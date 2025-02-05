@@ -261,14 +261,14 @@ spec:
                         a required field.
                       properties:
                         availabilityStrategy:
-                          default: AnyUpstream
+                          default: OneOf
                           description: |-
                             AvailabilityStrategy specifies the semantics for how requested Freight is
                             made available to the Stage. This field is optional. When left unspecified,
-                            the field is implicitly treated as if its value were "AnyUpstream".
+                            the field is implicitly treated as if its value were "OneOf".
                           enum:
-                          - AllUpstream
-                          - AnyUpstream
+                          - All
+                          - OneOf
                           type: string
                         direct:
                           description: |-

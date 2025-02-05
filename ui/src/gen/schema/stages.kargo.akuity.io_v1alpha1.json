@@ -178,11 +178,11 @@
                 "description": "Sources describes where the requested Freight may be obtained from. This is\na required field.",
                 "properties": {
                   "availabilityStrategy": {
-                    "default": "AnyUpstream",
-                    "description": "AvailabilityStrategy specifies the semantics for how requested Freight is\nmade available to the Stage. This field is optional. When left unspecified,\nthe field is implicitly treated as if its value were \"AnyUpstream\".",
+                    "default": "OneOf",
+                    "description": "AvailabilityStrategy specifies the semantics for how requested Freight is\nmade available to the Stage. This field is optional. When left unspecified,\nthe field is implicitly treated as if its value were \"OneOf\".",
                     "enum": [
-                      "AllUpstream",
-                      "AnyUpstream"
+                      "All",
+                      "OneOf"
                     ],
                     "type": "string"
                   },

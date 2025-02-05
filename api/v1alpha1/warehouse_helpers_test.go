@@ -271,9 +271,9 @@ func TestWarehouse_ListFreight(t *testing.T) {
 			},
 		},
 		{
-			name: "success with RequireAllVerifiedIn set to true",
+			name: "success with AvailabilityStrategy set to FreightAvailabilityStrategyAll",
 			opts: &ListWarehouseFreightOptions{
-				RequireAllVerifiedIn: true,
+				AvailabilityStrategy: FreightAvailabilityStrategyAll,
 				ApprovedFor:          testStage,
 				VerifiedIn:           []string{testUpstreamStage, testUpstreamStage2},
 				VerifiedBefore:       &metav1.Time{Time: time.Now().Add(-1 * time.Hour)},

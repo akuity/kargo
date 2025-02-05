@@ -87,11 +87,12 @@ type ListWarehouseFreightOptions struct {
 	// This is useful for filtering out Freight whose soak time has not yet
 	// elapsed.
 	VerifiedBefore *metav1.Time
-	// RequireAllVerifiedIn specifies whether ALL of the Stages defined in VerifiedIn
-	// must have verified a given Freight for it to match.
+	// AvailabilityStrategy specifies the semantics for how Freight is determined
+	// to be available. If not set, the default is to consider Freight available
+	// if it has been verified in any of the provided VerifiedIn stages.
 	// IMPORTANT: This is also applied to Freight matched using the VerifiedBefore
 	// condition.
-	RequireAllVerifiedIn bool
+	AvailabilityStrategy FreightAvailabilityStrategy
 }
 
 // ListFreight returns a list of all Freight resources that originated from the
@@ -156,10 +157,10 @@ func (w *Warehouse) ListFreight(
 	}
 
 	// Filter out identified Freight that has not been verified in all of the
-	// specified VerifiedIn Stages if RequireAllVerifiedIn is true.
+	// specified VerifiedIn Stages if AvailabilityStrategy is set to All.
 	// Default behavior is to return Freight that is verified in any of the
 	// specified VerifiedIn Stages.
-	if opts.RequireAllVerifiedIn && len(opts.VerifiedIn) > 0 {
+	if opts.AvailabilityStrategy == FreightAvailabilityStrategyAll && len(opts.VerifiedIn) > 0 {
 		// Reduce Freight to only items that are verified in ALL upstream
 		// Stages.  Freight that has been approved for a Stage is considered
 		// verified in this check.
@@ -215,11 +216,11 @@ func (w *Warehouse) ListFreight(
 			}
 		}
 
-		// Filter out Freight that has not been verified in all of the specified
-		// VerifiedIn Stages if RequireAllVerifiedIn is true.
+		// Filter out Freight that has passed its verification soak time in ALL
+		// of the specified VerifiedIn Stages if AvailabilityStrategy is set to All.
 		// Otherwise, include Freight if it has passed the soak time in a single
 		// Stage.
-		if opts.RequireAllVerifiedIn {
+		if opts.AvailabilityStrategy == FreightAvailabilityStrategyAll {
 			// If Freight is verified in ALL upstream Stages, then it is
 			// available.
 			if verifiedStages.Equal(sets.New(opts.VerifiedIn...)) {
