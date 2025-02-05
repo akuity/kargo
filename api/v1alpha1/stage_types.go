@@ -128,7 +128,7 @@ type FreightOriginKind string
 
 const FreightOriginKindWarehouse FreightOriginKind = "Warehouse"
 
-// +kubebuilder:validation:Enum={AllUpstream,AnyUpstream}
+// +kubebuilder:validation:Enum={All,OneOf}
 type FreightAvailabilityStrategy string
 
 const (
@@ -274,9 +274,9 @@ type FreightSources struct {
 	RequiredSoakTime *metav1.Duration `json:"requiredSoakTime,omitempty" protobuf:"bytes,3,opt,name=requiredSoakTime"`
 	// AvailabilityStrategy specifies the semantics for how requested Freight is
 	// made available to the Stage. This field is optional. When left unspecified,
-	// the field is implicitly treated as if its value were "AnyUpstream".
+	// the field is implicitly treated as if its value were "OneOf".
 	//
-	// +kubebuilder:default=AnyUpstream
+	// +kubebuilder:default=OneOf
 	AvailabilityStrategy FreightAvailabilityStrategy `json:"availabilityStrategy" protobuf:"bytes,4,opt,name=availabilityStrategy"`
 }
 
