@@ -108,7 +108,7 @@ func (w *Warehouse) ListFreight(
 
 	// Build a list of list options to make multiple queries whose results we will
 	// merge and de-dupe.
-	fieldSelectors := make([]fields.Selector, 0, 1+len(opts.VerifiedIn))
+	fieldSelectors := make([]fields.Selector, 0)
 	warehouseSelector := fields.OneTermEqualSelector("warehouse", w.Name)
 	if opts.ApprovedFor == "" && len(opts.VerifiedIn) == 0 {
 		// Just list all Freight resources that originated from the Warehouse
@@ -124,14 +124,43 @@ func (w *Warehouse) ListFreight(
 			),
 		)
 	}
-	for _, stage := range opts.VerifiedIn {
-		// List all Freight resources that are verified in the specified Stage
-		fieldSelectors = append(
-			fieldSelectors,
-			fields.AndSelectors(
-				warehouseSelector,
+
+	// Construct selectors for listing Freight using the configured AvailabilityStrategy
+	// semantics.
+	switch opts.AvailabilityStrategy {
+	case FreightAvailabilityStrategyAll:
+		// Query for Freight that is verified in ALL of the VerifiedIn stages.
+		stageSelectors := make([]fields.Selector, 0, len(opts.VerifiedIn))
+		for _, stage := range opts.VerifiedIn {
+			stageSelectors = append(
+				stageSelectors,
 				fields.OneTermEqualSelector("verifiedIn", stage),
-			),
+			)
+		}
+
+		if len(stageSelectors) > 0 {
+			fieldSelectors = append(
+				fieldSelectors,
+				fields.AndSelectors(
+					append(stageSelectors, warehouseSelector)...,
+				),
+			)
+		}
+	case FreightAvailabilityStrategyOneOf, "":
+		// Query for Freight that is verified in ANY of the VerifiedIn stages.
+		for _, stage := range opts.VerifiedIn {
+			fieldSelectors = append(
+				fieldSelectors,
+				fields.AndSelectors(
+					warehouseSelector,
+					fields.OneTermEqualSelector("verifiedIn", stage),
+				),
+			)
+		}
+	default:
+		return nil, fmt.Errorf(
+			"unsupported AvailabilityStrategy: %s",
+			opts.AvailabilityStrategy,
 		)
 	}
 
@@ -154,32 +183,6 @@ func (w *Warehouse) ListFreight(
 			)
 		}
 		freight = append(freight, res.Items...)
-	}
-
-	// Filter out identified Freight that has not been verified in all of the
-	// specified VerifiedIn Stages if AvailabilityStrategy is set to All.
-	// Default behavior is to return Freight that is verified in any of the
-	// specified VerifiedIn Stages.
-	if opts.AvailabilityStrategy == FreightAvailabilityStrategyAll && len(opts.VerifiedIn) > 0 {
-		// Reduce Freight to only items that are verified in ALL upstream
-		// Stages.  Freight that has been approved for a Stage is considered
-		// verified in this check.
-		filtered := make([]Freight, 0, len(freight))
-
-		for _, f := range freight {
-			if opts.ApprovedFor != "" {
-				if f.IsApprovedFor(opts.ApprovedFor) {
-					filtered = append(filtered, f)
-					continue
-				}
-			}
-			if f.IsVerifiedInAll(opts.VerifiedIn) {
-				filtered = append(filtered, f)
-				continue
-			}
-		}
-
-		freight = filtered
 	}
 
 	// Sort and de-dupe
