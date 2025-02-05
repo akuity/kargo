@@ -5,10 +5,25 @@ description: Learn how to do a basic installation of Kargo using Helm
 
 # Basic Installation
 
-Installing Kargo with default configuration is quick and easy.
+Installing Kargo's __cluster-side components__ (e.g. controllers and API server)
+with __default configuration__ is quick and easy.
+
+:::info
+__Not what you were looking for?__
+
+If you're looking for a more customized installation of cluster-side components,
+refer to
+[Advanced Installation](./20-advanced-installation/10-advanced-with-helm.md)
+for steps, and
+[Common Configurations](./20-advanced-installation/30-common-configurations.md)
+for guidance on configuring Kargo to address common operational concerns.
+
+If you're a developer looking for instructions for installing the Kargo CLI, see
+[Installing the CLI](../50-user-guide/05-installing-the-cli/index.md).
+:::
 
 :::caution
-The default configuration is suitable only for trying Kargo in a local cluster
+The default configuration is suitable _only_ for trying Kargo in a local cluster
 that is not internet-facing.
 
 For detailed instructions for a secure installation, refer to

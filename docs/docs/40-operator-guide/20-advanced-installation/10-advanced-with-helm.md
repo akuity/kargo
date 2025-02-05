@@ -5,8 +5,8 @@ description: Learn how to perform an advanced installation of Kargo using Helm
 
 # Advanced Installation with Helm
 
-This section outlines the general steps for customizing Kargo's configuration
-when installing it via Helm.
+This section outlines the general procedure for customizing configuration of
+Kargo's cluster-side components when installing them via Helm.
 
 1. Extract the default values from the Helm chart and save it to a convenient
 location. In the example below, we save it to `kargo-values.yaml`

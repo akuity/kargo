@@ -246,7 +246,7 @@ spec:
 
 :::info
 For complete documentation of how to perform verification, refer to the
-[Verification Guide](./16-verification.md).
+[Verification Guide](./60-verification.md).
 :::
 
 ### Status

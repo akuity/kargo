@@ -66,7 +66,7 @@ include one or more:
 Freight can therefore be thought of as a sort of meta-artifact. Freight is what
 Kargo seeks to progress from one stage to another.
 For detailed guidance on working with Freight, refer to
-[this guide](./30-how-to-guides/15-working-with-freight.md).
+[this guide](./30-how-to-guides/50-working-with-freight.md).
 
 ### What is a Warehouse?
 
@@ -122,8 +122,8 @@ traversing your pipeline(s) can make it easier to track their progress from one
 :::
 
 :::note
-For more information on aliases, refer to the [aliases](./30-how-to-guides/15-working-with-freight.md#aliases)
-and [updating aliases](./30-how-to-guides/15-working-with-freight.md#updating-aliases)
+For more information on aliases, refer to the [aliases](./30-how-to-guides/50-working-with-freight.md#aliases)
+and [updating aliases](./30-how-to-guides/50-working-with-freight.md#updating-aliases)
 sections of the "Working with Freight" how-to guide.
 :::
 

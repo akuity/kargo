@@ -7,6 +7,15 @@ sidebar_label: Installing the CLI
 Although its web-based UI provides the best user experience, Kargo also offers a
 command line interface (CLI) for users who may prefer it.
 
+:::info
+__Not what you were looking for?__
+
+If you're looking for instructions on installing Kargo's cluster-side
+components, refer to the
+[Basic Installation](../../40-operator-guide/10-basic-installation.md) section of
+the Operator Guide.
+:::
+
 To install:
 
 1. Download the CLI binary.
