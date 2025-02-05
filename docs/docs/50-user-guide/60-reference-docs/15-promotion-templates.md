@@ -169,7 +169,7 @@ steps:
 ```
 
 Variables defined in a step are scoped to that step and are not accessible to
-other steps like [global variables](#global-variables) are. The values of
+other steps like [global variables](#variables) are. The values of
 variables may  contain [expressions](40-expressions.md). In addition, the
 values of step variables  may contain references to the
 [outputs](#step-outputs) of other steps.
