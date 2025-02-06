@@ -435,16 +435,17 @@ func (a *authInterceptor) verifyIDPIssuedToken(
 	c := claims{}
 	if a.oidcTokenVerifyFn == nil {
 		verifierMu.Lock()
-		defer verifierMu.Unlock()
 		if a.oidcTokenVerifyFn == nil {
 			a.oidcTokenVerifyFn = newMultiClientVerifier(ctx, a.cfg)
-			if a.oidcTokenVerifyFn == nil {
-				return c, errors.New(
-					"could not validate token, possibly due to a transient network " +
-						"error; if the problem persists, check your OpenID Connect " +
-						"configuration",
-				)
-			}
+		}
+		verifier := a.oidcTokenVerifyFn
+		verifierMu.Unlock()
+		if verifier == nil {
+			return c, errors.New(
+				"could not validate token, possibly due to a transient network " +
+					"error; if the problem persists, check your OpenID Connect " +
+					"configuration",
+			)
 		}
 	}
 	token, err := a.oidcTokenVerifyFn(ctx, rawToken)
