@@ -22,11 +22,7 @@ func NewHandlerOption(
 		newErrorInterceptor(),
 	}
 	if !cfg.LocalMode {
-		authInterceptor, err := newAuthInterceptor(ctx, cfg, kubeclient)
-		if err != nil {
-			return nil, fmt.Errorf("initialize authentication interceptor: %w", err)
-		}
-		interceptors = append(interceptors, authInterceptor)
+		interceptors = append(interceptors, newAuthInterceptor(ctx, cfg, kubeclient))
 	}
 	return connect.WithHandlerOptions(
 		connect.WithInterceptors(interceptors...),
