@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 
 	"connectrpc.com/connect"
 	"github.com/coreos/go-oidc/v3/oidc"
@@ -23,6 +24,7 @@ import (
 	"github.com/akuity/kargo/internal/api/config"
 	"github.com/akuity/kargo/internal/api/user"
 	"github.com/akuity/kargo/internal/indexer"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 const authHeaderKey = "Authorization"
@@ -49,7 +51,7 @@ type authInterceptor struct {
 	verifyIDPIssuedTokenFn   func(
 		ctx context.Context,
 		rawToken string,
-	) (claims, bool)
+	) (claims, error)
 	oidcTokenVerifyFn     goOIDCIDTokenVerifyFn
 	oidcExtractClaimsFn   func(*oidc.IDToken) (claims, error)
 	listServiceAccountsFn func(
@@ -66,17 +68,13 @@ func newAuthInterceptor(
 	ctx context.Context,
 	cfg config.ServerConfig,
 	client libClient.Client,
-) (*authInterceptor, error) {
+) *authInterceptor {
 	a := &authInterceptor{
 		cfg:            cfg,
 		internalClient: client,
 	}
 	if cfg.OIDCConfig != nil {
-		var err error
-		a.oidcTokenVerifyFn, err = newMultiClientVerifier(ctx, cfg)
-		if err != nil {
-			return nil, err
-		}
+		a.oidcTokenVerifyFn = newMultiClientVerifier(ctx, cfg)
 	}
 	a.parseUnverifiedJWTFn =
 		jwt.NewParser(jwt.WithoutClaimsValidation()).ParseUnverified
@@ -84,16 +82,25 @@ func newAuthInterceptor(
 	a.verifyIDPIssuedTokenFn = a.verifyIDPIssuedToken
 	a.oidcExtractClaimsFn = oidcExtractClaims
 	a.listServiceAccountsFn = a.listServiceAccounts
-	return a, nil
+	return a
 }
 
 // newMultiClientVerifier returns a function that implements go-oidc IDTokenVerifier.Verify()
 // but iterates through multiple verifiers. We commonly have both a CLI and Web OIDC client,
 // each needing it's own OIDC verification.
-func newMultiClientVerifier(ctx context.Context, cfg config.ServerConfig) (goOIDCIDTokenVerifyFn, error) {
+func newMultiClientVerifier(ctx context.Context, cfg config.ServerConfig) goOIDCIDTokenVerifyFn {
 	keyset, err := getKeySet(ctx, cfg)
 	if err != nil {
-		return nil, fmt.Errorf("error getting keys from OpenID Connect provider: %w", err)
+		// The likely cause of this error is misconfiguration of the issuer URL.
+		// In case it's actually a transient network error, we'll log the error and
+		// return nil. Each authn attempt will retry this operation until it
+		// succeeds.
+		logger := logging.LoggerFromContext(ctx)
+		logger.Error(
+			err,
+			"error getting keys from OpenID Connect provider; will try again on first authn attempt",
+		)
+		return nil
 	}
 	// verifyFuncs might have two verify funcs: the web and cli verifier
 	var verifyFuncs []goOIDCIDTokenVerifyFn
@@ -126,7 +133,7 @@ func newMultiClientVerifier(ctx context.Context, cfg config.ServerConfig) (goOID
 		// if we get here, we've iterated all our verifiers and none of them worked.
 		return nil, errors.Join(errs...)
 	}
-	return multiVerifyFunc, nil
+	return multiVerifyFunc
 }
 
 // getKeySet retrieves the key set from the an OpenID Connect identify provider.
@@ -381,21 +388,22 @@ func (a *authInterceptor) authenticate(
 		untrustedClaims.Issuer == a.cfg.OIDCConfig.IssuerURL {
 		// Case 2: This token was allegedly issued by Kargo's OpenID Connect
 		// identity provider.
-		c, ok := a.verifyIDPIssuedTokenFn(ctx, rawToken)
-		if ok {
-			sa, err := a.listServiceAccountsFn(ctx, c)
-			if err != nil {
-				return ctx, fmt.Errorf("list service accounts for user: %w", err)
-			}
-			return user.ContextWithInfo(
-				ctx,
-				user.Info{
-					Claims:                     c,
-					ServiceAccountsByNamespace: sa,
-				},
-			), nil
+		c, err := a.verifyIDPIssuedTokenFn(ctx, rawToken)
+		if err != nil {
+			return ctx, err
 		}
-		return ctx, errors.New("invalid token")
+		sa, err := a.listServiceAccountsFn(ctx, c)
+		if err != nil {
+			return ctx, fmt.Errorf("list service accounts for user: %w", err)
+		}
+		return user.ContextWithInfo(
+			ctx,
+			user.Info{
+				Claims:                     c,
+				ServiceAccountsByNamespace: sa,
+			},
+		), nil
+
 	}
 
 	// Case 3 or 4: We don't know how to verify this token. It's probably a token
@@ -410,29 +418,40 @@ func (a *authInterceptor) authenticate(
 	), nil
 }
 
+var verifierMu = sync.Mutex{}
+
 // verifyIDPIssuedToken attempts to verify that the provided raw token was
 // issued by Kargo's OpenID Connect identity provider. On success, select claims
-// are extracted and returned along with a true boolean. If the provided raw
-// token couldn't be verified, the returned boolean is false. A non-nil error is
-// only ever returned if something goes wrong AFTER successfully verifying the
-// token. Callers may infer that if the returned error is nil, but the returned
-// boolean is false, the provided raw token could not be verified.
+// are extracted and returned.
 func (a *authInterceptor) verifyIDPIssuedToken(
 	ctx context.Context,
 	rawToken string,
-) (claims, bool) {
+) (claims, error) {
+	if a.cfg.OIDCConfig == nil {
+		// Really, this method never should have been called under these
+		// circumstances.
+		return claims{}, errors.New("OpenID Connect is not supported")
+	}
 	c := claims{}
 	if a.oidcTokenVerifyFn == nil {
-		return c, false
+		verifierMu.Lock()
+		defer verifierMu.Unlock()
+		if a.oidcTokenVerifyFn == nil {
+			a.oidcTokenVerifyFn = newMultiClientVerifier(ctx, a.cfg)
+			if a.oidcTokenVerifyFn == nil {
+				return c, errors.New(
+					"could not validate token, possibly due to a transient network " +
+						"error; if the problem persists, check your OpenID Connect " +
+						"configuration",
+				)
+			}
+		}
 	}
 	token, err := a.oidcTokenVerifyFn(ctx, rawToken)
 	if err != nil {
-		return c, false
+		return c, err
 	}
-	if c, err = a.oidcExtractClaimsFn(token); err != nil {
-		return c, false
-	}
-	return c, true
+	return a.oidcExtractClaimsFn(token)
 }
 
 // verifyKargoIssuedToken attempts to verify that the provided raw token was
