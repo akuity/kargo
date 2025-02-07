@@ -128,6 +128,14 @@ type FreightOriginKind string
 
 const FreightOriginKindWarehouse FreightOriginKind = "Warehouse"
 
+// +kubebuilder:validation:Enum={All,OneOf}
+type FreightAvailabilityStrategy string
+
+const (
+	FreightAvailabilityStrategyAll   FreightAvailabilityStrategy = "All"
+	FreightAvailabilityStrategyOneOf FreightAvailabilityStrategy = "OneOf"
+)
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name=Shard,type=string,JSONPath=`.spec.shard`
@@ -264,6 +272,12 @@ type FreightSources struct {
 	// +kubebuilder:validation:Type=string
 	// +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(s|m|h))+$"
 	RequiredSoakTime *metav1.Duration `json:"requiredSoakTime,omitempty" protobuf:"bytes,3,opt,name=requiredSoakTime"`
+	// AvailabilityStrategy specifies the semantics for how requested Freight is
+	// made available to the Stage. This field is optional. When left unspecified,
+	// the field is implicitly treated as if its value were "OneOf".
+	//
+	// +kubebuilder:default=OneOf
+	AvailabilityStrategy FreightAvailabilityStrategy `json:"availabilityStrategy" protobuf:"bytes,4,opt,name=availabilityStrategy"`
 }
 
 // PromotionTemplate defines a template for a Promotion that can be used to

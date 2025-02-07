@@ -260,6 +260,16 @@ spec:
                         Sources describes where the requested Freight may be obtained from. This is
                         a required field.
                       properties:
+                        availabilityStrategy:
+                          default: OneOf
+                          description: |-
+                            AvailabilityStrategy specifies the semantics for how requested Freight is
+                            made available to the Stage. This field is optional. When left unspecified,
+                            the field is implicitly treated as if its value were "OneOf".
+                          enum:
+                          - All
+                          - OneOf
+                          type: string
                         direct:
                           description: |-
                             Direct indicates the requested Freight may be obtained directly from the
@@ -288,6 +298,8 @@ spec:
                           items:
                             type: string
                           type: array
+                      required:
+                      - availabilityStrategy
                       type: object
                   required:
                   - origin
