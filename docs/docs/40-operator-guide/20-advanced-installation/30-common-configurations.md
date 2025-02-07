@@ -329,7 +329,7 @@ namespace specified by `controller.argocd.namespace`.
 
 By default, Kargo will enable the Argo Rollouts integration, which configures
 Kargo to work with `Rollout` resources created by Argo Rollouts as part of the
-[verification feature](../../50-user-guide/20-how-to-guides/40-working-with-stages.md#verification).
+[verification feature](../../50-user-guide/20-how-to-guides/14-working-with-stages.md#verification).
 
 This can be disabled as follows:
 
