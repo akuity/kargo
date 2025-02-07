@@ -483,7 +483,7 @@ the previous section.
     apiVersion: kargo.akuity.io/v1alpha1
     kind: PromotionTask
     metadata:
-      name: promo-process
+      name: demo-promo-process
       namespace: kargo-demo
     spec:
       vars:
