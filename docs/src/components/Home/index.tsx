@@ -4,6 +4,7 @@ import styles from './index.module.scss';
 import clsx from 'clsx';
 import { FaRocket, FaTruck, FaTools } from 'react-icons/fa';
 import Link, { NavLinkProps } from '@docusaurus/Link';
+import { Button } from '../Button';
 
 export default function Home(): JSX.Element {
   useEffect(() => {
@@ -25,18 +26,15 @@ export default function Home(): JSX.Element {
 
   return (
       <main className='landing-page'>
-        {/* <header className={styles.header}>
+        <header className={styles.header}>
           <h1 style={{margin: 0}}>Kargo</h1>
           <span>Learn how to use Kargo for GitOps promotions of stages</span>
           <div style={{marginTop: '24px'}}>
             <Link to='/user-guide/core-concepts'>
-              <Button>Overview</Button>
-            </Link>
-            <Link to='/user-guide/examples'>
-              <Button btnType='primary' style={{marginLeft: '24px'}}>Learn By Examples</Button>
+              <Button btnType='primary'>Overview</Button>
             </Link>
           </div>
-        </header> */}
+        </header>
         <div className='container'>
           <Section 
             title={<><FaRocket /> Get Started</>}
@@ -81,6 +79,18 @@ export default function Home(): JSX.Element {
                 },
                 link: {
                   to: '/quickstart/'
+                }
+              },
+              {
+                id: 'examples',
+                title: 'Examples',
+                description: 'Learn Kargo through examples',
+                headerStyle: {
+                  background: '#FF3333',
+                  color: 'white'
+                },
+                link: {
+                  to: '/user-guide/examples/'
                 }
               },
             ]}
