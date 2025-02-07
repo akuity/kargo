@@ -6,11 +6,15 @@ sidebar_label: Examples
 
 ## Basic Examples
 
-A catalog of small Kargo examples can be found in a unified [kargo-examples](https://github.com/akuity/kargo-examples/) repository. This collection of micro-examples demonstrate specific functionality in isolation.
+A catalog of small Kargo examples can be found in a unified
+[kargo-examples](https://github.com/akuity/kargo-examples/) repository.
+This collection of micro-examples demonstrate specific functionality in
+isolation.
 
 ## End-to-End Examples
 
-A number of end-to-end examples that can be used as a starting point, or inspiration for your own pipelines.
+A number of end-to-end examples that can be used as a starting point, or
+inspiration for your own pipelines.
 
 | Name | Description |
 |------|-------------|
