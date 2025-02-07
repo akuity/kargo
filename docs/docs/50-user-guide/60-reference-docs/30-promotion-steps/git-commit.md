@@ -63,7 +63,7 @@ steps:
 - uses: git-commit
   config:
     path: ./out
-    message: ${{ outputs.update-image.commitMessage }}
+    message: ${{ outputs['update-image'].commitMessage }}
 # Push, etc...
 ```
 
@@ -89,7 +89,7 @@ steps:
   config:
     path: ./out
     message: |
-      ${{ ctx.stage }}: ${{ outputs.update-image.commitMessage }}
+      ${{ ctx.stage }}: ${{ outputs['update-image'].commitMessage }}
 ```
 
 ### Commit with Custom Author
@@ -104,7 +104,7 @@ steps:
 - uses: git-commit
   config:
     path: ./out
-    message: ${{ outputs.update-image.commitMessage }}
+    message: ${{ outputs['update-image'].commitMessage }}
     author:
       name: Kargo
       email: kargo@example.com
