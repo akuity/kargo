@@ -76,6 +76,12 @@ rules:
   - analysistemplates
   verbs:
   - "*" # full access to analysistemplates
+- apiGroups:
+  - argoproj.io
+  resources:
+  - clusteranalysistemplates
+  verbs:
+  - "*" # full access to clusteranalysistemplates
 {{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -124,6 +130,7 @@ rules:
   resources:
   - analysisruns
   - analysistemplates
+  - clusteranalysistemplates
   verbs:
   - get
   - list

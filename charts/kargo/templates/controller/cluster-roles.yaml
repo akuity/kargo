@@ -132,6 +132,14 @@ rules:
 - apiGroups:
   - argoproj.io
   resources:
+  - clusteranalysistemplates
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - argoproj.io
+  resources:
   - analysisruns
   verbs:
   - create

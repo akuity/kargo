@@ -621,6 +621,12 @@ type AnalysisTemplateReference struct {
 	//
 	// +kubebuilder:validation:Required
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	// Kind is the type of the AnalysisTemplate. Can be either AnalysisTemplate or
+	// ClusterAnalysisTemplate, default is AnalysisTemplate.
+	//
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Enum=AnalysisTemplate;ClusterAnalysisTemplate
+	Kind string `json:"kind,omitempty" protobuf:"bytes,2,opt,name=kind"`
 }
 
 // AnalysisRunMetadata contains optional metadata that should be applied to all

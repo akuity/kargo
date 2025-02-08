@@ -115,6 +115,7 @@ rules:
       - argoproj.io
     resources:
       - analysistemplates
+      - clusteranalysistemplates
     verbs:
       - "*"
 {{- end }}

@@ -410,16 +410,16 @@ func TestAnalysisRunBuilder_buildMetadata(t *testing.T) {
 
 func TestAnalysisRunBuilder_buildSpec(t *testing.T) {
 	tests := []struct {
-		name       string
-		templates  []*rolloutsapi.AnalysisTemplate
-		args       []kargoapi.AnalysisRunArgument
-		exprCfg    *ArgumentEvaluationConfig
-		assertions func(*testing.T, rolloutsapi.AnalysisRunSpec, error)
+		name          string
+		templateSpecs []*rolloutsapi.AnalysisTemplateSpec
+		args          []kargoapi.AnalysisRunArgument
+		exprCfg       *ArgumentEvaluationConfig
+		assertions    func(*testing.T, rolloutsapi.AnalysisRunSpec, error)
 	}{
 		{
-			name:      "empty templates and args",
-			templates: []*rolloutsapi.AnalysisTemplate{},
-			args:      []kargoapi.AnalysisRunArgument{},
+			name:          "empty templates and args",
+			templateSpecs: []*rolloutsapi.AnalysisTemplateSpec{},
+			args:          []kargoapi.AnalysisRunArgument{},
 			assertions: func(t *testing.T, spec rolloutsapi.AnalysisRunSpec, err error) {
 				require.NoError(t, err)
 				assert.Empty(t, spec.Metrics)
@@ -430,24 +430,20 @@ func TestAnalysisRunBuilder_buildSpec(t *testing.T) {
 		},
 		{
 			name: "single template with metrics and args",
-			templates: []*rolloutsapi.AnalysisTemplate{
-				{
-					Spec: rolloutsapi.AnalysisTemplateSpec{
-						Metrics: []rolloutsapi.Metric{
-							{Name: "metric1", Provider: rolloutsapi.MetricProvider{Prometheus: &rolloutsapi.PrometheusMetric{}}},
-						},
-						Args: []rolloutsapi.Argument{
-							{Name: "param1"},
-						},
-						DryRun: []rolloutsapi.DryRun{
-							{MetricName: "metric1"},
-						},
-						MeasurementRetention: []rolloutsapi.MeasurementRetention{
-							{MetricName: "metric1", Limit: int32(5)},
-						},
-					},
+			templateSpecs: []*rolloutsapi.AnalysisTemplateSpec{{
+				Metrics: []rolloutsapi.Metric{
+					{Name: "metric1", Provider: rolloutsapi.MetricProvider{Prometheus: &rolloutsapi.PrometheusMetric{}}},
 				},
-			},
+				Args: []rolloutsapi.Argument{
+					{Name: "param1"},
+				},
+				DryRun: []rolloutsapi.DryRun{
+					{MetricName: "metric1"},
+				},
+				MeasurementRetention: []rolloutsapi.MeasurementRetention{
+					{MetricName: "metric1", Limit: int32(5)},
+				},
+			}},
 			args: []kargoapi.AnalysisRunArgument{
 				{Name: "param1", Value: "value1"},
 				{Name: "param2", Value: "${{ ctx.test }}"},
@@ -480,16 +476,12 @@ func TestAnalysisRunBuilder_buildSpec(t *testing.T) {
 		},
 		{
 			name: "template flattening error",
-			templates: []*rolloutsapi.AnalysisTemplate{
+			templateSpecs: []*rolloutsapi.AnalysisTemplateSpec{
 				{
-					Spec: rolloutsapi.AnalysisTemplateSpec{
-						Metrics: []rolloutsapi.Metric{{Name: "metric1"}},
-					},
+					Metrics: []rolloutsapi.Metric{{Name: "metric1"}},
 				},
 				{
-					Spec: rolloutsapi.AnalysisTemplateSpec{
-						Metrics: []rolloutsapi.Metric{{Name: "metric1"}},
-					},
+					Metrics: []rolloutsapi.Metric{{Name: "metric1"}},
 				},
 			},
 			assertions: func(t *testing.T, _ rolloutsapi.AnalysisRunSpec, err error) {
@@ -498,12 +490,10 @@ func TestAnalysisRunBuilder_buildSpec(t *testing.T) {
 		},
 		{
 			name: "argument error",
-			templates: []*rolloutsapi.AnalysisTemplate{
+			templateSpecs: []*rolloutsapi.AnalysisTemplateSpec{
 				{
-					Spec: rolloutsapi.AnalysisTemplateSpec{
-						Args: []rolloutsapi.Argument{
-							{Name: "param1"},
-						},
+					Args: []rolloutsapi.Argument{
+						{Name: "param1"},
 					},
 				},
 			},
@@ -519,7 +509,7 @@ func TestAnalysisRunBuilder_buildSpec(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			builder := &AnalysisRunBuilder{}
-			spec, err := builder.buildSpec(tt.templates, tt.args, tt.exprCfg)
+			spec, err := builder.buildSpec(tt.templateSpecs, tt.args, tt.exprCfg)
 			tt.assertions(t, spec, err)
 		})
 	}
@@ -860,15 +850,15 @@ func TestAnalysisRunBuilder_getAnalysisTemplates(t *testing.T) {
 		namespace  string
 		references []kargoapi.AnalysisTemplateReference
 		objects    []client.Object
-		assertions func(*testing.T, []*rolloutsapi.AnalysisTemplate, error)
+		assertions func(*testing.T, []*rolloutsapi.AnalysisTemplateSpec, error)
 	}{
 		{
 			name:       "empty references",
 			namespace:  "default",
 			references: []kargoapi.AnalysisTemplateReference{},
-			assertions: func(t *testing.T, templates []*rolloutsapi.AnalysisTemplate, err error) {
+			assertions: func(t *testing.T, templateSpecs []*rolloutsapi.AnalysisTemplateSpec, err error) {
 				require.NoError(t, err)
-				assert.Empty(t, templates)
+				assert.Empty(t, templateSpecs)
 			},
 		},
 		{
@@ -888,11 +878,10 @@ func TestAnalysisRunBuilder_getAnalysisTemplates(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, templates []*rolloutsapi.AnalysisTemplate, err error) {
+			assertions: func(t *testing.T, templateSpecs []*rolloutsapi.AnalysisTemplateSpec, err error) {
 				require.NoError(t, err)
-				assert.Len(t, templates, 1)
-				assert.Equal(t, "template1", templates[0].Name)
-				assert.Len(t, templates[0].Spec.Metrics, 1)
+				assert.Len(t, templateSpecs, 1)
+				assert.Len(t, templateSpecs[0].Metrics, 1)
 			},
 		},
 		{
@@ -901,9 +890,9 @@ func TestAnalysisRunBuilder_getAnalysisTemplates(t *testing.T) {
 			references: []kargoapi.AnalysisTemplateReference{
 				{Name: "nonexistent"},
 			},
-			assertions: func(t *testing.T, templates []*rolloutsapi.AnalysisTemplate, err error) {
+			assertions: func(t *testing.T, templateSpecs []*rolloutsapi.AnalysisTemplateSpec, err error) {
 				assert.ErrorContains(t, err, "get AnalysisRun")
-				assert.Nil(t, templates)
+				assert.Equal(t, templateSpecs, []*rolloutsapi.AnalysisTemplateSpec{})
 			},
 		},
 		{
@@ -933,11 +922,11 @@ func TestAnalysisRunBuilder_getAnalysisTemplates(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, templates []*rolloutsapi.AnalysisTemplate, err error) {
+			assertions: func(t *testing.T, templateSpecs []*rolloutsapi.AnalysisTemplateSpec, err error) {
 				require.NoError(t, err)
-				assert.Len(t, templates, 2)
-				assert.Equal(t, "template1", templates[0].Name)
-				assert.Equal(t, "template2", templates[1].Name)
+				assert.Len(t, templateSpecs, 2)
+				assert.Len(t, templateSpecs[0].Metrics, 1)
+				assert.Len(t, templateSpecs[1].Metrics, 1)
 			},
 		},
 		{
@@ -954,9 +943,9 @@ func TestAnalysisRunBuilder_getAnalysisTemplates(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, templates []*rolloutsapi.AnalysisTemplate, err error) {
+			assertions: func(t *testing.T, templateSpecs []*rolloutsapi.AnalysisTemplateSpec, err error) {
 				assert.ErrorContains(t, err, "get AnalysisRun")
-				assert.Nil(t, templates)
+				assert.Equal(t, templateSpecs, []*rolloutsapi.AnalysisTemplateSpec{})
 			},
 		},
 	}
@@ -969,8 +958,13 @@ func TestAnalysisRunBuilder_getAnalysisTemplates(t *testing.T) {
 				Build()
 
 			builder := &AnalysisRunBuilder{client: c}
-			templates, err := builder.getAnalysisTemplates(context.Background(), tt.namespace, tt.references)
-			tt.assertions(t, templates, err)
+			analysisTemplates, clusterAnalysisTemplates, err := builder.getAnalysisTemplates(
+				context.Background(),
+				tt.namespace,
+				tt.references,
+			)
+			analysisTemplateSpecs := combineAnalysisTemplateSpecs(analysisTemplates, clusterAnalysisTemplates)
+			tt.assertions(t, analysisTemplateSpecs, err)
 		})
 	}
 }
