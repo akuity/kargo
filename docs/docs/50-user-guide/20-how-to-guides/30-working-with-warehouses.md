@@ -487,7 +487,7 @@ Helm chart repository subscriptions can be defined using the following fields:
   ```yaml
   spec:
     subscriptions:
-    - helm:
+    - chart:
         repoURL: https://charts.example.com
         name: my-chart
         semverConstraint: ^1.0.0
