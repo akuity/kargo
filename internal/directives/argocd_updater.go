@@ -17,7 +17,6 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libargocd "github.com/akuity/kargo/internal/argocd"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
-	"github.com/akuity/kargo/internal/controller/freight"
 	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
@@ -57,9 +56,6 @@ type argocdUpdater struct {
 	) (*argocd.Application, error)
 
 	buildDesiredSourcesFn func(
-		ctx context.Context,
-		stepCtx *PromotionStepContext,
-		stepCfg *ArgoCDUpdateConfig,
 		update *ArgoCDAppUpdate,
 		desiredRevisions []string,
 		app *argocd.Application,
@@ -79,13 +75,10 @@ type argocdUpdater struct {
 	) error
 
 	applyArgoCDSourceUpdateFn func(
-		ctx context.Context,
-		stepCtx *PromotionStepContext,
-		stepCfg *ArgoCDUpdateConfig,
 		update *ArgoCDAppSourceUpdate,
 		desiredRevision string,
 		src argocd.ApplicationSource,
-	) (argocd.ApplicationSource, bool, error)
+	) (argocd.ApplicationSource, bool)
 
 	argoCDAppPatchFn func(
 		context.Context,
@@ -192,14 +185,7 @@ func (a *argocdUpdater) runPromotionStep(
 			)
 		}
 
-		desiredRevisions, err := a.getDesiredRevisions(stepCtx, update, app)
-		if err != nil {
-			return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
-				"error determining desired revisions for Argo CD Application %q in "+
-					"namespace %q: %w",
-				app.Name, app.Namespace, err,
-			)
-		}
+		desiredRevisions := a.getDesiredRevisions(update, app)
 		appHealthChecks[i] = ArgoCDAppHealthCheck{
 			Name:             app.Name,
 			Namespace:        app.Namespace,
@@ -252,9 +238,6 @@ func (a *argocdUpdater) runPromotionStep(
 
 		// Build the desired source(s) for the Argo CD Application.
 		desiredSources, err := a.buildDesiredSourcesFn(
-			ctx,
-			stepCtx,
-			&stepCfg,
 			update,
 			desiredRevisions,
 			app,
@@ -306,9 +289,6 @@ func (a *argocdUpdater) runPromotionStep(
 // buildDesiredSources returns the desired source(s) for an Argo CD Application,
 // by updating the current source(s) with the given source updates.
 func (a *argocdUpdater) buildDesiredSources(
-	ctx context.Context,
-	stepCtx *PromotionStepContext,
-	stepCfg *ArgoCDUpdateConfig,
 	update *ArgoCDAppUpdate,
 	desiredRevisions []string,
 	app *argocd.Application,
@@ -329,22 +309,11 @@ updateLoop:
 		srcUpdate := &update.Sources[i]
 		var updateUsed bool
 		for j := range desiredSources {
-			var err error
-			if desiredSources[j], updateUsed, err = a.applyArgoCDSourceUpdateFn(
-				ctx,
-				stepCtx,
-				stepCfg,
+			desiredSources[j], updateUsed = a.applyArgoCDSourceUpdateFn(
 				srcUpdate,
 				desiredRevisions[j],
 				desiredSources[j],
-			); err != nil {
-				return nil, fmt.Errorf(
-					"error applying source update to Argo CD Application %q in namespace %q: %w",
-					update.Name,
-					app.Namespace,
-					err,
-				)
-			}
+			)
 			if updateUsed {
 				continue updateLoop
 			}
@@ -433,11 +402,7 @@ func (a *argocdUpdater) mustPerformUpdate(
 	}
 
 	// Check if the desired revisions were applied.
-	desiredRevisions, err := a.getDesiredRevisions(stepCtx, update, app)
-	if err != nil {
-		return "", true, fmt.Errorf("error determining desired revisions: %w", err)
-	}
-
+	desiredRevisions := a.getDesiredRevisions(update, app)
 	if len(desiredRevisions) == 0 {
 		// We do not have any desired revisions, so we cannot determine if the
 		// operation was successful.
@@ -728,17 +693,14 @@ func (a *argocdUpdater) authorizeArgoCDAppUpdate(
 
 // applyArgoCDSourceUpdate updates a single Argo CD ApplicationSource.
 func (a *argocdUpdater) applyArgoCDSourceUpdate(
-	ctx context.Context,
-	stepCtx *PromotionStepContext,
-	stepCfg *ArgoCDUpdateConfig,
 	update *ArgoCDAppSourceUpdate,
 	desiredRevision string,
 	source argocd.ApplicationSource,
-) (argocd.ApplicationSource, bool, error) {
+) (argocd.ApplicationSource, bool) {
 	if source.Chart != "" || update.Chart != "" {
 		if source.RepoURL != update.RepoURL || source.Chart != update.Chart {
 			// The update is not applicable to this source.
-			return source, false, nil
+			return source, false
 		}
 		// If we get to here, we have confirmed that this update is applicable to
 		// this source.
@@ -751,7 +713,7 @@ func (a *argocdUpdater) applyArgoCDSourceUpdate(
 		sourceRepoURL := git.NormalizeURL(source.RepoURL)
 		if sourceRepoURL != git.NormalizeURL(update.RepoURL) {
 			// The update is not applicable to this source.
-			return source, false, nil
+			return source, false
 		}
 		// If we get to here, we have confirmed that this update is applicable to
 		// this source.
@@ -764,15 +726,7 @@ func (a *argocdUpdater) applyArgoCDSourceUpdate(
 		if source.Kustomize == nil {
 			source.Kustomize = &argocd.ApplicationSourceKustomize{}
 		}
-		var err error
-		if source.Kustomize.Images, err = a.buildKustomizeImagesForAppSource(
-			ctx,
-			stepCtx,
-			stepCfg,
-			update.Kustomize,
-		); err != nil {
-			return source, false, err
-		}
+		source.Kustomize.Images = a.buildKustomizeImagesForAppSource(update.Kustomize)
 	}
 
 	if update.Helm != nil && len(update.Helm.Images) > 0 {
@@ -782,16 +736,7 @@ func (a *argocdUpdater) applyArgoCDSourceUpdate(
 		if source.Helm.Parameters == nil {
 			source.Helm.Parameters = []argocd.HelmParameter{}
 		}
-		changes, err := a.buildHelmParamChangesForAppSource(
-			ctx,
-			stepCtx,
-			stepCfg,
-			update.Helm,
-		)
-		if err != nil {
-			return source, false,
-				fmt.Errorf("error building Helm parameter changes: %w", err)
-		}
+		changes := a.buildHelmParamChangesForAppSource(update.Helm)
 	imageUpdateLoop:
 		for k, v := range changes {
 			newParam := argocd.HelmParameter{
@@ -808,15 +753,10 @@ func (a *argocdUpdater) applyArgoCDSourceUpdate(
 		}
 	}
 
-	return source, true, nil
+	return source, true
 }
 
-func (a *argocdUpdater) buildKustomizeImagesForAppSource(
-	ctx context.Context,
-	stepCtx *PromotionStepContext,
-	stepCfg *ArgoCDUpdateConfig,
-	update *ArgoCDKustomizeImageUpdates,
-) (argocd.KustomizeImages, error) {
+func (a *argocdUpdater) buildKustomizeImagesForAppSource(update *ArgoCDKustomizeImageUpdates) argocd.KustomizeImages {
 	kustomizeImages := make(argocd.KustomizeImages, 0, len(update.Images))
 	for i := range update.Images {
 		imageUpdate := &update.Images[i]
@@ -826,26 +766,6 @@ func (a *argocdUpdater) buildKustomizeImagesForAppSource(
 			digest = imageUpdate.Digest
 		case imageUpdate.Tag != "":
 			tag = imageUpdate.Tag
-		default:
-			desiredOrigin := getDesiredOrigin(stepCfg, imageUpdate)
-			image, err := freight.FindImage(
-				ctx,
-				stepCtx.KargoClient,
-				stepCtx.Project,
-				stepCtx.FreightRequests,
-				desiredOrigin,
-				stepCtx.Freight.References(),
-				imageUpdate.RepoURL,
-			)
-			if err != nil {
-				return nil,
-					fmt.Errorf("error finding image from repo %q: %w", imageUpdate.RepoURL, err)
-			}
-			if imageUpdate.UseDigest {
-				digest = image.Digest
-			} else {
-				tag = image.Tag
-			}
 		}
 		kustomizeImageStr := imageUpdate.RepoURL
 		if imageUpdate.NewName != "" {
@@ -861,50 +781,16 @@ func (a *argocdUpdater) buildKustomizeImagesForAppSource(
 			argocd.KustomizeImage(kustomizeImageStr),
 		)
 	}
-	return kustomizeImages, nil
+	return kustomizeImages
 }
 
-func (a *argocdUpdater) buildHelmParamChangesForAppSource(
-	ctx context.Context,
-	stepCtx *PromotionStepContext,
-	stepCfg *ArgoCDUpdateConfig,
-	update *ArgoCDHelmParameterUpdates,
-) (map[string]string, error) {
+func (a *argocdUpdater) buildHelmParamChangesForAppSource(update *ArgoCDHelmParameterUpdates) map[string]string {
 	changes := map[string]string{}
 	for i := range update.Images {
 		imageUpdate := &update.Images[i]
-		switch imageUpdate.Value {
-		case ImageAndTag, Tag, ImageAndDigest, Digest:
-			// TODO(krancour): Remove this for v1.3.0
-			desiredOrigin := getDesiredOrigin(stepCfg, imageUpdate)
-			image, err := freight.FindImage(
-				ctx,
-				stepCtx.KargoClient,
-				stepCtx.Project,
-				stepCtx.FreightRequests,
-				desiredOrigin,
-				stepCtx.Freight.References(),
-				imageUpdate.RepoURL,
-			)
-			if err != nil {
-				return nil,
-					fmt.Errorf("error finding image from repo %q: %w", imageUpdate.RepoURL, err)
-			}
-			switch imageUpdate.Value {
-			case ImageAndTag:
-				changes[imageUpdate.Key] = fmt.Sprintf("%s:%s", imageUpdate.RepoURL, image.Tag)
-			case Tag:
-				changes[imageUpdate.Key] = image.Tag
-			case ImageAndDigest:
-				changes[imageUpdate.Key] = fmt.Sprintf("%s@%s", imageUpdate.RepoURL, image.Digest)
-			case Digest:
-				changes[imageUpdate.Key] = image.Digest
-			}
-		default:
-			changes[imageUpdate.Key] = imageUpdate.Value
-		}
+		changes[imageUpdate.Key] = imageUpdate.Value
 	}
-	return changes, nil
+	return changes
 }
 
 func (a *argocdUpdater) operationPhaseToPromotionStatus(

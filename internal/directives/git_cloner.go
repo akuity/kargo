@@ -10,7 +10,6 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/controller/freight"
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
 )
@@ -148,29 +147,6 @@ func (g *gitCloner) runPromotionStep(
 			ref = checkout.Commit
 		case checkout.Tag != "":
 			ref = checkout.Tag
-		// TODO(krancour): Remove for v1.3.0.
-		case checkout.FromFreight:
-			var desiredOrigin *kargoapi.FreightOrigin
-			if checkout.FromOrigin != nil {
-				desiredOrigin = &kargoapi.FreightOrigin{
-					Kind: kargoapi.FreightOriginKind(checkout.FromOrigin.Kind),
-					Name: checkout.FromOrigin.Name,
-				}
-			}
-			var commit *kargoapi.GitCommit
-			if commit, err = freight.FindCommit(
-				ctx,
-				stepCtx.KargoClient,
-				stepCtx.Project,
-				stepCtx.FreightRequests,
-				desiredOrigin,
-				stepCtx.Freight.References(),
-				cfg.RepoURL,
-			); err != nil {
-				return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
-					fmt.Errorf("error finding commit from repo %s: %w", cfg.RepoURL, err)
-			}
-			ref = commit.ID
 		}
 		path, err := securejoin.SecureJoin(stepCtx.WorkDir, checkout.Path)
 		if err != nil {

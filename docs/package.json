@@ -20,11 +20,15 @@
     "@cmfcmf/docusaurus-search-local": "^0.11.0",
     "@docusaurus/core": "^3.0.0",
     "@docusaurus/preset-classic": "^3.0.0",
+    "@docusaurus/theme-classic": "^3.7.0",
     "@mdx-js/react": "^3.0.0",
     "clsx": "^1.2.1",
+    "docusaurus-plugin-sass": "^0.2.6",
     "prism-react-renderer": "^2.1.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "react-icons": "^5.4.0",
+    "sass": "^1.83.4"
   },
   "devDependencies": {
     "@docusaurus/module-type-aliases": "^3.0.0",

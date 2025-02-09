@@ -85,17 +85,19 @@ service KargoService {
   rpc ListCredentials(ListCredentialsRequest) returns (ListCredentialsResponse);
   rpc UpdateCredentials(UpdateCredentialsRequest) returns (UpdateCredentialsResponse);
 
+  /* Project Secrets APIs */
+
+  rpc ListProjectSecrets(ListProjectSecretsRequest) returns (ListProjectSecretsResponse);
+  rpc CreateProjectSecret(CreateProjectSecretRequest) returns (CreateProjectSecretResponse);
+  rpc UpdateProjectSecret(UpdateProjectSecretRequest) returns (UpdateProjectSecretResponse);
+  rpc DeleteProjectSecret(DeleteProjectSecretRequest) returns (DeleteProjectSecretResponse);
+
   /* Analysis APIs */
 
   rpc ListAnalysisTemplates(ListAnalysisTemplatesRequest) returns (ListAnalysisTemplatesResponse);
   rpc GetAnalysisTemplate(GetAnalysisTemplateRequest) returns (GetAnalysisTemplateResponse);
   rpc DeleteAnalysisTemplate(DeleteAnalysisTemplateRequest) returns (DeleteAnalysisTemplateResponse);
   rpc GetAnalysisRun(GetAnalysisRunRequest) returns (GetAnalysisRunResponse);
-
-  rpc ListAnalysisTemplateConfigMaps(ListAnalysisTemplateConfigMapsRequest) returns (ListAnalysisTemplateConfigMapsResponse);
-  rpc GetAnalysisTemplateConfigMap(GetAnalysisTemplateConfigMapRequest) returns (GetAnalysisTemplateConfigMapResponse);
-  rpc ListAnalysisTemplateSecrets(ListAnalysisTemplateSecretsRequest) returns (ListAnalysisTemplateSecretsResponse);
-  rpc GetAnalysisTemplateSecret(GetAnalysisTemplateSecretRequest) returns (GetAnalysisTemplateSecretResponse);
 
   /* Event APIs */
 
@@ -532,10 +534,50 @@ message RefreshWarehouseResponse {
   github.com.akuity.kargo.api.v1alpha1.Warehouse warehouse = 1;
 }
 
+message ListProjectSecretsRequest {
+  string project = 1;
+}
+
+message ListProjectSecretsResponse {
+  repeated k8s.io.api.core.v1.Secret secrets = 1;
+}
+
+message CreateProjectSecretRequest {
+  string project = 1;
+  string name = 2;
+  string description = 3;
+  map<string, string> data = 4;
+}
+
+message CreateProjectSecretResponse {
+  k8s.io.api.core.v1.Secret secret = 1;
+}
+
+message UpdateProjectSecretRequest {
+  string project = 1;
+  string name = 2;
+  string description = 3;
+  map<string, string> data = 4;
+}
+
+message UpdateProjectSecretResponse {
+  k8s.io.api.core.v1.Secret secret = 1;
+}
+
+message DeleteProjectSecretRequest {
+  string project = 1;
+  string name = 2;
+}
+
+message DeleteProjectSecretResponse {
+  /* explicitly empty */
+}
+
 message CreateCredentialsRequest {
   string project = 1;
   string name = 2;
   string description = 8;
+  // type is git, helm, image
   string type = 3;
   string repo_url = 4 [json_name = "repoURL"];
   bool repo_url_is_regex = 5 [json_name = "repoURLIsRegex"];
@@ -723,46 +765,4 @@ message UpdateRoleRequest {
 
 message UpdateRoleResponse {
   github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
-}
-
-message ListAnalysisTemplateConfigMapsRequest {
-  string project = 1;
-}
-
-message ListAnalysisTemplateConfigMapsResponse {
-  repeated k8s.io.api.core.v1.ConfigMap config_maps = 1;
-}
-
-message GetAnalysisTemplateConfigMapRequest {
-  string project = 1;
-  string name = 2;
-  RawFormat format = 3;
-}
-
-message GetAnalysisTemplateConfigMapResponse {
-  oneof result {
-    k8s.io.api.core.v1.ConfigMap config_map = 1;
-    bytes raw = 2;
-  }
-}
-
-message ListAnalysisTemplateSecretsRequest {
-  string project = 1;
-}
-
-message ListAnalysisTemplateSecretsResponse {
-  repeated k8s.io.api.core.v1.Secret secrets = 1;
-}
-
-message GetAnalysisTemplateSecretRequest {
-  string project = 1;
-  string name = 2;
-  RawFormat format = 3;
-}
-
-message GetAnalysisTemplateSecretResponse {
-  oneof result {
-    k8s.io.api.core.v1.Secret secret = 1;
-    bytes raw = 2;
-  }
 }

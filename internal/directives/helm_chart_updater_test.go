@@ -15,12 +15,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"helm.sh/helm/v3/pkg/chart"
+	"helm.sh/helm/v3/pkg/helmpath"
 	helmregistry "helm.sh/helm/v3/pkg/registry"
 	"helm.sh/helm/v3/pkg/repo"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -108,39 +106,33 @@ func Test_helmChartUpdater_validate(t *testing.T) {
 			},
 		},
 		{
+			name: "version not specified",
+			config: Config{
+				"charts": []Config{{}},
+			},
+			expectedProblems: []string{
+				"charts.0: version is required",
+			},
+		},
+		{
+			name: "version is empty",
+			config: Config{
+				"charts": []Config{{
+					"version": "",
+				}},
+			},
+			expectedProblems: []string{
+				"charts.0.version: String length must be greater than or equal to 1",
+			},
+		},
+		{
 			name: "valid kitchen sink",
 			config: Config{
 				"path": "fake-path",
 				"charts": []Config{
 					{
 						"repository": "fake-repository",
-						"name":       "fake-chart-0",
-					},
-					{
-						"repository": "fake-repository",
-						"name":       "fake-chart-1",
-						"version":    "",
-					},
-					{
-						"repository": "fake-repository",
-						"name":       "fake-chart-2",
-						"fromOrigin": Config{
-							"kind": Warehouse,
-							"name": "fake-warehouse",
-						},
-					},
-					{
-						"repository": "fake-repository",
-						"name":       "fake-chart-3",
-						"version":    "",
-						"fromOrigin": Config{
-							"kind": Warehouse,
-							"name": "fake-warehouse",
-						},
-					},
-					{
-						"repository": "fake-repository",
-						"name":       "fake-chart-4",
+						"name":       "fake-chart",
 						"version":    "fake-version",
 					},
 				},
@@ -201,10 +193,7 @@ func Test_helmChartUpdater_runPromotionStep(t *testing.T) {
 					{
 						Repository: "https://charts.example.com",
 						Name:       "examplechart",
-						FromOrigin: &ChartFromOrigin{
-							Kind: "Warehouse",
-							Name: "test-warehouse",
-						},
+						Version:    "0.1.0",
 					},
 				},
 			},
@@ -263,6 +252,10 @@ func Test_helmChartUpdater_runPromotionStep(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Set up a fake Helm cache directory to ensure it is not used
+			h := t.TempDir()
+			t.Setenv(helmpath.CacheHomeEnvVar, h)
+
 			scheme := runtime.NewScheme()
 			require.NoError(t, kargoapi.AddToScheme(scheme))
 
@@ -300,6 +293,9 @@ func Test_helmChartUpdater_runPromotionStep(t *testing.T) {
 
 			result, err := runner.runPromotionStep(context.Background(), stepCtx, tt.cfg)
 			tt.assertions(t, stepCtx.WorkDir, result, err)
+
+			// Assert that the Helm cache directory was not used
+			assert.NoDirExistsf(t, helmpath.CachePath("repository"), "Helm home directory was used")
 		})
 	}
 }
@@ -307,202 +303,12 @@ func Test_helmChartUpdater_runPromotionStep(t *testing.T) {
 func Test_helmChartUpdater_processChartUpdates(t *testing.T) {
 	tests := []struct {
 		name              string
-		objects           []client.Object
-		context           *PromotionStepContext
 		cfg               HelmUpdateChartConfig
 		chartDependencies []chartDependency
 		assertions        func(*testing.T, []intyaml.Update, error)
 	}{
 		{
-			name: "finds chart update",
-			objects: []client.Object{
-				&kargoapi.Warehouse{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-warehouse",
-						Namespace: "test-project",
-					},
-					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{
-							{
-								Chart: &kargoapi.ChartSubscription{
-									RepoURL: "https://charts.example.com",
-									Name:    "test-chart",
-								},
-							},
-						},
-					},
-				},
-			},
-			context: &PromotionStepContext{
-				Project: "test-project",
-				Freight: kargoapi.FreightCollection{
-					Freight: map[string]kargoapi.FreightReference{
-						"Warehouse/test-warehouse": {
-							Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "test-warehouse"},
-							Charts: []kargoapi.Chart{
-								{RepoURL: "https://charts.example.com", Name: "test-chart", Version: "1.0.0"},
-							},
-						},
-					},
-				},
-				FreightRequests: []kargoapi.FreightRequest{
-					{
-						Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "test-warehouse"},
-					},
-				},
-			},
-			cfg: HelmUpdateChartConfig{
-				Charts: []Chart{
-					{Repository: "https://charts.example.com", Name: "test-chart"},
-				},
-			},
-			chartDependencies: []chartDependency{
-				{Repository: "https://charts.example.com", Name: "test-chart"},
-			},
-			assertions: func(t *testing.T, updates []intyaml.Update, err error) {
-				assert.NoError(t, err)
-				assert.Equal(
-					t,
-					[]intyaml.Update{{Key: "dependencies.0.version", Value: "1.0.0"}},
-					updates,
-				)
-			},
-		},
-		{
-			name: "chart not found",
-			context: &PromotionStepContext{
-				Project:         "test-project",
-				Freight:         kargoapi.FreightCollection{},
-				FreightRequests: []kargoapi.FreightRequest{},
-			},
-			cfg: HelmUpdateChartConfig{
-				Charts: []Chart{
-					{Repository: "https://charts.example.com", Name: "non-existent-chart"},
-				},
-			},
-			chartDependencies: []chartDependency{
-				{Repository: "https://charts.example.com", Name: "non-existent-chart"},
-			},
-			assertions: func(t *testing.T, _ []intyaml.Update, err error) {
-				assert.ErrorContains(t, err, "not found in referenced Freight")
-			},
-		},
-		{
-			name: "multiple charts, one not found",
-			objects: []client.Object{
-				&kargoapi.Warehouse{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-warehouse",
-						Namespace: "test-project",
-					},
-					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{
-							{
-								Chart: &kargoapi.ChartSubscription{
-									RepoURL: "https://charts.example.com",
-									Name:    "chart1",
-								},
-							},
-						},
-					},
-				},
-			},
-			context: &PromotionStepContext{
-				Project: "test-project",
-				Freight: kargoapi.FreightCollection{
-					Freight: map[string]kargoapi.FreightReference{
-						"Warehouse/test-warehouse": {
-							Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "test-warehouse"},
-							Charts: []kargoapi.Chart{
-								{RepoURL: "https://charts.example.com", Name: "chart1", Version: "1.0.0"},
-							},
-						},
-					},
-				},
-				FreightRequests: []kargoapi.FreightRequest{
-					{
-						Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "test-warehouse"},
-					},
-				},
-			},
-			cfg: HelmUpdateChartConfig{
-				Charts: []Chart{
-					{Repository: "https://charts.example.com", Name: "chart1"},
-					{Repository: "https://charts.example.com", Name: "chart2"},
-				},
-			},
-			chartDependencies: []chartDependency{
-				{Repository: "https://charts.example.com", Name: "chart1"},
-				{Repository: "https://charts.example.com", Name: "chart2"},
-			},
-			assertions: func(t *testing.T, _ []intyaml.Update, err error) {
-				assert.ErrorContains(t, err, "not found in referenced Freight")
-			},
-		},
-		{
-			name: "chart with FromOrigin specified",
-			objects: []client.Object{
-				&kargoapi.Warehouse{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-warehouse",
-						Namespace: "test-project",
-					},
-					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{
-							{
-								Chart: &kargoapi.ChartSubscription{
-									RepoURL: "https://charts.example.com",
-									Name:    "origin-chart",
-								},
-							},
-						},
-					},
-				},
-			},
-			context: &PromotionStepContext{
-				Project: "test-project",
-				Freight: kargoapi.FreightCollection{
-					Freight: map[string]kargoapi.FreightReference{
-						"Warehouse/test-warehouse": {
-							Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "test-warehouse"},
-							Charts: []kargoapi.Chart{
-								{RepoURL: "https://charts.example.com", Name: "origin-chart", Version: "2.0.0"},
-							},
-						},
-					},
-				},
-				FreightRequests: []kargoapi.FreightRequest{
-					{
-						Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "test-warehouse"},
-					},
-				},
-			},
-			cfg: HelmUpdateChartConfig{
-				Charts: []Chart{
-					{
-						Repository: "https://charts.example.com",
-						Name:       "origin-chart",
-						FromOrigin: &ChartFromOrigin{Kind: "Warehouse", Name: "test-warehouse"},
-					},
-				},
-			},
-			chartDependencies: []chartDependency{
-				{Repository: "https://charts.example.com", Name: "origin-chart"},
-			},
-			assertions: func(t *testing.T, updates []intyaml.Update, err error) {
-				assert.NoError(t, err)
-				assert.Equal(
-					t,
-					[]intyaml.Update{{Key: "dependencies.0.version", Value: "2.0.0"}},
-					updates,
-				)
-			},
-		},
-		{
 			name: "chart with version specified",
-			context: &PromotionStepContext{
-				Project: "test-project",
-			},
 			cfg: HelmUpdateChartConfig{
 				Charts: []Chart{
 					{
@@ -526,9 +332,6 @@ func Test_helmChartUpdater_processChartUpdates(t *testing.T) {
 		},
 		{
 			name: "update specified for non-existent chart dependency",
-			context: &PromotionStepContext{
-				Project: "test-project",
-			},
 			cfg: HelmUpdateChartConfig{
 				Charts: []Chart{
 					{
@@ -549,13 +352,7 @@ func Test_helmChartUpdater_processChartUpdates(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			scheme := runtime.NewScheme()
-			require.NoError(t, kargoapi.AddToScheme(scheme))
-
-			stepCtx := tt.context
-			stepCtx.KargoClient = fake.NewClientBuilder().WithScheme(scheme).WithObjects(tt.objects...).Build()
-
-			updates, err := runner.processChartUpdates(context.Background(), stepCtx, tt.cfg, tt.chartDependencies)
+			updates, err := runner.processChartUpdates(tt.cfg, tt.chartDependencies)
 			tt.assertions(t, updates, err)
 		})
 	}
@@ -896,7 +693,7 @@ func Test_helmChartUpdater_validateFileDependency(t *testing.T) {
 	}
 }
 
-func Test_helmChartUpdater_loadDependencyCredentials(t *testing.T) {
+func Test_helmChartUpdater_setupDependencyRepositories(t *testing.T) {
 	tests := []struct {
 		name              string
 		credentialsDB     credentials.Database
@@ -907,7 +704,7 @@ func Test_helmChartUpdater_loadDependencyCredentials(t *testing.T) {
 		assertions        func(*testing.T, string, string, *repo.File, error)
 	}{
 		{
-			name: "HTTP credentials",
+			name: "HTTPS repository with credentials",
 			credentialsDB: &credentials.FakeDB{
 				GetFn: func(context.Context, string, credentials.Type, string) (credentials.Credentials, bool, error) {
 					return credentials.Credentials{
@@ -934,6 +731,87 @@ func Test_helmChartUpdater_loadDependencyCredentials(t *testing.T) {
 				assert.Equal(t, "https://charts.example.com", repositoryFile.Repositories[0].URL)
 				assert.Equal(t, "username", repositoryFile.Repositories[0].Username)
 				assert.Equal(t, "password", repositoryFile.Repositories[0].Password)
+			},
+		},
+		{
+			name: "HTTP repository without credentials",
+			credentialsDB: &credentials.FakeDB{
+				GetFn: func(context.Context, string, credentials.Type, string) (credentials.Credentials, bool, error) {
+					return credentials.Credentials{
+						Username: "username",
+						Password: "password",
+					}, true, nil
+				},
+			},
+			repositoryFile: repo.NewFile(),
+			newRegistryClient: func(*testing.T) (string, *helmregistry.Client) {
+				return "", nil
+			},
+			buildDependencies: func(string) []chartDependency {
+				return []chartDependency{
+					{
+						Name:       "dep1",
+						Repository: "http://charts.example.com",
+					},
+				}
+			},
+			assertions: func(t *testing.T, _, _ string, repositoryFile *repo.File, err error) {
+				require.NoError(t, err)
+				require.Len(t, repositoryFile.Repositories, 1)
+				assert.Equal(t, "http://charts.example.com", repositoryFile.Repositories[0].URL)
+				assert.Empty(t, repositoryFile.Repositories[0].Username)
+				assert.Empty(t, repositoryFile.Repositories[0].Password)
+			},
+		},
+		{
+			name: "mixed HTTP and HTTPS repositories",
+			credentialsDB: &credentials.FakeDB{
+				GetFn: func(context.Context, string, credentials.Type, string) (credentials.Credentials, bool, error) {
+					return credentials.Credentials{
+						Username: "username",
+						Password: "password",
+					}, true, nil
+				},
+			},
+			repositoryFile: repo.NewFile(),
+			newRegistryClient: func(*testing.T) (string, *helmregistry.Client) {
+				return "", nil
+			},
+			buildDependencies: func(string) []chartDependency {
+				return []chartDependency{
+					{
+						Name:       "dep1",
+						Repository: "https://charts.example.com",
+					},
+					{
+						Name:       "dep2",
+						Repository: "http://charts.example.com",
+					},
+				}
+			},
+			assertions: func(t *testing.T, _, _ string, repositoryFile *repo.File, err error) {
+				require.NoError(t, err)
+				require.Len(t, repositoryFile.Repositories, 2)
+
+				// Find HTTPS repository
+				var httpsRepo, httpRepo *repo.Entry
+				for _, r := range repositoryFile.Repositories {
+					if strings.HasPrefix(r.URL, "https://") {
+						httpsRepo = r
+					} else if strings.HasPrefix(r.URL, "http://") {
+						httpRepo = r
+					}
+				}
+
+				require.NotNil(t, httpsRepo)
+				assert.Equal(t, "https://charts.example.com", httpsRepo.URL)
+				assert.Equal(t, "username", httpsRepo.Username)
+				assert.Equal(t, "password", httpsRepo.Password)
+
+				require.NotNil(t, httpRepo)
+				assert.Equal(t, "http://charts.example.com", httpRepo.URL)
+				assert.Empty(t, httpRepo.Username)
+				assert.Empty(t, httpRepo.Password)
 			},
 		},
 		{
@@ -968,14 +846,13 @@ func Test_helmChartUpdater_loadDependencyCredentials(t *testing.T) {
 			},
 			assertions: func(t *testing.T, home, registryURL string, _ *repo.File, err error) {
 				require.NoError(t, err)
-
 				require.FileExists(t, filepath.Join(home, ".docker", "config.json"))
 				b, _ := os.ReadFile(filepath.Join(home, ".docker", "config.json"))
 				assert.Contains(t, string(b), registryURL)
 			},
 		},
 		{
-			name: "multiple dependencies",
+			name: "multiple HTTPS repositories",
 			credentialsDB: &credentials.FakeDB{
 				GetFn: func(context.Context, string, credentials.Type, string) (credentials.Credentials, bool, error) {
 					return credentials.Credentials{
@@ -1035,12 +912,13 @@ func Test_helmChartUpdater_loadDependencyCredentials(t *testing.T) {
 			},
 		},
 		{
-			name: "unauthenticated repository",
+			name: "unauthenticated HTTPS repository",
 			credentialsDB: &credentials.FakeDB{
 				GetFn: func(context.Context, string, credentials.Type, string) (credentials.Credentials, bool, error) {
 					return credentials.Credentials{}, false, nil
 				},
 			},
+			repositoryFile: repo.NewFile(),
 			buildDependencies: func(string) []chartDependency {
 				return []chartDependency{
 					{
@@ -1052,8 +930,30 @@ func Test_helmChartUpdater_loadDependencyCredentials(t *testing.T) {
 			newRegistryClient: func(*testing.T) (string, *helmregistry.Client) {
 				return "", nil
 			},
-			assertions: func(t *testing.T, _, _ string, _ *repo.File, err error) {
+			assertions: func(t *testing.T, _, _ string, repositoryFile *repo.File, err error) {
 				require.NoError(t, err)
+				require.Len(t, repositoryFile.Repositories, 1)
+				assert.Equal(t, "https://charts.example.com", repositoryFile.Repositories[0].URL)
+			},
+		},
+		{
+			name:           "file repository",
+			credentialsDB:  &credentials.FakeDB{},
+			repositoryFile: repo.NewFile(),
+			buildDependencies: func(string) []chartDependency {
+				return []chartDependency{
+					{
+						Name:       "dep1",
+						Repository: "file:///path/to/charts",
+					},
+				}
+			},
+			newRegistryClient: func(*testing.T) (string, *helmregistry.Client) {
+				return "", nil
+			},
+			assertions: func(t *testing.T, _, _ string, repositoryFile *repo.File, err error) {
+				require.NoError(t, err)
+				assert.Empty(t, repositoryFile.Repositories)
 			},
 		},
 	}
@@ -1071,7 +971,7 @@ func Test_helmChartUpdater_loadDependencyCredentials(t *testing.T) {
 
 			dependencies := tt.buildDependencies(registryURL)
 
-			err := runner.loadDependencyCredentials(
+			err := runner.setupDependencyRepositories(
 				context.Background(),
 				tt.credentialsDB,
 				registryClient,

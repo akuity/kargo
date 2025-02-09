@@ -2,9 +2,11 @@ package directives
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -21,7 +23,6 @@ import (
 	yaml "sigs.k8s.io/yaml/goyaml.v3"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/controller/freight"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/logging"
@@ -101,7 +102,7 @@ func (h *helmChartUpdater) runPromotionStep(
 		}, fmt.Errorf("failed to load chart dependencies from %q: %w", chartFilePath, err)
 	}
 
-	changes, err := h.processChartUpdates(ctx, stepCtx, cfg, chartDependencies)
+	changes, err := h.processChartUpdates(cfg, chartDependencies)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
 	}
@@ -134,46 +135,17 @@ func (h *helmChartUpdater) runPromotionStep(
 }
 
 func (h *helmChartUpdater) processChartUpdates(
-	ctx context.Context,
-	stepCtx *PromotionStepContext,
 	cfg HelmUpdateChartConfig,
 	chartDependencies []chartDependency,
 ) ([]intyaml.Update, error) {
 	updates := make([]intyaml.Update, len(cfg.Charts))
 	for i, update := range cfg.Charts {
-		version := update.Version
-		if update.Version == "" {
-			// TODO(krancour): Remove this for v1.3.0
-			repoURL, chartName := normalizeChartReference(update.Repository, update.Name)
-			var desiredOrigin *kargoapi.FreightOrigin
-			if update.FromOrigin != nil {
-				desiredOrigin = &kargoapi.FreightOrigin{
-					Kind: kargoapi.FreightOriginKind(update.FromOrigin.Kind),
-					Name: update.FromOrigin.Name,
-				}
-			}
-			chart, err := freight.FindChart(
-				ctx,
-				stepCtx.KargoClient,
-				stepCtx.Project,
-				stepCtx.FreightRequests,
-				desiredOrigin,
-				stepCtx.Freight.References(),
-				repoURL,
-				chartName,
-			)
-			if err != nil {
-				return nil, fmt.Errorf("failed to find chart: %w", err)
-			}
-			version = chart.Version
-		}
-
 		var updateUsed bool
 		for j, dep := range chartDependencies {
 			if dep.Repository == update.Repository && dep.Name == update.Name {
 				updates[i] = intyaml.Update{
 					Key:   fmt.Sprintf("dependencies.%d.version", j),
-					Value: version,
+					Value: update.Version,
 				}
 				updateUsed = true
 				break
@@ -211,7 +183,7 @@ func (h *helmChartUpdater) updateDependencies(
 		}
 	}
 
-	if err = h.loadDependencyCredentials(
+	if err = h.setupDependencyRepositories(
 		ctx,
 		stepCtx.CredentialsDB,
 		registryClient,
@@ -248,11 +220,21 @@ func (h *helmChartUpdater) updateDependencies(
 		return nil, fmt.Errorf("failed to check Chart.lock: %w", err)
 	}
 
-	// Run the dependency update
+	// Prepare the environment settings for Helm
 	env := &cli.EnvSettings{
 		RepositoryConfig: repositoryConfig,
 		RepositoryCache:  filepath.Join(helmHome, "cache"),
 	}
+
+	// Download the repository indexes. This is necessary to ensure that the
+	// cache is properly populated, as otherwise the download manager will
+	// attempt to download the repository indexes to the default cache path
+	// instead of using the cache path set in the environment settings.
+	if err = h.downloadRepositoryIndexes(repositoryFile.Repositories, env); err != nil {
+		return nil, err
+	}
+
+	// Run the dependency update
 	manager := downloader.Manager{
 		Out:              io.Discard,
 		ChartPath:        chartPath,
@@ -325,7 +307,7 @@ func (h *helmChartUpdater) validateFileDependency(workDir, chartPath, dependency
 	return checkSymlinks(workDir, dependencyPath, visited, 0, 100)
 }
 
-func (h *helmChartUpdater) loadDependencyCredentials(
+func (h *helmChartUpdater) setupDependencyRepositories(
 	ctx context.Context,
 	credentialsDB credentials.Database,
 	registryClient *registry.Client,
@@ -334,42 +316,70 @@ func (h *helmChartUpdater) loadDependencyCredentials(
 	dependencies []chartDependency,
 ) error {
 	for _, dep := range dependencies {
-		var credType credentials.Type
-		var credURL string
-
 		switch {
-		case strings.HasPrefix(dep.Repository, "https://"):
-			credType = credentials.TypeHelm
-			credURL = dep.Repository
-		case strings.HasPrefix(dep.Repository, "oci://"):
-			credType = credentials.TypeHelm
-			credURL = "oci://" + path.Join(helm.NormalizeChartRepositoryURL(dep.Repository), dep.Name)
-		default:
+		case strings.HasPrefix(dep.Repository, "file://"):
 			continue
-		}
-
-		creds, ok, err := credentialsDB.Get(ctx, project, credType, credURL)
-		if err != nil {
-			return fmt.Errorf("failed to obtain credentials for chart repository %q: %w", dep.Repository, err)
-		}
-		if !ok {
-			continue
-		}
-
-		if strings.HasPrefix(dep.Repository, "https://") {
-			repositoryFile.Add(&repo.Entry{
-				Name:     dep.Name,
-				URL:      dep.Repository,
-				Username: creds.Username,
-				Password: creds.Password,
-			})
-		} else {
-			if err = registryClient.Login(
-				strings.TrimPrefix(dep.Repository, "oci://"),
-				registry.LoginOptBasicAuth(creds.Username, creds.Password),
-			); err != nil {
-				return fmt.Errorf("failed to authenticate with chart repository %q: %w", dep.Repository, err)
+		case strings.HasPrefix(dep.Repository, "http://"):
+			entry := &repo.Entry{
+				Name: nameForRepositoryURL(dep.Repository),
+				URL:  dep.Repository,
 			}
+			repositoryFile.Update(entry)
+		case strings.HasPrefix(dep.Repository, "https://"):
+			entry := &repo.Entry{
+				Name: nameForRepositoryURL(dep.Repository),
+				URL:  dep.Repository,
+			}
+
+			creds, ok, err := credentialsDB.Get(ctx, project, credentials.TypeHelm, dep.Repository)
+			if err != nil {
+				return fmt.Errorf("failed to obtain credentials for chart repository %q: %w", dep.Repository, err)
+			}
+			if ok {
+				entry.Username = creds.Username
+				entry.Password = creds.Password
+			}
+
+			repositoryFile.Update(entry)
+		case strings.HasPrefix(dep.Repository, "oci://"):
+			credURL := "oci://" + path.Join(helm.NormalizeChartRepositoryURL(dep.Repository), dep.Name)
+			creds, ok, err := credentialsDB.Get(ctx, project, credentials.TypeHelm, credURL)
+			if err != nil {
+				return fmt.Errorf("failed to obtain credentials for chart repository %q: %w", dep.Repository, err)
+			}
+			if ok {
+				if err = registryClient.Login(
+					strings.TrimPrefix(dep.Repository, "oci://"),
+					registry.LoginOptBasicAuth(creds.Username, creds.Password),
+				); err != nil {
+					return fmt.Errorf("failed to authenticate with chart repository %q: %w", dep.Repository, err)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (h *helmChartUpdater) downloadRepositoryIndexes(
+	repositories []*repo.Entry,
+	env *cli.EnvSettings,
+) error {
+	for _, entry := range repositories {
+		cr, err := repo.NewChartRepository(entry, getter.All(env))
+		if err != nil {
+			return fmt.Errorf("failed to create chart repository for %q: %w", entry.URL, err)
+		}
+
+		// NB: Explicitly overwrite the cache path to avoid using the default
+		// cache path from the environment variables. Without this, the download
+		// manager will not find the repository index files in the cache, and
+		// will attempt to download them again (to the default cache path).
+		// I.e. without this, the download manager will not use the isolated
+		// cache.
+		cr.CachePath = env.RepositoryCache
+
+		if _, err = cr.DownloadIndexFile(); err != nil {
+			return fmt.Errorf("failed to download repository index for %q: %w", entry.URL, err)
 		}
 	}
 	return nil
@@ -604,4 +614,28 @@ func backupFile(src, dst string) (err error) {
 		return err
 	}
 	return nil
+}
+
+// nameForRepositoryURL generates an SHA-256 hash of the repository URL to use
+// as the name for the repository in the Helm repository cache.
+//
+// The repository URL is normalized before hashing using the same logic as
+// urlutil.Equal from Helm, which is used to compare repository URLs in the
+// download manager when looking at cached repository indexes to find the
+// correct chart URL.
+func nameForRepositoryURL(repoURL string) string {
+	u, err := url.Parse(repoURL)
+	if err != nil {
+		repoURL = filepath.Clean(repoURL)
+	}
+
+	if u != nil {
+		if u.Path == "" {
+			u.Path = "/"
+		}
+		u.Path = filepath.Clean(u.Path)
+		repoURL = u.String()
+	}
+
+	return fmt.Sprintf("%x", sha256.Sum256([]byte(repoURL)))
 }

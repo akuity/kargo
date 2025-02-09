@@ -79,12 +79,7 @@ func (s *server) QueryFreight(
 				),
 			)
 		}
-		freight, err = s.getAvailableFreightForStageFn(
-			ctx,
-			project,
-			stageName,
-			stage.Spec.RequestedFreight,
-		)
+		freight, err = s.getAvailableFreightForStageFn(ctx, stage)
 		if err != nil {
 			return nil, fmt.Errorf("get available freight for stage: %w", err)
 		}
@@ -127,79 +122,11 @@ func (s *server) QueryFreight(
 	}), nil
 }
 
-// getAvailableFreightForStage gets all Freight available to the specified Stage
-// for any reason. This includes:
-//
-// 1. Any Freight from a Warehouse that the Stage subscribes to directly
-// 2. Any Freight that is verified in any upstream Stages
-// 3. Any Freight that is approved for the Stage
 func (s *server) getAvailableFreightForStage(
 	ctx context.Context,
-	project string,
-	stage string,
-	freightReqs []kargoapi.FreightRequest,
+	stage *kargoapi.Stage,
 ) ([]kargoapi.Freight, error) {
-	// Find all Warehouses and upstream Stages we need to consider
-	var warehouses []string
-	var upstreams []string
-	for _, req := range freightReqs {
-		if req.Sources.Direct {
-			warehouses = append(warehouses, req.Origin.Name)
-		}
-		upstreams = append(upstreams, req.Sources.Stages...)
-	}
-	// De-dupe the upstreams
-	slices.Sort(upstreams)
-	upstreams = slices.Compact(upstreams)
-
-	freightFromWarehouses, err := s.getFreightFromWarehousesFn(ctx, project, warehouses)
-	if err != nil {
-		return nil, fmt.Errorf("get freight from warehouses: %w", err)
-	}
-
-	verifiedFreight, err := s.getVerifiedFreightFn(ctx, project, upstreams)
-	if err != nil {
-		return nil, fmt.Errorf("get verified freight: %w", err)
-	}
-
-	var approvedFreight kargoapi.FreightList
-	if err = s.listFreightFn(
-		ctx,
-		&approvedFreight,
-		&client.ListOptions{
-			Namespace: project,
-			FieldSelector: fields.OneTermEqualSelector(
-				indexer.FreightApprovedForStagesField,
-				stage,
-			),
-		},
-	); err != nil {
-		return nil, fmt.Errorf(
-			"error listing Freight approved for Stage %q in namespace %q: %w",
-			stage,
-			project,
-			err,
-		)
-	}
-	if len(freightFromWarehouses) == 0 &&
-		len(verifiedFreight) == 0 &&
-		len(approvedFreight.Items) == 0 {
-		return nil, nil
-	}
-
-	// Concatenate all available Freight
-	availableFreight := append(freightFromWarehouses, verifiedFreight...)
-	availableFreight = append(availableFreight, approvedFreight.Items...)
-
-	// De-dupe the available Freight
-	slices.SortFunc(availableFreight, func(lhs, rhs kargoapi.Freight) int {
-		return strings.Compare(lhs.Name, rhs.Name)
-	})
-	availableFreight = slices.CompactFunc(availableFreight, func(lhs, rhs kargoapi.Freight) bool {
-		return lhs.Name == rhs.Name
-	})
-
-	return availableFreight, nil
+	return stage.ListAvailableFreight(ctx, s.client)
 }
 
 func (s *server) getFreightFromWarehouses(
