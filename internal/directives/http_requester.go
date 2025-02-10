@@ -196,7 +196,10 @@ func (h *httpRequester) buildExprEnv(resp *http.Response) (map[string]any, error
 	}
 	env := map[string]any{
 		"response": map[string]any{
-			"status":  resp.StatusCode,
+			// TODO(krancour): Casting as an int64 is a short-term fix here because
+			// deep copy of the output map will panic if any value is an int. This is
+			// a near-term fix and a better solution will be PR'ed soon.
+			"status":  int64(resp.StatusCode),
 			"header":  resp.Header.Get,
 			"headers": resp.Header,
 			"body":    map[string]any{},
