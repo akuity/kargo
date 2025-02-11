@@ -58,7 +58,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pnpm-
     - name: Install pnpm
-      uses: pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2 # v4.0.0
+      uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
       with:
         package_json_file: ui/package.json
     - name: Install nodejs
@@ -156,7 +156,7 @@ jobs:
     - name: Install tools
       run: apt update && apt install unzip
     - name: Install pnpm
-      uses: pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2 # v4.0.0
+      uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
       with:
         package_json_file: ui/package.json
     - name: Install nodejs
