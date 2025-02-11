@@ -78,8 +78,23 @@ func (e *SimpleEngine) executeSteps(
 		default:
 		}
 
-		// Prepare the step for execution by setting the alias.
 		step := steps[i]
+
+		// Check if the step should be skipped.
+		var skip bool
+		if skip, err = step.Skip(promoCtx, state); err != nil {
+			return PromotionResult{
+				Status:                kargoapi.PromotionPhaseErrored,
+				CurrentStep:           i,
+				StepExecutionMetadata: stepExecMetas,
+				State:                 state,
+				HealthCheckSteps:      healthChecks,
+			}, fmt.Errorf("error checking if step %d should be skipped: %w", i, err)
+		} else if skip {
+			continue
+		}
+
+		// Prepare the step for execution by setting the alias.
 		if step.Alias, err = e.stepAlias(step.Alias, i); err != nil {
 			return PromotionResult{
 				Status:                kargoapi.PromotionPhaseErrored,
