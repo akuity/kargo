@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 
+	securejoin "github.com/cyphar/filepath-securejoin"
+
 	"github.com/expr-lang/expr"
 	"github.com/xeipuuv/gojsonschema"
 
@@ -59,7 +61,7 @@ func (jp *jsonParser) validate(cfg Config) error {
 
 func (jp *jsonParser) runPromotionStep(
 	_ context.Context,
-	_ *PromotionStepContext,
+	stepCtx *PromotionStepContext,
 	cfg JSONParseConfig,
 ) (PromotionStepResult, error) {
 	failure := PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}
@@ -72,14 +74,14 @@ func (jp *jsonParser) runPromotionStep(
 		return failure, fmt.Errorf("invalid json-parse config: outputs is required")
 	}
 
-	data, err := jp.readAndParseJSON(cfg.Path)
+	data, err := jp.readAndParseJSON(stepCtx.WorkDir, cfg.Path)
 	if err != nil {
 		return failure, err
 	}
 
 	extractedValues, err := jp.extractValues(data, cfg.Outputs)
 	if err != nil {
-		return failure, err
+		return failure, fmt.Errorf("failed to extract outputs: %w", err)
 	}
 
 	return PromotionStepResult{
@@ -89,15 +91,21 @@ func (jp *jsonParser) runPromotionStep(
 }
 
 // readAndParseJSON reads a JSON file and unmarshals it into a map.
-func (jp *jsonParser) readAndParseJSON(path string) (map[string]any, error) {
-	jsonData, err := os.ReadFile(path)
+func (jp *jsonParser) readAndParseJSON(workDir string, path string) (map[string]any, error) {
+
+	absFilePath, err := securejoin.SecureJoin(workDir, path)
 	if err != nil {
-		return nil, fmt.Errorf("could not read file: %w", err)
+		return nil, fmt.Errorf("error joining path %q: %w", path, err)
+	}
+
+	jsonData, err := os.ReadFile(absFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("error reading JSON file %q: %w", absFilePath, err)
 	}
 
 	var data map[string]any
 	if err := json.Unmarshal(jsonData, &data); err != nil {
-		return nil, fmt.Errorf("could not parse JSON: %w", err)
+		return nil, fmt.Errorf("could not parse JSON file: %w", err)
 	}
 
 	return data, nil
@@ -108,30 +116,18 @@ func (jp *jsonParser) extractValues(data map[string]any, outputs []JSONParse) (m
 	results := make(map[string]any)
 
 	for _, output := range outputs {
-		value, err := jp.evaluateExpression(data, output.FromExpression)
+		program, err := expr.Compile(output.FromExpression, expr.Env(data))
 		if err != nil {
-			return nil, fmt.Errorf("failed to extract outputs from '%s': %w", output.FromExpression, err)
+			return nil, fmt.Errorf("error compiling expression %s: %w",output.FromExpression, err)
 		}
+
+		value, err := expr.Run(program, data)
+		if err != nil {
+			return nil, fmt.Errorf("error evaluating expression %s: %w",output.FromExpression, err)
+		}
+
 		results[output.Name] = value
 	}
 
 	return results, nil
-}
-
-// evaluateExpression compiles and runs an expression against the JSON data.
-func (jp *jsonParser) evaluateExpression(
-	data map[string]any,
-	expression string,
-) (any, error) {
-	program, err := expr.Compile(expression, expr.Env(data))
-	if err != nil {
-		return nil, fmt.Errorf("error compiling expression: %w", err)
-	}
-
-	result, err := expr.Run(program, data)
-	if err != nil {
-		return nil, fmt.Errorf("error evaluating expression: %w", err)
-	}
-
-	return result, nil
 }
