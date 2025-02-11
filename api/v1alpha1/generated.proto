@@ -987,6 +987,9 @@ message PromotionStep {
   // As is the alias this step can be referred to as.
   optional string as = 2;
 
+  // If is a condition that must be satisfied for the step to be executed.
+  optional string if = 7;
+
   // Retry is the retry policy for this step.
   optional PromotionStepRetry retry = 4;
 

@@ -43,6 +43,10 @@
                 "description": "Config is opaque configuration for the PromotionStep that is understood\nonly by each PromotionStep's implementation. It is legal to utilize\nexpressions in defining values at any level of this block.\nSee https://docs.kargo.io/references/expression-language for details.",
                 "x-kubernetes-preserve-unknown-fields": true
               },
+              "if": {
+                "description": "If is a condition that must be satisfied for the step to be executed.",
+                "type": "string"
+              },
               "retry": {
                 "description": "Retry is the retry policy for this step.",
                 "properties": {
