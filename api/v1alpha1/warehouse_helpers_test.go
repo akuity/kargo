@@ -383,7 +383,7 @@ func TestWarehouse_ListFreight(t *testing.T) {
 				VerifiedIn:           []string{testUpstreamStage, testUpstreamStage2},
 				VerifiedBefore:       &metav1.Time{Time: time.Now().Add(-1 * time.Hour)},
 			},
-			assertions: func(t *testing.T, freight []Freight, err error) {
+			assertions: func(t *testing.T, _ []Freight, err error) {
 				require.ErrorContains(t, err, "unsupported AvailabilityStrategy")
 			},
 		},

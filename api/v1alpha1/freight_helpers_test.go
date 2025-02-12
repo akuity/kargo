@@ -234,69 +234,6 @@ func TestFreight_IsVerifiedIn(t *testing.T) {
 	require.True(t, freight.IsVerifiedIn(testStage))
 }
 
-func TestFreight_IsVerifiedInAll(t *testing.T) {
-	testCases := []struct {
-		name     string
-		freight  Freight
-		stages   []string
-		expected bool
-	}{
-		{
-			name: "Freight is not verified in any stage",
-			freight: Freight{
-				Status: FreightStatus{
-					VerifiedIn: map[string]VerifiedStage{},
-				},
-			},
-			stages:   []string{"stage1", "stage2"},
-			expected: false,
-		},
-		{
-			name: "Freight is verified in all stages",
-			freight: Freight{
-				Status: FreightStatus{
-					VerifiedIn: map[string]VerifiedStage{
-						"stage1": {},
-						"stage2": {},
-					},
-				},
-			},
-			stages:   []string{"stage1", "stage2"},
-			expected: true,
-		},
-		{
-			name: "Freight is verified in some stages",
-			freight: Freight{
-				Status: FreightStatus{
-					VerifiedIn: map[string]VerifiedStage{
-						"stage1": {},
-					},
-				},
-			},
-			stages:   []string{"stage1", "stage2"},
-			expected: false,
-		},
-		{
-			name: "Freight is verified in all stages but not in the same order",
-			freight: Freight{
-				Status: FreightStatus{
-					VerifiedIn: map[string]VerifiedStage{
-						"stage2": {},
-						"stage1": {},
-					},
-				},
-			},
-			stages:   []string{"stage1", "stage2"},
-			expected: true,
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			require.Equal(t, testCase.expected, testCase.freight.IsVerifiedInAll(testCase.stages))
-		})
-	}
-}
-
 func TestFreight_IsApprovedFor(t *testing.T) {
 	const testStage = "fake-stage"
 	freight := &Freight{}

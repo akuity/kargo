@@ -129,17 +129,6 @@ func (f *Freight) IsVerifiedIn(stage string) bool {
 	return verified
 }
 
-// IsVerifiedInAll returns whether the Freight has been verified in all
-// Stages.
-func (f *Freight) IsVerifiedInAll(stages []string) bool {
-	for _, s := range stages {
-		if !f.IsVerifiedIn(s) {
-			return false
-		}
-	}
-	return true
-}
-
 // IsApprovedFor returns whether the Freight has been approved for the specified
 // Stage.
 func (f *Freight) IsApprovedFor(stage string) bool {
