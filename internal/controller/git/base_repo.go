@@ -232,20 +232,19 @@ func (b *baseRepo) buildCommand(command string, arg ...string) *exec.Cmd {
 func (b *baseRepo) buildGitCommand(arg ...string) *exec.Cmd {
 	cmd := b.buildCommand("git", arg...)
 	cmd.Env = append(cmd.Env, fmt.Sprintf("GIT_SSH_COMMAND=ssh -F %s/.ssh/config", b.homeDir))
-
 	if b.creds != nil && b.creds.Password != "" {
-		cmd.Env = append(cmd.Env, "GIT_ASKPASS=/usr/local/bin/credential-helper")
-		cmd.Env = append(cmd.Env, fmt.Sprintf("GIT_PASSWORD=%s", b.creds.Password))
+		cmd.Env = append(
+			cmd.Env,
+			"GIT_ASKPASS=/usr/local/bin/credential-helper",
+			fmt.Sprintf("GIT_PASSWORD=%s", b.creds.Password),
+		)
 	}
-
-	if httpProxy := os.Getenv("HTTP_PROXY"); httpProxy != "" {
+	if httpProxy := os.Getenv("http_proxy"); httpProxy != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("http_proxy=%s", httpProxy))
 	}
-
-	if httpsProxy := os.Getenv("HTTPS_PROXY"); httpsProxy != "" {
+	if httpsProxy := os.Getenv("https_proxy"); httpsProxy != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("https_proxy=%s", httpsProxy))
 	}
-
 	return cmd
 }
 
