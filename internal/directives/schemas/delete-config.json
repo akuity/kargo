@@ -9,6 +9,11 @@
       "type": "string",
       "description": "Path is the path to the file or directory to delete.",
       "minLength": 1
+    },
+    "strict": {
+      "type": "boolean",
+      "description": "Strict will cause the directive to fail if the path does not exist.",
+      "default": false
     }
   }
 }
