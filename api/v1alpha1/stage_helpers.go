@@ -102,9 +102,10 @@ func GetStage(
 // ListAvailableFreight lists all Freight available to the Stage for any reason.
 // This includes:
 //
-// 1. Any Freight from a Warehouse that the Stage subscribes to directly
-// 2. Any Freight that is verified in any upstream Stages (with any applicable soak time elapsed)
-// 3. Any Freight that is approved for the Stage
+//  1. Any Freight from a Warehouse that the Stage subscribes to directly
+//  2. Any Freight that is verified in upstream Stages matching configured AvailabilityStrategy
+//     (with any applicable soak time elapsed)
+//  3. Any Freight that is approved for the Stage
 func (s *Stage) ListAvailableFreight(
 	ctx context.Context,
 	c client.Client,
@@ -135,8 +136,9 @@ func (s *Stage) ListAvailableFreight(
 		var listOpts *ListWarehouseFreightOptions
 		if !req.Sources.Direct {
 			listOpts = &ListWarehouseFreightOptions{
-				ApprovedFor: s.Name,
-				VerifiedIn:  req.Sources.Stages,
+				ApprovedFor:          s.Name,
+				VerifiedIn:           req.Sources.Stages,
+				AvailabilityStrategy: req.Sources.AvailabilityStrategy,
 			}
 			if requiredSoak := req.Sources.RequiredSoakTime; requiredSoak != nil {
 				listOpts.VerifiedBefore = &metav1.Time{Time: time.Now().Add(-requiredSoak.Duration)}
