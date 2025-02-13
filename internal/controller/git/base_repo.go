@@ -239,6 +239,12 @@ func (b *baseRepo) buildGitCommand(arg ...string) *exec.Cmd {
 			fmt.Sprintf("GIT_PASSWORD=%s", b.creds.Password),
 		)
 	}
+	if httpProxy := os.Getenv("http_proxy"); httpProxy != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("http_proxy=%s", httpProxy))
+	}
+	if httpsProxy := os.Getenv("https_proxy"); httpsProxy != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("https_proxy=%s", httpsProxy))
+	}
 	return cmd
 }
 
