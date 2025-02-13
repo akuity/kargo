@@ -333,7 +333,7 @@ func Test_httpRequester_runPromotionStep(t *testing.T) {
 				FailureExpression: "response.status == 404",
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
-				require.ErrorContains(t, err, "HTTP response met failure criteria")
+				require.ErrorContains(t, err, "HTTP (404) response met failure criteria")
 				require.True(t, isTerminal(err))
 				require.Equal(t, kargoapi.PromotionPhaseFailed, res.Status)
 			},
@@ -346,7 +346,7 @@ func Test_httpRequester_runPromotionStep(t *testing.T) {
 				FailureExpression: "response.status == 200",
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
-				require.ErrorContains(t, err, "HTTP response met failure criteria")
+				require.ErrorContains(t, err, "HTTP (200) response met failure criteria")
 				require.True(t, isTerminal(err))
 				require.Equal(t, kargoapi.PromotionPhaseFailed, res.Status)
 			},
@@ -505,7 +505,7 @@ func Test_httpRequester_buildExprEnv(t *testing.T) {
 	h := &httpRequester{}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			env, err := h.buildExprEnv(testCase.resp)
+			env, err := h.buildExprEnv(context.Background(), testCase.resp)
 			testCase.assertions(t, env, err)
 		})
 	}

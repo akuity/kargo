@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -17,6 +16,7 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 const (
@@ -68,7 +68,7 @@ func (h *httpRequester) validate(cfg Config) error {
 }
 
 func (h *httpRequester) runPromotionStep(
-	_ context.Context,
+	ctx context.Context,
 	_ *PromotionStepContext,
 	cfg HTTPConfig,
 ) (PromotionStepResult, error) {
@@ -88,7 +88,7 @@ func (h *httpRequester) runPromotionStep(
 			fmt.Errorf("error sending HTTP request: %w", err)
 	}
 	defer resp.Body.Close()
-	env, err := h.buildExprEnv(resp)
+	env, err := h.buildExprEnv(ctx, resp)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error building expression context from HTTP response: %w", err)
@@ -116,7 +116,10 @@ func (h *httpRequester) runPromotionStep(
 		}, nil
 	case failure:
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseFailed},
-			&terminalError{err: errors.New("HTTP response met failure criteria")}
+			&terminalError{err: fmt.Errorf(
+				"HTTP (%d) response met failure criteria",
+				resp.StatusCode,
+			)}
 	default:
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseRunning}, nil
 	}
@@ -165,7 +168,10 @@ func (h *httpRequester) getClient(cfg HTTPConfig) (*http.Client, error) {
 	}, nil
 }
 
-func (h *httpRequester) buildExprEnv(resp *http.Response) (map[string]any, error) {
+func (h *httpRequester) buildExprEnv(
+	ctx context.Context,
+	resp *http.Response,
+) (map[string]any, error) {
 	const maxBytes = 2 << 20
 
 	// Early check of Content-Length if available
@@ -194,6 +200,19 @@ func (h *httpRequester) buildExprEnv(resp *http.Response) (map[string]any, error
 			return nil, fmt.Errorf("response body exceeds maximum size of %d bytes", maxBytes)
 		}
 	}
+
+	// TODO(hidde): It has proven to be difficult to figure out why a HTTP step
+	// fails or is not working as expected. To remediate this, we log the
+	// response body and headers at trace level. This is a temporary solution
+	// until we have a better way to present this information to the user, e.g.
+	// as part of the step output or error message.
+	logging.LoggerFromContext(ctx).Trace(
+		"HTTP request response",
+		"status", resp.StatusCode,
+		"header", resp.Header,
+		"body", string(bodyBytes),
+	)
+
 	env := map[string]any{
 		"response": map[string]any{
 			// TODO(krancour): Casting as an int64 is a short-term fix here because
