@@ -74,8 +74,7 @@ func (f *fileDeleter) runPromotionStep(
 	}
 
 	if symlink {
-		err = os.Remove(absPath)
-		if err != nil {
+		if f.ignoreNotExist(cfg.Strict, os.Remove(absPath)) != nil {
 			return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
 		}
 	} else {
@@ -86,7 +85,10 @@ func (f *fileDeleter) runPromotionStep(
 				fmt.Errorf("could not secure join path %q: %w", cfg.Path, err)
 		}
 
-		if err = removePath(pathToDelete); err != nil {
+		if err = f.ignoreNotExist(
+			cfg.Strict,
+			removePath(pathToDelete),
+		); err != nil {
 			return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 				fmt.Errorf("failed to delete %q: %w", cfg.Path, sanitizePathError(err, stepCtx.WorkDir))
 		}
@@ -95,10 +97,11 @@ func (f *fileDeleter) runPromotionStep(
 	return PromotionStepResult{Status: kargoapi.PromotionPhaseSucceeded}, nil
 }
 
+// isSymlink checks if a path is a symlink.
 func (f *fileDeleter) isSymlink(path string) (bool, error) {
 	fi, err := os.Lstat(path)
 	if err != nil {
-		// if file doesn't exist, it's not a symlink
+		// If file doesn't exist, it's not a symlink
 		if os.IsNotExist(err) {
 			return false, nil
 		}
@@ -108,7 +111,7 @@ func (f *fileDeleter) isSymlink(path string) (bool, error) {
 	return fi.Mode()&os.ModeSymlink != 0, nil
 }
 
-// resolveAbsPath resolves the absolute path from the workDir base path
+// resolveAbsPath resolves the absolute path from the workDir base path.
 func (f *fileDeleter) resolveAbsPath(workDir string, path string) (string, error) {
 	absBase, err := filepath.Abs(workDir)
 	if err != nil {
@@ -135,6 +138,16 @@ func (f *fileDeleter) resolveAbsPath(workDir string, path string) (string, error
 	}
 
 	return absPath, nil
+}
+
+// ignoreNotExist ignores os.IsNotExist errors depending on the strict
+// flag. If strict is false and the error is os.IsNotExist, it returns
+// nil.
+func (f *fileDeleter) ignoreNotExist(strict bool, err error) error {
+	if !strict && os.IsNotExist(err) {
+		return nil
+	}
+	return err
 }
 
 func removePath(path string) error {
