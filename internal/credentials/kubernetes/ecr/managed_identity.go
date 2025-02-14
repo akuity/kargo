@@ -179,6 +179,7 @@ func (p *managedIdentityCredentialHelper) getAuthToken(
 				"or project-specific role is not authorized to obtain an ECR auth token. " +
 				"Falling back to using controller's IAM role directly.",
 		)
+		cfg.Region = region
 		ecrSvc = ecr.NewFromConfig(cfg)
 		output, err = ecrSvc.GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenInput{})
 		if err != nil {
