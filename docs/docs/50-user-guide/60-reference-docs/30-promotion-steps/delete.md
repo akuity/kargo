@@ -16,7 +16,8 @@ the [`git-clear` step](git-clear.md) instead.
 
 | Name      | Type | Required | Description                              |
 |-----------|------|----------|------------------------------------------|
-| `path`    | `string` | Y | Path to the file or directory to delete. |
+| `path` | `string` | Y | Path to the file or directory to delete. |
+| `strict` | `bool` | N | Strict will cause the directive to fail if the path does not exist. Defaults to `false`. |
 
 ## Examples
 

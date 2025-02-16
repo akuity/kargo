@@ -60,16 +60,31 @@ func Test_fileDeleter_runPromotionStep(t *testing.T) {
 			},
 		},
 		{
-			name: "fails for non-existent path",
+			name: "fails for non-existent path when strict is true",
 			setupFiles: func(t *testing.T) string {
 				return t.TempDir()
 			},
 			cfg: DeleteConfig{
-				Path: "nonExistentFile.txt",
+				Path:   "nonExistentFile.txt",
+				Strict: true,
 			},
 			assertions: func(t *testing.T, _ string, result PromotionStepResult, err error) {
 				assert.Error(t, err)
 				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, result)
+			},
+		},
+		{
+			name: "succeeds for non-existent path when strict is false",
+			setupFiles: func(t *testing.T) string {
+				return t.TempDir()
+			},
+			cfg: DeleteConfig{
+				Path:   "nonExistentFile.txt",
+				Strict: false,
+			},
+			assertions: func(t *testing.T, _ string, result PromotionStepResult, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
 			},
 		},
 		{

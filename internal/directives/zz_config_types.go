@@ -122,6 +122,8 @@ type CopyConfig struct {
 type DeleteConfig struct {
 	// Path is the path to the file or directory to delete.
 	Path string `json:"path"`
+	// Strict will cause the directive to fail if the path does not exist.
+	Strict bool `json:"strict,omitempty"`
 }
 
 type GitClearConfig struct {
