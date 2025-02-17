@@ -14,6 +14,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.41.0
 	github.com/aws/aws-sdk-go-v2/service/sts v1.33.14
 	github.com/bacongobbler/browser v1.1.0
+	github.com/bmatcuk/doublestar/v4 v4.8.1
 	github.com/bombsimon/logrusr/v4 v4.1.0
 	github.com/coreos/go-oidc/v3 v3.12.0
 	github.com/cyphar/filepath-securejoin v0.4.1
