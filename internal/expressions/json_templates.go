@@ -155,14 +155,19 @@ func EvaluateTemplate(template string, env map[string]any, exprOpts ...expr.Opti
 		}
 		return result, nil
 	}
-	// If the result is parseable as a bool return that.
-	if resBool, err := strconv.ParseBool(result); err == nil {
-		return resBool, nil
-	}
+
+	// NOTE: The result is explicitly parsed as numbers before booleans to prevent values like
+	// "0" and "1" from being misinterpreted as boolean `false` and `true`,
+	// respectively. See: https://github.com/akuity/kargo/pull/3516
+
 	// If the result is parseable as a float64, return that. float64 is used
 	// because it can represent all JSON numbers.
 	if resNum, err := strconv.ParseFloat(result, 64); err == nil {
 		return resNum, nil
+	}
+	// If the result is parseable as a bool return that.
+	if resBool, err := strconv.ParseBool(result); err == nil {
+		return resBool, nil
 	}
 	// If the result is valid JSON, return its unmarshaled value.
 	var resMap any
