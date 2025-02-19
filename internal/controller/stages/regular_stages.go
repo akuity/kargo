@@ -1194,7 +1194,7 @@ func (r *RegularStageReconciler) recordFreightVerificationEvent(
 			)
 		}
 		// AnalysisRun that triggered by a Promotion contains the Promotion name
-		if promoName, ok := ar.Labels[kargoapi.PromotionLabelKey]; ok {
+		if promoName, ok := ar.Annotations[kargoapi.AnnotationKeyPromotion]; ok {
 			annotations[kargoapi.AnnotationKeyEventPromotionName] = promoName
 		}
 	}
@@ -1333,8 +1333,8 @@ func (r *RegularStageReconciler) startVerification(
 	}
 	if curVI == nil || (req.ForID(curVI.ID) && req.ControlPlane && req.Actor != "") {
 		if stage.Status.LastPromotion != nil {
-			builderOpts = append(builderOpts, rollouts.WithExtraLabels{
-				kargoapi.PromotionLabelKey: stage.Status.LastPromotion.Name,
+			builderOpts = append(builderOpts, rollouts.WithExtraAnnotations{
+				kargoapi.AnnotationKeyPromotion: stage.Status.LastPromotion.Name,
 			})
 		}
 	}
