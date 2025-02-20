@@ -8,6 +8,7 @@ import (
 	"code.gitea.io/sdk/gitea"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"k8s.io/utils/ptr"
 
 	"github.com/akuity/kargo/internal/gitprovider"
 )
@@ -15,7 +16,7 @@ import (
 const testRepoOwner = "akuity"
 const testRepoName = "kargo"
 
-func TestParsegiteaURL(t *testing.T) {
+func TestParseGiteaURL(t *testing.T) {
 	testCases := []struct {
 		url           string
 		expectedHost  string
@@ -164,16 +165,16 @@ func TestCreatePullRequestWithLabels(t *testing.T) {
 	// set up mock
 	mockClient := &mockGiteaClient{
 		pr: &gitea.PullRequest{
-			ID:    *gitea.OptionalInt64(42),
-			State: "open",
+			Index: int64(42),
+			State: gitea.StateOpen,
 			Head: &gitea.PRBranchInfo{
 				Sha: "HeadSha",
 			},
 			Base: &gitea.PRBranchInfo{
 				Sha: "BaseSha",
 			},
-			URL:            *gitea.OptionalString("http://localhost:8080"),
-			MergedCommitID: gitea.OptionalString("2994fd93"),
+			URL:            "http://localhost:8080",
+			MergedCommitID: ptr.To("2994fd93"),
 			HasMerged:      false,
 		},
 	}
@@ -181,16 +182,16 @@ func TestCreatePullRequestWithLabels(t *testing.T) {
 		On("CreatePullRequest", context.Background(), testRepoOwner, testRepoName, mock.Anything).
 		Return(
 			&gitea.PullRequest{
-				ID:    *gitea.OptionalInt64(42),
-				State: "open",
+				Index: int64(42),
+				State: gitea.StateOpen,
 				Head: &gitea.PRBranchInfo{
 					Sha: "HeadSha",
 				},
 				Base: &gitea.PRBranchInfo{
 					Sha: "BaseSha",
 				},
-				URL:            *gitea.OptionalString("http://localhost:8080"),
-				MergedCommitID: gitea.OptionalString("BaseSha"),
+				URL:            "http://localhost:8080",
+				MergedCommitID: ptr.To("BaseSha"),
 				HasMerged:      false,
 				Created:        &time.Time{},
 			},
@@ -198,7 +199,7 @@ func TestCreatePullRequestWithLabels(t *testing.T) {
 			nil,
 		)
 	mockClient.
-		On("AddLabelsToIssue", context.Background(), testRepoOwner, testRepoName, int(mockClient.pr.ID), mock.Anything).
+		On("AddLabelsToIssue", context.Background(), testRepoOwner, testRepoName, int(mockClient.pr.Index), mock.Anything).
 		Return(
 			[]*gitea.Label{},
 			&gitea.Response{},
@@ -229,7 +230,7 @@ func TestCreatePullRequestWithLabels(t *testing.T) {
 	require.ElementsMatch(t, opts.Labels, mockClient.labels,
 		"Expected labels passed to gitea client to match labels from options")
 
-	require.Equal(t, mockClient.pr.ID, pr.Number,
+	require.Equal(t, mockClient.pr.Index, pr.Number,
 		"Expected PR number in returned object to match what was returned by gitea")
 	require.Equal(t, mockClient.pr.Base.Sha, pr.MergeCommitSHA)
 	require.Equal(t, mockClient.pr.URL, pr.URL)
@@ -240,35 +241,35 @@ func TestGetPullRequest(t *testing.T) {
 	// set up mock
 	mockClient := &mockGiteaClient{
 		pr: &gitea.PullRequest{
-			ID:    *gitea.OptionalInt64(42),
-			State: "open",
+			Index: int64(42),
+			State: gitea.StateOpen,
 			Head: &gitea.PRBranchInfo{
 				Sha: "HeadSha",
 			},
 			Base: &gitea.PRBranchInfo{
 				Sha: "BaseSha",
 			},
-			URL:            *gitea.OptionalString("http://localhost:8080"),
-			MergedCommitID: gitea.OptionalString("2994fd93"),
+			URL:            "http://localhost:8080",
+			MergedCommitID: ptr.To("2994fd93"),
 			HasMerged:      false,
 			Created:        &time.Time{},
 		},
 	}
 
 	mockClient.
-		On("GetPullRequests", context.Background(), testRepoOwner, testRepoName, int(mockClient.pr.ID)).
+		On("GetPullRequests", context.Background(), testRepoOwner, testRepoName, int(mockClient.pr.Index)).
 		Return(
 			&gitea.PullRequest{
-				ID:    *gitea.OptionalInt64(42),
-				State: "open",
+				Index: int64(42),
+				State: gitea.StateOpen,
 				Head: &gitea.PRBranchInfo{
 					Sha: "HeadSha",
 				},
 				Base: &gitea.PRBranchInfo{
 					Sha: "BaseSha",
 				},
-				URL:            *gitea.OptionalString("http://localhost:8080"),
-				MergedCommitID: gitea.OptionalString("BaseSha"),
+				URL:            "http://localhost:8080",
+				MergedCommitID: ptr.To("BaseSha"),
 				HasMerged:      false,
 			},
 			&gitea.Response{},
@@ -290,7 +291,7 @@ func TestGetPullRequest(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, testRepoOwner, mockClient.owner)
 	require.Equal(t, testRepoName, mockClient.repo)
-	require.Equal(t, mockClient.pr.ID, pr.Number,
+	require.Equal(t, mockClient.pr.Index, pr.Number,
 		"Expected PR number in returned object to match what was returned by gitea")
 	require.Equal(t, mockClient.pr.Base.Sha, pr.MergeCommitSHA)
 	require.Equal(t, mockClient.pr.URL, pr.URL)
@@ -307,16 +308,16 @@ func TestListPullRequests(t *testing.T) {
 	// set up mock
 	mockClient := &mockGiteaClient{
 		pr: &gitea.PullRequest{
-			ID:    *gitea.OptionalInt64(42),
-			State: "open",
+			Index: int64(42),
+			State: gitea.StateOpen,
 			Head: &gitea.PRBranchInfo{
 				Sha: "HeadSha",
 			},
 			Base: &gitea.PRBranchInfo{
 				Sha: "BaseSha",
 			},
-			URL:            *gitea.OptionalString("http://localhost:8080"),
-			MergedCommitID: gitea.OptionalString("BaseSha"),
+			URL:            "http://localhost:8080",
+			MergedCommitID: ptr.To("BaseSha"),
 			HasMerged:      false,
 		},
 	}
@@ -329,16 +330,16 @@ func TestListPullRequests(t *testing.T) {
 		}).
 		Return(
 			[]*gitea.PullRequest{{
-				ID:    *gitea.OptionalInt64(42),
-				State: "open",
+				Index: int64(42),
+				State: gitea.StateOpen,
 				Head: &gitea.PRBranchInfo{
 					Sha: "HeadSha",
 				},
 				Base: &gitea.PRBranchInfo{
 					Sha: "BaseSha",
 				},
-				URL:            *gitea.OptionalString("http://localhost:8080"),
-				MergedCommitID: gitea.OptionalString("BaseSha"),
+				URL:            "http://localhost:8080",
+				MergedCommitID: ptr.To("BaseSha"),
 				HasMerged:      false,
 				Created:        &time.Time{},
 			}},
@@ -359,7 +360,7 @@ func TestListPullRequests(t *testing.T) {
 	require.Equal(t, testRepoOwner, mockClient.owner)
 	require.Equal(t, testRepoName, mockClient.repo)
 
-	require.Equal(t, mockClient.pr.ID, prs[0].Number)
+	require.Equal(t, mockClient.pr.Index, prs[0].Number)
 	require.Equal(t, mockClient.pr.Base.Sha, prs[0].MergeCommitSHA)
 	require.Equal(t, mockClient.pr.URL, prs[0].URL)
 	require.True(t, prs[0].Open)
