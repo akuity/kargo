@@ -97,7 +97,9 @@ func NewProvider(
 	if opts.InsecureSkipTLSVerify {
 		clientOpts = append(clientOpts, gitea.SetHTTPClient(&http.Client{
 			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true, // nolint: gosec
+				},
 			},
 		}))
 	}
