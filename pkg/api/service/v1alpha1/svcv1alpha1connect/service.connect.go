@@ -169,6 +169,15 @@ const (
 	// KargoServiceDeleteAnalysisTemplateProcedure is the fully-qualified name of the KargoService's
 	// DeleteAnalysisTemplate RPC.
 	KargoServiceDeleteAnalysisTemplateProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/DeleteAnalysisTemplate"
+	// KargoServiceListClusterAnalysisTemplatesProcedure is the fully-qualified name of the
+	// KargoService's ListClusterAnalysisTemplates RPC.
+	KargoServiceListClusterAnalysisTemplatesProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListClusterAnalysisTemplates"
+	// KargoServiceGetClusterAnalysisTemplateProcedure is the fully-qualified name of the KargoService's
+	// GetClusterAnalysisTemplate RPC.
+	KargoServiceGetClusterAnalysisTemplateProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetClusterAnalysisTemplate"
+	// KargoServiceDeleteClusterAnalysisTemplateProcedure is the fully-qualified name of the
+	// KargoService's DeleteClusterAnalysisTemplate RPC.
+	KargoServiceDeleteClusterAnalysisTemplateProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/DeleteClusterAnalysisTemplate"
 	// KargoServiceGetAnalysisRunProcedure is the fully-qualified name of the KargoService's
 	// GetAnalysisRun RPC.
 	KargoServiceGetAnalysisRunProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetAnalysisRun"
@@ -193,64 +202,67 @@ const (
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
 var (
-	kargoServiceServiceDescriptor                      = v1alpha1.File_service_v1alpha1_service_proto.Services().ByName("KargoService")
-	kargoServiceGetVersionInfoMethodDescriptor         = kargoServiceServiceDescriptor.Methods().ByName("GetVersionInfo")
-	kargoServiceGetConfigMethodDescriptor              = kargoServiceServiceDescriptor.Methods().ByName("GetConfig")
-	kargoServiceGetPublicConfigMethodDescriptor        = kargoServiceServiceDescriptor.Methods().ByName("GetPublicConfig")
-	kargoServiceAdminLoginMethodDescriptor             = kargoServiceServiceDescriptor.Methods().ByName("AdminLogin")
-	kargoServiceCreateResourceMethodDescriptor         = kargoServiceServiceDescriptor.Methods().ByName("CreateResource")
-	kargoServiceCreateOrUpdateResourceMethodDescriptor = kargoServiceServiceDescriptor.Methods().ByName("CreateOrUpdateResource")
-	kargoServiceUpdateResourceMethodDescriptor         = kargoServiceServiceDescriptor.Methods().ByName("UpdateResource")
-	kargoServiceDeleteResourceMethodDescriptor         = kargoServiceServiceDescriptor.Methods().ByName("DeleteResource")
-	kargoServiceListStagesMethodDescriptor             = kargoServiceServiceDescriptor.Methods().ByName("ListStages")
-	kargoServiceListImagesMethodDescriptor             = kargoServiceServiceDescriptor.Methods().ByName("ListImages")
-	kargoServiceGetStageMethodDescriptor               = kargoServiceServiceDescriptor.Methods().ByName("GetStage")
-	kargoServiceWatchStagesMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("WatchStages")
-	kargoServiceDeleteStageMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("DeleteStage")
-	kargoServiceRefreshStageMethodDescriptor           = kargoServiceServiceDescriptor.Methods().ByName("RefreshStage")
-	kargoServiceListPromotionsMethodDescriptor         = kargoServiceServiceDescriptor.Methods().ByName("ListPromotions")
-	kargoServiceWatchPromotionsMethodDescriptor        = kargoServiceServiceDescriptor.Methods().ByName("WatchPromotions")
-	kargoServiceGetPromotionMethodDescriptor           = kargoServiceServiceDescriptor.Methods().ByName("GetPromotion")
-	kargoServiceWatchPromotionMethodDescriptor         = kargoServiceServiceDescriptor.Methods().ByName("WatchPromotion")
-	kargoServiceAbortPromotionMethodDescriptor         = kargoServiceServiceDescriptor.Methods().ByName("AbortPromotion")
-	kargoServiceDeleteProjectMethodDescriptor          = kargoServiceServiceDescriptor.Methods().ByName("DeleteProject")
-	kargoServiceGetProjectMethodDescriptor             = kargoServiceServiceDescriptor.Methods().ByName("GetProject")
-	kargoServiceListProjectsMethodDescriptor           = kargoServiceServiceDescriptor.Methods().ByName("ListProjects")
-	kargoServiceApproveFreightMethodDescriptor         = kargoServiceServiceDescriptor.Methods().ByName("ApproveFreight")
-	kargoServiceDeleteFreightMethodDescriptor          = kargoServiceServiceDescriptor.Methods().ByName("DeleteFreight")
-	kargoServiceGetFreightMethodDescriptor             = kargoServiceServiceDescriptor.Methods().ByName("GetFreight")
-	kargoServicePromoteToStageMethodDescriptor         = kargoServiceServiceDescriptor.Methods().ByName("PromoteToStage")
-	kargoServicePromoteDownstreamMethodDescriptor      = kargoServiceServiceDescriptor.Methods().ByName("PromoteDownstream")
-	kargoServiceQueryFreightMethodDescriptor           = kargoServiceServiceDescriptor.Methods().ByName("QueryFreight")
-	kargoServiceUpdateFreightAliasMethodDescriptor     = kargoServiceServiceDescriptor.Methods().ByName("UpdateFreightAlias")
-	kargoServiceReverifyMethodDescriptor               = kargoServiceServiceDescriptor.Methods().ByName("Reverify")
-	kargoServiceAbortVerificationMethodDescriptor      = kargoServiceServiceDescriptor.Methods().ByName("AbortVerification")
-	kargoServiceListWarehousesMethodDescriptor         = kargoServiceServiceDescriptor.Methods().ByName("ListWarehouses")
-	kargoServiceGetWarehouseMethodDescriptor           = kargoServiceServiceDescriptor.Methods().ByName("GetWarehouse")
-	kargoServiceWatchWarehousesMethodDescriptor        = kargoServiceServiceDescriptor.Methods().ByName("WatchWarehouses")
-	kargoServiceDeleteWarehouseMethodDescriptor        = kargoServiceServiceDescriptor.Methods().ByName("DeleteWarehouse")
-	kargoServiceRefreshWarehouseMethodDescriptor       = kargoServiceServiceDescriptor.Methods().ByName("RefreshWarehouse")
-	kargoServiceCreateCredentialsMethodDescriptor      = kargoServiceServiceDescriptor.Methods().ByName("CreateCredentials")
-	kargoServiceDeleteCredentialsMethodDescriptor      = kargoServiceServiceDescriptor.Methods().ByName("DeleteCredentials")
-	kargoServiceGetCredentialsMethodDescriptor         = kargoServiceServiceDescriptor.Methods().ByName("GetCredentials")
-	kargoServiceListCredentialsMethodDescriptor        = kargoServiceServiceDescriptor.Methods().ByName("ListCredentials")
-	kargoServiceUpdateCredentialsMethodDescriptor      = kargoServiceServiceDescriptor.Methods().ByName("UpdateCredentials")
-	kargoServiceListProjectSecretsMethodDescriptor     = kargoServiceServiceDescriptor.Methods().ByName("ListProjectSecrets")
-	kargoServiceCreateProjectSecretMethodDescriptor    = kargoServiceServiceDescriptor.Methods().ByName("CreateProjectSecret")
-	kargoServiceUpdateProjectSecretMethodDescriptor    = kargoServiceServiceDescriptor.Methods().ByName("UpdateProjectSecret")
-	kargoServiceDeleteProjectSecretMethodDescriptor    = kargoServiceServiceDescriptor.Methods().ByName("DeleteProjectSecret")
-	kargoServiceListAnalysisTemplatesMethodDescriptor  = kargoServiceServiceDescriptor.Methods().ByName("ListAnalysisTemplates")
-	kargoServiceGetAnalysisTemplateMethodDescriptor    = kargoServiceServiceDescriptor.Methods().ByName("GetAnalysisTemplate")
-	kargoServiceDeleteAnalysisTemplateMethodDescriptor = kargoServiceServiceDescriptor.Methods().ByName("DeleteAnalysisTemplate")
-	kargoServiceGetAnalysisRunMethodDescriptor         = kargoServiceServiceDescriptor.Methods().ByName("GetAnalysisRun")
-	kargoServiceListProjectEventsMethodDescriptor      = kargoServiceServiceDescriptor.Methods().ByName("ListProjectEvents")
-	kargoServiceCreateRoleMethodDescriptor             = kargoServiceServiceDescriptor.Methods().ByName("CreateRole")
-	kargoServiceDeleteRoleMethodDescriptor             = kargoServiceServiceDescriptor.Methods().ByName("DeleteRole")
-	kargoServiceGetRoleMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("GetRole")
-	kargoServiceGrantMethodDescriptor                  = kargoServiceServiceDescriptor.Methods().ByName("Grant")
-	kargoServiceListRolesMethodDescriptor              = kargoServiceServiceDescriptor.Methods().ByName("ListRoles")
-	kargoServiceRevokeMethodDescriptor                 = kargoServiceServiceDescriptor.Methods().ByName("Revoke")
-	kargoServiceUpdateRoleMethodDescriptor             = kargoServiceServiceDescriptor.Methods().ByName("UpdateRole")
+	kargoServiceServiceDescriptor                             = v1alpha1.File_service_v1alpha1_service_proto.Services().ByName("KargoService")
+	kargoServiceGetVersionInfoMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("GetVersionInfo")
+	kargoServiceGetConfigMethodDescriptor                     = kargoServiceServiceDescriptor.Methods().ByName("GetConfig")
+	kargoServiceGetPublicConfigMethodDescriptor               = kargoServiceServiceDescriptor.Methods().ByName("GetPublicConfig")
+	kargoServiceAdminLoginMethodDescriptor                    = kargoServiceServiceDescriptor.Methods().ByName("AdminLogin")
+	kargoServiceCreateResourceMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("CreateResource")
+	kargoServiceCreateOrUpdateResourceMethodDescriptor        = kargoServiceServiceDescriptor.Methods().ByName("CreateOrUpdateResource")
+	kargoServiceUpdateResourceMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("UpdateResource")
+	kargoServiceDeleteResourceMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("DeleteResource")
+	kargoServiceListStagesMethodDescriptor                    = kargoServiceServiceDescriptor.Methods().ByName("ListStages")
+	kargoServiceListImagesMethodDescriptor                    = kargoServiceServiceDescriptor.Methods().ByName("ListImages")
+	kargoServiceGetStageMethodDescriptor                      = kargoServiceServiceDescriptor.Methods().ByName("GetStage")
+	kargoServiceWatchStagesMethodDescriptor                   = kargoServiceServiceDescriptor.Methods().ByName("WatchStages")
+	kargoServiceDeleteStageMethodDescriptor                   = kargoServiceServiceDescriptor.Methods().ByName("DeleteStage")
+	kargoServiceRefreshStageMethodDescriptor                  = kargoServiceServiceDescriptor.Methods().ByName("RefreshStage")
+	kargoServiceListPromotionsMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("ListPromotions")
+	kargoServiceWatchPromotionsMethodDescriptor               = kargoServiceServiceDescriptor.Methods().ByName("WatchPromotions")
+	kargoServiceGetPromotionMethodDescriptor                  = kargoServiceServiceDescriptor.Methods().ByName("GetPromotion")
+	kargoServiceWatchPromotionMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("WatchPromotion")
+	kargoServiceAbortPromotionMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("AbortPromotion")
+	kargoServiceDeleteProjectMethodDescriptor                 = kargoServiceServiceDescriptor.Methods().ByName("DeleteProject")
+	kargoServiceGetProjectMethodDescriptor                    = kargoServiceServiceDescriptor.Methods().ByName("GetProject")
+	kargoServiceListProjectsMethodDescriptor                  = kargoServiceServiceDescriptor.Methods().ByName("ListProjects")
+	kargoServiceApproveFreightMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("ApproveFreight")
+	kargoServiceDeleteFreightMethodDescriptor                 = kargoServiceServiceDescriptor.Methods().ByName("DeleteFreight")
+	kargoServiceGetFreightMethodDescriptor                    = kargoServiceServiceDescriptor.Methods().ByName("GetFreight")
+	kargoServicePromoteToStageMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("PromoteToStage")
+	kargoServicePromoteDownstreamMethodDescriptor             = kargoServiceServiceDescriptor.Methods().ByName("PromoteDownstream")
+	kargoServiceQueryFreightMethodDescriptor                  = kargoServiceServiceDescriptor.Methods().ByName("QueryFreight")
+	kargoServiceUpdateFreightAliasMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("UpdateFreightAlias")
+	kargoServiceReverifyMethodDescriptor                      = kargoServiceServiceDescriptor.Methods().ByName("Reverify")
+	kargoServiceAbortVerificationMethodDescriptor             = kargoServiceServiceDescriptor.Methods().ByName("AbortVerification")
+	kargoServiceListWarehousesMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("ListWarehouses")
+	kargoServiceGetWarehouseMethodDescriptor                  = kargoServiceServiceDescriptor.Methods().ByName("GetWarehouse")
+	kargoServiceWatchWarehousesMethodDescriptor               = kargoServiceServiceDescriptor.Methods().ByName("WatchWarehouses")
+	kargoServiceDeleteWarehouseMethodDescriptor               = kargoServiceServiceDescriptor.Methods().ByName("DeleteWarehouse")
+	kargoServiceRefreshWarehouseMethodDescriptor              = kargoServiceServiceDescriptor.Methods().ByName("RefreshWarehouse")
+	kargoServiceCreateCredentialsMethodDescriptor             = kargoServiceServiceDescriptor.Methods().ByName("CreateCredentials")
+	kargoServiceDeleteCredentialsMethodDescriptor             = kargoServiceServiceDescriptor.Methods().ByName("DeleteCredentials")
+	kargoServiceGetCredentialsMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("GetCredentials")
+	kargoServiceListCredentialsMethodDescriptor               = kargoServiceServiceDescriptor.Methods().ByName("ListCredentials")
+	kargoServiceUpdateCredentialsMethodDescriptor             = kargoServiceServiceDescriptor.Methods().ByName("UpdateCredentials")
+	kargoServiceListProjectSecretsMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("ListProjectSecrets")
+	kargoServiceCreateProjectSecretMethodDescriptor           = kargoServiceServiceDescriptor.Methods().ByName("CreateProjectSecret")
+	kargoServiceUpdateProjectSecretMethodDescriptor           = kargoServiceServiceDescriptor.Methods().ByName("UpdateProjectSecret")
+	kargoServiceDeleteProjectSecretMethodDescriptor           = kargoServiceServiceDescriptor.Methods().ByName("DeleteProjectSecret")
+	kargoServiceListAnalysisTemplatesMethodDescriptor         = kargoServiceServiceDescriptor.Methods().ByName("ListAnalysisTemplates")
+	kargoServiceGetAnalysisTemplateMethodDescriptor           = kargoServiceServiceDescriptor.Methods().ByName("GetAnalysisTemplate")
+	kargoServiceDeleteAnalysisTemplateMethodDescriptor        = kargoServiceServiceDescriptor.Methods().ByName("DeleteAnalysisTemplate")
+	kargoServiceListClusterAnalysisTemplatesMethodDescriptor  = kargoServiceServiceDescriptor.Methods().ByName("ListClusterAnalysisTemplates")
+	kargoServiceGetClusterAnalysisTemplateMethodDescriptor    = kargoServiceServiceDescriptor.Methods().ByName("GetClusterAnalysisTemplate")
+	kargoServiceDeleteClusterAnalysisTemplateMethodDescriptor = kargoServiceServiceDescriptor.Methods().ByName("DeleteClusterAnalysisTemplate")
+	kargoServiceGetAnalysisRunMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("GetAnalysisRun")
+	kargoServiceListProjectEventsMethodDescriptor             = kargoServiceServiceDescriptor.Methods().ByName("ListProjectEvents")
+	kargoServiceCreateRoleMethodDescriptor                    = kargoServiceServiceDescriptor.Methods().ByName("CreateRole")
+	kargoServiceDeleteRoleMethodDescriptor                    = kargoServiceServiceDescriptor.Methods().ByName("DeleteRole")
+	kargoServiceGetRoleMethodDescriptor                       = kargoServiceServiceDescriptor.Methods().ByName("GetRole")
+	kargoServiceGrantMethodDescriptor                         = kargoServiceServiceDescriptor.Methods().ByName("Grant")
+	kargoServiceListRolesMethodDescriptor                     = kargoServiceServiceDescriptor.Methods().ByName("ListRoles")
+	kargoServiceRevokeMethodDescriptor                        = kargoServiceServiceDescriptor.Methods().ByName("Revoke")
+	kargoServiceUpdateRoleMethodDescriptor                    = kargoServiceServiceDescriptor.Methods().ByName("UpdateRole")
 )
 
 // KargoServiceClient is a client for the akuity.io.kargo.service.v1alpha1.KargoService service.
@@ -305,6 +317,9 @@ type KargoServiceClient interface {
 	ListAnalysisTemplates(context.Context, *connect.Request[v1alpha1.ListAnalysisTemplatesRequest]) (*connect.Response[v1alpha1.ListAnalysisTemplatesResponse], error)
 	GetAnalysisTemplate(context.Context, *connect.Request[v1alpha1.GetAnalysisTemplateRequest]) (*connect.Response[v1alpha1.GetAnalysisTemplateResponse], error)
 	DeleteAnalysisTemplate(context.Context, *connect.Request[v1alpha1.DeleteAnalysisTemplateRequest]) (*connect.Response[v1alpha1.DeleteAnalysisTemplateResponse], error)
+	ListClusterAnalysisTemplates(context.Context, *connect.Request[v1alpha1.ListClusterAnalysisTemplatesRequest]) (*connect.Response[v1alpha1.ListClusterAnalysisTemplatesResponse], error)
+	GetClusterAnalysisTemplate(context.Context, *connect.Request[v1alpha1.GetClusterAnalysisTemplateRequest]) (*connect.Response[v1alpha1.GetClusterAnalysisTemplateResponse], error)
+	DeleteClusterAnalysisTemplate(context.Context, *connect.Request[v1alpha1.DeleteClusterAnalysisTemplateRequest]) (*connect.Response[v1alpha1.DeleteClusterAnalysisTemplateResponse], error)
 	GetAnalysisRun(context.Context, *connect.Request[v1alpha1.GetAnalysisRunRequest]) (*connect.Response[v1alpha1.GetAnalysisRunResponse], error)
 	ListProjectEvents(context.Context, *connect.Request[v1alpha1.ListProjectEventsRequest]) (*connect.Response[v1alpha1.ListProjectEventsResponse], error)
 	CreateRole(context.Context, *connect.Request[v1alpha1.CreateRoleRequest]) (*connect.Response[v1alpha1.CreateRoleResponse], error)
@@ -614,6 +629,24 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(kargoServiceDeleteAnalysisTemplateMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		listClusterAnalysisTemplates: connect.NewClient[v1alpha1.ListClusterAnalysisTemplatesRequest, v1alpha1.ListClusterAnalysisTemplatesResponse](
+			httpClient,
+			baseURL+KargoServiceListClusterAnalysisTemplatesProcedure,
+			connect.WithSchema(kargoServiceListClusterAnalysisTemplatesMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getClusterAnalysisTemplate: connect.NewClient[v1alpha1.GetClusterAnalysisTemplateRequest, v1alpha1.GetClusterAnalysisTemplateResponse](
+			httpClient,
+			baseURL+KargoServiceGetClusterAnalysisTemplateProcedure,
+			connect.WithSchema(kargoServiceGetClusterAnalysisTemplateMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		deleteClusterAnalysisTemplate: connect.NewClient[v1alpha1.DeleteClusterAnalysisTemplateRequest, v1alpha1.DeleteClusterAnalysisTemplateResponse](
+			httpClient,
+			baseURL+KargoServiceDeleteClusterAnalysisTemplateProcedure,
+			connect.WithSchema(kargoServiceDeleteClusterAnalysisTemplateMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		getAnalysisRun: connect.NewClient[v1alpha1.GetAnalysisRunRequest, v1alpha1.GetAnalysisRunResponse](
 			httpClient,
 			baseURL+KargoServiceGetAnalysisRunProcedure,
@@ -673,63 +706,66 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 
 // kargoServiceClient implements KargoServiceClient.
 type kargoServiceClient struct {
-	getVersionInfo         *connect.Client[v1alpha1.GetVersionInfoRequest, v1alpha1.GetVersionInfoResponse]
-	getConfig              *connect.Client[v1alpha1.GetConfigRequest, v1alpha1.GetConfigResponse]
-	getPublicConfig        *connect.Client[v1alpha1.GetPublicConfigRequest, v1alpha1.GetPublicConfigResponse]
-	adminLogin             *connect.Client[v1alpha1.AdminLoginRequest, v1alpha1.AdminLoginResponse]
-	createResource         *connect.Client[v1alpha1.CreateResourceRequest, v1alpha1.CreateResourceResponse]
-	createOrUpdateResource *connect.Client[v1alpha1.CreateOrUpdateResourceRequest, v1alpha1.CreateOrUpdateResourceResponse]
-	updateResource         *connect.Client[v1alpha1.UpdateResourceRequest, v1alpha1.UpdateResourceResponse]
-	deleteResource         *connect.Client[v1alpha1.DeleteResourceRequest, v1alpha1.DeleteResourceResponse]
-	listStages             *connect.Client[v1alpha1.ListStagesRequest, v1alpha1.ListStagesResponse]
-	listImages             *connect.Client[v1alpha1.ListImagesRequest, v1alpha1.ListImagesResponse]
-	getStage               *connect.Client[v1alpha1.GetStageRequest, v1alpha1.GetStageResponse]
-	watchStages            *connect.Client[v1alpha1.WatchStagesRequest, v1alpha1.WatchStagesResponse]
-	deleteStage            *connect.Client[v1alpha1.DeleteStageRequest, v1alpha1.DeleteStageResponse]
-	refreshStage           *connect.Client[v1alpha1.RefreshStageRequest, v1alpha1.RefreshStageResponse]
-	listPromotions         *connect.Client[v1alpha1.ListPromotionsRequest, v1alpha1.ListPromotionsResponse]
-	watchPromotions        *connect.Client[v1alpha1.WatchPromotionsRequest, v1alpha1.WatchPromotionsResponse]
-	getPromotion           *connect.Client[v1alpha1.GetPromotionRequest, v1alpha1.GetPromotionResponse]
-	watchPromotion         *connect.Client[v1alpha1.WatchPromotionRequest, v1alpha1.WatchPromotionResponse]
-	abortPromotion         *connect.Client[v1alpha1.AbortPromotionRequest, v1alpha1.AbortPromotionResponse]
-	deleteProject          *connect.Client[v1alpha1.DeleteProjectRequest, v1alpha1.DeleteProjectResponse]
-	getProject             *connect.Client[v1alpha1.GetProjectRequest, v1alpha1.GetProjectResponse]
-	listProjects           *connect.Client[v1alpha1.ListProjectsRequest, v1alpha1.ListProjectsResponse]
-	approveFreight         *connect.Client[v1alpha1.ApproveFreightRequest, v1alpha1.ApproveFreightResponse]
-	deleteFreight          *connect.Client[v1alpha1.DeleteFreightRequest, v1alpha1.DeleteFreightResponse]
-	getFreight             *connect.Client[v1alpha1.GetFreightRequest, v1alpha1.GetFreightResponse]
-	promoteToStage         *connect.Client[v1alpha1.PromoteToStageRequest, v1alpha1.PromoteToStageResponse]
-	promoteDownstream      *connect.Client[v1alpha1.PromoteDownstreamRequest, v1alpha1.PromoteDownstreamResponse]
-	queryFreight           *connect.Client[v1alpha1.QueryFreightRequest, v1alpha1.QueryFreightResponse]
-	updateFreightAlias     *connect.Client[v1alpha1.UpdateFreightAliasRequest, v1alpha1.UpdateFreightAliasResponse]
-	reverify               *connect.Client[v1alpha1.ReverifyRequest, v1alpha1.ReverifyResponse]
-	abortVerification      *connect.Client[v1alpha1.AbortVerificationRequest, v1alpha1.AbortVerificationResponse]
-	listWarehouses         *connect.Client[v1alpha1.ListWarehousesRequest, v1alpha1.ListWarehousesResponse]
-	getWarehouse           *connect.Client[v1alpha1.GetWarehouseRequest, v1alpha1.GetWarehouseResponse]
-	watchWarehouses        *connect.Client[v1alpha1.WatchWarehousesRequest, v1alpha1.WatchWarehousesResponse]
-	deleteWarehouse        *connect.Client[v1alpha1.DeleteWarehouseRequest, v1alpha1.DeleteWarehouseResponse]
-	refreshWarehouse       *connect.Client[v1alpha1.RefreshWarehouseRequest, v1alpha1.RefreshWarehouseResponse]
-	createCredentials      *connect.Client[v1alpha1.CreateCredentialsRequest, v1alpha1.CreateCredentialsResponse]
-	deleteCredentials      *connect.Client[v1alpha1.DeleteCredentialsRequest, v1alpha1.DeleteCredentialsResponse]
-	getCredentials         *connect.Client[v1alpha1.GetCredentialsRequest, v1alpha1.GetCredentialsResponse]
-	listCredentials        *connect.Client[v1alpha1.ListCredentialsRequest, v1alpha1.ListCredentialsResponse]
-	updateCredentials      *connect.Client[v1alpha1.UpdateCredentialsRequest, v1alpha1.UpdateCredentialsResponse]
-	listProjectSecrets     *connect.Client[v1alpha1.ListProjectSecretsRequest, v1alpha1.ListProjectSecretsResponse]
-	createProjectSecret    *connect.Client[v1alpha1.CreateProjectSecretRequest, v1alpha1.CreateProjectSecretResponse]
-	updateProjectSecret    *connect.Client[v1alpha1.UpdateProjectSecretRequest, v1alpha1.UpdateProjectSecretResponse]
-	deleteProjectSecret    *connect.Client[v1alpha1.DeleteProjectSecretRequest, v1alpha1.DeleteProjectSecretResponse]
-	listAnalysisTemplates  *connect.Client[v1alpha1.ListAnalysisTemplatesRequest, v1alpha1.ListAnalysisTemplatesResponse]
-	getAnalysisTemplate    *connect.Client[v1alpha1.GetAnalysisTemplateRequest, v1alpha1.GetAnalysisTemplateResponse]
-	deleteAnalysisTemplate *connect.Client[v1alpha1.DeleteAnalysisTemplateRequest, v1alpha1.DeleteAnalysisTemplateResponse]
-	getAnalysisRun         *connect.Client[v1alpha1.GetAnalysisRunRequest, v1alpha1.GetAnalysisRunResponse]
-	listProjectEvents      *connect.Client[v1alpha1.ListProjectEventsRequest, v1alpha1.ListProjectEventsResponse]
-	createRole             *connect.Client[v1alpha1.CreateRoleRequest, v1alpha1.CreateRoleResponse]
-	deleteRole             *connect.Client[v1alpha1.DeleteRoleRequest, v1alpha1.DeleteRoleResponse]
-	getRole                *connect.Client[v1alpha1.GetRoleRequest, v1alpha1.GetRoleResponse]
-	grant                  *connect.Client[v1alpha1.GrantRequest, v1alpha1.GrantResponse]
-	listRoles              *connect.Client[v1alpha1.ListRolesRequest, v1alpha1.ListRolesResponse]
-	revoke                 *connect.Client[v1alpha1.RevokeRequest, v1alpha1.RevokeResponse]
-	updateRole             *connect.Client[v1alpha1.UpdateRoleRequest, v1alpha1.UpdateRoleResponse]
+	getVersionInfo                *connect.Client[v1alpha1.GetVersionInfoRequest, v1alpha1.GetVersionInfoResponse]
+	getConfig                     *connect.Client[v1alpha1.GetConfigRequest, v1alpha1.GetConfigResponse]
+	getPublicConfig               *connect.Client[v1alpha1.GetPublicConfigRequest, v1alpha1.GetPublicConfigResponse]
+	adminLogin                    *connect.Client[v1alpha1.AdminLoginRequest, v1alpha1.AdminLoginResponse]
+	createResource                *connect.Client[v1alpha1.CreateResourceRequest, v1alpha1.CreateResourceResponse]
+	createOrUpdateResource        *connect.Client[v1alpha1.CreateOrUpdateResourceRequest, v1alpha1.CreateOrUpdateResourceResponse]
+	updateResource                *connect.Client[v1alpha1.UpdateResourceRequest, v1alpha1.UpdateResourceResponse]
+	deleteResource                *connect.Client[v1alpha1.DeleteResourceRequest, v1alpha1.DeleteResourceResponse]
+	listStages                    *connect.Client[v1alpha1.ListStagesRequest, v1alpha1.ListStagesResponse]
+	listImages                    *connect.Client[v1alpha1.ListImagesRequest, v1alpha1.ListImagesResponse]
+	getStage                      *connect.Client[v1alpha1.GetStageRequest, v1alpha1.GetStageResponse]
+	watchStages                   *connect.Client[v1alpha1.WatchStagesRequest, v1alpha1.WatchStagesResponse]
+	deleteStage                   *connect.Client[v1alpha1.DeleteStageRequest, v1alpha1.DeleteStageResponse]
+	refreshStage                  *connect.Client[v1alpha1.RefreshStageRequest, v1alpha1.RefreshStageResponse]
+	listPromotions                *connect.Client[v1alpha1.ListPromotionsRequest, v1alpha1.ListPromotionsResponse]
+	watchPromotions               *connect.Client[v1alpha1.WatchPromotionsRequest, v1alpha1.WatchPromotionsResponse]
+	getPromotion                  *connect.Client[v1alpha1.GetPromotionRequest, v1alpha1.GetPromotionResponse]
+	watchPromotion                *connect.Client[v1alpha1.WatchPromotionRequest, v1alpha1.WatchPromotionResponse]
+	abortPromotion                *connect.Client[v1alpha1.AbortPromotionRequest, v1alpha1.AbortPromotionResponse]
+	deleteProject                 *connect.Client[v1alpha1.DeleteProjectRequest, v1alpha1.DeleteProjectResponse]
+	getProject                    *connect.Client[v1alpha1.GetProjectRequest, v1alpha1.GetProjectResponse]
+	listProjects                  *connect.Client[v1alpha1.ListProjectsRequest, v1alpha1.ListProjectsResponse]
+	approveFreight                *connect.Client[v1alpha1.ApproveFreightRequest, v1alpha1.ApproveFreightResponse]
+	deleteFreight                 *connect.Client[v1alpha1.DeleteFreightRequest, v1alpha1.DeleteFreightResponse]
+	getFreight                    *connect.Client[v1alpha1.GetFreightRequest, v1alpha1.GetFreightResponse]
+	promoteToStage                *connect.Client[v1alpha1.PromoteToStageRequest, v1alpha1.PromoteToStageResponse]
+	promoteDownstream             *connect.Client[v1alpha1.PromoteDownstreamRequest, v1alpha1.PromoteDownstreamResponse]
+	queryFreight                  *connect.Client[v1alpha1.QueryFreightRequest, v1alpha1.QueryFreightResponse]
+	updateFreightAlias            *connect.Client[v1alpha1.UpdateFreightAliasRequest, v1alpha1.UpdateFreightAliasResponse]
+	reverify                      *connect.Client[v1alpha1.ReverifyRequest, v1alpha1.ReverifyResponse]
+	abortVerification             *connect.Client[v1alpha1.AbortVerificationRequest, v1alpha1.AbortVerificationResponse]
+	listWarehouses                *connect.Client[v1alpha1.ListWarehousesRequest, v1alpha1.ListWarehousesResponse]
+	getWarehouse                  *connect.Client[v1alpha1.GetWarehouseRequest, v1alpha1.GetWarehouseResponse]
+	watchWarehouses               *connect.Client[v1alpha1.WatchWarehousesRequest, v1alpha1.WatchWarehousesResponse]
+	deleteWarehouse               *connect.Client[v1alpha1.DeleteWarehouseRequest, v1alpha1.DeleteWarehouseResponse]
+	refreshWarehouse              *connect.Client[v1alpha1.RefreshWarehouseRequest, v1alpha1.RefreshWarehouseResponse]
+	createCredentials             *connect.Client[v1alpha1.CreateCredentialsRequest, v1alpha1.CreateCredentialsResponse]
+	deleteCredentials             *connect.Client[v1alpha1.DeleteCredentialsRequest, v1alpha1.DeleteCredentialsResponse]
+	getCredentials                *connect.Client[v1alpha1.GetCredentialsRequest, v1alpha1.GetCredentialsResponse]
+	listCredentials               *connect.Client[v1alpha1.ListCredentialsRequest, v1alpha1.ListCredentialsResponse]
+	updateCredentials             *connect.Client[v1alpha1.UpdateCredentialsRequest, v1alpha1.UpdateCredentialsResponse]
+	listProjectSecrets            *connect.Client[v1alpha1.ListProjectSecretsRequest, v1alpha1.ListProjectSecretsResponse]
+	createProjectSecret           *connect.Client[v1alpha1.CreateProjectSecretRequest, v1alpha1.CreateProjectSecretResponse]
+	updateProjectSecret           *connect.Client[v1alpha1.UpdateProjectSecretRequest, v1alpha1.UpdateProjectSecretResponse]
+	deleteProjectSecret           *connect.Client[v1alpha1.DeleteProjectSecretRequest, v1alpha1.DeleteProjectSecretResponse]
+	listAnalysisTemplates         *connect.Client[v1alpha1.ListAnalysisTemplatesRequest, v1alpha1.ListAnalysisTemplatesResponse]
+	getAnalysisTemplate           *connect.Client[v1alpha1.GetAnalysisTemplateRequest, v1alpha1.GetAnalysisTemplateResponse]
+	deleteAnalysisTemplate        *connect.Client[v1alpha1.DeleteAnalysisTemplateRequest, v1alpha1.DeleteAnalysisTemplateResponse]
+	listClusterAnalysisTemplates  *connect.Client[v1alpha1.ListClusterAnalysisTemplatesRequest, v1alpha1.ListClusterAnalysisTemplatesResponse]
+	getClusterAnalysisTemplate    *connect.Client[v1alpha1.GetClusterAnalysisTemplateRequest, v1alpha1.GetClusterAnalysisTemplateResponse]
+	deleteClusterAnalysisTemplate *connect.Client[v1alpha1.DeleteClusterAnalysisTemplateRequest, v1alpha1.DeleteClusterAnalysisTemplateResponse]
+	getAnalysisRun                *connect.Client[v1alpha1.GetAnalysisRunRequest, v1alpha1.GetAnalysisRunResponse]
+	listProjectEvents             *connect.Client[v1alpha1.ListProjectEventsRequest, v1alpha1.ListProjectEventsResponse]
+	createRole                    *connect.Client[v1alpha1.CreateRoleRequest, v1alpha1.CreateRoleResponse]
+	deleteRole                    *connect.Client[v1alpha1.DeleteRoleRequest, v1alpha1.DeleteRoleResponse]
+	getRole                       *connect.Client[v1alpha1.GetRoleRequest, v1alpha1.GetRoleResponse]
+	grant                         *connect.Client[v1alpha1.GrantRequest, v1alpha1.GrantResponse]
+	listRoles                     *connect.Client[v1alpha1.ListRolesRequest, v1alpha1.ListRolesResponse]
+	revoke                        *connect.Client[v1alpha1.RevokeRequest, v1alpha1.RevokeResponse]
+	updateRole                    *connect.Client[v1alpha1.UpdateRoleRequest, v1alpha1.UpdateRoleResponse]
 }
 
 // GetVersionInfo calls akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo.
@@ -974,6 +1010,24 @@ func (c *kargoServiceClient) DeleteAnalysisTemplate(ctx context.Context, req *co
 	return c.deleteAnalysisTemplate.CallUnary(ctx, req)
 }
 
+// ListClusterAnalysisTemplates calls
+// akuity.io.kargo.service.v1alpha1.KargoService.ListClusterAnalysisTemplates.
+func (c *kargoServiceClient) ListClusterAnalysisTemplates(ctx context.Context, req *connect.Request[v1alpha1.ListClusterAnalysisTemplatesRequest]) (*connect.Response[v1alpha1.ListClusterAnalysisTemplatesResponse], error) {
+	return c.listClusterAnalysisTemplates.CallUnary(ctx, req)
+}
+
+// GetClusterAnalysisTemplate calls
+// akuity.io.kargo.service.v1alpha1.KargoService.GetClusterAnalysisTemplate.
+func (c *kargoServiceClient) GetClusterAnalysisTemplate(ctx context.Context, req *connect.Request[v1alpha1.GetClusterAnalysisTemplateRequest]) (*connect.Response[v1alpha1.GetClusterAnalysisTemplateResponse], error) {
+	return c.getClusterAnalysisTemplate.CallUnary(ctx, req)
+}
+
+// DeleteClusterAnalysisTemplate calls
+// akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterAnalysisTemplate.
+func (c *kargoServiceClient) DeleteClusterAnalysisTemplate(ctx context.Context, req *connect.Request[v1alpha1.DeleteClusterAnalysisTemplateRequest]) (*connect.Response[v1alpha1.DeleteClusterAnalysisTemplateResponse], error) {
+	return c.deleteClusterAnalysisTemplate.CallUnary(ctx, req)
+}
+
 // GetAnalysisRun calls akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisRun.
 func (c *kargoServiceClient) GetAnalysisRun(ctx context.Context, req *connect.Request[v1alpha1.GetAnalysisRunRequest]) (*connect.Response[v1alpha1.GetAnalysisRunResponse], error) {
 	return c.getAnalysisRun.CallUnary(ctx, req)
@@ -1072,6 +1126,9 @@ type KargoServiceHandler interface {
 	ListAnalysisTemplates(context.Context, *connect.Request[v1alpha1.ListAnalysisTemplatesRequest]) (*connect.Response[v1alpha1.ListAnalysisTemplatesResponse], error)
 	GetAnalysisTemplate(context.Context, *connect.Request[v1alpha1.GetAnalysisTemplateRequest]) (*connect.Response[v1alpha1.GetAnalysisTemplateResponse], error)
 	DeleteAnalysisTemplate(context.Context, *connect.Request[v1alpha1.DeleteAnalysisTemplateRequest]) (*connect.Response[v1alpha1.DeleteAnalysisTemplateResponse], error)
+	ListClusterAnalysisTemplates(context.Context, *connect.Request[v1alpha1.ListClusterAnalysisTemplatesRequest]) (*connect.Response[v1alpha1.ListClusterAnalysisTemplatesResponse], error)
+	GetClusterAnalysisTemplate(context.Context, *connect.Request[v1alpha1.GetClusterAnalysisTemplateRequest]) (*connect.Response[v1alpha1.GetClusterAnalysisTemplateResponse], error)
+	DeleteClusterAnalysisTemplate(context.Context, *connect.Request[v1alpha1.DeleteClusterAnalysisTemplateRequest]) (*connect.Response[v1alpha1.DeleteClusterAnalysisTemplateResponse], error)
 	GetAnalysisRun(context.Context, *connect.Request[v1alpha1.GetAnalysisRunRequest]) (*connect.Response[v1alpha1.GetAnalysisRunResponse], error)
 	ListProjectEvents(context.Context, *connect.Request[v1alpha1.ListProjectEventsRequest]) (*connect.Response[v1alpha1.ListProjectEventsResponse], error)
 	CreateRole(context.Context, *connect.Request[v1alpha1.CreateRoleRequest]) (*connect.Response[v1alpha1.CreateRoleResponse], error)
@@ -1377,6 +1434,24 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(kargoServiceDeleteAnalysisTemplateMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	kargoServiceListClusterAnalysisTemplatesHandler := connect.NewUnaryHandler(
+		KargoServiceListClusterAnalysisTemplatesProcedure,
+		svc.ListClusterAnalysisTemplates,
+		connect.WithSchema(kargoServiceListClusterAnalysisTemplatesMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	kargoServiceGetClusterAnalysisTemplateHandler := connect.NewUnaryHandler(
+		KargoServiceGetClusterAnalysisTemplateProcedure,
+		svc.GetClusterAnalysisTemplate,
+		connect.WithSchema(kargoServiceGetClusterAnalysisTemplateMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	kargoServiceDeleteClusterAnalysisTemplateHandler := connect.NewUnaryHandler(
+		KargoServiceDeleteClusterAnalysisTemplateProcedure,
+		svc.DeleteClusterAnalysisTemplate,
+		connect.WithSchema(kargoServiceDeleteClusterAnalysisTemplateMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	kargoServiceGetAnalysisRunHandler := connect.NewUnaryHandler(
 		KargoServiceGetAnalysisRunProcedure,
 		svc.GetAnalysisRun,
@@ -1529,6 +1604,12 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceGetAnalysisTemplateHandler.ServeHTTP(w, r)
 		case KargoServiceDeleteAnalysisTemplateProcedure:
 			kargoServiceDeleteAnalysisTemplateHandler.ServeHTTP(w, r)
+		case KargoServiceListClusterAnalysisTemplatesProcedure:
+			kargoServiceListClusterAnalysisTemplatesHandler.ServeHTTP(w, r)
+		case KargoServiceGetClusterAnalysisTemplateProcedure:
+			kargoServiceGetClusterAnalysisTemplateHandler.ServeHTTP(w, r)
+		case KargoServiceDeleteClusterAnalysisTemplateProcedure:
+			kargoServiceDeleteClusterAnalysisTemplateHandler.ServeHTTP(w, r)
 		case KargoServiceGetAnalysisRunProcedure:
 			kargoServiceGetAnalysisRunHandler.ServeHTTP(w, r)
 		case KargoServiceListProjectEventsProcedure:
@@ -1746,6 +1827,18 @@ func (UnimplementedKargoServiceHandler) GetAnalysisTemplate(context.Context, *co
 
 func (UnimplementedKargoServiceHandler) DeleteAnalysisTemplate(context.Context, *connect.Request[v1alpha1.DeleteAnalysisTemplateRequest]) (*connect.Response[v1alpha1.DeleteAnalysisTemplateResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.DeleteAnalysisTemplate is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) ListClusterAnalysisTemplates(context.Context, *connect.Request[v1alpha1.ListClusterAnalysisTemplatesRequest]) (*connect.Response[v1alpha1.ListClusterAnalysisTemplatesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.ListClusterAnalysisTemplates is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) GetClusterAnalysisTemplate(context.Context, *connect.Request[v1alpha1.GetClusterAnalysisTemplateRequest]) (*connect.Response[v1alpha1.GetClusterAnalysisTemplateResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.GetClusterAnalysisTemplate is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) DeleteClusterAnalysisTemplate(context.Context, *connect.Request[v1alpha1.DeleteClusterAnalysisTemplateRequest]) (*connect.Response[v1alpha1.DeleteClusterAnalysisTemplateResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterAnalysisTemplate is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) GetAnalysisRun(context.Context, *connect.Request[v1alpha1.GetAnalysisRunRequest]) (*connect.Response[v1alpha1.GetAnalysisRunResponse], error) {

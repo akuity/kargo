@@ -68,7 +68,7 @@ func (b *AnalysisRunBuilder) Build(
 		opts.ExtraLabels,
 	)
 
-	templates, err := b.getAnalysisTemplates(
+	analysisTemplates, clusterAnalysisTemplates, err := b.getAnalysisTemplates(
 		ctx,
 		namespace,
 		cfg.AnalysisTemplates,
@@ -77,7 +77,9 @@ func (b *AnalysisRunBuilder) Build(
 		return nil, fmt.Errorf("get analysis templates: %w", err)
 	}
 
-	spec, err := b.buildSpec(templates, cfg.Args, opts.ExpressionConfig)
+	analysisTemplateSpecs := combineAnalysisTemplateSpecs(analysisTemplates, clusterAnalysisTemplates)
+
+	spec, err := b.buildSpec(analysisTemplateSpecs, cfg.Args, opts.ExpressionConfig)
 	if err != nil {
 		return nil, fmt.Errorf("build spec: %w", err)
 	}
@@ -150,11 +152,11 @@ func (b *AnalysisRunBuilder) buildMetadata(
 // buildSpec constructs an AnalysisRunSpec from the provided templates and
 // arguments.
 func (b *AnalysisRunBuilder) buildSpec(
-	templates []*rolloutsapi.AnalysisTemplate,
+	analysisTemplateSpecs []*rolloutsapi.AnalysisTemplateSpec,
 	args []kargoapi.AnalysisRunArgument,
 	exprCfg *ArgumentEvaluationConfig,
 ) (rolloutsapi.AnalysisRunSpec, error) {
-	template, err := flattenTemplates(templates)
+	template, err := flattenTemplates(analysisTemplateSpecs)
 	if err != nil {
 		return rolloutsapi.AnalysisRunSpec{}, fmt.Errorf("flatten templates: %w", err)
 	}
@@ -253,24 +255,54 @@ func (b *AnalysisRunBuilder) getAnalysisTemplates(
 	ctx context.Context,
 	namespace string,
 	references []kargoapi.AnalysisTemplateReference,
-) ([]*rolloutsapi.AnalysisTemplate, error) {
-	templates := make([]*rolloutsapi.AnalysisTemplate, len(references))
-
-	for i, ref := range references {
-		template := &rolloutsapi.AnalysisTemplate{}
-		if err := b.client.Get(ctx, types.NamespacedName{
-			Namespace: namespace,
-			Name:      ref.Name,
-		}, template); err != nil {
-			return nil, fmt.Errorf(
-				"get AnalysisRun %q in namespace %q: %w",
-				ref.Name,
-				namespace,
-				err,
-			)
+) ([]*rolloutsapi.AnalysisTemplate, []*rolloutsapi.ClusterAnalysisTemplate, error) {
+	analysisTemplates := []*rolloutsapi.AnalysisTemplate{}
+	clusterAnalysisTemplates := []*rolloutsapi.ClusterAnalysisTemplate{}
+	for _, ref := range references {
+		if ref.Kind == "ClusterAnalysisTemplate" {
+			template := &rolloutsapi.ClusterAnalysisTemplate{}
+			if err := b.client.Get(ctx, types.NamespacedName{
+				Name: ref.Name,
+			}, template); err != nil {
+				return nil, nil, fmt.Errorf(
+					"get ClusterAnalysisRun %q: %w",
+					ref.Name,
+					err,
+				)
+			}
+			clusterAnalysisTemplates = append(clusterAnalysisTemplates, template)
+		} else {
+			template := &rolloutsapi.AnalysisTemplate{}
+			if err := b.client.Get(ctx, types.NamespacedName{
+				Namespace: namespace,
+				Name:      ref.Name,
+			}, template); err != nil {
+				return nil, nil, fmt.Errorf(
+					"get AnalysisRun %q in namespace %q: %w",
+					ref.Name,
+					namespace,
+					err,
+				)
+			}
+			analysisTemplates = append(analysisTemplates, template)
 		}
-		templates[i] = template
 	}
 
-	return templates, nil
+	return analysisTemplates, clusterAnalysisTemplates, nil
+}
+
+// combineAnalysisTemplateSpecs combines the specs of analysis
+// templates and cluster analysis templates into one array
+func combineAnalysisTemplateSpecs(
+	analysisTemplates []*rolloutsapi.AnalysisTemplate,
+	clusterAnalysisTemplates []*rolloutsapi.ClusterAnalysisTemplate,
+) []*rolloutsapi.AnalysisTemplateSpec {
+	templateSpecs := make([]*rolloutsapi.AnalysisTemplateSpec, 0, len(analysisTemplates)+len(clusterAnalysisTemplates))
+	for _, template := range analysisTemplates {
+		templateSpecs = append(templateSpecs, &template.Spec)
+	}
+	for _, template := range clusterAnalysisTemplates {
+		templateSpecs = append(templateSpecs, &template.Spec)
+	}
+	return templateSpecs
 }

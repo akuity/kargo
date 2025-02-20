@@ -228,6 +228,21 @@ export const getAnalysisTemplate = KargoService.method.getAnalysisTemplate;
 export const deleteAnalysisTemplate = KargoService.method.deleteAnalysisTemplate;
 
 /**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListClusterAnalysisTemplates
+ */
+export const listClusterAnalysisTemplates = KargoService.method.listClusterAnalysisTemplates;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetClusterAnalysisTemplate
+ */
+export const getClusterAnalysisTemplate = KargoService.method.getClusterAnalysisTemplate;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterAnalysisTemplate
+ */
+export const deleteClusterAnalysisTemplate = KargoService.method.deleteClusterAnalysisTemplate;
+
+/**
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisRun
  */
 export const getAnalysisRun = KargoService.method.getAnalysisRun;
