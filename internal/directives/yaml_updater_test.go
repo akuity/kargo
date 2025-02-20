@@ -159,7 +159,7 @@ func Test_yamlUpdater_runPromotionStep(t *testing.T) {
 			cfg: YAMLUpdateConfig{
 				Path: "non-existent/values.yaml",
 				Updates: []YAMLUpdate{
-					{Key: "image.tag", Value: Tag},
+					{Key: "image.tag", Value: "fake-tag"},
 				},
 			},
 			assertions: func(t *testing.T, _ string, result PromotionStepResult, err error) {

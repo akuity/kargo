@@ -11,8 +11,6 @@ import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { getAlias } from '../../../common/utils';
 
-import style from './stage-node.module.less';
-
 export const FreightLabel = ({ freight }: { freight?: Freight }) => {
   const [copied, setCopied] = useState<boolean>(false);
 
@@ -36,7 +34,7 @@ export const FreightLabel = ({ freight }: { freight?: Freight }) => {
 
   return (
     <div
-      className='cursor-pointer font-semibold min-w-0 w-full'
+      className='cursor-pointer font-semibold min-w-0 w-full text-center'
       onClick={(e) => {
         if (alias || id) {
           e.preventDefault();
@@ -62,7 +60,7 @@ export const FreightLabel = ({ freight }: { freight?: Freight }) => {
                 timestampDate(freight?.metadata?.creationTimestamp) || '',
                 'MMM do yyyy HH:mm:ss'
               )}
-              className={style.smallLabel}
+              className='text-[9px] text-gray-400'
               placement='right'
             >
               Created {humanReadable}

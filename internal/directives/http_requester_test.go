@@ -251,7 +251,7 @@ func Test_httpRequester_runPromotionStep(t *testing.T) {
 				require.Equal(
 					t,
 					map[string]any{
-						"status":           http.StatusOK,
+						"status":           int64(http.StatusOK),
 						"theMeaningOfLife": nil,
 					},
 					res.Output,
@@ -284,7 +284,7 @@ func Test_httpRequester_runPromotionStep(t *testing.T) {
 				require.Equal(
 					t,
 					map[string]any{
-						"status":           http.StatusOK,
+						"status":           int64(http.StatusOK),
 						"theMeaningOfLife": nil,
 					},
 					res.Output,
@@ -317,7 +317,7 @@ func Test_httpRequester_runPromotionStep(t *testing.T) {
 				require.Equal(
 					t,
 					map[string]any{
-						"status":           http.StatusOK,
+						"status":           int64(http.StatusOK),
 						"theMeaningOfLife": float64(42),
 					},
 					res.Output,
@@ -333,7 +333,7 @@ func Test_httpRequester_runPromotionStep(t *testing.T) {
 				FailureExpression: "response.status == 404",
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
-				require.ErrorContains(t, err, "HTTP response met failure criteria")
+				require.ErrorContains(t, err, "HTTP (404) response met failure criteria")
 				require.True(t, isTerminal(err))
 				require.Equal(t, kargoapi.PromotionPhaseFailed, res.Status)
 			},
@@ -346,7 +346,7 @@ func Test_httpRequester_runPromotionStep(t *testing.T) {
 				FailureExpression: "response.status == 200",
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
-				require.ErrorContains(t, err, "HTTP response met failure criteria")
+				require.ErrorContains(t, err, "HTTP (200) response met failure criteria")
 				require.True(t, isTerminal(err))
 				require.Equal(t, kargoapi.PromotionPhaseFailed, res.Status)
 			},
@@ -465,9 +465,9 @@ func Test_httpRequester_buildExprEnv(t *testing.T) {
 				require.NoError(t, err)
 				statusAny, ok := env["response"].(map[string]any)["status"]
 				require.True(t, ok)
-				status, ok := statusAny.(int)
+				status, ok := statusAny.(int64)
 				require.True(t, ok)
-				require.Equal(t, http.StatusOK, status)
+				require.Equal(t, int64(http.StatusOK), status)
 				headerFnAny, ok := env["response"].(map[string]any)["header"]
 				require.True(t, ok)
 				headerFn, ok := headerFnAny.(func(string) string)
@@ -505,7 +505,7 @@ func Test_httpRequester_buildExprEnv(t *testing.T) {
 	h := &httpRequester{}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			env, err := h.buildExprEnv(testCase.resp)
+			env, err := h.buildExprEnv(context.Background(), testCase.resp)
 			testCase.assertions(t, env, err)
 		})
 	}

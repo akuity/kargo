@@ -17,6 +17,7 @@ import { MainLayout } from './features/common/layout/main-layout';
 import { Downloads } from './pages/downloads';
 import { Login } from './pages/login/login';
 import { Projects } from './pages/projects';
+import { Settings } from './pages/settings';
 import { User } from './pages/user';
 
 import './app.less';
@@ -45,6 +46,11 @@ export const App = () => (
                   <Route path={paths.warehouse} element={<Project />} />
                   <Route path={paths.downloads} element={<Downloads />} />
                   <Route path={paths.user} element={<User />} />
+                  <Route path={paths.settings} element={<Settings />} />
+                  <Route
+                    path={paths.settingsAnalysisTemplates}
+                    element={<Settings section='verification' />}
+                  />
                   <Route
                     path={paths.createStage}
                     element={<Project tab='pipelines' creatingStage={true} />}

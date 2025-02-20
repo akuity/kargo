@@ -117,8 +117,9 @@ export const Verifications = ({ verifications, images }: Props) => {
         />
         <Table.Column
           title='Freight'
-          dataIndex='freight'
-          render={(val) => val?.substring(0, 7)}
+          render={(val) => {
+            return val?.id?.substring(0, 7);
+          }}
           width={120}
         />
       </Table>

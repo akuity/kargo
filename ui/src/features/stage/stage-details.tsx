@@ -1,26 +1,34 @@
-import { toJson } from '@bufbuild/protobuf';
 import { useQuery } from '@connectrpc/connect-query';
-import { Divider, Drawer, Tabs, Typography } from 'antd';
+import { Divider, Drawer, Skeleton, Tabs, Typography } from 'antd';
 import moment from 'moment';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { Description } from '@ui/features/common/description';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
-import { ManifestPreview } from '@ui/features/common/manifest-preview';
 import { StagePhaseIcon } from '@ui/features/common/stage-phase/stage-phase-icon';
 import { StagePhase } from '@ui/features/common/stage-phase/utils';
 import { useImages } from '@ui/features/project/pipelines/utils/useImages';
-import { getConfig } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { Stage, StageSchema, VerificationInfo } from '@ui/gen/v1alpha1/generated_pb';
+import { getConfig, getStage } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { RawFormat } from '@ui/gen/service/v1alpha1/service_pb';
+import { Stage, VerificationInfo } from '@ui/gen/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
+import { decodeRawData } from '@ui/utils/decode-raw-data';
+
+import YamlEditor from '../common/code-editor/yaml-editor-lazy';
 
 import { FreightHistory } from './freight-history';
 import { Promotions } from './promotions';
 import { RequestedFreight } from './requested-freight';
 import { StageActions } from './stage-actions';
 import { Verifications } from './verifications';
+
+enum TabsTypes {
+  PROMOTION = 'Promotion',
+  VERIFICATIONS = 'Verification',
+  LIVE_MANIFEST = 'Live Manifest'
+}
 
 export const StageDetails = ({ stage }: { stage: Stage }) => {
   const { name: projectName, stageName } = useParams();
@@ -40,7 +48,8 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
             setIsVerificationRunning(true);
           }
           return {
-            ...verification
+            ...verification,
+            freight
           } as VerificationInfo;
         })
       )
@@ -48,6 +57,25 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
   }, [stage]);
 
   const { data: config } = useQuery(getConfig);
+
+  const rawStageYamlQuery = useQuery(getStage, {
+    project: projectName,
+    name: stage?.metadata?.name,
+    format: RawFormat.YAML
+  });
+
+  const [activeTab, setActiveTab] = useState(TabsTypes.PROMOTION);
+
+  useEffect(() => {
+    if (activeTab === TabsTypes.LIVE_MANIFEST) {
+      rawStageYamlQuery.refetch();
+    }
+  }, [stage, activeTab]);
+
+  const rawStageYaml = useMemo(
+    () => decodeRawData(rawStageYamlQuery.data),
+    [rawStageYamlQuery.data]
+  );
 
   const shardKey = stage?.metadata?.labels['kargo.akuity.io/shard'] || '';
   const argocdShard = config?.argocdShards?.[shardKey];
@@ -85,14 +113,16 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
               className='flex-1'
               defaultActiveKey='1'
               style={{ minHeight: 'fit-content' }}
+              activeKey={activeTab}
+              onChange={(newActiveTab) => setActiveTab(newActiveTab as TabsTypes)}
               items={[
                 {
-                  key: '1',
+                  key: TabsTypes.PROMOTION,
                   label: 'Promotions',
                   children: <Promotions argocdShard={argocdShard} />
                 },
                 {
-                  key: '2',
+                  key: TabsTypes.VERIFICATIONS,
                   label: 'Verifications',
                   children: (
                     <Verifications
@@ -102,10 +132,14 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                   )
                 },
                 {
-                  key: '3',
+                  key: TabsTypes.LIVE_MANIFEST,
                   label: 'Live Manifest',
                   className: 'h-full pb-2',
-                  children: <ManifestPreview object={toJson(StageSchema, stage)} height='700px' />
+                  children: rawStageYamlQuery.isLoading ? (
+                    <Skeleton />
+                  ) : (
+                    <YamlEditor value={rawStageYaml} height='700px' isHideManagedFieldsDisplayed />
+                  )
                 }
               ]}
             />

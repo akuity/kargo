@@ -1,0 +1,68 @@
+@node-min-width: 200px;
+@node-max-width: 350px;
+
+.container {
+    @apply h-full;
+    @apply w-full;
+    @apply rounded-lg;
+
+    // base font-size
+    @apply text-xs;
+}
+
+// node header
+.header {
+    @apply w-full;
+    @apply px-3;
+    @apply py-3;
+    @apply bg-gray-100;
+    @apply rounded-lg;
+    @apply flex;
+    @apply gap-5;
+
+    h3 {
+        margin: 0;
+    }
+}
+
+// node body
+.body {
+    @apply px-4;
+    @apply py-4;
+    @apply w-full;
+    @apply my-auto;
+}
+
+// node footer
+.footer {
+    @apply bg-gray-200;
+    @apply rounded-lg;
+    @apply p-1;
+    @apply px-5;
+}
+
+.repoSubscriptionNode, .warehouseNode {
+    width: 180px;
+    height: 106px;
+    @apply bg-gray-100;
+    @apply rounded-lg;
+
+    .header {
+        @apply shadow-md;
+    }
+}
+
+.stageNode {
+    width: 250px;
+    height: 210px;
+    @apply relative;
+    @apply bg-gray-100;
+    @apply flex;
+    @apply flex-col;
+}
+
+.highlightedNode {
+    border-color: #1db6f9 !important;
+    box-shadow: 0 0 0 2px #1db6f9;
+    @apply rounded-lg;
+}

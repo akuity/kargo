@@ -1,8 +1,6 @@
 package directives
 
 import (
-	"fmt"
-
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 )
 
@@ -13,19 +11,18 @@ import (
 // Sources slice. For any source whose desired revision cannot be determined,
 // the slice will contain an empty string at the corresponding index.
 func (a *argocdUpdater) getDesiredRevisions(
-	stepCtx *PromotionStepContext,
 	update *ArgoCDAppUpdate,
 	app *argocd.Application,
-) ([]string, error) {
+) []string {
 	if app == nil {
-		return nil, nil
+		return nil
 	}
 	sources := app.Spec.Sources
 	if len(sources) == 0 && app.Spec.Source != nil {
 		sources = []argocd.ApplicationSource{*app.Spec.Source}
 	}
 	if len(sources) == 0 {
-		return nil, nil
+		return nil
 	}
 	revisions := make([]string, len(sources))
 	for i, src := range sources {
@@ -35,18 +32,9 @@ func (a *argocdUpdater) getDesiredRevisions(
 		// revision.
 		if sourceUpdate != nil {
 			revisions[i] = sourceUpdate.DesiredRevision
-			if revisions[i] == "" {
-				var err error
-				if revisions[i], err = getCommitFromStep(
-					stepCtx.SharedState,
-					sourceUpdate.DesiredCommitFromStep,
-				); err != nil {
-					return nil, err
-				}
-			}
 		}
 	}
-	return revisions, nil
+	return revisions
 }
 
 // findSourceUpdate finds and returns the ArgoCDSourceUpdate that targets the
@@ -62,32 +50,4 @@ func (a *argocdUpdater) findSourceUpdate(
 		}
 	}
 	return nil
-}
-
-func getCommitFromStep(sharedState State, stepAlias string) (string, error) {
-	if stepAlias == "" {
-		return "", nil
-	}
-	stepOutput, exists := sharedState.Get(stepAlias)
-	if !exists {
-		return "", fmt.Errorf("no output found from step with alias %q", stepAlias)
-	}
-	stepOutputMap, ok := stepOutput.(map[string]any)
-	if !ok {
-		return "",
-			fmt.Errorf("output from step with alias %q is not a map[string]any", stepAlias)
-	}
-	commitAny, exists := stepOutputMap[stateKeyCommit]
-	if !exists {
-		return "",
-			fmt.Errorf("no commit found in output from step with alias %q", stepAlias)
-	}
-	commit, ok := commitAny.(string)
-	if !ok {
-		return "", fmt.Errorf(
-			"commit in output from step with alias %q is not a string",
-			stepAlias,
-		)
-	}
-	return commit, nil
 }
