@@ -18,11 +18,12 @@ const testRepoName = "kargo"
 
 func TestParseGiteaURL(t *testing.T) {
 	testCases := []struct {
-		url           string
-		expectedHost  string
-		expectedOwner string
-		expectedRepo  string
-		errExpected   bool
+		url            string
+		expectedScheme string
+		expectedHost   string
+		expectedOwner  string
+		expectedRepo   string
+		errExpected    bool
 	}{
 		{
 			url:         "not-a-url",
@@ -33,25 +34,42 @@ func TestParseGiteaURL(t *testing.T) {
 			errExpected: true,
 		},
 		{
-			url:           "https://git.domain.com/akuity/kargo",
-			expectedHost:  "git.domain.com",
-			expectedOwner: "akuity",
-			expectedRepo:  "kargo",
+			url:            "https://git.domain.com/akuity/kargo",
+			expectedScheme: "https",
+			expectedHost:   "git.domain.com",
+			expectedOwner:  "akuity",
+			expectedRepo:   "kargo",
 		},
 		{
-			url:           "https://git.domain.com/akuity/kargo.git",
-			expectedHost:  "git.domain.com",
-			expectedOwner: "akuity",
-			expectedRepo:  "kargo",
+			url:            "https://git.domain.com/akuity/kargo.git",
+			expectedScheme: "https",
+			expectedHost:   "git.domain.com",
+			expectedOwner:  "akuity",
+			expectedRepo:   "kargo",
+		},
+		{
+			url:            "git@git.domain.com:akuity/kargo",
+			expectedScheme: "https",
+			expectedHost:   "git.domain.com",
+			expectedOwner:  "akuity",
+			expectedRepo:   "kargo",
+		},
+		{
+			url:            "http://git.example.com:8080/akuity/kargo",
+			expectedScheme: "http",
+			expectedHost:   "git.example.com:8080",
+			expectedOwner:  "akuity",
+			expectedRepo:   "kargo",
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.url, func(t *testing.T) {
-			host, owner, repo, err := parseRepoURL(testCase.url)
+			scheme, host, owner, repo, err := parseRepoURL(testCase.url)
 			if testCase.errExpected {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
+				require.Equal(t, testCase.expectedScheme, scheme)
 				require.Equal(t, testCase.expectedHost, host)
 				require.Equal(t, testCase.expectedOwner, owner)
 				require.Equal(t, testCase.expectedRepo, repo)

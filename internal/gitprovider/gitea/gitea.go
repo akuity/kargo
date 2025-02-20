@@ -85,7 +85,7 @@ func NewProvider(
 		opts = &gitprovider.Options{}
 	}
 
-	host, owner, repo, err := parseRepoURL(repoURL)
+	scheme, host, owner, repo, err := parseRepoURL(repoURL)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func NewProvider(
 		}))
 	}
 
-	baseURL := "https://" + host
+	baseURL := fmt.Sprintf("%s://%s", scheme, host)
 	client, err := gitea.NewClient(baseURL, clientOpts...)
 	if err != nil {
 		return nil, err
@@ -236,7 +236,7 @@ func (p *provider) ListPullRequests(
 	default:
 		return nil, fmt.Errorf("unknown pull request state %q", opts.State)
 	}
-	prs := []gitprovider.PullRequest{}
+	var prs []gitprovider.PullRequest
 	for {
 		giteaPRs, res, err := p.client.ListPullRequests(ctx, p.owner, p.repo, &listOpts)
 		if err != nil {
@@ -274,15 +274,26 @@ func convertGiteaPR(giteaPR gitea.PullRequest) gitprovider.PullRequest {
 	return pr
 }
 
-func parseRepoURL(repoURL string) (string, string, string, error) {
+func parseRepoURL(repoURL string) (string, string, string, string, error) {
 	u, err := url.Parse(git.NormalizeURL(repoURL))
 	if err != nil {
-		return "", "", "", fmt.Errorf("error parsing gitea repository URL %q: %w", u, err)
+		return "", "", "", "", fmt.Errorf(
+			"error parsing gitea repository URL %q: %w", u, err,
+		)
 	}
+
+	scheme := u.Scheme
+	if scheme != "https" && scheme != "http" {
+		scheme = "https"
+	}
+
 	path := strings.TrimPrefix(u.Path, "/")
 	parts := strings.Split(path, "/")
 	if len(parts) != 2 {
-		return "", "", "", fmt.Errorf("could not extract repository owner and name from URL %q", u)
+		return "", "", "", "", fmt.Errorf(
+			"could not extract repository owner and name from URL %q", u,
+		)
 	}
-	return u.Host, parts[0], parts[1], nil
+
+	return scheme, u.Host, parts[0], parts[1], nil
 }

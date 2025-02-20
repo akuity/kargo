@@ -143,28 +143,43 @@ func TestListPullRequests(t *testing.T) {
 func TestParseGitLabURL(t *testing.T) {
 	const expectedProjectName = "akuity/kargo"
 	testCases := []struct {
-		url          string
-		expectedHost string
+		url            string
+		expectedScheme string
+		expectedHost   string
 	}{
 		{
-			url:          "https://gitlab.com/akuity/kargo",
-			expectedHost: "gitlab.com",
+			url:            "https://gitlab.com/akuity/kargo",
+			expectedScheme: "https",
+			expectedHost:   "gitlab.com",
 		},
 		{
-			url:          "https://gitlab.com/akuity/kargo.git",
-			expectedHost: "gitlab.com",
+			url:            "https://gitlab.com/akuity/kargo.git",
+			expectedScheme: "https",
+			expectedHost:   "gitlab.com",
 		},
 		{
 			// This isn't a real URL. It's just to validate that the function can
 			// handle GitHub Enterprise URLs.
-			url:          "https://gitlab.akuity.io/akuity/kargo.git",
-			expectedHost: "gitlab.akuity.io",
+			url:            "https://gitlab.akuity.io/akuity/kargo.git",
+			expectedScheme: "https",
+			expectedHost:   "gitlab.akuity.io",
+		},
+		{
+			url:            "ssh://gitlab.com/akuity/kargo.git",
+			expectedScheme: "https",
+			expectedHost:   "gitlab.com",
+		},
+		{
+			url:            "http://git.example.com/akuity/kargo",
+			expectedScheme: "http",
+			expectedHost:   "git.example.com",
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.url, func(t *testing.T) {
-			host, projectName, err := parseRepoURL(testCase.url)
+			scheme, host, projectName, err := parseRepoURL(testCase.url)
 			require.NoError(t, err)
+			require.Equal(t, testCase.expectedScheme, scheme)
 			require.Equal(t, testCase.expectedHost, host)
 			require.Equal(t, expectedProjectName, projectName)
 		})
