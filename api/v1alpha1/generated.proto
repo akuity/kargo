@@ -987,7 +987,8 @@ message PromotionStep {
   // As is the alias this step can be referred to as.
   optional string as = 2;
 
-  // If is a condition that must be satisfied for the step to be executed.
+  // If is an optional expression that, if present, must evaluate to a boolean
+  // value. If the expression evaluates to false, the step will be skipped.
   optional string if = 7;
 
   // Retry is the retry policy for this step.
