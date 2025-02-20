@@ -80,20 +80,6 @@ func (e *SimpleEngine) executeSteps(
 
 		step := steps[i]
 
-		// Check if the step should be skipped.
-		var skip bool
-		if skip, err = step.Skip(promoCtx, state); err != nil {
-			return PromotionResult{
-				Status:                kargoapi.PromotionPhaseErrored,
-				CurrentStep:           i,
-				StepExecutionMetadata: stepExecMetas,
-				State:                 state,
-				HealthCheckSteps:      healthChecks,
-			}, fmt.Errorf("error checking if step %d should be skipped: %w", i, err)
-		} else if skip {
-			continue
-		}
-
 		// Prepare the step for execution by setting the alias.
 		if step.Alias, err = e.stepAlias(step.Alias, i); err != nil {
 			return PromotionResult{
@@ -120,13 +106,35 @@ func (e *SimpleEngine) executeSteps(
 		// If we don't have metadata for this step yet, create it.
 		if int64(len(stepExecMetas)) == i {
 			stepExecMetas = append(stepExecMetas, kargoapi.StepExecutionMetadata{
-				Alias:     step.Alias,
-				StartedAt: ptr.To(metav1.Now()),
+				Alias: step.Alias,
 			})
 		}
 		stepExecMeta := &stepExecMetas[i]
 
+		// Check if the step should be skipped.
+		var skip bool
+		if skip, err = step.Skip(promoCtx, state); err != nil {
+			return PromotionResult{
+				Status:                kargoapi.PromotionPhaseErrored,
+				CurrentStep:           i,
+				StepExecutionMetadata: stepExecMetas,
+				State:                 state,
+				HealthCheckSteps:      healthChecks,
+			}, fmt.Errorf("error checking if step %d should be skipped: %w", i, err)
+		} else if skip {
+			// TODO(hidde): We should probably set the status to skipped here,
+			// but this would require step specific phases (opposed to the
+			// promotion wide phases we have now). We should revisit this when
+			// we dive into the other engine related changes (e.g. improved
+			// failure handling).
+			stepExecMeta.Status = kargoapi.PromotionPhaseSucceeded
+			continue
+		}
+
 		// Execute the step
+		if stepExecMeta.StartedAt == nil {
+			stepExecMeta.StartedAt = ptr.To(metav1.Now())
+		}
 		result, err := e.executeStep(ctx, promoCtx, step, reg, workDir, state)
 		stepExecMeta.Status = result.Status
 		stepExecMeta.Message = result.Message
