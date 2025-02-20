@@ -3,12 +3,12 @@ package directives
 import (
 	"context"
 	"fmt"
-	"github.com/xeipuuv/gojsonschema"
 	"os"
-	"sigs.k8s.io/yaml"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/expr-lang/expr"
+	"github.com/xeipuuv/gojsonschema"
+	"sigs.k8s.io/yaml"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
@@ -100,6 +100,10 @@ func (yp *yamlParser) readAndParseYAML(workDir string, path string) (map[string]
 	yamlData, err := os.ReadFile(absFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("error reading YAML file %q: %w", absFilePath, err)
+	}
+
+	if len(yamlData) == 0 {
+		return nil, fmt.Errorf("could not parse empty YAML file: %q", absFilePath)
 	}
 
 	var data map[string]any
