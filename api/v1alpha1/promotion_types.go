@@ -207,7 +207,8 @@ type PromotionStep struct {
 	Task *PromotionTaskReference `json:"task,omitempty" protobuf:"bytes,5,opt,name=task"`
 	// As is the alias this step can be referred to as.
 	As string `json:"as,omitempty" protobuf:"bytes,2,opt,name=as"`
-	// If is a condition that must be satisfied for the step to be executed.
+	// If is an optional expression that, if present, must evaluate to a boolean
+	// value. If the expression evaluates to false, the step will be skipped.
 	If string `json:"if,omitempty" protobuf:"bytes,7,opt,name=if"`
 	// Retry is the retry policy for this step.
 	Retry *PromotionStepRetry `json:"retry,omitempty" protobuf:"bytes,4,opt,name=retry"`
