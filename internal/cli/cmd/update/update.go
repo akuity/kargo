@@ -6,7 +6,6 @@ import (
 
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
-	"github.com/akuity/kargo/internal/cli/templates"
 )
 
 func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
@@ -14,10 +13,6 @@ func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra
 		Use:   "update SUBCOMMAND",
 		Short: "Update a resource",
 		Args:  option.NoArgs,
-		Example: templates.Example(`
-# Update the alias of a freight for a specified project
-kargo update freight --project=my-project abc123 --alias=my-new-alias
-`),
 	}
 
 	// Register subcommands.

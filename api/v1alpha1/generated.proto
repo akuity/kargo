@@ -55,6 +55,13 @@ message AnalysisTemplateReference {
   //
   // +kubebuilder:validation:Required
   optional string name = 1;
+
+  // Kind is the type of the AnalysisTemplate. Can be either AnalysisTemplate or
+  // ClusterAnalysisTemplate, default is AnalysisTemplate.
+  //
+  // +kubebuilder:validation:Optional
+  // +kubebuilder:validation:Enum=AnalysisTemplate;ClusterAnalysisTemplate
+  optional string kind = 2;
 }
 
 // ApprovedStage describes a Stage for which Freight has been (manually)
@@ -426,6 +433,13 @@ message FreightSources {
   // +kubebuilder:validation:Type=string
   // +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(s|m|h))+$"
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration requiredSoakTime = 3;
+
+  // AvailabilityStrategy specifies the semantics for how requested Freight is
+  // made available to the Stage. This field is optional. When left unspecified,
+  // the field is implicitly treated as if its value were "OneOf".
+  //
+  // +kubebuilder:default=OneOf
+  optional string availabilityStrategy = 4;
 }
 
 // FreightStatus describes a piece of Freight's most recently observed state.

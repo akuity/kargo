@@ -91,11 +91,7 @@ func (g *gitPROpener) runPromotionStep(
 		}, nil
 	}
 
-	sourceBranch, err := g.getSourceBranch(stepCtx.SharedState, cfg)
-	if err != nil {
-		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
-			fmt.Errorf("error determining source branch: %w", err)
-	}
+	sourceBranch := cfg.SourceBranch
 
 	var repoCreds *git.RepoCredentials
 	creds, found, err := stepCtx.CredentialsDB.Get(
@@ -270,43 +266,6 @@ func (g *gitPROpener) getPRNumber(
 			stepCtx.Alias,
 		)
 	}
-}
-
-func (g *gitPROpener) getSourceBranch(
-	sharedState State,
-	cfg GitOpenPRConfig,
-) (string, error) {
-	sourceBranch := cfg.SourceBranch
-	if cfg.SourceBranchFromStep != "" {
-		stepOutput, exists := sharedState.Get(cfg.SourceBranchFromStep)
-		if !exists {
-			return "", fmt.Errorf(
-				"no output found from step with alias %q",
-				cfg.SourceBranchFromStep,
-			)
-		}
-		stepOutputMap, ok := stepOutput.(map[string]any)
-		if !ok {
-			return "", fmt.Errorf(
-				"output from step with alias %q is not a map[string]any",
-				cfg.SourceBranchFromStep,
-			)
-		}
-		sourceBranchAny, exists := stepOutputMap[stateKeyBranch]
-		if !exists {
-			return "", fmt.Errorf(
-				"no branch found in output from step with alias %q",
-				cfg.SourceBranchFromStep,
-			)
-		}
-		if sourceBranch, ok = sourceBranchAny.(string); !ok {
-			return "", fmt.Errorf(
-				"branch name in output from step with alias %q is not a string",
-				cfg.SourceBranchFromStep,
-			)
-		}
-	}
-	return sourceBranch, nil
 }
 
 // ensureRemoteTargetBranch ensures the existence of a remote branch. If the

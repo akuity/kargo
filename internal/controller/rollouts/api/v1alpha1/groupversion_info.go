@@ -24,6 +24,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		GroupVersion,
 		&AnalysisTemplate{},
 		&AnalysisTemplateList{},
+		&ClusterAnalysisTemplate{},
+		&ClusterAnalysisTemplateList{},
 		&AnalysisRun{},
 		&AnalysisRunList{},
 	)

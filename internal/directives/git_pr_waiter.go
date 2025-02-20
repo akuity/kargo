@@ -64,12 +64,6 @@ func (g *gitPRWaiter) runPromotionStep(
 	stepCtx *PromotionStepContext,
 	cfg GitWaitForPRConfig,
 ) (PromotionStepResult, error) {
-	prNumber, err := g.getPRNumber(stepCtx.SharedState, cfg)
-	if err != nil {
-		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
-			fmt.Errorf("error getting PR number from shared state: %w", err)
-	}
-
 	var repoCreds *git.RepoCredentials
 	creds, found, err := stepCtx.CredentialsDB.Get(
 		ctx,
@@ -104,10 +98,10 @@ func (g *gitPRWaiter) runPromotionStep(
 			fmt.Errorf("error creating git provider service: %w", err)
 	}
 
-	pr, err := gitProv.GetPullRequest(ctx, prNumber)
+	pr, err := gitProv.GetPullRequest(ctx, cfg.PRNumber)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
-			fmt.Errorf("error getting pull request %d: %w", prNumber, err)
+			fmt.Errorf("error getting pull request %d: %w", cfg.PRNumber, err)
 	}
 
 	if pr.Open {
@@ -115,58 +109,10 @@ func (g *gitPRWaiter) runPromotionStep(
 	}
 	if !pr.Merged {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseFailed},
-			&terminalError{err: fmt.Errorf("pull request %d was closed without being merged", prNumber)}
+			&terminalError{err: fmt.Errorf("pull request %d was closed without being merged", cfg.PRNumber)}
 	}
 	return PromotionStepResult{
 		Status: kargoapi.PromotionPhaseSucceeded,
 		Output: map[string]any{stateKeyCommit: pr.MergeCommitSHA},
 	}, nil
-}
-
-// getPRNumber checks shared state for output from a previous step and returns
-// any PR number from that output. If no such output is found, the output
-// contains no PR number, or the PR number is not an int64 or float64, then an
-// error is returned.
-func (g *gitPRWaiter) getPRNumber(
-	sharedState State,
-	cfg GitWaitForPRConfig,
-) (int64, error) {
-	if cfg.PRNumberFromStep == "" {
-		return cfg.PRNumber, nil
-	}
-	stepOutput, exists := sharedState.Get(cfg.PRNumberFromStep)
-	if !exists {
-		return 0, fmt.Errorf(
-			"no output found from step with alias %q",
-			cfg.PRNumberFromStep,
-		)
-	}
-	stepOutputMap, ok := stepOutput.(map[string]any)
-	if !ok {
-		return 0, fmt.Errorf(
-			"output from step with alias %q is not a map[string]any",
-			cfg.PRNumberFromStep,
-		)
-	}
-	prNumberAny, exists := stepOutputMap[stateKeyPRNumber]
-	if !exists {
-		return 0, fmt.Errorf(
-			"no PR number found in output from step with alias %q",
-			cfg.PRNumberFromStep,
-		)
-	}
-	// If the state was rehydrated from PromotionStatus, which makes use of
-	// apiextensions.JSON, the PR number will be a float64. Otherwise, it will be
-	// an int64. We need to handle both cases.
-	switch prNumber := prNumberAny.(type) {
-	case int64:
-		return prNumber, nil
-	case float64:
-		return int64(prNumber), nil
-	default:
-		return 0, fmt.Errorf(
-			"PR number in output from step with alias %q is not an int64",
-			cfg.PRNumberFromStep,
-		)
-	}
 }

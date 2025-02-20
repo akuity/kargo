@@ -3,7 +3,7 @@
   "title": "GitWaitForPRConfig",
   "type": "object",
   "additionalProperties": false,
-  "required": ["repoURL"],
+  "required": ["repoURL", "prNumber"],
   "properties": {
     "insecureSkipTLSVerify" : {
       "type": "boolean",
@@ -15,13 +15,9 @@
       "enum": ["github", "gitlab", "azure", "gitea"]
     },
     "prNumber": {
-      "type": "number",
-      "description": "The number of the pull request to wait for."
-    },
-    "prNumberFromStep": {
-      "type": "string",
-      "description": "This field references the 'prNumber' output from a previous step and uses it as the number of the pull request to wait for.",
-      "minLength": 1
+      "type": "integer",
+      "description": "The number of the pull request to wait for.",
+      "minimum": 1
     },
     "repoURL": {
       "type": "string",
@@ -29,19 +25,5 @@
       "minLength": 1,
       "format": "uri"
     }
-  },
-  "oneOf": [
-    {
-      "required": ["prNumber"],
-      "properties": {
-        "prNumberFromStep": {  "enum": ["", null] }
-      }
-    },
-    {
-      "required": ["prNumberFromStep"],
-      "properties": {
-        "prNumber": {  "enum": [0, null] }
-      }
-    }
-  ]
+  }
 }

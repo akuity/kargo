@@ -2,6 +2,7 @@ package github
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"strconv"
 	"testing"
@@ -184,6 +185,43 @@ func TestAppCredentialHelper(t *testing.T) {
 				testCase.secret,
 			)
 			testCase.assertions(t, creds, testCase.helper.tokenCache, err)
+		})
+	}
+}
+
+func TestGetAccessToken(t *testing.T) {
+	const key = "-----BEGIN PRIVATE KEY-----\nfakekey\n-----END PRIVATE KEY-----"
+	testCases := []struct {
+		name        string
+		key         string
+		expectedKey string
+		expectsErr  bool
+	}{
+		{
+			name:        "key is not base64 encoded",
+			key:         key,
+			expectedKey: key,
+		},
+		{
+			name:        "key is base64 encoded",
+			key:         base64.StdEncoding.EncodeToString([]byte(key)),
+			expectedKey: key,
+		},
+		{
+			name:       "key is a corrupted base64 encoding",
+			key:        "corrupted", // These are all base64 digits. :)
+			expectsErr: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			key, err := decodeKey(testCase.key)
+			if testCase.expectsErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, []byte(testCase.expectedKey), key)
 		})
 	}
 }
