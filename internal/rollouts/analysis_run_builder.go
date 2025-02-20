@@ -120,8 +120,7 @@ func (b *AnalysisRunBuilder) generateName(prefix, suffix string) string {
 func (b *AnalysisRunBuilder) buildMetadata(
 	namespace, name string,
 	metadata *kargoapi.AnalysisRunMetadata,
-	extraLabels map[string]string,
-	extraAnnotations map[string]string,
+	extraLabels, extraAnnotations map[string]string,
 ) metav1.ObjectMeta {
 	annotations := make(map[string]string)
 	labels := make(map[string]string)
