@@ -41,7 +41,11 @@ export const Settings = ({ section = 'verification' }: { section?: string }) => 
 
   return (
     <Layout className='min-h-screen'>
-      <Sider width={250} className='bg-white border-r border-gray-300 shadow-sm'>
+      <Sider
+        width={250}
+        className='border-r border-gray-300 shadow-sm'
+        style={{ background: 'white' }}
+      >
         <div className='p-4'>
           <PageTitle title='Settings' />
         </div>
