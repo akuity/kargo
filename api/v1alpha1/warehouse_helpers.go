@@ -10,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -86,6 +87,12 @@ type ListWarehouseFreightOptions struct {
 	// This is useful for filtering out Freight whose soak time has not yet
 	// elapsed.
 	VerifiedBefore *metav1.Time
+	// AvailabilityStrategy specifies the semantics for how Freight is determined
+	// to be available. If not set, the default is to consider Freight available
+	// if it has been verified in any of the provided VerifiedIn stages.
+	// IMPORTANT: This is also applied to Freight matched using the VerifiedBefore
+	// condition.
+	AvailabilityStrategy FreightAvailabilityStrategy
 }
 
 // ListFreight returns a list of all Freight resources that originated from the
@@ -101,7 +108,7 @@ func (w *Warehouse) ListFreight(
 
 	// Build a list of list options to make multiple queries whose results we will
 	// merge and de-dupe.
-	fieldSelectors := make([]fields.Selector, 0, 1+len(opts.VerifiedIn))
+	fieldSelectors := make([]fields.Selector, 0)
 	warehouseSelector := fields.OneTermEqualSelector("warehouse", w.Name)
 	if opts.ApprovedFor == "" && len(opts.VerifiedIn) == 0 {
 		// Just list all Freight resources that originated from the Warehouse
@@ -117,14 +124,43 @@ func (w *Warehouse) ListFreight(
 			),
 		)
 	}
-	for _, stage := range opts.VerifiedIn {
-		// List all Freight resources that are verified in the specified Stage
-		fieldSelectors = append(
-			fieldSelectors,
-			fields.AndSelectors(
-				warehouseSelector,
+
+	// Construct selectors for listing Freight using the configured AvailabilityStrategy
+	// semantics.
+	switch opts.AvailabilityStrategy {
+	case FreightAvailabilityStrategyAll:
+		// Query for Freight that is verified in ALL of the VerifiedIn stages.
+		stageSelectors := make([]fields.Selector, 0, len(opts.VerifiedIn))
+		for _, stage := range opts.VerifiedIn {
+			stageSelectors = append(
+				stageSelectors,
 				fields.OneTermEqualSelector("verifiedIn", stage),
-			),
+			)
+		}
+
+		if len(stageSelectors) > 0 {
+			fieldSelectors = append(
+				fieldSelectors,
+				fields.AndSelectors(
+					append(stageSelectors, warehouseSelector)...,
+				),
+			)
+		}
+	case FreightAvailabilityStrategyOneOf, "":
+		// Query for Freight that is verified in ANY of the VerifiedIn stages.
+		for _, stage := range opts.VerifiedIn {
+			fieldSelectors = append(
+				fieldSelectors,
+				fields.AndSelectors(
+					warehouseSelector,
+					fields.OneTermEqualSelector("verifiedIn", stage),
+				),
+			)
+		}
+	default:
+		return nil, fmt.Errorf(
+			"unsupported AvailabilityStrategy: %s",
+			opts.AvailabilityStrategy,
 		)
 	}
 
@@ -164,7 +200,6 @@ func (w *Warehouse) ListFreight(
 
 	// Filter out Freight whose soak time has not yet elapsed
 	filtered := make([]Freight, 0, len(freight))
-freightLoop:
 	for _, f := range freight {
 		if opts.ApprovedFor != "" {
 			if f.IsApprovedFor(opts.ApprovedFor) {
@@ -172,13 +207,34 @@ freightLoop:
 				continue
 			}
 		}
-		for _, ver := range f.Status.VerifiedIn {
+
+		// Track set of Stages that have passed the verification soak time
+		// for the Freight.
+		verifiedStages := sets.New[string]()
+		for stage, ver := range f.Status.VerifiedIn {
 			if verifiedAt := ver.VerifiedAt; verifiedAt != nil {
 				if verifiedAt.Time.Before(opts.VerifiedBefore.Time) {
-					filtered = append(filtered, f)
-					continue freightLoop
+					verifiedStages.Insert(stage)
 				}
 			}
+		}
+
+		// Filter out Freight that has passed its verification soak time in ALL
+		// of the specified VerifiedIn Stages if AvailabilityStrategy is set to All.
+		// Otherwise, include Freight if it has passed the soak time in a single
+		// Stage.
+		if opts.AvailabilityStrategy == FreightAvailabilityStrategyAll {
+			// If Freight is verified in ALL upstream Stages, then it is
+			// available.
+			if verifiedStages.Equal(sets.New(opts.VerifiedIn...)) {
+				filtered = append(filtered, f)
+			}
+			continue
+		}
+
+		// If Freight is verified in ANY upstream Stage, then it is available.
+		if verifiedStages.Len() > 0 {
+			filtered = append(filtered, f)
 		}
 	}
 	return filtered, nil

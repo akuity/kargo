@@ -103,6 +103,7 @@ func TestWarehouse_ListFreight(t *testing.T) {
 	const testWarehouse = "fake-warehouse"
 	const testStage = "fake-stage"
 	const testUpstreamStage = "fake-upstream-stage"
+	const testUpstreamStage2 = "fake-upstream-stage2"
 
 	testCases := []struct {
 		name        string
@@ -171,7 +172,7 @@ func TestWarehouse_ListFreight(t *testing.T) {
 			},
 		},
 		{
-			name: "success with options",
+			name: "success with VerifiedIn and VerifiedBefore options",
 			opts: &ListWarehouseFreightOptions{
 				ApprovedFor:    testStage,
 				VerifiedIn:     []string{testUpstreamStage},
@@ -267,6 +268,123 @@ func TestWarehouse_ListFreight(t *testing.T) {
 				require.Equal(t, "fake-freight-3", freight[0].Name)
 				require.Equal(t, testProject, freight[1].Namespace)
 				require.Equal(t, "fake-freight-5", freight[1].Name)
+			},
+		},
+		{
+			name: "success with AvailabilityStrategy set to FreightAvailabilityStrategyAll",
+			opts: &ListWarehouseFreightOptions{
+				AvailabilityStrategy: FreightAvailabilityStrategyAll,
+				ApprovedFor:          testStage,
+				VerifiedIn:           []string{testUpstreamStage, testUpstreamStage2},
+				VerifiedBefore:       &metav1.Time{Time: time.Now().Add(-1 * time.Hour)},
+			},
+			objects: []client.Object{
+				&Freight{ // This should be returned as its approved for the Stage
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight-1",
+					},
+					Origin: FreightOrigin{
+						Kind: FreightOriginKindWarehouse,
+						Name: testWarehouse,
+					},
+					Status: FreightStatus{
+						// This is approved for the Stage
+						ApprovedFor: map[string]ApprovedStage{testStage: {}},
+						// This is only verified in a single upstream Stage
+						VerifiedIn: map[string]VerifiedStage{
+							testUpstreamStage: {
+								VerifiedAt: ptr.To(metav1.Now()),
+							},
+						},
+					},
+				},
+				&Freight{ // This should be returned because its verified in both upstream Stages and soak time has lapsed
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight-2",
+					},
+					Origin: FreightOrigin{
+						Kind: FreightOriginKindWarehouse,
+						Name: testWarehouse,
+					},
+					Status: FreightStatus{
+						// This is not approved for any Stage
+						ApprovedFor: map[string]ApprovedStage{},
+						// This is verified in all of the upstream Stages and the soak time has lapsed
+						VerifiedIn: map[string]VerifiedStage{
+							testUpstreamStage: {
+								VerifiedAt: ptr.To(metav1.NewTime(time.Now().Add(-2 * time.Hour))),
+							},
+							testUpstreamStage2: {
+								VerifiedAt: ptr.To(metav1.NewTime(time.Now().Add(-2 * time.Hour))),
+							},
+						},
+					},
+				},
+				&Freight{ // This should not be returned because it's not verified in all of the upstream Stages
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight-3",
+					},
+					Origin: FreightOrigin{
+						Kind: FreightOriginKindWarehouse,
+						Name: testWarehouse,
+					},
+					Status: FreightStatus{
+						// This is not approved for any Stage
+						ApprovedFor: map[string]ApprovedStage{},
+						// This is not verified in all of the upstream Stages
+						VerifiedIn: map[string]VerifiedStage{
+							testUpstreamStage: {
+								VerifiedAt: ptr.To(metav1.Now()),
+							},
+						},
+					},
+				},
+				&Freight{ // This should not be returned because its not passed the soak time in all Stages
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight-4",
+					},
+					Origin: FreightOrigin{
+						Kind: FreightOriginKindWarehouse,
+						Name: testWarehouse,
+					},
+					Status: FreightStatus{
+						// This is not approved for any Stage
+						ApprovedFor: map[string]ApprovedStage{},
+						// This is verified in all of the upstream Stages but only passed the soak time of one
+						VerifiedIn: map[string]VerifiedStage{
+							testUpstreamStage: {
+								VerifiedAt: ptr.To(metav1.NewTime(time.Now().Add(-2 * time.Hour))),
+							},
+							testUpstreamStage2: {
+								VerifiedAt: ptr.To(metav1.Now()),
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, freight []Freight, err error) {
+				require.NoError(t, err)
+				require.Len(t, freight, 2)
+				require.Equal(t, testProject, freight[0].Namespace)
+				require.Equal(t, "fake-freight-1", freight[0].Name)
+				require.Equal(t, testProject, freight[1].Namespace)
+				require.Equal(t, "fake-freight-2", freight[1].Name)
+			},
+		},
+		{
+			name: "failure with invalid AvailabilityStrategy",
+			opts: &ListWarehouseFreightOptions{
+				AvailabilityStrategy: "Invalid",
+				ApprovedFor:          testStage,
+				VerifiedIn:           []string{testUpstreamStage, testUpstreamStage2},
+				VerifiedBefore:       &metav1.Time{Time: time.Now().Add(-1 * time.Hour)},
+			},
+			assertions: func(t *testing.T, _ []Freight, err error) {
+				require.ErrorContains(t, err, "unsupported AvailabilityStrategy")
 			},
 		},
 	}
