@@ -47,9 +47,17 @@ promotion to that `Stage`.
 
 When a `Stage` accepts `Freight` from one or more "upstream" `Stage` resources,
 `Freight` is considered available for promotion to that `Stage` only after being
-_verified_ in at least one of the upstream `Stage`s. Alternatively, users with
-adequate permissions may manually _approve_ `Freight` for promotion to any given
-`Stage` without requiring upstream verification.
+_verified_ in at least one of the upstream `Stage`s by default. Alternatively,
+users with adequate permissions may manually _approve_ `Freight` for promotion
+to any given `Stage` without requiring upstream verification.
+
+You can control this behavior using the `availabilityStrategy` field, which
+accepts either:
+
+- `OneOf` (default): `Freight` is available for promotion after being verified
+  in at least one of the upstream `Stage`s
+- `All`: `Freight` is available for promotion only after being verified in all
+  upstream `Stage`s listed in the `sources`
 
 :::tip
 Explicit approvals are a useful method for applying the occasional "hotfix"
@@ -95,6 +103,30 @@ spec:
     sources:
       stages:
       - test
+  # ...
+```
+
+In the next example, the `prod` `Stage` requests `Freight` that has originated
+from the `my-warehouse` `Warehouse`, but indicates that it will accept such
+`Freight` only after it has been _verified_ in both the `qa` and `uat`
+`Stage`s:
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+   name: prod
+   namespace: kargo-demo
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: my-warehouse
+    sources:
+      stages:
+      - qa
+      - uat
+    availabilityStrategy: All
   # ...
 ```
 
