@@ -376,6 +376,20 @@ type Image struct {
 	Tag string `json:"tag,omitempty"`
 }
 
+type YAMLParseConfig struct {
+	// An array of outputs to extract from the YAML file.
+	Outputs []YAMLParse `json:"outputs"`
+	// The path to the YAML file to be parsed.
+	Path string `json:"path"`
+}
+
+type YAMLParse struct {
+	// The expression used to extract data from the YAML file.
+	FromExpression string `json:"fromExpression"`
+	// The name of the output variable to store the result.
+	Name string `json:"name"`
+}
+
 type YAMLUpdateConfig struct {
 	// The path to a YAML file.
 	Path string `json:"path"`
