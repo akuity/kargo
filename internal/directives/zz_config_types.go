@@ -298,6 +298,20 @@ type HTTPQueryParam struct {
 	Value string `json:"value"`
 }
 
+type JSONParseConfig struct {
+	// An array of outputs to extract from the JSON file.
+	Outputs []JSONParse `json:"outputs"`
+	// The path to the JSON file to be parsed.
+	Path string `json:"path"`
+}
+
+type JSONParse struct {
+	// The expression used to extract data from the JSON file.
+	FromExpression string `json:"fromExpression"`
+	// The name of the output variable to store the result.
+	Name string `json:"name"`
+}
+
 type JSONUpdateConfig struct {
 	// The path to a JSON file.
 	Path string `json:"path"`
