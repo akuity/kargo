@@ -75,7 +75,7 @@ func NewProvider(
 	if opts == nil {
 		opts = &gitprovider.Options{}
 	}
-	host, projectName, err := parseRepoURL(repoURL)
+	scheme, host, projectName, err := parseRepoURL(repoURL)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ func NewProvider(
 	if host != "gitlab.com" {
 		clientOpts = append(
 			clientOpts,
-			gitlab.WithBaseURL(fmt.Sprintf("https://%s/api/v4", host)),
+			gitlab.WithBaseURL(fmt.Sprintf("%s://%s/api/v4", scheme, host)),
 		)
 	}
 	if opts.InsecureSkipTLSVerify {
@@ -175,7 +175,7 @@ func (p *provider) ListPullRequests(
 			PerPage: 100,
 		},
 	}
-	prs := []gitprovider.PullRequest{}
+	var prs []gitprovider.PullRequest
 	for {
 		glMRs, res, err := p.client.ListProjectMergeRequests(p.projectName, listOpts)
 		if err != nil {
@@ -214,10 +214,18 @@ func isMROpen(glMR gitlab.MergeRequest) bool {
 	return glMR.State == "opened" || glMR.State == "locked"
 }
 
-func parseRepoURL(repoURL string) (string, string, error) {
+func parseRepoURL(repoURL string) (string, string, string, error) {
 	u, err := url.Parse(git.NormalizeURL(repoURL))
 	if err != nil {
-		return "", "", fmt.Errorf("error parsing gitlab repository URL %q: %w", u, err)
+		return "", "", "", fmt.Errorf(
+			"error parsing gitlab repository URL %q: %w", u, err,
+		)
 	}
-	return u.Host, strings.TrimPrefix(u.Path, "/"), nil
+
+	scheme := u.Scheme
+	if scheme != "https" && scheme != "http" {
+		scheme = "https"
+	}
+
+	return scheme, u.Host, strings.TrimPrefix(u.Path, "/"), nil
 }

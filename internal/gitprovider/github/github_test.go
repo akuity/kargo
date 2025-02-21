@@ -16,11 +16,12 @@ const testRepoName = "kargo"
 
 func TestParseGitHubURL(t *testing.T) {
 	testCases := []struct {
-		url           string
-		expectedHost  string
-		expectedOwner string
-		expectedRepo  string
-		errExpected   bool
+		url            string
+		expectedScheme string
+		expectedHost   string
+		expectedOwner  string
+		expectedRepo   string
+		errExpected    bool
 	}{
 		{
 			url:         "not-a-url",
@@ -31,33 +32,52 @@ func TestParseGitHubURL(t *testing.T) {
 			errExpected: true,
 		},
 		{
-			url:           "https://github.com/akuity/kargo",
-			expectedHost:  "github.com",
-			expectedOwner: "akuity",
-			expectedRepo:  "kargo",
+			url:            "https://github.com/akuity/kargo",
+			expectedScheme: "https",
+			expectedHost:   "github.com",
+			expectedOwner:  "akuity",
+			expectedRepo:   "kargo",
 		},
 		{
-			url:           "https://github.com/akuity/kargo.git",
-			expectedHost:  "github.com",
-			expectedOwner: "akuity",
-			expectedRepo:  "kargo",
+			url:            "https://github.com/akuity/kargo.git",
+			expectedScheme: "https",
+			expectedHost:   "github.com",
+			expectedOwner:  "akuity",
+			expectedRepo:   "kargo",
 		},
 		{
 			// This isn't a real URL. It's just to validate that the function can
 			// handle GitHub Enterprise URLs.
-			url:           "https://github.akuity.io/akuity/kargo.git",
-			expectedHost:  "github.akuity.io",
-			expectedOwner: "akuity",
-			expectedRepo:  "kargo",
+			url:            "https://github.akuity.io/akuity/kargo.git",
+			expectedScheme: "https",
+			expectedHost:   "github.akuity.io",
+			expectedOwner:  "akuity",
+			expectedRepo:   "kargo",
+		},
+		{
+			url:            "http://git@example.com:8080/akuity/kargo",
+			errExpected:    false,
+			expectedScheme: "http",
+			expectedHost:   "example.com:8080",
+			expectedOwner:  "akuity",
+			expectedRepo:   "kargo",
+		},
+		{
+			url:            "git@github.com:akuity/kargo",
+			expectedScheme: "https",
+			expectedHost:   "github.com",
+			expectedOwner:  "akuity",
+			expectedRepo:   "kargo",
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.url, func(t *testing.T) {
-			host, owner, repo, err := parseRepoURL(testCase.url)
+			scheme, host, owner, repo, err := parseRepoURL(testCase.url)
 			if testCase.errExpected {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
+				require.Equal(t, testCase.expectedScheme, scheme)
 				require.Equal(t, testCase.expectedHost, host)
 				require.Equal(t, testCase.expectedOwner, owner)
 				require.Equal(t, testCase.expectedRepo, repo)
