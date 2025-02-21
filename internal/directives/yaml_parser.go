@@ -70,7 +70,7 @@ func (yp *yamlParser) runPromotionStep(
 	}
 
 	if len(cfg.Outputs) == 0 {
-		return failure, fmt.Errorf("invalid yaml-parse config: outputs is required")
+		return failure, fmt.Errorf("invalid %s config: outputs is required", yp.Name())
 	}
 
 	data, err := yp.readAndParseYAML(stepCtx.WorkDir, cfg.Path)
@@ -121,12 +121,12 @@ func (yp *yamlParser) extractValues(data map[string]any, outputs []YAMLParse) (m
 	for _, output := range outputs {
 		program, err := expr.Compile(output.FromExpression, expr.Env(data))
 		if err != nil {
-			return nil, fmt.Errorf("error compiling expression %s: %w", output.FromExpression, err)
+			return nil, fmt.Errorf("error compiling expression %q: %w", output.FromExpression, err)
 		}
 
 		value, err := expr.Run(program, data)
 		if err != nil {
-			return nil, fmt.Errorf("error evaluating expression %s: %w", output.FromExpression, err)
+			return nil, fmt.Errorf("error evaluating expression %q: %w", output.FromExpression, err)
 		}
 
 		results[output.Name] = value
