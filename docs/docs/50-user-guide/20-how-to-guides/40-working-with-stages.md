@@ -108,14 +108,14 @@ spec:
 
 In the next example, the `prod` `Stage` requests `Freight` that has originated
 from the `my-warehouse` `Warehouse`, but indicates that it will accept such
-`Freight` only after it has been _verified_ in both the `test` and `uat`
+`Freight` only after it has been _verified_ in both the `qa` and `uat`
 `Stage`s:
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1
 kind: Stage
 metadata:
-   name: uat
+   name: prod
    namespace: kargo-demo
 spec:
   requestedFreight:
@@ -124,7 +124,7 @@ spec:
       name: my-warehouse
     sources:
       stages:
-      - test
+      - qa
       - uat
     availabilityStrategy: All
   # ...
