@@ -40,6 +40,25 @@ spec:
     - name: integration-test
 ```
 
+In addition to referencing `AnalysisTemplate`s, a `kind` field can be specified
+to reference [`ClusterAnalysisTemplate`s](https://argo-rollouts.readthedocs.io/en/stable/features/analysis/#clusteranalysistemplates),
+which are cluster-scoped resources that behave similarly to `AnalysisTemplate`s
+but are not namespaced:
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: dev
+  namespace: guestbook
+spec:
+  # ...
+  verification:
+    analysisTemplates:
+      - name: integration-test
+        kind: ClusterAnalysisTemplate
+```
+
 ## Configuring AnalysisTemplates
 
 An [AnalysisTemplate](../60-reference-docs/50-analysis-templates.md)
@@ -312,8 +331,3 @@ conjunction with one another.
 for a `Stage` makes it immediately available to that `Stage` _regardless_ of
 whether any required soak time has elapsed.
 :::
-
-## ClusterAnalysisTemplates
-
-Referencing `ClusterAnalysisTemplate`s is currently unsupported but is expected
-to be possible in a future release.
