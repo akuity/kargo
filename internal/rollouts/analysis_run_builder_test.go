@@ -359,12 +359,13 @@ func TestAnalysisRunBuilder_buildMetadata(t *testing.T) {
 	}
 
 	tests := []struct {
-		name        string
-		namespace   string
-		objName     string
-		metadata    *kargoapi.AnalysisRunMetadata
-		extraLabels map[string]string
-		assertions  func(*testing.T, metav1.ObjectMeta)
+		name             string
+		namespace        string
+		objName          string
+		metadata         *kargoapi.AnalysisRunMetadata
+		extraLabels      map[string]string
+		extraAnnotations map[string]string
+		assertions       func(*testing.T, metav1.ObjectMeta)
 	}{
 		{
 			name:      "basic metadata",
@@ -377,7 +378,7 @@ func TestAnalysisRunBuilder_buildMetadata(t *testing.T) {
 			},
 		},
 		{
-			name:      "with metadata and extra labels",
+			name:      "with metadata, extra labels and extra annotations",
 			namespace: "test-ns",
 			objName:   "test-name",
 			metadata: &kargoapi.AnalysisRunMetadata{
@@ -391,9 +392,13 @@ func TestAnalysisRunBuilder_buildMetadata(t *testing.T) {
 			extraLabels: map[string]string{
 				"extra": "value",
 			},
+			extraAnnotations: map[string]string{
+				"extra2": "value2",
+			},
 			assertions: func(t *testing.T, meta metav1.ObjectMeta) {
 				assert.Equal(t, "value1", meta.Labels["label1"])
 				assert.Equal(t, "value", meta.Labels["extra"])
+				assert.Equal(t, "value2", meta.Annotations["extra2"])
 				assert.Equal(t, "value1", meta.Annotations["anno1"])
 				assert.Equal(t, "test-controller", meta.Labels[controllerInstanceIDLabelKey])
 			},
@@ -402,7 +407,7 @@ func TestAnalysisRunBuilder_buildMetadata(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := builder.buildMetadata(tt.namespace, tt.objName, tt.metadata, tt.extraLabels)
+			result := builder.buildMetadata(tt.namespace, tt.objName, tt.metadata, tt.extraLabels, tt.extraAnnotations)
 			tt.assertions(t, result)
 		})
 	}

@@ -37,6 +37,10 @@ const (
 	// of the annotation should be in the format of "<project>:<stage>".
 	AnnotationKeyAuthorizedStage = "kargo.akuity.io/authorized-stage"
 
+	// AnnotationKeyPromotion is an annotation key that can be set on a
+	// resource to indicate that it is related to a specific promotion.
+	AnnotationKeyPromotion = "kargo.akuity.io/promotion"
+
 	// AnnotationValueTrue is a value that can be set on an annotation to
 	// indicate that it applies.
 	AnnotationValueTrue = "true"
