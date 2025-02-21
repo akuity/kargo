@@ -43,7 +43,7 @@ After cloning the repository and clearing the output directory, the `json-parse`
 to extract the image tag from the `Freight` being promoted.
 Using dot notation (image.tag), it extracts the nested value from the JSON file.
 
-```json
+```yaml
 vars:
 - name: gitRepo
   value: https://github.com/example/repo.git
