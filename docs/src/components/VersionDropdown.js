@@ -109,6 +109,7 @@ function VersionDropdown() {
       className="version_dropdown"
       onChange={handleVersionChange}
       value={currentVersion}
+      title={`${currentVersion}`}
     >
       {versions.map(version => (
         <option key={version.version} value={version.version}>
