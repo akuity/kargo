@@ -15,7 +15,7 @@ using [expr-lang] expressions.
 | `path` | `string` | Y | Path to a JSON file. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `outputs` | `[]object` | Y | A list of rules for extracting values from the parsed JSON. |
 | `outputs[].name` | `string` | Y | The name of the output variable. |
-| `outputs[].fromExpression` | `string` | Y | An [expr-lang] expression that can extract the value from the JSON file. Note that this expression should not be offset by `${{` and `}}`. See examples for more details. |
+| `outputs[].fromExpression` | `string` | Y | An [expr-lang] expression that can extract the value from the JSON file. Note that this expression should not be offset by `${{` and `}}`. See [examples](#examples) for more details. |
 
 ## Expressions
 
@@ -27,8 +27,8 @@ evaluation by Kargo. The `json-parse` step itself will evaluate these
 expressions.
 :::
 
-A `outputs` object (a `map[string]any`) is available to these expressions. It is
-structured as follows:
+An `outputs` object (a `map[string]any`) is available to these expressions. It
+is structured as follows:
 
 | Field | Type | Description |
 |-------|------|-------------|
