@@ -417,9 +417,9 @@ const (
 type Provider string
 
 const (
-	Azure  Provider   = "azure"
-	Gitea  Provider   = "gitea"
-	Github Provider   = "github"
-	Gitlab Provider   = "gitlab"
-  Bitbucket Provider  = "bitbucket"
+	Azure     Provider = "azure"
+	Gitea     Provider = "gitea"
+	Github    Provider = "github"
+	Gitlab    Provider = "gitlab"
+	Bitbucket Provider = "bitbucket"
 )
