@@ -6,8 +6,14 @@ import {
   Warehouse
 } from '@ui/gen/v1alpha1/generated_pb';
 
-import { RepoNodeDimensions } from './nodes/repo-node';
 import { StageNodeDimensions } from './nodes/stage-node';
+
+export const RepoNodeDimensions = () =>
+  ({
+    // MUST BE SAME AS DEFINED IN custom-node.module.less .repoSubscriptionNode and .warehouseNode
+    width: 180,
+    height: 106
+  }) as NodeDimensions;
 
 export enum NodeType {
   STAGE,

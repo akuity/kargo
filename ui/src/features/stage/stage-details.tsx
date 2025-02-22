@@ -48,7 +48,8 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
             setIsVerificationRunning(true);
           }
           return {
-            ...verification
+            ...verification,
+            freight
           } as VerificationInfo;
         })
       )

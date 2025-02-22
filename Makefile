@@ -77,7 +77,7 @@ lint-go: install-golangci-lint
 
 .PHONY: format-go
 format-go:
-	golangci-lint run --fix
+	$(GOLANGCI_LINT) run --fix
 
 .PHONY: lint-proto
 lint-proto: install-buf

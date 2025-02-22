@@ -92,7 +92,7 @@ app.kubernetes.io/component: webhooks-server
 {{- end -}}
 
 {{- define "kargo.api.baseURL" -}}
-{{- if or .Values.api.tls.enabled (and .Values.api.ingress.enabled .Values.api.ingress.tls.enabled) .Values.api.tls.terminatedUpstream -}}
+{{- if or (and .Values.api.ingress.enabled .Values.api.ingress.tls.enabled) (and (not .Values.api.ingress.enabled) .Values.api.tls.enabled) .Values.api.tls.terminatedUpstream -}}
 {{- printf "https://%s" .Values.api.host -}}
 {{- else -}}
 {{- printf "http://%s" .Values.api.host -}}

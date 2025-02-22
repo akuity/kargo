@@ -6,6 +6,8 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Drawer, Tabs, Typography } from 'antd';
+import Alert from 'antd/es/alert/Alert';
+import { useMemo } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -16,6 +18,7 @@ import { Warehouse } from '@ui/gen/v1alpha1/generated_pb';
 import { EditWarehouse } from './edit-warehouse';
 import { RepoSubscriptions } from './repo-subscriptions';
 import { WarehouseActions } from './warehouse-actions';
+import { getWarehouseError } from './warehouse-error';
 
 export const WarehouseDetails = ({
   warehouse,
@@ -28,6 +31,8 @@ export const WarehouseDetails = ({
   const navigate = useNavigate();
 
   const onClose = () => navigate(generatePath(paths.project, { name: projectName }));
+
+  const warehouseErrorMessage = useMemo(() => getWarehouseError(warehouse), [warehouse]);
 
   return (
     <Drawer open={!!warehouse} onClose={onClose} width={'80%'} closable={false}>
@@ -49,6 +54,10 @@ export const WarehouseDetails = ({
             </div>
             <WarehouseActions warehouse={warehouse} />
           </div>
+
+          {warehouseErrorMessage && (
+            <Alert className='mb-3' message={warehouseErrorMessage} type='error' closable />
+          )}
 
           <Tabs
             defaultActiveKey='1'

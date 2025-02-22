@@ -47,8 +47,7 @@ c1e3
 -----END CERTIFICATE-----`)
 
 func TestNewAuthInterceptor(t *testing.T) {
-	a, err := newAuthInterceptor(context.Background(), config.ServerConfig{}, nil)
-	require.NoError(t, err)
+	a := newAuthInterceptor(context.Background(), config.ServerConfig{}, nil)
 	require.NotNil(t, a)
 	require.NotNil(t, a.parseUnverifiedJWTFn)
 	require.NotNil(t, a.verifyKargoIssuedTokenFn)
@@ -288,8 +287,8 @@ func TestAuthenticate(t *testing.T) {
 				verifyIDPIssuedTokenFn: func(
 					context.Context,
 					string,
-				) (claims, bool) {
-					return claims{}, false
+				) (claims, error) {
+					return claims{}, errors.New("invalid token")
 				},
 			},
 			token: testToken,
@@ -321,7 +320,7 @@ func TestAuthenticate(t *testing.T) {
 				verifyIDPIssuedTokenFn: func(
 					context.Context,
 					string,
-				) (claims, bool) {
+				) (claims, error) {
 					return claims{
 						"sub":   "ironman",
 						"email": "tony@starkindustries.com",
@@ -329,7 +328,7 @@ func TestAuthenticate(t *testing.T) {
 							"avengers",
 							"shield",
 						},
-					}, true
+					}, nil
 				},
 				listServiceAccountsFn: func(
 					context.Context,
@@ -395,32 +394,38 @@ func TestVerifyIDPIssuedTokenFn(t *testing.T) {
 	testCases := []struct {
 		name            string
 		authInterceptor *authInterceptor
-		assertions      func(t *testing.T, c claims, ok bool)
+		assertions      func(t *testing.T, c claims, err error)
 	}{
 		{
 			name:            "OIDC not supported",
 			authInterceptor: &authInterceptor{},
-			assertions: func(t *testing.T, _ claims, ok bool) {
-				require.False(t, ok)
+			assertions: func(t *testing.T, _ claims, err error) {
+				require.ErrorContains(t, err, "OpenID Connect is not supported")
 			},
 		},
 		{
 			name: "token cannot be verified",
 			authInterceptor: &authInterceptor{
+				cfg: config.ServerConfig{
+					OIDCConfig: &libOIDC.Config{},
+				},
 				oidcTokenVerifyFn: func(
 					context.Context,
 					string,
 				) (*oidc.IDToken, error) {
-					return nil, errors.New("something went wrong")
+					return nil, errors.New("invalid token")
 				},
 			},
-			assertions: func(t *testing.T, _ claims, ok bool) {
-				require.False(t, ok)
+			assertions: func(t *testing.T, _ claims, err error) {
+				require.ErrorContains(t, err, "invalid token")
 			},
 		},
 		{
 			name: "error getting claims from token",
 			authInterceptor: &authInterceptor{
+				cfg: config.ServerConfig{
+					OIDCConfig: &libOIDC.Config{},
+				},
 				oidcTokenVerifyFn: func(
 					context.Context,
 					string,
@@ -431,13 +436,16 @@ func TestVerifyIDPIssuedTokenFn(t *testing.T) {
 					return claims{}, errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, _ claims, ok bool) {
-				require.False(t, ok)
+			assertions: func(t *testing.T, _ claims, err error) {
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
 			name: "token is successfully verified",
 			authInterceptor: &authInterceptor{
+				cfg: config.ServerConfig{
+					OIDCConfig: &libOIDC.Config{},
+				},
 				oidcTokenVerifyFn: func(
 					context.Context,
 					string,
@@ -457,8 +465,8 @@ func TestVerifyIDPIssuedTokenFn(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(t *testing.T, c claims, ok bool) {
-				require.True(t, ok)
+			assertions: func(t *testing.T, c claims, err error) {
+				require.NoError(t, err)
 				require.Equal(t, "ironman", c["sub"])
 				require.Equal(t, "tony@starkindustries.io", c["email"])
 				require.Equal(t, []string{"avengers", "shield"}, c["groups"])
@@ -467,13 +475,13 @@ func TestVerifyIDPIssuedTokenFn(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			c, ok := testCase.authInterceptor.verifyIDPIssuedToken(
+			c, err := testCase.authInterceptor.verifyIDPIssuedToken(
 				context.Background(),
 				// With the way these tests are constructed, this doesn't have to
 				// be valid.
 				"some-token",
 			)
-			testCase.assertions(t, c, ok)
+			testCase.assertions(t, c, err)
 		})
 	}
 }

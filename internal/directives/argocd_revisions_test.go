@@ -5,20 +5,14 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	argocdapi "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 )
 
 func Test_argoCDUpdater_getDesiredRevisions(t *testing.T) {
-	testOrigin := kargoapi.FreightOrigin{
-		Kind: kargoapi.FreightOriginKindWarehouse,
-		Name: "fake-warehouse",
-	}
 	testCases := []struct {
-		name    string
-		app     *argocdapi.Application
-		freight []kargoapi.FreightReference
-		want    []string
+		name string
+		app  *argocdapi.Application
+		want []string
 	}{
 		{
 			name: "no application",
@@ -80,24 +74,6 @@ func Test_argoCDUpdater_getDesiredRevisions(t *testing.T) {
 					},
 				},
 			},
-			freight: []kargoapi.FreightReference{
-				{
-					Origin: testOrigin,
-					Charts: []kargoapi.Chart{
-						{
-							RepoURL: "https://example.com",
-							Name:    "fake-chart",
-							Version: "fake-version",
-						},
-					},
-					Commits: []kargoapi.GitCommit{
-						{
-							RepoURL: "https://github.com/universe/42",
-							ID:      "fake-commit",
-						},
-					},
-				},
-			},
 			want: []string{"", "", "another-fake-version", "", "another-fake-commit"},
 		},
 	}
@@ -106,19 +82,8 @@ func Test_argoCDUpdater_getDesiredRevisions(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			stepCtx := &PromotionStepContext{
-				Freight: kargoapi.FreightCollection{},
-			}
-			for _, freight := range testCase.freight {
-				stepCtx.Freight.UpdateOrPush(freight)
-			}
-			revisions, err := runner.getDesiredRevisions(
-				stepCtx,
+			revisions := runner.getDesiredRevisions(
 				&ArgoCDAppUpdate{
-					FromOrigin: &AppFromOrigin{
-						Kind: Kind(testOrigin.Kind),
-						Name: testOrigin.Name,
-					},
 					Sources: []ArgoCDAppSourceUpdate{
 						{
 							RepoURL:         "https://example.com",
@@ -133,7 +98,6 @@ func Test_argoCDUpdater_getDesiredRevisions(t *testing.T) {
 				},
 				testCase.app,
 			)
-			require.NoError(t, err)
 			require.Equal(t, testCase.want, revisions)
 		})
 	}

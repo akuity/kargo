@@ -9,23 +9,25 @@ import (
 // flattenTemplates combines multiple analysis templates into a single
 // template. It merges metrics, dry-run metrics, measurement retention
 // metrics, and arguments.
-func flattenTemplates(templates []*rolloutsapi.AnalysisTemplate) (*rolloutsapi.AnalysisTemplate, error) {
-	metrics, err := flattenMetrics(templates)
+func flattenTemplates(
+	analysisTemplateSpecs []*rolloutsapi.AnalysisTemplateSpec,
+) (*rolloutsapi.AnalysisTemplate, error) {
+	metrics, err := flattenMetrics(analysisTemplateSpecs)
 	if err != nil {
 		return nil, fmt.Errorf("flatten metrics: %w", err)
 	}
 
-	dryRun, err := flattenDryRunMetrics(templates)
+	dryRun, err := flattenDryRunMetrics(analysisTemplateSpecs)
 	if err != nil {
 		return nil, fmt.Errorf("flatten dry-run metrics: %w", err)
 	}
 
-	retention, err := flattenMeasurementRetentionMetrics(templates)
+	retention, err := flattenMeasurementRetentionMetrics(analysisTemplateSpecs)
 	if err != nil {
 		return nil, fmt.Errorf("flatten measurement retention metrics: %w", err)
 	}
 
-	args, err := flattenArgs(templates)
+	args, err := flattenArgs(analysisTemplateSpecs)
 	if err != nil {
 		return nil, fmt.Errorf("flatten arguments: %w", err)
 	}
@@ -42,12 +44,12 @@ func flattenTemplates(templates []*rolloutsapi.AnalysisTemplate) (*rolloutsapi.A
 
 // flattenMetrics combines metrics from multiple templates while ensuring
 // unique names.
-func flattenMetrics(templates []*rolloutsapi.AnalysisTemplate) ([]rolloutsapi.Metric, error) {
-	metrics := make([]rolloutsapi.Metric, 0, len(templates))
+func flattenMetrics(analysisTemplateSpecs []*rolloutsapi.AnalysisTemplateSpec) ([]rolloutsapi.Metric, error) {
+	metrics := make([]rolloutsapi.Metric, 0, len(analysisTemplateSpecs))
 	seen := make(map[string]struct{})
 
-	for _, tmpl := range templates {
-		for _, metric := range tmpl.Spec.Metrics {
+	for _, analysisTmplSpec := range analysisTemplateSpecs {
+		for _, metric := range analysisTmplSpec.Metrics {
 			if _, exists := seen[metric.Name]; exists {
 				return nil, fmt.Errorf("duplicate metric name: %q", metric.Name)
 			}
@@ -60,11 +62,11 @@ func flattenMetrics(templates []*rolloutsapi.AnalysisTemplate) ([]rolloutsapi.Me
 }
 
 // flattenDryRunMetrics combines dry-run metrics from multiple templates.
-func flattenDryRunMetrics(templates []*rolloutsapi.AnalysisTemplate) ([]rolloutsapi.DryRun, error) {
-	dryRun := make([]rolloutsapi.DryRun, 0, len(templates))
+func flattenDryRunMetrics(analysisTemplateSpecs []*rolloutsapi.AnalysisTemplateSpec) ([]rolloutsapi.DryRun, error) {
+	dryRun := make([]rolloutsapi.DryRun, 0, len(analysisTemplateSpecs))
 
-	for _, tmpl := range templates {
-		dryRun = append(dryRun, tmpl.Spec.DryRun...)
+	for _, tmplSpec := range analysisTemplateSpecs {
+		dryRun = append(dryRun, tmplSpec.DryRun...)
 	}
 
 	if err := validateUniqueDryRunMetrics(dryRun); err != nil {
@@ -77,12 +79,12 @@ func flattenDryRunMetrics(templates []*rolloutsapi.AnalysisTemplate) ([]rollouts
 // flattenMeasurementRetentionMetrics combines measurement retention metrics
 // from multiple templates.
 func flattenMeasurementRetentionMetrics(
-	templates []*rolloutsapi.AnalysisTemplate,
+	analysisTemplateSpecs []*rolloutsapi.AnalysisTemplateSpec,
 ) ([]rolloutsapi.MeasurementRetention, error) {
-	retention := make([]rolloutsapi.MeasurementRetention, 0, len(templates))
+	retention := make([]rolloutsapi.MeasurementRetention, 0, len(analysisTemplateSpecs))
 
-	for _, tmpl := range templates {
-		retention = append(retention, tmpl.Spec.MeasurementRetention...)
+	for _, tmplSpec := range analysisTemplateSpecs {
+		retention = append(retention, tmplSpec.MeasurementRetention...)
 	}
 
 	if err := validateUniqueMeasurementRetentionMetrics(retention); err != nil {
@@ -94,7 +96,7 @@ func flattenMeasurementRetentionMetrics(
 
 // flattenArgs combines arguments from multiple templates, handling conflicts
 // and updates.
-func flattenArgs(templates []*rolloutsapi.AnalysisTemplate) ([]rolloutsapi.Argument, error) {
+func flattenArgs(analysisTemplateSpecs []*rolloutsapi.AnalysisTemplateSpec) ([]rolloutsapi.Argument, error) {
 	var combinedArgs []rolloutsapi.Argument
 
 	updateOrAppend := func(newArg rolloutsapi.Argument) error {
@@ -111,8 +113,8 @@ func flattenArgs(templates []*rolloutsapi.AnalysisTemplate) ([]rolloutsapi.Argum
 		return nil
 	}
 
-	for _, tmpl := range templates {
-		for _, arg := range tmpl.Spec.Args {
+	for _, tmplSpec := range analysisTemplateSpecs {
+		for _, arg := range tmplSpec.Args {
 			if err := updateOrAppend(arg); err != nil {
 				return nil, err
 			}

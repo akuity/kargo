@@ -95,7 +95,7 @@ func (k *kustomizeImageSetter) runPromotionStep(
 	switch {
 	case len(cfg.Images) > 0:
 		// Discover image origins and collect target images.
-		targetImages, err = k.buildTargetImagesFromConfig(ctx, stepCtx, cfg.Images)
+		targetImages = k.buildTargetImagesFromConfig(cfg.Images)
 	default:
 		// Attempt to automatically set target images based on the Freight references.
 		targetImages, err = k.buildTargetImagesAutomatically(ctx, stepCtx)
@@ -119,10 +119,8 @@ func (k *kustomizeImageSetter) runPromotionStep(
 }
 
 func (k *kustomizeImageSetter) buildTargetImagesFromConfig(
-	ctx context.Context,
-	stepCtx *PromotionStepContext,
-	images []KustomizeSetImageConfigImage,
-) (map[string]kustypes.Image, error) {
+	images []Image,
+) map[string]kustypes.Image {
 	targetImages := make(map[string]kustypes.Image, len(images))
 	for _, img := range images {
 		targetImage := kustypes.Image{
@@ -136,34 +134,10 @@ func (k *kustomizeImageSetter) buildTargetImagesFromConfig(
 			targetImage.Digest = img.Digest
 		} else if img.Tag != "" {
 			targetImage.NewTag = img.Tag
-		} else { // TODO(krancour): Remove this for v1.3.0
-			var desiredOrigin *kargoapi.FreightOrigin
-			if img.FromOrigin != nil {
-				desiredOrigin = &kargoapi.FreightOrigin{
-					Kind: kargoapi.FreightOriginKind(img.FromOrigin.Kind),
-					Name: img.FromOrigin.Name,
-				}
-			}
-			discoveredImage, err := freight.FindImage(
-				ctx,
-				stepCtx.KargoClient,
-				stepCtx.Project,
-				stepCtx.FreightRequests,
-				desiredOrigin,
-				stepCtx.Freight.References(),
-				img.Image,
-			)
-			if err != nil {
-				return nil, fmt.Errorf("unable to discover image for %q: %w", img.Image, err)
-			}
-			targetImage.NewTag = discoveredImage.Tag
-			if img.UseDigest {
-				targetImage.Digest = discoveredImage.Digest
-			}
 		}
 		targetImages[targetImage.Name] = targetImage
 	}
-	return targetImages, nil
+	return targetImages
 }
 
 func (k *kustomizeImageSetter) buildTargetImagesAutomatically(

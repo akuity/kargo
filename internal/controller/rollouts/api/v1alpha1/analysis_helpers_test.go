@@ -63,6 +63,52 @@ func TestGetAnalysisTemplate(t *testing.T) {
 	}
 }
 
+func TestGetClusterAnalysisTemplate(t *testing.T) {
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, SchemeBuilder.AddToScheme(scheme))
+
+	testCases := []struct {
+		name       string
+		client     client.Client
+		assertions func(*testing.T, *ClusterAnalysisTemplate, error)
+	}{
+		{
+			name:   "not found",
+			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
+			assertions: func(t *testing.T, template *ClusterAnalysisTemplate, err error) {
+				require.NoError(t, err)
+				require.Nil(t, template)
+			},
+		},
+
+		{
+			name: "found",
+			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+				&ClusterAnalysisTemplate{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "fake-template",
+					},
+				},
+			).Build(),
+			assertions: func(t *testing.T, template *ClusterAnalysisTemplate, err error) {
+				require.NoError(t, err)
+				require.Equal(t, "fake-template", template.Name)
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			template, err := GetClusterAnalysisTemplate(
+				context.Background(),
+				testCase.client,
+				"fake-template",
+			)
+			testCase.assertions(t, template, err)
+		})
+	}
+}
+
 func TestGetAnalysisRun(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
 	require.NoError(t, SchemeBuilder.AddToScheme(scheme))

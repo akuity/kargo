@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/bmatcuk/doublestar/v4"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -403,7 +404,7 @@ func getPathSelectors(selectorStrs []string) ([]pathSelector, error) {
 		case strings.HasPrefix(selectorStr, globPrefix):
 			pattern := strings.TrimPrefix(selectorStr, globPrefix)
 			selectors[i] = func(path string) (bool, error) {
-				return filepath.Match(pattern, path)
+				return doublestar.PathMatch(pattern, path)
 			}
 		default:
 			basePath := selectorStr
