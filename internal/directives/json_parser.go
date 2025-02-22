@@ -70,7 +70,7 @@ func (jp *jsonParser) runPromotionStep(
 	}
 
 	if len(cfg.Outputs) == 0 {
-		return failure, fmt.Errorf("invalid json-parse config: outputs is required")
+		return failure, fmt.Errorf("invalid %s config: outputs is required", jp.Name())
 	}
 
 	data, err := jp.readAndParseJSON(stepCtx.WorkDir, cfg.Path)
@@ -117,12 +117,12 @@ func (jp *jsonParser) extractValues(data map[string]any, outputs []JSONParse) (m
 	for _, output := range outputs {
 		program, err := expr.Compile(output.FromExpression, expr.Env(data))
 		if err != nil {
-			return nil, fmt.Errorf("error compiling expression %s: %w", output.FromExpression, err)
+			return nil, fmt.Errorf("error compiling expression %q: %w", output.FromExpression, err)
 		}
 
 		value, err := expr.Run(program, data)
 		if err != nil {
-			return nil, fmt.Errorf("error evaluating expression %s: %w", output.FromExpression, err)
+			return nil, fmt.Errorf("error evaluating expression %q: %w", output.FromExpression, err)
 		}
 
 		results[output.Name] = value

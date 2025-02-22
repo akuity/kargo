@@ -1,21 +1,21 @@
 ---
-sidebar_label: json-parse
-description: Parses a JSON string and extracts values based on specified expressions.
+sidebar_label: yaml-parse
+description: Parses a YAML string and extracts values based on specified expressions.
 ---
 
-# `json-parse`
+# `yaml-parse`
 
-`json-parse` is a utility step that parses a JSON string and extracts values
+`yaml-parse` is a utility step that parses a YAML string and extracts values
 using [expr-lang] expressions.
 
 ## Configuration
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `path` | `string` | Y | Path to a JSON file. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
-| `outputs` | `[]object` | Y | A list of rules for extracting values from the parsed JSON. |
+| `path` | `string` | Y | Path to a YAML file. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
+| `outputs` | `[]object` | Y | A list of rules for extracting values from the parsed YAML. |
 | `outputs[].name` | `string` | Y | The name of the output variable. |
-| `outputs[].fromExpression` | `string` | Y | An [expr-lang] expression that can extract the value from the JSON file. Note that this expression should not be offset by `${{` and `}}`. See [examples](#examples) for more details. |
+| `outputs[].fromExpression` | `string` | Y | An [expr-lang] expression that can extract the value from the YAML file. Note that this expression should not be offset by `${{` and `}}`. See [examples](#examples) for more details. |
 
 ## Expressions
 
@@ -23,7 +23,7 @@ The `fromExpression` field supports [expr-lang] expressions.
 
 :::note
 Expressions should _not_ be offset by `${{` and `}}` to prevent pre-processing
-evaluation by Kargo. The `json-parse` step itself will evaluate these
+evaluation by Kargo. The `yaml-parse` step itself will evaluate these
 expressions.
 :::
 
@@ -32,22 +32,22 @@ is structured as follows:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `outputs` | `map[string]any` | The parsed JSON object. |
+| `outputs` | `map[string]any` | The parsed YAML object. |
 
 ## Outputs
 
-The `json-parse` step produces the outputs described by the `outputs` field in
+The `yaml-parse` step produces the outputs described by the `outputs` field in
 its configuration.
 
 ## Examples
 
 ### Common Usage
 
-In this example, a values file is parsed to find the container image tag.
-After cloning the repository and clearing the output directory, the `json-parse`
-step parses `values.json` to extract the image tag from the `Freight` being
+In this example, a Helm values file is parsed to find the container image tag.
+After cloning the repository and clearing the output directory, the `yaml-parse`
+step parses `values.yaml` to extract the image tag from the `Freight` being
 promoted. Using dot notation (`image.tag`), it extracts the nested value from
-the JSON file.
+the YAML file.
 
 ```yaml
 vars:
@@ -66,27 +66,23 @@ steps:
 - uses: git-clear
   config:
     path: ./out
-- uses: json-parse
+- uses: yaml-parse
   as: values
   config:
-    path: './src/charts/my-chart/values.json'
+    path: './src/charts/my-chart/values.yaml'
     outputs:
     - name: imageTag
       fromExpression: image.tag
 # Render manifests to ./out, commit, push, etc...
 ```
 
-Given the sample input JSON:
+Given the sample input YAML:
 
-```json
-{
-  "image": {
-    "tag": "latest"
-  },
-  "rbac": {
-    "installClusterRoles": true
-  }
-}
+```yaml
+image:
+  tag: latest
+rbac:
+  installClusterRoles: true
 ```
 
 The step would produce the following
