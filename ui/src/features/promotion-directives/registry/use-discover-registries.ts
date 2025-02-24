@@ -13,9 +13,11 @@ import gitWaitForPR from '@ui/gen/directives/git-wait-for-pr-config.json';
 import helmTemplateConfig from '@ui/gen/directives/helm-template-config.json';
 import helmUpdateChartConfig from '@ui/gen/directives/helm-update-chart-config.json';
 import httpConfig from '@ui/gen/directives/http-config.json';
+import jsonParseConfig from '@ui/gen/directives/json-parse-config.json';
 import jsonUpdateConfig from '@ui/gen/directives/json-update-config.json';
 import kustomizeBuildConfig from '@ui/gen/directives/kustomize-build-config.json';
 import kustomizeSetImageConfig from '@ui/gen/directives/kustomize-set-image-config.json';
+import yamlParseConfig from '@ui/gen/directives/yaml-parse-config.json';
 import yamlUpdateConfig from '@ui/gen/directives/yaml-update-config.json';
 
 import { PromotionDirectivesRegistry } from './types';
@@ -60,8 +62,16 @@ export const useDiscoverPromotionDirectivesRegistries = (): PromotionDirectivesR
         config: gitWaitForPR as unknown as JSONSchema7
       },
       {
+        identifier: 'yaml-parse',
+        config: yamlParseConfig as JSONSchema7
+      },
+      {
         identifier: 'yaml-update',
         config: yamlUpdateConfig as unknown as JSONSchema7
+      },
+      {
+        identifier: 'json-parse',
+        config: jsonParseConfig as JSONSchema7
       },
       {
         identifier: 'json-update',
