@@ -95,6 +95,11 @@ type PromotionStep struct {
 	// step will be keyed to this alias by the Engine and made accessible to
 	// subsequent steps.
 	Alias string
+	// If is an optional expression that, if present, must evaluate to a boolean
+	// value. If the expression evaluates to false, the step will be skipped.
+	// If the expression does not evaluate to a boolean value, the step will
+	// fail.
+	If string
 	// Retry is the retry configuration for the PromotionStep.
 	Retry *kargoapi.PromotionStepRetry
 	// Vars is a list of variables definitions that can be used by the
@@ -198,6 +203,41 @@ func (s *PromotionStep) BuildEnv(
 	}
 
 	return env
+}
+
+// Skip returns true if the PromotionStep should be skipped based on the If
+// condition. The If condition is evaluated in the context of the provided
+// PromotionContext and State.
+func (s *PromotionStep) Skip(
+	promoCtx PromotionContext,
+	state State,
+) (bool, error) {
+	if s.If == "" {
+		return false, nil
+	}
+
+	vars, err := s.GetVars(promoCtx, state)
+	if err != nil {
+		return false, err
+	}
+
+	env := s.BuildEnv(
+		promoCtx,
+		StepEnvWithOutputs(state),
+		StepEnvWithTaskOutputs(s.Alias, state),
+		StepEnvWithVars(vars),
+	)
+
+	v, err := expressions.EvaluateTemplate(s.If, env)
+	if err != nil {
+		return false, err
+	}
+
+	if b, ok := v.(bool); ok {
+		return !b, nil
+	}
+
+	return false, fmt.Errorf("expression must evaluate to a boolean")
 }
 
 // GetConfig returns the Config unmarshalled into a map. Any expr-lang

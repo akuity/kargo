@@ -222,6 +222,37 @@ steps:
       input: ${{ outputs.alias.someOutput }}
 ```
 
+#### Conditional Steps
+
+You can conditionally execute a step based on the result of a previous step by
+using the `if` key in the step definition. The value of the `if` key must be a
+valid [expression](40-expressions.md) that evaluates to a boolean value.
+
+```yaml
+steps:
+- uses: step-name
+  if: ${{ outputs.step1.someOutput == 'value' }}
+```
+
+If the expression evaluates to `true`, the step is executed as normal. If the
+expression evaluates to `false`, the step is skipped and the next step in the
+sequence is executed.
+
+:::info
+In a future release, Kargo will be adding support for improved failure and
+error handling, which will supercharge the ability to conditionally execute
+steps based on the outcome of previous steps.
+
+Refer to [this issue](https://github.com/akuity/kargo/issues/3228) for more
+information and updates.
+:::
+
+:::tip
+Conditional steps can be used in [Promotion Tasks](20-promotion-tasks.md) to
+conditionally execute a task step based on provided
+[task variables](20-promotion-tasks.md#task-variables).
+:::
+
 #### Step Retries
 
 When a step fails for any reason, it can be retried instead of immediately
