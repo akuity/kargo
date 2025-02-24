@@ -3033,8 +3033,8 @@ func TestRegularStageReconciler_recordFreightVerificationEvent(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-analysis",
 						Namespace: "test-project",
-						Labels: map[string]string{
-							kargoapi.PromotionLabelKey: "test-promotion",
+						Annotations: map[string]string{
+							kargoapi.AnnotationKeyPromotion: "test-promotion",
 						},
 					},
 				},
@@ -3370,7 +3370,7 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 					Namespace: vi.AnalysisRun.Namespace,
 					Name:      vi.AnalysisRun.Name,
 				}, ar))
-				assert.Equal(t, "test-promotion", ar.Labels[kargoapi.PromotionLabelKey])
+				assert.Equal(t, "test-promotion", ar.Annotations[kargoapi.AnnotationKeyPromotion])
 			},
 		},
 		{
