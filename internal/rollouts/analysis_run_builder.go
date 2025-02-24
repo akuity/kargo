@@ -66,6 +66,7 @@ func (b *AnalysisRunBuilder) Build(
 		b.generateName(opts.NamePrefix, opts.NameSuffix),
 		cfg.AnalysisRunMetadata,
 		opts.ExtraLabels,
+		opts.ExtraAnnotations,
 	)
 
 	analysisTemplates, clusterAnalysisTemplates, err := b.getAnalysisTemplates(
@@ -121,16 +122,22 @@ func (b *AnalysisRunBuilder) generateName(prefix, suffix string) string {
 func (b *AnalysisRunBuilder) buildMetadata(
 	namespace, name string,
 	metadata *kargoapi.AnalysisRunMetadata,
-	extraLabels map[string]string,
+	extraLabels, extraAnnotations map[string]string,
 ) metav1.ObjectMeta {
-	var annotations map[string]string
+	annotations := make(map[string]string)
 	labels := make(map[string]string)
 
 	if metadata != nil {
-		annotations = metadata.Annotations
+		if metadata.Annotations != nil {
+			maps.Copy(annotations, metadata.Annotations)
+		}
 		if metadata.Labels != nil {
 			maps.Copy(labels, metadata.Labels)
 		}
+	}
+
+	if extraAnnotations != nil {
+		maps.Copy(annotations, extraAnnotations)
 	}
 
 	if extraLabels != nil {

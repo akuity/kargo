@@ -145,8 +145,9 @@ metadata:
   generation: 3
   labels:
     kargo.akuity.io/freight-collection: 55d452301040a73e9fd05289b1f8ddbec1791222
-    kargo.akuity.io/promotion: dev.01jjpfgfwkzk18k7cyq61jehf4.319ddec
     kargo.akuity.io/stage: dev
+  annotations:
+    kargo.akuity.io/promotion: dev.01jjpfgfwkzk18k7cyq61jehf4.319ddec
   name: dev.01jjqaq7qacfn766tcp1nqz2zv.55d4523
   namespace: guestbook
   ownerReferences:
