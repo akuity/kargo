@@ -75,6 +75,31 @@ func TestAnalysisRunOptions(t *testing.T) {
 			},
 		},
 		{
+			name: "extra annotations: single set",
+			options: []AnalysisRunOption{
+				WithExtraAnnotations{"key1": "value1", "key2": "value2"},
+			},
+			assertions: func(t *testing.T, opts *AnalysisRunOptions) {
+				assert.Equal(t, map[string]string{
+					"key1": "value1",
+					"key2": "value2",
+				}, opts.ExtraAnnotations)
+			},
+		},
+		{
+			name: "extra annotations: multiple sets are merged",
+			options: []AnalysisRunOption{
+				WithExtraAnnotations{"key1": "value1"},
+				WithExtraAnnotations{"key2": "value2"},
+			},
+			assertions: func(t *testing.T, opts *AnalysisRunOptions) {
+				assert.Equal(t, map[string]string{
+					"key1": "value1",
+					"key2": "value2",
+				}, opts.ExtraAnnotations)
+			},
+		},
+		{
 			name: "single owner",
 			options: []AnalysisRunOption{
 				WithOwner(Owner{
