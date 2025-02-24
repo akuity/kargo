@@ -622,6 +622,16 @@ func TestPromotionStep_Skip(t *testing.T) {
 				assert.True(t, b)
 			},
 		},
+		{
+			name: "if condition does not evaluate to a boolean",
+			step: &PromotionStep{
+				If: "invalid condition",
+			},
+			assertions: func(t *testing.T, b bool, err error) {
+				assert.ErrorContains(t, err, "must evaluate to a boolean")
+				assert.False(t, b)
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

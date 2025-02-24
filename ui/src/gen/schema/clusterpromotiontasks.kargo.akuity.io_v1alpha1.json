@@ -29,7 +29,7 @@
                 "x-kubernetes-preserve-unknown-fields": true
               },
               "if": {
-                "description": "If is an optional expression that, if present, must evaluate to a boolean\nvalue. If the expression evaluates to false, the step will be skipped.",
+                "description": "If is an optional expression that, if present, must evaluate to a boolean\nvalue. If the expression evaluates to false, the step will be skipped.\nIf the expression does not evaluate to a boolean value, the step will be\nconsidered to have failed.",
                 "type": "string"
               },
               "retry": {

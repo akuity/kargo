@@ -2087,6 +2087,8 @@ export type PromotionStep = Message<"github.com.akuity.kargo.api.v1alpha1.Promot
   /**
    * If is an optional expression that, if present, must evaluate to a boolean
    * value. If the expression evaluates to false, the step will be skipped.
+   * If the expression does not evaluate to a boolean value, the step will be
+   * considered to have failed.
    *
    * @generated from field: optional string if = 7;
    */

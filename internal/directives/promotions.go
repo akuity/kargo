@@ -97,6 +97,8 @@ type PromotionStep struct {
 	Alias string
 	// If is an optional expression that, if present, must evaluate to a boolean
 	// value. If the expression evaluates to false, the step will be skipped.
+	// If the expression does not evaluate to a boolean value, the step will
+	// fail.
 	If string
 	// Retry is the retry configuration for the PromotionStep.
 	Retry *kargoapi.PromotionStepRetry
