@@ -438,7 +438,7 @@ message FreightSources {
   // made available to the Stage. This field is optional. When left unspecified,
   // the field is implicitly treated as if its value were "OneOf".
   //
-  // +kubebuilder:default=OneOf
+  // +kubebuilder:validation:Optional
   optional string availabilityStrategy = 4;
 }
 
