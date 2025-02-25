@@ -1,11 +1,11 @@
 ---
 sidebar_label: json-parse
-description: Parses a JSON string and extracts values based on specified expressions.
+description: Parses a JSON file and extracts values based on specified expressions.
 ---
 
 # `json-parse`
 
-`json-parse` is a utility step that parses a JSON string and extracts values
+`json-parse` is a utility step that parses a JSON file and extracts values
 using [expr-lang] expressions.
 
 ## Configuration
