@@ -721,23 +721,24 @@ func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoa
 
 	// If the last Promotion did not succeed, then we cannot perform any health
 	// checks because they are only available after a successful Promotion.
+	// Since we lack enough information to determine health, we mark it as Unknown.
 	//
 	// TODO(hidde): Long term, this should probably be changed to allow to
 	//  continue to run health checks from the last successful Promotion,
 	//  even if the current Promotion did not succeed (e.g. because it was
 	//  aborted).
 	if lastPromo.Status.Phase != kargoapi.PromotionPhaseSucceeded {
-		logger.Debug("Last promotion did not succeed: defaulting Stage health to Unhealthy")
+		logger.Debug("Last promotion did not succeed: defaulting Stage health to Unknown")
 		conditions.Set(&newStatus, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeHealthy,
-			Status:             metav1.ConditionFalse,
+			Status:             metav1.ConditionUnknown,
 			Reason:             fmt.Sprintf("LastPromotion%s", lastPromo.Status.Phase),
-			Message:            "Last Promotion did not succeed",
+			Message:            "Cannot assess health because last Promotion did not succeed",
 			ObservedGeneration: stage.Generation,
 		})
 		newStatus.Health = &kargoapi.Health{
-			Status: kargoapi.HealthStateUnhealthy,
-			Issues: []string{"Last Promotion did not succeed"},
+			Status: kargoapi.HealthStateUnknown,
+			Issues: []string{"Cannot assess health because last Promotion did not succeed"},
 		}
 		return newStatus
 	}
