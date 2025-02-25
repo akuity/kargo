@@ -268,7 +268,6 @@ spec:
                         a required field.
                       properties:
                         availabilityStrategy:
-                          default: OneOf
                           description: |-
                             AvailabilityStrategy specifies the semantics for how requested Freight is
                             made available to the Stage. This field is optional. When left unspecified,
@@ -276,6 +275,7 @@ spec:
                           enum:
                           - All
                           - OneOf
+                          - ""
                           type: string
                         direct:
                           description: |-
@@ -305,8 +305,6 @@ spec:
                           items:
                             type: string
                           type: array
-                      required:
-                      - availabilityStrategy
                       type: object
                   required:
                   - origin

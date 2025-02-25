@@ -986,7 +986,7 @@ export type FreightSources = Message<"github.com.akuity.kargo.api.v1alpha1.Freig
    * made available to the Stage. This field is optional. When left unspecified,
    * the field is implicitly treated as if its value were "OneOf".
    *
-   * +kubebuilder:default=OneOf
+   * +kubebuilder:validation:Optional
    *
    * @generated from field: optional string availabilityStrategy = 4;
    */

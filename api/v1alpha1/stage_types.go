@@ -128,7 +128,7 @@ type FreightOriginKind string
 
 const FreightOriginKindWarehouse FreightOriginKind = "Warehouse"
 
-// +kubebuilder:validation:Enum={All,OneOf}
+// +kubebuilder:validation:Enum={All,OneOf,""}
 type FreightAvailabilityStrategy string
 
 const (
@@ -276,8 +276,8 @@ type FreightSources struct {
 	// made available to the Stage. This field is optional. When left unspecified,
 	// the field is implicitly treated as if its value were "OneOf".
 	//
-	// +kubebuilder:default=OneOf
-	AvailabilityStrategy FreightAvailabilityStrategy `json:"availabilityStrategy" protobuf:"bytes,4,opt,name=availabilityStrategy"`
+	// +kubebuilder:validation:Optional
+	AvailabilityStrategy FreightAvailabilityStrategy `json:"availabilityStrategy,omitempty" protobuf:"bytes,4,opt,name=availabilityStrategy"`
 }
 
 // PromotionTemplate defines a template for a Promotion that can be used to
