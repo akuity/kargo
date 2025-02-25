@@ -15,7 +15,7 @@ desired state and is commonly followed by a [`git-push` step](git-push.md).
 |------|------|----------|-------------|
 | `path` | `string` | Y | Path to a Git working tree containing changes to be committed. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `message` | `string` | N | The commit message. Mutually exclusive with `messageFromSteps`. |
-| `messageFromSteps` | `[]string` | N | References the `commitMessage` output of previous steps. When one or more are specified, the commit message will be constructed by concatenating the messages from individual steps. Mutually exclusive with `message`. |
+| `messageFromSteps` | `[]string` | N | References the `commitMessage` output of previous steps. When one or more are specified, the commit message will be constructed by concatenating the messages from individual steps. Mutually exclusive with `message`.<br/><br/>__Deprecated: Use `message` with an expression instead. Will be removed in v1.5.0.__ |
 | `author` | `[]object` | N | Optionally provider authorship information for the commit. |
 | `author.name` | `string` | N | The committer's name. |
 | `author.email` | `string` | N | The committer's email address. |
