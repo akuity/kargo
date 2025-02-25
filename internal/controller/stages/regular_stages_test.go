@@ -1442,7 +1442,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 				require.NotNil(t, healthyCond)
 				assert.Equal(t, metav1.ConditionUnknown, healthyCond.Status)
 				assert.Equal(t, "LastPromotionAborted", healthyCond.Reason)
-				assert.Equal(t, "Last Promotion did not succeed", healthyCond.Message)
+				assert.Equal(t, "Cannot assess health because last Promotion did not succeed", healthyCond.Message)
 			},
 		},
 		{

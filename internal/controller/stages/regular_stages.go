@@ -733,12 +733,12 @@ func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoa
 			Type:               kargoapi.ConditionTypeHealthy,
 			Status:             metav1.ConditionUnknown,
 			Reason:             fmt.Sprintf("LastPromotion%s", lastPromo.Status.Phase),
-			Message:            "Last Promotion did not succeed",
+			Message:            "Cannot assess health because last Promotion did not succeed",
 			ObservedGeneration: stage.Generation,
 		})
 		newStatus.Health = &kargoapi.Health{
 			Status: kargoapi.HealthStateUnknown,
-			Issues: []string{"Last Promotion did not succeed"},
+			Issues: []string{"Cannot assess health because last Promotion did not succeed"},
 		}
 		return newStatus
 	}
