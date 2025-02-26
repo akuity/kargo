@@ -5,11 +5,11 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
 
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/kelseyhightower/envconfig"
 )
 
@@ -49,13 +49,14 @@ func NewProxy(cfg ProxyConfig) (*httputil.ReverseProxy, error) {
 		}
 	}
 
-	proxy := httputil.NewSingleHostReverseProxy(target)
-	proxy.Transport = &http.Transport{
-		TLSClientConfig: &tls.Config{
-			MinVersion: tls.VersionTLS12,
-			RootCAs:    caCertPool,
-		},
+	transport := cleanhttp.DefaultPooledTransport()
+	transport.TLSClientConfig = &tls.Config{
+		MinVersion: tls.VersionTLS12,
+		RootCAs:    caCertPool,
 	}
+
+	proxy := httputil.NewSingleHostReverseProxy(target)
+	proxy.Transport = transport
 
 	return proxy, nil
 }
