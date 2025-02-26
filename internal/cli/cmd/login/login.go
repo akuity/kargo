@@ -19,6 +19,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/bacongobbler/browser"
 	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/spf13/cobra"
 	"golang.org/x/oauth2"
 	"k8s.io/utils/strings/slices"
@@ -266,16 +267,16 @@ func ssoLogin(
 
 	scopes := res.Msg.OidcConfig.Scopes
 
-	ctx = oidc.ClientContext(
-		ctx,
-		&http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: insecureTLS, // nolint: gosec
-				},
-			},
-		},
-	)
+	httpClient := cleanhttp.DefaultClient()
+	if insecureTLS {
+		transport := cleanhttp.DefaultTransport()
+		transport.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true, // nolint: gosec
+		}
+		httpClient.Transport = transport
+	}
+	ctx = oidc.ClientContext(ctx, httpClient)
+
 	provider, err := oidc.NewProvider(ctx, res.Msg.OidcConfig.IssuerUrl)
 	if err != nil {
 		return "", "", fmt.Errorf("error initializing OIDC provider: %w", err)

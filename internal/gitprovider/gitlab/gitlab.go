@@ -4,10 +4,10 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"net/http"
 	"net/url"
 	"strings"
 
+	"github.com/hashicorp/go-cleanhttp"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 
 	"github.com/akuity/kargo/internal/git"
@@ -75,33 +75,36 @@ func NewProvider(
 	if opts == nil {
 		opts = &gitprovider.Options{}
 	}
+
 	scheme, host, projectName, err := parseRepoURL(repoURL)
 	if err != nil {
 		return nil, err
 	}
+
 	clientOpts := make([]gitlab.ClientOptionFunc, 0, 2)
+
 	if host != "gitlab.com" {
 		clientOpts = append(
 			clientOpts,
 			gitlab.WithBaseURL(fmt.Sprintf("%s://%s/api/v4", scheme, host)),
 		)
 	}
+
+	httpClient := cleanhttp.DefaultClient()
 	if opts.InsecureSkipTLSVerify {
-		clientOpts = append(
-			clientOpts,
-			gitlab.WithHTTPClient(&http.Client{
-				Transport: &http.Transport{
-					TLSClientConfig: &tls.Config{
-						InsecureSkipVerify: true, // nolint: gosec
-					},
-				},
-			}),
-		)
+		transport := cleanhttp.DefaultTransport()
+		transport.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true, // nolint: gosec
+		}
+		httpClient.Transport = transport
 	}
+	clientOpts = append(clientOpts, gitlab.WithHTTPClient(httpClient))
+
 	client, err := gitlab.NewClient(opts.Token, clientOpts...)
 	if err != nil {
 		return nil, err
 	}
+
 	return &provider{
 		projectName: projectName,
 		client:      client.MergeRequests,

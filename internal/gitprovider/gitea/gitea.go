@@ -4,11 +4,11 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"net/http"
 	"net/url"
 	"strings"
 
 	"code.gitea.io/sdk/gitea"
+	"github.com/hashicorp/go-cleanhttp"
 
 	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/gitprovider"
@@ -94,15 +94,16 @@ func NewProvider(
 	if opts.Token != "" {
 		clientOpts = append(clientOpts, gitea.SetToken(opts.Token))
 	}
+
+	httpClient := cleanhttp.DefaultClient()
 	if opts.InsecureSkipTLSVerify {
-		clientOpts = append(clientOpts, gitea.SetHTTPClient(&http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: true, // nolint: gosec
-				},
-			},
-		}))
+		transport := cleanhttp.DefaultTransport()
+		transport.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true, // nolint: gosec
+		}
+		httpClient.Transport = transport
 	}
+	clientOpts = append(clientOpts, gitea.SetHTTPClient(httpClient))
 
 	baseURL := fmt.Sprintf("%s://%s", scheme, host)
 	client, err := gitea.NewClient(baseURL, clientOpts...)
