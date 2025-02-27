@@ -69,7 +69,6 @@ func Test_kustomizeImageSetter_validate(t *testing.T) {
 			},
 			expectedProblems: []string{
 				"images.0: Must validate one and only one schema (oneOf)",
-				"images.0: tag is required",
 			},
 		},
 		{
@@ -83,7 +82,6 @@ func Test_kustomizeImageSetter_validate(t *testing.T) {
 			},
 			expectedProblems: []string{
 				"images.0: Must validate one and only one schema (oneOf)",
-				"images.0.tag: String length must be greater than or equal to 1",
 			},
 		},
 		{
