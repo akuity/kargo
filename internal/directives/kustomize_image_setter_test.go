@@ -61,6 +61,30 @@ func Test_kustomizeImageSetter_validate(t *testing.T) {
 			},
 		},
 		{
+			name: "digest and tag are both not specified",
+			config: Config{
+				"images": []Config{{
+					"image": "fake-image",
+				}},
+			},
+			expectedProblems: []string{
+				"images.0: Must validate one and only one schema (oneOf)",
+			},
+		},
+		{
+			name: "digest and tag are both empty",
+			config: Config{
+				"images": []Config{{
+					"image":  "fake-image",
+					"digest": "",
+					"tag":    "",
+				}},
+			},
+			expectedProblems: []string{
+				"images.0: Must validate one and only one schema (oneOf)",
+			},
+		},
+		{
 			name: "digest and tag are both specified",
 			// These should be mutually exclusive.
 			config: Config{
@@ -79,14 +103,6 @@ func Test_kustomizeImageSetter_validate(t *testing.T) {
 				"path": "fake-path",
 				"images": []Config{
 					{
-						"image": "fake-image-0",
-					},
-					{
-						"image":  "fake-image-1",
-						"digest": "",
-						"tag":    "",
-					},
-					{
 						"image":  "fake-image-2",
 						"digest": "fake-digest",
 					},
@@ -103,17 +119,6 @@ func Test_kustomizeImageSetter_validate(t *testing.T) {
 						"image":  "fake-image-5",
 						"digest": "",
 						"tag":    "fake-tag",
-					},
-					{
-						"image": "fake-image-6",
-					},
-					{
-						"image":  "fake-image-7",
-						"digest": "",
-						"tag":    "",
-					},
-					{
-						"image": "fake-image-8",
 					},
 				},
 			},
