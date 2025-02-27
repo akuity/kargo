@@ -42,9 +42,10 @@
         },
         "oneOf": [
           {
+            "required": ["tag"],
             "properties": {
               "digest": { "enum": ["", null] },
-              "tag": { "enum": ["", null] }
+              "tag": { "minLength": 1 }
             }
           },
           {
@@ -52,13 +53,6 @@
             "properties": {
               "digest": { "minLength": 1 },
               "tag": { "enum": ["", null] }
-            }
-          },
-          {
-            "required": ["tag"],
-            "properties": {
-              "digest": { "enum": ["", null] },
-              "tag": { "minLength": 1 }
             }
           }
         ]
