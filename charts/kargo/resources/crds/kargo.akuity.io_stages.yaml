@@ -88,6 +88,13 @@ spec:
                                 expressions in defining values at any level of this block.
                                 See https://docs.kargo.io/references/expression-language for details.
                               x-kubernetes-preserve-unknown-fields: true
+                            if:
+                              description: |-
+                                If is an optional expression that, if present, must evaluate to a boolean
+                                value. If the expression evaluates to false, the step will be skipped.
+                                If the expression does not evaluate to a boolean value, the step will be
+                                considered to have failed.
+                              type: string
                             retry:
                               description: Retry is the retry policy for this step.
                               properties:
@@ -261,7 +268,6 @@ spec:
                         a required field.
                       properties:
                         availabilityStrategy:
-                          default: OneOf
                           description: |-
                             AvailabilityStrategy specifies the semantics for how requested Freight is
                             made available to the Stage. This field is optional. When left unspecified,
@@ -269,6 +275,7 @@ spec:
                           enum:
                           - All
                           - OneOf
+                          - ""
                           type: string
                         direct:
                           description: |-
@@ -298,8 +305,6 @@ spec:
                           items:
                             type: string
                           type: array
-                      required:
-                      - availabilityStrategy
                       type: object
                   required:
                   - origin

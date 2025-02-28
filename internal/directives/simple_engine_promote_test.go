@@ -200,6 +200,43 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 			},
 		},
 		{
+			name: "conditional step execution",
+			steps: []PromotionStep{
+				{Kind: "success-step", Alias: "step1"},
+				{Kind: "error-step", Alias: "step2", If: "${{ false }}"},
+				{Kind: "success-step", Alias: "step3", If: "${{ true }}"},
+			},
+			assertions: func(t *testing.T, result PromotionResult, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.Status)
+				assert.Equal(t, int64(2), result.CurrentStep)
+
+				// Verify the result contains metadata from all steps
+				assert.Len(t, result.StepExecutionMetadata, 3)
+				for _, metadata := range result.StepExecutionMetadata {
+					assert.Equal(t, kargoapi.PromotionPhaseSucceeded, metadata.Status)
+					switch metadata.Alias {
+					case "step2":
+						assert.Nil(t, metadata.StartedAt)
+						assert.Nil(t, metadata.FinishedAt)
+					default:
+						assert.NotNil(t, metadata.StartedAt)
+						assert.NotNil(t, metadata.FinishedAt)
+					}
+				}
+
+				// Verify state contains outputs from both steps
+				assert.Equal(t, State{
+					"step1": map[string]any{
+						"key": "value",
+					},
+					"step3": map[string]any{
+						"key": "value",
+					},
+				}, result.State)
+			},
+		},
+		{
 			name: "start from middle step",
 			promoCtx: PromotionContext{
 				StartFromStep: 1,

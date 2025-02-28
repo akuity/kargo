@@ -16,6 +16,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/hashicorp/go-cleanhttp"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	libClient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -142,7 +143,7 @@ func newMultiClientVerifier(ctx context.Context, cfg config.ServerConfig) goOIDC
 // provider.Verifier() because they're not flexible enough to handle the Dex
 // proxy case.
 func getKeySet(ctx context.Context, cfg config.ServerConfig) (oidc.KeySet, error) {
-	httpClient := &http.Client{}
+	httpClient := cleanhttp.DefaultClient()
 
 	var discoURL string
 	if cfg.DexProxyConfig == nil {
@@ -165,12 +166,12 @@ func getKeySet(ctx context.Context, cfg config.ServerConfig) (oidc.KeySet, error
 			if ok := caCertPool.AppendCertsFromPEM(caCertBytes); !ok {
 				return nil, errors.New("invalid CA cert data")
 			}
-			httpClient.Transport = &http.Transport{
-				TLSClientConfig: &tls.Config{
-					MinVersion: tls.VersionTLS12,
-					RootCAs:    caCertPool,
-				},
+			transport := cleanhttp.DefaultTransport()
+			transport.TLSClientConfig = &tls.Config{
+				MinVersion: tls.VersionTLS12,
+				RootCAs:    caCertPool,
 			}
+			httpClient.Transport = transport
 		}
 	}
 

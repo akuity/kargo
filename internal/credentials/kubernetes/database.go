@@ -35,6 +35,7 @@ type database struct {
 // of the credentials.Database interface.
 type DatabaseConfig struct {
 	GlobalCredentialsNamespaces []string `envconfig:"GLOBAL_CREDENTIALS_NAMESPACES" default:""`
+	AllowCredentialsOverHTTP    bool     `envconfig:"ALLOW_CREDENTIALS_OVER_HTTP" default:"false"`
 }
 
 func DatabaseConfigFromEnv() DatabaseConfig {
@@ -81,7 +82,7 @@ func (k *database) Get(
 ) (credentials.Credentials, bool, error) {
 	// If we are dealing with an insecure HTTP endpoint (of any type),
 	// refuse to return any credentials
-	if strings.HasPrefix(repoURL, "http://") {
+	if !k.cfg.AllowCredentialsOverHTTP && strings.HasPrefix(repoURL, "http://") {
 		logging.LoggerFromContext(ctx).Info(
 			"refused to get credentials for insecure HTTP endpoint",
 			"repoURL", repoURL,

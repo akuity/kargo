@@ -19,6 +19,7 @@ data:
   KUBECONFIG: /etc/kargo/kubeconfigs/kubeconfig.yaml
   {{- end }}
   GLOBAL_CREDENTIALS_NAMESPACES: {{ quote (join "," .Values.controller.globalCredentials.namespaces) }}
+  ALLOW_CREDENTIALS_OVER_HTTP: {{ quote .Values.controller.allowCredentialsOverHTTP }}
   GITCLIENT_NAME: {{ quote .Values.controller.gitClient.name }}
   GITCLIENT_EMAIL: {{ quote .Values.controller.gitClient.email }}
   GITCLIENT_SIGNING_KEY_TYPE: {{ .Values.controller.gitClient.signingKeySecret.type | default "gpg" | quote }}

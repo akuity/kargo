@@ -126,6 +126,7 @@ export const CreateStage = ({
         promotionWizardStepsState.state?.map((step) => ({
           uses: step?.identifier,
           as: step?.as || '',
+          if: '',
           config: step?.state as JSON, // step.state is type 'object' and it is safe to fake JSON type because it doesn't matter for stageFormToYAML function
           vars: []
         }))
@@ -178,6 +179,7 @@ export const CreateStage = ({
                 promotionWizardStepsState.state?.map((step) => ({
                   uses: step?.identifier,
                   as: step?.as || '',
+                  if: '',
                   config: step?.state as JSON, // step.state is type 'object' and it is safe to fake JSON type because it doesn't matter for stageFormToYAML function
                   vars: []
                 }))

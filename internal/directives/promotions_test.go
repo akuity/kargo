@@ -559,3 +559,84 @@ func TestPromotionStep_GetConfig(t *testing.T) {
 		})
 	}
 }
+func TestPromotionStep_Skip(t *testing.T) {
+	tests := []struct {
+		name       string
+		step       *PromotionStep
+		ctx        PromotionContext
+		state      State
+		assertions func(*testing.T, bool, error)
+	}{
+		{
+			name: "no if condition",
+			step: &PromotionStep{},
+			assertions: func(t *testing.T, b bool, err error) {
+				assert.False(t, b)
+				assert.NoError(t, err)
+			},
+		},
+		{
+			name: "if condition uses vars",
+			step: &PromotionStep{
+				If: "${{ vars.foo == 'bar' }}",
+			},
+			ctx: PromotionContext{
+				Vars: []kargoapi.PromotionVariable{
+					{
+						Name:  "foo",
+						Value: "bar",
+					},
+				},
+			},
+			assertions: func(t *testing.T, b bool, err error) {
+				assert.NoError(t, err)
+				assert.False(t, b)
+			},
+		},
+		{
+			name: "if condition uses outputs",
+			step: &PromotionStep{
+				If: "${{ outputs.foo == 'bar' }}",
+			},
+			state: State{
+				"foo": "bar",
+			},
+			assertions: func(t *testing.T, b bool, err error) {
+				assert.NoError(t, err)
+				assert.False(t, b)
+			},
+		},
+		{
+			name: "if condition uses task outputs",
+			step: &PromotionStep{
+				Alias: "task::other-alias",
+				If:    "${{ task.outputs.alias.foo == 'bar' }}",
+			},
+			state: State{
+				"task::alias": map[string]any{
+					"foo": "baz",
+				},
+			},
+			assertions: func(t *testing.T, b bool, err error) {
+				assert.NoError(t, err)
+				assert.True(t, b)
+			},
+		},
+		{
+			name: "if condition does not evaluate to a boolean",
+			step: &PromotionStep{
+				If: "invalid condition",
+			},
+			assertions: func(t *testing.T, b bool, err error) {
+				assert.ErrorContains(t, err, "must evaluate to a boolean")
+				assert.False(t, b)
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.step.Skip(tt.ctx, tt.state)
+			tt.assertions(t, got, err)
+		})
+	}
+}

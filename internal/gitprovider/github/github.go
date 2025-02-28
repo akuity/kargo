@@ -4,11 +4,11 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"net/http"
 	"net/url"
 	"strings"
 
 	"github.com/google/go-github/v56/github"
+	"github.com/hashicorp/go-cleanhttp"
 	"k8s.io/utils/ptr"
 
 	"github.com/akuity/kargo/internal/git"
@@ -87,17 +87,23 @@ func NewProvider(
 	if opts == nil {
 		opts = &gitprovider.Options{}
 	}
+
 	scheme, host, owner, repo, err := parseRepoURL(repoURL)
 	if err != nil {
 		return nil, err
 	}
-	client := github.NewClient(&http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: opts.InsecureSkipTLSVerify, // nolint: gosec
-			},
-		},
-	})
+
+	httpClient := cleanhttp.DefaultClient()
+	if opts.InsecureSkipTLSVerify {
+		transport := cleanhttp.DefaultTransport()
+		transport.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true, // nolint: gosec
+		}
+		httpClient.Transport = transport
+	}
+
+	client := github.NewClient(httpClient)
+
 	if host != "github.com" {
 		baseURL := fmt.Sprintf("%s://%s", scheme, host)
 		// This function call will automatically add correct paths to the base URL
@@ -109,6 +115,7 @@ func NewProvider(
 	if opts.Token != "" {
 		client = client.WithAuthToken(opts.Token)
 	}
+
 	return &provider{
 		owner:  owner,
 		repo:   repo,

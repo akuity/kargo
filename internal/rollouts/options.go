@@ -31,6 +31,7 @@ type AnalysisRunOptions struct {
 	NamePrefix       string
 	NameSuffix       string
 	ExtraLabels      map[string]string
+	ExtraAnnotations map[string]string
 	Owners           []Owner
 	ExpressionConfig *ArgumentEvaluationConfig
 }
@@ -98,6 +99,18 @@ func (o WithExtraLabels) ApplyToAnalysisRun(opts *AnalysisRunOptions) {
 		return
 	}
 	opts.ExtraLabels = o
+}
+
+// WithExtraAnnotations sets the extra labels for the AnalysisRun. It can be passed
+// multiple times to add more annotations.
+type WithExtraAnnotations map[string]string
+
+func (o WithExtraAnnotations) ApplyToAnalysisRun(opts *AnalysisRunOptions) {
+	if opts.ExtraAnnotations != nil {
+		maps.Copy(opts.ExtraAnnotations, o)
+		return
+	}
+	opts.ExtraAnnotations = o
 }
 
 // WithOwner sets the owner for the AnalysisRun. It can be passed multiple times

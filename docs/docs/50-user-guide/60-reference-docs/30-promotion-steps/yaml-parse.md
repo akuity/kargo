@@ -1,11 +1,11 @@
 ---
 sidebar_label: yaml-parse
-description: Parses a YAML string and extracts values based on specified expressions.
+description: Parses a YAML file and extracts values based on specified expressions.
 ---
 
 # `yaml-parse`
 
-`yaml-parse` is a utility step that parses a YAML string and extracts values
+`yaml-parse` is a utility step that parses a YAML file and extracts values
 using [expr-lang] expressions.
 
 ## Configuration

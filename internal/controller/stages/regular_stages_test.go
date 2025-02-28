@@ -1436,14 +1436,13 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus) {
 				assert.NotNil(t, status.Health)
-				assert.Equal(t, kargoapi.HealthStateUnhealthy, status.Health.Status)
-				assert.Equal(t, []string{"Last Promotion did not succeed"}, status.Health.Issues)
+				assert.Equal(t, kargoapi.HealthStateUnknown, status.Health.Status)
 
 				healthyCond := conditions.Get(&status, kargoapi.ConditionTypeHealthy)
 				require.NotNil(t, healthyCond)
-				assert.Equal(t, metav1.ConditionFalse, healthyCond.Status)
+				assert.Equal(t, metav1.ConditionUnknown, healthyCond.Status)
 				assert.Equal(t, "LastPromotionAborted", healthyCond.Reason)
-				assert.Equal(t, "Last Promotion did not succeed", healthyCond.Message)
+				assert.Equal(t, "Cannot assess health because last Promotion did not succeed", healthyCond.Message)
 			},
 		},
 		{
@@ -3033,8 +3032,8 @@ func TestRegularStageReconciler_recordFreightVerificationEvent(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-analysis",
 						Namespace: "test-project",
-						Labels: map[string]string{
-							kargoapi.PromotionLabelKey: "test-promotion",
+						Annotations: map[string]string{
+							kargoapi.AnnotationKeyPromotion: "test-promotion",
 						},
 					},
 				},
@@ -3370,7 +3369,7 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 					Namespace: vi.AnalysisRun.Namespace,
 					Name:      vi.AnalysisRun.Name,
 				}, ar))
-				assert.Equal(t, "test-promotion", ar.Labels[kargoapi.PromotionLabelKey])
+				assert.Equal(t, "test-promotion", ar.Annotations[kargoapi.AnnotationKeyPromotion])
 			},
 		},
 		{
