@@ -212,7 +212,7 @@ func TestPromotionStep_GetConfig(t *testing.T) {
 			rawCfg: []byte(`{
 				"project": "${{ ctx.project }}",
 				"stage": "${{ ctx.stage }}",
-				"promotion": "${{ ctx.promotion }}"
+				"promotion": "${{ ctx.promotion }}",
 				"creator": "${{ ctx.creator }}"
 			}`),
 			expectedCfg: Config{
