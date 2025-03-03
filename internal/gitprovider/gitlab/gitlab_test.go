@@ -33,10 +33,10 @@ func (m *mockGitLabClient) ListProjectMergeRequests(
 	pid any,
 	opt *gitlab.ListProjectMergeRequestsOptions,
 	_ ...gitlab.RequestOptionFunc,
-) ([]*gitlab.MergeRequest, *gitlab.Response, error) {
+) ([]*gitlab.BasicMergeRequest, *gitlab.Response, error) {
 	m.pid = pid
 	m.listOpts = opt
-	return []*gitlab.MergeRequest{m.mr}, nil, nil
+	return []*gitlab.BasicMergeRequest{&m.mr.BasicMergeRequest}, nil, nil
 }
 
 func (m *mockGitLabClient) GetMergeRequest(
@@ -52,10 +52,12 @@ func (m *mockGitLabClient) GetMergeRequest(
 func TestCreatePullRequest(t *testing.T) {
 	mockClient := &mockGitLabClient{
 		mr: &gitlab.MergeRequest{
-			IID:            1,
-			MergeCommitSHA: "sha",
-			State:          "merged",
-			WebURL:         "url",
+			BasicMergeRequest: gitlab.BasicMergeRequest{
+				IID:            1,
+				MergeCommitSHA: "sha",
+				State:          "merged",
+				WebURL:         "url",
+			},
 		},
 	}
 	g := provider{
@@ -87,10 +89,12 @@ func TestCreatePullRequest(t *testing.T) {
 func TestGetPullRequest(t *testing.T) {
 	mockClient := &mockGitLabClient{
 		mr: &gitlab.MergeRequest{
-			IID:            1,
-			MergeCommitSHA: "sha",
-			State:          "merged",
-			WebURL:         "url",
+			BasicMergeRequest: gitlab.BasicMergeRequest{
+				IID:            1,
+				MergeCommitSHA: "sha",
+				State:          "merged",
+				WebURL:         "url",
+			},
 		},
 	}
 	g := provider{
@@ -111,10 +115,12 @@ func TestGetPullRequest(t *testing.T) {
 func TestListPullRequests(t *testing.T) {
 	mockClient := &mockGitLabClient{
 		mr: &gitlab.MergeRequest{
-			IID:            1,
-			MergeCommitSHA: "sha",
-			State:          "merged",
-			WebURL:         "url",
+			BasicMergeRequest: gitlab.BasicMergeRequest{
+				IID:            1,
+				MergeCommitSHA: "sha",
+				State:          "merged",
+				WebURL:         "url",
+			},
 		},
 	}
 	g := provider{
