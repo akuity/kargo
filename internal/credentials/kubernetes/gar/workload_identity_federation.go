@@ -7,6 +7,7 @@ import (
 
 	"cloud.google.com/go/compute/metadata"
 	"github.com/patrickmn/go-cache"
+	"golang.org/x/oauth2/google"
 	"google.golang.org/api/iamcredentials/v1"
 	corev1 "k8s.io/api/core/v1"
 
@@ -116,20 +117,32 @@ func (w *workloadIdentityFederationCredentialHelper) getAccessToken(
 		"gcpProjectID", w.gcpProjectID,
 		"kargoProject", kargoProject,
 	)
+	tokenRequestScope := []string{
+		"https://www.googleapis.com/auth/cloud-platform",
+	}
 	resp, err := iamSvc.Projects.ServiceAccounts.GenerateAccessToken(
 		fmt.Sprintf(
 			"projects/-/serviceAccounts/kargo-project-%s@%s.iam.gserviceaccount.com",
 			kargoProject, w.gcpProjectID,
 		),
 		&iamcredentials.GenerateAccessTokenRequest{
-			Scope: []string{
-				"https://www.googleapis.com/auth/cloud-platform",
-			},
+			Scope: tokenRequestScope,
 		},
 	).Do()
 	if err != nil {
-		logger.Error(err, "error generating access token")
-		return "", nil
+		logger.Error(err, "Error generating access token; falling back to Application Default Credentials (ADC)")
+		tokenSource, err := google.DefaultTokenSource(ctx, tokenRequestScope...)
+		if err != nil {
+			logger.Error(err, "Failed to find Application Default Credentials")
+			return "", nil
+		}
+		token, err := tokenSource.Token()
+		if err != nil {
+			logger.Error(err, "Error generating access token from Application Default Credentials")
+			return "", nil
+		}
+		logger.Debug("Generated access token using Application Default Credentials")
+		return token.AccessToken, nil
 	}
 	logger.Debug("generated Artifact Registry access token")
 	return resp.AccessToken, nil
