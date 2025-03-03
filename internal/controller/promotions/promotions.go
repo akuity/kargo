@@ -480,7 +480,10 @@ func (r *reconciler) promote(
 	creator := "N/A"
 	actorAnnotation, ok := promo.ObjectMeta.Annotations[kargoapi.AnnotationKeyCreateActor]
 	if ok {
-		creator = strings.Split(actorAnnotation, ":")[1]
+		substrings := strings.Split(actorAnnotation, ":")
+		if len(substrings) == 2 {
+			creator = substrings[1]
+		}
 	}
 
 	promoCtx := directives.PromotionContext{
