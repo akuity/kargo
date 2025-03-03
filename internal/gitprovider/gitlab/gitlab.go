@@ -51,7 +51,7 @@ type mergeRequestClient interface {
 		pid any,
 		opt *gitlab.ListProjectMergeRequestsOptions,
 		options ...gitlab.RequestOptionFunc,
-	) ([]*gitlab.MergeRequest, *gitlab.Response, error)
+	) ([]*gitlab.BasicMergeRequest, *gitlab.Response, error)
 
 	GetMergeRequest(
 		pid any,
@@ -133,7 +133,7 @@ func (p *provider) CreatePullRequest(
 	if glMR == nil {
 		return nil, fmt.Errorf("unexpected nil merge request")
 	}
-	pr := convertGitlabMR(*glMR)
+	pr := convertGitlabMR(glMR.BasicMergeRequest)
 	return &pr, nil
 }
 
@@ -149,7 +149,7 @@ func (p *provider) GetPullRequest(
 	if glMR == nil {
 		return nil, fmt.Errorf("unexpected nil merge request")
 	}
-	pr := convertGitlabMR(*glMR)
+	pr := convertGitlabMR(glMR.BasicMergeRequest)
 	return &pr, nil
 }
 
@@ -199,8 +199,7 @@ func (p *provider) ListPullRequests(
 	return prs, nil
 }
 
-func convertGitlabMR(glMR gitlab.MergeRequest) gitprovider.PullRequest {
-	fmt.Println(glMR.MergeCommitSHA)
+func convertGitlabMR(glMR gitlab.BasicMergeRequest) gitprovider.PullRequest {
 	return gitprovider.PullRequest{
 		Number:         int64(glMR.IID),
 		URL:            glMR.WebURL,
@@ -213,7 +212,7 @@ func convertGitlabMR(glMR gitlab.MergeRequest) gitprovider.PullRequest {
 	}
 }
 
-func isMROpen(glMR gitlab.MergeRequest) bool {
+func isMROpen(glMR gitlab.BasicMergeRequest) bool {
 	return glMR.State == "opened" || glMR.State == "locked"
 }
 
