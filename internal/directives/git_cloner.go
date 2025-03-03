@@ -11,7 +11,6 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
-	"github.com/akuity/kargo/internal/credentials"
 )
 
 func init() {
@@ -87,43 +86,14 @@ func (g *gitCloner) validate(cfg Config) error {
 }
 
 func (g *gitCloner) runPromotionStep(
-	ctx context.Context,
+	_ context.Context,
 	stepCtx *PromotionStepContext,
 	cfg GitCloneConfig,
 ) (PromotionStepResult, error) {
-	mustClone, err := mustCloneRepo(stepCtx, cfg)
-	if err != nil {
-		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
-			"error determining if repo %s must be cloned: %w", cfg.RepoURL, err,
-		)
-	}
-	if !mustClone {
-		return PromotionStepResult{Status: kargoapi.PromotionPhaseSucceeded}, nil
-	}
-
-	var repoCreds *git.RepoCredentials
-	creds, found, err := stepCtx.CredentialsDB.Get(
-		ctx,
-		stepCtx.Project,
-		credentials.TypeGit,
-		cfg.RepoURL,
-	)
-	if err != nil {
-		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
-			fmt.Errorf("error getting credentials for %s: %w", cfg.RepoURL, err)
-	}
-	if found {
-		repoCreds = &git.RepoCredentials{
-			Username:      creds.Username,
-			Password:      creds.Password,
-			SSHPrivateKey: creds.SSHPrivateKey,
-		}
-	}
 	repo, err := git.CloneBare(
 		cfg.RepoURL,
 		&git.ClientOptions{
 			User:                  &g.gitUser,
-			Credentials:           repoCreds,
 			InsecureSkipTLSVerify: cfg.InsecureSkipTLSVerify,
 		},
 		&git.BareCloneOptions{
@@ -169,33 +139,6 @@ func (g *gitCloner) runPromotionStep(
 	// around on the FS for subsequent promotion steps to use. The Engine will
 	// handle all work dir cleanup.
 	return PromotionStepResult{Status: kargoapi.PromotionPhaseSucceeded}, nil
-}
-
-// mustCloneRepo determines if the repository must be cloned. At present, there
-// is no concept of partial success or retries for PromotionStepRunners, so if
-// any one working tree's path already exists, we can assume a previous attempt
-// to clone the repository was fully successful. If that were not the case, this
-// PromotionStepRunner would not even be executed again.
-func mustCloneRepo(stepCtx *PromotionStepContext, cfg GitCloneConfig) (bool, error) {
-	if len(cfg.Checkout) == 0 {
-		// This shouldn't actually happen because the schema enforces this being
-		// non-empty.
-		return false, nil
-	}
-	path, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.Checkout[0].Path)
-	if err != nil {
-		return false, fmt.Errorf(
-			"error joining path %s with work dir %s: %w",
-			cfg.Checkout[0].Path, stepCtx.WorkDir, err,
-		)
-	}
-	if _, err := os.Stat(path); err != nil {
-		if os.IsNotExist(err) {
-			return true, nil
-		}
-		return false, fmt.Errorf("error checking if path %s exists: %w", path, err)
-	}
-	return false, nil
 }
 
 // ensureRemoteBranch checks for the existence of a remote branch. If the remote
