@@ -7,6 +7,7 @@ import (
 
 	"cloud.google.com/go/compute/metadata"
 	"github.com/patrickmn/go-cache"
+	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/iamcredentials/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -18,11 +19,13 @@ import (
 type workloadIdentityFederationCredentialHelper struct {
 	gcpProjectID string
 
+	tokenSource oauth2.TokenSource
+
 	tokenCache *cache.Cache
 
 	// The following behaviors are overridable for testing purposes:
 
-	getAccessTokenFn func(ctx context.Context, kargoProject string) (string, error)
+	getAccessTokenFn func(ctx context.Context, kargoProject string) (string, bool, error)
 }
 
 // NewWorkloadIdentityFederationCredentialHelper returns an implementation of
@@ -83,7 +86,7 @@ func (w *workloadIdentityFederationCredentialHelper) getCredentials(
 		}, nil
 	}
 
-	accessToken, err := w.getAccessTokenFn(ctx, kargoProject)
+	accessToken, cacheToken, err := w.getAccessTokenFn(ctx, kargoProject)
 	if err != nil {
 		return nil, fmt.Errorf("error getting GCP access token: %w", err)
 	}
@@ -92,8 +95,10 @@ func (w *workloadIdentityFederationCredentialHelper) getCredentials(
 		return nil, nil
 	}
 
-	// Cache the access token
-	w.tokenCache.Set(kargoProject, accessToken, cache.DefaultExpiration)
+	if cacheToken {
+		// Cache the access token if using service account impersonation
+		w.tokenCache.Set(kargoProject, accessToken, cache.DefaultExpiration)
+	}
 
 	return &credentials.Credentials{
 		Username: accessTokenUsername,
@@ -106,12 +111,12 @@ func (w *workloadIdentityFederationCredentialHelper) getCredentials(
 func (w *workloadIdentityFederationCredentialHelper) getAccessToken(
 	ctx context.Context,
 	kargoProject string,
-) (string, error) {
+) (string, bool, error) {
 	logger := logging.LoggerFromContext(ctx)
 	iamSvc, err := iamcredentials.NewService(ctx)
 	if err != nil {
 		logger.Error(err, "error creating IAM Credentials service client")
-		return "", nil
+		return "", false, nil
 	}
 	logger = logger.WithValues(
 		"gcpProjectID", w.gcpProjectID,
@@ -131,19 +136,23 @@ func (w *workloadIdentityFederationCredentialHelper) getAccessToken(
 	).Do()
 	if err != nil {
 		logger.Error(err, "Error generating access token; falling back to Application Default Credentials (ADC)")
-		tokenSource, err := google.DefaultTokenSource(ctx, tokenRequestScope...)
-		if err != nil {
-			logger.Error(err, "Failed to find Application Default Credentials")
-			return "", nil
+		if w.tokenSource == nil {
+			tokenSource, err := google.DefaultTokenSource(ctx, tokenRequestScope...)
+			if err != nil {
+				logger.Error(err, "Failed to find Application Default Credentials")
+				return "", false, nil
+			}
+			w.tokenSource = tokenSource
 		}
-		token, err := tokenSource.Token()
+
+		token, err := w.tokenSource.Token()
 		if err != nil {
 			logger.Error(err, "Error generating access token from Application Default Credentials")
-			return "", nil
+			return "", false, nil
 		}
 		logger.Debug("Generated access token using Application Default Credentials")
-		return token.AccessToken, nil
+		return token.AccessToken, false, nil
 	}
 	logger.Debug("generated Artifact Registry access token")
-	return resp.AccessToken, nil
+	return resp.AccessToken, true, nil
 }

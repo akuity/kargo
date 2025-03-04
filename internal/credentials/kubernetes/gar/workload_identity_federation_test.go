@@ -82,8 +82,8 @@ func TestWorkloadIdentityFederationCredentialHelper(t *testing.T) {
 			helper: &workloadIdentityFederationCredentialHelper{
 				gcpProjectID: testGCPProjectID,
 				tokenCache:   cache.New(0, 0),
-				getAccessTokenFn: func(context.Context, string) (string, error) {
-					return "", fmt.Errorf("something went wrong")
+				getAccessTokenFn: func(context.Context, string) (string, bool, error) {
+					return "", false, fmt.Errorf("something went wrong")
 				},
 			},
 			assertions: func(t *testing.T, _ *credentials.Credentials, _ *cache.Cache, err error) {
@@ -98,8 +98,8 @@ func TestWorkloadIdentityFederationCredentialHelper(t *testing.T) {
 			helper: &workloadIdentityFederationCredentialHelper{
 				gcpProjectID: testGCPProjectID,
 				tokenCache:   cache.New(0, 0),
-				getAccessTokenFn: func(context.Context, string) (string, error) {
-					return testToken, nil
+				getAccessTokenFn: func(context.Context, string) (string, bool, error) {
+					return testToken, false, nil
 				},
 			},
 			assertions: func(t *testing.T, creds *credentials.Credentials, c *cache.Cache, err error) {
@@ -118,8 +118,8 @@ func TestWorkloadIdentityFederationCredentialHelper(t *testing.T) {
 			helper: &workloadIdentityFederationCredentialHelper{
 				gcpProjectID: testGCPProjectID,
 				tokenCache:   cache.New(0, 0),
-				getAccessTokenFn: func(context.Context, string) (string, error) {
-					return testToken, nil
+				getAccessTokenFn: func(context.Context, string) (string, bool, error) {
+					return testToken, true, nil
 				},
 			},
 			assertions: func(t *testing.T, creds *credentials.Credentials, c *cache.Cache, err error) {
