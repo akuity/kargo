@@ -126,6 +126,41 @@ func RefreshStage(
 	return stage, nil
 }
 
+func InjectArgoCDContextToStage(
+	ctx context.Context,
+	c client.Client,
+	healthChecks []HealthCheckStep,
+	stage *Stage,
+) error {
+	rawConfigs := []map[string]any{}
+	for _, healthCheck := range healthChecks {
+		healthCheckConfig := healthCheck.GetConfig()
+
+		apps, validType := healthCheckConfig["apps"].([]interface{})
+
+		if validType {
+			for _, untypedApp := range apps {
+				app, validTyped := untypedApp.(map[string]interface{})
+
+				if validTyped {
+					rawConfigs = append(rawConfigs, map[string]any{
+						"name":      app["name"],
+						"namespace": app["namespace"],
+					})
+				}
+			}
+		}
+	}
+
+	configsValue, err := json.Marshal(rawConfigs)
+
+	if err != nil {
+		return err
+	}
+
+	return patchAnnotation(ctx, c, stage, AnnotationKeyArgoCDContext, string(configsValue))
+}
+
 // ReverifyStageFreight forces reconfirmation of the verification of the
 // Freight associated with a Stage by setting an AnnotationKeyReverify
 // annotation on the Stage, causing the controller to rerun the verification.

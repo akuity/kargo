@@ -38,4 +38,8 @@ const (
 	// AnnotationKeyPromotion is an annotation key that can be set on a
 	// resource to indicate that it is related to a specific promotion.
 	AnnotationKeyPromotion = "kargo.akuity.io/promotion"
+
+	// AnnotationKeyArgoCDContext is an annotation key that is set on a Stage
+	// to reference the last ArgoCD Applications that were part of a Promotion.
+	AnnotationKeyArgoCDContext = "kargo.akuity.io/argocd-context"
 )
