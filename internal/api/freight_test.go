@@ -16,6 +16,43 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
+func TestGenerateFreightID(t *testing.T) {
+	freight := kargoapi.Freight{
+		Origin: kargoapi.FreightOrigin{
+			Kind: "fake-kind",
+			Name: "fake-name",
+		},
+		Commits: []kargoapi.GitCommit{
+			{
+				RepoURL: "fake-git-repo",
+				ID:      "fake-commit-id",
+			},
+		},
+		Images: []kargoapi.Image{
+			{
+				RepoURL: "fake-image-repo",
+				Tag:     "fake-image-tag",
+			},
+		},
+		Charts: []kargoapi.Chart{
+			{
+				RepoURL: "fake-chart-repo",
+				Name:    "fake-chart",
+				Version: "fake-chart-version",
+			},
+		},
+	}
+	id := GenerateFreightID(&freight)
+	expected := id
+	// Doing this any number of times should yield the same ID
+	for i := 0; i < 100; i++ {
+		require.Equal(t, expected, GenerateFreightID(&freight))
+	}
+	// Changing anything should change the result
+	freight.Commits[0].ID = "a-different-fake-commit"
+	require.NotEqual(t, expected, GenerateFreightID(&freight))
+}
+
 // TODO(krancour): If we move our actual indexers to this package, we can use
 // them here instead of duplicating them for the sake of avoiding an import
 // cycle.

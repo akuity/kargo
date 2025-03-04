@@ -127,7 +127,7 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 	if req.Operation == admissionv1.Create {
 		// Re-calculate ID in case it wasn't set correctly to begin with -- possible
 		// when users create their own Freight.
-		freight.Name = freight.GenerateID()
+		freight.Name = api.GenerateFreightID(freight)
 	}
 
 	// Sync the convenience alias field with the alias label

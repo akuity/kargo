@@ -1,17 +1,9 @@
 package v1alpha1
 
 import (
-	"crypto/sha1"
-	"fmt"
-	"path"
-	"slices"
-	"strings"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/akuity/kargo/internal/git"
-	"github.com/akuity/kargo/internal/helm"
 )
 
 // +kubebuilder:object:root=true
@@ -51,63 +43,6 @@ type Freight struct {
 
 func (f *Freight) GetStatus() *FreightStatus {
 	return &f.Status
-}
-
-// GenerateID deterministically calculates a piece of Freight's ID based on its
-// contents and returns it.
-func (f *Freight) GenerateID() string {
-	size := len(f.Commits) + len(f.Images) + len(f.Charts)
-	artifacts := make([]string, 0, size)
-	for _, commit := range f.Commits {
-		if commit.Tag != "" {
-			// If we have a tag, incorporate it into the canonical representation of a
-			// commit used when calculating Freight ID. This is necessary because one
-			// commit could have multiple tags. Suppose we have already detected a
-			// commit with a tag v1.0.0-rc.1 and produced the corresponding Freight.
-			// Later, that same commit is tagged as v1.0.0. If we don't incorporate
-			// the tag into the ID, we will never produce a new/distinct piece of
-			// Freight for the new tag.
-			artifacts = append(
-				artifacts,
-				fmt.Sprintf("%s:%s:%s", git.NormalizeURL(commit.RepoURL), commit.Tag, commit.ID),
-			)
-		} else {
-			artifacts = append(
-				artifacts,
-				fmt.Sprintf("%s:%s", git.NormalizeURL(commit.RepoURL), commit.ID),
-			)
-		}
-	}
-	for _, image := range f.Images {
-		artifacts = append(
-			artifacts,
-			// Note: This isn't the usual image representation using EITHER :<tag> OR @<digest>.
-			// It is possible to have found an image with a tag that is already known, but with a
-			// new digest -- as in the case of "mutable" tags like "latest". It is equally possible to
-			// have found an image with a digest that is already known, but has been re-tagged.
-			// To cover both cases, we incorporate BOTH tag and digest into the canonical
-			// representation of an image used when calculating Freight ID.
-			fmt.Sprintf("%s:%s@%s", image.RepoURL, image.Tag, image.Digest),
-		)
-	}
-	for _, chart := range f.Charts {
-		artifacts = append(
-			artifacts,
-			fmt.Sprintf(
-				"%s:%s",
-				// path.Join accounts for the possibility that chart.Name is empty
-				path.Join(helm.NormalizeChartRepositoryURL(chart.RepoURL), chart.Name),
-				chart.Version,
-			),
-		)
-	}
-	slices.Sort(artifacts)
-	return fmt.Sprintf(
-		"%x",
-		sha1.Sum([]byte(
-			fmt.Sprintf("%s:%s", f.Origin.String(), strings.Join(artifacts, "|")),
-		)),
-	)
 }
 
 // GitCommit describes a specific commit from a specific Git repository.

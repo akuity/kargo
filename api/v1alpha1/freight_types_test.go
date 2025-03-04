@@ -222,43 +222,6 @@ func TestGitCommitEquals(t *testing.T) {
 	}
 }
 
-func TestFreightGenerateID(t *testing.T) {
-	freight := Freight{
-		Origin: FreightOrigin{
-			Kind: "fake-kind",
-			Name: "fake-name",
-		},
-		Commits: []GitCommit{
-			{
-				RepoURL: "fake-git-repo",
-				ID:      "fake-commit-id",
-			},
-		},
-		Images: []Image{
-			{
-				RepoURL: "fake-image-repo",
-				Tag:     "fake-image-tag",
-			},
-		},
-		Charts: []Chart{
-			{
-				RepoURL: "fake-chart-repo",
-				Name:    "fake-chart",
-				Version: "fake-chart-version",
-			},
-		},
-	}
-	id := freight.GenerateID()
-	expected := id
-	// Doing this any number of times should yield the same ID
-	for i := 0; i < 100; i++ {
-		require.Equal(t, expected, freight.GenerateID())
-	}
-	// Changing anything should change the result
-	freight.Commits[0].ID = "a-different-fake-commit"
-	require.NotEqual(t, expected, freight.GenerateID())
-}
-
 func TestFreight_IsCurrentlyIn(t *testing.T) {
 	const testStage = "fake-stage"
 	freight := &Freight{}

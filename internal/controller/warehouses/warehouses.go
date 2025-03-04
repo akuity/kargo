@@ -485,7 +485,7 @@ func (r *reconciler) buildFreightFromLatestArtifacts(
 	}
 
 	// Generate a unique ID for the Freight based on its contents.
-	freight.Name = freight.GenerateID()
+	freight.Name = api.GenerateFreightID(freight)
 
 	return freight, nil
 }

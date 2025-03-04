@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
 	libWebhook "github.com/akuity/kargo/internal/webhook"
 )
@@ -528,7 +529,7 @@ func TestValidateUpdate(t *testing.T) {
 						},
 					},
 				}
-				oldFreight.Name = oldFreight.GenerateID()
+				oldFreight.Name = api.GenerateFreightID(oldFreight)
 				newFreight := oldFreight.DeepCopy()
 				newFreight.Commits[0].ID = "another-fake-commit-id"
 				return oldFreight, newFreight
@@ -560,7 +561,7 @@ func TestValidateUpdate(t *testing.T) {
 						Name: "fake-warehouse",
 					},
 				}
-				oldFreight.Name = oldFreight.GenerateID()
+				oldFreight.Name = api.GenerateFreightID(oldFreight)
 				newFreight := oldFreight.DeepCopy()
 				newFreight.Origin = kargoapi.FreightOrigin{
 					Kind: kargoapi.FreightOriginKindWarehouse,
@@ -597,7 +598,7 @@ func TestValidateUpdate(t *testing.T) {
 						},
 					},
 				}
-				oldFreight.Name = oldFreight.GenerateID()
+				oldFreight.Name = api.GenerateFreightID(oldFreight)
 				newFreight := oldFreight.DeepCopy()
 				return oldFreight, newFreight
 			},
@@ -639,7 +640,7 @@ func TestValidateUpdate(t *testing.T) {
 					},
 					Status: kargoapi.FreightStatus{},
 				}
-				oldFreight.Name = oldFreight.GenerateID()
+				oldFreight.Name = api.GenerateFreightID(oldFreight)
 				newFreight := oldFreight.DeepCopy()
 				newFreight.Status.ApprovedFor = map[string]kargoapi.ApprovedStage{
 					"fake-stage": {},
@@ -685,7 +686,7 @@ func TestValidateUpdate(t *testing.T) {
 					},
 					Status: kargoapi.FreightStatus{},
 				}
-				oldFreight.Name = oldFreight.GenerateID()
+				oldFreight.Name = api.GenerateFreightID(oldFreight)
 				newFreight := oldFreight.DeepCopy()
 				newFreight.Status.ApprovedFor = map[string]kargoapi.ApprovedStage{
 					"fake-stage": {},
