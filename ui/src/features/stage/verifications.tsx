@@ -98,7 +98,7 @@ export const Verifications = ({ verifications, images }: Props) => {
 
               const timeTook = moment.duration(finishTime.diff(startTime));
 
-              return timeTook.humanize();
+              return timeTook.humanize({ ss: 1 });
             } catch {
               return null;
             }
