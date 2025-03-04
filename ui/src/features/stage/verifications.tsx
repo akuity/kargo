@@ -92,7 +92,7 @@ export const Verifications = ({ verifications, images }: Props) => {
               const startTime = moment(timestampDate(verification.startTime));
               const finishTime = moment(timestampDate(verification.finishTime));
 
-              if (!startTime.isValid() && !finishTime.isValid()) {
+              if (!startTime.isValid() || !finishTime.isValid()) {
                 return null;
               }
 
