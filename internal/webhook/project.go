@@ -10,7 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/akuity/kargo/internal/api/validation"
+	"github.com/akuity/kargo/internal/server/validation"
 )
 
 func ValidateProject(

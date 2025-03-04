@@ -5,7 +5,7 @@ import (
 
 	authnv1 "k8s.io/api/authentication/v1"
 
-	"github.com/akuity/kargo/internal/api/user"
+	"github.com/akuity/kargo/internal/server/user"
 )
 
 const (

@@ -11,7 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/akuity/kargo/internal/api/user"
+	"github.com/akuity/kargo/internal/server/user"
 )
 
 // AbortAction is an action to take on a Promotion to abort it.

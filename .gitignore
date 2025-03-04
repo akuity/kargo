@@ -8,5 +8,5 @@ coverage.txt
 hack/include/
 pkg/api/v1alpha1/
 vendor/
-internal/api/ui/
+internal/server/ui/
 .DS_Store

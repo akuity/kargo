@@ -13,7 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/akuity/kargo/internal/api/user"
+	"github.com/akuity/kargo/internal/server/user"
 )
 
 // VerificationRequest is a request payload with an optional actor field which

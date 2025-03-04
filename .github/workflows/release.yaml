@@ -215,8 +215,8 @@ jobs:
       run: |
         pnpm install
         NODE_ENV=production pnpm run build
-        rm -rf ../internal/api/ui
-        mv build ../internal/api/ui
+        rm -rf ../internal/server/ui
+        mv build ../internal/server/ui
     - name: Build CLI
       env:
         GOFLAGS: -buildvcs=false
@@ -276,8 +276,8 @@ jobs:
       run: |
         pnpm install
         NODE_ENV=production pnpm run build
-        rm -rf ../internal/api/ui
-        mv build ../internal/api/ui
+        rm -rf ../internal/server/ui
+        mv build ../internal/server/ui
     - name: Build CLI
       env:
         GOFLAGS: -buildvcs=false

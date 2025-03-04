@@ -8,13 +8,13 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/akuity/kargo/internal/api"
-	"github.com/akuity/kargo/internal/api/config"
-	"github.com/akuity/kargo/internal/api/kubernetes"
-	"github.com/akuity/kargo/internal/api/rbac"
 	"github.com/akuity/kargo/internal/kubernetes/event"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
+	"github.com/akuity/kargo/internal/server"
+	"github.com/akuity/kargo/internal/server/config"
+	"github.com/akuity/kargo/internal/server/kubernetes"
+	"github.com/akuity/kargo/internal/server/rbac"
 	versionpkg "github.com/akuity/kargo/internal/version"
 )
 
@@ -117,7 +117,7 @@ func (o *apiOptions) run(ctx context.Context) error {
 		)
 	}
 
-	srv := api.NewServer(
+	srv := server.NewServer(
 		serverCfg,
 		kubeClient,
 		rbac.NewKubernetesRolesDatabase(kubeClient),
