@@ -11,6 +11,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
+	"github.com/akuity/kargo/internal/credentials"
 )
 
 func init() {
@@ -86,14 +87,33 @@ func (g *gitCloner) validate(cfg Config) error {
 }
 
 func (g *gitCloner) runPromotionStep(
-	_ context.Context,
+	ctx context.Context,
 	stepCtx *PromotionStepContext,
 	cfg GitCloneConfig,
 ) (PromotionStepResult, error) {
+	var repoCreds *git.RepoCredentials
+	creds, found, err := stepCtx.CredentialsDB.Get(
+		ctx,
+		stepCtx.Project,
+		credentials.TypeGit,
+		cfg.RepoURL,
+	)
+	if err != nil {
+		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
+			fmt.Errorf("error getting credentials for %s: %w", cfg.RepoURL, err)
+	}
+	if found {
+		repoCreds = &git.RepoCredentials{
+			Username:      creds.Username,
+			Password:      creds.Password,
+			SSHPrivateKey: creds.SSHPrivateKey,
+		}
+	}
 	repo, err := git.CloneBare(
 		cfg.RepoURL,
 		&git.ClientOptions{
 			User:                  &g.gitUser,
+			Credentials:           repoCreds,
 			InsecureSkipTLSVerify: cfg.InsecureSkipTLSVerify,
 		},
 		&git.BareCloneOptions{
