@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/indexer"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -126,7 +127,7 @@ func (s *server) getAvailableFreightForStage(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 ) ([]kargoapi.Freight, error) {
-	return stage.ListAvailableFreight(ctx, s.client)
+	return api.ListFreightAvailableToStage(ctx, s.client, stage)
 }
 
 func (s *server) getFreightFromWarehouses(

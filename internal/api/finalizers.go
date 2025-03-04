@@ -1,4 +1,4 @@
-package v1alpha1
+package api
 
 import (
 	"context"
@@ -10,17 +10,19 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 func EnsureFinalizer(ctx context.Context, c client.Client, obj client.Object) (bool, error) {
-	if controllerutil.AddFinalizer(obj, FinalizerName) {
+	if controllerutil.AddFinalizer(obj, kargoapi.FinalizerName) {
 		return true, patchFinalizers(ctx, c, obj)
 	}
 	return false, nil
 }
 
 func RemoveFinalizer(ctx context.Context, c client.Client, obj client.Object) error {
-	if controllerutil.RemoveFinalizer(obj, FinalizerName) {
+	if controllerutil.RemoveFinalizer(obj, kargoapi.FinalizerName) {
 		return patchFinalizers(ctx, c, obj)
 	}
 	return nil

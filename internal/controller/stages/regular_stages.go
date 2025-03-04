@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/conditions"
 	"github.com/akuity/kargo/internal/controller"
 	argocdapi "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
@@ -323,7 +324,7 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// Ensure the Stage has a finalizer and requeue if it was added.
 	// The reason to requeue is to ensure that a possible deletion of the Stage
 	// directly after the finalizer was added is handled without delay.
-	if ok, err := kargoapi.EnsureFinalizer(ctx, r.client, stage); ok || err != nil {
+	if ok, err := api.EnsureFinalizer(ctx, r.client, stage); ok || err != nil {
 		return ctrl.Result{Requeue: ok}, err
 	}
 
@@ -333,7 +334,7 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	logger.Debug("done reconciling Stage")
 
 	// Record the current refresh token as having been handled.
-	if token, ok := kargoapi.RefreshAnnotationValue(stage.GetAnnotations()); ok {
+	if token, ok := api.RefreshAnnotationValue(stage.GetAnnotations()); ok {
 		newStatus.LastHandledRefresh = token
 	}
 
@@ -538,7 +539,7 @@ func (r *RegularStageReconciler) syncPromotions(
 
 	// Sort the Promotions by phase and creation time to determine the current
 	// state of the Stage.
-	slices.SortFunc(promotions.Items, kargoapi.ComparePromotionByPhaseAndCreationTime)
+	slices.SortFunc(promotions.Items, api.ComparePromotionByPhaseAndCreationTime)
 
 	// The Promotion with the highest priority (i.e. a Running or Pending phase)
 	// is the one that we will consider for the current state of the Stage.
@@ -800,7 +801,7 @@ func (r *RegularStageReconciler) syncFreight(ctx context.Context, stage *kargoap
 	curFreight := stage.Status.FreightHistory.Current()
 	// Find all Freight that think they're currently in use by this Stage.
 	var freight []kargoapi.Freight
-	freight, err := kargoapi.ListFreightByCurrentStage(ctx, r.client, stage)
+	freight, err := api.ListFreightByCurrentStage(ctx, r.client, stage)
 	if err != nil {
 		return err
 	}
@@ -831,7 +832,7 @@ func (r *RegularStageReconciler) syncFreight(ctx context.Context, stage *kargoap
 	// LONGER than what we calculate.
 	now := time.Now()
 	for _, fr := range curFreight.References() {
-		f, err := kargoapi.GetFreight(
+		f, err := api.GetFreight(
 			ctx,
 			r.client,
 			types.NamespacedName{
@@ -987,7 +988,7 @@ func (r *RegularStageReconciler) verifyStageFreight(
 	}()
 
 	// Get the re-verification request, if any.
-	reverifyReq, _ := kargoapi.ReverifyAnnotationValue(stage.GetAnnotations())
+	reverifyReq, _ := api.ReverifyAnnotationValue(stage.GetAnnotations())
 
 	// Check if the current Freight has already been verified.
 	var newVI *kargoapi.VerificationInfo
@@ -997,7 +998,7 @@ func (r *RegularStageReconciler) verifyStageFreight(
 		// result.
 		if !lastVerification.Phase.IsTerminal() {
 			// Check if we need to abort the verification.
-			abortReq, _ := kargoapi.AbortVerificationAnnotationValue(stage.GetAnnotations())
+			abortReq, _ := api.AbortVerificationAnnotationValue(stage.GetAnnotations())
 			if abortReq.ForID(lastVerification.ID) {
 				logger.Debug("aborting verification of Stage Freight")
 
@@ -1165,7 +1166,7 @@ func (r *RegularStageReconciler) recordFreightVerificationEvent(
 	}
 
 	annotations := map[string]string{
-		kargoapi.AnnotationKeyEventActor:             kargoapi.FormatEventControllerActor(r.cfg.Name()),
+		kargoapi.AnnotationKeyEventActor:             api.FormatEventControllerActor(r.cfg.Name()),
 		kargoapi.AnnotationKeyEventProject:           stage.Namespace,
 		kargoapi.AnnotationKeyEventStageName:         stage.Name,
 		kargoapi.AnnotationKeyEventFreightAlias:      freight.Alias,
@@ -1685,7 +1686,7 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 			promotion,
 			kargoEvent.NewPromotionAnnotations(
 				ctx,
-				kargoapi.FormatEventControllerActor(r.cfg.Name()),
+				api.FormatEventControllerActor(r.cfg.Name()),
 				promotion,
 				&latestFreight,
 			),
@@ -1741,7 +1742,7 @@ func (r *RegularStageReconciler) getPromotableFreight(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 ) (map[string][]kargoapi.Freight, error) {
-	availableFreight, err := stage.ListAvailableFreight(ctx, r.client)
+	availableFreight, err := api.ListFreightAvailableToStage(ctx, r.client, stage)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"error listing available Freight for Stage %q: %w",
@@ -1795,7 +1796,7 @@ func (r *RegularStageReconciler) handleDelete(ctx context.Context, stage *kargoa
 	}
 
 	// Remove the finalizer from the Stage.
-	if err := kargoapi.RemoveFinalizer(ctx, r.client, stage); err != nil {
+	if err := api.RemoveFinalizer(ctx, r.client, stage); err != nil {
 		return fmt.Errorf("error removing finalizer from Stage: %w", err)
 	}
 

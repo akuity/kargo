@@ -1,4 +1,4 @@
-package v1alpha1
+package api
 
 import (
 	"context"
@@ -12,6 +12,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 // GetWarehouse returns a pointer to the Warehouse resource specified by the
@@ -21,8 +23,8 @@ func GetWarehouse(
 	ctx context.Context,
 	c client.Client,
 	namespacedName types.NamespacedName,
-) (*Warehouse, error) {
-	warehouse := Warehouse{}
+) (*kargoapi.Warehouse, error) {
+	warehouse := kargoapi.Warehouse{}
 	if err := c.Get(ctx, namespacedName, &warehouse); err != nil {
 		if err = client.IgnoreNotFound(err); err == nil {
 			return nil, nil
@@ -45,8 +47,8 @@ func RefreshWarehouse(
 	ctx context.Context,
 	c client.Client,
 	namespacedName types.NamespacedName,
-) (*Warehouse, error) {
-	warehouse := &Warehouse{
+) (*kargoapi.Warehouse, error) {
+	warehouse := &kargoapi.Warehouse{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespacedName.Namespace,
 			Name:      namespacedName.Name,
@@ -56,7 +58,7 @@ func RefreshWarehouse(
 		ctx,
 		c,
 		warehouse,
-		AnnotationKeyRefresh,
+		kargoapi.AnnotationKeyRefresh,
 		time.Now().Format(time.RFC3339),
 	); err != nil {
 		return nil, fmt.Errorf("refresh: %w", err)
@@ -92,16 +94,17 @@ type ListWarehouseFreightOptions struct {
 	// if it has been verified in any of the provided VerifiedIn stages.
 	// IMPORTANT: This is also applied to Freight matched using the VerifiedBefore
 	// condition.
-	AvailabilityStrategy FreightAvailabilityStrategy
+	AvailabilityStrategy kargoapi.FreightAvailabilityStrategy
 }
 
-// ListFreight returns a list of all Freight resources that originated from the
-// Warehouse.
-func (w *Warehouse) ListFreight(
+// ListFreightFromWarehouse returns a list of all Freight resources that
+// originated from a Warehouse.
+func ListFreightFromWarehouse(
 	ctx context.Context,
 	c client.Client,
+	w *kargoapi.Warehouse,
 	opts *ListWarehouseFreightOptions,
-) ([]Freight, error) {
+) ([]kargoapi.Freight, error) {
 	if opts == nil {
 		opts = &ListWarehouseFreightOptions{}
 	}
@@ -128,8 +131,8 @@ func (w *Warehouse) ListFreight(
 	// Construct selectors for listing Freight using the configured AvailabilityStrategy
 	// semantics.
 	switch opts.AvailabilityStrategy {
-	case FreightAvailabilityStrategyAll:
-		// Query for Freight that is verified in ALL of the VerifiedIn stages.
+	case kargoapi.FreightAvailabilityStrategyAll:
+		// Query for Freight that is verified in ALL the VerifiedIn stages.
 		stageSelectors := make([]fields.Selector, 0, len(opts.VerifiedIn))
 		for _, stage := range opts.VerifiedIn {
 			stageSelectors = append(
@@ -146,7 +149,7 @@ func (w *Warehouse) ListFreight(
 				),
 			)
 		}
-	case FreightAvailabilityStrategyOneOf, "":
+	case kargoapi.FreightAvailabilityStrategyOneOf, "":
 		// Query for Freight that is verified in ANY of the VerifiedIn stages.
 		for _, stage := range opts.VerifiedIn {
 			fieldSelectors = append(
@@ -164,9 +167,9 @@ func (w *Warehouse) ListFreight(
 		)
 	}
 
-	freight := []Freight{}
+	var freight []kargoapi.Freight
 	for _, fs := range fieldSelectors {
-		res := &FreightList{}
+		res := &kargoapi.FreightList{}
 		if err := c.List(
 			ctx,
 			res,
@@ -186,10 +189,10 @@ func (w *Warehouse) ListFreight(
 	}
 
 	// Sort and de-dupe
-	slices.SortFunc(freight, func(lhs, rhs Freight) int {
+	slices.SortFunc(freight, func(lhs, rhs kargoapi.Freight) int {
 		return strings.Compare(lhs.Name, rhs.Name)
 	})
-	freight = slices.CompactFunc(freight, func(lhs, rhs Freight) bool {
+	freight = slices.CompactFunc(freight, func(lhs, rhs kargoapi.Freight) bool {
 		return lhs.Name == rhs.Name
 	})
 
@@ -199,7 +202,7 @@ func (w *Warehouse) ListFreight(
 	}
 
 	// Filter out Freight whose soak time has not yet elapsed
-	filtered := make([]Freight, 0, len(freight))
+	filtered := make([]kargoapi.Freight, 0, len(freight))
 	for _, f := range freight {
 		if opts.ApprovedFor != "" {
 			if f.IsApprovedFor(opts.ApprovedFor) {
@@ -220,10 +223,10 @@ func (w *Warehouse) ListFreight(
 		}
 
 		// Filter out Freight that has passed its verification soak time in ALL
-		// of the specified VerifiedIn Stages if AvailabilityStrategy is set to All.
+		// the specified VerifiedIn Stages if AvailabilityStrategy is set to All.
 		// Otherwise, include Freight if it has passed the soak time in a single
 		// Stage.
-		if opts.AvailabilityStrategy == FreightAvailabilityStrategyAll {
+		if opts.AvailabilityStrategy == kargoapi.FreightAvailabilityStrategyAll {
 			// If Freight is verified in ALL upstream Stages, then it is
 			// available.
 			if verifiedStages.Equal(sets.New(opts.VerifiedIn...)) {

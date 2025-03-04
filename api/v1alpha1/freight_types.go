@@ -6,6 +6,7 @@ import (
 	"path"
 	"slices"
 	"strings"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -172,6 +173,108 @@ type FreightStatus struct {
 	// might wish to promote a piece of Freight to a given Stage without
 	// transiting the entire pipeline.
 	ApprovedFor map[string]ApprovedStage `json:"approvedFor,omitempty" protobuf:"bytes,2,rep,name=approvedFor" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+}
+
+// IsCurrentlyIn returns whether the Freight is currently in the specified
+// Stage.
+func (f *Freight) IsCurrentlyIn(stage string) bool {
+	// NB: This method exists for convenience. It doesn't require the caller to
+	// know anything about the Freight status' internal data structure.
+	_, in := f.Status.CurrentlyIn[stage]
+	return in
+}
+
+// IsVerifiedIn returns whether the Freight has been verified in the specified
+// Stage.
+func (f *Freight) IsVerifiedIn(stage string) bool {
+	// NB: This method exists for convenience. It doesn't require the caller to
+	// know anything about the Freight status' internal data structure.
+	_, verified := f.Status.VerifiedIn[stage]
+	return verified
+}
+
+// IsApprovedFor returns whether the Freight has been approved for the specified
+// Stage.
+func (f *Freight) IsApprovedFor(stage string) bool {
+	// NB: This method exists for convenience. It doesn't require the caller to
+	// know anything about the Freight status' internal data structure.
+	_, approved := f.Status.ApprovedFor[stage]
+	return approved
+}
+
+// GetLongestSoak returns the longest soak time for the Freight in the specified
+// Stage if it's been verified in that Stage. If it has not, zero will be
+// returned instead. If the Freight is currently in use by the specified Stage,
+// the current soak time is calculated and compared to the longest completed
+// soak time on record.
+func (f *Freight) GetLongestSoak(stage string) time.Duration {
+	if _, verified := f.Status.VerifiedIn[stage]; !verified {
+		return 0
+	}
+	var longestCompleted time.Duration
+	if record, isVerified := f.Status.VerifiedIn[stage]; isVerified && record.LongestCompletedSoak != nil {
+		longestCompleted = record.LongestCompletedSoak.Duration
+	}
+	var current time.Duration
+	if record, isCurrent := f.Status.CurrentlyIn[stage]; isCurrent {
+		current = time.Since(record.Since.Time)
+	}
+	return time.Duration(max(longestCompleted.Nanoseconds(), current.Nanoseconds()))
+}
+
+// AddCurrentStage updates the Freight status to reflect that the Freight is
+// currently in the specified Stage.
+func (f *FreightStatus) AddCurrentStage(stage string, since time.Time) {
+	if _, alreadyIn := f.CurrentlyIn[stage]; !alreadyIn {
+		if f.CurrentlyIn == nil {
+			f.CurrentlyIn = make(map[string]CurrentStage)
+		}
+		f.CurrentlyIn[stage] = CurrentStage{
+			Since: &metav1.Time{Time: since},
+		}
+	}
+}
+
+// RemoveCurrentStage updates the Freight status to reflect that the Freight is
+// no longer in the specified Stage. If the Freight was verified in the
+// specified Stage, the longest completed soak time will be updated if
+// necessary.
+func (f *FreightStatus) RemoveCurrentStage(stage string) {
+	if record, in := f.CurrentlyIn[stage]; in {
+		if _, verified := f.VerifiedIn[stage]; verified {
+			soak := time.Since(record.Since.Time)
+			if soak > f.VerifiedIn[stage].LongestCompletedSoak.Duration {
+				f.VerifiedIn[stage] = VerifiedStage{
+					LongestCompletedSoak: &metav1.Duration{Duration: soak},
+				}
+			}
+		}
+		delete(f.CurrentlyIn, stage)
+	}
+}
+
+// AddVerifiedStage updates the Freight status to reflect that the Freight has
+// been verified in the specified Stage.
+func (f *FreightStatus) AddVerifiedStage(stage string, verifiedAt time.Time) {
+	if _, verified := f.VerifiedIn[stage]; !verified {
+		record := VerifiedStage{VerifiedAt: &metav1.Time{Time: verifiedAt}}
+		if f.VerifiedIn == nil {
+			f.VerifiedIn = map[string]VerifiedStage{stage: record}
+		}
+		f.VerifiedIn[stage] = record
+	}
+}
+
+// AddApprovedStage updates the Freight status to reflect that the Freight has
+// been approved for the specified Stage.
+func (f *FreightStatus) AddApprovedStage(stage string, approvedAt time.Time) {
+	if _, approved := f.ApprovedFor[stage]; !approved {
+		record := ApprovedStage{ApprovedAt: &metav1.Time{Time: approvedAt}}
+		if f.ApprovedFor == nil {
+			f.ApprovedFor = map[string]ApprovedStage{stage: record}
+		}
+		f.ApprovedFor[stage] = record
+	}
 }
 
 // CurrentStage reflects a Stage's current use of Freight.

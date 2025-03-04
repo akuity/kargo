@@ -1,4 +1,4 @@
-package v1alpha1
+package api
 
 import (
 	"context"
@@ -6,6 +6,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 // GetProject returns a pointer to the cluster-scoped Project resource specified
@@ -14,8 +16,8 @@ func GetProject(
 	ctx context.Context,
 	c client.Client,
 	name string,
-) (*Project, error) {
-	project := Project{}
+) (*kargoapi.Project, error) {
+	project := kargoapi.Project{}
 	if err := c.Get(
 		ctx, types.NamespacedName{
 			Name: name,

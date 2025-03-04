@@ -5,6 +5,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -130,8 +131,8 @@ func (p RefreshRequested) Update(e event.UpdateEvent) bool {
 		return false
 	}
 
-	if newVal, newOk := kargoapi.RefreshAnnotationValue(e.ObjectNew.GetAnnotations()); newOk {
-		if oldVal, oldOk := kargoapi.RefreshAnnotationValue(e.ObjectOld.GetAnnotations()); oldOk {
+	if newVal, newOk := api.RefreshAnnotationValue(e.ObjectNew.GetAnnotations()); newOk {
+		if oldVal, oldOk := api.RefreshAnnotationValue(e.ObjectOld.GetAnnotations()); oldOk {
 			return newVal != oldVal
 		}
 		return true
@@ -153,8 +154,8 @@ func (r ReverifyRequested) Update(e event.UpdateEvent) bool {
 		return false
 	}
 
-	if newVal, newOk := kargoapi.ReverifyAnnotationValue(e.ObjectNew.GetAnnotations()); newOk {
-		if oldVal, oldOk := kargoapi.ReverifyAnnotationValue(e.ObjectOld.GetAnnotations()); oldOk {
+	if newVal, newOk := api.ReverifyAnnotationValue(e.ObjectNew.GetAnnotations()); newOk {
+		if oldVal, oldOk := api.ReverifyAnnotationValue(e.ObjectOld.GetAnnotations()); oldOk {
 			return !newVal.ForID(oldVal.ID)
 		}
 		return true
@@ -176,8 +177,8 @@ func (p VerificationAbortRequested) Update(e event.UpdateEvent) bool {
 		return false
 	}
 
-	if newVal, newOk := kargoapi.AbortVerificationAnnotationValue(e.ObjectNew.GetAnnotations()); newOk {
-		if oldVal, oldOk := kargoapi.AbortVerificationAnnotationValue(e.ObjectOld.GetAnnotations()); oldOk {
+	if newVal, newOk := api.AbortVerificationAnnotationValue(e.ObjectNew.GetAnnotations()); newOk {
+		if oldVal, oldOk := api.AbortVerificationAnnotationValue(e.ObjectOld.GetAnnotations()); oldOk {
 			return !newVal.ForID(oldVal.ID)
 		}
 		return true
@@ -199,8 +200,8 @@ func (p PromotionAbortRequested) Update(e event.UpdateEvent) bool {
 		return false
 	}
 
-	if newVal, newOk := kargoapi.AbortPromotionAnnotationValue(e.ObjectNew.GetAnnotations()); newOk {
-		if oldVal, oldOk := kargoapi.AbortPromotionAnnotationValue(e.ObjectOld.GetAnnotations()); oldOk {
+	if newVal, newOk := api.AbortPromotionAnnotationValue(e.ObjectNew.GetAnnotations()); newOk {
+		if oldVal, oldOk := api.AbortPromotionAnnotationValue(e.ObjectOld.GetAnnotations()); oldOk {
 			return oldVal.Action != newVal.Action
 		}
 		return true

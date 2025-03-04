@@ -6,7 +6,7 @@ import (
 	"connectrpc.com/connect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
@@ -31,7 +31,7 @@ func (s *server) RefreshStage(
 		Namespace: project,
 		Name:      name,
 	}
-	stage, err := kargoapi.RefreshStage(ctx, s.client, objKey)
+	stage, err := api.RefreshStage(ctx, s.client, objKey)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +39,7 @@ func (s *server) RefreshStage(
 	// server's own internal client so that individual users are not required to
 	// have this permission, which they really do not otherwise need.
 	if stage.Status.CurrentPromotion != nil {
-		if _, err := kargoapi.RefreshPromotion(ctx, s.client.InternalClient(), client.ObjectKey{
+		if _, err := api.RefreshPromotion(ctx, s.client.InternalClient(), client.ObjectKey{
 			Namespace: project,
 			Name:      stage.Status.CurrentPromotion.Name,
 		}); err != nil {

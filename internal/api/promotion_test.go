@@ -1,4 +1,4 @@
-package v1alpha1
+package api
 
 import (
 	"context"
@@ -12,107 +12,23 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
-
-func TestAbortPromotionRequest_Equals(t *testing.T) {
-	tests := []struct {
-		name     string
-		r1       *AbortPromotionRequest
-		r2       *AbortPromotionRequest
-		expected bool
-	}{
-		{
-			name:     "both nil",
-			r1:       nil,
-			r2:       nil,
-			expected: true,
-		},
-		{
-			name:     "one nil",
-			r1:       &AbortPromotionRequest{Action: "fake-action", Actor: "fake-actor", ControlPlane: false},
-			r2:       nil,
-			expected: false,
-		},
-		{
-			name:     "other nil",
-			r1:       nil,
-			r2:       &AbortPromotionRequest{Action: "fake-action", Actor: "fake-actor", ControlPlane: false},
-			expected: false,
-		},
-		{
-			name:     "different actions",
-			r1:       &AbortPromotionRequest{Action: "fake-action", Actor: "fake-actor", ControlPlane: false},
-			r2:       &AbortPromotionRequest{Action: "other-action", Actor: "fake-actor", ControlPlane: false},
-			expected: false,
-		},
-		{
-			name:     "different actors",
-			r1:       &AbortPromotionRequest{Action: "fake-action", Actor: "fake-actor", ControlPlane: true},
-			r2:       &AbortPromotionRequest{Action: "fake-action", Actor: "other-actor", ControlPlane: true},
-			expected: false,
-		},
-		{
-			name:     "different control plane flags",
-			r1:       &AbortPromotionRequest{Action: "fake-action", Actor: "fake-actor", ControlPlane: true},
-			r2:       &AbortPromotionRequest{Action: "fake-action", Actor: "fake-actor", ControlPlane: false},
-			expected: false,
-		},
-		{
-			name:     "equal",
-			r1:       &AbortPromotionRequest{Action: "fake-action", Actor: "fake-actor", ControlPlane: true},
-			r2:       &AbortPromotionRequest{Action: "fake-action", Actor: "fake-actor", ControlPlane: true},
-			expected: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.r1.Equals(tt.r2), tt.expected)
-		})
-	}
-}
-
-func TestAbortPromotionRequest_String(t *testing.T) {
-	t.Run("abort request is nil", func(t *testing.T) {
-		var r *AbortPromotionRequest
-		require.Empty(t, r.String())
-	})
-
-	t.Run("abort request is empty", func(t *testing.T) {
-		r := &AbortPromotionRequest{}
-		require.Empty(t, r.String())
-	})
-
-	t.Run("abort request has empty action", func(t *testing.T) {
-		r := &AbortPromotionRequest{
-			Action: "",
-		}
-		require.Empty(t, r.String())
-	})
-
-	t.Run("abort request has data", func(t *testing.T) {
-		r := &AbortPromotionRequest{
-			Action:       "foo",
-			Actor:        "fake-actor",
-			ControlPlane: true,
-		}
-		require.Equal(t, `{"action":"foo","actor":"fake-actor","controlPlane":true}`, r.String())
-	})
-}
 
 func TestGetPromotion(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
-	require.NoError(t, SchemeBuilder.AddToScheme(scheme))
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
 
 	testCases := []struct {
 		name       string
 		client     client.Client
-		assertions func(*testing.T, *Promotion, error)
+		assertions func(*testing.T, *kargoapi.Promotion, error)
 	}{
 		{
 			name:   "not found",
 			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
-			assertions: func(t *testing.T, promo *Promotion, err error) {
+			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
 				require.NoError(t, err)
 				require.Nil(t, promo)
 			},
@@ -121,14 +37,14 @@ func TestGetPromotion(t *testing.T) {
 		{
 			name: "found",
 			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-				&Promotion{
+				&kargoapi.Promotion{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-promotion",
 						Namespace: "fake-namespace",
 					},
 				},
 			).Build(),
-			assertions: func(t *testing.T, promo *Promotion, err error) {
+			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "fake-promotion", promo.Name)
 				require.Equal(t, "fake-namespace", promo.Namespace)
@@ -153,7 +69,7 @@ func TestGetPromotion(t *testing.T) {
 
 func TestAbortPromotion(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
-	require.NoError(t, SchemeBuilder.AddToScheme(scheme))
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
 
 	t.Run("not found", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
@@ -161,19 +77,19 @@ func TestAbortPromotion(t *testing.T) {
 		err := AbortPromotion(context.TODO(), c, types.NamespacedName{
 			Namespace: "fake-namespace",
 			Name:      "fake-promotion",
-		}, AbortActionTerminate)
+		}, kargoapi.AbortActionTerminate)
 		require.ErrorContains(t, err, "not found")
 	})
 
 	t.Run("already in a terminal phase", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-			&Promotion{
+			&kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-namespace",
 					Name:      "fake-promotion",
 				},
-				Status: PromotionStatus{
-					Phase: PromotionPhaseSucceeded,
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhaseSucceeded,
 				},
 			},
 		).Build()
@@ -181,7 +97,7 @@ func TestAbortPromotion(t *testing.T) {
 		err := AbortPromotion(context.TODO(), c, types.NamespacedName{
 			Namespace: "fake-namespace",
 			Name:      "fake-promotion",
-		}, AbortActionTerminate)
+		}, kargoapi.AbortActionTerminate)
 		require.NoError(t, err)
 
 		promotion, err := GetPromotion(context.TODO(), c, types.NamespacedName{
@@ -189,13 +105,13 @@ func TestAbortPromotion(t *testing.T) {
 			Name:      "fake-promotion",
 		})
 		require.NoError(t, err)
-		_, ok := promotion.Annotations[AnnotationKeyAbort]
+		_, ok := promotion.Annotations[kargoapi.AnnotationKeyAbort]
 		require.False(t, ok)
 	})
 
 	t.Run("success", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-			&Promotion{
+			&kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-namespace",
 					Name:      "fake-promotion",
@@ -206,7 +122,7 @@ func TestAbortPromotion(t *testing.T) {
 		err := AbortPromotion(context.TODO(), c, types.NamespacedName{
 			Namespace: "fake-namespace",
 			Name:      "fake-promotion",
-		}, AbortActionTerminate)
+		}, kargoapi.AbortActionTerminate)
 		require.NoError(t, err)
 
 		stage, err := GetPromotion(context.TODO(), c, types.NamespacedName{
@@ -214,9 +130,9 @@ func TestAbortPromotion(t *testing.T) {
 			Name:      "fake-promotion",
 		})
 		require.NoError(t, err)
-		require.Equal(t, (&AbortPromotionRequest{
-			Action: AbortActionTerminate,
-		}).String(), stage.Annotations[AnnotationKeyAbort])
+		require.Equal(t, (&kargoapi.AbortPromotionRequest{
+			Action: kargoapi.AbortActionTerminate,
+		}).String(), stage.Annotations[kargoapi.AnnotationKeyAbort])
 	})
 }
 
@@ -227,138 +143,138 @@ func Test_ComparePromotionByPhaseAndCreationTime(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		a        Promotion
-		b        Promotion
+		a        kargoapi.Promotion
+		b        kargoapi.Promotion
 		expected int
 	}{
 		{
 			name: "Running before Terminated",
-			a: Promotion{
-				Status: PromotionStatus{
-					Phase: PromotionPhaseRunning,
+			a: kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhaseRunning,
 				},
 			},
-			b: Promotion{
-				Status: PromotionStatus{
-					Phase: PromotionPhaseSucceeded,
+			b: kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhaseSucceeded,
 				},
 			},
 			expected: -1,
 		},
 		{
 			name: "Pending before Terminated",
-			a: Promotion{
-				Status: PromotionStatus{
-					Phase: PromotionPhasePending,
+			a: kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhasePending,
 				},
 			},
-			b: Promotion{
-				Status: PromotionStatus{
-					Phase: PromotionPhaseSucceeded,
+			b: kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhaseSucceeded,
 				},
 			},
 			expected: -1,
 		},
 		{
 			name: "Pending after Running",
-			a: Promotion{
-				Status: PromotionStatus{
-					Phase: PromotionPhasePending,
+			a: kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhasePending,
 				},
 			},
-			b: Promotion{
-				Status: PromotionStatus{
-					Phase: PromotionPhaseRunning,
+			b: kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhaseRunning,
 				},
 			},
 			expected: 1,
 		},
 		{
 			name: "Terminated after Running",
-			a: Promotion{
-				Status: PromotionStatus{
-					Phase: PromotionPhaseFailed,
+			a: kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhaseFailed,
 				},
 			},
-			b: Promotion{
-				Status: PromotionStatus{
-					Phase: PromotionPhaseRunning,
+			b: kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhaseRunning,
 				},
 			},
 			expected: 1,
 		},
 		{
 			name: "Earlier ULID first if both Running",
-			a: Promotion{
+			a: kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "promotion." + ulidEarlier.String(),
 				},
-				Status: PromotionStatus{
-					Phase: PromotionPhaseRunning,
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhaseRunning,
 				},
 			},
-			b: Promotion{
+			b: kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "promotion." + ulidLater.String(),
 				},
-				Status: PromotionStatus{
-					Phase: PromotionPhaseRunning,
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhaseRunning,
 				},
 			},
 			expected: -1,
 		},
 		{
 			name: "Later ULID first if both Terminated",
-			a: Promotion{
+			a: kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "promotion." + ulidLater.String(),
 				},
-				Status: PromotionStatus{
-					Phase: PromotionPhaseErrored,
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhaseErrored,
 				},
 			},
-			b: Promotion{
+			b: kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "promotion." + ulidEarlier.String(),
 				},
-				Status: PromotionStatus{
-					Phase: PromotionPhaseSucceeded,
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhaseSucceeded,
 				},
 			},
 			expected: -1,
 		},
 		{
 			name: "Equal promotions",
-			a: Promotion{
+			a: kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:              "promotion-a",
 					CreationTimestamp: metav1.Time{Time: now},
 				},
-				Status: PromotionStatus{
-					Phase: PromotionPhasePending,
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhasePending,
 				},
 			},
-			b: Promotion{
+			b: kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:              "promotion-a",
 					CreationTimestamp: metav1.Time{Time: now},
 				},
-				Status: PromotionStatus{
-					Phase: PromotionPhasePending,
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhasePending,
 				},
 			},
 			expected: 0,
 		},
 		{
 			name: "Nil creation timestamps",
-			a: Promotion{
-				Status: PromotionStatus{
-					Phase: PromotionPhasePending,
+			a: kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhasePending,
 				},
 			},
-			b: Promotion{
-				Status: PromotionStatus{
-					Phase: PromotionPhasePending,
+			b: kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhasePending,
 				},
 			},
 			expected: 0,
@@ -376,61 +292,61 @@ func Test_ComparePromotionByPhaseAndCreationTime(t *testing.T) {
 func TestComparePromotionPhase(t *testing.T) {
 	tests := []struct {
 		name     string
-		a        PromotionPhase
-		b        PromotionPhase
+		a        kargoapi.PromotionPhase
+		b        kargoapi.PromotionPhase
 		expected int
 	}{
 		{
 			name:     "Running before Terminated",
-			a:        PromotionPhaseRunning,
-			b:        PromotionPhaseSucceeded,
+			a:        kargoapi.PromotionPhaseRunning,
+			b:        kargoapi.PromotionPhaseSucceeded,
 			expected: -1,
 		},
 		{
 			name:     "Terminated after Running",
-			a:        PromotionPhaseFailed,
-			b:        PromotionPhaseRunning,
+			a:        kargoapi.PromotionPhaseFailed,
+			b:        kargoapi.PromotionPhaseRunning,
 			expected: 1,
 		},
 		{
 			name:     "Running before other phase",
-			a:        PromotionPhaseRunning,
-			b:        PromotionPhasePending,
+			a:        kargoapi.PromotionPhaseRunning,
+			b:        kargoapi.PromotionPhasePending,
 			expected: -1,
 		},
 		{
 			name:     "Other phase after Running",
 			a:        "",
-			b:        PromotionPhaseRunning,
+			b:        kargoapi.PromotionPhaseRunning,
 			expected: 1,
 		},
 		{
 			name:     "Pending before Terminated",
-			a:        PromotionPhasePending,
-			b:        PromotionPhaseErrored,
+			a:        kargoapi.PromotionPhasePending,
+			b:        kargoapi.PromotionPhaseErrored,
 			expected: -1,
 		},
 		{
 			name:     "Pending after Running",
-			a:        PromotionPhasePending,
-			b:        PromotionPhaseRunning,
+			a:        kargoapi.PromotionPhasePending,
+			b:        kargoapi.PromotionPhaseRunning,
 			expected: 1,
 		},
 		{
 			name:     "Equal Running phases",
-			a:        PromotionPhaseRunning,
-			b:        PromotionPhaseRunning,
+			a:        kargoapi.PromotionPhaseRunning,
+			b:        kargoapi.PromotionPhaseRunning,
 			expected: 0,
 		},
 		{
 			name: "Equal Terminated phases",
-			a:    PromotionPhaseSucceeded,
-			b:    PromotionPhaseFailed,
+			a:    kargoapi.PromotionPhaseSucceeded,
+			b:    kargoapi.PromotionPhaseFailed,
 		},
 		{
 			name:     "Equal other phases",
-			a:        PromotionPhasePending,
-			b:        PromotionPhasePending,
+			a:        kargoapi.PromotionPhasePending,
+			b:        kargoapi.PromotionPhasePending,
 			expected: 0,
 		},
 	}

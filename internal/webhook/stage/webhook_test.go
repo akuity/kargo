@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	libWebhook "github.com/akuity/kargo/internal/webhook"
 )
 
@@ -148,11 +149,11 @@ func TestDefault(t *testing.T) {
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
 				require.Contains(t, stage.Annotations, kargoapi.AnnotationKeyReverify)
-				rr, ok := kargoapi.ReverifyAnnotationValue(stage.Annotations)
+				rr, ok := api.ReverifyAnnotationValue(stage.Annotations)
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.VerificationRequest{
 					ID: "fake-id",
-					Actor: kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{
+					Actor: api.FormatEventKubernetesUserActor(authnv1.UserInfo{
 						Username: "real-user",
 					}),
 					ControlPlane: false,
@@ -191,11 +192,11 @@ func TestDefault(t *testing.T) {
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
 				require.Contains(t, stage.Annotations, kargoapi.AnnotationKeyReverify)
-				rr, ok := kargoapi.ReverifyAnnotationValue(stage.Annotations)
+				rr, ok := api.ReverifyAnnotationValue(stage.Annotations)
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.VerificationRequest{
 					ID: "fake-id",
-					Actor: kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{
+					Actor: api.FormatEventKubernetesUserActor(authnv1.UserInfo{
 						Username: "real-user",
 					}),
 					ControlPlane: false,
@@ -234,7 +235,7 @@ func TestDefault(t *testing.T) {
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
 				require.Contains(t, stage.Annotations, kargoapi.AnnotationKeyReverify)
-				rr, ok := kargoapi.ReverifyAnnotationValue(stage.Annotations)
+				rr, ok := api.ReverifyAnnotationValue(stage.Annotations)
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.VerificationRequest{
 					ID:           "fake-id",
@@ -284,11 +285,11 @@ func TestDefault(t *testing.T) {
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
 				require.Contains(t, stage.Annotations, kargoapi.AnnotationKeyReverify)
-				rr, ok := kargoapi.ReverifyAnnotationValue(stage.Annotations)
+				rr, ok := api.ReverifyAnnotationValue(stage.Annotations)
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.VerificationRequest{
 					ID:    "fake-id",
-					Actor: kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{Username: "real-user"}),
+					Actor: api.FormatEventKubernetesUserActor(authnv1.UserInfo{Username: "real-user"}),
 				}, rr)
 			},
 		},
@@ -334,11 +335,11 @@ func TestDefault(t *testing.T) {
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
 				require.Contains(t, stage.Annotations, kargoapi.AnnotationKeyReverify)
-				rr, ok := kargoapi.ReverifyAnnotationValue(stage.Annotations)
+				rr, ok := api.ReverifyAnnotationValue(stage.Annotations)
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.VerificationRequest{
 					ID:           "fake-id",
-					Actor:        kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{Username: "real-user"}),
+					Actor:        api.FormatEventKubernetesUserActor(authnv1.UserInfo{Username: "real-user"}),
 					ControlPlane: false,
 				}, rr)
 			},
@@ -490,11 +491,11 @@ func TestDefault(t *testing.T) {
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
 				require.Contains(t, stage.Annotations, kargoapi.AnnotationKeyAbort)
-				rr, ok := kargoapi.AbortVerificationAnnotationValue(stage.Annotations)
+				rr, ok := api.AbortVerificationAnnotationValue(stage.Annotations)
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.VerificationRequest{
 					ID: "fake-id",
-					Actor: kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{
+					Actor: api.FormatEventKubernetesUserActor(authnv1.UserInfo{
 						Username: "real-user",
 					}),
 					ControlPlane: false,
@@ -533,11 +534,11 @@ func TestDefault(t *testing.T) {
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
 				require.Contains(t, stage.Annotations, kargoapi.AnnotationKeyAbort)
-				rr, ok := kargoapi.AbortVerificationAnnotationValue(stage.Annotations)
+				rr, ok := api.AbortVerificationAnnotationValue(stage.Annotations)
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.VerificationRequest{
 					ID: "fake-id",
-					Actor: kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{
+					Actor: api.FormatEventKubernetesUserActor(authnv1.UserInfo{
 						Username: "real-user",
 					}),
 					ControlPlane: false,
@@ -576,7 +577,7 @@ func TestDefault(t *testing.T) {
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
 				require.Contains(t, stage.Annotations, kargoapi.AnnotationKeyAbort)
-				rr, ok := kargoapi.AbortVerificationAnnotationValue(stage.Annotations)
+				rr, ok := api.AbortVerificationAnnotationValue(stage.Annotations)
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.VerificationRequest{
 					ID:           "fake-id",
@@ -626,11 +627,11 @@ func TestDefault(t *testing.T) {
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
 				require.Contains(t, stage.Annotations, kargoapi.AnnotationKeyAbort)
-				rr, ok := kargoapi.AbortVerificationAnnotationValue(stage.Annotations)
+				rr, ok := api.AbortVerificationAnnotationValue(stage.Annotations)
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.VerificationRequest{
 					ID:    "fake-id",
-					Actor: kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{Username: "real-user"}),
+					Actor: api.FormatEventKubernetesUserActor(authnv1.UserInfo{Username: "real-user"}),
 				}, rr)
 			},
 		},
@@ -676,11 +677,11 @@ func TestDefault(t *testing.T) {
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
 				require.Contains(t, stage.Annotations, kargoapi.AnnotationKeyAbort)
-				rr, ok := kargoapi.AbortVerificationAnnotationValue(stage.Annotations)
+				rr, ok := api.AbortVerificationAnnotationValue(stage.Annotations)
 				require.True(t, ok)
 				require.Equal(t, &kargoapi.VerificationRequest{
 					ID:           "fake-id",
-					Actor:        kargoapi.FormatEventKubernetesUserActor(authnv1.UserInfo{Username: "real-user"}),
+					Actor:        api.FormatEventKubernetesUserActor(authnv1.UserInfo{Username: "real-user"}),
 					ControlPlane: false,
 				}, rr)
 			},

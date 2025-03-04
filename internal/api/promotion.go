@@ -1,8 +1,7 @@
-package v1alpha1
+package api
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -11,60 +10,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/server/user"
 )
-
-// AbortAction is an action to take on a Promotion to abort it.
-type AbortAction string
-
-const (
-	// AbortActionTerminate is an action to terminate the Promotion.
-	// I.e. the Promotion will be marked as failed and the controller
-	// will stop processing it.
-	AbortActionTerminate AbortAction = "terminate"
-)
-
-// AbortPromotionRequest is a request payload with an optional actor field which
-// can be used to annotate a Promotion using the AnnotationKeyAbort annotation.
-//
-// +protobuf=false
-// +k8s:deepcopy-gen=false
-// +k8s:openapi-gen=false
-type AbortPromotionRequest struct {
-	// Action is the action to take on the Promotion to abort it.
-	Action AbortAction `json:"action,omitempty" protobuf:"bytes,1,opt,name=action"`
-	// Actor is the user who initiated the request.
-	Actor string `json:"actor,omitempty" protobuf:"bytes,2,opt,name=actor"`
-	// ControlPlane is a flag to indicate if the request has been initiated by
-	// a control plane.
-	ControlPlane bool `json:"controlPlane,omitempty" protobuf:"varint,3,opt,name=controlPlane"`
-}
-
-// Equals returns true if the AbortPromotionRequest is equal to the other
-// AbortPromotionRequest, false otherwise. Two VerificationRequests are equal
-// if their Action, Actor, and ControlPlane fields are equal.
-func (r *AbortPromotionRequest) Equals(other *AbortPromotionRequest) bool {
-	if r == nil && other == nil {
-		return true
-	}
-	if r == nil || other == nil {
-		return false
-	}
-	return r.Action == other.Action && r.Actor == other.Actor && r.ControlPlane == other.ControlPlane
-}
-
-// String returns the JSON string representation of the AbortPromotionRequest,
-// or an empty string if the AbortPromotionRequest is nil or has an empty Action.
-func (r *AbortPromotionRequest) String() string {
-	if r == nil || r.Action == "" {
-		return ""
-	}
-	b, _ := json.Marshal(r)
-	if b == nil {
-		return ""
-	}
-	return string(b)
-}
 
 // GetPromotion returns a pointer to the Promotion resource specified by the
 // namespacedName argument. If no such resource is found, nil is returned
@@ -73,8 +21,8 @@ func GetPromotion(
 	ctx context.Context,
 	c client.Client,
 	namespacedName types.NamespacedName,
-) (*Promotion, error) {
-	promo := Promotion{}
+) (*kargoapi.Promotion, error) {
+	promo := kargoapi.Promotion{}
 	if err := c.Get(ctx, namespacedName, &promo); err != nil {
 		if err = client.IgnoreNotFound(err); err == nil {
 			return nil, nil
@@ -97,14 +45,14 @@ func RefreshPromotion(
 	ctx context.Context,
 	c client.Client,
 	namespacedName types.NamespacedName,
-) (*Promotion, error) {
-	promo := &Promotion{
+) (*kargoapi.Promotion, error) {
+	promo := &kargoapi.Promotion{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespacedName.Namespace,
 			Name:      namespacedName.Name,
 		},
 	}
-	if err := patchAnnotation(ctx, c, promo, AnnotationKeyRefresh, time.Now().Format(time.RFC3339)); err != nil {
+	if err := patchAnnotation(ctx, c, promo, kargoapi.AnnotationKeyRefresh, time.Now().Format(time.RFC3339)); err != nil {
 		return nil, fmt.Errorf("refresh: %w", err)
 	}
 	return promo, nil
@@ -117,7 +65,7 @@ func AbortPromotion(
 	ctx context.Context,
 	c client.Client,
 	namespacedName types.NamespacedName,
-	action AbortAction,
+	action kargoapi.AbortAction,
 ) error {
 	promotion, err := GetPromotion(ctx, c, namespacedName)
 	if err != nil || promotion == nil {
@@ -137,14 +85,14 @@ func AbortPromotion(
 		return nil
 	}
 
-	ar := AbortPromotionRequest{
+	ar := kargoapi.AbortPromotionRequest{
 		Action: action,
 	}
 	// Put actor information to track on the controller side
 	if u, ok := user.InfoFromContext(ctx); ok {
 		ar.Actor = FormatEventUserActor(u)
 	}
-	return patchAnnotation(ctx, c, promotion, AnnotationKeyAbort, ar.String())
+	return patchAnnotation(ctx, c, promotion, kargoapi.AnnotationKeyAbort, ar.String())
 }
 
 // ComparePromotionByPhaseAndCreationTime compares two Promotions by their
@@ -158,7 +106,7 @@ func AbortPromotion(
 //  1. Running Promotions
 //  2. Non-terminal Promotions (ordered by ULID in ascending order)
 //  3. Terminal Promotions (ordered by ULID in descending order)
-func ComparePromotionByPhaseAndCreationTime(a, b Promotion) int {
+func ComparePromotionByPhaseAndCreationTime(a, b kargoapi.Promotion) int {
 	// Compare the phases of the Promotions first.
 	if phaseCompare := ComparePromotionPhase(a.Status.Phase, b.Status.Phase); phaseCompare != 0 {
 		return phaseCompare
@@ -189,8 +137,8 @@ func ComparePromotionByPhaseAndCreationTime(a, b Promotion) int {
 //  1. Running
 //  2. Non-terminal phases
 //  3. Terminal phases
-func ComparePromotionPhase(a, b PromotionPhase) int {
-	aRunning, bRunning := a == PromotionPhaseRunning, b == PromotionPhaseRunning
+func ComparePromotionPhase(a, b kargoapi.PromotionPhase) int {
+	aRunning, bRunning := a == kargoapi.PromotionPhaseRunning, b == kargoapi.PromotionPhaseRunning
 	aTerminal, bTerminal := a.IsTerminal(), b.IsTerminal()
 
 	// NB: The order of the cases here is important, as "Running" is a special

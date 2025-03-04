@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/server/user"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
@@ -117,13 +118,13 @@ func (s *server) ApproveFreight(
 	var actor string
 	eventMsg := fmt.Sprintf("Freight approved for Stage %q", stageName)
 	if u, ok := user.InfoFromContext(ctx); ok {
-		actor = kargoapi.FormatEventUserActor(u)
+		actor = api.FormatEventUserActor(u)
 		eventMsg += fmt.Sprintf(" by %q", actor)
 	}
 
 	s.recorder.AnnotatedEventf(
 		freight,
-		kargoapi.NewFreightApprovedEventAnnotations(actor, freight, stageName),
+		api.NewFreightApprovedEventAnnotations(actor, freight, stageName),
 		corev1.EventTypeNormal,
 		kargoapi.EventReasonFreightApproved,
 		eventMsg,

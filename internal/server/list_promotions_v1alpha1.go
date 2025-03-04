@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/indexer"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
@@ -39,7 +40,7 @@ func (s *server) ListPromotions(
 		return nil, fmt.Errorf("list promotions: %w", err)
 	}
 
-	slices.SortFunc(list.Items, kargoapi.ComparePromotionByPhaseAndCreationTime)
+	slices.SortFunc(list.Items, api.ComparePromotionByPhaseAndCreationTime)
 
 	promotions := make([]*kargoapi.Promotion, len(list.Items))
 	for idx := range list.Items {

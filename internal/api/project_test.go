@@ -1,4 +1,4 @@
-package v1alpha1
+package api
 
 import (
 	"context"
@@ -9,21 +9,23 @@ import (
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 func TestGetProject(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
-	require.NoError(t, SchemeBuilder.AddToScheme(scheme))
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
 
 	testCases := []struct {
 		name       string
 		client     client.Client
-		assertions func(*testing.T, *Project, error)
+		assertions func(*testing.T, *kargoapi.Project, error)
 	}{
 		{
 			name:   "not found",
 			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
-			assertions: func(t *testing.T, project *Project, err error) {
+			assertions: func(t *testing.T, project *kargoapi.Project, err error) {
 				require.NoError(t, err)
 				require.Nil(t, project)
 			},
@@ -32,13 +34,13 @@ func TestGetProject(t *testing.T) {
 		{
 			name: "found",
 			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-				&Project{
+				&kargoapi.Project{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "fake-project",
 					},
 				},
 			).Build(),
-			assertions: func(t *testing.T, project *Project, err error) {
+			assertions: func(t *testing.T, project *kargoapi.Project, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "fake-project", project.Name)
 			},

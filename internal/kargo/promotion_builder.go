@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/server/user"
 )
 
@@ -67,7 +68,7 @@ func (b *PromotionBuilder) Build(
 	// Build metadata
 	annotations := make(map[string]string)
 	if u, ok := user.InfoFromContext(ctx); ok {
-		annotations[kargoapi.AnnotationKeyCreateActor] = kargoapi.FormatEventUserActor(u)
+		annotations[kargoapi.AnnotationKeyCreateActor] = api.FormatEventUserActor(u)
 	}
 
 	promotion := kargoapi.Promotion{

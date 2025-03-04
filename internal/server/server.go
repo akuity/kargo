@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	httputil "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/logging"
@@ -175,8 +176,8 @@ func NewServer(
 
 	s.validateProjectExistsFn = s.validateProjectExists
 	s.externalValidateProjectFn = validation.ValidateProject
-	s.getStageFn = kargoapi.GetStage
-	s.getFreightByNameOrAliasFn = kargoapi.GetFreightByNameOrAlias
+	s.getStageFn = api.GetStage
+	s.getFreightByNameOrAliasFn = api.GetFreightByNameOrAlias
 	s.isFreightAvailableFn = s.isFreightAvailable
 	s.createPromotionFn = kubeClient.Create
 	s.findDownstreamStagesFn = s.findDownstreamStages

@@ -1,4 +1,4 @@
-package v1alpha1
+package api
 
 import (
 	"context"
@@ -13,6 +13,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 func TestEnsureFinalizer(t *testing.T) {
@@ -21,7 +23,7 @@ func TestEnsureFinalizer(t *testing.T) {
 
 	ctx := context.Background()
 
-	stage := &Stage{
+	stage := &kargoapi.Stage{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: testNamespace,
 			Name:      testStageName,
@@ -29,7 +31,7 @@ func TestEnsureFinalizer(t *testing.T) {
 	}
 
 	scheme := k8sruntime.NewScheme()
-	err := AddToScheme(scheme)
+	err := kargoapi.AddToScheme(scheme)
 	require.NoError(t, err)
 	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(stage).Build()
 
@@ -37,7 +39,7 @@ func TestEnsureFinalizer(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, updated)
 
-	patchedStage := &Stage{}
+	patchedStage := &kargoapi.Stage{}
 	err = c.Get(
 		ctx,
 		types.NamespacedName{
@@ -48,7 +50,7 @@ func TestEnsureFinalizer(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	require.True(t, controllerutil.ContainsFinalizer(patchedStage, FinalizerName))
+	require.True(t, controllerutil.ContainsFinalizer(patchedStage, kargoapi.FinalizerName))
 }
 
 func TestRemoveFinalizer(t *testing.T) {
@@ -57,23 +59,23 @@ func TestRemoveFinalizer(t *testing.T) {
 
 	ctx := context.Background()
 
-	stage := &Stage{
+	stage := &kargoapi.Stage{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:  testNamespace,
 			Name:       testStageName,
-			Finalizers: []string{FinalizerName},
+			Finalizers: []string{kargoapi.FinalizerName},
 		},
 	}
 
 	scheme := k8sruntime.NewScheme()
-	err := AddToScheme(scheme)
+	err := kargoapi.AddToScheme(scheme)
 	require.NoError(t, err)
 	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(stage).Build()
 
 	err = RemoveFinalizer(ctx, c, stage)
 	require.NoError(t, err)
 
-	patchedStage := &Stage{}
+	patchedStage := &kargoapi.Stage{}
 	err = c.Get(
 		ctx,
 		types.NamespacedName{
@@ -84,7 +86,7 @@ func TestRemoveFinalizer(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	require.False(t, controllerutil.ContainsFinalizer(patchedStage, FinalizerName))
+	require.False(t, controllerutil.ContainsFinalizer(patchedStage, kargoapi.FinalizerName))
 }
 
 func TestPatchOwnerReferences(t *testing.T) {
@@ -99,7 +101,7 @@ func TestPatchOwnerReferences(t *testing.T) {
 		},
 	}
 
-	testProject := &Project{
+	testProject := &kargoapi.Project{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: testProjectName,
 		},
@@ -108,7 +110,7 @@ func TestPatchOwnerReferences(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
 	err := corev1.AddToScheme(scheme)
 	require.NoError(t, err)
-	err = AddToScheme(scheme)
+	err = kargoapi.AddToScheme(scheme)
 	require.NoError(t, err)
 	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 		initialNS,
@@ -119,7 +121,7 @@ func TestPatchOwnerReferences(t *testing.T) {
 
 	ownerRef := metav1.NewControllerRef(
 		testProject,
-		GroupVersion.WithKind("Project"),
+		kargoapi.GroupVersion.WithKind("Project"),
 	)
 	ownerRef.BlockOwnerDeletion = ptr.To(false)
 
@@ -145,7 +147,7 @@ func TestPatchOwnerReferences(t *testing.T) {
 
 func Test_patchAnnotation(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
-	require.NoError(t, SchemeBuilder.AddToScheme(scheme))
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
 
 	newFakeClient := func(obj ...client.Object) client.Client {
 		return fake.NewClientBuilder().
@@ -162,13 +164,13 @@ func Test_patchAnnotation(t *testing.T) {
 		errExpected bool
 	}{
 		"stage": {
-			obj: &Stage{
+			obj: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "stage",
 				},
 			},
-			client: newFakeClient(&Stage{
+			client: newFakeClient(&kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "stage",
@@ -178,13 +180,13 @@ func Test_patchAnnotation(t *testing.T) {
 			value: "value",
 		},
 		"stage with existing annotation": {
-			obj: &Stage{
+			obj: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "stage",
 				},
 			},
-			client: newFakeClient(&Stage{
+			client: newFakeClient(&kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "stage",
@@ -197,7 +199,7 @@ func Test_patchAnnotation(t *testing.T) {
 			value: "value2",
 		},
 		"non-existing stage": {
-			obj: &Stage{
+			obj: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "stage",
