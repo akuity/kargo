@@ -10,6 +10,7 @@ import { timestampDate } from '@ui/utils/connectrpc-utils';
 import { AnalysisModal } from '../common/analysis-modal/analysis-modal';
 import { useModal } from '../common/modal/use-modal';
 
+import { verificationPhaseIsTerminal } from './utils/verification-phase';
 import { VerificationIcon } from './verification-icon';
 
 type Props = {
@@ -83,11 +84,19 @@ export const Verifications = ({ verifications, images }: Props) => {
         <Table.Column<(typeof verifications)[number]>
           title='Duration'
           render={(_, verification) => {
-            try {
-              const startTime = timestampDate(verification.startTime);
-              const finishTime = timestampDate(verification.finishTime);
+            if (!verificationPhaseIsTerminal(verification.phase || '')) {
+              return null;
+            }
 
-              const timeTook = moment.duration(moment(finishTime).diff(moment(startTime)));
+            try {
+              const startTime = moment(timestampDate(verification.startTime));
+              const finishTime = moment(timestampDate(verification.finishTime));
+
+              if (!startTime.isValid() && !finishTime.isValid()) {
+                return null;
+              }
+
+              const timeTook = moment.duration(finishTime.diff(startTime));
 
               return timeTook.humanize();
             } catch {
