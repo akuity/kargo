@@ -13,6 +13,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 func Test_gitCommitter_validate(t *testing.T) {
@@ -216,7 +217,7 @@ func Test_gitCommitter_runPromotionStep(t *testing.T) {
 	res, err := runner.runPromotionStep(
 		context.Background(),
 		stepCtx,
-		GitCommitConfig{
+		builtin.GitCommitConfig{
 			Path:    "master",
 			Message: "Initial commit",
 		},
@@ -237,12 +238,12 @@ func Test_gitCommitter_buildCommitMessage(t *testing.T) {
 	testCases := []struct {
 		name        string
 		sharedState State
-		cfg         GitCommitConfig
+		cfg         builtin.GitCommitConfig
 		assertions  func(t *testing.T, msg string, err error)
 	}{
 		{
 			name: "message is specified",
-			cfg:  GitCommitConfig{Message: "fake commit message"},
+			cfg:  builtin.GitCommitConfig{Message: "fake commit message"},
 			assertions: func(t *testing.T, msg string, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "fake commit message", msg)
@@ -251,7 +252,7 @@ func Test_gitCommitter_buildCommitMessage(t *testing.T) {
 		{
 			name:        "no output from step with alias",
 			sharedState: State{},
-			cfg:         GitCommitConfig{MessageFromSteps: []string{"fake-step-alias"}},
+			cfg:         builtin.GitCommitConfig{MessageFromSteps: []string{"fake-step-alias"}},
 			assertions: func(t *testing.T, _ string, err error) {
 				require.NoError(t, err)
 			},
@@ -261,7 +262,7 @@ func Test_gitCommitter_buildCommitMessage(t *testing.T) {
 			sharedState: State{
 				"fake-step-alias": "not a State",
 			},
-			cfg: GitCommitConfig{MessageFromSteps: []string{"fake-step-alias"}},
+			cfg: builtin.GitCommitConfig{MessageFromSteps: []string{"fake-step-alias"}},
 			assertions: func(t *testing.T, _ string, err error) {
 				require.ErrorContains(t, err, "output from step with alias")
 				require.ErrorContains(t, err, "is not a map[string]any")
@@ -272,7 +273,7 @@ func Test_gitCommitter_buildCommitMessage(t *testing.T) {
 			sharedState: State{
 				"fake-step-alias": map[string]any{},
 			},
-			cfg: GitCommitConfig{MessageFromSteps: []string{"fake-step-alias"}},
+			cfg: builtin.GitCommitConfig{MessageFromSteps: []string{"fake-step-alias"}},
 			assertions: func(t *testing.T, msg string, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "Kargo made some changes", msg)
@@ -285,7 +286,7 @@ func Test_gitCommitter_buildCommitMessage(t *testing.T) {
 					"commitMessage": 42,
 				},
 			},
-			cfg: GitCommitConfig{MessageFromSteps: []string{"fake-step-alias"}},
+			cfg: builtin.GitCommitConfig{MessageFromSteps: []string{"fake-step-alias"}},
 			assertions: func(t *testing.T, _ string, err error) {
 				require.ErrorContains(
 					t, err, "commit message in output from step with alias",
@@ -303,7 +304,7 @@ func Test_gitCommitter_buildCommitMessage(t *testing.T) {
 					"commitMessage": "part two",
 				},
 			},
-			cfg: GitCommitConfig{
+			cfg: builtin.GitCommitConfig{
 				MessageFromSteps: []string{
 					"fake-step-alias",
 					"another-fake-step-alias",

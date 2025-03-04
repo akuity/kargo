@@ -14,6 +14,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 // stateKeyBranch is the key used to store the branch that was pushed to in the
@@ -21,7 +22,7 @@ import (
 const stateKeyBranch = "branch"
 
 func init() {
-	builtins.RegisterPromotionStepRunner(
+	builtinsReg.RegisterPromotionStepRunner(
 		newGitPusher(),
 		&StepRunnerPermissions{AllowCredentialsDB: true},
 	)
@@ -58,7 +59,7 @@ func (g *gitPushPusher) RunPromotionStep(
 	if err := g.validate(stepCtx.Config); err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
 	}
-	cfg, err := ConfigToStruct[GitPushConfig](stepCtx.Config)
+	cfg, err := ConfigToStruct[builtin.GitPushConfig](stepCtx.Config)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("could not convert config into git-push config: %w", err)
@@ -74,7 +75,7 @@ func (g *gitPushPusher) validate(cfg Config) error {
 func (g *gitPushPusher) runPromotionStep(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
-	cfg GitPushConfig,
+	cfg builtin.GitPushConfig,
 ) (PromotionStepResult, error) {
 	// This is kind of hacky, but we needed to load the working tree to get the
 	// URL of the repository. With that in hand, we can look for applicable

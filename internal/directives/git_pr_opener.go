@@ -13,6 +13,7 @@ import (
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/gitprovider"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 
 	_ "github.com/akuity/kargo/internal/gitprovider/azure"  // Azure provider registration
 	_ "github.com/akuity/kargo/internal/gitprovider/gitea"  // Gitea provider registration
@@ -24,7 +25,7 @@ import (
 const stateKeyPRNumber = "prNumber"
 
 func init() {
-	builtins.RegisterPromotionStepRunner(
+	builtinsReg.RegisterPromotionStepRunner(
 		newGitPROpener(),
 		&StepRunnerPermissions{AllowCredentialsDB: true},
 	)
@@ -57,7 +58,7 @@ func (g *gitPROpener) RunPromotionStep(
 	if err := g.validate(stepCtx.Config); err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
 	}
-	cfg, err := ConfigToStruct[GitOpenPRConfig](stepCtx.Config)
+	cfg, err := ConfigToStruct[builtin.GitOpenPRConfig](stepCtx.Config)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("could not convert config into git-open-pr config: %w", err)
@@ -73,7 +74,7 @@ func (g *gitPROpener) validate(cfg Config) error {
 func (g *gitPROpener) runPromotionStep(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
-	cfg GitOpenPRConfig,
+	cfg builtin.GitOpenPRConfig,
 ) (PromotionStepResult, error) {
 	// Short-circuit if shared state has output from a previous execution of this
 	// step that contains a PR number.

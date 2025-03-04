@@ -17,6 +17,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 const (
@@ -25,7 +26,7 @@ const (
 )
 
 func init() {
-	builtins.RegisterPromotionStepRunner(newHTTPRequester(), nil)
+	builtinsReg.RegisterPromotionStepRunner(newHTTPRequester(), nil)
 }
 
 // httpRequester is an implementation of the PromotionStepRunner interface that
@@ -54,7 +55,7 @@ func (h *httpRequester) RunPromotionStep(
 	if err := h.validate(stepCtx.Config); err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
 	}
-	cfg, err := ConfigToStruct[HTTPConfig](stepCtx.Config)
+	cfg, err := ConfigToStruct[builtin.HTTPConfig](stepCtx.Config)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("could not convert config into http config: %w", err)
@@ -70,7 +71,7 @@ func (h *httpRequester) validate(cfg Config) error {
 func (h *httpRequester) runPromotionStep(
 	ctx context.Context,
 	_ *PromotionStepContext,
-	cfg HTTPConfig,
+	cfg builtin.HTTPConfig,
 ) (PromotionStepResult, error) {
 	req, err := h.buildRequest(cfg)
 	if err != nil {
@@ -125,7 +126,7 @@ func (h *httpRequester) runPromotionStep(
 	}
 }
 
-func (h *httpRequester) buildRequest(cfg HTTPConfig) (*http.Request, error) {
+func (h *httpRequester) buildRequest(cfg builtin.HTTPConfig) (*http.Request, error) {
 	method := cfg.Method
 	if method == "" {
 		method = http.MethodGet
@@ -147,7 +148,7 @@ func (h *httpRequester) buildRequest(cfg HTTPConfig) (*http.Request, error) {
 	return req, nil
 }
 
-func (h *httpRequester) getClient(cfg HTTPConfig) (*http.Client, error) {
+func (h *httpRequester) getClient(cfg builtin.HTTPConfig) (*http.Client, error) {
 	httpTransport := cleanhttp.DefaultTransport()
 	if cfg.InsecureSkipTLSVerify {
 		httpTransport.TLSClientConfig = &tls.Config{
@@ -238,7 +239,7 @@ func (h *httpRequester) buildExprEnv(
 }
 
 func (h *httpRequester) wasRequestSuccessful(
-	cfg HTTPConfig,
+	cfg builtin.HTTPConfig,
 	statusCode int,
 	env map[string]any,
 ) (bool, error) {
@@ -270,7 +271,7 @@ func (h *httpRequester) wasRequestSuccessful(
 }
 
 func (h *httpRequester) didRequestFail(
-	cfg HTTPConfig,
+	cfg builtin.HTTPConfig,
 	statusCode int,
 	env map[string]any,
 ) (bool, error) {
@@ -302,7 +303,7 @@ func (h *httpRequester) didRequestFail(
 }
 
 func (h *httpRequester) buildOutputs(
-	outputExprs []HTTPOutput,
+	outputExprs []builtin.HTTPOutput,
 	env map[string]any,
 ) (map[string]any, error) {
 	outputs := make(map[string]any, len(outputExprs))

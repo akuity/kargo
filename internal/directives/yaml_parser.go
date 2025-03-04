@@ -11,10 +11,11 @@ import (
 	"sigs.k8s.io/yaml"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 func init() {
-	builtins.RegisterPromotionStepRunner(newYAMLParser(), nil)
+	builtinsReg.RegisterPromotionStepRunner(newYAMLParser(), nil)
 }
 
 // yamlParser is an implementation of the PromotionStepRunner interface that
@@ -45,7 +46,7 @@ func (yp *yamlParser) RunPromotionStep(
 		return failure, err
 	}
 
-	cfg, err := ConfigToStruct[YAMLParseConfig](stepCtx.Config)
+	cfg, err := ConfigToStruct[builtin.YAMLParseConfig](stepCtx.Config)
 	if err != nil {
 		return failure, fmt.Errorf("could not convert config into %s config: %w", yp.Name(), err)
 	}
@@ -61,7 +62,7 @@ func (yp *yamlParser) validate(cfg Config) error {
 func (yp *yamlParser) runPromotionStep(
 	_ context.Context,
 	stepCtx *PromotionStepContext,
-	cfg YAMLParseConfig,
+	cfg builtin.YAMLParseConfig,
 ) (PromotionStepResult, error) {
 	failure := PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}
 
@@ -115,7 +116,7 @@ func (yp *yamlParser) readAndParseYAML(workDir string, path string) (map[string]
 }
 
 // extractValues evaluates JSONPath expressions using expr and returns extracted values.
-func (yp *yamlParser) extractValues(data map[string]any, outputs []YAMLParse) (map[string]any, error) {
+func (yp *yamlParser) extractValues(data map[string]any, outputs []builtin.YAMLParse) (map[string]any, error) {
 	results := make(map[string]any)
 
 	for _, output := range outputs {

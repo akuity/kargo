@@ -14,13 +14,14 @@ import (
 	"helm.sh/helm/v3/pkg/release"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 func Test_helmTemplateRunner_runPromotionStep(t *testing.T) {
 	tests := []struct {
 		name       string
 		files      map[string]string
-		cfg        HelmTemplateConfig
+		cfg        builtin.HelmTemplateConfig
 		assertions func(*testing.T, string, PromotionStepResult, error)
 	}{
 		{
@@ -40,7 +41,7 @@ data:
   value: {{ .Values.key }}
 `,
 			},
-			cfg: HelmTemplateConfig{
+			cfg: builtin.HelmTemplateConfig{
 				Path:        "charts/test-chart",
 				ValuesFiles: []string{"values.yaml"},
 				OutPath:     "output.yaml",
@@ -86,7 +87,7 @@ data:
   value2: {{ .Values.key2 }}
 `,
 			},
-			cfg: HelmTemplateConfig{
+			cfg: builtin.HelmTemplateConfig{
 				Path:        "charts/test-chart",
 				ValuesFiles: []string{"values1.yaml", "values2.yaml"},
 				OutPath:     "output.yaml",
@@ -131,7 +132,7 @@ data:
   value: {{ .Values.key }}
 `,
 			},
-			cfg: HelmTemplateConfig{
+			cfg: builtin.HelmTemplateConfig{
 				Path:        "charts/test-chart",
 				ValuesFiles: []string{"values.yaml"},
 				OutPath:     "output/",
@@ -161,7 +162,7 @@ data:
 		},
 		{
 			name: "missing values file",
-			cfg: HelmTemplateConfig{
+			cfg: builtin.HelmTemplateConfig{
 				ValuesFiles: []string{"non-existent.yaml"},
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
@@ -173,7 +174,7 @@ data:
 		},
 		{
 			name: "invalid chart",
-			cfg: HelmTemplateConfig{
+			cfg: builtin.HelmTemplateConfig{
 				Path: "./",
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
@@ -195,7 +196,7 @@ dependencies:
   repository: https://example.com/charts
 `,
 			},
-			cfg: HelmTemplateConfig{
+			cfg: builtin.HelmTemplateConfig{
 				Path:    "charts/test-chart",
 				OutPath: "output.yaml",
 			},
@@ -213,7 +214,7 @@ dependencies:
 name: test-chart
 version: 0.1.0`,
 			},
-			cfg: HelmTemplateConfig{
+			cfg: builtin.HelmTemplateConfig{
 				Path:        "charts/test-chart",
 				KubeVersion: "invalid",
 			},
@@ -239,7 +240,7 @@ data:
   value: {{ .Values.nonexistent | quote }}}
 `,
 			},
-			cfg: HelmTemplateConfig{
+			cfg: builtin.HelmTemplateConfig{
 				Path:    "charts/test-chart",
 				OutPath: "output.yaml",
 			},
@@ -264,7 +265,7 @@ metadata:
   name: {{ .Release.Name }}-configmap
 `,
 			},
-			cfg: HelmTemplateConfig{
+			cfg: builtin.HelmTemplateConfig{
 				Path:    "./chart/",
 				OutPath: "output.yaml",
 			},
@@ -347,14 +348,14 @@ func Test_helmTemplateRunner_composeValues(t *testing.T) {
 func Test_helmTemplateRunner_newInstallAction(t *testing.T) {
 	tests := []struct {
 		name       string
-		cfg        HelmTemplateConfig
+		cfg        builtin.HelmTemplateConfig
 		project    string
 		absOutPath string
 		assertions func(*testing.T, *action.Install, error)
 	}{
 		{
 			name: "default values",
-			cfg:  HelmTemplateConfig{},
+			cfg:  builtin.HelmTemplateConfig{},
 			assertions: func(t *testing.T, client *action.Install, err error) {
 				require.NoError(t, err)
 				assert.True(t, client.DryRun)
@@ -370,7 +371,7 @@ func Test_helmTemplateRunner_newInstallAction(t *testing.T) {
 		},
 		{
 			name: "custom values",
-			cfg: HelmTemplateConfig{
+			cfg: builtin.HelmTemplateConfig{
 				ReleaseName: "custom-release",
 				Namespace:   "custom-namespace",
 				IncludeCRDs: true,
@@ -389,7 +390,7 @@ func Test_helmTemplateRunner_newInstallAction(t *testing.T) {
 		},
 		{
 			name: "output directory",
-			cfg: HelmTemplateConfig{
+			cfg: builtin.HelmTemplateConfig{
 				OutPath: "output/",
 			},
 			absOutPath: "/tmp/output",
@@ -400,7 +401,7 @@ func Test_helmTemplateRunner_newInstallAction(t *testing.T) {
 		},
 		{
 			name: "output file (YAML)",
-			cfg: HelmTemplateConfig{
+			cfg: builtin.HelmTemplateConfig{
 				OutPath: "output.yaml",
 			},
 			absOutPath: "/tmp/output.yaml",
@@ -411,7 +412,7 @@ func Test_helmTemplateRunner_newInstallAction(t *testing.T) {
 		},
 		{
 			name: "output file (YML)",
-			cfg: HelmTemplateConfig{
+			cfg: builtin.HelmTemplateConfig{
 				OutPath: "output.yml",
 			},
 			absOutPath: "/tmp/output.yml",
@@ -422,7 +423,7 @@ func Test_helmTemplateRunner_newInstallAction(t *testing.T) {
 		},
 		{
 			name: "KubeVersion parsing error",
-			cfg: HelmTemplateConfig{
+			cfg: builtin.HelmTemplateConfig{
 				KubeVersion: "invalid",
 			},
 			assertions: func(t *testing.T, client *action.Install, err error) {
@@ -525,14 +526,14 @@ func Test_helmTemplateRunner_checkDependencies(t *testing.T) {
 func Test_helmTemplateRunner_writeOutput(t *testing.T) {
 	tests := []struct {
 		name       string
-		cfg        HelmTemplateConfig
+		cfg        builtin.HelmTemplateConfig
 		rls        *release.Release
 		setup      func(*testing.T) (outPath string)
 		assertions func(*testing.T, string, error)
 	}{
 		{
 			name: "successful write to file",
-			cfg: HelmTemplateConfig{
+			cfg: builtin.HelmTemplateConfig{
 				OutPath: "output.yaml",
 			},
 			rls: &release.Release{
@@ -551,7 +552,7 @@ func Test_helmTemplateRunner_writeOutput(t *testing.T) {
 		},
 		{
 			name: "write to non-existent directory",
-			cfg: HelmTemplateConfig{
+			cfg: builtin.HelmTemplateConfig{
 				OutPath: "subdir/output.yaml",
 			},
 			rls: &release.Release{
@@ -570,7 +571,7 @@ func Test_helmTemplateRunner_writeOutput(t *testing.T) {
 		},
 		{
 			name: "write hooks to separate files",
-			cfg: HelmTemplateConfig{
+			cfg: builtin.HelmTemplateConfig{
 				OutPath: "output",
 			},
 			rls: &release.Release{
@@ -597,7 +598,7 @@ func Test_helmTemplateRunner_writeOutput(t *testing.T) {
 		},
 		{
 			name: "skip test hooks",
-			cfg: HelmTemplateConfig{
+			cfg: builtin.HelmTemplateConfig{
 				OutPath:   "output",
 				SkipTests: true,
 			},
@@ -623,7 +624,7 @@ func Test_helmTemplateRunner_writeOutput(t *testing.T) {
 		},
 		{
 			name: "write hooks to single file",
-			cfg: HelmTemplateConfig{
+			cfg: builtin.HelmTemplateConfig{
 				OutPath: "output.yaml",
 			},
 			rls: &release.Release{
@@ -652,7 +653,7 @@ hook2: content
 		},
 		{
 			name: "disable hooks",
-			cfg: HelmTemplateConfig{
+			cfg: builtin.HelmTemplateConfig{
 				OutPath:      "output",
 				DisableHooks: true,
 			},
@@ -673,7 +674,7 @@ hook2: content
 		},
 		{
 			name: "append to existing hook file",
-			cfg: HelmTemplateConfig{
+			cfg: builtin.HelmTemplateConfig{
 				OutPath: "output",
 			},
 			rls: &release.Release{

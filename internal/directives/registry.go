@@ -4,9 +4,9 @@ import (
 	"fmt"
 )
 
-// builtins is a registry of built-in PromotionStepRunner and
+// builtinsReg is a registry of built-in PromotionStepRunner and
 // HealthCheckStepRunner implementations.
-var builtins = NewStepRunnerRegistry()
+var builtinsReg = NewStepRunnerRegistry()
 
 // StepRunnerRegistry is a registry of built-in PromotionStepRunner and
 // HealthCheckStepRunner implementations.

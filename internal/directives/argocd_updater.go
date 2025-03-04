@@ -20,6 +20,7 @@ import (
 	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 const (
@@ -29,14 +30,14 @@ const (
 
 func init() {
 	runner := newArgocdUpdater()
-	builtins.RegisterPromotionStepRunner(
+	builtinsReg.RegisterPromotionStepRunner(
 		runner,
 		&StepRunnerPermissions{
 			AllowKargoClient:  true,
 			AllowArgoCDClient: true,
 		},
 	)
-	builtins.RegisterHealthCheckStepRunner(
+	builtinsReg.RegisterHealthCheckStepRunner(
 		runner,
 		&StepRunnerPermissions{AllowArgoCDClient: true},
 	)
@@ -56,14 +57,14 @@ type argocdUpdater struct {
 	) (*argocd.Application, error)
 
 	buildDesiredSourcesFn func(
-		update *ArgoCDAppUpdate,
+		update *builtin.ArgoCDAppUpdate,
 		desiredRevisions []string,
 		app *argocd.Application,
 	) (argocd.ApplicationSources, error)
 
 	mustPerformUpdateFn func(
 		*PromotionStepContext,
-		*ArgoCDAppUpdate,
+		*builtin.ArgoCDAppUpdate,
 		*argocd.Application,
 	) (argocd.OperationPhase, bool, error)
 
@@ -75,7 +76,7 @@ type argocdUpdater struct {
 	) error
 
 	applyArgoCDSourceUpdateFn func(
-		update *ArgoCDAppSourceUpdate,
+		update *builtin.ArgoCDAppSourceUpdate,
 		desiredRevision string,
 		src argocd.ApplicationSource,
 	) (argocd.ApplicationSource, bool)
@@ -136,7 +137,7 @@ func (a *argocdUpdater) RunPromotionStep(
 	if err := a.validate(stepCtx.Config); err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
 	}
-	cfg, err := ConfigToStruct[ArgoCDUpdateConfig](stepCtx.Config)
+	cfg, err := ConfigToStruct[builtin.ArgoCDUpdateConfig](stepCtx.Config)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("could not convert config into %s config: %w", a.Name(), err)
@@ -153,7 +154,7 @@ func (a *argocdUpdater) validate(cfg Config) error {
 func (a *argocdUpdater) runPromotionStep(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
-	stepCfg ArgoCDUpdateConfig,
+	stepCfg builtin.ArgoCDUpdateConfig,
 ) (PromotionStepResult, error) {
 	if stepCtx.ArgoCDClient == nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, errors.New(
@@ -289,7 +290,7 @@ func (a *argocdUpdater) runPromotionStep(
 // buildDesiredSources returns the desired source(s) for an Argo CD Application,
 // by updating the current source(s) with the given source updates.
 func (a *argocdUpdater) buildDesiredSources(
-	update *ArgoCDAppUpdate,
+	update *builtin.ArgoCDAppUpdate,
 	desiredRevisions []string,
 	app *argocd.Application,
 ) (argocd.ApplicationSources, error) {
@@ -338,7 +339,7 @@ updateLoop:
 
 func (a *argocdUpdater) mustPerformUpdate(
 	stepCtx *PromotionStepContext,
-	update *ArgoCDAppUpdate,
+	update *builtin.ArgoCDAppUpdate,
 	app *argocd.Application,
 ) (phase argocd.OperationPhase, mustUpdate bool, err error) {
 	status := app.Status.OperationState
@@ -693,7 +694,7 @@ func (a *argocdUpdater) authorizeArgoCDAppUpdate(
 
 // applyArgoCDSourceUpdate updates a single Argo CD ApplicationSource.
 func (a *argocdUpdater) applyArgoCDSourceUpdate(
-	update *ArgoCDAppSourceUpdate,
+	update *builtin.ArgoCDAppSourceUpdate,
 	desiredRevision string,
 	source argocd.ApplicationSource,
 ) (argocd.ApplicationSource, bool) {
@@ -756,7 +757,9 @@ func (a *argocdUpdater) applyArgoCDSourceUpdate(
 	return source, true
 }
 
-func (a *argocdUpdater) buildKustomizeImagesForAppSource(update *ArgoCDKustomizeImageUpdates) argocd.KustomizeImages {
+func (a *argocdUpdater) buildKustomizeImagesForAppSource(
+	update *builtin.ArgoCDKustomizeImageUpdates,
+) argocd.KustomizeImages {
 	kustomizeImages := make(argocd.KustomizeImages, 0, len(update.Images))
 	for i := range update.Images {
 		imageUpdate := &update.Images[i]
@@ -784,7 +787,9 @@ func (a *argocdUpdater) buildKustomizeImagesForAppSource(update *ArgoCDKustomize
 	return kustomizeImages
 }
 
-func (a *argocdUpdater) buildHelmParamChangesForAppSource(update *ArgoCDHelmParameterUpdates) map[string]string {
+func (a *argocdUpdater) buildHelmParamChangesForAppSource(
+	update *builtin.ArgoCDHelmParameterUpdates,
+) map[string]string {
 	changes := map[string]string{}
 	for i := range update.Images {
 		imageUpdate := &update.Images[i]

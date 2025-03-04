@@ -13,13 +13,14 @@ import (
 	"helm.sh/helm/v3/pkg/repo"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 func Test_kustomizeBuilder_runPromotionStep(t *testing.T) {
 	tests := []struct {
 		name       string
 		setupFiles func(*testing.T, string)
-		config     KustomizeBuildConfig
+		config     builtin.KustomizeBuildConfig
 		assertions func(*testing.T, string, PromotionStepResult, error)
 	}{
 		{
@@ -38,7 +39,7 @@ metadata:
   name: test-deployment
 `), 0o600))
 			},
-			config: KustomizeBuildConfig{
+			config: builtin.KustomizeBuildConfig{
 				Path:    ".",
 				OutPath: "output.yaml",
 			},
@@ -89,7 +90,7 @@ valuesFile: values.yaml
 				require.NoError(t, os.WriteFile(filepath.Join(dir, "values.yaml"), []byte(`---
 replicaCount: 3`), 0o600))
 			},
-			config: KustomizeBuildConfig{
+			config: builtin.KustomizeBuildConfig{
 				Path:    ".",
 				OutPath: "output.yaml",
 			},
@@ -125,7 +126,7 @@ metadata:
   name: test-deployment
 `), 0o600))
 			},
-			config: KustomizeBuildConfig{
+			config: builtin.KustomizeBuildConfig{
 				Path:    ".",
 				OutPath: "output/",
 			},
@@ -142,7 +143,7 @@ metadata:
 		{
 			name:       "kustomization file not found",
 			setupFiles: func(*testing.T, string) {},
-			config: KustomizeBuildConfig{
+			config: builtin.KustomizeBuildConfig{
 				Path:    "invalid/",
 				OutPath: "output.yaml",
 			},
@@ -158,7 +159,7 @@ metadata:
 			setupFiles: func(t *testing.T, dir string) {
 				require.NoError(t, os.WriteFile(filepath.Join(dir, "kustomization.yaml"), []byte(`invalid`), 0o600))
 			},
-			config: KustomizeBuildConfig{
+			config: builtin.KustomizeBuildConfig{
 				Path:    ".",
 				OutPath: "output.yaml",
 			},

@@ -10,10 +10,11 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	intyaml "github.com/akuity/kargo/internal/yaml"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 func init() {
-	builtins.RegisterPromotionStepRunner(newYAMLUpdater(), nil)
+	builtinsReg.RegisterPromotionStepRunner(newYAMLUpdater(), nil)
 }
 
 // yamlUpdater is an implementation of the PromotionStepRunner interface that
@@ -47,7 +48,7 @@ func (y *yamlUpdater) RunPromotionStep(
 	}
 
 	// Convert the configuration into a typed struct
-	cfg, err := ConfigToStruct[YAMLUpdateConfig](stepCtx.Config)
+	cfg, err := ConfigToStruct[builtin.YAMLUpdateConfig](stepCtx.Config)
 	if err != nil {
 		return failure, fmt.Errorf("could not convert config into %s config: %w", y.Name(), err)
 	}
@@ -63,7 +64,7 @@ func (y *yamlUpdater) validate(cfg Config) error {
 func (y *yamlUpdater) runPromotionStep(
 	_ context.Context,
 	stepCtx *PromotionStepContext,
-	cfg YAMLUpdateConfig,
+	cfg builtin.YAMLUpdateConfig,
 ) (PromotionStepResult, error) {
 	updates := make([]intyaml.Update, len(cfg.Updates))
 	for i, update := range cfg.Updates {
@@ -100,7 +101,7 @@ func (y *yamlUpdater) updateFile(workDir string, path string, updates []intyaml.
 	return nil
 }
 
-func (y *yamlUpdater) generateCommitMessage(path string, updates []YAMLUpdate) string {
+func (y *yamlUpdater) generateCommitMessage(path string, updates []builtin.YAMLUpdate) string {
 	if len(updates) == 0 {
 		return ""
 	}

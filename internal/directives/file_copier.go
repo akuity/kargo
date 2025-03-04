@@ -17,10 +17,11 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 func init() {
-	builtins.RegisterPromotionStepRunner(newFileCopier(), nil)
+	builtinsReg.RegisterPromotionStepRunner(newFileCopier(), nil)
 }
 
 // fileCopier is an implementation of the PromotionStepRunner interface that
@@ -57,7 +58,7 @@ func (f *fileCopier) RunPromotionStep(
 	}
 
 	// Convert the configuration into a typed object.
-	cfg, err := ConfigToStruct[CopyConfig](stepCtx.Config)
+	cfg, err := ConfigToStruct[builtin.CopyConfig](stepCtx.Config)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("could not convert config into %s config: %w", f.Name(), err)
@@ -69,7 +70,7 @@ func (f *fileCopier) RunPromotionStep(
 func (f *fileCopier) runPromotionStep(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
-	cfg CopyConfig,
+	cfg builtin.CopyConfig,
 ) (PromotionStepResult, error) {
 	// Secure join the paths to prevent path traversal attacks.
 	inPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.InPath)

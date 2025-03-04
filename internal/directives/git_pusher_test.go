@@ -14,6 +14,7 @@ import (
 
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 func Test_gitPusher_validate(t *testing.T) {
@@ -214,7 +215,7 @@ func Test_gitPusher_runPromotionStep(t *testing.T) {
 			WorkDir:       workDir,
 			CredentialsDB: &credentials.FakeDB{},
 		},
-		GitPushConfig{
+		builtin.GitPushConfig{
 			Path:                 "master",
 			GenerateTargetBranch: true,
 		},

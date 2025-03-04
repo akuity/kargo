@@ -27,10 +27,11 @@ import (
 	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/logging"
 	intyaml "github.com/akuity/kargo/internal/yaml"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 func init() {
-	builtins.RegisterPromotionStepRunner(
+	builtinsReg.RegisterPromotionStepRunner(
 		newHelmChartUpdater(),
 		&StepRunnerPermissions{
 			AllowKargoClient:   true,
@@ -70,7 +71,7 @@ func (h *helmChartUpdater) RunPromotionStep(
 	}
 
 	// Convert the configuration into a typed struct
-	cfg, err := ConfigToStruct[HelmUpdateChartConfig](stepCtx.Config)
+	cfg, err := ConfigToStruct[builtin.HelmUpdateChartConfig](stepCtx.Config)
 	if err != nil {
 		return failure, fmt.Errorf("could not convert config into %s config: %w", h.Name(), err)
 	}
@@ -86,7 +87,7 @@ func (h *helmChartUpdater) validate(cfg Config) error {
 func (h *helmChartUpdater) runPromotionStep(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
-	cfg HelmUpdateChartConfig,
+	cfg builtin.HelmUpdateChartConfig,
 ) (PromotionStepResult, error) {
 	absChartPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.Path)
 	if err != nil {
@@ -135,7 +136,7 @@ func (h *helmChartUpdater) runPromotionStep(
 }
 
 func (h *helmChartUpdater) processChartUpdates(
-	cfg HelmUpdateChartConfig,
+	cfg builtin.HelmUpdateChartConfig,
 	chartDependencies []chartDependency,
 ) ([]intyaml.Update, error) {
 	updates := make([]intyaml.Update, len(cfg.Charts))

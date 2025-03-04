@@ -10,13 +10,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 func Test_fileDeleter_runPromotionStep(t *testing.T) {
 	tests := []struct {
 		name       string
 		setupFiles func(*testing.T) string
-		cfg        DeleteConfig
+		cfg        builtin.DeleteConfig
 		assertions func(*testing.T, string, PromotionStepResult, error)
 	}{
 		{
@@ -29,7 +30,7 @@ func Test_fileDeleter_runPromotionStep(t *testing.T) {
 
 				return tmpDir
 			},
-			cfg: DeleteConfig{
+			cfg: builtin.DeleteConfig{
 				Path: "input.txt",
 			},
 			assertions: func(t *testing.T, _ string, result PromotionStepResult, err error) {
@@ -48,7 +49,7 @@ func Test_fileDeleter_runPromotionStep(t *testing.T) {
 				require.NoError(t, os.Mkdir(dirPath, 0o700))
 				return tmpDir
 			},
-			cfg: DeleteConfig{
+			cfg: builtin.DeleteConfig{
 				Path: "dirToDelete",
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
@@ -64,7 +65,7 @@ func Test_fileDeleter_runPromotionStep(t *testing.T) {
 			setupFiles: func(t *testing.T) string {
 				return t.TempDir()
 			},
-			cfg: DeleteConfig{
+			cfg: builtin.DeleteConfig{
 				Path:   "nonExistentFile.txt",
 				Strict: true,
 			},
@@ -78,7 +79,7 @@ func Test_fileDeleter_runPromotionStep(t *testing.T) {
 			setupFiles: func(t *testing.T) string {
 				return t.TempDir()
 			},
-			cfg: DeleteConfig{
+			cfg: builtin.DeleteConfig{
 				Path:   "nonExistentFile.txt",
 				Strict: false,
 			},
@@ -103,7 +104,7 @@ func Test_fileDeleter_runPromotionStep(t *testing.T) {
 
 				return tmpDir
 			},
-			cfg: DeleteConfig{
+			cfg: builtin.DeleteConfig{
 				Path: "input/symlink.txt",
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
@@ -134,7 +135,7 @@ func Test_fileDeleter_runPromotionStep(t *testing.T) {
 
 				return tmpDir
 			},
-			cfg: DeleteConfig{
+			cfg: builtin.DeleteConfig{
 				Path: "foo/",
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
