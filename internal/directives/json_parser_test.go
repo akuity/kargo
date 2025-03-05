@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 func Test_jsonParser_validate(t *testing.T) {
@@ -127,7 +128,7 @@ func Test_jsonParser_runPromotionStep(t *testing.T) {
 	tests := []struct {
 		name       string
 		stepCtx    *PromotionStepContext
-		cfg        JSONParseConfig
+		cfg        builtin.JSONParseConfig
 		files      map[string]string
 		assertions func(*testing.T, string, PromotionStepResult, error)
 	}{
@@ -136,9 +137,9 @@ func Test_jsonParser_runPromotionStep(t *testing.T) {
 			stepCtx: &PromotionStepContext{
 				Project: "test-project",
 			},
-			cfg: JSONParseConfig{
+			cfg: builtin.JSONParseConfig{
 				Path: "config.json",
-				Outputs: []JSONParse{
+				Outputs: []builtin.JSONParse{
 					{Name: "appVersion", FromExpression: "app.version"},
 					{Name: "featureStatus", FromExpression: "features.newFeature"},
 				},
@@ -170,9 +171,9 @@ func Test_jsonParser_runPromotionStep(t *testing.T) {
 			stepCtx: &PromotionStepContext{
 				Project: "test-project",
 			},
-			cfg: JSONParseConfig{
+			cfg: builtin.JSONParseConfig{
 				Path: "config.json",
-				Outputs: []JSONParse{
+				Outputs: []builtin.JSONParse{
 					{Name: "invalidField", FromExpression: "nonexistent.path"},
 				},
 			},
@@ -188,9 +189,9 @@ func Test_jsonParser_runPromotionStep(t *testing.T) {
 			stepCtx: &PromotionStepContext{
 				Project: "test-project",
 			},
-			cfg: JSONParseConfig{
+			cfg: builtin.JSONParseConfig{
 				Path:    "config.json",
-				Outputs: []JSONParse{},
+				Outputs: []builtin.JSONParse{},
 			},
 			files: map[string]string{
 				"config.json": `{
@@ -212,9 +213,9 @@ func Test_jsonParser_runPromotionStep(t *testing.T) {
 			stepCtx: &PromotionStepContext{
 				Project: "test-project",
 			},
-			cfg: JSONParseConfig{
+			cfg: builtin.JSONParseConfig{
 				Path: "config.json",
-				Outputs: []JSONParse{
+				Outputs: []builtin.JSONParse{
 					{Name: "key", FromExpression: "app.key"},
 				},
 			},
@@ -230,8 +231,11 @@ func Test_jsonParser_runPromotionStep(t *testing.T) {
 		{
 			name:    "path is empty",
 			stepCtx: &PromotionStepContext{Project: "test-project"},
-			cfg:     JSONParseConfig{Path: "", Outputs: []JSONParse{{Name: "key", FromExpression: "app.key"}}},
-			files:   map[string]string{},
+			cfg: builtin.JSONParseConfig{
+				Path:    "",
+				Outputs: []builtin.JSONParse{{Name: "key", FromExpression: "app.key"}},
+			},
+			files: map[string]string{},
 			assertions: func(t *testing.T, _ string, result PromotionStepResult, err error) {
 				assert.Error(t, err)
 				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, result)
@@ -241,8 +245,10 @@ func Test_jsonParser_runPromotionStep(t *testing.T) {
 		{
 			name:    "path is a directory instead of a file",
 			stepCtx: &PromotionStepContext{Project: "test-project"},
-			cfg:     JSONParseConfig{Path: "config", Outputs: []JSONParse{{Name: "key", FromExpression: "app.key"}}},
-			files:   map[string]string{},
+			cfg: builtin.JSONParseConfig{
+				Path: "config", Outputs: []builtin.JSONParse{{Name: "key", FromExpression: "app.key"}},
+			},
+			files: map[string]string{},
 			assertions: func(t *testing.T, _ string, result PromotionStepResult, err error) {
 				assert.Error(t, err)
 				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, result)
@@ -254,9 +260,9 @@ func Test_jsonParser_runPromotionStep(t *testing.T) {
 			stepCtx: &PromotionStepContext{
 				Project: "test-project",
 			},
-			cfg: JSONParseConfig{
+			cfg: builtin.JSONParseConfig{
 				Path: "config.json",
-				Outputs: []JSONParse{
+				Outputs: []builtin.JSONParse{
 					{Name: "appVersion", FromExpression: "app.version"},
 					{Name: "isEnabled", FromExpression: "features.enabled"},
 					{Name: "threshold", FromExpression: "config.threshold"},
@@ -347,14 +353,14 @@ func Test_jsonParser_extractValues(t *testing.T) {
 	tests := []struct {
 		name           string
 		data           map[string]any
-		outputs        []JSONParse
+		outputs        []builtin.JSONParse
 		expected       map[string]any
 		expectedErrMsg string
 	}{
 		{
 			name: "valid json, valid expression",
 			data: map[string]any{"key": "value"},
-			outputs: []JSONParse{
+			outputs: []builtin.JSONParse{
 				{Name: "result", FromExpression: "key"},
 			},
 			expected: map[string]any{"result": "value"},
@@ -362,7 +368,7 @@ func Test_jsonParser_extractValues(t *testing.T) {
 		{
 			name: "valid json, expression points to missing key",
 			data: map[string]any{"key": "value"},
-			outputs: []JSONParse{
+			outputs: []builtin.JSONParse{
 				{Name: "result", FromExpression: "missingKey"},
 			},
 			expectedErrMsg: "error compiling expression",
@@ -370,7 +376,7 @@ func Test_jsonParser_extractValues(t *testing.T) {
 		{
 			name: "expression evaluates to a nested object",
 			data: map[string]any{"nested": map[string]any{"key": "value"}},
-			outputs: []JSONParse{
+			outputs: []builtin.JSONParse{
 				{Name: "result", FromExpression: "nested"},
 			},
 			expected: map[string]any{"result": map[string]any{"key": "value"}},
@@ -378,7 +384,7 @@ func Test_jsonParser_extractValues(t *testing.T) {
 		{
 			name: "expression evaluates to an array",
 			data: map[string]any{"array": []any{1, 2, 3}},
-			outputs: []JSONParse{
+			outputs: []builtin.JSONParse{
 				{Name: "result", FromExpression: "array"},
 			},
 			expected: map[string]any{"result": []any{1, 2, 3}},
@@ -386,7 +392,7 @@ func Test_jsonParser_extractValues(t *testing.T) {
 		{
 			name: "expression evaluates to a string",
 			data: map[string]any{"key": "value"},
-			outputs: []JSONParse{
+			outputs: []builtin.JSONParse{
 				{Name: "result", FromExpression: "key"},
 			},
 			expected: map[string]any{"result": "value"},
@@ -394,7 +400,7 @@ func Test_jsonParser_extractValues(t *testing.T) {
 		{
 			name: "expression evaluates to an integer",
 			data: map[string]any{"number": 42},
-			outputs: []JSONParse{
+			outputs: []builtin.JSONParse{
 				{Name: "result", FromExpression: "number"},
 			},
 			expected: map[string]any{"result": 42},
@@ -402,7 +408,7 @@ func Test_jsonParser_extractValues(t *testing.T) {
 		{
 			name: "expression compilation error",
 			data: map[string]any{"key": "value"},
-			outputs: []JSONParse{
+			outputs: []builtin.JSONParse{
 				{Name: "result", FromExpression: "(1 + 2"},
 			},
 			expectedErrMsg: "error compiling expression",

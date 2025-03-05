@@ -12,6 +12,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/gitprovider"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 func Test_gitPRWaiter_validate(t *testing.T) {
@@ -203,8 +204,8 @@ func Test_gitPRWaiter_runPromotionStep(t *testing.T) {
 				&PromotionStepContext{
 					CredentialsDB: &credentials.FakeDB{},
 				},
-				GitWaitForPRConfig{
-					Provider: ptr.To(Provider(testGitProviderName)),
+				builtin.GitWaitForPRConfig{
+					Provider: ptr.To(builtin.Provider(testGitProviderName)),
 				},
 			)
 			testCase.assertions(t, res, err)

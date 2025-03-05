@@ -10,10 +10,11 @@ import (
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/gitprovider"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 func init() {
-	builtins.RegisterPromotionStepRunner(
+	builtinsReg.RegisterPromotionStepRunner(
 		newGitPRWaiter(),
 		&StepRunnerPermissions{AllowCredentialsDB: true},
 	)
@@ -46,7 +47,7 @@ func (g *gitPRWaiter) RunPromotionStep(
 	if err := g.validate(stepCtx.Config); err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
 	}
-	cfg, err := ConfigToStruct[GitWaitForPRConfig](stepCtx.Config)
+	cfg, err := ConfigToStruct[builtin.GitWaitForPRConfig](stepCtx.Config)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("could not convert config into git-wait-for-pr config: %w", err)
@@ -62,7 +63,7 @@ func (g *gitPRWaiter) validate(cfg Config) error {
 func (g *gitPRWaiter) runPromotionStep(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
-	cfg GitWaitForPRConfig,
+	cfg builtin.GitWaitForPRConfig,
 ) (PromotionStepResult, error) {
 	var repoCreds *git.RepoCredentials
 	creds, found, err := stepCtx.CredentialsDB.Get(

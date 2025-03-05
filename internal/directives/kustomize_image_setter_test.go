@@ -16,6 +16,7 @@ import (
 	yaml "sigs.k8s.io/yaml/goyaml.v3"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 func Test_kustomizeImageSetter_validate(t *testing.T) {
@@ -149,7 +150,7 @@ func Test_kustomizeImageSetter_runPromotionStep(t *testing.T) {
 	tests := []struct {
 		name         string
 		setupFiles   func(t *testing.T) string
-		cfg          KustomizeSetImageConfig
+		cfg          builtin.KustomizeSetImageConfig
 		setupStepCtx func(t *testing.T, workDir string) *PromotionStepContext
 		assertions   func(*testing.T, string, PromotionStepResult, error)
 	}{
@@ -164,9 +165,9 @@ kind: Kustomization
 				require.NoError(t, err)
 				return tempDir
 			},
-			cfg: KustomizeSetImageConfig{
+			cfg: builtin.KustomizeSetImageConfig{
 				Path: ".",
-				Images: []Image{
+				Images: []builtin.Image{
 					{Image: "nginx", Tag: "1.21.0"},
 				},
 			},
@@ -223,7 +224,7 @@ kind: Kustomization
 				require.NoError(t, err)
 				return tempDir
 			},
-			cfg: KustomizeSetImageConfig{
+			cfg: builtin.KustomizeSetImageConfig{
 				Path:   ".",
 				Images: nil, // Automatically set all images
 			},
@@ -262,9 +263,9 @@ kind: Kustomization
 			setupFiles: func(t *testing.T) string {
 				return t.TempDir()
 			},
-			cfg: KustomizeSetImageConfig{
+			cfg: builtin.KustomizeSetImageConfig{
 				Path: ".",
-				Images: []Image{
+				Images: []builtin.Image{
 					{Image: "nginx"},
 				},
 			},
@@ -302,12 +303,12 @@ kind: Kustomization
 func Test_kustomizeImageSetter_buildTargetImages(t *testing.T) {
 	tests := []struct {
 		name       string
-		images     []Image
+		images     []builtin.Image
 		assertions func(*testing.T, map[string]kustypes.Image)
 	}{
 		{
 			name: "digest or tag specified",
-			images: []Image{
+			images: []builtin.Image{
 				{
 					Image: "nginx",
 					Tag:   "fake-tag",

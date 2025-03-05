@@ -25,6 +25,7 @@ import (
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/helm"
 	intyaml "github.com/akuity/kargo/internal/yaml"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 func Test_helmChartUpdater_validate(t *testing.T) {
@@ -162,7 +163,7 @@ func Test_helmChartUpdater_runPromotionStep(t *testing.T) {
 	tests := []struct {
 		name            string
 		context         *PromotionStepContext
-		cfg             HelmUpdateChartConfig
+		cfg             builtin.HelmUpdateChartConfig
 		chartMetadata   *chart.Metadata
 		setupRepository func(t *testing.T) (string, func())
 		assertions      func(*testing.T, string, PromotionStepResult, error)
@@ -187,9 +188,9 @@ func Test_helmChartUpdater_runPromotionStep(t *testing.T) {
 					},
 				},
 			},
-			cfg: HelmUpdateChartConfig{
+			cfg: builtin.HelmUpdateChartConfig{
 				Path: "testchart",
-				Charts: []Chart{
+				Charts: []builtin.Chart{
 					{
 						Repository: "https://charts.example.com",
 						Name:       "examplechart",
@@ -303,14 +304,14 @@ func Test_helmChartUpdater_runPromotionStep(t *testing.T) {
 func Test_helmChartUpdater_processChartUpdates(t *testing.T) {
 	tests := []struct {
 		name              string
-		cfg               HelmUpdateChartConfig
+		cfg               builtin.HelmUpdateChartConfig
 		chartDependencies []chartDependency
 		assertions        func(*testing.T, []intyaml.Update, error)
 	}{
 		{
 			name: "chart with version specified",
-			cfg: HelmUpdateChartConfig{
-				Charts: []Chart{
+			cfg: builtin.HelmUpdateChartConfig{
+				Charts: []builtin.Chart{
 					{
 						Repository: "https://charts.example.com",
 						Name:       "origin-chart",
@@ -332,8 +333,8 @@ func Test_helmChartUpdater_processChartUpdates(t *testing.T) {
 		},
 		{
 			name: "update specified for non-existent chart dependency",
-			cfg: HelmUpdateChartConfig{
-				Charts: []Chart{
+			cfg: builtin.HelmUpdateChartConfig{
+				Charts: []builtin.Chart{
 					{
 						Repository: "https://charts.example.com",
 						Name:       "origin-chart",

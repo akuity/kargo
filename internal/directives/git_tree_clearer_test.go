@@ -13,6 +13,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 func Test_gitTreeOverwriter_validate(t *testing.T) {
@@ -113,7 +114,7 @@ func Test_gitTreeOverwriter_runPromotionStep(t *testing.T) {
 			Stage:   "fake-stage",
 			WorkDir: workDir,
 		},
-		GitClearConfig{
+		builtin.GitClearConfig{
 			Path: "master",
 		},
 	)

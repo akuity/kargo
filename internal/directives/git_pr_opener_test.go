@@ -15,6 +15,7 @@ import (
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/gitprovider"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 func Test_gitPROpener_validate(t *testing.T) {
@@ -194,13 +195,13 @@ func Test_gitPROpener_runPromotionStep(t *testing.T) {
 			WorkDir:       workDir,
 			CredentialsDB: &credentials.FakeDB{},
 		},
-		GitOpenPRConfig{
+		builtin.GitOpenPRConfig{
 			RepoURL: testRepoURL,
 			// We get slightly better coverage by using this option
 			SourceBranch:       testSourceBranch,
 			TargetBranch:       testTargetBranch,
 			CreateTargetBranch: true,
-			Provider:           ptr.To(Provider(fakeGitProviderName)),
+			Provider:           ptr.To(builtin.Provider(fakeGitProviderName)),
 			Title:              "kargo",
 		},
 	)

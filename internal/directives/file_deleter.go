@@ -12,10 +12,11 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 func init() {
-	builtins.RegisterPromotionStepRunner(newFileDeleter(), nil)
+	builtinsReg.RegisterPromotionStepRunner(newFileDeleter(), nil)
 }
 
 // fileDeleter is an implementation of the PromotionStepRunner interface that
@@ -48,7 +49,7 @@ func (f *fileDeleter) RunPromotionStep(
 	}
 
 	// Convert the configuration into a typed object.
-	cfg, err := ConfigToStruct[DeleteConfig](stepCtx.Config)
+	cfg, err := ConfigToStruct[builtin.DeleteConfig](stepCtx.Config)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("could not convert config into %s config: %w", f.Name(), err)
@@ -60,7 +61,7 @@ func (f *fileDeleter) RunPromotionStep(
 func (f *fileDeleter) runPromotionStep(
 	_ context.Context,
 	stepCtx *PromotionStepContext,
-	cfg DeleteConfig,
+	cfg builtin.DeleteConfig,
 ) (PromotionStepResult, error) {
 	absPath, err := f.resolveAbsPath(stepCtx.WorkDir, cfg.Path)
 	if err != nil {

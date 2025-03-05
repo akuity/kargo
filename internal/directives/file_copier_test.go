@@ -13,13 +13,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 func Test_fileCopier_runPromotionStep(t *testing.T) {
 	tests := []struct {
 		name       string
 		setupFiles func(*testing.T) string
-		cfg        CopyConfig
+		cfg        builtin.CopyConfig
 		assertions func(*testing.T, string, PromotionStepResult, error)
 	}{
 		{
@@ -32,7 +33,7 @@ func Test_fileCopier_runPromotionStep(t *testing.T) {
 
 				return tmpDir
 			},
-			cfg: CopyConfig{
+			cfg: builtin.CopyConfig{
 				InPath:  "input.txt",
 				OutPath: "output.txt",
 			},
@@ -64,7 +65,7 @@ func Test_fileCopier_runPromotionStep(t *testing.T) {
 
 				return tmpDir
 			},
-			cfg: CopyConfig{
+			cfg: builtin.CopyConfig{
 				InPath:  "input/",
 				OutPath: "output/",
 			},
@@ -102,7 +103,7 @@ func Test_fileCopier_runPromotionStep(t *testing.T) {
 
 				return tmpDir
 			},
-			cfg: CopyConfig{
+			cfg: builtin.CopyConfig{
 				InPath:  "input/",
 				OutPath: "output/",
 			},
@@ -140,7 +141,7 @@ func Test_fileCopier_runPromotionStep(t *testing.T) {
 
 				return tmpDir
 			},
-			cfg: CopyConfig{
+			cfg: builtin.CopyConfig{
 				InPath:  "input/",
 				OutPath: "output/",
 			},
@@ -176,7 +177,7 @@ func Test_fileCopier_runPromotionStep(t *testing.T) {
 
 				return tmpDir
 			},
-			cfg: CopyConfig{
+			cfg: builtin.CopyConfig{
 				InPath:  "input/",
 				OutPath: "output/",
 			},
@@ -212,7 +213,7 @@ func Test_fileCopier_runPromotionStep(t *testing.T) {
 
 				return tmpDir
 			},
-			cfg: CopyConfig{
+			cfg: builtin.CopyConfig{
 				InPath:  "input/",
 				OutPath: "output/",
 				Ignore:  "!.git/",
@@ -239,7 +240,7 @@ func Test_fileCopier_runPromotionStep(t *testing.T) {
 			setupFiles: func(t *testing.T) string {
 				return t.TempDir()
 			},
-			cfg: CopyConfig{
+			cfg: builtin.CopyConfig{
 				InPath: "input.txt",
 			},
 			assertions: func(t *testing.T, _ string, result PromotionStepResult, err error) {

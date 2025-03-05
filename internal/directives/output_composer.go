@@ -8,10 +8,11 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 func init() {
-	builtins.RegisterPromotionStepRunner(newOutputComposer(), nil)
+	builtinsReg.RegisterPromotionStepRunner(newOutputComposer(), nil)
 }
 
 // outputComposer is an implementation of the PromotionStepRunner interface
@@ -63,7 +64,7 @@ func (c *outputComposer) RunPromotionStep(
 	}
 
 	// Convert the configuration into a typed object.
-	cfg, err := ConfigToStruct[ComposeOutput](stepCtx.Config)
+	cfg, err := ConfigToStruct[builtin.ComposeOutput](stepCtx.Config)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("could not convert config into %s config: %w", c.Name(), err)
@@ -73,7 +74,7 @@ func (c *outputComposer) RunPromotionStep(
 }
 
 func (c *outputComposer) runPromotionStep(
-	cfg ComposeOutput,
+	cfg builtin.ComposeOutput,
 ) (PromotionStepResult, error) {
 	return PromotionStepResult{
 		Status: kargoapi.PromotionPhaseSucceeded,

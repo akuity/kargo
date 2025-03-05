@@ -20,10 +20,11 @@ import (
 	"helm.sh/helm/v3/pkg/release"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 func init() {
-	builtins.RegisterPromotionStepRunner(
+	builtinsReg.RegisterPromotionStepRunner(
 		newHelmTemplateRunner(),
 		&StepRunnerPermissions{
 			AllowArgoCDClient:  true,
@@ -32,11 +33,11 @@ func init() {
 	)
 }
 
-// OutPathIsFile returns true if the output path contains a YAML extension.
+// outPathIsFile returns true if the output path contains a YAML extension.
 // Otherwise, the output path is considered to target a directory where the
 // rendered manifest will be written to.
-func (c HelmTemplateConfig) OutPathIsFile() bool {
-	ext := filepath.Ext(c.OutPath)
+func outPathIsFile(cfg builtin.HelmTemplateConfig) bool {
+	ext := filepath.Ext(cfg.OutPath)
 	return ext == ".yaml" || ext == ".yml"
 }
 
@@ -76,7 +77,7 @@ func (h *helmTemplateRunner) RunPromotionStep(
 	}
 
 	// Convert the configuration into a typed struct
-	cfg, err := ConfigToStruct[HelmTemplateConfig](stepCtx.Config)
+	cfg, err := ConfigToStruct[builtin.HelmTemplateConfig](stepCtx.Config)
 	if err != nil {
 		return failure, fmt.Errorf("could not convert config into %s config: %w", h.Name(), err)
 	}
@@ -87,7 +88,7 @@ func (h *helmTemplateRunner) RunPromotionStep(
 func (h *helmTemplateRunner) runPromotionStep(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
-	cfg HelmTemplateConfig,
+	cfg builtin.HelmTemplateConfig,
 ) (PromotionStepResult, error) {
 	composedValues, err := h.composeValues(stepCtx.WorkDir, cfg.ValuesFiles)
 	if err != nil {
@@ -149,7 +150,7 @@ func (h *helmTemplateRunner) composeValues(workDir string, valuesFiles []string)
 // configuration. It sets the action to dry-run mode and client-only mode,
 // meaning that it will not install the chart, but only render the manifest.
 func (h *helmTemplateRunner) newInstallAction(
-	cfg HelmTemplateConfig,
+	cfg builtin.HelmTemplateConfig,
 	project, absOutPath string,
 ) (*action.Install, error) {
 	client := action.NewInstall(&action.Configuration{})
@@ -167,7 +168,7 @@ func (h *helmTemplateRunner) newInstallAction(
 
 	// If the output path does not have a YAML extension, it is considered a
 	// directory where the manifest will be written to.
-	if !cfg.OutPathIsFile() {
+	if !outPathIsFile(cfg) {
 		client.OutputDir = absOutPath
 	}
 
@@ -202,10 +203,10 @@ func (h *helmTemplateRunner) checkDependencies(chartRequested *chart.Chart) erro
 }
 
 // writeOutput writes the rendered manifest to the output path.
-func (h *helmTemplateRunner) writeOutput(cfg HelmTemplateConfig, rls *release.Release, outPath string) error {
+func (h *helmTemplateRunner) writeOutput(cfg builtin.HelmTemplateConfig, rls *release.Release, outPath string) error {
 	var (
 		manifests     bytes.Buffer
-		outPathIsFile = cfg.OutPathIsFile()
+		outPathIsFile = outPathIsFile(cfg)
 	)
 
 	if outPathIsFile {

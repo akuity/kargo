@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 func Test_yamlParser_validate(t *testing.T) {
@@ -127,7 +128,7 @@ func Test_yamlParser_runPromotionStep(t *testing.T) {
 	tests := []struct {
 		name       string
 		stepCtx    *PromotionStepContext
-		cfg        YAMLParseConfig
+		cfg        builtin.YAMLParseConfig
 		files      map[string]string
 		assertions func(*testing.T, string, PromotionStepResult, error)
 	}{
@@ -136,9 +137,9 @@ func Test_yamlParser_runPromotionStep(t *testing.T) {
 			stepCtx: &PromotionStepContext{
 				Project: "test-project",
 			},
-			cfg: YAMLParseConfig{
+			cfg: builtin.YAMLParseConfig{
 				Path: "config.yaml",
-				Outputs: []YAMLParse{
+				Outputs: []builtin.YAMLParse{
 					{Name: "appVersion", FromExpression: "app.version"},
 					{Name: "featureStatus", FromExpression: "features.newFeature"},
 				},
@@ -168,9 +169,9 @@ features:
 			stepCtx: &PromotionStepContext{
 				Project: "test-project",
 			},
-			cfg: YAMLParseConfig{
+			cfg: builtin.YAMLParseConfig{
 				Path: "config.yaml",
-				Outputs: []YAMLParse{
+				Outputs: []builtin.YAMLParse{
 					{Name: "invalidField", FromExpression: "nonexistent.path"},
 				},
 			},
@@ -191,9 +192,9 @@ app:
 			stepCtx: &PromotionStepContext{
 				Project: "test-project",
 			},
-			cfg: YAMLParseConfig{
+			cfg: builtin.YAMLParseConfig{
 				Path:    "config.yaml",
-				Outputs: []YAMLParse{},
+				Outputs: []builtin.YAMLParse{},
 			},
 			files: map[string]string{
 				"config.yaml": `
@@ -214,9 +215,9 @@ app:
 			stepCtx: &PromotionStepContext{
 				Project: "test-project",
 			},
-			cfg: YAMLParseConfig{
+			cfg: builtin.YAMLParseConfig{
 				Path: "config.yaml",
-				Outputs: []YAMLParse{
+				Outputs: []builtin.YAMLParse{
 					{Name: "key", FromExpression: "app.key"},
 				},
 			},
@@ -232,8 +233,11 @@ app:
 		{
 			name:    "path is empty",
 			stepCtx: &PromotionStepContext{Project: "test-project"},
-			cfg:     YAMLParseConfig{Path: "", Outputs: []YAMLParse{{Name: "key", FromExpression: "app.key"}}},
-			files:   map[string]string{},
+			cfg: builtin.YAMLParseConfig{
+				Path:    "",
+				Outputs: []builtin.YAMLParse{{Name: "key", FromExpression: "app.key"}},
+			},
+			files: map[string]string{},
 			assertions: func(t *testing.T, _ string, result PromotionStepResult, err error) {
 				assert.Error(t, err)
 				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, result)
@@ -243,8 +247,11 @@ app:
 		{
 			name:    "path is a directory instead of a file",
 			stepCtx: &PromotionStepContext{Project: "test-project"},
-			cfg:     YAMLParseConfig{Path: "config", Outputs: []YAMLParse{{Name: "key", FromExpression: "app.key"}}},
-			files:   map[string]string{},
+			cfg: builtin.YAMLParseConfig{
+				Path:    "config",
+				Outputs: []builtin.YAMLParse{{Name: "key", FromExpression: "app.key"}},
+			},
+			files: map[string]string{},
 			assertions: func(t *testing.T, _ string, result PromotionStepResult, err error) {
 				assert.Error(t, err)
 				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, result)
@@ -256,9 +263,9 @@ app:
 			stepCtx: &PromotionStepContext{
 				Project: "test-project",
 			},
-			cfg: YAMLParseConfig{
+			cfg: builtin.YAMLParseConfig{
 				Path: "config.yaml",
-				Outputs: []YAMLParse{
+				Outputs: []builtin.YAMLParse{
 					{Name: "appVersion", FromExpression: "app.version"},
 					{Name: "isEnabled", FromExpression: "features.enabled"},
 					{Name: "threshold", FromExpression: "config.threshold"},
@@ -354,14 +361,14 @@ func Test_yamlParser_extractValues(t *testing.T) {
 	tests := []struct {
 		name           string
 		data           map[string]any
-		outputs        []YAMLParse
+		outputs        []builtin.YAMLParse
 		expected       map[string]any
 		expectedErrMsg string
 	}{
 		{
 			name: "valid yaml, valid expression",
 			data: map[string]any{"key": "value"},
-			outputs: []YAMLParse{
+			outputs: []builtin.YAMLParse{
 				{Name: "result", FromExpression: "key"},
 			},
 			expected: map[string]any{"result": "value"},
@@ -369,7 +376,7 @@ func Test_yamlParser_extractValues(t *testing.T) {
 		{
 			name: "valid yaml, expression points to missing key",
 			data: map[string]any{"key": "value"},
-			outputs: []YAMLParse{
+			outputs: []builtin.YAMLParse{
 				{Name: "result", FromExpression: "missingKey"},
 			},
 			expectedErrMsg: "error compiling expression",
@@ -377,7 +384,7 @@ func Test_yamlParser_extractValues(t *testing.T) {
 		{
 			name: "expression evaluates to a nested object",
 			data: map[string]any{"nested": map[string]any{"key": "value"}},
-			outputs: []YAMLParse{
+			outputs: []builtin.YAMLParse{
 				{Name: "result", FromExpression: "nested"},
 			},
 			expected: map[string]any{"result": map[string]any{"key": "value"}},
@@ -385,7 +392,7 @@ func Test_yamlParser_extractValues(t *testing.T) {
 		{
 			name: "expression evaluates to an array",
 			data: map[string]any{"array": []any{1, 2, 3}},
-			outputs: []YAMLParse{
+			outputs: []builtin.YAMLParse{
 				{Name: "result", FromExpression: "array"},
 			},
 			expected: map[string]any{"result": []any{1, 2, 3}},
@@ -393,7 +400,7 @@ func Test_yamlParser_extractValues(t *testing.T) {
 		{
 			name: "expression evaluates to a string",
 			data: map[string]any{"key": "value"},
-			outputs: []YAMLParse{
+			outputs: []builtin.YAMLParse{
 				{Name: "result", FromExpression: "key"},
 			},
 			expected: map[string]any{"result": "value"},
@@ -401,7 +408,7 @@ func Test_yamlParser_extractValues(t *testing.T) {
 		{
 			name: "expression evaluates to an integer",
 			data: map[string]any{"number": 42},
-			outputs: []YAMLParse{
+			outputs: []builtin.YAMLParse{
 				{Name: "result", FromExpression: "number"},
 			},
 			expected: map[string]any{"result": 42},
@@ -409,7 +416,7 @@ func Test_yamlParser_extractValues(t *testing.T) {
 		{
 			name: "expression compilation error",
 			data: map[string]any{"key": "value"},
-			outputs: []YAMLParse{
+			outputs: []builtin.YAMLParse{
 				{Name: "result", FromExpression: "(1 + 2"},
 			},
 			expectedErrMsg: "error compiling expression",

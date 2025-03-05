@@ -11,6 +11,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/yaml"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 func Test_yamlUpdater_validate(t *testing.T) {
@@ -120,7 +121,7 @@ func Test_yamlUpdater_runPromotionStep(t *testing.T) {
 	tests := []struct {
 		name       string
 		stepCtx    *PromotionStepContext
-		cfg        YAMLUpdateConfig
+		cfg        builtin.YAMLUpdateConfig
 		files      map[string]string
 		assertions func(*testing.T, string, PromotionStepResult, error)
 	}{
@@ -129,9 +130,9 @@ func Test_yamlUpdater_runPromotionStep(t *testing.T) {
 			stepCtx: &PromotionStepContext{
 				Project: "test-project",
 			},
-			cfg: YAMLUpdateConfig{
+			cfg: builtin.YAMLUpdateConfig{
 				Path: "values.yaml",
-				Updates: []YAMLUpdate{
+				Updates: []builtin.YAMLUpdate{
 					{Key: "image.tag", Value: "fake-tag"},
 				},
 			},
@@ -156,9 +157,9 @@ func Test_yamlUpdater_runPromotionStep(t *testing.T) {
 			stepCtx: &PromotionStepContext{
 				Project: "test-project",
 			},
-			cfg: YAMLUpdateConfig{
+			cfg: builtin.YAMLUpdateConfig{
 				Path: "non-existent/values.yaml",
-				Updates: []YAMLUpdate{
+				Updates: []builtin.YAMLUpdate{
 					{Key: "image.tag", Value: "fake-tag"},
 				},
 			},
@@ -253,7 +254,7 @@ func Test_yamlUpdater_generateCommitMessage(t *testing.T) {
 	tests := []struct {
 		name       string
 		path       string
-		updates    []YAMLUpdate
+		updates    []builtin.YAMLUpdate
 		assertions func(*testing.T, string)
 	}{
 		{
@@ -266,7 +267,7 @@ func Test_yamlUpdater_generateCommitMessage(t *testing.T) {
 		{
 			name:    "single change",
 			path:    "values.yaml",
-			updates: []YAMLUpdate{{Key: "image", Value: "repo/image:tag1"}},
+			updates: []builtin.YAMLUpdate{{Key: "image", Value: "repo/image:tag1"}},
 			assertions: func(t *testing.T, result string) {
 				assert.Equal(t, `Updated values.yaml
 
@@ -276,7 +277,7 @@ func Test_yamlUpdater_generateCommitMessage(t *testing.T) {
 		{
 			name: "multiple changes",
 			path: "chart/values.yaml",
-			updates: []YAMLUpdate{
+			updates: []builtin.YAMLUpdate{
 				{Key: "image1", Value: "repo1/image1:tag1"},
 				{Key: "image2", Value: "repo2/image2:tag2"},
 			},

@@ -9,13 +9,14 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 // stateKeyCommit is the key used to store the commit ID in the shared State.
 const stateKeyCommit = "commit"
 
 func init() {
-	builtins.RegisterPromotionStepRunner(newGitCommitter(), nil)
+	builtinsReg.RegisterPromotionStepRunner(newGitCommitter(), nil)
 }
 
 // gitCommitter is an implementation of the PromotionStepRunner interface that
@@ -45,7 +46,7 @@ func (g *gitCommitter) RunPromotionStep(
 	if err := g.validate(stepCtx.Config); err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
 	}
-	cfg, err := ConfigToStruct[GitCommitConfig](stepCtx.Config)
+	cfg, err := ConfigToStruct[builtin.GitCommitConfig](stepCtx.Config)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("could not convert config into %s config: %w", g.Name(), err)
@@ -61,7 +62,7 @@ func (g *gitCommitter) validate(cfg Config) error {
 func (g *gitCommitter) runPromotionStep(
 	_ context.Context,
 	stepCtx *PromotionStepContext,
-	cfg GitCommitConfig,
+	cfg builtin.GitCommitConfig,
 ) (PromotionStepResult, error) {
 	path, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.Path)
 	if err != nil {
@@ -118,14 +119,14 @@ func (g *gitCommitter) runPromotionStep(
 
 func (g *gitCommitter) buildCommitMessage(
 	sharedState State,
-	cfg GitCommitConfig,
+	cfg builtin.GitCommitConfig,
 ) (string, error) {
 	var commitMsg string
 	if cfg.Message != "" {
 		commitMsg = cfg.Message
-	} else if len(cfg.MessageFromSteps) > 0 {
-		commitMsgParts := make([]string, 0, len(cfg.MessageFromSteps))
-		for _, alias := range cfg.MessageFromSteps {
+	} else if len(cfg.MessageFromSteps) > 0 { // nolint: staticcheck
+		commitMsgParts := make([]string, 0, len(cfg.MessageFromSteps)) // nolint: staticcheck
+		for _, alias := range cfg.MessageFromSteps {                   // nolint: staticcheck
 			stepOutput, exists := sharedState.Get(alias)
 			if !exists {
 				// It is valid for a previous step that MIGHT have left some output

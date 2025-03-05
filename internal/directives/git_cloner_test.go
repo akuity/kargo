@@ -14,6 +14,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 func Test_gitCloner_validate(t *testing.T) {
@@ -235,9 +236,9 @@ func Test_gitCloner_runPromotionStep(t *testing.T) {
 	res, err := runner.runPromotionStep(
 		context.Background(),
 		stepCtx,
-		GitCloneConfig{
+		builtin.GitCloneConfig{
 			RepoURL: fmt.Sprintf("%s/test.git", server.URL),
-			Checkout: []Checkout{
+			Checkout: []builtin.Checkout{
 				{
 					Commit: commitID,
 					Path:   "src",

@@ -29,7 +29,7 @@ func NewSimpleEngine(
 	argoCDClient client.Client,
 ) *SimpleEngine {
 	return &SimpleEngine{
-		registry:      builtins,
+		registry:      builtinsReg,
 		credentialsDB: credentialsDB,
 		kargoClient:   kargoClient,
 		argoCDClient:  argoCDClient,

@@ -11,10 +11,11 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 func init() {
-	builtins.RegisterPromotionStepRunner(newJSONParser(), nil)
+	builtinsReg.RegisterPromotionStepRunner(newJSONParser(), nil)
 }
 
 // jsonParser is an implementation of the PromotionStepRunner interface that
@@ -45,7 +46,7 @@ func (jp *jsonParser) RunPromotionStep(
 		return failure, err
 	}
 
-	cfg, err := ConfigToStruct[JSONParseConfig](stepCtx.Config)
+	cfg, err := ConfigToStruct[builtin.JSONParseConfig](stepCtx.Config)
 	if err != nil {
 		return failure, fmt.Errorf("could not convert config into %s config: %w", jp.Name(), err)
 	}
@@ -61,7 +62,7 @@ func (jp *jsonParser) validate(cfg Config) error {
 func (jp *jsonParser) runPromotionStep(
 	_ context.Context,
 	stepCtx *PromotionStepContext,
-	cfg JSONParseConfig,
+	cfg builtin.JSONParseConfig,
 ) (PromotionStepResult, error) {
 	failure := PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}
 
@@ -111,7 +112,7 @@ func (jp *jsonParser) readAndParseJSON(workDir string, path string) (map[string]
 }
 
 // extractValues evaluates JSONPath expressions using expr and returns extracted values.
-func (jp *jsonParser) extractValues(data map[string]any, outputs []JSONParse) (map[string]any, error) {
+func (jp *jsonParser) extractValues(data map[string]any, outputs []builtin.JSONParse) (map[string]any, error) {
 	results := make(map[string]any)
 
 	for _, output := range outputs {

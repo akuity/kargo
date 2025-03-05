@@ -9,10 +9,11 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 func init() {
-	builtins.RegisterPromotionStepRunner(newGitTreeClearer(), nil)
+	builtinsReg.RegisterPromotionStepRunner(newGitTreeClearer(), nil)
 }
 
 // gitTreeClearer is an implementation of the PromotionStepRunner interface
@@ -42,7 +43,7 @@ func (g *gitTreeClearer) RunPromotionStep(
 	if err := g.validate(stepCtx.Config); err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
 	}
-	cfg, err := ConfigToStruct[GitClearConfig](stepCtx.Config)
+	cfg, err := ConfigToStruct[builtin.GitClearConfig](stepCtx.Config)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("could not convert config into %s config: %w", g.Name(), err)
@@ -58,7 +59,7 @@ func (g *gitTreeClearer) validate(cfg Config) error {
 func (g *gitTreeClearer) runPromotionStep(
 	_ context.Context,
 	stepCtx *PromotionStepContext,
-	cfg GitClearConfig,
+	cfg builtin.GitClearConfig,
 ) (PromotionStepResult, error) {
 	p, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.Path)
 	if err != nil {

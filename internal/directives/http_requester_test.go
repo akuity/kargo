@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 func Test_httpRequester_validate(t *testing.T) {
@@ -225,16 +226,16 @@ func Test_httpRequester_validate(t *testing.T) {
 func Test_httpRequester_runPromotionStep(t *testing.T) {
 	testCases := []struct {
 		name       string
-		cfg        HTTPConfig
+		cfg        builtin.HTTPConfig
 		handler    http.HandlerFunc
 		assertions func(*testing.T, PromotionStepResult, error)
 	}{
 		{
 			name:    "success and not failed; no body",
 			handler: func(_ http.ResponseWriter, _ *http.Request) {},
-			cfg: HTTPConfig{
+			cfg: builtin.HTTPConfig{
 				SuccessExpression: "true",
-				Outputs: []HTTPOutput{
+				Outputs: []builtin.HTTPOutput{
 					{
 						Name:           "status",
 						FromExpression: "response.status",
@@ -265,9 +266,9 @@ func Test_httpRequester_runPromotionStep(t *testing.T) {
 				_, err := w.Write([]byte(`{"theMeaningOfLife": 42}`))
 				require.NoError(t, err)
 			},
-			cfg: HTTPConfig{
+			cfg: builtin.HTTPConfig{
 				SuccessExpression: "true",
-				Outputs: []HTTPOutput{
+				Outputs: []builtin.HTTPOutput{
 					{
 						Name:           "status",
 						FromExpression: "response.status",
@@ -298,9 +299,9 @@ func Test_httpRequester_runPromotionStep(t *testing.T) {
 				_, err := w.Write([]byte(`{"theMeaningOfLife": 42}`))
 				require.NoError(t, err)
 			},
-			cfg: HTTPConfig{
+			cfg: builtin.HTTPConfig{
 				SuccessExpression: "true",
-				Outputs: []HTTPOutput{
+				Outputs: []builtin.HTTPOutput{
 					{
 						Name:           "status",
 						FromExpression: "response.status",
@@ -329,7 +330,7 @@ func Test_httpRequester_runPromotionStep(t *testing.T) {
 			handler: func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusNotFound)
 			},
-			cfg: HTTPConfig{
+			cfg: builtin.HTTPConfig{
 				FailureExpression: "response.status == 404",
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
@@ -341,7 +342,7 @@ func Test_httpRequester_runPromotionStep(t *testing.T) {
 		{
 			name:    "success AND failed", // Treated like a failure
 			handler: func(_ http.ResponseWriter, _ *http.Request) {},
-			cfg: HTTPConfig{
+			cfg: builtin.HTTPConfig{
 				SuccessExpression: "response.status == 200",
 				FailureExpression: "response.status == 200",
 			},
@@ -356,7 +357,7 @@ func Test_httpRequester_runPromotionStep(t *testing.T) {
 			handler: func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusBadGateway)
 			},
-			cfg: HTTPConfig{
+			cfg: builtin.HTTPConfig{
 				SuccessExpression: "response.status == 200",
 				FailureExpression: "response.status == 404",
 			},
@@ -381,14 +382,14 @@ func Test_httpRequester_runPromotionStep(t *testing.T) {
 }
 
 func Test_httpRequester_buildRequest(t *testing.T) {
-	req, err := (&httpRequester{}).buildRequest(HTTPConfig{
+	req, err := (&httpRequester{}).buildRequest(builtin.HTTPConfig{
 		Method: "GET",
 		URL:    "http://example.com",
-		Headers: []HTTPHeader{{
+		Headers: []builtin.HTTPHeader{{
 			Name:  "Content-Type",
 			Value: "application/json",
 		}},
-		QueryParams: []HTTPQueryParam{{
+		QueryParams: []builtin.HTTPQueryParam{{
 			Name:  "param",
 			Value: "some value", // We want to be sure this gets url-encoded
 		}},
@@ -402,7 +403,7 @@ func Test_httpRequester_buildRequest(t *testing.T) {
 func Test_httpRequester_getClient(t *testing.T) {
 	testCases := []struct {
 		name       string
-		cfg        HTTPConfig
+		cfg        builtin.HTTPConfig
 		assertions func(*testing.T, *http.Client, error)
 	}{
 		{
@@ -417,7 +418,7 @@ func Test_httpRequester_getClient(t *testing.T) {
 		},
 		{
 			name: "with insecureSkipTLSVerify",
-			cfg: HTTPConfig{
+			cfg: builtin.HTTPConfig{
 				InsecureSkipTLSVerify: true,
 			},
 			assertions: func(t *testing.T, client *http.Client, err error) {
@@ -431,7 +432,7 @@ func Test_httpRequester_getClient(t *testing.T) {
 		},
 		{
 			name: "with invalid timeout",
-			cfg: HTTPConfig{
+			cfg: builtin.HTTPConfig{
 				Timeout: "invalid",
 			},
 			assertions: func(t *testing.T, _ *http.Client, err error) {
@@ -514,34 +515,34 @@ func Test_httpRequester_buildExprEnv(t *testing.T) {
 func Test_httpRequester_wasRequestSuccessful(t *testing.T) {
 	testCases := []struct {
 		name       string
-		cfg        HTTPConfig
+		cfg        builtin.HTTPConfig
 		statusCode int
 		assertions func(t *testing.T, success bool, err error)
 	}{
 		{
 			name: "error compiling success expression",
-			cfg:  HTTPConfig{SuccessExpression: "(1 + 2"},
+			cfg:  builtin.HTTPConfig{SuccessExpression: "(1 + 2"},
 			assertions: func(t *testing.T, _ bool, err error) {
 				require.ErrorContains(t, err, "error compiling success expression")
 			},
 		},
 		{
 			name: "error evaluating success expression",
-			cfg:  HTTPConfig{SuccessExpression: "invalid()"},
+			cfg:  builtin.HTTPConfig{SuccessExpression: "invalid()"},
 			assertions: func(t *testing.T, _ bool, err error) {
 				require.ErrorContains(t, err, "error evaluating success expression")
 			},
 		},
 		{
 			name: "success expression evaluates to non-boolean",
-			cfg:  HTTPConfig{SuccessExpression: `"foo"`},
+			cfg:  builtin.HTTPConfig{SuccessExpression: `"foo"`},
 			assertions: func(t *testing.T, _ bool, err error) {
 				require.ErrorContains(t, err, "success expression did not evaluate to a boolean")
 			},
 		},
 		{
 			name: "success expression evaluates to true",
-			cfg:  HTTPConfig{SuccessExpression: "true"},
+			cfg:  builtin.HTTPConfig{SuccessExpression: "true"},
 			assertions: func(t *testing.T, success bool, err error) {
 				require.NoError(t, err)
 				require.True(t, success)
@@ -549,7 +550,7 @@ func Test_httpRequester_wasRequestSuccessful(t *testing.T) {
 		},
 		{
 			name: "success expression evaluates to false",
-			cfg:  HTTPConfig{SuccessExpression: "false"},
+			cfg:  builtin.HTTPConfig{SuccessExpression: "false"},
 			assertions: func(t *testing.T, success bool, err error) {
 				require.NoError(t, err)
 				require.False(t, success)
@@ -557,7 +558,7 @@ func Test_httpRequester_wasRequestSuccessful(t *testing.T) {
 		},
 		{
 			name: "no success expression, but failure expression",
-			cfg:  HTTPConfig{FailureExpression: "true"},
+			cfg:  builtin.HTTPConfig{FailureExpression: "true"},
 			assertions: func(t *testing.T, success bool, err error) {
 				require.NoError(t, err)
 				require.False(t, success)
@@ -592,34 +593,34 @@ func Test_httpRequester_wasRequestSuccessful(t *testing.T) {
 func Test_httpRequester_didRequestFail(t *testing.T) {
 	testCases := []struct {
 		name       string
-		cfg        HTTPConfig
+		cfg        builtin.HTTPConfig
 		statusCode int
 		assertions func(t *testing.T, failed bool, err error)
 	}{
 		{
 			name: "error compiling failure expression",
-			cfg:  HTTPConfig{FailureExpression: "(1 + 2"},
+			cfg:  builtin.HTTPConfig{FailureExpression: "(1 + 2"},
 			assertions: func(t *testing.T, _ bool, err error) {
 				require.ErrorContains(t, err, "error compiling failure expression")
 			},
 		},
 		{
 			name: "error evaluating failure expression",
-			cfg:  HTTPConfig{FailureExpression: "invalid()"},
+			cfg:  builtin.HTTPConfig{FailureExpression: "invalid()"},
 			assertions: func(t *testing.T, _ bool, err error) {
 				require.ErrorContains(t, err, "error evaluating failure expression")
 			},
 		},
 		{
 			name: "failure expression evaluates to non-boolean",
-			cfg:  HTTPConfig{FailureExpression: `"foo"`},
+			cfg:  builtin.HTTPConfig{FailureExpression: `"foo"`},
 			assertions: func(t *testing.T, _ bool, err error) {
 				require.ErrorContains(t, err, "failure expression did not evaluate to a boolean")
 			},
 		},
 		{
 			name: "failure expression evaluates to true",
-			cfg:  HTTPConfig{FailureExpression: "true"},
+			cfg:  builtin.HTTPConfig{FailureExpression: "true"},
 			assertions: func(t *testing.T, failed bool, err error) {
 				require.NoError(t, err)
 				require.True(t, failed)
@@ -627,7 +628,7 @@ func Test_httpRequester_didRequestFail(t *testing.T) {
 		},
 		{
 			name: "failure expression evaluates to false",
-			cfg:  HTTPConfig{FailureExpression: "false"},
+			cfg:  builtin.HTTPConfig{FailureExpression: "false"},
 			assertions: func(t *testing.T, failed bool, err error) {
 				require.NoError(t, err)
 				require.False(t, failed)
@@ -635,7 +636,7 @@ func Test_httpRequester_didRequestFail(t *testing.T) {
 		},
 		{
 			name: "no failure expression, but success expression",
-			cfg:  HTTPConfig{SuccessExpression: "true"},
+			cfg:  builtin.HTTPConfig{SuccessExpression: "true"},
 			assertions: func(t *testing.T, failed bool, err error) {
 				require.NoError(t, err)
 				require.False(t, failed)
@@ -670,7 +671,7 @@ func Test_httpRequester_didRequestFail(t *testing.T) {
 func Test_httpRequester_buildOutputs(t *testing.T) {
 	testCases := []struct {
 		name        string
-		outputExprs []HTTPOutput
+		outputExprs []builtin.HTTPOutput
 		assertions  func(t *testing.T, outputs map[string]any, err error)
 	}{
 		{
@@ -682,7 +683,7 @@ func Test_httpRequester_buildOutputs(t *testing.T) {
 		},
 		{
 			name: "error compiling output expression",
-			outputExprs: []HTTPOutput{{
+			outputExprs: []builtin.HTTPOutput{{
 				Name:           "fake-output",
 				FromExpression: "(1 + 2",
 			}},
@@ -692,7 +693,7 @@ func Test_httpRequester_buildOutputs(t *testing.T) {
 		},
 		{
 			name: "error evaluating output expression",
-			outputExprs: []HTTPOutput{{
+			outputExprs: []builtin.HTTPOutput{{
 				Name:           "fake-output",
 				FromExpression: "invalid()",
 			}},
@@ -702,7 +703,7 @@ func Test_httpRequester_buildOutputs(t *testing.T) {
 		},
 		{
 			name: "success",
-			outputExprs: []HTTPOutput{
+			outputExprs: []builtin.HTTPOutput{
 				{
 					Name:           "string-output",
 					FromExpression: `"foo"`,

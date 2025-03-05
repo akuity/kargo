@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	argocdapi "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 func Test_argoCDUpdater_getDesiredRevisions(t *testing.T) {
@@ -83,8 +84,8 @@ func Test_argoCDUpdater_getDesiredRevisions(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			revisions := runner.getDesiredRevisions(
-				&ArgoCDAppUpdate{
-					Sources: []ArgoCDAppSourceUpdate{
+				&builtin.ArgoCDAppUpdate{
+					Sources: []builtin.ArgoCDAppSourceUpdate{
 						{
 							RepoURL:         "https://example.com",
 							Chart:           "another-fake-chart",

@@ -12,10 +12,11 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 func init() {
-	builtins.RegisterPromotionStepRunner(
+	builtinsReg.RegisterPromotionStepRunner(
 		newGitCloner(),
 		&StepRunnerPermissions{
 			AllowCredentialsDB: true,
@@ -73,7 +74,7 @@ func (g *gitCloner) RunPromotionStep(
 	if err := g.validate(stepCtx.Config); err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, err
 	}
-	cfg, err := ConfigToStruct[GitCloneConfig](stepCtx.Config)
+	cfg, err := ConfigToStruct[builtin.GitCloneConfig](stepCtx.Config)
 	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("could not convert config into %s config: %w", g.Name(), err)
@@ -89,7 +90,7 @@ func (g *gitCloner) validate(cfg Config) error {
 func (g *gitCloner) runPromotionStep(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
-	cfg GitCloneConfig,
+	cfg builtin.GitCloneConfig,
 ) (PromotionStepResult, error) {
 	var repoCreds *git.RepoCredentials
 	creds, found, err := stepCtx.CredentialsDB.Get(

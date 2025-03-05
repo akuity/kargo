@@ -18,6 +18,7 @@ import (
 	"github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 func Test_newArgocdUpdater(t *testing.T) {
@@ -336,14 +337,14 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 		name       string
 		runner     *argocdUpdater
 		stepCtx    *PromotionStepContext
-		stepCfg    ArgoCDUpdateConfig
+		stepCfg    builtin.ArgoCDUpdateConfig
 		assertions func(*testing.T, PromotionStepResult, error)
 	}{
 		{
 			name:    "argo cd integration disabled",
 			runner:  &argocdUpdater{},
 			stepCtx: &PromotionStepContext{},
-			stepCfg: ArgoCDUpdateConfig{},
+			stepCfg: builtin.ArgoCDUpdateConfig{},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.Equal(t, kargoapi.PromotionPhaseErrored, res.Status)
 				require.ErrorContains(
@@ -365,8 +366,8 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 			stepCtx: &PromotionStepContext{
 				ArgoCDClient: fake.NewFakeClient(),
 			},
-			stepCfg: ArgoCDUpdateConfig{
-				Apps: []ArgoCDAppUpdate{{}},
+			stepCfg: builtin.ArgoCDUpdateConfig{
+				Apps: []builtin.ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.Equal(t, kargoapi.PromotionPhaseErrored, res.Status)
@@ -386,7 +387,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 				},
 				mustPerformUpdateFn: func(
 					*PromotionStepContext,
-					*ArgoCDAppUpdate,
+					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					return "", false, errors.New("something went wrong")
@@ -395,8 +396,8 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 			stepCtx: &PromotionStepContext{
 				ArgoCDClient: fake.NewFakeClient(),
 			},
-			stepCfg: ArgoCDUpdateConfig{
-				Apps: []ArgoCDAppUpdate{{}},
+			stepCfg: builtin.ArgoCDUpdateConfig{
+				Apps: []builtin.ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.Equal(t, kargoapi.PromotionPhaseErrored, res.Status)
@@ -414,7 +415,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					return &argocd.Application{}, nil
 				},
 				buildDesiredSourcesFn: func(
-					*ArgoCDAppUpdate,
+					*builtin.ArgoCDAppUpdate,
 					[]string,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
@@ -422,7 +423,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 				},
 				mustPerformUpdateFn: func(
 					*PromotionStepContext,
-					*ArgoCDAppUpdate,
+					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					return "", true, errors.New("something went wrong")
@@ -439,8 +440,8 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 			stepCtx: &PromotionStepContext{
 				ArgoCDClient: fake.NewFakeClient(),
 			},
-			stepCfg: ArgoCDUpdateConfig{
-				Apps: []ArgoCDAppUpdate{{}},
+			stepCfg: builtin.ArgoCDUpdateConfig{
+				Apps: []builtin.ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.Equal(t, kargoapi.PromotionPhaseRunning, res.Status)
@@ -459,7 +460,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 				},
 				mustPerformUpdateFn: func(
 					*PromotionStepContext,
-					*ArgoCDAppUpdate,
+					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					return argocd.OperationRunning, false, nil
@@ -468,8 +469,8 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 			stepCtx: &PromotionStepContext{
 				ArgoCDClient: fake.NewFakeClient(),
 			},
-			stepCfg: ArgoCDUpdateConfig{
-				Apps: []ArgoCDAppUpdate{{}},
+			stepCfg: builtin.ArgoCDUpdateConfig{
+				Apps: []builtin.ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.Equal(t, kargoapi.PromotionPhaseRunning, res.Status)
@@ -488,7 +489,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 				},
 				mustPerformUpdateFn: func(
 					*PromotionStepContext,
-					*ArgoCDAppUpdate,
+					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					return argocd.OperationRunning, false, fmt.Errorf("waiting for operation to complete")
@@ -497,8 +498,8 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 			stepCtx: &PromotionStepContext{
 				ArgoCDClient: fake.NewFakeClient(),
 			},
-			stepCfg: ArgoCDUpdateConfig{
-				Apps: []ArgoCDAppUpdate{{}},
+			stepCfg: builtin.ArgoCDUpdateConfig{
+				Apps: []builtin.ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.Equal(t, kargoapi.PromotionPhaseRunning, res.Status)
@@ -517,13 +518,13 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 				},
 				mustPerformUpdateFn: func(
 					*PromotionStepContext,
-					*ArgoCDAppUpdate,
+					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					return "", true, nil
 				},
 				buildDesiredSourcesFn: func(
-					*ArgoCDAppUpdate,
+					*builtin.ArgoCDAppUpdate,
 					[]string,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
@@ -533,8 +534,8 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 			stepCtx: &PromotionStepContext{
 				ArgoCDClient: fake.NewFakeClient(),
 			},
-			stepCfg: ArgoCDUpdateConfig{
-				Apps: []ArgoCDAppUpdate{{}},
+			stepCfg: builtin.ArgoCDUpdateConfig{
+				Apps: []builtin.ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.Equal(t, kargoapi.PromotionPhaseErrored, res.Status)
@@ -554,13 +555,13 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 				},
 				mustPerformUpdateFn: func(
 					*PromotionStepContext,
-					*ArgoCDAppUpdate,
+					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					return "", true, nil
 				},
 				buildDesiredSourcesFn: func(
-					*ArgoCDAppUpdate,
+					*builtin.ArgoCDAppUpdate,
 					[]string,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
@@ -578,8 +579,8 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 			stepCtx: &PromotionStepContext{
 				ArgoCDClient: fake.NewFakeClient(),
 			},
-			stepCfg: ArgoCDUpdateConfig{
-				Apps: []ArgoCDAppUpdate{{}},
+			stepCfg: builtin.ArgoCDUpdateConfig{
+				Apps: []builtin.ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.Equal(t, kargoapi.PromotionPhaseErrored, res.Status)
@@ -599,13 +600,13 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 				},
 				mustPerformUpdateFn: func() func(
 					*PromotionStepContext,
-					*ArgoCDAppUpdate,
+					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					var count uint
 					return func(
 						*PromotionStepContext,
-						*ArgoCDAppUpdate,
+						*builtin.ArgoCDAppUpdate,
 						*argocd.Application,
 					) (argocd.OperationPhase, bool, error) {
 						count++
@@ -616,7 +617,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					}
 				}(),
 				buildDesiredSourcesFn: func(
-					*ArgoCDAppUpdate,
+					*builtin.ArgoCDAppUpdate,
 					[]string,
 					*argocd.Application,
 				) (argocd.ApplicationSources, error) {
@@ -634,8 +635,8 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 			stepCtx: &PromotionStepContext{
 				ArgoCDClient: fake.NewFakeClient(),
 			},
-			stepCfg: ArgoCDUpdateConfig{
-				Apps: []ArgoCDAppUpdate{
+			stepCfg: builtin.ArgoCDUpdateConfig{
+				Apps: []builtin.ArgoCDAppUpdate{
 					{},
 					{},
 				},
@@ -657,7 +658,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 				},
 				mustPerformUpdateFn: func(
 					*PromotionStepContext,
-					*ArgoCDAppUpdate,
+					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					return "Unknown", false, nil
@@ -666,8 +667,8 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 			stepCtx: &PromotionStepContext{
 				ArgoCDClient: fake.NewFakeClient(),
 			},
-			stepCfg: ArgoCDUpdateConfig{
-				Apps: []ArgoCDAppUpdate{{}},
+			stepCfg: builtin.ArgoCDUpdateConfig{
+				Apps: []builtin.ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.Equal(t, kargoapi.PromotionPhaseErrored, res.Status)
@@ -686,7 +687,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 				},
 				mustPerformUpdateFn: func(
 					*PromotionStepContext,
-					*ArgoCDAppUpdate,
+					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					return argocd.OperationSucceeded, false, nil
@@ -695,8 +696,8 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 			stepCtx: &PromotionStepContext{
 				ArgoCDClient: fake.NewFakeClient(),
 			},
-			stepCfg: ArgoCDUpdateConfig{
-				Apps: []ArgoCDAppUpdate{{}},
+			stepCfg: builtin.ArgoCDUpdateConfig{
+				Apps: []builtin.ArgoCDAppUpdate{{}},
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.Equal(t, kargoapi.PromotionPhaseSucceeded, res.Status)
@@ -720,7 +721,7 @@ func Test_argoCDUpdater_buildDesiredSources(t *testing.T) {
 	testCases := []struct {
 		name             string
 		runner           *argocdUpdater
-		update           *ArgoCDAppUpdate
+		update           *builtin.ArgoCDAppUpdate
 		desiredRevisions []string
 		app              *argocd.Application
 		assertions       func(
@@ -733,7 +734,7 @@ func Test_argoCDUpdater_buildDesiredSources(t *testing.T) {
 			name: "applies updates to sources",
 			runner: &argocdUpdater{
 				applyArgoCDSourceUpdateFn: func(
-					update *ArgoCDAppSourceUpdate,
+					update *builtin.ArgoCDAppSourceUpdate,
 					_ string,
 					src argocd.ApplicationSource,
 				) (argocd.ApplicationSource, bool) {
@@ -749,8 +750,8 @@ func Test_argoCDUpdater_buildDesiredSources(t *testing.T) {
 					return src, false
 				},
 			},
-			update: &ArgoCDAppUpdate{
-				Sources: []ArgoCDAppSourceUpdate{
+			update: &builtin.ArgoCDAppUpdate{
+				Sources: []builtin.ArgoCDAppSourceUpdate{
 					{
 						RepoURL: "fake-chart-url",
 						Chart:   "fake-chart",
@@ -1039,9 +1040,9 @@ func Test_argoCDUpdater_mustPerformUpdate(t *testing.T) {
 				testCase.modifyApplication(app)
 			}
 
-			stepCfg := &ArgoCDUpdateConfig{
-				Apps: []ArgoCDAppUpdate{{
-					Sources: []ArgoCDAppSourceUpdate{{
+			stepCfg := &builtin.ArgoCDUpdateConfig{
+				Apps: []builtin.ArgoCDAppUpdate{{
+					Sources: []builtin.ArgoCDAppSourceUpdate{{
 						RepoURL:         "https://github.com/universe/42",
 						DesiredRevision: "fake-revision",
 					}},
@@ -1432,7 +1433,7 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 	testCases := []struct {
 		name            string
 		source          argocd.ApplicationSource
-		update          ArgoCDAppSourceUpdate
+		update          builtin.ArgoCDAppSourceUpdate
 		desiredRevision string
 		assertions      func(
 			t *testing.T,
@@ -1446,7 +1447,7 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 			source: argocd.ApplicationSource{
 				RepoURL: "fake-url",
 			},
-			update: ArgoCDAppSourceUpdate{
+			update: builtin.ArgoCDAppSourceUpdate{
 				RepoURL: "different-fake-url",
 			},
 			assertions: func(
@@ -1466,7 +1467,7 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 			source: argocd.ApplicationSource{
 				RepoURL: "fake-url",
 			},
-			update: ArgoCDAppSourceUpdate{
+			update: builtin.ArgoCDAppSourceUpdate{
 				RepoURL:              "fake-url",
 				UpdateTargetRevision: true,
 			},
@@ -1492,7 +1493,7 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 				RepoURL: "fake-url",
 				Chart:   "fake-chart",
 			},
-			update: ArgoCDAppSourceUpdate{
+			update: builtin.ArgoCDAppSourceUpdate{
 				RepoURL:              "fake-url",
 				Chart:                "fake-chart",
 				UpdateTargetRevision: true,
@@ -1518,10 +1519,10 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 			source: argocd.ApplicationSource{
 				RepoURL: "fake-url",
 			},
-			update: ArgoCDAppSourceUpdate{
+			update: builtin.ArgoCDAppSourceUpdate{
 				RepoURL: "fake-url",
-				Kustomize: &ArgoCDKustomizeImageUpdates{
-					Images: []ArgoCDKustomizeImageUpdate{{
+				Kustomize: &builtin.ArgoCDKustomizeImageUpdates{
+					Images: []builtin.ArgoCDKustomizeImageUpdate{{
 						RepoURL: "fake-image-url",
 						Tag:     "fake-tag",
 					}},
@@ -1554,10 +1555,10 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 			source: argocd.ApplicationSource{
 				RepoURL: "fake-url",
 			},
-			update: ArgoCDAppSourceUpdate{
+			update: builtin.ArgoCDAppSourceUpdate{
 				RepoURL: "fake-url",
-				Helm: &ArgoCDHelmParameterUpdates{
-					Images: []ArgoCDHelmImageUpdate{
+				Helm: &builtin.ArgoCDHelmParameterUpdates{
+					Images: []builtin.ArgoCDHelmImageUpdate{
 						{
 							Key:   "image",
 							Value: "fake-image-url:fake-tag",
@@ -1596,9 +1597,9 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			stepCfg := &ArgoCDUpdateConfig{
-				Apps: []ArgoCDAppUpdate{{
-					Sources: []ArgoCDAppSourceUpdate{testCase.update},
+			stepCfg := &builtin.ArgoCDUpdateConfig{
+				Apps: []builtin.ArgoCDAppUpdate{{
+					Sources: []builtin.ArgoCDAppSourceUpdate{testCase.update},
 				}},
 			}
 			updatedSource, updated := runner.applyArgoCDSourceUpdate(
@@ -1612,11 +1613,11 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 }
 
 func Test_argoCDUpdater_buildKustomizeImagesForAppSource(t *testing.T) {
-	stepCfg := &ArgoCDUpdateConfig{
-		Apps: []ArgoCDAppUpdate{{
-			Sources: []ArgoCDAppSourceUpdate{{
-				Kustomize: &ArgoCDKustomizeImageUpdates{
-					Images: []ArgoCDKustomizeImageUpdate{
+	stepCfg := &builtin.ArgoCDUpdateConfig{
+		Apps: []builtin.ArgoCDAppUpdate{{
+			Sources: []builtin.ArgoCDAppSourceUpdate{{
+				Kustomize: &builtin.ArgoCDKustomizeImageUpdates{
+					Images: []builtin.ArgoCDKustomizeImageUpdate{
 						{
 							RepoURL: "yet-another-fake-url",
 							Digest:  "fake-digest",
@@ -1650,11 +1651,11 @@ func Test_argoCDUpdater_buildKustomizeImagesForAppSource(t *testing.T) {
 }
 
 func Test_argoCDUpdater_buildHelmParamChangesForAppSource(t *testing.T) {
-	stepCfg := &ArgoCDUpdateConfig{
-		Apps: []ArgoCDAppUpdate{{
-			Sources: []ArgoCDAppSourceUpdate{{
-				Helm: &ArgoCDHelmParameterUpdates{
-					Images: []ArgoCDHelmImageUpdate{
+	stepCfg := &builtin.ArgoCDUpdateConfig{
+		Apps: []builtin.ArgoCDAppUpdate{{
+			Sources: []builtin.ArgoCDAppSourceUpdate{{
+				Helm: &builtin.ArgoCDHelmParameterUpdates{
+					Images: []builtin.ArgoCDHelmImageUpdate{
 						{
 							Key:   "first-fake-key",
 							Value: "fake-value",

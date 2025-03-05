@@ -9,8 +9,8 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libargocd "github.com/akuity/kargo/internal/argocd"
-	"github.com/akuity/kargo/internal/directives"
 	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 // NewPromotionAnnotations returns annotations for a Promotion related event.
@@ -74,7 +74,7 @@ func NewPromotionAnnotations(
 		if step.Uses != "argocd-update" || step.Config == nil {
 			continue
 		}
-		var cfg directives.ArgoCDUpdateConfig
+		var cfg builtin.ArgoCDUpdateConfig
 		if err := json.Unmarshal(step.Config.Raw, &cfg); err != nil {
 			logger.Error(err, "unmarshal ArgoCD update config")
 			continue

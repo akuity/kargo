@@ -11,10 +11,11 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 func init() {
-	builtins.RegisterPromotionStepRunner(newJSONUpdater(), nil)
+	builtinsReg.RegisterPromotionStepRunner(newJSONUpdater(), nil)
 }
 
 // jsonUpdater is an implementation of the PromotionStepRunner interface that
@@ -47,7 +48,7 @@ func (j *jsonUpdater) RunPromotionStep(
 		return failure, err
 	}
 
-	cfg, err := ConfigToStruct[JSONUpdateConfig](stepCtx.Config)
+	cfg, err := ConfigToStruct[builtin.JSONUpdateConfig](stepCtx.Config)
 	if err != nil {
 		return failure, fmt.Errorf("could not convert config into %s config: %w", j.Name(), err)
 	}
@@ -63,7 +64,7 @@ func (j *jsonUpdater) validate(cfg Config) error {
 func (j *jsonUpdater) runPromotionStep(
 	_ context.Context,
 	stepCtx *PromotionStepContext,
-	cfg JSONUpdateConfig,
+	cfg builtin.JSONUpdateConfig,
 ) (PromotionStepResult, error) {
 	result := PromotionStepResult{Status: kargoapi.PromotionPhaseSucceeded}
 
@@ -82,7 +83,7 @@ func (j *jsonUpdater) runPromotionStep(
 	return result, nil
 }
 
-func (j *jsonUpdater) updateFile(workDir string, path string, updates []JSONUpdate) error {
+func (j *jsonUpdater) updateFile(workDir string, path string, updates []builtin.JSONUpdate) error {
 	absFilePath, err := securejoin.SecureJoin(workDir, path)
 	if err != nil {
 		return fmt.Errorf("error joining path %q: %w", path, err)
@@ -124,7 +125,7 @@ func isValidScalar(value any) bool {
 	}
 }
 
-func (j *jsonUpdater) generateCommitMessage(path string, updates []JSONUpdate) string {
+func (j *jsonUpdater) generateCommitMessage(path string, updates []builtin.JSONUpdate) string {
 	if len(updates) == 0 {
 		return ""
 	}

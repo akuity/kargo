@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/kustomize/kyaml/filesys"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 // kustomizeRenderMutex is a mutex that ensures only one kustomize build is
@@ -26,7 +27,7 @@ import (
 var kustomizeRenderMutex sync.Mutex
 
 func init() {
-	builtins.RegisterPromotionStepRunner(newKustomizeBuilder(), nil)
+	builtinsReg.RegisterPromotionStepRunner(newKustomizeBuilder(), nil)
 }
 
 // kustomizeBuilder is an implementation of the PromotionStepRunner interface
@@ -62,7 +63,7 @@ func (k *kustomizeBuilder) RunPromotionStep(
 	}
 
 	// Convert the configuration into a typed object.
-	cfg, err := ConfigToStruct[KustomizeBuildConfig](stepCtx.Config)
+	cfg, err := ConfigToStruct[builtin.KustomizeBuildConfig](stepCtx.Config)
 	if err != nil {
 		return failure, fmt.Errorf("could not convert config into %s config: %w", k.Name(), err)
 	}
@@ -72,7 +73,7 @@ func (k *kustomizeBuilder) RunPromotionStep(
 
 func (k *kustomizeBuilder) runPromotionStep(
 	stepCtx *PromotionStepContext,
-	cfg KustomizeBuildConfig,
+	cfg builtin.KustomizeBuildConfig,
 ) (PromotionStepResult, error) {
 	// Create a "chrooted" filesystem for the kustomize build.
 	fs, err := securefs.MakeFsOnDiskSecureBuild(stepCtx.WorkDir)
@@ -143,7 +144,7 @@ func (k *kustomizeBuilder) writeResult(rm resmap.ResMap, outPath string) error {
 }
 
 // kustomizeBuild builds the manifests in the given directory using Kustomize.
-func kustomizeBuild(fs filesys.FileSystem, path string, pluginCfg *Plugin) (_ resmap.ResMap, err error) {
+func kustomizeBuild(fs filesys.FileSystem, path string, pluginCfg *builtin.Plugin) (_ resmap.ResMap, err error) {
 	kustomizeRenderMutex.Lock()
 	defer kustomizeRenderMutex.Unlock()
 

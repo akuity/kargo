@@ -20,6 +20,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/freight"
 	intyaml "github.com/akuity/kargo/internal/yaml"
+	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
 // preserveSeparator is the separator used to preserve values in the
@@ -27,7 +28,7 @@ import (
 const preserveSeparator = "*"
 
 func init() {
-	builtins.RegisterPromotionStepRunner(
+	builtinsReg.RegisterPromotionStepRunner(
 		newKustomizeImageSetter(),
 		&StepRunnerPermissions{
 			AllowKargoClient: true,
@@ -66,7 +67,7 @@ func (k *kustomizeImageSetter) RunPromotionStep(
 	}
 
 	// Convert the configuration into a typed object.
-	cfg, err := ConfigToStruct[KustomizeSetImageConfig](stepCtx.Config)
+	cfg, err := ConfigToStruct[builtin.KustomizeSetImageConfig](stepCtx.Config)
 	if err != nil {
 		return failure, fmt.Errorf("could not convert config into kustomize-set-image config: %w", err)
 	}
@@ -82,7 +83,7 @@ func (k *kustomizeImageSetter) validate(cfg Config) error {
 func (k *kustomizeImageSetter) runPromotionStep(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
-	cfg KustomizeSetImageConfig,
+	cfg builtin.KustomizeSetImageConfig,
 ) (PromotionStepResult, error) {
 	// Find the Kustomization file.
 	kusPath, err := findKustomization(stepCtx.WorkDir, cfg.Path)
@@ -119,7 +120,7 @@ func (k *kustomizeImageSetter) runPromotionStep(
 }
 
 func (k *kustomizeImageSetter) buildTargetImagesFromConfig(
-	images []Image,
+	images []builtin.Image,
 ) map[string]kustypes.Image {
 	targetImages := make(map[string]kustypes.Image, len(images))
 	for _, img := range images {
