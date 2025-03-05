@@ -2,6 +2,7 @@ package gar
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -9,12 +10,17 @@ import (
 	"github.com/patrickmn/go-cache"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
+	"google.golang.org/api/googleapi"
 	"google.golang.org/api/iamcredentials/v1"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/logging"
 )
+
+var tokenRequestScope = []string{
+	"https://www.googleapis.com/auth/cloud-platform",
+}
 
 type workloadIdentityFederationCredentialHelper struct {
 	gcpProjectID string
@@ -35,6 +41,7 @@ func NewWorkloadIdentityFederationCredentialHelper(
 ) credentials.Helper {
 	logger := logging.LoggerFromContext(ctx)
 	var gcpProjectID string
+	var tokenSource oauth2.TokenSource
 	if !metadata.OnGCE() {
 		logger.Info("not running within GCE; assuming GCP Workload Identity Federation is not in use")
 		return nil
@@ -49,6 +56,14 @@ func NewWorkloadIdentityFederationCredentialHelper(
 			"project", gcpProjectID,
 		)
 	}
+	// Configure token source to enable fallback mechanism
+	// when project-specific credentials not available
+	if tokenSource, err = google.DefaultTokenSource(ctx, tokenRequestScope...); err != nil {
+		logger.Error(err, "Failed to retrieved GCP token source from Application Default Credentials")
+	} else {
+		logger.Debug("Succesfully retrieved GCP token source from Application Default Credentials")
+	}
+
 	w := &workloadIdentityFederationCredentialHelper{
 		gcpProjectID: gcpProjectID,
 		tokenCache: cache.New(
@@ -56,6 +71,9 @@ func NewWorkloadIdentityFederationCredentialHelper(
 			40*time.Minute, // Default ttl for each entry
 			time.Hour,      // Cleanup interval
 		),
+		// Configure token source to enable fallback mechanism
+		// when project-specific credentials not available
+		tokenSource: tokenSource,
 	}
 	w.getAccessTokenFn = w.getAccessToken
 	return w.getCredentials
@@ -122,9 +140,6 @@ func (w *workloadIdentityFederationCredentialHelper) getAccessToken(
 		"gcpProjectID", w.gcpProjectID,
 		"kargoProject", kargoProject,
 	)
-	tokenRequestScope := []string{
-		"https://www.googleapis.com/auth/cloud-platform",
-	}
 	resp, err := iamSvc.Projects.ServiceAccounts.GenerateAccessToken(
 		fmt.Sprintf(
 			"projects/-/serviceAccounts/kargo-project-%s@%s.iam.gserviceaccount.com",
@@ -135,23 +150,27 @@ func (w *workloadIdentityFederationCredentialHelper) getAccessToken(
 		},
 	).Do()
 	if err != nil {
-		logger.Error(err, "Error generating access token; falling back to Application Default Credentials (ADC)")
-		if w.tokenSource == nil {
-			tokenSource, err := google.DefaultTokenSource(ctx, tokenRequestScope...)
-			if err != nil {
-				logger.Error(err, "Failed to find Application Default Credentials")
+		var googleErr *googleapi.Error
+		if errors.As(err, &googleErr) {
+			switch googleErr.Code {
+			// fallback to controller identity only if GCP api return 404 code
+			// project-specific	service account do not exists
+			case 404:
+				logger.Debug("falling back to Application Default Credentials (ADC)")
+				token, err := w.tokenSource.Token()
+				if err != nil {
+					logger.Error(err, "Error generating access token from Application Default Credentials")
+					return "", false, nil
+				}
+				logger.Debug("Generated access token using Application Default Credentials")
+				return token.AccessToken, false, nil
+			default:
+				logger.Error(err, "error generating access token")
 				return "", false, nil
 			}
-			w.tokenSource = tokenSource
 		}
-
-		token, err := w.tokenSource.Token()
-		if err != nil {
-			logger.Error(err, "Error generating access token from Application Default Credentials")
-			return "", false, nil
-		}
-		logger.Debug("Generated access token using Application Default Credentials")
-		return token.AccessToken, false, nil
+		logger.Error(err, "error generating access token")
+		return "", false, nil
 	}
 	logger.Debug("generated Artifact Registry access token")
 	return resp.AccessToken, true, nil
