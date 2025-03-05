@@ -170,6 +170,31 @@ func (s *Stage) IsControlFlow() bool {
 	}
 }
 
+// IsFreightAvailable answers whether the specified Freight is available to the
+// Stage.
+func (s *Stage) IsFreightAvailable(freight *Freight) bool {
+	if s == nil || freight == nil || s.Namespace != freight.Namespace {
+		return false
+	}
+	if freight.IsApprovedFor(s.Name) {
+		return true
+	}
+	for _, req := range s.Spec.RequestedFreight {
+		if freight.Origin.Equals(&req.Origin) {
+			if req.Sources.Direct {
+				return true
+			}
+			for _, source := range req.Sources.Stages {
+				if freight.IsVerifiedIn(source) {
+					return req.Sources.RequiredSoakTime == nil ||
+						freight.GetLongestSoak(source) >= req.Sources.RequiredSoakTime.Duration
+				}
+			}
+		}
+	}
+	return false
+}
+
 func (s *Stage) GetStatus() *StageStatus {
 	return &s.Status
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/cli/templates"
@@ -81,7 +82,7 @@ func waitForWarehouse(
 		if msg == nil || msg.Warehouse == nil {
 			return errors.New("unexpected response")
 		}
-		token, ok := kargoapi.RefreshAnnotationValue(msg.Warehouse.GetAnnotations())
+		token, ok := api.RefreshAnnotationValue(msg.Warehouse.GetAnnotations())
 		if !ok {
 			return fmt.Errorf(
 				"Warehouse %q in Project %q has no %q annotation",

@@ -15,7 +15,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
-	"github.com/akuity/kargo/api/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/directives"
 	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
@@ -62,8 +61,8 @@ func TestReconcile(t *testing.T) {
 	testCases := []struct {
 		name      string
 		promos    []client.Object
-		promoteFn func(context.Context, v1alpha1.Promotion,
-			*v1alpha1.Freight) (*kargoapi.PromotionStatus, error)
+		promoteFn func(context.Context, kargoapi.Promotion,
+			*kargoapi.Freight) (*kargoapi.PromotionStatus, error)
 		terminateFn             func(context.Context, *kargoapi.Promotion) error
 		promoToReconcile        *types.NamespacedName // if nil, uses the first of the promos
 		expectPromoteFnCalled   bool
@@ -217,7 +216,7 @@ func TestReconcile(t *testing.T) {
 				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhasePending, before),
 			},
 			promoToReconcile: &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo"},
-			promoteFn: func(_ context.Context, _ v1alpha1.Promotion, _ *v1alpha1.Freight) (*kargoapi.PromotionStatus, error) {
+			promoteFn: func(_ context.Context, _ kargoapi.Promotion, _ *kargoapi.Freight) (*kargoapi.PromotionStatus, error) {
 				panic("expected panic")
 			},
 		},
@@ -242,7 +241,7 @@ func TestReconcile(t *testing.T) {
 				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhasePending, before),
 			},
 			promoToReconcile: &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo"},
-			promoteFn: func(_ context.Context, _ v1alpha1.Promotion, _ *v1alpha1.Freight) (*kargoapi.PromotionStatus, error) {
+			promoteFn: func(_ context.Context, _ kargoapi.Promotion, _ *kargoapi.Freight) (*kargoapi.PromotionStatus, error) {
 				return nil, errors.New("expected error")
 			},
 		},
@@ -276,9 +275,9 @@ func TestReconcile(t *testing.T) {
 			promoteWasCalled := false
 			r.promoteFn = func(
 				ctx context.Context,
-				p v1alpha1.Promotion,
-				_ *v1alpha1.Stage,
-				f *v1alpha1.Freight,
+				p kargoapi.Promotion,
+				_ *kargoapi.Stage,
+				f *kargoapi.Freight,
 			) (*kargoapi.PromotionStatus, error) {
 				promoteWasCalled = true
 				if tc.promoteFn != nil {

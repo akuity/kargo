@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/directives"
 	libWebhook "github.com/akuity/kargo/internal/webhook"
 )
@@ -110,10 +111,10 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 	}
 
 	if req.Operation == admissionv1.Create || req.Operation == admissionv1.Update {
-		if verReq, ok := kargoapi.ReverifyAnnotationValue(stage.Annotations); ok {
+		if verReq, ok := api.ReverifyAnnotationValue(stage.Annotations); ok {
 			var oldVerReq *kargoapi.VerificationRequest
 			if oldStage != nil {
-				oldVerReq, _ = kargoapi.ReverifyAnnotationValue(oldStage.Annotations)
+				oldVerReq, _ = api.ReverifyAnnotationValue(oldStage.Annotations)
 			}
 			// If the re-verification request has changed, enrich the annotation
 			// with the actor and control plane information.
@@ -123,16 +124,16 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 					// If the re-verification request is not from the control plane, then
 					// it's from a specific Kubernetes user. Without this check we would
 					// overwrite the actor field set by the control plane.
-					verReq.Actor = kargoapi.FormatEventKubernetesUserActor(req.UserInfo)
+					verReq.Actor = api.FormatEventKubernetesUserActor(req.UserInfo)
 				}
 				stage.Annotations[kargoapi.AnnotationKeyReverify] = verReq.String()
 			}
 		}
 
-		if verReq, ok := kargoapi.AbortVerificationAnnotationValue(stage.Annotations); ok {
+		if verReq, ok := api.AbortVerificationAnnotationValue(stage.Annotations); ok {
 			var oldVerReq *kargoapi.VerificationRequest
 			if oldStage != nil {
-				oldVerReq, _ = kargoapi.AbortVerificationAnnotationValue(oldStage.Annotations)
+				oldVerReq, _ = api.AbortVerificationAnnotationValue(oldStage.Annotations)
 			}
 			// If the abort request has changed, enrich the annotation with the
 			// actor and control plane information.
@@ -142,7 +143,7 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 					// If the abort request is not from the control plane, then
 					// it's from a specific Kubernetes user. Without this check we would
 					// overwrite the actor field set by the control plane.
-					verReq.Actor = kargoapi.FormatEventKubernetesUserActor(req.UserInfo)
+					verReq.Actor = api.FormatEventKubernetesUserActor(req.UserInfo)
 				}
 				stage.Annotations[kargoapi.AnnotationKeyAbort] = verReq.String()
 			}

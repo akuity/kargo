@@ -21,6 +21,7 @@ import (
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/conditions"
 	"github.com/akuity/kargo/internal/controller"
 	rolloutsapi "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
@@ -162,14 +163,14 @@ func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
 		cfg:    cfg,
 		client: kubeClient,
 	}
-	r.getProjectFn = kargoapi.GetProject
+	r.getProjectFn = api.GetProject
 	r.syncProjectFn = r.syncProject
 	r.ensureNamespaceFn = r.ensureNamespace
 	r.patchProjectStatusFn = r.patchProjectStatus
 	r.getNamespaceFn = r.client.Get
 	r.createNamespaceFn = r.client.Create
-	r.patchOwnerReferencesFn = kargoapi.PatchOwnerReferences
-	r.ensureFinalizerFn = kargoapi.EnsureFinalizer
+	r.patchOwnerReferencesFn = api.PatchOwnerReferences
+	r.ensureFinalizerFn = api.EnsureFinalizer
 	r.ensureAPIAdminPermissionsFn = r.ensureAPIAdminPermissions
 	r.ensureControllerPermissionsFn = r.ensureControllerPermissions
 	r.ensureDefaultProjectRolesFn = r.ensureDefaultProjectRoles

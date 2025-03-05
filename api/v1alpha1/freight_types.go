@@ -1,16 +1,9 @@
 package v1alpha1
 
 import (
-	"crypto/sha1"
-	"fmt"
-	"path"
-	"slices"
-	"strings"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/akuity/kargo/internal/git"
-	"github.com/akuity/kargo/internal/helm"
 )
 
 // +kubebuilder:object:root=true
@@ -50,63 +43,6 @@ type Freight struct {
 
 func (f *Freight) GetStatus() *FreightStatus {
 	return &f.Status
-}
-
-// GenerateID deterministically calculates a piece of Freight's ID based on its
-// contents and returns it.
-func (f *Freight) GenerateID() string {
-	size := len(f.Commits) + len(f.Images) + len(f.Charts)
-	artifacts := make([]string, 0, size)
-	for _, commit := range f.Commits {
-		if commit.Tag != "" {
-			// If we have a tag, incorporate it into the canonical representation of a
-			// commit used when calculating Freight ID. This is necessary because one
-			// commit could have multiple tags. Suppose we have already detected a
-			// commit with a tag v1.0.0-rc.1 and produced the corresponding Freight.
-			// Later, that same commit is tagged as v1.0.0. If we don't incorporate
-			// the tag into the ID, we will never produce a new/distinct piece of
-			// Freight for the new tag.
-			artifacts = append(
-				artifacts,
-				fmt.Sprintf("%s:%s:%s", git.NormalizeURL(commit.RepoURL), commit.Tag, commit.ID),
-			)
-		} else {
-			artifacts = append(
-				artifacts,
-				fmt.Sprintf("%s:%s", git.NormalizeURL(commit.RepoURL), commit.ID),
-			)
-		}
-	}
-	for _, image := range f.Images {
-		artifacts = append(
-			artifacts,
-			// Note: This isn't the usual image representation using EITHER :<tag> OR @<digest>.
-			// It is possible to have found an image with a tag that is already known, but with a
-			// new digest -- as in the case of "mutable" tags like "latest". It is equally possible to
-			// have found an image with a digest that is already known, but has been re-tagged.
-			// To cover both cases, we incorporate BOTH tag and digest into the canonical
-			// representation of an image used when calculating Freight ID.
-			fmt.Sprintf("%s:%s@%s", image.RepoURL, image.Tag, image.Digest),
-		)
-	}
-	for _, chart := range f.Charts {
-		artifacts = append(
-			artifacts,
-			fmt.Sprintf(
-				"%s:%s",
-				// path.Join accounts for the possibility that chart.Name is empty
-				path.Join(helm.NormalizeChartRepositoryURL(chart.RepoURL), chart.Name),
-				chart.Version,
-			),
-		)
-	}
-	slices.Sort(artifacts)
-	return fmt.Sprintf(
-		"%x",
-		sha1.Sum([]byte(
-			fmt.Sprintf("%s:%s", f.Origin.String(), strings.Join(artifacts, "|")),
-		)),
-	)
 }
 
 // GitCommit describes a specific commit from a specific Git repository.
@@ -172,6 +108,108 @@ type FreightStatus struct {
 	// might wish to promote a piece of Freight to a given Stage without
 	// transiting the entire pipeline.
 	ApprovedFor map[string]ApprovedStage `json:"approvedFor,omitempty" protobuf:"bytes,2,rep,name=approvedFor" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+}
+
+// IsCurrentlyIn returns whether the Freight is currently in the specified
+// Stage.
+func (f *Freight) IsCurrentlyIn(stage string) bool {
+	// NB: This method exists for convenience. It doesn't require the caller to
+	// know anything about the Freight status' internal data structure.
+	_, in := f.Status.CurrentlyIn[stage]
+	return in
+}
+
+// IsVerifiedIn returns whether the Freight has been verified in the specified
+// Stage.
+func (f *Freight) IsVerifiedIn(stage string) bool {
+	// NB: This method exists for convenience. It doesn't require the caller to
+	// know anything about the Freight status' internal data structure.
+	_, verified := f.Status.VerifiedIn[stage]
+	return verified
+}
+
+// IsApprovedFor returns whether the Freight has been approved for the specified
+// Stage.
+func (f *Freight) IsApprovedFor(stage string) bool {
+	// NB: This method exists for convenience. It doesn't require the caller to
+	// know anything about the Freight status' internal data structure.
+	_, approved := f.Status.ApprovedFor[stage]
+	return approved
+}
+
+// GetLongestSoak returns the longest soak time for the Freight in the specified
+// Stage if it's been verified in that Stage. If it has not, zero will be
+// returned instead. If the Freight is currently in use by the specified Stage,
+// the current soak time is calculated and compared to the longest completed
+// soak time on record.
+func (f *Freight) GetLongestSoak(stage string) time.Duration {
+	if _, verified := f.Status.VerifiedIn[stage]; !verified {
+		return 0
+	}
+	var longestCompleted time.Duration
+	if record, isVerified := f.Status.VerifiedIn[stage]; isVerified && record.LongestCompletedSoak != nil {
+		longestCompleted = record.LongestCompletedSoak.Duration
+	}
+	var current time.Duration
+	if record, isCurrent := f.Status.CurrentlyIn[stage]; isCurrent {
+		current = time.Since(record.Since.Time)
+	}
+	return time.Duration(max(longestCompleted.Nanoseconds(), current.Nanoseconds()))
+}
+
+// AddCurrentStage updates the Freight status to reflect that the Freight is
+// currently in the specified Stage.
+func (f *FreightStatus) AddCurrentStage(stage string, since time.Time) {
+	if _, alreadyIn := f.CurrentlyIn[stage]; !alreadyIn {
+		if f.CurrentlyIn == nil {
+			f.CurrentlyIn = make(map[string]CurrentStage)
+		}
+		f.CurrentlyIn[stage] = CurrentStage{
+			Since: &metav1.Time{Time: since},
+		}
+	}
+}
+
+// RemoveCurrentStage updates the Freight status to reflect that the Freight is
+// no longer in the specified Stage. If the Freight was verified in the
+// specified Stage, the longest completed soak time will be updated if
+// necessary.
+func (f *FreightStatus) RemoveCurrentStage(stage string) {
+	if record, in := f.CurrentlyIn[stage]; in {
+		if _, verified := f.VerifiedIn[stage]; verified {
+			soak := time.Since(record.Since.Time)
+			if soak > f.VerifiedIn[stage].LongestCompletedSoak.Duration {
+				f.VerifiedIn[stage] = VerifiedStage{
+					LongestCompletedSoak: &metav1.Duration{Duration: soak},
+				}
+			}
+		}
+		delete(f.CurrentlyIn, stage)
+	}
+}
+
+// AddVerifiedStage updates the Freight status to reflect that the Freight has
+// been verified in the specified Stage.
+func (f *FreightStatus) AddVerifiedStage(stage string, verifiedAt time.Time) {
+	if _, verified := f.VerifiedIn[stage]; !verified {
+		record := VerifiedStage{VerifiedAt: &metav1.Time{Time: verifiedAt}}
+		if f.VerifiedIn == nil {
+			f.VerifiedIn = map[string]VerifiedStage{stage: record}
+		}
+		f.VerifiedIn[stage] = record
+	}
+}
+
+// AddApprovedStage updates the Freight status to reflect that the Freight has
+// been approved for the specified Stage.
+func (f *FreightStatus) AddApprovedStage(stage string, approvedAt time.Time) {
+	if _, approved := f.ApprovedFor[stage]; !approved {
+		record := ApprovedStage{ApprovedAt: &metav1.Time{Time: approvedAt}}
+		if f.ApprovedFor == nil {
+			f.ApprovedFor = map[string]ApprovedStage{stage: record}
+		}
+		f.ApprovedFor[stage] = record
+	}
 }
 
 // CurrentStage reflects a Stage's current use of Freight.

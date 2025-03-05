@@ -8,6 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	libGit "github.com/akuity/kargo/internal/git"
 )
 
@@ -36,7 +37,7 @@ func FindCommit(
 	if desiredOrigin == nil {
 		for i := range freightReqs {
 			requestedFreight := freightReqs[i]
-			warehouse, err := kargoapi.GetWarehouse(
+			warehouse, err := api.GetWarehouse(
 				ctx,
 				cl,
 				types.NamespacedName{
@@ -112,7 +113,7 @@ func FindImage(
 	if desiredOrigin == nil {
 		for i := range freightReqs {
 			requestedFreight := freightReqs[i]
-			warehouse, err := kargoapi.GetWarehouse(
+			warehouse, err := api.GetWarehouse(
 				ctx,
 				cl,
 				types.NamespacedName{
@@ -178,7 +179,7 @@ func HasAmbiguousImageRequest(
 
 	for i := range freightReqs {
 		requestedFreight := freightReqs[i]
-		warehouse, err := kargoapi.GetWarehouse(
+		warehouse, err := api.GetWarehouse(
 			ctx,
 			cl,
 			types.NamespacedName{
@@ -229,7 +230,7 @@ func FindChart(
 	if desiredOrigin == nil {
 		for i := range freightReqs {
 			requestedFreight := freightReqs[i]
-			warehouse, err := kargoapi.GetWarehouse(
+			warehouse, err := api.GetWarehouse(
 				ctx,
 				cl,
 				types.NamespacedName{

@@ -22,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/controller"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/internal/directives"
@@ -179,7 +180,7 @@ func newReconciler(
 		recorder:         recorder,
 		cfg:              cfg,
 	}
-	r.getStageFn = kargoapi.GetStage
+	r.getStageFn = api.GetStage
 	r.promoteFn = r.promote
 	r.terminatePromotionFn = r.terminatePromotion
 	return r
@@ -199,7 +200,7 @@ func (r *reconciler) Reconcile(
 	logger.Debug("reconciling Promotion")
 
 	// Find the Promotion
-	promo, err := kargoapi.GetPromotion(ctx, r.kargoClient, req.NamespacedName)
+	promo, err := api.GetPromotion(ctx, r.kargoClient, req.NamespacedName)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -209,7 +210,7 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 	// Find the Freight
-	freight, err := kargoapi.GetFreight(ctx, r.kargoClient, types.NamespacedName{
+	freight, err := api.GetFreight(ctx, r.kargoClient, types.NamespacedName{
 		Namespace: promo.Namespace,
 		Name:      promo.Spec.Freight,
 	})
@@ -230,7 +231,7 @@ func (r *reconciler) Reconcile(
 	)
 
 	// Terminate the Promotion if requested by the user.
-	if req, ok := kargoapi.AbortPromotionAnnotationValue(
+	if req, ok := api.AbortPromotionAnnotationValue(
 		promo.GetAnnotations(),
 	); ok && req.Action == kargoapi.AbortActionTerminate {
 		if err = r.terminatePromotionFn(ctx, req, promo, freight); err != nil {
@@ -335,7 +336,7 @@ func (r *reconciler) Reconcile(
 	}
 
 	// Record the current refresh token as having been handled.
-	if token, ok := kargoapi.RefreshAnnotationValue(promo.GetAnnotations()); ok {
+	if token, ok := api.RefreshAnnotationValue(promo.GetAnnotations()); ok {
 		newStatus.LastHandledRefresh = token
 	}
 
@@ -395,7 +396,7 @@ func (r *reconciler) Reconcile(
 		}
 
 		eventAnnotations := event.NewPromotionAnnotations(ctx,
-			kargoapi.FormatEventControllerActor(r.cfg.Name()),
+			api.FormatEventControllerActor(r.cfg.Name()),
 			promo, freight)
 
 		if newStatus.Phase == kargoapi.PromotionPhaseSucceeded {
@@ -538,7 +539,7 @@ func (r *reconciler) promote(
 		if current != nil && current.VerificationHistory.Current() != nil {
 			for _, f := range current.Freight {
 				if f.Name == targetFreight.Name {
-					if err := kargoapi.ReverifyStageFreight(
+					if err := api.ReverifyStageFreight(
 						ctx,
 						r.kargoClient,
 						types.NamespacedName{
@@ -611,7 +612,7 @@ func (r *reconciler) terminatePromotion(
 	// events. For an abort request, however, we do not want to inherit this
 	// as the abort request is not necessarily made by the creator of the
 	// Promotion.
-	actor := kargoapi.FormatEventControllerActor(r.cfg.Name())
+	actor := api.FormatEventControllerActor(r.cfg.Name())
 	if req.Actor != "" {
 		actor = req.Actor
 	}

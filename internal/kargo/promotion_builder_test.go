@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/api/user"
+	"github.com/akuity/kargo/internal/server/user"
 )
 
 func TestPromotionBuilder_Build(t *testing.T) {
