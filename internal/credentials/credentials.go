@@ -2,8 +2,6 @@ package credentials
 
 import (
 	"context"
-
-	corev1 "k8s.io/api/core/v1"
 )
 
 const (
@@ -43,10 +41,22 @@ type Credentials struct {
 	SSHPrivateKey string
 }
 
-type Helper func(
-	ctx context.Context,
-	project string,
-	credType Type,
-	repoURL string,
-	secret *corev1.Secret,
-) (*Credentials, error)
+// Provider is an interface for providing credentials for a given type,
+// repository URL and data values.
+type Provider interface {
+	// Supports returns true if the provider can provide credentials for the
+	// given type, repository URL and data values. Otherwise, it should return
+	// false.
+	Supports(credType Type, repoURL string, data map[string][]byte) bool
+
+	// GetCredentials returns the credentials for the given type, repository URL
+	// and data values. If the provider cannot provide credentials for the given
+	// type, repository URL and data, it should return nil.
+	GetCredentials(
+		ctx context.Context,
+		project string,
+		credType Type,
+		repoURL string,
+		data map[string][]byte,
+	) (*Credentials, error)
+}

@@ -26,9 +26,9 @@ import (
 // utilizes a Kubernetes controller runtime client to retrieve credentials
 // stored in Kubernetes Secrets.
 type database struct {
-	kargoClient       client.Client
-	credentialHelpers []credentials.Helper
-	cfg               DatabaseConfig
+	kargoClient         client.Client
+	credentialProviders []credentials.Provider
+	cfg                 DatabaseConfig
 }
 
 // DatabaseConfig represents configuration for a Kubernetes based implementation
@@ -53,25 +53,27 @@ func NewDatabase(
 	kargoClient client.Client,
 	cfg DatabaseConfig,
 ) credentials.Database {
-	credentialHelpers := []credentials.Helper{
-		basic.SecretToCreds,
-		ecr.NewAccessKeyCredentialHelper(),
-		ecr.NewManagedIdentityCredentialHelper(ctx),
-		gar.NewServiceAccountKeyCredentialHelper(),
-		gar.NewWorkloadIdentityFederationCredentialHelper(ctx),
-		github.NewAppCredentialHelper(),
+	var credentialProviders = []credentials.Provider{
+		&basic.CredentialProvider{},
+		ecr.NewAccessKeyProvider(),
+		ecr.NewManagedIdentityProvider(ctx),
+		gar.NewServiceAccountKeyProvider(),
+		gar.NewWorkloadIdentityFederationProvider(ctx),
+		github.NewAppCredentialProvider(),
 	}
-	finalCredentialHelpers := make([]credentials.Helper, 0, len(credentialHelpers))
-	for _, helper := range credentialHelpers {
-		if helper != nil {
-			finalCredentialHelpers = append(finalCredentialHelpers, helper)
+
+	db := &database{
+		kargoClient: kargoClient,
+		cfg:         cfg,
+	}
+
+	for _, p := range credentialProviders {
+		if p != nil {
+			db.credentialProviders = append(db.credentialProviders, p)
 		}
 	}
-	return &database{
-		kargoClient:       kargoClient,
-		credentialHelpers: finalCredentialHelpers,
-		cfg:               cfg,
-	}
+
+	return db
 }
 
 func (k *database) Get(
@@ -120,8 +122,13 @@ func (k *database) Get(
 		}
 	}
 
-	for _, helper := range k.credentialHelpers {
-		creds, err := helper(ctx, namespace, credType, repoURL, secret)
+	var data map[string][]byte
+	if secret != nil {
+		data = secret.Data
+	}
+
+	for _, p := range k.credentialProviders {
+		creds, err := p.GetCredentials(ctx, namespace, credType, repoURL, data)
 		if err != nil {
 			return credentials.Credentials{}, false, err
 		}

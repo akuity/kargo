@@ -8,91 +8,101 @@ import (
 	"cloud.google.com/go/compute/metadata"
 	"github.com/patrickmn/go-cache"
 	"google.golang.org/api/iamcredentials/v1"
-	corev1 "k8s.io/api/core/v1"
 
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/logging"
 )
 
-type workloadIdentityFederationCredentialHelper struct {
-	gcpProjectID string
+const (
+	gcpResourceNameFormat = "projects/-/serviceAccounts/kargo-project-%s@%s.iam.gserviceaccount.com"
+)
 
+type WorkloadIdentityFederationProvider struct {
 	tokenCache *cache.Cache
 
-	// The following behaviors are overridable for testing purposes:
+	projectID string
 
-	getAccessTokenFn func(ctx context.Context, kargoProject string) (string, error)
+	getAccessTokenFn func(ctx context.Context, project string) (string, error)
 }
 
-// NewWorkloadIdentityFederationCredentialHelper returns an implementation of
-// credentials.Helper that utilizes a cache to avoid unnecessary calls to GCP.
-func NewWorkloadIdentityFederationCredentialHelper(
-	ctx context.Context,
-) credentials.Helper {
+func NewWorkloadIdentityFederationProvider(ctx context.Context) *WorkloadIdentityFederationProvider {
 	logger := logging.LoggerFromContext(ctx)
-	var gcpProjectID string
+
 	if !metadata.OnGCE() {
 		logger.Info("not running within GCE; assuming GCP Workload Identity Federation is not in use")
 		return nil
 	}
 	logger.Info("controller appears to be running within GCE")
-	var err error
-	if gcpProjectID, err = metadata.ProjectIDWithContext(ctx); err != nil {
+
+	projectID, err := metadata.ProjectIDWithContext(ctx)
+	if err != nil {
 		logger.Error(err, "error getting GCP project ID")
-	} else {
-		logger.Debug(
-			"got GCP project ID",
-			"project", gcpProjectID,
-		)
+		return nil
 	}
-	w := &workloadIdentityFederationCredentialHelper{
-		gcpProjectID: gcpProjectID,
+	logger.Debug("got GCP project ID", "project", projectID)
+
+	p := &WorkloadIdentityFederationProvider{
 		tokenCache: cache.New(
 			// Access tokens live for one hour. We'll hang on to them for 40 minutes.
 			40*time.Minute, // Default ttl for each entry
 			time.Hour,      // Cleanup interval
 		),
+		projectID: projectID,
 	}
-	w.getAccessTokenFn = w.getAccessToken
-	return w.getCredentials
+	p.getAccessTokenFn = p.getAccessToken
+	return p
 }
 
-func (w *workloadIdentityFederationCredentialHelper) getCredentials(
-	ctx context.Context,
-	kargoProject string,
+func (p *WorkloadIdentityFederationProvider) Supports(
 	credType credentials.Type,
 	repoURL string,
-	_ *corev1.Secret,
-) (*credentials.Credentials, error) {
-	if credType != credentials.TypeImage ||
-		w.gcpProjectID == "" { // Controller isn't running within GCE
-		// This helper can't handle this
-		return nil, nil
+	_ map[string][]byte,
+) bool {
+	if p.projectID == "" || credType != credentials.TypeImage {
+		return false
 	}
 
 	if !garURLRegex.MatchString(repoURL) && !gcrURLRegex.MatchString(repoURL) {
-		// This doesn't look like a Google Artifact Registry URL
+		return false
+	}
+
+	return true
+}
+
+func (p *WorkloadIdentityFederationProvider) GetCredentials(
+	ctx context.Context,
+	project string,
+	credType credentials.Type,
+	repoURL string,
+	_ map[string][]byte,
+) (*credentials.Credentials, error) {
+	if !p.Supports(credType, repoURL, nil) {
 		return nil, nil
 	}
 
-	if entry, exists := w.tokenCache.Get(kargoProject); exists {
+	var cacheKey = tokenCacheKey(project)
+
+	// Check the cache for the token
+	if entry, exists := p.tokenCache.Get(cacheKey); exists {
 		return &credentials.Credentials{
 			Username: accessTokenUsername,
 			Password: entry.(string), // nolint: forcetypeassert
 		}, nil
 	}
 
-	accessToken, err := w.getAccessTokenFn(ctx, kargoProject)
+	// Cache miss, get a new token
+	accessToken, err := p.getAccessTokenFn(ctx, project)
 	if err != nil {
 		return nil, fmt.Errorf("error getting GCP access token: %w", err)
 	}
 
+	// If we didn't get a token, we'll treat this as no credentials found
 	if accessToken == "" {
 		return nil, nil
 	}
 
-	// Cache the access token
-	w.tokenCache.Set(kargoProject, accessToken, cache.DefaultExpiration)
+	// Cache the token
+	p.tokenCache.Set(cacheKey, accessToken, cache.DefaultExpiration)
 
 	return &credentials.Credentials{
 		Username: accessTokenUsername,
@@ -102,28 +112,25 @@ func (w *workloadIdentityFederationCredentialHelper) getCredentials(
 
 // getAccessToken returns a GCP access token retrieved using the provided base64
 // encoded service account key. The access token is valid for one hour.
-func (w *workloadIdentityFederationCredentialHelper) getAccessToken(
+func (p *WorkloadIdentityFederationProvider) getAccessToken(
 	ctx context.Context,
 	kargoProject string,
 ) (string, error) {
 	logger := logging.LoggerFromContext(ctx)
+
 	iamSvc, err := iamcredentials.NewService(ctx)
 	if err != nil {
 		logger.Error(err, "error creating IAM Credentials service client")
 		return "", nil
 	}
-	logger = logger.WithValues(
-		"gcpProjectID", w.gcpProjectID,
-		"kargoProject", kargoProject,
-	)
+
+	logger = logger.WithValues("gcpProjectID", p.projectID, "kargoProject", kargoProject)
+
 	resp, err := iamSvc.Projects.ServiceAccounts.GenerateAccessToken(
-		fmt.Sprintf(
-			"projects/-/serviceAccounts/kargo-project-%s@%s.iam.gserviceaccount.com",
-			kargoProject, w.gcpProjectID,
-		),
+		fmt.Sprintf(gcpResourceNameFormat, kargoProject, p.projectID),
 		&iamcredentials.GenerateAccessTokenRequest{
 			Scope: []string{
-				"https://www.googleapis.com/auth/cloud-platform",
+				iamcredentials.CloudPlatformScope,
 			},
 		},
 	).Do()
@@ -131,6 +138,7 @@ func (w *workloadIdentityFederationCredentialHelper) getAccessToken(
 		logger.Error(err, "error generating access token")
 		return "", nil
 	}
+
 	logger.Debug("generated Artifact Registry access token")
 	return resp.AccessToken, nil
 }
