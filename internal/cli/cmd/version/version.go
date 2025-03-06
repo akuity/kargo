@@ -20,8 +20,8 @@ import (
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/cli/templates"
-	versionpkg "github.com/akuity/kargo/internal/version"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
+	versionpkg "github.com/akuity/kargo/pkg/x/version"
 )
 
 type versionOptions struct {

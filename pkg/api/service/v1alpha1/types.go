@@ -3,7 +3,7 @@ package svcv1alpha1
 import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/akuity/kargo/internal/version"
+	"github.com/akuity/kargo/pkg/x/version"
 )
 
 func ToVersionProto(v version.Version) *VersionInfo {

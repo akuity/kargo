@@ -10,7 +10,7 @@ CERT_MANAGER_CHART_VERSION 	:= 1.16.1
 BUF_LINT_ERROR_FORMAT	?= text
 GO_LINT_ERROR_FORMAT 	?= colored-line-number
 
-VERSION_PACKAGE := github.com/akuity/kargo/internal/version
+VERSION_PACKAGE := github.com/akuity/kargo/pkg/x/version
 
 # Default to docker, but support alternative container runtimes that are CLI-compatible with Docker
 CONTAINER_RUNTIME ?= docker
