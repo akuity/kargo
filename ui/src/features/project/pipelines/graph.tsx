@@ -81,6 +81,7 @@ export const Graph = memo((props: GraphProps) => {
       minZoom={0.1}
       nodesConnectable={false}
       nodesDraggable={false}
+      proOptions={{ hideAttribution: true }}
     >
       <Controls />
     </ReactFlow>
