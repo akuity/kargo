@@ -91,7 +91,8 @@ CustomNode.Container = (props: PropsWithChildren<{ stage?: Stage; warehouse?: Wa
         type='target'
         position={Position.Left}
         style={{
-          backgroundColor: 'transparent'
+          backgroundColor: 'transparent',
+          top: '48%'
         }}
       />
       <div className={styles.container}>{props.children}</div>
@@ -100,7 +101,8 @@ CustomNode.Container = (props: PropsWithChildren<{ stage?: Stage; warehouse?: Wa
         type='source'
         position={Position.Right}
         style={{
-          backgroundColor: 'transparent'
+          backgroundColor: 'transparent',
+          top: '48%'
         }}
       />
     </>
