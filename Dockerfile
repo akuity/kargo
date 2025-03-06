@@ -25,7 +25,7 @@ FROM --platform=$BUILDPLATFORM golang:1.24.0-bookworm AS back-end-builder
 ARG TARGETOS
 ARG TARGETARCH
 
-ARG VERSION_PACKAGE=github.com/akuity/kargo/internal/version
+ARG VERSION_PACKAGE=github.com/akuity/kargo/pkg/x/version
 
 ARG CGO_ENABLED=0
 

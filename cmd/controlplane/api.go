@@ -15,7 +15,7 @@ import (
 	"github.com/akuity/kargo/internal/server/config"
 	"github.com/akuity/kargo/internal/server/kubernetes"
 	"github.com/akuity/kargo/internal/server/rbac"
-	versionpkg "github.com/akuity/kargo/internal/version"
+	versionpkg "github.com/akuity/kargo/pkg/x/version"
 )
 
 type apiOptions struct {

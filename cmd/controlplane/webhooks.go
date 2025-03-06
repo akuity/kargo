@@ -19,7 +19,6 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
 	"github.com/akuity/kargo/internal/server/kubernetes"
-	versionpkg "github.com/akuity/kargo/internal/version"
 	libWebhook "github.com/akuity/kargo/internal/webhook"
 	"github.com/akuity/kargo/internal/webhook/freight"
 	"github.com/akuity/kargo/internal/webhook/project"
@@ -27,6 +26,7 @@ import (
 	"github.com/akuity/kargo/internal/webhook/promotiontask"
 	"github.com/akuity/kargo/internal/webhook/stage"
 	"github.com/akuity/kargo/internal/webhook/warehouse"
+	versionpkg "github.com/akuity/kargo/pkg/x/version"
 )
 
 type webhooksServerOptions struct {

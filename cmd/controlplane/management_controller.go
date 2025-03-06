@@ -23,7 +23,7 @@ import (
 	"github.com/akuity/kargo/internal/os"
 	"github.com/akuity/kargo/internal/server/kubernetes"
 	"github.com/akuity/kargo/internal/types"
-	versionpkg "github.com/akuity/kargo/internal/version"
+	versionpkg "github.com/akuity/kargo/pkg/x/version"
 )
 
 type managementControllerOptions struct {
