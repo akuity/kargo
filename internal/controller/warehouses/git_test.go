@@ -46,8 +46,8 @@ func TestDiscoverCommits(t *testing.T) {
 						string,
 						credentials.Type,
 						string,
-					) (credentials.Credentials, bool, error) {
-						return credentials.Credentials{}, false, errors.New("something went wrong")
+					) (*credentials.Credentials, error) {
+						return nil, errors.New("something went wrong")
 					},
 				},
 			},

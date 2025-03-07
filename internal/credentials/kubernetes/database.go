@@ -81,7 +81,7 @@ func (k *database) Get(
 	namespace string,
 	credType credentials.Type,
 	repoURL string,
-) (credentials.Credentials, bool, error) {
+) (*credentials.Credentials, error) {
 	// If we are dealing with an insecure HTTP endpoint (of any type),
 	// refuse to return any credentials
 	if !k.cfg.AllowCredentialsOverHTTP && strings.HasPrefix(repoURL, "http://") {
@@ -89,7 +89,7 @@ func (k *database) Get(
 			"refused to get credentials for insecure HTTP endpoint",
 			"repoURL", repoURL,
 		)
-		return credentials.Credentials{}, false, nil
+		return nil, nil
 	}
 
 	var secret *corev1.Secret
@@ -102,7 +102,7 @@ func (k *database) Get(
 		credType,
 		repoURL,
 	); err != nil {
-		return credentials.Credentials{}, false, err
+		return nil, err
 	}
 
 	if secret == nil {
@@ -114,7 +114,7 @@ func (k *database) Get(
 				credType,
 				repoURL,
 			); err != nil {
-				return credentials.Credentials{}, false, err
+				return nil, err
 			}
 			if secret != nil {
 				break
@@ -130,14 +130,14 @@ func (k *database) Get(
 	for _, p := range k.credentialProviders {
 		creds, err := p.GetCredentials(ctx, namespace, credType, repoURL, data)
 		if err != nil {
-			return credentials.Credentials{}, false, err
+			return nil, err
 		}
 		if creds != nil {
-			return *creds, true, nil
+			return creds, nil
 		}
 	}
 
-	return credentials.Credentials{}, false, nil
+	return nil, nil
 }
 
 func (k *database) getCredentialsSecret(

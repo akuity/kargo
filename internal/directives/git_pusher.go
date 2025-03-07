@@ -92,17 +92,17 @@ func (g *gitPushPusher) runPromotionStep(
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error loading working tree from %s: %w", cfg.Path, err)
 	}
-	var creds credentials.Credentials
-	var found bool
-	if creds, found, err = stepCtx.CredentialsDB.Get(
+	creds, err := stepCtx.CredentialsDB.Get(
 		ctx,
 		stepCtx.Project,
 		credentials.TypeGit,
 		workTree.URL(),
-	); err != nil {
+	)
+	if err != nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error getting credentials for %s: %w", workTree.URL(), err)
-	} else if found {
+	}
+	if creds != nil {
 		loadOpts.Credentials = &git.RepoCredentials{
 			Username:      creds.Username,
 			Password:      creds.Password,

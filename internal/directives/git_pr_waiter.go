@@ -65,7 +65,7 @@ func (g *gitPRWaiter) runPromotionStep(
 	cfg GitWaitForPRConfig,
 ) (PromotionStepResult, error) {
 	var repoCreds *git.RepoCredentials
-	creds, found, err := stepCtx.CredentialsDB.Get(
+	creds, err := stepCtx.CredentialsDB.Get(
 		ctx,
 		stepCtx.Project,
 		credentials.TypeGit,
@@ -75,7 +75,7 @@ func (g *gitPRWaiter) runPromotionStep(
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error getting credentials for %s: %w", cfg.RepoURL, err)
 	}
-	if found {
+	if creds != nil {
 		repoCreds = &git.RepoCredentials{
 			Username:      creds.Username,
 			Password:      creds.Password,

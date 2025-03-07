@@ -331,11 +331,11 @@ func (h *helmChartUpdater) setupDependencyRepositories(
 				URL:  dep.Repository,
 			}
 
-			creds, ok, err := credentialsDB.Get(ctx, project, credentials.TypeHelm, dep.Repository)
+			creds, err := credentialsDB.Get(ctx, project, credentials.TypeHelm, dep.Repository)
 			if err != nil {
 				return fmt.Errorf("failed to obtain credentials for chart repository %q: %w", dep.Repository, err)
 			}
-			if ok {
+			if creds != nil {
 				entry.Username = creds.Username
 				entry.Password = creds.Password
 			}
@@ -343,11 +343,11 @@ func (h *helmChartUpdater) setupDependencyRepositories(
 			repositoryFile.Update(entry)
 		case strings.HasPrefix(dep.Repository, "oci://"):
 			credURL := "oci://" + path.Join(helm.NormalizeChartRepositoryURL(dep.Repository), dep.Name)
-			creds, ok, err := credentialsDB.Get(ctx, project, credentials.TypeHelm, credURL)
+			creds, err := credentialsDB.Get(ctx, project, credentials.TypeHelm, credURL)
 			if err != nil {
 				return fmt.Errorf("failed to obtain credentials for chart repository %q: %w", dep.Repository, err)
 			}
-			if ok {
+			if creds != nil {
 				if err = registryClient.Login(
 					strings.TrimPrefix(dep.Repository, "oci://"),
 					registry.LoginOptBasicAuth(creds.Username, creds.Password),

@@ -29,7 +29,7 @@ func (r *reconciler) discoverCharts(
 			logger = logger.WithValues("chart", sub.Name)
 		}
 
-		creds, ok, err := r.credentialsDB.Get(ctx, namespace, credentials.TypeHelm, sub.RepoURL)
+		creds, err := r.credentialsDB.Get(ctx, namespace, credentials.TypeHelm, sub.RepoURL)
 		if err != nil {
 			return nil, fmt.Errorf(
 				"error obtaining credentials for chart repository %q: %w",
@@ -38,7 +38,7 @@ func (r *reconciler) discoverCharts(
 			)
 		}
 		var helmCreds *helm.Credentials
-		if ok {
+		if creds != nil {
 			helmCreds = &helm.Credentials{
 				Username: creds.Username,
 				Password: creds.Password,

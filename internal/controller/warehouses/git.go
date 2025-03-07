@@ -65,7 +65,7 @@ func (r *reconciler) discoverCommits(
 		repoLogger := logger.WithValues("repo", sub.RepoURL)
 
 		// Obtain credentials for the Git repository.
-		creds, ok, err := r.credentialsDB.Get(ctx, namespace, credentials.TypeGit, sub.RepoURL)
+		creds, err := r.credentialsDB.Get(ctx, namespace, credentials.TypeGit, sub.RepoURL)
 		if err != nil {
 			return nil, fmt.Errorf(
 				"error obtaining credentials for git repo %q: %w",
@@ -74,7 +74,7 @@ func (r *reconciler) discoverCommits(
 			)
 		}
 		var repoCreds *git.RepoCredentials
-		if ok {
+		if creds != nil {
 			repoCreds = &git.RepoCredentials{
 				Username:      creds.Username,
 				Password:      creds.Password,
