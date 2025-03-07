@@ -12,7 +12,7 @@ import (
 )
 
 func TestNewAccessKeyProvider(t *testing.T) {
-	provider := NewAccessKeyProvider()
+	provider := NewAccessKeyProvider().(*AccessKeyProvider) // nolint:forcetypeassert
 
 	assert.NotNil(t, provider)
 	assert.NotNil(t, provider.tokenCache)
@@ -262,7 +262,7 @@ func TestAccessKeyProvider_GetCredentials(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			provider := NewAccessKeyProvider()
+			provider := NewAccessKeyProvider().(*AccessKeyProvider) // nolint:forcetypeassert
 			provider.getAuthTokenFn = tt.getAuthTokenFn
 
 			if tt.setupCache != nil {

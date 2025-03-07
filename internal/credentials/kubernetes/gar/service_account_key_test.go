@@ -12,9 +12,9 @@ import (
 )
 
 func TestNewServiceAccountKeyProvider(t *testing.T) {
-	provider := NewServiceAccountKeyProvider()
-
+	provider := NewServiceAccountKeyProvider().(*ServiceAccountKeyProvider) // nolint:forcetypeassert
 	assert.NotNil(t, provider)
+
 	assert.NotNil(t, provider.tokenCache)
 	assert.NotNil(t, provider.getAccessTokenFn)
 }
@@ -196,7 +196,7 @@ func TestServiceAccountKeyProvider_GetCredentials(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			provider := NewServiceAccountKeyProvider()
+			provider := NewServiceAccountKeyProvider().(*ServiceAccountKeyProvider) // nolint:forcetypeassert
 			provider.getAccessTokenFn = tt.getAccessTokenFn
 
 			if tt.setupCache != nil {
