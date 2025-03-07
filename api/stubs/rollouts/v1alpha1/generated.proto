@@ -3,7 +3,7 @@
 
 syntax = "proto2";
 
-package github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1;
+package github.com.akuity.kargo.api.stubs.rollouts.v1alpha1;
 
 import "k8s.io/api/batch/v1/generated.proto";
 import "k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto";
@@ -12,7 +12,7 @@ import "k8s.io/apimachinery/pkg/runtime/schema/generated.proto";
 import "k8s.io/apimachinery/pkg/util/intstr/generated.proto";
 
 // Package-wide variables from generator "generated".
-option go_package = "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1";
+option go_package = "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1";
 
 message AnalysisRun {
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
