@@ -6,7 +6,7 @@ import classNames from 'classnames';
 import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
-import { AnalysisRun } from '@ui/gen/rollouts/api/v1alpha1/generated_pb';
+import { AnalysisRun } from '@ui/gen/stubs/rollouts/v1alpha1/generated_pb';
 import { getAnalysisRun } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
 import { RawFormat } from '@ui/gen/service/v1alpha1/service_pb';
 import { decodeRawData } from '@ui/utils/decode-raw-data';

@@ -7,7 +7,7 @@ import { format } from 'date-fns';
 import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
 import { descriptionExpandable } from '@ui/features/common/description-expandable';
 import { useModal } from '@ui/features/common/modal/use-modal';
-import { ClusterAnalysisTemplate } from '@ui/gen/rollouts/api/v1alpha1/generated_pb';
+import { ClusterAnalysisTemplate } from '@ui/gen/stubs/rollouts/v1alpha1/generated_pb';
 import {
   deleteClusterAnalysisTemplate,
   listClusterAnalysisTemplates
