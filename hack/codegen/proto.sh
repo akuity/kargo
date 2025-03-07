@@ -5,7 +5,7 @@ set -euxo pipefail
 readonly API_PKGS=(
   "github.com/akuity/kargo/api/v1alpha1"
   "github.com/akuity/kargo/api/rbac/v1alpha1"
-  "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
+  "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 )
 
 readonly APIMACHINERY_PKGS=(
@@ -32,6 +32,7 @@ function clean() {
   rm -r "${build_dir}" || true
   rm -r "${work_dir}/pkg/api/v1alpha1" || true
   rm -r "${work_dir}/pkg/api/rbac" || true
+  rm -r "${work_dir}/pkg/api/stubs" || true
   rm -r "${work_dir}/vendor" || true
 }
 trap 'clean' EXIT
