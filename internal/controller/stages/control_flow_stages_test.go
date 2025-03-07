@@ -148,6 +148,30 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 			},
 		},
 		{
+			name: "removes stale annotations",
+			req:  ctrl.Request{NamespacedName: testStage},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:  testProject,
+					Name:       testStageName,
+					Finalizers: []string{kargoapi.FinalizerName},
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyArgoCDContext: "old-argocd-context",
+					},
+				},
+			},
+			assertions: func(t *testing.T, c client.Client, result ctrl.Result, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, ctrl.Result{}, result)
+
+				// Verify annotation was removed
+				stage := &kargoapi.Stage{}
+				err = c.Get(context.Background(), testStage, stage)
+				require.NoError(t, err)
+				assert.NotContains(t, stage.Annotations, kargoapi.AnnotationKeyArgoCDContext)
+			},
+		},
+		{
 			name: "reconcile error",
 			req:  ctrl.Request{NamespacedName: testStage},
 			stage: &kargoapi.Stage{

@@ -637,14 +637,16 @@ func (r *RegularStageReconciler) syncPromotions(
 					ObservedGeneration: stage.Generation,
 				})
 
-				// if new promotion omits health checks then it is assumed that there is argocd-update step
-				// we need to annotate that information to Stage in order to persist UI deep link
-				if len(p.Status.HealthChecks) > 0 {
-					err := api.InjectArgoCDContextToStage(ctx, r.client, p.Status.HealthChecks, stage)
-
-					if err != nil {
-						return newStatus, hasNonTerminalPromotions, err
-					}
+				// Annotate the Stage with the latest information around related
+				// ArgoCD Applications. This is used to provide deep links to the
+				// ArgoCD UI for the Stage in the Kargo UI.
+				//
+				// NB: If the health checks do not include ArgoCD Applications,
+				// then the annotation will be removed.
+				if err := api.AnnotateStageWithArgoCDContext(ctx, r.client, p.Status.HealthChecks, stage); err != nil {
+					// Let the error be logged, but do not return it as it is not
+					// critical to the operation of the Stage.
+					logger.Error(err, "failed to annotate Stage with ArgoCD context")
 				}
 			}
 		}

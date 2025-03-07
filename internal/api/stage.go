@@ -127,39 +127,52 @@ func RefreshStage(
 	return stage, nil
 }
 
-func InjectArgoCDContextToStage(
+// AnnotateStageWithArgoCDContext annotates a Stage with the ArgoCD context
+// necessary for the frontend to display ArgoCD information for the Stage.
+//
+// The annotation value is a JSON-encoded list of ArgoCD apps that are
+// associated with the Stage, constructed from the HealthCheckSteps from
+// the latest Promotion.
+//
+// If no ArgoCD apps are found, the annotation is removed.
+func AnnotateStageWithArgoCDContext(
 	ctx context.Context,
 	c client.Client,
 	healthChecks []kargoapi.HealthCheckStep,
 	stage *kargoapi.Stage,
 ) error {
-	rawConfigs := []map[string]any{}
+	var argoCDApps []map[string]any
 	for _, healthCheck := range healthChecks {
 		healthCheckConfig := healthCheck.GetConfig()
 
-		apps, validType := healthCheckConfig["apps"].([]any)
+		appsList, ok := healthCheckConfig["apps"].([]any)
+		if !ok {
+			continue
+		}
 
-		if validType {
-			for _, untypedApp := range apps {
-				app, validTyped := untypedApp.(map[string]any)
-
-				if validTyped {
-					rawConfigs = append(rawConfigs, map[string]any{
-						"name":      app["name"],
-						"namespace": app["namespace"],
-					})
-				}
+		for _, rawApp := range appsList {
+			appConfig, ok := rawApp.(map[string]any)
+			if !ok {
+				continue
 			}
+			argoCDApps = append(argoCDApps, map[string]any{
+				"name":      appConfig["name"],
+				"namespace": appConfig["namespace"],
+			})
 		}
 	}
 
-	configsValue, err := json.Marshal(rawConfigs)
-
-	if err != nil {
-		return err
+	// If we did not find any ArgoCD apps, we should remove the annotation.
+	if len(argoCDApps) == 0 {
+		return deleteAnnotation(ctx, c, stage, kargoapi.AnnotationKeyArgoCDContext)
 	}
 
-	return patchAnnotation(ctx, c, stage, kargoapi.AnnotationKeyArgoCDContext, string(configsValue))
+	// Marshal the ArgoCD context to JSON and set the annotation on the Stage.
+	argoCDAppsJSON, err := json.Marshal(argoCDApps)
+	if err != nil {
+		return fmt.Errorf("failed to marshal ArgoCD context: %w", err)
+	}
+	return patchAnnotation(ctx, c, stage, kargoapi.AnnotationKeyArgoCDContext, string(argoCDAppsJSON))
 }
 
 // ReverifyStageFreight forces reconfirmation of the verification of the
