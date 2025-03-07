@@ -14,9 +14,9 @@ import (
 )
 
 func TestNewAppCredentialProvider(t *testing.T) {
-	provider := NewAppCredentialProvider()
-
+	provider := NewAppCredentialProvider().(*AppCredentialProvider) // nolint:forcetypeassert
 	assert.NotNil(t, provider)
+
 	assert.NotNil(t, provider.tokenCache)
 	assert.NotNil(t, provider.getAccessTokenFn)
 }
@@ -211,7 +211,8 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			provider := NewAppCredentialProvider()
+			provider := NewAppCredentialProvider().(*AppCredentialProvider) // nolint:forcetypeassert
+
 			if tt.getAccessTokenFn != nil {
 				provider.getAccessTokenFn = tt.getAccessTokenFn
 			}
@@ -303,7 +304,7 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			provider := NewAppCredentialProvider()
+			provider := NewAppCredentialProvider().(*AppCredentialProvider) // nolint:forcetypeassert
 
 			if tt.setupCache != nil {
 				tt.setupCache(provider.tokenCache)

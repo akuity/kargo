@@ -38,7 +38,7 @@ type AppCredentialProvider struct {
 }
 
 // NewAppCredentialProvider returns an implementation of credentials.Provider.
-func NewAppCredentialProvider() *AppCredentialProvider {
+func NewAppCredentialProvider() credentials.Provider {
 	p := &AppCredentialProvider{
 		tokenCache: cache.New(
 			// Access tokens live for one hour. We'll hang on to them for 40 minutes.

@@ -24,7 +24,7 @@ type ServiceAccountKeyProvider struct {
 	getAccessTokenFn func(ctx context.Context, encodedServiceAccountKey string) (string, error)
 }
 
-func NewServiceAccountKeyProvider() *ServiceAccountKeyProvider {
+func NewServiceAccountKeyProvider() credentials.Provider {
 	p := &ServiceAccountKeyProvider{
 		tokenCache: cache.New(
 			// Access tokens live for one hour. We'll hang on to them for 40 minutes.

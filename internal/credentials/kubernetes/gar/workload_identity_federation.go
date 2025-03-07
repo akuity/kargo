@@ -25,7 +25,7 @@ type WorkloadIdentityFederationProvider struct {
 	getAccessTokenFn func(ctx context.Context, project string) (string, error)
 }
 
-func NewWorkloadIdentityFederationProvider(ctx context.Context) *WorkloadIdentityFederationProvider {
+func NewWorkloadIdentityFederationProvider(ctx context.Context) credentials.Provider {
 	logger := logging.LoggerFromContext(ctx)
 
 	if !metadata.OnGCE() {

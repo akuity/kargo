@@ -27,7 +27,7 @@ type AccessKeyProvider struct {
 	getAuthTokenFn func(ctx context.Context, region, accessKeyID, secretAccessKey string) (string, error)
 }
 
-func NewAccessKeyProvider() *AccessKeyProvider {
+func NewAccessKeyProvider() credentials.Provider {
 	p := &AccessKeyProvider{
 		tokenCache: cache.New(
 			// Tokens live for 12 hours. We'll hang on to them for 10.

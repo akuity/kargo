@@ -32,7 +32,7 @@ type ManagedIdentityProvider struct {
 	getAuthTokenFn func(ctx context.Context, region, project string) (string, error)
 }
 
-func NewManagedIdentityProvider(ctx context.Context) *ManagedIdentityProvider {
+func NewManagedIdentityProvider(ctx context.Context) credentials.Provider {
 	logger := logging.LoggerFromContext(ctx)
 
 	switch {
