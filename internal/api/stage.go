@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -129,18 +130,18 @@ func RefreshStage(
 func InjectArgoCDContextToStage(
 	ctx context.Context,
 	c client.Client,
-	healthChecks []HealthCheckStep,
-	stage *Stage,
+	healthChecks []kargoapi.HealthCheckStep,
+	stage *kargoapi.Stage,
 ) error {
 	rawConfigs := []map[string]any{}
 	for _, healthCheck := range healthChecks {
 		healthCheckConfig := healthCheck.GetConfig()
 
-		apps, validType := healthCheckConfig["apps"].([]interface{})
+		apps, validType := healthCheckConfig["apps"].([]any)
 
 		if validType {
 			for _, untypedApp := range apps {
-				app, validTyped := untypedApp.(map[string]interface{})
+				app, validTyped := untypedApp.(map[string]any)
 
 				if validTyped {
 					rawConfigs = append(rawConfigs, map[string]any{
@@ -158,7 +159,7 @@ func InjectArgoCDContextToStage(
 		return err
 	}
 
-	return patchAnnotation(ctx, c, stage, AnnotationKeyArgoCDContext, string(configsValue))
+	return patchAnnotation(ctx, c, stage, kargoapi.AnnotationKeyArgoCDContext, string(configsValue))
 }
 
 // ReverifyStageFreight forces reconfirmation of the verification of the

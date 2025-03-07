@@ -640,7 +640,7 @@ func (r *RegularStageReconciler) syncPromotions(
 				// if new promotion omits health checks then it is assumed that there is argocd-update step
 				// we need to annotate that information to Stage in order to persist UI deep link
 				if len(p.Status.HealthChecks) > 0 {
-					err := kargoapi.InjectArgoCDContextToStage(ctx, r.client, p.Status.HealthChecks, stage)
+					err := api.InjectArgoCDContextToStage(ctx, r.client, p.Status.HealthChecks, stage)
 
 					if err != nil {
 						return newStatus, hasNonTerminalPromotions, err

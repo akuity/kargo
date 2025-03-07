@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -549,5 +550,57 @@ func TestAbortStageFreightVerification(t *testing.T) {
 		require.Equal(t, (&kargoapi.VerificationRequest{
 			ID: "fake-id",
 		}).String(), stage.Annotations[kargoapi.AnnotationKeyAbort])
+	})
+}
+
+func TestInjectArgoCDContextToStage(t *testing.T) {
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
+
+	t.Run("not found", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+		err := InjectArgoCDContextToStage(context.TODO(), c, []kargoapi.HealthCheckStep{}, &kargoapi.Stage{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "fake-stage",
+				Namespace: "fake-namespace",
+			},
+		})
+		require.ErrorContains(t, err, "not found")
+	})
+
+	t.Run("success", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			&kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-stage",
+					Namespace: "fake-namespace",
+				},
+			},
+		).Build()
+
+		err := InjectArgoCDContextToStage(context.TODO(), c, []kargoapi.HealthCheckStep{
+			{
+				Uses: "argocd-update",
+				Config: &v1.JSON{
+					Raw: []byte(`{"apps": [{"name": "fake-argo-app", "namespace": "fake-argo-namespace"}]}`),
+				},
+			},
+		}, &kargoapi.Stage{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "fake-stage",
+				Namespace: "fake-namespace",
+			},
+		})
+		require.NoError(t, err)
+
+		stage, err := GetStage(context.TODO(), c, types.NamespacedName{
+			Namespace: "fake-namespace",
+			Name:      "fake-stage",
+		})
+		require.NoError(t, err)
+		require.Equal(t,
+			`[{"name":"fake-argo-app","namespace":"fake-argo-namespace"}]`,
+			stage.Annotations[kargoapi.AnnotationKeyArgoCDContext])
 	})
 }
