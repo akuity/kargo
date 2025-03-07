@@ -215,6 +215,14 @@ func (r *ControlFlowStageReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{Requeue: ok}, err
 	}
 
+	// Remove any stale annotations from the Stage which are not relevant to
+	// a control flow Stage.
+	if stage.GetAnnotations()[kargoapi.AnnotationKeyArgoCDContext] != "" {
+		if err := api.AnnotateStageWithArgoCDContext(ctx, r.client, nil, stage); err != nil {
+			logger.Error(err, "failed to remove Argo CD context annotation from Stage")
+		}
+	}
+
 	// Reconcile the Stage.
 	logger.Debug("reconciling Stage")
 	newStatus, reconcileErr := r.reconcile(ctx, stage, time.Now())

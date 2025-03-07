@@ -224,3 +224,80 @@ func Test_patchAnnotation(t *testing.T) {
 		})
 	}
 }
+
+func Test_deleteAnnotation(t *testing.T) {
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
+
+	newFakeClient := func(obj ...client.Object) client.Client {
+		return fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(obj...).
+			Build()
+	}
+
+	testCases := map[string]struct {
+		obj         client.Object
+		client      client.Client
+		key         string
+		value       string
+		errExpected bool
+	}{
+		"stage without annotation": {
+			obj: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "stage",
+				},
+			},
+			client: newFakeClient(&kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "stage",
+				},
+			}),
+			key: "key",
+		},
+		"stage with existing annotation": {
+			obj: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "stage",
+				},
+			},
+			client: newFakeClient(&kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "stage",
+					Annotations: map[string]string{
+						"key": "value",
+					},
+				},
+			}),
+			key: "key",
+		},
+		"non-existing stage": {
+			obj: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "stage",
+				},
+			},
+			client:      newFakeClient(),
+			key:         "key",
+			value:       "value",
+			errExpected: true,
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			err := deleteAnnotation(context.Background(), tc.client, tc.obj, tc.key)
+			if tc.errExpected {
+				require.Error(t, err)
+				return
+			}
+			require.NotContains(t, tc.obj.GetAnnotations(), tc.key)
+		})
+	}
+}
