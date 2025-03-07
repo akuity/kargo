@@ -9,7 +9,7 @@ package svcv1alpha1
 import (
 	v1alpha12 "github.com/akuity/kargo/api/rbac/v1alpha1"
 	v1alpha1 "github.com/akuity/kargo/api/v1alpha1"
-	v1alpha11 "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
+	v1alpha11 "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"

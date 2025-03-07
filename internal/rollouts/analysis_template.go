@@ -3,7 +3,7 @@ package rollouts
 import (
 	"fmt"
 
-	rolloutsapi "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
+	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 )
 
 // flattenTemplates combines multiple analysis templates into a single

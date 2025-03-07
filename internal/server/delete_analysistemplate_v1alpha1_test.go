@@ -13,7 +13,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
+	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
+	"github.com/akuity/kargo/internal/api/stubs/rollouts"
 	"github.com/akuity/kargo/internal/server/config"
 	"github.com/akuity/kargo/internal/server/kubernetes"
 	"github.com/akuity/kargo/internal/server/validation"
@@ -100,7 +101,7 @@ func TestDeleteAnalysisTemplate(t *testing.T) {
 							WithScheme(scheme).
 							WithObjects(
 								mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
-								mustNewObject[rollouts.AnalysisTemplate]("testdata/analysistemplate.yaml"),
+								mustNewObject[rolloutsapi.AnalysisTemplate]("testdata/analysistemplate.yaml"),
 							).
 							Build(), nil
 					},

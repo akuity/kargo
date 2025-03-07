@@ -8,8 +8,8 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 
+	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	rolloutsapi "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 )
 
 var (

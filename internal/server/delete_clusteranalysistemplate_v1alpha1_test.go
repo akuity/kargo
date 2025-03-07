@@ -12,7 +12,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
+	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
+	rollouts "github.com/akuity/kargo/internal/api/stubs/rollouts"
 	"github.com/akuity/kargo/internal/server/config"
 	"github.com/akuity/kargo/internal/server/kubernetes"
 	"github.com/akuity/kargo/internal/server/validation"
@@ -78,7 +79,7 @@ func TestDeleteClusterAnalysisTemplate(t *testing.T) {
 						return fake.NewClientBuilder().
 							WithScheme(scheme).
 							WithObjects(
-								mustNewObject[rollouts.ClusterAnalysisTemplate]("testdata/clusteranalysistemplate.yaml"),
+								mustNewObject[rolloutsapi.ClusterAnalysisTemplate]("testdata/clusteranalysistemplate.yaml"),
 							).
 							Build(), nil
 					},

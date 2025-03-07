@@ -9,7 +9,7 @@ import (
 	"connectrpc.com/connect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
+	rollouts "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
