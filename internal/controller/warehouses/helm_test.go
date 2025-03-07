@@ -39,8 +39,8 @@ func TestDiscoverCharts(t *testing.T) {
 						string,
 						credentials.Type,
 						string,
-					) (credentials.Credentials, bool, error) {
-						return credentials.Credentials{}, false, fmt.Errorf("something went wrong")
+					) (*credentials.Credentials, error) {
+						return nil, fmt.Errorf("something went wrong")
 					},
 				},
 			},

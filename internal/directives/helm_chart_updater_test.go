@@ -470,11 +470,11 @@ func Test_helmChartUpdater_updateDependencies(t *testing.T) {
 
 		// Prepare the credentials database
 		credentialsDB := &credentials.FakeDB{
-			GetFn: func(context.Context, string, credentials.Type, string) (credentials.Credentials, bool, error) {
-				return credentials.Credentials{
+			GetFn: func(context.Context, string, credentials.Type, string) (*credentials.Credentials, error) {
+				return &credentials.Credentials{
 					Username: "username",
 					Password: "password",
-				}, true, nil
+				}, nil
 			},
 		}
 
@@ -504,8 +504,8 @@ func Test_helmChartUpdater_updateDependencies(t *testing.T) {
 		{
 			name: "error loading dependency credentials",
 			credentialsDB: &credentials.FakeDB{
-				GetFn: func(context.Context, string, credentials.Type, string) (credentials.Credentials, bool, error) {
-					return credentials.Credentials{}, false, fmt.Errorf("something went wrong")
+				GetFn: func(context.Context, string, credentials.Type, string) (*credentials.Credentials, error) {
+					return nil, fmt.Errorf("something went wrong")
 				},
 			},
 			chartDependencies: []chartDependency{
@@ -522,11 +522,11 @@ func Test_helmChartUpdater_updateDependencies(t *testing.T) {
 		{
 			name: "writes repository file",
 			credentialsDB: &credentials.FakeDB{
-				GetFn: func(context.Context, string, credentials.Type, string) (credentials.Credentials, bool, error) {
-					return credentials.Credentials{
+				GetFn: func(context.Context, string, credentials.Type, string) (*credentials.Credentials, error) {
+					return &credentials.Credentials{
 						Username: "username",
 						Password: "password",
-					}, true, nil
+					}, nil
 				},
 			},
 			chartDependencies: []chartDependency{
@@ -707,11 +707,11 @@ func Test_helmChartUpdater_setupDependencyRepositories(t *testing.T) {
 		{
 			name: "HTTPS repository with credentials",
 			credentialsDB: &credentials.FakeDB{
-				GetFn: func(context.Context, string, credentials.Type, string) (credentials.Credentials, bool, error) {
-					return credentials.Credentials{
+				GetFn: func(context.Context, string, credentials.Type, string) (*credentials.Credentials, error) {
+					return &credentials.Credentials{
 						Username: "username",
 						Password: "password",
-					}, true, nil
+					}, nil
 				},
 			},
 			repositoryFile: repo.NewFile(),
@@ -737,11 +737,11 @@ func Test_helmChartUpdater_setupDependencyRepositories(t *testing.T) {
 		{
 			name: "HTTP repository without credentials",
 			credentialsDB: &credentials.FakeDB{
-				GetFn: func(context.Context, string, credentials.Type, string) (credentials.Credentials, bool, error) {
-					return credentials.Credentials{
+				GetFn: func(context.Context, string, credentials.Type, string) (*credentials.Credentials, error) {
+					return &credentials.Credentials{
 						Username: "username",
 						Password: "password",
-					}, true, nil
+					}, nil
 				},
 			},
 			repositoryFile: repo.NewFile(),
@@ -767,11 +767,11 @@ func Test_helmChartUpdater_setupDependencyRepositories(t *testing.T) {
 		{
 			name: "mixed HTTP and HTTPS repositories",
 			credentialsDB: &credentials.FakeDB{
-				GetFn: func(context.Context, string, credentials.Type, string) (credentials.Credentials, bool, error) {
-					return credentials.Credentials{
+				GetFn: func(context.Context, string, credentials.Type, string) (*credentials.Credentials, error) {
+					return &credentials.Credentials{
 						Username: "username",
 						Password: "password",
-					}, true, nil
+					}, nil
 				},
 			},
 			repositoryFile: repo.NewFile(),
@@ -818,11 +818,11 @@ func Test_helmChartUpdater_setupDependencyRepositories(t *testing.T) {
 		{
 			name: "OCI credentials",
 			credentialsDB: &credentials.FakeDB{
-				GetFn: func(context.Context, string, credentials.Type, string) (credentials.Credentials, bool, error) {
-					return credentials.Credentials{
+				GetFn: func(context.Context, string, credentials.Type, string) (*credentials.Credentials, error) {
+					return &credentials.Credentials{
 						Username: "username",
 						Password: "password",
-					}, true, nil
+					}, nil
 				},
 			},
 			buildDependencies: func(registryURL string) []chartDependency {
@@ -855,11 +855,11 @@ func Test_helmChartUpdater_setupDependencyRepositories(t *testing.T) {
 		{
 			name: "multiple HTTPS repositories",
 			credentialsDB: &credentials.FakeDB{
-				GetFn: func(context.Context, string, credentials.Type, string) (credentials.Credentials, bool, error) {
-					return credentials.Credentials{
+				GetFn: func(context.Context, string, credentials.Type, string) (*credentials.Credentials, error) {
+					return &credentials.Credentials{
 						Username: "username",
 						Password: "password",
-					}, true, nil
+					}, nil
 				},
 			},
 			repositoryFile: repo.NewFile(),
@@ -892,8 +892,8 @@ func Test_helmChartUpdater_setupDependencyRepositories(t *testing.T) {
 		{
 			name: "error getting credentials",
 			credentialsDB: &credentials.FakeDB{
-				GetFn: func(context.Context, string, credentials.Type, string) (credentials.Credentials, bool, error) {
-					return credentials.Credentials{}, false, fmt.Errorf("something went wrong")
+				GetFn: func(context.Context, string, credentials.Type, string) (*credentials.Credentials, error) {
+					return nil, fmt.Errorf("something went wrong")
 				},
 			},
 			buildDependencies: func(string) []chartDependency {
@@ -915,8 +915,8 @@ func Test_helmChartUpdater_setupDependencyRepositories(t *testing.T) {
 		{
 			name: "unauthenticated HTTPS repository",
 			credentialsDB: &credentials.FakeDB{
-				GetFn: func(context.Context, string, credentials.Type, string) (credentials.Credentials, bool, error) {
-					return credentials.Credentials{}, false, nil
+				GetFn: func(context.Context, string, credentials.Type, string) (*credentials.Credentials, error) {
+					return nil, nil
 				},
 			},
 			repositoryFile: repo.NewFile(),

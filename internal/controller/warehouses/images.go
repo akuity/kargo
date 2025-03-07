@@ -33,7 +33,7 @@ func (r *reconciler) discoverImages(
 		logger := logging.LoggerFromContext(ctx).WithValues("repo", sub.RepoURL)
 
 		// Obtain credentials for the image repository.
-		creds, ok, err := r.credentialsDB.Get(ctx, namespace, credentials.TypeImage, sub.RepoURL)
+		creds, err := r.credentialsDB.Get(ctx, namespace, credentials.TypeImage, sub.RepoURL)
 		if err != nil {
 			return nil, fmt.Errorf(
 				"error obtaining credentials for image repo %q: %w",
@@ -42,7 +42,7 @@ func (r *reconciler) discoverImages(
 			)
 		}
 		var regCreds *image.Credentials
-		if ok {
+		if creds != nil {
 			regCreds = &image.Credentials{
 				Username: creds.Username,
 				Password: creds.Password,

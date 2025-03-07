@@ -327,7 +327,7 @@ func TestGet(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			creds, found, err := NewDatabase(
+			creds, err := NewDatabase(
 				context.Background(),
 				fake.NewClientBuilder().WithObjects(testCase.secrets...).Build(),
 				testCase.cfg,
@@ -340,12 +340,11 @@ func TestGet(t *testing.T) {
 			require.NoError(t, err)
 
 			if testCase.expected == nil {
-				require.False(t, found)
-				require.Empty(t, creds)
+				require.Nil(t, creds)
 				return
 			}
 
-			require.True(t, found)
+			require.NotNil(t, creds)
 			require.Equal(
 				t,
 				string(testCase.expected.Data["username"]),
