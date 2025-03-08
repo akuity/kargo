@@ -25,6 +25,7 @@ modules:
         - PACKAGE_NO_IMPORT_CYCLE
       ignore:
         - api/rbac/v1alpha1/generated.proto
+        - api/stubs/rollouts/v1alpha1/generated.proto
         - api/v1alpha1/generated.proto
     breaking:
       use:
