@@ -8,11 +8,11 @@ import { useParams } from 'react-router-dom';
 import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
 import { descriptionExpandable } from '@ui/features/common/description-expandable';
 import { useModal } from '@ui/features/common/modal/use-modal';
-import { AnalysisTemplate } from '@ui/gen/stubs/rollouts/v1alpha1/generated_pb';
 import {
   deleteAnalysisTemplate,
   listAnalysisTemplates
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { AnalysisTemplate } from '@ui/gen/stubs/rollouts/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { CreateAnalysisTemplateModal } from './create-analysis-template-modal';

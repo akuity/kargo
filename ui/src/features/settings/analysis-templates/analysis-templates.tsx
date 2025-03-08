@@ -7,11 +7,11 @@ import { format } from 'date-fns';
 import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
 import { descriptionExpandable } from '@ui/features/common/description-expandable';
 import { useModal } from '@ui/features/common/modal/use-modal';
-import { ClusterAnalysisTemplate } from '@ui/gen/stubs/rollouts/v1alpha1/generated_pb';
 import {
   deleteClusterAnalysisTemplate,
   listClusterAnalysisTemplates
 } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { ClusterAnalysisTemplate } from '@ui/gen/stubs/rollouts/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { CreateClusterAnalysisTemplateModal } from './create-cluster-analysis-template-modal';
