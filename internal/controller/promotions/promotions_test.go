@@ -335,6 +335,60 @@ func TestReconcile(t *testing.T) {
 	}
 }
 
+func Test_parseActorAnnotation(t *testing.T) {
+	tests := []struct {
+		name            string
+		promo           *kargoapi.Promotion
+		expectedCreator string
+	}{
+		{
+			name: "basic case",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-promo",
+					Namespace: "fake-namespace",
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyCreateActor: "email:fake-actor",
+					},
+				},
+			},
+			expectedCreator: "fake-actor",
+		},
+		{
+
+			name: "no annotation",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-promo",
+					Namespace: "fake-namespace",
+				},
+			},
+			expectedCreator: "N/A",
+		},
+		{
+			name: "invalid",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-promo",
+					Namespace: "fake-namespace",
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyCreateActor: "abc123",
+					},
+				},
+			},
+			expectedCreator: "N/A",
+		},
+	}
+
+	for _, tc := range tests {
+
+		t.Run(tc.name, func(t *testing.T) {
+			result := parseActorAnnotation(tc.promo)
+			require.Equal(t, tc.expectedCreator, result)
+		})
+	}
+}
+
 func Test_reconciler_terminatePromotion(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
 	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
