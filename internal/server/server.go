@@ -23,9 +23,10 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
-	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
+	rollouts "github.com/akuity/kargo/internal/api/stubs/rollouts"
 	httputil "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/server/config"
@@ -133,19 +134,19 @@ type server struct {
 		context.Context,
 		client.Client,
 		types.NamespacedName,
-	) (*rollouts.AnalysisTemplate, error)
+	) (*rolloutsapi.AnalysisTemplate, error)
 
 	getClusterAnalysisTemplateFn func(
 		context.Context,
 		client.Client,
 		string,
-	) (*rollouts.ClusterAnalysisTemplate, error)
+	) (*rolloutsapi.ClusterAnalysisTemplate, error)
 
 	getAnalysisRunFn func(
 		context.Context,
 		client.Client,
 		types.NamespacedName,
-	) (*rollouts.AnalysisRun, error)
+	) (*rolloutsapi.AnalysisRun, error)
 
 	// Special authorizations:
 	authorizeFn func(

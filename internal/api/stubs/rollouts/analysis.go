@@ -1,4 +1,4 @@
-package v1alpha1
+package rollouts
 
 import (
 	"context"
@@ -6,6 +6,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 )
 
 // GetAnalysisTemplate returns a pointer to the AnalysisTemplate resource
@@ -15,8 +17,8 @@ func GetAnalysisTemplate(
 	ctx context.Context,
 	c client.Client,
 	namespacedName types.NamespacedName,
-) (*AnalysisTemplate, error) {
-	at := AnalysisTemplate{}
+) (*rolloutsapi.AnalysisTemplate, error) {
+	at := rolloutsapi.AnalysisTemplate{}
 	if err := c.Get(ctx, namespacedName, &at); err != nil {
 		if err = client.IgnoreNotFound(err); err == nil {
 			return nil, nil
@@ -38,8 +40,8 @@ func GetClusterAnalysisTemplate(
 	ctx context.Context,
 	c client.Client,
 	name string,
-) (*ClusterAnalysisTemplate, error) {
-	cat := ClusterAnalysisTemplate{}
+) (*rolloutsapi.ClusterAnalysisTemplate, error) {
+	cat := rolloutsapi.ClusterAnalysisTemplate{}
 	if err := c.Get(
 		ctx,
 		types.NamespacedName{
@@ -63,8 +65,8 @@ func GetAnalysisRun(
 	ctx context.Context,
 	c client.Client,
 	namespacedName types.NamespacedName,
-) (*AnalysisRun, error) {
-	ar := AnalysisRun{}
+) (*rolloutsapi.AnalysisRun, error) {
+	ar := rolloutsapi.AnalysisRun{}
 	if err := c.Get(ctx, namespacedName, &ar); err != nil {
 		if err = client.IgnoreNotFound(err); err == nil {
 			return nil, nil

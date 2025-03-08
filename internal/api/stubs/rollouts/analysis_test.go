@@ -1,4 +1,4 @@
-package v1alpha1
+package rollouts
 
 import (
 	"context"
@@ -10,21 +10,23 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 )
 
 func TestGetAnalysisTemplate(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
-	require.NoError(t, SchemeBuilder.AddToScheme(scheme))
+	require.NoError(t, rolloutsapi.SchemeBuilder.AddToScheme(scheme))
 
 	testCases := []struct {
 		name       string
 		client     client.Client
-		assertions func(*testing.T, *AnalysisTemplate, error)
+		assertions func(*testing.T, *rolloutsapi.AnalysisTemplate, error)
 	}{
 		{
 			name:   "not found",
 			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
-			assertions: func(t *testing.T, template *AnalysisTemplate, err error) {
+			assertions: func(t *testing.T, template *rolloutsapi.AnalysisTemplate, err error) {
 				require.NoError(t, err)
 				require.Nil(t, template)
 			},
@@ -33,14 +35,14 @@ func TestGetAnalysisTemplate(t *testing.T) {
 		{
 			name: "found",
 			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-				&AnalysisTemplate{
+				&rolloutsapi.AnalysisTemplate{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-template",
 						Namespace: "fake-namespace",
 					},
 				},
 			).Build(),
-			assertions: func(t *testing.T, template *AnalysisTemplate, err error) {
+			assertions: func(t *testing.T, template *rolloutsapi.AnalysisTemplate, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "fake-template", template.Name)
 				require.Equal(t, "fake-namespace", template.Namespace)
@@ -65,17 +67,17 @@ func TestGetAnalysisTemplate(t *testing.T) {
 
 func TestGetClusterAnalysisTemplate(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
-	require.NoError(t, SchemeBuilder.AddToScheme(scheme))
+	require.NoError(t, rolloutsapi.SchemeBuilder.AddToScheme(scheme))
 
 	testCases := []struct {
 		name       string
 		client     client.Client
-		assertions func(*testing.T, *ClusterAnalysisTemplate, error)
+		assertions func(*testing.T, *rolloutsapi.ClusterAnalysisTemplate, error)
 	}{
 		{
 			name:   "not found",
 			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
-			assertions: func(t *testing.T, template *ClusterAnalysisTemplate, err error) {
+			assertions: func(t *testing.T, template *rolloutsapi.ClusterAnalysisTemplate, err error) {
 				require.NoError(t, err)
 				require.Nil(t, template)
 			},
@@ -84,13 +86,13 @@ func TestGetClusterAnalysisTemplate(t *testing.T) {
 		{
 			name: "found",
 			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-				&ClusterAnalysisTemplate{
+				&rolloutsapi.ClusterAnalysisTemplate{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "fake-template",
 					},
 				},
 			).Build(),
-			assertions: func(t *testing.T, template *ClusterAnalysisTemplate, err error) {
+			assertions: func(t *testing.T, template *rolloutsapi.ClusterAnalysisTemplate, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "fake-template", template.Name)
 			},
@@ -111,17 +113,17 @@ func TestGetClusterAnalysisTemplate(t *testing.T) {
 
 func TestGetAnalysisRun(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
-	require.NoError(t, SchemeBuilder.AddToScheme(scheme))
+	require.NoError(t, rolloutsapi.SchemeBuilder.AddToScheme(scheme))
 
 	testCases := []struct {
 		name       string
 		client     client.Client
-		assertions func(*testing.T, *AnalysisRun, error)
+		assertions func(*testing.T, *rolloutsapi.AnalysisRun, error)
 	}{
 		{
 			name:   "not found",
 			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
-			assertions: func(t *testing.T, run *AnalysisRun, err error) {
+			assertions: func(t *testing.T, run *rolloutsapi.AnalysisRun, err error) {
 				require.NoError(t, err)
 				require.Nil(t, run)
 			},
@@ -130,14 +132,14 @@ func TestGetAnalysisRun(t *testing.T) {
 		{
 			name: "found",
 			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-				&AnalysisRun{
+				&rolloutsapi.AnalysisRun{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "fake-run",
 						Namespace: "fake-namespace",
 					},
 				},
 			).Build(),
-			assertions: func(t *testing.T, run *AnalysisRun, err error) {
+			assertions: func(t *testing.T, run *rolloutsapi.AnalysisRun, err error) {
 				require.NoError(t, err)
 				require.Equal(t, "fake-run", run.Name)
 				require.Equal(t, "fake-namespace", run.Namespace)

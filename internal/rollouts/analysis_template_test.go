@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/ptr"
 
-	rolloutsapi "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
+	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 )
 
 func Test_flattenTemplates(t *testing.T) {

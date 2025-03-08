@@ -5,7 +5,7 @@ package akuity.io.kargo.service.v1alpha1;
 import "google/protobuf/timestamp.proto";
 import "v1alpha1/generated.proto";
 import "k8s.io/api/core/v1/generated.proto";
-import "rollouts/api/v1alpha1/generated.proto";
+import "stubs/rollouts/v1alpha1/generated.proto";
 import "rbac/v1alpha1/generated.proto";
 
 option go_package = "github.com/akuity/kargo/pkg/api/service/v1alpha1;svcv1alpha1";
@@ -642,7 +642,7 @@ message ListAnalysisTemplatesRequest {
 }
 
 message ListAnalysisTemplatesResponse {
-  repeated github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisTemplate analysis_templates = 1 [json_name = "analysisTemplates"];
+  repeated github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisTemplate analysis_templates = 1 [json_name = "analysisTemplates"];
 }
 
 message GetAnalysisTemplateRequest {
@@ -653,7 +653,7 @@ message GetAnalysisTemplateRequest {
 
 message GetAnalysisTemplateResponse {
   oneof result {
-    github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisTemplate analysis_template = 1 [json_name = "analysisTemplate"];
+    github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisTemplate analysis_template = 1 [json_name = "analysisTemplate"];
     bytes raw = 2;
   }
 }
@@ -661,7 +661,7 @@ message GetAnalysisTemplateResponse {
 message ListClusterAnalysisTemplatesRequest {}
 
 message ListClusterAnalysisTemplatesResponse {
-  repeated github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.ClusterAnalysisTemplate cluster_analysis_templates = 1 [json_name = "clusteranalysisTemplates"];
+  repeated github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.ClusterAnalysisTemplate cluster_analysis_templates = 1 [json_name = "clusteranalysisTemplates"];
 }
 
 message GetClusterAnalysisTemplateRequest {
@@ -671,7 +671,7 @@ message GetClusterAnalysisTemplateRequest {
 
 message GetClusterAnalysisTemplateResponse {
   oneof result {
-    github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.ClusterAnalysisTemplate cluster_analysis_template = 1 [json_name = "clusterAnalysisTemplate"];
+    github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.ClusterAnalysisTemplate cluster_analysis_template = 1 [json_name = "clusterAnalysisTemplate"];
     bytes raw = 2;
   }
 }
@@ -684,7 +684,7 @@ message GetAnalysisRunRequest {
 
 message GetAnalysisRunResponse {
   oneof result {
-    github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisRun analysis_run = 1 [json_name = "analysisRun"];
+    github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisRun analysis_run = 1 [json_name = "analysisRun"];
     bytes raw = 2;
   }
 }

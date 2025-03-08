@@ -16,12 +16,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
+	rollouts "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libargocd "github.com/akuity/kargo/internal/argocd"
 	"github.com/akuity/kargo/internal/controller"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/promotions"
-	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/stages"
 	"github.com/akuity/kargo/internal/controller/warehouses"
 	"github.com/akuity/kargo/internal/credentials"

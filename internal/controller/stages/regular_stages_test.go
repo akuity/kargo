@@ -21,9 +21,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
+	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/conditions"
-	rolloutsapi "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	"github.com/akuity/kargo/internal/directives"
 	"github.com/akuity/kargo/internal/indexer"
 	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"

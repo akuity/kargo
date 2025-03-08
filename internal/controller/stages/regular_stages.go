@@ -27,12 +27,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/conditions"
 	"github.com/akuity/kargo/internal/controller"
 	argocdapi "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
-	rolloutsapi "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	"github.com/akuity/kargo/internal/directives"
 	kargoEvent "github.com/akuity/kargo/internal/event"
 	exprfn "github.com/akuity/kargo/internal/expressions/function"
