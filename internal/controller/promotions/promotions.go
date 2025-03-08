@@ -477,14 +477,7 @@ func (r *reconciler) promote(
 		}
 	}
 
-	creator := "N/A"
-	actorAnnotation, ok := promo.ObjectMeta.Annotations[kargoapi.AnnotationKeyCreateActor]
-	if ok {
-		substrings := strings.Split(actorAnnotation, ":")
-		if len(substrings) == 2 {
-			creator = substrings[1]
-		}
-	}
+	creator := parseActorAnnotation(&promo)
 
 	promoCtx := directives.PromotionContext{
 		UIBaseURL:             r.cfg.APIServerBaseURL,
@@ -653,4 +646,16 @@ func (r *reconciler) terminatePromotion(
 	)
 
 	return nil
+}
+
+func parseActorAnnotation(promo *kargoapi.Promotion) string {
+	creator := "N/A"
+	actorAnnotation, ok := promo.ObjectMeta.Annotations[kargoapi.AnnotationKeyCreateActor]
+	if ok {
+		substrings := strings.Split(actorAnnotation, ":")
+		if len(substrings) == 2 {
+			creator = substrings[1]
+		}
+	}
+	return creator
 }
