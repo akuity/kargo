@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -478,6 +479,8 @@ func (r *reconciler) promote(
 		}
 	}
 
+	creator := parseActorAnnotation(&promo)
+
 	promoCtx := directives.PromotionContext{
 		UIBaseURL:             r.cfg.APIServerBaseURL,
 		WorkDir:               filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID)),
@@ -490,6 +493,7 @@ func (r *reconciler) promote(
 		StepExecutionMetadata: promo.Status.StepExecutionMetadata,
 		State:                 directives.State(workingPromo.Status.GetState()),
 		Vars:                  workingPromo.Spec.Vars,
+		Creator:               creator,
 	}
 	if err := os.Mkdir(promoCtx.WorkDir, 0o700); err == nil {
 		// If we're working with a fresh directory, we should start the promotion
@@ -644,4 +648,16 @@ func (r *reconciler) terminatePromotion(
 	)
 
 	return nil
+}
+
+func parseActorAnnotation(promo *kargoapi.Promotion) string {
+	creator := "N/A"
+	actorAnnotation, ok := promo.ObjectMeta.Annotations[kargoapi.AnnotationKeyCreateActor]
+	if ok {
+		substrings := strings.Split(actorAnnotation, ":")
+		if len(substrings) == 2 {
+			creator = substrings[1]
+		}
+	}
+	return creator
 }
