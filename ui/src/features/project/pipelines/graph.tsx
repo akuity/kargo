@@ -19,13 +19,14 @@ const nodeTypes = {
 };
 
 export const Graph = memo((props: GraphProps) => {
+  const pipelineContext = usePipelineContext();
+
   const { controlledNodes, controlledEdges } = useReactFlowPipelineGraph(
     props.project,
     props.stages,
-    props.warehouses
+    props.warehouses,
+    pipelineContext?.hideParents
   );
-
-  const pipelineContext = usePipelineContext();
 
   useEffect(() => {
     const action = pipelineContext?.state?.action;

@@ -16,6 +16,10 @@ export interface PipelineContextType {
   project: string;
   onHover: (hover: boolean, id: string, isStage?: boolean) => void;
   onPromoteClick: (stage: Stage, type: FreightTimelineAction) => void;
+
+  // array of node ids
+  hideParents: string[];
+  onHideParents(parents: string[]): void;
 }
 
 export const PipelineContext = createContext<PipelineContextType | null>(null);
