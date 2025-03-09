@@ -84,6 +84,12 @@ func patchAnnotation(ctx context.Context, c client.Client, obj client.Object, ke
 	})
 }
 
+func deleteAnnotation(ctx context.Context, c client.Client, obj client.Object, key string) error {
+	return patchAnnotations(ctx, c, obj, map[string]*string{
+		key: nil,
+	})
+}
+
 func patchAnnotations(
 	ctx context.Context,
 	c client.Client,
