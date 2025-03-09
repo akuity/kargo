@@ -53,9 +53,9 @@
   "dependencies": {
     "@ant-design/v5-patch-for-react-19": "^1.0.3",
     "@bufbuild/protobuf": "^2.2.2",
-    "@connectrpc/connect": "2.0.1",
+    "@connectrpc/connect": "2.0.2",
     "@connectrpc/connect-query": "2.0.1",
-    "@connectrpc/connect-web": "2.0.1",
+    "@connectrpc/connect-web": "2.0.2",
     "@fortawesome/fontawesome-svg-core": "^6.7.1",
     "@fortawesome/free-brands-svg-icons": "^6.7.1",
     "@fortawesome/free-solid-svg-icons": "^6.7.1",
