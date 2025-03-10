@@ -15,8 +15,11 @@ import { useParams } from 'react-router-dom';
 import { ConfirmModal } from '@ui/features/common/confirm-modal/confirm-modal';
 import { descriptionExpandable } from '@ui/features/common/description-expandable';
 import { useModal } from '@ui/features/common/modal/use-modal';
-import { Role } from '@ui/gen/rbac/v1alpha1/generated_pb';
-import { deleteRole, listRoles } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { Role } from '@ui/gen/api/rbac/v1alpha1/generated_pb';
+import {
+  deleteRole,
+  listRoles
+} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 
 import { CreateRole } from './create-role';
 import { RulesModal } from './rules-modal';

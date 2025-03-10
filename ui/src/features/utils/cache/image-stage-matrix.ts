@@ -4,14 +4,14 @@ import { createConnectQueryKey } from '@connectrpc/connect-query';
 import { queryClient } from '@ui/config/query-client';
 import { transportWithAuth } from '@ui/config/transport';
 import { PromotionStatusPhase } from '@ui/features/common/promotion-status/utils';
-import { listImages } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { listImages } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import {
   ImageStageMap,
   ListImagesRequestSchema,
   ListImagesResponse,
   TagMap
-} from '@ui/gen/service/v1alpha1/service_pb';
-import { Stage } from '@ui/gen/v1alpha1/generated_pb';
+} from '@ui/gen/api/service/v1alpha1/service_pb';
+import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 
 export default {
   /**

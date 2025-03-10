@@ -5,7 +5,7 @@ import { Alert, AutoComplete, Button, Flex, Select, Switch, Tooltip } from 'antd
 import classNames from 'classnames';
 import { useForm } from 'react-hook-form';
 
-import { FreightOrigin, FreightRequest, FreightSources } from '@ui/gen/v1alpha1/generated_pb';
+import { FreightOrigin, FreightRequest, FreightSources } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { FieldContainer } from '../common/form/field-container';
 

@@ -1,6 +1,6 @@
 import { createContext } from 'react';
 
-import { Freight, Stage } from '@ui/gen/v1alpha1/generated_pb';
+import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { FreightTimelineAction } from '../types';
 import { PipelineStateHook } from '../utils/state';
@@ -16,6 +16,10 @@ export interface PipelineContextType {
   project: string;
   onHover: (hover: boolean, id: string, isStage?: boolean) => void;
   onPromoteClick: (stage: Stage, type: FreightTimelineAction) => void;
+
+  // array of node ids
+  hideParents: string[];
+  onHideParents(parents: string[]): void;
 }
 
 export const PipelineContext = createContext<PipelineContextType | null>(null);

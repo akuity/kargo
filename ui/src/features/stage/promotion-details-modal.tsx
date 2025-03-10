@@ -27,8 +27,8 @@ import {
 import { usePromotionDirectivesRegistryContext } from '@ui/features/promotion-directives/registry/context/use-registry-context';
 import { Runner } from '@ui/features/promotion-directives/registry/types';
 import { canAbortPromotion } from '@ui/features/stage/utils/promotion';
-import { abortPromotion } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { Promotion, PromotionSchema, PromotionStep } from '@ui/gen/v1alpha1/generated_pb';
+import { abortPromotion } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { Promotion, PromotionSchema, PromotionStep } from '@ui/gen/api/v1alpha1/generated_pb';
 import uiPlugins from '@ui/plugins';
 import { UiPluginHoles } from '@ui/plugins/atoms/ui-plugin-hole/ui-plugin-holes';
 import { timestampDate } from '@ui/utils/connectrpc-utils';

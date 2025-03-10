@@ -1,43 +1,20 @@
 version: v2
 modules:
-  - path: .
-    lint:
-      use:
-        - STANDARD
-      except:
-        - FIELD_NOT_REQUIRED
-        - PACKAGE_NO_IMPORT_CYCLE
-      disallow_comment_ignores: true
-    breaking:
-      use:
-        - FILE
-      except:
-        - EXTENSION_NO_DELETE
-        - FIELD_SAME_DEFAULT
-  - path: api
-    name: buf.build/akuity/kargo
-    lint:
-      use:
-        - STANDARD
-      except:
-        - FIELD_NOT_REQUIRED
-        - PACKAGE_DIRECTORY_MATCH
-        - PACKAGE_NO_IMPORT_CYCLE
-      ignore:
-        - api/rbac/v1alpha1/generated.proto
-        - api/stubs/rollouts/v1alpha1/generated.proto
-        - api/v1alpha1/generated.proto
-    breaking:
-      use:
-        - FILE
-      except:
-        - EXTENSION_NO_DELETE
-        - FIELD_SAME_DEFAULT
-  - path: internal/controller
-    lint:
-      disallow_comment_ignores: true
-  - path: vendor
-    lint:
-      disallow_comment_ignores: true
+- path: .
+  lint:
+    use:
+    - STANDARD
+    except:
+    - FIELD_NOT_REQUIRED
+    - PACKAGE_DIRECTORY_MATCH
+    - PACKAGE_NO_IMPORT_CYCLE
+    disallow_comment_ignores: true
+  breaking:
+    use:
+    - FILE
+    except:
+    - EXTENSION_NO_DELETE
+    - FIELD_SAME_DEFAULT
+- path: vendor
 deps:
-  - buf.build/googleapis/googleapis
+- buf.build/googleapis/googleapis

@@ -12,7 +12,7 @@ import { Dropdown, message } from 'antd';
 
 import { useModal } from '@ui/features/common/modal/use-modal';
 import { getAlias } from '@ui/features/common/utils';
-import { Freight } from '@ui/gen/v1alpha1/generated_pb';
+import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { DeleteFreightModal } from './delete-freight-modal';
 import { UpdateFreightAliasModal } from './update-freight-alias-modal';

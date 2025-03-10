@@ -4,7 +4,7 @@ import {
   ImageSubscription,
   Stage,
   Warehouse
-} from '@ui/gen/v1alpha1/generated_pb';
+} from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { StageNodeDimensions } from './nodes/stage-node';
 

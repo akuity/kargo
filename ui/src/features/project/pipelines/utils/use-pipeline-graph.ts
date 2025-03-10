@@ -3,7 +3,7 @@ import { graphlib, layout } from 'dagre';
 import { useContext, useEffect, useMemo } from 'react';
 
 import { ColorContext } from '@ui/context/colors';
-import { RepoSubscription, Stage, Warehouse } from '@ui/gen/v1alpha1/generated_pb';
+import { RepoSubscription, Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { NodeType, RepoNodeDimensions, getNodeDimensions } from '../types';
 
@@ -20,7 +20,8 @@ export type GraphMeta = {
 export const useReactFlowPipelineGraph = (
   project: string | undefined,
   stages: Stage[],
-  warehouses: Warehouse[]
+  warehouses: Warehouse[],
+  hiddenParents: string[] = []
 ) => {
   const { warehouseColorMap } = useContext(ColorContext);
 
@@ -104,6 +105,9 @@ export const useReactFlowPipelineGraph = (
           label: node,
           value: dagreNode?.warehouse || dagreNode?.subscription || dagreNode?.stage,
           warehouses: warehouses?.length || 0
+        },
+        style: {
+          visibility: hiddenParents.includes(node) ? 'hidden' : 'visible'
         }
       });
     }
@@ -127,7 +131,7 @@ export const useReactFlowPipelineGraph = (
         },
         style: {
           strokeWidth: 2,
-          visibility: 'visible',
+          visibility: hiddenParents.includes(edge.v) ? 'hidden' : 'visible',
           stroke: dagreEdge?.edgeColor
         }
       });
@@ -137,7 +141,7 @@ export const useReactFlowPipelineGraph = (
       nodes: reactFlowNodes,
       edges: reactFlowEdges
     };
-  }, [project, stages, warehouses, warehouseColorMap]);
+  }, [project, stages, warehouses, warehouseColorMap, hiddenParents]);
 
   const controlledNodes = useNodesState(calculatedNodesAndEdges.nodes);
 

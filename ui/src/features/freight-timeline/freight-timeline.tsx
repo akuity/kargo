@@ -8,8 +8,8 @@ import {
   promoteDownstream,
   promoteToStage,
   queryFreight
-} from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { Freight, Stage } from '@ui/gen/v1alpha1/generated_pb';
+} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { FreightActionMenu } from '../project/pipelines/freight-action-menu';
 import { CollapseMode, FreightTimelineAction } from '../project/pipelines/types';

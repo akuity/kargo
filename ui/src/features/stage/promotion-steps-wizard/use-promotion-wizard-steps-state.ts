@@ -3,7 +3,7 @@ import { parse, stringify } from 'yaml';
 
 import { usePromotionDirectivesRegistryContext } from '@ui/features/promotion-directives/registry/context/use-registry-context';
 import { Runner } from '@ui/features/promotion-directives/registry/types';
-import { PromotionStep } from '@ui/gen/v1alpha1/generated_pb';
+import { PromotionStep } from '@ui/gen/api/v1alpha1/generated_pb';
 import { PlainMessage } from '@ui/utils/connectrpc-utils';
 
 import { RunnerWithConfiguration } from './types';

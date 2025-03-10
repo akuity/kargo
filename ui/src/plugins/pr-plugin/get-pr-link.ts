@@ -1,6 +1,6 @@
 import gitUrlParse from 'git-url-parse';
 
-import { PromotionStep } from '@ui/gen/v1alpha1/generated_pb';
+import { PromotionStep } from '@ui/gen/api/v1alpha1/generated_pb';
 import { getPromotionStepConfig } from '@ui/plugins/atoms/plugin-helper';
 
 export const getPullRequestLink = (

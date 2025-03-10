@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.33.0
 // 	protoc        (unknown)
-// source: service/v1alpha1/service.proto
+// source: api/service/v1alpha1/service.proto
 
 package svcv1alpha1
 
@@ -58,11 +58,11 @@ func (x RawFormat) String() string {
 }
 
 func (RawFormat) Descriptor() protoreflect.EnumDescriptor {
-	return file_service_v1alpha1_service_proto_enumTypes[0].Descriptor()
+	return file_api_service_v1alpha1_service_proto_enumTypes[0].Descriptor()
 }
 
 func (RawFormat) Type() protoreflect.EnumType {
-	return &file_service_v1alpha1_service_proto_enumTypes[0]
+	return &file_api_service_v1alpha1_service_proto_enumTypes[0]
 }
 
 func (x RawFormat) Number() protoreflect.EnumNumber {
@@ -71,7 +71,7 @@ func (x RawFormat) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use RawFormat.Descriptor instead.
 func (RawFormat) EnumDescriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{0}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{0}
 }
 
 type ComponentVersions struct {
@@ -86,7 +86,7 @@ type ComponentVersions struct {
 func (x *ComponentVersions) Reset() {
 	*x = ComponentVersions{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[0]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[0]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -99,7 +99,7 @@ func (x *ComponentVersions) String() string {
 func (*ComponentVersions) ProtoMessage() {}
 
 func (x *ComponentVersions) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[0]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[0]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -112,7 +112,7 @@ func (x *ComponentVersions) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ComponentVersions.ProtoReflect.Descriptor instead.
 func (*ComponentVersions) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{0}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *ComponentVersions) GetServer() *VersionInfo {
@@ -146,7 +146,7 @@ type VersionInfo struct {
 func (x *VersionInfo) Reset() {
 	*x = VersionInfo{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[1]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[1]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -159,7 +159,7 @@ func (x *VersionInfo) String() string {
 func (*VersionInfo) ProtoMessage() {}
 
 func (x *VersionInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[1]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[1]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -172,7 +172,7 @@ func (x *VersionInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VersionInfo.ProtoReflect.Descriptor instead.
 func (*VersionInfo) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{1}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *VersionInfo) GetVersion() string {
@@ -233,7 +233,7 @@ type GetVersionInfoRequest struct {
 func (x *GetVersionInfoRequest) Reset() {
 	*x = GetVersionInfoRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[2]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -246,7 +246,7 @@ func (x *GetVersionInfoRequest) String() string {
 func (*GetVersionInfoRequest) ProtoMessage() {}
 
 func (x *GetVersionInfoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[2]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -259,7 +259,7 @@ func (x *GetVersionInfoRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetVersionInfoRequest.ProtoReflect.Descriptor instead.
 func (*GetVersionInfoRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{2}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{2}
 }
 
 type GetVersionInfoResponse struct {
@@ -273,7 +273,7 @@ type GetVersionInfoResponse struct {
 func (x *GetVersionInfoResponse) Reset() {
 	*x = GetVersionInfoResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[3]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[3]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -286,7 +286,7 @@ func (x *GetVersionInfoResponse) String() string {
 func (*GetVersionInfoResponse) ProtoMessage() {}
 
 func (x *GetVersionInfoResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[3]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[3]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -299,7 +299,7 @@ func (x *GetVersionInfoResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetVersionInfoResponse.ProtoReflect.Descriptor instead.
 func (*GetVersionInfoResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{3}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *GetVersionInfoResponse) GetVersionInfo() *VersionInfo {
@@ -318,7 +318,7 @@ type GetConfigRequest struct {
 func (x *GetConfigRequest) Reset() {
 	*x = GetConfigRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[4]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[4]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -331,7 +331,7 @@ func (x *GetConfigRequest) String() string {
 func (*GetConfigRequest) ProtoMessage() {}
 
 func (x *GetConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[4]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[4]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -344,7 +344,7 @@ func (x *GetConfigRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetConfigRequest.ProtoReflect.Descriptor instead.
 func (*GetConfigRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{4}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{4}
 }
 
 type ArgoCDShard struct {
@@ -359,7 +359,7 @@ type ArgoCDShard struct {
 func (x *ArgoCDShard) Reset() {
 	*x = ArgoCDShard{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[5]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[5]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -372,7 +372,7 @@ func (x *ArgoCDShard) String() string {
 func (*ArgoCDShard) ProtoMessage() {}
 
 func (x *ArgoCDShard) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[5]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[5]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -385,7 +385,7 @@ func (x *ArgoCDShard) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ArgoCDShard.ProtoReflect.Descriptor instead.
 func (*ArgoCDShard) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{5}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ArgoCDShard) GetUrl() string {
@@ -414,7 +414,7 @@ type GetConfigResponse struct {
 func (x *GetConfigResponse) Reset() {
 	*x = GetConfigResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[6]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[6]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -427,7 +427,7 @@ func (x *GetConfigResponse) String() string {
 func (*GetConfigResponse) ProtoMessage() {}
 
 func (x *GetConfigResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[6]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[6]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -440,7 +440,7 @@ func (x *GetConfigResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetConfigResponse.ProtoReflect.Descriptor instead.
 func (*GetConfigResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{6}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *GetConfigResponse) GetArgocdShards() map[string]*ArgoCDShard {
@@ -466,7 +466,7 @@ type GetPublicConfigRequest struct {
 func (x *GetPublicConfigRequest) Reset() {
 	*x = GetPublicConfigRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[7]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[7]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -479,7 +479,7 @@ func (x *GetPublicConfigRequest) String() string {
 func (*GetPublicConfigRequest) ProtoMessage() {}
 
 func (x *GetPublicConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[7]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[7]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -492,7 +492,7 @@ func (x *GetPublicConfigRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPublicConfigRequest.ProtoReflect.Descriptor instead.
 func (*GetPublicConfigRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{7}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{7}
 }
 
 type GetPublicConfigResponse struct {
@@ -508,7 +508,7 @@ type GetPublicConfigResponse struct {
 func (x *GetPublicConfigResponse) Reset() {
 	*x = GetPublicConfigResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[8]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[8]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -521,7 +521,7 @@ func (x *GetPublicConfigResponse) String() string {
 func (*GetPublicConfigResponse) ProtoMessage() {}
 
 func (x *GetPublicConfigResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[8]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[8]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -534,7 +534,7 @@ func (x *GetPublicConfigResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPublicConfigResponse.ProtoReflect.Descriptor instead.
 func (*GetPublicConfigResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{8}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *GetPublicConfigResponse) GetOidcConfig() *OIDCConfig {
@@ -572,7 +572,7 @@ type OIDCConfig struct {
 func (x *OIDCConfig) Reset() {
 	*x = OIDCConfig{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[9]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[9]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -585,7 +585,7 @@ func (x *OIDCConfig) String() string {
 func (*OIDCConfig) ProtoMessage() {}
 
 func (x *OIDCConfig) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[9]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[9]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -598,7 +598,7 @@ func (x *OIDCConfig) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OIDCConfig.ProtoReflect.Descriptor instead.
 func (*OIDCConfig) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{9}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *OIDCConfig) GetIssuerUrl() string {
@@ -640,7 +640,7 @@ type AdminLoginRequest struct {
 func (x *AdminLoginRequest) Reset() {
 	*x = AdminLoginRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[10]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[10]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -653,7 +653,7 @@ func (x *AdminLoginRequest) String() string {
 func (*AdminLoginRequest) ProtoMessage() {}
 
 func (x *AdminLoginRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[10]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[10]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -666,7 +666,7 @@ func (x *AdminLoginRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AdminLoginRequest.ProtoReflect.Descriptor instead.
 func (*AdminLoginRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{10}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *AdminLoginRequest) GetPassword() string {
@@ -687,7 +687,7 @@ type AdminLoginResponse struct {
 func (x *AdminLoginResponse) Reset() {
 	*x = AdminLoginResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[11]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[11]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -700,7 +700,7 @@ func (x *AdminLoginResponse) String() string {
 func (*AdminLoginResponse) ProtoMessage() {}
 
 func (x *AdminLoginResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[11]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[11]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -713,7 +713,7 @@ func (x *AdminLoginResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AdminLoginResponse.ProtoReflect.Descriptor instead.
 func (*AdminLoginResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{11}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *AdminLoginResponse) GetIdToken() string {
@@ -734,7 +734,7 @@ type CreateResourceRequest struct {
 func (x *CreateResourceRequest) Reset() {
 	*x = CreateResourceRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[12]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[12]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -747,7 +747,7 @@ func (x *CreateResourceRequest) String() string {
 func (*CreateResourceRequest) ProtoMessage() {}
 
 func (x *CreateResourceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[12]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[12]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -760,7 +760,7 @@ func (x *CreateResourceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateResourceRequest.ProtoReflect.Descriptor instead.
 func (*CreateResourceRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{12}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *CreateResourceRequest) GetManifest() []byte {
@@ -785,7 +785,7 @@ type CreateResourceResult struct {
 func (x *CreateResourceResult) Reset() {
 	*x = CreateResourceResult{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[13]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[13]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -798,7 +798,7 @@ func (x *CreateResourceResult) String() string {
 func (*CreateResourceResult) ProtoMessage() {}
 
 func (x *CreateResourceResult) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[13]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[13]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -811,7 +811,7 @@ func (x *CreateResourceResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateResourceResult.ProtoReflect.Descriptor instead.
 func (*CreateResourceResult) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{13}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{13}
 }
 
 func (m *CreateResourceResult) GetResult() isCreateResourceResult_Result {
@@ -862,7 +862,7 @@ type CreateResourceResponse struct {
 func (x *CreateResourceResponse) Reset() {
 	*x = CreateResourceResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[14]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[14]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -875,7 +875,7 @@ func (x *CreateResourceResponse) String() string {
 func (*CreateResourceResponse) ProtoMessage() {}
 
 func (x *CreateResourceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[14]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[14]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -888,7 +888,7 @@ func (x *CreateResourceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateResourceResponse.ProtoReflect.Descriptor instead.
 func (*CreateResourceResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{14}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *CreateResourceResponse) GetResults() []*CreateResourceResult {
@@ -909,7 +909,7 @@ type CreateOrUpdateResourceRequest struct {
 func (x *CreateOrUpdateResourceRequest) Reset() {
 	*x = CreateOrUpdateResourceRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[15]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[15]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -922,7 +922,7 @@ func (x *CreateOrUpdateResourceRequest) String() string {
 func (*CreateOrUpdateResourceRequest) ProtoMessage() {}
 
 func (x *CreateOrUpdateResourceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[15]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[15]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -935,7 +935,7 @@ func (x *CreateOrUpdateResourceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateOrUpdateResourceRequest.ProtoReflect.Descriptor instead.
 func (*CreateOrUpdateResourceRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{15}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *CreateOrUpdateResourceRequest) GetManifest() []byte {
@@ -961,7 +961,7 @@ type CreateOrUpdateResourceResult struct {
 func (x *CreateOrUpdateResourceResult) Reset() {
 	*x = CreateOrUpdateResourceResult{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[16]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[16]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -974,7 +974,7 @@ func (x *CreateOrUpdateResourceResult) String() string {
 func (*CreateOrUpdateResourceResult) ProtoMessage() {}
 
 func (x *CreateOrUpdateResourceResult) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[16]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[16]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -987,7 +987,7 @@ func (x *CreateOrUpdateResourceResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateOrUpdateResourceResult.ProtoReflect.Descriptor instead.
 func (*CreateOrUpdateResourceResult) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{16}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{16}
 }
 
 func (m *CreateOrUpdateResourceResult) GetResult() isCreateOrUpdateResourceResult_Result {
@@ -1053,7 +1053,7 @@ type CreateOrUpdateResourceResponse struct {
 func (x *CreateOrUpdateResourceResponse) Reset() {
 	*x = CreateOrUpdateResourceResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[17]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[17]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1066,7 +1066,7 @@ func (x *CreateOrUpdateResourceResponse) String() string {
 func (*CreateOrUpdateResourceResponse) ProtoMessage() {}
 
 func (x *CreateOrUpdateResourceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[17]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[17]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1079,7 +1079,7 @@ func (x *CreateOrUpdateResourceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateOrUpdateResourceResponse.ProtoReflect.Descriptor instead.
 func (*CreateOrUpdateResourceResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{17}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *CreateOrUpdateResourceResponse) GetResults() []*CreateOrUpdateResourceResult {
@@ -1100,7 +1100,7 @@ type UpdateResourceRequest struct {
 func (x *UpdateResourceRequest) Reset() {
 	*x = UpdateResourceRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[18]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[18]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1113,7 +1113,7 @@ func (x *UpdateResourceRequest) String() string {
 func (*UpdateResourceRequest) ProtoMessage() {}
 
 func (x *UpdateResourceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[18]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[18]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1126,7 +1126,7 @@ func (x *UpdateResourceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateResourceRequest.ProtoReflect.Descriptor instead.
 func (*UpdateResourceRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{18}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *UpdateResourceRequest) GetManifest() []byte {
@@ -1151,7 +1151,7 @@ type UpdateResourceResult struct {
 func (x *UpdateResourceResult) Reset() {
 	*x = UpdateResourceResult{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[19]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[19]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1164,7 +1164,7 @@ func (x *UpdateResourceResult) String() string {
 func (*UpdateResourceResult) ProtoMessage() {}
 
 func (x *UpdateResourceResult) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[19]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[19]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1177,7 +1177,7 @@ func (x *UpdateResourceResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateResourceResult.ProtoReflect.Descriptor instead.
 func (*UpdateResourceResult) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{19}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{19}
 }
 
 func (m *UpdateResourceResult) GetResult() isUpdateResourceResult_Result {
@@ -1228,7 +1228,7 @@ type UpdateResourceResponse struct {
 func (x *UpdateResourceResponse) Reset() {
 	*x = UpdateResourceResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[20]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[20]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1241,7 +1241,7 @@ func (x *UpdateResourceResponse) String() string {
 func (*UpdateResourceResponse) ProtoMessage() {}
 
 func (x *UpdateResourceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[20]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[20]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1254,7 +1254,7 @@ func (x *UpdateResourceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateResourceResponse.ProtoReflect.Descriptor instead.
 func (*UpdateResourceResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{20}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *UpdateResourceResponse) GetResults() []*UpdateResourceResult {
@@ -1275,7 +1275,7 @@ type DeleteResourceRequest struct {
 func (x *DeleteResourceRequest) Reset() {
 	*x = DeleteResourceRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[21]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[21]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1288,7 +1288,7 @@ func (x *DeleteResourceRequest) String() string {
 func (*DeleteResourceRequest) ProtoMessage() {}
 
 func (x *DeleteResourceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[21]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[21]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1301,7 +1301,7 @@ func (x *DeleteResourceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteResourceRequest.ProtoReflect.Descriptor instead.
 func (*DeleteResourceRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{21}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *DeleteResourceRequest) GetManifest() []byte {
@@ -1326,7 +1326,7 @@ type DeleteResourceResult struct {
 func (x *DeleteResourceResult) Reset() {
 	*x = DeleteResourceResult{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[22]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[22]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1339,7 +1339,7 @@ func (x *DeleteResourceResult) String() string {
 func (*DeleteResourceResult) ProtoMessage() {}
 
 func (x *DeleteResourceResult) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[22]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[22]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1352,7 +1352,7 @@ func (x *DeleteResourceResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteResourceResult.ProtoReflect.Descriptor instead.
 func (*DeleteResourceResult) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{22}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{22}
 }
 
 func (m *DeleteResourceResult) GetResult() isDeleteResourceResult_Result {
@@ -1403,7 +1403,7 @@ type DeleteResourceResponse struct {
 func (x *DeleteResourceResponse) Reset() {
 	*x = DeleteResourceResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[23]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[23]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1416,7 +1416,7 @@ func (x *DeleteResourceResponse) String() string {
 func (*DeleteResourceResponse) ProtoMessage() {}
 
 func (x *DeleteResourceResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[23]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[23]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1429,7 +1429,7 @@ func (x *DeleteResourceResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteResourceResponse.ProtoReflect.Descriptor instead.
 func (*DeleteResourceResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{23}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *DeleteResourceResponse) GetResults() []*DeleteResourceResult {
@@ -1450,7 +1450,7 @@ type ListStagesRequest struct {
 func (x *ListStagesRequest) Reset() {
 	*x = ListStagesRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[24]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[24]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1463,7 +1463,7 @@ func (x *ListStagesRequest) String() string {
 func (*ListStagesRequest) ProtoMessage() {}
 
 func (x *ListStagesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[24]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[24]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1476,7 +1476,7 @@ func (x *ListStagesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListStagesRequest.ProtoReflect.Descriptor instead.
 func (*ListStagesRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{24}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ListStagesRequest) GetProject() string {
@@ -1497,7 +1497,7 @@ type ListStagesResponse struct {
 func (x *ListStagesResponse) Reset() {
 	*x = ListStagesResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[25]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[25]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1510,7 +1510,7 @@ func (x *ListStagesResponse) String() string {
 func (*ListStagesResponse) ProtoMessage() {}
 
 func (x *ListStagesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[25]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[25]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1523,7 +1523,7 @@ func (x *ListStagesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListStagesResponse.ProtoReflect.Descriptor instead.
 func (*ListStagesResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{25}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *ListStagesResponse) GetStages() []*v1alpha1.Stage {
@@ -1544,7 +1544,7 @@ type ListImagesRequest struct {
 func (x *ListImagesRequest) Reset() {
 	*x = ListImagesRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[26]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[26]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1557,7 +1557,7 @@ func (x *ListImagesRequest) String() string {
 func (*ListImagesRequest) ProtoMessage() {}
 
 func (x *ListImagesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[26]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[26]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1570,7 +1570,7 @@ func (x *ListImagesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListImagesRequest.ProtoReflect.Descriptor instead.
 func (*ListImagesRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{26}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *ListImagesRequest) GetProject() string {
@@ -1592,7 +1592,7 @@ type ListImagesResponse struct {
 func (x *ListImagesResponse) Reset() {
 	*x = ListImagesResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[27]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[27]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1605,7 +1605,7 @@ func (x *ListImagesResponse) String() string {
 func (*ListImagesResponse) ProtoMessage() {}
 
 func (x *ListImagesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[27]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[27]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1618,7 +1618,7 @@ func (x *ListImagesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListImagesResponse.ProtoReflect.Descriptor instead.
 func (*ListImagesResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{27}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *ListImagesResponse) GetImages() map[string]*TagMap {
@@ -1640,7 +1640,7 @@ type TagMap struct {
 func (x *TagMap) Reset() {
 	*x = TagMap{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[28]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[28]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1653,7 +1653,7 @@ func (x *TagMap) String() string {
 func (*TagMap) ProtoMessage() {}
 
 func (x *TagMap) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[28]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[28]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1666,7 +1666,7 @@ func (x *TagMap) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TagMap.ProtoReflect.Descriptor instead.
 func (*TagMap) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{28}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *TagMap) GetTags() map[string]*ImageStageMap {
@@ -1688,7 +1688,7 @@ type ImageStageMap struct {
 func (x *ImageStageMap) Reset() {
 	*x = ImageStageMap{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[29]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[29]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1701,7 +1701,7 @@ func (x *ImageStageMap) String() string {
 func (*ImageStageMap) ProtoMessage() {}
 
 func (x *ImageStageMap) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[29]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[29]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1714,7 +1714,7 @@ func (x *ImageStageMap) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImageStageMap.ProtoReflect.Descriptor instead.
 func (*ImageStageMap) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{29}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *ImageStageMap) GetStages() map[string]int32 {
@@ -1737,7 +1737,7 @@ type GetStageRequest struct {
 func (x *GetStageRequest) Reset() {
 	*x = GetStageRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[30]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[30]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1750,7 +1750,7 @@ func (x *GetStageRequest) String() string {
 func (*GetStageRequest) ProtoMessage() {}
 
 func (x *GetStageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[30]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[30]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1763,7 +1763,7 @@ func (x *GetStageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetStageRequest.ProtoReflect.Descriptor instead.
 func (*GetStageRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{30}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *GetStageRequest) GetProject() string {
@@ -1802,7 +1802,7 @@ type GetStageResponse struct {
 func (x *GetStageResponse) Reset() {
 	*x = GetStageResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[31]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[31]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1815,7 +1815,7 @@ func (x *GetStageResponse) String() string {
 func (*GetStageResponse) ProtoMessage() {}
 
 func (x *GetStageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[31]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[31]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1828,7 +1828,7 @@ func (x *GetStageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetStageResponse.ProtoReflect.Descriptor instead.
 func (*GetStageResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{31}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{31}
 }
 
 func (m *GetStageResponse) GetResult() isGetStageResponse_Result {
@@ -1880,7 +1880,7 @@ type WatchStagesRequest struct {
 func (x *WatchStagesRequest) Reset() {
 	*x = WatchStagesRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[32]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[32]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1893,7 +1893,7 @@ func (x *WatchStagesRequest) String() string {
 func (*WatchStagesRequest) ProtoMessage() {}
 
 func (x *WatchStagesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[32]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[32]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1906,7 +1906,7 @@ func (x *WatchStagesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchStagesRequest.ProtoReflect.Descriptor instead.
 func (*WatchStagesRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{32}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *WatchStagesRequest) GetProject() string {
@@ -1935,7 +1935,7 @@ type WatchStagesResponse struct {
 func (x *WatchStagesResponse) Reset() {
 	*x = WatchStagesResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[33]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[33]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1948,7 +1948,7 @@ func (x *WatchStagesResponse) String() string {
 func (*WatchStagesResponse) ProtoMessage() {}
 
 func (x *WatchStagesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[33]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[33]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1961,7 +1961,7 @@ func (x *WatchStagesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchStagesResponse.ProtoReflect.Descriptor instead.
 func (*WatchStagesResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{33}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *WatchStagesResponse) GetStage() *v1alpha1.Stage {
@@ -1990,7 +1990,7 @@ type DeleteStageRequest struct {
 func (x *DeleteStageRequest) Reset() {
 	*x = DeleteStageRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[34]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[34]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2003,7 +2003,7 @@ func (x *DeleteStageRequest) String() string {
 func (*DeleteStageRequest) ProtoMessage() {}
 
 func (x *DeleteStageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[34]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[34]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2016,7 +2016,7 @@ func (x *DeleteStageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteStageRequest.ProtoReflect.Descriptor instead.
 func (*DeleteStageRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{34}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *DeleteStageRequest) GetProject() string {
@@ -2042,7 +2042,7 @@ type DeleteStageResponse struct {
 func (x *DeleteStageResponse) Reset() {
 	*x = DeleteStageResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[35]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[35]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2055,7 +2055,7 @@ func (x *DeleteStageResponse) String() string {
 func (*DeleteStageResponse) ProtoMessage() {}
 
 func (x *DeleteStageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[35]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[35]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2068,7 +2068,7 @@ func (x *DeleteStageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteStageResponse.ProtoReflect.Descriptor instead.
 func (*DeleteStageResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{35}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{35}
 }
 
 type RefreshStageRequest struct {
@@ -2083,7 +2083,7 @@ type RefreshStageRequest struct {
 func (x *RefreshStageRequest) Reset() {
 	*x = RefreshStageRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[36]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[36]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2096,7 +2096,7 @@ func (x *RefreshStageRequest) String() string {
 func (*RefreshStageRequest) ProtoMessage() {}
 
 func (x *RefreshStageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[36]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[36]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2109,7 +2109,7 @@ func (x *RefreshStageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RefreshStageRequest.ProtoReflect.Descriptor instead.
 func (*RefreshStageRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{36}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *RefreshStageRequest) GetProject() string {
@@ -2137,7 +2137,7 @@ type RefreshStageResponse struct {
 func (x *RefreshStageResponse) Reset() {
 	*x = RefreshStageResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[37]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[37]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2150,7 +2150,7 @@ func (x *RefreshStageResponse) String() string {
 func (*RefreshStageResponse) ProtoMessage() {}
 
 func (x *RefreshStageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[37]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[37]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2163,7 +2163,7 @@ func (x *RefreshStageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RefreshStageResponse.ProtoReflect.Descriptor instead.
 func (*RefreshStageResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{37}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *RefreshStageResponse) GetStage() *v1alpha1.Stage {
@@ -2185,7 +2185,7 @@ type ListPromotionsRequest struct {
 func (x *ListPromotionsRequest) Reset() {
 	*x = ListPromotionsRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[38]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[38]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2198,7 +2198,7 @@ func (x *ListPromotionsRequest) String() string {
 func (*ListPromotionsRequest) ProtoMessage() {}
 
 func (x *ListPromotionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[38]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[38]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2211,7 +2211,7 @@ func (x *ListPromotionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPromotionsRequest.ProtoReflect.Descriptor instead.
 func (*ListPromotionsRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{38}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *ListPromotionsRequest) GetProject() string {
@@ -2239,7 +2239,7 @@ type ListPromotionsResponse struct {
 func (x *ListPromotionsResponse) Reset() {
 	*x = ListPromotionsResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[39]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[39]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2252,7 +2252,7 @@ func (x *ListPromotionsResponse) String() string {
 func (*ListPromotionsResponse) ProtoMessage() {}
 
 func (x *ListPromotionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[39]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[39]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2265,7 +2265,7 @@ func (x *ListPromotionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPromotionsResponse.ProtoReflect.Descriptor instead.
 func (*ListPromotionsResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{39}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *ListPromotionsResponse) GetPromotions() []*v1alpha1.Promotion {
@@ -2287,7 +2287,7 @@ type WatchPromotionsRequest struct {
 func (x *WatchPromotionsRequest) Reset() {
 	*x = WatchPromotionsRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[40]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[40]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2300,7 +2300,7 @@ func (x *WatchPromotionsRequest) String() string {
 func (*WatchPromotionsRequest) ProtoMessage() {}
 
 func (x *WatchPromotionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[40]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[40]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2313,7 +2313,7 @@ func (x *WatchPromotionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchPromotionsRequest.ProtoReflect.Descriptor instead.
 func (*WatchPromotionsRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{40}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *WatchPromotionsRequest) GetProject() string {
@@ -2342,7 +2342,7 @@ type WatchPromotionsResponse struct {
 func (x *WatchPromotionsResponse) Reset() {
 	*x = WatchPromotionsResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[41]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[41]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2355,7 +2355,7 @@ func (x *WatchPromotionsResponse) String() string {
 func (*WatchPromotionsResponse) ProtoMessage() {}
 
 func (x *WatchPromotionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[41]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[41]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2368,7 +2368,7 @@ func (x *WatchPromotionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchPromotionsResponse.ProtoReflect.Descriptor instead.
 func (*WatchPromotionsResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{41}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *WatchPromotionsResponse) GetPromotion() *v1alpha1.Promotion {
@@ -2398,7 +2398,7 @@ type GetPromotionRequest struct {
 func (x *GetPromotionRequest) Reset() {
 	*x = GetPromotionRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[42]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[42]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2411,7 +2411,7 @@ func (x *GetPromotionRequest) String() string {
 func (*GetPromotionRequest) ProtoMessage() {}
 
 func (x *GetPromotionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[42]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[42]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2424,7 +2424,7 @@ func (x *GetPromotionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPromotionRequest.ProtoReflect.Descriptor instead.
 func (*GetPromotionRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{42}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *GetPromotionRequest) GetProject() string {
@@ -2463,7 +2463,7 @@ type GetPromotionResponse struct {
 func (x *GetPromotionResponse) Reset() {
 	*x = GetPromotionResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[43]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[43]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2476,7 +2476,7 @@ func (x *GetPromotionResponse) String() string {
 func (*GetPromotionResponse) ProtoMessage() {}
 
 func (x *GetPromotionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[43]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[43]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2489,7 +2489,7 @@ func (x *GetPromotionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPromotionResponse.ProtoReflect.Descriptor instead.
 func (*GetPromotionResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{43}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{43}
 }
 
 func (m *GetPromotionResponse) GetResult() isGetPromotionResponse_Result {
@@ -2541,7 +2541,7 @@ type WatchPromotionRequest struct {
 func (x *WatchPromotionRequest) Reset() {
 	*x = WatchPromotionRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[44]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[44]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2554,7 +2554,7 @@ func (x *WatchPromotionRequest) String() string {
 func (*WatchPromotionRequest) ProtoMessage() {}
 
 func (x *WatchPromotionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[44]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[44]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2567,7 +2567,7 @@ func (x *WatchPromotionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchPromotionRequest.ProtoReflect.Descriptor instead.
 func (*WatchPromotionRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{44}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *WatchPromotionRequest) GetProject() string {
@@ -2596,7 +2596,7 @@ type WatchPromotionResponse struct {
 func (x *WatchPromotionResponse) Reset() {
 	*x = WatchPromotionResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[45]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[45]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2609,7 +2609,7 @@ func (x *WatchPromotionResponse) String() string {
 func (*WatchPromotionResponse) ProtoMessage() {}
 
 func (x *WatchPromotionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[45]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[45]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2622,7 +2622,7 @@ func (x *WatchPromotionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchPromotionResponse.ProtoReflect.Descriptor instead.
 func (*WatchPromotionResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{45}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *WatchPromotionResponse) GetPromotion() *v1alpha1.Promotion {
@@ -2651,7 +2651,7 @@ type AbortPromotionRequest struct {
 func (x *AbortPromotionRequest) Reset() {
 	*x = AbortPromotionRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[46]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[46]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2664,7 +2664,7 @@ func (x *AbortPromotionRequest) String() string {
 func (*AbortPromotionRequest) ProtoMessage() {}
 
 func (x *AbortPromotionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[46]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[46]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2677,7 +2677,7 @@ func (x *AbortPromotionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AbortPromotionRequest.ProtoReflect.Descriptor instead.
 func (*AbortPromotionRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{46}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *AbortPromotionRequest) GetProject() string {
@@ -2703,7 +2703,7 @@ type AbortPromotionResponse struct {
 func (x *AbortPromotionResponse) Reset() {
 	*x = AbortPromotionResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[47]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[47]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2716,7 +2716,7 @@ func (x *AbortPromotionResponse) String() string {
 func (*AbortPromotionResponse) ProtoMessage() {}
 
 func (x *AbortPromotionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[47]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[47]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2729,7 +2729,7 @@ func (x *AbortPromotionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AbortPromotionResponse.ProtoReflect.Descriptor instead.
 func (*AbortPromotionResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{47}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{47}
 }
 
 type DeleteProjectRequest struct {
@@ -2743,7 +2743,7 @@ type DeleteProjectRequest struct {
 func (x *DeleteProjectRequest) Reset() {
 	*x = DeleteProjectRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[48]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[48]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2756,7 +2756,7 @@ func (x *DeleteProjectRequest) String() string {
 func (*DeleteProjectRequest) ProtoMessage() {}
 
 func (x *DeleteProjectRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[48]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[48]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2769,7 +2769,7 @@ func (x *DeleteProjectRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteProjectRequest.ProtoReflect.Descriptor instead.
 func (*DeleteProjectRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{48}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *DeleteProjectRequest) GetName() string {
@@ -2788,7 +2788,7 @@ type DeleteProjectResponse struct {
 func (x *DeleteProjectResponse) Reset() {
 	*x = DeleteProjectResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[49]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[49]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2801,7 +2801,7 @@ func (x *DeleteProjectResponse) String() string {
 func (*DeleteProjectResponse) ProtoMessage() {}
 
 func (x *DeleteProjectResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[49]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[49]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2814,7 +2814,7 @@ func (x *DeleteProjectResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteProjectResponse.ProtoReflect.Descriptor instead.
 func (*DeleteProjectResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{49}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{49}
 }
 
 type GetProjectRequest struct {
@@ -2829,7 +2829,7 @@ type GetProjectRequest struct {
 func (x *GetProjectRequest) Reset() {
 	*x = GetProjectRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[50]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[50]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2842,7 +2842,7 @@ func (x *GetProjectRequest) String() string {
 func (*GetProjectRequest) ProtoMessage() {}
 
 func (x *GetProjectRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[50]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[50]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2855,7 +2855,7 @@ func (x *GetProjectRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetProjectRequest.ProtoReflect.Descriptor instead.
 func (*GetProjectRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{50}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *GetProjectRequest) GetName() string {
@@ -2887,7 +2887,7 @@ type GetProjectResponse struct {
 func (x *GetProjectResponse) Reset() {
 	*x = GetProjectResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[51]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[51]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2900,7 +2900,7 @@ func (x *GetProjectResponse) String() string {
 func (*GetProjectResponse) ProtoMessage() {}
 
 func (x *GetProjectResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[51]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[51]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2913,7 +2913,7 @@ func (x *GetProjectResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetProjectResponse.ProtoReflect.Descriptor instead.
 func (*GetProjectResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{51}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{51}
 }
 
 func (m *GetProjectResponse) GetResult() isGetProjectResponse_Result {
@@ -2966,7 +2966,7 @@ type ListProjectsRequest struct {
 func (x *ListProjectsRequest) Reset() {
 	*x = ListProjectsRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[52]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[52]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2979,7 +2979,7 @@ func (x *ListProjectsRequest) String() string {
 func (*ListProjectsRequest) ProtoMessage() {}
 
 func (x *ListProjectsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[52]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[52]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2992,7 +2992,7 @@ func (x *ListProjectsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProjectsRequest.ProtoReflect.Descriptor instead.
 func (*ListProjectsRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{52}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *ListProjectsRequest) GetPageSize() int32 {
@@ -3028,7 +3028,7 @@ type ListProjectsResponse struct {
 func (x *ListProjectsResponse) Reset() {
 	*x = ListProjectsResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[53]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[53]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3041,7 +3041,7 @@ func (x *ListProjectsResponse) String() string {
 func (*ListProjectsResponse) ProtoMessage() {}
 
 func (x *ListProjectsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[53]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[53]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3054,7 +3054,7 @@ func (x *ListProjectsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProjectsResponse.ProtoReflect.Descriptor instead.
 func (*ListProjectsResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{53}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *ListProjectsResponse) GetProjects() []*v1alpha1.Project {
@@ -3085,7 +3085,7 @@ type ApproveFreightRequest struct {
 func (x *ApproveFreightRequest) Reset() {
 	*x = ApproveFreightRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[54]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[54]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3098,7 +3098,7 @@ func (x *ApproveFreightRequest) String() string {
 func (*ApproveFreightRequest) ProtoMessage() {}
 
 func (x *ApproveFreightRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[54]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[54]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3111,7 +3111,7 @@ func (x *ApproveFreightRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApproveFreightRequest.ProtoReflect.Descriptor instead.
 func (*ApproveFreightRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{54}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *ApproveFreightRequest) GetProject() string {
@@ -3151,7 +3151,7 @@ type ApproveFreightResponse struct {
 func (x *ApproveFreightResponse) Reset() {
 	*x = ApproveFreightResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[55]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[55]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3164,7 +3164,7 @@ func (x *ApproveFreightResponse) String() string {
 func (*ApproveFreightResponse) ProtoMessage() {}
 
 func (x *ApproveFreightResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[55]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[55]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3177,7 +3177,7 @@ func (x *ApproveFreightResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApproveFreightResponse.ProtoReflect.Descriptor instead.
 func (*ApproveFreightResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{55}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{55}
 }
 
 type DeleteFreightRequest struct {
@@ -3193,7 +3193,7 @@ type DeleteFreightRequest struct {
 func (x *DeleteFreightRequest) Reset() {
 	*x = DeleteFreightRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[56]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[56]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3206,7 +3206,7 @@ func (x *DeleteFreightRequest) String() string {
 func (*DeleteFreightRequest) ProtoMessage() {}
 
 func (x *DeleteFreightRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[56]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[56]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3219,7 +3219,7 @@ func (x *DeleteFreightRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteFreightRequest.ProtoReflect.Descriptor instead.
 func (*DeleteFreightRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{56}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *DeleteFreightRequest) GetProject() string {
@@ -3252,7 +3252,7 @@ type DeleteFreightResponse struct {
 func (x *DeleteFreightResponse) Reset() {
 	*x = DeleteFreightResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[57]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[57]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3265,7 +3265,7 @@ func (x *DeleteFreightResponse) String() string {
 func (*DeleteFreightResponse) ProtoMessage() {}
 
 func (x *DeleteFreightResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[57]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[57]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3278,7 +3278,7 @@ func (x *DeleteFreightResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteFreightResponse.ProtoReflect.Descriptor instead.
 func (*DeleteFreightResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{57}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{57}
 }
 
 type GetFreightRequest struct {
@@ -3295,7 +3295,7 @@ type GetFreightRequest struct {
 func (x *GetFreightRequest) Reset() {
 	*x = GetFreightRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[58]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[58]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3308,7 +3308,7 @@ func (x *GetFreightRequest) String() string {
 func (*GetFreightRequest) ProtoMessage() {}
 
 func (x *GetFreightRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[58]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[58]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3321,7 +3321,7 @@ func (x *GetFreightRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFreightRequest.ProtoReflect.Descriptor instead.
 func (*GetFreightRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{58}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *GetFreightRequest) GetProject() string {
@@ -3367,7 +3367,7 @@ type GetFreightResponse struct {
 func (x *GetFreightResponse) Reset() {
 	*x = GetFreightResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[59]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[59]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3380,7 +3380,7 @@ func (x *GetFreightResponse) String() string {
 func (*GetFreightResponse) ProtoMessage() {}
 
 func (x *GetFreightResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[59]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[59]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3393,7 +3393,7 @@ func (x *GetFreightResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFreightResponse.ProtoReflect.Descriptor instead.
 func (*GetFreightResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{59}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{59}
 }
 
 func (m *GetFreightResponse) GetResult() isGetFreightResponse_Result {
@@ -3447,7 +3447,7 @@ type PromoteToStageRequest struct {
 func (x *PromoteToStageRequest) Reset() {
 	*x = PromoteToStageRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[60]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[60]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3460,7 +3460,7 @@ func (x *PromoteToStageRequest) String() string {
 func (*PromoteToStageRequest) ProtoMessage() {}
 
 func (x *PromoteToStageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[60]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[60]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3473,7 +3473,7 @@ func (x *PromoteToStageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromoteToStageRequest.ProtoReflect.Descriptor instead.
 func (*PromoteToStageRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{60}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *PromoteToStageRequest) GetProject() string {
@@ -3515,7 +3515,7 @@ type PromoteToStageResponse struct {
 func (x *PromoteToStageResponse) Reset() {
 	*x = PromoteToStageResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[61]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[61]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3528,7 +3528,7 @@ func (x *PromoteToStageResponse) String() string {
 func (*PromoteToStageResponse) ProtoMessage() {}
 
 func (x *PromoteToStageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[61]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[61]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3541,7 +3541,7 @@ func (x *PromoteToStageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromoteToStageResponse.ProtoReflect.Descriptor instead.
 func (*PromoteToStageResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{61}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *PromoteToStageResponse) GetPromotion() *v1alpha1.Promotion {
@@ -3565,7 +3565,7 @@ type PromoteDownstreamRequest struct {
 func (x *PromoteDownstreamRequest) Reset() {
 	*x = PromoteDownstreamRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[62]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[62]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3578,7 +3578,7 @@ func (x *PromoteDownstreamRequest) String() string {
 func (*PromoteDownstreamRequest) ProtoMessage() {}
 
 func (x *PromoteDownstreamRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[62]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[62]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3591,7 +3591,7 @@ func (x *PromoteDownstreamRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromoteDownstreamRequest.ProtoReflect.Descriptor instead.
 func (*PromoteDownstreamRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{62}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *PromoteDownstreamRequest) GetProject() string {
@@ -3633,7 +3633,7 @@ type PromoteDownstreamResponse struct {
 func (x *PromoteDownstreamResponse) Reset() {
 	*x = PromoteDownstreamResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[63]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[63]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3646,7 +3646,7 @@ func (x *PromoteDownstreamResponse) String() string {
 func (*PromoteDownstreamResponse) ProtoMessage() {}
 
 func (x *PromoteDownstreamResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[63]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[63]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3659,7 +3659,7 @@ func (x *PromoteDownstreamResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromoteDownstreamResponse.ProtoReflect.Descriptor instead.
 func (*PromoteDownstreamResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{63}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{63}
 }
 
 func (x *PromoteDownstreamResponse) GetPromotions() []*v1alpha1.Promotion {
@@ -3686,7 +3686,7 @@ type QueryFreightRequest struct {
 func (x *QueryFreightRequest) Reset() {
 	*x = QueryFreightRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[64]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[64]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3699,7 +3699,7 @@ func (x *QueryFreightRequest) String() string {
 func (*QueryFreightRequest) ProtoMessage() {}
 
 func (x *QueryFreightRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[64]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[64]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3712,7 +3712,7 @@ func (x *QueryFreightRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QueryFreightRequest.ProtoReflect.Descriptor instead.
 func (*QueryFreightRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{64}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{64}
 }
 
 func (x *QueryFreightRequest) GetProject() string {
@@ -3775,7 +3775,7 @@ type QueryFreightResponse struct {
 func (x *QueryFreightResponse) Reset() {
 	*x = QueryFreightResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[65]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[65]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3788,7 +3788,7 @@ func (x *QueryFreightResponse) String() string {
 func (*QueryFreightResponse) ProtoMessage() {}
 
 func (x *QueryFreightResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[65]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[65]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3801,7 +3801,7 @@ func (x *QueryFreightResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QueryFreightResponse.ProtoReflect.Descriptor instead.
 func (*QueryFreightResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{65}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{65}
 }
 
 func (x *QueryFreightResponse) GetGroups() map[string]*FreightList {
@@ -3822,7 +3822,7 @@ type FreightList struct {
 func (x *FreightList) Reset() {
 	*x = FreightList{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[66]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[66]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3835,7 +3835,7 @@ func (x *FreightList) String() string {
 func (*FreightList) ProtoMessage() {}
 
 func (x *FreightList) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[66]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[66]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3848,7 +3848,7 @@ func (x *FreightList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FreightList.ProtoReflect.Descriptor instead.
 func (*FreightList) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{66}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{66}
 }
 
 func (x *FreightList) GetFreight() []*v1alpha1.Freight {
@@ -3872,7 +3872,7 @@ type UpdateFreightAliasRequest struct {
 func (x *UpdateFreightAliasRequest) Reset() {
 	*x = UpdateFreightAliasRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[67]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[67]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3885,7 +3885,7 @@ func (x *UpdateFreightAliasRequest) String() string {
 func (*UpdateFreightAliasRequest) ProtoMessage() {}
 
 func (x *UpdateFreightAliasRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[67]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[67]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3898,7 +3898,7 @@ func (x *UpdateFreightAliasRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateFreightAliasRequest.ProtoReflect.Descriptor instead.
 func (*UpdateFreightAliasRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{67}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *UpdateFreightAliasRequest) GetProject() string {
@@ -3938,7 +3938,7 @@ type UpdateFreightAliasResponse struct {
 func (x *UpdateFreightAliasResponse) Reset() {
 	*x = UpdateFreightAliasResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[68]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[68]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3951,7 +3951,7 @@ func (x *UpdateFreightAliasResponse) String() string {
 func (*UpdateFreightAliasResponse) ProtoMessage() {}
 
 func (x *UpdateFreightAliasResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[68]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[68]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3964,7 +3964,7 @@ func (x *UpdateFreightAliasResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateFreightAliasResponse.ProtoReflect.Descriptor instead.
 func (*UpdateFreightAliasResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{68}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{68}
 }
 
 type ReverifyRequest struct {
@@ -3979,7 +3979,7 @@ type ReverifyRequest struct {
 func (x *ReverifyRequest) Reset() {
 	*x = ReverifyRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[69]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[69]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3992,7 +3992,7 @@ func (x *ReverifyRequest) String() string {
 func (*ReverifyRequest) ProtoMessage() {}
 
 func (x *ReverifyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[69]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[69]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4005,7 +4005,7 @@ func (x *ReverifyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReverifyRequest.ProtoReflect.Descriptor instead.
 func (*ReverifyRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{69}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{69}
 }
 
 func (x *ReverifyRequest) GetProject() string {
@@ -4031,7 +4031,7 @@ type ReverifyResponse struct {
 func (x *ReverifyResponse) Reset() {
 	*x = ReverifyResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[70]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[70]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4044,7 +4044,7 @@ func (x *ReverifyResponse) String() string {
 func (*ReverifyResponse) ProtoMessage() {}
 
 func (x *ReverifyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[70]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[70]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4057,7 +4057,7 @@ func (x *ReverifyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReverifyResponse.ProtoReflect.Descriptor instead.
 func (*ReverifyResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{70}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{70}
 }
 
 type AbortVerificationRequest struct {
@@ -4072,7 +4072,7 @@ type AbortVerificationRequest struct {
 func (x *AbortVerificationRequest) Reset() {
 	*x = AbortVerificationRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[71]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[71]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4085,7 +4085,7 @@ func (x *AbortVerificationRequest) String() string {
 func (*AbortVerificationRequest) ProtoMessage() {}
 
 func (x *AbortVerificationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[71]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[71]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4098,7 +4098,7 @@ func (x *AbortVerificationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AbortVerificationRequest.ProtoReflect.Descriptor instead.
 func (*AbortVerificationRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{71}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{71}
 }
 
 func (x *AbortVerificationRequest) GetProject() string {
@@ -4124,7 +4124,7 @@ type AbortVerificationResponse struct {
 func (x *AbortVerificationResponse) Reset() {
 	*x = AbortVerificationResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[72]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[72]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4137,7 +4137,7 @@ func (x *AbortVerificationResponse) String() string {
 func (*AbortVerificationResponse) ProtoMessage() {}
 
 func (x *AbortVerificationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[72]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[72]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4150,7 +4150,7 @@ func (x *AbortVerificationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AbortVerificationResponse.ProtoReflect.Descriptor instead.
 func (*AbortVerificationResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{72}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{72}
 }
 
 type ListWarehousesRequest struct {
@@ -4164,7 +4164,7 @@ type ListWarehousesRequest struct {
 func (x *ListWarehousesRequest) Reset() {
 	*x = ListWarehousesRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[73]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[73]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4177,7 +4177,7 @@ func (x *ListWarehousesRequest) String() string {
 func (*ListWarehousesRequest) ProtoMessage() {}
 
 func (x *ListWarehousesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[73]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[73]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4190,7 +4190,7 @@ func (x *ListWarehousesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListWarehousesRequest.ProtoReflect.Descriptor instead.
 func (*ListWarehousesRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{73}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{73}
 }
 
 func (x *ListWarehousesRequest) GetProject() string {
@@ -4211,7 +4211,7 @@ type ListWarehousesResponse struct {
 func (x *ListWarehousesResponse) Reset() {
 	*x = ListWarehousesResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[74]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[74]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4224,7 +4224,7 @@ func (x *ListWarehousesResponse) String() string {
 func (*ListWarehousesResponse) ProtoMessage() {}
 
 func (x *ListWarehousesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[74]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[74]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4237,7 +4237,7 @@ func (x *ListWarehousesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListWarehousesResponse.ProtoReflect.Descriptor instead.
 func (*ListWarehousesResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{74}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{74}
 }
 
 func (x *ListWarehousesResponse) GetWarehouses() []*v1alpha1.Warehouse {
@@ -4260,7 +4260,7 @@ type GetWarehouseRequest struct {
 func (x *GetWarehouseRequest) Reset() {
 	*x = GetWarehouseRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[75]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[75]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4273,7 +4273,7 @@ func (x *GetWarehouseRequest) String() string {
 func (*GetWarehouseRequest) ProtoMessage() {}
 
 func (x *GetWarehouseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[75]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[75]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4286,7 +4286,7 @@ func (x *GetWarehouseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWarehouseRequest.ProtoReflect.Descriptor instead.
 func (*GetWarehouseRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{75}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{75}
 }
 
 func (x *GetWarehouseRequest) GetProject() string {
@@ -4325,7 +4325,7 @@ type GetWarehouseResponse struct {
 func (x *GetWarehouseResponse) Reset() {
 	*x = GetWarehouseResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[76]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[76]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4338,7 +4338,7 @@ func (x *GetWarehouseResponse) String() string {
 func (*GetWarehouseResponse) ProtoMessage() {}
 
 func (x *GetWarehouseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[76]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[76]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4351,7 +4351,7 @@ func (x *GetWarehouseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWarehouseResponse.ProtoReflect.Descriptor instead.
 func (*GetWarehouseResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{76}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{76}
 }
 
 func (m *GetWarehouseResponse) GetResult() isGetWarehouseResponse_Result {
@@ -4403,7 +4403,7 @@ type WatchWarehousesRequest struct {
 func (x *WatchWarehousesRequest) Reset() {
 	*x = WatchWarehousesRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[77]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[77]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4416,7 +4416,7 @@ func (x *WatchWarehousesRequest) String() string {
 func (*WatchWarehousesRequest) ProtoMessage() {}
 
 func (x *WatchWarehousesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[77]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[77]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4429,7 +4429,7 @@ func (x *WatchWarehousesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchWarehousesRequest.ProtoReflect.Descriptor instead.
 func (*WatchWarehousesRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{77}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{77}
 }
 
 func (x *WatchWarehousesRequest) GetProject() string {
@@ -4458,7 +4458,7 @@ type WatchWarehousesResponse struct {
 func (x *WatchWarehousesResponse) Reset() {
 	*x = WatchWarehousesResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[78]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[78]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4471,7 +4471,7 @@ func (x *WatchWarehousesResponse) String() string {
 func (*WatchWarehousesResponse) ProtoMessage() {}
 
 func (x *WatchWarehousesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[78]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[78]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4484,7 +4484,7 @@ func (x *WatchWarehousesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchWarehousesResponse.ProtoReflect.Descriptor instead.
 func (*WatchWarehousesResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{78}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{78}
 }
 
 func (x *WatchWarehousesResponse) GetWarehouse() *v1alpha1.Warehouse {
@@ -4513,7 +4513,7 @@ type DeleteWarehouseRequest struct {
 func (x *DeleteWarehouseRequest) Reset() {
 	*x = DeleteWarehouseRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[79]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[79]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4526,7 +4526,7 @@ func (x *DeleteWarehouseRequest) String() string {
 func (*DeleteWarehouseRequest) ProtoMessage() {}
 
 func (x *DeleteWarehouseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[79]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[79]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4539,7 +4539,7 @@ func (x *DeleteWarehouseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteWarehouseRequest.ProtoReflect.Descriptor instead.
 func (*DeleteWarehouseRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{79}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{79}
 }
 
 func (x *DeleteWarehouseRequest) GetProject() string {
@@ -4565,7 +4565,7 @@ type DeleteWarehouseResponse struct {
 func (x *DeleteWarehouseResponse) Reset() {
 	*x = DeleteWarehouseResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[80]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[80]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4578,7 +4578,7 @@ func (x *DeleteWarehouseResponse) String() string {
 func (*DeleteWarehouseResponse) ProtoMessage() {}
 
 func (x *DeleteWarehouseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[80]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[80]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4591,7 +4591,7 @@ func (x *DeleteWarehouseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteWarehouseResponse.ProtoReflect.Descriptor instead.
 func (*DeleteWarehouseResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{80}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{80}
 }
 
 type RefreshWarehouseRequest struct {
@@ -4606,7 +4606,7 @@ type RefreshWarehouseRequest struct {
 func (x *RefreshWarehouseRequest) Reset() {
 	*x = RefreshWarehouseRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[81]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[81]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4619,7 +4619,7 @@ func (x *RefreshWarehouseRequest) String() string {
 func (*RefreshWarehouseRequest) ProtoMessage() {}
 
 func (x *RefreshWarehouseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[81]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[81]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4632,7 +4632,7 @@ func (x *RefreshWarehouseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RefreshWarehouseRequest.ProtoReflect.Descriptor instead.
 func (*RefreshWarehouseRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{81}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{81}
 }
 
 func (x *RefreshWarehouseRequest) GetProject() string {
@@ -4660,7 +4660,7 @@ type RefreshWarehouseResponse struct {
 func (x *RefreshWarehouseResponse) Reset() {
 	*x = RefreshWarehouseResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[82]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[82]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4673,7 +4673,7 @@ func (x *RefreshWarehouseResponse) String() string {
 func (*RefreshWarehouseResponse) ProtoMessage() {}
 
 func (x *RefreshWarehouseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[82]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[82]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4686,7 +4686,7 @@ func (x *RefreshWarehouseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RefreshWarehouseResponse.ProtoReflect.Descriptor instead.
 func (*RefreshWarehouseResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{82}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{82}
 }
 
 func (x *RefreshWarehouseResponse) GetWarehouse() *v1alpha1.Warehouse {
@@ -4707,7 +4707,7 @@ type ListProjectSecretsRequest struct {
 func (x *ListProjectSecretsRequest) Reset() {
 	*x = ListProjectSecretsRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[83]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[83]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4720,7 +4720,7 @@ func (x *ListProjectSecretsRequest) String() string {
 func (*ListProjectSecretsRequest) ProtoMessage() {}
 
 func (x *ListProjectSecretsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[83]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[83]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4733,7 +4733,7 @@ func (x *ListProjectSecretsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProjectSecretsRequest.ProtoReflect.Descriptor instead.
 func (*ListProjectSecretsRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{83}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{83}
 }
 
 func (x *ListProjectSecretsRequest) GetProject() string {
@@ -4754,7 +4754,7 @@ type ListProjectSecretsResponse struct {
 func (x *ListProjectSecretsResponse) Reset() {
 	*x = ListProjectSecretsResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[84]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[84]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4767,7 +4767,7 @@ func (x *ListProjectSecretsResponse) String() string {
 func (*ListProjectSecretsResponse) ProtoMessage() {}
 
 func (x *ListProjectSecretsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[84]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[84]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4780,7 +4780,7 @@ func (x *ListProjectSecretsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProjectSecretsResponse.ProtoReflect.Descriptor instead.
 func (*ListProjectSecretsResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{84}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{84}
 }
 
 func (x *ListProjectSecretsResponse) GetSecrets() []*v1.Secret {
@@ -4804,7 +4804,7 @@ type CreateProjectSecretRequest struct {
 func (x *CreateProjectSecretRequest) Reset() {
 	*x = CreateProjectSecretRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[85]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[85]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4817,7 +4817,7 @@ func (x *CreateProjectSecretRequest) String() string {
 func (*CreateProjectSecretRequest) ProtoMessage() {}
 
 func (x *CreateProjectSecretRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[85]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[85]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4830,7 +4830,7 @@ func (x *CreateProjectSecretRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateProjectSecretRequest.ProtoReflect.Descriptor instead.
 func (*CreateProjectSecretRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{85}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{85}
 }
 
 func (x *CreateProjectSecretRequest) GetProject() string {
@@ -4872,7 +4872,7 @@ type CreateProjectSecretResponse struct {
 func (x *CreateProjectSecretResponse) Reset() {
 	*x = CreateProjectSecretResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[86]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[86]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4885,7 +4885,7 @@ func (x *CreateProjectSecretResponse) String() string {
 func (*CreateProjectSecretResponse) ProtoMessage() {}
 
 func (x *CreateProjectSecretResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[86]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[86]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4898,7 +4898,7 @@ func (x *CreateProjectSecretResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateProjectSecretResponse.ProtoReflect.Descriptor instead.
 func (*CreateProjectSecretResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{86}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{86}
 }
 
 func (x *CreateProjectSecretResponse) GetSecret() *v1.Secret {
@@ -4922,7 +4922,7 @@ type UpdateProjectSecretRequest struct {
 func (x *UpdateProjectSecretRequest) Reset() {
 	*x = UpdateProjectSecretRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[87]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[87]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4935,7 +4935,7 @@ func (x *UpdateProjectSecretRequest) String() string {
 func (*UpdateProjectSecretRequest) ProtoMessage() {}
 
 func (x *UpdateProjectSecretRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[87]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[87]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4948,7 +4948,7 @@ func (x *UpdateProjectSecretRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateProjectSecretRequest.ProtoReflect.Descriptor instead.
 func (*UpdateProjectSecretRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{87}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{87}
 }
 
 func (x *UpdateProjectSecretRequest) GetProject() string {
@@ -4990,7 +4990,7 @@ type UpdateProjectSecretResponse struct {
 func (x *UpdateProjectSecretResponse) Reset() {
 	*x = UpdateProjectSecretResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[88]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[88]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5003,7 +5003,7 @@ func (x *UpdateProjectSecretResponse) String() string {
 func (*UpdateProjectSecretResponse) ProtoMessage() {}
 
 func (x *UpdateProjectSecretResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[88]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[88]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5016,7 +5016,7 @@ func (x *UpdateProjectSecretResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateProjectSecretResponse.ProtoReflect.Descriptor instead.
 func (*UpdateProjectSecretResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{88}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{88}
 }
 
 func (x *UpdateProjectSecretResponse) GetSecret() *v1.Secret {
@@ -5038,7 +5038,7 @@ type DeleteProjectSecretRequest struct {
 func (x *DeleteProjectSecretRequest) Reset() {
 	*x = DeleteProjectSecretRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[89]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[89]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5051,7 +5051,7 @@ func (x *DeleteProjectSecretRequest) String() string {
 func (*DeleteProjectSecretRequest) ProtoMessage() {}
 
 func (x *DeleteProjectSecretRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[89]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[89]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5064,7 +5064,7 @@ func (x *DeleteProjectSecretRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteProjectSecretRequest.ProtoReflect.Descriptor instead.
 func (*DeleteProjectSecretRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{89}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{89}
 }
 
 func (x *DeleteProjectSecretRequest) GetProject() string {
@@ -5090,7 +5090,7 @@ type DeleteProjectSecretResponse struct {
 func (x *DeleteProjectSecretResponse) Reset() {
 	*x = DeleteProjectSecretResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[90]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[90]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5103,7 +5103,7 @@ func (x *DeleteProjectSecretResponse) String() string {
 func (*DeleteProjectSecretResponse) ProtoMessage() {}
 
 func (x *DeleteProjectSecretResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[90]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[90]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5116,7 +5116,7 @@ func (x *DeleteProjectSecretResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteProjectSecretResponse.ProtoReflect.Descriptor instead.
 func (*DeleteProjectSecretResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{90}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{90}
 }
 
 type CreateCredentialsRequest struct {
@@ -5138,7 +5138,7 @@ type CreateCredentialsRequest struct {
 func (x *CreateCredentialsRequest) Reset() {
 	*x = CreateCredentialsRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[91]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[91]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5151,7 +5151,7 @@ func (x *CreateCredentialsRequest) String() string {
 func (*CreateCredentialsRequest) ProtoMessage() {}
 
 func (x *CreateCredentialsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[91]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[91]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5164,7 +5164,7 @@ func (x *CreateCredentialsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateCredentialsRequest.ProtoReflect.Descriptor instead.
 func (*CreateCredentialsRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{91}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{91}
 }
 
 func (x *CreateCredentialsRequest) GetProject() string {
@@ -5234,7 +5234,7 @@ type CreateCredentialsResponse struct {
 func (x *CreateCredentialsResponse) Reset() {
 	*x = CreateCredentialsResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[92]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[92]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5247,7 +5247,7 @@ func (x *CreateCredentialsResponse) String() string {
 func (*CreateCredentialsResponse) ProtoMessage() {}
 
 func (x *CreateCredentialsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[92]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[92]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5260,7 +5260,7 @@ func (x *CreateCredentialsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateCredentialsResponse.ProtoReflect.Descriptor instead.
 func (*CreateCredentialsResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{92}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{92}
 }
 
 func (x *CreateCredentialsResponse) GetCredentials() *v1.Secret {
@@ -5282,7 +5282,7 @@ type DeleteCredentialsRequest struct {
 func (x *DeleteCredentialsRequest) Reset() {
 	*x = DeleteCredentialsRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[93]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[93]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5295,7 +5295,7 @@ func (x *DeleteCredentialsRequest) String() string {
 func (*DeleteCredentialsRequest) ProtoMessage() {}
 
 func (x *DeleteCredentialsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[93]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[93]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5308,7 +5308,7 @@ func (x *DeleteCredentialsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteCredentialsRequest.ProtoReflect.Descriptor instead.
 func (*DeleteCredentialsRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{93}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{93}
 }
 
 func (x *DeleteCredentialsRequest) GetProject() string {
@@ -5334,7 +5334,7 @@ type DeleteCredentialsResponse struct {
 func (x *DeleteCredentialsResponse) Reset() {
 	*x = DeleteCredentialsResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[94]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[94]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5347,7 +5347,7 @@ func (x *DeleteCredentialsResponse) String() string {
 func (*DeleteCredentialsResponse) ProtoMessage() {}
 
 func (x *DeleteCredentialsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[94]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[94]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5360,7 +5360,7 @@ func (x *DeleteCredentialsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteCredentialsResponse.ProtoReflect.Descriptor instead.
 func (*DeleteCredentialsResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{94}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{94}
 }
 
 type GetCredentialsRequest struct {
@@ -5376,7 +5376,7 @@ type GetCredentialsRequest struct {
 func (x *GetCredentialsRequest) Reset() {
 	*x = GetCredentialsRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[95]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[95]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5389,7 +5389,7 @@ func (x *GetCredentialsRequest) String() string {
 func (*GetCredentialsRequest) ProtoMessage() {}
 
 func (x *GetCredentialsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[95]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[95]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5402,7 +5402,7 @@ func (x *GetCredentialsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCredentialsRequest.ProtoReflect.Descriptor instead.
 func (*GetCredentialsRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{95}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{95}
 }
 
 func (x *GetCredentialsRequest) GetProject() string {
@@ -5441,7 +5441,7 @@ type GetCredentialsResponse struct {
 func (x *GetCredentialsResponse) Reset() {
 	*x = GetCredentialsResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[96]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[96]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5454,7 +5454,7 @@ func (x *GetCredentialsResponse) String() string {
 func (*GetCredentialsResponse) ProtoMessage() {}
 
 func (x *GetCredentialsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[96]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[96]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5467,7 +5467,7 @@ func (x *GetCredentialsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCredentialsResponse.ProtoReflect.Descriptor instead.
 func (*GetCredentialsResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{96}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{96}
 }
 
 func (m *GetCredentialsResponse) GetResult() isGetCredentialsResponse_Result {
@@ -5518,7 +5518,7 @@ type ListCredentialsRequest struct {
 func (x *ListCredentialsRequest) Reset() {
 	*x = ListCredentialsRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[97]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[97]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5531,7 +5531,7 @@ func (x *ListCredentialsRequest) String() string {
 func (*ListCredentialsRequest) ProtoMessage() {}
 
 func (x *ListCredentialsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[97]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[97]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5544,7 +5544,7 @@ func (x *ListCredentialsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCredentialsRequest.ProtoReflect.Descriptor instead.
 func (*ListCredentialsRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{97}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{97}
 }
 
 func (x *ListCredentialsRequest) GetProject() string {
@@ -5565,7 +5565,7 @@ type ListCredentialsResponse struct {
 func (x *ListCredentialsResponse) Reset() {
 	*x = ListCredentialsResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[98]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[98]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5578,7 +5578,7 @@ func (x *ListCredentialsResponse) String() string {
 func (*ListCredentialsResponse) ProtoMessage() {}
 
 func (x *ListCredentialsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[98]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[98]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5591,7 +5591,7 @@ func (x *ListCredentialsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCredentialsResponse.ProtoReflect.Descriptor instead.
 func (*ListCredentialsResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{98}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{98}
 }
 
 func (x *ListCredentialsResponse) GetCredentials() []*v1.Secret {
@@ -5619,7 +5619,7 @@ type UpdateCredentialsRequest struct {
 func (x *UpdateCredentialsRequest) Reset() {
 	*x = UpdateCredentialsRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[99]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[99]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5632,7 +5632,7 @@ func (x *UpdateCredentialsRequest) String() string {
 func (*UpdateCredentialsRequest) ProtoMessage() {}
 
 func (x *UpdateCredentialsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[99]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[99]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5645,7 +5645,7 @@ func (x *UpdateCredentialsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateCredentialsRequest.ProtoReflect.Descriptor instead.
 func (*UpdateCredentialsRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{99}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{99}
 }
 
 func (x *UpdateCredentialsRequest) GetProject() string {
@@ -5715,7 +5715,7 @@ type UpdateCredentialsResponse struct {
 func (x *UpdateCredentialsResponse) Reset() {
 	*x = UpdateCredentialsResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[100]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[100]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5728,7 +5728,7 @@ func (x *UpdateCredentialsResponse) String() string {
 func (*UpdateCredentialsResponse) ProtoMessage() {}
 
 func (x *UpdateCredentialsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[100]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[100]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5741,7 +5741,7 @@ func (x *UpdateCredentialsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateCredentialsResponse.ProtoReflect.Descriptor instead.
 func (*UpdateCredentialsResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{100}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{100}
 }
 
 func (x *UpdateCredentialsResponse) GetCredentials() *v1.Secret {
@@ -5762,7 +5762,7 @@ type ListAnalysisTemplatesRequest struct {
 func (x *ListAnalysisTemplatesRequest) Reset() {
 	*x = ListAnalysisTemplatesRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[101]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[101]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5775,7 +5775,7 @@ func (x *ListAnalysisTemplatesRequest) String() string {
 func (*ListAnalysisTemplatesRequest) ProtoMessage() {}
 
 func (x *ListAnalysisTemplatesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[101]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[101]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5788,7 +5788,7 @@ func (x *ListAnalysisTemplatesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAnalysisTemplatesRequest.ProtoReflect.Descriptor instead.
 func (*ListAnalysisTemplatesRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{101}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{101}
 }
 
 func (x *ListAnalysisTemplatesRequest) GetProject() string {
@@ -5809,7 +5809,7 @@ type ListAnalysisTemplatesResponse struct {
 func (x *ListAnalysisTemplatesResponse) Reset() {
 	*x = ListAnalysisTemplatesResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[102]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[102]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5822,7 +5822,7 @@ func (x *ListAnalysisTemplatesResponse) String() string {
 func (*ListAnalysisTemplatesResponse) ProtoMessage() {}
 
 func (x *ListAnalysisTemplatesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[102]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[102]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5835,7 +5835,7 @@ func (x *ListAnalysisTemplatesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAnalysisTemplatesResponse.ProtoReflect.Descriptor instead.
 func (*ListAnalysisTemplatesResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{102}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{102}
 }
 
 func (x *ListAnalysisTemplatesResponse) GetAnalysisTemplates() []*v1alpha11.AnalysisTemplate {
@@ -5858,7 +5858,7 @@ type GetAnalysisTemplateRequest struct {
 func (x *GetAnalysisTemplateRequest) Reset() {
 	*x = GetAnalysisTemplateRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[103]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[103]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5871,7 +5871,7 @@ func (x *GetAnalysisTemplateRequest) String() string {
 func (*GetAnalysisTemplateRequest) ProtoMessage() {}
 
 func (x *GetAnalysisTemplateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[103]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[103]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5884,7 +5884,7 @@ func (x *GetAnalysisTemplateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAnalysisTemplateRequest.ProtoReflect.Descriptor instead.
 func (*GetAnalysisTemplateRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{103}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{103}
 }
 
 func (x *GetAnalysisTemplateRequest) GetProject() string {
@@ -5923,7 +5923,7 @@ type GetAnalysisTemplateResponse struct {
 func (x *GetAnalysisTemplateResponse) Reset() {
 	*x = GetAnalysisTemplateResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[104]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[104]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5936,7 +5936,7 @@ func (x *GetAnalysisTemplateResponse) String() string {
 func (*GetAnalysisTemplateResponse) ProtoMessage() {}
 
 func (x *GetAnalysisTemplateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[104]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[104]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5949,7 +5949,7 @@ func (x *GetAnalysisTemplateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAnalysisTemplateResponse.ProtoReflect.Descriptor instead.
 func (*GetAnalysisTemplateResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{104}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{104}
 }
 
 func (m *GetAnalysisTemplateResponse) GetResult() isGetAnalysisTemplateResponse_Result {
@@ -5998,7 +5998,7 @@ type ListClusterAnalysisTemplatesRequest struct {
 func (x *ListClusterAnalysisTemplatesRequest) Reset() {
 	*x = ListClusterAnalysisTemplatesRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[105]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[105]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6011,7 +6011,7 @@ func (x *ListClusterAnalysisTemplatesRequest) String() string {
 func (*ListClusterAnalysisTemplatesRequest) ProtoMessage() {}
 
 func (x *ListClusterAnalysisTemplatesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[105]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[105]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6024,7 +6024,7 @@ func (x *ListClusterAnalysisTemplatesRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use ListClusterAnalysisTemplatesRequest.ProtoReflect.Descriptor instead.
 func (*ListClusterAnalysisTemplatesRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{105}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{105}
 }
 
 type ListClusterAnalysisTemplatesResponse struct {
@@ -6038,7 +6038,7 @@ type ListClusterAnalysisTemplatesResponse struct {
 func (x *ListClusterAnalysisTemplatesResponse) Reset() {
 	*x = ListClusterAnalysisTemplatesResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[106]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[106]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6051,7 +6051,7 @@ func (x *ListClusterAnalysisTemplatesResponse) String() string {
 func (*ListClusterAnalysisTemplatesResponse) ProtoMessage() {}
 
 func (x *ListClusterAnalysisTemplatesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[106]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[106]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6064,7 +6064,7 @@ func (x *ListClusterAnalysisTemplatesResponse) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use ListClusterAnalysisTemplatesResponse.ProtoReflect.Descriptor instead.
 func (*ListClusterAnalysisTemplatesResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{106}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{106}
 }
 
 func (x *ListClusterAnalysisTemplatesResponse) GetClusterAnalysisTemplates() []*v1alpha11.ClusterAnalysisTemplate {
@@ -6086,7 +6086,7 @@ type GetClusterAnalysisTemplateRequest struct {
 func (x *GetClusterAnalysisTemplateRequest) Reset() {
 	*x = GetClusterAnalysisTemplateRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[107]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[107]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6099,7 +6099,7 @@ func (x *GetClusterAnalysisTemplateRequest) String() string {
 func (*GetClusterAnalysisTemplateRequest) ProtoMessage() {}
 
 func (x *GetClusterAnalysisTemplateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[107]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[107]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6112,7 +6112,7 @@ func (x *GetClusterAnalysisTemplateRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use GetClusterAnalysisTemplateRequest.ProtoReflect.Descriptor instead.
 func (*GetClusterAnalysisTemplateRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{107}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{107}
 }
 
 func (x *GetClusterAnalysisTemplateRequest) GetName() string {
@@ -6144,7 +6144,7 @@ type GetClusterAnalysisTemplateResponse struct {
 func (x *GetClusterAnalysisTemplateResponse) Reset() {
 	*x = GetClusterAnalysisTemplateResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[108]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[108]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6157,7 +6157,7 @@ func (x *GetClusterAnalysisTemplateResponse) String() string {
 func (*GetClusterAnalysisTemplateResponse) ProtoMessage() {}
 
 func (x *GetClusterAnalysisTemplateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[108]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[108]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6170,7 +6170,7 @@ func (x *GetClusterAnalysisTemplateResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use GetClusterAnalysisTemplateResponse.ProtoReflect.Descriptor instead.
 func (*GetClusterAnalysisTemplateResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{108}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{108}
 }
 
 func (m *GetClusterAnalysisTemplateResponse) GetResult() isGetClusterAnalysisTemplateResponse_Result {
@@ -6224,7 +6224,7 @@ type GetAnalysisRunRequest struct {
 func (x *GetAnalysisRunRequest) Reset() {
 	*x = GetAnalysisRunRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[109]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[109]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6237,7 +6237,7 @@ func (x *GetAnalysisRunRequest) String() string {
 func (*GetAnalysisRunRequest) ProtoMessage() {}
 
 func (x *GetAnalysisRunRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[109]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[109]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6250,7 +6250,7 @@ func (x *GetAnalysisRunRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAnalysisRunRequest.ProtoReflect.Descriptor instead.
 func (*GetAnalysisRunRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{109}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{109}
 }
 
 func (x *GetAnalysisRunRequest) GetNamespace() string {
@@ -6289,7 +6289,7 @@ type GetAnalysisRunResponse struct {
 func (x *GetAnalysisRunResponse) Reset() {
 	*x = GetAnalysisRunResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[110]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[110]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6302,7 +6302,7 @@ func (x *GetAnalysisRunResponse) String() string {
 func (*GetAnalysisRunResponse) ProtoMessage() {}
 
 func (x *GetAnalysisRunResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[110]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[110]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6315,7 +6315,7 @@ func (x *GetAnalysisRunResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAnalysisRunResponse.ProtoReflect.Descriptor instead.
 func (*GetAnalysisRunResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{110}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{110}
 }
 
 func (m *GetAnalysisRunResponse) GetResult() isGetAnalysisRunResponse_Result {
@@ -6367,7 +6367,7 @@ type DeleteAnalysisTemplateRequest struct {
 func (x *DeleteAnalysisTemplateRequest) Reset() {
 	*x = DeleteAnalysisTemplateRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[111]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[111]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6380,7 +6380,7 @@ func (x *DeleteAnalysisTemplateRequest) String() string {
 func (*DeleteAnalysisTemplateRequest) ProtoMessage() {}
 
 func (x *DeleteAnalysisTemplateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[111]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[111]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6393,7 +6393,7 @@ func (x *DeleteAnalysisTemplateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAnalysisTemplateRequest.ProtoReflect.Descriptor instead.
 func (*DeleteAnalysisTemplateRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{111}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{111}
 }
 
 func (x *DeleteAnalysisTemplateRequest) GetProject() string {
@@ -6419,7 +6419,7 @@ type DeleteAnalysisTemplateResponse struct {
 func (x *DeleteAnalysisTemplateResponse) Reset() {
 	*x = DeleteAnalysisTemplateResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[112]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[112]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6432,7 +6432,7 @@ func (x *DeleteAnalysisTemplateResponse) String() string {
 func (*DeleteAnalysisTemplateResponse) ProtoMessage() {}
 
 func (x *DeleteAnalysisTemplateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[112]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[112]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6445,7 +6445,7 @@ func (x *DeleteAnalysisTemplateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAnalysisTemplateResponse.ProtoReflect.Descriptor instead.
 func (*DeleteAnalysisTemplateResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{112}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{112}
 }
 
 type DeleteClusterAnalysisTemplateRequest struct {
@@ -6459,7 +6459,7 @@ type DeleteClusterAnalysisTemplateRequest struct {
 func (x *DeleteClusterAnalysisTemplateRequest) Reset() {
 	*x = DeleteClusterAnalysisTemplateRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[113]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[113]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6472,7 +6472,7 @@ func (x *DeleteClusterAnalysisTemplateRequest) String() string {
 func (*DeleteClusterAnalysisTemplateRequest) ProtoMessage() {}
 
 func (x *DeleteClusterAnalysisTemplateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[113]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[113]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6485,7 +6485,7 @@ func (x *DeleteClusterAnalysisTemplateRequest) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use DeleteClusterAnalysisTemplateRequest.ProtoReflect.Descriptor instead.
 func (*DeleteClusterAnalysisTemplateRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{113}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{113}
 }
 
 func (x *DeleteClusterAnalysisTemplateRequest) GetName() string {
@@ -6504,7 +6504,7 @@ type DeleteClusterAnalysisTemplateResponse struct {
 func (x *DeleteClusterAnalysisTemplateResponse) Reset() {
 	*x = DeleteClusterAnalysisTemplateResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[114]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[114]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6517,7 +6517,7 @@ func (x *DeleteClusterAnalysisTemplateResponse) String() string {
 func (*DeleteClusterAnalysisTemplateResponse) ProtoMessage() {}
 
 func (x *DeleteClusterAnalysisTemplateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[114]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[114]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6530,7 +6530,7 @@ func (x *DeleteClusterAnalysisTemplateResponse) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use DeleteClusterAnalysisTemplateResponse.ProtoReflect.Descriptor instead.
 func (*DeleteClusterAnalysisTemplateResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{114}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{114}
 }
 
 type ListProjectEventsRequest struct {
@@ -6544,7 +6544,7 @@ type ListProjectEventsRequest struct {
 func (x *ListProjectEventsRequest) Reset() {
 	*x = ListProjectEventsRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[115]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[115]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6557,7 +6557,7 @@ func (x *ListProjectEventsRequest) String() string {
 func (*ListProjectEventsRequest) ProtoMessage() {}
 
 func (x *ListProjectEventsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[115]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[115]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6570,7 +6570,7 @@ func (x *ListProjectEventsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProjectEventsRequest.ProtoReflect.Descriptor instead.
 func (*ListProjectEventsRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{115}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{115}
 }
 
 func (x *ListProjectEventsRequest) GetProject() string {
@@ -6591,7 +6591,7 @@ type ListProjectEventsResponse struct {
 func (x *ListProjectEventsResponse) Reset() {
 	*x = ListProjectEventsResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[116]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[116]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6604,7 +6604,7 @@ func (x *ListProjectEventsResponse) String() string {
 func (*ListProjectEventsResponse) ProtoMessage() {}
 
 func (x *ListProjectEventsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[116]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[116]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6617,7 +6617,7 @@ func (x *ListProjectEventsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProjectEventsResponse.ProtoReflect.Descriptor instead.
 func (*ListProjectEventsResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{116}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{116}
 }
 
 func (x *ListProjectEventsResponse) GetEvents() []*v1.Event {
@@ -6638,7 +6638,7 @@ type CreateRoleRequest struct {
 func (x *CreateRoleRequest) Reset() {
 	*x = CreateRoleRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[117]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[117]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6651,7 +6651,7 @@ func (x *CreateRoleRequest) String() string {
 func (*CreateRoleRequest) ProtoMessage() {}
 
 func (x *CreateRoleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[117]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[117]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6664,7 +6664,7 @@ func (x *CreateRoleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateRoleRequest.ProtoReflect.Descriptor instead.
 func (*CreateRoleRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{117}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{117}
 }
 
 func (x *CreateRoleRequest) GetRole() *v1alpha12.Role {
@@ -6685,7 +6685,7 @@ type CreateRoleResponse struct {
 func (x *CreateRoleResponse) Reset() {
 	*x = CreateRoleResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[118]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[118]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6698,7 +6698,7 @@ func (x *CreateRoleResponse) String() string {
 func (*CreateRoleResponse) ProtoMessage() {}
 
 func (x *CreateRoleResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[118]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[118]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6711,7 +6711,7 @@ func (x *CreateRoleResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateRoleResponse.ProtoReflect.Descriptor instead.
 func (*CreateRoleResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{118}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{118}
 }
 
 func (x *CreateRoleResponse) GetRole() *v1alpha12.Role {
@@ -6733,7 +6733,7 @@ type DeleteRoleRequest struct {
 func (x *DeleteRoleRequest) Reset() {
 	*x = DeleteRoleRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[119]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[119]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6746,7 +6746,7 @@ func (x *DeleteRoleRequest) String() string {
 func (*DeleteRoleRequest) ProtoMessage() {}
 
 func (x *DeleteRoleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[119]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[119]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6759,7 +6759,7 @@ func (x *DeleteRoleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteRoleRequest.ProtoReflect.Descriptor instead.
 func (*DeleteRoleRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{119}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{119}
 }
 
 func (x *DeleteRoleRequest) GetProject() string {
@@ -6785,7 +6785,7 @@ type DeleteRoleResponse struct {
 func (x *DeleteRoleResponse) Reset() {
 	*x = DeleteRoleResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[120]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[120]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6798,7 +6798,7 @@ func (x *DeleteRoleResponse) String() string {
 func (*DeleteRoleResponse) ProtoMessage() {}
 
 func (x *DeleteRoleResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[120]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[120]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6811,7 +6811,7 @@ func (x *DeleteRoleResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteRoleResponse.ProtoReflect.Descriptor instead.
 func (*DeleteRoleResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{120}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{120}
 }
 
 type GetRoleRequest struct {
@@ -6828,7 +6828,7 @@ type GetRoleRequest struct {
 func (x *GetRoleRequest) Reset() {
 	*x = GetRoleRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[121]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[121]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6841,7 +6841,7 @@ func (x *GetRoleRequest) String() string {
 func (*GetRoleRequest) ProtoMessage() {}
 
 func (x *GetRoleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[121]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[121]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6854,7 +6854,7 @@ func (x *GetRoleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRoleRequest.ProtoReflect.Descriptor instead.
 func (*GetRoleRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{121}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{121}
 }
 
 func (x *GetRoleRequest) GetProject() string {
@@ -6901,7 +6901,7 @@ type GetRoleResponse struct {
 func (x *GetRoleResponse) Reset() {
 	*x = GetRoleResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[122]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[122]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6914,7 +6914,7 @@ func (x *GetRoleResponse) String() string {
 func (*GetRoleResponse) ProtoMessage() {}
 
 func (x *GetRoleResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[122]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[122]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6927,7 +6927,7 @@ func (x *GetRoleResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRoleResponse.ProtoReflect.Descriptor instead.
 func (*GetRoleResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{122}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{122}
 }
 
 func (m *GetRoleResponse) GetResult() isGetRoleResponse_Result {
@@ -6992,7 +6992,7 @@ type Claims struct {
 func (x *Claims) Reset() {
 	*x = Claims{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[123]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[123]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7005,7 +7005,7 @@ func (x *Claims) String() string {
 func (*Claims) ProtoMessage() {}
 
 func (x *Claims) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[123]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[123]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7018,7 +7018,7 @@ func (x *Claims) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Claims.ProtoReflect.Descriptor instead.
 func (*Claims) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{123}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{123}
 }
 
 func (x *Claims) GetClaims() []*v1alpha12.Claim {
@@ -7045,7 +7045,7 @@ type GrantRequest struct {
 func (x *GrantRequest) Reset() {
 	*x = GrantRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[124]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[124]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7058,7 +7058,7 @@ func (x *GrantRequest) String() string {
 func (*GrantRequest) ProtoMessage() {}
 
 func (x *GrantRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[124]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[124]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7071,7 +7071,7 @@ func (x *GrantRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GrantRequest.ProtoReflect.Descriptor instead.
 func (*GrantRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{124}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{124}
 }
 
 func (x *GrantRequest) GetProject() string {
@@ -7136,7 +7136,7 @@ type GrantResponse struct {
 func (x *GrantResponse) Reset() {
 	*x = GrantResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[125]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[125]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7149,7 +7149,7 @@ func (x *GrantResponse) String() string {
 func (*GrantResponse) ProtoMessage() {}
 
 func (x *GrantResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[125]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[125]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7162,7 +7162,7 @@ func (x *GrantResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GrantResponse.ProtoReflect.Descriptor instead.
 func (*GrantResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{125}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{125}
 }
 
 func (x *GrantResponse) GetRole() *v1alpha12.Role {
@@ -7184,7 +7184,7 @@ type ListRolesRequest struct {
 func (x *ListRolesRequest) Reset() {
 	*x = ListRolesRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[126]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[126]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7197,7 +7197,7 @@ func (x *ListRolesRequest) String() string {
 func (*ListRolesRequest) ProtoMessage() {}
 
 func (x *ListRolesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[126]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[126]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7210,7 +7210,7 @@ func (x *ListRolesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRolesRequest.ProtoReflect.Descriptor instead.
 func (*ListRolesRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{126}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{126}
 }
 
 func (x *ListRolesRequest) GetProject() string {
@@ -7240,7 +7240,7 @@ type ListRolesResponse struct {
 func (x *ListRolesResponse) Reset() {
 	*x = ListRolesResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[127]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[127]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7253,7 +7253,7 @@ func (x *ListRolesResponse) String() string {
 func (*ListRolesResponse) ProtoMessage() {}
 
 func (x *ListRolesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[127]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[127]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7266,7 +7266,7 @@ func (x *ListRolesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRolesResponse.ProtoReflect.Descriptor instead.
 func (*ListRolesResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{127}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{127}
 }
 
 func (x *ListRolesResponse) GetRoles() []*v1alpha12.Role {
@@ -7300,7 +7300,7 @@ type RevokeRequest struct {
 func (x *RevokeRequest) Reset() {
 	*x = RevokeRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[128]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[128]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7313,7 +7313,7 @@ func (x *RevokeRequest) String() string {
 func (*RevokeRequest) ProtoMessage() {}
 
 func (x *RevokeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[128]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[128]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7326,7 +7326,7 @@ func (x *RevokeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeRequest.ProtoReflect.Descriptor instead.
 func (*RevokeRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{128}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{128}
 }
 
 func (x *RevokeRequest) GetProject() string {
@@ -7391,7 +7391,7 @@ type RevokeResponse struct {
 func (x *RevokeResponse) Reset() {
 	*x = RevokeResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[129]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[129]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7404,7 +7404,7 @@ func (x *RevokeResponse) String() string {
 func (*RevokeResponse) ProtoMessage() {}
 
 func (x *RevokeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[129]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[129]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7417,7 +7417,7 @@ func (x *RevokeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeResponse.ProtoReflect.Descriptor instead.
 func (*RevokeResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{129}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{129}
 }
 
 func (x *RevokeResponse) GetRole() *v1alpha12.Role {
@@ -7438,7 +7438,7 @@ type UpdateRoleRequest struct {
 func (x *UpdateRoleRequest) Reset() {
 	*x = UpdateRoleRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[130]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[130]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7451,7 +7451,7 @@ func (x *UpdateRoleRequest) String() string {
 func (*UpdateRoleRequest) ProtoMessage() {}
 
 func (x *UpdateRoleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[130]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[130]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7464,7 +7464,7 @@ func (x *UpdateRoleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateRoleRequest.ProtoReflect.Descriptor instead.
 func (*UpdateRoleRequest) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{130}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{130}
 }
 
 func (x *UpdateRoleRequest) GetRole() *v1alpha12.Role {
@@ -7485,7 +7485,7 @@ type UpdateRoleResponse struct {
 func (x *UpdateRoleResponse) Reset() {
 	*x = UpdateRoleResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_service_v1alpha1_service_proto_msgTypes[131]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[131]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7498,7 +7498,7 @@ func (x *UpdateRoleResponse) String() string {
 func (*UpdateRoleResponse) ProtoMessage() {}
 
 func (x *UpdateRoleResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_service_v1alpha1_service_proto_msgTypes[131]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[131]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7511,7 +7511,7 @@ func (x *UpdateRoleResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateRoleResponse.ProtoReflect.Descriptor instead.
 func (*UpdateRoleResponse) Descriptor() ([]byte, []int) {
-	return file_service_v1alpha1_service_proto_rawDescGZIP(), []int{131}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{131}
 }
 
 func (x *UpdateRoleResponse) GetRole() *v1alpha12.Role {
@@ -7521,22 +7521,23 @@ func (x *UpdateRoleResponse) GetRole() *v1alpha12.Role {
 	return nil
 }
 
-var File_service_v1alpha1_service_proto protoreflect.FileDescriptor
+var File_api_service_v1alpha1_service_proto protoreflect.FileDescriptor
 
-var file_service_v1alpha1_service_proto_rawDesc = []byte{
-	0x0a, 0x1e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2f, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68,
-	0x61, 0x31, 0x2f, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f,
-	0x12, 0x20, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67,
-	0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68,
-	0x61, 0x31, 0x1a, 0x1f, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f,
-	0x62, 0x75, 0x66, 0x2f, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x2e, 0x70, 0x72,
-	0x6f, 0x74, 0x6f, 0x1a, 0x18, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2f, 0x67, 0x65,
-	0x6e, 0x65, 0x72, 0x61, 0x74, 0x65, 0x64, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x22, 0x6b,
-	0x38, 0x73, 0x2e, 0x69, 0x6f, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x63, 0x6f, 0x72, 0x65, 0x2f, 0x76,
-	0x31, 0x2f, 0x67, 0x65, 0x6e, 0x65, 0x72, 0x61, 0x74, 0x65, 0x64, 0x2e, 0x70, 0x72, 0x6f, 0x74,
-	0x6f, 0x1a, 0x27, 0x73, 0x74, 0x75, 0x62, 0x73, 0x2f, 0x72, 0x6f, 0x6c, 0x6c, 0x6f, 0x75, 0x74,
-	0x73, 0x2f, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2f, 0x67, 0x65, 0x6e, 0x65, 0x72,
-	0x61, 0x74, 0x65, 0x64, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x1d, 0x72, 0x62, 0x61, 0x63,
+var file_api_service_v1alpha1_service_proto_rawDesc = []byte{
+	0x0a, 0x22, 0x61, 0x70, 0x69, 0x2f, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2f, 0x76, 0x31,
+	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2f, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x70,
+	0x72, 0x6f, 0x74, 0x6f, 0x12, 0x20, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e,
+	0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31,
+	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x1a, 0x1f, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2f, 0x70,
+	0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2f, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d,
+	0x70, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x1c, 0x61, 0x70, 0x69, 0x2f, 0x76, 0x31, 0x61,
+	0x6c, 0x70, 0x68, 0x61, 0x31, 0x2f, 0x67, 0x65, 0x6e, 0x65, 0x72, 0x61, 0x74, 0x65, 0x64, 0x2e,
+	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x22, 0x6b, 0x38, 0x73, 0x2e, 0x69, 0x6f, 0x2f, 0x61, 0x70,
+	0x69, 0x2f, 0x63, 0x6f, 0x72, 0x65, 0x2f, 0x76, 0x31, 0x2f, 0x67, 0x65, 0x6e, 0x65, 0x72, 0x61,
+	0x74, 0x65, 0x64, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x2b, 0x61, 0x70, 0x69, 0x2f, 0x73,
+	0x74, 0x75, 0x62, 0x73, 0x2f, 0x72, 0x6f, 0x6c, 0x6c, 0x6f, 0x75, 0x74, 0x73, 0x2f, 0x76, 0x31,
+	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2f, 0x67, 0x65, 0x6e, 0x65, 0x72, 0x61, 0x74, 0x65, 0x64,
+	0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x21, 0x61, 0x70, 0x69, 0x2f, 0x72, 0x62, 0x61, 0x63,
 	0x2f, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2f, 0x67, 0x65, 0x6e, 0x65, 0x72, 0x61,
 	0x74, 0x65, 0x64, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0xb8, 0x01, 0x0a, 0x11, 0x43, 0x6f,
 	0x6d, 0x70, 0x6f, 0x6e, 0x65, 0x6e, 0x74, 0x56, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x73, 0x12,
@@ -8935,42 +8936,42 @@ var file_service_v1alpha1_service_proto_rawDesc = []byte{
 	0x65, 0x73, 0x74, 0x1a, 0x34, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e,
 	0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31,
 	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x52, 0x6f, 0x6c,
-	0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x42, 0x97, 0x02, 0x0a, 0x24, 0x63, 0x6f,
+	0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x42, 0x93, 0x02, 0x0a, 0x24, 0x63, 0x6f,
 	0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67,
 	0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68,
 	0x61, 0x31, 0x42, 0x0c, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x50, 0x72, 0x6f, 0x74, 0x6f,
-	0x50, 0x01, 0x5a, 0x3c, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x61,
-	0x6b, 0x75, 0x69, 0x74, 0x79, 0x2f, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2f, 0x70, 0x6b, 0x67, 0x2f,
-	0x61, 0x70, 0x69, 0x2f, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2f, 0x76, 0x31, 0x61, 0x6c,
-	0x70, 0x68, 0x61, 0x31, 0x3b, 0x73, 0x76, 0x63, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31,
-	0xa2, 0x02, 0x04, 0x41, 0x49, 0x4b, 0x53, 0xaa, 0x02, 0x20, 0x41, 0x6b, 0x75, 0x69, 0x74, 0x79,
-	0x2e, 0x49, 0x6f, 0x2e, 0x4b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63,
-	0x65, 0x2e, 0x56, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0xca, 0x02, 0x20, 0x41, 0x6b, 0x75,
-	0x69, 0x74, 0x79, 0x5c, 0x49, 0x6f, 0x5c, 0x4b, 0x61, 0x72, 0x67, 0x6f, 0x5c, 0x53, 0x65, 0x72,
-	0x76, 0x69, 0x63, 0x65, 0x5c, 0x56, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0xe2, 0x02, 0x2c,
-	0x41, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x5c, 0x49, 0x6f, 0x5c, 0x4b, 0x61, 0x72, 0x67, 0x6f, 0x5c,
-	0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x5c, 0x56, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31,
-	0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0xea, 0x02, 0x24, 0x41,
-	0x6b, 0x75, 0x69, 0x74, 0x79, 0x3a, 0x3a, 0x49, 0x6f, 0x3a, 0x3a, 0x4b, 0x61, 0x72, 0x67, 0x6f,
-	0x3a, 0x3a, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x3a, 0x3a, 0x56, 0x31, 0x61, 0x6c, 0x70,
-	0x68, 0x61, 0x31, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x50, 0x01, 0x5a, 0x38, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x61,
+	0x6b, 0x75, 0x69, 0x74, 0x79, 0x2f, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2f, 0x61, 0x70, 0x69, 0x2f,
+	0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2f, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31,
+	0x3b, 0x73, 0x76, 0x63, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0xa2, 0x02, 0x04, 0x41,
+	0x49, 0x4b, 0x53, 0xaa, 0x02, 0x20, 0x41, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x49, 0x6f, 0x2e,
+	0x4b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x56, 0x31,
+	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0xca, 0x02, 0x20, 0x41, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x5c,
+	0x49, 0x6f, 0x5c, 0x4b, 0x61, 0x72, 0x67, 0x6f, 0x5c, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65,
+	0x5c, 0x56, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0xe2, 0x02, 0x2c, 0x41, 0x6b, 0x75, 0x69,
+	0x74, 0x79, 0x5c, 0x49, 0x6f, 0x5c, 0x4b, 0x61, 0x72, 0x67, 0x6f, 0x5c, 0x53, 0x65, 0x72, 0x76,
+	0x69, 0x63, 0x65, 0x5c, 0x56, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x5c, 0x47, 0x50, 0x42,
+	0x4d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0xea, 0x02, 0x24, 0x41, 0x6b, 0x75, 0x69, 0x74,
+	0x79, 0x3a, 0x3a, 0x49, 0x6f, 0x3a, 0x3a, 0x4b, 0x61, 0x72, 0x67, 0x6f, 0x3a, 0x3a, 0x53, 0x65,
+	0x72, 0x76, 0x69, 0x63, 0x65, 0x3a, 0x3a, 0x56, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x62,
+	0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
-	file_service_v1alpha1_service_proto_rawDescOnce sync.Once
-	file_service_v1alpha1_service_proto_rawDescData = file_service_v1alpha1_service_proto_rawDesc
+	file_api_service_v1alpha1_service_proto_rawDescOnce sync.Once
+	file_api_service_v1alpha1_service_proto_rawDescData = file_api_service_v1alpha1_service_proto_rawDesc
 )
 
-func file_service_v1alpha1_service_proto_rawDescGZIP() []byte {
-	file_service_v1alpha1_service_proto_rawDescOnce.Do(func() {
-		file_service_v1alpha1_service_proto_rawDescData = protoimpl.X.CompressGZIP(file_service_v1alpha1_service_proto_rawDescData)
+func file_api_service_v1alpha1_service_proto_rawDescGZIP() []byte {
+	file_api_service_v1alpha1_service_proto_rawDescOnce.Do(func() {
+		file_api_service_v1alpha1_service_proto_rawDescData = protoimpl.X.CompressGZIP(file_api_service_v1alpha1_service_proto_rawDescData)
 	})
-	return file_service_v1alpha1_service_proto_rawDescData
+	return file_api_service_v1alpha1_service_proto_rawDescData
 }
 
-var file_service_v1alpha1_service_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_service_v1alpha1_service_proto_msgTypes = make([]protoimpl.MessageInfo, 139)
-var file_service_v1alpha1_service_proto_goTypes = []interface{}{
+var file_api_service_v1alpha1_service_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_api_service_v1alpha1_service_proto_msgTypes = make([]protoimpl.MessageInfo, 139)
+var file_api_service_v1alpha1_service_proto_goTypes = []interface{}{
 	(RawFormat)(0),                                // 0: akuity.io.kargo.service.v1alpha1.RawFormat
 	(*ComponentVersions)(nil),                     // 1: akuity.io.kargo.service.v1alpha1.ComponentVersions
 	(*VersionInfo)(nil),                           // 2: akuity.io.kargo.service.v1alpha1.VersionInfo
@@ -9127,7 +9128,7 @@ var file_service_v1alpha1_service_proto_goTypes = []interface{}{
 	(*v1alpha12.Claim)(nil),                       // 153: github.com.akuity.kargo.api.rbac.v1alpha1.Claim
 	(*v1alpha12.ResourceDetails)(nil),             // 154: github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails
 }
-var file_service_v1alpha1_service_proto_depIdxs = []int32{
+var file_api_service_v1alpha1_service_proto_depIdxs = []int32{
 	2,   // 0: akuity.io.kargo.service.v1alpha1.ComponentVersions.server:type_name -> akuity.io.kargo.service.v1alpha1.VersionInfo
 	2,   // 1: akuity.io.kargo.service.v1alpha1.ComponentVersions.cli:type_name -> akuity.io.kargo.service.v1alpha1.VersionInfo
 	140, // 2: akuity.io.kargo.service.v1alpha1.VersionInfo.build_time:type_name -> google.protobuf.Timestamp
@@ -9331,13 +9332,13 @@ var file_service_v1alpha1_service_proto_depIdxs = []int32{
 	0,   // [0:76] is the sub-list for field type_name
 }
 
-func init() { file_service_v1alpha1_service_proto_init() }
-func file_service_v1alpha1_service_proto_init() {
-	if File_service_v1alpha1_service_proto != nil {
+func init() { file_api_service_v1alpha1_service_proto_init() }
+func file_api_service_v1alpha1_service_proto_init() {
+	if File_api_service_v1alpha1_service_proto != nil {
 		return
 	}
 	if !protoimpl.UnsafeEnabled {
-		file_service_v1alpha1_service_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ComponentVersions); i {
 			case 0:
 				return &v.state
@@ -9349,7 +9350,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*VersionInfo); i {
 			case 0:
 				return &v.state
@@ -9361,7 +9362,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetVersionInfoRequest); i {
 			case 0:
 				return &v.state
@@ -9373,7 +9374,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetVersionInfoResponse); i {
 			case 0:
 				return &v.state
@@ -9385,7 +9386,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetConfigRequest); i {
 			case 0:
 				return &v.state
@@ -9397,7 +9398,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ArgoCDShard); i {
 			case 0:
 				return &v.state
@@ -9409,7 +9410,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetConfigResponse); i {
 			case 0:
 				return &v.state
@@ -9421,7 +9422,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetPublicConfigRequest); i {
 			case 0:
 				return &v.state
@@ -9433,7 +9434,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetPublicConfigResponse); i {
 			case 0:
 				return &v.state
@@ -9445,7 +9446,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*OIDCConfig); i {
 			case 0:
 				return &v.state
@@ -9457,7 +9458,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*AdminLoginRequest); i {
 			case 0:
 				return &v.state
@@ -9469,7 +9470,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*AdminLoginResponse); i {
 			case 0:
 				return &v.state
@@ -9481,7 +9482,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*CreateResourceRequest); i {
 			case 0:
 				return &v.state
@@ -9493,7 +9494,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*CreateResourceResult); i {
 			case 0:
 				return &v.state
@@ -9505,7 +9506,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*CreateResourceResponse); i {
 			case 0:
 				return &v.state
@@ -9517,7 +9518,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*CreateOrUpdateResourceRequest); i {
 			case 0:
 				return &v.state
@@ -9529,7 +9530,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[16].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[16].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*CreateOrUpdateResourceResult); i {
 			case 0:
 				return &v.state
@@ -9541,7 +9542,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[17].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[17].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*CreateOrUpdateResourceResponse); i {
 			case 0:
 				return &v.state
@@ -9553,7 +9554,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[18].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[18].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UpdateResourceRequest); i {
 			case 0:
 				return &v.state
@@ -9565,7 +9566,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[19].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[19].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UpdateResourceResult); i {
 			case 0:
 				return &v.state
@@ -9577,7 +9578,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[20].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[20].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UpdateResourceResponse); i {
 			case 0:
 				return &v.state
@@ -9589,7 +9590,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[21].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[21].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*DeleteResourceRequest); i {
 			case 0:
 				return &v.state
@@ -9601,7 +9602,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[22].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[22].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*DeleteResourceResult); i {
 			case 0:
 				return &v.state
@@ -9613,7 +9614,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[23].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[23].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*DeleteResourceResponse); i {
 			case 0:
 				return &v.state
@@ -9625,7 +9626,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[24].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[24].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ListStagesRequest); i {
 			case 0:
 				return &v.state
@@ -9637,7 +9638,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[25].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[25].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ListStagesResponse); i {
 			case 0:
 				return &v.state
@@ -9649,7 +9650,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[26].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[26].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ListImagesRequest); i {
 			case 0:
 				return &v.state
@@ -9661,7 +9662,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[27].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[27].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ListImagesResponse); i {
 			case 0:
 				return &v.state
@@ -9673,7 +9674,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[28].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[28].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*TagMap); i {
 			case 0:
 				return &v.state
@@ -9685,7 +9686,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[29].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[29].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ImageStageMap); i {
 			case 0:
 				return &v.state
@@ -9697,7 +9698,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[30].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[30].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetStageRequest); i {
 			case 0:
 				return &v.state
@@ -9709,7 +9710,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[31].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[31].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetStageResponse); i {
 			case 0:
 				return &v.state
@@ -9721,7 +9722,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[32].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[32].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*WatchStagesRequest); i {
 			case 0:
 				return &v.state
@@ -9733,7 +9734,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[33].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[33].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*WatchStagesResponse); i {
 			case 0:
 				return &v.state
@@ -9745,7 +9746,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[34].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[34].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*DeleteStageRequest); i {
 			case 0:
 				return &v.state
@@ -9757,7 +9758,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[35].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[35].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*DeleteStageResponse); i {
 			case 0:
 				return &v.state
@@ -9769,7 +9770,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[36].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[36].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*RefreshStageRequest); i {
 			case 0:
 				return &v.state
@@ -9781,7 +9782,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[37].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[37].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*RefreshStageResponse); i {
 			case 0:
 				return &v.state
@@ -9793,7 +9794,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[38].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[38].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ListPromotionsRequest); i {
 			case 0:
 				return &v.state
@@ -9805,7 +9806,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[39].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[39].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ListPromotionsResponse); i {
 			case 0:
 				return &v.state
@@ -9817,7 +9818,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[40].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[40].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*WatchPromotionsRequest); i {
 			case 0:
 				return &v.state
@@ -9829,7 +9830,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[41].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[41].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*WatchPromotionsResponse); i {
 			case 0:
 				return &v.state
@@ -9841,7 +9842,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[42].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[42].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetPromotionRequest); i {
 			case 0:
 				return &v.state
@@ -9853,7 +9854,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[43].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[43].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetPromotionResponse); i {
 			case 0:
 				return &v.state
@@ -9865,7 +9866,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[44].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[44].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*WatchPromotionRequest); i {
 			case 0:
 				return &v.state
@@ -9877,7 +9878,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[45].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[45].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*WatchPromotionResponse); i {
 			case 0:
 				return &v.state
@@ -9889,7 +9890,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[46].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[46].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*AbortPromotionRequest); i {
 			case 0:
 				return &v.state
@@ -9901,7 +9902,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[47].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[47].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*AbortPromotionResponse); i {
 			case 0:
 				return &v.state
@@ -9913,7 +9914,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[48].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[48].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*DeleteProjectRequest); i {
 			case 0:
 				return &v.state
@@ -9925,7 +9926,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[49].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[49].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*DeleteProjectResponse); i {
 			case 0:
 				return &v.state
@@ -9937,7 +9938,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[50].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[50].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetProjectRequest); i {
 			case 0:
 				return &v.state
@@ -9949,7 +9950,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[51].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[51].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetProjectResponse); i {
 			case 0:
 				return &v.state
@@ -9961,7 +9962,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[52].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[52].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ListProjectsRequest); i {
 			case 0:
 				return &v.state
@@ -9973,7 +9974,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[53].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[53].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ListProjectsResponse); i {
 			case 0:
 				return &v.state
@@ -9985,7 +9986,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[54].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[54].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ApproveFreightRequest); i {
 			case 0:
 				return &v.state
@@ -9997,7 +9998,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[55].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[55].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ApproveFreightResponse); i {
 			case 0:
 				return &v.state
@@ -10009,7 +10010,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[56].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[56].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*DeleteFreightRequest); i {
 			case 0:
 				return &v.state
@@ -10021,7 +10022,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[57].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[57].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*DeleteFreightResponse); i {
 			case 0:
 				return &v.state
@@ -10033,7 +10034,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[58].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[58].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetFreightRequest); i {
 			case 0:
 				return &v.state
@@ -10045,7 +10046,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[59].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[59].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetFreightResponse); i {
 			case 0:
 				return &v.state
@@ -10057,7 +10058,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[60].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[60].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*PromoteToStageRequest); i {
 			case 0:
 				return &v.state
@@ -10069,7 +10070,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[61].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[61].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*PromoteToStageResponse); i {
 			case 0:
 				return &v.state
@@ -10081,7 +10082,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[62].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[62].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*PromoteDownstreamRequest); i {
 			case 0:
 				return &v.state
@@ -10093,7 +10094,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[63].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[63].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*PromoteDownstreamResponse); i {
 			case 0:
 				return &v.state
@@ -10105,7 +10106,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[64].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[64].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*QueryFreightRequest); i {
 			case 0:
 				return &v.state
@@ -10117,7 +10118,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[65].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[65].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*QueryFreightResponse); i {
 			case 0:
 				return &v.state
@@ -10129,7 +10130,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[66].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[66].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*FreightList); i {
 			case 0:
 				return &v.state
@@ -10141,7 +10142,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[67].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[67].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UpdateFreightAliasRequest); i {
 			case 0:
 				return &v.state
@@ -10153,7 +10154,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[68].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[68].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UpdateFreightAliasResponse); i {
 			case 0:
 				return &v.state
@@ -10165,7 +10166,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[69].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[69].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ReverifyRequest); i {
 			case 0:
 				return &v.state
@@ -10177,7 +10178,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[70].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[70].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ReverifyResponse); i {
 			case 0:
 				return &v.state
@@ -10189,7 +10190,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[71].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[71].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*AbortVerificationRequest); i {
 			case 0:
 				return &v.state
@@ -10201,7 +10202,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[72].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[72].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*AbortVerificationResponse); i {
 			case 0:
 				return &v.state
@@ -10213,7 +10214,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[73].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[73].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ListWarehousesRequest); i {
 			case 0:
 				return &v.state
@@ -10225,7 +10226,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[74].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[74].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ListWarehousesResponse); i {
 			case 0:
 				return &v.state
@@ -10237,7 +10238,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[75].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[75].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetWarehouseRequest); i {
 			case 0:
 				return &v.state
@@ -10249,7 +10250,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[76].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[76].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetWarehouseResponse); i {
 			case 0:
 				return &v.state
@@ -10261,7 +10262,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[77].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[77].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*WatchWarehousesRequest); i {
 			case 0:
 				return &v.state
@@ -10273,7 +10274,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[78].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[78].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*WatchWarehousesResponse); i {
 			case 0:
 				return &v.state
@@ -10285,7 +10286,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[79].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[79].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*DeleteWarehouseRequest); i {
 			case 0:
 				return &v.state
@@ -10297,7 +10298,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[80].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[80].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*DeleteWarehouseResponse); i {
 			case 0:
 				return &v.state
@@ -10309,7 +10310,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[81].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[81].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*RefreshWarehouseRequest); i {
 			case 0:
 				return &v.state
@@ -10321,7 +10322,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[82].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[82].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*RefreshWarehouseResponse); i {
 			case 0:
 				return &v.state
@@ -10333,7 +10334,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[83].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[83].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ListProjectSecretsRequest); i {
 			case 0:
 				return &v.state
@@ -10345,7 +10346,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[84].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[84].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ListProjectSecretsResponse); i {
 			case 0:
 				return &v.state
@@ -10357,7 +10358,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[85].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[85].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*CreateProjectSecretRequest); i {
 			case 0:
 				return &v.state
@@ -10369,7 +10370,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[86].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[86].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*CreateProjectSecretResponse); i {
 			case 0:
 				return &v.state
@@ -10381,7 +10382,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[87].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[87].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UpdateProjectSecretRequest); i {
 			case 0:
 				return &v.state
@@ -10393,7 +10394,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[88].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[88].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UpdateProjectSecretResponse); i {
 			case 0:
 				return &v.state
@@ -10405,7 +10406,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[89].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[89].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*DeleteProjectSecretRequest); i {
 			case 0:
 				return &v.state
@@ -10417,7 +10418,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[90].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[90].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*DeleteProjectSecretResponse); i {
 			case 0:
 				return &v.state
@@ -10429,7 +10430,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[91].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[91].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*CreateCredentialsRequest); i {
 			case 0:
 				return &v.state
@@ -10441,7 +10442,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[92].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[92].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*CreateCredentialsResponse); i {
 			case 0:
 				return &v.state
@@ -10453,7 +10454,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[93].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[93].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*DeleteCredentialsRequest); i {
 			case 0:
 				return &v.state
@@ -10465,7 +10466,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[94].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[94].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*DeleteCredentialsResponse); i {
 			case 0:
 				return &v.state
@@ -10477,7 +10478,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[95].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[95].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetCredentialsRequest); i {
 			case 0:
 				return &v.state
@@ -10489,7 +10490,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[96].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[96].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetCredentialsResponse); i {
 			case 0:
 				return &v.state
@@ -10501,7 +10502,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[97].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[97].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ListCredentialsRequest); i {
 			case 0:
 				return &v.state
@@ -10513,7 +10514,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[98].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[98].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ListCredentialsResponse); i {
 			case 0:
 				return &v.state
@@ -10525,7 +10526,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[99].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[99].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UpdateCredentialsRequest); i {
 			case 0:
 				return &v.state
@@ -10537,7 +10538,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[100].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[100].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UpdateCredentialsResponse); i {
 			case 0:
 				return &v.state
@@ -10549,7 +10550,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[101].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[101].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ListAnalysisTemplatesRequest); i {
 			case 0:
 				return &v.state
@@ -10561,7 +10562,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[102].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[102].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ListAnalysisTemplatesResponse); i {
 			case 0:
 				return &v.state
@@ -10573,7 +10574,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[103].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[103].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetAnalysisTemplateRequest); i {
 			case 0:
 				return &v.state
@@ -10585,7 +10586,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[104].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[104].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetAnalysisTemplateResponse); i {
 			case 0:
 				return &v.state
@@ -10597,7 +10598,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[105].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[105].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ListClusterAnalysisTemplatesRequest); i {
 			case 0:
 				return &v.state
@@ -10609,7 +10610,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[106].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[106].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ListClusterAnalysisTemplatesResponse); i {
 			case 0:
 				return &v.state
@@ -10621,7 +10622,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[107].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[107].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetClusterAnalysisTemplateRequest); i {
 			case 0:
 				return &v.state
@@ -10633,7 +10634,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[108].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[108].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetClusterAnalysisTemplateResponse); i {
 			case 0:
 				return &v.state
@@ -10645,7 +10646,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[109].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[109].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetAnalysisRunRequest); i {
 			case 0:
 				return &v.state
@@ -10657,7 +10658,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[110].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[110].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetAnalysisRunResponse); i {
 			case 0:
 				return &v.state
@@ -10669,7 +10670,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[111].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[111].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*DeleteAnalysisTemplateRequest); i {
 			case 0:
 				return &v.state
@@ -10681,7 +10682,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[112].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[112].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*DeleteAnalysisTemplateResponse); i {
 			case 0:
 				return &v.state
@@ -10693,7 +10694,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[113].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[113].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*DeleteClusterAnalysisTemplateRequest); i {
 			case 0:
 				return &v.state
@@ -10705,7 +10706,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[114].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[114].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*DeleteClusterAnalysisTemplateResponse); i {
 			case 0:
 				return &v.state
@@ -10717,7 +10718,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[115].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[115].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ListProjectEventsRequest); i {
 			case 0:
 				return &v.state
@@ -10729,7 +10730,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[116].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[116].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ListProjectEventsResponse); i {
 			case 0:
 				return &v.state
@@ -10741,7 +10742,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[117].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[117].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*CreateRoleRequest); i {
 			case 0:
 				return &v.state
@@ -10753,7 +10754,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[118].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[118].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*CreateRoleResponse); i {
 			case 0:
 				return &v.state
@@ -10765,7 +10766,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[119].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[119].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*DeleteRoleRequest); i {
 			case 0:
 				return &v.state
@@ -10777,7 +10778,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[120].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[120].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*DeleteRoleResponse); i {
 			case 0:
 				return &v.state
@@ -10789,7 +10790,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[121].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[121].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetRoleRequest); i {
 			case 0:
 				return &v.state
@@ -10801,7 +10802,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[122].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[122].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetRoleResponse); i {
 			case 0:
 				return &v.state
@@ -10813,7 +10814,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[123].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[123].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Claims); i {
 			case 0:
 				return &v.state
@@ -10825,7 +10826,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[124].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[124].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GrantRequest); i {
 			case 0:
 				return &v.state
@@ -10837,7 +10838,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[125].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[125].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GrantResponse); i {
 			case 0:
 				return &v.state
@@ -10849,7 +10850,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[126].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[126].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ListRolesRequest); i {
 			case 0:
 				return &v.state
@@ -10861,7 +10862,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[127].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[127].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ListRolesResponse); i {
 			case 0:
 				return &v.state
@@ -10873,7 +10874,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[128].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[128].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*RevokeRequest); i {
 			case 0:
 				return &v.state
@@ -10885,7 +10886,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[129].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[129].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*RevokeResponse); i {
 			case 0:
 				return &v.state
@@ -10897,7 +10898,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[130].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[130].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UpdateRoleRequest); i {
 			case 0:
 				return &v.state
@@ -10909,7 +10910,7 @@ func file_service_v1alpha1_service_proto_init() {
 				return nil
 			}
 		}
-		file_service_v1alpha1_service_proto_msgTypes[131].Exporter = func(v interface{}, i int) interface{} {
+		file_api_service_v1alpha1_service_proto_msgTypes[131].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UpdateRoleResponse); i {
 			case 0:
 				return &v.state
@@ -10922,73 +10923,73 @@ func file_service_v1alpha1_service_proto_init() {
 			}
 		}
 	}
-	file_service_v1alpha1_service_proto_msgTypes[0].OneofWrappers = []interface{}{}
-	file_service_v1alpha1_service_proto_msgTypes[13].OneofWrappers = []interface{}{
+	file_api_service_v1alpha1_service_proto_msgTypes[0].OneofWrappers = []interface{}{}
+	file_api_service_v1alpha1_service_proto_msgTypes[13].OneofWrappers = []interface{}{
 		(*CreateResourceResult_CreatedResourceManifest)(nil),
 		(*CreateResourceResult_Error)(nil),
 	}
-	file_service_v1alpha1_service_proto_msgTypes[16].OneofWrappers = []interface{}{
+	file_api_service_v1alpha1_service_proto_msgTypes[16].OneofWrappers = []interface{}{
 		(*CreateOrUpdateResourceResult_CreatedResourceManifest)(nil),
 		(*CreateOrUpdateResourceResult_UpdatedResourceManifest)(nil),
 		(*CreateOrUpdateResourceResult_Error)(nil),
 	}
-	file_service_v1alpha1_service_proto_msgTypes[19].OneofWrappers = []interface{}{
+	file_api_service_v1alpha1_service_proto_msgTypes[19].OneofWrappers = []interface{}{
 		(*UpdateResourceResult_UpdatedResourceManifest)(nil),
 		(*UpdateResourceResult_Error)(nil),
 	}
-	file_service_v1alpha1_service_proto_msgTypes[22].OneofWrappers = []interface{}{
+	file_api_service_v1alpha1_service_proto_msgTypes[22].OneofWrappers = []interface{}{
 		(*DeleteResourceResult_DeletedResourceManifest)(nil),
 		(*DeleteResourceResult_Error)(nil),
 	}
-	file_service_v1alpha1_service_proto_msgTypes[31].OneofWrappers = []interface{}{
+	file_api_service_v1alpha1_service_proto_msgTypes[31].OneofWrappers = []interface{}{
 		(*GetStageResponse_Stage)(nil),
 		(*GetStageResponse_Raw)(nil),
 	}
-	file_service_v1alpha1_service_proto_msgTypes[38].OneofWrappers = []interface{}{}
-	file_service_v1alpha1_service_proto_msgTypes[40].OneofWrappers = []interface{}{}
-	file_service_v1alpha1_service_proto_msgTypes[43].OneofWrappers = []interface{}{
+	file_api_service_v1alpha1_service_proto_msgTypes[38].OneofWrappers = []interface{}{}
+	file_api_service_v1alpha1_service_proto_msgTypes[40].OneofWrappers = []interface{}{}
+	file_api_service_v1alpha1_service_proto_msgTypes[43].OneofWrappers = []interface{}{
 		(*GetPromotionResponse_Promotion)(nil),
 		(*GetPromotionResponse_Raw)(nil),
 	}
-	file_service_v1alpha1_service_proto_msgTypes[51].OneofWrappers = []interface{}{
+	file_api_service_v1alpha1_service_proto_msgTypes[51].OneofWrappers = []interface{}{
 		(*GetProjectResponse_Project)(nil),
 		(*GetProjectResponse_Raw)(nil),
 	}
-	file_service_v1alpha1_service_proto_msgTypes[52].OneofWrappers = []interface{}{}
-	file_service_v1alpha1_service_proto_msgTypes[59].OneofWrappers = []interface{}{
+	file_api_service_v1alpha1_service_proto_msgTypes[52].OneofWrappers = []interface{}{}
+	file_api_service_v1alpha1_service_proto_msgTypes[59].OneofWrappers = []interface{}{
 		(*GetFreightResponse_Freight)(nil),
 		(*GetFreightResponse_Raw)(nil),
 	}
-	file_service_v1alpha1_service_proto_msgTypes[76].OneofWrappers = []interface{}{
+	file_api_service_v1alpha1_service_proto_msgTypes[76].OneofWrappers = []interface{}{
 		(*GetWarehouseResponse_Warehouse)(nil),
 		(*GetWarehouseResponse_Raw)(nil),
 	}
-	file_service_v1alpha1_service_proto_msgTypes[96].OneofWrappers = []interface{}{
+	file_api_service_v1alpha1_service_proto_msgTypes[96].OneofWrappers = []interface{}{
 		(*GetCredentialsResponse_Credentials)(nil),
 		(*GetCredentialsResponse_Raw)(nil),
 	}
-	file_service_v1alpha1_service_proto_msgTypes[104].OneofWrappers = []interface{}{
+	file_api_service_v1alpha1_service_proto_msgTypes[104].OneofWrappers = []interface{}{
 		(*GetAnalysisTemplateResponse_AnalysisTemplate)(nil),
 		(*GetAnalysisTemplateResponse_Raw)(nil),
 	}
-	file_service_v1alpha1_service_proto_msgTypes[108].OneofWrappers = []interface{}{
+	file_api_service_v1alpha1_service_proto_msgTypes[108].OneofWrappers = []interface{}{
 		(*GetClusterAnalysisTemplateResponse_ClusterAnalysisTemplate)(nil),
 		(*GetClusterAnalysisTemplateResponse_Raw)(nil),
 	}
-	file_service_v1alpha1_service_proto_msgTypes[110].OneofWrappers = []interface{}{
+	file_api_service_v1alpha1_service_proto_msgTypes[110].OneofWrappers = []interface{}{
 		(*GetAnalysisRunResponse_AnalysisRun)(nil),
 		(*GetAnalysisRunResponse_Raw)(nil),
 	}
-	file_service_v1alpha1_service_proto_msgTypes[122].OneofWrappers = []interface{}{
+	file_api_service_v1alpha1_service_proto_msgTypes[122].OneofWrappers = []interface{}{
 		(*GetRoleResponse_Role)(nil),
 		(*GetRoleResponse_Resources)(nil),
 		(*GetRoleResponse_Raw)(nil),
 	}
-	file_service_v1alpha1_service_proto_msgTypes[124].OneofWrappers = []interface{}{
+	file_api_service_v1alpha1_service_proto_msgTypes[124].OneofWrappers = []interface{}{
 		(*GrantRequest_UserClaims)(nil),
 		(*GrantRequest_ResourceDetails)(nil),
 	}
-	file_service_v1alpha1_service_proto_msgTypes[128].OneofWrappers = []interface{}{
+	file_api_service_v1alpha1_service_proto_msgTypes[128].OneofWrappers = []interface{}{
 		(*RevokeRequest_UserClaims)(nil),
 		(*RevokeRequest_ResourceDetails)(nil),
 	}
@@ -10996,19 +10997,19 @@ func file_service_v1alpha1_service_proto_init() {
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: file_service_v1alpha1_service_proto_rawDesc,
+			RawDescriptor: file_api_service_v1alpha1_service_proto_rawDesc,
 			NumEnums:      1,
 			NumMessages:   139,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_service_v1alpha1_service_proto_goTypes,
-		DependencyIndexes: file_service_v1alpha1_service_proto_depIdxs,
-		EnumInfos:         file_service_v1alpha1_service_proto_enumTypes,
-		MessageInfos:      file_service_v1alpha1_service_proto_msgTypes,
+		GoTypes:           file_api_service_v1alpha1_service_proto_goTypes,
+		DependencyIndexes: file_api_service_v1alpha1_service_proto_depIdxs,
+		EnumInfos:         file_api_service_v1alpha1_service_proto_enumTypes,
+		MessageInfos:      file_api_service_v1alpha1_service_proto_msgTypes,
 	}.Build()
-	File_service_v1alpha1_service_proto = out.File
-	file_service_v1alpha1_service_proto_rawDesc = nil
-	file_service_v1alpha1_service_proto_goTypes = nil
-	file_service_v1alpha1_service_proto_depIdxs = nil
+	File_api_service_v1alpha1_service_proto = out.File
+	file_api_service_v1alpha1_service_proto_rawDesc = nil
+	file_api_service_v1alpha1_service_proto_goTypes = nil
+	file_api_service_v1alpha1_service_proto_depIdxs = nil
 }

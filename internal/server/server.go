@@ -23,6 +23,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/akuity/kargo/api/service/v1alpha1/svcv1alpha1connect"
 	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
@@ -35,7 +36,6 @@ import (
 	"github.com/akuity/kargo/internal/server/option"
 	"github.com/akuity/kargo/internal/server/rbac"
 	"github.com/akuity/kargo/internal/server/validation"
-	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
 )
 
 var (

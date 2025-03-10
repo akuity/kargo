@@ -11,8 +11,8 @@ import (
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
-	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
+	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
+	"github.com/akuity/kargo/api/service/v1alpha1/svcv1alpha1connect"
 )
 
 type getVersionInfoHandlerFunc func(

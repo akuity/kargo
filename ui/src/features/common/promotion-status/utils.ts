@@ -1,4 +1,4 @@
-import { Promotion } from '@ui/gen/v1alpha1/generated_pb';
+import { Promotion } from '@ui/gen/api/v1alpha1/generated_pb';
 
 // TODO: can we map this to promotion_types.go?
 export enum PromotionStatusPhase {

@@ -6,7 +6,7 @@ import { format, formatDistance } from 'date-fns';
 import { useEffect, useState } from 'react';
 
 import { CommitInfo } from '@ui/features/common/commit-info';
-import { Freight } from '@ui/gen/v1alpha1/generated_pb';
+import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { getAlias } from '../../../common/utils';
@@ -31,6 +31,12 @@ export const FreightLabel = ({ freight }: { freight?: Freight }) => {
       addSuffix: true
     }
   );
+
+  const totalImages = freight?.images?.length || 0;
+  const totalCommits = freight?.commits?.length || 0;
+  const totalCharts = freight?.charts?.length || 0;
+
+  const totalSubscriptions = totalImages + totalCommits + totalCharts;
 
   return (
     <div
@@ -67,7 +73,7 @@ export const FreightLabel = ({ freight }: { freight?: Freight }) => {
             </Tooltip>
           )}
           <div className='flex items-center gap-1 my-1 justify-center text-gray-500'>
-            {(freight?.images || []).map((image) => {
+            {(freight?.images || []).slice(0, 2).map((image) => {
               const key = `${image.repoURL}:${image?.tag}`;
               return (
                 <Tooltip key={key} title={key} placement='bottom'>
@@ -75,12 +81,12 @@ export const FreightLabel = ({ freight }: { freight?: Freight }) => {
                 </Tooltip>
               );
             })}
-            {(freight?.commits || []).map((commit) => (
+            {(freight?.commits || []).slice(0, 2).map((commit) => (
               <Tooltip key={commit.id} title={<CommitInfo commit={commit} />} placement='bottom'>
                 <FontAwesomeIcon icon={faGitAlt} />
               </Tooltip>
             ))}
-            {(freight?.charts || []).map((chart) => {
+            {(freight?.charts || []).slice(0, 2).map((chart) => {
               const key = chart.repoURL;
               return (
                 <Tooltip key={key} title={key} placement='bottom'>
@@ -88,6 +94,9 @@ export const FreightLabel = ({ freight }: { freight?: Freight }) => {
                 </Tooltip>
               );
             })}
+            {totalSubscriptions > 6 && (
+              <div className='text-xs text-gray-400'>+{totalSubscriptions - 6}</div>
+            )}
           </div>
         </>
       ) : (

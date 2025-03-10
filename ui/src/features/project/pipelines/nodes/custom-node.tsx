@@ -1,7 +1,12 @@
+import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Handle, Position } from '@xyflow/react';
-import { PropsWithChildren } from 'react';
+import { Button } from 'antd';
+import { PropsWithChildren, ReactNode } from 'react';
 
-import { RepoSubscription, Stage, Warehouse } from '@ui/gen/v1alpha1/generated_pb';
+import { RepoSubscription, Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
+
+import { usePipelineContext } from '../context/use-pipeline-context';
 
 import styles from './custom-node.module.less';
 import { StageNode } from './stage-node';
@@ -50,6 +55,8 @@ export const CustomNode = ({
 };
 
 CustomNode.Container = (props: PropsWithChildren<{ stage?: Stage; warehouse?: Warehouse }>) => {
+  const pipelineContext = usePipelineContext();
+
   if (props.stage?.metadata?.name) {
     const howManyStagesDoThisStageSubscribe = props.stage?.spec?.requestedFreight?.length || 0;
 
@@ -84,8 +91,55 @@ CustomNode.Container = (props: PropsWithChildren<{ stage?: Stage; warehouse?: Wa
     );
   }
 
+  let HideParents: ReactNode;
+  if (props.warehouse?.metadata?.name) {
+    const hideParentsOption = !!props.warehouse;
+
+    const subscription = props.warehouse?.spec?.subscriptions?.[0];
+
+    const repoURL =
+      subscription?.image?.repoURL || subscription?.git?.repoURL || subscription?.chart?.repoURL;
+
+    const warehouseNodeIndex = `${props.warehouse?.metadata?.name}-${repoURL}`;
+
+    const parentsHidden = pipelineContext?.hideParents?.includes(warehouseNodeIndex);
+
+    HideParents = hideParentsOption && (
+      <Button
+        size='small'
+        className='absolute top-[50%] translate-y-[-50%] translate-x-[-50%] z-10'
+        icon={
+          <FontAwesomeIcon
+            icon={parentsHidden ? faEye : faEyeSlash}
+            onClick={() => {
+              const parents = new Set(pipelineContext?.hideParents);
+
+              for (const subscription of props.warehouse?.spec?.subscriptions || []) {
+                const repoURL =
+                  subscription.image?.repoURL ||
+                  subscription.git?.repoURL ||
+                  subscription.chart?.repoURL;
+
+                // TODO: centralize node id construction logic
+                const nodeIndex = `${props.warehouse?.metadata?.name}-${repoURL}`;
+
+                if (!parentsHidden) {
+                  parents.add(nodeIndex);
+                } else {
+                  parents.delete(nodeIndex);
+                }
+              }
+
+              pipelineContext?.onHideParents(Array.from(parents));
+            }}
+          />
+        }
+      />
+    );
+  }
   return (
     <>
+      {HideParents}
       <Handle
         id={props.warehouse?.metadata?.name || ''}
         type='target'

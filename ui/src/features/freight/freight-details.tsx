@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
-import { Freight, FreightSchema } from '@ui/gen/v1alpha1/generated_pb';
+import { Freight, FreightSchema } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { Description } from '../common/description';
 import { ManifestPreview } from '../common/manifest-preview';

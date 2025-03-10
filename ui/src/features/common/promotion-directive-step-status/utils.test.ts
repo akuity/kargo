@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 
-import { PromotionStatus } from '@ui/gen/v1alpha1/generated_pb';
+import { PromotionStatus } from '@ui/gen/api/v1alpha1/generated_pb';
 import { PlainMessage } from '@ui/utils/connectrpc-utils';
 
 import { PromotionStatusPhase } from '../promotion-status/utils';

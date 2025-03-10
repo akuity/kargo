@@ -1,5 +1,5 @@
 import { PromotionStatusPhase } from '@ui/features/common/promotion-status/utils';
-import { PromotionStatus } from '@ui/gen/v1alpha1/generated_pb';
+import { PromotionStatus } from '@ui/gen/api/v1alpha1/generated_pb';
 
 // UI concludes from Promotion's status data
 export enum PromotionDirectiveStepStatus {

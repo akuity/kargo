@@ -14,7 +14,7 @@ import { FieldTemplate } from '@ui/features/common/form/rjsf/field-template';
 import { ObjectFieldTemplate } from '@ui/features/common/form/rjsf/object-field-template';
 import { IconSetByKargoTerminology } from '@ui/features/common/icons';
 import { ObjectDescription } from '@ui/features/common/object-description';
-import { RepoSubscription } from '@ui/gen/v1alpha1/generated_pb';
+import { RepoSubscription } from '@ui/gen/api/v1alpha1/generated_pb';
 import { PlainMessage } from '@ui/utils/connectrpc-utils';
 
 import { warehouseCreateFormJSONSchema } from './schema';
