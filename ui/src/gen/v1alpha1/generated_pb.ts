@@ -2114,7 +2114,7 @@ export type PromotionStep = Message<"github.com.akuity.kargo.api.v1alpha1.Promot
    * Config is opaque configuration for the PromotionStep that is understood
    * only by each PromotionStep's implementation. It is legal to utilize
    * expressions in defining values at any level of this block.
-   * See https://docs.kargo.io/references/expression-language for details.
+   * See https://docs.kargo.io/user-guide/reference-docs/expressions for details.
    *
    * @generated from field: optional k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 3;
    */
@@ -2385,7 +2385,7 @@ export type PromotionVariable = Message<"github.com.akuity.kargo.api.v1alpha1.Pr
   /**
    * Value is the value of the variable. It is allowed to utilize expressions
    * in the value.
-   * See https://docs.kargo.io/references/expression-language for details.
+   * See https://docs.kargo.io/user-guide/reference-docs/expressions for details.
    *
    * @generated from field: optional string value = 2;
    */
