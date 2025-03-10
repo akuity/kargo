@@ -480,8 +480,6 @@ func (r *reconciler) promote(
 		}
 	}
 
-	creator := parseActorAnnotation(&promo)
-
 	promoCtx := promotion.Context{
 		UIBaseURL:             r.cfg.APIServerBaseURL,
 		WorkDir:               filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID)),
@@ -494,7 +492,7 @@ func (r *reconciler) promote(
 		StepExecutionMetadata: promo.Status.StepExecutionMetadata,
 		State:                 pkgPromotion.State(workingPromo.Status.GetState()),
 		Vars:                  workingPromo.Spec.Vars,
-		Creator:               creator,
+		Actor:                 parseCreateActorAnnotation(&promo),
 	}
 	if err := os.Mkdir(promoCtx.WorkDir, 0o700); err == nil {
 		// If we're working with a fresh directory, we should start the promotion
@@ -651,13 +649,18 @@ func (r *reconciler) terminatePromotion(
 	return nil
 }
 
-func parseActorAnnotation(promo *kargoapi.Promotion) string {
-	creator := "N/A"
-	actorAnnotation, ok := promo.ObjectMeta.Annotations[kargoapi.AnnotationKeyCreateActor]
-	if ok {
-		substrings := strings.Split(actorAnnotation, ":")
-		if len(substrings) == 2 {
-			creator = substrings[1]
+// parseCreateActorAnnotation extracts the v1alpha1.AnnotationKeyCreateActor
+// value from the Promotion's annotations and returns it. If the value contains
+// a colon, it is split and the second part is returned. Otherwise, the entire
+// value or an empty string is returned.
+func parseCreateActorAnnotation(promo *kargoapi.Promotion) string {
+	var creator string
+	if v, ok := promo.Annotations[kargoapi.AnnotationKeyCreateActor]; ok {
+		if v != kargoapi.EventActorUnknown {
+			creator = v
+		}
+		if parts := strings.Split(v, ":"); len(parts) == 2 {
+			creator = parts[1]
 		}
 	}
 	return creator

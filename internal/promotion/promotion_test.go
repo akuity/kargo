@@ -147,19 +147,19 @@ func TestStep_GetConfig(t *testing.T) {
 				Project:   "fake-project",
 				Stage:     "fake-stage",
 				Promotion: "fake-promotion",
-				Creator:   "fake-creator",
+				Actor:     "fake-creator",
 			},
 			rawCfg: []byte(`{
 				"project": "${{ ctx.project }}",
 				"stage": "${{ ctx.stage }}",
 				"promotion": "${{ ctx.promotion }}",
-				"creator": "${{ ctx.creator }}"
+				"actor": "${{ ctx.meta.promotion.actor }}"
 			}`),
 			expectedCfg: promotion.Config{
 				"project":   "fake-project",
 				"stage":     "fake-stage",
 				"promotion": "fake-promotion",
-				"creator":   "fake-creator",
+				"actor":     "fake-creator",
 			},
 		},
 		{
