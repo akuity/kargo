@@ -465,7 +465,7 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 
 func Test_parseCreateActorAnnotation(t *testing.T) {
 	tests := []struct {
-		name            string
+		name  string
 		promo *kargoapi.Promotion
 		want  string
 	}{
