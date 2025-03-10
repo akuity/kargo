@@ -3,10 +3,10 @@ syntax = "proto3";
 package akuity.io.kargo.service.v1alpha1;
 
 import "google/protobuf/timestamp.proto";
-import "v1alpha1/generated.proto";
+import "api/v1alpha1/generated.proto";
 import "k8s.io/api/core/v1/generated.proto";
-import "stubs/rollouts/v1alpha1/generated.proto";
-import "rbac/v1alpha1/generated.proto";
+import "api/stubs/rollouts/v1alpha1/generated.proto";
+import "api/rbac/v1alpha1/generated.proto";
 
 option go_package = "github.com/akuity/kargo/api/service/v1alpha1;svcv1alpha1";
 
