@@ -19,7 +19,7 @@ import {
   deleteProjectSecret,
   listCredentials,
   listProjectSecrets
-} from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 
 import { CreateCredentialsModal } from './create-credentials-modal';
 import { CredentialTypeLabelKey, CredentialsDataKey, CredentialsType } from './types';

@@ -6,7 +6,7 @@ import { format, formatDistance } from 'date-fns';
 import { useEffect, useState } from 'react';
 
 import { CommitInfo } from '@ui/features/common/commit-info';
-import { Freight } from '@ui/gen/v1alpha1/generated_pb';
+import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { getAlias } from '../../../common/utils';

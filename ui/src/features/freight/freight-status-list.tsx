@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useContext } from 'react';
 
 import { ColorContext } from '@ui/context/colors';
-import { Freight } from '@ui/gen/v1alpha1/generated_pb';
+import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
 
 const StageIndicator = ({ stageName, icon }: { stageName: string; icon?: IconDefinition }) => {
   const { stageColorMap } = useContext(ColorContext);

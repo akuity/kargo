@@ -11,7 +11,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
 import { CSSProperties } from 'react';
 
-import { Health } from '@ui/gen/v1alpha1/generated_pb';
+import { Health } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { HealthStatus, healthStatusToEnum } from './utils';
 

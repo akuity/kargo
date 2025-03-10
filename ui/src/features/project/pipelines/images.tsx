@@ -9,8 +9,8 @@ import semver from 'semver';
 
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
-import { TagMap } from '@ui/gen/service/v1alpha1/service_pb';
-import { Stage } from '@ui/gen/v1alpha1/generated_pb';
+import { TagMap } from '@ui/gen/api/service/v1alpha1/service_pb';
+import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
 const ImageTagRow = ({

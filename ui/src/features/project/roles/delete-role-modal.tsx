@@ -2,7 +2,7 @@ import { useMutation } from '@connectrpc/connect-query';
 import { Modal } from 'antd';
 import { useParams } from 'react-router-dom';
 
-import { deleteRole } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { deleteRole } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 
 export const DeleteRoleModal = ({
   name,

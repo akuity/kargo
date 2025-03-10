@@ -9,7 +9,7 @@ import {
   Measurement,
   MetricProvider,
   MetricResult
-} from '@ui/gen/stubs/rollouts/v1alpha1/generated_pb';
+} from '@ui/gen/api/stubs/rollouts/v1alpha1/generated_pb';
 
 import {
   AnalysisStatus,

@@ -1,4 +1,4 @@
-import { Measurement, Metric, MetricResult } from '@ui/gen/stubs/rollouts/v1alpha1/generated_pb';
+import { Measurement, Metric, MetricResult } from '@ui/gen/api/stubs/rollouts/v1alpha1/generated_pb';
 
 export enum AnalysisStatus {
   Successful = 'Successful',

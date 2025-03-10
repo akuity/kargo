@@ -12,7 +12,7 @@ import { FieldContainer } from '@ui/features/common/form/field-container';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import { queryCache } from '@ui/features/utils/cache';
 import schema from '@ui/gen/schema/projects.kargo.akuity.io_v1alpha1.json';
-import { createResource } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { createResource } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { decodeUint8ArrayYamlManifestToJson } from '@ui/utils/decode-raw-data';
 import { zodValidators } from '@ui/utils/validators';
 

@@ -5,7 +5,7 @@ import { paths } from '@ui/config/paths';
 import { Description } from '@ui/features/common/description';
 import { StageTag } from '@ui/features/common/stage-tag';
 import { getColors } from '@ui/features/stage/utils';
-import { Project, Stage } from '@ui/gen/v1alpha1/generated_pb';
+import { Project, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import * as styles from './project-item.module.less';
 

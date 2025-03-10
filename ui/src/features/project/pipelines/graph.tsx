@@ -1,7 +1,7 @@
 import { Controls, ReactFlow } from '@xyflow/react';
 import { memo, useEffect } from 'react';
 
-import { Stage, Warehouse } from '@ui/gen/v1alpha1/generated_pb';
+import { Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { usePipelineContext } from './context/use-pipeline-context';
 import { CustomNode } from './nodes/custom-node';

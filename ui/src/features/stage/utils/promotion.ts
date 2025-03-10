@@ -4,7 +4,7 @@ import {
   getPromotionStatusPhase,
   isPromotionPhaseTerminal
 } from '@ui/features/common/promotion-status/utils';
-import { Promotion } from '@ui/gen/v1alpha1/generated_pb';
+import { Promotion } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 export const canAbortPromotion = (promotion: Promotion) =>

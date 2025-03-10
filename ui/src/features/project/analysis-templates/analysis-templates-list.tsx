@@ -11,8 +11,8 @@ import { useModal } from '@ui/features/common/modal/use-modal';
 import {
   deleteAnalysisTemplate,
   listAnalysisTemplates
-} from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { AnalysisTemplate } from '@ui/gen/stubs/rollouts/v1alpha1/generated_pb';
+} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { AnalysisTemplate } from '@ui/gen/api/stubs/rollouts/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { CreateAnalysisTemplateModal } from './create-analysis-template-modal';

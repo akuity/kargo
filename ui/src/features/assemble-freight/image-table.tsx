@@ -2,7 +2,7 @@ import { faQuestionCircle } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Radio, Table } from 'antd';
 
-import { DiscoveredImageReference } from '@ui/gen/v1alpha1/generated_pb';
+import { DiscoveredImageReference } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { TruncatedCopyable } from './truncated-copyable';

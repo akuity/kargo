@@ -10,9 +10,9 @@ import { HealthStatusIcon } from '@ui/features/common/health-status/health-statu
 import { StagePhaseIcon } from '@ui/features/common/stage-phase/stage-phase-icon';
 import { StagePhase } from '@ui/features/common/stage-phase/utils';
 import { useImages } from '@ui/features/project/pipelines/utils/useImages';
-import { getConfig, getStage } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { RawFormat } from '@ui/gen/service/v1alpha1/service_pb';
-import { Stage, VerificationInfo } from '@ui/gen/v1alpha1/generated_pb';
+import { getConfig, getStage } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
+import { Stage, VerificationInfo } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 

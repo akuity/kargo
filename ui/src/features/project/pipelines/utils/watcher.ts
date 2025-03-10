@@ -9,7 +9,7 @@ import {
   getStage,
   listStages,
   listWarehouses
-} from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import {
   GetStageRequestSchema,
   KargoService,
@@ -17,8 +17,8 @@ import {
   ListStagesResponse,
   ListWarehousesRequestSchema,
   ListWarehousesResponse
-} from '@ui/gen/service/v1alpha1/service_pb';
-import { Stage, Warehouse } from '@ui/gen/v1alpha1/generated_pb';
+} from '@ui/gen/api/service/v1alpha1/service_pb';
+import { Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
 async function ProcessEvents<T extends { type: string }, S extends { metadata?: ObjectMeta }>(
   stream: AsyncIterable<T>,

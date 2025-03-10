@@ -13,7 +13,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { redirectToQueryParam, refreshTokenKey } from '@ui/config/auth';
 import { paths } from '@ui/config/paths';
-import { getPublicConfig } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { getPublicConfig } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 
 import { LoadingState } from '../common';
 

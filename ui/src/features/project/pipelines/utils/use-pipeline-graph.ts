@@ -3,7 +3,7 @@ import { graphlib, layout } from 'dagre';
 import { useContext, useEffect, useMemo } from 'react';
 
 import { ColorContext } from '@ui/context/colors';
-import { RepoSubscription, Stage, Warehouse } from '@ui/gen/v1alpha1/generated_pb';
+import { RepoSubscription, Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { NodeType, RepoNodeDimensions, getNodeDimensions } from '../types';
 

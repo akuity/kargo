@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
-import { listProjects } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { listProjects } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 
 export const ProjectListFilter = ({
   onChange,

@@ -12,8 +12,8 @@ import { FieldContainer } from '@ui/features/common/form/field-container';
 import { MultiStringEditor } from '@ui/features/common/form/multi-string-editor';
 import { DESCRIPTION_ANNOTATION_KEY, dnsRegex } from '@ui/features/common/utils';
 import { PolicyRule } from '@ui/gen/k8s.io/api/rbac/v1/generated_pb';
-import { Claim, ClaimSchema, Role } from '@ui/gen/rbac/v1alpha1/generated_pb';
-import { createRole, updateRole } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { Claim, ClaimSchema, Role } from '@ui/gen/api/rbac/v1alpha1/generated_pb';
+import { createRole, updateRole } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { zodValidators } from '@ui/utils/validators';
 
 import { RuleEditor } from './rule-editor';

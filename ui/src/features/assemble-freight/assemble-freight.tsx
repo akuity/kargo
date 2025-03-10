@@ -8,7 +8,7 @@ import { useParams } from 'react-router-dom';
 import yaml from 'yaml';
 
 import { newErrorHandler, newTransportWithAuth } from '@ui/config/transport';
-import { createResource } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { createResource } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import {
   Chart,
   ChartDiscoveryResult,
@@ -20,7 +20,7 @@ import {
   Image,
   ImageDiscoveryResult,
   Warehouse
-} from '@ui/gen/v1alpha1/generated_pb';
+} from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { FreightContents } from '../freight-timeline/freight-contents';
 

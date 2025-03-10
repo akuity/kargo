@@ -2,7 +2,7 @@ import { faDocker, faGitAlt } from '@fortawesome/free-brands-svg-icons';
 import { faAnchor } from '@fortawesome/free-solid-svg-icons';
 import classNames from 'classnames';
 
-import { Freight } from '@ui/gen/v1alpha1/generated_pb';
+import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
 import { urlForImage } from '@ui/utils/url';
 
 import { CommitInfo } from '../common/commit-info';

@@ -14,8 +14,8 @@ import schema from '@ui/gen/schema/projects.kargo.akuity.io_v1alpha1.json';
 import {
   getProject,
   updateResource
-} from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { RawFormat } from '@ui/gen/service/v1alpha1/service_pb';
+} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 import { zodValidators } from '@ui/utils/validators';
 

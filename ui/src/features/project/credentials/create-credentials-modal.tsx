@@ -16,7 +16,7 @@ import {
   createProjectSecret,
   updateCredentials,
   updateProjectSecret
-} from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { zodValidators } from '@ui/utils/validators';
 
 import { SecretEditor } from './secret-editor';
