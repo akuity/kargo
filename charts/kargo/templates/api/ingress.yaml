@@ -22,7 +22,7 @@ spec:
     http:
       paths:
       - pathType: {{ .Values.api.ingress.pathType | default "ImplementationSpecific" }}
-        path: /
+        path: /*
         backend:
           service:
             name: kargo-api
