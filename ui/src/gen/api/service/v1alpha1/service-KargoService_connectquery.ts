@@ -2,6 +2,8 @@
 // @generated from file api/service/v1alpha1/service.proto (package akuity.io.kargo.service.v1alpha1, syntax proto3)
 /* eslint-disable */
 
+// Experiment
+
 import { KargoService } from "./service_pb";
 
 /**

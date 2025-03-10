@@ -11,9 +11,9 @@ import { format } from 'date-fns';
 import moment from 'moment';
 import { useParams } from 'react-router-dom';
 
+import { listProjectEvents } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { Event } from '@ui/gen/k8s.io/api/core/v1/generated_pb';
 import { Time } from '@ui/gen/k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb';
-import { listProjectEvents } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 const EventValue = ({ label, children }: { label: string; children: React.ReactNode }) => {

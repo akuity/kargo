@@ -10,8 +10,8 @@ import { paths } from '@ui/config/paths';
 import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import { WarehouseManifestsGen } from '@ui/features/utils/manifest-generator';
-import warehouseSchema from '@ui/gen/schema/warehouses.kargo.akuity.io_v1alpha1.json';
 import { createResource } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import warehouseSchema from '@ui/gen/schema/warehouses.kargo.akuity.io_v1alpha1.json';
 
 import { CreateWarehouseWizard } from './create-warehouse-wizard';
 

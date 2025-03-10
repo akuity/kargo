@@ -1,5 +1,4 @@
 // eslint-disable-file @typescript-eslint/ban-ts-comment
-import { IntOrString } from '@ui/gen/k8s.io/apimachinery/pkg/util/intstr/generated_pb';
 import {
   AnalysisRunSpec,
   AnalysisRunStatus,
@@ -10,6 +9,7 @@ import {
   MetricProvider,
   MetricResult
 } from '@ui/gen/api/stubs/rollouts/v1alpha1/generated_pb';
+import { IntOrString } from '@ui/gen/k8s.io/apimachinery/pkg/util/intstr/generated_pb';
 
 import {
   AnalysisStatus,

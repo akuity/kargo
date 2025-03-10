@@ -10,13 +10,13 @@ import { FieldContainer } from '@ui/features/common/form/field-container';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import { SegmentLabel } from '@ui/features/common/segment-label';
 import { dnsRegex } from '@ui/features/common/utils';
-import { Secret } from '@ui/gen/k8s.io/api/core/v1/generated_pb';
 import {
   createCredentials,
   createProjectSecret,
   updateCredentials,
   updateProjectSecret
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { Secret } from '@ui/gen/k8s.io/api/core/v1/generated_pb';
 import { zodValidators } from '@ui/utils/validators';
 
 import { SecretEditor } from './secret-editor';

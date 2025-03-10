@@ -22,7 +22,10 @@ import { Events } from '@ui/features/project/events/events';
 import { Pipelines } from '@ui/features/project/pipelines/pipelines';
 import { Roles } from '@ui/features/project/roles/roles';
 import { ProjectSettings } from '@ui/features/project/settings/project-settings';
-import { getConfig, getProject } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import {
+  getConfig,
+  getProject
+} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { Project as _Project } from '@ui/gen/api/v1alpha1/generated_pb';
 
 export const Project = ({

@@ -9,7 +9,6 @@ import { generatePath, Link, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import freightTimelineStyles from '@ui/features/freight-timeline/freight-timeline.module.less';
-import { ObjectMetaSchema } from '@ui/gen/k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb';
 import { queryFreight } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import {
   Freight,
@@ -18,6 +17,7 @@ import {
   FreightSchema,
   StageStatus
 } from '@ui/gen/api/v1alpha1/generated_pb';
+import { ObjectMetaSchema } from '@ui/gen/k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb';
 import { PlainMessage } from '@ui/utils/connectrpc-utils';
 
 import { LoadingState } from '../common';

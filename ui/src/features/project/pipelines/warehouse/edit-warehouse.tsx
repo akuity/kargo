@@ -11,12 +11,12 @@ import { z } from 'zod';
 import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import { WarehouseManifestsGen } from '@ui/features/utils/manifest-generator';
-import schema from '@ui/gen/schema/warehouses.kargo.akuity.io_v1alpha1.json';
 import {
   getWarehouse,
   updateResource
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
+import schema from '@ui/gen/schema/warehouses.kargo.akuity.io_v1alpha1.json';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 import { zodValidators } from '@ui/utils/validators';
 

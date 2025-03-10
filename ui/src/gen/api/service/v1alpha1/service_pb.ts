@@ -2,6 +2,8 @@
 // @generated from file api/service/v1alpha1/service.proto (package akuity.io.kargo.service.v1alpha1, syntax proto3)
 /* eslint-disable */
 
+// Experiment
+
 import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv1";
 import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv1";
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
