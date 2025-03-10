@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-import { Freight } from '@ui/gen/v1alpha1/generated_pb';
+import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { FreightTimelineAction } from '../types';
 

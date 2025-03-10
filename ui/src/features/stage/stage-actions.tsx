@@ -20,8 +20,8 @@ import {
   queryFreight,
   refreshStage,
   reverify
-} from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { Stage } from '@ui/gen/v1alpha1/generated_pb';
+} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { useConfirmModal } from '../common/confirm-modal/use-confirm-modal';
 import { useModal } from '../common/modal/use-modal';

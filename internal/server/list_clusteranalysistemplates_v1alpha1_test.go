@@ -11,11 +11,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	rollouts "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	"github.com/akuity/kargo/internal/server/config"
 	"github.com/akuity/kargo/internal/server/kubernetes"
 	"github.com/akuity/kargo/internal/server/validation"
-	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
 func TestListClusterAnalysisTemplates(t *testing.T) {

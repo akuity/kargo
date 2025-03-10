@@ -1,4 +1,4 @@
-import { Stage } from '@ui/gen/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 
 export const lastVerificationErrored = (stage: Stage): boolean => {
   const freightHistory = stage?.status?.freightHistory;

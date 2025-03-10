@@ -14,8 +14,8 @@ import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
-import { refreshWarehouse } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { Warehouse } from '@ui/gen/v1alpha1/generated_pb';
+import { refreshWarehouse } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { usePipelineContext } from '../context/use-pipeline-context';
 import { onError } from '../utils/util';

@@ -39,8 +39,8 @@ import {
   listImages,
   listWarehouses,
   queryFreight
-} from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { Freight, Project, Stage, Warehouse } from '@ui/gen/v1alpha1/generated_pb';
+} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { Freight, Project, Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 import { useDocumentEvent } from '@ui/utils/document';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 

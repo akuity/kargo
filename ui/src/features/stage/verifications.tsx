@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import moment from 'moment';
 import { useMemo, useState } from 'react';
 
-import { VerificationInfo } from '@ui/gen/v1alpha1/generated_pb';
+import { VerificationInfo } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { AnalysisModal } from '../common/analysis-modal/analysis-modal';

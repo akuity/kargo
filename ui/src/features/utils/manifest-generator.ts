@@ -1,6 +1,6 @@
 import { stringify } from 'yaml';
 
-import { WarehouseSpec } from '@ui/gen/v1alpha1/generated_pb';
+import { WarehouseSpec } from '@ui/gen/api/v1alpha1/generated_pb';
 import { PartialRecursive, PlainMessageRecursive } from '@ui/utils/connectrpc-utils';
 import { cleanEmptyObjectValues } from '@ui/utils/helpers';
 

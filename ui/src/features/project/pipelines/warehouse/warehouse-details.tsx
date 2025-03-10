@@ -13,7 +13,7 @@ import { generatePath, useNavigate, useParams } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { AssembleFreight } from '@ui/features/assemble-freight/assemble-freight';
 import { SmallLabel } from '@ui/features/common/small-label';
-import { Warehouse } from '@ui/gen/v1alpha1/generated_pb';
+import { Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { EditWarehouse } from './edit-warehouse';
 import { RepoSubscriptions } from './repo-subscriptions';

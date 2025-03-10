@@ -18,7 +18,7 @@ import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
-import { Warehouse } from '@ui/gen/v1alpha1/generated_pb';
+import { Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { CollapseMode, FreightTimelineAction } from '../project/pipelines/types';
 

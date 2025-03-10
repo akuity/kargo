@@ -10,7 +10,7 @@ import { ModalProps } from '@ui/features/common/modal/use-modal';
 import {
   createResource,
   listClusterAnalysisTemplates
-} from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 
 import { getClusterAnalysisTemplateYAMLExample } from '../../utils/cluster-analysis-template-example';
 

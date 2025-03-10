@@ -4,8 +4,8 @@ import { useParams } from 'react-router-dom';
 
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import { getAlias } from '@ui/features/common/utils';
-import { deleteFreight } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { Freight } from '@ui/gen/v1alpha1/generated_pb';
+import { deleteFreight } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { onError } from '../pipelines/utils/util';
 

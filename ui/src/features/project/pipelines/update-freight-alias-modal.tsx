@@ -9,8 +9,8 @@ import { z } from 'zod';
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import { getAlias } from '@ui/features/common/utils';
-import { updateFreightAlias } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { Freight } from '@ui/gen/v1alpha1/generated_pb';
+import { updateFreightAlias } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
 import { zodValidators } from '@ui/utils/validators';
 
 type Props = ModalComponentProps & {

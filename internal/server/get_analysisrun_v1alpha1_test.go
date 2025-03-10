@@ -15,10 +15,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
+	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	rollouts "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	"github.com/akuity/kargo/internal/server/config"
 	"github.com/akuity/kargo/internal/server/kubernetes"
-	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
 func TestGetAnalysisRun(t *testing.T) {

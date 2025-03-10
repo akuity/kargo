@@ -15,7 +15,7 @@ import {
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 
-import { OIDCConfig } from '@ui/gen/service/v1alpha1/service_pb';
+import { OIDCConfig } from '@ui/gen/api/service/v1alpha1/service_pb';
 
 import { useAuthContext } from './context/use-auth-context';
 import {

@@ -7,7 +7,7 @@ import { LoadingState } from '@ui/features/common';
 import {
   listProjects,
   listStages
-} from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 
 import { useLocalStorage } from '../../../utils/use-local-storage';
 

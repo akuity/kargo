@@ -7,8 +7,8 @@ import (
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
 
+	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	"github.com/akuity/kargo/internal/server/config"
-	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
 func TestGetConfig(t *testing.T) {

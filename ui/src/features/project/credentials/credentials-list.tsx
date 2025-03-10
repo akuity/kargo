@@ -13,13 +13,13 @@ import { useParams } from 'react-router-dom';
 import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
 import { descriptionExpandable } from '@ui/features/common/description-expandable';
 import { useModal } from '@ui/features/common/modal/use-modal';
-import { Secret } from '@ui/gen/k8s.io/api/core/v1/generated_pb';
 import {
   deleteCredentials,
   deleteProjectSecret,
   listCredentials,
   listProjectSecrets
-} from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { Secret } from '@ui/gen/k8s.io/api/core/v1/generated_pb';
 
 import { CreateCredentialsModal } from './create-credentials-modal';
 import { CredentialTypeLabelKey, CredentialsDataKey, CredentialsType } from './types';

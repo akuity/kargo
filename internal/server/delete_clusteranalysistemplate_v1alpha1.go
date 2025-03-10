@@ -8,8 +8,8 @@ import (
 	"connectrpc.com/connect"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	"github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
-	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
 func (s *server) DeleteClusterAnalysisTemplate(

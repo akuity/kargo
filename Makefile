@@ -83,7 +83,8 @@ format-go:
 lint-proto: install-buf
 	# Vendor go dependencies to build protobuf definitions
 	go mod vendor
-	$(BUF) lint api --error-format=$(BUF_LINT_ERROR_FORMAT)
+	@# Only lint hand-written .proto files
+	$(BUF) lint . --path api/service --error-format=$(BUF_LINT_ERROR_FORMAT)
 
 .PHONY: lint-charts
 lint-charts: install-helm

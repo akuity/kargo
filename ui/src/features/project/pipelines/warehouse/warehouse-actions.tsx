@@ -10,8 +10,8 @@ import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-m
 import {
   deleteWarehouse,
   listWarehouses
-} from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { Warehouse } from '@ui/gen/v1alpha1/generated_pb';
+} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
 export const WarehouseActions = ({ warehouse }: { warehouse: Warehouse }) => {
   const { name: projectName } = useParams();

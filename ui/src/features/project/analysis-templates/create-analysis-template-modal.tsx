@@ -10,7 +10,7 @@ import { queryCache } from '@ui/features/utils/cache';
 import {
   createResource,
   listAnalysisTemplates
-} from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { decodeUint8ArrayYamlManifestToJson } from '@ui/utils/decode-raw-data';
 
 import { getAnalysisTemplateYAMLExample } from './utils/analysis-template-example';

@@ -9,7 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	sigyaml "sigs.k8s.io/yaml"
 
-	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
+	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 )
 
 func (s *server) UpdateResource(

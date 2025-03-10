@@ -1,6 +1,6 @@
 import { createContext } from 'react';
 
-import { Freight, Stage } from '@ui/gen/v1alpha1/generated_pb';
+import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { FreightTimelineAction } from '../types';
 import { PipelineStateHook } from '../utils/state';

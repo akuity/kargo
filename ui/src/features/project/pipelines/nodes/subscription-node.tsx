@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
 import classNames from 'classnames';
 
-import { RepoSubscription } from '@ui/gen/v1alpha1/generated_pb';
+import { RepoSubscription } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import styles from './custom-node.module.less';
 
