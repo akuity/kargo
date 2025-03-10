@@ -157,7 +157,7 @@ export const CreateStage = ({
           Create Stage
         </Typography.Title>
         <Typography.Link
-          href='https://docs.kargo.io/concepts/#stage-resources'
+          href='https://docs.kargo.io/user-guide/how-to-guides/working-with-stages'
           target='_blank'
           className='ml-3'
         >
