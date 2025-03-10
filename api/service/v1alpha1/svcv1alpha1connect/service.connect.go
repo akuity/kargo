@@ -8,7 +8,7 @@ import (
 	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
-	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
+	v1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	http "net/http"
 	strings "strings"
 )
