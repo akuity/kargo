@@ -11,7 +11,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, Dropdown, Spin, Tooltip } from 'antd';
 import classNames from 'classnames';
-import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -272,6 +272,8 @@ export const Pipelines = ({
     [name, data?.stages]
   );
 
+  const [hideParents, setHideParents] = useState<string[]>([]);
+
   if (isLoading || isLoadingFreight || isLoadingImages || isLoadingWarehouse)
     return <LoadingState />;
 
@@ -417,7 +419,9 @@ export const Pipelines = ({
               setSelectedWarehouse(newWarehouse) {
                 lastExplicitlySelectedWarehouse.current = newWarehouse;
                 setSelectedWarehouse(newWarehouse);
-              }
+              },
+              hideParents,
+              onHideParents: setHideParents
             }}
           >
             <Graph
