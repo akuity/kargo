@@ -3,6 +3,7 @@ package promotions
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -335,60 +336,6 @@ func TestReconcile(t *testing.T) {
 	}
 }
 
-func Test_parseActorAnnotation(t *testing.T) {
-	tests := []struct {
-		name            string
-		promo           *kargoapi.Promotion
-		expectedCreator string
-	}{
-		{
-			name: "basic case",
-			promo: &kargoapi.Promotion{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "fake-promo",
-					Namespace: "fake-namespace",
-					Annotations: map[string]string{
-						kargoapi.AnnotationKeyCreateActor: "email:fake-actor",
-					},
-				},
-			},
-			expectedCreator: "fake-actor",
-		},
-		{
-
-			name: "no annotation",
-			promo: &kargoapi.Promotion{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "fake-promo",
-					Namespace: "fake-namespace",
-				},
-			},
-			expectedCreator: "N/A",
-		},
-		{
-			name: "invalid",
-			promo: &kargoapi.Promotion{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "fake-promo",
-					Namespace: "fake-namespace",
-					Annotations: map[string]string{
-						kargoapi.AnnotationKeyCreateActor: "abc123",
-					},
-				},
-			},
-			expectedCreator: "N/A",
-		},
-	}
-
-	for _, tc := range tests {
-
-		t.Run(tc.name, func(t *testing.T) {
-			result := parseActorAnnotation(tc.promo)
-			require.Equal(t, tc.expectedCreator, result)
-		})
-	}
-}
-
 func Test_reconciler_terminatePromotion(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
 	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
@@ -512,6 +459,74 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 			req := tt.req
 			err := r.terminatePromotion(context.Background(), &req, tt.promo, tt.freight)
 			tt.assertions(t, recorder, tt.promo, err)
+		})
+	}
+}
+
+func Test_parseCreateActorAnnotation(t *testing.T) {
+	tests := []struct {
+		name            string
+		promo *kargoapi.Promotion
+		want  string
+	}{
+		{
+			name: "basic case",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-promo",
+					Namespace: "fake-namespace",
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyCreateActor: fmt.Sprintf(
+							"%s%s", kargoapi.EventActorEmailPrefix, "fake-actor",
+						),
+					},
+				},
+			},
+			want: "fake-actor",
+		},
+		{
+			name: "single element",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-promo",
+					Namespace: "fake-namespace",
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyCreateActor: kargoapi.EventActorAdmin,
+					},
+				},
+			},
+			want: kargoapi.EventActorAdmin,
+		},
+		{
+			name: "unknown actor",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-promo",
+					Namespace: "fake-namespace",
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyCreateActor: kargoapi.EventActorUnknown,
+					},
+				},
+			},
+			want: "",
+		},
+		{
+
+			name: "no annotation",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-promo",
+					Namespace: "fake-namespace",
+				},
+			},
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := parseCreateActorAnnotation(tt.promo)
+			require.Equal(t, tt.want, result)
 		})
 	}
 }

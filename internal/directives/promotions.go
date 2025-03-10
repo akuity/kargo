@@ -81,8 +81,8 @@ type PromotionContext struct {
 	Vars []kargoapi.PromotionVariable
 	// Secrets is a map of secrets that can be used by the PromotionSteps.
 	Secrets map[string]map[string]string
-	// Creator is the name of the actor triggering the Promotion.
-	Creator string
+	// Actor is the name of the actor triggering the Promotion.
+	Actor string
 }
 
 // PromotionStep describes a single step in a user-defined promotion process.
@@ -196,7 +196,11 @@ func (s *PromotionStep) BuildEnv(
 			"project":   promoCtx.Project,
 			"promotion": promoCtx.Promotion,
 			"stage":     promoCtx.Stage,
-			"creator":   promoCtx.Creator,
+			"meta": map[string]any{
+				"promotion": map[string]any{
+					"actor": promoCtx.Actor,
+				},
+			},
 		},
 	}
 
