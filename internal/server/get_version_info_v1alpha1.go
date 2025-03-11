@@ -6,6 +6,7 @@ import (
 	"connectrpc.com/connect"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/pkg/x/version"
 )
 
@@ -15,7 +16,7 @@ func (s *server) GetVersionInfo(
 ) (*connect.Response[svcv1alpha1.GetVersionInfoResponse], error) {
 	return connect.NewResponse(
 		&svcv1alpha1.GetVersionInfoResponse{
-			VersionInfo: svcv1alpha1.ToVersionProto(version.GetVersion()),
+			VersionInfo: api.ToVersionProto(version.GetVersion()),
 		},
 	), nil
 }
