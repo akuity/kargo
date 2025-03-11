@@ -637,7 +637,7 @@ func (r *RegularStageReconciler) syncPromotions(
 					ObservedGeneration: stage.Generation,
 				})
 
-				// Annotate the Stage with the latest information around related
+				// Annotate the Stage with the latest information related to
 				// ArgoCD Applications. This is used to provide deep links to the
 				// ArgoCD UI for the Stage in the Kargo UI.
 				//
