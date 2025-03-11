@@ -1,5 +1,8 @@
 import { useQuery } from '@connectrpc/connect-query';
-import { Divider, Drawer, Skeleton, Tabs, Typography } from 'antd';
+import { faChevronDown, faExternalLink } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { Divider, Drawer, Skeleton, Space, Tabs, Typography } from 'antd';
+import Dropdown from 'antd/es/dropdown/dropdown';
 import moment from 'moment';
 import { useEffect, useMemo, useState } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
@@ -83,6 +86,44 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
   const shardKey = stage?.metadata?.labels['kargo.akuity.io/shard'] || '';
   const argocdShard = config?.argocdShards?.[shardKey];
 
+  const argocdLinks = useMemo(() => {
+    const argocdContextKey = 'kargo.akuity.io/argocd-context';
+
+    if (!argocdShard) {
+      return [];
+    }
+
+    const argocdShardUrl = argocdShard?.url?.endsWith('/')
+      ? argocdShard?.url?.slice(0, -1)
+      : argocdShard?.url;
+
+    const rawValues = stage.metadata?.annotations?.[argocdContextKey];
+
+    if (!rawValues) {
+      return [];
+    }
+
+    try {
+      const parsedValues = JSON.parse(rawValues) as Array<{
+        name: string;
+        namespace: string;
+      }>;
+
+      return (
+        parsedValues?.map(
+          (parsedValue) =>
+            `${argocdShardUrl}/applications/${parsedValue.namespace}/${parsedValue.name}`
+        ) || []
+      );
+    } catch (e) {
+      // deliberately do not crash
+      // eslint-disable-next-line no-console
+      console.error(e);
+
+      return [];
+    }
+  }, [argocdShard, stage]);
+
   return (
     <Drawer open={!!stageName} onClose={onClose} width={'80%'} closable={false}>
       {stage && (
@@ -101,6 +142,56 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                 <Description item={stage} loading={false} className='mt-2' />
               </div>
             </div>
+            {argocdLinks?.length > 0 ? (
+              <div className='ml-auto mr-5 text-base flex gap-2 items-center'>
+                {argocdLinks?.length === 1 && (
+                  <a
+                    target='_blank'
+                    href={argocdLinks[0]}
+                    className='ml-auto mr-5 text-base flex gap-2 items-center'
+                  >
+                    ArgoCD
+                    <FontAwesomeIcon icon={faExternalLink} className='text-xs' />
+                  </a>
+                )}
+                {argocdLinks?.length > 1 && (
+                  <Dropdown
+                    menu={{
+                      items: argocdLinks.map((link, idx) => {
+                        const parts = link?.split('/');
+                        const name = parts?.[parts.length - 1];
+                        const namespace = parts?.[parts.length - 2];
+                        return {
+                          key: idx,
+                          label: (
+                            <a target='_blank' href={link}>
+                              {namespace} - {name}
+                              <FontAwesomeIcon icon={faExternalLink} className='text-xs ml-2' />
+                            </a>
+                          )
+                        };
+                      })
+                    }}
+                  >
+                    <a onClick={(e) => e.preventDefault()}>
+                      <Space>
+                        ArgoCD
+                        <FontAwesomeIcon icon={faChevronDown} className='text-xs' />
+                      </Space>
+                    </a>
+                  </Dropdown>
+                )}
+              </div>
+            ) : argocdShard?.url ? (
+              <a
+                target='_blank'
+                href={argocdShard?.url}
+                className='ml-auto mr-5 text-base flex gap-2 items-center'
+              >
+                ArgoCD
+                <FontAwesomeIcon icon={faExternalLink} className='text-xs' />
+              </a>
+            ) : null}
             <StageActions stage={stage} verificationRunning={isVerificationRunning} />
           </div>
           <Divider style={{ marginTop: '1em' }} />

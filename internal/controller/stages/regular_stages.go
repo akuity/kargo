@@ -636,6 +636,18 @@ func (r *RegularStageReconciler) syncPromotions(
 					Message:            "Waiting for verification to be performed after successful promotion",
 					ObservedGeneration: stage.Generation,
 				})
+
+				// Annotate the Stage with the latest information related to
+				// ArgoCD Applications. This is used to provide deep links to the
+				// ArgoCD UI for the Stage in the Kargo UI.
+				//
+				// NB: If the health checks do not include ArgoCD Applications,
+				// then the annotation will be removed.
+				if err := api.AnnotateStageWithArgoCDContext(ctx, r.client, p.Status.HealthChecks, stage); err != nil {
+					// Let the error be logged, but do not return it as it is not
+					// critical to the operation of the Stage.
+					logger.Error(err, "failed to annotate Stage with ArgoCD context")
+				}
 			}
 		}
 
