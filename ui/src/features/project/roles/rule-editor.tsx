@@ -104,6 +104,7 @@ export const RuleEditor = ({
           <FieldContainer control={control} name='resourceNames' className='w-full'>
             {({ field }) => (
               <MultiStringEditor
+                // @ts-expect-error zod infer problem
                 value={field.value}
                 onChange={field.onChange}
                 placeholder='my-stage'
