@@ -117,7 +117,7 @@ type PromotionVariable struct {
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 	// Value is the value of the variable. It is allowed to utilize expressions
 	// in the value.
-	// See https://docs.kargo.io/references/expression-language for details.
+	// See https://docs.kargo.io/user-guide/reference-docs/expressions for details.
 	Value string `json:"value,omitempty" protobuf:"bytes,2,opt,name=value"`
 }
 
@@ -221,7 +221,7 @@ type PromotionStep struct {
 	// Config is opaque configuration for the PromotionStep that is understood
 	// only by each PromotionStep's implementation. It is legal to utilize
 	// expressions in defining values at any level of this block.
-	// See https://docs.kargo.io/references/expression-language for details.
+	// See https://docs.kargo.io/user-guide/reference-docs/expressions for details.
 	Config *apiextensionsv1.JSON `json:"config,omitempty" protobuf:"bytes,3,opt,name=config"`
 }
 
