@@ -96,7 +96,7 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
   });
 
   const onSubmit = handleSubmit((values) => {
-    const annotations = annotationsWithDescription(values.description);
+    const annotations = annotationsWithDescription(values.description || '');
     const getClaims = (): Claim[] => {
       const claimsArray: Claim[] = [];
       multiFields.map((field) => {

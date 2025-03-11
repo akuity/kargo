@@ -117,7 +117,9 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
     if (credentialType === 'generic') {
       const data: Record<string, string> = {};
 
+      // @ts-expect-error zod infer problem
       if (values?.data?.length > 0) {
+        // @ts-expect-error zod infer problem
         for (const [k, v] of values.data) {
           data[k] = v;
         }

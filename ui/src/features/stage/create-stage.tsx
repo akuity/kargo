@@ -208,7 +208,9 @@ export const CreateStage = ({
           className='mb-4'
         >
           <FieldContainer name='name' label='Name' control={wizardControl}>
-            {({ field }) => <Input {...field} placeholder='my-stage' />}
+            {({ field }) => (
+              <Input {...field} value={field.value as string} placeholder='my-stage' />
+            )}
           </FieldContainer>
           <FieldContainer name='color' label='Color' control={wizardControl}>
             {({ field }) => (
