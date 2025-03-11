@@ -122,7 +122,7 @@ const CreateWarehouse = (props: ModalComponentProps) => {
             Create Warehouse
           </Typography.Title>
           <Typography.Link
-            href='https://docs.kargo.io/concepts/#warehouse-resources'
+            href='https://docs.kargo.io/user-guide/how-to-guides/working-with-warehouses'
             target='_blank'
             className='ml-3'
           >
