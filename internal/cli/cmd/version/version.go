@@ -15,6 +15,7 @@ import (
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/io"
@@ -78,7 +79,7 @@ func (o *versionOptions) addFlags(cmd *cobra.Command) {
 func (o *versionOptions) run(ctx context.Context) error {
 	printToStdout := o.PrintFlags.OutputFlagSpecified == nil || !o.PrintFlags.OutputFlagSpecified()
 
-	cliVersion := svcv1alpha1.ToVersionProto(versionpkg.GetVersion())
+	cliVersion := api.ToVersionProto(versionpkg.GetVersion())
 	if printToStdout {
 		_, _ = fmt.Fprintln(o.IOStreams.Out, "Client Version:", cliVersion.GetVersion())
 	}
