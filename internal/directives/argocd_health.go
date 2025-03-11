@@ -71,15 +71,14 @@ func (a *argocdUpdater) RunHealthCheckStep(
 			},
 		}
 	}
-	return a.runHealthCheckStep(ctx, healthCtx, cfg)
+	return a.runHealthCheckStep(ctx, cfg)
 }
 
 func (a *argocdUpdater) runHealthCheckStep(
 	ctx context.Context,
-	healthCtx *HealthCheckStepContext,
 	healthCfg ArgoCDHealthConfig,
 ) HealthCheckStepResult {
-	if healthCtx.ArgoCDClient == nil {
+	if a.argocdClient == nil {
 		return HealthCheckStepResult{
 			Status: kargoapi.HealthStateUnknown,
 			Issues: []string{
@@ -106,7 +105,6 @@ func (a *argocdUpdater) runHealthCheckStep(
 		var err error
 		state, appStatuses[i], err = a.getApplicationHealth(
 			ctx,
-			healthCtx,
 			client.ObjectKey{
 				Namespace: namespace,
 				Name:      appHealthCheck.Name,
@@ -144,7 +142,6 @@ var healthErrorConditions = []argocd.ApplicationConditionType{
 // returns an error with a message explaining why.
 func (a *argocdUpdater) getApplicationHealth(
 	ctx context.Context,
-	healthCtx *HealthCheckStepContext,
 	appKey client.ObjectKey,
 	desiredRevisions []string,
 ) (kargoapi.HealthState, ArgoCDAppStatus, error) {
@@ -161,7 +158,7 @@ func (a *argocdUpdater) getApplicationHealth(
 		},
 	}
 	app := &argocd.Application{}
-	if err := healthCtx.ArgoCDClient.Get(ctx, appKey, app); err != nil {
+	if err := a.argocdClient.Get(ctx, appKey, app); err != nil {
 		if kubeerr.IsNotFound(err) {
 			err = fmt.Errorf(
 				"unable to find Argo CD Application %q in namespace %q",
@@ -218,7 +215,7 @@ func (a *argocdUpdater) getApplicationHealth(
 			if duration := time.Until(cooldown); duration > 0 {
 				time.Sleep(duration)
 				// Re-fetch the application to get the latest state.
-				if err := healthCtx.ArgoCDClient.Get(ctx, appKey, app); err != nil {
+				if err := a.argocdClient.Get(ctx, appKey, app); err != nil {
 					if kubeerr.IsNotFound(err) {
 						err = fmt.Errorf(
 							"unable to find Argo CD Application %q in namespace %q",

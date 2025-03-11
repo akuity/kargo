@@ -24,23 +24,19 @@ import (
 // stateKeyPRNumber is the key used to store the PR number in the shared State.
 const stateKeyPRNumber = "prNumber"
 
-func init() {
-	builtinsReg.RegisterPromotionStepRunner(
-		newGitPROpener(),
-		&StepRunnerPermissions{AllowCredentialsDB: true},
-	)
-}
-
 // gitPROpener is an implementation of the PromotionStepRunner interface that
 // opens a pull request.
 type gitPROpener struct {
 	schemaLoader gojsonschema.JSONLoader
+	credsDB      credentials.Database
 }
 
 // newGitPROpener returns an implementation of the PromotionStepRunner interface
 // that opens a pull request.
-func newGitPROpener() PromotionStepRunner {
-	r := &gitPROpener{}
+func newGitPROpener(credsDB credentials.Database) PromotionStepRunner {
+	r := &gitPROpener{
+		credsDB: credsDB,
+	}
 	r.schemaLoader = getConfigSchemaLoader(r.Name())
 	return r
 }
@@ -95,7 +91,7 @@ func (g *gitPROpener) runPromotionStep(
 	sourceBranch := cfg.SourceBranch
 
 	var repoCreds *git.RepoCredentials
-	creds, err := stepCtx.CredentialsDB.Get(
+	creds, err := g.credsDB.Get(
 		ctx,
 		stepCtx.Project,
 		credentials.TypeGit,

@@ -7,76 +7,53 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestStepRunnerRegistry_RegisterPromotionStepRunner(t *testing.T) {
+func TestStepRunnerRegistry_register(t *testing.T) {
 	t.Run("registers", func(t *testing.T) {
-		registry := NewStepRunnerRegistry()
+		registry := stepRunnerRegistry{}
 		runner := &mockPromotionStepRunner{}
-		registry.RegisterPromotionStepRunner(runner, nil)
-		assert.Same(t, runner, registry.promotionStepRunners[runner.Name()].Runner)
+		registry.register(runner)
+		assert.Same(t, runner, registry[runner.Name()])
 	})
 
 	t.Run("overwrites registration", func(t *testing.T) {
-		registry := NewStepRunnerRegistry()
+		registry := stepRunnerRegistry{}
 		runner1 := &mockPromotionStepRunner{}
-		registry.RegisterPromotionStepRunner(runner1, nil)
+		registry.register(runner1)
 		runner2 := &mockPromotionStepRunner{
 			runErr: fmt.Errorf("error"),
 		}
-		registry.RegisterPromotionStepRunner(runner2, nil)
-		assert.NotSame(t, runner1, registry.promotionStepRunners[runner2.Name()].Runner)
-		assert.Same(t, runner2, registry.promotionStepRunners[runner2.Name()].Runner)
+		registry.register(runner2)
+		assert.NotSame(t, runner1, registry[runner2.Name()])
+		assert.Same(t, runner2, registry[runner2.Name()])
 	})
 }
 
-func TestStepRunnerRegistry_GetPromotionStepRunnerRegistration(t *testing.T) {
+func TestStepRunnerRegistry_getPromotionStepRunner(t *testing.T) {
 	t.Run("registration exists", func(t *testing.T) {
-		registry := NewStepRunnerRegistry()
+		registry := stepRunnerRegistry{}
 		runner := &mockPromotionStepRunner{}
-		registry.RegisterPromotionStepRunner(runner, nil)
-		reg, err := registry.GetPromotionStepRunnerRegistration(runner.Name())
-		assert.NoError(t, err)
-		assert.Same(t, runner, reg.Runner)
+		registry.register(runner)
+		r := registry.getPromotionStepRunner(runner.Name())
+		assert.Same(t, runner, r)
 	})
 
 	t.Run("registration does not exist", func(t *testing.T) {
-		_, err := NewStepRunnerRegistry().
-			GetPromotionStepRunnerRegistration("nonexistent")
-		assert.ErrorContains(t, err, "not found")
+		runner := stepRunnerRegistry{}.getPromotionStepRunner("nonexistent")
+		assert.Nil(t, runner)
 	})
 }
 
-func TestStepRunnerRegistry_RegisterHealthCheckStepRunner(t *testing.T) {
-	t.Run("registers", func(t *testing.T) {
-		registry := NewStepRunnerRegistry()
-		runner := &mockHealthCheckStepRunner{}
-		registry.RegisterHealthCheckStepRunner(runner, nil)
-		assert.Same(t, runner, registry.healthCheckStepRunners[runner.Name()].Runner)
-	})
-
-	t.Run("overwrites registration", func(t *testing.T) {
-		registry := NewStepRunnerRegistry()
-		runner1 := &mockHealthCheckStepRunner{}
-		registry.RegisterHealthCheckStepRunner(runner1, nil)
-		runner2 := &mockHealthCheckStepRunner{}
-		registry.RegisterHealthCheckStepRunner(runner2, nil)
-		assert.NotSame(t, runner1, registry.healthCheckStepRunners[runner2.Name()].Runner)
-		assert.Same(t, runner2, registry.healthCheckStepRunners[runner2.Name()].Runner)
-	})
-}
-
-func TestStepRunnerRegistry_GetHealthCheckStepRunnerRegistration(t *testing.T) {
+func TestStepRunnerRegistry_getHealthCheckStepRunner(t *testing.T) {
 	t.Run("registration exists", func(t *testing.T) {
-		registry := NewStepRunnerRegistry()
+		registry := stepRunnerRegistry{}
 		runner := &mockHealthCheckStepRunner{}
-		registry.RegisterHealthCheckStepRunner(runner, nil)
-		reg, err := registry.GetHealthCheckStepRunnerRegistration(runner.Name())
-		assert.NoError(t, err)
-		assert.Same(t, runner, reg.Runner)
+		registry.register(runner)
+		r := registry.getHealthCheckStepRunner(runner.Name())
+		assert.Same(t, r, runner)
 	})
 
 	t.Run("registration does not exist", func(t *testing.T) {
-		_, err := NewStepRunnerRegistry().
-			GetHealthCheckStepRunnerRegistration("nonexistent")
-		assert.ErrorContains(t, err, "not found")
+		runner := stepRunnerRegistry{}.getHealthCheckStepRunner("nonexistent")
+		assert.Nil(t, runner)
 	})
 }

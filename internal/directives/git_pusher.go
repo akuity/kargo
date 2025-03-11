@@ -21,25 +21,20 @@ import (
 // shared State.
 const stateKeyBranch = "branch"
 
-func init() {
-	builtinsReg.RegisterPromotionStepRunner(
-		newGitPusher(),
-		&StepRunnerPermissions{AllowCredentialsDB: true},
-	)
-}
-
 // gitPushPusher is an implementation of the PromotionStepRunner interface that
 // pushes commits from a local Git repository to a remote Git repository.
 type gitPushPusher struct {
 	schemaLoader gojsonschema.JSONLoader
+	credsDB      credentials.Database
 	branchMus    map[string]*sync.Mutex
 	masterMu     sync.Mutex
 }
 
 // newGitPusher returns an implementation of the PromotionStepRunner interface
 // that pushes commits from a local Git repository to a remote Git repository.
-func newGitPusher() PromotionStepRunner {
+func newGitPusher(credsDB credentials.Database) PromotionStepRunner {
 	r := &gitPushPusher{
+		credsDB:   credsDB,
 		branchMus: map[string]*sync.Mutex{},
 	}
 	r.schemaLoader = getConfigSchemaLoader(r.Name())
@@ -93,7 +88,7 @@ func (g *gitPushPusher) runPromotionStep(
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error loading working tree from %s: %w", cfg.Path, err)
 	}
-	creds, err := stepCtx.CredentialsDB.Get(
+	creds, err := g.credsDB.Get(
 		ctx,
 		stepCtx.Project,
 		credentials.TypeGit,

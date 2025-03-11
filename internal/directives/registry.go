@@ -1,123 +1,92 @@
 package directives
 
 import (
-	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/akuity/kargo/internal/credentials"
 )
 
-// builtinsReg is a registry of built-in PromotionStepRunner and
-// HealthCheckStepRunner implementations.
-var builtinsReg = NewStepRunnerRegistry()
-
-// StepRunnerRegistry is a registry of built-in PromotionStepRunner and
-// HealthCheckStepRunner implementations.
-type StepRunnerRegistry struct {
-	promotionStepRunners   map[string]PromotionStepRunnerRegistration
-	healthCheckStepRunners map[string]HealthCheckStepRunnerRegistration
-}
-
-// NewStepRunnerRegistry returns a new StepRunnerRegistry.
-func NewStepRunnerRegistry() *StepRunnerRegistry {
-	return &StepRunnerRegistry{
-		promotionStepRunners:   make(map[string]PromotionStepRunnerRegistration),
-		healthCheckStepRunners: make(map[string]HealthCheckStepRunnerRegistration),
+// InitializeBuiltins registers all built-in step runners with the package's
+// internal step runner registry.
+func InitializeBuiltins(kargoClient, argocdClient client.Client, credsDB credentials.Database) {
+	builtIns := []NamedRunner{
+		newArgocdUpdater(argocdClient),
+		newHelmChartUpdater(credsDB),
+		newFileCopier(),
+		newFileDeleter(),
+		newGitCloner(credsDB),
+		newGitCommitter(),
+		newGitPROpener(credsDB),
+		newGitPRWaiter(credsDB),
+		newGitPusher(credsDB),
+		newGitTreeClearer(),
+		newHelmTemplateRunner(),
+		newHTTPRequester(),
+		newJSONParser(),
+		newJSONUpdater(),
+		newKustomizeBuilder(),
+		newKustomizeImageSetter(kargoClient),
+		newOutputComposer(),
+		newYAMLParser(),
+		newYAMLUpdater(),
+	}
+	for _, builtIn := range builtIns {
+		Register(builtIn)
 	}
 }
 
-// PromotionStepRunnerRegistration is a registration for a single
-// PromotionStepRunner. It includes the PromotionStepRunner itself and a set of
-// permissions that indicate capabilities the Engine should enable for the
-// PromotionStepRunner.
-type PromotionStepRunnerRegistration struct {
-	// Permissions is a set of permissions that indicate capabilities the
-	// Engine should enable for the PromotionStepRunner.
-	Permissions StepRunnerPermissions
-	// Runner is a PromotionStepRunner executes a discrete PromotionStep in the
-	// context of a Promotion.
-	Runner PromotionStepRunner
+// NamedRunner is an interface for runners that can self-report their name.
+type NamedRunner interface {
+	Name() string
 }
 
-// HealthCheckStepRunnerRegistration is a registration for a single
-// HealthCheckStepRunner. It includes the HealthCheckStepRunner itself and a set
-// of permissions that indicate capabilities the Engine should enable for the
-// HealthCheckStepRunner.
-type HealthCheckStepRunnerRegistration struct {
-	// Permissions is a set of permissions that indicate capabilities the Engine
-	// should enable for the HealthCheckStepRunner.
-	Permissions StepRunnerPermissions
-	// Runner is a HealthCheckStepRunner executes a discrete HealthCheckStep.
-	Runner HealthCheckStepRunner
+// Register registers a NamedRunner with the package's internal step runner
+// registry.
+func Register(runner NamedRunner) {
+	runnerReg.register(runner)
 }
 
-// StepRunnerPermissions is a set of permissions that indicate capabilities the
-// Engine should enable for a PromotionStepRunner or HealthCheckStepRunner.
-type StepRunnerPermissions struct {
-	// AllowCredentialsDB indicates whether the Engine may provide the step runner
-	// with access to the credentials database.
-	AllowCredentialsDB bool
-	// AllowKargoClient indicates whether the Engine may provide the step runner
-	// with access to a Kubernetes client for the Kargo control plane.
-	AllowKargoClient bool
-	// AllowArgoCDClient indicates whether the Engine may provide the step runner
-	// with access to a Kubernetes client for the Argo CD control plane.
-	AllowArgoCDClient bool
+// runnerReg is a registry of PromotionStepRunner and HealthCheckStepRunner
+// implementations.
+var runnerReg = stepRunnerRegistry{}
+
+// stepRunnerRegistry is a registry of named components that can presumably
+// execute some sort of step, like a step of a promotion process or a health
+// check process.
+type stepRunnerRegistry map[string]NamedRunner
+
+// register adds a named component to the stepRunnerRegistry.
+func (s stepRunnerRegistry) register(runner NamedRunner) {
+	s[runner.Name()] = runner
 }
 
-// RegisterPromotionStepRunner registers a PromotionStepRunner with the given
-// name. If a PromotionStepRunner with the same name has already been
-// registered, it will be overwritten.
-func (s StepRunnerRegistry) RegisterPromotionStepRunner(
-	runner PromotionStepRunner,
-	permissions *StepRunnerPermissions,
-) {
-	if permissions == nil {
-		permissions = &StepRunnerPermissions{}
-	}
-	s.promotionStepRunners[runner.Name()] = PromotionStepRunnerRegistration{
-		Permissions: *permissions,
-		Runner:      runner,
-	}
-}
-
-// GetPromotionStepRunnerRegistration returns the
-// PromotionStepRunnerRegistration for the promotion step with the given name,
-// or an error if no such PromotionStepRunner is registered.
-func (s StepRunnerRegistry) GetPromotionStepRunnerRegistration(
-	name string,
-) (PromotionStepRunnerRegistration, error) {
-	reg, ok := s.promotionStepRunners[name]
+// getPromotionStepRunner returns the PromotionStepRunner for the promotion step
+// with the given name, if no runner is registered with the given name or the
+// runner with the given name does not implement PromotionStepRunner, nil is
+// returned.
+func (s stepRunnerRegistry) getPromotionStepRunner(name string) PromotionStepRunner {
+	runner, ok := s[name]
 	if !ok {
-		return PromotionStepRunnerRegistration{},
-			fmt.Errorf("runner not found for promotion step %q", name)
+		return nil
 	}
-	return reg, nil
-}
-
-// RegisterHealthCheckStepRunner registers a HealthCheckStepRunner with the
-// given name. If a HealthCheckStepRunner with the same name has already been
-// registered, it will be overwritten.
-func (s StepRunnerRegistry) RegisterHealthCheckStepRunner(
-	runner HealthCheckStepRunner,
-	permissions *StepRunnerPermissions,
-) {
-	if permissions == nil {
-		permissions = &StepRunnerPermissions{}
+	promoStepRunner, ok := runner.(PromotionStepRunner)
+	if !ok {
+		return nil
 	}
-	s.healthCheckStepRunners[runner.Name()] = HealthCheckStepRunnerRegistration{
-		Permissions: *permissions,
-		Runner:      runner,
-	}
+	return promoStepRunner
 }
 
 // GetHealthCheckStepRunnerRegistration returns the HealthStepRunnerRegistration
 // for the health check step with the given name, or an error if no such
 // HealthCheckStepRunner is registered.
-func (s StepRunnerRegistry) GetHealthCheckStepRunnerRegistration(
-	name string,
-) (HealthCheckStepRunnerRegistration, error) {
-	reg, ok := s.healthCheckStepRunners[name]
+func (s stepRunnerRegistry) getHealthCheckStepRunner(name string) HealthCheckStepRunner {
+	runner, ok := s[name]
 	if !ok {
-		return HealthCheckStepRunnerRegistration{},
-			fmt.Errorf("runner not found for health check step %q", name)
+		return nil
 	}
-	return reg, nil
+	healthCheckStepRunner, ok := runner.(HealthCheckStepRunner)
+	if !ok {
+		return nil
+	}
+	return healthCheckStepRunner
 }

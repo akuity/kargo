@@ -28,25 +28,12 @@ const (
 	promotionInfoKey              = "kargo.akuity.io/promotion"
 )
 
-func init() {
-	runner := newArgocdUpdater()
-	builtinsReg.RegisterPromotionStepRunner(
-		runner,
-		&StepRunnerPermissions{
-			AllowKargoClient:  true,
-			AllowArgoCDClient: true,
-		},
-	)
-	builtinsReg.RegisterHealthCheckStepRunner(
-		runner,
-		&StepRunnerPermissions{AllowArgoCDClient: true},
-	)
-}
-
 // argocdUpdater is an implementation of the PromotionStepRunner interface that
 // updates one or more Argo CD Application resources.
 type argocdUpdater struct {
 	schemaLoader gojsonschema.JSONLoader
+
+	argocdClient client.Client
 
 	// These behaviors are overridable for testing purposes:
 
@@ -83,14 +70,12 @@ type argocdUpdater struct {
 
 	argoCDAppPatchFn func(
 		context.Context,
-		*PromotionStepContext,
 		kubeclient.ObjectWithKind,
 		kubeclient.UnstructuredPatchFn,
 	) error
 
 	logAppEventFn func(
 		ctx context.Context,
-		stepCtx *PromotionStepContext,
 		app *argocd.Application,
 		user string,
 		reason string,
@@ -101,8 +86,10 @@ type argocdUpdater struct {
 // newArgocdUpdater returns a implementation of the PromotionStepRunner and
 // HealthCheckStepRunner interfaces that updates Argo CD Application resources
 // and monitors their health.
-func newArgocdUpdater() *argocdUpdater {
-	r := &argocdUpdater{}
+func newArgocdUpdater(argocdClient client.Client) *argocdUpdater {
+	r := &argocdUpdater{
+		argocdClient: argocdClient,
+	}
 	r.schemaLoader = getConfigSchemaLoader(r.Name())
 	r.getAuthorizedApplicationFn = r.getAuthorizedApplication
 	r.buildDesiredSourcesFn = r.buildDesiredSources
@@ -156,7 +143,7 @@ func (a *argocdUpdater) runPromotionStep(
 	stepCtx *PromotionStepContext,
 	stepCfg builtin.ArgoCDUpdateConfig,
 ) (PromotionStepResult, error) {
-	if stepCtx.ArgoCDClient == nil {
+	if a.argocdClient == nil {
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, errors.New(
 			"Argo CD integration is disabled on this controller; cannot update " +
 				"Argo CD Application resources",
@@ -499,7 +486,7 @@ func (a *argocdUpdater) syncApplication(
 	app.Status.OperationState = nil
 
 	// Patch the Argo CD Application.
-	if err := a.argoCDAppPatchFn(ctx, stepCtx, app, func(src, dst unstructured.Unstructured) error {
+	if err := a.argoCDAppPatchFn(ctx, app, func(src, dst unstructured.Unstructured) error {
 		dst.SetAnnotations(src.GetAnnotations())
 		dst.Object["spec"] = a.recursiveMerge(src.Object["spec"], dst.Object["spec"])
 		dst.Object["operation"] = src.Object["operation"]
@@ -537,7 +524,6 @@ func (a *argocdUpdater) syncApplication(
 	}
 	a.logAppEventFn(
 		ctx,
-		stepCtx,
 		app,
 		applicationOperationInitiator,
 		argocd.EventReasonOperationStarted,
@@ -548,16 +534,14 @@ func (a *argocdUpdater) syncApplication(
 
 func (a *argocdUpdater) argoCDAppPatch(
 	ctx context.Context,
-	stepCtx *PromotionStepContext,
 	app kubeclient.ObjectWithKind,
 	modify kubeclient.UnstructuredPatchFn,
 ) error {
-	return kubeclient.PatchUnstructured(ctx, stepCtx.ArgoCDClient, app, modify)
+	return kubeclient.PatchUnstructured(ctx, a.argocdClient, app, modify)
 }
 
 func (a *argocdUpdater) logAppEvent(
 	ctx context.Context,
-	stepCtx *PromotionStepContext,
 	app *argocd.Application,
 	user string,
 	reason string,
@@ -602,7 +586,7 @@ func (a *argocdUpdater) logAppEvent(
 		Type:    corev1.EventTypeNormal,
 		Reason:  reason,
 	}
-	if err := stepCtx.ArgoCDClient.Create(context.Background(), &event); err != nil {
+	if err := a.argocdClient.Create(context.Background(), &event); err != nil {
 		logger.Error(
 			err, "unable to create event for Argo CD Application",
 			"reason", reason,
@@ -620,7 +604,7 @@ func (a *argocdUpdater) getAuthorizedApplication(
 ) (*argocd.Application, error) {
 	app, err := argocd.GetApplication(
 		ctx,
-		stepCtx.ArgoCDClient,
+		a.argocdClient,
 		appKey.Namespace,
 		appKey.Name,
 	)

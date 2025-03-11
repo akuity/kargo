@@ -11,10 +11,6 @@ import (
 	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
-func init() {
-	builtinsReg.RegisterPromotionStepRunner(newOutputComposer(), nil)
-}
-
 // outputComposer is an implementation of the PromotionStepRunner interface
 // that allows composing outputs from previous steps into new outputs.
 //

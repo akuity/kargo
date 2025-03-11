@@ -103,7 +103,7 @@ func Test_gitPROpener_validate(t *testing.T) {
 		},
 	}
 
-	r := newGitPROpener()
+	r := newGitPROpener(nil)
 	runner, ok := r.(*gitPROpener)
 	require.True(t, ok)
 
@@ -183,17 +183,16 @@ func Test_gitPROpener_runPromotionStep(t *testing.T) {
 
 	// Now we can proceed to test gitPROpener...
 
-	r := newGitPROpener()
+	r := newGitPROpener(&credentials.FakeDB{})
 	runner, ok := r.(*gitPROpener)
 	require.True(t, ok)
 
 	res, err := runner.runPromotionStep(
 		context.Background(),
 		&PromotionStepContext{
-			Project:       "fake-project",
-			Stage:         "fake-stage",
-			WorkDir:       workDir,
-			CredentialsDB: &credentials.FakeDB{},
+			Project: "fake-project",
+			Stage:   "fake-stage",
+			WorkDir: workDir,
 		},
 		builtin.GitOpenPRConfig{
 			RepoURL: testRepoURL,

@@ -175,7 +175,7 @@ func Test_gitCloner_validate(t *testing.T) {
 		},
 	}
 
-	r := newGitCloner()
+	r := newGitCloner(nil)
 	runner, ok := r.(*gitCloner)
 	require.True(t, ok)
 
@@ -224,13 +224,12 @@ func Test_gitCloner_runPromotionStep(t *testing.T) {
 
 	// Now we can proceed to test gitCloner...
 
-	r := newGitCloner()
+	r := newGitCloner(&credentials.FakeDB{})
 	runner, ok := r.(*gitCloner)
 	require.True(t, ok)
 
 	stepCtx := &PromotionStepContext{
-		CredentialsDB: &credentials.FakeDB{},
-		WorkDir:       t.TempDir(),
+		WorkDir: t.TempDir(),
 	}
 
 	res, err := runner.runPromotionStep(

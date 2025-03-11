@@ -13,23 +13,19 @@ import (
 	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
-func init() {
-	builtinsReg.RegisterPromotionStepRunner(
-		newGitPRWaiter(),
-		&StepRunnerPermissions{AllowCredentialsDB: true},
-	)
-}
-
 // gitPRWaiter is an implementation of the PromotionStepRunner interface that
 // waits for a pull request to be merged or closed unmerged.
 type gitPRWaiter struct {
 	schemaLoader gojsonschema.JSONLoader
+	credsDB      credentials.Database
 }
 
 // newGitPRWaiter returns an implementation of the PromotionStepRunner interface
 // that waits for a pull request to be merged or closed unmerged.
-func newGitPRWaiter() PromotionStepRunner {
-	r := &gitPRWaiter{}
+func newGitPRWaiter(credsDB credentials.Database) PromotionStepRunner {
+	r := &gitPRWaiter{
+		credsDB: credsDB,
+	}
 	r.schemaLoader = getConfigSchemaLoader(r.Name())
 	return r
 }
@@ -66,7 +62,7 @@ func (g *gitPRWaiter) runPromotionStep(
 	cfg builtin.GitWaitForPRConfig,
 ) (PromotionStepResult, error) {
 	var repoCreds *git.RepoCredentials
-	creds, err := stepCtx.CredentialsDB.Get(
+	creds, err := g.credsDB.Get(
 		ctx,
 		stepCtx.Project,
 		credentials.TypeGit,

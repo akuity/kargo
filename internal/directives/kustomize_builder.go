@@ -26,10 +26,6 @@ import (
 // xref: https://github.com/kubernetes-sigs/kustomize/issues/3659
 var kustomizeRenderMutex sync.Mutex
 
-func init() {
-	builtinsReg.RegisterPromotionStepRunner(newKustomizeBuilder(), nil)
-}
-
 // kustomizeBuilder is an implementation of the PromotionStepRunner interface
 // that builds a set of Kubernetes manifests using Kustomize.
 type kustomizeBuilder struct {

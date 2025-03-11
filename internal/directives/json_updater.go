@@ -14,10 +14,6 @@ import (
 	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
-func init() {
-	builtinsReg.RegisterPromotionStepRunner(newJSONUpdater(), nil)
-}
-
 // jsonUpdater is an implementation of the PromotionStepRunner interface that
 // updates the values of specified keys in a JSON file.
 type jsonUpdater struct {

@@ -30,26 +30,19 @@ import (
 	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
-func init() {
-	builtinsReg.RegisterPromotionStepRunner(
-		newHelmChartUpdater(),
-		&StepRunnerPermissions{
-			AllowKargoClient:   true,
-			AllowCredentialsDB: true,
-		},
-	)
-}
-
 // helmChartUpdater is an implementation of the PromotionStepRunner interface
 // that updates the dependencies of a Helm chart.
 type helmChartUpdater struct {
 	schemaLoader gojsonschema.JSONLoader
+	credsDB      credentials.Database
 }
 
 // newHelmChartUpdater returns an implementation of the PromotionStepRunner
 // interface that updates the dependencies of a Helm chart.
-func newHelmChartUpdater() PromotionStepRunner {
-	r := &helmChartUpdater{}
+func newHelmChartUpdater(credsDB credentials.Database) PromotionStepRunner {
+	r := &helmChartUpdater{
+		credsDB: credsDB,
+	}
 	r.schemaLoader = getConfigSchemaLoader(r.Name())
 	return r
 }
@@ -186,7 +179,7 @@ func (h *helmChartUpdater) updateDependencies(
 
 	if err = h.setupDependencyRepositories(
 		ctx,
-		stepCtx.CredentialsDB,
+		h.credsDB,
 		registryClient,
 		repositoryFile,
 		stepCtx.Project,

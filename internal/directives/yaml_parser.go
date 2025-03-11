@@ -14,10 +14,6 @@ import (
 	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
-func init() {
-	builtinsReg.RegisterPromotionStepRunner(newYAMLParser(), nil)
-}
-
 // yamlParser is an implementation of the PromotionStepRunner interface that
 // parses a YAML file and extracts specified outputs.
 type yamlParser struct {

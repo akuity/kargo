@@ -22,7 +22,8 @@ import (
 )
 
 func Test_newArgocdUpdater(t *testing.T) {
-	runner := newArgocdUpdater()
+	runner := newArgocdUpdater(fake.NewFakeClient())
+	require.NotNil(t, runner)
 	require.Equal(t, "argocd-update", runner.Name())
 	require.NotNil(t, runner.schemaLoader)
 	require.NotNil(t, runner.getAuthorizedApplicationFn)
@@ -316,7 +317,7 @@ func Test_argoCDUpdater_validate(t *testing.T) {
 		},
 	}
 
-	runner := newArgocdUpdater()
+	runner := newArgocdUpdater(nil)
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -336,14 +337,12 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 	testCases := []struct {
 		name       string
 		runner     *argocdUpdater
-		stepCtx    *PromotionStepContext
 		stepCfg    builtin.ArgoCDUpdateConfig
 		assertions func(*testing.T, PromotionStepResult, error)
 	}{
 		{
 			name:    "argo cd integration disabled",
 			runner:  &argocdUpdater{},
-			stepCtx: &PromotionStepContext{},
 			stepCfg: builtin.ArgoCDUpdateConfig{},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.Equal(t, kargoapi.PromotionPhaseErrored, res.Status)
@@ -355,6 +354,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 		{
 			name: "error retrieving authorized application",
 			runner: &argocdUpdater{
+				argocdClient: fake.NewFakeClient(),
 				getAuthorizedApplicationFn: func(
 					context.Context,
 					*PromotionStepContext,
@@ -362,9 +362,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 				) (*v1alpha1.Application, error) {
 					return nil, errors.New("something went wrong")
 				},
-			},
-			stepCtx: &PromotionStepContext{
-				ArgoCDClient: fake.NewFakeClient(),
 			},
 			stepCfg: builtin.ArgoCDUpdateConfig{
 				Apps: []builtin.ArgoCDAppUpdate{{}},
@@ -378,6 +375,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 		{
 			name: "error determining if update is necessary",
 			runner: &argocdUpdater{
+				argocdClient: fake.NewFakeClient(),
 				getAuthorizedApplicationFn: func(
 					context.Context,
 					*PromotionStepContext,
@@ -393,9 +391,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					return "", false, errors.New("something went wrong")
 				},
 			},
-			stepCtx: &PromotionStepContext{
-				ArgoCDClient: fake.NewFakeClient(),
-			},
 			stepCfg: builtin.ArgoCDUpdateConfig{
 				Apps: []builtin.ArgoCDAppUpdate{{}},
 			},
@@ -407,6 +402,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 		{
 			name: "determination error can be solved by applying update",
 			runner: &argocdUpdater{
+				argocdClient: fake.NewFakeClient(),
 				getAuthorizedApplicationFn: func(
 					context.Context,
 					*PromotionStepContext,
@@ -437,9 +433,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					return nil
 				},
 			},
-			stepCtx: &PromotionStepContext{
-				ArgoCDClient: fake.NewFakeClient(),
-			},
 			stepCfg: builtin.ArgoCDUpdateConfig{
 				Apps: []builtin.ArgoCDAppUpdate{{}},
 			},
@@ -451,6 +444,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 		{
 			name: "must wait for update to complete",
 			runner: &argocdUpdater{
+				argocdClient: fake.NewFakeClient(),
 				getAuthorizedApplicationFn: func(
 					context.Context,
 					*PromotionStepContext,
@@ -466,9 +460,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					return argocd.OperationRunning, false, nil
 				},
 			},
-			stepCtx: &PromotionStepContext{
-				ArgoCDClient: fake.NewFakeClient(),
-			},
 			stepCfg: builtin.ArgoCDUpdateConfig{
 				Apps: []builtin.ArgoCDAppUpdate{{}},
 			},
@@ -480,6 +471,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 		{
 			name: "must wait for operation from different user to complete",
 			runner: &argocdUpdater{
+				argocdClient: fake.NewFakeClient(),
 				getAuthorizedApplicationFn: func(
 					context.Context,
 					*PromotionStepContext,
@@ -495,9 +487,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					return argocd.OperationRunning, false, fmt.Errorf("waiting for operation to complete")
 				},
 			},
-			stepCtx: &PromotionStepContext{
-				ArgoCDClient: fake.NewFakeClient(),
-			},
 			stepCfg: builtin.ArgoCDUpdateConfig{
 				Apps: []builtin.ArgoCDAppUpdate{{}},
 			},
@@ -509,6 +498,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 		{
 			name: "error building desired sources",
 			runner: &argocdUpdater{
+				argocdClient: fake.NewFakeClient(),
 				getAuthorizedApplicationFn: func(
 					context.Context,
 					*PromotionStepContext,
@@ -531,9 +521,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			stepCtx: &PromotionStepContext{
-				ArgoCDClient: fake.NewFakeClient(),
-			},
 			stepCfg: builtin.ArgoCDUpdateConfig{
 				Apps: []builtin.ArgoCDAppUpdate{{}},
 			},
@@ -546,6 +533,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 		{
 			name: "error applying update",
 			runner: &argocdUpdater{
+				argocdClient: fake.NewFakeClient(),
 				getAuthorizedApplicationFn: func(
 					context.Context,
 					*PromotionStepContext,
@@ -576,9 +564,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			stepCtx: &PromotionStepContext{
-				ArgoCDClient: fake.NewFakeClient(),
-			},
 			stepCfg: builtin.ArgoCDUpdateConfig{
 				Apps: []builtin.ArgoCDAppUpdate{{}},
 			},
@@ -591,6 +576,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 		{
 			name: "failed and pending update",
 			runner: &argocdUpdater{
+				argocdClient: fake.NewFakeClient(),
 				getAuthorizedApplicationFn: func(
 					context.Context,
 					*PromotionStepContext,
@@ -632,14 +618,8 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 					return nil
 				},
 			},
-			stepCtx: &PromotionStepContext{
-				ArgoCDClient: fake.NewFakeClient(),
-			},
 			stepCfg: builtin.ArgoCDUpdateConfig{
-				Apps: []builtin.ArgoCDAppUpdate{
-					{},
-					{},
-				},
+				Apps: []builtin.ArgoCDAppUpdate{{}, {}},
 			},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.Equal(t, kargoapi.PromotionPhaseErrored, res.Status)
@@ -649,6 +629,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 		{
 			name: "operation phase aggregation error",
 			runner: &argocdUpdater{
+				argocdClient: fake.NewFakeClient(),
 				getAuthorizedApplicationFn: func(
 					context.Context,
 					*PromotionStepContext,
@@ -663,9 +644,6 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 				) (argocd.OperationPhase, bool, error) {
 					return "Unknown", false, nil
 				},
-			},
-			stepCtx: &PromotionStepContext{
-				ArgoCDClient: fake.NewFakeClient(),
 			},
 			stepCfg: builtin.ArgoCDUpdateConfig{
 				Apps: []builtin.ArgoCDAppUpdate{{}},
@@ -692,9 +670,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 				) (argocd.OperationPhase, bool, error) {
 					return argocd.OperationSucceeded, false, nil
 				},
-			},
-			stepCtx: &PromotionStepContext{
-				ArgoCDClient: fake.NewFakeClient(),
+				argocdClient: fake.NewFakeClient(),
 			},
 			stepCfg: builtin.ArgoCDUpdateConfig{
 				Apps: []builtin.ArgoCDAppUpdate{{}},
@@ -709,7 +685,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			res, err := testCase.runner.runPromotionStep(
 				context.Background(),
-				testCase.stepCtx,
+				&PromotionStepContext{},
 				testCase.stepCfg,
 			)
 			testCase.assertions(t, res, err)
@@ -1072,7 +1048,6 @@ func Test_argoCDUpdater_syncApplication(t *testing.T) {
 			runner: &argocdUpdater{
 				argoCDAppPatchFn: func(
 					context.Context,
-					*PromotionStepContext,
 					kubeclient.ObjectWithKind,
 					kubeclient.UnstructuredPatchFn,
 				) error {
@@ -1098,7 +1073,6 @@ func Test_argoCDUpdater_syncApplication(t *testing.T) {
 			runner: &argocdUpdater{
 				argoCDAppPatchFn: func(
 					context.Context,
-					*PromotionStepContext,
 					kubeclient.ObjectWithKind,
 					kubeclient.UnstructuredPatchFn,
 				) error {
@@ -1106,7 +1080,6 @@ func Test_argoCDUpdater_syncApplication(t *testing.T) {
 				},
 				logAppEventFn: func(
 					context.Context,
-					*PromotionStepContext,
 					*argocd.Application,
 					string,
 					string,
@@ -1223,16 +1196,14 @@ func Test_argoCDUpdater_logAppEvent(t *testing.T) {
 		},
 	}
 
-	runner := &argocdUpdater{}
-
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			c := fake.NewFakeClient()
+			runner := &argocdUpdater{
+				argocdClient: c,
+			}
 			runner.logAppEvent(
 				context.Background(),
-				&PromotionStepContext{
-					ArgoCDClient: c,
-				},
 				testCase.app,
 				testCase.user,
 				testCase.eventReason,
@@ -1310,8 +1281,6 @@ func Test_argoCDUpdater_getAuthorizedApplication(t *testing.T) {
 		},
 	}
 
-	runner := &argocdUpdater{}
-
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			c := fake.NewClientBuilder().
@@ -1322,12 +1291,14 @@ func Test_argoCDUpdater_getAuthorizedApplication(t *testing.T) {
 				c.WithObjects(testCase.app)
 			}
 
+			runner := &argocdUpdater{
+				argocdClient: c.Build(),
+			}
 			app, err := runner.getAuthorizedApplication(
 				context.Background(),
 				&PromotionStepContext{
-					Project:      "fake-namespace",
-					Stage:        "fake-stage",
-					ArgoCDClient: c.Build(),
+					Project: "fake-namespace",
+					Stage:   "fake-stage",
 				},
 				client.ObjectKey{
 					Namespace: "fake-namespace",

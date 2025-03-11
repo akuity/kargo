@@ -14,10 +14,6 @@ import (
 	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
-func init() {
-	builtinsReg.RegisterPromotionStepRunner(newJSONParser(), nil)
-}
-
 // jsonParser is an implementation of the PromotionStepRunner interface that
 // parses a JSON file and extracts specified outputs.
 type jsonParser struct {

@@ -3,10 +3,7 @@ package directives
 import (
 	"context"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/credentials"
 )
 
 // HealthCheckStepRunner is an interface for components that implement the logic
@@ -50,30 +47,6 @@ type HealthCheckStepContext struct {
 	Project string
 	// Stage is the Stage that the health check is targeting.
 	Stage string
-	// KargoClient is a Kubernetes client that a HealthCheckStepRunner executing a
-	// HealthCheckStep may use to interact with the Kargo control plane. The value
-	// of this field will often be nil, as the Engine will only furnish a this to
-	// specially privileged HealthCheckStepRunners.
-	//
-	// TODO: krancour: Longer term, we may be able to do without this.
-	KargoClient client.Client
-	// ArgoCDClient is a Kubernetes client that a HealthCheckStepRunner executing
-	// a
-	// HealthCheckStep may use to interact with an Argo CD control plane. The
-	// value of this field will often be nil, as the Engine will only furnish this
-	// to specially privileged HealthCheckStepRunners.
-	ArgoCDClient client.Client
-	// CredentialsDB is a database of credentials that a HealthCheckStepRunner
-	// executing a HealthCheckStep may use to acquire credentials for interacting
-	// with external systems. The value of this field will often be nil, as the
-	// Engine will only furnish a CredentialsDB to specially privileged
-	// HealthCheckStepRunners.
-	//
-	// TODO: krancour: Longer term, if we can standardize the way that
-	// HealthCheckSteps express what credentials they need, we can make the Engine
-	// responsible for finding them and furnishing them directly to each
-	// HealthCheckStepRunner.
-	CredentialsDB credentials.Database
 }
 
 // HealthCheckStepResult represents the results of a single HealthCheckStep

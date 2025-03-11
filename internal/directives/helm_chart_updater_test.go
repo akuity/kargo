@@ -141,7 +141,7 @@ func Test_helmChartUpdater_validate(t *testing.T) {
 		},
 	}
 
-	r := newHelmChartUpdater()
+	r := newHelmChartUpdater(nil)
 	runner, ok := r.(*helmChartUpdater)
 	require.True(t, ok)
 
@@ -469,7 +469,7 @@ func Test_helmChartUpdater_updateDependencies(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(chartPath, "Chart.yaml"), b, 0o600))
 
 		// Prepare the credentials database
-		credentialsDB := &credentials.FakeDB{
+		runner.credsDB = &credentials.FakeDB{
 			GetFn: func(context.Context, string, credentials.Type, string) (*credentials.Credentials, error) {
 				return &credentials.Credentials{
 					Username: "username",
@@ -479,14 +479,16 @@ func Test_helmChartUpdater_updateDependencies(t *testing.T) {
 		}
 
 		// Run the promotion step and assert the dependency is updated
-		newVersions, err := runner.updateDependencies(context.Background(), &PromotionStepContext{
-			CredentialsDB: credentialsDB,
-		}, t.TempDir(), chartPath, []chartDependency{
-			{
+		newVersions, err := runner.updateDependencies(
+			context.Background(),
+			&PromotionStepContext{},
+			t.TempDir(),
+			chartPath,
+			[]chartDependency{{
 				Name:       "demo",
 				Repository: "oci://" + repositoryRef,
-			},
-		})
+			}},
+		)
 		require.NoError(t, err)
 		require.DirExists(t, filepath.Join(chartPath, "charts"))
 		assert.FileExists(t, filepath.Join(chartPath, "charts", "demo-0.1.0.tgz"))
@@ -569,9 +571,14 @@ func Test_helmChartUpdater_updateDependencies(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			helmHome, chartPath := t.TempDir(), t.TempDir()
-			_, err := runner.updateDependencies(context.Background(), &PromotionStepContext{
-				CredentialsDB: tt.credentialsDB,
-			}, helmHome, chartPath, tt.chartDependencies)
+			runner.credsDB = tt.credentialsDB
+			_, err := runner.updateDependencies(
+				context.Background(),
+				&PromotionStepContext{},
+				helmHome,
+				chartPath,
+				tt.chartDependencies,
+			)
 			tt.assertions(t, helmHome, chartPath, err)
 		})
 	}

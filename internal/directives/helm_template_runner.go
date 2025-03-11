@@ -23,16 +23,6 @@ import (
 	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
-func init() {
-	builtinsReg.RegisterPromotionStepRunner(
-		newHelmTemplateRunner(),
-		&StepRunnerPermissions{
-			AllowArgoCDClient:  true,
-			AllowCredentialsDB: true,
-		},
-	)
-}
-
 // outPathIsFile returns true if the output path contains a YAML extension.
 // Otherwise, the output path is considered to target a directory where the
 // rendered manifest will be written to.

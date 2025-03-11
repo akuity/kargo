@@ -15,10 +15,6 @@ import (
 	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
-func init() {
-	builtinsReg.RegisterPromotionStepRunner(newFileDeleter(), nil)
-}
-
 // fileDeleter is an implementation of the PromotionStepRunner interface that
 // deletes a file or directory.
 type fileDeleter struct {

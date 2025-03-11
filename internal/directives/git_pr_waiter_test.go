@@ -81,7 +81,7 @@ func Test_gitPRWaiter_validate(t *testing.T) {
 		},
 	}
 
-	r := newGitPRWaiter()
+	r := newGitPRWaiter(nil)
 	runner, ok := r.(*gitPRWaiter)
 	require.True(t, ok)
 
@@ -177,7 +177,7 @@ func Test_gitPRWaiter_runPromotionStep(t *testing.T) {
 		},
 	}
 
-	r := newGitPRWaiter()
+	r := newGitPRWaiter(&credentials.FakeDB{})
 	runner, ok := r.(*gitPRWaiter)
 	require.True(t, ok)
 
@@ -201,9 +201,7 @@ func Test_gitPRWaiter_runPromotionStep(t *testing.T) {
 
 			res, err := runner.runPromotionStep(
 				context.Background(),
-				&PromotionStepContext{
-					CredentialsDB: &credentials.FakeDB{},
-				},
+				&PromotionStepContext{},
 				builtin.GitWaitForPRConfig{
 					Provider: ptr.To(builtin.Provider(testGitProviderName)),
 				},

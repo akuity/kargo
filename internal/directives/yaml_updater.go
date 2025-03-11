@@ -13,10 +13,6 @@ import (
 	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
-func init() {
-	builtinsReg.RegisterPromotionStepRunner(newYAMLUpdater(), nil)
-}
-
 // yamlUpdater is an implementation of the PromotionStepRunner interface that
 // updates the values of specified keys in a YAML file.
 type yamlUpdater struct {

@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	kustypes "sigs.k8s.io/kustomize/api/types"
 	yaml "sigs.k8s.io/yaml/goyaml.v3"
@@ -126,7 +127,7 @@ func Test_kustomizeImageSetter_validate(t *testing.T) {
 		},
 	}
 
-	r := newKustomizeImageSetter()
+	r := newKustomizeImageSetter(nil)
 	runner, ok := r.(*kustomizeImageSetter)
 	require.True(t, ok)
 
@@ -147,57 +148,50 @@ func Test_kustomizeImageSetter_validate(t *testing.T) {
 func Test_kustomizeImageSetter_runPromotionStep(t *testing.T) {
 	const testNamespace = "test-project-run"
 
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
 	tests := []struct {
-		name         string
-		setupFiles   func(t *testing.T) string
-		cfg          builtin.KustomizeSetImageConfig
-		setupStepCtx func(t *testing.T, workDir string) *PromotionStepContext
-		assertions   func(*testing.T, string, PromotionStepResult, error)
+		name       string
+		setupFiles func(t *testing.T, workDir string)
+		cfg        builtin.KustomizeSetImageConfig
+		client     client.Client
+		stepCtx    *PromotionStepContext
+		assertions func(*testing.T, string, PromotionStepResult, error)
 	}{
 		{
 			name: "successfully sets image",
-			setupFiles: func(t *testing.T) string {
-				tempDir := t.TempDir()
+			setupFiles: func(t *testing.T, workDir string) {
 				kustomizationContent := `apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 `
-				err := os.WriteFile(filepath.Join(tempDir, "kustomization.yaml"), []byte(kustomizationContent), 0o600)
+				err := os.WriteFile(filepath.Join(workDir, "kustomization.yaml"), []byte(kustomizationContent), 0o600)
 				require.NoError(t, err)
-				return tempDir
 			},
 			cfg: builtin.KustomizeSetImageConfig{
-				Path: ".",
-				Images: []builtin.Image{
-					{Image: "nginx", Tag: "1.21.0"},
-				},
+				Path:   ".",
+				Images: []builtin.Image{{Image: "nginx", Tag: "1.21.0"}},
 			},
-			setupStepCtx: func(t *testing.T, workDir string) *PromotionStepContext {
-				scheme := runtime.NewScheme()
-				require.NoError(t, kargoapi.AddToScheme(scheme))
-				c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-					mockWarehouse(testNamespace, "warehouse1", kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{
-							{Image: &kargoapi.ImageSubscription{RepoURL: "nginx"}},
-						},
-					}),
-				).Build()
-
-				return &PromotionStepContext{
-					WorkDir:     workDir,
-					KargoClient: c,
-					Project:     testNamespace,
-					FreightRequests: []kargoapi.FreightRequest{
-						{Origin: kargoapi.FreightOrigin{Name: "warehouse1", Kind: "Warehouse"}},
+			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+				mockWarehouse(testNamespace, "warehouse1", kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx"}},
 					},
-					Freight: kargoapi.FreightCollection{
-						Freight: map[string]kargoapi.FreightReference{
-							"Warehouse/warehouse1": {
-								Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "warehouse1"},
-								Images: []kargoapi.Image{{RepoURL: "nginx", Tag: "1.21.0", Digest: "sha256:123"}},
-							},
+				}),
+			).Build(),
+			stepCtx: &PromotionStepContext{
+				Project: testNamespace,
+				FreightRequests: []kargoapi.FreightRequest{
+					{Origin: kargoapi.FreightOrigin{Name: "warehouse1", Kind: "Warehouse"}},
+				},
+				Freight: kargoapi.FreightCollection{
+					Freight: map[string]kargoapi.FreightReference{
+						"Warehouse/warehouse1": {
+							Origin: kargoapi.FreightOrigin{Kind: "Warehouse", Name: "warehouse1"},
+							Images: []kargoapi.Image{{RepoURL: "nginx", Tag: "1.21.0", Digest: "sha256:123"}},
 						},
 					},
-				}
+				},
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.NoError(t, err)
@@ -215,33 +209,28 @@ kind: Kustomization
 		},
 		{
 			name: "automatically sets image",
-			setupFiles: func(t *testing.T) string {
-				tempDir := t.TempDir()
+			setupFiles: func(t *testing.T, workDir string) {
 				kustomizationContent := `apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 `
-				err := os.WriteFile(filepath.Join(tempDir, "kustomization.yaml"), []byte(kustomizationContent), 0o600)
+				err := os.WriteFile(filepath.Join(workDir, "kustomization.yaml"), []byte(kustomizationContent), 0o600)
 				require.NoError(t, err)
-				return tempDir
 			},
 			cfg: builtin.KustomizeSetImageConfig{
 				Path:   ".",
 				Images: nil, // Automatically set all images
 			},
-			setupStepCtx: func(_ *testing.T, workDir string) *PromotionStepContext {
-				return &PromotionStepContext{
-					WorkDir: workDir,
-					Freight: kargoapi.FreightCollection{
-						Freight: map[string]kargoapi.FreightReference{
-							"Warehouse/warehouse1": {
-								Images: []kargoapi.Image{{RepoURL: "nginx", Digest: "sha256:123"}},
-							},
-							"Warehouse/warehouse2": {
-								Images: []kargoapi.Image{{RepoURL: "redis", Tag: "6.2.5"}},
-							},
+			stepCtx: &PromotionStepContext{
+				Freight: kargoapi.FreightCollection{
+					Freight: map[string]kargoapi.FreightReference{
+						"Warehouse/warehouse1": {
+							Images: []kargoapi.Image{{RepoURL: "nginx", Digest: "sha256:123"}},
+						},
+						"Warehouse/warehouse2": {
+							Images: []kargoapi.Image{{RepoURL: "redis", Tag: "6.2.5"}},
 						},
 					},
-				}
+				},
 			},
 			assertions: func(t *testing.T, workDir string, result PromotionStepResult, err error) {
 				require.NoError(t, err)
@@ -260,26 +249,14 @@ kind: Kustomization
 		},
 		{
 			name: "Kustomization file not found",
-			setupFiles: func(t *testing.T) string {
-				return t.TempDir()
-			},
 			cfg: builtin.KustomizeSetImageConfig{
 				Path: ".",
 				Images: []builtin.Image{
 					{Image: "nginx"},
 				},
 			},
-			setupStepCtx: func(t *testing.T, workDir string) *PromotionStepContext {
-				scheme := runtime.NewScheme()
-				require.NoError(t, kargoapi.AddToScheme(scheme))
-				c := fake.NewClientBuilder().WithScheme(scheme).Build()
-
-				return &PromotionStepContext{
-					WorkDir:     workDir,
-					KargoClient: c,
-					Project:     testNamespace,
-				}
-			},
+			client:  fake.NewClientBuilder().WithScheme(scheme).Build(),
+			stepCtx: &PromotionStepContext{Project: testNamespace},
 			assertions: func(t *testing.T, _ string, result PromotionStepResult, err error) {
 				require.ErrorContains(t, err, "could not discover kustomization file:")
 				assert.Equal(t, PromotionStepResult{Status: kargoapi.PromotionPhaseErrored}, result)
@@ -291,11 +268,12 @@ kind: Kustomization
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			workDir := tt.setupFiles(t)
-			stepCtx := tt.setupStepCtx(t, workDir)
-
-			result, err := runner.runPromotionStep(context.Background(), stepCtx, tt.cfg)
-			tt.assertions(t, workDir, result, err)
+			tt.stepCtx.WorkDir = t.TempDir()
+			if tt.setupFiles != nil {
+				tt.setupFiles(t, tt.stepCtx.WorkDir)
+			}
+			result, err := runner.runPromotionStep(context.Background(), tt.stepCtx, tt.cfg)
+			tt.assertions(t, tt.stepCtx.WorkDir, result, err)
 		})
 	}
 }
@@ -433,16 +411,16 @@ func Test_kustomizeImageSetter_buildTargetImagesAutomatically(t *testing.T) {
 		},
 	}
 
-	runner := &kustomizeImageSetter{}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			scheme := runtime.NewScheme()
 			require.NoError(t, kargoapi.AddToScheme(scheme))
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(tt.objects...).Build()
 
+			runner := &kustomizeImageSetter{
+				kargoClient: fakeClient,
+			}
 			stepCtx := &PromotionStepContext{
-				KargoClient:     fakeClient,
 				Project:         testNamespace,
 				FreightRequests: tt.freightRequests,
 				Freight: kargoapi.FreightCollection{

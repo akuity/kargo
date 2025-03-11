@@ -30,6 +30,7 @@ func Test_argocdUpdater_runHealthCheckStep(t *testing.T) {
 
 	testCases := []struct {
 		name       string
+		client     client.Client
 		healthCtx  *HealthCheckStepContext
 		assertions func(*testing.T, HealthCheckStepResult)
 	}{
@@ -44,50 +45,49 @@ func Test_argocdUpdater_runHealthCheckStep(t *testing.T) {
 		},
 		{
 			name: "composite error checking Application health",
-			healthCtx: &HealthCheckStepContext{
-				ArgoCDClient: fake.NewClientBuilder().
-					WithScheme(scheme).
-					WithObjects(
-						&argocd.Application{
-							ObjectMeta: metav1.ObjectMeta{
-								Namespace: testAppNamespace,
-								Name:      testAppName1,
+			client: fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(
+					&argocd.Application{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: testAppNamespace,
+							Name:      testAppName1,
+						},
+						Spec: argocd.ApplicationSpec{
+							Sources: []argocd.ApplicationSource{{}},
+						},
+						Status: argocd.ApplicationStatus{
+							Health: argocd.HealthStatus{
+								Status: argocd.HealthStatusHealthy,
 							},
-							Spec: argocd.ApplicationSpec{
-								Sources: []argocd.ApplicationSource{{}},
+							Sync: argocd.SyncStatus{
+								Status:    argocd.SyncStatusCodeSynced,
+								Revisions: []string{"fake-version"},
 							},
-							Status: argocd.ApplicationStatus{
-								Health: argocd.HealthStatus{
-									Status: argocd.HealthStatusHealthy,
+							OperationState: &argocd.OperationState{
+								FinishedAt: ptr.To(metav1.Now()),
+							},
+						},
+					},
+					&argocd.Application{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: testAppNamespace,
+							Name:      testAppName2,
+						},
+						Status: argocd.ApplicationStatus{
+							Conditions: []argocd.ApplicationCondition{
+								{
+									Type: argocd.ApplicationConditionComparisonError,
 								},
-								Sync: argocd.SyncStatus{
-									Status:    argocd.SyncStatusCodeSynced,
-									Revisions: []string{"fake-version"},
-								},
-								OperationState: &argocd.OperationState{
-									FinishedAt: ptr.To(metav1.Now()),
+								{
+									Type: argocd.ApplicationConditionInvalidSpecError,
 								},
 							},
 						},
-						&argocd.Application{
-							ObjectMeta: metav1.ObjectMeta{
-								Namespace: testAppNamespace,
-								Name:      testAppName2,
-							},
-							Status: argocd.ApplicationStatus{
-								Conditions: []argocd.ApplicationCondition{
-									{
-										Type: argocd.ApplicationConditionComparisonError,
-									},
-									{
-										Type: argocd.ApplicationConditionInvalidSpecError,
-									},
-								},
-							},
-						},
-					).
-					Build(),
-			},
+					},
+				).
+				Build(),
+			healthCtx: &HealthCheckStepContext{},
 			assertions: func(t *testing.T, res HealthCheckStepResult) {
 				require.Equal(t, kargoapi.HealthStateUnhealthy, res.Status)
 				require.Contains(t, res.Output, applicationStatusesKey)
@@ -100,55 +100,54 @@ func Test_argocdUpdater_runHealthCheckStep(t *testing.T) {
 		},
 		{
 			name: "all apps healthy and synced",
-			healthCtx: &HealthCheckStepContext{
-				ArgoCDClient: fake.NewClientBuilder().
-					WithScheme(scheme).
-					WithObjects(
-						&argocd.Application{
-							ObjectMeta: metav1.ObjectMeta{
-								Namespace: testAppNamespace,
-								Name:      testAppName1,
+			client: fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(
+					&argocd.Application{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: testAppNamespace,
+							Name:      testAppName1,
+						},
+						Spec: argocd.ApplicationSpec{
+							Sources: []argocd.ApplicationSource{{}},
+						},
+						Status: argocd.ApplicationStatus{
+							Health: argocd.HealthStatus{
+								Status: argocd.HealthStatusHealthy,
 							},
-							Spec: argocd.ApplicationSpec{
-								Sources: []argocd.ApplicationSource{{}},
+							Sync: argocd.SyncStatus{
+								Status:    argocd.SyncStatusCodeSynced,
+								Revisions: []string{"fake-version"},
 							},
-							Status: argocd.ApplicationStatus{
-								Health: argocd.HealthStatus{
-									Status: argocd.HealthStatusHealthy,
-								},
-								Sync: argocd.SyncStatus{
-									Status:    argocd.SyncStatusCodeSynced,
-									Revisions: []string{"fake-version"},
-								},
-								OperationState: &argocd.OperationState{
-									FinishedAt: ptr.To(metav1.Now()),
-								},
+							OperationState: &argocd.OperationState{
+								FinishedAt: ptr.To(metav1.Now()),
 							},
 						},
-						&argocd.Application{
-							ObjectMeta: metav1.ObjectMeta{
-								Namespace: testAppNamespace,
-								Name:      testAppName2,
+					},
+					&argocd.Application{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: testAppNamespace,
+							Name:      testAppName2,
+						},
+						Spec: argocd.ApplicationSpec{
+							Sources: []argocd.ApplicationSource{{}},
+						},
+						Status: argocd.ApplicationStatus{
+							Health: argocd.HealthStatus{
+								Status: argocd.HealthStatusHealthy,
 							},
-							Spec: argocd.ApplicationSpec{
-								Sources: []argocd.ApplicationSource{{}},
+							Sync: argocd.SyncStatus{
+								Status:    argocd.SyncStatusCodeSynced,
+								Revisions: []string{"fake-commit"},
 							},
-							Status: argocd.ApplicationStatus{
-								Health: argocd.HealthStatus{
-									Status: argocd.HealthStatusHealthy,
-								},
-								Sync: argocd.SyncStatus{
-									Status:    argocd.SyncStatusCodeSynced,
-									Revisions: []string{"fake-commit"},
-								},
-								OperationState: &argocd.OperationState{
-									FinishedAt: ptr.To(metav1.Now()),
-								},
+							OperationState: &argocd.OperationState{
+								FinishedAt: ptr.To(metav1.Now()),
 							},
 						},
-					).
-					Build(),
-			},
+					},
+				).
+				Build(),
+			healthCtx: &HealthCheckStepContext{},
 			assertions: func(t *testing.T, res HealthCheckStepResult) {
 				require.Equal(t, kargoapi.HealthStateHealthy, res.Status)
 				require.Contains(t, res.Output, applicationStatusesKey)
@@ -157,15 +156,15 @@ func Test_argocdUpdater_runHealthCheckStep(t *testing.T) {
 		},
 	}
 
-	runner := &argocdUpdater{}
-
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			runner := &argocdUpdater{
+				argocdClient: testCase.client,
+			}
 			testCase.assertions(
 				t,
 				runner.runHealthCheckStep(
 					context.Background(),
-					testCase.healthCtx,
 					ArgoCDHealthConfig{
 						Apps: []ArgoCDAppHealthCheck{
 							{
@@ -397,21 +396,19 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 		},
 	}
 
-	runner := &argocdUpdater{}
-
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			app := testApp.DeepCopy()
 			app.Status = testCase.appStatus
+			runner := &argocdUpdater{
+				argocdClient: fake.NewClientBuilder().
+					WithScheme(scheme).
+					WithObjects(app).
+					WithInterceptorFuncs(testCase.interceptor).
+					Build(),
+			}
 			stageHealth, appStatus, err := runner.getApplicationHealth(
 				context.Background(),
-				&HealthCheckStepContext{
-					ArgoCDClient: fake.NewClientBuilder().
-						WithScheme(scheme).
-						WithObjects(app).
-						WithInterceptorFuncs(testCase.interceptor).
-						Build(),
-				},
 				client.ObjectKey{
 					Namespace: app.Namespace,
 					Name:      app.Name,
@@ -437,29 +434,29 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 			},
 		}
 		var count int
+		runner := &argocdUpdater{
+			argocdClient: fake.NewClientBuilder().WithInterceptorFuncs(interceptor.Funcs{
+				Get: func(
+					_ context.Context,
+					_ client.WithWatch,
+					_ client.ObjectKey,
+					obj client.Object,
+					_ ...client.GetOption,
+				) error {
+					count++
+
+					appCopy := app.DeepCopy()
+					if count > 1 {
+						appCopy.Status.Health.Status = argocd.HealthStatusHealthy
+					}
+
+					*obj.(*argocd.Application) = *appCopy // nolint: forcetypeassert
+					return nil
+				},
+			}).Build(),
+		}
 		_, _, err := runner.getApplicationHealth(
 			context.Background(),
-			&HealthCheckStepContext{
-				ArgoCDClient: fake.NewClientBuilder().WithInterceptorFuncs(interceptor.Funcs{
-					Get: func(
-						_ context.Context,
-						_ client.WithWatch,
-						_ client.ObjectKey,
-						obj client.Object,
-						_ ...client.GetOption,
-					) error {
-						count++
-
-						appCopy := app.DeepCopy()
-						if count > 1 {
-							appCopy.Status.Health.Status = argocd.HealthStatusHealthy
-						}
-
-						*obj.(*argocd.Application) = *appCopy // nolint: forcetypeassert
-						return nil
-					},
-				}).Build(),
-			},
 			client.ObjectKey{
 				Namespace: testApp.Namespace,
 				Name:      testApp.Name,

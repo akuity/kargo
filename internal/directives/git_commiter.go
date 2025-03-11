@@ -15,10 +15,6 @@ import (
 // stateKeyCommit is the key used to store the commit ID in the shared State.
 const stateKeyCommit = "commit"
 
-func init() {
-	builtinsReg.RegisterPromotionStepRunner(newGitCommitter(), nil)
-}
-
 // gitCommitter is an implementation of the PromotionStepRunner interface that
 // makes a commit to a local Git repository.
 type gitCommitter struct {

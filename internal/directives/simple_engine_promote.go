@@ -92,15 +92,15 @@ func (e *SimpleEngine) executeSteps(
 		}
 
 		// Get the PromotionStepRunner for the step.
-		reg, err := e.registry.GetPromotionStepRunnerRegistration(step.Kind)
-		if err != nil {
+		runner := e.registry.getPromotionStepRunner(step.Kind)
+		if runner == nil {
 			return PromotionResult{
 				Status:                kargoapi.PromotionPhaseErrored,
 				CurrentStep:           i,
 				StepExecutionMetadata: stepExecMetas,
 				State:                 state,
 				HealthCheckSteps:      healthChecks,
-			}, fmt.Errorf("error getting runner for step %d: %w", i, err)
+			}, fmt.Errorf("no promotion step runner found for kind %d", i)
 		}
 
 		// If we don't have metadata for this step yet, create it.
@@ -135,7 +135,7 @@ func (e *SimpleEngine) executeSteps(
 		if stepExecMeta.StartedAt == nil {
 			stepExecMeta.StartedAt = ptr.To(metav1.Now())
 		}
-		result, err := e.executeStep(ctx, promoCtx, step, reg, workDir, state)
+		result, err := e.executeStep(ctx, promoCtx, step, runner, workDir, state)
 		stepExecMeta.Status = result.Status
 		stepExecMeta.Message = result.Message
 
@@ -143,7 +143,7 @@ func (e *SimpleEngine) executeSteps(
 		// inflated from tasks, we need to apply a special treatment to the output
 		// to allow it to become available under the alias of the "task".
 		aliasNamespace := getAliasNamespace(step.Alias)
-		if aliasNamespace != "" && reg.Runner.Name() == (&outputComposer{}).Name() {
+		if aliasNamespace != "" && runner.Name() == (&outputComposer{}).Name() {
 			if state[aliasNamespace] == nil {
 				state[aliasNamespace] = make(map[string]any)
 			}
@@ -216,7 +216,7 @@ func (e *SimpleEngine) executeSteps(
 			// If we get to here, the error is POTENTIALLY recoverable.
 			stepExecMeta.ErrorCount++
 			// Check if the error threshold has been met.
-			errorThreshold := step.GetErrorThreshold(reg.Runner)
+			errorThreshold := step.GetErrorThreshold(runner)
 			if stepExecMeta.ErrorCount >= errorThreshold {
 				// The error threshold has been met.
 				stepExecMeta.FinishedAt = ptr.To(metav1.Now())
@@ -238,7 +238,7 @@ func (e *SimpleEngine) executeSteps(
 		// threshold. Now we need to check if the timeout has elapsed. A nil timeout
 		// or any non-positive timeout interval are treated as NO timeout, although
 		// a nil timeout really shouldn't happen.
-		timeout := step.GetTimeout(reg.Runner)
+		timeout := step.GetTimeout(runner)
 		if timeout != nil && *timeout > 0 && metav1.Now().Sub(stepExecMeta.StartedAt.Time) > *timeout {
 			// Timeout has elapsed.
 			stepExecMeta.FinishedAt = ptr.To(metav1.Now())
@@ -292,11 +292,11 @@ func (e *SimpleEngine) executeStep(
 	ctx context.Context,
 	promoCtx PromotionContext,
 	step PromotionStep,
-	reg PromotionStepRunnerRegistration,
+	runner PromotionStepRunner,
 	workDir string,
 	state State,
 ) (PromotionStepResult, error) {
-	stepCtx, err := e.preparePromotionStepContext(ctx, promoCtx, step, reg.Permissions, workDir, state)
+	stepCtx, err := e.preparePromotionStepContext(ctx, promoCtx, step, workDir, state)
 	if err != nil {
 		// TODO(krancour): We're not yet distinguishing between retryable and
 		// non-retryable errors. When we start to do this, failure to prepare the
@@ -307,7 +307,7 @@ func (e *SimpleEngine) executeStep(
 		}, err
 	}
 
-	result, err := reg.Runner.RunPromotionStep(ctx, stepCtx)
+	result, err := runner.RunPromotionStep(ctx, stepCtx)
 	if err != nil {
 		err = fmt.Errorf("failed to run step %q: %w", step.Kind, err)
 	}
@@ -319,7 +319,6 @@ func (e *SimpleEngine) preparePromotionStepContext(
 	ctx context.Context,
 	promoCtx PromotionContext,
 	step PromotionStep,
-	permissions StepRunnerPermissions,
 	workDir string,
 	state State,
 ) (*PromotionStepContext, error) {
@@ -330,7 +329,7 @@ func (e *SimpleEngine) preparePromotionStepContext(
 		return nil, fmt.Errorf("failed to get step config: %w", err)
 	}
 
-	stepCtx := &PromotionStepContext{
+	return &PromotionStepContext{
 		UIBaseURL:       promoCtx.UIBaseURL,
 		WorkDir:         workDir,
 		SharedState:     stateCopy,
@@ -341,19 +340,7 @@ func (e *SimpleEngine) preparePromotionStepContext(
 		Promotion:       promoCtx.Promotion,
 		FreightRequests: promoCtx.FreightRequests,
 		Freight:         promoCtx.Freight,
-	}
-
-	if permissions.AllowCredentialsDB {
-		stepCtx.CredentialsDB = e.credentialsDB
-	}
-	if permissions.AllowKargoClient {
-		stepCtx.KargoClient = e.kargoClient
-	}
-	if permissions.AllowArgoCDClient {
-		stepCtx.ArgoCDClient = e.argoCDClient
-	}
-
-	return stepCtx, nil
+	}, nil
 }
 
 // stepAlias returns the alias for a step. If the alias is empty, a default

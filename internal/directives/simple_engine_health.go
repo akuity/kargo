@@ -75,41 +75,28 @@ func (e *SimpleEngine) executeHealthCheck(
 	healthCtx HealthCheckContext,
 	step HealthCheckStep,
 ) HealthCheckStepResult {
-	reg, err := e.registry.GetHealthCheckStepRunnerRegistration(step.Kind)
-	if err != nil {
+	runner := e.registry.getHealthCheckStepRunner(step.Kind)
+	if runner == nil {
 		return HealthCheckStepResult{
 			Status: kargoapi.HealthStateUnknown,
 			Issues: []string{
-				fmt.Sprintf("no runner registered for step kind %q: %s", step.Kind, err.Error()),
+				fmt.Sprintf("no promotion step runner registered for step kind %q", step.Kind),
 			},
 		}
 	}
-
-	stepCtx := e.prepareHealthCheckStepContext(healthCtx, step, reg)
-	return reg.Runner.RunHealthCheckStep(ctx, stepCtx)
+	stepCtx := e.prepareHealthCheckStepContext(healthCtx, step)
+	return runner.RunHealthCheckStep(ctx, stepCtx)
 }
 
 // prepareHealthCheckStepContext prepares a HealthCheckStepContext for a HealthCheckStep.
 func (e *SimpleEngine) prepareHealthCheckStepContext(
 	healthCtx HealthCheckContext,
 	step HealthCheckStep,
-	reg HealthCheckStepRunnerRegistration,
 ) *HealthCheckStepContext {
 	stepCtx := &HealthCheckStepContext{
 		Config:  step.Config.DeepCopy(),
 		Project: healthCtx.Project,
 		Stage:   healthCtx.Stage,
 	}
-
-	if reg.Permissions.AllowCredentialsDB {
-		stepCtx.CredentialsDB = e.credentialsDB
-	}
-	if reg.Permissions.AllowKargoClient {
-		stepCtx.KargoClient = e.kargoClient
-	}
-	if reg.Permissions.AllowArgoCDClient {
-		stepCtx.ArgoCDClient = e.argoCDClient
-	}
-
 	return stepCtx
 }

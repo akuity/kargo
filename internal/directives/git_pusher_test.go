@@ -128,7 +128,7 @@ func Test_gitPusher_validate(t *testing.T) {
 		},
 	}
 
-	r := newGitPusher()
+	r := newGitPusher(nil)
 	runner, ok := r.(*gitPushPusher)
 	require.True(t, ok)
 
@@ -201,7 +201,7 @@ func Test_gitPusher_runPromotionStep(t *testing.T) {
 
 	// Now we can proceed to test gitPusher...
 
-	r := newGitPusher()
+	r := newGitPusher(&credentials.FakeDB{})
 	runner, ok := r.(*gitPushPusher)
 	require.True(t, ok)
 	require.NotNil(t, runner.branchMus)
@@ -209,11 +209,10 @@ func Test_gitPusher_runPromotionStep(t *testing.T) {
 	res, err := runner.runPromotionStep(
 		context.Background(),
 		&PromotionStepContext{
-			Project:       "fake-project",
-			Stage:         "fake-stage",
-			Promotion:     "fake-promotion",
-			WorkDir:       workDir,
-			CredentialsDB: &credentials.FakeDB{},
+			Project:   "fake-project",
+			Stage:     "fake-stage",
+			Promotion: "fake-promotion",
+			WorkDir:   workDir,
 		},
 		builtin.GitPushConfig{
 			Path:                 "master",

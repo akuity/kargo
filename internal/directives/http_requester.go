@@ -25,10 +25,6 @@ const (
 	contentTypeJSON   = "application/json"
 )
 
-func init() {
-	builtinsReg.RegisterPromotionStepRunner(newHTTPRequester(), nil)
-}
-
 // httpRequester is an implementation of the PromotionStepRunner interface that
 // sends an HTTP request and processes the response.
 type httpRequester struct {

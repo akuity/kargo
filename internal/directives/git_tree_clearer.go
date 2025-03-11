@@ -12,10 +12,6 @@ import (
 	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
-func init() {
-	builtinsReg.RegisterPromotionStepRunner(newGitTreeClearer(), nil)
-}
-
 // gitTreeClearer is an implementation of the PromotionStepRunner interface
 // that removes the content of a Git working tree.
 type gitTreeClearer struct {

@@ -12,6 +12,7 @@ import (
 
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/xeipuuv/gojsonschema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/kustomize/api/konfig"
 	kustypes "sigs.k8s.io/kustomize/api/types"
 	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
@@ -27,26 +28,19 @@ import (
 // Kustomization image field.
 const preserveSeparator = "*"
 
-func init() {
-	builtinsReg.RegisterPromotionStepRunner(
-		newKustomizeImageSetter(),
-		&StepRunnerPermissions{
-			AllowKargoClient: true,
-		},
-	)
-}
-
 // kustomizeImageSetter is an implementation  of the PromotionStepRunner
 // interface that sets images in a Kustomization file.
 type kustomizeImageSetter struct {
 	schemaLoader gojsonschema.JSONLoader
+	kargoClient  client.Client
 }
 
 // newKustomizeImageSetter returns an implementation  of the PromotionStepRunner
 // interface that sets images in a Kustomization file.
-func newKustomizeImageSetter() PromotionStepRunner {
+func newKustomizeImageSetter(kargoClient client.Client) PromotionStepRunner {
 	return &kustomizeImageSetter{
 		schemaLoader: getConfigSchemaLoader("kustomize-set-image"),
+		kargoClient:  kargoClient,
 	}
 }
 
@@ -151,7 +145,7 @@ func (k *kustomizeImageSetter) buildTargetImagesAutomatically(
 	// contain all the images that are requested, which could lead eventually
 	// to an ambiguous result.
 	if ambiguous, ambErr := freight.HasAmbiguousImageRequest(
-		ctx, stepCtx.KargoClient, stepCtx.Project, stepCtx.FreightRequests,
+		ctx, k.kargoClient, stepCtx.Project, stepCtx.FreightRequests,
 	); ambErr != nil || ambiguous {
 		err := errors.New("manual configuration required due to ambiguous result")
 		if ambErr != nil {

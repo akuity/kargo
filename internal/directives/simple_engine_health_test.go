@@ -5,10 +5,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/credentials"
 )
 
 func TestSimpleEngine_CheckHealth(t *testing.T) {
@@ -72,42 +70,33 @@ func TestSimpleEngine_CheckHealth(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			testRegistry := NewStepRunnerRegistry()
-			testRegistry.RegisterHealthCheckStepRunner(
-				&mockHealthCheckStepRunner{
-					name: "success-check",
-					runResult: HealthCheckStepResult{
-						Status: kargoapi.HealthStateHealthy,
-						Output: State{"test": "success"},
-					},
+			testRegistry := stepRunnerRegistry{}
+			testRegistry.register(&mockHealthCheckStepRunner{
+				name: "success-check",
+				runResult: HealthCheckStepResult{
+					Status: kargoapi.HealthStateHealthy,
+					Output: State{"test": "success"},
 				},
-				nil,
-			)
-			testRegistry.RegisterHealthCheckStepRunner(
-				&mockHealthCheckStepRunner{
-					name: "error-check",
-					runResult: HealthCheckStepResult{
-						Status: kargoapi.HealthStateUnhealthy,
-						Issues: []string{"health check failed"},
-						Output: State{"test": "error"},
-					},
+			})
+			testRegistry.register(&mockHealthCheckStepRunner{
+				name: "error-check",
+				runResult: HealthCheckStepResult{
+					Status: kargoapi.HealthStateUnhealthy,
+					Issues: []string{"health check failed"},
+					Output: State{"test": "error"},
 				},
-				nil,
-			)
-			testRegistry.RegisterHealthCheckStepRunner(
-				&mockHealthCheckStepRunner{
-					name: "context-waiter",
-					runFunc: func(ctx context.Context, _ *HealthCheckStepContext) HealthCheckStepResult {
-						cancel()
-						<-ctx.Done()
-						return HealthCheckStepResult{
-							Status: kargoapi.HealthStateUnknown,
-							Issues: []string{ctx.Err().Error()},
-						}
-					},
+			})
+			testRegistry.register(&mockHealthCheckStepRunner{
+				name: "context-waiter",
+				runFunc: func(ctx context.Context, _ *HealthCheckStepContext) HealthCheckStepResult {
+					cancel()
+					<-ctx.Done()
+					return HealthCheckStepResult{
+						Status: kargoapi.HealthStateUnknown,
+						Issues: []string{ctx.Err().Error()},
+					}
 				},
-				nil,
-			)
+			})
 
 			engine := &SimpleEngine{
 				registry: testRegistry,
@@ -172,42 +161,33 @@ func TestSimpleEngine_executeHealthChecks(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			testRegistry := NewStepRunnerRegistry()
-			testRegistry.RegisterHealthCheckStepRunner(
-				&mockHealthCheckStepRunner{
-					name: "success-check",
-					runResult: HealthCheckStepResult{
-						Status: kargoapi.HealthStateHealthy,
-						Output: State{"test": "success"},
-					},
+			testRegistry := stepRunnerRegistry{}
+			testRegistry.register(&mockHealthCheckStepRunner{
+				name: "success-check",
+				runResult: HealthCheckStepResult{
+					Status: kargoapi.HealthStateHealthy,
+					Output: State{"test": "success"},
 				},
-				nil,
-			)
-			testRegistry.RegisterHealthCheckStepRunner(
-				&mockHealthCheckStepRunner{
-					name: "error-check",
-					runResult: HealthCheckStepResult{
-						Status: kargoapi.HealthStateUnhealthy,
-						Issues: []string{"health check failed"},
-						Output: State{"test": "error"},
-					},
+			})
+			testRegistry.register(&mockHealthCheckStepRunner{
+				name: "error-check",
+				runResult: HealthCheckStepResult{
+					Status: kargoapi.HealthStateUnhealthy,
+					Issues: []string{"health check failed"},
+					Output: State{"test": "error"},
 				},
-				nil,
-			)
-			testRegistry.RegisterHealthCheckStepRunner(
-				&mockHealthCheckStepRunner{
-					name: "context-waiter",
-					runFunc: func(ctx context.Context, _ *HealthCheckStepContext) HealthCheckStepResult {
-						cancel()
-						<-ctx.Done()
-						return HealthCheckStepResult{
-							Status: kargoapi.HealthStateUnknown,
-							Issues: []string{ctx.Err().Error()},
-						}
-					},
+			})
+			testRegistry.register(&mockHealthCheckStepRunner{
+				name: "context-waiter",
+				runFunc: func(ctx context.Context, _ *HealthCheckStepContext) HealthCheckStepResult {
+					cancel()
+					<-ctx.Done()
+					return HealthCheckStepResult{
+						Status: kargoapi.HealthStateUnknown,
+						Issues: []string{ctx.Err().Error()},
+					}
 				},
-				nil,
-			)
+			})
 
 			engine := &SimpleEngine{
 				registry: testRegistry,
@@ -239,7 +219,7 @@ func TestSimpleEngine_executeHealthCheck(t *testing.T) {
 			step: HealthCheckStep{Kind: "unknown"},
 			assertions: func(t *testing.T, result HealthCheckStepResult) {
 				assert.Equal(t, kargoapi.HealthStateUnknown, result.Status)
-				assert.Contains(t, result.Issues[0], "no runner registered for step kind")
+				assert.Contains(t, result.Issues[0], "no promotion step runner registered for step kind")
 				assert.Contains(t, result.Issues[0], "unknown")
 			},
 		},
@@ -247,16 +227,13 @@ func TestSimpleEngine_executeHealthCheck(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			testRegistry := NewStepRunnerRegistry()
-			testRegistry.RegisterHealthCheckStepRunner(
-				&mockHealthCheckStepRunner{
-					name: "success-check",
-					runResult: HealthCheckStepResult{
-						Status: kargoapi.HealthStateHealthy,
-					},
+			testRegistry := stepRunnerRegistry{}
+			testRegistry.register(&mockHealthCheckStepRunner{
+				name: "success-check",
+				runResult: HealthCheckStepResult{
+					Status: kargoapi.HealthStateHealthy,
 				},
-				nil,
-			)
+			})
 
 			engine := &SimpleEngine{
 				registry: testRegistry,
@@ -269,64 +246,17 @@ func TestSimpleEngine_executeHealthCheck(t *testing.T) {
 }
 
 func TestSimpleEngine_prepareHealthCheckStepContext(t *testing.T) {
-	tests := []struct {
-		name        string
-		healthCtx   HealthCheckContext
-		step        HealthCheckStep
-		permissions StepRunnerPermissions
-		assertions  func(*testing.T, *HealthCheckStepContext)
-	}{
-		{
-			name: "context with all permissions",
-			healthCtx: HealthCheckContext{
-				Project: "test-project",
-				Stage:   "test-stage",
-			},
-			step: HealthCheckStep{
-				Config: map[string]any{
-					"key": "value",
-				},
-			},
-			permissions: StepRunnerPermissions{
-				AllowCredentialsDB: true,
-				AllowKargoClient:   true,
-				AllowArgoCDClient:  true,
-			},
-			assertions: func(t *testing.T, ctx *HealthCheckStepContext) {
-				assert.Equal(t, "test-project", ctx.Project)
-				assert.Equal(t, "test-stage", ctx.Stage)
-				assert.NotNil(t, ctx.Config)
-				assert.NotNil(t, ctx.CredentialsDB)
-				assert.NotNil(t, ctx.KargoClient)
-				assert.NotNil(t, ctx.ArgoCDClient)
-			},
-		},
-		{
-			name:        "context without permissions",
-			step:        HealthCheckStep{},
-			permissions: StepRunnerPermissions{},
-			assertions: func(t *testing.T, ctx *HealthCheckStepContext) {
-				assert.Nil(t, ctx.CredentialsDB)
-				assert.Nil(t, ctx.KargoClient)
-				assert.Nil(t, ctx.ArgoCDClient)
-			},
+	healthCtx := HealthCheckContext{
+		Project: "test-project",
+		Stage:   "test-stage",
+	}
+	step := HealthCheckStep{
+		Config: map[string]any{
+			"key": "value",
 		},
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			engine := &SimpleEngine{
-				credentialsDB: &credentials.FakeDB{},
-				kargoClient:   fake.NewClientBuilder().Build(),
-				argoCDClient:  fake.NewClientBuilder().Build(),
-			}
-
-			reg := HealthCheckStepRunnerRegistration{
-				Permissions: tt.permissions,
-			}
-
-			ctx := engine.prepareHealthCheckStepContext(tt.healthCtx, tt.step, reg)
-			tt.assertions(t, ctx)
-		})
-	}
+	ctx := (&SimpleEngine{}).prepareHealthCheckStepContext(healthCtx, step)
+	assert.Equal(t, "test-project", ctx.Project)
+	assert.Equal(t, "test-stage", ctx.Stage)
+	assert.NotNil(t, ctx.Config)
 }

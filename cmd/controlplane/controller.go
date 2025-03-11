@@ -315,9 +315,11 @@ func (o *controllerOptions) setupReconcilers(
 	if argocdMgr != nil {
 		argoCDClient = argocdMgr.GetClient()
 	}
-	sharedIndexer := indexer.NewSharedFieldIndexer(kargoMgr.GetFieldIndexer())
 
-	directivesEngine := directives.NewSimpleEngine(credentialsDB, kargoMgr.GetClient(), argoCDClient)
+	directives.InitializeBuiltins(kargoMgr.GetClient(), argoCDClient, credentialsDB)
+	directivesEngine := directives.NewSimpleEngine(kargoMgr.GetClient())
+
+	sharedIndexer := indexer.NewSharedFieldIndexer(kargoMgr.GetFieldIndexer())
 
 	if err := promotions.SetupReconcilerWithManager(
 		ctx,

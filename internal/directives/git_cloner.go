@@ -15,21 +15,12 @@ import (
 	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
-func init() {
-	builtinsReg.RegisterPromotionStepRunner(
-		newGitCloner(),
-		&StepRunnerPermissions{
-			AllowCredentialsDB: true,
-			AllowKargoClient:   true,
-		},
-	)
-}
-
 // gitCloner is an implementation of the PromotionStepRunner interface that
 // clones one or more refs from a remote Git repository to one or more working
 // directories.
 type gitCloner struct {
 	gitUser      git.User
+	credsDB      credentials.Database
 	schemaLoader gojsonschema.JSONLoader
 }
 
@@ -53,8 +44,9 @@ func gitUserFromEnv() git.User {
 // newGitCloner returns an implementation of the PromotionStepRunner interface
 // that clones one or more refs from a remote Git repository to one or more
 // working directories.
-func newGitCloner() PromotionStepRunner {
+func newGitCloner(credsDB credentials.Database) PromotionStepRunner {
 	r := &gitCloner{
+		credsDB: credsDB,
 		gitUser: gitUserFromEnv(),
 	}
 	r.schemaLoader = getConfigSchemaLoader(r.Name())
@@ -93,7 +85,7 @@ func (g *gitCloner) runPromotionStep(
 	cfg builtin.GitCloneConfig,
 ) (PromotionStepResult, error) {
 	var repoCreds *git.RepoCredentials
-	creds, err := stepCtx.CredentialsDB.Get(
+	creds, err := g.credsDB.Get(
 		ctx,
 		stepCtx.Project,
 		credentials.TypeGit,

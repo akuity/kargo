@@ -20,10 +20,6 @@ import (
 	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
-func init() {
-	builtinsReg.RegisterPromotionStepRunner(newFileCopier(), nil)
-}
-
 // fileCopier is an implementation of the PromotionStepRunner interface that
 // copies a file or directory.
 //
