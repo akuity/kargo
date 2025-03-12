@@ -11,8 +11,8 @@ import (
 	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
-// outputComposer is an implementation of the PromotionStepRunner interface
-// that allows composing outputs from previous steps into new outputs.
+// outputComposer is an implementation of the Promoter interface that allows
+// composing outputs from previous steps into new outputs.
 //
 // It works based on the PromotionStepContext.Config field allowing to an
 // arbitrary number of key-value pairs to be exported as outputs.
@@ -36,21 +36,21 @@ type outputComposer struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
-// newOutputComposer returns an implementation of the PromotionStepRunner
-// interface that composes output from previous steps into new output.
-func newOutputComposer() PromotionStepRunner {
+// newOutputComposer returns an implementation of the Promoter interface that
+// composes output from previous steps into new output.
+func newOutputComposer() Promoter {
 	r := &outputComposer{}
 	r.schemaLoader = getConfigSchemaLoader(r.Name())
 	return r
 }
 
-// Name implements the PromotionStepRunner interface.
+// Name implements the NamedRunner interface.
 func (c *outputComposer) Name() string {
 	return "compose-output"
 }
 
-// RunPromotionStep implements the PromotionStepRunner interface.
-func (c *outputComposer) RunPromotionStep(
+// Promote implements the Promoter interface.
+func (c *outputComposer) Promote(
 	_ context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
@@ -66,10 +66,10 @@ func (c *outputComposer) RunPromotionStep(
 			fmt.Errorf("could not convert config into %s config: %w", c.Name(), err)
 	}
 
-	return c.runPromotionStep(cfg)
+	return c.promote(cfg)
 }
 
-func (c *outputComposer) runPromotionStep(
+func (c *outputComposer) promote(
 	cfg builtin.ComposeOutput,
 ) (PromotionStepResult, error) {
 	return PromotionStepResult{

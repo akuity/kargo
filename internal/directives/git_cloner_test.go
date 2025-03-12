@@ -175,13 +175,13 @@ func Test_gitCloner_validate(t *testing.T) {
 		},
 	}
 
-	r := newGitCloner(nil)
-	runner, ok := r.(*gitCloner)
+	p := newGitCloner(nil)
+	promoter, ok := p.(*gitCloner)
 	require.True(t, ok)
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			err := runner.validate(testCase.config)
+			err := promoter.validate(testCase.config)
 			if len(testCase.expectedProblems) == 0 {
 				require.NoError(t, err)
 			} else {
@@ -193,7 +193,7 @@ func Test_gitCloner_validate(t *testing.T) {
 	}
 }
 
-func Test_gitCloner_runPromotionStep(t *testing.T) {
+func Test_gitCloner_promote(t *testing.T) {
 	// Set up a test Git server in-process
 	service := gitkit.New(
 		gitkit.Config{
@@ -224,15 +224,15 @@ func Test_gitCloner_runPromotionStep(t *testing.T) {
 
 	// Now we can proceed to test gitCloner...
 
-	r := newGitCloner(&credentials.FakeDB{})
-	runner, ok := r.(*gitCloner)
+	p := newGitCloner(&credentials.FakeDB{})
+	promoter, ok := p.(*gitCloner)
 	require.True(t, ok)
 
 	stepCtx := &PromotionStepContext{
 		WorkDir: t.TempDir(),
 	}
 
-	res, err := runner.runPromotionStep(
+	res, err := promoter.promote(
 		context.Background(),
 		stepCtx,
 		builtin.GitCloneConfig{

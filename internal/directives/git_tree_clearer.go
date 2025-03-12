@@ -12,27 +12,27 @@ import (
 	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
-// gitTreeClearer is an implementation of the PromotionStepRunner interface
+// gitTreeClearer is an implementation of the Promoter interface
 // that removes the content of a Git working tree.
 type gitTreeClearer struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
-// newGitTreeClearer returns an implementation of the PromotionStepRunner
-// interface that removes the content of a Git working tree.
-func newGitTreeClearer() PromotionStepRunner {
+// newGitTreeClearer returns an implementation of the Promoter interface that
+// removes the content of a Git working tree.
+func newGitTreeClearer() Promoter {
 	r := &gitTreeClearer{}
 	r.schemaLoader = getConfigSchemaLoader(r.Name())
 	return r
 }
 
-// Name implements the PromotionStepRunner interface.
+// Name implements the NamedRunner interface.
 func (g *gitTreeClearer) Name() string {
 	return "git-clear"
 }
 
-// RunPromotionStep implements the PromotionStepRunner interface.
-func (g *gitTreeClearer) RunPromotionStep(
+// Promote implements the Promoter interface.
+func (g *gitTreeClearer) Promote(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
@@ -44,7 +44,7 @@ func (g *gitTreeClearer) RunPromotionStep(
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("could not convert config into %s config: %w", g.Name(), err)
 	}
-	return g.runPromotionStep(ctx, stepCtx, cfg)
+	return g.promote(ctx, stepCtx, cfg)
 }
 
 // validate validates gitTreeClearer configuration against a JSON schema.
@@ -52,7 +52,7 @@ func (g *gitTreeClearer) validate(cfg Config) error {
 	return validate(g.schemaLoader, gojsonschema.NewGoLoader(cfg), g.Name())
 }
 
-func (g *gitTreeClearer) runPromotionStep(
+func (g *gitTreeClearer) promote(
 	_ context.Context,
 	stepCtx *PromotionStepContext,
 	cfg builtin.GitClearConfig,

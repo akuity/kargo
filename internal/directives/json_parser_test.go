@@ -107,13 +107,13 @@ func Test_jsonParser_validate(t *testing.T) {
 		},
 	}
 
-	r := newJSONParser()
-	runner, ok := r.(*jsonParser)
+	p := newJSONParser()
+	promoter, ok := p.(*jsonParser)
 	require.True(t, ok)
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			err := runner.validate(tc.config)
+			err := promoter.validate(tc.config)
 			if tc.expectedError == "" {
 				assert.NoError(t, err)
 			} else {
@@ -124,7 +124,7 @@ func Test_jsonParser_validate(t *testing.T) {
 	}
 }
 
-func Test_jsonParser_runPromotionStep(t *testing.T) {
+func Test_jsonParser_promote(t *testing.T) {
 	tests := []struct {
 		name       string
 		stepCtx    *PromotionStepContext
@@ -294,7 +294,8 @@ func Test_jsonParser_runPromotionStep(t *testing.T) {
 			},
 		},
 	}
-	runner := &jsonParser{}
+
+	promoter := &jsonParser{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -306,7 +307,7 @@ func Test_jsonParser_runPromotionStep(t *testing.T) {
 				require.NoError(t, os.WriteFile(path.Join(stepCtx.WorkDir, p), []byte(c), 0o600))
 			}
 
-			result, err := runner.runPromotionStep(context.Background(), stepCtx, tt.cfg)
+			result, err := promoter.promote(context.Background(), stepCtx, tt.cfg)
 			tt.assertions(t, stepCtx.WorkDir, result, err)
 		})
 	}
@@ -326,9 +327,7 @@ func Test_jsonParser_readAndParseJSON(t *testing.T) {
 		{"Empty JSON file", "", errors.New("could not parse JSON file")},
 	}
 
-	r := newJSONParser()
-	runner, ok := r.(*jsonParser)
-	require.True(t, ok)
+	promoter := jsonParser{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -337,7 +336,7 @@ func Test_jsonParser_readAndParseJSON(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to write file: %v", err)
 			}
-			_, err = runner.readAndParseJSON(tempDir, "test.json")
+			_, err = promoter.readAndParseJSON(tempDir, "test.json")
 			if tt.expects != nil {
 				assert.ErrorContains(t, err, tt.expects.Error())
 			} else {

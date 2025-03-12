@@ -103,13 +103,13 @@ func Test_gitPROpener_validate(t *testing.T) {
 		},
 	}
 
-	r := newGitPROpener(nil)
-	runner, ok := r.(*gitPROpener)
+	p := newGitPROpener(nil)
+	promoter, ok := p.(*gitPROpener)
 	require.True(t, ok)
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			err := runner.validate(testCase.config)
+			err := promoter.validate(testCase.config)
 			if len(testCase.expectedProblems) == 0 {
 				require.NoError(t, err)
 			} else {
@@ -121,7 +121,7 @@ func Test_gitPROpener_validate(t *testing.T) {
 	}
 }
 
-func Test_gitPROpener_runPromotionStep(t *testing.T) {
+func Test_gitPROpener_promote(t *testing.T) {
 	const testSourceBranch = "source"
 	const testTargetBranch = "target"
 
@@ -183,11 +183,11 @@ func Test_gitPROpener_runPromotionStep(t *testing.T) {
 
 	// Now we can proceed to test gitPROpener...
 
-	r := newGitPROpener(&credentials.FakeDB{})
-	runner, ok := r.(*gitPROpener)
+	p := newGitPROpener(&credentials.FakeDB{})
+	promoter, ok := p.(*gitPROpener)
 	require.True(t, ok)
 
-	res, err := runner.runPromotionStep(
+	res, err := promoter.promote(
 		context.Background(),
 		&PromotionStepContext{
 			Project: "fake-project",

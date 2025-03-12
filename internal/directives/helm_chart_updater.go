@@ -30,16 +30,16 @@ import (
 	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
-// helmChartUpdater is an implementation of the PromotionStepRunner interface
-// that updates the dependencies of a Helm chart.
+// helmChartUpdater is an implementation of the Promoter interface that updates
+// the dependencies of a Helm chart.
 type helmChartUpdater struct {
 	schemaLoader gojsonschema.JSONLoader
 	credsDB      credentials.Database
 }
 
-// newHelmChartUpdater returns an implementation of the PromotionStepRunner
-// interface that updates the dependencies of a Helm chart.
-func newHelmChartUpdater(credsDB credentials.Database) PromotionStepRunner {
+// newHelmChartUpdater returns an implementation of the Promoter interface that
+// updates the dependencies of a Helm chart.
+func newHelmChartUpdater(credsDB credentials.Database) Promoter {
 	r := &helmChartUpdater{
 		credsDB: credsDB,
 	}
@@ -47,13 +47,13 @@ func newHelmChartUpdater(credsDB credentials.Database) PromotionStepRunner {
 	return r
 }
 
-// Name implements the PromotionStepRunner interface.
+// Name implements the NamedRunner interface.
 func (h *helmChartUpdater) Name() string {
 	return "helm-update-chart"
 }
 
-// RunPromotionStep implements the PromotionStepRunner interface.
-func (h *helmChartUpdater) RunPromotionStep(
+// Promote implements the Promoter interface.
+func (h *helmChartUpdater) Promote(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
@@ -69,7 +69,7 @@ func (h *helmChartUpdater) RunPromotionStep(
 		return failure, fmt.Errorf("could not convert config into %s config: %w", h.Name(), err)
 	}
 
-	return h.runPromotionStep(ctx, stepCtx, cfg)
+	return h.promote(ctx, stepCtx, cfg)
 }
 
 // validate validates helmChartUpdater configuration against a JSON schema.
@@ -77,7 +77,7 @@ func (h *helmChartUpdater) validate(cfg Config) error {
 	return validate(h.schemaLoader, gojsonschema.NewGoLoader(cfg), h.Name())
 }
 
-func (h *helmChartUpdater) runPromotionStep(
+func (h *helmChartUpdater) promote(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 	cfg builtin.HelmUpdateChartConfig,

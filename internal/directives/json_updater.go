@@ -14,27 +14,27 @@ import (
 	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
-// jsonUpdater is an implementation of the PromotionStepRunner interface that
-// updates the values of specified keys in a JSON file.
+// jsonUpdater is an implementation of the Promoter interface that updates the
+// values of specified keys in a JSON file.
 type jsonUpdater struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
-// newJSONUpdater returns an implementation of the PromotionStepRunner interface
-// that updates the values of specified keys in a JSON file.
-func newJSONUpdater() PromotionStepRunner {
+// newJSONUpdater returns an implementation of the Promoter interface that
+// updates the values of specified keys in a JSON file.
+func newJSONUpdater() Promoter {
 	r := &jsonUpdater{}
 	r.schemaLoader = getConfigSchemaLoader(r.Name())
 	return r
 }
 
-// Name implements the PromotionStepRunner interface.
+// Name implements the NamedRunner interface.
 func (j *jsonUpdater) Name() string {
 	return "json-update"
 }
 
-// RunPromotionStep implements the PromotionStepRunner interface.
-func (j *jsonUpdater) RunPromotionStep(
+// Promote implements the Promoter interface.
+func (j *jsonUpdater) Promote(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
@@ -49,7 +49,7 @@ func (j *jsonUpdater) RunPromotionStep(
 		return failure, fmt.Errorf("could not convert config into %s config: %w", j.Name(), err)
 	}
 
-	return j.runPromotionStep(ctx, stepCtx, cfg)
+	return j.promote(ctx, stepCtx, cfg)
 }
 
 // validate validates jsonUpdater configuration against a JSON schema.
@@ -57,7 +57,7 @@ func (j *jsonUpdater) validate(cfg Config) error {
 	return validate(j.schemaLoader, gojsonschema.NewGoLoader(cfg), j.Name())
 }
 
-func (j *jsonUpdater) runPromotionStep(
+func (j *jsonUpdater) promote(
 	_ context.Context,
 	stepCtx *PromotionStepContext,
 	cfg builtin.JSONUpdateConfig,

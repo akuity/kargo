@@ -22,17 +22,17 @@ import (
 )
 
 func Test_newArgocdUpdater(t *testing.T) {
-	runner := newArgocdUpdater(fake.NewFakeClient())
-	require.NotNil(t, runner)
-	require.Equal(t, "argocd-update", runner.Name())
-	require.NotNil(t, runner.schemaLoader)
-	require.NotNil(t, runner.getAuthorizedApplicationFn)
-	require.NotNil(t, runner.buildDesiredSourcesFn)
-	require.NotNil(t, runner.mustPerformUpdateFn)
-	require.NotNil(t, runner.syncApplicationFn)
-	require.NotNil(t, runner.applyArgoCDSourceUpdateFn)
-	require.NotNil(t, runner.argoCDAppPatchFn)
-	require.NotNil(t, runner.logAppEventFn)
+	promoter := newArgocdUpdater(fake.NewFakeClient())
+	require.NotNil(t, promoter)
+	require.Equal(t, "argocd-update", promoter.Name())
+	require.NotNil(t, promoter.schemaLoader)
+	require.NotNil(t, promoter.getAuthorizedApplicationFn)
+	require.NotNil(t, promoter.buildDesiredSourcesFn)
+	require.NotNil(t, promoter.mustPerformUpdateFn)
+	require.NotNil(t, promoter.syncApplicationFn)
+	require.NotNil(t, promoter.applyArgoCDSourceUpdateFn)
+	require.NotNil(t, promoter.argoCDAppPatchFn)
+	require.NotNil(t, promoter.logAppEventFn)
 }
 
 func Test_argoCDUpdater_validate(t *testing.T) {
@@ -317,11 +317,11 @@ func Test_argoCDUpdater_validate(t *testing.T) {
 		},
 	}
 
-	runner := newArgocdUpdater(nil)
+	promoter := newArgocdUpdater(nil)
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			err := runner.validate(testCase.config)
+			err := promoter.validate(testCase.config)
 			if len(testCase.expectedProblems) == 0 {
 				require.NoError(t, err)
 			} else {
@@ -333,17 +333,17 @@ func Test_argoCDUpdater_validate(t *testing.T) {
 	}
 }
 
-func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
+func Test_argoCDUpdater_promote(t *testing.T) {
 	testCases := []struct {
 		name       string
-		runner     *argocdUpdater
+		promoter   *argocdUpdater
 		stepCfg    builtin.ArgoCDUpdateConfig
 		assertions func(*testing.T, PromotionStepResult, error)
 	}{
 		{
-			name:    "argo cd integration disabled",
-			runner:  &argocdUpdater{},
-			stepCfg: builtin.ArgoCDUpdateConfig{},
+			name:     "argo cd integration disabled",
+			promoter: &argocdUpdater{},
+			stepCfg:  builtin.ArgoCDUpdateConfig{},
 			assertions: func(t *testing.T, res PromotionStepResult, err error) {
 				require.Equal(t, kargoapi.PromotionPhaseErrored, res.Status)
 				require.ErrorContains(
@@ -353,7 +353,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 		},
 		{
 			name: "error retrieving authorized application",
-			runner: &argocdUpdater{
+			promoter: &argocdUpdater{
 				argocdClient: fake.NewFakeClient(),
 				getAuthorizedApplicationFn: func(
 					context.Context,
@@ -374,7 +374,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 		},
 		{
 			name: "error determining if update is necessary",
-			runner: &argocdUpdater{
+			promoter: &argocdUpdater{
 				argocdClient: fake.NewFakeClient(),
 				getAuthorizedApplicationFn: func(
 					context.Context,
@@ -401,7 +401,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 		},
 		{
 			name: "determination error can be solved by applying update",
-			runner: &argocdUpdater{
+			promoter: &argocdUpdater{
 				argocdClient: fake.NewFakeClient(),
 				getAuthorizedApplicationFn: func(
 					context.Context,
@@ -443,7 +443,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 		},
 		{
 			name: "must wait for update to complete",
-			runner: &argocdUpdater{
+			promoter: &argocdUpdater{
 				argocdClient: fake.NewFakeClient(),
 				getAuthorizedApplicationFn: func(
 					context.Context,
@@ -470,7 +470,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 		},
 		{
 			name: "must wait for operation from different user to complete",
-			runner: &argocdUpdater{
+			promoter: &argocdUpdater{
 				argocdClient: fake.NewFakeClient(),
 				getAuthorizedApplicationFn: func(
 					context.Context,
@@ -497,7 +497,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 		},
 		{
 			name: "error building desired sources",
-			runner: &argocdUpdater{
+			promoter: &argocdUpdater{
 				argocdClient: fake.NewFakeClient(),
 				getAuthorizedApplicationFn: func(
 					context.Context,
@@ -532,7 +532,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 		},
 		{
 			name: "error applying update",
-			runner: &argocdUpdater{
+			promoter: &argocdUpdater{
 				argocdClient: fake.NewFakeClient(),
 				getAuthorizedApplicationFn: func(
 					context.Context,
@@ -575,7 +575,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 		},
 		{
 			name: "failed and pending update",
-			runner: &argocdUpdater{
+			promoter: &argocdUpdater{
 				argocdClient: fake.NewFakeClient(),
 				getAuthorizedApplicationFn: func(
 					context.Context,
@@ -628,7 +628,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 		},
 		{
 			name: "operation phase aggregation error",
-			runner: &argocdUpdater{
+			promoter: &argocdUpdater{
 				argocdClient: fake.NewFakeClient(),
 				getAuthorizedApplicationFn: func(
 					context.Context,
@@ -655,7 +655,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 		},
 		{
 			name: "completed",
-			runner: &argocdUpdater{
+			promoter: &argocdUpdater{
 				getAuthorizedApplicationFn: func(
 					context.Context,
 					*PromotionStepContext,
@@ -683,7 +683,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			res, err := testCase.runner.runPromotionStep(
+			res, err := testCase.promoter.promote(
 				context.Background(),
 				&PromotionStepContext{},
 				testCase.stepCfg,
@@ -696,7 +696,7 @@ func Test_argoCDUpdater_runPromotionStep(t *testing.T) {
 func Test_argoCDUpdater_buildDesiredSources(t *testing.T) {
 	testCases := []struct {
 		name             string
-		runner           *argocdUpdater
+		promoter         *argocdUpdater
 		update           *builtin.ArgoCDAppUpdate
 		desiredRevisions []string
 		app              *argocd.Application
@@ -708,7 +708,7 @@ func Test_argoCDUpdater_buildDesiredSources(t *testing.T) {
 	}{
 		{
 			name: "applies updates to sources",
-			runner: &argocdUpdater{
+			promoter: &argocdUpdater{
 				applyArgoCDSourceUpdateFn: func(
 					update *builtin.ArgoCDAppSourceUpdate,
 					_ string,
@@ -765,7 +765,7 @@ func Test_argoCDUpdater_buildDesiredSources(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			desiredSources, err := testCase.runner.buildDesiredSources(
+			desiredSources, err := testCase.promoter.buildDesiredSources(
 				testCase.update,
 				testCase.desiredRevisions,
 				testCase.app,
@@ -1002,7 +1002,7 @@ func Test_argoCDUpdater_mustPerformUpdate(t *testing.T) {
 		},
 	}
 
-	runner := &argocdUpdater{}
+	promoter := &argocdUpdater{}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -1025,7 +1025,7 @@ func Test_argoCDUpdater_mustPerformUpdate(t *testing.T) {
 				}},
 			}
 
-			phase, mustUpdate, err := runner.mustPerformUpdate(
+			phase, mustUpdate, err := promoter.mustPerformUpdate(
 				&PromotionStepContext{Promotion: testPromotionID},
 				&stepCfg.Apps[0],
 				app,
@@ -1038,14 +1038,14 @@ func Test_argoCDUpdater_mustPerformUpdate(t *testing.T) {
 func Test_argoCDUpdater_syncApplication(t *testing.T) {
 	testCases := []struct {
 		name           string
-		runner         *argocdUpdater
+		promoter       *argocdUpdater
 		app            *argocd.Application
 		desiredSources argocd.ApplicationSources
 		assertions     func(*testing.T, error)
 	}{
 		{
 			name: "error patching Application",
-			runner: &argocdUpdater{
+			promoter: &argocdUpdater{
 				argoCDAppPatchFn: func(
 					context.Context,
 					kubeclient.ObjectWithKind,
@@ -1070,7 +1070,7 @@ func Test_argoCDUpdater_syncApplication(t *testing.T) {
 		},
 		{
 			name: "success",
-			runner: &argocdUpdater{
+			promoter: &argocdUpdater{
 				argoCDAppPatchFn: func(
 					context.Context,
 					kubeclient.ObjectWithKind,
@@ -1112,7 +1112,7 @@ func Test_argoCDUpdater_syncApplication(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
 				t,
-				testCase.runner.syncApplication(
+				testCase.promoter.syncApplication(
 					context.Background(),
 					stepCtx,
 					testCase.app,
@@ -1199,10 +1199,10 @@ func Test_argoCDUpdater_logAppEvent(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			c := fake.NewFakeClient()
-			runner := &argocdUpdater{
+			promoter := &argocdUpdater{
 				argocdClient: c,
 			}
-			runner.logAppEvent(
+			promoter.logAppEvent(
 				context.Background(),
 				testCase.app,
 				testCase.user,
@@ -1291,10 +1291,10 @@ func Test_argoCDUpdater_getAuthorizedApplication(t *testing.T) {
 				c.WithObjects(testCase.app)
 			}
 
-			runner := &argocdUpdater{
+			promoter := &argocdUpdater{
 				argocdClient: c.Build(),
 			}
-			app, err := runner.getAuthorizedApplication(
+			app, err := promoter.getAuthorizedApplication(
 				context.Background(),
 				&PromotionStepContext{
 					Project: "fake-namespace",
@@ -1380,11 +1380,11 @@ func Test_argoCDUpdater_authorizeArgoCDAppUpdate(t *testing.T) {
 		},
 	}
 
-	runner := &argocdUpdater{}
+	promoter := &argocdUpdater{}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			err := runner.authorizeArgoCDAppUpdate(
+			err := promoter.authorizeArgoCDAppUpdate(
 				&PromotionStepContext{
 					Project: "ns-yep",
 					Stage:   "name-yep",
@@ -1564,7 +1564,7 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 		},
 	}
 
-	runner := &argocdUpdater{}
+	promoter := &argocdUpdater{}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -1573,7 +1573,7 @@ func Test_argoCDUpdater_applyArgoCDSourceUpdate(t *testing.T) {
 					Sources: []builtin.ArgoCDAppSourceUpdate{testCase.update},
 				}},
 			}
-			updatedSource, updated := runner.applyArgoCDSourceUpdate(
+			updatedSource, updated := promoter.applyArgoCDSourceUpdate(
 				&stepCfg.Apps[0].Sources[0],
 				testCase.desiredRevision,
 				testCase.source,
@@ -1748,11 +1748,11 @@ func Test_argoCDUpdater_recursiveMerge(t *testing.T) {
 		},
 	}
 
-	runner := &argocdUpdater{}
+	promoter := &argocdUpdater{}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := runner.recursiveMerge(tc.src, tc.dst)
+			result := promoter.recursiveMerge(tc.src, tc.dst)
 			require.Equal(t, tc.expected, result)
 		})
 	}

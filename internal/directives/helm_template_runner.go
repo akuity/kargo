@@ -31,27 +31,27 @@ func outPathIsFile(cfg builtin.HelmTemplateConfig) bool {
 	return ext == ".yaml" || ext == ".yml"
 }
 
-// helmTemplateRunner is an implementation of the PromotionStepRunner interface
-// that renders a Helm chart.
+// helmTemplateRunner is an implementation of the Promoter interface that
+// renders a Helm chart.
 type helmTemplateRunner struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
-// newHelmTemplateRunner returns an implementation of the PromotionStepRunner
-// interface that renders a Helm chart.
-func newHelmTemplateRunner() PromotionStepRunner {
-	r := &helmTemplateRunner{}
-	r.schemaLoader = getConfigSchemaLoader(r.Name())
-	return r
+// newHelmTemplateRunner returns an implementation of the Promoter interface
+// that renders a Helm chart.
+func newHelmTemplateRunner() Promoter {
+	p := &helmTemplateRunner{}
+	p.schemaLoader = getConfigSchemaLoader(p.Name())
+	return p
 }
 
-// Name implements the PromotionStepRunner interface.
+// Name implements the NamedRunner interface.
 func (h *helmTemplateRunner) Name() string {
 	return "helm-template"
 }
 
-// RunPromotionStep implements the PromotionStepRunner interface.
-func (h *helmTemplateRunner) RunPromotionStep(
+// Promote implements the Promoter interface.
+func (h *helmTemplateRunner) Promote(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
@@ -72,10 +72,10 @@ func (h *helmTemplateRunner) RunPromotionStep(
 		return failure, fmt.Errorf("could not convert config into %s config: %w", h.Name(), err)
 	}
 
-	return h.runPromotionStep(ctx, stepCtx, cfg)
+	return h.promote(ctx, stepCtx, cfg)
 }
 
-func (h *helmTemplateRunner) runPromotionStep(
+func (h *helmTemplateRunner) promote(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 	cfg builtin.HelmTemplateConfig,

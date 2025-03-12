@@ -15,9 +15,8 @@ import (
 	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
-// gitCloner is an implementation of the PromotionStepRunner interface that
-// clones one or more refs from a remote Git repository to one or more working
-// directories.
+// gitCloner is an implementation of the Promoter interface that clones one or
+// more refs from a remote Git repository to one or more working directories.
 type gitCloner struct {
 	gitUser      git.User
 	credsDB      credentials.Database
@@ -41,10 +40,10 @@ func gitUserFromEnv() git.User {
 	}
 }
 
-// newGitCloner returns an implementation of the PromotionStepRunner interface
-// that clones one or more refs from a remote Git repository to one or more
-// working directories.
-func newGitCloner(credsDB credentials.Database) PromotionStepRunner {
+// newGitCloner returns an implementation of the Promoter interface that clones
+// one or more refs from a remote Git repository to one or more working
+// directories.
+func newGitCloner(credsDB credentials.Database) Promoter {
 	r := &gitCloner{
 		credsDB: credsDB,
 		gitUser: gitUserFromEnv(),
@@ -53,13 +52,13 @@ func newGitCloner(credsDB credentials.Database) PromotionStepRunner {
 	return r
 }
 
-// Name implements the PromotionStepRunner interface.
+// Name implements the NamedRunner interface.
 func (g *gitCloner) Name() string {
 	return "git-clone"
 }
 
-// RunPromotionStep implements the PromotionStepRunner interface.
-func (g *gitCloner) RunPromotionStep(
+// Promote implements the Promoter interface.
+func (g *gitCloner) Promote(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
@@ -71,7 +70,7 @@ func (g *gitCloner) RunPromotionStep(
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("could not convert config into %s config: %w", g.Name(), err)
 	}
-	return g.runPromotionStep(ctx, stepCtx, cfg)
+	return g.promote(ctx, stepCtx, cfg)
 }
 
 // validate validates gitCloner configuration against a JSON schema.
@@ -79,7 +78,7 @@ func (g *gitCloner) validate(cfg Config) error {
 	return validate(g.schemaLoader, gojsonschema.NewGoLoader(cfg), g.Name())
 }
 
-func (g *gitCloner) runPromotionStep(
+func (g *gitCloner) promote(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 	cfg builtin.GitCloneConfig,

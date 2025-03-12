@@ -8,8 +8,7 @@ import (
 
 // Config is an opaque map of configuration values for both PromotionSteps and
 // HealthCheckSteps. The keys and values are arbitrary and implementations of
-// PromotionStepRunner and HealthCheckStepRunner are responsible for
-// interpreting them.
+// Promoter and HealthChecker are responsible for interpreting them.
 type Config map[string]any
 
 // DeepCopy returns a deep copy of the configuration.

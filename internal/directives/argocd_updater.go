@@ -28,8 +28,8 @@ const (
 	promotionInfoKey              = "kargo.akuity.io/promotion"
 )
 
-// argocdUpdater is an implementation of the PromotionStepRunner interface that
-// updates one or more Argo CD Application resources.
+// argocdUpdater is an implementation of the Promoter interface that updates one
+// or more Argo CD Application resources.
 type argocdUpdater struct {
 	schemaLoader gojsonschema.JSONLoader
 
@@ -83,9 +83,9 @@ type argocdUpdater struct {
 	)
 }
 
-// newArgocdUpdater returns a implementation of the PromotionStepRunner and
-// HealthCheckStepRunner interfaces that updates Argo CD Application resources
-// and monitors their health.
+// newArgocdUpdater returns a implementation of the Promoter and HealthChecker
+// interfaces that updates Argo CD Application resources and monitors their
+// health.
 func newArgocdUpdater(argocdClient client.Client) *argocdUpdater {
 	r := &argocdUpdater{
 		argocdClient: argocdClient,
@@ -101,23 +101,23 @@ func newArgocdUpdater(argocdClient client.Client) *argocdUpdater {
 	return r
 }
 
-// Name implements the PromotionStepRunner interface.
+// Name implements the NamedRunner interface.
 func (a *argocdUpdater) Name() string {
 	return "argocd-update"
 }
 
-// DefaultTimeout implements the RetryableStepRunner interface.
+// DefaultTimeout implements the RetryablePromoter interface.
 func (a *argocdUpdater) DefaultTimeout() *time.Duration {
 	return ptr.To(5 * time.Minute)
 }
 
-// DefaultErrorThreshold implements the RetryableStepRunner interface.
+// DefaultErrorThreshold implements the RetryablePromoter interface.
 func (a *argocdUpdater) DefaultErrorThreshold() uint32 {
 	return 0 // Will fall back to the system default.
 }
 
-// RunPromotionStep implements the PromotionStepRunner interface.
-func (a *argocdUpdater) RunPromotionStep(
+// Promoter implements the Promoter interface.
+func (a *argocdUpdater) Promote(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
@@ -129,16 +129,15 @@ func (a *argocdUpdater) RunPromotionStep(
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("could not convert config into %s config: %w", a.Name(), err)
 	}
-	return a.runPromotionStep(ctx, stepCtx, cfg)
+	return a.promote(ctx, stepCtx, cfg)
 }
 
-// validate validates argocdUpdatePromotionStepRunner configuration against a
-// JSON schema.
+// validate validates argocdUpdater configuration against a JSON schema.
 func (a *argocdUpdater) validate(cfg Config) error {
 	return validate(a.schemaLoader, gojsonschema.NewGoLoader(cfg), a.Name())
 }
 
-func (a *argocdUpdater) runPromotionStep(
+func (a *argocdUpdater) promote(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 	stepCfg builtin.ArgoCDUpdateConfig,

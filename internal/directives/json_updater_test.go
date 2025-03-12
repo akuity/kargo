@@ -99,13 +99,13 @@ func Test_jsonUpdater_validate(t *testing.T) {
 		},
 	}
 
-	r := newJSONUpdater()
-	runner, ok := r.(*jsonUpdater)
+	p := newJSONUpdater()
+	promoter, ok := p.(*jsonUpdater)
 	require.True(t, ok)
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			err := runner.validate(testCase.config)
+			err := promoter.validate(testCase.config)
 			if len(testCase.expectedProblems) == 0 {
 				require.NoError(t, err)
 			} else {
@@ -208,7 +208,7 @@ func Test_jsonUpdater_updateValuesFile(t *testing.T) {
 		},
 	}
 
-	runner := &jsonUpdater{}
+	promoter := &jsonUpdater{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -220,7 +220,7 @@ func Test_jsonUpdater_updateValuesFile(t *testing.T) {
 				require.NoError(t, err)
 			}
 
-			err := runner.updateFile(workDir, path.Base(valuesFile), tt.changes)
+			err := promoter.updateFile(workDir, path.Base(valuesFile), tt.changes)
 			tt.assertions(t, valuesFile, err)
 		})
 	}
@@ -275,17 +275,17 @@ func Test_jsonUpdater_generateCommitMessage(t *testing.T) {
 		},
 	}
 
-	runner := &jsonUpdater{}
+	promoter := &jsonUpdater{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := runner.generateCommitMessage(tt.path, tt.changes)
+			result := promoter.generateCommitMessage(tt.path, tt.changes)
 			tt.assertions(t, result)
 		})
 	}
 }
 
-func Test_jsonUpdater_runPromotionStep(t *testing.T) {
+func Test_jsonUpdater_promote(t *testing.T) {
 	tests := []struct {
 		name       string
 		stepCtx    *PromotionStepContext
@@ -469,7 +469,7 @@ func Test_jsonUpdater_runPromotionStep(t *testing.T) {
 		},
 	}
 
-	runner := &jsonUpdater{}
+	promoter := &jsonUpdater{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -481,7 +481,7 @@ func Test_jsonUpdater_runPromotionStep(t *testing.T) {
 				require.NoError(t, os.WriteFile(path.Join(stepCtx.WorkDir, p), []byte(c), 0o600))
 			}
 
-			result, err := runner.runPromotionStep(context.Background(), stepCtx, tt.cfg)
+			result, err := promoter.promote(context.Background(), stepCtx, tt.cfg)
 			tt.assertions(t, stepCtx.WorkDir, result, err)
 		})
 	}

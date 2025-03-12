@@ -141,13 +141,13 @@ func Test_helmChartUpdater_validate(t *testing.T) {
 		},
 	}
 
-	r := newHelmChartUpdater(nil)
-	runner, ok := r.(*helmChartUpdater)
+	p := newHelmChartUpdater(nil)
+	promoter, ok := p.(*helmChartUpdater)
 	require.True(t, ok)
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			err := runner.validate(testCase.config)
+			err := promoter.validate(testCase.config)
 			if len(testCase.expectedProblems) == 0 {
 				require.NoError(t, err)
 			} else {
@@ -159,7 +159,7 @@ func Test_helmChartUpdater_validate(t *testing.T) {
 	}
 }
 
-func Test_helmChartUpdater_runPromotionStep(t *testing.T) {
+func Test_helmChartUpdater_promote(t *testing.T) {
 	tests := []struct {
 		name            string
 		context         *PromotionStepContext
@@ -249,7 +249,7 @@ func Test_helmChartUpdater_runPromotionStep(t *testing.T) {
 		},
 	}
 
-	runner := &helmChartUpdater{}
+	promoter := &helmChartUpdater{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -292,7 +292,7 @@ func Test_helmChartUpdater_runPromotionStep(t *testing.T) {
 				require.NoError(t, os.WriteFile(filepath.Join(chartPath, "Chart.yaml"), b, 0o600))
 			}
 
-			result, err := runner.runPromotionStep(context.Background(), stepCtx, tt.cfg)
+			result, err := promoter.promote(context.Background(), stepCtx, tt.cfg)
 			tt.assertions(t, stepCtx.WorkDir, result, err)
 
 			// Assert that the Helm cache directory was not used
@@ -349,18 +349,18 @@ func Test_helmChartUpdater_processChartUpdates(t *testing.T) {
 		},
 	}
 
-	runner := &helmChartUpdater{}
+	promoter := &helmChartUpdater{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			updates, err := runner.processChartUpdates(tt.cfg, tt.chartDependencies)
+			updates, err := promoter.processChartUpdates(tt.cfg, tt.chartDependencies)
 			tt.assertions(t, updates, err)
 		})
 	}
 }
 
 func Test_helmChartUpdater_updateDependencies(t *testing.T) {
-	runner := &helmChartUpdater{}
+	promoter := &helmChartUpdater{}
 
 	t.Run("updates dependencies", func(t *testing.T) {
 		// Set up the HTTP repository
@@ -413,7 +413,7 @@ func Test_helmChartUpdater_updateDependencies(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(chartPath, "Chart.yaml"), b, 0o600))
 
 		// Run the promotion step and assert the dependencies are updated
-		newVersions, err := runner.updateDependencies(
+		newVersions, err := promoter.updateDependencies(
 			context.Background(),
 			&PromotionStepContext{},
 			t.TempDir(),
@@ -469,7 +469,7 @@ func Test_helmChartUpdater_updateDependencies(t *testing.T) {
 		require.NoError(t, os.WriteFile(filepath.Join(chartPath, "Chart.yaml"), b, 0o600))
 
 		// Prepare the credentials database
-		runner.credsDB = &credentials.FakeDB{
+		promoter.credsDB = &credentials.FakeDB{
 			GetFn: func(context.Context, string, credentials.Type, string) (*credentials.Credentials, error) {
 				return &credentials.Credentials{
 					Username: "username",
@@ -479,7 +479,7 @@ func Test_helmChartUpdater_updateDependencies(t *testing.T) {
 		}
 
 		// Run the promotion step and assert the dependency is updated
-		newVersions, err := runner.updateDependencies(
+		newVersions, err := promoter.updateDependencies(
 			context.Background(),
 			&PromotionStepContext{},
 			t.TempDir(),
@@ -571,8 +571,8 @@ func Test_helmChartUpdater_updateDependencies(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			helmHome, chartPath := t.TempDir(), t.TempDir()
-			runner.credsDB = tt.credentialsDB
-			_, err := runner.updateDependencies(
+			promoter.credsDB = tt.credentialsDB
+			_, err := promoter.updateDependencies(
 				context.Background(),
 				&PromotionStepContext{},
 				helmHome,
@@ -690,12 +690,12 @@ func Test_helmChartUpdater_validateFileDependency(t *testing.T) {
 		},
 	}
 
-	runner := &helmChartUpdater{}
+	promoter := &helmChartUpdater{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			workDir, chartPath, dependencyPath := tt.setup(t)
-			err := runner.validateFileDependency(workDir, chartPath, dependencyPath)
+			err := promoter.validateFileDependency(workDir, chartPath, dependencyPath)
 			tt.assertions(t, err)
 		})
 	}
@@ -966,7 +966,7 @@ func Test_helmChartUpdater_setupDependencyRepositories(t *testing.T) {
 		},
 	}
 
-	runner := &helmChartUpdater{}
+	promoter := &helmChartUpdater{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -979,7 +979,7 @@ func Test_helmChartUpdater_setupDependencyRepositories(t *testing.T) {
 
 			dependencies := tt.buildDependencies(registryURL)
 
-			err := runner.setupDependencyRepositories(
+			err := promoter.setupDependencyRepositories(
 				context.Background(),
 				tt.credentialsDB,
 				registryClient,
@@ -1099,11 +1099,11 @@ func Test_helmChartUpdater_generateCommitMessage(t *testing.T) {
 		},
 	}
 
-	runner := &helmChartUpdater{}
+	promoter := &helmChartUpdater{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := runner.generateCommitMessage(tt.path, tt.newVersions)
+			got := promoter.generateCommitMessage(tt.path, tt.newVersions)
 			tt.assertions(t, got)
 		})
 	}

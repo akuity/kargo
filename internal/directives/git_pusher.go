@@ -21,8 +21,8 @@ import (
 // shared State.
 const stateKeyBranch = "branch"
 
-// gitPushPusher is an implementation of the PromotionStepRunner interface that
-// pushes commits from a local Git repository to a remote Git repository.
+// gitPushPusher is an implementation of the Promoter interface that pushes
+// commits from a local Git repository to a remote Git repository.
 type gitPushPusher struct {
 	schemaLoader gojsonschema.JSONLoader
 	credsDB      credentials.Database
@@ -30,9 +30,9 @@ type gitPushPusher struct {
 	masterMu     sync.Mutex
 }
 
-// newGitPusher returns an implementation of the PromotionStepRunner interface
-// that pushes commits from a local Git repository to a remote Git repository.
-func newGitPusher(credsDB credentials.Database) PromotionStepRunner {
+// newGitPusher returns an implementation of the Promoter interface that pushes
+// commits from a local Git repository to a remote Git repository.
+func newGitPusher(credsDB credentials.Database) Promoter {
 	r := &gitPushPusher{
 		credsDB:   credsDB,
 		branchMus: map[string]*sync.Mutex{},
@@ -41,13 +41,13 @@ func newGitPusher(credsDB credentials.Database) PromotionStepRunner {
 	return r
 }
 
-// Name implements the PromotionStepRunner interface.
+// Name implements the NamedRunner interface.
 func (g *gitPushPusher) Name() string {
 	return "git-push"
 }
 
-// RunPromotionStep implements the PromotionStepRunner interface.
-func (g *gitPushPusher) RunPromotionStep(
+// Promote implements the Promoter interface.
+func (g *gitPushPusher) Promote(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
@@ -59,7 +59,7 @@ func (g *gitPushPusher) RunPromotionStep(
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("could not convert config into git-push config: %w", err)
 	}
-	return g.runPromotionStep(ctx, stepCtx, cfg)
+	return g.promote(ctx, stepCtx, cfg)
 }
 
 // validate validates gitPusher configuration against a JSON schema.
@@ -67,7 +67,7 @@ func (g *gitPushPusher) validate(cfg Config) error {
 	return validate(g.schemaLoader, gojsonschema.NewGoLoader(cfg), "git-push")
 }
 
-func (g *gitPushPusher) runPromotionStep(
+func (g *gitPushPusher) promote(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 	cfg builtin.GitPushConfig,

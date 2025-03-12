@@ -205,13 +205,13 @@ func Test_httpRequester_validate(t *testing.T) {
 		},
 	}
 
-	r := newHTTPRequester()
-	runner, ok := r.(*httpRequester)
+	p := newHTTPRequester()
+	promoter, ok := p.(*httpRequester)
 	require.True(t, ok)
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			err := runner.validate(testCase.config)
+			err := promoter.validate(testCase.config)
 			if len(testCase.expectedProblems) == 0 {
 				require.NoError(t, err)
 			} else {
@@ -223,7 +223,7 @@ func Test_httpRequester_validate(t *testing.T) {
 	}
 }
 
-func Test_httpRequester_runPromotionStep(t *testing.T) {
+func Test_httpRequester_promote(t *testing.T) {
 	testCases := []struct {
 		name       string
 		cfg        builtin.HTTPConfig
@@ -375,7 +375,7 @@ func Test_httpRequester_runPromotionStep(t *testing.T) {
 			srv := httptest.NewServer(testCase.handler)
 			t.Cleanup(srv.Close)
 			testCase.cfg.URL = srv.URL
-			res, err := h.runPromotionStep(context.Background(), nil, testCase.cfg)
+			res, err := h.promote(context.Background(), nil, testCase.cfg)
 			testCase.assertions(t, res, err)
 		})
 	}

@@ -79,11 +79,11 @@ func Test_argoCDUpdater_getDesiredRevisions(t *testing.T) {
 		},
 	}
 
-	runner := &argocdUpdater{}
+	promoter := &argocdUpdater{}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			revisions := runner.getDesiredRevisions(
+			revisions := promoter.getDesiredRevisions(
 				&builtin.ArgoCDAppUpdate{
 					Sources: []builtin.ArgoCDAppSourceUpdate{
 						{

@@ -26,28 +26,27 @@ import (
 // xref: https://github.com/kubernetes-sigs/kustomize/issues/3659
 var kustomizeRenderMutex sync.Mutex
 
-// kustomizeBuilder is an implementation of the PromotionStepRunner interface
-// that builds a set of Kubernetes manifests using Kustomize.
+// kustomizeBuilder is an implementation of the Promoter interface that builds a
+// set of Kubernetes manifests using Kustomize.
 type kustomizeBuilder struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
-// newKustomizeBuilder returns an implementation of the
-// PromotionStepRunner interface that builds a set of Kubernetes manifests using
-// Kustomize.
-func newKustomizeBuilder() PromotionStepRunner {
+// newKustomizeBuilder returns an implementation of the Promoter interface that
+// builds a set of Kubernetes manifests using Kustomize.
+func newKustomizeBuilder() Promoter {
 	return &kustomizeBuilder{
 		schemaLoader: getConfigSchemaLoader("kustomize-build"),
 	}
 }
 
-// Name implements the PromotionStepRunner interface.
+// Name implements the NamedRunner interface.
 func (k *kustomizeBuilder) Name() string {
 	return "kustomize-build"
 }
 
-// RunPromotionStep implements the PromotionStepRunner interface.
-func (k *kustomizeBuilder) RunPromotionStep(
+// Promote implements the Promoter interface.
+func (k *kustomizeBuilder) Promote(
 	_ context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
@@ -64,10 +63,10 @@ func (k *kustomizeBuilder) RunPromotionStep(
 		return failure, fmt.Errorf("could not convert config into %s config: %w", k.Name(), err)
 	}
 
-	return k.runPromotionStep(stepCtx, cfg)
+	return k.promote(stepCtx, cfg)
 }
 
-func (k *kustomizeBuilder) runPromotionStep(
+func (k *kustomizeBuilder) promote(
 	stepCtx *PromotionStepContext,
 	cfg builtin.KustomizeBuildConfig,
 ) (PromotionStepResult, error) {

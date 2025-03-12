@@ -6,14 +6,13 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-// HealthCheckStepRunner is an interface for components that implement the logic
+// HealthChecker is an interface for components that implement the logic
 // for execution of the individual HealthCheckSteps.
-type HealthCheckStepRunner interface {
-	// Name returns the name of the HealthCheckStepRunner.
-	Name() string
-	// RunHealthCheckStep executes a health check using the provided
+type HealthChecker interface {
+	NamedRunner
+	// CheckHealth executes a health check using the provided
 	// HealthCheckStepContext.
-	RunHealthCheckStep(context.Context, *HealthCheckStepContext) HealthCheckStepResult
+	CheckHealth(context.Context, *HealthCheckStepContext) HealthCheckStepResult
 }
 
 // HealthCheckContext is the context of a health check process that is executed
@@ -27,18 +26,18 @@ type HealthCheckContext struct {
 
 // HealthCheckStep describes a single step in a health check process.
 // HealthCheckSteps are executed in sequence by the Engine, which delegates the
-// execution of each step to a HealthCheckStepRunner.
+// execution of each step to a HealthChecker.
 type HealthCheckStep struct {
-	// Kind identifies a registered HealthCheckStepRunner that implements the
-	// logic for this step of the health check process.
+	// Kind identifies a registered HealthChecker that implements the logic for
+	// this step of the health check process.
 	Kind string
 	// Config is an opaque map of configuration values to be passed to the
-	// HealthCheckStepRunner executing this step.
+	// HealthChecker executing this step.
 	Config Config
 }
 
 // HealthCheckStepContext is a type that represents the context in which a
-// single HealthCheckStep is executed by a HealthCheckStepRunner.
+// single HealthCheckStep is executed by a HealthChecker.
 type HealthCheckStepContext struct {
 	// Config is the configuration of the step that is currently being
 	// executed.
@@ -50,17 +49,17 @@ type HealthCheckStepContext struct {
 }
 
 // HealthCheckStepResult represents the results of a single HealthCheckStep
-// executed by a HealthCheckStepRunner.
+// executed by a HealthChecker.
 type HealthCheckStepResult struct {
 	// Status is the high-level outcome of the HealthCheckStep executed by a
-	// HealthCheckStepRunner.
+	// HealthChecker.
 	Status kargoapi.HealthState
 	// Output is the opaque output of a HealthCheckStepResult executed by a
-	// HealthCheckStepRunner. The Engine will aggregate this output and include it
-	// in the final results of the health check, which will ultimately be included
-	// in StageStatus.
+	// HealthChecker. The Engine will aggregate this output and include it in the
+	// final results of the health check, which will ultimately be included in
+	// StageStatus.
 	Output map[string]any
 	// Issues is a list of issues that were encountered during the execution of
-	// the HealthCheckStep by a HealthCheckStepRunner.
+	// the HealthCheckStep by a HealthChecker.
 	Issues []string
 }

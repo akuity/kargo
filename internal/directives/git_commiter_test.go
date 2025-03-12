@@ -138,13 +138,13 @@ func Test_gitCommitter_validate(t *testing.T) {
 		},
 	}
 
-	r := newGitCommitter()
-	runner, ok := r.(*gitCommitter)
+	p := newGitCommitter()
+	promoter, ok := p.(*gitCommitter)
 	require.True(t, ok)
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			err := runner.validate(testCase.config)
+			err := promoter.validate(testCase.config)
 			if len(testCase.expectedProblems) == 0 {
 				require.NoError(t, err)
 			} else {
@@ -156,7 +156,7 @@ func Test_gitCommitter_validate(t *testing.T) {
 	}
 }
 
-func Test_gitCommitter_runPromotionStep(t *testing.T) {
+func Test_gitCommitter_promote(t *testing.T) {
 	// Set up a test Git server in-process
 	service := gitkit.New(
 		gitkit.Config{
@@ -206,15 +206,13 @@ func Test_gitCommitter_runPromotionStep(t *testing.T) {
 
 	// Now we can proceed to test gitCommitter...
 
-	r := newGitCommitter()
-	runner, ok := r.(*gitCommitter)
-	require.True(t, ok)
+	promoter := &gitCommitter{}
 
 	stepCtx := &PromotionStepContext{
 		WorkDir: workDir,
 	}
 
-	res, err := runner.runPromotionStep(
+	res, err := promoter.promote(
 		context.Background(),
 		stepCtx,
 		builtin.GitCommitConfig{
@@ -319,13 +317,11 @@ func Test_gitCommitter_buildCommitMessage(t *testing.T) {
 		},
 	}
 
-	r := newGitCommitter()
-	runner, ok := r.(*gitCommitter)
-	require.True(t, ok)
+	promoter := &gitCommitter{}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			commitMsg, err := runner.buildCommitMessage(
+			commitMsg, err := promoter.buildCommitMessage(
 				testCase.sharedState,
 				testCase.cfg,
 			)

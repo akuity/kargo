@@ -13,27 +13,27 @@ import (
 	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
-// yamlUpdater is an implementation of the PromotionStepRunner interface that
-// updates the values of specified keys in a YAML file.
+// yamlUpdater is an implementation of the Promoter interface that updates the
+// values of specified keys in a YAML file.
 type yamlUpdater struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
-// newYAMLUpdater returns an implementation of the PromotionStepRunner interface
-// that updates the values of specified keys in a YAML file.
-func newYAMLUpdater() PromotionStepRunner {
+// newYAMLUpdater returns an implementation of the Promoter interface that
+// updates the values of specified keys in a YAML file.
+func newYAMLUpdater() Promoter {
 	r := &yamlUpdater{}
 	r.schemaLoader = getConfigSchemaLoader(r.Name())
 	return r
 }
 
-// Name implements the PromotionStepRunner interface.
+// Name implements the NamedRunner interface.
 func (y *yamlUpdater) Name() string {
 	return "yaml-update"
 }
 
-// RunPromotionStep implements the PromotionStepRunner interface.
-func (y *yamlUpdater) RunPromotionStep(
+// Promote implements the Promoter interface.
+func (y *yamlUpdater) Promote(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
@@ -49,7 +49,7 @@ func (y *yamlUpdater) RunPromotionStep(
 		return failure, fmt.Errorf("could not convert config into %s config: %w", y.Name(), err)
 	}
 
-	return y.runPromotionStep(ctx, stepCtx, cfg)
+	return y.promote(ctx, stepCtx, cfg)
 }
 
 // validate validates yamlImageUpdater configuration against a JSON schema.
@@ -57,7 +57,7 @@ func (y *yamlUpdater) validate(cfg Config) error {
 	return validate(y.schemaLoader, gojsonschema.NewGoLoader(cfg), y.Name())
 }
 
-func (y *yamlUpdater) runPromotionStep(
+func (y *yamlUpdater) promote(
 	_ context.Context,
 	stepCtx *PromotionStepContext,
 	cfg builtin.YAMLUpdateConfig,

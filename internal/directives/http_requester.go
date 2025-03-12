@@ -25,26 +25,26 @@ const (
 	contentTypeJSON   = "application/json"
 )
 
-// httpRequester is an implementation of the PromotionStepRunner interface that
-// sends an HTTP request and processes the response.
+// httpRequester is an implementation of the Promoter interface that sends an
+// HTTP request and processes the response.
 type httpRequester struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
-// newHTTPRequester returns an implementation of the PromotionStepRunner
-// interface that sends an HTTP request and processes the response.
-func newHTTPRequester() PromotionStepRunner {
+// newHTTPRequester returns an implementation of the Promoter interface that
+// sends an HTTP request and processes the response.
+func newHTTPRequester() Promoter {
 	r := &httpRequester{}
 	r.schemaLoader = getConfigSchemaLoader(r.Name())
 	return r
 }
 
-// Name implements the PromotionStepRunner interface.
+// Name implements the NamedRunner interface.
 func (h *httpRequester) Name() string {
 	return "http"
 }
 
-func (h *httpRequester) RunPromotionStep(
+func (h *httpRequester) Promote(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
@@ -56,7 +56,7 @@ func (h *httpRequester) RunPromotionStep(
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("could not convert config into http config: %w", err)
 	}
-	return h.runPromotionStep(ctx, stepCtx, cfg)
+	return h.promote(ctx, stepCtx, cfg)
 }
 
 // validate validates httpRequester configuration against a JSON schema.
@@ -64,7 +64,7 @@ func (h *httpRequester) validate(cfg Config) error {
 	return validate(h.schemaLoader, gojsonschema.NewGoLoader(cfg), h.Name())
 }
 
-func (h *httpRequester) runPromotionStep(
+func (h *httpRequester) promote(
 	ctx context.Context,
 	_ *PromotionStepContext,
 	cfg builtin.HTTPConfig,

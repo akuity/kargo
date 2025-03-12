@@ -128,13 +128,13 @@ func Test_gitPusher_validate(t *testing.T) {
 		},
 	}
 
-	r := newGitPusher(nil)
-	runner, ok := r.(*gitPushPusher)
+	p := newGitPusher(nil)
+	promoter, ok := p.(*gitPushPusher)
 	require.True(t, ok)
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			err := runner.validate(testCase.config)
+			err := promoter.validate(testCase.config)
 			if len(testCase.expectedProblems) == 0 {
 				require.NoError(t, err)
 			} else {
@@ -146,7 +146,7 @@ func Test_gitPusher_validate(t *testing.T) {
 	}
 }
 
-func Test_gitPusher_runPromotionStep(t *testing.T) {
+func Test_gitPusher_promote(t *testing.T) {
 	// Set up a test Git server in-process
 	service := gitkit.New(
 		gitkit.Config{
@@ -195,18 +195,18 @@ func Test_gitPusher_runPromotionStep(t *testing.T) {
 	require.NoError(t, err)
 
 	// Commit the changes similarly to how gitCommitter would
-	// have. It will be gitPushStepRunner's job to push this commit.
+	// have. It will be gitPusher's job to push this commit.
 	err = workTree.AddAllAndCommit("Initial commit")
 	require.NoError(t, err)
 
 	// Now we can proceed to test gitPusher...
 
-	r := newGitPusher(&credentials.FakeDB{})
-	runner, ok := r.(*gitPushPusher)
+	p := newGitPusher(&credentials.FakeDB{})
+	promoter, ok := p.(*gitPushPusher)
 	require.True(t, ok)
-	require.NotNil(t, runner.branchMus)
+	require.NotNil(t, promoter.branchMus)
 
-	res, err := runner.runPromotionStep(
+	res, err := promoter.promote(
 		context.Background(),
 		&PromotionStepContext{
 			Project:   "fake-project",

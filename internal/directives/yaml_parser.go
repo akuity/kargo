@@ -14,25 +14,26 @@ import (
 	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
-// yamlParser is an implementation of the PromotionStepRunner interface that
-// parses a YAML file and extracts specified outputs.
+// yamlParser is an implementation of the Promoter interface that parses a YAML
+// file and extracts specified outputs.
 type yamlParser struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
 // newYAMLParser returns a new instance of yamlParser.
-func newYAMLParser() PromotionStepRunner {
+func newYAMLParser() Promoter {
 	r := &yamlParser{}
 	r.schemaLoader = getConfigSchemaLoader(r.Name())
 	return r
 }
 
-// Name implements the PromotionStepRunner interface.
+// Name implements the NamedRunner interface.
 func (yp *yamlParser) Name() string {
 	return "yaml-parse"
 }
 
-func (yp *yamlParser) RunPromotionStep(
+// Promote implements the Promoter interface.
+func (yp *yamlParser) Promote(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
@@ -47,7 +48,7 @@ func (yp *yamlParser) RunPromotionStep(
 		return failure, fmt.Errorf("could not convert config into %s config: %w", yp.Name(), err)
 	}
 
-	return yp.runPromotionStep(ctx, stepCtx, cfg)
+	return yp.promote(ctx, stepCtx, cfg)
 }
 
 // validate validates yamlParser configuration against a YAML schema.
@@ -55,7 +56,7 @@ func (yp *yamlParser) validate(cfg Config) error {
 	return validate(yp.schemaLoader, gojsonschema.NewGoLoader(cfg), yp.Name())
 }
 
-func (yp *yamlParser) runPromotionStep(
+func (yp *yamlParser) promote(
 	_ context.Context,
 	stepCtx *PromotionStepContext,
 	cfg builtin.YAMLParseConfig,

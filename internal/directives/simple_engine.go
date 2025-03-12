@@ -13,12 +13,12 @@ var ReservedStepAliasRegex = regexp.MustCompile(`^(step|task)-\d+$`)
 // SimpleEngine is a simple engine that executes a list of PromotionSteps in
 // sequence.
 type SimpleEngine struct {
-	registry    stepRunnerRegistry
+	registry    runnerRegistry
 	kargoClient client.Client
 }
 
 // NewSimpleEngine returns a new SimpleEngine that uses the package's built-in
-// StepRunnerRegistry.
+// step runner registry.
 func NewSimpleEngine(kargoClient client.Client) *SimpleEngine {
 	return &SimpleEngine{
 		registry:    runnerReg,

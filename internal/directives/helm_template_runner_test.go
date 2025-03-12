@@ -17,7 +17,7 @@ import (
 	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
-func Test_helmTemplateRunner_runPromotionStep(t *testing.T) {
+func Test_helmTemplateRunner_promote(t *testing.T) {
 	tests := []struct {
 		name       string
 		files      map[string]string
@@ -278,7 +278,7 @@ metadata:
 		},
 	}
 
-	runner := &helmTemplateRunner{}
+	promoter := &helmTemplateRunner{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -291,7 +291,7 @@ metadata:
 				WorkDir: workDir,
 				Project: "test-project",
 			}
-			result, err := runner.runPromotionStep(context.Background(), stepCtx, tt.cfg)
+			result, err := promoter.promote(context.Background(), stepCtx, tt.cfg)
 			tt.assertions(t, workDir, result, err)
 		})
 	}
@@ -332,14 +332,14 @@ func Test_helmTemplateRunner_composeValues(t *testing.T) {
 		},
 	}
 
-	runner := &helmTemplateRunner{}
+	promoter := &helmTemplateRunner{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			for p, c := range tt.valuesContents {
 				require.NoError(t, os.WriteFile(filepath.Join(tt.workDir, p), []byte(c), 0o600))
 			}
-			result, err := runner.composeValues(tt.workDir, tt.valuesFiles)
+			result, err := promoter.composeValues(tt.workDir, tt.valuesFiles)
 			tt.assertions(t, result, err)
 		})
 	}
@@ -433,11 +433,11 @@ func Test_helmTemplateRunner_newInstallAction(t *testing.T) {
 		},
 	}
 
-	runner := &helmTemplateRunner{}
+	promoter := &helmTemplateRunner{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client, err := runner.newInstallAction(tt.cfg, tt.project, tt.absOutPath)
+			client, err := promoter.newInstallAction(tt.cfg, tt.project, tt.absOutPath)
 			tt.assertions(t, client, err)
 		})
 	}
@@ -472,11 +472,11 @@ func Test_helmTemplateRunner_loadChart(t *testing.T) {
 		},
 	}
 
-	runner := &helmTemplateRunner{}
+	promoter := &helmTemplateRunner{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c, err := runner.loadChart(tt.workDir, tt.path)
+			c, err := promoter.loadChart(tt.workDir, tt.path)
 			tt.assertions(t, c, err)
 		})
 	}
@@ -513,11 +513,11 @@ func Test_helmTemplateRunner_checkDependencies(t *testing.T) {
 		},
 	}
 
-	runner := &helmTemplateRunner{}
+	promoter := &helmTemplateRunner{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := runner.checkDependencies(tt.chart)
+			err := promoter.checkDependencies(tt.chart)
 			tt.assertions(t, err)
 		})
 	}
@@ -705,12 +705,12 @@ hook2: content
 		},
 	}
 
-	runner := &helmTemplateRunner{}
+	promoter := &helmTemplateRunner{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			workDir := tt.setup(t)
-			err := runner.writeOutput(tt.cfg, tt.rls, filepath.Join(workDir, tt.cfg.OutPath))
+			err := promoter.writeOutput(tt.cfg, tt.rls, filepath.Join(workDir, tt.cfg.OutPath))
 			tt.assertions(t, workDir, err)
 		})
 	}

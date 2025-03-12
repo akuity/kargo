@@ -16,7 +16,7 @@ import (
 	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
-func Test_kustomizeBuilder_runPromotionStep(t *testing.T) {
+func Test_kustomizeBuilder_promote(t *testing.T) {
 	tests := []struct {
 		name       string
 		setupFiles func(*testing.T, string)
@@ -172,7 +172,7 @@ metadata:
 		},
 	}
 
-	runner := &kustomizeBuilder{}
+	promoter := &kustomizeBuilder{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -184,7 +184,7 @@ metadata:
 				WorkDir: tempDir,
 			}
 
-			result, err := runner.runPromotionStep(stepCtx, tt.config)
+			result, err := promoter.promote(stepCtx, tt.config)
 			tt.assertions(t, tempDir, result, err)
 		})
 	}

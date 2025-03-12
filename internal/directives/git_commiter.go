@@ -15,27 +15,27 @@ import (
 // stateKeyCommit is the key used to store the commit ID in the shared State.
 const stateKeyCommit = "commit"
 
-// gitCommitter is an implementation of the PromotionStepRunner interface that
-// makes a commit to a local Git repository.
+// gitCommitter is an implementation of the Promoter interface that makes a
+// commit to a local Git repository.
 type gitCommitter struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
-// newGitCommitter returns an implementation of the PromotionStepRunner
-// interface that makes a commit to a local Git repository.
-func newGitCommitter() PromotionStepRunner {
+// newGitCommitter returns an implementation of the Promoter interface that
+// makes a commit to a local Git repository.
+func newGitCommitter() Promoter {
 	r := &gitCommitter{}
 	r.schemaLoader = getConfigSchemaLoader(r.Name())
 	return r
 }
 
-// Name implements the PromotionStepRunner interface.
+// Name implements the NamedRunner interface.
 func (g *gitCommitter) Name() string {
 	return "git-commit"
 }
 
-// RunPromotionStep implements the PromotionStepRunner interface.
-func (g *gitCommitter) RunPromotionStep(
+// Promote implements the Promoter interface.
+func (g *gitCommitter) Promote(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
@@ -47,7 +47,7 @@ func (g *gitCommitter) RunPromotionStep(
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("could not convert config into %s config: %w", g.Name(), err)
 	}
-	return g.runPromotionStep(ctx, stepCtx, cfg)
+	return g.promote(ctx, stepCtx, cfg)
 }
 
 // validate validates gitCommitter configuration against a JSON schema.
@@ -55,7 +55,7 @@ func (g *gitCommitter) validate(cfg Config) error {
 	return validate(g.schemaLoader, gojsonschema.NewGoLoader(cfg), g.Name())
 }
 
-func (g *gitCommitter) runPromotionStep(
+func (g *gitCommitter) promote(
 	_ context.Context,
 	stepCtx *PromotionStepContext,
 	cfg builtin.GitCommitConfig,

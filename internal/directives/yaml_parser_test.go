@@ -107,13 +107,13 @@ func Test_yamlParser_validate(t *testing.T) {
 		},
 	}
 
-	r := newYAMLParser()
-	runner, ok := r.(*yamlParser)
+	p := newYAMLParser()
+	promoter, ok := p.(*yamlParser)
 	require.True(t, ok)
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			err := runner.validate(tc.config)
+			err := promoter.validate(tc.config)
 			if tc.expectedError == "" {
 				assert.NoError(t, err)
 			} else {
@@ -124,7 +124,7 @@ func Test_yamlParser_validate(t *testing.T) {
 	}
 }
 
-func Test_yamlParser_runPromotionStep(t *testing.T) {
+func Test_yamlParser_promote(t *testing.T) {
 	tests := []struct {
 		name       string
 		stepCtx    *PromotionStepContext
@@ -295,7 +295,7 @@ config:
 		},
 	}
 
-	runner := &yamlParser{}
+	promoter := &yamlParser{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -307,7 +307,7 @@ config:
 				require.NoError(t, os.WriteFile(path.Join(stepCtx.WorkDir, p), []byte(c), 0o600))
 			}
 
-			result, err := runner.runPromotionStep(context.Background(), stepCtx, tt.cfg)
+			result, err := promoter.promote(context.Background(), stepCtx, tt.cfg)
 			tt.assertions(t, stepCtx.WorkDir, result, err)
 		})
 	}
@@ -334,9 +334,7 @@ key: : value
 		{"Empty YAML file", "", errors.New("could not parse empty YAML file")},
 	}
 
-	r := newYAMLParser()
-	runner, ok := r.(*yamlParser)
-	require.True(t, ok)
+	promoter := &yamlParser{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -345,7 +343,7 @@ key: : value
 			if err != nil {
 				t.Fatalf("failed to write file: %v", err)
 			}
-			_, err = runner.readAndParseYAML(tempDir, "test.yaml")
+			_, err = promoter.readAndParseYAML(tempDir, "test.yaml")
 			if tt.expects != nil {
 				assert.ErrorContains(t, err, tt.expects.Error())
 			} else {

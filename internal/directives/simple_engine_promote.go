@@ -91,16 +91,16 @@ func (e *SimpleEngine) executeSteps(
 			}, fmt.Errorf("error getting step alias for step %d: %w", i, err)
 		}
 
-		// Get the PromotionStepRunner for the step.
-		runner := e.registry.getPromotionStepRunner(step.Kind)
-		if runner == nil {
+		// Get the Promoter for the step.
+		promoter := e.registry.getPromoter(step.Kind)
+		if promoter == nil {
 			return PromotionResult{
 				Status:                kargoapi.PromotionPhaseErrored,
 				CurrentStep:           i,
 				StepExecutionMetadata: stepExecMetas,
 				State:                 state,
 				HealthCheckSteps:      healthChecks,
-			}, fmt.Errorf("no promotion step runner found for kind %d", i)
+			}, fmt.Errorf("no promoter found for kind %d", i)
 		}
 
 		// If we don't have metadata for this step yet, create it.
@@ -135,7 +135,7 @@ func (e *SimpleEngine) executeSteps(
 		if stepExecMeta.StartedAt == nil {
 			stepExecMeta.StartedAt = ptr.To(metav1.Now())
 		}
-		result, err := e.executeStep(ctx, promoCtx, step, runner, workDir, state)
+		result, err := e.executeStep(ctx, promoCtx, step, promoter, workDir, state)
 		stepExecMeta.Status = result.Status
 		stepExecMeta.Message = result.Message
 
@@ -143,7 +143,7 @@ func (e *SimpleEngine) executeSteps(
 		// inflated from tasks, we need to apply a special treatment to the output
 		// to allow it to become available under the alias of the "task".
 		aliasNamespace := getAliasNamespace(step.Alias)
-		if aliasNamespace != "" && runner.Name() == (&outputComposer{}).Name() {
+		if aliasNamespace != "" && promoter.Name() == (&outputComposer{}).Name() {
 			if state[aliasNamespace] == nil {
 				state[aliasNamespace] = make(map[string]any)
 			}
@@ -216,7 +216,7 @@ func (e *SimpleEngine) executeSteps(
 			// If we get to here, the error is POTENTIALLY recoverable.
 			stepExecMeta.ErrorCount++
 			// Check if the error threshold has been met.
-			errorThreshold := step.GetErrorThreshold(runner)
+			errorThreshold := step.GetErrorThreshold(promoter)
 			if stepExecMeta.ErrorCount >= errorThreshold {
 				// The error threshold has been met.
 				stepExecMeta.FinishedAt = ptr.To(metav1.Now())
@@ -238,7 +238,7 @@ func (e *SimpleEngine) executeSteps(
 		// threshold. Now we need to check if the timeout has elapsed. A nil timeout
 		// or any non-positive timeout interval are treated as NO timeout, although
 		// a nil timeout really shouldn't happen.
-		timeout := step.GetTimeout(runner)
+		timeout := step.GetTimeout(promoter)
 		if timeout != nil && *timeout > 0 && metav1.Now().Sub(stepExecMeta.StartedAt.Time) > *timeout {
 			// Timeout has elapsed.
 			stepExecMeta.FinishedAt = ptr.To(metav1.Now())
@@ -292,7 +292,7 @@ func (e *SimpleEngine) executeStep(
 	ctx context.Context,
 	promoCtx PromotionContext,
 	step PromotionStep,
-	runner PromotionStepRunner,
+	promoter Promoter,
 	workDir string,
 	state State,
 ) (PromotionStepResult, error) {
@@ -307,7 +307,7 @@ func (e *SimpleEngine) executeStep(
 		}, err
 	}
 
-	result, err := runner.RunPromotionStep(ctx, stepCtx)
+	result, err := promoter.Promote(ctx, stepCtx)
 	if err != nil {
 		err = fmt.Errorf("failed to run step %q: %w", step.Kind, err)
 	}

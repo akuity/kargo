@@ -13,16 +13,16 @@ import (
 	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
-// gitPRWaiter is an implementation of the PromotionStepRunner interface that
-// waits for a pull request to be merged or closed unmerged.
+// gitPRWaiter is an implementation of the Promoter interface that waits for a
+// pull request to be merged or closed unmerged.
 type gitPRWaiter struct {
 	schemaLoader gojsonschema.JSONLoader
 	credsDB      credentials.Database
 }
 
-// newGitPRWaiter returns an implementation of the PromotionStepRunner interface
-// that waits for a pull request to be merged or closed unmerged.
-func newGitPRWaiter(credsDB credentials.Database) PromotionStepRunner {
+// newGitPRWaiter returns an implementation of the Promoter interface that waits
+// for a pull request to be merged or closed unmerged.
+func newGitPRWaiter(credsDB credentials.Database) Promoter {
 	r := &gitPRWaiter{
 		credsDB: credsDB,
 	}
@@ -30,13 +30,13 @@ func newGitPRWaiter(credsDB credentials.Database) PromotionStepRunner {
 	return r
 }
 
-// Name implements the PromotionStepRunner interface.
+// Name implements the NamedRunner interface.
 func (g *gitPRWaiter) Name() string {
 	return "git-wait-for-pr"
 }
 
-// RunPromotionStep implements the PromotionStepRunner interface.
-func (g *gitPRWaiter) RunPromotionStep(
+// Promote implements the Promoter interface.
+func (g *gitPRWaiter) Promote(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
@@ -48,7 +48,7 @@ func (g *gitPRWaiter) RunPromotionStep(
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("could not convert config into git-wait-for-pr config: %w", err)
 	}
-	return g.runPromotionStep(ctx, stepCtx, cfg)
+	return g.promote(ctx, stepCtx, cfg)
 }
 
 // validate validates gitPRWaiter configuration against a JSON schema.
@@ -56,7 +56,7 @@ func (g *gitPRWaiter) validate(cfg Config) error {
 	return validate(g.schemaLoader, gojsonschema.NewGoLoader(cfg), g.Name())
 }
 
-func (g *gitPRWaiter) runPromotionStep(
+func (g *gitPRWaiter) promote(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 	cfg builtin.GitWaitForPRConfig,

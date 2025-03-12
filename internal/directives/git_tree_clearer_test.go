@@ -40,13 +40,13 @@ func Test_gitTreeOverwriter_validate(t *testing.T) {
 		},
 	}
 
-	r := newGitTreeClearer()
-	runner, ok := r.(*gitTreeClearer)
+	p := newGitTreeClearer()
+	promoter, ok := p.(*gitTreeClearer)
 	require.True(t, ok)
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			err := runner.validate(testCase.config)
+			err := promoter.validate(testCase.config)
 			if len(testCase.expectedProblems) == 0 {
 				require.NoError(t, err)
 			} else {
@@ -58,7 +58,7 @@ func Test_gitTreeOverwriter_validate(t *testing.T) {
 	}
 }
 
-func Test_gitTreeOverwriter_runPromotionStep(t *testing.T) {
+func Test_gitTreeOverwriter_promote(t *testing.T) {
 	// Set up a test Git server in-process
 	service := gitkit.New(
 		gitkit.Config{
@@ -102,12 +102,9 @@ func Test_gitTreeOverwriter_runPromotionStep(t *testing.T) {
 	err = os.WriteFile(filepath.Join(workTree.Dir(), "original.txt"), []byte("foo"), 0600)
 	require.NoError(t, err)
 
-	// Run the directive
-	r := newGitTreeClearer()
-	runner, ok := r.(*gitTreeClearer)
-	require.True(t, ok)
+	promoter := &gitTreeClearer{}
 
-	res, err := runner.runPromotionStep(
+	res, err := promoter.promote(
 		context.Background(),
 		&PromotionStepContext{
 			Project: "fake-project",

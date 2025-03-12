@@ -2,35 +2,35 @@ package directives
 
 import "context"
 
-// mockPromotionStepRunner is a mock implementation of the PromotionStepRunner
-// interface, which can be used for testing.
-type mockPromotionStepRunner struct {
-	// name is the name of the PromotionStepRunner.
+// mockPromoter is a mock implementation of the Promoter interface, which can be
+// used for testing.
+type mockPromoter struct {
+	// name is the name of the Promoter.
 	name string
-	// runFunc is the function that the step should call when RunPromotionStep is
-	// called. If set, this function will be called instead of returning runResult
-	// and runErr.
-	runFunc func(context.Context, *PromotionStepContext) (PromotionStepResult, error)
-	// runResult is the result that the PromotionStepRunner should return when
-	// RunPromotionStep is called.
-	runResult PromotionStepResult
-	// runErr is the error that the PromotionStepRunner should return when
-	// RunPromotionStep is called.
-	runErr error
+	// promoteFunc is the function that the step should call when Promote is
+	// called. If set, this function will be called instead of returning
+	// promoteResult and promoteErr.
+	promoteFunc func(context.Context, *PromotionStepContext) (PromotionStepResult, error)
+	// promoteResult is the result that the Promoter should return when
+	// Promote is called.
+	promoteResult PromotionStepResult
+	// promoteErr is the error that the Promoter should return when Promote is
+	// called.
+	promoteErr error
 }
 
-// Name implements the PromotionStepRunner interface.
-func (m *mockPromotionStepRunner) Name() string {
+// Name implements the NamedRunner interface.
+func (m *mockPromoter) Name() string {
 	return m.name
 }
 
-// RunPromotionStep implements the PromotionStepRunner interface.
-func (m *mockPromotionStepRunner) RunPromotionStep(
+// Promote implements the Promoter interface.
+func (m *mockPromoter) Promote(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
-	if m.runFunc != nil {
-		return m.runFunc(ctx, stepCtx)
+	if m.promoteFunc != nil {
+		return m.promoteFunc(ctx, stepCtx)
 	}
-	return m.runResult, m.runErr
+	return m.promoteResult, m.promoteErr
 }

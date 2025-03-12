@@ -2,32 +2,32 @@ package directives
 
 import "context"
 
-// mockHealthCheckStepRunner is a mock implementation of the
-// HealthCheckStepRunner interface, which can be used for testing.
-type mockHealthCheckStepRunner struct {
-	// name is the name of the HealthCheckStepRunner.
+// mockHealthChecker is a mock implementation of the HealthChecker interface,
+// which can be used for testing.
+type mockHealthChecker struct {
+	// name is the name of the HealthChecker.
 	name string
-	// runFunc is the function that the step should call when
-	// RunHealthCheckStep is called. If set, this function will be called instead
-	// of returning healthResult.
-	runFunc func(context.Context, *HealthCheckStepContext) HealthCheckStepResult
-	// runResult is the result that the HealthCheckStepRunner should return when
-	// RunHealthCheckStep is called.
-	runResult HealthCheckStepResult
+	// checkHealthFunc is the function that the step should call when CheckHealth
+	// is called. If set, this function will be called instead of returning
+	// checkHealthResult.
+	checkHealthFunc func(context.Context, *HealthCheckStepContext) HealthCheckStepResult
+	// checkHealthResult is the result that the HealthChecker should return when
+	// CheckHealth is called.
+	checkHealthResult HealthCheckStepResult
 }
 
-// Name implements the HealthCheckStepRunner interface.
-func (m *mockHealthCheckStepRunner) Name() string {
+// Name implements the NamedRunner interface.
+func (m *mockHealthChecker) Name() string {
 	return m.name
 }
 
-// RunHealthCheckStep implements the HealthCheckStepRunner interface.
-func (m *mockHealthCheckStepRunner) RunHealthCheckStep(
+// CheckHealth implements the HealthChecker interface.
+func (m *mockHealthChecker) CheckHealth(
 	ctx context.Context,
 	stepCtx *HealthCheckStepContext,
 ) HealthCheckStepResult {
-	if m.runFunc != nil {
-		return m.runFunc(ctx, stepCtx)
+	if m.checkHealthFunc != nil {
+		return m.checkHealthFunc(ctx, stepCtx)
 	}
-	return m.runResult
+	return m.checkHealthResult
 }

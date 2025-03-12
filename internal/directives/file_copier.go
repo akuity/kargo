@@ -20,8 +20,8 @@ import (
 	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
-// fileCopier is an implementation of the PromotionStepRunner interface that
-// copies a file or directory.
+// fileCopier is an implementation of the Promoter interface that copies a file
+// or directory.
 //
 // The copy is recursive, merging directories if the destination directory
 // already exists. If the destination is an existing file, it will be
@@ -30,21 +30,21 @@ type fileCopier struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
-// newFileCopier returns an implementation of the PromotionStepRunner interface
+// newFileCopier returns an implementation of the Promoter interface
 // that copies a file or directory.
-func newFileCopier() PromotionStepRunner {
+func newFileCopier() Promoter {
 	r := &fileCopier{}
 	r.schemaLoader = getConfigSchemaLoader(r.Name())
 	return r
 }
 
-// Name implements the PromotionStepRunner interface.
+// Name implements the NamedRunner interface.
 func (f *fileCopier) Name() string {
 	return "copy"
 }
 
-// RunPromotionStep implements the PromotionStepRunner interface.
-func (f *fileCopier) RunPromotionStep(
+// Promote implements the Promoter interface.
+func (f *fileCopier) Promote(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
@@ -60,10 +60,10 @@ func (f *fileCopier) RunPromotionStep(
 			fmt.Errorf("could not convert config into %s config: %w", f.Name(), err)
 	}
 
-	return f.runPromotionStep(ctx, stepCtx, cfg)
+	return f.promote(ctx, stepCtx, cfg)
 }
 
-func (f *fileCopier) runPromotionStep(
+func (f *fileCopier) promote(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 	cfg builtin.CopyConfig,

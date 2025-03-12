@@ -99,13 +99,13 @@ func Test_yamlUpdater_validate(t *testing.T) {
 		},
 	}
 
-	r := newYAMLUpdater()
-	runner, ok := r.(*yamlUpdater)
+	p := newYAMLUpdater()
+	promoter, ok := p.(*yamlUpdater)
 	require.True(t, ok)
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			err := runner.validate(testCase.config)
+			err := promoter.validate(testCase.config)
 			if len(testCase.expectedProblems) == 0 {
 				require.NoError(t, err)
 			} else {
@@ -117,7 +117,7 @@ func Test_yamlUpdater_validate(t *testing.T) {
 	}
 }
 
-func Test_yamlUpdater_runPromotionStep(t *testing.T) {
+func Test_yamlUpdater_promote(t *testing.T) {
 	tests := []struct {
 		name       string
 		stepCtx    *PromotionStepContext
@@ -171,7 +171,7 @@ func Test_yamlUpdater_runPromotionStep(t *testing.T) {
 		},
 	}
 
-	runner := &yamlUpdater{}
+	promoter := &yamlUpdater{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -183,7 +183,7 @@ func Test_yamlUpdater_runPromotionStep(t *testing.T) {
 				require.NoError(t, os.WriteFile(path.Join(stepCtx.WorkDir, p), []byte(c), 0o600))
 			}
 
-			result, err := runner.runPromotionStep(context.Background(), stepCtx, tt.cfg)
+			result, err := promoter.promote(context.Background(), stepCtx, tt.cfg)
 			tt.assertions(t, stepCtx.WorkDir, result, err)
 		})
 	}
@@ -232,7 +232,7 @@ func Test_yamlUpdater_updateValuesFile(t *testing.T) {
 		},
 	}
 
-	runner := &yamlUpdater{}
+	promoter := &yamlUpdater{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -244,7 +244,7 @@ func Test_yamlUpdater_updateValuesFile(t *testing.T) {
 				require.NoError(t, err)
 			}
 
-			err := runner.updateFile(workDir, path.Base(valuesFile), tt.updates)
+			err := promoter.updateFile(workDir, path.Base(valuesFile), tt.updates)
 			tt.assertions(t, valuesFile, err)
 		})
 	}
@@ -290,11 +290,11 @@ func Test_yamlUpdater_generateCommitMessage(t *testing.T) {
 		},
 	}
 
-	runner := &yamlUpdater{}
+	promoter := &yamlUpdater{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := runner.generateCommitMessage(tt.path, tt.updates)
+			result := promoter.generateCommitMessage(tt.path, tt.updates)
 			tt.assertions(t, result)
 		})
 	}

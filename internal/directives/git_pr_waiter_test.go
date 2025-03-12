@@ -81,13 +81,13 @@ func Test_gitPRWaiter_validate(t *testing.T) {
 		},
 	}
 
-	r := newGitPRWaiter(nil)
-	runner, ok := r.(*gitPRWaiter)
+	p := newGitPRWaiter(nil)
+	promoter, ok := p.(*gitPRWaiter)
 	require.True(t, ok)
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			err := runner.validate(testCase.config)
+			err := promoter.validate(testCase.config)
 			if len(testCase.expectedProblems) == 0 {
 				require.NoError(t, err)
 			} else {
@@ -99,7 +99,7 @@ func Test_gitPRWaiter_validate(t *testing.T) {
 	}
 }
 
-func Test_gitPRWaiter_runPromotionStep(t *testing.T) {
+func Test_gitPRWaiter_promote(t *testing.T) {
 	testCases := []struct {
 		name       string
 		provider   gitprovider.Interface
@@ -177,8 +177,8 @@ func Test_gitPRWaiter_runPromotionStep(t *testing.T) {
 		},
 	}
 
-	r := newGitPRWaiter(&credentials.FakeDB{})
-	runner, ok := r.(*gitPRWaiter)
+	p := newGitPRWaiter(&credentials.FakeDB{})
+	promoter, ok := p.(*gitPRWaiter)
 	require.True(t, ok)
 
 	for _, testCase := range testCases {
@@ -199,7 +199,7 @@ func Test_gitPRWaiter_runPromotionStep(t *testing.T) {
 				},
 			)
 
-			res, err := runner.runPromotionStep(
+			res, err := promoter.promote(
 				context.Background(),
 				&PromotionStepContext{},
 				builtin.GitWaitForPRConfig{

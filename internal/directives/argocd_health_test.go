@@ -20,7 +20,7 @@ import (
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 )
 
-func Test_argocdUpdater_runHealthCheckStep(t *testing.T) {
+func Test_argocdUpdater_checkHealth(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, argocd.AddToScheme(scheme))
 
@@ -158,12 +158,12 @@ func Test_argocdUpdater_runHealthCheckStep(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			runner := &argocdUpdater{
+			healthChecker := &argocdUpdater{
 				argocdClient: testCase.client,
 			}
 			testCase.assertions(
 				t,
-				runner.runHealthCheckStep(
+				healthChecker.checkHealth(
 					context.Background(),
 					ArgoCDHealthConfig{
 						Apps: []ArgoCDAppHealthCheck{
@@ -400,14 +400,14 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			app := testApp.DeepCopy()
 			app.Status = testCase.appStatus
-			runner := &argocdUpdater{
+			healthChecker := &argocdUpdater{
 				argocdClient: fake.NewClientBuilder().
 					WithScheme(scheme).
 					WithObjects(app).
 					WithInterceptorFuncs(testCase.interceptor).
 					Build(),
 			}
-			stageHealth, appStatus, err := runner.getApplicationHealth(
+			stageHealth, appStatus, err := healthChecker.getApplicationHealth(
 				context.Background(),
 				client.ObjectKey{
 					Namespace: app.Namespace,
@@ -434,7 +434,7 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 			},
 		}
 		var count int
-		runner := &argocdUpdater{
+		healthChecker := &argocdUpdater{
 			argocdClient: fake.NewClientBuilder().WithInterceptorFuncs(interceptor.Funcs{
 				Get: func(
 					_ context.Context,
@@ -455,7 +455,7 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				},
 			}).Build(),
 		}
-		_, _, err := runner.getApplicationHealth(
+		_, _, err := healthChecker.getApplicationHealth(
 			context.Background(),
 			client.ObjectKey{
 				Namespace: testApp.Namespace,
@@ -585,11 +585,11 @@ func Test_argocdUpdater_stageHealthForAppSync(t *testing.T) {
 		},
 	}
 
-	runner := &argocdUpdater{}
+	healthChecker := &argocdUpdater{}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			health, err := runner.stageHealthForAppSync(
+			health, err := healthChecker.stageHealthForAppSync(
 				testCase.app,
 				testCase.revisions,
 			)
@@ -674,11 +674,11 @@ func Test_argocdUpdater_stageHealthForAppHealth(t *testing.T) {
 		},
 	}
 
-	runner := &argocdUpdater{}
+	healthChecker := &argocdUpdater{}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			got, err := runner.stageHealthForAppHealth(testCase.app)
+			got, err := healthChecker.stageHealthForAppHealth(testCase.app)
 			testCase.assertions(t, got, err)
 		})
 	}
@@ -757,13 +757,13 @@ func Test_argocdUpdater_filterAppConditions(t *testing.T) {
 		},
 	}
 
-	runner := (&argocdUpdater{})
+	healthChecker := (&argocdUpdater{})
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
 				t,
-				runner.filterAppConditions(
+				healthChecker.filterAppConditions(
 					&argocd.Application{
 						Status: argocd.ApplicationStatus{
 							Conditions: testCase.conditions,

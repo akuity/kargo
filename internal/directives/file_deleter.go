@@ -15,27 +15,27 @@ import (
 	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
-// fileDeleter is an implementation of the PromotionStepRunner interface that
-// deletes a file or directory.
+// fileDeleter is an implementation of the Promoter interface that deletes a
+// file or directory.
 type fileDeleter struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
-// newFileDeleter returns an implementation of the PromotionStepRunner interface
-// that deletes a file or directory.
-func newFileDeleter() PromotionStepRunner {
+// newFileDeleter returns an implementation of the Promoter interface that
+// deletes a file or directory.
+func newFileDeleter() Promoter {
 	r := &fileDeleter{}
 	r.schemaLoader = getConfigSchemaLoader(r.Name())
 	return r
 }
 
-// Name implements the PromotionStepRunner interface
+// Name implements the NamedRunner interface
 func (f *fileDeleter) Name() string {
 	return "delete"
 }
 
-// RunPromotionStep implements the PromotionStepRunner interface.
-func (f *fileDeleter) RunPromotionStep(
+// Promote implements the Promoter interface.
+func (f *fileDeleter) Promote(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
@@ -51,10 +51,10 @@ func (f *fileDeleter) RunPromotionStep(
 			fmt.Errorf("could not convert config into %s config: %w", f.Name(), err)
 	}
 
-	return f.runPromotionStep(ctx, stepCtx, cfg)
+	return f.promote(ctx, stepCtx, cfg)
 }
 
-func (f *fileDeleter) runPromotionStep(
+func (f *fileDeleter) promote(
 	_ context.Context,
 	stepCtx *PromotionStepContext,
 	cfg builtin.DeleteConfig,

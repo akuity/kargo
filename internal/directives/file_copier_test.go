@@ -16,7 +16,7 @@ import (
 	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
-func Test_fileCopier_runPromotionStep(t *testing.T) {
+func Test_fileCopier_promote(t *testing.T) {
 	tests := []struct {
 		name       string
 		setupFiles func(*testing.T) string
@@ -250,12 +250,12 @@ func Test_fileCopier_runPromotionStep(t *testing.T) {
 		},
 	}
 
-	runner := &fileCopier{}
+	promoter := &fileCopier{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			workDir := tt.setupFiles(t)
-			result, err := runner.runPromotionStep(
+			result, err := promoter.promote(
 				context.Background(),
 				&PromotionStepContext{WorkDir: workDir},
 				tt.cfg,

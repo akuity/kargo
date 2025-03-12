@@ -127,13 +127,13 @@ func Test_kustomizeImageSetter_validate(t *testing.T) {
 		},
 	}
 
-	r := newKustomizeImageSetter(nil)
-	runner, ok := r.(*kustomizeImageSetter)
+	p := newKustomizeImageSetter(nil)
+	promoter, ok := p.(*kustomizeImageSetter)
 	require.True(t, ok)
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			err := runner.validate(testCase.config)
+			err := promoter.validate(testCase.config)
 			if len(testCase.expectedProblems) == 0 {
 				require.NoError(t, err)
 			} else {
@@ -145,7 +145,7 @@ func Test_kustomizeImageSetter_validate(t *testing.T) {
 	}
 }
 
-func Test_kustomizeImageSetter_runPromotionStep(t *testing.T) {
+func Test_kustomizeImageSetter_promote(t *testing.T) {
 	const testNamespace = "test-project-run"
 
 	scheme := runtime.NewScheme()
@@ -264,7 +264,7 @@ kind: Kustomization
 		},
 	}
 
-	runner := &kustomizeImageSetter{}
+	promoter := &kustomizeImageSetter{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -272,7 +272,7 @@ kind: Kustomization
 			if tt.setupFiles != nil {
 				tt.setupFiles(t, tt.stepCtx.WorkDir)
 			}
-			result, err := runner.runPromotionStep(context.Background(), tt.stepCtx, tt.cfg)
+			result, err := promoter.promote(context.Background(), tt.stepCtx, tt.cfg)
 			tt.assertions(t, tt.stepCtx.WorkDir, result, err)
 		})
 	}
@@ -305,11 +305,11 @@ func Test_kustomizeImageSetter_buildTargetImages(t *testing.T) {
 		},
 	}
 
-	runner := &kustomizeImageSetter{}
+	promoter := &kustomizeImageSetter{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := runner.buildTargetImagesFromConfig(tt.images)
+			result := promoter.buildTargetImagesFromConfig(tt.images)
 			tt.assertions(t, result)
 		})
 	}
@@ -417,7 +417,7 @@ func Test_kustomizeImageSetter_buildTargetImagesAutomatically(t *testing.T) {
 			require.NoError(t, kargoapi.AddToScheme(scheme))
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(tt.objects...).Build()
 
-			runner := &kustomizeImageSetter{
+			promoter := &kustomizeImageSetter{
 				kargoClient: fakeClient,
 			}
 			stepCtx := &PromotionStepContext{
@@ -428,7 +428,7 @@ func Test_kustomizeImageSetter_buildTargetImagesAutomatically(t *testing.T) {
 				},
 			}
 
-			result, err := runner.buildTargetImagesAutomatically(context.Background(), stepCtx)
+			result, err := promoter.buildTargetImagesAutomatically(context.Background(), stepCtx)
 			tt.assertions(t, result, err)
 		})
 	}
@@ -517,11 +517,11 @@ func Test_kustomizeImageSetter_generateCommitMessage(t *testing.T) {
 		},
 	}
 
-	runner := &kustomizeImageSetter{}
+	promoter := &kustomizeImageSetter{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := runner.generateCommitMessage(tt.path, tt.images)
+			got := promoter.generateCommitMessage(tt.path, tt.images)
 			tt.assertions(t, got)
 		})
 	}

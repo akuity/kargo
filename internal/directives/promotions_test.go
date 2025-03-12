@@ -16,16 +16,16 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-type mockRetryableRunner struct {
+type mockRetryablePromoter struct {
 	defaultTimeout        *time.Duration
 	defaultErrorThreshold uint32
 }
 
-func (m mockRetryableRunner) DefaultTimeout() *time.Duration {
+func (m mockRetryablePromoter) DefaultTimeout() *time.Duration {
 	return m.defaultTimeout
 }
 
-func (m mockRetryableRunner) DefaultErrorThreshold() uint32 {
+func (m mockRetryablePromoter) DefaultErrorThreshold() uint32 {
 	return m.defaultErrorThreshold
 }
 
@@ -33,7 +33,7 @@ func TestPromotionStep_GetTimeout(t *testing.T) {
 	tests := []struct {
 		name       string
 		step       *PromotionStep
-		runner     any
+		promoter   any
 		assertions func(t *testing.T, result *time.Duration)
 	}{
 		{
@@ -46,7 +46,7 @@ func TestPromotionStep_GetTimeout(t *testing.T) {
 			},
 		},
 		{
-			name: "returns configured timeout for non-retryable runner",
+			name: "returns configured timeout for non-retryable promoter",
 			step: &PromotionStep{
 				Retry: &kargoapi.PromotionStepRetry{
 					Timeout: &metav1.Duration{
@@ -54,13 +54,13 @@ func TestPromotionStep_GetTimeout(t *testing.T) {
 					},
 				},
 			},
-			runner: nil,
+			promoter: nil,
 			assertions: func(t *testing.T, result *time.Duration) {
 				assert.Equal(t, ptr.To(time.Duration(5)), result)
 			},
 		},
 		{
-			name: "returns configured timeout for retryable runner",
+			name: "returns configured timeout for retryable promoter",
 			step: &PromotionStep{
 				Retry: &kargoapi.PromotionStepRetry{
 					Timeout: &metav1.Duration{
@@ -68,7 +68,7 @@ func TestPromotionStep_GetTimeout(t *testing.T) {
 					},
 				},
 			},
-			runner: mockRetryableRunner{defaultTimeout: ptr.To(time.Duration(3))},
+			promoter: mockRetryablePromoter{defaultTimeout: ptr.To(time.Duration(3))},
 			assertions: func(t *testing.T, result *time.Duration) {
 				assert.Equal(t, ptr.To(time.Duration(5)), result)
 			},
@@ -78,7 +78,7 @@ func TestPromotionStep_GetTimeout(t *testing.T) {
 			step: &PromotionStep{
 				Retry: &kargoapi.PromotionStepRetry{},
 			},
-			runner: mockRetryableRunner{defaultTimeout: ptr.To(time.Duration(3))},
+			promoter: mockRetryablePromoter{defaultTimeout: ptr.To(time.Duration(3))},
 			assertions: func(t *testing.T, result *time.Duration) {
 				assert.Equal(t, ptr.To(time.Duration(3)), result)
 			},
@@ -87,7 +87,7 @@ func TestPromotionStep_GetTimeout(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := tt.step.GetTimeout(tt.runner)
+			result := tt.step.GetTimeout(tt.promoter)
 			tt.assertions(t, result)
 		})
 	}
@@ -97,7 +97,7 @@ func TestPromotionStep_GetErrorThreshold(t *testing.T) {
 	tests := []struct {
 		name       string
 		step       *PromotionStep
-		runner     any
+		promoter   any
 		assertions func(t *testing.T, result uint32)
 	}{
 		{
@@ -110,25 +110,25 @@ func TestPromotionStep_GetErrorThreshold(t *testing.T) {
 			},
 		},
 		{
-			name: "returns configured threshold for non-retryable runner",
+			name: "returns configured threshold for non-retryable promoter",
 			step: &PromotionStep{
 				Retry: &kargoapi.PromotionStepRetry{
 					ErrorThreshold: 5,
 				},
 			},
-			runner: nil,
+			promoter: nil,
 			assertions: func(t *testing.T, result uint32) {
 				assert.Equal(t, uint32(5), result)
 			},
 		},
 		{
-			name: "returns configured threshold for retryable runner",
+			name: "returns configured threshold for retryable promoter",
 			step: &PromotionStep{
 				Retry: &kargoapi.PromotionStepRetry{
 					ErrorThreshold: 5,
 				},
 			},
-			runner: mockRetryableRunner{defaultErrorThreshold: 3},
+			promoter: mockRetryablePromoter{defaultErrorThreshold: 3},
 			assertions: func(t *testing.T, result uint32) {
 				assert.Equal(t, uint32(5), result)
 			},
@@ -140,7 +140,7 @@ func TestPromotionStep_GetErrorThreshold(t *testing.T) {
 					ErrorThreshold: 0,
 				},
 			},
-			runner: mockRetryableRunner{defaultErrorThreshold: 3},
+			promoter: mockRetryablePromoter{defaultErrorThreshold: 3},
 			assertions: func(t *testing.T, result uint32) {
 				assert.Equal(t, uint32(3), result)
 			},
@@ -149,7 +149,7 @@ func TestPromotionStep_GetErrorThreshold(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := tt.step.GetErrorThreshold(tt.runner)
+			result := tt.step.GetErrorThreshold(tt.promoter)
 			tt.assertions(t, result)
 		})
 	}

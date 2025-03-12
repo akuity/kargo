@@ -19,7 +19,7 @@ import (
 const applicationStatusesKey = "applicationStatuses"
 
 // ArgoCDHealthConfig is the configuration for a health check to be executed by
-// the argocd-update directive.
+// the argocd-update HealthChecker.
 type ArgoCDHealthConfig struct {
 	// Apps is a list health checks to perform on specific Argo CD Applications.
 	Apps []ArgoCDAppHealthCheck `json:"apps"`
@@ -54,8 +54,8 @@ type compositeError interface {
 	Unwrap() []error
 }
 
-// RunHealthCheckStep implements the Directive interface.
-func (a *argocdUpdater) RunHealthCheckStep(
+// CheckHealth implements the HealthChecker interface.
+func (a *argocdUpdater) CheckHealth(
 	ctx context.Context,
 	healthCtx *HealthCheckStepContext,
 ) HealthCheckStepResult {
@@ -71,10 +71,10 @@ func (a *argocdUpdater) RunHealthCheckStep(
 			},
 		}
 	}
-	return a.runHealthCheckStep(ctx, cfg)
+	return a.checkHealth(ctx, cfg)
 }
 
-func (a *argocdUpdater) runHealthCheckStep(
+func (a *argocdUpdater) checkHealth(
 	ctx context.Context,
 	healthCfg ArgoCDHealthConfig,
 ) HealthCheckStepResult {

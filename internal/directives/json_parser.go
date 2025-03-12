@@ -14,25 +14,26 @@ import (
 	"github.com/akuity/kargo/pkg/x/directive/builtin"
 )
 
-// jsonParser is an implementation of the PromotionStepRunner interface that
-// parses a JSON file and extracts specified outputs.
+// jsonParser is an implementation of the Promoter interface that parses a JSON
+// file and extracts specified outputs.
 type jsonParser struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
 // newJSONParser returns a new instance of jsonParser.
-func newJSONParser() PromotionStepRunner {
+func newJSONParser() Promoter {
 	r := &jsonParser{}
 	r.schemaLoader = getConfigSchemaLoader(r.Name())
 	return r
 }
 
-// Name implements the PromotionStepRunner interface.
+// Name implements the NamedRunner interface.
 func (jp *jsonParser) Name() string {
 	return "json-parse"
 }
 
-func (jp *jsonParser) RunPromotionStep(
+// Promote implements the Promoter interface.
+func (jp *jsonParser) Promote(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
@@ -47,7 +48,7 @@ func (jp *jsonParser) RunPromotionStep(
 		return failure, fmt.Errorf("could not convert config into %s config: %w", jp.Name(), err)
 	}
 
-	return jp.runPromotionStep(ctx, stepCtx, cfg)
+	return jp.promote(ctx, stepCtx, cfg)
 }
 
 // validate validates jsonParser configuration against a JSON schema.
@@ -55,7 +56,7 @@ func (jp *jsonParser) validate(cfg Config) error {
 	return validate(jp.schemaLoader, gojsonschema.NewGoLoader(cfg), jp.Name())
 }
 
-func (jp *jsonParser) runPromotionStep(
+func (jp *jsonParser) promote(
 	_ context.Context,
 	stepCtx *PromotionStepContext,
 	cfg builtin.JSONParseConfig,

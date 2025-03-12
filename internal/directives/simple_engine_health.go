@@ -75,17 +75,17 @@ func (e *SimpleEngine) executeHealthCheck(
 	healthCtx HealthCheckContext,
 	step HealthCheckStep,
 ) HealthCheckStepResult {
-	runner := e.registry.getHealthCheckStepRunner(step.Kind)
-	if runner == nil {
+	healthChecker := e.registry.getHealthChecker(step.Kind)
+	if healthChecker == nil {
 		return HealthCheckStepResult{
 			Status: kargoapi.HealthStateUnknown,
 			Issues: []string{
-				fmt.Sprintf("no promotion step runner registered for step kind %q", step.Kind),
+				fmt.Sprintf("no health checker registered for step kind %q", step.Kind),
 			},
 		}
 	}
 	stepCtx := e.prepareHealthCheckStepContext(healthCtx, step)
-	return runner.RunHealthCheckStep(ctx, stepCtx)
+	return healthChecker.CheckHealth(ctx, stepCtx)
 }
 
 // prepareHealthCheckStepContext prepares a HealthCheckStepContext for a HealthCheckStep.

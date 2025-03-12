@@ -6,8 +6,8 @@ import (
 	"github.com/akuity/kargo/internal/credentials"
 )
 
-// InitializeBuiltins registers all built-in step runners with the package's
-// internal step runner registry.
+// InitializeBuiltins registers all built-in step runners (Promoters and/or
+// HealthCheckers) with the package's internal step runner registry.
 func InitializeBuiltins(kargoClient, argocdClient client.Client, credsDB credentials.Database) {
 	builtIns := []NamedRunner{
 		newArgocdUpdater(argocdClient),
@@ -46,47 +46,45 @@ func Register(runner NamedRunner) {
 	runnerReg.register(runner)
 }
 
-// runnerReg is a registry of PromotionStepRunner and HealthCheckStepRunner
-// implementations.
-var runnerReg = stepRunnerRegistry{}
+// runnerReg is a registry of Promoter and HealthChecker implementations.
+var runnerReg = runnerRegistry{}
 
-// stepRunnerRegistry is a registry of named components that can presumably
+// runnerRegistry is a registry of named components that can presumably
 // execute some sort of step, like a step of a promotion process or a health
 // check process.
-type stepRunnerRegistry map[string]NamedRunner
+type runnerRegistry map[string]NamedRunner
 
-// register adds a named component to the stepRunnerRegistry.
-func (s stepRunnerRegistry) register(runner NamedRunner) {
-	s[runner.Name()] = runner
+// register adds a named component to the runnerRegistry.
+func (r runnerRegistry) register(runner NamedRunner) {
+	r[runner.Name()] = runner
 }
 
-// getPromotionStepRunner returns the PromotionStepRunner for the promotion step
-// with the given name, if no runner is registered with the given name or the
-// runner with the given name does not implement PromotionStepRunner, nil is
-// returned.
-func (s stepRunnerRegistry) getPromotionStepRunner(name string) PromotionStepRunner {
-	runner, ok := s[name]
+// getPromoter returns the Promoter with the given name, if no runner is
+// registered with the given name or the runner with the given name does not
+// implement Promoter, nil is returned.
+func (r runnerRegistry) getPromoter(name string) Promoter {
+	runner, ok := r[name]
 	if !ok {
 		return nil
 	}
-	promoStepRunner, ok := runner.(PromotionStepRunner)
+	promoter, ok := runner.(Promoter)
 	if !ok {
 		return nil
 	}
-	return promoStepRunner
+	return promoter
 }
 
-// GetHealthCheckStepRunnerRegistration returns the HealthStepRunnerRegistration
-// for the health check step with the given name, or an error if no such
-// HealthCheckStepRunner is registered.
-func (s stepRunnerRegistry) getHealthCheckStepRunner(name string) HealthCheckStepRunner {
-	runner, ok := s[name]
+// getHealthChecker returns the HealthChecker with the given name, if no runner
+// is registered with the given name or the runner with the given name does not
+// implement HealthChecker, nil is returned.
+func (r runnerRegistry) getHealthChecker(name string) HealthChecker {
+	runner, ok := r[name]
 	if !ok {
 		return nil
 	}
-	healthCheckStepRunner, ok := runner.(HealthCheckStepRunner)
+	healthChecker, ok := runner.(HealthChecker)
 	if !ok {
 		return nil
 	}
-	return healthCheckStepRunner
+	return healthChecker
 }

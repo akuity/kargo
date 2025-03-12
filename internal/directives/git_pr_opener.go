@@ -24,16 +24,16 @@ import (
 // stateKeyPRNumber is the key used to store the PR number in the shared State.
 const stateKeyPRNumber = "prNumber"
 
-// gitPROpener is an implementation of the PromotionStepRunner interface that
-// opens a pull request.
+// gitPROpener is an implementation of the Promoter interface that opens a pull
+// request.
 type gitPROpener struct {
 	schemaLoader gojsonschema.JSONLoader
 	credsDB      credentials.Database
 }
 
-// newGitPROpener returns an implementation of the PromotionStepRunner interface
-// that opens a pull request.
-func newGitPROpener(credsDB credentials.Database) PromotionStepRunner {
+// newGitPROpener returns an implementation of the Promoter interface that opens
+// a pull request.
+func newGitPROpener(credsDB credentials.Database) Promoter {
 	r := &gitPROpener{
 		credsDB: credsDB,
 	}
@@ -41,13 +41,13 @@ func newGitPROpener(credsDB credentials.Database) PromotionStepRunner {
 	return r
 }
 
-// Name implements the PromotionStepRunner interface.
+// Name implements the NamedRunner interface.
 func (g *gitPROpener) Name() string {
 	return "git-open-pr"
 }
 
-// RunPromotionStep implements the PromotionStepRunner interface.
-func (g *gitPROpener) RunPromotionStep(
+// Promote implements the Promoter interface.
+func (g *gitPROpener) Promote(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
@@ -59,7 +59,7 @@ func (g *gitPROpener) RunPromotionStep(
 		return PromotionStepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("could not convert config into git-open-pr config: %w", err)
 	}
-	return g.runPromotionStep(ctx, stepCtx, cfg)
+	return g.promote(ctx, stepCtx, cfg)
 }
 
 // validate validates gitPROpener configuration against a JSON schema.
@@ -67,7 +67,7 @@ func (g *gitPROpener) validate(cfg Config) error {
 	return validate(g.schemaLoader, gojsonschema.NewGoLoader(cfg), g.Name())
 }
 
-func (g *gitPROpener) runPromotionStep(
+func (g *gitPROpener) promote(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 	cfg builtin.GitOpenPRConfig,

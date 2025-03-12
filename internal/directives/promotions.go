@@ -16,22 +16,21 @@ import (
 	"github.com/akuity/kargo/internal/kargo"
 )
 
-// PromotionStepRunner is an interface for components that implement the logic for
+// Promoter is an interface for components that implement the logic for
 // execution of the individual PromotionSteps of a user-defined promotion
 // process.
-type PromotionStepRunner interface {
-	// Name returns the name of the PromotionStepRunner.
-	Name() string
-	// RunPromotionStep executes an individual step of a user-defined promotion
-	// process using the provided PromotionStepContext. Implementations may
-	// indirectly modify that context through the returned PromotionStepResult to
-	// allow subsequent promotion steps to access the results of its execution.
-	RunPromotionStep(context.Context, *PromotionStepContext) (PromotionStepResult, error)
+type Promoter interface {
+	NamedRunner
+	// Promote executes an individual step of a user-defined promotion process
+	// using the provided PromotionStepContext. Implementations may indirectly
+	// modify that context through the returned PromotionStepResult to allow
+	// subsequent promotion steps to access the results of its execution.
+	Promote(context.Context, *PromotionStepContext) (PromotionStepResult, error)
 }
 
-// RetryableStepRunner is an interface for PromotionStepRunners that can be
-// retried in the event of a failure.
-type RetryableStepRunner interface {
+// RetryablePromoter is an interface for Promoters that can be retried in the
+// event of a failure.
+type RetryablePromoter interface {
 	// DefaultTimeout returns the default timeout for the step.
 	DefaultTimeout() *time.Duration
 	// DefaultErrorThreshold returns the number of consecutive times the step must
@@ -84,10 +83,10 @@ type PromotionContext struct {
 
 // PromotionStep describes a single step in a user-defined promotion process.
 // PromotionSteps are executed in sequence by the Engine, which delegates the
-// execution of each step to a PromotionStepRunner.
+// execution of each step to a Promoter.
 type PromotionStep struct {
-	// Kind identifies a registered PromotionStepRunner that implements the logic
-	// for this step of the user-defined promotion process.
+	// Kind identifies a registered Promoter that implements the logic for this
+	// step of the user-defined promotion process.
 	Kind string
 	// Alias is an optional identifier for this step of the use-defined promotion
 	// process, which must be unique to the process. Output from execution of the
@@ -104,8 +103,7 @@ type PromotionStep struct {
 	// Vars is a list of variables definitions that can be used by the
 	// PromotionStep.
 	Vars []kargoapi.PromotionVariable
-	// Config is an opaque JSON to be passed to the PromotionStepRunner executing
-	// this step.
+	// Config is an opaque JSON to be passed to the Promoter executing this step.
 	Config []byte
 }
 
@@ -153,26 +151,26 @@ func StepEnvWithTaskOutputs(alias string, outputs State) PromotionStepEnvOption 
 	}
 }
 
-// GetTimeout returns the maximum interval the provided runner may spend
+// GetTimeout returns the maximum interval the provided promoter may spend
 // attempting to execute the step before retries are abandoned and the entire
-// Promotion is marked as failed. If the runner is a RetryableStepRunner, its
+// Promotion is marked as failed. If the promoter is a RetryablePromoter, its
 // timeout is used as the default. Otherwise, the default is 0 (no limit).
-func (s *PromotionStep) GetTimeout(runner any) *time.Duration {
+func (s *PromotionStep) GetTimeout(promoter any) *time.Duration {
 	fallback := ptr.To(time.Duration(0))
-	if retryCfg, isRetryable := runner.(RetryableStepRunner); isRetryable {
+	if retryCfg, isRetryable := promoter.(RetryablePromoter); isRetryable {
 		fallback = retryCfg.DefaultTimeout()
 	}
 	return s.Retry.GetTimeout(fallback)
 }
 
-// GetErrorThreshold returns the number of consecutive times the provided runner
-// must fail to execute the step (for any reason) before retries are abandoned
-// and the entire Promotion is marked as failed. If the runner is a
-// RetryableStepRunner, its threshold is used as the default. Otherwise, the
+// GetErrorThreshold returns the number of consecutive times the provided
+// promoter must fail to execute the step (for any reason) before retries are
+// abandoned and the entire Promotion is marked as failed. If the promoter is a
+// RetryablePromoter, its threshold is used as the default. Otherwise, the
 // default is 1.
-func (s *PromotionStep) GetErrorThreshold(runner any) uint32 {
+func (s *PromotionStep) GetErrorThreshold(promoter any) uint32 {
 	fallback := uint32(1)
-	if retryCfg, isRetryable := runner.(RetryableStepRunner); isRetryable {
+	if retryCfg, isRetryable := promoter.(RetryablePromoter); isRetryable {
 		fallback = retryCfg.DefaultErrorThreshold()
 	}
 	return s.Retry.GetErrorThreshold(fallback)
@@ -330,8 +328,7 @@ func (s *PromotionStep) GetVars(
 
 // PromotionResult is the result of a user-defined promotion process executed by
 // the Engine. It aggregates the status and output of the individual
-// PromotionStepResults returned by the PromotionStepRunner executing each
-// PromotionStep.
+// PromotionStepResults returned by the Promoter executing each PromotionStep.
 type PromotionResult struct {
 	// Status is the high-level outcome of the user-defined promotion executed by
 	// the Engine.
@@ -340,9 +337,8 @@ type PromotionResult struct {
 	// outcome of the user-defined promotion executed by the Engine.
 	Message string
 	// HealthCheckSteps collects health check configuration returned from the
-	// execution of individual PromotionSteps by their corresponding
-	// PromotionStepRunners. This configuration can later be used as input to
-	// health check processes.
+	// execution of individual PromotionSteps by their corresponding Promoters.
+	// This configuration can later be used as input to health check processes.
 	HealthCheckSteps []HealthCheckStep
 	// If the promotion process remains in-progress, perhaps waiting for a change
 	// in some external state, the value of this field will indicate where to
@@ -356,7 +352,7 @@ type PromotionResult struct {
 }
 
 // PromotionStepContext is a type that represents the context in which a
-// SinglePromotion step is executed by a PromotionStepRunner.
+// SinglePromotion step is executed by a Promoter.
 type PromotionStepContext struct {
 	// UIBaseURL may be used to construct deeper URLs for interacting with the
 	// Kargo UI.
@@ -387,7 +383,7 @@ type PromotionStepContext struct {
 	// TODO: krancour: Longer term, if we can standardize the way that
 	// PromotionSteps express the artifacts they need to work with, we can make
 	// the Engine responsible for finding them and furnishing them directly to
-	// each PromotionStepRunner.
+	// each Promoter.
 	FreightRequests []kargoapi.FreightRequest
 	// Freight is the collection of all Freight referenced by the Promotion. This
 	// collection contains both the Freight that is actively being promoted as
@@ -397,26 +393,26 @@ type PromotionStepContext struct {
 	// TODO: krancour: Longer term, if we can standardize the way that
 	// PromotionSteps express the artifacts they need to work with, we can make
 	// the Engine responsible for finding them and furnishing them directly to
-	// each PromotionStepRunner.
+	// each Promoter.
 	Freight kargoapi.FreightCollection
 }
 
 // PromotionStepResult represents the results of single PromotionStep executed
-// by a PromotionStepRunner.
+// by a Promoter.
 type PromotionStepResult struct {
 	// Status is the high-level outcome a PromotionStep executed by a
-	// PromotionStepRunner.
+	// Promoter.
 	Status kargoapi.PromotionPhase
 	// Message is an optional message that provides additional context about the
-	// outcome of a PromotionStep executed by a PromotionStepRunner.
+	// outcome of a PromotionStep executed by a Promoter.
 	Message string
-	// Output is the opaque output of a PromotionStep executed by a
-	// PromotionStepRunner. The Engine will update shared state with this output,
-	// making it available to subsequent steps.
+	// Output is the opaque output of a PromotionStep executed by a Promoter. The
+	// Engine will update shared state with this output, making it available to
+	// subsequent steps.
 	Output map[string]any
 	// HealthCheckStep is health check opaque configuration optionally returned by
-	// a PromotionStepRunner's successful execution of a PromotionStep. This
-	// configuration can later be used as input to health check processes.
+	// a Promoter's successful execution of a PromotionStep. This configuration
+	// can later be used as input to health check processes.
 	HealthCheckStep *HealthCheckStep
 }
 

@@ -28,29 +28,29 @@ import (
 // Kustomization image field.
 const preserveSeparator = "*"
 
-// kustomizeImageSetter is an implementation  of the PromotionStepRunner
-// interface that sets images in a Kustomization file.
+// kustomizeImageSetter is an implementation of the Promoter interface that sets
+// images in a Kustomization file.
 type kustomizeImageSetter struct {
 	schemaLoader gojsonschema.JSONLoader
 	kargoClient  client.Client
 }
 
-// newKustomizeImageSetter returns an implementation  of the PromotionStepRunner
-// interface that sets images in a Kustomization file.
-func newKustomizeImageSetter(kargoClient client.Client) PromotionStepRunner {
+// newKustomizeImageSetter returns an implementation of the Promoter interface
+// that sets images in a Kustomization file.
+func newKustomizeImageSetter(kargoClient client.Client) Promoter {
 	return &kustomizeImageSetter{
 		schemaLoader: getConfigSchemaLoader("kustomize-set-image"),
 		kargoClient:  kargoClient,
 	}
 }
 
-// Name implements the PromotionStepRunner interface.
+// Name implements the NamedRunner interface.
 func (k *kustomizeImageSetter) Name() string {
 	return "kustomize-set-image"
 }
 
-// RunPromotionStep implements the PromotionStepRunner interface.
-func (k *kustomizeImageSetter) RunPromotionStep(
+// Promote implements the Promoter interface.
+func (k *kustomizeImageSetter) Promote(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 ) (PromotionStepResult, error) {
@@ -66,7 +66,7 @@ func (k *kustomizeImageSetter) RunPromotionStep(
 		return failure, fmt.Errorf("could not convert config into kustomize-set-image config: %w", err)
 	}
 
-	return k.runPromotionStep(ctx, stepCtx, cfg)
+	return k.promote(ctx, stepCtx, cfg)
 }
 
 // validate validates kustomizeImageSetter configuration against a JSON schema.
@@ -74,7 +74,7 @@ func (k *kustomizeImageSetter) validate(cfg Config) error {
 	return validate(k.schemaLoader, gojsonschema.NewGoLoader(cfg), k.Name())
 }
 
-func (k *kustomizeImageSetter) runPromotionStep(
+func (k *kustomizeImageSetter) promote(
 	ctx context.Context,
 	stepCtx *PromotionStepContext,
 	cfg builtin.KustomizeSetImageConfig,
