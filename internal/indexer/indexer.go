@@ -14,9 +14,9 @@ import (
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libargocd "github.com/akuity/kargo/internal/argocd"
-	"github.com/akuity/kargo/internal/controller/promotion"
 	"github.com/akuity/kargo/internal/expressions"
 	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/internal/promotion"
 )
 
 const (

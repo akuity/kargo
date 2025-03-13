@@ -25,7 +25,6 @@ import (
 	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/controller"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
-	"github.com/akuity/kargo/internal/controller/promotion"
 	"github.com/akuity/kargo/internal/event"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/kargo"
@@ -33,6 +32,7 @@ import (
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	"github.com/akuity/kargo/internal/logging"
 	intpredicate "github.com/akuity/kargo/internal/predicate"
+	"github.com/akuity/kargo/internal/promotion"
 )
 
 // ReconcilerConfig represents configuration for the promotion reconciler.

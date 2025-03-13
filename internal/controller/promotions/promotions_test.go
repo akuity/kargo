@@ -16,8 +16,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/controller/promotion"
 	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
+	"github.com/akuity/kargo/internal/promotion"
 )
 
 var (

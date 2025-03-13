@@ -1,4 +1,4 @@
-// source schemas from internal/controller/promotion/runners/builtin/schemas/*.json
+// source schemas from internal/promotion/runners/builtin/schemas/*.json
 // expand the references such that UI can parse easily
 // output to ui/src/gen/directives
 
@@ -38,7 +38,7 @@ const main = async () => {
   const UIDirectivesDir = path.resolve(__dirname, '../src/gen/directives');
   const BackendDirectivesDir = path.resolve(
     __dirname,
-    '../../internal/controller/promotion/runners/builtin/schemas'
+    '../../internal/promotion/runners/builtin/schemas'
   );
   rmSync(UIDirectivesDir, { recursive: true, force: true });
   const source = readdirSync(path.resolve(__dirname, BackendDirectivesDir));
