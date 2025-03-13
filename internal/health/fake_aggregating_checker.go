@@ -6,14 +6,14 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-// FakeMultiChecker is a mock implementation of the MultiChecker interface that
-// can be used to facilitate unit testing.
-type FakeMultiChecker struct {
+// FakeAggregatingChecker is a mock implementation of the AggregatingChecker
+// interface that can be used to facilitate unit testing.
+type FakeAggregatingChecker struct {
 	CheckFn func(ctx context.Context, project, stage string, criteria []Criteria) kargoapi.Health
 }
 
-// Check implements the MultiChecker interface.
-func (f *FakeMultiChecker) Check(
+// Check implements the AggregatingChecker interface.
+func (f *FakeAggregatingChecker) Check(
 	ctx context.Context,
 	project string,
 	stage string,

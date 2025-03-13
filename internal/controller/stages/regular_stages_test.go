@@ -529,7 +529,7 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 			r := &RegularStageReconciler{
 				client:        c,
 				eventRecorder: fakeevent.NewEventRecorder(10),
-				healthChecker: &health.FakeMultiChecker{},
+				healthChecker: &health.FakeAggregatingChecker{},
 			}
 
 			status, requeue, err := r.reconcile(context.Background(), tt.stage, now)
@@ -1622,7 +1622,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 
 			r := &RegularStageReconciler{
 				client: c,
-				healthChecker: &health.FakeMultiChecker{
+				healthChecker: &health.FakeAggregatingChecker{
 					CheckFn: tt.checkHealthFn,
 				},
 			}
@@ -2904,7 +2904,7 @@ func TestRegularStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 
 			r := &RegularStageReconciler{
 				client:        c,
-				healthChecker: &health.FakeMultiChecker{},
+				healthChecker: &health.FakeAggregatingChecker{},
 			}
 
 			status, err := r.markFreightVerifiedForStage(context.Background(), tt.stage)

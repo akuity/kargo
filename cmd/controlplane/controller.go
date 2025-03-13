@@ -336,7 +336,7 @@ func (o *controllerOptions) setupReconcilers(
 
 	if err := stages.NewRegularStageReconciler(
 		stagesReconcilerCfg,
-		health.NewSimpleMultiChecker(),
+		health.NewAggregatingChecker(),
 	).SetupWithManager(
 		ctx,
 		kargoMgr,

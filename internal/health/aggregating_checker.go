@@ -10,26 +10,35 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-// simpleMultiChecker is a simple implementation of the MultiChecker interface
-// that delegates health checks to built-in Checkers.
-type simpleMultiChecker struct {
+// AggregatingChecker is an interface for components that can execute a
+// comprehensive assessment of Stage health by executing a sequence of health
+// checks and aggregating their results.
+type AggregatingChecker interface {
+	// Check executes the specified sequence of health checks and returns a
+	// kargoapi.Health that aggregates their results.
+	Check(ctx context.Context, project, stage string, criteria []Criteria) kargoapi.Health
+}
+
+// aggregatingChecker is the default implementation of the AggregatingChecker
+// interface that delegates health checks to built-in Checkers.
+type aggregatingChecker struct {
 	registry checkerRegistry
 }
 
-// NewSimpleMultiChecker returns a simple implementation of the MultiChecker
-// interface that uses built-in Checkers.
-func NewSimpleMultiChecker() MultiChecker {
-	return &simpleMultiChecker{registry: checkerReg}
+// NewAggregatingChecker returns a default implementation of the
+// AggregatingChecker that delegates health checks to built-in Checkers.
+func NewAggregatingChecker() AggregatingChecker {
+	return &aggregatingChecker{registry: checkerReg}
 }
 
-// Check implements the MultiChecker interface.
-func (e *simpleMultiChecker) Check(
+// Check implements the AggregatingChecker interface.
+func (a *aggregatingChecker) Check(
 	ctx context.Context,
 	project string,
 	stage string,
 	checks []Criteria,
 ) kargoapi.Health {
-	status, issues, output := e.executeHealthChecks(ctx, project, stage, checks)
+	status, issues, output := a.executeHealthChecks(ctx, project, stage, checks)
 	if len(output) == 0 {
 		return kargoapi.Health{
 			Status: status,
@@ -50,7 +59,7 @@ func (e *simpleMultiChecker) Check(
 }
 
 // executeHealthChecks executes a list of HealthChecks in sequence.
-func (e *simpleMultiChecker) executeHealthChecks(
+func (a *aggregatingChecker) executeHealthChecks(
 	ctx context.Context,
 	project string,
 	stage string,
@@ -71,7 +80,7 @@ func (e *simpleMultiChecker) executeHealthChecks(
 		default:
 		}
 
-		result := e.executeHealthCheck(ctx, project, stage, check)
+		result := a.executeHealthCheck(ctx, project, stage, check)
 		aggregatedStatus = aggregatedStatus.Merge(result.Status)
 		aggregatedIssues = append(aggregatedIssues, result.Issues...)
 
@@ -84,13 +93,13 @@ func (e *simpleMultiChecker) executeHealthChecks(
 }
 
 // executeHealthCheck executes a single HealthCheck.
-func (e *simpleMultiChecker) executeHealthCheck(
+func (a *aggregatingChecker) executeHealthCheck(
 	ctx context.Context,
 	project string,
 	stage string,
 	criteria Criteria,
 ) Result {
-	checker := e.registry.getChecker(criteria.Kind)
+	checker := a.registry.getChecker(criteria.Kind)
 	if checker == nil {
 		return Result{
 			Status: kargoapi.HealthStateUnknown,

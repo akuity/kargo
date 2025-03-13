@@ -75,7 +75,7 @@ type RegularStageReconciler struct {
 	cfg           ReconcilerConfig
 	client        client.Client
 	eventRecorder record.EventRecorder
-	healthChecker health.MultiChecker
+	healthChecker health.AggregatingChecker
 
 	backoffCfg wait.Backoff
 }
@@ -83,7 +83,7 @@ type RegularStageReconciler struct {
 // NewRegularStageReconciler creates a new Stages reconciler.
 func NewRegularStageReconciler(
 	cfg ReconcilerConfig,
-	healthChecker health.MultiChecker,
+	healthChecker health.AggregatingChecker,
 ) *RegularStageReconciler {
 	return &RegularStageReconciler{
 		cfg:           cfg,

@@ -9,7 +9,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-func TestSimpleMultiChecker_Check(t *testing.T) {
+func TestAggregatingChecker_Check(t *testing.T) {
 	tests := []struct {
 		name       string
 		criteria   []Criteria
@@ -103,7 +103,7 @@ func TestSimpleMultiChecker_Check(t *testing.T) {
 				},
 			)
 
-			checker := &simpleMultiChecker{
+			checker := &aggregatingChecker{
 				registry: testRegistry,
 			}
 
@@ -113,7 +113,7 @@ func TestSimpleMultiChecker_Check(t *testing.T) {
 	}
 }
 
-func TestSimpleMultiChecker_executeHealthChecks(t *testing.T) {
+func TestAggregatingChecker_executeHealthChecks(t *testing.T) {
 	tests := []struct {
 		name       string
 		criteria   []Criteria
@@ -199,7 +199,7 @@ func TestSimpleMultiChecker_executeHealthChecks(t *testing.T) {
 				},
 			)
 
-			checker := &simpleMultiChecker{
+			checker := &aggregatingChecker{
 				registry: testRegistry,
 			}
 
@@ -214,7 +214,7 @@ func TestSimpleMultiChecker_executeHealthChecks(t *testing.T) {
 	}
 }
 
-func TestSimpleMultiChecker_executeHealthCheck(t *testing.T) {
+func TestAggregatingChecker_executeHealthCheck(t *testing.T) {
 	tests := []struct {
 		name       string
 		criteria   Criteria
@@ -251,7 +251,7 @@ func TestSimpleMultiChecker_executeHealthCheck(t *testing.T) {
 				},
 			)
 
-			checker := &simpleMultiChecker{
+			checker := &aggregatingChecker{
 				registry: testRegistry,
 			}
 
