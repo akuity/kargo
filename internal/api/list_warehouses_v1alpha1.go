@@ -3,6 +3,8 @@ package api
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 
 	"connectrpc.com/connect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,6 +30,10 @@ func (s *server) ListWarehouses(
 	if err := s.client.List(ctx, &list, client.InNamespace(project)); err != nil {
 		return nil, fmt.Errorf("list warehouses: %w", err)
 	}
+
+	slices.SortFunc(list.Items, func(a, b kargoapi.Warehouse) int {
+		return strings.Compare(a.Name, b.Name)
+	})
 
 	warehouses := make([]*kargoapi.Warehouse, len(list.Items))
 	for idx := range list.Items {
