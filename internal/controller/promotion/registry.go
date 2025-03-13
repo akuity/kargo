@@ -1,13 +1,5 @@
 package promotion
 
-// RegisterStepRunner adds a StepRunner to the package's internal registry.
-func RegisterStepRunner(runner StepRunner) {
-	stepRunnerReg.register(runner)
-}
-
-// stepRunnerReg is a registry of StepRunners.
-var stepRunnerReg = stepRunnerRegistry{}
-
 // stepRunnerRegistry is a registry of StepRunners.
 type stepRunnerRegistry map[string]StepRunner
 
@@ -21,4 +13,12 @@ func (s stepRunnerRegistry) register(runner StepRunner) {
 // instead.
 func (s stepRunnerRegistry) getStepRunner(name string) StepRunner {
 	return s[name]
+}
+
+// stepRunnerReg is a registry of StepRunners.
+var stepRunnerReg = stepRunnerRegistry{}
+
+// RegisterStepRunner adds a StepRunner to the package's internal registry.
+func RegisterStepRunner(runner StepRunner) {
+	stepRunnerReg.register(runner)
 }

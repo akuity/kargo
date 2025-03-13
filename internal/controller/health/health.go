@@ -45,7 +45,7 @@ type Result struct {
 	// in StageStatus.
 	Output map[string]any
 	// Issues is a list of issues that were encountered during the execution of
-	// the HealthCheck by a Checker.
+	// the health check by a Checker.
 	Issues []string
 }
 

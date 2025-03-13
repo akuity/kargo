@@ -1,13 +1,5 @@
 package health
 
-// RegisterChecker adds a Checker to the package's internal registry.
-func RegisterChecker(checker Checker) {
-	checkerReg.register(checker)
-}
-
-// checkerReg is a registry of Checkers.
-var checkerReg = checkerRegistry{}
-
 // checkerRegistry is a registry of Checkers.
 type checkerRegistry map[string]Checker
 
@@ -20,4 +12,12 @@ func (c checkerRegistry) register(checker Checker) {
 // no Checker is registered with the given name, nil is returned instead.
 func (c checkerRegistry) getChecker(name string) Checker {
 	return c[name]
+}
+
+// checkerReg is a registry of Checkers.
+var checkerReg = checkerRegistry{}
+
+// RegisterChecker adds a Checker to the package's internal registry.
+func RegisterChecker(checker Checker) {
+	checkerReg.register(checker)
 }
