@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/directives"
+	"github.com/akuity/kargo/internal/controller/promotion"
 	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
 )
 
@@ -30,12 +30,12 @@ func TestNewPromotionReconciler(t *testing.T) {
 	r := newReconciler(
 		kubeClient,
 		&fakeevent.EventRecorder{},
-		&directives.FakeEngine{},
+		&promotion.FakeEngine{},
 		ReconcilerConfig{},
 	)
 	require.NotNil(t, r.kargoClient)
 	require.NotNil(t, r.recorder)
-	require.NotNil(t, r.directivesEngine)
+	require.NotNil(t, r.promoEngine)
 	require.NotNil(t, r.getStageFn)
 	require.NotNil(t, r.promoteFn)
 }
@@ -52,7 +52,7 @@ func newFakeReconciler(
 	return newReconciler(
 		kargoClient,
 		recorder,
-		&directives.FakeEngine{},
+		&promotion.FakeEngine{},
 		ReconcilerConfig{},
 	)
 }

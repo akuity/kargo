@@ -33,7 +33,7 @@ import (
 	"github.com/akuity/kargo/internal/conditions"
 	"github.com/akuity/kargo/internal/controller"
 	argocdapi "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
-	"github.com/akuity/kargo/internal/directives"
+	"github.com/akuity/kargo/internal/controller/health"
 	kargoEvent "github.com/akuity/kargo/internal/event"
 	exprfn "github.com/akuity/kargo/internal/expressions/function"
 	"github.com/akuity/kargo/internal/indexer"
@@ -72,19 +72,22 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 }
 
 type RegularStageReconciler struct {
-	cfg              ReconcilerConfig
-	client           client.Client
-	eventRecorder    record.EventRecorder
-	directivesEngine directives.Engine
+	cfg           ReconcilerConfig
+	client        client.Client
+	eventRecorder record.EventRecorder
+	healthEngine  health.Engine
 
 	backoffCfg wait.Backoff
 }
 
 // NewRegularStageReconciler creates a new Stages reconciler.
-func NewRegularStageReconciler(cfg ReconcilerConfig, engine directives.Engine) *RegularStageReconciler {
+func NewRegularStageReconciler(
+	cfg ReconcilerConfig,
+	healthEngine health.Engine,
+) *RegularStageReconciler {
 	return &RegularStageReconciler{
-		cfg:              cfg,
-		directivesEngine: engine,
+		cfg:          cfg,
+		healthEngine: healthEngine,
 		backoffCfg: wait.Backoff{
 			Duration: 1 * time.Second,
 			Factor:   2,
@@ -744,30 +747,27 @@ func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoa
 		return newStatus
 	}
 
-	// Compose the health check steps.
+	// Compose the health check criteria.
 	healthChecks := lastPromo.Status.HealthChecks
-	var steps []directives.HealthCheckStep
-	for _, step := range healthChecks {
-		steps = append(steps, directives.HealthCheckStep{
-			Kind:   step.Uses,
-			Config: step.GetConfig(),
+	var criteria []health.Criteria
+	for _, check := range healthChecks {
+		criteria = append(criteria, health.Criteria{
+			Kind:  check.Uses,
+			Input: check.GetConfig(),
 		})
 	}
 
-	// Run the health checks.
-	health := r.directivesEngine.CheckHealth(ctx, directives.HealthCheckContext{
-		Project: stage.Namespace,
-		Stage:   stage.Name,
-	}, steps)
-	newStatus.Health = &health
+	// Run the hlth checks.
+	hlth := r.healthEngine.Check(ctx, stage.Namespace, stage.Name, criteria)
+	newStatus.Health = &hlth
 
 	// Set the Healthy condition based on the health status.
-	switch health.Status {
+	switch hlth.Status {
 	case kargoapi.HealthStateHealthy:
 		conditions.Set(&newStatus, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeHealthy,
 			Status:             metav1.ConditionTrue,
-			Reason:             string(health.Status),
+			Reason:             string(hlth.Status),
 			Message:            fmt.Sprintf("Stage is healthy (performed %d health checks)", len(healthChecks)),
 			ObservedGeneration: stage.Generation,
 		})
@@ -775,10 +775,10 @@ func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoa
 		conditions.Set(&newStatus, &metav1.Condition{
 			Type:   kargoapi.ConditionTypeHealthy,
 			Status: metav1.ConditionFalse,
-			Reason: string(health.Status),
+			Reason: string(hlth.Status),
 			Message: fmt.Sprintf(
 				"Stage is unhealthy (%d issues in %d health checks)",
-				len(health.Issues), len(healthChecks),
+				len(hlth.Issues), len(healthChecks),
 			),
 			ObservedGeneration: stage.Generation,
 		})
@@ -786,7 +786,7 @@ func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoa
 		conditions.Set(&newStatus, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeHealthy,
 			Status:             metav1.ConditionUnknown,
-			Reason:             string(health.Status),
+			Reason:             string(hlth.Status),
 			ObservedGeneration: stage.Generation,
 		})
 	}

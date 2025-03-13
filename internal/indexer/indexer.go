@@ -14,7 +14,7 @@ import (
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libargocd "github.com/akuity/kargo/internal/argocd"
-	"github.com/akuity/kargo/internal/directives"
+	"github.com/akuity/kargo/internal/controller/promotion"
 	"github.com/akuity/kargo/internal/expressions"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -143,7 +143,7 @@ func RunningPromotionsByArgoCDApplications(
 
 		// Build just enough context to extract the relevant config from the
 		// argocd-update promotion step.
-		promoCtx := directives.PromotionContext{
+		promoCtx := promotion.Context{
 			Project:   promo.Namespace,
 			Stage:     promo.Spec.Stage,
 			Promotion: promo.Name,
@@ -153,9 +153,9 @@ func RunningPromotionsByArgoCDApplications(
 
 		// Extract the Argo CD Applications from the promotion steps.
 		//
-		// TODO(hidde): This is not ideal as it requires parsing the directives and
-		// treating some of them as special cases. We should consider a more general
-		// approach in the future.
+		// TODO(hidde): This is not ideal as it requires parsing the step configs
+		// and treating some of them as special cases. We should consider a more
+		// general approach in the future.
 		var res []string
 		for i, step := range promo.Spec.Steps {
 			if int64(i) > promo.Status.CurrentStep {
@@ -167,7 +167,7 @@ func RunningPromotionsByArgoCDApplications(
 				continue
 			}
 
-			dirStep := directives.PromotionStep{
+			dirStep := promotion.Step{
 				Kind:   step.Uses,
 				Alias:  step.As,
 				Vars:   step.Vars,
@@ -222,9 +222,9 @@ func RunningPromotionsByArgoCDApplications(
 							if nameTemplate, ok := app["name"].(string); ok {
 								env := dirStep.BuildEnv(
 									promoCtx,
-									directives.StepEnvWithOutputs(promoCtx.State),
-									directives.StepEnvWithTaskOutputs(dirStep.Alias, promoCtx.State),
-									directives.StepEnvWithVars(vars),
+									promotion.StepEnvWithOutputs(promoCtx.State),
+									promotion.StepEnvWithTaskOutputs(dirStep.Alias, promoCtx.State),
+									promotion.StepEnvWithVars(vars),
 								)
 
 								var namespace any = libargocd.Namespace()

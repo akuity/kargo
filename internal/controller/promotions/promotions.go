@@ -25,7 +25,7 @@ import (
 	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/controller"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
-	"github.com/akuity/kargo/internal/directives"
+	"github.com/akuity/kargo/internal/controller/promotion"
 	"github.com/akuity/kargo/internal/event"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/kargo"
@@ -58,8 +58,8 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 
 // reconciler reconciles Promotion resources.
 type reconciler struct {
-	kargoClient      client.Client
-	directivesEngine directives.Engine
+	kargoClient client.Client
+	promoEngine promotion.Engine
 
 	cfg ReconcilerConfig
 
@@ -94,7 +94,7 @@ func SetupReconcilerWithManager(
 	ctx context.Context,
 	kargoMgr manager.Manager,
 	argocdMgr manager.Manager,
-	directivesEngine directives.Engine,
+	promoEngine promotion.Engine,
 	cfg ReconcilerConfig,
 ) error {
 	// Index running Promotions by Argo CD Applications
@@ -110,7 +110,7 @@ func SetupReconcilerWithManager(
 	reconciler := newReconciler(
 		kargoMgr.GetClient(),
 		libEvent.NewRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), cfg.Name()),
-		directivesEngine,
+		promoEngine,
 		cfg,
 	)
 
@@ -171,14 +171,14 @@ func SetupReconcilerWithManager(
 func newReconciler(
 	kargoClient client.Client,
 	recorder record.EventRecorder,
-	directivesEngine directives.Engine,
+	promoEngine promotion.Engine,
 	cfg ReconcilerConfig,
 ) *reconciler {
 	r := &reconciler{
-		kargoClient:      kargoClient,
-		directivesEngine: directivesEngine,
-		recorder:         recorder,
-		cfg:              cfg,
+		kargoClient: kargoClient,
+		promoEngine: promoEngine,
+		recorder:    recorder,
+		cfg:         cfg,
 	}
 	r.getStageFn = api.GetStage
 	r.promoteFn = r.promote
@@ -466,9 +466,9 @@ func (r *reconciler) promote(
 	)
 
 	// Prepare promotion steps and vars for the promotion execution engine.
-	steps := make([]directives.PromotionStep, len(workingPromo.Spec.Steps))
+	steps := make([]promotion.Step, len(workingPromo.Spec.Steps))
 	for i, step := range workingPromo.Spec.Steps {
-		steps[i] = directives.PromotionStep{
+		steps[i] = promotion.Step{
 			Kind:   step.Uses,
 			Alias:  step.As,
 			If:     step.If,
@@ -478,7 +478,7 @@ func (r *reconciler) promote(
 		}
 	}
 
-	promoCtx := directives.PromotionContext{
+	promoCtx := promotion.Context{
 		UIBaseURL:             r.cfg.APIServerBaseURL,
 		WorkDir:               filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID)),
 		Project:               stageNamespace,
@@ -488,7 +488,7 @@ func (r *reconciler) promote(
 		Freight:               *workingPromo.Status.FreightCollection.DeepCopy(),
 		StartFromStep:         promo.Status.CurrentStep,
 		StepExecutionMetadata: promo.Status.StepExecutionMetadata,
-		State:                 directives.State(workingPromo.Status.GetState()),
+		State:                 promotion.State(workingPromo.Status.GetState()),
 		Vars:                  workingPromo.Spec.Vars,
 	}
 	if err := os.Mkdir(promoCtx.WorkDir, 0o700); err == nil {
@@ -510,18 +510,18 @@ func (r *reconciler) promote(
 		}
 	}()
 
-	res, err := r.directivesEngine.Promote(ctx, promoCtx, steps)
+	res, err := r.promoEngine.Promote(ctx, promoCtx, steps)
 	workingPromo.Status.Phase = res.Status
 	workingPromo.Status.Message = res.Message
 	workingPromo.Status.CurrentStep = res.CurrentStep
 	workingPromo.Status.StepExecutionMetadata = res.StepExecutionMetadata
 	workingPromo.Status.State = &apiextensionsv1.JSON{Raw: res.State.ToJSON()}
-	for _, step := range res.HealthCheckSteps {
+	for _, step := range res.HealthChecks {
 		workingPromo.Status.HealthChecks = append(
 			workingPromo.Status.HealthChecks,
 			kargoapi.HealthCheckStep{
 				Uses:   step.Kind,
-				Config: &apiextensionsv1.JSON{Raw: step.Config.ToJSON()},
+				Config: &apiextensionsv1.JSON{Raw: step.Input.ToJSON()},
 			},
 		)
 	}

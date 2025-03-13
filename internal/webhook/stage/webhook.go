@@ -16,7 +16,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
-	"github.com/akuity/kargo/internal/directives"
+	"github.com/akuity/kargo/internal/controller/promotion"
 	libWebhook "github.com/akuity/kargo/internal/webhook"
 )
 
@@ -239,7 +239,7 @@ func (w *webhook) ValidatePromotionTemplate(
 	errs := field.ErrorList{}
 	for i, step := range promoTemplate.Spec.Steps {
 		stepAlias := strings.TrimSpace(step.As)
-		if directives.ReservedStepAliasRegex.MatchString(stepAlias) {
+		if promotion.ReservedStepAliasRegex.MatchString(stepAlias) {
 			errs = append(errs, field.Invalid(
 				f.Child("spec", "steps").Index(i).Child("as"),
 				stepAlias,

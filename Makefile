@@ -204,7 +204,7 @@ codegen-controller: install-controller-gen
 .PHONY: codegen-directive-configs
 codegen-directive-configs:
 	npm install -g quicktype
-	./hack/codegen/directive-configs.sh
+	./hack/codegen/promotion-step-configs.sh
 
 .PHONY: codegen-ui
 codegen-ui:

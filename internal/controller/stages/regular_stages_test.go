@@ -24,7 +24,7 @@ import (
 	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/conditions"
-	"github.com/akuity/kargo/internal/directives"
+	"github.com/akuity/kargo/internal/controller/health"
 	"github.com/akuity/kargo/internal/indexer"
 	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
 )
@@ -527,9 +527,9 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 				Build()
 
 			r := &RegularStageReconciler{
-				client:           c,
-				eventRecorder:    fakeevent.NewEventRecorder(10),
-				directivesEngine: &directives.FakeEngine{},
+				client:        c,
+				eventRecorder: fakeevent.NewEventRecorder(10),
+				healthEngine:  &health.FakeEngine{},
 			}
 
 			status, requeue, err := r.reconcile(context.Background(), tt.stage, now)
@@ -1394,7 +1394,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 	tests := []struct {
 		name          string
 		stage         *kargoapi.Stage
-		checkHealthFn func(context.Context, directives.HealthCheckContext, []directives.HealthCheckStep) kargoapi.Health
+		checkHealthFn func(ctx context.Context, project, stage string, criteria []health.Criteria) kargoapi.Health
 		assertions    func(*testing.T, kargoapi.StageStatus)
 	}{
 		{
@@ -1492,11 +1492,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 					},
 				},
 			},
-			checkHealthFn: func(
-				context.Context,
-				directives.HealthCheckContext,
-				[]directives.HealthCheckStep,
-			) kargoapi.Health {
+			checkHealthFn: func(context.Context, string, string, []health.Criteria) kargoapi.Health {
 				return kargoapi.Health{Status: kargoapi.HealthStateHealthy}
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus) {
@@ -1530,11 +1526,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 					},
 				},
 			},
-			checkHealthFn: func(
-				context.Context,
-				directives.HealthCheckContext,
-				[]directives.HealthCheckStep,
-			) kargoapi.Health {
+			checkHealthFn: func(context.Context, string, string, []health.Criteria) kargoapi.Health {
 				return kargoapi.Health{
 					Status: kargoapi.HealthStateUnhealthy,
 					Issues: []string{
@@ -1575,11 +1567,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 					},
 				},
 			},
-			checkHealthFn: func(
-				context.Context,
-				directives.HealthCheckContext,
-				[]directives.HealthCheckStep,
-			) kargoapi.Health {
+			checkHealthFn: func(context.Context, string, string, []health.Criteria) kargoapi.Health {
 				return kargoapi.Health{Status: kargoapi.HealthStateNotApplicable}
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus) {
@@ -1611,11 +1599,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 					},
 				},
 			},
-			checkHealthFn: func(
-				context.Context,
-				directives.HealthCheckContext,
-				[]directives.HealthCheckStep,
-			) kargoapi.Health {
+			checkHealthFn: func(context.Context, string, string, []health.Criteria) kargoapi.Health {
 				return kargoapi.Health{Status: kargoapi.HealthStateUnknown}
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus) {
@@ -1638,8 +1622,8 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 
 			r := &RegularStageReconciler{
 				client: c,
-				directivesEngine: &directives.FakeEngine{
-					CheckHealthFn: tt.checkHealthFn,
+				healthEngine: &health.FakeEngine{
+					CheckFn: tt.checkHealthFn,
 				},
 			}
 
@@ -2919,8 +2903,8 @@ func TestRegularStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 				Build()
 
 			r := &RegularStageReconciler{
-				client:           c,
-				directivesEngine: &directives.FakeEngine{},
+				client:       c,
+				healthEngine: &health.FakeEngine{},
 			}
 
 			status, err := r.markFreightVerifiedForStage(context.Background(), tt.stage)
