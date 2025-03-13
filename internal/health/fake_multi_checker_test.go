@@ -9,10 +9,10 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-func TestFakeEngine_Check(t *testing.T) {
+func TestFakeMultiChecker_Check(t *testing.T) {
 	t.Run("without function injection", func(t *testing.T) {
-		engine := &FakeEngine{}
-		res := engine.Check(context.Background(), "fake-project", "fake-stage", nil)
+		checker := &FakeMultiChecker{}
+		res := checker.Check(context.Background(), "fake-project", "fake-stage", nil)
 		assert.Equal(t, kargoapi.HealthStateHealthy, res.Status)
 	})
 
@@ -21,14 +21,14 @@ func TestFakeEngine_Check(t *testing.T) {
 		const testProject = "fake-project"
 		const testStage = "fake-stage"
 		criteria := []Criteria{{Kind: "mock"}}
-		engine := &FakeEngine{
+		checker := &FakeMultiChecker{
 			CheckFn: func(givenCtx context.Context, _, _ string, givenCriteria []Criteria) kargoapi.Health {
 				assert.Equal(t, ctx, givenCtx)
 				assert.Equal(t, criteria, givenCriteria)
 				return kargoapi.Health{Status: kargoapi.HealthStateUnhealthy}
 			},
 		}
-		res := engine.Check(ctx, testProject, testStage, criteria)
+		res := checker.Check(ctx, testProject, testStage, criteria)
 		assert.Equal(t, kargoapi.HealthStateUnhealthy, res.Status)
 	})
 }

@@ -9,7 +9,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-func TestSimpleEngine_Check(t *testing.T) {
+func TestSimpleMultiChecker_Check(t *testing.T) {
 	tests := []struct {
 		name       string
 		criteria   []Criteria
@@ -103,17 +103,17 @@ func TestSimpleEngine_Check(t *testing.T) {
 				},
 			)
 
-			engine := &simpleEngine{
+			checker := &simpleMultiChecker{
 				registry: testRegistry,
 			}
 
-			health := engine.Check(ctx, "fake-project", "fake-stage", tt.criteria)
+			health := checker.Check(ctx, "fake-project", "fake-stage", tt.criteria)
 			tt.assertions(t, health)
 		})
 	}
 }
 
-func TestSimpleEngine_executeHealthChecks(t *testing.T) {
+func TestSimpleMultiChecker_executeHealthChecks(t *testing.T) {
 	tests := []struct {
 		name       string
 		criteria   []Criteria
@@ -199,11 +199,11 @@ func TestSimpleEngine_executeHealthChecks(t *testing.T) {
 				},
 			)
 
-			engine := &simpleEngine{
+			checker := &simpleMultiChecker{
 				registry: testRegistry,
 			}
 
-			status, issues, output := engine.executeHealthChecks(
+			status, issues, output := checker.executeHealthChecks(
 				ctx,
 				"fake-project",
 				"fake-stage",
@@ -214,7 +214,7 @@ func TestSimpleEngine_executeHealthChecks(t *testing.T) {
 	}
 }
 
-func TestSimpleEngine_executeHealthCheck(t *testing.T) {
+func TestSimpleMultiChecker_executeHealthCheck(t *testing.T) {
 	tests := []struct {
 		name       string
 		criteria   Criteria
@@ -251,11 +251,11 @@ func TestSimpleEngine_executeHealthCheck(t *testing.T) {
 				},
 			)
 
-			engine := &simpleEngine{
+			checker := &simpleMultiChecker{
 				registry: testRegistry,
 			}
 
-			result := engine.executeHealthCheck(
+			result := checker.executeHealthCheck(
 				context.Background(),
 				"fake-project",
 				"fake-stage",

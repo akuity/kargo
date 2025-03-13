@@ -9,6 +9,15 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
+// MultiChecker is an interface for components that can execute a comprehensive
+// assessment of Stage health by executing a sequence of health checks and
+// aggregating their results.
+type MultiChecker interface {
+	// Check executes the specified sequence of health checks and returns a
+	// kargoapi.Health that aggregates their results.
+	Check(ctx context.Context, project, stage string, criteria []Criteria) kargoapi.Health
+}
+
 // Checker is an interface for components that implement the logic for execution
 // of a health check.
 type Checker interface {

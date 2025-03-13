@@ -10,20 +10,20 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-// simpleEngine is a simple implementation of the Engine interface that uses
-// built-in Checkers.
-type simpleEngine struct {
+// simpleMultiChecker is a simple implementation of the MultiChecker interface
+// that delegates health checks to built-in Checkers.
+type simpleMultiChecker struct {
 	registry checkerRegistry
 }
 
-// NewSimpleEngine returns a simple implementation of the Engine interface that
-// uses built-in Checkers.
-func NewSimpleEngine() Engine {
-	return &simpleEngine{registry: checkerReg}
+// NewSimpleMultiChecker returns a simple implementation of the MultiChecker
+// interface that uses built-in Checkers.
+func NewSimpleMultiChecker() MultiChecker {
+	return &simpleMultiChecker{registry: checkerReg}
 }
 
-// CheckHealth implements the Engine interface.
-func (e *simpleEngine) Check(
+// Check implements the MultiChecker interface.
+func (e *simpleMultiChecker) Check(
 	ctx context.Context,
 	project string,
 	stage string,
@@ -50,7 +50,7 @@ func (e *simpleEngine) Check(
 }
 
 // executeHealthChecks executes a list of HealthChecks in sequence.
-func (e *simpleEngine) executeHealthChecks(
+func (e *simpleMultiChecker) executeHealthChecks(
 	ctx context.Context,
 	project string,
 	stage string,
@@ -84,7 +84,7 @@ func (e *simpleEngine) executeHealthChecks(
 }
 
 // executeHealthCheck executes a single HealthCheck.
-func (e *simpleEngine) executeHealthCheck(
+func (e *simpleMultiChecker) executeHealthCheck(
 	ctx context.Context,
 	project string,
 	stage string,

@@ -75,7 +75,7 @@ type RegularStageReconciler struct {
 	cfg           ReconcilerConfig
 	client        client.Client
 	eventRecorder record.EventRecorder
-	healthEngine  health.Engine
+	healthChecker health.MultiChecker
 
 	backoffCfg wait.Backoff
 }
@@ -83,11 +83,11 @@ type RegularStageReconciler struct {
 // NewRegularStageReconciler creates a new Stages reconciler.
 func NewRegularStageReconciler(
 	cfg ReconcilerConfig,
-	healthEngine health.Engine,
+	healthChecker health.MultiChecker,
 ) *RegularStageReconciler {
 	return &RegularStageReconciler{
-		cfg:          cfg,
-		healthEngine: healthEngine,
+		cfg:           cfg,
+		healthChecker: healthChecker,
 		backoffCfg: wait.Backoff{
 			Duration: 1 * time.Second,
 			Factor:   2,
@@ -758,7 +758,7 @@ func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoa
 	}
 
 	// Run the hlth checks.
-	hlth := r.healthEngine.Check(ctx, stage.Namespace, stage.Name, criteria)
+	hlth := r.healthChecker.Check(ctx, stage.Namespace, stage.Name, criteria)
 	newStatus.Health = &hlth
 
 	// Set the Healthy condition based on the health status.
