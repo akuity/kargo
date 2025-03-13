@@ -38,7 +38,7 @@ const main = async () => {
   const UIDirectivesDir = path.resolve(__dirname, '../src/gen/directives');
   const BackendDirectivesDir = path.resolve(
     __dirname,
-    '../../internal/promotion/runners/builtin/schemas'
+    '../../internal/promotion/runner/builtin/schemas'
   );
   rmSync(UIDirectivesDir, { recursive: true, force: true });
   const source = readdirSync(path.resolve(__dirname, BackendDirectivesDir));
