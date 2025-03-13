@@ -79,6 +79,8 @@ func (a *argocdChecker) Name() string {
 // Check implements the health.Checker interface.
 func (a *argocdChecker) Check(
 	ctx context.Context,
+	_ string,
+	_ string,
 	criteria health.Criteria,
 ) health.Result {
 	cfg, err := health.InputToStruct[ArgoCDHealthInput](criteria.Input)

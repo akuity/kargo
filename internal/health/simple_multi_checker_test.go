@@ -92,7 +92,7 @@ func TestSimpleMultiChecker_Check(t *testing.T) {
 			testRegistry.register(
 				&mockChecker{
 					name: "context-waiter",
-					checkFunc: func(ctx context.Context, _ Criteria) Result {
+					checkFunc: func(ctx context.Context, _, _ string, _ Criteria) Result {
 						cancel()
 						<-ctx.Done()
 						return Result{
@@ -188,7 +188,7 @@ func TestSimpleMultiChecker_executeHealthChecks(t *testing.T) {
 			testRegistry.register(
 				&mockChecker{
 					name: "context-waiter",
-					checkFunc: func(ctx context.Context, _ Criteria) Result {
+					checkFunc: func(ctx context.Context, _, _ string, _ Criteria) Result {
 						cancel()
 						<-ctx.Done()
 						return Result{

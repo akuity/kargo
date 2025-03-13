@@ -24,18 +24,12 @@ type Checker interface {
 	// Name returns the name of the Checker.
 	Name() string
 	// Check executes a health check.
-	Check(context.Context, Criteria) Result
+	Check(ctx context.Context, project, stage string, criteria Criteria) Result
 }
 
 // Criteria describes a request for the execution of a health check by a
 // specific Checker.
 type Criteria struct {
-	// Project is the name of the Project that the health check requested by this
-	// Criteria is associated with.
-	Project string
-	// Stage is the name of the Stage that the health check requested by this
-	// Criteria is associated with.
-	Stage string
 	// Kind identifies a registered Checker that implements the logic
 	// for the health check process.
 	Kind string

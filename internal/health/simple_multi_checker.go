@@ -99,7 +99,5 @@ func (e *simpleMultiChecker) executeHealthCheck(
 			},
 		}
 	}
-	criteria.Project = project
-	criteria.Stage = stage
-	return checker.Check(ctx, criteria)
+	return checker.Check(ctx, project, stage, criteria)
 }
