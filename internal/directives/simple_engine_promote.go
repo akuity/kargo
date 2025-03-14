@@ -139,6 +139,9 @@ func (e *SimpleEngine) executeSteps(
 		stepExecMeta.Status = result.Status
 		stepExecMeta.Message = result.Message
 
+		// Update the state with the output of the step.
+		state[step.Alias] = result.Output
+
 		// TODO(hidde): until we have a better way to handle the output of steps
 		// inflated from tasks, we need to apply a special treatment to the output
 		// to allow it to become available under the alias of the "task".
@@ -150,8 +153,6 @@ func (e *SimpleEngine) executeSteps(
 			for k, v := range result.Output {
 				state[aliasNamespace].(map[string]any)[k] = v // nolint: forcetypeassert
 			}
-		} else {
-			state[step.Alias] = result.Output
 		}
 
 		switch result.Status {
