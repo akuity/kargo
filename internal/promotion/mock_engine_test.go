@@ -10,9 +10,9 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-func TestFakeEngine_Promote(t *testing.T) {
+func TestMockEngine_Promote(t *testing.T) {
 	t.Run("without function injection", func(t *testing.T) {
-		engine := &FakeEngine{}
+		engine := &MockEngine{}
 		res, err := engine.Promote(context.Background(), Context{}, nil)
 		assert.NoError(t, err)
 		assert.Equal(t, kargoapi.PromotionPhaseSucceeded, res.Status)
@@ -25,7 +25,7 @@ func TestFakeEngine_Promote(t *testing.T) {
 		}
 		steps := []Step{{Kind: "mock"}}
 
-		engine := &FakeEngine{
+		engine := &MockEngine{
 			PromoteFn: func(
 				givenCtx context.Context,
 				givenPromoCtx Context,

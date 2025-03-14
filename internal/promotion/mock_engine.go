@@ -6,20 +6,20 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-// FakeEngine is a mock implementation of the Engine interface that can be used
+// MockEngine is a mock implementation of the Engine interface that can be used
 // to facilitate unit testing.
-type FakeEngine struct {
+type MockEngine struct {
 	PromoteFn func(context.Context, Context, []Step) (Result, error)
 }
 
 // Promote implements the Engine interface.
-func (e *FakeEngine) Promote(
+func (m *MockEngine) Promote(
 	ctx context.Context,
 	promoCtx Context,
 	steps []Step,
 ) (Result, error) {
-	if e.PromoteFn == nil {
+	if m.PromoteFn == nil {
 		return Result{Status: kargoapi.PromotionPhaseSucceeded}, nil
 	}
-	return e.PromoteFn(ctx, promoCtx, steps)
+	return m.PromoteFn(ctx, promoCtx, steps)
 }

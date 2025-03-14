@@ -9,9 +9,9 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-func TestFakeAggregatingChecker_Check(t *testing.T) {
+func TestMockAggregatingChecker_Check(t *testing.T) {
 	t.Run("without function injection", func(t *testing.T) {
-		checker := &FakeAggregatingChecker{}
+		checker := &MockAggregatingChecker{}
 		res := checker.Check(context.Background(), "fake-project", "fake-stage", nil)
 		assert.Equal(t, kargoapi.HealthStateHealthy, res.Status)
 	})
@@ -21,7 +21,7 @@ func TestFakeAggregatingChecker_Check(t *testing.T) {
 		const testProject = "fake-project"
 		const testStage = "fake-stage"
 		criteria := []Criteria{{Kind: "mock"}}
-		checker := &FakeAggregatingChecker{
+		checker := &MockAggregatingChecker{
 			CheckFn: func(givenCtx context.Context, _, _ string, givenCriteria []Criteria) kargoapi.Health {
 				assert.Equal(t, ctx, givenCtx)
 				assert.Equal(t, criteria, givenCriteria)

@@ -30,7 +30,7 @@ func TestNewPromotionReconciler(t *testing.T) {
 	r := newReconciler(
 		kubeClient,
 		&fakeevent.EventRecorder{},
-		&promotion.FakeEngine{},
+		&promotion.MockEngine{},
 		ReconcilerConfig{},
 	)
 	require.NotNil(t, r.kargoClient)
@@ -52,7 +52,7 @@ func newFakeReconciler(
 	return newReconciler(
 		kargoClient,
 		recorder,
-		&promotion.FakeEngine{},
+		&promotion.MockEngine{},
 		ReconcilerConfig{},
 	)
 }
