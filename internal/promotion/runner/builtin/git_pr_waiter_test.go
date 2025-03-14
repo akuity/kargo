@@ -12,26 +12,27 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/gitprovider"
-	"github.com/akuity/kargo/internal/promotion"
+	"github.com/akuity/kargo/pkg/promotion"
+	promoPkg "github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
 func Test_gitPRWaiter_validate(t *testing.T) {
 	testCases := []struct {
 		name             string
-		config           promotion.Config
+		config           promoPkg.Config
 		expectedProblems []string
 	}{
 		{
 			name:   "repoURL not specified",
-			config: promotion.Config{},
+			config: promoPkg.Config{},
 			expectedProblems: []string{
 				"(root): repoURL is required",
 			},
 		},
 		{
 			name: "repoURL is empty string",
-			config: promotion.Config{
+			config: promoPkg.Config{
 				"repoURL": "",
 			},
 			expectedProblems: []string{
@@ -40,7 +41,7 @@ func Test_gitPRWaiter_validate(t *testing.T) {
 		},
 		{
 			name: "prNumber not specified",
-			config: promotion.Config{
+			config: promoPkg.Config{
 				"repoURL": "https://github.com/example/repo.git",
 			},
 			expectedProblems: []string{
@@ -49,7 +50,7 @@ func Test_gitPRWaiter_validate(t *testing.T) {
 		},
 		{
 			name: "prNumber is less than 1",
-			config: promotion.Config{
+			config: promoPkg.Config{
 				"prNumber": 0,
 			},
 			expectedProblems: []string{
@@ -58,7 +59,7 @@ func Test_gitPRWaiter_validate(t *testing.T) {
 		},
 		{
 			name: "provider is an invalid value",
-			config: promotion.Config{
+			config: promoPkg.Config{
 				"provider": "bogus",
 			},
 			expectedProblems: []string{
@@ -67,14 +68,14 @@ func Test_gitPRWaiter_validate(t *testing.T) {
 		},
 		{
 			name: "valid without explicit provider",
-			config: promotion.Config{
+			config: promoPkg.Config{
 				"prNumber": 42,
 				"repoURL":  "https://github.com/example/repo.git",
 			},
 		},
 		{
 			name: "valid with explicit provider",
-			config: promotion.Config{
+			config: promoPkg.Config{
 				"provider": "github",
 				"prNumber": 42,
 				"repoURL":  "https://github.com/example/repo.git",
@@ -104,7 +105,7 @@ func Test_gitPRWaiter_run(t *testing.T) {
 	testCases := []struct {
 		name       string
 		provider   gitprovider.Interface
-		assertions func(*testing.T, promotion.StepResult, error)
+		assertions func(*testing.T, promoPkg.StepResult, error)
 	}{
 		{
 			name: "error finding PR",
@@ -116,7 +117,7 @@ func Test_gitPRWaiter_run(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+			assertions: func(t *testing.T, res promoPkg.StepResult, err error) {
 				require.ErrorContains(t, err, "error getting pull request")
 				require.ErrorContains(t, err, "something went wrong")
 				require.Equal(t, kargoapi.PromotionPhaseErrored, res.Status)
@@ -134,7 +135,7 @@ func Test_gitPRWaiter_run(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+			assertions: func(t *testing.T, res promoPkg.StepResult, err error) {
 				require.NoError(t, err)
 				require.Equal(t, kargoapi.PromotionPhaseRunning, res.Status)
 			},
@@ -152,7 +153,7 @@ func Test_gitPRWaiter_run(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+			assertions: func(t *testing.T, res promoPkg.StepResult, err error) {
 				require.ErrorContains(t, err, "closed without being merged")
 				require.True(t, promotion.IsTerminal(err))
 				require.Equal(t, kargoapi.PromotionPhaseFailed, res.Status)
@@ -171,7 +172,7 @@ func Test_gitPRWaiter_run(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+			assertions: func(t *testing.T, res promoPkg.StepResult, err error) {
 				require.NoError(t, err)
 				require.Equal(t, kargoapi.PromotionPhaseSucceeded, res.Status)
 			},
@@ -202,7 +203,7 @@ func Test_gitPRWaiter_run(t *testing.T) {
 
 			res, err := runner.run(
 				context.Background(),
-				&promotion.StepContext{},
+				&promoPkg.StepContext{},
 				builtin.GitWaitForPRConfig{
 					Provider: ptr.To(builtin.Provider(testGitProviderName)),
 				},

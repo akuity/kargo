@@ -13,32 +13,10 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/expressions"
 	exprfn "github.com/akuity/kargo/internal/expressions/function"
-	"github.com/akuity/kargo/internal/health"
 	"github.com/akuity/kargo/internal/kargo"
+	"github.com/akuity/kargo/pkg/health"
+	"github.com/akuity/kargo/pkg/promotion"
 )
-
-// StepRunner is an interface for components that implement the logic for
-// execution of an individual Step in a user-defined promotion process.
-type StepRunner interface {
-	// Name returns the name of the StepRunner.
-	Name() string
-	// Run executes an individual Step from a user-defined promotion process using
-	// the provided StepContext. Implementations may indirectly modify that
-	// context through the returned StepResult to allow StepRunners for subsequent
-	// Steps to access the results of this execution.
-	Run(context.Context, *StepContext) (StepResult, error)
-}
-
-// RetryableStepRunner is an additional interface for StepRunner implementations
-// that can be retried in the event of a failure.
-type RetryableStepRunner interface {
-	// DefaultTimeout returns the default timeout for the step.
-	DefaultTimeout() *time.Duration
-	// DefaultErrorThreshold returns the number of consecutive times the step must
-	// fail (for any reason) before retries are abandoned and the entire Promotion
-	// is marked as failed.
-	DefaultErrorThreshold() uint32
-}
 
 // Context is the context of a user-defined promotion process that is executed
 // by the Engine.
@@ -73,7 +51,7 @@ type Context struct {
 	// of individual promotion steps.
 	StepExecutionMetadata kargoapi.StepExecutionMetadataList
 	// State is the current state of the promotion process.
-	State State
+	State promotion.State
 	// Vars is a list of variables definitions that can be used by the
 	// Steps.
 	Vars []kargoapi.PromotionVariable
@@ -129,7 +107,7 @@ func StepEnvWithSecrets(secrets map[string]map[string]string) StepEnvOption {
 
 // StepEnvWithOutputs returns a StepEnvOption that adds the provided outputs to
 // the environment of the Step.
-func StepEnvWithOutputs(outputs State) StepEnvOption {
+func StepEnvWithOutputs(outputs promotion.State) StepEnvOption {
 	return func(env map[string]any) {
 		env["outputs"] = outputs
 	}
@@ -137,7 +115,7 @@ func StepEnvWithOutputs(outputs State) StepEnvOption {
 
 // StepEnvWithTaskOutputs returns a StepEnvOption that adds the provided
 // task outputs to the environment of the Step.
-func StepEnvWithTaskOutputs(alias string, outputs State) StepEnvOption {
+func StepEnvWithTaskOutputs(alias string, outputs promotion.State) StepEnvOption {
 	return func(env map[string]any) {
 		// Ensure that if the Step originated from a task, the task outputs are
 		// available to the Step. This allows inflated Steps to access the outputs
@@ -155,9 +133,9 @@ func StepEnvWithTaskOutputs(alias string, outputs State) StepEnvOption {
 // attempting to execute the Step before retries are abandoned and the entire
 // Promotion is marked as failed. If the StepRunner is a RetryableStepRunner,
 // its timeout is used as the default. Otherwise, the default is 0 (no limit).
-func (s *Step) GetTimeout(runner StepRunner) *time.Duration {
+func (s *Step) GetTimeout(runner promotion.StepRunner) *time.Duration {
 	fallback := ptr.To(time.Duration(0))
-	if retryCfg, isRetryable := runner.(RetryableStepRunner); isRetryable {
+	if retryCfg, isRetryable := runner.(promotion.RetryableStepRunner); isRetryable {
 		fallback = retryCfg.DefaultTimeout()
 	}
 	return s.Retry.GetTimeout(fallback)
@@ -168,9 +146,9 @@ func (s *Step) GetTimeout(runner StepRunner) *time.Duration {
 // abandoned and the entire Promotion is marked as failed. If the StepRunner is
 // a RetryableStepRunner, its threshold is used as the default. Otherwise, the
 // default is 1.
-func (s *Step) GetErrorThreshold(runner StepRunner) uint32 {
+func (s *Step) GetErrorThreshold(runner promotion.StepRunner) uint32 {
 	fallback := uint32(1)
-	if retryCfg, isRetryable := runner.(RetryableStepRunner); isRetryable {
+	if retryCfg, isRetryable := runner.(promotion.RetryableStepRunner); isRetryable {
 		fallback = retryCfg.DefaultErrorThreshold()
 	}
 	return s.Retry.GetErrorThreshold(fallback)
@@ -201,7 +179,7 @@ func (s *Step) BuildEnv(promoCtx Context, opts ...StepEnvOption) map[string]any 
 
 // Skip returns true if the Step should be skipped based on the If condition.
 // The If condition is evaluated against the provided Context and State.
-func (s *Step) Skip(promoCtx Context, state State) (bool, error) {
+func (s *Step) Skip(promoCtx Context, state promotion.State) (bool, error) {
 	if s.If == "" {
 		return false, nil
 	}
@@ -237,8 +215,8 @@ func (s *Step) GetConfig(
 	ctx context.Context,
 	cl client.Client,
 	promoCtx Context,
-	state State,
-) (Config, error) {
+	state promotion.State,
+) (promotion.Config, error) {
 	if s.Config == nil {
 		return nil, nil
 	}
@@ -279,7 +257,7 @@ func (s *Step) GetConfig(
 
 // GetVars returns the variables defined in the Step. The variables are
 // evaluated against the provided Context.
-func (s *Step) GetVars(promoCtx Context, state State) (map[string]any, error) {
+func (s *Step) GetVars(promoCtx Context, state promotion.State) (map[string]any, error) {
 	vars := make(map[string]any)
 
 	// Evaluate the global variables defined in the Promotion itself, these
@@ -338,78 +316,15 @@ type Result struct {
 	// of individual promotion steps.
 	StepExecutionMetadata kargoapi.StepExecutionMetadataList
 	// State is the current state of the promotion process.
-	State State
-}
-
-// StepContext is a type that represents the context in which a
-// single promotion step is executed by a StepRunner.
-type StepContext struct {
-	// UIBaseURL may be used to construct deeper URLs for interacting with the
-	// Kargo UI.
-	UIBaseURL string
-	// WorkDir is the root directory for the execution of a step.
-	WorkDir string
-	// SharedState is the state shared between steps.
-	SharedState State
-	// Alias is the alias of the step that is currently being executed.
-	Alias string
-	// Config is the configuration of the step that is currently being
-	// executed.
-	Config Config
-	// Project is the Project that the Promotion is associated with.
-	Project string
-	// Stage is the Stage that the Promotion is targeting.
-	Stage string
-	// Promotion is the name of the Promotion.
-	Promotion string
-	// FreightRequests is the list of Freight from various origins that is
-	// requested by the Stage targeted by the Promotion. This information is
-	// sometimes useful to Step that reference a particular artifact and, in the
-	// absence of any explicit information about the origin of that artifact, may
-	// need to examine FreightRequests to determine whether there exists any
-	// ambiguity as to its origin, which a user may then need to resolve.
-	//
-	// TODO: krancour: Longer term, if we can standardize the way that Steps
-	// express the artifacts they need to work with, we can make the Engine
-	// responsible for finding them and furnishing them directly to each
-	// StepRunner.
-	FreightRequests []kargoapi.FreightRequest
-	// Freight is the collection of all Freight referenced by the Promotion. This
-	// collection contains both the Freight that is actively being promoted as
-	// well as any Freight that has been inherited from the target Stage's current
-	// state.
-	//
-	// TODO: krancour: Longer term, if we can standardize the way that Steps
-	// express the artifacts they need to work with, we can make the Engine
-	// responsible for finding them and furnishing them directly to each
-	// StepRunner.
-	Freight kargoapi.FreightCollection
-}
-
-// StepResult represents the results of single Step of a user-defined promotion
-// process executed by a StepRunner.
-type StepResult struct {
-	// Status is the high-level outcome of a Step executed by a StepRunner.
-	Status kargoapi.PromotionPhase
-	// Message is an optional message that provides additional context about the
-	// outcome of a Step executed by a StepRunner.
-	Message string
-	// Output is the opaque output of a Step executed by a StepRunner. The Engine
-	// will update shared state with this output, making it available to the
-	// StepRunners executing subsequent Steps.
-	Output map[string]any
-	// HealthCheck identifies criteria for a health check process. This is
-	// returned by some StepRunner upon successful execution of a Step. These
-	// criteria can be used later as input to a health.Checker.
-	HealthCheck *health.Criteria
+	State promotion.State
 }
 
 // getTaskOutputs returns the outputs of a task that are relevant to the current
 // Step. This is useful when a Step is inflated from a task and needs to access
 // the outputs of that task.
-func getTaskOutputs(alias string, state State) State {
+func getTaskOutputs(alias string, state promotion.State) promotion.State {
 	if namespace := getAliasNamespace(alias); namespace != "" {
-		taskOutputs := make(State)
+		taskOutputs := make(promotion.State)
 		for k, v := range state.DeepCopy() {
 			if getAliasNamespace(k) == namespace {
 				taskOutputs[k[len(namespace)+2:]] = v

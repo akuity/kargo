@@ -18,11 +18,11 @@ import (
 	libargocd "github.com/akuity/kargo/internal/argocd"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/internal/git"
-	"github.com/akuity/kargo/internal/health"
 	checkers "github.com/akuity/kargo/internal/health/checker/builtin"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
-	"github.com/akuity/kargo/internal/promotion"
+	"github.com/akuity/kargo/pkg/health"
+	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 

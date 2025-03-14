@@ -8,6 +8,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/health"
 )
 
 // AggregatingChecker is an interface for components that can execute a
@@ -16,7 +17,7 @@ import (
 type AggregatingChecker interface {
 	// Check executes the specified sequence of health checks and returns a
 	// kargoapi.Health that aggregates their results.
-	Check(ctx context.Context, project, stage string, criteria []Criteria) kargoapi.Health
+	Check(ctx context.Context, project, stage string, criteria []health.Criteria) kargoapi.Health
 }
 
 // aggregatingChecker is the default implementation of the AggregatingChecker
@@ -36,7 +37,7 @@ func (a *aggregatingChecker) Check(
 	ctx context.Context,
 	project string,
 	stage string,
-	checks []Criteria,
+	checks []health.Criteria,
 ) kargoapi.Health {
 	status, issues, output := a.executeHealthChecks(ctx, project, stage, checks)
 	if len(output) == 0 {
@@ -63,7 +64,7 @@ func (a *aggregatingChecker) executeHealthChecks(
 	ctx context.Context,
 	project string,
 	stage string,
-	checks []Criteria,
+	checks []health.Criteria,
 ) (kargoapi.HealthState, []string, []map[string]any) {
 	var (
 		aggregatedStatus = kargoapi.HealthStateHealthy
@@ -97,11 +98,11 @@ func (a *aggregatingChecker) executeHealthCheck(
 	ctx context.Context,
 	project string,
 	stage string,
-	criteria Criteria,
-) Result {
+	criteria health.Criteria,
+) health.Result {
 	checker := a.registry.getChecker(criteria.Kind)
 	if checker == nil {
-		return Result{
+		return health.Result{
 			Status: kargoapi.HealthStateUnknown,
 			Issues: []string{
 				fmt.Sprintf("no health checker registered for health check kind %q", criteria.Kind),

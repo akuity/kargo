@@ -7,6 +7,7 @@ import (
 
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/promotion"
+	promoPkg "github.com/akuity/kargo/pkg/promotion"
 )
 
 var initialized atomic.Uint32
@@ -17,7 +18,7 @@ func Initialize(kargoClient, argocdClient client.Client, credsDB credentials.Dat
 	if !initialized.CompareAndSwap(0, 1) {
 		panic("built-in promotion step runners already initialized")
 	}
-	builtIns := []promotion.StepRunner{
+	builtIns := []promoPkg.StepRunner{
 		newArgocdUpdater(argocdClient),
 		newHelmChartUpdater(credsDB),
 		newFileCopier(),
