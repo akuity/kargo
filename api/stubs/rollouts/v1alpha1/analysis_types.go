@@ -55,16 +55,17 @@ func (d DurationString) Duration() (time.Duration, error) {
 }
 
 type Metric struct {
-	Name                  string                  `json:"name" protobuf:"bytes,1,opt,name=name"`
-	Interval              DurationString          `json:"interval,omitempty" protobuf:"bytes,2,opt,name=interval,casttype=DurationString"`
-	InitialDelay          DurationString          `json:"initialDelay,omitempty" protobuf:"bytes,3,opt,name=initialDelay,casttype=DurationString"`
-	Count                 *intstrutil.IntOrString `json:"count,omitempty" protobuf:"bytes,4,opt,name=count"`
-	SuccessCondition      string                  `json:"successCondition,omitempty" protobuf:"bytes,5,opt,name=successCondition"`
-	FailureCondition      string                  `json:"failureCondition,omitempty" protobuf:"bytes,6,opt,name=failureCondition"`
-	FailureLimit          *intstrutil.IntOrString `json:"failureLimit,omitempty" protobuf:"bytes,7,opt,name=failureLimit"`
-	InconclusiveLimit     *intstrutil.IntOrString `json:"inconclusiveLimit,omitempty" protobuf:"bytes,8,opt,name=inconclusiveLimit"`
-	ConsecutiveErrorLimit *intstrutil.IntOrString `json:"consecutiveErrorLimit,omitempty" protobuf:"bytes,9,opt,name=consecutiveErrorLimit"`
-	Provider              MetricProvider          `json:"provider" protobuf:"bytes,10,opt,name=provider"`
+	Name                    string                  `json:"name" protobuf:"bytes,1,opt,name=name"`
+	Interval                DurationString          `json:"interval,omitempty" protobuf:"bytes,2,opt,name=interval,casttype=DurationString"`
+	InitialDelay            DurationString          `json:"initialDelay,omitempty" protobuf:"bytes,3,opt,name=initialDelay,casttype=DurationString"`
+	Count                   *intstrutil.IntOrString `json:"count,omitempty" protobuf:"bytes,4,opt,name=count"`
+	SuccessCondition        string                  `json:"successCondition,omitempty" protobuf:"bytes,5,opt,name=successCondition"`
+	FailureCondition        string                  `json:"failureCondition,omitempty" protobuf:"bytes,6,opt,name=failureCondition"`
+	FailureLimit            *intstrutil.IntOrString `json:"failureLimit,omitempty" protobuf:"bytes,7,opt,name=failureLimit"`
+	InconclusiveLimit       *intstrutil.IntOrString `json:"inconclusiveLimit,omitempty" protobuf:"bytes,8,opt,name=inconclusiveLimit"`
+	ConsecutiveErrorLimit   *intstrutil.IntOrString `json:"consecutiveErrorLimit,omitempty" protobuf:"bytes,9,opt,name=consecutiveErrorLimit"`
+	Provider                MetricProvider          `json:"provider" protobuf:"bytes,10,opt,name=provider"`
+	ConsecutiveSuccessLimit *intstrutil.IntOrString `json:"consecutiveSuccessLimit,omitempty" protobuf:"bytes,11,opt,name=consecutiveSuccessLimit"`
 }
 
 type DryRun struct {
