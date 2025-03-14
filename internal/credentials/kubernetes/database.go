@@ -6,7 +6,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -70,7 +69,6 @@ func NewDatabase(
 
 	for _, p := range credentialProviders {
 		if p != nil {
-			spew.Dump(p)
 			db.credentialProviders = append(db.credentialProviders, p)
 		}
 	}

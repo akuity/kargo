@@ -26,10 +26,13 @@ import (
 	"github.com/akuity/kargo/internal/controller/warehouses"
 	"github.com/akuity/kargo/internal/credentials"
 	credsdb "github.com/akuity/kargo/internal/credentials/kubernetes"
-	"github.com/akuity/kargo/internal/directives"
+	"github.com/akuity/kargo/internal/health"
+	healthCheckers "github.com/akuity/kargo/internal/health/checker/builtin"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
+	"github.com/akuity/kargo/internal/promotion"
+	promotionStepRunners "github.com/akuity/kargo/internal/promotion/runner/builtin"
 	"github.com/akuity/kargo/internal/server/kubernetes"
 	"github.com/akuity/kargo/internal/types"
 	versionpkg "github.com/akuity/kargo/pkg/x/version"
@@ -315,21 +318,26 @@ func (o *controllerOptions) setupReconcilers(
 	if argocdMgr != nil {
 		argoCDClient = argocdMgr.GetClient()
 	}
-	sharedIndexer := indexer.NewSharedFieldIndexer(kargoMgr.GetFieldIndexer())
 
-	directivesEngine := directives.NewSimpleEngine(credentialsDB, kargoMgr.GetClient(), argoCDClient)
+	promotionStepRunners.Initialize(kargoMgr.GetClient(), argoCDClient, credentialsDB)
+	healthCheckers.Initialize(argoCDClient)
+
+	sharedIndexer := indexer.NewSharedFieldIndexer(kargoMgr.GetFieldIndexer())
 
 	if err := promotions.SetupReconcilerWithManager(
 		ctx,
 		kargoMgr,
 		argocdMgr,
-		directivesEngine,
+		promotion.NewSimpleEngine(kargoMgr.GetClient()),
 		promotions.ReconcilerConfigFromEnv(),
 	); err != nil {
 		return fmt.Errorf("error setting up Promotions reconciler: %w", err)
 	}
 
-	if err := stages.NewRegularStageReconciler(stagesReconcilerCfg, directivesEngine).SetupWithManager(
+	if err := stages.NewRegularStageReconciler(
+		stagesReconcilerCfg,
+		health.NewAggregatingChecker(),
+	).SetupWithManager(
 		ctx,
 		kargoMgr,
 		argocdMgr,
