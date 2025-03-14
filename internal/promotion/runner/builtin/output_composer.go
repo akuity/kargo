@@ -9,6 +9,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/promotion"
+	promoPkg "github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
@@ -39,7 +40,7 @@ type outputComposer struct {
 
 // newOutputComposer returns an implementation of the promotion.StepRunner
 // interface that composes output from previous steps into new output.
-func newOutputComposer() promotion.StepRunner {
+func newOutputComposer() promoPkg.StepRunner {
 	r := &outputComposer{}
 	r.schemaLoader = getConfigSchemaLoader(r.Name())
 	return r
@@ -53,17 +54,17 @@ func (c *outputComposer) Name() string {
 // Run implements the promotion.StepRunner interface.
 func (c *outputComposer) Run(
 	_ context.Context,
-	stepCtx *promotion.StepContext,
-) (promotion.StepResult, error) {
+	stepCtx *promoPkg.StepContext,
+) (promoPkg.StepResult, error) {
 	// Validate the configuration against the JSON Schema.
 	if err := validate(c.schemaLoader, gojsonschema.NewGoLoader(stepCtx.Config), c.Name()); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, err
+		return promoPkg.StepResult{Status: kargoapi.PromotionPhaseErrored}, err
 	}
 
 	// Convert the configuration into a typed object.
-	cfg, err := promotion.ConfigToStruct[builtin.ComposeOutput](stepCtx.Config)
+	cfg, err := promoPkg.ConfigToStruct[builtin.ComposeOutput](stepCtx.Config)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promoPkg.StepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("could not convert config into %s config: %w", c.Name(), err)
 	}
 
@@ -72,8 +73,8 @@ func (c *outputComposer) Run(
 
 func (c *outputComposer) run(
 	cfg builtin.ComposeOutput,
-) (promotion.StepResult, error) {
-	return promotion.StepResult{
+) (promoPkg.StepResult, error) {
+	return promoPkg.StepResult{
 		Status: kargoapi.PromotionPhaseSucceeded,
 		Output: maps.Clone(cfg),
 	}, nil

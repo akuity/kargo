@@ -26,8 +26,8 @@ import (
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/logging"
-	"github.com/akuity/kargo/internal/promotion"
 	intyaml "github.com/akuity/kargo/internal/yaml"
+	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 

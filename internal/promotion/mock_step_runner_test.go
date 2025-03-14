@@ -1,6 +1,10 @@
 package promotion
 
-import "context"
+import (
+	"context"
+
+	"github.com/akuity/kargo/pkg/promotion"
+)
 
 // mockStepRunner is a mock implementation of the StepRunner interface, which
 // can be used for testing.
@@ -10,10 +14,10 @@ type mockStepRunner struct {
 	// runFunc is the function that the StepRunner should call when Run is called.
 	// If set, this function will be called instead of returning RunResult and
 	// RunErr.
-	runFunc func(context.Context, *StepContext) (StepResult, error)
+	runFunc func(context.Context, *promotion.StepContext) (promotion.StepResult, error)
 	// runResult is the result that the StepRunner should return when Run is
 	// called.
-	runResult StepResult
+	runResult promotion.StepResult
 	// runErr is the error that the StepRunner should return when Run is called.
 	runErr error
 }
@@ -24,7 +28,10 @@ func (m *mockStepRunner) Name() string {
 }
 
 // Run implements the promotion.StepRunner interface.
-func (m *mockStepRunner) Run(ctx context.Context, stepCtx *StepContext) (StepResult, error) {
+func (m *mockStepRunner) Run(
+	ctx context.Context,
+	stepCtx *promotion.StepContext,
+) (promotion.StepResult, error) {
 	if m.runFunc != nil {
 		return m.runFunc(ctx, stepCtx)
 	}
