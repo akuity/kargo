@@ -5,28 +5,28 @@ import "context"
 // mockStepRunner is a mock implementation of the StepRunner interface, which
 // can be used for testing.
 type mockStepRunner struct {
-	// RunnerName is the RunnerName of the StepRunner.
-	RunnerName string
-	// RunFunc is the function that the StepRunner should call when Run is called.
+	// name is the name of the StepRunner.
+	name string
+	// runFunc is the function that the StepRunner should call when Run is called.
 	// If set, this function will be called instead of returning RunResult and
 	// RunErr.
-	RunFunc func(context.Context, *StepContext) (StepResult, error)
-	// RunResult is the result that the StepRunner should return when Run is
+	runFunc func(context.Context, *StepContext) (StepResult, error)
+	// runResult is the result that the StepRunner should return when Run is
 	// called.
-	RunResult StepResult
-	// RunErr is the error that the StepRunner should return when Run is called.
-	RunErr error
+	runResult StepResult
+	// runErr is the error that the StepRunner should return when Run is called.
+	runErr error
 }
 
 // Name implements the StepRunner interface.
 func (m *mockStepRunner) Name() string {
-	return m.RunnerName
+	return m.name
 }
 
 // Run implements the promotion.StepRunner interface.
 func (m *mockStepRunner) Run(ctx context.Context, stepCtx *StepContext) (StepResult, error) {
-	if m.RunFunc != nil {
-		return m.RunFunc(ctx, stepCtx)
+	if m.runFunc != nil {
+		return m.runFunc(ctx, stepCtx)
 	}
-	return m.RunResult, m.RunErr
+	return m.runResult, m.runErr
 }

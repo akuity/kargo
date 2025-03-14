@@ -20,7 +20,7 @@ func TestStepRunnerRegistry_register(t *testing.T) {
 		runner1 := &mockStepRunner{}
 		registry.register(runner1)
 		runner2 := &mockStepRunner{
-			RunErr: fmt.Errorf("error"),
+			runErr: fmt.Errorf("error"),
 		}
 		registry.register(runner2)
 		assert.NotSame(t, runner1, registry[runner2.Name()])
