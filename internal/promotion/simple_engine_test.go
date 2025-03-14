@@ -140,10 +140,11 @@ func TestSimpleEngine_Promote(t *testing.T) {
 
 func TestSimpleEngine_executeSteps(t *testing.T) {
 	tests := []struct {
-		name       string
-		promoCtx   Context
-		steps      []Step
-		assertions func(*testing.T, Result, error)
+		name        string
+		stepRunners []StepRunner
+		promoCtx    Context
+		steps       []Step
+		assertions  func(*testing.T, Result, error)
 	}{
 		{
 			name: "fail on invalid step alias",
@@ -430,6 +431,71 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				assert.Contains(t, result.StepExecutionMetadata[0].Message, context.Canceled.Error())
 			},
 		},
+		{
+			name: "output composition step from task",
+			stepRunners: []StepRunner{
+				&mockStepRunner{
+					RunnerName: ComposeOutputStepKind,
+					RunResult: StepResult{
+						Status: kargoapi.PromotionPhaseSucceeded,
+						Output: map[string]any{"test": "value"},
+					},
+				},
+			},
+			steps: []Step{{
+				Kind:  ComposeOutputStepKind,
+				Alias: "task-1::custom-output",
+			}},
+			assertions: func(t *testing.T, result Result, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.Status)
+				assert.Equal(t, int64(0), result.CurrentStep)
+				assert.Len(t, result.StepExecutionMetadata, 1)
+				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.StepExecutionMetadata[0].Status)
+				assert.NotNil(t, result.StepExecutionMetadata[0].StartedAt)
+				assert.NotNil(t, result.StepExecutionMetadata[0].FinishedAt)
+				assert.Equal(t, State{
+					// The output should be available under both the task alias
+					// and the step alias.
+					"task-1::custom-output": map[string]any{
+						"test": "value",
+					},
+					"task-1": map[string]any{
+						"test": "value",
+					},
+				}, result.State)
+			},
+		},
+		{
+			name: "stand alone output composition step",
+			stepRunners: []StepRunner{
+				&mockStepRunner{
+					RunnerName: ComposeOutputStepKind,
+					RunResult: StepResult{
+						Status: kargoapi.PromotionPhaseSucceeded,
+						Output: map[string]any{"test": "value"},
+					},
+				},
+			},
+			steps: []Step{{
+				Kind:  ComposeOutputStepKind,
+				Alias: "custom-output",
+			}},
+			assertions: func(t *testing.T, result Result, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.Status)
+				assert.Equal(t, int64(0), result.CurrentStep)
+				assert.Len(t, result.StepExecutionMetadata, 1)
+				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.StepExecutionMetadata[0].Status)
+				assert.NotNil(t, result.StepExecutionMetadata[0].StartedAt)
+				assert.NotNil(t, result.StepExecutionMetadata[0].FinishedAt)
+				assert.Equal(t, State{
+					"custom-output": map[string]any{
+						"test": "value",
+					},
+				}, result.State)
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -438,7 +504,8 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 			defer cancel()
 
 			testRegistry := stepRunnerRegistry{}
-			testRegistry.register(
+
+			var defaultStepRunners = []StepRunner{
 				&mockStepRunner{
 					RunnerName: "success-step",
 					RunResult: StepResult{
@@ -446,30 +513,22 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 						Output: map[string]any{"key": "value"},
 					},
 				},
-			)
-			testRegistry.register(
 				&mockStepRunner{
 					RunnerName: "running-step",
 					RunResult: StepResult{
 						Status: kargoapi.PromotionPhaseRunning,
 					},
 				},
-			)
-			testRegistry.register(
 				&mockStepRunner{
 					RunnerName: "error-step",
 					RunResult:  StepResult{Status: kargoapi.PromotionPhaseErrored},
 					RunErr:     errors.New("something went wrong"),
 				},
-			)
-			testRegistry.register(
 				&mockStepRunner{
 					RunnerName: "terminal-error-step",
 					RunResult:  StepResult{Status: kargoapi.PromotionPhaseErrored},
 					RunErr:     &TerminalError{Err: errors.New("something went wrong")},
 				},
-			)
-			testRegistry.register(
 				&mockStepRunner{
 					RunnerName: "context-waiter",
 					RunFunc: func(ctx context.Context, _ *StepContext) (StepResult, error) {
@@ -478,7 +537,10 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 						return StepResult{Status: kargoapi.PromotionPhaseErrored}, ctx.Err()
 					},
 				},
-			)
+			}
+			for _, r := range append(defaultStepRunners, tt.stepRunners...) {
+				testRegistry.register(r)
+			}
 
 			engine := &simpleEngine{
 				registry:    testRegistry,

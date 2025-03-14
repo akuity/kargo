@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -124,6 +125,54 @@ func RefreshStage(
 		return nil, fmt.Errorf("refresh: %w", err)
 	}
 	return stage, nil
+}
+
+// AnnotateStageWithArgoCDContext annotates a Stage with the ArgoCD context
+// necessary for the frontend to display ArgoCD information for the Stage.
+//
+// The annotation value is a JSON-encoded list of ArgoCD apps that are
+// associated with the Stage, constructed from the HealthCheckSteps from
+// the latest Promotion.
+//
+// If no ArgoCD apps are found, the annotation is removed.
+func AnnotateStageWithArgoCDContext(
+	ctx context.Context,
+	c client.Client,
+	healthChecks []kargoapi.HealthCheckStep,
+	stage *kargoapi.Stage,
+) error {
+	var argoCDApps []map[string]any
+	for _, healthCheck := range healthChecks {
+		healthCheckConfig := healthCheck.GetConfig()
+
+		appsList, ok := healthCheckConfig["apps"].([]any)
+		if !ok {
+			continue
+		}
+
+		for _, rawApp := range appsList {
+			appConfig, ok := rawApp.(map[string]any)
+			if !ok {
+				continue
+			}
+			argoCDApps = append(argoCDApps, map[string]any{
+				"name":      appConfig["name"],
+				"namespace": appConfig["namespace"],
+			})
+		}
+	}
+
+	// If we did not find any ArgoCD apps, we should remove the annotation.
+	if len(argoCDApps) == 0 {
+		return deleteAnnotation(ctx, c, stage, kargoapi.AnnotationKeyArgoCDContext)
+	}
+
+	// Marshal the ArgoCD context to JSON and set the annotation on the Stage.
+	argoCDAppsJSON, err := json.Marshal(argoCDApps)
+	if err != nil {
+		return fmt.Errorf("failed to marshal ArgoCD context: %w", err)
+	}
+	return patchAnnotation(ctx, c, stage, kargoapi.AnnotationKeyArgoCDContext, string(argoCDAppsJSON))
 }
 
 // ReverifyStageFreight forces reconfirmation of the verification of the

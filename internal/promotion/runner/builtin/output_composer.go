@@ -47,7 +47,7 @@ func newOutputComposer() promotion.StepRunner {
 
 // Name implements the promotion.StepRunner interface.
 func (c *outputComposer) Name() string {
-	return "compose-output"
+	return promotion.ComposeOutputStepKind
 }
 
 // Run implements the promotion.StepRunner interface.

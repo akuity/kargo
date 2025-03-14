@@ -17,6 +17,13 @@ import (
 	"github.com/akuity/kargo/internal/health"
 )
 
+// ComposeOutputStepKind is the name of the step kind that composes the output
+// of a task into the shared state.
+//
+// This is defined here because it's a name that needs to be mutually known to
+// the engine and to the built-in StepRunner that handles this step kind.
+const ComposeOutputStepKind = "compose-output"
+
 // ReservedStepAliasRegex is a regular expression that matches step aliases that
 // are reserved for internal use.
 var ReservedStepAliasRegex = regexp.MustCompile(`^(step|task)-\d+$`)
@@ -161,19 +168,20 @@ func (e *simpleEngine) executeSteps(
 		stepExecMeta.Status = result.Status
 		stepExecMeta.Message = result.Message
 
+		// Update the state with the output of the step.
+		state[step.Alias] = result.Output
+
 		// TODO(hidde): until we have a better way to handle the output of steps
 		// inflated from tasks, we need to apply a special treatment to the output
 		// to allow it to become available under the alias of the "task".
 		aliasNamespace := getAliasNamespace(step.Alias)
-		if aliasNamespace != "" && runner.Name() == "compose-output" {
+		if aliasNamespace != "" && runner.Name() == ComposeOutputStepKind {
 			if state[aliasNamespace] == nil {
 				state[aliasNamespace] = make(map[string]any)
 			}
 			for k, v := range result.Output {
 				state[aliasNamespace].(map[string]any)[k] = v // nolint: forcetypeassert
 			}
-		} else {
-			state[step.Alias] = result.Output
 		}
 
 		switch result.Status {
