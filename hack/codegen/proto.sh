@@ -58,7 +58,11 @@ function main() {
 
   msg "Vendoring dependencies for .proto files generation..."
   set -x
+  # IMPORTANT: This doesn't work unless all our modules (kargo, kargo/api, and
+  # kargo/pkg) are vendored into the workspace. 
   go work use ./src/github.com/akuity/kargo
+  go work use ./src/github.com/akuity/kargo/api
+  go work use ./src/github.com/akuity/kargo/pkg
   go work sync
   go work vendor
 
