@@ -156,7 +156,7 @@ build-cli:
 		./cmd/cli
 
 ################################################################################
-# Used for Nighty/Unstable builds                                              #
+# Used for Nightly/Unstable builds                                              #
 ################################################################################
 
 .PHONY: build-nightly-cli
