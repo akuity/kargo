@@ -27,6 +27,7 @@ import (
 	"github.com/akuity/kargo/internal/health"
 	"github.com/akuity/kargo/internal/indexer"
 	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
+	healthPkg "github.com/akuity/kargo/pkg/health"
 )
 
 func TestRegularStageReconciler_Reconcile(t *testing.T) {
@@ -1394,7 +1395,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 	tests := []struct {
 		name          string
 		stage         *kargoapi.Stage
-		checkHealthFn func(ctx context.Context, project, stage string, criteria []health.Criteria) kargoapi.Health
+		checkHealthFn func(ctx context.Context, project, stage string, criteria []healthPkg.Criteria) kargoapi.Health
 		assertions    func(*testing.T, kargoapi.StageStatus)
 	}{
 		{
@@ -1492,7 +1493,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 					},
 				},
 			},
-			checkHealthFn: func(context.Context, string, string, []health.Criteria) kargoapi.Health {
+			checkHealthFn: func(context.Context, string, string, []healthPkg.Criteria) kargoapi.Health {
 				return kargoapi.Health{Status: kargoapi.HealthStateHealthy}
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus) {
@@ -1526,7 +1527,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 					},
 				},
 			},
-			checkHealthFn: func(context.Context, string, string, []health.Criteria) kargoapi.Health {
+			checkHealthFn: func(context.Context, string, string, []healthPkg.Criteria) kargoapi.Health {
 				return kargoapi.Health{
 					Status: kargoapi.HealthStateUnhealthy,
 					Issues: []string{
@@ -1567,7 +1568,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 					},
 				},
 			},
-			checkHealthFn: func(context.Context, string, string, []health.Criteria) kargoapi.Health {
+			checkHealthFn: func(context.Context, string, string, []healthPkg.Criteria) kargoapi.Health {
 				return kargoapi.Health{Status: kargoapi.HealthStateNotApplicable}
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus) {
@@ -1599,7 +1600,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 					},
 				},
 			},
-			checkHealthFn: func(context.Context, string, string, []health.Criteria) kargoapi.Health {
+			checkHealthFn: func(context.Context, string, string, []healthPkg.Criteria) kargoapi.Health {
 				return kargoapi.Health{Status: kargoapi.HealthStateUnknown}
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus) {

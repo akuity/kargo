@@ -43,6 +43,7 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 	intpredicate "github.com/akuity/kargo/internal/predicate"
 	"github.com/akuity/kargo/internal/rollouts"
+	healthPkg "github.com/akuity/kargo/pkg/health"
 )
 
 // ReconcilerConfig represents configuration for the stage reconciler.
@@ -761,9 +762,9 @@ func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoa
 
 	// Compose the health check criteria.
 	healthChecks := lastPromo.Status.HealthChecks
-	var criteria []health.Criteria
+	var criteria []healthPkg.Criteria
 	for _, check := range healthChecks {
-		criteria = append(criteria, health.Criteria{
+		criteria = append(criteria, healthPkg.Criteria{
 			Kind:  check.Uses,
 			Input: check.GetConfig(),
 		})

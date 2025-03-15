@@ -7,17 +7,18 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/health"
 )
 
 func TestAggregatingChecker_Check(t *testing.T) {
 	tests := []struct {
 		name       string
-		criteria   []Criteria
+		criteria   []health.Criteria
 		assertions func(*testing.T, kargoapi.Health)
 	}{
 		{
 			name: "successful health check",
-			criteria: []Criteria{
+			criteria: []health.Criteria{
 				{Kind: "success-check"},
 			},
 			assertions: func(t *testing.T, health kargoapi.Health) {
@@ -29,7 +30,7 @@ func TestAggregatingChecker_Check(t *testing.T) {
 		},
 		{
 			name: "multiple successful health checks",
-			criteria: []Criteria{
+			criteria: []health.Criteria{
 				{Kind: "success-check"},
 				{Kind: "success-check"},
 			},
@@ -42,7 +43,7 @@ func TestAggregatingChecker_Check(t *testing.T) {
 		},
 		{
 			name: "failed health check",
-			criteria: []Criteria{
+			criteria: []health.Criteria{
 				{Kind: "error-check"},
 			},
 			assertions: func(t *testing.T, health kargoapi.Health) {
@@ -53,7 +54,7 @@ func TestAggregatingChecker_Check(t *testing.T) {
 		},
 		{
 			name: "context cancellation",
-			criteria: []Criteria{
+			criteria: []health.Criteria{
 				{Kind: "context-waiter"},
 			},
 			assertions: func(t *testing.T, health kargoapi.Health) {
@@ -73,7 +74,7 @@ func TestAggregatingChecker_Check(t *testing.T) {
 			testRegistry.register(
 				&mockChecker{
 					name: "success-check",
-					checkResult: Result{
+					checkResult: health.Result{
 						Status: kargoapi.HealthStateHealthy,
 						Output: map[string]any{"test": "success"},
 					},
@@ -82,7 +83,7 @@ func TestAggregatingChecker_Check(t *testing.T) {
 			testRegistry.register(
 				&mockChecker{
 					name: "error-check",
-					checkResult: Result{
+					checkResult: health.Result{
 						Status: kargoapi.HealthStateUnhealthy,
 						Issues: []string{"health check failed"},
 						Output: map[string]any{"test": "error"},
@@ -92,10 +93,10 @@ func TestAggregatingChecker_Check(t *testing.T) {
 			testRegistry.register(
 				&mockChecker{
 					name: "context-waiter",
-					checkFunc: func(ctx context.Context, _, _ string, _ Criteria) Result {
+					checkFunc: func(ctx context.Context, _, _ string, _ health.Criteria) health.Result {
 						cancel()
 						<-ctx.Done()
-						return Result{
+						return health.Result{
 							Status: kargoapi.HealthStateUnknown,
 							Issues: []string{ctx.Err().Error()},
 						}
@@ -116,12 +117,12 @@ func TestAggregatingChecker_Check(t *testing.T) {
 func TestAggregatingChecker_executeHealthChecks(t *testing.T) {
 	tests := []struct {
 		name       string
-		criteria   []Criteria
+		criteria   []health.Criteria
 		assertions func(*testing.T, kargoapi.HealthState, []string, []map[string]any)
 	}{
 		{
 			name: "aggregate multiple healthy checks",
-			criteria: []Criteria{
+			criteria: []health.Criteria{
 				{Kind: "success-check"},
 				{Kind: "success-check"},
 			},
@@ -136,7 +137,7 @@ func TestAggregatingChecker_executeHealthChecks(t *testing.T) {
 		},
 		{
 			name: "merge different health states",
-			criteria: []Criteria{
+			criteria: []health.Criteria{
 				{Kind: "success-check"},
 				{Kind: "error-check"},
 			},
@@ -148,7 +149,7 @@ func TestAggregatingChecker_executeHealthChecks(t *testing.T) {
 		},
 		{
 			name: "context cancellation",
-			criteria: []Criteria{
+			criteria: []health.Criteria{
 				{Kind: "context-waiter"},
 				{Kind: "success-check"}, // Should not execute
 			},
@@ -169,7 +170,7 @@ func TestAggregatingChecker_executeHealthChecks(t *testing.T) {
 			testRegistry.register(
 				&mockChecker{
 					name: "success-check",
-					checkResult: Result{
+					checkResult: health.Result{
 						Status: kargoapi.HealthStateHealthy,
 						Output: map[string]any{"test": "success"},
 					},
@@ -178,7 +179,7 @@ func TestAggregatingChecker_executeHealthChecks(t *testing.T) {
 			testRegistry.register(
 				&mockChecker{
 					name: "error-check",
-					checkResult: Result{
+					checkResult: health.Result{
 						Status: kargoapi.HealthStateUnhealthy,
 						Issues: []string{"health check failed"},
 						Output: map[string]any{"test": "error"},
@@ -188,10 +189,10 @@ func TestAggregatingChecker_executeHealthChecks(t *testing.T) {
 			testRegistry.register(
 				&mockChecker{
 					name: "context-waiter",
-					checkFunc: func(ctx context.Context, _, _ string, _ Criteria) Result {
+					checkFunc: func(ctx context.Context, _, _ string, _ health.Criteria) health.Result {
 						cancel()
 						<-ctx.Done()
-						return Result{
+						return health.Result{
 							Status: kargoapi.HealthStateUnknown,
 							Issues: []string{ctx.Err().Error()},
 						}
@@ -217,21 +218,21 @@ func TestAggregatingChecker_executeHealthChecks(t *testing.T) {
 func TestAggregatingChecker_executeHealthCheck(t *testing.T) {
 	tests := []struct {
 		name       string
-		criteria   Criteria
-		assertions func(*testing.T, Result)
+		criteria   health.Criteria
+		assertions func(*testing.T, health.Result)
 	}{
 		{
 			name:     "successful execution",
-			criteria: Criteria{Kind: "success-check"},
-			assertions: func(t *testing.T, result Result) {
+			criteria: health.Criteria{Kind: "success-check"},
+			assertions: func(t *testing.T, result health.Result) {
 				assert.Equal(t, kargoapi.HealthStateHealthy, result.Status)
 				assert.Empty(t, result.Issues)
 			},
 		},
 		{
 			name:     "unregistered runner",
-			criteria: Criteria{Kind: "unknown"},
-			assertions: func(t *testing.T, result Result) {
+			criteria: health.Criteria{Kind: "unknown"},
+			assertions: func(t *testing.T, result health.Result) {
 				assert.Equal(t, kargoapi.HealthStateUnknown, result.Status)
 				assert.Contains(t, result.Issues[0], "no health checker registered for health check kind")
 				assert.Contains(t, result.Issues[0], "unknown")
@@ -245,7 +246,7 @@ func TestAggregatingChecker_executeHealthCheck(t *testing.T) {
 			testRegistry.register(
 				&mockChecker{
 					name: "success-check",
-					checkResult: Result{
+					checkResult: health.Result{
 						Status: kargoapi.HealthStateHealthy,
 					},
 				},

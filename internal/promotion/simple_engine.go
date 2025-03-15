@@ -14,7 +14,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/health"
+	"github.com/akuity/kargo/pkg/health"
+	"github.com/akuity/kargo/pkg/promotion"
 )
 
 // ComposeOutputStepKind is the name of the step kind that composes the output
@@ -83,7 +84,7 @@ func (e *simpleEngine) executeSteps(
 	// run.
 	state := promoCtx.State.DeepCopy()
 	if state == nil {
-		state = make(State)
+		state = make(promotion.State)
 	}
 
 	var (
@@ -232,7 +233,7 @@ func (e *simpleEngine) executeSteps(
 				healthChecks = append(healthChecks, *healthCheck)
 			}
 			continue // Move on to the next step
-		case IsTerminal(err):
+		case promotion.IsTerminal(err):
 			// This is an unrecoverable error.
 			stepExecMeta.FinishedAt = ptr.To(metav1.Now())
 			return Result{
@@ -322,17 +323,17 @@ func (e *simpleEngine) executeStep(
 	ctx context.Context,
 	promoCtx Context,
 	step Step,
-	runner StepRunner,
+	runner promotion.StepRunner,
 	workDir string,
-	state State,
-) (StepResult, error) {
+	state promotion.State,
+) (promotion.StepResult, error) {
 	stepCtx, err := e.prepareStepContext(ctx, promoCtx, step, workDir, state)
 	if err != nil {
 		// TODO(krancour): We're not yet distinguishing between retryable and
 		// non-retryable errors. When we start to do this, failure to prepare the
 		// step context (likely due to invalid configuration) should be considered
 		// non-retryable.
-		return StepResult{
+		return promotion.StepResult{
 			Status: kargoapi.PromotionPhaseErrored,
 		}, err
 	}
@@ -350,8 +351,8 @@ func (e *simpleEngine) prepareStepContext(
 	promoCtx Context,
 	step Step,
 	workDir string,
-	state State,
-) (*StepContext, error) {
+	state promotion.State,
+) (*promotion.StepContext, error) {
 	stateCopy := state.DeepCopy()
 
 	stepCfg, err := step.GetConfig(ctx, e.kargoClient, promoCtx, stateCopy)
@@ -359,7 +360,7 @@ func (e *simpleEngine) prepareStepContext(
 		return nil, fmt.Errorf("failed to get step config: %w", err)
 	}
 
-	return &StepContext{
+	return &promotion.StepContext{
 		UIBaseURL:       promoCtx.UIBaseURL,
 		WorkDir:         workDir,
 		SharedState:     stateCopy,
