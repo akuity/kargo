@@ -217,7 +217,7 @@ steps:
   config:
     repoURL: ${{ vars.gitRepo }}
     checkout:
-    - commit: ${{ commitFrom(vars.gitRepo) }}
+    - commit: ${{ commitFrom(vars.gitRepo).ID }}
       path: ./src
     - branch: stage/${{ ctx.stage }}
       create: true
@@ -377,7 +377,7 @@ steps:
   config:
     repoURL: ${{ vars.gitRepo }}
     checkout:
-    - commit: ${{ commitFrom(vars.gitRepo) }}
+    - commit: ${{ commitFrom(vars.gitRepo).ID }}
       path: ./src
     - branch: stage/${{ ctx.stage }}
       create: true
