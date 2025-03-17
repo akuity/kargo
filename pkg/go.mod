@@ -1,6 +1,6 @@
 module github.com/akuity/kargo/pkg
 
-go 1.24.0
+go 1.24.1
 
 replace github.com/akuity/kargo/api => ../api
 
