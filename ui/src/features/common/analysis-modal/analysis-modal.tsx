@@ -1,5 +1,5 @@
 import { useQuery } from '@connectrpc/connect-query';
-import { faChartLine, faFileLines } from '@fortawesome/free-solid-svg-icons';
+import { faChartLine, faFileLines, faHistory } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Modal, Tabs } from 'antd';
 import classNames from 'classnames';
@@ -11,6 +11,7 @@ import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { AnalysisRun } from '@ui/gen/api/stubs/rollouts/v1alpha1/generated_pb';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 
+import { AnalysisRunLogs } from '../analysis-run-logs';
 import YamlEditor from '../code-editor/yaml-editor-lazy';
 import { ModalProps } from '../modal/use-modal';
 
@@ -118,6 +119,15 @@ export const AnalysisModal = ({
             isLoading={isLoading}
             disabled
             isHideManagedFieldsDisplayed
+          />
+        </Tabs.TabPane>
+
+        <Tabs.TabPane key='logs' tab='Logs' icon={<FontAwesomeIcon icon={faHistory} />}>
+          <AnalysisRunLogs
+            project={analysis?.metadata?.namespace || ''}
+            stage={analysis?.metadata?.labels['kargo.akuity.io/stage'] || ''}
+            linkFullScreen
+            analysisRunId={analysis?.metadata?.name || ''}
           />
         </Tabs.TabPane>
       </Tabs>
