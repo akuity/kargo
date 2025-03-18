@@ -2,8 +2,6 @@ module github.com/akuity/kargo
 
 go 1.24.1
 
-toolchain go1.24.1
-
 replace (
 	github.com/akuity/kargo/api => ./api
 	github.com/akuity/kargo/pkg => ./pkg
