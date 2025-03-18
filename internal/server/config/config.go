@@ -28,6 +28,8 @@ type ServerConfig struct {
 	ArgoCDConfig                ArgoCDConfig
 	PermissiveCORSPolicyEnabled bool
 	RolloutsIntegrationEnabled  bool
+	AnalysisRunLogURLTemplate   string
+	AnalysisRunLogHTTPHeaders   map[string]string
 }
 
 func ServerConfigFromEnv() ServerConfig {
@@ -55,6 +57,20 @@ func ServerConfigFromEnv() ServerConfig {
 		types.MustParseBool(os.GetEnv("PERMISSIVE_CORS_POLICY_ENABLED", "false"))
 	cfg.RolloutsIntegrationEnabled =
 		types.MustParseBool(os.GetEnv("ROLLOUTS_INTEGRATION_ENABLED", "true"))
+	if cfg.RolloutsIntegrationEnabled {
+		cfg.AnalysisRunLogURLTemplate = os.GetEnv("ANALYSIS_RUN_LOG_URL_TEMPLATE", "")
+		if headersStr := os.GetEnv("ANALYSIS_RUN_LOG_HTTP_HEADERS", ""); headersStr != "" {
+			kvPairs := strings.Split(headersStr, ",")
+			cfg.AnalysisRunLogHTTPHeaders = make(map[string]string, len(kvPairs))
+			for _, kvPair := range kvPairs {
+				kv := strings.SplitN(kvPair, "=", 2)
+				if len(kv) != 2 {
+					panic(fmt.Sprintf("Invalid key-value pair: %s", kvPair))
+				}
+				cfg.AnalysisRunLogHTTPHeaders[strings.TrimSpace(kv[0])] = strings.TrimSpace(kv[1])
+			}
+		}
+	}
 	return cfg
 }
 
