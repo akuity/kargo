@@ -1,8 +1,11 @@
 module github.com/akuity/kargo
 
-go 1.23.4
+go 1.24.1
 
-toolchain go1.24.1
+replace (
+	github.com/akuity/kargo/api => ./api
+	github.com/akuity/kargo/pkg => ./pkg
+)
 
 require (
 	code.gitea.io/sdk/gitea v0.20.0
@@ -11,6 +14,8 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/adrg/xdg v0.5.3
+	github.com/akuity/kargo/api v0.0.0
+	github.com/akuity/kargo/pkg v0.0.0
 	github.com/aws/aws-sdk-go-v2 v1.36.3
 	github.com/aws/aws-sdk-go-v2/config v1.29.9
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.62
