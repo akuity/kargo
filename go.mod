@@ -22,7 +22,7 @@ require (
 	github.com/coreos/go-oidc/v3 v3.13.0
 	github.com/cyphar/filepath-securejoin v0.4.1
 	github.com/evanphx/json-patch/v5 v5.9.11
-	github.com/expr-lang/expr v1.16.9
+	github.com/expr-lang/expr v1.17.0
 	github.com/fatih/structtag v1.2.0
 	github.com/fluxcd/pkg/kustomize v1.16.0
 	github.com/go-git/go-git/v5 v5.14.0
