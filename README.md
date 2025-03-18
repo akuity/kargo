@@ -16,7 +16,7 @@ technologies, like [Argo CD](https://argoproj.github.io/cd/), to streamline and
 automate the progressive rollout of changes across the many stages of an
 application's lifecycle.
 
-![Screenshot](docs/static/img/kargo-dashboard.png)
+![Screenshot](docs/old-docs/static/img/kargo-dashboard.png)
 
 ## Getting Started
 
