@@ -259,6 +259,8 @@ message Metric {
   optional .k8s.io.apimachinery.pkg.util.intstr.IntOrString consecutiveErrorLimit = 9;
 
   optional MetricProvider provider = 10;
+
+  optional .k8s.io.apimachinery.pkg.util.intstr.IntOrString consecutiveSuccessLimit = 11;
 }
 
 message MetricProvider {
