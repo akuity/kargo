@@ -181,6 +181,9 @@ const (
 	// KargoServiceGetAnalysisRunProcedure is the fully-qualified name of the KargoService's
 	// GetAnalysisRun RPC.
 	KargoServiceGetAnalysisRunProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetAnalysisRun"
+	// KargoServiceGetAnalysisRunLogsProcedure is the fully-qualified name of the KargoService's
+	// GetAnalysisRunLogs RPC.
+	KargoServiceGetAnalysisRunLogsProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetAnalysisRunLogs"
 	// KargoServiceListProjectEventsProcedure is the fully-qualified name of the KargoService's
 	// ListProjectEvents RPC.
 	KargoServiceListProjectEventsProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListProjectEvents"
@@ -255,6 +258,7 @@ var (
 	kargoServiceGetClusterAnalysisTemplateMethodDescriptor    = kargoServiceServiceDescriptor.Methods().ByName("GetClusterAnalysisTemplate")
 	kargoServiceDeleteClusterAnalysisTemplateMethodDescriptor = kargoServiceServiceDescriptor.Methods().ByName("DeleteClusterAnalysisTemplate")
 	kargoServiceGetAnalysisRunMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("GetAnalysisRun")
+	kargoServiceGetAnalysisRunLogsMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("GetAnalysisRunLogs")
 	kargoServiceListProjectEventsMethodDescriptor             = kargoServiceServiceDescriptor.Methods().ByName("ListProjectEvents")
 	kargoServiceCreateRoleMethodDescriptor                    = kargoServiceServiceDescriptor.Methods().ByName("CreateRole")
 	kargoServiceDeleteRoleMethodDescriptor                    = kargoServiceServiceDescriptor.Methods().ByName("DeleteRole")
@@ -321,6 +325,7 @@ type KargoServiceClient interface {
 	GetClusterAnalysisTemplate(context.Context, *connect.Request[v1alpha1.GetClusterAnalysisTemplateRequest]) (*connect.Response[v1alpha1.GetClusterAnalysisTemplateResponse], error)
 	DeleteClusterAnalysisTemplate(context.Context, *connect.Request[v1alpha1.DeleteClusterAnalysisTemplateRequest]) (*connect.Response[v1alpha1.DeleteClusterAnalysisTemplateResponse], error)
 	GetAnalysisRun(context.Context, *connect.Request[v1alpha1.GetAnalysisRunRequest]) (*connect.Response[v1alpha1.GetAnalysisRunResponse], error)
+	GetAnalysisRunLogs(context.Context, *connect.Request[v1alpha1.GetAnalysisRunLogsRequest]) (*connect.ServerStreamForClient[v1alpha1.GetAnalysisRunLogsResponse], error)
 	ListProjectEvents(context.Context, *connect.Request[v1alpha1.ListProjectEventsRequest]) (*connect.Response[v1alpha1.ListProjectEventsResponse], error)
 	CreateRole(context.Context, *connect.Request[v1alpha1.CreateRoleRequest]) (*connect.Response[v1alpha1.CreateRoleResponse], error)
 	DeleteRole(context.Context, *connect.Request[v1alpha1.DeleteRoleRequest]) (*connect.Response[v1alpha1.DeleteRoleResponse], error)
@@ -653,6 +658,12 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(kargoServiceGetAnalysisRunMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		getAnalysisRunLogs: connect.NewClient[v1alpha1.GetAnalysisRunLogsRequest, v1alpha1.GetAnalysisRunLogsResponse](
+			httpClient,
+			baseURL+KargoServiceGetAnalysisRunLogsProcedure,
+			connect.WithSchema(kargoServiceGetAnalysisRunLogsMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		listProjectEvents: connect.NewClient[v1alpha1.ListProjectEventsRequest, v1alpha1.ListProjectEventsResponse](
 			httpClient,
 			baseURL+KargoServiceListProjectEventsProcedure,
@@ -758,6 +769,7 @@ type kargoServiceClient struct {
 	getClusterAnalysisTemplate    *connect.Client[v1alpha1.GetClusterAnalysisTemplateRequest, v1alpha1.GetClusterAnalysisTemplateResponse]
 	deleteClusterAnalysisTemplate *connect.Client[v1alpha1.DeleteClusterAnalysisTemplateRequest, v1alpha1.DeleteClusterAnalysisTemplateResponse]
 	getAnalysisRun                *connect.Client[v1alpha1.GetAnalysisRunRequest, v1alpha1.GetAnalysisRunResponse]
+	getAnalysisRunLogs            *connect.Client[v1alpha1.GetAnalysisRunLogsRequest, v1alpha1.GetAnalysisRunLogsResponse]
 	listProjectEvents             *connect.Client[v1alpha1.ListProjectEventsRequest, v1alpha1.ListProjectEventsResponse]
 	createRole                    *connect.Client[v1alpha1.CreateRoleRequest, v1alpha1.CreateRoleResponse]
 	deleteRole                    *connect.Client[v1alpha1.DeleteRoleRequest, v1alpha1.DeleteRoleResponse]
@@ -1033,6 +1045,11 @@ func (c *kargoServiceClient) GetAnalysisRun(ctx context.Context, req *connect.Re
 	return c.getAnalysisRun.CallUnary(ctx, req)
 }
 
+// GetAnalysisRunLogs calls akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisRunLogs.
+func (c *kargoServiceClient) GetAnalysisRunLogs(ctx context.Context, req *connect.Request[v1alpha1.GetAnalysisRunLogsRequest]) (*connect.ServerStreamForClient[v1alpha1.GetAnalysisRunLogsResponse], error) {
+	return c.getAnalysisRunLogs.CallServerStream(ctx, req)
+}
+
 // ListProjectEvents calls akuity.io.kargo.service.v1alpha1.KargoService.ListProjectEvents.
 func (c *kargoServiceClient) ListProjectEvents(ctx context.Context, req *connect.Request[v1alpha1.ListProjectEventsRequest]) (*connect.Response[v1alpha1.ListProjectEventsResponse], error) {
 	return c.listProjectEvents.CallUnary(ctx, req)
@@ -1130,6 +1147,7 @@ type KargoServiceHandler interface {
 	GetClusterAnalysisTemplate(context.Context, *connect.Request[v1alpha1.GetClusterAnalysisTemplateRequest]) (*connect.Response[v1alpha1.GetClusterAnalysisTemplateResponse], error)
 	DeleteClusterAnalysisTemplate(context.Context, *connect.Request[v1alpha1.DeleteClusterAnalysisTemplateRequest]) (*connect.Response[v1alpha1.DeleteClusterAnalysisTemplateResponse], error)
 	GetAnalysisRun(context.Context, *connect.Request[v1alpha1.GetAnalysisRunRequest]) (*connect.Response[v1alpha1.GetAnalysisRunResponse], error)
+	GetAnalysisRunLogs(context.Context, *connect.Request[v1alpha1.GetAnalysisRunLogsRequest], *connect.ServerStream[v1alpha1.GetAnalysisRunLogsResponse]) error
 	ListProjectEvents(context.Context, *connect.Request[v1alpha1.ListProjectEventsRequest]) (*connect.Response[v1alpha1.ListProjectEventsResponse], error)
 	CreateRole(context.Context, *connect.Request[v1alpha1.CreateRoleRequest]) (*connect.Response[v1alpha1.CreateRoleResponse], error)
 	DeleteRole(context.Context, *connect.Request[v1alpha1.DeleteRoleRequest]) (*connect.Response[v1alpha1.DeleteRoleResponse], error)
@@ -1458,6 +1476,12 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(kargoServiceGetAnalysisRunMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	kargoServiceGetAnalysisRunLogsHandler := connect.NewServerStreamHandler(
+		KargoServiceGetAnalysisRunLogsProcedure,
+		svc.GetAnalysisRunLogs,
+		connect.WithSchema(kargoServiceGetAnalysisRunLogsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	kargoServiceListProjectEventsHandler := connect.NewUnaryHandler(
 		KargoServiceListProjectEventsProcedure,
 		svc.ListProjectEvents,
@@ -1612,6 +1636,8 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceDeleteClusterAnalysisTemplateHandler.ServeHTTP(w, r)
 		case KargoServiceGetAnalysisRunProcedure:
 			kargoServiceGetAnalysisRunHandler.ServeHTTP(w, r)
+		case KargoServiceGetAnalysisRunLogsProcedure:
+			kargoServiceGetAnalysisRunLogsHandler.ServeHTTP(w, r)
 		case KargoServiceListProjectEventsProcedure:
 			kargoServiceListProjectEventsHandler.ServeHTTP(w, r)
 		case KargoServiceCreateRoleProcedure:
@@ -1843,6 +1869,10 @@ func (UnimplementedKargoServiceHandler) DeleteClusterAnalysisTemplate(context.Co
 
 func (UnimplementedKargoServiceHandler) GetAnalysisRun(context.Context, *connect.Request[v1alpha1.GetAnalysisRunRequest]) (*connect.Response[v1alpha1.GetAnalysisRunResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisRun is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) GetAnalysisRunLogs(context.Context, *connect.Request[v1alpha1.GetAnalysisRunLogsRequest], *connect.ServerStream[v1alpha1.GetAnalysisRunLogsResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisRunLogs is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) ListProjectEvents(context.Context, *connect.Request[v1alpha1.ListProjectEventsRequest]) (*connect.Response[v1alpha1.ListProjectEventsResponse], error) {
