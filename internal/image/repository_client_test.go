@@ -416,14 +416,18 @@ func TestImageFromV1ImageIndex(t *testing.T) {
 			},
 		},
 		{
-			name: "with platform constraint, success",
+			name: "with platform constraint and index annotations, success",
 			idx: &mockImageIndex{
 				indexManifest: &v1.IndexManifest{
 					Manifests: []v1.Descriptor{{
 						Platform: &v1.Platform{
 							OS:           "linux",
 							Architecture: "amd64",
-						}},
+						},
+					}},
+					Annotations: map[string]string{
+						"org.opencontainers.image.vendor":  "Test Vendor",
+						"org.opencontainers.image.version": "1.0.0",
 					},
 				},
 			},
@@ -435,12 +439,28 @@ func TestImageFromV1ImageIndex(t *testing.T) {
 				getImageByDigestFn: func(
 					context.Context, string, *platformConstraint,
 				) (*Image, error) {
-					return &testImage, nil
+					// Return image with its own annotations
+					return &Image{
+						Digest:    testDigest,
+						CreatedAt: testImage.CreatedAt,
+						Annotations: map[string]string{
+							"org.opencontainers.image.created": "2023-01-01T00:00:00Z",
+							// Duplicate key to test overriding
+							"org.opencontainers.image.version": "1.1.0",
+						},
+					}, nil
 				},
 			},
 			assertions: func(t *testing.T, img *Image, err error) {
 				require.NoError(t, err)
-				require.Equal(t, testImage, *img)
+				require.NotNil(t, img)
+				require.Equal(t, testDigest, img.Digest)
+				require.NotNil(t, img.Annotations)
+				// Image annotations should override index annotations
+				require.Equal(t, "1.1.0", img.Annotations["org.opencontainers.image.version"])
+				// Both sets of annotations should be present
+				require.Equal(t, "Test Vendor", img.Annotations["org.opencontainers.image.vendor"])
+				require.Equal(t, "2023-01-01T00:00:00Z", img.Annotations["org.opencontainers.image.created"])
 			},
 		},
 		{
@@ -491,7 +511,7 @@ func TestImageFromV1ImageIndex(t *testing.T) {
 			},
 		},
 		{
-			name: "without platform constraint, success",
+			name: "without platform constraint and with annotations, success",
 			idx: &mockImageIndex{
 				indexManifest: &v1.IndexManifest{
 					Manifests: []v1.Descriptor{{
@@ -500,18 +520,30 @@ func TestImageFromV1ImageIndex(t *testing.T) {
 							Architecture: "amd64",
 						},
 					}},
+					Annotations: map[string]string{
+						"org.opencontainers.image.vendor": "Test Vendor",
+					},
 				},
 			},
 			client: &repositoryClient{
 				getImageByDigestFn: func(
 					context.Context, string, *platformConstraint,
 				) (*Image, error) {
-					return &testImage, nil
+					return &Image{
+						Digest:    testDigest,
+						CreatedAt: testImage.CreatedAt,
+						Annotations: map[string]string{
+							"org.opencontainers.image.created": "2023-01-01T00:00:00Z",
+						},
+					}, nil
 				},
 			},
 			assertions: func(t *testing.T, img *Image, err error) {
 				require.NoError(t, err)
-				require.Equal(t, testImage, *img)
+				require.NotNil(t, img)
+				require.Equal(t, testDigest, img.Digest)
+				require.Len(t, img.Annotations, 1)
+				require.Equal(t, "Test Vendor", img.Annotations["org.opencontainers.image.vendor"])
 			},
 		},
 	}
@@ -549,6 +581,29 @@ func TestGetImageFromV1Image(t *testing.T) {
 				require.NotNil(t, img)
 				require.NotEmpty(t, img.Digest)
 				require.NotNil(t, img.CreatedAt)
+				require.Nil(t, img.Annotations) // No annotations in manifest
+			},
+		},
+		{
+			name: "with annotations",
+			img: &mockImage{
+				configFile: &v1.ConfigFile{},
+				manifest: &v1.Manifest{
+					Annotations: map[string]string{
+						"org.opencontainers.image.created": "2023-01-01T00:00:00Z",
+						"org.opencontainers.image.authors": "Test Author",
+					},
+				},
+			},
+			client: &repositoryClient{},
+			assertions: func(t *testing.T, img *Image, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, img)
+				require.NotEmpty(t, img.Digest)
+				require.NotNil(t, img.CreatedAt)
+				require.NotNil(t, img.Annotations)
+				require.Equal(t, "Test Author", img.Annotations["org.opencontainers.image.authors"])
+				require.Equal(t, "2023-01-01T00:00:00Z", img.Annotations["org.opencontainers.image.created"])
 			},
 		},
 		{
@@ -570,11 +625,16 @@ func TestGetImageFromV1Image(t *testing.T) {
 			},
 		},
 		{
-			name: "matches platform constraint",
+			name: "matches platform constraint with annotations",
 			img: &mockImage{
 				configFile: &v1.ConfigFile{
 					OS:           "linux",
 					Architecture: "amd64",
+				},
+				manifest: &v1.Manifest{
+					Annotations: map[string]string{
+						"org.opencontainers.image.created": "2023-01-01T00:00:00Z",
+					},
 				},
 			},
 			platform: &platformConstraint{
@@ -587,6 +647,8 @@ func TestGetImageFromV1Image(t *testing.T) {
 				require.NotNil(t, img)
 				require.NotEmpty(t, img.Digest)
 				require.NotNil(t, img.CreatedAt)
+				require.NotNil(t, img.Annotations)
+				require.Equal(t, "2023-01-01T00:00:00Z", img.Annotations["org.opencontainers.image.created"])
 			},
 		},
 	}
@@ -636,6 +698,7 @@ func (m *mockImageIndex) ImageIndex(v1.Hash) (v1.ImageIndex, error) {
 
 type mockImage struct {
 	configFile *v1.ConfigFile
+	manifest   *v1.Manifest
 }
 
 func (m *mockImage) Layers() ([]v1.Layer, error) {
@@ -667,7 +730,10 @@ func (m *mockImage) Digest() (v1.Hash, error) {
 }
 
 func (m *mockImage) Manifest() (*v1.Manifest, error) {
-	return nil, errNotImplemented
+	if m.manifest == nil {
+		return &v1.Manifest{}, nil
+	}
+	return m.manifest, nil
 }
 
 func (m *mockImage) RawManifest() ([]byte, error) {

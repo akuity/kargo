@@ -270,6 +270,10 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 			digest, err,
 		)
 	}
+
+	// Extract annotations from the index manifest
+	annotations := idxManifest.Annotations
+
 	refs := make([]v1.Descriptor, 0, len(idxManifest.Manifests))
 	for _, ref := range idxManifest.Manifests {
 		if ref.Platform == nil ||
@@ -328,6 +332,23 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 			)
 		}
 		img.Digest = digest
+
+		// If annotations is nil, initialize it
+		if annotations == nil {
+			annotations = make(map[string]string)
+		}
+
+		// Then overlay image annotations, allowing them to override index
+		// annotations
+		if img.Annotations != nil {
+			for k, v := range img.Annotations {
+				annotations[k] = v
+			}
+		}
+
+		// Set the merged annotations
+		img.Annotations = annotations
+
 		return img, nil
 	}
 
@@ -352,9 +373,11 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 			createdAt = img.CreatedAt
 		}
 	}
+
 	return &Image{
-		Digest:    digest,
-		CreatedAt: createdAt,
+		Digest:      digest,
+		CreatedAt:   createdAt,
+		Annotations: annotations,
 	}, nil
 }
 
@@ -377,9 +400,20 @@ func (r *repositoryClient) getImageFromV1Image(
 		// This image doesn't match the platform constraint.
 		return nil, nil
 	}
+
+	// Extract annotations from the manifest
+	manifest, err := img.Manifest()
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error getting manifest for image with digest %s: %w",
+			digest, err,
+		)
+	}
+
 	return &Image{
-		Digest:    digest,
-		CreatedAt: &cfg.Created.Time,
+		Digest:      digest,
+		CreatedAt:   &cfg.Created.Time,
+		Annotations: manifest.Annotations,
 	}, nil
 }
 
