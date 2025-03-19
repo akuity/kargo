@@ -2,8 +2,8 @@ import { faExternalLink, faSearch } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Editor } from '@monaco-editor/react';
 import { Checkbox, Input, Select } from 'antd';
-import { editor } from 'monaco-editor';
-import { useMemo, useRef } from 'react';
+import { editor, languages } from 'monaco-editor';
+import { useEffect, useMemo, useRef } from 'react';
 import { generatePath, Link } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -40,6 +40,30 @@ export const AnalysisRunLogs = (props: {
       containerNames
     };
   }, [props.analysisRun]);
+
+  useEffect(() => {
+    languages.register({ id: 'logs' });
+
+    languages.setMonarchTokensProvider('logs', {
+      tokenizer: {
+        root: [
+          [/\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?(Z|[+-]\d{2}:\d{2})?\b/, 'time-format']
+        ]
+      }
+    });
+
+    editor.defineTheme('logsTheme', {
+      base: 'vs',
+      inherit: true,
+      rules: [
+        {
+          token: 'time-format',
+          foreground: '064497'
+        }
+      ],
+      colors: {}
+    });
+  }, []);
 
   return (
     <>
@@ -104,13 +128,15 @@ export const AnalysisRunLogs = (props: {
               analysisRunId: props.analysisRunId
             })}
             className='ml-auto'
-            target='__blank'
+            target='_blank'
           >
             <FontAwesomeIcon icon={faExternalLink} /> Full Screen
           </Link>
         )}
       </div>
       <Editor
+        defaultLanguage='logs'
+        theme='logsTheme'
         value={`2025-03-18T08:34:08.632211717Z [API] Checking API status...
 2025-03-18T08:34:13.637596803Z [API] API is responding with 200 OK
 2025-03-18T08:34:10.834131760Z [API Latency] Measuring API response time...
