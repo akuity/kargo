@@ -2,7 +2,7 @@ import { faExternalLink, faSearch } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Editor } from '@monaco-editor/react';
 import { Checkbox, Input, Select } from 'antd';
-import { editor, Range } from 'monaco-editor';
+import { editor } from 'monaco-editor';
 import { useRef } from 'react';
 import { generatePath, Link } from 'react-router-dom';
 
@@ -16,6 +16,7 @@ export const AnalysisRunLogs = (props: {
   height?: string;
 }) => {
   const logsEditor = useRef<editor.IStandaloneCodeEditor>(null);
+  const editorDecoration = useRef<editor.IEditorDecorationsCollection>(null);
 
   return (
     <>
@@ -27,24 +28,27 @@ export const AnalysisRunLogs = (props: {
           onChange={(e) => {
             const search = e.target.value;
 
+            if (!search) {
+              editorDecoration.current?.clear();
+              return;
+            }
+
             const model = logsEditor.current?.getModel();
 
             if (model) {
               const matches = model.findMatches(search, true, false, false, null, true);
 
-              if (matches?.length > 0) {
-                logsEditor.current?.setSelection(matches[0].range);
-                logsEditor.current?.revealLineInCenter(
-                  matches[matches.length - 1].range.startLineNumber
-                );
-              } else {
-                logsEditor.current?.setSelection(new Range(0, 0, 0, 0));
-              }
+              const decorations = matches.map((match) => ({
+                range: match.range,
+                options: { inlineClassName: 'bg-yellow-300' }
+              }));
+
+              editorDecoration.current?.set(decorations);
             }
           }}
         />
 
-        <label className='font-semibold ml-5'>Job: </label>
+        <label className='font-semibold ml-5'>Metric: </label>
         <Select
           value='All'
           className='ml-2 w-1/5'
@@ -190,6 +194,7 @@ export const AnalysisRunLogs = (props: {
         options={{ readOnly: true }}
         onMount={(editor) => {
           logsEditor.current = editor;
+          editorDecoration.current = editor.createDecorationsCollection([]);
         }}
       />
     </>
