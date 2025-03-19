@@ -3,10 +3,11 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Editor } from '@monaco-editor/react';
 import { Checkbox, Input, Select } from 'antd';
 import { editor } from 'monaco-editor';
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { generatePath, Link } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { AnalysisRun } from '@ui/gen/api/stubs/rollouts/v1alpha1/generated_pb';
 
 export const AnalysisRunLogs = (props: {
   linkFullScreen?: boolean;
@@ -14,9 +15,31 @@ export const AnalysisRunLogs = (props: {
   stage: string;
   analysisRunId: string;
   height?: string;
+  analysisRun: AnalysisRun;
 }) => {
   const logsEditor = useRef<editor.IStandaloneCodeEditor>(null);
   const editorDecoration = useRef<editor.IEditorDecorationsCollection>(null);
+
+  const filterableItems = useMemo(() => {
+    const logsEligibleMetrics = props.analysisRun?.spec?.metrics?.filter(
+      (metric) => !!metric?.provider?.job
+    );
+
+    const containerNames: string[] = [];
+
+    for (const logsEligibleMetric of logsEligibleMetrics || []) {
+      const containers = logsEligibleMetric?.provider?.job?.spec?.template?.spec?.containers;
+
+      for (const container of containers || []) {
+        containerNames.push(container?.name);
+      }
+    }
+
+    return {
+      jobNames: logsEligibleMetrics?.map((metric) => metric?.name) || [],
+      containerNames
+    };
+  }, [props.analysisRun]);
 
   return (
     <>
@@ -52,31 +75,18 @@ export const AnalysisRunLogs = (props: {
         <Select
           value='All'
           className='ml-2 w-1/5'
-          options={[
-            {
-              label: 'All'
-            },
-            {
-              label: 'api-check'
-            },
-            {
-              label: 'db-check'
-            },
-            {
-              label: 'cache-check'
-            }
-          ]}
+          options={filterableItems.jobNames.map((job) => ({
+            label: job
+          }))}
         />
 
         <label className='font-semibold ml-5'>Container: </label>
         <Select
           className='ml-2 w-1/5'
           value='All'
-          options={[
-            {
-              label: 'All'
-            }
-          ]}
+          options={filterableItems.containerNames.map((container) => ({
+            label: container
+          }))}
         />
       </div>
 

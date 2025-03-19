@@ -61,8 +61,8 @@ export const App = () => (
                     element={<Project tab='pipelines' creatingWarehouse />}
                   />
                 </Route>
+                <Route path={paths.analysisRunLogs} element={<AnalysisRunLogsPage />} />
               </Route>
-              <Route path={paths.analysisRunLogs} element={<AnalysisRunLogsPage />} />
               <Route path={paths.login} element={<Login />} />
               <Route path={paths.tokenRenew} element={<TokenRenew />} />
             </Routes>

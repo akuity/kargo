@@ -128,6 +128,7 @@ export const AnalysisModal = ({
             stage={analysis?.metadata?.labels['kargo.akuity.io/stage'] || ''}
             linkFullScreen
             analysisRunId={analysis?.metadata?.name || ''}
+            analysisRun={analysisRunData?.result?.value as AnalysisRun}
           />
         </Tabs.TabPane>
       </Tabs>
