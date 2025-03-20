@@ -466,6 +466,9 @@ type DiscoveredImageReference struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]+:[a-f0-9]+$`
 	Digest string `json:"digest" protobuf:"bytes,2,opt,name=digest"`
+	// Annotations is a map of key-value pairs that provide additional
+	// information about the image.
+	Annotations map[string]string `json:"annotations,omitempty" protobuf:"bytes,5,rep,name=annotations" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// GitRepoURL is the URL of the Git repository that contains the source
 	// code for this image. This field is optional, and only populated if the
 	// ImageSubscription specifies a GitRepoURL.

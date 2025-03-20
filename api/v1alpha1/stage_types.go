@@ -3,6 +3,7 @@ package v1alpha1
 import (
 	"crypto/sha1"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 
@@ -524,6 +525,8 @@ type Image struct {
 	// Digest identifies a specific version of the image in the repository
 	// specified by RepoURL. This is a more precise identifier than Tag.
 	Digest string `json:"digest,omitempty" protobuf:"bytes,4,opt,name=digest"`
+	// Annotations is a map of arbitrary metadata for the image.
+	Annotations map[string]string `json:"annotations,omitempty" protobuf:"bytes,5,rep,name=annotations" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 }
 
 // DeepEquals returns a bool indicating whether the receiver deep-equals the
@@ -538,7 +541,8 @@ func (i *Image) DeepEquals(other *Image) bool {
 	return i.RepoURL == other.RepoURL &&
 		i.GitRepoURL == other.GitRepoURL &&
 		i.Tag == other.Tag &&
-		i.Digest == other.Digest
+		i.Digest == other.Digest &&
+		maps.Equal(i.Annotations, other.Annotations)
 }
 
 // Chart describes a specific version of a Helm chart.

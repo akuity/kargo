@@ -461,10 +461,11 @@ func (r *reconciler) buildFreightFromLatestArtifacts(
 		}
 		latestImage := result.References[0]
 		freight.Images = append(freight.Images, kargoapi.Image{
-			RepoURL:    result.RepoURL,
-			GitRepoURL: latestImage.GitRepoURL,
-			Tag:        latestImage.Tag,
-			Digest:     latestImage.Digest,
+			RepoURL:     result.RepoURL,
+			GitRepoURL:  latestImage.GitRepoURL,
+			Tag:         latestImage.Tag,
+			Digest:      latestImage.Digest,
+			Annotations: latestImage.Annotations,
 		})
 	}
 
