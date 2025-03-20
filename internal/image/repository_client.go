@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"time"
 
@@ -239,7 +240,25 @@ func (r *repositoryClient) getImageFromRemoteDesc(
 				desc.Digest.String(), err,
 			)
 		}
-		return r.getImageFromV1ImageIndexFn(ctx, desc.Digest.String(), idx, platform)
+
+		img, err := r.getImageFromV1ImageIndexFn(ctx, desc.Digest.String(), idx, platform)
+		if err != nil {
+			return nil, err
+		}
+
+		// If the descriptor has annotations, merge them into the annotations
+		// collected from the index and manifest. The descriptor's annotations
+		// will have a lower precedence than any annotations collected for the
+		// image.
+		if img != nil && desc.Annotations != nil {
+			baseAnnotations := desc.Annotations
+			if img.Annotations != nil {
+				maps.Copy(baseAnnotations, img.Annotations)
+			}
+			img.Annotations = baseAnnotations
+		}
+
+		return img, nil
 	case types.OCIManifestSchema1, types.DockerManifestSchema2:
 		img, err := desc.Image()
 		if err != nil {
@@ -248,7 +267,24 @@ func (r *repositoryClient) getImageFromRemoteDesc(
 				desc.Digest.String(), err,
 			)
 		}
-		return r.getImageFromV1ImageFn(desc.Digest.String(), img, platform)
+
+		finalImg, err := r.getImageFromV1ImageFn(desc.Digest.String(), img, platform)
+		if err != nil {
+			return nil, err
+		}
+
+		// If the descriptor has annotations, merge them into the annotations
+		// collected from the index and manifest. The descriptor's annotations
+		// will have a lower precedence than any annotations collected for the
+		// image.
+		if finalImg != nil && desc.Annotations != nil {
+			baseAnnotations := desc.Annotations
+			if finalImg.Annotations != nil {
+				maps.Copy(baseAnnotations, finalImg.Annotations)
+			}
+			finalImg.Annotations = baseAnnotations
+		}
+		return finalImg, nil
 	default:
 		return nil, fmt.Errorf("unknown artifact type: %s", desc.MediaType)
 	}
@@ -271,7 +307,8 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 		)
 	}
 
-	// Extract annotations from the index manifest
+	// Extract annotations from the index manifest. More specific annotations
+	// from manifests or descriptors will be merged into these.
 	annotations := idxManifest.Annotations
 
 	refs := make([]v1.Descriptor, 0, len(idxManifest.Manifests))
@@ -293,19 +330,17 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 	if platform != nil {
 		var matchedRefs []v1.Descriptor
 		for _, ref := range refs {
-			if !platform.matches(
-				ref.Platform.OS,
-				ref.Platform.Architecture,
-				ref.Platform.Variant,
-			) {
+			if !platform.matches(ref.Platform.OS, ref.Platform.Architecture, ref.Platform.Variant) {
 				continue
 			}
 			matchedRefs = append(matchedRefs, ref)
 		}
+
 		if len(matchedRefs) == 0 {
 			// No refs matched the platform
 			return nil, nil
 		}
+
 		if len(matchedRefs) > 1 {
 			// This really shouldn't happen.
 			return nil, fmt.Errorf(
@@ -314,7 +349,9 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 				len(matchedRefs),
 			)
 		}
+
 		ref := matchedRefs[0]
+
 		img, err := r.getImageByDigestFn(ctx, ref.Digest.String(), platform)
 		if err != nil {
 			return nil, fmt.Errorf(
@@ -333,17 +370,23 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 		}
 		img.Digest = digest
 
-		// If annotations is nil, initialize it
-		if annotations == nil {
-			annotations = make(map[string]string)
+		// Merge the annotations from the manifest into the annotations from the
+		// index. The manifest's annotations will take precedence.
+		if img.Annotations != nil {
+			if annotations == nil {
+				annotations = make(map[string]string, len(img.Annotations))
+			}
+			maps.Copy(annotations, img.Annotations)
 		}
 
-		// Then overlay image annotations, allowing them to override index
-		// annotations
-		if img.Annotations != nil {
-			for k, v := range img.Annotations {
-				annotations[k] = v
+		// If the descriptor has annotations, merge them into the annotations
+		// collected from the index and manifest. The descriptor's annotations
+		// will take precedence, as they are the most granular.
+		if ref.Annotations != nil {
+			if annotations == nil {
+				annotations = make(map[string]string, len(ref.Annotations))
 			}
+			maps.Copy(annotations, ref.Annotations)
 		}
 
 		// Set the merged annotations
@@ -372,6 +415,10 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 		if createdAt == nil || img.CreatedAt.After(*createdAt) {
 			createdAt = img.CreatedAt
 		}
+
+		// TODO(hidde): Without a platform constraint, we can not collect
+		// annotations in a meaningful way. We should consider how to handle
+		// this in the future.
 	}
 
 	return &Image{

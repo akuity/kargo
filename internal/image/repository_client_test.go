@@ -279,6 +279,52 @@ func TestGetImageFromRemoteDesc(t *testing.T) {
 			require.Equal(t, testImage, *img)
 		})
 	}
+
+	t.Run("with remote descriptor annotations", func(t *testing.T) {
+		imageWithAnnotations := Image{
+			CreatedAt: ptr.To(time.Now().UTC()),
+			Annotations: map[string]string{
+				"key.one":   "image-value", // This should override descriptor
+				"key.two":   "image-value", // This should override descriptor
+				"key.three": "image-value", // This is unique to image
+			},
+		}
+
+		// Remote descriptor with annotations
+		remoteDesc := &remote.Descriptor{
+			Descriptor: v1.Descriptor{
+				MediaType: types.OCIImageIndex,
+				Annotations: map[string]string{
+					"key.one":  "descriptor-value", // Should be overridden by image
+					"key.two":  "descriptor-value", // Should be overridden by image
+					"key.four": "descriptor-value", // Unique to descriptor
+				},
+			},
+		}
+
+		testClientWithAnnotations := &repositoryClient{
+			getImageFromV1ImageIndexFn: func(
+				context.Context, string, v1.ImageIndex, *platformConstraint,
+			) (*Image, error) {
+				return &imageWithAnnotations, nil
+			},
+		}
+
+		img, err := testClientWithAnnotations.getImageFromRemoteDesc(
+			context.Background(),
+			remoteDesc,
+			nil,
+		)
+		require.NoError(t, err)
+
+		require.NotNil(t, img)
+		require.Equal(t, map[string]string{
+			"key.one":   "image-value",
+			"key.two":   "image-value",
+			"key.three": "image-value",
+			"key.four":  "descriptor-value",
+		}, img.Annotations)
+	})
 }
 
 func TestImageFromV1ImageIndex(t *testing.T) {
@@ -544,6 +590,58 @@ func TestImageFromV1ImageIndex(t *testing.T) {
 				require.Equal(t, testDigest, img.Digest)
 				require.Len(t, img.Annotations, 1)
 				require.Equal(t, "Test Vendor", img.Annotations["org.opencontainers.image.vendor"])
+			},
+		},
+		{
+			name: "platform descriptor annotations take precedence",
+			idx: &mockImageIndex{
+				indexManifest: &v1.IndexManifest{
+					Manifests: []v1.Descriptor{{
+						Platform: &v1.Platform{
+							OS:           "linux",
+							Architecture: "amd64",
+						},
+						Annotations: map[string]string{
+							"common.key":            "platform-descriptor-value",
+							"platform.specific.key": "platform-value",
+						},
+					}},
+					Annotations: map[string]string{
+						"common.key":         "index-value",
+						"index.specific.key": "index-value",
+					},
+				},
+			},
+			platform: &platformConstraint{
+				os:   "linux",
+				arch: "amd64",
+			},
+			client: &repositoryClient{
+				getImageByDigestFn: func(
+					context.Context, string, *platformConstraint,
+				) (*Image, error) {
+					return &Image{
+						Digest:    testDigest,
+						CreatedAt: testImage.CreatedAt,
+						Annotations: map[string]string{
+							"common.key":            "manifest-value",
+							"manifest.specific.key": "manifest-value",
+						},
+					}, nil
+				},
+			},
+			assertions: func(t *testing.T, img *Image, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, img)
+
+				require.Equal(t, map[string]string{
+					// Platform descriptor annotations should override both manifest and index
+					"common.key": "platform-descriptor-value",
+					// Keys unique to each level should be preserved
+					"platform.specific.key": "platform-value",
+					"index.specific.key":    "index-value",
+					"manifest.specific.key": "manifest-value",
+				}, img.Annotations)
 			},
 		},
 	}
