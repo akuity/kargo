@@ -198,6 +198,7 @@ func InteractivePassword(fs *pflag.FlagSet, changePasswordInteractively *bool, u
 	fs.BoolVar(changePasswordInteractively, InteractivePasswordFlag, false, usage)
 }
 
+// Metric adds the MetricFlag to the provided flag set.
 func Metric(fs *pflag.FlagSet, metric *string, usage string) {
 	fs.StringVar(metric, MetricFlag, "", usage)
 }
