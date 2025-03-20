@@ -101,6 +101,7 @@ service KargoService {
   rpc GetClusterAnalysisTemplate(GetClusterAnalysisTemplateRequest) returns (GetClusterAnalysisTemplateResponse);
   rpc DeleteClusterAnalysisTemplate(DeleteClusterAnalysisTemplateRequest) returns (DeleteClusterAnalysisTemplateResponse);
   rpc GetAnalysisRun(GetAnalysisRunRequest) returns (GetAnalysisRunResponse);
+  rpc GetAnalysisRunLogs(GetAnalysisRunLogsRequest) returns (stream GetAnalysisRunLogsResponse);
 
   /* Event APIs */
 
@@ -687,6 +688,17 @@ message GetAnalysisRunResponse {
     github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisRun analysis_run = 1 [json_name = "analysisRun"];
     bytes raw = 2;
   }
+}
+
+message GetAnalysisRunLogsRequest {
+  string namespace = 1;
+  string name = 2;
+  string metricName = 3;
+  string containerName = 4;
+}
+
+message GetAnalysisRunLogsResponse {
+  string line = 1;
 }
 
 message DeleteAnalysisTemplateRequest {

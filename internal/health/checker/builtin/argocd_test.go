@@ -18,7 +18,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
-	"github.com/akuity/kargo/internal/health"
+	"github.com/akuity/kargo/pkg/health"
 )
 
 func Test_argocdUpdater_check(t *testing.T) {

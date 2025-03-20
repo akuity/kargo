@@ -30,12 +30,14 @@ ARG VERSION_PACKAGE=github.com/akuity/kargo/pkg/x/version
 ARG CGO_ENABLED=0
 
 WORKDIR /kargo
+COPY ["api/go.mod", "api/go.sum", "api/"]
+COPY ["pkg/go.mod", "pkg/go.sum", "pkg/"]
 COPY ["go.mod", "go.sum", "./"]
 RUN go mod download
 COPY api/ api/
+COPY pkg/ pkg/
 COPY cmd/ cmd/
 COPY internal/ internal/
-COPY pkg/ pkg/
 COPY --from=ui-builder /ui/build internal/server/ui/
 
 ARG VERSION

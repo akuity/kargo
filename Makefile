@@ -4,7 +4,7 @@ SHELL	      ?= /bin/bash
 EXTENDED_PATH ?= $(CURDIR)/hack/bin:$(PATH)
 
 ARGO_CD_CHART_VERSION		:= 7.7.0
-ARGO_ROLLOUTS_CHART_VERSION := 2.37.7
+ARGO_ROLLOUTS_CHART_VERSION := 2.39.1
 CERT_MANAGER_CHART_VERSION 	:= 1.16.1
 
 BUF_LINT_ERROR_FORMAT	?= text
@@ -73,11 +73,27 @@ format: format-go format-ui
 
 .PHONY: lint-go
 lint-go: install-golangci-lint
-	$(GOLANGCI_LINT) run --out-format=$(GO_LINT_ERROR_FORMAT)
+	{ \
+		set -e; \
+		for mod in $$(find . -maxdepth 4 -type f -name 'go.mod' | grep -v tools); do \
+			echo "Linting $$(dirname $${mod}) ..."; \
+			cd $$(dirname $${mod}); \
+			$(GOLANGCI_LINT) run --out-format=$(GO_LINT_ERROR_FORMAT) --config $(CURDIR)/.golangci.yaml; \
+			cd - > /dev/null; \
+		done; \
+	}
 
 .PHONY: format-go
 format-go:
-	$(GOLANGCI_LINT) run --fix
+	{ \
+		set -e; \
+		for mod in $$(find . -maxdepth 4 -type f -name 'go.mod' | grep -v tools); do \
+			echo "Fixing $$(dirname $${mod}) ..."; \
+			cd $$(dirname $${mod}); \
+			$(GOLANGCI_LINT) run --fix --config $(CURDIR)/.golangci.yaml; \
+			cd - > /dev/null; \
+		done; \
+	}
 
 .PHONY: lint-proto
 lint-proto: install-buf
@@ -109,13 +125,21 @@ format-ui:
 
 .PHONY: test-unit
 test-unit: install-helm
-	PATH=$(EXTENDED_PATH) go test \
-		-v \
-		-timeout=300s \
-		-race \
-		-coverprofile=coverage.txt \
-		-covermode=atomic \
-		./...
+	{ \
+		set -e; \
+		for mod in $$(find . -maxdepth 4 -type f -name 'go.mod' | grep -v tools); do \
+			echo "Testing $$(dirname $${mod}) ..."; \
+			cd $$(dirname $${mod}); \
+			PATH=$(EXTENDED_PATH) go test \
+				-v \
+				-timeout=300s \
+				-race \
+				-coverprofile=coverage.txt \
+				-covermode=atomic \
+				./...; \
+			cd - > /dev/null; \
+		done; \
+	}
 
 ################################################################################
 # Builds                                                                       #
