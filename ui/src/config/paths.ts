@@ -14,6 +14,7 @@ export const paths = {
   user: '/user',
   settings: '/settings/',
   settingsAnalysisTemplates: '/settings/analysis-templates',
+  analysisRunLogs: '/ext/project/:name/stage/:stageName/analysis-run/:analysisRunId/logs',
 
   downloads: '/downloads',
   login: '/login',

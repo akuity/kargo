@@ -56,4 +56,7 @@ data:
   ARGOCD_URLS: {{ range $key, $val := .Values.api.argocd.urls }}{{ $key }}={{ $val }},{{- end }}
   {{- end }}
   ROLLOUTS_INTEGRATION_ENABLED: {{ quote .Values.api.rollouts.integrationEnabled }}
+  {{- if and .Values.api.rollouts.integrationEnabled .Values.api.rollouts.logs.enabled }}
+  ANALYSIS_RUN_LOG_URL_TEMPLATE: {{ quote .Values.api.rollouts.logs.urlTemplate }}
+  {{- end }}
 {{- end }}
