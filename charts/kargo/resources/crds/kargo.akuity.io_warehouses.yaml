@@ -152,8 +152,9 @@ spec:
                             NewestFromBranch). This field is optional. When left unspecified, (and the
                             CommitSelectionStrategy is NewestFromBranch or unspecified), the
                             subscription is implicitly to the repository's default branch.
+                          maxLength: 255
                           minLength: 1
-                          pattern: ^\w+([-/\.]\w+)*$
+                          pattern: ^[a-zA-Z0-9][a-zA-Z0-9._\/-]*[a-zA-Z0-9_-]$
                           type: string
                         commitSelectionStrategy:
                           default: NewestFromBranch
