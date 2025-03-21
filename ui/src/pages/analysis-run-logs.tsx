@@ -4,7 +4,7 @@ import { generatePath, useNavigate, useParams, useSearchParams } from 'react-rou
 
 import { paths } from '@ui/config/paths';
 import { LoadingState } from '@ui/features/common';
-import { AnalysisRunLogs } from '@ui/features/common/analysis-run-logs';
+import { AnalysisRunLogs } from '@ui/features/common/analysis-run-logs/analysis-run-logs';
 import { getAnalysisRun } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { AnalysisRun } from '@ui/gen/api/stubs/rollouts/v1alpha1/generated_pb';
 

@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Editor } from '@monaco-editor/react';
 import { Checkbox, Empty, Input, Select, Skeleton } from 'antd';
 import Alert from 'antd/es/alert/Alert';
-import { editor, languages } from 'monaco-editor';
+import { editor } from 'monaco-editor';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { generatePath, Link } from 'react-router-dom';
 
@@ -13,7 +13,14 @@ import { transportWithAuth } from '@ui/config/transport';
 import { KargoService } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { AnalysisRun } from '@ui/gen/api/stubs/rollouts/v1alpha1/generated_pb';
 
-import { verificationPhaseIsTerminal } from '../stage/utils/verification-phase';
+import { verificationPhaseIsTerminal } from '../../stage/utils/verification-phase';
+
+import { extractFilters } from './extract-analysis-run';
+import {
+  monacoEditorLogLanguage,
+  monacoEditorLogLanguageTheme,
+  useMonacoEditorLogLanguage
+} from './use-monaco-editor-log-language';
 
 export const AnalysisRunLogs = (props: {
   linkFullScreen?: boolean;
@@ -28,74 +35,48 @@ export const AnalysisRunLogs = (props: {
   const logsEditor = useRef<editor.IStandaloneCodeEditor>(null);
   const editorDecoration = useRef<editor.IEditorDecorationsCollection>(null);
 
-  const filterableItems = useMemo(() => {
-    const logsEligibleMetrics = props.analysisRun?.spec?.metrics?.filter(
-      (metric) => !!metric?.provider?.job
-    );
+  const filterableItems = useMemo(() => extractFilters(props.analysisRun), [props.analysisRun]);
 
-    const containerNames: Record<string, string[]> = {};
+  useMonacoEditorLogLanguage();
 
-    for (const logsEligibleMetric of logsEligibleMetrics || []) {
-      const containers = logsEligibleMetric?.provider?.job?.spec?.template?.spec?.containers;
+  const [filters, setFilters] = useState(() => {
+    const selectedJob = props.defaultFilters?.selectedJob || filterableItems?.jobNames?.[0];
 
-      for (const container of containers || []) {
-        if (!containerNames[logsEligibleMetric?.name]) {
-          containerNames[logsEligibleMetric?.name] = [];
-        }
+    const selectedContainer =
+      props.defaultFilters?.selectedContainer ||
+      filterableItems?.containerNames?.[selectedJob]?.[0];
 
-        containerNames[logsEligibleMetric?.name].push(container?.name);
-      }
-    }
+    return { selectedJob, selectedContainer };
+  });
 
-    return {
-      jobNames: logsEligibleMetrics?.map((metric) => metric?.name) || [],
-      containerNames
-    };
-  }, [props.analysisRun]);
+  const onSelectJob = (jobName: string) => {
+    const containerName = filterableItems?.containerNames?.[jobName]?.[0];
 
-  useEffect(() => {
-    languages.register({ id: 'logs' });
+    setFilters({ selectedContainer: containerName, selectedJob: jobName });
+  };
 
-    languages.setMonarchTokensProvider('logs', {
-      tokenizer: {
-        root: [
-          [/\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?(Z|[+-]\d{2}:\d{2})?\b/, 'time-format']
-        ]
-      }
-    });
+  const onSelectContainer = (containerName: string) =>
+    setFilters({ ...filters, selectedContainer: containerName });
 
-    editor.defineTheme('logsTheme', {
-      base: 'vs',
-      inherit: true,
-      rules: [
-        {
-          token: 'time-format',
-          foreground: '064497'
-        }
-      ],
-      colors: {}
-    });
-  }, []);
-
-  const [selectedJob, setSelectedJob] = useState(
-    props.defaultFilters?.selectedJob || filterableItems?.jobNames?.[0]
-  );
-  const [selectedContainer, setSelectedContainer] = useState(
-    props.defaultFilters?.selectedContainer || filterableItems?.containerNames?.[selectedJob]?.[0]
-  );
-
-  useEffect(() => {
-    if (
-      props.defaultFilters?.selectedContainer &&
-      filterableItems?.containerNames?.[selectedJob]?.includes(
-        props.defaultFilters?.selectedContainer || ''
-      )
-    ) {
-      setSelectedContainer(props.defaultFilters?.selectedContainer);
+  const triggerMonacoEditorSearch = (search: string) => {
+    if (!search) {
+      editorDecoration.current?.clear();
       return;
     }
-    setSelectedContainer(filterableItems?.containerNames?.[selectedJob]?.[0]);
-  }, [selectedJob]);
+
+    const model = logsEditor.current?.getModel();
+
+    if (model) {
+      const matches = model.findMatches(search, true, false, false, null, true);
+
+      const decorations = matches.map((match) => ({
+        range: match.range,
+        options: { inlineClassName: 'bg-yellow-300' }
+      }));
+
+      editorDecoration.current?.set(decorations);
+    }
+  };
 
   const [logs, setLogs] = useState('');
   const [logsLoading, setLogsLoading] = useState(false);
@@ -113,7 +94,9 @@ export const AnalysisRunLogs = (props: {
       return;
     }
 
-    if (!filterableItems?.containerNames?.[selectedJob]?.includes(selectedContainer)) {
+    if (
+      !filterableItems?.containerNames?.[filters.selectedJob]?.includes(filters.selectedContainer)
+    ) {
       setLogs('');
       return;
     }
@@ -123,8 +106,8 @@ export const AnalysisRunLogs = (props: {
     const stream = promiseClient.getAnalysisRunLogs({
       namespace: project,
       name: analysisRunId,
-      metricName: selectedJob,
-      containerName: selectedContainer
+      metricName: filters.selectedJob,
+      containerName: filters.selectedContainer
     });
 
     (async () => {
@@ -145,7 +128,7 @@ export const AnalysisRunLogs = (props: {
         setLogsLoading(false);
       }
     })();
-  }, [selectedJob, selectedContainer, filterableItems, props.analysisRun]);
+  }, [filters, filterableItems, props.analysisRun]);
 
   const [showLineNumbers, setShowLineNumbers] = useState(true);
   const [search, setSearch] = useState(props.defaultFilters?.search || '');
@@ -169,46 +152,30 @@ export const AnalysisRunLogs = (props: {
 
             setSearch(search);
 
-            if (!search) {
-              editorDecoration.current?.clear();
-              return;
-            }
-
-            const model = logsEditor.current?.getModel();
-
-            if (model) {
-              const matches = model.findMatches(search, true, false, false, null, true);
-
-              const decorations = matches.map((match) => ({
-                range: match.range,
-                options: { inlineClassName: 'bg-yellow-300' }
-              }));
-
-              editorDecoration.current?.set(decorations);
-            }
+            triggerMonacoEditorSearch(search);
           }}
         />
 
         <label className='font-semibold ml-5'>Metric: </label>
         <Select
-          value={selectedJob}
+          value={filters.selectedJob}
           className='ml-2 w-1/5'
           options={filterableItems.jobNames.map((job) => ({
             label: job,
             value: job
           }))}
-          onChange={setSelectedJob}
+          onChange={onSelectJob}
         />
 
         <label className='font-semibold ml-5'>Container: </label>
         <Select
           className='ml-2 w-1/5'
-          value={selectedContainer}
-          options={filterableItems.containerNames?.[selectedJob]?.map((container) => ({
+          value={filters.selectedContainer}
+          options={filterableItems.containerNames?.[filters.selectedJob]?.map((container) => ({
             label: container,
             value: container
           }))}
-          onChange={setSelectedContainer}
+          onChange={onSelectContainer}
         />
       </div>
 
@@ -227,7 +194,7 @@ export const AnalysisRunLogs = (props: {
               name: project,
               stageName: stage,
               analysisRunId: analysisRunId
-            })}?job=${selectedJob}&container=${selectedContainer}&search=${search}`}
+            })}?job=${filters.selectedJob}&container=${filters.selectedContainer}&search=${search}`}
             className='ml-auto'
             target='_blank'
           >
@@ -237,8 +204,8 @@ export const AnalysisRunLogs = (props: {
       </div>
       {!logsLoading && logs && (
         <Editor
-          defaultLanguage='logs'
-          theme='logsTheme'
+          defaultLanguage={monacoEditorLogLanguage}
+          theme={monacoEditorLogLanguageTheme}
           value={logs}
           height={props.height || '512px'}
           options={{ readOnly: true, lineNumbers: showLineNumbers ? 'on' : 'off' }}
@@ -246,20 +213,7 @@ export const AnalysisRunLogs = (props: {
             logsEditor.current = editor;
             editorDecoration.current = editor.createDecorationsCollection([]);
 
-            if (search) {
-              const model = editor.getModel();
-
-              if (model) {
-                const matches = model.findMatches(search, true, false, false, null, true);
-
-                const decorations = matches.map((match) => ({
-                  range: match.range,
-                  options: { inlineClassName: 'bg-yellow-300' }
-                }));
-
-                editorDecoration.current?.set(decorations);
-              }
-            }
+            triggerMonacoEditorSearch(search);
           }}
         />
       )}

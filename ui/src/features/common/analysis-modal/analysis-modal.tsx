@@ -11,7 +11,7 @@ import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { AnalysisRun } from '@ui/gen/api/stubs/rollouts/v1alpha1/generated_pb';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 
-import { AnalysisRunLogs } from '../analysis-run-logs';
+import { AnalysisRunLogs } from '../analysis-run-logs/analysis-run-logs';
 import YamlEditor from '../code-editor/yaml-editor-lazy';
 import { ModalProps } from '../modal/use-modal';
 
