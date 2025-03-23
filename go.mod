@@ -27,12 +27,12 @@ require (
 	github.com/coreos/go-oidc/v3 v3.13.0
 	github.com/cyphar/filepath-securejoin v0.4.1
 	github.com/evanphx/json-patch/v5 v5.9.11
-	github.com/expr-lang/expr v1.17.0
+	github.com/expr-lang/expr v1.17.1
 	github.com/fatih/structtag v1.2.0
 	github.com/fluxcd/pkg/kustomize v1.16.0
 	github.com/go-git/go-git/v5 v5.14.0
 	github.com/gogo/protobuf v1.3.2
-	github.com/golang-jwt/jwt/v5 v5.2.1
+	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/google/go-containerregistry v0.20.3
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-cleanhttp v0.5.2
