@@ -154,7 +154,7 @@ spec:
                             subscription is implicitly to the repository's default branch.
                           maxLength: 255
                           minLength: 1
-                          pattern: ^[a-zA-Z0-9][a-zA-Z0-9._\/-]*[a-zA-Z0-9_-]$
+                          pattern: ^[a-zA-Z0-9]([a-zA-Z0-9._\/-]*[a-zA-Z0-9_-])?$
                           type: string
                         commitSelectionStrategy:
                           default: NewestFromBranch

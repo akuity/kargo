@@ -1180,7 +1180,7 @@ export type GitSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.GitS
    *
    * +kubebuilder:validation:MinLength=1
    * +kubebuilder:validation:MaxLength=255
-   * +kubebuilder:validation:Pattern=`^[a-zA-Z0-9][a-zA-Z0-9._\/-]*[a-zA-Z0-9_-]$`
+   * +kubebuilder:validation:Pattern=`^[a-zA-Z0-9]([a-zA-Z0-9._\/-]*[a-zA-Z0-9_-])?$`
    *
    * @generated from field: optional string branch = 3;
    */
