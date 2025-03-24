@@ -143,11 +143,25 @@ Expect other useful variables to be added in the future.
 
 | Name | Type | Description |
 |------|------|-------------|
-| `ctx` | `object` | `string` fields `project`, `stage`, `promotion`, and `creator` provide convenient access to details of a `Promotion`. |
+| `ctx` | `object` | Contains contextual information about the promotion. See detailed structure below. |
 | `outputs` | `object` | A map of output from previous promotion steps indexed by step aliases. |
 | `secrets` | `object` | A map of maps indexed by the names of all Kubernetes `Secret`s in the `Promotion`'s `Project` and the keys within the `Data` block of each. |
 | `vars` | `object` | A user-defined map of variable names to static values of any type. The map is derived from a `Promotion`'s `spec.promotionTemplate.spec.vars` field. Variable names must observe standard Go variable-naming rules. Variables values may, themselves, be defined using an expression. `vars` (contains previously defined variables) and `ctx` are available to expressions defining the values of variables, however, `outputs` and `secrets` are not. |
 | `task` | `object` | A map containing output from previous steps within the same PromotionTask under the `outputs` field, indexed by step aliases. Only available within `(Cluster)PromotionTask` steps. |
+
+#### Context (`ctx`) Object Structure
+
+The `ctx` object has the following structure:
+
+```
+ctx
+├── project: string       # The name of the Project
+├── stage: string         # The name of the Stage
+├── promotion: string     # The name of the Promotion
+└── meta
+    └── promotion
+        └── actor: string # The creator of the Promotion
+```
 
 The following example promotion process clones a repository and checks out
 two branches to different directories, uses Kustomize with source from one
@@ -220,7 +234,17 @@ definition of the static variables).
 
 | Name | Type | Description |
 |------|------|-------------|
-| `ctx` | `object` | `string` fields `project` and `stage` provide convenient access to details of a `Stage`. |
+| `ctx` | `object` | Contains contextual information about the stage. See structure below. |
+
+#### Context (`ctx`) Object Structure for Verification
+
+The `ctx` object for verification has the following structure:
+
+```
+ctx
+├── project: string  # The name of the Project
+└── stage: string    # The name of the Stage
+```
 
 ## Functions
 
