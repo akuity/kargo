@@ -17,8 +17,8 @@ require (
 	github.com/akuity/kargo/api v0.0.0
 	github.com/akuity/kargo/pkg v0.0.0
 	github.com/aws/aws-sdk-go-v2 v1.36.3
-	github.com/aws/aws-sdk-go-v2/config v1.29.9
-	github.com/aws/aws-sdk-go-v2/credentials v1.17.62
+	github.com/aws/aws-sdk-go-v2/config v1.29.10
+	github.com/aws/aws-sdk-go-v2/credentials v1.17.63
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.43.0
 	github.com/aws/aws-sdk-go-v2/service/sts v1.33.17
 	github.com/bacongobbler/browser v1.1.0
@@ -27,7 +27,7 @@ require (
 	github.com/coreos/go-oidc/v3 v3.13.0
 	github.com/cyphar/filepath-securejoin v0.4.1
 	github.com/evanphx/json-patch/v5 v5.9.11
-	github.com/expr-lang/expr v1.17.1
+	github.com/expr-lang/expr v1.17.2
 	github.com/fatih/structtag v1.2.0
 	github.com/fluxcd/pkg/kustomize v1.16.0
 	github.com/go-git/go-git/v5 v5.14.0
@@ -61,7 +61,7 @@ require (
 	golang.org/x/sync v0.12.0
 	google.golang.org/api v0.227.0
 	google.golang.org/grpc v1.71.0
-	google.golang.org/protobuf v1.36.5
+	google.golang.org/protobuf v1.36.6
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.17.2
 	k8s.io/api v0.32.3
@@ -72,7 +72,7 @@ require (
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/utils v0.0.0-20241210054802-24370beab758
 	oras.land/oras-go v1.2.6
-	sigs.k8s.io/controller-runtime v0.20.3
+	sigs.k8s.io/controller-runtime v0.20.4
 	sigs.k8s.io/yaml v1.4.0
 )
 
@@ -94,7 +94,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.12.15 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.25.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.29.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.29.2 // indirect
 	github.com/aws/smithy-go v1.22.2 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/chai2010/gettext-go v1.0.2 // indirect
