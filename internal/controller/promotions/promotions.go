@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -491,6 +492,7 @@ func (r *reconciler) promote(
 		StepExecutionMetadata: promo.Status.StepExecutionMetadata,
 		State:                 pkgPromotion.State(workingPromo.Status.GetState()),
 		Vars:                  workingPromo.Spec.Vars,
+		Actor:                 parseCreateActorAnnotation(&promo),
 	}
 	if err := os.Mkdir(promoCtx.WorkDir, 0o700); err == nil {
 		// If we're working with a fresh directory, we should start the promotion
@@ -645,4 +647,21 @@ func (r *reconciler) terminatePromotion(
 	)
 
 	return nil
+}
+
+// parseCreateActorAnnotation extracts the v1alpha1.AnnotationKeyCreateActor
+// value from the Promotion's annotations and returns it. If the value contains
+// a colon, it is split and the second part is returned. Otherwise, the entire
+// value or an empty string is returned.
+func parseCreateActorAnnotation(promo *kargoapi.Promotion) string {
+	var creator string
+	if v, ok := promo.Annotations[kargoapi.AnnotationKeyCreateActor]; ok {
+		if v != kargoapi.EventActorUnknown {
+			creator = v
+		}
+		if parts := strings.Split(v, ":"); len(parts) == 2 {
+			creator = parts[1]
+		}
+	}
+	return creator
 }
