@@ -21,11 +21,8 @@ type Info struct {
 	// non-admin user whose credentials have
 	// been successfully verified by the server's authentication middleware.
 	Claims map[string]any
-	// BearerToken is set only in cases where the server's authentication
-	// middleware could not verify the token it was presented with. In this case,
-	// we assume the token to be a valid credential for a Kubernetes user. When
-	// constructing an ad-hoc Kubernetes client, this token will be used directly.
-	// When this is non-empty, all other fields should have an empty value.
+	// BearerToken is the raw bearer token presented in the Authorization header
+	// of any request requiring authentication.
 	BearerToken string
 	// ServiceAccountsByNamespace is the mapping of namespace names to sets of
 	// ServiceAccounts that a user has been mapped to.

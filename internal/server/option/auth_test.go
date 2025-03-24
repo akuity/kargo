@@ -267,7 +267,7 @@ func TestAuthenticate(t *testing.T) {
 				require.True(t, u.IsAdmin)
 				require.Empty(t, u.Claims["sub"])
 				require.Empty(t, u.Claims["groups"])
-				require.Empty(t, u.BearerToken)
+				require.Equal(t, testToken, u.BearerToken)
 			},
 		},
 		"failure verifying IDP-issued token": {
@@ -348,7 +348,7 @@ func TestAuthenticate(t *testing.T) {
 				require.Equal(t, "ironman", u.Claims["sub"])
 				require.Equal(t, "tony@starkindustries.com", u.Claims["email"])
 				require.Equal(t, []string{"avengers", "shield"}, u.Claims["groups"])
-				require.Empty(t, u.BearerToken)
+				require.Equal(t, testToken, u.BearerToken)
 			},
 		},
 		"unrecognized JWT": {
