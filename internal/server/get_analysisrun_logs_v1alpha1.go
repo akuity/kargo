@@ -18,6 +18,7 @@ import (
 	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/api/stubs/rollouts"
 	"github.com/akuity/kargo/internal/expressions"
+	"github.com/akuity/kargo/internal/server/user"
 )
 
 func (s *server) GetAnalysisRunLogs(
@@ -100,6 +101,7 @@ func (s *server) GetAnalysisRunLogs(
 	}
 
 	httpReq, err := s.buildRequest(
+		ctx,
 		stage,
 		analysisRun,
 		jobMetricName,
@@ -358,24 +360,23 @@ func (s *server) getStageFromAnalysisRun(
 // are themselves, used in evaluation of a URL template. The request is
 // returned. If it is not successfully constructed, an error is returned.
 func (s *server) buildRequest(
+	ctx context.Context,
 	stage *kargoapi.Stage,
 	run *rolloutsapi.AnalysisRun,
 	jobMetricName, jobNamespace, jobName, containerName string,
 ) (*http.Request, error) {
-	urlAny, err := expressions.EvaluateTemplate(
-		s.cfg.AnalysisRunLogURLTemplate,
-		map[string]any{
-			"project":      stage.Namespace,
-			"namespace":    stage.Namespace,
-			"shard":        stage.Spec.Shard,
-			"stage":        stage.Name,
-			"analysisRun":  run.Name,
-			"metricName":   jobMetricName,
-			"jobNamespace": jobNamespace,
-			"jobName":      jobName,
-			"container":    containerName,
-		},
-	)
+	env := map[string]any{
+		"project":      stage.Namespace,
+		"namespace":    stage.Namespace,
+		"shard":        stage.Spec.Shard,
+		"stage":        stage.Name,
+		"analysisRun":  run.Name,
+		"metricName":   jobMetricName,
+		"jobNamespace": jobNamespace,
+		"jobName":      jobName,
+		"container":    containerName,
+	}
+	urlAny, err := expressions.EvaluateTemplate(s.cfg.AnalysisRunLogURLTemplate, env)
 	if err != nil {
 		return nil, fmt.Errorf("error constructing log url: %w", err)
 	}
@@ -392,8 +393,19 @@ func (s *server) buildRequest(
 	if err != nil {
 		return nil, fmt.Errorf("error creating GET request for log url %s: %w", url, err)
 	}
-	for key, value := range s.cfg.AnalysisRunLogHTTPHeaders {
-		httpReq.Header.Set(key, value)
+	if userInfo, ok := user.InfoFromContext(ctx); ok {
+		env["token"] = userInfo.BearerToken
+	}
+	for key, valTemplate := range s.cfg.AnalysisRunLogHTTPHeaders {
+		valTemplateAny, err := expressions.EvaluateTemplate(valTemplate, env)
+		if err != nil {
+			return nil, fmt.Errorf("error constructing value for header %s: %w", key, err)
+		}
+		val, ok := valTemplateAny.(string)
+		if !ok {
+			return nil, fmt.Errorf("constructed value for header %s is not a string", key)
+		}
+		httpReq.Header.Set(key, val)
 	}
 	return httpReq, nil
 }

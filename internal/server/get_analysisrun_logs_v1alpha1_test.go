@@ -465,6 +465,11 @@ func TestServer_getStageFromAnalysisRun(t *testing.T) {
 }
 
 func TestServer_buildRequest(t *testing.T) {
+	const (
+		testNamespace   = "fake-namespace"
+		testAnalysisRun = "fake-analysis-run"
+		testURL         = "https://logs.example.com"
+	)
 	testCases := []struct {
 		name           string
 		urlTemplate    string
@@ -480,17 +485,34 @@ func TestServer_buildRequest(t *testing.T) {
 			},
 		},
 		{
-			name:        "success",
-			urlTemplate: "https://logs.example.com",
+			name:        "evaluated header template is not a string",
+			urlTemplate: testURL,
 			requestHeaders: map[string]string{
-				"foo": "bar",
-				"bat": "baz",
+				"foo": "${{42}}",
+			},
+			assertions: func(t *testing.T, _ *http.Request, err error) {
+				require.ErrorContains(t, err, "constructed value for header")
+				require.ErrorContains(t, err, "is not a string")
+			},
+		},
+		{
+			name:        "success",
+			urlTemplate: "https://logs.example.com/${{ namespace }}/${{ analysisRun }}",
+			requestHeaders: map[string]string{
+				"ns":       "${{ namespace }}",
+				"analysis": "${{ analysisRun }}",
 			},
 			assertions: func(t *testing.T, req *http.Request, err error) {
 				require.NoError(t, err)
-				require.Equal(t, "https://logs.example.com", req.URL.String())
-				require.Equal(t, "bar", req.Header.Get("foo"))
-				require.Equal(t, "baz", req.Header.Get("bat"))
+				require.Equal(
+					t,
+					fmt.Sprintf("https://logs.example.com/%s/%s",
+						testNamespace, testAnalysisRun,
+					),
+					req.URL.String(),
+				)
+				require.Equal(t, testNamespace, req.Header.Get("ns"))
+				require.Equal(t, testAnalysisRun, req.Header.Get("analysis"))
 			},
 		},
 	}
@@ -503,8 +525,16 @@ func TestServer_buildRequest(t *testing.T) {
 				},
 			}
 			req, err := s.buildRequest(
-				&kargoapi.Stage{},
-				&rolloutsapi.AnalysisRun{},
+				context.Background(),
+				&kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace},
+				},
+				&rolloutsapi.AnalysisRun{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testNamespace,
+						Name:      testAnalysisRun,
+					},
+				},
 				"", "", "", "",
 			)
 			testCase.assertions(t, req, err)
