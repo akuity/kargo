@@ -14,6 +14,7 @@ import { AuthContextProvider } from './features/auth/context/auth-context-provid
 import { ProtectedRoute } from './features/auth/protected-route';
 import { TokenRenew } from './features/auth/token-renew';
 import { MainLayout } from './features/common/layout/main-layout';
+import { AnalysisRunLogsPage } from './pages/analysis-run-logs';
 import { Downloads } from './pages/downloads';
 import { Login } from './pages/login/login';
 import { Projects } from './pages/projects';
@@ -60,6 +61,7 @@ export const App = () => (
                     element={<Project tab='pipelines' creatingWarehouse />}
                   />
                 </Route>
+                <Route path={paths.analysisRunLogs} element={<AnalysisRunLogsPage />} />
               </Route>
               <Route path={paths.login} element={<Login />} />
               <Route path={paths.tokenRenew} element={<TokenRenew />} />
