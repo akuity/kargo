@@ -270,6 +270,10 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 			digest, err,
 		)
 	}
+
+	// Extract annotations from the index manifest.
+	annotations := idxManifest.Annotations
+
 	refs := make([]v1.Descriptor, 0, len(idxManifest.Manifests))
 	for _, ref := range idxManifest.Manifests {
 		if ref.Platform == nil ||
@@ -289,19 +293,17 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 	if platform != nil {
 		var matchedRefs []v1.Descriptor
 		for _, ref := range refs {
-			if !platform.matches(
-				ref.Platform.OS,
-				ref.Platform.Architecture,
-				ref.Platform.Variant,
-			) {
+			if !platform.matches(ref.Platform.OS, ref.Platform.Architecture, ref.Platform.Variant) {
 				continue
 			}
 			matchedRefs = append(matchedRefs, ref)
 		}
+
 		if len(matchedRefs) == 0 {
 			// No refs matched the platform
 			return nil, nil
 		}
+
 		if len(matchedRefs) > 1 {
 			// This really shouldn't happen.
 			return nil, fmt.Errorf(
@@ -310,7 +312,9 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 				len(matchedRefs),
 			)
 		}
+
 		ref := matchedRefs[0]
+
 		img, err := r.getImageByDigestFn(ctx, ref.Digest.String(), platform)
 		if err != nil {
 			return nil, fmt.Errorf(
@@ -328,6 +332,8 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 			)
 		}
 		img.Digest = digest
+		img.Annotations = annotations
+
 		return img, nil
 	}
 
@@ -352,9 +358,11 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 			createdAt = img.CreatedAt
 		}
 	}
+
 	return &Image{
-		Digest:    digest,
-		CreatedAt: createdAt,
+		Digest:      digest,
+		CreatedAt:   createdAt,
+		Annotations: annotations,
 	}, nil
 }
 
@@ -377,9 +385,20 @@ func (r *repositoryClient) getImageFromV1Image(
 		// This image doesn't match the platform constraint.
 		return nil, nil
 	}
+
+	// Extract annotations from the manifest
+	manifest, err := img.Manifest()
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error getting manifest for image with digest %s: %w",
+			digest, err,
+		)
+	}
+
 	return &Image{
-		Digest:    digest,
-		CreatedAt: &cfg.Created.Time,
+		Digest:      digest,
+		CreatedAt:   &cfg.Created.Time,
+		Annotations: manifest.Annotations,
 	}, nil
 }
 

@@ -578,6 +578,13 @@ spec:
                               DiscoveredImageReference represents an image reference discovered by a
                               Warehouse for an ImageSubscription.
                             properties:
+                              annotations:
+                                additionalProperties:
+                                  type: string
+                                description: |-
+                                  Annotations is a map of key-value pairs that provide additional
+                                  information about the image.
+                                type: object
                               createdAt:
                                 description: |-
                                   CreatedAt is the time the image was created. This field is optional, and

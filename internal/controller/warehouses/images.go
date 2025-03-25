@@ -76,9 +76,10 @@ func (r *reconciler) discoverImages(
 		discoveredImages := make([]kargoapi.DiscoveredImageReference, 0, len(images))
 		for _, img := range images {
 			discovery := kargoapi.DiscoveredImageReference{
-				Tag:        img.Tag,
-				Digest:     img.Digest,
-				GitRepoURL: r.getImageSourceURL(sub.GitRepoURL, img.Tag),
+				Tag:         img.Tag,
+				Digest:      img.Digest,
+				Annotations: img.Annotations,
+				GitRepoURL:  r.getImageSourceURL(sub.GitRepoURL, img.Tag),
 			}
 			if img.CreatedAt != nil {
 				discovery.CreatedAt = &metav1.Time{Time: *img.CreatedAt}

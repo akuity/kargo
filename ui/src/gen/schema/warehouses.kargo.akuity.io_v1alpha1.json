@@ -409,6 +409,13 @@
                     "items": {
                       "description": "DiscoveredImageReference represents an image reference discovered by a\nWarehouse for an ImageSubscription.",
                       "properties": {
+                        "annotations": {
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "Annotations is a map of key-value pairs that provide additional\ninformation about the image.",
+                          "type": "object"
+                        },
                         "createdAt": {
                           "description": "CreatedAt is the time the image was created. This field is optional, and\nnot populated for every ImageSelectionStrategy.",
                           "format": "date-time",

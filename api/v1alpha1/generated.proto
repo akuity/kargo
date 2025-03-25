@@ -288,6 +288,10 @@ message DiscoveredImageReference {
   // +kubebuilder:validation:Pattern=`^[a-z0-9]+:[a-f0-9]+$`
   optional string digest = 2;
 
+  // Annotations is a map of key-value pairs that provide additional
+  // information about the image.
+  map<string, string> annotations = 5;
+
   // GitRepoURL is the URL of the Git repository that contains the source
   // code for this image. This field is optional, and only populated if the
   // ImageSubscription specifies a GitRepoURL.
@@ -664,6 +668,9 @@ message Image {
   // Digest identifies a specific version of the image in the repository
   // specified by RepoURL. This is a more precise identifier than Tag.
   optional string digest = 4;
+
+  // Annotations is a map of arbitrary metadata for the image.
+  map<string, string> annotations = 5;
 }
 
 // ImageDiscoveryResult represents the result of an image discovery operation

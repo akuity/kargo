@@ -441,6 +441,13 @@
                   "items": {
                     "description": "Image describes a specific version of a container image.",
                     "properties": {
+                      "annotations": {
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "description": "Annotations is a map of arbitrary metadata for the image.",
+                        "type": "object"
+                      },
                       "digest": {
                         "description": "Digest identifies a specific version of the image in the repository\nspecified by RepoURL. This is a more precise identifier than Tag.",
                         "type": "string"
@@ -577,6 +584,13 @@
                       "items": {
                         "description": "Image describes a specific version of a container image.",
                         "properties": {
+                          "annotations": {
+                            "additionalProperties": {
+                              "type": "string"
+                            },
+                            "description": "Annotations is a map of arbitrary metadata for the image.",
+                            "type": "object"
+                          },
                           "digest": {
                             "description": "Digest identifies a specific version of the image in the repository\nspecified by RepoURL. This is a more precise identifier than Tag.",
                             "type": "string"
@@ -702,6 +716,13 @@
                             "items": {
                               "description": "Image describes a specific version of a container image.",
                               "properties": {
+                                "annotations": {
+                                  "additionalProperties": {
+                                    "type": "string"
+                                  },
+                                  "description": "Annotations is a map of arbitrary metadata for the image.",
+                                  "type": "object"
+                                },
                                 "digest": {
                                   "description": "Digest identifies a specific version of the image in the repository\nspecified by RepoURL. This is a more precise identifier than Tag.",
                                   "type": "string"
@@ -983,6 +1004,13 @@
                       "items": {
                         "description": "Image describes a specific version of a container image.",
                         "properties": {
+                          "annotations": {
+                            "additionalProperties": {
+                              "type": "string"
+                            },
+                            "description": "Annotations is a map of arbitrary metadata for the image.",
+                            "type": "object"
+                          },
                           "digest": {
                             "description": "Digest identifies a specific version of the image in the repository\nspecified by RepoURL. This is a more precise identifier than Tag.",
                             "type": "string"
@@ -1211,6 +1239,13 @@
                   "items": {
                     "description": "Image describes a specific version of a container image.",
                     "properties": {
+                      "annotations": {
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "description": "Annotations is a map of arbitrary metadata for the image.",
+                        "type": "object"
+                      },
                       "digest": {
                         "description": "Digest identifies a specific version of the image in the repository\nspecified by RepoURL. This is a more precise identifier than Tag.",
                         "type": "string"
@@ -1347,6 +1382,13 @@
                       "items": {
                         "description": "Image describes a specific version of a container image.",
                         "properties": {
+                          "annotations": {
+                            "additionalProperties": {
+                              "type": "string"
+                            },
+                            "description": "Annotations is a map of arbitrary metadata for the image.",
+                            "type": "object"
+                          },
                           "digest": {
                             "description": "Digest identifies a specific version of the image in the repository\nspecified by RepoURL. This is a more precise identifier than Tag.",
                             "type": "string"
@@ -1472,6 +1514,13 @@
                             "items": {
                               "description": "Image describes a specific version of a container image.",
                               "properties": {
+                                "annotations": {
+                                  "additionalProperties": {
+                                    "type": "string"
+                                  },
+                                  "description": "Annotations is a map of arbitrary metadata for the image.",
+                                  "type": "object"
+                                },
                                 "digest": {
                                   "description": "Digest identifies a specific version of the image in the repository\nspecified by RepoURL. This is a more precise identifier than Tag.",
                                   "type": "string"
