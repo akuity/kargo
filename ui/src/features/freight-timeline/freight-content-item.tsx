@@ -72,7 +72,12 @@ export const FreightContentItem = (props: {
             }}
             target='_blank'
           >
-            <FontAwesomeIcon icon={faCode} style={{ fontSize: '10px' }} />
+            {horizontal && <u>image source</u>}
+            <FontAwesomeIcon
+              icon={faCode}
+              style={{ fontSize: '10px' }}
+              className={horizontal ? 'ml-1' : ''}
+            />
           </a>
         )}
       </div>
