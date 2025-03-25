@@ -279,52 +279,6 @@ func TestGetImageFromRemoteDesc(t *testing.T) {
 			require.Equal(t, testImage, *img)
 		})
 	}
-
-	t.Run("with remote descriptor annotations", func(t *testing.T) {
-		imageWithAnnotations := Image{
-			CreatedAt: ptr.To(time.Now().UTC()),
-			Annotations: map[string]string{
-				"key.one":   "image-value", // This should override descriptor
-				"key.two":   "image-value", // This should override descriptor
-				"key.three": "image-value", // This is unique to image
-			},
-		}
-
-		// Remote descriptor with annotations
-		remoteDesc := &remote.Descriptor{
-			Descriptor: v1.Descriptor{
-				MediaType: types.OCIImageIndex,
-				Annotations: map[string]string{
-					"key.one":  "descriptor-value", // Should be overridden by image
-					"key.two":  "descriptor-value", // Should be overridden by image
-					"key.four": "descriptor-value", // Unique to descriptor
-				},
-			},
-		}
-
-		testClientWithAnnotations := &repositoryClient{
-			getImageFromV1ImageIndexFn: func(
-				context.Context, string, v1.ImageIndex, *platformConstraint,
-			) (*Image, error) {
-				return &imageWithAnnotations, nil
-			},
-		}
-
-		img, err := testClientWithAnnotations.getImageFromRemoteDesc(
-			context.Background(),
-			remoteDesc,
-			nil,
-		)
-		require.NoError(t, err)
-
-		require.NotNil(t, img)
-		require.Equal(t, map[string]string{
-			"key.one":   "image-value",
-			"key.two":   "image-value",
-			"key.three": "image-value",
-			"key.four":  "descriptor-value",
-		}, img.Annotations)
-	})
 }
 
 func TestImageFromV1ImageIndex(t *testing.T) {
@@ -502,11 +456,12 @@ func TestImageFromV1ImageIndex(t *testing.T) {
 				require.NotNil(t, img)
 				require.Equal(t, testDigest, img.Digest)
 				require.NotNil(t, img.Annotations)
-				// Image annotations should override index annotations
-				require.Equal(t, "1.1.0", img.Annotations["org.opencontainers.image.version"])
-				// Both sets of annotations should be present
-				require.Equal(t, "Test Vendor", img.Annotations["org.opencontainers.image.vendor"])
-				require.Equal(t, "2023-01-01T00:00:00Z", img.Annotations["org.opencontainers.image.created"])
+
+				// Image annotations from digest should be ignored
+				require.Equal(t, map[string]string{
+					"org.opencontainers.image.vendor":  "Test Vendor",
+					"org.opencontainers.image.version": "1.0.0",
+				}, img.Annotations)
 			},
 		},
 		{
@@ -593,7 +548,7 @@ func TestImageFromV1ImageIndex(t *testing.T) {
 			},
 		},
 		{
-			name: "platform descriptor annotations take precedence",
+			name: "platform specific annotations are ignored",
 			idx: &mockImageIndex{
 				indexManifest: &v1.IndexManifest{
 					Manifests: []v1.Descriptor{{
@@ -635,12 +590,9 @@ func TestImageFromV1ImageIndex(t *testing.T) {
 				require.NotNil(t, img)
 
 				require.Equal(t, map[string]string{
-					// Platform descriptor annotations should override both manifest and index
-					"common.key": "platform-descriptor-value",
-					// Keys unique to each level should be preserved
-					"platform.specific.key": "platform-value",
-					"index.specific.key":    "index-value",
-					"manifest.specific.key": "manifest-value",
+					// Only index annotations are taken into account
+					"common.key":         "index-value",
+					"index.specific.key": "index-value",
 				}, img.Annotations)
 			},
 		},
