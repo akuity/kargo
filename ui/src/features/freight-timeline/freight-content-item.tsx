@@ -1,4 +1,4 @@
-import { IconDefinition } from '@fortawesome/free-solid-svg-icons';
+import { faCode, faHammer, IconDefinition } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
 import classNames from 'classnames';
@@ -18,6 +18,10 @@ export const FreightContentItem = (props: {
   linkClass: string;
   // don't truncate any content
   fullContentVisibility?: boolean;
+  // source of image
+  artifactSource?: string;
+  // build date of image
+  artifactBuildDate?: string;
 }) => {
   const {
     horizontal,
@@ -54,21 +58,44 @@ export const FreightContentItem = (props: {
       overlay={overlay}
       title={title}
     >
-      <FontAwesomeIcon
-        icon={icon}
-        style={{ fontSize: '14px' }}
-        className={classNames('px-1', {
-          'mb-2': !horizontal,
-          'mr-2': horizontal
-        })}
-      />
-      {href ? (
-        <a target='_blank' className={linkClass}>
-          {_children}
-        </a>
-      ) : (
-        _children
-      )}
+      <div className='flex gap-2 items-center'>
+        <FontAwesomeIcon icon={icon} style={{ fontSize: '14px' }} className={classNames('px-1')} />
+        {props.artifactSource && (
+          <a
+            href={props.artifactSource}
+            className={classNames('text-blue-500', {
+              'mr-2': horizontal
+            })}
+            style={{ fontSize: '10px' }}
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+            target='_blank'
+          >
+            <FontAwesomeIcon icon={faCode} style={{ fontSize: '10px' }} />
+          </a>
+        )}
+      </div>
+      <div
+        className={classNames(
+          { 'mt-2 flex-col': !horizontal, 'gap-2': horizontal },
+          'flex items-center'
+        )}
+      >
+        {href ? (
+          <a target='_blank' className={linkClass}>
+            {_children}
+          </a>
+        ) : (
+          _children
+        )}
+        {!!props.artifactBuildDate && (
+          <span className='text-[8px]'>
+            <FontAwesomeIcon icon={faHammer} />
+            {props.artifactBuildDate}
+          </span>
+        )}
+      </div>
     </Tooltip>
   );
 };
