@@ -208,7 +208,13 @@ export const AnalysisRunLogs = (props: {
           theme={monacoEditorLogLanguageTheme}
           value={logs}
           height={props.height || '512px'}
-          options={{ readOnly: true, lineNumbers: showLineNumbers ? 'on' : 'off' }}
+          options={{
+            readOnly: true,
+            lineNumbers: showLineNumbers ? 'on' : 'off',
+            guides: {
+              indentation: false
+            }
+          }}
           onMount={(editor) => {
             logsEditor.current = editor;
             editorDecoration.current = editor.createDecorationsCollection([]);
