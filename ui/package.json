@@ -21,7 +21,7 @@
     "@types/git-url-parse": "^9.0.3",
     "@types/json-schema": "^7.0.15",
     "@types/node": "^22.10.2",
-    "@types/react": "^19.0.10",
+    "@types/react": "^19.0.12",
     "@types/react-dom": "^19.0.4",
     "@types/react-infinite-scroller": "^1.2.5",
     "@types/semver": "^7.5.8",
@@ -46,7 +46,7 @@
     "vite": "^6.0.12",
     "vite-plugin-compression": "^0.5.1",
     "vite-tsconfig-paths": "^5.1.4",
-    "vitest": "^3.0.8",
+    "vitest": "^3.0.9",
     "zx": "^8.3.2"
   },
   "packageManager": "pnpm@9.0.3",
