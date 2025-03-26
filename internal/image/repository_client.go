@@ -307,8 +307,7 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 		)
 	}
 
-	// Extract annotations from the index manifest. More specific annotations
-	// from manifests or descriptors will be merged into these.
+	// Extract annotations from the index manifest.
 	annotations := idxManifest.Annotations
 
 	refs := make([]v1.Descriptor, 0, len(idxManifest.Manifests))
@@ -369,27 +368,6 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 			)
 		}
 		img.Digest = digest
-
-		// Merge the annotations from the manifest into the annotations from the
-		// index. The manifest's annotations will take precedence.
-		if img.Annotations != nil {
-			if annotations == nil {
-				annotations = make(map[string]string, len(img.Annotations))
-			}
-			maps.Copy(annotations, img.Annotations)
-		}
-
-		// If the descriptor has annotations, merge them into the annotations
-		// collected from the index and manifest. The descriptor's annotations
-		// will take precedence, as they are the most granular.
-		if ref.Annotations != nil {
-			if annotations == nil {
-				annotations = make(map[string]string, len(ref.Annotations))
-			}
-			maps.Copy(annotations, ref.Annotations)
-		}
-
-		// Set the merged annotations
 		img.Annotations = annotations
 
 		return img, nil

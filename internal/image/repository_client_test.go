@@ -502,11 +502,12 @@ func TestImageFromV1ImageIndex(t *testing.T) {
 				require.NotNil(t, img)
 				require.Equal(t, testDigest, img.Digest)
 				require.NotNil(t, img.Annotations)
-				// Image annotations should override index annotations
-				require.Equal(t, "1.1.0", img.Annotations["org.opencontainers.image.version"])
-				// Both sets of annotations should be present
-				require.Equal(t, "Test Vendor", img.Annotations["org.opencontainers.image.vendor"])
-				require.Equal(t, "2023-01-01T00:00:00Z", img.Annotations["org.opencontainers.image.created"])
+
+				// Image annotations from digest should be ignored
+				require.Equal(t, map[string]string{
+					"org.opencontainers.image.vendor":  "Test Vendor",
+					"org.opencontainers.image.version": "1.0.0",
+				}, img.Annotations)
 			},
 		},
 		{
@@ -593,7 +594,7 @@ func TestImageFromV1ImageIndex(t *testing.T) {
 			},
 		},
 		{
-			name: "platform descriptor annotations take precedence",
+			name: "platform specific annotations are ignored",
 			idx: &mockImageIndex{
 				indexManifest: &v1.IndexManifest{
 					Manifests: []v1.Descriptor{{
@@ -635,12 +636,9 @@ func TestImageFromV1ImageIndex(t *testing.T) {
 				require.NotNil(t, img)
 
 				require.Equal(t, map[string]string{
-					// Platform descriptor annotations should override both manifest and index
-					"common.key": "platform-descriptor-value",
-					// Keys unique to each level should be preserved
-					"platform.specific.key": "platform-value",
-					"index.specific.key":    "index-value",
-					"manifest.specific.key": "manifest-value",
+					// Only index annotations are taken into account
+					"common.key":         "index-value",
+					"index.specific.key": "index-value",
 				}, img.Annotations)
 			},
 		},

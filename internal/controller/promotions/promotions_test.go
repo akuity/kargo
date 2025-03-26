@@ -3,6 +3,7 @@ package promotions
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -458,6 +459,74 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 			req := tt.req
 			err := r.terminatePromotion(context.Background(), &req, tt.promo, tt.freight)
 			tt.assertions(t, recorder, tt.promo, err)
+		})
+	}
+}
+
+func Test_parseCreateActorAnnotation(t *testing.T) {
+	tests := []struct {
+		name  string
+		promo *kargoapi.Promotion
+		want  string
+	}{
+		{
+			name: "basic case",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-promo",
+					Namespace: "fake-namespace",
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyCreateActor: fmt.Sprintf(
+							"%s%s", kargoapi.EventActorEmailPrefix, "fake-actor",
+						),
+					},
+				},
+			},
+			want: "fake-actor",
+		},
+		{
+			name: "single element",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-promo",
+					Namespace: "fake-namespace",
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyCreateActor: kargoapi.EventActorAdmin,
+					},
+				},
+			},
+			want: kargoapi.EventActorAdmin,
+		},
+		{
+			name: "unknown actor",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-promo",
+					Namespace: "fake-namespace",
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyCreateActor: kargoapi.EventActorUnknown,
+					},
+				},
+			},
+			want: "",
+		},
+		{
+
+			name: "no annotation",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-promo",
+					Namespace: "fake-namespace",
+				},
+			},
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := parseCreateActorAnnotation(tt.promo)
+			require.Equal(t, tt.want, result)
 		})
 	}
 }

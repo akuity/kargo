@@ -19,8 +19,11 @@ const (
 	// as-kubernetes-resources flag.
 	AsKubernetesResourcesShortFlag = "k"
 
-	// Claim is a flag name for the claim flag
+	// ClaimFlag is a flag name for the claim flag.
 	ClaimFlag = "claim"
+
+	// ContainerFlag is the flag name for the container flag.
+	ContainerFlag = "container"
 
 	// FilenameFlag is the flag name for the filename flag.
 	FilenameFlag = "filename"
@@ -47,6 +50,9 @@ const (
 
 	// InteractivePasswordFlag is the flag name for the interactive-password flag.
 	InteractivePasswordFlag = "interactive-password"
+
+	// MetricFlag is the flag name for the metric flag.
+	MetricFlag = "metric"
 
 	// NameFlag is the flag name for the name flag.
 	NameFlag = "name"
@@ -143,6 +149,10 @@ func Claims(fs *pflag.FlagSet, claims *[]string, usage string) {
 	fs.StringSliceVar(claims, ClaimFlag, nil, usage)
 }
 
+func Container(fs *pflag.FlagSet, container *string, usage string) {
+	fs.StringVar(container, ContainerFlag, "", usage)
+}
+
 // Description adds the DescriptionFlag to the provided flag set.
 func Description(fs *pflag.FlagSet, stage *string, usage string) {
 	fs.StringVar(stage, DescriptionFlag, "", usage)
@@ -186,6 +196,11 @@ func InsecureTLS(fs *pflag.FlagSet, insecure *bool) {
 // InteractivePassword adds the InteractivePasswordFlag to the provided flag set.
 func InteractivePassword(fs *pflag.FlagSet, changePasswordInteractively *bool, usage string) {
 	fs.BoolVar(changePasswordInteractively, InteractivePasswordFlag, false, usage)
+}
+
+// Metric adds the MetricFlag to the provided flag set.
+func Metric(fs *pflag.FlagSet, metric *string, usage string) {
+	fs.StringVar(metric, MetricFlag, "", usage)
 }
 
 // Name adds the NameFlag to the provided flag set.

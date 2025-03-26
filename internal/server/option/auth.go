@@ -378,7 +378,8 @@ func (a *authInterceptor) authenticate(
 			return user.ContextWithInfo(
 				ctx,
 				user.Info{
-					IsAdmin: true,
+					IsAdmin:     true,
+					BearerToken: rawToken,
 				},
 			), nil
 		}
@@ -402,6 +403,7 @@ func (a *authInterceptor) authenticate(
 			user.Info{
 				Claims:                     c,
 				ServiceAccountsByNamespace: sa,
+				BearerToken:                rawToken,
 			},
 		), nil
 
