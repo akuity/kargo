@@ -1,7 +1,16 @@
 import { toJson } from '@bufbuild/protobuf';
-import { faFile, faInfoCircle, faPencil } from '@fortawesome/free-solid-svg-icons';
+import { IconProp } from '@fortawesome/fontawesome-svg-core';
+import { faDocker, faGitAlt } from '@fortawesome/free-brands-svg-icons';
+import {
+  faAnchor,
+  faCode,
+  faFile,
+  faHammer,
+  faInfoCircle,
+  faPencil
+} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Drawer, Tabs, Tooltip, Typography } from 'antd';
+import { Collapse, Descriptions, Drawer, Table, Tabs, Tag, Tooltip, Typography } from 'antd';
 import classNames from 'classnames';
 import { useEffect, useState } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
@@ -13,9 +22,14 @@ import { Description } from '../common/description';
 import { ManifestPreview } from '../common/manifest-preview';
 import { useModal } from '../common/modal/use-modal';
 import { getAlias } from '../common/utils';
-import { FreightContents } from '../freight-timeline/freight-contents';
+import {
+  getAllOciPrefixedAnnotations,
+  getImageBuiltDate,
+  getImageSource
+} from '../freight-timeline/open-container-initiative';
 import { UpdateFreightAliasModal } from '../project/pipelines/update-freight-alias-modal';
 
+import { flattenFreightOrigin } from './flatten-freight-origin';
 import { FreightStatusList } from './freight-status-list';
 
 const CopyValue = (props: { value: string; label: string; className?: string }) => (
@@ -101,11 +115,151 @@ export const FreightDetails = ({
                     <>
                       <div className='mb-4'>
                         <div className='font-semibold mb-2 text-xs'>ARTIFACTS</div>
-                        <FreightContents
-                          freight={freight}
-                          highlighted={true}
-                          horizontal={true}
-                          fullContentVisibility
+                        <Table
+                          pagination={{
+                            pageSize: 5
+                          }}
+                          dataSource={flattenFreightOrigin(freight)}
+                          columns={[
+                            {
+                              title: 'Source',
+                              render: (_, { type }) => {
+                                let icon: IconProp = faGitAlt;
+
+                                switch (type) {
+                                  case 'helm':
+                                    icon = faAnchor;
+                                    break;
+                                  case 'image':
+                                    icon = faDocker;
+                                    break;
+                                }
+
+                                return <FontAwesomeIcon icon={icon} />;
+                              },
+                              width: '5%'
+                            },
+                            {
+                              title: 'Repo',
+                              dataIndex: 'repoURL',
+                              width: '30%'
+                            },
+                            {
+                              title: 'Version',
+                              render: (_, record) => {
+                                switch (record.type) {
+                                  case 'git':
+                                    return record.id;
+                                  case 'helm':
+                                    return record.version;
+                                  case 'image':
+                                    return record.tag;
+                                }
+                              }
+                            },
+                            {
+                              title: 'Metadata',
+                              width: '600px',
+                              render: (_, record) => {
+                                if (record.type === 'image') {
+                                  const artifactSource = getImageSource(record?.annotations || {});
+                                  const artifactBuildDate = getImageBuiltDate(
+                                    record?.annotations || {}
+                                  );
+                                  const allOciPrefixedAnnotations = getAllOciPrefixedAnnotations(
+                                    record?.annotations || {}
+                                  );
+
+                                  if (
+                                    !artifactSource &&
+                                    !artifactBuildDate &&
+                                    !Object.keys(allOciPrefixedAnnotations).length
+                                  ) {
+                                    return '-';
+                                  }
+
+                                  return (
+                                    <>
+                                      {(!!artifactSource || !!artifactBuildDate) && (
+                                        <div className='flex gap-4 flex-wrap text-sm'>
+                                          {!!artifactSource && (
+                                            <a href={artifactSource} target='_blank'>
+                                              <FontAwesomeIcon icon={faCode} className='mr-2' />{' '}
+                                              source code
+                                              <span className='text-[8px] ml-1 font-bold'>OCI</span>
+                                            </a>
+                                          )}
+
+                                          {!!artifactBuildDate && (
+                                            <div>
+                                              <FontAwesomeIcon
+                                                icon={faHammer}
+                                                className='mr-2 text-sm'
+                                              />
+                                              Built {artifactBuildDate}
+                                              <span className='text-[8px] ml-1 font-bold'>OCI</span>
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+
+                                      {Object.keys(allOciPrefixedAnnotations).length > 0 && (
+                                        <Collapse
+                                          size='small'
+                                          className='mt-2'
+                                          items={[
+                                            {
+                                              label: <span className='text-xs'>OCI</span>,
+                                              children: (
+                                                <div className='flex gap-2 flex-wrap'>
+                                                  {Object.entries(allOciPrefixedAnnotations).map(
+                                                    ([key, value]) => (
+                                                      <Tag key={key}>
+                                                        {key}: {value}
+                                                      </Tag>
+                                                    )
+                                                  )}
+                                                </div>
+                                              )
+                                            }
+                                          ]}
+                                        />
+                                      )}
+                                    </>
+                                  );
+                                }
+
+                                if (record.type === 'git') {
+                                  return (
+                                    <Descriptions
+                                      size='small'
+                                      column={1}
+                                      items={[
+                                        {
+                                          label: 'Author',
+                                          children: record.author
+                                        },
+                                        {
+                                          label: 'Branch',
+                                          children: record.branch
+                                        },
+                                        {
+                                          label: 'Committer',
+                                          children: record.committer
+                                        },
+                                        {
+                                          label: 'Message',
+                                          children: record.message
+                                        }
+                                      ]}
+                                    />
+                                  );
+                                }
+
+                                return '-';
+                              }
+                            }
+                          ]}
                         />
                       </div>
                       <FreightStatusList freight={freight} />

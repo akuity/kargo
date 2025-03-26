@@ -241,6 +241,7 @@ export const AssembleFreight = ({
               freight={constructFreight(chosenItems, warehouse?.metadata?.name || '')}
               highlighted
               horizontal
+              fullContentVisibility
             />
             <Button
               className='ml-auto'
