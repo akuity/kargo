@@ -2,21 +2,40 @@ package bitbucket
 
 import (
 	"context"
-	"crypto/tls"
+	"encoding/json"
 	"fmt"
-	"github.com/akuity/kargo/internal/git"
-	"github.com/akuity/kargo/internal/gitprovider"
+	"net/url"
 	"strconv"
+	"strings"
 	"time"
+
+	"github.com/hashicorp/go-cleanhttp"
 
 	"github.com/ktrysmt/go-bitbucket"
 
-	"net/http"
-	"net/url"
-	"strings"
+	"github.com/akuity/kargo/internal/git"
+	"github.com/akuity/kargo/internal/gitprovider"
 )
 
-const ProviderName = "bitbucket"
+const (
+	ProviderName = "bitbucket"
+
+	// supportedHost is the hostname of the Bitbucket instance that this provider
+	// supports. As of now, this provider only supports Bitbucket "Cloud", and not
+	// self-hosted Bitbucket "Datacenter" instances.
+	supportedHost = "bitbucket.org"
+
+	// prStateOpen is the state of an open pull request.
+	prStateOpen = "OPEN"
+	// prStateMerged is the state of a merged pull request.
+	prStateMerged = "MERGED"
+	// prStateDeclined is the state of a declined pull request. This is also
+	// known as "closed" in other Git providers.
+	prStateDeclined = "DECLINED"
+	// prStateSuperseded is the state of a superseded pull request. This is also
+	// known as "closed" in other Git providers.
+	prStateSuperseded = "SUPERSEDED"
+)
 
 var registration = gitprovider.Registration{
 	Predicate: func(repoURL string) bool {
@@ -24,8 +43,7 @@ var registration = gitprovider.Registration{
 		if err != nil {
 			return false
 		}
-
-		return strings.Contains(u.Host, ProviderName)
+		return u.Hostname() == supportedHost
 	},
 	NewProvider: func(
 		repoURL string,
@@ -42,15 +60,15 @@ func init() {
 type pullRequestClient interface {
 	CreatePullRequest(
 		opt *bitbucket.PullRequestsOptions,
-	) (interface{}, error)
+	) (any, error)
 
 	ListPullRequests(
 		opt *bitbucket.PullRequestsOptions,
-	) (interface{}, error)
+	) (any, error)
 
 	GetPullRequest(
 		opt *bitbucket.PullRequestsOptions,
-	) (interface{}, error)
+	) (any, error)
 }
 
 // provider is a Bitbucket-based implementation of gitprovider.Interface.
@@ -68,136 +86,26 @@ func NewProvider(
 	if opts == nil {
 		opts = &gitprovider.Options{}
 	}
+
 	host, owner, repoSlug, err := parseRepoURL(repoURL)
 	if err != nil {
 		return nil, err
 	}
-	client := bitbucket.NewBasicAuth(opts.Name, opts.Token)
-	if host != "bitbucket.org" {
-		client.HttpClient = &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: opts.InsecureSkipTLSVerify,
-				},
-			},
-		}
+
+	// The provider only supports Bitbucket "Cloud", and not self-hosted
+	// Bitbucket "Datacenter" instances — these require a different API client.
+	if host != supportedHost {
+		return nil, fmt.Errorf("unsupported Bitbucket host %q", host)
 	}
+
+	client := bitbucket.NewOAuthbearerToken(opts.Token)
+	client.HttpClient = cleanhttp.DefaultClient()
+
 	return &provider{
 		owner:    owner,
 		repoSlug: repoSlug,
 		client:   &bitbucketClientWrapper{client},
 	}, nil
-}
-
-// CreatePullRequest implements gitprovider.Interface.
-func (p *provider) CreatePullRequest(
-	_ context.Context,
-	opts *gitprovider.CreatePullRequestOpts,
-) (*gitprovider.PullRequest, error) {
-	if opts == nil {
-		opts = &gitprovider.CreatePullRequestOpts{}
-	}
-	prOpts := &bitbucket.PullRequestsOptions{
-		Owner:             p.owner,
-		RepoSlug:          p.repoSlug,
-		Title:             opts.Title,
-		Description:       opts.Description,
-		SourceBranch:      opts.Head,
-		DestinationBranch: opts.Base,
-	}
-	bbPR, err := p.client.CreatePullRequest(prOpts)
-	if err != nil {
-		return nil, err
-	}
-	pr := convertBitbucketPR(bbPR)
-	return &pr, nil
-}
-
-// GetPullRequest implements gitprovider.Interface.
-func (p *provider) GetPullRequest(
-	_ context.Context,
-	id int64,
-) (*gitprovider.PullRequest, error) {
-	bbPR, err := p.client.GetPullRequest(&bitbucket.PullRequestsOptions{ID: strconv.FormatInt(id, 10)})
-	if err != nil {
-		return nil, err
-	}
-	if bbPR == nil {
-		return nil, fmt.Errorf("pull request %d not found", id)
-	}
-	pr := convertBitbucketPR(bbPR)
-	return &pr, nil
-}
-
-// ListPullRequests implements gitprovider.Interface.
-func (p *provider) ListPullRequests(
-	_ context.Context,
-	opts *gitprovider.ListPullRequestOptions,
-) ([]gitprovider.PullRequest, error) {
-	if opts == nil {
-		opts = &gitprovider.ListPullRequestOptions{}
-	}
-	prOpts := &bitbucket.PullRequestsOptions{
-		SourceBranch:      opts.HeadBranch,
-		DestinationBranch: opts.BaseBranch,
-	}
-	bbPRs, err := p.client.ListPullRequests(prOpts)
-	if err != nil {
-		return nil, err
-	}
-
-	// Type assert bbPRs to the correct type
-	prList, ok := bbPRs.([]map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("unexpected type for bbPRs: %T", bbPRs)
-	}
-
-	var prs []gitprovider.PullRequest
-	for _, bbPR := range prList {
-		prs = append(prs, convertBitbucketPR(bbPR))
-	}
-	return prs, nil
-}
-
-func convertBitbucketPR(pr interface{}) gitprovider.PullRequest {
-	bbPR, ok := pr.(bbPullRequest)
-	if !ok {
-		return gitprovider.PullRequest{}
-	}
-
-	createdOn, err := time.Parse("2006-01-02T15:04:05Z", bbPR.CreatedOn)
-	if err != nil {
-		fmt.Println("Error parsing CreatedOn:", err)
-	}
-
-	return gitprovider.PullRequest{
-		Number:         bbPR.ID,
-		URL:            bbPR.Links.HTML.Href,
-		Open:           bbPR.State == "OPEN",
-		Merged:         bbPR.State == "MERGED",
-		MergeCommitSHA: bbPR.MergeCommit.Hash,
-		Object:         pr,
-		HeadSHA:        bbPR.Source.Commit.Hash,
-		CreatedAt:      &createdOn,
-	}
-}
-
-func parseRepoURL(repoURL string) (string, string, string, error) {
-	u, err := url.Parse(git.NormalizeURL(repoURL))
-	if err != nil {
-		return "", "", "", fmt.Errorf("error parsing bitbucket repository URL %q: %w", u, err)
-	}
-	host := u.Host
-	path := strings.TrimPrefix(u.Path, "/")
-	parts := strings.Split(path, "/")
-	if len(parts) < 2 {
-		return "", "", "", fmt.Errorf("invalid repository URL %q", repoURL)
-	}
-
-	owner := parts[0]
-	repo := strings.TrimSuffix(parts[1], ".git")
-
-	return host, owner, repo, nil
 }
 
 type bitbucketClientWrapper struct {
@@ -206,18 +114,197 @@ type bitbucketClientWrapper struct {
 
 func (w *bitbucketClientWrapper) CreatePullRequest(
 	opt *bitbucket.PullRequestsOptions,
-) (interface{}, error) {
+) (any, error) {
 	return w.client.Repositories.PullRequests.Create(opt)
 }
 
 func (w *bitbucketClientWrapper) ListPullRequests(
 	opt *bitbucket.PullRequestsOptions,
-) (interface{}, error) {
+) (any, error) {
 	return w.client.Repositories.PullRequests.Gets(opt)
 }
 
 func (w *bitbucketClientWrapper) GetPullRequest(
 	opt *bitbucket.PullRequestsOptions,
-) (interface{}, error) {
+) (any, error) {
 	return w.client.Repositories.PullRequests.Get(opt)
+}
+
+// CreatePullRequest implements gitprovider.Interface.
+func (p *provider) CreatePullRequest(
+	ctx context.Context,
+	opts *gitprovider.CreatePullRequestOpts,
+) (*gitprovider.PullRequest, error) {
+	if opts == nil {
+		opts = &gitprovider.CreatePullRequestOpts{}
+	}
+
+	createOpts := &bitbucket.PullRequestsOptions{
+		Owner:             p.owner,
+		RepoSlug:          p.repoSlug,
+		Title:             opts.Title,
+		Description:       opts.Description,
+		SourceBranch:      opts.Head,
+		DestinationBranch: opts.Base,
+	}
+	createOpts.WithContext(ctx)
+
+	resp, err := p.client.CreatePullRequest(createOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	pr := convertBitbucketPR(resp)
+	return &pr, nil
+}
+
+// GetPullRequest implements gitprovider.Interface.
+func (p *provider) GetPullRequest(
+	ctx context.Context,
+	id int64,
+) (*gitprovider.PullRequest, error) {
+	getOpts := &bitbucket.PullRequestsOptions{
+		Owner:    p.owner,
+		RepoSlug: p.repoSlug,
+		ID:       strconv.FormatInt(id, 10),
+	}
+	getOpts.WithContext(ctx)
+
+	resp, err := p.client.GetPullRequest(getOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	pr := convertBitbucketPR(resp)
+	return &pr, nil
+}
+
+// ListPullRequests implements gitprovider.Interface.
+func (p *provider) ListPullRequests(
+	ctx context.Context,
+	opts *gitprovider.ListPullRequestOptions,
+) ([]gitprovider.PullRequest, error) {
+	if opts == nil {
+		opts = &gitprovider.ListPullRequestOptions{}
+	}
+	if opts.State == "" {
+		opts.State = gitprovider.PullRequestStateOpen
+	}
+
+	listOpts := &bitbucket.PullRequestsOptions{
+		Owner:             p.owner,
+		RepoSlug:          p.repoSlug,
+		// TODO(hidde): Listing pull requests does not support filtering by
+		// source or destination branch. This is a limitation of the Bitbucket
+		// API. Because of this, filtering will have to be done client-side (in
+		// other words, further down in this method), and will be highly
+		// inefficient.
+	}
+	listOpts.WithContext(ctx)
+
+	switch opts.State {
+	case gitprovider.PullRequestStateAny:
+		listOpts.States = []string{prStateOpen, prStateMerged, prStateDeclined, prStateSuperseded}
+	case gitprovider.PullRequestStateClosed:
+		listOpts.States = []string{prStateMerged, prStateDeclined, prStateSuperseded}
+	case gitprovider.PullRequestStateOpen:
+		listOpts.States = []string{prStateOpen}
+	default:
+		return nil, fmt.Errorf("unknown pull request state %q", opts.State)
+	}
+
+	resp, err := p.client.ListPullRequests(listOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	list, ok := resp.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("unexpected type for list response: %T", resp)
+	}
+
+	rawPRs, ok := list["values"]
+	if !ok {
+		return nil, fmt.Errorf("list response does not contain %q", "values")
+	}
+
+	prList, ok := rawPRs.([]any)
+	if !ok {
+		return nil, fmt.Errorf("unexpected type for list values: %T", rawPRs)
+	}
+
+	var prs []gitprovider.PullRequest
+	for _, pr := range prList {
+		prs = append(prs, convertBitbucketPR(pr))
+	}
+	return prs, nil
+}
+
+// pullRequest is the (partial) structure of a Bitbucket pull request.
+// xref: https://developer.atlassian.com/cloud/bitbucket/rest/api-group-pullrequests/#api-repositories-workspace-repo-slug-pullrequests-pull-request-id-get
+type pullRequest struct {
+	ID          int64  `json:"id"`
+	State       string `json:"state"`
+	Links       struct {
+		HTML struct {
+			Href string `json:"href"`
+		} `json:"html"`
+	} `json:"links"`
+	Source struct {
+		Commit struct {
+			Hash string `json:"hash"`
+		} `json:"commit"`
+	} `json:"source"`
+	MergeCommit struct {
+		Hash string `json:"hash"`
+	} `json:"merge_commit"`
+	CreatedOn string `json:"created_on"`
+}
+
+func convertBitbucketPR(raw any) gitprovider.PullRequest {
+	b, err := json.Marshal(raw)
+	if err != nil {
+		return gitprovider.PullRequest{}
+	}
+
+	var typedPR pullRequest
+	if err := json.Unmarshal(b, &typedPR); err != nil {
+		return gitprovider.PullRequest{}
+	}
+
+	var createdAt *time.Time
+	if ts, err := time.Parse("2006-01-02T15:04:05Z", typedPR.CreatedOn); err == nil {
+		createdAt = &ts
+	}
+
+	return gitprovider.PullRequest{
+		Number:         typedPR.ID,
+		URL:            typedPR.Links.HTML.Href,
+		Open:           typedPR.State == prStateOpen,
+		Merged:         typedPR.State == prStateMerged,
+		// TODO(hidde): As a sign of true craftsmanship, or lack thereof, the
+		// Bitbucket API returns a short commit SHA as merge commit hash. To get
+		// the full commit SHA, we need to fetch the commit details separately.
+		MergeCommitSHA: typedPR.MergeCommit.Hash,
+		Object:         raw,
+		HeadSHA:        typedPR.Source.Commit.Hash,
+		CreatedAt:      createdAt,
+	}
+}
+
+func parseRepoURL(repoURL string) (string, string, string, error) {
+	u, err := url.Parse(git.NormalizeURL(repoURL))
+	if err != nil {
+		return "", "", "", fmt.Errorf("error parsing bitbucket repository URL %q: %w", u, err)
+	}
+
+	path := strings.TrimPrefix(u.Path, "/")
+	parts := strings.Split(path, "/")
+	if len(parts) != 2 {
+		return "", "", "", fmt.Errorf(
+			"could not extract repository owner and slug from URL %q", u,
+		)
+	}
+
+	return u.Hostname(), parts[0], parts[1], nil
 }
