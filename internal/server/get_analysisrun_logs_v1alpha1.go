@@ -10,6 +10,9 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/hashicorp/go-cleanhttp"
+	"golang.org/x/text/encoding"
+	"golang.org/x/text/encoding/unicode"
+	"golang.org/x/text/transform"
 	"k8s.io/apimachinery/pkg/types"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
@@ -17,6 +20,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/api/stubs/rollouts"
+	libEncoding "github.com/akuity/kargo/internal/encoding"
 	"github.com/akuity/kargo/internal/expressions"
 	"github.com/akuity/kargo/internal/server/user"
 )
@@ -124,36 +128,44 @@ func (s *server) GetAnalysisRunLogs(
 
 	// Logs can be large, so we read them using a buffered reader.
 	reader := bufio.NewReader(httpResp.Body)
-	bufferSize := 4096 // 4 KB chunks
-	buf := make([]byte, bufferSize)
+
+	const bufferSize = 4096 // 4 KB
+
+	peekedBytes, err := reader.Peek(bufferSize)
+	if err != nil && err != io.EOF {
+		return fmt.Errorf("error peeking at log stream: %w", err)
+	}
+	// Log data has a higher than average probability of being encoded with
+	// something other than UTF-8.
+	enc := libEncoding.Determine(httpResp.Header.Get("Content-Type"), peekedBytes)
+	if enc == nil {
+		enc = unicode.UTF8
+	}
+
+	chunkCh, errCh, err := StreamLogs(ctx, reader, enc.NewDecoder(), bufferSize)
+	if err != nil {
+		return fmt.Errorf("error streaming logs: %w", err)
+	}
 	for {
 		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-		n, err := reader.Read(buf)
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				break
+		case chunk, ok := <-chunkCh:
+			if !ok {
+				return nil
 			}
-			return fmt.Errorf(
-				"error reading response from log url %s: %w",
-				httpReq.URL.String(), err,
-			)
-		}
-		if n > 0 {
-			if err := stream.Send(
-				&svcv1alpha1.GetAnalysisRunLogsResponse{
-					Chunk: string(buf[:n]),
-				},
+			if err = stream.Send(
+				&svcv1alpha1.GetAnalysisRunLogsResponse{Chunk: chunk},
 			); err != nil {
 				return fmt.Errorf("send response: %w", err)
 			}
+		case err := <-errCh:
+			if err == nil {
+				return nil
+			}
+			return fmt.Errorf("error streaming logs: %w", err)
+		case <-ctx.Done():
+			return ctx.Err()
 		}
 	}
-
-	return nil
 }
 
 // getJobMetric confirms the existence of a JobMetric with the provided name or,
@@ -408,4 +420,63 @@ func (s *server) buildRequest(
 		httpReq.Header.Set(key, val)
 	}
 	return httpReq, nil
+}
+
+func StreamLogs(
+	ctx context.Context,
+	reader *bufio.Reader,
+	decoder *encoding.Decoder,
+	bufferSize int,
+) (<-chan string, <-chan error, error) {
+	// Special case: We only use UTF-16 decoders that ignore the BOM, but that
+	// only means they do not REQUIRE there to be a BOM at the beginning of the
+	// stream. If it's there, it still gets decoded. A UTF-16 BOM is an invisible
+	// character in UTF-8, but it's still there. We don't want it.
+	//
+	// A UTF-16 BOM is two bytes. Peek at the first two bytes of the stream.
+	peekedBytes, err := reader.Peek(2)
+	if err != nil && err != io.EOF {
+		return nil, nil, fmt.Errorf("error peeking at log stream: %w", err)
+	}
+	if libEncoding.HasUTF16BOM(peekedBytes) {
+		if _, err = reader.Discard(2); err != nil {
+			return nil, nil, fmt.Errorf("error discarding BOM: %w", err)
+		}
+	}
+
+	transformReader := transform.NewReader(reader, decoder)
+
+	chunkCh := make(chan string)
+	errCh := make(chan error)
+
+	go func() {
+		defer close(chunkCh)
+		defer close(errCh)
+
+		buf := make([]byte, bufferSize)
+
+		for {
+			n, err := transformReader.Read(buf)
+			if n > 0 {
+				select {
+				case chunkCh <- string(buf[:n]):
+				case <-ctx.Done():
+					return
+				}
+			}
+			if err != nil {
+				if err == io.EOF {
+					return
+				}
+				select {
+				case errCh <- fmt.Errorf("error reading data: %w", err):
+					return
+				case <-ctx.Done():
+					return
+				}
+			}
+		}
+	}()
+
+	return chunkCh, errCh, nil
 }
