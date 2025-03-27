@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -33,7 +34,13 @@ import (
 	"github.com/akuity/kargo/internal/kubeclient"
 )
 
-const defaultRandStringCharSet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+const (
+	defaultRandStringCharSet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+	authMethodAdmin      = "admin"
+	authMethodKubeconfig = "kubeconfig"
+	authMethodSSO        = "sso"
+)
 
 //go:embed assets
 var assets embed.FS
@@ -64,8 +71,8 @@ func NewCommand(
 # Log in using SSO
 kargo login https://kargo.example.com --sso
 
-# Log in (again) using the last used server address
-kargo login --sso
+# Log in (again) using the last used server address and method
+kargo login
 
 # Log in using the admin user
 kargo login https://kargo.example.com --admin
@@ -111,7 +118,13 @@ func (o *loginOptions) addFlags(cmd *cobra.Command) {
 		"Port to use for the callback URL; 0 selects any available, unprivileged port. "+
 			"Only used when --sso is specified.")
 
-	cmd.MarkFlagsOneRequired("admin", "kubeconfig", "sso")
+	// If we do not have a saved configuration, we require the user to specify a
+	// login method. If we do have a saved configuration, we allow the user to
+	// omit the login method and use the last used method.
+	if o.Config.AuthMethod == "" {
+		cmd.MarkFlagsOneRequired("admin", "kubeconfig", "sso")
+	}
+
 	cmd.MarkFlagsMutuallyExclusive("admin", "kubeconfig", "sso")
 }
 
@@ -120,7 +133,19 @@ func (o *loginOptions) complete(args []string) {
 	// Use the API address in config as a default address
 	o.ServerAddress = o.Config.APIAddress
 	if len(args) == 1 {
-		o.ServerAddress = strings.TrimSpace(args[0])
+		o.ServerAddress = normalizeURL(args[0])
+	}
+
+	// If no auth method flag was explicitly set, use the stored method
+	if !o.UseAdmin && !o.UseKubeconfig && !o.UseSSO && o.Config.AuthMethod != "" {
+		switch o.Config.AuthMethod {
+		case authMethodAdmin:
+			o.UseAdmin = true
+		case authMethodKubeconfig:
+			o.UseKubeconfig = true
+		case authMethodSSO:
+			o.UseSSO = true
+		}
 	}
 }
 
@@ -138,8 +163,10 @@ func (o *loginOptions) run(ctx context.Context) error {
 	var bearerToken, refreshToken string
 	var err error
 
+	var authMethod string
 	switch {
 	case o.UseAdmin:
+		authMethod = authMethodAdmin
 		for {
 			if o.Password != "" {
 				break
@@ -155,10 +182,12 @@ func (o *loginOptions) run(ctx context.Context) error {
 			return err
 		}
 	case o.UseKubeconfig:
+		authMethod = authMethodKubeconfig
 		if bearerToken, err = kubeconfigLogin(ctx); err != nil {
 			return err
 		}
 	case o.UseSSO:
+		authMethod = authMethodSSO
 		if bearerToken, refreshToken, err = ssoLogin(
 			ctx, o.ServerAddress, o.CallbackPort, o.InsecureTLS,
 		); err != nil {
@@ -179,9 +208,10 @@ func (o *loginOptions) run(ctx context.Context) error {
 	}
 
 	if o.Config.APIAddress != o.ServerAddress {
-		o.Config = libConfig.CLIConfig{}
+		o.Config = libConfig.NewDefaultCLIConfig()
 	}
 
+	o.Config.AuthMethod = authMethod
 	o.Config.APIAddress = o.ServerAddress
 	o.Config.BearerToken = bearerToken
 	o.Config.RefreshToken = refreshToken
@@ -335,13 +365,12 @@ func ssoLogin(
 	if err != nil {
 		return "", "", fmt.Errorf("error creating PCKE code verifier and code challenge: %w", err)
 	}
-	url := cfg.AuthCodeURL(
+	u := cfg.AuthCodeURL(
 		state,
 		oauth2.SetAuthURLParam("code_challenge", codeChallenge),
 		oauth2.SetAuthURLParam("code_challenge_method", "S256"),
 	)
-
-	if err = browser.Open(url); err != nil {
+	if err = browser.Open(u); err != nil {
 		return "", "", fmt.Errorf("error opening system default browser: %w", err)
 	}
 
@@ -498,6 +527,26 @@ func randStringFromCharset(n int, charset string) (string, error) {
 		b[i] = charset[randIdxInt]
 	}
 	return string(b), nil
+}
+
+// normalizeURL ensures a given address has a scheme, defaulting to "https".
+func normalizeURL(address string) string {
+	address = strings.TrimSpace(address)
+	if address == "" {
+		return address
+	}
+
+	// If no scheme is present, prepend "https://"
+	if !strings.Contains(address, "://") {
+		address = "https://" + address
+	}
+
+	// Parse to normalize
+	parsedURL, err := url.Parse(address)
+	if err != nil {
+		return address // Return the best attempt if parsing fails
+	}
+	return parsedURL.String()
 }
 
 var splashHTML = []byte(`<!DOCTYPE html>
