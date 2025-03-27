@@ -10,6 +10,8 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/hashicorp/go-cleanhttp"
+	"golang.org/x/text/encoding"
+	"golang.org/x/text/transform"
 	"k8s.io/apimachinery/pkg/types"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
@@ -17,6 +19,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/api/stubs/rollouts"
+	libEncoding "github.com/akuity/kargo/internal/encoding"
 	"github.com/akuity/kargo/internal/expressions"
 	"github.com/akuity/kargo/internal/server/user"
 )
@@ -124,36 +127,46 @@ func (s *server) GetAnalysisRunLogs(
 
 	// Logs can be large, so we read them using a buffered reader.
 	reader := bufio.NewReader(httpResp.Body)
-	bufferSize := 4096 // 4 KB chunks
-	buf := make([]byte, bufferSize)
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-		n, err := reader.Read(buf)
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				break
-			}
-			return fmt.Errorf(
-				"error reading response from log url %s: %w",
-				httpReq.URL.String(), err,
-			)
-		}
-		if n > 0 {
-			if err := stream.Send(
-				&svcv1alpha1.GetAnalysisRunLogsResponse{
-					Chunk: string(buf[:n]),
-				},
-			); err != nil {
-				return fmt.Errorf("send response: %w", err)
-			}
-		}
+
+	const bufferSize = 4096 // 4 KB
+
+	peekedBytes, err := reader.Peek(bufferSize)
+	if err != nil && err != io.EOF {
+		return fmt.Errorf("error peeking at log stream: %w", err)
 	}
 
-	return nil
+	// Log data has a higher than average probability of being encoded with
+	// something other than UTF-8.
+	enc := libEncoding.DetectEncoding(httpResp.Header.Get("Content-Type"), peekedBytes)
+
+	logCh, err := streamLogs(ctx, reader, enc.NewDecoder(), bufferSize)
+	if err != nil {
+		return fmt.Errorf("error streaming logs: %w", err)
+	}
+
+	for {
+		select {
+		case chunk, ok := <-logCh:
+			if !ok {
+				// Channel closed
+				return nil
+			}
+
+			if chunk.Error != nil {
+				// Error reading log data
+				return fmt.Errorf("error streaming logs: %w", chunk.Error)
+			}
+
+			if err = stream.Send(&svcv1alpha1.GetAnalysisRunLogsResponse{
+				Chunk: chunk.Data,
+			}); err != nil {
+				return fmt.Errorf("error sending log chunk: %w", err)
+			}
+		case <-ctx.Done():
+			// Context canceled or timed out
+			return ctx.Err()
+		}
+	}
 }
 
 // getJobMetric confirms the existence of a JobMetric with the provided name or,
@@ -408,4 +421,69 @@ func (s *server) buildRequest(
 		httpReq.Header.Set(key, val)
 	}
 	return httpReq, nil
+}
+
+// logChunk represents a chunk of log data or an error.
+type logChunk struct {
+	Data  string
+	Error error
+}
+
+// streamLogs reads log data from the provided reader, decodes it using the
+// specified decoder, and returns a channel that receives chunks of log data.
+// The channel is closed when all data has been read or an error occurs.
+func streamLogs(
+	ctx context.Context,
+	reader *bufio.Reader,
+	decoder *encoding.Decoder,
+	bufferSize int,
+) (<-chan logChunk, error) {
+	// Special case: We only use UTF-16 decoders that ignore the BOM, but that
+	// only means they do not REQUIRE there to be a BOM at the beginning of the
+	// stream. If it's there, it still gets decoded. A UTF-16 BOM is an invisible
+	// character in UTF-8, but it's still there. We don't want it.
+	//
+	// A UTF-16 BOM is two bytes. Peek at the first two bytes of the stream.
+	peekedBytes, err := reader.Peek(2)
+	if err != nil && err != io.EOF {
+		return nil, fmt.Errorf("error peeking at log stream: %w", err)
+	}
+
+	if libEncoding.HasUTF16BOM(peekedBytes) {
+		if _, err = reader.Discard(2); err != nil {
+			return nil, fmt.Errorf("error discarding BOM: %w", err)
+		}
+	}
+
+	transformReader := transform.NewReader(reader, decoder)
+	resultCh := make(chan logChunk)
+
+	go func() {
+		defer close(resultCh)
+
+		buf := make([]byte, bufferSize)
+
+		for {
+			n, err := transformReader.Read(buf)
+			if n > 0 {
+				select {
+				case resultCh <- logChunk{Data: string(buf[:n])}:
+				case <-ctx.Done():
+					return
+				}
+			}
+			if err != nil {
+				if err == io.EOF {
+					return
+				}
+				select {
+				case resultCh <- logChunk{Error: fmt.Errorf("error reading data: %w", err)}:
+				case <-ctx.Done():
+				}
+				return
+			}
+		}
+	}()
+
+	return resultCh, nil
 }

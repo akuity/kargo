@@ -1,12 +1,17 @@
 package server
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/text/encoding"
+	"golang.org/x/text/encoding/unicode"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
@@ -538,6 +543,74 @@ func TestServer_buildRequest(t *testing.T) {
 				"", "", "", "",
 			)
 			testCase.assertions(t, req, err)
+		})
+	}
+}
+
+func Test_streamLogs(t *testing.T) {
+	// Strings in Go are UTF-8 encoded byte slices.
+	// testBytes is also a UTF-8 encoded byte slice.
+	testBytes := []byte("😊😊😊") // Emojis use four bytes in both UTF-8 and UTF-16
+	testCases := []struct {
+		name    string
+		encoder *encoding.Encoder
+		decoder *encoding.Decoder
+	}{
+		{
+			name:    "no transformation",
+			encoder: unicode.UTF8.NewEncoder(),
+			decoder: unicode.UTF8.NewDecoder(),
+		},
+		{
+			name:    "transform utf-16 bytes without BOM to utf-8 string",
+			encoder: unicode.UTF16(unicode.BigEndian, unicode.IgnoreBOM).NewEncoder(), // Don't include BOM
+			decoder: unicode.UTF16(unicode.BigEndian, unicode.IgnoreBOM).NewDecoder(), // Don't expect BOM
+		},
+		{
+			name:    "transform utf-16 bytes with BOM to utf-8 string",
+			encoder: unicode.UTF16(unicode.BigEndian, unicode.UseBOM).NewEncoder(),    // Include BOM
+			decoder: unicode.UTF16(unicode.BigEndian, unicode.IgnoreBOM).NewDecoder(), // Ignore BOM if present
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			// Time out in case something doesn't work as expected
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+
+			// Encode input bytes
+			input := make([]byte, len(testBytes)*2) // UTF-16 could use up to 2x the bytes of UTF-8
+			nInput, nTestBytes, err := testCase.encoder.Transform(input, testBytes, true)
+			require.NoError(t, err)
+			require.Equal(t, len(testBytes), nTestBytes)
+
+			// Create a buffered reader with the encoded input
+			bufReader := bufio.NewReader(bytes.NewReader(input[:nInput]))
+
+			// Stream logs using the smallest buffer possible to make sure we test
+			// that multi-byte encoding sequences spanning buffer boundaries are
+			// handled correctly.
+			chunkCh, err := streamLogs(ctx, bufReader, testCase.decoder, 256)
+			require.NoError(t, err)
+			var reassembled string
+		loop:
+			for {
+				select {
+				case chunk, ok := <-chunkCh:
+					if !ok {
+						break loop
+					}
+
+					require.NoError(t, chunk.Error, "received unexpected error while streaming logs")
+
+					reassembled += chunk.Data
+				case <-ctx.Done():
+					require.Fail(t, "timed out")
+				}
+			}
+
+			// Did we get the original text back?
+			require.Equal(t, string(testBytes), reassembled)
 		})
 	}
 }
