@@ -72,8 +72,6 @@ export const splitOciPrefixedAnnotations = (annotation: Annotation) => {
 
   return {
     ociPrefixedAnnotations,
-    restAnnotations: {
-      foo: 'bar'
-    }
+    restAnnotations
   };
 };
