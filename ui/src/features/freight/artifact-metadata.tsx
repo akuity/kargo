@@ -17,9 +17,9 @@ export const ArtifactMetadata = (props: TableSource) => {
   if (props.type === 'image') {
     const artifactSource = getImageSource(props?.annotations || {});
     const artifactBuildDate = getImageBuiltDate(props?.annotations || {});
-    const { ociPrefixedAnnotations, restAnnotations } = splitOciPrefixedAnnotations({
-      foo: 'bar'
-    });
+    const { ociPrefixedAnnotations, restAnnotations } = splitOciPrefixedAnnotations(
+      props?.annotations || {}
+    );
 
     if (
       !artifactSource &&
