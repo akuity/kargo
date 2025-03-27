@@ -346,6 +346,7 @@ The returned `Image` object has the following fields:
 | `GitRepoURL` | The URL of the Git repository which contains the source code for the image. Only present if Kargo was able to infer it from the URL. |
 | `Tag` | The tag of the image. |
 | `Digest` | The digest of the image. |
+| `Annotations` | A map of [annotations](https://specs.opencontainers.org/image-spec/annotations/) discovered for the image. |
 
 The optional `freightOrigin` argument should be used when a `Stage` requests
 `Freight` from multiple origins (`Warehouse`s) and more than one can provide a
