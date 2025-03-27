@@ -1,7 +1,8 @@
 package encoding
 
 import (
-	"net/http"
+	"bytes"
+	"mime"
 	"strings"
 
 	"golang.org/x/text/encoding"
@@ -9,72 +10,82 @@ import (
 	"golang.org/x/text/encoding/unicode"
 )
 
-// Determine attempts to determine the encoding of the provided bytes by first
-// parsing the provided content type and then, if that fails, by sniffing the
-// provided bytes. If the encoding can be determined, it is returned. If it
-// cannot be determined, nil is returned.
-func Determine(contentType string, bytes []byte) encoding.Encoding {
-	parts := strings.Split(
-		strings.TrimSpace(
-			strings.ToLower(contentType),
-		),
-		";",
-	)
-	for _, part := range parts {
-		part = strings.TrimSpace(part)
-		if strings.HasPrefix(part, charsetPrefix) {
-			if enc := CharsetTo(strings.TrimPrefix(part, charsetPrefix)); enc != nil {
-				return enc
-			}
-		}
+const (
+	CharsetUTF8    = "utf-8"
+	CharsetUTF16   = "utf-16"
+	CharsetUTF16BE = "utf-16be"
+	CharsetUTF16LE = "utf-16le"
+	CharsetISO8859 = "iso-8859-1"
+)
+
+var (
+	UTF16BEBOM = []byte{0xFE, 0xFF}
+	UTF16LEBOM = []byte{0xFF, 0xFE}
+)
+
+// GetEncodingFromContentType extracts and returns the encoding from a
+// Content-Type header. Returns nil if no charset is specified or the charset is
+// unknown.
+func GetEncodingFromContentType(contentType string) encoding.Encoding {
+	if contentType == "" {
+		return nil
 	}
-	// If we get to here, we could not determine the encoding. Try to determine it
-	// by sniffing the provided bytes.
-	//
-	// Note: This actually has little chance of succeeding because it relies
-	// heavily on BOMs, which are not commonly included in an HTTP response body.
-	// The likely outcome is the function's default return value of
-	// application/octet-stream.
-	detectedContentType := http.DetectContentType(bytes)
-	parts = strings.Split(
-		strings.TrimSpace(
-			strings.ToLower(detectedContentType),
-		),
-		";",
-	)
-	for _, part := range parts[1:] {
-		part = strings.TrimSpace(part)
-		if strings.HasPrefix(part, charsetPrefix) {
-			// Return no matter whether we determined the encoding or not.
-			return CharsetTo(strings.TrimPrefix(part, charsetPrefix))
-		}
+
+	_, params, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return nil
 	}
-	// If we get to here, we could not determine the encoding.
-	return nil
+
+	charset, ok := params["charset"]
+	if !ok {
+		return nil
+	}
+
+	return GetEncodingFromCharset(charset)
 }
 
-const charsetPrefix = "charset="
-
-// CharsetTo maps common character set names to their corresponding encoding.
-func CharsetTo(cs string) encoding.Encoding {
-	switch strings.TrimPrefix(cs, charsetPrefix) {
-	case "iso-8859-1":
+// GetEncodingFromCharset returns the encoding for a given charset name.
+// Returns nil if the charset is unknown.
+func GetEncodingFromCharset(charset string) encoding.Encoding {
+	switch strings.ToLower(charset) {
+	case CharsetISO8859:
 		return charmap.ISO8859_1
-	case "utf-8":
+	case CharsetUTF8:
 		return unicode.UTF8
-	case "utf-16", "utf-16be":
+	case CharsetUTF16, CharsetUTF16BE:
 		return unicode.UTF16(unicode.BigEndian, unicode.IgnoreBOM)
-	case "utf-16le":
+	case CharsetUTF16LE:
 		return unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM)
-	// TODO: Add other charsets as needed
 	default:
 		return nil
 	}
 }
 
-// HasUTF16BOM returns a boolean indicating whether the provided bytes begin
-// with either of a UTF-16 Big Endian or Little Endian byte order mark.
-func HasUTF16BOM(bytes []byte) bool {
-	return len(bytes) >= 2 &&
-		(bytes[0] == 0xfe && bytes[1] == 0xff || bytes[0] == 0xff && bytes[1] == 0xfe)
+// DetectEncoding attempts to determine the encoding of data.
+// It first checks the Content-Type header, then falls back to examining the
+// data. If no encoding can be determined, it returns UTF-8 as the default.
+func DetectEncoding(contentType string, data []byte) encoding.Encoding {
+	// Try to get encoding from Content-Type header
+	if enc := GetEncodingFromContentType(contentType); enc != nil {
+		return enc
+	}
+
+	// Try to detect from BOM if present
+	if len(data) >= 2 {
+		switch {
+		case bytes.Equal(data[:2], UTF16BEBOM):
+			return unicode.UTF16(unicode.BigEndian, unicode.IgnoreBOM)
+		case bytes.Equal(data[:2], UTF16LEBOM):
+			return unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM)
+		}
+	}
+
+	// Default to UTF-8
+	return unicode.UTF8
+}
+
+// HasUTF16BOM returns true if the data begins with a UTF-16 byte order mark.
+func HasUTF16BOM(data []byte) bool {
+	return len(data) >= 2 && (bytes.Equal(data[:2], UTF16BEBOM) ||
+		bytes.Equal(data[:2], UTF16LEBOM))
 }

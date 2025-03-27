@@ -11,7 +11,6 @@ import (
 	"connectrpc.com/connect"
 	"github.com/hashicorp/go-cleanhttp"
 	"golang.org/x/text/encoding"
-	"golang.org/x/text/encoding/unicode"
 	"golang.org/x/text/transform"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -135,12 +134,10 @@ func (s *server) GetAnalysisRunLogs(
 	if err != nil && err != io.EOF {
 		return fmt.Errorf("error peeking at log stream: %w", err)
 	}
+
 	// Log data has a higher than average probability of being encoded with
 	// something other than UTF-8.
-	enc := libEncoding.Determine(httpResp.Header.Get("Content-Type"), peekedBytes)
-	if enc == nil {
-		enc = unicode.UTF8
-	}
+	enc := libEncoding.DetectEncoding(httpResp.Header.Get("Content-Type"), peekedBytes)
 
 	logCh, err := streamLogs(ctx, reader, enc.NewDecoder(), bufferSize)
 	if err != nil {
