@@ -59,13 +59,21 @@ export const getImageBuiltDate = (annotation: Annotation) => {
   return '';
 };
 
-export const getAllOciPrefixedAnnotations = (annotation: Annotation) => {
+export const splitOciPrefixedAnnotations = (annotation: Annotation) => {
   const ociPrefixedAnnotations: Record<string, string> = {};
+  const restAnnotations: Record<string, string> = {};
   for (const [key, value] of Object.entries(annotation)) {
     if (key.startsWith(ociPrefix)) {
       ociPrefixedAnnotations[key] = value;
+    } else {
+      restAnnotations[key] = value;
     }
   }
 
-  return ociPrefixedAnnotations;
+  return {
+    ociPrefixedAnnotations,
+    restAnnotations: {
+      foo: 'bar'
+    }
+  };
 };

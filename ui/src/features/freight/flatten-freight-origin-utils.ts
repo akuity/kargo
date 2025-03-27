@@ -1,6 +1,6 @@
 import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
 
-type TableSource =
+export type TableSource =
   | {
       type: 'image';
       repoURL: string;

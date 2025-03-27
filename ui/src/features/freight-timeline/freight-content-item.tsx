@@ -1,6 +1,7 @@
 import { faCode, faHammer, IconDefinition } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Tooltip } from 'antd';
+import { Flex, Tooltip } from 'antd';
+import Link from 'antd/es/typography/Link';
 import classNames from 'classnames';
 import { useMemo } from 'react';
 
@@ -58,12 +59,12 @@ export const FreightContentItem = (props: {
       overlay={overlay}
       title={title}
     >
-      <div className='flex gap-2 items-center'>
+      <Flex align='center' gap={8}>
         <FontAwesomeIcon icon={icon} style={{ fontSize: '14px' }} className={classNames('px-1')} />
         {props.artifactSource && (
-          <a
+          <Link
             href={props.artifactSource}
-            className={classNames('text-blue-500', {
+            className={classNames({
               'mr-2': horizontal
             })}
             style={{ fontSize: '10px' }}
@@ -78,9 +79,9 @@ export const FreightContentItem = (props: {
               style={{ fontSize: '10px' }}
               className={horizontal ? 'ml-1' : ''}
             />
-          </a>
+          </Link>
         )}
-      </div>
+      </Flex>
       <div
         className={classNames(
           { 'mt-2 flex-col': !horizontal, 'gap-2': horizontal },

@@ -8,7 +8,7 @@ import { urlForImage } from '@ui/utils/url';
 import { CommitInfo } from '../common/commit-info';
 
 import { FreightContentItem } from './freight-content-item';
-import { getImageBuiltDate, getImageSource } from './open-container-initiative';
+import { getImageBuiltDate, getImageSource } from './open-container-initiative-utils';
 
 export const FreightContents = (props: {
   freight?: Freight;
