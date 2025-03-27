@@ -17,9 +17,9 @@ export const ArtifactMetadata = (props: TableSource) => {
   if (props.type === 'image') {
     const artifactSource = getImageSource(props?.annotations || {});
     const artifactBuildDate = getImageBuiltDate(props?.annotations || {});
-    const { ociPrefixedAnnotations, restAnnotations } = splitOciPrefixedAnnotations(
-      props.annotations || {}
-    );
+    const { ociPrefixedAnnotations, restAnnotations } = splitOciPrefixedAnnotations({
+      foo: 'bar'
+    });
 
     if (
       !artifactSource &&
@@ -64,6 +64,7 @@ export const ArtifactMetadata = (props: TableSource) => {
                     <Checkbox
                       className='ml-auto text-xs'
                       value={showOnlyOci}
+                      defaultChecked
                       onChange={(e) => setShowOnlyOci(e.target.checked)}
                       onClick={(e) => e.stopPropagation()}
                     >
