@@ -70,7 +70,7 @@ spec:
                 resourceFieldRef:
                   containerName: garbage-collector
                   divisor: "1"
-                  resource: limits.cpu
+                  resource: {{ include "kargo.selectCpuResourceField" (dict "resources" .Values.garbageCollector.resources) }}
             {{- with (concat .Values.global.env .Values.garbageCollector.env) }}
             {{- toYaml . | nindent 12 }}
             {{- end }}

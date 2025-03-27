@@ -71,7 +71,7 @@ spec:
             resourceFieldRef:
               containerName: controller
               divisor: "1"
-              resource: limits.cpu
+              resource: {{ include "kargo.selectCpuResourceField" (dict "resources" .Values.controller.resources) }}
         {{- with (concat .Values.global.env .Values.controller.env) }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
