@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -120,7 +121,7 @@ func (o *loginOptions) complete(args []string) {
 	// Use the API address in config as a default address
 	o.ServerAddress = o.Config.APIAddress
 	if len(args) == 1 {
-		o.ServerAddress = strings.TrimSpace(args[0])
+		o.ServerAddress = normalizeURL(args[0])
 	}
 }
 
@@ -498,6 +499,26 @@ func randStringFromCharset(n int, charset string) (string, error) {
 		b[i] = charset[randIdxInt]
 	}
 	return string(b), nil
+}
+
+// normalizeURL ensures a given address has a scheme, defaulting to "https".
+func normalizeURL(address string) string {
+	address = strings.TrimSpace(address)
+	if address == "" {
+		return address
+	}
+
+	// If no scheme is present, prepend "https://"
+	if !strings.Contains(address, "://") {
+		address = "https://" + address
+	}
+
+	// Parse to normalize
+	parsedURL, err := url.Parse(address)
+	if err != nil {
+		return address // Return the best attempt if parsing fails
+	}
+	return parsedURL.String()
 }
 
 var splashHTML = []byte(`<!DOCTYPE html>
