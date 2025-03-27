@@ -4794,7 +4794,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 		},
 		{
-			name: "handles verified freight from upstream stages with verification duration requirement",
+			name: "handles verified freight from upstream stages with soak time requirement",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
@@ -4874,9 +4874,8 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 					Status: kargoapi.FreightStatus{
 						VerifiedIn: map[string]kargoapi.VerifiedStage{
 							"upstream-stage": {
-								// Should be selected because it was verified
-								// after the required duration.
-								VerifiedAt: &metav1.Time{Time: now.Add(-2 * time.Hour)},
+								// Should be selected because the soak time has elapsed
+								LongestCompletedSoak: &metav1.Duration{Duration: 2 * time.Hour},
 							},
 						},
 					},
