@@ -51,41 +51,41 @@ export const ArtifactMetadata = (props: TableSource) => {
           </div>
         )}
 
-        {Object.keys(ociPrefixedAnnotations).length > 0 &&
-          Object.keys(restAnnotations).length > 0 && (
-            <Collapse
-              size='small'
-              className='mt-2'
-              items={[
-                {
-                  label: (
-                    <Flex align='center'>
-                      <span className='text-xs mt-1'>Annotations</span>
-                      <Checkbox
-                        className='ml-auto text-xs'
-                        value={showOnlyOci}
-                        onChange={(e) => setShowOnlyOci(e.target.checked)}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        Only OCI Annotation
-                      </Checkbox>
-                    </Flex>
-                  ),
-                  children: (
-                    <div className='flex gap-2 flex-wrap'>
-                      {Object.entries(ociPrefixedAnnotations)
-                        .concat(showOnlyOci ? [] : Object.entries(restAnnotations))
-                        .map(([key, value]) => (
-                          <Tag key={key}>
-                            {key}: {value}
-                          </Tag>
-                        ))}
-                    </div>
-                  )
-                }
-              ]}
-            />
-          )}
+        {(Object.keys(ociPrefixedAnnotations).length > 0 ||
+          Object.keys(restAnnotations).length > 0) && (
+          <Collapse
+            size='small'
+            className='mt-2'
+            items={[
+              {
+                label: (
+                  <Flex align='center'>
+                    <span className='text-xs mt-1'>Annotations</span>
+                    <Checkbox
+                      className='ml-auto text-xs'
+                      value={showOnlyOci}
+                      onChange={(e) => setShowOnlyOci(e.target.checked)}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Only OCI Annotation
+                    </Checkbox>
+                  </Flex>
+                ),
+                children: (
+                  <div className='flex gap-2 flex-wrap'>
+                    {Object.entries(ociPrefixedAnnotations)
+                      .concat(showOnlyOci ? [] : Object.entries(restAnnotations))
+                      .map(([key, value]) => (
+                        <Tag key={key}>
+                          {key}: {value}
+                        </Tag>
+                      ))}
+                  </div>
+                )
+              }
+            ]}
+          />
+        )}
       </>
     );
   }
