@@ -279,6 +279,52 @@ func TestGetImageFromRemoteDesc(t *testing.T) {
 			require.Equal(t, testImage, *img)
 		})
 	}
+
+	t.Run("with remote descriptor annotations", func(t *testing.T) {
+		imageWithAnnotations := Image{
+			CreatedAt: ptr.To(time.Now().UTC()),
+			Annotations: map[string]string{
+				"key.one":   "image-value", // This should override descriptor
+				"key.two":   "image-value", // This should override descriptor
+				"key.three": "image-value", // This is unique to image
+			},
+		}
+
+		// Remote descriptor with annotations
+		remoteDesc := &remote.Descriptor{
+			Descriptor: v1.Descriptor{
+				MediaType: types.OCIImageIndex,
+				Annotations: map[string]string{
+					"key.one":  "descriptor-value", // Should be overridden by image
+					"key.two":  "descriptor-value", // Should be overridden by image
+					"key.four": "descriptor-value", // Unique to descriptor
+				},
+			},
+		}
+
+		testClientWithAnnotations := &repositoryClient{
+			getImageFromV1ImageIndexFn: func(
+				context.Context, string, v1.ImageIndex, *platformConstraint,
+			) (*Image, error) {
+				return &imageWithAnnotations, nil
+			},
+		}
+
+		img, err := testClientWithAnnotations.getImageFromRemoteDesc(
+			context.Background(),
+			remoteDesc,
+			nil,
+		)
+		require.NoError(t, err)
+
+		require.NotNil(t, img)
+		require.Equal(t, map[string]string{
+			"key.one":   "image-value",
+			"key.two":   "image-value",
+			"key.three": "image-value",
+			"key.four":  "descriptor-value",
+		}, img.Annotations)
+	})
 }
 
 func TestImageFromV1ImageIndex(t *testing.T) {

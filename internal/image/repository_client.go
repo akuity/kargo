@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"time"
 
@@ -239,7 +240,25 @@ func (r *repositoryClient) getImageFromRemoteDesc(
 				desc.Digest.String(), err,
 			)
 		}
-		return r.getImageFromV1ImageIndexFn(ctx, desc.Digest.String(), idx, platform)
+
+		img, err := r.getImageFromV1ImageIndexFn(ctx, desc.Digest.String(), idx, platform)
+		if err != nil {
+			return nil, err
+		}
+
+		// If the descriptor has annotations, merge them into the annotations
+		// collected from the index and manifest. The descriptor's annotations
+		// will have a lower precedence than any annotations collected for the
+		// image.
+		if img != nil && desc.Annotations != nil {
+			baseAnnotations := desc.Annotations
+			if img.Annotations != nil {
+				maps.Copy(baseAnnotations, img.Annotations)
+			}
+			img.Annotations = baseAnnotations
+		}
+
+		return img, nil
 	case types.OCIManifestSchema1, types.DockerManifestSchema2:
 		img, err := desc.Image()
 		if err != nil {
@@ -248,7 +267,24 @@ func (r *repositoryClient) getImageFromRemoteDesc(
 				desc.Digest.String(), err,
 			)
 		}
-		return r.getImageFromV1ImageFn(desc.Digest.String(), img, platform)
+
+		finalImg, err := r.getImageFromV1ImageFn(desc.Digest.String(), img, platform)
+		if err != nil {
+			return nil, err
+		}
+
+		// If the descriptor has annotations, merge them into the annotations
+		// collected from the index and manifest. The descriptor's annotations
+		// will have a lower precedence than any annotations collected for the
+		// image.
+		if finalImg != nil && desc.Annotations != nil {
+			baseAnnotations := desc.Annotations
+			if finalImg.Annotations != nil {
+				maps.Copy(baseAnnotations, finalImg.Annotations)
+			}
+			finalImg.Annotations = baseAnnotations
+		}
+		return finalImg, nil
 	default:
 		return nil, fmt.Errorf("unknown artifact type: %s", desc.MediaType)
 	}
@@ -357,6 +393,10 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 		if createdAt == nil || img.CreatedAt.After(*createdAt) {
 			createdAt = img.CreatedAt
 		}
+
+		// TODO(hidde): Without a platform constraint, we can not collect
+		// annotations in a meaningful way. We should consider how to handle
+		// this in the future.
 	}
 
 	return &Image{

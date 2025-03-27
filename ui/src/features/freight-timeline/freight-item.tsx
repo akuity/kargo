@@ -31,7 +31,7 @@ export const FreightItem = ({
   let width = '';
   if (mode !== FreightMode.Confirming) {
     if (empty) {
-      width = '96px';
+      width = '116px';
     } else {
       width = '135px';
     }

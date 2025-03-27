@@ -1,7 +1,9 @@
 import { toJson } from '@bufbuild/protobuf';
-import { faFile, faInfoCircle, faPencil } from '@fortawesome/free-solid-svg-icons';
+import { IconProp } from '@fortawesome/fontawesome-svg-core';
+import { faDocker, faGitAlt } from '@fortawesome/free-brands-svg-icons';
+import { faAnchor, faFile, faInfoCircle, faPencil } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Drawer, Tabs, Tooltip, Typography } from 'antd';
+import { Drawer, Table, Tabs, Tooltip, Typography } from 'antd';
 import classNames from 'classnames';
 import { useEffect, useState } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
@@ -13,9 +15,10 @@ import { Description } from '../common/description';
 import { ManifestPreview } from '../common/manifest-preview';
 import { useModal } from '../common/modal/use-modal';
 import { getAlias } from '../common/utils';
-import { FreightContents } from '../freight-timeline/freight-contents';
 import { UpdateFreightAliasModal } from '../project/pipelines/update-freight-alias-modal';
 
+import { ArtifactMetadata } from './artifact-metadata';
+import { flattenFreightOrigin } from './flatten-freight-origin-utils';
 import { FreightStatusList } from './freight-status-list';
 
 const CopyValue = (props: { value: string; label: string; className?: string }) => (
@@ -101,11 +104,56 @@ export const FreightDetails = ({
                     <>
                       <div className='mb-4'>
                         <div className='font-semibold mb-2 text-xs'>ARTIFACTS</div>
-                        <FreightContents
-                          freight={freight}
-                          highlighted={true}
-                          horizontal={true}
-                          fullContentVisibility
+                        <Table
+                          pagination={{
+                            pageSize: 5
+                          }}
+                          dataSource={flattenFreightOrigin(freight)}
+                          columns={[
+                            {
+                              title: 'Source',
+                              render: (_, { type }) => {
+                                let icon: IconProp = faGitAlt;
+
+                                switch (type) {
+                                  case 'helm':
+                                    icon = faAnchor;
+                                    break;
+                                  case 'image':
+                                    icon = faDocker;
+                                    break;
+                                }
+
+                                return <FontAwesomeIcon icon={icon} />;
+                              },
+                              width: '5%'
+                            },
+                            {
+                              title: 'Repo',
+                              dataIndex: 'repoURL',
+                              width: '30%'
+                            },
+                            {
+                              title: 'Version',
+                              render: (_, record) => {
+                                switch (record.type) {
+                                  case 'git':
+                                    return record.id;
+                                  case 'helm':
+                                    return record.version;
+                                  case 'image':
+                                    return record.tag;
+                                }
+                              }
+                            },
+                            {
+                              title: 'Metadata',
+                              width: '600px',
+                              render: (_, record) => {
+                                return <ArtifactMetadata {...record} />;
+                              }
+                            }
+                          ]}
                         />
                       </div>
                       <FreightStatusList freight={freight} />
