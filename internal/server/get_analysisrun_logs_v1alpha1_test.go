@@ -547,7 +547,7 @@ func TestServer_buildRequest(t *testing.T) {
 	}
 }
 
-func TestStreamLogs(t *testing.T) {
+func Test_streamLogs(t *testing.T) {
 	// Strings in Go are UTF-8 encoded byte slices.
 	// testBytes is also a UTF-8 encoded byte slice.
 	testBytes := []byte("😊😊😊") // Emojis use four bytes in both UTF-8 and UTF-16
@@ -590,7 +590,7 @@ func TestStreamLogs(t *testing.T) {
 			// Stream logs using the smallest buffer possible to make sure we test
 			// that multi-byte encoding sequences spanning buffer boundaries are
 			// handled correctly.
-			chunkCh, errCh, err := StreamLogs(ctx, bufReader, testCase.decoder, 256)
+			chunkCh, err := streamLogs(ctx, bufReader, testCase.decoder, 256)
 			require.NoError(t, err)
 			var reassembled string
 		loop:
@@ -600,9 +600,10 @@ func TestStreamLogs(t *testing.T) {
 					if !ok {
 						break loop
 					}
-					reassembled += chunk
-				case err := <-errCh:
-					require.NoError(t, err, "received unexpected error while streaming logs")
+
+					require.NoError(t, chunk.Error, "received unexpected error while streaming logs")
+
+					reassembled += chunk.Data
 				case <-ctx.Done():
 					require.Fail(t, "timed out")
 				}

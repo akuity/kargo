@@ -142,27 +142,31 @@ func (s *server) GetAnalysisRunLogs(
 		enc = unicode.UTF8
 	}
 
-	chunkCh, errCh, err := StreamLogs(ctx, reader, enc.NewDecoder(), bufferSize)
+	logCh, err := streamLogs(ctx, reader, enc.NewDecoder(), bufferSize)
 	if err != nil {
 		return fmt.Errorf("error streaming logs: %w", err)
 	}
+
 	for {
 		select {
-		case chunk, ok := <-chunkCh:
+		case chunk, ok := <-logCh:
 			if !ok {
+				// Channel closed
 				return nil
 			}
-			if err = stream.Send(
-				&svcv1alpha1.GetAnalysisRunLogsResponse{Chunk: chunk},
-			); err != nil {
-				return fmt.Errorf("send response: %w", err)
+
+			if chunk.Error != nil {
+				// Error reading log data
+				return fmt.Errorf("error streaming logs: %w", chunk.Error)
 			}
-		case err := <-errCh:
-			if err == nil {
-				return nil
+
+			if err = stream.Send(&svcv1alpha1.GetAnalysisRunLogsResponse{
+				Chunk: chunk.Data,
+			}); err != nil {
+				return fmt.Errorf("error sending log chunk: %w", err)
 			}
-			return fmt.Errorf("error streaming logs: %w", err)
 		case <-ctx.Done():
+			// Context canceled or timed out
 			return ctx.Err()
 		}
 	}
@@ -422,12 +426,21 @@ func (s *server) buildRequest(
 	return httpReq, nil
 }
 
-func StreamLogs(
+// logChunk represents a chunk of log data or an error.
+type logChunk struct {
+	Data  string
+	Error error
+}
+
+// streamLogs reads log data from the provided reader, decodes it using the
+// specified decoder, and returns a channel that receives chunks of log data.
+// The channel is closed when all data has been read or an error occurs.
+func streamLogs(
 	ctx context.Context,
 	reader *bufio.Reader,
 	decoder *encoding.Decoder,
 	bufferSize int,
-) (<-chan string, <-chan error, error) {
+) (<-chan logChunk, error) {
 	// Special case: We only use UTF-16 decoders that ignore the BOM, but that
 	// only means they do not REQUIRE there to be a BOM at the beginning of the
 	// stream. If it's there, it still gets decoded. A UTF-16 BOM is an invisible
@@ -436,22 +449,20 @@ func StreamLogs(
 	// A UTF-16 BOM is two bytes. Peek at the first two bytes of the stream.
 	peekedBytes, err := reader.Peek(2)
 	if err != nil && err != io.EOF {
-		return nil, nil, fmt.Errorf("error peeking at log stream: %w", err)
+		return nil, fmt.Errorf("error peeking at log stream: %w", err)
 	}
+
 	if libEncoding.HasUTF16BOM(peekedBytes) {
 		if _, err = reader.Discard(2); err != nil {
-			return nil, nil, fmt.Errorf("error discarding BOM: %w", err)
+			return nil, fmt.Errorf("error discarding BOM: %w", err)
 		}
 	}
 
 	transformReader := transform.NewReader(reader, decoder)
-
-	chunkCh := make(chan string)
-	errCh := make(chan error)
+	resultCh := make(chan logChunk)
 
 	go func() {
-		defer close(chunkCh)
-		defer close(errCh)
+		defer close(resultCh)
 
 		buf := make([]byte, bufferSize)
 
@@ -459,7 +470,7 @@ func StreamLogs(
 			n, err := transformReader.Read(buf)
 			if n > 0 {
 				select {
-				case chunkCh <- string(buf[:n]):
+				case resultCh <- logChunk{Data: string(buf[:n])}:
 				case <-ctx.Done():
 					return
 				}
@@ -469,14 +480,13 @@ func StreamLogs(
 					return
 				}
 				select {
-				case errCh <- fmt.Errorf("error reading data: %w", err):
-					return
+				case resultCh <- logChunk{Error: fmt.Errorf("error reading data: %w", err)}:
 				case <-ctx.Done():
-					return
 				}
+				return
 			}
 		}
 	}()
 
-	return chunkCh, errCh, nil
+	return resultCh, nil
 }
