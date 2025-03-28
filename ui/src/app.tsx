@@ -53,6 +53,10 @@ export const App = () => (
                     element={<Settings section='verification' />}
                   />
                   <Route
+                    path={paths.settingsClusterPromotionTasks}
+                    element={<Settings section='cluster-promotion-tasks' />}
+                  />
+                  <Route
                     path={paths.createStage}
                     element={<Project tab='pipelines' creatingStage={true} />}
                   />
@@ -60,6 +64,7 @@ export const App = () => (
                     path={paths.createWarehouse}
                     element={<Project tab='pipelines' creatingWarehouse />}
                   />
+                  <Route path={paths.promotionTasks} element={<Project tab='promotionTasks' />} />
                 </Route>
                 <Route path={paths.analysisRunLogs} element={<AnalysisRunLogsPage />} />
               </Route>

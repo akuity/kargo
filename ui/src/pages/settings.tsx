@@ -1,4 +1,4 @@
-import { faBarChart } from '@fortawesome/free-solid-svg-icons';
+import { faBarChart, faTasks } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Layout, Menu, MenuProps } from 'antd';
 import { useNavigate, generatePath } from 'react-router-dom';
@@ -6,6 +6,7 @@ import { useNavigate, generatePath } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { PageTitle } from '@ui/features/common';
 import { ClusterAnalysisTemplatesList } from '@ui/features/settings/analysis-templates/analysis-templates';
+import { ClusterPromotionTasks } from '@ui/features/settings/cluster-promotion-tasks/cluster-promotion-tasks';
 
 const { Sider, Content } = Layout;
 
@@ -22,6 +23,14 @@ export const Settings = ({ section = 'verification' }: { section?: string }) => 
       onClick: () => {
         navigate(generatePath(paths.settingsAnalysisTemplates));
       }
+    },
+    {
+      key: 'cluster-promotion-tasks',
+      label: 'ClusterPromotionTasks',
+      icon: <FontAwesomeIcon icon={faTasks} />,
+      onClick: () => {
+        navigate(generatePath(paths.settingsClusterPromotionTasks));
+      }
     }
   ];
 
@@ -29,6 +38,8 @@ export const Settings = ({ section = 'verification' }: { section?: string }) => 
     switch (section) {
       case 'verification':
         return <ClusterAnalysisTemplatesList />;
+      case 'cluster-promotion-tasks':
+        return <ClusterPromotionTasks />;
     }
   };
 
@@ -36,6 +47,8 @@ export const Settings = ({ section = 'verification' }: { section?: string }) => 
     switch (section) {
       case 'verification':
         return 'Cluster Analysis Templates';
+      case 'cluster-promotion-tasks':
+        return 'Cluster Promotion Tasks';
     }
   };
 

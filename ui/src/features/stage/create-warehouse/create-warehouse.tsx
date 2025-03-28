@@ -9,7 +9,7 @@ import { generatePath, useNavigate, useParams } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
-import { WarehouseManifestsGen } from '@ui/features/utils/manifest-generator';
+import { warehouseManifestsGen } from '@ui/features/utils/manifest-generator';
 import { createResource } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import warehouseSchema from '@ui/gen/schema/warehouses.kargo.akuity.io_v1alpha1.json';
 
@@ -36,7 +36,7 @@ const Body = () => {
   const getWarehouseManifest = useCallback(() => {
     const manifest = form;
     if (manifest) {
-      return WarehouseManifestsGen.v1alpha1({
+      return warehouseManifestsGen.v1alpha1({
         projectName,
         // @ts-expect-error correct values from dynamic form
         warehouseName: manifest.name,
@@ -45,7 +45,7 @@ const Body = () => {
       });
     }
 
-    return WarehouseManifestsGen.v1alpha1({
+    return warehouseManifestsGen.v1alpha1({
       projectName,
       warehouseName: '',
       spec: {

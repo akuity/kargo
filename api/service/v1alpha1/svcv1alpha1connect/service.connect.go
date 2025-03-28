@@ -187,6 +187,18 @@ const (
 	// KargoServiceListProjectEventsProcedure is the fully-qualified name of the KargoService's
 	// ListProjectEvents RPC.
 	KargoServiceListProjectEventsProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListProjectEvents"
+	// KargoServiceListPromotionTasksProcedure is the fully-qualified name of the KargoService's
+	// ListPromotionTasks RPC.
+	KargoServiceListPromotionTasksProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListPromotionTasks"
+	// KargoServiceListClusterPromotionTasksProcedure is the fully-qualified name of the KargoService's
+	// ListClusterPromotionTasks RPC.
+	KargoServiceListClusterPromotionTasksProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListClusterPromotionTasks"
+	// KargoServiceGetPromotionTaskProcedure is the fully-qualified name of the KargoService's
+	// GetPromotionTask RPC.
+	KargoServiceGetPromotionTaskProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetPromotionTask"
+	// KargoServiceGetClusterPromotionTaskProcedure is the fully-qualified name of the KargoService's
+	// GetClusterPromotionTask RPC.
+	KargoServiceGetClusterPromotionTaskProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetClusterPromotionTask"
 	// KargoServiceCreateRoleProcedure is the fully-qualified name of the KargoService's CreateRole RPC.
 	KargoServiceCreateRoleProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/CreateRole"
 	// KargoServiceDeleteRoleProcedure is the fully-qualified name of the KargoService's DeleteRole RPC.
@@ -260,6 +272,10 @@ var (
 	kargoServiceGetAnalysisRunMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("GetAnalysisRun")
 	kargoServiceGetAnalysisRunLogsMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("GetAnalysisRunLogs")
 	kargoServiceListProjectEventsMethodDescriptor             = kargoServiceServiceDescriptor.Methods().ByName("ListProjectEvents")
+	kargoServiceListPromotionTasksMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("ListPromotionTasks")
+	kargoServiceListClusterPromotionTasksMethodDescriptor     = kargoServiceServiceDescriptor.Methods().ByName("ListClusterPromotionTasks")
+	kargoServiceGetPromotionTaskMethodDescriptor              = kargoServiceServiceDescriptor.Methods().ByName("GetPromotionTask")
+	kargoServiceGetClusterPromotionTaskMethodDescriptor       = kargoServiceServiceDescriptor.Methods().ByName("GetClusterPromotionTask")
 	kargoServiceCreateRoleMethodDescriptor                    = kargoServiceServiceDescriptor.Methods().ByName("CreateRole")
 	kargoServiceDeleteRoleMethodDescriptor                    = kargoServiceServiceDescriptor.Methods().ByName("DeleteRole")
 	kargoServiceGetRoleMethodDescriptor                       = kargoServiceServiceDescriptor.Methods().ByName("GetRole")
@@ -327,6 +343,10 @@ type KargoServiceClient interface {
 	GetAnalysisRun(context.Context, *connect.Request[v1alpha1.GetAnalysisRunRequest]) (*connect.Response[v1alpha1.GetAnalysisRunResponse], error)
 	GetAnalysisRunLogs(context.Context, *connect.Request[v1alpha1.GetAnalysisRunLogsRequest]) (*connect.ServerStreamForClient[v1alpha1.GetAnalysisRunLogsResponse], error)
 	ListProjectEvents(context.Context, *connect.Request[v1alpha1.ListProjectEventsRequest]) (*connect.Response[v1alpha1.ListProjectEventsResponse], error)
+	ListPromotionTasks(context.Context, *connect.Request[v1alpha1.ListPromotionTasksRequest]) (*connect.Response[v1alpha1.ListPromotionTasksResponse], error)
+	ListClusterPromotionTasks(context.Context, *connect.Request[v1alpha1.ListClusterPromotionTasksRequest]) (*connect.Response[v1alpha1.ListClusterPromotionTasksResponse], error)
+	GetPromotionTask(context.Context, *connect.Request[v1alpha1.GetPromotionTaskRequest]) (*connect.Response[v1alpha1.GetPromotionTaskResponse], error)
+	GetClusterPromotionTask(context.Context, *connect.Request[v1alpha1.GetClusterPromotionTaskRequest]) (*connect.Response[v1alpha1.GetClusterPromotionTaskResponse], error)
 	CreateRole(context.Context, *connect.Request[v1alpha1.CreateRoleRequest]) (*connect.Response[v1alpha1.CreateRoleResponse], error)
 	DeleteRole(context.Context, *connect.Request[v1alpha1.DeleteRoleRequest]) (*connect.Response[v1alpha1.DeleteRoleResponse], error)
 	GetRole(context.Context, *connect.Request[v1alpha1.GetRoleRequest]) (*connect.Response[v1alpha1.GetRoleResponse], error)
@@ -670,6 +690,30 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(kargoServiceListProjectEventsMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		listPromotionTasks: connect.NewClient[v1alpha1.ListPromotionTasksRequest, v1alpha1.ListPromotionTasksResponse](
+			httpClient,
+			baseURL+KargoServiceListPromotionTasksProcedure,
+			connect.WithSchema(kargoServiceListPromotionTasksMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		listClusterPromotionTasks: connect.NewClient[v1alpha1.ListClusterPromotionTasksRequest, v1alpha1.ListClusterPromotionTasksResponse](
+			httpClient,
+			baseURL+KargoServiceListClusterPromotionTasksProcedure,
+			connect.WithSchema(kargoServiceListClusterPromotionTasksMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getPromotionTask: connect.NewClient[v1alpha1.GetPromotionTaskRequest, v1alpha1.GetPromotionTaskResponse](
+			httpClient,
+			baseURL+KargoServiceGetPromotionTaskProcedure,
+			connect.WithSchema(kargoServiceGetPromotionTaskMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getClusterPromotionTask: connect.NewClient[v1alpha1.GetClusterPromotionTaskRequest, v1alpha1.GetClusterPromotionTaskResponse](
+			httpClient,
+			baseURL+KargoServiceGetClusterPromotionTaskProcedure,
+			connect.WithSchema(kargoServiceGetClusterPromotionTaskMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		createRole: connect.NewClient[v1alpha1.CreateRoleRequest, v1alpha1.CreateRoleResponse](
 			httpClient,
 			baseURL+KargoServiceCreateRoleProcedure,
@@ -771,6 +815,10 @@ type kargoServiceClient struct {
 	getAnalysisRun                *connect.Client[v1alpha1.GetAnalysisRunRequest, v1alpha1.GetAnalysisRunResponse]
 	getAnalysisRunLogs            *connect.Client[v1alpha1.GetAnalysisRunLogsRequest, v1alpha1.GetAnalysisRunLogsResponse]
 	listProjectEvents             *connect.Client[v1alpha1.ListProjectEventsRequest, v1alpha1.ListProjectEventsResponse]
+	listPromotionTasks            *connect.Client[v1alpha1.ListPromotionTasksRequest, v1alpha1.ListPromotionTasksResponse]
+	listClusterPromotionTasks     *connect.Client[v1alpha1.ListClusterPromotionTasksRequest, v1alpha1.ListClusterPromotionTasksResponse]
+	getPromotionTask              *connect.Client[v1alpha1.GetPromotionTaskRequest, v1alpha1.GetPromotionTaskResponse]
+	getClusterPromotionTask       *connect.Client[v1alpha1.GetClusterPromotionTaskRequest, v1alpha1.GetClusterPromotionTaskResponse]
 	createRole                    *connect.Client[v1alpha1.CreateRoleRequest, v1alpha1.CreateRoleResponse]
 	deleteRole                    *connect.Client[v1alpha1.DeleteRoleRequest, v1alpha1.DeleteRoleResponse]
 	getRole                       *connect.Client[v1alpha1.GetRoleRequest, v1alpha1.GetRoleResponse]
@@ -1055,6 +1103,28 @@ func (c *kargoServiceClient) ListProjectEvents(ctx context.Context, req *connect
 	return c.listProjectEvents.CallUnary(ctx, req)
 }
 
+// ListPromotionTasks calls akuity.io.kargo.service.v1alpha1.KargoService.ListPromotionTasks.
+func (c *kargoServiceClient) ListPromotionTasks(ctx context.Context, req *connect.Request[v1alpha1.ListPromotionTasksRequest]) (*connect.Response[v1alpha1.ListPromotionTasksResponse], error) {
+	return c.listPromotionTasks.CallUnary(ctx, req)
+}
+
+// ListClusterPromotionTasks calls
+// akuity.io.kargo.service.v1alpha1.KargoService.ListClusterPromotionTasks.
+func (c *kargoServiceClient) ListClusterPromotionTasks(ctx context.Context, req *connect.Request[v1alpha1.ListClusterPromotionTasksRequest]) (*connect.Response[v1alpha1.ListClusterPromotionTasksResponse], error) {
+	return c.listClusterPromotionTasks.CallUnary(ctx, req)
+}
+
+// GetPromotionTask calls akuity.io.kargo.service.v1alpha1.KargoService.GetPromotionTask.
+func (c *kargoServiceClient) GetPromotionTask(ctx context.Context, req *connect.Request[v1alpha1.GetPromotionTaskRequest]) (*connect.Response[v1alpha1.GetPromotionTaskResponse], error) {
+	return c.getPromotionTask.CallUnary(ctx, req)
+}
+
+// GetClusterPromotionTask calls
+// akuity.io.kargo.service.v1alpha1.KargoService.GetClusterPromotionTask.
+func (c *kargoServiceClient) GetClusterPromotionTask(ctx context.Context, req *connect.Request[v1alpha1.GetClusterPromotionTaskRequest]) (*connect.Response[v1alpha1.GetClusterPromotionTaskResponse], error) {
+	return c.getClusterPromotionTask.CallUnary(ctx, req)
+}
+
 // CreateRole calls akuity.io.kargo.service.v1alpha1.KargoService.CreateRole.
 func (c *kargoServiceClient) CreateRole(ctx context.Context, req *connect.Request[v1alpha1.CreateRoleRequest]) (*connect.Response[v1alpha1.CreateRoleResponse], error) {
 	return c.createRole.CallUnary(ctx, req)
@@ -1149,6 +1219,10 @@ type KargoServiceHandler interface {
 	GetAnalysisRun(context.Context, *connect.Request[v1alpha1.GetAnalysisRunRequest]) (*connect.Response[v1alpha1.GetAnalysisRunResponse], error)
 	GetAnalysisRunLogs(context.Context, *connect.Request[v1alpha1.GetAnalysisRunLogsRequest], *connect.ServerStream[v1alpha1.GetAnalysisRunLogsResponse]) error
 	ListProjectEvents(context.Context, *connect.Request[v1alpha1.ListProjectEventsRequest]) (*connect.Response[v1alpha1.ListProjectEventsResponse], error)
+	ListPromotionTasks(context.Context, *connect.Request[v1alpha1.ListPromotionTasksRequest]) (*connect.Response[v1alpha1.ListPromotionTasksResponse], error)
+	ListClusterPromotionTasks(context.Context, *connect.Request[v1alpha1.ListClusterPromotionTasksRequest]) (*connect.Response[v1alpha1.ListClusterPromotionTasksResponse], error)
+	GetPromotionTask(context.Context, *connect.Request[v1alpha1.GetPromotionTaskRequest]) (*connect.Response[v1alpha1.GetPromotionTaskResponse], error)
+	GetClusterPromotionTask(context.Context, *connect.Request[v1alpha1.GetClusterPromotionTaskRequest]) (*connect.Response[v1alpha1.GetClusterPromotionTaskResponse], error)
 	CreateRole(context.Context, *connect.Request[v1alpha1.CreateRoleRequest]) (*connect.Response[v1alpha1.CreateRoleResponse], error)
 	DeleteRole(context.Context, *connect.Request[v1alpha1.DeleteRoleRequest]) (*connect.Response[v1alpha1.DeleteRoleResponse], error)
 	GetRole(context.Context, *connect.Request[v1alpha1.GetRoleRequest]) (*connect.Response[v1alpha1.GetRoleResponse], error)
@@ -1488,6 +1562,30 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(kargoServiceListProjectEventsMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	kargoServiceListPromotionTasksHandler := connect.NewUnaryHandler(
+		KargoServiceListPromotionTasksProcedure,
+		svc.ListPromotionTasks,
+		connect.WithSchema(kargoServiceListPromotionTasksMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	kargoServiceListClusterPromotionTasksHandler := connect.NewUnaryHandler(
+		KargoServiceListClusterPromotionTasksProcedure,
+		svc.ListClusterPromotionTasks,
+		connect.WithSchema(kargoServiceListClusterPromotionTasksMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	kargoServiceGetPromotionTaskHandler := connect.NewUnaryHandler(
+		KargoServiceGetPromotionTaskProcedure,
+		svc.GetPromotionTask,
+		connect.WithSchema(kargoServiceGetPromotionTaskMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	kargoServiceGetClusterPromotionTaskHandler := connect.NewUnaryHandler(
+		KargoServiceGetClusterPromotionTaskProcedure,
+		svc.GetClusterPromotionTask,
+		connect.WithSchema(kargoServiceGetClusterPromotionTaskMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	kargoServiceCreateRoleHandler := connect.NewUnaryHandler(
 		KargoServiceCreateRoleProcedure,
 		svc.CreateRole,
@@ -1640,6 +1738,14 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceGetAnalysisRunLogsHandler.ServeHTTP(w, r)
 		case KargoServiceListProjectEventsProcedure:
 			kargoServiceListProjectEventsHandler.ServeHTTP(w, r)
+		case KargoServiceListPromotionTasksProcedure:
+			kargoServiceListPromotionTasksHandler.ServeHTTP(w, r)
+		case KargoServiceListClusterPromotionTasksProcedure:
+			kargoServiceListClusterPromotionTasksHandler.ServeHTTP(w, r)
+		case KargoServiceGetPromotionTaskProcedure:
+			kargoServiceGetPromotionTaskHandler.ServeHTTP(w, r)
+		case KargoServiceGetClusterPromotionTaskProcedure:
+			kargoServiceGetClusterPromotionTaskHandler.ServeHTTP(w, r)
 		case KargoServiceCreateRoleProcedure:
 			kargoServiceCreateRoleHandler.ServeHTTP(w, r)
 		case KargoServiceDeleteRoleProcedure:
@@ -1877,6 +1983,22 @@ func (UnimplementedKargoServiceHandler) GetAnalysisRunLogs(context.Context, *con
 
 func (UnimplementedKargoServiceHandler) ListProjectEvents(context.Context, *connect.Request[v1alpha1.ListProjectEventsRequest]) (*connect.Response[v1alpha1.ListProjectEventsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.ListProjectEvents is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) ListPromotionTasks(context.Context, *connect.Request[v1alpha1.ListPromotionTasksRequest]) (*connect.Response[v1alpha1.ListPromotionTasksResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.ListPromotionTasks is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) ListClusterPromotionTasks(context.Context, *connect.Request[v1alpha1.ListClusterPromotionTasksRequest]) (*connect.Response[v1alpha1.ListClusterPromotionTasksResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.ListClusterPromotionTasks is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) GetPromotionTask(context.Context, *connect.Request[v1alpha1.GetPromotionTaskRequest]) (*connect.Response[v1alpha1.GetPromotionTaskResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.GetPromotionTask is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) GetClusterPromotionTask(context.Context, *connect.Request[v1alpha1.GetClusterPromotionTaskRequest]) (*connect.Response[v1alpha1.GetClusterPromotionTaskResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.GetClusterPromotionTask is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) CreateRole(context.Context, *connect.Request[v1alpha1.CreateRoleRequest]) (*connect.Response[v1alpha1.CreateRoleResponse], error) {
