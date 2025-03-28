@@ -10,7 +10,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -176,7 +175,8 @@ func TestWarehouse_ListFreight(t *testing.T) {
 			opts: &ListWarehouseFreightOptions{
 				ApprovedFor:      testStage,
 				VerifiedIn:       []string{testUpstreamStage},
-				RequiredSoakTime: ptr.To(time.Hour)},
+				RequiredSoakTime: &metav1.Duration{Duration: time.Hour},
+			},
 			objects: []client.Object{
 				&Freight{ // This should not be returned
 					ObjectMeta: metav1.ObjectMeta{
@@ -277,7 +277,7 @@ func TestWarehouse_ListFreight(t *testing.T) {
 				AvailabilityStrategy: FreightAvailabilityStrategyAll,
 				ApprovedFor:          testStage,
 				VerifiedIn:           []string{testUpstreamStage, testUpstreamStage2},
-				RequiredSoakTime:     ptr.To(time.Hour),
+				RequiredSoakTime:     &metav1.Duration{Duration: time.Hour},
 			},
 			objects: []client.Object{
 				&Freight{ // This should be returned as its approved for the Stage
@@ -376,7 +376,7 @@ func TestWarehouse_ListFreight(t *testing.T) {
 				AvailabilityStrategy: "Invalid",
 				ApprovedFor:          testStage,
 				VerifiedIn:           []string{testUpstreamStage, testUpstreamStage2},
-				RequiredSoakTime:     ptr.To(time.Hour),
+				RequiredSoakTime:     &metav1.Duration{Duration: time.Hour},
 			},
 			assertions: func(t *testing.T, _ []Freight, err error) {
 				require.ErrorContains(t, err, "unsupported AvailabilityStrategy")

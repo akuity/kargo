@@ -139,9 +139,7 @@ func (s *Stage) ListAvailableFreight(
 				ApprovedFor:          s.Name,
 				VerifiedIn:           req.Sources.Stages,
 				AvailabilityStrategy: req.Sources.AvailabilityStrategy,
-			}
-			if requiredSoak := req.Sources.RequiredSoakTime; requiredSoak != nil {
-				listOpts.RequiredSoakTime = &requiredSoak.Duration
+				RequiredSoakTime:     req.Sources.RequiredSoakTime,
 			}
 		}
 		freightFromWarehouse, err := warehouse.ListFreight(ctx, c, listOpts)
@@ -172,15 +170,25 @@ func (s *Stage) IsFreightAvailable(freight *Freight) bool {
 		return true
 	}
 	for _, req := range s.Spec.RequestedFreight {
-		if freight.Origin.Equals(&req.Origin) {
-			if req.Sources.Direct {
-				return true
-			}
-			for _, source := range req.Sources.Stages {
-				if freight.IsVerifiedIn(source) {
-					return req.Sources.RequiredSoakTime == nil ||
-						freight.GetLongestSoak(source) >= req.Sources.RequiredSoakTime.Duration
+		if !freight.Origin.Equals(&req.Origin) {
+			continue
+		}
+		if req.Sources.Direct {
+			return true
+		}
+		if req.Sources.AvailabilityStrategy == FreightAvailabilityStrategyAll {
+			// Make sure Freight is verified and soaked in all upstream Stages
+			for _, upstream := range req.Sources.Stages {
+				if !freight.IsVerifiedIn(upstream) || !freight.HasSoakedIn(upstream, req.Sources.RequiredSoakTime) {
+					return false
 				}
+			}
+			return true
+		}
+		// Make sure Freight is verified and soaked in at least one upstream Stage
+		for _, upstream := range req.Sources.Stages {
+			if freight.IsVerifiedIn(upstream) && freight.HasSoakedIn(upstream, req.Sources.RequiredSoakTime) {
+				return true
 			}
 		}
 	}
