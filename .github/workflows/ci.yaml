@@ -39,8 +39,11 @@ jobs:
       run: make test-unit
     - name: Remove generated code from report
       run: |
-        grep -v .pb.go coverage.txt | grep -v zz_generated | grep -v service.connect.go > coverage.tmp
-        mv coverage.tmp coverage.txt
+        for report in $(find . -maxdepth 4 -type f -name 'coverage.txt'); do
+          tmp_file=$(dirname $report)/coverage.tmp
+          grep -v .pb.go $report | grep -v zz_ | grep -v .connect.go > $tmp_file
+          mv $tmp_file $report
+        done
     - name: Upload coverage reports
       uses: codecov/codecov-action@0565863a31f2c772f9f0395002a31e3f06189574 # v5.4.0
       with:
