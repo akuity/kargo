@@ -84,11 +84,10 @@ type ListWarehouseFreightOptions struct {
 	//
 	// IMPORTANT: This is OR'ed with the ApprovedFor field.
 	VerifiedIn []string
-	// VerifiedBefore optionally specifies a time before which a Freight verified
-	// in any of the Stages named in the VerifiedIn field must have been verified.
-	// This is useful for filtering out Freight whose soak time has not yet
-	// elapsed.
-	VerifiedBefore *metav1.Time
+	// RequiredSoakTime optionally specifies a minimum duration that a piece of
+	// Freight must have continuously remained in a Stage at any time after being
+	// verified.
+	RequiredSoakTime *time.Duration
 	// AvailabilityStrategy specifies the semantics for how Freight is determined
 	// to be available. If not set, the default is to consider Freight available
 	// if it has been verified in any of the provided VerifiedIn stages.
@@ -196,7 +195,7 @@ func ListFreightFromWarehouse(
 		return lhs.Name == rhs.Name
 	})
 
-	if len(opts.VerifiedIn) == 0 || opts.VerifiedBefore == nil {
+	if len(opts.VerifiedIn) == 0 || opts.RequiredSoakTime == nil {
 		// Nothing left to do
 		return freight, nil
 	}
@@ -214,11 +213,9 @@ func ListFreightFromWarehouse(
 		// Track set of Stages that have passed the verification soak time
 		// for the Freight.
 		verifiedStages := sets.New[string]()
-		for stage, ver := range f.Status.VerifiedIn {
-			if verifiedAt := ver.VerifiedAt; verifiedAt != nil {
-				if verifiedAt.Time.Before(opts.VerifiedBefore.Time) {
-					verifiedStages.Insert(stage)
-				}
+		for stage := range f.Status.VerifiedIn {
+			if f.GetLongestSoak(stage) >= *opts.RequiredSoakTime {
+				verifiedStages.Insert(stage)
 			}
 		}
 

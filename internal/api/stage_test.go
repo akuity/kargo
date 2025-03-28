@@ -208,8 +208,7 @@ func TestListFreightAvailableToStage(t *testing.T) {
 					Status: kargoapi.FreightStatus{
 						VerifiedIn: map[string]kargoapi.VerifiedStage{
 							testStage: {
-								VerifiedAt: &metav1.Time{Time: time.Now()},
-							},
+								LongestCompletedSoak: &metav1.Duration{Duration: 30 * time.Minute}},
 						},
 					},
 				},
@@ -222,7 +221,7 @@ func TestListFreightAvailableToStage(t *testing.T) {
 					Status: kargoapi.FreightStatus{
 						VerifiedIn: map[string]kargoapi.VerifiedStage{
 							testStage: {
-								VerifiedAt: &metav1.Time{Time: time.Now().Add(-time.Hour * 2)},
+								LongestCompletedSoak: &metav1.Duration{Duration: 2 * time.Hour},
 							},
 						},
 					},

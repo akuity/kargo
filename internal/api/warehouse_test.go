@@ -174,12 +174,11 @@ func TestListFreightFromWarehouse(t *testing.T) {
 			},
 		},
 		{
-			name: "success with VerifiedIn and VerifiedBefore options",
+			name: "success with VerifiedIn and RequiredSoakTime options",
 			opts: &ListWarehouseFreightOptions{
-				ApprovedFor:    testStage,
-				VerifiedIn:     []string{testUpstreamStage},
-				VerifiedBefore: &metav1.Time{Time: time.Now().Add(-1 * time.Hour)},
-			},
+				ApprovedFor:      testStage,
+				VerifiedIn:       []string{testUpstreamStage},
+				RequiredSoakTime: ptr.To(time.Hour)},
 			objects: []client.Object{
 				&kargoapi.Freight{ // This should not be returned
 					ObjectMeta: metav1.ObjectMeta{
@@ -196,7 +195,9 @@ func TestListFreightFromWarehouse(t *testing.T) {
 						ApprovedFor: map[string]kargoapi.ApprovedStage{testStage: {}},
 						// Doesn't matter that it's verified upstream, because this is the
 						// wrong warehouse
-						VerifiedIn: map[string]kargoapi.VerifiedStage{testUpstreamStage: {}},
+						VerifiedIn: map[string]kargoapi.VerifiedStage{testUpstreamStage: {
+							LongestCompletedSoak: &metav1.Duration{Duration: 2 * time.Hour},
+						}},
 					},
 				},
 				&kargoapi.Freight{ // This should not be returned
@@ -238,7 +239,7 @@ func TestListFreightFromWarehouse(t *testing.T) {
 						// yet elapsed
 						VerifiedIn: map[string]kargoapi.VerifiedStage{
 							testUpstreamStage: {
-								VerifiedAt: ptr.To(metav1.Now()),
+								LongestCompletedSoak: &metav1.Duration{Duration: 30 * time.Minute},
 							},
 						},
 					},
@@ -257,7 +258,7 @@ func TestListFreightFromWarehouse(t *testing.T) {
 						// elapsed
 						VerifiedIn: map[string]kargoapi.VerifiedStage{
 							testUpstreamStage: {
-								VerifiedAt: ptr.To(metav1.NewTime(time.Now().Add(-2 * time.Hour))),
+								LongestCompletedSoak: &metav1.Duration{Duration: 2 * time.Hour},
 							},
 						},
 					},
@@ -278,7 +279,7 @@ func TestListFreightFromWarehouse(t *testing.T) {
 				AvailabilityStrategy: kargoapi.FreightAvailabilityStrategyAll,
 				ApprovedFor:          testStage,
 				VerifiedIn:           []string{testUpstreamStage, testUpstreamStage2},
-				VerifiedBefore:       &metav1.Time{Time: time.Now().Add(-1 * time.Hour)},
+				RequiredSoakTime:     ptr.To(time.Hour),
 			},
 			objects: []client.Object{
 				&kargoapi.Freight{ // This should be returned as its approved for the Stage
@@ -294,11 +295,7 @@ func TestListFreightFromWarehouse(t *testing.T) {
 						// This is approved for the Stage
 						ApprovedFor: map[string]kargoapi.ApprovedStage{testStage: {}},
 						// This is only verified in a single upstream Stage
-						VerifiedIn: map[string]kargoapi.VerifiedStage{
-							testUpstreamStage: {
-								VerifiedAt: ptr.To(metav1.Now()),
-							},
-						},
+						VerifiedIn: map[string]kargoapi.VerifiedStage{},
 					},
 				},
 				&kargoapi.Freight{
@@ -317,10 +314,10 @@ func TestListFreightFromWarehouse(t *testing.T) {
 						// This is verified in all of the upstream Stages and the soak time has lapsed
 						VerifiedIn: map[string]kargoapi.VerifiedStage{
 							testUpstreamStage: {
-								VerifiedAt: ptr.To(metav1.NewTime(time.Now().Add(-2 * time.Hour))),
+								LongestCompletedSoak: &metav1.Duration{Duration: 2 * time.Hour},
 							},
 							testUpstreamStage2: {
-								VerifiedAt: ptr.To(metav1.NewTime(time.Now().Add(-2 * time.Hour))),
+								LongestCompletedSoak: &metav1.Duration{Duration: 2 * time.Hour},
 							},
 						},
 					},
@@ -339,9 +336,7 @@ func TestListFreightFromWarehouse(t *testing.T) {
 						ApprovedFor: map[string]kargoapi.ApprovedStage{},
 						// This is not verified in all of the upstream Stages
 						VerifiedIn: map[string]kargoapi.VerifiedStage{
-							testUpstreamStage: {
-								VerifiedAt: ptr.To(metav1.Now()),
-							},
+							testUpstreamStage: {},
 						},
 					},
 				},
@@ -360,10 +355,10 @@ func TestListFreightFromWarehouse(t *testing.T) {
 						// This is verified in all of the upstream Stages but only passed the soak time of one
 						VerifiedIn: map[string]kargoapi.VerifiedStage{
 							testUpstreamStage: {
-								VerifiedAt: ptr.To(metav1.NewTime(time.Now().Add(-2 * time.Hour))),
+								LongestCompletedSoak: &metav1.Duration{Duration: 2 * time.Hour},
 							},
 							testUpstreamStage2: {
-								VerifiedAt: ptr.To(metav1.Now()),
+								LongestCompletedSoak: &metav1.Duration{Duration: 30 * time.Minute},
 							},
 						},
 					},
@@ -384,7 +379,7 @@ func TestListFreightFromWarehouse(t *testing.T) {
 				AvailabilityStrategy: "Invalid",
 				ApprovedFor:          testStage,
 				VerifiedIn:           []string{testUpstreamStage, testUpstreamStage2},
-				VerifiedBefore:       &metav1.Time{Time: time.Now().Add(-1 * time.Hour)},
+				RequiredSoakTime:     ptr.To(time.Hour),
 			},
 			assertions: func(t *testing.T, _ []kargoapi.Freight, err error) {
 				require.ErrorContains(t, err, "unsupported AvailabilityStrategy")
