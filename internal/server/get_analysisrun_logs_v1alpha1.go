@@ -36,6 +36,13 @@ func (s *server) GetAnalysisRunLogs(
 		)
 	}
 
+	if s.cfg.AnalysisRunLogURLTemplate == "" {
+		return connect.NewError(
+			connect.CodeUnimplemented,
+			errors.New("AnalysisRun log streaming is not configured"),
+		)
+	}
+
 	namespace := req.Msg.GetNamespace()
 	if err := validateFieldNotEmpty("namespace", namespace); err != nil {
 		return err
