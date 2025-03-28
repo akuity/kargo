@@ -9,7 +9,7 @@ import { PartialRecursive, PlainMessageRecursive } from '@ui/utils/connectrpc-ut
 import { cleanEmptyObjectValues } from '@ui/utils/helpers';
 
 // generate manifests for kargo resources
-export const WarehouseManifestsGen = {
+export const warehouseManifestsGen = {
   v1alpha1: (def: {
     projectName: string;
     warehouseName: string;
@@ -26,7 +26,7 @@ export const WarehouseManifestsGen = {
     })
 };
 
-export const PromotionTaskManifestsGen = {
+export const promotionTaskManifestsGen = {
   v1alpha1: (def: PromotionTask) =>
     stringify({
       apiVersion: 'kargo.akuity.io/v1alpha1',
@@ -35,7 +35,7 @@ export const PromotionTaskManifestsGen = {
     })
 };
 
-export const ClusterPromotionTaskManifestsGen = {
+export const clusterPromotionTaskManifestsGen = {
   v1alpha1: (def: ClusterPromotionTask) =>
     stringify({
       apiVersion: 'kargo.akuity.io/v1alpha1',

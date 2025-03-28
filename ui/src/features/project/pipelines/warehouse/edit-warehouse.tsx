@@ -10,7 +10,7 @@ import { z } from 'zod';
 
 import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
 import { FieldContainer } from '@ui/features/common/form/field-container';
-import { WarehouseManifestsGen } from '@ui/features/utils/manifest-generator';
+import { warehouseManifestsGen } from '@ui/features/utils/manifest-generator';
 import {
   getWarehouse,
   updateResource
@@ -64,7 +64,7 @@ export const EditWarehouse = ({ projectName, warehouseName }: Props) => {
             onChange={(e) => onChange(e || '')}
             height='500px'
             schema={schema as JSONSchema4}
-            placeholder={WarehouseManifestsGen.v1alpha1({
+            placeholder={warehouseManifestsGen.v1alpha1({
               projectName: projectName || '',
               warehouseName: warehouseName || '',
               spec: {

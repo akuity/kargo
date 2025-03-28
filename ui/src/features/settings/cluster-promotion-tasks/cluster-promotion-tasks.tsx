@@ -6,7 +6,7 @@ import { format } from 'date-fns';
 
 import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
 import { useModal } from '@ui/features/common/modal/use-modal';
-import { ClusterPromotionTaskManifestsGen } from '@ui/features/utils/manifest-generator';
+import { clusterPromotionTaskManifestsGen } from '@ui/features/utils/manifest-generator';
 import {
   deleteResource,
   listClusterPromotionTasks
@@ -45,7 +45,7 @@ export const ClusterPromotionTasks = () => {
       ),
       onOk: () => {
         const manifest = new TextEncoder().encode(
-          ClusterPromotionTaskManifestsGen.v1alpha1(clusterPromotionTask)
+          clusterPromotionTaskManifestsGen.v1alpha1(clusterPromotionTask)
         );
         deleteClusterPromotionTaskMutation.mutate(
           { manifest },

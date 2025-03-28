@@ -14,7 +14,7 @@ import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { useConfirmModal } from '../common/confirm-modal/use-confirm-modal';
 import { useModal } from '../common/modal/use-modal';
-import { PromotionTaskManifestsGen } from '../utils/manifest-generator';
+import { promotionTaskManifestsGen } from '../utils/manifest-generator';
 
 import { CreatePromotionTaskModal } from './create-promotion-task';
 import { EditPromotionTaskModal } from './edit-promotion-task-modal';
@@ -47,7 +47,7 @@ export const PromotionTasks = () => {
       ),
       onOk: () => {
         const manifest = new TextEncoder().encode(
-          PromotionTaskManifestsGen.v1alpha1(promotionTask)
+          promotionTaskManifestsGen.v1alpha1(promotionTask)
         );
         deletePromotionTaskMutation.mutate(
           { manifest },
