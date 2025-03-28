@@ -157,6 +157,19 @@ func (f *Freight) GetLongestSoak(stage string) time.Duration {
 	return time.Duration(max(longestCompleted.Nanoseconds(), current.Nanoseconds()))
 }
 
+// HasSoakedIn returns whether the Freight has soaked in the specified Stage for
+// at least the specified duration. If the specified duration is nil, this
+// method will return true.
+func (f *Freight) HasSoakedIn(stage string, dur *metav1.Duration) bool {
+	if f == nil {
+		return false
+	}
+	if dur == nil {
+		return true
+	}
+	return f.GetLongestSoak(stage) >= dur.Duration
+}
+
 // AddCurrentStage updates the Freight status to reflect that the Freight is
 // currently in the specified Stage.
 func (f *FreightStatus) AddCurrentStage(stage string, since time.Time) {

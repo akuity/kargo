@@ -87,7 +87,7 @@ type ListWarehouseFreightOptions struct {
 	// RequiredSoakTime optionally specifies a minimum duration that a piece of
 	// Freight must have continuously remained in a Stage at any time after being
 	// verified.
-	RequiredSoakTime *time.Duration
+	RequiredSoakTime *metav1.Duration
 	// AvailabilityStrategy specifies the semantics for how Freight is determined
 	// to be available. If not set, the default is to consider Freight available
 	// if it has been verified in any of the provided VerifiedIn stages.
@@ -214,7 +214,7 @@ func ListFreightFromWarehouse(
 		// for the Freight.
 		verifiedStages := sets.New[string]()
 		for stage := range f.Status.VerifiedIn {
-			if f.GetLongestSoak(stage) >= *opts.RequiredSoakTime {
+			if f.HasSoakedIn(stage, opts.RequiredSoakTime) {
 				verifiedStages.Insert(stage)
 			}
 		}

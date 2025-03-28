@@ -186,6 +186,65 @@ func TestStage_IsFreightAvailable(t *testing.T) {
 			expected: true,
 		},
 		{
+			name: "availability strategy all + freight is verified and soaked in one upstream stage, but not all",
+			stage: &Stage{
+				ObjectMeta: testStageMeta,
+				Spec: StageSpec{
+					RequestedFreight: []FreightRequest{{
+						Origin: testOrigin,
+						Sources: FreightSources{
+							AvailabilityStrategy: FreightAvailabilityStrategyAll,
+							Stages:               []string{"upstream-stage-1", "upstream-stage-2"},
+							RequiredSoakTime:     &metav1.Duration{Duration: time.Hour},
+						},
+					}},
+				},
+			},
+			freight: &Freight{
+				ObjectMeta: testFreightMeta,
+				Origin:     testOrigin,
+				Status: FreightStatus{
+					VerifiedIn: map[string]VerifiedStage{
+						"upstream-stage-1": {
+							LongestCompletedSoak: &metav1.Duration{Duration: 2 * time.Hour},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "availability strategy all + freight is verified and soaked in all upstream stages",
+			stage: &Stage{
+				ObjectMeta: testStageMeta,
+				Spec: StageSpec{
+					RequestedFreight: []FreightRequest{{
+						Origin: testOrigin,
+						Sources: FreightSources{
+							AvailabilityStrategy: FreightAvailabilityStrategyAll,
+							Stages:               []string{"upstream-stage-1", "upstream-stage-2"},
+							RequiredSoakTime:     &metav1.Duration{Duration: time.Hour},
+						},
+					}},
+				},
+			},
+			freight: &Freight{
+				ObjectMeta: testFreightMeta,
+				Origin:     testOrigin,
+				Status: FreightStatus{
+					VerifiedIn: map[string]VerifiedStage{
+						"upstream-stage-1": {
+							LongestCompletedSoak: &metav1.Duration{Duration: 2 * time.Hour},
+						},
+						"upstream-stage-2": {
+							LongestCompletedSoak: &metav1.Duration{Duration: 2 * time.Hour},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
 			name: "freight from origin not requested",
 			stage: &Stage{
 				ObjectMeta: testStageMeta,

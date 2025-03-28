@@ -81,9 +81,7 @@ func ListFreightAvailableToStage(
 				ApprovedFor:          s.Name,
 				VerifiedIn:           req.Sources.Stages,
 				AvailabilityStrategy: req.Sources.AvailabilityStrategy,
-			}
-			if requiredSoak := req.Sources.RequiredSoakTime; requiredSoak != nil {
-				listOpts.RequiredSoakTime = &requiredSoak.Duration
+				RequiredSoakTime:     req.Sources.RequiredSoakTime,
 			}
 		}
 		freightFromWarehouse, err := ListFreightFromWarehouse(
