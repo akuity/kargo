@@ -335,7 +335,7 @@ func TestStage_ListAvailableFreight(t *testing.T) {
 					Status: FreightStatus{
 						VerifiedIn: map[string]VerifiedStage{
 							testStage: {
-								VerifiedAt: &metav1.Time{Time: time.Now()},
+								LongestCompletedSoak: &metav1.Duration{Duration: 30 * time.Minute},
 							},
 						},
 					},
@@ -349,7 +349,7 @@ func TestStage_ListAvailableFreight(t *testing.T) {
 					Status: FreightStatus{
 						VerifiedIn: map[string]VerifiedStage{
 							testStage: {
-								VerifiedAt: &metav1.Time{Time: time.Now().Add(-time.Hour * 2)},
+								LongestCompletedSoak: &metav1.Duration{Duration: 2 * time.Hour},
 							},
 						},
 					},

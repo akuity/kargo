@@ -141,7 +141,7 @@ func (s *Stage) ListAvailableFreight(
 				AvailabilityStrategy: req.Sources.AvailabilityStrategy,
 			}
 			if requiredSoak := req.Sources.RequiredSoakTime; requiredSoak != nil {
-				listOpts.VerifiedBefore = &metav1.Time{Time: time.Now().Add(-requiredSoak.Duration)}
+				listOpts.RequiredSoakTime = &requiredSoak.Duration
 			}
 		}
 		freightFromWarehouse, err := warehouse.ListFreight(ctx, c, listOpts)
