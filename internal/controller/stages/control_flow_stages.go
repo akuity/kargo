@@ -153,12 +153,13 @@ func (r *ControlFlowStageReconciler) SetupWithManager(
 		source.Kind(
 			mgr.GetCache(),
 			&kargoapi.Freight{},
-			&downstreamStageEnqueuer[*kargoapi.Freight]{
-				kargoClient: mgr.GetClient(),
+			&warehouseStageEnqueuer[*kargoapi.Freight]{
+				kargoClient:          mgr.GetClient(),
+				forControlFlowStages: true,
 			},
 		),
 	); err != nil {
-		return fmt.Errorf("unable to watch Freight from upstream Stages: %w", err)
+		return fmt.Errorf("unable to watch Freight produced by Warehouse: %w", err)
 	}
 
 	// Watch for Freight that have been verified in upstream Stages.
