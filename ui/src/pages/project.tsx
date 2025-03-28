@@ -160,7 +160,6 @@ export const Project = ({
                   }}
                 >
                   <FontAwesomeIcon icon={value.icon} className='mr-2' />
-                  {value.label}
                 </div>
               </Tooltip>
             ))}
