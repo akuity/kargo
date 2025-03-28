@@ -143,8 +143,8 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 			provider: &WorkloadIdentityFederationProvider{
 				projectID:  fakeProjectID,
 				tokenCache: cache.New(10*time.Hour, time.Hour),
-				getAccessTokenFn: func(_ context.Context, _ string) (string, error) {
-					return fakeToken, nil
+				getAccessTokenFn: func(_ context.Context, _ string) (string, bool, error) {
+					return fakeToken, true, nil
 				},
 			},
 			project:  fakeProject,
@@ -167,8 +167,8 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 			provider: &WorkloadIdentityFederationProvider{
 				projectID:  fakeProjectID,
 				tokenCache: cache.New(10*time.Hour, time.Hour),
-				getAccessTokenFn: func(_ context.Context, _ string) (string, error) {
-					return "", fmt.Errorf("token fetch error")
+				getAccessTokenFn: func(_ context.Context, _ string) (string, bool, error) {
+					return "", true, fmt.Errorf("token fetch error")
 				},
 			},
 			project:  fakeProject,
@@ -184,8 +184,8 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 			provider: &WorkloadIdentityFederationProvider{
 				projectID:  fakeProjectID,
 				tokenCache: cache.New(10*time.Hour, time.Hour),
-				getAccessTokenFn: func(_ context.Context, _ string) (string, error) {
-					return "", nil
+				getAccessTokenFn: func(_ context.Context, _ string) (string, bool, error) {
+					return "", true, nil
 				},
 			},
 			project:  fakeProject,
