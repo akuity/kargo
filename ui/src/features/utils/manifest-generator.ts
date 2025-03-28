@@ -1,6 +1,6 @@
 import { stringify } from 'yaml';
 
-import { WarehouseSpec } from '@ui/gen/api/v1alpha1/generated_pb';
+import { PromotionTask, WarehouseSpec } from '@ui/gen/api/v1alpha1/generated_pb';
 import { PartialRecursive, PlainMessageRecursive } from '@ui/utils/connectrpc-utils';
 import { cleanEmptyObjectValues } from '@ui/utils/helpers';
 
@@ -19,5 +19,14 @@ export const WarehouseManifestsGen = {
         namespace: def.projectName
       },
       spec: cleanEmptyObjectValues(def.spec)
+    })
+};
+
+export const PromotionTaskManifestsGen = {
+  v1alpha1: (def: PromotionTask) =>
+    stringify({
+      apiVersion: 'kargo.akuity.io/v1alpha1',
+      kind: 'PromotionTask',
+      ...def
     })
 };

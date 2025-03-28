@@ -60,6 +60,7 @@ export const App = () => (
                     path={paths.createWarehouse}
                     element={<Project tab='pipelines' creatingWarehouse />}
                   />
+                  <Route path={paths.promotionTasks} element={<Project tab='promotionTasks' />} />
                 </Route>
                 <Route path={paths.analysisRunLogs} element={<AnalysisRunLogsPage />} />
               </Route>

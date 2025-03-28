@@ -253,6 +253,21 @@ export const getAnalysisRun = KargoService.method.getAnalysisRun;
 export const listProjectEvents = KargoService.method.listProjectEvents;
 
 /**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListPromotionTasks
+ */
+export const listPromotionTasks = KargoService.method.listPromotionTasks;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListClusterPromotionTasks
+ */
+export const listClusterPromotionTasks = KargoService.method.listClusterPromotionTasks;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetPromotionTask
+ */
+export const getPromotionTask = KargoService.method.getPromotionTask;
+
+/**
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateRole
  */
 export const createRole = KargoService.method.createRole;

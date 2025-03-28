@@ -10,7 +10,8 @@ type Data = {
           | 'analysisRun'
           | 'analysisTemplate'
           | 'clusterAnalysisTemplate'
-          | 'warehouse';
+          | 'warehouse'
+          | 'promotionTask';
       }
     | {
         value: Uint8Array;

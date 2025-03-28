@@ -107,6 +107,12 @@ service KargoService {
 
   rpc ListProjectEvents(ListProjectEventsRequest) returns (ListProjectEventsResponse);
 
+  /* Promotion Task APIs */
+
+  rpc ListPromotionTasks(ListPromotionTasksRequest) returns (ListPromotionTasksResponse);
+  rpc ListClusterPromotionTasks(ListClusterPromotionTasksRequest) returns (ListClusterPromotionTasksResponse);
+  rpc GetPromotionTask(GetPromotionTaskRequest) returns (GetPromotionTaskResponse);
+
   /* Role APIs */
 
   rpc CreateRole(CreateRoleRequest) returns (CreateRoleResponse);
@@ -646,6 +652,20 @@ message ListAnalysisTemplatesResponse {
   repeated github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisTemplate analysis_templates = 1 [json_name = "analysisTemplates"];
 }
 
+message ListPromotionTasksRequest {
+  string project = 1;
+}
+
+message ListPromotionTasksResponse {
+  repeated github.com.akuity.kargo.api.v1alpha1.PromotionTask promotion_tasks = 1;
+}
+
+message ListClusterPromotionTasksRequest {}
+
+message ListClusterPromotionTasksResponse {
+  repeated github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask cluster_promotion_tasks = 1;
+}
+
 message GetAnalysisTemplateRequest {
   string project = 1;
   string name = 2;
@@ -655,6 +675,19 @@ message GetAnalysisTemplateRequest {
 message GetAnalysisTemplateResponse {
   oneof result {
     github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisTemplate analysis_template = 1 [json_name = "analysisTemplate"];
+    bytes raw = 2;
+  }
+}
+
+message GetPromotionTaskRequest {
+  string project = 1;
+  string name = 2;
+  RawFormat format = 3;
+}
+
+message GetPromotionTaskResponse {
+  oneof result {
+    github.com.akuity.kargo.api.v1alpha1.PromotionTask promotion_task = 1 [json_name = "promotionTask"];
     bytes raw = 2;
   }
 }

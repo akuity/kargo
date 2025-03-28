@@ -4,7 +4,8 @@ import {
   faChartBar,
   faClockRotateLeft,
   faDiagramProject,
-  faPeopleGroup
+  faPeopleGroup,
+  faTasks
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Result, Tooltip } from 'antd';
@@ -22,6 +23,7 @@ import { Events } from '@ui/features/project/events/events';
 import { Pipelines } from '@ui/features/project/pipelines/pipelines';
 import { Roles } from '@ui/features/project/roles/roles';
 import { ProjectSettings } from '@ui/features/project/settings/project-settings';
+import { PromotionTasks } from '@ui/features/promotion-tasks/promotion-tasks';
 import {
   getConfig,
   getProject
@@ -74,6 +76,11 @@ export const Project = ({
           path: paths.projectRoles,
           label: 'Roles',
           icon: faPeopleGroup
+        },
+        promotionTasks: {
+          path: paths.promotionTasks,
+          label: 'Promotion Tasks',
+          icon: faTasks
         }
       }
     ];
@@ -121,6 +128,8 @@ export const Project = ({
         return <Events />;
       case 'roles':
         return <Roles />;
+      case 'promotionTasks':
+        return <PromotionTasks />;
       default:
         return <Pipelines project={data?.result?.value as _Project} />;
     }
@@ -144,13 +153,14 @@ export const Project = ({
           <div className='flex items-center gap-8 text-gray-500 text-sm mr-2'>
             {Object.entries(tabs).map(([key, value]) => (
               <Tooltip key={key} title={value.label}>
-                <div className={classNames('cursor-pointer', { 'text-blue-500': tab === key })}>
-                  <FontAwesomeIcon
-                    icon={value.icon}
-                    onClick={() => {
-                      navigate(generatePath(tabs[key as keyof typeof tabs]?.path ?? '', { name }));
-                    }}
-                  />
+                <div
+                  className={classNames('cursor-pointer', { 'text-blue-500': tab === key })}
+                  onClick={() => {
+                    navigate(generatePath(tabs[key as keyof typeof tabs]?.path ?? '', { name }));
+                  }}
+                >
+                  <FontAwesomeIcon icon={value.icon} className='mr-2' />
+                  {value.label}
                 </div>
               </Tooltip>
             ))}
