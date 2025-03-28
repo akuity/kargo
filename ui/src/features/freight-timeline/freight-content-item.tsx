@@ -96,7 +96,7 @@ export const FreightContentItem = (props: {
           _children
         )}
         {!!props.artifactBuildDate && (
-          <span className='text-[8px]'>
+          <span className='text-[8px] text-center'>
             <FontAwesomeIcon icon={faHammer} />
             {props.artifactBuildDate}
           </span>
