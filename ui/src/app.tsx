@@ -53,6 +53,10 @@ export const App = () => (
                     element={<Settings section='verification' />}
                   />
                   <Route
+                    path={paths.settingsClusterPromotionTasks}
+                    element={<Settings section='cluster-promotion-tasks' />}
+                  />
+                  <Route
                     path={paths.createStage}
                     element={<Project tab='pipelines' creatingStage={true} />}
                   />

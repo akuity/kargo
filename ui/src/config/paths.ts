@@ -14,6 +14,7 @@ export const paths = {
   user: '/user',
   settings: '/settings/',
   settingsAnalysisTemplates: '/settings/analysis-templates',
+  settingsClusterPromotionTasks: '/settings/cluster-promotion-tasks',
   analysisRunLogs: '/ext/project/:name/stage/:stageName/analysis-run/:analysisRunId/logs',
   promotionTasks: '/project/:name/promotion-tasks',
 

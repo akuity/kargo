@@ -268,6 +268,11 @@ export const listClusterPromotionTasks = KargoService.method.listClusterPromotio
 export const getPromotionTask = KargoService.method.getPromotionTask;
 
 /**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetClusterPromotionTask
+ */
+export const getClusterPromotionTask = KargoService.method.getClusterPromotionTask;
+
+/**
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateRole
  */
 export const createRole = KargoService.method.createRole;

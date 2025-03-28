@@ -1,6 +1,10 @@
 import { stringify } from 'yaml';
 
-import { PromotionTask, WarehouseSpec } from '@ui/gen/api/v1alpha1/generated_pb';
+import {
+  ClusterPromotionTask,
+  PromotionTask,
+  WarehouseSpec
+} from '@ui/gen/api/v1alpha1/generated_pb';
 import { PartialRecursive, PlainMessageRecursive } from '@ui/utils/connectrpc-utils';
 import { cleanEmptyObjectValues } from '@ui/utils/helpers';
 
@@ -27,6 +31,15 @@ export const PromotionTaskManifestsGen = {
     stringify({
       apiVersion: 'kargo.akuity.io/v1alpha1',
       kind: 'PromotionTask',
+      ...def
+    })
+};
+
+export const ClusterPromotionTaskManifestsGen = {
+  v1alpha1: (def: ClusterPromotionTask) =>
+    stringify({
+      apiVersion: 'kargo.akuity.io/v1alpha1',
+      kind: 'ClusterPromotionTask',
       ...def
     })
 };

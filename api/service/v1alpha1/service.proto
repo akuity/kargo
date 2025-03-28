@@ -112,6 +112,7 @@ service KargoService {
   rpc ListPromotionTasks(ListPromotionTasksRequest) returns (ListPromotionTasksResponse);
   rpc ListClusterPromotionTasks(ListClusterPromotionTasksRequest) returns (ListClusterPromotionTasksResponse);
   rpc GetPromotionTask(GetPromotionTaskRequest) returns (GetPromotionTaskResponse);
+  rpc GetClusterPromotionTask(GetClusterPromotionTaskRequest) returns (GetClusterPromotionTaskResponse);
 
   /* Role APIs */
 
@@ -688,6 +689,18 @@ message GetPromotionTaskRequest {
 message GetPromotionTaskResponse {
   oneof result {
     github.com.akuity.kargo.api.v1alpha1.PromotionTask promotion_task = 1 [json_name = "promotionTask"];
+    bytes raw = 2;
+  }
+}
+
+message GetClusterPromotionTaskRequest {
+  string name = 2;
+  RawFormat format = 3;
+}
+
+message GetClusterPromotionTaskResponse {
+  oneof result {
+    github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask promotion_task = 1 [json_name = "clusterPromotionTask"];
     bytes raw = 2;
   }
 }
