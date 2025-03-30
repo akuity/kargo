@@ -15,7 +15,7 @@ commonly preceded by a [`git-clear` step](git-clear.md) and followed by
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `path` | `string` | Y | Path to a Helm chart (i.e. to a directory containing a `Chart.yaml` file). This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
+| `path` | `string` | Y | Path to a Helm chart (i.e. to a directory containing a `Chart.yaml` file or public `oci://registry/chart:version`). This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `outPath` | `string` | Y | Path to the file or directory where rendered manifests are to be written. If the path ends with `.yaml` or `.yml` it is presumed to indicate a file and is otherwise presumed to indicate a directory. |
 | `releaseName` | `string` | Y | Release name to use when rendering the manifests. |
 | `useReleaseName` | `boolean` | N | Whether to use the release name in the output path (instead of the chart name). This is `false` by default, and only has an effect when `outPath` is set to a directory. |

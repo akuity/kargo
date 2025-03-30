@@ -17,6 +17,7 @@ import (
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/cli/values"
+	"helm.sh/helm/v3/pkg/registry"
 	"helm.sh/helm/v3/pkg/release"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -174,13 +175,62 @@ func (h *helmTemplateRunner) newInstallAction(
 	return client, nil
 }
 
-// loadChart loads the chart from the given path.
+// loadChart loads the chart from the given path or OCI registry.
 func (h *helmTemplateRunner) loadChart(workDir, relPath string) (*chart.Chart, error) {
+	// Check if the path starts with "oci://", indicating an OCI-based chart registry
+	if strings.HasPrefix(relPath, "oci://") {
+		return h.loadChartFromOCI(relPath)
+	}
+
+	// Fallback to the existing filesystem-based loading
 	absChartPath, err := securejoin.SecureJoin(workDir, relPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to join relPath %q: %w", relPath, err)
 	}
 	return loader.Load(absChartPath)
+}
+
+// loadChartFromOCI loads a chart from a OCI registry.
+func (h *helmTemplateRunner) loadChartFromOCI(ociChartURL string) (*chart.Chart, error) {
+	// Set up Helm to work with OCI registries
+	registryClient, err := registry.NewClient()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create registry client %q: %w", ociChartURL, err)
+	}
+
+	// Helm OCI registry login placeholder
+	// err = registryClient.Login("ghcr.io", registry.LoginOptBasicAuth("username", "password"))
+	// if err != nil {
+	// 	log.Fatalf("failed to login: %v", err)
+	// }
+
+	ociChartURL = strings.TrimPrefix(ociChartURL, "oci://")
+	pullResult, err := registryClient.Pull(ociChartURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to pull chart : %w", err)
+	}
+
+	fmt.Println("Chart pulled successfully:", pullResult)
+
+	// Save the chart to a temporary file
+	tempDir, err := os.MkdirTemp("", "helm-chart")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create temporary directory: %w", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	chartFile := filepath.Join(tempDir, "chart.tgz")
+	if err := os.WriteFile(chartFile, pullResult.Chart.Data, 0644); err != nil {
+		return nil, fmt.Errorf("failed to write chart file: %w", err)
+	}
+
+	// Load the chart from the temporary file
+	chart, err := loader.Load(chartFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load chart: %w", err)
+	}
+
+	return chart, nil
 }
 
 // checkDependencies checks if the chart has all its dependencies.
