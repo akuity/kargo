@@ -76,7 +76,16 @@ function main() {
     --output-dir="${tmp_dir}/src"
 
   { msg "Copying generated .proto and .pb.go files back to the project root..."; } 2> /dev/null
-  cp -R "${build_src_dir}/api" "${proj_dir}"
+  find "$build_src_dir/api" \( \
+    -name '*.proto' -o \
+    -name '*.pg.go' \
+  \) -type f | while read -r file; do
+    rel_path="${file#$build_src_dir/}"
+    dest_file="$proj_dir/$rel_path"
+    dest_dir=$(dirname "$dest_file")
+    mkdir -p "$dest_dir"
+    cp "$file" "$dest_file"
+  done
 
   # At this point, .proto and .pb.go files generated from Kubebuilder structs
   # are all where they belong.
