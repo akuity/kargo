@@ -7,7 +7,7 @@ import {
   faTrash
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Table } from 'antd';
+import { Button, Card, Space, Table } from 'antd';
 import classNames from 'classnames';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
@@ -43,7 +43,7 @@ const renderColumn = (key: string) => {
   };
 };
 
-export const Roles = () => {
+export const RolesSettings = () => {
   const { name } = useParams();
   const { data, refetch } = useQuery(listRoles, { project: name });
 
@@ -60,7 +60,22 @@ export const Roles = () => {
   });
 
   return (
-    <div className='p-4'>
+    <Card
+      title='Roles'
+      type='inner'
+      className='min-h-full'
+      extra={
+        <Button
+          icon={<FontAwesomeIcon icon={faPlus} />}
+          onClick={() => {
+            setShowCreateRole(true);
+            setEditingRole(undefined);
+          }}
+        >
+          Create Role
+        </Button>
+      }
+    >
       {(showCreateRole || editingRole) && (
         <CreateRole
           project={name || ''}
@@ -73,6 +88,7 @@ export const Roles = () => {
         />
       )}
       <Table
+        className='my-2'
         key={data?.roles?.length}
         dataSource={(data?.roles || []).sort((a, b) => {
           if (a.metadata?.name && b.metadata?.name) {
@@ -113,30 +129,17 @@ export const Roles = () => {
             }
           },
           {
-            title: (
-              <div className='w-full flex'>
-                <Button
-                  type='primary'
-                  className='ml-auto text-xs font-semibold'
-                  icon={<FontAwesomeIcon icon={faPlus} />}
-                  onClick={() => {
-                    setShowCreateRole(true);
-                    setEditingRole(undefined);
-                  }}
-                >
-                  CREATE ROLE
-                </Button>
-              </div>
-            ),
             key: 'actions',
             render: (record: Role) => {
               return (
                 <div className='flex items-center justify-end'>
                   {record?.kargoManaged && (
-                    <>
+                    <Space>
                       <Button
-                        icon={<FontAwesomeIcon icon={faPencil} />}
-                        className='mr-2'
+                        icon={<FontAwesomeIcon icon={faPencil} size='sm' />}
+                        color='default'
+                        variant='filled'
+                        size='small'
                         onClick={() => {
                           setEditingRole(record);
                           setShowCreateRole(false);
@@ -145,9 +148,10 @@ export const Roles = () => {
                         Edit
                       </Button>
                       <Button
-                        type='primary'
-                        icon={<FontAwesomeIcon icon={faTrash} />}
-                        danger
+                        color='danger'
+                        variant='filled'
+                        size='small'
+                        icon={<FontAwesomeIcon icon={faTrash} size='sm' />}
                         onClick={() => {
                           show((p) => (
                             <ConfirmModal
@@ -169,7 +173,7 @@ export const Roles = () => {
                       >
                         Delete
                       </Button>
-                    </>
+                    </Space>
                   )}
                 </div>
               );
@@ -177,7 +181,8 @@ export const Roles = () => {
           }
         ]}
         expandable={descriptionExpandable()}
+        pagination={{ hideOnSinglePage: true }}
       />
-    </div>
+    </Card>
   );
 };

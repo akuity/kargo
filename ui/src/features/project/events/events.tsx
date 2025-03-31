@@ -5,16 +5,19 @@ import {
   faQuestionCircle
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Empty, Tooltip } from 'antd';
+import { Breadcrumb, Empty, Flex, Tooltip } from 'antd';
 import classNames from 'classnames';
 import { format } from 'date-fns';
 import moment from 'moment';
 import { useParams } from 'react-router-dom';
 
+import { BaseHeader } from '@ui/features/common/layout/base-header';
 import { listProjectEvents } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { Event } from '@ui/gen/k8s.io/api/core/v1/generated_pb';
 import { Time } from '@ui/gen/k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
+
+import { useProjectBreadcrumbs } from '../project-utils';
 
 const EventValue = ({ label, children }: { label: string; children: React.ReactNode }) => {
   return (
@@ -121,14 +124,28 @@ const EventRow = ({ event }: { event: Event }) => {
 export const Events = () => {
   const { name } = useParams();
   const { data } = useQuery(listProjectEvents, { project: name });
+  const projectBreadcrumbs = useProjectBreadcrumbs();
 
   return (
-    <div className='px-4 pt-3 pb-10 flex flex-col h-full'>
-      {(data?.events || []).length > 0 ? (
-        data?.events.map((event) => <EventRow key={event.metadata?.name} event={event} />)
-      ) : (
-        <Empty description='No events' className='my-auto pb-20' />
-      )}
-    </div>
+    <Flex vertical className='min-h-full'>
+      <BaseHeader>
+        <Breadcrumb
+          separator='>'
+          items={[
+            ...projectBreadcrumbs,
+            {
+              title: 'Events'
+            }
+          ]}
+        />
+      </BaseHeader>
+      <div className='px-4 pt-3 pb-10 flex flex-col flex-1'>
+        {(data?.events || []).length > 0 ? (
+          data?.events.map((event) => <EventRow key={event.metadata?.name} event={event} />)
+        ) : (
+          <Empty description='No events' className='my-auto pb-20' />
+        )}
+      </div>
+    </Flex>
   );
 };
