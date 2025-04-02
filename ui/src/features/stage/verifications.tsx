@@ -76,6 +76,7 @@ export const Verifications = ({ verifications, images }: Props) => {
         />
         <Table.Column<(typeof verifications)[number]>
           title='Date'
+          width={220}
           render={(_, verification) => {
             const date = timestampDate(verification.startTime);
             return date ? format(date, 'MMM do yyyy HH:mm:ss') : '';
@@ -104,7 +105,6 @@ export const Verifications = ({ verifications, images }: Props) => {
             }
           }}
         />
-        <Table.Column title='ID' dataIndex='id' />
         <Table.Column<(typeof verifications)[number]>
           title='AnalysisRun'
           dataIndex=''

@@ -1,8 +1,13 @@
 import { useQuery } from '@connectrpc/connect-query';
-import { faChevronDown, faExternalLink } from '@fortawesome/free-solid-svg-icons';
+import {
+  faBarsStaggered,
+  faCircleCheck,
+  faCircleUp,
+  faGear,
+  faHistory
+} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Divider, Drawer, Skeleton, Space, Tabs, Typography } from 'antd';
-import Dropdown from 'antd/es/dropdown/dropdown';
+import { Drawer, Flex, Skeleton, Tabs, Typography } from 'antd';
 import moment from 'moment';
 import { useEffect, useMemo, useState } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
@@ -24,16 +29,19 @@ import { decodeRawData } from '@ui/utils/decode-raw-data';
 
 import YamlEditor from '../common/code-editor/yaml-editor-lazy';
 
-import { FreightHistory } from './freight-history';
 import { Promotions } from './promotions';
 import { RequestedFreight } from './requested-freight';
 import { StageActions } from './stage-actions';
+import { FreightHistory } from './tabs/freight-history/freight-history';
+import { StageSettings } from './tabs/settings/stage-settings';
 import { Verifications } from './verifications';
 
 enum TabsTypes {
   PROMOTION = 'Promotion',
   VERIFICATIONS = 'Verification',
-  LIVE_MANIFEST = 'Live Manifest'
+  LIVE_MANIFEST = 'Live Manifest',
+  FREIGHT_HISTORY = 'Freight History',
+  SETTINGS = 'Settings'
 }
 
 export const StageDetails = ({ stage }: { stage: Stage }) => {
@@ -62,8 +70,6 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
       .sort((a, b) => moment(timestampDate(b.startTime)).diff(moment(timestampDate(a.startTime))));
   }, [stage]);
 
-  const { data: config } = useQuery(getConfig);
-
   const rawStageYamlQuery = useQuery(getStage, {
     project: projectName,
     name: stage?.metadata?.name,
@@ -83,119 +89,42 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
     [rawStageYamlQuery.data]
   );
 
+  const { data: config } = useQuery(getConfig);
   const shardKey = stage?.metadata?.labels['kargo.akuity.io/shard'] || '';
   const argocdShard = config?.argocdShards?.[shardKey];
 
-  const argocdLinks = useMemo(() => {
-    const argocdContextKey = 'kargo.akuity.io/argocd-context';
-
-    if (!argocdShard) {
-      return [];
-    }
-
-    const argocdShardUrl = argocdShard?.url?.endsWith('/')
-      ? argocdShard?.url?.slice(0, -1)
-      : argocdShard?.url;
-
-    const rawValues = stage.metadata?.annotations?.[argocdContextKey];
-
-    if (!rawValues) {
-      return [];
-    }
-
-    try {
-      const parsedValues = JSON.parse(rawValues) as Array<{
-        name: string;
-        namespace: string;
-      }>;
-
-      return (
-        parsedValues?.map(
-          (parsedValue) =>
-            `${argocdShardUrl}/applications/${parsedValue.namespace}/${parsedValue.name}`
-        ) || []
-      );
-    } catch (e) {
-      // deliberately do not crash
-      // eslint-disable-next-line no-console
-      console.error(e);
-
-      return [];
-    }
-  }, [argocdShard, stage]);
-
   return (
-    <Drawer open={!!stageName} onClose={onClose} width={'80%'} closable={false}>
+    <Drawer
+      open={!!stageName}
+      onClose={onClose}
+      width='80%'
+      title={
+        <Flex justify='space-between' className='font-normal'>
+          <div>
+            <Flex gap={16} align='center'>
+              <Typography.Title level={2} style={{ margin: 0 }}>
+                {stage.metadata?.name}
+              </Typography.Title>
+              <Flex gap={4}>
+                <StagePhaseIcon phase={stage.status?.phase as StagePhase} />
+                {!!stage.status?.health && <HealthStatusIcon health={stage.status?.health} />}
+              </Flex>
+            </Flex>
+            <div className='-mt-1'>
+              <Typography.Text type='secondary'>{projectName}</Typography.Text>
+              <Description item={stage} loading={false} className='mt-2' />
+            </div>
+          </div>
+          <StageActions
+            stage={stage}
+            verificationRunning={isVerificationRunning}
+            argocdShard={argocdShard}
+          />
+        </Flex>
+      }
+    >
       {stage && (
         <div className='flex flex-col h-full'>
-          <div className='flex items-center justify-between'>
-            <div className='flex gap-1 items-center'>
-              <StagePhaseIcon className='mr-2' phase={stage.status?.phase as StagePhase} />
-              {!!stage.status?.health && (
-                <HealthStatusIcon health={stage.status?.health} style={{ marginRight: '10px' }} />
-              )}
-              <div>
-                <Typography.Title level={1} style={{ margin: 0 }}>
-                  {stage.metadata?.name}
-                </Typography.Title>
-                <Typography.Text type='secondary'>{projectName}</Typography.Text>
-                <Description item={stage} loading={false} className='mt-2' />
-              </div>
-            </div>
-            {argocdLinks?.length > 0 ? (
-              <div className='ml-auto mr-5 text-base flex gap-2 items-center'>
-                {argocdLinks?.length === 1 && (
-                  <a
-                    target='_blank'
-                    href={argocdLinks[0]}
-                    className='ml-auto mr-5 text-base flex gap-2 items-center'
-                  >
-                    ArgoCD
-                    <FontAwesomeIcon icon={faExternalLink} className='text-xs' />
-                  </a>
-                )}
-                {argocdLinks?.length > 1 && (
-                  <Dropdown
-                    menu={{
-                      items: argocdLinks.map((link, idx) => {
-                        const parts = link?.split('/');
-                        const name = parts?.[parts.length - 1];
-                        const namespace = parts?.[parts.length - 2];
-                        return {
-                          key: idx,
-                          label: (
-                            <a target='_blank' href={link}>
-                              {namespace} - {name}
-                              <FontAwesomeIcon icon={faExternalLink} className='text-xs ml-2' />
-                            </a>
-                          )
-                        };
-                      })
-                    }}
-                  >
-                    <a onClick={(e) => e.preventDefault()}>
-                      <Space>
-                        ArgoCD
-                        <FontAwesomeIcon icon={faChevronDown} className='text-xs' />
-                      </Space>
-                    </a>
-                  </Dropdown>
-                )}
-              </div>
-            ) : argocdShard?.url ? (
-              <a
-                target='_blank'
-                href={argocdShard?.url}
-                className='ml-auto mr-5 text-base flex gap-2 items-center'
-              >
-                ArgoCD
-                <FontAwesomeIcon icon={faExternalLink} className='text-xs' />
-              </a>
-            ) : null}
-            <StageActions stage={stage} verificationRunning={isVerificationRunning} />
-          </div>
-          <Divider style={{ marginTop: '1em' }} />
-
           <div className='flex flex-col gap-8 flex-1 pb-10'>
             <RequestedFreight
               requestedFreight={stage?.spec?.requestedFreight || []}
@@ -213,11 +142,13 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                 {
                   key: TabsTypes.PROMOTION,
                   label: 'Promotions',
+                  icon: <FontAwesomeIcon icon={faCircleUp} />,
                   children: <Promotions argocdShard={argocdShard} />
                 },
                 {
                   key: TabsTypes.VERIFICATIONS,
                   label: 'Verifications',
+                  icon: <FontAwesomeIcon icon={faCircleCheck} />,
                   children: (
                     <Verifications
                       verifications={verifications}
@@ -228,21 +159,34 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                 {
                   key: TabsTypes.LIVE_MANIFEST,
                   label: 'Live Manifest',
+                  icon: <FontAwesomeIcon icon={faBarsStaggered} />,
                   className: 'h-full pb-2',
                   children: rawStageYamlQuery.isLoading ? (
                     <Skeleton />
                   ) : (
                     <YamlEditor value={rawStageYaml} height='700px' isHideManagedFieldsDisplayed />
                   )
+                },
+                {
+                  key: TabsTypes.FREIGHT_HISTORY,
+                  label: 'Freight History',
+                  icon: <FontAwesomeIcon icon={faHistory} />,
+                  children: (
+                    <FreightHistory
+                      requestedFreights={stage?.spec?.requestedFreight || []}
+                      freightHistory={stage?.status?.freightHistory}
+                      currentActiveFreight={stage?.status?.lastPromotion?.freight?.name}
+                      projectName={projectName || ''}
+                    />
+                  )
+                },
+                {
+                  key: TabsTypes.SETTINGS,
+                  label: 'Settings',
+                  icon: <FontAwesomeIcon icon={faGear} />,
+                  children: <StageSettings />
                 }
               ]}
-            />
-
-            <FreightHistory
-              requestedFreights={stage?.spec?.requestedFreight || []}
-              freightHistory={stage?.status?.freightHistory}
-              currentActiveFreight={stage?.status?.lastPromotion?.freight?.name}
-              projectName={projectName || ''}
             />
           </div>
         </div>
