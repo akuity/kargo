@@ -192,8 +192,8 @@ func (p *provider) ListPullRequests(
 	}
 
 	listOpts := &bitbucket.PullRequestsOptions{
-		Owner:             p.owner,
-		RepoSlug:          p.repoSlug,
+		Owner:    p.owner,
+		RepoSlug: p.repoSlug,
 		// TODO(hidde): Listing pull requests does not support filtering by
 		// source or destination branch. This is a limitation of the Bitbucket
 		// API. Because of this, filtering will have to be done client-side (in
@@ -243,9 +243,9 @@ func (p *provider) ListPullRequests(
 // pullRequest is the (partial) structure of a Bitbucket pull request.
 // xref: https://developer.atlassian.com/cloud/bitbucket/rest/api-group-pullrequests/#api-repositories-workspace-repo-slug-pullrequests-pull-request-id-get
 type pullRequest struct {
-	ID          int64  `json:"id"`
-	State       string `json:"state"`
-	Links       struct {
+	ID    int64  `json:"id"`
+	State string `json:"state"`
+	Links struct {
 		HTML struct {
 			Href string `json:"href"`
 		} `json:"html"`
@@ -278,10 +278,10 @@ func convertBitbucketPR(raw any) gitprovider.PullRequest {
 	}
 
 	return gitprovider.PullRequest{
-		Number:         typedPR.ID,
-		URL:            typedPR.Links.HTML.Href,
-		Open:           typedPR.State == prStateOpen,
-		Merged:         typedPR.State == prStateMerged,
+		Number: typedPR.ID,
+		URL:    typedPR.Links.HTML.Href,
+		Open:   typedPR.State == prStateOpen,
+		Merged: typedPR.State == prStateMerged,
 		// TODO(hidde): As a sign of true craftsmanship, or lack thereof, the
 		// Bitbucket API returns a short commit SHA as merge commit hash. To get
 		// the full commit SHA, we need to fetch the commit details separately.
