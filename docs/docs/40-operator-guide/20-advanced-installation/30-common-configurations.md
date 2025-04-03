@@ -349,6 +349,64 @@ is preferred if this integration is not desired, as it will grant fewer
 permissions to the controller.
 :::
 
+### Logs from Job Metrics
+
+For those utilizing Argo Rollouts integration for verifications,
+[job metrics](https://argoproj.github.io/argo-rollouts/analysis/job/) stand out
+as an especially useful feature because they are implemented as Kubernetes
+[`Job`s](https://kubernetes.io/docs/concepts/workloads/controllers/job/), which
+give users the flexibility to define any arbitrary post-promotion tests they'd
+like to run against a `Stage` by simply providing appropriate `Job` specs
+[as described here](../../50-user-guide/20-how-to-guides/60-verification.md#configuring-analysistemplates).
+In cases such as these, access to logs produced by the `Job`'s underlying `Pod`
+is helpful for debugging purposes and for understanding results.
+
+Since it's common for multiple Kargo controllers to be deployed to many
+different clusters, such logs need to be aggregated in a centralized location
+for the API server to access them and, in-turn, stream them to the Kargo UI or
+CLI. Rather than build support for many different logging stacks, Kargo has
+settled on a "lowest common denominator" approach: The API server can stream
+any logs that it can access via an HTTP GET request.
+
+To facilitate this, operators may, at the time of installation, provide a URL
+template that the API server can use to construct the URL for any job metric logs
+as a function of attributes such as `Project` name, `Stage` name, `AnalysisRun`
+name, and more.
+
+A token can be specified by referencing a Kubernetes `Secret` that is managed
+"out of band." HTTP headers may also be specified, and may reference the token
+if one is provided.
+
+Example:
+
+```yaml
+api:
+  rollouts:
+    integrationEnabled: true
+    logs:
+      enabled: true
+      urlTemplate: https://logs.kargo.example.com/${{project}}/${{analysisRun}}/${{job}}/${{container}}
+      tokenSecret:
+        name: kargo-logs-token
+        key: token
+      httpHeaders:
+        Authentication: "Bearer ${{ token }}"
+```
+
+:::note
+This "lowest common denominator" approach to streaming job metric logs does
+leave it as an exercise for the Kargo administrator to arrange for the
+forwarding and storage of applicable logs.
+
+Users of Kargo via the [Akuity Platform](https://akuity.io/akuity-platform),
+however, will have this seamlessly handled for them.
+:::
+
+:::note
+For more information, refer to the
+[chart documentation](https://github.com/akuity/kargo/blob/main/charts/kargo/README.md).
+:::
+
 ## Resource Management
 
 ### Tuning Concurrent Reconciliation Limits
