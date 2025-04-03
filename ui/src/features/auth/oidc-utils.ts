@@ -6,7 +6,7 @@ export const oidcClientAuth: ClientAuth = () => {
   // equivalent function for token_endpoint_auth_method: 'none'
 };
 
-export const shouldAllowIdpHttpRequest = () => __UI_VERSION__ === 'development';
+export const shouldAllowIdpHttpRequest = () => true;
 
 export const getOIDCScopes = (userOIDCConfig: OIDCConfig, idp: AuthorizationServer) => {
   const scopes = [...userOIDCConfig.scopes];
