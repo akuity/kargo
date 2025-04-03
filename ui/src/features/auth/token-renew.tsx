@@ -103,11 +103,6 @@ export const TokenRenew = () => {
         onLogin(result.id_token, result.refresh_token);
         navigate(searchParams.get(redirectToQueryParam) || paths.home);
       } catch (err) {
-        notification.error({
-          message: `OIDC: ${JSON.stringify(err)}`,
-          placement: 'bottomRight'
-        });
-
         logout();
         navigate(paths.login);
       }
