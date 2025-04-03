@@ -4,14 +4,13 @@ import Modal from 'antd/es/modal/Modal';
 import Link from 'antd/es/typography/Link';
 import { useForm } from 'react-hook-form';
 
+import YamlEditor from '@ui/features/common/code-editor/yaml-editor-lazy';
+import { FieldContainer } from '@ui/features/common/form/field-container';
+import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import {
   createResource,
   listPromotionTasks
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-
-import YamlEditor from '../common/code-editor/yaml-editor-lazy';
-import { FieldContainer } from '../common/form/field-container';
-import { ModalComponentProps } from '../common/modal/modal-context';
 
 import { getPromotionTaskYAMLExample } from './promotion-task-example';
 

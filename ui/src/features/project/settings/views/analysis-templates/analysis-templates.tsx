@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { faPencil, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Table } from 'antd';
+import { Button, Card, Space, Table } from 'antd';
 import { format } from 'date-fns';
 import { useParams } from 'react-router-dom';
 
@@ -18,7 +18,7 @@ import { timestampDate } from '@ui/utils/connectrpc-utils';
 import { CreateAnalysisTemplateModal } from './create-analysis-template-modal';
 import { EditAnalysisTemplateModal } from './edit-analysis-template-modal';
 
-export const AnalysisTemplatesList = () => {
+export const AnalysisTemplatesSettings = () => {
   const { name } = useParams();
   const confirm = useConfirmModal();
 
@@ -32,13 +32,23 @@ export const AnalysisTemplatesList = () => {
   });
 
   return (
-    <div className='p-4'>
+    <Card
+      title='Analysis Templates'
+      type='inner'
+      className='min-h-full'
+      extra={
+        <Button icon={<FontAwesomeIcon icon={faPlus} />} onClick={() => showCreate()}>
+          Add Template
+        </Button>
+      }
+    >
       <Table<AnalysisTemplate>
         dataSource={data?.analysisTemplates}
         pagination={{ hideOnSinglePage: true }}
         rowKey={(i) => i.metadata?.name || ''}
         loading={isLoading}
         expandable={descriptionExpandable()}
+        className='my-2'
       >
         <Table.Column<AnalysisTemplate>
           title='Creation Date'
@@ -50,23 +60,11 @@ export const AnalysisTemplatesList = () => {
         />
         <Table.Column<AnalysisTemplate> title='Name' dataIndex={['metadata', 'name']} />
         <Table.Column<AnalysisTemplate>
-          width={260}
-          title={
-            <div className='text-right'>
-              <Button
-                type='primary'
-                className='ml-auto text-xs font-semibold'
-                icon={<FontAwesomeIcon icon={faPlus} />}
-                onClick={() => showCreate()}
-              >
-                ADD TEMPLATE
-              </Button>
-            </div>
-          }
+          width={150}
           render={(_, template) => (
-            <div className='flex gap-2 justify-end'>
+            <Space>
               <Button
-                icon={<FontAwesomeIcon icon={faPencil} />}
+                icon={<FontAwesomeIcon icon={faPencil} size='sm' />}
                 className='mr-2 ml-auto'
                 onClick={() => {
                   showEdit((p) => (
@@ -77,13 +75,17 @@ export const AnalysisTemplatesList = () => {
                     />
                   ));
                 }}
+                size='small'
+                color='default'
+                variant='filled'
               >
                 Edit
               </Button>
               <Button
-                icon={<FontAwesomeIcon icon={faTrash} />}
-                danger
+                icon={<FontAwesomeIcon icon={faTrash} size='sm' />}
                 loading={isDeleting}
+                color='danger'
+                variant='filled'
                 onClick={() => {
                   confirm({
                     title: (
@@ -104,13 +106,14 @@ export const AnalysisTemplatesList = () => {
                     hide: () => {}
                   });
                 }}
+                size='small'
               >
                 Delete
               </Button>
-            </div>
+            </Space>
           )}
         />
       </Table>
-    </div>
+    </Card>
   );
 };

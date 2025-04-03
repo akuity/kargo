@@ -3,6 +3,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Modal } from 'antd';
 import { useForm } from 'react-hook-form';
 
+import YamlEditor from '@ui/features/common/code-editor/yaml-editor-lazy';
+import { FieldContainer } from '@ui/features/common/form/field-container';
+import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import {
   getPromotionTask,
   listPromotionTasks,
@@ -11,10 +14,6 @@ import {
 import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { PromotionTask } from '@ui/gen/api/v1alpha1/generated_pb';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
-
-import YamlEditor from '../common/code-editor/yaml-editor-lazy';
-import { FieldContainer } from '../common/form/field-container';
-import { ModalComponentProps } from '../common/modal/modal-context';
 
 import { getPromotionTaskYAMLExample } from './promotion-task-example';
 
