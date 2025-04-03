@@ -29,6 +29,7 @@ type ServerConfig struct {
 	PermissiveCORSPolicyEnabled bool
 	RolloutsIntegrationEnabled  bool
 	AnalysisRunLogURLTemplate   string
+	AnalysisRunLogToken         string
 	AnalysisRunLogHTTPHeaders   map[string]string
 }
 
@@ -59,6 +60,7 @@ func ServerConfigFromEnv() ServerConfig {
 		types.MustParseBool(os.GetEnv("ROLLOUTS_INTEGRATION_ENABLED", "true"))
 	if cfg.RolloutsIntegrationEnabled {
 		cfg.AnalysisRunLogURLTemplate = os.GetEnv("ANALYSIS_RUN_LOG_URL_TEMPLATE", "")
+		cfg.AnalysisRunLogToken = os.GetEnv("ANALYSIS_RUN_LOG_TOKEN", "")
 		if headersStr := os.GetEnv("ANALYSIS_RUN_LOG_HTTP_HEADERS", ""); headersStr != "" {
 			kvPairs := strings.Split(headersStr, ",")
 			cfg.AnalysisRunLogHTTPHeaders = make(map[string]string, len(kvPairs))
