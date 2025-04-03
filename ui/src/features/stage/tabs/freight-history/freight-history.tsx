@@ -103,6 +103,7 @@ export const FreightHistory = ({
               dataSource={freightReferences}
               size='small'
               pagination={{ hideOnSinglePage: true }}
+              rowKey={(record, index) => `${record.name}${index}`}
             >
               <Table.Column<PlainMessage<FreightReference>>
                 title='ID'
