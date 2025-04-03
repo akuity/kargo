@@ -82,8 +82,6 @@ spec:
                 name: {{ .Values.api.rollouts.logs.tokenSecret.name }}
                 key: {{ .Values.api.rollouts.logs.tokenSecret.key }}
           {{- end }}
-          {{- if and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled }}
-          {{- end }}
           envFrom:
           - configMapRef:
               name: kargo-api
