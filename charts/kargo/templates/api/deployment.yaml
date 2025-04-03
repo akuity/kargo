@@ -75,6 +75,15 @@ spec:
           {{- with (concat .Values.global.env .Values.api.env) }}
           {{- toYaml . | nindent 10 }}
           {{- end }}
+          {{- if and .Values.api.rollouts.integrationEnabled .Values.api.rollouts.logs.enabled .Values.api.rollouts.logs.tokenSecret.name .Values.api.rollouts.logs.tokenSecret.key }}
+          - name: ANALYSIS_RUN_LOG_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.api.rollouts.logs.tokenSecret.name }}
+                key: {{ .Values.api.rollouts.logs.tokenSecret.key }}
+          {{- end }}
+          {{- if and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled }}
+          {{- end }}
           envFrom:
           - configMapRef:
               name: kargo-api
