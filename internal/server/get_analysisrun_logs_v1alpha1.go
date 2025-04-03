@@ -413,7 +413,9 @@ func (s *server) buildRequest(
 	if err != nil {
 		return nil, fmt.Errorf("error creating GET request for log url %s: %w", url, err)
 	}
-	if userInfo, ok := user.InfoFromContext(ctx); ok {
+	if s.cfg.AnalysisRunLogToken != "" {
+		env["token"] = s.cfg.AnalysisRunLogToken
+	} else if userInfo, ok := user.InfoFromContext(ctx); ok {
 		env["token"] = userInfo.BearerToken
 	}
 	for key, valTemplate := range s.cfg.AnalysisRunLogHTTPHeaders {
