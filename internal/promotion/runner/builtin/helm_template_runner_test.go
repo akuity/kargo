@@ -117,6 +117,53 @@ data:
 			},
 		},
 		{
+			name: "successful run with set values",
+			files: map[string]string{
+				"values.yaml": "key1: value1",
+				"charts/test-chart/Chart.yaml": `apiVersion: v1
+name: test-chart
+version: 0.1.0`,
+				"charts/test-chart/templates/test.yaml": `---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-configmap
+  namespace: {{ .Release.Namespace }}
+data:
+  value1: {{ .Values.key1 }}
+  value2: {{ .Values.key2 }}
+`,
+			},
+			cfg: builtin.HelmTemplateConfig{
+				Path:        "charts/test-chart",
+				ValuesFiles: []string{"values.yaml"},
+				SetValues:   []builtin.SetValues{{Key: "key2", Value: "value2"}},
+				OutPath:     "output.yaml",
+				ReleaseName: "test-release",
+				Namespace:   "test-namespace",
+			},
+			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
+
+				outPath := filepath.Join(workDir, "output.yaml")
+				require.FileExists(t, outPath)
+				content, err := os.ReadFile(outPath)
+				require.NoError(t, err)
+				assert.Equal(t, `---
+# Source: test-chart/templates/test.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-release-configmap
+  namespace: test-namespace
+data:
+  value1: value1
+  value2: value2
+`, string(content))
+			},
+		},
+		{
 			name: "successful run with output directory",
 			files: map[string]string{
 				"values.yaml": "key: value",
