@@ -1,6 +1,23 @@
 {
  "$schema": "https://json-schema.org/draft/2020-12/schema",
  "title": "HelmTemplateConfig",
+ "definitions": {
+  "setValues": {
+   "type": "object",
+   "additionalProperties": false,
+   "properties": {
+    "key": {
+     "type": "string",
+     "description": "The key whose value needs to be templated. For nested values, use a YAML dot notation path.",
+     "minLength": 1
+    },
+    "value": {
+     "type": "string",
+     "description": "The value to set."
+    }
+   }
+  }
+ },
  "type": "object",
  "additionalProperties": false,
  "properties": {
@@ -34,6 +51,25 @@
    "items": {
     "type": "string",
     "minLength": 1
+   }
+  },
+  "setValues": {
+   "type": "array",
+   "description": "SetValues to use for rendering the Helm chart.",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+     "key": {
+      "type": "string",
+      "description": "The key whose value needs to be templated. For nested values, use a YAML dot notation path.",
+      "minLength": 1
+     },
+     "value": {
+      "type": "string",
+      "description": "The value to set."
+     }
+    }
    }
   },
   "includeCRDs": {
