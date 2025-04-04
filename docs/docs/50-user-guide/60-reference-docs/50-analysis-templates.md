@@ -150,6 +150,7 @@ spec:
   metrics:
   - name: total-errors
     interval: 5m
+    count: 3
     failureCondition: result[0] >= 10
     failureLimit: 3
     provider:
