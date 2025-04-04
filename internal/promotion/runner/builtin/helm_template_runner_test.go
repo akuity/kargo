@@ -303,6 +303,7 @@ func Test_helmTemplateRunner_composeValues(t *testing.T) {
 		name           string
 		workDir        string
 		valuesFiles    []string
+		setValues      []builtin.SetValues
 		valuesContents map[string]string
 		assertions     func(*testing.T, map[string]any, error)
 	}{
@@ -310,11 +311,42 @@ func Test_helmTemplateRunner_composeValues(t *testing.T) {
 			name:        "successful composition",
 			workDir:     t.TempDir(),
 			valuesFiles: []string{"values1.yaml", "values2.yaml"},
+			setValues:   []builtin.SetValues{{Key: "key3", Value: "value3"}},
 			valuesContents: map[string]string{
 				"values1.yaml": "key1: value1",
 				"values2.yaml": "key2: value2",
 			},
 			assertions: func(t *testing.T, result map[string]any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, map[string]any{
+					"key1": "value1",
+					"key2": "value2",
+					"key3": "value3",
+				}, result)
+			},
+		},
+		{
+			name:           "successful composition with no files",
+			workDir:        t.TempDir(),
+			valuesFiles:    []string{},
+			setValues:      []builtin.SetValues{{Key: "key3", Value: "value3"}},
+			valuesContents: map[string]string{},
+			assertions: func(t *testing.T, result map[string]any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, map[string]any{
+					"key3": "value3",
+				}, result)
+			},
+		},
+		{
+			name:        "successful composition with no set values",
+			workDir:     t.TempDir(),
+			valuesFiles: []string{"values1.yaml", "values2.yaml"},
+			setValues:   []builtin.SetValues{},
+			valuesContents: map[string]string{
+				"values1.yaml": "key1: value1",
+				"values2.yaml": "key2: value2",
+			}, assertions: func(t *testing.T, result map[string]any, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, map[string]any{
 					"key1": "value1",
@@ -326,6 +358,7 @@ func Test_helmTemplateRunner_composeValues(t *testing.T) {
 			name:        "file not found",
 			workDir:     t.TempDir(),
 			valuesFiles: []string{"non_existent.yaml"},
+			setValues:   []builtin.SetValues{},
 			assertions: func(t *testing.T, result map[string]any, err error) {
 				assert.Error(t, err)
 				assert.Nil(t, result)
@@ -340,7 +373,7 @@ func Test_helmTemplateRunner_composeValues(t *testing.T) {
 			for p, c := range tt.valuesContents {
 				require.NoError(t, os.WriteFile(filepath.Join(tt.workDir, p), []byte(c), 0o600))
 			}
-			result, err := runner.composeValues(tt.workDir, tt.valuesFiles)
+			result, err := runner.composeValues(tt.workDir, tt.valuesFiles, tt.setValues)
 			tt.assertions(t, result, err)
 		})
 	}
