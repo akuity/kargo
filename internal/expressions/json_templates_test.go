@@ -221,6 +221,16 @@ func TestEvaluateJSONTemplate(t *testing.T) {
 			},
 		},
 		{
+			name:         "quote function doesn't double quote string input",
+			jsonTemplate: `{ "AString": "${{ quote('foo') }}" }`,
+			assertions: func(t *testing.T, jsonOutput []byte, err error) {
+				require.NoError(t, err)
+				parsed := testStruct{}
+				require.NoError(t, json.Unmarshal(jsonOutput, &parsed))
+				require.Equal(t, "foo", parsed.AString)
+			},
+		},
+		{
 			name: "a variety of tricky cases dealing with YAML and quotes",
 			yamlTemplate: `
 value1: {"foo": "bar"} # This is a JSON object
