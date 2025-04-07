@@ -1,6 +1,7 @@
 module tools
 
 go 1.24.1
+
 require (
 	github.com/bufbuild/buf v1.51.0
 	github.com/golangci/golangci-lint v1.64.8
