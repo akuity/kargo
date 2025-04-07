@@ -8,7 +8,7 @@ require (
 	golang.org/x/tools v0.31.0
 	helm.sh/helm/v3 v3.17.2
 	k8s.io/code-generator v0.32.3
-	sigs.k8s.io/controller-tools v0.17.2
+	sigs.k8s.io/controller-tools v0.17.3
 )
 
 require (
