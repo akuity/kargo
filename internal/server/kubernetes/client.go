@@ -813,7 +813,6 @@ func getAuthorizedClient(globalServiceAccountNamespaces []string) func(
 					}
 				}
 			}
-			return nil, newForbiddenError(ra)
 		}
 
 		// If we get to here, we're dealing with a user who "authenticated" by just
