@@ -97,8 +97,8 @@ func TestStep_GetTimeout(t *testing.T) {
 
 func TestStep_GetConfig(t *testing.T) {
 	testScheme := k8sruntime.NewScheme()
-	err := kargoapi.AddToScheme(testScheme)
-	require.NoError(t, err)
+	require.NoError(t, kargoapi.AddToScheme(testScheme))
+
 	testClient := fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 		&kargoapi.Warehouse{
 			ObjectMeta: v1.ObjectMeta{
@@ -499,6 +499,383 @@ func TestStep_GetConfig(t *testing.T) {
 			)
 			require.NoError(t, err)
 			require.Equal(t, testCase.expectedCfg, stepCfg)
+		})
+	}
+}
+
+func TestStep_GetVars(t *testing.T) {
+	testScheme := k8sruntime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(testScheme))
+
+	testClient := fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+		&kargoapi.Warehouse{
+			ObjectMeta: v1.ObjectMeta{
+				Name:      "fake-warehouse",
+				Namespace: "fake-project",
+			},
+			Spec: kargoapi.WarehouseSpec{
+				Subscriptions: []kargoapi.RepoSubscription{
+					{
+						Git: &kargoapi.GitSubscription{
+							RepoURL: "https://fake-git-repo",
+						},
+					},
+				},
+			},
+		},
+	).Build()
+
+	testCases := []struct {
+		name         string
+		promoCtx     Context
+		promoState   promotion.State
+		step         Step
+		expectedVars map[string]any
+		expectErr    bool
+	}{
+		{
+			name: "global vars with literal values",
+			promoCtx: Context{
+				Project: "fake-project",
+				Vars: []kargoapi.PromotionVariable{
+					{
+						Name:  "str",
+						Value: "foo",
+					},
+					{
+						Name:  "bool",
+						Value: "true",
+					},
+					{
+						Name:  "num",
+						Value: "42",
+					},
+				},
+			},
+			step: Step{},
+			expectedVars: map[string]any{
+				"str":  "foo",
+				"bool": "true",
+				"num":  "42",
+			},
+		},
+		{
+			name: "global vars with expressions",
+			promoCtx: Context{
+				Project: "fake-project",
+				Vars: []kargoapi.PromotionVariable{
+					{
+						Name:  "str",
+						Value: "${{ 'f' + 'o' + 'o' }}",
+					},
+					{
+						Name:  "bool",
+						Value: "${{ 1 == 1 }}",
+					},
+					{
+						Name:  "num",
+						Value: "${{ 40 + 2 }}",
+					},
+				},
+			},
+			step: Step{},
+			expectedVars: map[string]any{
+				"str":  "foo",
+				"bool": true,
+				"num":  float64(42),
+			},
+		},
+		{
+			name: "step vars with literal values",
+			promoCtx: Context{
+				Project: "fake-project",
+			},
+			step: Step{
+				Vars: []kargoapi.PromotionVariable{
+					{
+						Name:  "str",
+						Value: "foo",
+					},
+					{
+						Name:  "bool",
+						Value: "true",
+					},
+					{
+						Name:  "num",
+						Value: "42",
+					},
+				},
+			},
+			expectedVars: map[string]any{
+				"str":  "foo",
+				"bool": "true",
+				"num":  "42",
+			},
+		},
+		{
+			name: "step vars with expressions",
+			promoCtx: Context{
+				Project: "fake-project",
+			},
+			step: Step{
+				Vars: []kargoapi.PromotionVariable{
+					{
+						Name:  "str",
+						Value: "${{ 'f' + 'o' + 'o' }}",
+					},
+					{
+						Name:  "bool",
+						Value: "${{ 1 == 1 }}",
+					},
+					{
+						Name:  "num",
+						Value: "${{ 40 + 2 }}",
+					},
+				},
+			},
+			expectedVars: map[string]any{
+				"str":  "foo",
+				"bool": true,
+				"num":  float64(42),
+			},
+		},
+		{
+			name: "step vars referencing global vars",
+			promoCtx: Context{
+				Project: "fake-project",
+				Vars: []kargoapi.PromotionVariable{
+					{
+						Name:  "global",
+						Value: "global-value",
+					},
+				},
+			},
+			step: Step{
+				Vars: []kargoapi.PromotionVariable{
+					{
+						Name:  "local",
+						Value: "${{ vars.global + '-suffix' }}",
+					},
+				},
+			},
+			expectedVars: map[string]any{
+				"global": "global-value",
+				"local":  "global-value-suffix",
+			},
+		},
+		{
+			name: "step vars referencing other step vars",
+			promoCtx: Context{
+				Project: "fake-project",
+			},
+			step: Step{
+				Vars: []kargoapi.PromotionVariable{
+					{
+						Name:  "v1",
+						Value: "value1",
+					},
+					{
+						Name:  "v2",
+						Value: "${{ vars.v1 + '-suffix' }}",
+					},
+				},
+			},
+			expectedVars: map[string]any{
+				"v1": "value1",
+				"v2": "value1-suffix",
+			},
+		},
+		{
+			name: "step vars referencing outputs",
+			promoCtx: Context{
+				Project: "fake-project",
+			},
+			promoState: promotion.State{
+				"output1": "output-value",
+			},
+			step: Step{
+				Vars: []kargoapi.PromotionVariable{
+					{
+						Name:  "fromOutput",
+						Value: "${{ outputs.output1 + '-suffix' }}",
+					},
+				},
+			},
+			expectedVars: map[string]any{
+				"fromOutput": "output-value-suffix",
+			},
+		},
+		{
+			name: "step vars referencing task outputs",
+			promoCtx: Context{
+				Project: "fake-project",
+			},
+			promoState: promotion.State{
+				"task::alias": map[string]any{
+					"foo": "baz",
+				},
+			},
+			step: Step{
+				Alias: "task::other-alias",
+				Vars: []kargoapi.PromotionVariable{
+					{
+						Name:  "fromTask",
+						Value: "${{ task.outputs.alias.foo + '-suffix' }}",
+					},
+				},
+			},
+			expectedVars: map[string]any{
+				"fromTask": "baz-suffix",
+			},
+		},
+		{
+			name: "invalid expression in global var",
+			promoCtx: Context{
+				Project: "fake-project",
+				Vars: []kargoapi.PromotionVariable{
+					{
+						Name:  "invalid",
+						Value: "${{ invalid.expression }}",
+					},
+				},
+			},
+			step:      Step{},
+			expectErr: true,
+		},
+		{
+			name: "invalid expression in step var",
+			promoCtx: Context{
+				Project: "fake-project",
+			},
+			step: Step{
+				Vars: []kargoapi.PromotionVariable{
+					{
+						Name:  "invalid",
+						Value: "${{ invalid.expression }}",
+					},
+				},
+			},
+			expectErr: true,
+		},
+		{
+			name: "warehouse function in vars",
+			promoCtx: Context{
+				Project: "fake-project",
+				FreightRequests: []kargoapi.FreightRequest{{
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "fake-warehouse",
+					},
+				}},
+			},
+			step: Step{
+				Vars: []kargoapi.PromotionVariable{
+					{
+						Name:  "wh",
+						Value: "${{ warehouse('fake-warehouse') }}",
+					},
+				},
+			},
+			expectedVars: map[string]any{
+				"wh": map[string]any{
+					"kind": string(kargoapi.FreightOriginKindWarehouse),
+					"name": "fake-warehouse",
+				},
+			},
+		},
+		{
+			name: "context properties in vars",
+			promoCtx: Context{
+				Project:   "fake-project",
+				Stage:     "fake-stage",
+				Promotion: "fake-promotion",
+				Actor:     "fake-creator",
+			},
+			step: Step{
+				Vars: []kargoapi.PromotionVariable{
+					{
+						Name:  "proj",
+						Value: "${{ ctx.project }}",
+					},
+					{
+						Name:  "stage",
+						Value: "${{ ctx.stage }}",
+					},
+					{
+						Name:  "promo",
+						Value: "${{ ctx.promotion }}",
+					},
+					{
+						Name:  "actor",
+						Value: "${{ ctx.meta.promotion.actor }}",
+					},
+				},
+			},
+			expectedVars: map[string]any{
+				"proj":  "fake-project",
+				"stage": "fake-stage",
+				"promo": "fake-promotion",
+				"actor": "fake-creator",
+			},
+		},
+		{
+			name: "freight functions in vars",
+			promoCtx: Context{
+				Project: "fake-project",
+				FreightRequests: []kargoapi.FreightRequest{{
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "fake-warehouse",
+					},
+					Sources: kargoapi.FreightSources{
+						Direct: true,
+					},
+				}},
+				Freight: kargoapi.FreightCollection{
+					Freight: map[string]kargoapi.FreightReference{
+						"Warehouse/fake-warehouse": {
+							Origin: kargoapi.FreightOrigin{
+								Kind: kargoapi.FreightOriginKindWarehouse,
+								Name: "fake-warehouse",
+							},
+							Commits: []kargoapi.GitCommit{{
+								RepoURL: "https://fake-git-repo",
+								ID:      "fake-commit-id",
+							}},
+						},
+					},
+				},
+			},
+			step: Step{
+				Vars: []kargoapi.PromotionVariable{
+					{
+						Name:  "commit",
+						Value: "${{ commitFrom('https://fake-git-repo').ID }}",
+					},
+				},
+			},
+			expectedVars: map[string]any{
+				"commit": "fake-commit-id",
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			vars, err := testCase.step.GetVars(
+				context.Background(),
+				testClient,
+				testCase.promoCtx,
+				testCase.promoState,
+			)
+
+			if testCase.expectErr {
+				require.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, testCase.expectedVars, vars)
 		})
 	}
 }
