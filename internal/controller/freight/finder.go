@@ -73,9 +73,7 @@ func FindCommit(
 		}
 	}
 	if desiredOrigin == nil {
-		return nil, NotFoundError{
-			msg: fmt.Sprintf("commit from repo %s not found in referenced Freight", repoURL),
-		}
+		return nil, nil
 	}
 	// We know exactly what we're after, so this should be easy
 	for i := range freight {
@@ -92,9 +90,7 @@ func FindCommit(
 	// If we get to here, we looked at all the FreightReferences and didn't find
 	// any that came from the desired origin. This could be because no Freight
 	// from the desired origin has been promoted yet.
-	return nil, NotFoundError{
-		msg: fmt.Sprintf("commit from repo %s not found in referenced Freight", repoURL),
-	}
+	return nil, nil
 }
 
 func FindImage(
@@ -147,9 +143,7 @@ func FindImage(
 	if desiredOrigin == nil {
 		// There is no chance of finding the commit we're looking for. Just return
 		// nil and let the caller decide what to do.
-		return nil, NotFoundError{
-			msg: fmt.Sprintf("image from repo %s not found in referenced Freight", repoURL),
-		}
+		return nil, nil
 	}
 	// We know exactly what we're after, so this should be easy
 	for _, f := range freight {
@@ -163,10 +157,9 @@ func FindImage(
 	}
 	// If we get to here, we looked at all the FreightReferences and didn't find
 	// any that came from the desired origin. This could be because no Freight
-	// from the desired origin has been promoted yet.
-	return nil, NotFoundError{
-		msg: fmt.Sprintf("image from repo %s not found in referenced Freight", repoURL),
-	}
+	// from the desired origin has been promoted yet. We return nil to indicate
+	// that none was found
+	return nil, nil
 }
 
 func HasAmbiguousImageRequest(
@@ -285,12 +278,5 @@ func FindChart(
 	// If we get to here, we looked at all the FreightReferences and didn't find
 	// any that came from the desired origin. This could be because no Freight
 	// from the desired origin has been promoted yet.
-	if chartName == "" {
-		return nil, NotFoundError{
-			msg: fmt.Sprintf("chart from repo %s not found in referenced Freight", repoURL),
-		}
-	}
-	return nil, NotFoundError{
-		msg: fmt.Sprintf("chart %q from repo %s not found in referenced Freight", chartName, repoURL),
-	}
+	return nil, nil
 }

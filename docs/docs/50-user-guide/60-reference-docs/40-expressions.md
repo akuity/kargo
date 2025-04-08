@@ -315,6 +315,8 @@ The optional `freightOrigin` argument should be used when a `Stage` requests
 `Freight` from multiple origins (`Warehouse`s) and more than one can provide a
 `GitCommit` object from the specified repository.
 
+If a commit is not found from the `FreightCollection`, returns `nil`.
+
 Examples:
 
 ```yaml
@@ -351,6 +353,8 @@ The returned `Image` object has the following fields:
 The optional `freightOrigin` argument should be used when a `Stage` requests
 `Freight` from multiple origins (`Warehouse`s) and more than one can provide a
 `Image` object from the specified repository.
+
+If an image is not found from the `FreightCollection`, returns `nil`.
 
 Examples:
 
@@ -395,6 +399,8 @@ must be provided to specify the name of the chart within the repository.
 The optional `freightOrigin` argument should be used when a `Stage` requests
 `Freight` from multiple origins (`Warehouse`s) and more than one can provide a
 `Chart` object from the specified repository.
+
+If a chart is not found from the `FreightCollection`, returns `nil`.
 
 Examples:
 
