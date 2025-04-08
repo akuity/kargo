@@ -1189,6 +1189,10 @@ message StageSpec {
   // is empty, the webhook will ensure that label is absent.
   optional string shard = 4;
 
+  // Vars is a list of variables that can be referenced by the PromotionTemplate
+  // and the arguments of the Verification.
+  repeated PromotionVariable vars = 7;
+
   // RequestedFreight expresses the Stage's need for certain pieces of Freight,
   // each having originated from a particular Warehouse. This list must be
   // non-empty. In the common case, a Stage will request Freight having

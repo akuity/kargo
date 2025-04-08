@@ -223,6 +223,29 @@
           "description": "Shard is the name of the shard that this Stage belongs to. This is an\noptional field. If not specified, the Stage will belong to the default\nshard. A defaulting webhook will sync the value of the\nkargo.akuity.io/shard label with the value of this field. When this field\nis empty, the webhook will ensure that label is absent.",
           "type": "string"
         },
+        "vars": {
+          "description": "Vars is a list of variables that can be referenced by the PromotionTemplate\nand the arguments of the Verification.",
+          "items": {
+            "description": "PromotionVariable describes a single variable that may be referenced by\nexpressions in promotion steps.",
+            "properties": {
+              "name": {
+                "description": "Name is the name of the variable.",
+                "minLength": 1,
+                "pattern": "^[a-zA-Z_]\\w*$",
+                "type": "string"
+              },
+              "value": {
+                "description": "Value is the value of the variable. It is allowed to utilize expressions\nin the value.\nSee https://docs.kargo.io/user-guide/reference-docs/expressions for details.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
         "verification": {
           "description": "Verification describes how to verify a Stage's current Freight is fit for\npromotion downstream.",
           "properties": {
