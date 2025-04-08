@@ -59,6 +59,11 @@ fields:
 - `imageSelectionStrategy`: One of four pre-defined strategies for selecting the
   desired image. (See next section.)
 
+- `allowBranches`: An optional regular expression that limits the eligibility for
+  selection to branches that match the pattern.
+
+- `ignoreBranches`: An optional list of branches that should explicitly be ignored.
+
 - `allowTags`: An optional regular expression that limits the eligibility for
   selection to tags that match the pattern.
 
@@ -213,6 +218,18 @@ Git repository subscriptions can be defined using the following fields:
 - `commitSelectionStrategy`: One of four pre-defined strategies for selecting
   the desired commit. (See next section.)
 
+- `branch`: An optional field that specifies the branch of the Git repository 
+  to target for commits. If provided, only commits from the specified branch 
+  will be considered.
+
+- `allowBranches`: An optional regular expression that limits the eligibility 
+  for selection to branches that match the pattern. (This is not applicable
+  to selection strategies that do not involve branches.)
+
+- `ignoreBranches`: An optional list of branches that should explicitly be 
+  ignored. (This is not applicable to selection strategies that do not 
+  involve branches.)
+
 - `allowTags`: An optional regular expression that limits the eligibility for
   selection to commits with tags that match the pattern. (This is not applicable
   to selection strategies that do not involve tags.)
@@ -313,10 +330,21 @@ strategies are:
     This is useful in scenarios wherein you do not wish for the `Warehouse` to
     discover _every new commit_ and tags incorporate date/time stamps in formats
     such as `yyyymmdd` and you wish to select the tag with the latest stamp.
-    When using this strategy, it is recommended to use the `allowTags` field to
+  When using this strategy, it is recommended to use the `allowTags` field to
     limit eligibility to tags that match the expected format.
 
-    Example:
+    Example for `allowBranches`:
+
+    ```yaml
+    spec:
+      subscriptions:
+      - git:
+          repoURL: https://github.com/example/repo.git
+          commitSelectionStrategy: NewestFromBranch
+          allowBranches: ^feature/.*
+    ```
+
+    Example for `allowTags`:
 
     ```yaml
     spec:

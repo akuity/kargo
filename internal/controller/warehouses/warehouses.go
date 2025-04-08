@@ -64,9 +64,13 @@ type reconciler struct {
 
 	listCommitsFn func(repo git.Repo, limit, skip uint) ([]git.CommitMetadata, error)
 
+	listBranchesFn func(repo git.Repo) ([]git.BranchMetadata, error)
+
 	listTagsFn func(repo git.Repo) ([]git.TagMetadata, error)
 
 	discoverBranchHistoryFn func(repo git.Repo, sub kargoapi.GitSubscription) ([]git.CommitMetadata, error)
+
+	discoverBranchesFn func(repo git.Repo, sub kargoapi.GitSubscription) ([]git.BranchMetadata, error)
 
 	discoverTagsFn func(repo git.Repo, sub kargoapi.GitSubscription) ([]git.TagMetadata, error)
 
@@ -135,8 +139,10 @@ func newReconciler(
 	r.discoverChartsFn = r.discoverCharts
 	r.buildFreightFromLatestArtifactsFn = r.buildFreightFromLatestArtifacts
 	r.listCommitsFn = r.listCommits
+	r.listBranchesFn = r.listBranches
 	r.listTagsFn = r.listTags
 	r.discoverBranchHistoryFn = r.discoverBranchHistory
+	r.discoverBranchesFn = r.discoverBranches
 	r.discoverTagsFn = r.discoverTags
 	r.getDiffPathsForCommitIDFn = r.getDiffPathsForCommitID
 	r.patchStatusFn = r.patchStatus

@@ -137,6 +137,13 @@ spec:
                     git:
                       description: Git describes a subscriptions to a Git repository.
                       properties:
+                        allowBranches:
+                          description: |-
+                            AllowBranches is a regular expression that can optionally be used to limit
+                            the branches that are considered in determining the newest commit of interest.
+                            The value in this field only has any effect when the CommitSelectionStrategy is
+                            NewestFromBranch. This field is optional.
+                          type: string
                         allowTags:
                           description: |-
                             AllowTags is a regular expression that can optionally be used to limit the
@@ -175,7 +182,7 @@ spec:
                           description: |-
                             DiscoveryLimit is an optional limit on the number of commits that can be
                             discovered for this subscription. The limit is applied after filtering
-                            commits based on the AllowTags and IgnoreTags fields.
+                            commits based on the AllowBranches, AllowTags, IgnoreBranches, and IgnoreTags fields.
                             When left unspecified, the field is implicitly treated as if its value
                             were "20". The upper limit for this field is 100.
                           format: int32
@@ -197,6 +204,15 @@ spec:
                             Paths selected by IncludePaths may be unselected by ExcludePaths. This
                             is a useful method for including a broad set of paths and then excluding a
                             subset of them.
+                          items:
+                            type: string
+                          type: array
+                        ignoreBranches:
+                          description: |-
+                            IgnoreBranches is a list of branches that must be ignored when determining
+                            the newest commit of interest. No regular expressions or glob patterns are
+                            supported yet. The value in this field only has any effect when the CommitSelectionStrategy is
+                            NewestFromBranch. This field is optional.
                           items:
                             type: string
                           type: array

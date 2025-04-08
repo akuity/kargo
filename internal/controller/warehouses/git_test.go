@@ -3,11 +3,10 @@ package warehouses
 import (
 	"context"
 	"errors"
-	"regexp"
-	"testing"
-
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"regexp"
+	"testing"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
@@ -57,6 +56,41 @@ func TestDiscoverCommits(t *testing.T) {
 			assertions: func(t *testing.T, _ []kargoapi.GitDiscoveryResult, err error) {
 				require.ErrorContains(t, err, "error obtaining credentials for git repo")
 				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "discovers branches",
+			reconciler: &reconciler{
+				credentialsDB: &credentials.FakeDB{},
+				gitCloneFn: func(string, *git.ClientOptions, *git.CloneOptions) (git.Repo, error) {
+					return nil, nil // Assuming this doesn't affect the test, you can adjust this part as needed
+				},
+				discoverBranchesFn: func(git.Repo, kargoapi.GitSubscription) ([]git.BranchMetadata, error) {
+					return []git.BranchMetadata{
+						{Branch: "main"},
+						{Branch: "dev"},
+						//{Branch: "main", CommitID: "commit1", Subject: "Initial commit", Author: "John Doe <john@example.com>", Committer: "Jane Doe <jane@example.com>"},
+						//{Branch: "dev", CommitID: "commit2", Subject: "Develop branch", Author: "Alice <alice@example.com>", Committer: "Bob <bob@example.com>"},
+					}, nil
+				},
+			},
+			subs: []kargoapi.RepoSubscription{
+				{Git: &kargoapi.GitSubscription{
+					RepoURL:                 "fake-repo",
+					CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+				}},
+			},
+			assertions: func(t *testing.T, results []kargoapi.GitDiscoveryResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []kargoapi.GitDiscoveryResult{
+					{
+						RepoURL: "fake-repo",
+						Commits: []kargoapi.DiscoveredCommit{
+							{Branch: "main", CreatorDate: &metav1.Time{}},
+							{Branch: "dev", CreatorDate: &metav1.Time{}},
+						},
+					},
+				}, results)
 			},
 		},
 		{
@@ -325,6 +359,119 @@ func TestDiscoverBranchHistory(t *testing.T) {
 	}
 }
 
+func TestDiscoverBranches(t *testing.T) {
+	testCases := []struct {
+		name       string
+		sub        kargoapi.GitSubscription
+		reconciler *reconciler
+		assertions func(*testing.T, []git.BranchMetadata, error)
+	}{
+		{
+			name: "error listing branches",
+			reconciler: &reconciler{
+				listBranchesFn: func(git.Repo) ([]git.BranchMetadata, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, _ []git.BranchMetadata, err error) {
+				require.ErrorContains(t, err, "error listing branches")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "ignore branches",
+			sub: kargoapi.GitSubscription{
+				IgnoreBranches:          []string{"feature-abc"},
+				CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+			},
+			reconciler: &reconciler{
+				listBranchesFn: func(git.Repo) ([]git.BranchMetadata, error) {
+					return []git.BranchMetadata{
+						{Branch: "feature-abc"},
+						{Branch: "develop"},
+					}, nil
+				},
+			},
+			assertions: func(t *testing.T, branches []git.BranchMetadata, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []git.BranchMetadata{{Branch: "develop"}}, branches)
+			},
+		},
+		{
+			name: "allow branches compile error",
+			sub: kargoapi.GitSubscription{
+				AllowBranches: "[",
+			},
+			reconciler: &reconciler{
+				listBranchesFn: func(git.Repo) ([]git.BranchMetadata, error) {
+					return nil, nil
+				},
+			},
+			assertions: func(t *testing.T, _ []git.BranchMetadata, err error) {
+				require.ErrorContains(t, err, "failed to filter branches")
+				require.ErrorContains(t, err, "error compiling regular expression")
+			},
+		},
+		{
+			name: "more branches than limit",
+			sub: kargoapi.GitSubscription{
+				CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+				DiscoveryLimit:          3,
+			},
+			reconciler: &reconciler{
+				listBranchesFn: func(git.Repo) ([]git.BranchMetadata, error) {
+					return []git.BranchMetadata{
+						{Branch: "branch-a"}, {Branch: "branch-b"}, {Branch: "branch-c"}, {Branch: "branch-d"}, {Branch: "branch-e"},
+					}, nil
+				},
+			},
+			assertions: func(t *testing.T, branches []git.BranchMetadata, err error) {
+				require.NoError(t, err)
+				require.Len(t, branches, 3)
+			},
+		},
+		{
+			name: "with path filters",
+			sub: kargoapi.GitSubscription{
+				IncludePaths:   []string{regexpPrefix + "^.*some_path_to_a/file$"},
+				DiscoveryLimit: 20,
+			},
+			reconciler: &reconciler{
+				listBranchesFn: func(git.Repo) ([]git.BranchMetadata, error) {
+					return []git.BranchMetadata{
+						{Branch: "branch-1"},
+						{Branch: "feature-abc", CommitID: "fake-commit-id"},
+						{Branch: "branch-2"},
+						{Branch: "release-xyz"},
+					}, nil
+				},
+				getDiffPathsForCommitIDFn: func(_ git.Repo, id string) ([]string, error) {
+					if id == "fake-commit-id" {
+						return []string{"some_path_to_a/file"}, nil
+					}
+					return []string{"other_path_to_a/file"}, nil
+				},
+			},
+			assertions: func(t *testing.T, branches []git.BranchMetadata, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []git.BranchMetadata{
+					{Branch: "feature-abc", CommitID: "fake-commit-id"},
+				}, branches)
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			branches, err := testCase.reconciler.discoverBranches(
+				nil,
+				testCase.sub,
+			)
+			testCase.assertions(t, branches, err)
+		})
+	}
+}
+
 func TestDiscoverTags(t *testing.T) {
 	testCases := []struct {
 		name       string
@@ -521,6 +668,101 @@ func TestDiscoverTags(t *testing.T) {
 				testCase.sub,
 			)
 			testCase.assertions(t, tags, err)
+		})
+	}
+}
+
+func TestFilterBranches(t *testing.T) {
+	testCases := []struct {
+		name           string
+		branches       []git.BranchMetadata
+		ignoreBranches []string
+		allow          string
+		assertions     func(*testing.T, []git.BranchMetadata, error)
+	}{
+		{
+			name:     "no branches",
+			branches: nil,
+			assertions: func(t *testing.T, branches []git.BranchMetadata, err error) {
+				require.NoError(t, err)
+				require.Empty(t, branches)
+			},
+		},
+		{
+			name:  "invalid regular expression",
+			allow: "[",
+			assertions: func(t *testing.T, _ []git.BranchMetadata, err error) {
+				require.ErrorContains(t, err, "error compiling regular expression")
+			},
+		},
+		{
+			name: "without ignore branches or allow regex",
+			branches: []git.BranchMetadata{
+				{Branch: "feature-1"},
+				{Branch: "bugfix-2"},
+				{Branch: "main"},
+			},
+			assertions: func(t *testing.T, branches []git.BranchMetadata, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []git.BranchMetadata{
+					{Branch: "feature-1"},
+					{Branch: "bugfix-2"},
+					{Branch: "main"},
+				}, branches)
+			},
+		},
+		{
+			name: "with ignore branches",
+			branches: []git.BranchMetadata{
+				{Branch: "feature-1"},
+				{Branch: "bugfix-2"},
+				{Branch: "main"},
+			},
+			ignoreBranches: []string{"feature-1", "main"},
+			assertions: func(t *testing.T, branches []git.BranchMetadata, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []git.BranchMetadata{
+					{Branch: "bugfix-2"},
+				}, branches)
+			},
+		},
+		{
+			name: "with allow regex",
+			branches: []git.BranchMetadata{
+				{Branch: "feature-1"},
+				{Branch: "bugfix-2"},
+				{Branch: "main"},
+			},
+			allow: "bug.*",
+			assertions: func(t *testing.T, branches []git.BranchMetadata, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []git.BranchMetadata{
+					{Branch: "bugfix-2"},
+				}, branches)
+			},
+		},
+		{
+			name: "with ignore branches and allow regex",
+			branches: []git.BranchMetadata{
+				{Branch: "feature-1"},
+				{Branch: "bugfix-2"},
+				{Branch: "main"},
+				{Branch: "feature-2"},
+			},
+			ignoreBranches: []string{"feature-1"},
+			allow:          "feature.*",
+			assertions: func(t *testing.T, branches []git.BranchMetadata, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []git.BranchMetadata{
+					{Branch: "feature-2"},
+				}, branches)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			branches, err := filterBranches(testCase.branches, testCase.ignoreBranches, testCase.allow)
+			testCase.assertions(t, branches, err)
 		})
 	}
 }

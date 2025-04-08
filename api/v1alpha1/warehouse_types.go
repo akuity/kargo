@@ -147,6 +147,20 @@ type GitSubscription struct {
 	//
 	// +kubebuilder:validation:Optional
 	SemverConstraint string `json:"semverConstraint,omitempty" protobuf:"bytes,4,opt,name=semverConstraint"`
+	// AllowBranches is a regular expression that can optionally be used to limit the
+	// branches that are considered when determining the newest commit of interest.
+	// The value in this field only has any effect when the CommitSelectionStrategy is
+	// NewestFromBranch. This field is optional.
+	//
+	// +kubebuilder:validation:Optional
+	AllowBranches string `json:"allowBranches,omitempty" protobuf:"bytes,7,opt,name=allowBranches"`
+	// IgnoreBranches is a list of branches that must be ignored when determining the
+	// newest commit of interest. No regular expressions or glob patterns are supported
+	// yet. The value in this field only has any effect when the CommitSelectionStrategy
+	// is NewestFromBranch. This field is optional.
+	//
+	// +kubebuilder:validation:Optional
+	IgnoreBranches []string `json:"ignoreBranches,omitempty" protobuf:"bytes,8,rep,name=ignoreBranches"`
 	// AllowTags is a regular expression that can optionally be used to limit the
 	// tags that are considered in determining the newest commit of interest. The
 	// value in this field only has any effect when the CommitSelectionStrategy is
@@ -197,7 +211,7 @@ type GitSubscription struct {
 	ExcludePaths []string `json:"excludePaths,omitempty" protobuf:"bytes,9,rep,name=excludePaths"`
 	// DiscoveryLimit is an optional limit on the number of commits that can be
 	// discovered for this subscription. The limit is applied after filtering
-	// commits based on the AllowTags and IgnoreTags fields.
+	// commits based on the AllowBranches, AllowTags, IgnoreBranches, and IgnoreTags fields.
 	// When left unspecified, the field is implicitly treated as if its value
 	// were "20". The upper limit for this field is 100.
 	//

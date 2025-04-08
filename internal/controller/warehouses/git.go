@@ -118,6 +118,39 @@ func (r *reconciler) discoverCommits(
 		// Discover commits based on the subscription's commit selection strategy.
 		var discovered []kargoapi.DiscoveredCommit
 		switch sub.CommitSelectionStrategy {
+		case kargoapi.CommitSelectionStrategyNewestFromBranch:
+			// TODO: Remove this debug print
+			logger.Debug("discoverCommits() - CommitSelectionStrategyNewestFromBranch...")
+			branches, err := r.discoverBranchesFn(repo, sub)
+			if err != nil {
+				return nil, fmt.Errorf("error listing branches from git repo %q: %w", sub.RepoURL, err)
+			}
+
+			// TODO: Remove this debug print
+			for _, meta := range branches {
+				logger.Debug("  branch", meta.Branch)
+			}
+
+			for _, meta := range branches {
+				discovered = append(discovered, kargoapi.DiscoveredCommit{
+					ID:     meta.CommitID,
+					Branch: meta.Branch,
+					// A decent subject length for a commit message is 50 characters
+					// (based on the 50/72 rule). We are nice people, and allow a
+					// bit more. But not an excessive amount, to minimize the risk of
+					// exceeding the maximum size of the object in the API server.
+					Subject:     shortenString(meta.Subject, 80),
+					Author:      meta.Author,
+					Committer:   meta.Committer,
+					CreatorDate: &metav1.Time{Time: meta.CreationDate},
+				})
+				repoLogger.Trace(
+					"discovered commit from branch",
+					"branch", meta.Branch,
+					"commit", meta.CommitID,
+					"creatorDate", meta.CreationDate.Format(time.RFC3339),
+				)
+			}
 		case kargoapi.CommitSelectionStrategyLexical,
 			kargoapi.CommitSelectionStrategyNewestTag,
 			kargoapi.CommitSelectionStrategySemVer:
@@ -266,6 +299,77 @@ func (r *reconciler) discoverBranchHistory(repo git.Repo, sub kargoapi.GitSubscr
 	return trimSlice(filteredCommits, limit), nil
 }
 
+// discoverBranches returns a list of branches from the given Git repository that match
+// the given subscription's branch selection criteria. It returns the list of branches
+// that match the criteria, sorted in descending order. If the list contains more than
+// 20 branches, it is clipped to the 20 most recent branches.
+func (r *reconciler) discoverBranches(repo git.Repo, sub kargoapi.GitSubscription) (
+	[]git.BranchMetadata, error) {
+
+	branches, err := r.listBranchesFn(repo)
+	if err != nil {
+		return nil, fmt.Errorf("error listing branches from git repo %q: %w", sub.RepoURL, err)
+	}
+	// TODO: Remove this debug print
+	fmt.Println("[DEBUG] Branches Count before filtering: ", len(branches))
+
+	// Filter branches based on the provided criteria
+	if branches, err = filterBranches(branches, sub.IgnoreBranches, sub.AllowBranches); err != nil {
+		return nil, fmt.Errorf("failed to filter branches: %w", err)
+	}
+	// TODO: Remove this debug print
+	fmt.Println("[DEBUG] Branches Count after filtering: ", len(branches))
+
+	// If no include or exclude paths are specified, return the first branches up to
+	// the limit.
+	limit := int(sub.DiscoveryLimit)
+	if len(branches) == 0 || (sub.IncludePaths == nil && sub.ExcludePaths == nil) {
+		return trimSlice(branches, limit), nil
+	}
+
+	// Compile include and exclude path selectors
+	includeSelectors, err := getPathSelectors(sub.IncludePaths)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing include selector: %w", err)
+	}
+	excludeSelectors, err := getPathSelectors(sub.ExcludePaths)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing exclude selector: %w", err)
+	}
+
+	// Filter branches based on include and exclude paths
+	var filteredBranches = make([]git.BranchMetadata, 0, limit)
+	for _, meta := range branches {
+		diffPaths, err := r.getDiffPathsForCommitIDFn(repo, meta.CommitID)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"error getting diff paths for branch %q in git repo %q: %w",
+				meta.Branch,
+				sub.RepoURL,
+				err,
+			)
+		}
+		match, err := matchesPathsFilters(includeSelectors, excludeSelectors, diffPaths)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"error checking includePaths/excludePaths match for branch %q for git repo %q: %w",
+				meta.Branch,
+				sub.RepoURL,
+				err,
+			)
+		}
+		if match {
+			filteredBranches = append(filteredBranches, meta)
+		}
+
+		if len(filteredBranches) >= limit {
+			break
+		}
+	}
+
+	return trimSlice(filteredBranches, limit), nil
+}
+
 // discoverTags returns a list of tags from the given Git repository that match
 // the given subscription's tag selection criteria. It returns the list of tags
 // that match the criteria, sorted in descending order. If the list contains
@@ -342,6 +446,23 @@ func (r *reconciler) discoverTags(repo git.Repo, sub kargoapi.GitSubscription) (
 		}
 	}
 	return trimSlice(filteredTags, limit), nil
+}
+
+// filterBranches filters the given list of branch names based on the given allow and
+// ignore criteria. It returns the filtered list of branches.
+func filterBranches(branches []git.BranchMetadata, ignoreBranches []string, allow string) ([]git.BranchMetadata, error) {
+	allowRegex, err := regexp.Compile(allow)
+	if err != nil {
+		return nil, fmt.Errorf("error compiling regular expression %q: %w", allow, err)
+	}
+	filteredBranches := make([]git.BranchMetadata, 0, len(branches))
+	for _, branch := range branches {
+		if ignores(branch.Branch, ignoreBranches) || !allows(branch.Branch, allowRegex) {
+			continue
+		}
+		filteredBranches = append(filteredBranches, branch)
+	}
+	return slices.Clip(filteredBranches), nil
 }
 
 // filterTags filters the given list of tag names based on the given allow and
@@ -508,6 +629,10 @@ func (r *reconciler) listCommits(repo git.Repo, limit, skip uint) ([]git.CommitM
 	return repo.ListCommits(limit, skip)
 }
 
+func (r *reconciler) listBranches(repo git.Repo) ([]git.BranchMetadata, error) {
+	return repo.ListBranches()
+}
+
 func (r *reconciler) listTags(repo git.Repo) ([]git.TagMetadata, error) {
 	return repo.ListTags()
 }
@@ -533,6 +658,8 @@ func gitDiscoveryLogFields(sub kargoapi.GitSubscription) []any {
 			"semverConstraint", sub.SemverConstraint,
 			"tagConstrained", sub.AllowTags != "" || len(sub.IgnoreTags) > 0,
 		)
+	case kargoapi.CommitSelectionStrategyNewestFromBranch:
+		f = append(f, "branchConstrained", sub.AllowBranches != "" || len(sub.IgnoreBranches) > 0)
 	case kargoapi.CommitSelectionStrategyLexical, kargoapi.CommitSelectionStrategyNewestTag:
 		f = append(f, "tagConstrained", sub.AllowTags != "" || len(sub.IgnoreTags) > 0)
 	}

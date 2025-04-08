@@ -74,6 +74,10 @@
               "git": {
                 "description": "Git describes a subscriptions to a Git repository.",
                 "properties": {
+                  "allowBranches": {
+                    "description": "AllowBranches is a regular expression that can optionally be used to limit the branches that are considered in determining the newest commit of interest. The value in this field only has any effect when the CommitSelectionStrategy is Lexical, NewestCommit, or SemVer. This field is optional.",
+                    "type": "string"
+                  },
                   "allowTags": {
                     "description": "AllowTags is a regular expression that can optionally be used to limit the\ntags that are considered in determining the newest commit of interest. The\nvalue in this field only has any effect when the CommitSelectionStrategy is\nLexical, NewestTag, or SemVer. This field is optional.",
                     "type": "string"
@@ -106,6 +110,13 @@
                   },
                   "excludePaths": {
                     "description": "ExcludePaths is a list of selectors that designate paths in the repository\nthat should NOT trigger the production of new Freight when changes are\ndetected therein. When specified, changes in the identified paths will not\ntrigger Freight production. When not specified, paths that should trigger\nFreight production will be defined solely by IncludePaths. Selectors may be\ndefined using:\n  1. Exact paths to files or directories (ex. \"charts/foo\")\n  2. Glob patterns (prefix the pattern with \"glob:\"; ex. \"glob:*.yaml\")\n  3. Regular expressions (prefix the pattern with \"regex:\" or \"regexp:\";\n     ex. \"regexp:^.*\\.yaml$\")\nPaths selected by IncludePaths may be unselected by ExcludePaths. This\nis a useful method for including a broad set of paths and then excluding a\nsubset of them.",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "ignoreBranches": {
+                    "description": "IgnoreBranches is a list of branches that must be ignored when determining the newest commit of interest. No regular expressions or glob patterns are supported yet. The value in this field only has any effect when the CommitSelectionStrategy is Lexical, NewestCommit, or SemVer. This field is optional.",
                     "items": {
                       "type": "string"
                     },
