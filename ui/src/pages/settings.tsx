@@ -1,75 +1,65 @@
 import { faBarChart, faTasks } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Layout, Menu, MenuProps } from 'antd';
-import { useNavigate, generatePath } from 'react-router-dom';
+import { Breadcrumb, Flex, Menu, Typography } from 'antd';
+import { NavLink, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
-import { paths } from '@ui/config/paths';
-import { PageTitle } from '@ui/features/common';
+import { BaseHeader } from '@ui/features/common/layout/base-header';
 import { ClusterAnalysisTemplatesList } from '@ui/features/settings/analysis-templates/analysis-templates';
 import { ClusterPromotionTasks } from '@ui/features/settings/cluster-promotion-tasks/cluster-promotion-tasks';
 
-const { Sider, Content } = Layout;
+const settingsViews = {
+  verification: {
+    label: 'Verificaion',
+    icon: faBarChart,
+    path: 'analysis-templates',
+    component: ClusterAnalysisTemplatesList
+  },
+  clusterPromotionTashs: {
+    label: 'ClusterPromotionTasks',
+    icon: faTasks,
+    path: 'cluster-promotion-tasks',
+    component: ClusterPromotionTasks
+  }
+};
 
-type MenuItem = Required<MenuProps>['items'][number];
+const defaultView = settingsViews.verification;
 
-export const Settings = ({ section = 'verification' }: { section?: string }) => {
-  const navigate = useNavigate();
-
-  const items: MenuItem[] = [
-    {
-      key: 'verification',
-      label: 'Verification',
-      icon: <FontAwesomeIcon icon={faBarChart} />,
-      onClick: () => {
-        navigate(generatePath(paths.settingsAnalysisTemplates));
-      }
-    },
-    {
-      key: 'cluster-promotion-tasks',
-      label: 'ClusterPromotionTasks',
-      icon: <FontAwesomeIcon icon={faTasks} />,
-      onClick: () => {
-        navigate(generatePath(paths.settingsClusterPromotionTasks));
-      }
-    }
-  ];
-
-  const renderSection = (section: string) => {
-    switch (section) {
-      case 'verification':
-        return <ClusterAnalysisTemplatesList />;
-      case 'cluster-promotion-tasks':
-        return <ClusterPromotionTasks />;
-    }
-  };
-
-  const getSectionTitle = (section: string) => {
-    switch (section) {
-      case 'verification':
-        return 'Cluster Analysis Templates';
-      case 'cluster-promotion-tasks':
-        return 'Cluster Promotion Tasks';
-    }
-  };
+export const Settings = () => {
+  const location = useLocation();
 
   return (
-    <Layout className='min-h-screen'>
-      <Sider
-        width={250}
-        className='border-r border-gray-300 shadow-sm'
-        style={{ background: 'white' }}
-      >
-        <div className='p-4'>
-          <PageTitle title='Settings' />
-        </div>
-        <Menu mode='vertical' defaultSelectedKeys={[section]} items={items} />
-      </Sider>
-      <Layout>
-        <Content className='p-6 bg-gray-100'>
-          <div className='text-2xl font-semibold mb-4'>{getSectionTitle(section)}</div>
-          {renderSection(section)}
-        </Content>
-      </Layout>
-    </Layout>
+    <>
+      <BaseHeader>
+        <Breadcrumb separator='>' items={[{ title: 'Settings' }]} />
+      </BaseHeader>
+      <div className='py-4 px-6'>
+        <Typography.Title level={3}>Settings</Typography.Title>
+        <Flex gap={24} className='mt-2'>
+          <div style={{ width: 240 }}>
+            <Menu
+              className='-ml-2 -mt-1'
+              style={{ border: 0, background: 'transparent' }}
+              selectedKeys={Object.values(settingsViews)
+                .map((i) => i.path)
+                .filter((i) => location.pathname.endsWith(i))}
+              items={Object.values(settingsViews).map((i) => ({
+                label: <NavLink to={`../${i.path}`}>{i.label}</NavLink>,
+                icon: <FontAwesomeIcon icon={i.icon} />,
+                key: i.path
+              }))}
+            />
+          </div>
+          <div className='flex-1 overflow-hidden' style={{ maxWidth: '920px', minHeight: '700px' }}>
+            <Routes>
+              <Route index element={<Navigate to={defaultView.path} replace={true} />} />
+              {Object.values(settingsViews).map((t) => (
+                <Route key={t.path} path={t.path} element={<t.component />} />
+              ))}
+              <Route path='*' element={<Navigate to='../' replace={true} />} />
+            </Routes>
+          </div>
+        </Flex>
+      </div>
+    </>
   );
 };

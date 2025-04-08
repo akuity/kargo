@@ -1,5 +1,6 @@
 import { createConnectQueryKey, useMutation } from '@connectrpc/connect-query';
 import { useQueryClient } from '@tanstack/react-query';
+import { Button, Flex, Space } from 'antd';
 import Modal from 'antd/es/modal/Modal';
 import Link from 'antd/es/typography/Link';
 import { useForm } from 'react-hook-form';
@@ -52,21 +53,24 @@ export const CreateClusterPromotionTaskModal = (props: CreateClusterPromotionTas
     <Modal
       open={props.visible}
       onCancel={props.hide}
-      title={
-        <>
-          Create Cluster Promotion Task{' '}
+      title='Create Cluster Promotion Task'
+      width={700}
+      footer={
+        <Flex justify='space-between' align='center'>
           <Link
             href='https://docs.kargo.io/user-guide/reference-docs/promotion-tasks/#defining-a-global-promotion-task'
             target='_blank'
-            className='ml-1 text-xs'
           >
-            documentation
+            Documentation
           </Link>
-        </>
+          <Space>
+            <Button onClick={props.hide}>Cancel</Button>
+            <Button onClick={onSubmit} loading={createResourceMutation.isPending} type='primary'>
+              Create
+            </Button>
+          </Space>
+        </Flex>
       }
-      okText='Create'
-      width={700}
-      onOk={onSubmit}
     >
       <FieldContainer control={clusterPromotionTaskForm.control} name='value'>
         {({ field }) => (
