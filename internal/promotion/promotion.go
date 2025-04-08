@@ -186,7 +186,12 @@ func (s *Step) BuildEnv(promoCtx Context, opts ...StepEnvOption) map[string]any 
 
 // Skip returns true if the Step should be skipped based on the If condition.
 // The If condition is evaluated against the provided Context and State.
-func (s *Step) Skip(promoCtx Context, state promotion.State) (bool, error) {
+func (s *Step) Skip(
+	ctx context.Context,
+	cl client.Client,
+	promoCtx Context,
+	state promotion.State,
+) (bool, error) {
 	if s.If == "" {
 		return false, nil
 	}
@@ -203,7 +208,13 @@ func (s *Step) Skip(promoCtx Context, state promotion.State) (bool, error) {
 		StepEnvWithVars(vars),
 	)
 
-	v, err := expressions.EvaluateTemplate(s.If, env)
+	v, err := expressions.EvaluateTemplate(s.If, env, exprfn.FreightOperations(
+		ctx,
+		cl,
+		promoCtx.Project,
+		promoCtx.FreightRequests,
+		promoCtx.Freight.References(),
+	)...)
 	if err != nil {
 		return false, err
 	}

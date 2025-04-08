@@ -502,6 +502,7 @@ func TestStep_GetConfig(t *testing.T) {
 		})
 	}
 }
+
 func TestStep_Skip(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -566,6 +567,33 @@ func TestStep_Skip(t *testing.T) {
 			},
 		},
 		{
+			name: "if condition uses expression function",
+			step: &Step{
+				If: "${{ commitFrom('https://git.example.com', warehouse('fake-warehouse')).ID == 'foo' }}",
+			},
+			ctx: Context{
+				Project: "fake-project",
+				Freight: kargoapi.FreightCollection{
+					Freight: map[string]kargoapi.FreightReference{
+						"Warehouse/fake-warehouse": {
+							Origin: kargoapi.FreightOrigin{
+								Kind: kargoapi.FreightOriginKindWarehouse,
+								Name: "fake-warehouse",
+							},
+							Commits: []kargoapi.GitCommit{{
+								RepoURL: "https://git.example.com",
+								ID:      "foo",
+							}},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, b bool, err error) {
+				assert.NoError(t, err)
+				assert.False(t, b)
+			},
+		},
+		{
 			name: "if condition does not evaluate to a boolean",
 			step: &Step{
 				If: "invalid condition",
@@ -578,7 +606,12 @@ func TestStep_Skip(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.step.Skip(tt.ctx, tt.state)
+			got, err := tt.step.Skip(
+				context.Background(),
+				fake.NewClientBuilder().Build(),
+				tt.ctx,
+				tt.state,
+			)
 			tt.assertions(t, got, err)
 		})
 	}
