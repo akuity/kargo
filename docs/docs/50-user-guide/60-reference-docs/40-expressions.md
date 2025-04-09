@@ -286,7 +286,14 @@ The returned `FreightOrigin` object has the following fields:
 
 The `FreightOrigin` object can be used as an optional argument to the
 `commitFrom()`, `imageFrom()`, or `chartFrom()` functions to disambiguate the
-desired source of an artifact when necessary.
+desired source of an artifact when necessary. These functions return `nil` when
+relevant `Freight` is not found from the `FreightCollection`. 
+
+:::tip
+You can handle `nil` values gracefully in Expr using its
+[nil coalescing](https://expr-lang.org/docs/language-definition#nil-coalescing) and
+[optional chaining](https://expr-lang.org/docs/language-definition#optional-chaining) features.
+:::
 
 ### `commitFrom(repoURL, [freightOrigin])`
 
@@ -314,6 +321,8 @@ The returned `GitCommit` object has the following fields:
 The optional `freightOrigin` argument should be used when a `Stage` requests
 `Freight` from multiple origins (`Warehouse`s) and more than one can provide a
 `GitCommit` object from the specified repository.
+
+If a commit is not found from the `FreightCollection`, returns `nil`.
 
 Examples:
 
@@ -351,6 +360,8 @@ The returned `Image` object has the following fields:
 The optional `freightOrigin` argument should be used when a `Stage` requests
 `Freight` from multiple origins (`Warehouse`s) and more than one can provide a
 `Image` object from the specified repository.
+
+If an image is not found from the `FreightCollection`, returns `nil`.
 
 Examples:
 
@@ -395,6 +406,8 @@ must be provided to specify the name of the chart within the repository.
 The optional `freightOrigin` argument should be used when a `Stage` requests
 `Freight` from multiple origins (`Warehouse`s) and more than one can provide a
 `Chart` object from the specified repository.
+
+If a chart is not found from the `FreightCollection`, returns `nil`.
 
 Examples:
 
