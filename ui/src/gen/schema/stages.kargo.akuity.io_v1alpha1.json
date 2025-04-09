@@ -224,7 +224,7 @@
           "type": "string"
         },
         "vars": {
-          "description": "Vars is a list of variables that can be referenced by the PromotionTemplate\nand the arguments of the Verification.",
+          "description": "Vars is a list of variables that can be referenced anywhere in the\nStageSpec that supports expressions. For example, the PromotionTemplate\nand arguments of the Verification.",
           "items": {
             "description": "ExpressionVariable describes a single variable that may be referenced by\nexpressions in the context of a ClusterPromotionTask, PromotionTask,\nPromotion, AnalysisRun arguments, or other objects that support expressions.\n\nIt is used to pass information to the expression evaluation engine, and to\nallow for dynamic evaluation of expressions based on the variable values.",
             "properties": {

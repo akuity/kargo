@@ -2534,8 +2534,9 @@ export type StageSpec = Message<"github.com.akuity.kargo.api.v1alpha1.StageSpec"
   shard: string;
 
   /**
-   * Vars is a list of variables that can be referenced by the PromotionTemplate
-   * and the arguments of the Verification.
+   * Vars is a list of variables that can be referenced anywhere in the
+   * StageSpec that supports expressions. For example, the PromotionTemplate
+   * and arguments of the Verification.
    *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.ExpressionVariable vars = 7;
    */

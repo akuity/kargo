@@ -330,8 +330,9 @@ spec:
                 type: string
               vars:
                 description: |-
-                  Vars is a list of variables that can be referenced by the PromotionTemplate
-                  and the arguments of the Verification.
+                  Vars is a list of variables that can be referenced anywhere in the
+                  StageSpec that supports expressions. For example, the PromotionTemplate
+                  and arguments of the Verification.
                 items:
                   description: |-
                     ExpressionVariable describes a single variable that may be referenced by
