@@ -92,7 +92,8 @@ const FreightTimeline = (props: { freights: Freight[] }) => {
       enabled: false
     },
     sources: [],
-    timerange: 'all-time'
+    timerange: 'all-time',
+    showColors: false
   });
 
   const filteredFreights = useMemo(() => {
@@ -249,7 +250,7 @@ const FreightTimeline = (props: { freights: Freight[] }) => {
                   setPreferredFilter({ ...preferredFilter, showAlias: e.target.checked })
                 }
               >
-                Show Alias
+                Alias
               </Checkbox>
 
               <Checkbox
@@ -276,7 +277,17 @@ const FreightTimeline = (props: { freights: Freight[] }) => {
                   setPreferredFilter({ ...preferredFilter, artifactCarousel: { enabled } });
                 }}
               >
-                Show all Artifacts
+                All Artifacts
+              </Checkbox>
+
+              <Checkbox
+                className='text-xs'
+                checked={preferredFilter?.showColors}
+                onChange={(e) =>
+                  setPreferredFilter({ ...preferredFilter, showColors: e.target.checked })
+                }
+              >
+                Colors
               </Checkbox>
             </div>
           </div>
@@ -300,7 +311,7 @@ const FreightTimeline = (props: { freights: Freight[] }) => {
           </div>
 
           <div
-            className='absolute left-0 h-full bg-gray-200 px-1 flex items-center cursor-pointer'
+            className='absolute left-0 h-full bg-gray-100 px-1 flex items-center cursor-pointer'
             onClick={() => {
               scrollCarouselLeft();
             }}
@@ -309,7 +320,7 @@ const FreightTimeline = (props: { freights: Freight[] }) => {
           </div>
 
           <div
-            className='absolute right-0 h-full bg-gray-300 px-1 flex items-center cursor-pointer'
+            className='absolute right-0 h-full bg-gray-100 px-1 flex items-center cursor-pointer'
             onClick={() => {
               scrollCarouselRight();
             }}
@@ -370,6 +381,18 @@ const FreightCard = (props: { freight: Freight }) => {
         freightTimelineControllerContext?.setViewingFreight(isViewingFreight ? null : props.freight)
       }
     >
+      {freightTimelineControllerContext?.preferredFilter?.showColors && (
+        <div className='flex gap-1 mb-1 justify-center'>
+          <div
+            title='dev'
+            className='mx-1 h-3 w-3 rounded'
+            style={{
+              background: '#45B084'
+            }}
+          />
+        </div>
+      )}
+
       {freightTimelineControllerContext?.preferredFilter?.showAlias && (
         <div className='text-[10px] text-nowrap mb-2'>{freightAlias}</div>
       )}
@@ -377,7 +400,7 @@ const FreightCard = (props: { freight: Freight }) => {
       {!freightTimelineControllerContext?.preferredFilter?.artifactCarousel?.enabled && (
         <div className='flex gap-1 justify-center'>
           {props.freight?.commits?.map((commit) => (
-            <Tag title={commit?.repoURL} bordered={false} color='blue' key={commit?.id}>
+            <Tag title={commit?.repoURL} bordered={false} color='geekblue' key={commit?.id}>
               {commit?.id?.slice(0, 7)}
             </Tag>
           ))}
@@ -386,7 +409,7 @@ const FreightCard = (props: { freight: Freight }) => {
             <Tag
               title={`${chart.repoURL}:${chart.version}`}
               bordered={false}
-              color='blue'
+              color='geekblue'
               key={chart.repoURL}
             >
               {shortVersion(chart?.version)}
@@ -397,7 +420,7 @@ const FreightCard = (props: { freight: Freight }) => {
             <Tag
               title={`${image.repoURL}:${image.tag}`}
               bordered={false}
-              color='blue'
+              color='geekblue'
               key={image?.repoURL}
             >
               {shortVersion(image?.tag)}
@@ -468,8 +491,18 @@ FreightCard.ArtifactCarousel = (props: { freight: Freight }) => {
         }}
       />
       {activeArtifact?.$typeName === 'github.com.akuity.kargo.api.v1alpha1.GitCommit' && (
-        <Tag title={activeArtifact?.repoURL} bordered={false} color='blue' key={activeArtifact?.id}>
+        <Tag
+          title={activeArtifact?.repoURL}
+          bordered={false}
+          color='geekblue'
+          key={activeArtifact?.id}
+          className='text-center'
+        >
           {activeArtifact?.id?.slice(0, 7)}
+
+          <span className='text-[10px] ml-1'>
+            {humanComprehendableArtifact(activeArtifact?.repoURL)}
+          </span>
         </Tag>
       )}
 
@@ -477,10 +510,15 @@ FreightCard.ArtifactCarousel = (props: { freight: Freight }) => {
         <Tag
           title={`${activeArtifact.repoURL}:${activeArtifact.version}`}
           bordered={false}
-          color='blue'
+          color='geekblue'
           key={activeArtifact.repoURL}
+          className='text-center'
         >
           {shortVersion(activeArtifact?.version)}
+
+          <span className='text-[10px] ml-1'>
+            {humanComprehendableArtifact(activeArtifact?.repoURL)}
+          </span>
         </Tag>
       )}
 
@@ -488,10 +526,15 @@ FreightCard.ArtifactCarousel = (props: { freight: Freight }) => {
         <Tag
           title={`${activeArtifact.repoURL}:${activeArtifact.tag}`}
           bordered={false}
-          color='blue'
+          color='geekblue'
           key={activeArtifact?.repoURL}
+          className='text-center'
         >
           {shortVersion(activeArtifact?.tag)}
+
+          <span className='text-[10px] ml-1'>
+            {humanComprehendableArtifact(activeArtifact?.repoURL)}
+          </span>
         </Tag>
       )}
 

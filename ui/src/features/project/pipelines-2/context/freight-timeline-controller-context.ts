@@ -8,6 +8,7 @@ export type FreightTimelineControllerContextType = {
   viewingFreight: Freight | null;
   setViewingFreight: (freight: Freight | null) => void;
   preferredFilter: {
+    showColors: boolean;
     showAlias: boolean;
     artifactCarousel: {
       enabled: boolean;
