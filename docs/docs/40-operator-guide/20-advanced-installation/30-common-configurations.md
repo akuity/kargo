@@ -370,7 +370,7 @@ any logs that it can access via an HTTP GET request.
 
 To facilitate this, operators may, at the time of installation, provide a URL
 template that the API server can use to construct the URL for any job metric logs
-as a function of attributes such as `project` name, stage `namespace`, `shard` name, `stage` name, `analysisRun` name, job `metricName`, `jobNamespace`, `jobName`, `container` name.
+as a function of attributes such as `project` name, stage `namespace`, `shard` name, `stage` name, `analysisRun` name, job `metricName`, `jobNamespace`, `jobName` and `container` name.
 
 A token can be specified by referencing a Kubernetes `Secret` that is managed
 "out of band." HTTP headers may also be specified, and may reference the token
