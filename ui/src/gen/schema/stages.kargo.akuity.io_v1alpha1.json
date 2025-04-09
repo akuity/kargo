@@ -88,7 +88,7 @@
                       "vars": {
                         "description": "Vars is a list of variables that can be referenced by expressions in\nthe step's Config. The values override the values specified in the\nPromotionSpec.",
                         "items": {
-                          "description": "PromotionVariable describes a single variable that may be referenced by\nexpressions in promotion steps.",
+                          "description": "ExpressionVariable describes a single variable that may be referenced by\nexpressions in the context of a ClusterPromotionTask, PromotionTask,\nPromotion, AnalysisRun arguments, or other objects that support expressions.\n\nIt is used to pass information to the expression evaluation engine, and to\nallow for dynamic evaluation of expressions based on the variable values.",
                           "properties": {
                             "name": {
                               "description": "Name is the name of the variable.",
@@ -123,7 +123,7 @@
                 "vars": {
                   "description": "Vars is a list of variables that can be referenced by expressions in\npromotion steps.",
                   "items": {
-                    "description": "PromotionVariable describes a single variable that may be referenced by\nexpressions in promotion steps.",
+                    "description": "ExpressionVariable describes a single variable that may be referenced by\nexpressions in the context of a ClusterPromotionTask, PromotionTask,\nPromotion, AnalysisRun arguments, or other objects that support expressions.\n\nIt is used to pass information to the expression evaluation engine, and to\nallow for dynamic evaluation of expressions based on the variable values.",
                     "properties": {
                       "name": {
                         "description": "Name is the name of the variable.",
@@ -222,6 +222,29 @@
         "shard": {
           "description": "Shard is the name of the shard that this Stage belongs to. This is an\noptional field. If not specified, the Stage will belong to the default\nshard. A defaulting webhook will sync the value of the\nkargo.akuity.io/shard label with the value of this field. When this field\nis empty, the webhook will ensure that label is absent.",
           "type": "string"
+        },
+        "vars": {
+          "description": "Vars is a list of variables that can be referenced anywhere in the\nStageSpec that supports expressions. For example, the PromotionTemplate\nand arguments of the Verification.",
+          "items": {
+            "description": "ExpressionVariable describes a single variable that may be referenced by\nexpressions in the context of a ClusterPromotionTask, PromotionTask,\nPromotion, AnalysisRun arguments, or other objects that support expressions.\n\nIt is used to pass information to the expression evaluation engine, and to\nallow for dynamic evaluation of expressions based on the variable values.",
+            "properties": {
+              "name": {
+                "description": "Name is the name of the variable.",
+                "minLength": 1,
+                "pattern": "^[a-zA-Z_]\\w*$",
+                "type": "string"
+              },
+              "value": {
+                "description": "Value is the value of the variable. It is allowed to utilize expressions\nin the value.\nSee https://docs.kargo.io/user-guide/reference-docs/expressions for details.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "type": "object"
+          },
+          "type": "array"
         },
         "verification": {
           "description": "Verification describes how to verify a Stage's current Freight is fit for\npromotion downstream.",

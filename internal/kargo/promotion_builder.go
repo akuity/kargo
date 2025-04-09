@@ -71,6 +71,11 @@ func (b *PromotionBuilder) Build(
 		annotations[kargoapi.AnnotationKeyCreateActor] = api.FormatEventUserActor(u)
 	}
 
+	// Merge Stage variables with PromotionTemplate variables
+	vars := make([]kargoapi.ExpressionVariable, 0, len(stage.Spec.Vars)+len(stage.Spec.PromotionTemplate.Spec.Vars))
+	vars = append(vars, stage.Spec.Vars...)
+	vars = append(vars, stage.Spec.PromotionTemplate.Spec.Vars...)
+
 	promotion := kargoapi.Promotion{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        generatePromotionName(stage.Name, freight),
@@ -80,7 +85,7 @@ func (b *PromotionBuilder) Build(
 		Spec: kargoapi.PromotionSpec{
 			Stage:   stage.Name,
 			Freight: freight,
-			Vars:    stage.Spec.PromotionTemplate.Spec.Vars,
+			Vars:    vars,
 			Steps:   stage.Spec.PromotionTemplate.Spec.Steps,
 		},
 	}
@@ -121,7 +126,7 @@ func (b *PromotionBuilder) InflateSteps(ctx context.Context, promo *kargoapi.Pro
 func (b *PromotionBuilder) inflateTaskSteps(
 	ctx context.Context,
 	project, taskAlias string,
-	promoVars []kargoapi.PromotionVariable,
+	promoVars []kargoapi.ExpressionVariable,
 	taskStep kargoapi.PromotionStep,
 ) ([]kargoapi.PromotionStep, error) {
 	task, err := b.getTaskSpec(ctx, project, taskStep.Task)
@@ -220,8 +225,8 @@ func generatePromotionTaskStepAlias(taskAlias, stepAlias string) string {
 // variables and maps them to variables which can be used by the inflated
 // PromotionStep.
 func promotionTaskVarsToStepVars(
-	taskVars, promoVars, stepVars []kargoapi.PromotionVariable,
-) ([]kargoapi.PromotionVariable, error) {
+	taskVars, promoVars, stepVars []kargoapi.ExpressionVariable,
+) ([]kargoapi.ExpressionVariable, error) {
 	// Promotion variables can be used to set (or override) the variables
 	// required by the PromotionTask, but they are not inflated into the
 	// variables for the step. This map is used to check if a variable is
@@ -244,7 +249,7 @@ func promotionTaskVarsToStepVars(
 		}
 	}
 
-	var vars []kargoapi.PromotionVariable
+	var vars []kargoapi.ExpressionVariable
 
 	// Set the PromotionTask variable default values, but only if the variable
 	// is not set on the Promotion.

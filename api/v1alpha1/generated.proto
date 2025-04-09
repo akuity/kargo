@@ -302,6 +302,25 @@ message DiscoveredImageReference {
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 4;
 }
 
+// ExpressionVariable describes a single variable that may be referenced by
+// expressions in the context of a ClusterPromotionTask, PromotionTask,
+// Promotion, AnalysisRun arguments, or other objects that support expressions.
+//
+// It is used to pass information to the expression evaluation engine, and to
+// allow for dynamic evaluation of expressions based on the variable values.
+message ExpressionVariable {
+  // Name is the name of the variable.
+  //
+  // +kubebuilder:validation:MinLength=1
+  // +kubebuilder:validation:Pattern=^[a-zA-Z_]\w*$
+  optional string name = 1;
+
+  // Value is the value of the variable. It is allowed to utilize expressions
+  // in the value.
+  // See https://docs.kargo.io/user-guide/reference-docs/expressions for details.
+  optional string value = 2;
+}
+
 // Freight represents a collection of versioned artifacts.
 message Freight {
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
@@ -921,7 +940,7 @@ message PromotionSpec {
 
   // Vars is a list of variables that can be referenced by expressions in
   // promotion steps.
-  repeated PromotionVariable vars = 4;
+  repeated ExpressionVariable vars = 4;
 
   // Steps specifies the directives to be executed as part of this Promotion.
   // The order in which the directives are executed is the order in which they
@@ -1007,7 +1026,7 @@ message PromotionStep {
   // Vars is a list of variables that can be referenced by expressions in
   // the step's Config. The values override the values specified in the
   // PromotionSpec.
-  repeated PromotionVariable vars = 6;
+  repeated ExpressionVariable vars = 6;
 
   // Config is opaque configuration for the PromotionStep that is understood
   // only by each PromotionStep's implementation. It is legal to utilize
@@ -1095,7 +1114,7 @@ message PromotionTaskSpec {
   // Vars specifies the variables available to the PromotionTask. The
   // values of these variables are the default values that can be
   // overridden by the step referencing the task.
-  repeated PromotionVariable vars = 1;
+  repeated ExpressionVariable vars = 1;
 
   // Steps specifies the directives to be executed as part of this
   // PromotionTask. The steps as defined here are inflated into a
@@ -1119,7 +1138,7 @@ message PromotionTemplate {
 message PromotionTemplateSpec {
   // Vars is a list of variables that can be referenced by expressions in
   // promotion steps.
-  repeated PromotionVariable vars = 2;
+  repeated ExpressionVariable vars = 2;
 
   // Steps specifies the directives to be executed as part of a Promotion.
   // The order in which the directives are executed is the order in which they
@@ -1128,21 +1147,6 @@ message PromotionTemplateSpec {
   // +kubebuilder:validation:MinItems=1
   // +kubebuilder:validation:items:XValidation:message="PromotionTemplate step must have exactly one of uses or task set",rule="(has(self.uses) ? !has(self.task) : has(self.task))"
   repeated PromotionStep steps = 1;
-}
-
-// PromotionVariable describes a single variable that may be referenced by
-// expressions in promotion steps.
-message PromotionVariable {
-  // Name is the name of the variable.
-  //
-  // +kubebuilder:validation:MinLength=1
-  // +kubebuilder:validation:Pattern=^[a-zA-Z_]\w*$
-  optional string name = 1;
-
-  // Value is the value of the variable. It is allowed to utilize expressions
-  // in the value.
-  // See https://docs.kargo.io/user-guide/reference-docs/expressions for details.
-  optional string value = 2;
 }
 
 // RepoSubscription describes a subscription to ONE OF a Git repository, a
@@ -1188,6 +1192,11 @@ message StageSpec {
   // kargo.akuity.io/shard label with the value of this field. When this field
   // is empty, the webhook will ensure that label is absent.
   optional string shard = 4;
+
+  // Vars is a list of variables that can be referenced anywhere in the
+  // StageSpec that supports expressions. For example, the PromotionTemplate
+  // and arguments of the Verification.
+  repeated ExpressionVariable vars = 7;
 
   // RequestedFreight expresses the Stage's need for certain pieces of Freight,
   // each having originated from a particular Warehouse. This list must be

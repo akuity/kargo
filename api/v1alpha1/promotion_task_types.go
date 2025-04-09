@@ -23,7 +23,7 @@ type PromotionTaskSpec struct {
 	// Vars specifies the variables available to the PromotionTask. The
 	// values of these variables are the default values that can be
 	// overridden by the step referencing the task.
-	Vars []PromotionVariable `json:"vars,omitempty" protobuf:"bytes,1,rep,name=vars"`
+	Vars []ExpressionVariable `json:"vars,omitempty" protobuf:"bytes,1,rep,name=vars"`
 	// Steps specifies the directives to be executed as part of this
 	// PromotionTask. The steps as defined here are inflated into a
 	// Promotion when it is built from a PromotionTemplate.

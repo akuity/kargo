@@ -194,7 +194,7 @@ func TestStep_GetConfig(t *testing.T) {
 			name: "test vars with literal values",
 			// Test that vars can be assigned literal values
 			promoCtx: Context{
-				Vars: []kargoapi.PromotionVariable{
+				Vars: []kargoapi.ExpressionVariable{
 					{
 						Name:  "strVar",
 						Value: "foo",
@@ -224,7 +224,7 @@ func TestStep_GetConfig(t *testing.T) {
 			name: "test vars with expressions",
 			// Test using expressions to define the value of vars
 			promoCtx: Context{
-				Vars: []kargoapi.PromotionVariable{
+				Vars: []kargoapi.ExpressionVariable{
 					{
 						Name:  "strVar",
 						Value: "${{ 'f' + 'o' + 'o' }}",
@@ -274,7 +274,7 @@ func TestStep_GetConfig(t *testing.T) {
 			// Test that the warehouse() function can be used to reference freight
 			// origins
 			promoCtx: Context{
-				Vars: []kargoapi.PromotionVariable{{
+				Vars: []kargoapi.ExpressionVariable{{
 					Name:  "warehouseName",
 					Value: "fake-warehouse",
 				}},
@@ -322,7 +322,7 @@ func TestStep_GetConfig(t *testing.T) {
 						},
 					},
 				},
-				Vars: []kargoapi.PromotionVariable{
+				Vars: []kargoapi.ExpressionVariable{
 					{
 						Name:  "warehouseName",
 						Value: "fake-warehouse",
@@ -377,7 +377,7 @@ func TestStep_GetConfig(t *testing.T) {
 						},
 					},
 				},
-				Vars: []kargoapi.PromotionVariable{
+				Vars: []kargoapi.ExpressionVariable{
 					{
 						Name:  "warehouseName",
 						Value: "fake-warehouse",
@@ -439,7 +439,7 @@ func TestStep_GetConfig(t *testing.T) {
 						},
 					},
 				},
-				Vars: []kargoapi.PromotionVariable{
+				Vars: []kargoapi.ExpressionVariable{
 					{
 						Name:  "warehouseName",
 						Value: "fake-warehouse",
@@ -537,7 +537,7 @@ func TestStep_GetVars(t *testing.T) {
 			name: "global vars with literal values",
 			promoCtx: Context{
 				Project: "fake-project",
-				Vars: []kargoapi.PromotionVariable{
+				Vars: []kargoapi.ExpressionVariable{
 					{
 						Name:  "str",
 						Value: "foo",
@@ -563,7 +563,7 @@ func TestStep_GetVars(t *testing.T) {
 			name: "global vars with expressions",
 			promoCtx: Context{
 				Project: "fake-project",
-				Vars: []kargoapi.PromotionVariable{
+				Vars: []kargoapi.ExpressionVariable{
 					{
 						Name:  "str",
 						Value: "${{ 'f' + 'o' + 'o' }}",
@@ -591,7 +591,7 @@ func TestStep_GetVars(t *testing.T) {
 				Project: "fake-project",
 			},
 			step: Step{
-				Vars: []kargoapi.PromotionVariable{
+				Vars: []kargoapi.ExpressionVariable{
 					{
 						Name:  "str",
 						Value: "foo",
@@ -618,7 +618,7 @@ func TestStep_GetVars(t *testing.T) {
 				Project: "fake-project",
 			},
 			step: Step{
-				Vars: []kargoapi.PromotionVariable{
+				Vars: []kargoapi.ExpressionVariable{
 					{
 						Name:  "str",
 						Value: "${{ 'f' + 'o' + 'o' }}",
@@ -643,7 +643,7 @@ func TestStep_GetVars(t *testing.T) {
 			name: "step vars referencing global vars",
 			promoCtx: Context{
 				Project: "fake-project",
-				Vars: []kargoapi.PromotionVariable{
+				Vars: []kargoapi.ExpressionVariable{
 					{
 						Name:  "global",
 						Value: "global-value",
@@ -651,7 +651,7 @@ func TestStep_GetVars(t *testing.T) {
 				},
 			},
 			step: Step{
-				Vars: []kargoapi.PromotionVariable{
+				Vars: []kargoapi.ExpressionVariable{
 					{
 						Name:  "local",
 						Value: "${{ vars.global + '-suffix' }}",
@@ -669,7 +669,7 @@ func TestStep_GetVars(t *testing.T) {
 				Project: "fake-project",
 			},
 			step: Step{
-				Vars: []kargoapi.PromotionVariable{
+				Vars: []kargoapi.ExpressionVariable{
 					{
 						Name:  "v1",
 						Value: "value1",
@@ -694,7 +694,7 @@ func TestStep_GetVars(t *testing.T) {
 				"output1": "output-value",
 			},
 			step: Step{
-				Vars: []kargoapi.PromotionVariable{
+				Vars: []kargoapi.ExpressionVariable{
 					{
 						Name:  "fromOutput",
 						Value: "${{ outputs.output1 + '-suffix' }}",
@@ -717,7 +717,7 @@ func TestStep_GetVars(t *testing.T) {
 			},
 			step: Step{
 				Alias: "task::other-alias",
-				Vars: []kargoapi.PromotionVariable{
+				Vars: []kargoapi.ExpressionVariable{
 					{
 						Name:  "fromTask",
 						Value: "${{ task.outputs.alias.foo + '-suffix' }}",
@@ -732,7 +732,7 @@ func TestStep_GetVars(t *testing.T) {
 			name: "invalid expression in global var",
 			promoCtx: Context{
 				Project: "fake-project",
-				Vars: []kargoapi.PromotionVariable{
+				Vars: []kargoapi.ExpressionVariable{
 					{
 						Name:  "invalid",
 						Value: "${{ invalid.expression }}",
@@ -748,7 +748,7 @@ func TestStep_GetVars(t *testing.T) {
 				Project: "fake-project",
 			},
 			step: Step{
-				Vars: []kargoapi.PromotionVariable{
+				Vars: []kargoapi.ExpressionVariable{
 					{
 						Name:  "invalid",
 						Value: "${{ invalid.expression }}",
@@ -769,7 +769,7 @@ func TestStep_GetVars(t *testing.T) {
 				}},
 			},
 			step: Step{
-				Vars: []kargoapi.PromotionVariable{
+				Vars: []kargoapi.ExpressionVariable{
 					{
 						Name:  "wh",
 						Value: "${{ warehouse('fake-warehouse') }}",
@@ -792,7 +792,7 @@ func TestStep_GetVars(t *testing.T) {
 				Actor:     "fake-creator",
 			},
 			step: Step{
-				Vars: []kargoapi.PromotionVariable{
+				Vars: []kargoapi.ExpressionVariable{
 					{
 						Name:  "proj",
 						Value: "${{ ctx.project }}",
@@ -847,7 +847,7 @@ func TestStep_GetVars(t *testing.T) {
 				},
 			},
 			step: Step{
-				Vars: []kargoapi.PromotionVariable{
+				Vars: []kargoapi.ExpressionVariable{
 					{
 						Name:  "commit",
 						Value: "${{ commitFrom('https://fake-git-repo').ID }}",
@@ -902,7 +902,7 @@ func TestStep_Skip(t *testing.T) {
 				If: "${{ vars.foo == 'bar' }}",
 			},
 			ctx: Context{
-				Vars: []kargoapi.PromotionVariable{
+				Vars: []kargoapi.ExpressionVariable{
 					{
 						Name:  "foo",
 						Value: "bar",

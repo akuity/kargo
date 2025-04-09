@@ -45,17 +45,39 @@ type Owner struct {
 }
 
 // ArgumentEvaluationConfig holds the configuration for the evaluation of
-// expressions in the AnalysisRun arguments.
+// expressions in the AnalysisRun arguments. It contains the environment
+// variables, the variables, and the options for the expression evaluation.
+//
+// Note: The builder may modify the Env map to add additional information.
+// For example, to add any evaluated Vars. Because of this, it is recommended
+// not to reuse the same ArgumentEvaluationConfig or Env map for multiple
+// builds without making use of a deep copy.
 type ArgumentEvaluationConfig struct {
 	// Env is a (nested) map of variables that can be used in the expressions.
 	// The keys are the variable names, and the values are the variable values.
 	// When the value itself is a map, it is considered a nested variable and
 	// can be accessed using dot notation. e.g. `${{ foo.bar }}`.
+	//
+	// Note: The Env map can be modified by the builder to add additional
+	// information. For example, to add any evaluated Vars.
 	Env map[string]any
+	// Vars are the variables that can be used in the expressions. They are
+	// evaluated in the order they are defined. After the evaluation of the
+	// variables, they are available in the Env map as `${{ vars.<name>}}`.
+	Vars []ArgumentVariable
 	// Options are the options for the expression evaluation. It can be used to
 	// configure the behavior of the expression evaluation and the functions
 	// available.
 	Options []expr.Option
+}
+
+// ArgumentVariable represents a variable that can be used in the AnalysisRun
+// arguments.
+type ArgumentVariable struct {
+	// Name is the name of the variable.
+	Name string
+	// Value is the value of the variable.
+	Value string
 }
 
 // Apply applies the given options to the AnalysisRunOptions.
