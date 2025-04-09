@@ -114,6 +114,7 @@ func PromotionsByStage(obj client.Object) []string {
 // Promotions not labeled with a shardName are indexed.
 func RunningPromotionsByArgoCDApplications(
 	ctx context.Context,
+	cl client.Client,
 	shardName string,
 ) client.IndexerFunc {
 	logger := logging.LoggerFromContext(ctx)
@@ -176,7 +177,7 @@ func RunningPromotionsByArgoCDApplications(
 
 			// As step-level variables are allowed to reference to output, we
 			// need to provide the state.
-			vars, err := dirStep.GetVars(promoCtx, promoCtx.State)
+			vars, err := dirStep.GetVars(ctx, cl, promoCtx, promoCtx.State)
 			if err != nil {
 				logger.Error(
 					err,

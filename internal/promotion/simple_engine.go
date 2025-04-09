@@ -143,7 +143,7 @@ func (e *simpleEngine) executeSteps(
 
 		// Check if the step should be skipped.
 		var skip bool
-		if skip, err = step.Skip(promoCtx, state); err != nil {
+		if skip, err = step.Skip(ctx, e.kargoClient, promoCtx, state); err != nil {
 			return Result{
 				Status:                kargoapi.PromotionPhaseErrored,
 				CurrentStep:           i,
