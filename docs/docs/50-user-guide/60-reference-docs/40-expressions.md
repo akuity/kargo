@@ -286,7 +286,14 @@ The returned `FreightOrigin` object has the following fields:
 
 The `FreightOrigin` object can be used as an optional argument to the
 `commitFrom()`, `imageFrom()`, or `chartFrom()` functions to disambiguate the
-desired source of an artifact when necessary.
+desired source of an artifact when necessary. These functions return `nil` when
+relevant `Freight` is not found from the `FreightCollection`. 
+
+:::tip
+You can handle `nil` values gracefully in Expr using its
+[nil coalescing](https://expr-lang.org/docs/language-definition#nil-coalescing) and
+[optional chaining](https://expr-lang.org/docs/language-definition#optional-chaining) features.
+:::
 
 ### `commitFrom(repoURL, [freightOrigin])`
 
