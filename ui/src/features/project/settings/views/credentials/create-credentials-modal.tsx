@@ -150,7 +150,6 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
 
   return (
     <Modal
-      onCancel={props.hide}
       okButtonProps={{
         loading: createCredentialsMutation.isPending || updateCredentialsMutation.isPending
       }}
@@ -162,7 +161,8 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
           {editing ? 'Edit' : 'Create'} {props.type === 'repo' ? 'Credentials' : 'Secret'}
         </>
       }
-      {...props}
+      onCancel={props.hide}
+      open={props.visible}
       width='612px'
     >
       {props.type === 'repo' && (

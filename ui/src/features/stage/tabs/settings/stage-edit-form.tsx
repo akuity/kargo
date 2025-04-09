@@ -1,36 +1,38 @@
 import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Modal } from 'antd';
+import { Button, Flex, message, Space, Typography } from 'antd';
 import type { JSONSchema4 } from 'json-schema';
 import { useForm } from 'react-hook-form';
 import { useParams } from 'react-router-dom';
-import yaml from 'yaml';
 import { z } from 'zod';
 
 import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
 import { FieldContainer } from '@ui/features/common/form/field-container';
-import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import {
-  getProject,
+  getStage,
   updateResource
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
-import schema from '@ui/gen/schema/projects.kargo.akuity.io_v1alpha1.json';
+import schema from '@ui/gen/schema/stages.kargo.akuity.io_v1alpha1.json';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 import { zodValidators } from '@ui/utils/validators';
 
-import { projectYAMLExample } from '../../list/utils/project-yaml-example';
+import { getStageYAMLExample } from '../../../project/pipelines/utils/stage-yaml-example';
 
 const formSchema = z.object({
   value: zodValidators.requiredString
 });
 
-export const EditProjectModal = ({ visible, hide }: ModalComponentProps) => {
-  const { name } = useParams();
-  const { data, isLoading } = useQuery(getProject, { name, format: RawFormat.YAML });
+export const StageEditForm = () => {
+  const { name: projectName, stageName } = useParams();
+  const { data, isLoading } = useQuery(getStage, {
+    project: projectName,
+    name: stageName,
+    format: RawFormat.YAML
+  });
 
   const { mutateAsync, isPending } = useMutation(updateResource, {
-    onSuccess: () => hide()
+    onSuccess: () => message.success('Stage has been updated')
   });
 
   const { control, handleSubmit } = useForm({
@@ -48,31 +50,33 @@ export const EditProjectModal = ({ visible, hide }: ModalComponentProps) => {
   });
 
   return (
-    <Modal
-      destroyOnClose
-      open={visible}
-      title='Edit Project'
-      width={680}
-      onCancel={hide}
-      onOk={onSubmit}
-      okText='Update'
-      okButtonProps={{ loading: isPending }}
-    >
+    <>
       <FieldContainer name='value' control={control}>
         {({ field: { value, onChange } }) => (
           <YamlEditor
-            label='YAML'
             value={value}
             onChange={(e) => onChange(e || '')}
             height='500px'
             schema={schema as JSONSchema4}
-            placeholder={yaml.stringify(projectYAMLExample)}
+            placeholder={projectName && getStageYAMLExample(projectName)}
             isLoading={isLoading}
-            resourceType='projects'
             isHideManagedFieldsDisplayed
+            label='YAML'
+            resourceType='stages'
           />
         )}
       </FieldContainer>
-    </Modal>
+
+      <Flex justify='space-between'>
+        <Typography.Link href='https://docs.kargo.io/quickstart/#the-test-stage' target='_blank'>
+          Documentation
+        </Typography.Link>
+        <Space>
+          <Button type='primary' onClick={onSubmit} loading={isPending}>
+            Update
+          </Button>
+        </Space>
+      </Flex>
+    </>
   );
 };

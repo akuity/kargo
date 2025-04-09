@@ -1,20 +1,19 @@
 import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { faPencil, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Flex, Table } from 'antd';
+import { Button, Card, Flex, Table } from 'antd';
 import { format } from 'date-fns';
 import { useParams } from 'react-router-dom';
 
+import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
+import { useModal } from '@ui/features/common/modal/use-modal';
+import { promotionTaskManifestsGen } from '@ui/features/utils/manifest-generator';
 import {
   deleteResource,
   listPromotionTasks
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { PromotionTask } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
-
-import { useConfirmModal } from '../common/confirm-modal/use-confirm-modal';
-import { useModal } from '../common/modal/use-modal';
-import { promotionTaskManifestsGen } from '../utils/manifest-generator';
 
 import { CreatePromotionTaskModal } from './create-promotion-task';
 import { EditPromotionTaskModal } from './edit-promotion-task-modal';
@@ -63,8 +62,18 @@ export const PromotionTasks = () => {
     ));
 
   return (
-    <div className='p-4'>
+    <Card
+      title='Promotion Tasks'
+      type='inner'
+      className='min-h-full'
+      extra={
+        <Button icon={<FontAwesomeIcon icon={faPlus} />} onClick={onAddPromotionTaskModalOpen}>
+          Add Promotion Task
+        </Button>
+      }
+    >
       <Table<PromotionTask>
+        className='my-2'
         dataSource={listPromotionTasksQuery.data?.promotionTasks}
         loading={listPromotionTasksQuery.isFetching}
         locale={{
@@ -96,30 +105,23 @@ export const PromotionTasks = () => {
             render: (_, r) => r.metadata?.name
           },
           {
-            title: (
-              <div className='text-right'>
-                <Button
-                  type='primary'
-                  className='ml-auto text-xs font-semibold'
-                  icon={<FontAwesomeIcon icon={faPlus} />}
-                  onClick={onAddPromotionTaskModalOpen}
-                >
-                  ADD PROMOTION TASK
-                </Button>
-              </div>
-            ),
             render: (_, template) => (
               <Flex gap={8} justify='end'>
                 <Button
-                  icon={<FontAwesomeIcon icon={faPencil} />}
+                  icon={<FontAwesomeIcon icon={faPencil} size='sm' />}
                   onClick={() => onEditPromotionTaskModalOpen(template)}
+                  color='default'
+                  variant='filled'
+                  size='small'
                 >
                   Edit
                 </Button>
                 <Button
-                  icon={<FontAwesomeIcon icon={faTrash} />}
-                  danger
+                  icon={<FontAwesomeIcon icon={faTrash} size='sm' />}
                   onClick={() => onDeletePromotionTaskModalOpen(template)}
+                  color='danger'
+                  variant='filled'
+                  size='small'
                 >
                   Delete
                 </Button>
@@ -128,6 +130,6 @@ export const PromotionTasks = () => {
           }
         ]}
       />
-    </div>
+    </Card>
   );
 };

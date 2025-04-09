@@ -14,6 +14,8 @@ import { AuthContextProvider } from './features/auth/context/auth-context-provid
 import { ProtectedRoute } from './features/auth/protected-route';
 import { TokenRenew } from './features/auth/token-renew';
 import { MainLayout } from './features/common/layout/main-layout';
+import { Events } from './features/project/events/events';
+import { ProjectSettings } from './features/project/settings/project-settings';
 import { AnalysisRunLogsPage } from './pages/analysis-run-logs';
 import { Downloads } from './pages/downloads';
 import { Login } from './pages/login/login';
@@ -35,13 +37,7 @@ export const App = () => (
                 <Route element={<MainLayout />}>
                   <Route path={paths.projects} element={<Projects />} />
                   <Route path={paths.project} element={<Project />} />
-                  <Route path={paths.projectCredentials} element={<Project tab='credentials' />} />
-                  <Route
-                    path={paths.projectAnalysisTemplates}
-                    element={<Project tab='analysisTemplates' />}
-                  />
-                  <Route path={paths.projectEvents} element={<Project tab='events' />} />
-                  <Route path={paths.projectRoles} element={<Project tab='roles' />} />
+                  <Route path={paths.projectEvents} element={<Events />} />
                   <Route path={paths.stage} element={<Project />} />
                   <Route path={paths.freight} element={<Project />} />
                   <Route path={paths.warehouse} element={<Project />} />
@@ -65,6 +61,10 @@ export const App = () => (
                     element={<Project tab='pipelines' creatingWarehouse />}
                   />
                   <Route path={paths.promotionTasks} element={<Project tab='promotionTasks' />} />
+                  <Route path={paths.projectSettings}>
+                    <Route index element={<ProjectSettings />} />
+                    <Route path='*' element={<ProjectSettings />} />
+                  </Route>
                 </Route>
                 <Route path={paths.analysisRunLogs} element={<AnalysisRunLogsPage />} />
               </Route>
