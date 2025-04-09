@@ -67,11 +67,7 @@ export const Project = ({
         </Space>
       </BaseHeader>
 
-      <Pipelines
-        project={data?.result?.value as _Project}
-        creatingStage={creatingStage}
-        creatingWarehouse={creatingWarehouse}
-      />
+      <Pipelines project={data?.result?.value as _Project} />
     </div>
   );
 };

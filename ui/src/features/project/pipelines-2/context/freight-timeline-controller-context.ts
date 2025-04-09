@@ -2,6 +2,8 @@ import { createContext, useContext } from 'react';
 
 import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
 
+import { timerangeTypes } from '../filter-timerange-utils';
+
 export type FreightTimelineControllerContextType = {
   viewingFreight: Freight | null;
   setViewingFreight: (freight: Freight | null) => void;
@@ -13,6 +15,8 @@ export type FreightTimelineControllerContextType = {
         repoURL: string;
       };
     };
+    sources: string[]; // repoURL
+    timerange: timerangeTypes;
   };
   setPreferredFilter: (filter: FreightTimelineControllerContextType['preferredFilter']) => void;
 };

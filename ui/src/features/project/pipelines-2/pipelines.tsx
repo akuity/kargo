@@ -12,7 +12,17 @@ import {
   IconDefinition
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Checkbox, Descriptions, Divider, Select, Table, Tag, Typography } from 'antd';
+import {
+  Button,
+  Checkbox,
+  Descriptions,
+  Divider,
+  Select,
+  SelectProps,
+  Table,
+  Tag,
+  Typography
+} from 'antd';
 import classNames from 'classnames';
 import { formatDistance } from 'date-fns';
 import { useMemo, useRef, useState } from 'react';
@@ -27,6 +37,7 @@ import { Freight, Project } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import './pipelines.less';
+import { humanComprehendableArtifact } from './artifact-parts-utils';
 import {
   selectActiveCarouselFreight,
   selectFirstArtifact,
@@ -38,7 +49,17 @@ import {
   FreightTimelineControllerContextType,
   useFreightTimelineControllerContext
 } from './context/freight-timeline-controller-context';
+import {
+  timerangeOrderedOptions,
+  timerangeToDate,
+  timerangeToLabel
+} from './filter-timerange-utils';
 import { shortVersion } from './short-version-utils';
+import {
+  catalogueFreights,
+  filterFreightBySource,
+  filterFreightByTimerange
+} from './source-catalogue-utils';
 
 export const Pipelines = (props: { project: Project }) => {
   const getFreightQuery = useQuery(queryFreight, { project: props.project?.metadata?.name });
@@ -69,10 +90,62 @@ const FreightTimeline = (props: { freights: Freight[] }) => {
     showAlias: false,
     artifactCarousel: {
       enabled: false
-    }
+    },
+    sources: [],
+    timerange: 'all-time'
   });
 
-  const orderedFreights = useMemo(() => props.freights?.reverse(), [props.freights]);
+  const filteredFreights = useMemo(() => {
+    let filtered = props.freights?.sort((a, b) => {
+      const t1 = timestampDate(a?.metadata?.creationTimestamp);
+
+      const t2 = timestampDate(b?.metadata?.creationTimestamp);
+
+      return (t2?.getTime() || 0) - (t1?.getTime() || 0);
+    });
+
+    filtered = filtered
+      .map(filterFreightBySource(preferredFilter?.sources))
+      .filter(Boolean) as Freight[];
+
+    if (preferredFilter.timerange !== 'all-time') {
+      filtered = filtered.filter(
+        filterFreightByTimerange(timerangeToDate(preferredFilter.timerange))
+      );
+    }
+
+    return filtered;
+  }, [props.freights, preferredFilter.sources, preferredFilter.timerange]);
+
+  const sourcesDropdownOptions: SelectProps['options'] = useMemo(() => {
+    const freightSourcesCatalogue = catalogueFreights(props.freights);
+
+    const opts: SelectProps['options'] = [];
+
+    for (const [sourceType, repoURLs] of Object.entries(freightSourcesCatalogue)) {
+      let icon: IconDefinition = faGitAlt;
+
+      if (sourceType === 'images') {
+        icon = faDocker;
+      } else if (sourceType === 'charts') {
+        icon = faAnchor;
+      }
+
+      for (const repoURL of repoURLs) {
+        opts.push({
+          value: repoURL,
+          label: (
+            <div className='w-fit'>
+              <FontAwesomeIcon icon={icon} className='mr-2' />
+              <span className='text-xs'>{repoURL}</span>
+            </div>
+          )
+        });
+      }
+    }
+
+    return opts;
+  }, [props.freights]);
 
   const freightListStyleRef = useRef<HTMLDivElement>(null);
 
@@ -142,7 +215,12 @@ const FreightTimeline = (props: { freights: Freight[] }) => {
                 mode='multiple'
                 className='min-w-[200px] ml-auto'
                 size='small'
-                defaultValue={['foo', 'bar', 'baz']}
+                value={preferredFilter?.sources}
+                dropdownStyle={{ width: '50%' }}
+                onChange={(sources) => setPreferredFilter({ ...preferredFilter, sources })}
+                labelRender={(props) => humanComprehendableArtifact(props.value.toString())}
+                placeholder='All'
+                options={sourcesDropdownOptions}
                 maxTagCount={1}
               />
             </div>
@@ -151,8 +229,15 @@ const FreightTimeline = (props: { freights: Freight[] }) => {
               <Select
                 className='min-w-[200px]'
                 size='small'
-                defaultValue={['7 Days']}
+                value={preferredFilter?.timerange}
+                options={timerangeOrderedOptions.map((opt) => ({
+                  value: opt,
+                  label: <>{timerangeToLabel(opt)}</>
+                }))}
                 maxTagCount={1}
+                onChange={(timerange) =>
+                  setPreferredFilter({ ...preferredFilter, timerange: timerange })
+                }
               />
             </div>
 
@@ -174,7 +259,7 @@ const FreightTimeline = (props: { freights: Freight[] }) => {
                   const enabled = !e.target.checked;
 
                   if (enabled) {
-                    const firstArtifact = selectFirstArtifact(orderedFreights);
+                    const firstArtifact = selectFirstArtifact(filteredFreights);
 
                     setPreferredFilter({
                       ...preferredFilter,
@@ -199,8 +284,8 @@ const FreightTimeline = (props: { freights: Freight[] }) => {
         {!filtersCollapsed && <Divider type='vertical' className='h-full' />}
         <div className='w-full flex overflow-hidden relative px-5'>
           <div className='flex gap-1 relative transition-all right-0' ref={freightListStyleRef}>
-            {orderedFreights.map((freight) => (
-              <FreightCard key={freight?.metadata?.name} freight={freight} />
+            {filteredFreights.map((freight) => (
+              <FreightCard key={freight?.metadata?.uid} freight={freight} />
             ))}
           </div>
 
@@ -280,7 +365,7 @@ const FreightCard = (props: { freight: Freight }) => {
       )}
 
       {!freightTimelineControllerContext?.preferredFilter?.artifactCarousel?.enabled && (
-        <div className='flex gap-1 justify-center mb-auto'>
+        <div className='flex gap-1 justify-center'>
           {props.freight?.commits?.map((commit) => (
             <Tag title={commit?.repoURL} bordered={false} color='blue' key={commit?.id}>
               {commit?.id?.slice(0, 7)}
