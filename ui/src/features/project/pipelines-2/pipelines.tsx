@@ -282,7 +282,17 @@ const FreightTimeline = (props: { freights: Freight[] }) => {
           </div>
         </div>
         {!filtersCollapsed && <Divider type='vertical' className='h-full' />}
-        <div className='w-full flex overflow-hidden relative px-5'>
+        <div
+          className='w-full flex overflow-hidden relative px-5'
+          onWheel={(e) => {
+            if (e.deltaX > 0) {
+              scrollCarouselRight();
+              return;
+            }
+
+            scrollCarouselLeft();
+          }}
+        >
           <div className='flex gap-1 relative transition-all right-0' ref={freightListStyleRef}>
             {filteredFreights.map((freight) => (
               <FreightCard key={freight?.metadata?.uid} freight={freight} />
@@ -310,7 +320,7 @@ const FreightTimeline = (props: { freights: Freight[] }) => {
       </div>
 
       {!!viewingFreight && (
-        <div className='scale-75 origin-top bg-white p-5'>
+        <div className='scale-90 origin-top bg-white p-5'>
           <FreightExtended freight={viewingFreight} onClose={() => setViewingFreight(null)} />
         </div>
       )}
