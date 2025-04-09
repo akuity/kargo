@@ -14,7 +14,7 @@ const settingsViews = {
     path: 'analysis-templates',
     component: ClusterAnalysisTemplatesList
   },
-  clusterPromotionTashs: {
+  clusterPromotionTasks: {
     label: 'ClusterPromotionTasks',
     icon: faTasks,
     path: 'cluster-promotion-tasks',
