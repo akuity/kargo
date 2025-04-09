@@ -71,6 +71,11 @@ func (b *PromotionBuilder) Build(
 		annotations[kargoapi.AnnotationKeyCreateActor] = api.FormatEventUserActor(u)
 	}
 
+	// Merge Stage variables with PromotionTemplate variables
+	vars := make([]kargoapi.PromotionVariable, 0, len(stage.Spec.Vars)+len(stage.Spec.PromotionTemplate.Spec.Vars))
+	vars = append(vars, stage.Spec.Vars...)
+	vars = append(vars, stage.Spec.PromotionTemplate.Spec.Vars...)
+
 	promotion := kargoapi.Promotion{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        generatePromotionName(stage.Name, freight),
@@ -80,7 +85,7 @@ func (b *PromotionBuilder) Build(
 		Spec: kargoapi.PromotionSpec{
 			Stage:   stage.Name,
 			Freight: freight,
-			Vars:    stage.Spec.PromotionTemplate.Spec.Vars,
+			Vars:    vars,
 			Steps:   stage.Spec.PromotionTemplate.Spec.Steps,
 		},
 	}

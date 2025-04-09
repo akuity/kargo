@@ -82,6 +82,9 @@ func TestPromotionBuilder_Build(t *testing.T) {
 					Namespace: "test-project",
 				},
 				Spec: kargoapi.StageSpec{
+					Vars: []kargoapi.PromotionVariable{
+						{Name: "key0", Value: "value0"},
+					},
 					PromotionTemplate: &kargoapi.PromotionTemplate{
 						Spec: kargoapi.PromotionTemplateSpec{
 							Vars: []kargoapi.PromotionVariable{
@@ -109,6 +112,10 @@ func TestPromotionBuilder_Build(t *testing.T) {
 
 				// Check vars
 				assert.Equal(t, []kargoapi.PromotionVariable{
+					{
+						Name:  "key0",
+						Value: "value0",
+					},
 					{
 						Name:  "key1",
 						Value: "value1",
