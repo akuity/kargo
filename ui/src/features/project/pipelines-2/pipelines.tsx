@@ -7,6 +7,7 @@ import {
   faCaretRight,
   faChevronLeft,
   faChevronRight,
+  faExternalLink,
   faFilter,
   faTimes,
   IconDefinition
@@ -23,6 +24,7 @@ import {
   Tag,
   Typography
 } from 'antd';
+import Link from 'antd/es/typography/Link';
 import classNames from 'classnames';
 import { formatDistance } from 'date-fns';
 import { useMemo, useRef, useState } from 'react';
@@ -32,6 +34,7 @@ import { LoadingState } from '@ui/features/common';
 import { ArtifactMetadata } from '@ui/features/freight/artifact-metadata';
 import { flattenFreightOrigin } from '@ui/features/freight/flatten-freight-origin-utils';
 import { FreightStatusList } from '@ui/features/freight/freight-status-list';
+import { getImageSource } from '@ui/features/freight-timeline/open-container-initiative-utils';
 import { queryFreight } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { Freight, Project } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
@@ -416,16 +419,46 @@ const FreightCard = (props: { freight: Freight }) => {
             </Tag>
           ))}
 
-          {props.freight?.images?.map((image) => (
-            <Tag
-              title={`${image.repoURL}:${image.tag}`}
-              bordered={false}
-              color='geekblue'
-              key={image?.repoURL}
-            >
-              {shortVersion(image?.tag)}
-            </Tag>
-          ))}
+          {props.freight?.images?.map((image) => {
+            let imageSourceFromOci = '';
+
+            if (image?.annotations) {
+              imageSourceFromOci = getImageSource(image.annotations);
+            }
+
+            const TagComponent = (
+              <Tag
+                title={`${image.repoURL}:${image.tag}`}
+                bordered={false}
+                color='geekblue'
+                key={image?.repoURL}
+              >
+                {shortVersion(image?.tag)}
+
+                {!!imageSourceFromOci && (
+                  <FontAwesomeIcon
+                    icon={faExternalLink}
+                    className='text-blue-600 ml-1 text-[8px]'
+                  />
+                )}
+              </Tag>
+            );
+
+            if (imageSourceFromOci) {
+              return (
+                <Link
+                  key={image?.repoURL}
+                  href={imageSourceFromOci}
+                  target='_blank'
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {TagComponent}
+                </Link>
+              );
+            }
+
+            return TagComponent;
+          })}
         </div>
       )}
 
