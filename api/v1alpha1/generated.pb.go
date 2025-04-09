@@ -1458,15 +1458,15 @@ func (m *PromotionTemplateSpec) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_PromotionTemplateSpec proto.InternalMessageInfo
 
-func (m *PromotionVariable) Reset()      { *m = PromotionVariable{} }
-func (*PromotionVariable) ProtoMessage() {}
-func (*PromotionVariable) Descriptor() ([]byte, []int) {
+func (m *ExpressionVariable) Reset()      { *m = ExpressionVariable{} }
+func (*ExpressionVariable) ProtoMessage() {}
+func (*ExpressionVariable) Descriptor() ([]byte, []int) {
 	return fileDescriptor_e26b7f7bbc391025, []int{51}
 }
-func (m *PromotionVariable) XXX_Unmarshal(b []byte) error {
+func (m *ExpressionVariable) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *PromotionVariable) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *ExpressionVariable) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	b = b[:cap(b)]
 	n, err := m.MarshalToSizedBuffer(b)
 	if err != nil {
@@ -1474,17 +1474,17 @@ func (m *PromotionVariable) XXX_Marshal(b []byte, deterministic bool) ([]byte, e
 	}
 	return b[:n], nil
 }
-func (m *PromotionVariable) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_PromotionVariable.Merge(m, src)
+func (m *ExpressionVariable) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ExpressionVariable.Merge(m, src)
 }
-func (m *PromotionVariable) XXX_Size() int {
+func (m *ExpressionVariable) XXX_Size() int {
 	return m.Size()
 }
-func (m *PromotionVariable) XXX_DiscardUnknown() {
-	xxx_messageInfo_PromotionVariable.DiscardUnknown(m)
+func (m *ExpressionVariable) XXX_DiscardUnknown() {
+	xxx_messageInfo_ExpressionVariable.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_PromotionVariable proto.InternalMessageInfo
+var xxx_messageInfo_ExpressionVariable proto.InternalMessageInfo
 
 func (m *RepoSubscription) Reset()      { *m = RepoSubscription{} }
 func (*RepoSubscription) ProtoMessage() {}
@@ -1910,7 +1910,7 @@ func init() {
 	proto.RegisterType((*PromotionTaskSpec)(nil), "github.com.akuity.kargo.api.v1alpha1.PromotionTaskSpec")
 	proto.RegisterType((*PromotionTemplate)(nil), "github.com.akuity.kargo.api.v1alpha1.PromotionTemplate")
 	proto.RegisterType((*PromotionTemplateSpec)(nil), "github.com.akuity.kargo.api.v1alpha1.PromotionTemplateSpec")
-	proto.RegisterType((*PromotionVariable)(nil), "github.com.akuity.kargo.api.v1alpha1.PromotionVariable")
+	proto.RegisterType((*ExpressionVariable)(nil), "github.com.akuity.kargo.api.v1alpha1.ExpressionVariable")
 	proto.RegisterType((*RepoSubscription)(nil), "github.com.akuity.kargo.api.v1alpha1.RepoSubscription")
 	proto.RegisterType((*Stage)(nil), "github.com.akuity.kargo.api.v1alpha1.Stage")
 	proto.RegisterType((*StageList)(nil), "github.com.akuity.kargo.api.v1alpha1.StageList")
@@ -4976,7 +4976,7 @@ func (m *PromotionTemplateSpec) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *PromotionVariable) Marshal() (dAtA []byte, err error) {
+func (m *ExpressionVariable) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -4986,12 +4986,12 @@ func (m *PromotionVariable) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *PromotionVariable) MarshalTo(dAtA []byte) (int, error) {
+func (m *ExpressionVariable) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *PromotionVariable) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *ExpressionVariable) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -6866,7 +6866,7 @@ func (m *PromotionTemplateSpec) Size() (n int) {
 	return n
 }
 
-func (m *PromotionVariable) Size() (n int) {
+func (m *ExpressionVariable) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -7857,9 +7857,9 @@ func (this *PromotionSpec) String() string {
 		repeatedStringForSteps += strings.Replace(strings.Replace(f.String(), "PromotionStep", "PromotionStep", 1), `&`, ``, 1) + ","
 	}
 	repeatedStringForSteps += "}"
-	repeatedStringForVars := "[]PromotionVariable{"
+	repeatedStringForVars := "[]ExpressionVariable{"
 	for _, f := range this.Vars {
-		repeatedStringForVars += strings.Replace(strings.Replace(f.String(), "PromotionVariable", "PromotionVariable", 1), `&`, ``, 1) + ","
+		repeatedStringForVars += strings.Replace(strings.Replace(f.String(), "ExpressionVariable", "ExpressionVariable", 1), `&`, ``, 1) + ","
 	}
 	repeatedStringForVars += "}"
 	s := strings.Join([]string{`&PromotionSpec{`,
@@ -7904,9 +7904,9 @@ func (this *PromotionStep) String() string {
 	if this == nil {
 		return "nil"
 	}
-	repeatedStringForVars := "[]PromotionVariable{"
+	repeatedStringForVars := "[]ExpressionVariable{"
 	for _, f := range this.Vars {
-		repeatedStringForVars += strings.Replace(strings.Replace(f.String(), "PromotionVariable", "PromotionVariable", 1), `&`, ``, 1) + ","
+		repeatedStringForVars += strings.Replace(strings.Replace(f.String(), "ExpressionVariable", "ExpressionVariable", 1), `&`, ``, 1) + ","
 	}
 	repeatedStringForVars += "}"
 	s := strings.Join([]string{`&PromotionStep{`,
@@ -7974,9 +7974,9 @@ func (this *PromotionTaskSpec) String() string {
 	if this == nil {
 		return "nil"
 	}
-	repeatedStringForVars := "[]PromotionVariable{"
+	repeatedStringForVars := "[]ExpressionVariable{"
 	for _, f := range this.Vars {
-		repeatedStringForVars += strings.Replace(strings.Replace(f.String(), "PromotionVariable", "PromotionVariable", 1), `&`, ``, 1) + ","
+		repeatedStringForVars += strings.Replace(strings.Replace(f.String(), "ExpressionVariable", "ExpressionVariable", 1), `&`, ``, 1) + ","
 	}
 	repeatedStringForVars += "}"
 	repeatedStringForSteps := "[]PromotionStep{"
@@ -8010,9 +8010,9 @@ func (this *PromotionTemplateSpec) String() string {
 		repeatedStringForSteps += strings.Replace(strings.Replace(f.String(), "PromotionStep", "PromotionStep", 1), `&`, ``, 1) + ","
 	}
 	repeatedStringForSteps += "}"
-	repeatedStringForVars := "[]PromotionVariable{"
+	repeatedStringForVars := "[]ExpressionVariable{"
 	for _, f := range this.Vars {
-		repeatedStringForVars += strings.Replace(strings.Replace(f.String(), "PromotionVariable", "PromotionVariable", 1), `&`, ``, 1) + ","
+		repeatedStringForVars += strings.Replace(strings.Replace(f.String(), "ExpressionVariable", "ExpressionVariable", 1), `&`, ``, 1) + ","
 	}
 	repeatedStringForVars += "}"
 	s := strings.Join([]string{`&PromotionTemplateSpec{`,
@@ -8022,11 +8022,11 @@ func (this *PromotionTemplateSpec) String() string {
 	}, "")
 	return s
 }
-func (this *PromotionVariable) String() string {
+func (this *ExpressionVariable) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&PromotionVariable{`,
+	s := strings.Join([]string{`&ExpressionVariable{`,
 		`Name:` + fmt.Sprintf("%v", this.Name) + `,`,
 		`Value:` + fmt.Sprintf("%v", this.Value) + `,`,
 		`}`,
@@ -15800,7 +15800,7 @@ func (m *PromotionSpec) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Vars = append(m.Vars, PromotionVariable{})
+			m.Vars = append(m.Vars, ExpressionVariable{})
 			if err := m.Vars[len(m.Vars)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
@@ -16433,7 +16433,7 @@ func (m *PromotionStep) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Vars = append(m.Vars, PromotionVariable{})
+			m.Vars = append(m.Vars, ExpressionVariable{})
 			if err := m.Vars[len(m.Vars)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
@@ -17001,7 +17001,7 @@ func (m *PromotionTaskSpec) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Vars = append(m.Vars, PromotionVariable{})
+			m.Vars = append(m.Vars, ExpressionVariable{})
 			if err := m.Vars[len(m.Vars)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
@@ -17236,7 +17236,7 @@ func (m *PromotionTemplateSpec) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Vars = append(m.Vars, PromotionVariable{})
+			m.Vars = append(m.Vars, ExpressionVariable{})
 			if err := m.Vars[len(m.Vars)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
@@ -17262,7 +17262,7 @@ func (m *PromotionTemplateSpec) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *PromotionVariable) Unmarshal(dAtA []byte) error {
+func (m *ExpressionVariable) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -17285,10 +17285,10 @@ func (m *PromotionVariable) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: PromotionVariable: wiretype end group for non-group")
+			return fmt.Errorf("proto: ExpressionVariable: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: PromotionVariable: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: ExpressionVariable: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:

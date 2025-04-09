@@ -96,7 +96,7 @@ type PromotionSpec struct {
 	Freight string `json:"freight" protobuf:"bytes,2,opt,name=freight"`
 	// Vars is a list of variables that can be referenced by expressions in
 	// promotion steps.
-	Vars []PromotionVariable `json:"vars,omitempty" protobuf:"bytes,4,rep,name=vars"`
+	Vars []ExpressionVariable `json:"vars,omitempty" protobuf:"bytes,4,rep,name=vars"`
 	// Steps specifies the directives to be executed as part of this Promotion.
 	// The order in which the directives are executed is the order in which they
 	// are listed in this field.
@@ -105,20 +105,6 @@ type PromotionSpec struct {
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:items:XValidation:message="Promotion step must have uses set and must not reference a task",rule="has(self.uses) && !has(self.task)"
 	Steps []PromotionStep `json:"steps" protobuf:"bytes,3,rep,name=steps"`
-}
-
-// PromotionVariable describes a single variable that may be referenced by
-// expressions in promotion steps.
-type PromotionVariable struct {
-	// Name is the name of the variable.
-	//
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Pattern=^[a-zA-Z_]\w*$
-	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
-	// Value is the value of the variable. It is allowed to utilize expressions
-	// in the value.
-	// See https://docs.kargo.io/user-guide/reference-docs/expressions for details.
-	Value string `json:"value,omitempty" protobuf:"bytes,2,opt,name=value"`
 }
 
 // PromotionTaskReference describes a reference to a PromotionTask.
@@ -217,7 +203,7 @@ type PromotionStep struct {
 	// Vars is a list of variables that can be referenced by expressions in
 	// the step's Config. The values override the values specified in the
 	// PromotionSpec.
-	Vars []PromotionVariable `json:"vars,omitempty" protobuf:"bytes,6,rep,name=vars"`
+	Vars []ExpressionVariable `json:"vars,omitempty" protobuf:"bytes,6,rep,name=vars"`
 	// Config is opaque configuration for the PromotionStep that is understood
 	// only by each PromotionStep's implementation. It is legal to utilize
 	// expressions in defining values at any level of this block.

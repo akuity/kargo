@@ -173,8 +173,12 @@ spec:
                                 PromotionSpec.
                               items:
                                 description: |-
-                                  PromotionVariable describes a single variable that may be referenced by
-                                  expressions in promotion steps.
+                                  ExpressionVariable describes a single variable that may be referenced by
+                                  expressions in the context of a ClusterPromotionTask, PromotionTask,
+                                  Promotion, AnalysisRun arguments, or other objects that support expressions.
+
+                                  It is used to pass information to the expression evaluation engine, and to
+                                  allow for dynamic evaluation of expressions based on the variable values.
                                 properties:
                                   name:
                                     description: Name is the name of the variable.
@@ -204,8 +208,12 @@ spec:
                           promotion steps.
                         items:
                           description: |-
-                            PromotionVariable describes a single variable that may be referenced by
-                            expressions in promotion steps.
+                            ExpressionVariable describes a single variable that may be referenced by
+                            expressions in the context of a ClusterPromotionTask, PromotionTask,
+                            Promotion, AnalysisRun arguments, or other objects that support expressions.
+
+                            It is used to pass information to the expression evaluation engine, and to
+                            allow for dynamic evaluation of expressions based on the variable values.
                           properties:
                             name:
                               description: Name is the name of the variable.
@@ -326,8 +334,12 @@ spec:
                   and the arguments of the Verification.
                 items:
                   description: |-
-                    PromotionVariable describes a single variable that may be referenced by
-                    expressions in promotion steps.
+                    ExpressionVariable describes a single variable that may be referenced by
+                    expressions in the context of a ClusterPromotionTask, PromotionTask,
+                    Promotion, AnalysisRun arguments, or other objects that support expressions.
+
+                    It is used to pass information to the expression evaluation engine, and to
+                    allow for dynamic evaluation of expressions based on the variable values.
                   properties:
                     name:
                       description: Name is the name of the variable.

@@ -88,7 +88,7 @@
                       "vars": {
                         "description": "Vars is a list of variables that can be referenced by expressions in\nthe step's Config. The values override the values specified in the\nPromotionSpec.",
                         "items": {
-                          "description": "PromotionVariable describes a single variable that may be referenced by\nexpressions in promotion steps.",
+                          "description": "ExpressionVariable describes a single variable that may be referenced by\nexpressions in the context of a ClusterPromotionTask, PromotionTask,\nPromotion, AnalysisRun arguments, or other objects that support expressions.\n\nIt is used to pass information to the expression evaluation engine, and to\nallow for dynamic evaluation of expressions based on the variable values.",
                           "properties": {
                             "name": {
                               "description": "Name is the name of the variable.",
@@ -123,7 +123,7 @@
                 "vars": {
                   "description": "Vars is a list of variables that can be referenced by expressions in\npromotion steps.",
                   "items": {
-                    "description": "PromotionVariable describes a single variable that may be referenced by\nexpressions in promotion steps.",
+                    "description": "ExpressionVariable describes a single variable that may be referenced by\nexpressions in the context of a ClusterPromotionTask, PromotionTask,\nPromotion, AnalysisRun arguments, or other objects that support expressions.\n\nIt is used to pass information to the expression evaluation engine, and to\nallow for dynamic evaluation of expressions based on the variable values.",
                     "properties": {
                       "name": {
                         "description": "Name is the name of the variable.",
@@ -226,7 +226,7 @@
         "vars": {
           "description": "Vars is a list of variables that can be referenced by the PromotionTemplate\nand the arguments of the Verification.",
           "items": {
-            "description": "PromotionVariable describes a single variable that may be referenced by\nexpressions in promotion steps.",
+            "description": "ExpressionVariable describes a single variable that may be referenced by\nexpressions in the context of a ClusterPromotionTask, PromotionTask,\nPromotion, AnalysisRun arguments, or other objects that support expressions.\n\nIt is used to pass information to the expression evaluation engine, and to\nallow for dynamic evaluation of expressions based on the variable values.",
             "properties": {
               "name": {
                 "description": "Name is the name of the variable.",

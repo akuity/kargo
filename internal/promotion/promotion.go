@@ -54,7 +54,7 @@ type Context struct {
 	State promotion.State
 	// Vars is a list of variables definitions that can be used by the
 	// Steps.
-	Vars []kargoapi.PromotionVariable
+	Vars []kargoapi.ExpressionVariable
 	// Secrets is a map of secrets that can be used by the Steps.
 	Secrets map[string]map[string]string
 	// Actor is the name of the actor triggering the Promotion.
@@ -81,7 +81,7 @@ type Step struct {
 	Retry *kargoapi.PromotionStepRetry
 	// Vars is a list of variables definitions that can be used by the
 	// Step.
-	Vars []kargoapi.PromotionVariable
+	Vars []kargoapi.ExpressionVariable
 	// Config is an opaque JSON to be passed to the StepRunner executing this
 	// step.
 	Config []byte

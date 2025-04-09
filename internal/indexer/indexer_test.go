@@ -329,7 +329,7 @@ func TestRunningPromotionsByArgoCDApplications(t *testing.T) {
 				},
 				Spec: kargoapi.PromotionSpec{
 					Stage: "fake-stage",
-					Vars: []kargoapi.PromotionVariable{
+					Vars: []kargoapi.ExpressionVariable{
 						{
 							Name:  "app",
 							Value: "fake-app-from-var",
@@ -361,7 +361,7 @@ func TestRunningPromotionsByArgoCDApplications(t *testing.T) {
 						},
 						{
 							Uses: "argocd-update",
-							Vars: []kargoapi.PromotionVariable{
+							Vars: []kargoapi.ExpressionVariable{
 								{
 									Name:  "app",
 									Value: "fake-app-from-step-var",
@@ -381,7 +381,7 @@ func TestRunningPromotionsByArgoCDApplications(t *testing.T) {
 						},
 						{
 							Uses: "argocd-update",
-							Vars: []kargoapi.PromotionVariable{
+							Vars: []kargoapi.ExpressionVariable{
 								{
 									Name:  "input",
 									Value: "${{ outputs.composition.name }}",

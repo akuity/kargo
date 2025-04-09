@@ -222,7 +222,7 @@ type StageSpec struct {
 	Shard string `json:"shard,omitempty" protobuf:"bytes,4,opt,name=shard"`
 	// Vars is a list of variables that can be referenced by the PromotionTemplate
 	// and the arguments of the Verification.
-	Vars []PromotionVariable `json:"vars,omitempty" protobuf:"bytes,7,rep,name=vars"`
+	Vars []ExpressionVariable `json:"vars,omitempty" protobuf:"bytes,7,rep,name=vars"`
 	// RequestedFreight expresses the Stage's need for certain pieces of Freight,
 	// each having originated from a particular Warehouse. This list must be
 	// non-empty. In the common case, a Stage will request Freight having
@@ -332,7 +332,7 @@ type PromotionTemplate struct {
 type PromotionTemplateSpec struct {
 	// Vars is a list of variables that can be referenced by expressions in
 	// promotion steps.
-	Vars []PromotionVariable `json:"vars,omitempty" protobuf:"bytes,2,rep,name=vars"`
+	Vars []ExpressionVariable `json:"vars,omitempty" protobuf:"bytes,2,rep,name=vars"`
 	// Steps specifies the directives to be executed as part of a Promotion.
 	// The order in which the directives are executed is the order in which they
 	// are listed in this field.
