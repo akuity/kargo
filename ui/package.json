@@ -16,6 +16,8 @@
   "devDependencies": {
     "@apidevtools/json-schema-ref-parser": "^11.9.3",
     "@eslint/compat": "^1.2.7",
+    "@eslint/eslintrc": "^3.3.0",
+    "@eslint/js": "^9.22.0",
     "@openapi-contrib/openapi-schema-to-json-schema": "^5.1.0",
     "@tanstack/react-query-devtools": "^5.71.0",
     "@types/git-url-parse": "^9.0.3",
