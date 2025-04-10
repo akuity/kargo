@@ -231,6 +231,9 @@ type HelmTemplateConfig struct {
 	Path string `json:"path"`
 	// ReleaseName to use for the rendered manifests.
 	ReleaseName string `json:"releaseName"`
+	// Allows for amending chart configuration inline as one would with the `helm template`
+	// command's `--set` flag.
+	SetValues []SetValues `json:"setValues,omitempty"`
 	// Whether to skip tests when rendering the manifests.
 	SkipTests bool `json:"skipTests,omitempty"`
 	// Whether to use the release name in the output path (instead of the chart name). This only
@@ -238,6 +241,14 @@ type HelmTemplateConfig struct {
 	UseReleaseName bool `json:"useReleaseName,omitempty"`
 	// ValuesFiles to use for rendering the Helm chart.
 	ValuesFiles []string `json:"valuesFiles,omitempty"`
+}
+
+type SetValues struct {
+	// The key whose value should be set. For nested values, use dots to delimit key parts. e.g.
+	// `image.tag`.
+	Key string `json:"key"`
+	// The new value for the key.
+	Value string `json:"value"`
 }
 
 type HelmUpdateChartConfig struct {
