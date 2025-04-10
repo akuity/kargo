@@ -472,6 +472,37 @@ func TestVerifyIDPIssuedTokenFn(t *testing.T) {
 				require.Equal(t, []string{"avengers", "shield"}, c["groups"])
 			},
 		},
+		{
+			name: "custom username claim token is successfully verified",
+			authInterceptor: &authInterceptor{
+				cfg: config.ServerConfig{
+					OIDCConfig: &libOIDC.Config{
+						UsernameClaim: "oidc_username_claim",
+					},
+				},
+				oidcTokenVerifyFn: func(
+					context.Context,
+					string,
+				) (*oidc.IDToken, error) {
+					return &oidc.IDToken{
+						Subject: "correct-username",
+					}, nil
+				},
+				oidcExtractClaimsFn: func(*oidc.IDToken) (claims, error) {
+					return claims{
+						"oidc_username_claim":    "oidc_provider_username",
+						"oidc_provider_username": "correct-username",
+						"sub":                    "shouldnt-be-this-one",
+						"email":                  "wrong-username@failed-test.io",
+					}, nil
+				},
+			},
+			assertions: func(t *testing.T, c claims, err error) {
+				require.NoError(t, err)
+				require.Equal(t, "oidc_provider_username", c["oidc_username_claim"])
+				require.Equal(t, "correct-username", c["oidc_provider_username"])
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
