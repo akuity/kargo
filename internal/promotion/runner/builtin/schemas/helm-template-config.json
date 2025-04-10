@@ -59,7 +59,7 @@
     },
     "setValues": {
       "type": "array",
-      "description": "SetValues to use for rendering the Helm chart.",
+      "description": "Allows for amending chart configuration inline as one would with the `helm template` command's `--set` flag.",
       "items": {
         "$ref": "#/definitions/setValues"
       }
