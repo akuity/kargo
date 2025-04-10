@@ -9,7 +9,7 @@
       "properties": {
         "key": {
           "type": "string",
-          "description": "The key whose value needs to be templated. For nested values, use a YAML dot notation path.",
+          "description": "The key whose value should be set. For nested values, use dots to delimit key parts. e.g. `image.tag`.",
           "minLength": 1
         },
         "value": {
