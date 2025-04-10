@@ -13,6 +13,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { Description } from '@ui/features/common/description';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { StagePhaseIcon } from '@ui/features/common/stage-phase/stage-phase-icon';
@@ -92,6 +93,8 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
   const { data: config } = useQuery(getConfig);
   const shardKey = stage?.metadata?.labels['kargo.akuity.io/shard'] || '';
   const argocdShard = config?.argocdShards?.[shardKey];
+
+  const { stageTabs } = useExtensionsContext();
 
   return (
     <Drawer
@@ -180,6 +183,12 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                     />
                   )
                 },
+                ...stageTabs.map((data, index) => ({
+                  children: <data.component stage={stage} />,
+                  key: String(data.label + index),
+                  label: data.label,
+                  icon: data.icon
+                })),
                 {
                   key: TabsTypes.SETTINGS,
                   label: 'Settings',
