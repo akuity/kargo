@@ -231,7 +231,8 @@ type HelmTemplateConfig struct {
 	Path string `json:"path"`
 	// ReleaseName to use for the rendered manifests.
 	ReleaseName string `json:"releaseName"`
-	// SetValues to use for rendering the Helm chart.
+	// Allows for amending chart configuration inline as one would with the `helm template`
+	// command's `--set` flag.
 	SetValues []SetValues `json:"setValues,omitempty"`
 	// Whether to skip tests when rendering the manifests.
 	SkipTests bool `json:"skipTests,omitempty"`
@@ -243,10 +244,10 @@ type HelmTemplateConfig struct {
 }
 
 type SetValues struct {
-	// The key whose value needs to be templated. For nested values, use a YAML dot notation
-	// path.
+	// The key whose value should be set. For nested values, use dots to delimit key parts. e.g.
+	// `image.tag`.
 	Key string `json:"key"`
-	// The value to set.
+	// The new value for the key.
 	Value string `json:"value"`
 }
 

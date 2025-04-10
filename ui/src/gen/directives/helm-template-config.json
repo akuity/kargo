@@ -8,12 +8,12 @@
    "properties": {
     "key": {
      "type": "string",
-     "description": "The key whose value needs to be templated. For nested values, use a YAML dot notation path.",
+     "description": "The key whose value should be set. For nested values, use dots to delimit key parts. e.g. `image.tag`.",
      "minLength": 1
     },
     "value": {
      "type": "string",
-     "description": "The value to set."
+     "description": "The new value for the key."
     }
    }
   }
@@ -55,19 +55,19 @@
   },
   "setValues": {
    "type": "array",
-   "description": "SetValues to use for rendering the Helm chart.",
+   "description": "Allows for amending chart configuration inline as one would with the `helm template` command's `--set` flag.",
    "items": {
     "type": "object",
     "additionalProperties": false,
     "properties": {
      "key": {
       "type": "string",
-      "description": "The key whose value needs to be templated. For nested values, use a YAML dot notation path.",
+      "description": "The key whose value should be set. For nested values, use dots to delimit key parts. e.g. `image.tag`.",
       "minLength": 1
      },
      "value": {
       "type": "string",
-      "description": "The value to set."
+      "description": "The new value for the key."
      }
     }
    }
