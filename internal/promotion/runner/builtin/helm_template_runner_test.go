@@ -349,16 +349,17 @@ func Test_helmTemplateRunner_composeValues(t *testing.T) {
 	tests := []struct {
 		name           string
 		workDir        string
-		valuesFiles    []string
-		setValues      []builtin.SetValues
+		cfg            builtin.HelmTemplateConfig
 		valuesContents map[string]string
 		assertions     func(*testing.T, map[string]any, error)
 	}{
 		{
-			name:        "successful composition",
-			workDir:     t.TempDir(),
-			valuesFiles: []string{"values1.yaml", "values2.yaml"},
-			setValues:   []builtin.SetValues{{Key: "key3", Value: "value3"}},
+			name:    "successful composition",
+			workDir: t.TempDir(),
+			cfg: builtin.HelmTemplateConfig{
+				ValuesFiles: []string{"values1.yaml", "values2.yaml"},
+				SetValues:   []builtin.SetValues{{Key: "key3", Value: "value3"}},
+			},
 			valuesContents: map[string]string{
 				"values1.yaml": "key1: value1",
 				"values2.yaml": "key2: value2",
@@ -373,10 +374,12 @@ func Test_helmTemplateRunner_composeValues(t *testing.T) {
 			},
 		},
 		{
-			name:           "successful composition with no files",
-			workDir:        t.TempDir(),
-			valuesFiles:    []string{},
-			setValues:      []builtin.SetValues{{Key: "key3", Value: "value3"}},
+			name:    "successful composition with no files",
+			workDir: t.TempDir(),
+			cfg: builtin.HelmTemplateConfig{
+				ValuesFiles: []string{},
+				SetValues:   []builtin.SetValues{{Key: "key3", Value: "value3"}},
+			},
 			valuesContents: map[string]string{},
 			assertions: func(t *testing.T, result map[string]any, err error) {
 				assert.NoError(t, err)
@@ -386,10 +389,12 @@ func Test_helmTemplateRunner_composeValues(t *testing.T) {
 			},
 		},
 		{
-			name:        "successful composition with no set values",
-			workDir:     t.TempDir(),
-			valuesFiles: []string{"values1.yaml", "values2.yaml"},
-			setValues:   []builtin.SetValues{},
+			name:    "successful composition with no set values",
+			workDir: t.TempDir(),
+			cfg: builtin.HelmTemplateConfig{
+				ValuesFiles: []string{"values1.yaml", "values2.yaml"},
+				SetValues:   []builtin.SetValues{},
+			},
 			valuesContents: map[string]string{
 				"values1.yaml": "key1: value1",
 				"values2.yaml": "key2: value2",
@@ -402,10 +407,12 @@ func Test_helmTemplateRunner_composeValues(t *testing.T) {
 			},
 		},
 		{
-			name:        "file not found",
-			workDir:     t.TempDir(),
-			valuesFiles: []string{"non_existent.yaml"},
-			setValues:   []builtin.SetValues{},
+			name:    "file not found",
+			workDir: t.TempDir(),
+			cfg: builtin.HelmTemplateConfig{
+				ValuesFiles: []string{"non_existent.yaml"},
+				SetValues:   []builtin.SetValues{},
+			},
 			assertions: func(t *testing.T, result map[string]any, err error) {
 				assert.Error(t, err)
 				assert.Nil(t, result)
@@ -420,7 +427,7 @@ func Test_helmTemplateRunner_composeValues(t *testing.T) {
 			for p, c := range tt.valuesContents {
 				require.NoError(t, os.WriteFile(filepath.Join(tt.workDir, p), []byte(c), 0o600))
 			}
-			result, err := runner.composeValues(tt.workDir, tt.valuesFiles, tt.setValues)
+			result, err := runner.composeValues(tt.workDir, tt.cfg)
 			tt.assertions(t, result, err)
 		})
 	}
