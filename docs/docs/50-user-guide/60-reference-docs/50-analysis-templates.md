@@ -97,6 +97,40 @@ spec:
         jsonPath: "{$.results.ok}"
 ```
 
+## Interval and Count
+
+To collect multiple measurements over a longer duration, use the 
+`count` and `interval` fields. This allows you to define how many
+measurements to take and how frequently to take them.
+
+In the example below, the analysis is configured to take 20
+measurements at 5-minute intervals, resulting in a total duration
+of approximately 1 hour:
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: count-interval-example
+spec:
+  metrics:
+  - name: test
+    # Number of measurements to take
+    count: 20
+    # Time interval between each measurement as a duration string
+    interval: 5m
+    provider:
+      web:
+        url: https://pokeapi.co/api/v2/pokemon/pikachu
+```
+
+:::caution
+When specifying an `interval`, you must also specify a `count`. Without 
+it, the AnalysisRun would collect an indefinite amount of measurements
+and never complete (until terminated).
+:::
+
+
 ## Success Condition
 
 When interpreting the result of a query, an
