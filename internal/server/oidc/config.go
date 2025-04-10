@@ -22,6 +22,8 @@ type Config struct {
 	// AdditionalScopes are any more scopes to be requested during the authorization code flow
 	// on top of the default Scopes.
 	AdditionalScopes []string `envconfig:"OIDC_ADDITIONAL_SCOPES"`
+	// UsernameClaim is the claim to use as the username for the user.
+	UsernameClaim string `envconfig:"OIDC_USERNAME_CLAIM" default:"email"`
 
 	// GlobalServiceAccountNamespaces is the list of namespaces to look up
 	// for shared service accounts.
