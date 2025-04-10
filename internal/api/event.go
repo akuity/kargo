@@ -21,7 +21,14 @@ func FormatEventControllerActor(name string) string {
 // 3. If the subject is available, it returns subject in "subject:<subject>" format.
 // 4. Otherwise, it returns EventActorUnknown.
 func FormatEventUserActor(u user.Info) string {
-	var email, subject string
+	var email, subject, username string
+	if u.Username != "" && u.Username != "email" {
+		if usernameClaim, ok := u.Claims[u.Username]; ok {
+			if usernameStr, ok := usernameClaim.(string); ok {
+				username = usernameStr
+			}
+		}
+	}
 	if emailClaim, ok := u.Claims["email"]; ok {
 		if emailStr, ok := emailClaim.(string); ok {
 			email = emailStr
@@ -36,6 +43,8 @@ func FormatEventUserActor(u user.Info) string {
 	switch {
 	case u.IsAdmin:
 		return kargoapi.EventActorAdmin
+	case username != "":
+		return kargoapi.EventActorOidcUsernamePrefix + username
 	case email != "":
 		return kargoapi.EventActorEmailPrefix + email
 	case subject != "":

@@ -404,6 +404,7 @@ func (a *authInterceptor) authenticate(
 				Claims:                     c,
 				ServiceAccountsByNamespace: sa,
 				BearerToken:                rawToken,
+				Username:                   a.cfg.OIDCConfig.UsernameClaim,
 			},
 		), nil
 

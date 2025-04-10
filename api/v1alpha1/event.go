@@ -40,5 +40,6 @@ const (
 	EventActorEmailPrefix          = "email:"
 	EventActorSubjectPrefix        = "subject:"
 	EventActorKubernetesUserPrefix = "kubernetes:"
+	EventActorOidcUsernamePrefix   = "oidc-username:"
 	EventActorUnknown              = "unknown actor"
 )
