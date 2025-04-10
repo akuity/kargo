@@ -823,6 +823,29 @@ message Project {
   optional ProjectStatus status = 3;
 }
 
+// ProjectConfig is a resource type that describes the configuration of a
+// Project.
+message ProjectConfig {
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
+  // Spec describes the configuration of a Project.
+  optional ProjectConfigSpec spec = 2;
+}
+
+// ProjectConfigList is a list of ProjectConfig resources.
+message ProjectConfigList {
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+
+  repeated ProjectConfig items = 2;
+}
+
+// ProjectConfigSpec describes the configuration of a Project.
+message ProjectConfigSpec {
+  // PromotionPolicies defines policies governing the promotion of Freight to
+  // specific Stages within the Project.
+  repeated PromotionPolicy promotionPolicies = 1;
+}
+
 // ProjectList is a list of Project resources.
 message ProjectList {
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;

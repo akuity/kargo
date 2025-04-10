@@ -35,6 +35,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&StageList{},
 		&Project{},
 		&ProjectList{},
+		&ProjectConfig{},
+		&ProjectConfigList{},
 		&Promotion{},
 		&PromotionList{},
 		&PromotionTask{},

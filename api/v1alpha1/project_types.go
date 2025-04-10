@@ -56,22 +56,6 @@ type ProjectSpec struct {
 	PromotionPolicies []PromotionPolicy `json:"promotionPolicies,omitempty" protobuf:"bytes,1,rep,name=promotionPolicies"`
 }
 
-// PromotionPolicy defines policies governing the promotion of Freight to a
-// specific Stage.
-type PromotionPolicy struct {
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-	Stage string `json:"stage" protobuf:"bytes,1,opt,name=stage"`
-	// AutoPromotionEnabled indicates whether new Freight can automatically be
-	// promoted into the Stage referenced by the Stage field. Note: There are may
-	// be other conditions also required for an auto-promotion to occur. This
-	// field defaults to false, but is commonly set to true for Stages that
-	// subscribe to Warehouses instead of other, upstream Stages. This allows
-	// users to define Stages that are automatically updated as soon as new
-	// artifacts are detected.
-	AutoPromotionEnabled bool `json:"autoPromotionEnabled,omitempty" protobuf:"varint,2,opt,name=autoPromotionEnabled"`
-}
-
 // ProjectStatus describes a Project's current status.
 type ProjectStatus struct {
 	// Conditions contains the last observations of the Project's current
