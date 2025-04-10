@@ -104,7 +104,7 @@ To collect multiple measurements over a longer duration, use the
 measurements to take and how frequently to take them.
 
 In the example below, the analysis is configured to take 20
-measurements at 5-minute intervals, resulting in a total duration
+measurements at 3-minute intervals, resulting in a total duration
 of approximately 1 hour:
 
 ```yaml
@@ -118,7 +118,7 @@ spec:
     # Number of measurements to take
     count: 20
     # Time interval between each measurement as a duration string
-    interval: 5m
+    interval: 3m
     provider:
       web:
         url: https://pokeapi.co/api/v2/pokemon/pikachu
