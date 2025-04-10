@@ -14,7 +14,7 @@
         },
         "value": {
           "type": "string",
-          "description": "The value to set."
+          "description": "The new value for the key."
         }
       },
       "required": ["key", "value"]
