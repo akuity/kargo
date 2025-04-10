@@ -370,8 +370,9 @@ any logs that it can access via an HTTP GET request.
 
 To facilitate this, operators may, at the time of installation, provide a URL
 template that the API server can use to construct the URL for any job metric logs
-as a function of attributes such as `Project` name, `Stage` name, `AnalysisRun`
-name, and more.
+as a function of `project` (name), `namespace` (always equal to the `Project`'s
+name), `shard`, `stage` (name), `analysisRun` (name), `metricName`,
+`jobNamespace`, `jobName`, and `container` (name).
 
 A token can be specified by referencing a Kubernetes `Secret` that is managed
 "out of band." HTTP headers may also be specified, and may reference the token
@@ -385,7 +386,7 @@ api:
     integrationEnabled: true
     logs:
       enabled: true
-      urlTemplate: https://logs.kargo.example.com/${{project}}/${{analysisRun}}/${{job}}/${{container}}
+      urlTemplate: https://logs.kargo.example.com/${{project}}/${{analysisRun}}/${{jobName}}/${{container}}
       tokenSecret:
         name: kargo-logs-token
         key: token
