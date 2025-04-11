@@ -40,6 +40,7 @@ const (
 	EventActorEmailPrefix          = "email:"
 	EventActorSubjectPrefix        = "subject:"
 	EventActorKubernetesUserPrefix = "kubernetes:"
-	EventActorOidcUsernamePrefix   = "oidc-username:"
 	EventActorUnknown              = "unknown actor"
 )
+
+var EventActorOIDCClaimPrefix = os.GetEnv("OIDC_USERNAME_CLAIM", "email") + ":"
