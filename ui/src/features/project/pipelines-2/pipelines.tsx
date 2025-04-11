@@ -27,16 +27,19 @@ import {
 import Link from 'antd/es/typography/Link';
 import classNames from 'classnames';
 import { formatDistance } from 'date-fns';
-import { useMemo, useRef, useState } from 'react';
+import { ReactNode, useMemo, useRef, useState } from 'react';
 
 import { ColorContext } from '@ui/context/colors';
 import { LoadingState } from '@ui/features/common';
 import { ArtifactMetadata } from '@ui/features/freight/artifact-metadata';
 import { flattenFreightOrigin } from '@ui/features/freight/flatten-freight-origin-utils';
 import { FreightStatusList } from '@ui/features/freight/freight-status-list';
-import { getImageSource } from '@ui/features/freight-timeline/open-container-initiative-utils';
+import {
+  getGitCommitURL,
+  getImageSource
+} from '@ui/features/freight-timeline/open-container-initiative-utils';
 import { queryFreight } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { Freight, Project } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Chart, Freight, GitCommit, Image, Project } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import './pipelines.less';
@@ -403,62 +406,16 @@ const FreightCard = (props: { freight: Freight }) => {
       {!freightTimelineControllerContext?.preferredFilter?.artifactCarousel?.enabled && (
         <div className='flex gap-1 justify-center'>
           {props.freight?.commits?.map((commit) => (
-            <Tag title={commit?.repoURL} bordered={false} color='geekblue' key={commit?.id}>
-              {commit?.id?.slice(0, 7)}
-            </Tag>
+            <FreightCard.Artifact key={commit?.repoURL} artifact={commit} />
           ))}
 
           {props.freight?.charts?.map((chart) => (
-            <Tag
-              title={`${chart.repoURL}:${chart.version}`}
-              bordered={false}
-              color='geekblue'
-              key={chart.repoURL}
-            >
-              {shortVersion(chart?.version)}
-            </Tag>
+            <FreightCard.Artifact key={chart?.repoURL} artifact={chart} />
           ))}
 
-          {props.freight?.images?.map((image) => {
-            let imageSourceFromOci = '';
-
-            if (image?.annotations) {
-              imageSourceFromOci = getImageSource(image.annotations);
-            }
-
-            const TagComponent = (
-              <Tag
-                title={`${image.repoURL}:${image.tag}`}
-                bordered={false}
-                color='geekblue'
-                key={image?.repoURL}
-              >
-                {shortVersion(image?.tag)}
-
-                {!!imageSourceFromOci && (
-                  <FontAwesomeIcon
-                    icon={faExternalLink}
-                    className='text-blue-600 ml-1 text-[8px]'
-                  />
-                )}
-              </Tag>
-            );
-
-            if (imageSourceFromOci) {
-              return (
-                <Link
-                  key={image?.repoURL}
-                  href={imageSourceFromOci}
-                  target='_blank'
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {TagComponent}
-                </Link>
-              );
-            }
-
-            return TagComponent;
-          })}
+          {props.freight?.images?.map((image) => (
+            <FreightCard.Artifact key={image?.repoURL} artifact={image} />
+          ))}
         </div>
       )}
 
@@ -486,6 +443,104 @@ const FreightCard = (props: { freight: Freight }) => {
       </div>
     </div>
   );
+};
+
+FreightCard.Artifact = (props: { artifact: GitCommit | Chart | Image; expand?: boolean }) => {
+  const artifactType = props.artifact?.$typeName;
+
+  let Expand: ReactNode;
+
+  if (props.expand) {
+    Expand = (
+      <span className='text-[10px] ml-1'>
+        {humanComprehendableArtifact(props.artifact.repoURL)}
+      </span>
+    );
+  }
+
+  if (artifactType === 'github.com.akuity.kargo.api.v1alpha1.GitCommit') {
+    const url = getGitCommitURL(props.artifact.repoURL, props.artifact.id);
+
+    const TagComponent = (
+      <Tag title={props.artifact.repoURL} bordered={false} color='geekblue' key={props.artifact.id}>
+        {props.artifact.id.slice(0, 7)}
+
+        {!!url && (
+          <FontAwesomeIcon icon={faExternalLink} className='text-blue-600 text-[8px] ml-1' />
+        )}
+
+        {Expand}
+      </Tag>
+    );
+
+    if (url) {
+      return (
+        <Link
+          key={props.artifact.repoURL}
+          href={url}
+          target='_blank'
+          onClick={(e) => e.stopPropagation()}
+        >
+          {TagComponent}
+        </Link>
+      );
+    }
+
+    return TagComponent;
+  }
+
+  if (artifactType === 'github.com.akuity.kargo.api.v1alpha1.Chart') {
+    return (
+      <Tag
+        title={`${props.artifact.repoURL}:${props.artifact.version}`}
+        bordered={false}
+        color='geekblue'
+        key={props.artifact.repoURL}
+      >
+        {shortVersion(props.artifact.version)}
+
+        {Expand}
+      </Tag>
+    );
+  }
+
+  let imageSourceFromOci = '';
+
+  if (props.artifact.annotations) {
+    imageSourceFromOci = getImageSource(props.artifact.annotations);
+  }
+
+  const TagComponent = (
+    <Tag
+      title={`${props.artifact.repoURL}:${props.artifact.tag}`}
+      bordered={false}
+      color='geekblue'
+      key={props.artifact?.repoURL}
+    >
+      {shortVersion(props.artifact?.tag)}
+
+      {!!imageSourceFromOci && (
+        <FontAwesomeIcon icon={faExternalLink} className='text-blue-600 ml-1 text-[8px]' />
+      )}
+
+      {Expand}
+    </Tag>
+  );
+
+  if (imageSourceFromOci) {
+    return (
+      <Link
+        key={props.artifact?.repoURL}
+        href={imageSourceFromOci}
+        target='_blank'
+        onClick={(e) => e.stopPropagation()}
+      >
+        {TagComponent}
+      </Link>
+    );
+  }
+
+  return TagComponent;
 };
 
 FreightCard.ArtifactCarousel = (props: { freight: Freight }) => {
@@ -523,53 +578,8 @@ FreightCard.ArtifactCarousel = (props: { freight: Freight }) => {
           });
         }}
       />
-      {activeArtifact?.$typeName === 'github.com.akuity.kargo.api.v1alpha1.GitCommit' && (
-        <Tag
-          title={activeArtifact?.repoURL}
-          bordered={false}
-          color='geekblue'
-          key={activeArtifact?.id}
-          className='text-center'
-        >
-          {activeArtifact?.id?.slice(0, 7)}
 
-          <span className='text-[10px] ml-1'>
-            {humanComprehendableArtifact(activeArtifact?.repoURL)}
-          </span>
-        </Tag>
-      )}
-
-      {activeArtifact?.$typeName === 'github.com.akuity.kargo.api.v1alpha1.Chart' && (
-        <Tag
-          title={`${activeArtifact.repoURL}:${activeArtifact.version}`}
-          bordered={false}
-          color='geekblue'
-          key={activeArtifact.repoURL}
-          className='text-center'
-        >
-          {shortVersion(activeArtifact?.version)}
-
-          <span className='text-[10px] ml-1'>
-            {humanComprehendableArtifact(activeArtifact?.repoURL)}
-          </span>
-        </Tag>
-      )}
-
-      {activeArtifact?.$typeName === 'github.com.akuity.kargo.api.v1alpha1.Image' && (
-        <Tag
-          title={`${activeArtifact.repoURL}:${activeArtifact.tag}`}
-          bordered={false}
-          color='geekblue'
-          key={activeArtifact?.repoURL}
-          className='text-center'
-        >
-          {shortVersion(activeArtifact?.tag)}
-
-          <span className='text-[10px] ml-1'>
-            {humanComprehendableArtifact(activeArtifact?.repoURL)}
-          </span>
-        </Tag>
-      )}
+      <FreightCard.Artifact artifact={activeArtifact} expand />
 
       <Button
         type='text'
