@@ -7,7 +7,7 @@ import { generatePath, useNavigate, useParams } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { LoadingState } from '@ui/features/common';
 import { BaseHeader } from '@ui/features/common/layout/base-header';
-import { Pipelines } from '@ui/features/project/pipelines/pipelines';
+import { Pipelines } from '@ui/features/project/pipelines-2/pipelines';
 import { useProjectBreadcrumbs } from '@ui/features/project/project-utils';
 import { getProject } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { Project as _Project } from '@ui/gen/api/v1alpha1/generated_pb';
@@ -67,11 +67,7 @@ export const Project = ({
         </Space>
       </BaseHeader>
 
-      <Pipelines
-        project={data?.result?.value as _Project}
-        creatingStage={creatingStage}
-        creatingWarehouse={creatingWarehouse}
-      />
+      <Pipelines project={data?.result?.value as _Project} />
     </div>
   );
 };
