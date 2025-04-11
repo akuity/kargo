@@ -2,11 +2,13 @@ package gar
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"cloud.google.com/go/compute/metadata"
 	"github.com/patrickmn/go-cache"
+	"google.golang.org/api/googleapi"
 	"google.golang.org/api/iamcredentials/v1"
 
 	"github.com/akuity/kargo/internal/credentials"
@@ -14,7 +16,8 @@ import (
 )
 
 const (
-	gcpResourceNameFormat = "projects/-/serviceAccounts/kargo-project-%s@%s.iam.gserviceaccount.com"
+	gcpResourceNameFormat         = "projects/-/serviceAccounts/kargo-project-%s@%s.iam.gserviceaccount.com"
+	gcpFallbackResourceNameFormat = "projects/-/serviceAccounts/kargo-controller@%s.iam.gserviceaccount.com"
 )
 
 type WorkloadIdentityFederationProvider struct {
@@ -135,6 +138,31 @@ func (p *WorkloadIdentityFederationProvider) getAccessToken(
 		},
 	).Do()
 	if err != nil {
+		var googleErr *googleapi.Error
+		if errors.As(err, &googleErr) {
+			switch googleErr.Code {
+			// fallback to default controller identity only if GCP api return 404 code
+			// project-specific	service account do not exists
+			case 404:
+				logger.Debug("Fallback to default controller identity")
+				resp, err := iamSvc.Projects.ServiceAccounts.GenerateAccessToken(
+					fmt.Sprintf(gcpFallbackResourceNameFormat, p.projectID),
+					&iamcredentials.GenerateAccessTokenRequest{
+						Scope: []string{
+							iamcredentials.CloudPlatformScope,
+						},
+					},
+				).Do()
+				if err != nil {
+					logger.Error(err, "error generating access token")
+					return "", err
+				}
+				return resp.AccessToken, nil
+			default:
+				logger.Error(err, "error generating access token")
+				return "", err
+			}
+		}
 		logger.Error(err, "error generating access token")
 		return "", nil
 	}
