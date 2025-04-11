@@ -104,6 +104,7 @@ func (p *WorkloadIdentityFederationProvider) GetCredentials(
 		return nil, nil
 	}
 
+	// Cache the token
 	p.tokenCache.Set(cacheKey, accessToken, cache.DefaultExpiration)
 
 	return &credentials.Credentials{
