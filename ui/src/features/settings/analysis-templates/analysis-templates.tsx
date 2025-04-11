@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { faPencil, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Table } from 'antd';
+import { Button, Card, Table } from 'antd';
 import { format } from 'date-fns';
 
 import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
@@ -34,83 +34,87 @@ export const ClusterAnalysisTemplatesList = () => {
   );
 
   return (
-    <Table<ClusterAnalysisTemplate>
-      dataSource={data?.clusterAnalysisTemplates}
-      pagination={{ hideOnSinglePage: true }}
-      rowKey={(i) => i.metadata?.name || ''}
-      loading={isLoading}
-      expandable={descriptionExpandable()}
-      className='w-full'
+    <Card
+      title='Cluster Analysis Templates'
+      type='inner'
+      className='min-h-full'
+      extra={
+        <Button icon={<FontAwesomeIcon icon={faPlus} />} onClick={() => showCreate()}>
+          Add Template
+        </Button>
+      }
     >
-      <Table.Column<ClusterAnalysisTemplate>
-        title='Creation Date'
-        width={200}
-        render={(_, template) => {
-          const date = timestampDate(template.metadata?.creationTimestamp);
-          return date ? format(date, 'MMM do yyyy HH:mm:ss') : '';
-        }}
-      />
-      <Table.Column<ClusterAnalysisTemplate> title='Name' dataIndex={['metadata', 'name']} />
-      <Table.Column<ClusterAnalysisTemplate>
-        width={260}
-        title={
-          <div className='text-right'>
-            <Button
-              type='primary'
-              className='ml-auto text-xs font-semibold'
-              icon={<FontAwesomeIcon icon={faPlus} />}
-              onClick={() => showCreate()}
-            >
-              ADD TEMPLATE
-            </Button>
-          </div>
-        }
-        render={(_, template) => (
-          <div className='flex gap-2 justify-end'>
-            <Button
-              icon={<FontAwesomeIcon icon={faPencil} />}
-              className='mr-2 ml-auto'
-              onClick={() => {
-                showEdit((p) => (
-                  <EditClusterAnalysisTemplateModal
-                    {...p}
-                    templateName={template.metadata?.name || ''}
-                  />
-                ));
-              }}
-            >
-              Edit
-            </Button>
-            <Button
-              icon={<FontAwesomeIcon icon={faTrash} />}
-              danger
-              loading={isDeleting}
-              onClick={() => {
-                confirm({
-                  title: (
-                    <div className='flex items-center'>
-                      <FontAwesomeIcon icon={faTrash} className='mr-2' />
-                      Delete Cluster Analysis Template
-                    </div>
-                  ),
-                  content: (
-                    <p>
-                      Are you sure you want to delete ClusterAnalysisTemplate{' '}
-                      <b>{template?.metadata?.name}</b>?
-                    </p>
-                  ),
-                  onOk: () => {
-                    deleteTemplate({ name: template?.metadata?.name || '' });
-                  },
-                  hide: () => {}
-                });
-              }}
-            >
-              Delete
-            </Button>
-          </div>
-        )}
-      />
-    </Table>
+      <Table<ClusterAnalysisTemplate>
+        dataSource={data?.clusterAnalysisTemplates}
+        pagination={{ hideOnSinglePage: true }}
+        rowKey={(i) => i.metadata?.name || ''}
+        loading={isLoading}
+        expandable={descriptionExpandable()}
+        className='w-full'
+      >
+        <Table.Column<ClusterAnalysisTemplate>
+          title='Creation Date'
+          width={200}
+          render={(_, template) => {
+            const date = timestampDate(template.metadata?.creationTimestamp);
+            return date ? format(date, 'MMM do yyyy HH:mm:ss') : '';
+          }}
+        />
+        <Table.Column<ClusterAnalysisTemplate> title='Name' dataIndex={['metadata', 'name']} />
+        <Table.Column<ClusterAnalysisTemplate>
+          width={260}
+          render={(_, template) => (
+            <div className='flex gap-2 justify-end'>
+              <Button
+                icon={<FontAwesomeIcon icon={faPencil} />}
+                className='mr-2 ml-auto'
+                onClick={() => {
+                  showEdit((p) => (
+                    <EditClusterAnalysisTemplateModal
+                      {...p}
+                      templateName={template.metadata?.name || ''}
+                    />
+                  ));
+                }}
+                size='small'
+                color='default'
+                variant='filled'
+              >
+                Edit
+              </Button>
+              <Button
+                icon={<FontAwesomeIcon icon={faTrash} />}
+                loading={isDeleting}
+                onClick={() => {
+                  confirm({
+                    title: (
+                      <div className='flex items-center'>
+                        <FontAwesomeIcon icon={faTrash} className='mr-2' />
+                        Delete Cluster Analysis Template
+                      </div>
+                    ),
+                    content: (
+                      <p>
+                        Are you sure you want to delete ClusterAnalysisTemplate{' '}
+                        <b>{template?.metadata?.name}</b>?
+                      </p>
+                    ),
+                    onOk: () => {
+                      deleteTemplate({ name: template?.metadata?.name || '' });
+                    },
+                    hide: () => {}
+                  });
+                }}
+                size='small'
+                color='danger'
+                variant='filled'
+              >
+                Delete
+              </Button>
+            </div>
+          )}
+        />
+      </Table>
+    </Card>
   );
 };

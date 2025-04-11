@@ -10,9 +10,7 @@ export const paths = {
   createWarehouse: '/project/:name/create-warehouse',
   projectSettings: '/project/:name/settings',
   user: '/user',
-  settings: '/settings/',
-  settingsAnalysisTemplates: '/settings/analysis-templates',
-  settingsClusterPromotionTasks: '/settings/cluster-promotion-tasks',
+  settings: '/settings',
   analysisRunLogs: '/ext/project/:name/stage/:stageName/analysis-run/:analysisRunId/logs',
   promotionTasks: '/project/:name/promotion-tasks',
 
