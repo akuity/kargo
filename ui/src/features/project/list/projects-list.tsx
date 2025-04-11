@@ -55,12 +55,22 @@ export const ProjectsList = () => {
 
   if (isLoading) return <LoadingState />;
 
-  if (!data || data.projects.length === 0) return <Empty />;
+  const isEmpty = !data || data.projects.length === 0;
+  const projectListFilter = () => <ProjectListFilter onChange={handleFilterChange} init={filter} />;
+
+  if (isEmpty) {
+    return (
+      <>
+        <div className='flex items-center mb-20'>{projectListFilter()}</div>
+        <Empty />
+      </>
+    );
+  }
 
   return (
     <>
       <div className='flex items-center mb-6'>
-        <ProjectListFilter onChange={handleFilterChange} init={filter} />
+        {projectListFilter()}
         <Pagination
           total={data?.total || 0}
           className='ml-auto flex-shrink-0'
