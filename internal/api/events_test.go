@@ -33,10 +33,10 @@ func TestFormatEventUserActor(t *testing.T) {
 			name: "sub",
 			user: user.Info{
 				Claims: map[string]any{
-					"email": "email@inbox.com",
+					"sub": "subject",
 				},
 			},
-			expected: kargoapi.EventActorEmailPrefix + "email@inbox.com",
+			expected: kargoapi.EventActorSubjectPrefix + "subject",
 		},
 		{
 			name: "oidc-username",
