@@ -9,7 +9,7 @@ import (
 	"github.com/akuity/kargo/internal/server/user"
 )
 
-func TestFormatEventUserActorForOidc(t *testing.T) {
+func TestFormatEventUserActor(t *testing.T) {
 	for _, test := range []struct {
 		name     string
 		user     user.Info
