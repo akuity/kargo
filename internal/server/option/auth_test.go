@@ -308,7 +308,8 @@ func TestAuthenticate(t *testing.T) {
 			authInterceptor: &authInterceptor{
 				cfg: config.ServerConfig{
 					OIDCConfig: &libOIDC.Config{
-						IssuerURL: testIDPIssuer,
+						IssuerURL:     testIDPIssuer,
+						UsernameClaim: "oidc-username",
 					},
 				},
 				parseUnverifiedJWTFn: func(_ string, claims jwt.Claims) (*jwt.Token, []string, error) {
@@ -322,8 +323,9 @@ func TestAuthenticate(t *testing.T) {
 					string,
 				) (claims, error) {
 					return claims{
-						"sub":   "ironman",
-						"email": "tony@starkindustries.com",
+						"oidc-username": "oidc-user",
+						"sub":           "ironman",
+						"email":         "tony@starkindustries.com",
 						"groups": []string{
 							"avengers",
 							"shield",
@@ -345,6 +347,7 @@ func TestAuthenticate(t *testing.T) {
 				u, ok := user.InfoFromContext(ctx)
 				require.True(t, ok)
 				require.False(t, u.IsAdmin)
+				require.Equal(t, u.Username, "oidc-user")
 				require.Equal(t, "ironman", u.Claims["sub"])
 				require.Equal(t, "tony@starkindustries.com", u.Claims["email"])
 				require.Equal(t, []string{"avengers", "shield"}, u.Claims["groups"])
@@ -470,37 +473,6 @@ func TestVerifyIDPIssuedTokenFn(t *testing.T) {
 				require.Equal(t, "ironman", c["sub"])
 				require.Equal(t, "tony@starkindustries.io", c["email"])
 				require.Equal(t, []string{"avengers", "shield"}, c["groups"])
-			},
-		},
-		{
-			name: "custom username claim token is successfully verified",
-			authInterceptor: &authInterceptor{
-				cfg: config.ServerConfig{
-					OIDCConfig: &libOIDC.Config{
-						UsernameClaim: "oidc_username_claim",
-					},
-				},
-				oidcTokenVerifyFn: func(
-					context.Context,
-					string,
-				) (*oidc.IDToken, error) {
-					return &oidc.IDToken{
-						Subject: "correct-username",
-					}, nil
-				},
-				oidcExtractClaimsFn: func(*oidc.IDToken) (claims, error) {
-					return claims{
-						"oidc_username_claim":    "oidc_provider_username",
-						"oidc_provider_username": "correct-username",
-						"sub":                    "shouldnt-be-this-one",
-						"email":                  "wrong-username@failed-test.io",
-					}, nil
-				},
-			},
-			assertions: func(t *testing.T, c claims, err error) {
-				require.NoError(t, err)
-				require.Equal(t, "oidc_provider_username", c["oidc_username_claim"])
-				require.Equal(t, "correct-username", c["oidc_provider_username"])
 			},
 		},
 	}
