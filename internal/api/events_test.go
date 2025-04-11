@@ -46,7 +46,7 @@ func TestFormatEventUserActorForOidc(t *testing.T) {
 				},
 				Username: "oidc-provider",
 			},
-			expected: kargoapi.EventActorOidcUsernamePrefix + "oidc-username",
+			expected: kargoapi.EventActorOIDCClaimPrefix + "oidc-username",
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
