@@ -78,9 +78,9 @@ function main() {
   { msg "Copying generated .proto and .pb.go files back to the project root..."; } 2> /dev/null
   find "$build_src_dir/api" \( \
     -name '*.proto' -o \
-    -name '*.pg.go' \
+    -name '*.pb.go' \
   \) -type f | while read -r file; do
-    rel_path="${file#$build_src_dir/}"
+    rel_path="${file#"$build_src_dir"/}"
     dest_file="$proj_dir/$rel_path"
     dest_dir=$(dirname "$dest_file")
     mkdir -p "$dest_dir"
