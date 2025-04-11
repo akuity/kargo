@@ -21,15 +21,6 @@ func TestFormatEventUserActor(t *testing.T) {
 			expected: kargoapi.EventActorAdmin,
 		},
 		{
-			name: "email",
-			user: user.Info{
-				Claims: map[string]any{
-					"email": "email@inbox.com",
-				},
-			},
-			expected: kargoapi.EventActorEmailPrefix + "email@inbox.com",
-		},
-		{
 			name: "sub",
 			user: user.Info{
 				Claims: map[string]any{
@@ -39,11 +30,20 @@ func TestFormatEventUserActor(t *testing.T) {
 			expected: kargoapi.EventActorSubjectPrefix + "subject",
 		},
 		{
+			name: "email",
+			user: user.Info{
+				Claims: map[string]any{
+					"email": "email@inbox.com",
+				},
+			},
+			expected: kargoapi.EventActorEmailPrefix + "email@inbox.com",
+		},
+		{
 			name: "oidc-username",
 			user: user.Info{
 				Username: "oidc-username",
 			},
-			expected: formatOidcUsername("oidc-username"),
+			expected: formatOIDCUsername("oidc-username"),
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {

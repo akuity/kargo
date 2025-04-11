@@ -27,7 +27,7 @@ func FormatEventUserActor(u user.Info) string {
 		return kargoapi.EventActorAdmin
 	}
 	if u.Username != "" {
-		return formatOidcUsername(u.Username)
+		return formatOIDCUsername(u.Username)
 	}
 	if emailClaim, ok := u.Claims["email"]; ok {
 		if email, ok := emailClaim.(string); ok {
@@ -60,6 +60,6 @@ func NewFreightApprovedEventAnnotations(actor string, f *kargoapi.Freight, stage
 	return annotations
 }
 
-func formatOidcUsername(oidcUsername string) string {
+func formatOIDCUsername(oidcUsername string) string {
 	return fmt.Sprintf("%s:%s", os.Getenv("OIDC_USERNAME_CLAIM"), oidcUsername)
 }
