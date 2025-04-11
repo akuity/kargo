@@ -1,7 +1,5 @@
 package v1alpha1
 
-import "os"
-
 const (
 	AnnotationKeyEventActor                  = "event.kargo.akuity.io/actor"
 	AnnotationKeyEventProject                = "event.kargo.akuity.io/project"
@@ -44,5 +42,3 @@ const (
 	EventActorKubernetesUserPrefix = "kubernetes:"
 	EventActorUnknown              = "unknown actor"
 )
-
-var EventActorOIDCClaimPrefix = os.Getenv("OIDC_USERNAME_CLAIM") + ":"

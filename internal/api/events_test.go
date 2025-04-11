@@ -43,7 +43,7 @@ func TestFormatEventUserActor(t *testing.T) {
 			user: user.Info{
 				Username: "oidc-username",
 			},
-			expected: kargoapi.EventActorOIDCClaimPrefix + "oidc-username",
+			expected: formatOidcUsername("oidc-username"),
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
