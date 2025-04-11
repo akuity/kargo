@@ -211,7 +211,7 @@ api:
     ## @param api.oidc.additionalScopes The additional scopes to send to the OIDC provider. This should be set to the scopes you wish to be provided to your identity provider from clients of Kargo, the scopes openid, profile and email are always requested and don't need to be added, this value is intended for any additional ones you require.
     additionalScopes:
     - groups
-    ## @param api.oidc.usernameClaim The claim to use as the username for the user. This is typically set to `email` or `sub`. If you are using Dex, this value will be ignored and the username claim will be automatically configured.
+    ## @param api.oidc.usernameClaim The claim to use as the username for the user.
     usernameClaim: email
 
     admins:
