@@ -8,8 +8,6 @@ import (
 
 	"cloud.google.com/go/compute/metadata"
 	"github.com/patrickmn/go-cache"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/iamcredentials/v1"
 
@@ -18,7 +16,8 @@ import (
 )
 
 const (
-	gcpResourceNameFormat = "projects/-/serviceAccounts/kargo-project-%s@%s.iam.gserviceaccount.com"
+	gcpResourceNameFormat         = "projects/-/serviceAccounts/kargo-project-%s@%s.iam.gserviceaccount.com"
+	gcpFallbackResourceNameFormat = "projects/-/serviceAccounts/kargo-controller@%s.iam.gserviceaccount.com"
 )
 
 type WorkloadIdentityFederationProvider struct {
@@ -26,9 +25,7 @@ type WorkloadIdentityFederationProvider struct {
 
 	projectID string
 
-	getAccessTokenFn func(ctx context.Context, project string) (string, bool, error)
-
-	tokenSource oauth2.TokenSource
+	getAccessTokenFn func(ctx context.Context, project string) (string, error)
 }
 
 func NewWorkloadIdentityFederationProvider(ctx context.Context) credentials.Provider {
@@ -46,11 +43,6 @@ func NewWorkloadIdentityFederationProvider(ctx context.Context) credentials.Prov
 		return nil
 	}
 	logger.Debug("got GCP project ID", "project", projectID)
-	// Configure DefaultTokenSource as a fallback when project specific Service Account cannot be impersonated
-	tS, err := google.DefaultTokenSource(ctx, iamcredentials.CloudPlatformScope)
-	if err != nil {
-		logger.Info("Fallback to Controller Identity Default Token Source cannot be obtained")
-	}
 
 	p := &WorkloadIdentityFederationProvider{
 		tokenCache: cache.New(
@@ -58,8 +50,7 @@ func NewWorkloadIdentityFederationProvider(ctx context.Context) credentials.Prov
 			40*time.Minute, // Default ttl for each entry
 			time.Hour,      // Cleanup interval
 		),
-		projectID:   projectID,
-		tokenSource: tS,
+		projectID: projectID,
 	}
 	p.getAccessTokenFn = p.getAccessToken
 	return p
@@ -103,7 +94,7 @@ func (p *WorkloadIdentityFederationProvider) GetCredentials(
 	}
 
 	// Cache miss, get a new token
-	accessToken, cacheToken, err := p.getAccessTokenFn(ctx, project)
+	accessToken, err := p.getAccessTokenFn(ctx, project)
 	if err != nil {
 		return nil, fmt.Errorf("error getting GCP access token: %w", err)
 	}
@@ -113,10 +104,7 @@ func (p *WorkloadIdentityFederationProvider) GetCredentials(
 		return nil, nil
 	}
 
-	if cacheToken {
-		// Cache the token
-		p.tokenCache.Set(cacheKey, accessToken, cache.DefaultExpiration)
-	}
+	p.tokenCache.Set(cacheKey, accessToken, cache.DefaultExpiration)
 
 	return &credentials.Credentials{
 		Username: accessTokenUsername,
@@ -129,13 +117,13 @@ func (p *WorkloadIdentityFederationProvider) GetCredentials(
 func (p *WorkloadIdentityFederationProvider) getAccessToken(
 	ctx context.Context,
 	kargoProject string,
-) (string, bool, error) {
+) (string, error) {
 	logger := logging.LoggerFromContext(ctx)
 
 	iamSvc, err := iamcredentials.NewService(ctx)
 	if err != nil {
 		logger.Error(err, "error creating IAM Credentials service client")
-		return "", false, nil
+		return "", nil
 	}
 
 	logger = logger.WithValues("gcpProjectID", p.projectID, "kargoProject", kargoProject)
@@ -152,26 +140,32 @@ func (p *WorkloadIdentityFederationProvider) getAccessToken(
 		var googleErr *googleapi.Error
 		if errors.As(err, &googleErr) {
 			switch googleErr.Code {
-			// fallback to controller identity only if GCP api return 404 code
+			// fallback to default controller identity only if GCP api return 404 code
 			// project-specific	service account do not exists
 			case 404:
-				logger.Debug("falling back to Application Default Credentials (ADC)")
-				token, err := p.tokenSource.Token()
+				logger.Debug("Fallback to default controller identity")
+				resp, err := iamSvc.Projects.ServiceAccounts.GenerateAccessToken(
+					fmt.Sprintf(gcpFallbackResourceNameFormat, p.projectID),
+					&iamcredentials.GenerateAccessTokenRequest{
+						Scope: []string{
+							iamcredentials.CloudPlatformScope,
+						},
+					},
+				).Do()
 				if err != nil {
-					logger.Error(err, "Error generating access token from Application Default Credentials")
-					return "", false, nil
+					logger.Error(err, "error generating access token")
+					return "", err
 				}
-				logger.Debug("Generated access token using Application Default Credentials")
-				return token.AccessToken, false, nil
+				return resp.AccessToken, nil
 			default:
 				logger.Error(err, "error generating access token")
-				return "", false, nil
+				return "", err
 			}
 		}
 		logger.Error(err, "error generating access token")
-		return "", false, nil
+		return "", nil
 	}
 
 	logger.Debug("generated Artifact Registry access token")
-	return resp.AccessToken, true, nil
+	return resp.AccessToken, nil
 }
