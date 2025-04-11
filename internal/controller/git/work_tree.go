@@ -3,9 +3,11 @@ package git
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -65,6 +67,9 @@ type WorkTree interface {
 	// LastCommitID returns the ID (sha) of the most recent commit to the current
 	// branch.
 	LastCommitID() (string, error)
+	// ListBranches returns a slice of branches in the repository with metadata such as
+	// branch name, commit ID, creator date, author, committer, and subject.
+	ListBranches() ([]BranchMetadata, error)
 	// ListTags returns a slice of tags in the repository with metadata such as
 	// commit ID, creator date, and subject.
 	ListTags() ([]TagMetadata, error)
@@ -417,6 +422,118 @@ func (w *workTree) ListCommits(limit, skip uint) ([]CommitMetadata, error) {
 	}
 
 	return commits, nil
+}
+
+// BranchMetadata represents metadata associated with a Git branch.
+type BranchMetadata struct {
+	// Branch is the name of the branch.
+	Branch string
+	// CommitID is the ID (sha) of the latest commit on the branch.
+	CommitID string
+	// CreationDate is the creation date of the branch.
+	CreationDate time.Time
+	// Author is the author of the latest commit on the branch, in the format "Name <email>".
+	Author string
+	// Committer is the person who committed the latest commit on the branch, in the format "Name <email>".
+	Committer string
+	// Subject is the subject (first line) of the latest commit message on the branch.
+	Subject string
+}
+
+// TODO: Remove this debug function
+func (w *workTree) debugListBranches(cmd *exec.Cmd, references string) {
+	fmt.Println("\n=====\n[BEBUG] [debugListBranches] url: ", w.url)
+
+	if cmd != nil {
+		fmt.Println("[BEBUG] [debugListBranches] cmd: ", cmd.String())
+		res, _ := libExec.Exec(cmd)
+		fmt.Println("[BEBUG] [debugListBranches] output:\n", string(res))
+	}
+
+	if references != "" {
+		fmt.Println("[DEBUG] [debugListBranches] references: ", references)
+		// Get the list of branches sorted by creation date and only fetch branches (not tags)
+		branchesBytes, _ := libExec.Exec(w.buildGitCommand(
+			"for-each-ref",
+			"--sort=creatordate",
+			"--format=`%(refname:short)|*|%(objectname)|*|%(contents:subject)|*|%(authorname) %(authoremail)|*|%(committername) %(committeremail)|*|%(creatordate:iso8601)`",
+			references,
+		))
+
+		prettyJSON, _ := json.MarshalIndent(string(branchesBytes), "", "  ")
+		fmt.Println("[DEBUG] [debugListBranches] branches:\n", string(prettyJSON))
+	}
+}
+
+func (w *workTree) ListBranches() ([]BranchMetadata, error) {
+	// TODO: remove these debug calls
+	w.debugListBranches(w.buildGitCommand("fetch", "origin"), "refs/remotes")
+	w.debugListBranches(w.buildGitCommand("fetch", "origin", "'refs/heads/feature/*:refs/remotes/origin/feature/*'"), "refs/remotes")
+	w.debugListBranches(w.buildGitCommand("ls-remote", "--heads", "origin"), "")
+	w.debugListBranches(w.buildGitCommand("branch", "-a"), "")
+	w.debugListBranches(nil, "refs/tags")
+	w.debugListBranches(w.buildGitCommand("fetch", "origin", "--tags"), "refs/tags")
+
+	// Fetch the latest references for the branches.
+	if _, err := libExec.Exec(w.buildGitCommand("fetch", "origin")); err != nil {
+		return nil, fmt.Errorf("error fetching branches from repo %q: %w", w.url, err)
+	}
+
+	// This format will output the following fields, separated by `|*|`:
+	// - branch name
+	// - commit ID (latest commit on the branch)
+	// - subject of the latest commit
+	// - author name and email
+	// - committer name and email
+	// - creation date (using `creatordate` for the branch creation)
+	const branchFormat = `%(refname:short)|*|%(objectname)|*|%(contents:subject)|*|%(authorname) %(authoremail)|*|%(committername) %(committeremail)|*|%(creatordate:iso8601)`
+
+	// TODO: Remove this debug print
+	fmt.Println("[BEBUG] [ListBranches] starting ...")
+
+	// Get the list of branches sorted by creation date and only fetch branches (not tags)
+	branchesBytes, err := libExec.Exec(w.buildGitCommand(
+		"for-each-ref",
+		"--sort=creatordate",
+		"--format="+branchFormat,
+		"refs/remotes",
+	))
+
+	if err != nil {
+		return nil, fmt.Errorf("error listing branches for repo %q: %w", w.url, err)
+	}
+
+	var branches []BranchMetadata
+	scanner := bufio.NewScanner(bytes.NewReader(branchesBytes))
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		// TODO: Remove this debug print
+		fmt.Println("[DEBUG] [ListBranches] Branch: ", string(line))
+		parts := bytes.SplitN(scanner.Bytes(), []byte("|*|"), 6)
+		if len(parts) != 6 {
+			return nil, fmt.Errorf("unexpected number of fields: %q", line)
+		}
+
+		creationDate, err := time.Parse("2006-01-02 15:04:05 -0700", string(parts[5]))
+		if err != nil {
+			return nil, fmt.Errorf("error parsing creation date %q: %w", parts[5], err)
+		}
+
+		branches = append(branches, BranchMetadata{
+			Branch:       string(parts[0]),
+			CommitID:     string(parts[1]),
+			Subject:      string(parts[2]),
+			Author:       string(parts[3]),
+			Committer:    string(parts[4]),
+			CreationDate: creationDate,
+		})
+	}
+
+	// TODO: Remove this debug print
+	prettyJSON, err := json.MarshalIndent(branches, "", "  ")
+	fmt.Println("[DEBUG] [ListBranches] returns branches: ", string(prettyJSON))
+
+	return branches, nil
 }
 
 // TagMetadata represents metadata associated with a Git tag.
