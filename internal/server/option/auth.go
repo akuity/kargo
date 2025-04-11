@@ -401,8 +401,7 @@ func (a *authInterceptor) authenticate(
 		var username string
 		un, ok := c[a.cfg.OIDCConfig.UsernameClaim]
 		if ok {
-			username, ok = un.(string)
-			if !ok {
+			if username, ok = un.(string); !ok {
 				return ctx, fmt.Errorf(
 					"claim %q must be a string; got %T",
 					a.cfg.OIDCConfig.UsernameClaim,
