@@ -414,12 +414,8 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, err
 	}
 
-	// If the promotion is still running, we'll need to periodically check on
-	// it.
-	//
-	// TODO: Make this configurable
 	if newStatus.Phase == kargoapi.PromotionPhaseRunning {
-		return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
+		return ctrl.Result{RequeueAfter: calculateRequeueInterval(promo)}, nil
 	}
 	return ctrl.Result{}, nil
 }
@@ -664,4 +660,31 @@ func parseCreateActorAnnotation(promo *kargoapi.Promotion) string {
 		}
 	}
 	return creator
+}
+
+func calculateRequeueInterval(p *kargoapi.Promotion) time.Duration {
+	defaultRequeueInterval := 5 * time.Minute
+	for i := range p.Spec.Steps {
+		if p.Status.CurrentStep == int64(i) {
+			step := &promotion.Step{
+				Kind:   p.Spec.Steps[i].Uses,
+				Alias:  p.Spec.Steps[i].As,
+				If:     p.Spec.Steps[i].If,
+				Retry:  p.Spec.Steps[i].Retry,
+				Vars:   p.Spec.Steps[i].Vars,
+				Config: p.Spec.Steps[i].Config.Raw,
+			}
+			var (
+				runner        = promotion.GetStepRunner(step)
+				timeout       = step.GetTimeout(runner)
+				md            = p.Status.StepExecutionMetadata[p.Status.CurrentStep]
+				fiveMinLater  = time.Now().Add(5 * time.Minute)
+				targetTimeout = md.StartedAt.Time.Add(*timeout)
+			)
+			if targetTimeout.Before(fiveMinLater) {
+				return time.Until(targetTimeout)
+			}
+		}
+	}
+	return defaultRequeueInterval
 }
