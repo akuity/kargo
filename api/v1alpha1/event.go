@@ -1,5 +1,7 @@
 package v1alpha1
 
+import "os"
+
 const (
 	AnnotationKeyEventActor                  = "event.kargo.akuity.io/actor"
 	AnnotationKeyEventProject                = "event.kargo.akuity.io/project"
@@ -43,4 +45,4 @@ const (
 	EventActorUnknown              = "unknown actor"
 )
 
-var EventActorOIDCClaimPrefix = os.GetEnv("OIDC_USERNAME_CLAIM", "email") + ":"
+var EventActorOIDCClaimPrefix = os.Getenv("OIDC_USERNAME_CLAIM") + ":"

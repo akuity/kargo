@@ -41,10 +41,7 @@ func TestFormatEventUserActor(t *testing.T) {
 		{
 			name: "oidc-username",
 			user: user.Info{
-				Claims: map[string]any{
-					"oidc-provider": "oidc-username",
-				},
-				Username: "oidc-provider",
+				Username: "oidc-username",
 			},
 			expected: kargoapi.EventActorOIDCClaimPrefix + "oidc-username",
 		},
