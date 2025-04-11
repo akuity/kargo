@@ -49,6 +49,7 @@ data:
   {{- if .Values.api.oidc.cliClientID }}
   OIDC_CLI_CLIENT_ID: {{ quote .Values.api.oidc.cliClientID }}
   {{- end }}
+  OIDC_USERNAME_CLAIM: {{ quote .Values.api.oidc.usernameClaim | default "email" }}
   {{- end }}
   {{- end }}
   {{- if .Values.api.argocd.urls }}
