@@ -1,6 +1,7 @@
 package azure
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -89,5 +90,38 @@ func TestParseRepoURL(t *testing.T) {
 				require.Equal(t, tc.expectedRepo, repo)
 			}
 		})
+	}
+}
+
+func TestGetCommitURL(t *testing.T) {
+
+	testCases := []struct {
+		url         string
+		sha         string
+		expectedURL string
+	}{
+		{
+			url:         "ssh://git@ssh.dev.azure.com:v3/akuity/_git/kargo",
+			sha:         "sha",
+			expectedURL: "https://dev.azure.com/akuity/_git/kargo/commit/sha",
+		},
+		{
+			url:         "git@ssh.dev.azure.com:v3/akuity/_git/kargo",
+			sha:         "sha",
+			expectedURL: "https://dev.azure.com/akuity/_git/kargo/commit/sha",
+		},
+		{
+			url:         "http://dev.azure.com/akuity/_git/kargo",
+			sha:         "sha",
+			expectedURL: "https://dev.azure.com/akuity/_git/kargo/commit/sha",
+		},
+	}
+
+	for _, testCase := range testCases {
+		// call the code we are testing
+		g := provider{}
+		commitURL, err := g.GetCommitURL(context.Background(), testCase.url, testCase.sha)
+		require.NoError(t, err)
+		require.Equal(t, testCase.expectedURL, *commitURL)
 	}
 }

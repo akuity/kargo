@@ -199,6 +199,23 @@ func (p *provider) ListPullRequests(
 	return prs, nil
 }
 
+// GetCommit implements gitprovider.Interface.
+func (p *provider) GetCommitURL(
+	ctx context.Context,
+	repoURL string,
+	sha string,
+) (*string, error) {
+	replacer := strings.NewReplacer(
+		"git@gitlab.com:/", "https://gitlab.com/",
+		"ssh://git@gitlab.com/", "https://gitlab.com/",
+		".git", "",
+		"http://gitlab.com/", "https://gitlab.com/",
+	)
+	formattedRepoURL := replacer.Replace(repoURL)
+	commitUrl := formattedRepoURL + "/-/commit/" + sha
+	return &commitUrl, nil
+}
+
 func convertGitlabMR(glMR gitlab.BasicMergeRequest) gitprovider.PullRequest {
 	return gitprovider.PullRequest{
 		Number:         int64(glMR.IID),

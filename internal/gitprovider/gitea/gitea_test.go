@@ -383,3 +383,26 @@ func TestListPullRequests(t *testing.T) {
 	require.Equal(t, mockClient.pr.URL, prs[0].URL)
 	require.True(t, prs[0].Open)
 }
+
+func TestGetCommitURL(t *testing.T) {
+
+	testCases := []struct {
+		url         string
+		sha         string
+		expectedURL string
+	}{
+		{
+			url:         "http://gitea.com/akuity/kargo",
+			sha:         "sha",
+			expectedURL: "https://gitea.com/akuity/kargo/commit/sha",
+		},
+	}
+
+	for _, testCase := range testCases {
+		// call the code we are testing
+		g := provider{}
+		commitURL, err := g.GetCommitURL(context.Background(), testCase.url, testCase.sha)
+		require.NoError(t, err)
+		require.Equal(t, testCase.expectedURL, *commitURL)
+	}
+}

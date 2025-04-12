@@ -191,3 +191,36 @@ func TestParseGitLabURL(t *testing.T) {
 		})
 	}
 }
+
+func TestGetCommitURL(t *testing.T) {
+
+	testCases := []struct {
+		url         string
+		sha         string
+		expectedURL string
+	}{
+		{
+			url:         "ssh://git@gitlab.com/akuity/kargo.git",
+			sha:         "sha",
+			expectedURL: "https://gitlab.com/akuity/kargo/-/commit/sha",
+		},
+		{
+			url:         "git@gitlab.com:/akuity/kargo.git",
+			sha:         "sha",
+			expectedURL: "https://gitlab.com/akuity/kargo/-/commit/sha",
+		},
+		{
+			url:         "http://gitlab.com/akuity/kargo",
+			sha:         "sha",
+			expectedURL: "https://gitlab.com/akuity/kargo/-/commit/sha",
+		},
+	}
+
+	for _, testCase := range testCases {
+		// call the code we are testing
+		g := provider{}
+		commitURL, err := g.GetCommitURL(context.Background(), testCase.url, testCase.sha)
+		require.NoError(t, err)
+		require.Equal(t, testCase.expectedURL, *commitURL)
+	}
+}

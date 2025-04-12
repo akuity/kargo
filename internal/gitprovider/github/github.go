@@ -268,6 +268,23 @@ func (p *provider) ListPullRequests(
 	return prs, nil
 }
 
+// GetCommit implements gitprovider.Interface.
+func (p *provider) GetCommitURL(
+	ctx context.Context,
+	repoURL string,
+	sha string,
+) (*string, error) {
+	replacer := strings.NewReplacer(
+		"git@github.com:/", "https://github.com/",
+		".git", "",
+		"http://github.com/", "https://github.com/",
+		"ssh://git@github.com/", "https://github.com/",
+	)
+	formattedRepoURL := replacer.Replace(repoURL)
+	commitUrl := formattedRepoURL + "/commit/" + sha
+	return &commitUrl, nil
+}
+
 func convertGithubPR(ghPR github.PullRequest) gitprovider.PullRequest {
 	pr := gitprovider.PullRequest{
 		Number:         int64(ptr.Deref(ghPR.Number, 0)),
