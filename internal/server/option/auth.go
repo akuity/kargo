@@ -398,12 +398,23 @@ func (a *authInterceptor) authenticate(
 		if err != nil {
 			return ctx, fmt.Errorf("list service accounts for user: %w", err)
 		}
+		var username string
+		if un, ok := c[a.cfg.OIDCConfig.UsernameClaim]; ok {
+			if username, ok = un.(string); !ok {
+				return ctx, fmt.Errorf(
+					"claim %q must be a string; got %T",
+					a.cfg.OIDCConfig.UsernameClaim,
+					un,
+				)
+			}
+		}
 		return user.ContextWithInfo(
 			ctx,
 			user.Info{
 				Claims:                     c,
 				ServiceAccountsByNamespace: sa,
 				BearerToken:                rawToken,
+				Username:                   username,
 			},
 		), nil
 
