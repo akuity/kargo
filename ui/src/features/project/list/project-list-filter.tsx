@@ -26,7 +26,7 @@ export const ProjectListFilter = ({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key !== 'Enter') return;
 
-    if (filteredProjects?.length !== 1) {
+    if (filteredProjects?.length !== 1 || !filter) {
       onChange(filter);
       return;
     }
