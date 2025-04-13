@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { faPencil, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Flex, Table } from 'antd';
+import { Button, Card, Flex, Table } from 'antd';
 import { format } from 'date-fns';
 
 import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
@@ -61,7 +61,19 @@ export const ClusterPromotionTasks = () => {
     ));
 
   return (
-    <div className='p-4'>
+    <Card
+      title='Cluster Promotion Tasks'
+      type='inner'
+      className='min-h-full'
+      extra={
+        <Button
+          icon={<FontAwesomeIcon icon={faPlus} />}
+          onClick={() => onAddClusterPromotionTaskModalOpen()}
+        >
+          Add Cluster Promotion Task
+        </Button>
+      }
+    >
       <Table<ClusterPromotionTask>
         dataSource={listClusterPromotionTasksQuery.data?.clusterPromotionTasks}
         loading={listClusterPromotionTasksQuery.isFetching}
@@ -94,30 +106,23 @@ export const ClusterPromotionTasks = () => {
             render: (_, r) => r.metadata?.name
           },
           {
-            title: (
-              <div className='text-right'>
-                <Button
-                  type='primary'
-                  className='ml-auto text-xs font-semibold'
-                  icon={<FontAwesomeIcon icon={faPlus} />}
-                  onClick={onAddClusterPromotionTaskModalOpen}
-                >
-                  ADD CLUSTER PROMOTION TASK
-                </Button>
-              </div>
-            ),
             render: (_, template) => (
               <Flex gap={8} justify='end'>
                 <Button
                   icon={<FontAwesomeIcon icon={faPencil} />}
                   onClick={() => onEditClusterPromotionTaskModalOpen(template)}
+                  size='small'
+                  color='default'
+                  variant='filled'
                 >
                   Edit
                 </Button>
                 <Button
                   icon={<FontAwesomeIcon icon={faTrash} />}
-                  danger
                   onClick={() => onDeleteClusterPromotionTaskModalOpen(template)}
+                  size='small'
+                  color='danger'
+                  variant='filled'
                 >
                   Delete
                 </Button>
@@ -126,6 +131,6 @@ export const ClusterPromotionTasks = () => {
           }
         ]}
       />
-    </div>
+    </Card>
   );
 };
