@@ -31,7 +31,7 @@ require (
 	github.com/expr-lang/expr v1.17.2
 	github.com/fatih/structtag v1.2.0
 	github.com/fluxcd/pkg/kustomize v1.16.0
-	github.com/go-git/go-git/v5 v5.14.0
+	github.com/go-git/go-git/v5 v5.15.0
 	github.com/go-logr/logr v1.4.2
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang-jwt/jwt/v5 v5.2.2
@@ -59,7 +59,7 @@ require (
 	gitlab.com/gitlab-org/api/client-go v0.127.0
 	go.uber.org/ratelimit v0.3.1
 	golang.org/x/crypto v0.37.0
-	golang.org/x/net v0.38.0
+	golang.org/x/net v0.39.0
 	golang.org/x/oauth2 v0.29.0
 	golang.org/x/sync v0.13.0
 	golang.org/x/text v0.24.0
