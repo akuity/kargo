@@ -666,8 +666,8 @@ func parseCreateActorAnnotation(promo *kargoapi.Promotion) string {
 func calculateRequeueInterval(p *kargoapi.Promotion) time.Duration {
 	var (
 		defaultRequeueInterval = 5 * time.Minute
-		apiStep                = p.Spec.Steps[p.Status.CurrentStep]
-		runner                 = promotion.GetStepRunner(apiStep.As)
+		step                   = p.Spec.Steps[p.Status.CurrentStep]
+		runner                 = promotion.GetStepRunner(step.As)
 		timeout                = ptr.To(time.Duration(0))
 	)
 
