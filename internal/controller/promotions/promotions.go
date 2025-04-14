@@ -664,24 +664,17 @@ func parseCreateActorAnnotation(promo *kargoapi.Promotion) string {
 }
 
 func calculateRequeueInterval(p *kargoapi.Promotion) time.Duration {
-	var (
-		defaultRequeueInterval = 5 * time.Minute
-		step                   = p.Spec.Steps[p.Status.CurrentStep]
-		runner                 = promotion.GetStepRunner(step.As)
-		timeout                = ptr.To(time.Duration(0))
-	)
-
+	defaultRequeueInterval := 5 * time.Minute
+	step := p.Spec.Steps[p.Status.CurrentStep]
+	runner := promotion.GetStepRunner(step.Uses)
+	timeout := ptr.To(time.Duration(0))
 	if retryCfg, isRetryable := runner.(pkgPromotion.RetryableStepRunner); isRetryable {
 		timeout = retryCfg.DefaultTimeout()
 	}
 
-	var (
-		md            = p.Status.StepExecutionMetadata[p.Status.CurrentStep]
-		fiveMinLater  = time.Now().Add(defaultRequeueInterval)
-		targetTimeout = md.StartedAt.Time.Add(*timeout)
-	)
-
-	if targetTimeout.Before(fiveMinLater) {
+	md := p.Status.StepExecutionMetadata[p.Status.CurrentStep]
+	targetTimeout := md.StartedAt.Time.Add(*timeout)
+	if targetTimeout.Before(time.Now().Add(defaultRequeueInterval)) {
 		return time.Until(targetTimeout)
 	}
 	return defaultRequeueInterval

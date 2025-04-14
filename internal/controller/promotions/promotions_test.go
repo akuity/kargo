@@ -551,7 +551,7 @@ func Test_calculateRequeueInterval(t *testing.T) {
 					Stage: "fake-stage",
 					Steps: []kargoapi.PromotionStep{
 						{
-							As: "slow-step",
+							Uses: "slow-step",
 							Retry: &kargoapi.PromotionStepRetry{
 								Timeout: &metav1.Duration{
 									// exceeds default threshold
@@ -599,7 +599,7 @@ func Test_calculateRequeueInterval(t *testing.T) {
 					Stage: "fake-stage",
 					Steps: []kargoapi.PromotionStep{
 						{
-							As: "fast-step",
+							Uses: "fast-step",
 							Retry: &kargoapi.PromotionStepRetry{
 								Timeout: &metav1.Duration{
 									// faster than default threshold
