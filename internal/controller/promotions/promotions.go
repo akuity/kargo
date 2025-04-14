@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -663,28 +664,25 @@ func parseCreateActorAnnotation(promo *kargoapi.Promotion) string {
 }
 
 func calculateRequeueInterval(p *kargoapi.Promotion) time.Duration {
-	defaultRequeueInterval := 5 * time.Minute
-	for i := range p.Spec.Steps {
-		if p.Status.CurrentStep == int64(i) {
-			step := &promotion.Step{
-				Kind:   p.Spec.Steps[i].Uses,
-				Alias:  p.Spec.Steps[i].As,
-				If:     p.Spec.Steps[i].If,
-				Retry:  p.Spec.Steps[i].Retry,
-				Vars:   p.Spec.Steps[i].Vars,
-				Config: p.Spec.Steps[i].Config.Raw,
-			}
-			var (
-				runner        = promotion.GetStepRunner(step)
-				timeout       = step.GetTimeout(runner)
-				md            = p.Status.StepExecutionMetadata[p.Status.CurrentStep]
-				fiveMinLater  = time.Now().Add(5 * time.Minute)
-				targetTimeout = md.StartedAt.Time.Add(*timeout)
-			)
-			if targetTimeout.Before(fiveMinLater) {
-				return time.Until(targetTimeout)
-			}
-		}
+	var (
+		defaultRequeueInterval = 5 * time.Minute
+		apiStep                = p.Spec.Steps[p.Status.CurrentStep]
+		runner                 = promotion.GetStepRunner(apiStep.As)
+		timeout                = ptr.To(time.Duration(0))
+	)
+
+	if retryCfg, isRetryable := runner.(pkgPromotion.RetryableStepRunner); isRetryable {
+		timeout = retryCfg.DefaultTimeout()
+	}
+
+	var (
+		md            = p.Status.StepExecutionMetadata[p.Status.CurrentStep]
+		fiveMinLater  = time.Now().Add(defaultRequeueInterval)
+		targetTimeout = md.StartedAt.Time.Add(*timeout)
+	)
+
+	if targetTimeout.Before(fiveMinLater) {
+		return time.Until(targetTimeout)
 	}
 	return defaultRequeueInterval
 }

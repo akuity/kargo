@@ -27,6 +27,6 @@ func RegisterStepRunner(runner promotion.StepRunner) {
 	stepRunnerReg.register(runner)
 }
 
-func GetStepRunner(step *Step) promotion.StepRunner {
-	return stepRunnerReg.getStepRunner(step.Alias)
+func GetStepRunner(name string) promotion.StepRunner {
+	return stepRunnerReg.getStepRunner(name)
 }
