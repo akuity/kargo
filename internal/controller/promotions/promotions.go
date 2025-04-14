@@ -668,8 +668,9 @@ func calculateRequeueInterval(p *kargoapi.Promotion) time.Duration {
 	step := p.Spec.Steps[p.Status.CurrentStep]
 	runner := promotion.GetStepRunner(step.Uses)
 	timeout := ptr.To(time.Duration(0))
-	
-	if retryCfg, isRetryable := runner.(pkgPromotion.RetryableStepRunner); isRetryable {
+
+	retryCfg, isRetryable := runner.(pkgPromotion.RetryableStepRunner)
+	if isRetryable {
 		timeout = retryCfg.DefaultTimeout()
 	}
 
