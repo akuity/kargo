@@ -125,7 +125,6 @@ func (p *provider) CreatePullRequest(
 		Labels:             (*gitlab.LabelOptions)(&opts.Labels),
 		SourceBranch:       &opts.Head,
 		TargetBranch:       &opts.Base,
-		RemoveSourceBranch: gitlab.Ptr(true),
 	})
 	if err != nil {
 		return nil, err
