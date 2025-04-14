@@ -27,6 +27,8 @@ func RegisterStepRunner(runner promotion.StepRunner) {
 	stepRunnerReg.register(runner)
 }
 
+// GetStepRunner returns a StepRunner from the package's internal registry. If
+// no StepRunner is registered with the given name, nil is returned instead.
 func GetStepRunner(name string) promotion.StepRunner {
 	return stepRunnerReg.getStepRunner(name)
 }
