@@ -1330,12 +1330,15 @@ func (r *RegularStageReconciler) startVerification(
 					"stage":   stage.Name,
 				},
 			},
-			Options: exprfn.FreightOperations(
-				ctx,
-				r.client,
-				stage.Namespace,
-				stage.Spec.RequestedFreight,
-				freight.References(),
+			Options: append(
+				exprfn.FreightOperations(
+					ctx,
+					r.client,
+					stage.Namespace,
+					stage.Spec.RequestedFreight,
+					freight.References(),
+				),
+				exprfn.DataOperations(ctx, r.client, stage.Namespace)...,
 			),
 		},
 	}

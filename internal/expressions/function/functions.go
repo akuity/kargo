@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"github.com/expr-lang/expr"
+	corev1 "k8s.io/api/core/v1"
+	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -32,6 +34,15 @@ func FreightOperations(
 		CommitFrom(ctx, c, project, freightRequests, freightRefs),
 		ImageFrom(ctx, c, project, freightRequests, freightRefs),
 		ChartFrom(ctx, c, project, freightRequests, freightRefs),
+	}
+}
+
+// DataOperations returns a slice of expr.Option containing functions for
+// data operations, such as accessing ConfigMaps and Secrets.
+func DataOperations(ctx context.Context, c client.Client, project string) []expr.Option {
+	return []expr.Option{
+		ConfigMap(ctx, c, project),
+		Secret(ctx, c, project),
 	}
 }
 
@@ -106,6 +117,26 @@ func ChartFrom(
 		new(func(repoURL string, chartName string) kargoapi.Chart),
 		new(func(repoURL string, origin kargoapi.FreightOrigin) kargoapi.Chart),
 		new(func(repoURL string) kargoapi.Chart),
+	)
+}
+
+// ConfigMap returns an expr.Option that provides a `configMap()` function for
+// use in expressions.
+func ConfigMap(ctx context.Context, c client.Client, project string) expr.Option {
+	return expr.Function(
+		"configMap",
+		getConfigMap(ctx, c, project),
+		new(func(name string) map[string]string),
+	)
+}
+
+// Secret returns an expr.Option that provides a `secret()` function for use in
+// expressions.
+func Secret(ctx context.Context, c client.Client, project string) expr.Option {
+	return expr.Function(
+		"secret",
+		getSecret(ctx, c, project),
+		new(func(name string) map[string]string),
 	)
 }
 
@@ -275,5 +306,70 @@ func getChart(
 			repoURL,
 			chartName,
 		)
+	}
+}
+
+func getConfigMap(ctx context.Context, c client.Client, project string) exprFn {
+	return func(a ...any) (any, error) {
+		if len(a) != 1 {
+			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
+		}
+
+		name, ok := a[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("argument must be string, got %T", a[0])
+		}
+
+		var cfgMap corev1.ConfigMap
+		if err := c.Get(
+			ctx,
+			client.ObjectKey{
+				Namespace: project,
+				Name:      name,
+			},
+			&cfgMap,
+		); err != nil {
+			if kubeerr.IsNotFound(err) {
+				return map[string]string{}, nil
+			}
+			return nil, fmt.Errorf("failed to get configmap %s: %w", name, err)
+		}
+
+		return cfgMap.Data, nil
+	}
+}
+
+func getSecret(ctx context.Context, c client.Client, project string) exprFn {
+	return func(a ...any) (any, error) {
+		if len(a) != 1 {
+			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
+		}
+
+		name, ok := a[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("argument must be string, got %T", a[0])
+		}
+
+		var secret corev1.Secret
+		if err := c.Get(
+			ctx,
+			client.ObjectKey{
+				Namespace: project,
+				Name:      name,
+			},
+			&secret,
+		); err != nil {
+			if kubeerr.IsNotFound(err) {
+				return map[string]string{}, nil
+			}
+			return nil, fmt.Errorf("failed to get secret %s: %w", name, err)
+		}
+
+		data := make(map[string]string, len(secret.Data))
+		for k, v := range secret.Data {
+			data[k] = string(v)
+		}
+
+		return data, nil
 	}
 }

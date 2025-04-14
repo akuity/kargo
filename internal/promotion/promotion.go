@@ -208,13 +208,20 @@ func (s *Step) Skip(
 		StepEnvWithVars(vars),
 	)
 
-	v, err := expressions.EvaluateTemplate(s.If, env, exprfn.FreightOperations(
-		ctx,
-		cl,
-		promoCtx.Project,
-		promoCtx.FreightRequests,
-		promoCtx.Freight.References(),
-	)...)
+	v, err := expressions.EvaluateTemplate(
+		s.If,
+		env,
+		append(
+			exprfn.FreightOperations(
+				ctx,
+				cl,
+				promoCtx.Project,
+				promoCtx.FreightRequests,
+				promoCtx.Freight.References(),
+			),
+			exprfn.DataOperations(ctx, cl, promoCtx.Project)...,
+		)...,
+	)
 	if err != nil {
 		return false, err
 	}
@@ -255,12 +262,15 @@ func (s *Step) GetConfig(
 	evaledCfgJSON, err := expressions.EvaluateJSONTemplate(
 		s.Config,
 		env,
-		exprfn.FreightOperations(
-			ctx,
-			cl,
-			promoCtx.Project,
-			promoCtx.FreightRequests,
-			promoCtx.Freight.References(),
+		append(
+			exprfn.FreightOperations(
+				ctx,
+				cl,
+				promoCtx.Project,
+				promoCtx.FreightRequests,
+				promoCtx.Freight.References(),
+			),
+			exprfn.DataOperations(ctx, cl, promoCtx.Project)...,
 		)...,
 	)
 	if err != nil {
@@ -289,7 +299,10 @@ func (s *Step) GetVars(
 		newVar, err := expressions.EvaluateTemplate(
 			v.Value,
 			s.BuildEnv(promoCtx, StepEnvWithVars(vars)),
-			exprfn.FreightOperations(ctx, cl, promoCtx.Project, promoCtx.FreightRequests, promoCtx.Freight.References())...,
+			append(
+				exprfn.FreightOperations(ctx, cl, promoCtx.Project, promoCtx.FreightRequests, promoCtx.Freight.References()),
+				exprfn.DataOperations(ctx, cl, promoCtx.Project)...,
+			)...,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("error pre-processing promotion variable %q: %w", v.Name, err)
@@ -308,7 +321,10 @@ func (s *Step) GetVars(
 				StepEnvWithTaskOutputs(s.Alias, state),
 				StepEnvWithVars(vars),
 			),
-			exprfn.FreightOperations(ctx, cl, promoCtx.Project, promoCtx.FreightRequests, promoCtx.Freight.References())...,
+			append(
+				exprfn.FreightOperations(ctx, cl, promoCtx.Project, promoCtx.FreightRequests, promoCtx.Freight.References()),
+				exprfn.DataOperations(ctx, cl, promoCtx.Project)...,
+			)...,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("error pre-processing promotion variable %q: %w", v.Name, err)
