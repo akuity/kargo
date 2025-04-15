@@ -38,13 +38,7 @@ vars:
 - name: repoURL
   value: https://github.com/example/repo
 steps:
-steps:
-# Clone, prepare the contents of ./out, commit, etc...
-- uses: git-push
-  as: push
-  config:
-    path: ./out
-    generateTargetBranch: true
+# Clone, prepare the contents of ./out, commit, push as part of a `push` step etc...
 - uses: git-open-pr
   as: open-pr
   config:
