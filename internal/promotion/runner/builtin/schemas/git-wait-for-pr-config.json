@@ -11,8 +11,8 @@
     },
     "provider": {
       "type": "string",
-      "description": "The name of the Git provider to use. Currently 'github', 'gitlab', 'bitbucket', 'gitea' and 'azure' are supported. Kargo will try to infer the provider if it is not explicitly specified.",
-      "enum": ["github", "gitlab", "azure", "gitea", "bitbucket"]
+      "description": "The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github', and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly specified.",
+      "enum": ["azure", "bitbucket", "gitea", "github", "gitlab"]
     },
     "prNumber": {
       "type": "integer",
