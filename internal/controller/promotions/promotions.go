@@ -16,7 +16,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -415,6 +414,8 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, err
 	}
 
+	// If the promotion is still running, we'll need to periodically check on
+	// it.
 	if newStatus.Phase == kargoapi.PromotionPhaseRunning {
 		return ctrl.Result{RequeueAfter: calculateRequeueInterval(promo)}, nil
 	}
@@ -667,12 +668,10 @@ func calculateRequeueInterval(p *kargoapi.Promotion) time.Duration {
 	defaultRequeueInterval := 5 * time.Minute
 	step := p.Spec.Steps[p.Status.CurrentStep]
 	runner := promotion.GetStepRunner(step.Uses)
-	timeout := ptr.To(time.Duration(0))
 
-	retryCfg, isRetryable := runner.(pkgPromotion.RetryableStepRunner)
-	if isRetryable {
-		timeout = retryCfg.DefaultTimeout()
-	}
+	timeout := (&promotion.Step{
+		Retry: step.Retry,
+	}).GetTimeout(runner)
 
 	md := p.Status.StepExecutionMetadata[p.Status.CurrentStep]
 	targetTimeout := md.StartedAt.Time.Add(*timeout)
