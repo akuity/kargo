@@ -162,8 +162,8 @@ type GitOpenPRConfig struct {
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 	// Labels to add to the pull request.
 	Labels []string `json:"labels,omitempty"`
-	// The name of the Git provider to use. Currently 'github', 'gitlab', 'bitbucket', 'gitea'
-	// and 'azure' are supported. Kargo will try to infer the provider if it is not explicitly
+	// The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github',
+	// and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly
 	// specified.
 	Provider *Provider `json:"provider,omitempty"`
 	// The URL of a remote Git repository to clone.
@@ -202,8 +202,8 @@ type GitWaitForPRConfig struct {
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 	// The number of the pull request to wait for.
 	PRNumber int64 `json:"prNumber"`
-	// The name of the Git provider to use. Currently 'github', 'gitlab', 'bitbucket', 'gitea'
-	// and 'azure' are supported. Kargo will try to infer the provider if it is not explicitly
+	// The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github',
+	// and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly
 	// specified.
 	Provider *Provider `json:"provider,omitempty"`
 	// The URL of a remote Git repository to clone.
@@ -419,8 +419,8 @@ type YAMLUpdate struct {
 	Value string `json:"value"`
 }
 
-// The name of the Git provider to use. Currently 'github', 'gitlab', 'bitbucket', 'gitea'
-// and 'azure' are supported. Kargo will try to infer the provider if it is not explicitly
+// The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github',
+// and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly
 // specified.
 type Provider string
 
