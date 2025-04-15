@@ -81,16 +81,6 @@ type ProjectStatus struct {
 	// +listType=map
 	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,3,rep,name=conditions"`
-	// Phase describes the Project's current phase.
-	//
-	// Deprecated: Use the Conditions field instead.
-	Phase ProjectPhase `json:"phase,omitempty" protobuf:"bytes,1,opt,name=phase"`
-	// Message is a display message about the Project, including any errors
-	// preventing the Project from being reconciled. i.e. If the Phase field has a
-	// value of CreationFailed, this field can be expected to explain why.
-	//
-	// Deprecated: Use the Conditions field instead.
-	Message string `json:"message,omitempty" protobuf:"bytes,2,opt,name=message"`
 }
 
 func (w *ProjectStatus) GetConditions() []metav1.Condition {

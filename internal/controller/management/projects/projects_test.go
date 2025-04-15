@@ -593,7 +593,13 @@ func TestEnsureNamespace(t *testing.T) {
 			name: "namespace does not exist; success creating it",
 			project: &kargoapi.Project{
 				Status: kargoapi.ProjectStatus{
-					Phase: kargoapi.ProjectPhaseInitializing,
+					Conditions: []metav1.Condition{
+						{
+							Type:   kargoapi.ConditionTypeReady,
+							Status: metav1.ConditionTrue,
+							Reason: "CreatedReason",
+						},
+					},
 				},
 			},
 			reconciler: &reconciler{
@@ -1063,157 +1069,6 @@ func TestEnsureDefaultProjectRoles(t *testing.T) {
 					&kargoapi.Project{},
 				),
 			)
-		})
-	}
-}
-
-func TestMigratePhaseToConditions(t *testing.T) {
-	tests := []struct {
-		name       string
-		project    *kargoapi.Project
-		assertions func(t *testing.T, status kargoapi.ProjectStatus, ok bool)
-	}{
-		{
-			name: "Empty Phase",
-			project: &kargoapi.Project{
-				Status: kargoapi.ProjectStatus{
-					Phase:   "",
-					Message: "Some message",
-				},
-			},
-			assertions: func(t *testing.T, status kargoapi.ProjectStatus, ok bool) {
-				require.True(t, ok)
-				require.Empty(t, status.Phase)   // nolint:staticcheck
-				require.Empty(t, status.Message) // nolint:staticcheck
-				require.Empty(t, status.Conditions)
-			},
-		},
-		{
-			name: "Initializing Phase",
-			project: &kargoapi.Project{
-				ObjectMeta: metav1.ObjectMeta{
-					Generation: 1,
-				},
-				Status: kargoapi.ProjectStatus{
-					Phase: kargoapi.ProjectPhaseInitializing,
-				},
-			},
-			assertions: func(t *testing.T, status kargoapi.ProjectStatus, ok bool) {
-				require.True(t, ok)
-				require.Empty(t, status.Phase)   // nolint:staticcheck
-				require.Empty(t, status.Message) // nolint:staticcheck
-				require.Len(t, status.Conditions, 2)
-
-				reconcilingCondition := conditions.Get(&status, kargoapi.ConditionTypeReconciling)
-				require.NotNil(t, reconcilingCondition)
-				require.Equal(t, metav1.ConditionTrue, reconcilingCondition.Status)
-				require.Equal(t, "Initializing", reconcilingCondition.Reason)
-				require.Equal(
-					t,
-					"Creating project namespace and initializing permissions",
-					reconcilingCondition.Message,
-				)
-				require.Equal(t, int64(1), reconcilingCondition.ObservedGeneration)
-
-				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
-				require.NotNil(t, readyCondition)
-				require.Equal(t, metav1.ConditionFalse, readyCondition.Status)
-				require.Equal(t, "Initializing", readyCondition.Reason)
-				require.Equal(
-					t,
-					"Creating project namespace and initializing permissions",
-					readyCondition.Message,
-				)
-				require.Equal(t, int64(1), readyCondition.ObservedGeneration)
-			},
-		},
-		{
-			name: "InitializationFailed Phase",
-			project: &kargoapi.Project{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-project",
-					Generation: 2,
-				},
-				Status: kargoapi.ProjectStatus{
-					Phase: kargoapi.ProjectPhaseInitializationFailed,
-				},
-			},
-			assertions: func(t *testing.T, status kargoapi.ProjectStatus, ok bool) {
-				require.True(t, ok)
-				require.Empty(t, status.Phase)   // nolint:staticcheck
-				require.Empty(t, status.Message) // nolint:staticcheck
-				require.Len(t, status.Conditions, 2)
-
-				stalledCondition := conditions.Get(&status, kargoapi.ConditionTypeStalled)
-				require.NotNil(t, stalledCondition)
-				require.Equal(t, metav1.ConditionTrue, stalledCondition.Status)
-				require.Equal(t, "ExistingNamespaceMissingLabel", stalledCondition.Reason)
-				require.Contains(
-					t,
-					stalledCondition.Message,
-					"already exists but is not labeled as a Project namespace using label",
-				)
-				require.Equal(t, int64(2), stalledCondition.ObservedGeneration)
-
-				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
-				require.NotNil(t, readyCondition)
-				require.Equal(t, metav1.ConditionFalse, readyCondition.Status)
-				require.Equal(t, "NamespaceInitializationFailed", readyCondition.Reason)
-				require.Contains(
-					t,
-					readyCondition.Message,
-					"namespace already exists and is not labeled as a Project namespace",
-				)
-				require.Equal(t, int64(2), readyCondition.ObservedGeneration)
-			},
-		},
-		{
-			name: "Ready Phase",
-			project: &kargoapi.Project{
-				ObjectMeta: metav1.ObjectMeta{
-					Generation: 3,
-				},
-				Status: kargoapi.ProjectStatus{
-					Phase: kargoapi.ProjectPhaseReady,
-				},
-			},
-			assertions: func(t *testing.T, status kargoapi.ProjectStatus, ok bool) {
-				require.True(t, ok)
-				require.Empty(t, status.Phase)   // nolint:staticcheck
-				require.Empty(t, status.Message) // nolint:staticcheck
-				require.Len(t, status.Conditions, 1)
-
-				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
-				require.NotNil(t, readyCondition)
-				require.Equal(t, metav1.ConditionTrue, readyCondition.Status)
-				require.Equal(t, "Initialized", readyCondition.Reason)
-				require.Equal(t, "Project is initialized and ready for use", readyCondition.Message)
-				require.Equal(t, int64(3), readyCondition.ObservedGeneration)
-			},
-		},
-		{
-			name: "Unknown Phase",
-			project: &kargoapi.Project{
-				ObjectMeta: metav1.ObjectMeta{
-					Generation: 4,
-				},
-				Status: kargoapi.ProjectStatus{
-					Phase: "UnknownPhase",
-				},
-			},
-			assertions: func(t *testing.T, status kargoapi.ProjectStatus, ok bool) {
-				require.True(t, ok)
-				require.Empty(t, status.Phase)   // nolint:staticcheck
-				require.Empty(t, status.Message) // nolint:staticcheck
-				require.Empty(t, status.Conditions)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			status, ok := migratePhaseToConditions(tt.project)
-			tt.assertions(t, status, ok)
 		})
 	}
 }

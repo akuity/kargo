@@ -103,14 +103,6 @@
             "type"
           ],
           "x-kubernetes-list-type": "map"
-        },
-        "message": {
-          "description": "Message is a display message about the Project, including any errors\npreventing the Project from being reconciled. i.e. If the Phase field has a\nvalue of CreationFailed, this field can be expected to explain why.\n\nDeprecated: Use the Conditions field instead.",
-          "type": "string"
-        },
-        "phase": {
-          "description": "Phase describes the Project's current phase.\n\nDeprecated: Use the Conditions field instead.",
-          "type": "string"
         }
       },
       "type": "object"
