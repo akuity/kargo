@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/google/go-github/v56/github"
@@ -273,16 +274,18 @@ func (p *provider) GetCommitURL(
 	ctx context.Context,
 	repoURL string,
 	sha string,
-) (*string, error) {
-	replacer := strings.NewReplacer(
-		"git@github.com:/", "https://github.com/",
-		".git", "",
-		"http://github.com/", "https://github.com/",
-		"ssh://git@github.com/", "https://github.com/",
-	)
-	formattedRepoURL := replacer.Replace(repoURL)
+) (string, error) {
+	re := regexp.MustCompile(`^(?:(?:\w+://)?(?:\w+@)?)?(github.com)[:/]([^/]+/[^.]+)(?:\.git)?$`)
+	matches := re.FindStringSubmatch(repoURL)
+	formattedRepoURL := ""
+	if len(matches) == 3 {
+		host := matches[1]
+		path := matches[2]
+		formattedRepoURL = fmt.Sprintf("https://%s/%s", host, path)
+	}
+
 	commitUrl := formattedRepoURL + "/commit/" + sha
-	return &commitUrl, nil
+	return commitUrl, nil
 }
 
 func convertGithubPR(ghPR github.PullRequest) gitprovider.PullRequest {

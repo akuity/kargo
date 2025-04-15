@@ -396,6 +396,26 @@ func TestGetCommitURL(t *testing.T) {
 			sha:         "sha",
 			expectedURL: "https://gitea.com/akuity/kargo/commit/sha",
 		},
+		{
+			url:         "ssh://git@gitea.com:akuity/kargo",
+			sha:         "sha",
+			expectedURL: "https://gitea.com/akuity/kargo/commit/sha",
+		},
+		{
+			url:         "git@gitea.com:akuity/kargo",
+			sha:         "sha",
+			expectedURL: "https://gitea.com/akuity/kargo/commit/sha",
+		},
+		{
+			url:         "git@custom.host.com:akuity/kargo",
+			sha:         "sha",
+			expectedURL: "https://custom.host.com/akuity/kargo/commit/sha",
+		},
+		{
+			url:         "http://custom.host.com/akuity/kargo",
+			sha:         "sha",
+			expectedURL: "https://custom.host.com/akuity/kargo/commit/sha",
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -403,6 +423,6 @@ func TestGetCommitURL(t *testing.T) {
 		g := provider{}
 		commitURL, err := g.GetCommitURL(context.Background(), testCase.url, testCase.sha)
 		require.NoError(t, err)
-		require.Equal(t, testCase.expectedURL, *commitURL)
+		require.Equal(t, testCase.expectedURL, commitURL)
 	}
 }

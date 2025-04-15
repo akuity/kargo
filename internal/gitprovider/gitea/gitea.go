@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"code.gitea.io/sdk/gitea"
@@ -262,16 +263,18 @@ func (p *provider) GetCommitURL(
 	ctx context.Context,
 	repoURL string,
 	sha string,
-) (*string, error) {
-	replacer := strings.NewReplacer(
-		"git@gitea.com:/", "https://gitea.com/",
-		"ssh://git@gitea.com/", "https://gitea.com/",
-		".git", "",
-		"http://gitea.com/", "https://gitea.com/",
-	)
-	formattedRepoURL := replacer.Replace(repoURL)
+) (string, error) {
+	re := regexp.MustCompile(`^(?:(?:\w+://)?(?:\w+@)?)?(.+)[:/]([^/]+/[^.]+)(?:\.git)?$`)
+	matches := re.FindStringSubmatch(repoURL)
+	formattedRepoURL := ""
+	if len(matches) == 3 {
+		host := matches[1]
+		path := matches[2]
+		formattedRepoURL = fmt.Sprintf("https://%s/%s", host, path)
+	}
+
 	commitUrl := formattedRepoURL + "/commit/" + sha
-	return &commitUrl, nil
+	return commitUrl, nil
 }
 
 func convertGiteaPR(giteaPR gitea.PullRequest) gitprovider.PullRequest {

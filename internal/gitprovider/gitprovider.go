@@ -53,7 +53,7 @@ type Interface interface {
 	ListPullRequests(context.Context, *ListPullRequestOptions) ([]PullRequest, error)
 
 	// GetCommit get a commit by the repoistory URL and commit SHA.
-	GetCommitURL(context.Context, string, string) (*string, error)
+	GetCommitURL(context.Context, string, string) (string, error)
 }
 
 // CreatePullRequestOpts encapsulates the options used when creating a pull

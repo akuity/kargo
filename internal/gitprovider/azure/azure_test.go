@@ -122,6 +122,6 @@ func TestGetCommitURL(t *testing.T) {
 		g := provider{}
 		commitURL, err := g.GetCommitURL(context.Background(), testCase.url, testCase.sha)
 		require.NoError(t, err)
-		require.Equal(t, testCase.expectedURL, *commitURL)
+		require.Equal(t, testCase.expectedURL, commitURL)
 	}
 }

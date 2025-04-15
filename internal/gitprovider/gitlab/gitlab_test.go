@@ -200,12 +200,12 @@ func TestGetCommitURL(t *testing.T) {
 		expectedURL string
 	}{
 		{
-			url:         "ssh://git@gitlab.com/akuity/kargo.git",
+			url:         "ssh://git@gitlab.com:akuity/kargo.git",
 			sha:         "sha",
 			expectedURL: "https://gitlab.com/akuity/kargo/-/commit/sha",
 		},
 		{
-			url:         "git@gitlab.com:/akuity/kargo.git",
+			url:         "git@gitlab.com:akuity/kargo.git",
 			sha:         "sha",
 			expectedURL: "https://gitlab.com/akuity/kargo/-/commit/sha",
 		},
@@ -221,6 +221,6 @@ func TestGetCommitURL(t *testing.T) {
 		g := provider{}
 		commitURL, err := g.GetCommitURL(context.Background(), testCase.url, testCase.sha)
 		require.NoError(t, err)
-		require.Equal(t, testCase.expectedURL, *commitURL)
+		require.Equal(t, testCase.expectedURL, commitURL)
 	}
 }

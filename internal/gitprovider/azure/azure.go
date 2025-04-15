@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/microsoft/azure-devops-go-api/azuredevops/v7"
@@ -186,16 +187,18 @@ func (p *provider) GetCommitURL(
 	ctx context.Context,
 	repoURL string,
 	sha string,
-) (*string, error) {
-	replacer := strings.NewReplacer(
-		"git@ssh.dev.azure.com:v3/", "https://dev.azure.com/",
-		"ssh://git@ssh.dev.azure.com:v3/", "https://dev.azure.com/",
-		".git", "",
-		"http://dev.azure.com/", "https://dev.azure.com/",
-	)
-	formattedRepoURL := replacer.Replace(repoURL)
+) (string, error) {
+	re := regexp.MustCompile(`^(?:(?:\w+://)?(?:\w+@)?)?(dev.azure.com|ssh.dev.azure.com\:v3)[:/]([^/]+/[^.]+)(?:\.git)?$`)
+	matches := re.FindStringSubmatch(repoURL)
+	formattedRepoURL := ""
+	if len(matches) == 3 {
+		host := "dev.azure.com"
+		path := matches[2]
+		formattedRepoURL = fmt.Sprintf("https://%s/%s", host, path)
+	}
+
 	commitUrl := formattedRepoURL + "/commit/" + sha
-	return &commitUrl, nil
+	return commitUrl, nil
 }
 
 // mapADOPrState maps a gitprovider.PullRequestState to an adogit.PullRequestStatus.

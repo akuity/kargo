@@ -14,6 +14,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/gitprovider"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -21,6 +22,10 @@ import (
 // stateKeyBranch is the key used to store the branch that was pushed to in the
 // shared State.
 const stateKeyBranch = "branch"
+
+// stateKeyCommitURL is the key used to store the URL of the commit that was
+// pushed to in the shared State.
+const stateKeyCommitURL = "commitURL"
 
 // gitPushPusher is an implementation of the promotion.StepRunner interface that
 // pushes commits from a local Git repository to a remote Git repository.
@@ -181,11 +186,26 @@ func (g *gitPushPusher) run(
 		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error getting last commit ID: %w", err)
 	}
+
+	gpOpts := &gitprovider.Options{}
+	gitProvider, err := gitprovider.New(workTree.URL(), gpOpts)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+			fmt.Errorf("error creating git provider service: %w", err)
+	}
+
+	commitURL, err := gitProvider.GetCommitURL(ctx, workTree.URL(), commitID)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+			fmt.Errorf("error getting commit url: %w", err)
+	}
+
 	return promotion.StepResult{
 		Status: kargoapi.PromotionPhaseSucceeded,
 		Output: map[string]any{
-			stateKeyBranch: pushOpts.TargetBranch,
-			stateKeyCommit: commitID,
+			stateKeyBranch:    pushOpts.TargetBranch,
+			stateKeyCommit:    commitID,
+			stateKeyCommitURL: commitURL,
 		},
 	}, nil
 }
