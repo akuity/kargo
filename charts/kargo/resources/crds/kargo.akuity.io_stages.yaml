@@ -173,8 +173,12 @@ spec:
                                 PromotionSpec.
                               items:
                                 description: |-
-                                  PromotionVariable describes a single variable that may be referenced by
-                                  expressions in promotion steps.
+                                  ExpressionVariable describes a single variable that may be referenced by
+                                  expressions in the context of a ClusterPromotionTask, PromotionTask,
+                                  Promotion, AnalysisRun arguments, or other objects that support expressions.
+
+                                  It is used to pass information to the expression evaluation engine, and to
+                                  allow for dynamic evaluation of expressions based on the variable values.
                                 properties:
                                   name:
                                     description: Name is the name of the variable.
@@ -204,8 +208,12 @@ spec:
                           promotion steps.
                         items:
                           description: |-
-                            PromotionVariable describes a single variable that may be referenced by
-                            expressions in promotion steps.
+                            ExpressionVariable describes a single variable that may be referenced by
+                            expressions in the context of a ClusterPromotionTask, PromotionTask,
+                            Promotion, AnalysisRun arguments, or other objects that support expressions.
+
+                            It is used to pass information to the expression evaluation engine, and to
+                            allow for dynamic evaluation of expressions based on the variable values.
                           properties:
                             name:
                               description: Name is the name of the variable.
@@ -320,6 +328,35 @@ spec:
                   kargo.akuity.io/shard label with the value of this field. When this field
                   is empty, the webhook will ensure that label is absent.
                 type: string
+              vars:
+                description: |-
+                  Vars is a list of variables that can be referenced anywhere in the
+                  StageSpec that supports expressions. For example, the PromotionTemplate
+                  and arguments of the Verification.
+                items:
+                  description: |-
+                    ExpressionVariable describes a single variable that may be referenced by
+                    expressions in the context of a ClusterPromotionTask, PromotionTask,
+                    Promotion, AnalysisRun arguments, or other objects that support expressions.
+
+                    It is used to pass information to the expression evaluation engine, and to
+                    allow for dynamic evaluation of expressions based on the variable values.
+                  properties:
+                    name:
+                      description: Name is the name of the variable.
+                      minLength: 1
+                      pattern: ^[a-zA-Z_]\w*$
+                      type: string
+                    value:
+                      description: |-
+                        Value is the value of the variable. It is allowed to utilize expressions
+                        in the value.
+                        See https://docs.kargo.io/user-guide/reference-docs/expressions for details.
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
               verification:
                 description: |-
                   Verification describes how to verify a Stage's current Freight is fit for

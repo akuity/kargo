@@ -18,10 +18,10 @@ require (
 	github.com/akuity/kargo/api v0.0.0
 	github.com/akuity/kargo/pkg v0.0.0
 	github.com/aws/aws-sdk-go-v2 v1.36.3
-	github.com/aws/aws-sdk-go-v2/config v1.29.13
-	github.com/aws/aws-sdk-go-v2/credentials v1.17.66
-	github.com/aws/aws-sdk-go-v2/service/ecr v1.43.2
-	github.com/aws/aws-sdk-go-v2/service/sts v1.33.18
+	github.com/aws/aws-sdk-go-v2/config v1.29.14
+	github.com/aws/aws-sdk-go-v2/credentials v1.17.67
+	github.com/aws/aws-sdk-go-v2/service/ecr v1.43.3
+	github.com/aws/aws-sdk-go-v2/service/sts v1.33.19
 	github.com/bacongobbler/browser v1.1.0
 	github.com/bmatcuk/doublestar/v4 v4.8.1
 	github.com/bombsimon/logrusr/v4 v4.1.0
@@ -31,7 +31,7 @@ require (
 	github.com/expr-lang/expr v1.17.2
 	github.com/fatih/structtag v1.2.0
 	github.com/fluxcd/pkg/kustomize v1.16.0
-	github.com/go-git/go-git/v5 v5.14.0
+	github.com/go-git/go-git/v5 v5.15.0
 	github.com/go-logr/logr v1.4.2
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang-jwt/jwt/v5 v5.2.2
@@ -60,7 +60,7 @@ require (
 	gitlab.com/gitlab-org/api/client-go v0.127.0
 	go.uber.org/ratelimit v0.3.1
 	golang.org/x/crypto v0.37.0
-	golang.org/x/net v0.38.0
+	golang.org/x/net v0.39.0
 	golang.org/x/oauth2 v0.29.0
 	golang.org/x/sync v0.13.0
 	golang.org/x/text v0.24.0
@@ -68,7 +68,7 @@ require (
 	google.golang.org/grpc v1.71.1
 	google.golang.org/protobuf v1.36.6
 	gopkg.in/yaml.v3 v3.0.1
-	helm.sh/helm/v3 v3.17.2
+	helm.sh/helm/v3 v3.17.3
 	k8s.io/api v0.32.3
 	k8s.io/apiextensions-apiserver v0.32.3
 	k8s.io/apimachinery v0.32.3

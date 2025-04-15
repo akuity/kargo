@@ -123,6 +123,12 @@ importers:
       '@eslint/compat':
         specifier: ^1.2.7
         version: 1.2.7(eslint@9.23.0(jiti@1.21.7))
+      '@eslint/eslintrc':
+        specifier: ^3.3.0
+        version: 3.3.1
+      '@eslint/js':
+        specifier: ^9.22.0
+        version: 9.23.0
       '@openapi-contrib/openapi-schema-to-json-schema':
         specifier: ^5.1.0
         version: 5.1.0

@@ -59,8 +59,10 @@ func TestFindCommit(t *testing.T) {
 					Commits: []kargoapi.GitCommit{testCommit2},
 				},
 			},
-			assertions: func(t *testing.T, _ *kargoapi.GitCommit, err error) {
-				require.ErrorContains(t, err, "not found in referenced Freight")
+			assertions: func(t *testing.T, commit *kargoapi.GitCommit, err error) {
+				require.NoError(t, err)
+				require.Nil(t, commit)
+
 			},
 		},
 		{
@@ -127,8 +129,9 @@ func TestFindCommit(t *testing.T) {
 					RequestedFreight: []kargoapi.FreightRequest{{Origin: testOrigin1}},
 				},
 			},
-			assertions: func(t *testing.T, _ *kargoapi.GitCommit, err error) {
-				require.ErrorContains(t, err, "not found in referenced Freight")
+			assertions: func(t *testing.T, commit *kargoapi.GitCommit, err error) {
+				require.NoError(t, err)
+				require.Nil(t, commit)
 			},
 		},
 		{
@@ -293,8 +296,9 @@ func TestFindImage(t *testing.T) {
 					Images: []kargoapi.Image{testImage2},
 				},
 			},
-			assertions: func(t *testing.T, _ *kargoapi.Image, err error) {
-				require.ErrorContains(t, err, "not found in referenced Freight")
+			assertions: func(t *testing.T, image *kargoapi.Image, err error) {
+				require.NoError(t, err)
+				require.Nil(t, image)
 			},
 		},
 		{
@@ -359,8 +363,9 @@ func TestFindImage(t *testing.T) {
 					RequestedFreight: []kargoapi.FreightRequest{{Origin: testOrigin1}},
 				},
 			},
-			assertions: func(t *testing.T, _ *kargoapi.Image, err error) {
-				require.ErrorContains(t, err, "not found in referenced Freight")
+			assertions: func(t *testing.T, image *kargoapi.Image, err error) {
+				require.NoError(t, err)
+				require.Nil(t, image)
 			},
 		},
 		{
@@ -656,8 +661,9 @@ func TestFindChart(t *testing.T) {
 					Charts: []kargoapi.Chart{testChart2},
 				},
 			},
-			assertions: func(t *testing.T, _ *kargoapi.Chart, err error) {
-				require.ErrorContains(t, err, "not found in referenced Freight")
+			assertions: func(t *testing.T, chart *kargoapi.Chart, err error) {
+				require.NoError(t, err)
+				require.Nil(t, chart)
 			},
 		},
 		{

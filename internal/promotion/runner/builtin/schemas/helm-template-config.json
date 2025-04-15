@@ -1,6 +1,26 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "HelmTemplateConfig",
+
+  "definitions": {
+    "setValues": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "type": "string",
+          "description": "The key whose value should be set. For nested values, use dots to delimit key parts. e.g. `image.tag`.",
+          "minLength": 1
+        },
+        "value": {
+          "type": "string",
+          "description": "The new value for the key."
+        }
+      },
+      "required": ["key", "value"]
+    }
+  },
+
   "type": "object",
   "additionalProperties": false,
   "required": ["outPath", "path", "releaseName"],
@@ -35,6 +55,13 @@
       "items": {
         "type": "string",
         "minLength": 1
+      }
+    },
+    "setValues": {
+      "type": "array",
+      "description": "Allows for amending chart configuration inline as one would with the `helm template` command's `--set` flag.",
+      "items": {
+        "$ref": "#/definitions/setValues"
       }
     },
     "includeCRDs": {

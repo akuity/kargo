@@ -211,6 +211,8 @@ api:
     ## @param api.oidc.additionalScopes The additional scopes to send to the OIDC provider. This should be set to the scopes you wish to be provided to your identity provider from clients of Kargo, the scopes openid, profile and email are always requested and don't need to be added, this value is intended for any additional ones you require.
     additionalScopes:
     - groups
+    ## @param api.oidc.usernameClaim The claim to use as the username for the user.
+    usernameClaim: email
 
     admins:
       ## @param api.oidc.admins.claims Subjects having any of these claims will automatically be Kargo admins.
@@ -355,7 +357,7 @@ api:
     logs:
       ## @param api.rollouts.logs.enabled Specifies whether support for streaming logs from AnalysisRuns using a JobMetric provider is enabled. This feature requires you to have forwarded and stored the logs yourself in a place where they can be retrieved with an HTTP GET.
       enabled: false
-      ## @param api.rollouts.logs.urlTemplate Instructs Kargo on how to construct a URL for the retrieval of relevant logs via HTTP GET. Expressions offset by ${{ }} are supported with the following variables pre-defined and injected with values: project, namespace (the Project namespace), stage, analysisRun (its name), metricName (name of the JobMetric), jobNamespace (namespace of the Job; may be different that the Project namespace as the Job may actually execute in a different cluster), jobName, container (since a Pod associated with a Job could have more than one). Example: "https://logs.kargo.example.com/${{project}}/${{analysisRun}}/${{job}}/${{container}}".
+      ## @param api.rollouts.logs.urlTemplate Instructs Kargo on how to construct a URL for the retrieval of relevant logs via HTTP GET. Expressions offset by ${{ }} are supported with the following variables pre-defined and injected with values: project (name), namespace (always equal to the Project's name), stage (name), analysisRun (name), metricName (name of the JobMetric), jobNamespace (namespace of the Job; may be different that the Project namespace as the Job may actually execute in a different cluster), jobName, container (name; since a Pod associated with a Job could have more than one). Example: "https://logs.kargo.example.com/${{project}}/${{analysisRun}}/${{jobName}}/${{container}}".
       urlTemplate: ""
       tokenSecret:
         ## @param api.rollouts.logs.tokenSecret.name specifies the name of a Kubernetes Secret managed "out of band" that contains a token usable for accessing job metric logs.

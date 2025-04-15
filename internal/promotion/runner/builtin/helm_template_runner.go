@@ -81,7 +81,7 @@ func (h *helmTemplateRunner) run(
 	stepCtx *promotion.StepContext,
 	cfg builtin.HelmTemplateConfig,
 ) (promotion.StepResult, error) {
-	composedValues, err := h.composeValues(stepCtx.WorkDir, cfg.ValuesFiles)
+	composedValues, err := h.composeValues(stepCtx.WorkDir, cfg)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("failed to compose values: %w", err)
@@ -123,17 +123,26 @@ func (h *helmTemplateRunner) run(
 	return promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded}, nil
 }
 
-// composeValues composes the values from the given values files. It merges the
-// values in the order they are provided.
-func (h *helmTemplateRunner) composeValues(workDir string, valuesFiles []string) (map[string]any, error) {
+// composeValues composes the values from the given values files and set values.
+// It merges the value files in the order they are provided. Set values are merged
+// into last as overrides
+func (h *helmTemplateRunner) composeValues(
+	workDir string,
+	cfg builtin.HelmTemplateConfig,
+) (map[string]any, error) {
 	valueOpts := &values.Options{}
-	for _, p := range valuesFiles {
+	for _, p := range cfg.ValuesFiles {
 		absValuesPath, err := securejoin.SecureJoin(workDir, p)
 		if err != nil {
 			return nil, fmt.Errorf("failed to join path %q: %w", p, err)
 		}
 		valueOpts.ValueFiles = append(valueOpts.ValueFiles, absValuesPath)
 	}
+	setValueStrVal := make([]string, len(cfg.SetValues))
+	for i, setValue := range cfg.SetValues {
+		setValueStrVal[i] = fmt.Sprintf("%s=%s", setValue.Key, setValue.Value)
+	}
+	valueOpts.Values = append(valueOpts.Values, setValueStrVal...)
 	return valueOpts.MergeValues(nil)
 }
 

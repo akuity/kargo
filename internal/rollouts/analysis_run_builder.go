@@ -24,6 +24,9 @@ import (
 // controller instance.
 const controllerInstanceIDLabelKey = "argo-rollouts.argoproj.io/controller-instance-id"
 
+// varsEnvKey is the key for variables in the ArgumentEvaluationConfig.Env map.
+const varsEnvKey = "vars"
+
 // Config holds the configuration for the AnalysisRunBuilder.
 type Config struct {
 	// ControllerInstanceID is the unique identifier for the Argo Rollouts
@@ -190,6 +193,28 @@ func (b *AnalysisRunBuilder) buildArgs(
 ) ([]rolloutsapi.Argument, error) {
 	if exprCfg == nil {
 		exprCfg = &ArgumentEvaluationConfig{}
+	}
+
+	if len(exprCfg.Vars) > 0 {
+		if exprCfg.Env == nil {
+			exprCfg.Env = make(map[string]any)
+		}
+		if exprCfg.Env[varsEnvKey] == nil {
+			exprCfg.Env[varsEnvKey] = make(map[string]any)
+		}
+		// NB: This will cause direct modifications to the map in the config.
+		vars, ok := exprCfg.Env[varsEnvKey].(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("vars in argument evaluation config env is of unexpected type %T", exprCfg.Env["vars"])
+		}
+
+		for _, v := range exprCfg.Vars {
+			value, err := expressions.EvaluateTemplate(v.Value, exprCfg.Env, exprCfg.Options...)
+			if err != nil {
+				return nil, fmt.Errorf("evaluate variable %q: %w", v.Name, err)
+			}
+			vars[v.Name] = value
+		}
 	}
 
 	rolloutsArgs := make([]rolloutsapi.Argument, len(args))

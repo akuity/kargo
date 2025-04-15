@@ -624,6 +624,60 @@ func TestAnalysisRunBuilder_buildArgs(t *testing.T) {
 				require.ErrorContains(t, err, "evaluate argument \"param1\"")
 			},
 		},
+		{
+			name: "evaluate variable in argument",
+			template: &rolloutsapi.AnalysisTemplate{
+				Spec: rolloutsapi.AnalysisTemplateSpec{
+					Args: []rolloutsapi.Argument{
+						{Name: "param1"},
+					},
+				},
+			},
+			args: []kargoapi.AnalysisRunArgument{
+				{Name: "param1", Value: "${{ vars.test }}"},
+			},
+			exprCfg: &ArgumentEvaluationConfig{
+				Vars: []ArgumentVariable{
+					{Name: "test", Value: "value1"},
+					// Ensure overriding and expression evaluation works.
+					{Name: "test", Value: "${{ vars.test + '-suffix'}}"},
+				},
+			},
+			assertions: func(t *testing.T, args []rolloutsapi.Argument, err error) {
+				require.NoError(t, err)
+				assert.Len(t, args, 1)
+				assert.Equal(t, "value1-suffix", *args[0].Value)
+			},
+		},
+		{
+			name:     "variable evaluation error",
+			template: &rolloutsapi.AnalysisTemplate{},
+			exprCfg: &ArgumentEvaluationConfig{
+				Vars: []ArgumentVariable{
+					{Name: "test", Value: "${{ ctx.test }}"},
+				},
+			},
+			assertions: func(t *testing.T, _ []rolloutsapi.Argument, err error) {
+				require.ErrorContains(t, err, "evaluate variable \"test\"")
+			},
+		},
+		{
+			name:     "existing vars in env",
+			template: &rolloutsapi.AnalysisTemplate{},
+			exprCfg: &ArgumentEvaluationConfig{
+				Env: map[string]any{
+					"vars": map[string]string{
+						"test": "value1",
+					},
+				},
+				Vars: []ArgumentVariable{
+					{Name: "test", Value: "value2"},
+				},
+			},
+			assertions: func(t *testing.T, _ []rolloutsapi.Argument, err error) {
+				require.ErrorContains(t, err, "vars in argument evaluation config env is of unexpected type")
+			},
+		},
 	}
 
 	for _, tt := range tests {
