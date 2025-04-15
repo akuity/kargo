@@ -172,7 +172,7 @@ steps:
     url: https://slack.com/api/chat.postMessage
     headers:
     - name: Authorization
-      value: Bearer ${{ secrets.slack.token }}
+      value: Bearer ${{ secret('slack').token }}
     - name: Content-Type
       value: application/json
     body: |

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -631,6 +632,178 @@ func Test_getChart(t *testing.T) {
 				tt.freightReqs,
 				tt.freightRefs,
 			)
+
+			result, err := fn(tt.args...)
+			tt.assertions(t, result, err)
+		})
+	}
+}
+
+func Test_getConfigMap(t *testing.T) {
+	const testProject = "fake-project"
+	const testConfigMap = "fake-configmap"
+
+	testData := map[string]string{
+		"foo": "bar",
+	}
+
+	scheme := runtime.NewScheme()
+	assert.NoError(t, corev1.AddToScheme(scheme))
+
+	tests := []struct {
+		name       string
+		objects    []client.Object
+		args       []any
+		assertions func(t *testing.T, result any, err error)
+	}{
+		{
+			name: "no arguments",
+			args: []any{},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "expected 1 argument")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "too many arguments",
+			args: []any{testConfigMap, "extra"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "expected 1 argument")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "invalid argument type",
+			args: []any{123},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "argument must be string")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "ConfigMap not found",
+			args: []any{testConfigMap},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.NotNil(t, result)
+				assert.IsType(t, map[string]string{}, result)
+				assert.Empty(t, result)
+			},
+		},
+		{
+			name: "success",
+			objects: []client.Object{
+				&corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      testConfigMap,
+					},
+					Data: testData,
+				},
+			},
+			args: []any{testConfigMap},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, testData, result)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(tt.objects...).
+				Build()
+
+			fn := getConfigMap(ctx, c, testProject)
+
+			result, err := fn(tt.args...)
+			tt.assertions(t, result, err)
+		})
+	}
+}
+
+func Test_getSecret(t *testing.T) {
+	const testProject = "fake-project"
+	const testSecret = "fake-secret"
+
+	scheme := runtime.NewScheme()
+	assert.NoError(t, corev1.AddToScheme(scheme))
+
+	tests := []struct {
+		name       string
+		objects    []client.Object
+		args       []any
+		assertions func(t *testing.T, result any, err error)
+	}{
+		{
+			name: "no arguments",
+			args: []any{},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "expected 1 argument")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "too many arguments",
+			args: []any{testSecret, "extra"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "expected 1 argument")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "invalid argument type",
+			args: []any{123},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "argument must be string")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "Secret not found",
+			args: []any{testSecret},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.NotNil(t, result)
+				assert.IsType(t, map[string]string{}, result)
+				assert.Empty(t, result)
+			},
+		},
+		{
+			name: "success",
+			objects: []client.Object{
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      testSecret,
+					},
+					Data: map[string][]byte{
+						"foo": []byte("bar"),
+					},
+				},
+			},
+			args: []any{testSecret},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, map[string]string{"foo": "bar"}, result)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(tt.objects...).
+				Build()
+
+			fn := getSecret(ctx, c, testProject)
 
 			result, err := fn(tt.args...)
 			tt.assertions(t, result, err)
