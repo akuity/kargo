@@ -531,6 +531,118 @@ func Test_parseCreateActorAnnotation(t *testing.T) {
 	}
 }
 
+func Test_calculateRequeueInterval(t *testing.T) {
+	defaultTimeout := 5 * time.Minute
+	for _, test := range []struct {
+		name       string
+		promo      *kargoapi.Promotion
+		setup      func(*testing.T)
+		assertions func(*testing.T, time.Duration)
+	}{
+		{
+			name: "should return default requeue interval",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					CreationTimestamp: now,
+					Name:              "fake-name",
+					Namespace:         "fake-namespace",
+				},
+				Spec: kargoapi.PromotionSpec{
+					Stage: "fake-stage",
+					Steps: []kargoapi.PromotionStep{
+						{
+							Uses: "slow-step",
+							Retry: &kargoapi.PromotionStepRetry{
+								Timeout: &metav1.Duration{
+									// exceeds default threshold
+									Duration: 10 * time.Minute,
+								},
+							},
+						},
+					},
+				},
+				Status: kargoapi.PromotionStatus{
+					Phase:       kargoapi.PromotionPhasePending,
+					CurrentStep: 0,
+					StepExecutionMetadata: []kargoapi.StepExecutionMetadata{
+						{StartedAt: &now},
+					},
+				},
+			},
+			setup: func(tt *testing.T) {
+				tt.Helper()
+				var (
+					// exceeds than the 5 minute default
+					stepRunnerTimeout = 10 * time.Minute
+					numRetries        = uint32(1)
+					runner            = promotion.NewMockRetryableStepRunner(
+						"slow-step",
+						&stepRunnerTimeout,
+						numRetries,
+					)
+				)
+				promotion.RegisterStepRunner(runner)
+			},
+			assertions: func(tt *testing.T, d time.Duration) {
+				require.Equal(tt, d, defaultTimeout)
+			},
+		},
+		{
+			name: "requeue interval should return requeue interval less than the default",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					CreationTimestamp: now,
+					Name:              "fake-name",
+					Namespace:         "fake-namespace",
+				},
+				Spec: kargoapi.PromotionSpec{
+					Stage: "fake-stage",
+					Steps: []kargoapi.PromotionStep{
+						{
+							Uses: "fast-step",
+							Retry: &kargoapi.PromotionStepRetry{
+								Timeout: &metav1.Duration{
+									// faster than default threshold
+									Duration: 3 * time.Minute,
+								},
+							},
+						},
+					},
+				},
+				Status: kargoapi.PromotionStatus{
+					Phase:       kargoapi.PromotionPhasePending,
+					CurrentStep: 0,
+					StepExecutionMetadata: []kargoapi.StepExecutionMetadata{
+						{StartedAt: &now},
+					},
+				},
+			},
+			setup: func(tt *testing.T) {
+				tt.Helper()
+				var (
+					// lower than the 5 minute default
+					stepRunnerTimeout = 3 * time.Minute
+					numRetries        = uint32(1)
+					runner            = promotion.NewMockRetryableStepRunner(
+						"fast-step",
+						&stepRunnerTimeout,
+						numRetries,
+					)
+				)
+				promotion.RegisterStepRunner(runner)
+			},
+			assertions: func(tt *testing.T, d time.Duration) {
+				require.Less(tt, d, defaultTimeout)
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			test.setup(t)
+			test.assertions(t, calculateRequeueInterval(test.promo))
+		})
+	}
+}
+
 // nolint: unparam
 func newPromo(namespace, name, stage string,
 	phase kargoapi.PromotionPhase,

@@ -1,6 +1,8 @@
 package promotion
 
-import "github.com/akuity/kargo/pkg/promotion"
+import (
+	"github.com/akuity/kargo/pkg/promotion"
+)
 
 // stepRunnerRegistry is a registry of StepRunners.
 type stepRunnerRegistry map[string]promotion.StepRunner
@@ -23,4 +25,10 @@ var stepRunnerReg = stepRunnerRegistry{}
 // RegisterStepRunner adds a StepRunner to the package's internal registry.
 func RegisterStepRunner(runner promotion.StepRunner) {
 	stepRunnerReg.register(runner)
+}
+
+// GetStepRunner returns a StepRunner from the package's internal registry. If
+// no StepRunner is registered with the given name, nil is returned instead.
+func GetStepRunner(name string) promotion.StepRunner {
+	return stepRunnerReg.getStepRunner(name)
 }
