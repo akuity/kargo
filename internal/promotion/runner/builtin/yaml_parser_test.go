@@ -156,7 +156,7 @@ features:
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, promotion.StepResult{
-					Status: kargoapi.PromotionPhaseSucceeded,
+					Status: kargoapi.PromotionStepPhaseSucceeded,
 					Output: map[string]any{
 						"appVersion":    "1.0.0",
 						"featureStatus": false,
@@ -184,7 +184,7 @@ app:
 			},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
 				assert.Error(t, err)
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored}, result)
 				assert.Contains(t, err.Error(), "failed to extract outputs")
 			},
 		},
@@ -206,7 +206,7 @@ app:
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
 				assert.Error(t, err)
 				assert.Equal(t, promotion.StepResult{
-					Status: kargoapi.PromotionPhaseErrored,
+					Status: kargoapi.PromotionStepPhaseErrored,
 				}, result)
 				assert.Contains(t, err.Error(), "outputs is required")
 			},
@@ -227,7 +227,7 @@ app:
 			},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
 				assert.Error(t, err)
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored}, result)
 				assert.Contains(t, err.Error(), "could not parse empty YAML file")
 			},
 		},
@@ -241,7 +241,7 @@ app:
 			files: map[string]string{},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
 				assert.Error(t, err)
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored}, result)
 				assert.Contains(t, err.Error(), "YAML file path cannot be empty")
 			},
 		},
@@ -255,7 +255,7 @@ app:
 			files: map[string]string{},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
 				assert.Error(t, err)
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored}, result)
 				assert.Contains(t, err.Error(), "no such file or directory")
 			},
 		},
@@ -285,7 +285,7 @@ config:
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, promotion.StepResult{
-					Status: kargoapi.PromotionPhaseSucceeded,
+					Status: kargoapi.PromotionStepPhaseSucceeded,
 					Output: map[string]any{
 						"appVersion": "2.0.1",
 						"isEnabled":  true,

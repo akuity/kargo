@@ -52,7 +52,7 @@ func (k *kustomizeBuilder) Run(
 	_ context.Context,
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
-	failure := promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}
+	failure := promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored}
 
 	// Validate the configuration against the JSON Schema.
 	if err := validate(k.schemaLoader, gojsonschema.NewGoLoader(stepCtx.Config), k.Name()); err != nil {
@@ -75,29 +75,29 @@ func (k *kustomizeBuilder) run(
 	// Create a "chrooted" filesystem for the kustomize build.
 	fs, err := securefs.MakeFsOnDiskSecureBuild(stepCtx.WorkDir)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, err
+		return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored}, err
 	}
 
 	// Build the manifests.
 	rm, err := kustomizeBuild(fs, filepath.Join(stepCtx.WorkDir, cfg.Path), cfg.Plugin)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, err
+		return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored}, err
 	}
 
 	// Prepare the output path.
 	outPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutPath)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, err
+		return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored}, err
 	}
 
 	// Write the built manifests to the output path.
 	if err := k.writeResult(rm, outPath); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
+		return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored}, fmt.Errorf(
 			"failed to write built manifests to %q: %w", cfg.OutPath,
 			sanitizePathError(err, stepCtx.WorkDir),
 		)
 	}
-	return promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded}, nil
+	return promotion.StepResult{Status: kargoapi.PromotionStepPhaseSucceeded}, nil
 }
 
 func (k *kustomizeBuilder) writeResult(rm resmap.ResMap, outPath string) error {

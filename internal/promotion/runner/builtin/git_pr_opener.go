@@ -53,11 +53,11 @@ func (g *gitPROpener) Run(
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
 	if err := g.validate(stepCtx.Config); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, err
+		return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored}, err
 	}
 	cfg, err := promotion.ConfigToStruct[builtin.GitOpenPRConfig](stepCtx.Config)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored},
 			fmt.Errorf("could not convert config into git-open-pr config: %w", err)
 	}
 	return g.run(ctx, stepCtx, cfg)
@@ -77,12 +77,12 @@ func (g *gitPROpener) run(
 	// step that contains a PR number.
 	prNumber, err := g.getPRNumber(stepCtx, stepCtx.SharedState)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored},
 			fmt.Errorf("error getting PR number from shared state: %w", err)
 	}
 	if prNumber != -1 {
 		return promotion.StepResult{
-			Status: kargoapi.PromotionPhaseSucceeded,
+			Status: kargoapi.PromotionStepPhaseSucceeded,
 			Output: map[string]any{
 				stateKeyPRNumber: prNumber,
 			},
@@ -99,7 +99,7 @@ func (g *gitPROpener) run(
 		cfg.RepoURL,
 	)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored},
 			fmt.Errorf("error getting credentials for %s: %w", cfg.RepoURL, err)
 	}
 	if creds != nil {
@@ -122,7 +122,7 @@ func (g *gitPROpener) run(
 		},
 	)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored},
 			fmt.Errorf("error cloning %s: %w", cfg.RepoURL, err)
 	}
 	defer repo.Close()
@@ -138,7 +138,7 @@ func (g *gitPROpener) run(
 	}
 	gitProvider, err := gitprovider.New(cfg.RepoURL, gpOpts)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored},
 			fmt.Errorf("error creating git provider service: %w", err)
 	}
 
@@ -151,12 +151,12 @@ func (g *gitPROpener) run(
 		cfg.TargetBranch,
 	)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored},
 			fmt.Errorf("error determining if pull request already exists: %w", err)
 	}
 	if pr != nil && (pr.Open || pr.Merged) { // Excludes PR that is both closed AND unmerged
 		return promotion.StepResult{
-			Status: kargoapi.PromotionPhaseSucceeded,
+			Status: kargoapi.PromotionStepPhaseSucceeded,
 			Output: map[string]any{
 				stateKeyPRNumber: pr.Number,
 			},
@@ -172,7 +172,7 @@ func (g *gitPROpener) run(
 	// that may involve creating a new branch and committing to it.
 	commitMsg, err := repo.CommitMessage(sourceBranch)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
+		return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored}, fmt.Errorf(
 			"error getting commit message from head of branch %s: %w",
 			sourceBranch, err,
 		)
@@ -183,7 +183,7 @@ func (g *gitPROpener) run(
 		cfg.TargetBranch,
 		cfg.CreateTargetBranch,
 	); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
+		return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored}, fmt.Errorf(
 			"error ensuring existence of remote branch %s: %w",
 			cfg.TargetBranch, err,
 		)
@@ -216,11 +216,11 @@ func (g *gitPROpener) run(
 			Labels:      cfg.Labels,
 		},
 	); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored},
 			fmt.Errorf("error creating pull request: %w", err)
 	}
 	return promotion.StepResult{
-		Status: kargoapi.PromotionPhaseSucceeded,
+		Status: kargoapi.PromotionStepPhaseSucceeded,
 		Output: map[string]any{
 			stateKeyPRNumber: pr.Number,
 		},

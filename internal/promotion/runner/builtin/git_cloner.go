@@ -65,11 +65,11 @@ func (g *gitCloner) Run(
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
 	if err := g.validate(stepCtx.Config); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, err
+		return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored}, err
 	}
 	cfg, err := promotion.ConfigToStruct[builtin.GitCloneConfig](stepCtx.Config)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored},
 			fmt.Errorf("could not convert config into %s config: %w", g.Name(), err)
 	}
 	return g.run(ctx, stepCtx, cfg)
@@ -93,7 +93,7 @@ func (g *gitCloner) run(
 		cfg.RepoURL,
 	)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored},
 			fmt.Errorf("error getting credentials for %s: %w", cfg.RepoURL, err)
 	}
 	if creds != nil {
@@ -115,7 +115,7 @@ func (g *gitCloner) run(
 		},
 	)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored},
 			fmt.Errorf("error cloning %s: %w", cfg.RepoURL, err)
 	}
 	for _, checkout := range cfg.Checkout {
@@ -124,7 +124,7 @@ func (g *gitCloner) run(
 		case checkout.Branch != "":
 			ref = checkout.Branch
 			if err = ensureRemoteBranch(repo, ref, checkout.Create); err != nil {
-				return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+				return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored},
 					fmt.Errorf("error ensuring existence of remote branch %s: %w", ref, err)
 			}
 		case checkout.Commit != "":
@@ -134,7 +134,7 @@ func (g *gitCloner) run(
 		}
 		path, err := securejoin.SecureJoin(stepCtx.WorkDir, checkout.Path)
 		if err != nil {
-			return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
+			return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored}, fmt.Errorf(
 				"error joining path %s with work dir %s: %w",
 				checkout.Path, stepCtx.WorkDir, err,
 			)
@@ -143,7 +143,7 @@ func (g *gitCloner) run(
 			path,
 			&git.AddWorkTreeOptions{Ref: ref},
 		); err != nil {
-			return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
+			return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored}, fmt.Errorf(
 				"error adding work tree %s to repo %s: %w",
 				checkout.Path, cfg.RepoURL, err,
 			)
@@ -152,7 +152,7 @@ func (g *gitCloner) run(
 	// Note: We do NOT defer repo.Close() because we want to keep the repository
 	// around on the FS for subsequent promotion steps to use. The Engine will
 	// handle all work dir cleanup.
-	return promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded}, nil
+	return promotion.StepResult{Status: kargoapi.PromotionStepPhaseSucceeded}, nil
 }
 
 // ensureRemoteBranch checks for the existence of a remote branch. If the remote

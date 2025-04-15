@@ -152,12 +152,7 @@ func (e *simpleEngine) executeSteps(
 				HealthChecks:          healthChecks,
 			}, fmt.Errorf("error checking if step %d should be skipped: %w", i, err)
 		} else if skip {
-			// TODO(hidde): We should probably set the status to skipped here,
-			// but this would require step specific phases (opposed to the
-			// promotion wide phases we have now). We should revisit this when
-			// we dive into the other engine related changes (e.g. improved
-			// failure handling).
-			stepExecMeta.Status = kargoapi.PromotionPhaseSucceeded
+			stepExecMeta.Status = kargoapi.PromotionStepPhaseSkipped
 			continue
 		}
 
@@ -186,8 +181,9 @@ func (e *simpleEngine) executeSteps(
 		}
 
 		switch result.Status {
-		case kargoapi.PromotionPhaseErrored, kargoapi.PromotionPhaseFailed,
-			kargoapi.PromotionPhaseRunning, kargoapi.PromotionPhaseSucceeded:
+		case kargoapi.PromotionStepPhaseErrored, kargoapi.PromotionStepPhaseFailed,
+			kargoapi.PromotionStepPhaseRunning, kargoapi.PromotionStepPhaseSucceeded,
+			kargoapi.PromotionStepPhaseSkipped: // Step runners can self-determine they should be skipped
 		default:
 			// Deal with statuses that no step should have returned.
 			stepExecMeta.FinishedAt = ptr.To(metav1.Now())
@@ -202,16 +198,16 @@ func (e *simpleEngine) executeSteps(
 
 		// Reconcile status and err...
 		if err != nil {
-			if stepExecMeta.Status != kargoapi.PromotionPhaseFailed {
+			if stepExecMeta.Status != kargoapi.PromotionStepPhaseFailed {
 				// All states other than Errored and Failed should be mutually exclusive
 				// with a hard error. If we got to here, a step has violated this
 				// assumption. We will prioritize the error over the status and change
 				// the status to Errored.
-				stepExecMeta.Status = kargoapi.PromotionPhaseErrored
+				stepExecMeta.Status = kargoapi.PromotionStepPhaseErrored
 			}
 			// Let the hard error take precedence over the message.
 			stepExecMeta.Message = err.Error()
-		} else if result.Status == kargoapi.PromotionPhaseErrored {
+		} else if result.Status == kargoapi.PromotionStepPhaseErrored {
 			// A nil err should be mutually exclusive with an Errored status. If we
 			// got to here, a step has violated this assumption. We will prioritize
 			// the Errored status over the nil error and create an error.
@@ -226,7 +222,7 @@ func (e *simpleEngine) executeSteps(
 		// err.
 
 		switch {
-		case stepExecMeta.Status == kargoapi.PromotionPhaseSucceeded:
+		case stepExecMeta.Status == kargoapi.PromotionStepPhaseSucceeded:
 			// Best case scenario: The step succeeded.
 			stepExecMeta.FinishedAt = ptr.To(metav1.Now())
 			if healthCheck := result.HealthCheck; healthCheck != nil {
@@ -237,7 +233,7 @@ func (e *simpleEngine) executeSteps(
 			// This is an unrecoverable error.
 			stepExecMeta.FinishedAt = ptr.To(metav1.Now())
 			return Result{
-				Status:                stepExecMeta.Status,
+				Status:                kargoapi.PromotionPhaseErrored,
 				CurrentStep:           i,
 				StepExecutionMetadata: stepExecMetas,
 				State:                 state,
@@ -329,13 +325,9 @@ func (e *simpleEngine) executeStep(
 ) (promotion.StepResult, error) {
 	stepCtx, err := e.prepareStepContext(ctx, promoCtx, step, workDir, state)
 	if err != nil {
-		// TODO(krancour): We're not yet distinguishing between retryable and
-		// non-retryable errors. When we start to do this, failure to prepare the
-		// step context (likely due to invalid configuration) should be considered
-		// non-retryable.
 		return promotion.StepResult{
-			Status: kargoapi.PromotionPhaseErrored,
-		}, err
+			Status: kargoapi.PromotionStepPhaseErrored,
+		}, &promotion.TerminalError{Err: err}
 	}
 
 	result, err := runner.Run(ctx, stepCtx)
