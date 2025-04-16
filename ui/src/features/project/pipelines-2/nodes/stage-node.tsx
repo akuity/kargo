@@ -10,6 +10,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Card, Dropdown, Flex, Tag, Typography } from 'antd';
 import Link from 'antd/es/typography/Link';
+import classNames from 'classnames';
 import { formatDistance } from 'date-fns';
 import { CSSProperties, ReactNode, useEffect, useMemo, useState } from 'react';
 
@@ -42,6 +43,7 @@ import {
   selectNextArtifact,
   selectPreviousArtifact
 } from './artifact-selector-utils';
+import style from './node-size-source-of-truth.module.less';
 
 export const StageNode = (props: { stage: Stage }) => {
   const headerStyle = useStageHeaderStyle(props.stage);
@@ -103,7 +105,7 @@ export const StageNode = (props: { stage: Stage }) => {
           )}
         </Flex>
       }
-      className='stage-node'
+      className={classNames('stage-node', style['stage-node-size'])}
       size='small'
       variant='borderless'
     >

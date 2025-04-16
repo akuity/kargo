@@ -10,6 +10,8 @@ import { RepoSubscription } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { artifactBase, artifactURL, humanComprehendableArtifact } from '../artifact-parts-utils';
 
+import styles from './node-size-source-of-truth.module.less';
+
 export const SubscriptionNode = (props: { subscription: RepoSubscription }) => {
   const { title, base, link } = useMemo(() => {
     const repoURL =
@@ -37,7 +39,7 @@ export const SubscriptionNode = (props: { subscription: RepoSubscription }) => {
   return (
     <Card
       size='small'
-      className='w-[256px]'
+      className={styles['subscription-node-size']}
       title={
         <Flex align='center' gap={16}>
           <FontAwesomeIcon icon={icon} />

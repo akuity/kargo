@@ -6,6 +6,8 @@ import { useMemo } from 'react';
 
 import { Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
+import styles from './node-size-source-of-truth.module.less';
+
 export const WarehouseNode = (props: { warehouse: Warehouse }) => {
   const warehouseState = useWarehouseState(props.warehouse);
 
@@ -24,6 +26,7 @@ export const WarehouseNode = (props: { warehouse: Warehouse }) => {
           {warehouseState.hasError && <Badge status='error' />}
         </Flex>
       }
+      className={styles['warehouse-node-size']}
     >
       <center>
         <Button
