@@ -10,6 +10,7 @@ import {
   faExternalLink,
   faFilter,
   faTimes,
+  faWarehouse,
   IconDefinition
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -38,11 +39,16 @@ import {
   getGitCommitURL,
   getImageSource
 } from '@ui/features/freight-timeline/open-container-initiative-utils';
-import { queryFreight } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import {
+  listStages,
+  listWarehouses,
+  queryFreight
+} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { Chart, Freight, GitCommit, Image, Project } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import './pipelines.less';
+
 import { humanComprehendableArtifact } from './artifact-parts-utils';
 import {
   selectActiveCarouselFreight,
@@ -60,6 +66,7 @@ import {
   timerangeToDate,
   timerangeToLabel
 } from './filter-timerange-utils';
+import { Graph } from './graph/graph';
 import { shortVersion } from './short-version-utils';
 import {
   catalogueFreights,
@@ -67,10 +74,19 @@ import {
   filterFreightByTimerange
 } from './source-catalogue-utils';
 
-export const Pipelines = (props: { project: Project }) => {
-  const getFreightQuery = useQuery(queryFreight, { project: props.project?.metadata?.name });
+import '@xyflow/react/dist/style.css';
 
-  const loading = getFreightQuery.isLoading;
+export const Pipelines = (props: { project: Project }) => {
+  const projectName = props.project?.metadata?.name;
+
+  const getFreightQuery = useQuery(queryFreight, { project: projectName });
+
+  const listWarehousesQuery = useQuery(listWarehouses, { project: projectName });
+
+  const listStagesQuery = useQuery(listStages, { project: projectName });
+
+  const loading =
+    getFreightQuery.isLoading || listWarehousesQuery.isLoading || listStagesQuery.isLoading;
 
   if (loading) {
     return <LoadingState />;
@@ -80,6 +96,13 @@ export const Pipelines = (props: { project: Project }) => {
     <>
       <ColorContext.Provider value={{ stageColorMap: {}, warehouseColorMap: {} }}>
         <FreightTimeline freights={getFreightQuery?.data?.groups?.['']?.freight || []} />
+
+        <div className='w-full h-full'>
+          <Graph
+            warehouses={listWarehousesQuery.data?.warehouses || []}
+            stages={listStagesQuery.data?.stages || []}
+          />
+        </div>
       </ColorContext.Provider>
     </>
   );
@@ -387,6 +410,13 @@ const FreightCard = (props: { freight: Freight }) => {
         freightTimelineControllerContext?.setViewingFreight(isViewingFreight ? null : props.freight)
       }
     >
+      <Tag
+        className='w-fit text-[8px] absolute right-0 top-1 leading-none'
+        bordered={false}
+        color='green'
+      >
+        in use
+      </Tag>
       {freightTimelineControllerContext?.preferredFilter?.showColors && (
         <div className='flex gap-1 mb-1 justify-center'>
           <div
@@ -439,6 +469,10 @@ const FreightCard = (props: { freight: Freight }) => {
           title={creation.abs?.toString()}
         >
           {creation.relative}
+        </Typography.Text>
+        <Typography.Text className='text-[10px] text-nowrap' type='secondary'>
+          <FontAwesomeIcon className='mr-1' icon={faWarehouse} />
+          {props.freight?.origin?.name}
         </Typography.Text>
       </div>
     </div>
@@ -624,6 +658,10 @@ const FreightExtended = (props: { freight: Freight; onClose?: () => void }) => {
         column={1}
         size='small'
         items={[
+          {
+            label: 'Warehouse',
+            children: props.freight?.origin?.name
+          },
           {
             label: 'Name',
             children: props.freight?.metadata?.name

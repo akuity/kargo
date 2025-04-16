@@ -4,3 +4,12 @@ export const humanComprehendableArtifact = (repoURL: string) => {
 
   return lastPart;
 };
+
+export const artifactBase = (repoURL: string) => {
+  const parts = repoURL.split('/');
+
+  return parts.slice(0, parts.length - 1).join('/');
+};
+
+export const artifactURL = (repoURL: string) =>
+  repoURL.startsWith('https://') ? repoURL : `https://${repoURL}`;

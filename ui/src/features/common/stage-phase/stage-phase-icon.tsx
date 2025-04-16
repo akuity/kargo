@@ -13,7 +13,11 @@ import styles from './styles.module.less';
 import { TruckIcon } from './truck-icon/truck-icon';
 import { StagePhase } from './utils';
 
-export const StagePhaseIcon = (props: { phase: StagePhase; className?: string }) => {
+export const StagePhaseIcon = (props: {
+  phase: StagePhase;
+  className?: string;
+  noTooltip?: boolean;
+}) => {
   let icon: IconDefinition = faCircleMinus;
 
   switch (props.phase) {
@@ -30,6 +34,28 @@ export const StagePhaseIcon = (props: { phase: StagePhase; className?: string })
       break;
   }
 
+  const Children =
+    props.phase === StagePhase.Promoting ? (
+      <>
+        <TruckIcon />
+      </>
+    ) : (
+      <FontAwesomeIcon
+        icon={icon}
+        className={classNames(props.className, {
+          'text-gray-400': props.phase === StagePhase.NotApplicable,
+          'text-red-400': props.phase === StagePhase.Failed,
+          'text-green-400': props.phase === StagePhase.Steady,
+          'text-blue-500': props.phase === StagePhase.Verifying,
+          [styles.magnifyingGlass]: props.phase === StagePhase.Verifying
+        })}
+      />
+    );
+
+  if (props.noTooltip) {
+    return Children;
+  }
+
   return (
     <Tooltip
       title={
@@ -38,22 +64,7 @@ export const StagePhaseIcon = (props: { phase: StagePhase; className?: string })
         </>
       }
     >
-      {props.phase === StagePhase.Promoting ? (
-        <>
-          <TruckIcon />
-        </>
-      ) : (
-        <FontAwesomeIcon
-          icon={icon}
-          className={classNames(props.className, {
-            'text-gray-400': props.phase === StagePhase.NotApplicable,
-            'text-red-400': props.phase === StagePhase.Failed,
-            'text-green-400': props.phase === StagePhase.Steady,
-            'text-blue-500': props.phase === StagePhase.Verifying,
-            [styles.magnifyingGlass]: props.phase === StagePhase.Verifying
-          })}
-        />
-      )}
+      {Children}
     </Tooltip>
   );
 };
