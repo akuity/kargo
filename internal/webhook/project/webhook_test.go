@@ -73,7 +73,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: testProjectName,
 				},
-				Spec: &kargoapi.ProjectSpec{},
+				Spec: &kargoapi.ProjectSpec{}, // nolint: staticcheck
 			},
 			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
 				assert.Empty(t, warnings)
@@ -195,13 +195,13 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: testProjectName,
 				},
-				Spec: &kargoapi.ProjectSpec{},
+				Spec: &kargoapi.ProjectSpec{}, // nolint: staticcheck
 			},
 			newProject: &kargoapi.Project{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: testProjectName,
 				},
-				Spec: &kargoapi.ProjectSpec{},
+				Spec: &kargoapi.ProjectSpec{}, // nolint: staticcheck
 			},
 			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
 				assert.Empty(t, warnings)
@@ -214,7 +214,7 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: testProjectName,
 				},
-				Spec: &kargoapi.ProjectSpec{
+				Spec: &kargoapi.ProjectSpec{ // nolint: staticcheck
 					PromotionPolicies: []kargoapi.PromotionPolicy{
 						{
 							Stage:                "test-stage",
@@ -227,7 +227,7 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: testProjectName,
 				},
-				Spec: &kargoapi.ProjectSpec{
+				Spec: &kargoapi.ProjectSpec{ // nolint: staticcheck
 					PromotionPolicies: []kargoapi.PromotionPolicy{
 						{
 							Stage:                "test-stage",
