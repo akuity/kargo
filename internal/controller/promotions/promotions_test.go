@@ -361,7 +361,41 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, kargoapi.PromotionPhaseAborted, promo.Status.Phase)
 				require.Contains(t, promo.Status.Message, "terminated")
-				require.NotNil(t, now, promo.Status.FinishedAt)
+				require.NotNil(t, promo.Status.FinishedAt)
+
+				require.Len(t, recorder.Events, 1)
+				event := <-recorder.Events
+				require.Equal(t, kargoapi.EventReasonPromotionAborted, event.Reason)
+			},
+		},
+		{
+			name: "terminates running promotion",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					CreationTimestamp: now,
+					Name:              "fake-promo",
+					Namespace:         "fake-namespace",
+				},
+				Spec: kargoapi.PromotionSpec{
+					Stage: "fake-stage",
+				},
+				Status: kargoapi.PromotionStatus{
+					Phase:       kargoapi.PromotionPhaseRunning,
+					CurrentStep: 0,
+					StepExecutionMetadata: []kargoapi.StepExecutionMetadata{{
+						StartedAt: &now,
+						Status:    kargoapi.PromotionStepStatusRunning,
+					}},
+				},
+			},
+			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder, promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionPhaseAborted, promo.Status.Phase)
+				require.Contains(t, promo.Status.Message, "terminated")
+				require.NotNil(t, promo.Status.FinishedAt)
+
+				require.Equal(t, kargoapi.PromotionStepStatusAborted, promo.Status.StepExecutionMetadata[0].Status)
+				require.NotNil(t, promo.Status.StepExecutionMetadata[0].FinishedAt)
 
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
@@ -384,7 +418,7 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, kargoapi.PromotionPhaseAborted, promo.Status.Phase)
 				require.Contains(t, promo.Status.Message, "terminated")
-				require.NotNil(t, now, promo.Status.FinishedAt)
+				require.NotNil(t, promo.Status.FinishedAt)
 
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
