@@ -110,6 +110,7 @@ spec:
       {{- with .Values.controller.initContainers }}
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- if or .Values.controller.cabundle.configMapName .Values.controller.cabundle.secretName }}
         - name: parse-cabundle
           image: {{ include "kargo.image" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
@@ -132,6 +133,7 @@ spec:
             mountPath: /tmp/source
           - name: certs
             mountPath: /tmp/target
+      {{- end }}
       {{- end }}
       volumes:
       - name: tmp-data
