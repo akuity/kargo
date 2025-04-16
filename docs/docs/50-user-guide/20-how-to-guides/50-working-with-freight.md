@@ -266,3 +266,59 @@ kargo promote \
 
 </TabItem>
 </Tabs>
+
+## OCI Image Annotations
+
+Kargo understands 
+[OCI Image Annotations](https://github.com/opencontainers/image-spec/blob/main/annotations.md)
+and uses them to generate helpful links in the UI. When the following 
+annotations are present in your container images, Kargo can display
+direct references to the source code and revision:
+
+* `org.opencontainers.image.source`
+* `org.opencontainers.image.revision`
+
+   ![oci-annotations](img/freight-oci-annotations.png)
+
+### Adding Annotations with GitHub Actions
+
+If you're using Docker's `build-and-push` GitHub Action, you can
+automatically  include these annotations using the 
+[`metadata-action` action](https://github.com/docker/metadata-action?tab=readme-ov-file#annotations).
+Here's an example workflow snippet:
+
+```yaml
+  - name: Docker meta
+    id: meta
+    uses: docker/metadata-action@v5
+    with:
+      images: akuity/guestbook
+    env:
+      DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index  
+
+  - name: Build and push
+    uses: docker/build-push-action@v6
+    with:
+      tags: ${{ steps.meta.outputs.tags }}
+      annotations: ${{ steps.meta.outputs.annotations }}
+```
+
+### Adding Annotations with `docker buildx`
+
+If you're building images manually using `docker buildx`,
+you can add annotations using the `--annotation`
+[flag](https://docs.docker.com/reference/cli/docker/buildx/build/#annotation):
+
+```
+GIT_SHA=$(git rev-parse --short HEAD)
+docker buildx build \
+  --push \
+  --platform linux/amd64,linux/arm64 \
+  --tag akuity/guestbook:latest
+  --annotation index,manifest:org.opencontainers.image.source=https://github.com/akuity/guestbook \
+  --annotation index,manifest:org.opencontainers.image.revision=${GIT_SHA} \
+  .
+```
+
+By including these annotations, you enable Kargo to provide
+rich context around your container images directly in the UI.
