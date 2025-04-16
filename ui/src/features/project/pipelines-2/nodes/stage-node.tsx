@@ -2,8 +2,10 @@ import {
   faChevronDown,
   faChevronLeft,
   faChevronRight,
+  faCodeCommit,
   faExternalLink,
-  faRobot
+  faFire,
+  faTruck
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Card, Dropdown, Flex, Tag, Typography } from 'antd';
@@ -51,8 +53,6 @@ export const StageNode = (props: { stage: Stage }) => {
 
   const controlFlow = isStageControlFlow(props.stage);
 
-  // const descriptionItems: DescriptionsItemType[] = [];
-
   let descriptionItems: ReactNode;
 
   if (!controlFlow) {
@@ -60,21 +60,20 @@ export const StageNode = (props: { stage: Stage }) => {
     const date = timestampDate(lastPromotion) as Date;
 
     descriptionItems = (
-      <Flex className='text-[10px]' gap={8} wrap>
-        <Flex gap={4}>
+      <Flex className='text-[10px]' gap={8} wrap vertical>
+        <Flex gap={24}>
           <Flex align='center' gap={4}>
             {stagePhase} <StagePhaseIcon className={'text-[8px]'} noTooltip phase={stagePhase} />
           </Flex>
-        </Flex>
-
-        {stageHealth?.status && (
-          <Flex gap={4}>
-            <Flex align='center' gap={4}>
-              {stageHealth?.status}
-              <HealthStatusIcon noTooltip className='text-[8px]' health={stageHealth} />
+          {stageHealth?.status && (
+            <Flex gap={4}>
+              <Flex align='center' gap={4}>
+                {stageHealth?.status}
+                <HealthStatusIcon noTooltip className='text-[8px]' health={stageHealth} />
+              </Flex>
             </Flex>
-          </Flex>
-        )}
+          )}
+        </Flex>
 
         {lastPromotion && (
           <Flex gap={4}>
@@ -91,15 +90,20 @@ export const StageNode = (props: { stage: Stage }) => {
   return (
     <Card
       styles={{
-        header: headerStyle
+        header: headerStyle,
+        body: {
+          height: '100%'
+        }
       }}
       title={
         <Flex align='center'>
-          <span className='text-xs'>{props.stage.metadata?.name}</span>
-          {autoPromotionMode && <FontAwesomeIcon icon={faRobot} className='ml-auto text-xs' />}
+          <span className='text-xs text-wrap'>{props.stage.metadata?.name}</span>
+          {autoPromotionMode && (
+            <span className='text-[9px] lowercase ml-auto font-normal'>Auto Promotion</span>
+          )}
         </Flex>
       }
-      className='w-[286px] stage-node'
+      className='stage-node'
       size='small'
       variant='borderless'
     >
@@ -109,7 +113,30 @@ export const StageNode = (props: { stage: Stage }) => {
         <StageFreight stage={props.stage} />
       </div>
 
-      <Dropdown trigger={['click']} menu={{ items: [] }}>
+      <Dropdown
+        trigger={['click']}
+        menu={{
+          items: [
+            {
+              label: (
+                <span className='text-[10px]'>
+                  <FontAwesomeIcon icon={faTruck} className='mr-2' />
+                  Promote to Downstream
+                </span>
+              ),
+              key: 'downstream'
+            },
+            {
+              label: (
+                <span className='text-[10px] text-orange-600'>
+                  <FontAwesomeIcon icon={faFire} className='mr-2' /> Hotfix
+                </span>
+              ),
+              key: 'hotfix'
+            }
+          ]
+        }}
+      >
         <Button className='success' size='small'>
           <span>Promote</span>
           <FontAwesomeIcon className='ml-2' icon={faChevronDown} />
@@ -180,34 +207,28 @@ const StageFreight = (props: { stage: Stage }) => {
   const totalArtifacts = noOfContainerImages + noOfGitCommits + noOfHelmReleases;
 
   return (
-    <Card
-      size='small'
-      styles={{
-        header: {}
-      }}
-      title={
-        warehouses?.length > 1 && (
-          <Flex align='center' justify='center' className='text-[10px] font-light'>
-            <Button
-              icon={<FontAwesomeIcon icon={faChevronLeft} />}
-              size='small'
-              type='text'
-              className='mr-auto text-[10px]'
-              onClick={onPreviousWarehouse}
-            />
-            {selectedWarehouse}
-            <Button
-              icon={<FontAwesomeIcon icon={faChevronRight} />}
-              size='small'
-              type='text'
-              className='ml-auto text-[10px]'
-              onClick={onNextWarehouse}
-            />
-          </Flex>
-        )
-      }
-    >
-      <Flex align='center' justify='center'>
+    <>
+      {warehouses?.length > 1 && (
+        <Flex align='center' justify='center' className='text-[10px] font-light'>
+          <Button
+            icon={<FontAwesomeIcon icon={faChevronLeft} />}
+            size='small'
+            type='text'
+            className='mr-auto text-[10px]'
+            onClick={onPreviousWarehouse}
+          />
+          {selectedWarehouse}
+          <Button
+            icon={<FontAwesomeIcon icon={faChevronRight} />}
+            size='small'
+            type='text'
+            className='ml-auto text-[10px]'
+            onClick={onNextWarehouse}
+          />
+        </Flex>
+      )}
+
+      <Flex align='center' justify='center' className='my-2'>
         {totalArtifacts > 1 && (
           <Button
             icon={<FontAwesomeIcon icon={faChevronLeft} />}
@@ -219,6 +240,8 @@ const StageFreight = (props: { stage: Stage }) => {
         )}
 
         <div className='scale-90'>
+          <div className='text-[10px] mr-1 text-center mb-1'>dozing-oyster</div>
+
           <Artifact artifact={selectedArtifact} />
         </div>
 
@@ -232,7 +255,7 @@ const StageFreight = (props: { stage: Stage }) => {
           />
         )}
       </Flex>
-    </Card>
+    </>
   );
 };
 
@@ -255,11 +278,13 @@ const Artifact = (props: { artifact: string | GitCommit | Chart | Image }) => {
     let TagComponent = (
       <Tag title={props.artifact.repoURL} bordered={false} color='geekblue'>
         <Flex justify='center' align='center'>
-          {props.artifact.id.slice(0, 7)}
+          <div>
+            {props.artifact.id.slice(0, 7)}
 
-          {!!url && (
-            <FontAwesomeIcon icon={faExternalLink} className='text-blue-600 text-[8px] ml-1' />
-          )}
+            {!!url && (
+              <FontAwesomeIcon icon={faExternalLink} className='text-blue-600 text-[8px] ml-1' />
+            )}
+          </div>
 
           {source}
         </Flex>
@@ -275,13 +300,14 @@ const Artifact = (props: { artifact: string | GitCommit | Chart | Image }) => {
     }
 
     return (
-      <Flex vertical gap={8}>
+      <Flex vertical gap={2}>
         {TagComponent}
         <Typography.Text
           className='text-[10px] text-center'
           type='secondary'
           title={`${props.artifact.author}: ${props.artifact.message}`}
         >
+          <FontAwesomeIcon icon={faCodeCommit} className='mr-1' />
           {props.artifact.message?.slice(0, 35)}
           {props.artifact?.message?.length > 35 ? '...' : ''}
         </Typography.Text>
@@ -317,13 +343,16 @@ const Artifact = (props: { artifact: string | GitCommit | Chart | Image }) => {
       bordered={false}
       color='geekblue'
     >
-      {shortVersion(props.artifact?.tag)}
+      <Flex justify='center'>
+        <div className='text-center'>
+          {shortVersion(props.artifact?.tag)}
 
-      {!!imageSourceFromOci && (
-        <FontAwesomeIcon icon={faExternalLink} className='text-blue-600 ml-1 text-[8px]' />
-      )}
-
-      {source}
+          {!!imageSourceFromOci && (
+            <FontAwesomeIcon icon={faExternalLink} className='text-blue-600 ml-1 text-[8px]' />
+          )}
+        </div>
+        {source}
+      </Flex>
     </Tag>
   );
 

@@ -7,7 +7,10 @@ export const warehouseLabelling = {
 };
 
 export const repoSubscriptionLabelling = {
-  label: (subscription: RepoSubscription): Label => ({ subscription })
+  label: (warehouse: Warehouse, subscription: RepoSubscription): Label => ({
+    subscription,
+    subscriptionParent: warehouse
+  })
 };
 
 export const stageLabelling = {

@@ -4,8 +4,10 @@ import { useMemo } from 'react';
 
 import { RepoSubscription, Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
+import { edgeIndexer } from './edge-indexer';
 import { repoSubscriptionIndexer, stageIndexer, warehouseIndexer } from './node-indexer';
 import { repoSubscriptionLabelling, stageLabelling, warehouseLabelling } from './node-labeling';
+import { repoSubscriptionSizer, stageSizer, warehouseSizer } from './node-sizer';
 
 export const reactFlowNodeConstants = {
   CUSTOM_NODE: 'custom-node'
@@ -15,6 +17,7 @@ export type GraphMeta = {
   warehouse?: Warehouse;
   subscription?: RepoSubscription;
   stage?: Stage;
+  subscriptionParent?: Warehouse;
 };
 
 export const useReactFlowPipelineGraph = (stages: Stage[], warehouses: Warehouse[]) => {
@@ -38,12 +41,18 @@ export const useReactFlowPipelineGraph = (stages: Stage[], warehouses: Warehouse
     // subscriptions and warehouses
     for (const warehouse of warehouses) {
       const warehouseNodeIndex = warehouseIndexer.index(warehouse);
-      graph.setNode(warehouseNodeIndex, warehouseLabelling.label(warehouse));
+      graph.setNode(warehouseNodeIndex, {
+        ...warehouseLabelling.label(warehouse),
+        ...warehouseSizer.size()
+      });
 
       for (const subscription of warehouse.spec?.subscriptions || []) {
         const subscriptionNodeIndex = repoSubscriptionIndexer.index(warehouse, subscription);
 
-        graph.setNode(subscriptionNodeIndex, repoSubscriptionLabelling.label(subscription));
+        graph.setNode(subscriptionNodeIndex, {
+          ...repoSubscriptionLabelling.label(warehouse, subscription),
+          ...repoSubscriptionSizer.size()
+        });
 
         // subscription -> warehouse
         graph.setEdge(subscriptionNodeIndex, warehouseNodeIndex);
@@ -54,12 +63,11 @@ export const useReactFlowPipelineGraph = (stages: Stage[], warehouses: Warehouse
     for (const stage of stages) {
       const stageNodeIndex = stageIndexer.index(stage);
 
-      graph.setNode(stageNodeIndex, stageLabelling.label(stage));
+      graph.setNode(stageNodeIndex, { ...stageLabelling.label(stage), ...stageSizer.size() });
 
       for (const requestedOrigin of stage.spec?.requestedFreight || []) {
-        const warehouseNodeIndex = warehouseIndexer.index(
-          warehouseByName[requestedOrigin?.origin?.name || '']
-        );
+        const warehouseName = requestedOrigin?.origin?.name || '';
+        const warehouseNodeIndex = warehouseIndexer.index(warehouseByName[warehouseName]);
 
         // check if source is warehouse
         if (requestedOrigin?.sources?.direct) {
@@ -90,12 +98,13 @@ export const useReactFlowPipelineGraph = (stages: Stage[], warehouses: Warehouse
         id: node,
         type: reactFlowNodeConstants.CUSTOM_NODE,
         position: {
-          x: dagreNode?.x,
-          y: dagreNode?.y
+          x: dagreNode?.x - dagreNode?.width / 2,
+          y: dagreNode?.y - dagreNode?.height / 2
         },
         data: {
           label: node,
-          value: dagreNode?.warehouse || dagreNode?.subscription || dagreNode?.stage
+          value: dagreNode?.warehouse || dagreNode?.subscription || dagreNode?.stage,
+          subscriptionParent: dagreNode?.subscriptionParent
         }
       });
     }
@@ -104,8 +113,8 @@ export const useReactFlowPipelineGraph = (stages: Stage[], warehouses: Warehouse
       const belongsToWarehouse = warehouseIndexer.getWarehouseName(edge.name || '');
 
       reactFlowEdges.push({
-        id: `${belongsToWarehouse}-${edge.v}->${edge.w}`,
-        type: 'smoothstep',
+        id: edgeIndexer.index(belongsToWarehouse, edge.v, edge.w),
+        type: edge.v.startsWith('warehouse') ? 'default' : 'smoothstep',
         source: edge.v,
         target: edge.w,
         animated: false,

@@ -411,7 +411,7 @@ const FreightCard = (props: { freight: Freight }) => {
       }
     >
       <Tag
-        className='w-fit text-[8px] absolute right-0 top-1 leading-none'
+        className='w-fit text-[8px] absolute right-[-20px] top-0 leading-none'
         bordered={false}
         color='green'
       >

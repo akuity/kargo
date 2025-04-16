@@ -12,7 +12,6 @@ export const WarehouseNode = (props: { warehouse: Warehouse }) => {
   return (
     <Card
       size='small'
-      className='w-[256px]'
       title={
         <Flex
           align='center'
