@@ -1730,7 +1730,7 @@ func (r *RegularStageReconciler) autoPromotionAllowed(
 
 	projectCfg := &kargoapi.ProjectConfig{}
 	if err := r.client.Get(ctx, types.NamespacedName{
-		Name: stage.Namespace,
+		Name:      stage.Namespace,
 		Namespace: stage.Namespace,
 	}, projectCfg); err != nil {
 		if apierrors.IsNotFound(err) {

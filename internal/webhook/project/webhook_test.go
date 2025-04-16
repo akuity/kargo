@@ -3,18 +3,16 @@ package project
 import (
 	"context"
 	"errors"
-	"net/http"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/ptr"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -22,391 +20,447 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-func TestNewWebhook(t *testing.T) {
-	testCfg := WebhookConfig{
-		KargoNamespace: "fake-namespace",
-	}
-	w := newWebhook(fake.NewClientBuilder().Build(), testCfg)
-	require.NotNil(t, w)
-	require.Equal(t, testCfg, w.cfg)
-	require.NotNil(t, w.validateSpecFn)
-	require.NotNil(t, w.ensureNamespaceFn)
-	require.NotNil(t, w.ensureProjectAdminPermissionsFn)
-	require.NotNil(t, w.getNamespaceFn)
-	require.NotNil(t, w.createNamespaceFn)
-	require.NotNil(t, w.createRoleBindingFn)
+func TestWebhookConfigFromEnv(t *testing.T) {
+	const kargoNamespace = "test-kargo-namespace"
+	t.Setenv("KARGO_NAMESPACE", kargoNamespace)
+	cfg := WebhookConfigFromEnv()
+	assert.Equal(t, kargoNamespace, cfg.KargoNamespace)
 }
 
-func TestValidateCreate(t *testing.T) {
-	testCases := []struct {
-		name       string
-		webhook    *webhook
-		assertions func(*testing.T, error)
-	}{
-		{
-			name: "error validating spec",
-			webhook: &webhook{
-				validateSpecFn: func(f *field.Path, spec *kargoapi.ProjectSpec) field.ErrorList {
-					return field.ErrorList{
-						field.Invalid(
-							f,
-							spec,
-							"something was invalid",
-						),
-					}
-				},
-			},
-			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				var statusErr *apierrors.StatusError
-				require.True(t, errors.As(err, &statusErr))
-				require.Equal(t, int32(http.StatusUnprocessableEntity), statusErr.ErrStatus.Code)
-			},
-		},
-		{
-			name: "error ensuring namespace",
-			webhook: &webhook{
-				validateSpecFn: func(*field.Path, *kargoapi.ProjectSpec) field.ErrorList {
-					return nil
-				},
-				ensureNamespaceFn: func(context.Context, *kargoapi.Project) error {
-					return apierrors.NewInternalError(errors.New("something went wrong"))
-				},
-			},
-			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				var statusErr *apierrors.StatusError
-				require.True(t, errors.As(err, &statusErr))
-				require.Equal(t, int32(http.StatusInternalServerError), statusErr.ErrStatus.Code)
+func Test_webhook_ValidateCreate(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, rbacv1.AddToScheme(scheme))
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	testProjectName := "test-project"
+	testNs := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: testProjectName,
+			Labels: map[string]string{
+				kargoapi.ProjectLabelKey: kargoapi.LabelTrueValue,
 			},
 		},
 	}
-	for _, testCase := range testCases {
-		ctx := admission.NewContextWithRequest(
-			context.Background(),
-			admission.Request{
-				AdmissionRequest: admissionv1.AdmissionRequest{
-					DryRun: ptr.To(false),
+	testNsNoLabel := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: testProjectName,
+		},
+	}
+
+	tests := []struct {
+		name       string
+		project    *kargoapi.Project
+		objects    []client.Object
+		isDryRun   bool
+		assertions func(*testing.T, admission.Warnings, error)
+	}{
+		{
+			name: "valid project",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: testProjectName,
 				},
 			},
-		)
-		t.Run(testCase.name, func(t *testing.T) {
-			_, err := testCase.webhook.ValidateCreate(
-				ctx,
-				&kargoapi.Project{
-					ObjectMeta: metav1.ObjectMeta{
-						UID: "fake-uid",
-					},
+			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
+				assert.Empty(t, warnings)
+				assert.NoError(t, err)
+			},
+		},
+		{
+			name: "project with deprecated spec",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: testProjectName,
 				},
-			)
-			testCase.assertions(t, err)
+				Spec: &kargoapi.ProjectSpec{},
+			},
+			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
+				assert.Empty(t, warnings)
+				require.Error(t, err)
+
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+
+				assert.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
+				assert.Contains(t, statusErr.ErrStatus.Details.Causes[0].Message, "deprecated field")
+				assert.Equal(t, "spec", statusErr.ErrStatus.Details.Causes[0].Field)
+			},
+		},
+		{
+			name: "namespace exists with project label",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: testProjectName,
+				},
+			},
+			objects: []client.Object{testNs},
+			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
+				assert.Empty(t, warnings)
+				assert.NoError(t, err)
+			},
+		},
+		{
+			name: "namespace exists but without project label",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: testProjectName,
+				},
+			},
+			objects: []client.Object{testNsNoLabel},
+			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
+				assert.Empty(t, warnings)
+				require.Error(t, err)
+
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+
+				assert.Equal(t, metav1.StatusReasonConflict, statusErr.ErrStatus.Reason)
+				assert.Contains(t, statusErr.ErrStatus.Message, "not labeled as a Project namespace")
+			},
+		},
+		{
+			name: "dry run request",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: testProjectName,
+				},
+			},
+			isDryRun: true,
+			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
+				assert.Empty(t, warnings)
+				assert.NoError(t, err)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(tt.objects...).
+				Build()
+
+			w := &webhook{
+				client: c,
+				cfg: WebhookConfig{
+					KargoNamespace: "kargo-system",
+				},
+			}
+
+			ctx := admission.NewContextWithRequest(context.Background(), admission.Request{
+				AdmissionRequest: admissionv1.AdmissionRequest{
+					DryRun: &tt.isDryRun,
+				},
+			})
+
+			warnings, err := w.ValidateCreate(ctx, tt.project)
+			tt.assertions(t, warnings, err)
 		})
 	}
 }
 
-func TestValidateSpec(t *testing.T) {
-	testCases := []struct {
+func Test_webhook_ValidateUpdate(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	testProjectName := "test-project"
+
+	tests := []struct {
 		name       string
-		spec       *kargoapi.ProjectSpec
-		assertions func(*testing.T, *kargoapi.ProjectSpec, field.ErrorList)
+		oldProject *kargoapi.Project
+		newProject *kargoapi.Project
+		assertions func(*testing.T, admission.Warnings, error)
 	}{
 		{
-			name: "nil",
-			assertions: func(t *testing.T, _ *kargoapi.ProjectSpec, errs field.ErrorList) {
-				require.Nil(t, errs)
+			name: "no spec changes",
+			oldProject: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: testProjectName,
+				},
+			},
+			newProject: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: testProjectName,
+				},
+			},
+			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
+				assert.Empty(t, warnings)
+				assert.NoError(t, err)
 			},
 		},
 		{
-			name: "invalid",
-			spec: &kargoapi.ProjectSpec{
-				// Has two conflicting PromotionPolicies...
-				PromotionPolicies: []kargoapi.PromotionPolicy{
-					{Stage: "fake-stage"},
-					{Stage: "fake-stage"},
+			name: "no change to deprecated spec",
+			oldProject: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: testProjectName,
 				},
+				Spec: &kargoapi.ProjectSpec{},
 			},
-			assertions: func(t *testing.T, spec *kargoapi.ProjectSpec, errs field.ErrorList) {
-				require.Equal(
-					t,
-					field.ErrorList{
+			newProject: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: testProjectName,
+				},
+				Spec: &kargoapi.ProjectSpec{},
+			},
+			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
+				assert.Empty(t, warnings)
+				assert.NoError(t, err)
+			},
+		},
+		{
+			name: "changes to deprecated spec",
+			oldProject: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: testProjectName,
+				},
+				Spec: &kargoapi.ProjectSpec{
+					PromotionPolicies: []kargoapi.PromotionPolicy{
 						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "spec.promotionPolicies",
-							BadValue: spec.PromotionPolicies,
-							Detail:   "multiple spec.promotionPolicies reference stage fake-stage",
+							Stage:                "test-stage",
+							AutoPromotionEnabled: false,
 						},
 					},
-					errs,
-				)
-			},
-		},
-		{
-			name: "valid",
-			spec: &kargoapi.ProjectSpec{
-				PromotionPolicies: []kargoapi.PromotionPolicy{
-					{Stage: "fake-stage"},
 				},
 			},
-			assertions: func(t *testing.T, _ *kargoapi.ProjectSpec, errs field.ErrorList) {
-				require.Nil(t, errs)
+			newProject: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: testProjectName,
+				},
+				Spec: &kargoapi.ProjectSpec{
+					PromotionPolicies: []kargoapi.PromotionPolicy{
+						{
+							Stage:                "test-stage",
+							AutoPromotionEnabled: true,
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
+				assert.Empty(t, warnings)
+				require.Error(t, err)
+
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+
+				assert.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
+				assert.Contains(t, statusErr.ErrStatus.Details.Causes[0].Message, "deprecated field")
+				assert.Equal(t, "spec", statusErr.ErrStatus.Details.Causes[0].Field)
 			},
 		},
 	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := &webhook{}
+			warnings, err := w.ValidateUpdate(context.Background(), tt.oldProject, tt.newProject)
+			tt.assertions(t, warnings, err)
+		})
+	}
+}
+
+func Test_webhook_ValidateDelete(t *testing.T) {
 	w := &webhook{}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				t,
-				testCase.spec,
-				w.validateSpec(field.NewPath("spec"), testCase.spec),
-			)
+
+	project := &kargoapi.Project{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-project",
+		},
+	}
+
+	warnings, err := w.ValidateDelete(context.Background(), project)
+	assert.Empty(t, warnings)
+	assert.NoError(t, err)
+}
+
+func Test_webhook_ensureNamespace(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	testProjectName := "test-project"
+	testNs := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: testProjectName,
+			Labels: map[string]string{
+				kargoapi.ProjectLabelKey: kargoapi.LabelTrueValue,
+			},
+		},
+	}
+	testNsNoLabel := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: testProjectName,
+		},
+	}
+
+	tests := []struct {
+		name       string
+		project    *kargoapi.Project
+		objects    []client.Object
+		assertions func(*testing.T, error)
+	}{
+		{
+			name: "namespace does not exist, should create",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: testProjectName,
+				},
+			},
+			objects: []client.Object{}, // No namespace exists yet
+			assertions: func(t *testing.T, err error) {
+				assert.NoError(t, err)
+			},
+		},
+		{
+			name: "namespace exists with project label, no conflict",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: testProjectName,
+				},
+			},
+			objects: []client.Object{testNs},
+			assertions: func(t *testing.T, err error) {
+				assert.NoError(t, err)
+			},
+		},
+		{
+			name: "namespace exists without project label, conflict",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: testProjectName,
+				},
+			},
+			objects: []client.Object{testNsNoLabel},
+			assertions: func(t *testing.T, err error) {
+				require.Error(t, err)
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+				assert.Equal(t, metav1.StatusReasonConflict, statusErr.ErrStatus.Reason)
+				assert.Contains(t, statusErr.ErrStatus.Message, "not labeled as a Project namespace")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(tt.objects...).
+				Build()
+
+			w := &webhook{
+				client: c,
+			}
+
+			err := w.ensureNamespace(context.Background(), tt.project)
+			tt.assertions(t, err)
+
+			// Check namespace creation in the first test case
+			if tt.name == "namespace does not exist, should create" {
+				ns := &corev1.Namespace{}
+				err := c.Get(context.Background(), client.ObjectKey{Name: testProjectName}, ns)
+				assert.NoError(t, err)
+				assert.Equal(t, kargoapi.LabelTrueValue, ns.Labels[kargoapi.ProjectLabelKey])
+				assert.Contains(t, ns.Finalizers, kargoapi.FinalizerName)
+			}
 		})
 	}
 }
 
-func TestEnsureNamespace(t *testing.T) {
-	testCases := []struct {
-		name       string
-		webhook    *webhook
-		assertions func(*testing.T, error)
-	}{
+func Test_webhook_ensureProjectAdminPermissions(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, rbacv1.AddToScheme(scheme))
+	require.NoError(t, kargoapi.AddToScheme(scheme))
 
-		{
-			name: "error getting namespace",
-			webhook: &webhook{
-				validateSpecFn: func(*field.Path, *kargoapi.ProjectSpec) field.ErrorList {
-					return nil
-				},
-				getNamespaceFn: func(
-					context.Context,
-					types.NamespacedName,
-					client.Object,
-					...client.GetOption,
-				) error {
-					return errors.New("something went wrong")
-				},
-			},
-			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				var statusErr *apierrors.StatusError
-				require.True(t, errors.As(err, &statusErr))
-				require.Equal(t, int32(http.StatusInternalServerError), statusErr.ErrStatus.Code)
-			},
+	testProjectName := "test-project"
+	kargoNamespace := "kargo-system"
+
+	roleBindingName := "kargo-project-admin"
+	existingRoleBinding := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      roleBindingName,
+			Namespace: testProjectName,
 		},
-
-		{
-			name: "namespace exists, but isn't labeled as a project",
-			webhook: &webhook{
-				validateSpecFn: func(*field.Path, *kargoapi.ProjectSpec) field.ErrorList {
-					return nil
-				},
-				getNamespaceFn: func(
-					context.Context,
-					types.NamespacedName,
-					client.Object,
-					...client.GetOption,
-				) error {
-					return nil
-				},
-			},
-			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				var statusErr *apierrors.StatusError
-				require.True(t, errors.As(err, &statusErr))
-				require.Equal(t, int32(http.StatusConflict), statusErr.ErrStatus.Code)
-			},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     "kargo-project-admin",
 		},
-
-		{
-			name: "namespace exists and is labeled as a Project",
-			webhook: &webhook{
-				validateSpecFn: func(*field.Path, *kargoapi.ProjectSpec) field.ErrorList {
-					return nil
-				},
-				getNamespaceFn: func(
-					_ context.Context,
-					_ types.NamespacedName,
-					obj client.Object,
-					_ ...client.GetOption,
-				) error {
-					ns := obj.(*corev1.Namespace) // nolint: forcetypeassert
-					ns.Labels = map[string]string{
-						kargoapi.ProjectLabelKey: kargoapi.LabelTrueValue,
-					}
-					return nil
-				},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      "kargo-api",
+				Namespace: kargoNamespace,
 			},
-			assertions: func(t *testing.T, err error) {
-				require.NoError(t, err)
-			},
-		},
-
-		{
-			name: "namespace does not exist; error creating it",
-			webhook: &webhook{
-				validateSpecFn: func(*field.Path, *kargoapi.ProjectSpec) field.ErrorList {
-					return nil
-				},
-				getNamespaceFn: func(
-					context.Context,
-					types.NamespacedName,
-					client.Object,
-					...client.GetOption,
-				) error {
-					return apierrors.NewNotFound(schema.GroupResource{}, "")
-				},
-				createNamespaceFn: func(
-					context.Context,
-					client.Object,
-					...client.CreateOption,
-				) error {
-					return errors.New("something went wrong")
-				},
-			},
-			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				var statusErr *apierrors.StatusError
-				require.True(t, errors.As(err, &statusErr))
-				require.Equal(
-					t,
-					int32(http.StatusInternalServerError),
-					statusErr.ErrStatus.Code,
-				)
-			},
-		},
-
-		{
-			name: "namespace does not exist; success creating it",
-			webhook: &webhook{
-				validateSpecFn: func(*field.Path, *kargoapi.ProjectSpec) field.ErrorList {
-					return nil
-				},
-				getNamespaceFn: func(
-					context.Context,
-					types.NamespacedName,
-					client.Object,
-					...client.GetOption,
-				) error {
-					return apierrors.NewNotFound(schema.GroupResource{}, "")
-				},
-				createNamespaceFn: func(
-					context.Context,
-					client.Object,
-					...client.CreateOption,
-				) error {
-					return nil
-				},
-			},
-			assertions: func(t *testing.T, err error) {
-				require.NoError(t, err)
+			{
+				Kind:      "ServiceAccount",
+				Name:      "kargo-admin",
+				Namespace: kargoNamespace,
 			},
 		},
 	}
-	for _, testCase := range testCases {
-		ctx := admission.NewContextWithRequest(
-			context.Background(),
-			admission.Request{
-				AdmissionRequest: admissionv1.AdmissionRequest{
-					DryRun: ptr.To(false),
-				},
-			},
-		)
-		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				t,
-				testCase.webhook.ensureNamespace(
-					ctx,
-					&kargoapi.Project{
-						ObjectMeta: metav1.ObjectMeta{
-							UID: "fake-uid",
-						},
-					},
-				),
-			)
-		})
-	}
-}
 
-func TestEnsureProjectAdminPermissions(t *testing.T) {
-	testCases := []struct {
+	tests := []struct {
 		name       string
-		webhook    *webhook
-		assertions func(*testing.T, error)
+		project    *kargoapi.Project
+		objects    []client.Object
+		assertions func(*testing.T, error, client.Client)
 	}{
 		{
-			name: "error creating role binding",
-			webhook: &webhook{
-				createRoleBindingFn: func(
-					context.Context,
-					client.Object,
-					...client.CreateOption,
-				) error {
-					return errors.New("something went wrong")
+			name: "role binding does not exist, should create",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: testProjectName,
 				},
 			},
-			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				var statusErr *apierrors.StatusError
-				require.True(t, errors.As(err, &statusErr))
-				require.Equal(
-					t,
-					int32(http.StatusInternalServerError),
-					statusErr.ErrStatus.Code,
-				)
+			objects: []client.Object{},
+			assertions: func(t *testing.T, err error, c client.Client) {
+				assert.NoError(t, err)
+
+				// Check role binding creation
+				rb := &rbacv1.RoleBinding{}
+				err = c.Get(context.Background(), client.ObjectKey{
+					Name:      roleBindingName,
+					Namespace: testProjectName,
+				}, rb)
+				assert.NoError(t, err)
+				assert.Equal(t, "kargo-project-admin", rb.RoleRef.Name)
+				assert.Len(t, rb.Subjects, 2)
+				assert.Equal(t, "kargo-api", rb.Subjects[0].Name)
+				assert.Equal(t, "kargo-admin", rb.Subjects[1].Name)
+				assert.Equal(t, kargoNamespace, rb.Subjects[0].Namespace)
 			},
 		},
 		{
 			name: "role binding already exists",
-			webhook: &webhook{
-				createRoleBindingFn: func(
-					context.Context,
-					client.Object,
-					...client.CreateOption,
-				) error {
-					return apierrors.NewAlreadyExists(schema.GroupResource{}, "")
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: testProjectName,
 				},
 			},
-			assertions: func(t *testing.T, err error) {
-				require.NoError(t, err)
-			},
-		},
-		{
-			name: "success creating role binding",
-			webhook: &webhook{
-				createRoleBindingFn: func(
-					context.Context,
-					client.Object,
-					...client.CreateOption,
-				) error {
-					return nil
-				},
-			},
-			assertions: func(t *testing.T, err error) {
-				require.NoError(t, err)
+			objects: []client.Object{existingRoleBinding},
+			assertions: func(t *testing.T, err error, _ client.Client) {
+				assert.NoError(t, err)
 			},
 		},
 	}
-	for _, testCase := range testCases {
-		ctx := admission.NewContextWithRequest(
-			context.Background(),
-			admission.Request{
-				AdmissionRequest: admissionv1.AdmissionRequest{
-					DryRun: ptr.To(false),
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(tt.objects...).
+				Build()
+
+			w := &webhook{
+				client: c,
+				cfg: WebhookConfig{
+					KargoNamespace: kargoNamespace,
 				},
-			},
-		)
-		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				t,
-				testCase.webhook.ensureProjectAdminPermissions(
-					ctx,
-					&kargoapi.Project{
-						ObjectMeta: metav1.ObjectMeta{
-							UID: types.UID("fake-uid"),
-						},
-					},
-				),
-			)
+			}
+
+			err := w.ensureProjectAdminPermissions(context.Background(), tt.project)
+			tt.assertions(t, err, c)
 		})
 	}
 }
