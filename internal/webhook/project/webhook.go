@@ -3,6 +3,7 @@ package project
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
@@ -44,58 +45,18 @@ func WebhookConfigFromEnv() WebhookConfig {
 }
 
 type webhook struct {
-	cfg WebhookConfig
-
-	// The following behaviors are overridable for testing purposes:
-
-	validateSpecFn func(*field.Path, *kargoapi.ProjectSpec) field.ErrorList
-
-	ensureNamespaceFn func(context.Context, *kargoapi.Project) error
-
-	ensureProjectAdminPermissionsFn func(
-		context.Context,
-		*kargoapi.Project,
-	) error
-
-	getNamespaceFn func(
-		context.Context,
-		types.NamespacedName,
-		client.Object,
-		...client.GetOption,
-	) error
-
-	createNamespaceFn func(
-		context.Context,
-		client.Object,
-		...client.CreateOption,
-	) error
-
-	createRoleBindingFn func(
-		context.Context,
-		client.Object,
-		...client.CreateOption,
-	) error
+	cfg    WebhookConfig
+	client client.Client
 }
 
 func SetupWebhookWithManager(mgr ctrl.Manager, cfg WebhookConfig) error {
-	w := newWebhook(mgr.GetClient(), cfg)
+	w := &webhook{
+		cfg: cfg,
+	}
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&kargoapi.Project{}).
 		WithValidator(w).
 		Complete()
-}
-
-func newWebhook(kubeClient client.Client, cfg WebhookConfig) *webhook {
-	w := &webhook{
-		cfg: cfg,
-	}
-	w.validateSpecFn = w.validateSpec
-	w.ensureNamespaceFn = w.ensureNamespace
-	w.ensureProjectAdminPermissionsFn = w.ensureProjectAdminPermissions
-	w.getNamespaceFn = kubeClient.Get
-	w.createNamespaceFn = kubeClient.Create
-	w.createRoleBindingFn = kubeClient.Create
-	return w
 }
 
 func (w *webhook) ValidateCreate(
@@ -104,8 +65,21 @@ func (w *webhook) ValidateCreate(
 ) (admission.Warnings, error) {
 	project := obj.(*kargoapi.Project) // nolint: forcetypeassert
 
-	if errs := w.validateSpecFn(field.NewPath("spec"), project.Spec); len(errs) > 0 {
-		return nil, apierrors.NewInvalid(projectGroupKind, project.Name, errs)
+	// TODO(hidde): Remove this when the deprecated Spec field is removed.
+	if project.Spec != nil {
+		return nil, apierrors.NewInvalid(
+			projectGroupKind,
+			project.Name,
+			field.ErrorList{
+				field.Forbidden(
+					field.NewPath("spec"),
+					fmt.Sprintf(
+						"deprecated field: create a ProjectConfig named %q with the config instead",
+						project.Name,
+					),
+				),
+			},
+		)
 	}
 
 	req, err := admission.RequestFromContext(ctx)
@@ -122,7 +96,7 @@ func (w *webhook) ValidateCreate(
 	// We synchronously ensure the existence of a namespace with the same name as
 	// the Project because resources following the Project in a manifest are
 	// likely to be scoped to that namespace.
-	if err := w.ensureNamespaceFn(ctx, project); err != nil {
+	if err := w.ensureNamespace(ctx, project); err != nil {
 		return nil, err
 	}
 
@@ -130,20 +104,40 @@ func (w *webhook) ValidateCreate(
 	// permissions to manage ServiceAccounts, Roles, RoleBindings, and Secrets in
 	// the Project namespace just in time. This prevents us from having to give
 	// the Kargo API server carte blanche access these resources throughout the
-	// cluster. We do this synchronously because resources of these types are are
+	// cluster. We do this synchronously because resources of these types are
 	// likely to follow the Project in a manifest.
-	return nil, w.ensureProjectAdminPermissionsFn(ctx, project)
+	return nil, w.ensureProjectAdminPermissions(ctx, project)
 }
 
 func (w *webhook) ValidateUpdate(
 	_ context.Context,
-	_ runtime.Object,
+	oldObj runtime.Object,
 	newObj runtime.Object,
 ) (admission.Warnings, error) {
-	project := newObj.(*kargoapi.Project) // nolint: forcetypeassert
-	if errs := w.validateSpecFn(field.NewPath("spec"), project.Spec); len(errs) > 0 {
-		return nil, apierrors.NewInvalid(projectGroupKind, project.Name, errs)
+	oldProject := oldObj.(*kargoapi.Project) // nolint: forcetypeassert
+	newProject := newObj.(*kargoapi.Project) // nolint: forcetypeassert
+
+	specPath := field.NewPath("spec")
+
+	// TODO(hidde): Remove this when the deprecated Spec field is removed.
+	if newProject.Spec != nil {
+		if !reflect.DeepEqual(oldProject.Spec, newProject.Spec) {
+			return nil, apierrors.NewInvalid(
+				projectGroupKind,
+				newProject.Name,
+				field.ErrorList{
+					field.Forbidden(
+						specPath,
+						fmt.Sprintf(
+							"deprecated field: create a ProjectConfig named %q with the config instead",
+							newProject.Name,
+						),
+					),
+				},
+			)
+		}
 	}
+
 	return nil, nil
 }
 
@@ -152,43 +146,6 @@ func (w *webhook) ValidateDelete(
 	runtime.Object,
 ) (admission.Warnings, error) {
 	return nil, nil
-}
-
-func (w *webhook) validateSpec(
-	f *field.Path,
-	spec *kargoapi.ProjectSpec,
-) field.ErrorList {
-	if spec == nil { // nil spec is valid
-		return nil
-	}
-	return w.validatePromotionPolicies(
-		f.Child("promotionPolicies"),
-		spec.PromotionPolicies,
-	)
-}
-
-func (w *webhook) validatePromotionPolicies(
-	f *field.Path,
-	promotionPolicies []kargoapi.PromotionPolicy,
-) field.ErrorList {
-	stageNames := make(map[string]struct{}, len(promotionPolicies))
-	for _, promotionPolicy := range promotionPolicies {
-		if _, found := stageNames[promotionPolicy.Stage]; found {
-			return field.ErrorList{
-				field.Invalid(
-					f,
-					promotionPolicies,
-					fmt.Sprintf(
-						"multiple %s reference stage %s",
-						f.String(),
-						promotionPolicy.Stage,
-					),
-				),
-			}
-		}
-		stageNames[promotionPolicy.Stage] = struct{}{}
-	}
-	return nil
 }
 
 // ensureNamespace is used to ensure the existence of a namespace with the same
@@ -202,7 +159,7 @@ func (w *webhook) ensureNamespace(
 	logger := logging.LoggerFromContext(ctx).WithValues("project", project.Name)
 
 	ns := &corev1.Namespace{}
-	if err := w.getNamespaceFn(
+	if err := w.client.Get(
 		ctx,
 		types.NamespacedName{Name: project.Name},
 		ns,
@@ -229,7 +186,7 @@ func (w *webhook) ensureNamespace(
 		return nil
 	}
 
-	// If we get to here, we had a not found error and we can proceed with
+	// If we get to here, we had a not found error, and we can proceed with
 	// creating the namespace.
 
 	logger.Debug("namespace does not exist; creating it")
@@ -255,7 +212,7 @@ func (w *webhook) ensureNamespace(
 	// to the namespace and use our own namespace reconciler to clear it after
 	// deleting the Project.
 	controllerutil.AddFinalizer(ns, kargoapi.FinalizerName)
-	if err := w.createNamespaceFn(ctx, ns); err != nil {
+	if err := w.client.Create(ctx, ns); err != nil {
 		return apierrors.NewInternalError(
 			fmt.Errorf("error creating namespace %q: %w", project.Name, err),
 		)
@@ -301,7 +258,7 @@ func (w *webhook) ensureProjectAdminPermissions(
 			},
 		},
 	}
-	if err := w.createRoleBindingFn(ctx, roleBinding); err != nil {
+	if err := w.client.Create(ctx, roleBinding); err != nil {
 		if apierrors.IsAlreadyExists(err) {
 			logger.Debug("role binding already exists in project namespace")
 			return nil
