@@ -1,7 +1,6 @@
 package azure
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -120,7 +119,7 @@ func TestGetCommitURL(t *testing.T) {
 	for _, testCase := range testCases {
 		// call the code we are testing
 		g := provider{}
-		commitURL, err := g.GetCommitURL(context.Background(), testCase.url, testCase.sha)
+		commitURL, err := g.GetCommitURL(testCase.url, testCase.sha)
 		require.NoError(t, err)
 		require.Equal(t, testCase.expectedURL, commitURL)
 	}

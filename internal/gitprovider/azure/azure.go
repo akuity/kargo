@@ -184,11 +184,12 @@ func (p *provider) ListPullRequests(
 
 // GetCommit implements gitprovider.Interface.
 func (p *provider) GetCommitURL(
-	ctx context.Context,
 	repoURL string,
 	sha string,
 ) (string, error) {
-	re := regexp.MustCompile(`^(?:(?:\w+://)?(?:\w+@)?)?(dev.azure.com|ssh.dev.azure.com\:v3)[:/]([^/]+/[^.]+)(?:\.git)?$`)
+	re := regexp.MustCompile(
+		`^(?:(?:\w+://)?(?:\w+@)?)?(dev.azure.com|ssh.dev.azure.com\:v3)[:/]([^/]+/[^.]+)(?:\.git)?$`,
+	)
 	matches := re.FindStringSubmatch(repoURL)
 	formattedRepoURL := ""
 	if len(matches) == 3 {

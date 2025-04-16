@@ -194,7 +194,7 @@ func (g *gitPushPusher) run(
 			fmt.Errorf("error creating git provider service: %w", err)
 	}
 
-	commitURL, err := gitProvider.GetCommitURL(ctx, workTree.URL(), commitID)
+	commitURL, err := gitProvider.GetCommitURL(workTree.URL(), commitID)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error getting commit url: %w", err)

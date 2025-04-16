@@ -271,7 +271,6 @@ func (p *provider) ListPullRequests(
 
 // GetCommit implements gitprovider.Interface.
 func (p *provider) GetCommitURL(
-	ctx context.Context,
 	repoURL string,
 	sha string,
 ) (string, error) {
