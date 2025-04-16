@@ -274,6 +274,7 @@ Kargo understands
 and uses them to generate helpful links in the UI. When the following 
 annotations are present in your container images, Kargo can display
 direct references to the source code and revision:
+
 * `org.opencontainers.image.source`
 * `org.opencontainers.image.revision`
 
