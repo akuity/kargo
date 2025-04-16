@@ -209,6 +209,9 @@ func Test_gitPRWaiter_run(t *testing.T) {
 				},
 			)
 			testCase.assertions(t, res, err)
+			t.Cleanup(func() {
+				gitprovider.UnRegister(testGitProviderName)
+			})
 		})
 	}
 }

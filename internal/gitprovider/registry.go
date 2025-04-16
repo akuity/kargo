@@ -1,6 +1,8 @@
 package gitprovider
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // Registration holds details on how to instantiate a correct implementation of
 // Interface based on parameters (i.e. repo URL). It allows programs to
@@ -45,4 +47,9 @@ func Register(name string, reg Registration) {
 		panic(fmt.Sprintf("Provider %q already registered", name))
 	}
 	registeredProviders[name] = reg
+}
+
+// UnRegister is called by unit test clean ups to avoid conflicts between tests
+func UnRegister(name string) {
+	delete(registeredProviders, name)
 }

@@ -202,22 +202,23 @@ func Test_gitPusher_run(t *testing.T) {
 	require.NoError(t, err)
 
 	// Set up a fake git provider
-	const fakeGitProviderName = "fake"
+	fakeGitProviderName := "fake1"
 	gitprovider.Register(
 		fakeGitProviderName,
 		gitprovider.Registration{
+			Predicate: func(repoURL string) bool {
+				return true
+			},
 			NewProvider: func(
 				string,
 				*gitprovider.Options,
 			) (gitprovider.Interface, error) {
 				return &gitprovider.Fake{
 					GetCommitURLFn: func(
-						string,
-						string,
+						repoURL string,
+						sha string,
 					) (string, error) {
-						commitID, err := workTree.LastCommitID()
-						require.NoError(t, err)
-						return fmt.Sprintf("%s/commit/%s", testRepoURL, commitID), nil
+						return fmt.Sprintf("%s/commit/%s", repoURL, sha), nil
 					},
 				}, nil
 			},
@@ -256,4 +257,7 @@ func Test_gitPusher_run(t *testing.T) {
 	expectedCommitURL := fmt.Sprintf("%s/commit/%s", testRepoURL, expectedCommit)
 	actualCommitURL := res.Output[stateKeyCommitURL]
 	require.Equal(t, expectedCommitURL, actualCommitURL)
+	t.Cleanup(func() {
+		gitprovider.UnRegister(fakeGitProviderName)
+	})
 }
