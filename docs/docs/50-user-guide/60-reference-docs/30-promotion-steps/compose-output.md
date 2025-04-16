@@ -38,17 +38,18 @@ vars:
 - name: repoURL
   value: https://github.com/example/repo
 steps:
+# Clone, prepare the contents of ./out, commit, push as part of a `push` step etc...
 - uses: git-open-pr
   as: open-pr
   config:
     repoURL: ${{ vars.repoURL }}
     createTargetBranch: true
-    sourceBranch: ${{ outputs.push.branch }}
+    sourceBranch: ${{ task.outputs.push.branch }}
     targetBranch: stage/${{ ctx.stage }}
 - uses: compose-output
   as: pr-link
   config:
-    url: ${{ vars.repoURL }}/pull/${{ outputs['open-pr'].prNumber }}
+    url: ${{ vars.repoURL }}/pull/${{ task.outputs['open-pr'].prNumber }}
 - uses: http
   config:
     method: POST
@@ -66,7 +67,7 @@ steps:
             "type": "section",
             "text": {
               "type": "mrkdwn",
-              "text": "A new PR has been opened: ${{ task.outputs['pr-link'].url }}"
+              "text": "A new PR has been opened: " + task.outputs['pr-link'].url
             }
           }
         ]
