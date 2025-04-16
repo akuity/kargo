@@ -385,16 +385,11 @@ controller:
   # -- Init containers to add to the kargo controller pod
   ## This will be rendered as the literal yaml
   initContainers:
-    - name: download-tools
-      image: alpine:3.8
-      command: [sh, -c]
-      args:
-        -  ls
-#    - name: download-tools-2
-#      image: alpine:3.8
-#      command: [ sh, -c ]
-#      args:
-#        - ls
+    # - name: download-tools
+    #   image: alpine:3.8
+    #   command: [ sh, -c ]
+    #   args:
+    #    - ls
 
   ## All settings relating to the service account for the controller
   serviceAccount:
