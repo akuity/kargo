@@ -31,7 +31,7 @@ func (s *server) RefreshStage(
 		Namespace: project,
 		Name:      name,
 	}
-	stage, err := api.RefreshStage(ctx, s.client, objKey)
+	stage, err := api.RefreshStage(ctx, s.client.InternalClient(), objKey)
 	if err != nil {
 		return nil, err
 	}
