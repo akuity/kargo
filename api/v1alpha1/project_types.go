@@ -40,20 +40,23 @@ type Project struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	// Spec describes a Project.
+	//
+	// Deprecated: Create a ProjectConfig resource with the same name as the
+	// Project resource in the Project's namespace. The ProjectConfig resource
+	// can be used to configure the Project.
 	Spec *ProjectSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 	// Status describes the Project's current status.
 	Status ProjectStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
+// ProjectSpec is a deprecated alias for ProjectConfigSpec. It is retained for
+// backwards compatibility.
+//
+// Deprecated: Use ProjectConfigSpec instead.
+type ProjectSpec = ProjectConfigSpec
+
 func (p *Project) GetStatus() *ProjectStatus {
 	return &p.Status
-}
-
-// ProjectSpec describes a Project.
-type ProjectSpec struct {
-	// PromotionPolicies defines policies governing the promotion of Freight to
-	// specific Stages within this Project.
-	PromotionPolicies []PromotionPolicy `json:"promotionPolicies,omitempty" protobuf:"bytes,1,rep,name=promotionPolicies"`
 }
 
 // ProjectStatus describes a Project's current status.

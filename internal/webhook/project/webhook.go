@@ -66,7 +66,7 @@ func (w *webhook) ValidateCreate(
 	project := obj.(*kargoapi.Project) // nolint: forcetypeassert
 
 	// TODO(hidde): Remove this when the deprecated Spec field is removed.
-	if project.Spec != nil {
+	if project.Spec != nil { // nolint: staticcheck
 		return nil, apierrors.NewInvalid(
 			projectGroupKind,
 			project.Name,
@@ -120,8 +120,8 @@ func (w *webhook) ValidateUpdate(
 	specPath := field.NewPath("spec")
 
 	// TODO(hidde): Remove this when the deprecated Spec field is removed.
-	if newProject.Spec != nil {
-		if !reflect.DeepEqual(oldProject.Spec, newProject.Spec) {
+	if newProject.Spec != nil { // nolint: staticcheck
+		if !reflect.DeepEqual(oldProject.Spec, newProject.Spec) { // nolint: staticcheck
 			return nil, apierrors.NewInvalid(
 				projectGroupKind,
 				newProject.Name,
