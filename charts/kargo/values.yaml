@@ -384,7 +384,7 @@ controller:
 
   # -- Init containers to add to the kargo controller pod
   ## This will be rendered as the literal yaml
-  initContainers:
+  initContainers: []
     # - name: download-tools
     #   image: alpine:3.8
     #   command: [ sh, -c ]
