@@ -8,7 +8,7 @@ import { useMemo } from 'react';
 
 import { RepoSubscription } from '@ui/gen/api/v1alpha1/generated_pb';
 
-import { artifactBase, artifactURL, humanComprehendableArtifact } from '../artifact-parts-utils';
+import { artifactBase, artifactURL, humanComprehendableArtifact } from '../freight/artifact-parts-utils';
 
 import styles from './node-size-source-of-truth.module.less';
 

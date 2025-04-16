@@ -34,8 +34,8 @@ import {
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import './stage-node.less';
-import { humanComprehendableArtifact } from '../artifact-parts-utils';
-import { shortVersion } from '../short-version-utils';
+import { humanComprehendableArtifact } from '../freight/artifact-parts-utils';
+import { shortVersion } from '../freight/short-version-utils';
 
 import {
   ArtifactTypes,

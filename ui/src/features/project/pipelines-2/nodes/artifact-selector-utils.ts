@@ -1,6 +1,6 @@
 import { Chart, FreightReference, GitCommit, Image } from '@ui/gen/api/v1alpha1/generated_pb';
 
-import { selectFirstArtifact as _selectFirstArtifact } from '../artifact-selector-utils';
+import { selectFirstArtifact as _selectFirstArtifact } from '../freight/artifact-selector-utils';
 
 export type ArtifactTypes = Image | Chart | GitCommit;
 
