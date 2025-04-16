@@ -51,13 +51,13 @@ func (f *fileCopier) Run(
 ) (promotion.StepResult, error) {
 	// Validate the configuration against the JSON Schema.
 	if err := validate(f.schemaLoader, gojsonschema.NewGoLoader(stepCtx.Config), f.Name()); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored}, err
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
 	// Convert the configuration into a typed object.
 	cfg, err := promotion.ConfigToStruct[builtin.CopyConfig](stepCtx.Config)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("could not convert config into %s config: %w", f.Name(), err)
 	}
 
@@ -72,19 +72,19 @@ func (f *fileCopier) run(
 	// Secure join the paths to prevent path traversal attacks.
 	inPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.InPath)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("could not secure join inPath %q: %w", cfg.InPath, err)
 	}
 	outPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutPath)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("could not secure join outPath %q: %w", cfg.OutPath, err)
 	}
 
 	// Load the ignore rules.
 	matcher, err := f.loadIgnoreRules(inPath, cfg.Ignore)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("failed to load ignore rules: %w", err)
 	}
 
@@ -102,10 +102,10 @@ func (f *fileCopier) run(
 		},
 	}
 	if err = copy.Copy(inPath, outPath, opts); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("failed to copy %q to %q: %w", cfg.InPath, cfg.OutPath, err)
 	}
-	return promotion.StepResult{Status: kargoapi.PromotionStepPhaseSucceeded}, nil
+	return promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, nil
 }
 
 // loadIgnoreRules loads the ignore rules from the given string. The rules are

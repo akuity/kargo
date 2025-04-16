@@ -38,7 +38,7 @@ func (yp *yamlParser) Run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
-	failure := promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored}
+	failure := promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}
 
 	if err := yp.validate(stepCtx.Config); err != nil {
 		return failure, err
@@ -62,7 +62,7 @@ func (yp *yamlParser) run(
 	stepCtx *promotion.StepContext,
 	cfg builtin.YAMLParseConfig,
 ) (promotion.StepResult, error) {
-	failure := promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored}
+	failure := promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}
 
 	if cfg.Path == "" {
 		return failure, fmt.Errorf("YAML file path cannot be empty")
@@ -83,7 +83,7 @@ func (yp *yamlParser) run(
 	}
 
 	return promotion.StepResult{
-		Status: kargoapi.PromotionStepPhaseSucceeded,
+		Status: kargoapi.PromotionStepStatusSucceeded,
 		Output: extractedValues,
 	}, nil
 }

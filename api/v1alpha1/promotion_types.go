@@ -37,31 +37,31 @@ const (
 	PromotionPhaseAborted PromotionPhase = "Aborted"
 )
 
-type PromotionStepPhase string
+type PromotionStepStatus string
 
 const (
-	// PromotionStepPhaseRunning denotes a PromotionStep that is currently
+	// PromotionStepStatusRunning denotes a PromotionStep that is currently
 	// "running." This does not necessarily indicate that the step is ACTIVELY
 	// running, but rather that it has not yet completed. It may, for instance, be
 	// waiting on some external event to occur and will check again on the next
 	// reconciliation attempt.
-	PromotionStepPhaseRunning PromotionStepPhase = "Running"
-	// PromotionStepPhaseSucceeded denotes a PromotionStep that has completed
+	PromotionStepStatusRunning PromotionStepStatus = "Running"
+	// PromotionStepStatusSucceeded denotes a PromotionStep that has completed
 	// successfully.
-	PromotionStepPhaseSucceeded PromotionStepPhase = "Succeeded"
-	// PromotionStepPhaseFailed denotes a PromotionStep that has failed, usually
+	PromotionStepStatusSucceeded PromotionStepStatus = "Succeeded"
+	// PromotionStepStatusFailed denotes a PromotionStep that has failed, usually
 	// for non-technical reasons.
-	PromotionStepPhaseFailed PromotionStepPhase = "Failed"
-	// PromotionStepPhaseErrored denotes a Promotion that has failed for technical
+	PromotionStepStatusFailed PromotionStepStatus = "Failed"
+	// PromotionStepStatusErrored denotes a Promotion that has failed for technical
 	// reasons. Further information about the failure can be found in the
 	// Promotion's status.
-	PromotionStepPhaseErrored PromotionStepPhase = "Errored"
-	// PromotionStepPhaseAborted denotes a PromotionStep that was aborted because
+	PromotionStepStatusErrored PromotionStepStatus = "Errored"
+	// PromotionStepStatusAborted denotes a PromotionStep that was aborted because
 	// the Promotion to which it belongs was aborted.
-	PromotionStepPhaseAborted PromotionStepPhase = "Aborted"
-	// PromotionStepPhaseSkipped denotes a PromotionStep that was skipped for any
+	PromotionStepStatusAborted PromotionStepStatus = "Aborted"
+	// PromotionStepStatusSkipped denotes a PromotionStep that was skipped for any
 	// reason and immediately yielded execution to the next PromotionStep.
-	PromotionStepPhaseSkipped PromotionStepPhase = "Skipped"
+	PromotionStepStatusSkipped PromotionStepStatus = "Skipped"
 )
 
 // IsTerminal returns true if the PromotionPhase is a terminal one.
@@ -363,7 +363,7 @@ type StepExecutionMetadata struct {
 	// ErrorCount tracks consecutive failed attempts to execute the step.
 	ErrorCount uint32 `json:"errorCount,omitempty" protobuf:"varint,4,opt,name=errorCount"`
 	// Status is the high-level outcome of the step.
-	Status PromotionStepPhase `json:"status,omitempty" protobuf:"bytes,5,opt,name=status"`
+	Status PromotionStepStatus `json:"status,omitempty" protobuf:"bytes,5,opt,name=status"`
 	// Message is a display message about the step, including any errors.
 	Message string `json:"message,omitempty" protobuf:"bytes,6,opt,name=message"`
 }

@@ -58,7 +58,7 @@ func (h *helmChartUpdater) Run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
-	failure := promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored}
+	failure := promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}
 
 	if err := h.validate(stepCtx.Config); err != nil {
 		return failure, err
@@ -85,7 +85,7 @@ func (h *helmChartUpdater) run(
 ) (promotion.StepResult, error) {
 	absChartPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.Path)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("failed to join path %q: %w", cfg.Path, err)
 	}
 
@@ -93,34 +93,34 @@ func (h *helmChartUpdater) run(
 	chartDependencies, err := readChartDependencies(chartFilePath)
 	if err != nil {
 		return promotion.StepResult{
-			Status: kargoapi.PromotionStepPhaseErrored,
+			Status: kargoapi.PromotionStepStatusErrored,
 		}, fmt.Errorf("failed to load chart dependencies from %q: %w", chartFilePath, err)
 	}
 
 	changes, err := h.processChartUpdates(cfg, chartDependencies)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored}, err
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
 	if err = intyaml.SetStringsInFile(chartFilePath, changes); err != nil {
 		return promotion.StepResult{
-			Status: kargoapi.PromotionStepPhaseErrored,
+			Status: kargoapi.PromotionStepStatusErrored,
 		}, fmt.Errorf("failed to update chart dependencies in %q: %w", chartFilePath, err)
 	}
 
 	helmHome, err := os.MkdirTemp("", "helm-chart-update-")
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("failed to create temporary Helm home directory: %w", err)
 	}
 	defer os.RemoveAll(helmHome)
 
 	newVersions, err := h.updateDependencies(ctx, stepCtx, helmHome, absChartPath, chartDependencies)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored}, err
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
-	result := promotion.StepResult{Status: kargoapi.PromotionStepPhaseSucceeded}
+	result := promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}
 	if commitMsg := h.generateCommitMessage(cfg.Path, newVersions); commitMsg != "" {
 		result.Output = map[string]any{
 			"commitMessage": commitMsg,

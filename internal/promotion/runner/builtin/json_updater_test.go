@@ -320,7 +320,7 @@ func Test_jsonUpdater_run(t *testing.T) {
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, promotion.StepResult{
-					Status: kargoapi.PromotionStepPhaseSucceeded,
+					Status: kargoapi.PromotionStepStatusSucceeded,
 					Output: map[string]any{
 						"commitMessage": "Updated config.json\n\n" +
 							"- app.version: \"1.0.1\"\n" +
@@ -348,7 +348,7 @@ func Test_jsonUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
 				assert.Error(t, err)
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, result)
 				assert.Contains(t, err.Error(), "JSON file update failed")
 			},
 		},
@@ -371,7 +371,7 @@ func Test_jsonUpdater_run(t *testing.T) {
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, promotion.StepResult{
-					Status: kargoapi.PromotionStepPhaseSucceeded,
+					Status: kargoapi.PromotionStepStatusSucceeded,
 				}, result)
 				content, err := os.ReadFile(path.Join(workDir, "config.json"))
 				require.NoError(t, err)
@@ -440,7 +440,7 @@ func Test_jsonUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, kargoapi.PromotionStepPhaseSucceeded, result.Status)
+				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
 				content, err := os.ReadFile(path.Join(workDir, "config.json"))
 				require.NoError(t, err)
 				assert.JSONEq(t, `{"threshold": 425}`, string(content))
@@ -462,7 +462,7 @@ func Test_jsonUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, kargoapi.PromotionStepPhaseSucceeded, result.Status)
+				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
 				content, err := os.ReadFile(path.Join(workDir, "config.json"))
 				require.NoError(t, err)
 				assert.JSONEq(t, `{"features": {"existingFeature": false}}`, string(content))

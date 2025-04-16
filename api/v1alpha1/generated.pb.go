@@ -18604,7 +18604,7 @@ func (m *StepExecutionMetadata) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Status = PromotionStepPhase(dAtA[iNdEx:postIndex])
+			m.Status = PromotionStepStatus(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 6:
 			if wireType != 2 {

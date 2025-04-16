@@ -120,7 +120,7 @@ func Test_gitPRWaiter_run(t *testing.T) {
 			assertions: func(t *testing.T, res promoPkg.StepResult, err error) {
 				require.ErrorContains(t, err, "error getting pull request")
 				require.ErrorContains(t, err, "something went wrong")
-				require.Equal(t, kargoapi.PromotionStepPhaseErrored, res.Status)
+				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
 			},
 		},
 		{
@@ -137,7 +137,7 @@ func Test_gitPRWaiter_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promoPkg.StepResult, err error) {
 				require.NoError(t, err)
-				require.Equal(t, kargoapi.PromotionStepPhaseRunning, res.Status)
+				require.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
 			},
 		},
 		{
@@ -156,7 +156,7 @@ func Test_gitPRWaiter_run(t *testing.T) {
 			assertions: func(t *testing.T, res promoPkg.StepResult, err error) {
 				require.ErrorContains(t, err, "closed without being merged")
 				require.True(t, promotion.IsTerminal(err))
-				require.Equal(t, kargoapi.PromotionStepPhaseFailed, res.Status)
+				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
 			},
 		},
 		{
@@ -174,7 +174,7 @@ func Test_gitPRWaiter_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promoPkg.StepResult, err error) {
 				require.NoError(t, err)
-				require.Equal(t, kargoapi.PromotionStepPhaseSucceeded, res.Status)
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
 			},
 		},
 	}

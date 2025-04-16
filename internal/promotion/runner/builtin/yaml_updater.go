@@ -38,7 +38,7 @@ func (y *yamlUpdater) Run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
-	failure := promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored}
+	failure := promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}
 
 	if err := y.validate(stepCtx.Config); err != nil {
 		return failure, err
@@ -71,10 +71,10 @@ func (y *yamlUpdater) run(
 		}
 	}
 
-	result := promotion.StepResult{Status: kargoapi.PromotionStepPhaseSucceeded}
+	result := promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}
 	if len(updates) > 0 {
 		if err := y.updateFile(stepCtx.WorkDir, cfg.Path, updates); err != nil {
-			return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored},
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 				fmt.Errorf("values file update failed: %w", err)
 		}
 

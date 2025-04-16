@@ -39,7 +39,7 @@ func (j *jsonUpdater) Run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
-	failure := promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored}
+	failure := promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}
 
 	if err := j.validate(stepCtx.Config); err != nil {
 		return failure, err
@@ -63,11 +63,11 @@ func (j *jsonUpdater) run(
 	stepCtx *promotion.StepContext,
 	cfg builtin.JSONUpdateConfig,
 ) (promotion.StepResult, error) {
-	result := promotion.StepResult{Status: kargoapi.PromotionStepPhaseSucceeded}
+	result := promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}
 
 	if len(cfg.Updates) > 0 {
 		if err := j.updateFile(stepCtx.WorkDir, cfg.Path, cfg.Updates); err != nil {
-			return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored},
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 				fmt.Errorf("JSON file update failed: %w", err)
 		}
 

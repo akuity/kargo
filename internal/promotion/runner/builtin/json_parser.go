@@ -38,7 +38,7 @@ func (jp *jsonParser) Run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
-	failure := promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored}
+	failure := promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}
 
 	if err := jp.validate(stepCtx.Config); err != nil {
 		return failure, err
@@ -62,7 +62,7 @@ func (jp *jsonParser) run(
 	stepCtx *promotion.StepContext,
 	cfg builtin.JSONParseConfig,
 ) (promotion.StepResult, error) {
-	failure := promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored}
+	failure := promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}
 
 	if cfg.Path == "" {
 		return failure, fmt.Errorf("JSON file path cannot be empty")
@@ -83,7 +83,7 @@ func (jp *jsonParser) run(
 	}
 
 	return promotion.StepResult{
-		Status: kargoapi.PromotionStepPhaseSucceeded,
+		Status: kargoapi.PromotionStepStatusSucceeded,
 		Output: extractedValues,
 	}, nil
 }

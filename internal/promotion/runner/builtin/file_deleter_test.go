@@ -36,7 +36,7 @@ func Test_fileDeleter_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepPhaseSucceeded}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
 
 				_, statError := os.Stat("input.txt")
 				assert.True(t, os.IsNotExist(statError))
@@ -55,7 +55,7 @@ func Test_fileDeleter_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepPhaseSucceeded}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
 
 				_, statErr := os.Stat(filepath.Join(workDir, "dirToDelete"))
 				assert.True(t, os.IsNotExist(statErr))
@@ -72,7 +72,7 @@ func Test_fileDeleter_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
 				assert.Error(t, err)
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, result)
 			},
 		},
 		{
@@ -86,7 +86,7 @@ func Test_fileDeleter_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepPhaseSucceeded}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
 			},
 		},
 		{
@@ -110,7 +110,7 @@ func Test_fileDeleter_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
-				require.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepPhaseSucceeded}, result)
+				require.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
 
 				_, statErr := os.Stat(filepath.Join(workDir, "input", "input.txt"))
 				assert.NoError(t, statErr)
@@ -141,7 +141,7 @@ func Test_fileDeleter_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
-				require.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepPhaseSucceeded}, result)
+				require.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
 
 				_, statErr := os.Stat(filepath.Join(workDir, "foo", "file.txt"))
 				assert.Error(t, statErr)

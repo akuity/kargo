@@ -81,7 +81,7 @@ type StepContext struct {
 // process executed by a StepRunner.
 type StepResult struct {
 	// Status is the high-level outcome of a Step executed by a StepRunner.
-	Status kargoapi.PromotionStepPhase
+	Status kargoapi.PromotionStepStatus
 	// Message is an optional message that provides additional context about the
 	// outcome of a Step executed by a StepRunner.
 	Message string

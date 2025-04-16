@@ -55,7 +55,7 @@ func (k *kustomizeImageSetter) Run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
-	failure := promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored}
+	failure := promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}
 
 	if err := k.validate(stepCtx.Config); err != nil {
 		return failure, err
@@ -83,7 +83,7 @@ func (k *kustomizeImageSetter) run(
 	// Find the Kustomization file.
 	kusPath, err := findKustomization(stepCtx.WorkDir, cfg.Path)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("could not discover kustomization file: %w", err)
 	}
 
@@ -97,15 +97,15 @@ func (k *kustomizeImageSetter) run(
 		targetImages, err = k.buildTargetImagesAutomatically(ctx, stepCtx)
 	}
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored}, err
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
 	// Update the Kustomization file with the new images.
 	if err = updateKustomizationFile(kusPath, targetImages); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepPhaseErrored}, err
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
-	result := promotion.StepResult{Status: kargoapi.PromotionStepPhaseSucceeded}
+	result := promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}
 	if commitMsg := k.generateCommitMessage(cfg.Path, targetImages); commitMsg != "" {
 		result.Output = map[string]any{
 			"commitMessage": commitMsg,
