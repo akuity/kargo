@@ -1728,17 +1728,24 @@ func (r *RegularStageReconciler) autoPromotionAllowed(
 ) (bool, error) {
 	logger := logging.LoggerFromContext(ctx)
 
-	project := &kargoapi.Project{}
-	if err := r.client.Get(ctx, types.NamespacedName{Name: stage.Namespace}, project); err != nil {
-		return false, fmt.Errorf("error getting Project %q in namespace %q: %w", stage.Name, stage.Namespace, err)
+	projectCfg := &kargoapi.ProjectConfig{}
+	if err := r.client.Get(ctx, types.NamespacedName{
+		Name: stage.Namespace,
+		Namespace: stage.Namespace,
+	}, projectCfg); err != nil {
+		if apierrors.IsNotFound(err) {
+			logger.Debug("found no ProjectConfig associated with Project; auto-promotion is disabled")
+			return false, nil
+		}
+		return false, fmt.Errorf("error getting ProjectConfig for Project %q: %w", stage.Namespace, err)
 	}
 
-	if project.Spec == nil || len(project.Spec.PromotionPolicies) == 0 {
+	if len(projectCfg.Spec.PromotionPolicies) == 0 {
 		logger.Debug("found no PromotionPolicy associated with Stage")
 		return false, nil
 	}
 
-	for _, policy := range project.Spec.PromotionPolicies {
+	for _, policy := range projectCfg.Spec.PromotionPolicies {
 		if policy.Stage == stage.Name {
 			logger.Debug(
 				"found PromotionPolicy associated with Stage",
