@@ -114,7 +114,10 @@ export class Watcher {
     );
   }
 
-  async watchWarehouses(refreshHook: () => void) {
+  async watchWarehouses(opts?: {
+    refreshHook?: () => void;
+    onWarehouseEvent?: (warehouse: Warehouse) => void;
+  }) {
     const stream = this.promiseClient.watchWarehouses(
       { project: this.project },
       { signal: this.cancel.signal }
@@ -145,7 +148,7 @@ export class Watcher {
           refresh[warehouse?.metadata?.name || ''] = true;
         } else if (refresh[warehouse?.metadata?.name || '']) {
           delete refresh[warehouse?.metadata?.name || ''];
-          refreshHook();
+          opts?.refreshHook?.();
         }
 
         // update Warehouse list
@@ -170,6 +173,8 @@ export class Watcher {
           transport: transportWithAuth
         });
         this.client.setQueryData(getWarehouseQueryKey, { warehouse });
+
+        opts?.onWarehouseEvent?.(warehouse);
       }
     );
   }

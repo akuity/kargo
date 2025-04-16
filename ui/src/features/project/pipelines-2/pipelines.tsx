@@ -99,6 +99,7 @@ export const Pipelines = (props: { project: Project }) => {
 
         <div className='w-full h-full'>
           <Graph
+            project={props.project.metadata?.name || ''}
             warehouses={listWarehousesQuery.data?.warehouses || []}
             stages={listStagesQuery.data?.stages || []}
           />

@@ -160,7 +160,9 @@ export const Pipelines = ({
     const watcher = new Watcher(name, client);
 
     watcher.watchStages(queryCache.imageStageMatrix.update);
-    watcher.watchWarehouses(refetchFreightData);
+    watcher.watchWarehouses({
+      refreshHook: refetchFreightData
+    });
 
     return () => {
       watcher.cancelWatch();
