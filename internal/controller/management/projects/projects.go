@@ -661,7 +661,7 @@ func (r *reconciler) ensureDefaultProjectRoles(
 				},
 				{ // Full access to all mutable Kargo resource types
 					APIGroups: []string{kargoapi.GroupVersion.Group},
-					Resources: []string{"freights", "stages", "warehouses"},
+					Resources: []string{"freights", "stages", "warehouses", "projectconfigs"},
 					Verbs:     []string{"*"},
 				},
 				{ // Promote permission on all stages
@@ -713,7 +713,7 @@ func (r *reconciler) ensureDefaultProjectRoles(
 				},
 				{
 					APIGroups: []string{kargoapi.GroupVersion.Group},
-					Resources: []string{"freights", "promotions", "stages", "warehouses"},
+					Resources: []string{"freights", "promotions", "stages", "warehouses", "projectconfigs"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
 				{
