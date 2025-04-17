@@ -18,6 +18,7 @@ type FreightCardProps = {
   viewingFreight?: Freight | null;
   setViewingFreight?(f: Freight | null): void;
   preferredFilter: FreightTimelineControllerContextType['preferredFilter'];
+  inUse?: boolean; // is used by stages
 };
 
 export const FreightCard = (props: FreightCardProps) => {
@@ -57,13 +58,15 @@ export const FreightCard = (props: FreightCardProps) => {
       style={{ border: '1px solid rgba(0,0,0,.05)' }}
       onClick={() => props.setViewingFreight?.(isViewingFreight ? null : props.freight)}
     >
-      <Tag
-        className='w-fit text-[8px] absolute right-[-20px] top-0 leading-none'
-        bordered={false}
-        color='green'
-      >
-        in use
-      </Tag>
+      {props.inUse && (
+        <Tag
+          className='w-fit text-[8px] absolute right-[-20px] top-0 leading-none'
+          bordered={false}
+          color='green'
+        >
+          in use
+        </Tag>
+      )}
       {props?.preferredFilter?.showColors && (
         <div className='flex gap-1 mb-1 justify-center'>
           <div

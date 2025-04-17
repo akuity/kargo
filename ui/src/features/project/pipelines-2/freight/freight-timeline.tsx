@@ -9,6 +9,7 @@ import { useMemo, useRef, useState } from 'react';
 import { ArtifactMetadata } from '@ui/features/freight/artifact-metadata';
 import { flattenFreightOrigin } from '@ui/features/freight/flatten-freight-origin-utils';
 import { FreightStatusList } from '@ui/features/freight/freight-status-list';
+import { useDictionaryContext } from '@ui/features/project/pipelines-2/context/dictionary-context';
 import {
   FreightTimelineControllerContext,
   FreightTimelineControllerContextType
@@ -24,6 +25,8 @@ import { filterFreightBySource, filterFreightByTimerange } from './source-catalo
 import './freight-timeline.less';
 
 export const FreightTimeline = (props: { freights: Freight[] }) => {
+  const dictionaryContext = useDictionaryContext();
+
   const [filtersCollapsed, setFilterCollapsed] = useState(true);
 
   const [viewingFreight, setViewingFreight] = useState<Freight | null>(null);
@@ -129,6 +132,10 @@ export const FreightTimeline = (props: { freights: Freight[] }) => {
                 preferredFilter={preferredFilter}
                 setViewingFreight={setViewingFreight}
                 viewingFreight={viewingFreight}
+                inUse={
+                  (dictionaryContext?.freightInStages[freight?.metadata?.name || '']?.length || 0) >
+                  0
+                }
               />
             ))}
           </div>
