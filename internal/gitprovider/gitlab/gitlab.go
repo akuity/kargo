@@ -205,13 +205,16 @@ func (p *provider) GetCommitURL(
 	repoURL string,
 	sha string,
 ) (string, error) {
-	re := regexp.MustCompile(`^(?:(?:\w+://)?(?:\w+@)?)?(gitlab.com)[:/]([^/]+/[^.]+)(?:\.git)?$`)
+	repoURLRegex := `^(?:(?:\w+://)?(?:\w+@)?)?(gitlab.com)[:/]([^/]+/[^.]+)(?:\.git)?$`
+	re := regexp.MustCompile(repoURLRegex)
 	matches := re.FindStringSubmatch(repoURL)
 	formattedRepoURL := ""
 	if len(matches) == 3 {
 		host := matches[1]
 		path := matches[2]
 		formattedRepoURL = fmt.Sprintf("https://%s/%s", host, path)
+	} else {
+		return "", fmt.Errorf("error processing repository URL: %s: must match regex: %s", repoURL, repoURLRegex)
 	}
 
 	commitUrl := formattedRepoURL + "/-/commit/" + sha
