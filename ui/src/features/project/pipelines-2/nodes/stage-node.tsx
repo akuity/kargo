@@ -160,12 +160,14 @@ export const StageNode = (props: { stage: Stage }) => {
         </Button>
       </Dropdown>
 
-      <Button
-        icon={<FontAwesomeIcon icon={faMinus} />}
-        size='small'
-        className='absolute top-[50%] translate-y-[-50%] text-[10px] z-10'
-        onClick={() => graphContext?.onStack(stageNodeIndex)}
-      />
+      {!graphContext?.stackedNodesParents?.includes(stageNodeIndex) && (
+        <Button
+          icon={<FontAwesomeIcon icon={faMinus} />}
+          size='small'
+          className='absolute top-[50%] translate-y-[-50%] text-[10px] z-10'
+          onClick={() => graphContext?.onStack(stageNodeIndex)}
+        />
+      )}
     </Card>
   );
 };
