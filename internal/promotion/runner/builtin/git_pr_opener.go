@@ -25,8 +25,8 @@ import (
 const (
 	// stateKeyPRNumber is the key used to store the PR number in the shared State.
 	stateKeyPRNumber = "prNumber"
-	// stateKeyRepoURL is the key used to store the repository URL in the shared State.
-	stateKeyRepoURL = "repoURL"
+	// stateKeyPRLink is the key used to store the Pull Request Link in the shared State.
+	stateKeyPRLink = "prLink"
 )
 
 // gitPROpener is an implementation of the promotion.StepRunner interface that
@@ -89,7 +89,6 @@ func (g *gitPROpener) run(
 			Status: kargoapi.PromotionPhaseSucceeded,
 			Output: map[string]any{
 				stateKeyPRNumber: prNumber,
-				stateKeyRepoURL:  cfg.RepoURL,
 			},
 		}, nil
 	}
@@ -164,7 +163,7 @@ func (g *gitPROpener) run(
 			Status: kargoapi.PromotionPhaseSucceeded,
 			Output: map[string]any{
 				stateKeyPRNumber: pr.Number,
-				stateKeyRepoURL:  cfg.RepoURL,
+				stateKeyPRLink:   pr.URL,
 			},
 		}, nil
 	}
@@ -229,7 +228,7 @@ func (g *gitPROpener) run(
 		Status: kargoapi.PromotionPhaseSucceeded,
 		Output: map[string]any{
 			stateKeyPRNumber: pr.Number,
-			stateKeyRepoURL:  cfg.RepoURL,
+			stateKeyPRLink:   pr.URL,
 		},
 	}, nil
 }
