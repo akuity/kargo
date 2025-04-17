@@ -52,7 +52,7 @@ type Interface interface {
 	// the caller to sort the results as needed.
 	ListPullRequests(context.Context, *ListPullRequestOptions) ([]PullRequest, error)
 
-	// GetCommit get a commit by the repository URL and commit SHA.
+	// GetCommitURL get a commit by the repository URL and commit SHA.
 	GetCommitURL(string, string) (string, error)
 }
 
@@ -157,7 +157,7 @@ func (f *Fake) ListPullRequests(
 	return f.ListPullRequestsFn(ctx, opts)
 }
 
-// GetCommit implements gitprovider.Interface.
+// GetCommitURL implements gitprovider.Interface.
 func (f *Fake) GetCommitURL(
 	repoURL string,
 	sha string,

@@ -269,7 +269,7 @@ func (p *provider) ListPullRequests(
 	return prs, nil
 }
 
-// GetCommit implements gitprovider.Interface.
+// GetCommitURL implements gitprovider.Interface.
 func (p *provider) GetCommitURL(
 	repoURL string,
 	sha string,

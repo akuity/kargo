@@ -187,6 +187,7 @@ func (g *gitPushPusher) run(
 			fmt.Errorf("error getting last commit ID: %w", err)
 	}
 
+	// Using git provider to get commit url.
 	gpOpts := &gitprovider.Options{}
 	gitProvider, err := gitprovider.New(workTree.URL(), gpOpts)
 	if err != nil {
