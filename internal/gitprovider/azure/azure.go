@@ -190,14 +190,12 @@ func (p *provider) GetCommitURL(
 	repoURLRegex := `^(?:(?:\w+://)?(?:\w+@)?)?(dev.azure.com|ssh.dev.azure.com\:v3)[:/]([^/]+/[^.]+)(?:\.git)?$`
 	re := regexp.MustCompile(repoURLRegex)
 	matches := re.FindStringSubmatch(repoURL)
-	formattedRepoURL := ""
-	if len(matches) == 3 {
-		host := "dev.azure.com"
-		path := matches[2]
-		formattedRepoURL = fmt.Sprintf("https://%s/%s", host, path)
-	} else {
+	if len(matches) != 3 {
 		return "", fmt.Errorf("error processing repository URL: %s: must match regex: %s", repoURL, repoURLRegex)
 	}
+	host := "dev.azure.com"
+	path := matches[2]
+	formattedRepoURL := fmt.Sprintf("https://%s/%s", host, path)
 
 	commitUrl := formattedRepoURL + "/commit/" + sha
 	return commitUrl, nil
