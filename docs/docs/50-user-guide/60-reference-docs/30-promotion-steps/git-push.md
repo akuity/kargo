@@ -41,7 +41,7 @@ Stages that write to the same branch do not write to the same files.
 |------|------|-------------|
 | `branch` | `string` | The name of the remote branch pushed to by this step. This is especially useful when the `generateTargetBranch=true` option has been used, in which case a subsequent [`git-open-pr`](git-open-pr.md) will typically reference this output to learn what branch to use as the head branch of a new pull request. |
 | `commit` | `string` | The ID (SHA) of the commit pushed by this step. |
-| `commitURL` | `string` | The URL to the commit that was pushed on the hosting provider e.g. Github. |
+| `commitURL` | `string` | The URL to the commit that was pushed to the hosting provider. |
 
 
 ## Examples
