@@ -32,7 +32,8 @@ type managementControllerOptions struct {
 	KargoNamespace               string
 	ManageControllerRoleBindings bool
 
-	PprofBindAddress string
+	MetricsBindAddress string
+	PprofBindAddress   string
 
 	Logger *logging.Logger
 }
@@ -63,6 +64,7 @@ func (o *managementControllerOptions) complete() {
 	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
 	o.KargoNamespace = os.GetEnv("KARGO_NAMESPACE", "kargo")
 	o.ManageControllerRoleBindings = types.MustParseBool(os.GetEnv("MANAGE_CONTROLLER_ROLE_BINDINGS", "true"))
+	o.MetricsBindAddress = os.GetEnv("METRICS_BIND_ADDRESS", "0")
 	o.PprofBindAddress = os.GetEnv("PPROF_BIND_ADDRESS", "")
 }
 
@@ -146,7 +148,7 @@ func (o *managementControllerOptions) setupManager(ctx context.Context) (manager
 		ctrl.Options{
 			Scheme: scheme,
 			Metrics: server.Options{
-				BindAddress: "0",
+				BindAddress: o.MetricsBindAddress,
 			},
 			PprofBindAddress: o.PprofBindAddress,
 			Cache: cache.Options{
