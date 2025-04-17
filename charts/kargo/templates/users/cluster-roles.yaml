@@ -32,6 +32,7 @@ rules:
   - clusterpromotiontasks
   - freights
   - projects
+  - projectconfigs
   - promotiontasks
   - stages
   - warehouses
@@ -116,6 +117,7 @@ rules:
   - clusterpromotiontasks
   - freights
   - projects
+  - projectconfigs
   - promotions
   - promotiontasks
   - stages
