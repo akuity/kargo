@@ -79,17 +79,23 @@ func (g *gitPROpener) run(
 ) (promotion.StepResult, error) {
 	// Short-circuit if shared state has output from a previous execution of this
 	// step that contains a PR number.
+	//
+	// TODO(krancour): This short-circuiting logic may have outlived its
+	// usefulness now that we keep track of the current step.
 	prNumber, err := g.getPRNumber(stepCtx, stepCtx.SharedState)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error getting PR number from shared state: %w", err)
 	}
 	if prNumber != -1 {
+		// We don't need to check for the existence of prior output from this
+		// step because we'd not have gotten to here if it didn't exist.
+		output, _ := stepCtx.SharedState.Get(stepCtx.Alias)
 		return promotion.StepResult{
 			Status: kargoapi.PromotionPhaseSucceeded,
-			Output: map[string]any{
-				stateKeyPRNumber: prNumber,
-			},
+			// Don't need to validate the type assertion on the output here because
+			// we'd not have gotten to here if it wasn't a map[string]any.
+			Output: output.(map[string]any), //nolint: forcetypeassert
 		}, nil
 	}
 
