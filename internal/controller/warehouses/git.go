@@ -3,14 +3,12 @@ package warehouses
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/bmatcuk/doublestar/v4"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -18,6 +16,7 @@ import (
 	libSemver "github.com/akuity/kargo/internal/controller/semver"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/internal/pattern"
 )
 
 const (
@@ -25,8 +24,6 @@ const (
 	regexPrefix  = "regex:"
 	globPrefix   = "glob:"
 )
-
-type pathSelector func(path string) (bool, error)
 
 // discoverCommits discovers commits from the given Git repositories based on the
 // given subscriptions. It returns a list of GitDiscoveryResult objects, each
@@ -381,82 +378,44 @@ func ignores(tagName string, ignore []string) bool {
 	return false
 }
 
-func getPathSelectors(selectorStrs []string) ([]pathSelector, error) {
-	selectors := make([]pathSelector, len(selectorStrs))
-	for i, selectorStr := range selectorStrs {
-		switch {
-		case strings.HasPrefix(selectorStr, regexpPrefix):
-			regex, err := regexp.Compile(strings.TrimPrefix(selectorStr, regexpPrefix))
-			if err != nil {
-				return nil, err
-			}
-			selectors[i] = func(path string) (bool, error) {
-				return regex.MatchString(path), nil
-			}
-		case strings.HasPrefix(selectorStr, regexPrefix):
-			regex, err := regexp.Compile(strings.TrimPrefix(selectorStr, regexPrefix))
-			if err != nil {
-				return nil, err
-			}
-			selectors[i] = func(path string) (bool, error) {
-				return regex.MatchString(path), nil
-			}
-		case strings.HasPrefix(selectorStr, globPrefix):
-			pattern := strings.TrimPrefix(selectorStr, globPrefix)
-			selectors[i] = func(path string) (bool, error) {
-				return doublestar.PathMatch(pattern, path)
-			}
-		default:
-			basePath := selectorStr
-			selectors[i] = func(path string) (bool, error) {
-				relPath, err := filepath.Rel(basePath, path)
-				if err != nil {
-					return false, err
-				}
-				return !strings.Contains(relPath, ".."), nil
-			}
-		}
+func getPathSelectors(selectors []string) (pattern.Matcher, error) {
+	if len(selectors) == 0 {
+		return nil, nil
 	}
-	return selectors, nil
+
+	matchers := make(pattern.Matchers, len(selectors))
+	for i := range selectors {
+		matcher, err := pattern.ParsePathPattern(selectors[i])
+		if err != nil {
+			return nil, fmt.Errorf("parse error path selector %q: %w", selectors[i], err)
+		}
+		matchers[i] = matcher
+	}
+	return matchers, nil
 }
 
-func matchesPathsFilters(includeSelectors, excludeSelectors []pathSelector, diffs []string) (bool, error) {
-pathLoop:
+func matchesPathsFilters(include, exclude pattern.Matcher, diffs []string) bool {
 	for _, path := range diffs {
-		if len(includeSelectors) > 0 {
-			var selected bool
-			var err error
-			for _, selector := range includeSelectors {
-				if selected, err = selector(path); err != nil {
-					return false, err
-				}
-				if selected {
-					// Path was explicitly included, so we can move on to checking if
-					// it should be excluded
-					break
-				}
-			}
-			if !selected {
-				// Path was not explicitly included, so we can move on to the next path
-				continue pathLoop
-			}
+		// If include is nil, all paths are implicitly included
+		// Otherwise, check if the path matches the include pattern
+		if include != nil && !include.Matches(path) {
+			// Path not included, skip to next path
+			continue
 		}
-		// If we reach this point, the path was either implicitly or explicitly
-		// included. Now check if it should be excluded.
-		for _, selector := range excludeSelectors {
-			selected, err := selector(path)
-			if err != nil {
-				return false, err
-			}
-			if selected {
-				// Path was explicitly excluded, so we can move on to the next path
-				continue pathLoop
-			}
+
+		// Path is included (either implicitly or explicitly)
+		// Now check if it should be excluded
+		if exclude != nil && exclude.Matches(path) {
+			// Path is explicitly excluded, skip to next path
+			continue
 		}
-		// If we reach this point, the path was not explicitly excluded
-		return true, nil
+
+		// If we reach here, the path is included and not excluded
+		return true
 	}
-	return false, nil
+
+	// None of the paths match our criteria
+	return false
 }
 
 func selectSemVerTags(tags []git.TagMetadata, strict bool, constraint string) ([]git.TagMetadata, error) {

@@ -868,15 +868,6 @@ func TestMatchesPathsFilters(t *testing.T) {
 			},
 		},
 		{
-			name:         "error with invalid glob syntax",
-			includePaths: []string{"glob:path2/*.tpl["},
-			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
-			assertions: func(t *testing.T, _ bool, err error) {
-				require.Error(t, err)
-				require.ErrorContains(t, err, "syntax error in pattern")
-			},
-		},
-		{
 			name:         "success unmatching mix1",
 			includePaths: []string{"path3", regexPrefix + "nonexistent", globPrefix + "nonexistent"},
 			excludePaths: []string{regexPrefix + "nonexistent", "*/?helpers.tpl", globPrefix + "nonexistent"},
