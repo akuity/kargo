@@ -1,6 +1,5 @@
 import { useQuery } from '@connectrpc/connect-query';
 import { faChevronDown, faExternalLink } from '@fortawesome/free-solid-svg-icons';
-import { faGear, faHistory } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Divider, Drawer, Skeleton, Space, Tabs, Typography } from 'antd';
 import Dropdown from 'antd/es/dropdown/dropdown';
@@ -125,6 +124,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
       return [];
     }
   }, [argocdShard, stage]);
+
   const { stageTabs } = useExtensionsContext();
 
   return (
@@ -238,31 +238,12 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                     <YamlEditor value={rawStageYaml} height='700px' isHideManagedFieldsDisplayed />
                   )
                 },
-                {
-                  key: TabsTypes.FREIGHT_HISTORY,
-                  label: 'Freight History',
-                  icon: <FontAwesomeIcon icon={faHistory} />,
-                  children: (
-                    <FreightHistory
-                      requestedFreights={stage?.spec?.requestedFreight || []}
-                      freightHistory={stage?.status?.freightHistory}
-                      currentActiveFreight={stage?.status?.lastPromotion?.freight?.name}
-                      projectName={projectName || ''}
-                    />
-                  )
-                },
                 ...stageTabs.map((data, index) => ({
                   children: <data.component stage={stage} />,
                   key: String(data.label + index),
                   label: data.label,
                   icon: data.icon
-                })),
-                {
-                  key: TabsTypes.SETTINGS,
-                  label: 'Settings',
-                  icon: <FontAwesomeIcon icon={faGear} />,
-                  children: <StageSettings />
-                }
+                }))
               ]}
             />
 
