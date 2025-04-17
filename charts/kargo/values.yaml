@@ -381,9 +381,7 @@ controller:
   podLabels: {}
   ## @param controller.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
   podAnnotations: {}
-
-  # -- Init containers to add to the kargo controller pod
-  ## This will be rendered as the literal yaml
+  ## @param controller.initContainers Optional init containers to add to the controller pods. This is rendered as the literal yaml.
   initContainers: []
     # - name: download-tools
     #   image: alpine:3.8
