@@ -114,7 +114,6 @@ export const useReactFlowPipelineGraph = (stages: Stage[], warehouses: Warehouse
 
       reactFlowEdges.push({
         id: edgeIndexer.index(belongsToWarehouse, edge.v, edge.w),
-        type: edge.v.startsWith('warehouse') ? 'default' : 'smoothstep',
         source: edge.v,
         target: edge.w,
         animated: false,

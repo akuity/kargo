@@ -65,7 +65,15 @@ export const StageNode = (props: { stage: Stage }) => {
       <Flex className='text-[10px]' gap={8} wrap vertical>
         <Flex gap={24}>
           <Flex align='center' gap={4}>
-            {stagePhase} <StagePhaseIcon className={'text-[8px]'} noTooltip phase={stagePhase} />
+            {stagePhase}{' '}
+            <StagePhaseIcon
+              className={classNames(
+                stagePhase !== StagePhase.Promoting && 'text-[8px]',
+                stagePhase === StagePhase.Promoting && 'text-[10px] ml-2'
+              )}
+              noTooltip
+              phase={stagePhase}
+            />
           </Flex>
           {stageHealth?.status && (
             <Flex gap={4}>

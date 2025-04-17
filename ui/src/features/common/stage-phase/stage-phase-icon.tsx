@@ -37,7 +37,7 @@ export const StagePhaseIcon = (props: {
   const Children =
     props.phase === StagePhase.Promoting ? (
       <>
-        <TruckIcon />
+        <TruckIcon className={props.className} />
       </>
     ) : (
       <FontAwesomeIcon
