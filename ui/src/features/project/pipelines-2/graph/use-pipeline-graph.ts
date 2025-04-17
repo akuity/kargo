@@ -99,7 +99,7 @@ export const useReactFlowPipelineGraph = (
     const reactFlowNodes: Node[] = [];
     const reactFlowEdges: Edge[] = [];
 
-    let ignoreNodes: string[] = [];
+    const ignoreNodes = new Set<string>();
     const keepNodeAsStackNode: string[] = [];
 
     for (const afterNode of stack?.afterNodes || []) {
@@ -107,11 +107,13 @@ export const useReactFlowPipelineGraph = (
 
       if (subIgnoreNodes?.length > 0) {
         // in same pipeline
-        if (!ignoreNodes.includes(subIgnoreNodes[0])) {
+        if (!ignoreNodes.has(subIgnoreNodes[0])) {
           keepNodeAsStackNode.push(subIgnoreNodes[0]);
         }
 
-        ignoreNodes = [...ignoreNodes, ...subIgnoreNodes];
+        for (const inds of subIgnoreNodes) {
+          ignoreNodes.add(inds);
+        }
       }
     }
 
@@ -128,7 +130,7 @@ export const useReactFlowPipelineGraph = (
             y: dagreNode?.y - dagreNode?.height / 2
           },
           data: {
-            value: ignoreNodes.length,
+            value: ignoreNodes.size,
             id: dagreNode?.stage?.spec?.requestedFreight?.[0]?.origin?.name,
             parentNodeId: graph.predecessors(node)?.[0]
           }
@@ -136,7 +138,7 @@ export const useReactFlowPipelineGraph = (
         continue;
       }
 
-      if (ignoreNodes.includes(node)) {
+      if (ignoreNodes.has(node)) {
         continue;
       }
 
@@ -156,7 +158,7 @@ export const useReactFlowPipelineGraph = (
     }
 
     for (const edge of graph.edges()) {
-      if (!keepNodeAsStackNode.includes(edge.v) && ignoreNodes.includes(edge.v)) {
+      if (!keepNodeAsStackNode.includes(edge.v) && ignoreNodes.has(edge.v)) {
         continue;
       }
 
