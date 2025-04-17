@@ -236,16 +236,7 @@ func (r *reconciler) discoverBranchHistory(repo git.Repo, sub kargoapi.GitSubscr
 					err,
 				)
 			}
-			match, err := matchesPathsFilters(includeSelectors, excludeSelectors, diffPaths)
-			if err != nil {
-				return nil, fmt.Errorf(
-					"error checking includePaths/excludePaths match for commit %q for git repo %q: %w",
-					meta.ID,
-					sub.RepoURL,
-					err,
-				)
-			}
-			if match {
+			if matchesPathsFilters(includeSelectors, excludeSelectors, diffPaths) {
 				filteredCommits = append(filteredCommits, meta)
 			}
 
@@ -321,16 +312,7 @@ func (r *reconciler) discoverTags(repo git.Repo, sub kargoapi.GitSubscription) (
 				err,
 			)
 		}
-		match, err := matchesPathsFilters(includeSelectors, excludeSelectors, diffPaths)
-		if err != nil {
-			return nil, fmt.Errorf(
-				"error checking includePaths/excludePaths match for tag %q for git repo %q: %w",
-				meta.Tag,
-				sub.RepoURL,
-				err,
-			)
-		}
-		if match {
+		if matchesPathsFilters(includeSelectors, excludeSelectors, diffPaths) {
 			filteredTags = append(filteredTags, meta)
 		}
 

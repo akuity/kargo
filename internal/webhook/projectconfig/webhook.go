@@ -145,7 +145,7 @@ func (w *webhook) validatePromotionPolicies(
 ) field.ErrorList {
 	stageNames := make(map[string]struct{}, len(promotionPolicies))
 	for _, promotionPolicy := range promotionPolicies {
-		if _, found := stageNames[promotionPolicy.Stage]; found {
+		if _, found := stageNames[promotionPolicy.Stage]; found { // nolint:staticcheck
 			return field.ErrorList{
 				field.Invalid(
 					f,
@@ -153,12 +153,12 @@ func (w *webhook) validatePromotionPolicies(
 					fmt.Sprintf(
 						"multiple %s reference stage %q",
 						f.String(),
-						promotionPolicy.Stage,
+						promotionPolicy.Stage, // nolint:staticcheck
 					),
 				),
 			}
 		}
-		stageNames[promotionPolicy.Stage] = struct{}{}
+		stageNames[promotionPolicy.Stage] = struct{}{} // nolint:staticcheck
 	}
 	return nil
 }

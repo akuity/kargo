@@ -1564,7 +1564,7 @@ func TestMigrateSpecToProjectConfig(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Name: testProject},
 				Spec: &kargoapi.ProjectSpec{ // nolint:staticcheck
 					PromotionPolicies: []kargoapi.PromotionPolicy{
-						{Stage: "policy-1"},
+						{Stage: "policy-1"}, // nolint:staticcheck
 					},
 				},
 			},
@@ -1584,7 +1584,7 @@ func TestMigrateSpecToProjectConfig(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Name: testProject},
 				Spec: &kargoapi.ProjectSpec{ // nolint:staticcheck
 					PromotionPolicies: []kargoapi.PromotionPolicy{
-						{Stage: "policy-1"},
+						{Stage: "policy-1"}, // nolint:staticcheck
 					},
 				},
 			},
