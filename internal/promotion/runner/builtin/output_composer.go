@@ -58,13 +58,13 @@ func (c *outputComposer) Run(
 ) (promoPkg.StepResult, error) {
 	// Validate the configuration against the JSON Schema.
 	if err := validate(c.schemaLoader, gojsonschema.NewGoLoader(stepCtx.Config), c.Name()); err != nil {
-		return promoPkg.StepResult{Status: kargoapi.PromotionPhaseErrored}, err
+		return promoPkg.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
 	// Convert the configuration into a typed object.
 	cfg, err := promoPkg.ConfigToStruct[builtin.ComposeOutput](stepCtx.Config)
 	if err != nil {
-		return promoPkg.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promoPkg.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("could not convert config into %s config: %w", c.Name(), err)
 	}
 
@@ -75,7 +75,7 @@ func (c *outputComposer) run(
 	cfg builtin.ComposeOutput,
 ) (promoPkg.StepResult, error) {
 	return promoPkg.StepResult{
-		Status: kargoapi.PromotionPhaseSucceeded,
+		Status: kargoapi.PromotionStepStatusSucceeded,
 		Output: maps.Clone(cfg),
 	}, nil
 }

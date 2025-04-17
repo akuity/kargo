@@ -619,13 +619,24 @@ func (r *reconciler) terminatePromotion(
 	}
 
 	newStatus := promo.Status.DeepCopy()
+
+	now := &metav1.Time{Time: time.Now()}
+
+	// If a step was running, mark the step as aborted.
+	if newStatus.Phase == kargoapi.PromotionPhaseRunning &&
+		int64(len(newStatus.StepExecutionMetadata)) == promo.Status.CurrentStep+1 &&
+		promo.Status.StepExecutionMetadata[promo.Status.CurrentStep].Status == kargoapi.PromotionStepStatusRunning {
+		newStatus.StepExecutionMetadata[promo.Status.CurrentStep].Status = kargoapi.PromotionStepStatusAborted
+		newStatus.StepExecutionMetadata[promo.Status.CurrentStep].FinishedAt = now
+	}
+
 	newStatus.Phase = kargoapi.PromotionPhaseAborted
 	if actor != "" {
 		newStatus.Message = fmt.Sprintf("Promotion terminated by %s", actor)
 	} else {
 		newStatus.Message = "Promotion terminated per user request"
 	}
-	newStatus.FinishedAt = &metav1.Time{Time: time.Now()}
+	newStatus.FinishedAt = now
 
 	if err := kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
 		*status = *newStatus

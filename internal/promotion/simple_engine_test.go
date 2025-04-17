@@ -71,7 +71,7 @@ func TestSimpleEngine_Promote(t *testing.T) {
 				assert.ErrorContains(t, err, "met error threshold")
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
 				assert.Len(t, result.StepExecutionMetadata, 1)
-				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.StepExecutionMetadata[0].Status)
+				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.StepExecutionMetadata[0].Status)
 				assert.Contains(t, result.StepExecutionMetadata[0].Message, context.Canceled.Error())
 			},
 		},
@@ -105,13 +105,13 @@ func TestSimpleEngine_Promote(t *testing.T) {
 			testRegistry.register(
 				&mockStepRunner{
 					name:      "success-step",
-					runResult: promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded},
+					runResult: promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded},
 				},
 			)
 			testRegistry.register(
 				&mockStepRunner{
 					name:      "error-step",
-					runResult: promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+					runResult: promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 					runErr:    errors.New("something went wrong"),
 				},
 			)
@@ -121,7 +121,7 @@ func TestSimpleEngine_Promote(t *testing.T) {
 					runFunc: func(ctx context.Context, _ *promotion.StepContext) (promotion.StepResult, error) {
 						cancel() // Cancel context immediately
 						<-ctx.Done()
-						return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, ctx.Err()
+						return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, ctx.Err()
 					},
 				},
 			)
@@ -181,7 +181,7 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				// Verify the result contains metadata from both steps
 				assert.Len(t, result.StepExecutionMetadata, 2)
 				for _, metadata := range result.StepExecutionMetadata {
-					assert.Equal(t, kargoapi.PromotionPhaseSucceeded, metadata.Status)
+					assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, metadata.Status)
 					assert.NotNil(t, metadata.StartedAt)
 					assert.NotNil(t, metadata.FinishedAt)
 				}
@@ -212,12 +212,13 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				// Verify the result contains metadata from all steps
 				assert.Len(t, result.StepExecutionMetadata, 3)
 				for _, metadata := range result.StepExecutionMetadata {
-					assert.Equal(t, kargoapi.PromotionPhaseSucceeded, metadata.Status)
 					switch metadata.Alias {
 					case "step2":
+						assert.Equal(t, kargoapi.PromotionStepStatusSkipped, metadata.Status)
 						assert.Nil(t, metadata.StartedAt)
 						assert.Nil(t, metadata.FinishedAt)
 					default:
+						assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, metadata.Status)
 						assert.NotNil(t, metadata.StartedAt)
 						assert.NotNil(t, metadata.FinishedAt)
 					}
@@ -258,7 +259,7 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				assert.Len(t, result.StepExecutionMetadata, 2)
 				// We're not bothering with assertions on the dummy metadata for the 0
 				// step.
-				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.StepExecutionMetadata[1].Status)
+				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.StepExecutionMetadata[1].Status)
 				assert.NotNil(t, result.StepExecutionMetadata[1].StartedAt)
 				assert.NotNil(t, result.StepExecutionMetadata[1].FinishedAt)
 
@@ -281,10 +282,10 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
 				assert.Equal(t, int64(1), result.CurrentStep)
 				assert.Len(t, result.StepExecutionMetadata, 2)
-				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.StepExecutionMetadata[0].Status)
+				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.StepExecutionMetadata[0].Status)
 				assert.NotNil(t, result.StepExecutionMetadata[0].StartedAt)
 				assert.NotNil(t, result.StepExecutionMetadata[0].FinishedAt)
-				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.StepExecutionMetadata[1].Status)
+				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.StepExecutionMetadata[1].Status)
 				assert.NotNil(t, result.StepExecutionMetadata[1].StartedAt)
 				assert.NotNil(t, result.StepExecutionMetadata[1].FinishedAt)
 				assert.Contains(t, result.StepExecutionMetadata[1].Message, "something went wrong")
@@ -309,10 +310,10 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
 				assert.Equal(t, int64(1), result.CurrentStep)
 				assert.Len(t, result.StepExecutionMetadata, 2)
-				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.StepExecutionMetadata[0].Status)
+				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.StepExecutionMetadata[0].Status)
 				assert.NotNil(t, result.StepExecutionMetadata[0].StartedAt)
 				assert.NotNil(t, result.StepExecutionMetadata[0].FinishedAt)
-				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.StepExecutionMetadata[1].Status)
+				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.StepExecutionMetadata[1].Status)
 				assert.NotNil(t, result.StepExecutionMetadata[1].StartedAt)
 				assert.NotNil(t, result.StepExecutionMetadata[1].FinishedAt)
 				assert.Contains(t, result.StepExecutionMetadata[1].Message, "something went wrong")
@@ -340,7 +341,7 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				assert.Equal(t, kargoapi.PromotionPhaseRunning, result.Status)
 				assert.Equal(t, int64(0), result.CurrentStep)
 				assert.Len(t, result.StepExecutionMetadata, 1)
-				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.StepExecutionMetadata[0].Status)
+				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.StepExecutionMetadata[0].Status)
 				assert.NotNil(t, result.StepExecutionMetadata[0].StartedAt)
 				assert.Nil(t, result.StepExecutionMetadata[0].FinishedAt)
 				assert.Equal(t, uint32(1), result.StepExecutionMetadata[0].ErrorCount)
@@ -372,7 +373,7 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
 				assert.Equal(t, int64(0), result.CurrentStep)
 				assert.Len(t, result.StepExecutionMetadata, 1)
-				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.StepExecutionMetadata[0].Status)
+				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.StepExecutionMetadata[0].Status)
 				assert.NotNil(t, result.StepExecutionMetadata[0].StartedAt)
 				assert.NotNil(t, result.StepExecutionMetadata[0].FinishedAt)
 				assert.Equal(t, uint32(1), result.StepExecutionMetadata[0].ErrorCount)
@@ -402,7 +403,7 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
 				assert.Equal(t, int64(0), result.CurrentStep)
 				assert.Len(t, result.StepExecutionMetadata, 1)
-				assert.Equal(t, kargoapi.PromotionPhaseRunning, result.StepExecutionMetadata[0].Status)
+				assert.Equal(t, kargoapi.PromotionStepStatusRunning, result.StepExecutionMetadata[0].Status)
 				assert.NotNil(t, result.StepExecutionMetadata[0].StartedAt)
 				assert.NotNil(t, result.StepExecutionMetadata[0].FinishedAt)
 			},
@@ -415,7 +416,7 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				assert.Equal(t, kargoapi.PromotionPhaseRunning, result.Status)
 				assert.Equal(t, int64(0), result.CurrentStep)
 				assert.Len(t, result.StepExecutionMetadata, 1)
-				assert.Equal(t, kargoapi.PromotionPhaseRunning, result.StepExecutionMetadata[0].Status)
+				assert.Equal(t, kargoapi.PromotionStepStatusRunning, result.StepExecutionMetadata[0].Status)
 				assert.NotNil(t, result.StepExecutionMetadata[0].StartedAt)
 				assert.Nil(t, result.StepExecutionMetadata[0].FinishedAt)
 			},
@@ -428,7 +429,7 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
 				assert.Equal(t, int64(0), result.CurrentStep)
 				assert.Len(t, result.StepExecutionMetadata, 1)
-				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.StepExecutionMetadata[0].Status)
+				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.StepExecutionMetadata[0].Status)
 				assert.Contains(t, result.StepExecutionMetadata[0].Message, context.Canceled.Error())
 			},
 		},
@@ -438,7 +439,7 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				&mockStepRunner{
 					name: ComposeOutputStepKind,
 					runResult: promotion.StepResult{
-						Status: kargoapi.PromotionPhaseSucceeded,
+						Status: kargoapi.PromotionStepStatusSucceeded,
 						Output: map[string]any{"test": "value"},
 					},
 				},
@@ -452,7 +453,7 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.Status)
 				assert.Equal(t, int64(0), result.CurrentStep)
 				assert.Len(t, result.StepExecutionMetadata, 1)
-				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.StepExecutionMetadata[0].Status)
+				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.StepExecutionMetadata[0].Status)
 				assert.NotNil(t, result.StepExecutionMetadata[0].StartedAt)
 				assert.NotNil(t, result.StepExecutionMetadata[0].FinishedAt)
 				assert.Equal(t, promotion.State{
@@ -473,7 +474,7 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				&mockStepRunner{
 					name: ComposeOutputStepKind,
 					runResult: promotion.StepResult{
-						Status: kargoapi.PromotionPhaseSucceeded,
+						Status: kargoapi.PromotionStepStatusSucceeded,
 						Output: map[string]any{"test": "value"},
 					},
 				},
@@ -487,7 +488,7 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.Status)
 				assert.Equal(t, int64(0), result.CurrentStep)
 				assert.Len(t, result.StepExecutionMetadata, 1)
-				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.StepExecutionMetadata[0].Status)
+				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.StepExecutionMetadata[0].Status)
 				assert.NotNil(t, result.StepExecutionMetadata[0].StartedAt)
 				assert.NotNil(t, result.StepExecutionMetadata[0].FinishedAt)
 				assert.Equal(t, promotion.State{
@@ -510,24 +511,24 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				&mockStepRunner{
 					name: "success-step",
 					runResult: promotion.StepResult{
-						Status: kargoapi.PromotionPhaseSucceeded,
+						Status: kargoapi.PromotionStepStatusSucceeded,
 						Output: map[string]any{"key": "value"},
 					},
 				},
 				&mockStepRunner{
 					name: "running-step",
 					runResult: promotion.StepResult{
-						Status: kargoapi.PromotionPhaseRunning,
+						Status: kargoapi.PromotionStepStatusRunning,
 					},
 				},
 				&mockStepRunner{
 					name:      "error-step",
-					runResult: promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+					runResult: promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 					runErr:    errors.New("something went wrong"),
 				},
 				&mockStepRunner{
 					name:      "terminal-error-step",
-					runResult: promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+					runResult: promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 					runErr:    &promotion.TerminalError{Err: errors.New("something went wrong")},
 				},
 				&mockStepRunner{
@@ -535,7 +536,7 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 					runFunc: func(ctx context.Context, _ *promotion.StepContext) (promotion.StepResult, error) {
 						cancel()
 						<-ctx.Done()
-						return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, ctx.Err()
+						return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, ctx.Err()
 					},
 				},
 			}
@@ -567,12 +568,12 @@ func TestSimpleEngine_executeStep(t *testing.T) {
 			runner: &mockStepRunner{
 				name: "success-step",
 				runResult: promotion.StepResult{
-					Status: kargoapi.PromotionPhaseSucceeded,
+					Status: kargoapi.PromotionStepStatusSucceeded,
 				},
 			},
 			assertions: func(t *testing.T, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.Status)
+				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
 			},
 		},
 		{
@@ -581,14 +582,14 @@ func TestSimpleEngine_executeStep(t *testing.T) {
 			runner: &mockStepRunner{
 				name: "error-step",
 				runResult: promotion.StepResult{
-					Status: kargoapi.PromotionPhaseErrored,
+					Status: kargoapi.PromotionStepStatusErrored,
 				},
 				runErr: errors.New("something went wrong"),
 			},
 			assertions: func(t *testing.T, result promotion.StepResult, err error) {
 				assert.ErrorContains(t, err, "failed to run step \"error-step\"")
 				assert.ErrorContains(t, err, "something went wrong")
-				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
+				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
 			},
 		},
 	}
