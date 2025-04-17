@@ -1,9 +1,10 @@
 import { Controls, ReactFlow, useNodesState } from '@xyflow/react';
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { GraphContext } from '../context/graph-context';
+import { StackedNodes } from '../nodes/stacked-nodes';
 
 import { CustomNode } from './custom-node';
 import { stageIndexer, warehouseIndexer } from './node-indexer';
@@ -17,20 +18,45 @@ type GraphProps = {
 };
 
 const nodeTypes = {
-  [reactFlowNodeConstants.CUSTOM_NODE]: CustomNode
+  [reactFlowNodeConstants.CUSTOM_NODE]: CustomNode,
+  [reactFlowNodeConstants.STACKED_NODE]: StackedNodes
 };
 
 export const Graph = (props: GraphProps) => {
-  const graph = useReactFlowPipelineGraph(props.stages, props.warehouses);
+  const [stackedNodesParents, setStackedNodesParents] = useState<string[]>([]);
+
+  const onStack = useCallback(
+    (parentNode: string) => {
+      if (!stackedNodesParents.includes(parentNode)) {
+        setStackedNodesParents([...stackedNodesParents, parentNode]);
+      }
+    },
+    [stackedNodesParents]
+  );
+
+  const onUnstack = useCallback(
+    (parentNode: string) => {
+      setStackedNodesParents(stackedNodesParents.filter((node) => node !== parentNode));
+    },
+    [stackedNodesParents]
+  );
+
+  const graph = useReactFlowPipelineGraph(props.stages, props.warehouses, {
+    afterNodes: stackedNodesParents
+  });
 
   const [nodes, setNodes] = useNodesState(graph.nodes);
+
+  useEffect(() => {
+    setNodes(graph.nodes);
+  }, [graph.nodes]);
 
   useEventsWatcher(props.project, {
     onStage(stage) {
       const index = stageIndexer.index(stage);
       setNodes((nodes) =>
         nodes.map((node) => {
-          if (node.id === index) {
+          if (node.id === index && node.type === reactFlowNodeConstants.CUSTOM_NODE) {
             return {
               ...node,
               data: {
@@ -48,7 +74,7 @@ export const Graph = (props: GraphProps) => {
       const index = warehouseIndexer.index(warehouse);
       setNodes((nodes) =>
         nodes.map((node) => {
-          if (node.id === index) {
+          if (node.id === index && node.type === reactFlowNodeConstants.CUSTOM_NODE) {
             return {
               ...node,
               data: {
@@ -75,7 +101,7 @@ export const Graph = (props: GraphProps) => {
   }, [props.warehouses]);
 
   return (
-    <GraphContext.Provider value={{ warehouseByName }}>
+    <GraphContext.Provider value={{ warehouseByName, stackedNodesParents, onStack, onUnstack }}>
       <ReactFlow
         nodes={nodes}
         edges={graph.edges}

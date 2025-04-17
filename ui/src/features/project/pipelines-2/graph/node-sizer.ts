@@ -7,5 +7,9 @@ export const repoSubscriptionSizer = {
 };
 
 export const stageSizer = {
-  size: () => ({ width: 250, height: 200 })
+  size: () => ({ width: 300, height: 200 })
+};
+
+export const stackSizer = {
+  size: () => ({ width: 300, height: 100 })
 };

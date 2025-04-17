@@ -5,6 +5,7 @@ import {
   faCodeCommit,
   faExternalLink,
   faFire,
+  faMinus,
   faTruck
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -34,8 +35,10 @@ import {
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import './stage-node.less';
+import { useGraphContext } from '../context/graph-context';
 import { humanComprehendableArtifact } from '../freight/artifact-parts-utils';
 import { shortVersion } from '../freight/short-version-utils';
+import { stageIndexer } from '../graph/node-indexer';
 
 import {
   ArtifactTypes,
@@ -46,6 +49,10 @@ import {
 import style from './node-size-source-of-truth.module.less';
 
 export const StageNode = (props: { stage: Stage }) => {
+  const graphContext = useGraphContext();
+
+  const stageNodeIndex = useMemo(() => stageIndexer.index(props.stage), [props.stage]);
+
   const headerStyle = useStageHeaderStyle(props.stage);
 
   const autoPromotionMode = useIsStageAutoPromotionMode();
@@ -152,6 +159,13 @@ export const StageNode = (props: { stage: Stage }) => {
           <FontAwesomeIcon className='ml-2' icon={faChevronDown} />
         </Button>
       </Dropdown>
+
+      <Button
+        icon={<FontAwesomeIcon icon={faMinus} />}
+        size='small'
+        className='absolute top-[50%] translate-y-[-50%] text-[10px] z-10'
+        onClick={() => graphContext?.onStack(stageNodeIndex)}
+      />
     </Card>
   );
 };

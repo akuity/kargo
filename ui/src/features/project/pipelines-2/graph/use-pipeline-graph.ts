@@ -8,9 +8,11 @@ import { edgeIndexer } from './edge-indexer';
 import { repoSubscriptionIndexer, stageIndexer, warehouseIndexer } from './node-indexer';
 import { repoSubscriptionLabelling, stageLabelling, warehouseLabelling } from './node-labeling';
 import { repoSubscriptionSizer, stageSizer, warehouseSizer } from './node-sizer';
+import { stackNode } from './stack-nodes';
 
 export const reactFlowNodeConstants = {
-  CUSTOM_NODE: 'custom-node'
+  CUSTOM_NODE: 'custom-node',
+  STACKED_NODE: 'stacked-node'
 };
 
 export type GraphMeta = {
@@ -20,7 +22,13 @@ export type GraphMeta = {
   subscriptionParent?: Warehouse;
 };
 
-export const useReactFlowPipelineGraph = (stages: Stage[], warehouses: Warehouse[]) => {
+export const useReactFlowPipelineGraph = (
+  stages: Stage[],
+  warehouses: Warehouse[],
+  stack?: {
+    afterNodes?: string[];
+  }
+) => {
   return useMemo(() => {
     const graph = new graphlib.Graph<GraphMeta>({ multigraph: true });
 
@@ -91,8 +99,46 @@ export const useReactFlowPipelineGraph = (stages: Stage[], warehouses: Warehouse
     const reactFlowNodes: Node[] = [];
     const reactFlowEdges: Edge[] = [];
 
+    let ignoreNodes: string[] = [];
+    const keepNodeAsStackNode: string[] = [];
+
+    for (const afterNode of stack?.afterNodes || []) {
+      const subIgnoreNodes = stackNode(afterNode, graph);
+
+      if (subIgnoreNodes?.length > 0) {
+        // in same pipeline
+        if (!ignoreNodes.includes(subIgnoreNodes[0])) {
+          keepNodeAsStackNode.push(subIgnoreNodes[0]);
+        }
+
+        ignoreNodes = [...ignoreNodes, ...subIgnoreNodes];
+      }
+    }
+
     for (const node of graph.nodes()) {
+      const isStackNode = keepNodeAsStackNode.includes(node);
       const dagreNode = graph.node(node);
+
+      if (isStackNode) {
+        reactFlowNodes.push({
+          id: node,
+          type: reactFlowNodeConstants.STACKED_NODE,
+          position: {
+            x: dagreNode?.x - dagreNode?.width / 2,
+            y: dagreNode?.y - dagreNode?.height / 2
+          },
+          data: {
+            value: ignoreNodes.length,
+            id: dagreNode?.stage?.spec?.requestedFreight?.[0]?.origin?.name,
+            parentNodeId: graph.predecessors(node)?.[0]
+          }
+        });
+        continue;
+      }
+
+      if (ignoreNodes.includes(node)) {
+        continue;
+      }
 
       reactFlowNodes.push({
         id: node,
@@ -110,6 +156,10 @@ export const useReactFlowPipelineGraph = (stages: Stage[], warehouses: Warehouse
     }
 
     for (const edge of graph.edges()) {
+      if (!keepNodeAsStackNode.includes(edge.v) && ignoreNodes.includes(edge.v)) {
+        continue;
+      }
+
       const belongsToWarehouse = warehouseIndexer.getWarehouseName(edge.name || '');
 
       reactFlowEdges.push({
@@ -132,5 +182,5 @@ export const useReactFlowPipelineGraph = (stages: Stage[], warehouses: Warehouse
       nodes: reactFlowNodes,
       edges: reactFlowEdges
     };
-  }, []);
+  }, [stack?.afterNodes]);
 };
