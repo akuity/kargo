@@ -41,6 +41,7 @@ import (
 	"github.com/akuity/kargo/internal/kubeclient"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/internal/pattern"
 	intpredicate "github.com/akuity/kargo/internal/predicate"
 	"github.com/akuity/kargo/internal/rollouts"
 	healthPkg "github.com/akuity/kargo/pkg/health"
@@ -1618,10 +1619,8 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 		return newStatus, nil
 	}
 
-	stageRef := types.NamespacedName{Namespace: stage.Namespace, Name: stage.Name}
-
 	// Confirm that auto-promotion is allowed for the Stage.
-	if autoPromotionAllowed, err := r.autoPromotionAllowed(ctx, stageRef); err != nil || !autoPromotionAllowed {
+	if autoPromotionAllowed, err := r.autoPromotionAllowed(ctx, stage.ObjectMeta); err != nil || !autoPromotionAllowed {
 		return newStatus, err
 	}
 
@@ -1724,28 +1723,64 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 // autoPromotionAllowed checks if auto-promotion is allowed for the given Stage.
 func (r *RegularStageReconciler) autoPromotionAllowed(
 	ctx context.Context,
-	stage types.NamespacedName,
+	stage metav1.ObjectMeta,
 ) (bool, error) {
 	logger := logging.LoggerFromContext(ctx)
 
-	project := &kargoapi.Project{}
-	if err := r.client.Get(ctx, types.NamespacedName{Name: stage.Namespace}, project); err != nil {
-		return false, fmt.Errorf("error getting Project %q in namespace %q: %w", stage.Name, stage.Namespace, err)
+	projectCfg := &kargoapi.ProjectConfig{}
+	if err := r.client.Get(ctx, types.NamespacedName{
+		Name:      stage.Namespace,
+		Namespace: stage.Namespace,
+	}, projectCfg); err != nil {
+		if apierrors.IsNotFound(err) {
+			logger.Debug("found no ProjectConfig associated with Project; auto-promotion is disabled")
+			return false, nil
+		}
+		return false, fmt.Errorf("error getting ProjectConfig for Project %q: %w", stage.Namespace, err)
 	}
 
-	if project.Spec == nil || len(project.Spec.PromotionPolicies) == 0 {
+	if len(projectCfg.Spec.PromotionPolicies) == 0 {
 		logger.Debug("found no PromotionPolicy associated with Stage")
 		return false, nil
 	}
 
-	for _, policy := range project.Spec.PromotionPolicies {
-		if policy.Stage == stage.Name {
-			logger.Debug(
-				"found PromotionPolicy associated with Stage",
-				"autoPromotionEnabled", policy.AutoPromotionEnabled,
-			)
-			return policy.AutoPromotionEnabled, nil
+	for _, policy := range projectCfg.Spec.PromotionPolicies {
+		if policy.StageSelector == nil {
+			// Maintain backward compatibility with older versions of the
+			// PromotionPolicy where the selector was not available.
+			policy.StageSelector = &kargoapi.PromotionPolicySelector{
+				Name:         policy.Stage,
+			}
 		}
+
+		// Match the Stage name with the exact PromotionPolicy name
+		if nameSelector := policy.StageSelector.Name; nameSelector != "" {
+			m, err := pattern.ParseNamePattern(nameSelector)
+			if err != nil {
+				return false, fmt.Errorf("error parsing PromotionPolicy name pattern %q: %w", nameSelector, err)
+			}
+			if !m.Matches(stage.Name) {
+				continue
+			}
+		}
+
+		// Match the Stage labels with the PromotionPolicy label selector.
+		if labelSelector := policy.StageSelector.LabelSelector; labelSelector != nil {
+			s, err := metav1.LabelSelectorAsSelector(labelSelector)
+			if err != nil {
+				return false, fmt.Errorf("error parsing PromotionPolicy label selector %q: %w", labelSelector, err)
+			}
+			if !s.Matches(labels.Set(stage.Labels)) {
+				continue
+			}
+		}
+
+		// If we reach this point, we have found a matching PromotionPolicy.
+		logger.Debug(
+			"found PromotionPolicy associated with Stage",
+			"autoPromotionEnabled", policy.AutoPromotionEnabled,
+		)
+		return policy.AutoPromotionEnabled, nil
 	}
 
 	logger.Debug("found no PromotionPolicy associated with Stage")

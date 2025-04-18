@@ -4405,11 +4405,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				},
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "fake-project",
+						Name:      "fake-project",
+						Namespace: "fake-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "test-stage",
@@ -4435,7 +4436,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 		},
 		{
-			name: "project not found",
+			name: "projectconfig not found",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
@@ -4455,11 +4456,16 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ *fakeevent.EventRecorder,
-				_ client.Client,
+				c client.Client,
 				_ kargoapi.StageStatus,
 				err error,
 			) {
-				require.ErrorContains(t, err, "error getting Project")
+				require.NoError(t, err)
+
+				// Verify no promotions were created
+				promoList := &kargoapi.PromotionList{}
+				require.NoError(t, c.List(context.Background(), promoList, client.InNamespace("fake-project")))
+				assert.Empty(t, promoList.Items)
 			},
 		},
 		{
@@ -4493,11 +4499,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				},
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "fake-project",
+						Name:      "fake-project",
+						Namespace: "fake-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "test-stage",
@@ -4582,11 +4589,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				},
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "fake-project",
+						Name:      "fake-project",
+						Namespace: "fake-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "test-stage",
@@ -4650,11 +4658,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				},
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "fake-project",
+						Name:      "fake-project",
+						Namespace: "fake-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "test-stage",
@@ -4741,11 +4750,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				},
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "fake-project",
+						Name:      "fake-project",
+						Namespace: "fake-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "test-stage",
@@ -4825,11 +4835,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				},
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "fake-project",
+						Name:      "fake-project",
+						Namespace: "fake-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "test-stage",
@@ -4940,11 +4951,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				},
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "fake-project",
+						Name:      "fake-project",
+						Namespace: "fake-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "test-stage",
@@ -5032,11 +5044,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				},
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "fake-project",
+						Name:      "fake-project",
+						Namespace: "fake-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "test-stage",
@@ -5137,11 +5150,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				},
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "fake-project",
+						Name:      "fake-project",
+						Namespace: "fake-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "test-stage",
@@ -5217,11 +5231,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				},
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "fake-project",
+						Name:      "fake-project",
+						Namespace: "fake-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "test-stage",
@@ -5295,11 +5310,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				},
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "fake-project",
+						Name:      "fake-project",
+						Namespace: "fake-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "test-stage",
@@ -5368,11 +5384,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				},
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "fake-project",
+						Name:      "fake-project",
+						Namespace: "fake-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "test-stage",
@@ -5465,26 +5482,26 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		stage       types.NamespacedName
+		stage       metav1.ObjectMeta
 		objects     []client.Object
 		interceptor interceptor.Funcs
 		assertions  func(*testing.T, bool, error)
 	}{
 		{
-			name: "project not found",
-			stage: types.NamespacedName{
-				Namespace: "default",
+			name: "no ProjectConfig for Project",
+			stage: metav1.ObjectMeta{
+				Namespace: "test-project",
 				Name:      "test-stage",
 			},
 			assertions: func(t *testing.T, allowed bool, err error) {
-				require.ErrorContains(t, err, "error getting Project")
+				require.NoError(t, err)
 				assert.False(t, allowed)
 			},
 		},
 		{
-			name: "error getting project",
-			stage: types.NamespacedName{
-				Namespace: "default",
+			name: "error getting ProjectConfig",
+			stage: metav1.ObjectMeta{
+				Namespace: "test-project",
 				Name:      "test-stage",
 			},
 			interceptor: interceptor.Funcs{
@@ -5504,16 +5521,18 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 			},
 		},
 		{
-			name: "nil project spec",
-			stage: types.NamespacedName{
-				Namespace: "default",
+			name: "empty ProjectConfig spec",
+			stage: metav1.ObjectMeta{
+				Namespace: "test-project",
 				Name:      "test-stage",
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "default",
+						Name:      "test-project",
+						Namespace: "test-project",
 					},
+					Spec: kargoapi.ProjectConfigSpec{},
 				},
 			},
 			assertions: func(t *testing.T, allowed bool, err error) {
@@ -5523,16 +5542,17 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 		},
 		{
 			name: "empty promotion policies",
-			stage: types.NamespacedName{
-				Namespace: "default",
+			stage: metav1.ObjectMeta{
+				Namespace: "test-project",
 				Name:      "test-stage",
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "default",
+						Name:      "test-project",
+						Namespace: "test-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{},
 					},
 				},
@@ -5544,16 +5564,17 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 		},
 		{
 			name: "stage not found in policies",
-			stage: types.NamespacedName{
-				Namespace: "default",
+			stage: metav1.ObjectMeta{
+				Namespace: "test-project",
 				Name:      "test-stage",
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "default",
+						Name:      "test-project",
+						Namespace: "test-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "other-stage",
@@ -5570,16 +5591,17 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 		},
 		{
 			name: "auto-promotion enabled",
-			stage: types.NamespacedName{
-				Namespace: "default",
+			stage: metav1.ObjectMeta{
+				Namespace: "test-project",
 				Name:      "test-stage",
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "default",
+						Name:      "test-project",
+						Namespace: "test-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "test-stage",
@@ -5596,16 +5618,17 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 		},
 		{
 			name: "auto-promotion disabled",
-			stage: types.NamespacedName{
-				Namespace: "default",
+			stage: metav1.ObjectMeta{
+				Namespace: "test-project",
 				Name:      "test-stage",
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "default",
+						Name:      "test-project",
+						Namespace: "test-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "test-stage",
@@ -5622,16 +5645,17 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 		},
 		{
 			name: "multiple policies - finds correct stage",
-			stage: types.NamespacedName{
-				Namespace: "default",
+			stage: metav1.ObjectMeta{
+				Namespace: "test-project",
 				Name:      "test-stage",
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "default",
+						Name:      "test-project",
+						Namespace: "test-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "stage-1",
@@ -5656,16 +5680,17 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 		},
 		{
 			name: "different namespace",
-			stage: types.NamespacedName{
+			stage: metav1.ObjectMeta{
 				Namespace: "other-namespace",
 				Name:      "test-stage",
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "other-namespace",
+						Name:      "other-namespace",
+						Namespace: "other-namespace",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "test-stage",
@@ -5682,16 +5707,17 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 		},
 		{
 			name: "matches first policy for stage",
-			stage: types.NamespacedName{
-				Namespace: "default",
+			stage: metav1.ObjectMeta{
+				Namespace: "test-project",
 				Name:      "test-stage",
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "default",
+						Name:      "test-project",
+						Namespace: "test-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "test-stage",
