@@ -5,6 +5,7 @@ import (
 	"fmt"
 	stdruntime "runtime"
 	"sync"
+	"time"
 
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
@@ -29,6 +30,7 @@ import (
 	"github.com/akuity/kargo/internal/health"
 	healthCheckers "github.com/akuity/kargo/internal/health/checker/builtin"
 	"github.com/akuity/kargo/internal/indexer"
+	"github.com/akuity/kargo/internal/leaderelection"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
 	"github.com/akuity/kargo/internal/promotion"
@@ -42,6 +44,12 @@ import (
 type controllerOptions struct {
 	ShardName  string
 	KubeConfig string
+
+	LeaderElectionEnabled         bool
+	LeaderElectionReleaseOnCancel bool
+	LeaderElectionLeaseDuration   *time.Duration
+	LeaderElectionRenewDeadline   *time.Duration
+	LeaderElectionRetryPeriod     *time.Duration
 
 	ArgoCDEnabled       bool
 	ArgoCDKubeConfig    string
@@ -77,9 +85,17 @@ func newControllerCommand() *cobra.Command {
 func (o *controllerOptions) complete() {
 	o.ShardName = os.GetEnv("SHARD_NAME", "")
 	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
+
+	o.LeaderElectionEnabled = types.MustParseBool(os.GetEnv("LEADER_ELECTION_ENABLED", "false"))
+	o.LeaderElectionReleaseOnCancel = types.MustParseBool(os.GetEnv("LEADER_ELECTION_RELEASE_ON_CANCEL", ""))
+	o.LeaderElectionLeaseDuration = types.MustParseDuration(os.GetEnv("LEADER_ELECTION_LEASE_DURATION", ""))
+	o.LeaderElectionRenewDeadline = types.MustParseDuration(os.GetEnv("LEADER_ELECTION_RENEW_DEADLINE", ""))
+	o.LeaderElectionRetryPeriod = types.MustParseDuration(os.GetEnv("LEADER_ELECTION_RETRY_PERIOD", ""))
+
 	o.ArgoCDEnabled = types.MustParseBool(os.GetEnv("ARGOCD_INTEGRATION_ENABLED", "true"))
 	o.ArgoCDKubeConfig = os.GetEnv("ARGOCD_KUBECONFIG", "")
 	o.ArgoCDNamespaceOnly = types.MustParseBool(os.GetEnv("ARGOCD_WATCH_ARGOCD_NAMESPACE_ONLY", "false"))
+
 	o.PprofBindAddress = os.GetEnv("PPROF_BIND_ADDRESS", "")
 }
 
@@ -203,10 +219,6 @@ func (o *controllerOptions) setupKargoManager(
 		restCfg,
 		ctrl.Options{
 			Scheme: scheme,
-			Metrics: server.Options{
-				BindAddress: "0",
-			},
-			PprofBindAddress: o.PprofBindAddress,
 			Client: client.Options{
 				Cache: &client.CacheOptions{
 					DisableFor: []client.Object{
@@ -234,6 +246,15 @@ func (o *controllerOptions) setupKargoManager(
 					&kargoapi.Promotion{}: {Label: shardSelector},
 				},
 			},
+			LeaderElection:                o.LeaderElectionEnabled,
+			LeaderElectionID:              leaderelection.GenerateIDFromLabelSelector("kargo-controller", shardSelector),
+			LeaderElectionReleaseOnCancel: o.LeaderElectionReleaseOnCancel,
+			LeaseDuration:                 o.LeaderElectionLeaseDuration,
+			RenewDeadline:                 o.LeaderElectionRenewDeadline,
+			Metrics: server.Options{
+				BindAddress: "0",
+			},
+			PprofBindAddress: o.PprofBindAddress,
 		},
 	)
 	return mgr, stagesReconcilerCfg, err
