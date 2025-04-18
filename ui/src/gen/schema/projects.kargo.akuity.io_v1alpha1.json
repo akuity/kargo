@@ -111,6 +111,67 @@
         "phase": {
           "description": "Phase describes the Project's current phase.\n\nDeprecated: Use the Conditions field instead.",
           "type": "string"
+        },
+        "stats": {
+          "properties": {
+            "stages": {
+              "properties": {
+                "health": {
+                  "properties": {
+                    "healthy": {
+                      "format": "int64",
+                      "maximum": 9223372036854776000,
+                      "minimum": -9223372036854776000,
+                      "type": "integer"
+                    },
+                    "unhealthy": {
+                      "format": "int64",
+                      "maximum": 9223372036854776000,
+                      "minimum": -9223372036854776000,
+                      "type": "integer"
+                    },
+                    "unknown": {
+                      "format": "int64",
+                      "maximum": 9223372036854776000,
+                      "minimum": -9223372036854776000,
+                      "type": "integer"
+                    }
+                  },
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            },
+            "warehouses": {
+              "properties": {
+                "health": {
+                  "properties": {
+                    "healthy": {
+                      "format": "int64",
+                      "maximum": 9223372036854776000,
+                      "minimum": -9223372036854776000,
+                      "type": "integer"
+                    },
+                    "unhealthy": {
+                      "format": "int64",
+                      "maximum": 9223372036854776000,
+                      "minimum": -9223372036854776000,
+                      "type": "integer"
+                    },
+                    "unknown": {
+                      "format": "int64",
+                      "maximum": 9223372036854776000,
+                      "minimum": -9223372036854776000,
+                      "type": "integer"
+                    }
+                  },
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "type": "object"
         }
       },
       "type": "object"

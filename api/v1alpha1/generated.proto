@@ -670,6 +670,14 @@ message HealthCheckStep {
   optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 2;
 }
 
+message HealthStats {
+  optional int64 healthy = 1;
+
+  optional int64 unhealthy = 2;
+
+  optional int64 unknown = 3;
+}
+
 // Image describes a specific version of a container image.
 message Image {
   // RepoURL describes the repository in which the image can be found.
@@ -837,6 +845,12 @@ message ProjectSpec {
   repeated PromotionPolicy promotionPolicies = 1;
 }
 
+message ProjectStats {
+  optional WarehouseStats warehouses = 1;
+
+  optional StageStats stages = 2;
+}
+
 // ProjectStatus describes a Project's current status.
 message ProjectStatus {
   // Conditions contains the last observations of the Project's current
@@ -858,6 +872,8 @@ message ProjectStatus {
   //
   // Deprecated: Use the Conditions field instead.
   optional string message = 2;
+
+  optional ProjectStats stats = 4;
 }
 
 // Promotion represents a request to transition a particular Stage into a
@@ -1219,6 +1235,10 @@ message StageSpec {
   optional Verification verification = 3;
 }
 
+message StageStats {
+  optional HealthStats health = 1;
+}
+
 // StageStatus describes a Stages's current and recent Freight, health, and
 // more.
 message StageStatus {
@@ -1416,6 +1436,10 @@ message WarehouseSpec {
   //
   // +kubebuilder:validation:MinItems=1
   repeated RepoSubscription subscriptions = 1;
+}
+
+message WarehouseStats {
+  optional HealthStats health = 1;
 }
 
 // WarehouseStatus describes a Warehouse's most recently observed state.

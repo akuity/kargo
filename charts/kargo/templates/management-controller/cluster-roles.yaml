@@ -47,4 +47,13 @@ rules:
   - projects/status
   verbs:
   - patch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - stages
+  - warehouses
+  verbs:
+  - get
+  - list
+  - watch
 {{- end }}  
