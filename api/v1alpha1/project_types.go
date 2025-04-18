@@ -91,6 +91,8 @@ type ProjectStatus struct {
 	//
 	// Deprecated: Use the Conditions field instead.
 	Message string `json:"message,omitempty" protobuf:"bytes,2,opt,name=message"`
+
+	Stats ProjectStats `json:"stats,omitempty" protobuf:"bytes,4,opt,name=stats"`
 }
 
 func (w *ProjectStatus) GetConditions() []metav1.Condition {
@@ -99,6 +101,25 @@ func (w *ProjectStatus) GetConditions() []metav1.Condition {
 
 func (w *ProjectStatus) SetConditions(conditions []metav1.Condition) {
 	w.Conditions = conditions
+}
+
+type ProjectStats struct {
+	Warehouses WarehouseStats `json:"warehouses,omitempty" protobuf:"bytes,1,opt,name=warehouses"`
+	Stages     StageStats     `json:"stages,omitempty" protobuf:"bytes,2,opt,name=stages"`
+}
+
+type WarehouseStats struct {
+	Health HealthStats `json:"health,omitempty" protobuf:"bytes,1,opt,name=health"`
+}
+
+type StageStats struct {
+	Health HealthStats `json:"health,omitempty" protobuf:"bytes,1,opt,name=health"`
+}
+
+type HealthStats struct {
+	Healthy   int64 `json:"healthy,omitempty" protobuf:"varint,1,opt,name=healthy"`
+	Unhealthy int64 `json:"unhealthy,omitempty" protobuf:"varint,2,opt,name=unhealthy"`
+	Unknown   int64 `json:"unknown,omitempty" protobuf:"varint,3,opt,name=unknown"`
 }
 
 // +kubebuilder:object:root=true
