@@ -22,12 +22,8 @@ import (
 	_ "github.com/akuity/kargo/internal/gitprovider/gitlab" // GitLab provider registration
 )
 
-const (
-	// stateKeyPRNumber is the key used to store the PR number in the shared State.
-	stateKeyPRNumber = "prNumber"
-	// stateKeyPRLink is the key used to store the Pull Request Link in the shared State.
-	stateKeyPRLink = "prLink"
-)
+// stateKeyPRNumber is the key used to store the PR number in the shared State. This will be deprecated in the future.
+const stateKeyPRNumber = "prNumber"
 
 // gitPROpener is an implementation of the promotion.StepRunner interface that
 // opens a pull request.
@@ -164,12 +160,16 @@ func (g *gitPROpener) run(
 		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error determining if pull request already exists: %w", err)
 	}
+
 	if pr != nil && (pr.Open || pr.Merged) { // Excludes PR that is both closed AND unmerged
 		return promotion.StepResult{
 			Status: kargoapi.PromotionPhaseSucceeded,
 			Output: map[string]any{
-				stateKeyPRNumber: pr.Number,
-				stateKeyPRLink:   pr.URL,
+				"pr": map[string]any{
+					"id":  pr.Number,
+					"url": pr.URL,
+				},
+				stateKeyPRNumber: pr.Number, // Backward compatibility, this field will be deprecated in the future
 			},
 		}, nil
 	}
@@ -233,8 +233,11 @@ func (g *gitPROpener) run(
 	return promotion.StepResult{
 		Status: kargoapi.PromotionPhaseSucceeded,
 		Output: map[string]any{
-			stateKeyPRNumber: pr.Number,
-			stateKeyPRLink:   pr.URL,
+			"pr": map[string]any{
+				"id":  pr.Number,
+				"url": pr.URL,
+			},
+			stateKeyPRNumber: pr.Number, // Backward compatibility, this field will be deprecated in the future
 		},
 	}, nil
 }
@@ -258,6 +261,27 @@ func (g *gitPROpener) getPRNumber(
 			stepCtx.Alias,
 		)
 	}
+
+	// Check for `pr.id` first and then fall back to `prNumber`
+	// since `prNumber` is going to be deprecated in the future
+	prMap, exists := stepOutputMap["pr"].(map[string]any)
+	if exists {
+		prIDAny, exists := prMap["id"]
+		if exists {
+			switch prID := prIDAny.(type) {
+			case int64:
+				return prID, nil
+			case float64:
+				return int64(prID), nil
+			default:
+				return -1, fmt.Errorf(
+					"PR ID in output from step with alias %q is not an int64",
+					stepCtx.Alias,
+				)
+			}
+		}
+	}
+
 	prNumberAny, exists := stepOutputMap[stateKeyPRNumber]
 	if !exists {
 		return -1, nil
