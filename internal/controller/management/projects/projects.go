@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
@@ -18,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
@@ -62,7 +64,7 @@ type reconciler struct {
 		string,
 	) (*kargoapi.Project, error)
 
-	syncProjectFn func(
+	initializeProjectFn func(
 		context.Context,
 		*kargoapi.Project,
 	) (kargoapi.ProjectStatus, error)
@@ -135,7 +137,7 @@ func SetupReconcilerWithManager(
 	kargoMgr manager.Manager,
 	cfg ReconcilerConfig,
 ) error {
-	err := ctrl.NewControllerManagedBy(kargoMgr).
+	c, err := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&kargoapi.Project{}).
 		WithEventFilter(
 			predicate.Funcs{
@@ -146,14 +148,37 @@ func SetupReconcilerWithManager(
 			},
 		).
 		WithOptions(controller.CommonOptions(cfg.MaxConcurrentReconciles)).
-		Complete(newReconciler(kargoMgr.GetClient(), cfg))
-
-	if err == nil {
-		logging.LoggerFromContext(ctx).Info(
-			"Initialized Project reconciler",
-			"maxConcurrentReconciles", cfg.MaxConcurrentReconciles,
-		)
+		Build(newReconciler(kargoMgr.GetClient(), cfg))
+	if err != nil {
+		return fmt.Errorf("error creating Project reconciler: %w", err)
 	}
+
+	// Watch for Warehouses for which the health condition has changed.
+	if err = c.Watch(
+		source.Kind(
+			kargoMgr.GetCache(),
+			&kargoapi.Warehouse{},
+			&projectWarehouseHealthEnqueuer[*kargoapi.Warehouse]{},
+		),
+	); err != nil {
+		return fmt.Errorf("unable to watch Warehouses: %w", err)
+	}
+
+	// Watch for Stages for which the health condition has changed.
+	if err = c.Watch(
+		source.Kind(
+			kargoMgr.GetCache(),
+			&kargoapi.Stage{},
+			&projectStageHealthEnqueuer[*kargoapi.Stage]{},
+		),
+	); err != nil {
+		return fmt.Errorf("unable to watch Stages: %w", err)
+	}
+
+	logging.LoggerFromContext(ctx).Info(
+		"Initialized Project reconciler",
+		"maxConcurrentReconciles", cfg.MaxConcurrentReconciles,
+	)
 
 	return err
 }
@@ -164,7 +189,7 @@ func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
 		client: kubeClient,
 	}
 	r.getProjectFn = api.GetProject
-	r.syncProjectFn = r.syncProject
+	r.initializeProjectFn = r.initializeProject
 	r.ensureNamespaceFn = r.ensureNamespace
 	r.patchProjectStatusFn = r.patchProjectStatus
 	r.getNamespaceFn = r.client.Get
@@ -190,7 +215,6 @@ func (r *reconciler) Reconcile(
 		"project", req.NamespacedName.Name,
 	)
 	ctx = logging.ContextWithLogger(ctx, logger)
-	logger.Debug("reconciling Project")
 
 	// Find the Project
 	project, err := r.getProjectFn(ctx, r.client, req.NamespacedName.Name)
@@ -208,41 +232,133 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	if newStatus, ok := migratePhaseToConditions(project); ok {
-		logger.Debug("migrated Project phase to conditions")
-		patchErr := r.patchProjectStatusFn(ctx, project, newStatus)
-		return ctrl.Result{Requeue: true}, patchErr
-	}
-
-	if reason, ok := mustReconcileProject(project); !ok {
-		logger.Debug("nothing to do", "reason", reason)
-		return ctrl.Result{}, nil
-	}
-
-	newStatus, err := r.syncProjectFn(ctx, project)
-	if err != nil {
-		logger.Error(err, "error syncing Project")
-	}
-
-	patchErr := r.patchProjectStatusFn(ctx, project, newStatus)
-	if patchErr != nil {
-		logger.Error(patchErr, "error updating Project status")
-	}
-
-	// If we had no error, but couldn't patch, then we DO have an error. But we
-	// do it this way so that a failure to patch is never counted as THE failure
-	// when something else more serious occurred first.
-	if err == nil {
-		err = patchErr
-	}
+	logger.Debug("reconciling Project")
+	newStatus, needsRequeue, reconcileErr := r.reconcile(ctx, project)
 	logger.Debug("done reconciling Project")
 
-	// Controller runtime automatically gives us a progressive backoff if err is
-	// not nil
-	return ctrl.Result{}, err
+	// Patch the status of the Project.
+	if err := kubeclient.PatchStatus(ctx, r.client, project, func(status *kargoapi.ProjectStatus) {
+		*status = newStatus
+	}); err != nil {
+		// Prioritize the reconcile error if it exists.
+		if reconcileErr != nil {
+			logger.Error(err, "failed to update Project status after reconciliation error")
+			return ctrl.Result{}, reconcileErr
+		}
+		return ctrl.Result{}, fmt.Errorf("failed to update Project status: %w", err)
+	}
+
+	// Return the reconcile error if it exists.
+	if reconcileErr != nil {
+		return ctrl.Result{}, reconcileErr
+	}
+	// Immediate requeue if needed.
+	if needsRequeue {
+		return ctrl.Result{Requeue: true}, nil
+	}
+	// Otherwise, requeue after a delay.
+	// TODO: Make the requeue delay configurable.
+	return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
 }
 
-func (r *reconciler) syncProject(
+func (r *reconciler) reconcile(
+	ctx context.Context,
+	project *kargoapi.Project,
+) (kargoapi.ProjectStatus, bool, error) {
+	logger := logging.LoggerFromContext(ctx)
+	status := *project.Status.DeepCopy()
+
+	var requestRequeue bool
+	subReconcilers := []struct {
+		name string
+		// Returns updated status, whether to stop the loop, and possibly an error
+		reconcile func() (kargoapi.ProjectStatus, bool, error)
+	}{
+		{
+			name: "migrate phase to conditions",
+			reconcile: func() (kargoapi.ProjectStatus, bool, error) {
+				if newStatus, ok := migratePhaseToConditions(project); ok {
+					logger.Debug("migrated Project phase to conditions")
+					requestRequeue = true
+					return newStatus, true, nil // Stop the loop
+				}
+				return status, false, nil // Continue
+			},
+		},
+		{
+			name: "stop if stalled",
+			reconcile: func() (kargoapi.ProjectStatus, bool, error) {
+				if cond := conditions.Get(
+					&project.Status,
+					kargoapi.ConditionTypeStalled,
+				); cond != nil && cond.Status == metav1.ConditionTrue {
+					logger.Debug("Project is stalled; nothing to do")
+					return status, true, nil // Stop the loop
+				}
+				return status, false, nil // Continue
+			},
+		},
+		{
+			name: "initializing project",
+			reconcile: func() (kargoapi.ProjectStatus, bool, error) {
+				if cond := conditions.Get(
+					&project.Status,
+					kargoapi.ConditionTypeReady,
+				); cond != nil && cond.Status == metav1.ConditionTrue {
+					logger.Debug("Project is already initialized; nothing to do")
+					return status, false, nil // Continue
+				}
+				newStatus, err := r.initializeProjectFn(ctx, project)
+				if err != nil {
+					logger.Error(err, "error initializing Project")
+					return newStatus, true, err // Stop the loop
+				}
+				return newStatus, false, nil // Continue
+			},
+		},
+		{
+			name: "collecting project stats",
+			reconcile: func() (kargoapi.ProjectStatus, bool, error) {
+				newStatus, err := r.collectStats(ctx, project)
+				if err != nil {
+					logger.Error(err, "error collecting project stats")
+					return newStatus, true, err // Stop the loop
+				}
+				return newStatus, false, nil // Continue
+			},
+		},
+	}
+	for _, subR := range subReconcilers {
+		logger.Debug(subR.name)
+
+		// Reconcile the Project with the sub-reconciler.
+		var err error
+		var shouldBreak bool
+		status, shouldBreak, err = subR.reconcile()
+
+		// If an error occurred during the sub-reconciler, then we should
+		// return the error which will cause the Project to be requeued.
+		if err != nil {
+			return status, false, err
+		}
+
+		// Patch the status of the Project after each sub-reconciler to show
+		// progress.
+		if err = kubeclient.PatchStatus(ctx, r.client, project, func(st *kargoapi.ProjectStatus) {
+			*st = status
+		}); err != nil {
+			logger.Error(err, fmt.Sprintf("failed to update Project status after %s", subR.name))
+		}
+
+		if shouldBreak {
+			break
+		}
+	}
+
+	return status, requestRequeue, nil
+}
+
+func (r *reconciler) initializeProject(
 	ctx context.Context,
 	project *kargoapi.Project,
 ) (kargoapi.ProjectStatus, error) {
@@ -820,23 +936,6 @@ func migratePhaseToConditions(project *kargoapi.Project) (kargoapi.ProjectStatus
 	status.Message = "" // nolint:staticcheck
 
 	return status, true
-}
-
-// mustReconcileProject returns if the Project should be reconciled, or if it
-// should be left alone, and the reason why.
-func mustReconcileProject(project *kargoapi.Project) (string, bool) {
-	if stalled := conditions.Get(&project.Status, kargoapi.ConditionTypeStalled); stalled != nil {
-		if stalled.Status == metav1.ConditionTrue {
-			return stalled.Reason, false
-		}
-	}
-
-	if ready := conditions.Get(&project.Status, kargoapi.ConditionTypeReady); ready != nil {
-		if ready.Status == metav1.ConditionTrue {
-			return ready.Reason, false
-		}
-	}
-	return "", true
 }
 
 func getRoleBindingName(serviceAccountName string) string {
