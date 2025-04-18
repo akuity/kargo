@@ -151,7 +151,7 @@ steps:
     repoURL: ${{ vars.repoURL }}
 - uses: git-wait-for-pr
   config:
-    prNumber: ${{ task.outputs['open-pr'].prNumber }}
+    prNumber: ${{ task.outputs['open-pr'].pr.id }}
 ```
 
 :::info
