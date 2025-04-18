@@ -1,23 +1,27 @@
+import { useQuery } from '@connectrpc/connect-query';
 import {
   faArrowDownShortWide,
   faBuilding,
   faFileLines,
+  faGear,
   faTools
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Drawer, Tabs, Typography } from 'antd';
+import { Drawer, Flex, Skeleton, Tabs, Typography } from 'antd';
 import Alert from 'antd/es/alert/Alert';
 import { useMemo } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { AssembleFreight } from '@ui/features/assemble-freight/assemble-freight';
-import { SmallLabel } from '@ui/features/common/small-label';
+import YamlEditor from '@ui/features/common/code-editor/yaml-editor-lazy';
+import { getWarehouse } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
+import { decodeRawData } from '@ui/utils/decode-raw-data';
 
-import { EditWarehouse } from './edit-warehouse';
 import { RepoSubscriptions } from './repo-subscriptions';
-import { WarehouseActions } from './warehouse-actions';
+import { WarehouseSettings } from './tabs/settings/warehouse-settings';
 import { getWarehouseError } from './warehouse-error';
 
 export const WarehouseDetails = ({
@@ -27,39 +31,53 @@ export const WarehouseDetails = ({
   warehouse: Warehouse;
   refetchFreight: () => void;
 }) => {
-  const { name: projectName, tab } = useParams();
+  const { name: projectName, warehouseName, tab } = useParams();
   const navigate = useNavigate();
 
   const onClose = () => navigate(generatePath(paths.project, { name: projectName }));
 
   const warehouseErrorMessage = useMemo(() => getWarehouseError(warehouse), [warehouse]);
 
+  const rawWarehouseYamlQuery = useQuery(getWarehouse, {
+    project: projectName,
+    name: warehouseName,
+    format: RawFormat.YAML
+  });
+
+  const rawWarehouseYaml = useMemo(
+    () => decodeRawData(rawWarehouseYamlQuery.data),
+    [rawWarehouseYamlQuery.data]
+  );
+
   return (
-    <Drawer open={!!warehouse} onClose={onClose} width={'80%'} closable={false}>
+    <Drawer
+      open={!!warehouse}
+      onClose={onClose}
+      width={'80%'}
+      title={
+        <Flex justify='space-between' className='font-normal'>
+          <div>
+            <Flex gap={16} align='center'>
+              <Typography.Title level={2} style={{ margin: 0 }}>
+                <FontAwesomeIcon icon={faBuilding} size='xs' className='mr-1 text-gray-400' />{' '}
+                {warehouse.metadata?.name}
+              </Typography.Title>
+            </Flex>
+            <div className='-mt-1'>
+              <Typography.Text type='secondary'>{projectName}</Typography.Text>
+            </div>
+          </div>
+        </Flex>
+      }
+    >
       {warehouse && (
         <div className='flex flex-col h-full'>
-          <div className='flex items-center justify-between mb-4'>
-            <div className='flex gap-1 items-start'>
-              <div>
-                <SmallLabel>WAREHOUSE</SmallLabel>
-                <Typography.Title level={1} className='flex items-center m-0 !mb-2'>
-                  <FontAwesomeIcon icon={faBuilding} className='mr-2 text-base text-gray-400' />
-                  {warehouse.metadata?.name}
-                </Typography.Title>
-                <Typography.Text type='secondary'>
-                  <span className='uppercase text-xs'>Project: </span>
-                  <span className='font-semibold'>{projectName}</span>
-                </Typography.Text>
-              </div>
-            </div>
-            <WarehouseActions warehouse={warehouse} />
-          </div>
-
           {warehouseErrorMessage && (
-            <Alert className='mb-3' message={warehouseErrorMessage} type='error' closable />
+            <Alert className='mb-6' message={warehouseErrorMessage} type='error' closable />
           )}
 
           <Tabs
+            className='-mt-4'
             defaultActiveKey='1'
             activeKey={tab}
             onChange={(tab) => {
@@ -98,9 +116,25 @@ export const WarehouseDetails = ({
               key='live-manifest'
               tab='Live Manifest'
               icon={<FontAwesomeIcon icon={faFileLines} />}
-            >
-              <EditWarehouse projectName={projectName} warehouseName={warehouse.metadata?.name} />
-            </Tabs.TabPane>
+              children={
+                rawWarehouseYamlQuery.isLoading ? (
+                  <Skeleton />
+                ) : (
+                  <YamlEditor
+                    value={rawWarehouseYaml}
+                    height='700px'
+                    isHideManagedFieldsDisplayed
+                    disabled
+                  />
+                )
+              }
+            />
+            <Tabs.TabPane
+              key='settings'
+              tab='Settings'
+              icon={<FontAwesomeIcon icon={faGear} />}
+              children={<WarehouseSettings />}
+            />
           </Tabs>
         </div>
       )}
