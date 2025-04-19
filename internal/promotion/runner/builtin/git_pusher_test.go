@@ -202,7 +202,9 @@ func Test_gitPusher_run(t *testing.T) {
 	require.NoError(t, err)
 
 	// Set up a fake git provider
-	fakeGitProviderName := "fake1"
+	// Cannot register multiple providers with the same name, so this takes
+	// care of that problem
+	fakeGitProviderName := uuid.NewString()
 	gitprovider.Register(
 		fakeGitProviderName,
 		gitprovider.Registration{
