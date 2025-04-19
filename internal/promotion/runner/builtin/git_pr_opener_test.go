@@ -214,6 +214,9 @@ func Test_gitPROpener_run(t *testing.T) {
 	exists, err := repo.RemoteBranchExists(testTargetBranch)
 	require.NoError(t, err)
 	require.True(t, exists)
+	t.Cleanup(func() {
+		gitprovider.UnRegister(fakeGitProviderName)
+	})
 }
 
 func Test_gitPROpener_sortPullRequests(t *testing.T) {

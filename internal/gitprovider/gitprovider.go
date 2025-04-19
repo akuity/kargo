@@ -51,6 +51,9 @@ type Interface interface {
 	// to differences in the underlying provider APIs. It is the responsibility of
 	// the caller to sort the results as needed.
 	ListPullRequests(context.Context, *ListPullRequestOptions) ([]PullRequest, error)
+
+	// GetCommitURL returns a commit URL inferred from the provided repository URL and commit SHA.
+	GetCommitURL(string, string) (string, error)
 }
 
 // CreatePullRequestOpts encapsulates the options used when creating a pull
@@ -126,6 +129,8 @@ type Fake struct {
 		context.Context,
 		*ListPullRequestOptions,
 	) ([]PullRequest, error)
+	// GetCommitURLFn defines the functionality of the GetCommitURL method.
+	GetCommitURLFn func(string, string) (string, error)
 }
 
 // CreatePullRequest implements gitprovider.Interface.
@@ -150,4 +155,12 @@ func (f *Fake) ListPullRequests(
 	opts *ListPullRequestOptions,
 ) ([]PullRequest, error) {
 	return f.ListPullRequestsFn(ctx, opts)
+}
+
+// GetCommitURL implements gitprovider.Interface.
+func (f *Fake) GetCommitURL(
+	repoURL string,
+	sha string,
+) (string, error) {
+	return f.GetCommitURLFn(repoURL, sha)
 }

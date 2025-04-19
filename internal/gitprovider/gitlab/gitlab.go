@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/go-cleanhttp"
@@ -196,6 +197,25 @@ func (p *provider) ListPullRequests(
 		listOpts.Page = res.NextPage
 	}
 	return prs, nil
+}
+
+// GetCommitURL implements gitprovider.Interface.
+func (p *provider) GetCommitURL(
+	repoURL string,
+	sha string,
+) (string, error) {
+	repoURLRegex := `^(?:(?:\w+://)?(?:\w+@)?)?(gitlab.com)[:/]([^/]+/[^.]+)(?:\.git)?$`
+	re := regexp.MustCompile(repoURLRegex)
+	matches := re.FindStringSubmatch(repoURL)
+	if len(matches) != 3 {
+		return "", fmt.Errorf("error processing repository URL: %s: must match regex: %s", repoURL, repoURLRegex)
+	}
+	host := matches[1]
+	path := matches[2]
+	formattedRepoURL := fmt.Sprintf("https://%s/%s", host, path)
+
+	commitUrl := formattedRepoURL + "/-/commit/" + sha
+	return commitUrl, nil
 }
 
 func convertGitlabMR(glMR gitlab.BasicMergeRequest) gitprovider.PullRequest {

@@ -14,6 +14,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/gitprovider"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -21,6 +22,10 @@ import (
 // stateKeyBranch is the key used to store the branch that was pushed to in the
 // shared State.
 const stateKeyBranch = "branch"
+
+// stateKeyCommitURL is the key used to store the URL of the commit that was
+// pushed to in the shared State.
+const stateKeyCommitURL = "commitURL"
 
 // gitPushPusher is an implementation of the promotion.StepRunner interface that
 // pushes commits from a local Git repository to a remote Git repository.
@@ -89,15 +94,21 @@ func (g *gitPushPusher) run(
 		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error loading working tree from %s: %w", cfg.Path, err)
 	}
+	repoURL := ""
+	if cfg.RepoURL == "" {
+		repoURL = workTree.URL()
+	} else {
+		repoURL = cfg.RepoURL
+	}
 	creds, err := g.credsDB.Get(
 		ctx,
 		stepCtx.Project,
 		credentials.TypeGit,
-		workTree.URL(),
+		repoURL,
 	)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
-			fmt.Errorf("error getting credentials for %s: %w", workTree.URL(), err)
+			fmt.Errorf("error getting credentials for %s: %w", repoURL, err)
 	}
 	if creds != nil {
 		loadOpts.Credentials = &git.RepoCredentials{
@@ -132,6 +143,9 @@ func (g *gitPushPusher) run(
 			return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
 				fmt.Errorf("error getting current branch: %w", err)
 		}
+	}
+	if cfg.RepoURL != "" {
+		pushOpts.RepoURL = repoURL
 	}
 
 	backoff := wait.Backoff{
@@ -181,12 +195,24 @@ func (g *gitPushPusher) run(
 		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error getting last commit ID: %w", err)
 	}
+
+	// Using git provider to get commit url. Continuing even if provider
+	// cannot be implemented as the push will still succeeded, we just
+	// can't construct the URL.
+	gitProvider, _ := gitprovider.New(repoURL, nil)
+	commitURL, _ := gitProvider.GetCommitURL(repoURL, commitID)
+
+	output := map[string]any{
+		stateKeyBranch: pushOpts.TargetBranch,
+		stateKeyCommit: commitID,
+	}
+	if commitURL != "" {
+		output[stateKeyCommitURL] = commitURL
+	}
+
 	return promotion.StepResult{
 		Status: kargoapi.PromotionPhaseSucceeded,
-		Output: map[string]any{
-			stateKeyBranch: pushOpts.TargetBranch,
-			stateKeyCommit: commitID,
-		},
+		Output: output,
 	}, nil
 }
 
