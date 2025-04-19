@@ -12,7 +12,6 @@ import (
 	"time"
 
 	libExec "github.com/akuity/kargo/internal/exec"
-	"k8s.io/klog/v2"
 )
 
 // WorkTree is an interface for interacting with any working tree of a Git
@@ -541,7 +540,6 @@ func (w *workTree) Push(opts *PushOptions) error {
 	if repoURL == "" {
 		repoURL = "origin"
 	}
-	klog.Info("pushing to " + repoURL)
 	if opts.PullRebase {
 		exists, err := w.RemoteBranchExists(targetBranch)
 		if err != nil {
