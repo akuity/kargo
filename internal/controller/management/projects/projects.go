@@ -208,23 +208,17 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	if newStatus, ok := migratePhaseToConditions(project); ok {
-		logger.Debug("migrated Project phase to conditions")
-		patchErr := r.patchProjectStatusFn(ctx, project, newStatus)
-		return ctrl.Result{Requeue: true}, patchErr
-	}
-
 	if reason, ok := mustReconcileProject(project); !ok {
 		logger.Debug("nothing to do", "reason", reason)
 		return ctrl.Result{}, nil
 	}
 
-	newStatus, err := r.syncProjectFn(ctx, project)
+	projectStatus, err := r.syncProjectFn(ctx, project)
 	if err != nil {
 		logger.Error(err, "error syncing Project")
 	}
 
-	patchErr := r.patchProjectStatusFn(ctx, project, newStatus)
+	patchErr := r.patchProjectStatusFn(ctx, project, projectStatus)
 	if patchErr != nil {
 		logger.Error(patchErr, "error updating Project status")
 	}
@@ -756,70 +750,6 @@ func (r *reconciler) patchProjectStatus(
 			*s = status
 		},
 	)
-}
-
-// migratePhaseToConditions migrates the Project's Phase and Message fields to
-// Conditions. It returns the updated ProjectStatus and a boolean indicating
-// whether the Project status was updated.
-func migratePhaseToConditions(project *kargoapi.Project) (kargoapi.ProjectStatus, bool) {
-	status := *project.Status.DeepCopy()
-	if project.Status.Phase == "" { // nolint:staticcheck
-		status.Message = ""                         // nolint:staticcheck
-		return status, project.Status.Message != "" // nolint:staticcheck
-	}
-
-	switch project.Status.Phase { // nolint:staticcheck
-	case kargoapi.ProjectPhaseInitializing:
-		conditions.Set(&status, &metav1.Condition{
-			Type:               kargoapi.ConditionTypeReconciling,
-			Status:             metav1.ConditionTrue,
-			Reason:             "Initializing",
-			Message:            "Creating project namespace and initializing permissions",
-			ObservedGeneration: project.GetGeneration(),
-		})
-		conditions.Set(&status, &metav1.Condition{
-			Type:               kargoapi.ConditionTypeReady,
-			Status:             metav1.ConditionFalse,
-			Reason:             "Initializing",
-			Message:            "Creating project namespace and initializing permissions",
-			ObservedGeneration: project.GetGeneration(),
-		})
-	case kargoapi.ProjectPhaseInitializationFailed:
-		// If the Project is in the InitializationFailed phase, it means that the
-		// namespace already exists but is not labeled as a Project namespace.
-		conditions.Set(&status, &metav1.Condition{
-			Type:   kargoapi.ConditionTypeStalled,
-			Status: metav1.ConditionTrue,
-			Reason: "ExistingNamespaceMissingLabel",
-			Message: fmt.Sprintf(
-				"Namespace %q already exists but is not labeled as a Project namespace using label %q",
-				project.Name,
-				kargoapi.ProjectLabelKey,
-			),
-			ObservedGeneration: project.GetGeneration(),
-		})
-		conditions.Set(&status, &metav1.Condition{
-			Type:               kargoapi.ConditionTypeReady,
-			Status:             metav1.ConditionFalse,
-			Reason:             "NamespaceInitializationFailed",
-			Message:            "Failed to initialize project namespace: " + errProjectNamespaceExists.Error(),
-			ObservedGeneration: project.GetGeneration(),
-		})
-	case kargoapi.ProjectPhaseReady:
-		conditions.Set(&status, &metav1.Condition{
-			Type:               kargoapi.ConditionTypeReady,
-			Status:             metav1.ConditionTrue,
-			Reason:             "Initialized",
-			Message:            "Project is initialized and ready for use",
-			ObservedGeneration: project.GetGeneration(),
-		})
-	}
-
-	// Clear the phase and message now that we've migrated them to conditions.
-	status.Phase = ""   // nolint:staticcheck
-	status.Message = "" // nolint:staticcheck
-
-	return status, true
 }
 
 // mustReconcileProject returns if the Project should be reconciled, or if it
