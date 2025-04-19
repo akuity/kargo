@@ -3,8 +3,9 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Card, Dropdown, Flex } from 'antd';
 import classNames from 'classnames';
 import { formatDistance } from 'date-fns';
-import { CSSProperties, ReactNode, useMemo } from 'react';
+import { CSSProperties, ReactNode, useContext, useMemo } from 'react';
 
+import { ColorContext } from '@ui/context/colors';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { StagePhaseIcon } from '@ui/features/common/stage-phase/stage-phase-icon';
 import { StagePhase } from '@ui/features/common/stage-phase/utils';
@@ -14,6 +15,7 @@ import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import './stage-node.less';
 import { useDictionaryContext } from '../context/dictionary-context';
+import { useFreightTimelineControllerContext } from '../context/freight-timeline-controller-context';
 import { useGraphContext } from '../context/graph-context';
 import { stageIndexer } from '../graph/node-indexer';
 
@@ -147,11 +149,13 @@ export const StageNode = (props: { stage: Stage }) => {
 };
 
 const useStageHeaderStyle = (stage: Stage): CSSProperties => {
+  const colorContext = useContext(ColorContext);
   if (!useIsColorsUsed()) {
     return {};
   }
 
-  let stageColor = parseColorAnnotation(stage);
+  let stageColor =
+    parseColorAnnotation(stage) || colorContext.stageColorMap[stage?.metadata?.name || ''];
   let stageFontColor = '';
 
   if (stageColor && ColorMapHex[stageColor]) {
@@ -173,7 +177,9 @@ const isStageControlFlow = (stage: Stage) =>
 const getStageHealth = (stage: Stage) => stage?.status?.health;
 
 const useIsColorsUsed = () => {
-  return false;
+  const freightTimelineControllerContext = useFreightTimelineControllerContext();
+
+  return freightTimelineControllerContext?.preferredFilter?.showColors;
 };
 
 const getLastPromotion = (stage: Stage) => stage?.status?.lastPromotion?.finishedAt;

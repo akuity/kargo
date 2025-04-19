@@ -4,18 +4,17 @@ import { faAnchor, faCaretLeft, faCaretRight, faTimes } from '@fortawesome/free-
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Descriptions, Divider, Table } from 'antd';
 import classNames from 'classnames';
-import { useMemo, useRef, useState } from 'react';
+import { useContext, useMemo, useRef, useState } from 'react';
 
+import { ColorContext } from '@ui/context/colors';
 import { ArtifactMetadata } from '@ui/features/freight/artifact-metadata';
 import { flattenFreightOrigin } from '@ui/features/freight/flatten-freight-origin-utils';
 import { FreightStatusList } from '@ui/features/freight/freight-status-list';
 import { useDictionaryContext } from '@ui/features/project/pipelines-2/context/dictionary-context';
-import {
-  FreightTimelineControllerContext,
-  FreightTimelineControllerContextType
-} from '@ui/features/project/pipelines-2/context/freight-timeline-controller-context';
 import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
+
+import { useFreightTimelineControllerContext } from '../context/freight-timeline-controller-context';
 
 import { timerangeToDate } from './filter-timerange-utils';
 import { FreightCard } from './freight-card';
@@ -25,23 +24,17 @@ import { filterFreightBySource, filterFreightByTimerange } from './source-catalo
 import './freight-timeline.less';
 
 export const FreightTimeline = (props: { freights: Freight[] }) => {
+  const colorContext = useContext(ColorContext);
+  const freightTimelineControllerContext = useFreightTimelineControllerContext();
   const dictionaryContext = useDictionaryContext();
+
+  if (!freightTimelineControllerContext) {
+    throw new Error('missing context freightTimelineControllerContext');
+  }
 
   const [filtersCollapsed, setFilterCollapsed] = useState(true);
 
   const [viewingFreight, setViewingFreight] = useState<Freight | null>(null);
-
-  const [preferredFilter, setPreferredFilter] = useState<
-    FreightTimelineControllerContextType['preferredFilter']
-  >({
-    showAlias: false,
-    artifactCarousel: {
-      enabled: false
-    },
-    sources: [],
-    timerange: 'all-time',
-    showColors: false
-  });
 
   const filteredFreights = useMemo(() => {
     let filtered = props.freights?.sort((a, b) => {
@@ -53,17 +46,23 @@ export const FreightTimeline = (props: { freights: Freight[] }) => {
     });
 
     filtered = filtered
-      .map(filterFreightBySource(preferredFilter?.sources))
+      .map(filterFreightBySource(freightTimelineControllerContext.preferredFilter?.sources))
       .filter(Boolean) as Freight[];
 
-    if (preferredFilter.timerange !== 'all-time') {
+    if (freightTimelineControllerContext.preferredFilter.timerange !== 'all-time') {
       filtered = filtered.filter(
-        filterFreightByTimerange(timerangeToDate(preferredFilter.timerange))
+        filterFreightByTimerange(
+          timerangeToDate(freightTimelineControllerContext.preferredFilter.timerange)
+        )
       );
     }
 
     return filtered;
-  }, [props.freights, preferredFilter.sources, preferredFilter.timerange]);
+  }, [
+    props.freights,
+    freightTimelineControllerContext.preferredFilter.sources,
+    freightTimelineControllerContext.preferredFilter.timerange
+  ]);
 
   const freightListStyleRef = useRef<HTMLDivElement>(null);
 
@@ -92,14 +91,7 @@ export const FreightTimeline = (props: { freights: Freight[] }) => {
   };
 
   return (
-    <FreightTimelineControllerContext.Provider
-      value={{
-        viewingFreight,
-        setViewingFreight,
-        preferredFilter,
-        setPreferredFilter
-      }}
-    >
+    <>
       <div
         className={classNames('freightTimeline', 'bg-white px-5 py-2 flex gap-5')}
         style={{ borderBottom: '2px solid rgba(0,0,0,.05)' }}
@@ -109,8 +101,8 @@ export const FreightTimeline = (props: { freights: Freight[] }) => {
           filteredFreights={filteredFreights}
           freights={props.freights}
           onCollapseToggle={() => setFilterCollapsed(!filtersCollapsed)}
-          onPreferredFilterChange={setPreferredFilter}
-          preferredFilter={preferredFilter}
+          onPreferredFilterChange={freightTimelineControllerContext.setPreferredFilter}
+          preferredFilter={freightTimelineControllerContext.preferredFilter}
         />
         {!filtersCollapsed && <Divider type='vertical' className='h-full' />}
         <div
@@ -127,15 +119,19 @@ export const FreightTimeline = (props: { freights: Freight[] }) => {
           <div className='flex gap-1 relative transition-all right-0' ref={freightListStyleRef}>
             {filteredFreights.map((freight) => (
               <FreightCard
+                stagesInFreight={
+                  dictionaryContext?.freightInStages?.[freight?.metadata?.name || ''] || []
+                }
                 key={freight?.metadata?.uid}
                 freight={freight}
-                preferredFilter={preferredFilter}
+                preferredFilter={freightTimelineControllerContext.preferredFilter}
                 setViewingFreight={setViewingFreight}
                 viewingFreight={viewingFreight}
                 inUse={
                   (dictionaryContext?.freightInStages[freight?.metadata?.name || '']?.length || 0) >
                   0
                 }
+                stageColorMap={colorContext.stageColorMap}
               />
             ))}
           </div>
@@ -165,7 +161,7 @@ export const FreightTimeline = (props: { freights: Freight[] }) => {
           <FreightExtended freight={viewingFreight} onClose={() => setViewingFreight(null)} />
         </div>
       )}
-    </FreightTimelineControllerContext.Provider>
+    </>
   );
 };
 

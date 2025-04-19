@@ -25,6 +25,7 @@ import {
 
 import './stage-node.less';
 import { useDictionaryContext } from '../context/dictionary-context';
+import { useFreightTimelineControllerContext } from '../context/freight-timeline-controller-context';
 import { humanComprehendableArtifact } from '../freight/artifact-parts-utils';
 import { shortVersion } from '../freight/short-version-utils';
 
@@ -37,6 +38,7 @@ import {
 
 export const StageFreight = (props: { stage: Stage }) => {
   const dictionaryContext = useDictionaryContext();
+  const freightTimelineControllerContext = useFreightTimelineControllerContext();
 
   const currentFreight = useMemo(() => getCurrentFreight(props.stage), [props.stage]);
 
@@ -136,7 +138,9 @@ export const StageFreight = (props: { stage: Stage }) => {
         )}
 
         <div className='scale-90'>
-          <div className='text-[10px] mr-1 text-center mb-1'>{selectedFreightAlias}</div>
+          {freightTimelineControllerContext?.preferredFilter?.showAlias && (
+            <div className='text-[10px] mr-1 text-center mb-1'>{selectedFreightAlias}</div>
+          )}
 
           <Artifact artifact={selectedArtifact} />
         </div>

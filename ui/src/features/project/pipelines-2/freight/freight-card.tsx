@@ -7,7 +7,8 @@ import { formatDistance } from 'date-fns';
 import { useMemo } from 'react';
 
 import { FreightTimelineControllerContextType } from '@ui/features/project/pipelines-2/context/freight-timeline-controller-context';
-import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
+import { ColorMap } from '@ui/features/stage/utils';
+import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { FreightArtifact } from './freight-artifact';
@@ -19,6 +20,8 @@ type FreightCardProps = {
   setViewingFreight?(f: Freight | null): void;
   preferredFilter: FreightTimelineControllerContextType['preferredFilter'];
   inUse?: boolean; // is used by stages
+  stagesInFreight: Stage[];
+  stageColorMap: ColorMap;
 };
 
 export const FreightCard = (props: FreightCardProps) => {
@@ -69,13 +72,16 @@ export const FreightCard = (props: FreightCardProps) => {
       )}
       {props?.preferredFilter?.showColors && (
         <div className='flex gap-1 mb-1 justify-center'>
-          <div
-            title='dev'
-            className='mx-1 h-3 w-3 rounded'
-            style={{
-              background: '#45B084'
-            }}
-          />
+          {props.stagesInFreight.map((stage) => (
+            <div
+              key={stage?.metadata?.uid}
+              title={stage?.metadata?.name}
+              className='mx-1 h-3 w-3 rounded'
+              style={{
+                background: `linear-gradient(60deg,rgb(255 255 255/0%),rgb(200 200 200/30%)), ${props.stageColorMap[stage?.metadata?.name || '']}`
+              }}
+            />
+          ))}
         </div>
       )}
 
