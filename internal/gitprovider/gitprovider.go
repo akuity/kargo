@@ -52,7 +52,7 @@ type Interface interface {
 	// the caller to sort the results as needed.
 	ListPullRequests(context.Context, *ListPullRequestOptions) ([]PullRequest, error)
 
-	// GetCommitURL get a commit by the repository URL and commit SHA.
+	// GetCommitURL returns a commit URL inferred from the provided repository URL and commit SHA.
 	GetCommitURL(string, string) (string, error)
 }
 
