@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/sosedoff/gitkit"
 	"github.com/stretchr/testify/require"
 

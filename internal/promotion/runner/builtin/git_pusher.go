@@ -94,15 +94,21 @@ func (g *gitPushPusher) run(
 		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error loading working tree from %s: %w", cfg.Path, err)
 	}
+	repoURL := ""
+	if cfg.RepoURL == "" {
+		repoURL = workTree.URL()
+	} else {
+		repoURL = cfg.RepoURL
+	}
 	creds, err := g.credsDB.Get(
 		ctx,
 		stepCtx.Project,
 		credentials.TypeGit,
-		workTree.URL(),
+		repoURL,
 	)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
-			fmt.Errorf("error getting credentials for %s: %w", workTree.URL(), err)
+			fmt.Errorf("error getting credentials for %s: %w", repoURL, err)
 	}
 	if creds != nil {
 		loadOpts.Credentials = &git.RepoCredentials{
@@ -137,6 +143,9 @@ func (g *gitPushPusher) run(
 			return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
 				fmt.Errorf("error getting current branch: %w", err)
 		}
+	}
+	if cfg.RepoURL != "" {
+		pushOpts.RepoURL = repoURL
 	}
 
 	backoff := wait.Backoff{
@@ -187,27 +196,23 @@ func (g *gitPushPusher) run(
 			fmt.Errorf("error getting last commit ID: %w", err)
 	}
 
-	// Using git provider to get commit url.
-	gpOpts := &gitprovider.Options{}
-	gitProvider, err := gitprovider.New(workTree.URL(), gpOpts)
-	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
-			fmt.Errorf("error creating git provider service: %w", err)
-	}
+	// Using git provider to get commit url. Continuing even if provider
+	// cannot be implemented as the push will still succeeded, we just
+	// can't construct the URL.
+	gitProvider, _ := gitprovider.New(repoURL, nil)
+	commitURL, _ := gitProvider.GetCommitURL(repoURL, commitID)
 
-	commitURL, err := gitProvider.GetCommitURL(workTree.URL(), commitID)
-	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
-			fmt.Errorf("error getting commit url: %w", err)
+	output := map[string]any{
+		stateKeyBranch: pushOpts.TargetBranch,
+		stateKeyCommit: commitID,
+	}
+	if commitURL != "" {
+		output[stateKeyCommitURL] = commitURL
 	}
 
 	return promotion.StepResult{
 		Status: kargoapi.PromotionPhaseSucceeded,
-		Output: map[string]any{
-			stateKeyBranch:    pushOpts.TargetBranch,
-			stateKeyCommit:    commitID,
-			stateKeyCommitURL: commitURL,
-		},
+		Output: output,
 	}, nil
 }
 

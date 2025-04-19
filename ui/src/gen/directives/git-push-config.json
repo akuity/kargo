@@ -22,6 +22,10 @@
   "targetBranch": {
    "type": "string",
    "description": "The target branch to push to. Mutually exclusive with 'generateTargetBranch=true'. If neither of these is provided, the target branch will be the currently checked out branch."
+  },
+  "repoURL": {
+   "type": "string",
+   "description": "The URL to the remote repository. If this is left blank, the repoURL will be the remote used when the repository was cloned."
   }
  }
 }
