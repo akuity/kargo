@@ -374,7 +374,7 @@ func TestGetCommitURL(t *testing.T) {
 		expectedURL string
 	}{
 		{
-			url:         "ssh://git@github.com:akuity/kargo.git",
+			url:         "ssh://git@github.com/akuity/kargo.git",
 			sha:         "sha",
 			expectedURL: "https://github.com/akuity/kargo/commit/sha",
 		},

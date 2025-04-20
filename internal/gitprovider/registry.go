@@ -48,8 +48,3 @@ func Register(name string, reg Registration) {
 	}
 	registeredProviders[name] = reg
 }
-
-// UnRegister is called by unit test clean ups to avoid conflicts between tests
-func UnRegister(name string) {
-	delete(registeredProviders, name)
-}

@@ -260,7 +260,4 @@ func Test_gitPusher_run(t *testing.T) {
 	expectedCommitURL := fmt.Sprintf("%s/commit/%s", testRepoURL, expectedCommit)
 	actualCommitURL := res.Output[stateKeyCommitURL]
 	require.Equal(t, expectedCommitURL, actualCommitURL)
-	t.Cleanup(func() {
-		gitprovider.UnRegister(fakeGitProviderName)
-	})
 }

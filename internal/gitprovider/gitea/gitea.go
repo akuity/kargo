@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/url"
-	"regexp"
 	"strings"
 
 	"code.gitea.io/sdk/gitea"
@@ -263,18 +262,16 @@ func (p *provider) GetCommitURL(
 	repoURL string,
 	sha string,
 ) (string, error) {
-	repoURLRegex := `^(?:(?:\w+://)?(?:\w+@)?)?(.+)[:/]([^/]+/[^.]+)(?:\.git)?$`
-	re := regexp.MustCompile(repoURLRegex)
-	matches := re.FindStringSubmatch(repoURL)
-	if len(matches) != 3 {
-		return "", fmt.Errorf("error processing repository URL: %s: must match regex: %s", repoURL, repoURLRegex)
-	}
-	host := matches[1]
-	path := matches[2]
-	formattedRepoURL := fmt.Sprintf("https://%s/%s", host, path)
+	normalizedURL := git.NormalizeURL(repoURL)
 
-	commitUrl := formattedRepoURL + "/commit/" + sha
-	return commitUrl, nil
+	parsedURL, err := url.Parse(normalizedURL)
+	if err != nil {
+		return "Unknown", fmt.Errorf("error processing repository URL: %s: %s", repoURL, err)
+	}
+
+	commitURL := fmt.Sprintf("https://%s%s/commit/%s", parsedURL.Host, parsedURL.Path, sha)
+
+	return commitURL, nil
 }
 
 func convertGiteaPR(giteaPR gitea.PullRequest) gitprovider.PullRequest {

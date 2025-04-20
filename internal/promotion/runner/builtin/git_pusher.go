@@ -15,6 +15,7 @@ import (
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/gitprovider"
+	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -78,6 +79,9 @@ func (g *gitPushPusher) run(
 	stepCtx *promotion.StepContext,
 	cfg builtin.GitPushConfig,
 ) (promotion.StepResult, error) {
+
+	logger := logging.LoggerFromContext(ctx)
+
 	// This is kind of hacky, but we needed to load the working tree to get the
 	// URL of the repository. With that in hand, we can look for applicable
 	// credentials and, if found, reload the work tree with the credentials.
@@ -197,22 +201,24 @@ func (g *gitPushPusher) run(
 	}
 
 	// Using git provider to get commit url. Continuing even if provider
-	// cannot be implemented as the push will still succeeded, we just
-	// can't construct the URL.
-	gitProvider, _ := gitprovider.New(repoURL, nil)
-	commitURL, _ := gitProvider.GetCommitURL(repoURL, commitID)
-
-	output := map[string]any{
-		stateKeyBranch: pushOpts.TargetBranch,
-		stateKeyCommit: commitID,
-	}
-	if commitURL != "" {
-		output[stateKeyCommitURL] = commitURL
+	// cannot be implemented as the push will still have succeeded, we
+	// just can't construct the URL.
+	gitProvider, err := gitprovider.New(repoURL, nil)
+	commitURL := ""
+	if err != nil {
+		commitURL = "Unknown"
+		logger.Info("unable to construct commit URL from %s: %s", repoURL, err)
+	} else {
+		commitURL, _ = gitProvider.GetCommitURL(repoURL, commitID)
 	}
 
 	return promotion.StepResult{
 		Status: kargoapi.PromotionPhaseSucceeded,
-		Output: output,
+		Output: map[string]any{
+			stateKeyBranch:    pushOpts.TargetBranch,
+			stateKeyCommit:    commitID,
+			stateKeyCommitURL: commitURL,
+		},
 	}, nil
 }
 
