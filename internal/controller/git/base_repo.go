@@ -125,15 +125,21 @@ func (b *baseRepo) setupAuthor(author *User) error {
 
 		if author.SigningKeyPath != "" {
 			cmd = b.buildGitCommand("config", "--global", "commit.gpgsign", "true")
-			cmd.Dir = b.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
+			cmd.Dir = b.homeDir // Override the cmd.Dir that's set by b.buildGitCommand()
 			if _, err := libExec.Exec(cmd); err != nil {
 				return fmt.Errorf("error configuring commit gpg signing: %w", err)
 			}
 
 			cmd = b.buildCommand("gpg", "--import", author.SigningKeyPath)
-			cmd.Dir = b.homeDir // Override the cmd.Dir that's set by r.buildCommand()
+			cmd.Dir = b.homeDir // Override the cmd.Dir that's set by b.buildCommand()
 			if _, err := libExec.Exec(cmd); err != nil {
 				return fmt.Errorf("error importing gpg key %q: %w", author.SigningKeyPath, err)
+			}
+		}
+
+		if author.SigningKey != "" {
+			if err := os.Remove(author.SigningKeyPath); err != nil {
+				return fmt.Errorf("error removing file %q: %w", author.SigningKeyPath, err)
 			}
 		}
 
