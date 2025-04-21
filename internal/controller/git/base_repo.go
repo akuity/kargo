@@ -74,8 +74,13 @@ type User struct {
 	Email string
 	// SigningKeyType indicates the type of signing key.
 	SigningKeyType SigningKeyType
+	// SigningKeyPath is an optional signing key for signing git objects. If this
+	// is field is non-empty, its value takes precedence over any key at the path
+	// specified by SigningKeyPath (if any).
+	SigningKey string
 	// SigningKeyPath is an optional path referencing a signing key for
-	// signing git objects.
+	// signing git objects. If the SigningKey field is non-empty, its value takes
+	// precedence over any key at the path specified by this field (if any).
 	SigningKeyPath string
 }
 
@@ -107,18 +112,33 @@ func (b *baseRepo) setupAuthor(author *User) error {
 		return fmt.Errorf("error configuring git user email: %w", err)
 	}
 
-	if author.SigningKeyPath != "" && author.SigningKeyType == SigningKeyTypeGPG {
-		cmd = b.buildGitCommand("config", "--global", "commit.gpgsign", "true")
-		cmd.Dir = b.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
-		if _, err := libExec.Exec(cmd); err != nil {
-			return fmt.Errorf("error configuring commit gpg signing: %w", err)
+	if author.SigningKeyType == SigningKeyTypeGPG {
+
+		if author.SigningKey != "" {
+			author.SigningKeyPath = filepath.Join(b.homeDir, "signing-key.asc")
+			if err := os.WriteFile(
+				author.SigningKeyPath,
+				[]byte(author.SigningKey),
+				0600,
+			); err != nil {
+				return fmt.Errorf("error writing signing key to %q: %w", author.SigningKeyPath, err)
+			}
 		}
 
-		cmd = b.buildCommand("gpg", "--import", author.SigningKeyPath)
-		cmd.Dir = b.homeDir // Override the cmd.Dir that's set by r.buildCommand()
-		if _, err := libExec.Exec(cmd); err != nil {
-			return fmt.Errorf("error importing gpg key %q: %w", author.SigningKeyPath, err)
+		if author.SigningKeyPath != "" {
+			cmd = b.buildGitCommand("config", "--global", "commit.gpgsign", "true")
+			cmd.Dir = b.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
+			if _, err := libExec.Exec(cmd); err != nil {
+				return fmt.Errorf("error configuring commit gpg signing: %w", err)
+			}
+
+			cmd = b.buildCommand("gpg", "--import", author.SigningKeyPath)
+			cmd.Dir = b.homeDir // Override the cmd.Dir that's set by r.buildCommand()
+			if _, err := libExec.Exec(cmd); err != nil {
+				return fmt.Errorf("error importing gpg key %q: %w", author.SigningKeyPath, err)
+			}
 		}
+
 	}
 
 	return nil
