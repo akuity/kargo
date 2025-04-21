@@ -75,7 +75,7 @@ type User struct {
 	// SigningKeyType indicates the type of signing key.
 	SigningKeyType SigningKeyType
 	// SigningKeyPath is an optional signing key for signing git objects. If this
-	// is field is non-empty, its value takes precedence over any key at the path
+	// field is non-empty, its value takes precedence over any key at the path
 	// specified by SigningKeyPath (if any).
 	SigningKey string
 	// SigningKeyPath is an optional path referencing a signing key for
