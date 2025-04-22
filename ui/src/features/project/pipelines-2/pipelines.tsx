@@ -22,6 +22,7 @@ import { Graph } from './graph/graph';
 import { useFreightById } from './use-freight-by-id';
 import { useFreightInStage } from './use-freight-in-stage';
 import { useStageAutoPromotionMap } from './use-stage-auto-promotion-map';
+import { useStageByName } from './use-stage-by-name';
 import { useSubscribersByStage } from './use-subscribers-by-stage';
 
 import '@xyflow/react/dist/style.css';
@@ -75,6 +76,7 @@ export const Pipelines = (props: { project: Project; stageName?: string }) => {
   const freightById = useFreightById(getFreightQuery?.data?.groups?.['']?.freight || []);
   const stageAutoPromotionMap = useStageAutoPromotionMap(props.project);
   const subscribersByStage = useSubscribersByStage(listStagesQuery.data?.stages || []);
+  const stageByName = useStageByName(listStagesQuery.data?.stages || []);
 
   if (loading) {
     return <LoadingState />;
@@ -90,7 +92,13 @@ export const Pipelines = (props: { project: Project; stageName?: string }) => {
       }}
     >
       <DictionaryContext.Provider
-        value={{ freightInStages, freightById, stageAutoPromotionMap, subscribersByStage }}
+        value={{
+          freightInStages,
+          freightById,
+          stageAutoPromotionMap,
+          subscribersByStage,
+          stageByName
+        }}
       >
         <ColorContext.Provider value={{ stageColorMap, warehouseColorMap }}>
           <FreightTimeline freights={getFreightQuery?.data?.groups?.['']?.freight || []} />

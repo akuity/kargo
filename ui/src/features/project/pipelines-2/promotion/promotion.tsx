@@ -1,90 +1,118 @@
-import { faTruckArrowRight } from '@fortawesome/free-solid-svg-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { ReactFlow } from '@xyflow/react';
-import { Button, Descriptions, Drawer, Flex } from 'antd';
-import classNames from 'classnames';
+import { Descriptions, DescriptionsProps, Drawer, Flex } from 'antd';
+import { formatDistance } from 'date-fns';
+import { useMemo } from 'react';
 
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
-import { FreightTable } from '@ui/features/project/pipelines-2/freight/freight-table';
-import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { PromotionStatusIcon } from '@ui/features/common/promotion-status/promotion-status-icon';
+import {
+  getPromotionStatusPhase,
+  isPromotionPhaseTerminal
+} from '@ui/features/common/promotion-status/utils';
+import { useDictionaryContext } from '@ui/features/project/pipelines-2/context/dictionary-context';
+import { PromotionSteps } from '@ui/features/stage/promotion-steps';
+import { hasAbortRequest } from '@ui/features/stage/utils/promotion';
+import { Freight, Stage, Promotion as TPromotion } from '@ui/gen/api/v1alpha1/generated_pb';
+import { timestampDate } from '@ui/utils/connectrpc-utils';
 
-import { useGetFreightCreation } from '../freight/use-get-freight-creation';
-
-import { nodeTypes } from './mini-graph/constant';
-import { useMiniPromotionGraph } from './mini-graph/use-mini-promotion-graph';
-import styles from './promotion.module.less';
+import { FreightDetails } from './freight-details';
+import { getPromotionActor } from './get-promotion-actor';
+import { PromotionGraph } from './promotion-graph';
 
 type PromotionProps = ModalComponentProps & {
-  stage: Stage;
-  freight: Freight;
+  promotion: TPromotion;
 };
 
 export const Promotion = (props: PromotionProps) => {
-  const freightAlias = props.freight?.alias;
-  const stageName = props.stage?.metadata?.name;
+  const dictionaryContext = useDictionaryContext();
+  const promotionDescriptions: DescriptionsProps['items'] = [];
 
-  const freightCreatedAt = useGetFreightCreation(props.freight);
+  const isPromotionTerminal = isPromotionPhaseTerminal(getPromotionStatusPhase(props.promotion));
+  const isAbortRequestPending = hasAbortRequest(props.promotion) && !isPromotionTerminal;
 
-  const graph = useMiniPromotionGraph(props.stage, props.freight);
+  const freight = useMemo(
+    () => dictionaryContext?.freightById?.[props.promotion?.spec?.freight || ''] as Freight,
+    [dictionaryContext?.freightById, props.promotion]
+  );
+
+  const stage = useMemo(
+    () => dictionaryContext?.stageByName?.[props.promotion?.spec?.stage || ''] as Stage,
+    [dictionaryContext, props.promotion]
+  );
+
+  if (isAbortRequestPending && props.promotion?.status) {
+    props.promotion.status.message = 'Promotion Abort Request is in Queue';
+  }
+
+  promotionDescriptions.push({
+    label: 'status',
+    children: (
+      <Flex align='center' gap={8}>
+        <PromotionStatusIcon
+          status={props.promotion?.status}
+          color={isAbortRequestPending ? 'red' : ''}
+        />
+
+        <span>{props.promotion?.status?.phase}</span>
+      </Flex>
+    )
+  });
+
+  const promotionStartTime = timestampDate(props.promotion?.metadata?.creationTimestamp);
+
+  if (promotionStartTime) {
+    const promotionRelativeStartTime = formatDistance(promotionStartTime, new Date(), {
+      addSuffix: true
+    })?.replace('about', '');
+
+    promotionDescriptions.push({
+      label: 'start time',
+      children: `${promotionRelativeStartTime}, on ${promotionStartTime}`
+    });
+  }
+
+  if (isPromotionTerminal) {
+    const promotionEndTime = timestampDate(props.promotion?.status?.finishedAt);
+
+    if (promotionEndTime && promotionStartTime) {
+      const duration = formatDistance(promotionStartTime, promotionEndTime, {
+        addSuffix: false
+      })?.replace('about', '');
+
+      promotionDescriptions.push({
+        label: 'duration',
+        children: <span title={`${promotionEndTime}`}>{duration}</span>
+      });
+    }
+  }
+
+  promotionDescriptions.push({
+    label: 'created by',
+    children: getPromotionActor(props.promotion)
+  });
 
   return (
     <Drawer
       open={props.visible}
       onClose={props.hide}
-      title={
-        <Flex align='center'>
-          Promote {freightAlias} to {stageName}
-        </Flex>
-      }
       size='large'
       width={'1224px'}
-      footer={
-        <Button
-          size='large'
-          className={classNames(styles['promote-btn'], 'ml-auto mt-5')}
-          icon={<FontAwesomeIcon icon={faTruckArrowRight} />}
-        >
-          Promote
-        </Button>
-      }
+      title={`Promotion - ${props.promotion?.metadata?.name}`}
     >
       <Descriptions
+        className='mb-5'
         column={2}
         size='small'
         bordered
-        title='Freight'
-        items={[
-          {
-            label: 'id',
-            children: props.freight?.metadata?.name
-          },
-          {
-            label: 'uid',
-            children: props.freight?.metadata?.uid
-          },
-          {
-            label: 'created',
-            children: `${freightCreatedAt.relative}${freightCreatedAt.relative && ' , on'} ${freightCreatedAt.abs}`
-          }
-        ]}
+        items={promotionDescriptions}
       />
 
-      <FreightTable className='mt-5' freight={props.freight} />
-
-      <div className='bg-zinc-100 w-full h-[300px] rounded-lg'>
-        <ReactFlow
-          nodeTypes={nodeTypes}
-          {...graph}
-          fitView
-          proOptions={{ hideAttribution: true }}
-          panOnDrag={false}
-          panOnScroll={false}
-          nodesDraggable={false}
-          elementsSelectable={false}
-          maxZoom={1}
-          minZoom={1}
-        />
+      <div className='my-5'>
+        <PromotionSteps promotion={props.promotion} />
       </div>
+
+      <FreightDetails freight={freight} />
+
+      <PromotionGraph stage={stage} freight={freight} />
     </Drawer>
   );
 };

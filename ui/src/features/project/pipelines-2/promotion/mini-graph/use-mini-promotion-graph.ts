@@ -27,7 +27,8 @@ export const useMiniPromotionGraph = (stage: Stage, freight: Freight) => {
         graph.setEdge(parentStage, stageName);
       }
     } else {
-      graph.setNode(freight?.metadata?.name || '', nodeSize());
+      graph.setNode(freight?.alias || '', nodeSize());
+      graph.setEdge(freight?.alias, stageName);
     }
 
     layout(graph, { lablepos: 'c' });
@@ -69,4 +70,4 @@ export const useMiniPromotionGraph = (stage: Stage, freight: Freight) => {
   }, [stage, freight, dictionaryContext?.subscribersByStage]);
 };
 
-const nodeSize = () => ({ width: 100, height: 100 });
+const nodeSize = () => ({ width: 200, height: 100 });
