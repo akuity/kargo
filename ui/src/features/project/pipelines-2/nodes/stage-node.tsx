@@ -1,10 +1,12 @@
-import { faChevronDown, faFire, faMinus, faTruck } from '@fortawesome/free-solid-svg-icons';
+import { faBullseye, faEllipsis, faInfo, faMinus } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Card, Dropdown, Flex } from 'antd';
 import classNames from 'classnames';
 import { formatDistance } from 'date-fns';
 import { CSSProperties, ReactNode, useContext, useMemo } from 'react';
+import { generatePath, useNavigate } from 'react-router-dom';
 
+import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { StagePhaseIcon } from '@ui/features/common/stage-phase/stage-phase-icon';
@@ -23,6 +25,7 @@ import style from './node-size-source-of-truth.module.less';
 import { StageFreight } from './stage-freight';
 
 export const StageNode = (props: { stage: Stage }) => {
+  const navigate = useNavigate();
   const dictionaryContext = useDictionaryContext();
   const graphContext = useGraphContext();
 
@@ -90,10 +93,45 @@ export const StageNode = (props: { stage: Stage }) => {
       }}
       title={
         <Flex align='center'>
-          <span className='text-xs text-wrap'>{props.stage.metadata?.name}</span>
+          <span className='text-xs text-wrap mr-auto'>{props.stage.metadata?.name}</span>
           {autoPromotionMode && (
-            <span className='text-[9px] lowercase ml-auto font-normal'>Auto Promotion</span>
+            <span className='text-[9px] lowercase font-normal'>Auto Promotion</span>
           )}
+          <Dropdown
+            trigger={['click']}
+            className='ml-2'
+            menu={{
+              items: [
+                {
+                  key: 'promote',
+                  label: (
+                    <Flex align='center' className='success' gap={12}>
+                      <FontAwesomeIcon icon={faBullseye} />
+                      Promote
+                    </Flex>
+                  )
+                },
+                {
+                  key: 'stage-details',
+                  label: (
+                    <Flex align='center' gap={12}>
+                      <FontAwesomeIcon icon={faInfo} />
+                      Details
+                    </Flex>
+                  ),
+                  onClick: () =>
+                    navigate(
+                      generatePath(paths.stage, {
+                        name: props.stage?.metadata?.namespace,
+                        stageName: props.stage?.metadata?.name
+                      })
+                    )
+                }
+              ]
+            }}
+          >
+            <Button size='small' className='text-xs' icon={<FontAwesomeIcon icon={faEllipsis} />} />
+          </Dropdown>
         </Flex>
       }
       className={classNames('stage-node', style['stage-node-size'])}
@@ -106,41 +144,11 @@ export const StageNode = (props: { stage: Stage }) => {
         <StageFreight stage={props.stage} />
       </div>
 
-      <Dropdown
-        trigger={['click']}
-        menu={{
-          items: [
-            {
-              label: (
-                <span className='text-[10px]'>
-                  <FontAwesomeIcon icon={faTruck} className='mr-2' />
-                  Promote to Downstream
-                </span>
-              ),
-              key: 'downstream'
-            },
-            {
-              label: (
-                <span className='text-[10px] text-orange-600'>
-                  <FontAwesomeIcon icon={faFire} className='mr-2' /> Hotfix
-                </span>
-              ),
-              key: 'hotfix'
-            }
-          ]
-        }}
-      >
-        <Button className='success' size='small'>
-          <span>Promote</span>
-          <FontAwesomeIcon className='ml-2' icon={faChevronDown} />
-        </Button>
-      </Dropdown>
-
       {!graphContext?.stackedNodesParents?.includes(stageNodeIndex) && (
         <Button
           icon={<FontAwesomeIcon icon={faMinus} />}
           size='small'
-          className='absolute top-[50%] translate-y-[-50%] text-[10px] z-10'
+          className='absolute top-[50%] right-0 translate-x-[50%] translate-y-[-50%] text-[10px] z-10'
           onClick={() => graphContext?.onStack(stageNodeIndex)}
         />
       )}

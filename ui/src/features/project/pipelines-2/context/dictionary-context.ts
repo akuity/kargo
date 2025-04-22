@@ -6,6 +6,7 @@ export type DictionaryContextType = {
   freightInStages: Record<string, Stage[]>;
   freightById: Record<string, Freight>;
   stageAutoPromotionMap: Record<string, boolean>;
+  subscribersByStage: Record<string, Set<string>>;
 };
 
 export const DictionaryContext = createContext<DictionaryContextType | null>(null);

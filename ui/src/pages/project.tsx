@@ -20,7 +20,7 @@ export const Project = ({
   creatingStage?: boolean;
   creatingWarehouse?: boolean;
 }) => {
-  const { name } = useParams();
+  const { name, stageName } = useParams();
   const navigate = useNavigate();
   const projectBreadcrumbs = useProjectBreadcrumbs();
 
@@ -67,7 +67,7 @@ export const Project = ({
         </Space>
       </BaseHeader>
 
-      <Pipelines project={data?.result?.value as _Project} />
+      <Pipelines project={data?.result?.value as _Project} stageName={stageName} />
     </div>
   );
 };

@@ -1,14 +1,10 @@
-import { IconProp } from '@fortawesome/fontawesome-svg-core';
-import { faDocker, faGitAlt } from '@fortawesome/free-brands-svg-icons';
-import { faAnchor, faCaretLeft, faCaretRight, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faCaretLeft, faCaretRight, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Descriptions, Divider, Table } from 'antd';
+import { Button, Descriptions, Divider } from 'antd';
 import classNames from 'classnames';
 import { useContext, useMemo, useRef, useState } from 'react';
 
 import { ColorContext } from '@ui/context/colors';
-import { ArtifactMetadata } from '@ui/features/freight/artifact-metadata';
-import { flattenFreightOrigin } from '@ui/features/freight/flatten-freight-origin-utils';
 import { FreightStatusList } from '@ui/features/freight/freight-status-list';
 import { useDictionaryContext } from '@ui/features/project/pipelines-2/context/dictionary-context';
 import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
@@ -18,6 +14,7 @@ import { useFreightTimelineControllerContext } from '../context/freight-timeline
 
 import { timerangeToDate } from './filter-timerange-utils';
 import { FreightCard } from './freight-card';
+import { FreightTable } from './freight-table';
 import { FreightTimelineFilters } from './freight-timeline-filters';
 import { filterFreightBySource, filterFreightByTimerange } from './source-catalogue-utils';
 
@@ -198,58 +195,7 @@ const FreightExtended = (props: { freight: Freight; onClose?: () => void }) => {
         ]}
       />
 
-      <Table
-        className='mt-5'
-        pagination={{
-          pageSize: 5
-        }}
-        dataSource={flattenFreightOrigin(props.freight)}
-        columns={[
-          {
-            title: 'Source',
-            render: (_, { type }) => {
-              let icon: IconProp = faGitAlt;
-
-              switch (type) {
-                case 'helm':
-                  icon = faAnchor;
-                  break;
-                case 'image':
-                  icon = faDocker;
-                  break;
-              }
-
-              return <FontAwesomeIcon icon={icon} />;
-            },
-            width: '5%'
-          },
-          {
-            title: 'Repo',
-            dataIndex: 'repoURL',
-            width: '30%'
-          },
-          {
-            title: 'Version',
-            render: (_, record) => {
-              switch (record.type) {
-                case 'git':
-                  return record.id;
-                case 'helm':
-                  return record.version;
-                case 'image':
-                  return record.tag;
-              }
-            }
-          },
-          {
-            title: 'Metadata',
-            width: '600px',
-            render: (_, record) => {
-              return <ArtifactMetadata {...record} />;
-            }
-          }
-        ]}
-      />
+      <FreightTable className='mt-5' freight={props.freight} />
       <FreightStatusList freight={props.freight} />
     </div>
   );

@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 
 import { ColorContext } from '@ui/context/colors';
 import { LoadingState } from '@ui/features/common';
+import StageDetails from '@ui/features/stage/stage-details';
 import { getColors } from '@ui/features/stage/utils';
 import {
   listStages,
@@ -21,10 +22,11 @@ import { Graph } from './graph/graph';
 import { useFreightById } from './use-freight-by-id';
 import { useFreightInStage } from './use-freight-in-stage';
 import { useStageAutoPromotionMap } from './use-stage-auto-promotion-map';
+import { useSubscribersByStage } from './use-subscribers-by-stage';
 
 import '@xyflow/react/dist/style.css';
 
-export const Pipelines = (props: { project: Project }) => {
+export const Pipelines = (props: { project: Project; stageName?: string }) => {
   const projectName = props.project?.metadata?.name;
 
   const getFreightQuery = useQuery(queryFreight, { project: projectName });
@@ -35,6 +37,10 @@ export const Pipelines = (props: { project: Project }) => {
 
   const loading =
     getFreightQuery.isLoading || listWarehousesQuery.isLoading || listStagesQuery.isLoading;
+
+  const stageDetails =
+    props.stageName &&
+    listStagesQuery?.data?.stages?.find((s) => s?.metadata?.name === props.stageName);
 
   const warehouseColorMap = useMemo(
     () =>
@@ -68,6 +74,7 @@ export const Pipelines = (props: { project: Project }) => {
   const freightInStages = useFreightInStage(listStagesQuery.data?.stages || []);
   const freightById = useFreightById(getFreightQuery?.data?.groups?.['']?.freight || []);
   const stageAutoPromotionMap = useStageAutoPromotionMap(props.project);
+  const subscribersByStage = useSubscribersByStage(listStagesQuery.data?.stages || []);
 
   if (loading) {
     return <LoadingState />;
@@ -82,7 +89,9 @@ export const Pipelines = (props: { project: Project }) => {
         setViewingFreight
       }}
     >
-      <DictionaryContext.Provider value={{ freightInStages, freightById, stageAutoPromotionMap }}>
+      <DictionaryContext.Provider
+        value={{ freightInStages, freightById, stageAutoPromotionMap, subscribersByStage }}
+      >
         <ColorContext.Provider value={{ stageColorMap, warehouseColorMap }}>
           <FreightTimeline freights={getFreightQuery?.data?.groups?.['']?.freight || []} />
 
@@ -93,6 +102,8 @@ export const Pipelines = (props: { project: Project }) => {
               stages={listStagesQuery.data?.stages || []}
             />
           </div>
+
+          {!!stageDetails && <StageDetails stage={stageDetails} />}
         </ColorContext.Provider>
       </DictionaryContext.Provider>
     </FreightTimelineControllerContext.Provider>
