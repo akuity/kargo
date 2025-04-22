@@ -2041,6 +2041,10 @@ export const PromotionPolicySchema: GenMessage<PromotionPolicy> = /*@__PURE__*/
   messageDesc(file_api_v1alpha1_generated, 44);
 
 /**
+ * PromotionPolicySelector is a selector that matches the resource to which
+ * this policy applies. It can be used to match a specific resource by name or
+ * to match a set of resources by label.
+ *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionPolicySelector
  */
 export type PromotionPolicySelector = Message<"github.com.akuity.kargo.api.v1alpha1.PromotionPolicySelector"> & {

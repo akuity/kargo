@@ -46,6 +46,9 @@ type PromotionPolicy struct {
 	AutoPromotionEnabled bool `json:"autoPromotionEnabled,omitempty" protobuf:"varint,2,opt,name=autoPromotionEnabled"`
 }
 
+// PromotionPolicySelector is a selector that matches the resource to which
+// this policy applies. It can be used to match a specific resource by name or
+// to match a set of resources by label.
 type PromotionPolicySelector struct {
 	// Name is the name of the resource to which this policy applies.
 	//
