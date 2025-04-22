@@ -45,29 +45,33 @@ creation. This includes things such as project-level RBAC resources and
 
 ## Promotion Policies
 
-A `Project` resource can additionally define project-level configuration. At
-present, this only includes **promotion policies** that describe which `Stage`s
-are eligible for automatic promotion of newly available `Freight`.
+A `ProjectConfig` resource defines project-level configuration for an associated
+`Project`. At present, this only includes **promotion policies** that describe
+which `Stage`s are eligible for automatic promotion of newly available `Freight`.
 
-:::note
-Promotion policies are defined at the project-level because users with
-permission to update `Stage` resources in a given project `Namespace` may _not_
-have permission to create `Promotion` resources. Defining promotion policies at
-the project-level therefore restricts such users from enabling automatic
-promotions for a `Stage` to which they may lack permission to promote to
-manually. It leaves decisions about eligibility for auto-promotion squarely in
-the hands of someone like a "project admin."
-:::
+The `ProjectConfig` resource must have the same name as its associated `Project`
+and be created in the `Namespace` of the `Project`. This separation of
+configuration from the `Project` resource enables more granular RBAC control.
+Users can be granted permission to modify project configurations via
+`ProjectConfig` resources without necessarily having broader access to `Project`
+resources themselves.
 
 In the example below, the `test` and `uat` `Stage`s are eligible for automatic
 promotion of newly available `Freight`, but any other `Stage`s in the `Project`
 are not:
 
 ```yaml
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+   name: example
+---
 apiVersion: kargo.akuity.io/v1alpha1
 kind: Project
 metadata:
   name: example
+  namespace: example
 spec:
   promotionPolicies:
   - stage: test
@@ -86,11 +90,13 @@ This enables pre-configuring such `Namespace`s according to your
 own requirements.
 
 :::info
-Requiring a `Namespace` to have the `kargo.akuity.io/project: "true"` label to be eligible for adoption by a new `Project` is intended to prevent accidental or willful hijacking of an existing `Namespace`.
+Requiring a `Namespace` to have the `kargo.akuity.io/project: "true"` label to
+be eligible for adoption by a new `Project` is intended to prevent accidental or
+willful hijacking of an existing `Namespace`.
 :::
 
 The following example demonstrates adoption of a `Namespace` that's been
-pre-configured with with a label unrelated to Kargo:
+pre-configured with a label unrelated to Kargo:
 
 ```yaml
 apiVersion: v1

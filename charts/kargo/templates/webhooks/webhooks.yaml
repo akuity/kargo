@@ -108,7 +108,22 @@ webhooks:
     apiGroups: ["kargo.akuity.io"]
     apiVersions: ["v1alpha1"]
     resources: ["projects"]
-    operations: ["CREATE"]
+    operations: ["CREATE", "UPDATE"]
+  failurePolicy: Fail
+- name: projectconfig.kargo.akuity.io
+  admissionReviewVersions: ["v1"]
+  sideEffects: NoneOnDryRun
+  clientConfig:
+    service:
+      namespace: {{ .Release.Namespace }}
+      name: kargo-webhooks-server
+      path: /validate-kargo-akuity-io-v1alpha1-projectconfig
+  rules:
+    - scope: Namespaced
+      apiGroups: ["kargo.akuity.io"]
+      apiVersions: ["v1alpha1"]
+      resources: ["projectconfigs"]
+      operations: ["CREATE", "UPDATE"]
   failurePolicy: Fail
 - name: promotion.kargo.akuity.io
   admissionReviewVersions: ["v1"]
