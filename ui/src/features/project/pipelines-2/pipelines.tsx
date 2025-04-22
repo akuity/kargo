@@ -1,6 +1,8 @@
 import { useQuery } from '@connectrpc/connect-query';
 import { useMemo, useState } from 'react';
+import { generatePath, useNavigate } from 'react-router-dom';
 
+import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
 import { LoadingState } from '@ui/features/common';
 import StageDetails from '@ui/features/stage/stage-details';
@@ -19,6 +21,7 @@ import {
 } from './context/freight-timeline-controller-context';
 import { FreightTimeline } from './freight/freight-timeline';
 import { Graph } from './graph/graph';
+import { Promotion } from './promotion/promotion';
 import { useFreightById } from './use-freight-by-id';
 import { useFreightInStage } from './use-freight-in-stage';
 import { useStageAutoPromotionMap } from './use-stage-auto-promotion-map';
@@ -27,7 +30,12 @@ import { useSubscribersByStage } from './use-subscribers-by-stage';
 
 import '@xyflow/react/dist/style.css';
 
-export const Pipelines = (props: { project: Project; stageName?: string }) => {
+export const Pipelines = (props: {
+  project: Project;
+  stageName?: string;
+  promotionId?: string;
+}) => {
+  const navigate = useNavigate();
   const projectName = props.project?.metadata?.name;
 
   const getFreightQuery = useQuery(queryFreight, { project: projectName });
@@ -112,6 +120,14 @@ export const Pipelines = (props: { project: Project; stageName?: string }) => {
           </div>
 
           {!!stageDetails && <StageDetails stage={stageDetails} />}
+          {!!props.promotionId && (
+            <Promotion
+              visible
+              hide={() => navigate(generatePath(paths.project, { name: projectName }))}
+              promotionId={props.promotionId}
+              project={projectName || ''}
+            />
+          )}
         </ColorContext.Provider>
       </DictionaryContext.Provider>
     </FreightTimelineControllerContext.Provider>

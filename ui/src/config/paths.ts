@@ -5,6 +5,7 @@ export const paths = {
   projectEvents: '/project/:name/events',
   stage: '/project/:name/stage/:stageName',
   warehouse: '/project/:name/warehouse/:warehouseName/:tab?',
+  promotion: '/project/:name/promotion/:promotionId',
   freight: '/project/:name/freight/:freightName',
   createStage: '/project/:name/create-stage',
   createWarehouse: '/project/:name/create-warehouse',

@@ -12,7 +12,7 @@ export const useMiniPromotionGraph = (stage: Stage, freight: Freight) => {
 
   return useMemo(() => {
     const stageName = stage?.metadata?.name || '';
-    const graph = new graphlib.Graph();
+    const graph = new graphlib.Graph<{ handles: number }>();
 
     graph.setGraph({ rankdir: 'LR' });
     graph.setDefaultEdgeLabel(() => ({}));
@@ -23,7 +23,7 @@ export const useMiniPromotionGraph = (stage: Stage, freight: Freight) => {
 
     if (parentStages) {
       for (const parentStage of parentStages) {
-        graph.setNode(parentStage, nodeSize());
+        graph.setNode(parentStage, { ...nodeSize(), handles: parentStages.size });
         graph.setEdge(parentStage, stageName);
       }
     } else {
@@ -47,7 +47,8 @@ export const useMiniPromotionGraph = (stage: Stage, freight: Freight) => {
           y: dagreNode?.y
         },
         data: {
-          label: node
+          label: node,
+          handles: dagreNode.handles
         }
       });
     }

@@ -1,10 +1,16 @@
-import { faBullseye, faEllipsis, faInfo, faMinus } from '@fortawesome/free-solid-svg-icons';
+import {
+  faBullseye,
+  faEllipsis,
+  faExternalLink,
+  faInfo,
+  faMinus
+} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Card, Dropdown, Flex } from 'antd';
 import classNames from 'classnames';
 import { formatDistance } from 'date-fns';
 import { CSSProperties, ReactNode, useContext, useMemo } from 'react';
-import { generatePath, useNavigate } from 'react-router-dom';
+import { generatePath, Link, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
@@ -44,7 +50,7 @@ export const StageNode = (props: { stage: Stage }) => {
   let descriptionItems: ReactNode;
 
   if (!controlFlow) {
-    const lastPromotion = getLastPromotion(props.stage);
+    const lastPromotion = getLastPromotionDate(props.stage);
     const date = timestampDate(lastPromotion) as Date;
 
     descriptionItems = (
@@ -72,12 +78,20 @@ export const StageNode = (props: { stage: Stage }) => {
         </Flex>
 
         {lastPromotion && (
-          <Flex gap={4}>
-            <span>Last Promotion: </span>
-            <span title={date?.toString()}>
-              {formatDistance(date, new Date(), { addSuffix: true })}
-            </span>
-          </Flex>
+          <Link
+            to={generatePath(paths.promotion, {
+              name: props.stage?.metadata?.namespace,
+              promotionId: props.stage?.status?.lastPromotion?.name
+            })}
+          >
+            <Flex gap={4} align='center'>
+              <span>Last Promotion: </span>
+              <span title={date?.toString()}>
+                {formatDistance(date, new Date(), { addSuffix: true })}
+              </span>
+              <FontAwesomeIcon icon={faExternalLink} className='text-[6px]' />
+            </Flex>
+          </Link>
         )}
       </Flex>
     );
@@ -190,4 +204,4 @@ const useIsColorsUsed = () => {
   return freightTimelineControllerContext?.preferredFilter?.showColors;
 };
 
-const getLastPromotion = (stage: Stage) => stage?.status?.lastPromotion?.finishedAt;
+const getLastPromotionDate = (stage: Stage) => stage?.status?.lastPromotion?.finishedAt;
