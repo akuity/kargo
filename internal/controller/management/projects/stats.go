@@ -11,10 +11,15 @@ import (
 	"github.com/akuity/kargo/internal/conditions"
 )
 
+// collectStats collects statistics about the current health state of all
+// Warehouses and Stages in the Project. It returns a ProjectStatus that's been
+// updated with the collected stats.
 func (r *reconciler) collectStats(
 	ctx context.Context,
 	project *kargoapi.Project,
 ) (kargoapi.ProjectStatus, error) {
+	status := *project.Status.DeepCopy()
+
 	// Mark the Project as reconciling.
 	conditions.Set(&project.Status, &metav1.Condition{
 		Type:               kargoapi.ConditionTypeReconciling,
@@ -23,8 +28,7 @@ func (r *reconciler) collectStats(
 		Message:            "Collecting project stats",
 		ObservedGeneration: project.GetGeneration(),
 	})
-
-	status := *project.Status.DeepCopy()
+	defer conditions.Delete(&status, kargoapi.ConditionTypeReconciling)
 
 	warehouses := &kargoapi.WarehouseList{}
 	if err := r.client.List(
@@ -97,6 +101,5 @@ func (r *reconciler) collectStats(
 	status.Stats = stats
 
 	conditions.Delete(&status, kargoapi.ConditionTypeHealthy)
-	conditions.Delete(&status, kargoapi.ConditionTypeReconciling)
 	return status, nil
 }
