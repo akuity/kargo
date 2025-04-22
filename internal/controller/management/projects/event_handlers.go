@@ -13,6 +13,8 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
+// projectWarehouseHealthEnqueuer enqueues a Project for reconciliation when the
+// health condition of a Warehouse within that Project changes.
 type projectWarehouseHealthEnqueuer[T any] struct{}
 
 // Create implements TypedEventHandler.
@@ -82,6 +84,8 @@ func (e *projectWarehouseHealthEnqueuer[T]) Update(
 	}
 }
 
+// projectStageHealthEnqueuer enqueues a Project for reconciliation when the
+// health condition of a Stage within that Project changes.
 type projectStageHealthEnqueuer[T any] struct{}
 
 // Create implements TypedEventHandler.
