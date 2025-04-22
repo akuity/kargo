@@ -49,12 +49,17 @@ spec:
           metadata:
             type: object
           spec:
-            description: Spec describes a Project.
+            description: |-
+              Spec describes a Project.
+
+              Deprecated: Create a ProjectConfig resource with the same name as the
+              Project resource in the Project's namespace. The ProjectConfig resource
+              can be used to configure the Project.
             properties:
               promotionPolicies:
                 description: |-
                   PromotionPolicies defines policies governing the promotion of Freight to
-                  specific Stages within this Project.
+                  specific Stages within the Project.
                 items:
                   description: |-
                     PromotionPolicy defines policies governing the promotion of Freight to a

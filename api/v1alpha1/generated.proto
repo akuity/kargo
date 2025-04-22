@@ -825,10 +825,40 @@ message Project {
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
   // Spec describes a Project.
-  optional ProjectSpec spec = 2;
+  //
+  // Deprecated: Create a ProjectConfig resource with the same name as the
+  // Project resource in the Project's namespace. The ProjectConfig resource
+  // can be used to configure the Project.
+  optional ProjectConfigSpec spec = 2;
 
   // Status describes the Project's current status.
   optional ProjectStatus status = 3;
+}
+
+// ProjectConfig is a resource type that describes the configuration of a
+// Project.
+message ProjectConfig {
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
+  // Spec describes the configuration of a Project.
+  optional ProjectConfigSpec spec = 2;
+}
+
+// ProjectConfigList is a list of ProjectConfig resources.
+message ProjectConfigList {
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+
+  repeated ProjectConfig items = 2;
+}
+
+// ProjectSpec is a deprecated alias for ProjectConfigSpec. It is retained for
+// backwards compatibility.
+//
+// Deprecated: Use ProjectConfigSpec instead.
+message ProjectConfigSpec {
+  // PromotionPolicies defines policies governing the promotion of Freight to
+  // specific Stages within the Project.
+  repeated PromotionPolicy promotionPolicies = 1;
 }
 
 // ProjectList is a list of Project resources.
@@ -836,13 +866,6 @@ message ProjectList {
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
 
   repeated Project items = 2;
-}
-
-// ProjectSpec describes a Project.
-message ProjectSpec {
-  // PromotionPolicies defines policies governing the promotion of Freight to
-  // specific Stages within this Project.
-  repeated PromotionPolicy promotionPolicies = 1;
 }
 
 message ProjectStats {

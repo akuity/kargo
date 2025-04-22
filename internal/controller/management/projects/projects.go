@@ -74,6 +74,12 @@ type reconciler struct {
 		*kargoapi.Project,
 	) (kargoapi.ProjectStatus, error)
 
+	updateProjectFn func(
+		context.Context,
+		client.Object,
+		...client.UpdateOption,
+	) error
+
 	patchProjectStatusFn func(
 		context.Context,
 		*kargoapi.Project,
@@ -124,6 +130,12 @@ type reconciler struct {
 	) error
 
 	createRoleBindingFn func(
+		context.Context,
+		client.Object,
+		...client.CreateOption,
+	) error
+
+	createProjectConfigFn func(
 		context.Context,
 		client.Object,
 		...client.CreateOption,
@@ -191,6 +203,7 @@ func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
 	r.getProjectFn = api.GetProject
 	r.initializeProjectFn = r.initializeProject
 	r.ensureNamespaceFn = r.ensureNamespace
+	r.updateProjectFn = r.client.Update
 	r.patchProjectStatusFn = r.patchProjectStatus
 	r.getNamespaceFn = r.client.Get
 	r.createNamespaceFn = r.client.Create
@@ -202,6 +215,7 @@ func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
 	r.createServiceAccountFn = r.client.Create
 	r.createRoleFn = r.client.Create
 	r.createRoleBindingFn = r.client.Create
+	r.createProjectConfigFn = r.client.Create
 	return r
 }
 
@@ -277,10 +291,44 @@ func (r *reconciler) reconcile(
 		{
 			name: "migrate phase to conditions",
 			reconcile: func() (kargoapi.ProjectStatus, bool, error) {
+				// TODO(krancour): Remove this migration code when the Phase field is
+				// removed from ProjectStatus.
 				if newStatus, ok := migratePhaseToConditions(project); ok {
 					logger.Debug("migrated Project phase to conditions")
 					requestRequeue = true
 					return newStatus, true, nil // Stop the loop
+				}
+				return status, false, nil // Continue
+			},
+		},
+		{
+			name: "migrate spec to ProjectConfig",
+			reconcile: func() (kargoapi.ProjectStatus, bool, error) {
+				// TODO(hidde): Remove this migration code when the spec field is
+				// removed from the Project.
+				if projectCfg, ok := migrateSpecToProjectConfig(project); ok {
+					// If we receive a ProjectConfig, we need to create it.
+					if projectCfg != nil {
+						if err := r.createProjectConfigFn(ctx, projectCfg); err != nil {
+							// If the ProjectConfig already exists, we can ignore the error.
+							// This can for example happen if the ProjectConfig was created
+							// by the user without them removing the spec from the Project.
+							if !kubeerr.IsAlreadyExists(err) {
+								return status, true, err // Stop the loop
+							}
+							logger.Debug("ProjectConfig already exists")
+						} else {
+							logger.Debug(fmt.Sprintf(
+								"migrated Project spec to ProjectConfig %q",
+								projectCfg.Name,
+							))
+						}
+					}
+					// Remove the spec from the Project.
+					if err := r.updateProjectFn(ctx, project); err != nil {
+						return status, true, err // Stop the loop
+					}
+					logger.Debug("removed deprecated spec from Project")
 				}
 				return status, false, nil // Continue
 			},
@@ -734,7 +782,7 @@ func (r *reconciler) ensureDefaultProjectRoles(
 				},
 				{ // Full access to all mutable Kargo resource types
 					APIGroups: []string{kargoapi.GroupVersion.Group},
-					Resources: []string{"freights", "stages", "warehouses"},
+					Resources: []string{"freights", "stages", "warehouses", "projectconfigs"},
 					Verbs:     []string{"*"},
 				},
 				{ // Promote permission on all stages
@@ -786,7 +834,7 @@ func (r *reconciler) ensureDefaultProjectRoles(
 				},
 				{
 					APIGroups: []string{kargoapi.GroupVersion.Group},
-					Resources: []string{"freights", "promotions", "stages", "warehouses"},
+					Resources: []string{"freights", "promotions", "stages", "warehouses", "projectconfigs"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
 				{
@@ -936,6 +984,40 @@ func migratePhaseToConditions(project *kargoapi.Project) (kargoapi.ProjectStatus
 	status.Message = "" // nolint:staticcheck
 
 	return status, true
+}
+
+// migrateSpecToProjectConfig migrates the Project's Spec to a dedicated
+// ProjectConfig resource. It returns the new ProjectConfig and a boolean
+// indicating whether the Project's Spec was cleared.
+func migrateSpecToProjectConfig(
+	project *kargoapi.Project,
+) (*kargoapi.ProjectConfig, bool) {
+	if project.Spec == nil { // nolint:staticcheck
+		return nil, false
+	}
+
+	// If the Project has no PromotionPolicies, we can remove the spec entirely.
+	if len(project.Spec.PromotionPolicies) == 0 { // nolint:staticcheck
+		project.Spec = nil // nolint:staticcheck
+		return nil, true
+	}
+
+	// If the Project has PromotionPolicies, we need to migrate them to a
+	// ProjectConfig.
+	projectConfig := &kargoapi.ProjectConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      project.Name,
+			Namespace: project.Name,
+		},
+		Spec: kargoapi.ProjectConfigSpec{
+			PromotionPolicies: project.Spec.PromotionPolicies, // nolint:staticcheck
+		},
+	}
+
+	// Clear the spec now that we've migrated it to a ProjectConfig.
+	project.Spec = nil // nolint:staticcheck
+
+	return projectConfig, true
 }
 
 func getRoleBindingName(serviceAccountName string) string {

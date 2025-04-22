@@ -45,6 +45,7 @@ rules:
   - clusterpromotiontasks
   - freights
   - projects
+  - projectconfigs
   - promotiontasks
   - stages
   - warehouses

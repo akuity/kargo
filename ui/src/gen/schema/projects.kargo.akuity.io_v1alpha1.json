@@ -14,10 +14,10 @@
       "type": "object"
     },
     "spec": {
-      "description": "Spec describes a Project.",
+      "description": "Spec describes a Project.\n\nDeprecated: Create a ProjectConfig resource with the same name as the\nProject resource in the Project's namespace. The ProjectConfig resource\ncan be used to configure the Project.",
       "properties": {
         "promotionPolicies": {
-          "description": "PromotionPolicies defines policies governing the promotion of Freight to\nspecific Stages within this Project.",
+          "description": "PromotionPolicies defines policies governing the promotion of Freight to\nspecific Stages within the Project.",
           "items": {
             "description": "PromotionPolicy defines policies governing the promotion of Freight to a\nspecific Stage.",
             "properties": {

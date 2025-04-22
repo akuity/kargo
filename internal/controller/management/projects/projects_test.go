@@ -30,16 +30,19 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, r.getProjectFn)
 	require.NotNil(t, r.initializeProjectFn)
 	require.NotNil(t, r.ensureNamespaceFn)
+	require.NotNil(t, r.updateProjectFn)
 	require.NotNil(t, r.patchProjectStatusFn)
 	require.NotNil(t, r.getNamespaceFn)
 	require.NotNil(t, r.createNamespaceFn)
 	require.NotNil(t, r.patchOwnerReferencesFn)
 	require.NotNil(t, r.ensureFinalizerFn)
 	require.NotNil(t, r.ensureAPIAdminPermissionsFn)
+	require.NotNil(t, r.ensureControllerPermissionsFn)
 	require.NotNil(t, r.ensureDefaultProjectRolesFn)
 	require.NotNil(t, r.createServiceAccountFn)
 	require.NotNil(t, r.createRoleFn)
 	require.NotNil(t, r.createRoleBindingFn)
+	require.NotNil(t, r.createProjectConfigFn)
 }
 
 func TestReconciler_Reconcile(*testing.T) {
@@ -1087,6 +1090,67 @@ func TestReconciler_migratePhaseToConditions(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			status, ok := migratePhaseToConditions(tt.project)
 			tt.assertions(t, status, ok)
+		})
+	}
+}
+
+func TestMigrateSpecToProjectConfig(t *testing.T) {
+	tests := []struct {
+		name       string
+		project    *kargoapi.Project
+		assertions func(t *testing.T, projectConfig *kargoapi.ProjectConfig, ok bool)
+	}{
+		{
+			name: "nil spec",
+			project: &kargoapi.Project{
+				Spec: nil,
+			},
+			assertions: func(t *testing.T, projectConfig *kargoapi.ProjectConfig, ok bool) {
+				require.Nil(t, projectConfig)
+				require.False(t, ok)
+			},
+		},
+		{
+			name: "empty promotion policies",
+			project: &kargoapi.Project{
+				Spec: &kargoapi.ProjectSpec{ // nolint:staticcheck
+					PromotionPolicies: []kargoapi.PromotionPolicy{},
+				},
+			},
+			assertions: func(t *testing.T, projectConfig *kargoapi.ProjectConfig, ok bool) {
+				require.Nil(t, projectConfig)
+				require.True(t, ok)
+				// Verify that the spec was cleared
+				require.Nil(t, projectConfig)
+			},
+		},
+		{
+			name: "with promotion policies",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-project",
+				},
+				Spec: &kargoapi.ProjectSpec{ // nolint:staticcheck
+					PromotionPolicies: []kargoapi.PromotionPolicy{
+						{Stage: "policy-1"},
+					},
+				},
+			},
+			assertions: func(t *testing.T, projectConfig *kargoapi.ProjectConfig, ok bool) {
+				require.NotNil(t, projectConfig)
+				require.True(t, ok)
+				require.Equal(t, "test-project", projectConfig.Name)
+				require.Equal(t, "test-project", projectConfig.Namespace)
+				require.Len(t, projectConfig.Spec.PromotionPolicies, 1)
+				require.Equal(t, "policy-1", projectConfig.Spec.PromotionPolicies[0].Stage)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			projectConfig, ok := migrateSpecToProjectConfig(tt.project)
+			tt.assertions(t, projectConfig, ok)
 		})
 	}
 }

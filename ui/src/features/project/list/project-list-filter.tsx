@@ -24,11 +24,16 @@ export const ProjectListFilter = ({
   );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && filteredProjects?.length === 1) {
-      const selectedProject = filteredProjects[0].metadata?.name;
-      if (selectedProject) {
-        navigate(paths.project.replace(':name', selectedProject));
-      }
+    if (e.key !== 'Enter') return;
+
+    if (filteredProjects?.length !== 1 || !filter) {
+      onChange(filter);
+      return;
+    }
+
+    const selectedProject = filteredProjects![0].metadata?.name;
+    if (selectedProject) {
+      navigate(paths.project.replace(':name', selectedProject));
     }
   };
 
