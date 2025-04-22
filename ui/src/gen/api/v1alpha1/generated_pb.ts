@@ -2047,9 +2047,15 @@ export type PromotionPolicySelector = Message<"github.com.akuity.kargo.api.v1alp
   /**
    * Name is the name of the resource to which this policy applies.
    *
-   * It selects a resource based on its name. It supports exact name matching,
-   * regex matching (with prefix "regex:"), or glob pattern matching (with
-   * prefix "glob:").
+   * It can be an exact name, a regex pattern (with prefix "regex:"), or a
+   * glob pattern (with prefix "glob:").
+   *
+   * NOTE: Using a specific exact name is the most secure option. Pattern
+   * matching via regex or glob can be exploited by users with permissions to
+   * match promotion policies that weren't intended to apply to their
+   * resources. For example, a user could create a resource with a name
+   * deliberately crafted to match the pattern, potentially bypassing intended
+   * promotion controls.
    *
    * +optional
    *
@@ -2060,6 +2066,11 @@ export type PromotionPolicySelector = Message<"github.com.akuity.kargo.api.v1alp
   /**
    * LabelSelector is a selector that matches the resource to which this policy
    * applies.
+   *
+   * NOTE: Using label selectors introduces security risks as users with
+   * appropriate permissions could create new resources with labels that match
+   * the selector, potentially enabling unauthorized auto-promotion.
+   * For sensitive environments, exact Name matching provides tighter control.
    *
    * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector labelSelector = 2;
    */

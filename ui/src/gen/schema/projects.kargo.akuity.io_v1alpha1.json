@@ -72,7 +72,7 @@
                     "type": "object"
                   },
                   "name": {
-                    "description": "Name is the name of the resource to which this policy applies.\n\nIt selects a resource based on its name. It supports exact name matching,\nregex matching (with prefix \"regex:\"), or glob pattern matching (with\nprefix \"glob:\").",
+                    "description": "Name is the name of the resource to which this policy applies.\n\nIt can be an exact name, a regex pattern (with prefix \"regex:\"), or a\nglob pattern (with prefix \"glob:\").\n\nNOTE: Using a specific exact name is the most secure option. Pattern\nmatching via regex or glob can be exploited by users with permissions to\nmatch promotion policies that weren't intended to apply to their\nresources. For example, a user could create a resource with a name\ndeliberately crafted to match the pattern, potentially bypassing intended\npromotion controls.",
                     "type": "string"
                   }
                 },
