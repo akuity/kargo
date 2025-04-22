@@ -1434,27 +1434,29 @@ export const HealthCheckStepSchema: GenMessage<HealthCheckStep> = /*@__PURE__*/
   messageDesc(file_api_v1alpha1_generated, 30);
 
 /**
- * TODO: Document this
+ * HealthStats contains a summary of the collective health of a some resource
+ * type.
  *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.HealthStats
  */
 export type HealthStats = Message<"github.com.akuity.kargo.api.v1alpha1.HealthStats"> & {
   /**
-   * TODO: Document this
+   * Healthy contains the number of resources that are explicitly healthy.
    *
    * @generated from field: optional int64 healthy = 1;
    */
   healthy: bigint;
 
   /**
-   * TODO: Document this
+   * Unhealthy contains the number of resources that are explicitly unhealthy.
    *
    * @generated from field: optional int64 unhealthy = 2;
    */
   unhealthy: bigint;
 
   /**
-   * TODO: Document this
+   * Unknown contains the number of resources whose current health is
+   * indeterminable.
    *
    * @generated from field: optional int64 unknown = 3;
    */
@@ -1853,20 +1855,22 @@ export const ProjectListSchema: GenMessage<ProjectList> = /*@__PURE__*/
   messageDesc(file_api_v1alpha1_generated, 39);
 
 /**
- * TODO: Document this
+ * ProjectStats contains a summary of the of the collective state of a
+ * Project's constituent resources.
  *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.ProjectStats
  */
 export type ProjectStats = Message<"github.com.akuity.kargo.api.v1alpha1.ProjectStats"> & {
   /**
-   * TODO: Document this
+   * Warehouses contains a summary of the collective state of the Project's
+   * Warehouses.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.WarehouseStats warehouses = 1;
    */
   warehouses?: WarehouseStats;
 
   /**
-   * TODO: Document this
+   * Stages contains a summary of the collective state of the Project's Stages.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.StageStats stages = 2;
    */
@@ -1919,7 +1923,8 @@ export type ProjectStatus = Message<"github.com.akuity.kargo.api.v1alpha1.Projec
   message: string;
 
   /**
-   * TODO: Document this
+   * Stats contains a summary of the of the collective state of a Project's
+   * constituent resources.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.ProjectStats stats = 4;
    */
@@ -2711,13 +2716,14 @@ export const StageSpecSchema: GenMessage<StageSpec> = /*@__PURE__*/
   messageDesc(file_api_v1alpha1_generated, 59);
 
 /**
- * TODO: Document this
+ * StageStats contains a summary of the collective state of the a Project's
+ * Stages.
  *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.StageStats
  */
 export type StageStats = Message<"github.com.akuity.kargo.api.v1alpha1.StageStats"> & {
   /**
-   * TODO: Document this
+   * Health contains a summary of the collective health of a Project's Stages.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.HealthStats health = 1;
    */
@@ -3164,13 +3170,15 @@ export const WarehouseSpecSchema: GenMessage<WarehouseSpec> = /*@__PURE__*/
   messageDesc(file_api_v1alpha1_generated, 68);
 
 /**
- * TODO: Document this
+ * WarehouseStats contains a summary of the collective state of the a Project's
+ * Warehouses.
  *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.WarehouseStats
  */
 export type WarehouseStats = Message<"github.com.akuity.kargo.api.v1alpha1.WarehouseStats"> & {
   /**
-   * TODO: Document this
+   * Health contains a summary of the collective health of a Project's
+   * Warehouses.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.HealthStats health = 1;
    */

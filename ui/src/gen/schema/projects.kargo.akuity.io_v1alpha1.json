@@ -113,24 +113,30 @@
           "type": "string"
         },
         "stats": {
+          "description": "Stats contains a summary of the of the collective state of a Project's\nconstituent resources.",
           "properties": {
             "stages": {
+              "description": "Stages contains a summary of the collective state of the Project's Stages.",
               "properties": {
                 "health": {
+                  "description": "Health contains a summary of the collective health of a Project's Stages.",
                   "properties": {
                     "healthy": {
+                      "description": "Healthy contains the number of resources that are explicitly healthy.",
                       "format": "int64",
                       "maximum": 9223372036854776000,
                       "minimum": -9223372036854776000,
                       "type": "integer"
                     },
                     "unhealthy": {
+                      "description": "Unhealthy contains the number of resources that are explicitly unhealthy.",
                       "format": "int64",
                       "maximum": 9223372036854776000,
                       "minimum": -9223372036854776000,
                       "type": "integer"
                     },
                     "unknown": {
+                      "description": "Unknown contains the number of resources whose current health is\nindeterminable.",
                       "format": "int64",
                       "maximum": 9223372036854776000,
                       "minimum": -9223372036854776000,
@@ -143,22 +149,27 @@
               "type": "object"
             },
             "warehouses": {
+              "description": "Warehouses contains a summary of the collective state of the Project's\nWarehouses.",
               "properties": {
                 "health": {
+                  "description": "Health contains a summary of the collective health of a Project's\nWarehouses.",
                   "properties": {
                     "healthy": {
+                      "description": "Healthy contains the number of resources that are explicitly healthy.",
                       "format": "int64",
                       "maximum": 9223372036854776000,
                       "minimum": -9223372036854776000,
                       "type": "integer"
                     },
                     "unhealthy": {
+                      "description": "Unhealthy contains the number of resources that are explicitly unhealthy.",
                       "format": "int64",
                       "maximum": 9223372036854776000,
                       "minimum": -9223372036854776000,
                       "type": "integer"
                     },
                     "unknown": {
+                      "description": "Unknown contains the number of resources whose current health is\nindeterminable.",
                       "format": "int64",
                       "maximum": 9223372036854776000,
                       "minimum": -9223372036854776000,

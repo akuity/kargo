@@ -78,45 +78,55 @@ type ProjectStatus struct {
 	//
 	// Deprecated: Use the Conditions field instead.
 	Message string `json:"message,omitempty" protobuf:"bytes,2,opt,name=message"`
-	// TODO: Document this
+	// Stats contains a summary of the of the collective state of a Project's
+	// constituent resources.
 	Stats ProjectStats `json:"stats,omitempty" protobuf:"bytes,4,opt,name=stats"`
 }
 
+// GetConditions implements the conditions.Getter interface.
 func (w *ProjectStatus) GetConditions() []metav1.Condition {
 	return w.Conditions
 }
 
+// SetConditions implements the conditions.Setter interface.
 func (w *ProjectStatus) SetConditions(conditions []metav1.Condition) {
 	w.Conditions = conditions
 }
 
-// TODO: Document this
+// ProjectStats contains a summary of the of the collective state of a
+// Project's constituent resources.
 type ProjectStats struct {
-	// TODO: Document this
+	// Warehouses contains a summary of the collective state of the Project's
+	// Warehouses.
 	Warehouses WarehouseStats `json:"warehouses,omitempty" protobuf:"bytes,1,opt,name=warehouses"`
-	// TODO: Document this
+	// Stages contains a summary of the collective state of the Project's Stages.
 	Stages StageStats `json:"stages,omitempty" protobuf:"bytes,2,opt,name=stages"`
 }
 
-// TODO: Document this
+// WarehouseStats contains a summary of the collective state of the a Project's
+// Warehouses.
 type WarehouseStats struct {
-	// TODO: Document this
+	// Health contains a summary of the collective health of a Project's
+	// Warehouses.
 	Health HealthStats `json:"health,omitempty" protobuf:"bytes,1,opt,name=health"`
 }
 
-// TODO: Document this
+// StageStats contains a summary of the collective state of the a Project's
+// Stages.
 type StageStats struct {
-	// TODO: Document this
+	// Health contains a summary of the collective health of a Project's Stages.
 	Health HealthStats `json:"health,omitempty" protobuf:"bytes,1,opt,name=health"`
 }
 
-// TODO: Document this
+// HealthStats contains a summary of the collective health of a some resource
+// type.
 type HealthStats struct {
-	// TODO: Document this
+	// Healthy contains the number of resources that are explicitly healthy.
 	Healthy int64 `json:"healthy,omitempty" protobuf:"varint,1,opt,name=healthy"`
-	// TODO: Document this
+	// Unhealthy contains the number of resources that are explicitly unhealthy.
 	Unhealthy int64 `json:"unhealthy,omitempty" protobuf:"varint,2,opt,name=unhealthy"`
-	// TODO: Document this
+	// Unknown contains the number of resources whose current health is
+	// indeterminable.
 	Unknown int64 `json:"unknown,omitempty" protobuf:"varint,3,opt,name=unknown"`
 }
 

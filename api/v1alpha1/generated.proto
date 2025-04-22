@@ -670,15 +670,17 @@ message HealthCheckStep {
   optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 2;
 }
 
-// TODO: Document this
+// HealthStats contains a summary of the collective health of a some resource
+// type.
 message HealthStats {
-  // TODO: Document this
+  // Healthy contains the number of resources that are explicitly healthy.
   optional int64 healthy = 1;
 
-  // TODO: Document this
+  // Unhealthy contains the number of resources that are explicitly unhealthy.
   optional int64 unhealthy = 2;
 
-  // TODO: Document this
+  // Unknown contains the number of resources whose current health is
+  // indeterminable.
   optional int64 unknown = 3;
 }
 
@@ -872,12 +874,14 @@ message ProjectList {
   repeated Project items = 2;
 }
 
-// TODO: Document this
+// ProjectStats contains a summary of the of the collective state of a
+// Project's constituent resources.
 message ProjectStats {
-  // TODO: Document this
+  // Warehouses contains a summary of the collective state of the Project's
+  // Warehouses.
   optional WarehouseStats warehouses = 1;
 
-  // TODO: Document this
+  // Stages contains a summary of the collective state of the Project's Stages.
   optional StageStats stages = 2;
 }
 
@@ -903,7 +907,8 @@ message ProjectStatus {
   // Deprecated: Use the Conditions field instead.
   optional string message = 2;
 
-  // TODO: Document this
+  // Stats contains a summary of the of the collective state of a Project's
+  // constituent resources.
   optional ProjectStats stats = 4;
 }
 
@@ -1266,9 +1271,10 @@ message StageSpec {
   optional Verification verification = 3;
 }
 
-// TODO: Document this
+// StageStats contains a summary of the collective state of the a Project's
+// Stages.
 message StageStats {
-  // TODO: Document this
+  // Health contains a summary of the collective health of a Project's Stages.
   optional HealthStats health = 1;
 }
 
@@ -1471,9 +1477,11 @@ message WarehouseSpec {
   repeated RepoSubscription subscriptions = 1;
 }
 
-// TODO: Document this
+// WarehouseStats contains a summary of the collective state of the a Project's
+// Warehouses.
 message WarehouseStats {
-  // TODO: Document this
+  // Health contains a summary of the collective health of a Project's
+  // Warehouses.
   optional HealthStats health = 1;
 }
 
