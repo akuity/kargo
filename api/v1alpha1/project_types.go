@@ -78,7 +78,7 @@ type ProjectStatus struct {
 	//
 	// Deprecated: Use the Conditions field instead.
 	Message string `json:"message,omitempty" protobuf:"bytes,2,opt,name=message"`
-
+	// TODO: Document this
 	Stats ProjectStats `json:"stats,omitempty" protobuf:"bytes,4,opt,name=stats"`
 }
 
@@ -90,23 +90,34 @@ func (w *ProjectStatus) SetConditions(conditions []metav1.Condition) {
 	w.Conditions = conditions
 }
 
+// TODO: Document this
 type ProjectStats struct {
+	// TODO: Document this
 	Warehouses WarehouseStats `json:"warehouses,omitempty" protobuf:"bytes,1,opt,name=warehouses"`
-	Stages     StageStats     `json:"stages,omitempty" protobuf:"bytes,2,opt,name=stages"`
+	// TODO: Document this
+	Stages StageStats `json:"stages,omitempty" protobuf:"bytes,2,opt,name=stages"`
 }
 
+// TODO: Document this
 type WarehouseStats struct {
+	// TODO: Document this
 	Health HealthStats `json:"health,omitempty" protobuf:"bytes,1,opt,name=health"`
 }
 
+// TODO: Document this
 type StageStats struct {
+	// TODO: Document this
 	Health HealthStats `json:"health,omitempty" protobuf:"bytes,1,opt,name=health"`
 }
 
+// TODO: Document this
 type HealthStats struct {
-	Healthy   int64 `json:"healthy,omitempty" protobuf:"varint,1,opt,name=healthy"`
+	// TODO: Document this
+	Healthy int64 `json:"healthy,omitempty" protobuf:"varint,1,opt,name=healthy"`
+	// TODO: Document this
 	Unhealthy int64 `json:"unhealthy,omitempty" protobuf:"varint,2,opt,name=unhealthy"`
-	Unknown   int64 `json:"unknown,omitempty" protobuf:"varint,3,opt,name=unknown"`
+	// TODO: Document this
+	Unknown int64 `json:"unknown,omitempty" protobuf:"varint,3,opt,name=unknown"`
 }
 
 // +kubebuilder:object:root=true

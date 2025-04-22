@@ -670,11 +670,15 @@ message HealthCheckStep {
   optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 2;
 }
 
+// TODO: Document this
 message HealthStats {
+  // TODO: Document this
   optional int64 healthy = 1;
 
+  // TODO: Document this
   optional int64 unhealthy = 2;
 
+  // TODO: Document this
   optional int64 unknown = 3;
 }
 
@@ -868,9 +872,12 @@ message ProjectList {
   repeated Project items = 2;
 }
 
+// TODO: Document this
 message ProjectStats {
+  // TODO: Document this
   optional WarehouseStats warehouses = 1;
 
+  // TODO: Document this
   optional StageStats stages = 2;
 }
 
@@ -896,6 +903,7 @@ message ProjectStatus {
   // Deprecated: Use the Conditions field instead.
   optional string message = 2;
 
+  // TODO: Document this
   optional ProjectStats stats = 4;
 }
 
@@ -1258,7 +1266,9 @@ message StageSpec {
   optional Verification verification = 3;
 }
 
+// TODO: Document this
 message StageStats {
+  // TODO: Document this
   optional HealthStats health = 1;
 }
 
@@ -1461,7 +1471,9 @@ message WarehouseSpec {
   repeated RepoSubscription subscriptions = 1;
 }
 
+// TODO: Document this
 message WarehouseStats {
+  // TODO: Document this
   optional HealthStats health = 1;
 }
 
