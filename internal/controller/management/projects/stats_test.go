@@ -5,13 +5,15 @@ import (
 	"fmt"
 	"testing"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/conditions"
 )
 
 func Test_reconciler_collectStats(t *testing.T) {
@@ -23,11 +25,28 @@ func Test_reconciler_collectStats(t *testing.T) {
 
 	testCases := []struct {
 		name       string
+		project    *kargoapi.Project
 		client     client.Client
 		assertions func(*testing.T, kargoapi.ProjectStatus, error)
 	}{
 		{
+			name:    "Project not ready",
+			project: &kargoapi.Project{},
+			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
+				require.NoError(t, err)
+				require.Nil(t, status.Stats)
+			},
+		},
+		{
 			name: "error listing Warehouses",
+			project: &kargoapi.Project{
+				Status: kargoapi.ProjectStatus{
+					Conditions: []metav1.Condition{{
+						Type:   kargoapi.ConditionTypeReady,
+						Status: metav1.ConditionTrue,
+					}},
+				},
+			},
 			client: fake.NewClientBuilder().WithScheme(scheme).
 				WithInterceptorFuncs(interceptor.Funcs{
 					List: func(
@@ -41,15 +60,23 @@ func Test_reconciler_collectStats(t *testing.T) {
 				}).Build(),
 			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
 				require.Error(t, err)
-				require.Len(t, status.Conditions, 1)
-				require.Equal(t, metav1.ConditionFalse, status.Conditions[0].Status)
-				require.Equal(t, kargoapi.ConditionTypeHealthy, status.Conditions[0].Type)
-				require.Equal(t, "CollectingWarehouseStatsFailed", status.Conditions[0].Reason)
-				require.Equal(t, "Failed to collect Warehouse stats: something went wrong", status.Conditions[0].Message)
+				cond := conditions.Get(&status, kargoapi.ConditionTypeHealthy)
+				require.NotNil(t, cond)
+				require.Equal(t, metav1.ConditionFalse, cond.Status)
+				require.Equal(t, kargoapi.ConditionTypeHealthy, cond.Type)
+				require.Equal(t, "CollectingWarehouseStatsFailed", cond.Reason)
 			},
 		},
 		{
 			name: "error listing Stages",
+			project: &kargoapi.Project{
+				Status: kargoapi.ProjectStatus{
+					Conditions: []metav1.Condition{{
+						Type:   kargoapi.ConditionTypeReady,
+						Status: metav1.ConditionTrue,
+					}},
+				},
+			},
 			client: fake.NewClientBuilder().WithScheme(scheme).
 				WithInterceptorFuncs(interceptor.Funcs{
 					List: func(
@@ -66,15 +93,23 @@ func Test_reconciler_collectStats(t *testing.T) {
 				}).Build(),
 			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
 				require.Error(t, err)
-				require.Len(t, status.Conditions, 1)
-				require.Equal(t, metav1.ConditionFalse, status.Conditions[0].Status)
-				require.Equal(t, kargoapi.ConditionTypeHealthy, status.Conditions[0].Type)
-				require.Equal(t, "CollectingStageStatsFailed", status.Conditions[0].Reason)
-				require.Equal(t, "Failed to collect Stage stats: something went wrong", status.Conditions[0].Message)
+				cond := conditions.Get(&status, kargoapi.ConditionTypeHealthy)
+				require.NotNil(t, cond)
+				require.Equal(t, metav1.ConditionFalse, cond.Status)
+				require.Equal(t, kargoapi.ConditionTypeHealthy, cond.Type)
+				require.Equal(t, "CollectingStageStatsFailed", cond.Reason)
 			},
 		},
 		{
 			name: "successful stats collection",
+			project: &kargoapi.Project{
+				Status: kargoapi.ProjectStatus{
+					Conditions: []metav1.Condition{{
+						Type:   kargoapi.ConditionTypeReady,
+						Status: metav1.ConditionTrue,
+					}},
+				},
+			},
 			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 				&kargoapi.Warehouse{
 					ObjectMeta: metav1.ObjectMeta{
@@ -189,7 +224,7 @@ func Test_reconciler_collectStats(t *testing.T) {
 			).Build(),
 			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
 				require.NoError(t, err)
-				require.Empty(t, status.Conditions)
+				require.Nil(t, conditions.Get(&status, kargoapi.ConditionTypeHealthy))
 				stats := status.Stats
 				require.Equal(t, int64(1), stats.Warehouses.Health.Healthy)
 				require.Equal(t, int64(1), stats.Warehouses.Health.Unhealthy)
@@ -204,7 +239,7 @@ func Test_reconciler_collectStats(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &reconciler{client: tt.client}
-			status, err := r.collectStats(context.Background(), &kargoapi.Project{})
+			status, err := r.collectStats(context.Background(), tt.project)
 			tt.assertions(t, status, err)
 		})
 	}

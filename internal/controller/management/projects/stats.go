@@ -9,6 +9,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/conditions"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 // collectStats collects statistics about the current health state of all
@@ -18,6 +19,14 @@ func (r *reconciler) collectStats(
 	ctx context.Context,
 	project *kargoapi.Project,
 ) (kargoapi.ProjectStatus, error) {
+	if cond := conditions.Get(
+		&project.Status,
+		kargoapi.ConditionTypeReady,
+	); cond == nil || cond.Status != metav1.ConditionTrue {
+		logging.LoggerFromContext(ctx).Debug("Project is not ready; won't collect stats")
+		return project.Status, nil
+	}
+
 	status := *project.Status.DeepCopy()
 
 	// Mark the Project as reconciling.
@@ -36,7 +45,6 @@ func (r *reconciler) collectStats(
 		warehouses,
 		client.InNamespace(project.Name),
 	); err != nil {
-		conditions.Delete(&status, kargoapi.ConditionTypeReconciling)
 		conditions.Set(&status, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeHealthy,
 			Status:             metav1.ConditionFalse,
@@ -53,7 +61,6 @@ func (r *reconciler) collectStats(
 		stages,
 		client.InNamespace(project.Name),
 	); err != nil {
-		conditions.Delete(&status, kargoapi.ConditionTypeReconciling)
 		conditions.Set(&status, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeHealthy,
 			Status:             metav1.ConditionFalse,
@@ -98,7 +105,7 @@ func (r *reconciler) collectStats(
 		}
 	}
 
-	status.Stats = stats
+	status.Stats = &stats
 
 	conditions.Delete(&status, kargoapi.ConditionTypeHealthy)
 	return status, nil

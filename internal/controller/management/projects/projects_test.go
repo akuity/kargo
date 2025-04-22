@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -28,9 +29,7 @@ func TestNewReconciler(t *testing.T) {
 	require.Equal(t, testCfg, r.cfg)
 	require.NotNil(t, r.client)
 	require.NotNil(t, r.getProjectFn)
-	require.NotNil(t, r.initializeProjectFn)
 	require.NotNil(t, r.ensureNamespaceFn)
-	require.NotNil(t, r.updateProjectFn)
 	require.NotNil(t, r.patchProjectStatusFn)
 	require.NotNil(t, r.getNamespaceFn)
 	require.NotNil(t, r.createNamespaceFn)
@@ -42,7 +41,6 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, r.createServiceAccountFn)
 	require.NotNil(t, r.createRoleFn)
 	require.NotNil(t, r.createRoleBindingFn)
-	require.NotNil(t, r.createProjectConfigFn)
 }
 
 func TestReconciler_Reconcile(*testing.T) {
@@ -57,20 +55,23 @@ func TestReconciler_initializeProject(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
-		assertions func(*testing.T, kargoapi.ProjectStatus, error)
+		assertions func(
+			t *testing.T,
+			status kargoapi.ProjectStatus,
+			initialized bool,
+			err error,
+		)
 	}{
 		{
 			name: "error ensuring namespace",
 			reconciler: &reconciler{
-				ensureNamespaceFn: func(
-					_ context.Context,
-					project *kargoapi.Project,
-				) (kargoapi.ProjectStatus, error) {
-					return *project.Status.DeepCopy(), errors.New("something went wrong")
+				ensureNamespaceFn: func(context.Context, *kargoapi.Project) error {
+					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.ProjectStatus, initialized bool, err error) {
 				require.ErrorContains(t, err, "something went wrong")
+				require.False(t, initialized)
 
 				// Still initializing because retry could succeed
 				require.Len(t, status.Conditions, 2)
@@ -89,16 +90,13 @@ func TestReconciler_initializeProject(t *testing.T) {
 		{
 			name: "fatal error ensuring namespace",
 			reconciler: &reconciler{
-				ensureNamespaceFn: func(
-					_ context.Context,
-					project *kargoapi.Project,
-				) (kargoapi.ProjectStatus, error) {
-					status := *project.Status.DeepCopy()
-					return status, errProjectNamespaceExists
+				ensureNamespaceFn: func(context.Context, *kargoapi.Project) error {
+					return errProjectNamespaceExists
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.ProjectStatus, initialized bool, err error) {
 				require.True(t, errors.Is(err, errProjectNamespaceExists))
+				require.False(t, initialized)
 
 				// Failed because retry cannot possibly succeed
 				require.Len(t, status.Conditions, 2)
@@ -117,11 +115,8 @@ func TestReconciler_initializeProject(t *testing.T) {
 		{
 			name: "error ensuring project admin permissions",
 			reconciler: &reconciler{
-				ensureNamespaceFn: func(
-					_ context.Context,
-					project *kargoapi.Project,
-				) (kargoapi.ProjectStatus, error) {
-					return *project.Status.DeepCopy(), nil
+				ensureNamespaceFn: func(context.Context, *kargoapi.Project) error {
+					return nil
 				},
 				ensureAPIAdminPermissionsFn: func(
 					context.Context,
@@ -130,8 +125,9 @@ func TestReconciler_initializeProject(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.ProjectStatus, initialized bool, err error) {
 				require.ErrorContains(t, err, "something went wrong")
+				require.False(t, initialized)
 
 				// Still initializing because retry could succeed
 				require.Len(t, status.Conditions, 2)
@@ -153,11 +149,8 @@ func TestReconciler_initializeProject(t *testing.T) {
 				cfg: ReconcilerConfig{
 					ManageControllerRoleBindings: true,
 				},
-				ensureNamespaceFn: func(
-					_ context.Context,
-					project *kargoapi.Project,
-				) (kargoapi.ProjectStatus, error) {
-					return *project.Status.DeepCopy(), nil
+				ensureNamespaceFn: func(context.Context, *kargoapi.Project) error {
+					return nil
 				},
 				ensureAPIAdminPermissionsFn: func(
 					context.Context,
@@ -172,18 +165,16 @@ func TestReconciler_initializeProject(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, _ kargoapi.ProjectStatus, err error) {
+			assertions: func(t *testing.T, _ kargoapi.ProjectStatus, initialized bool, err error) {
 				require.ErrorContains(t, err, "something went wrong")
+				require.False(t, initialized)
 			},
 		},
 		{
 			name: "error ensuring default project roles",
 			reconciler: &reconciler{
-				ensureNamespaceFn: func(
-					_ context.Context,
-					project *kargoapi.Project,
-				) (kargoapi.ProjectStatus, error) {
-					return *project.Status.DeepCopy(), nil
+				ensureNamespaceFn: func(context.Context, *kargoapi.Project) error {
+					return nil
 				},
 				ensureAPIAdminPermissionsFn: func(
 					context.Context,
@@ -198,8 +189,9 @@ func TestReconciler_initializeProject(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.ProjectStatus, initialized bool, err error) {
 				require.ErrorContains(t, err, "something went wrong")
+				require.False(t, initialized)
 
 				// Still initializing because retry could succeed
 				require.Len(t, status.Conditions, 2)
@@ -218,11 +210,8 @@ func TestReconciler_initializeProject(t *testing.T) {
 		{
 			name: "success",
 			reconciler: &reconciler{
-				ensureNamespaceFn: func(
-					_ context.Context,
-					project *kargoapi.Project,
-				) (kargoapi.ProjectStatus, error) {
-					return *project.Status.DeepCopy(), nil
+				ensureNamespaceFn: func(context.Context, *kargoapi.Project) error {
+					return nil
 				},
 				ensureAPIAdminPermissionsFn: func(
 					context.Context,
@@ -237,8 +226,9 @@ func TestReconciler_initializeProject(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.ProjectStatus, initialized bool, err error) {
 				require.NoError(t, err)
+				require.True(t, initialized)
 
 				require.Len(t, status.Conditions, 1)
 
@@ -251,13 +241,13 @@ func TestReconciler_initializeProject(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			status, err := testCase.reconciler.initializeProject(
+			status, initialized, err := testCase.reconciler.initializeProject(
 				context.Background(),
 				&kargoapi.Project{
 					Status: kargoapi.ProjectStatus{},
 				},
 			)
-			testCase.assertions(t, status, err)
+			testCase.assertions(t, status, initialized, err)
 		})
 	}
 }
@@ -267,7 +257,7 @@ func TestReconciler_ensureNamespace(t *testing.T) {
 		name       string
 		project    *kargoapi.Project
 		reconciler *reconciler
-		assertions func(*testing.T, kargoapi.ProjectStatus, error)
+		assertions func(*testing.T, error)
 	}{
 		{
 			name:    "error getting namespace",
@@ -282,7 +272,7 @@ func TestReconciler_ensureNamespace(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, _ kargoapi.ProjectStatus, err error) {
+			assertions: func(t *testing.T, err error) {
 				require.ErrorContains(t, err, "something went wrong")
 				require.ErrorContains(t, err, "error getting namespace")
 			},
@@ -300,7 +290,7 @@ func TestReconciler_ensureNamespace(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(t *testing.T, _ kargoapi.ProjectStatus, err error) {
+			assertions: func(t *testing.T, err error) {
 				require.True(t, errors.Is(err, errProjectNamespaceExists))
 			},
 		},
@@ -330,7 +320,7 @@ func TestReconciler_ensureNamespace(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(t *testing.T, _ kargoapi.ProjectStatus, err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -360,7 +350,7 @@ func TestReconciler_ensureNamespace(t *testing.T) {
 					return false, errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, _ kargoapi.ProjectStatus, err error) {
+			assertions: func(t *testing.T, err error) {
 				require.ErrorContains(t, err, "error ensuring finalizer on namespace")
 				require.ErrorContains(t, err, "something went wrong")
 			},
@@ -398,7 +388,7 @@ func TestReconciler_ensureNamespace(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, _ kargoapi.ProjectStatus, err error) {
+			assertions: func(t *testing.T, err error) {
 				require.ErrorContains(t, err, "error patching namespace")
 				require.ErrorContains(t, err, "something went wrong")
 			},
@@ -436,7 +426,7 @@ func TestReconciler_ensureNamespace(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(t *testing.T, _ kargoapi.ProjectStatus, err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -460,7 +450,7 @@ func TestReconciler_ensureNamespace(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, _ kargoapi.ProjectStatus, err error) {
+			assertions: func(t *testing.T, err error) {
 				require.ErrorContains(t, err, "something went wrong")
 				require.ErrorContains(t, err, "error creating namespace")
 			},
@@ -489,18 +479,17 @@ func TestReconciler_ensureNamespace(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(t *testing.T, _ kargoapi.ProjectStatus, err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			res, err := testCase.reconciler.ensureNamespace(
-				context.Background(),
-				testCase.project,
+			testCase.assertions(
+				t,
+				testCase.reconciler.ensureNamespace(context.Background(), testCase.project),
 			)
-			testCase.assertions(t, res, err)
 		})
 	}
 }
@@ -1095,62 +1084,102 @@ func TestReconciler_migratePhaseToConditions(t *testing.T) {
 }
 
 func TestMigrateSpecToProjectConfig(t *testing.T) {
+	const testProject = "fake-project"
+	testScheme := runtime.NewScheme()
+	err := kargoapi.AddToScheme(testScheme)
+	require.NoError(t, err)
+
 	tests := []struct {
 		name       string
 		project    *kargoapi.Project
-		assertions func(t *testing.T, projectConfig *kargoapi.ProjectConfig, ok bool)
+		assertions func(t *testing.T, migrated bool, cl client.Client, err error)
 	}{
 		{
 			name: "nil spec",
 			project: &kargoapi.Project{
-				Spec: nil,
+				ObjectMeta: metav1.ObjectMeta{Name: testProject},
+				Spec:       nil,
 			},
-			assertions: func(t *testing.T, projectConfig *kargoapi.ProjectConfig, ok bool) {
-				require.Nil(t, projectConfig)
-				require.False(t, ok)
+			assertions: func(t *testing.T, migrated bool, cl client.Client, err error) {
+				require.NoError(t, err)
+				require.False(t, migrated)
+				projCfg := &kargoapi.ProjectConfig{}
+				err = cl.Get(
+					context.Background(),
+					types.NamespacedName{
+						Name:      testProject,
+						Namespace: testProject,
+					},
+					projCfg,
+				)
+				require.True(t, kubeerr.IsNotFound(err))
 			},
 		},
 		{
 			name: "empty promotion policies",
 			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{Name: testProject},
 				Spec: &kargoapi.ProjectSpec{ // nolint:staticcheck
 					PromotionPolicies: []kargoapi.PromotionPolicy{},
 				},
 			},
-			assertions: func(t *testing.T, projectConfig *kargoapi.ProjectConfig, ok bool) {
-				require.Nil(t, projectConfig)
-				require.True(t, ok)
-				// Verify that the spec was cleared
-				require.Nil(t, projectConfig)
+			assertions: func(t *testing.T, migrated bool, cl client.Client, err error) {
+				require.NoError(t, err)
+				require.True(t, migrated)
+				project := &kargoapi.Project{}
+				err = cl.Get(context.Background(), types.NamespacedName{Name: testProject}, project)
+				require.NoError(t, err)
+				require.Nil(t, project.Spec) // nolint:staticcheck
+				projCfg := &kargoapi.ProjectConfig{}
+				err = cl.Get(
+					context.Background(),
+					types.NamespacedName{
+						Name:      testProject,
+						Namespace: testProject,
+					},
+					projCfg,
+				)
+				require.True(t, kubeerr.IsNotFound(err))
 			},
 		},
+		// TODO: Add error cases
 		{
-			name: "with promotion policies",
+			name: "success with promotion policies",
 			project: &kargoapi.Project{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-project",
-				},
+				ObjectMeta: metav1.ObjectMeta{Name: testProject},
 				Spec: &kargoapi.ProjectSpec{ // nolint:staticcheck
 					PromotionPolicies: []kargoapi.PromotionPolicy{
 						{Stage: "policy-1"},
 					},
 				},
 			},
-			assertions: func(t *testing.T, projectConfig *kargoapi.ProjectConfig, ok bool) {
-				require.NotNil(t, projectConfig)
-				require.True(t, ok)
-				require.Equal(t, "test-project", projectConfig.Name)
-				require.Equal(t, "test-project", projectConfig.Namespace)
-				require.Len(t, projectConfig.Spec.PromotionPolicies, 1)
-				require.Equal(t, "policy-1", projectConfig.Spec.PromotionPolicies[0].Stage)
+			assertions: func(t *testing.T, migrated bool, cl client.Client, err error) {
+				require.NoError(t, err)
+				require.True(t, migrated)
+				project := &kargoapi.Project{}
+				err = cl.Get(context.Background(), types.NamespacedName{Name: testProject}, project)
+				require.NoError(t, err)
+				require.Nil(t, project.Spec)
+				projCfg := &kargoapi.ProjectConfig{}
+				err = cl.Get(
+					context.Background(),
+					types.NamespacedName{
+						Name:      testProject,
+						Namespace: testProject,
+					},
+					projCfg,
+				)
+				require.NoError(t, err)
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			projectConfig, ok := migrateSpecToProjectConfig(tt.project)
-			tt.assertions(t, projectConfig, ok)
+			cl := fake.NewClientBuilder().WithScheme(testScheme).WithObjects(tt.project).Build()
+			r := &reconciler{client: cl}
+			migrated, err := r.migrateSpecToProjectConfig(context.Background(), tt.project)
+			tt.assertions(t, migrated, cl, err)
 		})
 	}
 }

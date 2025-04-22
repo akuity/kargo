@@ -80,7 +80,7 @@ type ProjectStatus struct {
 	Message string `json:"message,omitempty" protobuf:"bytes,2,opt,name=message"`
 	// Stats contains a summary of the of the collective state of a Project's
 	// constituent resources.
-	Stats ProjectStats `json:"stats,omitempty" protobuf:"bytes,4,opt,name=stats"`
+	Stats *ProjectStats `json:"stats,omitempty" protobuf:"bytes,4,opt,name=stats"`
 }
 
 // GetConditions implements the conditions.Getter interface.
