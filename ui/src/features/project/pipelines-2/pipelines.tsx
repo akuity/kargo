@@ -21,6 +21,7 @@ import {
 } from './context/freight-timeline-controller-context';
 import { FreightTimeline } from './freight/freight-timeline';
 import { Graph } from './graph/graph';
+import { GraphFilters } from './graph-filters';
 import { Promotion } from './promotion/promotion';
 import { useFreightById } from './use-freight-by-id';
 import { useFreightInStage } from './use-freight-in-stage';
@@ -75,7 +76,8 @@ export const Pipelines = (props: {
     },
     sources: [],
     timerange: 'all-time',
-    showColors: false
+    showColors: false,
+    warehouses: []
   });
 
   const [viewingFreight, setViewingFreight] = useState<Freight | null>(null);
@@ -111,7 +113,8 @@ export const Pipelines = (props: {
         <ColorContext.Provider value={{ stageColorMap, warehouseColorMap }}>
           <FreightTimeline freights={getFreightQuery?.data?.groups?.['']?.freight || []} />
 
-          <div className='w-full h-full'>
+          <div className='w-full h-full relative'>
+            <GraphFilters warehouses={listWarehousesQuery.data?.warehouses || []} />
             <Graph
               project={props.project.metadata?.name || ''}
               warehouses={listWarehousesQuery.data?.warehouses || []}

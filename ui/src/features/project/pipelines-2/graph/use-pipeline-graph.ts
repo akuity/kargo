@@ -25,6 +25,8 @@ export type GraphMeta = {
 export const useReactFlowPipelineGraph = (
   stages: Stage[],
   warehouses: Warehouse[],
+  // basically list of warehouses
+  pipeline: string[],
   stack?: {
     afterNodes?: string[];
   }
@@ -48,6 +50,10 @@ export const useReactFlowPipelineGraph = (
 
     // subscriptions and warehouses
     for (const warehouse of warehouses) {
+      if (pipeline.length && !pipeline.includes(warehouse?.metadata?.name || '')) {
+        continue;
+      }
+
       const warehouseNodeIndex = warehouseIndexer.index(warehouse);
       graph.setNode(warehouseNodeIndex, {
         ...warehouseLabelling.label(warehouse),
@@ -69,6 +75,13 @@ export const useReactFlowPipelineGraph = (
 
     // stages
     for (const stage of stages) {
+      if (
+        pipeline.length &&
+        !stage?.spec?.requestedFreight?.find((f) => pipeline.includes(f?.origin?.name || ''))
+      ) {
+        continue;
+      }
+
       const stageNodeIndex = stageIndexer.index(stage);
 
       graph.setNode(stageNodeIndex, { ...stageLabelling.label(stage), ...stageSizer.size() });
@@ -184,5 +197,5 @@ export const useReactFlowPipelineGraph = (
       nodes: reactFlowNodes,
       edges: reactFlowEdges
     };
-  }, [stack?.afterNodes]);
+  }, [stack?.afterNodes, pipeline]);
 };

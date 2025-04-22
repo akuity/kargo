@@ -18,6 +18,7 @@ export type FreightTimelineControllerContextType = {
     };
     sources: string[]; // repoURL
     timerange: timerangeTypes;
+    warehouses: string[];
   };
   setPreferredFilter: (filter: FreightTimelineControllerContextType['preferredFilter']) => void;
 };

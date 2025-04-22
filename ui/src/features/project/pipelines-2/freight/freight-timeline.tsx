@@ -54,11 +54,18 @@ export const FreightTimeline = (props: { freights: Freight[] }) => {
       );
     }
 
+    if (freightTimelineControllerContext.preferredFilter.warehouses?.length > 0) {
+      filtered = filtered.filter((f) =>
+        freightTimelineControllerContext.preferredFilter.warehouses.includes(f.origin?.name || '')
+      );
+    }
+
     return filtered;
   }, [
     props.freights,
     freightTimelineControllerContext.preferredFilter.sources,
-    freightTimelineControllerContext.preferredFilter.timerange
+    freightTimelineControllerContext.preferredFilter.timerange,
+    freightTimelineControllerContext.preferredFilter.warehouses
   ]);
 
   const freightListStyleRef = useRef<HTMLDivElement>(null);

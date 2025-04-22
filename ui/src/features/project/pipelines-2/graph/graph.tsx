@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
+import { useFreightTimelineControllerContext } from '../context/freight-timeline-controller-context';
 import { GraphContext } from '../context/graph-context';
 import { StackedNodes } from '../nodes/stacked-nodes';
 
@@ -23,6 +24,8 @@ const nodeTypes = {
 };
 
 export const Graph = (props: GraphProps) => {
+  const filterContext = useFreightTimelineControllerContext();
+
   const [stackedNodesParents, setStackedNodesParents] = useState<string[]>([]);
 
   const onStack = useCallback(
@@ -41,9 +44,14 @@ export const Graph = (props: GraphProps) => {
     [stackedNodesParents]
   );
 
-  const graph = useReactFlowPipelineGraph(props.stages, props.warehouses, {
-    afterNodes: stackedNodesParents
-  });
+  const graph = useReactFlowPipelineGraph(
+    props.stages,
+    props.warehouses,
+    filterContext?.preferredFilter.warehouses || [],
+    {
+      afterNodes: stackedNodesParents
+    }
+  );
 
   const [nodes, setNodes] = useNodesState(graph.nodes);
 

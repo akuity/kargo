@@ -16,6 +16,10 @@ export const CustomNode = (props: {
     subscriptionParent?: Warehouse;
   };
 }) => {
+  if (!props.data.value) {
+    return null;
+  }
+
   if (props.data.value.$typeName === 'github.com.akuity.kargo.api.v1alpha1.Warehouse') {
     return (
       <CustomNode.Container warehouse={props.data.value}>
