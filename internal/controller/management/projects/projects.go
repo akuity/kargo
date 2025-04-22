@@ -955,7 +955,7 @@ func (r *reconciler) migrateSpecToProjectConfig(
 		return false, nil
 	}
 
-	if len(project.Spec.PromotionPolicies) != 0 {
+	if len(project.Spec.PromotionPolicies) != 0 { // nolint:staticcheck
 		projectCfg := &kargoapi.ProjectConfig{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      project.Name,
