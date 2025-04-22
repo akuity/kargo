@@ -28,7 +28,7 @@ func (s *server) RefreshWarehouse(
 		return nil, err
 	}
 
-	warehouse, err := api.RefreshWarehouse(ctx, s.client, client.ObjectKey{
+	warehouse, err := api.RefreshWarehouse(ctx, s.client.InternalClient(), client.ObjectKey{
 		Namespace: project,
 		Name:      name,
 	})

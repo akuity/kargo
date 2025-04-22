@@ -39,21 +39,6 @@ webhooks:
     resources: ["promotions"]
     operations: ["CREATE", "UPDATE"]
   failurePolicy: Fail
-- name: promotiontask.kargo.akuity.io
-  admissionReviewVersions: [ "v1" ]
-  sideEffects: None
-  clientConfig:
-    service:
-      namespace: {{ .Release.Namespace }}
-      name: kargo-webhooks-server
-      path: /validate-kargo-akuity-io-v1alpha1-promotiontask
-  rules:
-    - scope: Namespaced
-      apiGroups: ["kargo.akuity.io"]
-      apiVersions: ["v1alpha1"]
-      resources: ["promotiontasks"]
-      operations: ["CREATE"]
-  failurePolicy: Fail
 - name: stage.kargo.akuity.io
   admissionReviewVersions: ["v1"]
   sideEffects: None
@@ -123,7 +108,22 @@ webhooks:
     apiGroups: ["kargo.akuity.io"]
     apiVersions: ["v1alpha1"]
     resources: ["projects"]
-    operations: ["CREATE"]
+    operations: ["CREATE", "UPDATE"]
+  failurePolicy: Fail
+- name: projectconfig.kargo.akuity.io
+  admissionReviewVersions: ["v1"]
+  sideEffects: NoneOnDryRun
+  clientConfig:
+    service:
+      namespace: {{ .Release.Namespace }}
+      name: kargo-webhooks-server
+      path: /validate-kargo-akuity-io-v1alpha1-projectconfig
+  rules:
+    - scope: Namespaced
+      apiGroups: ["kargo.akuity.io"]
+      apiVersions: ["v1alpha1"]
+      resources: ["projectconfigs"]
+      operations: ["CREATE", "UPDATE"]
   failurePolicy: Fail
 - name: promotion.kargo.akuity.io
   admissionReviewVersions: ["v1"]
@@ -139,6 +139,21 @@ webhooks:
     apiVersions: ["v1alpha1"]
     resources: ["promotions"]
     operations: ["CREATE", "UPDATE", "DELETE"]
+  failurePolicy: Fail
+- name: promotiontask.kargo.akuity.io
+  admissionReviewVersions: [ "v1" ]
+  sideEffects: None
+  clientConfig:
+    service:
+      namespace: {{ .Release.Namespace }}
+      name: kargo-webhooks-server
+      path: /validate-kargo-akuity-io-v1alpha1-promotiontask
+  rules:
+  - scope: Namespaced
+    apiGroups: ["kargo.akuity.io"]
+    apiVersions: ["v1alpha1"]
+    resources: ["promotiontasks"]
+    operations: ["CREATE"]
   failurePolicy: Fail
 - name: stage.kargo.akuity.io
   admissionReviewVersions: ["v1"]
