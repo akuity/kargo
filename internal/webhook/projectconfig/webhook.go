@@ -3,6 +3,7 @@ package projectconfig
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -16,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/pattern"
 )
 
 var (
@@ -143,24 +145,74 @@ func (w *webhook) validatePromotionPolicies(
 	f *field.Path,
 	promotionPolicies []kargoapi.PromotionPolicy,
 ) field.ErrorList {
-	stageNames := make(map[string]struct{}, len(promotionPolicies))
-	for _, promotionPolicy := range promotionPolicies {
-		if _, found := stageNames[promotionPolicy.Stage]; found { // nolint:staticcheck
-			return field.ErrorList{
-				field.Invalid(
-					f,
-					promotionPolicies,
-					fmt.Sprintf(
-						"multiple %s reference stage %q",
-						f.String(),
-						promotionPolicy.Stage, // nolint:staticcheck
-					),
-				),
+	var errs field.ErrorList
+
+	// Map of stage names to their indices in the promotionPolicies slice
+	stageNames := make(map[string][]int)
+
+	for i, policy := range promotionPolicies {
+		stage := policy.Stage // nolint:staticcheck
+		if policy.StageSelector != nil {
+			stage = policy.StageSelector.Name
+		}
+
+		// Skip empty stage names
+		if stage == "" {
+			continue
+		}
+
+		// Handle patterns (a name containing an identifier, e.g. "glob:")
+		stageParts := strings.SplitN(stage, ":", 2)
+		if len(stageParts) > 1 {
+			m, err := pattern.ParseNamePattern(stage)
+			if err != nil {
+				errs = append(errs, field.Invalid(
+					// NB: Our validation rule only allows patterns to be set
+					// on the stageSelector's name field. The deprecated stage
+					// field has to adhere to Kubernetes naming rules.
+					f.Index(i).Child("stageSelector").Child("name"),
+					stage,
+					err.Error(),
+				))
+				continue
+			}
+
+			// The behavior of the pattern parser is to fall back to an exact
+			// matcher. However, if a ":" is present we do not expect this
+			// fallback to ever happen.
+			if _, isExact := m.(*pattern.ExactMatcher); isExact {
+				errs = append(errs, field.Invalid(
+					f.Index(i).Child("stageSelector").Child("name"),
+					stage,
+					fmt.Sprintf(`invalid pattern identifier %q: must be "regex", "regexp" or "glob"`, stageParts[0]),
+				))
+			}
+
+			continue
+		}
+
+		// Track stages by name and their positions
+		stageNames[stage] = append(stageNames[stage], i)
+	}
+
+	// Generate an error for each duplicate field
+	for stage, indices := range stageNames {
+		if len(indices) > 1 {
+			// Skip the first occurrence (it's not a duplicate)
+			for _, i := range indices[1:] {
+				errs = append(errs, field.Invalid(
+					// TODO(hidde): When the deprecated "stage" field is removed,
+					// this can become more specific. I.e.
+					// f.Index(i).Child("stageSelector").Child("name"),
+					f.Index(i),
+					stage,
+					fmt.Sprintf("stage name already defined at %s", f.Index(indices[0])),
+				))
 			}
 		}
-		stageNames[promotionPolicy.Stage] = struct{}{} // nolint:staticcheck
 	}
-	return nil
+
+	return errs
 }
 
 func (w *webhook) ensureProjectNamespace(ctx context.Context, meta metav1.ObjectMeta) error {
