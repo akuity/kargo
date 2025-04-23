@@ -295,6 +295,8 @@ message DiscoveredImageReference {
   // GitRepoURL is the URL of the Git repository that contains the source
   // code for this image. This field is optional, and only populated if the
   // ImageSubscription specifies a GitRepoURL.
+  //
+  // Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
   optional string gitRepoURL = 3;
 
   // CreatedAt is the time the image was created. This field is optional, and
@@ -678,6 +680,8 @@ message Image {
   // GitRepoURL specifies the URL of a Git repository that contains the source
   // code for the image repository referenced by the RepoURL field if Kargo was
   // able to infer it.
+  //
+  // Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
   optional string gitRepoURL = 2;
 
   // Tag identifies a specific version of the image in the repository specified
@@ -728,6 +732,8 @@ message ImageSubscription {
   // the source code for the image repository referenced by the RepoURL field.
   // When this is specified, Kargo MAY be able to infer and link to the exact
   // revision of that source code that was used to build the image.
+  //
+  // Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
   //
   // +kubebuilder:validation:Optional
   // +kubebuilder:validation:Pattern=`^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
