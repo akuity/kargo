@@ -79,7 +79,6 @@ func (r *reconciler) discoverImages(
 				Tag:         img.Tag,
 				Digest:      img.Digest,
 				Annotations: img.Annotations,
-				GitRepoURL:  r.getImageSourceURL(sub.GitRepoURL, img.Tag),
 			}
 			if img.CreatedAt != nil {
 				discovery.CreatedAt = &metav1.Time{Time: *img.CreatedAt}
