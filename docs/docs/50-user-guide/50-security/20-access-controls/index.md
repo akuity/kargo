@@ -268,6 +268,16 @@ With the exception of the claim-mapping annotations on `ServiceAccount`
 resources, these resources do not need to be labeled or annotated in any special
 way.
 
+##### `promote` Verb
+
+Kargo introduces custom verbs to extend Kubernetes'
+[standard RBAC verbs](https://kubernetes.io/docs/reference/access-authn-authz/authorization/#request-verb-resource) 
+(such as get, create, list) to support more granular authorization.
+
+One such verb is `promote`, which applies to the `stages` resource.
+Kargo uses this verb to determine whether a user or `ServiceAccount`
+is authorized to initiate a promotion into a specific Stage.
+
 ##### Example: Custom Promoter Role
 
 The following example demonstrates how to create a custom role named
