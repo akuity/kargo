@@ -106,6 +106,8 @@ type ProjectStats struct {
 // WarehouseStats contains a summary of the collective state of the a Project's
 // Warehouses.
 type WarehouseStats struct {
+	// Count contains the total number of Warehouses in the Project.
+	Count int64 `json:"count,omitempty" protobuf:"varint,2,opt,name=count"`
 	// Health contains a summary of the collective health of a Project's
 	// Warehouses.
 	Health HealthStats `json:"health,omitempty" protobuf:"bytes,1,opt,name=health"`
@@ -114,6 +116,8 @@ type WarehouseStats struct {
 // StageStats contains a summary of the collective state of the a Project's
 // Stages.
 type StageStats struct {
+	// Count contains the total number of Stages in the Project.
+	Count int64 `json:"count,omitempty" protobuf:"varint,2,opt,name=count"`
 	// Health contains a summary of the collective health of a Project's Stages.
 	Health HealthStats `json:"health,omitempty" protobuf:"bytes,1,opt,name=health"`
 }
@@ -123,11 +127,6 @@ type StageStats struct {
 type HealthStats struct {
 	// Healthy contains the number of resources that are explicitly healthy.
 	Healthy int64 `json:"healthy,omitempty" protobuf:"varint,1,opt,name=healthy"`
-	// Unhealthy contains the number of resources that are explicitly unhealthy.
-	Unhealthy int64 `json:"unhealthy,omitempty" protobuf:"varint,2,opt,name=unhealthy"`
-	// Unknown contains the number of resources whose current health is
-	// indeterminable.
-	Unknown int64 `json:"unknown,omitempty" protobuf:"varint,3,opt,name=unknown"`
 }
 
 // +kubebuilder:object:root=true

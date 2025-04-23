@@ -61,37 +61,30 @@ func (r *reconciler) collectStats(
 		return status, fmt.Errorf("error listing Stages: %w", err)
 	}
 
-	stats := kargoapi.ProjectStats{}
+	stats := kargoapi.ProjectStats{
+		Warehouses: kargoapi.WarehouseStats{
+			Count: int64(len(warehouses.Items)),
+		},
+		Stages: kargoapi.StageStats{
+			Count: int64(len(stages.Items)),
+		},
+	}
 
 	for _, warehouse := range warehouses.Items {
-		health := conditions.Get(&warehouse.Status, kargoapi.ConditionTypeHealthy)
-		if health == nil {
-			stats.Warehouses.Health.Unknown++
-			continue
-		}
-		switch health.Status {
-		case metav1.ConditionTrue:
+		if health := conditions.Get(
+			&warehouse.Status,
+			kargoapi.ConditionTypeHealthy,
+		); health != nil && health.Status == metav1.ConditionTrue {
 			stats.Warehouses.Health.Healthy++
-		case metav1.ConditionFalse:
-			stats.Warehouses.Health.Unhealthy++
-		default:
-			stats.Warehouses.Health.Unknown++
 		}
 	}
 
 	for _, stage := range stages.Items {
-		health := conditions.Get(&stage.Status, kargoapi.ConditionTypeHealthy)
-		if health == nil {
-			stats.Stages.Health.Unknown++
-			continue
-		}
-		switch health.Status {
-		case metav1.ConditionTrue:
+		if health := conditions.Get(
+			&stage.Status,
+			kargoapi.ConditionTypeHealthy,
+		); health != nil && health.Status == metav1.ConditionTrue {
 			stats.Stages.Health.Healthy++
-		case metav1.ConditionFalse:
-			stats.Stages.Health.Unhealthy++
-		default:
-			stats.Stages.Health.Unknown++
 		}
 	}
 

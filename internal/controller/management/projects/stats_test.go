@@ -226,12 +226,10 @@ func Test_reconciler_collectStats(t *testing.T) {
 				require.NoError(t, err)
 				require.Nil(t, conditions.Get(&status, kargoapi.ConditionTypeHealthy))
 				stats := status.Stats
+				require.Equal(t, int64(5), stats.Warehouses.Count)
 				require.Equal(t, int64(1), stats.Warehouses.Health.Healthy)
-				require.Equal(t, int64(1), stats.Warehouses.Health.Unhealthy)
-				require.Equal(t, int64(3), stats.Warehouses.Health.Unknown)
+				require.Equal(t, int64(5), stats.Stages.Count)
 				require.Equal(t, int64(1), stats.Stages.Health.Healthy)
-				require.Equal(t, int64(1), stats.Stages.Health.Unhealthy)
-				require.Equal(t, int64(3), stats.Stages.Health.Unknown)
 			},
 		},
 	}
