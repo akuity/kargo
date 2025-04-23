@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -29,6 +30,7 @@ func TestNewReconciler(t *testing.T) {
 	require.Equal(t, testCfg, r.cfg)
 	require.NotNil(t, r.client)
 	require.NotNil(t, r.getProjectFn)
+	require.NotNil(t, r.reconcileFn)
 	require.NotNil(t, r.ensureNamespaceFn)
 	require.NotNil(t, r.patchProjectStatusFn)
 	require.NotNil(t, r.getNamespaceFn)
@@ -43,8 +45,138 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, r.createRoleBindingFn)
 }
 
-func TestReconciler_Reconcile(*testing.T) {
-	// TODO: Implement this test
+func TestReconciler_Reconcile(t *testing.T) {
+	testCases := []struct {
+		name       string
+		reconciler *reconciler
+		assertions func(*testing.T, ctrl.Result, error)
+	}{
+		{
+			name: "project not found",
+			reconciler: &reconciler{
+				getProjectFn: func(
+					context.Context,
+					client.Client,
+					string,
+				) (*kargoapi.Project, error) {
+					return nil, nil
+				},
+			},
+			assertions: func(t *testing.T, result ctrl.Result, err error) {
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					ctrl.Result{
+						RequeueAfter: 0,
+					},
+					result,
+				)
+			},
+		},
+		{
+			name: "error finding project",
+			reconciler: &reconciler{
+				getProjectFn: func(
+					context.Context,
+					client.Client,
+					string,
+				) (*kargoapi.Project, error) {
+					return nil, errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, _ ctrl.Result, err error) {
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "project is being deleted",
+			reconciler: &reconciler{
+				getProjectFn: func(
+					context.Context,
+					client.Client,
+					string,
+				) (*kargoapi.Project, error) {
+					return &kargoapi.Project{
+						ObjectMeta: metav1.ObjectMeta{
+							DeletionTimestamp: &metav1.Time{},
+						},
+					}, nil
+				},
+			},
+			assertions: func(t *testing.T, result ctrl.Result, err error) {
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					ctrl.Result{
+						RequeueAfter: 0,
+					},
+					result,
+				)
+			},
+		},
+		{
+			name: "error running internal reconcile",
+			reconciler: &reconciler{
+				getProjectFn: func(
+					context.Context,
+					client.Client,
+					string,
+				) (*kargoapi.Project, error) {
+					return &kargoapi.Project{}, nil
+				},
+				reconcileFn: func(
+					context.Context,
+					*kargoapi.Project,
+				) (kargoapi.ProjectStatus, bool, error) {
+					return kargoapi.ProjectStatus{}, false, errors.New("something went wrong")
+				},
+				patchProjectStatusFn: func(
+					_ context.Context,
+					_ *kargoapi.Project,
+					_ kargoapi.ProjectStatus,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, _ ctrl.Result, err error) {
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "success",
+			reconciler: &reconciler{
+				getProjectFn: func(
+					context.Context,
+					client.Client,
+					string,
+				) (*kargoapi.Project, error) {
+					return &kargoapi.Project{}, nil
+				},
+				reconcileFn: func(
+					context.Context,
+					*kargoapi.Project,
+				) (kargoapi.ProjectStatus, bool, error) {
+					return kargoapi.ProjectStatus{}, false, nil
+				},
+				patchProjectStatusFn: func(
+					_ context.Context,
+					_ *kargoapi.Project,
+					_ kargoapi.ProjectStatus,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, _ ctrl.Result, err error) {
+				require.NoError(t, err)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			res, err := testCase.reconciler.Reconcile(context.Background(), ctrl.Request{})
+			testCase.assertions(t, res, err)
+		})
+	}
 }
 
 func TestReconciler_reconcile(*testing.T) {

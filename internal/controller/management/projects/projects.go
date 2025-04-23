@@ -64,6 +64,11 @@ type reconciler struct {
 		string,
 	) (*kargoapi.Project, error)
 
+	reconcileFn func(
+		context.Context,
+		*kargoapi.Project,
+	) (kargoapi.ProjectStatus, bool, error)
+
 	ensureNamespaceFn func(context.Context, *kargoapi.Project) error
 
 	patchProjectStatusFn func(
@@ -181,6 +186,7 @@ func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
 		client: kubeClient,
 	}
 	r.getProjectFn = api.GetProject
+	r.reconcileFn = r.reconcile
 	r.ensureNamespaceFn = r.ensureNamespace
 	r.patchProjectStatusFn = r.patchProjectStatus
 	r.getNamespaceFn = r.client.Get
@@ -224,7 +230,7 @@ func (r *reconciler) Reconcile(
 	}
 
 	logger.Debug("reconciling Project")
-	newStatus, needsRequeue, reconcileErr := r.reconcile(ctx, project)
+	newStatus, needsRequeue, reconcileErr := r.reconcileFn(ctx, project)
 	logger.Debug("done reconciling Project")
 
 	// Patch the status of the Project.
