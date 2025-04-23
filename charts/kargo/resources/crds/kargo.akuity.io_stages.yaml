@@ -589,6 +589,7 @@ spec:
                                 GitRepoURL specifies the URL of a Git repository that contains the source
                                 code for the image repository referenced by the RepoURL field if Kargo was
                                 able to infer it.
+
                                 Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
                               type: string
                             repoURL:
@@ -737,6 +738,7 @@ spec:
                                     GitRepoURL specifies the URL of a Git repository that contains the source
                                     code for the image repository referenced by the RepoURL field if Kargo was
                                     able to infer it.
+
                                     Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
                                   type: string
                                 repoURL:
@@ -881,6 +883,7 @@ spec:
                                           GitRepoURL specifies the URL of a Git repository that contains the source
                                           code for the image repository referenced by the RepoURL field if Kargo was
                                           able to infer it.
+
                                           Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
                                         type: string
                                       repoURL:
@@ -1186,6 +1189,7 @@ spec:
                                     GitRepoURL specifies the URL of a Git repository that contains the source
                                     code for the image repository referenced by the RepoURL field if Kargo was
                                     able to infer it.
+
                                     Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
                                   type: string
                                 repoURL:
@@ -1434,6 +1438,7 @@ spec:
                                 GitRepoURL specifies the URL of a Git repository that contains the source
                                 code for the image repository referenced by the RepoURL field if Kargo was
                                 able to infer it.
+
                                 Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
                               type: string
                             repoURL:
@@ -1582,6 +1587,7 @@ spec:
                                     GitRepoURL specifies the URL of a Git repository that contains the source
                                     code for the image repository referenced by the RepoURL field if Kargo was
                                     able to infer it.
+
                                     Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
                                   type: string
                                 repoURL:
@@ -1726,6 +1732,7 @@ spec:
                                           GitRepoURL specifies the URL of a Git repository that contains the source
                                           code for the image repository referenced by the RepoURL field if Kargo was
                                           able to infer it.
+
                                           Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
                                         type: string
                                       repoURL:

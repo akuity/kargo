@@ -671,6 +671,8 @@ export type DiscoveredImageReference = Message<"github.com.akuity.kargo.api.v1al
    * code for this image. This field is optional, and only populated if the
    * ImageSubscription specifies a GitRepoURL.
    *
+   * Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
+   *
    * @generated from field: optional string gitRepoURL = 3;
    */
   gitRepoURL: string;
@@ -1451,6 +1453,8 @@ export type Image = Message<"github.com.akuity.kargo.api.v1alpha1.Image"> & {
    * code for the image repository referenced by the RepoURL field if Kargo was
    * able to infer it.
    *
+   * Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
+   *
    * @generated from field: optional string gitRepoURL = 2;
    */
   gitRepoURL: string;
@@ -1554,6 +1558,8 @@ export type ImageSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.Im
    * the source code for the image repository referenced by the RepoURL field.
    * When this is specified, Kargo MAY be able to infer and link to the exact
    * revision of that source code that was used to build the image.
+   *
+   * Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
    *
    * +kubebuilder:validation:Optional
    * +kubebuilder:validation:Pattern=`^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
