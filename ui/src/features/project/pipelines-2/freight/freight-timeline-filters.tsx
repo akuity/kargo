@@ -166,6 +166,18 @@ export const FreightTimelineFilters = (props: FreightTimelineFiltersProps) => {
             Colors
           </Checkbox>
         </div>
+        <Checkbox
+          className='text-xs mt-3'
+          checked={props.preferredFilter?.hideUnusedFreights}
+          onChange={(e) =>
+            props.onPreferredFilterChange({
+              ...props.preferredFilter,
+              hideUnusedFreights: e.target.checked
+            })
+          }
+        >
+          Hide unused
+        </Checkbox>
       </div>
     </div>
   );

@@ -77,7 +77,8 @@ export const Pipelines = (props: {
     sources: [],
     timerange: 'all-time',
     showColors: false,
-    warehouses: []
+    warehouses: [],
+    hideUnusedFreights: false
   });
 
   const [viewingFreight, setViewingFreight] = useState<Freight | null>(null);

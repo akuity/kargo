@@ -60,12 +60,23 @@ export const FreightTimeline = (props: { freights: Freight[] }) => {
       );
     }
 
+    if (freightTimelineControllerContext.preferredFilter.hideUnusedFreights) {
+      filtered = filtered.filter((f) => {
+        const inUse =
+          (dictionaryContext?.freightInStages[f?.metadata?.name || '']?.length || 0) > 0;
+
+        return inUse;
+      });
+    }
+
     return filtered;
   }, [
     props.freights,
     freightTimelineControllerContext.preferredFilter.sources,
     freightTimelineControllerContext.preferredFilter.timerange,
-    freightTimelineControllerContext.preferredFilter.warehouses
+    freightTimelineControllerContext.preferredFilter.warehouses,
+    freightTimelineControllerContext.preferredFilter.hideUnusedFreights,
+    dictionaryContext?.freightInStages
   ]);
 
   const freightListStyleRef = useRef<HTMLDivElement>(null);
