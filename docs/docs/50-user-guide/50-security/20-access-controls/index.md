@@ -276,6 +276,7 @@ to `promote` into the `dev` and `staging` `Stages` in the `guestbook`
 `Project`.
 
 ```yaml
+---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -284,7 +285,6 @@ metadata:
   annotations:
     kargo.akuity.io/description: Permissions to promote into pre-prod Stages
     rbac.kargo.akuity.io/claim.groups: devops
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -310,7 +310,6 @@ rules:
   resourceNames:
   - dev
   - staging
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -325,7 +324,6 @@ subjects:
 - kind: ServiceAccount
   name: promoter
   namespace: guestbook
-
 ---
 # This RoleBinding allows the promoter ServiceAccount to view project
 # resources (without redefining read rules), by binding it to the
@@ -356,6 +354,7 @@ In the example below, users in the `devops` OIDC group are granted
 admin-level permissions within the `guestbook` `Project`:
 
 ```yaml
+---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -363,7 +362,6 @@ metadata:
   namespace: guestbook
   annotations:
     rbac.kargo.akuity.io/claim.groups: devops
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
