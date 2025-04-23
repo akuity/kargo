@@ -179,14 +179,252 @@ func TestReconciler_Reconcile(t *testing.T) {
 	}
 }
 
-func TestReconciler_reconcile(*testing.T) {
-	// TODO: Implement this test
+func TestReconciler_reconcile(t *testing.T) {
+	const testProject = "fake-project"
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	tests := []struct {
+		name        string
+		reconciler  *reconciler
+		project     *kargoapi.Project
+		interceptor interceptor.Funcs
+		assertions  func(
+			t *testing.T,
+			status kargoapi.ProjectStatus,
+			requeue bool,
+			cl client.Client,
+			err error,
+		)
+	}{
+		{
+			name:       "success migrating phase to conditions",
+			reconciler: &reconciler{},
+			project: &kargoapi.Project{
+				Status: kargoapi.ProjectStatus{
+					Phase: kargoapi.ProjectPhaseInitializing,
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				status kargoapi.ProjectStatus,
+				requeue bool,
+				_ client.Client,
+				err error,
+			) {
+				require.NoError(t, err)
+
+				// Phase should be cleared
+				require.Empty(t, status.Phase) // nolint:staticcheck
+
+				// Conditions should be set
+				reconciling := conditions.Get(&status, kargoapi.ConditionTypeReconciling)
+				require.NotNil(t, reconciling)
+				require.Equal(t, metav1.ConditionTrue, reconciling.Status)
+				require.Equal(t, "Initializing", reconciling.Reason)
+
+				ready := conditions.Get(&status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, ready)
+				require.Equal(t, metav1.ConditionFalse, ready.Status)
+				require.Equal(t, "Initializing", ready.Reason)
+
+				// Immediate requeue should be requested
+				require.True(t, requeue)
+			},
+		},
+		{
+			name:       "error migrating spec to ProjectConfig",
+			reconciler: &reconciler{},
+			// Requires no phase --> conditions migration.
+			// Does require spec --> ProjectConfig migration.
+			project: &kargoapi.Project{
+				// Non-nil of spec is enough to trigger migration.
+				Spec: &kargoapi.ProjectSpec{}, // nolint:staticcheck
+			},
+			interceptor: interceptor.Funcs{
+				Update: func(
+					context.Context,
+					client.WithWatch,
+					client.Object,
+					...client.UpdateOption,
+				) error {
+					return fmt.Errorf("something went wrong")
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ kargoapi.ProjectStatus,
+				requeue bool,
+				_ client.Client,
+				err error,
+			) {
+				require.ErrorContains(t, err, "something went wrong")
+				// Immediate requeue should NOT be requested
+				require.False(t, requeue)
+			},
+		},
+		{
+			name:       "success migrating spec to ProjectConfig",
+			reconciler: &reconciler{},
+			// Requires no phase --> conditions migration.
+			// Does require spec --> ProjectConfig migration.
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{Name: testProject},
+				// Non-nil of spec is enough to trigger migration.
+				Spec: &kargoapi.ProjectSpec{}, // nolint:staticcheck
+			},
+			assertions: func(
+				t *testing.T,
+				_ kargoapi.ProjectStatus,
+				requeue bool,
+				cl client.Client,
+				err error,
+			) {
+				require.NoError(t, err)
+				// Immediate requeue should be requested
+				require.True(t, requeue)
+				// Spec should be cleared
+				project := &kargoapi.Project{}
+				err = cl.Get(context.Background(), types.NamespacedName{Name: testProject}, project)
+				require.NoError(t, err)
+				require.Empty(t, project.Spec) // nolint:staticcheck
+			},
+		},
+		{
+			name: "error initializing project",
+			reconciler: &reconciler{
+				ensureNamespaceFn: func(context.Context, *kargoapi.Project) error {
+					return fmt.Errorf("something went wrong")
+				},
+			},
+			// Requires no phase --> conditions migration.
+			// Requires no spec --> ProjectConfig migration.
+			project: &kargoapi.Project{},
+			assertions: func(
+				t *testing.T,
+				_ kargoapi.ProjectStatus,
+				requeue bool,
+				_ client.Client,
+				err error,
+			) {
+				require.ErrorContains(t, err, "something went wrong")
+				// Immediate requeue should NOT be requested
+				require.False(t, requeue)
+			},
+		},
+		{
+			name: "success initializing project",
+			reconciler: &reconciler{
+				ensureNamespaceFn: func(context.Context, *kargoapi.Project) error {
+					return nil
+				},
+				ensureAPIAdminPermissionsFn: func(context.Context, *kargoapi.Project) error {
+					return nil
+				},
+				ensureDefaultProjectRolesFn: func(context.Context, *kargoapi.Project) error {
+					return nil
+				},
+			},
+			// Requires no phase --> conditions migration.
+			// Requires no spec --> ProjectConfig migration.
+			project: &kargoapi.Project{},
+			assertions: func(
+				t *testing.T,
+				_ kargoapi.ProjectStatus,
+				requeue bool,
+				_ client.Client,
+				err error,
+			) {
+				require.NoError(t, err)
+				// Immediate requeue should be requested
+				require.True(t, requeue)
+			},
+		},
+		{
+			name:       "error collecting Project stats",
+			reconciler: &reconciler{},
+			// Requires no phase --> conditions migration.
+			// Requires no spec --> ProjectConfig migration.
+			// Is already initialized.
+			project: &kargoapi.Project{
+				Status: kargoapi.ProjectStatus{
+					Conditions: []metav1.Condition{{
+						Type:   kargoapi.ConditionTypeReady,
+						Status: metav1.ConditionTrue,
+					}},
+				},
+			},
+			interceptor: interceptor.Funcs{
+				// Fail to list Warehouses
+				List: func(
+					context.Context,
+					client.WithWatch,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return fmt.Errorf("something went wrong")
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ kargoapi.ProjectStatus,
+				requeue bool,
+				_ client.Client,
+				err error,
+			) {
+				require.ErrorContains(t, err, "something went wrong")
+				// Immediate requeue should NOT be requested
+				require.False(t, requeue)
+			},
+		},
+		{
+			name:       "success collecting Project stats",
+			reconciler: &reconciler{},
+			// Requires no phase --> conditions migration.
+			// Requires no spec --> ProjectConfig migration.
+			// Is already initialized.
+			project: &kargoapi.Project{
+				Status: kargoapi.ProjectStatus{
+					Conditions: []metav1.Condition{{
+						Type:   kargoapi.ConditionTypeReady,
+						Status: metav1.ConditionTrue,
+					}},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				status kargoapi.ProjectStatus,
+				requeue bool,
+				_ client.Client,
+				err error,
+			) {
+				require.NoError(t, err)
+				// Immediate requeue should NOT be requested
+				require.False(t, requeue)
+				// Status has stats
+				require.NotNil(t, status.Stats)
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.reconciler.client = fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(tt.project).
+				WithInterceptorFuncs(tt.interceptor).
+				Build()
+			status, requeue, err := tt.reconciler.reconcile(context.Background(), tt.project)
+			tt.assertions(t, status, requeue, tt.reconciler.client, err)
+		})
+	}
 }
 
 func TestReconciler_initializeProject(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
+		project    *kargoapi.Project
 		assertions func(
 			t *testing.T,
 			status kargoapi.ProjectStatus,
@@ -195,12 +433,55 @@ func TestReconciler_initializeProject(t *testing.T) {
 		)
 	}{
 		{
+			name:       "already initialized",
+			reconciler: &reconciler{},
+			project: &kargoapi.Project{
+				Status: kargoapi.ProjectStatus{
+					Conditions: []metav1.Condition{{
+						Type:   kargoapi.ConditionTypeReady,
+						Status: metav1.ConditionTrue,
+					}},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ kargoapi.ProjectStatus,
+				initialized bool,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.False(t, initialized)
+			},
+		},
+		{
+			name:       "initialization stalled",
+			reconciler: &reconciler{},
+			project: &kargoapi.Project{
+				Status: kargoapi.ProjectStatus{
+					Conditions: []metav1.Condition{{
+						Type:   kargoapi.ConditionTypeStalled,
+						Status: metav1.ConditionTrue,
+					}},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ kargoapi.ProjectStatus,
+				initialized bool,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.False(t, initialized)
+			},
+		},
+		{
 			name: "error ensuring namespace",
 			reconciler: &reconciler{
 				ensureNamespaceFn: func(context.Context, *kargoapi.Project) error {
 					return errors.New("something went wrong")
 				},
 			},
+			project: &kargoapi.Project{},
 			assertions: func(t *testing.T, status kargoapi.ProjectStatus, initialized bool, err error) {
 				require.ErrorContains(t, err, "something went wrong")
 				require.False(t, initialized)
@@ -226,6 +507,7 @@ func TestReconciler_initializeProject(t *testing.T) {
 					return errProjectNamespaceExists
 				},
 			},
+			project: &kargoapi.Project{},
 			assertions: func(t *testing.T, status kargoapi.ProjectStatus, initialized bool, err error) {
 				require.True(t, errors.Is(err, errProjectNamespaceExists))
 				require.False(t, initialized)
@@ -257,6 +539,7 @@ func TestReconciler_initializeProject(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
+			project: &kargoapi.Project{},
 			assertions: func(t *testing.T, status kargoapi.ProjectStatus, initialized bool, err error) {
 				require.ErrorContains(t, err, "something went wrong")
 				require.False(t, initialized)
@@ -297,6 +580,7 @@ func TestReconciler_initializeProject(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
+			project: &kargoapi.Project{},
 			assertions: func(t *testing.T, _ kargoapi.ProjectStatus, initialized bool, err error) {
 				require.ErrorContains(t, err, "something went wrong")
 				require.False(t, initialized)
@@ -321,6 +605,7 @@ func TestReconciler_initializeProject(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
+			project: &kargoapi.Project{},
 			assertions: func(t *testing.T, status kargoapi.ProjectStatus, initialized bool, err error) {
 				require.ErrorContains(t, err, "something went wrong")
 				require.False(t, initialized)
@@ -358,6 +643,7 @@ func TestReconciler_initializeProject(t *testing.T) {
 					return nil
 				},
 			},
+			project: &kargoapi.Project{},
 			assertions: func(t *testing.T, status kargoapi.ProjectStatus, initialized bool, err error) {
 				require.NoError(t, err)
 				require.True(t, initialized)
@@ -375,9 +661,7 @@ func TestReconciler_initializeProject(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			status, initialized, err := testCase.reconciler.initializeProject(
 				context.Background(),
-				&kargoapi.Project{
-					Status: kargoapi.ProjectStatus{},
-				},
+				testCase.project,
 			)
 			testCase.assertions(t, status, initialized, err)
 		})
@@ -1222,9 +1506,10 @@ func TestMigrateSpecToProjectConfig(t *testing.T) {
 	require.NoError(t, err)
 
 	tests := []struct {
-		name       string
-		project    *kargoapi.Project
-		assertions func(t *testing.T, migrated bool, cl client.Client, err error)
+		name        string
+		project     *kargoapi.Project
+		interceptor interceptor.Funcs
+		assertions  func(t *testing.T, migrated bool, cl client.Client, err error)
 	}{
 		{
 			name: "nil spec",
@@ -1274,7 +1559,26 @@ func TestMigrateSpecToProjectConfig(t *testing.T) {
 				require.True(t, kubeerr.IsNotFound(err))
 			},
 		},
-		// TODO: Add error cases
+		{
+			name: "error creating ProjectConfig",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{Name: testProject},
+				Spec: &kargoapi.ProjectSpec{ // nolint:staticcheck
+					PromotionPolicies: []kargoapi.PromotionPolicy{
+						{Stage: "policy-1"},
+					},
+				},
+			},
+			interceptor: interceptor.Funcs{
+				Create: func(context.Context, client.WithWatch, client.Object, ...client.CreateOption) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, migrated bool, _ client.Client, err error) {
+				require.ErrorContains(t, err, "something went wrong")
+				require.False(t, migrated)
+			},
+		},
 		{
 			name: "success with promotion policies",
 			project: &kargoapi.Project{
@@ -1308,7 +1612,11 @@ func TestMigrateSpecToProjectConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cl := fake.NewClientBuilder().WithScheme(testScheme).WithObjects(tt.project).Build()
+			cl := fake.NewClientBuilder().
+				WithScheme(testScheme).
+				WithObjects(tt.project).
+				WithInterceptorFuncs(tt.interceptor).
+				Build()
 			r := &reconciler{client: cl}
 			migrated, err := r.migrateSpecToProjectConfig(context.Background(), tt.project)
 			tt.assertions(t, migrated, cl, err)

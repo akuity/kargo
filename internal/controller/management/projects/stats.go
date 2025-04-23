@@ -29,16 +29,6 @@ func (r *reconciler) collectStats(
 
 	status := *project.Status.DeepCopy()
 
-	// Mark the Project as reconciling.
-	conditions.Set(&project.Status, &metav1.Condition{
-		Type:               kargoapi.ConditionTypeReconciling,
-		Status:             metav1.ConditionTrue,
-		Reason:             "CollectingProjectStats",
-		Message:            "Collecting project stats",
-		ObservedGeneration: project.GetGeneration(),
-	})
-	defer conditions.Delete(&status, kargoapi.ConditionTypeReconciling)
-
 	warehouses := &kargoapi.WarehouseList{}
 	if err := r.client.List(
 		ctx,

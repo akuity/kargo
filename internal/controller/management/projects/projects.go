@@ -310,6 +310,8 @@ func (r *reconciler) reconcile(
 				}
 				if initialized {
 					logger.Debug("initialized Project")
+					requestRequeue = true
+					return newStatus, true, nil // Stop the loop
 				}
 				return newStatus, false, nil // Continue
 			},
