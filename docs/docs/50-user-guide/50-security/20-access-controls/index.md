@@ -355,8 +355,8 @@ subjects:
 
 ##### Example: Declarative OIDC Claim Mapping to Built-in Roles
 
-To declaratively assign OIDC group claims to Kargo’s built-in roles,
-such as `kargo-admin` or `kargo-viewer`, you can create a `ServiceAccount`
+To declaratively assign OIDC claims to Kargo’s built-in roles, such
+as `kargo-admin` or `kargo-viewer`, you can create a `ServiceAccount`
 annotated with the appropriate claims, then bind it to the desired 
 role using a `RoleBinding`.
 
