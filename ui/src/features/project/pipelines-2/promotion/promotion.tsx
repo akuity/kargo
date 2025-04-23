@@ -20,6 +20,7 @@ import { timestampDate } from '@ui/utils/connectrpc-utils';
 import { FreightDetails } from './freight-details';
 import { getPromotionActor } from './get-promotion-actor';
 import { PromotionGraph } from './promotion-graph';
+import { useWatchPromotion } from './use-watch-promotion';
 
 type PromotionProps = ModalComponentProps & {
   promotionId: string;
@@ -122,6 +123,8 @@ export const Promotion = (props: PromotionProps) => {
     project: props.project,
     name: props.promotionId
   });
+
+  useWatchPromotion(props.project, props.promotionId);
 
   return (
     <Drawer
