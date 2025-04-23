@@ -268,6 +268,118 @@ With the exception of the claim-mapping annotations on `ServiceAccount`
 resources, these resources do not need to be labeled or annotated in any special
 way.
 
+##### Example: Custom Promoter Role
+
+The following example demonstrates how to create a custom role named
+`promoter`, which grants members of the `devops` OIDC group permission
+to `promote` into the `dev` and `staging` `Stages` in the `guestbook` 
+`Project`.
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: promoter
+  namespace: guestbook
+  annotations:
+    kargo.akuity.io/description: Permissions to promote into pre-prod Stages
+    rbac.kargo.akuity.io/claim.groups: devops
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: promoter
+  namespace: guestbook
+rules:
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  verbs:
+  - create
+  - patch
+  - update
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - stages
+  verbs:
+  - promote
+  # Limit promotions to a subset of Stages
+  resourceNames:
+  - dev
+  - staging
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: promoter
+  namespace: guestbook
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: promoter
+subjects:
+- kind: ServiceAccount
+  name: promoter
+  namespace: guestbook
+
+---
+# This RoleBinding allows the promoter ServiceAccount to view project
+# resources (without redefining read rules), by binding it to the
+# built-in kargo-viewer Role.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: promoter-viewer
+  namespace: guestbook
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kargo-viewer
+subjects:
+- kind: ServiceAccount
+  name: promoter
+  namespace: guestbook
+```
+
+##### Example: Declarative OIDC Claim Mapping to Built-in Roles
+
+To declaratively assign OIDC group claims to Kargo’s built-in roles,
+such as `kargo-admin` or `kargo-viewer`, you can create a `ServiceAccount`
+annotated with the appropriate claims, then bind it to the desired 
+role using a `RoleBinding`.
+
+In the example below, users in the `devops` OIDC group are granted 
+admin-level permissions within the `guestbook` `Project`:
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: admin
+  namespace: guestbook
+  annotations:
+    rbac.kargo.akuity.io/claim.groups: devops
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: admin
+  namespace: guestbook
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kargo-admin
+subjects:
+- kind: ServiceAccount
+  name: admin
+  namespace: guestbook
+```
+
 #### Global Mappings
 
 As previously mentioned, _most_ access controls are managed at the project level
