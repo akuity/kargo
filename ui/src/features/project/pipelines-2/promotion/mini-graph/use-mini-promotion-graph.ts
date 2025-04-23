@@ -19,9 +19,17 @@ export const useMiniPromotionGraph = (stage: Stage, freight: Freight) => {
 
     graph.setNode(stageName, nodeSize());
 
-    const parentStages = dictionaryContext?.subscribersByStage?.[stageName];
+    const parentStages = new Set<string>();
 
-    if (parentStages) {
+    for (const [stage, subscribers] of Object.entries(
+      dictionaryContext?.subscribersByStage || {}
+    )) {
+      if (subscribers.has(stageName)) {
+        parentStages.add(stage);
+      }
+    }
+
+    if (parentStages.size) {
       for (const parentStage of parentStages) {
         graph.setNode(parentStage, { ...nodeSize(), handles: parentStages.size });
         graph.setEdge(parentStage, stageName);

@@ -118,7 +118,7 @@ export const Graph = (props: GraphProps) => {
         minZoom={0.1}
         proOptions={{ hideAttribution: true }}
       >
-        <Controls />
+        <Controls showInteractive={false} />
       </ReactFlow>
     </GraphContext.Provider>
   );

@@ -1,4 +1,4 @@
-import { Card, Select } from 'antd';
+import { Card, Select, Typography } from 'antd';
 
 import { Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
@@ -13,7 +13,9 @@ export const GraphFilters = (props: GraphFiltersProps) => {
 
   return (
     <Card size='small' className='absolute mt-2 ml-2 z-10'>
-      <label>Warehouses: </label>
+      <Typography.Text className='text-xs' type='secondary'>
+        Warehouses:{' '}
+      </Typography.Text>
       <Select
         size='small'
         mode='multiple'

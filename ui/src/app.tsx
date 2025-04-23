@@ -40,6 +40,7 @@ export const App = () => (
                   <Route path={paths.projectEvents} element={<Events />} />
                   <Route path={paths.stage} element={<Project />} />
                   <Route path={paths.promotion} element={<Project />} />
+                  <Route path={paths.promote} element={<Project />} />
                   <Route path={paths.freight} element={<Project />} />
                   <Route path={paths.warehouse} element={<Project />} />
                   <Route path={paths.downloads} element={<Downloads />} />

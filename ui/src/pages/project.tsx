@@ -20,7 +20,7 @@ export const Project = ({
   creatingStage?: boolean;
   creatingWarehouse?: boolean;
 }) => {
-  const { name, stageName, promotionId } = useParams();
+  const { name, stageName, promotionId, freight, stage } = useParams();
 
   const navigate = useNavigate();
   const projectBreadcrumbs = useProjectBreadcrumbs();
@@ -72,6 +72,14 @@ export const Project = ({
         project={data?.result?.value as _Project}
         stageName={stageName}
         promotionId={promotionId}
+        promote={
+          freight && stage
+            ? {
+                freight,
+                stage
+              }
+            : undefined
+        }
       />
     </div>
   );

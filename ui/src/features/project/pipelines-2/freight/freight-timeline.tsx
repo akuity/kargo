@@ -1,29 +1,51 @@
+import { useQuery } from '@connectrpc/connect-query';
 import { faCaretLeft, faCaretRight, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Descriptions, Divider } from 'antd';
 import classNames from 'classnames';
 import { useContext, useMemo, useRef, useState } from 'react';
+import { generatePath, useNavigate } from 'react-router-dom';
 
+import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
 import { FreightStatusList } from '@ui/features/freight/freight-status-list';
+import { useActionContext } from '@ui/features/project/pipelines-2/context/action-context';
 import { useDictionaryContext } from '@ui/features/project/pipelines-2/context/dictionary-context';
+import { useFreightTimelineControllerContext } from '@ui/features/project/pipelines-2/context/freight-timeline-controller-context';
+import { queryFreight } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
-
-import { useFreightTimelineControllerContext } from '../context/freight-timeline-controller-context';
 
 import { timerangeToDate } from './filter-timerange-utils';
 import { FreightCard } from './freight-card';
 import { FreightTable } from './freight-table';
 import { FreightTimelineFilters } from './freight-timeline-filters';
+import { PromotionModeHeader } from './promotion-mode-header';
 import { filterFreightBySource, filterFreightByTimerange } from './source-catalogue-utils';
 
 import './freight-timeline.less';
 
-export const FreightTimeline = (props: { freights: Freight[] }) => {
+export const FreightTimeline = (props: { freights: Freight[]; project: string }) => {
+  const navigate = useNavigate();
+
   const colorContext = useContext(ColorContext);
   const freightTimelineControllerContext = useFreightTimelineControllerContext();
   const dictionaryContext = useDictionaryContext();
+  const actionContext = useActionContext();
+
+  const isPromotionMode = !!actionContext?.action;
+
+  const getPromotionEligibleFreightQuery = useQuery(
+    queryFreight,
+    {
+      project: props.project,
+      stage: actionContext?.action?.stage?.metadata?.name
+    },
+    { enabled: isPromotionMode }
+  );
+
+  const promotionEligibleFreight =
+    getPromotionEligibleFreightQuery?.data?.groups?.['']?.freight || [];
 
   if (!freightTimelineControllerContext) {
     throw new Error('missing context freightTimelineControllerContext');
@@ -107,6 +129,10 @@ export const FreightTimeline = (props: { freights: Freight[] }) => {
 
   return (
     <>
+      <PromotionModeHeader
+        loading={getPromotionEligibleFreightQuery.isFetching}
+        className='bg-white px-2 py-1 space-x-2 hf'
+      />
       <div
         className={classNames('freightTimeline', 'bg-white px-5 py-2 flex gap-5')}
         style={{ borderBottom: '2px solid rgba(0,0,0,.05)' }}
@@ -132,23 +158,42 @@ export const FreightTimeline = (props: { freights: Freight[] }) => {
           }}
         >
           <div className='flex gap-1 relative transition-all right-0' ref={freightListStyleRef}>
-            {filteredFreights.map((freight) => (
-              <FreightCard
-                stagesInFreight={
-                  dictionaryContext?.freightInStages?.[freight?.metadata?.name || ''] || []
-                }
-                key={freight?.metadata?.uid}
-                freight={freight}
-                preferredFilter={freightTimelineControllerContext.preferredFilter}
-                setViewingFreight={setViewingFreight}
-                viewingFreight={viewingFreight}
-                inUse={
-                  (dictionaryContext?.freightInStages[freight?.metadata?.name || '']?.length || 0) >
-                  0
-                }
-                stageColorMap={colorContext.stageColorMap}
-              />
-            ))}
+            {filteredFreights.map((freight) => {
+              const promotionEligible = Boolean(
+                promotionEligibleFreight?.find((f) => f?.metadata?.name === freight?.metadata?.name)
+              );
+
+              return (
+                <FreightCard
+                  key={freight?.metadata?.uid}
+                  className='h-full'
+                  stagesInFreight={
+                    dictionaryContext?.freightInStages?.[freight?.metadata?.name || ''] || []
+                  }
+                  freight={freight}
+                  preferredFilter={freightTimelineControllerContext.preferredFilter}
+                  setViewingFreight={setViewingFreight}
+                  viewingFreight={viewingFreight}
+                  inUse={
+                    (dictionaryContext?.freightInStages[freight?.metadata?.name || '']?.length ||
+                      0) > 0
+                  }
+                  stageColorMap={colorContext.stageColorMap}
+                  promote={isPromotionMode && promotionEligible}
+                  onReviewAndPromote={() => {
+                    const stage = actionContext?.action?.stage?.metadata?.name || '';
+
+                    navigate(
+                      generatePath(paths.promote, {
+                        name: props.project,
+                        freight: freight?.metadata?.name,
+                        stage: stage
+                      })
+                    );
+                  }}
+                />
+              );
+            })}
           </div>
 
           <div
@@ -170,7 +215,6 @@ export const FreightTimeline = (props: { freights: Freight[] }) => {
           </div>
         </div>
       </div>
-
       {!!viewingFreight && (
         <div className='scale-90 origin-top bg-white p-5'>
           <FreightExtended freight={viewingFreight} onClose={() => setViewingFreight(null)} />

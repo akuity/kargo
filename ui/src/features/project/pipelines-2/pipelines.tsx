@@ -14,6 +14,7 @@ import {
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { Freight, Project } from '@ui/gen/api/v1alpha1/generated_pb';
 
+import { ActionContext } from './context/action-context';
 import { DictionaryContext } from './context/dictionary-context';
 import {
   FreightTimelineControllerContext,
@@ -22,7 +23,9 @@ import {
 import { FreightTimeline } from './freight/freight-timeline';
 import { Graph } from './graph/graph';
 import { GraphFilters } from './graph-filters';
+import { Promote } from './promotion/promote';
 import { Promotion } from './promotion/promotion';
+import { useAction } from './use-action';
 import { useFreightById } from './use-freight-by-id';
 import { useFreightInStage } from './use-freight-in-stage';
 import { useStageAutoPromotionMap } from './use-stage-auto-promotion-map';
@@ -35,11 +38,20 @@ export const Pipelines = (props: {
   project: Project;
   stageName?: string;
   promotionId?: string;
+  promote?: {
+    freight: string;
+    stage: string;
+  };
 }) => {
   const navigate = useNavigate();
+
+  const action = useAction();
+
   const projectName = props.project?.metadata?.name;
 
-  const getFreightQuery = useQuery(queryFreight, { project: projectName });
+  const getFreightQuery = useQuery(queryFreight, {
+    project: projectName
+  });
 
   const listWarehousesQuery = useQuery(listWarehouses, { project: projectName });
 
@@ -94,46 +106,61 @@ export const Pipelines = (props: {
   }
 
   return (
-    <FreightTimelineControllerContext.Provider
-      value={{
-        viewingFreight,
-        setPreferredFilter,
-        preferredFilter,
-        setViewingFreight
-      }}
-    >
-      <DictionaryContext.Provider
+    <ActionContext.Provider value={action}>
+      <FreightTimelineControllerContext.Provider
         value={{
-          freightInStages,
-          freightById,
-          stageAutoPromotionMap,
-          subscribersByStage,
-          stageByName
+          viewingFreight,
+          setPreferredFilter,
+          preferredFilter,
+          setViewingFreight
         }}
       >
-        <ColorContext.Provider value={{ stageColorMap, warehouseColorMap }}>
-          <FreightTimeline freights={getFreightQuery?.data?.groups?.['']?.freight || []} />
-
-          <div className='w-full h-full relative'>
-            <GraphFilters warehouses={listWarehousesQuery.data?.warehouses || []} />
-            <Graph
-              project={props.project.metadata?.name || ''}
-              warehouses={listWarehousesQuery.data?.warehouses || []}
-              stages={listStagesQuery.data?.stages || []}
-            />
-          </div>
-
-          {!!stageDetails && <StageDetails stage={stageDetails} />}
-          {!!props.promotionId && (
-            <Promotion
-              visible
-              hide={() => navigate(generatePath(paths.project, { name: projectName }))}
-              promotionId={props.promotionId}
+        <DictionaryContext.Provider
+          value={{
+            freightInStages,
+            freightById,
+            stageAutoPromotionMap,
+            subscribersByStage,
+            stageByName
+          }}
+        >
+          <ColorContext.Provider value={{ stageColorMap, warehouseColorMap }}>
+            <FreightTimeline
+              freights={getFreightQuery?.data?.groups?.['']?.freight || []}
               project={projectName || ''}
             />
-          )}
-        </ColorContext.Provider>
-      </DictionaryContext.Provider>
-    </FreightTimelineControllerContext.Provider>
+
+            <div className='w-full h-full relative'>
+              <GraphFilters warehouses={listWarehousesQuery.data?.warehouses || []} />
+              <Graph
+                project={props.project.metadata?.name || ''}
+                warehouses={listWarehousesQuery.data?.warehouses || []}
+                stages={listStagesQuery.data?.stages || []}
+              />
+            </div>
+
+            {!!stageDetails && <StageDetails stage={stageDetails} />}
+
+            {!!props.promotionId && (
+              <Promotion
+                visible
+                hide={() => navigate(generatePath(paths.project, { name: projectName }))}
+                promotionId={props.promotionId}
+                project={projectName || ''}
+              />
+            )}
+
+            {!!props.promote && (
+              <Promote
+                visible
+                hide={() => navigate(generatePath(paths.project, { name: projectName }))}
+                freight={freightById?.[props.promote.freight]}
+                stage={stageByName?.[props.promote.stage]}
+              />
+            )}
+          </ColorContext.Provider>
+        </DictionaryContext.Provider>
+      </FreightTimelineControllerContext.Provider>
+    </ActionContext.Provider>
   );
 };

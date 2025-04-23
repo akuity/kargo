@@ -1,7 +1,7 @@
 import { faDocker, faGithub } from '@fortawesome/free-brands-svg-icons';
 import { faAnchor, faWarehouse, IconDefinition } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Tag, Typography } from 'antd';
+import { Button, Tag, Typography } from 'antd';
 import classNames from 'classnames';
 import { formatDistance } from 'date-fns';
 import { useMemo } from 'react';
@@ -22,6 +22,9 @@ type FreightCardProps = {
   inUse?: boolean; // is used by stages
   stagesInFreight: Stage[];
   stageColorMap: ColorMap;
+  className?: string;
+  promote?: boolean;
+  onReviewAndPromote?(): void;
 };
 
 export const FreightCard = (props: FreightCardProps) => {
@@ -56,7 +59,8 @@ export const FreightCard = (props: FreightCardProps) => {
         {
           'bg-gray-50': !isViewingFreight,
           'bg-gray-100': isViewingFreight
-        }
+        },
+        props.className
       )}
       style={{ border: '1px solid rgba(0,0,0,.05)' }}
       onClick={() => props.setViewingFreight?.(isViewingFreight ? null : props.freight)}
@@ -109,7 +113,7 @@ export const FreightCard = (props: FreightCardProps) => {
         <FreightArtifactCarousel freight={props.freight} />
       )}
 
-      <div className='flex mx-auto w-full gap-2 items-center justify-center text-nowrap mt-1'>
+      <div className='flex mx-auto w-full gap-2 items-center justify-center text-nowrap my-1'>
         {noOfGitCommits + noOfHelmReleases + noOfContainerImages > 0 && (
           <>
             <FreightCard.ArtifactCount icon={faGithub} count={noOfGitCommits} />
@@ -131,6 +135,20 @@ export const FreightCard = (props: FreightCardProps) => {
           {props.freight?.origin?.name}
         </Typography.Text>
       </div>
+
+      {props.promote && (
+        <Button
+          className='w-full my-2 mt-auto'
+          type='primary'
+          size='small'
+          onClick={(e) => {
+            e.stopPropagation();
+            props.onReviewAndPromote?.();
+          }}
+        >
+          Review and Promote
+        </Button>
+      )}
     </div>
   );
 };
