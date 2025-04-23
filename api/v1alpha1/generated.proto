@@ -675,13 +675,6 @@ message HealthCheckStep {
 message HealthStats {
   // Healthy contains the number of resources that are explicitly healthy.
   optional int64 healthy = 1;
-
-  // Unhealthy contains the number of resources that are explicitly unhealthy.
-  optional int64 unhealthy = 2;
-
-  // Unknown contains the number of resources whose current health is
-  // indeterminable.
-  optional int64 unknown = 3;
 }
 
 // Image describes a specific version of a container image.
@@ -1274,6 +1267,9 @@ message StageSpec {
 // StageStats contains a summary of the collective state of the a Project's
 // Stages.
 message StageStats {
+  // Count contains the total number of Stages in the Project.
+  optional int64 count = 2;
+
   // Health contains a summary of the collective health of a Project's Stages.
   optional HealthStats health = 1;
 }
@@ -1480,6 +1476,9 @@ message WarehouseSpec {
 // WarehouseStats contains a summary of the collective state of the a Project's
 // Warehouses.
 message WarehouseStats {
+  // Count contains the total number of Warehouses in the Project.
+  optional int64 count = 2;
+
   // Health contains a summary of the collective health of a Project's
   // Warehouses.
   optional HealthStats health = 1;

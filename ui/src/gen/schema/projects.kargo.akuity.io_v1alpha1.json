@@ -118,25 +118,18 @@
             "stages": {
               "description": "Stages contains a summary of the collective state of the Project's Stages.",
               "properties": {
+                "count": {
+                  "description": "Count contains the total number of Stages in the Project.",
+                  "format": "int64",
+                  "maximum": 9223372036854776000,
+                  "minimum": -9223372036854776000,
+                  "type": "integer"
+                },
                 "health": {
                   "description": "Health contains a summary of the collective health of a Project's Stages.",
                   "properties": {
                     "healthy": {
                       "description": "Healthy contains the number of resources that are explicitly healthy.",
-                      "format": "int64",
-                      "maximum": 9223372036854776000,
-                      "minimum": -9223372036854776000,
-                      "type": "integer"
-                    },
-                    "unhealthy": {
-                      "description": "Unhealthy contains the number of resources that are explicitly unhealthy.",
-                      "format": "int64",
-                      "maximum": 9223372036854776000,
-                      "minimum": -9223372036854776000,
-                      "type": "integer"
-                    },
-                    "unknown": {
-                      "description": "Unknown contains the number of resources whose current health is\nindeterminable.",
                       "format": "int64",
                       "maximum": 9223372036854776000,
                       "minimum": -9223372036854776000,
@@ -151,25 +144,18 @@
             "warehouses": {
               "description": "Warehouses contains a summary of the collective state of the Project's\nWarehouses.",
               "properties": {
+                "count": {
+                  "description": "Count contains the total number of Warehouses in the Project.",
+                  "format": "int64",
+                  "maximum": 9223372036854776000,
+                  "minimum": -9223372036854776000,
+                  "type": "integer"
+                },
                 "health": {
                   "description": "Health contains a summary of the collective health of a Project's\nWarehouses.",
                   "properties": {
                     "healthy": {
                       "description": "Healthy contains the number of resources that are explicitly healthy.",
-                      "format": "int64",
-                      "maximum": 9223372036854776000,
-                      "minimum": -9223372036854776000,
-                      "type": "integer"
-                    },
-                    "unhealthy": {
-                      "description": "Unhealthy contains the number of resources that are explicitly unhealthy.",
-                      "format": "int64",
-                      "maximum": 9223372036854776000,
-                      "minimum": -9223372036854776000,
-                      "type": "integer"
-                    },
-                    "unknown": {
-                      "description": "Unknown contains the number of resources whose current health is\nindeterminable.",
                       "format": "int64",
                       "maximum": 9223372036854776000,
                       "minimum": -9223372036854776000,
