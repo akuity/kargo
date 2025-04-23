@@ -589,6 +589,7 @@ spec:
                                 GitRepoURL specifies the URL of a Git repository that contains the source
                                 code for the image repository referenced by the RepoURL field if Kargo was
                                 able to infer it.
+                                Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
                               type: string
                             repoURL:
                               description: RepoURL describes the repository in which
@@ -736,6 +737,7 @@ spec:
                                     GitRepoURL specifies the URL of a Git repository that contains the source
                                     code for the image repository referenced by the RepoURL field if Kargo was
                                     able to infer it.
+                                    Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
                                   type: string
                                 repoURL:
                                   description: RepoURL describes the repository in
@@ -879,6 +881,7 @@ spec:
                                           GitRepoURL specifies the URL of a Git repository that contains the source
                                           code for the image repository referenced by the RepoURL field if Kargo was
                                           able to infer it.
+                                          Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
                                         type: string
                                       repoURL:
                                         description: RepoURL describes the repository
@@ -1183,6 +1186,7 @@ spec:
                                     GitRepoURL specifies the URL of a Git repository that contains the source
                                     code for the image repository referenced by the RepoURL field if Kargo was
                                     able to infer it.
+                                    Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
                                   type: string
                                 repoURL:
                                   description: RepoURL describes the repository in
@@ -1430,6 +1434,7 @@ spec:
                                 GitRepoURL specifies the URL of a Git repository that contains the source
                                 code for the image repository referenced by the RepoURL field if Kargo was
                                 able to infer it.
+                                Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
                               type: string
                             repoURL:
                               description: RepoURL describes the repository in which
@@ -1577,6 +1582,7 @@ spec:
                                     GitRepoURL specifies the URL of a Git repository that contains the source
                                     code for the image repository referenced by the RepoURL field if Kargo was
                                     able to infer it.
+                                    Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
                                   type: string
                                 repoURL:
                                   description: RepoURL describes the repository in
@@ -1720,6 +1726,7 @@ spec:
                                           GitRepoURL specifies the URL of a Git repository that contains the source
                                           code for the image repository referenced by the RepoURL field if Kargo was
                                           able to infer it.
+                                          Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
                                         type: string
                                       repoURL:
                                         description: RepoURL describes the repository

@@ -262,7 +262,7 @@ first argument and returns a corresponding `Image` object from the `Promotion`'s
 | Field | Description |
 |-------|-------------|
 | `RepoURL` | The URL of the container image repository the image originates from. |
-| `GitRepoURL` | The URL of the Git repository which contains the source code for the image. Only present if Kargo was able to infer it from the URL. |
+| `GitRepoURL` | (Deprecated as of version 1.5, will be removed in version 1.7) The URL of the Git repository which contains the source code for the image. Only present if Kargo was able to infer it from the URL. |
 | `Tag` | The tag of the image. |
 | `Digest` | The digest of the image. |
 

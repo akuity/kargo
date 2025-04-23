@@ -220,6 +220,8 @@ type ImageSubscription struct {
 	// When this is specified, Kargo MAY be able to infer and link to the exact
 	// revision of that source code that was used to build the image.
 	//
+	// Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
+	//
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:Pattern=`^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
 	GitRepoURL string `json:"gitRepoURL,omitempty" protobuf:"bytes,2,opt,name=gitRepoURL"`
@@ -473,6 +475,8 @@ type DiscoveredImageReference struct {
 	// GitRepoURL is the URL of the Git repository that contains the source
 	// code for this image. This field is optional, and only populated if the
 	// ImageSubscription specifies a GitRepoURL.
+	//
+	// Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
 	GitRepoURL string `json:"gitRepoURL,omitempty" protobuf:"bytes,3,opt,name=gitRepoURL"`
 	// CreatedAt is the time the image was created. This field is optional, and
 	// not populated for every ImageSelectionStrategy.

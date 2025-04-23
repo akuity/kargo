@@ -60,6 +60,7 @@ const constructFreight = (
         repoURL: artifact.repoURL,
         tag: imageRef.tag,
         digest: imageRef.digest,
+        // Deprecated: Use OCI annotations instead. Will be removed in version 1.7.
         gitRepoURL: imageRef.gitRepoURL
       } as Image);
     } else if ('versions' in artifact) {
