@@ -4,15 +4,17 @@ import (
 	"context"
 	"testing"
 
-	"github.com/akuity/kargo/internal/gitprovider"
 	"github.com/ktrysmt/go-bitbucket"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/akuity/kargo/internal/gitprovider"
 )
 
 type mockPullRequestClient struct {
 	createPullRequestFunc func(opt *bitbucket.PullRequestsOptions) (any, error)
 	listPullRequestsFunc  func(opt *bitbucket.PullRequestsOptions) (any, error)
 	getPullRequestFunc    func(opt *bitbucket.PullRequestsOptions) (any, error)
+	getCommitFunc         func(opt *bitbucket.CommitsOptions) (any, error)
 }
 
 func (m *mockPullRequestClient) CreatePullRequest(opt *bitbucket.PullRequestsOptions) (any, error) {
@@ -25,6 +27,10 @@ func (m *mockPullRequestClient) ListPullRequests(opt *bitbucket.PullRequestsOpti
 
 func (m *mockPullRequestClient) GetPullRequest(opt *bitbucket.PullRequestsOptions) (any, error) {
 	return m.getPullRequestFunc(opt)
+}
+
+func (m *mockPullRequestClient) GetCommit(opt *bitbucket.CommitsOptions) (any, error) {
+	return m.getCommitFunc(opt)
 }
 
 func TestNewProvider(t *testing.T) {
