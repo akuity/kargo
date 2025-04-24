@@ -677,7 +677,7 @@ func (r *RegularStageReconciler) syncPromotions(
 		// or the verification failed, then we can allow the next Promotion to
 		// start immediately as the expectation is that the Promotion can fix the
 		// issue.
-		if stage.Status.Health == nil || stage.Status.Health.Status != kargoapi.HealthStateUnhealthy {
+		if stage.Status.Health == nil || stage.Status.Health.Status == kargoapi.HealthStateHealthy {
 			curVI := curFreight.VerificationHistory.Current()
 			if curVI == nil || !curVI.Phase.IsTerminal() {
 				logger.Debug("current Freight needs to be verified before allowing new promotions to start")
