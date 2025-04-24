@@ -158,6 +158,15 @@ func (p *provider) CreatePullRequest(
 	if err != nil {
 		return nil, err
 	}
+
+	if pr.MergeCommit.Hash != "" {
+		fullSHA, err := p.getFullCommitSHA(ctx, pr.MergeCommit.Hash)
+		if err != nil {
+			return nil, err
+		}
+		pr.MergeCommit.Hash = fullSHA
+	}
+
 	return toProviderPR(pr, resp), nil
 }
 
@@ -182,6 +191,15 @@ func (p *provider) GetPullRequest(
 	if err != nil {
 		return nil, err
 	}
+
+	if pr.MergeCommit.Hash != "" {
+		fullSHA, err := p.getFullCommitSHA(ctx, pr.MergeCommit.Hash)
+		if err != nil {
+			return nil, err
+		}
+		pr.MergeCommit.Hash = fullSHA
+	}
+
 	return toProviderPR(pr, resp), nil
 }
 
@@ -256,11 +274,48 @@ func (p *provider) ListPullRequests(
 			continue
 		}
 
+		if bbPR.MergeCommit.Hash != "" {
+			fullSHA, err := p.getFullCommitSHA(ctx, bbPR.MergeCommit.Hash)
+			if err != nil {
+				return nil, err
+			}
+			bbPR.MergeCommit.Hash = fullSHA
+		}
+
 		if converted := toProviderPR(bbPR, pr); converted != nil {
 			prs = append(prs, *converted)
 		}
 	}
 	return prs, nil
+}
+
+func (p *provider) getFullCommitSHA(ctx context.Context, shortSHA string) (string, error) {
+	if shortSHA == "" {
+		return "", nil
+	}
+
+	commitOpts := &bitbucket.CommitsOptions{
+		Owner:    p.owner,
+		RepoSlug: p.repoSlug,
+		Revision: shortSHA,
+	}
+	commitOpts.WithContext(ctx)
+
+	resp, err := p.client.GetCommit(commitOpts)
+	if err != nil {
+		return "", err
+	}
+
+	commitResp, ok := resp.(map[string]any)
+	if !ok {
+		return "", fmt.Errorf("unexpected commit response type: %T", resp)
+	}
+
+	hash, ok := commitResp["hash"].(string)
+	if !ok || hash == "" {
+		return "", fmt.Errorf("commit response missing 'hash' field")
+	}
+	return hash, nil
 }
 
 // bitbucketPR represents the structure of a Bitbucket pull request.
@@ -324,9 +379,9 @@ func toProviderPR(pr *bitbucketPR, raw any) *gitprovider.PullRequest {
 		URL:    pr.Links.HTML.Href,
 		Open:   pr.State == prStateOpen,
 		Merged: pr.State == prStateMerged,
-		// TODO(hidde): As a sign of true craftsmanship, or lack thereof, the
-		// Bitbucket API returns a short commit SHA as merge commit hash. To get
-		// the full commit SHA, we need to fetch the commit details separately.
+		// NB: As a sign of true craftsmanship, or lack thereof, the Bitbucket
+		// API returns a short commit SHA as merge commit hash. To get the full
+		// commit SHA, we need to fetch the commit details separately.
 		MergeCommitSHA: pr.MergeCommit.Hash,
 		HeadSHA:        pr.Source.Commit.Hash,
 		CreatedAt:      createdAt,
