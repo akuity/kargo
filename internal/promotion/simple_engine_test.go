@@ -764,7 +764,7 @@ func TestSimpleEngine_getProjectSecrets(t *testing.T) {
 					},
 					Data: testData,
 				},
-				&corev1.Secret{ // Labeled with new label; should be included
+				&corev1.Secret{ // Labeled; should be included
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-secret-b",
 						Namespace: "test-project",
@@ -774,37 +774,12 @@ func TestSimpleEngine_getProjectSecrets(t *testing.T) {
 					},
 					Data: testData,
 				},
-				&corev1.Secret{ // Labeled with legacy label; should be included
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-secret-c",
-						Namespace: "test-project",
-						Labels: map[string]string{
-							kargoapi.ProjectSecretLabelKey: kargoapi.LabelTrueValue,
-						},
-					},
-					Data: testData,
-				},
-				&corev1.Secret{ // Labeled both ways; should be included ONCE
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-secret-d",
-						Namespace: "test-project",
-						Labels: map[string]string{
-							kargoapi.CredentialTypeLabelKey: kargoapi.CredentialTypeLabelGeneric,
-							kargoapi.ProjectSecretLabelKey:  kargoapi.LabelTrueValue,
-						},
-					},
-					Data: testData,
-				},
 			},
 			assertions: func(t *testing.T, secrets map[string]map[string]string, err error) {
 				assert.NoError(t, err)
-				require.Len(t, secrets, 3)
+				require.Len(t, secrets, 1)
 				assert.Equal(t, "value1", secrets["test-secret-b"]["key1"])
 				assert.Equal(t, "value2", secrets["test-secret-b"]["key2"])
-				assert.Equal(t, "value1", secrets["test-secret-c"]["key1"])
-				assert.Equal(t, "value2", secrets["test-secret-c"]["key2"])
-				assert.Equal(t, "value1", secrets["test-secret-d"]["key1"])
-				assert.Equal(t, "value2", secrets["test-secret-d"]["key2"])
 			},
 		},
 		{
