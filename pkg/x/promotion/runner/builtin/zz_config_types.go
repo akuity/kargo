@@ -134,14 +134,8 @@ type Checkout struct {
 type GitCommitConfig struct {
 	// The author of the commit.
 	Author *Author `json:"author,omitempty"`
-	// The commit message. Mutually exclusive with 'messageFromSteps'.
-	Message string `json:"message,omitempty"`
-	// References the `commitMessage` output of previous steps. When one or more are specified,
-	// the commit message will be constructed by concatenating the messages from individual
-	// steps. Mutually exclusive with `message`.
-	//
-	// Deprecated: Use 'message' with an expression instead. Will be removed in v1.5.0.
-	MessageFromSteps []string `json:"messageFromSteps,omitempty"`
+	// The commit message.
+	Message string `json:"message"`
 	// The path to a working directory of a local repository.
 	Path string `json:"path"`
 }

@@ -336,7 +336,7 @@ the previous section.
         config:
           path: ./out
       - uses: kustomize-set-image
-        as: update-image
+        as: update
         config:
           path: ./src/base
           images:
@@ -350,8 +350,7 @@ the previous section.
         as: commit
         config:
           path: ./out
-          messageFromSteps:
-          - update-image
+          message: \${{ outputs.update.commitMessage }}
       - uses: git-push
         config:
           path: ./out
@@ -505,7 +504,7 @@ the previous section.
         config:
           path: ./out
       - uses: kustomize-set-image
-        as: update-image
+        as: update
         config:
           path: ./src/base
           images:
@@ -519,8 +518,7 @@ the previous section.
         as: commit
         config:
           path: ./out
-          messageFromSteps:
-          - update-image
+          message: \${{ outputs.update.commitMessage }}
       - uses: git-push
         config:
           path: ./out

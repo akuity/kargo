@@ -347,7 +347,7 @@ the previous section.
             config:
               path: \${{ vars.outPath }}
           - uses: kustomize-set-image
-            as: update-image
+            as: update
             config:
               path: \${{ vars.srcPath }}/base
               images:
@@ -361,8 +361,7 @@ the previous section.
             as: commit
             config:
               path: \${{ vars.outPath }}
-              messageFromSteps:
-              - update-image
+              message: \${{ outputs.update.commitMessage }}
           - uses: git-push
             config:
               path: \${{ vars.outPath }}
@@ -412,7 +411,7 @@ the previous section.
             config:
               path: \${{ vars.outPath }}
           - uses: kustomize-set-image
-            as: update-image
+            as: update
             config:
               path: \${{ vars.srcPath }}/base
               images:
@@ -426,8 +425,7 @@ the previous section.
             as: commit
             config:
               path: \${{ vars.outPath }}
-              messageFromSteps:
-              - update-image
+              message: \${{ outputs.update.commitMessage }}
           - uses: git-push
             config:
               path: \${{ vars.outPath }}
@@ -477,7 +475,7 @@ the previous section.
             config:
               path: \${{ vars.outPath }}
           - uses: kustomize-set-image
-            as: update-image
+            as: update
             config:
               path: \${{ vars.srcPath }}/base
               images:
@@ -491,8 +489,7 @@ the previous section.
             as: commit
             config:
               path: \${{ vars.outPath }}
-              messageFromSteps:
-              - update-image
+              message: \${{ outputs.update.commitMessage }}
           - uses: git-push
             config:
               path: \${{ vars.outPath }}
@@ -618,7 +615,7 @@ the previous section.
             config:
               path: \${{ vars.outPath }}
           - uses: kustomize-set-image
-            as: update-image
+            as: update
             config:
               path: \${{ vars.srcPath }}/base
               images:
@@ -632,8 +629,7 @@ the previous section.
             as: commit
             config:
               path: \${{ vars.outPath }}
-              messageFromSteps:
-              - update-image
+              message: \${{ outputs.update.commitMessage }}
           - uses: git-push
             config:
               path: \${{ vars.outPath }}
@@ -683,7 +679,7 @@ the previous section.
             config:
               path: \${{ vars.outPath }}
           - uses: kustomize-set-image
-            as: update-image
+            as: update
             config:
               path: \${{ vars.srcPath }}/base
               images:
@@ -697,8 +693,7 @@ the previous section.
             as: commit
             config:
               path: \${{ vars.outPath }}
-              messageFromSteps:
-              - update-image
+              message: \${{ outputs.update.commitMessage }}
           - uses: git-push
             config:
               path: \${{ vars.outPath }}
@@ -748,7 +743,7 @@ the previous section.
             config:
               path: \${{ vars.outPath }}
           - uses: kustomize-set-image
-            as: update-image
+            as: update
             config:
               path: \${{ vars.srcPath }}/base
               images:
@@ -762,8 +757,7 @@ the previous section.
             as: commit
             config:
               path: \${{ vars.outPath }}
-              messageFromSteps:
-              - update-image
+              message: \${{ outputs.update.commitMessage }}
           - uses: git-push
             config:
               path: \${{ vars.outPath }}
