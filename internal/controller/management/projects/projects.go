@@ -106,7 +106,7 @@ type reconciler struct {
 
 	ensureControllerPermissionsFn func(context.Context, *kargoapi.Project) error
 
-	ensureDefaultProjectRolesFn func(context.Context, *kargoapi.Project) error
+	ensureDefaultUserRolesFn func(context.Context, *kargoapi.Project) error
 
 	createServiceAccountFn func(
 		context.Context,
@@ -195,7 +195,7 @@ func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
 	r.ensureFinalizerFn = api.EnsureFinalizer
 	r.ensureAPIAdminPermissionsFn = r.ensureAPIAdminPermissions
 	r.ensureControllerPermissionsFn = r.ensureControllerPermissions
-	r.ensureDefaultProjectRolesFn = r.ensureDefaultProjectRoles
+	r.ensureDefaultUserRolesFn = r.ensureDefaultUserRoles
 	r.createServiceAccountFn = r.client.Create
 	r.createRoleFn = r.client.Create
 	r.createRoleBindingFn = r.client.Create
@@ -302,16 +302,11 @@ func (r *reconciler) reconcile(
 			},
 		},
 		{
-			name: "initializing project",
+			name: "syncing project resources",
 			reconcile: func() (kargoapi.ProjectStatus, bool, error) {
-				newStatus, initialized, err := r.initializeProject(ctx, project)
+				newStatus, err := r.syncProject(ctx, project)
 				if err != nil {
 					return newStatus, true, err // Stop the loop
-				}
-				if initialized {
-					logger.Debug("initialized Project")
-					requestRequeue = true
-					return newStatus, true, nil // Stop the loop
 				}
 				return newStatus, false, nil // Continue
 			},
@@ -358,41 +353,34 @@ func (r *reconciler) reconcile(
 	return status, requestRequeue, nil
 }
 
-// initializeProject initializes a Project if necessary and returns updated
-// ProjectStatus and a boolean indicating if Project initialization was
-// performed and completed in its entirety.
-func (r *reconciler) initializeProject(
+// syncProject ensures the existence of the Project's namespace and any
+// resources that are required for the Project to function properly. It
+// returns an updated ProjectStatus.
+func (r *reconciler) syncProject(
 	ctx context.Context,
 	project *kargoapi.Project,
-) (kargoapi.ProjectStatus, bool, error) {
-	if cond := conditions.Get(
-		&project.Status,
-		kargoapi.ConditionTypeReady,
-	); cond != nil && cond.Status == metav1.ConditionTrue {
-		logging.LoggerFromContext(ctx).Debug("Project is already initialized; nothing to do")
-		return project.Status, false, nil
-	}
-	if cond := conditions.Get(
-		&project.Status,
-		kargoapi.ConditionTypeStalled,
-	); cond != nil && cond.Status == metav1.ConditionTrue {
-		logging.LoggerFromContext(ctx).Debug("Project initialization is stalled; nothing to do")
-		return project.Status, false, nil
-	}
-
+) (kargoapi.ProjectStatus, error) {
 	status := project.Status.DeepCopy()
 
 	conditions.Set(status, &metav1.Condition{
 		Type:               kargoapi.ConditionTypeReconciling,
 		Status:             metav1.ConditionTrue,
-		Reason:             "Initializing",
-		Message:            "Creating project namespace and initializing permissions",
+		Reason:             "Syncing",
+		Message:            "Ensuring project namespace and permissions",
+		ObservedGeneration: project.GetGeneration(),
+	})
+	conditions.Set(status, &metav1.Condition{
+		Type:               kargoapi.ConditionTypeReady,
+		Status:             metav1.ConditionFalse,
+		Reason:             "Syncing",
+		Message:            "Ensuring project namespace and permissions",
 		ObservedGeneration: project.GetGeneration(),
 	})
 
 	if err := r.ensureNamespaceFn(ctx, project); err != nil {
 		if errors.Is(err, errProjectNamespaceExists) {
-			conditions.Delete(status, kargoapi.ConditionTypeReconciling)
+			// Stalled is a special condition because this won't be resolved without
+			// user intervention.
 			conditions.Set(status, &metav1.Condition{
 				Type:   kargoapi.ConditionTypeStalled,
 				Status: metav1.ConditionTrue,
@@ -404,54 +392,64 @@ func (r *reconciler) initializeProject(
 				),
 				ObservedGeneration: project.GetGeneration(),
 			})
+		} else {
+			conditions.Delete(status, kargoapi.ConditionTypeStalled)
 		}
 		conditions.Set(status, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeReady,
 			Status:             metav1.ConditionFalse,
-			Reason:             "NamespaceInitializationFailed",
-			Message:            "Failed to initialize project namespace: " + err.Error(),
+			Reason:             "EnsuringNamespaceFailed",
+			Message:            "Failed to ensure existence of project namespace: " + err.Error(),
 			ObservedGeneration: project.GetGeneration(),
 		})
-		return *status, false, fmt.Errorf("error ensuring namespace: %w", err)
+		return *status, fmt.Errorf("error ensuring namespace: %w", err)
 	}
 
 	if err := r.ensureAPIAdminPermissionsFn(ctx, project); err != nil {
 		conditions.Set(status, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeReady,
 			Status:             metav1.ConditionFalse,
-			Reason:             "PermissionsInitializationFailed",
-			Message:            "Failed to initialize project admin permissions: " + err.Error(),
+			Reason:             "EnsuringAPIServerPermissionsFailed",
+			Message:            "Failed to ensure project permissions for API server: " + err.Error(),
 			ObservedGeneration: project.GetGeneration(),
 		})
-		return *status, false, fmt.Errorf("error ensuring project admin permissions: %w", err)
+		return *status, fmt.Errorf("error ensuring API server permissions: %w", err)
 	}
 
 	if r.cfg.ManageControllerRoleBindings {
 		if err := r.ensureControllerPermissionsFn(ctx, project); err != nil {
-			return *status, false, fmt.Errorf("error ensuring controller permissions: %w", err)
+			conditions.Set(status, &metav1.Condition{
+				Type:               kargoapi.ConditionTypeReady,
+				Status:             metav1.ConditionFalse,
+				Reason:             "EnsuringControllerPermissionsFailed",
+				Message:            "Failed to ensure project permissions for controller: " + err.Error(),
+				ObservedGeneration: project.GetGeneration(),
+			})
+			return *status, fmt.Errorf("error ensuring controller permissions: %w", err)
 		}
 	}
 
-	if err := r.ensureDefaultProjectRolesFn(ctx, project); err != nil {
+	if err := r.ensureDefaultUserRolesFn(ctx, project); err != nil {
 		conditions.Set(status, &metav1.Condition{
-			Type:               kargoapi.ConditionTypeReady,
-			Status:             metav1.ConditionFalse,
-			Reason:             "RolesInitializationFailed",
-			Message:            "Failed to initialize default project roles: " + err.Error(),
+			Type:   kargoapi.ConditionTypeReady,
+			Status: metav1.ConditionFalse,
+			Reason: "EnsuringDefaultUserRoles",
+			Message: "Failed to ensure existence of default project " +
+				"ServiceAccount, Roles, and RoleBindings: " + err.Error(),
 			ObservedGeneration: project.GetGeneration(),
 		})
-		return *status, false, fmt.Errorf("error ensuring default project roles: %w", err)
+		return *status, fmt.Errorf("error ensuring default project roles: %w", err)
 	}
 
 	conditions.Delete(status, kargoapi.ConditionTypeReconciling)
 	conditions.Set(status, &metav1.Condition{
 		Type:               kargoapi.ConditionTypeReady,
 		Status:             metav1.ConditionTrue,
-		Reason:             "Initialized",
-		Message:            "Project is initialized and ready for use",
+		Reason:             "Synced",
+		Message:            "Project is synced and ready for use",
 		ObservedGeneration: project.GetGeneration(),
 	})
-	return *status, true, nil
+	return *status, nil
 }
 
 func (r *reconciler) ensureNamespace(ctx context.Context, project *kargoapi.Project) error {
@@ -475,7 +473,7 @@ func (r *reconciler) ensureNamespace(ctx context.Context, project *kargoapi.Proj
 		// only a problem if it is not labeled as a Project namespace.
 		if ns.Labels[kargoapi.ProjectLabelKey] != kargoapi.LabelTrueValue {
 			return fmt.Errorf(
-				"failed to initialize Project %q with namespace %q: %w",
+				"failed to sync Project %q with namespace %q: %w",
 				project.Name, project.Name, errProjectNamespaceExists,
 			)
 		}
@@ -678,7 +676,7 @@ func (r *reconciler) ensureControllerPermissions(
 	return nil
 }
 
-func (r *reconciler) ensureDefaultProjectRoles(
+func (r *reconciler) ensureDefaultUserRoles(
 	ctx context.Context,
 	project *kargoapi.Project,
 ) error {
@@ -901,15 +899,15 @@ func migratePhaseToConditions(project *kargoapi.Project) (kargoapi.ProjectStatus
 		conditions.Set(&status, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeReconciling,
 			Status:             metav1.ConditionTrue,
-			Reason:             "Initializing",
-			Message:            "Creating project namespace and initializing permissions",
+			Reason:             "Syncing",
+			Message:            "Ensuring project namespace and permissions",
 			ObservedGeneration: project.GetGeneration(),
 		})
 		conditions.Set(&status, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeReady,
 			Status:             metav1.ConditionFalse,
-			Reason:             "Initializing",
-			Message:            "Creating project namespace and initializing permissions",
+			Reason:             "Syncing",
+			Message:            "Ensuring project namespace and permissions",
 			ObservedGeneration: project.GetGeneration(),
 		})
 	case kargoapi.ProjectPhaseInitializationFailed:
@@ -927,18 +925,22 @@ func migratePhaseToConditions(project *kargoapi.Project) (kargoapi.ProjectStatus
 			ObservedGeneration: project.GetGeneration(),
 		})
 		conditions.Set(&status, &metav1.Condition{
-			Type:               kargoapi.ConditionTypeReady,
-			Status:             metav1.ConditionFalse,
-			Reason:             "NamespaceInitializationFailed",
-			Message:            "Failed to initialize project namespace: " + errProjectNamespaceExists.Error(),
+			Type:   kargoapi.ConditionTypeReady,
+			Status: metav1.ConditionFalse,
+			Reason: "ExistingNamespaceMissingLabel",
+			Message: fmt.Sprintf(
+				"Namespace %q already exists but is not labeled as a Project namespace using label %q",
+				project.Name,
+				kargoapi.ProjectLabelKey,
+			),
 			ObservedGeneration: project.GetGeneration(),
 		})
 	case kargoapi.ProjectPhaseReady:
 		conditions.Set(&status, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeReady,
 			Status:             metav1.ConditionTrue,
-			Reason:             "Initialized",
-			Message:            "Project is initialized and ready for use",
+			Reason:             "Synced",
+			Message:            "Project is synced and ready for use",
 			ObservedGeneration: project.GetGeneration(),
 		})
 	}
