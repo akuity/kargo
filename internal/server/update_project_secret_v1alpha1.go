@@ -46,19 +46,16 @@ func (s *server) UpdateProjectSecret(
 		return nil, fmt.Errorf("get secret: %w", err)
 	}
 
-	// If this isn't labeled as a project secret, return not found.
-	// Check for either of the two possible labels (newer and legacy) that
-	// indicate the secret is a generic project secret.
-	if secret.Labels[kargoapi.CredentialTypeLabelKey] != kargoapi.CredentialTypeLabelGeneric &&
-		secret.Labels[kargoapi.ProjectSecretLabelKey] != kargoapi.LabelTrueValue {
+	// Check for the label that indicates this is a generic secret.
+	if secret.Labels[kargoapi.CredentialTypeLabelKey] != kargoapi.CredentialTypeLabelGeneric {
 		return nil, connect.NewError(
 			connect.CodeNotFound,
 			fmt.Errorf(
 				"secret %s/%s exists, but is not labeled with %s=%s",
 				secret.Namespace,
 				secret.Name,
-				kargoapi.ProjectSecretLabelKey,
-				kargoapi.LabelTrueValue,
+				kargoapi.CredentialTypeLabelKey,
+				kargoapi.CredentialTypeLabelGeneric,
 			),
 		)
 	}
@@ -86,11 +83,7 @@ func (s *server) UpdateProjectSecret(
 }
 
 func applyProjectSecretUpdateToK8sSecret(secret *corev1.Secret, projectSecretUpdate projectSecret) {
-	// Ensure the Secret is labeled according to newer conventions and not legacy
-	// ones.
-	secret.Labels[kargoapi.CredentialTypeLabelKey] = kargoapi.CredentialTypeLabelGeneric
-	delete(secret.Labels, kargoapi.ProjectSecretLabelKey)
-
+	// Set the description annotation if provided
 	if projectSecretUpdate.description != "" {
 		if secret.Annotations == nil {
 			secret.Annotations = make(map[string]string, 1)
@@ -100,14 +93,14 @@ func applyProjectSecretUpdateToK8sSecret(secret *corev1.Secret, projectSecretUpd
 		delete(secret.Annotations, kargoapi.AnnotationKeyDescription)
 	}
 
-	// delete the keys that exist in secret but not in the update
+	// Delete any keys in the secret that are not in the update
 	for key := range secret.Data {
-		if _, exist := projectSecretUpdate.data[key]; !exist {
+		if _, ok := projectSecretUpdate.data[key]; !ok {
 			delete(secret.Data, key)
 		}
 	}
 
-	// upsert
+	// Add or update the keys in the secret with the values from the update
 	if secret.Data == nil {
 		secret.Data = make(map[string][]byte, len(projectSecretUpdate.data))
 	}
