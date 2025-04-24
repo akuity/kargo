@@ -320,6 +320,7 @@ func (p *provider) getFullCommitSHA(ctx context.Context, shortSHA string) (strin
 
 // bitbucketPR represents the structure of a Bitbucket pull request.
 // See: https://developer.atlassian.com/cloud/bitbucket/rest/api-group-pullrequests/#api-repositories-workspace-repo-slug-pullrequests-pull-request-id-get
+// nolint:lll
 type bitbucketPR struct {
 	ID    int64  `json:"id"`
 	State string `json:"state"`
