@@ -202,8 +202,7 @@ promotionTemplate:
       as: commit
       config:
         path: ${{ vars.outPath }}
-        messageFromSteps:
-        - update-image
+        message: ${{ outputs['update-image'].commitMessage }}
     - uses: git-push
       config:
         path: ${{ vars.outPath }}

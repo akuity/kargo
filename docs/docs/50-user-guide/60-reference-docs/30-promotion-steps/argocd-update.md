@@ -106,8 +106,7 @@ steps:
   as: commit
   config:
     path: ./out
-    messageFromSteps:
-    - update-image
+    message: ${{ outputs['update-image'].commitMessage }}
 - uses: git-push
   config:
     path: ./out
