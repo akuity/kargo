@@ -25,7 +25,9 @@ func Test_gitCommitter_validate(t *testing.T) {
 	}{
 		{
 			name:   "path not specified",
-			config: promotion.Config{},
+			config: promotion.Config{
+				"message": "fake commit message",
+			},
 			expectedProblems: []string{
 				"(root): path is required",
 			},
@@ -40,20 +42,12 @@ func Test_gitCommitter_validate(t *testing.T) {
 			},
 		},
 		{
-			name:   "neither message nor messageFromSteps is specified",
-			config: promotion.Config{},
-			expectedProblems: []string{
-				"(root): Must validate one and only one schema",
-			},
-		},
-		{
-			name: "both message and messageFromSteps are specified",
+			name:   "message is not specified",
 			config: promotion.Config{
-				"message":          "fake commit message",
-				"messageFromSteps": []string{"fake-step-alias"},
+				"path": "/tmp/foo",
 			},
 			expectedProblems: []string{
-				"(root): Must validate one and only one schema",
+				"(root): message is required",
 			},
 		},
 		{
@@ -63,24 +57,6 @@ func Test_gitCommitter_validate(t *testing.T) {
 			},
 			expectedProblems: []string{
 				"message: String length must be greater than or equal to 1",
-			},
-		},
-		{
-			name: "messageFromSteps is empty array",
-			config: promotion.Config{
-				"messageFromSteps": []string{},
-			},
-			expectedProblems: []string{
-				"messageFromSteps: Array must have at least 1 items",
-			},
-		},
-		{
-			name: "messageFromSteps array contains an empty string",
-			config: promotion.Config{
-				"messageFromSteps": []string{""},
-			},
-			expectedProblems: []string{
-				"messageFromSteps.0: String length must be greater than or equal to 1",
 			},
 		},
 		{
@@ -233,104 +209,4 @@ func Test_gitCommitter_run(t *testing.T) {
 	lastCommitMsg, err := workTree.CommitMessage("HEAD")
 	require.NoError(t, err)
 	require.Equal(t, "Initial commit", lastCommitMsg)
-}
-
-func Test_gitCommitter_buildCommitMessage(t *testing.T) {
-	testCases := []struct {
-		name        string
-		sharedState promotion.State
-		cfg         builtin.GitCommitConfig
-		assertions  func(t *testing.T, msg string, err error)
-	}{
-		{
-			name: "message is specified",
-			cfg:  builtin.GitCommitConfig{Message: "fake commit message"},
-			assertions: func(t *testing.T, msg string, err error) {
-				require.NoError(t, err)
-				require.Equal(t, "fake commit message", msg)
-			},
-		},
-		{
-			name:        "no output from step with alias",
-			sharedState: promotion.State{},
-			cfg:         builtin.GitCommitConfig{MessageFromSteps: []string{"fake-step-alias"}},
-			assertions: func(t *testing.T, _ string, err error) {
-				require.NoError(t, err)
-			},
-		},
-		{
-			name: "unexpected value type from step with alias",
-			sharedState: promotion.State{
-				"fake-step-alias": "not a State",
-			},
-			cfg: builtin.GitCommitConfig{MessageFromSteps: []string{"fake-step-alias"}},
-			assertions: func(t *testing.T, _ string, err error) {
-				require.ErrorContains(t, err, "output from step with alias")
-				require.ErrorContains(t, err, "is not a map[string]any")
-			},
-		},
-		{
-			name: "output from step with alias does not contain a commit message",
-			sharedState: promotion.State{
-				"fake-step-alias": map[string]any{},
-			},
-			cfg: builtin.GitCommitConfig{MessageFromSteps: []string{"fake-step-alias"}},
-			assertions: func(t *testing.T, msg string, err error) {
-				require.NoError(t, err)
-				require.Equal(t, "Kargo made some changes", msg)
-			},
-		},
-		{
-			name: "output from step with alias contain a commit message that isn't a string",
-			sharedState: promotion.State{
-				"fake-step-alias": map[string]any{
-					"commitMessage": 42,
-				},
-			},
-			cfg: builtin.GitCommitConfig{MessageFromSteps: []string{"fake-step-alias"}},
-			assertions: func(t *testing.T, _ string, err error) {
-				require.ErrorContains(
-					t, err, "commit message in output from step with alias",
-				)
-				require.ErrorContains(t, err, "is not a string")
-			},
-		},
-		{
-			name: "successful message construction",
-			sharedState: promotion.State{
-				"fake-step-alias": map[string]any{
-					"commitMessage": "part one",
-				},
-				"another-fake-step-alias": map[string]any{
-					"commitMessage": "part two",
-				},
-			},
-			cfg: builtin.GitCommitConfig{
-				MessageFromSteps: []string{
-					"fake-step-alias",
-					"another-fake-step-alias",
-				},
-			},
-			assertions: func(t *testing.T, msg string, err error) {
-				require.NoError(t, err)
-				require.Contains(t, msg, "Kargo applied multiple changes")
-				require.Contains(t, msg, "part one")
-				require.Contains(t, msg, "part two")
-			},
-		},
-	}
-
-	r := newGitCommitter()
-	runner, ok := r.(*gitCommitter)
-	require.True(t, ok)
-
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			commitMsg, err := runner.buildCommitMessage(
-				testCase.sharedState,
-				testCase.cfg,
-			)
-			testCase.assertions(t, commitMsg, err)
-		})
-	}
 }

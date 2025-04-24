@@ -83,11 +83,6 @@ func (g *gitCommitter) run(
 			fmt.Errorf("error checking for diffs in working tree: %w", err)
 	}
 	if hasDiffs {
-		var commitMsg string
-		if commitMsg, err = g.buildCommitMessage(stepCtx.SharedState, cfg); err != nil {
-			return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
-				fmt.Errorf("error building commit message: %w", err)
-		}
 		commitOpts := &git.CommitOptions{}
 		if cfg.Author != nil {
 			commitOpts.Author = &git.User{}
@@ -98,7 +93,7 @@ func (g *gitCommitter) run(
 				commitOpts.Author.Email = cfg.Author.Email
 			}
 		}
-		if err = workTree.Commit(commitMsg, commitOpts); err != nil {
+		if err = workTree.Commit(cfg.Message, commitOpts); err != nil {
 			return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
 				fmt.Errorf("error committing to working tree: %w", err)
 		}
@@ -112,66 +107,4 @@ func (g *gitCommitter) run(
 		Status: kargoapi.PromotionPhaseSucceeded,
 		Output: map[string]any{stateKeyCommit: commitID},
 	}, nil
-}
-
-func (g *gitCommitter) buildCommitMessage(
-	sharedState promotion.State,
-	cfg builtin.GitCommitConfig,
-) (string, error) {
-	var commitMsg string
-	if cfg.Message != "" {
-		commitMsg = cfg.Message
-	} else if len(cfg.MessageFromSteps) > 0 { // nolint: staticcheck
-		commitMsgParts := make([]string, 0, len(cfg.MessageFromSteps)) // nolint: staticcheck
-		for _, alias := range cfg.MessageFromSteps {                   // nolint: staticcheck
-			stepOutput, exists := sharedState.Get(alias)
-			if !exists {
-				// It is valid for a previous step that MIGHT have left some output
-				// (potentially including a commit message fragment) not to have done
-				// so.
-				continue
-			}
-			stepOutputMap, ok := stepOutput.(map[string]any)
-			if !ok {
-				return "", fmt.Errorf(
-					"output from step with alias %q is not a map[string]any; cannot construct "+
-						"commit message",
-					alias,
-				)
-			}
-			commitMsgPart, exists := stepOutputMap["commitMessage"]
-			if !exists {
-				// It is valid for a previous step that MIGHT have left behind a
-				// commit message fragment not to have done so.
-				continue
-			}
-			commitMsgPartStr, ok := commitMsgPart.(string)
-			if !ok {
-				return "", fmt.Errorf(
-					"commit message in output from step with alias %q is not a string; "+
-						"cannot construct commit message",
-					alias,
-				)
-			}
-			commitMsgParts = append(commitMsgParts, commitMsgPartStr)
-		}
-		if len(commitMsgParts) == 0 {
-			// TODO: krancour: This message is painfully generic, but there is little
-			// else we can do and empty commit messages are not allowed. It should
-			// also be very rare that we get here. It would only occur if no previous
-			// step that the user indicated might contribute a commit message fragment
-			// actually did so -- and in that case, it is unlikely there are any
-			// differences to commit, which would preclude us from ever attempting to
-			// build a commit message in the first place.
-			commitMsg = "Kargo made some changes"
-		} else if len(commitMsgParts) == 1 {
-			commitMsg = commitMsgParts[0]
-		} else {
-			commitMsg = "Kargo applied multiple changes\n\nIncluding:\n"
-			for _, commitMsgPart := range commitMsgParts {
-				commitMsg = fmt.Sprintf("%s\n  * %s", commitMsg, commitMsgPart)
-			}
-		}
-	}
-	return commitMsg, nil
 }
