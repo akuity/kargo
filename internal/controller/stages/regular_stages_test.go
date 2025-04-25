@@ -5539,14 +5539,14 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		stage       types.NamespacedName
+		stage       metav1.ObjectMeta
 		objects     []client.Object
 		interceptor interceptor.Funcs
 		assertions  func(*testing.T, bool, error)
 	}{
 		{
 			name: "no ProjectConfig for Project",
-			stage: types.NamespacedName{
+			stage: metav1.ObjectMeta{
 				Namespace: "test-project",
 				Name:      "test-stage",
 			},
@@ -5557,7 +5557,7 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 		},
 		{
 			name: "error getting ProjectConfig",
-			stage: types.NamespacedName{
+			stage: metav1.ObjectMeta{
 				Namespace: "test-project",
 				Name:      "test-stage",
 			},
@@ -5579,7 +5579,7 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 		},
 		{
 			name: "empty ProjectConfig spec",
-			stage: types.NamespacedName{
+			stage: metav1.ObjectMeta{
 				Namespace: "test-project",
 				Name:      "test-stage",
 			},
@@ -5599,7 +5599,7 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 		},
 		{
 			name: "empty promotion policies",
-			stage: types.NamespacedName{
+			stage: metav1.ObjectMeta{
 				Namespace: "test-project",
 				Name:      "test-stage",
 			},
@@ -5621,7 +5621,7 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 		},
 		{
 			name: "stage not found in policies",
-			stage: types.NamespacedName{
+			stage: metav1.ObjectMeta{
 				Namespace: "test-project",
 				Name:      "test-stage",
 			},
@@ -5648,7 +5648,7 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 		},
 		{
 			name: "auto-promotion enabled",
-			stage: types.NamespacedName{
+			stage: metav1.ObjectMeta{
 				Namespace: "test-project",
 				Name:      "test-stage",
 			},
@@ -5675,7 +5675,7 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 		},
 		{
 			name: "auto-promotion disabled",
-			stage: types.NamespacedName{
+			stage: metav1.ObjectMeta{
 				Namespace: "test-project",
 				Name:      "test-stage",
 			},
@@ -5702,7 +5702,7 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 		},
 		{
 			name: "multiple policies - finds correct stage",
-			stage: types.NamespacedName{
+			stage: metav1.ObjectMeta{
 				Namespace: "test-project",
 				Name:      "test-stage",
 			},
@@ -5737,7 +5737,7 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 		},
 		{
 			name: "different namespace",
-			stage: types.NamespacedName{
+			stage: metav1.ObjectMeta{
 				Namespace: "other-namespace",
 				Name:      "test-stage",
 			},
@@ -5764,7 +5764,7 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 		},
 		{
 			name: "matches first policy for stage",
-			stage: types.NamespacedName{
+			stage: metav1.ObjectMeta{
 				Namespace: "test-project",
 				Name:      "test-stage",
 			},

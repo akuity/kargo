@@ -796,14 +796,13 @@ func TestMatchesPathsFilters(t *testing.T) {
 		includePaths []string
 		excludePaths []string
 		diffs        []string
-		assertions   func(*testing.T, bool, error)
+		assertions   func(*testing.T, bool)
 	}{
 		{
 			name:         "success with no includePaths configured",
 			excludePaths: []string{regexpPrefix + "nonexistent"},
 			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
-			assertions: func(t *testing.T, matchFound bool, err error) {
-				require.NoError(t, err)
+			assertions: func(t *testing.T, matchFound bool) {
 				require.Equal(t, true, matchFound)
 			},
 		},
@@ -812,8 +811,7 @@ func TestMatchesPathsFilters(t *testing.T) {
 			includePaths: []string{regexpPrefix + "values\\.ya?ml$"},
 			excludePaths: []string{regexPrefix + "nonexistent"},
 			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
-			assertions: func(t *testing.T, matchFound bool, err error) {
-				require.NoError(t, err)
+			assertions: func(t *testing.T, matchFound bool) {
 				require.Equal(t, true, matchFound)
 			},
 		},
@@ -822,8 +820,7 @@ func TestMatchesPathsFilters(t *testing.T) {
 			includePaths: []string{regexpPrefix + "values\\.ya?ml$"},
 			excludePaths: []string{regexPrefix + "nonexistent", regexpPrefix + ".*val.*"},
 			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
-			assertions: func(t *testing.T, matchFound bool, err error) {
-				require.NoError(t, err)
+			assertions: func(t *testing.T, matchFound bool) {
 				require.Equal(t, false, matchFound)
 			},
 		},
@@ -832,8 +829,7 @@ func TestMatchesPathsFilters(t *testing.T) {
 			includePaths: []string{"glob:path2/*.tpl"},
 			excludePaths: []string{"nonexistent"},
 			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
-			assertions: func(t *testing.T, matchFound bool, err error) {
-				require.NoError(t, err)
+			assertions: func(t *testing.T, matchFound bool) {
 				require.Equal(t, true, matchFound)
 			},
 		},
@@ -842,8 +838,7 @@ func TestMatchesPathsFilters(t *testing.T) {
 			includePaths: []string{"path2/*.tpl"},
 			excludePaths: []string{regexPrefix + "nonexistent", "*/?helpers.tpl"},
 			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
-			assertions: func(t *testing.T, matchFound bool, err error) {
-				require.NoError(t, err)
+			assertions: func(t *testing.T, matchFound bool) {
 				require.Equal(t, false, matchFound)
 			},
 		},
@@ -852,8 +847,7 @@ func TestMatchesPathsFilters(t *testing.T) {
 			includePaths: []string{"path1/"},
 			excludePaths: []string{"nonexistent"},
 			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
-			assertions: func(t *testing.T, matchFound bool, err error) {
-				require.NoError(t, err)
+			assertions: func(t *testing.T, matchFound bool) {
 				require.Equal(t, true, matchFound)
 			},
 		},
@@ -862,18 +856,8 @@ func TestMatchesPathsFilters(t *testing.T) {
 			includePaths: []string{"path3/"},
 			excludePaths: []string{regexPrefix + "nonexistent", "*/?helpers.tpl"},
 			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
-			assertions: func(t *testing.T, matchFound bool, err error) {
-				require.NoError(t, err)
+			assertions: func(t *testing.T, matchFound bool) {
 				require.Equal(t, false, matchFound)
-			},
-		},
-		{
-			name:         "error with invalid glob syntax",
-			includePaths: []string{"glob:path2/*.tpl["},
-			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
-			assertions: func(t *testing.T, _ bool, err error) {
-				require.Error(t, err)
-				require.ErrorContains(t, err, "syntax error in pattern")
 			},
 		},
 		{
@@ -881,8 +865,7 @@ func TestMatchesPathsFilters(t *testing.T) {
 			includePaths: []string{"path3", regexPrefix + "nonexistent", globPrefix + "nonexistent"},
 			excludePaths: []string{regexPrefix + "nonexistent", "*/?helpers.tpl", globPrefix + "nonexistent"},
 			diffs:        []string{"path1/values.yaml", "path2/_helpers.tpl"},
-			assertions: func(t *testing.T, matchFound bool, err error) {
-				require.NoError(t, err)
+			assertions: func(t *testing.T, matchFound bool) {
 				require.Equal(t, false, matchFound)
 			},
 		},
@@ -899,8 +882,7 @@ func TestMatchesPathsFilters(t *testing.T) {
 				"path1",
 			},
 			diffs: []string{"path1/values.yaml", "path2/_helpers.tpl", "path2/ingress.yaml"},
-			assertions: func(t *testing.T, matchFound bool, err error) {
-				require.NoError(t, err)
+			assertions: func(t *testing.T, matchFound bool) {
 				require.Equal(t, false, matchFound)
 			},
 		},
@@ -919,8 +901,7 @@ func TestMatchesPathsFilters(t *testing.T) {
 				"nonexistent",
 			},
 			diffs: []string{"path1/file1", "path2/file2", "path3/file3"},
-			assertions: func(t *testing.T, matchFound bool, err error) {
-				require.NoError(t, err)
+			assertions: func(t *testing.T, matchFound bool) {
 				require.Equal(t, false, matchFound)
 			},
 		},
@@ -929,8 +910,7 @@ func TestMatchesPathsFilters(t *testing.T) {
 			includePaths: []string{},
 			excludePaths: []string{},
 			diffs:        []string{},
-			assertions: func(t *testing.T, matchFound bool, err error) {
-				require.NoError(t, err)
+			assertions: func(t *testing.T, matchFound bool) {
 				require.Equal(t, false, matchFound)
 			},
 		},
@@ -967,8 +947,7 @@ func TestMatchesPathsFilters(t *testing.T) {
 				"path3/abc/abd/abe/deployment.yaml",
 				"path4.txt",
 			},
-			assertions: func(t *testing.T, matchFound bool, err error) {
-				require.NoError(t, err)
+			assertions: func(t *testing.T, matchFound bool) {
 				require.Equal(t, true, matchFound)
 			},
 		},
@@ -991,8 +970,7 @@ func TestMatchesPathsFilters(t *testing.T) {
 				"abv",
 				"abu",
 			},
-			assertions: func(t *testing.T, matchFound bool, err error) {
-				require.NoError(t, err)
+			assertions: func(t *testing.T, matchFound bool) {
 				require.Equal(t, true, matchFound)
 			},
 		},
@@ -1004,8 +982,8 @@ func TestMatchesPathsFilters(t *testing.T) {
 			excludeSelectors, err := getPathSelectors(testCase.excludePaths)
 			require.NoError(t, err)
 
-			matchFound, err := matchesPathsFilters(includeSelectors, excludeSelectors, testCase.diffs)
-			testCase.assertions(t, matchFound, err)
+			matchFound := matchesPathsFilters(includeSelectors, excludeSelectors, testCase.diffs)
+			testCase.assertions(t, matchFound)
 		})
 	}
 }
