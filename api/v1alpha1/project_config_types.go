@@ -55,6 +55,10 @@ type PromotionPolicySelector struct {
 	// It can be an exact name, a regex pattern (with prefix "regex:"), or a
 	// glob pattern (with prefix "glob:").
 	//
+	// When both Name and LabelSelector are specified, the Name is ANDed with
+	// the LabelSelector. I.e., the resource must match both the Name and
+	// LabelSelector to be selected by this policy.
+	//
 	// NOTE: Using a specific exact name is the most secure option. Pattern
 	// matching via regex or glob can be exploited by users with permissions to
 	// match promotion policies that weren't intended to apply to their
@@ -67,6 +71,10 @@ type PromotionPolicySelector struct {
 
 	// LabelSelector is a selector that matches the resource to which this policy
 	// applies.
+	//
+	// When both Name and LabelSelector are specified, the Name is ANDed with
+	// the LabelSelector. I.e., the resource must match both the Name and
+	// LabelSelector to be selected by this policy.
 	//
 	// NOTE: Using label selectors introduces security risks as users with
 	// appropriate permissions could create new resources with labels that match

@@ -177,6 +177,37 @@ spec:
     autoPromotionEnabled: true
 ```
 
+#### Using Stage Selectors with Patterns and Labels
+
+The [name](#using-stage-selectors-with-patterns) and
+[label](#using-stage-selectors-with-labels) selectors can be combined, in which
+case a `Stage` must match both the name and label selectors to be eligible for
+automatic promotion:
+
+```yaml
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: example
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: example
+  namespace: example
+spec:
+  promotionPolicies:
+  - stageSelector:
+      name: glob:prod-*
+      matchLabels:
+        example.org/allow-auto-promotion: "true"
+```
+
+In the example above, the promotion policy applies to all `Stage`s with the
+`example.org/allow-auto-promotion: "true"` label and names matching the
+`glob:prod-*` pattern.
+
 ## Namespace Adoption
 
 At times, `Namespace`s may require specific configuration to
