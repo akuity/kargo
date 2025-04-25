@@ -11,7 +11,7 @@ description: Extracts the contents of a tar (or gzipped tar) file to a specified
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `filePath` | `string` | Y | Path to the tar file to extract. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
+| `inPath` | `string` | Y | Path to the tar file to extract. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `outPath` | `string` | Y | Path to the destination directory where contents will be extracted. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `stripComponents` | `integer` | N | Number of leading path components to strip from file names in the archive. Similar to the `--strip-components` option in the tar command. |
 | `ignore` | `string` | N | A multiline string of glob patterns to ignore when extracting files. It accepts the same syntax as `.gitignore` files. |
@@ -26,7 +26,7 @@ Extract a tarball to a specific directory:
 steps:
 - uses: untar
   config:
-    filePath: ./artifacts/bundle.tar.gz
+    inPath: ./artifacts/bundle.tar.gz
     outPath: ./extracted
 ```
 
@@ -38,7 +38,7 @@ Extract a tarball while removing leading directory components:
 steps:
 - uses: untar
   config:
-    filePath: ./artifacts/bundle.tar.gz
+    inPath: ./artifacts/bundle.tar.gz
     outPath: ./extracted
     stripComponents: 1
 ```
@@ -51,7 +51,7 @@ Extract a tarball while ignoring specific files:
 steps:
 - uses: untar
   config:
-    filePath: ./artifacts/bundle.tar.gz
+    inPath: ./artifacts/bundle.tar.gz
     outPath: ./extracted
     ignore: |
       *.log
@@ -92,7 +92,7 @@ steps:
 - as: untar
   uses: untar
   config:
-    filePath: ./target/pathToMyUmbrellaChart/charts/${{ vars.chartName }}-${{ chartFrom(vars.chartRepo, "kube-prometheus-stack").Version }}.tgz
+    inPath: ./target/pathToMyUmbrellaChart/charts/${{ vars.chartName }}-${{ chartFrom(vars.chartRepo, "kube-prometheus-stack").Version }}.tgz
     outPath: ./target/pathToMyUmbrellaChart/charts/${{ vars.chartName }}
 - as: deleteTgz
   uses: delete
