@@ -1,0 +1,255 @@
+package builtin
+
+import (
+	"archive/tar"
+	"bufio"
+	"compress/gzip"
+	"context"
+	"fmt"
+	"io"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"strings"
+
+	securejoin "github.com/cyphar/filepath-securejoin"
+	"github.com/go-git/go-git/v5/plumbing/format/gitignore"
+	"github.com/xeipuuv/gojsonschema"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/pkg/promotion"
+	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+)
+
+// tarExtractor is an implementation of the promotion.StepRunner interface that
+// extracts a tar file to a specified directory.
+type tarExtractor struct {
+	schemaLoader gojsonschema.JSONLoader
+}
+
+// newTarExtractor returns an implementation of the promotion.StepRunner interface
+// that extracts a tar file.
+func newTarExtractor() promotion.StepRunner {
+	r := &tarExtractor{}
+	r.schemaLoader = getConfigSchemaLoader(r.Name())
+	return r
+}
+
+// Name implements the promotion.StepRunner interface.
+func (t *tarExtractor) Name() string {
+	return "untar"
+}
+
+// Run implements the promotion.StepRunner interface.
+func (t *tarExtractor) Run(
+	ctx context.Context,
+	stepCtx *promotion.StepContext,
+) (promotion.StepResult, error) {
+	// Validate the configuration against the JSON Schema.
+	if err := validate(t.schemaLoader, gojsonschema.NewGoLoader(stepCtx.Config), t.Name()); err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, err
+	}
+
+	// Convert the configuration into a typed object.
+	cfg, err := promotion.ConfigToStruct[builtin.UntarConfig](stepCtx.Config)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+			fmt.Errorf("could not convert config into %s config: %w", t.Name(), err)
+	}
+
+	return t.run(ctx, stepCtx, cfg)
+}
+
+func (t *tarExtractor) run(
+	ctx context.Context,
+	stepCtx *promotion.StepContext,
+	cfg builtin.UntarConfig,
+) (promotion.StepResult, error) {
+	// Secure join the paths to prevent path traversal attacks.
+	filePath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.FilePath)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+			fmt.Errorf("could not secure join filePath %q: %w", cfg.FilePath, err)
+	}
+	outPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutPath)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+			fmt.Errorf("could not secure join outPath %q: %w", cfg.OutPath, err)
+	}
+
+	// Ensure the output directory exists
+	if err := os.MkdirAll(outPath, 0755); err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+			fmt.Errorf("failed to create output directory %q: %w", cfg.OutPath, err)
+	}
+
+	// Load the ignore rules.
+	matcher, err := t.loadIgnoreRules(outPath, cfg.Ignore)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+			fmt.Errorf("failed to load ignore rules: %w", err)
+	}
+
+	// Open the tar file
+	file, err := os.Open(filePath)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+			fmt.Errorf("failed to open tar file %q: %w", cfg.FilePath, err)
+	}
+	defer file.Close()
+
+	logger := logging.LoggerFromContext(ctx)
+	var tarReader *tar.Reader
+
+	// Check if the file is gzipped
+	gzr, err := gzip.NewReader(file)
+	if err == nil {
+		// File is gzipped
+		defer gzr.Close()
+		tarReader = tar.NewReader(gzr)
+		logger.Debug("treating file as gzipped tar")
+	} else {
+		// File is not gzipped, reset to beginning of file and try as regular tar
+		_, err = file.Seek(0, 0)
+		if err != nil {
+			return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+				fmt.Errorf("failed to seek in tar file: %w", err)
+		}
+		tarReader = tar.NewReader(file)
+		logger.Debug("treating file as regular tar")
+	}
+
+	// Extract the tar file
+	stripComponents := int64(0)
+	if cfg.StripComponents != nil {
+		stripComponents = *cfg.StripComponents
+		if stripComponents > 0 {
+			logger.Debug("stripping path components", "count", stripComponents)
+		}
+	}
+
+	for {
+		header, err := tarReader.Next()
+		if err == io.EOF {
+			break // End of archive
+		}
+		if err != nil {
+			return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+				fmt.Errorf("error reading tar: %w", err)
+		}
+
+		// Skip if this is not a regular file, symlink, or directory
+		if header.Typeflag != tar.TypeReg && header.Typeflag != tar.TypeDir && header.Typeflag != tar.TypeSymlink {
+			logger.Debug("skipping non-regular file", "path", header.Name, "type", header.Typeflag)
+			continue
+		}
+
+		// Handle stripping components if specified
+		targetName := header.Name
+		if stripComponents > 0 {
+			// Get parts of the path
+			parts := strings.Split(header.Name, "/")
+			// Only strip if we have enough components
+			if len(parts) > int(stripComponents) {
+				targetName = strings.Join(parts[stripComponents:], "/")
+			} else {
+				// Skip this file if we don't have enough components
+				logger.Debug("skipping file with insufficient path components", "path", header.Name)
+				continue
+			}
+		}
+
+		// Skip any empty targetName which can happen if we're processing a directory entry
+		if targetName == "" || targetName == "/" {
+			continue
+		}
+
+		// Simple check for exact filename match for ignore patterns
+		if cfg.Ignore != "" && filepath.Base(targetName) == strings.TrimSpace(cfg.Ignore) {
+			logger.Debug("ignoring exact match path", "path", targetName)
+			continue
+		}
+
+		// Check more complex patterns using gitignore matcher
+		isDir := header.Typeflag == tar.TypeDir
+		pathParts := strings.Split(targetName, "/")
+		if matcher.Match(pathParts, isDir) {
+			logger.Debug("ignoring path based on pattern", "path", targetName)
+			continue
+		}
+
+		// Create destination directory for files and links
+		targetPath := filepath.Join(outPath, targetName)
+		destDir := filepath.Dir(targetPath)
+		if err := os.MkdirAll(destDir, 0755); err != nil {
+			return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+				fmt.Errorf("failed to create directory %s: %w", destDir, err)
+		}
+
+		switch header.Typeflag {
+		case tar.TypeDir:
+			// Create directory
+			if err := os.MkdirAll(targetPath, 0755); err != nil {
+				return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+					fmt.Errorf("failed to create directory %s: %w", targetPath, err)
+			}
+
+		case tar.TypeSymlink:
+			// Create symlink
+			if err := os.Symlink(header.Linkname, targetPath); err != nil && !os.IsExist(err) {
+				logger.Debug("failed to create symlink", "path", targetPath, "target", header.Linkname, "error", err)
+			}
+
+		case tar.TypeReg:
+			// Create file
+			outFile, err := os.Create(targetPath)
+			if err != nil {
+				return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+					fmt.Errorf("failed to create file %s: %w", targetPath, err)
+			}
+
+			if _, err := io.Copy(outFile, tarReader); err != nil {
+				outFile.Close()
+				return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+					fmt.Errorf("failed to write to file %s: %w", targetPath, err)
+			}
+			outFile.Close()
+
+			// Set file permissions
+			if err := os.Chmod(targetPath, fs.FileMode(header.Mode)); err != nil {
+				logger.Debug("failed to set file permissions", "path", targetPath, "error", err)
+			}
+		}
+	}
+
+	return promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded}, nil
+}
+
+// loadIgnoreRules loads the ignore rules from the given string. The rules are
+// separated by newlines, and comments are allowed with the '#' character.
+// It returns a gitignore.Matcher that can be used to match paths against the
+// rules.
+func (t *tarExtractor) loadIgnoreRules(outPath, rules string) (gitignore.Matcher, error) {
+	// Determine the domain for the ignore rules
+	domain := strings.Split(outPath, string(filepath.Separator))
+
+	// Create patterns from the provided rules
+	var ps []gitignore.Pattern
+	if rules != "" {
+		scanner := bufio.NewScanner(strings.NewReader(rules))
+		for scanner.Scan() {
+			s := scanner.Text()
+			if !strings.HasPrefix(s, "#") && len(strings.TrimSpace(s)) > 0 {
+				ps = append(ps, gitignore.ParsePattern(s, domain))
+			}
+		}
+	}
+
+	// If no patterns were provided, add a default pattern to ignore .git directory
+	if len(ps) == 0 {
+		ps = append(ps, gitignore.ParsePattern(".git", domain))
+	}
+
+	return gitignore.NewMatcher(ps), nil
+}
