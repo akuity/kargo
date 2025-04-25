@@ -163,6 +163,54 @@ spec:
 
                   Deprecated: Use the Conditions field instead.
                 type: string
+              stats:
+                description: |-
+                  Stats contains a summary of the of the collective state of a Project's
+                  constituent resources.
+                properties:
+                  stages:
+                    description: Stages contains a summary of the collective state
+                      of the Project's Stages.
+                    properties:
+                      count:
+                        description: Count contains the total number of Stages in
+                          the Project.
+                        format: int64
+                        type: integer
+                      health:
+                        description: Health contains a summary of the collective health
+                          of a Project's Stages.
+                        properties:
+                          healthy:
+                            description: Healthy contains the number of resources
+                              that are explicitly healthy.
+                            format: int64
+                            type: integer
+                        type: object
+                    type: object
+                  warehouses:
+                    description: |-
+                      Warehouses contains a summary of the collective state of the Project's
+                      Warehouses.
+                    properties:
+                      count:
+                        description: Count contains the total number of Warehouses
+                          in the Project.
+                        format: int64
+                        type: integer
+                      health:
+                        description: |-
+                          Health contains a summary of the collective health of a Project's
+                          Warehouses.
+                        properties:
+                          healthy:
+                            description: Healthy contains the number of resources
+                              that are explicitly healthy.
+                            format: int64
+                            type: integer
+                        type: object
+                    type: object
+                type: object
             type: object
         type: object
     served: true

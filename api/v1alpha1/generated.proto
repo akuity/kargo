@@ -672,6 +672,13 @@ message HealthCheckStep {
   optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 2;
 }
 
+// HealthStats contains a summary of the collective health of a some resource
+// type.
+message HealthStats {
+  // Healthy contains the number of resources that are explicitly healthy.
+  optional int64 healthy = 1;
+}
+
 // Image describes a specific version of a container image.
 message Image {
   // RepoURL describes the repository in which the image can be found.
@@ -866,6 +873,17 @@ message ProjectList {
   repeated Project items = 2;
 }
 
+// ProjectStats contains a summary of the of the collective state of a
+// Project's constituent resources.
+message ProjectStats {
+  // Warehouses contains a summary of the collective state of the Project's
+  // Warehouses.
+  optional WarehouseStats warehouses = 1;
+
+  // Stages contains a summary of the collective state of the Project's Stages.
+  optional StageStats stages = 2;
+}
+
 // ProjectStatus describes a Project's current status.
 message ProjectStatus {
   // Conditions contains the last observations of the Project's current
@@ -887,6 +905,10 @@ message ProjectStatus {
   //
   // Deprecated: Use the Conditions field instead.
   optional string message = 2;
+
+  // Stats contains a summary of the of the collective state of a Project's
+  // constituent resources.
+  optional ProjectStats stats = 4;
 }
 
 // Promotion represents a request to transition a particular Stage into a
@@ -1248,6 +1270,16 @@ message StageSpec {
   optional Verification verification = 3;
 }
 
+// StageStats contains a summary of the collective state of the a Project's
+// Stages.
+message StageStats {
+  // Count contains the total number of Stages in the Project.
+  optional int64 count = 2;
+
+  // Health contains a summary of the collective health of a Project's Stages.
+  optional HealthStats health = 1;
+}
+
 // StageStatus describes a Stages's current and recent Freight, health, and
 // more.
 message StageStatus {
@@ -1445,6 +1477,17 @@ message WarehouseSpec {
   //
   // +kubebuilder:validation:MinItems=1
   repeated RepoSubscription subscriptions = 1;
+}
+
+// WarehouseStats contains a summary of the collective state of the a Project's
+// Warehouses.
+message WarehouseStats {
+  // Count contains the total number of Warehouses in the Project.
+  optional int64 count = 2;
+
+  // Health contains a summary of the collective health of a Project's
+  // Warehouses.
+  optional HealthStats health = 1;
 }
 
 // WarehouseStatus describes a Warehouse's most recently observed state.
