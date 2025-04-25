@@ -70,8 +70,8 @@ func Test_tarExtractor_run(t *testing.T) {
 				return tmpDir
 			},
 			cfg: builtin.UntarConfig{
-				FilePath: "archive.tar",
-				OutPath:  "extracted/",
+				InPath:  "archive.tar",
+				OutPath: "extracted/",
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
@@ -127,8 +127,8 @@ func Test_tarExtractor_run(t *testing.T) {
 				return tmpDir
 			},
 			cfg: builtin.UntarConfig{
-				FilePath: "archive.tar.gz",
-				OutPath:  "extracted/",
+				InPath:  "archive.tar.gz",
+				OutPath: "extracted/",
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
@@ -169,7 +169,7 @@ func Test_tarExtractor_run(t *testing.T) {
 				return tmpDir
 			},
 			cfg: builtin.UntarConfig{
-				FilePath:        "archive.tar",
+				InPath:          "archive.tar",
 				OutPath:         "extracted/",
 				StripComponents: intPtr(2), // Use helper function to create int64 pointer
 			},
@@ -225,9 +225,9 @@ func Test_tarExtractor_run(t *testing.T) {
 				return tmpDir
 			},
 			cfg: builtin.UntarConfig{
-				FilePath: "archive.tar",
-				OutPath:  "extracted/",
-				Ignore:   "ignore.txt",
+				InPath:  "archive.tar",
+				OutPath: "extracted/",
+				Ignore:  "ignore.txt",
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
@@ -284,8 +284,8 @@ func Test_tarExtractor_run(t *testing.T) {
 				return tmpDir
 			},
 			cfg: builtin.UntarConfig{
-				FilePath: "archive.tar",
-				OutPath:  "extracted/",
+				InPath:  "archive.tar",
+				OutPath: "extracted/",
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
@@ -317,8 +317,8 @@ func Test_tarExtractor_run(t *testing.T) {
 				return t.TempDir()
 			},
 			cfg: builtin.UntarConfig{
-				FilePath: "nonexistent.tar",
-				OutPath:  "extracted/",
+				InPath:  "nonexistent.tar",
+				OutPath: "extracted/",
 			},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
 				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, result)
@@ -334,8 +334,8 @@ func Test_tarExtractor_run(t *testing.T) {
 				return tmpDir
 			},
 			cfg: builtin.UntarConfig{
-				FilePath: "notatar.txt",
-				OutPath:  "extracted/",
+				InPath:  "notatar.txt",
+				OutPath: "extracted/",
 			},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
 				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, result)

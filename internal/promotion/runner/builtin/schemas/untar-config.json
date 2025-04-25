@@ -3,11 +3,11 @@
   "title": "UntarConfig",
   "type": "object",
   "additionalProperties": false,
-  "required": ["filePath", "outPath"],
+  "required": ["inPath", "outPath"],
   "properties": {
-    "filePath": {
+    "inPath": {
       "type": "string",
-      "description": "FilePath is the path to the tar file to extract.",
+      "description": "InPath is the path to the tar file to extract.",
       "minLength": 1
     },
     "outPath": {

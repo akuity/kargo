@@ -4,9 +4,9 @@
  "type": "object",
  "additionalProperties": false,
  "properties": {
-  "filePath": {
+  "inPath": {
    "type": "string",
-   "description": "FilePath is the path to the tar file to extract.",
+   "description": "InPath is the path to the tar file to extract.",
    "minLength": 1
   },
   "outPath": {
