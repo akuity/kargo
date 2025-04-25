@@ -3,6 +3,7 @@ package git
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -11,7 +12,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
+
 	libExec "github.com/akuity/kargo/internal/exec"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 // WorkTree is an interface for interacting with any working tree of a Git
@@ -22,7 +26,7 @@ type WorkTree interface {
 	// AddAllAndCommit is a convenience function that stages pending changes for
 	// commit to the current branch and then commits them using the provided
 	// commit message.
-	AddAllAndCommit(message string) error
+	AddAllAndCommit(message string, commitOpts *CommitOptions) error
 	// Clean cleans the working tree.
 	Clean() error
 	// Clear executes `git rm -rf .` to remove all files from the working tree.
@@ -123,7 +127,7 @@ func LoadWorkTree(path string, opts *LoadWorkTreeOptions) (WorkTree, error) {
 		return nil,
 			fmt.Errorf(`error reading URL of remote "origin" from config: %w`, err)
 	}
-	if err = w.setupAuth(); err != nil {
+	if err = w.setupAuth(w.homeDir); err != nil {
 		return nil, fmt.Errorf("error configuring the credentials: %w", err)
 	}
 	br, err := LoadBareRepo(repoPath, &LoadBareRepoOptions{
@@ -143,11 +147,11 @@ func (w *workTree) AddAll() error {
 	return nil
 }
 
-func (w *workTree) AddAllAndCommit(message string) error {
+func (w *workTree) AddAllAndCommit(message string, commitOpts *CommitOptions) error {
 	if err := w.AddAll(); err != nil {
 		return err
 	}
-	return w.Commit(message, nil)
+	return w.Commit(message, commitOpts)
 }
 
 func (w *workTree) Clean() error {
@@ -203,23 +207,45 @@ func (w *workTree) Commit(message string, opts *CommitOptions) error {
 	if opts == nil {
 		opts = &CommitOptions{}
 	}
-	cmdTokens := []string{"commit", "-m", message}
+
+	var homeDir string
 	if opts.Author != nil {
-		name := opts.Author.Name
-		if name == "" {
-			name = defaultUsername
+		// This author information is specific to this commit, so we will override
+		// repository-level author information by creating a temporary home
+		// directory, configuring the author information "globally" within it, and
+		// then ensuring the git commit command uses that home directory.
+		homeDir = filepath.Join(w.homeDir, uuid.New().String())
+		if err := os.MkdirAll(homeDir, 0700); err != nil {
+			return fmt.Errorf(
+				"error creating virtual home directory %q for commit command: %w",
+				homeDir, err,
+			)
 		}
-		email := opts.Author.Email
-		if email == "" {
-			email = defaultEmail
+		defer func() {
+			if err := os.RemoveAll(homeDir); err != nil {
+				logging.LoggerFromContext(context.TODO()).
+					Error(err, "error removing virtual home directory", "path", homeDir)
+			}
+		}()
+		err := w.setupAuthor(homeDir, opts.Author)
+		if err != nil {
+			return fmt.Errorf(
+				"error setting up author information for commit command: %w", err,
+			)
 		}
-		cmdTokens = append(cmdTokens, "--author", fmt.Sprintf("%s <%s>", name, email))
 	}
+
+	cmdTokens := []string{"commit", "-m", message}
 	if opts.AllowEmpty {
 		cmdTokens = append(cmdTokens, "--allow-empty")
 	}
 
-	if _, err := libExec.Exec(w.buildGitCommand(cmdTokens...)); err != nil {
+	cmd := w.buildGitCommand(cmdTokens...)
+	if homeDir != "" {
+		// Override the home directory set by b.buildGitCommand().
+		w.setCmdHome(cmd, homeDir)
+	}
+	if _, err := libExec.Exec(cmd); err != nil {
 		return fmt.Errorf("error committing changes: %w", err)
 	}
 	return nil
