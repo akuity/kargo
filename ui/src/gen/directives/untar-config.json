@@ -1,0 +1,28 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "UntarConfig",
+ "type": "object",
+ "additionalProperties": false,
+ "properties": {
+  "filePath": {
+   "type": "string",
+   "description": "FilePath is the path to the tar file to extract.",
+   "minLength": 1
+  },
+  "outPath": {
+   "type": "string",
+   "description": "OutPath is the path to the destination directory where contents will be extracted.",
+   "minLength": 1
+  },
+  "stripComponents": {
+   "type": "integer",
+   "description": "StripComponents is the number of leading components to strip from file names in the archive.",
+   "minimum": 0
+  },
+  "ignore": {
+   "type": "string",
+   "description": "Ignore is a (multiline) string of glob patterns to ignore when extracting files. It accepts the same syntax as .gitignore files.",
+   "minLength": 1
+  }
+ }
+}
