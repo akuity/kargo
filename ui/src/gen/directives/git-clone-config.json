@@ -13,6 +13,27 @@
    "description": "The URL of a remote Git repository to clone. Required.",
    "minLength": 1
   },
+  "user": {
+   "type": "object",
+   "description": "User information for the Git operations.",
+   "additionalProperties": false,
+   "properties": {
+    "name": {
+     "type": "string",
+     "description": "The name of the user performing the Git operations.",
+     "minLength": 1
+    },
+    "email": {
+     "type": "string",
+     "description": "The email of the user performing the Git operations.",
+     "format": "email"
+    },
+    "signingKey": {
+     "type": "string",
+     "description": "The GPG signing key for the user. Optional."
+    }
+   }
+  },
   "checkout": {
    "type": "array",
    "description": "The commits, branches, or tags to check out from the repository and the paths where they should be checked out. At least one must be specified.",

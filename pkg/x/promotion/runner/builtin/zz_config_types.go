@@ -112,6 +112,8 @@ type GitCloneConfig struct {
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 	// The URL of a remote Git repository to clone. Required.
 	RepoURL string `json:"repoURL"`
+	// User information for the Git operations.
+	User *User `json:"user,omitempty"`
 }
 
 type Checkout struct {
@@ -129,6 +131,16 @@ type Checkout struct {
 	// The tag to checkout. Mutually exclusive with 'branch' and 'commit'. If none of these are
 	// specified, the default branch is checked out.
 	Tag string `json:"tag,omitempty"`
+}
+
+// User information for the Git operations.
+type User struct {
+	// The email of the user performing the Git operations.
+	Email string `json:"email"`
+	// The name of the user performing the Git operations.
+	Name string `json:"name"`
+	// The GPG signing key for the user. Optional.
+	SigningKey string `json:"signingKey,omitempty"`
 }
 
 type GitCommitConfig struct {
