@@ -509,7 +509,7 @@ func (a *argocdUpdater) syncApplication(
 		// prone to the same problem.
 		_, dstHasStatus := dst.Object["status"]
 		_, srcHasStatus := src.Object["status"]
-		if !dstHasStatus || !srcHasStatus {
+		if dstHasStatus && srcHasStatus {
 			// nolint: forcetypeassert
 			dst.Object["status"].(map[string]any)["operationState"] =
 				src.Object["status"].(map[string]any)["operationState"]
