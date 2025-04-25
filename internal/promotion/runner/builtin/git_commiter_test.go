@@ -24,7 +24,7 @@ func Test_gitCommitter_validate(t *testing.T) {
 		expectedProblems []string
 	}{
 		{
-			name:   "path not specified",
+			name: "path not specified",
 			config: promotion.Config{
 				"message": "fake commit message",
 			},
@@ -42,7 +42,7 @@ func Test_gitCommitter_validate(t *testing.T) {
 			},
 		},
 		{
-			name:   "message is not specified",
+			name: "message is not specified",
 			config: promotion.Config{
 				"path": "/tmp/foo",
 			},

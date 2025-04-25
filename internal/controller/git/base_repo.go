@@ -1,6 +1,7 @@
 package git
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/url"
@@ -10,6 +11,7 @@ import (
 	"strings"
 
 	libExec "github.com/akuity/kargo/internal/exec"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 const (
@@ -40,24 +42,29 @@ type ClientOptions struct {
 	InsecureSkipTLSVerify bool
 }
 
-// setupClient configures the git CLI for authentication using either SSH or
-// the "store" (username/password-based) credential helper.
-func (b *baseRepo) setupClient(opts *ClientOptions) error {
+// setupClient sets up "global" git configuration with author and authentication
+// details in the specified virtual home directory.
+func (b *baseRepo) setupClient(homeDir string, opts *ClientOptions) error {
 	if opts == nil {
 		opts = &ClientOptions{}
 	}
 
-	if err := b.setupAuthor(opts.User); err != nil {
+	if err := b.setupAuthor(homeDir, opts.User); err != nil {
 		return fmt.Errorf("error configuring the author: %w", err)
 	}
 
-	if err := b.setupAuth(); err != nil {
+	if err := b.setupAuth(homeDir); err != nil {
 		return fmt.Errorf("error configuring the credentials: %w", err)
 	}
 
 	if opts.InsecureSkipTLSVerify {
 		cmd := b.buildGitCommand("config", "--global", "http.sslVerify", "false")
-		cmd.Dir = b.homeDir // Override the cmd.Dir that's set by b.buildGitCommand()
+		// Override the home directory set by b.buildGitCommand().
+		b.setCmdHome(cmd, homeDir)
+		// Override the cmd.Dir that's set by b.buildGitCommand(). It's normally the
+		// repository's path, but if this method was called as part of the cloning
+		// process, that path may not exist yet.
+		cmd.Dir = homeDir
 		if _, err := libExec.Exec(cmd); err != nil {
 			return fmt.Errorf("error configuring http.sslVerify: %w", err)
 		}
@@ -84,8 +91,10 @@ type User struct {
 
 // setupAuthor configures the git CLI with a default commit author.
 // Optionally, the author can have an associated signing key. When using GPG
-// signing, the name and email must match the GPG key identity.
-func (b *baseRepo) setupAuthor(author *User) error {
+// signing, the name and email must match the GPG key identity. The directory
+// specified by homeDir is used as a virtual home directory for all commands
+// executed by this method.
+func (b *baseRepo) setupAuthor(homeDir string, author *User) error {
 	if author == nil {
 		author = &User{}
 	}
@@ -95,7 +104,12 @@ func (b *baseRepo) setupAuthor(author *User) error {
 	}
 
 	cmd := b.buildGitCommand("config", "--global", "user.name", author.Name)
-	cmd.Dir = b.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
+	// Override the home directory set by b.buildGitCommand().
+	b.setCmdHome(cmd, homeDir)
+	// Override the cmd.Dir that's set by b.buildGitCommand(). It's normally the
+	// repository's path, but if this method was called as part of the cloning
+	// process, that path may not exist yet.
+	cmd.Dir = homeDir
 	if _, err := libExec.Exec(cmd); err != nil {
 		return fmt.Errorf("error configuring git user name: %w", err)
 	}
@@ -105,15 +119,22 @@ func (b *baseRepo) setupAuthor(author *User) error {
 	}
 
 	cmd = b.buildGitCommand("config", "--global", "user.email", author.Email)
-	cmd.Dir = b.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
+	// Override the home directory set by b.buildGitCommand().
+	b.setCmdHome(cmd, homeDir)
+	// Override the cmd.Dir that's set by b.buildGitCommand(). It's normally the
+	// repository's path, but if this method was called as part of the cloning
+	// process, that path may not exist yet.
+	cmd.Dir = homeDir
 	if _, err := libExec.Exec(cmd); err != nil {
 		return fmt.Errorf("error configuring git user email: %w", err)
 	}
 
-	if author.SigningKeyType == SigningKeyTypeGPG {
+	// For now, since only GPG signing is supported, we will assume GPG if the
+	// signing key type is not specified.
+	if author.SigningKeyType == SigningKeyTypeGPG || author.SigningKeyType == "" {
 
 		if author.SigningKey != "" {
-			author.SigningKeyPath = filepath.Join(b.homeDir, "signing-key.asc")
+			author.SigningKeyPath = filepath.Join(homeDir, "signing-key.asc")
 			if err := os.WriteFile(
 				author.SigningKeyPath,
 				[]byte(author.SigningKey),
@@ -121,25 +142,38 @@ func (b *baseRepo) setupAuthor(author *User) error {
 			); err != nil {
 				return fmt.Errorf("error writing signing key to %q: %w", author.SigningKeyPath, err)
 			}
+			defer func() {
+				if err := os.Remove(author.SigningKeyPath); err != nil {
+					logging.LoggerFromContext(context.TODO()).Error(
+						err,
+						"error removing file",
+						"file", author.SigningKeyPath,
+					)
+				}
+			}()
 		}
 
 		if author.SigningKeyPath != "" {
 			cmd = b.buildGitCommand("config", "--global", "commit.gpgsign", "true")
-			cmd.Dir = b.homeDir // Override the cmd.Dir that's set by b.buildGitCommand()
+			// Override the home directory set by b.buildGitCommand().
+			b.setCmdHome(cmd, homeDir)
+			// Override the cmd.Dir that's set by b.buildGitCommand(). It's normally the
+			// repository's path, but if this method was called as part of the cloning
+			// process, that path may not exist yet.
+			cmd.Dir = homeDir
 			if _, err := libExec.Exec(cmd); err != nil {
 				return fmt.Errorf("error configuring commit gpg signing: %w", err)
 			}
 
 			cmd = b.buildCommand("gpg", "--import", author.SigningKeyPath)
-			cmd.Dir = b.homeDir // Override the cmd.Dir that's set by b.buildCommand()
+			// Override the home directory set by b.buildCommand().
+			b.setCmdHome(cmd, homeDir)
+			// Override the cmd.Dir that's set by b.buildCommand(). It's normally the
+			// repository's path, but if this method was called as part of the cloning
+			// process, that path may not exist yet.
+			cmd.Dir = homeDir
 			if _, err := libExec.Exec(cmd); err != nil {
 				return fmt.Errorf("error importing gpg key %q: %w", author.SigningKeyPath, err)
-			}
-		}
-
-		if author.SigningKey != "" {
-			if err := os.Remove(author.SigningKeyPath); err != nil {
-				return fmt.Errorf("error removing file %q: %w", author.SigningKeyPath, err)
 			}
 		}
 
@@ -148,13 +182,16 @@ func (b *baseRepo) setupAuthor(author *User) error {
 	return nil
 }
 
-func (b *baseRepo) setupAuth() error {
+// setupAuth configures the git CLI with authentication information. The
+// directory specified by homeDir is used as a virtual home directory for
+// storing ssh keys if applicable.
+func (b *baseRepo) setupAuth(homeDir string) error {
 	if b.creds == nil {
 		return nil
 	}
 	// If an SSH key was provided, use that.
 	if b.creds.SSHPrivateKey != "" {
-		sshPath := filepath.Join(b.homeDir, ".ssh")
+		sshPath := filepath.Join(homeDir, ".ssh")
 		if err := os.MkdirAll(sshPath, 0700); err != nil {
 			return fmt.Errorf("error creating SSH directory %q: %w", sshPath, err)
 		}
@@ -306,4 +343,12 @@ func (b *baseRepo) RemoteBranchExists(branch string) (bool, error) {
 
 func (b *baseRepo) URL() string {
 	return b.url
+}
+
+func (b *baseRepo) setCmdHome(cmd *exec.Cmd, homeDir string) {
+	if cmd.Env == nil {
+		cmd.Env = []string{fmt.Sprintf("HOME=%s", homeDir)}
+	} else {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("HOME=%s", homeDir))
+	}
 }
