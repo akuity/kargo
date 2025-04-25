@@ -67,10 +67,10 @@ func (t *tarExtractor) run(
 	cfg builtin.UntarConfig,
 ) (promotion.StepResult, error) {
 	// Secure join the paths to prevent path traversal attacks.
-	filePath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.FilePath)
+	inPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.InPath)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
-			fmt.Errorf("could not secure join filePath %q: %w", cfg.FilePath, err)
+			fmt.Errorf("could not secure join inPath %q: %w", cfg.InPath, err)
 	}
 	outPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutPath)
 	if err != nil {
@@ -92,10 +92,10 @@ func (t *tarExtractor) run(
 	}
 
 	// Open the tar file
-	file, err := os.Open(filePath)
+	file, err := os.Open(inPath)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
-			fmt.Errorf("failed to open tar file %q: %w", cfg.FilePath, err)
+			fmt.Errorf("failed to open tar file %q: %w", cfg.InPath, err)
 	}
 	defer file.Close()
 

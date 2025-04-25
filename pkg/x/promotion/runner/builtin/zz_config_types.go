@@ -414,11 +414,11 @@ type Image struct {
 }
 
 type UntarConfig struct {
-	// FilePath is the path to the tar file to extract.
-	FilePath string `json:"filePath"`
 	// Ignore is a (multiline) string of glob patterns to ignore when extracting files. It
 	// accepts the same syntax as .gitignore files.
 	Ignore string `json:"ignore,omitempty"`
+	// InPath is the path to the tar file to extract.
+	InPath string `json:"inPath"`
 	// OutPath is the path to the destination directory where contents will be extracted.
 	OutPath string `json:"outPath"`
 	// StripComponents is the number of leading components to strip from file names in the
