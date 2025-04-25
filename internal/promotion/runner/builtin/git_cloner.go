@@ -103,10 +103,24 @@ func (g *gitCloner) run(
 			SSHPrivateKey: creds.SSHPrivateKey,
 		}
 	}
+	var repoUser git.User
+
+	if cfg.User != nil {
+		repoUser = git.User{
+			Name:  cfg.User.Name,
+			Email: cfg.User.Email,
+			SigningKey:     cfg.User.SigningKey, // Optional, may be empty
+			SigningKeyType: g.gitUser.SigningKeyType, // Preserve system-level SigningKeyType
+			SigningKeyPath: g.gitUser.SigningKeyPath, // Preserve system-level SigningKeyPath
+		}
+	} else {
+		repoUser = g.gitUser // Default to the system-level gitUser
+	}
+
 	repo, err := git.CloneBare(
 		cfg.RepoURL,
 		&git.ClientOptions{
-			User:                  &g.gitUser,
+			User:                  &repoUser,
 			Credentials:           repoCreds,
 			InsecureSkipTLSVerify: cfg.InsecureSkipTLSVerify,
 		},
