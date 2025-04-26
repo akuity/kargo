@@ -1,29 +1,24 @@
+version: "2"
 run:
-  go: "1.23"
+  # Go version to use for running golangci-lint
+  go: "1.24"
+  # Build tags to be passed to all linters
   build-tags:
     - dockerhub
     - ghcr
-  timeout: 10m
-
-issues:
-  exclude-files:
-    - .*/*_types.go
-    - .*/groupversion_info.go
 
 linters:
-  disable-all: true
+  # Disable default linters to use only explicitly enabled ones
+  default: none
+  # List of linters to enable
   enable:
     - bodyclose
+    - copyloopvar
     - depguard
     - errcheck
-    - copyloopvar
     - forcetypeassert
-    - gci
     - goconst
-    - gofmt
-    - goimports
     - gosec
-    - gosimple
     - govet
     - ineffassign
     - lll
@@ -31,123 +26,157 @@ linters:
     - nakedret
     - revive
     - staticcheck
-    - typecheck
     - unconvert
     - unparam
     - unused
 
-# all available settings for linters we enable
-linters-settings:
-  depguard:
-    rules:
-      main:
-        deny:
-          # avoid reintroduction of `github.com/pkg/errors` package
-          - pkg: "github.com/pkg/errors"
-            desc: Should use `errors` package from the standard library
-  errcheck:
-    # report about not checking of errors in type assertions: `a := b.(MyStruct)`;
-    # default is false: such cases aren't reported by default.
-    check-type-assertions: false
+  settings:
+    depguard:
+      rules:
+        main:
+          deny:
+            # Avoid reintroduction of `github.com/pkg/errors` package
+            - pkg: github.com/pkg/errors
+              desc: Should use `errors` package from the standard library
 
-    # report about assignment of errors to blank identifier: `num, _ := strconv.Atoi(numStr)`;
-    # default is false: such cases aren't reported by default.
-    check-blank: false
-  gci:
-    sections:
-      - standard
-      - default
-      - prefix(github.com/akuity)
-      - dot
-      - blank
-    skip-generated: true
-    custom-order: true
-  goconst:
-    ignore-tests: true
-    # minimal length of string constant, 3 by default
-    min-len: 3
-    # minimal occurrences count to trigger, 3 by default
-    min-occurrences: 3
-  gofmt:
-    # simplify code: gofmt with `-s` option, true by default
-    simplify: true
-  goimports:
-    # put imports beginning with prefix after 3rd-party packages;
-    # it's a comma-separated list of prefixes
-    local-prefixes: github.com/org/project
-  govet:
-    enable:
-      # report about shadowed variables
-      - shadow
-  lll:
-    # max line length, lines longer will be reported. Default is 120.
-    # '\t' is counted as 1 character by default, and can be changed with the tab-width option
-    line-length: 120
-    # tab width in spaces. Default to 1.
-    tab-width: 2
-  misspell:
-    # Correct spellings using locale preferences for US or UK.
-    # Default is to use a neutral variety of English.
-    # Setting locale to US will correct the British spelling of 'colour' to 'color'.
-    locale: US
-  nakedret:
-    # make an issue if func has more lines of code than this setting and it has naked returns; default is 30
-    max-func-lines: 30
-  unparam:
-    # Inspect exported functions, default is false. Set to true if no external program/library imports your code.
-    # XXX: if you enable this setting, unparam will report a lot of false-positives in text editors:
-    # if it's called for subdir of a project it can't find external interfaces. All text editor integrations
-    # with golangci-lint call it on a directory with the changed file.
-    check-exported: false
-  revive:
-    # based on https://github.com/mgechev/revive#recommended-configuration
-    ignore-generated-header: false
-    severity: warning
-    confidence: 0.8
-    # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md
+    errcheck:
+      # Report about not checking of errors in type assertions: `a := b.(MyStruct)`
+      # Default is false: such cases aren't reported by default
+      check-type-assertions: false
+
+      # Report about assignment of errors to blank identifier: `num, _ := strconv.Atoi(numStr)`
+      # Default is false: such cases aren't reported by default
+      check-blank: false
+
+    goconst:
+      # Minimal length of string constant, 3 by default
+      min-len: 3
+      # Minimal occurrences count to trigger, 3 by default
+      min-occurrences: 3
+
+    govet:
+      enable:
+        # Report about shadowed variables
+        - shadow
+
+    lll:
+      # Max line length, lines longer will be reported. Default is 120
+      line-length: 120
+      # Tab width in spaces. Default to 2
+      tab-width: 2
+
+    misspell:
+      # Correct spellings using locale preferences for US or UK
+      # Default is to use a neutral variety of English
+      # Setting locale to US will correct the British spelling of 'colour' to 'color'
+      locale: US
+
+    nakedret:
+      # Make an issue if func has more lines of code than this setting and it has naked returns; default is 30
+      max-func-lines: 30
+
+    revive:
+      # Based on https://github.com/mgechev/revive#recommended-configuration
+      confidence: 0.8
+      severity: warning
+      rules:
+        # Deny naked return always
+        - name: bare-return
+          severity: error
+        - name: blank-imports
+        - name: bool-literal-in-expr
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: datarace
+        - name: defer
+        - name: early-return
+        - name: error-naming
+        - name: error-return
+        - name: error-strings
+        - name: errorf
+        - name: exported
+        - name: if-return
+        - name: import-shadowing
+        - name: indent-error-flow
+        - name: increment-decrement
+        - name: range
+        - name: receiver-naming
+        - name: redefines-builtin-id
+        - name: superfluous-else
+        - name: time-equal
+        - name: time-naming
+        - name: var-declaration
+        - name: unexported-naming
+        # Handle error always
+        - name: unhandled-error
+          # Ignore following functions
+          arguments:
+            - fmt.Print
+            - fmt.Fprintf
+            - fmt.Fprintln
+            - fmt.Printf
+            - fmt.Println
+          severity: error
+        - name: unused-parameter
+        - name: use-any
+        - name: useless-break
+        - name: waitgroup-by-value
+        # Explicitly disabled rules
+        - name: var-naming
+          # Disable because it conflicts with protobuf naming convention like "Id"
+          disabled: true
+
+    unparam:
+      # Inspect exported functions, default is false
+      # Set to true if no external program/library imports your code
+      check-exported: false
+
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
     rules:
-      # Deny naked return always
-      - name: bare-return
-        severity: error
-      - name: blank-imports
-      - name: bool-literal-in-expr
-      - name: context-as-argument
-      - name: context-keys-type
-      - name: datarace
-      - name: defer
-      - name: early-return
-      - name: error-naming
-      - name: error-return
-      - name: error-strings
-      - name: errorf
-      - name: exported
-      - name: if-return
-      - name: import-shadowing
-      - name: indent-error-flow
-      - name: increment-decrement
-      - name: range
-      - name: receiver-naming
-      - name: redefines-builtin-id
-      - name: superfluous-else
-      - name: time-equal
-      - name: time-naming
-      - name: var-declaration
-      - name: unexported-naming
-      # Handle error always
-      - name: unhandled-error
-        severity: error
-        # Ignore following functions
-        arguments:
-          - fmt.Print
-          - fmt.Fprintf
-          - fmt.Fprintln
-          - fmt.Printf
-          - fmt.Println
-      - name: unused-parameter
-      - name: use-any
-      - name: useless-break
-      - name: waitgroup-by-value
-      # Explicitly disabled rules
-      - name: var-naming
-        # Disable because it conflicts with protobuf naming convention like "Id"
-        disabled: true
+      - linters:
+          - goconst
+        path: (.+)_test\.go
+    paths:
+      - .*/*_types.go
+      - .*/groupversion_info.go
+      - third_party$
+      - builtin$
+      - examples$
+
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - goimports
+
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/akuity)
+        - dot
+        - blank
+      custom-order: true
+    gofmt:
+      # Simplify code: gofmt with `-s` option
+      simplify: true
+    goimports:
+      # Put imports beginning with prefix after 3rd-party packages
+      local-prefixes:
+        - github.com/org/project
+
+  exclusions:
+    generated: lax
+    paths:
+      - .*/*_types.go
+      - .*/groupversion_info.go
+      - third_party$
+      - builtin$
+      - examples$
