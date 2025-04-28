@@ -1,13 +1,9 @@
-import { createQueryOptions, useQuery, useTransport } from '@connectrpc/connect-query';
-import { useQueries } from '@tanstack/react-query';
-import { Empty, Pagination } from 'antd';
+import { useQuery } from '@connectrpc/connect-query';
+import { Empty, Flex, Pagination } from 'antd';
 import { useEffect } from 'react';
 
 import { LoadingState } from '@ui/features/common';
-import {
-  listProjects,
-  listStages
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { listProjects } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 
 import { useLocalStorage } from '../../../utils/use-local-storage';
 
@@ -36,13 +32,6 @@ export const ProjectsList = () => {
     }
   }, [data, page, pageSize, setPage]);
 
-  const transport = useTransport();
-  const stageData = useQueries({
-    queries: (data?.projects || []).map((proj) => {
-      return createQueryOptions(listStages, { project: proj?.metadata?.name }, { transport });
-    })
-  });
-
   const handlePaginationChange = (newPage: number, newPageSize: number) => {
     setPage(newPage);
     setPageSize(newPageSize);
@@ -69,8 +58,13 @@ export const ProjectsList = () => {
 
   return (
     <>
-      <div className='flex items-center mb-6'>
-        {projectListFilter()}
+      <div className='mb-6'>{projectListFilter()}</div>
+      <div className={styles.list}>
+        {data.projects.map((proj) => (
+          <ProjectItem key={proj?.metadata?.name} project={proj} />
+        ))}
+      </div>
+      <Flex justify='flex-end' className='mt-8'>
         <Pagination
           total={data?.total || 0}
           className='ml-auto flex-shrink-0'
@@ -78,17 +72,9 @@ export const ProjectsList = () => {
           current={page}
           onChange={handlePaginationChange}
           showSizeChanger
+          hideOnSinglePage
         />
-      </div>
-      <div className={styles.list}>
-        {data.projects.map((proj, i) => (
-          <ProjectItem
-            key={proj?.metadata?.name}
-            project={proj}
-            stages={stageData[i]?.data?.stages}
-          />
-        ))}
-      </div>
+      </Flex>
     </>
   );
 };

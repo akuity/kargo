@@ -1,4 +1,4 @@
-import { faWandSparkles } from '@fortawesome/free-solid-svg-icons';
+import { faPlus } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Flex } from 'antd';
 
@@ -17,9 +17,9 @@ export const Projects = () => {
         <Button
           type='primary'
           onClick={() => show()}
-          icon={<FontAwesomeIcon icon={faWandSparkles} size='1x' />}
+          icon={<FontAwesomeIcon icon={faPlus} size='1x' />}
         >
-          Create
+          New Project
         </Button>
       </Flex>
       <ProjectsList />
