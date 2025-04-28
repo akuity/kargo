@@ -186,9 +186,6 @@ type GitPushConfig struct {
 	MaxAttempts *int64 `json:"maxAttempts,omitempty"`
 	// The path to a working directory of a local repository.
 	Path string `json:"path"`
-	// The URL to the remote repository. If this is left blank, the repoURL will be the remote
-	// used when the repository was cloned.
-	RepoURL string `json:"repoURL,omitempty"`
 	// The target branch to push to. Mutually exclusive with 'generateTargetBranch=true'. If
 	// neither of these is provided, the target branch will be the currently checked out branch.
 	TargetBranch string `json:"targetBranch,omitempty"`
