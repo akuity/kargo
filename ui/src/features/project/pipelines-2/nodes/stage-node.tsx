@@ -1,3 +1,4 @@
+import { useMutation } from '@connectrpc/connect-query';
 import {
   faBullseye,
   faEllipsis,
@@ -7,7 +8,7 @@ import {
   faTruckArrowRight
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Card, Dropdown, Flex } from 'antd';
+import { Button, Card, Dropdown, Flex, message } from 'antd';
 import { ItemType } from 'antd/es/menu/interface';
 import classNames from 'classnames';
 import { formatDistance } from 'date-fns';
@@ -21,6 +22,7 @@ import { StagePhaseIcon } from '@ui/features/common/stage-phase/stage-phase-icon
 import { StagePhase } from '@ui/features/common/stage-phase/utils';
 import { IAction, useActionContext } from '@ui/features/project/pipelines-2/context/action-context';
 import { ColorMapHex, parseColorAnnotation } from '@ui/features/stage/utils';
+import { approveFreight } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
@@ -52,6 +54,16 @@ export const StageNode = (props: { stage: Stage }) => {
   const controlFlow = isStageControlFlow(props.stage);
 
   const hideStage = useHideStageIfInPromotionMode(props.stage);
+
+  const manualApproveActionMutation = useMutation(approveFreight, {
+    onSuccess: (_, vars) => {
+      message.success(
+        `Freight ${actionContext?.action?.freight?.alias} has been manually approved for stage ${vars.stage}`
+      );
+
+      actionContext?.cancel();
+    }
+  });
 
   let descriptionItems: ReactNode;
 
@@ -134,7 +146,7 @@ export const StageNode = (props: { stage: Stage }) => {
           Promote
         </Flex>
       ),
-      onClick: () => actionContext?.act(IAction.PROMOTE, props.stage)
+      onClick: () => actionContext?.actPromote(IAction.PROMOTE, props.stage)
     });
   }
 
@@ -150,7 +162,7 @@ export const StageNode = (props: { stage: Stage }) => {
           Promote to downstream
         </Flex>
       ),
-      onClick: () => actionContext?.act(IAction.PROMOTE_DOWNSTREAM, props.stage)
+      onClick: () => actionContext?.actPromote(IAction.PROMOTE_DOWNSTREAM, props.stage)
     });
   }
 
@@ -205,7 +217,24 @@ export const StageNode = (props: { stage: Stage }) => {
       {descriptionItems}
 
       <div className='my-2'>
-        <StageFreight stage={props.stage} />
+        {actionContext?.action?.type === IAction.MANUALLY_APPROVE ? (
+          <Button
+            className='success'
+            size='small'
+            loading={manualApproveActionMutation.isPending}
+            onClick={() => {
+              manualApproveActionMutation.mutate({
+                stage: props.stage?.metadata?.name || '',
+                project: props.stage?.metadata?.namespace,
+                name: actionContext?.action?.freight?.metadata?.name
+              });
+            }}
+          >
+            Approve
+          </Button>
+        ) : (
+          <StageFreight stage={props.stage} />
+        )}
       </div>
 
       {!graphContext?.stackedNodesParents?.includes(stageNodeIndex) && (
@@ -262,7 +291,10 @@ const useHideStageIfInPromotionMode = (stage: Stage) => {
   const dictionaryContext = useDictionaryContext();
 
   return useMemo(() => {
-    if (!actionContext?.action) {
+    if (
+      actionContext?.action?.type !== IAction.PROMOTE &&
+      actionContext?.action?.type !== IAction.PROMOTE_DOWNSTREAM
+    ) {
       return false;
     }
 

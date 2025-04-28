@@ -9,7 +9,7 @@ import { generatePath, useNavigate } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
 import { FreightStatusList } from '@ui/features/freight/freight-status-list';
-import { useActionContext } from '@ui/features/project/pipelines-2/context/action-context';
+import { IAction, useActionContext } from '@ui/features/project/pipelines-2/context/action-context';
 import { useDictionaryContext } from '@ui/features/project/pipelines-2/context/dictionary-context';
 import { useFreightTimelineControllerContext } from '@ui/features/project/pipelines-2/context/freight-timeline-controller-context';
 import { queryFreight } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
@@ -33,7 +33,9 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
   const dictionaryContext = useDictionaryContext();
   const actionContext = useActionContext();
 
-  const isPromotionMode = !!actionContext?.action;
+  const isPromotionMode =
+    actionContext?.action?.type === IAction.PROMOTE ||
+    actionContext?.action?.type === IAction.PROMOTE_DOWNSTREAM;
 
   const getPromotionEligibleFreightQuery = useQuery(
     queryFreight,

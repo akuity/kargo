@@ -13,6 +13,19 @@ export const PromotionModeHeader = (props: { className?: string; loading?: boole
     return null;
   }
 
+  if (actionContext?.action?.type === IAction.MANUALLY_APPROVE) {
+    return (
+      <div className={props.className}>
+        <Typography.Text type='secondary'>
+          Manually approve freight <b>{actionContext?.action?.freight?.alias}</b>
+        </Typography.Text>
+        <Button danger type='primary' size='small' onClick={() => actionContext?.cancel()}>
+          Cancel
+        </Button>
+      </div>
+    );
+  }
+
   let promotingTo = actionContext?.action?.stage?.metadata?.name || '';
 
   if (actionContext?.action?.type === IAction.PROMOTE_DOWNSTREAM) {

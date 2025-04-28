@@ -5,14 +5,17 @@ import { generatePath, useNavigate } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
 import { LoadingState } from '@ui/features/common';
+import { mapToNames } from '@ui/features/common/utils';
+import WarehouseDetails from '@ui/features/project/pipelines/warehouse/warehouse-details';
+import CreateStage from '@ui/features/stage/create-stage';
+import CreateWarehouse from '@ui/features/stage/create-warehouse/create-warehouse';
 import StageDetails from '@ui/features/stage/stage-details';
 import { getColors } from '@ui/features/stage/utils';
 import {
   listStages,
-  listWarehouses,
   queryFreight
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { Freight, Project } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight, Project, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { ActionContext } from './context/action-context';
 import { DictionaryContext } from './context/dictionary-context';
@@ -28,6 +31,7 @@ import { Promotion } from './promotion/promotion';
 import { useAction } from './use-action';
 import { useFreightById } from './use-freight-by-id';
 import { useFreightInStage } from './use-freight-in-stage';
+import { useGetWarehouse } from './use-get-warehouse';
 import { useStageAutoPromotionMap } from './use-stage-auto-promotion-map';
 import { useStageByName } from './use-stage-by-name';
 import { useSubscribersByStage } from './use-subscribers-by-stage';
@@ -42,6 +46,10 @@ export const Pipelines = (props: {
     freight: string;
     stage: string;
   };
+  creatingStage?: boolean;
+  creatingWarehouse?: boolean;
+  warehouses: Warehouse[];
+  warehouseName?: string;
 }) => {
   const navigate = useNavigate();
 
@@ -53,25 +61,17 @@ export const Pipelines = (props: {
     project: projectName
   });
 
-  const listWarehousesQuery = useQuery(listWarehouses, { project: projectName });
-
   const listStagesQuery = useQuery(listStages, { project: projectName });
 
-  const loading =
-    getFreightQuery.isLoading || listWarehousesQuery.isLoading || listStagesQuery.isLoading;
+  const loading = getFreightQuery.isLoading || listStagesQuery.isLoading;
 
   const stageDetails =
     props.stageName &&
     listStagesQuery?.data?.stages?.find((s) => s?.metadata?.name === props.stageName);
 
   const warehouseColorMap = useMemo(
-    () =>
-      getColors(
-        props.project?.metadata?.name || '',
-        listWarehousesQuery.data?.warehouses || [],
-        'warehouses'
-      ),
-    [props.project, listWarehousesQuery.data?.warehouses]
+    () => getColors(props.project?.metadata?.name || '', props.warehouses, 'warehouses'),
+    [props.project, props.warehouses]
   );
 
   const stageColorMap = useMemo(
@@ -100,6 +100,7 @@ export const Pipelines = (props: {
   const stageAutoPromotionMap = useStageAutoPromotionMap(props.project);
   const subscribersByStage = useSubscribersByStage(listStagesQuery.data?.stages || []);
   const stageByName = useStageByName(listStagesQuery.data?.stages || []);
+  const warehouse = useGetWarehouse(props.warehouses, props.warehouseName);
 
   if (loading) {
     return <LoadingState />;
@@ -131,13 +132,17 @@ export const Pipelines = (props: {
             />
 
             <div className='w-full h-full relative'>
-              <GraphFilters warehouses={listWarehousesQuery.data?.warehouses || []} />
+              <GraphFilters warehouses={props.warehouses} />
               <Graph
                 project={props.project.metadata?.name || ''}
-                warehouses={listWarehousesQuery.data?.warehouses || []}
+                warehouses={props.warehouses}
                 stages={listStagesQuery.data?.stages || []}
               />
             </div>
+
+            {!!warehouse && (
+              <WarehouseDetails warehouse={warehouse} refetchFreight={getFreightQuery.refetch} />
+            )}
 
             {!!stageDetails && <StageDetails stage={stageDetails} />}
 
@@ -158,6 +163,21 @@ export const Pipelines = (props: {
                 stage={stageByName?.[props.promote.stage]}
               />
             )}
+
+            {props.creatingStage && (
+              <CreateStage
+                project={props.project?.metadata?.name}
+                warehouses={mapToNames(props.warehouses || [])}
+                stages={mapToNames(listStagesQuery.data?.stages || [])}
+              />
+            )}
+
+            <CreateWarehouse
+              visible={Boolean(props.creatingWarehouse)}
+              hide={() =>
+                navigate(generatePath(paths.project, { name: props.project?.metadata?.name }))
+              }
+            />
           </ColorContext.Provider>
         </DictionaryContext.Provider>
       </FreightTimelineControllerContext.Provider>

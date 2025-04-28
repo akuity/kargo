@@ -1,11 +1,18 @@
 import { faDocker, faGithub } from '@fortawesome/free-brands-svg-icons';
-import { faAnchor, faWarehouse, IconDefinition } from '@fortawesome/free-solid-svg-icons';
+import {
+  faAnchor,
+  faCheck,
+  faEllipsis,
+  faWarehouse,
+  IconDefinition
+} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Tag, Typography } from 'antd';
+import { Button, Dropdown, Tag, Typography } from 'antd';
 import classNames from 'classnames';
 import { formatDistance } from 'date-fns';
 import { useMemo } from 'react';
 
+import { useActionContext } from '@ui/features/project/pipelines-2/context/action-context';
 import { FreightTimelineControllerContextType } from '@ui/features/project/pipelines-2/context/freight-timeline-controller-context';
 import { ColorMap } from '@ui/features/stage/utils';
 import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
@@ -28,6 +35,8 @@ type FreightCardProps = {
 };
 
 export const FreightCard = (props: FreightCardProps) => {
+  const actionContext = useActionContext();
+
   const freightAlias = props.freight?.alias;
 
   const creation = useMemo(() => {
@@ -50,7 +59,9 @@ export const FreightCard = (props: FreightCardProps) => {
   const noOfHelmReleases = props.freight?.charts?.length || 0;
   const noOfContainerImages = props.freight?.images?.length || 0;
 
-  const isViewingFreight = props.viewingFreight?.metadata?.name === props.freight?.metadata?.name;
+  const isViewingFreight =
+    props.viewingFreight?.metadata?.name === props.freight?.metadata?.name ||
+    actionContext?.action?.freight?.metadata?.name === props.freight?.metadata?.name;
 
   return (
     <div
@@ -65,9 +76,33 @@ export const FreightCard = (props: FreightCardProps) => {
       style={{ border: '1px solid rgba(0,0,0,.05)' }}
       onClick={() => props.setViewingFreight?.(isViewingFreight ? null : props.freight)}
     >
+      <Dropdown
+        menu={{
+          items: [
+            {
+              key: 'manually-approve',
+              label: 'Manually Approve',
+              icon: <FontAwesomeIcon icon={faCheck} />,
+              onClick: (e) => {
+                e.domEvent.stopPropagation();
+                actionContext?.actManuallyApprove(props.freight);
+              }
+            }
+          ]
+        }}
+      >
+        <Button
+          icon={<FontAwesomeIcon icon={faEllipsis} />}
+          size='small'
+          className='absolute right-0 top-0'
+          type='text'
+          onClick={(e) => e.stopPropagation()}
+        />
+      </Dropdown>
+
       {props.inUse && (
         <Tag
-          className='w-fit text-[8px] absolute right-[-20px] top-0 leading-none'
+          className='w-fit text-[8px] absolute left-0 top-0 leading-none'
           bordered={false}
           color='green'
         >

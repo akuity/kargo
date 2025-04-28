@@ -1,18 +1,22 @@
 import { createContext, useContext } from 'react';
 
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 
 export enum IAction {
   PROMOTE,
-  PROMOTE_DOWNSTREAM
+  PROMOTE_DOWNSTREAM,
+  MANUALLY_APPROVE
 }
 
 export type ActionContextType = {
   action?: {
     type: IAction;
-    stage: Stage;
+    stage?: Stage;
+    freight?: Freight;
   };
-  act(type: IAction, stage: Stage): void;
+
+  actPromote(type: IAction.PROMOTE | IAction.PROMOTE_DOWNSTREAM, stage: Stage): void;
+  actManuallyApprove(freight: Freight): void;
   cancel(): void;
 };
 
