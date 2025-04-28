@@ -34,7 +34,6 @@ Stages that write to the same branch do not write to the same files.
 | `targetBranch` | `string` | N | The branch to push to in the remote repository. Mutually exclusive with `generateTargetBranch=true`. If neither of these is provided, the target branch will be the same as the branch currently checked out in the working tree. |
 | `maxAttempts` | `int32` | N | The maximum number of attempts to make when pushing to the remote repository. Default is 50. |
 | `generateTargetBranch` | `boolean` | N | Whether to push to a remote branch named like `kargo/promotion/<promotionName>`. If such a branch does not already exist, it will be created. A value of 'true' is mutually exclusive with `targetBranch`. If neither of these is provided, the target branch will be the currently checked out branch. This option is useful when a subsequent promotion step will open a pull request against a Stage-specific branch. In such a case, the generated target branch pushed to by the `git-push` step can later be utilized as the source branch of the pull request. |
-| `repoURL` | `string` | N | The URL of a remote Git repository. If this is left blank, the remote URL of respository when it was cloned will be used. |
 
 ## Output
 
