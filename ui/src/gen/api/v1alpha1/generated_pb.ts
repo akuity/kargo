@@ -1809,8 +1809,6 @@ export type ProjectConfigSpec = Message<"github.com.akuity.kargo.api.v1alpha1.Pr
    * PromotionPolicies defines policies governing the promotion of Freight to
    * specific Stages within the Project.
    *
-   * +kubebuilder:validation:XValidation:message="PromotionPolicy must have exactly one of stage or stageSelector set",rule="has(self.stage) ? !has(self.stageSelector) : has(self.stageSelector)"
-   *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PromotionPolicy promotionPolicies = 1;
    */
   promotionPolicies: PromotionPolicy[];
@@ -1996,6 +1994,8 @@ export const PromotionListSchema: GenMessage<PromotionList> = /*@__PURE__*/
 /**
  * PromotionPolicy defines policies governing the promotion of Freight to a
  * specific Stage.
+ *
+ * +kubebuilder:validation:XValidation:message="PromotionPolicy must have exactly one of stage or stageSelector set",rule="has(self.stage) ? !has(self.stageSelector) : has(self.stageSelector)"
  *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionPolicy
  */

@@ -863,8 +863,6 @@ message ProjectConfigList {
 message ProjectConfigSpec {
   // PromotionPolicies defines policies governing the promotion of Freight to
   // specific Stages within the Project.
-  //
-  // +kubebuilder:validation:XValidation:message="PromotionPolicy must have exactly one of stage or stageSelector set",rule="has(self.stage) ? !has(self.stageSelector) : has(self.stageSelector)"
   repeated PromotionPolicy promotionPolicies = 1;
 }
 
@@ -938,6 +936,8 @@ message PromotionList {
 
 // PromotionPolicy defines policies governing the promotion of Freight to a
 // specific Stage.
+//
+// +kubebuilder:validation:XValidation:message="PromotionPolicy must have exactly one of stage or stageSelector set",rule="has(self.stage) ? !has(self.stageSelector) : has(self.stageSelector)"
 message PromotionPolicy {
   // Stage is the name of the Stage to which this policy applies.
   //
