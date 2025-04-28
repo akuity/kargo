@@ -116,6 +116,57 @@ func Test_gitCloner_validate(t *testing.T) {
 			},
 		},
 		{
+			name: "signingKey is provided and valid",
+			config: promotion.Config{
+				"repoURL": "https://github.com/example/repo.git",
+				"checkout": []promotion.Config{
+					{
+						"path": "/fake/path/0",
+					},
+				},
+				"author": promotion.Config{
+					"name":       "Tony Stark",
+					"email":      "tony@starkindustries.com",
+					"signingKey": "valid-signing-key", // Valid signing key
+				},
+			},
+			// No expected problems
+		},
+		{
+			name: "signingKey is empty string",
+			config: promotion.Config{
+				"repoURL": "https://github.com/example/repo.git",
+				"checkout": []promotion.Config{
+					{
+						"path": "/fake/path/1",
+					},
+				},
+				"author": promotion.Config{
+					"name":       "Tony Stark",
+					"email":      "tony@starkindustries.com",
+					"signingKey": "", // Empty string for signing key
+				},
+			},
+			// No expected problems because signingKey is optional and empty is valid
+		},
+		{
+			name: "signingKey is missing",
+			config: promotion.Config{
+				"repoURL": "https://github.com/example/repo.git",
+				"checkout": []promotion.Config{
+					{
+						"path": "/fake/path/2",
+					},
+				},
+				"author": promotion.Config{
+					"name":  "Tony Stark",
+					"email": "tony@starkindustries.com",
+					// signingKey is absent
+				},
+			},
+			// No expected problems because signingKey is optional
+		},
+		{
 			name: "valid kitchen sink",
 			config: promotion.Config{
 				"repoURL": "https://github.com/example/repo.git",

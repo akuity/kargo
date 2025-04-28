@@ -68,39 +68,83 @@ func Test_gitCommitter_validate(t *testing.T) {
 		},
 		{
 			name: "author email is not specified",
-			config: promotion.Config{ // Should be completely valid
-				"author":  promotion.Config{},
+			config: promotion.Config{ // If author is specified, email must be specified
+				"author":  promotion.Config{
+					"name": "Tony Stark",
+				},
 				"path":    "/tmp/foo",
 				"message": "fake commit message",
+			},
+			expectedProblems: []string{
+				"invalid git-commit config: author: email is required",
 			},
 		},
 		{
 			name: "author email is empty string",
-			config: promotion.Config{ // Should be completely valid
+			config: promotion.Config{
 				"author": promotion.Config{
+					"name":  "Tony Stark",
 					"email": "",
 				},
 				"path":    "/tmp/foo",
 				"message": "fake commit message",
 			},
-		},
-		{
-			name: "author name is not specified",
-			config: promotion.Config{ // Should be completely valid
-				"author":  promotion.Config{},
-				"path":    "/tmp/foo",
-				"message": "fake commit message",
+			expectedProblems: []string{
+				"invalid git-commit config: author.email: Does not match format 'email'",
 			},
 		},
 		{
-			name: "author name is empty string",
-			config: promotion.Config{ // Should be completely valid
-				"author": promotion.Config{
-					"name": "",
+			name: "author name is not specified",
+			config: promotion.Config{ // If author is specified, name must be specified
+				"author":  promotion.Config{
+					"email": "example@example.com",
 				},
 				"path":    "/tmp/foo",
 				"message": "fake commit message",
 			},
+			expectedProblems: []string{
+				"invalid git-commit config: author: name is required",
+			},
+		},
+		{
+			name: "author name is empty string",
+			config: promotion.Config{
+				"author": promotion.Config{
+					"name": "",
+					"email": "example@example.com",
+				},
+				"path":    "/tmp/foo",
+				"message": "fake commit message",
+			},
+			expectedProblems: []string{
+				"invalid git-commit config: author.name: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "author signingKey is empty string",
+			config: promotion.Config{
+				"author": promotion.Config{
+					"name":       "Tony Stark",
+					"email":      "tony@starkindustries.com",
+					"signingKey": "",
+				},
+				"path":    "/tmp/foo",
+				"message": "fake commit message",
+			},
+			// No expected problems because signingKey is optional
+		},
+		{
+			name: "author signingKey is missing",
+			config: promotion.Config{
+				"author": promotion.Config{
+					"name":  "Tony Stark",
+					"email": "tony@starkindustries.com",
+					// signingKey is absent
+				},
+				"path":    "/tmp/foo",
+				"message": "fake commit message",
+			},
+			// No expected problems because signingKey is optional
 		},
 		{
 			name: "valid kitchen sink",
