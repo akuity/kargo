@@ -82,7 +82,8 @@ const Content = (props: { promotion: TPromotion }) => {
 
     if (promotionEndTime && promotionStartTime) {
       const duration = formatDistance(promotionStartTime, promotionEndTime, {
-        addSuffix: false
+        addSuffix: false,
+        includeSeconds: true
       })?.replace('about', '');
 
       promotionDescriptions.push({

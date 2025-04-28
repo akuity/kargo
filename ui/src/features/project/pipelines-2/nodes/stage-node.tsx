@@ -59,20 +59,40 @@ export const StageNode = (props: { stage: Stage }) => {
     const lastPromotion = getLastPromotionDate(props.stage);
     const date = timestampDate(lastPromotion) as Date;
 
+    let Phase = (
+      <Flex align='center' gap={4}>
+        {stagePhase}{' '}
+        <StagePhaseIcon
+          className={classNames(
+            stagePhase !== StagePhase.Promoting && 'text-[8px]',
+            stagePhase === StagePhase.Promoting && 'text-[10px] ml-2'
+          )}
+          noTooltip
+          phase={stagePhase}
+        />
+        {stagePhase === StagePhase.Promoting && (
+          <FontAwesomeIcon icon={faExternalLink} className='text-[8px]' />
+        )}
+      </Flex>
+    );
+
+    if (stagePhase === StagePhase.Promoting) {
+      Phase = (
+        <Link
+          to={generatePath(paths.promotion, {
+            name: props.stage?.metadata?.namespace,
+            promotionId: props.stage?.status?.currentPromotion?.name || ''
+          })}
+        >
+          {Phase}
+        </Link>
+      );
+    }
+
     descriptionItems = (
       <Flex className='text-[10px]' gap={8} wrap vertical>
         <Flex gap={24}>
-          <Flex align='center' gap={4}>
-            {stagePhase}{' '}
-            <StagePhaseIcon
-              className={classNames(
-                stagePhase !== StagePhase.Promoting && 'text-[8px]',
-                stagePhase === StagePhase.Promoting && 'text-[10px] ml-2'
-              )}
-              noTooltip
-              phase={stagePhase}
-            />
-          </Flex>
+          {Phase}
           {stageHealth?.status && (
             <Flex gap={4}>
               <Flex align='center' gap={4}>
@@ -163,7 +183,7 @@ export const StageNode = (props: { stage: Stage }) => {
         <Flex align='center'>
           <span className='text-xs text-wrap mr-auto'>{props.stage.metadata?.name}</span>
           {autoPromotionMode && (
-            <span className='text-[9px] lowercase font-normal'>Auto Promotion</span>
+            <span className='text-[9px] lowercase font-normal mr-1'>Auto Promotion</span>
           )}
           <Dropdown
             trigger={['click']}

@@ -51,7 +51,7 @@ export const StageFreight = (props: { stage: Stage }) => {
 
   const [selectedFreight, setSelectedFreight] = useState(defaultToFirstFreight);
 
-  useEffect(() => setSelectedFreight(defaultToFirstFreight()), [selectedWarehouse]);
+  useEffect(() => setSelectedFreight(defaultToFirstFreight()), [selectedWarehouse, props.stage]);
 
   const selectedFreightAlias = useMemo(
     () => dictionaryContext?.freightById?.[selectedFreight?.name]?.alias,
@@ -64,7 +64,7 @@ export const StageFreight = (props: { stage: Stage }) => {
 
   const [selectedArtifact, setSelectedArtifact] = useState(defaultToFirstArtifact());
 
-  useEffect(() => setSelectedArtifact(defaultToFirstArtifact()), [selectedFreight]);
+  useEffect(() => setSelectedArtifact(defaultToFirstArtifact()), [selectedFreight, props.stage]);
 
   const onNextArtifact = () => {
     setSelectedArtifact(selectNextArtifact(selectedFreight, selectedArtifact));

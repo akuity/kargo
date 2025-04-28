@@ -14,6 +14,7 @@ export const Node = (props: { data: { label: string; handles?: number } }) => {
         {TargetHandles}
         <Handle
           type='target'
+          id={`${i}`}
           position={Position.Left}
           style={{ backgroundColor: 'transparent', border: 'none' }}
         />
@@ -24,6 +25,7 @@ export const Node = (props: { data: { label: string; handles?: number } }) => {
       <>
         {SourceHandles}
         <Handle
+          id={`${i}`}
           type='source'
           position={Position.Right}
           style={{ backgroundColor: 'transparent', border: 'none' }}
@@ -34,17 +36,14 @@ export const Node = (props: { data: { label: string; handles?: number } }) => {
 
   return (
     <>
-      <Handle
-        type='target'
-        position={Position.Left}
-        style={{ backgroundColor: 'transparent', border: 'none' }}
-      />
+      {TargetHandles}
       <Card>{props.data.label}</Card>
       <Handle
         type='source'
         position={Position.Right}
         style={{ backgroundColor: 'transparent', border: 'none' }}
       />
+      {SourceHandles}
     </>
   );
 };

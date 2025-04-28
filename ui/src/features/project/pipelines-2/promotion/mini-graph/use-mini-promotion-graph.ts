@@ -27,11 +27,49 @@ export const useMiniPromotionGraph = (stage: Stage, freight: Freight) => {
           : 1
     });
 
+    let edgeHandleIdBuckets: Record<'source' | 'target', Record<string, number>> = {
+      source: {},
+      target: {}
+    };
+
+    const addToBucket = (type: 'source' | 'target', node: string) => {
+      if (edgeHandleIdBuckets[type][node] === undefined) {
+        edgeHandleIdBuckets[type] = {
+          ...edgeHandleIdBuckets[type],
+          [node]: -1
+        };
+      }
+
+      edgeHandleIdBuckets = {
+        ...edgeHandleIdBuckets,
+        [type]: {
+          ...edgeHandleIdBuckets[type],
+          [node]: edgeHandleIdBuckets[type][node] + 1
+        }
+      };
+    };
+
+    const useBucket = (type: 'source' | 'target', node: string): string => {
+      const id = edgeHandleIdBuckets[type][node];
+
+      edgeHandleIdBuckets = {
+        ...edgeHandleIdBuckets,
+        [type]: {
+          ...edgeHandleIdBuckets[type],
+          [node]: edgeHandleIdBuckets[type][node] - 1
+        }
+      };
+
+      return `${id < 0 ? 0 : id}`;
+    };
+
     if (actionContext?.action?.type === IAction.PROMOTE_DOWNSTREAM) {
       const subscribers = dictionaryContext?.subscribersByStage[stageName] || new Set<string>();
       for (const stage of subscribers) {
         graph.setNode(stage, { ...nodeSize(), handles: subscribers.size });
         graph.setEdge(stageName, stage);
+        addToBucket('source', stageName);
+        addToBucket('target', stage);
       }
     } else {
       const parentStages = new Set<string>();
@@ -48,6 +86,8 @@ export const useMiniPromotionGraph = (stage: Stage, freight: Freight) => {
         for (const parentStage of parentStages) {
           graph.setNode(parentStage, { ...nodeSize(), handles: parentStages.size });
           graph.setEdge(parentStage, stageName);
+          addToBucket('source', parentStage);
+          addToBucket('target', stageName);
         }
       } else {
         graph.setNode(freight?.alias || '', nodeSize());
@@ -78,10 +118,15 @@ export const useMiniPromotionGraph = (stage: Stage, freight: Freight) => {
     }
 
     for (const edge of graph.edges()) {
+      const sourceHandle = useBucket('source', edge.v);
+      const targetHandle = useBucket('target', edge.w);
+
       reactFlowEdges.push({
         id: edge?.name || '',
         source: edge.v,
         target: edge.w,
+        sourceHandle,
+        targetHandle,
         markerEnd: {
           type: MarkerType.ArrowClosed
         }
