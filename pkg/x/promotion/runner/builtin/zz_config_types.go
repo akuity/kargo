@@ -105,7 +105,9 @@ type GitClearConfig struct {
 }
 
 type GitCloneConfig struct {
-	// The author of the commit.
+	// Default authorship information for any commits made to the cloned repository. If
+	// provided, this overrides any system-level defaults. Note: Configuration of the
+	// `git-commit` step can override this information.
 	Author *GitCloneConfigAuthor `json:"author,omitempty"`
 	// The commits, branches, or tags to check out from the repository and the paths where they
 	// should be checked out. At least one must be specified.
@@ -116,7 +118,9 @@ type GitCloneConfig struct {
 	RepoURL string `json:"repoURL"`
 }
 
-// The author of the commit.
+// Default authorship information for any commits made to the cloned repository. If
+// provided, this overrides any system-level defaults. Note: Configuration of the
+// `git-commit` step can override this information.
 type GitCloneConfigAuthor struct {
 	// The email of the author.
 	Email string `json:"email"`
@@ -144,7 +148,9 @@ type Checkout struct {
 }
 
 type GitCommitConfig struct {
-	// The author of the commit.
+	// Optional authorship information for the commit. If provided, this takes precedence over
+	// both system-level defaults and any optional, default authorship information configured in
+	// the `git-clone` step.
 	Author *GitCommitConfigAuthor `json:"author,omitempty"`
 	// The commit message.
 	Message string `json:"message"`
@@ -152,7 +158,9 @@ type GitCommitConfig struct {
 	Path string `json:"path"`
 }
 
-// The author of the commit.
+// Optional authorship information for the commit. If provided, this takes precedence over
+// both system-level defaults and any optional, default authorship information configured in
+// the `git-clone` step.
 type GitCommitConfigAuthor struct {
 	// The email of the author.
 	Email string `json:"email"`

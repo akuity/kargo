@@ -24,7 +24,7 @@ multiple working trees.
 |------|------|----------|-------------|
 | `repoURL` | `string` | Y | The URL of a remote Git repository to clone. |
 | `insecureSkipTLSVerify` | `boolean` | N | Whether to bypass TLS certificate verification when cloning (and for all subsequent operations involving this clone). Setting this to `true` is highly discouraged in production. |
-| `author` | `[]object` | N | Optional provider authorship information for the commit. |
+| `author` | `[]object` | N | Default authorship information for any commits made to the cloned repository. If provided, this overrides any system-level defaults. Note: Configuration of the `git-commit` step can override this information. |
 | `author.name` | `string` | Y | The committer's name. |
 | `author.email` | `string` | Y | The committer's email address. |
 | `author.signingKey` | `string` | N | The GPG signing key for the author. This field is optional. |

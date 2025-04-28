@@ -116,7 +116,7 @@ func Test_gitCloner_validate(t *testing.T) {
 			},
 		},
 		{
-			name: "signingKey is provided and valid",
+			name: "author name is missing",
 			config: promotion.Config{
 				"repoURL": "https://github.com/example/repo.git",
 				"checkout": []promotion.Config{
@@ -125,12 +125,31 @@ func Test_gitCloner_validate(t *testing.T) {
 					},
 				},
 				"author": promotion.Config{
-					"name":       "Tony Stark",
-					"email":      "tony@starkindustries.com",
-					"signingKey": "valid-signing-key", // Valid signing key
+					"email": "tony@starkindustries.com",
+					// Missing "name"
 				},
 			},
-			// No expected problems
+			expectedProblems: []string{
+				"invalid git-clone config: author: name is required",
+			},
+		},
+		{
+			name: "author email is missing",
+			config: promotion.Config{
+				"repoURL": "https://github.com/example/repo.git",
+				"checkout": []promotion.Config{
+					{
+						"path": "/fake/path/1",
+					},
+				},
+				"author": promotion.Config{
+					"name": "Tony Stark",
+					// Missing "email"
+				},
+			},
+			expectedProblems: []string{
+				"invalid git-clone config: author: email is required",
+			},
 		},
 		{
 			name: "signingKey is empty string",

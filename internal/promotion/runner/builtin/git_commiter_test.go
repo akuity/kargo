@@ -152,6 +152,7 @@ func Test_gitCommitter_validate(t *testing.T) {
 				"author": promotion.Config{
 					"email": "tony@starkindustries.com",
 					"name":  "Tony Stark",
+					"signingKey": "valid-signing-key",
 				},
 				"path":    "/tmp/foo",
 				"message": "fake commit message",

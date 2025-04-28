@@ -103,8 +103,8 @@ func (g *gitCloner) run(
 			SSHPrivateKey: creds.SSHPrivateKey,
 		}
 	}
-	var repoUser git.User
 
+	var repoUser git.User
 	if cfg.Author != nil {
 		repoUser = git.User{
 			Name:  cfg.Author.Name,
