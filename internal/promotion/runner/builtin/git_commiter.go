@@ -86,11 +86,11 @@ func (g *gitCommitter) run(
 		commitOpts := &git.CommitOptions{}
 		if cfg.Author != nil {
 			commitOpts.Author = &git.User{}
-			if cfg.Author.Name != "" {
-				commitOpts.Author.Name = cfg.Author.Name
-			}
-			if cfg.Author.Email != "" {
-				commitOpts.Author.Email = cfg.Author.Email
+ 			// Author is non-nil; Name and Email must be populated.
+			commitOpts.Author.Name = cfg.Author.Name
+			commitOpts.Author.Email = cfg.Author.Email
+			if cfg.Author.SigningKey != "" {
+				commitOpts.Author.SigningKey = cfg.Author.SigningKey
 			}
 		}
 		if err = workTree.Commit(cfg.Message, commitOpts); err != nil {

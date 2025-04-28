@@ -105,13 +105,11 @@ func (g *gitCloner) run(
 	}
 	var repoUser git.User
 
-	if cfg.User != nil {
+	if cfg.Author != nil {
 		repoUser = git.User{
-			Name:  cfg.User.Name,
-			Email: cfg.User.Email,
-			SigningKey:     cfg.User.SigningKey, // Optional, may be empty
-			SigningKeyType: g.gitUser.SigningKeyType, // Preserve system-level SigningKeyType
-			SigningKeyPath: g.gitUser.SigningKeyPath, // Preserve system-level SigningKeyPath
+			Name:  cfg.Author.Name,
+			Email: cfg.Author.Email,
+			SigningKey:     cfg.Author.SigningKey, // Optional, may be empty
 		}
 	} else {
 		repoUser = g.gitUser // Default to the system-level gitUser
