@@ -134,14 +134,8 @@ type Checkout struct {
 type GitCommitConfig struct {
 	// The author of the commit.
 	Author *Author `json:"author,omitempty"`
-	// The commit message. Mutually exclusive with 'messageFromSteps'.
-	Message string `json:"message,omitempty"`
-	// References the `commitMessage` output of previous steps. When one or more are specified,
-	// the commit message will be constructed by concatenating the messages from individual
-	// steps. Mutually exclusive with `message`.
-	//
-	// Deprecated: Use 'message' with an expression instead. Will be removed in v1.5.0.
-	MessageFromSteps []string `json:"messageFromSteps,omitempty"`
+	// The commit message.
+	Message string `json:"message"`
 	// The path to a working directory of a local repository.
 	Path string `json:"path"`
 }
@@ -162,8 +156,8 @@ type GitOpenPRConfig struct {
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 	// Labels to add to the pull request.
 	Labels []string `json:"labels,omitempty"`
-	// The name of the Git provider to use. Currently only 'github', 'gitlab', 'gitea' and
-	// 'azure' are supported. Kargo will try to infer the provider if it is not explicitly
+	// The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github',
+	// and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly
 	// specified.
 	Provider *Provider `json:"provider,omitempty"`
 	// The URL of a remote Git repository to clone.
@@ -205,8 +199,8 @@ type GitWaitForPRConfig struct {
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 	// The number of the pull request to wait for.
 	PRNumber int64 `json:"prNumber"`
-	// The name of the Git provider to use. Currently only 'github', 'gitlab', 'gitea' and
-	// 'azure' are supported. Kargo will try to infer the provider if it is not explicitly
+	// The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github',
+	// and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly
 	// specified.
 	Provider *Provider `json:"provider,omitempty"`
 	// The URL of a remote Git repository to clone.
@@ -422,14 +416,15 @@ type YAMLUpdate struct {
 	Value string `json:"value"`
 }
 
-// The name of the Git provider to use. Currently only 'github', 'gitlab', 'gitea' and
-// 'azure' are supported. Kargo will try to infer the provider if it is not explicitly
+// The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github',
+// and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly
 // specified.
 type Provider string
 
 const (
-	Azure  Provider = "azure"
-	Gitea  Provider = "gitea"
-	Github Provider = "github"
-	Gitlab Provider = "gitlab"
+	Azure     Provider = "azure"
+	Bitbucket Provider = "bitbucket"
+	Gitea     Provider = "gitea"
+	Github    Provider = "github"
+	Gitlab    Provider = "gitlab"
 )

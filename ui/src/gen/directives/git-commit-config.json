@@ -21,17 +21,8 @@
   },
   "message": {
    "type": "string",
-   "description": "The commit message. Mutually exclusive with 'messageFromSteps'.",
+   "description": "The commit message.",
    "minLength": 1
-  },
-  "messageFromSteps": {
-   "type": "array",
-   "deprecated": true,
-   "description": "References the `commitMessage` output of previous steps. When one or more are specified, the commit message will be constructed by concatenating the messages from individual steps. Mutually exclusive with `message`.\n\nDeprecated: Use 'message' with an expression instead. Will be removed in v1.5.0.",
-   "items": {
-    "type": "string",
-    "minLength": 1
-   }
   },
   "path": {
    "type": "string",

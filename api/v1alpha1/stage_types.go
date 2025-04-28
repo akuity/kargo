@@ -533,6 +533,8 @@ type Image struct {
 	// GitRepoURL specifies the URL of a Git repository that contains the source
 	// code for the image repository referenced by the RepoURL field if Kargo was
 	// able to infer it.
+	//
+	// Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
 	GitRepoURL string `json:"gitRepoURL,omitempty" protobuf:"bytes,2,opt,name=gitRepoURL"`
 	// Tag identifies a specific version of the image in the repository specified
 	// by RepoURL.

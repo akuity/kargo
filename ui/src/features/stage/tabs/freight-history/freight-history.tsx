@@ -1,6 +1,6 @@
 import { create } from '@bufbuild/protobuf';
 import { useQuery } from '@connectrpc/connect-query';
-import { Card, Descriptions, Flex, Select, Space, Table, Tag } from 'antd';
+import { Descriptions, Flex, Select, Space, Table, Tag } from 'antd';
 import { useMemo } from 'react';
 import { useState } from 'react';
 import { useEffect } from 'react';
@@ -92,78 +92,76 @@ export const FreightHistory = ({
 
   return (
     <Flex vertical gap={16}>
-      <Card size='small'>
-        <Descriptions bordered className='max-w-md mb-4' size='small'>
-          <Descriptions.Item label={selectedRequestedFreight?.origin?.kind}>
-            <Select
-              value={freightUniqueIdentifier}
-              className='w-full'
-              onChange={(value) => {
-                const [kind, name] = value.split('/');
-                const newRequestedFreight = requestedFreights.find(
-                  (i) => i.origin?.kind === kind && i.origin?.name === name
-                );
+      <Descriptions bordered className='max-w-md' size='small'>
+        <Descriptions.Item label={selectedRequestedFreight?.origin?.kind}>
+          <Select
+            value={freightUniqueIdentifier}
+            className='w-full'
+            onChange={(value) => {
+              const [kind, name] = value.split('/');
+              const newRequestedFreight = requestedFreights.find(
+                (i) => i.origin?.kind === kind && i.origin?.name === name
+              );
 
-                if (newRequestedFreight) {
-                  setSelectedRequestedFreight(newRequestedFreight);
-                }
-              }}
-              options={requestedFreights?.map((i) => ({
-                label: i.origin?.name,
-                value: `${i?.origin?.kind}/${i?.origin?.name}`
-              }))}
-            />
-          </Descriptions.Item>
-        </Descriptions>
+              if (newRequestedFreight) {
+                setSelectedRequestedFreight(newRequestedFreight);
+              }
+            }}
+            options={requestedFreights?.map((i) => ({
+              label: i.origin?.name,
+              value: `${i?.origin?.kind}/${i?.origin?.name}`
+            }))}
+          />
+        </Descriptions.Item>
+      </Descriptions>
 
-        <Table
-          dataSource={freightReferences}
-          size='small'
-          pagination={{ hideOnSinglePage: true }}
-          rowKey={(record, index) => `${record.name}${index}`}
-        >
-          <Table.Column<PlainMessage<FreightReference>>
-            title='ID'
-            width={100}
-            render={(value, record) =>
-              freightMap[record?.name || '']?.metadata?.name?.substring(0, 7)
-            }
-          />
-          <Table.Column<PlainMessage<FreightReference>>
-            title='Alias'
-            width={240}
-            render={(value, record, index) => (
-              <Space>
-                <Link
-                  to={generatePath(paths.freight, {
-                    name: projectName,
-                    freightName: record.name
-                  })}
-                >
-                  {freightMap[record?.name || '']?.alias || record.name}
-                </Link>
-                {index === 0 && <Tag color='success'>Active</Tag>}
-              </Space>
-            )}
-          />
-          <Table.Column<PlainMessage<FreightReference>>
-            title='Contents'
-            render={(value, record) => (
-              <FreightContents
-                horizontal
-                fullContentVisibility
-                highlighted={false}
-                freight={create(FreightSchema, {
-                  metadata: {
-                    name: record.name
-                  },
-                  ...record
+      <Table
+        dataSource={freightReferences}
+        size='small'
+        pagination={{ hideOnSinglePage: true }}
+        rowKey={(record, index) => `${record.name}${index}`}
+      >
+        <Table.Column<PlainMessage<FreightReference>>
+          title='ID'
+          width={100}
+          render={(value, record) =>
+            freightMap[record?.name || '']?.metadata?.name?.substring(0, 7)
+          }
+        />
+        <Table.Column<PlainMessage<FreightReference>>
+          title='Alias'
+          width={240}
+          render={(value, record, index) => (
+            <Space>
+              <Link
+                to={generatePath(paths.freight, {
+                  name: projectName,
+                  freightName: record.name
                 })}
-              />
-            )}
-          />
-        </Table>
-      </Card>
+              >
+                {freightMap[record?.name || '']?.alias || record.name}
+              </Link>
+              {index === 0 && <Tag color='success'>Active</Tag>}
+            </Space>
+          )}
+        />
+        <Table.Column<PlainMessage<FreightReference>>
+          title='Contents'
+          render={(value, record) => (
+            <FreightContents
+              horizontal
+              fullContentVisibility
+              highlighted={false}
+              freight={create(FreightSchema, {
+                metadata: {
+                  name: record.name
+                },
+                ...record
+              })}
+            />
+          )}
+        />
+      </Table>
     </Flex>
   );
 };

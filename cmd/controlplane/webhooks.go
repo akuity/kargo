@@ -22,6 +22,7 @@ import (
 	libWebhook "github.com/akuity/kargo/internal/webhook"
 	"github.com/akuity/kargo/internal/webhook/freight"
 	"github.com/akuity/kargo/internal/webhook/project"
+	"github.com/akuity/kargo/internal/webhook/projectconfig"
 	"github.com/akuity/kargo/internal/webhook/promotion"
 	"github.com/akuity/kargo/internal/webhook/promotiontask"
 	"github.com/akuity/kargo/internal/webhook/stage"
@@ -32,7 +33,8 @@ import (
 type webhooksServerOptions struct {
 	KubeConfig string
 
-	PprofBindAddress string
+	MetricsBindAddress string
+	PprofBindAddress   string
 
 	Logger *logging.Logger
 }
@@ -61,6 +63,7 @@ func newWebhooksServerCommand() *cobra.Command {
 
 func (o *webhooksServerOptions) complete() {
 	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
+	o.MetricsBindAddress = os.GetEnv("METRICS_BIND_ADDRESS", "0")
 	o.PprofBindAddress = os.GetEnv("PPROF_BIND_ADDRESS", "")
 }
 
@@ -105,7 +108,7 @@ func (o *webhooksServerOptions) run(ctx context.Context) error {
 				},
 			),
 			Metrics: server.Options{
-				BindAddress: "0",
+				BindAddress: o.MetricsBindAddress,
 			},
 			PprofBindAddress: o.PprofBindAddress,
 		},
@@ -132,6 +135,9 @@ func (o *webhooksServerOptions) run(ctx context.Context) error {
 		project.WebhookConfigFromEnv(),
 	); err != nil {
 		return fmt.Errorf("setup Project webhook: %w", err)
+	}
+	if err = projectconfig.SetupWebhookWithManager(mgr); err != nil {
+		return fmt.Errorf("setup ProjectConfig webhook: %w", err)
 	}
 	if err = promotion.SetupWebhookWithManager(ctx, webhookCfg, mgr); err != nil {
 		return fmt.Errorf("setup Promotion webhook: %w", err)

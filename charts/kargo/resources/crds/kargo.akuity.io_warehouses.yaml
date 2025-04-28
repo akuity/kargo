@@ -292,6 +292,8 @@ spec:
                             the source code for the image repository referenced by the RepoURL field.
                             When this is specified, Kargo MAY be able to infer and link to the exact
                             revision of that source code that was used to build the image.
+
+                            Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
                           pattern: ^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$
                           type: string
                         ignoreTags:
@@ -601,6 +603,8 @@ spec:
                                   GitRepoURL is the URL of the Git repository that contains the source
                                   code for this image. This field is optional, and only populated if the
                                   ImageSubscription specifies a GitRepoURL.
+
+                                  Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
                                 type: string
                               tag:
                                 description: Tag is the tag of the image.

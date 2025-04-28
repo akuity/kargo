@@ -215,7 +215,7 @@ func Test_gitCloner_run(t *testing.T) {
 	defer repo.Close()
 	err = os.WriteFile(filepath.Join(repo.Dir(), "test.txt"), []byte("foo"), 0600)
 	require.NoError(t, err)
-	err = repo.AddAllAndCommit("Initial commit")
+	err = repo.AddAllAndCommit("Initial commit", nil)
 	require.NoError(t, err)
 	err = repo.Push(nil)
 	require.NoError(t, err)

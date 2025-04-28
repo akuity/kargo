@@ -46,10 +46,9 @@ func (s *server) DeleteProjectSecret(
 	); err != nil {
 		return nil, fmt.Errorf("get secret: %w", err)
 	}
-	// Check for either of the two possible labels (newer and legacy) that
-	// indicate the secret is a generic project secret.
-	if secret.Labels[kargoapi.CredentialTypeLabelKey] != kargoapi.CredentialTypeLabelGeneric &&
-		secret.Labels[kargoapi.ProjectSecretLabelKey] != kargoapi.LabelTrueValue { // Legacy
+
+	// Check for the label that indicates this is a generic secret.
+	if secret.Labels[kargoapi.CredentialTypeLabelKey] != kargoapi.CredentialTypeLabelGeneric {
 		return nil, connect.NewError(
 			connect.CodeNotFound,
 			fmt.Errorf(
