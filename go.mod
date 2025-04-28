@@ -11,7 +11,7 @@ require (
 	cloud.google.com/go/compute/metadata v0.6.0
 	code.gitea.io/sdk/gitea v0.21.0
 	connectrpc.com/connect v1.18.1
-	connectrpc.com/grpchealth v1.3.0
+	connectrpc.com/grpchealth v1.4.0
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/adrg/xdg v0.5.3
@@ -57,15 +57,15 @@ require (
 	github.com/tidwall/sjson v1.2.5
 	github.com/valyala/fasttemplate v1.2.2
 	github.com/xeipuuv/gojsonschema v1.2.0
-	gitlab.com/gitlab-org/api/client-go v0.127.0
+	gitlab.com/gitlab-org/api/client-go v0.128.0
 	go.uber.org/ratelimit v0.3.1
 	golang.org/x/crypto v0.37.0
 	golang.org/x/net v0.39.0
 	golang.org/x/oauth2 v0.29.0
 	golang.org/x/sync v0.13.0
 	golang.org/x/text v0.24.0
-	google.golang.org/api v0.229.0
-	google.golang.org/grpc v1.71.1
+	google.golang.org/api v0.230.0
+	google.golang.org/grpc v1.72.0
 	google.golang.org/protobuf v1.36.6
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.17.3
