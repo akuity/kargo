@@ -134,6 +134,24 @@ func Test_gitCloner_validate(t *testing.T) {
 			},
 		},
 		{
+			name: "author name is empty",
+			config: promotion.Config{
+				"repoURL": "https://github.com/example/repo.git",
+				"checkout": []promotion.Config{
+					{
+						"path": "/fake/path/0",
+					},
+				},
+				"author": promotion.Config{
+					"name":  "",
+					"email": "tony@starkindustries.com",
+				},
+			},
+			expectedProblems: []string{
+				"invalid git-clone config: author.name: String length must be greater than or equal to 1",
+			},
+		},
+		{
 			name: "author email is missing",
 			config: promotion.Config{
 				"repoURL": "https://github.com/example/repo.git",
@@ -152,7 +170,7 @@ func Test_gitCloner_validate(t *testing.T) {
 			},
 		},
 		{
-			name: "signingKey is empty string",
+			name: "author email is empty",
 			config: promotion.Config{
 				"repoURL": "https://github.com/example/repo.git",
 				"checkout": []promotion.Config{
@@ -161,12 +179,13 @@ func Test_gitCloner_validate(t *testing.T) {
 					},
 				},
 				"author": promotion.Config{
-					"name":       "Tony Stark",
-					"email":      "tony@starkindustries.com",
-					"signingKey": "", // Empty string for signing key
+					"name":  "Tony Stark",
+					"email": "",
 				},
 			},
-			// No expected problems because signingKey is optional and empty is valid
+			expectedProblems: []string{
+				"invalid git-clone config: author.email: Does not match format 'email'",
+			},
 		},
 		{
 			name: "signingKey is missing",
@@ -184,6 +203,23 @@ func Test_gitCloner_validate(t *testing.T) {
 				},
 			},
 			// No expected problems because signingKey is optional
+		},
+		{
+			name: "signingKey is empty string",
+			config: promotion.Config{
+				"repoURL": "https://github.com/example/repo.git",
+				"checkout": []promotion.Config{
+					{
+						"path": "/fake/path/1",
+					},
+				},
+				"author": promotion.Config{
+					"name":       "Tony Stark",
+					"email":      "tony@starkindustries.com",
+					"signingKey": "", // Empty string for signing key
+				},
+			},
+			// No expected problems because signingKey is optional and empty is valid
 		},
 		{
 			name: "valid kitchen sink",
