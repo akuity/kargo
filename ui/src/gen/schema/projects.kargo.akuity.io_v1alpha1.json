@@ -80,15 +80,15 @@
                 "x-kubernetes-map-type": "atomic"
               }
             },
-            "type": "object"
+            "type": "object",
+            "x-kubernetes-validations": [
+              {
+                "message": "PromotionPolicy must have exactly one of stage or stageSelector set",
+                "rule": "has(self.stage) ? !has(self.stageSelector) : has(self.stageSelector)"
+              }
+            ]
           },
-          "type": "array",
-          "x-kubernetes-validations": [
-            {
-              "message": "PromotionPolicy must have exactly one of stage or stageSelector set",
-              "rule": "has(self.stage) ? !has(self.stageSelector) : has(self.stageSelector)"
-            }
-          ]
+          "type": "array"
         }
       },
       "type": "object"
