@@ -1,15 +1,23 @@
+import { useMutation } from '@connectrpc/connect-query';
 import { faRefresh, faWarehouse } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Badge, Button, Card, Flex } from 'antd';
+import { Badge, Button, Card, Flex, message } from 'antd';
 import classNames from 'classnames';
 import { useMemo } from 'react';
 
+import { refreshWarehouse } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import styles from './node-size-source-of-truth.module.less';
 
 export const WarehouseNode = (props: { warehouse: Warehouse }) => {
   const warehouseState = useWarehouseState(props.warehouse);
+
+  const refreshWarehouseMutation = useMutation(refreshWarehouse, {
+    onSuccess: () => {
+      message.success('Warehouse successfully refreshed');
+    }
+  });
 
   return (
     <Card
@@ -33,6 +41,12 @@ export const WarehouseNode = (props: { warehouse: Warehouse }) => {
           size='small'
           icon={<FontAwesomeIcon icon={faRefresh} />}
           loading={warehouseState.refreshing}
+          onClick={() =>
+            refreshWarehouseMutation.mutate({
+              project: props.warehouse?.metadata?.namespace,
+              name: props.warehouse?.metadata?.name
+            })
+          }
         >
           Refresh{warehouseState.refreshing && 'ing'}
         </Button>
