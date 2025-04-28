@@ -105,6 +105,8 @@ type GitClearConfig struct {
 }
 
 type GitCloneConfig struct {
+	// The author of the commit.
+	Author *GitCloneConfigAuthor `json:"author,omitempty"`
 	// The commits, branches, or tags to check out from the repository and the paths where they
 	// should be checked out. At least one must be specified.
 	Checkout []Checkout `json:"checkout"`
@@ -112,8 +114,16 @@ type GitCloneConfig struct {
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 	// The URL of a remote Git repository to clone. Required.
 	RepoURL string `json:"repoURL"`
-	// User information for the Git operations.
-	User *User `json:"user,omitempty"`
+}
+
+// The author of the commit.
+type GitCloneConfigAuthor struct {
+	// The email of the author.
+	Email string `json:"email"`
+	// The name of the author.
+	Name string `json:"name"`
+	// The GPG signing key for the author.
+	SigningKey string `json:"signingKey,omitempty"`
 }
 
 type Checkout struct {
@@ -133,19 +143,9 @@ type Checkout struct {
 	Tag string `json:"tag,omitempty"`
 }
 
-// User information for the Git operations.
-type User struct {
-	// The email of the user performing the Git operations.
-	Email string `json:"email"`
-	// The name of the user performing the Git operations.
-	Name string `json:"name"`
-	// The GPG signing key for the user. Optional.
-	SigningKey string `json:"signingKey,omitempty"`
-}
-
 type GitCommitConfig struct {
 	// The author of the commit.
-	Author *Author `json:"author,omitempty"`
+	Author *GitCommitConfigAuthor `json:"author,omitempty"`
 	// The commit message.
 	Message string `json:"message"`
 	// The path to a working directory of a local repository.
@@ -153,11 +153,13 @@ type GitCommitConfig struct {
 }
 
 // The author of the commit.
-type Author struct {
+type GitCommitConfigAuthor struct {
 	// The email of the author.
-	Email string `json:"email,omitempty"`
+	Email string `json:"email"`
 	// The name of the author.
-	Name string `json:"name,omitempty"`
+	Name string `json:"name"`
+	// The GPG signing key for the author.
+	SigningKey string `json:"signingKey,omitempty"`
 }
 
 type GitOpenPRConfig struct {

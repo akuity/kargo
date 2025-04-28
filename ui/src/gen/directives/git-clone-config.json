@@ -13,24 +13,24 @@
    "description": "The URL of a remote Git repository to clone. Required.",
    "minLength": 1
   },
-  "user": {
+  "author": {
    "type": "object",
-   "description": "User information for the Git operations.",
+   "description": "The author of the commit.",
    "additionalProperties": false,
    "properties": {
-    "name": {
-     "type": "string",
-     "description": "The name of the user performing the Git operations.",
-     "minLength": 1
-    },
     "email": {
      "type": "string",
-     "description": "The email of the user performing the Git operations.",
+     "description": "The email of the author.",
      "format": "email"
+    },
+    "name": {
+     "type": "string",
+     "description": "The name of the author.",
+     "minLength": 1
     },
     "signingKey": {
      "type": "string",
-     "description": "The GPG signing key for the user. Optional."
+     "description": "The GPG signing key for the author."
     }
    }
   },

@@ -11,11 +11,17 @@
    "properties": {
     "email": {
      "type": "string",
-     "description": "The email of the author."
+     "description": "The email of the author.",
+     "format": "email"
     },
     "name": {
      "type": "string",
-     "description": "The name of the author."
+     "description": "The name of the author.",
+     "minLength": 1
+    },
+    "signingKey": {
+     "type": "string",
+     "description": "The GPG signing key for the author."
     }
    }
   },
