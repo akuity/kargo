@@ -1,5 +1,5 @@
 import { Controls, ReactFlow, useNodesState } from '@xyflow/react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 
 import { Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
@@ -26,7 +26,16 @@ const nodeTypes = {
 export const Graph = (props: GraphProps) => {
   const filterContext = useFreightTimelineControllerContext();
 
-  const [stackedNodesParents, setStackedNodesParents] = useState<string[]>([]);
+  const stackedNodesParents = filterContext?.preferredFilter?.stackedNodesParents || [];
+
+  const setStackedNodesParents = useCallback(
+    (nodes: string[]) =>
+      filterContext?.setPreferredFilter({
+        ...filterContext?.preferredFilter,
+        stackedNodesParents: nodes
+      }),
+    [filterContext?.setPreferredFilter, filterContext?.preferredFilter]
+  );
 
   const onStack = useCallback(
     (parentNode: string) => {

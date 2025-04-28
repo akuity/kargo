@@ -11,7 +11,9 @@ import { Button, Dropdown, Tag, Typography } from 'antd';
 import classNames from 'classnames';
 import { formatDistance } from 'date-fns';
 import { useMemo } from 'react';
+import { generatePath, useNavigate } from 'react-router-dom';
 
+import { paths } from '@ui/config/paths';
 import { useActionContext } from '@ui/features/project/pipelines-2/context/action-context';
 import { FreightTimelineControllerContextType } from '@ui/features/project/pipelines-2/context/freight-timeline-controller-context';
 import { ColorMap } from '@ui/features/stage/utils';
@@ -35,6 +37,7 @@ type FreightCardProps = {
 };
 
 export const FreightCard = (props: FreightCardProps) => {
+  const navigate = useNavigate();
   const actionContext = useActionContext();
 
   const freightAlias = props.freight?.alias;
@@ -74,7 +77,14 @@ export const FreightCard = (props: FreightCardProps) => {
         props.className
       )}
       style={{ border: '1px solid rgba(0,0,0,.05)' }}
-      onClick={() => props.setViewingFreight?.(isViewingFreight ? null : props.freight)}
+      onClick={() => {
+        navigate(
+          generatePath(paths.freight, {
+            name: props.freight?.metadata?.namespace,
+            freightName: props.freight?.metadata?.name
+          })
+        );
+      }}
     >
       <Dropdown
         menu={{

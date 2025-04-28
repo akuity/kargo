@@ -6,15 +6,14 @@ import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
 import { LoadingState } from '@ui/features/common';
 import { mapToNames } from '@ui/features/common/utils';
+import FreightDetails from '@ui/features/freight/freight-details';
 import WarehouseDetails from '@ui/features/project/pipelines/warehouse/warehouse-details';
 import CreateStage from '@ui/features/stage/create-stage';
 import CreateWarehouse from '@ui/features/stage/create-warehouse/create-warehouse';
 import StageDetails from '@ui/features/stage/stage-details';
 import { getColors } from '@ui/features/stage/utils';
-import {
-  listStages,
-  queryFreight
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { listStages } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { FreightList } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { Freight, Project, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { ActionContext } from './context/action-context';
@@ -31,6 +30,7 @@ import { Promotion } from './promotion/promotion';
 import { useAction } from './use-action';
 import { useFreightById } from './use-freight-by-id';
 import { useFreightInStage } from './use-freight-in-stage';
+import { useGetFreight } from './use-get-freight';
 import { useGetWarehouse } from './use-get-warehouse';
 import { useStageAutoPromotionMap } from './use-stage-auto-promotion-map';
 import { useStageByName } from './use-stage-by-name';
@@ -48,8 +48,13 @@ export const Pipelines = (props: {
   };
   creatingStage?: boolean;
   creatingWarehouse?: boolean;
-  warehouses: Warehouse[];
   warehouseName?: string;
+  freightName?: string;
+  warehouses: Warehouse[];
+  freights: {
+    [key: string]: FreightList;
+  };
+  refetchFreights: () => void;
 }) => {
   const navigate = useNavigate();
 
@@ -57,13 +62,9 @@ export const Pipelines = (props: {
 
   const projectName = props.project?.metadata?.name;
 
-  const getFreightQuery = useQuery(queryFreight, {
-    project: projectName
-  });
-
   const listStagesQuery = useQuery(listStages, { project: projectName });
 
-  const loading = getFreightQuery.isLoading || listStagesQuery.isLoading;
+  const loading = listStagesQuery.isLoading;
 
   const stageDetails =
     props.stageName &&
@@ -90,17 +91,19 @@ export const Pipelines = (props: {
     timerange: 'all-time',
     showColors: false,
     warehouses: [],
-    hideUnusedFreights: false
+    hideUnusedFreights: false,
+    stackedNodesParents: []
   });
 
   const [viewingFreight, setViewingFreight] = useState<Freight | null>(null);
 
   const freightInStages = useFreightInStage(listStagesQuery.data?.stages || []);
-  const freightById = useFreightById(getFreightQuery?.data?.groups?.['']?.freight || []);
+  const freightById = useFreightById(props.freights?.['']?.freight || []);
   const stageAutoPromotionMap = useStageAutoPromotionMap(props.project);
   const subscribersByStage = useSubscribersByStage(listStagesQuery.data?.stages || []);
   const stageByName = useStageByName(listStagesQuery.data?.stages || []);
-  const warehouse = useGetWarehouse(props.warehouses, props.warehouseName);
+  const warehouseDrawer = useGetWarehouse(props.warehouses, props.warehouseName);
+  const freightDrawer = useGetFreight(props.freights?.[''], props.freightName);
 
   if (loading) {
     return <LoadingState />;
@@ -127,7 +130,7 @@ export const Pipelines = (props: {
         >
           <ColorContext.Provider value={{ stageColorMap, warehouseColorMap }}>
             <FreightTimeline
-              freights={getFreightQuery?.data?.groups?.['']?.freight || []}
+              freights={props.freights?.['']?.freight || []}
               project={projectName || ''}
             />
 
@@ -140,8 +143,15 @@ export const Pipelines = (props: {
               />
             </div>
 
-            {!!warehouse && (
-              <WarehouseDetails warehouse={warehouse} refetchFreight={getFreightQuery.refetch} />
+            {!!freightDrawer && (
+              <FreightDetails freight={freightDrawer} refetchFreight={props.refetchFreights} />
+            )}
+
+            {!!warehouseDrawer && (
+              <WarehouseDetails
+                warehouse={warehouseDrawer}
+                refetchFreight={props.refetchFreights}
+              />
             )}
 
             {!!stageDetails && <StageDetails stage={stageDetails} />}

@@ -11,7 +11,8 @@ import { Pipelines } from '@ui/features/project/pipelines-2/pipelines';
 import { useProjectBreadcrumbs } from '@ui/features/project/project-utils';
 import {
   getProject,
-  listWarehouses
+  listWarehouses,
+  queryFreight
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { Project as _Project } from '@ui/gen/api/v1alpha1/generated_pb';
 
@@ -23,12 +24,14 @@ export const Project = ({
   creatingStage?: boolean;
   creatingWarehouse?: boolean;
 }) => {
-  const { name, stageName, promotionId, freight, stage, warehouseName } = useParams();
+  const { name, stageName, promotionId, freight, stage, warehouseName, freightName } = useParams();
 
   const navigate = useNavigate();
   const projectBreadcrumbs = useProjectBreadcrumbs();
 
   const { data, isLoading, error } = useQuery(getProject, { name });
+
+  const getFreightQuery = useQuery(queryFreight, { project: name });
 
   const listWarehousesQuery = useQuery(
     listWarehouses,
@@ -38,7 +41,7 @@ export const Project = ({
     { enabled: !isLoading }
   );
 
-  if (isLoading || listWarehousesQuery.isLoading) {
+  if (isLoading || listWarehousesQuery.isLoading || getFreightQuery.isLoading) {
     return <LoadingState />;
   }
 
@@ -129,8 +132,11 @@ export const Project = ({
         }
         creatingStage={creatingStage}
         creatingWarehouse={creatingWarehouse}
-        warehouses={listWarehousesQuery.data?.warehouses || []}
         warehouseName={warehouseName}
+        freightName={freightName}
+        warehouses={listWarehousesQuery.data?.warehouses || []}
+        freights={getFreightQuery.data?.groups || {}}
+        refetchFreights={getFreightQuery.refetch}
       />
     </div>
   );

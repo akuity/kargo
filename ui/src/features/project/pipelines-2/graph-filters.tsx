@@ -1,4 +1,6 @@
-import { Card, Select, Typography } from 'antd';
+import { faObjectGroup } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { Button, Card, Select, Typography } from 'antd';
 
 import { Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
@@ -33,6 +35,12 @@ export const GraphFilters = (props: GraphFiltersProps) => {
             warehouses
           })
         }
+      />
+
+      <Button
+        className='ml-3'
+        title='Group stages'
+        icon={<FontAwesomeIcon icon={faObjectGroup} />}
       />
     </Card>
   );

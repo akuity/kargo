@@ -1,14 +1,13 @@
 import { useQuery } from '@connectrpc/connect-query';
-import { faCaretLeft, faCaretRight, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faCaretLeft, faCaretRight } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Descriptions, Divider } from 'antd';
+import { Divider } from 'antd';
 import classNames from 'classnames';
 import { useContext, useMemo, useRef, useState } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
-import { FreightStatusList } from '@ui/features/freight/freight-status-list';
 import { IAction, useActionContext } from '@ui/features/project/pipelines-2/context/action-context';
 import { useDictionaryContext } from '@ui/features/project/pipelines-2/context/dictionary-context';
 import { useFreightTimelineControllerContext } from '@ui/features/project/pipelines-2/context/freight-timeline-controller-context';
@@ -18,7 +17,6 @@ import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { timerangeToDate } from './filter-timerange-utils';
 import { FreightCard } from './freight-card';
-import { FreightTable } from './freight-table';
 import { FreightTimelineFilters } from './freight-timeline-filters';
 import { PromotionModeHeader } from './promotion-mode-header';
 import { filterFreightBySource, filterFreightByTimerange } from './source-catalogue-utils';
@@ -217,50 +215,6 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
           </div>
         </div>
       </div>
-      {!!viewingFreight && (
-        <div className='scale-90 origin-top bg-white p-5'>
-          <FreightExtended freight={viewingFreight} onClose={() => setViewingFreight(null)} />
-        </div>
-      )}
     </>
-  );
-};
-
-const FreightExtended = (props: { freight: Freight; onClose?: () => void }) => {
-  return (
-    <div className='relative'>
-      <Button
-        icon={<FontAwesomeIcon icon={faTimes} />}
-        type='text'
-        size='large'
-        className='absolute right-2'
-        onClick={() => props.onClose?.()}
-      />
-      <Descriptions
-        column={1}
-        size='small'
-        items={[
-          {
-            label: 'Warehouse',
-            children: props.freight?.origin?.name
-          },
-          {
-            label: 'Name',
-            children: props.freight?.metadata?.name
-          },
-          {
-            label: 'UID',
-            children: props.freight?.metadata?.uid
-          },
-          {
-            label: 'Creation Timestamp',
-            children: timestampDate(props.freight?.metadata?.creationTimestamp)?.toString()
-          }
-        ]}
-      />
-
-      <FreightTable className='mt-5' freight={props.freight} />
-      <FreightStatusList freight={props.freight} />
-    </div>
   );
 };

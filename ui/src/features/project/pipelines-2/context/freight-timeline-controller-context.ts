@@ -20,6 +20,7 @@ export type FreightTimelineControllerContextType = {
     timerange: timerangeTypes;
     warehouses: string[];
     hideUnusedFreights: boolean;
+    stackedNodesParents: string[];
   };
   setPreferredFilter: (filter: FreightTimelineControllerContextType['preferredFilter']) => void;
 };
