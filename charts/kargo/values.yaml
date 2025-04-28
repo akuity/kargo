@@ -381,7 +381,7 @@ controller:
   podLabels: {}
   ## @param controller.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
   podAnnotations: {}
-  ## @param controller.initContainers Optional init containers to add to the controller pods. This is rendered as the literal yaml.
+  ## @param controller.initContainers Optional init containers to add to the controller pods. This is rendered as the literal YAML.
   initContainers: []
     # - name: download-tools
     #   image: alpine:3.8
@@ -474,9 +474,9 @@ controller:
     # requests:
     #   cpu: 100m
     #   memory: 128Mi
-  ## @param controller.volumes Volumes for the Controller Pods.
+  ## @param controller.volumes Volumes for the controller pods.
   volumes: []
-  ## @param controller.volumeMounts Volume Mounts for the Controller Pods.
+  ## @param controller.volumeMounts Volume mounts for the controller pods.
   volumeMounts: []
   ## @param controller.nodeSelector Node selector for controller pods. Defaults to `global.nodeSelector`.
   nodeSelector: {}
