@@ -15,6 +15,7 @@ import {
   getImageBuiltDate,
   getImageSource
 } from '@ui/features/freight-timeline/open-container-initiative-utils';
+import { useGetFreightCreation } from '@ui/features/project/pipelines-2/freight/use-get-freight-creation';
 import {
   Chart,
   FreightReference,
@@ -94,6 +95,10 @@ export const StageFreight = (props: { stage: Stage }) => {
     setSelectedWarehouse(warehouses[nextWarehouseIndex]);
   };
 
+  const freightCreation = useGetFreightCreation(
+    dictionaryContext?.freightById?.[selectedFreight?.name]
+  );
+
   if (!currentFreight?.length) {
     return null;
   }
@@ -137,12 +142,22 @@ export const StageFreight = (props: { stage: Stage }) => {
           />
         )}
 
-        <div className='scale-90'>
+        <div className='scale-90 flex flex-col items-center'>
           {freightTimelineControllerContext?.preferredFilter?.showAlias && (
             <div className='text-[10px] mr-1 text-center mb-1'>{selectedFreightAlias}</div>
           )}
 
           <Artifact artifact={selectedArtifact} />
+
+          {freightCreation && (
+            <Typography.Text
+              type='secondary'
+              className='text-[8px] mt-1'
+              title={freightCreation?.abs?.toString()}
+            >
+              {freightCreation?.relative}
+            </Typography.Text>
+          )}
         </div>
 
         {totalArtifacts > 1 && (
