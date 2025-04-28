@@ -1,13 +1,12 @@
 import { Edge, MarkerType, Node } from '@xyflow/react';
-import { graphlib, layout } from 'dagre';
+import { layout } from 'dagre';
 import { useMemo } from 'react';
 
 import { RepoSubscription, Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { edgeIndexer } from './edge-indexer';
-import { repoSubscriptionIndexer, stageIndexer, warehouseIndexer } from './node-indexer';
-import { repoSubscriptionLabelling, stageLabelling, warehouseLabelling } from './node-labeling';
-import { repoSubscriptionSizer, stageSizer, warehouseSizer } from './node-sizer';
+import { layoutGraph } from './layout-graph';
+import { warehouseIndexer } from './node-indexer';
 import { stackNode } from './stack-nodes';
 
 export const reactFlowNodeConstants = {
@@ -32,80 +31,23 @@ export const useReactFlowPipelineGraph = (
   }
 ) => {
   return useMemo(() => {
-    const graph = new graphlib.Graph<GraphMeta>({ multigraph: true });
-
-    graph.setGraph({ rankdir: 'LR' });
-    graph.setDefaultEdgeLabel(() => ({}));
-
-    const warehouseByName: Record<string, Warehouse> = {};
-    const stageByName: Record<string, Stage> = {};
-
-    for (const warehouse of warehouses) {
-      warehouseByName[warehouse?.metadata?.name || ''] = warehouse;
-    }
-
-    for (const stage of stages) {
-      stageByName[stage?.metadata?.name || ''] = stage;
-    }
-
-    // subscriptions and warehouses
-    for (const warehouse of warehouses) {
-      if (pipeline.length && !pipeline.includes(warehouse?.metadata?.name || '')) {
-        continue;
-      }
-
-      const warehouseNodeIndex = warehouseIndexer.index(warehouse);
-      graph.setNode(warehouseNodeIndex, {
-        ...warehouseLabelling.label(warehouse),
-        ...warehouseSizer.size()
-      });
-
-      for (const subscription of warehouse.spec?.subscriptions || []) {
-        const subscriptionNodeIndex = repoSubscriptionIndexer.index(warehouse, subscription);
-
-        graph.setNode(subscriptionNodeIndex, {
-          ...repoSubscriptionLabelling.label(warehouse, subscription),
-          ...repoSubscriptionSizer.size()
-        });
-
-        // subscription -> warehouse
-        graph.setEdge(subscriptionNodeIndex, warehouseNodeIndex);
-      }
-    }
-
-    // stages
-    for (const stage of stages) {
-      if (
-        pipeline.length &&
-        !stage?.spec?.requestedFreight?.find((f) => pipeline.includes(f?.origin?.name || ''))
-      ) {
-        continue;
-      }
-
-      const stageNodeIndex = stageIndexer.index(stage);
-
-      graph.setNode(stageNodeIndex, { ...stageLabelling.label(stage), ...stageSizer.size() });
-
-      for (const requestedOrigin of stage.spec?.requestedFreight || []) {
-        const warehouseName = requestedOrigin?.origin?.name || '';
-        const warehouseNodeIndex = warehouseIndexer.index(warehouseByName[warehouseName]);
-
-        // check if source is warehouse
-        if (requestedOrigin?.sources?.direct) {
-          graph.setEdge(warehouseNodeIndex, stageNodeIndex);
-        }
-
-        // check if source is other stage
-        for (const sourceStage of requestedOrigin?.sources?.stages || []) {
-          graph.setEdge(
-            stageIndexer.index(stageByName[sourceStage]),
-            stageNodeIndex,
-            {},
-            warehouseNodeIndex
+    const graph = layoutGraph(
+      {
+        stages,
+        ignore(s) {
+          return (
+            !!pipeline.length &&
+            !s.spec?.requestedFreight?.find((f) => pipeline.includes(f?.origin?.name || ''))
           );
         }
+      },
+      {
+        warehouses,
+        ignore(w) {
+          return !!pipeline.length && !pipeline.includes(w?.metadata?.name || '');
+        }
       }
-    }
+    );
 
     layout(graph, { lablepos: 'c' });
 

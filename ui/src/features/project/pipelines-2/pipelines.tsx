@@ -135,7 +135,10 @@ export const Pipelines = (props: {
             />
 
             <div className='w-full h-full relative'>
-              <GraphFilters warehouses={props.warehouses} />
+              <GraphFilters
+                warehouses={props.warehouses}
+                stages={listStagesQuery.data?.stages || []}
+              />
               <Graph
                 project={props.project.metadata?.name || ''}
                 warehouses={props.warehouses}

@@ -2,12 +2,14 @@ import { faObjectGroup } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Card, Select, Typography } from 'antd';
 
-import { Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { useFreightTimelineControllerContext } from './context/freight-timeline-controller-context';
+import { groupNodes } from './group-nodes';
 
 type GraphFiltersProps = {
   warehouses: Warehouse[];
+  stages: Stage[];
 };
 
 export const GraphFilters = (props: GraphFiltersProps) => {
@@ -41,6 +43,12 @@ export const GraphFilters = (props: GraphFiltersProps) => {
         className='ml-3'
         title='Group stages'
         icon={<FontAwesomeIcon icon={faObjectGroup} />}
+        onClick={() => {
+          filterContext?.setPreferredFilter({
+            ...filterContext?.preferredFilter,
+            stackedNodesParents: groupNodes(props.stages, props.warehouses)
+          });
+        }}
       />
     </Card>
   );
