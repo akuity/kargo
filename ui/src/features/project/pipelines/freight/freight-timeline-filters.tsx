@@ -5,7 +5,7 @@ import { Button, Checkbox, Select, SelectProps } from 'antd';
 import classNames from 'classnames';
 import { useMemo } from 'react';
 
-import { FreightTimelineControllerContextType } from '@ui/features/project/pipelines-2/context/freight-timeline-controller-context';
+import { FreightTimelineControllerContextType } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
 import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { humanComprehendableArtifact } from './artifact-parts-utils';

@@ -15,11 +15,11 @@ import { Description } from '../common/description';
 import { ManifestPreview } from '../common/manifest-preview';
 import { useModal } from '../common/modal/use-modal';
 import { getAlias } from '../common/utils';
-import { UpdateFreightAliasModal } from '../project/pipelines/update-freight-alias-modal';
 
 import { ArtifactMetadata } from './artifact-metadata';
 import { flattenFreightOrigin } from './flatten-freight-origin-utils';
 import { FreightStatusList } from './freight-status-list';
+import { UpdateFreightAliasModal } from './update-freight-alias-modal';
 
 const CopyValue = (props: { value: string; label: string; className?: string }) => (
   <div className={classNames('flex items-center text-gray-500 font-mono', props.className)}>

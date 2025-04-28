@@ -7,7 +7,7 @@ import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
-import { IAction, useActionContext } from '@ui/features/project/pipelines-2/context/action-context';
+import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import {
   promoteDownstream,
   promoteToStage

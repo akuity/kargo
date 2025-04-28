@@ -18,7 +18,6 @@ import { Description } from '@ui/features/common/description';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { StagePhaseIcon } from '@ui/features/common/stage-phase/stage-phase-icon';
 import { StagePhase } from '@ui/features/common/stage-phase/utils';
-import { useImages } from '@ui/features/project/pipelines/utils/useImages';
 import {
   getConfig,
   getStage
@@ -35,6 +34,7 @@ import { RequestedFreight } from './requested-freight';
 import { StageActions } from './stage-actions';
 import { FreightHistory } from './tabs/freight-history/freight-history';
 import { StageSettings } from './tabs/settings/stage-settings';
+import { useImages } from './use-images';
 import { Verifications } from './verifications';
 
 enum TabsTypes {

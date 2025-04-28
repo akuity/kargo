@@ -7,7 +7,7 @@ import { generatePath, useNavigate, useParams } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { LoadingState } from '@ui/features/common';
 import { BaseHeader } from '@ui/features/common/layout/base-header';
-import { Pipelines } from '@ui/features/project/pipelines-2/pipelines';
+import { Pipelines } from '@ui/features/project/pipelines/pipelines';
 import { useProjectBreadcrumbs } from '@ui/features/project/project-utils';
 import {
   getProject,

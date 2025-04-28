@@ -1,7 +1,7 @@
 import { Descriptions } from 'antd';
 
-import { FreightTable } from '@ui/features/project/pipelines-2/freight/freight-table';
-import { useGetFreightCreation } from '@ui/features/project/pipelines-2/freight/use-get-freight-creation';
+import { FreightTable } from '@ui/features/project/pipelines/freight/freight-table';
+import { useGetFreightCreation } from '@ui/features/project/pipelines/freight/use-get-freight-creation';
 import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
 
 type FreightDetailsProps = {

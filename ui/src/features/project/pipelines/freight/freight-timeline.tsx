@@ -8,9 +8,9 @@ import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
-import { IAction, useActionContext } from '@ui/features/project/pipelines-2/context/action-context';
-import { useDictionaryContext } from '@ui/features/project/pipelines-2/context/dictionary-context';
-import { useFreightTimelineControllerContext } from '@ui/features/project/pipelines-2/context/freight-timeline-controller-context';
+import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
+import { useDictionaryContext } from '@ui/features/project/pipelines/context/dictionary-context';
+import { useFreightTimelineControllerContext } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
 import { queryFreight } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';

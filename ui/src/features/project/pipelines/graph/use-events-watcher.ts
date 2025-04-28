@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
-import { Watcher } from '@ui/features/project/pipelines/utils/watcher';
+import { Watcher } from '@ui/features/project/pipelines/watcher';
 import { Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 import { useDocumentEvent } from '@ui/utils/document';
 

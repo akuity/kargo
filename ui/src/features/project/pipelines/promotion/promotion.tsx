@@ -10,7 +10,7 @@ import {
   getPromotionStatusPhase,
   isPromotionPhaseTerminal
 } from '@ui/features/common/promotion-status/utils';
-import { useDictionaryContext } from '@ui/features/project/pipelines-2/context/dictionary-context';
+import { useDictionaryContext } from '@ui/features/project/pipelines/context/dictionary-context';
 import { PromotionSteps } from '@ui/features/stage/promotion-steps';
 import { hasAbortRequest } from '@ui/features/stage/utils/promotion';
 import { getPromotion } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';

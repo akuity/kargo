@@ -2,8 +2,8 @@ import { faCircleNotch } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Typography } from 'antd';
 
-import { IAction, useActionContext } from '@ui/features/project/pipelines-2/context/action-context';
-import { useDictionaryContext } from '@ui/features/project/pipelines-2/context/dictionary-context';
+import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
+import { useDictionaryContext } from '@ui/features/project/pipelines/context/dictionary-context';
 
 export const PromotionModeHeader = (props: { className?: string; loading?: boolean }) => {
   const actionContext = useActionContext();

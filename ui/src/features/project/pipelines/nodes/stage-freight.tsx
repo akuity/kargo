@@ -15,7 +15,7 @@ import {
   getImageBuiltDate,
   getImageSource
 } from '@ui/features/freight-timeline/open-container-initiative-utils';
-import { useGetFreightCreation } from '@ui/features/project/pipelines-2/freight/use-get-freight-creation';
+import { useGetFreightCreation } from '@ui/features/project/pipelines/freight/use-get-freight-creation';
 import {
   Chart,
   FreightReference,

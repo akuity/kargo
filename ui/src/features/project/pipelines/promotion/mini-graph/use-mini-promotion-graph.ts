@@ -2,8 +2,8 @@ import { Edge, MarkerType, Node } from '@xyflow/react';
 import { graphlib, layout } from 'dagre';
 import { useMemo } from 'react';
 
-import { IAction, useActionContext } from '@ui/features/project/pipelines-2/context/action-context';
-import { useDictionaryContext } from '@ui/features/project/pipelines-2/context/dictionary-context';
+import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
+import { useDictionaryContext } from '@ui/features/project/pipelines/context/dictionary-context';
 import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { CUSTOM_NODE } from './constant';

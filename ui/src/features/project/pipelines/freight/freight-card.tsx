@@ -14,8 +14,8 @@ import { useMemo } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
-import { useActionContext } from '@ui/features/project/pipelines-2/context/action-context';
-import { FreightTimelineControllerContextType } from '@ui/features/project/pipelines-2/context/freight-timeline-controller-context';
+import { useActionContext } from '@ui/features/project/pipelines/context/action-context';
+import { FreightTimelineControllerContextType } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
 import { ColorMap } from '@ui/features/stage/utils';
 import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
