@@ -15,9 +15,10 @@ desired state and is commonly followed by a [`git-push` step](git-push.md).
 |------|------|----------|-------------|
 | `path` | `string` | Y | Path to a Git working tree containing changes to be committed. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `message` | `string` | Y | The commit message. |
-| `author` | `[]object` | N | Optionally provider authorship information for the commit. |
-| `author.name` | `string` | N | The committer's name. |
-| `author.email` | `string` | N | The committer's email address. |
+| `author` | `[]object` | N | Optional provider authorship information for the commit. |
+| `author.name` | `string` | Y | The committer's name. |
+| `author.email` | `string` | Y | The committer's email address. |
+| `author.signingKey` | `string` | N | The GPG signing key for the author. This field is optional. |
 
 ## Output
 

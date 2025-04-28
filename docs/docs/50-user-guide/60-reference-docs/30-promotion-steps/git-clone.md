@@ -24,10 +24,10 @@ multiple working trees.
 |------|------|----------|-------------|
 | `repoURL` | `string` | Y | The URL of a remote Git repository to clone. |
 | `insecureSkipTLSVerify` | `boolean` | N | Whether to bypass TLS certificate verification when cloning (and for all subsequent operations involving this clone). Setting this to `true` is highly discouraged in production. |
-| `user` | `[]object` | N | User information for the Git operations. If not specified, system-level Git user details will be used. |
-| `user.name` | `string` | Y | The name of the user performing the Git operations. |
-| `user.email` | `string` | Y | The email of the user performing the Git operations. |
-| `user.signingKey` | `string` | N | The GPG signing key for the user. This field is optional. |
+| `author` | `[]object` | N | Optional provider authorship information for the commit. |
+| `author.name` | `string` | Y | The committer's name. |
+| `author.email` | `string` | Y | The committer's email address. |
+| `author.signingKey` | `string` | N | The GPG signing key for the author. This field is optional. |
 | `checkout` | `[]object` | Y | The commits, branches, or tags to check out from the repository and the paths where they should be checked out. At least one must be specified. |
 | `checkout[].branch` | `string` | N | A branch to check out. Mutually exclusive with `commit` and `tag`. If none of these is specified, the default branch will be checked out. |
 | `checkout[].create` | `boolean` | N | In the event `branch` does not already exist on the remote, whether a new, empty, orphaned branch should be created. Default is `false`, but should commonly be set to `true` for Stage-specific branches, which may not exist yet at the time of a Stage's first promotion. |
