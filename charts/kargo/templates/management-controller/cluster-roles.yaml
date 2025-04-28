@@ -54,4 +54,13 @@ rules:
   - projectconfigs
   verbs:
   - create
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - stages
+  - warehouses
+  verbs:
+  - get
+  - list
+  - watch
 {{- end }}  

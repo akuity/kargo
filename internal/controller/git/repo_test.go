@@ -104,7 +104,7 @@ func TestRepo(t *testing.T) {
 	})
 
 	testCommitMessage := fmt.Sprintf("test commit %s", uuid.NewString())
-	err = rep.AddAllAndCommit(testCommitMessage)
+	err = rep.AddAllAndCommit(testCommitMessage, nil)
 	require.NoError(t, err)
 
 	t.Run("can commit", func(t *testing.T) {

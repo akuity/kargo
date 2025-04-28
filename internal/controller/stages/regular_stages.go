@@ -41,6 +41,7 @@ import (
 	"github.com/akuity/kargo/internal/kubeclient"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/internal/pattern"
 	intpredicate "github.com/akuity/kargo/internal/predicate"
 	"github.com/akuity/kargo/internal/rollouts"
 	healthPkg "github.com/akuity/kargo/pkg/health"
@@ -677,7 +678,7 @@ func (r *RegularStageReconciler) syncPromotions(
 		// or the verification failed, then we can allow the next Promotion to
 		// start immediately as the expectation is that the Promotion can fix the
 		// issue.
-		if stage.Status.Health == nil || stage.Status.Health.Status != kargoapi.HealthStateUnhealthy {
+		if stage.Status.Health == nil || stage.Status.Health.Status == kargoapi.HealthStateHealthy {
 			curVI := curFreight.VerificationHistory.Current()
 			if curVI == nil || !curVI.Phase.IsTerminal() {
 				logger.Debug("current Freight needs to be verified before allowing new promotions to start")
@@ -1618,10 +1619,8 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 		return newStatus, nil
 	}
 
-	stageRef := types.NamespacedName{Namespace: stage.Namespace, Name: stage.Name}
-
 	// Confirm that auto-promotion is allowed for the Stage.
-	if autoPromotionAllowed, err := r.autoPromotionAllowed(ctx, stageRef); err != nil || !autoPromotionAllowed {
+	if autoPromotionAllowed, err := r.autoPromotionAllowed(ctx, stage.ObjectMeta); err != nil || !autoPromotionAllowed {
 		return newStatus, err
 	}
 
@@ -1724,7 +1723,7 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 // autoPromotionAllowed checks if auto-promotion is allowed for the given Stage.
 func (r *RegularStageReconciler) autoPromotionAllowed(
 	ctx context.Context,
-	stage types.NamespacedName,
+	stage metav1.ObjectMeta,
 ) (bool, error) {
 	logger := logging.LoggerFromContext(ctx)
 
@@ -1746,13 +1745,42 @@ func (r *RegularStageReconciler) autoPromotionAllowed(
 	}
 
 	for _, policy := range projectCfg.Spec.PromotionPolicies {
-		if policy.Stage == stage.Name {
-			logger.Debug(
-				"found PromotionPolicy associated with Stage",
-				"autoPromotionEnabled", policy.AutoPromotionEnabled,
-			)
-			return policy.AutoPromotionEnabled, nil
+		if policy.StageSelector == nil {
+			// Maintain backward compatibility with older versions of the
+			// PromotionPolicy where the selector was not available.
+			policy.StageSelector = &kargoapi.PromotionPolicySelector{
+				Name: policy.Stage, // nolint:staticcheck
+			}
 		}
+
+		// Match the Stage name with the exact PromotionPolicy name
+		if nameSelector := policy.StageSelector.Name; nameSelector != "" {
+			m, err := pattern.ParseNamePattern(nameSelector)
+			if err != nil {
+				return false, fmt.Errorf("error parsing PromotionPolicy name pattern %q: %w", nameSelector, err)
+			}
+			if !m.Matches(stage.Name) {
+				continue
+			}
+		}
+
+		// Match the Stage labels with the PromotionPolicy label selector.
+		if labelSelector := policy.StageSelector.LabelSelector; labelSelector != nil {
+			s, err := metav1.LabelSelectorAsSelector(labelSelector)
+			if err != nil {
+				return false, fmt.Errorf("error parsing PromotionPolicy label selector %q: %w", labelSelector, err)
+			}
+			if !s.Matches(labels.Set(stage.Labels)) {
+				continue
+			}
+		}
+
+		// If we reach this point, we have found a matching PromotionPolicy.
+		logger.Debug(
+			"found PromotionPolicy associated with Stage",
+			"autoPromotionEnabled", policy.AutoPromotionEnabled,
+		)
+		return policy.AutoPromotionEnabled, nil
 	}
 
 	logger.Debug("found no PromotionPolicy associated with Stage")

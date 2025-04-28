@@ -3,7 +3,7 @@ import { Modal, ModalFuncProps } from 'antd';
 export interface ConfirmProps {
   title: string | React.ReactNode;
   onOk: () => void;
-  hide: () => void;
+  hide?: () => void;
   content?: string | React.ReactNode;
 }
 
@@ -17,7 +17,7 @@ export const ConfirmModal = ({
 }: ConfirmProps & ModalFuncProps) => {
   const onConfirm = () => {
     onOk();
-    hide();
+    hide?.();
   };
 
   return (

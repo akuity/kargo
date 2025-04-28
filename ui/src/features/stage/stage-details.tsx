@@ -167,7 +167,12 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                   children: rawStageYamlQuery.isLoading ? (
                     <Skeleton />
                   ) : (
-                    <YamlEditor value={rawStageYaml} height='700px' isHideManagedFieldsDisplayed />
+                    <YamlEditor
+                      value={rawStageYaml}
+                      height='700px'
+                      isHideManagedFieldsDisplayed
+                      disabled
+                    />
                   )
                 },
                 {

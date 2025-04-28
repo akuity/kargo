@@ -501,9 +501,19 @@ func (a *argocdUpdater) syncApplication(
 		// We can remove this hack once the issue is resolved and all Argo CD
 		// versions without the fix have reached their EOL.
 		//
-		// nolint: forcetypeassert
-		dst.Object["status"].(map[string]any)["operationState"] =
-			src.Object["status"].(map[string]any)["operationState"]
+		// We've once encountered an occasion where the unstructured representation
+		// of the destination App was missing the status field because it had never
+		// yet been reconciled (Application controller was not yet running), so we
+		// are completely bailing on this hack if we find this to be the case. We
+		// check the source object too for good measure, although that should not be
+		// prone to the same problem.
+		_, dstHasStatus := dst.Object["status"]
+		_, srcHasStatus := src.Object["status"]
+		if dstHasStatus && srcHasStatus {
+			// nolint: forcetypeassert
+			dst.Object["status"].(map[string]any)["operationState"] =
+				src.Object["status"].(map[string]any)["operationState"]
+		}
 		return nil
 	}); err != nil {
 		return fmt.Errorf("error patching Argo CD Application %q: %w", app.Name, err)

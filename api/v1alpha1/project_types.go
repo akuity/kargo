@@ -78,14 +78,55 @@ type ProjectStatus struct {
 	//
 	// Deprecated: Use the Conditions field instead.
 	Message string `json:"message,omitempty" protobuf:"bytes,2,opt,name=message"`
+	// Stats contains a summary of the of the collective state of a Project's
+	// constituent resources.
+	Stats *ProjectStats `json:"stats,omitempty" protobuf:"bytes,4,opt,name=stats"`
 }
 
+// GetConditions implements the conditions.Getter interface.
 func (w *ProjectStatus) GetConditions() []metav1.Condition {
 	return w.Conditions
 }
 
+// SetConditions implements the conditions.Setter interface.
 func (w *ProjectStatus) SetConditions(conditions []metav1.Condition) {
 	w.Conditions = conditions
+}
+
+// ProjectStats contains a summary of the of the collective state of a
+// Project's constituent resources.
+type ProjectStats struct {
+	// Warehouses contains a summary of the collective state of the Project's
+	// Warehouses.
+	Warehouses WarehouseStats `json:"warehouses,omitempty" protobuf:"bytes,1,opt,name=warehouses"`
+	// Stages contains a summary of the collective state of the Project's Stages.
+	Stages StageStats `json:"stages,omitempty" protobuf:"bytes,2,opt,name=stages"`
+}
+
+// WarehouseStats contains a summary of the collective state of the a Project's
+// Warehouses.
+type WarehouseStats struct {
+	// Count contains the total number of Warehouses in the Project.
+	Count int64 `json:"count,omitempty" protobuf:"varint,2,opt,name=count"`
+	// Health contains a summary of the collective health of a Project's
+	// Warehouses.
+	Health HealthStats `json:"health,omitempty" protobuf:"bytes,1,opt,name=health"`
+}
+
+// StageStats contains a summary of the collective state of the a Project's
+// Stages.
+type StageStats struct {
+	// Count contains the total number of Stages in the Project.
+	Count int64 `json:"count,omitempty" protobuf:"varint,2,opt,name=count"`
+	// Health contains a summary of the collective health of a Project's Stages.
+	Health HealthStats `json:"health,omitempty" protobuf:"bytes,1,opt,name=health"`
+}
+
+// HealthStats contains a summary of the collective health of a some resource
+// type.
+type HealthStats struct {
+	// Healthy contains the number of resources that are explicitly healthy.
+	Healthy int64 `json:"healthy,omitempty" protobuf:"varint,1,opt,name=healthy"`
 }
 
 // +kubebuilder:object:root=true

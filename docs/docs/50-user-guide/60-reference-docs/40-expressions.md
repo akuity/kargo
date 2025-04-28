@@ -208,8 +208,7 @@ promotionTemplate:
       as: commit
       config:
         path: ${{ vars.outPath }}
-        messageFromSteps:
-        - update-image
+        message: ${{ outputs['update-image'].commitMessage }}
     - uses: git-push
       config:
         path: ${{ vars.outPath }}
@@ -380,7 +379,7 @@ The returned `Image` object has the following fields:
 | Field | Description |
 |-------|-------------|
 | `RepoURL` | The URL of the container image repository the image originates from. |
-| `GitRepoURL` | The URL of the Git repository which contains the source code for the image. Only present if Kargo was able to infer it from the URL. |
+| `GitRepoURL` | (Deprecated as of version 1.5, will be removed in version 1.7) The URL of the Git repository which contains the source code for the image. Only present if Kargo was able to infer it from the URL. |
 | `Tag` | The tag of the image. |
 | `Digest` | The digest of the image. |
 | `Annotations` | A map of [annotations](https://specs.opencontainers.org/image-spec/annotations/) discovered for the image. |

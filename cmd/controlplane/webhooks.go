@@ -33,7 +33,8 @@ import (
 type webhooksServerOptions struct {
 	KubeConfig string
 
-	PprofBindAddress string
+	MetricsBindAddress string
+	PprofBindAddress   string
 
 	Logger *logging.Logger
 }
@@ -62,6 +63,7 @@ func newWebhooksServerCommand() *cobra.Command {
 
 func (o *webhooksServerOptions) complete() {
 	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
+	o.MetricsBindAddress = os.GetEnv("METRICS_BIND_ADDRESS", "0")
 	o.PprofBindAddress = os.GetEnv("PPROF_BIND_ADDRESS", "")
 }
 
@@ -106,7 +108,7 @@ func (o *webhooksServerOptions) run(ctx context.Context) error {
 				},
 			),
 			Metrics: server.Options{
-				BindAddress: "0",
+				BindAddress: o.MetricsBindAddress,
 			},
 			PprofBindAddress: o.PprofBindAddress,
 		},

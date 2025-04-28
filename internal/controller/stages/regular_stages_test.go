@@ -981,6 +981,63 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 			},
 		},
 		{
+			name: "allows promotion when health is unknown and no verification exists",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Status: kargoapi.StageStatus{
+					Health: &kargoapi.Health{
+						Status: kargoapi.HealthStateUnknown,
+						Issues: []string{"Cannot assess health because last Promotion did not succeed"},
+					},
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							ID: "current-collection",
+							Freight: map[string]kargoapi.FreightReference{
+								"warehouse": {Name: "current-freight"},
+							},
+							// No verification history
+							VerificationHistory: []kargoapi.VerificationInfo{},
+						},
+					},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "pending-promotion",
+						Namespace: "fake-project",
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage: "test-stage",
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhasePending,
+						Freight: &kargoapi.FreightReference{
+							Name: "new-freight",
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
+				require.NoError(t, err)
+				assert.True(t, hasPendingPromotions)
+
+				// Should allow promotion since there's no verification to wait for
+				require.NotNil(t, status.CurrentPromotion)
+				assert.Equal(t, "pending-promotion", status.CurrentPromotion.Name)
+				assert.Equal(t, "new-freight", status.CurrentPromotion.Freight.Name)
+
+				promotingCond := conditions.Get(&status, kargoapi.ConditionTypePromoting)
+				require.NotNil(t, promotingCond)
+				assert.Equal(t, metav1.ConditionTrue, promotingCond.Status)
+				assert.Equal(t, "ActivePromotion", promotingCond.Reason)
+				assert.Contains(t, promotingCond.Message, "Pending")
+			},
+		},
+		{
 			name: "allows promotion when verification failed",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
@@ -5482,14 +5539,14 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		stage       types.NamespacedName
+		stage       metav1.ObjectMeta
 		objects     []client.Object
 		interceptor interceptor.Funcs
 		assertions  func(*testing.T, bool, error)
 	}{
 		{
 			name: "no ProjectConfig for Project",
-			stage: types.NamespacedName{
+			stage: metav1.ObjectMeta{
 				Namespace: "test-project",
 				Name:      "test-stage",
 			},
@@ -5500,7 +5557,7 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 		},
 		{
 			name: "error getting ProjectConfig",
-			stage: types.NamespacedName{
+			stage: metav1.ObjectMeta{
 				Namespace: "test-project",
 				Name:      "test-stage",
 			},
@@ -5522,7 +5579,7 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 		},
 		{
 			name: "empty ProjectConfig spec",
-			stage: types.NamespacedName{
+			stage: metav1.ObjectMeta{
 				Namespace: "test-project",
 				Name:      "test-stage",
 			},
@@ -5542,7 +5599,7 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 		},
 		{
 			name: "empty promotion policies",
-			stage: types.NamespacedName{
+			stage: metav1.ObjectMeta{
 				Namespace: "test-project",
 				Name:      "test-stage",
 			},
@@ -5564,7 +5621,7 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 		},
 		{
 			name: "stage not found in policies",
-			stage: types.NamespacedName{
+			stage: metav1.ObjectMeta{
 				Namespace: "test-project",
 				Name:      "test-stage",
 			},
@@ -5591,7 +5648,7 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 		},
 		{
 			name: "auto-promotion enabled",
-			stage: types.NamespacedName{
+			stage: metav1.ObjectMeta{
 				Namespace: "test-project",
 				Name:      "test-stage",
 			},
@@ -5618,7 +5675,7 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 		},
 		{
 			name: "auto-promotion disabled",
-			stage: types.NamespacedName{
+			stage: metav1.ObjectMeta{
 				Namespace: "test-project",
 				Name:      "test-stage",
 			},
@@ -5645,7 +5702,7 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 		},
 		{
 			name: "multiple policies - finds correct stage",
-			stage: types.NamespacedName{
+			stage: metav1.ObjectMeta{
 				Namespace: "test-project",
 				Name:      "test-stage",
 			},
@@ -5680,7 +5737,7 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 		},
 		{
 			name: "different namespace",
-			stage: types.NamespacedName{
+			stage: metav1.ObjectMeta{
 				Namespace: "other-namespace",
 				Name:      "test-stage",
 			},
@@ -5707,7 +5764,7 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 		},
 		{
 			name: "matches first policy for stage",
-			stage: types.NamespacedName{
+			stage: metav1.ObjectMeta{
 				Namespace: "test-project",
 				Name:      "test-stage",
 			},

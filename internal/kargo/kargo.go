@@ -9,62 +9,6 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
-func NewPromoWentTerminalPredicate(logger *logging.Logger) PromoWentTerminal[*kargoapi.Promotion] {
-	return PromoWentTerminal[*kargoapi.Promotion]{
-		logger: logger,
-	}
-}
-
-// PromoWentTerminal is a predicate that returns true if a promotion went terminal.
-// Used by stage reconciler to enqueue a stage when it's associated promo is complete.
-// Also used by promo reconciler to enqueue the next highest priority promotion.
-type PromoWentTerminal[T any] struct {
-	predicate.Funcs
-	logger *logging.Logger
-}
-
-func (p PromoWentTerminal[T]) Create(event.TypedCreateEvent[T]) bool {
-	return false
-}
-
-func (p PromoWentTerminal[T]) Delete(e event.TypedDeleteEvent[T]) bool {
-	promo := any(e.Object).(*kargoapi.Promotion) // nolint: forcetypeassert
-	// if promo is deleted but was non-terminal, we want to enqueue the
-	// Stage so it can reset status.currentPromotion, as well as the
-	// enqueue the next priority Promo for reconciliation
-	return !promo.Status.Phase.IsTerminal()
-}
-
-func (p PromoWentTerminal[T]) Generic(event.TypedGenericEvent[T]) bool {
-	// we should never get here
-	return true
-}
-
-// Update implements default TypedUpdateEvent filter for checking if a promotion
-// went terminal
-func (p PromoWentTerminal[T]) Update(e event.TypedUpdateEvent[T]) bool {
-	oldPromo := any(e.ObjectOld).(*kargoapi.Promotion) // nolint: forcetypeassert
-	if oldPromo == nil {
-		p.logger.Error(
-			nil, "Update event has no old object to update",
-			"event", e,
-		)
-		return false
-	}
-	newPromo := any(e.ObjectNew).(*kargoapi.Promotion) // nolint: forcetypeassert
-	if newPromo == nil {
-		p.logger.Error(
-			nil, "Update event has no new object for update",
-			"event", e,
-		)
-		return false
-	}
-	if newPromo.Status.Phase.IsTerminal() && !oldPromo.Status.Phase.IsTerminal() {
-		return true
-	}
-	return false
-}
-
 func NewPromoPhaseChangedPredicate(logger *logging.Logger) PromoPhaseChanged[*kargoapi.Promotion] {
 	return PromoPhaseChanged[*kargoapi.Promotion]{
 		logger: logger,

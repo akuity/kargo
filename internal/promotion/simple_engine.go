@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"slices"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -406,34 +405,14 @@ func (e *simpleEngine) getProjectSecrets(
 		&secretList,
 		client.InNamespace(project),
 		client.MatchingLabels{
-			// Newer label
 			kargoapi.CredentialTypeLabelKey: kargoapi.CredentialTypeLabelGeneric,
 		},
 	); err != nil {
 		return nil, fmt.Errorf("error listing Secrets for Project %q: %w", project, err)
 	}
-	secrets := secretList.Items
-	if err := e.kargoClient.List(
-		ctx,
-		&secretList,
-		client.InNamespace(project),
-		client.MatchingLabels{
-			// Legacy label
-			kargoapi.ProjectSecretLabelKey: kargoapi.LabelTrueValue,
-		},
-	); err != nil {
-		return nil, fmt.Errorf("error listing Secrets for Project %q: %w", project, err)
-	}
-	secrets = append(secrets, secretList.Items...)
-	// Sort and de-dupe
-	slices.SortFunc(secrets, func(lhs, rhs corev1.Secret) int {
-		return strings.Compare(lhs.Name, rhs.Name)
-	})
-	secrets = slices.CompactFunc(secrets, func(lhs, rhs corev1.Secret) bool {
-		return lhs.Name == rhs.Name
-	})
-	secretsMap := make(map[string]map[string]string, len(secrets))
-	for _, secret := range secrets {
+
+	secretsMap := make(map[string]map[string]string, len(secretList.Items))
+	for _, secret := range secretList.Items {
 		secretsMap[secret.Name] = make(map[string]string, len(secret.Data))
 		for key, value := range secret.Data {
 			secretsMap[secret.Name][key] = string(value)

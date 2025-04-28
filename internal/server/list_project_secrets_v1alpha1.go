@@ -32,38 +32,23 @@ func (s *server) ListProjectSecrets(
 		return nil, err
 	}
 
-	// List secrets having either of two labels (newer or legacy) that indicate
-	// the secret is a generic project secret.
+	// List secrets having the label that indicates this is a generic secret.
 	var secretsList corev1.SecretList
 	if err := s.client.List(
 		ctx,
 		&secretsList,
 		client.InNamespace(req.Msg.GetProject()),
 		client.MatchingLabels{
-			kargoapi.CredentialTypeLabelKey: kargoapi.CredentialTypeLabelGeneric, // Newer label
+			kargoapi.CredentialTypeLabelKey: kargoapi.CredentialTypeLabelGeneric,
 		},
 	); err != nil {
 		return nil, fmt.Errorf("list secrets: %w", err)
 	}
-	secrets := secretsList.Items
-	if err := s.client.List(
-		ctx,
-		&secretsList,
-		client.InNamespace(req.Msg.GetProject()),
-		client.MatchingLabels{
-			kargoapi.ProjectSecretLabelKey: kargoapi.LabelTrueValue, // Legacy label
-		},
-	); err != nil {
-		return nil, fmt.Errorf("list secrets: %w", err)
-	}
-	secrets = append(secrets, secretsList.Items...)
 
-	// Sort and de-dupe
+	// Sort the secrets by name
+	secrets := secretsList.Items
 	slices.SortFunc(secrets, func(lhs, rhs corev1.Secret) int {
 		return strings.Compare(lhs.Name, rhs.Name)
-	})
-	secrets = slices.CompactFunc(secrets, func(lhs, rhs corev1.Secret) bool {
-		return lhs.Name == rhs.Name
 	})
 
 	sanitizedSecrets := make([]*corev1.Secret, len(secrets))
