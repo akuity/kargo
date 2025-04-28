@@ -385,44 +385,42 @@ func TestListPullRequests(t *testing.T) {
 }
 
 func TestGetCommitURL(t *testing.T) {
-
 	testCases := []struct {
-		url         string
-		sha         string
-		expectedURL string
+		repoURL           string
+		sha               string
+		expectedCommitURL string
 	}{
 		{
-			url:         "http://gitea.com/akuity/kargo",
-			sha:         "sha",
-			expectedURL: "https://gitea.com/akuity/kargo/commit/sha",
+			repoURL:           "http://gitea.com/akuity/kargo",
+			sha:               "sha",
+			expectedCommitURL: "https://gitea.com/akuity/kargo/commit/sha",
 		},
 		{
-			url:         "ssh://git@gitea.com/akuity/kargo",
-			sha:         "sha",
-			expectedURL: "https://gitea.com/akuity/kargo/commit/sha",
+			repoURL:           "ssh://git@gitea.com/akuity/kargo",
+			sha:               "sha",
+			expectedCommitURL: "https://gitea.com/akuity/kargo/commit/sha",
 		},
 		{
-			url:         "git@gitea.com:akuity/kargo",
-			sha:         "sha",
-			expectedURL: "https://gitea.com/akuity/kargo/commit/sha",
+			repoURL:           "git@gitea.com:akuity/kargo",
+			sha:               "sha",
+			expectedCommitURL: "https://gitea.com/akuity/kargo/commit/sha",
 		},
 		{
-			url:         "git@custom.host.com:akuity/kargo",
-			sha:         "sha",
-			expectedURL: "https://custom.host.com/akuity/kargo/commit/sha",
+			repoURL:           "git@custom.host.com:akuity/kargo",
+			sha:               "sha",
+			expectedCommitURL: "https://custom.host.com/akuity/kargo/commit/sha",
 		},
 		{
-			url:         "http://custom.host.com/akuity/kargo",
-			sha:         "sha",
-			expectedURL: "https://custom.host.com/akuity/kargo/commit/sha",
+			repoURL:           "http://custom.host.com/akuity/kargo",
+			sha:               "sha",
+			expectedCommitURL: "https://custom.host.com/akuity/kargo/commit/sha",
 		},
 	}
-
 	for _, testCase := range testCases {
 		// call the code we are testing
 		g := provider{}
-		commitURL, err := g.GetCommitURL(testCase.url, testCase.sha)
+		commitURL, err := g.GetCommitURL(testCase.repoURL, testCase.sha)
 		require.NoError(t, err)
-		require.Equal(t, testCase.expectedURL, commitURL)
+		require.Equal(t, testCase.expectedCommitURL, commitURL)
 	}
 }

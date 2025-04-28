@@ -277,7 +277,7 @@ func (p *provider) GetCommitURL(
 
 	parsedURL, err := url.Parse(normalizedURL)
 	if err != nil {
-		return "Unknown", fmt.Errorf("error processing repository URL: %s: %s", repoURL, err)
+		return "", fmt.Errorf("error processing repository URL: %s: %s", repoURL, err)
 	}
 
 	commitURL := fmt.Sprintf("https://%s%s/commit/%s", parsedURL.Host, parsedURL.Path, sha)

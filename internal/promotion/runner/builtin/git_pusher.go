@@ -98,21 +98,15 @@ func (g *gitPushPusher) run(
 		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
 			fmt.Errorf("error loading working tree from %s: %w", cfg.Path, err)
 	}
-	repoURL := ""
-	if cfg.RepoURL == "" {
-		repoURL = workTree.URL()
-	} else {
-		repoURL = cfg.RepoURL
-	}
 	creds, err := g.credsDB.Get(
 		ctx,
 		stepCtx.Project,
 		credentials.TypeGit,
-		repoURL,
+		workTree.URL(),
 	)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
-			fmt.Errorf("error getting credentials for %s: %w", repoURL, err)
+			fmt.Errorf("error getting credentials for %s: %w", workTree.URL(), err)
 	}
 	if creds != nil {
 		loadOpts.Credentials = &git.RepoCredentials{
@@ -147,9 +141,6 @@ func (g *gitPushPusher) run(
 			return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
 				fmt.Errorf("error getting current branch: %w", err)
 		}
-	}
-	if cfg.RepoURL != "" {
-		pushOpts.RepoURL = repoURL
 	}
 
 	backoff := wait.Backoff{
@@ -203,13 +194,13 @@ func (g *gitPushPusher) run(
 	// Using git provider to get commit url. Continuing even if provider
 	// cannot be implemented as the push will still have succeeded, we
 	// just can't construct the URL.
-	gitProvider, err := gitprovider.New(repoURL, nil)
+	gitProvider, err := gitprovider.New(workTree.URL(), nil)
 	commitURL := ""
 	if err != nil {
 		commitURL = "Unknown"
-		logger.Info("unable to construct commit URL from %s: %s", repoURL, err)
+		logger.Info("unable to construct commit URL from %s: %s", workTree.URL(), err)
 	} else {
-		commitURL, _ = gitProvider.GetCommitURL(repoURL, commitID)
+		commitURL, _ = gitProvider.GetCommitURL(workTree.URL(), commitID)
 	}
 
 	return promotion.StepResult{
