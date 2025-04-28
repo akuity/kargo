@@ -469,12 +469,13 @@ func (r *reconciler) promote(
 	steps := make([]promotion.Step, len(workingPromo.Spec.Steps))
 	for i, step := range workingPromo.Spec.Steps {
 		steps[i] = promotion.Step{
-			Kind:   step.Uses,
-			Alias:  step.As,
-			If:     step.If,
-			Retry:  step.Retry,
-			Vars:   step.Vars,
-			Config: step.Config.Raw,
+			Kind:            step.Uses,
+			Alias:           step.As,
+			If:              step.If,
+			ContinueOnError: step.ContinueOnError,
+			Retry:           step.Retry,
+			Vars:            step.Vars,
+			Config:          step.Config.Raw,
 		}
 	}
 

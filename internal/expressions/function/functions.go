@@ -46,6 +46,17 @@ func DataOperations(ctx context.Context, c client.Client, project string) []expr
 	}
 }
 
+// StatusOperations returns a slice of expr.Option containing functions for
+// assessing the status of all preceding steps.
+func StatusOperations(stepExecMetas kargoapi.StepExecutionMetadataList) []expr.Option {
+	return []expr.Option{
+		Always(),
+		Failure(stepExecMetas),
+		Success(stepExecMetas),
+		Status(stepExecMetas),
+	}
+}
+
 // Warehouse returns an expr.Option that provides a `warehouse()` function
 // for use in expressions.
 //
@@ -137,6 +148,53 @@ func Secret(ctx context.Context, c client.Client, project string) expr.Option {
 		"secret",
 		getSecret(ctx, c, project),
 		new(func(name string) map[string]string),
+	)
+}
+
+// Always returns an expr.Option that provides an `always()` function
+// for use in expressions.
+//
+// The `always()` function unconditionally returns true.
+func Always() expr.Option {
+	return expr.Function(
+		"always",
+		func(...any) (any, error) {
+			return true, nil
+		},
+		new(func() bool),
+	)
+}
+
+// Failure returns an expr.Option that provides a `failure()` function
+// for use in expressions.
+//
+// The `failure()` function checks the status of all preceding steps and
+// returns true if any of them have failed or errored and false otherwise.
+func Failure(stepExecMetas kargoapi.StepExecutionMetadataList) expr.Option {
+	return expr.Function("failure", hasFailure(stepExecMetas), new(func() bool))
+}
+
+// Success returns an expr.Option that provides a `success()` function
+// for use in expressions.
+//
+// The `success()` function checks the status of all preceding steps and
+// returns true if none of them have failed or errored and false otherwise.
+func Success(stepExecMetas kargoapi.StepExecutionMetadataList) expr.Option {
+	return expr.Function(
+		"success",
+		func(a ...any) (any, error) {
+			failed, err := hasFailure(stepExecMetas)(a...)
+			return !failed.(bool), err // nolint: forcetypeassert
+		},
+		new(func() bool),
+	)
+}
+
+func Status(stepExecMetas kargoapi.StepExecutionMetadataList) expr.Option {
+	return expr.Function(
+		"status",
+		getStatus(stepExecMetas),
+		new(func(alias string) kargoapi.PromotionStepStatus),
 	)
 }
 
@@ -371,5 +429,49 @@ func getSecret(ctx context.Context, c client.Client, project string) exprFn {
 		}
 
 		return data, nil
+	}
+}
+
+func hasFailure(stepExecMetas kargoapi.StepExecutionMetadataList) exprFn {
+	return func(a ...any) (any, error) {
+		if len(a) != 0 {
+			return nil, fmt.Errorf("expected 0 arguments, got %d", len(a))
+		}
+		for _, stepExecMeta := range stepExecMetas {
+			switch stepExecMeta.Status {
+			case "", kargoapi.PromotionStepStatusRunning:
+				// We've caught up to the current step, so we can stop checking.
+				return false, nil
+			case kargoapi.PromotionStepStatusErrored, kargoapi.PromotionStepStatusFailed:
+				return true, nil
+			default:
+				// Other statuses have no effect on the failure check.
+			}
+		}
+		return false, nil
+	}
+}
+
+func getStatus(stepExecMetas kargoapi.StepExecutionMetadataList) exprFn {
+	return func(a ...any) (any, error) {
+		if len(a) != 1 {
+			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
+		}
+
+		alias, ok := a[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("argument must be string, got %T", a[0])
+		}
+
+		if alias == "" {
+			return nil, fmt.Errorf("argument must not be empty")
+		}
+
+		for _, stepExecMeta := range stepExecMetas {
+			if stepExecMeta.Alias == alias {
+				return stepExecMeta.Status, nil
+			}
+		}
+		return "", nil
 	}
 }

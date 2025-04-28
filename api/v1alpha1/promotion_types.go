@@ -37,6 +37,16 @@ const (
 	PromotionPhaseAborted PromotionPhase = "Aborted"
 )
 
+// IsTerminal returns true if the PromotionPhase is a terminal one.
+func (p *PromotionPhase) IsTerminal() bool {
+	switch *p {
+	case PromotionPhaseSucceeded, PromotionPhaseFailed, PromotionPhaseErrored, PromotionPhaseAborted:
+		return true
+	default:
+		return false
+	}
+}
+
 type PromotionStepStatus string
 
 const (
@@ -64,13 +74,37 @@ const (
 	PromotionStepStatusSkipped PromotionStepStatus = "Skipped"
 )
 
-// IsTerminal returns true if the PromotionPhase is a terminal one.
-func (p *PromotionPhase) IsTerminal() bool {
-	switch *p {
-	case PromotionPhaseSucceeded, PromotionPhaseFailed, PromotionPhaseErrored, PromotionPhaseAborted:
-		return true
+// Compare compares the severity of the current PromotionStepStatus with
+// another. It returns -1 if the current status is less severe than the other, 0
+// if the two statuses are equally severe, or 1 if the current status is more
+// severe than the other.
+func (s PromotionStepStatus) Compare(rhs PromotionStepStatus) int {
+	// Define severity levels for each status
+	severity := map[PromotionStepStatus]int{
+		PromotionStepStatusSucceeded: 0,
+		PromotionStepStatusSkipped:   1,
+		PromotionStepStatusRunning:   2,
+		PromotionStepStatusAborted:   3,
+		PromotionStepStatusFailed:    4,
+		PromotionStepStatusErrored:   5,
+	}
+
+	// Get the severity levels of the current and other statuses
+	lhsSeverity, lhsOK := severity[s]
+	rhsSeverity, rhsOK := severity[rhs]
+
+	if !lhsOK || !rhsOK {
+		panic(fmt.Sprintf("unknown PromotionStepStatus: %s or %s", s, rhs))
+	}
+
+	// Compare the severity levels
+	switch {
+	case lhsSeverity < rhsSeverity:
+		return -1
+	case lhsSeverity > rhsSeverity:
+		return 1
 	default:
-		return false
+		return 0
 	}
 }
 
@@ -226,6 +260,9 @@ type PromotionStep struct {
 	// If the expression does not evaluate to a boolean value, the step will be
 	// considered to have failed.
 	If string `json:"if,omitempty" protobuf:"bytes,7,opt,name=if"`
+	// ContinueOnError is a boolean value that, if set to true, will cause the
+	// Promotion to continue executing the next step even if this step fails.
+	ContinueOnError bool `json:"continueOnError,omitempty" protobuf:"varint,8,opt,name=continueOnError"`
 	// Retry is the retry policy for this step.
 	Retry *PromotionStepRetry `json:"retry,omitempty" protobuf:"bytes,4,opt,name=retry"`
 	// Vars is a list of variables that can be referenced by expressions in
