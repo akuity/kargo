@@ -1,7 +1,7 @@
 import { useQuery } from '@connectrpc/connect-query';
-import { faClockRotateLeft, faCog, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { faClockRotateLeft, faCog } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Breadcrumb, Button, Dropdown, Result, Space } from 'antd';
+import { Breadcrumb, Button, Result, Space } from 'antd';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -66,42 +66,6 @@ export const Project = ({
         <Breadcrumb separator='>' items={[projectBreadcrumbs[0], { title: name }]} />
         <Space>
           <Button
-            size='small'
-            icon={<FontAwesomeIcon icon={faPlus} />}
-            onClick={() => navigate(generatePath(paths.createStage, { name }))}
-          >
-            Create Stage
-          </Button>
-          <Button
-            size='small'
-            icon={<FontAwesomeIcon icon={faPlus} />}
-            onClick={() => navigate(generatePath(paths.createWarehouse, { name }))}
-          >
-            Create Warehouse
-          </Button>
-          <Dropdown
-            menu={{
-              items: listWarehousesQuery.data?.warehouses?.map((warehouse) => ({
-                key: warehouse?.metadata?.name || '',
-                label: warehouse?.metadata?.name || '',
-                onClick: () => {
-                  navigate(
-                    generatePath(paths.warehouse, {
-                      name,
-                      warehouseName: warehouse?.metadata?.name || '',
-                      tab: 'create-freight'
-                    })
-                  );
-                }
-              }))
-            }}
-            trigger={['click']}
-          >
-            <Button size='small' icon={<FontAwesomeIcon icon={faPlus} />}>
-              Create Freight
-            </Button>
-          </Dropdown>
-          <Button
             icon={<FontAwesomeIcon icon={faClockRotateLeft} size='sm' />}
             onClick={() => navigate(generatePath(paths.projectEvents, { name }))}
             size='small'
@@ -109,7 +73,7 @@ export const Project = ({
             Events
           </Button>
           <Button
-            icon={<FontAwesomeIcon icon={faCog} />}
+            icon={<FontAwesomeIcon icon={faCog} size='sm' />}
             onClick={() => navigate(generatePath(paths.projectSettings, { name }))}
             size='small'
           >

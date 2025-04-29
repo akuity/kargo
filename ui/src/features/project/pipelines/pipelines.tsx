@@ -1,6 +1,9 @@
 import { useQuery } from '@connectrpc/connect-query';
+import { faPlus } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { Button, Dropdown, Flex } from 'antd';
 import { useMemo, useState } from 'react';
-import { generatePath, useNavigate } from 'react-router-dom';
+import { generatePath, Link, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
@@ -138,10 +141,62 @@ export const Pipelines = (props: {
             />
 
             <div className='w-full h-full relative'>
-              <GraphFilters
-                warehouses={props.warehouses}
-                stages={listStagesQuery.data?.stages || []}
-              />
+              <Flex justify='space-between' gap={24} className='absolute z-10 top-2 right-2 left-2'>
+                <GraphFilters
+                  warehouses={props.warehouses}
+                  stages={listStagesQuery.data?.stages || []}
+                />
+                <Dropdown
+                  trigger={['click']}
+                  menu={{
+                    items: [
+                      {
+                        key: '0',
+                        label: (
+                          <Link
+                            to={generatePath(paths.createStage, {
+                              name: props.project.metadata?.name
+                            })}
+                          >
+                            Stage
+                          </Link>
+                        )
+                      },
+                      {
+                        key: '1',
+                        label: (
+                          <Link
+                            to={generatePath(paths.createWarehouse, {
+                              name: props.project.metadata?.name
+                            })}
+                          >
+                            Warehouse
+                          </Link>
+                        )
+                      },
+                      {
+                        key: '2',
+                        label: 'Freight',
+                        children: props.warehouses?.map((warehouse) => ({
+                          key: warehouse?.metadata?.name || '',
+                          label: warehouse?.metadata?.name || '',
+                          onClick: () => {
+                            navigate(
+                              generatePath(paths.warehouse, {
+                                name: props.project.metadata?.name,
+                                warehouseName: warehouse?.metadata?.name || '',
+                                tab: 'create-freight'
+                              })
+                            );
+                          }
+                        }))
+                      }
+                    ]
+                  }}
+                >
+                  <Button icon={<FontAwesomeIcon icon={faPlus} />}>Create</Button>
+                </Dropdown>
+              </Flex>
               <Graph
                 project={props.project.metadata?.name || ''}
                 warehouses={props.warehouses}

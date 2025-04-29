@@ -16,7 +16,7 @@ export const GraphFilters = (props: GraphFiltersProps) => {
   const filterContext = useFreightTimelineControllerContext();
 
   return (
-    <Card size='small' className='absolute mt-2 ml-2 z-10'>
+    <Card size='small'>
       <Typography.Text className='text-xs' type='secondary'>
         Warehouses:{' '}
       </Typography.Text>
