@@ -8,7 +8,7 @@ import {
   faTruckArrowRight
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Card, Dropdown, Flex, message } from 'antd';
+import { Button, Card, Dropdown, Flex, message, Typography } from 'antd';
 import { ItemType } from 'antd/es/menu/interface';
 import classNames from 'classnames';
 import { formatDistance } from 'date-fns';
@@ -214,6 +214,13 @@ export const StageNode = (props: { stage: Stage }) => {
       size='small'
       variant='borderless'
     >
+      {controlFlow && (
+        <Typography.Text type='secondary'>
+          <FontAwesomeIcon icon={faTruckArrowRight} className='mr-2' />
+          Control Flow
+        </Typography.Text>
+      )}
+
       {descriptionItems}
 
       <div className='my-2'>
