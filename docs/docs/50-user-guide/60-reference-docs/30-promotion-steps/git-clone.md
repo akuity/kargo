@@ -24,6 +24,10 @@ multiple working trees.
 |------|------|----------|-------------|
 | `repoURL` | `string` | Y | The URL of a remote Git repository to clone. |
 | `insecureSkipTLSVerify` | `boolean` | N | Whether to bypass TLS certificate verification when cloning (and for all subsequent operations involving this clone). Setting this to `true` is highly discouraged in production. |
+| `author` | `[]object` | N | Default authorship information for any commits made to the cloned repository. If provided, this overrides any system-level defaults. Note: Configuration of the [`git-commit`](./git-commit.md) step can override this information. |
+| `author.name` | `string` | Y | The committer's name. |
+| `author.email` | `string` | Y | The committer's email address. |
+| `author.signingKey` | `string` | N | The GPG signing key for the author. This field is optional. |
 | `checkout` | `[]object` | Y | The commits, branches, or tags to check out from the repository and the paths where they should be checked out. At least one must be specified. |
 | `checkout[].branch` | `string` | N | A branch to check out. Mutually exclusive with `commit` and `tag`. If none of these is specified, the default branch will be checked out. |
 | `checkout[].create` | `boolean` | N | In the event `branch` does not already exist on the remote, whether a new, empty, orphaned branch should be created. Default is `false`, but should commonly be set to `true` for Stage-specific branches, which may not exist yet at the time of a Stage's first promotion. |

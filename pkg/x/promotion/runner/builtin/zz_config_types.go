@@ -105,6 +105,10 @@ type GitClearConfig struct {
 }
 
 type GitCloneConfig struct {
+	// Default authorship information for any commits made to the cloned repository. If
+	// provided, this overrides any system-level defaults. Note: Configuration of the
+	// `git-commit` step can override this information.
+	Author *GitCloneConfigAuthor `json:"author,omitempty"`
 	// The commits, branches, or tags to check out from the repository and the paths where they
 	// should be checked out. At least one must be specified.
 	Checkout []Checkout `json:"checkout"`
@@ -112,6 +116,18 @@ type GitCloneConfig struct {
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 	// The URL of a remote Git repository to clone. Required.
 	RepoURL string `json:"repoURL"`
+}
+
+// Default authorship information for any commits made to the cloned repository. If
+// provided, this overrides any system-level defaults. Note: Configuration of the
+// `git-commit` step can override this information.
+type GitCloneConfigAuthor struct {
+	// The email of the author.
+	Email string `json:"email"`
+	// The name of the author.
+	Name string `json:"name"`
+	// The GPG signing key for the author.
+	SigningKey string `json:"signingKey,omitempty"`
 }
 
 type Checkout struct {
@@ -132,20 +148,26 @@ type Checkout struct {
 }
 
 type GitCommitConfig struct {
-	// The author of the commit.
-	Author *Author `json:"author,omitempty"`
+	// Optional authorship information for the commit. If provided, this takes precedence over
+	// both system-level defaults and any optional, default authorship information configured in
+	// the `git-clone` step.
+	Author *GitCommitConfigAuthor `json:"author,omitempty"`
 	// The commit message.
 	Message string `json:"message"`
 	// The path to a working directory of a local repository.
 	Path string `json:"path"`
 }
 
-// The author of the commit.
-type Author struct {
+// Optional authorship information for the commit. If provided, this takes precedence over
+// both system-level defaults and any optional, default authorship information configured in
+// the `git-clone` step.
+type GitCommitConfigAuthor struct {
 	// The email of the author.
-	Email string `json:"email,omitempty"`
+	Email string `json:"email"`
 	// The name of the author.
-	Name string `json:"name,omitempty"`
+	Name string `json:"name"`
+	// The GPG signing key for the author.
+	SigningKey string `json:"signingKey,omitempty"`
 }
 
 type GitOpenPRConfig struct {

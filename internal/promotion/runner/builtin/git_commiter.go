@@ -85,12 +85,10 @@ func (g *gitCommitter) run(
 	if hasDiffs {
 		commitOpts := &git.CommitOptions{}
 		if cfg.Author != nil {
-			commitOpts.Author = &git.User{}
-			if cfg.Author.Name != "" {
-				commitOpts.Author.Name = cfg.Author.Name
-			}
-			if cfg.Author.Email != "" {
-				commitOpts.Author.Email = cfg.Author.Email
+			commitOpts.Author = &git.User{
+				Name:       cfg.Author.Name,
+				Email:      cfg.Author.Email,
+				SigningKey: cfg.Author.SigningKey,
 			}
 		}
 		if err = workTree.Commit(cfg.Message, commitOpts); err != nil {
