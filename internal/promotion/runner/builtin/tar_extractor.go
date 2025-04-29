@@ -102,20 +102,34 @@ func (t *tarExtractor) run(
 	logger := logging.LoggerFromContext(ctx)
 	var tarReader *tar.Reader
 
-	// Check if the file is gzipped
-	gzr, err := gzip.NewReader(file)
-	if err == nil {
+	// Read the first few bytes to check magic numbers
+	header := make([]byte, 2)
+	_, err = file.Read(header)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+			fmt.Errorf("failed to read file header: %w", err)
+	}
+
+	// Reset to beginning of file
+	_, err = file.Seek(0, 0)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+			fmt.Errorf("failed to seek in tar file: %w", err)
+	}
+
+	// Check for gzip magic numbers (0x1F 0x8B)
+	if header[0] == 0x1F && header[1] == 0x8B {
 		// File is gzipped
-		defer gzr.Close()
-		tarReader = tar.NewReader(gzr)
-		logger.Debug("treating file as gzipped tar")
-	} else {
-		// File is not gzipped, reset to beginning of file and try as regular tar
-		_, err = file.Seek(0, 0)
+		gzr, err := gzip.NewReader(file)
 		if err != nil {
 			return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
-				fmt.Errorf("failed to seek in tar file: %w", err)
+				fmt.Errorf("failed to create gzip reader: %w", err)
 		}
+		defer gzr.Close()
+		tarReader = tar.NewReader(gzr)
+		logger.Debug("treating file as gzipped tar based on magic numbers")
+	} else {
+		// File is not gzipped
 		tarReader = tar.NewReader(file)
 		logger.Debug("treating file as regular tar")
 	}
