@@ -8,6 +8,7 @@ import { z } from 'zod';
 
 import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
 import { FieldContainer } from '@ui/features/common/form/field-container';
+import { getStageYAMLExample } from '@ui/features/stage/get-stage-yaml-example';
 import {
   getWarehouse,
   updateResource
@@ -16,8 +17,6 @@ import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
 import schema from '@ui/gen/schema/stages.kargo.akuity.io_v1alpha1.json';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 import { zodValidators } from '@ui/utils/validators';
-
-import { getStageYAMLExample } from '../../../../../project/pipelines/utils/stage-yaml-example';
 
 const formSchema = z.object({
   value: zodValidators.requiredString
