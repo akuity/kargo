@@ -1,9 +1,7 @@
 import { create } from '@bufbuild/protobuf';
 import { useMutation } from '@connectrpc/connect-query';
-import { faPeopleGroup } from '@fortawesome/free-solid-svg-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, Drawer, Input, Typography } from 'antd';
+import { Button, Drawer, Input } from 'antd';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -155,18 +153,7 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
   const [rules, setRules] = useState<PolicyRule[]>(editing?.rules || []);
 
   return (
-    <Drawer open={true} onClose={() => hide()} width={'85%'} closable={false}>
-      <Typography.Title
-        level={2}
-        style={{ margin: 0, marginBottom: '0.5em' }}
-        className='flex items-center'
-      >
-        <FontAwesomeIcon icon={faPeopleGroup} className='mr-2' />
-        {editing ? 'Edit' : 'Create'} Role
-        <Button type='primary' className='ml-auto' onClick={onSubmit}>
-          Save
-        </Button>
-      </Typography.Title>
+    <Drawer open={true} onClose={hide} width='80%' title={`${editing ? 'Edit' : 'Create'} Role`}>
       <div className='mb-6'>
         <FieldContainer
           label='Name'
@@ -217,6 +204,9 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
           <RuleEditor onSuccess={(rule) => setRules([...rules, rule])} style={{ width: '600px' }} />
         </div>
       </div>
+      <Button type='primary' onClick={onSubmit}>
+        Save
+      </Button>
     </Drawer>
   );
 };
