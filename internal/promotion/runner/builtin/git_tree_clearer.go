@@ -38,11 +38,11 @@ func (g *gitTreeClearer) Run(
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
 	if err := g.validate(stepCtx.Config); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, err
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 	cfg, err := promotion.ConfigToStruct[builtin.GitClearConfig](stepCtx.Config)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("could not convert config into %s config: %w", g.Name(), err)
 	}
 	return g.run(ctx, stepCtx, cfg)
@@ -60,26 +60,26 @@ func (g *gitTreeClearer) run(
 ) (promotion.StepResult, error) {
 	p, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.Path)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
 			"error joining path %s with work dir %s: %w",
 			cfg.Path, stepCtx.WorkDir, err,
 		)
 	}
 	workTree, err := git.LoadWorkTree(p, nil)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error loading working tree from %s: %w", cfg.Path, err)
 	}
 	// workTree.Clear() won't remove any files that aren't indexed. This is a bit
 	// of a hack to ensure that we don't have any untracked files in the working
 	// tree so that workTree.Clear() will remove everything.
 	if err = workTree.AddAll(); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error adding all files to working tree at %s: %w", cfg.Path, err)
 	}
 	if err = workTree.Clear(); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error clearing working tree at %s: %w", cfg.Path, err)
 	}
-	return promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded}, nil
+	return promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, nil
 }

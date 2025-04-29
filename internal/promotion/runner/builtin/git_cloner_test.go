@@ -252,7 +252,7 @@ func Test_gitCloner_run(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	require.Equal(t, kargoapi.PromotionPhaseSucceeded, res.Status)
+	require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
 	require.DirExists(t, filepath.Join(stepCtx.WorkDir, "src"))
 	// The checked out master branch should have the content we know is in the
 	// test remote's master branch.

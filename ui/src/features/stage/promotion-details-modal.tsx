@@ -1,6 +1,7 @@
 import { toJson } from '@bufbuild/protobuf';
 import { useMutation } from '@connectrpc/connect-query';
 import {
+  faBan,
   faCheck,
   faCircleNotch,
   faCog,
@@ -76,6 +77,7 @@ const Step = ({
   const progressing = result === PromotionDirectiveStepStatus.RUNNING;
   const success = result === PromotionDirectiveStepStatus.SUCCESS;
   const failed = result === PromotionDirectiveStepStatus.FAILED;
+  const skipped = result === PromotionDirectiveStepStatus.SKIPPED;
 
   const opts: SegmentedOptions<string> = [];
 
@@ -133,6 +135,7 @@ const Step = ({
           {progressing && <FontAwesomeIcon spin icon={faCircleNotch} />}
           {success && <FontAwesomeIcon icon={faCheck} className='text-green-500' />}
           {failed && <FontAwesomeIcon icon={faTimes} className='text-red-500' />}
+          {skipped && <FontAwesomeIcon icon={faBan} />}
         </Flex>
         <Flex className={'w-full'} align='center'>
           <span className='font-semibold text-base '>{meta.spec.identifier}</span>

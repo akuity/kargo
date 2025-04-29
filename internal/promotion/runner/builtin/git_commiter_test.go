@@ -200,7 +200,7 @@ func Test_gitCommitter_run(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	require.Equal(t, kargoapi.PromotionPhaseSucceeded, res.Status)
+	require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
 	expectedCommit, err := workTree.LastCommitID()
 	require.NoError(t, err)
 	actualCommit, ok := res.Output[stateKeyCommit]

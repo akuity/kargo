@@ -40,7 +40,7 @@ func Test_fileCopier_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
 
 				outPath := filepath.Join(workDir, "output.txt")
 				b, err := os.ReadFile(outPath)
@@ -72,7 +72,7 @@ func Test_fileCopier_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
 
 				outDir := filepath.Join(workDir, "output")
 
@@ -110,7 +110,7 @@ func Test_fileCopier_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
-				require.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
+				require.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
 
 				outDir := filepath.Join(workDir, "output")
 
@@ -148,7 +148,7 @@ func Test_fileCopier_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
-				require.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
+				require.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
 
 				outDir := filepath.Join(workDir, "output")
 
@@ -184,7 +184,7 @@ func Test_fileCopier_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
-				require.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
+				require.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
 
 				outDir := filepath.Join(workDir, "output")
 
@@ -221,7 +221,7 @@ func Test_fileCopier_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
-				require.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
+				require.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
 
 				outDir := filepath.Join(workDir, "output")
 
@@ -245,7 +245,7 @@ func Test_fileCopier_run(t *testing.T) {
 				InPath: "input.txt",
 			},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
-				require.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, result)
+				require.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, result)
 				require.ErrorContains(t, err, "failed to copy")
 			},
 		},
