@@ -92,6 +92,8 @@ export const useMiniPromotionGraph = (stage: Stage, freight: Freight) => {
       } else {
         graph.setNode(freight?.alias || '', nodeSize());
         graph.setEdge(freight?.alias, stageName);
+        addToBucket('source', freight?.alias);
+        addToBucket('target', stageName);
       }
     }
 
@@ -123,6 +125,7 @@ export const useMiniPromotionGraph = (stage: Stage, freight: Freight) => {
 
       reactFlowEdges.push({
         id: edge?.name || '',
+        type: 'smoothstep',
         source: edge.v,
         target: edge.w,
         sourceHandle,

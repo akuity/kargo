@@ -24,8 +24,8 @@ export const PromotionGraph = (props: PromotionGraphProps) => {
         panOnScroll={false}
         nodesDraggable={false}
         elementsSelectable={false}
-        maxZoom={1}
-        minZoom={1}
+        zoomOnScroll={false}
+        zoomOnPinch={false}
       />
     </div>
   );

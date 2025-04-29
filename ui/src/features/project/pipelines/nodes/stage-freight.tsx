@@ -47,6 +47,14 @@ export const StageFreight = (props: { stage: Stage }) => {
 
   const [selectedWarehouse, setSelectedWarehouse] = useState(warehouses?.[0]);
 
+  useEffect(() => {
+    if (selectedWarehouse) {
+      return;
+    }
+
+    setSelectedWarehouse(warehouses?.[0]);
+  }, [currentFreight]);
+
   const defaultToFirstFreight = () =>
     currentFreight?.find((f) => f?.origin?.name === selectedWarehouse) as FreightReference;
 
