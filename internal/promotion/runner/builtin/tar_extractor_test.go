@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -340,6 +341,149 @@ func Test_tarExtractor_run(t *testing.T) {
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
 				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, result)
 				assert.ErrorContains(t, err, "error reading tar")
+			},
+		},
+		{
+			name: "skips unsafe path traversal attempts",
+			setupFiles: func(t *testing.T) string {
+				tmpDir := t.TempDir()
+
+				// Create a tar file with unsafe paths
+				tarPath := filepath.Join(tmpDir, "unsafe.tar")
+				tarFile, err := os.Create(tarPath)
+				require.NoError(t, err)
+				defer tarFile.Close()
+
+				tw := tar.NewWriter(tarFile)
+				defer tw.Close()
+
+				// Add files with unsafe paths
+				unsafePaths := []string{
+					"../outside.txt",           // Path traversal
+					"/etc/passwd",              // Absolute path
+					"subdir/../../outside.txt", // Path traversal
+					"./config.txt",             // Relative current directory
+					"safe.txt",                 // Safe path (should be extracted)
+				}
+
+				for _, path := range unsafePaths {
+					data := []byte("test content for " + path)
+					hdr := &tar.Header{
+						Name: path,
+						Mode: 0600,
+						Size: int64(len(data)),
+					}
+					require.NoError(t, tw.WriteHeader(hdr))
+					_, err = tw.Write(data)
+					require.NoError(t, err)
+				}
+
+				return tmpDir
+			},
+			cfg: builtin.UntarConfig{
+				InPath:  "unsafe.tar",
+				OutPath: "extracted/",
+			},
+			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
+
+				extractDir := filepath.Join(workDir, "extracted")
+
+				// Only the safe file should exist
+				safePath := filepath.Join(extractDir, "safe.txt")
+				_, err = os.Stat(safePath)
+				assert.NoError(t, err, "Safe file should be extracted")
+
+				// These unsafe paths should not exist relative to the extract dir
+				unsafePaths := []string{
+					filepath.Join(workDir, "outside.txt"),      // Path traversal
+					filepath.Join(extractDir, "etc", "passwd"), // Absolute path
+					filepath.Join(workDir, "outside.txt"),      // Path traversal
+					filepath.Join(extractDir, "config.txt"),    // Relative current directory
+				}
+
+				for _, path := range unsafePaths {
+					_, err = os.Stat(path)
+					assert.True(t, os.IsNotExist(err), fmt.Sprintf("Unsafe path should not be extracted: %s", path))
+				}
+			},
+		},
+		{
+			name: "skips unsafe symlinks",
+			setupFiles: func(t *testing.T) string {
+				tmpDir := t.TempDir()
+
+				// Create a tar file with unsafe symlinks
+				tarPath := filepath.Join(tmpDir, "unsafe_symlinks.tar")
+				tarFile, err := os.Create(tarPath)
+				require.NoError(t, err)
+				defer tarFile.Close()
+
+				tw := tar.NewWriter(tarFile)
+				defer tw.Close()
+
+				// Add a valid file
+				fileData := []byte("target content")
+				hdr := &tar.Header{
+					Name: "safe.txt",
+					Mode: 0600,
+					Size: int64(len(fileData)),
+				}
+				require.NoError(t, tw.WriteHeader(hdr))
+				_, err = tw.Write(fileData)
+				require.NoError(t, err)
+
+				// Add symlinks with unsafe targets
+				symlinks := map[string]string{
+					"safe_link.txt":    "safe.txt",            // Safe symlink
+					"unsafe_link1.txt": "../outside.txt",      // Path traversal
+					"unsafe_link2.txt": "/etc/passwd",         // Absolute path
+					"unsafe_link3.txt": "./unsafe_target.txt", // Starts with ./
+				}
+
+				for name, target := range symlinks {
+					hdr = &tar.Header{
+						Name:     name,
+						Linkname: target,
+						Typeflag: tar.TypeSymlink,
+						Mode:     0777,
+					}
+					require.NoError(t, tw.WriteHeader(hdr))
+				}
+
+				return tmpDir
+			},
+			cfg: builtin.UntarConfig{
+				InPath:  "unsafe_symlinks.tar",
+				OutPath: "extracted/",
+			},
+			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
+
+				extractDir := filepath.Join(workDir, "extracted")
+
+				// The safe file and symlink should exist
+				safePath := filepath.Join(extractDir, "safe.txt")
+				_, err = os.Stat(safePath)
+				assert.NoError(t, err, "Safe file should be extracted")
+
+				safeLinkPath := filepath.Join(extractDir, "safe_link.txt")
+				_, err = os.Stat(safeLinkPath)
+				assert.NoError(t, err, "Safe symlink should be extracted")
+
+				// Unsafe symlinks should not be created
+				unsafeLinks := []string{
+					filepath.Join(extractDir, "unsafe_link1.txt"),
+					filepath.Join(extractDir, "unsafe_link2.txt"),
+					filepath.Join(extractDir, "unsafe_link3.txt"),
+				}
+
+				for _, path := range unsafeLinks {
+					_, err = os.Stat(path)
+					assert.True(t, os.IsNotExist(err), fmt.Sprintf("Unsafe symlink should not be extracted: %s", path))
+				}
 			},
 		},
 	}
