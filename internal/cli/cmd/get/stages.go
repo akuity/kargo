@@ -22,6 +22,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/cli/templates"
+	"github.com/akuity/kargo/internal/conditions"
 )
 
 type getStagesOptions struct {
@@ -167,17 +168,26 @@ func newStageTable(list *metav1.List) *metav1.Table {
 	rows := make([]metav1.TableRow, len(list.Items))
 	for i, item := range list.Items {
 		stage := item.Object.(*kargoapi.Stage) // nolint: forcetypeassert
+
 		var health string
 		if stage.Status.Health != nil {
 			health = string(stage.Status.Health.Status)
 		}
+
+		var status string
+		if recCond := conditions.Get(&stage.Status, kargoapi.ConditionTypeReconciling); recCond != nil {
+			status = recCond.Reason
+		} else if readyCond := conditions.Get(&stage.Status, kargoapi.ConditionTypeReady); readyCond != nil {
+			status = readyCond.Reason
+		}
+
 		rows[i] = metav1.TableRow{
 			Cells: []any{
 				stage.Name,
 				stage.Spec.Shard,
 				stage.Status.FreightSummary,
 				health,
-				stage.Status.Phase,
+				status,
 				duration.HumanDuration(time.Since(stage.CreationTimestamp.Time)),
 			},
 			Object: list.Items[i],
@@ -189,7 +199,7 @@ func newStageTable(list *metav1.List) *metav1.Table {
 			{Name: "Shard", Type: "string"},
 			{Name: "Current Freight", Type: "string"},
 			{Name: "Health", Type: "string"},
-			{Name: "Phase", Type: "string"},
+			{Name: "Status", Type: "string"},
 			{Name: "Age", Type: "string"},
 		},
 		Rows: rows,

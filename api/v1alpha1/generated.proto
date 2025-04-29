@@ -401,9 +401,9 @@ message FreightOrigin {
 // FreightReference is a simplified representation of a piece of Freight -- not
 // a root resource type.
 message FreightReference {
-  // Name is system-assigned identifier that is derived deterministically from
-  // the contents of the Freight. i.e. Two pieces of Freight can be compared for
-  // equality by comparing their Names.
+  // Name is a system-assigned identifier derived deterministically from
+  // the contents of the Freight. I.e., two pieces of Freight can be compared
+  // for equality by comparing their Names.
   optional string name = 1;
 
   // Origin describes a kind of Freight in terms of its origin.
@@ -1331,9 +1331,6 @@ message StageStatus {
   // +optional
   optional string lastHandledRefresh = 11;
 
-  // Phase describes where the Stage currently is in its lifecycle.
-  optional string phase = 1;
-
   // FreightHistory is a list of recent Freight selections that were deployed
   // to the Stage. By default, the last ten Freight selections are stored.
   // The first item in the list is the most recent Freight selection and
@@ -1354,10 +1351,6 @@ message StageStatus {
 
   // Health is the Stage's last observed health.
   optional Health health = 8;
-
-  // Message describes any errors that are preventing the Stage controller
-  // from assessing Stage health or from finding new Freight.
-  optional string message = 9;
 
   // ObservedGeneration represents the .metadata.generation that this Stage
   // status was reconciled against.

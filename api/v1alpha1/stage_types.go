@@ -358,8 +358,6 @@ type StageStatus struct {
 	// determine whether the request to refresh the resource has been handled.
 	// +optional
 	LastHandledRefresh string `json:"lastHandledRefresh,omitempty" protobuf:"bytes,11,opt,name=lastHandledRefresh"`
-	// Phase describes where the Stage currently is in its lifecycle.
-	Phase StagePhase `json:"phase,omitempty" protobuf:"bytes,1,opt,name=phase"`
 	// FreightHistory is a list of recent Freight selections that were deployed
 	// to the Stage. By default, the last ten Freight selections are stored.
 	// The first item in the list is the most recent Freight selection and
@@ -378,9 +376,6 @@ type StageStatus struct {
 	FreightSummary string `json:"freightSummary,omitempty" protobuf:"bytes,12,opt,name=freightSummary"`
 	// Health is the Stage's last observed health.
 	Health *Health `json:"health,omitempty" protobuf:"bytes,8,opt,name=health"`
-	// Message describes any errors that are preventing the Stage controller
-	// from assessing Stage health or from finding new Freight.
-	Message string `json:"message,omitempty" protobuf:"bytes,9,opt,name=message"`
 	// ObservedGeneration represents the .metadata.generation that this Stage
 	// status was reconciled against.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,6,opt,name=observedGeneration"`
@@ -390,10 +385,12 @@ type StageStatus struct {
 	LastPromotion *PromotionReference `json:"lastPromotion,omitempty" protobuf:"bytes,10,opt,name=lastPromotion"`
 }
 
+// GetConditions implements the conditions.Getter interface.
 func (w *StageStatus) GetConditions() []metav1.Condition {
 	return w.Conditions
 }
 
+// SetConditions implements the conditions.Setter interface.
 func (w *StageStatus) SetConditions(conditions []metav1.Condition) {
 	w.Conditions = conditions
 }
@@ -401,9 +398,9 @@ func (w *StageStatus) SetConditions(conditions []metav1.Condition) {
 // FreightReference is a simplified representation of a piece of Freight -- not
 // a root resource type.
 type FreightReference struct {
-	// Name is system-assigned identifier that is derived deterministically from
-	// the contents of the Freight. i.e. Two pieces of Freight can be compared for
-	// equality by comparing their Names.
+	// Name is a system-assigned identifier derived deterministically from
+	// the contents of the Freight. I.e., two pieces of Freight can be compared
+	// for equality by comparing their Names.
 	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
 	// Origin describes a kind of Freight in terms of its origin.
 	Origin FreightOrigin `json:"origin,omitempty" protobuf:"bytes,8,opt,name=origin"`

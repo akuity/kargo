@@ -364,9 +364,9 @@ spec:
                     type: array
                   name:
                     description: |-
-                      Name is system-assigned identifier that is derived deterministically from
-                      the contents of the Freight. i.e. Two pieces of Freight can be compared for
-                      equality by comparing their Names.
+                      Name is a system-assigned identifier derived deterministically from
+                      the contents of the Freight. I.e., two pieces of Freight can be compared
+                      for equality by comparing their Names.
                     type: string
                   origin:
                     description: Origin describes a kind of Freight in terms of its
@@ -507,9 +507,9 @@ spec:
                           type: array
                         name:
                           description: |-
-                            Name is system-assigned identifier that is derived deterministically from
-                            the contents of the Freight. i.e. Two pieces of Freight can be compared for
-                            equality by comparing their Names.
+                            Name is a system-assigned identifier derived deterministically from
+                            the contents of the Freight. I.e., two pieces of Freight can be compared
+                            for equality by comparing their Names.
                           type: string
                         origin:
                           description: Origin describes a kind of Freight in terms
