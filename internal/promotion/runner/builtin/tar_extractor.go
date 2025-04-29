@@ -22,6 +22,14 @@ import (
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
+// Size limits to prevent decompression bombs
+const (
+	// 100 MB maximum total size for all extracted files
+	MaxDecompressedTarSize int64 = 100 * 1024 * 1024
+	// 50 MB maximum size for a single file
+	MaxDecompressedFileSize int64 = 50 * 1024 * 1024
+)
+
 // tarExtractor is an implementation of the promotion.StepRunner interface that
 // extracts a tar file to a specified directory.
 type tarExtractor struct {
@@ -143,6 +151,9 @@ func (t *tarExtractor) run(
 		}
 	}
 
+	// Track total size extracted
+	var totalExtractedSize int64 = 0
+
 	for {
 		header, err := tarReader.Next()
 		if err == io.EOF {
@@ -235,6 +246,27 @@ func (t *tarExtractor) run(
 			}
 
 		case tar.TypeReg:
+			// Check if single file exceeds max size limit
+			logger.Debug("checking file size", "path", targetName, "size", header.Size)
+			if header.Size > MaxDecompressedFileSize {
+				logger.Debug("aborting extraction due to exceeding file size limit",
+					"path", targetName,
+					"size", header.Size,
+					"limit", MaxDecompressedFileSize)
+				return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+					fmt.Errorf("extraction aborted: file %s exceeds size limit of %d bytes", targetName, MaxDecompressedFileSize)
+			}
+
+			// Check if total extracted size would exceed limit
+			if totalExtractedSize+header.Size > MaxDecompressedTarSize {
+				logger.Debug("aborting extraction due to exceeding total size limit",
+					"total_size", totalExtractedSize,
+					"file_size", header.Size,
+					"limit", MaxDecompressedTarSize)
+				return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+					fmt.Errorf("extraction aborted: total size would exceed limit of %d bytes", MaxDecompressedTarSize)
+			}
+
 			// Create file
 			outFile, err := os.Create(targetPath)
 			if err != nil {
@@ -242,12 +274,16 @@ func (t *tarExtractor) run(
 					fmt.Errorf("failed to create file %s: %w", targetPath, err)
 			}
 
-			if _, err := io.Copy(outFile, tarReader); err != nil {
-				outFile.Close()
+			// Limit copying to the declared size
+			written, err := io.CopyN(outFile, tarReader, header.Size)
+			outFile.Close()
+			if err != nil && err != io.EOF {
 				return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
 					fmt.Errorf("failed to write to file %s: %w", targetPath, err)
 			}
-			outFile.Close()
+
+			// Update total size counter
+			totalExtractedSize += written
 
 			// Set file permissions
 			if err := os.Chmod(targetPath, fs.FileMode(header.Mode)); err != nil {
