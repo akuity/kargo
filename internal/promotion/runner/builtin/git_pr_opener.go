@@ -22,7 +22,11 @@ import (
 	_ "github.com/akuity/kargo/internal/gitprovider/gitlab" // GitLab provider registration
 )
 
-// stateKeyPRNumber is the key used to store the PR number in the shared State. This will be deprecated in the future.
+// stateKeyPRNumber is the key used to store the PR number in the shared State.
+// 
+// Deprecated: Use `pr.id` instead.
+//
+// TODO: Remove in v1.7.0
 const stateKeyPRNumber = "prNumber"
 
 // gitPROpener is an implementation of the promotion.StepRunner interface that
@@ -147,7 +151,7 @@ func (g *gitPROpener) run(
 					"id":  pr.Number,
 					"url": pr.URL,
 				},
-				stateKeyPRNumber: pr.Number, // Backward compatibility, this field will be deprecated in the future
+				stateKeyPRNumber: pr.Number, // TODO: Remove in v1.7.0
 			},
 		}, nil
 	}
@@ -215,7 +219,7 @@ func (g *gitPROpener) run(
 				"id":  pr.Number,
 				"url": pr.URL,
 			},
-			stateKeyPRNumber: pr.Number, // Backward compatibility, this field will be deprecated in the future
+			stateKeyPRNumber: pr.Number, // TODO: Remove in v1.7.0
 		},
 	}, nil
 }
