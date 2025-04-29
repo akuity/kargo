@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { Description } from '@ui/features/common/description';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { StagePhaseIcon } from '@ui/features/common/stage-phase/stage-phase-icon';
@@ -124,6 +125,8 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
     }
   }, [argocdShard, stage]);
 
+  const { stageTabs } = useExtensionsContext();
+
   return (
     <Drawer open={!!stageName} onClose={onClose} width={'80%'} closable={false}>
       {stage && (
@@ -234,7 +237,13 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                   ) : (
                     <YamlEditor value={rawStageYaml} height='700px' isHideManagedFieldsDisplayed />
                   )
-                }
+                },
+                ...stageTabs.map((data, index) => ({
+                  children: <data.component stage={stage} />,
+                  key: String(data.label + index),
+                  label: data.label,
+                  icon: data.icon
+                }))
               ]}
             />
 

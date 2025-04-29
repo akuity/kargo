@@ -31,7 +31,7 @@ these sort of processes that Kargo is designed to help you implement and manage.
 If you've ever made a change to your "test" environment, were satisfied with the
 change, and then either manually applied the same change to another environment,
 such as "staging," or else grappled with how to automate such a process, then
-you're already familiar with the with the idea of a promotion.
+you're already familiar with the idea of a promotion.
 
 :::note
 Promotions are different from _deployments_. Promotions focus on propagating
