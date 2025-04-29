@@ -3,7 +3,7 @@ import { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { faDocker, faGitAlt } from '@fortawesome/free-brands-svg-icons';
 import { faAnchor, faFile, faInfoCircle, faPencil } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Drawer, Table, Tabs, Tooltip, Typography } from 'antd';
+import { Button, Drawer, Table, Tabs, Typography } from 'antd';
 import classNames from 'classnames';
 import { useEffect, useState } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
@@ -48,51 +48,43 @@ export const FreightDetails = ({
   const { show } = useModal();
 
   return (
-    <Drawer open={!!freight} onClose={onClose} width={'80%'} closable={false}>
+    <Drawer
+      open={!!freight}
+      onClose={onClose}
+      width='80%'
+      title={alias || freight?.metadata?.name}
+      extra={
+        alias &&
+        freight && (
+          <Button
+            icon={<FontAwesomeIcon icon={faPencil} />}
+            onClick={() =>
+              show((p) => (
+                <UpdateFreightAliasModal
+                  {...p}
+                  freight={freight || undefined}
+                  project={freight?.metadata?.namespace || ''}
+                  onSubmit={(newAlias) => {
+                    setAlias(newAlias);
+                    refetchFreight();
+                    p.hide();
+                  }}
+                />
+              ))
+            }
+          >
+            Edit Alias
+          </Button>
+        )
+      }
+    >
       {freight && (
         <div className='flex flex-col h-full'>
-          <div className='flex items-center justify-between mb-4'>
-            <div>
-              <Typography.Title
-                level={1}
-                style={{ margin: 0, marginBottom: '0.5em' }}
-                className='flex items-center'
-              >
-                {alias || freight.metadata?.name}
-                {alias && (
-                  <Tooltip placement='bottom' title='Edit Alias'>
-                    <FontAwesomeIcon
-                      icon={faPencil}
-                      className='ml-2 text-gray-400 cursor-pointer text-sm hover:text-blue-500'
-                      onClick={() =>
-                        show((p) => (
-                          <UpdateFreightAliasModal
-                            {...p}
-                            freight={freight || undefined}
-                            project={freight?.metadata?.namespace || ''}
-                            onSubmit={(newAlias) => {
-                              setAlias(newAlias);
-                              refetchFreight();
-                              p.hide();
-                            }}
-                          />
-                        ))
-                      }
-                    />
-                  </Tooltip>
-                )}
-              </Typography.Title>
-              {alias && freight?.metadata?.name && (
-                <CopyValue label='NAME:' value={freight.metadata?.name} />
-              )}
-              <Description item={freight} loading={false} className='mt-2' />
-            </div>
+          <Description item={freight} loading={false} className='mb-6' />
 
-            {freight?.metadata?.uid && <CopyValue label='UID:' value={freight?.metadata?.uid} />}
-          </div>
           <div className='flex flex-col flex-1'>
             <Tabs
-              className='flex-1'
+              className='flex-1 -mt-4'
               defaultActiveKey='1'
               style={{ minHeight: '500px' }}
               items={[
@@ -103,7 +95,13 @@ export const FreightDetails = ({
                   children: (
                     <>
                       <div className='mb-4'>
-                        <div className='font-semibold mb-2 text-xs'>ARTIFACTS</div>
+                        {alias && freight?.metadata?.name && (
+                          <CopyValue label='NAME:' value={freight.metadata?.name} />
+                        )}
+                        {freight?.metadata?.uid && (
+                          <CopyValue label='UID:' value={freight?.metadata?.uid} />
+                        )}
+                        <div className='font-semibold mt-4 mb-2 text-xs'>ARTIFACTS</div>
                         <Table
                           pagination={{
                             pageSize: 5

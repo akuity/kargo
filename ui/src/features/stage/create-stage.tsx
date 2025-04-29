@@ -1,11 +1,5 @@
 import { useMutation } from '@connectrpc/connect-query';
-import {
-  faBook,
-  faCode,
-  faListCheck,
-  faTheaterMasks,
-  faTimes
-} from '@fortawesome/free-solid-svg-icons';
+import { faCode, faListCheck, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button, Col, Drawer, Flex, Input, Row, Select, Tabs, Typography } from 'antd';
@@ -150,25 +144,23 @@ export const CreateStage = ({
   const promotionWizardStepsState = usePromotionWizardStepsState();
 
   return (
-    <Drawer open={!!project} width={'80%'} closable={false} onClose={close}>
-      <Flex align='center' className='mb-4'>
-        <Typography.Title level={1} className='flex items-center !m-0'>
-          <FontAwesomeIcon icon={faTheaterMasks} className='mr-2 text-base text-gray-400' />
-          Create Stage
-        </Typography.Title>
+    <Drawer
+      open={!!project}
+      width={'80%'}
+      onClose={close}
+      title='Create Stage'
+      extra={
         <Typography.Link
           href='https://docs.kargo.io/user-guide/how-to-guides/working-with-stages'
           target='_blank'
           className='ml-3'
         >
-          <FontAwesomeIcon icon={faBook} />
+          Docs
         </Typography.Link>
-        <Button onClick={close} className='ml-auto'>
-          Cancel
-        </Button>
-      </Flex>
-
+      }
+    >
       <Tabs
+        className='-mt-4'
         onChange={(newTab) => {
           if (tab === 'wizard' && newTab === 'yaml') {
             setValue(
@@ -323,7 +315,7 @@ export const CreateStage = ({
           </FieldContainer>
         </Tabs.TabPane>
       </Tabs>
-      <Button onClick={onSubmit} loading={isPending}>
+      <Button onClick={onSubmit} loading={isPending} type='primary'>
         Create
       </Button>
     </Drawer>
