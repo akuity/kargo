@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -124,9 +125,9 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				assert.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
 				assert.Contains(t,
 					statusErr.ErrStatus.Details.Causes[0].Message,
-					`multiple spec.promotionPolicies reference stage "stage-1"`,
+					`stage name already defined at spec.promotionPolicies[0]`,
 				)
-				assert.Equal(t, "spec.promotionPolicies", statusErr.ErrStatus.Details.Causes[0].Field)
+				assert.Equal(t, "spec.promotionPolicies[1]", statusErr.ErrStatus.Details.Causes[0].Field)
 			},
 		},
 		{
@@ -274,8 +275,231 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				assert.Contains(
 					t,
 					statusErr.ErrStatus.Details.Causes[0].Message,
-					`multiple spec.promotionPolicies reference stage "stage-1"`,
+					`stage name already defined at spec.promotionPolicies[0]`,
 				)
+			},
+		},
+		{
+			name: "invalid pattern identifier in stage selector",
+			projectConfig: &kargoapi.ProjectConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testProjectName,
+					Namespace: testProjectName,
+				},
+				Spec: kargoapi.ProjectConfigSpec{
+					PromotionPolicies: []kargoapi.PromotionPolicy{
+						{Stage: "stage-1"},
+						{StageSelector: &kargoapi.PromotionPolicySelector{Name: "badpattern:stage-*"}},
+					},
+				},
+			},
+			objects: []client.Object{testNs},
+			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
+				assert.Empty(t, warnings)
+				require.Error(t, err)
+
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+
+				assert.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
+				assert.Equal(t, 1, len(statusErr.ErrStatus.Details.Causes))
+
+				assert.Equal(t, "spec.promotionPolicies[1].stageSelector.name",
+					statusErr.ErrStatus.Details.Causes[0].Field)
+				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, statusErr.ErrStatus.Details.Causes[0].Type)
+				assert.Contains(t, statusErr.ErrStatus.Details.Causes[0].Message, `invalid pattern identifier "badpattern"`)
+			},
+		},
+		{
+			name: "valid pattern in stage selector",
+			projectConfig: &kargoapi.ProjectConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testProjectName,
+					Namespace: testProjectName,
+				},
+				Spec: kargoapi.ProjectConfigSpec{
+					PromotionPolicies: []kargoapi.PromotionPolicy{
+						{Stage: "stage-1"},
+						{StageSelector: &kargoapi.PromotionPolicySelector{Name: "glob:stage-*"}},
+					},
+				},
+			},
+			objects: []client.Object{testNs},
+			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
+				assert.Empty(t, warnings)
+				assert.NoError(t, err)
+			},
+		},
+		{
+			name: "invalid regex pattern in stage selector",
+			projectConfig: &kargoapi.ProjectConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testProjectName,
+					Namespace: testProjectName,
+				},
+				Spec: kargoapi.ProjectConfigSpec{
+					PromotionPolicies: []kargoapi.PromotionPolicy{
+						{Stage: "stage-1"},
+						{StageSelector: &kargoapi.PromotionPolicySelector{Name: "regex:stage-[unclosed"}},
+					},
+				},
+			},
+			objects: []client.Object{testNs},
+			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
+				assert.Empty(t, warnings)
+				require.Error(t, err)
+
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+
+				assert.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
+				assert.Equal(t, 1, len(statusErr.ErrStatus.Details.Causes))
+
+				assert.Equal(t, "spec.promotionPolicies[1].stageSelector.name",
+					statusErr.ErrStatus.Details.Causes[0].Field)
+				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, statusErr.ErrStatus.Details.Causes[0].Type)
+				assert.Contains(t, statusErr.ErrStatus.Details.Causes[0].Message, "error parsing regexp")
+			},
+		},
+		{
+			name: "empty stage names are skipped",
+			projectConfig: &kargoapi.ProjectConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testProjectName,
+					Namespace: testProjectName,
+				},
+				Spec: kargoapi.ProjectConfigSpec{
+					PromotionPolicies: []kargoapi.PromotionPolicy{
+						{Stage: "stage-1"},
+						{Stage: ""}, // Empty stage - should be skipped
+						{StageSelector: &kargoapi.PromotionPolicySelector{Name: ""}}, // Empty selector - should be skipped
+					},
+				},
+			},
+			objects: []client.Object{testNs},
+			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
+				assert.Empty(t, warnings)
+				assert.NoError(t, err)
+			},
+		},
+		{
+			name: "multiple duplicate stages",
+			projectConfig: &kargoapi.ProjectConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testProjectName,
+					Namespace: testProjectName,
+				},
+				Spec: kargoapi.ProjectConfigSpec{
+					PromotionPolicies: []kargoapi.PromotionPolicy{
+						{Stage: "stage-1"},
+						{Stage: "stage-2"},
+						{Stage: "stage-1"}, // Duplicate of stage-1
+						{Stage: "stage-3"},
+						{Stage: "stage-2"}, // Duplicate of stage-2
+					},
+				},
+			},
+			objects: []client.Object{testNs},
+			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
+				assert.Empty(t, warnings)
+				require.Error(t, err)
+
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+
+				assert.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
+				assert.Equal(t, 2, len(statusErr.ErrStatus.Details.Causes))
+
+				// Sort errors for consistent testing
+				sort.Slice(statusErr.ErrStatus.Details.Causes, func(i, j int) bool {
+					return statusErr.ErrStatus.Details.Causes[i].Field < statusErr.ErrStatus.Details.Causes[j].Field
+				})
+
+				assert.Equal(t, "spec.promotionPolicies[2]", statusErr.ErrStatus.Details.Causes[0].Field)
+				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, statusErr.ErrStatus.Details.Causes[0].Type)
+				assert.Contains(t, statusErr.ErrStatus.Details.Causes[0].Message,
+					"stage name already defined at spec.promotionPolicies[0]")
+
+				assert.Equal(t, "spec.promotionPolicies[4]", statusErr.ErrStatus.Details.Causes[1].Field)
+				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, statusErr.ErrStatus.Details.Causes[1].Type)
+				assert.Contains(t, statusErr.ErrStatus.Details.Causes[1].Message,
+					"stage name already defined at spec.promotionPolicies[1]")
+			},
+		},
+		{
+			name: "mix of deprecated Stage and StageSelector",
+			projectConfig: &kargoapi.ProjectConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testProjectName,
+					Namespace: testProjectName,
+				},
+				Spec: kargoapi.ProjectConfigSpec{
+					PromotionPolicies: []kargoapi.PromotionPolicy{
+						{Stage: "stage-1"},
+						{StageSelector: &kargoapi.PromotionPolicySelector{Name: "stage-2"}},
+						{StageSelector: &kargoapi.PromotionPolicySelector{Name: "stage-1"}}, // Duplicate with Stage field
+					},
+				},
+			},
+			objects: []client.Object{testNs},
+			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
+				assert.Empty(t, warnings)
+				require.Error(t, err)
+
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+
+				assert.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
+				assert.Equal(t, 1, len(statusErr.ErrStatus.Details.Causes))
+
+				assert.Equal(t, "spec.promotionPolicies[2]", statusErr.ErrStatus.Details.Causes[0].Field)
+				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, statusErr.ErrStatus.Details.Causes[0].Type)
+				assert.Contains(t, statusErr.ErrStatus.Details.Causes[0].Message,
+					"stage name already defined at spec.promotionPolicies[0]")
+			},
+		},
+		{
+			name: "invalid spec: multiple errors - duplicates and invalid pattern",
+			projectConfig: &kargoapi.ProjectConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testProjectName,
+					Namespace: testProjectName,
+				},
+				Spec: kargoapi.ProjectConfigSpec{
+					PromotionPolicies: []kargoapi.PromotionPolicy{
+						{Stage: "stage-1"},
+						{Stage: "stage-1"}, // Duplicate
+						{StageSelector: &kargoapi.PromotionPolicySelector{
+							Name: "badpattern:stage-*",
+						}}, // Invalid pattern
+					},
+				},
+			},
+			objects: []client.Object{testNs},
+			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
+				assert.Empty(t, warnings)
+				require.Error(t, err)
+
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+
+				assert.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
+				assert.Equal(t, 2, len(statusErr.ErrStatus.Details.Causes))
+
+				// Sort errors for consistent testing
+				sort.Slice(statusErr.ErrStatus.Details.Causes, func(i, j int) bool {
+					return statusErr.ErrStatus.Details.Causes[i].Field < statusErr.ErrStatus.Details.Causes[j].Field
+				})
+
+				assert.Equal(t, "spec.promotionPolicies[1]", statusErr.ErrStatus.Details.Causes[0].Field)
+				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, statusErr.ErrStatus.Details.Causes[0].Type)
+				assert.Contains(t, statusErr.ErrStatus.Details.Causes[0].Message,
+					"stage name already defined at spec.promotionPolicies[0]")
+
+				assert.Equal(t, "spec.promotionPolicies[2].stageSelector.name", statusErr.ErrStatus.Details.Causes[1].Field)
+				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, statusErr.ErrStatus.Details.Causes[1].Type)
+				assert.Contains(t, statusErr.ErrStatus.Details.Causes[1].Message,
+					`invalid pattern identifier "badpattern"`)
 			},
 		},
 	}
@@ -334,6 +558,25 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 			},
 		},
 		{
+			name: "valid update: glob pattern",
+			projectCfg: &kargoapi.ProjectConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testProjectName,
+					Namespace: testProjectName,
+				},
+				Spec: kargoapi.ProjectConfigSpec{
+					PromotionPolicies: []kargoapi.PromotionPolicy{
+						{Stage: "stage-1"},
+						{StageSelector: &kargoapi.PromotionPolicySelector{Name: "glob:stage-*"}},
+					},
+				},
+			},
+			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
+				assert.Empty(t, warnings)
+				assert.NoError(t, err)
+			},
+		},
+		{
 			name: "invalid spec: duplicate promotion policy stage",
 			projectCfg: &kargoapi.ProjectConfig{
 				ObjectMeta: metav1.ObjectMeta{
@@ -358,9 +601,120 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 				assert.Contains(
 					t,
 					statusErr.ErrStatus.Details.Causes[0].Message,
-					`multiple spec.promotionPolicies reference stage "stage-duplicate"`,
+					`stage name already defined at spec.promotionPolicies[0]`,
 				)
-				assert.Equal(t, "spec.promotionPolicies", statusErr.ErrStatus.Details.Causes[0].Field)
+				assert.Equal(t, "spec.promotionPolicies[1]", statusErr.ErrStatus.Details.Causes[0].Field)
+			},
+		},
+		{
+			name: "invalid spec: triple duplicate of stage name",
+			projectCfg: &kargoapi.ProjectConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testProjectName,
+					Namespace: testProjectName,
+				},
+				Spec: kargoapi.ProjectConfigSpec{
+					PromotionPolicies: []kargoapi.PromotionPolicy{
+						{Stage: "stage-1"},
+						{Stage: "stage-1"}, // Duplicate #1
+						{Stage: "stage-1"}, // Duplicate #2
+					},
+				},
+			},
+			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
+				assert.Empty(t, warnings)
+				require.Error(t, err)
+
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+
+				assert.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
+				assert.Equal(t, 2, len(statusErr.ErrStatus.Details.Causes))
+
+				// Sort errors for consistent testing
+				sort.Slice(statusErr.ErrStatus.Details.Causes, func(i, j int) bool {
+					return statusErr.ErrStatus.Details.Causes[i].Field < statusErr.ErrStatus.Details.Causes[j].Field
+				})
+
+				assert.Equal(t, "spec.promotionPolicies[1]", statusErr.ErrStatus.Details.Causes[0].Field)
+				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, statusErr.ErrStatus.Details.Causes[0].Type)
+				assert.Contains(t, statusErr.ErrStatus.Details.Causes[0].Message,
+					"stage name already defined at spec.promotionPolicies[0]")
+
+				assert.Equal(t, "spec.promotionPolicies[2]", statusErr.ErrStatus.Details.Causes[1].Field)
+				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, statusErr.ErrStatus.Details.Causes[1].Type)
+				assert.Contains(t, statusErr.ErrStatus.Details.Causes[1].Message,
+					"stage name already defined at spec.promotionPolicies[0]")
+			},
+		},
+		{
+			name: "invalid spec: invalid regex pattern",
+			projectCfg: &kargoapi.ProjectConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testProjectName,
+					Namespace: testProjectName,
+				},
+				Spec: kargoapi.ProjectConfigSpec{
+					PromotionPolicies: []kargoapi.PromotionPolicy{
+						{Stage: "stage-1"},
+						{StageSelector: &kargoapi.PromotionPolicySelector{Name: "regex:stage-[unclosed"}},
+					},
+				},
+			},
+			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
+				assert.Empty(t, warnings)
+				require.Error(t, err)
+
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+
+				assert.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
+				assert.Equal(t, 1, len(statusErr.ErrStatus.Details.Causes))
+
+				assert.Equal(t, "spec.promotionPolicies[1].stageSelector.name", statusErr.ErrStatus.Details.Causes[0].Field)
+				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, statusErr.ErrStatus.Details.Causes[0].Type)
+				assert.Contains(t, statusErr.ErrStatus.Details.Causes[0].Message, "error parsing regexp")
+			},
+		},
+		{
+			name: "invalid spec: duplicates and invalid pattern",
+			projectCfg: &kargoapi.ProjectConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testProjectName,
+					Namespace: testProjectName,
+				},
+				Spec: kargoapi.ProjectConfigSpec{
+					PromotionPolicies: []kargoapi.PromotionPolicy{
+						{Stage: "stage-1"},
+						{Stage: "stage-1"}, // Duplicate
+						{StageSelector: &kargoapi.PromotionPolicySelector{Name: "badpattern:stage-*"}}, // Invalid pattern
+					},
+				},
+			},
+			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
+				assert.Empty(t, warnings)
+				require.Error(t, err)
+
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+
+				assert.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
+				assert.Equal(t, 2, len(statusErr.ErrStatus.Details.Causes))
+
+				// Sort errors for consistent testing
+				sort.Slice(statusErr.ErrStatus.Details.Causes, func(i, j int) bool {
+					return statusErr.ErrStatus.Details.Causes[i].Field < statusErr.ErrStatus.Details.Causes[j].Field
+				})
+
+				assert.Equal(t, "spec.promotionPolicies[1]", statusErr.ErrStatus.Details.Causes[0].Field)
+				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, statusErr.ErrStatus.Details.Causes[0].Type)
+				assert.Contains(t, statusErr.ErrStatus.Details.Causes[0].Message,
+					"stage name already defined at spec.promotionPolicies[0]")
+
+				assert.Equal(t, "spec.promotionPolicies[2].stageSelector.name", statusErr.ErrStatus.Details.Causes[1].Field)
+				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, statusErr.ErrStatus.Details.Causes[1].Type)
+				assert.Contains(t, statusErr.ErrStatus.Details.Causes[1].Message,
+					`invalid pattern identifier "badpattern"`)
 			},
 		},
 	}

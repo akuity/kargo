@@ -49,7 +49,7 @@ steps:
 - uses: compose-output
   as: pr-link
   config:
-    url: ${{ vars.repoURL }}/pull/${{ task.outputs['open-pr'].prNumber }}
+    url: ${{ vars.repoURL }}/pull/${{ task.outputs['open-pr'].pr.id }}
 - uses: http
   config:
     method: POST

@@ -123,7 +123,7 @@ spec:
 ## Multi-Source Argo CD Application
 
 The most advanced method covered here __is nevertheless our recommendation
-because it aligns best with with GitOps principles.__ Use an `Application`
+because it aligns best with GitOps principles.__ Use an `Application`
 with
 [multiple sources](https://argo-cd.readthedocs.io/en/stable/user-guide/multiple_sources)
 to reference _both_ the Kargo Helm chart repository and a `values.yaml` file of
