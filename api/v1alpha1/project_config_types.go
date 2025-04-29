@@ -19,13 +19,13 @@ type ProjectConfig struct {
 type ProjectConfigSpec struct {
 	// PromotionPolicies defines policies governing the promotion of Freight to
 	// specific Stages within the Project.
-	//
-	// +kubebuilder:validation:XValidation:message="PromotionPolicy must have exactly one of stage or stageSelector set",rule="has(self.stage) ? !has(self.stageSelector) : has(self.stageSelector)"
 	PromotionPolicies []PromotionPolicy `json:"promotionPolicies,omitempty" protobuf:"bytes,1,rep,name=promotionPolicies"`
 }
 
 // PromotionPolicy defines policies governing the promotion of Freight to a
 // specific Stage.
+//
+// +kubebuilder:validation:XValidation:message="PromotionPolicy must have exactly one of stage or stageSelector set",rule="has(self.stage) ? !has(self.stageSelector) : has(self.stageSelector)"
 type PromotionPolicy struct {
 	// Stage is the name of the Stage to which this policy applies.
 	//
