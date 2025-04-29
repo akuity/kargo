@@ -124,7 +124,7 @@ export const useMiniPromotionGraph = (stage: Stage, freight: Freight) => {
       const targetHandle = useBucket('target', edge.w);
 
       reactFlowEdges.push({
-        id: edge?.name || '',
+        id: `${sourceHandle}->${targetHandle}`,
         type: 'smoothstep',
         source: edge.v,
         target: edge.w,

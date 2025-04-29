@@ -24,7 +24,7 @@ export const SubscriptionNode = (props: { subscription: RepoSubscription }) => {
       props.subscription?.image?.repoURL ||
       '';
     const title = humanComprehendableArtifact(repoURL);
-    const base = artifactBase(repoURL);
+    const base = artifactBase(repoURL) || repoURL;
     const link = artifactURL(repoURL);
 
     return { title, repoURL, base, link };

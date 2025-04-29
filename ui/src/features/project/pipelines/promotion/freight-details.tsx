@@ -1,5 +1,8 @@
 import { Descriptions } from 'antd';
+import Link from 'antd/es/typography/Link';
+import { generatePath, useNavigate } from 'react-router-dom';
 
+import { paths } from '@ui/config/paths';
 import { FreightTable } from '@ui/features/project/pipelines/freight/freight-table';
 import { useGetFreightCreation } from '@ui/features/project/pipelines/freight/use-get-freight-creation';
 import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
@@ -9,6 +12,7 @@ type FreightDetailsProps = {
 };
 
 export const FreightDetails = (props: FreightDetailsProps) => {
+  const navigate = useNavigate();
   const freightCreatedAt = useGetFreightCreation(props.freight);
 
   return (
@@ -21,7 +25,20 @@ export const FreightDetails = (props: FreightDetailsProps) => {
         items={[
           {
             label: 'id',
-            children: props.freight?.metadata?.name
+            children: (
+              <Link
+                onClick={() =>
+                  navigate(
+                    generatePath(paths.freight, {
+                      name: props.freight?.metadata?.namespace,
+                      freightName: props.freight?.metadata?.name
+                    })
+                  )
+                }
+              >
+                {props.freight?.metadata?.name}
+              </Link>
+            )
           },
           {
             label: 'uid',

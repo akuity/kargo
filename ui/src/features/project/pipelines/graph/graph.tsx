@@ -1,6 +1,7 @@
 import { Controls, ReactFlow, useNodesState } from '@xyflow/react';
 import { useCallback, useEffect, useMemo } from 'react';
 
+import { queryCache } from '@ui/features/utils/cache';
 import { Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { useFreightTimelineControllerContext } from '../context/freight-timeline-controller-context';
@@ -86,6 +87,8 @@ export const Graph = (props: GraphProps) => {
           return node;
         })
       );
+
+      queryCache.imageStageMatrix.update(stage);
     },
     onWarehouse(warehouse) {
       const index = warehouseIndexer.index(warehouse);
@@ -104,6 +107,8 @@ export const Graph = (props: GraphProps) => {
           return node;
         })
       );
+
+      queryCache.freight.refetch();
     }
   });
 
