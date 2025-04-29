@@ -179,6 +179,12 @@ func (t *tarExtractor) run(
 			continue
 		}
 
+		// Validate the target path to prevent directory traversal
+		if !t.validRelPath(targetName) {
+			logger.Debug("skipping file with unsafe path", "path", targetName)
+			continue
+		}
+
 		// Simple check for exact filename match for ignore patterns
 		if cfg.Ignore != "" && filepath.Base(targetName) == strings.TrimSpace(cfg.Ignore) {
 			logger.Debug("ignoring exact match path", "path", targetName)
@@ -195,6 +201,14 @@ func (t *tarExtractor) run(
 
 		// Create destination directory for files and links
 		targetPath := filepath.Join(outPath, targetName)
+
+		// Double check the target path is within the output directory
+		relPath, err := filepath.Rel(outPath, targetPath)
+		if err != nil || strings.HasPrefix(relPath, "..") || strings.HasPrefix(relPath, "/") {
+			logger.Debug("skipping path escaping target directory", "path", targetName)
+			continue
+		}
+
 		destDir := filepath.Dir(targetPath)
 		if err := os.MkdirAll(destDir, 0755); err != nil {
 			return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
@@ -210,6 +224,11 @@ func (t *tarExtractor) run(
 			}
 
 		case tar.TypeSymlink:
+			// Validate the symlink target to prevent symlink attacks
+			if !t.validRelPath(header.Linkname) {
+				logger.Debug("skipping symlink with unsafe target", "path", targetName, "target", header.Linkname)
+				continue
+			}
 			// Create symlink
 			if err := os.Symlink(header.Linkname, targetPath); err != nil && !os.IsExist(err) {
 				logger.Debug("failed to create symlink", "path", targetPath, "target", header.Linkname, "error", err)
@@ -238,6 +257,18 @@ func (t *tarExtractor) run(
 	}
 
 	return promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded}, nil
+}
+
+// validRelPath checks if the path is safe to extract (no path traversal, etc.)
+func (t *tarExtractor) validRelPath(p string) bool {
+	if p == "" ||
+		strings.Contains(p, `\`) ||
+		strings.HasPrefix(p, "/") ||
+		strings.Contains(p, "../") ||
+		strings.HasPrefix(p, "./") {
+		return false
+	}
+	return true
 }
 
 // loadIgnoreRules loads the ignore rules from the given string. The rules are
