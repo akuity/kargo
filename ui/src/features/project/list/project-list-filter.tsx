@@ -24,11 +24,16 @@ export const ProjectListFilter = ({
   );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && filteredProjects?.length === 1) {
-      const selectedProject = filteredProjects[0].metadata?.name;
-      if (selectedProject) {
-        navigate(paths.project.replace(':name', selectedProject));
-      }
+    if (e.key !== 'Enter') return;
+
+    if (filteredProjects?.length !== 1 || !filter) {
+      onChange(filter);
+      return;
+    }
+
+    const selectedProject = filteredProjects![0].metadata?.name;
+    if (selectedProject) {
+      navigate(paths.project.replace(':name', selectedProject));
     }
   };
 
@@ -39,7 +44,7 @@ export const ProjectListFilter = ({
   return (
     <div className='flex items-center w-2/3'>
       <AutoComplete
-        placeholder='Filter...'
+        placeholder='Search...'
         options={filteredProjects?.map((p) => ({ value: p.metadata?.name }))}
         onChange={setFilter}
         className='w-full mr-2 bg-white'

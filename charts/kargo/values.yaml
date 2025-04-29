@@ -211,6 +211,8 @@ api:
     ## @param api.oidc.additionalScopes The additional scopes to send to the OIDC provider. This should be set to the scopes you wish to be provided to your identity provider from clients of Kargo, the scopes openid, profile and email are always requested and don't need to be added, this value is intended for any additional ones you require.
     additionalScopes:
     - groups
+    ## @param api.oidc.usernameClaim The claim to use as the username for the user.
+    usernameClaim: email
 
     admins:
       ## @param api.oidc.admins.claims Subjects having any of these claims will automatically be Kargo admins.
@@ -379,6 +381,13 @@ controller:
   podLabels: {}
   ## @param controller.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
   podAnnotations: {}
+  ## @param controller.initContainers Optional init containers to add to the controller pods. This is rendered as the literal YAML.
+  initContainers: []
+    # - name: download-tools
+    #   image: alpine:3.8
+    #   command: [ sh, -c ]
+    #   args:
+    #    - ls
 
   ## All settings relating to the service account for the controller
   serviceAccount:
@@ -465,6 +474,10 @@ controller:
     # requests:
     #   cpu: 100m
     #   memory: 128Mi
+  ## @param controller.volumes Volumes for the controller pods.
+  volumes: []
+  ## @param controller.volumeMounts Volume mounts for the controller pods.
+  volumeMounts: []
   ## @param controller.nodeSelector Node selector for controller pods. Defaults to `global.nodeSelector`.
   nodeSelector: {}
   ## @param controller.tolerations Tolerations for controller pods. Defaults to `global.tolerations`.

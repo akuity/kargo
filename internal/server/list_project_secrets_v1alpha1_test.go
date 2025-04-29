@@ -53,27 +53,6 @@ func TestListProjectSecrets(t *testing.T) {
 							},
 							Data: testData,
 						},
-						&corev1.Secret{ // Labeled with the legacy project secret label; should be in the list
-							ObjectMeta: metav1.ObjectMeta{
-								Namespace: "kargo-demo",
-								Name:      "secret-c",
-								Labels: map[string]string{
-									kargoapi.ProjectSecretLabelKey: kargoapi.LabelTrueValue,
-								},
-							},
-							Data: testData,
-						},
-						&corev1.Secret{ // Labeled both ways; should be in the list ONCE
-							ObjectMeta: metav1.ObjectMeta{
-								Namespace: "kargo-demo",
-								Name:      "secret-d",
-								Labels: map[string]string{
-									kargoapi.CredentialTypeLabelKey: kargoapi.CredentialTypeLabelGeneric,
-									kargoapi.ProjectSecretLabelKey:  kargoapi.LabelTrueValue,
-								},
-							},
-							Data: testData,
-						},
 					).
 					Build(), nil
 			},
@@ -94,10 +73,8 @@ func TestListProjectSecrets(t *testing.T) {
 	require.NoError(t, err)
 
 	secrets := resp.Msg.GetSecrets()
-	require.Len(t, secrets, 3)
+	require.Len(t, secrets, 1)
 	require.Equal(t, "secret-b", secrets[0].Name)
-	require.Equal(t, "secret-c", secrets[1].Name)
-	require.Equal(t, "secret-d", secrets[2].Name)
 	for _, secret := range secrets {
 		require.Equal(t, redacted, secret.StringData["PROJECT_SECRET"])
 	}

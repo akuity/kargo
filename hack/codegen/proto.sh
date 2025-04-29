@@ -20,6 +20,36 @@ readonly APIMACHINERY_PKGS=(
   "-k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+# Default to cleaning up the temporary directory
+CLEANUP_TMP="true"
+
+# Function to display usage
+function usage() {
+  echo "Usage: $0 [options]"
+  echo "Options:"
+  echo "  --no-cleanup    Don't clean up temporary directory after execution"
+  echo "  -h, --help      Display this help message"
+}
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --no-cleanup)
+      CLEANUP_TMP="false"
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1"
+      usage
+      exit 1
+      ;;
+  esac
+done
+
 function main() {
   set -x
 
@@ -78,9 +108,9 @@ function main() {
   { msg "Copying generated .proto and .pb.go files back to the project root..."; } 2> /dev/null
   find "$build_src_dir/api" \( \
     -name '*.proto' -o \
-    -name '*.pg.go' \
+    -name '*.pb.go' \
   \) -type f | while read -r file; do
-    rel_path="${file#$build_src_dir/}"
+    rel_path="${file#"$build_src_dir"/}"
     dest_file="$proj_dir/$rel_path"
     dest_dir=$(dirname "$dest_file")
     mkdir -p "$dest_dir"
@@ -138,6 +168,14 @@ function clean() {
   { msg "Cleaning up all intermediate resources..."; } 2> /dev/null
   rm -rf "${proj_dir}/vendor" || true
   rm -rf "${proj_dir}/tmp" || true
+
+  if [[ "${CLEANUP_TMP}" == "true" ]]; then
+    { msg "Cleaning up temporary directory..."; } 2> /dev/null
+    rm -rf "${tmp_dir}" || true
+  else
+    { msg "Temporary directory '${tmp_dir}' preserved"; } 2> /dev/null
+  fi
+
   { msg "Done"; } 2> /dev/null
 }
 

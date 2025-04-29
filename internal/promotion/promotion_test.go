@@ -17,20 +17,6 @@ import (
 	"github.com/akuity/kargo/pkg/promotion"
 )
 
-type mockRetryableStepRunner struct {
-	*mockStepRunner
-	defaultTimeout        *time.Duration
-	defaultErrorThreshold uint32
-}
-
-func (m mockRetryableStepRunner) DefaultTimeout() *time.Duration {
-	return m.defaultTimeout
-}
-
-func (m mockRetryableStepRunner) DefaultErrorThreshold() uint32 {
-	return m.defaultErrorThreshold
-}
-
 func TestStep_GetTimeout(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -70,7 +56,7 @@ func TestStep_GetTimeout(t *testing.T) {
 					},
 				},
 			},
-			runner: mockRetryableStepRunner{defaultTimeout: ptr.To(time.Duration(3))},
+			runner: MockRetryableStepRunner{defaultTimeout: ptr.To(time.Duration(3))},
 			assertions: func(t *testing.T, result *time.Duration) {
 				assert.Equal(t, ptr.To(time.Duration(5)), result)
 			},
@@ -80,7 +66,7 @@ func TestStep_GetTimeout(t *testing.T) {
 			step: &Step{
 				Retry: &kargoapi.PromotionStepRetry{},
 			},
-			runner: mockRetryableStepRunner{defaultTimeout: ptr.To(time.Duration(3))},
+			runner: MockRetryableStepRunner{defaultTimeout: ptr.To(time.Duration(3))},
 			assertions: func(t *testing.T, result *time.Duration) {
 				assert.Equal(t, ptr.To(time.Duration(3)), result)
 			},

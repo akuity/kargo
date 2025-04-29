@@ -197,7 +197,7 @@ func Test_gitPusher_run(t *testing.T) {
 
 	// Commit the changes similarly to how gitCommitter would
 	// have. It will be gitPushStepRunner's job to push this commit.
-	err = workTree.AddAllAndCommit("Initial commit")
+	err = workTree.AddAllAndCommit("Initial commit", nil)
 	require.NoError(t, err)
 
 	// Now we can proceed to test gitPusher...

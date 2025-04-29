@@ -49,12 +49,17 @@ spec:
           metadata:
             type: object
           spec:
-            description: Spec describes a Project.
+            description: |-
+              Spec describes a Project.
+
+              Deprecated: Create a ProjectConfig resource with the same name as the
+              Project resource in the Project's namespace. The ProjectConfig resource
+              can be used to configure the Project.
             properties:
               promotionPolicies:
                 description: |-
                   PromotionPolicies defines policies governing the promotion of Freight to
-                  specific Stages within this Project.
+                  specific Stages within the Project.
                 items:
                   description: |-
                     PromotionPolicy defines policies governing the promotion of Freight to a
@@ -71,12 +76,83 @@ spec:
                         artifacts are detected.
                       type: boolean
                     stage:
-                      minLength: 1
+                      description: |-
+                        Stage is the name of the Stage to which this policy applies.
+
+                        Deprecated: Use StageSelector instead.
                       pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                       type: string
-                  required:
-                  - stage
+                    stageSelector:
+                      description: |-
+                        StageSelector is a selector that matches the Stage resource to which
+                        this policy applies.
+                      properties:
+                        matchExpressions:
+                          description: matchExpressions is a list of label selector
+                            requirements. The requirements are ANDed.
+                          items:
+                            description: |-
+                              A label selector requirement is a selector that contains values, a key, and an operator that
+                              relates the key and values.
+                            properties:
+                              key:
+                                description: key is the label key that the selector
+                                  applies to.
+                                type: string
+                              operator:
+                                description: |-
+                                  operator represents a key's relationship to a set of values.
+                                  Valid operators are In, NotIn, Exists and DoesNotExist.
+                                type: string
+                              values:
+                                description: |-
+                                  values is an array of string values. If the operator is In or NotIn,
+                                  the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                  the values array must be empty. This array is replaced during a strategic
+                                  merge patch.
+                                items:
+                                  type: string
+                                type: array
+                                x-kubernetes-list-type: atomic
+                            required:
+                            - key
+                            - operator
+                            type: object
+                          type: array
+                          x-kubernetes-list-type: atomic
+                        matchLabels:
+                          additionalProperties:
+                            type: string
+                          description: |-
+                            matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                            map is equivalent to an element of matchExpressions, whose key field is "key", the
+                            operator is "In", and the values array contains only "value". The requirements are ANDed.
+                          type: object
+                        name:
+                          description: |-
+                            Name is the name of the resource to which this policy applies.
+
+                            It can be an exact name, a regex pattern (with prefix "regex:"), or a
+                            glob pattern (with prefix "glob:").
+
+                            When both Name and LabelSelector are specified, the Name is ANDed with
+                            the LabelSelector. I.e., the resource must match both the Name and
+                            LabelSelector to be selected by this policy.
+
+                            NOTE: Using a specific exact name is the most secure option. Pattern
+                            matching via regex or glob can be exploited by users with permissions to
+                            match promotion policies that weren't intended to apply to their
+                            resources. For example, a user could create a resource with a name
+                            deliberately crafted to match the pattern, potentially bypassing intended
+                            promotion controls.
+                          type: string
+                      type: object
+                      x-kubernetes-map-type: atomic
                   type: object
+                  x-kubernetes-validations:
+                  - message: PromotionPolicy must have exactly one of stage or stageSelector
+                      set
+                    rule: 'has(self.stage) ? !has(self.stageSelector) : has(self.stageSelector)'
                 type: array
             type: object
           status:
@@ -158,6 +234,54 @@ spec:
 
                   Deprecated: Use the Conditions field instead.
                 type: string
+              stats:
+                description: |-
+                  Stats contains a summary of the of the collective state of a Project's
+                  constituent resources.
+                properties:
+                  stages:
+                    description: Stages contains a summary of the collective state
+                      of the Project's Stages.
+                    properties:
+                      count:
+                        description: Count contains the total number of Stages in
+                          the Project.
+                        format: int64
+                        type: integer
+                      health:
+                        description: Health contains a summary of the collective health
+                          of a Project's Stages.
+                        properties:
+                          healthy:
+                            description: Healthy contains the number of resources
+                              that are explicitly healthy.
+                            format: int64
+                            type: integer
+                        type: object
+                    type: object
+                  warehouses:
+                    description: |-
+                      Warehouses contains a summary of the collective state of the Project's
+                      Warehouses.
+                    properties:
+                      count:
+                        description: Count contains the total number of Warehouses
+                          in the Project.
+                        format: int64
+                        type: integer
+                      health:
+                        description: |-
+                          Health contains a summary of the collective health of a Project's
+                          Warehouses.
+                        properties:
+                          healthy:
+                            description: Healthy contains the number of resources
+                              that are explicitly healthy.
+                            format: int64
+                            type: integer
+                        type: object
+                    type: object
+                type: object
             type: object
         type: object
     served: true

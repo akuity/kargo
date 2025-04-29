@@ -47,7 +47,8 @@ type controllerOptions struct {
 	ArgoCDKubeConfig    string
 	ArgoCDNamespaceOnly bool
 
-	PprofBindAddress string
+	MetricsBindAddress string
+	PprofBindAddress   string
 
 	Logger *logging.Logger
 }
@@ -80,6 +81,7 @@ func (o *controllerOptions) complete() {
 	o.ArgoCDEnabled = types.MustParseBool(os.GetEnv("ARGOCD_INTEGRATION_ENABLED", "true"))
 	o.ArgoCDKubeConfig = os.GetEnv("ARGOCD_KUBECONFIG", "")
 	o.ArgoCDNamespaceOnly = types.MustParseBool(os.GetEnv("ARGOCD_WATCH_ARGOCD_NAMESPACE_ONLY", "false"))
+	o.MetricsBindAddress = os.GetEnv("METRICS_BIND_ADDRESS", "0")
 	o.PprofBindAddress = os.GetEnv("PPROF_BIND_ADDRESS", "")
 }
 
@@ -204,17 +206,23 @@ func (o *controllerOptions) setupKargoManager(
 		ctrl.Options{
 			Scheme: scheme,
 			Metrics: server.Options{
-				BindAddress: "0",
+				BindAddress: o.MetricsBindAddress,
 			},
 			PprofBindAddress: o.PprofBindAddress,
 			Client: client.Options{
 				Cache: &client.CacheOptions{
-					// The controller does not have cluster-wide permissions, to
-					// get/list/watch Secrets. Its access to Secrets grows and shrinks
-					// dynamically as Projects are created and deleted. We disable caching
-					// here since the underlying informer will not be able to watch
-					// Secrets in all namespaces.
-					DisableFor: []client.Object{&corev1.Secret{}},
+					DisableFor: []client.Object{
+						// The controller does not have cluster-wide permissions, to
+						// get/list/watch Secrets. Its access to Secrets grows and shrinks
+						// dynamically as Projects are created and deleted. We disable
+						// caching here since the underlying informer will not be able to
+						// watch Secrets in all namespaces.
+						&corev1.Secret{},
+						// The controller has cluster-wide permissions to get/list/watch
+						// ConfigMaps, but ConfigMaps have the potential to be quite large,
+						// so we prefer to not cache them.
+						&corev1.ConfigMap{},
+					},
 				},
 			},
 			Cache: cache.Options{

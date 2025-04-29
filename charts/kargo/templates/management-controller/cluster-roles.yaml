@@ -41,10 +41,26 @@ rules:
   - get
   - list
   - watch
+  - update
 - apiGroups:
   - kargo.akuity.io
   resources:
   - projects/status
   verbs:
   - patch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - projectconfigs
+  verbs:
+  - create
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - stages
+  - warehouses
+  verbs:
+  - get
+  - list
+  - watch
 {{- end }}  

@@ -39,7 +39,7 @@ func TestUpdateProjectSecret(t *testing.T) {
 								Namespace: "kargo-demo",
 								Name:      "secret",
 								Labels: map[string]string{
-									kargoapi.ProjectSecretLabelKey: kargoapi.LabelTrueValue,
+									kargoapi.CredentialTypeLabelKey: kargoapi.CredentialTypeLabelGeneric,
 								},
 							},
 							StringData: map[string]string{
@@ -67,7 +67,6 @@ func TestUpdateProjectSecret(t *testing.T) {
 			"TOKEN_1": "bar",
 		},
 	}))
-
 	require.NoError(t, err)
 
 	secret := corev1.Secret{}
@@ -90,9 +89,6 @@ func TestApplyProjectSecretUpdateToK8sSecret(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "kargo-demo",
 			Name:      "secret",
-			Labels: map[string]string{
-				kargoapi.CredentialTypeLabelKey: kargoapi.CredentialTypeLabelGeneric,
-			},
 		},
 		Data: map[string][]byte{
 			"TOKEN_1": []byte("foo"),
@@ -140,18 +136,5 @@ func TestApplyProjectSecretUpdateToK8sSecret(t *testing.T) {
 			},
 		})
 		require.Equal(t, expectedSecret, secret)
-	})
-
-	t.Run("legacy project secret label gets converted", func(t *testing.T) {
-		expectedSecret := baseSecret.DeepCopy()
-		expectedSecret.Labels = map[string]string{
-			kargoapi.CredentialTypeLabelKey: kargoapi.CredentialTypeLabelGeneric,
-		}
-		secret := baseSecret.DeepCopy()
-		secret.Labels = map[string]string{
-			kargoapi.ProjectSecretLabelKey: kargoapi.LabelTrueValue,
-		}
-		applyProjectSecretUpdateToK8sSecret(secret, projectSecret{data: nil})
-		require.Equal(t, expectedSecret.Labels, secret.Labels)
 	})
 }

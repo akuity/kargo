@@ -13,6 +13,12 @@ import (
 	"github.com/akuity/kargo/pkg/promotion"
 	promoPkg "github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+
+	_ "github.com/akuity/kargo/internal/gitprovider/azure"  // Azure provider registration
+	_ "github.com/akuity/kargo/internal/gitprovider/bitbucket" // Bitbucket provider registration
+	_ "github.com/akuity/kargo/internal/gitprovider/gitea"  // Gitea provider registration
+	_ "github.com/akuity/kargo/internal/gitprovider/github" // GitHub provider registration
+	_ "github.com/akuity/kargo/internal/gitprovider/gitlab" // GitLab provider registration
 )
 
 // gitPRWaiter is an implementation of the promotion.StepRunner interface that

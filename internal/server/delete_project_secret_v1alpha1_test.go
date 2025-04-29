@@ -7,6 +7,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -43,15 +44,6 @@ func TestDeleteProjectSecret(t *testing.T) {
 								},
 							},
 						},
-						&corev1.Secret{
-							ObjectMeta: metav1.ObjectMeta{
-								Namespace: "kargo-demo",
-								Name:      "secret-b",
-								Labels: map[string]string{
-									kargoapi.ProjectSecretLabelKey: kargoapi.LabelTrueValue, // Legacy label
-								},
-							},
-						},
 					).Build(), nil
 			},
 		},
@@ -84,27 +76,5 @@ func TestDeleteProjectSecret(t *testing.T) {
 		},
 		&secret,
 	)
-	require.Error(t, err)
-
-	_, err = s.DeleteProjectSecret(
-		ctx,
-		connect.NewRequest(
-			&svcv1alpha1.DeleteProjectSecretRequest{
-				Project: "kargo-demo",
-				Name:    "secret-b", // Has the legacy label
-			},
-		),
-	)
-	require.NoError(t, err)
-
-	err = s.client.Get(
-		ctx,
-		types.NamespacedName{
-			Namespace: "kargo-demo",
-			Name:      "secret-b",
-		},
-		&secret,
-	)
-	require.Error(t, err)
-
+	require.True(t, apierrors.IsNotFound(err))
 }

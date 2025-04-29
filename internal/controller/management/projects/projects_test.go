@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -29,7 +30,7 @@ func TestNewReconciler(t *testing.T) {
 	require.Equal(t, testCfg, r.cfg)
 	require.NotNil(t, r.client)
 	require.NotNil(t, r.getProjectFn)
-	require.NotNil(t, r.syncProjectFn)
+	require.NotNil(t, r.reconcileFn)
 	require.NotNil(t, r.ensureNamespaceFn)
 	require.NotNil(t, r.patchProjectStatusFn)
 	require.NotNil(t, r.getNamespaceFn)
@@ -37,13 +38,14 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, r.patchOwnerReferencesFn)
 	require.NotNil(t, r.ensureFinalizerFn)
 	require.NotNil(t, r.ensureAPIAdminPermissionsFn)
-	require.NotNil(t, r.ensureDefaultProjectRolesFn)
+	require.NotNil(t, r.ensureControllerPermissionsFn)
+	require.NotNil(t, r.ensureDefaultUserRolesFn)
 	require.NotNil(t, r.createServiceAccountFn)
 	require.NotNil(t, r.createRoleFn)
 	require.NotNil(t, r.createRoleBindingFn)
 }
 
-func TestReconcile(t *testing.T) {
+func TestReconciler_Reconcile(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
@@ -113,7 +115,7 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
-			name: "error syncing project",
+			name: "error running internal reconcile",
 			reconciler: &reconciler{
 				getProjectFn: func(
 					context.Context,
@@ -122,11 +124,11 @@ func TestReconcile(t *testing.T) {
 				) (*kargoapi.Project, error) {
 					return &kargoapi.Project{}, nil
 				},
-				syncProjectFn: func(
+				reconcileFn: func(
 					context.Context,
 					*kargoapi.Project,
-				) (kargoapi.ProjectStatus, error) {
-					return kargoapi.ProjectStatus{}, errors.New("something went wrong")
+				) (kargoapi.ProjectStatus, bool, error) {
+					return kargoapi.ProjectStatus{}, false, errors.New("something went wrong")
 				},
 				patchProjectStatusFn: func(
 					_ context.Context,
@@ -150,11 +152,11 @@ func TestReconcile(t *testing.T) {
 				) (*kargoapi.Project, error) {
 					return &kargoapi.Project{}, nil
 				},
-				syncProjectFn: func(
+				reconcileFn: func(
 					context.Context,
 					*kargoapi.Project,
-				) (kargoapi.ProjectStatus, error) {
-					return kargoapi.ProjectStatus{}, nil
+				) (kargoapi.ProjectStatus, bool, error) {
+					return kargoapi.ProjectStatus{}, false, nil
 				},
 				patchProjectStatusFn: func(
 					_ context.Context,
@@ -177,75 +179,353 @@ func TestReconcile(t *testing.T) {
 	}
 }
 
-func TestSyncProject(t *testing.T) {
+func TestReconciler_reconcile(t *testing.T) {
+	const testProject = "fake-project"
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	tests := []struct {
+		name        string
+		reconciler  *reconciler
+		project     *kargoapi.Project
+		interceptor interceptor.Funcs
+		assertions  func(
+			t *testing.T,
+			status kargoapi.ProjectStatus,
+			requeue bool,
+			cl client.Client,
+			err error,
+		)
+	}{
+		{
+			name:       "success migrating phase to conditions",
+			reconciler: &reconciler{},
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{Name: testProject},
+				Status: kargoapi.ProjectStatus{
+					Phase: kargoapi.ProjectPhaseInitializing,
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				status kargoapi.ProjectStatus,
+				requeue bool,
+				_ client.Client,
+				err error,
+			) {
+				require.NoError(t, err)
+
+				// Phase should be cleared
+				require.Empty(t, status.Phase) // nolint:staticcheck
+
+				// Conditions should be set
+				reconciling := conditions.Get(&status, kargoapi.ConditionTypeReconciling)
+				require.NotNil(t, reconciling)
+				require.Equal(t, metav1.ConditionTrue, reconciling.Status)
+				require.Equal(t, "Syncing", reconciling.Reason)
+
+				ready := conditions.Get(&status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, ready)
+				require.Equal(t, metav1.ConditionFalse, ready.Status)
+				require.Equal(t, "Syncing", ready.Reason)
+
+				// Immediate requeue should be requested
+				require.True(t, requeue)
+			},
+		},
+		{
+			name:       "error migrating spec to ProjectConfig",
+			reconciler: &reconciler{},
+			// Requires no phase --> conditions migration.
+			// Does require spec --> ProjectConfig migration.
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{Name: testProject},
+				// Non-nil of spec is enough to trigger migration.
+				Spec: &kargoapi.ProjectSpec{}, // nolint:staticcheck
+			},
+			interceptor: interceptor.Funcs{
+				Update: func(
+					context.Context,
+					client.WithWatch,
+					client.Object,
+					...client.UpdateOption,
+				) error {
+					return fmt.Errorf("something went wrong")
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				status kargoapi.ProjectStatus,
+				requeue bool,
+				_ client.Client,
+				err error,
+			) {
+				require.ErrorContains(t, err, "something went wrong")
+
+				// Doesn't impact conditions
+				require.Len(t, status.Conditions, 0)
+
+				// Immediate requeue should NOT be requested
+				require.False(t, requeue)
+			},
+		},
+		{
+			name:       "success migrating spec to ProjectConfig",
+			reconciler: &reconciler{},
+			// Requires no phase --> conditions migration.
+			// Does require spec --> ProjectConfig migration.
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{Name: testProject},
+				// Non-nil of spec is enough to trigger migration.
+				Spec: &kargoapi.ProjectSpec{}, // nolint:staticcheck
+			},
+			assertions: func(
+				t *testing.T,
+				status kargoapi.ProjectStatus,
+				requeue bool,
+				cl client.Client,
+				err error,
+			) {
+				require.NoError(t, err)
+
+				// Doesn't impact conditions
+				require.Len(t, status.Conditions, 0)
+
+				// Spec should be cleared
+				project := &kargoapi.Project{}
+				err = cl.Get(context.Background(), types.NamespacedName{Name: testProject}, project)
+				require.NoError(t, err)
+				require.Empty(t, project.Spec) // nolint:staticcheck
+
+				// Immediate requeue should be requested
+				require.True(t, requeue)
+			},
+		},
+		{
+			name: "error syncing project",
+			reconciler: &reconciler{
+				ensureNamespaceFn: func(context.Context, *kargoapi.Project) error {
+					return fmt.Errorf("something went wrong")
+				},
+			},
+			// Requires no phase --> conditions migration.
+			// Requires no spec --> ProjectConfig migration.
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{Name: testProject},
+			},
+			assertions: func(
+				t *testing.T,
+				status kargoapi.ProjectStatus,
+				requeue bool,
+				_ client.Client,
+				err error,
+			) {
+				require.ErrorContains(t, err, "something went wrong")
+
+				// Still syncing because retry could succeed
+				require.Len(t, status.Conditions, 2)
+				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCondition)
+				require.Equal(t, metav1.ConditionFalse, readyCondition.Status)
+
+				reconcilingCondition := conditions.Get(&status, kargoapi.ConditionTypeReconciling)
+				require.NotNil(t, reconcilingCondition)
+				require.Equal(t, metav1.ConditionTrue, reconcilingCondition.Status)
+				require.Equal(t, "Syncing", reconcilingCondition.Reason)
+
+				// Immediate requeue should NOT be requested
+				require.False(t, requeue)
+			},
+		},
+		{
+			name: "error collecting Project stats",
+			reconciler: &reconciler{
+				ensureNamespaceFn: func(context.Context, *kargoapi.Project) error {
+					return nil
+				},
+				ensureAPIAdminPermissionsFn: func(context.Context, *kargoapi.Project) error {
+					return nil
+				},
+				ensureDefaultUserRolesFn: func(context.Context, *kargoapi.Project) error {
+					return nil
+				},
+			},
+			// Requires no phase --> conditions migration.
+			// Requires no spec --> ProjectConfig migration.
+			// Is already initialized.
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{Name: testProject},
+				Status: kargoapi.ProjectStatus{
+					Conditions: []metav1.Condition{{
+						Type:   kargoapi.ConditionTypeReady,
+						Status: metav1.ConditionTrue,
+					}},
+				},
+			},
+			interceptor: interceptor.Funcs{
+				// Fail to list Warehouses
+				List: func(
+					context.Context,
+					client.WithWatch,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return fmt.Errorf("something went wrong")
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				status kargoapi.ProjectStatus,
+				requeue bool,
+				_ client.Client,
+				err error,
+			) {
+				require.ErrorContains(t, err, "something went wrong")
+
+				require.Len(t, status.Conditions, 2)
+
+				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCondition)
+				require.Equal(t, metav1.ConditionTrue, readyCondition.Status)
+
+				healthCondition := conditions.Get(&status, kargoapi.ConditionTypeHealthy)
+				require.NotNil(t, healthCondition)
+				require.Equal(t, metav1.ConditionFalse, healthCondition.Status)
+
+				// Immediate requeue should NOT be requested
+				require.False(t, requeue)
+			},
+		},
+		{
+			name: "success collecting Project stats",
+			reconciler: &reconciler{
+				ensureNamespaceFn: func(context.Context, *kargoapi.Project) error {
+					return nil
+				},
+				ensureAPIAdminPermissionsFn: func(context.Context, *kargoapi.Project) error {
+					return nil
+				},
+				ensureDefaultUserRolesFn: func(context.Context, *kargoapi.Project) error {
+					return nil
+				},
+			},
+			// Requires no phase --> conditions migration.
+			// Requires no spec --> ProjectConfig migration.
+			// Is already ready.
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{Name: testProject},
+				Status: kargoapi.ProjectStatus{
+					Conditions: []metav1.Condition{{
+						Type:   kargoapi.ConditionTypeReady,
+						Status: metav1.ConditionTrue,
+					}},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				status kargoapi.ProjectStatus,
+				requeue bool,
+				_ client.Client,
+				err error,
+			) {
+				require.NoError(t, err)
+
+				require.Len(t, status.Conditions, 1)
+
+				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCondition)
+				require.Equal(t, metav1.ConditionTrue, readyCondition.Status)
+
+				// Immediate requeue should NOT be requested
+				require.False(t, requeue)
+
+				// Status has stats
+				require.NotNil(t, status.Stats)
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.reconciler.client = fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(tt.project).
+				WithInterceptorFuncs(tt.interceptor).
+				Build()
+			status, requeue, err := tt.reconciler.reconcile(context.Background(), tt.project)
+			tt.assertions(t, status, requeue, tt.reconciler.client, err)
+		})
+	}
+}
+
+func TestReconciler_syncProject(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
-		assertions func(*testing.T, kargoapi.ProjectStatus, error)
+		project    *kargoapi.Project
+		assertions func(*testing.T, kargoapi.ProjectStatus, error,
+		)
 	}{
 		{
 			name: "error ensuring namespace",
 			reconciler: &reconciler{
-				ensureNamespaceFn: func(
-					_ context.Context,
-					project *kargoapi.Project,
-				) (kargoapi.ProjectStatus, error) {
-					return *project.Status.DeepCopy(), errors.New("something went wrong")
+				ensureNamespaceFn: func(context.Context, *kargoapi.Project) error {
+					return errors.New("something went wrong")
 				},
 			},
+			project: &kargoapi.Project{},
 			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
 				require.ErrorContains(t, err, "something went wrong")
 
-				// Still initializing because retry could succeed
+				// Still syncing because retry could succeed
 				require.Len(t, status.Conditions, 2)
 
 				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCondition)
 				require.Equal(t, metav1.ConditionFalse, readyCondition.Status)
-				require.Equal(t, "NamespaceInitializationFailed", readyCondition.Reason)
+				require.Equal(t, "EnsuringNamespaceFailed", readyCondition.Reason)
 
 				reconcilingCondition := conditions.Get(&status, kargoapi.ConditionTypeReconciling)
 				require.NotNil(t, reconcilingCondition)
 				require.Equal(t, metav1.ConditionTrue, reconcilingCondition.Status)
-				require.Equal(t, "Initializing", reconcilingCondition.Reason)
+				require.Equal(t, "Syncing", reconcilingCondition.Reason)
 			},
 		},
 		{
 			name: "fatal error ensuring namespace",
 			reconciler: &reconciler{
-				ensureNamespaceFn: func(
-					_ context.Context,
-					project *kargoapi.Project,
-				) (kargoapi.ProjectStatus, error) {
-					status := *project.Status.DeepCopy()
-					return status, errProjectNamespaceExists
+				ensureNamespaceFn: func(context.Context, *kargoapi.Project) error {
+					return errProjectNamespaceExists
 				},
 			},
+			project: &kargoapi.Project{},
 			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
 				require.True(t, errors.Is(err, errProjectNamespaceExists))
 
-				// Failed because retry cannot possibly succeed
-				require.Len(t, status.Conditions, 2)
+				// Still syncing because retry could succeed
+				require.Len(t, status.Conditions, 3)
 
 				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCondition)
 				require.Equal(t, metav1.ConditionFalse, readyCondition.Status)
-				require.Equal(t, "NamespaceInitializationFailed", readyCondition.Reason)
+				require.Equal(t, "EnsuringNamespaceFailed", readyCondition.Reason)
 
 				stalledCondition := conditions.Get(&status, kargoapi.ConditionTypeStalled)
 				require.NotNil(t, stalledCondition)
 				require.Equal(t, metav1.ConditionTrue, stalledCondition.Status)
 				require.Equal(t, "ExistingNamespaceMissingLabel", stalledCondition.Reason)
+
+				reconcilingCondition := conditions.Get(&status, kargoapi.ConditionTypeReconciling)
+				require.NotNil(t, reconcilingCondition)
+				require.Equal(t, metav1.ConditionTrue, reconcilingCondition.Status)
+				require.Equal(t, "Syncing", reconcilingCondition.Reason)
 			},
 		},
 		{
-			name: "error ensuring project admin permissions",
+			name: "error ensuring api server permissions",
 			reconciler: &reconciler{
-				ensureNamespaceFn: func(
-					_ context.Context,
-					project *kargoapi.Project,
-				) (kargoapi.ProjectStatus, error) {
-					return *project.Status.DeepCopy(), nil
+				ensureNamespaceFn: func(context.Context, *kargoapi.Project) error {
+					return nil
 				},
 				ensureAPIAdminPermissionsFn: func(
 					context.Context,
@@ -254,21 +534,22 @@ func TestSyncProject(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
+			project: &kargoapi.Project{},
 			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
 				require.ErrorContains(t, err, "something went wrong")
 
-				// Still initializing because retry could succeed
+				// Still syncing because retry could succeed
 				require.Len(t, status.Conditions, 2)
 
 				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCondition)
 				require.Equal(t, metav1.ConditionFalse, readyCondition.Status)
-				require.Equal(t, "PermissionsInitializationFailed", readyCondition.Reason)
+				require.Equal(t, "EnsuringAPIServerPermissionsFailed", readyCondition.Reason)
 
 				reconcilingCondition := conditions.Get(&status, kargoapi.ConditionTypeReconciling)
 				require.NotNil(t, reconcilingCondition)
 				require.Equal(t, metav1.ConditionTrue, reconcilingCondition.Status)
-				require.Equal(t, "Initializing", reconcilingCondition.Reason)
+				require.Equal(t, "Syncing", reconcilingCondition.Reason)
 			},
 		},
 		{
@@ -277,11 +558,8 @@ func TestSyncProject(t *testing.T) {
 				cfg: ReconcilerConfig{
 					ManageControllerRoleBindings: true,
 				},
-				ensureNamespaceFn: func(
-					_ context.Context,
-					project *kargoapi.Project,
-				) (kargoapi.ProjectStatus, error) {
-					return *project.Status.DeepCopy(), nil
+				ensureNamespaceFn: func(context.Context, *kargoapi.Project) error {
+					return nil
 				},
 				ensureAPIAdminPermissionsFn: func(
 					context.Context,
@@ -296,18 +574,29 @@ func TestSyncProject(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, _ kargoapi.ProjectStatus, err error) {
+			project: &kargoapi.Project{},
+			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
 				require.ErrorContains(t, err, "something went wrong")
+
+				// Still syncing because retry could succeed
+				require.Len(t, status.Conditions, 2)
+
+				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCondition)
+				require.Equal(t, metav1.ConditionFalse, readyCondition.Status)
+				require.Equal(t, "EnsuringControllerPermissionsFailed", readyCondition.Reason)
+
+				reconcilingCondition := conditions.Get(&status, kargoapi.ConditionTypeReconciling)
+				require.NotNil(t, reconcilingCondition)
+				require.Equal(t, metav1.ConditionTrue, reconcilingCondition.Status)
+				require.Equal(t, "Syncing", reconcilingCondition.Reason)
 			},
 		},
 		{
-			name: "error ensuring default project roles",
+			name: "error ensuring default user roles",
 			reconciler: &reconciler{
-				ensureNamespaceFn: func(
-					_ context.Context,
-					project *kargoapi.Project,
-				) (kargoapi.ProjectStatus, error) {
-					return *project.Status.DeepCopy(), nil
+				ensureNamespaceFn: func(context.Context, *kargoapi.Project) error {
+					return nil
 				},
 				ensureAPIAdminPermissionsFn: func(
 					context.Context,
@@ -315,38 +604,36 @@ func TestSyncProject(t *testing.T) {
 				) error {
 					return nil
 				},
-				ensureDefaultProjectRolesFn: func(
+				ensureDefaultUserRolesFn: func(
 					context.Context,
 					*kargoapi.Project,
 				) error {
 					return errors.New("something went wrong")
 				},
 			},
+			project: &kargoapi.Project{},
 			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
 				require.ErrorContains(t, err, "something went wrong")
 
-				// Still initializing because retry could succeed
+				// Still syncing because retry could succeed
 				require.Len(t, status.Conditions, 2)
 
 				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCondition)
 				require.Equal(t, metav1.ConditionFalse, readyCondition.Status)
-				require.Equal(t, "RolesInitializationFailed", readyCondition.Reason)
+				require.Equal(t, "EnsuringDefaultUserRoles", readyCondition.Reason)
 
 				reconcilingCondition := conditions.Get(&status, kargoapi.ConditionTypeReconciling)
 				require.NotNil(t, reconcilingCondition)
 				require.Equal(t, metav1.ConditionTrue, reconcilingCondition.Status)
-				require.Equal(t, "Initializing", reconcilingCondition.Reason)
+				require.Equal(t, "Syncing", reconcilingCondition.Reason)
 			},
 		},
 		{
 			name: "success",
 			reconciler: &reconciler{
-				ensureNamespaceFn: func(
-					_ context.Context,
-					project *kargoapi.Project,
-				) (kargoapi.ProjectStatus, error) {
-					return *project.Status.DeepCopy(), nil
+				ensureNamespaceFn: func(context.Context, *kargoapi.Project) error {
+					return nil
 				},
 				ensureAPIAdminPermissionsFn: func(
 					context.Context,
@@ -354,13 +641,14 @@ func TestSyncProject(t *testing.T) {
 				) error {
 					return nil
 				},
-				ensureDefaultProjectRolesFn: func(
+				ensureDefaultUserRolesFn: func(
 					context.Context,
 					*kargoapi.Project,
 				) error {
 					return nil
 				},
 			},
+			project: &kargoapi.Project{},
 			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
 				require.NoError(t, err)
 
@@ -369,7 +657,7 @@ func TestSyncProject(t *testing.T) {
 				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCondition)
 				require.Equal(t, metav1.ConditionTrue, readyCondition.Status)
-				require.Equal(t, "Initialized", readyCondition.Reason)
+				require.Equal(t, "Synced", readyCondition.Reason)
 			},
 		},
 	}
@@ -377,21 +665,19 @@ func TestSyncProject(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			status, err := testCase.reconciler.syncProject(
 				context.Background(),
-				&kargoapi.Project{
-					Status: kargoapi.ProjectStatus{},
-				},
+				testCase.project,
 			)
 			testCase.assertions(t, status, err)
 		})
 	}
 }
 
-func TestEnsureNamespace(t *testing.T) {
+func TestReconciler_ensureNamespace(t *testing.T) {
 	testCases := []struct {
 		name       string
 		project    *kargoapi.Project
 		reconciler *reconciler
-		assertions func(*testing.T, kargoapi.ProjectStatus, error)
+		assertions func(*testing.T, error)
 	}{
 		{
 			name:    "error getting namespace",
@@ -406,7 +692,7 @@ func TestEnsureNamespace(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, _ kargoapi.ProjectStatus, err error) {
+			assertions: func(t *testing.T, err error) {
 				require.ErrorContains(t, err, "something went wrong")
 				require.ErrorContains(t, err, "error getting namespace")
 			},
@@ -424,7 +710,7 @@ func TestEnsureNamespace(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(t *testing.T, _ kargoapi.ProjectStatus, err error) {
+			assertions: func(t *testing.T, err error) {
 				require.True(t, errors.Is(err, errProjectNamespaceExists))
 			},
 		},
@@ -454,7 +740,7 @@ func TestEnsureNamespace(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(t *testing.T, _ kargoapi.ProjectStatus, err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -484,7 +770,7 @@ func TestEnsureNamespace(t *testing.T) {
 					return false, errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, _ kargoapi.ProjectStatus, err error) {
+			assertions: func(t *testing.T, err error) {
 				require.ErrorContains(t, err, "error ensuring finalizer on namespace")
 				require.ErrorContains(t, err, "something went wrong")
 			},
@@ -522,7 +808,7 @@ func TestEnsureNamespace(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, _ kargoapi.ProjectStatus, err error) {
+			assertions: func(t *testing.T, err error) {
 				require.ErrorContains(t, err, "error patching namespace")
 				require.ErrorContains(t, err, "something went wrong")
 			},
@@ -560,7 +846,7 @@ func TestEnsureNamespace(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(t *testing.T, _ kargoapi.ProjectStatus, err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
@@ -584,7 +870,7 @@ func TestEnsureNamespace(t *testing.T) {
 					return errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, _ kargoapi.ProjectStatus, err error) {
+			assertions: func(t *testing.T, err error) {
 				require.ErrorContains(t, err, "something went wrong")
 				require.ErrorContains(t, err, "error creating namespace")
 			},
@@ -613,23 +899,22 @@ func TestEnsureNamespace(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(t *testing.T, _ kargoapi.ProjectStatus, err error) {
+			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			res, err := testCase.reconciler.ensureNamespace(
-				context.Background(),
-				testCase.project,
+			testCase.assertions(
+				t,
+				testCase.reconciler.ensureNamespace(context.Background(), testCase.project),
 			)
-			testCase.assertions(t, res, err)
 		})
 	}
 }
 
-func TestEnsureAPIAdminPermissions(t *testing.T) {
+func TestReconciler_ensureAPIAdminPermissions(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
@@ -695,7 +980,7 @@ func TestEnsureAPIAdminPermissions(t *testing.T) {
 	}
 }
 
-func TestEnsureControllerPermissions(t *testing.T) {
+func TestReconciler_ensureControllerPermissions(t *testing.T) {
 	cfg := ReconcilerConfigFromEnv()
 
 	testControllerSA := &corev1.ServiceAccount{
@@ -949,7 +1234,7 @@ func TestEnsureControllerPermissions(t *testing.T) {
 	}
 }
 
-func TestEnsureDefaultProjectRoles(t *testing.T) {
+func TestReconciler_ensureDefaultProjectRoles(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
@@ -1058,7 +1343,7 @@ func TestEnsureDefaultProjectRoles(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
 				t,
-				testCase.reconciler.ensureDefaultProjectRoles(
+				testCase.reconciler.ensureDefaultUserRoles(
 					context.Background(),
 					&kargoapi.Project{},
 				),
@@ -1067,7 +1352,7 @@ func TestEnsureDefaultProjectRoles(t *testing.T) {
 	}
 }
 
-func TestMigratePhaseToConditions(t *testing.T) {
+func TestReconciler_migratePhaseToConditions(t *testing.T) {
 	tests := []struct {
 		name       string
 		project    *kargoapi.Project
@@ -1107,10 +1392,10 @@ func TestMigratePhaseToConditions(t *testing.T) {
 				reconcilingCondition := conditions.Get(&status, kargoapi.ConditionTypeReconciling)
 				require.NotNil(t, reconcilingCondition)
 				require.Equal(t, metav1.ConditionTrue, reconcilingCondition.Status)
-				require.Equal(t, "Initializing", reconcilingCondition.Reason)
+				require.Equal(t, "Syncing", reconcilingCondition.Reason)
 				require.Equal(
 					t,
-					"Creating project namespace and initializing permissions",
+					"Ensuring project namespace and permissions",
 					reconcilingCondition.Message,
 				)
 				require.Equal(t, int64(1), reconcilingCondition.ObservedGeneration)
@@ -1118,10 +1403,10 @@ func TestMigratePhaseToConditions(t *testing.T) {
 				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCondition)
 				require.Equal(t, metav1.ConditionFalse, readyCondition.Status)
-				require.Equal(t, "Initializing", readyCondition.Reason)
+				require.Equal(t, "Syncing", readyCondition.Reason)
 				require.Equal(
 					t,
-					"Creating project namespace and initializing permissions",
+					"Ensuring project namespace and permissions",
 					readyCondition.Message,
 				)
 				require.Equal(t, int64(1), readyCondition.ObservedGeneration)
@@ -1158,12 +1443,7 @@ func TestMigratePhaseToConditions(t *testing.T) {
 				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCondition)
 				require.Equal(t, metav1.ConditionFalse, readyCondition.Status)
-				require.Equal(t, "NamespaceInitializationFailed", readyCondition.Reason)
-				require.Contains(
-					t,
-					readyCondition.Message,
-					"namespace already exists and is not labeled as a Project namespace",
-				)
+				require.Equal(t, "ExistingNamespaceMissingLabel", readyCondition.Reason)
 				require.Equal(t, int64(2), readyCondition.ObservedGeneration)
 			},
 		},
@@ -1186,8 +1466,8 @@ func TestMigratePhaseToConditions(t *testing.T) {
 				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCondition)
 				require.Equal(t, metav1.ConditionTrue, readyCondition.Status)
-				require.Equal(t, "Initialized", readyCondition.Reason)
-				require.Equal(t, "Project is initialized and ready for use", readyCondition.Message)
+				require.Equal(t, "Synced", readyCondition.Reason)
+				require.Equal(t, "Project is synced and ready for use", readyCondition.Message)
 				require.Equal(t, int64(3), readyCondition.ObservedGeneration)
 			},
 		},
@@ -1218,143 +1498,127 @@ func TestMigratePhaseToConditions(t *testing.T) {
 	}
 }
 
-func TestMustReconcileProject(t *testing.T) {
+func TestMigrateSpecToProjectConfig(t *testing.T) {
+	const testProject = "fake-project"
+	testScheme := runtime.NewScheme()
+	err := kargoapi.AddToScheme(testScheme)
+	require.NoError(t, err)
+
 	tests := []struct {
-		name       string
-		project    *kargoapi.Project
-		assertions func(t *testing.T, reason string, ok bool)
+		name        string
+		project     *kargoapi.Project
+		interceptor interceptor.Funcs
+		assertions  func(t *testing.T, migrated bool, cl client.Client, err error)
 	}{
 		{
-			name: "Stalled condition is true",
+			name: "nil spec",
 			project: &kargoapi.Project{
-				Status: kargoapi.ProjectStatus{
-					Conditions: []metav1.Condition{
-						{
-							Type:   kargoapi.ConditionTypeStalled,
-							Status: metav1.ConditionTrue,
-							Reason: "StalledReason",
-						},
-					},
-				},
+				ObjectMeta: metav1.ObjectMeta{Name: testProject},
+				Spec:       nil,
 			},
-			assertions: func(t *testing.T, reason string, ok bool) {
-				require.Equal(t, "StalledReason", reason)
-				require.False(t, ok)
+			assertions: func(t *testing.T, migrated bool, cl client.Client, err error) {
+				require.NoError(t, err)
+				require.False(t, migrated)
+				projCfg := &kargoapi.ProjectConfig{}
+				err = cl.Get(
+					context.Background(),
+					types.NamespacedName{
+						Name:      testProject,
+						Namespace: testProject,
+					},
+					projCfg,
+				)
+				require.True(t, kubeerr.IsNotFound(err))
 			},
 		},
 		{
-			name: "Stalled condition is false",
+			name: "empty promotion policies",
 			project: &kargoapi.Project{
-				Status: kargoapi.ProjectStatus{
-					Conditions: []metav1.Condition{
-						{
-							Type:   kargoapi.ConditionTypeStalled,
-							Status: metav1.ConditionFalse,
-							Reason: "NotStalledReason",
-						},
-					},
+				ObjectMeta: metav1.ObjectMeta{Name: testProject},
+				Spec: &kargoapi.ProjectSpec{ // nolint:staticcheck
+					PromotionPolicies: []kargoapi.PromotionPolicy{},
 				},
 			},
-			assertions: func(t *testing.T, reason string, ok bool) {
-				require.Empty(t, reason)
-				require.True(t, ok)
+			assertions: func(t *testing.T, migrated bool, cl client.Client, err error) {
+				require.NoError(t, err)
+				require.True(t, migrated)
+				project := &kargoapi.Project{}
+				err = cl.Get(context.Background(), types.NamespacedName{Name: testProject}, project)
+				require.NoError(t, err)
+				require.Nil(t, project.Spec) // nolint:staticcheck
+				projCfg := &kargoapi.ProjectConfig{}
+				err = cl.Get(
+					context.Background(),
+					types.NamespacedName{
+						Name:      testProject,
+						Namespace: testProject,
+					},
+					projCfg,
+				)
+				require.True(t, kubeerr.IsNotFound(err))
 			},
 		},
 		{
-			name: "Ready condition is true",
+			name: "error creating ProjectConfig",
 			project: &kargoapi.Project{
-				Status: kargoapi.ProjectStatus{
-					Conditions: []metav1.Condition{
-						{
-							Type:   kargoapi.ConditionTypeReady,
-							Status: metav1.ConditionTrue,
-							Reason: "ReadyReason",
-						},
+				ObjectMeta: metav1.ObjectMeta{Name: testProject},
+				Spec: &kargoapi.ProjectSpec{ // nolint:staticcheck
+					PromotionPolicies: []kargoapi.PromotionPolicy{
+						{Stage: "policy-1"}, // nolint:staticcheck
 					},
 				},
 			},
-			assertions: func(t *testing.T, reason string, ok bool) {
-				require.Equal(t, "ReadyReason", reason)
-				require.False(t, ok)
+			interceptor: interceptor.Funcs{
+				Create: func(context.Context, client.WithWatch, client.Object, ...client.CreateOption) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, migrated bool, _ client.Client, err error) {
+				require.ErrorContains(t, err, "something went wrong")
+				require.False(t, migrated)
 			},
 		},
 		{
-			name: "Ready condition is false",
+			name: "success with promotion policies",
 			project: &kargoapi.Project{
-				Status: kargoapi.ProjectStatus{
-					Conditions: []metav1.Condition{
-						{
-							Type:   kargoapi.ConditionTypeReady,
-							Status: metav1.ConditionFalse,
-							Reason: "NotReadyReason",
-						},
+				ObjectMeta: metav1.ObjectMeta{Name: testProject},
+				Spec: &kargoapi.ProjectSpec{ // nolint:staticcheck
+					PromotionPolicies: []kargoapi.PromotionPolicy{
+						{Stage: "policy-1"}, // nolint:staticcheck
 					},
 				},
 			},
-			assertions: func(t *testing.T, reason string, ok bool) {
-				require.Empty(t, reason)
-				require.True(t, ok)
-			},
-		},
-		{
-			name: "Stalled true takes precedence over Ready true",
-			project: &kargoapi.Project{
-				Status: kargoapi.ProjectStatus{
-					Conditions: []metav1.Condition{
-						{
-							Type:   kargoapi.ConditionTypeStalled,
-							Status: metav1.ConditionTrue,
-							Reason: "StalledReason",
-						},
-						{
-							Type:   kargoapi.ConditionTypeReady,
-							Status: metav1.ConditionTrue,
-							Reason: "ReadyReason",
-						},
+			assertions: func(t *testing.T, migrated bool, cl client.Client, err error) {
+				require.NoError(t, err)
+				require.True(t, migrated)
+				project := &kargoapi.Project{}
+				err = cl.Get(context.Background(), types.NamespacedName{Name: testProject}, project)
+				require.NoError(t, err)
+				require.Nil(t, project.Spec) // nolint:staticcheck
+				projCfg := &kargoapi.ProjectConfig{}
+				err = cl.Get(
+					context.Background(),
+					types.NamespacedName{
+						Name:      testProject,
+						Namespace: testProject,
 					},
-				},
-			},
-			assertions: func(t *testing.T, reason string, ok bool) {
-				require.Equal(t, "StalledReason", reason)
-				require.False(t, ok)
-			},
-		},
-		{
-			name: "No relevant conditions",
-			project: &kargoapi.Project{
-				Status: kargoapi.ProjectStatus{
-					Conditions: []metav1.Condition{
-						{
-							Type:   "SomeOtherCondition",
-							Status: metav1.ConditionTrue,
-							Reason: "SomeOtherReason",
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, reason string, ok bool) {
-				require.Empty(t, reason)
-				require.True(t, ok)
-			},
-		},
-		{
-			name: "Empty conditions",
-			project: &kargoapi.Project{
-				Status: kargoapi.ProjectStatus{
-					Conditions: []metav1.Condition{},
-				},
-			},
-			assertions: func(t *testing.T, reason string, ok bool) {
-				require.Empty(t, reason)
-				require.True(t, ok)
+					projCfg,
+				)
+				require.NoError(t, err)
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			reason, ok := mustReconcileProject(tt.project)
-			tt.assertions(t, reason, ok)
+			cl := fake.NewClientBuilder().
+				WithScheme(testScheme).
+				WithObjects(tt.project).
+				WithInterceptorFuncs(tt.interceptor).
+				Build()
+			r := &reconciler{client: cl}
+			migrated, err := r.migrateSpecToProjectConfig(context.Background(), tt.project)
+			tt.assertions(t, migrated, cl, err)
 		})
 	}
 }

@@ -18,7 +18,7 @@ GitLab pull/merge requests.
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
 | `repoURL` | `string` | Y | The URL of a remote Git repository. |
-| `provider` | `string` | N | The name of the Git provider to use. Currently only `github`, `gitlab`, `azure`, and `gitea` are supported. Kargo will try to infer the provider if it is not explicitly specified. |
+| `provider` | `string` | N | The name of the Git provider to use. Currently `azure`, `bitbucket`, `gitea`, `github`, and `gitlab` are supported. Kargo will try to infer the provider if it is not explicitly specified. |
 | `insecureSkipTLSVerify` | `boolean` | N | Indicates whether to bypass TLS certificate verification when interfacing with the Git provider. Setting this to `true` is highly discouraged in production. |
 | `sourceBranch` | `string` | Y | Specifies the source branch for the pull request. |
 | `targetBranch` | `string` | N | The branch to which the changes should be merged. |

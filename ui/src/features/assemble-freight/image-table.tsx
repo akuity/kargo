@@ -37,6 +37,7 @@ export const ImageTable = ({
           title: 'Source Repo',
           render: (record: DiscoveredImageReference) =>
             record?.gitRepoURL ? (
+              // Deprecated: Use OCI annotations instead. Will be removed in version 1.7.
               <a href={record?.gitRepoURL} target='_blank' rel='noreferrer'>
                 {record?.gitRepoURL}
               </a>

@@ -310,10 +310,11 @@ Google Artifact Registry repositories.
 :::
 
 :::info
-Unlike in the case of EKS Pod Identity or IRSA, the Kargo controller does not
-fall back on using its own IAM principal directly if it is unable to impersonate
-a project-specific Google service account, although that capability is
-anticipated in a future release.
+Like in the case of EKS Pod Identity or IRSA if project-specific credentials could
+not be assumed by the Kargo controller will fall back on on using its own 
+IAM principal directly. For organizations without strict tenancy requirements, this 
+can eliminate the need to manage a large number of project-specific IAM roles. 
+While useful, this approach is not strictly recommended.
 :::
 
 ### Azure Container Registry (ACR)

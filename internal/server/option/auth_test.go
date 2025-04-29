@@ -308,7 +308,8 @@ func TestAuthenticate(t *testing.T) {
 			authInterceptor: &authInterceptor{
 				cfg: config.ServerConfig{
 					OIDCConfig: &libOIDC.Config{
-						IssuerURL: testIDPIssuer,
+						IssuerURL:     testIDPIssuer,
+						UsernameClaim: "preferred_username",
 					},
 				},
 				parseUnverifiedJWTFn: func(_ string, claims jwt.Claims) (*jwt.Token, []string, error) {
@@ -322,8 +323,9 @@ func TestAuthenticate(t *testing.T) {
 					string,
 				) (claims, error) {
 					return claims{
-						"sub":   "ironman",
-						"email": "tony@starkindustries.com",
+						"preferred_username": "foo",
+						"sub":                "ironman",
+						"email":              "tony@starkindustries.com",
 						"groups": []string{
 							"avengers",
 							"shield",
@@ -345,6 +347,7 @@ func TestAuthenticate(t *testing.T) {
 				u, ok := user.InfoFromContext(ctx)
 				require.True(t, ok)
 				require.False(t, u.IsAdmin)
+				require.Equal(t, u.Username, "foo")
 				require.Equal(t, "ironman", u.Claims["sub"])
 				require.Equal(t, "tony@starkindustries.com", u.Claims["email"])
 				require.Equal(t, []string{"avengers", "shield"}, u.Claims["groups"])

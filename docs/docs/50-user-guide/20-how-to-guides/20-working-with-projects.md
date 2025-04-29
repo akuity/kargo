@@ -43,38 +43,170 @@ creation. This includes things such as project-level RBAC resources and
 `ServiceAccount` resources.
 :::
 
-## Promotion Policies
+## Project Configuration
 
-A `Project` resource can additionally define project-level configuration. At
-present, this only includes **promotion policies** that describe which `Stage`s
-are eligible for automatic promotion of newly available `Freight`.
+A `ProjectConfig` resource defines project-level configuration for an associated
+`Project`. At present, this only includes
+[promotion policies](#promotion-policies)
+that describe which `Stage`s are eligible for automatic promotion of newly
+available `Freight`.
 
-:::note
-Promotion policies are defined at the project-level because users with
-permission to update `Stage` resources in a given project `Namespace` may _not_
-have permission to create `Promotion` resources. Defining promotion policies at
-the project-level therefore restricts such users from enabling automatic
-promotions for a `Stage` to which they may lack permission to promote to
-manually. It leaves decisions about eligibility for auto-promotion squarely in
-the hands of someone like a "project admin."
-:::
+The `ProjectConfig` resource must have the same name as its associated `Project`
+and be created in the `Namespace` of the `Project`. This separation of
+configuration from the `Project` resource enables more granular RBAC control.
+Users can be granted permission to modify project configurations via
+`ProjectConfig` resources without necessarily having broader access to `Project`
+resources themselves.
+
+### Promotion Policies
+
+A `ProjectConfig` resource can contain multiple promotion policies. Each policy
+is defined by a `stageSelector` and an `autoPromotionEnabled` flag. The
+`stageSelector` specifies which `Stage`s the policy applies to, and the
+`autoPromotionEnabled` flag indicates whether automatic promotion is enabled for
+those `Stage`s.
+
+#### Basic Promotion Policy
 
 In the example below, the `test` and `uat` `Stage`s are eligible for automatic
 promotion of newly available `Freight`, but any other `Stage`s in the `Project`
 are not:
 
 ```yaml
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+   name: example
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: example
+  namespace: example
+spec:
+  promotionPolicies:
+  - stageSelector:
+      name: test
+    autoPromotionEnabled: true
+  - stageSelector:
+      name: uat
+    autoPromotionEnabled: true
+```
+
+#### Advanced Promotion Policies with Selectors
+
+Kargo supports more flexible ways to specify which `Stage`s a promotion policy
+applies to, using either pattern matching or label selectors.
+
+:::warning
+Pattern and label matching introduce security considerations. Users with
+appropriate permissions could potentially create resources with names or labels
+deliberately crafted to match patterns, bypassing intended promotion controls.
+Using [exact names](#basic-promotion-policy) provides the most secure option.
+:::
+
+##### Using Stage Selectors with Patterns
+
+You can use the `stageSelector` field with pattern matching to apply a promotion
+policy to multiple `Stage`s that match a specific pattern:
+
+```yaml
+---
 apiVersion: kargo.akuity.io/v1alpha1
 kind: Project
 metadata:
   name: example
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: example
+  namespace: example
 spec:
   promotionPolicies:
-  - stage: test
+  - stageSelector:
+      # Apply to a specific stage by exact name
+      name: prod-east
+    autoPromotionEnabled: false
+  - stageSelector:
+      # Apply to all stages matching a regex pattern
+      name: "regex:test-.*"
     autoPromotionEnabled: true
-  - stage: uat
+  - stageSelector:
+      # Apply to all stages matching a glob pattern
+      name: "glob:dev-*"
     autoPromotionEnabled: true
 ```
+
+The pattern matching supports:
+
+- Exact name matching (when no prefix is used)
+- Regex patterns with prefix `regex:` or `regexp:`
+- Glob patterns with prefix `glob:`
+
+##### Using Stage Selectors with Labels
+
+You can also use
+[Kubernetes-style label selectors](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#resources-that-support-set-based-requirements)
+to apply a promotion policy to `Stage`s with specific labels:
+
+```yaml
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: example
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: example
+  namespace: example
+spec:
+  promotionPolicies:
+  - stageSelector:
+      matchLabels:
+        environment: development
+    autoPromotionEnabled: true
+  - stageSelector:
+      matchExpressions:
+      - key: environment
+        operator: In
+        values: ["development", "staging"]
+    autoPromotionEnabled: true
+```
+
+#### Using Stage Selectors with Patterns and Labels
+
+The [name](#using-stage-selectors-with-patterns) and
+[label](#using-stage-selectors-with-labels) selectors can be combined, in which
+case a `Stage` must match both the name and label selectors to be eligible for
+automatic promotion:
+
+```yaml
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: example
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: example
+  namespace: example
+spec:
+  promotionPolicies:
+  - stageSelector:
+      name: glob:prod-*
+      matchLabels:
+        example.org/allow-auto-promotion: "true"
+```
+
+In the example above, the promotion policy applies to all `Stage`s with the
+`example.org/allow-auto-promotion: "true"` label and names matching the
+`glob:prod-*` pattern.
 
 ## Namespace Adoption
 
@@ -86,11 +218,13 @@ This enables pre-configuring such `Namespace`s according to your
 own requirements.
 
 :::info
-Requiring a `Namespace` to have the `kargo.akuity.io/project: "true"` label to be eligible for adoption by a new `Project` is intended to prevent accidental or willful hijacking of an existing `Namespace`.
+Requiring a `Namespace` to have the `kargo.akuity.io/project: "true"` label to
+be eligible for adoption by a new `Project` is intended to prevent accidental or
+willful hijacking of an existing `Namespace`.
 :::
 
 The following example demonstrates adoption of a `Namespace` that's been
-pre-configured with with a label unrelated to Kargo:
+pre-configured with a label unrelated to Kargo:
 
 ```yaml
 apiVersion: v1
