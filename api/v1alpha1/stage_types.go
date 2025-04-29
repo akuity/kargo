@@ -11,23 +11,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type StagePhase string
-
-const (
-	// StagePhaseNotApplicable denotes a Stage that has no Freight.
-	StagePhaseNotApplicable StagePhase = "NotApplicable"
-	// StagePhaseSteady denotes a Stage that has Freight and is not currently
-	// being promoted or verified.
-	StagePhaseSteady StagePhase = "Steady"
-	// StagePhasePromoting denotes a Stage that is currently being promoted.
-	StagePhasePromoting StagePhase = "Promoting"
-	// StagePhaseVerifying denotes a Stage that is currently being verified.
-	StagePhaseVerifying StagePhase = "Verifying"
-	// StagePhaseFailed denotes a Stage that is in a failed state. For example,
-	// the Stage may have failed to promote or verify its Freight.
-	StagePhaseFailed StagePhase = "Failed"
-)
-
 type VerificationPhase string
 
 // Note: VerificationPhases are identical to AnalysisRunPhases. In almost all

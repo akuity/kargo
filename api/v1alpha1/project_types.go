@@ -4,29 +4,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type ProjectPhase string
-
-const (
-	// ProjectPhaseInitializing denotes a Project that is not yet fully
-	// initialized.
-	ProjectPhaseInitializing ProjectPhase = "Initializing"
-	// ProjectPhaseInitializationFailed denotes a Project while failed to
-	// initialize properly.
-	ProjectPhaseInitializationFailed ProjectPhase = "InitializationFailed"
-	// ProjectPhaseReady denotes a Project that is fully initialized.
-	ProjectPhaseReady ProjectPhase = "Ready"
-)
-
-// IsTerminal returns true if the ProjectPhase is a terminal one.
-func (p *ProjectPhase) IsTerminal() bool {
-	switch *p {
-	case ProjectPhaseInitializationFailed, ProjectPhaseReady:
-		return true
-	default:
-		return false
-	}
-}
-
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster
 // +kubebuilder:subresource:status
