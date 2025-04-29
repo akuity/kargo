@@ -38,7 +38,7 @@ export const WarehouseNode = (props: { warehouse: Warehouse }) => {
           {warehouseState.hasError && <Badge status='error' />}
         </Flex>
       }
-      className={styles['warehouse-node-size']}
+      className={(styles['warehouse-node-size'], 'cursor-pointer')}
       onClick={() =>
         navigate(
           generatePath(paths.warehouse, {
