@@ -672,7 +672,7 @@ message HealthCheckStep {
   optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 2;
 }
 
-// HealthStats contains a summary of the collective health of a some resource
+// HealthStats contains a summary of the collective health of some resource
 // type.
 message HealthStats {
   // Healthy contains the number of resources that are explicitly healthy.
@@ -873,8 +873,8 @@ message ProjectList {
   repeated Project items = 2;
 }
 
-// ProjectStats contains a summary of the of the collective state of a
-// Project's constituent resources.
+// ProjectStats contains a summary of the collective state of a Project's
+// constituent resources.
 message ProjectStats {
   // Warehouses contains a summary of the collective state of the Project's
   // Warehouses.
@@ -894,19 +894,7 @@ message ProjectStatus {
   // +listMapKey=type
   repeated .k8s.io.apimachinery.pkg.apis.meta.v1.Condition conditions = 3;
 
-  // Phase describes the Project's current phase.
-  //
-  // Deprecated: Use the Conditions field instead.
-  optional string phase = 1;
-
-  // Message is a display message about the Project, including any errors
-  // preventing the Project from being reconciled. i.e. If the Phase field has a
-  // value of CreationFailed, this field can be expected to explain why.
-  //
-  // Deprecated: Use the Conditions field instead.
-  optional string message = 2;
-
-  // Stats contains a summary of the of the collective state of a Project's
+  // Stats contains a summary of the collective state of a Project's
   // constituent resources.
   optional ProjectStats stats = 4;
 }
@@ -1316,7 +1304,7 @@ message StageSpec {
   optional Verification verification = 3;
 }
 
-// StageStats contains a summary of the collective state of the a Project's
+// StageStats contains a summary of the collective state of a Project's
 // Stages.
 message StageStats {
   // Count contains the total number of Stages in the Project.
@@ -1525,7 +1513,7 @@ message WarehouseSpec {
   repeated RepoSubscription subscriptions = 1;
 }
 
-// WarehouseStats contains a summary of the collective state of the a Project's
+// WarehouseStats contains a summary of the collective state of a Project's
 // Warehouses.
 message WarehouseStats {
   // Count contains the total number of Warehouses in the Project.

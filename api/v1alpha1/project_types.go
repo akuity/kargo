@@ -68,17 +68,7 @@ type ProjectStatus struct {
 	// +listType=map
 	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,3,rep,name=conditions"`
-	// Phase describes the Project's current phase.
-	//
-	// Deprecated: Use the Conditions field instead.
-	Phase ProjectPhase `json:"phase,omitempty" protobuf:"bytes,1,opt,name=phase"`
-	// Message is a display message about the Project, including any errors
-	// preventing the Project from being reconciled. i.e. If the Phase field has a
-	// value of CreationFailed, this field can be expected to explain why.
-	//
-	// Deprecated: Use the Conditions field instead.
-	Message string `json:"message,omitempty" protobuf:"bytes,2,opt,name=message"`
-	// Stats contains a summary of the of the collective state of a Project's
+	// Stats contains a summary of the collective state of a Project's
 	// constituent resources.
 	Stats *ProjectStats `json:"stats,omitempty" protobuf:"bytes,4,opt,name=stats"`
 }
@@ -93,8 +83,8 @@ func (w *ProjectStatus) SetConditions(conditions []metav1.Condition) {
 	w.Conditions = conditions
 }
 
-// ProjectStats contains a summary of the of the collective state of a
-// Project's constituent resources.
+// ProjectStats contains a summary of the collective state of a Project's
+// constituent resources.
 type ProjectStats struct {
 	// Warehouses contains a summary of the collective state of the Project's
 	// Warehouses.
@@ -103,7 +93,7 @@ type ProjectStats struct {
 	Stages StageStats `json:"stages,omitempty" protobuf:"bytes,2,opt,name=stages"`
 }
 
-// WarehouseStats contains a summary of the collective state of the a Project's
+// WarehouseStats contains a summary of the collective state of a Project's
 // Warehouses.
 type WarehouseStats struct {
 	// Count contains the total number of Warehouses in the Project.
@@ -113,7 +103,7 @@ type WarehouseStats struct {
 	Health HealthStats `json:"health,omitempty" protobuf:"bytes,1,opt,name=health"`
 }
 
-// StageStats contains a summary of the collective state of the a Project's
+// StageStats contains a summary of the collective state of a Project's
 // Stages.
 type StageStats struct {
 	// Count contains the total number of Stages in the Project.
@@ -122,7 +112,7 @@ type StageStats struct {
 	Health HealthStats `json:"health,omitempty" protobuf:"bytes,1,opt,name=health"`
 }
 
-// HealthStats contains a summary of the collective health of a some resource
+// HealthStats contains a summary of the collective health of some resource
 // type.
 type HealthStats struct {
 	// Healthy contains the number of resources that are explicitly healthy.
