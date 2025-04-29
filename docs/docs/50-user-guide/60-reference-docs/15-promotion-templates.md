@@ -285,7 +285,7 @@ steps:
     errorThreshold: 3
     timeout: 48h
   config:
-    prNumber: ${{ outputs['open-pr'].prNumber }}
+    prNumber: ${{ outputs['open-pr'].pr.id }}
 ```
 
 :::info
