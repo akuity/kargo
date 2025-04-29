@@ -503,55 +503,6 @@ func Test_tarExtractor_run(t *testing.T) {
 	}
 }
 
-// Helper function to create a test tar file
-func createTestTarFile(t *testing.T, path string, files map[string][]byte) {
-	tarFile, err := os.Create(path)
-	require.NoError(t, err)
-	defer tarFile.Close()
-
-	tw := tar.NewWriter(tarFile)
-	defer tw.Close()
-
-	for name, content := range files {
-		hdr := &tar.Header{
-			Name: name,
-			Mode: 0600,
-			Size: int64(len(content)),
-		}
-		require.NoError(t, tw.WriteHeader(hdr))
-		if len(content) > 0 {
-			_, err = tw.Write(content)
-			require.NoError(t, err)
-		}
-	}
-}
-
-// Helper function to create a test tar.gz file
-func createTestTarGzFile(t *testing.T, path string, files map[string][]byte) {
-	tarFile, err := os.Create(path)
-	require.NoError(t, err)
-	defer tarFile.Close()
-
-	gzw := gzip.NewWriter(tarFile)
-	defer gzw.Close()
-
-	tw := tar.NewWriter(gzw)
-	defer tw.Close()
-
-	for name, content := range files {
-		hdr := &tar.Header{
-			Name: name,
-			Mode: 0600,
-			Size: int64(len(content)),
-		}
-		require.NoError(t, tw.WriteHeader(hdr))
-		if len(content) > 0 {
-			_, err = tw.Write(content)
-			require.NoError(t, err)
-		}
-	}
-}
-
 // Helper function to create an int64 pointer
 func intPtr(i int64) *int64 {
 	return &i
