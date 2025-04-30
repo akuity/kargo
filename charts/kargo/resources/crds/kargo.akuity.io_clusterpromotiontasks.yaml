@@ -66,6 +66,11 @@ spec:
                         expressions in defining values at any level of this block.
                         See https://docs.kargo.io/user-guide/reference-docs/expressions for details.
                       x-kubernetes-preserve-unknown-fields: true
+                    continueOnError:
+                      description: |-
+                        ContinueOnError is a boolean value that, if set to true, will cause the
+                        Promotion to continue executing the next step even if this step fails.
+                      type: boolean
                     if:
                       description: |-
                         If is an optional expression that, if present, must evaluate to a boolean

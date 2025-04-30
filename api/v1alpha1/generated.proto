@@ -1105,6 +1105,10 @@ message PromotionStep {
   // considered to have failed.
   optional string if = 7;
 
+  // ContinueOnError is a boolean value that, if set to true, will cause the
+  // Promotion to continue executing the next step even if this step fails.
+  optional bool continueOnError = 8;
+
   // Retry is the retry policy for this step.
   optional PromotionStepRetry retry = 4;
 
