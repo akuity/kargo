@@ -174,11 +174,10 @@ func newStageTable(list *metav1.List) *metav1.Table {
 			health = string(stage.Status.Health.Status)
 		}
 
-		var status string
-		if recCond := conditions.Get(&stage.Status, kargoapi.ConditionTypeReconciling); recCond != nil {
-			status = recCond.Reason
-		} else if readyCond := conditions.Get(&stage.Status, kargoapi.ConditionTypeReady); readyCond != nil {
-			status = readyCond.Reason
+		var ready, status = string(metav1.ConditionUnknown), ""
+		if readyCond := conditions.Get(&stage.Status, kargoapi.ConditionTypeReady); readyCond != nil {
+			ready = string(readyCond.Status)
+			status = readyCond.Message
 		}
 
 		rows[i] = metav1.TableRow{
@@ -187,6 +186,7 @@ func newStageTable(list *metav1.List) *metav1.Table {
 				stage.Spec.Shard,
 				stage.Status.FreightSummary,
 				health,
+				ready,
 				status,
 				duration.HumanDuration(time.Since(stage.CreationTimestamp.Time)),
 			},
@@ -199,6 +199,7 @@ func newStageTable(list *metav1.List) *metav1.Table {
 			{Name: "Shard", Type: "string"},
 			{Name: "Current Freight", Type: "string"},
 			{Name: "Health", Type: "string"},
+			{Name: "Ready", Type: "string"},
 			{Name: "Status", Type: "string"},
 			{Name: "Age", Type: "string"},
 		},
