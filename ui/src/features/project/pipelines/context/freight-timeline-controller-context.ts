@@ -10,12 +10,6 @@ export type FreightTimelineControllerContextType = {
   preferredFilter: {
     showColors: boolean;
     showAlias: boolean;
-    artifactCarousel: {
-      enabled: boolean;
-      state?: {
-        repoURL: string;
-      };
-    };
     sources: string[]; // repoURL
     timerange: timerangeTypes;
     warehouses: string[];

@@ -9,7 +9,6 @@ import { FreightTimelineControllerContextType } from '@ui/features/project/pipel
 import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { humanComprehendableArtifact } from './artifact-parts-utils';
-import { selectFirstArtifact } from './artifact-selector-utils';
 import { timerangeOrderedOptions, timerangeToLabel } from './filter-timerange-utils';
 import { catalogueFreights } from './source-catalogue-utils';
 
@@ -125,36 +124,6 @@ export const FreightTimelineFilters = (props: FreightTimelineFiltersProps) => {
 
           <Checkbox
             className='text-xs'
-            checked={!props.preferredFilter?.artifactCarousel?.enabled}
-            onChange={(e) => {
-              const enabled = !e.target.checked;
-
-              if (enabled) {
-                const firstArtifact = selectFirstArtifact(props.filteredFreights);
-
-                props.onPreferredFilterChange({
-                  ...props.preferredFilter,
-                  artifactCarousel: {
-                    enabled,
-                    state: {
-                      repoURL: typeof firstArtifact === 'string' ? '' : firstArtifact?.repoURL
-                    }
-                  }
-                });
-                return;
-              }
-
-              props.onPreferredFilterChange({
-                ...props.preferredFilter,
-                artifactCarousel: { enabled }
-              });
-            }}
-          >
-            All Artifacts
-          </Checkbox>
-
-          <Checkbox
-            className='text-xs'
             checked={props.preferredFilter?.showColors}
             onChange={(e) =>
               props.onPreferredFilterChange({
@@ -165,19 +134,20 @@ export const FreightTimelineFilters = (props: FreightTimelineFiltersProps) => {
           >
             Colors
           </Checkbox>
+
+          <Checkbox
+            className='text-xs'
+            checked={props.preferredFilter?.hideUnusedFreights}
+            onChange={(e) =>
+              props.onPreferredFilterChange({
+                ...props.preferredFilter,
+                hideUnusedFreights: e.target.checked
+              })
+            }
+          >
+            Hide unused
+          </Checkbox>
         </div>
-        <Checkbox
-          className='text-xs mt-3'
-          checked={props.preferredFilter?.hideUnusedFreights}
-          onChange={(e) =>
-            props.onPreferredFilterChange({
-              ...props.preferredFilter,
-              hideUnusedFreights: e.target.checked
-            })
-          }
-        >
-          Hide unused
-        </Checkbox>
       </div>
     </div>
   );

@@ -55,6 +55,9 @@ export const StageNode = (props: { stage: Stage }) => {
 
   const hideStage = useHideStageIfInPromotionMode(props.stage);
 
+  const totalSubscribersToThisStage =
+    dictionaryContext?.subscribersByStage?.[props.stage?.metadata?.name || '']?.size || 0;
+
   const manualApproveActionMutation = useMutation(approveFreight, {
     onSuccess: (_, vars) => {
       message.success(
@@ -150,10 +153,7 @@ export const StageNode = (props: { stage: Stage }) => {
     });
   }
 
-  if (
-    controlFlow ||
-    (dictionaryContext?.subscribersByStage?.[props.stage?.metadata?.name || '']?.size || 0) > 1
-  ) {
+  if (controlFlow || totalSubscribersToThisStage > 1) {
     dropdownItems.push({
       key: 'promote-downstream',
       label: (
@@ -244,15 +244,16 @@ export const StageNode = (props: { stage: Stage }) => {
         )}
       </div>
 
-      {!graphContext?.stackedNodesParents?.includes(stageNodeIndex) && (
-        <Button
-          style={{ width: 16, height: 16 }}
-          icon={<FontAwesomeIcon icon={faMinus} />}
-          size='small'
-          className='absolute top-[50%] right-0 translate-x-[50%] translate-y-[-50%] text-[8px] z-10'
-          onClick={() => graphContext?.onStack(stageNodeIndex)}
-        />
-      )}
+      {!graphContext?.stackedNodesParents?.includes(stageNodeIndex) &&
+        totalSubscribersToThisStage > 0 && (
+          <Button
+            style={{ width: 16, height: 16 }}
+            icon={<FontAwesomeIcon icon={faMinus} />}
+            size='small'
+            className='absolute top-[50%] right-0 translate-x-[50%] translate-y-[-50%] text-[8px] z-10'
+            onClick={() => graphContext?.onStack(stageNodeIndex)}
+          />
+        )}
     </Card>
   );
 };

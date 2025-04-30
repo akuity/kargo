@@ -88,9 +88,6 @@ export const Pipelines = (props: {
     FreightTimelineControllerContextType['preferredFilter']
   >({
     showAlias: false,
-    artifactCarousel: {
-      enabled: false
-    },
     sources: [],
     timerange: 'all-time',
     showColors: false,

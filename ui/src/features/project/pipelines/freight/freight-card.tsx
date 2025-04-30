@@ -21,7 +21,6 @@ import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { FreightArtifact } from './freight-artifact';
-import { FreightArtifactCarousel } from './freight-artifacts-carousel';
 
 type FreightCardProps = {
   freight: Freight;
@@ -138,25 +137,19 @@ export const FreightCard = (props: FreightCardProps) => {
         <div className='text-[10px] text-nowrap mb-2'>{freightAlias}</div>
       )}
 
-      {!props?.preferredFilter?.artifactCarousel?.enabled && (
-        <div className='flex gap-1 justify-center'>
-          {props.freight?.commits?.map((commit) => (
-            <FreightArtifact key={commit?.repoURL} artifact={commit} />
-          ))}
+      <div className='flex gap-1 justify-center'>
+        {props.freight?.commits?.map((commit) => (
+          <FreightArtifact key={commit?.repoURL} artifact={commit} />
+        ))}
 
-          {props.freight?.charts?.map((chart) => (
-            <FreightArtifact key={chart?.repoURL} artifact={chart} />
-          ))}
+        {props.freight?.charts?.map((chart) => (
+          <FreightArtifact key={chart?.repoURL} artifact={chart} />
+        ))}
 
-          {props.freight?.images?.map((image) => (
-            <FreightArtifact key={image?.repoURL} artifact={image} />
-          ))}
-        </div>
-      )}
-
-      {props?.preferredFilter?.artifactCarousel?.enabled && (
-        <FreightArtifactCarousel freight={props.freight} />
-      )}
+        {props.freight?.images?.map((image) => (
+          <FreightArtifact key={image?.repoURL} artifact={image} />
+        ))}
+      </div>
 
       <div className='flex mx-auto w-full gap-2 items-center justify-center text-nowrap my-1'>
         {noOfGitCommits + noOfHelmReleases + noOfContainerImages > 0 && (
