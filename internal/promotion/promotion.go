@@ -207,8 +207,11 @@ func (s *Step) Skip(
 	promoCtx Context,
 	state promotion.State,
 ) (bool, error) {
+	// If no "if" condition is provided, then this step is automatically skipped
+	// if any of the previous steps have errored or failed and is not skipped
+	// otherwise.
 	if s.If == "" {
-		s.If = "${{ success() }}"
+		return promoCtx.StepExecutionMetadata.HasFailures(), nil
 	}
 
 	vars, err := s.GetVars(ctx, cl, promoCtx, state)

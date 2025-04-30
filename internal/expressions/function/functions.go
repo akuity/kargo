@@ -437,18 +437,7 @@ func hasFailure(stepExecMetas kargoapi.StepExecutionMetadataList) exprFn {
 		if len(a) != 0 {
 			return nil, fmt.Errorf("expected 0 arguments, got %d", len(a))
 		}
-		for _, stepExecMeta := range stepExecMetas {
-			switch stepExecMeta.Status {
-			case "", kargoapi.PromotionStepStatusRunning:
-				// We've caught up to the current step, so we can stop checking.
-				return false, nil
-			case kargoapi.PromotionStepStatusErrored, kargoapi.PromotionStepStatusFailed:
-				return true, nil
-			default:
-				// Other statuses have no effect on the failure check.
-			}
-		}
-		return false, nil
+		return stepExecMetas.HasFailures(), nil
 	}
 }
 

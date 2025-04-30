@@ -68,7 +68,7 @@ func (e *simpleEngine) Promote(
 		err = errors.New(result.Message)
 	}
 
-	return e.executeSteps(ctx, promoCtx, steps, workDir), err
+	return result, err
 }
 
 // executeSteps executes a list of Steps in sequence.
