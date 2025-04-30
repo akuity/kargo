@@ -18,8 +18,8 @@ import { generatePath, Link, useNavigate } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
-import { StagePhaseIcon } from '@ui/features/common/stage-phase/stage-phase-icon';
-import { StagePhase } from '@ui/features/common/stage-phase/utils';
+import { StageConditionIcon } from '@ui/features/common/stage-status/stage-condition-icon';
+import { getStagePhase } from '@ui/features/common/stage-status/utils';
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import { ColorMapHex, parseColorAnnotation } from '@ui/features/stage/utils';
 import { approveFreight } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
@@ -76,22 +76,14 @@ export const StageNode = (props: { stage: Stage }) => {
 
     let Phase = (
       <Flex align='center' gap={4}>
-        {stagePhase}{' '}
-        <StagePhaseIcon
-          className={classNames(
-            stagePhase !== StagePhase.Promoting && 'text-[8px]',
-            stagePhase === StagePhase.Promoting && 'text-[10px] ml-2'
-          )}
-          noTooltip
-          phase={stagePhase}
-        />
-        {stagePhase === StagePhase.Promoting && (
+        {stagePhase} <StageConditionIcon conditions={props.stage?.status?.conditions || []} />
+        {stagePhase === 'Promoting' && (
           <FontAwesomeIcon icon={faExternalLink} className='text-[8px]' />
         )}
       </Flex>
     );
 
-    if (stagePhase === StagePhase.Promoting) {
+    if (stagePhase === 'Promoting') {
       Phase = (
         <Link
           to={generatePath(paths.promotion, {
@@ -278,8 +270,6 @@ const useStageHeaderStyle = (stage: Stage): CSSProperties => {
     color: stageFontColor
   };
 };
-
-const getStagePhase = (stage: Stage) => stage?.status?.phase as StagePhase;
 
 const isStageControlFlow = (stage: Stage) =>
   (stage?.spec?.promotionTemplate?.spec?.steps?.length || 0) <= 0;

@@ -16,8 +16,6 @@ import { paths } from '@ui/config/paths';
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { Description } from '@ui/features/common/description';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
-import { StagePhaseIcon } from '@ui/features/common/stage-phase/stage-phase-icon';
-import { StagePhase } from '@ui/features/common/stage-phase/utils';
 import {
   getConfig,
   getStage
@@ -28,6 +26,7 @@ import { timestampDate } from '@ui/utils/connectrpc-utils';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 
 import YamlEditor from '../common/code-editor/yaml-editor-lazy';
+import { StageConditionIcon } from '../common/stage-status/stage-condition-icon';
 
 import { Promotions } from './promotions';
 import { RequestedFreight } from './requested-freight';
@@ -96,6 +95,8 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
 
   const { stageTabs } = useExtensionsContext();
 
+  const stageConditions = useMemo(() => stage.status?.conditions || [], [stage.status?.conditions]);
+
   return (
     <Drawer
       open={!!stageName}
@@ -109,7 +110,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                 {stage.metadata?.name}
               </Typography.Title>
               <Flex gap={4}>
-                <StagePhaseIcon phase={stage.status?.phase as StagePhase} />
+                <StageConditionIcon conditions={stageConditions} />
                 {!!stage.status?.health && <HealthStatusIcon health={stage.status?.health} />}
               </Flex>
             </Flex>

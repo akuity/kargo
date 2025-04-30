@@ -272,19 +272,6 @@ func (r *reconciler) reconcile(
 		reconcile func() (kargoapi.ProjectStatus, bool, error)
 	}{
 		{
-			name: "migrate phase to conditions",
-			reconcile: func() (kargoapi.ProjectStatus, bool, error) {
-				// TODO(krancour): Remove this migration code when the Phase field is
-				// removed from ProjectStatus.
-				if newStatus, migrated := migratePhaseToConditions(project); migrated {
-					logger.Debug("migrated Project phase to conditions")
-					requestRequeue = true
-					return newStatus, true, nil // Stop the loop
-				}
-				return status, false, nil // Continue
-			},
-		},
-		{
 			name: "migrate spec to ProjectConfig",
 			reconcile: func() (kargoapi.ProjectStatus, bool, error) {
 				// TODO(hidde): Remove this migration code when the spec field is
@@ -882,74 +869,6 @@ func (r *reconciler) patchProjectStatus(
 			*s = status
 		},
 	)
-}
-
-// migratePhaseToConditions migrates the Project's Phase and Message fields to
-// Conditions. It returns the updated ProjectStatus and a boolean indicating
-// whether the ProjectStatus was updated.
-func migratePhaseToConditions(project *kargoapi.Project) (kargoapi.ProjectStatus, bool) {
-	status := *project.Status.DeepCopy()
-	if project.Status.Phase == "" { // nolint:staticcheck
-		status.Message = ""                         // nolint:staticcheck
-		return status, project.Status.Message != "" // nolint:staticcheck
-	}
-
-	switch project.Status.Phase { // nolint:staticcheck
-	case kargoapi.ProjectPhaseInitializing:
-		conditions.Set(&status, &metav1.Condition{
-			Type:               kargoapi.ConditionTypeReconciling,
-			Status:             metav1.ConditionTrue,
-			Reason:             "Syncing",
-			Message:            "Ensuring project namespace and permissions",
-			ObservedGeneration: project.GetGeneration(),
-		})
-		conditions.Set(&status, &metav1.Condition{
-			Type:               kargoapi.ConditionTypeReady,
-			Status:             metav1.ConditionFalse,
-			Reason:             "Syncing",
-			Message:            "Ensuring project namespace and permissions",
-			ObservedGeneration: project.GetGeneration(),
-		})
-	case kargoapi.ProjectPhaseInitializationFailed:
-		// If the Project is in the InitializationFailed phase, it means that the
-		// namespace already exists but is not labeled as a Project namespace.
-		conditions.Set(&status, &metav1.Condition{
-			Type:   kargoapi.ConditionTypeStalled,
-			Status: metav1.ConditionTrue,
-			Reason: "ExistingNamespaceMissingLabel",
-			Message: fmt.Sprintf(
-				"Namespace %q already exists but is not labeled as a Project namespace using label %q",
-				project.Name,
-				kargoapi.ProjectLabelKey,
-			),
-			ObservedGeneration: project.GetGeneration(),
-		})
-		conditions.Set(&status, &metav1.Condition{
-			Type:   kargoapi.ConditionTypeReady,
-			Status: metav1.ConditionFalse,
-			Reason: "ExistingNamespaceMissingLabel",
-			Message: fmt.Sprintf(
-				"Namespace %q already exists but is not labeled as a Project namespace using label %q",
-				project.Name,
-				kargoapi.ProjectLabelKey,
-			),
-			ObservedGeneration: project.GetGeneration(),
-		})
-	case kargoapi.ProjectPhaseReady:
-		conditions.Set(&status, &metav1.Condition{
-			Type:               kargoapi.ConditionTypeReady,
-			Status:             metav1.ConditionTrue,
-			Reason:             "Synced",
-			Message:            "Project is synced and ready for use",
-			ObservedGeneration: project.GetGeneration(),
-		})
-	}
-
-	// Clear the phase and message now that we've migrated them to conditions.
-	status.Phase = ""   // nolint:staticcheck
-	status.Message = "" // nolint:staticcheck
-
-	return status, true
 }
 
 // migrateSpecToProjectConfig migrates the Project's Spec to a dedicated
