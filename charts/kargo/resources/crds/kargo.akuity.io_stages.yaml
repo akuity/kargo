@@ -24,8 +24,11 @@ spec:
     - jsonPath: .status.health.status
       name: Health
       type: string
-    - jsonPath: .status.phase
-      name: Phase
+    - jsonPath: .status.conditions[?(@.type=="Ready")].status
+      name: Ready
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Ready")].message
+      name: Status
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age

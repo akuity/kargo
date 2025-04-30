@@ -125,7 +125,8 @@ const (
 // +kubebuilder:printcolumn:name=Shard,type=string,JSONPath=`.spec.shard`
 // +kubebuilder:printcolumn:name=Current Freight,type=string,JSONPath=`.status.freightSummary`
 // +kubebuilder:printcolumn:name=Health,type=string,JSONPath=`.status.health.status`
-// +kubebuilder:printcolumn:name=Phase,type=string,JSONPath=`.status.phase`
+// +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].status"
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].message"
 // +kubebuilder:printcolumn:name=Age,type=date,JSONPath=`.metadata.creationTimestamp`
 
 // Stage is the Kargo API's main type.

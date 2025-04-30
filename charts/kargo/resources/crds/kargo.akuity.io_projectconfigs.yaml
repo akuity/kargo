@@ -14,7 +14,11 @@ spec:
     singular: projectconfig
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: |-
@@ -143,5 +147,4 @@ spec:
         type: object
     served: true
     storage: true
-    subresources:
-      status: {}
+    subresources: {}
