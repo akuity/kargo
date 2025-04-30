@@ -10,23 +10,11 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
 import classNames from 'classnames';
 
+import { StageConditionType, StageConditionStatus } from '@ui/features/common/stage-status/utils';
 import type { Condition } from '@ui/gen/k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb';
 
 import styles from './styles.module.less';
 import { TruckIcon } from './truck-icon/truck-icon';
-
-const enum StageConditionType {
-  Promoting = 'Promoting',
-  Reconciling = 'Reconciling',
-  Ready = 'Ready',
-  Verified = 'Verified'
-}
-
-const enum StageConditionStatus {
-  True = 'True',
-  False = 'False',
-  Unknown = 'Unknown'
-}
 
 interface IconState {
   icon: IconDefinition;

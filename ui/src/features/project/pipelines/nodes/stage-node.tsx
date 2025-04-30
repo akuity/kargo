@@ -21,6 +21,7 @@ import { generatePath, useNavigate } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { PromotionStatusIcon } from '@ui/features/common/promotion-status/promotion-status-icon';
+import { StageConditionType, StageConditionStatus } from '@ui/features/common/stage-status/utils';
 import { getCurrentFreight, selectFreightByWarehouse } from '@ui/features/common/utils';
 import { willStagePromotionOpenPR } from '@ui/features/promotion-directives/utils';
 import { getColors } from '@ui/features/stage/utils';
@@ -29,6 +30,7 @@ import {
   promoteToStage
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import type { Condition } from '@ui/gen/k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
@@ -228,6 +230,13 @@ export const StageNode = (props: StageNodeProps) => {
     return false;
   };
 
+  const isVerifying = (stage: Stage): boolean => {
+    const verifiedCondition = stage.status?.conditions?.find(
+      (c: Condition) => c.type === StageConditionType.Verified
+    );
+    return verifiedCondition?.status === StageConditionStatus.Unknown;
+  };
+
   return (
     <div
       className={classNames(styles.stageNode, {
@@ -273,7 +282,7 @@ export const StageNode = (props: StageNodeProps) => {
             >
               <FontAwesomeIcon icon={faGear} spin={true} />
             </Tooltip>
-          ) : props.stage.status?.phase === 'Verifying' ? (
+          ) : isVerifying(props.stage) ? (
             <Tooltip title='Verifying Current Freight'>
               <FontAwesomeIcon icon={faCircleNotch} spin={true} />
             </Tooltip>
