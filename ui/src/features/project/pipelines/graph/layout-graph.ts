@@ -11,6 +11,9 @@ export type GraphMeta = {
   subscription?: RepoSubscription;
   stage?: Stage;
   subscriptionParent?: Warehouse;
+  value?: number;
+  id?: string;
+  parentNodeId?: string;
 };
 
 export const layoutGraph = (
@@ -93,5 +96,5 @@ export const layoutGraph = (
     }
   }
 
-  return graph;
+  return { graph, stageByName, warehouseByName };
 };

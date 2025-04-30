@@ -4,7 +4,7 @@ import { layoutGraph } from './graph/layout-graph';
 import { warehouseIndexer } from './graph/node-indexer';
 
 export const groupNodes = (stages: Stage[], warehouses: Warehouse[]) => {
-  const graph = layoutGraph({ stages: stages }, { warehouses: warehouses });
+  const { graph } = layoutGraph({ stages: stages }, { warehouses: warehouses });
 
   const stackNodesAfter = new Set<string>();
   for (const warehouse of warehouses) {

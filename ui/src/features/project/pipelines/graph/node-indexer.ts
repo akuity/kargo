@@ -26,5 +26,11 @@ export const stageIndexer = {
     const stageName = stage?.metadata?.name;
 
     return `stage/${stageUID}/${stageName}`;
-  }
+  },
+  getStageName: (index: string) => index.split('/')[2]
+};
+
+export const stackedIndexer = {
+  index: (parentNode: string) => `stacked/${parentNode}`,
+  is: (id: string) => id.startsWith('stacked/')
 };

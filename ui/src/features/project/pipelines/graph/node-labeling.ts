@@ -16,3 +16,11 @@ export const repoSubscriptionLabelling = {
 export const stageLabelling = {
   label: (stage: Stage): Label => ({ stage })
 };
+
+export const stackedLabelling = {
+  label: (parentStage: Stage, parentStageId: string, count: number): Label => ({
+    value: count,
+    id: parentStage?.spec?.requestedFreight?.[0]?.origin?.name,
+    parentNodeId: parentStageId
+  })
+};

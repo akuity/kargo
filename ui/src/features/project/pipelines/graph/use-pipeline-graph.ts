@@ -2,23 +2,16 @@ import { Edge, MarkerType, Node } from '@xyflow/react';
 import { layout } from 'dagre';
 import { useMemo } from 'react';
 
-import { RepoSubscription, Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { edgeIndexer } from './edge-indexer';
 import { layoutGraph } from './layout-graph';
-import { warehouseIndexer } from './node-indexer';
-import { stackNode } from './stack-nodes';
+import { stackedIndexer, warehouseIndexer } from './node-indexer';
+import { stackNodes } from './stack-nodes';
 
 export const reactFlowNodeConstants = {
   CUSTOM_NODE: 'custom-node',
   STACKED_NODE: 'stacked-node'
-};
-
-export type GraphMeta = {
-  warehouse?: Warehouse;
-  subscription?: RepoSubscription;
-  stage?: Stage;
-  subscriptionParent?: Warehouse;
 };
 
 export const useReactFlowPipelineGraph = (
@@ -32,7 +25,8 @@ export const useReactFlowPipelineGraph = (
   }
 ) => {
   return useMemo(() => {
-    const graph = layoutGraph(
+    // eslint-disable-next-line prefer-const
+    let { graph, stageByName } = layoutGraph(
       {
         stages,
         ignore(s) {
@@ -50,34 +44,19 @@ export const useReactFlowPipelineGraph = (
       }
     );
 
+    const stackedNodes = stackNodes(stack?.afterNodes || [], graph, stageByName);
+
+    graph = stackedNodes.graph;
+
     layout(graph, { lablepos: 'c' });
 
     const reactFlowNodes: Node[] = [];
     const reactFlowEdges: Edge[] = [];
 
-    const ignoreNodes = new Set<string>();
-    const keepNodeAsStackNode: string[] = [];
-
-    for (const afterNode of stack?.afterNodes || []) {
-      const subIgnoreNodes = stackNode(afterNode, graph);
-
-      if (subIgnoreNodes?.length > 0) {
-        // in same pipeline
-        if (!ignoreNodes.has(subIgnoreNodes[0])) {
-          keepNodeAsStackNode.push(subIgnoreNodes[0]);
-        }
-
-        for (const inds of subIgnoreNodes) {
-          ignoreNodes.add(inds);
-        }
-      }
-    }
-
     for (const node of graph.nodes()) {
-      const isStackNode = keepNodeAsStackNode.includes(node);
       const dagreNode = graph.node(node);
 
-      if (isStackNode) {
+      if (stackedIndexer.is(node)) {
         reactFlowNodes.push({
           id: node,
           type: reactFlowNodeConstants.STACKED_NODE,
@@ -86,15 +65,11 @@ export const useReactFlowPipelineGraph = (
             y: dagreNode?.y - dagreNode?.height / 2
           },
           data: {
-            value: ignoreNodes.size,
-            id: dagreNode?.stage?.spec?.requestedFreight?.[0]?.origin?.name,
-            parentNodeId: graph.predecessors(node)?.[0]
+            value: dagreNode?.value,
+            id: dagreNode?.id,
+            parentNodeId: dagreNode?.parentNodeId
           }
         });
-        continue;
-      }
-
-      if (ignoreNodes.has(node)) {
         continue;
       }
 
@@ -114,10 +89,6 @@ export const useReactFlowPipelineGraph = (
     }
 
     for (const edge of graph.edges()) {
-      if (!keepNodeAsStackNode.includes(edge.v) && ignoreNodes.has(edge.v)) {
-        continue;
-      }
-
       const belongsToWarehouse = warehouseIndexer.getWarehouseName(edge.name || '');
 
       reactFlowEdges.push({
