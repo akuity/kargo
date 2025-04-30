@@ -95,6 +95,8 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
 
   const { stageTabs } = useExtensionsContext();
 
+  const stageConditions = useMemo(() => stage.status?.conditions || [], [stage.status?.conditions]);
+
   return (
     <Drawer
       open={!!stageName}
@@ -108,7 +110,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                 {stage.metadata?.name}
               </Typography.Title>
               <Flex gap={4}>
-                <StageConditionIcon conditions={stage.status?.conditions || []} />
+                <StageConditionIcon conditions={stageConditions} />
                 {!!stage.status?.health && <HealthStatusIcon health={stage.status?.health} />}
               </Flex>
             </Flex>
