@@ -7,7 +7,7 @@ import { StageNode } from '../nodes/stage-node';
 import { SubscriptionNode } from '../nodes/subscription-node';
 import { WarehouseNode } from '../nodes/warehouse-node';
 
-import { repoSubscriptionIndexer, stageIndexer, warehouseIndexer } from './node-indexer';
+import { repoSubscriptionIndexer, stageIndexer } from './node-indexer';
 
 export const CustomNode = (props: {
   data: {
@@ -98,7 +98,7 @@ CustomNode.Container = (
   }
 
   if (props.warehouse) {
-    id = warehouseIndexer.index(props.warehouse);
+    id = props.warehouse?.metadata?.name || '';
   }
 
   if (props.repoSubscription) {

@@ -140,10 +140,14 @@ export const Graph = (props: GraphProps) => {
         edges={graph.edges}
         nodeTypes={nodeTypes}
         fitView
-        minZoom={0.1}
         proOptions={{ hideAttribution: true }}
       >
-        <Controls showInteractive={false} />
+        <Controls
+          showInteractive={false}
+          onFitView={() => {
+            setRedraw(!redraw);
+          }}
+        />
       </ReactFlow>
     </GraphContext.Provider>
   );

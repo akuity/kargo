@@ -1,7 +1,8 @@
 import { layout } from '@dagrejs/dagre';
 import { Edge, MarkerType, Node } from '@xyflow/react';
-import { useMemo } from 'react';
+import { useContext, useMemo } from 'react';
 
+import { ColorContext } from '@ui/context/colors';
 import { Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { edgeIndexer } from './edge-indexer';
@@ -24,6 +25,8 @@ export const useReactFlowPipelineGraph = (
     afterNodes?: string[];
   }
 ) => {
+  const { warehouseColorMap } = useContext(ColorContext);
+
   return useMemo(() => {
     // eslint-disable-next-line prefer-const
     let { graph, stageByName } = layoutGraph(
@@ -41,7 +44,8 @@ export const useReactFlowPipelineGraph = (
         ignore(w) {
           return !!pipeline.length && !pipeline.includes(w?.metadata?.name || '');
         }
-      }
+      },
+      warehouseColorMap
     );
 
     const stackedNodes = stackNodes(stack?.afterNodes || [], graph, stageByName);
@@ -91,6 +95,8 @@ export const useReactFlowPipelineGraph = (
     for (const edge of graph.edges()) {
       const belongsToWarehouse = warehouseIndexer.getWarehouseName(edge.name || '');
 
+      const dagreEdge = graph.edge(edge);
+
       reactFlowEdges.push({
         id: edgeIndexer.index(belongsToWarehouse, edge.v, edge.w),
         source: edge.v,
@@ -99,10 +105,12 @@ export const useReactFlowPipelineGraph = (
         sourceHandle: belongsToWarehouse,
         targetHandle: belongsToWarehouse,
         markerEnd: {
-          type: MarkerType.ArrowClosed
+          type: MarkerType.ArrowClosed,
+          color: dagreEdge.edgeColor || ''
         },
         style: {
-          strokeWidth: 2
+          strokeWidth: 2,
+          stroke: dagreEdge.edgeColor || ''
         }
       });
     }
@@ -111,5 +119,5 @@ export const useReactFlowPipelineGraph = (
       nodes: reactFlowNodes,
       edges: reactFlowEdges
     };
-  }, [stack?.afterNodes, pipeline, redraw]);
+  }, [stack?.afterNodes, pipeline, redraw, warehouseColorMap]);
 };

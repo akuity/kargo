@@ -162,13 +162,13 @@ export const FreightCard = (props: FreightCardProps) => {
           </>
         )}
         <Typography.Text
-          className='text-[10px] text-nowrap'
+          className='text-xs text-nowrap'
           type='secondary'
           title={creation.abs?.toString()}
         >
           {creation.relative}
         </Typography.Text>
-        <Typography.Text className='text-[10px] text-nowrap' type='secondary'>
+        <Typography.Text className='text-xs text-nowrap' type='secondary'>
           <FontAwesomeIcon className='mr-1' icon={faWarehouse} />
           {props.freight?.origin?.name}
         </Typography.Text>

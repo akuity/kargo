@@ -1,5 +1,6 @@
 import { graphlib } from '@dagrejs/dagre';
 
+import { ColorMap } from '@ui/features/stage/utils';
 import { RepoSubscription, Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { repoSubscriptionIndexer, stageIndexer, warehouseIndexer } from './node-indexer';
@@ -24,7 +25,8 @@ export const layoutGraph = (
   warehouse: {
     warehouses: Warehouse[];
     ignore?: (w: Warehouse) => boolean;
-  }
+  },
+  warehouseColorMap?: ColorMap
 ) => {
   const graph = new graphlib.Graph<GraphMeta>({ multigraph: true });
 
@@ -79,17 +81,26 @@ export const layoutGraph = (
 
     for (const requestedOrigin of s.spec?.requestedFreight || []) {
       const warehouseName = requestedOrigin?.origin?.name || '';
+
+      const warehouseData = warehouseByName[warehouseName];
+
+      if (warehouse.ignore?.(warehouseData)) {
+        continue;
+      }
+
       const warehouseNodeIndex = warehouseIndexer.index(warehouseByName[warehouseName]);
 
+      const edgeColor = warehouseColorMap?.[warehouseName];
+
       if (requestedOrigin?.sources?.direct) {
-        graph.setEdge(warehouseNodeIndex, stageNodeIndex);
+        graph.setEdge(warehouseNodeIndex, stageNodeIndex, { edgeColor }, warehouseNodeIndex);
       }
 
       for (const sourceStage of requestedOrigin?.sources?.stages || []) {
         graph.setEdge(
           stageIndexer.index(stageByName[sourceStage]),
           stageNodeIndex,
-          {},
+          { edgeColor },
           warehouseNodeIndex
         );
       }
