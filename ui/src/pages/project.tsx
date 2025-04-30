@@ -9,12 +9,7 @@ import { LoadingState } from '@ui/features/common';
 import { BaseHeader } from '@ui/features/common/layout/base-header';
 import { Pipelines } from '@ui/features/project/pipelines/pipelines';
 import { useProjectBreadcrumbs } from '@ui/features/project/project-utils';
-import {
-  getProject,
-  listStages,
-  listWarehouses,
-  queryFreight
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { getProject } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { Project as _Project } from '@ui/gen/api/v1alpha1/generated_pb';
 
 export const Project = ({
@@ -32,24 +27,7 @@ export const Project = ({
 
   const { data, isLoading, error } = useQuery(getProject, { name });
 
-  const getFreightQuery = useQuery(queryFreight, { project: name });
-
-  const listWarehousesQuery = useQuery(
-    listWarehouses,
-    {
-      project: name
-    },
-    { enabled: !isLoading }
-  );
-
-  const listStagesQuery = useQuery(listStages, { project: name });
-
-  if (
-    isLoading ||
-    listWarehousesQuery.isLoading ||
-    getFreightQuery.isLoading ||
-    listStagesQuery.isLoading
-  ) {
+  if (isLoading) {
     return <LoadingState />;
   }
 
@@ -94,10 +72,6 @@ export const Project = ({
         project={data?.result?.value as _Project}
         creatingStage={creatingStage}
         creatingWarehouse={creatingWarehouse}
-        warehouses={listWarehousesQuery.data?.warehouses || []}
-        freights={getFreightQuery.data?.groups || {}}
-        refetchFreights={getFreightQuery.refetch}
-        stages={listStagesQuery.data?.stages || []}
       />
     </div>
   );
