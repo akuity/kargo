@@ -1,5 +1,5 @@
 import { Controls, ReactFlow, useNodesState } from '@xyflow/react';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { queryCache } from '@ui/features/utils/cache';
 import { Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
@@ -54,10 +54,13 @@ export const Graph = (props: GraphProps) => {
     [stackedNodesParents]
   );
 
+  const [redraw, setRedraw] = useState(false);
+
   const graph = useReactFlowPipelineGraph(
     props.stages,
     props.warehouses,
     filterContext?.preferredFilter.warehouses || [],
+    redraw,
     {
       afterNodes: stackedNodesParents
     }
@@ -88,6 +91,10 @@ export const Graph = (props: GraphProps) => {
         })
       );
 
+      if (!nodes.find((n) => n.id === index)) {
+        setRedraw(!redraw);
+      }
+
       queryCache.imageStageMatrix.update(stage);
     },
     onWarehouse(warehouse) {
@@ -107,6 +114,10 @@ export const Graph = (props: GraphProps) => {
           return node;
         })
       );
+
+      if (!nodes.find((n) => n.id === index)) {
+        setRedraw(!redraw);
+      }
 
       queryCache.freight.refetch();
     }

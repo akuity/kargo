@@ -26,6 +26,7 @@ export const useReactFlowPipelineGraph = (
   warehouses: Warehouse[],
   // basically list of warehouses
   pipeline: string[],
+  redraw: boolean,
   stack?: {
     afterNodes?: string[];
   }
@@ -121,7 +122,6 @@ export const useReactFlowPipelineGraph = (
 
       reactFlowEdges.push({
         id: edgeIndexer.index(belongsToWarehouse, edge.v, edge.w),
-        type: 'smoothstep',
         source: edge.v,
         target: edge.w,
         animated: false,
@@ -140,5 +140,5 @@ export const useReactFlowPipelineGraph = (
       nodes: reactFlowNodes,
       edges: reactFlowEdges
     };
-  }, [stack?.afterNodes, pipeline]);
+  }, [stack?.afterNodes, pipeline, redraw]);
 };
