@@ -107,9 +107,23 @@ CustomNode.Container = (
 
   return (
     <>
-      <Handle id={id} type='target' position={Position.Left} />
+      <Handle
+        id={id}
+        type='target'
+        position={Position.Left}
+        style={{
+          backgroundColor: 'transparent'
+        }}
+      />
       {Children}
-      <Handle id={id} type='source' position={Position.Right} />
+      <Handle
+        id={id}
+        type='source'
+        position={Position.Right}
+        style={{
+          backgroundColor: 'transparent'
+        }}
+      />
     </>
   );
 };

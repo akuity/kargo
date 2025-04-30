@@ -78,7 +78,7 @@ export const Pipelines = (props: {
     showAlias: false,
     sources: [],
     timerange: 'all-time',
-    showColors: false,
+    showColors: true,
     warehouses: [],
     hideUnusedFreights: false,
     stackedNodesParents: [],

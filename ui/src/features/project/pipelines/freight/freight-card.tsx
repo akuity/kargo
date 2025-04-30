@@ -137,18 +137,24 @@ export const FreightCard = (props: FreightCardProps) => {
         <div className='text-[10px] text-nowrap mb-2'>{freightAlias}</div>
       )}
 
-      <div className='flex gap-1 justify-center'>
-        {props.freight?.commits?.map((commit) => (
-          <FreightArtifact key={commit?.repoURL} artifact={commit} />
-        ))}
+      <div className='flex gap-1 justify-center items-center'>
+        {props.freight?.commits
+          ?.slice(0, 2)
+          .map((commit) => <FreightArtifact key={commit?.repoURL} artifact={commit} />)}
 
-        {props.freight?.charts?.map((chart) => (
-          <FreightArtifact key={chart?.repoURL} artifact={chart} />
-        ))}
+        {props.freight?.charts
+          ?.slice(0, 2)
+          .map((chart) => <FreightArtifact key={chart?.repoURL} artifact={chart} />)}
 
-        {props.freight?.images?.map((image) => (
-          <FreightArtifact key={image?.repoURL} artifact={image} />
-        ))}
+        {props.freight?.images
+          ?.slice(0, 2)
+          .map((image) => <FreightArtifact key={image?.repoURL} artifact={image} />)}
+
+        {noOfGitCommits + noOfHelmReleases + noOfContainerImages > 6 && (
+          <Typography.Text type='secondary' className='text-[10px]'>
+            +{noOfGitCommits + noOfHelmReleases + noOfContainerImages - 6} more
+          </Typography.Text>
+        )}
       </div>
 
       <div className='flex mx-auto w-full gap-2 items-center justify-center text-nowrap my-1'>
