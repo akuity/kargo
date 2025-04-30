@@ -23,7 +23,6 @@ export const PromotionGraph = (props: PromotionGraphProps) => {
         panOnDrag={false}
         panOnScroll={false}
         nodesDraggable={false}
-        elementsSelectable={false}
         zoomOnScroll={false}
         zoomOnPinch={false}
       />

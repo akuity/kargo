@@ -1,5 +1,5 @@
+import { layout } from '@dagrejs/dagre';
 import { Edge, MarkerType, Node } from '@xyflow/react';
-import { layout } from 'dagre';
 import { useMemo } from 'react';
 
 import { Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
@@ -48,7 +48,7 @@ export const useReactFlowPipelineGraph = (
 
     graph = stackedNodes.graph;
 
-    layout(graph, { lablepos: 'c' });
+    layout(graph, { disableOptimalOrderHeuristic: true });
 
     const reactFlowNodes: Node[] = [];
     const reactFlowEdges: Edge[] = [];

@@ -1,5 +1,5 @@
+import { graphlib, layout } from '@dagrejs/dagre';
 import { Edge, MarkerType, Node } from '@xyflow/react';
-import { graphlib, layout } from 'dagre';
 import { useMemo } from 'react';
 
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
@@ -14,7 +14,7 @@ export const useMiniPromotionGraph = (stage: Stage, freight: Freight) => {
 
   return useMemo(() => {
     const stageName = stage?.metadata?.name || '';
-    const graph = new graphlib.Graph<{ handles: number }>();
+    const graph = new graphlib.Graph<{ handles: number; namespace: string }>();
 
     graph.setGraph({ rankdir: 'LR' });
     graph.setDefaultEdgeLabel(() => ({}));
@@ -24,7 +24,8 @@ export const useMiniPromotionGraph = (stage: Stage, freight: Freight) => {
       handles:
         actionContext?.action?.type === IAction.PROMOTE_DOWNSTREAM
           ? dictionaryContext?.subscribersByStage[stageName]?.size
-          : 1
+          : 1,
+      namespace: stage?.metadata?.namespace
     });
 
     let edgeHandleIdBuckets: Record<'source' | 'target', Record<string, number>> = {
@@ -66,7 +67,11 @@ export const useMiniPromotionGraph = (stage: Stage, freight: Freight) => {
     if (actionContext?.action?.type === IAction.PROMOTE_DOWNSTREAM) {
       const subscribers = dictionaryContext?.subscribersByStage[stageName] || new Set<string>();
       for (const stage of subscribers) {
-        graph.setNode(stage, { ...nodeSize(), handles: subscribers.size });
+        graph.setNode(stage, {
+          ...nodeSize(),
+          handles: subscribers.size,
+          namespace: dictionaryContext?.stageByName?.[stage]?.metadata?.namespace
+        });
         graph.setEdge(stageName, stage);
         addToBucket('source', stageName);
         addToBucket('target', stage);
@@ -84,7 +89,11 @@ export const useMiniPromotionGraph = (stage: Stage, freight: Freight) => {
 
       if (parentStages.size) {
         for (const parentStage of parentStages) {
-          graph.setNode(parentStage, { ...nodeSize(), handles: parentStages.size });
+          graph.setNode(parentStage, {
+            ...nodeSize(),
+            handles: parentStages.size,
+            namespace: dictionaryContext?.stageByName?.[parentStage]?.metadata?.namespace
+          });
           graph.setEdge(parentStage, stageName);
           addToBucket('source', parentStage);
           addToBucket('target', stageName);
@@ -97,7 +106,7 @@ export const useMiniPromotionGraph = (stage: Stage, freight: Freight) => {
       }
     }
 
-    layout(graph, { lablepos: 'c' });
+    layout(graph, { disableOptimalOrderHeuristic: true });
 
     const reactFlowNodes: Node[] = [];
     const reactFlowEdges: Edge[] = [];
@@ -114,7 +123,8 @@ export const useMiniPromotionGraph = (stage: Stage, freight: Freight) => {
         },
         data: {
           label: node,
-          handles: dagreNode.handles
+          handles: dagreNode.handles,
+          namespace: dagreNode.namespace
         }
       });
     }
@@ -140,7 +150,13 @@ export const useMiniPromotionGraph = (stage: Stage, freight: Freight) => {
       nodes: reactFlowNodes,
       edges: reactFlowEdges
     };
-  }, [stage, freight, dictionaryContext?.subscribersByStage, actionContext?.action]);
+  }, [
+    stage,
+    freight,
+    dictionaryContext?.subscribersByStage,
+    actionContext?.action,
+    dictionaryContext?.stageByName
+  ]);
 };
 
 const nodeSize = () => ({ width: 200, height: 100 });
