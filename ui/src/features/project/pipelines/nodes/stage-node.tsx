@@ -76,7 +76,12 @@ export const StageNode = (props: { stage: Stage }) => {
 
     let Phase = (
       <Flex align='center' gap={4}>
-        {stagePhase} <StageConditionIcon conditions={props.stage?.status?.conditions || []} />
+        {stagePhase}{' '}
+        <StageConditionIcon
+          className='text-[10px]'
+          conditions={props.stage?.status?.conditions || []}
+          noTooltip
+        />
         {stagePhase === 'Promoting' && (
           <FontAwesomeIcon icon={faExternalLink} className='text-[8px]' />
         )}

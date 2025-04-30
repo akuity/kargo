@@ -25,7 +25,15 @@ interface IconState {
 }
 
 export const StageConditionIcon = memo(
-  ({ conditions, className }: { conditions: Condition[]; className?: string }) => {
+  ({
+    conditions,
+    className,
+    noTooltip
+  }: {
+    conditions: Condition[];
+    className?: string;
+    noTooltip?: boolean;
+  }) => {
     const { iconState, isPromoting } = useMemo(() => {
       const hasCondition = (
         type: StageConditionType,
@@ -123,17 +131,19 @@ export const StageConditionIcon = memo(
       [iconState.tooltipTitle, iconState.tooltipMessage] // Only recalculate when tooltip content changes
     );
 
-    return (
-      <Tooltip title={tooltipContent}>
-        {isPromoting ? (
-          <TruckIcon />
-        ) : (
-          <FontAwesomeIcon
-            icon={iconState.icon}
-            className={classNames(className, iconState.iconClass)}
-          />
-        )}
-      </Tooltip>
+    const Icon = isPromoting ? (
+      <TruckIcon className={className} />
+    ) : (
+      <FontAwesomeIcon
+        icon={iconState.icon}
+        className={classNames(className, iconState.iconClass)}
+      />
     );
+
+    if (noTooltip) {
+      return Icon;
+    }
+
+    return <Tooltip title={tooltipContent}>{Icon}</Tooltip>;
   }
 );

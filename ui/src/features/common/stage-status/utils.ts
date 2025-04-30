@@ -49,7 +49,17 @@ export const getStagePhase = (stage: Stage) => {
     return 'Verifying';
   }
 
-  const ready = hasCondition(StageConditionType.Reconciling, StageConditionStatus.True, conditions);
+  const reconciling = hasCondition(
+    StageConditionType.Reconciling,
+    StageConditionStatus.True,
+    conditions
+  );
+
+  if (reconciling.isActive) {
+    return 'Reconciling';
+  }
+
+  const ready = hasCondition(StageConditionType.Ready, StageConditionStatus.True, conditions);
 
   const failed = ready.condition?.status === StageConditionStatus.False;
 
@@ -60,4 +70,6 @@ export const getStagePhase = (stage: Stage) => {
   if (ready.isActive) {
     return 'Ready';
   }
+
+  return 'Steady';
 };
