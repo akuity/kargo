@@ -1,7 +1,9 @@
 import { useQuery } from '@connectrpc/connect-query';
+import { faDocker } from '@fortawesome/free-brands-svg-icons';
 import { faPlus } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Dropdown, Flex, Result } from 'antd';
+import classNames from 'classnames';
 import { useMemo, useState } from 'react';
 import { generatePath, Link, useNavigate, useParams } from 'react-router-dom';
 
@@ -17,6 +19,7 @@ import StageDetails from '@ui/features/stage/stage-details';
 import { getColors } from '@ui/features/stage/utils';
 import {
   getProject,
+  listImages,
   listStages,
   listWarehouses,
   queryFreight
@@ -33,6 +36,7 @@ import {
 import { FreightTimeline } from './freight/freight-timeline';
 import { Graph } from './graph/graph';
 import { GraphFilters } from './graph-filters';
+import { Images } from './images';
 import { Promote } from './promotion/promote';
 import { Promotion } from './promotion/promotion';
 import { useAction } from './use-action';
@@ -55,6 +59,8 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
   const project = projectQuery.data?.result?.value as Project;
 
   const projectName = name;
+
+  const listImagesQuery = useQuery(listImages, { project: name });
 
   const getFreightQuery = useQuery(queryFreight, { project: projectName });
 
@@ -104,7 +110,8 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
     warehouses: [],
     hideUnusedFreights: false,
     stackedNodesParents: [],
-    hideSubscriptions: {}
+    hideSubscriptions: {},
+    images: false
   });
 
   usePersistPreferredFilter(projectName || '', preferredFilter, setPreferredFilter);
@@ -170,12 +177,13 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
             />
 
             <div className='w-full h-full relative'>
-              <Flex justify='space-between' gap={24} className='absolute z-10 top-2 right-2 left-2'>
+              <Flex gap={12} className='absolute z-10 top-2 right-2 left-2'>
                 <GraphFilters
                   warehouses={listWarehousesQuery.data?.warehouses || []}
                   stages={listStagesQuery.data?.stages || []}
                 />
                 <Dropdown
+                  className='ml-auto'
                   trigger={['click']}
                   menu={{
                     items: [
@@ -225,7 +233,34 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                 >
                   <Button icon={<FontAwesomeIcon icon={faPlus} />}>Create</Button>
                 </Dropdown>
+                <Button
+                  icon={<FontAwesomeIcon icon={faDocker} />}
+                  onClick={() =>
+                    setPreferredFilter({
+                      ...preferredFilter,
+                      images: !preferredFilter?.images
+                    })
+                  }
+                />
               </Flex>
+
+              <div
+                className={classNames('w-[450px] absolute right-2 top-20 z-10', {
+                  hidden: !preferredFilter?.images
+                })}
+              >
+                <Images
+                  hide={() =>
+                    setPreferredFilter({
+                      ...preferredFilter,
+                      images: !preferredFilter?.images
+                    })
+                  }
+                  images={listImagesQuery.data?.images || {}}
+                  project={projectName || ''}
+                  stages={listStagesQuery.data?.stages || []}
+                />
+              </div>
               <Graph
                 project={project.metadata?.name || ''}
                 warehouses={listWarehousesQuery.data?.warehouses || []}
