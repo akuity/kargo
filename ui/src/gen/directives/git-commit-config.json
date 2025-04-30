@@ -6,16 +6,22 @@
  "properties": {
   "author": {
    "type": "object",
-   "description": "The author of the commit.",
+   "description": "Optional authorship information for the commit. If provided, this takes precedence over both system-level defaults and any optional, default authorship information configured in the `git-clone` step.",
    "additionalProperties": false,
    "properties": {
     "email": {
      "type": "string",
-     "description": "The email of the author."
+     "description": "The email of the author.",
+     "format": "email"
     },
     "name": {
      "type": "string",
-     "description": "The name of the author."
+     "description": "The name of the author.",
+     "minLength": 1
+    },
+    "signingKey": {
+     "type": "string",
+     "description": "The GPG signing key for the author."
     }
    }
   },

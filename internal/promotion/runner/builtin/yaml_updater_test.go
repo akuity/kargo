@@ -143,7 +143,7 @@ func Test_yamlUpdater_run(t *testing.T) {
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, promotion.StepResult{
-					Status: kargoapi.PromotionPhaseSucceeded,
+					Status: kargoapi.PromotionStepStatusSucceeded,
 					Output: map[string]any{
 						"commitMessage": "Updated values.yaml\n\n- image.tag: \"fake-tag\"",
 					},
@@ -166,7 +166,7 @@ func Test_yamlUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
 				assert.Error(t, err)
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, result)
 				assert.Contains(t, err.Error(), "values file update failed")
 			},
 		},

@@ -228,7 +228,7 @@ func Test_helmChartUpdater_run(t *testing.T) {
 			assertions: func(t *testing.T, tempDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, promotion.StepResult{
-					Status: kargoapi.PromotionPhaseSucceeded,
+					Status: kargoapi.PromotionStepStatusSucceeded,
 					Output: map[string]any{
 						"commitMessage": `Updated chart dependencies for testchart
 

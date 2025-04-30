@@ -51,7 +51,8 @@ type webhook struct {
 
 func SetupWebhookWithManager(mgr ctrl.Manager, cfg WebhookConfig) error {
 	w := &webhook{
-		cfg: cfg,
+		cfg:    cfg,
+		client: mgr.GetClient(),
 	}
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&kargoapi.Project{}).

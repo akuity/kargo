@@ -16,14 +16,18 @@ import (
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 
-	_ "github.com/akuity/kargo/internal/gitprovider/azure"  // Azure provider registration
+	_ "github.com/akuity/kargo/internal/gitprovider/azure"     // Azure provider registration
 	_ "github.com/akuity/kargo/internal/gitprovider/bitbucket" // Bitbucket provider registration
-	_ "github.com/akuity/kargo/internal/gitprovider/gitea"  // Gitea provider registration
-	_ "github.com/akuity/kargo/internal/gitprovider/github" // GitHub provider registration
-	_ "github.com/akuity/kargo/internal/gitprovider/gitlab" // GitLab provider registration
+	_ "github.com/akuity/kargo/internal/gitprovider/gitea"     // Gitea provider registration
+	_ "github.com/akuity/kargo/internal/gitprovider/github"    // GitHub provider registration
+	_ "github.com/akuity/kargo/internal/gitprovider/gitlab"    // GitLab provider registration
 )
 
 // stateKeyPRNumber is the key used to store the PR number in the shared State.
+//
+// Deprecated: Use `pr.id` instead.
+//
+// TODO: Remove in v1.7.0
 const stateKeyPRNumber = "prNumber"
 
 // gitPROpener is an implementation of the promotion.StepRunner interface that
@@ -54,11 +58,11 @@ func (g *gitPROpener) Run(
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
 	if err := g.validate(stepCtx.Config); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, err
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 	cfg, err := promotion.ConfigToStruct[builtin.GitOpenPRConfig](stepCtx.Config)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("could not convert config into git-open-pr config: %w", err)
 	}
 	return g.run(ctx, stepCtx, cfg)
@@ -74,22 +78,6 @@ func (g *gitPROpener) run(
 	stepCtx *promotion.StepContext,
 	cfg builtin.GitOpenPRConfig,
 ) (promotion.StepResult, error) {
-	// Short-circuit if shared state has output from a previous execution of this
-	// step that contains a PR number.
-	prNumber, err := g.getPRNumber(stepCtx, stepCtx.SharedState)
-	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
-			fmt.Errorf("error getting PR number from shared state: %w", err)
-	}
-	if prNumber != -1 {
-		return promotion.StepResult{
-			Status: kargoapi.PromotionPhaseSucceeded,
-			Output: map[string]any{
-				stateKeyPRNumber: prNumber,
-			},
-		}, nil
-	}
-
 	sourceBranch := cfg.SourceBranch
 
 	var repoCreds *git.RepoCredentials
@@ -100,7 +88,7 @@ func (g *gitPROpener) run(
 		cfg.RepoURL,
 	)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error getting credentials for %s: %w", cfg.RepoURL, err)
 	}
 	if creds != nil {
@@ -123,7 +111,7 @@ func (g *gitPROpener) run(
 		},
 	)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error cloning %s: %w", cfg.RepoURL, err)
 	}
 	defer repo.Close()
@@ -139,7 +127,7 @@ func (g *gitPROpener) run(
 	}
 	gitProvider, err := gitprovider.New(cfg.RepoURL, gpOpts)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error creating git provider service: %w", err)
 	}
 
@@ -152,14 +140,19 @@ func (g *gitPROpener) run(
 		cfg.TargetBranch,
 	)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error determining if pull request already exists: %w", err)
 	}
+
 	if pr != nil && (pr.Open || pr.Merged) { // Excludes PR that is both closed AND unmerged
 		return promotion.StepResult{
-			Status: kargoapi.PromotionPhaseSucceeded,
+			Status: kargoapi.PromotionStepStatusSucceeded,
 			Output: map[string]any{
-				stateKeyPRNumber: pr.Number,
+				"pr": map[string]any{
+					"id":  pr.Number,
+					"url": pr.URL,
+				},
+				stateKeyPRNumber: pr.Number, // TODO: Remove in v1.7.0
 			},
 		}, nil
 	}
@@ -173,7 +166,7 @@ func (g *gitPROpener) run(
 	// that may involve creating a new branch and committing to it.
 	commitMsg, err := repo.CommitMessage(sourceBranch)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
 			"error getting commit message from head of branch %s: %w",
 			sourceBranch, err,
 		)
@@ -184,7 +177,7 @@ func (g *gitPROpener) run(
 		cfg.TargetBranch,
 		cfg.CreateTargetBranch,
 	); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
 			"error ensuring existence of remote branch %s: %w",
 			cfg.TargetBranch, err,
 		)
@@ -217,54 +210,19 @@ func (g *gitPROpener) run(
 			Labels:      cfg.Labels,
 		},
 	); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error creating pull request: %w", err)
 	}
 	return promotion.StepResult{
-		Status: kargoapi.PromotionPhaseSucceeded,
+		Status: kargoapi.PromotionStepStatusSucceeded,
 		Output: map[string]any{
-			stateKeyPRNumber: pr.Number,
+			"pr": map[string]any{
+				"id":  pr.Number,
+				"url": pr.URL,
+			},
+			stateKeyPRNumber: pr.Number, // TODO: Remove in v1.7.0
 		},
 	}, nil
-}
-
-// getPRNumber checks shared state for output from a previous execution of this
-// step. If any is found and it contains a PR number, that number is returned.
-// 0 is returned if no PR number is found in the shared state. An error is
-// returned if the PR number is found but is neither an int64 nor a float64.
-func (g *gitPROpener) getPRNumber(
-	stepCtx *promotion.StepContext,
-	sharedState promotion.State,
-) (int64, error) {
-	stepOutput, exists := sharedState.Get(stepCtx.Alias)
-	if !exists {
-		return -1, nil
-	}
-	stepOutputMap, ok := stepOutput.(map[string]any)
-	if !ok {
-		return -1, fmt.Errorf(
-			"output from step with alias %q is not a map[string]any",
-			stepCtx.Alias,
-		)
-	}
-	prNumberAny, exists := stepOutputMap[stateKeyPRNumber]
-	if !exists {
-		return -1, nil
-	}
-	// If the state was rehydrated from PromotionStatus, which makes use of
-	// apiextensions.JSON, the PR number will be a float64. Otherwise, it will be
-	// an int64. We need to handle both cases.
-	switch prNumber := prNumberAny.(type) {
-	case int64:
-		return prNumber, nil
-	case float64:
-		return int64(prNumber), nil
-	default:
-		return -1, fmt.Errorf(
-			"PR number in output from step with alias %q is not an int64",
-			stepCtx.Alias,
-		)
-	}
 }
 
 // ensureRemoteTargetBranch ensures the existence of a remote branch. If the

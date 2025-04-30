@@ -120,7 +120,7 @@ func Test_gitTreeOverwriter_run(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	require.Equal(t, kargoapi.PromotionPhaseSucceeded, res.Status)
+	require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
 
 	// Make sure old files are gone
 	_, err = os.Stat(filepath.Join(workTree.Dir(), "original.txt"))

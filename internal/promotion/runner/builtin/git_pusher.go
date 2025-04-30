@@ -53,11 +53,11 @@ func (g *gitPushPusher) Run(
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
 	if err := g.validate(stepCtx.Config); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, err
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 	cfg, err := promotion.ConfigToStruct[builtin.GitPushConfig](stepCtx.Config)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("could not convert config into git-push config: %w", err)
 	}
 	return g.run(ctx, stepCtx, cfg)
@@ -78,7 +78,7 @@ func (g *gitPushPusher) run(
 	// credentials and, if found, reload the work tree with the credentials.
 	path, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.Path)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, fmt.Errorf(
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
 			"error joining path %s with work dir %s: %w",
 			cfg.Path, stepCtx.WorkDir, err,
 		)
@@ -86,7 +86,7 @@ func (g *gitPushPusher) run(
 	loadOpts := &git.LoadWorkTreeOptions{}
 	workTree, err := git.LoadWorkTree(path, loadOpts)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error loading working tree from %s: %w", cfg.Path, err)
 	}
 	creds, err := g.credsDB.Get(
@@ -96,7 +96,7 @@ func (g *gitPushPusher) run(
 		workTree.URL(),
 	)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error getting credentials for %s: %w", workTree.URL(), err)
 	}
 	if creds != nil {
@@ -107,7 +107,7 @@ func (g *gitPushPusher) run(
 		}
 	}
 	if workTree, err = git.LoadWorkTree(path, loadOpts); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error loading working tree from %s: %w", cfg.Path, err)
 	}
 	pushOpts := &git.PushOptions{
@@ -129,7 +129,7 @@ func (g *gitPushPusher) run(
 		// because we will want to return the branch that was pushed to, but we
 		// don't want to mess with the options any further.
 		if pushOpts.TargetBranch, err = workTree.CurrentBranch(); err != nil {
-			return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 				fmt.Errorf("error getting current branch: %w", err)
 		}
 	}
@@ -169,20 +169,20 @@ func (g *gitPushPusher) run(
 		if git.IsMergeConflict(err) {
 			// Special case: A merge conflict requires manual resolution and no amount
 			// of retries will fix that.
-			return promotion.StepResult{Status: kargoapi.PromotionPhaseFailed},
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
 				&promotion.TerminalError{Err: err}
 		}
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error pushing commits to remote: %w", err)
 	}
 
 	commitID, err := workTree.LastCommitID()
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error getting last commit ID: %w", err)
 	}
 	return promotion.StepResult{
-		Status: kargoapi.PromotionPhaseSucceeded,
+		Status: kargoapi.PromotionStepStatusSucceeded,
 		Output: map[string]any{
 			stateKeyBranch: pushOpts.TargetBranch,
 			stateKeyCommit: commitID,

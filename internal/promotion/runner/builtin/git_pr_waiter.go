@@ -49,11 +49,11 @@ func (g *gitPRWaiter) Run(
 	stepCtx *promoPkg.StepContext,
 ) (promoPkg.StepResult, error) {
 	if err := g.validate(stepCtx.Config); err != nil {
-		return promoPkg.StepResult{Status: kargoapi.PromotionPhaseErrored}, err
+		return promoPkg.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 	cfg, err := promoPkg.ConfigToStruct[builtin.GitWaitForPRConfig](stepCtx.Config)
 	if err != nil {
-		return promoPkg.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promoPkg.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("could not convert config into git-wait-for-pr config: %w", err)
 	}
 	return g.run(ctx, stepCtx, cfg)
@@ -77,7 +77,7 @@ func (g *gitPRWaiter) run(
 		cfg.RepoURL,
 	)
 	if err != nil {
-		return promoPkg.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promoPkg.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error getting credentials for %s: %w", cfg.RepoURL, err)
 	}
 	if creds != nil {
@@ -99,25 +99,25 @@ func (g *gitPRWaiter) run(
 	}
 	gitProv, err := gitprovider.New(cfg.RepoURL, gpOpts)
 	if err != nil {
-		return promoPkg.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promoPkg.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error creating git provider service: %w", err)
 	}
 
 	pr, err := gitProv.GetPullRequest(ctx, cfg.PRNumber)
 	if err != nil {
-		return promoPkg.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promoPkg.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error getting pull request %d: %w", cfg.PRNumber, err)
 	}
 
 	if pr.Open {
-		return promoPkg.StepResult{Status: kargoapi.PromotionPhaseRunning}, nil
+		return promoPkg.StepResult{Status: kargoapi.PromotionStepStatusRunning}, nil
 	}
 	if !pr.Merged {
-		return promoPkg.StepResult{Status: kargoapi.PromotionPhaseFailed},
+		return promoPkg.StepResult{Status: kargoapi.PromotionStepStatusFailed},
 			&promotion.TerminalError{Err: fmt.Errorf("pull request %d was closed without being merged", cfg.PRNumber)}
 	}
 	return promoPkg.StepResult{
-		Status: kargoapi.PromotionPhaseSucceeded,
+		Status: kargoapi.PromotionStepStatusSucceeded,
 		Output: map[string]any{stateKeyCommit: pr.MergeCommitSHA},
 	}, nil
 }
