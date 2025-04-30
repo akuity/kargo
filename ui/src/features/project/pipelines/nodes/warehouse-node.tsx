@@ -1,5 +1,5 @@
 import { useMutation } from '@connectrpc/connect-query';
-import { faRefresh, faWarehouse } from '@fortawesome/free-solid-svg-icons';
+import { faMinus, faPlus, faRefresh, faWarehouse } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Badge, Button, Card, Flex, message } from 'antd';
 import classNames from 'classnames';
@@ -7,6 +7,7 @@ import { useMemo } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { useFreightTimelineControllerContext } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
 import { refreshWarehouse } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
@@ -15,6 +16,8 @@ import styles from './node-size-source-of-truth.module.less';
 export const WarehouseNode = (props: { warehouse: Warehouse }) => {
   const navigate = useNavigate();
 
+  const freightTimelineControllerContext = useFreightTimelineControllerContext();
+
   const warehouseState = useWarehouseState(props.warehouse);
 
   const refreshWarehouseMutation = useMutation(refreshWarehouse, {
@@ -22,6 +25,11 @@ export const WarehouseNode = (props: { warehouse: Warehouse }) => {
       message.success('Warehouse successfully refreshed');
     }
   });
+
+  const isSubscriptionHidden =
+    freightTimelineControllerContext?.preferredFilter?.hideSubscriptions?.[
+      props.warehouse?.metadata?.name || ''
+    ];
 
   return (
     <Card
@@ -38,7 +46,7 @@ export const WarehouseNode = (props: { warehouse: Warehouse }) => {
           {warehouseState.hasError && <Badge status='error' />}
         </Flex>
       }
-      className={(styles['warehouse-node-size'], 'cursor-pointer')}
+      className={(styles['warehouse-node-size'], 'cursor-pointer relative')}
       onClick={() =>
         navigate(
           generatePath(paths.warehouse, {
@@ -48,6 +56,30 @@ export const WarehouseNode = (props: { warehouse: Warehouse }) => {
         )
       }
     >
+      <Button
+        size='small'
+        icon={<FontAwesomeIcon icon={isSubscriptionHidden ? faPlus : faMinus} />}
+        className='absolute -left-2 top-[50%] translate-y-[-50%] text-[10px]'
+        onClick={(e) => {
+          e.stopPropagation();
+
+          const warehouseName = props.warehouse?.metadata?.name || '';
+          const hiddenSubscriptions = {
+            ...freightTimelineControllerContext?.preferredFilter.hideSubscriptions
+          };
+
+          if (isSubscriptionHidden) {
+            delete hiddenSubscriptions[warehouseName];
+          } else {
+            hiddenSubscriptions[warehouseName] = true;
+          }
+
+          freightTimelineControllerContext?.setPreferredFilter({
+            ...freightTimelineControllerContext?.preferredFilter,
+            hideSubscriptions: hiddenSubscriptions
+          });
+        }}
+      />
       <center>
         <Button
           size='small'

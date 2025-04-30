@@ -63,7 +63,8 @@ export const Graph = (props: GraphProps) => {
     redraw,
     {
       afterNodes: stackedNodesParents
-    }
+    },
+    filterContext?.preferredFilter?.hideSubscriptions
   );
 
   const [nodes, setNodes] = useNodesState(graph.nodes);

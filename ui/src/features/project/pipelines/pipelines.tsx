@@ -93,7 +93,8 @@ export const Pipelines = (props: {
     showColors: false,
     warehouses: [],
     hideUnusedFreights: false,
-    stackedNodesParents: []
+    stackedNodesParents: [],
+    hideSubscriptions: {}
   });
 
   usePersistPreferredFilter(projectName || '', preferredFilter, setPreferredFilter);

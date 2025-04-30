@@ -15,6 +15,7 @@ export type FreightTimelineControllerContextType = {
     warehouses: string[];
     hideUnusedFreights: boolean;
     stackedNodesParents: string[];
+    hideSubscriptions: Record<string, boolean>;
   };
   setPreferredFilter: (filter: FreightTimelineControllerContextType['preferredFilter']) => void;
 };

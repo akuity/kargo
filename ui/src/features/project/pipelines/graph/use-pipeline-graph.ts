@@ -23,7 +23,8 @@ export const useReactFlowPipelineGraph = (
   redraw: boolean,
   stack?: {
     afterNodes?: string[];
-  }
+  },
+  hideSubscriptions?: Record<string, boolean>
 ) => {
   const { warehouseColorMap } = useContext(ColorContext);
 
@@ -77,6 +78,12 @@ export const useReactFlowPipelineGraph = (
         continue;
       }
 
+      const subscriptionParent = dagreNode?.subscriptionParent?.metadata?.name || '';
+
+      if (hideSubscriptions?.[subscriptionParent]) {
+        continue;
+      }
+
       reactFlowNodes.push({
         id: node,
         type: reactFlowNodeConstants.CUSTOM_NODE,
@@ -119,5 +126,5 @@ export const useReactFlowPipelineGraph = (
       nodes: reactFlowNodes,
       edges: reactFlowEdges
     };
-  }, [stack?.afterNodes, pipeline, redraw, warehouseColorMap]);
+  }, [stack?.afterNodes, pipeline, redraw, warehouseColorMap, hideSubscriptions]);
 };
