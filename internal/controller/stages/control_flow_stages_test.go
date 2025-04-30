@@ -22,6 +22,7 @@ import (
 
 	rollouts "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/conditions"
 	"github.com/akuity/kargo/internal/indexer"
 	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
 )
@@ -198,7 +199,6 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 				stage := &kargoapi.Stage{}
 				err = c.Get(context.Background(), testStage, stage)
 				require.NoError(t, err)
-				assert.Contains(t, stage.Status.Message, "something went wrong")
 			},
 		},
 		{
@@ -271,8 +271,6 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 				stage := &kargoapi.Stage{}
 				err = c.Get(context.Background(), testStage, stage)
 				require.NoError(t, err)
-				assert.Equal(t, kargoapi.StagePhaseNotApplicable, stage.Status.Phase)
-				assert.Empty(t, stage.Status.Message)
 			},
 		},
 	}
@@ -363,8 +361,11 @@ func TestControlFlowStageReconciler_reconcile(t *testing.T) {
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus, _ client.Client, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, kargoapi.StagePhaseNotApplicable, status.Phase)
-				assert.Empty(t, status.Message)
+
+				require.Len(t, status.Conditions, 1)
+				readyCond := conditions.Get(&status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCond)
+				assert.Equal(t, metav1.ConditionTrue, readyCond.Status)
 			},
 		},
 		{
@@ -390,8 +391,6 @@ func TestControlFlowStageReconciler_reconcile(t *testing.T) {
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus, c client.Client, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, kargoapi.StagePhaseNotApplicable, status.Phase)
-				assert.Empty(t, status.Message)
 				updatedFreight := &kargoapi.Freight{}
 				err = c.Get(
 					context.Background(),
@@ -403,6 +402,11 @@ func TestControlFlowStageReconciler_reconcile(t *testing.T) {
 				)
 				require.NoError(t, err)
 				assert.Contains(t, updatedFreight.Status.VerifiedIn, testStage)
+
+				require.Len(t, status.Conditions, 1)
+				readyCond := conditions.Get(&status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCond)
+				assert.Equal(t, metav1.ConditionTrue, readyCond.Status)
 			},
 		},
 		{
@@ -425,7 +429,20 @@ func TestControlFlowStageReconciler_reconcile(t *testing.T) {
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus, _ client.Client, err error) {
 				require.ErrorContains(t, err, "something went wrong")
-				assert.Contains(t, status.Message, "something went wrong")
+
+				require.Len(t, status.Conditions, 2)
+
+				readyCond := conditions.Get(&status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCond)
+				assert.Equal(t, metav1.ConditionFalse, readyCond.Status)
+				assert.Equal(t, "FreightRetrievalFailed", readyCond.Reason)
+				assert.Contains(t, readyCond.Message, "something went wrong")
+
+				recCond := conditions.Get(&status, kargoapi.ConditionTypeReconciling)
+				require.NotNil(t, recCond)
+				assert.Equal(t, metav1.ConditionTrue, recCond.Status)
+				assert.Equal(t, "RetryAfterFreightRetrievalFailed", recCond.Reason)
+				assert.Contains(t, recCond.Message, "something went wrong")
 			},
 		},
 		{
@@ -463,7 +480,20 @@ func TestControlFlowStageReconciler_reconcile(t *testing.T) {
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus, _ client.Client, err error) {
 				require.ErrorContains(t, err, "failed to verify 1 Freight")
-				assert.Contains(t, status.Message, "failed to verify 1 Freight")
+
+				require.Len(t, status.Conditions, 2)
+
+				readyCond := conditions.Get(&status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCond)
+				assert.Equal(t, metav1.ConditionFalse, readyCond.Status)
+				assert.Equal(t, "FreightVerificationFailed", readyCond.Reason)
+				assert.Contains(t, readyCond.Message, "failed to verify 1 Freight")
+
+				recCond := conditions.Get(&status, kargoapi.ConditionTypeReconciling)
+				require.NotNil(t, recCond)
+				assert.Equal(t, metav1.ConditionTrue, recCond.Status)
+				assert.Equal(t, "RetryAfterVerificationFailed", recCond.Reason)
+				assert.Contains(t, recCond.Message, "failed to verify 1 Freight")
 			},
 		},
 		{
@@ -509,8 +539,12 @@ func TestControlFlowStageReconciler_reconcile(t *testing.T) {
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus, _ client.Client, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, kargoapi.StagePhaseNotApplicable, status.Phase)
-				assert.Empty(t, status.Message)
+
+				require.Len(t, status.Conditions, 1)
+
+				readyCond := conditions.Get(&status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCond)
+				assert.Equal(t, metav1.ConditionTrue, readyCond.Status)
 			},
 		},
 		{
@@ -527,9 +561,7 @@ func TestControlFlowStageReconciler_reconcile(t *testing.T) {
 			objects: []client.Object{testWarehouse},
 			assertions: func(t *testing.T, status kargoapi.StageStatus, _ client.Client, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, kargoapi.StagePhaseNotApplicable, status.Phase)
 				assert.Equal(t, "refresh-token", status.LastHandledRefresh)
-				assert.Empty(t, status.Message)
 			},
 		},
 		{
@@ -547,6 +579,29 @@ func TestControlFlowStageReconciler_reconcile(t *testing.T) {
 			assertions: func(t *testing.T, status kargoapi.StageStatus, _ client.Client, err error) {
 				require.NoError(t, err)
 				assert.Equal(t, int64(2), status.ObservedGeneration)
+			},
+		},
+		{
+			name: "removes reconciling condition",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testStage,
+					Namespace: testProject,
+				},
+				Status: kargoapi.StageStatus{
+					Conditions: []metav1.Condition{
+						{
+							Type:   kargoapi.ConditionTypeReconciling,
+							Status: metav1.ConditionTrue,
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, _ client.Client, err error) {
+				require.NoError(t, err)
+				assert.Len(t, status.Conditions, 1)
+				assert.Equal(t, kargoapi.ConditionTypeReady, status.Conditions[0].Type)
+				assert.Equal(t, metav1.ConditionTrue, status.Conditions[0].Status)
 			},
 		},
 	}
@@ -598,19 +653,7 @@ func TestControlFlowStageReconciler_initializeStatus(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, newStatus kargoapi.StageStatus) {
-				assert.Equal(t, kargoapi.StagePhaseNotApplicable, newStatus.Phase)
 				assert.Equal(t, int64(2), newStatus.ObservedGeneration)
-			},
-		},
-		{
-			name: "resets previous message",
-			stage: &kargoapi.Stage{
-				Status: kargoapi.StageStatus{
-					Message: "previous message",
-				},
-			},
-			assertions: func(t *testing.T, newStatus kargoapi.StageStatus) {
-				assert.Empty(t, newStatus.Message)
 			},
 		},
 		{
@@ -624,6 +667,35 @@ func TestControlFlowStageReconciler_initializeStatus(t *testing.T) {
 			},
 			assertions: func(t *testing.T, newStatus kargoapi.StageStatus) {
 				assert.Equal(t, "refresh-token", newStatus.LastHandledRefresh)
+			},
+		},
+		{
+			name: "clears irrelevant conditions for Stage type",
+			stage: &kargoapi.Stage{
+				Status: kargoapi.StageStatus{
+					Conditions: []metav1.Condition{
+						{
+							// Should be kept
+							Type:   kargoapi.ConditionTypeReady,
+							Status: metav1.ConditionTrue,
+						},
+						{
+							// Should be kept
+							Type:   kargoapi.ConditionTypeReconciling,
+							Status: metav1.ConditionTrue,
+						},
+						{
+							// Should be cleared
+							Type:   kargoapi.ConditionTypeHealthy,
+							Status: metav1.ConditionTrue,
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, newStatus kargoapi.StageStatus) {
+				assert.Len(t, newStatus.Conditions, 2)
+				assert.Equal(t, kargoapi.ConditionTypeReady, newStatus.Conditions[0].Type)
+				assert.Equal(t, kargoapi.ConditionTypeReconciling, newStatus.Conditions[1].Type)
 			},
 		},
 		{

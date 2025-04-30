@@ -6,6 +6,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
@@ -18,6 +19,7 @@ import (
 	rollouts "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
+	"github.com/akuity/kargo/internal/conditions"
 	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/kargo"
@@ -265,7 +267,21 @@ func (r *ControlFlowStageReconciler) reconcile(
 	logger.Debug("getting available Freight")
 	freight, err := api.ListFreightAvailableToStage(ctx, r.client, stage)
 	if err != nil {
-		newStatus.Message = err.Error()
+		conditions.Set(
+			&newStatus,
+			&metav1.Condition{
+				Type:    kargoapi.ConditionTypeReconciling,
+				Status:  metav1.ConditionTrue,
+				Reason:  "RetryAfterFreightRetrievalFailed",
+				Message: err.Error(),
+			},
+			&metav1.Condition{
+				Type:    kargoapi.ConditionTypeReady,
+				Status:  metav1.ConditionFalse,
+				Reason:  "FreightRetrievalFailed",
+				Message: err.Error(),
+			},
+		)
 		return newStatus, err
 	}
 
@@ -276,10 +292,31 @@ func (r *ControlFlowStageReconciler) reconcile(
 			logger.Debug("verified Freight", "count", newlyVerified)
 		}
 		if err != nil {
-			newStatus.Message = err.Error()
+			conditions.Set(
+				&newStatus,
+				&metav1.Condition{
+					Type:    kargoapi.ConditionTypeReconciling,
+					Status:  metav1.ConditionTrue,
+					Reason:  "RetryAfterVerificationFailed",
+					Message: err.Error(),
+				},
+				&metav1.Condition{
+					Type:    kargoapi.ConditionTypeReady,
+					Status:  metav1.ConditionFalse,
+					Reason:  "FreightVerificationFailed",
+					Message: err.Error(),
+				},
+			)
 			return newStatus, err
 		}
 	}
+
+	// Mark the Stage as Ready and remove any reconciling condition.
+	conditions.Set(&newStatus, &metav1.Condition{
+		Type:   kargoapi.ConditionTypeReady,
+		Status: metav1.ConditionTrue,
+	})
+	conditions.Delete(&newStatus, kargoapi.ConditionTypeReconciling)
 
 	return newStatus, nil
 }
@@ -291,18 +328,23 @@ func (r *ControlFlowStageReconciler) initializeStatus(stage *kargoapi.Stage) kar
 	newStatus := stage.Status.DeepCopy()
 
 	// Update the status with the new observed generation and phase.
-	newStatus.Phase = kargoapi.StagePhaseNotApplicable
 	if stage.Generation > stage.Status.ObservedGeneration {
 		newStatus.ObservedGeneration = stage.Generation
 	}
-
-	// Reset any previous error message.
-	newStatus.Message = ""
 
 	// Record the current refresh token as having been handled.
 	if token, ok := api.RefreshAnnotationValue(stage.GetAnnotations()); ok {
 		newStatus.LastHandledRefresh = token
 	}
+
+	// Only keep the conditions that are relevant to this Stage type.
+	var condCopy []metav1.Condition
+	for _, c := range []string{kargoapi.ConditionTypeReady, kargoapi.ConditionTypeReconciling} {
+		if cond := conditions.Get(newStatus, c); cond != nil {
+			condCopy = append(condCopy, *cond)
+		}
+	}
+	newStatus.Conditions = condCopy
 
 	// Clear all the fields that are not relevant to this Stage type.
 	newStatus.FreightHistory = nil
@@ -310,9 +352,6 @@ func (r *ControlFlowStageReconciler) initializeStatus(stage *kargoapi.Stage) kar
 	newStatus.CurrentPromotion = nil
 	newStatus.LastPromotion = nil
 	newStatus.FreightSummary = "N/A"
-	// TODO(hidde): We might want to introduce simple conditions for control
-	// flow Stages at some point, but for now we just clear them.
-	newStatus.Conditions = nil
 
 	return *newStatus
 }

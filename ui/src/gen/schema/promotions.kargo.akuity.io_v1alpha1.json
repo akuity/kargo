@@ -271,7 +271,7 @@
               "type": "array"
             },
             "name": {
-              "description": "Name is system-assigned identifier that is derived deterministically from\nthe contents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their Names.",
+              "description": "Name is a system-assigned identifier derived deterministically from\nthe contents of the Freight. I.e., two pieces of Freight can be compared\nfor equality by comparing their Names.",
               "type": "string"
             },
             "origin": {
@@ -403,7 +403,7 @@
                     "type": "array"
                   },
                   "name": {
-                    "description": "Name is system-assigned identifier that is derived deterministically from\nthe contents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their Names.",
+                    "description": "Name is a system-assigned identifier derived deterministically from\nthe contents of the Freight. I.e., two pieces of Freight can be compared\nfor equality by comparing their Names.",
                     "type": "string"
                   },
                   "origin": {

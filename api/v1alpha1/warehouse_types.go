@@ -360,10 +360,12 @@ type WarehouseStatus struct {
 	DiscoveredArtifacts *DiscoveredArtifacts `json:"discoveredArtifacts,omitempty" protobuf:"bytes,7,opt,name=discoveredArtifacts"`
 }
 
+// GetConditions implements the conditions.Getter interface.
 func (w *WarehouseStatus) GetConditions() []metav1.Condition {
 	return w.Conditions
 }
 
+// SetConditions implements the conditions.Setter interface.
 func (w *WarehouseStatus) SetConditions(conditions []metav1.Condition) {
 	w.Conditions = conditions
 }
