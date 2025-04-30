@@ -67,7 +67,7 @@ steps:
             "type": "section",
             "text": {
               "type": "mrkdwn",
-              "text": "A new PR has been opened: " + task.outputs['pr-link'].url
+              "text": "A new PR has been opened: " + outputs['pr-link'].url
             }
           }
         ]
