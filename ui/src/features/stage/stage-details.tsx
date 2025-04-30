@@ -16,8 +16,7 @@ import { paths } from '@ui/config/paths';
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { Description } from '@ui/features/common/description';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
-import { StagePhaseIcon } from '@ui/features/common/stage-phase/stage-phase-icon';
-import { StagePhase } from '@ui/features/common/stage-phase/utils';
+import { StageConditionIcon } from '@ui/features/common/stage-status/stage-condition-icon';
 import { useImages } from '@ui/features/project/pipelines/utils/useImages';
 import {
   getConfig,
@@ -109,7 +108,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                 {stage.metadata?.name}
               </Typography.Title>
               <Flex gap={4}>
-                <StagePhaseIcon phase={stage.status?.phase as StagePhase} />
+                <StageConditionIcon conditions={stage.status?.conditions || []} />
                 {!!stage.status?.health && <HealthStatusIcon health={stage.status?.health} />}
               </Flex>
             </Flex>
