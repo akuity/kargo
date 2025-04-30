@@ -25,7 +25,7 @@ export const Project = ({
   creatingStage?: boolean;
   creatingWarehouse?: boolean;
 }) => {
-  const { name, stageName, promotionId, freight, stage, warehouseName, freightName } = useParams();
+  const { name } = useParams();
 
   const navigate = useNavigate();
   const projectBreadcrumbs = useProjectBreadcrumbs();
@@ -92,20 +92,8 @@ export const Project = ({
 
       <Pipelines
         project={data?.result?.value as _Project}
-        stageName={stageName}
-        promotionId={promotionId}
-        promote={
-          freight && stage
-            ? {
-                freight,
-                stage
-              }
-            : undefined
-        }
         creatingStage={creatingStage}
         creatingWarehouse={creatingWarehouse}
-        warehouseName={warehouseName}
-        freightName={freightName}
         warehouses={listWarehousesQuery.data?.warehouses || []}
         freights={getFreightQuery.data?.groups || {}}
         refetchFreights={getFreightQuery.refetch}

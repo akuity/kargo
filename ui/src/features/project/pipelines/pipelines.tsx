@@ -2,7 +2,7 @@ import { faPlus } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Dropdown, Flex } from 'antd';
 import { useMemo, useState } from 'react';
-import { generatePath, Link, useNavigate } from 'react-router-dom';
+import { generatePath, Link, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
@@ -41,16 +41,8 @@ import '@xyflow/react/dist/style.css';
 
 export const Pipelines = (props: {
   project: Project;
-  stageName?: string;
-  promotionId?: string;
-  promote?: {
-    freight: string;
-    stage: string;
-  };
   creatingStage?: boolean;
   creatingWarehouse?: boolean;
-  warehouseName?: string;
-  freightName?: string;
   warehouses: Warehouse[];
   freights: {
     [key: string]: FreightList;
@@ -58,14 +50,17 @@ export const Pipelines = (props: {
   refetchFreights: () => void;
   stages: Stage[];
 }) => {
+  const { stageName, promotionId, freight, stage, warehouseName, freightName } = useParams();
+
+  const promote = freight && stage ? { freight, stage } : undefined;
+
   const navigate = useNavigate();
 
   const action = useAction();
 
   const projectName = props.project?.metadata?.name;
 
-  const stageDetails =
-    props.stageName && props.stages.find((s) => s?.metadata?.name === props.stageName);
+  const stageDetails = stageName && props.stages.find((s) => s?.metadata?.name === stageName);
 
   const warehouseColorMap = useMemo(
     () => getColors(props.project?.metadata?.name || '', props.warehouses, 'warehouses'),
@@ -99,8 +94,8 @@ export const Pipelines = (props: {
   const stageAutoPromotionMap = useStageAutoPromotionMap(props.project);
   const subscribersByStage = useSubscribersByStage(props.stages || []);
   const stageByName = useStageByName(props.stages || []);
-  const warehouseDrawer = useGetWarehouse(props.warehouses, props.warehouseName);
-  const freightDrawer = useGetFreight(props.freights?.[''], props.freightName);
+  const warehouseDrawer = useGetWarehouse(props.warehouses, warehouseName);
+  const freightDrawer = useGetFreight(props.freights?.[''], freightName);
 
   return (
     <ActionContext.Provider value={action}>
@@ -201,21 +196,21 @@ export const Pipelines = (props: {
 
             {!!stageDetails && <StageDetails stage={stageDetails} />}
 
-            {!!props.promotionId && (
+            {!!promotionId && (
               <Promotion
                 visible
                 hide={() => navigate(generatePath(paths.project, { name: projectName }))}
-                promotionId={props.promotionId}
+                promotionId={promotionId}
                 project={projectName || ''}
               />
             )}
 
-            {!!props.promote && (
+            {!!promote && (
               <Promote
                 visible
                 hide={() => navigate(generatePath(paths.project, { name: projectName }))}
-                freight={freightById?.[props.promote.freight]}
-                stage={stageByName?.[props.promote.stage]}
+                freight={freightById?.[promote.freight]}
+                stage={stageByName?.[promote.stage]}
               />
             )}
 
