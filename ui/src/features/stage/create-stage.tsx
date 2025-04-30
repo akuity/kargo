@@ -21,8 +21,7 @@ import { PlainMessage } from '@ui/utils/connectrpc-utils';
 import { cleanEmptyObjectValues } from '@ui/utils/helpers';
 import { zodValidators } from '@ui/utils/validators';
 
-import { getStageYAMLExample } from '../project/pipelines/utils/stage-yaml-example';
-
+import { getStageYAMLExample } from './get-stage-yaml-example';
 import { PromotionStepsWizard } from './promotion-steps-wizard/promotion-steps-wizard';
 import { usePromotionWizardStepsState } from './promotion-steps-wizard/use-promotion-wizard-steps-state';
 import { RequestedFreight } from './requested-freight';

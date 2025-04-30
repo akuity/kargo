@@ -1,16 +1,12 @@
-import { useQuery } from '@connectrpc/connect-query';
 import { faClockRotateLeft, faCog } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Breadcrumb, Button, Result, Space } from 'antd';
+import { Breadcrumb, Button, Space } from 'antd';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
-import { LoadingState } from '@ui/features/common';
 import { BaseHeader } from '@ui/features/common/layout/base-header';
 import { Pipelines } from '@ui/features/project/pipelines/pipelines';
 import { useProjectBreadcrumbs } from '@ui/features/project/project-utils';
-import { getProject } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { Project as _Project } from '@ui/gen/api/v1alpha1/generated_pb';
 
 export const Project = ({
   creatingStage,
@@ -21,29 +17,9 @@ export const Project = ({
   creatingWarehouse?: boolean;
 }) => {
   const { name } = useParams();
+
   const navigate = useNavigate();
   const projectBreadcrumbs = useProjectBreadcrumbs();
-
-  const { data, isLoading, error } = useQuery(getProject, { name });
-
-  if (isLoading) {
-    return <LoadingState />;
-  }
-
-  if (error) {
-    return (
-      <Result
-        status='404'
-        title='Error'
-        subTitle={error?.message}
-        extra={
-          <Button type='primary' onClick={() => navigate(paths.projects)}>
-            Go to Projects Page
-          </Button>
-        }
-      />
-    );
-  }
 
   return (
     <div className='h-full flex flex-col'>
@@ -58,7 +34,7 @@ export const Project = ({
             Events
           </Button>
           <Button
-            icon={<FontAwesomeIcon icon={faCog} />}
+            icon={<FontAwesomeIcon icon={faCog} size='sm' />}
             onClick={() => navigate(generatePath(paths.projectSettings, { name }))}
             size='small'
           >
@@ -67,11 +43,7 @@ export const Project = ({
         </Space>
       </BaseHeader>
 
-      <Pipelines
-        project={data?.result?.value as _Project}
-        creatingStage={creatingStage}
-        creatingWarehouse={creatingWarehouse}
-      />
+      <Pipelines creatingStage={creatingStage} creatingWarehouse={creatingWarehouse} />
     </div>
   );
 };

@@ -1,19 +1,35 @@
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { faDocker, faGitAlt } from '@fortawesome/free-brands-svg-icons';
-import { faAnchor, faQuestion } from '@fortawesome/free-solid-svg-icons';
+import { faAnchor, faExternalLink, faQuestion } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Tooltip } from 'antd';
-import classNames from 'classnames';
+import { Card, Flex, Tag } from 'antd';
+import Link from 'antd/es/typography/Link';
+import { useMemo } from 'react';
 
 import { RepoSubscription } from '@ui/gen/api/v1alpha1/generated_pb';
 
-import styles from './custom-node.module.less';
+import {
+  artifactBase,
+  artifactURL,
+  humanComprehendableArtifact
+} from '../freight/artifact-parts-utils';
 
-type SubscriptionNodeProps = {
-  subscription: RepoSubscription;
-};
+import styles from './node-size-source-of-truth.module.less';
 
-export const SubscriptionNode = (props: SubscriptionNodeProps) => {
+export const SubscriptionNode = (props: { subscription: RepoSubscription }) => {
+  const { title, base, link } = useMemo(() => {
+    const repoURL =
+      props.subscription?.git?.repoURL ||
+      props.subscription?.chart?.repoURL ||
+      props.subscription?.image?.repoURL ||
+      '';
+    const title = humanComprehendableArtifact(repoURL);
+    const base = artifactBase(repoURL) || repoURL;
+    const link = artifactURL(repoURL);
+
+    return { title, repoURL, base, link };
+  }, [props.subscription]);
+
   let icon: IconProp = faQuestion;
 
   if (props.subscription?.chart) {
@@ -24,24 +40,25 @@ export const SubscriptionNode = (props: SubscriptionNodeProps) => {
     icon = faDocker;
   }
 
-  const url =
-    props.subscription?.git?.repoURL ||
-    props.subscription?.image?.repoURL ||
-    props.subscription?.chart?.repoURL;
-
   return (
-    <div className={classNames(styles.repoSubscriptionNode)}>
-      <div className={classNames(styles.header, 'header')}>
-        <h3>Subscription</h3>
+    <Card
+      size='small'
+      className={styles['subscription-node-size']}
+      title={
+        <Flex align='center' gap={16}>
+          <FontAwesomeIcon icon={icon} />
+          <span className='text-xs'>{title}</span>
+        </Flex>
+      }
+      variant='borderless'
+    >
+      <Link href={link} target='_blank'>
+        <Tag className='text-[9px] text-wrap' color='blue' bordered={false}>
+          {base}
 
-        <FontAwesomeIcon className='ml-auto text-base' icon={icon} />
-      </div>
-
-      <div className={classNames(styles.body)}>
-        <Tooltip title={url}>
-          <span className='block w-36 overflow-hidden text-ellipsis whitespace-nowrap'>{url}</span>
-        </Tooltip>
-      </div>
-    </div>
+          <FontAwesomeIcon icon={faExternalLink} className='ml-1' />
+        </Tag>
+      </Link>
+    </Card>
   );
 };

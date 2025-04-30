@@ -16,8 +16,6 @@ import { paths } from '@ui/config/paths';
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { Description } from '@ui/features/common/description';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
-import { StageConditionIcon } from '@ui/features/common/stage-status/stage-condition-icon';
-import { useImages } from '@ui/features/project/pipelines/utils/useImages';
 import {
   getConfig,
   getStage
@@ -28,12 +26,14 @@ import { timestampDate } from '@ui/utils/connectrpc-utils';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 
 import YamlEditor from '../common/code-editor/yaml-editor-lazy';
+import { StageConditionIcon } from '../common/stage-status/stage-condition-icon';
 
 import { Promotions } from './promotions';
 import { RequestedFreight } from './requested-freight';
 import { StageActions } from './stage-actions';
 import { FreightHistory } from './tabs/freight-history/freight-history';
 import { StageSettings } from './tabs/settings/stage-settings';
+import { useImages } from './use-images';
 import { Verifications } from './verifications';
 
 enum TabsTypes {

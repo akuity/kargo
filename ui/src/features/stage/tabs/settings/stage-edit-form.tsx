@@ -17,7 +17,7 @@ import schema from '@ui/gen/schema/stages.kargo.akuity.io_v1alpha1.json';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 import { zodValidators } from '@ui/utils/validators';
 
-import { getStageYAMLExample } from '../../../project/pipelines/utils/stage-yaml-example';
+import { getStageYAMLExample } from '../../get-stage-yaml-example';
 
 const formSchema = z.object({
   value: zodValidators.requiredString
