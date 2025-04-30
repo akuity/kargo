@@ -1,7 +1,7 @@
 import { useQuery } from '@connectrpc/connect-query';
 import { faPlus } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Dropdown, Flex } from 'antd';
+import { Button, Dropdown, Flex, Result } from 'antd';
 import { useMemo, useState } from 'react';
 import { generatePath, Link, useNavigate, useParams } from 'react-router-dom';
 
@@ -16,6 +16,7 @@ import CreateWarehouse from '@ui/features/stage/create-warehouse/create-warehous
 import StageDetails from '@ui/features/stage/stage-details';
 import { getColors } from '@ui/features/stage/utils';
 import {
+  getProject,
   listStages,
   listWarehouses,
   queryFreight
@@ -46,14 +47,14 @@ import { useSubscribersByStage } from './use-subscribers-by-stage';
 
 import '@xyflow/react/dist/style.css';
 
-export const Pipelines = (props: {
-  project: Project;
-  creatingStage?: boolean;
-  creatingWarehouse?: boolean;
-}) => {
-  const { stageName, promotionId, freight, stage, warehouseName, freightName } = useParams();
+export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: boolean }) => {
+  const { name, stageName, promotionId, freight, stage, warehouseName, freightName } = useParams();
 
-  const projectName = props.project?.metadata?.name;
+  const projectQuery = useQuery(getProject, { name });
+
+  const project = projectQuery.data?.result?.value as Project;
+
+  const projectName = name;
 
   const getFreightQuery = useQuery(queryFreight, { project: projectName });
 
@@ -64,7 +65,10 @@ export const Pipelines = (props: {
   const listStagesQuery = useQuery(listStages, { project: projectName });
 
   const loading =
-    getFreightQuery.isLoading || listWarehousesQuery.isLoading || listStagesQuery.isLoading;
+    projectQuery.isLoading ||
+    getFreightQuery.isLoading ||
+    listWarehousesQuery.isLoading ||
+    listStagesQuery.isLoading;
 
   const promote = freight && stage ? { freight, stage } : undefined;
 
@@ -78,16 +82,16 @@ export const Pipelines = (props: {
   const warehouseColorMap = useMemo(
     () =>
       getColors(
-        props.project?.metadata?.name || '',
+        project?.metadata?.name || '',
         listWarehousesQuery.data?.warehouses || [],
         'warehouses'
       ),
-    [props.project, listWarehousesQuery.data?.warehouses]
+    [project, listWarehousesQuery.data?.warehouses]
   );
 
   const stageColorMap = useMemo(
-    () => getColors(props.project?.metadata?.name || '', listStagesQuery.data?.stages || []),
-    [props.project, listStagesQuery.data?.stages]
+    () => getColors(project?.metadata?.name || '', listStagesQuery.data?.stages || []),
+    [project, listStagesQuery.data?.stages]
   );
 
   const [preferredFilter, setPreferredFilter] = useState<
@@ -109,7 +113,7 @@ export const Pipelines = (props: {
 
   const freightInStages = useFreightInStage(listStagesQuery.data?.stages || []);
   const freightById = useFreightById(getFreightQuery.data?.groups?.['']?.freight || []);
-  const stageAutoPromotionMap = useStageAutoPromotionMap(props.project);
+  const stageAutoPromotionMap = useStageAutoPromotionMap(project);
   const subscribersByStage = useSubscribersByStage(listStagesQuery.data?.stages || []);
   const stageByName = useStageByName(listStagesQuery.data?.stages || []);
   const warehouseDrawer = useGetWarehouse(
@@ -123,6 +127,21 @@ export const Pipelines = (props: {
 
   if (loading) {
     return <LoadingState />;
+  }
+
+  if (projectQuery.error) {
+    return (
+      <Result
+        status='404'
+        title='Error'
+        subTitle={projectQuery.error?.message}
+        extra={
+          <Button type='primary' onClick={() => navigate(paths.projects)}>
+            Go to Projects Page
+          </Button>
+        }
+      />
+    );
   }
 
   return (
@@ -165,7 +184,7 @@ export const Pipelines = (props: {
                         label: (
                           <Link
                             to={generatePath(paths.createStage, {
-                              name: props.project.metadata?.name
+                              name: project.metadata?.name
                             })}
                           >
                             Stage
@@ -177,7 +196,7 @@ export const Pipelines = (props: {
                         label: (
                           <Link
                             to={generatePath(paths.createWarehouse, {
-                              name: props.project.metadata?.name
+                              name: project.metadata?.name
                             })}
                           >
                             Warehouse
@@ -193,7 +212,7 @@ export const Pipelines = (props: {
                           onClick: () => {
                             navigate(
                               generatePath(paths.warehouse, {
-                                name: props.project.metadata?.name,
+                                name: project.metadata?.name,
                                 warehouseName: warehouse?.metadata?.name || '',
                                 tab: 'create-freight'
                               })
@@ -208,7 +227,7 @@ export const Pipelines = (props: {
                 </Dropdown>
               </Flex>
               <Graph
-                project={props.project.metadata?.name || ''}
+                project={project.metadata?.name || ''}
                 warehouses={listWarehousesQuery.data?.warehouses || []}
                 stages={listStagesQuery.data?.stages || []}
               />
@@ -247,7 +266,7 @@ export const Pipelines = (props: {
 
             {props.creatingStage && (
               <CreateStage
-                project={props.project?.metadata?.name}
+                project={project?.metadata?.name}
                 warehouses={mapToNames(listWarehousesQuery.data?.warehouses || [])}
                 stages={mapToNames(listStagesQuery.data?.stages || [])}
               />
@@ -255,9 +274,7 @@ export const Pipelines = (props: {
 
             <CreateWarehouse
               visible={Boolean(props.creatingWarehouse)}
-              hide={() =>
-                navigate(generatePath(paths.project, { name: props.project?.metadata?.name }))
-              }
+              hide={() => navigate(generatePath(paths.project, { name: project?.metadata?.name }))}
             />
           </ColorContext.Provider>
         </DictionaryContext.Provider>

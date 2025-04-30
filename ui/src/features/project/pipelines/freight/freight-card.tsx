@@ -152,7 +152,14 @@ export const FreightCard = (props: FreightCardProps) => {
 
         {noOfGitCommits + noOfHelmReleases + noOfContainerImages > 6 && (
           <Typography.Text type='secondary' className='text-[10px]'>
-            +{noOfGitCommits + noOfHelmReleases + noOfContainerImages - 6} more
+            +
+            {noOfGitCommits +
+              noOfHelmReleases +
+              noOfContainerImages -
+              (props.freight?.charts?.slice(0, 2)?.length +
+                props.freight?.charts?.slice(0, 2)?.length +
+                props.freight?.images?.slice(0, 2)?.length)}{' '}
+            more
           </Typography.Text>
         )}
       </div>
