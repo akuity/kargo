@@ -151,7 +151,7 @@ When installing Kargo with Helm, all options related to OIDC are grouped under
           claims:
             groups:
             - devops
-        viewer:
+        viewers:
           claims:
             groups:
             - developers
