@@ -11,6 +11,7 @@ import { Pipelines } from '@ui/features/project/pipelines/pipelines';
 import { useProjectBreadcrumbs } from '@ui/features/project/project-utils';
 import {
   getProject,
+  listStages,
   listWarehouses,
   queryFreight
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
@@ -41,7 +42,14 @@ export const Project = ({
     { enabled: !isLoading }
   );
 
-  if (isLoading || listWarehousesQuery.isLoading || getFreightQuery.isLoading) {
+  const listStagesQuery = useQuery(listStages, { project: name });
+
+  if (
+    isLoading ||
+    listWarehousesQuery.isLoading ||
+    getFreightQuery.isLoading ||
+    listStagesQuery.isLoading
+  ) {
     return <LoadingState />;
   }
 
@@ -101,6 +109,7 @@ export const Project = ({
         warehouses={listWarehousesQuery.data?.warehouses || []}
         freights={getFreightQuery.data?.groups || {}}
         refetchFreights={getFreightQuery.refetch}
+        stages={listStagesQuery.data?.stages || []}
       />
     </div>
   );

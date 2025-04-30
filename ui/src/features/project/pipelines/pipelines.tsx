@@ -1,4 +1,3 @@
-import { useQuery } from '@connectrpc/connect-query';
 import { faPlus } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Dropdown, Flex } from 'antd';
@@ -7,7 +6,6 @@ import { generatePath, Link, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
-import { LoadingState } from '@ui/features/common';
 import { mapToNames } from '@ui/features/common/utils';
 import FreightDetails from '@ui/features/freight/freight-details';
 import WarehouseDetails from '@ui/features/project/pipelines/warehouse/warehouse-details';
@@ -15,9 +13,8 @@ import CreateStage from '@ui/features/stage/create-stage';
 import CreateWarehouse from '@ui/features/stage/create-warehouse/create-warehouse';
 import StageDetails from '@ui/features/stage/stage-details';
 import { getColors } from '@ui/features/stage/utils';
-import { listStages } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { FreightList } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { Freight, Project, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight, Project, Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { ActionContext } from './context/action-context';
 import { DictionaryContext } from './context/dictionary-context';
@@ -59,6 +56,7 @@ export const Pipelines = (props: {
     [key: string]: FreightList;
   };
   refetchFreights: () => void;
+  stages: Stage[];
 }) => {
   const navigate = useNavigate();
 
@@ -66,13 +64,8 @@ export const Pipelines = (props: {
 
   const projectName = props.project?.metadata?.name;
 
-  const listStagesQuery = useQuery(listStages, { project: projectName });
-
-  const loading = listStagesQuery.isLoading;
-
   const stageDetails =
-    props.stageName &&
-    listStagesQuery?.data?.stages?.find((s) => s?.metadata?.name === props.stageName);
+    props.stageName && props.stages.find((s) => s?.metadata?.name === props.stageName);
 
   const warehouseColorMap = useMemo(
     () => getColors(props.project?.metadata?.name || '', props.warehouses, 'warehouses'),
@@ -80,8 +73,8 @@ export const Pipelines = (props: {
   );
 
   const stageColorMap = useMemo(
-    () => getColors(props.project?.metadata?.name || '', listStagesQuery.data?.stages || []),
-    [props.project, listStagesQuery.data?.stages]
+    () => getColors(props.project?.metadata?.name || '', props.stages),
+    [props.project, props.stages]
   );
 
   const [preferredFilter, setPreferredFilter] = useState<
@@ -101,17 +94,13 @@ export const Pipelines = (props: {
 
   const [viewingFreight, setViewingFreight] = useState<Freight | null>(null);
 
-  const freightInStages = useFreightInStage(listStagesQuery.data?.stages || []);
+  const freightInStages = useFreightInStage(props.stages || []);
   const freightById = useFreightById(props.freights?.['']?.freight || []);
   const stageAutoPromotionMap = useStageAutoPromotionMap(props.project);
-  const subscribersByStage = useSubscribersByStage(listStagesQuery.data?.stages || []);
-  const stageByName = useStageByName(listStagesQuery.data?.stages || []);
+  const subscribersByStage = useSubscribersByStage(props.stages || []);
+  const stageByName = useStageByName(props.stages || []);
   const warehouseDrawer = useGetWarehouse(props.warehouses, props.warehouseName);
   const freightDrawer = useGetFreight(props.freights?.[''], props.freightName);
-
-  if (loading) {
-    return <LoadingState />;
-  }
 
   return (
     <ActionContext.Provider value={action}>
@@ -140,10 +129,7 @@ export const Pipelines = (props: {
 
             <div className='w-full h-full relative'>
               <Flex justify='space-between' gap={24} className='absolute z-10 top-2 right-2 left-2'>
-                <GraphFilters
-                  warehouses={props.warehouses}
-                  stages={listStagesQuery.data?.stages || []}
-                />
+                <GraphFilters warehouses={props.warehouses} stages={props.stages} />
                 <Dropdown
                   trigger={['click']}
                   menu={{
@@ -198,7 +184,7 @@ export const Pipelines = (props: {
               <Graph
                 project={props.project.metadata?.name || ''}
                 warehouses={props.warehouses}
-                stages={listStagesQuery.data?.stages || []}
+                stages={props.stages}
               />
             </div>
 
@@ -237,7 +223,7 @@ export const Pipelines = (props: {
               <CreateStage
                 project={props.project?.metadata?.name}
                 warehouses={mapToNames(props.warehouses || [])}
-                stages={mapToNames(listStagesQuery.data?.stages || [])}
+                stages={mapToNames(props.stages)}
               />
             )}
 
