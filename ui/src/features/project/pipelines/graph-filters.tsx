@@ -1,6 +1,7 @@
 import { faObjectGroup } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Card, Select, Typography } from 'antd';
+import { useMemo } from 'react';
 
 import { Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
@@ -14,6 +15,11 @@ type GraphFiltersProps = {
 
 export const GraphFilters = (props: GraphFiltersProps) => {
   const filterContext = useFreightTimelineControllerContext();
+
+  const stackedNodesParents = useMemo(
+    () => groupNodes(props.stages, props.warehouses).filter(Boolean),
+    [props.stages, props.warehouses]
+  );
 
   return (
     <Card size='small'>
@@ -46,9 +52,10 @@ export const GraphFilters = (props: GraphFiltersProps) => {
         onClick={() => {
           filterContext?.setPreferredFilter({
             ...filterContext?.preferredFilter,
-            stackedNodesParents: groupNodes(props.stages, props.warehouses)
+            stackedNodesParents
           });
         }}
+        disabled={stackedNodesParents.length < 1}
       />
     </Card>
   );

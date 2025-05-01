@@ -59,7 +59,6 @@ export const timerangeToLabel = (timerange: timerangeTypes) => {
 };
 
 export const timerangeOrderedOptions: timerangeTypes[] = [
-  '1-minute',
   '15-minutes',
   '30-minutes',
   '1-hour',

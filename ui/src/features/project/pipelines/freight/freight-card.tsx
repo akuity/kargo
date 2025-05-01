@@ -165,7 +165,8 @@ export const FreightCard = (props: FreightCardProps) => {
       </div>
 
       <div className='flex mx-auto w-full gap-2 items-center justify-center text-nowrap my-1'>
-        {noOfGitCommits + noOfHelmReleases + noOfContainerImages > 0 && (
+        {(noOfGitCommits ? 1 : 0) + (noOfHelmReleases ? 1 : 0) + (noOfContainerImages ? 1 : 0) >
+          2 && (
           <>
             <FreightCard.ArtifactCount icon={faGithub} count={noOfGitCommits} />
 
