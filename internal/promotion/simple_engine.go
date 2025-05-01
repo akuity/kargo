@@ -74,10 +74,20 @@ func (e *simpleEngine) Promote(
 // executeSteps executes a list of Steps in sequence.
 func (e *simpleEngine) executeSteps(
 	ctx context.Context,
-	promoCtx Context,
+	pCtx Context,
 	steps []Step,
 	workDir string,
 ) Result {
+	// Important: Make a shallow copy of the PromotionContext with a deep copy of
+	// the StepExecutionMetadata. We'll be modifying StepExecutionMetadata
+	// in-place throughout this method, but we don't want to modify the original
+	// StepExecutionMetadata that we were passed in the PromotionContext. If we
+	// did, the status patch operation that will eventually be performed wouldn't
+	// see any difference between the original and the modified
+	// StepExecutionMetadata.
+	promoCtx := pCtx
+	promoCtx.StepExecutionMetadata = promoCtx.StepExecutionMetadata.DeepCopy()
+
 	// Initialize the state which will be passed to each step.
 	// This is the state that will be updated by each step,
 	// and returned as the final state after all steps have
@@ -88,9 +98,8 @@ func (e *simpleEngine) executeSteps(
 	}
 
 	var (
-		healthChecks  []health.Criteria
-		err           error
-		stepExecMetas = promoCtx.StepExecutionMetadata.DeepCopy()
+		healthChecks []health.Criteria
+		err          error
 	)
 
 	// Execute each step in sequence, starting from the step index specified in
@@ -100,12 +109,16 @@ stepLoop:
 		step := steps[i]
 
 		// If we don't have metadata for this step yet, create it.
-		if int64(len(stepExecMetas)) == i {
-			stepExecMetas = append(stepExecMetas, kargoapi.StepExecutionMetadata{
-				Alias: step.Alias,
-			})
+		if int64(len(promoCtx.StepExecutionMetadata)) == i {
+			promoCtx.StepExecutionMetadata = append(
+				promoCtx.StepExecutionMetadata,
+				kargoapi.StepExecutionMetadata{
+					Alias:           step.Alias,
+					ContinueOnError: step.ContinueOnError,
+				},
+			)
 		}
-		stepExecMeta := &stepExecMetas[i]
+		stepExecMeta := &promoCtx.StepExecutionMetadata[i]
 
 		select {
 		case <-ctx.Done():
@@ -126,6 +139,7 @@ stepLoop:
 			// still allow them to run.
 			continue
 		}
+		stepExecMeta.Alias = step.Alias
 
 		// Check if the step should be skipped.
 		var skip bool
@@ -272,7 +286,7 @@ stepLoop:
 			return Result{
 				Status:                kargoapi.PromotionPhaseRunning,
 				CurrentStep:           i,
-				StepExecutionMetadata: stepExecMetas,
+				StepExecutionMetadata: promoCtx.StepExecutionMetadata,
 				State:                 state,
 				HealthChecks:          healthChecks,
 			}
@@ -284,20 +298,20 @@ stepLoop:
 		return Result{
 			Status:                kargoapi.PromotionPhaseRunning,
 			CurrentStep:           i,
-			StepExecutionMetadata: stepExecMetas,
+			StepExecutionMetadata: promoCtx.StepExecutionMetadata,
 			State:                 state,
 			HealthChecks:          healthChecks,
 		}
 	}
 
-	status, msg := determinePromoPhase(steps, stepExecMetas)
+	status, msg := determinePromoPhase(steps, promoCtx.StepExecutionMetadata)
 
 	// All steps have succeeded, return the final state.
 	return Result{
 		Status:                status,
 		Message:               msg,
 		CurrentStep:           int64(len(steps)) - 1,
-		StepExecutionMetadata: stepExecMetas,
+		StepExecutionMetadata: promoCtx.StepExecutionMetadata,
 		State:                 state,
 		HealthChecks:          healthChecks,
 	}

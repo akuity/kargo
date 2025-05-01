@@ -78,7 +78,9 @@ type Step struct {
 	// fail.
 	If string
 	// ContinueOnError is a boolean value that, if set to true, will cause the
-	// Promotion to continue executing the next step even if this step fails.
+	// Promotion to continue executing the next step even if this step fails. It
+	// also will not permit this failure to impact the overall status of the
+	// Promotion.
 	ContinueOnError bool
 	// Retry is the retry configuration for the Step.
 	Retry *kargoapi.PromotionStepRetry

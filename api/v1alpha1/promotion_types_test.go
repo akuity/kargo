@@ -186,3 +186,68 @@ func TestPromotionRetry_GetErrorThreshold(t *testing.T) {
 		require.Equal(t, tt.want, tt.retry.GetErrorThreshold(tt.fallback))
 	}
 }
+
+func TestStepExecutionMetadataList_HasFailures(t *testing.T) {
+	tests := []struct {
+		name     string
+		metadata StepExecutionMetadataList
+		expected bool
+	}{
+		{
+			name: "no errors/failures at all",
+			metadata: StepExecutionMetadataList{
+				{Status: PromotionStepStatusSucceeded},
+				{Status: PromotionStepStatusSucceeded},
+				{Status: PromotionStepStatusSucceeded},
+			},
+			expected: false,
+		},
+		{
+			name: "has an error",
+			metadata: StepExecutionMetadataList{
+				{Status: PromotionStepStatusSucceeded},
+				{Status: PromotionStepStatusErrored},
+				{Status: PromotionStepStatusSucceeded},
+			},
+			expected: true,
+		},
+		{
+			name: "has an error with continueOnError == true",
+			metadata: StepExecutionMetadataList{
+				{Status: PromotionStepStatusSucceeded},
+				{
+					ContinueOnError: true,
+					Status:          PromotionStepStatusErrored,
+				},
+				{Status: PromotionStepStatusSucceeded},
+			},
+			expected: false,
+		},
+		{
+			name: "has a failure",
+			metadata: StepExecutionMetadataList{
+				{Status: PromotionStepStatusSucceeded},
+				{Status: PromotionStepStatusFailed},
+				{Status: PromotionStepStatusSucceeded},
+			},
+			expected: true,
+		},
+		{
+			name: "has a failure with continueOnError == true",
+			metadata: StepExecutionMetadataList{
+				{Status: PromotionStepStatusSucceeded},
+				{
+					ContinueOnError: true,
+					Status:          PromotionStepStatusFailed,
+				},
+				{Status: PromotionStepStatusSucceeded},
+			},
+			expected: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expected, tt.metadata.HasFailures())
+		})
+	}
+}

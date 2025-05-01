@@ -262,7 +262,9 @@ type PromotionStep struct {
 	// considered to have failed.
 	If string `json:"if,omitempty" protobuf:"bytes,7,opt,name=if"`
 	// ContinueOnError is a boolean value that, if set to true, will cause the
-	// Promotion to continue executing the next step even if this step fails.
+	// Promotion to continue executing the next step even if this step fails. It
+	// also will not permit this failure to impact the overall status of the
+	// Promotion.
 	ContinueOnError bool `json:"continueOnError,omitempty" protobuf:"varint,8,opt,name=continueOnError"`
 	// Retry is the retry policy for this step.
 	Retry *PromotionStepRetry `json:"retry,omitempty" protobuf:"bytes,4,opt,name=retry"`
@@ -391,6 +393,9 @@ type StepExecutionMetadataList []StepExecutionMetadata
 // have a status of PromotionStepStatusErrored or PromotionStepStatusFailed.
 func (s StepExecutionMetadataList) HasFailures() bool {
 	for _, stepExecMeta := range s {
+		if stepExecMeta.ContinueOnError {
+			continue
+		}
 		switch stepExecMeta.Status {
 		case PromotionStepStatusErrored, PromotionStepStatusFailed:
 			return true
@@ -417,4 +422,9 @@ type StepExecutionMetadata struct {
 	Status PromotionStepStatus `json:"status,omitempty" protobuf:"bytes,5,opt,name=status"`
 	// Message is a display message about the step, including any errors.
 	Message string `json:"message,omitempty" protobuf:"bytes,6,opt,name=message"`
+	// ContinueOnError is a boolean value that, if set to true, will cause the
+	// Promotion to continue executing the next step even if this step fails. It
+	// also will not permit this failure to impact the overall status of the
+	// Promotion.
+	ContinueOnError bool `json:"continueOnError,omitempty" protobuf:"varint,7,opt,name=continueOnError"`
 }
