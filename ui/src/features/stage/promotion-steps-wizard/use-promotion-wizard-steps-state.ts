@@ -48,7 +48,8 @@ const APIPromotionStepsToLocalStateEquivalent = (
     runnerWithConfig.push({
       ...runnerMeta,
       state: step.config,
-      as: step.as
+      as: step.as,
+      continueOnError: step.continueOnError
     });
   }
 
@@ -79,6 +80,7 @@ const stateToYAML = (state: RunnerWithConfiguration[]): string => {
       // @ts-expect-error this will be object but its hard to convey in types after migration of connectrpc to v2
       config: step.state,
       as: step.as || '',
+      continueOnError: step.continueOnError || false,
       vars: []
     });
   }

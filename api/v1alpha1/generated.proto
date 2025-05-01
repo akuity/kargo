@@ -1105,6 +1105,12 @@ message PromotionStep {
   // considered to have failed.
   optional string if = 7;
 
+  // ContinueOnError is a boolean value that, if set to true, will cause the
+  // Promotion to continue executing the next step even if this step fails. It
+  // also will not permit this failure to impact the overall status of the
+  // Promotion.
+  optional bool continueOnError = 8;
+
   // Retry is the retry policy for this step.
   optional PromotionStepRetry retry = 4;
 
@@ -1385,6 +1391,12 @@ message StepExecutionMetadata {
 
   // Message is a display message about the step, including any errors.
   optional string message = 6;
+
+  // ContinueOnError is a boolean value that, if set to true, will cause the
+  // Promotion to continue executing the next step even if this step fails. It
+  // also will not permit this failure to impact the overall status of the
+  // Promotion.
+  optional bool continueOnError = 7;
 }
 
 // Verification describes how to verify that a Promotion has been successful

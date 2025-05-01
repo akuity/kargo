@@ -2,6 +2,7 @@ package promotion
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -62,21 +63,31 @@ func (e *simpleEngine) Promote(
 		return Result{Status: kargoapi.PromotionPhaseErrored}, err
 	}
 
-	result, err := e.executeSteps(ctx, promoCtx, steps, workDir)
-	if err != nil {
-		return result, fmt.Errorf("step execution failed: %w", err)
+	result := e.executeSteps(ctx, promoCtx, steps, workDir)
+	if result.Status == kargoapi.PromotionPhaseErrored {
+		err = errors.New(result.Message)
 	}
 
-	return result, nil
+	return result, err
 }
 
 // executeSteps executes a list of Steps in sequence.
 func (e *simpleEngine) executeSteps(
 	ctx context.Context,
-	promoCtx Context,
+	pCtx Context,
 	steps []Step,
 	workDir string,
-) (Result, error) {
+) Result {
+	// Important: Make a shallow copy of the PromotionContext with a deep copy of
+	// the StepExecutionMetadata. We'll be modifying StepExecutionMetadata
+	// in-place throughout this method, but we don't want to modify the original
+	// StepExecutionMetadata that we were passed in the PromotionContext. If we
+	// did, the status patch operation that will eventually be performed wouldn't
+	// see any difference between the original and the modified
+	// StepExecutionMetadata.
+	promoCtx := pCtx
+	promoCtx.StepExecutionMetadata = promoCtx.StepExecutionMetadata.DeepCopy()
+
 	// Initialize the state which will be passed to each step.
 	// This is the state that will be updated by each step,
 	// and returned as the final state after all steps have
@@ -87,71 +98,69 @@ func (e *simpleEngine) executeSteps(
 	}
 
 	var (
-		healthChecks  []health.Criteria
-		err           error
-		stepExecMetas = promoCtx.StepExecutionMetadata.DeepCopy()
+		healthChecks []health.Criteria
+		err          error
 	)
 
 	// Execute each step in sequence, starting from the step index specified in
 	// the Context if provided.
+stepLoop:
 	for i := promoCtx.StartFromStep; i < int64(len(steps)); i++ {
+		step := steps[i]
+
+		// If we don't have metadata for this step yet, create it.
+		if int64(len(promoCtx.StepExecutionMetadata)) == i {
+			promoCtx.StepExecutionMetadata = append(
+				promoCtx.StepExecutionMetadata,
+				kargoapi.StepExecutionMetadata{
+					Alias:           step.Alias,
+					ContinueOnError: step.ContinueOnError,
+				},
+			)
+		}
+		stepExecMeta := &promoCtx.StepExecutionMetadata[i]
+
 		select {
 		case <-ctx.Done():
-			return Result{
-				Status:                kargoapi.PromotionPhaseErrored,
-				CurrentStep:           i,
-				StepExecutionMetadata: stepExecMetas,
-				State:                 state,
-				HealthChecks:          healthChecks,
-			}, ctx.Err()
+			stepExecMeta.Status = kargoapi.PromotionStepStatusErrored
+			stepExecMeta.Message = ctx.Err().Error()
+			if stepExecMeta.StartedAt != nil {
+				stepExecMeta.FinishedAt = ptr.To(metav1.Now())
+			}
+			break stepLoop
 		default:
 		}
 
-		step := steps[i]
-
 		// Prepare the step for execution by setting the alias.
 		if step.Alias, err = e.stepAlias(step.Alias, i); err != nil {
-			return Result{
-				Status:                kargoapi.PromotionPhaseErrored,
-				CurrentStep:           i,
-				StepExecutionMetadata: stepExecMetas,
-				State:                 state,
-				HealthChecks:          healthChecks,
-			}, fmt.Errorf("error getting step alias for step %d: %w", i, err)
+			stepExecMeta.Status = kargoapi.PromotionStepStatusErrored
+			stepExecMeta.Message = fmt.Sprintf("error getting step alias: %s", err)
+			// Continue, because despite this failure, some steps' "if" conditions may
+			// still allow them to run.
+			continue
+		}
+		stepExecMeta.Alias = step.Alias
+
+		// Check if the step should be skipped.
+		var skip bool
+		if skip, err = step.Skip(ctx, e.kargoClient, promoCtx, state); err != nil {
+			stepExecMeta.Status = kargoapi.PromotionStepStatusErrored
+			stepExecMeta.Message = fmt.Sprintf("error checking if step %d should be skipped: %s", i, err)
+			// Continue, because despite this failure, some steps' "if" conditions may
+			// still allow them to run.
+			continue
+		} else if skip {
+			stepExecMeta.Status = kargoapi.PromotionStepStatusSkipped
+			continue // Move on to the next step
 		}
 
 		// Get the StepRunner for the step.
 		runner := e.registry.getStepRunner(step.Kind)
 		if runner == nil {
-			return Result{
-				Status:                kargoapi.PromotionPhaseErrored,
-				CurrentStep:           i,
-				StepExecutionMetadata: stepExecMetas,
-				State:                 state,
-				HealthChecks:          healthChecks,
-			}, fmt.Errorf("no promotion step runner found for kind %d", i)
-		}
-
-		// If we don't have metadata for this step yet, create it.
-		if int64(len(stepExecMetas)) == i {
-			stepExecMetas = append(stepExecMetas, kargoapi.StepExecutionMetadata{
-				Alias: step.Alias,
-			})
-		}
-		stepExecMeta := &stepExecMetas[i]
-
-		// Check if the step should be skipped.
-		var skip bool
-		if skip, err = step.Skip(ctx, e.kargoClient, promoCtx, state); err != nil {
-			return Result{
-				Status:                kargoapi.PromotionPhaseErrored,
-				CurrentStep:           i,
-				StepExecutionMetadata: stepExecMetas,
-				State:                 state,
-				HealthChecks:          healthChecks,
-			}, fmt.Errorf("error checking if step %d should be skipped: %w", i, err)
-		} else if skip {
-			stepExecMeta.Status = kargoapi.PromotionStepStatusSkipped
+			stepExecMeta.Status = kargoapi.PromotionStepStatusErrored
+			stepExecMeta.Message = fmt.Sprintf("no promotion step runner found for kind %q", step.Kind)
+			// Continue, because despite this failure, some steps' "if" conditions may
+			// still allow them to run.
 			continue
 		}
 
@@ -186,13 +195,11 @@ func (e *simpleEngine) executeSteps(
 		default:
 			// Deal with statuses that no step should have returned.
 			stepExecMeta.FinishedAt = ptr.To(metav1.Now())
-			return Result{
-				Status:                kargoapi.PromotionPhaseErrored,
-				CurrentStep:           i,
-				StepExecutionMetadata: stepExecMetas,
-				State:                 state,
-				HealthChecks:          healthChecks,
-			}, fmt.Errorf("step %d returned an invalid status", i)
+			stepExecMeta.Status = kargoapi.PromotionStepStatusErrored
+			stepExecMeta.Message = fmt.Sprintf("step %d returned an invalid status: %s", i, result.Status)
+			// Continue, because despite this failure, some steps' "if" conditions may
+			// still allow them to run.
+			continue
 		}
 
 		// Reconcile status and err...
@@ -231,13 +238,11 @@ func (e *simpleEngine) executeSteps(
 		case promotion.IsTerminal(err):
 			// This is an unrecoverable error.
 			stepExecMeta.FinishedAt = ptr.To(metav1.Now())
-			return Result{
-				Status:                kargoapi.PromotionPhaseErrored,
-				CurrentStep:           i,
-				StepExecutionMetadata: stepExecMetas,
-				State:                 state,
-				HealthChecks:          healthChecks,
-			}, fmt.Errorf("an unrecoverable error occurred: %w", err)
+			stepExecMeta.Status = kargoapi.PromotionStepStatusErrored
+			stepExecMeta.Message = fmt.Sprintf("an unrecoverable error occurred: %s", err)
+			// Continue, because despite this failure, some steps' "if" conditions may
+			// still allow them to run.
+			continue
 		case err != nil:
 			// If we get to here, the error is POTENTIALLY recoverable.
 			stepExecMeta.ErrorCount++
@@ -246,16 +251,14 @@ func (e *simpleEngine) executeSteps(
 			if stepExecMeta.ErrorCount >= errorThreshold {
 				// The error threshold has been met.
 				stepExecMeta.FinishedAt = ptr.To(metav1.Now())
-				return Result{
-						Status:                kargoapi.PromotionPhaseErrored,
-						CurrentStep:           i,
-						StepExecutionMetadata: stepExecMetas,
-						State:                 state,
-						HealthChecks:          healthChecks,
-					}, fmt.Errorf(
-						"step %d met error threshold of %d: %s", i,
-						errorThreshold, stepExecMeta.Message,
-					)
+				stepExecMeta.Status = kargoapi.PromotionStepStatusErrored
+				stepExecMeta.Message = fmt.Sprintf(
+					"step %d met error threshold of %d: %s", i,
+					errorThreshold, stepExecMeta.Message,
+				)
+				// Continue, because despite this failure, some steps' "if" conditions
+				// may still allow them to run.
+				continue
 			}
 		}
 
@@ -268,13 +271,11 @@ func (e *simpleEngine) executeSteps(
 		if timeout != nil && *timeout > 0 && metav1.Now().Sub(stepExecMeta.StartedAt.Time) > *timeout {
 			// Timeout has elapsed.
 			stepExecMeta.FinishedAt = ptr.To(metav1.Now())
-			return Result{
-				Status:                kargoapi.PromotionPhaseErrored,
-				CurrentStep:           i,
-				StepExecutionMetadata: stepExecMetas,
-				State:                 state,
-				HealthChecks:          healthChecks,
-			}, fmt.Errorf("step %d timeout of %s has elapsed", i, timeout.String())
+			stepExecMeta.Status = kargoapi.PromotionStepStatusErrored
+			stepExecMeta.Message = fmt.Sprintf("step %d timed out after %s", i, timeout.String())
+			// Continue, because despite this failure, some steps' "if" conditions may
+			// still allow them to run.
+			continue
 		}
 
 		if err != nil {
@@ -285,10 +286,10 @@ func (e *simpleEngine) executeSteps(
 			return Result{
 				Status:                kargoapi.PromotionPhaseRunning,
 				CurrentStep:           i,
-				StepExecutionMetadata: stepExecMetas,
+				StepExecutionMetadata: promoCtx.StepExecutionMetadata,
 				State:                 state,
 				HealthChecks:          healthChecks,
-			}, nil
+			}
 		}
 
 		// If we get to here, the step is still Running (waiting for some external
@@ -297,20 +298,57 @@ func (e *simpleEngine) executeSteps(
 		return Result{
 			Status:                kargoapi.PromotionPhaseRunning,
 			CurrentStep:           i,
-			StepExecutionMetadata: stepExecMetas,
+			StepExecutionMetadata: promoCtx.StepExecutionMetadata,
 			State:                 state,
 			HealthChecks:          healthChecks,
-		}, nil
+		}
 	}
+
+	status, msg := determinePromoPhase(steps, promoCtx.StepExecutionMetadata)
 
 	// All steps have succeeded, return the final state.
 	return Result{
-		Status:                kargoapi.PromotionPhaseSucceeded,
+		Status:                status,
+		Message:               msg,
 		CurrentStep:           int64(len(steps)) - 1,
-		StepExecutionMetadata: stepExecMetas,
+		StepExecutionMetadata: promoCtx.StepExecutionMetadata,
 		State:                 state,
 		HealthChecks:          healthChecks,
-	}, nil
+	}
+}
+
+// determinePromoPhase determines the final PromotionPhase as a function of the
+// step configuration and step execution metadata.
+func determinePromoPhase(
+	steps []Step,
+	stepExecMetas kargoapi.StepExecutionMetadataList,
+) (kargoapi.PromotionPhase, string) {
+	worstStepStatus := kargoapi.PromotionStepStatusSucceeded
+	var worstMsg string
+	for i, stepExecMeta := range stepExecMetas {
+		if steps[i].ContinueOnError {
+			// If continueOnError is set, we don't don't permit this step's outcome
+			// to affect the overall PromotionPhase.
+			continue
+		}
+		if stepExecMeta.Status.Compare(worstStepStatus) > 0 {
+			worstStepStatus = stepExecMeta.Status
+			worstMsg = stepExecMeta.Message
+		}
+	}
+	switch worstStepStatus {
+	case kargoapi.PromotionStepStatusSucceeded, kargoapi.PromotionStepStatusSkipped:
+		return kargoapi.PromotionPhaseSucceeded, worstMsg
+	case kargoapi.PromotionStepStatusAborted:
+		return kargoapi.PromotionPhaseAborted, worstMsg
+	case kargoapi.PromotionStepStatusFailed:
+		return kargoapi.PromotionPhaseFailed, worstMsg
+	case kargoapi.PromotionStepStatusErrored:
+		return kargoapi.PromotionPhaseErrored, worstMsg
+	default:
+		// This really shouldn't ever happen. We'll treat it as an error.
+		return kargoapi.PromotionPhaseErrored, worstMsg
+	}
 }
 
 // executeStep executes a single Step.
@@ -331,7 +369,7 @@ func (e *simpleEngine) executeStep(
 
 	result, err := runner.Run(ctx, stepCtx)
 	if err != nil {
-		err = fmt.Errorf("failed to run step %q: %w", step.Kind, err)
+		err = fmt.Errorf("error running step %q: %w", step.Kind, err)
 	}
 	return result, err
 }
