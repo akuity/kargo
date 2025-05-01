@@ -288,9 +288,9 @@ func (s *PromotionStep) GetAlias(i int) string {
 	case s.As != "":
 		return s.As
 	case s.Task != nil:
-		return fmt.Sprintf("task-%d", i)
+		return fmt.Sprintf("task-%d", i+1)
 	default:
-		return fmt.Sprintf("step-%d", i)
+		return fmt.Sprintf("step-%d", i+1)
 	}
 }
 

@@ -113,6 +113,7 @@ func (b *PromotionBuilder) InflateSteps(ctx context.Context, promo *kargoapi.Pro
 			}
 			steps = append(steps, taskSteps...)
 		default:
+			step.As = step.GetAlias(i)
 			steps = append(steps, step)
 		}
 	}

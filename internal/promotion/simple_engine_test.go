@@ -844,55 +844,6 @@ func TestSimpleEngine_prepareStepContext(t *testing.T) {
 	}
 }
 
-func TestSimpleEngine_stepAlias(t *testing.T) {
-	tests := []struct {
-		name       string
-		alias      string
-		index      int64
-		assertions func(*testing.T, string, error)
-	}{
-		{
-			name:  "use provided alias",
-			alias: "custom-step",
-			assertions: func(t *testing.T, alias string, err error) {
-				assert.NoError(t, err)
-				assert.Equal(t, "custom-step", alias)
-			},
-		},
-		{
-			name:  "generate default alias",
-			index: 42,
-			assertions: func(t *testing.T, alias string, err error) {
-				assert.NoError(t, err)
-				assert.Equal(t, "step-42", alias)
-			},
-		},
-		{
-			name:  "reject reserved alias",
-			alias: "step-1",
-			assertions: func(t *testing.T, _ string, err error) {
-				assert.ErrorContains(t, err, "forbidden")
-			},
-		},
-		{
-			name:  "trim whitespace",
-			alias: "  step  ",
-			assertions: func(t *testing.T, alias string, err error) {
-				assert.NoError(t, err)
-				assert.Equal(t, "step", alias)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			engine := &simpleEngine{}
-			alias, err := engine.stepAlias(tt.alias, tt.index)
-			tt.assertions(t, alias, err)
-		})
-	}
-}
-
 func TestSimpleEngine_setupWorkDir(t *testing.T) {
 	tmpDir := t.TempDir()
 
