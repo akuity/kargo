@@ -1,5 +1,11 @@
 import { useMutation } from '@connectrpc/connect-query';
-import { faMinus, faPlus, faRefresh, faWarehouse } from '@fortawesome/free-solid-svg-icons';
+import {
+  faArrowUpRightFromSquare,
+  faMinus,
+  faPlus,
+  faRefresh,
+  faWarehouse
+} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Badge, Button, Card, Flex, message } from 'antd';
 import classNames from 'classnames';
@@ -35,26 +41,32 @@ export const WarehouseNode = (props: { warehouse: Warehouse }) => {
     <Card
       size='small'
       title={
-        <Flex
-          align='center'
-          gap={16}
-          className={classNames(warehouseState.hasError && 'text-red-500')}
-        >
-          <FontAwesomeIcon icon={faWarehouse} />
-          <span className='text-xs'>{props.warehouse?.metadata?.name}</span>
+        <Flex justify='space-between'>
+          <Flex
+            align='center'
+            gap={16}
+            className={classNames(warehouseState.hasError && 'text-red-500')}
+          >
+            <FontAwesomeIcon icon={faWarehouse} />
+            <span className='text-xs'>{props.warehouse?.metadata?.name}</span>
 
-          {warehouseState.hasError && <Badge status='error' />}
+            {warehouseState.hasError && <Badge status='error' />}
+          </Flex>
+          <Button
+            icon={<FontAwesomeIcon icon={faArrowUpRightFromSquare} />}
+            size='small'
+            onClick={() =>
+              navigate(
+                generatePath(paths.warehouse, {
+                  name: props.warehouse?.metadata?.namespace,
+                  warehouseName: props.warehouse?.metadata?.name
+                })
+              )
+            }
+          />
         </Flex>
       }
-      className={(styles['warehouse-node-size'], 'cursor-pointer relative')}
-      onClick={() =>
-        navigate(
-          generatePath(paths.warehouse, {
-            name: props.warehouse?.metadata?.namespace,
-            warehouseName: props.warehouse?.metadata?.name
-          })
-        )
-      }
+      className={(styles['warehouse-node-size'], 'relative')}
     >
       <Button
         size='small'

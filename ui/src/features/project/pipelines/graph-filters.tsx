@@ -45,19 +45,18 @@ export const GraphFilters = (props: GraphFiltersProps) => {
         }
       />
 
-      {stackedNodesParents.length > 0 && (
-        <Button
-          className='ml-3'
-          title='Group stages'
-          icon={<FontAwesomeIcon icon={faObjectGroup} />}
-          onClick={() => {
-            filterContext?.setPreferredFilter({
-              ...filterContext?.preferredFilter,
-              stackedNodesParents
-            });
-          }}
-        />
-      )}
+      <Button
+        className='ml-3'
+        title='Group stages'
+        icon={<FontAwesomeIcon icon={faObjectGroup} />}
+        onClick={() => {
+          filterContext?.setPreferredFilter({
+            ...filterContext?.preferredFilter,
+            stackedNodesParents
+          });
+        }}
+        disabled={stackedNodesParents.length < 1}
+      />
     </Card>
   );
 };
