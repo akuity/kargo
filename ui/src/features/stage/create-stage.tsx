@@ -120,6 +120,7 @@ export const CreateStage = ({
           uses: step?.identifier,
           as: step?.as || '',
           if: '',
+          continueOnError: false,
           config: step?.state as JSON, // step.state is type 'object' and it is safe to fake JSON type because it doesn't matter for stageFormToYAML function
           vars: []
         }))
@@ -171,6 +172,7 @@ export const CreateStage = ({
                   uses: step?.identifier,
                   as: step?.as || '',
                   if: '',
+                  continueOnError: false,
                   config: step?.state as JSON, // step.state is type 'object' and it is safe to fake JSON type because it doesn't matter for stageFormToYAML function
                   vars: []
                 }))
