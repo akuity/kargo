@@ -15,6 +15,8 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libargocd "github.com/akuity/kargo/internal/argocd"
 	"github.com/akuity/kargo/internal/expressions"
+	"github.com/akuity/kargo/internal/git"
+	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/promotion"
 )
@@ -38,6 +40,8 @@ const (
 	StagesByWarehouseField      = "warehouse"
 
 	ServiceAccountsByOIDCClaimsField = "claims"
+
+	WarehouseRepoURLIndexKey = "subscriptions.repoURL"
 )
 
 // EventsByInvolvedObjectAPIGroup is a client.IndexerFunc that indexes
@@ -442,4 +446,43 @@ func ServiceAccountsByOIDCClaims(obj client.Object) []string {
 		return nil
 	}
 	return refinedClaimValues
+}
+
+// WarehousesByRepoURL is a client.IndexerFunc that indexes Warehouses by the
+// the RepoURLs they are associated with.
+func WarehousesByRepoURL(obj client.Object) []string {
+	warehouse, ok := obj.(*kargoapi.Warehouse)
+	if !ok {
+		return nil
+	}
+
+	var repoURLs []string
+	for _, sub := range warehouse.Spec.Subscriptions {
+		if sub.Git != nil && sub.Git.RepoURL != "" {
+			repoURLs = apppendIfNotExists(repoURLs,
+				git.NormalizeURL(sub.Git.RepoURL),
+			)
+		}
+		if sub.Chart != nil && sub.Chart.RepoURL != "" {
+			repoURLs = apppendIfNotExists(repoURLs,
+				helm.NormalizeChartRepositoryURL(sub.Chart.RepoURL),
+			)
+		}
+		if sub.Image != nil && sub.Image.RepoURL != "" {
+			repoURLs = apppendIfNotExists(repoURLs,
+				// The normalization of Helm chart repository URLs can also be used here
+				// to ensure the uniqueness of the image reference as it does the job of
+				// ensuring lower-casing, etc. without introducing unwanted side effects.
+				helm.NormalizeChartRepositoryURL(sub.Image.RepoURL),
+			)
+		}
+	}
+	return repoURLs
+}
+
+func apppendIfNotExists(ss []string, repoURL string) []string {
+	if !slices.Contains(ss, repoURL) {
+		return append(ss, repoURL)
+	}
+	return ss
 }

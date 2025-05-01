@@ -818,3 +818,70 @@ func TestServiceAccountsByOIDCClaims(t *testing.T) {
 		})
 	}
 }
+
+func TestWarehousesByRepoURL(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		warehouse kargoapi.Warehouse
+		expected  []string
+	}{
+		{
+			name: "simple",
+			warehouse: kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "https://github.com/username/repo",
+							},
+							Image: &kargoapi.ImageSubscription{
+								RepoURL: "https://registry.hub.docker.com/u/svendowideit/testhook/",
+							},
+						},
+					},
+				},
+			},
+			expected: []string{
+				"https://github.com/username/repo",
+				"https://registry.hub.docker.com/u/svendowideit/testhook/",
+			},
+		},
+		{
+			name: "duplicates removed",
+			warehouse: kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "https://github.com/username/repo",
+							},
+							Image: &kargoapi.ImageSubscription{
+								RepoURL: "https://registry.hub.docker.com/u/svendowideit/testhook/",
+							},
+						},
+						{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "https://github.com/username/repo",
+							},
+							Image: &kargoapi.ImageSubscription{
+								RepoURL: "https://registry.hub.docker.com/u/svendowideit/testhook/",
+							},
+						},
+					},
+				},
+			},
+			expected: []string{
+				"https://github.com/username/repo",
+				"https://registry.hub.docker.com/u/svendowideit/testhook/",
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t,
+				test.expected,
+				WarehousesByRepoURL(&test.warehouse),
+			)
+
+		})
+	}
+}
