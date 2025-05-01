@@ -68,6 +68,14 @@ export const StageNode = (props: { stage: Stage }) => {
     }
   });
 
+  const onStageDetails = () =>
+    navigate(
+      generatePath(paths.stage, {
+        name: props.stage?.metadata?.namespace,
+        stageName: props.stage?.metadata?.name
+      })
+    );
+
   let descriptionItems: ReactNode;
 
   if (!controlFlow) {
@@ -95,6 +103,7 @@ export const StageNode = (props: { stage: Stage }) => {
             name: props.stage?.metadata?.namespace,
             promotionId: props.stage?.status?.currentPromotion?.name || ''
           })}
+          onClick={(e) => e.stopPropagation()}
         >
           {Phase}
         </Link>
@@ -121,6 +130,7 @@ export const StageNode = (props: { stage: Stage }) => {
               name: props.stage?.metadata?.namespace,
               promotionId: props.stage?.status?.lastPromotion?.name
             })}
+            onClick={(e) => e.stopPropagation()}
           >
             <Flex gap={4} align='center'>
               <span>Last Promotion: </span>
@@ -171,13 +181,7 @@ export const StageNode = (props: { stage: Stage }) => {
         Details
       </Flex>
     ),
-    onClick: () =>
-      navigate(
-        generatePath(paths.stage, {
-          name: props.stage?.metadata?.namespace,
-          stageName: props.stage?.metadata?.name
-        })
-      )
+    onClick: onStageDetails
   });
 
   return (
@@ -201,15 +205,21 @@ export const StageNode = (props: { stage: Stage }) => {
               items: dropdownItems
             }}
           >
-            <Button size='small' className='text-xs' icon={<FontAwesomeIcon icon={faEllipsis} />} />
+            <Button
+              size='small'
+              className='text-xs'
+              icon={<FontAwesomeIcon icon={faEllipsis} />}
+              onClick={(e) => e.stopPropagation()}
+            />
           </Dropdown>
         </Flex>
       }
-      className={classNames('stage-node', style['stage-node-size'], {
+      className={classNames('stage-node cursor-pointer', style['stage-node-size'], {
         'opacity-40': hideStage
       })}
       size='small'
       variant='borderless'
+      onClick={onStageDetails}
     >
       {controlFlow && (
         <Typography.Text type='secondary'>
