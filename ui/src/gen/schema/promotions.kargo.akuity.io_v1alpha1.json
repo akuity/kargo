@@ -44,7 +44,7 @@
                 "x-kubernetes-preserve-unknown-fields": true
               },
               "continueOnError": {
-                "description": "ContinueOnError is a boolean value that, if set to true, will cause the\nPromotion to continue executing the next step even if this step fails.",
+                "description": "ContinueOnError is a boolean value that, if set to true, will cause the\nPromotion to continue executing the next step even if this step fails. It\nalso will not permit this failure to impact the overall status of the\nPromotion.",
                 "type": "boolean"
               },
               "if": {
@@ -548,6 +548,10 @@
               "alias": {
                 "description": "Alias is the alias of the step.",
                 "type": "string"
+              },
+              "continueOnError": {
+                "description": "ContinueOnError is a boolean value that, if set to true, will cause the\nPromotion to continue executing the next step even if this step fails. It\nalso will not permit this failure to impact the overall status of the\nPromotion.",
+                "type": "boolean"
               },
               "errorCount": {
                 "description": "ErrorCount tracks consecutive failed attempts to execute the step.",
