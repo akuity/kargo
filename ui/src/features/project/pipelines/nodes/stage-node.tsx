@@ -167,7 +167,7 @@ export const StageNode = (props: { stage: Stage }) => {
           )}
           <Space>
             <Dropdown
-              trigger={['click']}
+              trigger={['hover']}
               overlayClassName='w-[220px]'
               menu={{
                 items: dropdownItems

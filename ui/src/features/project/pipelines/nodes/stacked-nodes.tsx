@@ -19,7 +19,7 @@ export const StackedNodes = (props: {
   return (
     <>
       <Handle id={props.data.id} position={Position.Left} type='target' />
-      <div className={classNames(styles['stacked-node-size'], 'relative')}>
+      <div className={classNames(styles['stacked-node-size'], 'relative nodrag cursor-default')}>
         <div className='absolute w-full h-full -top-1 -right-1 bg-white shadow-md rounded-md z-10' />
         <div className='absolute w-full h-full -top-2 -right-2 bg-white shadow-md rounded-md' />
         <Card className={classNames(styles['stacked-node-size'], 'relative z-20')}>
