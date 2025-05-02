@@ -38,7 +38,7 @@ export const PromotionModeHeader = (props: { className?: string; loading?: boole
         {props.loading && <FontAwesomeIcon icon={faCircleNotch} spin className='mr-2' />}
         Promote to <b>{promotingTo}</b>
       </Typography.Text>
-      <Button danger type='primary' size='small' onClick={() => actionContext.cancel()}>
+      <Button danger size='small' onClick={() => actionContext.cancel()}>
         Cancel
       </Button>
     </div>
