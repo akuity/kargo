@@ -3,7 +3,10 @@ import Link from 'antd/es/typography/Link';
 import { format } from 'date-fns';
 import moment from 'moment';
 import { useMemo, useState } from 'react';
+import { Link as ReactRouterLink } from 'react-router-dom';
+import { generatePath } from 'react-router-dom';
 
+import { paths } from '@ui/config/paths';
 import { VerificationInfo } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
@@ -127,7 +130,22 @@ export const Verifications = ({ verifications, images }: Props) => {
         <Table.Column
           title='Freight'
           render={(val) => {
-            return val?.id?.substring(0, 7);
+            const freights = val?.freight?.items;
+
+            const freight = Object.values(freights || {})?.[0] as {
+              name: string;
+            };
+
+            return (
+              <ReactRouterLink
+                to={generatePath(paths.freight, {
+                  name: val?.analysisRun?.namespace,
+                  freightName: freight?.name
+                })}
+              >
+                {freight?.name?.slice(0, 7)}
+              </ReactRouterLink>
+            );
           }}
           width={120}
         />
