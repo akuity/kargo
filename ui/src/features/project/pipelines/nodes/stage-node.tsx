@@ -255,6 +255,10 @@ const useStageHeaderStyle = (stage: Stage): CSSProperties => {
     stageFontColor = 'white';
   }
 
+  if (stageColor) {
+    stageFontColor = 'white';
+  }
+
   return {
     backgroundColor: stageColor || '',
     color: stageFontColor

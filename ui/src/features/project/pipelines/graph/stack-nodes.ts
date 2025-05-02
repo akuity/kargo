@@ -6,30 +6,6 @@ import { stackedIndexer, stageIndexer } from './node-indexer';
 import { stackedLabelling } from './node-labeling';
 import { stackSizer } from './node-sizer';
 
-export const stackNode = (afterNode: string, graph: graphlib.Graph) => {
-  const traverseQueue: string[] = [];
-
-  if (afterNode) {
-    traverseQueue.push(afterNode);
-  }
-
-  const ignoreNodes: string[] = [];
-  while (traverseQueue.length > 0) {
-    const firstNode = traverseQueue.shift();
-
-    if (firstNode) {
-      for (const successor of graph.successors(firstNode) || []) {
-        // @ts-expect-error type of successor is string
-        ignoreNodes.push(successor);
-        // @ts-expect-error type of successor is string
-        traverseQueue.push(successor);
-      }
-    }
-  }
-
-  return ignoreNodes;
-};
-
 export const stackNodes = (
   afterNodes: string[],
   graph: graphlib.Graph,
@@ -40,6 +16,7 @@ export const stackNodes = (
   const stackNodes: Array<{
     count: number;
     parentNode: string;
+    actualNode: string;
   }> = [];
 
   const ignoreList = new Set<string>();
@@ -51,15 +28,23 @@ export const stackNodes = (
     const currentNode = traverseQueue.shift();
 
     if (currentNode) {
-      for (const _successor of graph.successors(currentNode) || []) {
+      const currentNodeSuccessors = graph.successors(currentNode) || [];
+
+      for (const _successor of currentNodeSuccessors) {
         // @ts-expect-error type of successor is string
         const successor = _successor as string;
 
         if (afterNodes.includes(successor)) {
-          const stackedNode: { count: number; parentNode: string } = {
+          const stackedNode: { count: number; parentNode: string; actualNode: string } = {
             count: 0,
-            parentNode: successor
+            parentNode: successor,
+            // @ts-expect-error it is string
+            actualNode: graph.successors(successor)?.[0] as string
           };
+
+          if (!stackedNode.actualNode) {
+            continue;
+          }
 
           const successors = getAllSuccessors(successor, graph);
 
