@@ -73,3 +73,15 @@ steps:
         ]
       }) }}
 ```
+
+:::note
+In the above example, it is assumed that the steps are part of a
+[`PromotionTask`](../20-promotion-tasks.md). Because of this, it uses the
+[`task.outputs` syntax](../20-promotion-tasks.md#task-outputs) to reference the
+outputs of the `git-open-pr` step.
+
+If you are using the `compose-output` step in a regular
+[Promotion template](../15-promotion-templates.md), you can omit the `task`
+prefix and use `outputs` instead. For example, `outputs['open-pr'].pr.url`
+instead of `task.outputs['open-pr'].pr.url`.
+:::
