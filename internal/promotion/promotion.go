@@ -45,7 +45,7 @@ type Context struct {
 	// any Freight that has been inherited from the target Stage's current
 	// state.
 	Freight kargoapi.FreightCollection
-	// TargetFreightRef is the actual freight that triggered this Promotion.
+	// TargetFreightRef is the actual Freight that triggered this Promotion.
 	TargetFreightRef kargoapi.FreightReference
 	// StartFromStep is the index of the step from which the promotion should
 	// begin execution.
