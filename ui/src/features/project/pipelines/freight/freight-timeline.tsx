@@ -131,8 +131,8 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
   return (
     <>
       <div
-        className={actionContext?.action ? 'absolute top-0 right-0 bottom-0 left-0 z-20' : ''}
-        style={actionContext?.action ? { backgroundColor: 'rgba(0,0,0,.4)' } : {}}
+        className={isPromotionMode ? 'absolute top-0 right-0 bottom-0 left-0 z-20' : ''}
+        style={isPromotionMode ? { backgroundColor: 'rgba(0,0,0,.4)' } : {}}
         onClick={() => actionContext?.cancel()}
       />
       {actionContext?.action && (
