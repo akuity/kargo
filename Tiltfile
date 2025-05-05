@@ -1,3 +1,7 @@
+if 'ENABLE_NGROK_EXTENSION' in os.environ and os.environ['ENABLE_NGROK_EXTENSION'] == '1':
+  v1alpha1.extension_repo(name = 'default', url = 'https://github.com/tilt-dev/tilt-extensions')
+  v1alpha1.extension(name = 'ngrok:config', repo_name = 'default', repo_path = 'ngrok')
+
 trigger_mode(TRIGGER_MODE_MANUAL)
 allow_k8s_contexts('orbstack')
 
@@ -125,6 +129,21 @@ k8s_resource(
 )
 
 k8s_resource(
+  workload = 'kargo-external-webhooks-server',
+  new_name = 'external-webhooks-server',
+  port_forwards = [
+    '30083:8080'
+  ],
+  labels = ['kargo'],
+  objects = [
+    'kargo-external-webhooks-server:clusterrole',
+    'kargo-external-webhooks-server:clusterrolebinding',
+    'kargo-external-webhooks-server:configmap',
+    'kargo-external-webhooks-server:serviceaccount'
+  ],
+)
+
+k8s_resource(
   workload = 'kargo-garbage-collector',
   new_name = 'garbage-collector',
   labels = ['kargo'],
@@ -162,7 +181,7 @@ k8s_resource(
 
 k8s_resource(
   workload = 'kargo-webhooks-server',
-  new_name = 'webhooks-server',
+  new_name = 'kubernetes-webhooks-server',
   labels = ['kargo'],
   objects = [
     'kargo:mutatingwebhookconfiguration',
@@ -183,9 +202,12 @@ k8s_resource(
 k8s_resource(
   new_name = 'crds',
   objects = [
+    'clusterpromotiontasks.kargo.akuity.io:customresourcedefinition',
     'freights.kargo.akuity.io:customresourcedefinition',
+    'projectconfigs.kargo.akuity.io:customresourcedefinition',
     'projects.kargo.akuity.io:customresourcedefinition',
     'promotions.kargo.akuity.io:customresourcedefinition',
+    'promotiontasks.kargo.akuity.io:customresourcedefinition',
     'stages.kargo.akuity.io:customresourcedefinition',
     'warehouses.kargo.akuity.io:customresourcedefinition'
   ],
