@@ -17,7 +17,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/promotion"
-	libWebhook "github.com/akuity/kargo/internal/webhook"
+	libWebhook "github.com/akuity/kargo/internal/webhook/kubernetes"
 )
 
 var (

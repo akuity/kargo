@@ -25,7 +25,7 @@ import (
 	"github.com/akuity/kargo/internal/kargo"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	"github.com/akuity/kargo/internal/logging"
-	libWebhook "github.com/akuity/kargo/internal/webhook"
+	libWebhook "github.com/akuity/kargo/internal/webhook/kubernetes"
 )
 
 var (

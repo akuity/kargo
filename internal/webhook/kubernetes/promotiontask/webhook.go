@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	libWebhook "github.com/akuity/kargo/internal/webhook"
+	libWebhook "github.com/akuity/kargo/internal/webhook/kubernetes"
 )
 
 var promotionTaskGroupKind = schema.GroupKind{

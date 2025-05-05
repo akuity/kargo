@@ -6,7 +6,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
-    {{- include "kargo.webhooksServer.labels" . | nindent 4 }}
+    {{- include "kargo.kubernetesWebhooksServer.labels" . | nindent 4 }}
   {{- with (mergeOverwrite (deepCopy .Values.global.labels) .Values.webhooksServer.labels) }}
     {{- range $key, $value := . }}
     {{ $key }}: {{ $value | quote }}
@@ -25,19 +25,19 @@ spec:
   selector:
     matchLabels:
       {{- include "kargo.selectorLabels" . | nindent 6 }}
-      {{- include "kargo.webhooksServer.labels" . | nindent 6 }}
+      {{- include "kargo.kubernetesWebhooksServer.labels" . | nindent 6 }}
   template:
     metadata:
       labels:
         {{- include "kargo.labels" . | nindent 8 }}
-        {{- include "kargo.webhooksServer.labels" . | nindent 8 }}
+        {{- include "kargo.kubernetesWebhooksServer.labels" . | nindent 8 }}
       {{- with (mergeOverwrite (deepCopy .Values.global.podLabels) .Values.webhooksServer.podLabels) }}
         {{- range $key, $value := . }}
         {{ $key }}: {{ $value | quote }}
         {{- end }}
       {{- end }}
       annotations:
-        configmap/checksum: {{ pick ( include (print $.Template.BasePath "/webhooks-server/configmap.yaml") . | fromYaml ) "data" | toYaml | sha256sum }}
+        configmap/checksum: {{ pick ( include (print $.Template.BasePath "/kubernetes-webhooks-server/configmap.yaml") . | fromYaml ) "data" | toYaml | sha256sum }}
       {{- with (mergeOverwrite (deepCopy .Values.global.podAnnotations) .Values.webhooksServer.podAnnotations) }}
         {{- range $key, $value := . }}
         {{ $key }}: {{ $value | quote }}
@@ -58,7 +58,7 @@ spec:
         image: {{ include "kargo.image" . }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         command: ["/sbin/tini", "--", "/usr/local/bin/kargo"]
-        args: ["webhooks-server"]
+        args: ["kubernetes-webhooks-server"]
         env:
         - name: GOMEMLIMIT
           valueFrom:

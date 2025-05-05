@@ -24,6 +24,6 @@ func Execute(ctx context.Context) error {
 	rootCmd.AddCommand(newGarbageCollectorCommand())
 	rootCmd.AddCommand(newManagementControllerCommand())
 	rootCmd.AddCommand(newVersionCommand())
-	rootCmd.AddCommand(newWebhooksServerCommand())
+	rootCmd.AddCommand(newKubernetesWebhooksServerCommand())
 	return rootCmd.ExecuteContext(ctx)
 }

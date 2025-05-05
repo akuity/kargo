@@ -86,8 +86,8 @@ app.kubernetes.io/component: garbage-collector
 app.kubernetes.io/component: management-controller
 {{- end -}}
 
-{{- define "kargo.webhooksServer.labels" -}}
-app.kubernetes.io/component: webhooks-server
+{{- define "kargo.kubernetesWebhooksServer.labels" -}}
+app.kubernetes.io/component: kubernetes-webhooks-server
 {{- end -}}
 
 {{/*

@@ -5,7 +5,7 @@ metadata:
   name: kargo-webhooks-server
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
-    {{- include "kargo.webhooksServer.labels" . | nindent 4 }}
+    {{- include "kargo.kubernetesWebhooksServer.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -21,7 +21,7 @@ metadata:
   name: kargo-webhooks-server-ns-controller
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
-    {{- include "kargo.webhooksServer.labels" . | nindent 4 }}
+    {{- include "kargo.kubernetesWebhooksServer.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -37,7 +37,7 @@ metadata:
   name: kargo-webhooks-server-generic-gc
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
-    {{- include "kargo.webhooksServer.labels" . | nindent 4 }}
+    {{- include "kargo.kubernetesWebhooksServer.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
