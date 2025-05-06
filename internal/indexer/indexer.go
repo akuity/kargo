@@ -459,17 +459,17 @@ func WarehousesByRepoURL(obj client.Object) []string {
 	var repoURLs []string
 	for _, sub := range warehouse.Spec.Subscriptions {
 		if sub.Git != nil && sub.Git.RepoURL != "" {
-			repoURLs = apppendIfNotExists(repoURLs,
+			repoURLs = append(repoURLs,
 				git.NormalizeURL(sub.Git.RepoURL),
 			)
 		}
 		if sub.Chart != nil && sub.Chart.RepoURL != "" {
-			repoURLs = apppendIfNotExists(repoURLs,
+			repoURLs = append(repoURLs,
 				helm.NormalizeChartRepositoryURL(sub.Chart.RepoURL),
 			)
 		}
 		if sub.Image != nil && sub.Image.RepoURL != "" {
-			repoURLs = apppendIfNotExists(repoURLs,
+			repoURLs = append(repoURLs,
 				// The normalization of Helm chart repository URLs can also be used here
 				// to ensure the uniqueness of the image reference as it does the job of
 				// ensuring lower-casing, etc. without introducing unwanted side effects.
@@ -478,11 +478,4 @@ func WarehousesByRepoURL(obj client.Object) []string {
 		}
 	}
 	return repoURLs
-}
-
-func apppendIfNotExists(ss []string, repoURL string) []string {
-	if !slices.Contains(ss, repoURL) {
-		return append(ss, repoURL)
-	}
-	return ss
 }

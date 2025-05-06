@@ -851,35 +851,6 @@ func TestWarehousesByRepoURL(t *testing.T) {
 			},
 		},
 		{
-			name: "duplicates removed",
-			warehouse: &kargoapi.Warehouse{
-				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
-						{
-							Git: &kargoapi.GitSubscription{
-								RepoURL: "https://github.com/username/repo",
-							},
-							Image: &kargoapi.ImageSubscription{
-								RepoURL: "https://registry.hub.docker.com/u/svendowideit/testhook/",
-							},
-						},
-						{
-							Git: &kargoapi.GitSubscription{
-								RepoURL: "https://github.com/username/repo",
-							},
-							Image: &kargoapi.ImageSubscription{
-								RepoURL: "https://registry.hub.docker.com/u/svendowideit/testhook/",
-							},
-						},
-					},
-				},
-			},
-			expected: []string{
-				"https://github.com/username/repo",
-				"https://registry.hub.docker.com/u/svendowideit/testhook/",
-			},
-		},
-		{
 			name:      "not a warehouse",
 			warehouse: &kargoapi.Freight{},
 			expected:  nil,
