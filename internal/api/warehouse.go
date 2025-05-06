@@ -54,7 +54,7 @@ func RefreshWarehouse(
 			Name:      namespacedName.Name,
 		},
 	}
-	if err := patchAnnotation(
+	if err := PatchAnnotation(
 		ctx,
 		c,
 		warehouse,
