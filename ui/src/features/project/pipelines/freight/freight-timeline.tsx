@@ -56,7 +56,9 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
 
   const [viewingFreight, setViewingFreight] = useState<Freight | null>(null);
 
-  const filteredFreights = useMemo(() => {
+  const filteredFreights: (Freight & {
+    count?: number;
+  })[] = useMemo(() => {
     let filtered = props.freights?.sort((a, b) => {
       const t1 = timestampDate(a?.metadata?.creationTimestamp);
 
@@ -84,12 +86,32 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
     }
 
     if (freightTimelineControllerContext.preferredFilter.hideUnusedFreights) {
-      filtered = filtered.filter((f) => {
+      const newFiltered: (Freight & {
+        count?: number;
+      })[] = [];
+
+      let count = 0;
+
+      for (const f of filtered) {
         const inUse =
           (dictionaryContext?.freightInStages[f?.metadata?.name || '']?.length || 0) > 0;
 
-        return inUse;
-      });
+        if (inUse) {
+          if (count > 0) {
+            newFiltered.push({
+              ...f,
+              count
+            });
+            count = 0;
+          }
+
+          newFiltered.push(f);
+        } else {
+          count++;
+        }
+      }
+
+      filtered = [...newFiltered];
     }
 
     return filtered;
@@ -177,7 +199,8 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
 
               return (
                 <FreightCard
-                  key={freight?.metadata?.uid}
+                  key={`${freight?.metadata?.uid}-${freight?.count}`}
+                  count={freight?.count}
                   className='h-full'
                   stagesInFreight={
                     dictionaryContext?.freightInStages?.[freight?.metadata?.name || ''] || []
@@ -203,6 +226,12 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
                       })
                     );
                   }}
+                  onExpand={() =>
+                    freightTimelineControllerContext?.setPreferredFilter({
+                      ...freightTimelineControllerContext?.preferredFilter,
+                      hideUnusedFreights: false
+                    })
+                  }
                 />
               );
             })}
