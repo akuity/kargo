@@ -56,13 +56,13 @@ func (t *tarExtractor) Run(
 ) (promotion.StepResult, error) {
 	// Validate the configuration against the JSON Schema.
 	if err := validate(t.schemaLoader, gojsonschema.NewGoLoader(stepCtx.Config), t.Name()); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, err
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
 	// Convert the configuration into a typed object.
 	cfg, err := promotion.ConfigToStruct[builtin.UntarConfig](stepCtx.Config)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("could not convert config into %s config: %w", t.Name(), err)
 	}
 
@@ -77,32 +77,32 @@ func (t *tarExtractor) run(
 	// Secure join the paths to prevent path traversal attacks.
 	inPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.InPath)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("could not secure join inPath %q: %w", cfg.InPath, err)
 	}
 	outPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutPath)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("could not secure join outPath %q: %w", cfg.OutPath, err)
 	}
 
 	// Ensure the output directory exists
 	if err := os.MkdirAll(outPath, 0755); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("failed to create output directory %q: %w", cfg.OutPath, err)
 	}
 
 	// Load the ignore rules.
 	matcher, err := t.loadIgnoreRules(outPath, cfg.Ignore)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("failed to load ignore rules: %w", err)
 	}
 
 	// Open the tar file
 	file, err := os.Open(inPath)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("failed to open tar file %q: %w", cfg.InPath, err)
 	}
 	defer file.Close()
@@ -114,14 +114,14 @@ func (t *tarExtractor) run(
 	header := make([]byte, 2)
 	_, err = file.Read(header)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("failed to read file header: %w", err)
 	}
 
 	// Reset to beginning of file
 	_, err = file.Seek(0, 0)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("failed to seek in tar file: %w", err)
 	}
 
@@ -130,7 +130,7 @@ func (t *tarExtractor) run(
 		// File is gzipped
 		gzr, err := gzip.NewReader(file)
 		if err != nil {
-			return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 				fmt.Errorf("failed to create gzip reader: %w", err)
 		}
 		defer gzr.Close()
@@ -160,7 +160,7 @@ func (t *tarExtractor) run(
 			break // End of archive
 		}
 		if err != nil {
-			return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 				fmt.Errorf("error reading tar: %w", err)
 		}
 
@@ -222,7 +222,7 @@ func (t *tarExtractor) run(
 
 		destDir := filepath.Dir(targetPath)
 		if err := os.MkdirAll(destDir, 0755); err != nil {
-			return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 				fmt.Errorf("failed to create directory %s: %w", destDir, err)
 		}
 
@@ -230,7 +230,7 @@ func (t *tarExtractor) run(
 		case tar.TypeDir:
 			// Create directory
 			if err := os.MkdirAll(targetPath, 0755); err != nil {
-				return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 					fmt.Errorf("failed to create directory %s: %w", targetPath, err)
 			}
 
@@ -253,7 +253,7 @@ func (t *tarExtractor) run(
 					"path", targetName,
 					"size", header.Size,
 					"limit", MaxDecompressedFileSize)
-				return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 					fmt.Errorf("extraction aborted: file %s exceeds size limit of %d bytes", targetName, MaxDecompressedFileSize)
 			}
 
@@ -263,14 +263,14 @@ func (t *tarExtractor) run(
 					"total_size", totalExtractedSize,
 					"file_size", header.Size,
 					"limit", MaxDecompressedTarSize)
-				return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 					fmt.Errorf("extraction aborted: total size would exceed limit of %d bytes", MaxDecompressedTarSize)
 			}
 
 			// Create file
 			outFile, err := os.Create(targetPath)
 			if err != nil {
-				return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 					fmt.Errorf("failed to create file %s: %w", targetPath, err)
 			}
 
@@ -278,7 +278,7 @@ func (t *tarExtractor) run(
 			written, err := io.CopyN(outFile, tarReader, header.Size)
 			outFile.Close()
 			if err != nil && err != io.EOF {
-				return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 					fmt.Errorf("failed to write to file %s: %w", targetPath, err)
 			}
 
@@ -292,7 +292,7 @@ func (t *tarExtractor) run(
 		}
 	}
 
-	return promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded}, nil
+	return promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, nil
 }
 
 // validRelPath checks if the path is safe to extract (no path traversal, etc.)
