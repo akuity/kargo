@@ -77,6 +77,11 @@ type Step struct {
 	// If the expression does not evaluate to a boolean value, the step will
 	// fail.
 	If string
+	// ContinueOnError is a boolean value that, if set to true, will cause the
+	// Promotion to continue executing the next step even if this step fails. It
+	// also will not permit this failure to impact the overall status of the
+	// Promotion.
+	ContinueOnError bool
 	// Retry is the retry configuration for the Step.
 	Retry *kargoapi.PromotionStepRetry
 	// Vars is a list of variables definitions that can be used by the
@@ -104,6 +109,18 @@ func StepEnvWithVars(vars map[string]any) StepEnvOption {
 func StepEnvWithSecrets(secrets map[string]map[string]string) StepEnvOption {
 	return func(env map[string]any) {
 		env["secrets"] = secrets
+	}
+}
+
+// StepEnvWithStepMetas returns a StepEnvOption that adds StepExecutionMetadata
+// indexed by alias to the environment of the Step.
+func StepEnvWithStepMetas(promoCtx Context) StepEnvOption {
+	metas := make(map[string]any, len(promoCtx.StepExecutionMetadata))
+	for _, stepMeta := range promoCtx.StepExecutionMetadata {
+		metas[stepMeta.Alias] = stepMeta
+	}
+	return func(env map[string]any) {
+		env["stepMetas"] = metas
 	}
 }
 
@@ -192,8 +209,11 @@ func (s *Step) Skip(
 	promoCtx Context,
 	state promotion.State,
 ) (bool, error) {
+	// If no "if" condition is provided, then this step is automatically skipped
+	// if any of the previous steps have errored or failed and is not skipped
+	// otherwise.
 	if s.If == "" {
-		return false, nil
+		return promoCtx.StepExecutionMetadata.HasFailures(), nil
 	}
 
 	vars, err := s.GetVars(ctx, cl, promoCtx, state)
@@ -203,6 +223,7 @@ func (s *Step) Skip(
 
 	env := s.BuildEnv(
 		promoCtx,
+		StepEnvWithStepMetas(promoCtx),
 		StepEnvWithOutputs(state),
 		StepEnvWithTaskOutputs(s.Alias, state),
 		StepEnvWithVars(vars),
@@ -212,14 +233,17 @@ func (s *Step) Skip(
 		s.If,
 		env,
 		append(
-			exprfn.FreightOperations(
-				ctx,
-				cl,
-				promoCtx.Project,
-				promoCtx.FreightRequests,
-				promoCtx.Freight.References(),
+			append(
+				exprfn.FreightOperations(
+					ctx,
+					cl,
+					promoCtx.Project,
+					promoCtx.FreightRequests,
+					promoCtx.Freight.References(),
+				),
+				exprfn.DataOperations(ctx, cl, promoCtx.Project)...,
 			),
-			exprfn.DataOperations(ctx, cl, promoCtx.Project)...,
+			exprfn.StatusOperations(promoCtx.StepExecutionMetadata)...,
 		)...,
 	)
 	if err != nil {
@@ -253,6 +277,7 @@ func (s *Step) GetConfig(
 
 	env := s.BuildEnv(
 		promoCtx,
+		StepEnvWithStepMetas(promoCtx),
 		StepEnvWithOutputs(state),
 		StepEnvWithTaskOutputs(s.Alias, state),
 		StepEnvWithVars(vars),
@@ -317,6 +342,7 @@ func (s *Step) GetVars(
 			v.Value,
 			s.BuildEnv(
 				promoCtx,
+				StepEnvWithStepMetas(promoCtx),
 				StepEnvWithOutputs(state),
 				StepEnvWithTaskOutputs(s.Alias, state),
 				StepEnvWithVars(vars),

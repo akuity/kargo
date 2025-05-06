@@ -6,7 +6,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
-    {{- include "kargo.webhooksServer.labels" . | nindent 4 }}
+    {{- include "kargo.kubernetesWebhooksServer.labels" . | nindent 4 }}
 data:
   KARGO_NAMESPACE: {{ .Release.Namespace }}
   LOG_LEVEL: {{ quote .Values.webhooksServer.logLevel }}

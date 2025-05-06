@@ -59,7 +59,9 @@ CustomNode.Container = (
 ) => {
   let id = '';
 
-  const Children = <div className='max-w-[356px] min-w-[250px]'>{props.children}</div>;
+  const Children = (
+    <div className='max-w-[356px] min-w-[250px] nodrag cursor-default'>{props.children}</div>
+  );
 
   if (props.stage) {
     id = stageIndexer.index(props.stage);

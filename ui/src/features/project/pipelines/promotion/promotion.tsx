@@ -1,9 +1,10 @@
 import { useQuery } from '@connectrpc/connect-query';
-import { Descriptions, DescriptionsProps, Drawer, Flex } from 'antd';
+import { Descriptions, DescriptionsProps, Drawer, Flex, Tabs } from 'antd';
 import { formatDistance } from 'date-fns';
 import { useMemo } from 'react';
 
 import { LoadingState } from '@ui/features/common';
+import YamlEditor from '@ui/features/common/code-editor/yaml-editor-lazy';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import { PromotionStatusIcon } from '@ui/features/common/promotion-status/promotion-status-icon';
 import {
@@ -14,8 +15,10 @@ import { useDictionaryContext } from '@ui/features/project/pipelines/context/dic
 import { PromotionSteps } from '@ui/features/stage/promotion-steps';
 import { hasAbortRequest } from '@ui/features/stage/utils/promotion';
 import { getPromotion } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { Freight, Stage, Promotion as TPromotion } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
+import { decodeRawData } from '@ui/utils/decode-raw-data';
 
 import { FreightDetails } from './freight-details';
 import { getPromotionActor } from './get-promotion-actor';
@@ -27,7 +30,7 @@ type PromotionProps = ModalComponentProps & {
   project: string;
 };
 
-const Content = (props: { promotion: TPromotion }) => {
+const Content = (props: { promotion: TPromotion; yaml: string }) => {
   const dictionaryContext = useDictionaryContext();
   const promotionDescriptions: DescriptionsProps['items'] = [];
 
@@ -100,17 +103,37 @@ const Content = (props: { promotion: TPromotion }) => {
 
   return (
     <>
-      <Descriptions
+      <Tabs
         className='mb-5'
-        column={2}
-        size='small'
-        bordered
-        items={promotionDescriptions}
-      />
+        items={[
+          {
+            key: 'promotion',
+            label: 'Promotion',
+            children: (
+              <>
+                <Descriptions
+                  className='mb-5'
+                  column={2}
+                  size='small'
+                  bordered
+                  items={promotionDescriptions}
+                />
 
-      <div className='my-5'>
-        <PromotionSteps promotion={promotion} />
-      </div>
+                <div className='mt-5'>
+                  <PromotionSteps promotion={promotion} />
+                </div>
+              </>
+            )
+          },
+          {
+            key: 'yaml',
+            label: 'YAML',
+            children: (
+              <YamlEditor value={props.yaml} height='500px' disabled isHideManagedFieldsDisplayed />
+            )
+          }
+        ]}
+      />
 
       <FreightDetails freight={freight} />
 
@@ -125,7 +148,18 @@ export const Promotion = (props: PromotionProps) => {
     name: props.promotionId
   });
 
+  const rawPromotionYamlQuery = useQuery(getPromotion, {
+    project: props.project,
+    name: props.promotionId,
+    format: RawFormat.YAML
+  });
+
   useWatchPromotion(props.project, props.promotionId);
+
+  const rawPromotionYaml = useMemo(
+    () => decodeRawData(rawPromotionYamlQuery.data),
+    [rawPromotionYamlQuery.data]
+  );
 
   return (
     <Drawer
@@ -137,7 +171,10 @@ export const Promotion = (props: PromotionProps) => {
     >
       {getPromotionQuery.isLoading && <LoadingState />}
       {!getPromotionQuery.isLoading && (
-        <Content promotion={getPromotionQuery.data?.result?.value as TPromotion} />
+        <Content
+          promotion={getPromotionQuery.data?.result?.value as TPromotion}
+          yaml={rawPromotionYaml}
+        />
       )}
     </Drawer>
   );

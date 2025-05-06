@@ -875,7 +875,20 @@ func TestStep_Skip(t *testing.T) {
 		assertions func(*testing.T, bool, error)
 	}{
 		{
-			name: "no if condition",
+			name: "no if condition with failures",
+			step: &Step{},
+			ctx: Context{
+				StepExecutionMetadata: kargoapi.StepExecutionMetadataList{{
+					Status: kargoapi.PromotionStepStatusFailed,
+				}},
+			},
+			assertions: func(t *testing.T, b bool, err error) {
+				assert.True(t, b)
+				assert.NoError(t, err)
+			},
+		},
+		{
+			name: "no if condition without failures",
 			step: &Step{},
 			assertions: func(t *testing.T, b bool, err error) {
 				assert.False(t, b)

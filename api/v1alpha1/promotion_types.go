@@ -37,6 +37,16 @@ const (
 	PromotionPhaseAborted PromotionPhase = "Aborted"
 )
 
+// IsTerminal returns true if the PromotionPhase is a terminal one.
+func (p *PromotionPhase) IsTerminal() bool {
+	switch *p {
+	case PromotionPhaseSucceeded, PromotionPhaseFailed, PromotionPhaseErrored, PromotionPhaseAborted:
+		return true
+	default:
+		return false
+	}
+}
+
 type PromotionStepStatus string
 
 const (
@@ -64,13 +74,38 @@ const (
 	PromotionStepStatusSkipped PromotionStepStatus = "Skipped"
 )
 
-// IsTerminal returns true if the PromotionPhase is a terminal one.
-func (p *PromotionPhase) IsTerminal() bool {
-	switch *p {
-	case PromotionPhaseSucceeded, PromotionPhaseFailed, PromotionPhaseErrored, PromotionPhaseAborted:
-		return true
+// severityByStatus defines relative severity levels for each
+// PromotionStepStatus.
+var severityByStatus = map[PromotionStepStatus]int{
+	PromotionStepStatusSucceeded: 0,
+	PromotionStepStatusSkipped:   1,
+	PromotionStepStatusRunning:   2,
+	PromotionStepStatusAborted:   3,
+	PromotionStepStatusFailed:    4,
+	PromotionStepStatusErrored:   5,
+}
+
+// Compare compares the severity of the current PromotionStepStatus with
+// another. It returns -1 if the current status is less severe than the other, 0
+// if the two statuses are equally severe, or 1 if the current status is more
+// severe than the other.
+func (s PromotionStepStatus) Compare(other PromotionStepStatus) int {
+	// Get the severity levels of the current and other statuses
+	thisSeverity, lhsOK := severityByStatus[s]
+	otherSeverity, rhsOK := severityByStatus[other]
+
+	if !lhsOK || !rhsOK {
+		panic(fmt.Sprintf("unknown PromotionStepStatus: %s or %s", s, other))
+	}
+
+	// Compare the severity levels
+	switch {
+	case thisSeverity < otherSeverity:
+		return -1
+	case thisSeverity > otherSeverity:
+		return 1
 	default:
-		return false
+		return 0
 	}
 }
 
@@ -226,6 +261,11 @@ type PromotionStep struct {
 	// If the expression does not evaluate to a boolean value, the step will be
 	// considered to have failed.
 	If string `json:"if,omitempty" protobuf:"bytes,7,opt,name=if"`
+	// ContinueOnError is a boolean value that, if set to true, will cause the
+	// Promotion to continue executing the next step even if this step fails. It
+	// also will not permit this failure to impact the overall status of the
+	// Promotion.
+	ContinueOnError bool `json:"continueOnError,omitempty" protobuf:"varint,8,opt,name=continueOnError"`
 	// Retry is the retry policy for this step.
 	Retry *PromotionStepRetry `json:"retry,omitempty" protobuf:"bytes,4,opt,name=retry"`
 	// Vars is a list of variables that can be referenced by expressions in
@@ -349,6 +389,22 @@ type PromotionList struct {
 // StepExecutionMetadataList is a list of StepExecutionMetadata.
 type StepExecutionMetadataList []StepExecutionMetadata
 
+// HasFailures returns true if any of the StepExecutionMetadata in the list
+// have a status of PromotionStepStatusErrored or PromotionStepStatusFailed.
+func (s StepExecutionMetadataList) HasFailures() bool {
+	for _, stepExecMeta := range s {
+		if stepExecMeta.ContinueOnError {
+			continue
+		}
+		switch stepExecMeta.Status {
+		case PromotionStepStatusErrored, PromotionStepStatusFailed:
+			return true
+		}
+		// Other statuses have no effect on the failure check.
+	}
+	return false
+}
+
 // StepExecutionMetadata tracks metadata pertaining to the execution of
 // a promotion step.
 type StepExecutionMetadata struct {
@@ -366,4 +422,9 @@ type StepExecutionMetadata struct {
 	Status PromotionStepStatus `json:"status,omitempty" protobuf:"bytes,5,opt,name=status"`
 	// Message is a display message about the step, including any errors.
 	Message string `json:"message,omitempty" protobuf:"bytes,6,opt,name=message"`
+	// ContinueOnError is a boolean value that, if set to true, will cause the
+	// Promotion to continue executing the next step even if this step fails. It
+	// also will not permit this failure to impact the overall status of the
+	// Promotion.
+	ContinueOnError bool `json:"continueOnError,omitempty" protobuf:"varint,7,opt,name=continueOnError"`
 }

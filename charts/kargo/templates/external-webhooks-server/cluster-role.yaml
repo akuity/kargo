@@ -1,0 +1,19 @@
+{{- if and .Values.externalWebhooksServer.enabled .Values.rbac.installClusterRoles }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kargo-external-webhooks-server
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.externalWebhooksServer.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - warehouses
+  verbs:
+  - get
+  - list
+  - patch
+  - watch
+{{- end }}

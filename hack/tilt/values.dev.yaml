@@ -33,9 +33,16 @@ controller:
   logLevel: DEBUG
 crds:
   install: true
+externalWebhooksServer:
+  logLevel: DEBUG
+  host: localhost:30083
+  tls:
+    enabled: false
+  probes:
+    enabled: false
+garbageCollector:
+  logLevel: DEBUG
 managementController:
   logLevel: DEBUG
 webhooksServer:
-  logLevel: DEBUG
-garbageCollector:
   logLevel: DEBUG

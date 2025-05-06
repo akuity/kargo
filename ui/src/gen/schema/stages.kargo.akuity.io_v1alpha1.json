@@ -35,6 +35,10 @@
                         "description": "Config is opaque configuration for the PromotionStep that is understood\nonly by each PromotionStep's implementation. It is legal to utilize\nexpressions in defining values at any level of this block.\nSee https://docs.kargo.io/user-guide/reference-docs/expressions for details.",
                         "x-kubernetes-preserve-unknown-fields": true
                       },
+                      "continueOnError": {
+                        "description": "ContinueOnError is a boolean value that, if set to true, will cause the\nPromotion to continue executing the next step even if this step fails. It\nalso will not permit this failure to impact the overall status of the\nPromotion.",
+                        "type": "boolean"
+                      },
                       "if": {
                         "description": "If is an optional expression that, if present, must evaluate to a boolean\nvalue. If the expression evaluates to false, the step will be skipped.\nIf the expression does not evaluate to a boolean value, the step will be\nconsidered to have failed.",
                         "type": "string"
@@ -910,6 +914,10 @@
                         "description": "Alias is the alias of the step.",
                         "type": "string"
                       },
+                      "continueOnError": {
+                        "description": "ContinueOnError is a boolean value that, if set to true, will cause the\nPromotion to continue executing the next step even if this step fails. It\nalso will not permit this failure to impact the overall status of the\nPromotion.",
+                        "type": "boolean"
+                      },
                       "errorCount": {
                         "description": "ErrorCount tracks consecutive failed attempts to execute the step.",
                         "format": "int32",
@@ -1707,6 +1715,10 @@
                       "alias": {
                         "description": "Alias is the alias of the step.",
                         "type": "string"
+                      },
+                      "continueOnError": {
+                        "description": "ContinueOnError is a boolean value that, if set to true, will cause the\nPromotion to continue executing the next step even if this step fails. It\nalso will not permit this failure to impact the overall status of the\nPromotion.",
+                        "type": "boolean"
                       },
                       "errorCount": {
                         "description": "ErrorCount tracks consecutive failed attempts to execute the step.",

@@ -78,16 +78,20 @@ app.kubernetes.io/component: controller
 app.kubernetes.io/component: dex-server
 {{- end -}}
 
+{{- define "kargo.externalWebhooksServer.labels" -}}
+app.kubernetes.io/component: external-webhooks-server
+{{- end -}}
+
 {{- define "kargo.garbageCollector.labels" -}}
 app.kubernetes.io/component: garbage-collector
 {{- end -}}
 
-{{- define "kargo.managementController.labels" -}}
-app.kubernetes.io/component: management-controller
+{{- define "kargo.kubernetesWebhooksServer.labels" -}}
+app.kubernetes.io/component: kubernetes-webhooks-server
 {{- end -}}
 
-{{- define "kargo.webhooksServer.labels" -}}
-app.kubernetes.io/component: webhooks-server
+{{- define "kargo.managementController.labels" -}}
+app.kubernetes.io/component: management-controller
 {{- end -}}
 
 {{/*

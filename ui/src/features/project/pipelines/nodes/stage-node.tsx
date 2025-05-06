@@ -1,14 +1,12 @@
 import { useMutation } from '@connectrpc/connect-query';
 import {
-  faBullseye,
-  faEllipsis,
+  faArrowUpRightFromSquare,
   faExternalLink,
-  faInfo,
   faMinus,
   faTruckArrowRight
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Card, Dropdown, Flex, message, Typography } from 'antd';
+import { Button, Card, Dropdown, Flex, message, Space, Typography } from 'antd';
 import { ItemType } from 'antd/es/menu/interface';
 import classNames from 'classnames';
 import { formatDistance } from 'date-fns';
@@ -140,12 +138,7 @@ export const StageNode = (props: { stage: Stage }) => {
   if (!controlFlow) {
     dropdownItems.push({
       key: 'promote',
-      label: (
-        <Flex align='center' gap={12}>
-          <FontAwesomeIcon icon={faBullseye} />
-          Promote
-        </Flex>
-      ),
+      label: 'Promote',
       onClick: () => actionContext?.actPromote(IAction.PROMOTE, props.stage)
     });
   }
@@ -153,32 +146,10 @@ export const StageNode = (props: { stage: Stage }) => {
   if (controlFlow || totalSubscribersToThisStage > 1) {
     dropdownItems.push({
       key: 'promote-downstream',
-      label: (
-        <Flex align='center' gap={12}>
-          <FontAwesomeIcon icon={faTruckArrowRight} />
-          Promote to downstream
-        </Flex>
-      ),
+      label: 'Promote to downstream',
       onClick: () => actionContext?.actPromote(IAction.PROMOTE_DOWNSTREAM, props.stage)
     });
   }
-
-  dropdownItems.push({
-    key: 'stage-details',
-    label: (
-      <Flex align='center' gap={12}>
-        <FontAwesomeIcon icon={faInfo} />
-        Details
-      </Flex>
-    ),
-    onClick: () =>
-      navigate(
-        generatePath(paths.stage, {
-          name: props.stage?.metadata?.namespace,
-          stageName: props.stage?.metadata?.name
-        })
-      )
-  });
 
   return (
     <Card
@@ -194,15 +165,29 @@ export const StageNode = (props: { stage: Stage }) => {
           {autoPromotionMode && (
             <span className='text-[9px] lowercase font-normal mr-1'>Auto Promotion</span>
           )}
-          <Dropdown
-            trigger={['click']}
-            overlayClassName='w-[250px]'
-            menu={{
-              items: dropdownItems
-            }}
-          >
-            <Button size='small' className='text-xs' icon={<FontAwesomeIcon icon={faEllipsis} />} />
-          </Dropdown>
+          <Space>
+            <Dropdown
+              trigger={['hover']}
+              overlayClassName='w-[220px]'
+              menu={{
+                items: dropdownItems
+              }}
+            >
+              <Button size='small' icon={<FontAwesomeIcon icon={faTruckArrowRight} size='sm' />} />
+            </Dropdown>
+            <Button
+              icon={<FontAwesomeIcon icon={faArrowUpRightFromSquare} />}
+              size='small'
+              onClick={() =>
+                navigate(
+                  generatePath(paths.stage, {
+                    name: props.stage?.metadata?.namespace,
+                    stageName: props.stage?.metadata?.name
+                  })
+                )
+              }
+            />
+          </Space>
         </Flex>
       }
       className={classNames('stage-node', style['stage-node-size'], {
@@ -267,6 +252,10 @@ const useStageHeaderStyle = (stage: Stage): CSSProperties => {
 
   if (stageColor && ColorMapHex[stageColor]) {
     stageColor = ColorMapHex[stageColor];
+    stageFontColor = 'white';
+  }
+
+  if (stageColor) {
     stageFontColor = 'white';
   }
 

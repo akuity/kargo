@@ -8,6 +8,7 @@ import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
+import { BaseHeader } from '@ui/features/common/layout/base-header';
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import { useDictionaryContext } from '@ui/features/project/pipelines/context/dictionary-context';
 import { useFreightTimelineControllerContext } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
@@ -55,7 +56,9 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
 
   const [viewingFreight, setViewingFreight] = useState<Freight | null>(null);
 
-  const filteredFreights = useMemo(() => {
+  const filteredFreights: (Freight & {
+    count?: number;
+  })[] = useMemo(() => {
     let filtered = props.freights?.sort((a, b) => {
       const t1 = timestampDate(a?.metadata?.creationTimestamp);
 
@@ -83,12 +86,32 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
     }
 
     if (freightTimelineControllerContext.preferredFilter.hideUnusedFreights) {
-      filtered = filtered.filter((f) => {
+      const newFiltered: (Freight & {
+        count?: number;
+      })[] = [];
+
+      let count = 0;
+
+      for (const f of filtered) {
         const inUse =
           (dictionaryContext?.freightInStages[f?.metadata?.name || '']?.length || 0) > 0;
 
-        return inUse;
-      });
+        if (inUse) {
+          if (count > 0) {
+            newFiltered.push({
+              ...f,
+              count
+            });
+            count = 0;
+          }
+
+          newFiltered.push(f);
+        } else {
+          count++;
+        }
+      }
+
+      filtered = [...newFiltered];
     }
 
     return filtered;
@@ -129,12 +152,23 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
 
   return (
     <>
-      <PromotionModeHeader
-        loading={getPromotionEligibleFreightQuery.isFetching}
-        className='bg-white px-2 py-1 space-x-2 hf'
-      />
       <div
-        className={classNames('freightTimeline', 'bg-white px-5 py-2 flex gap-5')}
+        className={isPromotionMode ? 'absolute top-0 right-0 bottom-0 left-0 z-20' : ''}
+        style={isPromotionMode ? { backgroundColor: 'rgba(0,0,0,.4)' } : {}}
+        onClick={() => actionContext?.cancel()}
+      />
+      {actionContext?.action && (
+        <div className='z-20 absolute top-0 left-0 right-0'>
+          <BaseHeader>
+            <PromotionModeHeader
+              loading={getPromotionEligibleFreightQuery.isFetching}
+              className='bg-white space-x-2'
+            />
+          </BaseHeader>
+        </div>
+      )}
+      <div
+        className={classNames('freightTimeline', 'bg-white pl-4 py-2 flex gap-3 z-20')}
         style={{ borderBottom: '2px solid rgba(0,0,0,.05)' }}
       >
         <FreightTimelineFilters
@@ -165,7 +199,8 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
 
               return (
                 <FreightCard
-                  key={freight?.metadata?.uid}
+                  key={`${freight?.metadata?.uid}-${freight?.count}`}
+                  count={freight?.count}
                   className='h-full'
                   stagesInFreight={
                     dictionaryContext?.freightInStages?.[freight?.metadata?.name || ''] || []
@@ -191,6 +226,12 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
                       })
                     );
                   }}
+                  onExpand={() =>
+                    freightTimelineControllerContext?.setPreferredFilter({
+                      ...freightTimelineControllerContext?.preferredFilter,
+                      hideUnusedFreights: false
+                    })
+                  }
                 />
               );
             })}
