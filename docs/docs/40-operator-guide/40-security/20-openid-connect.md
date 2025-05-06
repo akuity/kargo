@@ -251,3 +251,129 @@ To configure Kargo to use Dex, set:
     The above example would require that you have, through some means, created a
     secret named `github-dex` with a key `clientSecret` within the same
     namespace in which Kargo is installed.
+
+### Using Okta as IDP
+
+While Okta [officially supports OpenID Connect and
+PKCE](https://auth0.com/docs/authenticate/identity-providers/enterprise-identity-providers/configure-pkce-claim-mapping-for-oidc),
+**Kargo OIDC configuration is currently incompatible with this setup** due to
+leaving out the `state` parameter in its PKCE flow (see [`akuity/kargo` issue
+#3575](https://github.com/akuity/kargo/issues/3575) and [Pull Request
+#2916](https://github.com/akuity/kargo/pull/2916) for more).
+
+:::info
+Okta has [dedicated
+documentation](https://support.okta.com/help/s/article/oidc-authorization-request-failure-invalid-state)
+to the error you would encounter if you attempted such a setup.
+
+**The `state` parameter aims at protecting against cross-site request forgery
+(CSRF)** attacks by maintaining a state between the request and the callback,
+ensuring the response is from a request the client actually initiated. The
+client sends a random `state` value in the authentication request and verifies
+the same value is returned in the response.
+
+As per the [Okta documentation on why they enforce its
+usage](https://support.okta.com/help/s/article/oidc-authorization-request-failure-invalid-state):
+> The OAuth 2.0 specification
+> [requires](https://datatracker.ietf.org/doc/html/rfc6749#section-10.12) that
+> clients protect their redirect URIs against CSRF by sending a value in the
+> authorized request that binds the request to the user-agent's authenticated
+> state. Using the state parameter is also a countermeasure to several other
+> known attacks, as outlined in [OAuth 2.0 Threat Model and Security
+> Considerations](https://tools.ietf.org/html/rfc6819).
+
+As per the [OIDC specification of authentication
+requests](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest),
+the `state` parameter is **recommended** and not mandatory:
+> RECOMMENDED. Opaque value used to maintain state between the request and the
+> callback. Typically, Cross-Site Request Forgery (CSRF, XSRF) mitigation is
+> done by cryptographically binding the value of this parameter with a browser
+> cookie.
+:::
+
+Therefore, if you are looking to authenticate on Kargo through Okta, you will
+**have to go with the Dex configuration**. Note that going through Dex still
+means doing OIDC authentication, just not with PKCE given it's not necessary.
+
+There are a few specificities to be aware of though:
+
+- **Different callback URL**
+    - the callback URL will be `https://<hostname for api server>/dex/callback`
+      rather than `https://<hostname for api server>/login`
+- **`groups` scope to be requested explicitly**
+    - While Kargo's OIDC with PKCE implementation [**adds the `groups` scope**
+      to the requested ones even if non-standard](#configuring-kargo), **Dex
+      doesn't**: it
+      [defaults](https://dexidp.io/docs/connectors/oidc/#configuration) to
+      [requesting `profile` and `email`
+      only](https://github.com/dexidp/website/blob/main/content/docs/connectors/oidc.md?plain=1#L47),
+      even if Kargo requests `groups` to it — _it gets lost in the redirection
+      between `https://<hostname of api server>/dex/auth/<dex connect id>` and
+      `https://<idp issuer>/oauth2/v1/authorize`_.
+    - Therefore, you have to **define the `api.oidc.dex.connectors.<your
+      connector>.config.scopes` to include `groups` if you want to use it to
+      assign admins, viewers or more**.
+- **`email_verified` claim to be ignored**
+    - Okta has no usage of emails verification in enrollment process, therefore
+      the `email_verified` field isn't sent in its OIDC response's claims,
+      which makes Dex fail with `Missing "email_verified" in OIDC claim`.
+    - To prevent this, you have to **set
+      `api.oidc.dex.connectors.<your_connector>.config.insecureSkipEmailVerified`
+      to `true`**.
+    - See the [Dex documentation about
+      it](https://github.com/dexidp/website/blob/main/content/docs/connectors/oidc.md?plain=1#L54-L57),
+      the [OIDC standard claims
+      documentation](https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims),
+      and [the `dexidp/dex` issue
+      #1405](https://github.com/dexidp/dex/issues/1405) for more.
+- **Groups to be forcely sent**
+    - Groups claims (like the rest of OIDC claims through dex) only refresh
+      when the ID token is refreshed, meaning the regular refresh flow doesn't
+      update the groups claim.
+    - As such **the Dex' `oidc` connector doesn't allow `groups`
+  claims by default**.
+    - You have to **set
+      `api.oidc.dex.connectors.<your_connector>.config.insecureEnableGroups` to
+      `true`** if you want to have up-to-date `groups` claims to assign
+      permissions.
+    - Check the [Dex documentation on _"Authentication Through an OpenID
+      Connect Provider"_](https://dexidp.io/docs/connectors/oidc/) and [the
+      OIDC connector doc on this
+      parameer](https://github.com/dexidp/website/blob/main/content/docs/connectors/oidc.md?plain=1#L59-L64)
+      for more.
+
+These result in the following configuration snippet that you can use to authenticate on Kargo through Okta and OIDC:
+
+```yaml
+api:
+  oidc:
+    enabled: true
+    admins: # This section and `viewers` remains valid even while using Dex
+      claims:
+        groups:
+          - <SOME-OKTA-GROUP>
+    dex:
+      enabled: true
+      env:
+        - name: CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: okta
+              key: clientSecret
+      connectors:
+        - id: okta
+          name: Okta
+          type: oidc
+          config:
+            issuer: https://<EXAMPLE>.okta.com/
+            clientID: <CLIENT_ID>
+            clientSecret: $CLIENT_SECRET
+            redirectURI: https://<hostname for api server>/dex/callback
+            insecureSkipEmailVerified: true
+            insecureEnableGroups: true
+            scopes:
+              - openid
+              - profile
+              - email
+              - groups
+```
