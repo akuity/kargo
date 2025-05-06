@@ -28,6 +28,11 @@ const (
 	MaxDecompressedTarSize int64 = 100 * 1024 * 1024
 	// 50 MB maximum size for a single file
 	MaxDecompressedFileSize int64 = 50 * 1024 * 1024
+
+	// gzipID1 is the first byte of the gzip magic number
+	gzipID1 = 0x1F
+	// gzipID2 is the second byte of the gzip magic number
+	gzipID2 = 0x8B
 )
 
 // tarExtractor is an implementation of the promotion.StepRunner interface that
@@ -126,7 +131,7 @@ func (t *tarExtractor) run(
 	}
 
 	// Check for gzip magic numbers (0x1F 0x8B)
-	if header[0] == 0x1F && header[1] == 0x8B {
+	if header[0] == gzipID1 && header[1] == gzipID2 {
 		// File is gzipped
 		gzr, err := gzip.NewReader(file)
 		if err != nil {
