@@ -417,6 +417,10 @@ hack-uninstall-argocd: install-helm
 hack-uninstall-cert-manager: install-helm
 	$(HELM) delete cert-manager --namespace cert-manager
 
+.PHONY: hack-ngrok
+hack-ngrok:
+	ngrok http --hostname=$(KARGO_EXTERNAL_WEBHOOKS_SERVER_HOSTNAME) 30083
+
 .PHONY: start-api-local
 start-api-local:
 	./hack/start-api.sh

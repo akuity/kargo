@@ -54,7 +54,8 @@ k8s_yaml(
     './charts/kargo',
     name = 'kargo',
     namespace = 'kargo',
-    values = 'hack/tilt/values.dev.yaml'
+    values = 'hack/tilt/values.dev.yaml',
+    set = 'externalWebhooksServer.host=' + os.environ.get('KARGO_EXTERNAL_WEBHOOKS_SERVER_HOSTNAME', 'localhost:30083')
   )
 )
 # Normally the API server serves up the front end, but we want live updates

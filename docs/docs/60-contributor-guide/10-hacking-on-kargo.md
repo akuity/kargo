@@ -280,6 +280,40 @@ as native processes.
     You may safely ignore any certificate warnings.
     :::
 
+1. Optional: Configure and start a tunnel for the external webhooks server:
+
+    If you are working on or testing the external webhooks server, you will
+    benefit from configuring a tunnel from the outside world so that traffic
+    originating from platforms like GitHub, Docker Hub, and others can reach the
+    server. It is easy to accomplish this using [ngrok](https://ngrok.com/).
+    If you wish to do so, you must first
+    [install ngrok](https://ngrok.com/downloads) yourself.
+
+    With `ngrok` installed, you can conveniently open a tunnel to
+    `localhost:30083` (where the next step will run the external webhooks
+    server) using:
+
+    ```shell
+    make hack-ngrok
+    ```
+
+    Allow this process to run while you are working on or testing the external
+    webhooks server. Interrupt it with `ctrl + c` when you are done.
+
+    If you have a paid ngrok account that allows you to use a custom domain name
+    for your tunnels, you can specify that domain name using the
+    `KARGO_EXTERNAL_WEBHOOKS_SERVER_HOSTNAME` environment variable before running
+    the make target:
+
+    ```shell
+    export KARGO_EXTERNAL_WEBHOOKS_SERVER_HOSTNAME=my-tunnel.ngrok.io
+    make hack-ngrok
+    ```
+
+    If the `KARGO_EXTERNAL_WEBHOOKS_SERVER_HOSTNAME` environment variable is
+    undefined, the tunnel will utilize a dynamically-generated subdomain of
+    `ngrok.io`.
+
 1. Build and deploy Kargo from source:
 
     [Tilt](https://docs.tilt.dev/#macoslinux) is a convenient tool that builds
@@ -308,6 +342,19 @@ as native processes.
     it’s better to conserve system resources by only rebuilding when you choose.
     The web UI makes it easy to identify components whose source has been
     altered. They can be rebuilt and replaced with a single click.
+    :::
+
+    :::info
+    If you specified a custom domain name for a tunnel to the external webhooks
+    server in the previous step by defining a value for the
+    `KARGO_EXTERNAL_WEBHOOKS_SERVER_HOSTNAME` environment variable, you should
+    export the same value for that environment variable before running `tilt up`
+    as well:
+
+    ```shell
+    export KARGO_EXTERNAL_WEBHOOKS_SERVER_HOSTNAME=my-tunnel.ngrok.io
+    tilt up
+    ```
     :::
 
 1. If necessary, build the CLI from source:
