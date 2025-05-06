@@ -46,8 +46,12 @@ func (p *provider) Name() string {
 
 func (p *provider) Authenticate(r *http.Request) error {
 	sig := r.Header.Get("X-Hub-Signature-256")
-	if sig == "" || !strings.HasPrefix(sig, "sha256=") {
+	if sig == "" {
 		return ErrMissingSignature
+	}
+
+	if !strings.HasPrefix(sig, "sha256=") {
+		return ErrInvalidSignature
 	}
 
 	b, err := xhttp.PeakBody(r)
