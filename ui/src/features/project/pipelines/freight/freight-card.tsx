@@ -1,6 +1,7 @@
 import { faDocker, faGithub } from '@fortawesome/free-brands-svg-icons';
 import {
   faAnchor,
+  faArrowsLeftRightToLine,
   faCheck,
   faEllipsis,
   faWarehouse,
@@ -73,8 +74,10 @@ export const FreightCard = (props: FreightCardProps) => {
 
   if (props.count) {
     CardContent = (
-      <div className='flex flex-col items-center justify-center h-full px-2'>
+      <div className='flex flex-col items-center justify-center h-full px-2 bg-gray-200'>
         <Typography.Text type='secondary' className='text-xs'>
+          <FontAwesomeIcon icon={faArrowsLeftRightToLine} />
+          <br />
           {props.count}x
           <br />
           freights
