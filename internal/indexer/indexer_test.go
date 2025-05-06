@@ -859,7 +859,7 @@ func TestWarehousesByRepoURL(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			require.Equal(t,
 				test.expected,
-				WarehousesByRepoURL(test.warehouse),
+				WarehousesBySubscribedURLs(test.warehouse),
 			)
 
 		})

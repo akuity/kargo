@@ -41,7 +41,7 @@ const (
 
 	ServiceAccountsByOIDCClaimsField = "claims"
 
-	WarehouseRepoURLIndexKey = "subscribedURLs"
+	WarehousesBySubscribedURLsField = "subscribedURLs"
 )
 
 // EventsByInvolvedObjectAPIGroup is a client.IndexerFunc that indexes
@@ -448,9 +448,9 @@ func ServiceAccountsByOIDCClaims(obj client.Object) []string {
 	return refinedClaimValues
 }
 
-// WarehousesByRepoURL is a client.IndexerFunc that indexes Warehouses by the
-// the RepoURLs they are associated with.
-func WarehousesByRepoURL(obj client.Object) []string {
+// WarehousesBySubscribedURLs is a client.IndexerFunc that indexes Warehouses by the
+// repositories they subscribe to.
+func WarehousesBySubscribedURLs(obj client.Object) []string {
 	warehouse, ok := obj.(*kargoapi.Warehouse)
 	if !ok {
 		return nil
@@ -470,8 +470,9 @@ func WarehousesByRepoURL(obj client.Object) []string {
 		}
 		if sub.Image != nil && sub.Image.RepoURL != "" {
 			repoURLs = append(repoURLs,
-				// TODO(fuskovic): the chart URL normalization logic is adequate for the interim,
-				// but that it should be replaced with dedicated image URL normalization logic in the future.
+				// TODO(fuskovic): This chart URL normalization logic is adequate for
+				// normalizing image URLs in the near term, but should eventually be
+				// replaced with dedicated image URL normalization logic.
 				// See https://github.com/akuity/kargo/issues/3999
 				helm.NormalizeChartRepositoryURL(sub.Image.RepoURL),
 			)
