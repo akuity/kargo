@@ -41,7 +41,7 @@ const (
 
 	ServiceAccountsByOIDCClaimsField = "claims"
 
-	WarehouseRepoURLIndexKey = "subscriptions.repoURL"
+	WarehouseRepoURLIndexKey = "subscribedURLs"
 )
 
 // EventsByInvolvedObjectAPIGroup is a client.IndexerFunc that indexes
@@ -470,9 +470,9 @@ func WarehousesByRepoURL(obj client.Object) []string {
 		}
 		if sub.Image != nil && sub.Image.RepoURL != "" {
 			repoURLs = append(repoURLs,
-				// The normalization of Helm chart repository URLs can also be used here
-				// to ensure the uniqueness of the image reference as it does the job of
-				// ensuring lower-casing, etc. without introducing unwanted side effects.
+				// TODO(fuskovic): the chart URL normalization logic is adequate for the interim,
+				// but that it should be replaced with dedicated image URL normalization logic in the future.
+				// See https://github.com/akuity/kargo/issues/3999
 				helm.NormalizeChartRepositoryURL(sub.Image.RepoURL),
 			)
 		}
