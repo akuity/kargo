@@ -80,7 +80,8 @@ export const ClusterPromotionTasks = () => {
         locale={{
           emptyText: (
             <>
-              This project does not have any Promotion Tasks. Read more about ClusterPromotionTasks{' '}
+              This instance does not have any Cluster Promotion Tasks. Read more about
+              ClusterPromotionTasks{' '}
               <a
                 href='https://docs.kargo.io/user-guide/reference-docs/promotion-tasks/#defining-a-global-promotion-task'
                 target='_blank'
