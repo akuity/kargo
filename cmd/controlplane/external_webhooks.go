@@ -9,6 +9,8 @@ import (
 	"github.com/spf13/cobra"
 	libCluster "sigs.k8s.io/controller-runtime/pkg/cluster"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
 	"github.com/akuity/kargo/internal/server/kubernetes"
@@ -75,7 +77,15 @@ func (o *externalWebhooksServerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error creating Kubernetes client: %w", err)
 	}
 
-	// TODO: Add all indices required by the external webhooks server
+	err = cluster.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Warehouse{},
+		indexer.WarehousesBySubscribedURLsField,
+		indexer.WarehousesBySubscribedURLs,
+	)
+	if err != nil {
+		return fmt.Errorf("error registering warehouse by repo url indexer: %w", err)
+	}
 
 	srv := external.NewServer(serverCfg, cluster.GetClient())
 	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.Host, o.Port))
