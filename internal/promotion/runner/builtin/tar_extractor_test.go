@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/utils/ptr"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
@@ -172,7 +173,7 @@ func Test_tarExtractor_run(t *testing.T) {
 			cfg: builtin.UntarConfig{
 				InPath:          "archive.tar",
 				OutPath:         "extracted/",
-				StripComponents: intPtr(2), // Use helper function to create int64 pointer
+				StripComponents: ptr.To(int64(2)),
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
@@ -501,9 +502,4 @@ func Test_tarExtractor_run(t *testing.T) {
 			tt.assertions(t, workDir, result, err)
 		})
 	}
-}
-
-// Helper function to create an int64 pointer
-func intPtr(i int64) *int64 {
-	return &i
 }
