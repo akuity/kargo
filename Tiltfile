@@ -1,6 +1,5 @@
-if 'ENABLE_NGROK_EXTENSION' in os.environ and os.environ['ENABLE_NGROK_EXTENSION'] == '1':
-  v1alpha1.extension_repo(name = 'default', url = 'https://github.com/tilt-dev/tilt-extensions')
-  v1alpha1.extension(name = 'ngrok:config', repo_name = 'default', repo_path = 'ngrok')
+v1alpha1.extension_repo(name = 'default', url = 'https://github.com/tilt-dev/tilt-extensions')
+v1alpha1.extension(name = 'ngrok:config', repo_name = 'default', repo_path = 'ngrok')
 
 trigger_mode(TRIGGER_MODE_MANUAL)
 allow_k8s_contexts('orbstack')
