@@ -54,6 +54,8 @@ ifeq ($(GOARCH), x86_64)
 	override GOARCH = amd64
 endif
 
+KARGO_EXTERNAL_WEBHOOKS_SERVER_HOSTNAME ?=
+
 ################################################################################
 # Tests                                                                        #
 #                                                                              #
@@ -416,6 +418,10 @@ hack-uninstall-argocd: install-helm
 .PHONY: hack-uninstall-cert-manager
 hack-uninstall-cert-manager: install-helm
 	$(HELM) delete cert-manager --namespace cert-manager
+
+.PHONY: hack-ngrok
+hack-ngrok:
+	ngrok http --hostname=$(KARGO_EXTERNAL_WEBHOOKS_SERVER_HOSTNAME) 30083
 
 .PHONY: start-api-local
 start-api-local:

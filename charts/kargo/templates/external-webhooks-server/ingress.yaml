@@ -1,0 +1,41 @@
+{{- if and .Values.externalWebhooksServer.enabled .Values.externalWebhooksServer.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kargo-external-webhooks-server
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.externalWebhooksServer.labels" . | nindent 4 }}
+  {{- with (mergeOverwrite (deepCopy .Values.global.annotations) .Values.externalWebhooksServer.ingress.annotations) }}
+  annotations:
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  {{- end }}
+spec:
+  {{- if .Values.externalWebhooksServer.ingress.ingressClassName }}
+  ingressClassName: {{ .Values.externalWebhooksServer.ingress.ingressClassName }}
+  {{- end }}
+  rules:
+  - host: {{ quote .Values.externalWebhooksServer.host }}
+    http:
+      paths:
+      - pathType: {{ .Values.externalWebhooksServer.ingress.pathType | default "ImplementationSpecific" }}
+        path: /
+        backend:
+          service:
+            name: kargo-external-webhooks-server
+            port:
+              {{- if .Values.externalWebhooksServer.tls.enabled }}
+              number: 443
+              {{- else }}
+              number: 80
+              {{- end }}
+  {{- if .Values.externalWebhooksServer.ingress.tls.enabled }}
+  tls:
+  - hosts:
+    - {{ quote .Values.externalWebhooksServer.host }}
+    secretName: kargo-external-webhooks-server-ingress-cert
+  {{- end }}
+{{- end }}

@@ -18,7 +18,7 @@ import (
 	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/image"
-	libWebhook "github.com/akuity/kargo/internal/webhook"
+	libWebhook "github.com/akuity/kargo/internal/webhook/kubernetes"
 )
 
 var warehouseGroupKind = schema.GroupKind{
