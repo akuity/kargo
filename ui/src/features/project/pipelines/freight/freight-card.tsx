@@ -32,6 +32,7 @@ type FreightCardProps = {
   stageColorMap: ColorMap;
   className?: string;
   promote?: boolean;
+  soakTime?: string;
   onReviewAndPromote?(): void;
 };
 

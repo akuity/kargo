@@ -21,6 +21,7 @@ import { FreightCard } from './freight-card';
 import { FreightTimelineFilters } from './freight-timeline-filters';
 import { PromotionModeHeader } from './promotion-mode-header';
 import { filterFreightBySource, filterFreightByTimerange } from './source-catalogue-utils';
+import { useSoakTime } from './use-soak-time';
 
 import './freight-timeline.less';
 
@@ -55,6 +56,8 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
   const [filtersCollapsed, setFilterCollapsed] = useState(true);
 
   const [viewingFreight, setViewingFreight] = useState<Freight | null>(null);
+
+  useSoakTime(props.freights);
 
   const filteredFreights = useMemo(() => {
     let filtered = props.freights?.sort((a, b) => {
