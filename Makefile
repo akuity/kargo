@@ -54,6 +54,8 @@ ifeq ($(GOARCH), x86_64)
 	override GOARCH = amd64
 endif
 
+KARGO_EXTERNAL_WEBHOOKS_SERVER_HOSTNAME ?=
+
 ################################################################################
 # Tests                                                                        #
 #                                                                              #
