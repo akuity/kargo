@@ -2,12 +2,12 @@ package handlers
 
 import (
 	"encoding/json"
-	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
+	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/webhook/external/providers"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -17,7 +17,7 @@ import (
 // the kubeclient is queried for all warehouses that contain a subscription
 // to the repo in question. Those warehouses are then patched with a special
 // annotation that signals down stream logic to refresh the warehouse.
-func NewRefreshWarehouseWebhook(name providers.Name, l *slog.Logger, c client.Client) http.HandlerFunc {
+func NewRefreshWarehouseWebhook(name providers.Name, l *logging.Logger, c client.Client) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		l.Info("initializing provider")
 		p, err := providers.New(name)
@@ -27,10 +27,7 @@ func NewRefreshWarehouseWebhook(name providers.Name, l *slog.Logger, c client.Cl
 			// from our API so just log the part that's
 			// useful to us and return a generic error
 			// to the client.
-			l.Error(
-				"failed to initialize provider",
-				"error", err.Error(),
-			)
+			l.Error(err, "failed to initialize provider")
 			http.Error(w,
 				"failed to initialize provider",
 				http.StatusInternalServerError,
@@ -44,10 +41,7 @@ func NewRefreshWarehouseWebhook(name providers.Name, l *slog.Logger, c client.Cl
 
 		l.Info("authenticating request")
 		if err := p.Authenticate(r); err != nil {
-			l.Error(
-				"failed to authenticate request",
-				"error", err.Error(),
-			)
+			l.Error(err, "failed to authenticate request")
 			http.Error(w,
 				"failed to authenticate request",
 				http.StatusUnauthorized,
@@ -59,7 +53,7 @@ func NewRefreshWarehouseWebhook(name providers.Name, l *slog.Logger, c client.Cl
 		l.Info("retrieving event")
 		event, err := p.Event(r)
 		if err != nil {
-			l.Error("failed to retrieve event", "error", err.Error())
+			l.Error(err, "failed to retrieve event")
 			http.Error(w,
 				err.Error(),
 				http.StatusBadRequest,
@@ -78,13 +72,13 @@ func NewRefreshWarehouseWebhook(name providers.Name, l *slog.Logger, c client.Cl
 		err = c.List(
 			ctx,
 			&warehouses,
-			// TODO(Faris): Merge https://github.com/akuity/kargo/pull/3969
+			// TODO(fuskovic): Merge https://github.com/akuity/kargo/pull/3969
 			// client.MatchingFields{
 			// 	indexer.WarehouseRepoURLIndexKey: event.Repository(),
 			// },
 		)
 		if err != nil {
-			l.Error("failed to list warehouses", "error", err.Error())
+			l.Error(err, "failed to list warehouses")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -110,9 +104,8 @@ func NewRefreshWarehouseWebhook(name providers.Name, l *slog.Logger, c client.Cl
 				time.Now().Format(time.RFC3339),
 			)
 			if err != nil {
-				l.Error("failed to patch annotations",
+				l.Error(err, "failed to patch annotations",
 					"warehouse", wh.GetName(),
-					"error", err.Error(),
 				)
 				resp.Errors[wh.GetName()] = err.Error()
 				resp.WarehousesFailedToRefresh++

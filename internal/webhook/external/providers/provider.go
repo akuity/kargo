@@ -24,7 +24,7 @@ func New(name Name) (Provider, error) {
 	switch name {
 	case Github:
 		return github.NewProvider()
-	// TODO(Faris): Support additional providers
+	// TODO(fuskovic): Support additional providers
 	default:
 		return nil, ErrUnsupportedProvider
 	}
@@ -36,7 +36,7 @@ func (name Name) String() string {
 	switch name {
 	case Github:
 		return "github"
-	// TODO(Faris): Support additional providers
+	// TODO(fuskovic): Support additional providers
 	default:
 		return "unknown"
 	}
@@ -45,5 +45,5 @@ func (name Name) String() string {
 const (
 	// Github is the name of the github provider
 	Github Name = iota
-	// TODO(Faris): Support additional providers
+	// TODO(fuskovic): Support additional providers
 )
