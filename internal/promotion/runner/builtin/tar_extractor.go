@@ -135,11 +135,11 @@ func (t *tarExtractor) run(
 		}
 		defer gzr.Close()
 		tarReader = tar.NewReader(gzr)
-		logger.Debug("treating file as gzipped tar based on magic numbers")
+		logger.Trace("treating file as gzipped tar based on magic numbers")
 	} else {
 		// File is not gzipped
 		tarReader = tar.NewReader(file)
-		logger.Debug("treating file as regular tar")
+		logger.Trace("treating file as regular tar")
 	}
 
 	// Extract the tar file
@@ -147,7 +147,7 @@ func (t *tarExtractor) run(
 	if cfg.StripComponents != nil {
 		stripComponents = *cfg.StripComponents
 		if stripComponents > 0 {
-			logger.Debug("stripping path components", "count", stripComponents)
+			logger.Trace("stripping path components", "count", stripComponents)
 		}
 	}
 
@@ -247,7 +247,7 @@ func (t *tarExtractor) run(
 
 		case tar.TypeReg:
 			// Check if single file exceeds max size limit
-			logger.Debug("checking file size", "path", targetName, "size", header.Size)
+			logger.Trace("checking file size", "path", targetName, "size", header.Size)
 			if header.Size > MaxDecompressedFileSize {
 				logger.Debug("aborting extraction due to exceeding file size limit",
 					"path", targetName,
