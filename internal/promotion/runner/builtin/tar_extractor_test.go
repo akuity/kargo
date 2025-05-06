@@ -76,7 +76,7 @@ func Test_tarExtractor_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
 
 				extractDir := filepath.Join(workDir, "extracted")
 
@@ -133,7 +133,7 @@ func Test_tarExtractor_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
 
 				extractDir := filepath.Join(workDir, "extracted")
 				filePath := filepath.Join(extractDir, "compressed.txt")
@@ -176,7 +176,7 @@ func Test_tarExtractor_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
 
 				extractDir := filepath.Join(workDir, "extracted")
 				filePath := filepath.Join(extractDir, "file.txt")
@@ -232,7 +232,7 @@ func Test_tarExtractor_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
 
 				extractDir := filepath.Join(workDir, "extracted")
 
@@ -290,7 +290,7 @@ func Test_tarExtractor_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
 
 				extractDir := filepath.Join(workDir, "extracted")
 
@@ -322,7 +322,7 @@ func Test_tarExtractor_run(t *testing.T) {
 				OutPath: "extracted/",
 			},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, result)
 				assert.ErrorContains(t, err, "failed to open tar file")
 			},
 		},
@@ -339,7 +339,7 @@ func Test_tarExtractor_run(t *testing.T) {
 				OutPath: "extracted/",
 			},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, result)
 				assert.ErrorContains(t, err, "error reading tar")
 			},
 		},
@@ -386,7 +386,7 @@ func Test_tarExtractor_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
 
 				extractDir := filepath.Join(workDir, "extracted")
 
@@ -460,7 +460,7 @@ func Test_tarExtractor_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
 
 				extractDir := filepath.Join(workDir, "extracted")
 
