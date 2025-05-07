@@ -6,6 +6,7 @@ import (
 
 	"github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
+	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/webhook/external/providers"
 	"k8s.io/apimachinery/pkg/types"
@@ -72,10 +73,9 @@ func NewRefreshWarehouseWebhook(name providers.Name, l *logging.Logger, c client
 		err = c.List(
 			ctx,
 			&warehouses,
-			// TODO(fuskovic): Merge https://github.com/akuity/kargo/pull/3969
-			// client.MatchingFields{
-			// 	indexer.WarehouseRepoURLIndexKey: event.Repository(),
-			// },
+			client.MatchingFields{
+				indexer.WarehousesBySubscribedURLsField: event.Repository(),
+			},
 		)
 		if err != nil {
 			l.Error(err, "failed to list warehouses")
