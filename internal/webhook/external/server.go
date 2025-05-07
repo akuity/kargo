@@ -43,7 +43,6 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	mux.Handle("POST /v1/github",
 		handlers.NewRefreshWarehouseWebhook(
 			ghProvider,
-			logger,
 			s.client,
 		),
 	)

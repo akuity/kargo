@@ -19,27 +19,24 @@ import (
 // the kubeclient is queried for all warehouses that contain a subscription
 // to the repo in question. Those warehouses are then patched with a special
 // annotation that signals down stream logic to refresh the warehouse.
-func NewRefreshWarehouseWebhook(
-	p providers.Provider,
-	log *logging.Logger,
-	kClient client.Client,
-) http.HandlerFunc {
+func NewRefreshWarehouseWebhook(p providers.Provider, c client.Client) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Info("authenticating request")
+		logger := logging.LoggerFromContext(r.Context())
+		logger.Debug("authenticating request")
 		if err := p.Authenticate(r); err != nil {
-			log.Error(err, "failed to authenticate request")
+			logger.Error(err, "failed to authenticate request")
 			http.Error(w,
 				"failed to authenticate request",
 				http.StatusUnauthorized,
 			)
 			return
 		}
-		log.Info("request authenticated")
+		logger.Debug("request authenticated")
 
-		log.Info("retrieving source repo")
+		logger.Debug("retrieving source repo")
 		repo, err := p.Repository(r)
 		if err != nil {
-			log.Error(err, "failed to retrieve source repo")
+			logger.Error(err, "failed to retrieve source repo")
 			http.Error(w,
 				err.Error(),
 				http.StatusBadRequest,
@@ -47,11 +44,11 @@ func NewRefreshWarehouseWebhook(
 			return
 		}
 
-		log.Info("repo retrieved", "name", repo)
+		logger.Info("repo retrieved", "name", repo)
 
 		ctx := r.Context()
 		var warehouses v1alpha1.WarehouseList
-		err = kClient.List(
+		err = c.List(
 			ctx,
 			&warehouses,
 			client.MatchingFields{
@@ -59,12 +56,12 @@ func NewRefreshWarehouseWebhook(
 			},
 		)
 		if err != nil {
-			log.Error(err, "failed to list warehouses")
+			logger.Error(err, "failed to list warehouses")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		log.Info("listed warehouses",
+		logger.Debug("listed warehouses",
 			"num-warehouses", len(warehouses.Items),
 		)
 
@@ -79,20 +76,20 @@ func NewRefreshWarehouseWebhook(
 		for _, wh := range warehouses.Items {
 			_, err = api.RefreshWarehouse(
 				ctx,
-				kClient,
+				c,
 				types.NamespacedName{
 					Namespace: wh.GetNamespace(),
 					Name:      wh.GetName(),
 				},
 			)
 			if err != nil {
-				log.Error(err, "failed to patch annotations",
+				logger.Error(err, "failed to patch annotations",
 					"warehouse", wh.GetName(),
 				)
 				resp.Errors[wh.GetName()] = err.Error()
 				resp.WarehousesFailedToRefresh++
 			} else {
-				log.Info("successfully patched annotations",
+				logger.Debug("successfully patched annotations",
 					"warehouse", wh.GetName(),
 				)
 				resp.WarehousesSuccessfullyRefreshed++

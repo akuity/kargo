@@ -19,7 +19,6 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/indexer"
-	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/webhook/external/providers/github"
 )
 
@@ -114,12 +113,8 @@ func TestRefreshWarehouseWebhook_Github(t *testing.T) {
 			w := httptest.NewRecorder()
 			p, err := github.NewProvider()
 			require.NoError(t, err)
-
-			NewRefreshWarehouseWebhook(p,
-				logging.NewLogger(logging.InfoLevel),
-				kubeClient,
-			)(w, req)
-
+			h := NewRefreshWarehouseWebhook(p, kubeClient)
+			h(w, req)
 			require.Equal(t,
 				test.expectedCode,
 				w.Code,
