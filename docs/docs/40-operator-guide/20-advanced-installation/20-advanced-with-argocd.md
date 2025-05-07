@@ -65,7 +65,7 @@ spec:
   source:
     repoURL: ghcr.io/akuity/kargo-charts
     chart: kargo
-    targetRevision: 1.2.0
+    targetRevision: 1.4.4
     helm:
       parameters:
         - name: api.adminAccount.passwordHash
