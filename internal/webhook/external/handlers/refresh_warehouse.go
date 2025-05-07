@@ -51,10 +51,10 @@ func NewRefreshWarehouseWebhook(name providers.Name, l *logging.Logger, c client
 		}
 		l.Info("request authenticated")
 
-		l.Info("retrieving event")
-		event, err := p.Event(r)
+		l.Info("retrieving source repo")
+		repo, err := p.Repository(r)
 		if err != nil {
-			l.Error(err, "failed to retrieve event")
+			l.Error(err, "failed to retrieve source repo")
 			http.Error(w,
 				err.Error(),
 				http.StatusBadRequest,
@@ -62,11 +62,7 @@ func NewRefreshWarehouseWebhook(name providers.Name, l *logging.Logger, c client
 			return
 		}
 
-		l.Info("event retrieved",
-			"commit", event.Commit(),
-			"pushed-by", event.PushedBy(),
-			"repository", event.Repository(),
-		)
+		l.Info("repo retrieved", "name", repo)
 
 		ctx := r.Context()
 		var warehouses v1alpha1.WarehouseList
@@ -74,7 +70,7 @@ func NewRefreshWarehouseWebhook(name providers.Name, l *logging.Logger, c client
 			ctx,
 			&warehouses,
 			client.MatchingFields{
-				indexer.WarehousesBySubscribedURLsField: event.Repository(),
+				indexer.WarehousesBySubscribedURLsField: repo,
 			},
 		)
 		if err != nil {

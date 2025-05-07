@@ -4,7 +4,6 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/akuity/kargo/internal/webhook/external/events"
 	"github.com/akuity/kargo/internal/webhook/external/providers/github"
 )
 
@@ -16,8 +15,8 @@ type Provider interface {
 	// Authenticate runs the providers authentication
 	// mechanism against the request.
 	Authenticate(*http.Request) error
-	// Event returns a generic read-only event from the request
-	Event(*http.Request) (events.Event, error)
+	// Repository returns the repository name for which the event was generated.
+	Repository(*http.Request) (string, error)
 }
 
 func New(name Name) (Provider, error) {

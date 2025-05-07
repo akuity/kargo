@@ -3,7 +3,7 @@ package handlers
 import (
 	"bytes"
 	"crypto/hmac"
-	"crypto/sha256"
+	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
 	"net/http"
@@ -12,18 +12,26 @@ import (
 	"testing"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/webhook/external/providers"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 func TestRefreshWarehouseWebhook(t *testing.T) {
-	kubeClient := fake.NewClientBuilder().Build()
-	require.NoError(t,
-		kargoapi.AddToScheme(kubeClient.Scheme()),
-	)
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+	kubeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithIndex(
+			&kargoapi.Warehouse{},
+			indexer.WarehousesBySubscribedURLsField,
+			indexer.WarehousesBySubscribedURLs,
+		).Build()
+
 	handler := NewRefreshWarehouseWebhook(
 		providers.Github,
 		logging.NewLogger(logging.InfoLevel),
@@ -46,7 +54,8 @@ func TestRefreshWarehouseWebhook(t *testing.T) {
 					serverURL,
 					mockRequestPayload,
 				)
-				req.Header.Set("X-Hub-Signature-256", sign(t, secret))
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("X-Hub-Signature", sign(t, secret))
 				req.Header.Set("X-GitHub-Event", "push")
 				return req
 			},
@@ -86,7 +95,8 @@ func TestRefreshWarehouseWebhook(t *testing.T) {
 					serverURL,
 					mockRequestPayload,
 				)
-				req.Header.Set("X-Hub-Signature-256", sign(t, secret))
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("X-Hub-Signature", sign(t, secret))
 				req.Header.Set("X-GitHub-Event", "ping")
 				return req
 			},
@@ -108,9 +118,9 @@ func TestRefreshWarehouseWebhook(t *testing.T) {
 func sign(t *testing.T, secret string) string {
 	t.Helper()
 
-	mac := hmac.New(sha256.New, []byte(secret))
+	mac := hmac.New(sha1.New, []byte(secret))
 	mac.Write(mockRequestPayload.Bytes())
-	return fmt.Sprintf("sha256=%s",
+	return fmt.Sprintf("sha1=%s",
 		hex.EncodeToString(mac.Sum(nil)),
 	)
 }
