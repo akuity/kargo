@@ -180,7 +180,7 @@ func (p *provider) CreatePullRequest(
 			Head:                &opts.Head,
 			Base:                &opts.Base,
 			Body:                &opts.Description,
-			MaintainerCanModify: github.Bool(false),
+			MaintainerCanModify: github.Ptr(false),
 		},
 	)
 	if err != nil {

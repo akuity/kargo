@@ -190,10 +190,10 @@ func TestCreatePullRequestWithLabels(t *testing.T) {
 	// set up mock
 	mockClient := &mockGithubClient{
 		pr: &github.PullRequest{
-			Number:         github.Int(42),
-			MergeCommitSHA: github.String("sha"),
-			State:          github.String("open"),
-			URL:            github.String("url"),
+			Number:         github.Ptr(42),
+			MergeCommitSHA: github.Ptr("sha"),
+			State:          github.Ptr("open"),
+			URL:            github.Ptr("url"),
 		},
 	}
 	mockClient.
@@ -202,13 +202,13 @@ func TestCreatePullRequestWithLabels(t *testing.T) {
 			&github.PullRequest{
 				Number: mockClient.pr.Number,
 				Head: &github.PullRequestBranch{
-					Ref: github.String(opts.Head),
+					Ref: github.Ptr(opts.Head),
 				},
 				Base: &github.PullRequestBranch{
-					Ref: github.String(opts.Base),
+					Ref: github.Ptr(opts.Base),
 				},
-				Title:          github.String(opts.Title),
-				Body:           github.String(opts.Description),
+				Title:          github.Ptr(opts.Title),
+				Body:           github.Ptr(opts.Description),
 				MergeCommitSHA: mockClient.pr.MergeCommitSHA,
 				State:          mockClient.pr.State,
 				HTMLURL:        mockClient.pr.URL,
@@ -259,10 +259,10 @@ func TestGetPullRequest(t *testing.T) {
 	// set up mock
 	mockClient := &mockGithubClient{
 		pr: &github.PullRequest{
-			Number:         github.Int(42),
-			MergeCommitSHA: github.String("sha"),
-			State:          github.String("open"),
-			URL:            github.String("url"),
+			Number:         github.Ptr(42),
+			MergeCommitSHA: github.Ptr("sha"),
+			State:          github.Ptr("open"),
+			URL:            github.Ptr("url"),
 		},
 	}
 	mockClient.
@@ -271,7 +271,7 @@ func TestGetPullRequest(t *testing.T) {
 			&github.PullRequest{
 				Number: mockClient.pr.Number,
 				Head: &github.PullRequestBranch{
-					Ref: github.String("head"),
+					Ref: github.Ptr("head"),
 				},
 				MergeCommitSHA: mockClient.pr.MergeCommitSHA,
 				State:          mockClient.pr.State,
@@ -313,10 +313,10 @@ func TestListPullRequests(t *testing.T) {
 	// set up mock
 	mockClient := &mockGithubClient{
 		pr: &github.PullRequest{
-			Number:         github.Int(42),
-			MergeCommitSHA: github.String("sha"),
-			State:          github.String("open"),
-			URL:            github.String("url"),
+			Number:         github.Ptr(42),
+			MergeCommitSHA: github.Ptr("sha"),
+			State:          github.Ptr("open"),
+			URL:            github.Ptr("url"),
 		},
 	}
 	mockClient.
@@ -335,7 +335,7 @@ func TestListPullRequests(t *testing.T) {
 			[]*github.PullRequest{{
 				Number: mockClient.pr.Number,
 				Head: &github.PullRequestBranch{
-					Ref: github.String("head"),
+					Ref: github.Ptr("head"),
 				},
 				MergeCommitSHA: mockClient.pr.MergeCommitSHA,
 				State:          mockClient.pr.State,

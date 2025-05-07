@@ -44,7 +44,7 @@ func Error(w http.ResponseWriter, statusCode int, err any) {
 		msg = fmt.Sprintf("%v", t)
 	}
 	w.WriteHeader(statusCode)
-	json.NewEncoder(w).Encode(
+	_ = json.NewEncoder(w).Encode(
 		map[string]string{"error": msg},
 	)
 }
