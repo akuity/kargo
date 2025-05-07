@@ -162,6 +162,9 @@ func (t *tarExtractor) run(
 	// Track total size extracted
 	var totalExtractedSize int64 = 0
 
+	// Track directories created to avoid duplicates
+	madeDir := map[string]bool{}
+
 	for {
 		header, err := tarReader.Next()
 		if err == io.EOF {
@@ -241,6 +244,7 @@ func (t *tarExtractor) run(
 				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 					fmt.Errorf("failed to create directory %s: %w", targetPath, err)
 			}
+			madeDir[targetPath] = true
 
 		case tar.TypeSymlink:
 			// Validate the symlink target to prevent symlink attacks
@@ -273,6 +277,16 @@ func (t *tarExtractor) run(
 					"limit", MaxDecompressedTarSize)
 				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 					fmt.Errorf("extraction aborted: total size would exceed limit of %d bytes", MaxDecompressedTarSize)
+			}
+
+			dir := filepath.Dir(targetPath)
+			// Create the directory if it doesn't exist
+			if !madeDir[dir] {
+				if err := os.MkdirAll(dir, defaultPermissions); err != nil {
+					return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+						fmt.Errorf("failed to create directory %s: %w", dir, err)
+				}
+				madeDir[dir] = true
 			}
 
 			// Create file
