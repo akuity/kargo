@@ -19,7 +19,11 @@ import (
 // the kubeclient is queried for all warehouses that contain a subscription
 // to the repo in question. Those warehouses are then patched with a special
 // annotation that signals down stream logic to refresh the warehouse.
-func NewRefreshWarehouseWebhook(p providers.Provider, log *logging.Logger, kClient client.Client) http.HandlerFunc {
+func NewRefreshWarehouseWebhook(
+	p providers.Provider,
+	log *logging.Logger,
+	kClient client.Client,
+) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Info("authenticating request")
 		if err := p.Authenticate(r); err != nil {
