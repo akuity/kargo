@@ -33,6 +33,9 @@ const (
 	gzipID1 = 0x1F
 	// gzipID2 is the second byte of the gzip magic number
 	gzipID2 = 0x8B
+
+	// defaultPermissions is the default permissions for created directories and files
+	defaultPermissions = 0750
 )
 
 // tarExtractor is an implementation of the promotion.StepRunner interface that
@@ -92,7 +95,7 @@ func (t *tarExtractor) run(
 	}
 
 	// Ensure the output directory exists
-	if err := os.MkdirAll(outPath, 0755); err != nil {
+	if err := os.MkdirAll(outPath, defaultPermissions); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("failed to create output directory %q: %w", cfg.OutPath, err)
 	}
@@ -226,7 +229,7 @@ func (t *tarExtractor) run(
 		}
 
 		destDir := filepath.Dir(targetPath)
-		if err := os.MkdirAll(destDir, 0755); err != nil {
+		if err := os.MkdirAll(destDir, defaultPermissions); err != nil {
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 				fmt.Errorf("failed to create directory %s: %w", destDir, err)
 		}
@@ -234,7 +237,7 @@ func (t *tarExtractor) run(
 		switch header.Typeflag {
 		case tar.TypeDir:
 			// Create directory
-			if err := os.MkdirAll(targetPath, 0755); err != nil {
+			if err := os.MkdirAll(targetPath, defaultPermissions); err != nil {
 				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 					fmt.Errorf("failed to create directory %s: %w", targetPath, err)
 			}
@@ -273,7 +276,7 @@ func (t *tarExtractor) run(
 			}
 
 			// Create file
-			outFile, err := os.Create(targetPath)
+			outFile, err := os.OpenFile(targetPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, fs.FileMode(header.Mode))
 			if err != nil {
 				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 					fmt.Errorf("failed to create file %s: %w", targetPath, err)
@@ -290,9 +293,12 @@ func (t *tarExtractor) run(
 			// Update total size counter
 			totalExtractedSize += written
 
-			// Set file permissions
-			if err := os.Chmod(targetPath, fs.FileMode(header.Mode)); err != nil {
-				logger.Debug("failed to set file permissions", "path", targetPath, "error", err)
+			// Change mod time
+			if !header.ModTime.IsZero() {
+				if err := os.Chtimes(targetPath, header.ModTime, header.ModTime); err != nil {
+					return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+						fmt.Errorf("failed to change mod time for %s: %w", targetPath, err)
+				}
 			}
 		}
 	}
