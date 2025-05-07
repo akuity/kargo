@@ -214,7 +214,7 @@ func Test_patchAnnotation(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			err := PatchAnnotation(context.Background(), tc.client, tc.obj, tc.key, tc.value)
+			err := patchAnnotation(context.Background(), tc.client, tc.obj, tc.key, tc.value)
 			if tc.errExpected {
 				require.Error(t, err)
 				return

@@ -3,12 +3,12 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
-	"time"
 
 	"github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/webhook/external/providers"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -96,12 +96,13 @@ func NewRefreshWarehouseWebhook(name providers.Name, l *logging.Logger, c client
 		}
 
 		for _, wh := range warehouses.Items {
-			err = api.PatchAnnotation(
+			_, err = api.RefreshWarehouse(
 				ctx,
 				c,
-				&wh,
-				v1alpha1.AnnotationKeyRefresh,
-				time.Now().Format(time.RFC3339),
+				types.NamespacedName{
+					Namespace: wh.GetNamespace(),
+					Name:      wh.GetName(),
+				},
 			)
 			if err != nil {
 				l.Error(err, "failed to patch annotations",

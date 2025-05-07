@@ -52,7 +52,7 @@ func RefreshPromotion(
 			Name:      namespacedName.Name,
 		},
 	}
-	if err := PatchAnnotation(ctx, c, promo, kargoapi.AnnotationKeyRefresh, time.Now().Format(time.RFC3339)); err != nil {
+	if err := patchAnnotation(ctx, c, promo, kargoapi.AnnotationKeyRefresh, time.Now().Format(time.RFC3339)); err != nil {
 		return nil, fmt.Errorf("refresh: %w", err)
 	}
 	return promo, nil
@@ -92,7 +92,7 @@ func AbortPromotion(
 	if u, ok := user.InfoFromContext(ctx); ok {
 		ar.Actor = FormatEventUserActor(u)
 	}
-	return PatchAnnotation(ctx, c, promotion, kargoapi.AnnotationKeyAbort, ar.String())
+	return patchAnnotation(ctx, c, promotion, kargoapi.AnnotationKeyAbort, ar.String())
 }
 
 // ComparePromotionByPhaseAndCreationTime compares two Promotions by their

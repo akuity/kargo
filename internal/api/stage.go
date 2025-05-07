@@ -119,7 +119,7 @@ func RefreshStage(
 			Name:      namespacedName.Name,
 		},
 	}
-	if err := PatchAnnotation(ctx, c, stage, kargoapi.AnnotationKeyRefresh, time.Now().Format(time.RFC3339)); err != nil {
+	if err := patchAnnotation(ctx, c, stage, kargoapi.AnnotationKeyRefresh, time.Now().Format(time.RFC3339)); err != nil {
 		return nil, fmt.Errorf("refresh: %w", err)
 	}
 	return stage, nil
@@ -170,7 +170,7 @@ func AnnotateStageWithArgoCDContext(
 	if err != nil {
 		return fmt.Errorf("failed to marshal ArgoCD context: %w", err)
 	}
-	return PatchAnnotation(ctx, c, stage, kargoapi.AnnotationKeyArgoCDContext, string(argoCDAppsJSON))
+	return patchAnnotation(ctx, c, stage, kargoapi.AnnotationKeyArgoCDContext, string(argoCDAppsJSON))
 }
 
 // ReverifyStageFreight forces reconfirmation of the verification of the
@@ -212,7 +212,7 @@ func ReverifyStageFreight(
 	if u, ok := user.InfoFromContext(ctx); ok {
 		rr.Actor = FormatEventUserActor(u)
 	}
-	return PatchAnnotation(ctx, c, stage, kargoapi.AnnotationKeyReverify, rr.String())
+	return patchAnnotation(ctx, c, stage, kargoapi.AnnotationKeyReverify, rr.String())
 }
 
 // AbortStageFreightVerification forces aborting the verification of the
@@ -259,5 +259,5 @@ func AbortStageFreightVerification(
 	if u, ok := user.InfoFromContext(ctx); ok {
 		ar.Actor = FormatEventUserActor(u)
 	}
-	return PatchAnnotation(ctx, c, stage, kargoapi.AnnotationKeyAbort, ar.String())
+	return patchAnnotation(ctx, c, stage, kargoapi.AnnotationKeyAbort, ar.String())
 }

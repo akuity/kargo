@@ -78,7 +78,7 @@ func PatchOwnerReferences(ctx context.Context, c client.Client, obj client.Objec
 	return nil
 }
 
-func PatchAnnotation(ctx context.Context, c client.Client, obj client.Object, key, value string) error {
+func patchAnnotation(ctx context.Context, c client.Client, obj client.Object, key, value string) error {
 	return patchAnnotations(ctx, c, obj, map[string]*string{
 		key: ptr.To(value),
 	})
