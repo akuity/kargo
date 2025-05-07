@@ -818,3 +818,50 @@ func TestServiceAccountsByOIDCClaims(t *testing.T) {
 		})
 	}
 }
+
+func TestWarehousesByRepoURL(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		warehouse client.Object
+		expected  []string
+	}{
+		{
+			name: "simple",
+			warehouse: &kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "https://github.com/username/repo",
+							},
+							Image: &kargoapi.ImageSubscription{
+								RepoURL: "https://registry.hub.docker.com/u/svendowideit/testhook/",
+							},
+							Chart: &kargoapi.ChartSubscription{
+								RepoURL: "https://example.com/charts/alpine-0.1.2",
+							},
+						},
+					},
+				},
+			},
+			expected: []string{
+				"https://github.com/username/repo",
+				"https://example.com/charts/alpine-0.1.2",
+				"https://registry.hub.docker.com/u/svendowideit/testhook/",
+			},
+		},
+		{
+			name:      "not a warehouse",
+			warehouse: &kargoapi.Freight{},
+			expected:  nil,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t,
+				test.expected,
+				WarehousesBySubscribedURLs(test.warehouse),
+			)
+
+		})
+	}
+}
