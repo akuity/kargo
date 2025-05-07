@@ -3,7 +3,7 @@ package handlers
 import (
 	"bytes"
 	"crypto/hmac"
-	"crypto/sha1" // nolint: gosec
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"net/http"
@@ -13,37 +13,52 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/indexer"
-	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/webhook/external/providers"
 )
 
-func TestRefreshWarehouseWebhook(t *testing.T) {
+func TestRefreshWarehouseWebhook_Github(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 	kubeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
+		WithObjects(
+			&kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fakenamespace",
+					Name:      "fakename",
+				},
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{
+							Git: &kargoapi.GitSubscription{
+								// matches repo url in event payload
+								RepoURL: "https://github.com/username/repo",
+							},
+						},
+					},
+				},
+			},
+		).
 		WithIndex(
 			&kargoapi.Warehouse{},
 			indexer.WarehousesBySubscribedURLsField,
 			indexer.WarehousesBySubscribedURLs,
 		).Build()
 
-	handler := NewRefreshWarehouseWebhook(
-		providers.Github,
-		logging.NewLogger(logging.InfoLevel),
-		kubeClient,
-	)
+	f := NewFactory(kubeClient)
 	serverURL := "http://doesntmatter.com"
 
 	for _, test := range []struct {
 		name         string
 		setup        func() *http.Request
 		expectedCode int
+		expectedMsg  string
 	}{
 		{
 			name: "OK",
@@ -60,10 +75,11 @@ func TestRefreshWarehouseWebhook(t *testing.T) {
 				req.Header.Set("X-GitHub-Event", "push")
 				return req
 			},
+			expectedMsg:  `"warehouses_successfully_refreshed":1`,
 			expectedCode: http.StatusOK,
 		},
 		{
-			name: "internal server error",
+			name: "internal server error - provider misconfiguration",
 			setup: func() *http.Request {
 				os.Clearenv()
 				return httptest.NewRequest(
@@ -72,6 +88,7 @@ func TestRefreshWarehouseWebhook(t *testing.T) {
 					mockRequestPayload,
 				)
 			},
+			expectedMsg:  "failed to initialize provider",
 			expectedCode: http.StatusInternalServerError,
 		},
 		{
@@ -84,10 +101,11 @@ func TestRefreshWarehouseWebhook(t *testing.T) {
 					mockRequestPayload,
 				)
 			},
+			expectedMsg:  "failed to authenticate request",
 			expectedCode: http.StatusUnauthorized,
 		},
 		{
-			name: "bad request",
+			name: "bad request - unsupported event type",
 			setup: func() *http.Request {
 				secret := uuid.New().String()
 				os.Setenv("GH_WEBHOOK_SECRET", secret)
@@ -101,16 +119,22 @@ func TestRefreshWarehouseWebhook(t *testing.T) {
 				req.Header.Set("X-GitHub-Event", "ping")
 				return req
 			},
+			expectedMsg:  "unsupported event type",
 			expectedCode: http.StatusBadRequest,
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			req := test.setup()
 			w := httptest.NewRecorder()
+			handler := f.NewRefreshWarehouseWebhook(providers.Github)
 			handler(w, req)
 			require.Equal(t,
 				test.expectedCode,
 				w.Code,
+			)
+			require.Contains(t,
+				w.Body.String(),
+				test.expectedMsg,
 			)
 		})
 	}
@@ -119,9 +143,9 @@ func TestRefreshWarehouseWebhook(t *testing.T) {
 func sign(t *testing.T, secret string) string {
 	t.Helper()
 
-	mac := hmac.New(sha1.New, []byte(secret))
+	mac := hmac.New(sha256.New, []byte(secret))
 	mac.Write(mockRequestPayload.Bytes())
-	return fmt.Sprintf("sha1=%s",
+	return fmt.Sprintf("sha256=%s",
 		hex.EncodeToString(mac.Sum(nil)),
 	)
 }

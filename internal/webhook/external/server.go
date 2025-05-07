@@ -33,9 +33,10 @@ func NewServer(cfg ServerConfig, cl client.Client) Server {
 func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	logger := logging.LoggerFromContext(ctx)
 	mux := http.NewServeMux()
+	whf := handlers.NewFactory(s.client)
 
 	mux.Handle("POST /v1/github",
-		handlers.NewRefreshWarehouseWebhook(providers.Github, logger, s.client),
+		whf.NewRefreshWarehouseWebhook(providers.Github),
 	)
 	// TODO(fuskovic): support additional providers
 

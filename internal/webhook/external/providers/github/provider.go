@@ -3,10 +3,11 @@ package github
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 
-	gh "github.com/google/go-github/github"
+	gh "github.com/google/go-github/v71/github"
 )
 
 var (
@@ -42,20 +43,62 @@ func (p *provider) Name() string {
 }
 
 func (p *provider) Authenticate(r *http.Request) error {
-	payload, err := gh.ValidatePayload(r, []byte(p.secret))
-	if err != nil {
-		return fmt.Errorf("failed to validate payload: %w", err)
+	var signature string
+	if h := r.Header.Get(gh.SHA1SignatureHeader); h != "" {
+		signature = h
 	}
-	p.payload = payload
+	if h := r.Header.Get(gh.SHA256SignatureHeader); h != "" {
+		signature = h
+	}
+	if signature == "" {
+		return ErrMissingSignature
+	}
+
+	const maxBytes = 2 << 20
+	lr := io.LimitReader(r.Body, maxBytes)
+
+	// Read as far as we are allowed to
+	bodyBytes, err := io.ReadAll(lr)
+	if err != nil {
+		return fmt.Errorf("failed to read request body: %w", err)
+	}
+
+	// If we read exactly the maximum, the body might be larger
+	if len(bodyBytes) == maxBytes {
+		// Try to read one more byte
+		buf := make([]byte, 1)
+		var n int
+		if n, err = r.Body.Read(buf); err != nil && err != io.EOF {
+			return fmt.Errorf("failed to check for additional content: %w", err)
+		}
+		if n > 0 || err != io.EOF {
+			return fmt.Errorf("response body exceeds maximum size of %d bytes", maxBytes)
+		}
+	}
+
+	if err := gh.ValidateSignature(
+		signature,
+		bodyBytes,
+		[]byte(p.secret),
+	); err != nil {
+		return ErrInvalidSignature
+	}
+	p.payload = bodyBytes
 	return nil
 }
 
 func (p *provider) Repository(r *http.Request) (string, error) {
-	event, err := gh.ParseWebHook(gh.WebHookType(r), p.payload)
+	eventType := r.Header.Get("X-GitHub-Event")
+	if eventType != "push" {
+		return "", ErrUnsupportedEventType
+	}
+
+	e, err := gh.ParseWebHook(eventType, p.payload)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse webhook event: %w", err)
 	}
-	pe, ok := event.(*gh.PushEvent)
+
+	pe, ok := e.(*gh.PushEvent)
 	if !ok {
 		return "", ErrUnsupportedEventType
 	}
