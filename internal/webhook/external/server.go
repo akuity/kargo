@@ -34,10 +34,7 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	logger := logging.LoggerFromContext(ctx)
 	mux := http.NewServeMux()
 
-	// TODO(fuskovic): this path assumes we will only have webhooks handlers
-	// for warehouse refreshes. Should we add the resource e.g. /api/v1/github/warehouses?
-	// Need to get clarity here.
-	mux.Handle("POST /api/v1/github",
+	mux.Handle("POST /v1/github",
 		handlers.NewRefreshWarehouseWebhook(providers.Github, logger, s.client),
 	)
 	// TODO(fuskovic): support additional providers
