@@ -9,6 +9,7 @@ import (
 
 	"github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
+	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/webhook/external/providers"
@@ -23,11 +24,12 @@ func NewRefreshWarehouseWebhook(p providers.Provider, c client.Client) http.Hand
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger := logging.LoggerFromContext(r.Context())
 		logger.Debug("authenticating request")
+		w.Header().Set("Content-type", "application/json")
 		if err := p.Authenticate(r); err != nil {
 			logger.Error(err, "failed to authenticate request")
-			http.Error(w,
-				"failed to authenticate request",
+			xhttp.Error(w,
 				http.StatusUnauthorized,
+				"failed to authenticate request",
 			)
 			return
 		}
@@ -37,14 +39,11 @@ func NewRefreshWarehouseWebhook(p providers.Provider, c client.Client) http.Hand
 		repo, err := p.Repository(r)
 		if err != nil {
 			logger.Error(err, "failed to retrieve source repo")
-			http.Error(w,
-				err.Error(),
-				http.StatusBadRequest,
-			)
+			xhttp.Error(w, http.StatusBadRequest, err)
 			return
 		}
 
-		logger.Info("repo retrieved", "name", repo)
+		logger.Debug("repo retrieved", "name", repo)
 
 		ctx := r.Context()
 		var warehouses v1alpha1.WarehouseList
@@ -57,7 +56,11 @@ func NewRefreshWarehouseWebhook(p providers.Provider, c client.Client) http.Hand
 		)
 		if err != nil {
 			logger.Error(err, "failed to list warehouses")
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			xhttp.Errorf(w,
+				http.StatusInternalServerError,
+				"failed to list warehouses: %w",
+				err,
+			)
 			return
 		}
 
@@ -73,6 +76,7 @@ func NewRefreshWarehouseWebhook(p providers.Provider, c client.Client) http.Hand
 			Errors: make(map[string]string),
 		}
 
+		code := http.StatusOK
 		for _, wh := range warehouses.Items {
 			_, err = api.RefreshWarehouse(
 				ctx,
@@ -88,6 +92,9 @@ func NewRefreshWarehouseWebhook(p providers.Provider, c client.Client) http.Hand
 				)
 				resp.Errors[wh.GetName()] = err.Error()
 				resp.WarehousesFailedToRefresh++
+				if code == http.StatusOK {
+					code = http.StatusMultiStatus
+				}
 			} else {
 				logger.Debug("successfully patched annotations",
 					"warehouse", wh.GetName(),
@@ -95,7 +102,7 @@ func NewRefreshWarehouseWebhook(p providers.Provider, c client.Client) http.Hand
 				resp.WarehousesSuccessfullyRefreshed++
 			}
 		}
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(code)
 		_ = json.NewEncoder(w).Encode(resp)
 	})
 }

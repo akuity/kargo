@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/google/go-github/v56/github"
+	"github.com/google/go-github/v71/github"
 	"github.com/hashicorp/go-cleanhttp"
 	"k8s.io/utils/ptr"
 
