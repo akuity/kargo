@@ -560,8 +560,8 @@ func TestPromotionBuilder_inflateTaskSteps(t *testing.T) {
 				require.NoError(t, err)
 				require.Len(t, steps, 2)
 
-				assert.Equal(t, "custom-alias::step-0", steps[0].As)
-				assert.Equal(t, "custom-alias::step-1", steps[1].As)
+				assert.Equal(t, "custom-alias::step-1", steps[0].As)
+				assert.Equal(t, "custom-alias::step-2", steps[1].As)
 			},
 		},
 		{

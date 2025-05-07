@@ -147,24 +147,6 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 		assertions  func(*testing.T, Result)
 	}{
 		{
-			name: "fail on invalid step alias",
-			steps: []Step{
-				{Kind: "success-step", Alias: "step-1"},
-			},
-			assertions: func(t *testing.T, result Result) {
-				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
-				assert.Contains(t, result.Message, "is forbidden")
-				assert.Equal(t, int64(0), result.CurrentStep)
-
-				assert.Len(t, result.StepExecutionMetadata, 1)
-
-				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.StepExecutionMetadata[0].Status)
-				assert.Contains(t, result.StepExecutionMetadata[0].Message, "is forbidden")
-				assert.Nil(t, result.StepExecutionMetadata[0].StartedAt)
-				assert.Nil(t, result.StepExecutionMetadata[0].FinishedAt)
-			},
-		},
-		{
 			name:  "runner not found",
 			steps: []Step{{Kind: "unknown-step"}},
 			assertions: func(t *testing.T, result Result) {
@@ -767,7 +749,10 @@ func TestSimpleEngine_executeStep(t *testing.T) {
 		},
 		{
 			name: "step execution failure",
-			step: Step{Kind: "error-step"},
+			step: Step{
+				Kind:  "error-step",
+				Alias: "my-step",
+			},
 			runner: &mockStepRunner{
 				name: "error-step",
 				runResult: promotion.StepResult{
@@ -776,7 +761,7 @@ func TestSimpleEngine_executeStep(t *testing.T) {
 				runErr: errors.New("something went wrong"),
 			},
 			assertions: func(t *testing.T, result promotion.StepResult, err error) {
-				assert.ErrorContains(t, err, "error running step \"error-step\"")
+				assert.ErrorContains(t, err, "error running step \"my-step\"")
 				assert.ErrorContains(t, err, "something went wrong")
 				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
 			},
