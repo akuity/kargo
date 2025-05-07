@@ -3,7 +3,7 @@ package handlers
 import (
 	"bytes"
 	"crypto/hmac"
-	"crypto/sha1"
+	"crypto/sha1" // nolint: gosec
 	"encoding/hex"
 	"fmt"
 	"net/http"
@@ -11,14 +11,15 @@ import (
 	"os"
 	"testing"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/indexer"
-	"github.com/akuity/kargo/internal/logging"
-	"github.com/akuity/kargo/internal/webhook/external/providers"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/indexer"
+	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/internal/webhook/external/providers"
 )
 
 func TestRefreshWarehouseWebhook(t *testing.T) {

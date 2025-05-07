@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/webhook/external/providers"
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // NewRefreshWarehouseWebhook handles push events for the designated provider.
@@ -41,7 +42,7 @@ func NewRefreshWarehouseWebhook(name providers.Name, l *logging.Logger, c client
 		)
 
 		l.Info("authenticating request")
-		if err := p.Authenticate(r); err != nil {
+		if err = p.Authenticate(r); err != nil {
 			l.Error(err, "failed to authenticate request")
 			http.Error(w,
 				"failed to authenticate request",
