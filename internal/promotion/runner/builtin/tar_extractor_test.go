@@ -527,6 +527,46 @@ func Test_tarExtractor_run(t *testing.T) {
 				assert.Contains(t, err.Error(), "large_file.bin")
 			},
 		},
+		{
+			name: "fails with total archive size larger than limit",
+			setupFiles: func(t *testing.T) string {
+				tmpDir := t.TempDir()
+
+				// Create a tar file
+				tarPath := filepath.Join(tmpDir, "oversized.tar")
+				tarFile, err := os.Create(tarPath)
+				require.NoError(t, err)
+				defer tarFile.Close()
+
+				tw := tar.NewWriter(tarFile)
+				defer tw.Close()
+
+				nbFiles := (MaxDecompressedTarSize / MaxDecompressedFileSize) + 1
+				for i := range int(nbFiles) {
+					hdr := &tar.Header{
+						Name: fmt.Sprintf("file%d.bin", i),
+						Mode: 0600,
+						Size: MaxDecompressedFileSize - 1,
+					}
+					require.NoError(t, tw.WriteHeader(hdr))
+
+					// Write zeros to the file
+					_, err = tw.Write(make([]byte, MaxDecompressedFileSize-1))
+					require.NoError(t, err)
+				}
+
+				return tmpDir
+			},
+			cfg: builtin.UntarConfig{
+				InPath:  "oversized.tar",
+				OutPath: "extracted/",
+			},
+			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
+				assert.Error(t, err)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, result)
+				assert.Contains(t, err.Error(), "extraction aborted: total size would exceed limit")
+			},
+		},
 	}
 
 	runner := &tarExtractor{}
