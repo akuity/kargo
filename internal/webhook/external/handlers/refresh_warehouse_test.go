@@ -19,7 +19,8 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/indexer"
-	"github.com/akuity/kargo/internal/webhook/external/providers"
+	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/internal/webhook/external/providers/github"
 )
 
 func TestRefreshWarehouseWebhook_Github(t *testing.T) {
@@ -50,8 +51,6 @@ func TestRefreshWarehouseWebhook_Github(t *testing.T) {
 			indexer.WarehousesBySubscribedURLsField,
 			indexer.WarehousesBySubscribedURLs,
 		).Build()
-
-	f := NewFactory(kubeClient)
 	serverURL := "http://doesntmatter.com"
 
 	for _, test := range []struct {
@@ -77,19 +76,6 @@ func TestRefreshWarehouseWebhook_Github(t *testing.T) {
 			},
 			expectedMsg:  `"warehouses_successfully_refreshed":1`,
 			expectedCode: http.StatusOK,
-		},
-		{
-			name: "internal server error - provider misconfiguration",
-			setup: func() *http.Request {
-				os.Clearenv()
-				return httptest.NewRequest(
-					http.MethodPost,
-					serverURL,
-					mockRequestPayload,
-				)
-			},
-			expectedMsg:  "failed to initialize provider",
-			expectedCode: http.StatusInternalServerError,
 		},
 		{
 			name: "unauthorized",
@@ -126,8 +112,14 @@ func TestRefreshWarehouseWebhook_Github(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			req := test.setup()
 			w := httptest.NewRecorder()
-			handler := f.NewRefreshWarehouseWebhook(providers.Github)
-			handler(w, req)
+			p, err := github.NewProvider()
+			require.NoError(t, err)
+
+			NewRefreshWarehouseWebhook(p,
+				logging.NewLogger(logging.InfoLevel),
+				kubeClient,
+			)(w, req)
+
 			require.Equal(t,
 				test.expectedCode,
 				w.Code,

@@ -10,6 +10,7 @@ import (
 	"github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/indexer"
+	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/webhook/external/providers"
 )
 
@@ -18,43 +19,23 @@ import (
 // the kubeclient is queried for all warehouses that contain a subscription
 // to the repo in question. Those warehouses are then patched with a special
 // annotation that signals down stream logic to refresh the warehouse.
-func (f *Factory) NewRefreshWarehouseWebhook(name providers.Name) http.HandlerFunc {
+func NewRefreshWarehouseWebhook(p providers.Provider, log *logging.Logger, kClient client.Client) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		f.log.Info("initializing provider")
-		p, err := providers.New(name)
-		if err != nil {
-			// If there's a missing secret/env var
-			// we don't want to leak that information
-			// from our API so just log the part that's
-			// useful to us and return a generic error
-			// to the client.
-			f.log.Error(err, "failed to initialize provider")
-			http.Error(w,
-				"failed to initialize provider",
-				http.StatusInternalServerError,
-			)
-			return
-		}
-
-		f.log.Info("provider initialized",
-			"provider", name.String(),
-		)
-
-		f.log.Info("authenticating request")
-		if err = p.Authenticate(r); err != nil {
-			f.log.Error(err, "failed to authenticate request")
+		log.Info("authenticating request")
+		if err := p.Authenticate(r); err != nil {
+			log.Error(err, "failed to authenticate request")
 			http.Error(w,
 				"failed to authenticate request",
 				http.StatusUnauthorized,
 			)
 			return
 		}
-		f.log.Info("request authenticated")
+		log.Info("request authenticated")
 
-		f.log.Info("retrieving source repo")
+		log.Info("retrieving source repo")
 		repo, err := p.Repository(r)
 		if err != nil {
-			f.log.Error(err, "failed to retrieve source repo")
+			log.Error(err, "failed to retrieve source repo")
 			http.Error(w,
 				err.Error(),
 				http.StatusBadRequest,
@@ -62,11 +43,11 @@ func (f *Factory) NewRefreshWarehouseWebhook(name providers.Name) http.HandlerFu
 			return
 		}
 
-		f.log.Info("repo retrieved", "name", repo)
+		log.Info("repo retrieved", "name", repo)
 
 		ctx := r.Context()
 		var warehouses v1alpha1.WarehouseList
-		err = f.Client.List(
+		err = kClient.List(
 			ctx,
 			&warehouses,
 			client.MatchingFields{
@@ -74,12 +55,12 @@ func (f *Factory) NewRefreshWarehouseWebhook(name providers.Name) http.HandlerFu
 			},
 		)
 		if err != nil {
-			f.log.Error(err, "failed to list warehouses")
+			log.Error(err, "failed to list warehouses")
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		f.log.Info("listed warehouses",
+		log.Info("listed warehouses",
 			"num-warehouses", len(warehouses.Items),
 		)
 
@@ -94,20 +75,20 @@ func (f *Factory) NewRefreshWarehouseWebhook(name providers.Name) http.HandlerFu
 		for _, wh := range warehouses.Items {
 			_, err = api.RefreshWarehouse(
 				ctx,
-				f.Client,
+				kClient,
 				types.NamespacedName{
 					Namespace: wh.GetNamespace(),
 					Name:      wh.GetName(),
 				},
 			)
 			if err != nil {
-				f.log.Error(err, "failed to patch annotations",
+				log.Error(err, "failed to patch annotations",
 					"warehouse", wh.GetName(),
 				)
 				resp.Errors[wh.GetName()] = err.Error()
 				resp.WarehousesFailedToRefresh++
 			} else {
-				f.log.Info("successfully patched annotations",
+				log.Info("successfully patched annotations",
 					"warehouse", wh.GetName(),
 				)
 				resp.WarehousesSuccessfullyRefreshed++
