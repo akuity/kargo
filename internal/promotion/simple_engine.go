@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -131,21 +130,11 @@ stepLoop:
 		default:
 		}
 
-		// Prepare the step for execution by setting the alias.
-		if step.Alias, err = e.stepAlias(step.Alias, i); err != nil {
-			stepExecMeta.Status = kargoapi.PromotionStepStatusErrored
-			stepExecMeta.Message = fmt.Sprintf("error getting step alias: %s", err)
-			// Continue, because despite this failure, some steps' "if" conditions may
-			// still allow them to run.
-			continue
-		}
-		stepExecMeta.Alias = step.Alias
-
 		// Check if the step should be skipped.
 		var skip bool
 		if skip, err = step.Skip(ctx, e.kargoClient, promoCtx, state); err != nil {
 			stepExecMeta.Status = kargoapi.PromotionStepStatusErrored
-			stepExecMeta.Message = fmt.Sprintf("error checking if step %d should be skipped: %s", i, err)
+			stepExecMeta.Message = fmt.Sprintf("error checking if step %q should be skipped: %s", step.Alias, err)
 			// Continue, because despite this failure, some steps' "if" conditions may
 			// still allow them to run.
 			continue
@@ -196,7 +185,7 @@ stepLoop:
 			// Deal with statuses that no step should have returned.
 			stepExecMeta.FinishedAt = ptr.To(metav1.Now())
 			stepExecMeta.Status = kargoapi.PromotionStepStatusErrored
-			stepExecMeta.Message = fmt.Sprintf("step %d returned an invalid status: %s", i, result.Status)
+			stepExecMeta.Message = fmt.Sprintf("step %q returned an invalid status: %s", step.Alias, result.Status)
 			// Continue, because despite this failure, some steps' "if" conditions may
 			// still allow them to run.
 			continue
@@ -221,7 +210,7 @@ stepLoop:
 			if message == "" {
 				message = "no details provided"
 			}
-			err = fmt.Errorf("step %d errored: %s", i, message)
+			err = fmt.Errorf("step %q errored: %s", step.Alias, message)
 		}
 
 		// At this point, we've sorted out any discrepancies between the status and
@@ -253,7 +242,7 @@ stepLoop:
 				stepExecMeta.FinishedAt = ptr.To(metav1.Now())
 				stepExecMeta.Status = kargoapi.PromotionStepStatusErrored
 				stepExecMeta.Message = fmt.Sprintf(
-					"step %d met error threshold of %d: %s", i,
+					"step %q met error threshold of %d: %s", step.Alias,
 					errorThreshold, stepExecMeta.Message,
 				)
 				// Continue, because despite this failure, some steps' "if" conditions
@@ -272,7 +261,7 @@ stepLoop:
 			// Timeout has elapsed.
 			stepExecMeta.FinishedAt = ptr.To(metav1.Now())
 			stepExecMeta.Status = kargoapi.PromotionStepStatusErrored
-			stepExecMeta.Message = fmt.Sprintf("step %d timed out after %s", i, timeout.String())
+			stepExecMeta.Message = fmt.Sprintf("step %q timed out after %s", step.Alias, timeout.String())
 			// Continue, because despite this failure, some steps' "if" conditions may
 			// still allow them to run.
 			continue
@@ -369,7 +358,7 @@ func (e *simpleEngine) executeStep(
 
 	result, err := runner.Run(ctx, stepCtx)
 	if err != nil {
-		err = fmt.Errorf("error running step %q: %w", step.Kind, err)
+		err = fmt.Errorf("error running step %q: %w", step.Alias, err)
 	}
 	return result, err
 }
@@ -401,21 +390,6 @@ func (e *simpleEngine) prepareStepContext(
 		FreightRequests: promoCtx.FreightRequests,
 		Freight:         promoCtx.Freight,
 	}, nil
-}
-
-// stepAlias returns the alias for a step. If the alias is empty, a default
-// alias is returned based on the step index.
-func (e *simpleEngine) stepAlias(alias string, index int64) (string, error) {
-	if alias = strings.TrimSpace(alias); alias != "" {
-		// A webhook enforces this regex as well, but we're checking here to
-		// account for the possibility of EXISTING Stages with a promotionTemplate
-		// containing a step with a now-reserved alias.
-		if ReservedStepAliasRegex.MatchString(alias) {
-			return "", fmt.Errorf("step alias %q is forbidden", alias)
-		}
-		return alias, nil
-	}
-	return fmt.Sprintf("step-%d", index), nil
 }
 
 // setupWorkDir creates a temporary working directory if one is not provided.
