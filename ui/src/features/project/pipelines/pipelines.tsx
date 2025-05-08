@@ -177,7 +177,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
             />
 
             <div className='w-full h-full relative'>
-              <Flex gap={12} className='absolute z-50 top-2 right-2 left-2'>
+              <Flex gap={12} className='absolute z-10 top-2 right-2 left-2'>
                 <GraphFilters
                   warehouses={listWarehousesQuery.data?.warehouses || []}
                   stages={listStagesQuery.data?.stages || []}
