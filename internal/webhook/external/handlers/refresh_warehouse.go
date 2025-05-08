@@ -23,9 +23,10 @@ import (
 // annotation that signals down stream logic to refresh the warehouse.
 func NewRefreshWarehouseWebhook(p providers.Provider, c client.Client) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		logger := logging.LoggerFromContext(r.Context())
+		ctx := r.Context()
+		logger := logging.LoggerFromContext(ctx)
 		logger.Debug("authenticating request")
-		w.Header().Set("Content-type", "application/json")
+
 		if err := p.Authenticate(r); err != nil {
 			logger.Error(err, "failed to authenticate request")
 			xhttp.Error(w,
@@ -46,7 +47,6 @@ func NewRefreshWarehouseWebhook(p providers.Provider, c client.Client) http.Hand
 
 		logger.Debug("repo retrieved", "name", repo)
 
-		ctx := r.Context()
 		var warehouses v1alpha1.WarehouseList
 		err = c.List(
 			ctx,

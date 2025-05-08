@@ -43,7 +43,9 @@ func Error(w http.ResponseWriter, statusCode int, err any) {
 	default:
 		msg = fmt.Sprintf("%v", t)
 	}
+	
 	w.WriteHeader(statusCode)
+	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(
 		map[string]string{"error": msg},
 	)
