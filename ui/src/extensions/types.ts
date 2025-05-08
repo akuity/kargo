@@ -13,4 +13,9 @@ export type ExtensionStageTab = {
   icon?: React.ReactNode;
 };
 
-export type Extension = ExtensionStageTab;
+export type LayoutExtensionTab = {
+  type: 'layoutExtension';
+  component: () => React.ReactNode;
+};
+
+export type Extension = ExtensionStageTab | LayoutExtensionTab;
