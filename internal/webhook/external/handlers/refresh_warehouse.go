@@ -93,11 +93,13 @@ func NewRefreshWarehouseWebhook(p providers.Provider, c client.Client) http.Hand
 				numSuccessfullyRefreshed++
 			}
 		}
+
 		w.WriteHeader(code)
 		logger.Debug("execution complete",
 			"num-successful-refreshes", numSuccessfullyRefreshed,
 			"num-refresh-failures", numRefreshFailures,
 		)
+
 		if numRefreshFailures > 0 {
 			xhttp.Error(w,
 				code,
