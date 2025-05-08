@@ -65,7 +65,7 @@ export const StageConditionIcon = memo(
 
       const { condition: verifiedCondition, isActive: isVerifying } = hasCondition(
         StageConditionType.Verified,
-        StageConditionStatus.Unknown
+        StageConditionStatus.True
       );
 
       // Default state
