@@ -414,6 +414,7 @@ metadata:
   labels:
     kargo.akuity.io/cred-type: image
 stringData:
+  awsRegion: us-west-2
   awsAccessKeyID: <access key id>
   awsSecretAccessKey: <secret access key>
   repoURL: <ecr url>
