@@ -34,7 +34,6 @@ import (
 	"github.com/akuity/kargo/internal/controller"
 	argocdapi "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	kargoEvent "github.com/akuity/kargo/internal/event"
-	exprfn "github.com/akuity/kargo/internal/expressions/function"
 	"github.com/akuity/kargo/internal/health"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/kargo"
@@ -44,6 +43,7 @@ import (
 	"github.com/akuity/kargo/internal/pattern"
 	intpredicate "github.com/akuity/kargo/internal/predicate"
 	"github.com/akuity/kargo/internal/rollouts"
+	exprfn "github.com/akuity/kargo/pkg/expr/function"
 	healthPkg "github.com/akuity/kargo/pkg/health"
 )
 

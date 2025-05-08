@@ -11,9 +11,9 @@ import (
 	yaml "sigs.k8s.io/yaml/goyaml.v3"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/expressions"
-	exprfn "github.com/akuity/kargo/internal/expressions/function"
 	"github.com/akuity/kargo/internal/kargo"
+	"github.com/akuity/kargo/pkg/expr"
+	exprfn "github.com/akuity/kargo/pkg/expr/function"
 	"github.com/akuity/kargo/pkg/health"
 	"github.com/akuity/kargo/pkg/promotion"
 )
@@ -229,7 +229,7 @@ func (s *Step) Skip(
 		StepEnvWithVars(vars),
 	)
 
-	v, err := expressions.EvaluateTemplate(
+	v, err := expr.EvaluateTemplate(
 		s.If,
 		env,
 		append(
@@ -284,7 +284,7 @@ func (s *Step) GetConfig(
 		StepEnvWithSecrets(promoCtx.Secrets),
 	)
 
-	evaledCfgJSON, err := expressions.EvaluateJSONTemplate(
+	evaledCfgJSON, err := expr.EvaluateJSONTemplate(
 		s.Config,
 		env,
 		append(
@@ -321,7 +321,7 @@ func (s *Step) GetVars(
 	// Evaluate the global variables defined in the Promotion itself, these
 	// variables DO NOT have access to the (task) outputs.
 	for _, v := range promoCtx.Vars {
-		newVar, err := expressions.EvaluateTemplate(
+		newVar, err := expr.EvaluateTemplate(
 			v.Value,
 			s.BuildEnv(promoCtx, StepEnvWithVars(vars)),
 			append(
@@ -338,7 +338,7 @@ func (s *Step) GetVars(
 	// Evaluate the variables defined in the Step. These variables DO have access
 	// to the (task) outputs.
 	for _, v := range s.Vars {
-		newVar, err := expressions.EvaluateTemplate(
+		newVar, err := expr.EvaluateTemplate(
 			v.Value,
 			s.BuildEnv(
 				promoCtx,

@@ -14,11 +14,11 @@ import (
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libargocd "github.com/akuity/kargo/internal/argocd"
-	"github.com/akuity/kargo/internal/expressions"
 	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/promotion"
+	"github.com/akuity/kargo/pkg/expr"
 )
 
 const (
@@ -234,7 +234,7 @@ func RunningPromotionsByArgoCDApplications(
 
 								var namespace any = libargocd.Namespace()
 								if namespaceTemplate, ok := app["namespace"].(string); ok {
-									if namespace, err = expressions.EvaluateTemplate(namespaceTemplate, env); err != nil {
+									if namespace, err = expr.EvaluateTemplate(namespaceTemplate, env); err != nil {
 										logger.Error(
 											err,
 											fmt.Sprintf(
@@ -248,7 +248,7 @@ func RunningPromotionsByArgoCDApplications(
 										continue
 									}
 								}
-								name, err := expressions.EvaluateTemplate(nameTemplate, env)
+								name, err := expr.EvaluateTemplate(nameTemplate, env)
 								if err != nil {
 									logger.Error(
 										err,

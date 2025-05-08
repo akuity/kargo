@@ -20,8 +20,8 @@ import (
 	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/api/stubs/rollouts"
 	libEncoding "github.com/akuity/kargo/internal/encoding"
-	"github.com/akuity/kargo/internal/expressions"
 	"github.com/akuity/kargo/internal/server/user"
+	"github.com/akuity/kargo/pkg/expr"
 )
 
 func (s *server) GetAnalysisRunLogs(
@@ -396,7 +396,7 @@ func (s *server) buildRequest(
 		"jobName":      jobName,
 		"container":    containerName,
 	}
-	urlAny, err := expressions.EvaluateTemplate(s.cfg.AnalysisRunLogURLTemplate, env)
+	urlAny, err := expr.EvaluateTemplate(s.cfg.AnalysisRunLogURLTemplate, env)
 	if err != nil {
 		return nil, fmt.Errorf("error constructing log url: %w", err)
 	}
@@ -419,7 +419,7 @@ func (s *server) buildRequest(
 		env["token"] = userInfo.BearerToken
 	}
 	for key, valTemplate := range s.cfg.AnalysisRunLogHTTPHeaders {
-		valTemplateAny, err := expressions.EvaluateTemplate(valTemplate, env)
+		valTemplateAny, err := expr.EvaluateTemplate(valTemplate, env)
 		if err != nil {
 			return nil, fmt.Errorf("error constructing value for header %s: %w", key, err)
 		}
