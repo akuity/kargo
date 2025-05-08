@@ -73,7 +73,7 @@ func TestRefreshWarehouseWebhook_Github(t *testing.T) {
 				req.Header.Set("X-GitHub-Event", "push")
 				return req
 			},
-			expectedMsg:  `"warehouses_successfully_refreshed":1`,
+			expectedMsg:  "{\"msg\":\"refreshed 1 warehouses\"}\n",
 			expectedCode: http.StatusOK,
 		},
 		{
@@ -86,7 +86,7 @@ func TestRefreshWarehouseWebhook_Github(t *testing.T) {
 					mockRequestPayload,
 				)
 			},
-			expectedMsg:  "failed to authenticate request",
+			expectedMsg:  "{\"error\":\"failed to get repository: Unauthorized: missing signature\"}\n",
 			expectedCode: http.StatusUnauthorized,
 		},
 		{
@@ -104,7 +104,7 @@ func TestRefreshWarehouseWebhook_Github(t *testing.T) {
 				req.Header.Set("X-GitHub-Event", "ping")
 				return req
 			},
-			expectedMsg:  "unsupported event type",
+			expectedMsg:  "{\"error\":\"failed to get repository: Bad Request: unsupported event type\"}\n",
 			expectedCode: http.StatusBadRequest,
 		},
 	} {

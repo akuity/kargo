@@ -27,8 +27,7 @@ var (
 )
 
 type provider struct {
-	secret  string
-	payload []byte
+	secret string
 }
 
 func NewProvider() (*provider, error) {
@@ -90,7 +89,7 @@ func (p *provider) GetRepository(r *http.Request) (string, error) {
 		return "", xhttp.BadRequestError(ErrUnsupportedEventType)
 	}
 
-	e, err := gh.ParseWebHook(eventType, p.payload)
+	e, err := gh.ParseWebHook(eventType, bodyBytes)
 	if err != nil {
 		return "", xhttp.BadRequestErrorf("failed to parse webhook event: %w", err)
 	}
