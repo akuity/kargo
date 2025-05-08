@@ -4,6 +4,7 @@ import {
   faArrowsLeftRightToLine,
   faCheck,
   faEllipsis,
+  faTrash,
   faWarehouse,
   IconDefinition
 } from '@fortawesome/free-solid-svg-icons';
@@ -15,12 +16,14 @@ import { ReactNode, useMemo } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { useModal } from '@ui/features/common/modal/use-modal';
 import { useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import { FreightTimelineControllerContextType } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
 import { ColorMap } from '@ui/features/stage/utils';
 import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
+import { DeleteFreightModal } from './delete-freight-modal';
 import { FreightArtifact } from './freight-artifact';
 
 type FreightCardProps = {
@@ -45,6 +48,8 @@ export const FreightCard = (props: FreightCardProps) => {
   const actionContext = useActionContext();
 
   const freightAlias = props.freight?.alias;
+
+  const deleteFreightModal = useModal();
 
   const creation = useMemo(() => {
     const creationDate = timestampDate(props.freight?.metadata?.creationTimestamp);
@@ -107,6 +112,22 @@ export const FreightCard = (props: FreightCardProps) => {
                     e.domEvent.stopPropagation();
                     actionContext?.actManuallyApprove(props.freight);
                   }
+                },
+                {
+                  key: 'delete-freight',
+                  label: 'Delete Freight',
+                  icon: <FontAwesomeIcon icon={faTrash} />,
+                  onClick: (e) => {
+                    e.domEvent.stopPropagation();
+                    deleteFreightModal.show((modalProps) => (
+                      <DeleteFreightModal
+                        freight={props.freight}
+                        onDelete={modalProps.hide}
+                        {...modalProps}
+                      />
+                    ));
+                  },
+                  disabled: props.inUse
                 }
               ]
             }}

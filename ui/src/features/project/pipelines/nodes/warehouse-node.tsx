@@ -9,10 +9,11 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Badge, Button, Card, Flex, message } from 'antd';
 import classNames from 'classnames';
-import { useMemo } from 'react';
+import { useContext, useMemo } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { ColorContext } from '@ui/context/colors';
 import { useFreightTimelineControllerContext } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
 import { refreshWarehouse } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
@@ -20,6 +21,7 @@ import { Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 import styles from './node-size-source-of-truth.module.less';
 
 export const WarehouseNode = (props: { warehouse: Warehouse }) => {
+  const colorContext = useContext(ColorContext);
   const navigate = useNavigate();
 
   const freightTimelineControllerContext = useFreightTimelineControllerContext();
@@ -31,6 +33,8 @@ export const WarehouseNode = (props: { warehouse: Warehouse }) => {
       message.success('Warehouse successfully refreshed');
     }
   });
+
+  const color = colorContext?.warehouseColorMap?.[props.warehouse?.metadata?.name || ''];
 
   const isSubscriptionHidden =
     freightTimelineControllerContext?.preferredFilter?.hideSubscriptions?.[
@@ -67,6 +71,9 @@ export const WarehouseNode = (props: { warehouse: Warehouse }) => {
         </Flex>
       }
       className={(styles['warehouse-node-size'], 'relative')}
+      style={{
+        border: color && `1px solid ${color}`
+      }}
     >
       <Button
         size='small'
