@@ -70,7 +70,7 @@ export const FreightTimelineFilters = (props: FreightTimelineFiltersProps) => {
 
       <div
         className={classNames('transition-all', {
-          'w-0 h-0 opacity-0': props.collapsed,
+          'w-0 h-0 opacity-0 invisible': props.collapsed,
           'w-full': !props.collapsed
         })}
       >
