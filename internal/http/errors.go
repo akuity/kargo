@@ -175,12 +175,7 @@ func Write(w http.ResponseWriter, statusCode int, msg string) {
 // Writef sets the statusCode on w before writing a formatted error
 // to the response writer as json.
 func Writef(w http.ResponseWriter, statusCode int, format string, args ...any) {
-	w.WriteHeader(statusCode)
-	_ = json.NewEncoder(w).Encode(
-		map[string]string{
-			"msg": fmt.Sprintf(format, args...),
-		},
-	)
+	Write(w, statusCode, fmt.Sprintf(format, args...))
 }
 
 // implement error
