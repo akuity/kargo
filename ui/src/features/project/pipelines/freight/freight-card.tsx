@@ -10,7 +10,6 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Divider, Dropdown, Flex, Typography } from 'antd';
-import { ItemType } from 'antd/es/menu/interface';
 import classNames from 'classnames';
 import { formatDistance } from 'date-fns';
 import { ReactNode, useMemo } from 'react';
@@ -78,22 +77,6 @@ export const FreightCard = (props: FreightCardProps) => {
 
   let CardContent: ReactNode;
 
-  const items: ItemType[] = [];
-
-  if (!props.inUse) {
-    items.push({
-      key: 'delete-freight',
-      label: 'Delete Freight',
-      icon: <FontAwesomeIcon icon={faTrash} />,
-      onClick: (e) => {
-        e.domEvent.stopPropagation();
-        deleteFreightModal.show((modalProps) => (
-          <DeleteFreightModal freight={props.freight} onDelete={modalProps.hide} {...modalProps} />
-        ));
-      }
-    });
-  }
-
   if (props.count) {
     CardContent = (
       <div className='flex flex-col items-center justify-center h-full px-2 bg-gray-200'>
@@ -130,7 +113,22 @@ export const FreightCard = (props: FreightCardProps) => {
                     actionContext?.actManuallyApprove(props.freight);
                   }
                 },
-                ...items
+                {
+                  key: 'delete-freight',
+                  label: 'Delete Freight',
+                  icon: <FontAwesomeIcon icon={faTrash} />,
+                  onClick: (e) => {
+                    e.domEvent.stopPropagation();
+                    deleteFreightModal.show((modalProps) => (
+                      <DeleteFreightModal
+                        freight={props.freight}
+                        onDelete={modalProps.hide}
+                        {...modalProps}
+                      />
+                    ));
+                  },
+                  disabled: props.inUse
+                }
               ]
             }}
           >
