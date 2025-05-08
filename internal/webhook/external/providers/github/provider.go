@@ -2,12 +2,13 @@ package github
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
 
 	gh "github.com/google/go-github/v71/github"
+
+	xhttp "github.com/akuity/kargo/internal/http"
 )
 
 var (
@@ -42,7 +43,7 @@ func (p *provider) Name() string {
 	return "github"
 }
 
-func (p *provider) Authenticate(r *http.Request) error {
+func (p *provider) GetRepository(r *http.Request) (string, error) {
 	var signature string
 	if h := r.Header.Get(gh.SHA1SignatureHeader); h != "" {
 		signature = h
@@ -51,7 +52,7 @@ func (p *provider) Authenticate(r *http.Request) error {
 		signature = h
 	}
 	if signature == "" {
-		return ErrMissingSignature
+		return "", xhttp.UnauthorizedError(ErrMissingSignature)
 	}
 
 	const maxBytes = 2 << 20
@@ -60,7 +61,7 @@ func (p *provider) Authenticate(r *http.Request) error {
 	// Read as far as we are allowed to
 	bodyBytes, err := io.ReadAll(lr)
 	if err != nil {
-		return fmt.Errorf("failed to read request body: %w", err)
+		return "", xhttp.BadRequestErrorf("failed to read request body: %w", err)
 	}
 
 	// If we read exactly the maximum, the body might be larger
@@ -69,38 +70,34 @@ func (p *provider) Authenticate(r *http.Request) error {
 		buf := make([]byte, 1)
 		var n int
 		if n, err = r.Body.Read(buf); err != nil && err != io.EOF {
-			return fmt.Errorf("failed to check for additional content: %w", err)
+			return "", xhttp.BadRequestErrorf("failed to check for additional content: %w", err)
 		}
 		if n > 0 || err != io.EOF {
-			return fmt.Errorf("response body exceeds maximum size of %d bytes", maxBytes)
+			return "", xhttp.BadRequestErrorf("response body exceeds maximum size of %d bytes", maxBytes)
 		}
 	}
 
-	if err := gh.ValidateSignature(
+	if err = gh.ValidateSignature(
 		signature,
 		bodyBytes,
 		[]byte(p.secret),
 	); err != nil {
-		return ErrInvalidSignature
+		return "", xhttp.UnauthorizedError(ErrInvalidSignature)
 	}
-	p.payload = bodyBytes
-	return nil
-}
 
-func (p *provider) Repository(r *http.Request) (string, error) {
 	eventType := r.Header.Get("X-GitHub-Event")
 	if eventType != "push" {
-		return "", ErrUnsupportedEventType
+		return "", xhttp.BadRequestError(ErrUnsupportedEventType)
 	}
 
 	e, err := gh.ParseWebHook(eventType, p.payload)
 	if err != nil {
-		return "", fmt.Errorf("failed to parse webhook event: %w", err)
+		return "", xhttp.BadRequestErrorf("failed to parse webhook event: %w", err)
 	}
 
 	pe, ok := e.(*gh.PushEvent)
 	if !ok {
-		return "", ErrUnsupportedEventType
+		return "", xhttp.BadRequestError(ErrUnsupportedEventType)
 	}
 	return *pe.Repo.HTMLURL, nil
 }

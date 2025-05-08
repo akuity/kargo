@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -25,27 +23,19 @@ func NewRefreshWarehouseWebhook(p providers.Provider, c client.Client) http.Hand
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		logger := logging.LoggerFromContext(ctx)
-		logger.Debug("authenticating request")
+		logger.Debug("identifying source repository")
 
-		if err := p.Authenticate(r); err != nil {
-			logger.Error(err, "failed to authenticate request")
-			xhttp.Error(w,
-				http.StatusUnauthorized,
-				"failed to authenticate request",
+		repo, err := p.GetRepository(r)
+		if err != nil {
+			code := xhttp.CodeFrom(err)
+			xhttp.WriteErrorf(w,
+				code,
+				"failed to get repository: %w",
+				err,
 			)
 			return
 		}
-		logger.Debug("request authenticated")
-
-		logger.Debug("retrieving source repo")
-		repo, err := p.Repository(r)
-		if err != nil {
-			logger.Error(err, "failed to retrieve source repo")
-			xhttp.Error(w, http.StatusBadRequest, err)
-			return
-		}
-
-		logger.Debug("repo retrieved", "name", repo)
+		logger.Debug("source repository retrieved", "name", repo)
 
 		var warehouses v1alpha1.WarehouseList
 		err = c.List(
@@ -57,8 +47,7 @@ func NewRefreshWarehouseWebhook(p providers.Provider, c client.Client) http.Hand
 		)
 		if err != nil {
 			logger.Error(err, "failed to list warehouses")
-			xhttp.Errorf(w,
-				http.StatusInternalServerError,
+			xhttp.WriteServerErrorf(w,
 				"failed to list warehouses: %w",
 				err,
 			)
@@ -70,7 +59,6 @@ func NewRefreshWarehouseWebhook(p providers.Provider, c client.Client) http.Hand
 		)
 
 		var numSuccessfullyRefreshed, numRefreshFailures int
-		code := http.StatusOK
 		for _, wh := range warehouses.Items {
 			_, err = api.RefreshWarehouse(
 				ctx,
@@ -85,7 +73,6 @@ func NewRefreshWarehouseWebhook(p providers.Provider, c client.Client) http.Hand
 					"warehouse", wh.GetName(),
 				)
 				numRefreshFailures++
-				code = http.StatusInternalServerError
 			} else {
 				logger.Debug("successfully patched annotations",
 					"warehouse", wh.GetName(),
@@ -94,30 +81,24 @@ func NewRefreshWarehouseWebhook(p providers.Provider, c client.Client) http.Hand
 			}
 		}
 
-		w.WriteHeader(code)
 		logger.Debug("execution complete",
 			"num-successful-refreshes", numSuccessfullyRefreshed,
 			"num-refresh-failures", numRefreshFailures,
 		)
 
 		if numRefreshFailures > 0 {
-			xhttp.Error(w,
-				code,
-				fmt.Errorf(
-					"failed to refresh %d of %d warehouses",
-					numRefreshFailures,
-					len(warehouses.Items),
-				),
+			xhttp.WriteServerErrorf(w,
+				"failed to refresh %d of %d warehouses",
+				numRefreshFailures,
+				len(warehouses.Items),
 			)
 			return
 		}
 
-		_ = json.NewEncoder(w).Encode(
-			map[string]string{
-				"result": fmt.Sprintf(
-					"refreshed %d warehouses",
-					len(warehouses.Items),
-				),
-			})
+		xhttp.Writef(w,
+			http.StatusOK,
+			"refreshed %d warehouses",
+			len(warehouses.Items),
+		)
 	})
 }
