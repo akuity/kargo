@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -68,14 +69,7 @@ func NewRefreshWarehouseWebhook(p providers.Provider, c client.Client) http.Hand
 			"num-warehouses", len(warehouses.Items),
 		)
 
-		resp := &struct {
-			WarehousesSuccessfullyRefreshed int               `json:"warehouses_successfully_refreshed"`
-			WarehousesFailedToRefresh       int               `json:"warehouses_failed_to_refresh"`
-			Errors                          map[string]string `json:"errors,omitempty"`
-		}{
-			Errors: make(map[string]string),
-		}
-
+		var numSuccessfullyRefreshed, numRefreshFailures int
 		code := http.StatusOK
 		for _, wh := range warehouses.Items {
 			_, err = api.RefreshWarehouse(
@@ -87,22 +81,41 @@ func NewRefreshWarehouseWebhook(p providers.Provider, c client.Client) http.Hand
 				},
 			)
 			if err != nil {
-				logger.Error(err, "failed to patch annotations",
+				logger.Error(err, "failed to refresh warehouse",
 					"warehouse", wh.GetName(),
 				)
-				resp.Errors[wh.GetName()] = err.Error()
-				resp.WarehousesFailedToRefresh++
-				if code == http.StatusOK {
-					code = http.StatusMultiStatus
-				}
+				numRefreshFailures++
+				code = http.StatusInternalServerError
 			} else {
 				logger.Debug("successfully patched annotations",
 					"warehouse", wh.GetName(),
 				)
-				resp.WarehousesSuccessfullyRefreshed++
+				numSuccessfullyRefreshed++
 			}
 		}
 		w.WriteHeader(code)
-		_ = json.NewEncoder(w).Encode(resp)
+		logger.Debug("execution complete",
+			"num-successful-refreshes", numSuccessfullyRefreshed,
+			"num-refresh-failures", numRefreshFailures,
+		)
+		if numRefreshFailures > 0 {
+			xhttp.Error(w,
+				code,
+				fmt.Errorf(
+					"failed to refresh %d of %d warehouses",
+					numRefreshFailures,
+					len(warehouses.Items),
+				),
+			)
+			return
+		}
+
+		_ = json.NewEncoder(w).Encode(
+			map[string]string{
+				"result": fmt.Sprintf(
+					"refreshed %d warehouses",
+					len(warehouses.Items),
+				),
+			})
 	})
 }
