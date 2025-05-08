@@ -78,7 +78,7 @@ func (o *externalWebhooksServerOptions) run(ctx context.Context) error {
 	}
 
 	if err = kargoapi.AddToScheme(cluster.GetClient().Scheme()); err != nil {
-		return fmt.Errorf("failed to add custom kargo type to runtime scheme: %w", err)
+		return fmt.Errorf("error adding Kargo API to Kargo manager scheme: %w", err)
 	}
 
 	err = cluster.GetFieldIndexer().IndexField(
