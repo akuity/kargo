@@ -34,7 +34,7 @@ import (
 	"github.com/akuity/kargo/internal/controller"
 	argocdapi "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	kargoEvent "github.com/akuity/kargo/internal/event"
-	exprfn "github.com/akuity/kargo/internal/expressions/function"
+	exprfn "github.com/akuity/kargo/pkg/expr/function"
 	"github.com/akuity/kargo/internal/health"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/kargo"

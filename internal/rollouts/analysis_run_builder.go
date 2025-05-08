@@ -16,7 +16,7 @@ import (
 
 	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/expressions"
+	"github.com/akuity/kargo/pkg/expr"
 )
 
 // controllerInstanceIDLabelKey is the key for the Argo Rollouts controller
@@ -209,7 +209,7 @@ func (b *AnalysisRunBuilder) buildArgs(
 		}
 
 		for _, v := range exprCfg.Vars {
-			value, err := expressions.EvaluateTemplate(v.Value, exprCfg.Env, exprCfg.Options...)
+			value, err := expr.EvaluateTemplate(v.Value, exprCfg.Env, exprCfg.Options...)
 			if err != nil {
 				return nil, fmt.Errorf("evaluate variable %q: %w", v.Name, err)
 			}
@@ -223,7 +223,7 @@ func (b *AnalysisRunBuilder) buildArgs(
 			Name: arg.Name,
 		}
 		if arg.Value != "" {
-			value, err := expressions.EvaluateTemplate(arg.Value, exprCfg.Env, exprCfg.Options...)
+			value, err := expr.EvaluateTemplate(arg.Value, exprCfg.Env, exprCfg.Options...)
 			if err != nil {
 				return nil, fmt.Errorf("evaluate argument %q: %w", arg.Name, err)
 			}
