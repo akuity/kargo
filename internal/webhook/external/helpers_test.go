@@ -133,10 +133,7 @@ func TestRefreshWarehouses(t *testing.T) {
 			)
 			if test.expectedErr != nil {
 				require.Error(t, err)
-				require.Contains(t,
-					err.Error(),
-					test.expectedErr.Error(),
-				)
+				require.ErrorContains(t, err, test.expectedErr.Error())
 				return
 			}
 			require.NoError(t, err)
