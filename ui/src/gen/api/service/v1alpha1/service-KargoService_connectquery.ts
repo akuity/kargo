@@ -103,6 +103,11 @@ export const getProject = KargoService.method.getProject;
 export const listProjects = KargoService.method.listProjects;
 
 /**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetProjectConfig
+ */
+export const getProjectConfig = KargoService.method.getProjectConfig;
+
+/**
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ApproveFreight
  */
 export const approveFreight = KargoService.method.approveFreight;
