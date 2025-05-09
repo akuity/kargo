@@ -54,8 +54,8 @@ func TestRefresh(t *testing.T) {
 			},
 			repoName: "https://github.com/username/repo",
 			expectedResult: &refreshResult{
-				totalWarehouses: 1,
-				numFailures:     0,
+				successes: 1,
+				failures:  0,
 			},
 			expectedErr: nil,
 		},
@@ -119,8 +119,8 @@ func TestRefresh(t *testing.T) {
 			},
 			repoName: "https://github.com/username/repo",
 			expectedResult: &refreshResult{
-				totalWarehouses: 2,
-				numFailures:     1,
+				successes: 1,
+				failures:  1,
 			},
 			expectedErr: nil,
 		},
@@ -141,12 +141,12 @@ func TestRefresh(t *testing.T) {
 			}
 			require.NoError(t, err)
 			require.Equal(t,
-				test.expectedResult.numFailures,
-				result.numFailures,
+				test.expectedResult.failures,
+				result.failures,
 			)
 			require.Equal(t,
-				test.expectedResult.totalWarehouses,
-				result.totalWarehouses,
+				test.expectedResult.successes,
+				result.successes,
 			)
 		})
 	}

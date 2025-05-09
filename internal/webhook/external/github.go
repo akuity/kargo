@@ -118,17 +118,17 @@ func githubHandler(c client.Client) http.HandlerFunc {
 		}
 
 		logger.Debug("execution complete",
-			"total", result.totalWarehouses,
-			"num-failures", result.numFailures,
+			"successes", result.successes,
+			"failures", result.failures,
 		)
 
-		if result.numFailures > 0 {
+		if result.failures > 0 {
 			xhttp.WriteResponseJSON(w,
 				http.StatusInternalServerError,
 				map[string]string{
 					"error": fmt.Sprintf("failed to refresh %d of %d warehouses",
-						result.numFailures,
-						result.totalWarehouses,
+						result.failures,
+						result.successes+result.failures,
 					),
 				},
 			)
@@ -139,7 +139,7 @@ func githubHandler(c client.Client) http.HandlerFunc {
 			http.StatusOK,
 			map[string]string{
 				"msg": fmt.Sprintf("refreshed %d warehouses",
-					result.totalWarehouses,
+					result.successes,
 				),
 			},
 		)

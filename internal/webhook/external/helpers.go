@@ -14,8 +14,8 @@ import (
 )
 
 type refreshResult struct {
-	totalWarehouses int
-	numFailures     int
+	successes int
+	failures  int
 }
 
 func refresh(
@@ -40,9 +40,8 @@ func refresh(
 		"num-warehouses", len(warehouses.Items),
 	)
 
-	var total, numRefreshFailures int
+	var successes, failures int
 	for _, wh := range warehouses.Items {
-		total++
 		_, err = api.RefreshWarehouse(
 			ctx,
 			c,
@@ -56,15 +55,16 @@ func refresh(
 				"warehouse", wh.GetName(),
 				"error", err.Error(),
 			)
-			numRefreshFailures++
+			failures++
 		} else {
 			logger.Debug("successfully patched annotations",
 				"warehouse", wh.GetName(),
 			)
+			successes++
 		}
 	}
 	return &refreshResult{
-		numFailures:     numRefreshFailures,
-		totalWarehouses: len(warehouses.Items),
+		failures:  failures,
+		successes: successes,
 	}, nil
 }
