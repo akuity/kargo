@@ -12,7 +12,6 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/indexer"
-	"github.com/akuity/kargo/internal/logging"
 )
 
 func TestRefresh(t *testing.T) {
@@ -130,7 +129,6 @@ func TestRefresh(t *testing.T) {
 			result, err := refresh(
 				t.Context(),
 				test.newKubeClient(),
-				logging.NewLogger(logging.DebugLevel),
 				test.repoName,
 			)
 			if test.expectedErr != nil {

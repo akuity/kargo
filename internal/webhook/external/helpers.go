@@ -21,7 +21,6 @@ type refreshResult struct {
 func refresh(
 	ctx context.Context,
 	c client.Client,
-	l *logging.Logger,
 	repoName string,
 ) (*refreshResult, error) {
 	var warehouses v1alpha1.WarehouseList
@@ -36,6 +35,7 @@ func refresh(
 		return nil, fmt.Errorf("failed to list warehouses: %w", err)
 	}
 
+	l := logging.LoggerFromContext(ctx)
 	l.Debug("listed warehouses",
 		"num-warehouses", len(warehouses.Items),
 	)

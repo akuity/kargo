@@ -108,7 +108,8 @@ func githubHandler(c client.Client) http.HandlerFunc {
 
 		repo := *pe.Repo.HTMLURL
 		logger.Debug("source repository retrieved", "name", repo)
-		result, err := refresh(ctx, c, logger, repo)
+		ctx = logging.ContextWithLogger(ctx, logger)
+		result, err := refresh(ctx, c, repo)
 		if err != nil {
 			xhttp.WriteErrorJSON(w,
 				xhttp.Error(err, http.StatusInternalServerError),
@@ -122,14 +123,14 @@ func githubHandler(c client.Client) http.HandlerFunc {
 		)
 
 		if result.numFailures > 0 {
-			xhttp.WriteErrorJSON(w,
-				xhttp.Error(
-					fmt.Errorf("failed to refresh %d of %d warehouses",
+			xhttp.WriteResponseJSON(w,
+				http.StatusInternalServerError,
+				map[string]string{
+					"error": fmt.Sprintf("failed to refresh %d of %d warehouses",
 						result.numFailures,
 						result.totalWarehouses,
 					),
-					http.StatusInternalServerError,
-				),
+				},
 			)
 			return
 		}
