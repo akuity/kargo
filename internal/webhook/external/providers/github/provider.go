@@ -38,18 +38,8 @@ func NewProvider() (*provider, error) {
 	return &provider{secret: secret}, nil
 }
 
-func (p *provider) Name() string {
-	return "github"
-}
-
 func (p *provider) GetRepository(r *http.Request) (string, error) {
-	var signature string
-	if h := r.Header.Get(gh.SHA1SignatureHeader); h != "" {
-		signature = h
-	}
-	if h := r.Header.Get(gh.SHA256SignatureHeader); h != "" {
-		signature = h
-	}
+	signature := r.Header.Get(gh.SHA256SignatureHeader)
 	if signature == "" {
 		return "", xhttp.UnauthorizedError(ErrMissingSignature)
 	}
