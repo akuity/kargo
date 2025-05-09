@@ -65,15 +65,15 @@ export const newErrorHandler = (handler: (err: ConnectError) => void): Intercept
     });
 };
 
-const defaultErrorHandler = newErrorHandler((err) => {
+export const defaultErrorHandler = (err: ConnectError) => {
   const errorMessage = err instanceof ConnectError ? err.rawMessage : 'Unexpected API error';
   notification.error({ message: errorMessage, placement: 'bottomRight' });
-});
+};
 
 export const transport = createConnectTransport({
   baseUrl: '',
   useBinaryFormat: true,
-  interceptors: [defaultErrorHandler]
+  interceptors: [newErrorHandler(defaultErrorHandler)]
 });
 
 export const newTransportWithAuth = (errorHandler: Interceptor) =>
@@ -83,4 +83,4 @@ export const newTransportWithAuth = (errorHandler: Interceptor) =>
     interceptors: [authHandler, errorHandler]
   });
 
-export const transportWithAuth = newTransportWithAuth(defaultErrorHandler);
+export const transportWithAuth = newTransportWithAuth(newErrorHandler(defaultErrorHandler));
