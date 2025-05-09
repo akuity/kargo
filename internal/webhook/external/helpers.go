@@ -21,7 +21,7 @@ type refreshResult struct {
 func refresh(
 	ctx context.Context,
 	c client.Client,
-	repoName string,
+	repoURL string,
 ) (*refreshResult, error) {
 	logger := logging.LoggerFromContext(ctx)
 	var warehouses v1alpha1.WarehouseList
@@ -29,7 +29,7 @@ func refresh(
 		ctx,
 		&warehouses,
 		client.MatchingFields{
-			indexer.WarehousesBySubscribedURLsField: repoName,
+			indexer.WarehousesBySubscribedURLsField: repoURL,
 		},
 	)
 	if err != nil {
