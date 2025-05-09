@@ -292,6 +292,12 @@ The name of the GSA it attempts to
 impersonate will _always_ be of the form
 `kargo-project-<KARGO_PROJECT_NAME>@<GCP_PROJECT_NAME>.iam.gserviceaccount.com`.
 
+:::info
+The name of the GSA associated with each Kargo project is deliberately
+not configurable to prevent project admins from attempting to coerce Kargo into
+assuming arbitrary GSA's.
+:::
+
 Each [GSA(Google Service Account)](https://cloud.google.com/iam/docs/service-account-overview):
 
 - Should be granted read-only access to applicable
