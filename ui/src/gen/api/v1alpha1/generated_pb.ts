@@ -1164,7 +1164,7 @@ export type GitDiscoveryResult = Message<"github.com.akuity.kargo.api.v1alpha1.G
    * RepoURL is the repository URL of the GitSubscription.
    *
    * +kubebuilder:validation:MinLength=1
-   * +kubebuilder:validation:Pattern=`(?:^(https?)://(?:([\w-]+):(.+)@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
+   * +kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
    *
    * @generated from field: optional string repoURL = 1;
    */
@@ -1199,7 +1199,7 @@ export type GitSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.GitS
    * URL is the repository's URL. This is a required field.
    *
    * +kubebuilder:validation:MinLength=1
-   * +kubebuilder:validation:Pattern=`(?:^(https?)://(?:([\w-]+):(.+)@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
+   * +kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
    *
    * @generated from field: optional string repoURL = 1;
    */
