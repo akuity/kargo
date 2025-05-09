@@ -23,6 +23,7 @@ func refresh(
 	c client.Client,
 	repoName string,
 ) (*refreshResult, error) {
+	logger := logging.LoggerFromContext(ctx)
 	var warehouses v1alpha1.WarehouseList
 	err := c.List(
 		ctx,
@@ -35,8 +36,7 @@ func refresh(
 		return nil, fmt.Errorf("failed to list warehouses: %w", err)
 	}
 
-	l := logging.LoggerFromContext(ctx)
-	l.Debug("listed warehouses",
+	logger.Debug("listed warehouses",
 		"num-warehouses", len(warehouses.Items),
 	)
 
@@ -52,13 +52,13 @@ func refresh(
 			},
 		)
 		if err != nil {
-			l.Error(err, "failed to refresh warehouse",
+			logger.Error(err, "failed to refresh warehouse",
 				"warehouse", wh.GetName(),
 				"error", err.Error(),
 			)
 			numRefreshFailures++
 		} else {
-			l.Debug("successfully patched annotations",
+			logger.Debug("successfully patched annotations",
 				"warehouse", wh.GetName(),
 			)
 		}
