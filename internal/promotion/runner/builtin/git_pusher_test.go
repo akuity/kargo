@@ -9,11 +9,13 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/sosedoff/gitkit"
 	"github.com/stretchr/testify/require"
 
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/gitprovider"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -200,6 +202,32 @@ func Test_gitPusher_run(t *testing.T) {
 	err = workTree.AddAllAndCommit("Initial commit", nil)
 	require.NoError(t, err)
 
+	// Set up a fake git provider
+	// Cannot register multiple providers with the same name, so this takes
+	// care of that problem
+	fakeGitProviderName := uuid.NewString()
+	gitprovider.Register(
+		fakeGitProviderName,
+		gitprovider.Registration{
+			Predicate: func(repoURL string) bool {
+				return true
+			},
+			NewProvider: func(
+				string,
+				*gitprovider.Options,
+			) (gitprovider.Interface, error) {
+				return &gitprovider.Fake{
+					GetCommitURLFn: func(
+						repoURL string,
+						sha string,
+					) (string, error) {
+						return fmt.Sprintf("%s/commit/%s", repoURL, sha), nil
+					},
+				}, nil
+			},
+		},
+	)
+
 	// Now we can proceed to test gitPusher...
 
 	r := newGitPusher(&credentials.FakeDB{})
@@ -229,4 +257,7 @@ func Test_gitPusher_run(t *testing.T) {
 	actualCommit, ok := res.Output[stateKeyCommit]
 	require.True(t, ok)
 	require.Equal(t, expectedCommit, actualCommit)
+	expectedCommitURL := fmt.Sprintf("%s/commit/%s", testRepoURL, expectedCommit)
+	actualCommitURL := res.Output[stateKeyCommitURL]
+	require.Equal(t, expectedCommitURL, actualCommitURL)
 }

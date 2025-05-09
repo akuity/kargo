@@ -91,3 +91,34 @@ func TestParseRepoURL(t *testing.T) {
 		})
 	}
 }
+
+func TestGetCommitURL(t *testing.T) {
+	testCases := []struct {
+		repoURL           string
+		sha               string
+		expectedCommitURL string
+	}{
+		{
+			repoURL:           "ssh://git@ssh.dev.azure.com/akuity/_git/kargo",
+			sha:               "sha",
+			expectedCommitURL: "https://dev.azure.com/akuity/_git/kargo/commit/sha",
+		},
+		{
+			repoURL:           "git@ssh.dev.azure.com:v3/akuity/_git/kargo",
+			sha:               "sha",
+			expectedCommitURL: "https://dev.azure.com/akuity/_git/kargo/commit/sha",
+		},
+		{
+			repoURL:           "http://dev.azure.com/akuity/_git/kargo",
+			sha:               "sha",
+			expectedCommitURL: "https://dev.azure.com/akuity/_git/kargo/commit/sha",
+		},
+	}
+	for _, testCase := range testCases {
+		// call the code we are testing
+		g := provider{}
+		commitURL, err := g.GetCommitURL(testCase.repoURL, testCase.sha)
+		require.NoError(t, err)
+		require.Equal(t, testCase.expectedCommitURL, commitURL)
+	}
+}
