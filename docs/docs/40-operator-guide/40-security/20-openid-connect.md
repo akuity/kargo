@@ -84,13 +84,10 @@ When installing Kargo with Helm, all options related to OIDC are grouped under
 
     1. Set `api.oidc.clientID` to the client ID provided by your IDP.
 
-        If you needed to register two separate clients, use the client ID
-        associated with the UI.
+        If you register separate separate clients for UI and CLI with your IDP,
+        additionally specify a value for `api.oidc.cliClientID`. This setting
+        can otherwise be left alone.
 
-    1. Set `api.oidc.cliClientID` to the client ID for the OIDC client used by CLI (optional)
-
-        If you needed to register two separate clients, use the client ID
-        associated with the CLI.
 
     1. Ensure `api.oidc.dex.enabled` remains set to its default value of
        `false`.
