@@ -290,10 +290,6 @@ specific project, it will first attempt to
 [impersonate a Google service account](https://cloud.google.com/iam/docs/service-account-impersonation) 
 specific to that project. 
 
-:::note
-There is no need to create a Google Service Account (GSA) for the Kargo controller itself.
-:::
-
 The name of the service account it attempts to
 impersonate will _always_ be of the form
 `kargo-project-<KARGO_PROJECT_NAME>@<GCP_PROJECT_NAME>.iam.gserviceaccount.com`.
