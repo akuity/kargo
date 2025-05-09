@@ -13,7 +13,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -27,22 +26,10 @@ func TestGithubHandler(t *testing.T) {
 	kubeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(
-			&kargoapi.Warehouse{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fakenamespace",
-					Name:      "fakename",
-				},
-				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
-						{
-							Git: &kargoapi.GitSubscription{
-								// matches repo url in event payload
-								RepoURL: "https://github.com/username/repo",
-							},
-						},
-					},
-				},
-			},
+		// not adding any objects
+		// because the refresh is tested in helpers_test.go
+		// this test just ensures the correct http status
+		// codes are returned for the edgecases provided
 		).
 		WithIndex(
 			&kargoapi.Warehouse{},
@@ -72,7 +59,7 @@ func TestGithubHandler(t *testing.T) {
 				req.Header.Set("X-GitHub-Event", "push")
 				return req
 			},
-			expectedMsg:  "{\"msg\":\"refreshed 1 warehouses\"}\n",
+			expectedMsg:  "{\"msg\":\"refreshed 0 warehouses\"}\n",
 			expectedCode: http.StatusOK,
 		},
 		{
