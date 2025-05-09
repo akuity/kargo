@@ -3,7 +3,6 @@ package external
 import (
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 
@@ -15,18 +14,12 @@ import (
 )
 
 var (
-	// ErrMissingSignature is returned when the 'X-Hub-Signature-256'
+	// errMissingSignature is returned when the 'X-Hub-Signature-256'
 	// header is not found or empty.
-	ErrMissingSignature = errors.New("missing signature")
-	// ErrInvalidSignature is returned when the 'X-Hub-Signature-256'
-	// header is not the value that was expected.
-	ErrInvalidSignature = errors.New("invalid signature")
-	// ErrSecretUnset is returned when the 'GH_WEBHOOK_SECRET'
+	errMissingSignature = errors.New("missing signature")
+	// errSecretUnset is returned when the 'GH_WEBHOOK_SECRET'
 	// environment variable is empty.
-	ErrSecretUnset = errors.New("secret is unset")
-	// ErrUnsupportedEventType is returned when the received
-	// request body does not conform to a github push event.
-	ErrUnsupportedEventType = errors.New("unsupported event type")
+	errSecretUnset = errors.New("secret is unset")
 )
 
 // githubHandler handles push events for github.
@@ -40,67 +33,34 @@ func githubHandler(c client.Client) http.HandlerFunc {
 		logger := logging.LoggerFromContext(ctx)
 		logger.Debug("identifying source repository")
 
-		signature := r.Header.Get(gh.SHA256SignatureHeader)
-		if signature == "" {
-			xhttp.WriteErrorJSON(w,
-				xhttp.Error(
-					ErrMissingSignature,
-					http.StatusUnauthorized,
-				),
-			)
-			return
-		}
-
-		const maxBytes = 2 << 20
-		lr := io.LimitReader(r.Body, maxBytes)
-
-		// Read as far as we are allowed to
-		bodyBytes, err := io.ReadAll(lr)
-		if err != nil {
-			xhttp.WriteErrorJSON(w,
-				xhttp.Error(
-					fmt.Errorf("failed to read request body: %w", err),
-					http.StatusBadRequest,
-				),
-			)
-			return
-		}
-
-		// If we read exactly the maximum, the body might be larger
-		if len(bodyBytes) == maxBytes {
-			// Try to read one more byte
-			buf := make([]byte, 1)
-			var n int
-			if n, err = r.Body.Read(buf); err != nil && err != io.EOF {
-				xhttp.WriteErrorJSON(w,
-					xhttp.Error(
-						fmt.Errorf("failed to check for additional content: %w", err),
-						http.StatusInternalServerError,
-					),
-				)
-				return
-			}
-
-			if n > 0 {
-				xhttp.WriteErrorJSON(w,
-					xhttp.Error(
-						fmt.Errorf("response body exceeds maximum size of %d bytes", maxBytes),
-						http.StatusRequestEntityTooLarge,
-					),
-				)
-				return
-			}
-		}
-
 		secret, ok := os.LookupEnv("GH_WEBHOOK_SECRET")
 		if !ok {
-			logger.Error(ErrSecretUnset, "environment misconfiguration")
+			logger.Error(errSecretUnset, "environment misconfiguration")
 			xhttp.WriteErrorJSON(w,
 				xhttp.Error(
 					// keep it vague, no need to leak config details
 					errors.New("unexpected server error"),
 					http.StatusInternalServerError,
 				),
+			)
+			return
+		}
+
+		signature := r.Header.Get(gh.SHA256SignatureHeader)
+		if signature == "" {
+			xhttp.WriteErrorJSON(w,
+				xhttp.Error(
+					errMissingSignature,
+					http.StatusUnauthorized,
+				),
+			)
+			return
+		}
+
+		bodyBytes, code, err := limitRead(r.Body)
+		if err != nil {
+			xhttp.WriteErrorJSON(w,
+				xhttp.Error(err, code),
 			)
 			return
 		}
@@ -158,7 +118,10 @@ func githubHandler(c client.Client) http.HandlerFunc {
 		logger.Debug("source repository retrieved", "name", repo)
 		result, err := refresh(ctx, c, logger, repo)
 		if err != nil {
-
+			xhttp.WriteErrorJSON(w,
+				xhttp.Error(err, http.StatusInternalServerError),
+			)
+			return
 		}
 
 		logger.Debug("execution complete",

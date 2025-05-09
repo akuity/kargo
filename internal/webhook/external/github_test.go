@@ -21,7 +21,7 @@ import (
 	"github.com/akuity/kargo/internal/indexer"
 )
 
-func TestRefreshWarehouseWebhook(t *testing.T) {
+func TestGithubHandler(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 	kubeClient := fake.NewClientBuilder().
@@ -85,7 +85,7 @@ func TestRefreshWarehouseWebhook(t *testing.T) {
 					mockRequestPayload,
 				)
 			},
-			expectedMsg:  "{\"error\":\"failed to get repository: Unauthorized: missing signature\"}\n",
+			expectedMsg:  "{\"error\":\"missing signature\"}\n",
 			expectedCode: http.StatusUnauthorized,
 		},
 		{
@@ -103,8 +103,8 @@ func TestRefreshWarehouseWebhook(t *testing.T) {
 				req.Header.Set("X-GitHub-Event", "ping")
 				return req
 			},
-			expectedMsg:  "{\"error\":\"failed to get repository: Bad Request: unsupported event type\"}\n",
-			expectedCode: http.StatusBadRequest,
+			expectedMsg:  "{\"error\":\"only push events are supported\"}\n",
+			expectedCode: http.StatusNotImplemented,
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
@@ -117,8 +117,8 @@ func TestRefreshWarehouseWebhook(t *testing.T) {
 				w.Code,
 			)
 			require.Contains(t,
-				w.Body.String(),
 				test.expectedMsg,
+				w.Body.String(),
 			)
 		})
 	}
