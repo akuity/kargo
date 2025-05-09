@@ -53,12 +53,9 @@ func LimitRead(r io.Reader) ([]byte, error) {
 		buf := make([]byte, 1)
 		var n int
 		if n, err = r.Read(buf); err != nil && err != io.EOF {
-			return nil, Error(
-				fmt.Errorf(
-					"failed to check for additional content: %w",
-					err,
-				),
-				http.StatusInternalServerError,
+			return nil, fmt.Errorf(
+				"failed to check for additional content: %w",
+				err,
 			)
 		}
 		if n > 0 {
