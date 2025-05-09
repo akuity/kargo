@@ -38,10 +38,7 @@ func TestLimitRead(t *testing.T) {
 				require.True(t, ok)
 				receivedCode = apiErr.code
 			}
-			require.Equal(t,
-				test.expectedCode,
-				receivedCode,
-			)
+			require.Equal(t, test.expectedCode, receivedCode)
 		})
 	}
 }
