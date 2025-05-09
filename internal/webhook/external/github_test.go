@@ -99,14 +99,8 @@ func TestGithubHandler(t *testing.T) {
 			w := httptest.NewRecorder()
 			h := githubHandler(kubeClient)
 			h(w, req)
-			require.Equal(t,
-				test.expectedCode,
-				w.Code,
-			)
-			require.Contains(t,
-				test.expectedMsg,
-				w.Body.String(),
-			)
+			require.Equal(t, test.expectedCode, w.Code)
+			require.Contains(t, test.expectedMsg, w.Body.String())
 		})
 	}
 }

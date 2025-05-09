@@ -37,10 +37,10 @@ func refreshWarehouses(
 	}
 
 	logger.Debug("listed warehouses",
-		"num-warehouses", len(warehouses.Items),
+		"count", len(warehouses.Items),
 	)
 
-	var successes, failures int
+	var failures int
 	for _, wh := range warehouses.Items {
 		_, err = api.RefreshWarehouse(
 			ctx,
@@ -60,11 +60,10 @@ func refreshWarehouses(
 			logger.Debug("successfully patched annotations",
 				"warehouse", wh.GetName(),
 			)
-			successes++
 		}
 	}
 	return &refreshResult{
 		failures:  failures,
-		successes: successes,
+		successes: len(warehouses.Items) - failures,
 	}, nil
 }
