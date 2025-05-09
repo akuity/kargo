@@ -10,7 +10,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/akuity/kargo/internal/logging"
-	handlers "github.com/akuity/kargo/internal/webhook/external/handlers/github"
 )
 
 type server struct {
@@ -33,9 +32,7 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	logger := logging.LoggerFromContext(ctx)
 	mux := http.NewServeMux()
 
-	mux.Handle("POST /v1/github",
-		handlers.NewRefreshWarehouseWebhook(s.client),
-	)
+	mux.Handle("POST /v1/github", githubHandler(s.client))
 	// TODO(fuskovic): support additional providers
 
 	srv := &http.Server{

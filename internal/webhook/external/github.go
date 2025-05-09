@@ -1,4 +1,4 @@
-package handlers
+package external
 
 import (
 	"errors"
@@ -8,13 +8,9 @@ import (
 	"os"
 
 	gh "github.com/google/go-github/v71/github"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/api"
 	xhttp "github.com/akuity/kargo/internal/http"
-	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -33,12 +29,12 @@ var (
 	ErrUnsupportedEventType = errors.New("unsupported event type")
 )
 
-// NewRefreshWarehouseWebhook handles push events for the designated provider.
-// After the provider has been resolved and the request has been authenticated,
+// githubHandler handles push events for github.
+// After the request has been authenticated,
 // the kubeclient is queried for all warehouses that contain a subscription
 // to the repo in question. Those warehouses are then patched with a special
 // annotation that signals down stream logic to refresh the warehouse.
-func NewRefreshWarehouseWebhook(c client.Client) http.HandlerFunc {
+func githubHandler(c client.Client) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		logger := logging.LoggerFromContext(ctx)
@@ -160,64 +156,22 @@ func NewRefreshWarehouseWebhook(c client.Client) http.HandlerFunc {
 
 		repo := *pe.Repo.HTMLURL
 		logger.Debug("source repository retrieved", "name", repo)
-
-		var warehouses v1alpha1.WarehouseList
-		err = c.List(
-			ctx,
-			&warehouses,
-			client.MatchingFields{
-				indexer.WarehousesBySubscribedURLsField: repo,
-			},
-		)
+		result, err := refresh(ctx, c, logger, repo)
 		if err != nil {
-			logger.Error(err, "failed to list warehouses")
-			xhttp.WriteErrorJSON(w,
-				xhttp.Error(
-					fmt.Errorf("failed to list warehouses: %w", err),
-					http.StatusInternalServerError,
-				),
-			)
-			return
-		}
 
-		logger.Debug("listed warehouses",
-			"num-warehouses", len(warehouses.Items),
-		)
-
-		var numSuccessfullyRefreshed, numRefreshFailures int
-		for _, wh := range warehouses.Items {
-			_, err = api.RefreshWarehouse(
-				ctx,
-				c,
-				types.NamespacedName{
-					Namespace: wh.GetNamespace(),
-					Name:      wh.GetName(),
-				},
-			)
-			if err != nil {
-				logger.Error(err, "failed to refresh warehouse",
-					"warehouse", wh.GetName(),
-				)
-				numRefreshFailures++
-			} else {
-				logger.Debug("successfully patched annotations",
-					"warehouse", wh.GetName(),
-				)
-				numSuccessfullyRefreshed++
-			}
 		}
 
 		logger.Debug("execution complete",
-			"num-successful-refreshes", numSuccessfullyRefreshed,
-			"num-refresh-failures", numRefreshFailures,
+			"total", result.totalWarehouses,
+			"num-failures", result.numFailures,
 		)
 
-		if numRefreshFailures > 0 {
+		if result.numFailures > 0 {
 			xhttp.WriteErrorJSON(w,
 				xhttp.Error(
 					fmt.Errorf("failed to refresh %d of %d warehouses",
-						numRefreshFailures,
-						len(warehouses.Items),
+						result.numFailures,
+						result.totalWarehouses,
 					),
 					http.StatusInternalServerError,
 				),
@@ -229,7 +183,7 @@ func NewRefreshWarehouseWebhook(c client.Client) http.HandlerFunc {
 			http.StatusOK,
 			map[string]string{
 				"msg": fmt.Sprintf("refreshed %d warehouses",
-					len(warehouses.Items),
+					result.totalWarehouses,
 				),
 			},
 		)

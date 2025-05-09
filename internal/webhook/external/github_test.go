@@ -1,4 +1,4 @@
-package handlers
+package external
 
 import (
 	"bytes"
@@ -110,7 +110,7 @@ func TestRefreshWarehouseWebhook(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			req := test.setup()
 			w := httptest.NewRecorder()
-			h := NewRefreshWarehouseWebhook(kubeClient)
+			h := githubHandler(kubeClient)
 			h(w, req)
 			require.Equal(t,
 				test.expectedCode,
