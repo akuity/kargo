@@ -70,10 +70,6 @@ func UnimplementedErrorf(format string, args ...any) error {
 // before writing the error as json.
 func WriteBadRequestError(w http.ResponseWriter, err any) {
 	writeHttpError(w, BadRequestError(err))
-	WriteError(w,
-		http.StatusBadRequest,
-		BadRequestError(err),
-	)
 }
 
 // WriteBadRequestErrorf sets a 400 status code header
