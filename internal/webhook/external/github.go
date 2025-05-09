@@ -13,15 +13,6 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
-var (
-	// errMissingSignature is returned when the 'X-Hub-Signature-256'
-	// header is not found or empty.
-	errMissingSignature = errors.New("missing signature")
-	// errSecretUnset is returned when the 'GH_WEBHOOK_SECRET'
-	// environment variable is empty.
-	errSecretUnset = errors.New("secret is unset")
-)
-
 // githubHandler handles push events for github.
 // After the request has been authenticated,
 // the kubeclient is queried for all warehouses that contain a subscription
@@ -35,7 +26,10 @@ func githubHandler(c client.Client) http.HandlerFunc {
 
 		secret, ok := os.LookupEnv("GH_WEBHOOK_SECRET")
 		if !ok {
-			logger.Error(errSecretUnset, "environment misconfiguration")
+			logger.Error(
+				errors.New("GH_WEBHOOK_SECRET unset"),
+				"environment misconfiguration",
+			)
 			xhttp.WriteErrorJSON(w,
 				xhttp.Error(
 					// keep it vague, no need to leak config details
@@ -50,7 +44,7 @@ func githubHandler(c client.Client) http.HandlerFunc {
 		if signature == "" {
 			xhttp.WriteErrorJSON(w,
 				xhttp.Error(
-					errMissingSignature,
+					errors.New("missing signature"),
 					http.StatusUnauthorized,
 				),
 			)

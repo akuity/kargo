@@ -39,12 +39,7 @@ func LimitRead(r io.Reader) ([]byte, error) {
 	// Read as far as we are allowed to
 	bodyBytes, err := io.ReadAll(lr)
 	if err != nil {
-		return nil, Error(
-			fmt.Errorf(
-				"failed to read from reader: %w", err,
-			),
-			http.StatusBadRequest,
-		)
+		return nil, fmt.Errorf("failed to read from reader: %w", err)
 	}
 
 	// If we read exactly the maximum, the body might be larger
