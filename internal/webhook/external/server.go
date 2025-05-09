@@ -32,8 +32,8 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	logger := logging.LoggerFromContext(ctx)
 	mux := http.NewServeMux()
 
-	// TODO: Register handlers here
-	// mux.Handle("/", ...)
+	mux.Handle("POST /v1/github", githubHandler(s.client))
+	// TODO(fuskovic): support additional providers
 
 	srv := &http.Server{
 		Handler:           mux,

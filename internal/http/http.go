@@ -1,9 +1,13 @@
 package http
 
 import (
+	"fmt"
+	"io"
 	"net/http"
 	"time"
 )
+
+const MaxBytes = 2 << 20
 
 var noCacheHeaders = map[string]string{
 	"Expires":         time.Unix(0, 0).Format(time.RFC1123),
@@ -27,4 +31,34 @@ func SetCacheHeaders(w http.ResponseWriter, maxAge time.Duration, timeUntilExpir
 	}
 	w.Header().Set("Cache-Control", "public, max-age="+maxAge.String())
 	w.Header().Set("Expires", time.Now().Add(timeUntilExpiry).Format(time.RFC1123))
+}
+
+func LimitRead(r io.Reader, limit int64) ([]byte, error) {
+	lr := io.LimitReader(r, limit)
+
+	// Read as far as we are allowed to
+	bodyBytes, err := io.ReadAll(lr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read from reader: %w", err)
+	}
+
+	// If we read exactly the limit, the body might be larger
+	if int64(len(bodyBytes)) == limit {
+		// Try to read one more byte
+		buf := make([]byte, 1)
+		var n int
+		if n, err = r.Read(buf); err != nil && err != io.EOF {
+			return nil, fmt.Errorf(
+				"failed to check for additional content: %w",
+				err,
+			)
+		}
+		if n > 0 {
+			return nil, Error(
+				fmt.Errorf("response body exceeds limit of %d bytes", limit),
+				http.StatusRequestEntityTooLarge,
+			)
+		}
+	}
+	return bodyBytes, nil
 }
