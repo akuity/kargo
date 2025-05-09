@@ -140,14 +140,7 @@ func TestRefresh(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			require.Equal(t,
-				test.expectedResult.failures,
-				result.failures,
-			)
-			require.Equal(t,
-				test.expectedResult.successes,
-				result.successes,
-			)
+			require.Equal(t, test.expectedResult, result)
 		})
 	}
 }
