@@ -83,6 +83,23 @@ func TestCodeFrom(t *testing.T) {
 			},
 			expected: http.StatusInternalServerError,
 		},
+		{
+			name: "unimplemented",
+			input: func() error {
+				return UnimplementedError("not implemented")
+			},
+			expected: http.StatusNotImplemented,
+		},
+		{
+			name: "unimplemented - formatted",
+			input: func() error {
+				return UnimplementedErrorf(
+					"not implemented, use %s instead",
+					"other-endpoint",
+				)
+			},
+			expected: http.StatusNotImplemented,
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			require.Equal(t,
@@ -191,6 +208,29 @@ func TestStatusErrors(t *testing.T) {
 			},
 			expectedMsg:  "{\"error\":\"Internal Server Error: max retries(3) exceeded\"}\n",
 			expectedCode: http.StatusInternalServerError,
+		},
+		{
+			name: "unimplemented",
+			writeFn: func() *httptest.ResponseRecorder {
+				w := httptest.NewRecorder()
+				WriteUnimplementedError(w, "not implemented")
+				return w
+			},
+			expectedMsg:  "",
+			expectedCode: http.StatusNotImplemented,
+		},
+		{
+			name: "unimplemented - formatted",
+			writeFn: func() *httptest.ResponseRecorder {
+				w := httptest.NewRecorder()
+				WriteUnimplementedErrorf(w,
+					"not implemented see %s",
+					"other thing",
+				)
+				return w
+			},
+			expectedMsg:  "",
+			expectedCode: http.StatusNotImplemented,
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {

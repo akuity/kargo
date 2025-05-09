@@ -9,12 +9,7 @@ import (
 // BadRequestError returns an error
 // wrapped in a 400 status code.
 func BadRequestError(err any) error {
-	code := http.StatusBadRequest
-	return &Error{
-		Code:       code,
-		StatusText: http.StatusText(code),
-		Msg:        toString(err),
-	}
+	return wrapWithCode(http.StatusBadRequest, err)
 }
 
 // BadRequestErrorf returns a formatted error
@@ -26,12 +21,7 @@ func BadRequestErrorf(format string, args ...any) error {
 // UnauthorizedError returns an error
 // wrapped in a 401 status code.
 func UnauthorizedError(err any) error {
-	code := http.StatusUnauthorized
-	return &Error{
-		Code:       code,
-		StatusText: http.StatusText(code),
-		Msg:        toString(err),
-	}
+	return wrapWithCode(http.StatusUnauthorized, err)
 }
 
 // UnauthorizedErrorf returns a formatted error
@@ -43,12 +33,7 @@ func UnauthorizedErrorf(format string, args ...any) error {
 // ForbiddenError returns an error
 // wrapped in a 403 status code.
 func ForbiddenError(err any) error {
-	code := http.StatusForbidden
-	return &Error{
-		Code:       code,
-		StatusText: http.StatusText(code),
-		Msg:        toString(err),
-	}
+	return wrapWithCode(http.StatusForbidden, err)
 }
 
 // ForbiddenError returns a formatted error
@@ -60,12 +45,7 @@ func ForbiddenErrorf(format string, args ...any) error {
 // ServerError returns an error
 // wrapped in a 500 status code.
 func ServerError(err any) error {
-	code := http.StatusInternalServerError
-	return &Error{
-		Code:       code,
-		StatusText: http.StatusText(code),
-		Msg:        toString(err),
-	}
+	return wrapWithCode(http.StatusInternalServerError, err)
 }
 
 // ServerErrorf returns a formatted error
@@ -74,9 +54,22 @@ func ServerErrorf(format string, args ...any) error {
 	return ServerError(fmt.Errorf(format, args...))
 }
 
+// UnimplementedError returns an error
+// wrapped in a 501 status code.
+func UnimplementedError(err any) error {
+	return wrapWithCode(http.StatusNotImplemented, err)
+}
+
+// UnimplementedErrorf returns a formatted error
+// wrapped in a 501 status code.
+func UnimplementedErrorf(format string, args ...any) error {
+	return UnimplementedError(fmt.Errorf(format, args...))
+}
+
 // WriteBadRequestError sets a 400 status code header
 // before writing the error as json.
 func WriteBadRequestError(w http.ResponseWriter, err any) {
+	writeHttpError(w, BadRequestError(err))
 	WriteError(w,
 		http.StatusBadRequest,
 		BadRequestError(err),
@@ -86,64 +79,55 @@ func WriteBadRequestError(w http.ResponseWriter, err any) {
 // WriteBadRequestErrorf sets a 400 status code header
 // before writing the formatted error as json.
 func WriteBadRequestErrorf(w http.ResponseWriter, format string, args ...any) {
-	WriteError(w,
-		http.StatusBadRequest,
-		BadRequestErrorf(format, args...),
-	)
+	WriteBadRequestError(w, fmt.Errorf(format, args...))
 }
 
 // WriteUnauthorizedError sets a 401 status code header
 // before writing the error as json.
 func WriteUnauthorizedError(w http.ResponseWriter, err any) {
-	WriteError(w,
-		http.StatusUnauthorized,
-		UnauthorizedError(err),
-	)
+	writeHttpError(w, UnauthorizedError(err))
 }
 
 // WriteUnauthorizedErrorf sets a 401 status code header
 // before writing the formatted error as json.
 func WriteUnauthorizedErrorf(w http.ResponseWriter, format string, args ...any) {
-	WriteError(w,
-		http.StatusUnauthorized,
-		UnauthorizedErrorf(format, args...),
-	)
+	WriteUnauthorizedError(w, fmt.Errorf(format, args...))
 }
 
 // WriteForbiddenError sets a 403 status code header
 // before writing the error as json.
 func WriteForbiddenError(w http.ResponseWriter, err any) {
-	WriteError(w,
-		http.StatusForbidden,
-		ForbiddenError(err),
-	)
+	writeHttpError(w, ForbiddenError(err))
 }
 
 // WriteForbiddenErrorf sets a 403 status code header
 // before writing the formatted error as json.
 func WriteForbiddenErrorf(w http.ResponseWriter, format string, args ...any) {
-	WriteError(w,
-		http.StatusForbidden,
-		ForbiddenErrorf(format, args...),
-	)
+	WriteForbiddenError(w, fmt.Errorf(format, args...))
 }
 
 // WriteServerError sets a 500 status code header
 // before writing the error as json.
 func WriteServerError(w http.ResponseWriter, err any) {
-	WriteError(w,
-		http.StatusInternalServerError,
-		ServerError(err),
-	)
+	writeHttpError(w, ServerError(err))
 }
 
 // WriteServerErrorf sets a 500 status code header
 // before writing the formatted error as json.
 func WriteServerErrorf(w http.ResponseWriter, format string, args ...any) {
-	WriteError(w,
-		http.StatusInternalServerError,
-		ServerErrorf(format, args...),
-	)
+	WriteServerError(w, fmt.Errorf(format, args...))
+}
+
+// WriteUnimplementedError sets a 500 status code header
+// before writing the error as json.
+func WriteUnimplementedError(w http.ResponseWriter, err any) {
+	writeHttpError(w, UnimplementedError(err))
+}
+
+// WriteUnimplementedErrorf sets a 500 status code header
+// before writing the formatted error as json.
+func WriteUnimplementedErrorf(w http.ResponseWriter, format string, args ...any) {
+	WriteUnimplementedError(w, fmt.Errorf(format, args...))
 }
 
 // WriteError sets the Content-Type header to application/json
@@ -200,6 +184,22 @@ func CodeFrom(err error) int {
 		return http.StatusInternalServerError
 	}
 	return apiErr.Code
+}
+
+func writeHttpError(w http.ResponseWriter, err error) {
+	apiErr, ok := err.(*Error)
+	if !ok {
+		WriteError(w, http.StatusInternalServerError, err.Error())
+	}
+	WriteError(w, apiErr.Code, apiErr)
+}
+
+func wrapWithCode(code int, err any) error {
+	return &Error{
+		Code:       code,
+		StatusText: http.StatusText(code),
+		Msg:        toString(err),
+	}
 }
 
 func toString(err any) string {
