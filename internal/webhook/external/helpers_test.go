@@ -14,7 +14,7 @@ import (
 	"github.com/akuity/kargo/internal/indexer"
 )
 
-func TestRefresh(t *testing.T) {
+func TestRefreshWarehouses(t *testing.T) {
 	for _, test := range []struct {
 		name           string
 		newKubeClient  func() client.Client
@@ -126,7 +126,7 @@ func TestRefresh(t *testing.T) {
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			result, err := refresh(
+			result, err := refreshWarehouses(
 				t.Context(),
 				test.newKubeClient(),
 				test.repoName,

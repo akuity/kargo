@@ -18,7 +18,7 @@ type refreshResult struct {
 	failures  int
 }
 
-func refresh(
+func refreshWarehouses(
 	ctx context.Context,
 	c client.Client,
 	repoURL string,

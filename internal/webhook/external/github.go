@@ -109,7 +109,7 @@ func githubHandler(c client.Client) http.HandlerFunc {
 		repo := *pe.Repo.HTMLURL
 		logger.Debug("source repository retrieved", "name", repo)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		result, err := refresh(ctx, c, repo)
+		result, err := refreshWarehouses(ctx, c, repo)
 		if err != nil {
 			xhttp.WriteErrorJSON(w,
 				xhttp.Error(err, http.StatusInternalServerError),
