@@ -276,11 +276,8 @@ If you use [GKE Autopilot](https://cloud.google.com/kubernetes-engine/docs/conce
 
 `principal://iam.googleapis.com/projects/<GCP_PROJECT_NUMBER>/locations/global/workloadIdentityPools/<GCP_PROJECT_NAME>.svc.id.goog/subject/ns/<KARGO_NAMESPACE>/sa/kargo-controller`
 
-
-You do not need to annotate the Kargo controller's Kubernetes ServiceAccount (KSA) in any specific way. 
-
 :::note
-At one time this may have been required. Later it may have been required for standard clusters but not for Autopilot clusters. At present, this is not required at all.
+You do not need to annotate the Kargo controller's Kubernetes ServiceAccount (KSA) in any specific way. At one time this may have been required. Later it may have been required for standard clusters but not for Autopilot clusters. At present, this is not required at all.
 :::
 
 #### Service Account Impersonation
