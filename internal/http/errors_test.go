@@ -45,14 +45,8 @@ func TestWriteErrorJSON(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			w := test.writeFn()
-			require.Equal(t,
-				test.expectedCode,
-				w.Result().StatusCode,
-			)
-			require.Equal(t,
-				test.expectedBody,
-				w.Body.String(),
-			)
+			require.Equal(t, test.expectedCode, w.Result().StatusCode)
+			require.Equal(t, test.expectedBody, w.Body.String())
 		})
 	}
 }
@@ -95,14 +89,8 @@ func TestWriteResponseJSON(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			w := test.writeFn()
-			require.Equal(t,
-				test.expectedCode,
-				w.Result().StatusCode,
-			)
-			require.Equal(t,
-				test.expectedBody,
-				w.Body.String(),
-			)
+			require.Equal(t, test.expectedCode, w.Result().StatusCode)
+			require.Equal(t, test.expectedBody, w.Body.String())
 		})
 	}
 }
