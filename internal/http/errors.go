@@ -2,211 +2,46 @@ package http
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 )
 
-// BadRequestError returns an error
-// wrapped in a 400 status code.
-func BadRequestError(err any) error {
-	return wrapWithCode(http.StatusBadRequest, err)
+type httpError struct {
+	code int
+	err  error
 }
 
-// BadRequestErrorf returns a formatted error
-// wrapped in a 400 status code.
-func BadRequestErrorf(format string, args ...any) error {
-	return BadRequestError(fmt.Errorf(format, args...))
+func (e *httpError) Error() string {
+	return e.err.Error()
 }
 
-// UnauthorizedError returns an error
-// wrapped in a 401 status code.
-func UnauthorizedError(err any) error {
-	return wrapWithCode(http.StatusUnauthorized, err)
+func Error(err error, code int) error {
+	return &httpError{
+		code: code,
+		err:  err,
+	}
 }
 
-// UnauthorizedErrorf returns a formatted error
-// wrapped in a 401 status code.
-func UnauthorizedErrorf(format string, args ...any) error {
-	return UnauthorizedError(fmt.Errorf(format, args...))
-}
-
-// ForbiddenError returns an error
-// wrapped in a 403 status code.
-func ForbiddenError(err any) error {
-	return wrapWithCode(http.StatusForbidden, err)
-}
-
-// ForbiddenError returns a formatted error
-// wrapped in a 403 status code.
-func ForbiddenErrorf(format string, args ...any) error {
-	return ForbiddenError(fmt.Errorf(format, args...))
-}
-
-// ServerError returns an error
-// wrapped in a 500 status code.
-func ServerError(err any) error {
-	return wrapWithCode(http.StatusInternalServerError, err)
-}
-
-// ServerErrorf returns a formatted error
-// wrapped in a 500 status code.
-func ServerErrorf(format string, args ...any) error {
-	return ServerError(fmt.Errorf(format, args...))
-}
-
-// UnimplementedError returns an error
-// wrapped in a 501 status code.
-func UnimplementedError(err any) error {
-	return wrapWithCode(http.StatusNotImplemented, err)
-}
-
-// UnimplementedErrorf returns a formatted error
-// wrapped in a 501 status code.
-func UnimplementedErrorf(format string, args ...any) error {
-	return UnimplementedError(fmt.Errorf(format, args...))
-}
-
-// WriteBadRequestError sets a 400 status code header
-// before writing the error as json.
-func WriteBadRequestError(w http.ResponseWriter, err any) {
-	writeHttpError(w, BadRequestError(err))
-}
-
-// WriteBadRequestErrorf sets a 400 status code header
-// before writing the formatted error as json.
-func WriteBadRequestErrorf(w http.ResponseWriter, format string, args ...any) {
-	WriteBadRequestError(w, fmt.Errorf(format, args...))
-}
-
-// WriteUnauthorizedError sets a 401 status code header
-// before writing the error as json.
-func WriteUnauthorizedError(w http.ResponseWriter, err any) {
-	writeHttpError(w, UnauthorizedError(err))
-}
-
-// WriteUnauthorizedErrorf sets a 401 status code header
-// before writing the formatted error as json.
-func WriteUnauthorizedErrorf(w http.ResponseWriter, format string, args ...any) {
-	WriteUnauthorizedError(w, fmt.Errorf(format, args...))
-}
-
-// WriteForbiddenError sets a 403 status code header
-// before writing the error as json.
-func WriteForbiddenError(w http.ResponseWriter, err any) {
-	writeHttpError(w, ForbiddenError(err))
-}
-
-// WriteForbiddenErrorf sets a 403 status code header
-// before writing the formatted error as json.
-func WriteForbiddenErrorf(w http.ResponseWriter, format string, args ...any) {
-	WriteForbiddenError(w, fmt.Errorf(format, args...))
-}
-
-// WriteServerError sets a 500 status code header
-// before writing the error as json.
-func WriteServerError(w http.ResponseWriter, err any) {
-	writeHttpError(w, ServerError(err))
-}
-
-// WriteServerErrorf sets a 500 status code header
-// before writing the formatted error as json.
-func WriteServerErrorf(w http.ResponseWriter, format string, args ...any) {
-	WriteServerError(w, fmt.Errorf(format, args...))
-}
-
-// WriteUnimplementedError sets a 500 status code header
-// before writing the error as json.
-func WriteUnimplementedError(w http.ResponseWriter, err any) {
-	writeHttpError(w, UnimplementedError(err))
-}
-
-// WriteUnimplementedErrorf sets a 500 status code header
-// before writing the formatted error as json.
-func WriteUnimplementedErrorf(w http.ResponseWriter, format string, args ...any) {
-	WriteUnimplementedError(w, fmt.Errorf(format, args...))
-}
-
-// WriteError sets the Content-Type header to application/json
-// and then writes the error as json to the response writer
-func WriteError(w http.ResponseWriter, statusCode int, err any) {
-	w.WriteHeader(statusCode)
+func WriteErrorJSON(w http.ResponseWriter, err error) {
+	code := http.StatusInternalServerError
+	if httpErr, ok := err.(*httpError); ok {
+		code = httpErr.code
+		err = httpErr.err
+	}
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(
-		map[string]string{"error": toString(err)},
-	)
-}
-
-// WriteError sets the Content-Type header to application/json
-// and then writes a formatted error as json to the resopnse writer.
-func WriteErrorf(w http.ResponseWriter, statusCode int, format string, args ...any) {
-	WriteError(w, statusCode, fmt.Errorf(format, args...))
-}
-
-// Write sets the statusCode on w before writing msg as json.
-func Write(w http.ResponseWriter, statusCode int, msg string) {
-	w.WriteHeader(statusCode)
-	_ = json.NewEncoder(w).Encode(
-		map[string]string{
-			"msg": msg,
-		},
-	)
-}
-
-// Writef sets the statusCode on w before writing a formatted error
-// to the response writer as json.
-func Writef(w http.ResponseWriter, statusCode int, format string, args ...any) {
-	Write(w, statusCode, fmt.Sprintf(format, args...))
-}
-
-// implement error
-type Error struct {
-	Code       int
-	StatusText string
-	Msg        string
-}
-
-func (e *Error) Error() string {
-	if e.Msg == "" {
-		return e.StatusText
+	w.WriteHeader(code)
+	resp := struct {
+		Error string `json:"error,omitempty"`
+	}{
+		Error: err.Error(),
 	}
-	return fmt.Sprintf("%s: %s", e.StatusText, e.Msg)
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
-// CodeFrom returns the http status code for the given error.
-// If err is not of type xhttp.Error an internal server error is returned.
-func CodeFrom(err error) int {
-	apiErr, ok := err.(*Error)
-	if !ok {
-		return http.StatusInternalServerError
+func WriteResponseJSON(w http.ResponseWriter, code int, body any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	if body == nil {
+		body = struct{}{}
 	}
-	return apiErr.Code
-}
-
-func writeHttpError(w http.ResponseWriter, err error) {
-	apiErr, ok := err.(*Error)
-	if !ok {
-		WriteError(w, http.StatusInternalServerError, err.Error())
-	}
-	WriteError(w, apiErr.Code, apiErr)
-}
-
-func wrapWithCode(code int, err any) error {
-	return &Error{
-		Code:       code,
-		StatusText: http.StatusText(code),
-		Msg:        toString(err),
-	}
-}
-
-func toString(err any) string {
-	var msg string
-	switch t := err.(type) {
-	case error:
-		msg = t.Error()
-	case string:
-		msg = t
-	default:
-		msg = fmt.Sprintf("%v", t)
-	}
-	return msg
+	_ = json.NewEncoder(w).Encode(body)
 }

@@ -3,7 +3,6 @@ package external
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net"
 	"net/http"
 	"time"
@@ -11,8 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/akuity/kargo/internal/logging"
-	"github.com/akuity/kargo/internal/webhook/external/handlers"
-	"github.com/akuity/kargo/internal/webhook/external/providers/github"
+	handlers "github.com/akuity/kargo/internal/webhook/external/handlers/github"
 )
 
 type server struct {
@@ -35,16 +33,8 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	logger := logging.LoggerFromContext(ctx)
 	mux := http.NewServeMux()
 
-	ghProvider, err := github.NewProvider()
-	if err != nil {
-		return fmt.Errorf("failed to initialize github provider: %w", err)
-	}
-
 	mux.Handle("POST /v1/github",
-		handlers.NewRefreshWarehouseWebhook(
-			ghProvider,
-			s.client,
-		),
+		handlers.NewRefreshWarehouseWebhook(s.client),
 	)
 	// TODO(fuskovic): support additional providers
 

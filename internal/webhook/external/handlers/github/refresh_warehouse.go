@@ -1,0 +1,237 @@
+package handlers
+
+import (
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+
+	gh "github.com/google/go-github/v71/github"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
+	xhttp "github.com/akuity/kargo/internal/http"
+	"github.com/akuity/kargo/internal/indexer"
+	"github.com/akuity/kargo/internal/logging"
+)
+
+var (
+	// ErrMissingSignature is returned when the 'X-Hub-Signature-256'
+	// header is not found or empty.
+	ErrMissingSignature = errors.New("missing signature")
+	// ErrInvalidSignature is returned when the 'X-Hub-Signature-256'
+	// header is not the value that was expected.
+	ErrInvalidSignature = errors.New("invalid signature")
+	// ErrSecretUnset is returned when the 'GH_WEBHOOK_SECRET'
+	// environment variable is empty.
+	ErrSecretUnset = errors.New("secret is unset")
+	// ErrUnsupportedEventType is returned when the received
+	// request body does not conform to a github push event.
+	ErrUnsupportedEventType = errors.New("unsupported event type")
+)
+
+// NewRefreshWarehouseWebhook handles push events for the designated provider.
+// After the provider has been resolved and the request has been authenticated,
+// the kubeclient is queried for all warehouses that contain a subscription
+// to the repo in question. Those warehouses are then patched with a special
+// annotation that signals down stream logic to refresh the warehouse.
+func NewRefreshWarehouseWebhook(c client.Client) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		logger := logging.LoggerFromContext(ctx)
+		logger.Debug("identifying source repository")
+
+		signature := r.Header.Get(gh.SHA256SignatureHeader)
+		if signature == "" {
+			xhttp.WriteErrorJSON(w,
+				xhttp.Error(
+					ErrMissingSignature,
+					http.StatusUnauthorized,
+				),
+			)
+			return
+		}
+
+		const maxBytes = 2 << 20
+		lr := io.LimitReader(r.Body, maxBytes)
+
+		// Read as far as we are allowed to
+		bodyBytes, err := io.ReadAll(lr)
+		if err != nil {
+			xhttp.WriteErrorJSON(w,
+				xhttp.Error(
+					fmt.Errorf("failed to read request body: %w", err),
+					http.StatusBadRequest,
+				),
+			)
+			return
+		}
+
+		// If we read exactly the maximum, the body might be larger
+		if len(bodyBytes) == maxBytes {
+			// Try to read one more byte
+			buf := make([]byte, 1)
+			var n int
+			if n, err = r.Body.Read(buf); err != nil && err != io.EOF {
+				xhttp.WriteErrorJSON(w,
+					xhttp.Error(
+						fmt.Errorf("failed to check for additional content: %w", err),
+						http.StatusInternalServerError,
+					),
+				)
+				return
+			}
+
+			if n > 0 {
+				xhttp.WriteErrorJSON(w,
+					xhttp.Error(
+						fmt.Errorf("response body exceeds maximum size of %d bytes", maxBytes),
+						http.StatusRequestEntityTooLarge,
+					),
+				)
+				return
+			}
+		}
+
+		secret, ok := os.LookupEnv("GH_WEBHOOK_SECRET")
+		if !ok {
+			logger.Error(ErrSecretUnset, "environment misconfiguration")
+			xhttp.WriteErrorJSON(w,
+				xhttp.Error(
+					// keep it vague, no need to leak config details
+					errors.New("unexpected server error"),
+					http.StatusInternalServerError,
+				),
+			)
+			return
+		}
+
+		if err = gh.ValidateSignature(
+			signature,
+			bodyBytes,
+			[]byte(secret),
+		); err != nil {
+			logger.Error(err, "failed to validate signature")
+			xhttp.WriteErrorJSON(w,
+				xhttp.Error(
+					// same here
+					errors.New("unauthorized"),
+					http.StatusUnauthorized,
+				),
+			)
+			return
+		}
+
+		eventType := r.Header.Get("X-GitHub-Event")
+		if eventType != "push" {
+			xhttp.WriteErrorJSON(w,
+				xhttp.Error(
+					fmt.Errorf("only push events are supported"),
+					http.StatusNotImplemented,
+				),
+			)
+			return
+		}
+
+		e, err := gh.ParseWebHook(eventType, bodyBytes)
+		if err != nil {
+			xhttp.WriteErrorJSON(w,
+				xhttp.Error(
+					fmt.Errorf("failed to parse webhook event: %w", err),
+					http.StatusBadRequest,
+				),
+			)
+			return
+		}
+
+		pe, ok := e.(*gh.PushEvent)
+		if !ok {
+			xhttp.WriteErrorJSON(w,
+				xhttp.Error(
+					fmt.Errorf("only push events are supported"),
+					http.StatusNotImplemented,
+				),
+			)
+			return
+		}
+
+		repo := *pe.Repo.HTMLURL
+		logger.Debug("source repository retrieved", "name", repo)
+
+		var warehouses v1alpha1.WarehouseList
+		err = c.List(
+			ctx,
+			&warehouses,
+			client.MatchingFields{
+				indexer.WarehousesBySubscribedURLsField: repo,
+			},
+		)
+		if err != nil {
+			logger.Error(err, "failed to list warehouses")
+			xhttp.WriteErrorJSON(w,
+				xhttp.Error(
+					fmt.Errorf("failed to list warehouses: %w", err),
+					http.StatusInternalServerError,
+				),
+			)
+			return
+		}
+
+		logger.Debug("listed warehouses",
+			"num-warehouses", len(warehouses.Items),
+		)
+
+		var numSuccessfullyRefreshed, numRefreshFailures int
+		for _, wh := range warehouses.Items {
+			_, err = api.RefreshWarehouse(
+				ctx,
+				c,
+				types.NamespacedName{
+					Namespace: wh.GetNamespace(),
+					Name:      wh.GetName(),
+				},
+			)
+			if err != nil {
+				logger.Error(err, "failed to refresh warehouse",
+					"warehouse", wh.GetName(),
+				)
+				numRefreshFailures++
+			} else {
+				logger.Debug("successfully patched annotations",
+					"warehouse", wh.GetName(),
+				)
+				numSuccessfullyRefreshed++
+			}
+		}
+
+		logger.Debug("execution complete",
+			"num-successful-refreshes", numSuccessfullyRefreshed,
+			"num-refresh-failures", numRefreshFailures,
+		)
+
+		if numRefreshFailures > 0 {
+			xhttp.WriteErrorJSON(w,
+				xhttp.Error(
+					fmt.Errorf("failed to refresh %d of %d warehouses",
+						numRefreshFailures,
+						len(warehouses.Items),
+					),
+					http.StatusInternalServerError,
+				),
+			)
+			return
+		}
+
+		xhttp.WriteResponseJSON(w,
+			http.StatusOK,
+			map[string]string{
+				"msg": fmt.Sprintf("refreshed %d warehouses",
+					len(warehouses.Items),
+				),
+			},
+		)
+	})
+}

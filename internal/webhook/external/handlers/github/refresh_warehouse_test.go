@@ -19,10 +19,9 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/indexer"
-	"github.com/akuity/kargo/internal/webhook/external/providers/github"
 )
 
-func TestRefreshWarehouseWebhook_Github(t *testing.T) {
+func TestRefreshWarehouseWebhook(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 	kubeClient := fake.NewClientBuilder().
@@ -69,7 +68,7 @@ func TestRefreshWarehouseWebhook_Github(t *testing.T) {
 					mockRequestPayload,
 				)
 				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("X-Hub-Signature", sign(t, secret))
+				req.Header.Set("X-Hub-Signature-256", sign(t, secret))
 				req.Header.Set("X-GitHub-Event", "push")
 				return req
 			},
@@ -100,7 +99,7 @@ func TestRefreshWarehouseWebhook_Github(t *testing.T) {
 					mockRequestPayload,
 				)
 				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("X-Hub-Signature", sign(t, secret))
+				req.Header.Set("X-Hub-Signature-256", sign(t, secret))
 				req.Header.Set("X-GitHub-Event", "ping")
 				return req
 			},
@@ -111,9 +110,7 @@ func TestRefreshWarehouseWebhook_Github(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			req := test.setup()
 			w := httptest.NewRecorder()
-			p, err := github.NewProvider()
-			require.NoError(t, err)
-			h := NewRefreshWarehouseWebhook(p, kubeClient)
+			h := NewRefreshWarehouseWebhook(kubeClient)
 			h(w, req)
 			require.Equal(t,
 				test.expectedCode,
