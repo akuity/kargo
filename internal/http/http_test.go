@@ -31,8 +31,17 @@ func TestLimitRead(t *testing.T) {
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			_, code, _ := LimitRead(test.reader)
-			require.Equal(t, test.expectedCode, code)
+			_, err := LimitRead(test.reader)
+			receivedCode := http.StatusOK
+			if err != nil {
+				apiErr, ok := err.(*httpError)
+				require.True(t, ok)
+				receivedCode = apiErr.code
+			}
+			require.Equal(t,
+				test.expectedCode,
+				receivedCode,
+			)
 		})
 	}
 }

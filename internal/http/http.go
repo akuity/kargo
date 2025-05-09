@@ -33,13 +33,18 @@ func SetCacheHeaders(w http.ResponseWriter, maxAge time.Duration, timeUntilExpir
 	w.Header().Set("Expires", time.Now().Add(timeUntilExpiry).Format(time.RFC1123))
 }
 
-func LimitRead(r io.Reader) ([]byte, int, error) {
+func LimitRead(r io.Reader) ([]byte, error) {
 	lr := io.LimitReader(r, maxBytes)
 
 	// Read as far as we are allowed to
 	bodyBytes, err := io.ReadAll(lr)
 	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("failed to read from reader: %w", err)
+		return nil, Error(
+			fmt.Errorf(
+				"failed to read from reader: %w", err,
+			),
+			http.StatusBadRequest,
+		)
 	}
 
 	// If we read exactly the maximum, the body might be larger
@@ -48,15 +53,20 @@ func LimitRead(r io.Reader) ([]byte, int, error) {
 		buf := make([]byte, 1)
 		var n int
 		if n, err = r.Read(buf); err != nil && err != io.EOF {
-			return nil,
+			return nil, Error(
+				fmt.Errorf(
+					"failed to check for additional content: %w",
+					err,
+				),
 				http.StatusInternalServerError,
-				fmt.Errorf("failed to check for additional content: %w", err)
+			)
 		}
 		if n > 0 {
-			return nil,
+			return nil, Error(
+				fmt.Errorf("response body exceeds maximum size of %d bytes", maxBytes),
 				http.StatusRequestEntityTooLarge,
-				fmt.Errorf("response body exceeds maximum size of %d bytes", maxBytes)
+			)
 		}
 	}
-	return bodyBytes, http.StatusOK, nil
+	return bodyBytes, nil
 }
