@@ -283,16 +283,7 @@ You do not need to annotate the Kargo controller's Kubernetes ServiceAccount (KS
 At one time this may have been required. Later it may have been required for standard clusters but not for Autopilot clusters. At present, this is not required at all.
 :::
 
-#### Create GSAs for each Kargo Project
-
-Each [GSA](https://cloud.google.com/iam/docs/service-account-overview) requires an [IAM policy](https://cloud.google.com/iam/docs/reference/rest/v1/Policy) that allows the Kargo controller's KSA to create a token. i.e. `roles/iam.serviceAccountTokenCreator`
-
-What this accomplishes is it permits the Kargo controller's KSA to impersonate (Kargo) Project-specific GSAs.
-
-:::note
-There is no need to create a Google Service Account (GSA) for the Kargo controller.
-:::
-
+#### Service Account Impersonation
 
 Although associated with [this _one_ principal](#kubernetes-service-account-principal), the Kargo controller acts on
 behalf of multiple Kargo projects, each of which may require access to
@@ -300,11 +291,27 @@ _different_ Google Artifact Registry repositories. To account for this, when
 Kargo attempts to access a Google Artifact Registry repository on behalf of a
 specific project, it will first attempt to
 [impersonate a Google service account](https://cloud.google.com/iam/docs/service-account-impersonation) 
-specific to that project. The name of the service account it attempts to
+specific to that project. 
+
+:::note
+There is no need to create a Google Service Account (GSA) for the Kargo controller itself.
+:::
+
+The name of the service account it attempts to
 impersonate will _always_ be of the form
 `kargo-project-<KARGO_PROJECT_NAME>@<GCP_PROJECT_NAME>.iam.gserviceaccount.com`.
-It is this service account that should be granted read-only access to applicable
-Google Artifact Registry repositories.
+
+Each [GSA](https://cloud.google.com/iam/docs/service-account-overview):
+
+- Should be granted read-only access to applicable
+  Google Artifact Registry repositories.
+
+- Should have an [IAM policy](https://cloud.google.com/iam/docs/reference/rest/v1/Policy) that allows the Kargo controller's KSA to create a token. i.e. `roles/iam.serviceAccountTokenCreator`
+
+:::note
+This permits the Kargo controller's KSA to impersonate (Kargo) Project-specific GSAs while observing the practice of principle-of-least-priviledge.
+:::
+
 
 :::info
 The name of the Google service account associated with each Kargo project is
@@ -317,12 +324,8 @@ given project, it will follow a process similar to that described in the
 previous section to obtain a token that is valid for 60 minutes and cached for
 40.
 
-:::caution
-Following the principle of least privilege, the IAM principal associated with
-the `kargo-controller` `ServiceAccount` should be limited only to the ability to
-impersonate project-specific Google service accounts. Project-specific Google
-service accounts should be limited only to read-only access to the applicable
-Google Artifact Registry repositories.
+:::note
+Beginning with Kargo `v1.5.0`, if maintaining a separate GSA for every Kargo Project is deemed too much of a hassle and strict adherence to the principle of least privilege is not a concern, Google Artifact Registry permissions may be granted directly to the [Kargo controller's KSA](#kubernetes-service-account-principal). In the event that a (Kargo) Project-specific GSA does not exist or cannot be impersonated by the Kargo controller's KSA, Kargo will fall back on using the controller's KSA to access GAR directly.
 :::
 
 :::info
