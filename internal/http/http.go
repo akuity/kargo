@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-const maxBytes = 2 << 20
+const MaxBytes = 2 << 20
 
 var noCacheHeaders = map[string]string{
 	"Expires":         time.Unix(0, 0).Format(time.RFC1123),
@@ -33,8 +33,8 @@ func SetCacheHeaders(w http.ResponseWriter, maxAge time.Duration, timeUntilExpir
 	w.Header().Set("Expires", time.Now().Add(timeUntilExpiry).Format(time.RFC1123))
 }
 
-func LimitRead(r io.Reader) ([]byte, error) {
-	lr := io.LimitReader(r, maxBytes)
+func LimitRead(r io.Reader, limit int64) ([]byte, error) {
+	lr := io.LimitReader(r, limit)
 
 	// Read as far as we are allowed to
 	bodyBytes, err := io.ReadAll(lr)
@@ -42,8 +42,8 @@ func LimitRead(r io.Reader) ([]byte, error) {
 		return nil, fmt.Errorf("failed to read from reader: %w", err)
 	}
 
-	// If we read exactly the maximum, the body might be larger
-	if len(bodyBytes) == maxBytes {
+	// If we read exactly the limit, the body might be larger
+	if int64(len(bodyBytes)) == limit {
 		// Try to read one more byte
 		buf := make([]byte, 1)
 		var n int
@@ -55,7 +55,7 @@ func LimitRead(r io.Reader) ([]byte, error) {
 		}
 		if n > 0 {
 			return nil, Error(
-				fmt.Errorf("response body exceeds maximum size of %d bytes", maxBytes),
+				fmt.Errorf("response body exceeds limit of %d bytes", limit),
 				http.StatusRequestEntityTooLarge,
 			)
 		}

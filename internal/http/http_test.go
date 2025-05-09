@@ -24,14 +24,14 @@ func TestLimitRead(t *testing.T) {
 		{
 			name: "exceeds max",
 			reader: func() io.Reader {
-				b := make([]byte, maxBytes+1)
+				b := make([]byte, MaxBytes+1)
 				return bytes.NewBuffer(b)
 			}(),
 			expectedCode: http.StatusRequestEntityTooLarge,
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			_, err := LimitRead(test.reader)
+			_, err := LimitRead(test.reader, MaxBytes)
 			receivedCode := http.StatusOK
 			if err != nil {
 				apiErr, ok := err.(*httpError)

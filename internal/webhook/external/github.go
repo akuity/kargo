@@ -51,7 +51,7 @@ func githubHandler(c client.Client) http.HandlerFunc {
 			return
 		}
 
-		bodyBytes, err := xhttp.LimitRead(r.Body)
+		bodyBytes, err := xhttp.LimitRead(r.Body, xhttp.MaxBytes)
 		if err != nil {
 			xhttp.WriteErrorJSON(w, err)
 			return
