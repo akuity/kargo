@@ -303,10 +303,6 @@ a project-specific
 (GSA). The name of the GSA that the controller will attempt to impersonate will
 _always_ be of the form
 `kargo-project-<kargo project name>@<gcp project name>.iam.gserviceaccount.com`.
-behalf of multiple Kargo projects, each of which may require access to
-specific project, it will first attempt to
-impersonate will _always_ be of the form
-`kargo-project-<KARGO_PROJECT_NAME>@<GCP_PROJECT_NAME>.iam.gserviceaccount.com`.
 
 :::info
 The name of the GSA associated with each Kargo project is deliberately
