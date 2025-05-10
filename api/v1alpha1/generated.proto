@@ -517,6 +517,7 @@ message GitDiscoveryResult {
   //
   // +kubebuilder:validation:MinLength=1
   // +kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
+  // +akuity:IsGitRepoURL
   optional string repoURL = 1;
 
   // Commits is a list of commits discovered by the Warehouse for the
@@ -533,6 +534,7 @@ message GitSubscription {
   //
   // +kubebuilder:validation:MinLength=1
   // +kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
+  // +akuity:IsGitRepoURL
   optional string repoURL = 1;
 
   // CommitSelectionStrategy specifies the rules for how to identify the newest
