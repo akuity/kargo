@@ -279,7 +279,12 @@ have WIF enabled automatically.
 
 #### Kubernetes Service Account Principal
 
-[GCP IAM](https://cloud.google.com/iam/docs/overview) understands the Kargo controller's [KSA(Kubernetes Service Account)](https://kubernetes.io/docs/concepts/security/service-accounts/)is the following [principal](https://cloud.google.com/iam/docs/overview#principals):
+With WIF enabled,
+[GCP Identity and Access Management](https://cloud.google.com/iam/docs/overview)
+(IAM) automatically understands a
+[principal](https://cloud.google.com/iam/docs/overview#principals)
+identifier of the following form to be a reference to the Kargo controller's
+_Kubernetes_ Service Account (KSA):
 
 `principal://iam.googleapis.com/projects/<GCP_PROJECT_NUMBER>/locations/global/workloadIdentityPools/<GCP_PROJECT_NAME>.svc.id.goog/subject/ns/<KARGO_NAMESPACE>/sa/kargo-controller`
 
