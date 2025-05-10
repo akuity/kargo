@@ -182,7 +182,7 @@ controllers read permissions on all `Secret`s throughout the Kargo control
 plane's cluster -- including `Secret`s having nothing to do with Kargo.__
 :::
 
-## Other Forms of Credentials
+## Ambient Credentials
 
 This section provides guidance on configuring Kargo and various cloud platforms
 to support "ambient" credentials. Kargo users are presumed not to have
@@ -322,11 +322,13 @@ To enabled this, each project-specific GSA must:
 Once Kargo is able to impersonate the appropriate GSA for a given project, it
 will follow a process similar to that described in the previous section to
 obtain a token that is valid for 60 minutes and cached for 40.
+
 :::caution
 Following the principle of least privilege, the IAM principal associated with
 the Kargo controller's GSA should be be granted no permissions beyond the
 ability to impersonate project-specific GSAs.
 :::
+
 :::note
 Beginning with Kargo `v1.5.0`, if maintaining a separate GSA for every Kargo
 project is deemed too onerous and strict adherence to the principle of least
@@ -334,14 +336,6 @@ privilege is not a concern, permissions may be granted directly to the Kargo
 controller's KSA. In the event that a project-specific GSA does not exist or
 cannot be impersonated, Kargo will fall back on using the controller's KSA
 directly to access GAR repositories.
-:::
-
-:::info
-Like in the case of EKS Pod Identity or IRSA if project-specific credentials could
-not be assumed by the Kargo controller will fall back on on using its own 
-IAM principal directly. For organizations without strict tenancy requirements, this 
-can eliminate the need to manage a large number of project-specific IAM roles. 
-While useful, this approach is not strictly recommended.
 :::
 
 ### Azure Container Registry (ACR)
