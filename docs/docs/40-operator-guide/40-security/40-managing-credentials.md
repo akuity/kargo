@@ -293,8 +293,6 @@ There is no need to annotate the Kargo controller's KSA in any specific way to
 enable the above.
 :::
 
-#### Google Service Account Impersonation
-
 Because the Kargo controller acts on behalf of multiple Kargo projects, each of
 which may require access to _different_ GAR repositories, when accessing a
 repository on behalf of a given project, it will attempt to
@@ -320,7 +318,6 @@ To enabled this, each project-specific GSA must:
 
 - Be granted read-only access (`roles/artifactregistry.reader`) to the specific
   GAR repositories with which it interacts.
-deliberately not configurable to prevent Kargo project admins from attempting to
 
 Once Kargo is able to impersonate the appropriate GSA for a given project, it
 will follow a process similar to that described in the previous section to
