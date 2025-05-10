@@ -258,7 +258,7 @@ obtain a token that is valid for 12 hours and cached for 10.
 Kargo can be configured to authenticate to
 [Google Artifact Registry](https://cloud.google.com/artifact-registry/docs/overview)
 (GAR) repositories using
-[Workload Identity Federation](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity))
+[Workload Identity Federation](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity)
 (WIF).
 
 If Kargo locates no `Secret` resources matching a repository URL, and if Kargo
