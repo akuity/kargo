@@ -272,7 +272,9 @@ or can be added to an
 [existing cluster](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity#enable-existing-cluster).
 
 :::note
-If you use GKE [Autopilot](https://cloud.google.com/kubernetes-engine/docs/concepts/autopilot-overview), to create the cluster, WIF will be enabled automatically.
+Clusters managed by
+[GKE Autopilot](https://cloud.google.com/kubernetes-engine/docs/concepts/autopilot-overview)
+have WIF enabled automatically.
 :::
 
 #### Kubernetes Service Account Principal
