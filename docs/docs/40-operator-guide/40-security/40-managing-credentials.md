@@ -249,9 +249,9 @@ project-specific IAM roles. While useful, this approach is not strictly
 recommended.
 :::
 
-Once Kargo is able to gain necessary permissions to access an ECR repository,
-it will follow a process similar to that described in the previous section to
-obtain a token that is valid for 12 hours and cached for 10.
+Tokens Kargo obtains for accessing any specific ECR repository on behalf of
+any specific Kargo project, are valid for 12 hours and cached for 10. A
+controller restart clears the cache.
 
 ### Google Artifact Registry
 
@@ -319,10 +319,6 @@ To enabled this, each project-specific GSA must:
 - Be granted read-only access (`roles/artifactregistry.reader`) to the specific
   GAR repositories with which it interacts.
 
-Once Kargo is able to impersonate the appropriate GSA for a given project, it
-will follow a process similar to that described in the previous section to
-obtain a token that is valid for 60 minutes and cached for 40.
-
 :::caution
 Following the principle of least privilege, the IAM principal associated with
 the Kargo controller's GSA should be be granted no permissions beyond the
@@ -335,8 +331,13 @@ project is deemed too onerous and strict adherence to the principle of least
 privilege is not a concern, permissions may be granted directly to the Kargo 
 controller's KSA. In the event that a project-specific GSA does not exist or
 cannot be impersonated, Kargo will fall back on using the controller's KSA
-directly to access GAR repositories.
+directly to access GAR repositories. While useful, this approach is not
+strictly recommended.
 :::
+
+Tokens Kargo obtains for accessing any specific GAR repository on behalf of
+any specific Kargo project, are valid for 60 minutes and cached for 40. A
+controller restart clears the cache.
 
 ### Azure Container Registry (ACR)
 
