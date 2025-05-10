@@ -316,17 +316,7 @@ To enabled this, each project-specific GSA must:
   GAR repositories.
 
 - Should have an [IAM policy](https://cloud.google.com/iam/docs/reference/rest/v1/Policy) that allows the Kargo controller's KSA to create a token. i.e. `roles/iam.serviceAccountTokenCreator`
-
-:::note
-This permits the Kargo controller's KSA to impersonate (Kargo) Project-specific GSAs while observing the practice of principle-of-least-priviledge.
-:::
-
-
-:::info
-The name of the GSA associated with each Kargo project is
 deliberately not configurable to prevent Kargo project admins from attempting to
-coerce Kargo into impersonating arbitrary GSA's.
-:::
 
 Once Kargo is able to impersonate the appropriate GSA for a
 given project, it will follow a process similar to that described in the
