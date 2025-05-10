@@ -289,7 +289,7 @@ principal://iam.googleapis.com/projects/<gcp project number>/locations/global/wo
 ```
 
 :::note
-You do not need to annotate the Kargo controller's KSA in any specific way. At one time this may have been required. Later it may have been required for standard clusters but not for Autopilot clusters. At present, this is not required at all.
+There is no need to annotate the Kargo controller's KSA in any specific way to enable the above.
 :::
 
 #### Google Service Account Impersonation
