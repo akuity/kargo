@@ -266,8 +266,12 @@ Kargo can be configured to authenticate to
 If Kargo locates no `Secret` resources matching a repository URL, and if Kargo
 is deployed within a
 [Google Kubernetes Engine](https://cloud.google.com/kubernetes-engine/docs/concepts/kubernetes-engine-overview)
-(GKE) cluster, it will attempt to use WIF to authenticate. Leveraging this
-option eliminates the need to store credentials in a `Secret` resource. However, this requires WIF to be enabled on the cluster. You can [enable this when the cluster is created](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity#enable_on_cluster) or you can [enable it on an existing cluster that doesn't already have it](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity#enable-existing-cluster). 
+(GKE) cluster with WIF enabled, it will attempt to use it to authenticate.
+Leveraging this option eliminates the need to store credentials in a `Secret`
+resource. WIF can be enabled when creating a
+[new cluster](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity#enable_on_cluster)
+or can be added to an
+[existing cluster](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity#enable-existing-cluster).
 
 :::note
 If you use GKE [Autopilot](https://cloud.google.com/kubernetes-engine/docs/concepts/autopilot-overview), to create the cluster, WIF will be enabled automatically.
