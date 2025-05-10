@@ -253,7 +253,7 @@ Tokens Kargo obtains for accessing any specific ECR repository on behalf of
 any specific Kargo project, are valid for 12 hours and cached for 10. A
 controller restart clears the cache.
 
-### Google Artifact Registry
+### Google Artifact Registry (GAR)
 
 Kargo can be configured to authenticate to
 [Google Artifact Registry](https://cloud.google.com/artifact-registry/docs/overview)
