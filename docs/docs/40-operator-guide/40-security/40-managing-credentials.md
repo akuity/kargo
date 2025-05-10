@@ -294,15 +294,17 @@ There is no need to annotate the Kargo controller's KSA in any specific way to e
 
 #### Google Service Account Impersonation
 
-Although associated with [this _one_ principal](#kubernetes-service-account-principal), the Kargo controller acts on
+Because the Kargo controller acts on behalf of multiple Kargo projects, each of
+which may require access to _different_ GAR repositories, when accessing a
+repository on behalf of a given project, it will attempt to
+[impersonate](https://cloud.google.com/iam/docs/service-account-impersonation)
+a project-specific
+[Google Service Account](https://cloud.google.com/iam/docs/service-accounts-create) 
+(GSA). The name of the GSA that the controller will attempt to impersonate will
+_always_ be of the form
+`kargo-project-<kargo project name>@<gcp project name>.iam.gserviceaccount.com`.
 behalf of multiple Kargo projects, each of which may require access to
-_different_ GAR repositories. To account for this, when
-Kargo attempts to access a GAR repository on behalf of a
 specific project, it will first attempt to
-[impersonate a GSA](https://cloud.google.com/iam/docs/service-account-impersonation) 
-specific to that project. 
-
-The name of the GSA it attempts to
 impersonate will _always_ be of the form
 `kargo-project-<KARGO_PROJECT_NAME>@<GCP_PROJECT_NAME>.iam.gserviceaccount.com`.
 
