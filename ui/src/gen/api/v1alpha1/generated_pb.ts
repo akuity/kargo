@@ -1165,6 +1165,7 @@ export type GitDiscoveryResult = Message<"github.com.akuity.kargo.api.v1alpha1.G
    *
    * +kubebuilder:validation:MinLength=1
    * +kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
+   * +akuity:IsGitRepoURL
    *
    * @generated from field: optional string repoURL = 1;
    */
@@ -1200,6 +1201,7 @@ export type GitSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.GitS
    *
    * +kubebuilder:validation:MinLength=1
    * +kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
+   * +akuity:IsGitRepoURL
    *
    * @generated from field: optional string repoURL = 1;
    */
