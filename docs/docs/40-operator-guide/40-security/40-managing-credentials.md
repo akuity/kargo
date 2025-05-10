@@ -310,7 +310,7 @@ configurable to prevent project admins from attempting to coerce Kargo into
 assuming arbitrary GSAs.
 :::
 
-Each [GSA(Google Service Account)](https://cloud.google.com/iam/docs/service-account-overview):
+To enabled this, each project-specific GSA must:
 
 - Should be granted read-only access to applicable
   GAR repositories.
