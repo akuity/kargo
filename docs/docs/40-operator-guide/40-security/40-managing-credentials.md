@@ -322,9 +322,18 @@ To enabled this, each project-specific GSA must:
 Once Kargo is able to impersonate the appropriate GSA for a given project, it
 will follow a process similar to that described in the previous section to
 obtain a token that is valid for 60 minutes and cached for 40.
-
+:::caution
+Following the principle of least privilege, the IAM principal associated with
+the Kargo controller's GSA should be be granted no permissions beyond the
+ability to impersonate project-specific GSAs.
+:::
 :::note
-Beginning with Kargo `v1.5.0`, if maintaining a separate GSA for every Kargo Project is deemed too much of a hassle and strict adherence to the principle of least privilege is not a concern, GAR permissions may be granted directly to the [Kargo controller's KSA](#kubernetes-service-account-principal). In the event that a (Kargo) Project-specific GSA does not exist or cannot be impersonated by the Kargo controller's KSA, Kargo will fall back on using the controller's KSA to access GAR directly.
+Beginning with Kargo `v1.5.0`, if maintaining a separate GSA for every Kargo
+project is deemed too onerous and strict adherence to the principle of least
+privilege is not a concern, permissions may be granted directly to the Kargo 
+controller's KSA. In the event that a project-specific GSA does not exist or
+cannot be impersonated, Kargo will fall back on using the controller's KSA
+directly to access GAR repositories.
 :::
 
 :::info
