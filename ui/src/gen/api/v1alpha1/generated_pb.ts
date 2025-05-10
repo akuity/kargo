@@ -1033,6 +1033,7 @@ export type FreightSources = Message<"github.com.akuity.kargo.api.v1alpha1.Freig
    * AvailabilityStrategy specifies the semantics for how requested Freight is
    * made available to the Stage. This field is optional. When left unspecified,
    * the field is implicitly treated as if its value were "OneOf".
+   * Accepted Values: "All", "OneOf", ""
    *
    * +kubebuilder:validation:Optional
    *
