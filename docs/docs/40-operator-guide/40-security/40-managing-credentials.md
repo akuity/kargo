@@ -277,8 +277,6 @@ Clusters managed by
 have WIF enabled automatically.
 :::
 
-#### Kubernetes Service Account Principal
-
 With WIF enabled,
 [GCP Identity and Access Management](https://cloud.google.com/iam/docs/overview)
 (IAM) automatically understands a
