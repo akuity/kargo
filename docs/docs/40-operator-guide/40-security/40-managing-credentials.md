@@ -255,58 +255,74 @@ obtain a token that is valid for 12 hours and cached for 10.
 
 ### Google Artifact Registry
 
-Kargo can be configured to authenticate to Google Artifact Registry repositories
-using Workload Identity Federation.
+Kargo can be configured to authenticate to [GAR(Google Artifact Registry)](https://cloud.google.com/artifact-registry/docs/overview) repositories
+using [WIF(Workload Identity Federation)](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity)).
+
+#### Cluster Configuration
 
 If Kargo locates no `Secret` resources matching a repository URL, and if Kargo
-is deployed within a GKE cluster, it will attempt to use
-[Workload Identity Federation](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity)
-to authenticate, but this relies upon some external setup. Leveraging this
-option eliminates the need to store credentials in a `Secret` resource.
+is deployed within a [GKE(Google Kubernetes Engine)](https://cloud.google.com/kubernetes-engine/docs/concepts/kubernetes-engine-overview) cluster, it will attempt to use WIF to authenticate. Leveraging this
+option eliminates the need to store credentials in a `Secret` resource. However, this requires WIF to be enabled on the cluster. You can [enable this when the cluster is created](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity#enable_on_cluster) or you can [enable it on an existing cluster that doesn't already have it](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity#enable-existing-cluster). 
 
-First, follow
-[these directions](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity#enable_on_cluster)
-to provision a new GKE cluster with Workload Identity Federation enabled or
-[these directions](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity#enable-existing-cluster)
-to enable Workload Identity Federation on an existing GKE cluster.
-
-At this point, the `kargo-controller` `ServiceAccount` within the namespace in
-which Kargo is (or will be) installed will be associated with an _IAM principal
-identifier_, which takes the following form:
-
-```plaintext
-principal://iam.googleapis.com/projects/<gcp project number>/locations/global/workloadIdentityPools/<gcp project name>.svc.id.goog/subject/ns/<kargo namespace>/sa/kargo-controller
-```
-
-Although associated with this _one_ principal, the Kargo controller acts on
-behalf of multiple Kargo projects, each of which may require access to
-_different_ Google Artifact Registry repositories. To account for this, when
-Kargo attempts to access a Google Artifact Registry repository on behalf of a
-specific project, it will first attempt to
-[impersonate a Google service account](https://cloud.google.com/iam/docs/service-account-impersonation) 
-specific to that project. The name of the service account it attempts to
-impersonate will _always_ be of the form
-`kargo-project-<kargo project name>@<gcp project name>.iam.gserviceaccount.com`.
-It is this service account that should be granted read-only access to applicable
-Google Artifact Registry repositories.
-
-:::info
-The name of the Google service account associated with each Kargo project is
-deliberately not configurable to prevent Kargo project admins from attempting to
-coerce Kargo into impersonating arbitrary Google service accounts.
+:::note
+If you use GKE [Autopilot](https://cloud.google.com/kubernetes-engine/docs/concepts/autopilot-overview), to create the cluster, WIF will be enabled automatically.
 :::
 
-Once Kargo is able to impersonate the appropriate Google service account for a
+#### Kubernetes Service Account Principal
+
+[GCP IAM](https://cloud.google.com/iam/docs/overview) understands the Kargo controller's [KSA(Kubernetes Service Account)](https://kubernetes.io/docs/concepts/security/service-accounts/)is the following [principal](https://cloud.google.com/iam/docs/overview#principals):
+
+`principal://iam.googleapis.com/projects/<GCP_PROJECT_NUMBER>/locations/global/workloadIdentityPools/<GCP_PROJECT_NAME>.svc.id.goog/subject/ns/<KARGO_NAMESPACE>/sa/kargo-controller`
+
+:::note
+You do not need to annotate the Kargo controller's KSA in any specific way. At one time this may have been required. Later it may have been required for standard clusters but not for Autopilot clusters. At present, this is not required at all.
+:::
+
+#### Google Service Account Impersonation
+
+Although associated with [this _one_ principal](#kubernetes-service-account-principal), the Kargo controller acts on
+behalf of multiple Kargo projects, each of which may require access to
+_different_ GAR repositories. To account for this, when
+Kargo attempts to access a GAR repository on behalf of a
+specific project, it will first attempt to
+[impersonate a GSA](https://cloud.google.com/iam/docs/service-account-impersonation) 
+specific to that project. 
+
+The name of the GSA it attempts to
+impersonate will _always_ be of the form
+`kargo-project-<KARGO_PROJECT_NAME>@<GCP_PROJECT_NAME>.iam.gserviceaccount.com`.
+
+:::info
+The name of the GSA associated with each Kargo project is deliberately
+not configurable to prevent project admins from attempting to coerce Kargo into
+assuming arbitrary GSA's.
+:::
+
+Each [GSA(Google Service Account)](https://cloud.google.com/iam/docs/service-account-overview):
+
+- Should be granted read-only access to applicable
+  GAR repositories.
+
+- Should have an [IAM policy](https://cloud.google.com/iam/docs/reference/rest/v1/Policy) that allows the Kargo controller's KSA to create a token. i.e. `roles/iam.serviceAccountTokenCreator`
+
+:::note
+This permits the Kargo controller's KSA to impersonate (Kargo) Project-specific GSAs while observing the practice of principle-of-least-priviledge.
+:::
+
+
+:::info
+The name of the GSA associated with each Kargo project is
+deliberately not configurable to prevent Kargo project admins from attempting to
+coerce Kargo into impersonating arbitrary GSA's.
+:::
+
+Once Kargo is able to impersonate the appropriate GSA for a
 given project, it will follow a process similar to that described in the
 previous section to obtain a token that is valid for 60 minutes and cached for
 40.
 
-:::caution
-Following the principle of least privilege, the IAM principal associated with
-the `kargo-controller` `ServiceAccount` should be limited only to the ability to
-impersonate project-specific Google service accounts. Project-specific Google
-service accounts should be limited only to read-only access to the applicable
-Google Artifact Registry repositories.
+:::note
+Beginning with Kargo `v1.5.0`, if maintaining a separate GSA for every Kargo Project is deemed too much of a hassle and strict adherence to the principle of least privilege is not a concern, GAR permissions may be granted directly to the [Kargo controller's KSA](#kubernetes-service-account-principal). In the event that a (Kargo) Project-specific GSA does not exist or cannot be impersonated by the Kargo controller's KSA, Kargo will fall back on using the controller's KSA to access GAR directly.
 :::
 
 :::info
