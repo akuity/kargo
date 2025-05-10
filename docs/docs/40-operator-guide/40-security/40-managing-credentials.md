@@ -321,7 +321,7 @@ To enabled this, each project-specific GSA must:
 
 :::caution
 Following the principle of least privilege, the IAM principal associated with
-the Kargo controller's GSA should be be granted no permissions beyond the
+the Kargo controller's GSA should be granted no permissions beyond the
 ability to impersonate project-specific GSAs.
 :::
 
