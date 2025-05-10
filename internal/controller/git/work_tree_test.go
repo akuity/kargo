@@ -11,8 +11,22 @@ import (
 	"github.com/sosedoff/gitkit"
 	"github.com/stretchr/testify/require"
 
+	"github.com/akuity/kargo/api/v1alpha1/testhelper"
 	"github.com/akuity/kargo/internal/types"
 )
+
+func TestNonFastForwardRegex(t *testing.T) {
+	testCases := map[string]bool{
+		// source: https://regex101.com/r/aNYjHP/1
+		" ! [rejected]        krancour/foo -> krancour/foo (non-fast-forward)": true,
+		" ! [rejected]        main -> main (fetch first)":                      true,
+		" ! [remote rejected] HEAD -> experiment (cannot lock ref 'refs/heads/experiment': is at " +
+			"7dc98ee9c0b75be429e300bb59b3cf6d091ca9ed but expected 1bdf96c8c868981a0e24c43c98aef09a8970a1b8)": true,
+		" ! [rejected]        HEAD -> experiment (fetch first)": true,
+	}
+
+	testhelper.ValidateRegularExpression(t, nonFastForwardRegex, testCases)
+}
 
 func TestWorkTree(t *testing.T) {
 	testRepoCreds := RepoCredentials{
