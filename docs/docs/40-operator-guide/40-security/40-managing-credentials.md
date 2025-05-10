@@ -286,7 +286,9 @@ With WIF enabled,
 identifier of the following form to be a reference to the Kargo controller's
 _Kubernetes_ Service Account (KSA):
 
-`principal://iam.googleapis.com/projects/<GCP_PROJECT_NUMBER>/locations/global/workloadIdentityPools/<GCP_PROJECT_NAME>.svc.id.goog/subject/ns/<KARGO_NAMESPACE>/sa/kargo-controller`
+```
+principal://iam.googleapis.com/projects/<gcp project number>/locations/global/workloadIdentityPools/<gcp project name>.svc.id.goog/subject/ns/<kargo namespace>/sa/kargo-controller
+```
 
 :::note
 You do not need to annotate the Kargo controller's KSA in any specific way. At one time this may have been required. Later it may have been required for standard clusters but not for Autopilot clusters. At present, this is not required at all.
