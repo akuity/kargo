@@ -305,9 +305,9 @@ _always_ be of the form
 `kargo-project-<kargo project name>@<gcp project name>.iam.gserviceaccount.com`.
 
 :::info
-The name of the GSA associated with each Kargo project is deliberately
-not configurable to prevent project admins from attempting to coerce Kargo into
-assuming arbitrary GSA's.
+The name of the GSA associated with each Kargo project is deliberately not
+configurable to prevent project admins from attempting to coerce Kargo into
+assuming arbitrary GSAs.
 :::
 
 Each [GSA(Google Service Account)](https://cloud.google.com/iam/docs/service-account-overview):
