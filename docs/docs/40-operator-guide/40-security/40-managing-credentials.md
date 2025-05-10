@@ -289,7 +289,8 @@ principal://iam.googleapis.com/projects/<gcp project number>/locations/global/wo
 ```
 
 :::note
-There is no need to annotate the Kargo controller's KSA in any specific way to enable the above.
+There is no need to annotate the Kargo controller's KSA in any specific way to
+enable the above.
 :::
 
 #### Google Service Account Impersonation
@@ -307,15 +308,18 @@ _always_ be of the form
 :::info
 The name of the GSA associated with each Kargo project is deliberately not
 configurable to prevent project admins from attempting to coerce Kargo into
-assuming arbitrary GSAs.
+impersonating arbitrary GSAs.
 :::
 
 To enabled this, each project-specific GSA must:
 
-- Should be granted read-only access to applicable
-  GAR repositories.
+- Have an
+  [IAM policy](https://cloud.google.com/iam/docs/reference/rest/v1/Policy) that
+  permits the Kargo controller's KSA to impersonate the GSA by creating a token
+  (`roles/iam.serviceAccountTokenCreator`).
 
-- Should have an [IAM policy](https://cloud.google.com/iam/docs/reference/rest/v1/Policy) that allows the Kargo controller's KSA to create a token. i.e. `roles/iam.serviceAccountTokenCreator`
+- Be granted read-only access (`roles/artifactregistry.reader`) to the specific
+  GAR repositories with which it interacts.
 deliberately not configurable to prevent Kargo project admins from attempting to
 
 Once Kargo is able to impersonate the appropriate GSA for a
