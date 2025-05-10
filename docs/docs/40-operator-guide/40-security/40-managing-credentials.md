@@ -261,8 +261,6 @@ Kargo can be configured to authenticate to
 [Workload Identity Federation](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity))
 (WIF).
 
-#### Cluster Configuration
-
 If Kargo locates no `Secret` resources matching a repository URL, and if Kargo
 is deployed within a
 [Google Kubernetes Engine](https://cloud.google.com/kubernetes-engine/docs/concepts/kubernetes-engine-overview)
