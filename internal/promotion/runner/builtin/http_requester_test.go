@@ -327,6 +327,39 @@ func Test_httpRequester_run(t *testing.T) {
 			},
 		},
 		{
+			name: "success and not failed with json body and response is array",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set(contentTypeHeader, contentTypeJSON)
+				_, err := w.Write([]byte(`[{"theMeaningOfLife": 42}]`))
+				require.NoError(t, err)
+			},
+			cfg: builtin.HTTPConfig{
+				SuccessExpression: "true",
+				Outputs: []builtin.HTTPOutput{
+					{
+						Name:           "status",
+						FromExpression: "response.status",
+					},
+					{
+						Name:           "theMeaningOfLife",
+						FromExpression: "response.body[0].theMeaningOfLife",
+					},
+				},
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				require.Equal(
+					t,
+					map[string]any{
+						"status":           int64(http.StatusOK),
+						"theMeaningOfLife": float64(42),
+					},
+					res.Output,
+				)
+			},
+		},
+		{
 			name: "failed and not success",
 			handler: func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusNotFound)
@@ -501,6 +534,28 @@ func Test_httpRequester_buildExprEnv(t *testing.T) {
 				body, ok := bodyAny.(map[string]any)
 				require.True(t, ok)
 				require.Equal(t, map[string]any{"foo": "bar"}, body)
+			},
+		},
+		{
+			name: "with body as an array",
+			resp: &http.Response{
+				StatusCode: 200,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Body:       io.NopCloser(strings.NewReader(`[{"foo1": "bar1"}, {"foo2": "bar2"}]`)),
+			},
+			assertions: func(t *testing.T, env map[string]any, err error) {
+				require.NoError(t, err)
+				bodyAny, ok := env["response"].(map[string]any)["body"]
+				require.True(t, ok)
+
+				// Check if interface is of type []any
+				body, ok := bodyAny.([]any)
+				require.True(t, ok)
+				require.Len(t, body, 2)
+
+				firstItem, ok := body[0].(map[string]any)
+				require.True(t, ok)
+				require.Equal(t, map[string]any{"foo1": "bar1"}, firstItem)
 			},
 		},
 	}

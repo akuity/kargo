@@ -227,12 +227,20 @@ func (h *httpRequester) buildExprEnv(
 		strings.Split(resp.Header.Get(contentTypeHeader), ";")[0],
 	)
 	if len(bodyBytes) > 0 && contentType == contentTypeJSON {
-		body := map[string]any{}
-		if err = json.Unmarshal(bodyBytes, &body); err != nil {
-			return nil, err
+		var parsedBody any
+		if err := json.Unmarshal(bodyBytes, &parsedBody); err != nil {
+			return nil, fmt.Errorf("failed to parse response: %w", err)
 		}
-		env["response"].(map[string]any)["body"] = body // nolint: forcetypeassert
+
+		// Unmarshal into map[string]any or []any
+		switch parsedBody.(type) {
+		case map[string]any, []any:
+			env["response"].(map[string]any)["body"] = parsedBody
+		default:
+			return nil, fmt.Errorf("unexpected type when unmarshaling response: %w", err)
+		}
 	}
+
 	return env, nil
 }
 
