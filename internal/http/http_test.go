@@ -11,6 +11,7 @@ import (
 )
 
 func TestLimitRead(t *testing.T) {
+	const maxBytes = 2 << 20 // 2MB
 	for _, test := range []struct {
 		name         string
 		reader       io.Reader
@@ -24,14 +25,14 @@ func TestLimitRead(t *testing.T) {
 		{
 			name: "exceeds max",
 			reader: func() io.Reader {
-				b := make([]byte, MaxBytes+1)
+				b := make([]byte, maxBytes+1)
 				return bytes.NewBuffer(b)
 			}(),
 			expectedCode: http.StatusRequestEntityTooLarge,
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			_, err := LimitRead(test.reader, MaxBytes)
+			_, err := LimitRead(test.reader, maxBytes)
 			receivedCode := http.StatusOK
 			if err != nil {
 				apiErr, ok := err.(*httpError)

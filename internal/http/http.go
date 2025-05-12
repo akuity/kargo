@@ -7,8 +7,6 @@ import (
 	"time"
 )
 
-const MaxBytes = 2 << 20
-
 var noCacheHeaders = map[string]string{
 	"Expires":         time.Unix(0, 0).Format(time.RFC1123),
 	"Cache-Control":   "no-cache, private, max-age=0",
