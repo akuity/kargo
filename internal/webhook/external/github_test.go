@@ -6,18 +6,18 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/indexer"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 func TestGithubHandler(t *testing.T) {
@@ -25,18 +25,12 @@ func TestGithubHandler(t *testing.T) {
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 	kubeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(
-		// not adding any objects
-		// because the refresh is tested in helpers_test.go
-		// this test just ensures the correct http status
-		// codes are returned for the edgecases provided
-		).
 		WithIndex(
 			&kargoapi.Warehouse{},
 			indexer.WarehousesBySubscribedURLsField,
 			indexer.WarehousesBySubscribedURLs,
 		).Build()
-	serverURL := "http://doesntmatter.com"
+	url := "http://doesntmatter.com"
 
 	for _, test := range []struct {
 		name  string
@@ -45,57 +39,87 @@ func TestGithubHandler(t *testing.T) {
 		msg   string
 	}{
 		{
-			name: "OK",
-			setup: func() *http.Request {
-				secret := uuid.New().String()
-				os.Setenv("GH_WEBHOOK_SECRET", secret)
-				req := httptest.NewRequest(
-					http.MethodPost,
-					serverURL,
-					mockRequestPayload,
-				)
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("X-Hub-Signature-256", sign(t, secret))
-				req.Header.Set("X-GitHub-Event", "push")
-				return req
-			},
-			msg:  "{\"msg\":\"refreshed 0 warehouses\"}\n",
-			code: http.StatusOK,
-		},
-		{
-			name: "unauthorized",
-			setup: func() *http.Request {
-				os.Setenv("GH_WEBHOOK_SECRET", uuid.New().String())
-				return httptest.NewRequest(
-					http.MethodPost,
-					serverURL,
-					mockRequestPayload,
-				)
-			},
-			msg:  "{\"error\":\"missing signature\"}\n",
-			code: http.StatusUnauthorized,
-		},
-		{
 			name: "bad request - unsupported event type",
 			setup: func() *http.Request {
-				secret := uuid.New().String()
-				os.Setenv("GH_WEBHOOK_SECRET", secret)
-				req := httptest.NewRequest(
-					http.MethodPost,
-					serverURL,
-					mockRequestPayload,
-				)
+				b := newBody()
+				req := httptest.NewRequest(http.MethodPost, url, b)
 				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("X-Hub-Signature-256", sign(t, secret))
+				req.Header.Set("X-Hub-Signature-256", sign(t, tempSecret, b.Bytes()))
 				req.Header.Set("X-GitHub-Event", "ping")
 				return req
 			},
 			msg:  "{\"error\":\"only push events are supported\"}\n",
 			code: http.StatusNotImplemented,
 		},
+		{
+			name: "request too large",
+			setup: func() *http.Request {
+				const maxBytes = 2 << 20 // 2MB
+				body := make([]byte, maxBytes+1)
+				b := io.NopCloser(bytes.NewBuffer(body))
+				req := httptest.NewRequest(http.MethodPost, url, b)
+				req.Header.Set("X-Hub-Signature-256", sign(t, tempSecret, body))
+				req.Header.Set("X-GitHub-Event", "push")
+				return req
+			},
+			msg:  "{\"error\":\"response body exceeds limit of 2097152 bytes\"}\n",
+			code: http.StatusRequestEntityTooLarge,
+		},
+		{
+			name: "unauthorized - missing signature",
+			setup: func() *http.Request {
+				b := newBody()
+				req := httptest.NewRequest(http.MethodPost, url, b)
+				req.Header.Set("X-GitHub-Event", "push")
+				return req
+			},
+			msg:  "{\"error\":\"missing signature\"}\n",
+			code: http.StatusUnauthorized,
+		},
+		{
+			name: "unauthorized - invalid signature",
+			setup: func() *http.Request {
+				b := newBody()
+				req := httptest.NewRequest(http.MethodPost, url, b)
+				req.Header.Set("X-Hub-Signature-256", sign(t, "invalid-sig", b.Bytes()))
+				req.Header.Set("X-GitHub-Event", "push")
+				return req
+			},
+			msg:  "{\"error\":\"unauthorized\"}\n",
+			code: http.StatusUnauthorized,
+		},
+		{
+			name: "malformed request",
+			setup: func() *http.Request {
+				b := bytes.NewBuffer([]byte("invalid json"))
+				req := httptest.NewRequest(http.MethodPost, url, b)
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("X-Hub-Signature-256", sign(t, tempSecret, b.Bytes()))
+				req.Header.Set("X-GitHub-Event", "push")
+				return req
+			},
+			msg:  "{\"error\":\"failed to parse webhook event: invalid character 'i' looking for beginning of value\"}\n",
+			code: http.StatusBadRequest,
+		},
+		{
+			name: "OK",
+			setup: func() *http.Request {
+				b := newBody()
+				req := httptest.NewRequest(http.MethodPost, url, b)
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("X-Hub-Signature-256", sign(t, tempSecret, b.Bytes()))
+				req.Header.Set("X-GitHub-Event", "push")
+				return req
+			},
+			msg:  "{\"msg\":\"refreshed 0 warehouses\"}\n",
+			code: http.StatusOK,
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			req := test.setup()
+			l := logging.NewLogger(logging.DebugLevel)
+			ctx := logging.ContextWithLogger(req.Context(), l)
+			req = req.WithContext(ctx)
 			w := httptest.NewRecorder()
 			h := githubHandler(kubeClient)
 			h(w, req)
@@ -105,17 +129,18 @@ func TestGithubHandler(t *testing.T) {
 	}
 }
 
-func sign(t *testing.T, secret string) string {
+func sign(t *testing.T, s string, b []byte) string {
 	t.Helper()
 
-	mac := hmac.New(sha256.New, []byte(secret))
-	mac.Write(mockRequestPayload.Bytes())
+	mac := hmac.New(sha256.New, []byte(s))
+	mac.Write(b)
 	return fmt.Sprintf("sha256=%s",
 		hex.EncodeToString(mac.Sum(nil)),
 	)
 }
 
-var mockRequestPayload = bytes.NewBuffer([]byte(`
+func newBody() *bytes.Buffer {
+	return bytes.NewBuffer([]byte(`
 {
 	"ref": "refs/heads/main",
 	"before": "1fe030abc48d0d0ee7b3d650d6e9449775990318",
@@ -132,3 +157,4 @@ var mockRequestPayload = bytes.NewBuffer([]byte(`
 	}
   }	
 `))
+}

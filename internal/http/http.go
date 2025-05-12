@@ -31,7 +31,8 @@ func SetCacheHeaders(w http.ResponseWriter, maxAge time.Duration, timeUntilExpir
 	w.Header().Set("Expires", time.Now().Add(timeUntilExpiry).Format(time.RFC1123))
 }
 
-func LimitRead(r io.Reader, limit int64) ([]byte, error) {
+func LimitRead(r io.ReadCloser, limit int64) ([]byte, error) {
+	defer r.Close()
 	lr := io.LimitReader(r, limit)
 
 	// Read as far as we are allowed to

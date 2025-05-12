@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 
 	gh "github.com/google/go-github/v71/github"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -12,6 +11,8 @@ import (
 	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/logging"
 )
+
+const tempSecret = "TODO(fuskovic): source from CRD" // nolint: gosec
 
 // githubHandler handles push events for github.
 // After the request has been authenticated,
@@ -24,19 +25,21 @@ func githubHandler(c client.Client) http.HandlerFunc {
 		logger := logging.LoggerFromContext(ctx)
 		logger.Debug("identifying source repository")
 
-		secret, ok := os.LookupEnv("GH_WEBHOOK_SECRET")
-		if !ok {
-			logger.Error(
-				errors.New("GH_WEBHOOK_SECRET unset"),
-				"environment misconfiguration",
-			)
+		eventType := r.Header.Get("X-GitHub-Event")
+		if eventType != "push" {
 			xhttp.WriteErrorJSON(w,
 				xhttp.Error(
-					// keep it vague, no need to leak config details
-					errors.New("unexpected server error"),
-					http.StatusInternalServerError,
+					fmt.Errorf("only push events are supported"),
+					http.StatusNotImplemented,
 				),
 			)
+			return
+		}
+
+		const maxBytes = 2 << 20 // 2MB
+		bodyBytes, err := xhttp.LimitRead(r.Body, maxBytes)
+		if err != nil {
+			xhttp.WriteErrorJSON(w, err)
 			return
 		}
 
@@ -51,35 +54,17 @@ func githubHandler(c client.Client) http.HandlerFunc {
 			return
 		}
 
-		const maxBytes = 2 << 20 // 2MB
-		bodyBytes, err := xhttp.LimitRead(r.Body, maxBytes)
-		if err != nil {
-			xhttp.WriteErrorJSON(w, err)
-			return
-		}
-
+		logger.Debug("validating sig", "signature", signature)
 		if err = gh.ValidateSignature(
 			signature,
 			bodyBytes,
-			[]byte(secret),
+			[]byte(tempSecret),
 		); err != nil {
 			logger.Error(err, "failed to validate signature")
 			xhttp.WriteErrorJSON(w,
 				xhttp.Error(
-					// same here
 					errors.New("unauthorized"),
 					http.StatusUnauthorized,
-				),
-			)
-			return
-		}
-
-		eventType := r.Header.Get("X-GitHub-Event")
-		if eventType != "push" {
-			xhttp.WriteErrorJSON(w,
-				xhttp.Error(
-					fmt.Errorf("only push events are supported"),
-					http.StatusNotImplemented,
 				),
 			)
 			return
