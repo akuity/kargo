@@ -434,8 +434,6 @@ export type JobSpec = Message<"k8s.io.api.batch.v1.JobSpec"> & {
    * When the field is specified, it must be immutable and works only for the Indexed Jobs.
    * Once the Job meets the SuccessPolicy, the lingering pods are terminated.
    *
-   * This field is beta-level. To use this field, you must enable the
-   * `JobSuccessPolicy` feature gate (enabled by default).
    * +optional
    *
    * @generated from field: optional k8s.io.api.batch.v1.SuccessPolicy successPolicy = 16;
@@ -458,8 +456,6 @@ export type JobSpec = Message<"k8s.io.api.batch.v1.JobSpec"> & {
    * batch.kubernetes.io/job-index-failure-count annotation. It can only
    * be set when Job's completionMode=Indexed, and the Pod's restart
    * policy is Never. The field is immutable.
-   * This field is beta-level. It can be used when the `JobBackoffLimitPerIndex`
-   * feature gate is enabled (enabled by default).
    * +optional
    *
    * @generated from field: optional int32 backoffLimitPerIndex = 12;
@@ -475,8 +471,6 @@ export type JobSpec = Message<"k8s.io.api.batch.v1.JobSpec"> & {
    * It can only be specified when backoffLimitPerIndex is set.
    * It can be null or up to completions. It is required and must be
    * less than or equal to 10^4 when is completions greater than 10^5.
-   * This field is beta-level. It can be used when the `JobBackoffLimitPerIndex`
-   * feature gate is enabled (enabled by default).
    * +optional
    *
    * @generated from field: optional int32 maxFailedIndexes = 13;
@@ -745,8 +739,6 @@ export type JobStatus = Message<"k8s.io.api.batch.v1.JobStatus"> & {
    * represented as "1,3-5,7".
    * The set of failed indexes cannot overlap with the set of completed indexes.
    *
-   * This field is beta-level. It can be used when the `JobBackoffLimitPerIndex`
-   * feature gate is enabled (enabled by default).
    * +optional
    *
    * @generated from field: optional string failedIndexes = 10;
@@ -956,8 +948,6 @@ export type PodFailurePolicyRule = Message<"k8s.io.api.batch.v1.PodFailurePolicy
    *   running pods are terminated.
    * - FailIndex: indicates that the pod's index is marked as Failed and will
    *   not be restarted.
-   *   This value is beta-level. It can be used when the
-   *   `JobBackoffLimitPerIndex` feature gate is enabled (enabled by default).
    * - Ignore: indicates that the counter towards the .backoffLimit is not
    *   incremented and a replacement pod is created.
    * - Count: indicates that the pod is handled in the default way - the
