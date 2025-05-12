@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -60,4 +61,13 @@ func LimitRead(r io.ReadCloser, limit int64) ([]byte, error) {
 		}
 	}
 	return bodyBytes, nil
+}
+
+func WriteResponseJSON(w http.ResponseWriter, code int, body any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	if body == nil {
+		body = struct{}{}
+	}
+	_ = json.NewEncoder(w).Encode(body)
 }

@@ -31,17 +31,9 @@ func WriteErrorJSON(w http.ResponseWriter, err error) {
 	w.WriteHeader(code)
 	resp := struct {
 		Error string `json:"error,omitempty"`
-	}{
-		Error: err.Error(),
+	}{}
+	if code != http.StatusInternalServerError {
+		resp.Error = err.Error()
 	}
 	_ = json.NewEncoder(w).Encode(resp)
-}
-
-func WriteResponseJSON(w http.ResponseWriter, code int, body any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	if body == nil {
-		body = struct{}{}
-	}
-	_ = json.NewEncoder(w).Encode(body)
 }
