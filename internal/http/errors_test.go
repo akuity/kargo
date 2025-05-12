@@ -11,86 +11,61 @@ import (
 
 func TestWriteErrorJSON(t *testing.T) {
 	for _, test := range []struct {
-		name         string
-		writeFn      func() *httptest.ResponseRecorder
-		expectedCode int
-		expectedBody string
+		name    string
+		err     error
+		code    int
+		bodyObj any
 	}{
 		{
-			name: "basic error",
-			writeFn: func() *httptest.ResponseRecorder {
-				w := httptest.NewRecorder()
-				WriteErrorJSON(w, errors.New("basic error"))
-				return w
-			},
-			// should default to this
-			expectedCode: http.StatusInternalServerError,
-			expectedBody: "{\"error\":\"basic error\"}\n",
+			name:    "basic error",
+			err:     errors.New("basic error"),
+			code:    http.StatusInternalServerError,
+			bodyObj: "{\"error\":\"basic error\"}\n",
 		},
 		{
 			name: "http error",
-			writeFn: func() *httptest.ResponseRecorder {
-				w := httptest.NewRecorder()
-				WriteErrorJSON(w,
-					Error(
-						errors.New("unauthorized"),
-						http.StatusUnauthorized,
-					),
-				)
-				return w
-			},
-			expectedCode: http.StatusUnauthorized,
-			expectedBody: "{\"error\":\"unauthorized\"}\n",
+			err: Error(
+				errors.New("unauthorized"),
+				http.StatusUnauthorized,
+			),
+			code:    http.StatusUnauthorized,
+			bodyObj: "{\"error\":\"unauthorized\"}\n",
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			w := test.writeFn()
-			require.Equal(t, test.expectedCode, w.Result().StatusCode)
-			require.Equal(t, test.expectedBody, w.Body.String())
+			w := httptest.NewRecorder()
+			WriteErrorJSON(w, test.err)
+			require.Equal(t, test.code, w.Result().StatusCode)
+			require.Equal(t, test.bodyObj, w.Body.String())
 		})
 	}
 }
 
 func TestWriteResponseJSON(t *testing.T) {
 	for _, test := range []struct {
-		name         string
-		writeFn      func() *httptest.ResponseRecorder
-		expectedCode int
-		expectedBody string
+		name    string
+		input   any
+		code    int
+		bodyObj any
 	}{
 		{
-			name: "nil body",
-			writeFn: func() *httptest.ResponseRecorder {
-				w := httptest.NewRecorder()
-				WriteResponseJSON(w,
-					http.StatusOK,
-					nil,
-				)
-				return w
-			},
-			expectedCode: http.StatusOK,
-			expectedBody: "{}\n",
+			name:    "nil body",
+			input:   nil,
+			code:    http.StatusOK,
+			bodyObj: "{}\n",
 		},
 		{
-			name: "non-nil body",
-			writeFn: func() *httptest.ResponseRecorder {
-				w := httptest.NewRecorder()
-				WriteResponseJSON(w,
-					http.StatusOK,
-					map[string]any{
-						"key": "value",
-					},
-				)
-				return w
-			},
-			expectedCode: http.StatusOK,
-			expectedBody: "{\"key\":\"value\"}\n",
+			name:    "non-nil body",
+			code:    http.StatusOK,
+			input:   map[string]string{"key": "value"},
+			bodyObj: "{\"key\":\"value\"}\n",
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			w := test.writeFn()
-			require.Equal(t, test.expectedCode, w.Result().StatusCode)
-			require.Equal(t, test.expectedBody, w.Body.String())
+			w := httptest.NewRecorder()
+			WriteResponseJSON(w, test.code, test.input)
+			require.Equal(t, test.code, w.Result().StatusCode)
+			require.Equal(t, test.bodyObj, w.Body.String())
 		})
 	}
 }
