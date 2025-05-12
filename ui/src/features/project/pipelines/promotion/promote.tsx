@@ -16,7 +16,6 @@ import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { FreightDetails } from './freight-details';
 import styles from './promote.module.less';
-import { PromotionGraph } from './promotion-graph';
 
 type PromoteProps = ModalComponentProps & {
   stage: Stage;
@@ -96,8 +95,6 @@ export const Promote = (props: PromoteProps) => {
       }
     >
       <FreightDetails freight={props.freight} />
-
-      <PromotionGraph freight={props.freight} stage={props.stage} />
     </Drawer>
   );
 };

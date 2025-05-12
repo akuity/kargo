@@ -53,6 +53,7 @@ service KargoService {
   rpc DeleteProject(DeleteProjectRequest) returns (DeleteProjectResponse);
   rpc GetProject(GetProjectRequest) returns (GetProjectResponse);
   rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
+  rpc GetProjectConfig(GetProjectConfigRequest) returns (GetProjectConfigResponse);
 
   /* Freight APIs */
 
@@ -367,6 +368,18 @@ message DeleteProjectRequest {
 
 message DeleteProjectResponse {
   /* explicitly empty */
+}
+
+message GetProjectConfigRequest {
+  string name = 1;
+  RawFormat format = 2;
+}
+
+message GetProjectConfigResponse {
+  oneof result {
+    github.com.akuity.kargo.api.v1alpha1.ProjectConfig project_config = 1;
+    bytes raw = 2;
+  }
 }
 
 message GetProjectRequest {

@@ -9,6 +9,7 @@ import { z } from 'zod';
 
 import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
 import { FieldContainer } from '@ui/features/common/form/field-container';
+import { projectYAMLExample } from '@ui/features/project/list/utils/project-yaml-example';
 import {
   getProject,
   updateResource
@@ -21,7 +22,6 @@ import { zodValidators } from '@ui/utils/validators';
 const formSchema = z.object({
   value: zodValidators.requiredString
 });
-import { projectYAMLExample } from '../../../list/utils/project-yaml-example';
 
 import { DeleteProject } from './delete-project-modal';
 

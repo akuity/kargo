@@ -114,7 +114,9 @@ CustomNode.Container = (
         type='target'
         position={Position.Left}
         style={{
-          backgroundColor: 'transparent'
+          backgroundColor: 'transparent',
+          stroke: 'none',
+          border: 'none'
         }}
       />
       {Children}
@@ -123,7 +125,9 @@ CustomNode.Container = (
         type='source'
         position={Position.Right}
         style={{
-          backgroundColor: 'transparent'
+          backgroundColor: 'transparent',
+          stroke: 'none',
+          border: 'none'
         }}
       />
     </>

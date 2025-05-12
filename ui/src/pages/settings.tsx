@@ -9,7 +9,7 @@ import { ClusterPromotionTasks } from '@ui/features/settings/cluster-promotion-t
 
 const settingsViews = {
   verification: {
-    label: 'Verificaion',
+    label: 'Verification',
     icon: faBarChart,
     path: 'analysis-templates',
     component: ClusterAnalysisTemplatesList

@@ -1,8 +1,10 @@
 import { faDocker, faGithub } from '@fortawesome/free-brands-svg-icons';
 import {
   faAnchor,
+  faArrowsLeftRightToLine,
   faCheck,
   faEllipsis,
+  faTrash,
   faWarehouse,
   IconDefinition
 } from '@fortawesome/free-solid-svg-icons';
@@ -10,16 +12,18 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Divider, Dropdown, Flex, Typography } from 'antd';
 import classNames from 'classnames';
 import { formatDistance } from 'date-fns';
-import { useMemo } from 'react';
+import { ReactNode, useMemo } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { useModal } from '@ui/features/common/modal/use-modal';
 import { useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import { FreightTimelineControllerContextType } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
 import { ColorMap } from '@ui/features/stage/utils';
 import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
+import { DeleteFreightModal } from './delete-freight-modal';
 import { FreightArtifact } from './freight-artifact';
 
 type FreightCardProps = {
@@ -34,6 +38,10 @@ type FreightCardProps = {
   promote?: boolean;
   soakTime?: string;
   onReviewAndPromote?(): void;
+  onExpand(): void;
+
+  // count of stacked freights
+  count?: number;
 };
 
 export const FreightCard = (props: FreightCardProps) => {
@@ -41,6 +49,8 @@ export const FreightCard = (props: FreightCardProps) => {
   const actionContext = useActionContext();
 
   const freightAlias = props.freight?.alias;
+
+  const deleteFreightModal = useModal();
 
   const creation = useMemo(() => {
     const creationDate = timestampDate(props.freight?.metadata?.creationTimestamp);
@@ -66,26 +76,22 @@ export const FreightCard = (props: FreightCardProps) => {
     props.viewingFreight?.metadata?.name === props.freight?.metadata?.name ||
     actionContext?.action?.freight?.metadata?.name === props.freight?.metadata?.name;
 
-  return (
-    <div
-      className={classNames(
-        'rounded-md text-center flex flex-col cursor-pointer hover:bg-gray-100',
-        {
-          'bg-gray-50': !isViewingFreight,
-          'bg-gray-100': isViewingFreight
-        },
-        props.className
-      )}
-      style={{ border: '1px solid rgba(0,0,0,.05)' }}
-      onClick={() => {
-        navigate(
-          generatePath(paths.freight, {
-            name: props.freight?.metadata?.namespace,
-            freightName: props.freight?.metadata?.name
-          })
-        );
-      }}
-    >
+  let CardContent: ReactNode;
+
+  if (props.count) {
+    CardContent = (
+      <div className='flex flex-col items-center justify-center h-full px-2 bg-gray-200'>
+        <Typography.Text type='secondary' className='text-xs'>
+          <FontAwesomeIcon icon={faArrowsLeftRightToLine} />
+          <br />
+          {props.count}x
+          <br />
+          freights
+        </Typography.Text>
+      </div>
+    );
+  } else {
+    CardContent = (
       <div
         className={classNames('relative px-2', {
           'pl-4': props.inUse
@@ -107,6 +113,22 @@ export const FreightCard = (props: FreightCardProps) => {
                     e.domEvent.stopPropagation();
                     actionContext?.actManuallyApprove(props.freight);
                   }
+                },
+                {
+                  key: 'delete-freight',
+                  label: 'Delete Freight',
+                  icon: <FontAwesomeIcon icon={faTrash} />,
+                  onClick: (e) => {
+                    e.domEvent.stopPropagation();
+                    deleteFreightModal.show((modalProps) => (
+                      <DeleteFreightModal
+                        freight={props.freight}
+                        onDelete={modalProps.hide}
+                        {...modalProps}
+                      />
+                    ));
+                  },
+                  disabled: props.inUse
                 }
               ]
             }}
@@ -190,6 +212,35 @@ export const FreightCard = (props: FreightCardProps) => {
           </Typography.Text>
         </div>
       </div>
+    );
+  }
+
+  return (
+    <div
+      className={classNames(
+        'rounded-md text-center flex flex-col cursor-pointer hover:bg-gray-100',
+        {
+          'bg-gray-50': !isViewingFreight,
+          'bg-gray-100': isViewingFreight
+        },
+        props.className
+      )}
+      style={{ border: '1px solid rgba(0,0,0,.05)' }}
+      onClick={() => {
+        if (props.count) {
+          props.onExpand();
+          return;
+        }
+
+        navigate(
+          generatePath(paths.freight, {
+            name: props.freight?.metadata?.namespace,
+            freightName: props.freight?.metadata?.name
+          })
+        );
+      }}
+    >
+      {CardContent}
 
       {props.promote && (
         <div className='px-1 pb-1'>

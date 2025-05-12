@@ -19,18 +19,18 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
 	"github.com/akuity/kargo/internal/server/kubernetes"
-	libWebhook "github.com/akuity/kargo/internal/webhook"
-	"github.com/akuity/kargo/internal/webhook/freight"
-	"github.com/akuity/kargo/internal/webhook/project"
-	"github.com/akuity/kargo/internal/webhook/projectconfig"
-	"github.com/akuity/kargo/internal/webhook/promotion"
-	"github.com/akuity/kargo/internal/webhook/promotiontask"
-	"github.com/akuity/kargo/internal/webhook/stage"
-	"github.com/akuity/kargo/internal/webhook/warehouse"
+	libWebhook "github.com/akuity/kargo/internal/webhook/kubernetes"
+	"github.com/akuity/kargo/internal/webhook/kubernetes/freight"
+	"github.com/akuity/kargo/internal/webhook/kubernetes/project"
+	"github.com/akuity/kargo/internal/webhook/kubernetes/projectconfig"
+	"github.com/akuity/kargo/internal/webhook/kubernetes/promotion"
+	"github.com/akuity/kargo/internal/webhook/kubernetes/promotiontask"
+	"github.com/akuity/kargo/internal/webhook/kubernetes/stage"
+	"github.com/akuity/kargo/internal/webhook/kubernetes/warehouse"
 	versionpkg "github.com/akuity/kargo/pkg/x/version"
 )
 
-type webhooksServerOptions struct {
+type kubernetesWebhooksServerOptions struct {
 	KubeConfig string
 
 	MetricsBindAddress string
@@ -39,15 +39,15 @@ type webhooksServerOptions struct {
 	Logger *logging.Logger
 }
 
-func newWebhooksServerCommand() *cobra.Command {
-	cmdOpts := &webhooksServerOptions{
+func newKubernetesWebhooksServerCommand() *cobra.Command {
+	cmdOpts := &kubernetesWebhooksServerOptions{
 		// During startup, we enforce use of an info-level logger to ensure that
 		// no important startup messages are missed.
 		Logger: logging.NewLogger(logging.InfoLevel),
 	}
 
 	cmd := &cobra.Command{
-		Use:               "webhooks-server",
+		Use:               "kubernetes-webhooks-server",
 		DisableAutoGenTag: true,
 		SilenceErrors:     true,
 		SilenceUsage:      true,
@@ -61,16 +61,16 @@ func newWebhooksServerCommand() *cobra.Command {
 	return cmd
 }
 
-func (o *webhooksServerOptions) complete() {
+func (o *kubernetesWebhooksServerOptions) complete() {
 	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
 	o.MetricsBindAddress = os.GetEnv("METRICS_BIND_ADDRESS", "0")
 	o.PprofBindAddress = os.GetEnv("PPROF_BIND_ADDRESS", "")
 }
 
-func (o *webhooksServerOptions) run(ctx context.Context) error {
+func (o *kubernetesWebhooksServerOptions) run(ctx context.Context) error {
 	version := versionpkg.GetVersion()
 	o.Logger.Info(
-		"Starting Kargo Webhooks Server",
+		"Starting Kargo Kubernetes Webhooks Server",
 		"version", version.Version,
 		"commit", version.GitCommit,
 		"GOMAXPROCS", stdruntime.GOMAXPROCS(0),
@@ -153,7 +153,7 @@ func (o *webhooksServerOptions) run(ctx context.Context) error {
 	}
 
 	if err := mgr.Start(ctx); err != nil {
-		return fmt.Errorf("start Kargo webhook manager: %w", err)
+		return fmt.Errorf("start Kargo Kubernetes webhook manager: %w", err)
 	}
 	return nil
 }

@@ -20,7 +20,7 @@ RUN NODE_ENV='production' VERSION=${VERSION} pnpm run build
 ####################################################################################################
 # back-end-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM golang:1.24.2-bookworm AS back-end-builder
+FROM --platform=$BUILDPLATFORM golang:1.24.3-bookworm AS back-end-builder
 
 ARG TARGETOS
 ARG TARGETARCH

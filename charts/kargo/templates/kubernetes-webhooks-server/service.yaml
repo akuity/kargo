@@ -6,7 +6,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
-    {{- include "kargo.webhooksServer.labels" . | nindent 4 }}
+    {{- include "kargo.kubernetesWebhooksServer.labels" . | nindent 4 }}
 spec:
   type: ClusterIP
   ports:
@@ -15,5 +15,5 @@ spec:
     targetPort: 9443
   selector:
     {{- include "kargo.selectorLabels" . | nindent 4 }}
-    {{- include "kargo.webhooksServer.labels" . | nindent 4 }}
+    {{- include "kargo.kubernetesWebhooksServer.labels" . | nindent 4 }}
 {{- end }}
