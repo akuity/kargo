@@ -20,6 +20,9 @@ type ProjectConfigSpec struct {
 	// PromotionPolicies defines policies governing the promotion of Freight to
 	// specific Stages within the Project.
 	PromotionPolicies []PromotionPolicy `json:"promotionPolicies,omitempty" protobuf:"bytes,1,rep,name=promotionPolicies"`
+	// Receivers defines the receivers that are used to receive warehouse events
+	// and trigger refreshes.
+	Receivers []Receiver `json:"receivers,omitempty" protobuf:"bytes,2,rep,name=receivers"`
 }
 
 // PromotionPolicy defines policies governing the promotion of Freight to a
@@ -44,6 +47,27 @@ type PromotionPolicy struct {
 	// users to define Stages that are automatically updated as soon as new
 	// artifacts are detected.
 	AutoPromotionEnabled bool `json:"autoPromotionEnabled,omitempty" protobuf:"varint,2,opt,name=autoPromotionEnabled"`
+}
+
+type Receiver struct {
+	// Name is the name of the receiver.
+	//
+	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
+	// Type is the type of the receiver.
+	//
+	// TODO: Add more receiver enum types(e.g. Dockerhub, Quay, Gitlab, etc...)
+	// +kubebuilder:validation:Enum=GitHub;
+	Type string `json:"type,omitempty" protobuf:"bytes,2,opt,name=type"`
+	// URL is the URL of the receiver.
+	//
+	// +kubebuilder:validation:Format=uri
+	URL string `json:"url,omitempty" protobuf:"bytes,3,opt,name=url"`
+	// Secret is the name of the secret that contains the credentials for the
+	// receiver.
+	//
+	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+	Secret string `json:"secret,omitempty" protobuf:"bytes,4,opt,name=secret"`
 }
 
 // PromotionPolicySelector is a selector that matches the resource to which

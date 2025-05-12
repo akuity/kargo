@@ -864,6 +864,10 @@ message ProjectConfigSpec {
   // PromotionPolicies defines policies governing the promotion of Freight to
   // specific Stages within the Project.
   repeated PromotionPolicy promotionPolicies = 1;
+
+  // Receivers defines the receivers that are used to receive warehouse events
+  // and trigger refreshes.
+  repeated Receiver receivers = 2;
 }
 
 // ProjectList is a list of Project resources.
@@ -1238,6 +1242,30 @@ message PromotionTemplateSpec {
   // +kubebuilder:validation:MinItems=1
   // +kubebuilder:validation:items:XValidation:message="PromotionTemplate step must have exactly one of uses or task set",rule="(has(self.uses) ? !has(self.task) : has(self.task))"
   repeated PromotionStep steps = 1;
+}
+
+message Receiver {
+  // Name is the name of the receiver.
+  //
+  // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+  optional string name = 1;
+
+  // Type is the type of the receiver.
+  //
+  // TODO: Add more receiver enum types(e.g. Dockerhub, Quay, Gitlab, etc...)
+  // +kubebuilder:validation:Enum=GitHub;
+  optional string type = 2;
+
+  // URL is the URL of the receiver.
+  //
+  // +kubebuilder:validation:Format=uri
+  optional string url = 3;
+
+  // Secret is the name of the secret that contains the credentials for the
+  // receiver.
+  //
+  // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+  optional string secret = 4;
 }
 
 // RepoSubscription describes a subscription to ONE OF a Git repository, a

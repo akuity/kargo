@@ -89,6 +89,37 @@
             ]
           },
           "type": "array"
+        },
+        "receivers": {
+          "description": "Receivers defines the receivers that are used to receive warehouse events\nand trigger refreshes.",
+          "items": {
+            "properties": {
+              "name": {
+                "description": "Name is the name of the receiver.",
+                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
+                "type": "string"
+              },
+              "secret": {
+                "description": "Secret is the name of the secret that contains the credentials for the\nreceiver.",
+                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
+                "type": "string"
+              },
+              "type": {
+                "description": "Type is the type of the receiver.\n",
+                "enum": [
+                  "GitHub"
+                ],
+                "type": "string"
+              },
+              "url": {
+                "description": "URL is the URL of the receiver.",
+                "format": "uri",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "type": "array"
         }
       },
       "type": "object"
