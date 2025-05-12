@@ -39,10 +39,10 @@ func TestGithubHandler(t *testing.T) {
 	serverURL := "http://doesntmatter.com"
 
 	for _, test := range []struct {
-		name         string
-		setup        func() *http.Request
-		expectedCode int
-		expectedMsg  string
+		name  string
+		setup func() *http.Request
+		code  int
+		msg   string
 	}{
 		{
 			name: "OK",
@@ -59,8 +59,8 @@ func TestGithubHandler(t *testing.T) {
 				req.Header.Set("X-GitHub-Event", "push")
 				return req
 			},
-			expectedMsg:  "{\"msg\":\"refreshed 0 warehouses\"}\n",
-			expectedCode: http.StatusOK,
+			msg:  "{\"msg\":\"refreshed 0 warehouses\"}\n",
+			code: http.StatusOK,
 		},
 		{
 			name: "unauthorized",
@@ -72,8 +72,8 @@ func TestGithubHandler(t *testing.T) {
 					mockRequestPayload,
 				)
 			},
-			expectedMsg:  "{\"error\":\"missing signature\"}\n",
-			expectedCode: http.StatusUnauthorized,
+			msg:  "{\"error\":\"missing signature\"}\n",
+			code: http.StatusUnauthorized,
 		},
 		{
 			name: "bad request - unsupported event type",
@@ -90,8 +90,8 @@ func TestGithubHandler(t *testing.T) {
 				req.Header.Set("X-GitHub-Event", "ping")
 				return req
 			},
-			expectedMsg:  "{\"error\":\"only push events are supported\"}\n",
-			expectedCode: http.StatusNotImplemented,
+			msg:  "{\"error\":\"only push events are supported\"}\n",
+			code: http.StatusNotImplemented,
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
@@ -99,8 +99,8 @@ func TestGithubHandler(t *testing.T) {
 			w := httptest.NewRecorder()
 			h := githubHandler(kubeClient)
 			h(w, req)
-			require.Equal(t, test.expectedCode, w.Code)
-			require.Contains(t, test.expectedMsg, w.Body.String())
+			require.Equal(t, test.code, w.Code)
+			require.Contains(t, test.msg, w.Body.String())
 		})
 	}
 }
