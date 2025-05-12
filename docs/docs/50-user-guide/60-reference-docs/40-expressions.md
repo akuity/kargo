@@ -153,7 +153,7 @@ Expect other useful variables to be added in the future.
 
 The `ctx` object has the following structure:
 
-```
+```console
 ctx
 ├── project: string       # The name of the Project
 ├── stage: string         # The name of the Stage
@@ -239,7 +239,7 @@ definition of the static variables).
 
 The `ctx` object for verification has the following structure:
 
-```
+```console
 ctx
 ├── project: string  # The name of the Project
 └── stage: string    # The name of the Stage
@@ -314,7 +314,7 @@ The returned `FreightOrigin` object has the following fields:
 The `FreightOrigin` object can be used as an optional argument to the
 `commitFrom()`, `imageFrom()`, or `chartFrom()` functions to disambiguate the
 desired source of an artifact when necessary. These functions return `nil` when
-relevant `Freight` is not found from the `FreightCollection`. 
+relevant `Freight` is not found from the `FreightCollection`.
 
 :::tip
 You can handle `nil` values gracefully in Expr using its
