@@ -93,6 +93,9 @@ const (
 	// KargoServiceListProjectsProcedure is the fully-qualified name of the KargoService's ListProjects
 	// RPC.
 	KargoServiceListProjectsProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListProjects"
+	// KargoServiceDeleteProjectConfigProcedure is the fully-qualified name of the KargoService's
+	// DeleteProjectConfig RPC.
+	KargoServiceDeleteProjectConfigProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/DeleteProjectConfig"
 	// KargoServiceGetProjectConfigProcedure is the fully-qualified name of the KargoService's
 	// GetProjectConfig RPC.
 	KargoServiceGetProjectConfigProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetProjectConfig"
@@ -243,6 +246,7 @@ var (
 	kargoServiceDeleteProjectMethodDescriptor                 = kargoServiceServiceDescriptor.Methods().ByName("DeleteProject")
 	kargoServiceGetProjectMethodDescriptor                    = kargoServiceServiceDescriptor.Methods().ByName("GetProject")
 	kargoServiceListProjectsMethodDescriptor                  = kargoServiceServiceDescriptor.Methods().ByName("ListProjects")
+	kargoServiceDeleteProjectConfigMethodDescriptor           = kargoServiceServiceDescriptor.Methods().ByName("DeleteProjectConfig")
 	kargoServiceGetProjectConfigMethodDescriptor              = kargoServiceServiceDescriptor.Methods().ByName("GetProjectConfig")
 	kargoServiceApproveFreightMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("ApproveFreight")
 	kargoServiceDeleteFreightMethodDescriptor                 = kargoServiceServiceDescriptor.Methods().ByName("DeleteFreight")
@@ -315,6 +319,7 @@ type KargoServiceClient interface {
 	DeleteProject(context.Context, *connect.Request[v1alpha1.DeleteProjectRequest]) (*connect.Response[v1alpha1.DeleteProjectResponse], error)
 	GetProject(context.Context, *connect.Request[v1alpha1.GetProjectRequest]) (*connect.Response[v1alpha1.GetProjectResponse], error)
 	ListProjects(context.Context, *connect.Request[v1alpha1.ListProjectsRequest]) (*connect.Response[v1alpha1.ListProjectsResponse], error)
+	DeleteProjectConfig(context.Context, *connect.Request[v1alpha1.DeleteProjectConfigRequest]) (*connect.Response[v1alpha1.DeleteProjectConfigResponse], error)
 	GetProjectConfig(context.Context, *connect.Request[v1alpha1.GetProjectConfigRequest]) (*connect.Response[v1alpha1.GetProjectConfigResponse], error)
 	ApproveFreight(context.Context, *connect.Request[v1alpha1.ApproveFreightRequest]) (*connect.Response[v1alpha1.ApproveFreightResponse], error)
 	DeleteFreight(context.Context, *connect.Request[v1alpha1.DeleteFreightRequest]) (*connect.Response[v1alpha1.DeleteFreightResponse], error)
@@ -501,6 +506,12 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+KargoServiceListProjectsProcedure,
 			connect.WithSchema(kargoServiceListProjectsMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		deleteProjectConfig: connect.NewClient[v1alpha1.DeleteProjectConfigRequest, v1alpha1.DeleteProjectConfigResponse](
+			httpClient,
+			baseURL+KargoServiceDeleteProjectConfigProcedure,
+			connect.WithSchema(kargoServiceDeleteProjectConfigMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		getProjectConfig: connect.NewClient[v1alpha1.GetProjectConfigRequest, v1alpha1.GetProjectConfigResponse](
@@ -794,6 +805,7 @@ type kargoServiceClient struct {
 	deleteProject                 *connect.Client[v1alpha1.DeleteProjectRequest, v1alpha1.DeleteProjectResponse]
 	getProject                    *connect.Client[v1alpha1.GetProjectRequest, v1alpha1.GetProjectResponse]
 	listProjects                  *connect.Client[v1alpha1.ListProjectsRequest, v1alpha1.ListProjectsResponse]
+	deleteProjectConfig           *connect.Client[v1alpha1.DeleteProjectConfigRequest, v1alpha1.DeleteProjectConfigResponse]
 	getProjectConfig              *connect.Client[v1alpha1.GetProjectConfigRequest, v1alpha1.GetProjectConfigResponse]
 	approveFreight                *connect.Client[v1alpha1.ApproveFreightRequest, v1alpha1.ApproveFreightResponse]
 	deleteFreight                 *connect.Client[v1alpha1.DeleteFreightRequest, v1alpha1.DeleteFreightResponse]
@@ -949,6 +961,11 @@ func (c *kargoServiceClient) GetProject(ctx context.Context, req *connect.Reques
 // ListProjects calls akuity.io.kargo.service.v1alpha1.KargoService.ListProjects.
 func (c *kargoServiceClient) ListProjects(ctx context.Context, req *connect.Request[v1alpha1.ListProjectsRequest]) (*connect.Response[v1alpha1.ListProjectsResponse], error) {
 	return c.listProjects.CallUnary(ctx, req)
+}
+
+// DeleteProjectConfig calls akuity.io.kargo.service.v1alpha1.KargoService.DeleteProjectConfig.
+func (c *kargoServiceClient) DeleteProjectConfig(ctx context.Context, req *connect.Request[v1alpha1.DeleteProjectConfigRequest]) (*connect.Response[v1alpha1.DeleteProjectConfigResponse], error) {
+	return c.deleteProjectConfig.CallUnary(ctx, req)
 }
 
 // GetProjectConfig calls akuity.io.kargo.service.v1alpha1.KargoService.GetProjectConfig.
@@ -1204,6 +1221,7 @@ type KargoServiceHandler interface {
 	DeleteProject(context.Context, *connect.Request[v1alpha1.DeleteProjectRequest]) (*connect.Response[v1alpha1.DeleteProjectResponse], error)
 	GetProject(context.Context, *connect.Request[v1alpha1.GetProjectRequest]) (*connect.Response[v1alpha1.GetProjectResponse], error)
 	ListProjects(context.Context, *connect.Request[v1alpha1.ListProjectsRequest]) (*connect.Response[v1alpha1.ListProjectsResponse], error)
+	DeleteProjectConfig(context.Context, *connect.Request[v1alpha1.DeleteProjectConfigRequest]) (*connect.Response[v1alpha1.DeleteProjectConfigResponse], error)
 	GetProjectConfig(context.Context, *connect.Request[v1alpha1.GetProjectConfigRequest]) (*connect.Response[v1alpha1.GetProjectConfigResponse], error)
 	ApproveFreight(context.Context, *connect.Request[v1alpha1.ApproveFreightRequest]) (*connect.Response[v1alpha1.ApproveFreightResponse], error)
 	DeleteFreight(context.Context, *connect.Request[v1alpha1.DeleteFreightRequest]) (*connect.Response[v1alpha1.DeleteFreightResponse], error)
@@ -1386,6 +1404,12 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		KargoServiceListProjectsProcedure,
 		svc.ListProjects,
 		connect.WithSchema(kargoServiceListProjectsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	kargoServiceDeleteProjectConfigHandler := connect.NewUnaryHandler(
+		KargoServiceDeleteProjectConfigProcedure,
+		svc.DeleteProjectConfig,
+		connect.WithSchema(kargoServiceDeleteProjectConfigMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceGetProjectConfigHandler := connect.NewUnaryHandler(
@@ -1698,6 +1722,8 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceGetProjectHandler.ServeHTTP(w, r)
 		case KargoServiceListProjectsProcedure:
 			kargoServiceListProjectsHandler.ServeHTTP(w, r)
+		case KargoServiceDeleteProjectConfigProcedure:
+			kargoServiceDeleteProjectConfigHandler.ServeHTTP(w, r)
 		case KargoServiceGetProjectConfigProcedure:
 			kargoServiceGetProjectConfigHandler.ServeHTTP(w, r)
 		case KargoServiceApproveFreightProcedure:
@@ -1881,6 +1907,10 @@ func (UnimplementedKargoServiceHandler) GetProject(context.Context, *connect.Req
 
 func (UnimplementedKargoServiceHandler) ListProjects(context.Context, *connect.Request[v1alpha1.ListProjectsRequest]) (*connect.Response[v1alpha1.ListProjectsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.ListProjects is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) DeleteProjectConfig(context.Context, *connect.Request[v1alpha1.DeleteProjectConfigRequest]) (*connect.Response[v1alpha1.DeleteProjectConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.DeleteProjectConfig is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) GetProjectConfig(context.Context, *connect.Request[v1alpha1.GetProjectConfigRequest]) (*connect.Response[v1alpha1.GetProjectConfigResponse], error) {

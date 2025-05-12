@@ -53,6 +53,7 @@ service KargoService {
   rpc DeleteProject(DeleteProjectRequest) returns (DeleteProjectResponse);
   rpc GetProject(GetProjectRequest) returns (GetProjectResponse);
   rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
+  rpc DeleteProjectConfig(DeleteProjectConfigRequest) returns (DeleteProjectConfigResponse);
   rpc GetProjectConfig(GetProjectConfigRequest) returns (GetProjectConfigResponse);
 
   /* Freight APIs */
@@ -367,6 +368,14 @@ message DeleteProjectRequest {
 }
 
 message DeleteProjectResponse {
+  /* explicitly empty */
+}
+
+message DeleteProjectConfigRequest {
+  string name = 1;
+}
+
+message DeleteProjectConfigResponse {
   /* explicitly empty */
 }
 
