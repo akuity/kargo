@@ -490,6 +490,20 @@ func Test_httpRequester_buildExprEnv(t *testing.T) {
 		assertions func(*testing.T, map[string]any, error)
 	}{
 		{
+			name: "response body Content-Length exceeds limit",
+			resp: &http.Response{
+				StatusCode:    200,
+				ContentLength: (2 << 20) + 1,
+				Header:        http.Header{"Content-Type": []string{"application/json"}},
+				Body:          io.NopCloser(strings.NewReader(`{"foo": "bar"}`)),
+			},
+			assertions: func(t *testing.T, env map[string]any, err error) {
+				require.Error(t, err)
+				require.ErrorContains(t, err, "response body size")
+				require.Nil(t, env)
+			},
+		},
+		{
 			name: "without body",
 			resp: &http.Response{
 				StatusCode: http.StatusOK,
@@ -556,6 +570,30 @@ func Test_httpRequester_buildExprEnv(t *testing.T) {
 				firstItem, ok := body[0].(map[string]any)
 				require.True(t, ok)
 				require.Equal(t, map[string]any{"foo1": "bar1"}, firstItem)
+			},
+		},
+		{
+			name: "invalid JSON body",
+			resp: &http.Response{
+				StatusCode: 200,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Body:       io.NopCloser(strings.NewReader(`{"foo":`)),
+			},
+			assertions: func(t *testing.T, env map[string]any, err error) {
+				require.Error(t, err)
+				require.ErrorContains(t, err, "failed to parse response")
+			},
+		},
+		{
+			name: "valid JSON but unexpected type string",
+			resp: &http.Response{
+				StatusCode: 200,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Body:       io.NopCloser(strings.NewReader(`"foo"`)),
+			},
+			assertions: func(t *testing.T, env map[string]any, err error) {
+				require.Error(t, err)
+				require.ErrorContains(t, err, "unexpected type when unmarshaling")
 			},
 		},
 	}
