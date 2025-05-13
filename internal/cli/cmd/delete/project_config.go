@@ -42,17 +42,17 @@ func newProjectConfigCommand(
 	}
 
 	cmd := &cobra.Command{
-		Use:     "projectconfiguration [PROJECT]",
-		Aliases: []string{"projectconfigurations", "projectconfig", "projectconfigs"},
+		Use:     "projectconfig [PROJECT]",
+		Aliases: []string{"projectconfigs"},
 		Short:   "Delete project configuration",
 		Args:    option.MaximumNArgs(1),
 		Example: templates.Example(`
 # Delete project configuration for my-project
-kargo delete projectconfiguration my-project
+kargo delete projectconfig my-project
 
 # Delete project configuration for the default project
 kargo config set-project my-project
-kargo delete projectconfiguration
+kargo delete projectconfig
 `),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
