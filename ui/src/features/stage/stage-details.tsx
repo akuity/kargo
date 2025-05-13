@@ -21,7 +21,7 @@ import {
   getStage
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { Stage, VerificationInfo } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 
@@ -65,7 +65,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
           return {
             ...verification,
             freight
-          } as VerificationInfo;
+          };
         })
       )
       .sort((a, b) => moment(timestampDate(b.startTime)).diff(moment(timestampDate(a.startTime))));
