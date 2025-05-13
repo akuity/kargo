@@ -183,13 +183,19 @@ func (g *gitPROpener) run(
 		)
 	}
 
-	var title string
-	if cfg.Title != "" {
-		title = cfg.Title
-	} else {
-		title = strings.Split(commitMsg, "\n")[0]
-	}
+	title := cfg.Title
 	description := commitMsg
+
+	if title == "" {
+		parts := strings.SplitN(commitMsg, "\n", 2)
+		title = parts[0]
+		description = ""
+
+		if len(parts) > 1 {
+			description = parts[1]
+		}
+	}
+
 	if stepCtx.UIBaseURL != "" {
 		description = fmt.Sprintf(
 			"%s\n\n[View in Kargo UI](%s/project/%s/stage/%s)",
