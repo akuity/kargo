@@ -422,6 +422,15 @@ func getSecret(ctx context.Context, c client.Client, project string) exprFn {
 			}
 			return nil, fmt.Errorf("failed to get secret %s: %w", name, err)
 		}
+		// Limit access to Secrets that the Kargo API will let you manage, otherwise
+		// it's awkward that you can access secrets here that the rest of Kargo
+		// basically ignores.
+		switch secret.Labels[kargoapi.CredentialTypeLabelKey] {
+		case kargoapi.CredentialTypeLabelValueGit, kargoapi.CredentialTypeLabelValueHelm,
+			kargoapi.CredentialTypeLabelValueImage, kargoapi.CredentialTypeLabelGeneric:
+		default:
+			return map[string]string{}, nil
+		}
 
 		data := make(map[string]string, len(secret.Data))
 		for k, v := range secret.Data {

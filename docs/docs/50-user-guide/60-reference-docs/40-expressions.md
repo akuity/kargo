@@ -285,7 +285,10 @@ config:
 
 The `secret()` function returns the `Data` field of a Kubernetes `Secret` with
 the specified name from the `Project`'s namespace decoded into a
-`map[string]string`. If no such `Secret` exists, an empty map is returned.
+`map[string]string`. The secret _must_ be labeled with the key
+`kargo.akuity.io/cred-type` with a value of `git`, `helm`, `image`, or
+`generic`. If no such `Secret` exists, or is not labeled correctly, an empty map
+is returned.
 
 Examples:
 

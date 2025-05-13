@@ -774,12 +774,60 @@ func Test_getSecret(t *testing.T) {
 			},
 		},
 		{
+			name: "missing required label",
+			objects: []client.Object{
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      testSecret,
+					},
+					Data: map[string][]byte{
+						"foo": []byte("bar"),
+					},
+				},
+			},
+			args: []any{testSecret},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.NotNil(t, result)
+				assert.IsType(t, map[string]string{}, result)
+				assert.Empty(t, result)
+			},
+		},
+		{
+			name: "required label has invalid value",
+			objects: []client.Object{
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      testSecret,
+						Labels: map[string]string{
+							kargoapi.CredentialTypeLabelKey: "invalid",
+						},
+					},
+					Data: map[string][]byte{
+						"foo": []byte("bar"),
+					},
+				},
+			},
+			args: []any{testSecret},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.NotNil(t, result)
+				assert.IsType(t, map[string]string{}, result)
+				assert.Empty(t, result)
+			},
+		},
+		{
 			name: "success",
 			objects: []client.Object{
 				&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: testProject,
 						Name:      testSecret,
+						Labels: map[string]string{
+							kargoapi.CredentialTypeLabelKey: kargoapi.CredentialTypeLabelGeneric,
+						},
 					},
 					Data: map[string][]byte{
 						"foo": []byte("bar"),
