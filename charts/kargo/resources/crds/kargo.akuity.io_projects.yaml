@@ -160,6 +160,10 @@ spec:
                   and trigger refreshes.
                 items:
                   properties:
+                    path:
+                      description: Path is the path to the receiver's webhook endpoint.
+                      pattern: ^/[^/].*$
+                      type: string
                     secretRef:
                       description: |-
                         Secret is the name of the secret that contains the credentials for the
@@ -240,6 +244,30 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              receivers:
+                description: |-
+                  Receivers contains a summary of the collective state of a Project's
+                  Receivers.
+                items:
+                  properties:
+                    path:
+                      description: Path is the path to the receiver's webhook endpoint.
+                      pattern: ^/[^/].*$
+                      type: string
+                    secretRef:
+                      description: |-
+                        Secret is the name of the secret that contains the credentials for the
+                        receiver.
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
+                    type:
+                      description: |
+                        Type is the type of the receiver.
+                      enum:
+                      - GitHub
+                      type: string
+                  type: object
+                type: array
               stats:
                 description: |-
                   Stats contains a summary of the collective state of a Project's

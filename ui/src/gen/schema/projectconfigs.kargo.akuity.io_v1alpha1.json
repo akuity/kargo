@@ -94,6 +94,11 @@
           "description": "Receivers defines the receivers that are used to receive warehouse events\nand trigger refreshes.",
           "items": {
             "properties": {
+              "path": {
+                "description": "Path is the path to the receiver's webhook endpoint.",
+                "pattern": "^/[^/].*$",
+                "type": "string"
+              },
               "secretRef": {
                 "description": "Secret is the name of the secret that contains the credentials for the\nreceiver.",
                 "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",

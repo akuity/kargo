@@ -149,6 +149,10 @@ spec:
                   and trigger refreshes.
                 items:
                   properties:
+                    path:
+                      description: Path is the path to the receiver's webhook endpoint.
+                      pattern: ^/[^/].*$
+                      type: string
                     secretRef:
                       description: |-
                         Secret is the name of the secret that contains the credentials for the

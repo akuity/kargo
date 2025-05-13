@@ -905,6 +905,10 @@ message ProjectStatus {
   // Stats contains a summary of the collective state of a Project's
   // constituent resources.
   optional ProjectStats stats = 4;
+
+  // Receivers contains a summary of the collective state of a Project's
+  // Receivers.
+  repeated Receiver receivers = 5;
 }
 
 // Promotion represents a request to transition a particular Stage into a
@@ -1260,6 +1264,11 @@ message Receiver {
   //
   // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
   optional string secretRef = 4;
+
+  // Path is the path to the receiver's webhook endpoint.
+  //
+  // +kubebuilder:validation:Pattern=^/[^/].*$
+  optional string path = 3;
 }
 
 message ReceiverStats {

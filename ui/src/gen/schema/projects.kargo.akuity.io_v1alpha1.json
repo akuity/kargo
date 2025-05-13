@@ -94,6 +94,11 @@
           "description": "Receivers defines the receivers that are used to receive warehouse events\nand trigger refreshes.",
           "items": {
             "properties": {
+              "path": {
+                "description": "Path is the path to the receiver's webhook endpoint.",
+                "pattern": "^/[^/].*$",
+                "type": "string"
+              },
               "secretRef": {
                 "description": "Secret is the name of the secret that contains the credentials for the\nreceiver.",
                 "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
@@ -176,6 +181,32 @@
             "type"
           ],
           "x-kubernetes-list-type": "map"
+        },
+        "receivers": {
+          "description": "Receivers contains a summary of the collective state of a Project's\nReceivers.",
+          "items": {
+            "properties": {
+              "path": {
+                "description": "Path is the path to the receiver's webhook endpoint.",
+                "pattern": "^/[^/].*$",
+                "type": "string"
+              },
+              "secretRef": {
+                "description": "Secret is the name of the secret that contains the credentials for the\nreceiver.",
+                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
+                "type": "string"
+              },
+              "type": {
+                "description": "Type is the type of the receiver.\n",
+                "enum": [
+                  "GitHub"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "type": "array"
         },
         "stats": {
           "description": "Stats contains a summary of the collective state of a Project's\nconstituent resources.",
