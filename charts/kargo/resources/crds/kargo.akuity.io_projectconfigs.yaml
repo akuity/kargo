@@ -153,7 +153,7 @@ spec:
                       description: Name is the name of the receiver.
                       pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                       type: string
-                    secret:
+                    secretRef:
                       description: |-
                         Secret is the name of the secret that contains the credentials for the
                         receiver.

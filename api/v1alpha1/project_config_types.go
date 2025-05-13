@@ -67,7 +67,7 @@ type Receiver struct {
 	// receiver.
 	//
 	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-	Secret string `json:"secret,omitempty" protobuf:"bytes,4,opt,name=secret"`
+	SecretRef string `json:"secretRef,omitempty" protobuf:"bytes,4,opt,name=secretRef"`
 }
 
 // PromotionPolicySelector is a selector that matches the resource to which

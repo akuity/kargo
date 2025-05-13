@@ -1265,7 +1265,7 @@ message Receiver {
   // receiver.
   //
   // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-  optional string secret = 4;
+  optional string secretRef = 4;
 }
 
 // RepoSubscription describes a subscription to ONE OF a Git repository, a
