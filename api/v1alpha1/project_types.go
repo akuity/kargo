@@ -48,6 +48,9 @@ type ProjectStatus struct {
 	// Stats contains a summary of the collective state of a Project's
 	// constituent resources.
 	Stats *ProjectStats `json:"stats,omitempty" protobuf:"bytes,4,opt,name=stats"`
+	// Receivers contains a summary of the collective state of a Project's
+	// Receivers.
+	Receivers []Receiver `json:"receivers,omitempty" protobuf:"bytes,5,rep,name=receivers"`
 }
 
 // GetConditions implements the conditions.Getter interface.

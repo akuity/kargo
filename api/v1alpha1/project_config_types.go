@@ -60,6 +60,10 @@ type Receiver struct {
 	//
 	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
 	SecretRef string `json:"secretRef,omitempty" protobuf:"bytes,4,opt,name=secretRef"`
+	// Path is the path to the receiver's webhook endpoint.
+	//
+	// +kubebuilder:validation:Pattern=^/[^/].*$
+	Path string `json:"path,omitempty" protobuf:"bytes,3,opt,name=path"`
 }
 
 // PromotionPolicySelector is a selector that matches the resource to which

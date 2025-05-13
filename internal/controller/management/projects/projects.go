@@ -2,6 +2,7 @@ package projects
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"time"
@@ -108,6 +109,8 @@ type reconciler struct {
 
 	ensureDefaultUserRolesFn func(context.Context, *kargoapi.Project) error
 
+	ensureReceiversFn func(context.Context, *kargoapi.Project) error
+
 	createServiceAccountFn func(
 		context.Context,
 		client.Object,
@@ -196,6 +199,7 @@ func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
 	r.ensureAPIAdminPermissionsFn = r.ensureAPIAdminPermissions
 	r.ensureControllerPermissionsFn = r.ensureControllerPermissions
 	r.ensureDefaultUserRolesFn = r.ensureDefaultUserRoles
+	r.ensureReceiversFn = r.ensureReceivers
 	r.createServiceAccountFn = r.client.Create
 	r.createRoleFn = r.client.Create
 	r.createRoleBindingFn = r.client.Create
@@ -426,6 +430,17 @@ func (r *reconciler) syncProject(
 			ObservedGeneration: project.GetGeneration(),
 		})
 		return *status, fmt.Errorf("error ensuring default project roles: %w", err)
+	}
+
+	if err := r.ensureReceiversFn(ctx, project); err != nil {
+		conditions.Set(status, &metav1.Condition{
+			Type:               kargoapi.ConditionTypeReady,
+			Status:             metav1.ConditionFalse,
+			Reason:             "EnsuringReceivers",
+			Message:            "Failed to ensure existence of default project receivers: " + err.Error(),
+			ObservedGeneration: project.GetGeneration(),
+		})
+		return *status, fmt.Errorf("error ensuring receivers configuration: %w", err)
 	}
 
 	conditions.Delete(status, kargoapi.ConditionTypeReconciling)
@@ -856,6 +871,43 @@ func (r *reconciler) ensureDefaultUserRoles(
 	return nil
 }
 
+func (r *reconciler) ensureReceivers(
+	ctx context.Context,
+	project *kargoapi.Project,
+) error {
+	for _, receiver := range project.Spec.Receivers { // nolint:staticcheck
+		var secretRef corev1.Secret
+		err := r.client.Get(ctx, types.NamespacedName{
+			Namespace: project.Namespace,
+			Name:      receiver.SecretRef,
+		}, &secretRef)
+		if err != nil {
+			if kubeerr.IsNotFound(err) {
+				return fmt.Errorf(
+					"error getting receiver secret %q in project namespace %q: %w",
+					receiver.SecretRef, project.Name, err,
+				)
+			}
+		}
+
+		// TODO(fuskovic): is there a certain key we should use?
+		secret, ok := secretRef.Data["TODO"]
+		if !ok {
+			return fmt.Errorf(
+				"error getting receiver secret %q in project namespace %q: %w",
+				receiver.SecretRef, project.Name, err,
+			)
+		}
+		receiver.Path = generateWebhookURL(
+			project.Name,
+			receiver.Type,
+			string(secret),
+		)
+		project.Status.Receivers = append(project.Status.Receivers, receiver)
+	}
+	return nil
+}
+
 func (r *reconciler) patchProjectStatus(
 	ctx context.Context,
 	project *kargoapi.Project,
@@ -925,4 +977,11 @@ func (r *reconciler) migrateSpecToProjectConfig(
 
 func getRoleBindingName(serviceAccountName string) string {
 	return fmt.Sprintf("%s-read-secrets", serviceAccountName)
+}
+
+func generateWebhookURL(project, provider, secret string) string {
+	input := []byte(project + provider + secret)
+	h := sha256.New()
+	h.Write(input)
+	return fmt.Sprintf("/%x", h.Sum(nil))
 }
