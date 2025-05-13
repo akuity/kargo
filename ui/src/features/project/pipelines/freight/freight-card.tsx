@@ -12,7 +12,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Divider, Dropdown, Flex, Progress, Typography } from 'antd';
 import classNames from 'classnames';
 import { Duration, formatDistance, formatDuration } from 'date-fns';
-import { ReactNode, useMemo } from 'react';
+import { ReactNode, useMemo, useRef } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -79,7 +79,9 @@ export const FreightCard = (props: FreightCardProps) => {
 
   const soakTime = useSoakTimeCounter(props.soakTime);
 
-  const soakTimePercentage = useSoakTimePercentage(props.soakTime, soakTime);
+  const frozenInitialSoakTime = useRef(props.soakTime);
+
+  const soakTimePercentage = useSoakTimePercentage(frozenInitialSoakTime.current, soakTime);
 
   const soakTimeFormatted = useMemo(() => (soakTime ? formatDuration(soakTime) : ''), [soakTime]);
 
@@ -258,7 +260,7 @@ export const FreightCard = (props: FreightCardProps) => {
             className='text-[10px] text-center w-[200px] flex'
           >
             <span className='mr-auto'>Soak: {soakTimeFormatted}</span>
-            <Progress type='circle' size={14} percent={soakTimePercentage} />
+            <Progress strokeWidth={12} type='circle' size={14} percent={soakTimePercentage} />
           </Button>
         </div>
       )}
