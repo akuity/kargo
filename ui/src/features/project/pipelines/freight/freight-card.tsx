@@ -9,7 +9,7 @@ import {
   IconDefinition
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Divider, Dropdown, Flex, Typography } from 'antd';
+import { Button, Divider, Dropdown, Flex, Progress, Typography } from 'antd';
 import classNames from 'classnames';
 import { Duration, formatDistance, formatDuration } from 'date-fns';
 import { ReactNode, useMemo } from 'react';
@@ -25,7 +25,7 @@ import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { DeleteFreightModal } from './delete-freight-modal';
 import { FreightArtifact } from './freight-artifact';
-import { useSoakTimeCounter } from './use-soak-time-counter';
+import { useSoakTimeCounter, useSoakTimePercentage } from './use-soak-time-counter';
 
 type FreightCardProps = {
   freight: Freight;
@@ -78,6 +78,8 @@ export const FreightCard = (props: FreightCardProps) => {
     actionContext?.action?.freight?.metadata?.name === props.freight?.metadata?.name;
 
   const soakTime = useSoakTimeCounter(props.soakTime);
+
+  const soakTimePercentage = useSoakTimePercentage(props.soakTime, soakTime);
 
   const soakTimeFormatted = useMemo(() => (soakTime ? formatDuration(soakTime) : ''), [soakTime]);
 
@@ -253,9 +255,10 @@ export const FreightCard = (props: FreightCardProps) => {
             disabled
             onClick={(e) => e.stopPropagation()}
             size='small'
-            className='text-[10px] text-center w-[200px]'
+            className='text-[10px] text-center w-[200px] flex'
           >
-            Soak time: {soakTimeFormatted}
+            <span className='mr-auto'>Soak: {soakTimeFormatted}</span>
+            <Progress type='circle' size={14} percent={soakTimePercentage} />
           </Button>
         </div>
       )}
