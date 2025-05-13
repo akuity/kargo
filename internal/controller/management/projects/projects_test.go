@@ -22,6 +22,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/conditions"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 func TestNewReconciler(t *testing.T) {
@@ -40,6 +41,7 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, r.ensureAPIAdminPermissionsFn)
 	require.NotNil(t, r.ensureControllerPermissionsFn)
 	require.NotNil(t, r.ensureDefaultUserRolesFn)
+	require.NotNil(t, r.ensureReceiversFn)
 	require.NotNil(t, r.createServiceAccountFn)
 	require.NotNil(t, r.createRoleFn)
 	require.NotNil(t, r.createRoleBindingFn)
@@ -1308,6 +1310,123 @@ func TestReconciler_ensureDefaultProjectRoles(t *testing.T) {
 					&kargoapi.Project{},
 				),
 			)
+		})
+	}
+}
+
+func TestReconciler_ensureReceivers(t *testing.T) {
+	for _, test := range []struct {
+		name       string
+		kubeClient func() client.Client
+		reconciler func() *reconciler
+		project    *kargoapi.Project
+		assertions func(*testing.T, *kargoapi.Project, error)
+	}{
+		{
+			name: "secret ref not found",
+			reconciler: func() *reconciler {
+				scheme := runtime.NewScheme()
+				require.NoError(t, corev1.AddToScheme(scheme))
+				require.NoError(t, kargoapi.AddToScheme(scheme))
+				return newReconciler(
+					fake.NewClientBuilder().WithScheme(scheme).Build(),
+					ReconcilerConfig{
+						KargoNamespace: "fake-namespace",
+					},
+				)
+			},
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-namespace",
+					Name:      "fake-project",
+				},
+				Spec: &kargoapi.ProjectSpec{ // nolint:staticcheck
+					Receivers: []kargoapi.Receiver{
+						{
+							Type:      kargoapi.ReceiverTypeGitHub,
+							SecretRef: "secret-ref-that-does-not-exist",
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, _ *kargoapi.Project, err error) {
+				require.ErrorContains(t, err, "not found")
+			},
+		},
+		{
+			name: "success",
+			reconciler: func() *reconciler {
+				scheme := runtime.NewScheme()
+				require.NoError(t, corev1.AddToScheme(scheme))
+				require.NoError(t, kargoapi.AddToScheme(scheme))
+				return newReconciler(
+					fake.NewClientBuilder().
+						WithScheme(scheme).
+						WithObjects(
+							&kargoapi.Project{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "fake-name",
+									Namespace: "fake-namespace",
+								},
+								Spec: &kargoapi.ProjectSpec{ // nolint:staticcheck
+									// none yet
+									Receivers: nil,
+								},
+							},
+							&corev1.Secret{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "secret-that-exists",
+									Namespace: "fake-namespace",
+								},
+								Data: map[string][]byte{
+									"TODO": []byte("fake-secret-data"),
+								},
+							},
+						).
+						Build(),
+					ReconcilerConfig{
+						KargoNamespace: "fake-namespace",
+					},
+				)
+			},
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-namespace",
+					Name:      "fake-project",
+				},
+				Spec: &kargoapi.ProjectSpec{ // nolint:staticcheck
+					Receivers: []kargoapi.Receiver{
+						{
+							Type:      kargoapi.ReceiverTypeGitHub,
+							SecretRef: "secret-that-exists",
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, p *kargoapi.Project, err error) {
+				require.NoError(t, err)
+				require.Len(t, p.Status.Receivers, 1)
+				require.Equal(t,
+					kargoapi.ReceiverTypeGitHub,
+					p.Status.Receivers[0].Type,
+				)
+				require.Equal(t,
+					generateWebhookURL(
+						p.Name,
+						kargoapi.ReceiverTypeGitHub,
+						"fake-secret-data",
+					),
+					p.Status.Receivers[0].Path,
+				)
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			r := test.reconciler()
+			l := logging.NewLogger(logging.DebugLevel)
+			ctx := logging.ContextWithLogger(t.Context(), l)
+			err := r.ensureReceiversFn(ctx, test.project)
+			test.assertions(t, test.project, err)
 		})
 	}
 }

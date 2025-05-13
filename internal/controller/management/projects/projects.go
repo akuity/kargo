@@ -875,33 +875,58 @@ func (r *reconciler) ensureReceivers(
 	ctx context.Context,
 	project *kargoapi.Project,
 ) error {
+	logger := logging.LoggerFromContext(ctx)
+	logger.Debug("ensuring receivers",
+		"receivers", len(project.Spec.Receivers), // nolint:staticcheck
+	)
 	for _, receiver := range project.Spec.Receivers { // nolint:staticcheck
-		var secretRef corev1.Secret
-		err := r.client.Get(ctx, types.NamespacedName{
-			Namespace: project.Namespace,
-			Name:      receiver.SecretRef,
-		}, &secretRef)
+		var secret corev1.Secret
+		err := r.client.Get(
+			ctx,
+			types.NamespacedName{
+				Namespace: project.Namespace,
+				Name:      receiver.SecretRef,
+			},
+			&secret,
+		)
 		if err != nil {
+			logger.Error(err, "secret not found",
+				"secret", receiver.SecretRef,
+			)
 			if kubeerr.IsNotFound(err) {
 				return fmt.Errorf(
-					"error getting receiver secret %q in project namespace %q: %w",
-					receiver.SecretRef, project.Name, err,
+					"secret-reference %q in namespace %q not found",
+					receiver.SecretRef, project.Namespace,
 				)
 			}
+			return fmt.Errorf(
+				"error getting receiver secret-reference %q in project namespace %q: %w",
+				receiver.SecretRef, project.Name, err,
+			)
 		}
+		logger.Debug("secret found", "secret", secret.Name)
 
 		// TODO(fuskovic): is there a certain key we should use?
-		secret, ok := secretRef.Data["TODO"]
+		secretData, ok := secret.Data["TODO"]
 		if !ok {
+			logger.Error(err, "secret data not found")
 			return fmt.Errorf(
 				"error getting receiver secret %q in project namespace %q: %w",
 				receiver.SecretRef, project.Name, err,
 			)
 		}
+
 		receiver.Path = generateWebhookURL(
 			project.Name,
 			receiver.Type,
-			string(secret),
+			string(secretData),
+		)
+
+		logger.Debug("path generated",
+			"project", project.Name,
+			"provider", receiver.Type,
+			"secret-ref", receiver.SecretRef,
+			"path", receiver.Path,
 		)
 		project.Status.Receivers = append(project.Status.Receivers, receiver)
 	}
