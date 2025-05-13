@@ -94,11 +94,6 @@
           "description": "Receivers defines the receivers that are used to receive warehouse events\nand trigger refreshes.",
           "items": {
             "properties": {
-              "name": {
-                "description": "Name is the name of the receiver.",
-                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
-                "type": "string"
-              },
               "secretRef": {
                 "description": "Secret is the name of the secret that contains the credentials for the\nreceiver.",
                 "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
@@ -109,11 +104,6 @@
                 "enum": [
                   "GitHub"
                 ],
-                "type": "string"
-              },
-              "url": {
-                "description": "URL is the URL of the receiver.",
-                "format": "uri",
                 "type": "string"
               }
             },

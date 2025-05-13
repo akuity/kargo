@@ -94,11 +94,6 @@
           "description": "Receivers defines the receivers that are used to receive warehouse events\nand trigger refreshes.",
           "items": {
             "properties": {
-              "name": {
-                "description": "Name is the name of the receiver.",
-                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
-                "type": "string"
-              },
               "secretRef": {
                 "description": "Secret is the name of the secret that contains the credentials for the\nreceiver.",
                 "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
@@ -109,11 +104,6 @@
                 "enum": [
                   "GitHub"
                 ],
-                "type": "string"
-              },
-              "url": {
-                "description": "URL is the URL of the receiver.",
-                "format": "uri",
                 "type": "string"
               }
             },
@@ -190,6 +180,32 @@
         "stats": {
           "description": "Stats contains a summary of the collective state of a Project's\nconstituent resources.",
           "properties": {
+            "receivers": {
+              "description": "Receivers contains a summary of the collective state of the Project's\nReceivers.",
+              "properties": {
+                "count": {
+                  "description": "Count contains the total number of Receivers in the Project.",
+                  "format": "int64",
+                  "maximum": 9223372036854776000,
+                  "minimum": -9223372036854776000,
+                  "type": "integer"
+                },
+                "health": {
+                  "description": "Health contains a summary of the collective health of a Project's\nReceivers.",
+                  "properties": {
+                    "healthy": {
+                      "description": "Healthy contains the number of resources that are explicitly healthy.",
+                      "format": "int64",
+                      "maximum": 9223372036854776000,
+                      "minimum": -9223372036854776000,
+                      "type": "integer"
+                    }
+                  },
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            },
             "stages": {
               "description": "Stages contains a summary of the collective state of the Project's Stages.",
               "properties": {

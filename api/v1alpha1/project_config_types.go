@@ -50,19 +50,11 @@ type PromotionPolicy struct {
 }
 
 type Receiver struct {
-	// Name is the name of the receiver.
-	//
-	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
 	// Type is the type of the receiver.
 	//
 	// TODO: Add more receiver enum types(e.g. Dockerhub, Quay, Gitlab, etc...)
 	// +kubebuilder:validation:Enum=GitHub;
 	Type string `json:"type,omitempty" protobuf:"bytes,2,opt,name=type"`
-	// URL is the URL of the receiver.
-	//
-	// +kubebuilder:validation:Format=uri
-	URL string `json:"url,omitempty" protobuf:"bytes,3,opt,name=url"`
 	// Secret is the name of the secret that contains the credentials for the
 	// receiver.
 	//

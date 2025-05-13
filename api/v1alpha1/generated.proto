@@ -886,6 +886,10 @@ message ProjectStats {
 
   // Stages contains a summary of the collective state of the Project's Stages.
   optional StageStats stages = 2;
+
+  // Receivers contains a summary of the collective state of the Project's
+  // Receivers.
+  optional ReceiverStats receivers = 3;
 }
 
 // ProjectStatus describes a Project's current status.
@@ -1245,27 +1249,26 @@ message PromotionTemplateSpec {
 }
 
 message Receiver {
-  // Name is the name of the receiver.
-  //
-  // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-  optional string name = 1;
-
   // Type is the type of the receiver.
   //
   // TODO: Add more receiver enum types(e.g. Dockerhub, Quay, Gitlab, etc...)
   // +kubebuilder:validation:Enum=GitHub;
   optional string type = 2;
 
-  // URL is the URL of the receiver.
-  //
-  // +kubebuilder:validation:Format=uri
-  optional string url = 3;
-
   // Secret is the name of the secret that contains the credentials for the
   // receiver.
   //
   // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
   optional string secretRef = 4;
+}
+
+message ReceiverStats {
+  // Count contains the total number of Receivers in the Project.
+  optional int64 count = 2;
+
+  // Health contains a summary of the collective health of a Project's
+  // Receivers.
+  optional HealthStats health = 1;
 }
 
 // RepoSubscription describes a subscription to ONE OF a Git repository, a

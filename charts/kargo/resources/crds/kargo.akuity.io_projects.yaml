@@ -160,10 +160,6 @@ spec:
                   and trigger refreshes.
                 items:
                   properties:
-                    name:
-                      description: Name is the name of the receiver.
-                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-                      type: string
                     secretRef:
                       description: |-
                         Secret is the name of the secret that contains the credentials for the
@@ -175,10 +171,6 @@ spec:
                         Type is the type of the receiver.
                       enum:
                       - GitHub
-                      type: string
-                    url:
-                      description: URL is the URL of the receiver.
-                      format: uri
                       type: string
                   type: object
                 type: array
@@ -253,6 +245,28 @@ spec:
                   Stats contains a summary of the collective state of a Project's
                   constituent resources.
                 properties:
+                  receivers:
+                    description: |-
+                      Receivers contains a summary of the collective state of the Project's
+                      Receivers.
+                    properties:
+                      count:
+                        description: Count contains the total number of Receivers
+                          in the Project.
+                        format: int64
+                        type: integer
+                      health:
+                        description: |-
+                          Health contains a summary of the collective health of a Project's
+                          Receivers.
+                        properties:
+                          healthy:
+                            description: Healthy contains the number of resources
+                              that are explicitly healthy.
+                            format: int64
+                            type: integer
+                        type: object
+                    type: object
                   stages:
                     description: Stages contains a summary of the collective state
                       of the Project's Stages.
