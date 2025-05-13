@@ -46,6 +46,7 @@ kargo get promotions --project=my-project --stage=my-stage
 	// Register subcommands.
 	cmd.AddCommand(newGetCredentialsCommand(cfg, streams, cmdOpts))
 	cmd.AddCommand(newGetFreightCommand(cfg, streams, cmdOpts))
+	cmd.AddCommand(newGetProjectConfigCommand(cfg, streams, cmdOpts))
 	cmd.AddCommand(newGetProjectsCommand(cfg, streams, cmdOpts))
 	cmd.AddCommand(newGetPromotionsCommand(cfg, streams, cmdOpts))
 	cmd.AddCommand(newRolesCommand(cfg, streams, cmdOpts))
@@ -97,6 +98,8 @@ func printObjects[T runtime.Object](
 		printObj = newFreightTable(list)
 	case *kargoapi.Project:
 		printObj = newProjectTable(list)
+	case *kargoapi.ProjectConfig:
+		printObj = newProjectConfigTable(list)
 	case *kargoapi.Promotion:
 		printObj = newPromotionTable(list)
 	case *rbacapi.Role:
