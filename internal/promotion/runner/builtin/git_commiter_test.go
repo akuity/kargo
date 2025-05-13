@@ -253,5 +253,5 @@ func Test_gitCommitter_run(t *testing.T) {
 	require.Equal(t, expectedCommit, actualCommit)
 	lastCommitMsg, err := workTree.CommitMessage("HEAD")
 	require.NoError(t, err)
-	require.Equal(t, "Initial commit", lastCommitMsg)
+	require.Equal(t, "Initial commit\n", lastCommitMsg)
 }
