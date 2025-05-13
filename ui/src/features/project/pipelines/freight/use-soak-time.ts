@@ -1,9 +1,11 @@
+import { Duration } from 'date-fns';
 import { useMemo } from 'react';
 
-import { useActionContext } from '@ui/features/project/pipelines/context/action-context';
+import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import { useDictionaryContext } from '@ui/features/project/pipelines/context/dictionary-context';
 import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
 
+import { durationToSeconds } from './duration-to-seconds';
 import { getSoakTime } from './get-soak-time';
 
 export const useSoakTime = (freights: Freight[]) => {
@@ -11,7 +13,14 @@ export const useSoakTime = (freights: Freight[]) => {
   const dictionaryContext = useDictionaryContext();
 
   return useMemo(() => {
-    const soakTimes: Record<string, string> = {};
+    const soakTimes: Record<string, Duration> = {};
+
+    if (
+      actionContext?.action?.type !== IAction.PROMOTE &&
+      actionContext?.action?.type !== IAction.PROMOTE_DOWNSTREAM
+    ) {
+      return soakTimes;
+    }
 
     const currentlyPromotingStage = actionContext?.action?.stage;
     const currentlyPromotingStageName = actionContext?.action?.stage?.metadata?.name || '';
@@ -31,18 +40,36 @@ export const useSoakTime = (freights: Freight[]) => {
         (f) => f?.origin?.name === freightOrigin
       )?.sources?.requiredSoakTime;
 
-      const soakTimesForFreight = [];
+      const soakTimesForFreight: Duration[] = [];
       for (const stage of freightInStages) {
+        if (!sourcesOfCurrentlyPromotingStage.includes(stage)) {
+          continue;
+        }
+
         const stageDetails = dictionaryContext?.stageByName?.[stage];
 
         if (stageDetails && requireSoakTime) {
-          getSoakTime({
+          const soakTime = getSoakTime({
             freight,
             freightInStage: dictionaryContext?.stageByName?.[stage],
             requiredSoakTime: requireSoakTime
           });
+
+          if (soakTime) {
+            soakTimesForFreight.push(soakTime);
+          }
         }
       }
+
+      if (soakTimesForFreight.length > 0) {
+        const maxSoakTime = soakTimesForFreight.reduce((max, curr) =>
+          durationToSeconds(curr) > durationToSeconds(max) ? curr : max
+        );
+
+        soakTimes[freight?.metadata?.name || ''] = maxSoakTime;
+      }
     }
+
+    return soakTimes;
   }, [actionContext, freights, dictionaryContext]);
 };

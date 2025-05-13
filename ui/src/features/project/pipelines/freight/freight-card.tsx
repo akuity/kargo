@@ -11,7 +11,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Divider, Dropdown, Flex, Typography } from 'antd';
 import classNames from 'classnames';
-import { formatDistance } from 'date-fns';
+import { Duration, formatDistance, formatDuration } from 'date-fns';
 import { ReactNode, useMemo } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 
@@ -25,6 +25,7 @@ import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { DeleteFreightModal } from './delete-freight-modal';
 import { FreightArtifact } from './freight-artifact';
+import { useSoakTimeCounter } from './use-soak-time-counter';
 
 type FreightCardProps = {
   freight: Freight;
@@ -36,9 +37,9 @@ type FreightCardProps = {
   stageColorMap: ColorMap;
   className?: string;
   promote?: boolean;
-  soakTime?: string;
   onReviewAndPromote?(): void;
   onExpand(): void;
+  soakTime?: Duration;
 
   // count of stacked freights
   count?: number;
@@ -75,6 +76,10 @@ export const FreightCard = (props: FreightCardProps) => {
   const isViewingFreight =
     props.viewingFreight?.metadata?.name === props.freight?.metadata?.name ||
     actionContext?.action?.freight?.metadata?.name === props.freight?.metadata?.name;
+
+  const soakTime = useSoakTimeCounter(props.soakTime);
+
+  const soakTimeFormatted = useMemo(() => (soakTime ? formatDuration(soakTime) : ''), [soakTime]);
 
   let CardContent: ReactNode;
 
@@ -241,6 +246,19 @@ export const FreightCard = (props: FreightCardProps) => {
       }}
     >
       {CardContent}
+
+      {soakTimeFormatted && !props.promote && (
+        <div className='px-1 pb-1'>
+          <Button
+            disabled
+            onClick={(e) => e.stopPropagation()}
+            size='small'
+            className='text-[10px] text-center w-[200px]'
+          >
+            Soak time: {soakTimeFormatted}
+          </Button>
+        </div>
+      )}
 
       {props.promote && (
         <div className='px-1 pb-1'>

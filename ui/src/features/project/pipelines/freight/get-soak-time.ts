@@ -40,6 +40,7 @@ export const getSoakTime = (payload: {
 
   return null;
 };
+
 const durationToHMS = (duration: Duration) => {
   const totalSeconds = Number(duration.duration / 1_000_000_000n); // Convert to seconds
 

@@ -49,6 +49,8 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
   const promotionEligibleFreight =
     getPromotionEligibleFreightQuery?.data?.groups?.['']?.freight || [];
 
+  const soakTime = useSoakTime(props.freights);
+
   if (!freightTimelineControllerContext) {
     throw new Error('missing context freightTimelineControllerContext');
   }
@@ -56,8 +58,6 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
   const [filtersCollapsed, setFilterCollapsed] = useState(true);
 
   const [viewingFreight, setViewingFreight] = useState<Freight | null>(null);
-
-  useSoakTime(props.freights);
 
   const filteredFreights: (Freight & {
     count?: number;
@@ -235,6 +235,7 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
                       hideUnusedFreights: false
                     })
                   }
+                  soakTime={soakTime?.[freight?.metadata?.name || '']}
                 />
               );
             })}
