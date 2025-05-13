@@ -250,7 +250,7 @@ func (w *workTree) Commit(message string, opts *CommitOptions) error {
 
 func (w *workTree) CommitMessage(id string) (string, error) {
 	msgBytes, err := libExec.Exec(
-		w.buildGitCommand("log", "-n", "1", "--pretty=format:%s", id),
+		w.buildGitCommand("log", "-n", "1", "--pretty=format:%B", id),
 	)
 	if err != nil {
 		return "", fmt.Errorf("error obtaining commit message for commit %q: %w", id, err)
