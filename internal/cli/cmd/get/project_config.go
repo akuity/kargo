@@ -46,17 +46,17 @@ func newGetProjectConfigCommand(
 	}
 
 	cmd := &cobra.Command{
-		Use:     "projectconfiguration [PROJECT] [--no-headers]",
-		Aliases: []string{"projectconfigurations", "projectconfig", "projectconfigs"},
+		Use:     "projectconfig [PROJECT] [--no-headers]",
+		Aliases: []string{"projectconfigs"},
 		Short:   "Display project configuration",
 		Args:    cobra.MaximumNArgs(1),
 		Example: templates.Example(`
 # Get project configuration for my-project
-kargo get projectconfiguration my-project
+kargo get projectconfig my-project
 
 # Get project configuration for the default project
 kargo config set-project my-project
-kargo get projectconfiguration
+kargo get projectconfig
 `),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
