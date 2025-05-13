@@ -7,7 +7,7 @@ import { Link as ReactRouterLink } from 'react-router-dom';
 import { generatePath } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
-import { VerificationInfo } from '@ui/gen/api/v1alpha1/generated_pb';
+import { FreightCollection, VerificationInfo } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { AnalysisModal } from '../common/analysis-modal/analysis-modal';
@@ -17,7 +17,7 @@ import { verificationPhaseIsTerminal } from './utils/verification-phase';
 import { VerificationIcon } from './verification-icon';
 
 type Props = {
-  verifications: VerificationInfo[];
+  verifications: Array<VerificationInfo & { freight: FreightCollection }>;
   images: string[];
 };
 
@@ -127,19 +127,20 @@ export const Verifications = ({ verifications, images }: Props) => {
             </Link>
           )}
         />
-        <Table.Column
+        <Table.Column<(typeof verifications)[number]>
           title='Freight'
-          render={(val) => {
-            const freights = val?.freight?.items;
+          render={(val, verification) => {
+            const freights = verification?.freight?.items;
+            const freight = Object.values(freights || {})?.[0];
 
-            const freight = Object.values(freights || {})?.[0] as {
-              name: string;
-            };
+            if (!verification?.analysisRun?.namespace || !freight?.name) {
+              return null;
+            }
 
             return (
               <ReactRouterLink
                 to={generatePath(paths.freight, {
-                  name: val?.analysisRun?.namespace,
+                  name: verification?.analysisRun?.namespace,
                   freightName: freight?.name
                 })}
               >
