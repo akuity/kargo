@@ -1329,7 +1329,6 @@ func TestReconciler_ensureDefaultProjectRoles(t *testing.T) {
 func TestReconciler_ensureReceivers(t *testing.T) {
 	for _, test := range []struct {
 		name       string
-		kubeClient func() client.Client
 		reconciler func() *reconciler
 		project    *kargoapi.Project
 		assertions func(*testing.T, *kargoapi.Project, error)
