@@ -12,7 +12,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Divider, Dropdown, Flex, Progress, Typography } from 'antd';
 import classNames from 'classnames';
 import { Duration, formatDistance, formatDuration } from 'date-fns';
-import { ReactNode, useMemo, useRef } from 'react';
+import { ReactNode, useEffect, useMemo, useRef } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -80,6 +80,12 @@ export const FreightCard = (props: FreightCardProps) => {
   const soakTime = useSoakTimeCounter(props.soakTime);
 
   const frozenInitialSoakTime = useRef(props.soakTime);
+
+  useEffect(() => {
+    if (!frozenInitialSoakTime.current) {
+      frozenInitialSoakTime.current = props.soakTime;
+    }
+  }, [props.soakTime]);
 
   const soakTimePercentage = useSoakTimePercentage(frozenInitialSoakTime.current, soakTime);
 
