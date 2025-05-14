@@ -1252,7 +1252,12 @@ message PromotionTemplateSpec {
   repeated PromotionStep steps = 1;
 }
 
+// Receiver is a resource type that describes a receiver for a
+// Project. Receivers are used to receive warehouse events and trigger
+// refreshes.
 message Receiver {
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
   // Type is the type of the receiver.
   //
   // TODO: Add more receiver enum types(e.g. Dockerhub, Quay, Gitlab, etc...)
@@ -1269,6 +1274,13 @@ message Receiver {
   //
   // +kubebuilder:validation:Pattern=^/[^/].*$
   optional string path = 3;
+}
+
+// ReceiverList is a list of Receiver resources.
+message ReceiverList {
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+
+  repeated Receiver items = 2;
 }
 
 message ReceiverStats {

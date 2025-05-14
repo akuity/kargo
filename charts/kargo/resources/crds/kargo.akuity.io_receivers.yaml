@@ -1,0 +1,77 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.3
+  name: receivers.kargo.akuity.io
+spec:
+  group: kargo.akuity.io
+  names:
+    kind: Receiver
+    listKind: ReceiverList
+    plural: receivers
+    singular: receiver
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    - jsonPath: .type
+      name: Type
+      type: string
+    - jsonPath: .path
+      name: Path
+      type: string
+    - jsonPath: .secretRef
+      name: SecretRef
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          Receiver is a resource type that describes a receiver for a
+          Project. Receivers are used to receive warehouse events and trigger
+          refreshes.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          path:
+            description: Path is the path to the receiver's webhook endpoint.
+            pattern: ^/[^/].*$
+            type: string
+          secretRef:
+            description: |-
+              Secret is the name of the secret that contains the credentials for the
+              receiver.
+            pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+            type: string
+          type:
+            description: |
+              Type is the type of the receiver.
+            enum:
+            - GitHub
+            type: string
+        type: object
+    served: true
+    storage: true
+    subresources: {}

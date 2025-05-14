@@ -3,7 +3,7 @@ package v1alpha1
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 var (
-	ReceiverTypeGitHub = "github"
+	ReceiverTypeGitHub = "GitHub"
 	// TODO(fuskovic): Add more receiver enum types(e.g. Dockerhub, Quay, Gitlab, etc...)
 )
 
@@ -54,7 +54,20 @@ type PromotionPolicy struct {
 	AutoPromotionEnabled bool `json:"autoPromotionEnabled,omitempty" protobuf:"varint,2,opt,name=autoPromotionEnabled"`
 }
 
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:scope=Namespaced
+// +kubebuilder:printcolumn:name=Age,type=date,JSONPath=`.metadata.creationTimestamp`
+// +kubebuilder:printcolumn:name="Type",type="string",JSONPath=".type"
+// +kubebuilder:printcolumn:name="Path",type="string",JSONPath=".path"
+// +kubebuilder:printcolumn:name="SecretRef",type="string",JSONPath=".secretRef"
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
+
+// Receiver is a resource type that describes a receiver for a
+// Project. Receivers are used to receive warehouse events and trigger
+// refreshes.
 type Receiver struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	// Type is the type of the receiver.
 	//
 	// TODO: Add more receiver enum types(e.g. Dockerhub, Quay, Gitlab, etc...)
@@ -69,6 +82,15 @@ type Receiver struct {
 	//
 	// +kubebuilder:validation:Pattern=^/[^/].*$
 	Path string `json:"path,omitempty" protobuf:"bytes,3,opt,name=path"`
+}
+
+// +kubebuilder:object:root=true
+
+// ReceiverList is a list of Receiver resources.
+type ReceiverList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	Items           []Receiver `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
 // PromotionPolicySelector is a selector that matches the resource to which

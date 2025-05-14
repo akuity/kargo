@@ -316,7 +316,7 @@ func TestReconciler_reconcile(t *testing.T) {
 				ensureDefaultUserRolesFn: func(context.Context, *kargoapi.Project) error {
 					return nil
 				},
-				ensureReceiversFn: func(ctx context.Context, p *kargoapi.Project) error {
+				ensureReceiversFn: func(context.Context, *kargoapi.Project) error {
 					return nil
 				},
 			},
@@ -378,7 +378,7 @@ func TestReconciler_reconcile(t *testing.T) {
 				ensureDefaultUserRolesFn: func(context.Context, *kargoapi.Project) error {
 					return nil
 				},
-				ensureReceiversFn: func(ctx context.Context, p *kargoapi.Project) error {
+				ensureReceiversFn: func(context.Context, *kargoapi.Project) error {
 					return nil
 				},
 			},
