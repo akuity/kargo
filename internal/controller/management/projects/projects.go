@@ -931,7 +931,7 @@ func (r *reconciler) ensureReceivers(
 		)
 		receivers = append(receivers, receiver)
 	}
-	project.Status.Receivers = receivers // nolint:staticcheck
+	project.Status.Receivers = receivers
 	return nil
 }
 
