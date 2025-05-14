@@ -1272,13 +1272,6 @@ message Receiver {
   optional string path = 3;
 }
 
-// ReceiverList is a list of Receiver resources.
-message ReceiverList {
-  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
-
-  repeated Receiver items = 2;
-}
-
 // RepoSubscription describes a subscription to ONE OF a Git repository, a
 // container image repository, or a Helm chart repository.
 message RepoSubscription {

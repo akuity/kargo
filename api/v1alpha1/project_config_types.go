@@ -76,13 +76,6 @@ type Receiver struct {
 	Path string `json:"path,omitempty" protobuf:"bytes,3,opt,name=path"`
 }
 
-// ReceiverList is a list of Receiver resources.
-type ReceiverList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-	Items           []Receiver `json:"items" protobuf:"bytes,2,rep,name=items"`
-}
-
 // PromotionPolicySelector is a selector that matches the resource to which
 // this policy applies. It can be used to match a specific resource by name or
 // to match a set of resources by label.
