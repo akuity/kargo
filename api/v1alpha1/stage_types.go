@@ -300,9 +300,14 @@ type FreightSources struct {
 	// AvailabilityStrategy specifies the semantics for how requested Freight is
 	// made available to the Stage. This field is optional. When left unspecified,
 	// the field is implicitly treated as if its value were "OneOf".
-	// Accepted Values: "All", "OneOf", ""
 	//
-	// +kubebuilder:validation:Optional
+	// Accepted Values:
+	//
+	// - "All": All requested Freight must be available before proceeding.
+	// - "OneOf": At least one requested Freight must be available before proceeding.
+	// - "": Treated the same as "OneOf" (for backward compatibility).
+	//
+	// +kubebuilder:validation:Enum=All;OneOf;""
 	AvailabilityStrategy FreightAvailabilityStrategy `json:"availabilityStrategy,omitempty" protobuf:"bytes,4,opt,name=availabilityStrategy"`
 }
 

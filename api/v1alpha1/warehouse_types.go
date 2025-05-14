@@ -67,9 +67,14 @@ type WarehouseSpec struct {
 	// FreightCreationPolicy describes how Freight is created by this Warehouse.
 	// This field is optional. When left unspecified, the field is implicitly
 	// treated as if its value were "Automatic".
-	// Accepted values: Automatic, Manual
+	//
+	// Accepted values:
+	//
+	// - "Automatic": Freight is automatically created in response to detected changes in the source repository.
+	// - "Manual": Freight must be created explicitly by a user or an external system.
 	//
 	// +kubebuilder:default=Automatic
+	// +kubebuilder:validation:Enum=Automatic;Manual
 	// +kubebuilder:validation:Optional
 	FreightCreationPolicy FreightCreationPolicy `json:"freightCreationPolicy" protobuf:"bytes,3,opt,name=freightCreationPolicy"`
 	// Subscriptions describes sources of artifacts to be included in Freight
@@ -112,9 +117,22 @@ type GitSubscription struct {
 	// commit of interest in the repository specified by the RepoURL field. This
 	// field is optional. When left unspecified, the field is implicitly treated
 	// as if its value were "NewestFromBranch".
-	// Accepted values: Lexical, NewestFromBranch, NewestTag, SemVer
+	//
+	// Accepted values:
+	//
+	// - `"NewestFromBranch"`: Selects the latest commit on the specified branch,
+	//   or the default branch if none is specified. This is the default strategy.
+	//
+	// - `"SemVer"`: Selects the commit pointed to by the tag with the highest
+	//   semantic version. An optional constraint can narrow the version range.
+	//
+	// - `"Lexical"`: Selects the commit referenced by the lexicographically greatest
+	//   tag. Useful when tags encode timestamps or dates.
+	//
+	// - `"NewestTag"`: Selects the commit pointed to by the most recently created tag.
 	//
 	// +kubebuilder:default=NewestFromBranch
+	// +kubebuilder:validation:Enum=Lexical;NewestFromBranch;NewestTag;SemVer
 	CommitSelectionStrategy CommitSelectionStrategy `json:"commitSelectionStrategy,omitempty" protobuf:"bytes,2,opt,name=commitSelectionStrategy"`
 	// Branch references a particular branch of the repository. The value in this
 	// field only has any effect when the CommitSelectionStrategy is
@@ -175,6 +193,7 @@ type GitSubscription struct {
 	//   2. Glob patterns (prefix the pattern with "glob:"; ex. "glob:*.yaml")
 	//   3. Regular expressions (prefix the pattern with "regex:" or "regexp:";
 	//      ex. "regexp:^.*\.yaml$")
+	//
 	// Paths selected by IncludePaths may be unselected by ExcludePaths. This
 	// is a useful method for including a broad set of paths and then excluding a
 	// subset of them.
@@ -229,9 +248,23 @@ type ImageSubscription struct {
 	// of the image specified by the RepoURL field. This field is optional. When
 	// left unspecified, the field is implicitly treated as if its value were
 	// "SemVer".
-	// Accepted values: Digest, Lexical, NewestBuild, SemVer
+	//
+	// Accepted values:
+	//
+	// - `"Digest"`: Selects the image by resolving the digest of a tag (e.g., `latest`).
+	//   Requires the constraint to match an exact tag name.
+	//
+	// - `"Lexical"`: Selects the image whose tag is lexically last among those matched
+	//   by a regex. Best suited for tags with timestamp suffixes.
+	//
+	// - `"NewestBuild"`: Selects the image that was most recently pushed to the registry.
+	//   This is the least efficient method and should be constrained with regex when used.
+	//
+	// - `"SemVer"`: Selects the image with the highest semantic version tag.
+	//   An optional constraint may restrict the version range.
 	//
 	// +kubebuilder:default=SemVer
+	// +kubebuilder:validation:Enum=Digest;Lexical;NewestBuild;SemVer
 	ImageSelectionStrategy ImageSelectionStrategy `json:"imageSelectionStrategy,omitempty" protobuf:"bytes,3,opt,name=imageSelectionStrategy"`
 	// StrictSemvers specifies whether only "strict" semver tags should be
 	// considered. A "strict" semver tag is one containing ALL of major, minor,
