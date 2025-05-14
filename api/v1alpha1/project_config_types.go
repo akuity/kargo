@@ -71,7 +71,6 @@ type ReceiverConfig struct {
 // Receiver is a resource type that describes a path used
 // to receive warehouse events and trigger refreshes.
 type Receiver struct {
-	Config ReceiverConfig `json:"config,omitempty" protobuf:"bytes,1,opt,name=config"`
 	// Path is the path to the receiver's webhook endpoint.
 	//
 	// +kubebuilder:validation:Pattern=^/[^/].*$

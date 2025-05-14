@@ -23,6 +23,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/conditions"
 	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/internal/webhook/external"
 )
 
 func TestNewReconciler(t *testing.T) {
@@ -1471,10 +1472,10 @@ func TestReconciler_ensureReceivers(t *testing.T) {
 				require.Len(t, p.Status.Receivers, 1)
 				require.Equal(t,
 					kargoapi.ReceiverTypeGitHub,
-					p.Status.Receivers[0].Config.Type, // nolint: staticcheck
+					p.Spec.ReceiverConfigs[0].Type, // nolint: staticcheck
 				)
 				require.Equal(t,
-					generateWebhookPath(
+					external.GenerateWebhookPath(
 						p.Name,
 						kargoapi.ReceiverTypeGitHub,
 						"fake-secret-data",

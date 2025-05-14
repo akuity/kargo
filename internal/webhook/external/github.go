@@ -12,14 +12,12 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
-const tempSecret = "TODO(fuskovic): source from CRD" // nolint: gosec
-
 // githubHandler handles push events for github.
 // After the request has been authenticated,
 // the kubeclient is queried for all warehouses that contain a subscription
 // to the repo in question. Those warehouses are then patched with a special
 // annotation that signals down stream logic to refresh the warehouse.
-func githubHandler(c client.Client) http.HandlerFunc {
+func githubHandler(c client.Client, token string) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		logger := logging.LoggerFromContext(ctx)
@@ -57,7 +55,7 @@ func githubHandler(c client.Client) http.HandlerFunc {
 		if err = gh.ValidateSignature(
 			signature,
 			bodyBytes,
-			[]byte(tempSecret),
+			[]byte(token),
 		); err != nil {
 			logger.Error(err, "failed to validate signature")
 			xhttp.WriteErrorJSON(w,

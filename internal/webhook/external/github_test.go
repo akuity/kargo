@@ -20,6 +20,8 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
+const testSecret = "testsecret" // nolint: gosec
+
 func TestGithubHandler(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
@@ -44,7 +46,7 @@ func TestGithubHandler(t *testing.T) {
 				b := newBody()
 				req := httptest.NewRequest(http.MethodPost, url, b)
 				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("X-Hub-Signature-256", sign(t, tempSecret, b.Bytes()))
+				req.Header.Set("X-Hub-Signature-256", sign(t, testSecret, b.Bytes()))
 				req.Header.Set("X-GitHub-Event", "ping")
 				return req
 			},
@@ -58,7 +60,7 @@ func TestGithubHandler(t *testing.T) {
 				body := make([]byte, maxBytes+1)
 				b := io.NopCloser(bytes.NewBuffer(body))
 				req := httptest.NewRequest(http.MethodPost, url, b)
-				req.Header.Set("X-Hub-Signature-256", sign(t, tempSecret, body))
+				req.Header.Set("X-Hub-Signature-256", sign(t, testSecret, body))
 				req.Header.Set("X-GitHub-Event", "push")
 				return req
 			},
@@ -94,7 +96,7 @@ func TestGithubHandler(t *testing.T) {
 				b := bytes.NewBuffer([]byte("invalid json"))
 				req := httptest.NewRequest(http.MethodPost, url, b)
 				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("X-Hub-Signature-256", sign(t, tempSecret, b.Bytes()))
+				req.Header.Set("X-Hub-Signature-256", sign(t, testSecret, b.Bytes()))
 				req.Header.Set("X-GitHub-Event", "push")
 				return req
 			},
@@ -107,7 +109,7 @@ func TestGithubHandler(t *testing.T) {
 				b := newBody()
 				req := httptest.NewRequest(http.MethodPost, url, b)
 				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("X-Hub-Signature-256", sign(t, tempSecret, b.Bytes()))
+				req.Header.Set("X-Hub-Signature-256", sign(t, testSecret, b.Bytes()))
 				req.Header.Set("X-GitHub-Event", "push")
 				return req
 			},
@@ -121,7 +123,7 @@ func TestGithubHandler(t *testing.T) {
 			ctx := logging.ContextWithLogger(req.Context(), l)
 			req = req.WithContext(ctx)
 			w := httptest.NewRecorder()
-			h := githubHandler(kubeClient)
+			h := githubHandler(kubeClient, testSecret)
 			h(w, req)
 			require.Equal(t, test.code, w.Code)
 			require.Contains(t, test.msg, w.Body.String())

@@ -2,7 +2,6 @@ package projects
 
 import (
 	"context"
-	"crypto/sha256"
 	"errors"
 	"fmt"
 	"time"
@@ -30,6 +29,7 @@ import (
 	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/internal/webhook/external"
 )
 
 const (
@@ -937,14 +937,7 @@ func (r *reconciler) ensureReceivers(
 			)
 		}
 		receivers = append(receivers, kargoapi.Receiver{
-			// When the project controller sub-reconciler
-			// migrates the project spec to a project config, it will
-			// remove the spec from the project.
-			// This means when the webhook server queries the kube
-			// client for the project it will not find the spec.
-			// We solve for this by including the config in the receiver.
-			Config: rc,
-			Path: generateWebhookPath(
+			Path: external.GenerateWebhookPath(
 				project.Name,
 				rc.Type,
 				string(seed),
@@ -1025,11 +1018,4 @@ func (r *reconciler) migrateSpecToProjectConfig(
 
 func getRoleBindingName(serviceAccountName string) string {
 	return fmt.Sprintf("%s-read-secrets", serviceAccountName)
-}
-
-func generateWebhookPath(project, provider, seed string) string {
-	input := []byte(project + provider + seed)
-	h := sha256.New()
-	h.Write(input)
-	return fmt.Sprintf("/%x", h.Sum(nil))
 }
