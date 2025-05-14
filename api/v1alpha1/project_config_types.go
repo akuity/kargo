@@ -27,7 +27,7 @@ type ProjectConfigSpec struct {
 	PromotionPolicies []PromotionPolicy `json:"promotionPolicies,omitempty" protobuf:"bytes,1,rep,name=promotionPolicies"`
 	// Receivers defines the receivers that are used to receive warehouse events
 	// and trigger refreshes.
-	Receivers []Receiver `json:"receivers,omitempty" protobuf:"bytes,2,rep,name=receivers"`
+	ReceiverConfigs []ReceiverConfig `json:"receivers,omitempty" protobuf:"bytes,2,rep,name=receivers"`
 }
 
 // PromotionPolicy defines policies governing the promotion of Freight to a
@@ -54,10 +54,9 @@ type PromotionPolicy struct {
 	AutoPromotionEnabled bool `json:"autoPromotionEnabled,omitempty" protobuf:"varint,2,opt,name=autoPromotionEnabled"`
 }
 
-// Receiver is a resource type that describes a receiver for a
-// Project. Receivers are used to receive warehouse events and trigger
-// refreshes.
-type Receiver struct {
+// ReceiverConfig is a resource type that describes the configuration
+// for a receiver.
+type ReceiverConfig struct {
 	// Type is the type of the receiver.
 	//
 	// TODO: Add more receiver enum types(e.g. Dockerhub, Quay, Gitlab, etc...)
@@ -68,6 +67,12 @@ type Receiver struct {
 	//
 	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
 	SecretRef string `json:"secretRef,omitempty" protobuf:"bytes,4,opt,name=secretRef"`
+}
+
+// Receiver is a resource type that describes a receiver for a
+// Project. Receivers are used to receive warehouse events and trigger
+// refreshes.
+type Receiver struct {
 	// Path is the path to the receiver's webhook endpoint.
 	//
 	// +kubebuilder:validation:Pattern=^/[^/].*$

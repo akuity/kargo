@@ -491,7 +491,7 @@ func ProjectsByReceiverPaths(obj client.Object) []string {
 	}
 
 	var receiverPaths []string
-	for _, r := range project.Spec.Receivers { // nolint :staticcheck
+	for _, r := range project.Status.Receivers {
 		receiverPaths = append(receiverPaths, r.Path)
 	}
 	return receiverPaths

@@ -160,14 +160,9 @@ spec:
                   and trigger refreshes.
                 items:
                   description: |-
-                    Receiver is a resource type that describes a receiver for a
-                    Project. Receivers are used to receive warehouse events and trigger
-                    refreshes.
+                    ReceiverConfig is a resource type that describes the configuration
+                    for a receiver.
                   properties:
-                    path:
-                      description: Path is the path to the receiver's webhook endpoint.
-                      pattern: ^/[^/].*$
-                      type: string
                     secretRef:
                       description: |-
                         Secret is the name of the secret that contains the credentials for the
@@ -261,18 +256,6 @@ spec:
                     path:
                       description: Path is the path to the receiver's webhook endpoint.
                       pattern: ^/[^/].*$
-                      type: string
-                    secretRef:
-                      description: |-
-                        Secret is the name of the secret that contains the credentials for the
-                        receiver.
-                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-                      type: string
-                    type:
-                      description: |
-                        Type is the type of the receiver.
-                      enum:
-                      - GitHub
                       type: string
                   type: object
                 type: array

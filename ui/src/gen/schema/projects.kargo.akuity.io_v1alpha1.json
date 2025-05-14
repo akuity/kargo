@@ -93,13 +93,8 @@
         "receivers": {
           "description": "Receivers defines the receivers that are used to receive warehouse events\nand trigger refreshes.",
           "items": {
-            "description": "Receiver is a resource type that describes a receiver for a\nProject. Receivers are used to receive warehouse events and trigger\nrefreshes.",
+            "description": "ReceiverConfig is a resource type that describes the configuration\nfor a receiver.",
             "properties": {
-              "path": {
-                "description": "Path is the path to the receiver's webhook endpoint.",
-                "pattern": "^/[^/].*$",
-                "type": "string"
-              },
               "secretRef": {
                 "description": "Secret is the name of the secret that contains the credentials for the\nreceiver.",
                 "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
@@ -191,18 +186,6 @@
               "path": {
                 "description": "Path is the path to the receiver's webhook endpoint.",
                 "pattern": "^/[^/].*$",
-                "type": "string"
-              },
-              "secretRef": {
-                "description": "Secret is the name of the secret that contains the credentials for the\nreceiver.",
-                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
-                "type": "string"
-              },
-              "type": {
-                "description": "Type is the type of the receiver.\n",
-                "enum": [
-                  "GitHub"
-                ],
                 "type": "string"
               }
             },

@@ -875,18 +875,10 @@ func TestProjectsByReceiverPath(t *testing.T) {
 		{
 			name: "simple",
 			project: &kargoapi.Project{
-				Spec: &kargoapi.ProjectConfigSpec{
+				Status: kargoapi.ProjectStatus{
 					Receivers: []kargoapi.Receiver{
-						{
-							Type:      kargoapi.ReceiverTypeGitHub,
-							SecretRef: "fake-secret",
-							Path:      "/webhookpath",
-						},
-						{
-							Type:      kargoapi.ReceiverTypeGitHub,
-							SecretRef: "fake-secret",
-							Path:      "/myotherwebhookpath",
-						},
+						{Path: "/webhookpath"},
+						{Path: "/myotherwebhookpath"},
 					},
 				},
 			},

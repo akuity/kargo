@@ -877,10 +877,10 @@ func (r *reconciler) ensureReceivers(
 ) error {
 	logger := logging.LoggerFromContext(ctx)
 	logger.Debug("ensuring receivers",
-		"receivers", len(project.Spec.Receivers), // nolint:staticcheck
+		"receiver-configs", len(project.Spec.ReceiverConfigs), // nolint:staticcheck
 	)
 	var receivers []kargoapi.Receiver
-	for _, receiver := range project.Spec.Receivers { // nolint:staticcheck
+	for _, receiver := range project.Spec.ReceiverConfigs { // nolint:staticcheck
 		var secret corev1.Secret
 		err := r.client.Get(
 			ctx,
@@ -916,20 +916,13 @@ func (r *reconciler) ensureReceivers(
 				receiver.SecretRef, project.Name, err,
 			)
 		}
-
-		receiver.Path = generateWebhookPath(
-			project.Name,
-			receiver.Type,
-			string(secretData),
-		)
-
-		logger.Debug("path generated",
-			"project", project.Name,
-			"provider", receiver.Type,
-			"secret-ref", receiver.SecretRef,
-			"path", receiver.Path,
-		)
-		receivers = append(receivers, receiver)
+		receivers = append(receivers, kargoapi.Receiver{
+			Path: generateWebhookPath(
+				project.Name,
+				receiver.Type,
+				string(secretData),
+			),
+		})
 	}
 	project.Status.Receivers = receivers
 	return nil

@@ -149,14 +149,9 @@ spec:
                   and trigger refreshes.
                 items:
                   description: |-
-                    Receiver is a resource type that describes a receiver for a
-                    Project. Receivers are used to receive warehouse events and trigger
-                    refreshes.
+                    ReceiverConfig is a resource type that describes the configuration
+                    for a receiver.
                   properties:
-                    path:
-                      description: Path is the path to the receiver's webhook endpoint.
-                      pattern: ^/[^/].*$
-                      type: string
                     secretRef:
                       description: |-
                         Secret is the name of the secret that contains the credentials for the
