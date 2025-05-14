@@ -563,9 +563,7 @@ such as Argo CD. There are a few viable options by which to approach this:
 
    :::info
    The practice of storing stage-specific configuration in dedicated branches
-   seems to have been unfairly maligned through misunderstanding of a certain
-   infamous blog post, which was actually asserting that _GitFlow_ has no place
-   in GitOps.
+   seems to have been unfairly misunderstood as being the same as _GitFlow_.
 
    Some users also object to this approach on the grounds that they don't wish
    to maintain a large number of branches. In fact (this is not GitFlow), it is
