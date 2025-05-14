@@ -54,7 +54,6 @@ func githubHandler(c client.Client) http.HandlerFunc {
 			return
 		}
 
-		logger.Debug("validating sig", "signature", signature)
 		if err = gh.ValidateSignature(
 			signature,
 			bodyBytes,

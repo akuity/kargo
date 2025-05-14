@@ -879,6 +879,7 @@ func (r *reconciler) ensureReceivers(
 	logger.Debug("ensuring receivers",
 		"receivers", len(project.Spec.Receivers), // nolint:staticcheck
 	)
+	var receivers []kargoapi.Receiver
 	for _, receiver := range project.Spec.Receivers { // nolint:staticcheck
 		var secret corev1.Secret
 		err := r.client.Get(
@@ -928,8 +929,9 @@ func (r *reconciler) ensureReceivers(
 			"secret-ref", receiver.SecretRef,
 			"path", receiver.Path,
 		)
-		project.Status.Receivers = append(project.Status.Receivers, receiver)
+		receivers = append(receivers, receiver)
 	}
+	project.Status.Receivers = receivers // nolint:staticcheck
 	return nil
 }
 
