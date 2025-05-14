@@ -186,9 +186,14 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
         >
           <div className='flex gap-1 relative transition-all right-0' ref={freightListStyleRef}>
             {filteredFreights.map((freight) => {
-              const promotionEligible = Boolean(
-                promotionEligibleFreight?.find((f) => f?.metadata?.name === freight?.metadata?.name)
-              );
+              const freightSoakTime = soakTime?.[freight?.metadata?.name || ''];
+
+              const promotionEligible =
+                Boolean(
+                  promotionEligibleFreight?.find(
+                    (f) => f?.metadata?.name === freight?.metadata?.name
+                  )
+                ) && !freightSoakTime;
 
               return (
                 <FreightCard
@@ -225,7 +230,7 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
                       hideUnusedFreights: false
                     })
                   }
-                  soakTime={soakTime?.[freight?.metadata?.name || '']}
+                  soakTime={freightSoakTime}
                 />
               );
             })}

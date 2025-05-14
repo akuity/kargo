@@ -263,7 +263,7 @@ export const FreightCard = (props: FreightCardProps) => {
             disabled
             onClick={(e) => e.stopPropagation()}
             size='small'
-            className='text-[10px] text-center w-[200px] flex'
+            className='text-[10px] text-center w-[230px] flex font-semibold'
           >
             <span className='mr-auto'>Soak: {soakTimeFormatted}</span>
             <Progress strokeWidth={12} type='circle' size={14} percent={soakTimePercentage} />
