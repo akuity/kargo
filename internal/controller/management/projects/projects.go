@@ -928,7 +928,6 @@ func (r *reconciler) ensureReceivers(
 		}
 		logger.Debug("secret found", "secret", secret.Name)
 
-		// TODO(fuskovic): is there a certain key we should use?
 		seed, ok := secret.Data["seed"]
 		if !ok {
 			logger.Error(err, "secret data not found")

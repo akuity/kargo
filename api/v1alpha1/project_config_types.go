@@ -25,8 +25,7 @@ type ProjectConfigSpec struct {
 	// PromotionPolicies defines policies governing the promotion of Freight to
 	// specific Stages within the Project.
 	PromotionPolicies []PromotionPolicy `json:"promotionPolicies,omitempty" protobuf:"bytes,1,rep,name=promotionPolicies"`
-	// Receivers defines the receivers that are used to receive warehouse events
-	// and trigger refreshes.
+	// ReceiverConfigs defines the default receivers for the project.
 	ReceiverConfigs []ReceiverConfig `json:"receivers,omitempty" protobuf:"bytes,2,rep,name=receivers"`
 }
 
@@ -69,9 +68,8 @@ type ReceiverConfig struct {
 	SecretRef string `json:"secretRef,omitempty" protobuf:"bytes,4,opt,name=secretRef"`
 }
 
-// Receiver is a resource type that describes a receiver for a
-// Project. Receivers are used to receive warehouse events and trigger
-// refreshes.
+// Receiver is a resource type that describes a path used
+// to receive warehouse events and trigger refreshes.
 type Receiver struct {
 	// Path is the path to the receiver's webhook endpoint.
 	//
