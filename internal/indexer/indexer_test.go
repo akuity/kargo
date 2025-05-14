@@ -865,3 +865,47 @@ func TestWarehousesByRepoURL(t *testing.T) {
 		})
 	}
 }
+
+func TestProjectsByReceiverPath(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		project  client.Object
+		expected []string
+	}{
+		{
+			name: "simple",
+			project: &kargoapi.Project{
+				Spec: &kargoapi.ProjectConfigSpec{
+					Receivers: []kargoapi.Receiver{
+						{
+							Type:      kargoapi.ReceiverTypeGitHub,
+							SecretRef: "fake-secret",
+							Path:      "/webhookpath",
+						},
+						{
+							Type:      kargoapi.ReceiverTypeGitHub,
+							SecretRef: "fake-secret",
+							Path:      "/myotherwebhookpath",
+						},
+					},
+				},
+			},
+			expected: []string{
+				"/webhookpath",
+				"/myotherwebhookpath",
+			},
+		},
+		{
+			name:     "not a project",
+			project:  &kargoapi.Freight{},
+			expected: nil,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t,
+				test.expected,
+				ProjectsByReceiverPaths(test.project),
+			)
+		})
+	}
+}

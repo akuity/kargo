@@ -91,6 +91,16 @@ func (o *externalWebhooksServerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error registering warehouse by repo url indexer: %w", err)
 	}
 
+	err = cluster.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Project{},
+		indexer.ProjectsByReceiverPathsField,
+		indexer.ProjectsByReceiverPaths,
+	)
+	if err != nil {
+		return fmt.Errorf("error registering warehouse by repo url indexer: %w", err)
+	}
+
 	srv := external.NewServer(serverCfg, cluster.GetClient())
 	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.Host, o.Port))
 	if err != nil {
