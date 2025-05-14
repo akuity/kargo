@@ -54,14 +54,6 @@ type PromotionPolicy struct {
 	AutoPromotionEnabled bool `json:"autoPromotionEnabled,omitempty" protobuf:"varint,2,opt,name=autoPromotionEnabled"`
 }
 
-// +kubebuilder:object:root=true
-// +kubebuilder:resource:scope=Namespaced
-// +kubebuilder:printcolumn:name=Age,type=date,JSONPath=`.metadata.creationTimestamp`
-// +kubebuilder:printcolumn:name="Type",type="string",JSONPath=".type"
-// +kubebuilder:printcolumn:name="Path",type="string",JSONPath=".path"
-// +kubebuilder:printcolumn:name="SecretRef",type="string",JSONPath=".secretRef"
-// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
-
 // Receiver is a resource type that describes a receiver for a
 // Project. Receivers are used to receive warehouse events and trigger
 // refreshes.
@@ -83,8 +75,6 @@ type Receiver struct {
 	// +kubebuilder:validation:Pattern=^/[^/].*$
 	Path string `json:"path,omitempty" protobuf:"bytes,3,opt,name=path"`
 }
-
-// +kubebuilder:object:root=true
 
 // ReceiverList is a list of Receiver resources.
 type ReceiverList struct {

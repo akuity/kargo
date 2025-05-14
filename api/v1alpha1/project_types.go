@@ -71,9 +71,6 @@ type ProjectStats struct {
 	Warehouses WarehouseStats `json:"warehouses,omitempty" protobuf:"bytes,1,opt,name=warehouses"`
 	// Stages contains a summary of the collective state of the Project's Stages.
 	Stages StageStats `json:"stages,omitempty" protobuf:"bytes,2,opt,name=stages"`
-	// Receivers contains a summary of the collective state of the Project's
-	// Receivers.
-	Receivers ReceiverStats `json:"receivers,omitempty" protobuf:"bytes,3,opt,name=receivers"`
 }
 
 // WarehouseStats contains a summary of the collective state of a Project's
@@ -92,14 +89,6 @@ type StageStats struct {
 	// Count contains the total number of Stages in the Project.
 	Count int64 `json:"count,omitempty" protobuf:"varint,2,opt,name=count"`
 	// Health contains a summary of the collective health of a Project's Stages.
-	Health HealthStats `json:"health,omitempty" protobuf:"bytes,1,opt,name=health"`
-}
-
-type ReceiverStats struct {
-	// Count contains the total number of Receivers in the Project.
-	Count int64 `json:"count,omitempty" protobuf:"varint,2,opt,name=count"`
-	// Health contains a summary of the collective health of a Project's
-	// Receivers.
 	Health HealthStats `json:"health,omitempty" protobuf:"bytes,1,opt,name=health"`
 }
 

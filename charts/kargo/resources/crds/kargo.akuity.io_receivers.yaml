@@ -14,23 +14,7 @@ spec:
     singular: receiver
   scope: Namespaced
   versions:
-  - additionalPrinterColumns:
-    - jsonPath: .metadata.creationTimestamp
-      name: Age
-      type: date
-    - jsonPath: .type
-      name: Type
-      type: string
-    - jsonPath: .path
-      name: Path
-      type: string
-    - jsonPath: .secretRef
-      name: SecretRef
-      type: string
-    - jsonPath: .metadata.creationTimestamp
-      name: Age
-      type: date
-    name: v1alpha1
+  - name: v1alpha1
     schema:
       openAPIV3Schema:
         description: |-
@@ -74,4 +58,3 @@ spec:
         type: object
     served: true
     storage: true
-    subresources: {}
