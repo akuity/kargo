@@ -1,4 +1,3 @@
-import { useQuery } from '@connectrpc/connect-query';
 import { faCaretLeft, faCaretRight } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Divider } from 'antd';
@@ -12,7 +11,6 @@ import { BaseHeader } from '@ui/features/common/layout/base-header';
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import { useDictionaryContext } from '@ui/features/project/pipelines/context/dictionary-context';
 import { useFreightTimelineControllerContext } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
-import { queryFreight } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
@@ -21,6 +19,7 @@ import { FreightCard } from './freight-card';
 import { FreightTimelineFilters } from './freight-timeline-filters';
 import { PromotionModeHeader } from './promotion-mode-header';
 import { filterFreightBySource, filterFreightByTimerange } from './source-catalogue-utils';
+import { usePromotionEligibleFreight } from './use-promotion-eligible-freight';
 import { useSoakTime } from './use-soak-time';
 
 import './freight-timeline.less';
@@ -37,17 +36,8 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
     actionContext?.action?.type === IAction.PROMOTE ||
     actionContext?.action?.type === IAction.PROMOTE_DOWNSTREAM;
 
-  const getPromotionEligibleFreightQuery = useQuery(
-    queryFreight,
-    {
-      project: props.project,
-      stage: actionContext?.action?.stage?.metadata?.name
-    },
-    { enabled: isPromotionMode }
-  );
-
-  const promotionEligibleFreight =
-    getPromotionEligibleFreightQuery?.data?.groups?.['']?.freight || [];
+  const { promotionEligibleFreight, ...getPromotionEligibleFreightQuery } =
+    usePromotionEligibleFreight(props.project);
 
   const soakTime = useSoakTime(props.freights);
 
