@@ -1375,7 +1375,7 @@ func TestReconciler_ensureReceivers(t *testing.T) {
 								Spec: kargoapi.ProjectConfigSpec{
 									WebhookReceiverConfigs: []kargoapi.WebhookReceiverConfig{
 										{
-											Type:      kargoapi.ReceiverTypeGitHub,
+											Type:      kargoapi.WebhookReceiverTypeGitHub,
 											SecretRef: "secret-ref-that-does-not-exist",
 										},
 									},
@@ -1396,7 +1396,7 @@ func TestReconciler_ensureReceivers(t *testing.T) {
 				Spec: &kargoapi.ProjectSpec{ // nolint:staticcheck
 					WebhookReceiverConfigs: []kargoapi.WebhookReceiverConfig{
 						{
-							Type:      kargoapi.ReceiverTypeGitHub,
+							Type:      kargoapi.WebhookReceiverTypeGitHub,
 							SecretRef: "secret-ref-that-does-not-exist",
 						},
 					},
@@ -1431,7 +1431,7 @@ func TestReconciler_ensureReceivers(t *testing.T) {
 								Spec: kargoapi.ProjectConfigSpec{
 									WebhookReceiverConfigs: []kargoapi.WebhookReceiverConfig{
 										{
-											Type:      kargoapi.ReceiverTypeGitHub,
+											Type:      kargoapi.WebhookReceiverTypeGitHub,
 											SecretRef: "secret-that-exists",
 										},
 									},
@@ -1461,7 +1461,7 @@ func TestReconciler_ensureReceivers(t *testing.T) {
 				Spec: &kargoapi.ProjectSpec{ // nolint:staticcheck
 					WebhookReceiverConfigs: []kargoapi.WebhookReceiverConfig{
 						{
-							Type:      kargoapi.ReceiverTypeGitHub,
+							Type:      kargoapi.WebhookReceiverTypeGitHub,
 							SecretRef: "secret-that-exists",
 						},
 					},
@@ -1471,13 +1471,13 @@ func TestReconciler_ensureReceivers(t *testing.T) {
 				require.NoError(t, err)
 				require.Len(t, p.Status.WebhookReceivers, 1)
 				require.Equal(t,
-					kargoapi.ReceiverTypeGitHub,
+					kargoapi.WebhookReceiverTypeGitHub,
 					p.Spec.WebhookReceiverConfigs[0].Type, // nolint: staticcheck
 				)
 				require.Equal(t,
 					external.GenerateWebhookPath(
 						p.Name,
-						kargoapi.ReceiverTypeGitHub,
+						kargoapi.WebhookReceiverTypeGitHub,
 						"fake-secret-data",
 					),
 					p.Status.WebhookReceivers[0].Path,

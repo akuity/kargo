@@ -3,7 +3,7 @@ package v1alpha1
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 var (
-	ReceiverTypeGitHub = "GitHub"
+	WebhookReceiverTypeGitHub = "GitHub"
 	// TODO(fuskovic): Add more receiver enum types(e.g. Dockerhub, Quay, Gitlab, etc...)
 )
 

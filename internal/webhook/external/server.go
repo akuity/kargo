@@ -114,7 +114,7 @@ func (s *server) refreshWarehouseWebhook(w http.ResponseWriter, r *http.Request)
 
 	logger.Debug("receiver config found", "config", config)
 	switch config.Type {
-	case kargoapi.ReceiverTypeGitHub:
+	case kargoapi.WebhookReceiverTypeGitHub:
 		githubHandler(s.client, config.SecretRef)(w, r)
 	default:
 		http.Error(w, "not found", http.StatusNotFound)
