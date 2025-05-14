@@ -58,8 +58,6 @@ type PromotionPolicy struct {
 // Project. Receivers are used to receive warehouse events and trigger
 // refreshes.
 type Receiver struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	// Type is the type of the receiver.
 	//
 	// TODO: Add more receiver enum types(e.g. Dockerhub, Quay, Gitlab, etc...)
