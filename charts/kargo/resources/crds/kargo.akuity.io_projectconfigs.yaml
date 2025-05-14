@@ -144,12 +144,11 @@ spec:
                     rule: 'has(self.stage) ? !has(self.stageSelector) : has(self.stageSelector)'
                 type: array
               receivers:
-                description: |-
-                  Receivers defines the receivers that are used to receive warehouse events
-                  and trigger refreshes.
+                description: WebhookReceiverConfigs defines the default receivers
+                  for the project.
                 items:
                   description: |-
-                    ReceiverConfig is a resource type that describes the configuration
+                    WebhookReceiverConfig is a resource type that describes the configuration
                     for a receiver.
                   properties:
                     secretRef:

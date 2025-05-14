@@ -25,8 +25,8 @@ type ProjectConfigSpec struct {
 	// PromotionPolicies defines policies governing the promotion of Freight to
 	// specific Stages within the Project.
 	PromotionPolicies []PromotionPolicy `json:"promotionPolicies,omitempty" protobuf:"bytes,1,rep,name=promotionPolicies"`
-	// ReceiverConfigs defines the default receivers for the project.
-	ReceiverConfigs []ReceiverConfig `json:"receivers,omitempty" protobuf:"bytes,2,rep,name=receivers"`
+	// WebhookReceiverConfigs defines the default receivers for the project.
+	WebhookReceiverConfigs []WebhookReceiverConfig `json:"receivers,omitempty" protobuf:"bytes,2,rep,name=receivers"`
 }
 
 // PromotionPolicy defines policies governing the promotion of Freight to a
@@ -53,9 +53,9 @@ type PromotionPolicy struct {
 	AutoPromotionEnabled bool `json:"autoPromotionEnabled,omitempty" protobuf:"varint,2,opt,name=autoPromotionEnabled"`
 }
 
-// ReceiverConfig is a resource type that describes the configuration
+// WebhookReceiverConfig is a resource type that describes the configuration
 // for a receiver.
-type ReceiverConfig struct {
+type WebhookReceiverConfig struct {
 	// Type is the type of the receiver.
 	//
 	// TODO: Add more receiver enum types(e.g. Dockerhub, Quay, Gitlab, etc...)
@@ -68,9 +68,9 @@ type ReceiverConfig struct {
 	SecretRef string `json:"secretRef,omitempty" protobuf:"bytes,4,opt,name=secretRef"`
 }
 
-// Receiver is a resource type that describes a path used
+// WebhookReceiver is a resource type that describes a path used
 // to receive warehouse events and trigger refreshes.
-type Receiver struct {
+type WebhookReceiver struct {
 	// Path is the path to the receiver's webhook endpoint.
 	//
 	// +kubebuilder:validation:Pattern=^/[^/].*$

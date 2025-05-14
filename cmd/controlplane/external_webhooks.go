@@ -94,8 +94,8 @@ func (o *externalWebhooksServerOptions) run(ctx context.Context) error {
 	err = cluster.GetFieldIndexer().IndexField(
 		ctx,
 		&kargoapi.Project{},
-		indexer.ProjectsByReceiverPathsField,
-		indexer.ProjectsByReceiverPaths,
+		indexer.ProjectsByWebhookReceiverPathsField,
+		indexer.ProjectsByWebhookReceiverPaths,
 	)
 	if err != nil {
 		return fmt.Errorf("error registering warehouse by repo url indexer: %w", err)

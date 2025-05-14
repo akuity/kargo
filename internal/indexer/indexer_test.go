@@ -876,7 +876,7 @@ func TestProjectsByReceiverPath(t *testing.T) {
 			name: "simple",
 			project: &kargoapi.Project{
 				Status: kargoapi.ProjectStatus{
-					Receivers: []kargoapi.Receiver{
+					WebhookReceivers: []kargoapi.WebhookReceiver{
 						{Path: "/webhookpath"},
 						{Path: "/myotherwebhookpath"},
 					},
@@ -896,7 +896,7 @@ func TestProjectsByReceiverPath(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			require.Equal(t,
 				test.expected,
-				ProjectsByReceiverPaths(test.project),
+				ProjectsByWebhookReceiverPaths(test.project),
 			)
 		})
 	}

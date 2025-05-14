@@ -1373,7 +1373,7 @@ func TestReconciler_ensureReceivers(t *testing.T) {
 									Namespace: "fake-namespace",
 								},
 								Spec: kargoapi.ProjectConfigSpec{
-									ReceiverConfigs: []kargoapi.ReceiverConfig{
+									WebhookReceiverConfigs: []kargoapi.WebhookReceiverConfig{
 										{
 											Type:      kargoapi.ReceiverTypeGitHub,
 											SecretRef: "secret-ref-that-does-not-exist",
@@ -1394,7 +1394,7 @@ func TestReconciler_ensureReceivers(t *testing.T) {
 					Name:      "fake-project",
 				},
 				Spec: &kargoapi.ProjectSpec{ // nolint:staticcheck
-					ReceiverConfigs: []kargoapi.ReceiverConfig{
+					WebhookReceiverConfigs: []kargoapi.WebhookReceiverConfig{
 						{
 							Type:      kargoapi.ReceiverTypeGitHub,
 							SecretRef: "secret-ref-that-does-not-exist",
@@ -1429,7 +1429,7 @@ func TestReconciler_ensureReceivers(t *testing.T) {
 									Namespace: "fake-namespace",
 								},
 								Spec: kargoapi.ProjectConfigSpec{
-									ReceiverConfigs: []kargoapi.ReceiverConfig{
+									WebhookReceiverConfigs: []kargoapi.WebhookReceiverConfig{
 										{
 											Type:      kargoapi.ReceiverTypeGitHub,
 											SecretRef: "secret-that-exists",
@@ -1459,7 +1459,7 @@ func TestReconciler_ensureReceivers(t *testing.T) {
 					Name:      "fake-project",
 				},
 				Spec: &kargoapi.ProjectSpec{ // nolint:staticcheck
-					ReceiverConfigs: []kargoapi.ReceiverConfig{
+					WebhookReceiverConfigs: []kargoapi.WebhookReceiverConfig{
 						{
 							Type:      kargoapi.ReceiverTypeGitHub,
 							SecretRef: "secret-that-exists",
@@ -1469,10 +1469,10 @@ func TestReconciler_ensureReceivers(t *testing.T) {
 			},
 			assertions: func(t *testing.T, p *kargoapi.Project, err error) {
 				require.NoError(t, err)
-				require.Len(t, p.Status.Receivers, 1)
+				require.Len(t, p.Status.WebhookReceivers, 1)
 				require.Equal(t,
 					kargoapi.ReceiverTypeGitHub,
-					p.Spec.ReceiverConfigs[0].Type, // nolint: staticcheck
+					p.Spec.WebhookReceiverConfigs[0].Type, // nolint: staticcheck
 				)
 				require.Equal(t,
 					external.GenerateWebhookPath(
@@ -1480,7 +1480,7 @@ func TestReconciler_ensureReceivers(t *testing.T) {
 						kargoapi.ReceiverTypeGitHub,
 						"fake-secret-data",
 					),
-					p.Status.Receivers[0].Path,
+					p.Status.WebhookReceivers[0].Path,
 				)
 			},
 		},

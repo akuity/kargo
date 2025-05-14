@@ -865,9 +865,8 @@ message ProjectConfigSpec {
   // specific Stages within the Project.
   repeated PromotionPolicy promotionPolicies = 1;
 
-  // Receivers defines the receivers that are used to receive warehouse events
-  // and trigger refreshes.
-  repeated ReceiverConfig receivers = 2;
+  // WebhookReceiverConfigs defines the default receivers for the project.
+  repeated WebhookReceiverConfig receivers = 2;
 }
 
 // ProjectList is a list of Project resources.
@@ -902,9 +901,8 @@ message ProjectStatus {
   // constituent resources.
   optional ProjectStats stats = 4;
 
-  // Receivers contains a summary of the collective state of a Project's
-  // Receivers.
-  repeated Receiver receivers = 5;
+  // WebhookReceivers contains the list of webhook receivers for the
+  repeated WebhookReceiver receivers = 5;
 }
 
 // Promotion represents a request to transition a particular Stage into a
@@ -1248,32 +1246,6 @@ message PromotionTemplateSpec {
   repeated PromotionStep steps = 1;
 }
 
-// Receiver is a resource type that describes a receiver for a
-// Project. Receivers are used to receive warehouse events and trigger
-// refreshes.
-message Receiver {
-  // Path is the path to the receiver's webhook endpoint.
-  //
-  // +kubebuilder:validation:Pattern=^/[^/].*$
-  optional string path = 3;
-}
-
-// ReceiverConfig is a resource type that describes the configuration
-// for a receiver.
-message ReceiverConfig {
-  // Type is the type of the receiver.
-  //
-  // TODO: Add more receiver enum types(e.g. Dockerhub, Quay, Gitlab, etc...)
-  // +kubebuilder:validation:Enum=GitHub;
-  optional string type = 2;
-
-  // Secret is the name of the secret that contains the credentials for the
-  // receiver.
-  //
-  // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-  optional string secretRef = 4;
-}
-
 // RepoSubscription describes a subscription to ONE OF a Git repository, a
 // container image repository, or a Helm chart repository.
 message RepoSubscription {
@@ -1589,5 +1561,30 @@ message WarehouseStatus {
 
   // DiscoveredArtifacts holds the artifacts discovered by the Warehouse.
   optional DiscoveredArtifacts discoveredArtifacts = 7;
+}
+
+// WebhookReceiver is a resource type that describes a path used
+// to receive warehouse events and trigger refreshes.
+message WebhookReceiver {
+  // Path is the path to the receiver's webhook endpoint.
+  //
+  // +kubebuilder:validation:Pattern=^/[^/].*$
+  optional string path = 3;
+}
+
+// WebhookReceiverConfig is a resource type that describes the configuration
+// for a receiver.
+message WebhookReceiverConfig {
+  // Type is the type of the receiver.
+  //
+  // TODO: Add more receiver enum types(e.g. Dockerhub, Quay, Gitlab, etc...)
+  // +kubebuilder:validation:Enum=GitHub;
+  optional string type = 2;
+
+  // Secret is the name of the secret that contains the credentials for the
+  // receiver.
+  //
+  // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+  optional string secretRef = 4;
 }
 

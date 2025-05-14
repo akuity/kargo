@@ -91,9 +91,9 @@
           "type": "array"
         },
         "receivers": {
-          "description": "Receivers defines the receivers that are used to receive warehouse events\nand trigger refreshes.",
+          "description": "WebhookReceiverConfigs defines the default receivers for the project.",
           "items": {
-            "description": "ReceiverConfig is a resource type that describes the configuration\nfor a receiver.",
+            "description": "WebhookReceiverConfig is a resource type that describes the configuration\nfor a receiver.",
             "properties": {
               "secretRef": {
                 "description": "Secret is the name of the secret that contains the credentials for the\nreceiver.",
@@ -179,9 +179,9 @@
           "x-kubernetes-list-type": "map"
         },
         "receivers": {
-          "description": "Receivers contains a summary of the collective state of a Project's\nReceivers.",
+          "description": "WebhookReceivers contains the list of webhook receivers for the",
           "items": {
-            "description": "Receiver is a resource type that describes a receiver for a\nProject. Receivers are used to receive warehouse events and trigger\nrefreshes.",
+            "description": "WebhookReceiver is a resource type that describes a path used\nto receive warehouse events and trigger refreshes.",
             "properties": {
               "path": {
                 "description": "Path is the path to the receiver's webhook endpoint.",

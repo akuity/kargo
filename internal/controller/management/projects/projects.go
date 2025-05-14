@@ -892,16 +892,16 @@ func (r *reconciler) ensureReceivers(
 		)
 	}
 
-	if pc.Spec.ReceiverConfigs == nil {
+	if pc.Spec.WebhookReceiverConfigs == nil {
 		logger.Debug("ProjectConfig does not have any receiver configurations")
 		return nil
 	}
 
 	logger.Debug("ensuring receivers",
-		"receiver-configs", len(pc.Spec.ReceiverConfigs),
+		"receiver-configs", len(pc.Spec.WebhookReceiverConfigs),
 	)
-	var receivers []kargoapi.Receiver
-	for _, rc := range pc.Spec.ReceiverConfigs {
+	var whReceivers []kargoapi.WebhookReceiver
+	for _, rc := range pc.Spec.WebhookReceiverConfigs {
 		var secret corev1.Secret
 		err := r.client.Get(
 			ctx,
@@ -936,7 +936,7 @@ func (r *reconciler) ensureReceivers(
 				rc.SecretRef, project.Name, err,
 			)
 		}
-		receivers = append(receivers, kargoapi.Receiver{
+		whReceivers = append(whReceivers, kargoapi.WebhookReceiver{
 			Path: external.GenerateWebhookPath(
 				project.Name,
 				rc.Type,
@@ -944,7 +944,7 @@ func (r *reconciler) ensureReceivers(
 			),
 		})
 	}
-	project.Status.Receivers = receivers
+	project.Status.WebhookReceivers = whReceivers
 	return nil
 }
 
@@ -983,8 +983,8 @@ func (r *reconciler) migrateSpecToProjectConfig(
 				Namespace: project.Name,
 			},
 			Spec: kargoapi.ProjectConfigSpec{
-				PromotionPolicies: project.Spec.PromotionPolicies, // nolint:staticcheck
-				ReceiverConfigs:   project.Spec.ReceiverConfigs,   // nolint:staticcheck
+				PromotionPolicies:      project.Spec.PromotionPolicies,      // nolint:staticcheck
+				WebhookReceiverConfigs: project.Spec.WebhookReceiverConfigs, // nolint:staticcheck
 			},
 		}
 		if err := r.client.Create(ctx, projectCfg); err != nil {

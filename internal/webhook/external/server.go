@@ -84,7 +84,7 @@ func (s *server) refreshWarehouseWebhook(w http.ResponseWriter, r *http.Request)
 		ctx,
 		&projects,
 		client.MatchingFields{
-			indexer.ProjectsByReceiverPathsField: r.URL.Path,
+			indexer.ProjectsByWebhookReceiverPathsField: r.URL.Path,
 		},
 	)
 	if err != nil {
@@ -125,7 +125,7 @@ func (s *server) getReceiverConfig(
 	ctx context.Context,
 	receiverPath string,
 	project kargoapi.Project,
-) (*kargoapi.ReceiverConfig, error) {
+) (*kargoapi.WebhookReceiverConfig, error) {
 	logger := logging.LoggerFromContext(ctx).WithValues(
 		"receiverPath", receiverPath,
 		"projectName", project.Name,
@@ -160,33 +160,33 @@ func (s *server) getReceiverConfig(
 		)
 	}
 
-	var receiverConfig *kargoapi.ReceiverConfig
-	for _, config := range projectConfig.Spec.ReceiverConfigs { // nolint: nilness, lll // impossible for project config spec to be empty
+	var whrc *kargoapi.WebhookReceiverConfig
+	for _, config := range projectConfig.Spec.WebhookReceiverConfigs { // nolint: nilness, lll // impossible for project config spec to be empty
 		target := GenerateWebhookPath(
 			project.Name,
 			config.Type,
 			config.SecretRef,
 		)
 		if receiver.Path == target {
-			receiverConfig = &config
+			whrc = &config
 		}
 	}
-	if receiverConfig == nil {
+	if whrc == nil {
 		return nil, fmt.Errorf(
 			"failed to find receiver config with path %q in project %q",
 			receiver.Path,
 			project.Name,
 		)
 	}
-	return receiverConfig, nil
+	return whrc, nil
 }
 
 func (s *server) getReceiver(
 	receiverPath string,
 	project kargoapi.Project,
-) (*kargoapi.Receiver, error) {
-	var receiver *kargoapi.Receiver
-	for _, r := range project.Status.Receivers {
+) (*kargoapi.WebhookReceiver, error) {
+	var receiver *kargoapi.WebhookReceiver
+	for _, r := range project.Status.WebhookReceivers {
 		if r.Path == receiverPath {
 			receiver = &r
 		}
