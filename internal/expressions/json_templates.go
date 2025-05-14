@@ -108,22 +108,21 @@ func EvaluateTemplate(template string, env map[string]any, exprOpts ...expr.Opti
 		return template, nil
 	}
 	if exprOpts == nil {
-		exprOpts = make([]expr.Option, 0, 1)
+		exprOpts = make([]expr.Option, 0, 2)
 	}
-	exprOpts = append(exprOpts, expr.Function(
-		"quote",
-		func(a ...any) (any, error) {
-			if str, ok := a[0].(string); ok {
-				return fmt.Sprintf("%q", str), nil
-			}
-			jsonBytes, err := json.Marshal(a[0])
-			if err != nil {
-				return nil, fmt.Errorf("error applying quote() function: %w", err)
-			}
-			return fmt.Sprintf(`"%s"`, jsonBytes), nil
-		},
-		new(func(any) string),
-	))
+	exprOpts = append(
+		exprOpts,
+		expr.Function(
+			"quote",
+			quoteFunc,
+			new(func(any) string),
+		),
+		expr.Function(
+			"unsafeQuote",
+			unsafeQuoteFunc,
+			new(func(any) string),
+		),
+	)
 	t, err := fasttemplate.NewTemplate(template, "${{", "}}")
 	if err != nil {
 		return nil, fmt.Errorf("error parsing template: %w", err)
@@ -208,4 +207,25 @@ func getExpressionEvaluator(env map[string]any, exprOpts ...expr.Option) fasttem
 		}
 		return out.Write(resJSON)
 	}
+}
+
+// quoteFunc formats a value as a quoted string, with special handling for
+// string inputs. For string inputs, it produces a clean string without visible
+// quotation marks. For non-string inputs, it delegates to unsafeQuoteFunc.
+func quoteFunc(a ...any) (any, error) {
+	if str, ok := a[0].(string); ok {
+		return fmt.Sprintf("%q", str), nil
+	}
+	return unsafeQuoteFunc(a...)
+}
+
+// unsafeQuoteFunc converts any value to JSON and preserves the escape sequences.
+// Unlike quoteFunc, this function retains the literal escape sequences in the
+// output, producing a string with visible escaped quotation marks.
+func unsafeQuoteFunc(a ...any) (any, error) {
+	jsonBytes, err := json.Marshal(a[0])
+	if err != nil {
+		return nil, fmt.Errorf("error applying quote() function: %w", err)
+	}
+	return fmt.Sprintf(`"%s"`, jsonBytes), nil
 }
