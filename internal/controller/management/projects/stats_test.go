@@ -101,39 +101,6 @@ func Test_reconciler_collectStats(t *testing.T) {
 			},
 		},
 		{
-			name: "error listing Receivers",
-			project: &kargoapi.Project{
-				Status: kargoapi.ProjectStatus{
-					Conditions: []metav1.Condition{{
-						Type:   kargoapi.ConditionTypeReady,
-						Status: metav1.ConditionTrue,
-					}},
-				},
-			},
-			client: fake.NewClientBuilder().WithScheme(scheme).
-				WithInterceptorFuncs(interceptor.Funcs{
-					List: func(
-						_ context.Context,
-						_ client.WithWatch,
-						list client.ObjectList,
-						_ ...client.ListOption,
-					) error {
-						if _, ok := list.(*kargoapi.StageList); ok {
-							return fmt.Errorf("something went wrong")
-						}
-						return nil
-					},
-				}).Build(),
-			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
-				require.Error(t, err)
-				cond := conditions.Get(&status, kargoapi.ConditionTypeHealthy)
-				require.NotNil(t, cond)
-				require.Equal(t, metav1.ConditionFalse, cond.Status)
-				require.Equal(t, kargoapi.ConditionTypeHealthy, cond.Type)
-				require.Equal(t, "CollectingStageStatsFailed", cond.Reason)
-			},
-		},
-		{
 			name: "successful stats collection",
 			project: &kargoapi.Project{
 				Status: kargoapi.ProjectStatus{
