@@ -316,6 +316,9 @@ func TestReconciler_reconcile(t *testing.T) {
 				ensureDefaultUserRolesFn: func(context.Context, *kargoapi.Project) error {
 					return nil
 				},
+				ensureReceiversFn: func(ctx context.Context, p *kargoapi.Project) error {
+					return nil
+				},
 			},
 			// Requires no phase --> conditions migration.
 			// Requires no spec --> ProjectConfig migration.
@@ -373,6 +376,9 @@ func TestReconciler_reconcile(t *testing.T) {
 					return nil
 				},
 				ensureDefaultUserRolesFn: func(context.Context, *kargoapi.Project) error {
+					return nil
+				},
+				ensureReceiversFn: func(ctx context.Context, p *kargoapi.Project) error {
 					return nil
 				},
 			},
@@ -608,6 +614,12 @@ func TestReconciler_syncProject(t *testing.T) {
 					return nil
 				},
 				ensureDefaultUserRolesFn: func(
+					context.Context,
+					*kargoapi.Project,
+				) error {
+					return nil
+				},
+				ensureReceiversFn: func(
 					context.Context,
 					*kargoapi.Project,
 				) error {
@@ -1411,7 +1423,7 @@ func TestReconciler_ensureReceivers(t *testing.T) {
 					p.Status.Receivers[0].Type,
 				)
 				require.Equal(t,
-					generateWebhookURL(
+					generateWebhookPath(
 						p.Name,
 						kargoapi.ReceiverTypeGitHub,
 						"fake-secret-data",

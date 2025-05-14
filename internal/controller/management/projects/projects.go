@@ -916,7 +916,7 @@ func (r *reconciler) ensureReceivers(
 			)
 		}
 
-		receiver.Path = generateWebhookURL(
+		receiver.Path = generateWebhookPath(
 			project.Name,
 			receiver.Type,
 			string(secretData),
@@ -1004,7 +1004,7 @@ func getRoleBindingName(serviceAccountName string) string {
 	return fmt.Sprintf("%s-read-secrets", serviceAccountName)
 }
 
-func generateWebhookURL(project, provider, secret string) string {
+func generateWebhookPath(project, provider, secret string) string {
 	input := []byte(project + provider + secret)
 	h := sha256.New()
 	h.Write(input)

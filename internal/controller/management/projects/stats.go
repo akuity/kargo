@@ -61,12 +61,31 @@ func (r *reconciler) collectStats(
 		return status, fmt.Errorf("error listing Stages: %w", err)
 	}
 
+	receivers := &kargoapi.ReceiverList{}
+	if err := r.client.List(
+		ctx,
+		receivers,
+		client.InNamespace(project.Name),
+	); err != nil {
+		conditions.Set(&status, &metav1.Condition{
+			Type:               kargoapi.ConditionTypeHealthy,
+			Status:             metav1.ConditionFalse,
+			Reason:             "CollectingReceiverStatsFailed",
+			Message:            "Failed to collect Receiver stats: " + err.Error(),
+			ObservedGeneration: project.GetGeneration(),
+		})
+		return status, fmt.Errorf("error listing Receivers: %w", err)
+	}
+
 	stats := kargoapi.ProjectStats{
 		Warehouses: kargoapi.WarehouseStats{
 			Count: int64(len(warehouses.Items)),
 		},
 		Stages: kargoapi.StageStats{
 			Count: int64(len(stages.Items)),
+		},
+		Receivers: kargoapi.ReceiverStats{
+			Count: int64(len(receivers.Items)),
 		},
 	}
 
