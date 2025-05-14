@@ -886,25 +886,22 @@ func (r *reconciler) ensureReceivers(
 		},
 		pc,
 	); err != nil {
-		if kubeerr.IsNotFound(err) {
-			logger.Debug("ProjectConfig not found; skipping receiver configuration")
-			return nil
-		}
 		return fmt.Errorf(
 			"error getting ProjectConfig %q in project namespace %q: %w",
-			project.Name, project.Name, err,
+			project.Name, project.Namespace, err,
 		)
 	}
-	if pc.Spec.ReceiverConfigs == nil { // nolint:staticcheck
+
+	if pc.Spec.ReceiverConfigs == nil {
 		logger.Debug("ProjectConfig does not have any receiver configurations")
 		return nil
 	}
 
 	logger.Debug("ensuring receivers",
-		"receiver-configs", len(pc.Spec.ReceiverConfigs), // nolint:staticcheck
+		"receiver-configs", len(pc.Spec.ReceiverConfigs),
 	)
 	var receivers []kargoapi.Receiver
-	for _, receiver := range pc.Spec.ReceiverConfigs { // nolint:staticcheck
+	for _, receiver := range pc.Spec.ReceiverConfigs {
 		var secret corev1.Secret
 		err := r.client.Get(
 			ctx,

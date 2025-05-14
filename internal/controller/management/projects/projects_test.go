@@ -1334,13 +1334,54 @@ func TestReconciler_ensureReceivers(t *testing.T) {
 		assertions func(*testing.T, *kargoapi.Project, error)
 	}{
 		{
-			name: "secret ref not found",
+			name: "project config not found",
 			reconciler: func() *reconciler {
 				scheme := runtime.NewScheme()
 				require.NoError(t, corev1.AddToScheme(scheme))
 				require.NoError(t, kargoapi.AddToScheme(scheme))
 				return newReconciler(
 					fake.NewClientBuilder().WithScheme(scheme).Build(),
+					ReconcilerConfig{
+						KargoNamespace: "fake-namespace",
+					},
+				)
+			},
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-namespace",
+					Name:      "fake-project",
+				},
+			},
+			assertions: func(t *testing.T, _ *kargoapi.Project, err error) {
+				require.ErrorContains(t, err, "error getting ProjectConfig")
+			},
+		},
+		{
+			name: "secret-ref not found",
+			reconciler: func() *reconciler {
+				scheme := runtime.NewScheme()
+				require.NoError(t, corev1.AddToScheme(scheme))
+				require.NoError(t, kargoapi.AddToScheme(scheme))
+				return newReconciler(
+					fake.NewClientBuilder().
+						WithScheme(scheme).
+						WithObjects(
+							&kargoapi.ProjectConfig{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "fake-project",
+									Namespace: "fake-namespace",
+								},
+								Spec: kargoapi.ProjectConfigSpec{
+									ReceiverConfigs: []kargoapi.ReceiverConfig{
+										{
+											Type:      kargoapi.ReceiverTypeGitHub,
+											SecretRef: "secret-ref-that-does-not-exist",
+										},
+									},
+								},
+							},
+						).
+						Build(),
 					ReconcilerConfig{
 						KargoNamespace: "fake-namespace",
 					},
@@ -1379,9 +1420,20 @@ func TestReconciler_ensureReceivers(t *testing.T) {
 									Name:      "fake-name",
 									Namespace: "fake-namespace",
 								},
-								Spec: &kargoapi.ProjectSpec{ // nolint:staticcheck
-									// none yet
-									ReceiverConfigs: nil,
+								Spec: &kargoapi.ProjectConfigSpec{},
+							},
+							&kargoapi.ProjectConfig{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "fake-project",
+									Namespace: "fake-namespace",
+								},
+								Spec: kargoapi.ProjectConfigSpec{
+									ReceiverConfigs: []kargoapi.ReceiverConfig{
+										{
+											Type:      kargoapi.ReceiverTypeGitHub,
+											SecretRef: "secret-that-exists",
+										},
+									},
 								},
 							},
 							&corev1.Secret{
@@ -1390,7 +1442,7 @@ func TestReconciler_ensureReceivers(t *testing.T) {
 									Namespace: "fake-namespace",
 								},
 								Data: map[string][]byte{
-									"TODO": []byte("fake-secret-data"),
+									"seed": []byte("fake-secret-data"),
 								},
 							},
 						).
