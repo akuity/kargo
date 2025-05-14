@@ -103,7 +103,10 @@ func TestRepo(t *testing.T) {
 		require.True(t, hasDiffs)
 	})
 
-	testCommitMessage := fmt.Sprintf("test commit %s", uuid.NewString())
+	testCommitMessage := fmt.Sprintf(`test commit %s
+
+with a body
+`, uuid.NewString())
 	err = rep.AddAllAndCommit(testCommitMessage, nil)
 	require.NoError(t, err)
 

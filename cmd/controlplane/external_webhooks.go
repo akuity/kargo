@@ -77,6 +77,10 @@ func (o *externalWebhooksServerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error creating Kubernetes client: %w", err)
 	}
 
+	if err = kargoapi.AddToScheme(cluster.GetClient().Scheme()); err != nil {
+		return fmt.Errorf("error adding Kargo API to scheme: %w", err)
+	}
+
 	err = cluster.GetFieldIndexer().IndexField(
 		ctx,
 		&kargoapi.Warehouse{},

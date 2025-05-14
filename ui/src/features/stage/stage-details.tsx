@@ -21,12 +21,13 @@ import {
   getStage
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { Stage, VerificationInfo } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 
 import YamlEditor from '../common/code-editor/yaml-editor-lazy';
 import { StageConditionIcon } from '../common/stage-status/stage-condition-icon';
+import { getCurrentFreight } from '../common/utils';
 
 import { Promotions } from './promotions';
 import { RequestedFreight } from './requested-freight';
@@ -64,7 +65,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
           return {
             ...verification,
             freight
-          } as VerificationInfo;
+          };
         })
       )
       .sort((a, b) => moment(timestampDate(b.startTime)).diff(moment(timestampDate(a.startTime))));
@@ -110,7 +111,9 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                 {stage.metadata?.name}
               </Typography.Title>
               <Flex gap={4}>
-                <StageConditionIcon conditions={stageConditions} />
+                {getCurrentFreight(stage).length > 0 && (
+                  <StageConditionIcon conditions={stageConditions} />
+                )}
                 {!!stage.status?.health && <HealthStatusIcon health={stage.status?.health} />}
               </Flex>
             </Flex>

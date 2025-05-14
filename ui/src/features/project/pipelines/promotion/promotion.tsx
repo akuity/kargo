@@ -16,13 +16,12 @@ import { PromotionSteps } from '@ui/features/stage/promotion-steps';
 import { hasAbortRequest } from '@ui/features/stage/utils/promotion';
 import { getPromotion } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { Freight, Stage, Promotion as TPromotion } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight, Promotion as TPromotion } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 
 import { FreightDetails } from './freight-details';
 import { getPromotionActor } from './get-promotion-actor';
-import { PromotionGraph } from './promotion-graph';
 import { useWatchPromotion } from './use-watch-promotion';
 
 type PromotionProps = ModalComponentProps & {
@@ -42,11 +41,6 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
   const freight = useMemo(
     () => dictionaryContext?.freightById?.[promotion?.spec?.freight || ''] as Freight,
     [dictionaryContext?.freightById, promotion]
-  );
-
-  const stage = useMemo(
-    () => dictionaryContext?.stageByName?.[promotion?.spec?.stage || ''] as Stage,
-    [dictionaryContext, promotion]
   );
 
   if (isAbortRequestPending && promotion?.status) {
@@ -136,8 +130,6 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
       />
 
       <FreightDetails freight={freight} />
-
-      <PromotionGraph stage={stage} freight={freight} />
     </>
   );
 };

@@ -195,7 +195,7 @@ func (h *httpRequester) buildExprEnv(
 		if n, err = resp.Body.Read(buf); err != nil && err != io.EOF {
 			return nil, fmt.Errorf("checking for additional content: %w", err)
 		}
-		if n > 0 || err != io.EOF {
+		if n > 0 {
 			return nil, fmt.Errorf("response body exceeds maximum size of %d bytes", maxBytes)
 		}
 	}

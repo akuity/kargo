@@ -516,7 +516,7 @@ message GitDiscoveryResult {
   // RepoURL is the repository URL of the GitSubscription.
   //
   // +kubebuilder:validation:MinLength=1
-  // +kubebuilder:validation:Pattern=`(?:^(https?)://(?:([\w-]+):(.+)@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
+  // +kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
   optional string repoURL = 1;
 
   // Commits is a list of commits discovered by the Warehouse for the
@@ -532,7 +532,7 @@ message GitSubscription {
   // URL is the repository's URL. This is a required field.
   //
   // +kubebuilder:validation:MinLength=1
-  // +kubebuilder:validation:Pattern=`(?:^(https?)://(?:([\w-]+):(.+)@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
+  // +kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
   optional string repoURL = 1;
 
   // CommitSelectionStrategy specifies the rules for how to identify the newest
