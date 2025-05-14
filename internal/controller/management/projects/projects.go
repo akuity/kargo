@@ -876,16 +876,40 @@ func (r *reconciler) ensureReceivers(
 	project *kargoapi.Project,
 ) error {
 	logger := logging.LoggerFromContext(ctx)
+
+	pc := &kargoapi.ProjectConfig{}
+	if err := r.client.Get(
+		ctx,
+		types.NamespacedName{
+			Name:      project.Name,
+			Namespace: project.Namespace,
+		},
+		pc,
+	); err != nil {
+		if kubeerr.IsNotFound(err) {
+			logger.Debug("ProjectConfig not found; skipping receiver configuration")
+			return nil
+		}
+		return fmt.Errorf(
+			"error getting ProjectConfig %q in project namespace %q: %w",
+			project.Name, project.Name, err,
+		)
+	}
+	if pc.Spec.ReceiverConfigs == nil { // nolint:staticcheck
+		logger.Debug("ProjectConfig does not have any receiver configurations")
+		return nil
+	}
+
 	logger.Debug("ensuring receivers",
-		"receiver-configs", len(project.Spec.ReceiverConfigs), // nolint:staticcheck
+		"receiver-configs", len(pc.Spec.ReceiverConfigs), // nolint:staticcheck
 	)
 	var receivers []kargoapi.Receiver
-	for _, receiver := range project.Spec.ReceiverConfigs { // nolint:staticcheck
+	for _, receiver := range pc.Spec.ReceiverConfigs { // nolint:staticcheck
 		var secret corev1.Secret
 		err := r.client.Get(
 			ctx,
 			types.NamespacedName{
-				Namespace: project.Namespace,
+				Namespace: pc.Namespace,
 				Name:      receiver.SecretRef,
 			},
 			&secret,
@@ -908,7 +932,7 @@ func (r *reconciler) ensureReceivers(
 		logger.Debug("secret found", "secret", secret.Name)
 
 		// TODO(fuskovic): is there a certain key we should use?
-		secretData, ok := secret.Data["TODO"]
+		seed, ok := secret.Data["seed"]
 		if !ok {
 			logger.Error(err, "secret data not found")
 			return fmt.Errorf(
@@ -920,7 +944,7 @@ func (r *reconciler) ensureReceivers(
 			Path: generateWebhookPath(
 				project.Name,
 				receiver.Type,
-				string(secretData),
+				string(seed),
 			),
 		})
 	}
@@ -964,6 +988,7 @@ func (r *reconciler) migrateSpecToProjectConfig(
 			},
 			Spec: kargoapi.ProjectConfigSpec{
 				PromotionPolicies: project.Spec.PromotionPolicies, // nolint:staticcheck
+				ReceiverConfigs:   project.Spec.ReceiverConfigs,   // nolint:staticcheck
 			},
 		}
 		if err := r.client.Create(ctx, projectCfg); err != nil {
@@ -999,8 +1024,8 @@ func getRoleBindingName(serviceAccountName string) string {
 	return fmt.Sprintf("%s-read-secrets", serviceAccountName)
 }
 
-func generateWebhookPath(project, provider, secret string) string {
-	input := []byte(project + provider + secret)
+func generateWebhookPath(project, provider, seed string) string {
+	input := []byte(project + provider + seed)
 	h := sha256.New()
 	h.Write(input)
 	return fmt.Sprintf("/%x", h.Sum(nil))

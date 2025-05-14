@@ -1419,7 +1419,7 @@ func TestReconciler_ensureReceivers(t *testing.T) {
 				require.Len(t, p.Status.Receivers, 1)
 				require.Equal(t,
 					kargoapi.ReceiverTypeGitHub,
-					p.Spec.ReceiverConfigs[0].Type,
+					p.Spec.ReceiverConfigs[0].Type, // nolint: staticcheck
 				)
 				require.Equal(t,
 					generateWebhookPath(
