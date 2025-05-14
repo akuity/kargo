@@ -901,29 +901,29 @@ func (r *reconciler) ensureReceivers(
 		"receiver-configs", len(pc.Spec.ReceiverConfigs),
 	)
 	var receivers []kargoapi.Receiver
-	for _, receiver := range pc.Spec.ReceiverConfigs {
+	for _, rc := range pc.Spec.ReceiverConfigs {
 		var secret corev1.Secret
 		err := r.client.Get(
 			ctx,
 			types.NamespacedName{
 				Namespace: pc.Namespace,
-				Name:      receiver.SecretRef,
+				Name:      rc.SecretRef,
 			},
 			&secret,
 		)
 		if err != nil {
 			logger.Error(err, "secret not found",
-				"secret", receiver.SecretRef,
+				"secret", rc.SecretRef,
 			)
 			if kubeerr.IsNotFound(err) {
 				return fmt.Errorf(
 					"secret-reference %q in namespace %q not found",
-					receiver.SecretRef, project.Namespace,
+					rc.SecretRef, project.Namespace,
 				)
 			}
 			return fmt.Errorf(
 				"error getting receiver secret-reference %q in project namespace %q: %w",
-				receiver.SecretRef, project.Name, err,
+				rc.SecretRef, project.Name, err,
 			)
 		}
 		logger.Debug("secret found", "secret", secret.Name)
@@ -933,13 +933,20 @@ func (r *reconciler) ensureReceivers(
 			logger.Error(err, "secret data not found")
 			return fmt.Errorf(
 				"error getting receiver secret %q in project namespace %q: %w",
-				receiver.SecretRef, project.Name, err,
+				rc.SecretRef, project.Name, err,
 			)
 		}
 		receivers = append(receivers, kargoapi.Receiver{
+			// When the project controller sub-reconciler
+			// migrates the project spec to a project config, it will
+			// remove the spec from the project.
+			// This means when the webhook server queries the kube
+			// client for the project it will not find the spec.
+			// We solve for this by including the config in the receiver.
+			Config: rc,
 			Path: generateWebhookPath(
 				project.Name,
-				receiver.Type,
+				rc.Type,
 				string(seed),
 			),
 		})
