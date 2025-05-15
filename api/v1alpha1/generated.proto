@@ -873,6 +873,14 @@ message ProjectConfigSpec {
 }
 
 message ProjectConfigStatus {
+  // Conditions contains the last observations of the Project's current
+  // state.
+  // +patchMergeKey=type
+  // +patchStrategy=merge
+  // +listType=map
+  // +listMapKey=type
+  repeated .k8s.io.apimachinery.pkg.apis.meta.v1.Condition conditions = 3;
+
   // WebhookReceivers contains the list of webhook receivers for the
   repeated WebhookReceiver receivers = 5;
 }

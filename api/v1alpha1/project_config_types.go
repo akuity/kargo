@@ -8,7 +8,10 @@ var (
 )
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:scope=Namespaced
+// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].status"
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].message"
 // +kubebuilder:printcolumn:name=Age,type=date,JSONPath=`.metadata.creationTimestamp`
 
 // ProjectConfig is a resource type that describes the configuration of a
@@ -22,6 +25,10 @@ type ProjectConfig struct {
 	Status ProjectConfigStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
+func (p *ProjectConfig) GetStatus() *ProjectConfigStatus {
+	return &p.Status
+}
+
 // ProjectConfigSpec describes the configuration of a Project.
 type ProjectConfigSpec struct {
 	// PromotionPolicies defines policies governing the promotion of Freight to
@@ -32,8 +39,25 @@ type ProjectConfigSpec struct {
 }
 
 type ProjectConfigStatus struct {
+	// Conditions contains the last observations of the Project's current
+	// state.
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	// +listType=map
+	// +listMapKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,3,rep,name=conditions"`
 	// WebhookReceivers contains the list of webhook receivers for the
 	WebhookReceivers []WebhookReceiver `json:"receivers,omitempty" protobuf:"bytes,5,rep,name=receivers"`
+}
+
+// GetConditions implements the conditions.Getter interface.
+func (w *ProjectConfigStatus) GetConditions() []metav1.Condition {
+	return w.Conditions
+}
+
+// SetConditions implements the conditions.Setter interface.
+func (w *ProjectConfigStatus) SetConditions(conditions []metav1.Condition) {
+	w.Conditions = conditions
 }
 
 // PromotionPolicy defines policies governing the promotion of Freight to a

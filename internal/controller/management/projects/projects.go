@@ -29,7 +29,6 @@ import (
 	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
-	"github.com/akuity/kargo/internal/webhook/external"
 )
 
 const (
@@ -108,8 +107,6 @@ type reconciler struct {
 	ensureControllerPermissionsFn func(context.Context, *kargoapi.Project) error
 
 	ensureDefaultUserRolesFn func(context.Context, *kargoapi.Project) error
-
-	ensureReceiversFn func(context.Context, *kargoapi.Project) error
 
 	createServiceAccountFn func(
 		context.Context,
@@ -199,7 +196,6 @@ func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
 	r.ensureAPIAdminPermissionsFn = r.ensureAPIAdminPermissions
 	r.ensureControllerPermissionsFn = r.ensureControllerPermissions
 	r.ensureDefaultUserRolesFn = r.ensureDefaultUserRoles
-	r.ensureReceiversFn = r.ensureReceivers
 	r.createServiceAccountFn = r.client.Create
 	r.createRoleFn = r.client.Create
 	r.createRoleBindingFn = r.client.Create
@@ -430,17 +426,6 @@ func (r *reconciler) syncProject(
 			ObservedGeneration: project.GetGeneration(),
 		})
 		return *status, fmt.Errorf("error ensuring default project roles: %w", err)
-	}
-
-	if err := r.ensureReceiversFn(ctx, project); err != nil {
-		conditions.Set(status, &metav1.Condition{
-			Type:               kargoapi.ConditionTypeReady,
-			Status:             metav1.ConditionFalse,
-			Reason:             "EnsuringReceivers",
-			Message:            "Failed to ensure existence of default project receivers: " + err.Error(),
-			ObservedGeneration: project.GetGeneration(),
-		})
-		return *status, fmt.Errorf("error ensuring receivers configuration: %w", err)
 	}
 
 	conditions.Delete(status, kargoapi.ConditionTypeReconciling)
@@ -868,83 +853,6 @@ func (r *reconciler) ensureDefaultUserRoles(
 		rbLogger.Debug("created RoleBinding in project namespace")
 	}
 
-	return nil
-}
-
-func (r *reconciler) ensureReceivers(
-	ctx context.Context,
-	project *kargoapi.Project,
-) error {
-	logger := logging.LoggerFromContext(ctx)
-
-	pc := &kargoapi.ProjectConfig{}
-	if err := r.client.Get(
-		ctx,
-		types.NamespacedName{
-			Name:      project.Name,
-			Namespace: project.Namespace,
-		},
-		pc,
-	); err != nil {
-		return fmt.Errorf(
-			"error getting ProjectConfig %q in project namespace %q: %w",
-			project.Name, project.Namespace, err,
-		)
-	}
-
-	if pc.Spec.WebhookReceiverConfigs == nil {
-		logger.Debug("ProjectConfig does not have any receiver configurations")
-		return nil
-	}
-
-	logger.Debug("ensuring receivers",
-		"receiver-configs", len(pc.Spec.WebhookReceiverConfigs),
-	)
-	var whReceivers []kargoapi.WebhookReceiver
-	for _, rc := range pc.Spec.WebhookReceiverConfigs {
-		var secret corev1.Secret
-		err := r.client.Get(
-			ctx,
-			types.NamespacedName{
-				Namespace: pc.Namespace,
-				Name:      rc.SecretRef,
-			},
-			&secret,
-		)
-		if err != nil {
-			logger.Error(err, "secret not found",
-				"secret", rc.SecretRef,
-			)
-			if kubeerr.IsNotFound(err) {
-				return fmt.Errorf(
-					"secret-reference %q in namespace %q not found",
-					rc.SecretRef, project.Namespace,
-				)
-			}
-			return fmt.Errorf(
-				"error getting receiver secret-reference %q in project namespace %q: %w",
-				rc.SecretRef, project.Name, err,
-			)
-		}
-		logger.Debug("secret found", "secret", secret.Name)
-
-		seed, ok := secret.Data["seed"]
-		if !ok {
-			logger.Error(err, "secret data not found")
-			return fmt.Errorf(
-				"error getting receiver secret %q in project namespace %q: %w",
-				rc.SecretRef, project.Name, err,
-			)
-		}
-		whReceivers = append(whReceivers, kargoapi.WebhookReceiver{
-			Path: external.GenerateWebhookPath(
-				project.Name,
-				rc.Type,
-				string(seed),
-			),
-		})
-	}
-	project.Status.WebhookReceivers = whReceivers
 	return nil
 }
 
