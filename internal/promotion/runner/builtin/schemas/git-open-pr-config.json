@@ -39,6 +39,11 @@
       "description": "The title for the pull request. Kargo generates a title based on the commit messages if it is not explicitly specified.",
       "minLength": 1
     },
+    "description": {
+      "type": "string",
+      "description": "The description of the pull request. Kargo generates a description based on the commit messages if it is not explicitly specified.",
+      "minLength": 1
+    },
     "labels": {
       "type": "array",
       "description": "Labels to add to the pull request.",
