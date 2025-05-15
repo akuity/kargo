@@ -350,7 +350,7 @@ the previous section.
         as: commit
         config:
           path: ./out
-          message: \${{ outputs.update.commitMessage }}
+          message: \${{ task.outputs.update.commitMessage }}
       - uses: git-push
         config:
           path: ./out
