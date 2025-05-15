@@ -102,7 +102,7 @@ func (h *helmChartUpdater) run(
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
-	if err = intyaml.SetStringsInFile(chartFilePath, changes); err != nil {
+	if err = intyaml.SetValuesInFile(chartFilePath, changes); err != nil {
 		return promotion.StepResult{
 			Status: kargoapi.PromotionStepStatusErrored,
 		}, fmt.Errorf("failed to update chart dependencies in %q: %w", chartFilePath, err)

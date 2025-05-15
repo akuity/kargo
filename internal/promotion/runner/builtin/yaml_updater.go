@@ -9,6 +9,7 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/yaml"
 	intyaml "github.com/akuity/kargo/internal/yaml"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
@@ -92,7 +93,7 @@ func (y *yamlUpdater) updateFile(workDir string, path string, updates []intyaml.
 	if err != nil {
 		return fmt.Errorf("error joining path %q: %w", path, err)
 	}
-	if err := intyaml.SetStringsInFile(absValuesFile, updates); err != nil {
+	if err := intyaml.SetValuesInFile(absValuesFile, updates); err != nil {
 		return fmt.Errorf("error updating image references in values file %q: %w", path, err)
 	}
 	return nil
@@ -106,7 +107,13 @@ func (y *yamlUpdater) generateCommitMessage(path string, updates []builtin.YAMLU
 	var commitMsg strings.Builder
 	_, _ = commitMsg.WriteString(fmt.Sprintf("Updated %s\n", path))
 	for _, update := range updates {
-		_, _ = commitMsg.WriteString(fmt.Sprintf("\n- %s: %q", update.Key, update.Value))
+		_, _ = commitMsg.WriteString(
+			fmt.Sprintf(
+				"\n- %s: %v",
+				update.Key,
+				yaml.QuoteIfNecessary(update.Value),
+			),
+		)
 	}
 
 	return commitMsg.String()
