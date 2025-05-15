@@ -29,8 +29,7 @@ func QuoteIfNecessary(val any) any {
 	}
 	// If valStr is valid JSON, return its unmarshaled value. This could be an
 	// object, array, or null.
-	var parsedOther any
-	if err := json.Unmarshal([]byte(valStr), &parsedOther); err == nil {
+	if json.Valid([]byte(valStr)) {
 		return fmt.Sprintf("%q", valStr)
 	}
 	// If we get to here, just return the string.
