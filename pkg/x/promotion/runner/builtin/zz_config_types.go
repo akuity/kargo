@@ -432,7 +432,7 @@ type YAMLUpdate struct {
 	// The key whose value needs to be updated. For nested values, use a YAML dot notation path.
 	Key string `json:"key"`
 	// The new value for the specified key.
-	Value string `json:"value"`
+	Value interface{} `json:"value"`
 }
 
 // The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github',
