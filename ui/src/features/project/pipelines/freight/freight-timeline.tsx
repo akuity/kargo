@@ -20,6 +20,8 @@ import { FreightTimelineFilters } from './freight-timeline-filters';
 import { PromotionModeHeader } from './promotion-mode-header';
 import { filterFreightBySource, filterFreightByTimerange } from './source-catalogue-utils';
 import { usePromotionEligibleFreight } from './use-promotion-eligible-freight';
+import { useSoakTime } from './use-soak-time';
+
 import './freight-timeline.less';
 
 export const FreightTimeline = (props: { freights: Freight[]; project: string }) => {
@@ -36,6 +38,8 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
 
   const { promotionEligibleFreight, ...getPromotionEligibleFreightQuery } =
     usePromotionEligibleFreight(props.project);
+
+  const soakTime = useSoakTime(props.freights);
 
   if (!freightTimelineControllerContext) {
     throw new Error('missing context freightTimelineControllerContext');
@@ -182,9 +186,14 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
         >
           <div className='flex gap-1 relative transition-all right-0' ref={freightListStyleRef}>
             {filteredFreights.map((freight) => {
-              const promotionEligible = Boolean(
-                promotionEligibleFreight?.find((f) => f?.metadata?.name === freight?.metadata?.name)
-              );
+              const freightSoakTime = soakTime?.[freight?.metadata?.name || ''];
+
+              const promotionEligible =
+                Boolean(
+                  promotionEligibleFreight?.find(
+                    (f) => f?.metadata?.name === freight?.metadata?.name
+                  )
+                ) && !freightSoakTime;
 
               return (
                 <FreightCard
@@ -221,6 +230,7 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
                       hideUnusedFreights: false
                     })
                   }
+                  soakTime={freightSoakTime}
                 />
               );
             })}
