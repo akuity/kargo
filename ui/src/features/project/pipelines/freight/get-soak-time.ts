@@ -4,6 +4,11 @@ import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 import { Duration } from '@ui/gen/k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
+// freight is in stage since X
+// required soak time is Y duration
+// add Y duration in X
+// if it is in past, then freight is soaked
+// if it is in future then difference between future time and current time is how much time it needs to soak
 export const getSoakTime = (payload: {
   freight: Freight;
   // only relevant stages

@@ -8,6 +8,20 @@ import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 import { durationToSeconds } from './duration-to-seconds';
 import { getSoakTime } from './get-soak-time';
 
+/**
+ * soak time calculation:
+ *
+ * when pipeline is in promotion mode, we will calculate soak time for each freight
+ *
+ * first find if currently promoting stage has required soak time from upstream stage(s)
+ * if it is then for each promotion ineligible freight, find how much time it is in upstream stage(s) of currently promoting stage
+ * if there are multiple upstream stages then find longest time since the freight is in one of stage
+ * then compare it with currently promoting stages required soak time
+ *
+ * above process is for "promote to stage"
+ * for promote to downstream, we have to calculate for each downstream stages required soak time and pick the longest one
+ */
+
 const soakTimeForPromotingStage = (payload: {
   stage: Stage;
   subscribersByStage: Record<string, Set<string>>;
@@ -34,6 +48,8 @@ const soakTimeForPromotingStage = (payload: {
       (f) => f?.origin?.name === freightOrigin
     )?.sources?.requiredSoakTime;
 
+    // there will be multiple soak times due to the fact that there are potentially multiple source
+    // in that case we just need to find longest soak time
     const soakTimesForFreight: Duration[] = [];
 
     for (const stage of freightInStages) {
@@ -64,6 +80,8 @@ const soakTimeForPromotingStage = (payload: {
       if (!payload.soakTimesByFreight[freightName]) {
         payload.soakTimesByFreight[freightName] = maxSoakTime;
       } else {
+        // if we find soak time already calculated for that freight
+        // that means we are looking for "downstream" promotion mode
         const existingSoakTime = payload.soakTimesByFreight[freightName];
         payload.soakTimesByFreight[freightName] =
           durationToSeconds(existingSoakTime) > durationToSeconds(maxSoakTime)
@@ -90,6 +108,8 @@ export const useSoakTime = (freights: Freight[]) => {
       return soakTimes;
     }
 
+    // for normal promotion mode, currently promoting stage is selected stage
+    // for downstream, it is subscribers of the selected stage
     const currentlyPromotingStages: string[] = [];
 
     if (actionContext?.action?.type === IAction.PROMOTE) {
