@@ -9,10 +9,10 @@ import {
   IconDefinition
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Divider, Dropdown, Flex, Typography } from 'antd';
+import { Button, Divider, Dropdown, Flex, Progress, Typography } from 'antd';
 import classNames from 'classnames';
-import { formatDistance } from 'date-fns';
-import { ReactNode, useMemo } from 'react';
+import { Duration, formatDistance, formatDuration } from 'date-fns';
+import { ReactNode, useEffect, useMemo, useRef } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -25,6 +25,7 @@ import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { DeleteFreightModal } from './delete-freight-modal';
 import { FreightArtifact } from './freight-artifact';
+import { useSoakTimeCounter, useSoakTimePercentage } from './use-soak-time-counter';
 
 type FreightCardProps = {
   freight: Freight;
@@ -38,6 +39,7 @@ type FreightCardProps = {
   promote?: boolean;
   onReviewAndPromote?(): void;
   onExpand(): void;
+  soakTime?: Duration;
 
   // count of stacked freights
   count?: number;
@@ -74,6 +76,20 @@ export const FreightCard = (props: FreightCardProps) => {
   const isViewingFreight =
     props.viewingFreight?.metadata?.name === props.freight?.metadata?.name ||
     actionContext?.action?.freight?.metadata?.name === props.freight?.metadata?.name;
+
+  const soakTime = useSoakTimeCounter(props.soakTime);
+
+  const frozenInitialSoakTime = useRef(props.soakTime);
+
+  useEffect(() => {
+    if (!frozenInitialSoakTime.current) {
+      frozenInitialSoakTime.current = props.soakTime;
+    }
+  }, [props.soakTime]);
+
+  const soakTimePercentage = useSoakTimePercentage(frozenInitialSoakTime.current, soakTime);
+
+  const soakTimeFormatted = useMemo(() => (soakTime ? formatDuration(soakTime) : ''), [soakTime]);
 
   let CardContent: ReactNode;
 
@@ -240,6 +256,20 @@ export const FreightCard = (props: FreightCardProps) => {
       }}
     >
       {CardContent}
+
+      {soakTimeFormatted && !props.promote && (
+        <div className='px-1 pb-1'>
+          <Button
+            disabled
+            onClick={(e) => e.stopPropagation()}
+            size='small'
+            className='text-[10px] text-center w-[230px] flex font-semibold'
+          >
+            <span className='mr-auto'>Soak: {soakTimeFormatted}</span>
+            <Progress strokeWidth={12} type='circle' size={14} percent={soakTimePercentage} />
+          </Button>
+        </div>
+      )}
 
       {props.promote && (
         <div className='px-1 pb-1'>

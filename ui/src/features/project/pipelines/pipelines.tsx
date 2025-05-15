@@ -132,6 +132,8 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
     freightName
   );
 
+  const freights = getFreightQuery.data?.groups?.['']?.freight || [];
+
   if (loading) {
     return <LoadingState />;
   }
@@ -171,10 +173,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
           }}
         >
           <ColorContext.Provider value={{ stageColorMap, warehouseColorMap }}>
-            <FreightTimeline
-              freights={getFreightQuery.data?.groups?.['']?.freight || []}
-              project={projectName || ''}
-            />
+            <FreightTimeline freights={freights} project={projectName || ''} />
 
             <div className='w-full h-full relative'>
               <Flex gap={12} className='absolute z-10 top-2 right-2 left-2'>
