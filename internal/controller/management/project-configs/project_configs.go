@@ -102,7 +102,7 @@ func (r *reconciler) Reconcile(
 	}
 
 	logger.Debug("reconciling ProjectConfig")
-	newStatus, needsRequeue, reconcileErr := r.reconcileFn(ctx, projectConfig)
+	newStatus, needsRequeue, reconcileErr := r.syncProjectConfig(ctx, projectConfig)
 	logger.Debug("done reconciling ProjectConfig")
 
 	// Patch the status of the ProjectConfig.
@@ -130,25 +130,6 @@ func (r *reconciler) Reconcile(
 	return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
 }
 
-func (r *reconciler) reconcileFn(
-	ctx context.Context,
-	projectConfig *kargoapi.ProjectConfig,
-) (kargoapi.ProjectConfigStatus, bool, error) {
-	logger := logging.LoggerFromContext(ctx)
-
-	status, shouldRequeue, err := r.syncProjectConfig(ctx, projectConfig)
-	if err != nil {
-		return status, shouldRequeue, fmt.Errorf("error reconciling: %w", err)
-	}
-
-	if err = kubeclient.PatchStatus(ctx, r.client, projectConfig, func(st *kargoapi.ProjectConfigStatus) {
-		*st = status
-	}); err != nil {
-		logger.Error(err, "failed to update ProjectConfig status after reconciliation")
-	}
-	return status, shouldRequeue, nil
-}
-
 func (r *reconciler) syncProjectConfig(
 	ctx context.Context,
 	projectConfig *kargoapi.ProjectConfig,
@@ -171,7 +152,7 @@ func (r *reconciler) syncProjectConfig(
 		ObservedGeneration: projectConfig.GetGeneration(),
 	})
 
-	whReceivers, err := r.ensureWebhookReceivers(ctx, projectConfig)
+	whReceivers, err := r.ensureWebhookReceiversFn(ctx, projectConfig)
 	if err != nil {
 		logger.Error(err, "error ensuring webhook receivers")
 		conditions.Set(status, &metav1.Condition{
