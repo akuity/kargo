@@ -58,8 +58,8 @@ func TestReconciler_syncProjectConfig(t *testing.T) {
 				r.ensureWebhookReceiversFn = func(
 					_ context.Context,
 					_ *kargoapi.ProjectConfig,
-				) ([]kargoapi.WebhookReceiver, error) {
-					return nil, fmt.Errorf("something went wrong")
+				) error {
+					return fmt.Errorf("something went wrong")
 				}
 				return r
 			},
@@ -142,29 +142,8 @@ func TestReconciler_ensureWebhookReceivers(t *testing.T) {
 		name          string
 		reconciler    func() *reconciler
 		projectConfig *kargoapi.ProjectConfig
-		assertions    func(*testing.T, *kargoapi.ProjectConfig, []kargoapi.WebhookReceiver, error)
+		assertions    func(*testing.T, *kargoapi.ProjectConfig, error)
 	}{
-		{
-			name: "project config not found",
-			reconciler: func() *reconciler {
-				scheme := runtime.NewScheme()
-				require.NoError(t, corev1.AddToScheme(scheme))
-				require.NoError(t, kargoapi.AddToScheme(scheme))
-				return newReconciler(
-					fake.NewClientBuilder().WithScheme(scheme).Build(),
-					ReconcilerConfig{},
-				)
-			},
-			projectConfig: &kargoapi.ProjectConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-namespace",
-					Name:      "fake-project",
-				},
-			},
-			assertions: func(t *testing.T, _ *kargoapi.ProjectConfig, _ []kargoapi.WebhookReceiver, err error) {
-				require.ErrorContains(t, err, "error getting ProjectConfig")
-			},
-		},
 		{
 			name: "secret-ref not found",
 			reconciler: func() *reconciler {
@@ -208,7 +187,7 @@ func TestReconciler_ensureWebhookReceivers(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, _ *kargoapi.ProjectConfig, _ []kargoapi.WebhookReceiver, err error) {
+			assertions: func(t *testing.T, _ *kargoapi.ProjectConfig, err error) {
 				require.ErrorContains(t, err, "not found")
 			},
 		},
@@ -271,9 +250,9 @@ func TestReconciler_ensureWebhookReceivers(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, pc *kargoapi.ProjectConfig, whReceivers []kargoapi.WebhookReceiver, err error) {
+			assertions: func(t *testing.T, pc *kargoapi.ProjectConfig, err error) {
 				require.NoError(t, err)
-				require.Len(t, whReceivers, 1)
+				require.Len(t, pc.Status.WebhookReceivers, 1)
 				require.Equal(t,
 					kargoapi.WebhookReceiverTypeGitHub,
 					pc.Spec.WebhookReceiverConfigs[0].Type, // nolint: staticcheck
@@ -293,8 +272,8 @@ func TestReconciler_ensureWebhookReceivers(t *testing.T) {
 			r := test.reconciler()
 			l := logging.NewLogger(logging.DebugLevel)
 			ctx := logging.ContextWithLogger(t.Context(), l)
-			whReceivers, err := r.ensureWebhookReceiversFn(ctx, test.projectConfig)
-			test.assertions(t, test.projectConfig, whReceivers, err)
+			err := r.ensureWebhookReceiversFn(ctx, test.projectConfig)
+			test.assertions(t, test.projectConfig, err)
 		})
 	}
 }

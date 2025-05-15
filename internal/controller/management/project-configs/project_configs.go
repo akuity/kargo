@@ -41,7 +41,7 @@ type reconciler struct {
 	ensureWebhookReceiversFn func(
 		context.Context,
 		*kargoapi.ProjectConfig,
-	) ([]kargoapi.WebhookReceiver, error)
+	) error
 }
 
 func SetupReconcilerWithManager(
@@ -152,8 +152,7 @@ func (r *reconciler) syncProjectConfig(
 		ObservedGeneration: projectConfig.GetGeneration(),
 	})
 
-	whReceivers, err := r.ensureWebhookReceiversFn(ctx, projectConfig)
-	if err != nil {
+	if err := r.ensureWebhookReceiversFn(ctx, projectConfig); err != nil {
 		logger.Error(err, "error ensuring webhook receivers")
 		conditions.Set(status, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeReady,
@@ -164,7 +163,7 @@ func (r *reconciler) syncProjectConfig(
 		})
 		return *status, true, fmt.Errorf("error ensuring webhook receivers: %w", err)
 	}
-	status.WebhookReceivers = whReceivers
+	status.WebhookReceivers = projectConfig.Status.WebhookReceivers
 
 	conditions.Delete(status, kargoapi.ConditionTypeReconciling)
 	conditions.Set(status, &metav1.Condition{
@@ -179,24 +178,24 @@ func (r *reconciler) syncProjectConfig(
 
 func (r *reconciler) ensureWebhookReceivers(
 	ctx context.Context,
-	projectConfig *kargoapi.ProjectConfig,
-) ([]kargoapi.WebhookReceiver, error) {
+	pc *kargoapi.ProjectConfig,
+) error {
 	logger := logging.LoggerFromContext(ctx)
 
-	if projectConfig.Spec.WebhookReceiverConfigs == nil {
+	if pc.Spec.WebhookReceiverConfigs == nil {
 		logger.Debug("ProjectConfig does not have any receiver configurations")
-		return nil, nil
+		return nil
 	}
 	logger.Debug("ensuring receivers",
-		"receiver-configs", len(projectConfig.Spec.WebhookReceiverConfigs),
+		"receiver-configs", len(pc.Spec.WebhookReceiverConfigs),
 	)
 	var whReceivers []kargoapi.WebhookReceiver
-	for _, rc := range projectConfig.Spec.WebhookReceiverConfigs {
+	for _, rc := range pc.Spec.WebhookReceiverConfigs {
 		var secret corev1.Secret
 		err := r.client.Get(
 			ctx,
 			types.NamespacedName{
-				Namespace: projectConfig.Namespace,
+				Namespace: pc.Namespace,
 				Name:      rc.SecretRef,
 			},
 			&secret,
@@ -206,14 +205,14 @@ func (r *reconciler) ensureWebhookReceivers(
 				"secret", rc.SecretRef,
 			)
 			if kubeerr.IsNotFound(err) {
-				return nil, fmt.Errorf(
+				return fmt.Errorf(
 					"secret-reference %q in namespace %q not found",
-					rc.SecretRef, projectConfig.Namespace,
+					rc.SecretRef, pc.Namespace,
 				)
 			}
-			return nil, fmt.Errorf(
+			return fmt.Errorf(
 				"error getting webhook receiver secret-reference %q in project namespace %q: %w",
-				rc.SecretRef, projectConfig.Name, err,
+				rc.SecretRef, pc.Name, err,
 			)
 		}
 		logger.Debug("secret found", "secret", secret.Name)
@@ -221,18 +220,18 @@ func (r *reconciler) ensureWebhookReceivers(
 		seed, ok := secret.Data["seed"]
 		if !ok {
 			logger.Error(err, "secret data not found")
-			return nil, fmt.Errorf(
+			return fmt.Errorf(
 				"error getting receiver secret %q in project namespace %q: %w",
-				rc.SecretRef, projectConfig.Name, err,
+				rc.SecretRef, pc.Name, err,
 			)
 		}
-		whReceivers = append(whReceivers, kargoapi.WebhookReceiver{
+		pc.Status.WebhookReceivers = append(whReceivers, kargoapi.WebhookReceiver{
 			Path: external.GenerateWebhookPath(
-				projectConfig.Name,
+				pc.Name,
 				rc.Type,
 				string(seed),
 			),
 		})
 	}
-	return whReceivers, nil
+	return nil
 }
