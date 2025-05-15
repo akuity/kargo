@@ -34,7 +34,7 @@ type ProjectConfigSpec struct {
 	// PromotionPolicies defines policies governing the promotion of Freight to
 	// specific Stages within the Project.
 	PromotionPolicies []PromotionPolicy `json:"promotionPolicies,omitempty" protobuf:"bytes,1,rep,name=promotionPolicies"`
-	// WebhookReceiverConfigs defines the default receivers for the project.
+	// WebhookReceiverConfigs defines the webhook receivers for the project config.
 	WebhookReceiverConfigs []WebhookReceiverConfig `json:"receivers,omitempty" protobuf:"bytes,2,rep,name=receivers"`
 }
 
@@ -99,12 +99,10 @@ type WebhookReceiverConfig struct {
 	SecretRef string `json:"secretRef,omitempty" protobuf:"bytes,4,opt,name=secretRef"`
 }
 
-// WebhookReceiver is a resource type that describes a path used
-// to receive warehouse events and trigger refreshes.
+// WebhookReceiver describes a path used to receive warehouse events and
+// trigger refreshes.
 type WebhookReceiver struct {
 	// Path is the path to the receiver's webhook endpoint.
-	//
-	// +kubebuilder:validation:Pattern=^/[^/].*$
 	Path string `json:"path,omitempty" protobuf:"bytes,3,opt,name=path"`
 }
 
