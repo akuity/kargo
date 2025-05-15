@@ -95,6 +95,10 @@ func Test_yamlUpdater_validate(t *testing.T) {
 						"key":   "another-fake-key",
 						"value": "another-fake-value",
 					},
+					{
+						"key":   "yet-another-fake-key",
+						"value": 5,
+					},
 				},
 			},
 		},
@@ -135,22 +139,35 @@ func Test_yamlUpdater_run(t *testing.T) {
 				Path: "values.yaml",
 				Updates: []builtin.YAMLUpdate{
 					{Key: "image.tag", Value: "fake-tag"},
+					{Key: "image.numStr", Value: "42"},
+					{Key: "image.realNum", Value: 42},
 				},
 			},
 			files: map[string]string{
-				"values.yaml": "image:\n  tag: oldtag\n",
+				"values.yaml": `
+image:
+  tag: oldtag
+  numStr: "5"
+  realNum: 5
+`,
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, promotion.StepResult{
 					Status: kargoapi.PromotionStepStatusSucceeded,
 					Output: map[string]any{
-						"commitMessage": "Updated values.yaml\n\n- image.tag: \"fake-tag\"",
+						"commitMessage": `Updated values.yaml
+
+- image.tag: fake-tag
+- image.numStr: "42"
+- image.realNum: 42`,
 					},
 				}, result)
 				content, err := os.ReadFile(path.Join(workDir, "values.yaml"))
 				require.NoError(t, err)
-				assert.Contains(t, string(content), "tag: fake-tag")
+				assert.Contains(t, string(content), "  tag: fake-tag")
+				assert.Contains(t, string(content), `  numStr: "42"`)
+				assert.Contains(t, string(content), "  realNum: 42")
 			},
 		},
 		{
@@ -272,7 +289,7 @@ func Test_yamlUpdater_generateCommitMessage(t *testing.T) {
 			assertions: func(t *testing.T, result string) {
 				assert.Equal(t, `Updated values.yaml
 
-- image: "repo/image:tag1"`, result)
+- image: repo/image:tag1`, result)
 			},
 		},
 		{
@@ -281,12 +298,20 @@ func Test_yamlUpdater_generateCommitMessage(t *testing.T) {
 			updates: []builtin.YAMLUpdate{
 				{Key: "image1", Value: "repo1/image1:tag1"},
 				{Key: "image2", Value: "repo2/image2:tag2"},
+				{Key: "numStr", Value: "42"},
+				{Key: "realNum", Value: 42},
 			},
 			assertions: func(t *testing.T, result string) {
-				assert.Equal(t, `Updated chart/values.yaml
+				assert.Equal(
+					t,
+					`Updated chart/values.yaml
 
-- image1: "repo1/image1:tag1"
-- image2: "repo2/image2:tag2"`, result)
+- image1: repo1/image1:tag1
+- image2: repo2/image2:tag2
+- numStr: "42"
+- realNum: 42`,
+					result,
+				)
 			},
 		},
 	}
