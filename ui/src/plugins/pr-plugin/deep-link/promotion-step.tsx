@@ -38,7 +38,7 @@ const plugin: DeepLinkPluginsInstallation['PromotionStep'] = {
       );
     }
 
-    const url = getPullRequestLink(props.step, props.output || {});
+    const url = getPullRequestLink(props.output || {});
 
     nodes.push(
       <a href={url} target='_blank'>

@@ -22,7 +22,7 @@ const plugin: DeepLinkPluginsInstallation['Promotion'] = {
         const alias = getPromotionStepAlias(step, idx);
 
         try {
-          const deepLink = getPullRequestLink(step, promotionState[alias]);
+          const deepLink = getPullRequestLink(promotionState[alias]);
 
           deepLinks.push([alias, deepLink]);
         } catch {
