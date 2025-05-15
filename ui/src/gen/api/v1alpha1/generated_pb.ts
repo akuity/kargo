@@ -1042,7 +1042,7 @@ export type FreightSources = Message<"github.com.akuity.kargo.api.v1alpha1.Freig
    *    one upstream Stage to be considered available for promotion.
    * - "": Treated the same as "OneOf".
    *
-   * +kubebuilder:validation:Enum=All;OneOf;""
+   * +kubebuilder:validation:Optional
    *
    * @generated from field: optional string availabilityStrategy = 4;
    */
@@ -1239,7 +1239,6 @@ export type GitSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.GitS
    *   narrow the set of tags eligible for selection.
    *
    * +kubebuilder:default=NewestFromBranch
-   * +kubebuilder:validation:Enum=Lexical;NewestFromBranch;NewestTag;SemVer
    *
    * @generated from field: optional string commitSelectionStrategy = 2;
    */
@@ -1645,7 +1644,6 @@ export type ImageSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.Im
    *   of tags eligible for selection.
    *
    * +kubebuilder:default=SemVer
-   * +kubebuilder:validation:Enum=Digest;Lexical;NewestBuild;SemVer
    *
    * @generated from field: optional string imageSelectionStrategy = 3;
    */
@@ -3250,7 +3248,6 @@ export type WarehouseSpec = Message<"github.com.akuity.kargo.api.v1alpha1.Wareho
    * - "Manual": New Freight is never created automatically.
    *
    * +kubebuilder:default=Automatic
-   * +kubebuilder:validation:Enum=Automatic;Manual
    * +kubebuilder:validation:Optional
    *
    * @generated from field: optional string freightCreationPolicy = 3;

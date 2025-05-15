@@ -75,7 +75,6 @@ type WarehouseSpec struct {
 	// - "Manual": New Freight is never created automatically.
 	//
 	// +kubebuilder:default=Automatic
-	// +kubebuilder:validation:Enum=Automatic;Manual
 	// +kubebuilder:validation:Optional
 	FreightCreationPolicy FreightCreationPolicy `json:"freightCreationPolicy" protobuf:"bytes,3,opt,name=freightCreationPolicy"`
 	// Subscriptions describes sources of artifacts to be included in Freight
@@ -139,7 +138,6 @@ type GitSubscription struct {
 	//   narrow the set of tags eligible for selection.
 	//
 	// +kubebuilder:default=NewestFromBranch
-	// +kubebuilder:validation:Enum=Lexical;NewestFromBranch;NewestTag;SemVer
 	CommitSelectionStrategy CommitSelectionStrategy `json:"commitSelectionStrategy,omitempty" protobuf:"bytes,2,opt,name=commitSelectionStrategy"`
 	// Branch references a particular branch of the repository. The value in this
 	// field only has any effect when the CommitSelectionStrategy is
@@ -277,7 +275,6 @@ type ImageSubscription struct {
 	//   of tags eligible for selection.
 	//
 	// +kubebuilder:default=SemVer
-	// +kubebuilder:validation:Enum=Digest;Lexical;NewestBuild;SemVer
 	ImageSelectionStrategy ImageSelectionStrategy `json:"imageSelectionStrategy,omitempty" protobuf:"bytes,3,opt,name=imageSelectionStrategy"`
 	// StrictSemvers specifies whether only "strict" semver tags should be
 	// considered. A "strict" semver tag is one containing ALL of major, minor,

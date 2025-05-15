@@ -47,13 +47,6 @@ spec:
             description: Spec describes sources of artifacts.
             properties:
               freightCreationPolicy:
-                allOf:
-                - enum:
-                  - Automatic
-                  - Manual
-                - enum:
-                  - Automatic
-                  - Manual
                 default: Automatic
                 description: |-
                   FreightCreationPolicy describes how Freight is created by this Warehouse.
@@ -65,6 +58,9 @@ spec:
                   - "Automatic": New Freight is created automatically when any new artifact
                     is discovered.
                   - "Manual": New Freight is never created automatically.
+                enum:
+                - Automatic
+                - Manual
                 type: string
               interval:
                 default: 5m0s
@@ -166,17 +162,6 @@ spec:
                           pattern: ^[a-zA-Z0-9]([a-zA-Z0-9._\/-]*[a-zA-Z0-9_-])?$
                           type: string
                         commitSelectionStrategy:
-                          allOf:
-                          - enum:
-                            - Lexical
-                            - NewestFromBranch
-                            - NewestTag
-                            - SemVer
-                          - enum:
-                            - Lexical
-                            - NewestFromBranch
-                            - NewestTag
-                            - SemVer
                           default: NewestFromBranch
                           description: |-
                             CommitSelectionStrategy specifies the rules for how to identify the newest
@@ -202,6 +187,11 @@ spec:
                             - "NewestTag": Selects the commit referenced by the most recently created
                               tag. The AllowTags and IgnoreTags fields can optionally be used to
                               narrow the set of tags eligible for selection.
+                          enum:
+                          - Lexical
+                          - NewestFromBranch
+                          - NewestTag
+                          - SemVer
                           type: string
                         discoveryLimit:
                           default: 20
@@ -339,17 +329,6 @@ spec:
                             type: string
                           type: array
                         imageSelectionStrategy:
-                          allOf:
-                          - enum:
-                            - Digest
-                            - Lexical
-                            - NewestBuild
-                            - SemVer
-                          - enum:
-                            - Digest
-                            - Lexical
-                            - NewestBuild
-                            - SemVer
                           default: SemVer
                           description: |-
                             ImageSelectionStrategy specifies the rules for how to identify the newest version
@@ -376,6 +355,11 @@ spec:
                             - "SemVer": Selects the image with the semantically greatest tag. The
                               AllowTags and IgnoreTags fields can optionally be used to narrow the set
                               of tags eligible for selection.
+                          enum:
+                          - Digest
+                          - Lexical
+                          - NewestBuild
+                          - SemVer
                           type: string
                         insecureSkipTLSVerify:
                           description: |-

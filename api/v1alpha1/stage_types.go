@@ -309,7 +309,7 @@ type FreightSources struct {
 	//    one upstream Stage to be considered available for promotion.
 	// - "": Treated the same as "OneOf".
 	//
-	// +kubebuilder:validation:Enum=All;OneOf;""
+	// +kubebuilder:validation:Optional
 	AvailabilityStrategy FreightAvailabilityStrategy `json:"availabilityStrategy,omitempty" protobuf:"bytes,4,opt,name=availabilityStrategy"`
 }
 

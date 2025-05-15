@@ -471,7 +471,7 @@ message FreightSources {
   //    one upstream Stage to be considered available for promotion.
   // - "": Treated the same as "OneOf".
   //
-  // +kubebuilder:validation:Enum=All;OneOf;""
+  // +kubebuilder:validation:Optional
   optional string availabilityStrategy = 4;
 }
 
@@ -568,7 +568,6 @@ message GitSubscription {
   //   narrow the set of tags eligible for selection.
   //
   // +kubebuilder:default=NewestFromBranch
-  // +kubebuilder:validation:Enum=Lexical;NewestFromBranch;NewestTag;SemVer
   optional string commitSelectionStrategy = 2;
 
   // Branch references a particular branch of the repository. The value in this
@@ -800,7 +799,6 @@ message ImageSubscription {
   //   of tags eligible for selection.
   //
   // +kubebuilder:default=SemVer
-  // +kubebuilder:validation:Enum=Digest;Lexical;NewestBuild;SemVer
   optional string imageSelectionStrategy = 3;
 
   // StrictSemvers specifies whether only "strict" semver tags should be
@@ -1561,7 +1559,6 @@ message WarehouseSpec {
   // - "Manual": New Freight is never created automatically.
   //
   // +kubebuilder:default=Automatic
-  // +kubebuilder:validation:Enum=Automatic;Manual
   // +kubebuilder:validation:Optional
   optional string freightCreationPolicy = 3;
 
