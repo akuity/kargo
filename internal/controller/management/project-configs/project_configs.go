@@ -5,24 +5,23 @@ import (
 	"fmt"
 	"time"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/conditions"
-	"github.com/akuity/kargo/internal/controller"
-	"github.com/akuity/kargo/internal/kubeclient"
-	"github.com/akuity/kargo/internal/webhook/external"
+	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-
-	"github.com/akuity/kargo/internal/logging"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-
-	"github.com/kelseyhightower/envconfig"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/conditions"
+	"github.com/akuity/kargo/internal/controller"
+	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/internal/webhook/external"
 )
 
 type ReconcilerConfig struct {
@@ -39,7 +38,10 @@ type reconciler struct {
 	cfg    ReconcilerConfig
 	client client.Client
 
-	ensureWebhookReceiversFn func(context.Context, *kargoapi.ProjectConfig) error
+	ensureWebhookReceiversFn func(
+		context.Context,
+		*kargoapi.ProjectConfig,
+	) ([]kargoapi.WebhookReceiver, error)
 }
 
 func SetupReconcilerWithManager(
@@ -51,7 +53,7 @@ func SetupReconcilerWithManager(
 		For(&kargoapi.ProjectConfig{}).
 		WithEventFilter(
 			predicate.Funcs{
-				DeleteFunc: func(e event.DeleteEvent) bool {
+				DeleteFunc: func(event.DeleteEvent) bool {
 					return false
 				},
 			},
@@ -69,10 +71,12 @@ func SetupReconcilerWithManager(
 }
 
 func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
-	return &reconciler{
+	r := &reconciler{
 		cfg:    cfg,
 		client: kubeClient,
 	}
+	r.ensureWebhookReceiversFn = r.ensureWebhookReceivers
+	return r
 }
 
 // Reconcile is part of the main Kubernetes reconciliation loop which aims to
@@ -131,7 +135,6 @@ func (r *reconciler) reconcileFn(
 	projectConfig *kargoapi.ProjectConfig,
 ) (kargoapi.ProjectConfigStatus, bool, error) {
 	logger := logging.LoggerFromContext(ctx)
-	status := *projectConfig.Status.DeepCopy()
 
 	status, shouldRequeue, err := r.syncProjectConfig(ctx, projectConfig)
 	if err != nil {
@@ -168,7 +171,8 @@ func (r *reconciler) syncProjectConfig(
 		ObservedGeneration: projectConfig.GetGeneration(),
 	})
 
-	if whReceivers, err := r.ensureWebhookReceivers(ctx, projectConfig); err != nil {
+	whReceivers, err := r.ensureWebhookReceivers(ctx, projectConfig)
+	if err != nil {
 		logger.Error(err, "error ensuring webhook receivers")
 		conditions.Set(status, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeReady,
@@ -178,9 +182,8 @@ func (r *reconciler) syncProjectConfig(
 			ObservedGeneration: projectConfig.GetGeneration(),
 		})
 		return *status, true, fmt.Errorf("error ensuring webhook receivers: %w", err)
-	} else {
-		status.WebhookReceivers = whReceivers
 	}
+	status.WebhookReceivers = whReceivers
 
 	conditions.Delete(status, kargoapi.ConditionTypeReconciling)
 	conditions.Set(status, &metav1.Condition{

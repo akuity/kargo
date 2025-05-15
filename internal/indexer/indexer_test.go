@@ -868,14 +868,14 @@ func TestWarehousesByRepoURL(t *testing.T) {
 
 func TestProjectsByReceiverPath(t *testing.T) {
 	for _, test := range []struct {
-		name     string
-		project  client.Object
-		expected []string
+		name          string
+		projectConfig client.Object
+		expected      []string
 	}{
 		{
 			name: "simple",
-			project: &kargoapi.Project{
-				Status: kargoapi.ProjectStatus{
+			projectConfig: &kargoapi.ProjectConfig{
+				Status: kargoapi.ProjectConfigStatus{
 					WebhookReceivers: []kargoapi.WebhookReceiver{
 						{Path: "/webhookpath"},
 						{Path: "/myotherwebhookpath"},
@@ -888,15 +888,15 @@ func TestProjectsByReceiverPath(t *testing.T) {
 			},
 		},
 		{
-			name:     "not a project",
-			project:  &kargoapi.Freight{},
-			expected: nil,
+			name:          "not a project",
+			projectConfig: &kargoapi.Freight{},
+			expected:      nil,
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			require.Equal(t,
 				test.expected,
-				ProjectsByWebhookReceiverPaths(test.project),
+				ProjectConfigsByWebhookReceiverPaths(test.projectConfig),
 			)
 		})
 	}

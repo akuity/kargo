@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"time"
 
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -79,124 +78,69 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 func (s *server) refreshWarehouseWebhook(w http.ResponseWriter, r *http.Request) {
 	ctx := (r.Context())
 	logger := logging.LoggerFromContext(ctx)
-	var projects kargoapi.ProjectList
+	var projectConfigs kargoapi.ProjectConfigList
 	err := s.client.List(
 		ctx,
-		&projects,
+		&projectConfigs,
 		client.MatchingFields{
-			indexer.ProjectsByWebhookReceiverPathsField: r.URL.Path,
+			indexer.ProjectConfigsByWebhookReceiverPathsField: r.URL.Path,
 		},
 	)
 	if err != nil {
-		logger.Error(err, "failed to list projects")
+		logger.Error(err, "failed to list project config")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	if len(projects.Items) == 0 {
-		logger.Error(err, "no projects found")
+	if len(projectConfigs.Items) == 0 {
+		logger.Error(err, "no project configs found")
 		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
 
-	// There will always be only one project
-	// because two projects can never have the same
+	// There will always be only one project config
+	// because two project configs can never have the same
 	// receiver path because the receiver path is
 	// a hash of the project name, provider and secret.
-	project := projects.Items[0]
+	pc := projectConfigs.Items[0]
 
-	config, err := s.getReceiverConfig(ctx, r.URL.Path, project)
+	wrc, err := s.getWebhookReceiverConfig(r.URL.Path, pc)
 	if err != nil {
 		logger.Error(err, "failed to get receiver config")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	logger.Debug("receiver config found", "config", config)
-	switch config.Type {
+	logger.Debug("webhook receiver config found", "webhook-receiver-config", wrc)
+	switch wrc.Type {
 	case kargoapi.WebhookReceiverTypeGitHub:
-		githubHandler(s.client, config.SecretRef)(w, r)
+		githubHandler(s.client, wrc.SecretRef)(w, r)
 	default:
 		http.Error(w, "not found", http.StatusNotFound)
 	}
 }
 
-func (s *server) getReceiverConfig(
-	ctx context.Context,
+func (s *server) getWebhookReceiverConfig(
 	receiverPath string,
-	project kargoapi.Project,
+	pc kargoapi.ProjectConfig,
 ) (*kargoapi.WebhookReceiverConfig, error) {
-	logger := logging.LoggerFromContext(ctx).WithValues(
-		"receiverPath", receiverPath,
-		"projectName", project.Name,
-		"projectNamespace", project.Namespace,
-	)
-
-	receiver, err := s.getReceiver(receiverPath, project)
-	if err != nil {
-		return nil, fmt.Errorf(
-			"failed to get receiver for project %q in namespace %q: %w",
-			project.Name,
-			project.Namespace,
-			err,
-		)
-	}
-
-	logger.Debug("getting project config")
-	var projectConfig *kargoapi.ProjectConfig
-	err = s.client.Get(ctx,
-		types.NamespacedName{
-			Name:      project.Name,
-			Namespace: project.Namespace,
-		},
-		projectConfig,
-	)
-	if err != nil {
-		return nil, fmt.Errorf(
-			"failed to get project config for project %q in namespace %q: %w",
-			project.Name,
-			project.Namespace,
-			err,
-		)
-	}
-
 	var whrc *kargoapi.WebhookReceiverConfig
-	for _, config := range projectConfig.Spec.WebhookReceiverConfigs { // nolint: nilness, lll // impossible for project config spec to be empty
+	for _, config := range pc.Spec.WebhookReceiverConfigs { // nolint: nilness, lll // impossible for project config spec to be empty
 		target := GenerateWebhookPath(
-			project.Name,
+			pc.Name,
 			config.Type,
 			config.SecretRef,
 		)
-		if receiver.Path == target {
+		if receiverPath == target {
 			whrc = &config
 		}
 	}
 	if whrc == nil {
 		return nil, fmt.Errorf(
-			"failed to find receiver config with path %q in project %q",
-			receiver.Path,
-			project.Name,
+			"failed to find receiver config with path %q in project config %q",
+			receiverPath,
+			pc.Name,
 		)
 	}
 	return whrc, nil
-}
-
-func (s *server) getReceiver(
-	receiverPath string,
-	project kargoapi.Project,
-) (*kargoapi.WebhookReceiver, error) {
-	var receiver *kargoapi.WebhookReceiver
-	for _, r := range project.Status.WebhookReceivers {
-		if r.Path == receiverPath {
-			receiver = &r
-		}
-	}
-	if receiver == nil {
-		return nil, fmt.Errorf(
-			"failed to find receiver with path %q in project %q",
-			receiverPath,
-			project.Name,
-		)
-	}
-	return receiver, nil
 }

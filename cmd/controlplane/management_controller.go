@@ -17,6 +17,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/management/namespaces"
+	projectconfigs "github.com/akuity/kargo/internal/controller/management/project-configs"
 	"github.com/akuity/kargo/internal/controller/management/projects"
 	"github.com/akuity/kargo/internal/controller/management/serviceaccounts"
 	"github.com/akuity/kargo/internal/logging"
@@ -98,6 +99,14 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		projects.ReconcilerConfigFromEnv(),
 	); err != nil {
 		return fmt.Errorf("error setting up Projects reconciler: %w", err)
+	}
+
+	if err := projectconfigs.SetupReconcilerWithManager(
+		ctx,
+		kargoMgr,
+		projectconfigs.ReconcilerConfigFromEnv(),
+	); err != nil {
+		return fmt.Errorf("error setting up ProjectConfigs reconciler: %w", err)
 	}
 
 	if o.ManageControllerRoleBindings {

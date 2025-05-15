@@ -891,8 +891,7 @@ func (r *reconciler) migrateSpecToProjectConfig(
 				Namespace: project.Name,
 			},
 			Spec: kargoapi.ProjectConfigSpec{
-				PromotionPolicies:      project.Spec.PromotionPolicies,      // nolint:staticcheck
-				WebhookReceiverConfigs: project.Spec.WebhookReceiverConfigs, // nolint:staticcheck
+				PromotionPolicies: project.Spec.PromotionPolicies, // nolint:staticcheck
 			},
 		}
 		if err := r.client.Create(ctx, projectCfg); err != nil {
