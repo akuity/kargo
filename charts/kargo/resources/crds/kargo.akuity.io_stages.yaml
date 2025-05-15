@@ -286,15 +286,27 @@ spec:
                         a required field.
                       properties:
                         availabilityStrategy:
+                          allOf:
+                          - enum:
+                            - All
+                            - OneOf
+                            - ""
+                          - enum:
+                            - All
+                            - OneOf
+                            - ""
                           description: |-
                             AvailabilityStrategy specifies the semantics for how requested Freight is
                             made available to the Stage. This field is optional. When left unspecified,
                             the field is implicitly treated as if its value were "OneOf".
-                            Accepted Values: "All", "OneOf", ""
-                          enum:
-                          - All
-                          - OneOf
-                          - ""
+
+                            Accepted Values:
+
+                            - "All": Freight must be be verified and, if applicable, soaked in all
+                              upstream Stages to be considered available for promotion.
+                            - "OneOf": Freight must be verified and, if applicable, soaked in at least
+                               one upstream Stage to be considered available for promotion.
+                            - "": Treated the same as "OneOf".
                           type: string
                         direct:
                           description: |-
