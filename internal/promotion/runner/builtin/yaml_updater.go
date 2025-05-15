@@ -92,7 +92,7 @@ func (y *yamlUpdater) updateFile(workDir string, path string, updates []intyaml.
 	if err != nil {
 		return fmt.Errorf("error joining path %q: %w", path, err)
 	}
-	if err := intyaml.SetStringsInFile(absValuesFile, updates); err != nil {
+	if err := intyaml.SetValuesInFile(absValuesFile, updates); err != nil {
 		return fmt.Errorf("error updating image references in values file %q: %w", path, err)
 	}
 	return nil
