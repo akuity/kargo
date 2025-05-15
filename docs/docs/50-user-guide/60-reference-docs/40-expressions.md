@@ -145,7 +145,7 @@ Expect other useful variables to be added in the future.
 |------|------|-------------|
 | `ctx` | `object` | Contains contextual information about the promotion. See detailed structure below. |
 | `outputs` | `object` | A map of output from previous promotion steps indexed by step aliases. |
-| `secrets` | `object` | A map of maps indexed by the names of all Kubernetes `Secret`s in the `Promotion`'s `Project` and the keys within the `Data` block of each.<br/><br/>__Deprecated: Use the [`secret()` function](#secretname) instead. Will be removed in v1.7.0.__ |
+| `secrets` | `object` | A map of maps, indexed by the names of all Kubernetes `Secret`s in the `Promotion`'s `Project` that are labeled with `kargo.akuity.io/cred-type: generic`. Each inner map exposes the keys from the corresponding `Secret`'s `data` field. See [Managing Other Secrets](../50-security/40-managing-other-secrets.md) for more details about managing such `Secret`s.<br/><br/>__Deprecated: Use the [`secret()` function](#secretname) instead. Will be removed in v1.7.0.__ |
 | `vars` | `object` | A user-defined map of variable names to static values of any type. The map is derived from a `Promotion`'s `spec.promotionTemplate.spec.vars` field. Variable names must observe standard Go variable-naming rules. Variables values may, themselves, be defined using an expression. `vars` (contains previously defined variables) and `ctx` are available to expressions defining the values of variables, however, `outputs` and `secrets` are not. |
 | `task` | `object` | A map containing output from previous steps within the same PromotionTask under the `outputs` field, indexed by step aliases. Only available within `(Cluster)PromotionTask` steps. |
 
@@ -153,7 +153,7 @@ Expect other useful variables to be added in the future.
 
 The `ctx` object has the following structure:
 
-```
+```console
 ctx
 ├── project: string       # The name of the Project
 ├── stage: string         # The name of the Stage
@@ -239,7 +239,7 @@ definition of the static variables).
 
 The `ctx` object for verification has the following structure:
 
-```
+```console
 ctx
 ├── project: string  # The name of the Project
 └── stage: string    # The name of the Stage
@@ -336,7 +336,7 @@ The returned `FreightOrigin` object has the following fields:
 The `FreightOrigin` object can be used as an optional argument to the
 `commitFrom()`, `imageFrom()`, or `chartFrom()` functions to disambiguate the
 desired source of an artifact when necessary. These functions return `nil` when
-relevant `Freight` is not found from the `FreightCollection`. 
+relevant `Freight` is not found from the `FreightCollection`.
 
 :::tip
 You can handle `nil` values gracefully in Expr using its
