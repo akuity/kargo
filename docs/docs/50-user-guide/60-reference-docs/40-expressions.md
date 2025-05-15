@@ -258,14 +258,36 @@ one required argument:
 - `value` (Required): A value of any type to be converted to a string.
 
 This is useful for scenarios where an expression evaluates to a non-`string`
-JSON type, but you wish to treat it as a `string` regardless.
+JSON type, but you wish to treat it as a `string` regardless. For string inputs,
+it produces clean output without visible quotation marks.
 
 Example:
 
 ```yaml
 config:
-  numField: ${{ 40 + 2 }} # Will be treated as a number
-  strField: ${{ quote(40 + 2) }} # Will be treated as a string
+  numField: ${{ 40 + 2 }} # Will be treated as a number (42)
+  strField: ${{ quote(40 + 2) }} # Will be treated as a string ("42")
+  rawField: ${{ quote("string") }} # Will result in "string"
+```
+
+### `unsafeQuote(value)`
+
+The `unsafeQuote()` function converts any value to its string representation. It
+has one required argument:
+
+- `value` (Required): A value of any type to be converted to a string.
+
+Compared to [`quote()`](#quotevalue) this function is considered "unsafe"
+because it adds escaped quotes around input values that are already considered
+strings. For non-string values, it behaves similarly to `quote()`.
+
+Example:
+
+```yaml
+config:
+  numField: ${{ 40 + 2 }} # Will be treated as a number (42)
+  strField: ${{ unsafeQuote(40 + 2) }} # Will result in "42"
+  rawField: ${{ unsafeQuote("string") }} # Will result in "\"string\""
 ```
 
 ### `configMap(name)`
