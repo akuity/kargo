@@ -70,8 +70,9 @@ type WarehouseSpec struct {
 	//
 	// Accepted values:
 	//
-	// - "Automatic": Freight is automatically created in response to detected changes in the source repository.
-	// - "Manual": Freight must be created explicitly by a user or an external system.
+	// - "Automatic": New Freight is created automatically when any new artifact
+	//   is discovered.
+	// - "Manual": New Freight is never created automatically.
 	//
 	// +kubebuilder:default=Automatic
 	// +kubebuilder:validation:Enum=Automatic;Manual
@@ -120,16 +121,22 @@ type GitSubscription struct {
 	//
 	// Accepted values:
 	//
-	// - `"NewestFromBranch"`: Selects the latest commit on the specified branch,
-	//   or the default branch if none is specified. This is the default strategy.
+	// - "NewestFromBranch": Selects the latest commit on the branch specified
+	//   by the Branch field or the default branch if none is specified. This is
+	//   the default strategy.
 	//
-	// - `"SemVer"`: Selects the commit pointed to by the tag with the highest
-	//   semantic version. An optional constraint can narrow the version range.
+	// - "SemVer": Selects the commit referenced by the the semantically greatest
+	//   tag. The SemverConstraint field can optionally be used to narrow the set
+	//   of tags eligible for selection.
 	//
-	// - `"Lexical"`: Selects the commit referenced by the lexicographically greatest
-	//   tag. Useful when tags encode timestamps or dates.
+	// - "Lexical": Selects the commit referenced by the lexicographically
+	//   greatest tag. Useful when tags embed a _leading_ date or timestamp. The
+	//   AllowTags and IgnoreTags fields can optionally be used to narrow the set
+	//   of tags eligible for selection.
 	//
-	// - `"NewestTag"`: Selects the commit pointed to by the most recently created tag.
+	// - "NewestTag": Selects the commit referenced by the most recently created
+	//   tag. The AllowTags and IgnoreTags fields can optionally be used to
+	//   narrow the set of tags eligible for selection.
 	//
 	// +kubebuilder:default=NewestFromBranch
 	// +kubebuilder:validation:Enum=Lexical;NewestFromBranch;NewestTag;SemVer
@@ -251,17 +258,23 @@ type ImageSubscription struct {
 	//
 	// Accepted values:
 	//
-	// - `"Digest"`: Selects the image by resolving the digest of a tag (e.g., `latest`).
-	//   Requires the constraint to match an exact tag name.
+	// - "Digest": Selects the image currently referenced by the tag specified
+	//   (unintuitively) by the SemverConstraint field.
 	//
-	// - `"Lexical"`: Selects the image whose tag is lexically last among those matched
-	//   by a regex. Best suited for tags with timestamp suffixes.
+	// - "Lexical": Selects the image referenced by the lexicographically greatest
+	//   tag. Useful when tags embed a leading date or timestamp. The AllowTags
+	//   and IgnoreTags fields can optionally be used to narrow the set of tags
+	//   eligible for selection.
 	//
-	// - `"NewestBuild"`: Selects the image that was most recently pushed to the registry.
-	//   This is the least efficient method and should be constrained with regex when used.
+	// - "NewestBuild": Selects the image that was most recently pushed to the
+	//   repository. The AllowTags and IgnoreTags fields can optionally be used
+	//   to narrow the set of tags eligible for selection. This is the least
+	//   efficient and is likely to cause rate limiting affecting this Warehouse
+	//   and possibly others. This strategy should be avoided.
 	//
-	// - `"SemVer"`: Selects the image with the highest semantic version tag.
-	//   An optional constraint may restrict the version range.
+	// - "SemVer": Selects the image with the semantically greatest tag. The
+	//   AllowTags and IgnoreTags fields can optionally be used to narrow the set
+	//   of tags eligible for selection.
 	//
 	// +kubebuilder:default=SemVer
 	// +kubebuilder:validation:Enum=Digest;Lexical;NewestBuild;SemVer

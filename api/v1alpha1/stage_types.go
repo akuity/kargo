@@ -303,9 +303,11 @@ type FreightSources struct {
 	//
 	// Accepted Values:
 	//
-	// - "All": All requested Freight must be available before proceeding.
-	// - "OneOf": At least one requested Freight must be available before proceeding.
-	// - "": Treated the same as "OneOf" (for backward compatibility).
+	// - "All": Freight must be be verified and, if applicable, soaked in all
+	//   upstream Stages to be considered available for promotion.
+	// - "OneOf": Freight must be verified and, if applicable, soaked in at least
+	//    one upstream Stage to be considered available for promotion.
+	// - "": Treated the same as "OneOf".
 	//
 	// +kubebuilder:validation:Enum=All;OneOf;""
 	AvailabilityStrategy FreightAvailabilityStrategy `json:"availabilityStrategy,omitempty" protobuf:"bytes,4,opt,name=availabilityStrategy"`
