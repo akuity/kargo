@@ -158,6 +158,7 @@ message ChartSubscription {
   //
   // +kubebuilder:validation:MinLength=1
   // +kubebuilder:validation:Pattern=`^(((https?)|(oci))://)([\w\d\.\-]+)(:[\d]+)?(/.*)*$`
+  // +akuity:test-kubebuilder-pattern=HelmRepoURL
   optional string repoURL = 1;
 
   // Name specifies the name of a Helm chart to subscribe to within a classic
@@ -280,12 +281,14 @@ message DiscoveredImageReference {
   // +kubebuilder:validation:MinLength=1
   // +kubebuilder:validation:MaxLength=128
   // +kubebuilder:validation:Pattern=`^[\w.\-\_]+$`
+  // +akuity:test-kubebuilder-pattern=Tag
   optional string tag = 1;
 
   // Digest is the digest of the image.
   //
   // +kubebuilder:validation:MinLength=1
   // +kubebuilder:validation:Pattern=`^[a-z0-9]+:[a-f0-9]+$`
+  // +akuity:test-kubebuilder-pattern=Digest
   optional string digest = 2;
 
   // Annotations is a map of key-value pairs that provide additional
@@ -456,7 +459,8 @@ message FreightSources {
   // requirement.
   //
   // +kubebuilder:validation:Type=string
-  // +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(s|m|h))+$"
+  // +kubebuilder:validation:Pattern=`^([0-9]+(\.[0-9]+)?(s|m|h))+$`
+  // +akuity:test-kubebuilder-pattern=Duration
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration requiredSoakTime = 3;
 
   // AvailabilityStrategy specifies the semantics for how requested Freight is
@@ -525,6 +529,7 @@ message GitDiscoveryResult {
   //
   // +kubebuilder:validation:MinLength=1
   // +kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
+  // +akuity:test-kubebuilder-pattern=GitRepoURL
   optional string repoURL = 1;
 
   // Commits is a list of commits discovered by the Warehouse for the
@@ -541,6 +546,7 @@ message GitSubscription {
   //
   // +kubebuilder:validation:MinLength=1
   // +kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
+  // +akuity:test-kubebuilder-pattern=GitRepoURL
   optional string repoURL = 1;
 
   // CommitSelectionStrategy specifies the rules for how to identify the newest
@@ -580,6 +586,7 @@ message GitSubscription {
   // +kubebuilder:validation:MinLength=1
   // +kubebuilder:validation:MaxLength=255
   // +kubebuilder:validation:Pattern=`^[a-zA-Z0-9]([a-zA-Z0-9._\/-]*[a-zA-Z0-9_-])?$`
+  // +akuity:test-kubebuilder-pattern=Branch
   optional string branch = 3;
 
   // StrictSemvers specifies whether only "strict" semver tags should be
@@ -760,6 +767,7 @@ message ImageSubscription {
   //
   // +kubebuilder:validation:MinLength=1
   // +kubebuilder:validation:Pattern=`^(\w+([\.-]\w+)*(:[\d]+)?/)?(\w+([\.-]\w+)*)(/\w+([\.-]\w+)*)*$`
+  // +akuity:test-kubebuilder-pattern=ImageRepoURL
   optional string repoURL = 1;
 
   // GitRepoURL optionally specifies the URL of a Git repository that contains
@@ -1057,7 +1065,8 @@ message PromotionSpec {
   // +kubebuilder:validation:Required
   // +kubebuilder:validation:MinLength=1
   // +kubebuilder:validation:MaxLength=253
-  // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+  // +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+  // +akuity:test-kubebuilder-pattern=KubernetesName
   optional string stage = 1;
 
   // Freight specifies the piece of Freight to be promoted into the Stage
@@ -1066,7 +1075,8 @@ message PromotionSpec {
   // +kubebuilder:validation:Required
   // +kubebuilder:validation:MinLength=1
   // +kubebuilder:validation:MaxLength=253
-  // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+  // +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+  // +akuity:test-kubebuilder-pattern=KubernetesName
   optional string freight = 2;
 
   // Vars is a list of variables that can be referenced by expressions in
@@ -1236,7 +1246,8 @@ message PromotionTaskReference {
   // +kubebuilder:validation:Required
   // +kubebuilder:validation:MinLength=1
   // +kubebuilder:validation:MaxLength=253
-  // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+  // +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+  // +akuity:test-kubebuilder-pattern=KubernetesName
   optional string name = 1;
 
   // Kind is the type of the PromotionTask. Can be either PromotionTask or
@@ -1544,8 +1555,9 @@ message WarehouseSpec {
   // field is implicitly treated as if its value were "5m0s".
   //
   // +kubebuilder:validation:Type=string
-  // +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(s|m|h))+$"
+  // +kubebuilder:validation:Pattern=`^([0-9]+(\.[0-9]+)?(s|m|h))+$`
   // +kubebuilder:default="5m0s"
+  // +akuity:test-kubebuilder-pattern=Duration
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration interval = 4;
 
   // FreightCreationPolicy describes how Freight is created by this Warehouse.
