@@ -114,6 +114,27 @@
         }
       },
       "type": "object"
+    },
+    "status": {
+      "description": "Status describes the current status of a Project.",
+      "properties": {
+        "receivers": {
+          "description": "WebhookReceivers contains the list of webhook receivers for the",
+          "items": {
+            "description": "WebhookReceiver is a resource type that describes a path used\nto receive warehouse events and trigger refreshes.",
+            "properties": {
+              "path": {
+                "description": "Path is the path to the receiver's webhook endpoint.",
+                "pattern": "^/[^/].*$",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
     }
   },
   "type": "object"

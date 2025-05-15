@@ -847,6 +847,9 @@ message ProjectConfig {
 
   // Spec describes the configuration of a Project.
   optional ProjectConfigSpec spec = 2;
+
+  // Status describes the current status of a Project.
+  optional ProjectConfigStatus status = 3;
 }
 
 // ProjectConfigList is a list of ProjectConfig resources.
@@ -867,6 +870,11 @@ message ProjectConfigSpec {
 
   // WebhookReceiverConfigs defines the default receivers for the project.
   repeated WebhookReceiverConfig receivers = 2;
+}
+
+message ProjectConfigStatus {
+  // WebhookReceivers contains the list of webhook receivers for the
+  repeated WebhookReceiver receivers = 5;
 }
 
 // ProjectList is a list of Project resources.
@@ -900,9 +908,6 @@ message ProjectStatus {
   // Stats contains a summary of the collective state of a Project's
   // constituent resources.
   optional ProjectStats stats = 4;
-
-  // WebhookReceivers contains the list of webhook receivers for the
-  repeated WebhookReceiver receivers = 5;
 }
 
 // Promotion represents a request to transition a particular Stage into a

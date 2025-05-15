@@ -18,6 +18,8 @@ type ProjectConfig struct {
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	// Spec describes the configuration of a Project.
 	Spec ProjectConfigSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+	// Status describes the current status of a Project.
+	Status ProjectConfigStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
 // ProjectConfigSpec describes the configuration of a Project.
@@ -27,6 +29,11 @@ type ProjectConfigSpec struct {
 	PromotionPolicies []PromotionPolicy `json:"promotionPolicies,omitempty" protobuf:"bytes,1,rep,name=promotionPolicies"`
 	// WebhookReceiverConfigs defines the default receivers for the project.
 	WebhookReceiverConfigs []WebhookReceiverConfig `json:"receivers,omitempty" protobuf:"bytes,2,rep,name=receivers"`
+}
+
+type ProjectConfigStatus struct {
+	// WebhookReceivers contains the list of webhook receivers for the
+	WebhookReceivers []WebhookReceiver `json:"receivers,omitempty" protobuf:"bytes,5,rep,name=receivers"`
 }
 
 // PromotionPolicy defines policies governing the promotion of Freight to a

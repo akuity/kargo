@@ -242,20 +242,6 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
-              receivers:
-                description: WebhookReceivers contains the list of webhook receivers
-                  for the
-                items:
-                  description: |-
-                    WebhookReceiver is a resource type that describes a path used
-                    to receive warehouse events and trigger refreshes.
-                  properties:
-                    path:
-                      description: Path is the path to the receiver's webhook endpoint.
-                      pattern: ^/[^/].*$
-                      type: string
-                  type: object
-                type: array
               stats:
                 description: |-
                   Stats contains a summary of the collective state of a Project's
