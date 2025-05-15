@@ -44,6 +44,8 @@ type Context struct {
 	// any Freight that has been inherited from the target Stage's current
 	// state.
 	Freight kargoapi.FreightCollection
+	// TargetFreightRef is the actual Freight that triggered this Promotion.
+	TargetFreightRef kargoapi.FreightReference
 	// StartFromStep is the index of the step from which the promotion should
 	// begin execution.
 	StartFromStep int64
@@ -182,12 +184,18 @@ func (s *Step) GetErrorThreshold(runner promotion.StepRunner) uint32 {
 func (s *Step) BuildEnv(promoCtx Context, opts ...StepEnvOption) map[string]any {
 	env := map[string]any{
 		"ctx": map[string]any{
-			"project":   promoCtx.Project,
-			"promotion": promoCtx.Promotion,
-			"stage":     promoCtx.Stage,
+			"project":       promoCtx.Project,
+			"promotion":     promoCtx.Promotion,
+			"stage":         promoCtx.Stage,
+			"targetFreight": promoCtx.TargetFreightRef.Name,
 			"meta": map[string]any{
 				"promotion": map[string]any{
 					"actor": promoCtx.Actor,
+				},
+				"targetFreight": map[string]any{
+					"origin": map[string]any{
+						"name": promoCtx.TargetFreightRef.Origin.Name,
+					},
 				},
 			},
 		},
