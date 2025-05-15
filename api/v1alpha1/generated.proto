@@ -868,13 +868,12 @@ message ProjectConfigSpec {
   // specific Stages within the Project.
   repeated PromotionPolicy promotionPolicies = 1;
 
-  // WebhookReceiverConfigs defines the default receivers for the project.
+  // WebhookReceiverConfigs defines the webhook receivers for the project config.
   repeated WebhookReceiverConfig receivers = 2;
 }
 
 message ProjectConfigStatus {
-  // Conditions contains the last observations of the Project's current
-  // state.
+  // Conditions contains the last observations of the Project Config's current state.
   // +patchMergeKey=type
   // +patchStrategy=merge
   // +listType=map
@@ -1576,12 +1575,10 @@ message WarehouseStatus {
   optional DiscoveredArtifacts discoveredArtifacts = 7;
 }
 
-// WebhookReceiver is a resource type that describes a path used
-// to receive warehouse events and trigger refreshes.
+// WebhookReceiver describes a path used to receive warehouse events and
+// trigger refreshes.
 message WebhookReceiver {
   // Path is the path to the receiver's webhook endpoint.
-  //
-  // +kubebuilder:validation:Pattern=^/[^/].*$
   optional string path = 3;
 }
 

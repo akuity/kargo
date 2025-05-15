@@ -1821,7 +1821,7 @@ export type ProjectConfigSpec = Message<"github.com.akuity.kargo.api.v1alpha1.Pr
   promotionPolicies: PromotionPolicy[];
 
   /**
-   * WebhookReceiverConfigs defines the default receivers for the project.
+   * WebhookReceiverConfigs defines the webhook receivers for the project config.
    *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.WebhookReceiverConfig receivers = 2;
    */
@@ -1840,8 +1840,7 @@ export const ProjectConfigSpecSchema: GenMessage<ProjectConfigSpec> = /*@__PURE_
  */
 export type ProjectConfigStatus = Message<"github.com.akuity.kargo.api.v1alpha1.ProjectConfigStatus"> & {
   /**
-   * Conditions contains the last observations of the Project's current
-   * state.
+   * Conditions contains the last observations of the Project Config's current state.
    * +patchMergeKey=type
    * +patchStrategy=merge
    * +listType=map
@@ -3356,16 +3355,14 @@ export const WarehouseStatusSchema: GenMessage<WarehouseStatus> = /*@__PURE__*/
   messageDesc(file_api_v1alpha1_generated, 72);
 
 /**
- * WebhookReceiver is a resource type that describes a path used
- * to receive warehouse events and trigger refreshes.
+ * WebhookReceiver describes a path used to receive warehouse events and
+ * trigger refreshes.
  *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.WebhookReceiver
  */
 export type WebhookReceiver = Message<"github.com.akuity.kargo.api.v1alpha1.WebhookReceiver"> & {
   /**
    * Path is the path to the receiver's webhook endpoint.
-   *
-   * +kubebuilder:validation:Pattern=^/[^/].*$
    *
    * @generated from field: optional string path = 3;
    */

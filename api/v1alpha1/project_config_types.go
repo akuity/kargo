@@ -8,7 +8,7 @@ var (
 )
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:scope=Cluster
+// +kubebuilder:resource:scope=Namespaced
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].status"
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].message"
@@ -39,8 +39,7 @@ type ProjectConfigSpec struct {
 }
 
 type ProjectConfigStatus struct {
-	// Conditions contains the last observations of the Project's current
-	// state.
+	// Conditions contains the last observations of the Project Config's current state.
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	// +listType=map

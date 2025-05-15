@@ -12,7 +12,7 @@ spec:
     listKind: ProjectConfigList
     plural: projectconfigs
     singular: projectconfig
-  scope: Cluster
+  scope: Namespaced
   versions:
   - additionalPrinterColumns:
     - jsonPath: .status.conditions[?(@.type=="Ready")].status
@@ -150,8 +150,8 @@ spec:
                     rule: 'has(self.stage) ? !has(self.stageSelector) : has(self.stageSelector)'
                 type: array
               receivers:
-                description: WebhookReceiverConfigs defines the default receivers
-                  for the project.
+                description: WebhookReceiverConfigs defines the webhook receivers
+                  for the project config.
                 items:
                   description: |-
                     WebhookReceiverConfig is a resource type that describes the configuration
@@ -176,9 +176,8 @@ spec:
             description: Status describes the current status of a Project.
             properties:
               conditions:
-                description: |-
-                  Conditions contains the last observations of the Project's current
-                  state.
+                description: Conditions contains the last observations of the Project
+                  Config's current state.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -242,12 +241,11 @@ spec:
                   for the
                 items:
                   description: |-
-                    WebhookReceiver is a resource type that describes a path used
-                    to receive warehouse events and trigger refreshes.
+                    WebhookReceiver describes a path used to receive warehouse events and
+                    trigger refreshes.
                   properties:
                     path:
                       description: Path is the path to the receiver's webhook endpoint.
-                      pattern: ^/[^/].*$
                       type: string
                   type: object
                 type: array
