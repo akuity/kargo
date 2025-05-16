@@ -237,7 +237,7 @@ func (h *httpRequester) buildExprEnv(
 		case map[string]any, []any:
 			env["response"].(map[string]any)["body"] = parsedBody
 		default:
-			return nil, fmt.Errorf("unexpected type when unmarshaling response: %w", err)
+			return nil, fmt.Errorf("unexpected type when unmarshaling response: %T", parsedBody)
 		}
 	}
 
