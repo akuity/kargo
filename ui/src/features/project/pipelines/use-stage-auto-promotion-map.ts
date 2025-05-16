@@ -27,4 +27,4 @@ export const useStageAutoPromotionMap = (
     }
 
     return map;
-  }, [project]);
+  }, [project, projectConfig]);
