@@ -274,29 +274,28 @@ const DiscoveryTable = ({
 
   const selectedItem = chosenItems[selected?.repoURL as string]?.info;
 
-  if ('references' in selected) {
-    return (
+  return (
+    <>
       <ImageTable
-        references={(selected as ImageDiscoveryResult).references}
+        references={(selected as ImageDiscoveryResult).references || []}
         select={select}
         selected={selectedItem as DiscoveredImageReference}
+        show={'references' in selected}
       />
-    );
-  } else if ('commits' in selected) {
-    return (
+
       <CommitTable
-        commits={(selected as GitDiscoveryResult).commits}
+        commits={(selected as GitDiscoveryResult).commits || []}
         select={select}
         selected={selectedItem as DiscoveredCommit}
+        show={'commits' in selected}
       />
-    );
-  } else if ('versions' in selected) {
-    return (
+
       <ChartTable
-        versions={(selected as ChartDiscoveryResult).versions}
+        versions={(selected as ChartDiscoveryResult).versions || []}
         select={select}
         selected={selectedItem as string}
+        show={'versions' in selected}
       />
-    );
-  }
+    </>
+  );
 };
