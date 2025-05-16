@@ -48,6 +48,7 @@ import { usePersistPreferredFilter } from './use-persist-filters';
 import { useStageAutoPromotionMap } from './use-stage-auto-promotion-map';
 import { useStageByName } from './use-stage-by-name';
 import { useSubscribersByStage } from './use-subscribers-by-stage';
+import { useSyncFreight } from './use-sync-freight';
 
 import '@xyflow/react/dist/style.css';
 
@@ -131,6 +132,11 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
     getFreightQuery.data?.groups?.[''] as FreightList,
     freightName
   );
+
+  useSyncFreight({
+    freights: freightById,
+    freightInStages
+  });
 
   const freights = getFreightQuery.data?.groups?.['']?.freight || [];
 
