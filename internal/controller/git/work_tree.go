@@ -538,6 +538,9 @@ type PushOptions struct {
 	// be useful when pushing changes to a remote branch that has been updated
 	// in the time since the local branch was last pulled.
 	PullRebase bool
+	// RepoURL determines the URL of the remote repository to push to. If empty,
+	// origin will be used.
+	RepoURL string
 }
 
 // https://regex101.com/r/aNYjHP/1
@@ -556,6 +559,10 @@ func (w *workTree) Push(opts *PushOptions) error {
 			return err
 		}
 	}
+	repoURL := opts.RepoURL
+	if repoURL == "" {
+		repoURL = "origin"
+	}
 	if opts.PullRebase {
 		exists, err := w.RemoteBranchExists(targetBranch)
 		if err != nil {
@@ -563,7 +570,7 @@ func (w *workTree) Push(opts *PushOptions) error {
 		}
 		// We only want to pull and rebase if the remote branch exists.
 		if exists {
-			if _, err = libExec.Exec(w.buildGitCommand("pull", "--rebase", "origin", targetBranch)); err != nil {
+			if _, err = libExec.Exec(w.buildGitCommand("pull", "--rebase", repoURL, targetBranch)); err != nil {
 				// The error we're most concerned with is a merge conflict requiring
 				// manual resolution, because it's an error that no amount of retries
 				// will fix. If we find that a rebase is in progress, this is what
@@ -576,7 +583,7 @@ func (w *workTree) Push(opts *PushOptions) error {
 			}
 		}
 	}
-	args := []string{"push", "origin", fmt.Sprintf("HEAD:%s", targetBranch)}
+	args := []string{"push", repoURL, fmt.Sprintf("HEAD:%s", targetBranch)}
 	if opts.Force {
 		args = append(args, "--force")
 	}
