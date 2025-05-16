@@ -1,6 +1,7 @@
 import { useMutation } from '@connectrpc/connect-query';
 import {
   faArrowUpRightFromSquare,
+  faBolt,
   faExternalLink,
   faMinus,
   faTruckArrowRight
@@ -169,10 +170,10 @@ export const StageNode = (props: { stage: Stage }) => {
       }}
       title={
         <Flex align='center'>
-          <span className='text-xs text-wrap mr-auto'>{props.stage.metadata?.name}</span>
           {autoPromotionMode && (
-            <span className='text-[9px] lowercase font-normal mr-1'>Auto Promotion</span>
+            <FontAwesomeIcon title='Auto Promotion' icon={faBolt} className='text-[10px] mr-1' />
           )}
+          <span className='text-xs text-wrap mr-auto'>{props.stage.metadata?.name}</span>
           <Space>
             <Dropdown
               trigger={['hover']}
