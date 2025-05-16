@@ -26,15 +26,16 @@ import (
 // utilizes a Kubernetes controller runtime client to retrieve credentials
 // stored in Kubernetes Secrets.
 type database struct {
-	kargoClient       client.Client
-	credentialHelpers []credentials.Helper
-	cfg               DatabaseConfig
+	kargoClient         client.Client
+	credentialProviders []credentials.Provider
+	cfg                 DatabaseConfig
 }
 
 // DatabaseConfig represents configuration for a Kubernetes based implementation
 // of the credentials.Database interface.
 type DatabaseConfig struct {
 	GlobalCredentialsNamespaces []string `envconfig:"GLOBAL_CREDENTIALS_NAMESPACES" default:""`
+	AllowCredentialsOverHTTP    bool     `envconfig:"ALLOW_CREDENTIALS_OVER_HTTP" default:"false"`
 }
 
 func DatabaseConfigFromEnv() DatabaseConfig {
@@ -52,25 +53,27 @@ func NewDatabase(
 	kargoClient client.Client,
 	cfg DatabaseConfig,
 ) credentials.Database {
-	credentialHelpers := []credentials.Helper{
-		basic.SecretToCreds,
-		ecr.NewAccessKeyCredentialHelper(),
-		ecr.NewManagedIdentityCredentialHelper(ctx),
-		gar.NewServiceAccountKeyCredentialHelper(),
-		gar.NewWorkloadIdentityFederationCredentialHelper(ctx),
-		github.NewAppCredentialHelper(),
+	var credentialProviders = []credentials.Provider{
+		&basic.CredentialProvider{},
+		ecr.NewAccessKeyProvider(),
+		ecr.NewManagedIdentityProvider(ctx),
+		gar.NewServiceAccountKeyProvider(),
+		gar.NewWorkloadIdentityFederationProvider(ctx),
+		github.NewAppCredentialProvider(),
 	}
-	finalCredentialHelpers := make([]credentials.Helper, 0, len(credentialHelpers))
-	for _, helper := range credentialHelpers {
-		if helper != nil {
-			finalCredentialHelpers = append(finalCredentialHelpers, helper)
+
+	db := &database{
+		kargoClient: kargoClient,
+		cfg:         cfg,
+	}
+
+	for _, p := range credentialProviders {
+		if p != nil {
+			db.credentialProviders = append(db.credentialProviders, p)
 		}
 	}
-	return &database{
-		kargoClient:       kargoClient,
-		credentialHelpers: finalCredentialHelpers,
-		cfg:               cfg,
-	}
+
+	return db
 }
 
 func (k *database) Get(
@@ -78,15 +81,15 @@ func (k *database) Get(
 	namespace string,
 	credType credentials.Type,
 	repoURL string,
-) (credentials.Credentials, bool, error) {
+) (*credentials.Credentials, error) {
 	// If we are dealing with an insecure HTTP endpoint (of any type),
 	// refuse to return any credentials
-	if strings.HasPrefix(repoURL, "http://") {
+	if !k.cfg.AllowCredentialsOverHTTP && strings.HasPrefix(repoURL, "http://") {
 		logging.LoggerFromContext(ctx).Info(
 			"refused to get credentials for insecure HTTP endpoint",
 			"repoURL", repoURL,
 		)
-		return credentials.Credentials{}, false, nil
+		return nil, nil
 	}
 
 	var secret *corev1.Secret
@@ -99,7 +102,7 @@ func (k *database) Get(
 		credType,
 		repoURL,
 	); err != nil {
-		return credentials.Credentials{}, false, err
+		return nil, err
 	}
 
 	if secret == nil {
@@ -111,7 +114,7 @@ func (k *database) Get(
 				credType,
 				repoURL,
 			); err != nil {
-				return credentials.Credentials{}, false, err
+				return nil, err
 			}
 			if secret != nil {
 				break
@@ -119,17 +122,22 @@ func (k *database) Get(
 		}
 	}
 
-	for _, helper := range k.credentialHelpers {
-		creds, err := helper(ctx, namespace, credType, repoURL, secret)
+	var data map[string][]byte
+	if secret != nil {
+		data = secret.Data
+	}
+
+	for _, p := range k.credentialProviders {
+		creds, err := p.GetCredentials(ctx, namespace, credType, repoURL, data)
 		if err != nil {
-			return credentials.Credentials{}, false, err
+			return nil, err
 		}
 		if creds != nil {
-			return *creds, true, nil
+			return creds, nil
 		}
 	}
 
-	return credentials.Credentials{}, false, nil
+	return nil, nil
 }
 
 func (k *database) getCredentialsSecret(

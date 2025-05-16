@@ -180,6 +180,7 @@ func TestGet(t *testing.T) {
 	testCases := []struct {
 		name     string
 		secrets  []client.Object
+		cfg      DatabaseConfig
 		credType credentials.Type
 		repoURL  string
 		expected *corev1.Secret
@@ -199,15 +200,21 @@ func TestGet(t *testing.T) {
 			expected: projectGitCredentialWithRepoURLPattern,
 		},
 		{
-			name:     "git URL exact match in global namespace",
-			secrets:  []client.Object{globalGitCredentialWithRepoURL},
+			name:    "git URL exact match in global namespace",
+			secrets: []client.Object{globalGitCredentialWithRepoURL},
+			cfg: DatabaseConfig{
+				GlobalCredentialsNamespaces: []string{testGlobalNamespace},
+			},
 			credType: credentials.TypeGit,
 			repoURL:  testGitRepoURL,
 			expected: globalGitCredentialWithRepoURL,
 		},
 		{
-			name:     "git URL pattern match in global namespace",
-			secrets:  []client.Object{globalGitCredentialWithRepoURLPattern},
+			name:    "git URL pattern match in global namespace",
+			secrets: []client.Object{globalGitCredentialWithRepoURLPattern},
+			cfg: DatabaseConfig{
+				GlobalCredentialsNamespaces: []string{testGlobalNamespace},
+			},
 			credType: credentials.TypeGit,
 			repoURL:  testGitRepoURL,
 			expected: globalGitCredentialWithRepoURLPattern,
@@ -231,15 +238,21 @@ func TestGet(t *testing.T) {
 			expected: projectImageCredentialWithRepoURLPattern,
 		},
 		{
-			name:     "image URL exact match in global namespace",
-			secrets:  []client.Object{globalImageCredentialWithRepoURL},
+			name:    "image URL exact match in global namespace",
+			secrets: []client.Object{globalImageCredentialWithRepoURL},
+			cfg: DatabaseConfig{
+				GlobalCredentialsNamespaces: []string{testGlobalNamespace},
+			},
 			credType: credentials.TypeImage,
 			repoURL:  testImageURL,
 			expected: globalImageCredentialWithRepoURL,
 		},
 		{
-			name:     "image URL pattern match in global namespace",
-			secrets:  []client.Object{globalImageCredentialWithRepoURLPattern},
+			name:    "image URL pattern match in global namespace",
+			secrets: []client.Object{globalImageCredentialWithRepoURLPattern},
+			cfg: DatabaseConfig{
+				GlobalCredentialsNamespaces: []string{testGlobalNamespace},
+			},
 			credType: credentials.TypeImage,
 			repoURL:  testImageURL,
 			expected: globalImageCredentialWithRepoURLPattern,
@@ -261,6 +274,9 @@ func TestGet(t *testing.T) {
 			secrets: []client.Object{
 				globalGitCredentialWithRepoURL,
 				globalGitCredentialWithRepoURLPattern,
+			},
+			cfg: DatabaseConfig{
+				GlobalCredentialsNamespaces: []string{testGlobalNamespace},
 			},
 			credType: credentials.TypeGit,
 			repoURL:  testGitRepoURL,
@@ -296,16 +312,25 @@ func TestGet(t *testing.T) {
 			repoURL:  testInsecureGitURL,
 			expected: nil,
 		},
+		{
+			name: "insecure HTTP endpoint allowed",
+			// Matches because credentials for insecure URLs are allowed
+			secrets: []client.Object{projectGitCredentialWithInsecureRepoURL},
+			cfg: DatabaseConfig{
+				AllowCredentialsOverHTTP: true,
+			},
+			credType: credentials.TypeGit,
+			repoURL:  testInsecureGitURL,
+			expected: projectGitCredentialWithInsecureRepoURL,
+		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			creds, found, err := NewDatabase(
+			creds, err := NewDatabase(
 				context.Background(),
 				fake.NewClientBuilder().WithObjects(testCase.secrets...).Build(),
-				DatabaseConfig{
-					GlobalCredentialsNamespaces: []string{testGlobalNamespace},
-				},
+				testCase.cfg,
 			).Get(
 				context.Background(),
 				testProjectNamespace,
@@ -315,12 +340,11 @@ func TestGet(t *testing.T) {
 			require.NoError(t, err)
 
 			if testCase.expected == nil {
-				require.False(t, found)
-				require.Empty(t, creds)
+				require.Nil(t, creds)
 				return
 			}
 
-			require.True(t, found)
+			require.NotNil(t, creds)
 			require.Equal(
 				t,
 				string(testCase.expected.Data["username"]),

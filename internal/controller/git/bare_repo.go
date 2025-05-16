@@ -104,7 +104,7 @@ func CloneBare(
 			url:     repoURL,
 		},
 	}
-	if err = b.setupClient(clientOpts); err != nil {
+	if err = b.setupClient(homeDir, clientOpts); err != nil {
 		return nil, err
 	}
 	if err = b.clone(); err != nil {
@@ -146,7 +146,7 @@ func LoadBareRepo(path string, opts *LoadBareRepoOptions) (BareRepo, error) {
 		return nil,
 			fmt.Errorf(`error reading URL of remote "origin" from config: %w`, err)
 	}
-	if err := b.setupAuth(); err != nil {
+	if err := b.setupAuth(b.homeDir); err != nil {
 		return nil, fmt.Errorf("error configuring the credentials: %w", err)
 	}
 	return b, nil

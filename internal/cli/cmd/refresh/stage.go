@@ -8,12 +8,13 @@ import (
 	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 
+	v1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
+	"github.com/akuity/kargo/api/service/v1alpha1/svcv1alpha1connect"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/cli/templates"
-	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
-	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
 )
 
 func newRefreshStageCommand(cfg config.CLIConfig) *cobra.Command {
@@ -81,7 +82,7 @@ func waitForStage(
 		if msg == nil || msg.Stage == nil {
 			return errors.New("unexpected response")
 		}
-		token, ok := kargoapi.RefreshAnnotationValue(msg.Stage.GetAnnotations())
+		token, ok := api.RefreshAnnotationValue(msg.Stage.GetAnnotations())
 		if !ok {
 			return fmt.Errorf(
 				"Stage %q in Project %q has no %q annotation",

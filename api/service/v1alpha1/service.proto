@@ -3,12 +3,12 @@ syntax = "proto3";
 package akuity.io.kargo.service.v1alpha1;
 
 import "google/protobuf/timestamp.proto";
-import "v1alpha1/generated.proto";
+import "api/v1alpha1/generated.proto";
 import "k8s.io/api/core/v1/generated.proto";
-import "rollouts/api/v1alpha1/generated.proto";
-import "rbac/v1alpha1/generated.proto";
+import "api/stubs/rollouts/v1alpha1/generated.proto";
+import "api/rbac/v1alpha1/generated.proto";
 
-option go_package = "github.com/akuity/kargo/pkg/api/service/v1alpha1;svcv1alpha1";
+option go_package = "github.com/akuity/kargo/api/service/v1alpha1;svcv1alpha1";
 
 enum RawFormat {
   RAW_FORMAT_UNSPECIFIED = 0;
@@ -53,6 +53,8 @@ service KargoService {
   rpc DeleteProject(DeleteProjectRequest) returns (DeleteProjectResponse);
   rpc GetProject(GetProjectRequest) returns (GetProjectResponse);
   rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
+  rpc DeleteProjectConfig(DeleteProjectConfigRequest) returns (DeleteProjectConfigResponse);
+  rpc GetProjectConfig(GetProjectConfigRequest) returns (GetProjectConfigResponse);
 
   /* Freight APIs */
 
@@ -97,16 +99,22 @@ service KargoService {
   rpc ListAnalysisTemplates(ListAnalysisTemplatesRequest) returns (ListAnalysisTemplatesResponse);
   rpc GetAnalysisTemplate(GetAnalysisTemplateRequest) returns (GetAnalysisTemplateResponse);
   rpc DeleteAnalysisTemplate(DeleteAnalysisTemplateRequest) returns (DeleteAnalysisTemplateResponse);
+  rpc ListClusterAnalysisTemplates(ListClusterAnalysisTemplatesRequest) returns (ListClusterAnalysisTemplatesResponse);
+  rpc GetClusterAnalysisTemplate(GetClusterAnalysisTemplateRequest) returns (GetClusterAnalysisTemplateResponse);
+  rpc DeleteClusterAnalysisTemplate(DeleteClusterAnalysisTemplateRequest) returns (DeleteClusterAnalysisTemplateResponse);
   rpc GetAnalysisRun(GetAnalysisRunRequest) returns (GetAnalysisRunResponse);
-
-  rpc ListAnalysisTemplateConfigMaps(ListAnalysisTemplateConfigMapsRequest) returns (ListAnalysisTemplateConfigMapsResponse);
-  rpc GetAnalysisTemplateConfigMap(GetAnalysisTemplateConfigMapRequest) returns (GetAnalysisTemplateConfigMapResponse);
-  rpc ListAnalysisTemplateSecrets(ListAnalysisTemplateSecretsRequest) returns (ListAnalysisTemplateSecretsResponse);
-  rpc GetAnalysisTemplateSecret(GetAnalysisTemplateSecretRequest) returns (GetAnalysisTemplateSecretResponse);
+  rpc GetAnalysisRunLogs(GetAnalysisRunLogsRequest) returns (stream GetAnalysisRunLogsResponse);
 
   /* Event APIs */
 
   rpc ListProjectEvents(ListProjectEventsRequest) returns (ListProjectEventsResponse);
+
+  /* Promotion Task APIs */
+
+  rpc ListPromotionTasks(ListPromotionTasksRequest) returns (ListPromotionTasksResponse);
+  rpc ListClusterPromotionTasks(ListClusterPromotionTasksRequest) returns (ListClusterPromotionTasksResponse);
+  rpc GetPromotionTask(GetPromotionTaskRequest) returns (GetPromotionTaskResponse);
+  rpc GetClusterPromotionTask(GetClusterPromotionTaskRequest) returns (GetClusterPromotionTaskResponse);
 
   /* Role APIs */
 
@@ -361,6 +369,26 @@ message DeleteProjectRequest {
 
 message DeleteProjectResponse {
   /* explicitly empty */
+}
+
+message DeleteProjectConfigRequest {
+  string name = 1;
+}
+
+message DeleteProjectConfigResponse {
+  /* explicitly empty */
+}
+
+message GetProjectConfigRequest {
+  string name = 1;
+  RawFormat format = 2;
+}
+
+message GetProjectConfigResponse {
+  oneof result {
+    github.com.akuity.kargo.api.v1alpha1.ProjectConfig project_config = 1;
+    bytes raw = 2;
+  }
 }
 
 message GetProjectRequest {
@@ -644,7 +672,21 @@ message ListAnalysisTemplatesRequest {
 }
 
 message ListAnalysisTemplatesResponse {
-  repeated github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisTemplate analysis_templates = 1 [json_name = "analysisTemplates"];
+  repeated github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisTemplate analysis_templates = 1 [json_name = "analysisTemplates"];
+}
+
+message ListPromotionTasksRequest {
+  string project = 1;
+}
+
+message ListPromotionTasksResponse {
+  repeated github.com.akuity.kargo.api.v1alpha1.PromotionTask promotion_tasks = 1;
+}
+
+message ListClusterPromotionTasksRequest {}
+
+message ListClusterPromotionTasksResponse {
+  repeated github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask cluster_promotion_tasks = 1;
 }
 
 message GetAnalysisTemplateRequest {
@@ -655,7 +697,50 @@ message GetAnalysisTemplateRequest {
 
 message GetAnalysisTemplateResponse {
   oneof result {
-    github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisTemplate analysis_template = 1 [json_name = "analysisTemplate"];
+    github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisTemplate analysis_template = 1 [json_name = "analysisTemplate"];
+    bytes raw = 2;
+  }
+}
+
+message GetPromotionTaskRequest {
+  string project = 1;
+  string name = 2;
+  RawFormat format = 3;
+}
+
+message GetPromotionTaskResponse {
+  oneof result {
+    github.com.akuity.kargo.api.v1alpha1.PromotionTask promotion_task = 1 [json_name = "promotionTask"];
+    bytes raw = 2;
+  }
+}
+
+message GetClusterPromotionTaskRequest {
+  string name = 2;
+  RawFormat format = 3;
+}
+
+message GetClusterPromotionTaskResponse {
+  oneof result {
+    github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask promotion_task = 1 [json_name = "clusterPromotionTask"];
+    bytes raw = 2;
+  }
+}
+
+message ListClusterAnalysisTemplatesRequest {}
+
+message ListClusterAnalysisTemplatesResponse {
+  repeated github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.ClusterAnalysisTemplate cluster_analysis_templates = 1 [json_name = "clusteranalysisTemplates"];
+}
+
+message GetClusterAnalysisTemplateRequest {
+  string name = 2;
+  RawFormat format = 3;
+}
+
+message GetClusterAnalysisTemplateResponse {
+  oneof result {
+    github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.ClusterAnalysisTemplate cluster_analysis_template = 1 [json_name = "clusterAnalysisTemplate"];
     bytes raw = 2;
   }
 }
@@ -668,9 +753,20 @@ message GetAnalysisRunRequest {
 
 message GetAnalysisRunResponse {
   oneof result {
-    github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisRun analysis_run = 1 [json_name = "analysisRun"];
+    github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisRun analysis_run = 1 [json_name = "analysisRun"];
     bytes raw = 2;
   }
+}
+
+message GetAnalysisRunLogsRequest {
+  string namespace = 1;
+  string name = 2;
+  string metric_name = 3;
+  string container_name = 4;
+}
+
+message GetAnalysisRunLogsResponse {
+  string chunk = 1;
 }
 
 message DeleteAnalysisTemplateRequest {
@@ -679,6 +775,14 @@ message DeleteAnalysisTemplateRequest {
 }
 
 message DeleteAnalysisTemplateResponse {
+  /* explicitly empty */
+}
+
+message DeleteClusterAnalysisTemplateRequest {
+  string name = 2;
+}
+
+message DeleteClusterAnalysisTemplateResponse {
   /* explicitly empty */
 }
 
@@ -770,46 +874,4 @@ message UpdateRoleRequest {
 
 message UpdateRoleResponse {
   github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
-}
-
-message ListAnalysisTemplateConfigMapsRequest {
-  string project = 1;
-}
-
-message ListAnalysisTemplateConfigMapsResponse {
-  repeated k8s.io.api.core.v1.ConfigMap config_maps = 1;
-}
-
-message GetAnalysisTemplateConfigMapRequest {
-  string project = 1;
-  string name = 2;
-  RawFormat format = 3;
-}
-
-message GetAnalysisTemplateConfigMapResponse {
-  oneof result {
-    k8s.io.api.core.v1.ConfigMap config_map = 1;
-    bytes raw = 2;
-  }
-}
-
-message ListAnalysisTemplateSecretsRequest {
-  string project = 1;
-}
-
-message ListAnalysisTemplateSecretsResponse {
-  repeated k8s.io.api.core.v1.Secret secrets = 1;
-}
-
-message GetAnalysisTemplateSecretRequest {
-  string project = 1;
-  string name = 2;
-  RawFormat format = 3;
-}
-
-message GetAnalysisTemplateSecretResponse {
-  oneof result {
-    k8s.io.api.core.v1.Secret secret = 1;
-    bytes raw = 2;
-  }
 }

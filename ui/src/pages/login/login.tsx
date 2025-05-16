@@ -9,7 +9,7 @@ import { useAuthContext } from '@ui/features/auth/context/use-auth-context';
 import { OIDCLogin } from '@ui/features/auth/oidc-login';
 import { LoadingState } from '@ui/features/common';
 import { KargoLogo } from '@ui/features/common/logo/logo';
-import { getPublicConfig } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { getPublicConfig } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 
 import * as styles from './login.module.less';
 

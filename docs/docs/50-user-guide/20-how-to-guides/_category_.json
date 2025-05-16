@@ -1,0 +1,11 @@
+{
+  "label": "How-to Guides",
+  "link": {
+    "type": "generated-index",
+    "title": "How-to Guides",
+    "description": "How-to guides for using Kargo",
+    "slug": "user-guide/how-to-guides"
+  },
+  "collapsible": true,
+  "collapsed": true
+}

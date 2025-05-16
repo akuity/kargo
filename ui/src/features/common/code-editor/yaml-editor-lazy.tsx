@@ -184,7 +184,7 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
 
         {placeholder && (
           <p
-            className={`${styles.placeholderWrapper} font-mono`}
+            className={`${styles.placeholderWrapper} font-mono mt-9`}
             onClick={() => {
               editorRef.current?.focus?.();
             }}

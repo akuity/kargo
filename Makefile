@@ -4,13 +4,13 @@ SHELL	      ?= /bin/bash
 EXTENDED_PATH ?= $(CURDIR)/hack/bin:$(PATH)
 
 ARGO_CD_CHART_VERSION		:= 7.7.0
-ARGO_ROLLOUTS_CHART_VERSION := 2.37.7
+ARGO_ROLLOUTS_CHART_VERSION := 2.39.1
 CERT_MANAGER_CHART_VERSION 	:= 1.16.1
 
 BUF_LINT_ERROR_FORMAT	?= text
 GO_LINT_ERROR_FORMAT 	?= colored-line-number
 
-VERSION_PACKAGE := github.com/akuity/kargo/internal/version
+VERSION_PACKAGE := github.com/akuity/kargo/pkg/x/version
 
 # Default to docker, but support alternative container runtimes that are CLI-compatible with Docker
 CONTAINER_RUNTIME ?= docker
@@ -54,6 +54,8 @@ ifeq ($(GOARCH), x86_64)
 	override GOARCH = amd64
 endif
 
+KARGO_EXTERNAL_WEBHOOKS_SERVER_HOSTNAME ?=
+
 ################################################################################
 # Tests                                                                        #
 #                                                                              #
@@ -73,17 +75,34 @@ format: format-go format-ui
 
 .PHONY: lint-go
 lint-go: install-golangci-lint
-	$(GOLANGCI_LINT) run --out-format=$(GO_LINT_ERROR_FORMAT)
+	{ \
+		set -e; \
+		for mod in $$(find . -maxdepth 4 -type f -name 'go.mod' | grep -v tools); do \
+			echo "Linting $$(dirname $${mod}) ..."; \
+			cd $$(dirname $${mod}); \
+			$(GOLANGCI_LINT) run --out-format=$(GO_LINT_ERROR_FORMAT) --config $(CURDIR)/.golangci.yaml; \
+			cd - > /dev/null; \
+		done; \
+	}
 
 .PHONY: format-go
 format-go:
-	golangci-lint run --fix
+	{ \
+		set -e; \
+		for mod in $$(find . -maxdepth 4 -type f -name 'go.mod' | grep -v tools); do \
+			echo "Fixing $$(dirname $${mod}) ..."; \
+			cd $$(dirname $${mod}); \
+			$(GOLANGCI_LINT) run --fix --config $(CURDIR)/.golangci.yaml; \
+			cd - > /dev/null; \
+		done; \
+	}
 
 .PHONY: lint-proto
 lint-proto: install-buf
 	# Vendor go dependencies to build protobuf definitions
 	go mod vendor
-	$(BUF) lint api --error-format=$(BUF_LINT_ERROR_FORMAT)
+	@# Only lint hand-written .proto files
+	$(BUF) lint . --path api/service --error-format=$(BUF_LINT_ERROR_FORMAT)
 
 .PHONY: lint-charts
 lint-charts: install-helm
@@ -108,13 +127,21 @@ format-ui:
 
 .PHONY: test-unit
 test-unit: install-helm
-	PATH=$(EXTENDED_PATH) go test \
-		-v \
-		-timeout=300s \
-		-race \
-		-coverprofile=coverage.txt \
-		-covermode=atomic \
-		./...
+	{ \
+		set -e; \
+		for mod in $$(find . -maxdepth 4 -type f -name 'go.mod' | grep -v tools); do \
+			echo "Testing $$(dirname $${mod}) ..."; \
+			cd $$(dirname $${mod}); \
+			PATH=$(EXTENDED_PATH) go test \
+				-v \
+				-timeout=300s \
+				-race \
+				-coverprofile=coverage.txt \
+				-covermode=atomic \
+				./...; \
+			cd - > /dev/null; \
+		done; \
+	}
 
 ################################################################################
 # Builds                                                                       #
@@ -171,8 +198,8 @@ build-nightly-cli:
 
 .PHONY: build-ui
 build-ui:
-	cd ui && NODE_ENV=production BUILD_TARGET_PATH=../internal/api/ui pnpm run build --emptyOutDir
-	touch internal/api/ui/.keep
+	cd ui && NODE_ENV=production BUILD_TARGET_PATH=../internal/server/ui pnpm run build --emptyOutDir
+	touch internal/server/ui/.keep
 
 .PHONY: build-cli-with-ui
 build-cli-with-ui: build-ui build-cli
@@ -202,8 +229,8 @@ codegen-controller: install-controller-gen
 
 .PHONY: codegen-directive-configs
 codegen-directive-configs:
-	npm install -g quicktype
-	./hack/codegen/directive-configs.sh
+	npm install -g quicktype@23.0.176
+	./hack/codegen/promotion-step-configs.sh
 
 .PHONY: codegen-ui
 codegen-ui:
@@ -391,6 +418,10 @@ hack-uninstall-argocd: install-helm
 .PHONY: hack-uninstall-cert-manager
 hack-uninstall-cert-manager: install-helm
 	$(HELM) delete cert-manager --namespace cert-manager
+
+.PHONY: hack-ngrok
+hack-ngrok:
+	ngrok http --hostname=$(KARGO_EXTERNAL_WEBHOOKS_SERVER_HOSTNAME) 30083
 
 .PHONY: start-api-local
 start-api-local:

@@ -14,6 +14,7 @@ import (
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
+	v1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
@@ -21,7 +22,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/cli/templates"
-	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
+	"github.com/akuity/kargo/internal/conditions"
 )
 
 type getStagesOptions struct {
@@ -167,17 +168,26 @@ func newStageTable(list *metav1.List) *metav1.Table {
 	rows := make([]metav1.TableRow, len(list.Items))
 	for i, item := range list.Items {
 		stage := item.Object.(*kargoapi.Stage) // nolint: forcetypeassert
+
 		var health string
 		if stage.Status.Health != nil {
 			health = string(stage.Status.Health.Status)
 		}
+
+		var ready, status = string(metav1.ConditionUnknown), ""
+		if readyCond := conditions.Get(&stage.Status, kargoapi.ConditionTypeReady); readyCond != nil {
+			ready = string(readyCond.Status)
+			status = readyCond.Message
+		}
+
 		rows[i] = metav1.TableRow{
 			Cells: []any{
 				stage.Name,
 				stage.Spec.Shard,
 				stage.Status.FreightSummary,
 				health,
-				stage.Status.Phase,
+				ready,
+				status,
 				duration.HumanDuration(time.Since(stage.CreationTimestamp.Time)),
 			},
 			Object: list.Items[i],
@@ -189,7 +199,8 @@ func newStageTable(list *metav1.List) *metav1.Table {
 			{Name: "Shard", Type: "string"},
 			{Name: "Current Freight", Type: "string"},
 			{Name: "Health", Type: "string"},
-			{Name: "Phase", Type: "string"},
+			{Name: "Ready", Type: "string"},
+			{Name: "Status", Type: "string"},
 			{Name: "Age", Type: "string"},
 		},
 		Rows: rows,

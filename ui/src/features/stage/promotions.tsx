@@ -17,11 +17,11 @@ import {
 import {
   getFreight,
   listPromotions
-} from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { ListPromotionsResponse } from '@ui/gen/service/v1alpha1/service_pb';
-import { KargoService } from '@ui/gen/service/v1alpha1/service_pb';
-import { ArgoCDShard } from '@ui/gen/service/v1alpha1/service_pb';
-import { Freight, Promotion } from '@ui/gen/v1alpha1/generated_pb';
+} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { ListPromotionsResponse } from '@ui/gen/api/service/v1alpha1/service_pb';
+import { KargoService } from '@ui/gen/api/service/v1alpha1/service_pb';
+import { ArgoCDShard } from '@ui/gen/api/service/v1alpha1/service_pb';
+import { Freight, Promotion } from '@ui/gen/api/v1alpha1/generated_pb';
 import uiPlugins from '@ui/plugins';
 import { UiPluginHoles } from '@ui/plugins/atoms/ui-plugin-hole/ui-plugin-holes';
 import { timestampDate } from '@ui/utils/connectrpc-utils';

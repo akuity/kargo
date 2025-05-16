@@ -34,22 +34,6 @@ rules:
       - create
       - patch
   - apiGroups:
-      - ""
-    resources:
-      - configmaps
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
-      - ""
-    resources:
-      - secrets
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups:
       - authorization.k8s.io
     resources:
       - subjectaccessreviews
@@ -81,6 +65,7 @@ rules:
       - promotiontasks
       - stages
       - warehouses
+      - projectconfigs
     verbs:
       - "*"
   - apiGroups:
@@ -115,6 +100,7 @@ rules:
       - argoproj.io
     resources:
       - analysistemplates
+      - clusteranalysistemplates
     verbs:
       - "*"
 {{- end }}

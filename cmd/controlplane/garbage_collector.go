@@ -14,18 +14,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/garbage"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
-	versionpkg "github.com/akuity/kargo/internal/version"
+	"github.com/akuity/kargo/internal/server/kubernetes"
+	versionpkg "github.com/akuity/kargo/pkg/x/version"
 )
 
 type garbageCollectorOptions struct {
 	KubeConfig string
 
-	PprofBindAddress string
+	MetricsBindAddress string
+	PprofBindAddress   string
 
 	Logger *logging.Logger
 }
@@ -54,6 +55,7 @@ func newGarbageCollectorCommand() *cobra.Command {
 
 func (o *garbageCollectorOptions) complete() {
 	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
+	o.MetricsBindAddress = os.GetEnv("METRICS_BIND_ADDRESS", "0")
 	o.PprofBindAddress = os.GetEnv("PPROF_BIND_ADDRESS", "")
 }
 
@@ -109,7 +111,7 @@ func (o *garbageCollectorOptions) setupManager(ctx context.Context) (manager.Man
 		ctrl.Options{
 			Scheme: scheme,
 			Metrics: server.Options{
-				BindAddress: "0",
+				BindAddress: o.MetricsBindAddress,
 			},
 			PprofBindAddress: o.PprofBindAddress,
 		},

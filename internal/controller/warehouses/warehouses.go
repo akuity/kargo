@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/conditions"
 	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/controller/git"
@@ -158,7 +159,7 @@ func (r *reconciler) Reconcile(
 	logger.Debug("reconciling Warehouse")
 
 	// Find the Warehouse
-	warehouse, err := kargoapi.GetWarehouse(ctx, r.client, req.NamespacedName)
+	warehouse, err := api.GetWarehouse(ctx, r.client, req.NamespacedName)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -211,7 +212,7 @@ func (r *reconciler) syncWarehouse(
 	status := *warehouse.Status.DeepCopy()
 
 	// Record the current refresh token as having been handled.
-	if token, ok := kargoapi.RefreshAnnotationValue(warehouse.GetAnnotations()); ok {
+	if token, ok := api.RefreshAnnotationValue(warehouse.GetAnnotations()); ok {
 		status.LastHandledRefresh = token
 	}
 
@@ -460,10 +461,10 @@ func (r *reconciler) buildFreightFromLatestArtifacts(
 		}
 		latestImage := result.References[0]
 		freight.Images = append(freight.Images, kargoapi.Image{
-			RepoURL:    result.RepoURL,
-			GitRepoURL: latestImage.GitRepoURL,
-			Tag:        latestImage.Tag,
-			Digest:     latestImage.Digest,
+			RepoURL:     result.RepoURL,
+			Tag:         latestImage.Tag,
+			Digest:      latestImage.Digest,
+			Annotations: latestImage.Annotations,
 		})
 	}
 
@@ -484,7 +485,7 @@ func (r *reconciler) buildFreightFromLatestArtifacts(
 	}
 
 	// Generate a unique ID for the Freight based on its contents.
-	freight.Name = freight.GenerateID()
+	freight.Name = api.GenerateFreightID(freight)
 
 	return freight, nil
 }

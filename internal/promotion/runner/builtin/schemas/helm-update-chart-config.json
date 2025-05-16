@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HelmUpdateChartConfig",
+  "type": "object",
+  "required": ["path", "charts"],
+  "additionalProperties": false,
+  "properties": {
+    "path": {
+      "type": "string",
+      "description": "The path at which the umbrella chart with the dependency can be found.",
+      "minLength": 1
+    },
+    "charts": {
+      "type": "array",
+      "description": "A list of chart dependencies which should receive updates.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "repository": {
+            "type": "string",
+            "description": "The repository of the subchart, as defined in `Chart.yaml`. It also supports OCI charts using `oci://`.",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "The name of the subchart, as defined in `Chart.yaml`.",
+            "minLength": 1
+          },
+          "version": {
+            "type": "string",
+            "description": "The version of the subchart to update to.",
+            "minLength": 1
+          }
+        },
+        "required": ["repository", "name", "version"]
+      }
+    }
+  }
+}
+

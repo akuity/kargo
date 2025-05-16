@@ -1,13 +1,13 @@
 .tile {
   padding: ~'@{sizeMD}px';
   border-radius: ~'@{borderRadiusLG}px';
-  box-shadow: 1px 1px #eee;
   border: 1px solid @colorBorder;
   text-decoration: none !important;
-}
+  background-color: @colorBgBase;
+  transition: border-color .1s;
+  color: inherit;
 
-.title {
-  font-size: 20px;
-  font-weight: 600;
-  color: black;
+  &:hover {
+    border-color: rgba(@colorPrimary, 0.5);
+  }
 }

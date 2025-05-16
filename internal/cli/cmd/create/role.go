@@ -13,13 +13,13 @@ import (
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
+	kargosvcapi "github.com/akuity/kargo/api/service/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/io"
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/cli/templates"
-	kargosvcapi "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
 type createRoleOptions struct {

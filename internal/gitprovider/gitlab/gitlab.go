@@ -4,10 +4,10 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"net/http"
 	"net/url"
 	"strings"
 
+	"github.com/hashicorp/go-cleanhttp"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 
 	"github.com/akuity/kargo/internal/git"
@@ -51,7 +51,7 @@ type mergeRequestClient interface {
 		pid any,
 		opt *gitlab.ListProjectMergeRequestsOptions,
 		options ...gitlab.RequestOptionFunc,
-	) ([]*gitlab.MergeRequest, *gitlab.Response, error)
+	) ([]*gitlab.BasicMergeRequest, *gitlab.Response, error)
 
 	GetMergeRequest(
 		pid any,
@@ -75,33 +75,36 @@ func NewProvider(
 	if opts == nil {
 		opts = &gitprovider.Options{}
 	}
-	host, projectName, err := parseRepoURL(repoURL)
+
+	scheme, host, projectName, err := parseRepoURL(repoURL)
 	if err != nil {
 		return nil, err
 	}
+
 	clientOpts := make([]gitlab.ClientOptionFunc, 0, 2)
+
 	if host != "gitlab.com" {
 		clientOpts = append(
 			clientOpts,
-			gitlab.WithBaseURL(fmt.Sprintf("https://%s/api/v4", host)),
+			gitlab.WithBaseURL(fmt.Sprintf("%s://%s/api/v4", scheme, host)),
 		)
 	}
+
+	httpClient := cleanhttp.DefaultClient()
 	if opts.InsecureSkipTLSVerify {
-		clientOpts = append(
-			clientOpts,
-			gitlab.WithHTTPClient(&http.Client{
-				Transport: &http.Transport{
-					TLSClientConfig: &tls.Config{
-						InsecureSkipVerify: true, // nolint: gosec
-					},
-				},
-			}),
-		)
+		transport := cleanhttp.DefaultTransport()
+		transport.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true, // nolint: gosec
+		}
+		httpClient.Transport = transport
 	}
+	clientOpts = append(clientOpts, gitlab.WithHTTPClient(httpClient))
+
 	client, err := gitlab.NewClient(opts.Token, clientOpts...)
 	if err != nil {
 		return nil, err
 	}
+
 	return &provider{
 		projectName: projectName,
 		client:      client.MergeRequests,
@@ -117,12 +120,11 @@ func (p *provider) CreatePullRequest(
 		opts = &gitprovider.CreatePullRequestOpts{}
 	}
 	glMR, _, err := p.client.CreateMergeRequest(p.projectName, &gitlab.CreateMergeRequestOptions{
-		Title:              &opts.Title,
-		Description:        &opts.Description,
-		Labels:             (*gitlab.LabelOptions)(&opts.Labels),
-		SourceBranch:       &opts.Head,
-		TargetBranch:       &opts.Base,
-		RemoveSourceBranch: gitlab.Ptr(true),
+		Title:        &opts.Title,
+		Description:  &opts.Description,
+		Labels:       (*gitlab.LabelOptions)(&opts.Labels),
+		SourceBranch: &opts.Head,
+		TargetBranch: &opts.Base,
 	})
 	if err != nil {
 		return nil, err
@@ -130,7 +132,7 @@ func (p *provider) CreatePullRequest(
 	if glMR == nil {
 		return nil, fmt.Errorf("unexpected nil merge request")
 	}
-	pr := convertGitlabMR(*glMR)
+	pr := convertGitlabMR(glMR.BasicMergeRequest)
 	return &pr, nil
 }
 
@@ -146,7 +148,7 @@ func (p *provider) GetPullRequest(
 	if glMR == nil {
 		return nil, fmt.Errorf("unexpected nil merge request")
 	}
-	pr := convertGitlabMR(*glMR)
+	pr := convertGitlabMR(glMR.BasicMergeRequest)
 	return &pr, nil
 }
 
@@ -175,7 +177,7 @@ func (p *provider) ListPullRequests(
 			PerPage: 100,
 		},
 	}
-	prs := []gitprovider.PullRequest{}
+	var prs []gitprovider.PullRequest
 	for {
 		glMRs, res, err := p.client.ListProjectMergeRequests(p.projectName, listOpts)
 		if err != nil {
@@ -196,8 +198,7 @@ func (p *provider) ListPullRequests(
 	return prs, nil
 }
 
-func convertGitlabMR(glMR gitlab.MergeRequest) gitprovider.PullRequest {
-	fmt.Println(glMR.MergeCommitSHA)
+func convertGitlabMR(glMR gitlab.BasicMergeRequest) gitprovider.PullRequest {
 	return gitprovider.PullRequest{
 		Number:         int64(glMR.IID),
 		URL:            glMR.WebURL,
@@ -210,14 +211,22 @@ func convertGitlabMR(glMR gitlab.MergeRequest) gitprovider.PullRequest {
 	}
 }
 
-func isMROpen(glMR gitlab.MergeRequest) bool {
+func isMROpen(glMR gitlab.BasicMergeRequest) bool {
 	return glMR.State == "opened" || glMR.State == "locked"
 }
 
-func parseRepoURL(repoURL string) (string, string, error) {
+func parseRepoURL(repoURL string) (string, string, string, error) {
 	u, err := url.Parse(git.NormalizeURL(repoURL))
 	if err != nil {
-		return "", "", fmt.Errorf("error parsing gitlab repository URL %q: %w", u, err)
+		return "", "", "", fmt.Errorf(
+			"error parsing gitlab repository URL %q: %w", u, err,
+		)
 	}
-	return u.Host, strings.TrimPrefix(u.Path, "/"), nil
+
+	scheme := u.Scheme
+	if scheme != "https" && scheme != "http" {
+		scheme = "https"
+	}
+
+	return scheme, u.Host, strings.TrimPrefix(u.Path, "/"), nil
 }

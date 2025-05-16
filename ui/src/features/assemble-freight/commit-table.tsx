@@ -1,7 +1,7 @@
 import { Radio, Table } from 'antd';
 import { useState } from 'react';
 
-import { DiscoveredCommit } from '@ui/gen/v1alpha1/generated_pb';
+import { DiscoveredCommit } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 import { calculatePageForSelectedRow } from '@ui/utils/pagination';
 

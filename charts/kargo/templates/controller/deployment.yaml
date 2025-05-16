@@ -64,12 +64,14 @@ spec:
           valueFrom:
             resourceFieldRef:
               containerName: controller
+              divisor: "1"
               resource: limits.memory
         - name: GOMAXPROCS
           valueFrom:
             resourceFieldRef:
               containerName: controller
-              resource: limits.cpu
+              divisor: "1"
+              resource: {{ include "kargo.selectCpuResourceField" (dict "resources" .Values.controller.resources) }}
         {{- with (concat .Values.global.env .Values.controller.env) }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -96,6 +98,9 @@ spec:
         - mountPath: /etc/ssl/certs
           name: certs
         {{- end }}
+        {{- with .Values.controller.volumeMounts }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
         {{- with .Values.controller.securityContext | default .Values.global.securityContext }}
         securityContext:
           {{- toYaml . | nindent 10 }}
@@ -103,30 +108,35 @@ spec:
         resources:
           {{- toYaml .Values.controller.resources | nindent 10 }}
 
-      {{- if or .Values.controller.cabundle.configMapName .Values.controller.cabundle.secretName }}
+      {{- if or .Values.controller.cabundle.configMapName .Values.controller.cabundle.secretName .Values.controller.initContainers  }}
       initContainers:
-      - name: parse-cabundle
-        image: {{ include "kargo.image" . }}
-        imagePullPolicy: {{ .Values.image.pullPolicy }}
-        securityContext:
-          runAsUser: 0
-        command:
-        - "/bin/sh"
-        - "-c"
-        args:
-        - |
-          for file in /tmp/source/*; do
-            base_filename=$(basename "$file" .crt)
-            awk 'BEGIN {c=0;} /BEGIN CERT/{c++} { print > "/usr/local/share/ca-certificates/" base_filename "." c ".crt"}' base_filename="$base_filename" < $file
-          done
-          /usr/sbin/update-ca-certificates
-          find /etc/ssl/certs -type l -exec cp --remove-destination {} /etc/ssl/certs/ \;
-          cp -r /etc/ssl/certs/* /tmp/target/
-        volumeMounts:
-        - name: cabundle
-          mountPath: /tmp/source
-        - name: certs
-          mountPath: /tmp/target
+      {{- with .Values.controller.initContainers }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if or .Values.controller.cabundle.configMapName .Values.controller.cabundle.secretName }}
+        - name: parse-cabundle
+          image: {{ include "kargo.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            runAsUser: 0
+          command:
+          - "/bin/sh"
+          - "-c"
+          args:
+          - |
+            for file in /tmp/source/*; do
+              base_filename=$(basename "$file" .crt)
+              awk 'BEGIN {c=0;} /BEGIN CERT/{c++} { print > "/usr/local/share/ca-certificates/" base_filename "." c ".crt"}' base_filename="$base_filename" < $file
+            done
+            /usr/sbin/update-ca-certificates
+            find /etc/ssl/certs -type l -exec cp --remove-destination {} /etc/ssl/certs/ \;
+            cp -r /etc/ssl/certs/* /tmp/target/
+          volumeMounts:
+          - name: cabundle
+            mountPath: /tmp/source
+          - name: certs
+            mountPath: /tmp/target
+      {{- end }}
       {{- end }}
       volumes:
       - name: tmp-data
@@ -170,6 +180,9 @@ spec:
         secret:
           secretName: {{ .Values.controller.gitClient.signingKeySecret.name }}
           defaultMode: 0644
+      {{- end }}
+      {{- with .Values.controller.volumes }}
+        {{- toYaml . | nindent 6 }}
       {{- end }}
       {{- with .Values.controller.nodeSelector | default .Values.global.nodeSelector }}
       nodeSelector:

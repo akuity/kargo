@@ -33,10 +33,10 @@ func (m *mockGitLabClient) ListProjectMergeRequests(
 	pid any,
 	opt *gitlab.ListProjectMergeRequestsOptions,
 	_ ...gitlab.RequestOptionFunc,
-) ([]*gitlab.MergeRequest, *gitlab.Response, error) {
+) ([]*gitlab.BasicMergeRequest, *gitlab.Response, error) {
 	m.pid = pid
 	m.listOpts = opt
-	return []*gitlab.MergeRequest{m.mr}, nil, nil
+	return []*gitlab.BasicMergeRequest{&m.mr.BasicMergeRequest}, nil, nil
 }
 
 func (m *mockGitLabClient) GetMergeRequest(
@@ -52,10 +52,12 @@ func (m *mockGitLabClient) GetMergeRequest(
 func TestCreatePullRequest(t *testing.T) {
 	mockClient := &mockGitLabClient{
 		mr: &gitlab.MergeRequest{
-			IID:            1,
-			MergeCommitSHA: "sha",
-			State:          "merged",
-			WebURL:         "url",
+			BasicMergeRequest: gitlab.BasicMergeRequest{
+				IID:            1,
+				MergeCommitSHA: "sha",
+				State:          "merged",
+				WebURL:         "url",
+			},
 		},
 	}
 	g := provider{
@@ -87,10 +89,12 @@ func TestCreatePullRequest(t *testing.T) {
 func TestGetPullRequest(t *testing.T) {
 	mockClient := &mockGitLabClient{
 		mr: &gitlab.MergeRequest{
-			IID:            1,
-			MergeCommitSHA: "sha",
-			State:          "merged",
-			WebURL:         "url",
+			BasicMergeRequest: gitlab.BasicMergeRequest{
+				IID:            1,
+				MergeCommitSHA: "sha",
+				State:          "merged",
+				WebURL:         "url",
+			},
 		},
 	}
 	g := provider{
@@ -111,10 +115,12 @@ func TestGetPullRequest(t *testing.T) {
 func TestListPullRequests(t *testing.T) {
 	mockClient := &mockGitLabClient{
 		mr: &gitlab.MergeRequest{
-			IID:            1,
-			MergeCommitSHA: "sha",
-			State:          "merged",
-			WebURL:         "url",
+			BasicMergeRequest: gitlab.BasicMergeRequest{
+				IID:            1,
+				MergeCommitSHA: "sha",
+				State:          "merged",
+				WebURL:         "url",
+			},
 		},
 	}
 	g := provider{
@@ -143,28 +149,43 @@ func TestListPullRequests(t *testing.T) {
 func TestParseGitLabURL(t *testing.T) {
 	const expectedProjectName = "akuity/kargo"
 	testCases := []struct {
-		url          string
-		expectedHost string
+		url            string
+		expectedScheme string
+		expectedHost   string
 	}{
 		{
-			url:          "https://gitlab.com/akuity/kargo",
-			expectedHost: "gitlab.com",
+			url:            "https://gitlab.com/akuity/kargo",
+			expectedScheme: "https",
+			expectedHost:   "gitlab.com",
 		},
 		{
-			url:          "https://gitlab.com/akuity/kargo.git",
-			expectedHost: "gitlab.com",
+			url:            "https://gitlab.com/akuity/kargo.git",
+			expectedScheme: "https",
+			expectedHost:   "gitlab.com",
 		},
 		{
 			// This isn't a real URL. It's just to validate that the function can
 			// handle GitHub Enterprise URLs.
-			url:          "https://gitlab.akuity.io/akuity/kargo.git",
-			expectedHost: "gitlab.akuity.io",
+			url:            "https://gitlab.akuity.io/akuity/kargo.git",
+			expectedScheme: "https",
+			expectedHost:   "gitlab.akuity.io",
+		},
+		{
+			url:            "ssh://gitlab.com/akuity/kargo.git",
+			expectedScheme: "https",
+			expectedHost:   "gitlab.com",
+		},
+		{
+			url:            "http://git.example.com/akuity/kargo",
+			expectedScheme: "http",
+			expectedHost:   "git.example.com",
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.url, func(t *testing.T) {
-			host, projectName, err := parseRepoURL(testCase.url)
+			scheme, host, projectName, err := parseRepoURL(testCase.url)
 			require.NoError(t, err)
+			require.Equal(t, testCase.expectedScheme, scheme)
 			require.Equal(t, testCase.expectedHost, host)
 			require.Equal(t, expectedProjectName, projectName)
 		})

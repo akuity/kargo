@@ -1,5 +1,5 @@
+import { Freight, FreightReference, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 import { ObjectMeta } from '@ui/gen/k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb';
-import { Freight, FreightReference, Stage } from '@ui/gen/v1alpha1/generated_pb';
 import { PlainMessageRecursive } from '@ui/utils/connectrpc-utils';
 
 export const ALIAS_LABEL_KEY = 'kargo.akuity.io/alias';

@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.17.0
+    controller-gen.kubebuilder.io/version: v0.18.0
   name: clusterpromotiontasks.kargo.akuity.io
 spec:
   group: kargo.akuity.io
@@ -64,8 +64,22 @@ spec:
                         Config is opaque configuration for the PromotionStep that is understood
                         only by each PromotionStep's implementation. It is legal to utilize
                         expressions in defining values at any level of this block.
-                        See https://docs.kargo.io/references/expression-language for details.
+                        See https://docs.kargo.io/user-guide/reference-docs/expressions for details.
                       x-kubernetes-preserve-unknown-fields: true
+                    continueOnError:
+                      description: |-
+                        ContinueOnError is a boolean value that, if set to true, will cause the
+                        Promotion to continue executing the next step even if this step fails. It
+                        also will not permit this failure to impact the overall status of the
+                        Promotion.
+                      type: boolean
+                    if:
+                      description: |-
+                        If is an optional expression that, if present, must evaluate to a boolean
+                        value. If the expression evaluates to false, the step will be skipped.
+                        If the expression does not evaluate to a boolean value, the step will be
+                        considered to have failed.
+                      type: string
                     retry:
                       description: Retry is the retry policy for this step.
                       properties:
@@ -144,8 +158,12 @@ spec:
                         PromotionSpec.
                       items:
                         description: |-
-                          PromotionVariable describes a single variable that may be referenced by
-                          expressions in promotion steps.
+                          ExpressionVariable describes a single variable that may be referenced by
+                          expressions in the context of a ClusterPromotionTask, PromotionTask,
+                          Promotion, AnalysisRun arguments, or other objects that support expressions.
+
+                          It is used to pass information to the expression evaluation engine, and to
+                          allow for dynamic evaluation of expressions based on the variable values.
                         properties:
                           name:
                             description: Name is the name of the variable.
@@ -156,7 +174,7 @@ spec:
                             description: |-
                               Value is the value of the variable. It is allowed to utilize expressions
                               in the value.
-                              See https://docs.kargo.io/references/expression-language for details.
+                              See https://docs.kargo.io/user-guide/reference-docs/expressions for details.
                             type: string
                         required:
                         - name
@@ -176,8 +194,12 @@ spec:
                   overridden by the step referencing the task.
                 items:
                   description: |-
-                    PromotionVariable describes a single variable that may be referenced by
-                    expressions in promotion steps.
+                    ExpressionVariable describes a single variable that may be referenced by
+                    expressions in the context of a ClusterPromotionTask, PromotionTask,
+                    Promotion, AnalysisRun arguments, or other objects that support expressions.
+
+                    It is used to pass information to the expression evaluation engine, and to
+                    allow for dynamic evaluation of expressions based on the variable values.
                   properties:
                     name:
                       description: Name is the name of the variable.
@@ -188,7 +210,7 @@ spec:
                       description: |-
                         Value is the value of the variable. It is allowed to utilize expressions
                         in the value.
-                        See https://docs.kargo.io/references/expression-language for details.
+                        See https://docs.kargo.io/user-guide/reference-docs/expressions for details.
                       type: string
                   required:
                   - name

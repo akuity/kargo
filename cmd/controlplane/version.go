@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	versionpkg "github.com/akuity/kargo/internal/version"
+	versionpkg "github.com/akuity/kargo/pkg/x/version"
 )
 
 type versionOptions struct{}

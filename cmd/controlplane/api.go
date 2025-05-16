@@ -8,14 +8,14 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/akuity/kargo/internal/api"
-	"github.com/akuity/kargo/internal/api/config"
-	"github.com/akuity/kargo/internal/api/kubernetes"
-	"github.com/akuity/kargo/internal/api/rbac"
 	"github.com/akuity/kargo/internal/kubernetes/event"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
-	versionpkg "github.com/akuity/kargo/internal/version"
+	"github.com/akuity/kargo/internal/server"
+	"github.com/akuity/kargo/internal/server/config"
+	"github.com/akuity/kargo/internal/server/kubernetes"
+	"github.com/akuity/kargo/internal/server/rbac"
+	versionpkg "github.com/akuity/kargo/pkg/x/version"
 )
 
 type apiOptions struct {
@@ -81,17 +81,28 @@ func (o *apiOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error creating Kubernetes client for Kargo API server: %w", err)
 	}
 
-	switch {
-	case !serverCfg.RolloutsIntegrationEnabled:
-		o.Logger.Info("Argo Rollouts integration is disabled")
-	case !argoRolloutsExists(ctx, restCfg):
-		o.Logger.Info(
-			"Argo Rollouts integration was enabled, but no Argo Rollouts " +
-				"CRDs were found. Proceeding without Argo Rollouts integration.",
-		)
-		serverCfg.RolloutsIntegrationEnabled = false
-	default:
-		o.Logger.Info("Argo Rollouts integration is enabled")
+	if serverCfg.RolloutsIntegrationEnabled {
+		var exists bool
+		if exists, err = argoRolloutsExists(ctx, restCfg); !exists || err != nil {
+			// If we are unable to determine if Argo Rollouts is installed, we
+			// will return an error and fail to start the server. Note this
+			// will only happen if we get an inconclusive response from the API
+			// server (e.g. due to network issues), and not if Argo Rollouts is
+			// not installed.
+			if err != nil {
+				return fmt.Errorf("unable to determine if Argo Rollouts is installed: %w", err)
+			}
+
+			o.Logger.Info(
+				"Argo Rollouts integration was enabled, but no Argo Rollouts " +
+					"CRDs were found. Proceeding without Argo Rollouts integration.",
+			)
+			serverCfg.RolloutsIntegrationEnabled = false
+		} else {
+			o.Logger.Debug("Argo Rollouts integration is enabled")
+		}
+	} else {
+		o.Logger.Debug("Argo Rollouts integration is disabled")
 	}
 
 	if serverCfg.AdminConfig != nil {
@@ -106,7 +117,7 @@ func (o *apiOptions) run(ctx context.Context) error {
 		)
 	}
 
-	srv := api.NewServer(
+	srv := server.NewServer(
 		serverCfg,
 		kubeClient,
 		rbac.NewKubernetesRolesDatabase(kubeClient),

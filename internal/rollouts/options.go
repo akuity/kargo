@@ -3,6 +3,7 @@ package rollouts
 import (
 	"maps"
 
+	"github.com/expr-lang/expr"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -27,10 +28,12 @@ type AnalysisRunOption interface {
 
 // AnalysisRunOptions holds the options for building an AnalysisRun.
 type AnalysisRunOptions struct {
-	NamePrefix  string
-	NameSuffix  string
-	ExtraLabels map[string]string
-	Owners      []Owner
+	NamePrefix       string
+	NameSuffix       string
+	ExtraLabels      map[string]string
+	ExtraAnnotations map[string]string
+	Owners           []Owner
+	ExpressionConfig *ArgumentEvaluationConfig
 }
 
 // Owner represents a reference to an owner object.
@@ -39,6 +42,42 @@ type Owner struct {
 	Kind          string
 	Reference     types.NamespacedName
 	BlockDeletion bool
+}
+
+// ArgumentEvaluationConfig holds the configuration for the evaluation of
+// expressions in the AnalysisRun arguments. It contains the environment
+// variables, the variables, and the options for the expression evaluation.
+//
+// Note: The builder may modify the Env map to add additional information.
+// For example, to add any evaluated Vars. Because of this, it is recommended
+// not to reuse the same ArgumentEvaluationConfig or Env map for multiple
+// builds without making use of a deep copy.
+type ArgumentEvaluationConfig struct {
+	// Env is a (nested) map of variables that can be used in the expressions.
+	// The keys are the variable names, and the values are the variable values.
+	// When the value itself is a map, it is considered a nested variable and
+	// can be accessed using dot notation. e.g. `${{ foo.bar }}`.
+	//
+	// Note: The Env map can be modified by the builder to add additional
+	// information. For example, to add any evaluated Vars.
+	Env map[string]any
+	// Vars are the variables that can be used in the expressions. They are
+	// evaluated in the order they are defined. After the evaluation of the
+	// variables, they are available in the Env map as `${{ vars.<name>}}`.
+	Vars []ArgumentVariable
+	// Options are the options for the expression evaluation. It can be used to
+	// configure the behavior of the expression evaluation and the functions
+	// available.
+	Options []expr.Option
+}
+
+// ArgumentVariable represents a variable that can be used in the AnalysisRun
+// arguments.
+type ArgumentVariable struct {
+	// Name is the name of the variable.
+	Name string
+	// Value is the value of the variable.
+	Value string
 }
 
 // Apply applies the given options to the AnalysisRunOptions.
@@ -84,10 +123,31 @@ func (o WithExtraLabels) ApplyToAnalysisRun(opts *AnalysisRunOptions) {
 	opts.ExtraLabels = o
 }
 
+// WithExtraAnnotations sets the extra labels for the AnalysisRun. It can be passed
+// multiple times to add more annotations.
+type WithExtraAnnotations map[string]string
+
+func (o WithExtraAnnotations) ApplyToAnalysisRun(opts *AnalysisRunOptions) {
+	if opts.ExtraAnnotations != nil {
+		maps.Copy(opts.ExtraAnnotations, o)
+		return
+	}
+	opts.ExtraAnnotations = o
+}
+
 // WithOwner sets the owner for the AnalysisRun. It can be passed multiple times
 // to add more owners.
 type WithOwner Owner
 
 func (o WithOwner) ApplyToAnalysisRun(opts *AnalysisRunOptions) {
 	opts.Owners = append(opts.Owners, Owner(o))
+}
+
+// WithArgumentEvaluationConfig sets the argument evaluation configuration for
+// the AnalysisRun. By default, the environment is empty, and only the builtin
+// functions are available.
+type WithArgumentEvaluationConfig ArgumentEvaluationConfig
+
+func (o WithArgumentEvaluationConfig) ApplyToAnalysisRun(opts *AnalysisRunOptions) {
+	opts.ExpressionConfig = (*ArgumentEvaluationConfig)(&o)
 }

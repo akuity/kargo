@@ -16,23 +16,27 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
+	rollouts "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/api/kubernetes"
 	libargocd "github.com/akuity/kargo/internal/argocd"
 	"github.com/akuity/kargo/internal/controller"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/promotions"
-	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/stages"
 	"github.com/akuity/kargo/internal/controller/warehouses"
 	"github.com/akuity/kargo/internal/credentials"
 	credsdb "github.com/akuity/kargo/internal/credentials/kubernetes"
-	"github.com/akuity/kargo/internal/directives"
+	"github.com/akuity/kargo/internal/health"
+	healthCheckers "github.com/akuity/kargo/internal/health/checker/builtin"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
+	"github.com/akuity/kargo/internal/promotion"
+	promotionStepRunners "github.com/akuity/kargo/internal/promotion/runner/builtin"
+	"github.com/akuity/kargo/internal/server/kubernetes"
 	"github.com/akuity/kargo/internal/types"
-	versionpkg "github.com/akuity/kargo/internal/version"
+	pkgPromo "github.com/akuity/kargo/pkg/promotion"
+	versionpkg "github.com/akuity/kargo/pkg/x/version"
 )
 
 type controllerOptions struct {
@@ -43,7 +47,8 @@ type controllerOptions struct {
 	ArgoCDKubeConfig    string
 	ArgoCDNamespaceOnly bool
 
-	PprofBindAddress string
+	MetricsBindAddress string
+	PprofBindAddress   string
 
 	Logger *logging.Logger
 }
@@ -76,6 +81,7 @@ func (o *controllerOptions) complete() {
 	o.ArgoCDEnabled = types.MustParseBool(os.GetEnv("ARGOCD_INTEGRATION_ENABLED", "true"))
 	o.ArgoCDKubeConfig = os.GetEnv("ARGOCD_KUBECONFIG", "")
 	o.ArgoCDNamespaceOnly = types.MustParseBool(os.GetEnv("ARGOCD_WATCH_ARGOCD_NAMESPACE_ONLY", "false"))
+	o.MetricsBindAddress = os.GetEnv("METRICS_BIND_ADDRESS", "0")
 	o.PprofBindAddress = os.GetEnv("PPROF_BIND_ADDRESS", "")
 }
 
@@ -158,7 +164,8 @@ func (o *controllerOptions) setupKargoManager(
 		)
 	}
 	if stagesReconcilerCfg.RolloutsIntegrationEnabled {
-		if argoRolloutsExists(ctx, restCfg) {
+		var exists bool
+		if exists, err = argoRolloutsExists(ctx, restCfg); exists {
 			o.Logger.Info("Argo Rollouts integration is enabled")
 			if err = rollouts.AddToScheme(scheme); err != nil {
 				return nil, stagesReconcilerCfg, fmt.Errorf(
@@ -167,6 +174,18 @@ func (o *controllerOptions) setupKargoManager(
 				)
 			}
 		} else {
+			// If we are unable to determine if Argo Rollouts is installed, we
+			// will return an error and fail to start the controller. Note this
+			// will only happen if we get an inconclusive response from the API
+			// server (e.g. due to network issues), and not if Argo Rollouts is
+			// not installed.
+			if err != nil {
+				return nil, stagesReconcilerCfg, fmt.Errorf(
+					"unable to determine if Argo Rollouts is installed: %w",
+					err,
+				)
+			}
+
 			// Disable Argo Rollouts integration if the CRDs are not found.
 			stagesReconcilerCfg.RolloutsIntegrationEnabled = false
 			o.Logger.Info(
@@ -187,17 +206,23 @@ func (o *controllerOptions) setupKargoManager(
 		ctrl.Options{
 			Scheme: scheme,
 			Metrics: server.Options{
-				BindAddress: "0",
+				BindAddress: o.MetricsBindAddress,
 			},
 			PprofBindAddress: o.PprofBindAddress,
 			Client: client.Options{
 				Cache: &client.CacheOptions{
-					// The controller does not have cluster-wide permissions, to
-					// get/list/watch Secrets. Its access to Secrets grows and shrinks
-					// dynamically as Projects are created and deleted. We disable caching
-					// here since the underlying informer will not be able to watch
-					// Secrets in all namespaces.
-					DisableFor: []client.Object{&corev1.Secret{}},
+					DisableFor: []client.Object{
+						// The controller does not have cluster-wide permissions, to
+						// get/list/watch Secrets. Its access to Secrets grows and shrinks
+						// dynamically as Projects are created and deleted. We disable
+						// caching here since the underlying informer will not be able to
+						// watch Secrets in all namespaces.
+						&corev1.Secret{},
+						// The controller has cluster-wide permissions to get/list/watch
+						// ConfigMaps, but ConfigMaps have the potential to be quite large,
+						// so we prefer to not cache them.
+						&corev1.ConfigMap{},
+					},
 				},
 			},
 			Cache: cache.Options{
@@ -241,7 +266,16 @@ func (o *controllerOptions) setupArgoCDManager(ctx context.Context) (manager.Man
 	// There's a chance there is only permission to interact with Argo CD
 	// Application resources in a single namespace, so we will use that
 	// namespace when attempting to determine if Argo CD CRDs are installed.
-	if !argoCDExists(ctx, restCfg, argocdNamespace) {
+	var exists bool
+	if exists, err = argoCDExists(ctx, restCfg, argocdNamespace); !exists || err != nil {
+		// If we are unable to determine if Argo CD is installed, we will
+		// return an error and fail to start the controller. Note this
+		// will only happen if we get an inconclusive response from the API
+		// server (e.g. due to network issues), and not if Argo CD is not
+		// installed.
+		if err != nil {
+			return nil, fmt.Errorf("unable to determine if Argo CD is installed: %w", err)
+		}
 		o.Logger.Info(
 			"Argo CD integration was enabled, but no Argo CD CRDs were found. " +
 				"Proceeding without Argo CD integration.",
@@ -293,21 +327,26 @@ func (o *controllerOptions) setupReconcilers(
 	if argocdMgr != nil {
 		argoCDClient = argocdMgr.GetClient()
 	}
-	sharedIndexer := indexer.NewSharedFieldIndexer(kargoMgr.GetFieldIndexer())
 
-	directivesEngine := directives.NewSimpleEngine(credentialsDB, kargoMgr.GetClient(), argoCDClient)
+	promotionStepRunners.Initialize(kargoMgr.GetClient(), argoCDClient, credentialsDB)
+	healthCheckers.Initialize(argoCDClient)
+
+	sharedIndexer := indexer.NewSharedFieldIndexer(kargoMgr.GetFieldIndexer())
 
 	if err := promotions.SetupReconcilerWithManager(
 		ctx,
 		kargoMgr,
 		argocdMgr,
-		directivesEngine,
+		promotion.NewSimpleEngine(kargoMgr.GetClient()),
 		promotions.ReconcilerConfigFromEnv(),
 	); err != nil {
 		return fmt.Errorf("error setting up Promotions reconciler: %w", err)
 	}
 
-	if err := stages.NewRegularStageReconciler(stagesReconcilerCfg, directivesEngine).SetupWithManager(
+	if err := stages.NewRegularStageReconciler(
+		stagesReconcilerCfg,
+		health.NewAggregatingChecker(),
+	).SetupWithManager(
 		ctx,
 		kargoMgr,
 		argocdMgr,
@@ -373,4 +412,8 @@ func (o *controllerOptions) startManagers(ctx context.Context, kargoMgr, argocdM
 	case <-doneCh:
 		return nil
 	}
+}
+
+func RegisterPromotionStepRunner(runner pkgPromo.StepRunner) {
+	promotion.RegisterStepRunner(runner)
 }

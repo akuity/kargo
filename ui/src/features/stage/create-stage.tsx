@@ -1,11 +1,5 @@
 import { useMutation } from '@connectrpc/connect-query';
-import {
-  faBook,
-  faCode,
-  faListCheck,
-  faTheaterMasks,
-  faTimes
-} from '@fortawesome/free-solid-svg-icons';
+import { faCode, faListCheck, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button, Col, Drawer, Flex, Input, Row, Select, Tabs, Typography } from 'antd';
@@ -19,16 +13,15 @@ import { z } from 'zod';
 import { paths } from '@ui/config/paths';
 import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
 import { FieldContainer } from '@ui/features/common/form/field-container';
+import { createResource } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { PromotionStep, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 import { JSON } from '@ui/gen/k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated_pb';
 import schema from '@ui/gen/schema/stages.kargo.akuity.io_v1alpha1.json';
-import { createResource } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { PromotionStep, Stage } from '@ui/gen/v1alpha1/generated_pb';
 import { PlainMessage } from '@ui/utils/connectrpc-utils';
 import { cleanEmptyObjectValues } from '@ui/utils/helpers';
 import { zodValidators } from '@ui/utils/validators';
 
-import { getStageYAMLExample } from '../project/pipelines/utils/stage-yaml-example';
-
+import { getStageYAMLExample } from './get-stage-yaml-example';
 import { PromotionStepsWizard } from './promotion-steps-wizard/promotion-steps-wizard';
 import { usePromotionWizardStepsState } from './promotion-steps-wizard/use-promotion-wizard-steps-state';
 import { RequestedFreight } from './requested-freight';
@@ -126,6 +119,8 @@ export const CreateStage = ({
         promotionWizardStepsState.state?.map((step) => ({
           uses: step?.identifier,
           as: step?.as || '',
+          if: '',
+          continueOnError: step.continueOnError || false,
           config: step?.state as JSON, // step.state is type 'object' and it is safe to fake JSON type because it doesn't matter for stageFormToYAML function
           vars: []
         }))
@@ -149,25 +144,23 @@ export const CreateStage = ({
   const promotionWizardStepsState = usePromotionWizardStepsState();
 
   return (
-    <Drawer open={!!project} width={'80%'} closable={false} onClose={close}>
-      <Flex align='center' className='mb-4'>
-        <Typography.Title level={1} className='flex items-center !m-0'>
-          <FontAwesomeIcon icon={faTheaterMasks} className='mr-2 text-base text-gray-400' />
-          Create Stage
-        </Typography.Title>
+    <Drawer
+      open={!!project}
+      width={'80%'}
+      onClose={close}
+      title='Create Stage'
+      extra={
         <Typography.Link
-          href='https://docs.kargo.io/concepts/#stage-resources'
+          href='https://docs.kargo.io/user-guide/how-to-guides/working-with-stages'
           target='_blank'
           className='ml-3'
         >
-          <FontAwesomeIcon icon={faBook} />
+          Docs
         </Typography.Link>
-        <Button onClick={close} className='ml-auto'>
-          Cancel
-        </Button>
-      </Flex>
-
+      }
+    >
       <Tabs
+        className='-mt-4'
         onChange={(newTab) => {
           if (tab === 'wizard' && newTab === 'yaml') {
             setValue(
@@ -178,6 +171,8 @@ export const CreateStage = ({
                 promotionWizardStepsState.state?.map((step) => ({
                   uses: step?.identifier,
                   as: step?.as || '',
+                  if: '',
+                  continueOnError: step?.continueOnError || false,
                   config: step?.state as JSON, // step.state is type 'object' and it is safe to fake JSON type because it doesn't matter for stageFormToYAML function
                   vars: []
                 }))
@@ -206,7 +201,9 @@ export const CreateStage = ({
           className='mb-4'
         >
           <FieldContainer name='name' label='Name' control={wizardControl}>
-            {({ field }) => <Input {...field} placeholder='my-stage' />}
+            {({ field }) => (
+              <Input {...field} value={field.value as string} placeholder='my-stage' />
+            )}
           </FieldContainer>
           <FieldContainer name='color' label='Color' control={wizardControl}>
             {({ field }) => (
@@ -319,7 +316,7 @@ export const CreateStage = ({
           </FieldContainer>
         </Tabs.TabPane>
       </Tabs>
-      <Button onClick={onSubmit} loading={isPending}>
+      <Button onClick={onSubmit} loading={isPending} type='primary'>
         Create
       </Button>
     </Drawer>

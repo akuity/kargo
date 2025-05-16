@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/api/user"
+	"github.com/akuity/kargo/internal/server/user"
 )
 
 func TestPromotionBuilder_Build(t *testing.T) {
@@ -82,9 +82,12 @@ func TestPromotionBuilder_Build(t *testing.T) {
 					Namespace: "test-project",
 				},
 				Spec: kargoapi.StageSpec{
+					Vars: []kargoapi.ExpressionVariable{
+						{Name: "key0", Value: "value0"},
+					},
 					PromotionTemplate: &kargoapi.PromotionTemplate{
 						Spec: kargoapi.PromotionTemplateSpec{
-							Vars: []kargoapi.PromotionVariable{
+							Vars: []kargoapi.ExpressionVariable{
 								{Name: "key1", Value: "value1"},
 							},
 							Steps: []kargoapi.PromotionStep{
@@ -108,7 +111,11 @@ func TestPromotionBuilder_Build(t *testing.T) {
 				assert.Equal(t, "abc123", promotion.Spec.Freight)
 
 				// Check vars
-				assert.Equal(t, []kargoapi.PromotionVariable{
+				assert.Equal(t, []kargoapi.ExpressionVariable{
+					{
+						Name:  "key0",
+						Value: "value0",
+					},
 					{
 						Name:  "key1",
 						Value: "value1",
@@ -141,7 +148,7 @@ func TestPromotionBuilder_Build(t *testing.T) {
 									Task: &kargoapi.PromotionTaskReference{
 										Name: "test-task",
 									},
-									Vars: []kargoapi.PromotionVariable{
+									Vars: []kargoapi.ExpressionVariable{
 										{Name: "input1", Value: "value1"},
 									},
 								},
@@ -252,7 +259,7 @@ func TestPromotionBuilder_InflateSteps(t *testing.T) {
 							Task: &kargoapi.PromotionTaskReference{
 								Name: "test-task",
 							},
-							Vars: []kargoapi.PromotionVariable{
+							Vars: []kargoapi.ExpressionVariable{
 								{Name: "input1", Value: "value1"},
 							},
 						},
@@ -266,7 +273,7 @@ func TestPromotionBuilder_InflateSteps(t *testing.T) {
 						Namespace: "test-project",
 					},
 					Spec: kargoapi.PromotionTaskSpec{
-						Vars: []kargoapi.PromotionVariable{
+						Vars: []kargoapi.ExpressionVariable{
 							{Name: "input1"},
 						},
 						Steps: []kargoapi.PromotionStep{
@@ -289,7 +296,7 @@ func TestPromotionBuilder_InflateSteps(t *testing.T) {
 				// Check inflated task step
 				assert.Equal(t, "task-step::sub-step", steps[1].As)
 				assert.Equal(t, "other-fake-step", steps[1].Uses)
-				assert.ElementsMatch(t, []kargoapi.PromotionVariable{
+				assert.ElementsMatch(t, []kargoapi.ExpressionVariable{
 					{Name: "input1", Value: "value1"},
 				}, steps[1].Vars)
 			},
@@ -308,7 +315,7 @@ func TestPromotionBuilder_InflateSteps(t *testing.T) {
 							Task: &kargoapi.PromotionTaskReference{
 								Name: "test-task-1",
 							},
-							Vars: []kargoapi.PromotionVariable{
+							Vars: []kargoapi.ExpressionVariable{
 								{Name: "input1", Value: "value1"},
 							},
 						},
@@ -318,7 +325,7 @@ func TestPromotionBuilder_InflateSteps(t *testing.T) {
 								Kind: "ClusterPromotionTask",
 								Name: "test-task-2",
 							},
-							Vars: []kargoapi.PromotionVariable{
+							Vars: []kargoapi.ExpressionVariable{
 								{Name: "input2", Value: "value2"},
 							},
 						},
@@ -332,7 +339,7 @@ func TestPromotionBuilder_InflateSteps(t *testing.T) {
 						Namespace: "test-project",
 					},
 					Spec: kargoapi.PromotionTaskSpec{
-						Vars: []kargoapi.PromotionVariable{
+						Vars: []kargoapi.ExpressionVariable{
 							{Name: "input1"},
 						},
 						Steps: []kargoapi.PromotionStep{
@@ -348,7 +355,7 @@ func TestPromotionBuilder_InflateSteps(t *testing.T) {
 						Name: "test-task-2",
 					},
 					Spec: kargoapi.PromotionTaskSpec{
-						Vars: []kargoapi.PromotionVariable{
+						Vars: []kargoapi.ExpressionVariable{
 							{Name: "input2"},
 						},
 						Steps: []kargoapi.PromotionStep{
@@ -366,13 +373,13 @@ func TestPromotionBuilder_InflateSteps(t *testing.T) {
 
 				assert.Equal(t, "task1::step1", steps[0].As)
 				assert.Equal(t, "fake-step", steps[0].Uses)
-				assert.ElementsMatch(t, []kargoapi.PromotionVariable{
+				assert.ElementsMatch(t, []kargoapi.ExpressionVariable{
 					{Name: "input1", Value: "value1"},
 				}, steps[0].Vars)
 
 				assert.Equal(t, "task2::step2", steps[1].As)
 				assert.Equal(t, "other-fake-step", steps[1].Uses)
-				assert.ElementsMatch(t, []kargoapi.PromotionVariable{
+				assert.ElementsMatch(t, []kargoapi.ExpressionVariable{
 					{Name: "input2", Value: "value2"},
 				}, steps[1].Vars)
 			},
@@ -402,7 +409,7 @@ func TestPromotionBuilder_inflateTaskSteps(t *testing.T) {
 		name       string
 		project    string
 		taskAlias  string
-		promoVars  []kargoapi.PromotionVariable
+		promoVars  []kargoapi.ExpressionVariable
 		taskStep   kargoapi.PromotionStep
 		objects    []client.Object
 		assertions func(*testing.T, []kargoapi.PromotionStep, error)
@@ -439,7 +446,7 @@ func TestPromotionBuilder_inflateTaskSteps(t *testing.T) {
 						Namespace: "test-project",
 					},
 					Spec: kargoapi.PromotionTaskSpec{
-						Vars: []kargoapi.PromotionVariable{
+						Vars: []kargoapi.ExpressionVariable{
 							{Name: "input1"},
 						},
 					},
@@ -454,14 +461,14 @@ func TestPromotionBuilder_inflateTaskSteps(t *testing.T) {
 			name:      "successful task step inflation",
 			project:   "test-project",
 			taskAlias: "task-1",
-			promoVars: []kargoapi.PromotionVariable{
+			promoVars: []kargoapi.ExpressionVariable{
 				{Name: "input3", Value: "value1"},
 			},
 			taskStep: kargoapi.PromotionStep{
 				Task: &kargoapi.PromotionTaskReference{
 					Name: "test-task",
 				},
-				Vars: []kargoapi.PromotionVariable{
+				Vars: []kargoapi.ExpressionVariable{
 					{Name: "input1", Value: "value1"},
 					{Name: "input2", Value: "value2"},
 				},
@@ -473,7 +480,7 @@ func TestPromotionBuilder_inflateTaskSteps(t *testing.T) {
 						Namespace: "test-project",
 					},
 					Spec: kargoapi.PromotionTaskSpec{
-						Vars: []kargoapi.PromotionVariable{
+						Vars: []kargoapi.ExpressionVariable{
 							{Name: "input1"},
 							{Name: "input2", Value: "default2"},
 							{Name: "input3"},
@@ -486,7 +493,7 @@ func TestPromotionBuilder_inflateTaskSteps(t *testing.T) {
 							{
 								As:   "step2",
 								Uses: "other-fake-step",
-								Vars: []kargoapi.PromotionVariable{
+								Vars: []kargoapi.ExpressionVariable{
 									{Name: "input4", Value: "value4"},
 								},
 							},
@@ -500,7 +507,7 @@ func TestPromotionBuilder_inflateTaskSteps(t *testing.T) {
 
 				assert.Equal(t, "task-1::step1", steps[0].As)
 				assert.Equal(t, "fake-step", steps[0].Uses)
-				assert.ElementsMatch(t, []kargoapi.PromotionVariable{
+				assert.ElementsMatch(t, []kargoapi.ExpressionVariable{
 					{Name: "input2", Value: "default2"},
 					{Name: "input1", Value: "value1"},
 					{Name: "input2", Value: "value2"},
@@ -508,7 +515,7 @@ func TestPromotionBuilder_inflateTaskSteps(t *testing.T) {
 
 				assert.Equal(t, "task-1::step2", steps[1].As)
 				assert.Equal(t, "other-fake-step", steps[1].Uses)
-				assert.ElementsMatch(t, []kargoapi.PromotionVariable{
+				assert.ElementsMatch(t, []kargoapi.ExpressionVariable{
 					{Name: "input2", Value: "default2"},
 					{Name: "input1", Value: "value1"},
 					{Name: "input2", Value: "value2"},
@@ -524,7 +531,7 @@ func TestPromotionBuilder_inflateTaskSteps(t *testing.T) {
 				Task: &kargoapi.PromotionTaskReference{
 					Name: "test-task",
 				},
-				Vars: []kargoapi.PromotionVariable{
+				Vars: []kargoapi.ExpressionVariable{
 					{Name: "input1", Value: "value1"},
 				},
 			},
@@ -535,7 +542,7 @@ func TestPromotionBuilder_inflateTaskSteps(t *testing.T) {
 						Namespace: "test-project",
 					},
 					Spec: kargoapi.PromotionTaskSpec{
-						Vars: []kargoapi.PromotionVariable{
+						Vars: []kargoapi.ExpressionVariable{
 							{Name: "input1"},
 						},
 						Steps: []kargoapi.PromotionStep{
@@ -553,8 +560,8 @@ func TestPromotionBuilder_inflateTaskSteps(t *testing.T) {
 				require.NoError(t, err)
 				require.Len(t, steps, 2)
 
-				assert.Equal(t, "custom-alias::step-0", steps[0].As)
-				assert.Equal(t, "custom-alias::step-1", steps[1].As)
+				assert.Equal(t, "custom-alias::step-1", steps[0].As)
+				assert.Equal(t, "custom-alias::step-2", steps[1].As)
 			},
 		},
 		{
@@ -566,7 +573,7 @@ func TestPromotionBuilder_inflateTaskSteps(t *testing.T) {
 					Kind: "ClusterPromotionTask",
 					Name: "test-cluster-task",
 				},
-				Vars: []kargoapi.PromotionVariable{
+				Vars: []kargoapi.ExpressionVariable{
 					{Name: "input1", Value: "value1"},
 				},
 			},
@@ -576,7 +583,7 @@ func TestPromotionBuilder_inflateTaskSteps(t *testing.T) {
 						Name: "test-cluster-task",
 					},
 					Spec: kargoapi.PromotionTaskSpec{
-						Vars: []kargoapi.PromotionVariable{
+						Vars: []kargoapi.ExpressionVariable{
 							{Name: "input1"},
 						},
 						Steps: []kargoapi.PromotionStep{
@@ -703,7 +710,7 @@ func TestPromotionBuilder_getTaskSpec(t *testing.T) {
 						Namespace: "test-project",
 					},
 					Spec: kargoapi.PromotionTaskSpec{
-						Vars: []kargoapi.PromotionVariable{
+						Vars: []kargoapi.ExpressionVariable{
 							{Name: "input1", Value: "value1"},
 						},
 					},
@@ -731,7 +738,7 @@ func TestPromotionBuilder_getTaskSpec(t *testing.T) {
 						Name: "test-cluster-task",
 					},
 					Spec: kargoapi.PromotionTaskSpec{
-						Vars: []kargoapi.PromotionVariable{
+						Vars: []kargoapi.ExpressionVariable{
 							{Name: "input1", Value: "value1"},
 						},
 					},
@@ -760,7 +767,7 @@ func TestPromotionBuilder_getTaskSpec(t *testing.T) {
 						Namespace: "test-project",
 					},
 					Spec: kargoapi.PromotionTaskSpec{
-						Vars: []kargoapi.PromotionVariable{
+						Vars: []kargoapi.ExpressionVariable{
 							{Name: "input1", Value: "value1"},
 						},
 					},
@@ -937,66 +944,66 @@ func Test_generatePromotionTaskStepName(t *testing.T) {
 func Test_promotionTaskVarsToStepVars(t *testing.T) {
 	tests := []struct {
 		name       string
-		taskVars   []kargoapi.PromotionVariable
-		promoVars  []kargoapi.PromotionVariable
-		stepVars   []kargoapi.PromotionVariable
-		assertions func(t *testing.T, result []kargoapi.PromotionVariable, err error)
+		taskVars   []kargoapi.ExpressionVariable
+		promoVars  []kargoapi.ExpressionVariable
+		stepVars   []kargoapi.ExpressionVariable
+		assertions func(t *testing.T, result []kargoapi.ExpressionVariable, err error)
 	}{
 		{
 			name:     "nil inputs returns nil map and no error",
 			taskVars: nil,
 			stepVars: nil,
-			assertions: func(t *testing.T, result []kargoapi.PromotionVariable, err error) {
+			assertions: func(t *testing.T, result []kargoapi.ExpressionVariable, err error) {
 				require.NoError(t, err)
 				assert.Nil(t, result)
 			},
 		},
 		{
 			name:     "empty inputs returns nil map and no error",
-			taskVars: []kargoapi.PromotionVariable{},
+			taskVars: []kargoapi.ExpressionVariable{},
 			stepVars: nil,
-			assertions: func(t *testing.T, result []kargoapi.PromotionVariable, err error) {
+			assertions: func(t *testing.T, result []kargoapi.ExpressionVariable, err error) {
 				require.NoError(t, err)
 				assert.Nil(t, result)
 			},
 		},
 		{
 			name: "missing required variable returns error",
-			taskVars: []kargoapi.PromotionVariable{
+			taskVars: []kargoapi.ExpressionVariable{
 				{Name: "input1"},
 			},
-			stepVars: []kargoapi.PromotionVariable{
+			stepVars: []kargoapi.ExpressionVariable{
 				{Name: "input1", Value: ""},
 			},
-			assertions: func(t *testing.T, result []kargoapi.PromotionVariable, err error) {
+			assertions: func(t *testing.T, result []kargoapi.ExpressionVariable, err error) {
 				assert.ErrorContains(t, err, "missing value for variable \"input1\"")
 				assert.Nil(t, result)
 			},
 		},
 		{
 			name: "default value used when config value not provided",
-			taskVars: []kargoapi.PromotionVariable{
+			taskVars: []kargoapi.ExpressionVariable{
 				{Name: "input1", Value: "default1"},
 			},
 			stepVars: nil,
-			assertions: func(t *testing.T, result []kargoapi.PromotionVariable, err error) {
+			assertions: func(t *testing.T, result []kargoapi.ExpressionVariable, err error) {
 				require.NoError(t, err)
-				assert.ElementsMatch(t, []kargoapi.PromotionVariable{
+				assert.ElementsMatch(t, []kargoapi.ExpressionVariable{
 					{Name: "input1", Value: "default1"},
 				}, result)
 			},
 		},
 		{
 			name: "step value appends task default value",
-			taskVars: []kargoapi.PromotionVariable{
+			taskVars: []kargoapi.ExpressionVariable{
 				{Name: "input1", Value: "default1"},
 			},
-			stepVars: []kargoapi.PromotionVariable{
+			stepVars: []kargoapi.ExpressionVariable{
 				{Name: "input1", Value: "override1"},
 			},
-			assertions: func(t *testing.T, result []kargoapi.PromotionVariable, err error) {
+			assertions: func(t *testing.T, result []kargoapi.ExpressionVariable, err error) {
 				require.NoError(t, err)
-				assert.ElementsMatch(t, []kargoapi.PromotionVariable{
+				assert.ElementsMatch(t, []kargoapi.ExpressionVariable{
 					{Name: "input1", Value: "default1"},
 					{Name: "input1", Value: "override1"},
 				}, result)
@@ -1004,14 +1011,14 @@ func Test_promotionTaskVarsToStepVars(t *testing.T) {
 		},
 		{
 			name: "promotion variable overrides default value",
-			taskVars: []kargoapi.PromotionVariable{
+			taskVars: []kargoapi.ExpressionVariable{
 				{Name: "input1", Value: "default1"},
 			},
-			promoVars: []kargoapi.PromotionVariable{
+			promoVars: []kargoapi.ExpressionVariable{
 				{Name: "input1", Value: "override1"},
 			},
 			stepVars: nil,
-			assertions: func(t *testing.T, result []kargoapi.PromotionVariable, err error) {
+			assertions: func(t *testing.T, result []kargoapi.ExpressionVariable, err error) {
 				require.NoError(t, err)
 				// Variable is set by engine at runtime
 				assert.Empty(t, result)
@@ -1019,18 +1026,18 @@ func Test_promotionTaskVarsToStepVars(t *testing.T) {
 		},
 		{
 			name: "multiple inputs processed correctly",
-			taskVars: []kargoapi.PromotionVariable{
+			taskVars: []kargoapi.ExpressionVariable{
 				{Name: "input1", Value: "default1"},
 				{Name: "input2", Value: "default2"},
 				{Name: "input3"},
 			},
-			stepVars: []kargoapi.PromotionVariable{
+			stepVars: []kargoapi.ExpressionVariable{
 				{Name: "input1", Value: "override1"},
 				{Name: "input3", Value: "value3"},
 			},
-			assertions: func(t *testing.T, result []kargoapi.PromotionVariable, err error) {
+			assertions: func(t *testing.T, result []kargoapi.ExpressionVariable, err error) {
 				require.NoError(t, err)
-				assert.ElementsMatch(t, []kargoapi.PromotionVariable{
+				assert.ElementsMatch(t, []kargoapi.ExpressionVariable{
 					{Name: "input1", Value: "default1"},
 					{Name: "input2", Value: "default2"},
 					{Name: "input1", Value: "override1"},

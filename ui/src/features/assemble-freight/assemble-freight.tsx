@@ -8,7 +8,7 @@ import { useParams } from 'react-router-dom';
 import yaml from 'yaml';
 
 import { newErrorHandler, newTransportWithAuth } from '@ui/config/transport';
-import { createResource } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { createResource } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import {
   Chart,
   ChartDiscoveryResult,
@@ -20,7 +20,7 @@ import {
   Image,
   ImageDiscoveryResult,
   Warehouse
-} from '@ui/gen/v1alpha1/generated_pb';
+} from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { FreightContents } from '../freight-timeline/freight-contents';
 
@@ -60,6 +60,7 @@ const constructFreight = (
         repoURL: artifact.repoURL,
         tag: imageRef.tag,
         digest: imageRef.digest,
+        // Deprecated: Use OCI annotations instead. Will be removed in version 1.7.
         gitRepoURL: imageRef.gitRepoURL
       } as Image);
     } else if ('versions' in artifact) {
@@ -207,6 +208,7 @@ export const AssembleFreight = ({
               freight={constructFreight(chosenItems, warehouse?.metadata?.name || '')}
               highlighted
               horizontal
+              fullContentVisibility
             />
             <Button
               className='ml-auto'

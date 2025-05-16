@@ -64,12 +64,14 @@ spec:
           valueFrom:
             resourceFieldRef:
               containerName: management-controller
+              divisor: "1"
               resource: limits.memory
         - name: GOMAXPROCS
           valueFrom:
             resourceFieldRef:
               containerName: management-controller
-              resource: limits.cpu
+              divisor: "1"
+              resource: {{ include "kargo.selectCpuResourceField" (dict "resources" .Values.managementController.resources) }}
         {{- with (concat .Values.global.env .Values.managementController.env) }}
         {{- toYaml . | nindent 8 }}
         {{- end }}

@@ -32,8 +32,16 @@
                         "type": "string"
                       },
                       "config": {
-                        "description": "Config is opaque configuration for the PromotionStep that is understood\nonly by each PromotionStep's implementation. It is legal to utilize\nexpressions in defining values at any level of this block.\nSee https://docs.kargo.io/references/expression-language for details.",
+                        "description": "Config is opaque configuration for the PromotionStep that is understood\nonly by each PromotionStep's implementation. It is legal to utilize\nexpressions in defining values at any level of this block.\nSee https://docs.kargo.io/user-guide/reference-docs/expressions for details.",
                         "x-kubernetes-preserve-unknown-fields": true
+                      },
+                      "continueOnError": {
+                        "description": "ContinueOnError is a boolean value that, if set to true, will cause the\nPromotion to continue executing the next step even if this step fails. It\nalso will not permit this failure to impact the overall status of the\nPromotion.",
+                        "type": "boolean"
+                      },
+                      "if": {
+                        "description": "If is an optional expression that, if present, must evaluate to a boolean\nvalue. If the expression evaluates to false, the step will be skipped.\nIf the expression does not evaluate to a boolean value, the step will be\nconsidered to have failed.",
+                        "type": "string"
                       },
                       "retry": {
                         "description": "Retry is the retry policy for this step.",
@@ -84,7 +92,7 @@
                       "vars": {
                         "description": "Vars is a list of variables that can be referenced by expressions in\nthe step's Config. The values override the values specified in the\nPromotionSpec.",
                         "items": {
-                          "description": "PromotionVariable describes a single variable that may be referenced by\nexpressions in promotion steps.",
+                          "description": "ExpressionVariable describes a single variable that may be referenced by\nexpressions in the context of a ClusterPromotionTask, PromotionTask,\nPromotion, AnalysisRun arguments, or other objects that support expressions.\n\nIt is used to pass information to the expression evaluation engine, and to\nallow for dynamic evaluation of expressions based on the variable values.",
                           "properties": {
                             "name": {
                               "description": "Name is the name of the variable.",
@@ -93,7 +101,7 @@
                               "type": "string"
                             },
                             "value": {
-                              "description": "Value is the value of the variable. It is allowed to utilize expressions\nin the value.\nSee https://docs.kargo.io/references/expression-language for details.",
+                              "description": "Value is the value of the variable. It is allowed to utilize expressions\nin the value.\nSee https://docs.kargo.io/user-guide/reference-docs/expressions for details.",
                               "type": "string"
                             }
                           },
@@ -119,7 +127,7 @@
                 "vars": {
                   "description": "Vars is a list of variables that can be referenced by expressions in\npromotion steps.",
                   "items": {
-                    "description": "PromotionVariable describes a single variable that may be referenced by\nexpressions in promotion steps.",
+                    "description": "ExpressionVariable describes a single variable that may be referenced by\nexpressions in the context of a ClusterPromotionTask, PromotionTask,\nPromotion, AnalysisRun arguments, or other objects that support expressions.\n\nIt is used to pass information to the expression evaluation engine, and to\nallow for dynamic evaluation of expressions based on the variable values.",
                     "properties": {
                       "name": {
                         "description": "Name is the name of the variable.",
@@ -128,7 +136,7 @@
                         "type": "string"
                       },
                       "value": {
-                        "description": "Value is the value of the variable. It is allowed to utilize expressions\nin the value.\nSee https://docs.kargo.io/references/expression-language for details.",
+                        "description": "Value is the value of the variable. It is allowed to utilize expressions\nin the value.\nSee https://docs.kargo.io/user-guide/reference-docs/expressions for details.",
                         "type": "string"
                       }
                     },
@@ -177,6 +185,15 @@
               "sources": {
                 "description": "Sources describes where the requested Freight may be obtained from. This is\na required field.",
                 "properties": {
+                  "availabilityStrategy": {
+                    "description": "AvailabilityStrategy specifies the semantics for how requested Freight is\nmade available to the Stage. This field is optional. When left unspecified,\nthe field is implicitly treated as if its value were \"OneOf\".\n\nAccepted Values:\n\n- \"All\": Freight must be be verified and, if applicable, soaked in all\n  upstream Stages to be considered available for promotion.\n- \"OneOf\": Freight must be verified and, if applicable, soaked in at least\n   one upstream Stage to be considered available for promotion.\n- \"\": Treated the same as \"OneOf\".",
+                    "enum": [
+                      "All",
+                      "OneOf",
+                      ""
+                    ],
+                    "type": "string"
+                  },
                   "direct": {
                     "description": "Direct indicates the requested Freight may be obtained directly from the\nWarehouse from which it originated. If this field's value is false, then\nthe value of the Stages field must be non-empty. i.e. Between the two\nfields, at least one source must be specified.",
                     "type": "boolean"
@@ -210,6 +227,29 @@
           "description": "Shard is the name of the shard that this Stage belongs to. This is an\noptional field. If not specified, the Stage will belong to the default\nshard. A defaulting webhook will sync the value of the\nkargo.akuity.io/shard label with the value of this field. When this field\nis empty, the webhook will ensure that label is absent.",
           "type": "string"
         },
+        "vars": {
+          "description": "Vars is a list of variables that can be referenced anywhere in the\nStageSpec that supports expressions. For example, the PromotionTemplate\nand arguments of the Verification.",
+          "items": {
+            "description": "ExpressionVariable describes a single variable that may be referenced by\nexpressions in the context of a ClusterPromotionTask, PromotionTask,\nPromotion, AnalysisRun arguments, or other objects that support expressions.\n\nIt is used to pass information to the expression evaluation engine, and to\nallow for dynamic evaluation of expressions based on the variable values.",
+            "properties": {
+              "name": {
+                "description": "Name is the name of the variable.",
+                "minLength": 1,
+                "pattern": "^[a-zA-Z_]\\w*$",
+                "type": "string"
+              },
+              "value": {
+                "description": "Value is the value of the variable. It is allowed to utilize expressions\nin the value.\nSee https://docs.kargo.io/user-guide/reference-docs/expressions for details.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
         "verification": {
           "description": "Verification describes how to verify a Stage's current Freight is fit for\npromotion downstream.",
           "properties": {
@@ -238,6 +278,14 @@
               "items": {
                 "description": "AnalysisTemplateReference is a reference to an AnalysisTemplate.",
                 "properties": {
+                  "kind": {
+                    "description": "Kind is the type of the AnalysisTemplate. Can be either AnalysisTemplate or\nClusterAnalysisTemplate, default is AnalysisTemplate.",
+                    "enum": [
+                      "AnalysisTemplate",
+                      "ClusterAnalysisTemplate"
+                    ],
+                    "type": "string"
+                  },
                   "name": {
                     "description": "Name is the name of the AnalysisTemplate in the same project/namespace as\nthe Stage.",
                     "type": "string"
@@ -420,12 +468,19 @@
                   "items": {
                     "description": "Image describes a specific version of a container image.",
                     "properties": {
+                      "annotations": {
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "description": "Annotations is a map of arbitrary metadata for the image.",
+                        "type": "object"
+                      },
                       "digest": {
                         "description": "Digest identifies a specific version of the image in the repository\nspecified by RepoURL. This is a more precise identifier than Tag.",
                         "type": "string"
                       },
                       "gitRepoURL": {
-                        "description": "GitRepoURL specifies the URL of a Git repository that contains the source\ncode for the image repository referenced by the RepoURL field if Kargo was\nable to infer it.",
+                        "description": "GitRepoURL specifies the URL of a Git repository that contains the source\ncode for the image repository referenced by the RepoURL field if Kargo was\nable to infer it.\n\nDeprecated: Use OCI annotations instead. Will be removed in v1.7.0.",
                         "type": "string"
                       },
                       "repoURL": {
@@ -442,7 +497,7 @@
                   "type": "array"
                 },
                 "name": {
-                  "description": "Name is system-assigned identifier that is derived deterministically from\nthe contents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their Names.",
+                  "description": "Name is a system-assigned identifier derived deterministically from\nthe contents of the Freight. I.e., two pieces of Freight can be compared\nfor equality by comparing their Names.",
                   "type": "string"
                 },
                 "origin": {
@@ -556,12 +611,19 @@
                       "items": {
                         "description": "Image describes a specific version of a container image.",
                         "properties": {
+                          "annotations": {
+                            "additionalProperties": {
+                              "type": "string"
+                            },
+                            "description": "Annotations is a map of arbitrary metadata for the image.",
+                            "type": "object"
+                          },
                           "digest": {
                             "description": "Digest identifies a specific version of the image in the repository\nspecified by RepoURL. This is a more precise identifier than Tag.",
                             "type": "string"
                           },
                           "gitRepoURL": {
-                            "description": "GitRepoURL specifies the URL of a Git repository that contains the source\ncode for the image repository referenced by the RepoURL field if Kargo was\nable to infer it.",
+                            "description": "GitRepoURL specifies the URL of a Git repository that contains the source\ncode for the image repository referenced by the RepoURL field if Kargo was\nable to infer it.\n\nDeprecated: Use OCI annotations instead. Will be removed in v1.7.0.",
                             "type": "string"
                           },
                           "repoURL": {
@@ -578,7 +640,7 @@
                       "type": "array"
                     },
                     "name": {
-                      "description": "Name is system-assigned identifier that is derived deterministically from\nthe contents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their Names.",
+                      "description": "Name is a system-assigned identifier derived deterministically from\nthe contents of the Freight. I.e., two pieces of Freight can be compared\nfor equality by comparing their Names.",
                       "type": "string"
                     },
                     "origin": {
@@ -681,12 +743,19 @@
                             "items": {
                               "description": "Image describes a specific version of a container image.",
                               "properties": {
+                                "annotations": {
+                                  "additionalProperties": {
+                                    "type": "string"
+                                  },
+                                  "description": "Annotations is a map of arbitrary metadata for the image.",
+                                  "type": "object"
+                                },
                                 "digest": {
                                   "description": "Digest identifies a specific version of the image in the repository\nspecified by RepoURL. This is a more precise identifier than Tag.",
                                   "type": "string"
                                 },
                                 "gitRepoURL": {
-                                  "description": "GitRepoURL specifies the URL of a Git repository that contains the source\ncode for the image repository referenced by the RepoURL field if Kargo was\nable to infer it.",
+                                  "description": "GitRepoURL specifies the URL of a Git repository that contains the source\ncode for the image repository referenced by the RepoURL field if Kargo was\nable to infer it.\n\nDeprecated: Use OCI annotations instead. Will be removed in v1.7.0.",
                                   "type": "string"
                                 },
                                 "repoURL": {
@@ -703,7 +772,7 @@
                             "type": "array"
                           },
                           "name": {
-                            "description": "Name is system-assigned identifier that is derived deterministically from\nthe contents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their Names.",
+                            "description": "Name is a system-assigned identifier derived deterministically from\nthe contents of the Freight. I.e., two pieces of Freight can be compared\nfor equality by comparing their Names.",
                             "type": "string"
                           },
                           "origin": {
@@ -845,6 +914,10 @@
                         "description": "Alias is the alias of the step.",
                         "type": "string"
                       },
+                      "continueOnError": {
+                        "description": "ContinueOnError is a boolean value that, if set to true, will cause the\nPromotion to continue executing the next step even if this step fails. It\nalso will not permit this failure to impact the overall status of the\nPromotion.",
+                        "type": "boolean"
+                      },
                       "errorCount": {
                         "description": "ErrorCount tracks consecutive failed attempts to execute the step.",
                         "format": "int32",
@@ -962,12 +1035,19 @@
                       "items": {
                         "description": "Image describes a specific version of a container image.",
                         "properties": {
+                          "annotations": {
+                            "additionalProperties": {
+                              "type": "string"
+                            },
+                            "description": "Annotations is a map of arbitrary metadata for the image.",
+                            "type": "object"
+                          },
                           "digest": {
                             "description": "Digest identifies a specific version of the image in the repository\nspecified by RepoURL. This is a more precise identifier than Tag.",
                             "type": "string"
                           },
                           "gitRepoURL": {
-                            "description": "GitRepoURL specifies the URL of a Git repository that contains the source\ncode for the image repository referenced by the RepoURL field if Kargo was\nable to infer it.",
+                            "description": "GitRepoURL specifies the URL of a Git repository that contains the source\ncode for the image repository referenced by the RepoURL field if Kargo was\nable to infer it.\n\nDeprecated: Use OCI annotations instead. Will be removed in v1.7.0.",
                             "type": "string"
                           },
                           "repoURL": {
@@ -984,7 +1064,7 @@
                       "type": "array"
                     },
                     "name": {
-                      "description": "Name is system-assigned identifier that is derived deterministically from\nthe contents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their Names.",
+                      "description": "Name is a system-assigned identifier derived deterministically from\nthe contents of the Freight. I.e., two pieces of Freight can be compared\nfor equality by comparing their Names.",
                       "type": "string"
                     },
                     "origin": {
@@ -1190,12 +1270,19 @@
                   "items": {
                     "description": "Image describes a specific version of a container image.",
                     "properties": {
+                      "annotations": {
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "description": "Annotations is a map of arbitrary metadata for the image.",
+                        "type": "object"
+                      },
                       "digest": {
                         "description": "Digest identifies a specific version of the image in the repository\nspecified by RepoURL. This is a more precise identifier than Tag.",
                         "type": "string"
                       },
                       "gitRepoURL": {
-                        "description": "GitRepoURL specifies the URL of a Git repository that contains the source\ncode for the image repository referenced by the RepoURL field if Kargo was\nable to infer it.",
+                        "description": "GitRepoURL specifies the URL of a Git repository that contains the source\ncode for the image repository referenced by the RepoURL field if Kargo was\nable to infer it.\n\nDeprecated: Use OCI annotations instead. Will be removed in v1.7.0.",
                         "type": "string"
                       },
                       "repoURL": {
@@ -1212,7 +1299,7 @@
                   "type": "array"
                 },
                 "name": {
-                  "description": "Name is system-assigned identifier that is derived deterministically from\nthe contents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their Names.",
+                  "description": "Name is a system-assigned identifier derived deterministically from\nthe contents of the Freight. I.e., two pieces of Freight can be compared\nfor equality by comparing their Names.",
                   "type": "string"
                 },
                 "origin": {
@@ -1326,12 +1413,19 @@
                       "items": {
                         "description": "Image describes a specific version of a container image.",
                         "properties": {
+                          "annotations": {
+                            "additionalProperties": {
+                              "type": "string"
+                            },
+                            "description": "Annotations is a map of arbitrary metadata for the image.",
+                            "type": "object"
+                          },
                           "digest": {
                             "description": "Digest identifies a specific version of the image in the repository\nspecified by RepoURL. This is a more precise identifier than Tag.",
                             "type": "string"
                           },
                           "gitRepoURL": {
-                            "description": "GitRepoURL specifies the URL of a Git repository that contains the source\ncode for the image repository referenced by the RepoURL field if Kargo was\nable to infer it.",
+                            "description": "GitRepoURL specifies the URL of a Git repository that contains the source\ncode for the image repository referenced by the RepoURL field if Kargo was\nable to infer it.\n\nDeprecated: Use OCI annotations instead. Will be removed in v1.7.0.",
                             "type": "string"
                           },
                           "repoURL": {
@@ -1348,7 +1442,7 @@
                       "type": "array"
                     },
                     "name": {
-                      "description": "Name is system-assigned identifier that is derived deterministically from\nthe contents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their Names.",
+                      "description": "Name is a system-assigned identifier derived deterministically from\nthe contents of the Freight. I.e., two pieces of Freight can be compared\nfor equality by comparing their Names.",
                       "type": "string"
                     },
                     "origin": {
@@ -1451,12 +1545,19 @@
                             "items": {
                               "description": "Image describes a specific version of a container image.",
                               "properties": {
+                                "annotations": {
+                                  "additionalProperties": {
+                                    "type": "string"
+                                  },
+                                  "description": "Annotations is a map of arbitrary metadata for the image.",
+                                  "type": "object"
+                                },
                                 "digest": {
                                   "description": "Digest identifies a specific version of the image in the repository\nspecified by RepoURL. This is a more precise identifier than Tag.",
                                   "type": "string"
                                 },
                                 "gitRepoURL": {
-                                  "description": "GitRepoURL specifies the URL of a Git repository that contains the source\ncode for the image repository referenced by the RepoURL field if Kargo was\nable to infer it.",
+                                  "description": "GitRepoURL specifies the URL of a Git repository that contains the source\ncode for the image repository referenced by the RepoURL field if Kargo was\nable to infer it.\n\nDeprecated: Use OCI annotations instead. Will be removed in v1.7.0.",
                                   "type": "string"
                                 },
                                 "repoURL": {
@@ -1473,7 +1574,7 @@
                             "type": "array"
                           },
                           "name": {
-                            "description": "Name is system-assigned identifier that is derived deterministically from\nthe contents of the Freight. i.e. Two pieces of Freight can be compared for\nequality by comparing their Names.",
+                            "description": "Name is a system-assigned identifier derived deterministically from\nthe contents of the Freight. I.e., two pieces of Freight can be compared\nfor equality by comparing their Names.",
                             "type": "string"
                           },
                           "origin": {
@@ -1615,6 +1716,10 @@
                         "description": "Alias is the alias of the step.",
                         "type": "string"
                       },
+                      "continueOnError": {
+                        "description": "ContinueOnError is a boolean value that, if set to true, will cause the\nPromotion to continue executing the next step even if this step fails. It\nalso will not permit this failure to impact the overall status of the\nPromotion.",
+                        "type": "boolean"
+                      },
                       "errorCount": {
                         "description": "ErrorCount tracks consecutive failed attempts to execute the step.",
                         "format": "int32",
@@ -1654,20 +1759,12 @@
           ],
           "type": "object"
         },
-        "message": {
-          "description": "Message describes any errors that are preventing the Stage controller\nfrom assessing Stage health or from finding new Freight.",
-          "type": "string"
-        },
         "observedGeneration": {
           "description": "ObservedGeneration represents the .metadata.generation that this Stage\nstatus was reconciled against.",
           "format": "int64",
           "maximum": 9223372036854776000,
           "minimum": -9223372036854776000,
           "type": "integer"
-        },
-        "phase": {
-          "description": "Phase describes where the Stage currently is in its lifecycle.",
-          "type": "string"
         }
       },
       "type": "object"

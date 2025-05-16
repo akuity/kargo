@@ -72,8 +72,8 @@ export const Downloads = () => (
         title='Windows'
         icon={faWindows}
         links={[
-          { url: constructUrl('kargo-windows-arm64'), title: 'ARM' },
-          { url: constructUrl('kargo-windows-amd64'), title: 'x86' }
+          { url: `${constructUrl('kargo-windows-arm64')}.exe`, title: 'ARM' },
+          { url: `${constructUrl('kargo-windows-amd64')}.exe`, title: 'x86' }
         ]}
       />
       <DownloadItem

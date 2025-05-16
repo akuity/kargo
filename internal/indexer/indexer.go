@@ -14,9 +14,11 @@ import (
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libargocd "github.com/akuity/kargo/internal/argocd"
-	"github.com/akuity/kargo/internal/directives"
 	"github.com/akuity/kargo/internal/expressions"
+	"github.com/akuity/kargo/internal/git"
+	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/internal/promotion"
 )
 
 const (
@@ -38,6 +40,8 @@ const (
 	StagesByWarehouseField      = "warehouse"
 
 	ServiceAccountsByOIDCClaimsField = "claims"
+
+	WarehousesBySubscribedURLsField = "subscribedURLs"
 )
 
 // EventsByInvolvedObjectAPIGroup is a client.IndexerFunc that indexes
@@ -114,6 +118,7 @@ func PromotionsByStage(obj client.Object) []string {
 // Promotions not labeled with a shardName are indexed.
 func RunningPromotionsByArgoCDApplications(
 	ctx context.Context,
+	cl client.Client,
 	shardName string,
 ) client.IndexerFunc {
 	logger := logging.LoggerFromContext(ctx)
@@ -143,7 +148,7 @@ func RunningPromotionsByArgoCDApplications(
 
 		// Build just enough context to extract the relevant config from the
 		// argocd-update promotion step.
-		promoCtx := directives.PromotionContext{
+		promoCtx := promotion.Context{
 			Project:   promo.Namespace,
 			Stage:     promo.Spec.Stage,
 			Promotion: promo.Name,
@@ -153,9 +158,9 @@ func RunningPromotionsByArgoCDApplications(
 
 		// Extract the Argo CD Applications from the promotion steps.
 		//
-		// TODO(hidde): This is not ideal as it requires parsing the directives and
-		// treating some of them as special cases. We should consider a more general
-		// approach in the future.
+		// TODO(hidde): This is not ideal as it requires parsing the step configs
+		// and treating some of them as special cases. We should consider a more
+		// general approach in the future.
 		var res []string
 		for i, step := range promo.Spec.Steps {
 			if int64(i) > promo.Status.CurrentStep {
@@ -167,7 +172,7 @@ func RunningPromotionsByArgoCDApplications(
 				continue
 			}
 
-			dirStep := directives.PromotionStep{
+			dirStep := promotion.Step{
 				Kind:   step.Uses,
 				Alias:  step.As,
 				Vars:   step.Vars,
@@ -176,7 +181,7 @@ func RunningPromotionsByArgoCDApplications(
 
 			// As step-level variables are allowed to reference to output, we
 			// need to provide the state.
-			vars, err := dirStep.GetVars(promoCtx, promoCtx.State)
+			vars, err := dirStep.GetVars(ctx, cl, promoCtx, promoCtx.State)
 			if err != nil {
 				logger.Error(
 					err,
@@ -222,9 +227,9 @@ func RunningPromotionsByArgoCDApplications(
 							if nameTemplate, ok := app["name"].(string); ok {
 								env := dirStep.BuildEnv(
 									promoCtx,
-									directives.StepEnvWithOutputs(promoCtx.State),
-									directives.StepEnvWithTaskOutputs(dirStep.Alias, promoCtx.State),
-									directives.StepEnvWithVars(vars),
+									promotion.StepEnvWithOutputs(promoCtx.State),
+									promotion.StepEnvWithTaskOutputs(dirStep.Alias, promoCtx.State),
+									promotion.StepEnvWithVars(vars),
 								)
 
 								var namespace any = libargocd.Namespace()
@@ -441,4 +446,37 @@ func ServiceAccountsByOIDCClaims(obj client.Object) []string {
 		return nil
 	}
 	return refinedClaimValues
+}
+
+// WarehousesBySubscribedURLs is a client.IndexerFunc that indexes Warehouses by the
+// repositories they subscribe to.
+func WarehousesBySubscribedURLs(obj client.Object) []string {
+	warehouse, ok := obj.(*kargoapi.Warehouse)
+	if !ok {
+		return nil
+	}
+
+	var repoURLs []string
+	for _, sub := range warehouse.Spec.Subscriptions {
+		if sub.Git != nil && sub.Git.RepoURL != "" {
+			repoURLs = append(repoURLs,
+				git.NormalizeURL(sub.Git.RepoURL),
+			)
+		}
+		if sub.Chart != nil && sub.Chart.RepoURL != "" {
+			repoURLs = append(repoURLs,
+				helm.NormalizeChartRepositoryURL(sub.Chart.RepoURL),
+			)
+		}
+		if sub.Image != nil && sub.Image.RepoURL != "" {
+			repoURLs = append(repoURLs,
+				// TODO(fuskovic): This chart URL normalization logic is adequate for
+				// normalizing image URLs in the near term, but should eventually be
+				// replaced with dedicated image URL normalization logic.
+				// See https://github.com/akuity/kargo/issues/3999
+				helm.NormalizeChartRepositoryURL(sub.Image.RepoURL),
+			)
+		}
+	}
+	return repoURLs
 }

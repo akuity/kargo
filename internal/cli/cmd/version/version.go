@@ -13,15 +13,16 @@ import (
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
+	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/io"
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/cli/templates"
-	versionpkg "github.com/akuity/kargo/internal/version"
-	svcv1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
+	versionpkg "github.com/akuity/kargo/pkg/x/version"
 )
 
 type versionOptions struct {
@@ -78,7 +79,7 @@ func (o *versionOptions) addFlags(cmd *cobra.Command) {
 func (o *versionOptions) run(ctx context.Context) error {
 	printToStdout := o.PrintFlags.OutputFlagSpecified == nil || !o.PrintFlags.OutputFlagSpecified()
 
-	cliVersion := svcv1alpha1.ToVersionProto(versionpkg.GetVersion())
+	cliVersion := api.ToVersionProto(versionpkg.GetVersion())
 	if printToStdout {
 		_, _ = fmt.Fprintln(o.IOStreams.Out, "Client Version:", cliVersion.GetVersion())
 	}

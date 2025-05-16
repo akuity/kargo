@@ -6,6 +6,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/tools/record"
@@ -15,9 +16,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	rollouts "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
+	"github.com/akuity/kargo/internal/conditions"
 	"github.com/akuity/kargo/internal/controller"
-	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
@@ -152,12 +155,13 @@ func (r *ControlFlowStageReconciler) SetupWithManager(
 		source.Kind(
 			mgr.GetCache(),
 			&kargoapi.Freight{},
-			&downstreamStageEnqueuer[*kargoapi.Freight]{
-				kargoClient: mgr.GetClient(),
+			&warehouseStageEnqueuer[*kargoapi.Freight]{
+				kargoClient:          mgr.GetClient(),
+				forControlFlowStages: true,
 			},
 		),
 	); err != nil {
-		return fmt.Errorf("unable to watch Freight from upstream Stages: %w", err)
+		return fmt.Errorf("unable to watch Freight produced by Warehouse: %w", err)
 	}
 
 	// Watch for Freight that have been verified in upstream Stages.
@@ -210,8 +214,16 @@ func (r *ControlFlowStageReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// Ensure the Stage has a finalizer and requeue if it was added.
 	// The reason to requeue is to ensure that a possible deletion of the Stage
 	// directly after the finalizer was added is handled without delay.
-	if ok, err := kargoapi.EnsureFinalizer(ctx, r.client, stage); ok || err != nil {
+	if ok, err := api.EnsureFinalizer(ctx, r.client, stage); ok || err != nil {
 		return ctrl.Result{Requeue: ok}, err
+	}
+
+	// Remove any stale annotations from the Stage which are not relevant to
+	// a control flow Stage.
+	if stage.GetAnnotations()[kargoapi.AnnotationKeyArgoCDContext] != "" {
+		if err := api.AnnotateStageWithArgoCDContext(ctx, r.client, nil, stage); err != nil {
+			logger.Error(err, "failed to remove Argo CD context annotation from Stage")
+		}
 	}
 
 	// Reconcile the Stage.
@@ -253,9 +265,23 @@ func (r *ControlFlowStageReconciler) reconcile(
 
 	// Get the available Freight for the Stage.
 	logger.Debug("getting available Freight")
-	freight, err := stage.ListAvailableFreight(ctx, r.client)
+	freight, err := api.ListFreightAvailableToStage(ctx, r.client, stage)
 	if err != nil {
-		newStatus.Message = err.Error()
+		conditions.Set(
+			&newStatus,
+			&metav1.Condition{
+				Type:    kargoapi.ConditionTypeReconciling,
+				Status:  metav1.ConditionTrue,
+				Reason:  "RetryAfterFreightRetrievalFailed",
+				Message: err.Error(),
+			},
+			&metav1.Condition{
+				Type:    kargoapi.ConditionTypeReady,
+				Status:  metav1.ConditionFalse,
+				Reason:  "FreightRetrievalFailed",
+				Message: err.Error(),
+			},
+		)
 		return newStatus, err
 	}
 
@@ -266,10 +292,31 @@ func (r *ControlFlowStageReconciler) reconcile(
 			logger.Debug("verified Freight", "count", newlyVerified)
 		}
 		if err != nil {
-			newStatus.Message = err.Error()
+			conditions.Set(
+				&newStatus,
+				&metav1.Condition{
+					Type:    kargoapi.ConditionTypeReconciling,
+					Status:  metav1.ConditionTrue,
+					Reason:  "RetryAfterVerificationFailed",
+					Message: err.Error(),
+				},
+				&metav1.Condition{
+					Type:    kargoapi.ConditionTypeReady,
+					Status:  metav1.ConditionFalse,
+					Reason:  "FreightVerificationFailed",
+					Message: err.Error(),
+				},
+			)
 			return newStatus, err
 		}
 	}
+
+	// Mark the Stage as Ready and remove any reconciling condition.
+	conditions.Set(&newStatus, &metav1.Condition{
+		Type:   kargoapi.ConditionTypeReady,
+		Status: metav1.ConditionTrue,
+	})
+	conditions.Delete(&newStatus, kargoapi.ConditionTypeReconciling)
 
 	return newStatus, nil
 }
@@ -281,18 +328,23 @@ func (r *ControlFlowStageReconciler) initializeStatus(stage *kargoapi.Stage) kar
 	newStatus := stage.Status.DeepCopy()
 
 	// Update the status with the new observed generation and phase.
-	newStatus.Phase = kargoapi.StagePhaseNotApplicable
 	if stage.Generation > stage.Status.ObservedGeneration {
 		newStatus.ObservedGeneration = stage.Generation
 	}
 
-	// Reset any previous error message.
-	newStatus.Message = ""
-
 	// Record the current refresh token as having been handled.
-	if token, ok := kargoapi.RefreshAnnotationValue(stage.GetAnnotations()); ok {
+	if token, ok := api.RefreshAnnotationValue(stage.GetAnnotations()); ok {
 		newStatus.LastHandledRefresh = token
 	}
+
+	// Only keep the conditions that are relevant to this Stage type.
+	var condCopy []metav1.Condition
+	for _, c := range []string{kargoapi.ConditionTypeReady, kargoapi.ConditionTypeReconciling} {
+		if cond := conditions.Get(newStatus, c); cond != nil {
+			condCopy = append(condCopy, *cond)
+		}
+	}
+	newStatus.Conditions = condCopy
 
 	// Clear all the fields that are not relevant to this Stage type.
 	newStatus.FreightHistory = nil
@@ -300,9 +352,6 @@ func (r *ControlFlowStageReconciler) initializeStatus(stage *kargoapi.Stage) kar
 	newStatus.CurrentPromotion = nil
 	newStatus.LastPromotion = nil
 	newStatus.FreightSummary = "N/A"
-	// TODO(hidde): We might want to introduce simple conditions for control
-	// flow Stages at some point, but for now we just clear them.
-	newStatus.Conditions = nil
 
 	return *newStatus
 }
@@ -359,7 +408,7 @@ func (r *ControlFlowStageReconciler) markFreightVerifiedForStage(
 		r.eventRecorder.AnnotatedEventf(
 			stage,
 			map[string]string{
-				kargoapi.AnnotationKeyEventActor:                  kargoapi.FormatEventControllerActor(r.cfg.Name()),
+				kargoapi.AnnotationKeyEventActor:                  api.FormatEventControllerActor(r.cfg.Name()),
 				kargoapi.AnnotationKeyEventProject:                stage.Namespace,
 				kargoapi.AnnotationKeyEventStageName:              stage.Name,
 				kargoapi.AnnotationKeyEventFreightAlias:           f.Alias,
@@ -415,7 +464,7 @@ func (r *ControlFlowStageReconciler) handleDelete(ctx context.Context, stage *ka
 	}
 
 	// Remove the finalizer from the Stage.
-	if err := kargoapi.RemoveFinalizer(ctx, r.client, stage); err != nil {
+	if err := api.RemoveFinalizer(ctx, r.client, stage); err != nil {
 		return fmt.Errorf("error removing finalizer from Stage: %w", err)
 	}
 

@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Radio, Table } from 'antd';
 import { useState } from 'react';
 
-import { DiscoveredImageReference } from '@ui/gen/v1alpha1/generated_pb';
+import { DiscoveredImageReference } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 import { calculatePageForSelectedRow } from '@ui/utils/pagination';
 
@@ -35,6 +35,25 @@ export const ImageTable = ({
                 onClick={() => select(selected === record ? undefined : record)}
               />
             )
+          },
+          { title: 'Tag', dataIndex: 'tag' },
+          {
+            title: 'Digest',
+            render: (record: DiscoveredImageReference) => (
+              <TruncatedCopyable text={record?.digest} />
+            )
+          },
+          {
+            title: 'Source Repo',
+            render: (record: DiscoveredImageReference) =>
+              record?.gitRepoURL ? (
+                // Deprecated: Use OCI annotations instead. Will be removed in version 1.7.
+                <a href={record?.gitRepoURL} target='_blank' rel='noreferrer'>
+                  {record?.gitRepoURL}
+                </a>
+              ) : (
+                <FontAwesomeIcon icon={faQuestionCircle} className='text-gray-400' />
+              )
           },
           { title: 'Tag', dataIndex: 'tag' },
           {

@@ -16,14 +16,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/controller/management/namespaces"
 	"github.com/akuity/kargo/internal/controller/management/projects"
 	"github.com/akuity/kargo/internal/controller/management/serviceaccounts"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
+	"github.com/akuity/kargo/internal/server/kubernetes"
 	"github.com/akuity/kargo/internal/types"
-	versionpkg "github.com/akuity/kargo/internal/version"
+	versionpkg "github.com/akuity/kargo/pkg/x/version"
 )
 
 type managementControllerOptions struct {
@@ -32,7 +32,8 @@ type managementControllerOptions struct {
 	KargoNamespace               string
 	ManageControllerRoleBindings bool
 
-	PprofBindAddress string
+	MetricsBindAddress string
+	PprofBindAddress   string
 
 	Logger *logging.Logger
 }
@@ -63,6 +64,7 @@ func (o *managementControllerOptions) complete() {
 	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
 	o.KargoNamespace = os.GetEnv("KARGO_NAMESPACE", "kargo")
 	o.ManageControllerRoleBindings = types.MustParseBool(os.GetEnv("MANAGE_CONTROLLER_ROLE_BINDINGS", "true"))
+	o.MetricsBindAddress = os.GetEnv("METRICS_BIND_ADDRESS", "0")
 	o.PprofBindAddress = os.GetEnv("PPROF_BIND_ADDRESS", "")
 }
 
@@ -146,7 +148,7 @@ func (o *managementControllerOptions) setupManager(ctx context.Context) (manager
 		ctrl.Options{
 			Scheme: scheme,
 			Metrics: server.Options{
-				BindAddress: "0",
+				BindAddress: o.MetricsBindAddress,
 			},
 			PprofBindAddress: o.PprofBindAddress,
 			Cache: cache.Options{

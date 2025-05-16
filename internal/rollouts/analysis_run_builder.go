@@ -14,14 +14,18 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	rolloutsapi "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
+	"github.com/akuity/kargo/internal/expressions"
 )
 
 // controllerInstanceIDLabelKey is the key for the Argo Rollouts controller
 // instance ID label. It can be used to assign an AnalysisRun to a specific
 // controller instance.
 const controllerInstanceIDLabelKey = "argo-rollouts.argoproj.io/controller-instance-id"
+
+// varsEnvKey is the key for variables in the ArgumentEvaluationConfig.Env map.
+const varsEnvKey = "vars"
 
 // Config holds the configuration for the AnalysisRunBuilder.
 type Config struct {
@@ -65,9 +69,10 @@ func (b *AnalysisRunBuilder) Build(
 		b.generateName(opts.NamePrefix, opts.NameSuffix),
 		cfg.AnalysisRunMetadata,
 		opts.ExtraLabels,
+		opts.ExtraAnnotations,
 	)
 
-	templates, err := b.getAnalysisTemplates(
+	analysisTemplates, clusterAnalysisTemplates, err := b.getAnalysisTemplates(
 		ctx,
 		namespace,
 		cfg.AnalysisTemplates,
@@ -76,7 +81,9 @@ func (b *AnalysisRunBuilder) Build(
 		return nil, fmt.Errorf("get analysis templates: %w", err)
 	}
 
-	spec, err := b.buildSpec(templates, cfg.Args)
+	analysisTemplateSpecs := combineAnalysisTemplateSpecs(analysisTemplates, clusterAnalysisTemplates)
+
+	spec, err := b.buildSpec(analysisTemplateSpecs, cfg.Args, opts.ExpressionConfig)
 	if err != nil {
 		return nil, fmt.Errorf("build spec: %w", err)
 	}
@@ -118,16 +125,22 @@ func (b *AnalysisRunBuilder) generateName(prefix, suffix string) string {
 func (b *AnalysisRunBuilder) buildMetadata(
 	namespace, name string,
 	metadata *kargoapi.AnalysisRunMetadata,
-	extraLabels map[string]string,
+	extraLabels, extraAnnotations map[string]string,
 ) metav1.ObjectMeta {
-	var annotations map[string]string
+	annotations := make(map[string]string)
 	labels := make(map[string]string)
 
 	if metadata != nil {
-		annotations = metadata.Annotations
+		if metadata.Annotations != nil {
+			maps.Copy(annotations, metadata.Annotations)
+		}
 		if metadata.Labels != nil {
 			maps.Copy(labels, metadata.Labels)
 		}
+	}
+
+	if extraAnnotations != nil {
+		maps.Copy(annotations, extraAnnotations)
 	}
 
 	if extraLabels != nil {
@@ -149,15 +162,16 @@ func (b *AnalysisRunBuilder) buildMetadata(
 // buildSpec constructs an AnalysisRunSpec from the provided templates and
 // arguments.
 func (b *AnalysisRunBuilder) buildSpec(
-	templates []*rolloutsapi.AnalysisTemplate,
+	analysisTemplateSpecs []*rolloutsapi.AnalysisTemplateSpec,
 	args []kargoapi.AnalysisRunArgument,
+	exprCfg *ArgumentEvaluationConfig,
 ) (rolloutsapi.AnalysisRunSpec, error) {
-	template, err := flattenTemplates(templates)
+	template, err := flattenTemplates(analysisTemplateSpecs)
 	if err != nil {
 		return rolloutsapi.AnalysisRunSpec{}, fmt.Errorf("flatten templates: %w", err)
 	}
 
-	finalArgs, err := b.buildArgs(template, args)
+	finalArgs, err := b.buildArgs(template, args, exprCfg)
 	if err != nil {
 		return rolloutsapi.AnalysisRunSpec{}, fmt.Errorf("build arguments: %w", err)
 	}
@@ -175,14 +189,49 @@ func (b *AnalysisRunBuilder) buildSpec(
 func (b *AnalysisRunBuilder) buildArgs(
 	template *rolloutsapi.AnalysisTemplate,
 	args []kargoapi.AnalysisRunArgument,
+	exprCfg *ArgumentEvaluationConfig,
 ) ([]rolloutsapi.Argument, error) {
+	if exprCfg == nil {
+		exprCfg = &ArgumentEvaluationConfig{}
+	}
+
+	if len(exprCfg.Vars) > 0 {
+		if exprCfg.Env == nil {
+			exprCfg.Env = make(map[string]any)
+		}
+		if exprCfg.Env[varsEnvKey] == nil {
+			exprCfg.Env[varsEnvKey] = make(map[string]any)
+		}
+		// NB: This will cause direct modifications to the map in the config.
+		vars, ok := exprCfg.Env[varsEnvKey].(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("vars in argument evaluation config env is of unexpected type %T", exprCfg.Env["vars"])
+		}
+
+		for _, v := range exprCfg.Vars {
+			value, err := expressions.EvaluateTemplate(v.Value, exprCfg.Env, exprCfg.Options...)
+			if err != nil {
+				return nil, fmt.Errorf("evaluate variable %q: %w", v.Name, err)
+			}
+			vars[v.Name] = value
+		}
+	}
+
 	rolloutsArgs := make([]rolloutsapi.Argument, len(args))
 	for i, arg := range args {
 		rolloutsArgs[i] = rolloutsapi.Argument{
 			Name: arg.Name,
 		}
 		if arg.Value != "" {
-			rolloutsArgs[i].Value = &arg.Value
+			value, err := expressions.EvaluateTemplate(arg.Value, exprCfg.Env, exprCfg.Options...)
+			if err != nil {
+				return nil, fmt.Errorf("evaluate argument %q: %w", arg.Name, err)
+			}
+			strValue, ok := value.(string)
+			if !ok {
+				return nil, fmt.Errorf("evaluated argument %q value is not a string but %T", arg.Name, value)
+			}
+			rolloutsArgs[i].Value = &strValue
 		}
 	}
 
@@ -238,24 +287,54 @@ func (b *AnalysisRunBuilder) getAnalysisTemplates(
 	ctx context.Context,
 	namespace string,
 	references []kargoapi.AnalysisTemplateReference,
-) ([]*rolloutsapi.AnalysisTemplate, error) {
-	templates := make([]*rolloutsapi.AnalysisTemplate, len(references))
-
-	for i, ref := range references {
-		template := &rolloutsapi.AnalysisTemplate{}
-		if err := b.client.Get(ctx, types.NamespacedName{
-			Namespace: namespace,
-			Name:      ref.Name,
-		}, template); err != nil {
-			return nil, fmt.Errorf(
-				"get AnalysisRun %q in namespace %q: %w",
-				ref.Name,
-				namespace,
-				err,
-			)
+) ([]*rolloutsapi.AnalysisTemplate, []*rolloutsapi.ClusterAnalysisTemplate, error) {
+	analysisTemplates := []*rolloutsapi.AnalysisTemplate{}
+	clusterAnalysisTemplates := []*rolloutsapi.ClusterAnalysisTemplate{}
+	for _, ref := range references {
+		if ref.Kind == "ClusterAnalysisTemplate" {
+			template := &rolloutsapi.ClusterAnalysisTemplate{}
+			if err := b.client.Get(ctx, types.NamespacedName{
+				Name: ref.Name,
+			}, template); err != nil {
+				return nil, nil, fmt.Errorf(
+					"get ClusterAnalysisRun %q: %w",
+					ref.Name,
+					err,
+				)
+			}
+			clusterAnalysisTemplates = append(clusterAnalysisTemplates, template)
+		} else {
+			template := &rolloutsapi.AnalysisTemplate{}
+			if err := b.client.Get(ctx, types.NamespacedName{
+				Namespace: namespace,
+				Name:      ref.Name,
+			}, template); err != nil {
+				return nil, nil, fmt.Errorf(
+					"get AnalysisRun %q in namespace %q: %w",
+					ref.Name,
+					namespace,
+					err,
+				)
+			}
+			analysisTemplates = append(analysisTemplates, template)
 		}
-		templates[i] = template
 	}
 
-	return templates, nil
+	return analysisTemplates, clusterAnalysisTemplates, nil
+}
+
+// combineAnalysisTemplateSpecs combines the specs of analysis
+// templates and cluster analysis templates into one array
+func combineAnalysisTemplateSpecs(
+	analysisTemplates []*rolloutsapi.AnalysisTemplate,
+	clusterAnalysisTemplates []*rolloutsapi.ClusterAnalysisTemplate,
+) []*rolloutsapi.AnalysisTemplateSpec {
+	templateSpecs := make([]*rolloutsapi.AnalysisTemplateSpec, 0, len(analysisTemplates)+len(clusterAnalysisTemplates))
+	for _, template := range analysisTemplates {
+		templateSpecs = append(templateSpecs, &template.Spec)
+	}
+	for _, template := range clusterAnalysisTemplates {
+		templateSpecs = append(templateSpecs, &template.Spec)
+	}
+	return templateSpecs
 }

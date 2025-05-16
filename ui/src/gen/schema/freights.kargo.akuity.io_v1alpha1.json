@@ -75,12 +75,19 @@
       "items": {
         "description": "Image describes a specific version of a container image.",
         "properties": {
+          "annotations": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Annotations is a map of arbitrary metadata for the image.",
+            "type": "object"
+          },
           "digest": {
             "description": "Digest identifies a specific version of the image in the repository\nspecified by RepoURL. This is a more precise identifier than Tag.",
             "type": "string"
           },
           "gitRepoURL": {
-            "description": "GitRepoURL specifies the URL of a Git repository that contains the source\ncode for the image repository referenced by the RepoURL field if Kargo was\nable to infer it.",
+            "description": "GitRepoURL specifies the URL of a Git repository that contains the source\ncode for the image repository referenced by the RepoURL field if Kargo was\nable to infer it.\n\nDeprecated: Use OCI annotations instead. Will be removed in v1.7.0.",
             "type": "string"
           },
           "repoURL": {

@@ -33,7 +33,7 @@ func (r *reconciler) discoverImages(
 		logger := logging.LoggerFromContext(ctx).WithValues("repo", sub.RepoURL)
 
 		// Obtain credentials for the image repository.
-		creds, ok, err := r.credentialsDB.Get(ctx, namespace, credentials.TypeImage, sub.RepoURL)
+		creds, err := r.credentialsDB.Get(ctx, namespace, credentials.TypeImage, sub.RepoURL)
 		if err != nil {
 			return nil, fmt.Errorf(
 				"error obtaining credentials for image repo %q: %w",
@@ -42,7 +42,7 @@ func (r *reconciler) discoverImages(
 			)
 		}
 		var regCreds *image.Credentials
-		if ok {
+		if creds != nil {
 			regCreds = &image.Credentials{
 				Username: creds.Username,
 				Password: creds.Password,
@@ -76,9 +76,9 @@ func (r *reconciler) discoverImages(
 		discoveredImages := make([]kargoapi.DiscoveredImageReference, 0, len(images))
 		for _, img := range images {
 			discovery := kargoapi.DiscoveredImageReference{
-				Tag:        img.Tag,
-				Digest:     img.Digest,
-				GitRepoURL: r.getImageSourceURL(sub.GitRepoURL, img.Tag),
+				Tag:         img.Tag,
+				Digest:      img.Digest,
+				Annotations: img.Annotations,
 			}
 			if img.CreatedAt != nil {
 				discovery.CreatedAt = &metav1.Time{Time: *img.CreatedAt}

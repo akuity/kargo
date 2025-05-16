@@ -3,6 +3,7 @@ package promotions
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -15,10 +16,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
-	"github.com/akuity/kargo/api/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/directives"
 	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
+	"github.com/akuity/kargo/internal/promotion"
 )
 
 var (
@@ -31,12 +31,12 @@ func TestNewPromotionReconciler(t *testing.T) {
 	r := newReconciler(
 		kubeClient,
 		&fakeevent.EventRecorder{},
-		&directives.FakeEngine{},
+		&promotion.MockEngine{},
 		ReconcilerConfig{},
 	)
 	require.NotNil(t, r.kargoClient)
 	require.NotNil(t, r.recorder)
-	require.NotNil(t, r.directivesEngine)
+	require.NotNil(t, r.promoEngine)
 	require.NotNil(t, r.getStageFn)
 	require.NotNil(t, r.promoteFn)
 }
@@ -53,7 +53,7 @@ func newFakeReconciler(
 	return newReconciler(
 		kargoClient,
 		recorder,
-		&directives.FakeEngine{},
+		&promotion.MockEngine{},
 		ReconcilerConfig{},
 	)
 }
@@ -62,8 +62,8 @@ func TestReconcile(t *testing.T) {
 	testCases := []struct {
 		name      string
 		promos    []client.Object
-		promoteFn func(context.Context, v1alpha1.Promotion,
-			*v1alpha1.Freight) (*kargoapi.PromotionStatus, error)
+		promoteFn func(context.Context, kargoapi.Promotion,
+			*kargoapi.Freight) (*kargoapi.PromotionStatus, error)
 		terminateFn             func(context.Context, *kargoapi.Promotion) error
 		promoToReconcile        *types.NamespacedName // if nil, uses the first of the promos
 		expectPromoteFnCalled   bool
@@ -217,7 +217,7 @@ func TestReconcile(t *testing.T) {
 				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhasePending, before),
 			},
 			promoToReconcile: &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo"},
-			promoteFn: func(_ context.Context, _ v1alpha1.Promotion, _ *v1alpha1.Freight) (*kargoapi.PromotionStatus, error) {
+			promoteFn: func(_ context.Context, _ kargoapi.Promotion, _ *kargoapi.Freight) (*kargoapi.PromotionStatus, error) {
 				panic("expected panic")
 			},
 		},
@@ -242,7 +242,7 @@ func TestReconcile(t *testing.T) {
 				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhasePending, before),
 			},
 			promoToReconcile: &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo"},
-			promoteFn: func(_ context.Context, _ v1alpha1.Promotion, _ *v1alpha1.Freight) (*kargoapi.PromotionStatus, error) {
+			promoteFn: func(_ context.Context, _ kargoapi.Promotion, _ *kargoapi.Freight) (*kargoapi.PromotionStatus, error) {
 				return nil, errors.New("expected error")
 			},
 		},
@@ -276,9 +276,9 @@ func TestReconcile(t *testing.T) {
 			promoteWasCalled := false
 			r.promoteFn = func(
 				ctx context.Context,
-				p v1alpha1.Promotion,
-				_ *v1alpha1.Stage,
-				f *v1alpha1.Freight,
+				p kargoapi.Promotion,
+				_ *kargoapi.Stage,
+				f *kargoapi.Freight,
 			) (*kargoapi.PromotionStatus, error) {
 				promoteWasCalled = true
 				if tc.promoteFn != nil {
@@ -361,7 +361,41 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, kargoapi.PromotionPhaseAborted, promo.Status.Phase)
 				require.Contains(t, promo.Status.Message, "terminated")
-				require.NotNil(t, now, promo.Status.FinishedAt)
+				require.NotNil(t, promo.Status.FinishedAt)
+
+				require.Len(t, recorder.Events, 1)
+				event := <-recorder.Events
+				require.Equal(t, kargoapi.EventReasonPromotionAborted, event.Reason)
+			},
+		},
+		{
+			name: "terminates running promotion",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					CreationTimestamp: now,
+					Name:              "fake-promo",
+					Namespace:         "fake-namespace",
+				},
+				Spec: kargoapi.PromotionSpec{
+					Stage: "fake-stage",
+				},
+				Status: kargoapi.PromotionStatus{
+					Phase:       kargoapi.PromotionPhaseRunning,
+					CurrentStep: 0,
+					StepExecutionMetadata: []kargoapi.StepExecutionMetadata{{
+						StartedAt: &now,
+						Status:    kargoapi.PromotionStepStatusRunning,
+					}},
+				},
+			},
+			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder, promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionPhaseAborted, promo.Status.Phase)
+				require.Contains(t, promo.Status.Message, "terminated")
+				require.NotNil(t, promo.Status.FinishedAt)
+
+				require.Equal(t, kargoapi.PromotionStepStatusAborted, promo.Status.StepExecutionMetadata[0].Status)
+				require.NotNil(t, promo.Status.StepExecutionMetadata[0].FinishedAt)
 
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
@@ -384,7 +418,7 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, kargoapi.PromotionPhaseAborted, promo.Status.Phase)
 				require.Contains(t, promo.Status.Message, "terminated")
-				require.NotNil(t, now, promo.Status.FinishedAt)
+				require.NotNil(t, promo.Status.FinishedAt)
 
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
@@ -459,6 +493,186 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 			req := tt.req
 			err := r.terminatePromotion(context.Background(), &req, tt.promo, tt.freight)
 			tt.assertions(t, recorder, tt.promo, err)
+		})
+	}
+}
+
+func Test_parseCreateActorAnnotation(t *testing.T) {
+	tests := []struct {
+		name  string
+		promo *kargoapi.Promotion
+		want  string
+	}{
+		{
+			name: "basic case",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-promo",
+					Namespace: "fake-namespace",
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyCreateActor: fmt.Sprintf(
+							"%s%s", kargoapi.EventActorEmailPrefix, "fake-actor",
+						),
+					},
+				},
+			},
+			want: "fake-actor",
+		},
+		{
+			name: "single element",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-promo",
+					Namespace: "fake-namespace",
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyCreateActor: kargoapi.EventActorAdmin,
+					},
+				},
+			},
+			want: kargoapi.EventActorAdmin,
+		},
+		{
+			name: "unknown actor",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-promo",
+					Namespace: "fake-namespace",
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyCreateActor: kargoapi.EventActorUnknown,
+					},
+				},
+			},
+			want: "",
+		},
+		{
+
+			name: "no annotation",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-promo",
+					Namespace: "fake-namespace",
+				},
+			},
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := parseCreateActorAnnotation(tt.promo)
+			require.Equal(t, tt.want, result)
+		})
+	}
+}
+
+func Test_calculateRequeueInterval(t *testing.T) {
+	defaultTimeout := 5 * time.Minute
+	for _, test := range []struct {
+		name       string
+		promo      *kargoapi.Promotion
+		setup      func(*testing.T)
+		assertions func(*testing.T, time.Duration)
+	}{
+		{
+			name: "should return default requeue interval",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					CreationTimestamp: now,
+					Name:              "fake-name",
+					Namespace:         "fake-namespace",
+				},
+				Spec: kargoapi.PromotionSpec{
+					Stage: "fake-stage",
+					Steps: []kargoapi.PromotionStep{
+						{
+							Uses: "slow-step",
+							Retry: &kargoapi.PromotionStepRetry{
+								Timeout: &metav1.Duration{
+									// exceeds default threshold
+									Duration: 10 * time.Minute,
+								},
+							},
+						},
+					},
+				},
+				Status: kargoapi.PromotionStatus{
+					Phase:       kargoapi.PromotionPhasePending,
+					CurrentStep: 0,
+					StepExecutionMetadata: []kargoapi.StepExecutionMetadata{
+						{StartedAt: &now},
+					},
+				},
+			},
+			setup: func(tt *testing.T) {
+				tt.Helper()
+				var (
+					// exceeds than the 5 minute default
+					stepRunnerTimeout = 10 * time.Minute
+					numRetries        = uint32(1)
+					runner            = promotion.NewMockRetryableStepRunner(
+						"slow-step",
+						&stepRunnerTimeout,
+						numRetries,
+					)
+				)
+				promotion.RegisterStepRunner(runner)
+			},
+			assertions: func(tt *testing.T, d time.Duration) {
+				require.Equal(tt, d, defaultTimeout)
+			},
+		},
+		{
+			name: "requeue interval should return requeue interval less than the default",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					CreationTimestamp: now,
+					Name:              "fake-name",
+					Namespace:         "fake-namespace",
+				},
+				Spec: kargoapi.PromotionSpec{
+					Stage: "fake-stage",
+					Steps: []kargoapi.PromotionStep{
+						{
+							Uses: "fast-step",
+							Retry: &kargoapi.PromotionStepRetry{
+								Timeout: &metav1.Duration{
+									// faster than default threshold
+									Duration: 3 * time.Minute,
+								},
+							},
+						},
+					},
+				},
+				Status: kargoapi.PromotionStatus{
+					Phase:       kargoapi.PromotionPhasePending,
+					CurrentStep: 0,
+					StepExecutionMetadata: []kargoapi.StepExecutionMetadata{
+						{StartedAt: &now},
+					},
+				},
+			},
+			setup: func(tt *testing.T) {
+				tt.Helper()
+				var (
+					// lower than the 5 minute default
+					stepRunnerTimeout = 3 * time.Minute
+					numRetries        = uint32(1)
+					runner            = promotion.NewMockRetryableStepRunner(
+						"fast-step",
+						&stepRunnerTimeout,
+						numRetries,
+					)
+				)
+				promotion.RegisterStepRunner(runner)
+			},
+			assertions: func(tt *testing.T, d time.Duration) {
+				require.Less(tt, d, defaultTimeout)
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			test.setup(t)
+			test.assertions(t, calculateRequeueInterval(test.promo))
 		})
 	}
 }

@@ -27,20 +27,24 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/conditions"
 	"github.com/akuity/kargo/internal/controller"
 	argocdapi "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
-	rolloutsapi "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
-	"github.com/akuity/kargo/internal/directives"
 	kargoEvent "github.com/akuity/kargo/internal/event"
+	exprfn "github.com/akuity/kargo/internal/expressions/function"
+	"github.com/akuity/kargo/internal/health"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/internal/pattern"
 	intpredicate "github.com/akuity/kargo/internal/predicate"
 	"github.com/akuity/kargo/internal/rollouts"
+	healthPkg "github.com/akuity/kargo/pkg/health"
 )
 
 // ReconcilerConfig represents configuration for the stage reconciler.
@@ -70,19 +74,22 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 }
 
 type RegularStageReconciler struct {
-	cfg              ReconcilerConfig
-	client           client.Client
-	eventRecorder    record.EventRecorder
-	directivesEngine directives.Engine
+	cfg           ReconcilerConfig
+	client        client.Client
+	eventRecorder record.EventRecorder
+	healthChecker health.AggregatingChecker
 
 	backoffCfg wait.Backoff
 }
 
 // NewRegularStageReconciler creates a new Stages reconciler.
-func NewRegularStageReconciler(cfg ReconcilerConfig, engine directives.Engine) *RegularStageReconciler {
+func NewRegularStageReconciler(
+	cfg ReconcilerConfig,
+	healthChecker health.AggregatingChecker,
+) *RegularStageReconciler {
 	return &RegularStageReconciler{
-		cfg:              cfg,
-		directivesEngine: engine,
+		cfg:           cfg,
+		healthChecker: healthChecker,
 		backoffCfg: wait.Backoff{
 			Duration: 1 * time.Second,
 			Factor:   2,
@@ -322,7 +329,7 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// Ensure the Stage has a finalizer and requeue if it was added.
 	// The reason to requeue is to ensure that a possible deletion of the Stage
 	// directly after the finalizer was added is handled without delay.
-	if ok, err := kargoapi.EnsureFinalizer(ctx, r.client, stage); ok || err != nil {
+	if ok, err := api.EnsureFinalizer(ctx, r.client, stage); ok || err != nil {
 		return ctrl.Result{Requeue: ok}, err
 	}
 
@@ -332,7 +339,7 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	logger.Debug("done reconciling Stage")
 
 	// Record the current refresh token as having been handled.
-	if token, ok := kargoapi.RefreshAnnotationValue(stage.GetAnnotations()); ok {
+	if token, ok := api.RefreshAnnotationValue(stage.GetAnnotations()); ok {
 		newStatus.LastHandledRefresh = token
 	}
 
@@ -537,7 +544,7 @@ func (r *RegularStageReconciler) syncPromotions(
 
 	// Sort the Promotions by phase and creation time to determine the current
 	// state of the Stage.
-	slices.SortFunc(promotions.Items, kargoapi.ComparePromotionByPhaseAndCreationTime)
+	slices.SortFunc(promotions.Items, api.ComparePromotionByPhaseAndCreationTime)
 
 	// The Promotion with the highest priority (i.e. a Running or Pending phase)
 	// is the one that we will consider for the current state of the Stage.
@@ -634,6 +641,18 @@ func (r *RegularStageReconciler) syncPromotions(
 					Message:            "Waiting for verification to be performed after successful promotion",
 					ObservedGeneration: stage.Generation,
 				})
+
+				// Annotate the Stage with the latest information related to
+				// ArgoCD Applications. This is used to provide deep links to the
+				// ArgoCD UI for the Stage in the Kargo UI.
+				//
+				// NB: If the health checks do not include ArgoCD Applications,
+				// then the annotation will be removed.
+				if err := api.AnnotateStageWithArgoCDContext(ctx, r.client, p.Status.HealthChecks, stage); err != nil {
+					// Let the error be logged, but do not return it as it is not
+					// critical to the operation of the Stage.
+					logger.Error(err, "failed to annotate Stage with ArgoCD context")
+				}
 			}
 		}
 
@@ -659,7 +678,7 @@ func (r *RegularStageReconciler) syncPromotions(
 		// or the verification failed, then we can allow the next Promotion to
 		// start immediately as the expectation is that the Promotion can fix the
 		// issue.
-		if stage.Status.Health == nil || stage.Status.Health.Status != kargoapi.HealthStateUnhealthy {
+		if stage.Status.Health == nil || stage.Status.Health.Status == kargoapi.HealthStateHealthy {
 			curVI := curFreight.VerificationHistory.Current()
 			if curVI == nil || !curVI.Phase.IsTerminal() {
 				logger.Debug("current Freight needs to be verified before allowing new promotions to start")
@@ -720,51 +739,49 @@ func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoa
 
 	// If the last Promotion did not succeed, then we cannot perform any health
 	// checks because they are only available after a successful Promotion.
+	// Since we lack enough information to determine health, we mark it as Unknown.
 	//
 	// TODO(hidde): Long term, this should probably be changed to allow to
 	//  continue to run health checks from the last successful Promotion,
 	//  even if the current Promotion did not succeed (e.g. because it was
 	//  aborted).
 	if lastPromo.Status.Phase != kargoapi.PromotionPhaseSucceeded {
-		logger.Debug("Last promotion did not succeed: defaulting Stage health to Unhealthy")
+		logger.Debug("Last promotion did not succeed: defaulting Stage health to Unknown")
 		conditions.Set(&newStatus, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeHealthy,
-			Status:             metav1.ConditionFalse,
+			Status:             metav1.ConditionUnknown,
 			Reason:             fmt.Sprintf("LastPromotion%s", lastPromo.Status.Phase),
-			Message:            "Last Promotion did not succeed",
+			Message:            "Cannot assess health because last Promotion did not succeed",
 			ObservedGeneration: stage.Generation,
 		})
 		newStatus.Health = &kargoapi.Health{
-			Status: kargoapi.HealthStateUnhealthy,
-			Issues: []string{"Last Promotion did not succeed"},
+			Status: kargoapi.HealthStateUnknown,
+			Issues: []string{"Cannot assess health because last Promotion did not succeed"},
 		}
 		return newStatus
 	}
 
-	// Compose the health check steps.
+	// Compose the health check criteria.
 	healthChecks := lastPromo.Status.HealthChecks
-	var steps []directives.HealthCheckStep
-	for _, step := range healthChecks {
-		steps = append(steps, directives.HealthCheckStep{
-			Kind:   step.Uses,
-			Config: step.GetConfig(),
+	var criteria []healthPkg.Criteria
+	for _, check := range healthChecks {
+		criteria = append(criteria, healthPkg.Criteria{
+			Kind:  check.Uses,
+			Input: check.GetConfig(),
 		})
 	}
 
-	// Run the health checks.
-	health := r.directivesEngine.CheckHealth(ctx, directives.HealthCheckContext{
-		Project: stage.Namespace,
-		Stage:   stage.Name,
-	}, steps)
-	newStatus.Health = &health
+	// Run the hlth checks.
+	hlth := r.healthChecker.Check(ctx, stage.Namespace, stage.Name, criteria)
+	newStatus.Health = &hlth
 
 	// Set the Healthy condition based on the health status.
-	switch health.Status {
+	switch hlth.Status {
 	case kargoapi.HealthStateHealthy:
 		conditions.Set(&newStatus, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeHealthy,
 			Status:             metav1.ConditionTrue,
-			Reason:             string(health.Status),
+			Reason:             string(hlth.Status),
 			Message:            fmt.Sprintf("Stage is healthy (performed %d health checks)", len(healthChecks)),
 			ObservedGeneration: stage.Generation,
 		})
@@ -772,10 +789,10 @@ func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoa
 		conditions.Set(&newStatus, &metav1.Condition{
 			Type:   kargoapi.ConditionTypeHealthy,
 			Status: metav1.ConditionFalse,
-			Reason: string(health.Status),
+			Reason: string(hlth.Status),
 			Message: fmt.Sprintf(
 				"Stage is unhealthy (%d issues in %d health checks)",
-				len(health.Issues), len(healthChecks),
+				len(hlth.Issues), len(healthChecks),
 			),
 			ObservedGeneration: stage.Generation,
 		})
@@ -783,7 +800,7 @@ func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoa
 		conditions.Set(&newStatus, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeHealthy,
 			Status:             metav1.ConditionUnknown,
-			Reason:             string(health.Status),
+			Reason:             string(hlth.Status),
 			ObservedGeneration: stage.Generation,
 		})
 	}
@@ -798,7 +815,7 @@ func (r *RegularStageReconciler) syncFreight(ctx context.Context, stage *kargoap
 	curFreight := stage.Status.FreightHistory.Current()
 	// Find all Freight that think they're currently in use by this Stage.
 	var freight []kargoapi.Freight
-	freight, err := kargoapi.ListFreightByCurrentStage(ctx, r.client, stage)
+	freight, err := api.ListFreightByCurrentStage(ctx, r.client, stage)
 	if err != nil {
 		return err
 	}
@@ -829,7 +846,7 @@ func (r *RegularStageReconciler) syncFreight(ctx context.Context, stage *kargoap
 	// LONGER than what we calculate.
 	now := time.Now()
 	for _, fr := range curFreight.References() {
-		f, err := kargoapi.GetFreight(
+		f, err := api.GetFreight(
 			ctx,
 			r.client,
 			types.NamespacedName{
@@ -985,7 +1002,7 @@ func (r *RegularStageReconciler) verifyStageFreight(
 	}()
 
 	// Get the re-verification request, if any.
-	reverifyReq, _ := kargoapi.ReverifyAnnotationValue(stage.GetAnnotations())
+	reverifyReq, _ := api.ReverifyAnnotationValue(stage.GetAnnotations())
 
 	// Check if the current Freight has already been verified.
 	var newVI *kargoapi.VerificationInfo
@@ -995,7 +1012,7 @@ func (r *RegularStageReconciler) verifyStageFreight(
 		// result.
 		if !lastVerification.Phase.IsTerminal() {
 			// Check if we need to abort the verification.
-			abortReq, _ := kargoapi.AbortVerificationAnnotationValue(stage.GetAnnotations())
+			abortReq, _ := api.AbortVerificationAnnotationValue(stage.GetAnnotations())
 			if abortReq.ForID(lastVerification.ID) {
 				logger.Debug("aborting verification of Stage Freight")
 
@@ -1163,7 +1180,7 @@ func (r *RegularStageReconciler) recordFreightVerificationEvent(
 	}
 
 	annotations := map[string]string{
-		kargoapi.AnnotationKeyEventActor:             kargoapi.FormatEventControllerActor(r.cfg.Name()),
+		kargoapi.AnnotationKeyEventActor:             api.FormatEventControllerActor(r.cfg.Name()),
 		kargoapi.AnnotationKeyEventProject:           stage.Namespace,
 		kargoapi.AnnotationKeyEventStageName:         stage.Name,
 		kargoapi.AnnotationKeyEventFreightAlias:      freight.Alias,
@@ -1193,7 +1210,7 @@ func (r *RegularStageReconciler) recordFreightVerificationEvent(
 			)
 		}
 		// AnalysisRun that triggered by a Promotion contains the Promotion name
-		if promoName, ok := ar.Labels[kargoapi.PromotionLabelKey]; ok {
+		if promoName, ok := ar.Annotations[kargoapi.AnnotationKeyPromotion]; ok {
 			annotations[kargoapi.AnnotationKeyEventPromotionName] = promoName
 		}
 	}
@@ -1307,6 +1324,24 @@ func (r *RegularStageReconciler) startVerification(
 			kargoapi.StageLabelKey:             stage.Name,
 			kargoapi.FreightCollectionLabelKey: freight.ID,
 		}),
+		rollouts.WithArgumentEvaluationConfig{
+			Env: map[string]any{
+				"ctx": map[string]any{
+					"project": stage.Namespace,
+					"stage":   stage.Name,
+				},
+			},
+			Options: append(
+				exprfn.FreightOperations(
+					ctx,
+					r.client,
+					stage.Namespace,
+					stage.Spec.RequestedFreight,
+					freight.References(),
+				),
+				exprfn.DataOperations(ctx, r.client, stage.Namespace)...,
+			),
+		},
 	}
 	for _, freightRef := range freight.Freight {
 		builderOpts = append(builderOpts, rollouts.WithOwner{
@@ -1317,8 +1352,8 @@ func (r *RegularStageReconciler) startVerification(
 	}
 	if curVI == nil || (req.ForID(curVI.ID) && req.ControlPlane && req.Actor != "") {
 		if stage.Status.LastPromotion != nil {
-			builderOpts = append(builderOpts, rollouts.WithExtraLabels{
-				kargoapi.PromotionLabelKey: stage.Status.LastPromotion.Name,
+			builderOpts = append(builderOpts, rollouts.WithExtraAnnotations{
+				kargoapi.AnnotationKeyPromotion: stage.Status.LastPromotion.Name,
 			})
 		}
 	}
@@ -1584,10 +1619,8 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 		return newStatus, nil
 	}
 
-	stageRef := types.NamespacedName{Namespace: stage.Namespace, Name: stage.Name}
-
 	// Confirm that auto-promotion is allowed for the Stage.
-	if autoPromotionAllowed, err := r.autoPromotionAllowed(ctx, stageRef); err != nil || !autoPromotionAllowed {
+	if autoPromotionAllowed, err := r.autoPromotionAllowed(ctx, stage.ObjectMeta); err != nil || !autoPromotionAllowed {
 		return newStatus, err
 	}
 
@@ -1668,7 +1701,7 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 			promotion,
 			kargoEvent.NewPromotionAnnotations(
 				ctx,
-				kargoapi.FormatEventControllerActor(r.cfg.Name()),
+				api.FormatEventControllerActor(r.cfg.Name()),
 				promotion,
 				&latestFreight,
 			),
@@ -1690,28 +1723,64 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 // autoPromotionAllowed checks if auto-promotion is allowed for the given Stage.
 func (r *RegularStageReconciler) autoPromotionAllowed(
 	ctx context.Context,
-	stage types.NamespacedName,
+	stage metav1.ObjectMeta,
 ) (bool, error) {
 	logger := logging.LoggerFromContext(ctx)
 
-	project := &kargoapi.Project{}
-	if err := r.client.Get(ctx, types.NamespacedName{Name: stage.Namespace}, project); err != nil {
-		return false, fmt.Errorf("error getting Project %q in namespace %q: %w", stage.Name, stage.Namespace, err)
+	projectCfg := &kargoapi.ProjectConfig{}
+	if err := r.client.Get(ctx, types.NamespacedName{
+		Name:      stage.Namespace,
+		Namespace: stage.Namespace,
+	}, projectCfg); err != nil {
+		if apierrors.IsNotFound(err) {
+			logger.Debug("found no ProjectConfig associated with Project; auto-promotion is disabled")
+			return false, nil
+		}
+		return false, fmt.Errorf("error getting ProjectConfig for Project %q: %w", stage.Namespace, err)
 	}
 
-	if project.Spec == nil || len(project.Spec.PromotionPolicies) == 0 {
+	if len(projectCfg.Spec.PromotionPolicies) == 0 {
 		logger.Debug("found no PromotionPolicy associated with Stage")
 		return false, nil
 	}
 
-	for _, policy := range project.Spec.PromotionPolicies {
-		if policy.Stage == stage.Name {
-			logger.Debug(
-				"found PromotionPolicy associated with Stage",
-				"autoPromotionEnabled", policy.AutoPromotionEnabled,
-			)
-			return policy.AutoPromotionEnabled, nil
+	for _, policy := range projectCfg.Spec.PromotionPolicies {
+		if policy.StageSelector == nil {
+			// Maintain backward compatibility with older versions of the
+			// PromotionPolicy where the selector was not available.
+			policy.StageSelector = &kargoapi.PromotionPolicySelector{
+				Name: policy.Stage, // nolint:staticcheck
+			}
 		}
+
+		// Match the Stage name with the exact PromotionPolicy name
+		if nameSelector := policy.StageSelector.Name; nameSelector != "" {
+			m, err := pattern.ParseNamePattern(nameSelector)
+			if err != nil {
+				return false, fmt.Errorf("error parsing PromotionPolicy name pattern %q: %w", nameSelector, err)
+			}
+			if !m.Matches(stage.Name) {
+				continue
+			}
+		}
+
+		// Match the Stage labels with the PromotionPolicy label selector.
+		if labelSelector := policy.StageSelector.LabelSelector; labelSelector != nil {
+			s, err := metav1.LabelSelectorAsSelector(labelSelector)
+			if err != nil {
+				return false, fmt.Errorf("error parsing PromotionPolicy label selector %q: %w", labelSelector, err)
+			}
+			if !s.Matches(labels.Set(stage.Labels)) {
+				continue
+			}
+		}
+
+		// If we reach this point, we have found a matching PromotionPolicy.
+		logger.Debug(
+			"found PromotionPolicy associated with Stage",
+			"autoPromotionEnabled", policy.AutoPromotionEnabled,
+		)
+		return policy.AutoPromotionEnabled, nil
 	}
 
 	logger.Debug("found no PromotionPolicy associated with Stage")
@@ -1724,7 +1793,7 @@ func (r *RegularStageReconciler) getPromotableFreight(
 	ctx context.Context,
 	stage *kargoapi.Stage,
 ) (map[string][]kargoapi.Freight, error) {
-	availableFreight, err := stage.ListAvailableFreight(ctx, r.client)
+	availableFreight, err := api.ListFreightAvailableToStage(ctx, r.client, stage)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"error listing available Freight for Stage %q: %w",
@@ -1778,7 +1847,7 @@ func (r *RegularStageReconciler) handleDelete(ctx context.Context, stage *kargoa
 	}
 
 	// Remove the finalizer from the Stage.
-	if err := kargoapi.RemoveFinalizer(ctx, r.client, stage); err != nil {
+	if err := api.RemoveFinalizer(ctx, r.client, stage); err != nil {
 		return fmt.Errorf("error removing finalizer from Stage: %w", err)
 	}
 
@@ -1897,7 +1966,7 @@ func (r *RegularStageReconciler) clearAnalysisRuns(ctx context.Context, stage *k
 }
 
 // summarizeConditions summarizes the conditions of the given Stage. It sets the
-// Ready condition based on the Promoting, Healthy and Verified conditions.
+// Ready condition based on the Promoting, Healthy, and Verified conditions.
 // If there is an error, the Ready condition is set to False until the error is
 // resolved.
 func summarizeConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus, err error) {
@@ -1917,23 +1986,10 @@ func summarizeConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus,
 			Reason:             "RetryAfterError",
 			ObservedGeneration: stage.Generation,
 		})
-
-		// Backwards compatibility: set the Phase and Message.
-		// TODO: Remove this in a future release.
-		newStatus.Phase = kargoapi.StagePhaseFailed
-		newStatus.Message = err.Error()
-
 		return
 	}
 
-	// By default, the Stage is steady unless we find a more specific condition.
-	// TODO: Remove this in a future release.
-	newStatus.Phase = kargoapi.StagePhaseSteady
-
-	// Backwards compatibility: clear the Message field of the Status
-	// and set the Freight summary.
-	// TODO: Remove this in a future release.
-	newStatus.Message = ""
+	// Set the Freight summary.
 	newStatus.FreightSummary = buildFreightSummary(len(stage.Spec.RequestedFreight), newStatus.FreightHistory.Current())
 
 	// If we are currently Promoting, then we are not Ready.
@@ -1946,11 +2002,6 @@ func summarizeConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus,
 			Message:            promoCond.Message,
 			ObservedGeneration: stage.Generation,
 		})
-
-		// Backwards compatibility: set Phase to Promoting.
-		// TODO: Remove this in a future release.
-		newStatus.Phase = kargoapi.StagePhasePromoting
-
 		return
 	}
 
@@ -1965,11 +2016,6 @@ func summarizeConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus,
 			Message:            lastPromo.Status.Message,
 			ObservedGeneration: stage.Generation,
 		})
-
-		// Backwards compatibility: set Phase to Failed.
-		// TODO: Remove this in a future release.
-		newStatus.Phase = kargoapi.StagePhaseFailed
-
 		return
 	}
 
@@ -1986,25 +2032,14 @@ func summarizeConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus,
 		if healthCond != nil {
 			readyCond.Reason = healthCond.Reason
 			readyCond.Message = healthCond.Message
-
-			if healthCond.Status == metav1.ConditionFalse {
-				// Backwards compatibility: set Phase to Failed on health failure.
-				// TODO: Remove this in a future release.
-				newStatus.Phase = kargoapi.StagePhaseFailed
-			}
 		}
 		conditions.Set(newStatus, readyCond)
-
 		return
 	}
 
 	// If we are not verified, then we are not Ready.
 	verificationCond := conditions.Get(newStatus, kargoapi.ConditionTypeVerified)
 	if verificationCond == nil || verificationCond.Status != metav1.ConditionTrue {
-		// Backwards compatibility: set Phase to Verifying.
-		// TODO: Remove this in a future release.
-		newStatus.Phase = kargoapi.StagePhaseVerifying
-
 		readyCond := &metav1.Condition{
 			Type:               kargoapi.ConditionTypeReady,
 			Status:             metav1.ConditionFalse,
@@ -2015,15 +2050,8 @@ func summarizeConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus,
 		if verificationCond != nil {
 			readyCond.Reason = verificationCond.Reason
 			readyCond.Message = verificationCond.Message
-
-			// Backwards compatibility: set Phase to Failed on verification failure.
-			// TODO: Remove this in a future release.
-			if verificationCond.Status == metav1.ConditionFalse {
-				newStatus.Phase = kargoapi.StagePhaseFailed
-			}
 		}
 		conditions.Set(newStatus, readyCond)
-
 		return
 	}
 
@@ -2041,10 +2069,6 @@ func summarizeConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus,
 	// If we are Ready, then we can also mark the current generation as
 	// observed.
 	newStatus.ObservedGeneration = stage.Generation
-
-	// Backwards compatibility: set Phase to Steady.
-	// TODO: Remove this in a future release.
-	newStatus.Phase = kargoapi.StagePhaseSteady
 }
 
 func buildFreightSummary(requested int, current *kargoapi.FreightCollection) string {

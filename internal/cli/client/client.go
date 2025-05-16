@@ -5,14 +5,14 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"net/http"
 
 	"connectrpc.com/connect"
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/spf13/pflag"
 
+	"github.com/akuity/kargo/api/service/v1alpha1/svcv1alpha1connect"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
-	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
 )
 
 type Options struct {
@@ -57,13 +57,16 @@ func GetClient(
 	credential string,
 	insecureTLS bool,
 ) svcv1alpha1connect.KargoServiceClient {
-	httpClient := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: insecureTLS, // nolint: gosec
-			},
-		},
+	httpClient := cleanhttp.DefaultClient()
+
+	if insecureTLS {
+		transport := cleanhttp.DefaultTransport()
+		transport.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true, // nolint: gosec
+		}
+		httpClient.Transport = transport
 	}
+
 	if credential == "" {
 		return svcv1alpha1connect.NewKargoServiceClient(httpClient, serverAddress)
 	}

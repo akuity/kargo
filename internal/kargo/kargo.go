@@ -5,64 +5,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/logging"
 )
-
-func NewPromoWentTerminalPredicate(logger *logging.Logger) PromoWentTerminal[*kargoapi.Promotion] {
-	return PromoWentTerminal[*kargoapi.Promotion]{
-		logger: logger,
-	}
-}
-
-// PromoWentTerminal is a predicate that returns true if a promotion went terminal.
-// Used by stage reconciler to enqueue a stage when it's associated promo is complete.
-// Also used by promo reconciler to enqueue the next highest priority promotion.
-type PromoWentTerminal[T any] struct {
-	predicate.Funcs
-	logger *logging.Logger
-}
-
-func (p PromoWentTerminal[T]) Create(event.TypedCreateEvent[T]) bool {
-	return false
-}
-
-func (p PromoWentTerminal[T]) Delete(e event.TypedDeleteEvent[T]) bool {
-	promo := any(e.Object).(*kargoapi.Promotion) // nolint: forcetypeassert
-	// if promo is deleted but was non-terminal, we want to enqueue the
-	// Stage so it can reset status.currentPromotion, as well as the
-	// enqueue the next priority Promo for reconciliation
-	return !promo.Status.Phase.IsTerminal()
-}
-
-func (p PromoWentTerminal[T]) Generic(event.TypedGenericEvent[T]) bool {
-	// we should never get here
-	return true
-}
-
-// Update implements default TypedUpdateEvent filter for checking if a promotion
-// went terminal
-func (p PromoWentTerminal[T]) Update(e event.TypedUpdateEvent[T]) bool {
-	oldPromo := any(e.ObjectOld).(*kargoapi.Promotion) // nolint: forcetypeassert
-	if oldPromo == nil {
-		p.logger.Error(
-			nil, "Update event has no old object to update",
-			"event", e,
-		)
-		return false
-	}
-	newPromo := any(e.ObjectNew).(*kargoapi.Promotion) // nolint: forcetypeassert
-	if newPromo == nil {
-		p.logger.Error(
-			nil, "Update event has no new object for update",
-			"event", e,
-		)
-		return false
-	}
-	if newPromo.Status.Phase.IsTerminal() && !oldPromo.Status.Phase.IsTerminal() {
-		return true
-	}
-	return false
-}
 
 func NewPromoPhaseChangedPredicate(logger *logging.Logger) PromoPhaseChanged[*kargoapi.Promotion] {
 	return PromoPhaseChanged[*kargoapi.Promotion]{
@@ -130,8 +75,8 @@ func (p RefreshRequested) Update(e event.UpdateEvent) bool {
 		return false
 	}
 
-	if newVal, newOk := kargoapi.RefreshAnnotationValue(e.ObjectNew.GetAnnotations()); newOk {
-		if oldVal, oldOk := kargoapi.RefreshAnnotationValue(e.ObjectOld.GetAnnotations()); oldOk {
+	if newVal, newOk := api.RefreshAnnotationValue(e.ObjectNew.GetAnnotations()); newOk {
+		if oldVal, oldOk := api.RefreshAnnotationValue(e.ObjectOld.GetAnnotations()); oldOk {
 			return newVal != oldVal
 		}
 		return true
@@ -153,8 +98,8 @@ func (r ReverifyRequested) Update(e event.UpdateEvent) bool {
 		return false
 	}
 
-	if newVal, newOk := kargoapi.ReverifyAnnotationValue(e.ObjectNew.GetAnnotations()); newOk {
-		if oldVal, oldOk := kargoapi.ReverifyAnnotationValue(e.ObjectOld.GetAnnotations()); oldOk {
+	if newVal, newOk := api.ReverifyAnnotationValue(e.ObjectNew.GetAnnotations()); newOk {
+		if oldVal, oldOk := api.ReverifyAnnotationValue(e.ObjectOld.GetAnnotations()); oldOk {
 			return !newVal.ForID(oldVal.ID)
 		}
 		return true
@@ -176,8 +121,8 @@ func (p VerificationAbortRequested) Update(e event.UpdateEvent) bool {
 		return false
 	}
 
-	if newVal, newOk := kargoapi.AbortVerificationAnnotationValue(e.ObjectNew.GetAnnotations()); newOk {
-		if oldVal, oldOk := kargoapi.AbortVerificationAnnotationValue(e.ObjectOld.GetAnnotations()); oldOk {
+	if newVal, newOk := api.AbortVerificationAnnotationValue(e.ObjectNew.GetAnnotations()); newOk {
+		if oldVal, oldOk := api.AbortVerificationAnnotationValue(e.ObjectOld.GetAnnotations()); oldOk {
 			return !newVal.ForID(oldVal.ID)
 		}
 		return true
@@ -199,8 +144,8 @@ func (p PromotionAbortRequested) Update(e event.UpdateEvent) bool {
 		return false
 	}
 
-	if newVal, newOk := kargoapi.AbortPromotionAnnotationValue(e.ObjectNew.GetAnnotations()); newOk {
-		if oldVal, oldOk := kargoapi.AbortPromotionAnnotationValue(e.ObjectOld.GetAnnotations()); oldOk {
+	if newVal, newOk := api.AbortPromotionAnnotationValue(e.ObjectNew.GetAnnotations()); newOk {
+		if oldVal, oldOk := api.AbortPromotionAnnotationValue(e.ObjectOld.GetAnnotations()); oldOk {
 			return oldVal.Action != newVal.Action
 		}
 		return true

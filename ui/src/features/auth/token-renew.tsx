@@ -13,7 +13,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { redirectToQueryParam, refreshTokenKey } from '@ui/config/auth';
 import { paths } from '@ui/config/paths';
-import { getPublicConfig } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { getPublicConfig } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 
 import { LoadingState } from '../common';
 
@@ -56,7 +56,10 @@ export const TokenRenew = () => {
       })
         .then((response) => processDiscoveryResponse(issuerUrl, response))
         .then((response) => {
-          if (response.code_challenge_methods_supported?.includes('S256') !== true) {
+          if (
+            response.code_challenge_methods_supported?.includes('S256') !== true &&
+            !issuerUrl.toString().startsWith('https://login.microsoftonline.com')
+          ) {
             throw new Error('OIDC config fetch error');
           }
 
@@ -100,11 +103,6 @@ export const TokenRenew = () => {
         onLogin(result.id_token, result.refresh_token);
         navigate(searchParams.get(redirectToQueryParam) || paths.home);
       } catch (err) {
-        notification.error({
-          message: `OIDC: ${JSON.stringify(err)}`,
-          placement: 'bottomRight'
-        });
-
         logout();
         navigate(paths.login);
       }

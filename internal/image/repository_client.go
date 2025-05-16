@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"time"
 
@@ -239,7 +240,25 @@ func (r *repositoryClient) getImageFromRemoteDesc(
 				desc.Digest.String(), err,
 			)
 		}
-		return r.getImageFromV1ImageIndexFn(ctx, desc.Digest.String(), idx, platform)
+
+		img, err := r.getImageFromV1ImageIndexFn(ctx, desc.Digest.String(), idx, platform)
+		if err != nil {
+			return nil, err
+		}
+
+		// If the descriptor has annotations, merge them into the annotations
+		// collected from the index and manifest. The descriptor's annotations
+		// will have a lower precedence than any annotations collected for the
+		// image.
+		if img != nil && desc.Annotations != nil {
+			baseAnnotations := desc.Annotations
+			if img.Annotations != nil {
+				maps.Copy(baseAnnotations, img.Annotations)
+			}
+			img.Annotations = baseAnnotations
+		}
+
+		return img, nil
 	case types.OCIManifestSchema1, types.DockerManifestSchema2:
 		img, err := desc.Image()
 		if err != nil {
@@ -248,7 +267,24 @@ func (r *repositoryClient) getImageFromRemoteDesc(
 				desc.Digest.String(), err,
 			)
 		}
-		return r.getImageFromV1ImageFn(desc.Digest.String(), img, platform)
+
+		finalImg, err := r.getImageFromV1ImageFn(desc.Digest.String(), img, platform)
+		if err != nil {
+			return nil, err
+		}
+
+		// If the descriptor has annotations, merge them into the annotations
+		// collected from the index and manifest. The descriptor's annotations
+		// will have a lower precedence than any annotations collected for the
+		// image.
+		if finalImg != nil && desc.Annotations != nil {
+			baseAnnotations := desc.Annotations
+			if finalImg.Annotations != nil {
+				maps.Copy(baseAnnotations, finalImg.Annotations)
+			}
+			finalImg.Annotations = baseAnnotations
+		}
+		return finalImg, nil
 	default:
 		return nil, fmt.Errorf("unknown artifact type: %s", desc.MediaType)
 	}
@@ -270,6 +306,10 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 			digest, err,
 		)
 	}
+
+	// Extract annotations from the index manifest.
+	annotations := idxManifest.Annotations
+
 	refs := make([]v1.Descriptor, 0, len(idxManifest.Manifests))
 	for _, ref := range idxManifest.Manifests {
 		if ref.Platform == nil ||
@@ -289,19 +329,17 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 	if platform != nil {
 		var matchedRefs []v1.Descriptor
 		for _, ref := range refs {
-			if !platform.matches(
-				ref.Platform.OS,
-				ref.Platform.Architecture,
-				ref.Platform.Variant,
-			) {
+			if !platform.matches(ref.Platform.OS, ref.Platform.Architecture, ref.Platform.Variant) {
 				continue
 			}
 			matchedRefs = append(matchedRefs, ref)
 		}
+
 		if len(matchedRefs) == 0 {
 			// No refs matched the platform
 			return nil, nil
 		}
+
 		if len(matchedRefs) > 1 {
 			// This really shouldn't happen.
 			return nil, fmt.Errorf(
@@ -310,7 +348,9 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 				len(matchedRefs),
 			)
 		}
+
 		ref := matchedRefs[0]
+
 		img, err := r.getImageByDigestFn(ctx, ref.Digest.String(), platform)
 		if err != nil {
 			return nil, fmt.Errorf(
@@ -328,6 +368,8 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 			)
 		}
 		img.Digest = digest
+		img.Annotations = annotations
+
 		return img, nil
 	}
 
@@ -351,10 +393,16 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 		if createdAt == nil || img.CreatedAt.After(*createdAt) {
 			createdAt = img.CreatedAt
 		}
+
+		// TODO(hidde): Without a platform constraint, we can not collect
+		// annotations in a meaningful way. We should consider how to handle
+		// this in the future.
 	}
+
 	return &Image{
-		Digest:    digest,
-		CreatedAt: createdAt,
+		Digest:      digest,
+		CreatedAt:   createdAt,
+		Annotations: annotations,
 	}, nil
 }
 
@@ -377,9 +425,20 @@ func (r *repositoryClient) getImageFromV1Image(
 		// This image doesn't match the platform constraint.
 		return nil, nil
 	}
+
+	// Extract annotations from the manifest
+	manifest, err := img.Manifest()
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error getting manifest for image with digest %s: %w",
+			digest, err,
+		)
+	}
+
 	return &Image{
-		Digest:    digest,
-		CreatedAt: &cfg.Created.Time,
+		Digest:      digest,
+		CreatedAt:   &cfg.Created.Time,
+		Annotations: manifest.Annotations,
 	}, nil
 }
 

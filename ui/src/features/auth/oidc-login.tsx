@@ -15,7 +15,7 @@ import {
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 
-import { OIDCConfig } from '@ui/gen/service/v1alpha1/service_pb';
+import { OIDCConfig } from '@ui/gen/api/service/v1alpha1/service_pb';
 
 import { useAuthContext } from './context/use-auth-context';
 import {
@@ -65,7 +65,10 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
       })
         .then((response) => processDiscoveryResponse(issuerUrl, response))
         .then((response) => {
-          if (response.code_challenge_methods_supported?.includes('S256') !== true) {
+          if (
+            response.code_challenge_methods_supported?.includes('S256') !== true &&
+            !issuerUrl.toString().startsWith('https://login.microsoftonline.com')
+          ) {
             throw new Error('OIDC config fetch error');
           }
 

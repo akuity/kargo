@@ -3,17 +3,21 @@ import Link from 'antd/es/typography/Link';
 import { format } from 'date-fns';
 import moment from 'moment';
 import { useMemo, useState } from 'react';
+import { Link as ReactRouterLink } from 'react-router-dom';
+import { generatePath } from 'react-router-dom';
 
-import { VerificationInfo } from '@ui/gen/v1alpha1/generated_pb';
+import { paths } from '@ui/config/paths';
+import { FreightCollection, VerificationInfo } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { AnalysisModal } from '../common/analysis-modal/analysis-modal';
 import { useModal } from '../common/modal/use-modal';
 
+import { verificationPhaseIsTerminal } from './utils/verification-phase';
 import { VerificationIcon } from './verification-icon';
 
 type Props = {
-  verifications: VerificationInfo[];
+  verifications: Array<VerificationInfo & { freight: FreightCollection }>;
   images: string[];
 };
 
@@ -75,6 +79,7 @@ export const Verifications = ({ verifications, images }: Props) => {
         />
         <Table.Column<(typeof verifications)[number]>
           title='Date'
+          width={220}
           render={(_, verification) => {
             const date = timestampDate(verification.startTime);
             return date ? format(date, 'MMM do yyyy HH:mm:ss') : '';
@@ -83,19 +88,26 @@ export const Verifications = ({ verifications, images }: Props) => {
         <Table.Column<(typeof verifications)[number]>
           title='Duration'
           render={(_, verification) => {
+            if (!verificationPhaseIsTerminal(verification.phase || '')) {
+              return null;
+            }
+
             try {
-              const startTime = timestampDate(verification.startTime);
-              const finishTime = timestampDate(verification.finishTime);
+              const startTime = moment(timestampDate(verification.startTime));
+              const finishTime = moment(timestampDate(verification.finishTime));
 
-              const timeTook = moment.duration(moment(finishTime).diff(moment(startTime)));
+              if (!startTime.isValid() || !finishTime.isValid()) {
+                return null;
+              }
 
-              return timeTook.humanize();
+              const timeTook = moment.duration(finishTime.diff(startTime));
+
+              return timeTook.humanize({ ss: 1 });
             } catch {
               return null;
             }
           }}
         />
-        <Table.Column title='ID' dataIndex='id' />
         <Table.Column<(typeof verifications)[number]>
           title='AnalysisRun'
           dataIndex=''
@@ -115,10 +127,27 @@ export const Verifications = ({ verifications, images }: Props) => {
             </Link>
           )}
         />
-        <Table.Column
+        <Table.Column<(typeof verifications)[number]>
           title='Freight'
-          dataIndex='freight'
-          render={(val) => val?.substring(0, 7)}
+          render={(val, verification) => {
+            const freights = verification?.freight?.items;
+            const freight = Object.values(freights || {})?.[0];
+
+            if (!verification?.analysisRun?.namespace || !freight?.name) {
+              return null;
+            }
+
+            return (
+              <ReactRouterLink
+                to={generatePath(paths.freight, {
+                  name: verification?.analysisRun?.namespace,
+                  freightName: freight?.name
+                })}
+              >
+                {freight?.name?.slice(0, 7)}
+              </ReactRouterLink>
+            );
+          }}
           width={120}
         />
       </Table>

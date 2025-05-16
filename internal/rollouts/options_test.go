@@ -75,6 +75,31 @@ func TestAnalysisRunOptions(t *testing.T) {
 			},
 		},
 		{
+			name: "extra annotations: single set",
+			options: []AnalysisRunOption{
+				WithExtraAnnotations{"key1": "value1", "key2": "value2"},
+			},
+			assertions: func(t *testing.T, opts *AnalysisRunOptions) {
+				assert.Equal(t, map[string]string{
+					"key1": "value1",
+					"key2": "value2",
+				}, opts.ExtraAnnotations)
+			},
+		},
+		{
+			name: "extra annotations: multiple sets are merged",
+			options: []AnalysisRunOption{
+				WithExtraAnnotations{"key1": "value1"},
+				WithExtraAnnotations{"key2": "value2"},
+			},
+			assertions: func(t *testing.T, opts *AnalysisRunOptions) {
+				assert.Equal(t, map[string]string{
+					"key1": "value1",
+					"key2": "value2",
+				}, opts.ExtraAnnotations)
+			},
+		},
+		{
 			name: "single owner",
 			options: []AnalysisRunOption{
 				WithOwner(Owner{
@@ -115,6 +140,20 @@ func TestAnalysisRunOptions(t *testing.T) {
 			},
 		},
 		{
+			name: "argument evaluation config",
+			options: []AnalysisRunOption{
+				WithArgumentEvaluationConfig{
+					Env: map[string]any{
+						"key": "value",
+					},
+				},
+			},
+			assertions: func(t *testing.T, opts *AnalysisRunOptions) {
+				assert.NotNil(t, opts.ExpressionConfig)
+				assert.Equal(t, map[string]any{"key": "value"}, opts.ExpressionConfig.Env)
+			},
+		},
+		{
 			name: "combined options",
 			options: []AnalysisRunOption{
 				WithNamePrefix("prefix"),
@@ -125,12 +164,18 @@ func TestAnalysisRunOptions(t *testing.T) {
 					Kind:       "Pod",
 					Reference:  types.NamespacedName{Name: "pod1", Namespace: "default"},
 				}),
+				WithArgumentEvaluationConfig{
+					Env: map[string]any{
+						"key": "value",
+					},
+				},
 			},
 			assertions: func(t *testing.T, opts *AnalysisRunOptions) {
 				assert.Equal(t, "prefix", opts.NamePrefix)
 				assert.Equal(t, "suffix", opts.NameSuffix)
 				assert.Equal(t, map[string]string{"key": "value"}, opts.ExtraLabels)
 				assert.Len(t, opts.Owners, 1)
+				assert.NotNil(t, opts.ExpressionConfig)
 			},
 		},
 	}

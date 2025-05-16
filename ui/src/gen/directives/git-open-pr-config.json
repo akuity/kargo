@@ -14,11 +14,13 @@
   },
   "provider": {
    "type": "string",
-   "description": "The name of the Git provider to use. Currently only 'github', 'gitlab' and 'azure' are supported. Kargo will try to infer the provider if it is not explicitly specified.",
+   "description": "The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github', and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly specified.",
    "enum": [
+    "azure",
+    "bitbucket",
+    "gitea",
     "github",
-    "gitlab",
-    "azure"
+    "gitlab"
    ]
   },
   "repoURL": {
@@ -32,11 +34,6 @@
    "description": "The branch containing the changes to be merged. This branch must already exist and be up to date on the remote.",
    "minLength": 1
   },
-  "sourceBranchFromStep": {
-   "type": "string",
-   "description": "References the 'branch' output from a previous step. This step will use that value as the source branch.",
-   "minLength": 1
-  },
   "targetBranch": {
    "type": "string",
    "description": "The branch to which the changes should be merged. This branch must already exist and be up to date on the remote.",
@@ -45,6 +42,11 @@
   "title": {
    "type": "string",
    "description": "The title for the pull request. Kargo generates a title based on the commit messages if it is not explicitly specified.",
+   "minLength": 1
+  },
+  "description": {
+   "type": "string",
+   "description": "The description of the pull request. Kargo generates a description based on the commit messages if it is not explicitly specified.",
    "minLength": 1
   },
   "labels": {

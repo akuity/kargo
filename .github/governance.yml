@@ -9,9 +9,9 @@ issue:
         - chore
         - discussion
         - enhancement
+        - proposal
         - question
         - refactor
-        - feature-request
       multiple: true
       needs: true
 
@@ -39,13 +39,15 @@ issue:
         - ci-process
         - release-process
         # kargo component areas
-        - api
+        - api-server
         - charts
         - cli
         - controller
         - crds
+        - external-webhooks
         - garbage-collector
+        - kubernetes-webhooks
+        - management-controller
         - ui
-        - webhooks
       multiple: true
       needs: true

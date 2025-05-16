@@ -9,7 +9,6 @@ Expand the name of the chart.
 {{/*
 Create image reference as used by resources.
 */}}
-
 {{- define "kargo.image" -}}
 {{- $tag := default .Chart.AppVersion .Values.image.tag -}}
 {{- printf "%s:%s" .Values.image.repository $tag -}}
@@ -79,24 +78,48 @@ app.kubernetes.io/component: controller
 app.kubernetes.io/component: dex-server
 {{- end -}}
 
+{{- define "kargo.externalWebhooksServer.labels" -}}
+app.kubernetes.io/component: external-webhooks-server
+{{- end -}}
+
 {{- define "kargo.garbageCollector.labels" -}}
 app.kubernetes.io/component: garbage-collector
+{{- end -}}
+
+{{- define "kargo.kubernetesWebhooksServer.labels" -}}
+app.kubernetes.io/component: kubernetes-webhooks-server
 {{- end -}}
 
 {{- define "kargo.managementController.labels" -}}
 app.kubernetes.io/component: management-controller
 {{- end -}}
 
-{{- define "kargo.webhooksServer.labels" -}}
-app.kubernetes.io/component: webhooks-server
-{{- end -}}
-
+{{/*
+Generate the base URL for the API service.
+*/}}
 {{- define "kargo.api.baseURL" -}}
-{{- if or .Values.api.tls.enabled (and .Values.api.ingress.enabled .Values.api.ingress.tls.enabled) .Values.api.tls.terminatedUpstream -}}
+{{- if or (and .Values.api.ingress.enabled .Values.api.ingress.tls.enabled) (and (not .Values.api.ingress.enabled) .Values.api.tls.enabled) .Values.api.tls.terminatedUpstream -}}
 {{- printf "https://%s" .Values.api.host -}}
 {{- else -}}
 {{- printf "http://%s" .Values.api.host -}}
 {{- end -}}
+{{- end -}}
+
+{{/*
+Determine the most appropriate CPU resource field for GOMAXPROCS.
+Prioritizes limits over requests, with a fallback to limits if neither is set.
+*/}}
+{{- define "kargo.selectCpuResourceField" -}}
+  {{- $resources := .resources -}}
+  {{- $hasLimits := and $resources (hasKey $resources "limits") (ne (toString $resources.limits.cpu) "") -}}
+  {{- $hasRequests := and $resources (hasKey $resources "requests") (ne (toString $resources.requests.cpu) "") -}}
+  {{- if $hasLimits -}}
+    limits.cpu
+  {{- else if $hasRequests -}}
+    requests.cpu
+  {{- else -}}
+    limits.cpu
+  {{- end -}}
 {{- end -}}
 
 {{- define "call-nested" }}

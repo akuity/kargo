@@ -21,12 +21,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
+	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/conditions"
-	rolloutsapi "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
-	"github.com/akuity/kargo/internal/directives"
+	"github.com/akuity/kargo/internal/health"
 	"github.com/akuity/kargo/internal/indexer"
 	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
+	healthPkg "github.com/akuity/kargo/pkg/health"
 )
 
 func TestRegularStageReconciler_Reconcile(t *testing.T) {
@@ -210,7 +211,6 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 					Name:      "test-stage",
 				}, stage)
 				require.NoError(t, err)
-				assert.Contains(t, stage.Status.Message, "something went wrong")
 			},
 		},
 		{
@@ -334,7 +334,6 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 					Name:      "test-stage",
 				}, stage)
 				require.NoError(t, err)
-				assert.Equal(t, kargoapi.StagePhaseSteady, stage.Status.Phase)
 
 				readyCond := conditions.Get(&stage.Status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCond)
@@ -527,9 +526,9 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 				Build()
 
 			r := &RegularStageReconciler{
-				client:           c,
-				eventRecorder:    fakeevent.NewEventRecorder(10),
-				directivesEngine: &directives.FakeEngine{},
+				client:        c,
+				eventRecorder: fakeevent.NewEventRecorder(10),
+				healthChecker: &health.MockAggregatingChecker{},
 			}
 
 			status, requeue, err := r.reconcile(context.Background(), tt.stage, now)
@@ -941,6 +940,63 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 								"warehouse-1": {Name: "current-freight"},
 							},
 							// Empty verification history
+							VerificationHistory: []kargoapi.VerificationInfo{},
+						},
+					},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "pending-promotion",
+						Namespace: "fake-project",
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage: "test-stage",
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhasePending,
+						Freight: &kargoapi.FreightReference{
+							Name: "new-freight",
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.StageStatus, hasPendingPromotions bool, err error) {
+				require.NoError(t, err)
+				assert.True(t, hasPendingPromotions)
+
+				// Should allow promotion since there's no verification to wait for
+				require.NotNil(t, status.CurrentPromotion)
+				assert.Equal(t, "pending-promotion", status.CurrentPromotion.Name)
+				assert.Equal(t, "new-freight", status.CurrentPromotion.Freight.Name)
+
+				promotingCond := conditions.Get(&status, kargoapi.ConditionTypePromoting)
+				require.NotNil(t, promotingCond)
+				assert.Equal(t, metav1.ConditionTrue, promotingCond.Status)
+				assert.Equal(t, "ActivePromotion", promotingCond.Reason)
+				assert.Contains(t, promotingCond.Message, "Pending")
+			},
+		},
+		{
+			name: "allows promotion when health is unknown and no verification exists",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Status: kargoapi.StageStatus{
+					Health: &kargoapi.Health{
+						Status: kargoapi.HealthStateUnknown,
+						Issues: []string{"Cannot assess health because last Promotion did not succeed"},
+					},
+					FreightHistory: kargoapi.FreightHistory{
+						{
+							ID: "current-collection",
+							Freight: map[string]kargoapi.FreightReference{
+								"warehouse": {Name: "current-freight"},
+							},
+							// No verification history
 							VerificationHistory: []kargoapi.VerificationInfo{},
 						},
 					},
@@ -1394,7 +1450,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 	tests := []struct {
 		name          string
 		stage         *kargoapi.Stage
-		checkHealthFn func(context.Context, directives.HealthCheckContext, []directives.HealthCheckStep) kargoapi.Health
+		checkHealthFn func(ctx context.Context, project, stage string, criteria []healthPkg.Criteria) kargoapi.Health
 		assertions    func(*testing.T, kargoapi.StageStatus)
 	}{
 		{
@@ -1436,14 +1492,13 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus) {
 				assert.NotNil(t, status.Health)
-				assert.Equal(t, kargoapi.HealthStateUnhealthy, status.Health.Status)
-				assert.Equal(t, []string{"Last Promotion did not succeed"}, status.Health.Issues)
+				assert.Equal(t, kargoapi.HealthStateUnknown, status.Health.Status)
 
 				healthyCond := conditions.Get(&status, kargoapi.ConditionTypeHealthy)
 				require.NotNil(t, healthyCond)
-				assert.Equal(t, metav1.ConditionFalse, healthyCond.Status)
+				assert.Equal(t, metav1.ConditionUnknown, healthyCond.Status)
 				assert.Equal(t, "LastPromotionAborted", healthyCond.Reason)
-				assert.Equal(t, "Last Promotion did not succeed", healthyCond.Message)
+				assert.Equal(t, "Cannot assess health because last Promotion did not succeed", healthyCond.Message)
 			},
 		},
 		{
@@ -1493,11 +1548,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 					},
 				},
 			},
-			checkHealthFn: func(
-				context.Context,
-				directives.HealthCheckContext,
-				[]directives.HealthCheckStep,
-			) kargoapi.Health {
+			checkHealthFn: func(context.Context, string, string, []healthPkg.Criteria) kargoapi.Health {
 				return kargoapi.Health{Status: kargoapi.HealthStateHealthy}
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus) {
@@ -1531,11 +1582,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 					},
 				},
 			},
-			checkHealthFn: func(
-				context.Context,
-				directives.HealthCheckContext,
-				[]directives.HealthCheckStep,
-			) kargoapi.Health {
+			checkHealthFn: func(context.Context, string, string, []healthPkg.Criteria) kargoapi.Health {
 				return kargoapi.Health{
 					Status: kargoapi.HealthStateUnhealthy,
 					Issues: []string{
@@ -1576,11 +1623,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 					},
 				},
 			},
-			checkHealthFn: func(
-				context.Context,
-				directives.HealthCheckContext,
-				[]directives.HealthCheckStep,
-			) kargoapi.Health {
+			checkHealthFn: func(context.Context, string, string, []healthPkg.Criteria) kargoapi.Health {
 				return kargoapi.Health{Status: kargoapi.HealthStateNotApplicable}
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus) {
@@ -1612,11 +1655,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 					},
 				},
 			},
-			checkHealthFn: func(
-				context.Context,
-				directives.HealthCheckContext,
-				[]directives.HealthCheckStep,
-			) kargoapi.Health {
+			checkHealthFn: func(context.Context, string, string, []healthPkg.Criteria) kargoapi.Health {
 				return kargoapi.Health{Status: kargoapi.HealthStateUnknown}
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus) {
@@ -1639,8 +1678,8 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 
 			r := &RegularStageReconciler{
 				client: c,
-				directivesEngine: &directives.FakeEngine{
-					CheckHealthFn: tt.checkHealthFn,
+				healthChecker: &health.MockAggregatingChecker{
+					CheckFn: tt.checkHealthFn,
 				},
 			}
 
@@ -2920,8 +2959,8 @@ func TestRegularStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 				Build()
 
 			r := &RegularStageReconciler{
-				client:           c,
-				directivesEngine: &directives.FakeEngine{},
+				client:        c,
+				healthChecker: &health.MockAggregatingChecker{},
 			}
 
 			status, err := r.markFreightVerifiedForStage(context.Background(), tt.stage)
@@ -3033,8 +3072,8 @@ func TestRegularStageReconciler_recordFreightVerificationEvent(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-analysis",
 						Namespace: "test-project",
-						Labels: map[string]string{
-							kargoapi.PromotionLabelKey: "test-promotion",
+						Annotations: map[string]string{
+							kargoapi.AnnotationKeyPromotion: "test-promotion",
 						},
 					},
 				},
@@ -3370,7 +3409,7 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 					Namespace: vi.AnalysisRun.Namespace,
 					Name:      vi.AnalysisRun.Name,
 				}, ar))
-				assert.Equal(t, "test-promotion", ar.Labels[kargoapi.PromotionLabelKey])
+				assert.Equal(t, "test-promotion", ar.Annotations[kargoapi.AnnotationKeyPromotion])
 			},
 		},
 		{
@@ -4421,11 +4460,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				},
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "fake-project",
+						Name:      "fake-project",
+						Namespace: "fake-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "test-stage",
@@ -4451,7 +4491,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 		},
 		{
-			name: "project not found",
+			name: "projectconfig not found",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
@@ -4471,11 +4511,16 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				_ *fakeevent.EventRecorder,
-				_ client.Client,
+				c client.Client,
 				_ kargoapi.StageStatus,
 				err error,
 			) {
-				require.ErrorContains(t, err, "error getting Project")
+				require.NoError(t, err)
+
+				// Verify no promotions were created
+				promoList := &kargoapi.PromotionList{}
+				require.NoError(t, c.List(context.Background(), promoList, client.InNamespace("fake-project")))
+				assert.Empty(t, promoList.Items)
 			},
 		},
 		{
@@ -4509,11 +4554,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				},
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "fake-project",
+						Name:      "fake-project",
+						Namespace: "fake-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "test-stage",
@@ -4598,11 +4644,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				},
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "fake-project",
+						Name:      "fake-project",
+						Namespace: "fake-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "test-stage",
@@ -4666,11 +4713,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				},
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "fake-project",
+						Name:      "fake-project",
+						Namespace: "fake-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "test-stage",
@@ -4757,11 +4805,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				},
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "fake-project",
+						Name:      "fake-project",
+						Namespace: "fake-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "test-stage",
@@ -4810,7 +4859,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 		},
 		{
-			name: "handles verified freight from upstream stages with verification duration requirement",
+			name: "handles verified freight from upstream stages with soak time requirement",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
@@ -4841,11 +4890,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				},
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "fake-project",
+						Name:      "fake-project",
+						Namespace: "fake-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "test-stage",
@@ -4890,9 +4940,8 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 					Status: kargoapi.FreightStatus{
 						VerifiedIn: map[string]kargoapi.VerifiedStage{
 							"upstream-stage": {
-								// Should be selected because it was verified
-								// after the required duration.
-								VerifiedAt: &metav1.Time{Time: now.Add(-2 * time.Hour)},
+								// Should be selected because the soak time has elapsed
+								LongestCompletedSoak: &metav1.Duration{Duration: 2 * time.Hour},
 							},
 						},
 					},
@@ -4957,11 +5006,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				},
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "fake-project",
+						Name:      "fake-project",
+						Namespace: "fake-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "test-stage",
@@ -5049,11 +5099,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				},
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "fake-project",
+						Name:      "fake-project",
+						Namespace: "fake-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "test-stage",
@@ -5154,11 +5205,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				},
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "fake-project",
+						Name:      "fake-project",
+						Namespace: "fake-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "test-stage",
@@ -5234,11 +5286,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				},
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "fake-project",
+						Name:      "fake-project",
+						Namespace: "fake-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "test-stage",
@@ -5312,11 +5365,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				},
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "fake-project",
+						Name:      "fake-project",
+						Namespace: "fake-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "test-stage",
@@ -5385,11 +5439,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				},
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "fake-project",
+						Name:      "fake-project",
+						Namespace: "fake-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "test-stage",
@@ -5482,26 +5537,26 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		stage       types.NamespacedName
+		stage       metav1.ObjectMeta
 		objects     []client.Object
 		interceptor interceptor.Funcs
 		assertions  func(*testing.T, bool, error)
 	}{
 		{
-			name: "project not found",
-			stage: types.NamespacedName{
-				Namespace: "default",
+			name: "no ProjectConfig for Project",
+			stage: metav1.ObjectMeta{
+				Namespace: "test-project",
 				Name:      "test-stage",
 			},
 			assertions: func(t *testing.T, allowed bool, err error) {
-				require.ErrorContains(t, err, "error getting Project")
+				require.NoError(t, err)
 				assert.False(t, allowed)
 			},
 		},
 		{
-			name: "error getting project",
-			stage: types.NamespacedName{
-				Namespace: "default",
+			name: "error getting ProjectConfig",
+			stage: metav1.ObjectMeta{
+				Namespace: "test-project",
 				Name:      "test-stage",
 			},
 			interceptor: interceptor.Funcs{
@@ -5521,16 +5576,18 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 			},
 		},
 		{
-			name: "nil project spec",
-			stage: types.NamespacedName{
-				Namespace: "default",
+			name: "empty ProjectConfig spec",
+			stage: metav1.ObjectMeta{
+				Namespace: "test-project",
 				Name:      "test-stage",
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "default",
+						Name:      "test-project",
+						Namespace: "test-project",
 					},
+					Spec: kargoapi.ProjectConfigSpec{},
 				},
 			},
 			assertions: func(t *testing.T, allowed bool, err error) {
@@ -5540,16 +5597,17 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 		},
 		{
 			name: "empty promotion policies",
-			stage: types.NamespacedName{
-				Namespace: "default",
+			stage: metav1.ObjectMeta{
+				Namespace: "test-project",
 				Name:      "test-stage",
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "default",
+						Name:      "test-project",
+						Namespace: "test-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{},
 					},
 				},
@@ -5561,16 +5619,17 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 		},
 		{
 			name: "stage not found in policies",
-			stage: types.NamespacedName{
-				Namespace: "default",
+			stage: metav1.ObjectMeta{
+				Namespace: "test-project",
 				Name:      "test-stage",
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "default",
+						Name:      "test-project",
+						Namespace: "test-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "other-stage",
@@ -5587,16 +5646,17 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 		},
 		{
 			name: "auto-promotion enabled",
-			stage: types.NamespacedName{
-				Namespace: "default",
+			stage: metav1.ObjectMeta{
+				Namespace: "test-project",
 				Name:      "test-stage",
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "default",
+						Name:      "test-project",
+						Namespace: "test-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "test-stage",
@@ -5613,16 +5673,17 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 		},
 		{
 			name: "auto-promotion disabled",
-			stage: types.NamespacedName{
-				Namespace: "default",
+			stage: metav1.ObjectMeta{
+				Namespace: "test-project",
 				Name:      "test-stage",
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "default",
+						Name:      "test-project",
+						Namespace: "test-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "test-stage",
@@ -5639,16 +5700,17 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 		},
 		{
 			name: "multiple policies - finds correct stage",
-			stage: types.NamespacedName{
-				Namespace: "default",
+			stage: metav1.ObjectMeta{
+				Namespace: "test-project",
 				Name:      "test-stage",
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "default",
+						Name:      "test-project",
+						Namespace: "test-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "stage-1",
@@ -5673,16 +5735,17 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 		},
 		{
 			name: "different namespace",
-			stage: types.NamespacedName{
+			stage: metav1.ObjectMeta{
 				Namespace: "other-namespace",
 				Name:      "test-stage",
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "other-namespace",
+						Name:      "other-namespace",
+						Namespace: "other-namespace",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "test-stage",
@@ -5699,16 +5762,17 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 		},
 		{
 			name: "matches first policy for stage",
-			stage: types.NamespacedName{
-				Namespace: "default",
+			stage: metav1.ObjectMeta{
+				Namespace: "test-project",
 				Name:      "test-stage",
 			},
 			objects: []client.Object{
-				&kargoapi.Project{
+				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "default",
+						Name:      "test-project",
+						Namespace: "test-project",
 					},
-					Spec: &kargoapi.ProjectSpec{
+					Spec: kargoapi.ProjectConfigSpec{
 						PromotionPolicies: []kargoapi.PromotionPolicy{
 							{
 								Stage:                "test-stage",
@@ -5778,9 +5842,6 @@ func Test_summarizeConditions(t *testing.T) {
 				assert.Equal(t, metav1.ConditionTrue, reconcileCond.Status)
 				assert.Equal(t, "RetryAfterError", reconcileCond.Reason)
 				assert.Equal(t, int64(1), reconcileCond.ObservedGeneration)
-
-				assert.Equal(t, kargoapi.StagePhaseFailed, status.Phase)
-				assert.Equal(t, "something went wrong", status.Message)
 			},
 		},
 		{
@@ -5807,8 +5868,6 @@ func Test_summarizeConditions(t *testing.T) {
 				assert.Equal(t, "Promoting", readyCond.Reason)
 				assert.Equal(t, "Stage is promoting", readyCond.Message)
 				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
-
-				assert.Equal(t, kargoapi.StagePhasePromoting, status.Phase)
 			},
 		},
 		{
@@ -5833,8 +5892,6 @@ func Test_summarizeConditions(t *testing.T) {
 				assert.Equal(t, "LastPromotionFailed", readyCond.Reason)
 				assert.Equal(t, "Promotion failed due to error", readyCond.Message)
 				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
-
-				assert.Equal(t, kargoapi.StagePhaseFailed, status.Phase)
 			},
 		},
 		{
@@ -5862,8 +5919,6 @@ func Test_summarizeConditions(t *testing.T) {
 				assert.Equal(t, "HealthCheckFailed", readyCond.Reason)
 				assert.Equal(t, "Health check failed", readyCond.Message)
 				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
-
-				assert.Equal(t, kargoapi.StagePhaseFailed, status.Phase)
 			},
 		},
 		{
@@ -5881,8 +5936,6 @@ func Test_summarizeConditions(t *testing.T) {
 				assert.Equal(t, "Unhealthy", readyCond.Reason)
 				assert.Equal(t, "Stage is not healthy", readyCond.Message)
 				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
-
-				assert.Equal(t, kargoapi.StagePhaseSteady, status.Phase)
 			},
 		},
 		{
@@ -5909,8 +5962,6 @@ func Test_summarizeConditions(t *testing.T) {
 				assert.Equal(t, "HealthCheckPending", readyCond.Reason)
 				assert.Equal(t, "Health check in progress", readyCond.Message)
 				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
-
-				assert.Equal(t, kargoapi.StagePhaseSteady, status.Phase)
 			},
 		},
 		{
@@ -5943,8 +5994,6 @@ func Test_summarizeConditions(t *testing.T) {
 				assert.Equal(t, "VerificationPending", readyCond.Reason)
 				assert.Equal(t, "Verification is pending", readyCond.Message)
 				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
-
-				assert.Equal(t, kargoapi.StagePhaseVerifying, status.Phase)
 			},
 		},
 		{
@@ -5977,8 +6026,6 @@ func Test_summarizeConditions(t *testing.T) {
 				assert.Equal(t, "VerificationError", readyCond.Reason)
 				assert.Equal(t, "Verification failed", readyCond.Message)
 				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
-
-				assert.Equal(t, kargoapi.StagePhaseFailed, status.Phase)
 			},
 		},
 		{
@@ -6004,7 +6051,6 @@ func Test_summarizeConditions(t *testing.T) {
 				assert.Equal(t, metav1.ConditionFalse, readyCond.Status)
 				assert.Equal(t, "PendingVerification", readyCond.Reason)
 				assert.Equal(t, "Stage is not verified", readyCond.Message)
-				assert.Equal(t, kargoapi.StagePhaseVerifying, status.Phase)
 			},
 		},
 		{
@@ -6039,7 +6085,6 @@ func Test_summarizeConditions(t *testing.T) {
 				assert.Equal(t, "Stage is verified", readyCond.Message)
 				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
 
-				assert.Equal(t, kargoapi.StagePhaseSteady, status.Phase)
 				assert.Equal(t, int64(1), status.ObservedGeneration)
 			},
 		},
@@ -6080,12 +6125,11 @@ func Test_summarizeConditions(t *testing.T) {
 				reconcileCond := conditions.Get(status, kargoapi.ConditionTypeReconciling)
 				assert.Nil(t, reconcileCond, "Reconciling condition should be deleted when ready")
 
-				assert.Equal(t, kargoapi.StagePhaseSteady, status.Phase)
 				assert.Equal(t, int64(1), status.ObservedGeneration)
 			},
 		},
 		{
-			name: "freight summary updated and message cleared",
+			name: "freight summary updated",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Generation: 1,
@@ -6095,7 +6139,6 @@ func Test_summarizeConditions(t *testing.T) {
 				},
 			},
 			status: &kargoapi.StageStatus{
-				Message: "Previous error message",
 				FreightHistory: kargoapi.FreightHistory{
 					&kargoapi.FreightCollection{
 						Freight: map[string]kargoapi.FreightReference{
@@ -6119,7 +6162,6 @@ func Test_summarizeConditions(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, status *kargoapi.StageStatus) {
-				assert.Empty(t, status.Message, "Message should be cleared")
 				assert.Equal(t, "1/2 Fulfilled", status.FreightSummary)
 			},
 		},

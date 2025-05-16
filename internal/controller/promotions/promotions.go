@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -22,9 +23,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/controller"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
-	"github.com/akuity/kargo/internal/directives"
 	"github.com/akuity/kargo/internal/event"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/kargo"
@@ -32,6 +33,8 @@ import (
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	"github.com/akuity/kargo/internal/logging"
 	intpredicate "github.com/akuity/kargo/internal/predicate"
+	"github.com/akuity/kargo/internal/promotion"
+	pkgPromotion "github.com/akuity/kargo/pkg/promotion"
 )
 
 // ReconcilerConfig represents configuration for the promotion reconciler.
@@ -57,8 +60,8 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 
 // reconciler reconciles Promotion resources.
 type reconciler struct {
-	kargoClient      client.Client
-	directivesEngine directives.Engine
+	kargoClient client.Client
+	promoEngine promotion.Engine
 
 	cfg ReconcilerConfig
 
@@ -93,7 +96,7 @@ func SetupReconcilerWithManager(
 	ctx context.Context,
 	kargoMgr manager.Manager,
 	argocdMgr manager.Manager,
-	directivesEngine directives.Engine,
+	promoEngine promotion.Engine,
 	cfg ReconcilerConfig,
 ) error {
 	// Index running Promotions by Argo CD Applications
@@ -101,7 +104,7 @@ func SetupReconcilerWithManager(
 		ctx,
 		&kargoapi.Promotion{},
 		indexer.RunningPromotionsByArgoCDApplicationsField,
-		indexer.RunningPromotionsByArgoCDApplications(ctx, cfg.ShardName),
+		indexer.RunningPromotionsByArgoCDApplications(ctx, kargoMgr.GetClient(), cfg.ShardName),
 	); err != nil {
 		return fmt.Errorf("index running Promotions by Argo CD Applications: %w", err)
 	}
@@ -109,7 +112,7 @@ func SetupReconcilerWithManager(
 	reconciler := newReconciler(
 		kargoMgr.GetClient(),
 		libEvent.NewRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), cfg.Name()),
-		directivesEngine,
+		promoEngine,
 		cfg,
 	)
 
@@ -170,16 +173,16 @@ func SetupReconcilerWithManager(
 func newReconciler(
 	kargoClient client.Client,
 	recorder record.EventRecorder,
-	directivesEngine directives.Engine,
+	promoEngine promotion.Engine,
 	cfg ReconcilerConfig,
 ) *reconciler {
 	r := &reconciler{
-		kargoClient:      kargoClient,
-		directivesEngine: directivesEngine,
-		recorder:         recorder,
-		cfg:              cfg,
+		kargoClient: kargoClient,
+		promoEngine: promoEngine,
+		recorder:    recorder,
+		cfg:         cfg,
 	}
-	r.getStageFn = kargoapi.GetStage
+	r.getStageFn = api.GetStage
 	r.promoteFn = r.promote
 	r.terminatePromotionFn = r.terminatePromotion
 	return r
@@ -199,7 +202,7 @@ func (r *reconciler) Reconcile(
 	logger.Debug("reconciling Promotion")
 
 	// Find the Promotion
-	promo, err := kargoapi.GetPromotion(ctx, r.kargoClient, req.NamespacedName)
+	promo, err := api.GetPromotion(ctx, r.kargoClient, req.NamespacedName)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -209,7 +212,7 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 	// Find the Freight
-	freight, err := kargoapi.GetFreight(ctx, r.kargoClient, types.NamespacedName{
+	freight, err := api.GetFreight(ctx, r.kargoClient, types.NamespacedName{
 		Namespace: promo.Namespace,
 		Name:      promo.Spec.Freight,
 	})
@@ -230,7 +233,7 @@ func (r *reconciler) Reconcile(
 	)
 
 	// Terminate the Promotion if requested by the user.
-	if req, ok := kargoapi.AbortPromotionAnnotationValue(
+	if req, ok := api.AbortPromotionAnnotationValue(
 		promo.GetAnnotations(),
 	); ok && req.Action == kargoapi.AbortActionTerminate {
 		if err = r.terminatePromotionFn(ctx, req, promo, freight); err != nil {
@@ -335,7 +338,7 @@ func (r *reconciler) Reconcile(
 	}
 
 	// Record the current refresh token as having been handled.
-	if token, ok := kargoapi.RefreshAnnotationValue(promo.GetAnnotations()); ok {
+	if token, ok := api.RefreshAnnotationValue(promo.GetAnnotations()); ok {
 		newStatus.LastHandledRefresh = token
 	}
 
@@ -395,7 +398,7 @@ func (r *reconciler) Reconcile(
 		}
 
 		eventAnnotations := event.NewPromotionAnnotations(ctx,
-			kargoapi.FormatEventControllerActor(r.cfg.Name()),
+			api.FormatEventControllerActor(r.cfg.Name()),
 			promo, freight)
 
 		if newStatus.Phase == kargoapi.PromotionPhaseSucceeded {
@@ -413,10 +416,8 @@ func (r *reconciler) Reconcile(
 
 	// If the promotion is still running, we'll need to periodically check on
 	// it.
-	//
-	// TODO: Make this configurable
 	if newStatus.Phase == kargoapi.PromotionPhaseRunning {
-		return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
+		return ctrl.Result{RequeueAfter: calculateRequeueInterval(promo)}, nil
 	}
 	return ctrl.Result{}, nil
 }
@@ -465,18 +466,20 @@ func (r *reconciler) promote(
 	)
 
 	// Prepare promotion steps and vars for the promotion execution engine.
-	steps := make([]directives.PromotionStep, len(workingPromo.Spec.Steps))
+	steps := make([]promotion.Step, len(workingPromo.Spec.Steps))
 	for i, step := range workingPromo.Spec.Steps {
-		steps[i] = directives.PromotionStep{
-			Kind:   step.Uses,
-			Alias:  step.As,
-			Retry:  step.Retry,
-			Vars:   step.Vars,
-			Config: step.Config.Raw,
+		steps[i] = promotion.Step{
+			Kind:            step.Uses,
+			Alias:           step.As,
+			If:              step.If,
+			ContinueOnError: step.ContinueOnError,
+			Retry:           step.Retry,
+			Vars:            step.Vars,
+			Config:          step.Config.Raw,
 		}
 	}
 
-	promoCtx := directives.PromotionContext{
+	promoCtx := promotion.Context{
 		UIBaseURL:             r.cfg.APIServerBaseURL,
 		WorkDir:               filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID)),
 		Project:               stageNamespace,
@@ -486,8 +489,9 @@ func (r *reconciler) promote(
 		Freight:               *workingPromo.Status.FreightCollection.DeepCopy(),
 		StartFromStep:         promo.Status.CurrentStep,
 		StepExecutionMetadata: promo.Status.StepExecutionMetadata,
-		State:                 directives.State(workingPromo.Status.GetState()),
+		State:                 pkgPromotion.State(workingPromo.Status.GetState()),
 		Vars:                  workingPromo.Spec.Vars,
+		Actor:                 parseCreateActorAnnotation(&promo),
 	}
 	if err := os.Mkdir(promoCtx.WorkDir, 0o700); err == nil {
 		// If we're working with a fresh directory, we should start the promotion
@@ -508,18 +512,18 @@ func (r *reconciler) promote(
 		}
 	}()
 
-	res, err := r.directivesEngine.Promote(ctx, promoCtx, steps)
+	res, err := r.promoEngine.Promote(ctx, promoCtx, steps)
 	workingPromo.Status.Phase = res.Status
 	workingPromo.Status.Message = res.Message
 	workingPromo.Status.CurrentStep = res.CurrentStep
 	workingPromo.Status.StepExecutionMetadata = res.StepExecutionMetadata
 	workingPromo.Status.State = &apiextensionsv1.JSON{Raw: res.State.ToJSON()}
-	for _, step := range res.HealthCheckSteps {
+	for _, step := range res.HealthChecks {
 		workingPromo.Status.HealthChecks = append(
 			workingPromo.Status.HealthChecks,
 			kargoapi.HealthCheckStep{
 				Uses:   step.Kind,
-				Config: &apiextensionsv1.JSON{Raw: step.Config.ToJSON()},
+				Config: &apiextensionsv1.JSON{Raw: step.Input.ToJSON()},
 			},
 		)
 	}
@@ -537,7 +541,7 @@ func (r *reconciler) promote(
 		if current != nil && current.VerificationHistory.Current() != nil {
 			for _, f := range current.Freight {
 				if f.Name == targetFreight.Name {
-					if err := kargoapi.ReverifyStageFreight(
+					if err := api.ReverifyStageFreight(
 						ctx,
 						r.kargoClient,
 						types.NamespacedName{
@@ -610,19 +614,30 @@ func (r *reconciler) terminatePromotion(
 	// events. For an abort request, however, we do not want to inherit this
 	// as the abort request is not necessarily made by the creator of the
 	// Promotion.
-	actor := kargoapi.FormatEventControllerActor(r.cfg.Name())
+	actor := api.FormatEventControllerActor(r.cfg.Name())
 	if req.Actor != "" {
 		actor = req.Actor
 	}
 
 	newStatus := promo.Status.DeepCopy()
+
+	now := &metav1.Time{Time: time.Now()}
+
+	// If a step was running, mark the step as aborted.
+	if newStatus.Phase == kargoapi.PromotionPhaseRunning &&
+		int64(len(newStatus.StepExecutionMetadata)) == promo.Status.CurrentStep+1 &&
+		promo.Status.StepExecutionMetadata[promo.Status.CurrentStep].Status == kargoapi.PromotionStepStatusRunning {
+		newStatus.StepExecutionMetadata[promo.Status.CurrentStep].Status = kargoapi.PromotionStepStatusAborted
+		newStatus.StepExecutionMetadata[promo.Status.CurrentStep].FinishedAt = now
+	}
+
 	newStatus.Phase = kargoapi.PromotionPhaseAborted
 	if actor != "" {
 		newStatus.Message = fmt.Sprintf("Promotion terminated by %s", actor)
 	} else {
 		newStatus.Message = "Promotion terminated per user request"
 	}
-	newStatus.FinishedAt = &metav1.Time{Time: time.Now()}
+	newStatus.FinishedAt = now
 
 	if err := kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
 		*status = *newStatus
@@ -642,4 +657,38 @@ func (r *reconciler) terminatePromotion(
 	)
 
 	return nil
+}
+
+// parseCreateActorAnnotation extracts the v1alpha1.AnnotationKeyCreateActor
+// value from the Promotion's annotations and returns it. If the value contains
+// a colon, it is split and the second part is returned. Otherwise, the entire
+// value or an empty string is returned.
+func parseCreateActorAnnotation(promo *kargoapi.Promotion) string {
+	var creator string
+	if v, ok := promo.Annotations[kargoapi.AnnotationKeyCreateActor]; ok {
+		if v != kargoapi.EventActorUnknown {
+			creator = v
+		}
+		if parts := strings.Split(v, ":"); len(parts) == 2 {
+			creator = parts[1]
+		}
+	}
+	return creator
+}
+
+func calculateRequeueInterval(p *kargoapi.Promotion) time.Duration {
+	defaultRequeueInterval := 5 * time.Minute
+	step := p.Spec.Steps[p.Status.CurrentStep]
+	runner := promotion.GetStepRunner(step.Uses)
+
+	timeout := (&promotion.Step{
+		Retry: step.Retry,
+	}).GetTimeout(runner)
+
+	md := p.Status.StepExecutionMetadata[p.Status.CurrentStep]
+	targetTimeout := md.StartedAt.Time.Add(*timeout)
+	if targetTimeout.Before(time.Now().Add(defaultRequeueInterval)) {
+		return time.Until(targetTimeout)
+	}
+	return defaultRequeueInterval
 }

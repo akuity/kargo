@@ -18,7 +18,7 @@ const (
 	// tag.
 	SelectionStrategyDigest SelectionStrategy = "Digest"
 	// SelectionStrategyLexical represents an image selection strategy that is
-	// useful for finding the the image referenced by the tag that is lexically
+	// useful for finding the image referenced by the tag that is lexically
 	// last among those matched by a regular expression and not explicitly
 	// ignored. This strategy is useful for finding the images referenced by the
 	// latest in a series of tag that are suffixed with a predictably formatted

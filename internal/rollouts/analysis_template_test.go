@@ -7,18 +7,18 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/ptr"
 
-	rolloutsapi "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
+	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 )
 
 func Test_flattenTemplates(t *testing.T) {
 	tests := []struct {
-		name       string
-		templates  []*rolloutsapi.AnalysisTemplate
-		assertions func(*testing.T, *rolloutsapi.AnalysisTemplate, error)
+		name          string
+		templateSpecs []*rolloutsapi.AnalysisTemplateSpec
+		assertions    func(*testing.T, *rolloutsapi.AnalysisTemplate, error)
 	}{
 		{
-			name:      "handle nil templates",
-			templates: nil,
+			name:          "handle nil templates",
+			templateSpecs: nil,
 			assertions: func(t *testing.T, template *rolloutsapi.AnalysisTemplate, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, template)
@@ -29,8 +29,8 @@ func Test_flattenTemplates(t *testing.T) {
 			},
 		},
 		{
-			name:      "handle empty list",
-			templates: []*rolloutsapi.AnalysisTemplate{},
+			name:          "handle empty list",
+			templateSpecs: []*rolloutsapi.AnalysisTemplateSpec{},
 			assertions: func(t *testing.T, template *rolloutsapi.AnalysisTemplate, err error) {
 				require.NoError(t, err)
 				require.Empty(t, template.Spec.Metrics)
@@ -39,20 +39,18 @@ func Test_flattenTemplates(t *testing.T) {
 		},
 		{
 			name: "no changes on single template",
-			templates: []*rolloutsapi.AnalysisTemplate{
+			templateSpecs: []*rolloutsapi.AnalysisTemplateSpec{
 				{
-					Spec: rolloutsapi.AnalysisTemplateSpec{
-						Metrics: []rolloutsapi.Metric{
-							{
-								Name:             "foo",
-								SuccessCondition: "{{args.test}}",
-							},
+					Metrics: []rolloutsapi.Metric{
+						{
+							Name:             "foo",
+							SuccessCondition: "{{args.test}}",
 						},
-						Args: []rolloutsapi.Argument{
-							{
-								Name:  "test",
-								Value: ptr.To("true"),
-							},
+					},
+					Args: []rolloutsapi.Argument{
+						{
+							Name:  "test",
+							Value: ptr.To("true"),
 						},
 					},
 				},
@@ -71,46 +69,42 @@ func Test_flattenTemplates(t *testing.T) {
 		},
 		{
 			name: "merge multiple metrics",
-			templates: []*rolloutsapi.AnalysisTemplate{
+			templateSpecs: []*rolloutsapi.AnalysisTemplateSpec{
 				{
-					Spec: rolloutsapi.AnalysisTemplateSpec{
-						Metrics: []rolloutsapi.Metric{
-							{
-								Name:             "foo",
-								SuccessCondition: "true",
-							},
+					Metrics: []rolloutsapi.Metric{
+						{
+							Name:             "foo",
+							SuccessCondition: "true",
 						},
-						DryRun: []rolloutsapi.DryRun{
-							{
-								MetricName: "foo",
-							},
+					},
+					DryRun: []rolloutsapi.DryRun{
+						{
+							MetricName: "foo",
 						},
-						MeasurementRetention: []rolloutsapi.MeasurementRetention{
-							{
-								MetricName: "foo",
-								Limit:      int32(5),
-							},
+					},
+					MeasurementRetention: []rolloutsapi.MeasurementRetention{
+						{
+							MetricName: "foo",
+							Limit:      int32(5),
 						},
 					},
 				},
 				{
-					Spec: rolloutsapi.AnalysisTemplateSpec{
-						Metrics: []rolloutsapi.Metric{
-							{
-								Name:             "bar",
-								SuccessCondition: "true",
-							},
+					Metrics: []rolloutsapi.Metric{
+						{
+							Name:             "bar",
+							SuccessCondition: "true",
 						},
-						DryRun: []rolloutsapi.DryRun{
-							{
-								MetricName: "bar",
-							},
+					},
+					DryRun: []rolloutsapi.DryRun{
+						{
+							MetricName: "bar",
 						},
-						MeasurementRetention: []rolloutsapi.MeasurementRetention{
-							{
-								MetricName: "bar",
-								Limit:      int32(10),
-							},
+					},
+					MeasurementRetention: []rolloutsapi.MeasurementRetention{
+						{
+							MetricName: "bar",
+							Limit:      int32(10),
 						},
 					},
 				},
@@ -149,24 +143,20 @@ func Test_flattenTemplates(t *testing.T) {
 		},
 		{
 			name: "merge fail with metric name collision",
-			templates: []*rolloutsapi.AnalysisTemplate{
+			templateSpecs: []*rolloutsapi.AnalysisTemplateSpec{
 				{
-					Spec: rolloutsapi.AnalysisTemplateSpec{
-						Metrics: []rolloutsapi.Metric{
-							{
-								Name:             "foo",
-								SuccessCondition: "true",
-							},
+					Metrics: []rolloutsapi.Metric{
+						{
+							Name:             "foo",
+							SuccessCondition: "true",
 						},
 					},
 				},
 				{
-					Spec: rolloutsapi.AnalysisTemplateSpec{
-						Metrics: []rolloutsapi.Metric{
-							{
-								Name:             "foo",
-								SuccessCondition: "false",
-							},
+					Metrics: []rolloutsapi.Metric{
+						{
+							Name:             "foo",
+							SuccessCondition: "false",
 						},
 					},
 				},
@@ -178,34 +168,30 @@ func Test_flattenTemplates(t *testing.T) {
 		},
 		{
 			name: "merge fail with dry-run name collision",
-			templates: []*rolloutsapi.AnalysisTemplate{
+			templateSpecs: []*rolloutsapi.AnalysisTemplateSpec{
 				{
-					Spec: rolloutsapi.AnalysisTemplateSpec{
-						Metrics: []rolloutsapi.Metric{
-							{
-								Name:             "foo",
-								SuccessCondition: "true",
-							},
+					Metrics: []rolloutsapi.Metric{
+						{
+							Name:             "foo",
+							SuccessCondition: "true",
 						},
-						DryRun: []rolloutsapi.DryRun{
-							{
-								MetricName: "metric1",
-							},
+					},
+					DryRun: []rolloutsapi.DryRun{
+						{
+							MetricName: "metric1",
 						},
 					},
 				},
 				{
-					Spec: rolloutsapi.AnalysisTemplateSpec{
-						Metrics: []rolloutsapi.Metric{
-							{
-								Name:             "bar",
-								SuccessCondition: "true",
-							},
+					Metrics: []rolloutsapi.Metric{
+						{
+							Name:             "bar",
+							SuccessCondition: "true",
 						},
-						DryRun: []rolloutsapi.DryRun{
-							{
-								MetricName: "metric1",
-							},
+					},
+					DryRun: []rolloutsapi.DryRun{
+						{
+							MetricName: "metric1",
 						},
 					},
 				},
@@ -217,24 +203,20 @@ func Test_flattenTemplates(t *testing.T) {
 		},
 		{
 			name: "merge fail with measurement retention name collision",
-			templates: []*rolloutsapi.AnalysisTemplate{
+			templateSpecs: []*rolloutsapi.AnalysisTemplateSpec{
 				{
-					Spec: rolloutsapi.AnalysisTemplateSpec{
-						MeasurementRetention: []rolloutsapi.MeasurementRetention{
-							{
-								MetricName: "metric1",
-								Limit:      int32(0),
-							},
+					MeasurementRetention: []rolloutsapi.MeasurementRetention{
+						{
+							MetricName: "metric1",
+							Limit:      int32(0),
 						},
 					},
 				},
 				{
-					Spec: rolloutsapi.AnalysisTemplateSpec{
-						MeasurementRetention: []rolloutsapi.MeasurementRetention{
-							{
-								MetricName: "metric1",
-								Limit:      int32(0),
-							},
+					MeasurementRetention: []rolloutsapi.MeasurementRetention{
+						{
+							MetricName: "metric1",
+							Limit:      int32(0),
 						},
 					},
 				},
@@ -246,24 +228,20 @@ func Test_flattenTemplates(t *testing.T) {
 		},
 		{
 			name: "merge fail with argument error",
-			templates: []*rolloutsapi.AnalysisTemplate{
+			templateSpecs: []*rolloutsapi.AnalysisTemplateSpec{
 				{
-					Spec: rolloutsapi.AnalysisTemplateSpec{
-						Args: []rolloutsapi.Argument{
-							{
-								Name:  "foo",
-								Value: ptr.To("value1"),
-							},
+					Args: []rolloutsapi.Argument{
+						{
+							Name:  "foo",
+							Value: ptr.To("value1"),
 						},
 					},
 				},
 				{
-					Spec: rolloutsapi.AnalysisTemplateSpec{
-						Args: []rolloutsapi.Argument{
-							{
-								Name:  "foo",
-								Value: ptr.To("value2"),
-							},
+					Args: []rolloutsapi.Argument{
+						{
+							Name:  "foo",
+							Value: ptr.To("value2"),
 						},
 					},
 				},
@@ -278,7 +256,7 @@ func Test_flattenTemplates(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := flattenTemplates(tt.templates)
+			result, err := flattenTemplates(tt.templateSpecs)
 			tt.assertions(t, result, err)
 		})
 	}
@@ -399,30 +377,26 @@ func Test_mergeArgs(t *testing.T) {
 
 func Test_flattenArgs(t *testing.T) {
 	tests := []struct {
-		name       string
-		templates  []*rolloutsapi.AnalysisTemplate
-		assertions func(*testing.T, []rolloutsapi.Argument, error)
+		name          string
+		templateSpecs []*rolloutsapi.AnalysisTemplateSpec
+		assertions    func(*testing.T, []rolloutsapi.Argument, error)
 	}{
 		{
 			name: "merge multiple args",
-			templates: []*rolloutsapi.AnalysisTemplate{
+			templateSpecs: []*rolloutsapi.AnalysisTemplateSpec{
 				{
-					Spec: rolloutsapi.AnalysisTemplateSpec{
-						Args: []rolloutsapi.Argument{
-							{
-								Name:  "foo",
-								Value: ptr.To("true"),
-							},
+					Args: []rolloutsapi.Argument{
+						{
+							Name:  "foo",
+							Value: ptr.To("true"),
 						},
 					},
 				},
 				{
-					Spec: rolloutsapi.AnalysisTemplateSpec{
-						Args: []rolloutsapi.Argument{
-							{
-								Name:  "bar",
-								Value: ptr.To("false"),
-							},
+					Args: []rolloutsapi.Argument{
+						{
+							Name:  "bar",
+							Value: ptr.To("false"),
 						},
 					},
 				},
@@ -442,24 +416,20 @@ func Test_flattenArgs(t *testing.T) {
 		},
 		{
 			name: "merge args with same name but only one has value",
-			templates: []*rolloutsapi.AnalysisTemplate{
+			templateSpecs: []*rolloutsapi.AnalysisTemplateSpec{
 				{
-					Spec: rolloutsapi.AnalysisTemplateSpec{
-						Args: []rolloutsapi.Argument{
-							{
-								Name:  "foo",
-								Value: ptr.To("value"),
-							},
+					Args: []rolloutsapi.Argument{
+						{
+							Name:  "foo",
+							Value: ptr.To("value"),
 						},
 					},
 				},
 				{
-					Spec: rolloutsapi.AnalysisTemplateSpec{
-						Args: []rolloutsapi.Argument{
-							{
-								Name:  "foo",
-								Value: nil,
-							},
+					Args: []rolloutsapi.Argument{
+						{
+							Name:  "foo",
+							Value: nil,
 						},
 					},
 				},
@@ -475,24 +445,20 @@ func Test_flattenArgs(t *testing.T) {
 		},
 		{
 			name: "error when merging args with same name but different values",
-			templates: []*rolloutsapi.AnalysisTemplate{
+			templateSpecs: []*rolloutsapi.AnalysisTemplateSpec{
 				{
-					Spec: rolloutsapi.AnalysisTemplateSpec{
-						Args: []rolloutsapi.Argument{
-							{
-								Name:  "foo",
-								Value: ptr.To("true"),
-							},
+					Args: []rolloutsapi.Argument{
+						{
+							Name:  "foo",
+							Value: ptr.To("true"),
 						},
 					},
 				},
 				{
-					Spec: rolloutsapi.AnalysisTemplateSpec{
-						Args: []rolloutsapi.Argument{
-							{
-								Name:  "foo",
-								Value: ptr.To("false"),
-							},
+					Args: []rolloutsapi.Argument{
+						{
+							Name:  "foo",
+							Value: ptr.To("false"),
 						},
 					},
 				},
@@ -503,20 +469,16 @@ func Test_flattenArgs(t *testing.T) {
 			},
 		},
 		{
-			name: "nil args in templates",
-			templates: []*rolloutsapi.AnalysisTemplate{
+			name: "nil args in templateSpecs",
+			templateSpecs: []*rolloutsapi.AnalysisTemplateSpec{
 				{
-					Spec: rolloutsapi.AnalysisTemplateSpec{
-						Args: nil,
-					},
+					Args: nil,
 				},
 				{
-					Spec: rolloutsapi.AnalysisTemplateSpec{
-						Args: []rolloutsapi.Argument{
-							{
-								Name:  "foo",
-								Value: ptr.To("value"),
-							},
+					Args: []rolloutsapi.Argument{
+						{
+							Name:  "foo",
+							Value: ptr.To("value"),
 						},
 					},
 				},
@@ -531,20 +493,16 @@ func Test_flattenArgs(t *testing.T) {
 			},
 		},
 		{
-			name: "empty args slice in templates",
-			templates: []*rolloutsapi.AnalysisTemplate{
+			name: "empty args slice in templateSpecs",
+			templateSpecs: []*rolloutsapi.AnalysisTemplateSpec{
 				{
-					Spec: rolloutsapi.AnalysisTemplateSpec{
-						Args: []rolloutsapi.Argument{},
-					},
+					Args: []rolloutsapi.Argument{},
 				},
 				{
-					Spec: rolloutsapi.AnalysisTemplateSpec{
-						Args: []rolloutsapi.Argument{
-							{
-								Name:  "foo",
-								Value: ptr.To("value"),
-							},
+					Args: []rolloutsapi.Argument{
+						{
+							Name:  "foo",
+							Value: ptr.To("value"),
 						},
 					},
 				},
@@ -560,18 +518,16 @@ func Test_flattenArgs(t *testing.T) {
 		},
 		{
 			name: "handle argument with both value and valueFrom",
-			templates: []*rolloutsapi.AnalysisTemplate{
+			templateSpecs: []*rolloutsapi.AnalysisTemplateSpec{
 				{
-					Spec: rolloutsapi.AnalysisTemplateSpec{
-						Args: []rolloutsapi.Argument{
-							{
-								Name:  "foo",
-								Value: ptr.To("value"),
-								ValueFrom: &rolloutsapi.ValueFrom{
-									SecretKeyRef: &rolloutsapi.SecretKeyRef{
-										Name: "secret1",
-										Key:  "key1",
-									},
+					Args: []rolloutsapi.Argument{
+						{
+							Name:  "foo",
+							Value: ptr.To("value"),
+							ValueFrom: &rolloutsapi.ValueFrom{
+								SecretKeyRef: &rolloutsapi.SecretKeyRef{
+									Name: "secret1",
+									Key:  "key1",
 								},
 							},
 						},
@@ -595,29 +551,25 @@ func Test_flattenArgs(t *testing.T) {
 		},
 		{
 			name: "merge args with ValueFrom",
-			templates: []*rolloutsapi.AnalysisTemplate{
+			templateSpecs: []*rolloutsapi.AnalysisTemplateSpec{
 				{
-					Spec: rolloutsapi.AnalysisTemplateSpec{
-						Args: []rolloutsapi.Argument{
-							{
-								Name: "foo",
-								ValueFrom: &rolloutsapi.ValueFrom{
-									SecretKeyRef: &rolloutsapi.SecretKeyRef{
-										Name: "secret1",
-										Key:  "key1",
-									},
+					Args: []rolloutsapi.Argument{
+						{
+							Name: "foo",
+							ValueFrom: &rolloutsapi.ValueFrom{
+								SecretKeyRef: &rolloutsapi.SecretKeyRef{
+									Name: "secret1",
+									Key:  "key1",
 								},
 							},
 						},
 					},
 				},
 				{
-					Spec: rolloutsapi.AnalysisTemplateSpec{
-						Args: []rolloutsapi.Argument{
-							{
-								Name:  "foo",
-								Value: nil,
-							},
+					Args: []rolloutsapi.Argument{
+						{
+							Name:  "foo",
+							Value: nil,
 						},
 					},
 				},
@@ -640,7 +592,7 @@ func Test_flattenArgs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := flattenArgs(tt.templates)
+			result, err := flattenArgs(tt.templateSpecs)
 			tt.assertions(t, result, err)
 		})
 	}
