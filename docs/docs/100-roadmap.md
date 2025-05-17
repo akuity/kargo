@@ -17,28 +17,40 @@ Project](https://github.com/akuity/kargo/milestones)
 
 ## In Progress
 
-### v1.3.0
+### v1.6.0 (Upcoming)
 
-__Expected:__ TBD
+**Expected:** TBD
 
-v1.3.0 will focus on isolating user-defined promotion processes (or possibly
-individual steps thereof) in their own ephemeral execution environments. This
-is intended to pave the way for eventual support for custom/third-party
-promotion steps.
-
-## Upcoming
-
-### v1.4.0 and Beyond
-
-__Expected:__ TBD
-
-v1.4.0 will leverage the improved isolation of user-defined promotion processes
-to begin supporting custom/third-party promotion steps. This work will include
-establishing a formal specification for developers wishing to implement their
-own promotion steps, as well as building the mechanisms whereby operators may
-install and users may leverage such promotion steps.
+The v1.6.0 release is currently in progress. We’re working on several new features and improvements.
+This release might include webhook endpoint to allow immediate warehouse refresh when new git
+commits or container images are pushed, improving over current polling delays.
 
 ## Completed
+
+### v1.5.0
+
+This major release revamped the UI for better usability and responsiveness and introduced significant improvements including:
+
+* Namespaced `ProjectConfig` CRD for easier project-level configuration and permissions
+* Explicit tracking of skipped promotion steps
+* Enhanced conditional promotion step execution with new functions like `always()`, `failure()`, `success()`, and direct step status access
+* New `config()` and improved `secret()` functions for better ConfigMap and Secret access in expressions
+* Improved Workload Identity Federation support in GKE
+* Updates to promotion steps including `git-clone`, `git-commit`, and Bitbucket support in PR steps
+
+### v1.4.0
+
+Focused on improving isolation of user-defined promotion processes and supporting custom/third-party promotion steps. This release also introduced:
+
+* Modular promotion steps specification and installation mechanisms
+* Refactoring of core components for scalability and maintainability
+
+### v1.3.0
+
+Centered on isolating promotion processes to pave the way for custom/third-party steps. Key features included:
+
+* Ephemeral execution environments for user-defined promotion steps
+* Foundations for future enhancements in promotion step flexibility and extensibility
 
 ### v1.2.0
 
