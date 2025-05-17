@@ -12,7 +12,7 @@ with a wide variety of external services.
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `method` | `string` | Y | The HTTP method to use. |
+| `method` | `string` | N | The HTTP method to use. Defaults to `GET` |
 | `url` | `string` | Y | The URL to which the request should be made. |
 | `headers` | `[]object` | N | A list of headers to include in the request. |
 | `headers[].name` | `string` | Y | The name of the header. |
