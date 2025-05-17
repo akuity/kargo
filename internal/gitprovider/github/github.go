@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/google/go-github/v56/github"
+	"github.com/google/go-github/v71/github"
 	"github.com/hashicorp/go-cleanhttp"
 	"k8s.io/utils/ptr"
 
@@ -180,7 +180,7 @@ func (p *provider) CreatePullRequest(
 			Head:                &opts.Head,
 			Base:                &opts.Base,
 			Body:                &opts.Description,
-			MaintainerCanModify: github.Bool(false),
+			MaintainerCanModify: github.Ptr(false),
 		},
 	)
 	if err != nil {

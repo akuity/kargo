@@ -893,6 +893,9 @@ message ProjectConfig {
 
   // Spec describes the configuration of a Project.
   optional ProjectConfigSpec spec = 2;
+
+  // Status describes the current status of a Project.
+  optional ProjectConfigStatus status = 3;
 }
 
 // ProjectConfigList is a list of ProjectConfig resources.
@@ -910,6 +913,21 @@ message ProjectConfigSpec {
   // PromotionPolicies defines policies governing the promotion of Freight to
   // specific Stages within the Project.
   repeated PromotionPolicy promotionPolicies = 1;
+
+  // WebhookReceiverConfigs defines the webhook receivers for the project config.
+  repeated WebhookReceiverConfig receivers = 2;
+}
+
+message ProjectConfigStatus {
+  // Conditions contains the last observations of the Project Config's current state.
+  // +patchMergeKey=type
+  // +patchStrategy=merge
+  // +listType=map
+  // +listMapKey=type
+  repeated .k8s.io.apimachinery.pkg.apis.meta.v1.Condition conditions = 3;
+
+  // WebhookReceivers contains the list of webhook receivers for the
+  repeated WebhookReceiver receivers = 5;
 }
 
 // ProjectList is a list of Project resources.
@@ -1606,5 +1624,28 @@ message WarehouseStatus {
 
   // DiscoveredArtifacts holds the artifacts discovered by the Warehouse.
   optional DiscoveredArtifacts discoveredArtifacts = 7;
+}
+
+// WebhookReceiver describes a path used to receive warehouse events and
+// trigger refreshes.
+message WebhookReceiver {
+  // Path is the path to the receiver's webhook endpoint.
+  optional string path = 3;
+}
+
+// WebhookReceiverConfig is a resource type that describes the configuration
+// for a receiver.
+message WebhookReceiverConfig {
+  // Type is the type of the receiver.
+  //
+  // TODO: Add more receiver enum types(e.g. Dockerhub, Quay, Gitlab, etc...)
+  // +kubebuilder:validation:Enum=GitHub;
+  optional string type = 2;
+
+  // Secret is the name of the secret that contains the credentials for the
+  // receiver.
+  //
+  // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+  optional string secretRef = 4;
 }
 

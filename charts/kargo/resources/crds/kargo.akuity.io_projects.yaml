@@ -154,6 +154,28 @@ spec:
                       set
                     rule: 'has(self.stage) ? !has(self.stageSelector) : has(self.stageSelector)'
                 type: array
+              receivers:
+                description: WebhookReceiverConfigs defines the webhook receivers
+                  for the project config.
+                items:
+                  description: |-
+                    WebhookReceiverConfig is a resource type that describes the configuration
+                    for a receiver.
+                  properties:
+                    secretRef:
+                      description: |-
+                        Secret is the name of the secret that contains the credentials for the
+                        receiver.
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
+                    type:
+                      description: |
+                        Type is the type of the receiver.
+                      enum:
+                      - GitHub
+                      type: string
+                  type: object
+                type: array
             type: object
           status:
             description: Status describes the Project's current status.

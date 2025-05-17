@@ -41,7 +41,8 @@ const (
 
 	ServiceAccountsByOIDCClaimsField = "claims"
 
-	WarehousesBySubscribedURLsField = "subscribedURLs"
+	WarehousesBySubscribedURLsField           = "subscribedURLs"
+	ProjectConfigsByWebhookReceiverPathsField = "receiverPaths"
 )
 
 // EventsByInvolvedObjectAPIGroup is a client.IndexerFunc that indexes
@@ -479,4 +480,19 @@ func WarehousesBySubscribedURLs(obj client.Object) []string {
 		}
 	}
 	return repoURLs
+}
+
+// ProjectConfigsByWebhookReceiverPaths is a client.IndexerFunc that indexes Projects by the
+// paths of their receivers.
+func ProjectConfigsByWebhookReceiverPaths(obj client.Object) []string {
+	pc, ok := obj.(*kargoapi.ProjectConfig)
+	if !ok {
+		return nil
+	}
+
+	var receiverPaths []string
+	for _, r := range pc.Status.WebhookReceivers {
+		receiverPaths = append(receiverPaths, r.Path)
+	}
+	return receiverPaths
 }
