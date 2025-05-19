@@ -2,7 +2,9 @@ package builtin
 
 import (
 	"sync/atomic"
+	"time"
 
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/akuity/kargo/internal/credentials"
@@ -19,7 +21,11 @@ func Initialize(kargoClient, argocdClient client.Client, credsDB credentials.Dat
 		panic("built-in promotion step runners already initialized")
 	}
 	builtIns := []promoPkg.StepRunner{
-		newArgocdUpdater(argocdClient),
+		NewRetryableStepRunner(
+			newArgocdUpdater(argocdClient),
+			ptr.To(5*time.Minute),
+			0,
+		),
 		newHelmChartUpdater(credsDB),
 		newFileCopier(),
 		newFileDeleter(),
