@@ -193,40 +193,6 @@ export const AssembleFreight = ({
     }
   }
 
-  const DiscoveryTable = () => {
-    if (!selected) {
-      return null;
-    }
-
-    const selectedItem = chosenItems[selected?.repoURL as string]?.info;
-
-    if ('references' in selected) {
-      return (
-        <ImageTable
-          references={(selected as ImageDiscoveryResult).references}
-          select={select}
-          selected={selectedItem as DiscoveredImageReference}
-        />
-      );
-    } else if ('commits' in selected) {
-      return (
-        <CommitTable
-          commits={(selected as GitDiscoveryResult).commits}
-          select={select}
-          selected={selectedItem as DiscoveredCommit}
-        />
-      );
-    } else if ('versions' in selected) {
-      return (
-        <ChartTable
-          versions={(selected as ChartDiscoveryResult).versions}
-          select={select}
-          selected={selectedItem as string}
-        />
-      );
-    }
-  };
-
   const commonProps = {
     onClick: setSelected,
     selected: selected
@@ -278,12 +244,58 @@ export const AssembleFreight = ({
             <ArtifactMenuGroup icon={faGitAlt} label='Git' items={git} {...commonProps} />
           </div>
           <div className='w-full p-4 overflow-auto'>
-            <DiscoveryTable />
+            <DiscoveryTable selected={selected} chosenItems={chosenItems} select={select} />
           </div>
         </div>
       ) : (
         <div className='text-gray-500 text-sm mt-2'>Please select a warehouse to continue.</div>
       )}
     </div>
+  );
+};
+
+const DiscoveryTable = ({
+  selected,
+  chosenItems,
+  select
+}: {
+  selected?: DiscoveryResult;
+  chosenItems: {
+    [key: string]: {
+      artifact: DiscoveryResult;
+      info: FreightInfo;
+    };
+  };
+  select: (item?: FreightInfo) => void;
+}) => {
+  if (!selected) {
+    return null;
+  }
+
+  const selectedItem = chosenItems[selected?.repoURL as string]?.info;
+
+  return (
+    <>
+      <ImageTable
+        references={(selected as ImageDiscoveryResult).references || []}
+        select={select}
+        selected={selectedItem as DiscoveredImageReference}
+        show={'references' in selected}
+      />
+
+      <CommitTable
+        commits={(selected as GitDiscoveryResult).commits || []}
+        select={select}
+        selected={selectedItem as DiscoveredCommit}
+        show={'commits' in selected}
+      />
+
+      <ChartTable
+        versions={(selected as ChartDiscoveryResult).versions || []}
+        select={select}
+        selected={selectedItem as string}
+        show={'versions' in selected}
+      />
+    </>
   );
 };
