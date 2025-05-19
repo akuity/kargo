@@ -15,6 +15,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
+	promoPkg "github.com/akuity/kargo/pkg/promotion"
 )
 
 func TestStep_GetTimeout(t *testing.T) {
@@ -56,7 +57,7 @@ func TestStep_GetTimeout(t *testing.T) {
 					},
 				},
 			},
-			runner: MockRetryableStepRunner{defaultTimeout: ptr.To(time.Duration(3))},
+			runner: promoPkg.NewRetryableStepRunner(nil, ptr.To(time.Duration(3)), 0),
 			assertions: func(t *testing.T, result *time.Duration) {
 				assert.Equal(t, ptr.To(time.Duration(5)), result)
 			},
@@ -66,7 +67,7 @@ func TestStep_GetTimeout(t *testing.T) {
 			step: &Step{
 				Retry: &kargoapi.PromotionStepRetry{},
 			},
-			runner: MockRetryableStepRunner{defaultTimeout: ptr.To(time.Duration(3))},
+			runner: promoPkg.NewRetryableStepRunner(nil, ptr.To(time.Duration(3)), 0),
 			assertions: func(t *testing.T, result *time.Duration) {
 				assert.Equal(t, ptr.To(time.Duration(3)), result)
 			},
