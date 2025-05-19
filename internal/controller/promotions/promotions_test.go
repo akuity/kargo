@@ -19,7 +19,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
 	"github.com/akuity/kargo/internal/promotion"
-	promoPkg "github.com/akuity/kargo/pkg/promotion"
+	pkgPromotion "github.com/akuity/kargo/pkg/promotion"
 )
 
 var (
@@ -610,8 +610,8 @@ func Test_calculateRequeueInterval(t *testing.T) {
 					// exceeds than the 5 minute default
 					stepRunnerTimeout = 10 * time.Minute
 					numRetries        = uint32(1)
-					runner            = promoPkg.NewRetryableStepRunner(
-						&promoPkg.MockStepRunner{Nm: "slow-step"},
+					runner            = pkgPromotion.NewRetryableStepRunner(
+						&pkgPromotion.MockStepRunner{Nm: "slow-step"},
 						&stepRunnerTimeout,
 						numRetries,
 					)
@@ -658,8 +658,8 @@ func Test_calculateRequeueInterval(t *testing.T) {
 					// lower than the 5 minute default
 					stepRunnerTimeout = 3 * time.Minute
 					numRetries        = uint32(1)
-					runner            = promoPkg.NewRetryableStepRunner(
-						&promoPkg.MockStepRunner{Nm: "fast-step"},
+					runner            = pkgPromotion.NewRetryableStepRunner(
+						&pkgPromotion.MockStepRunner{Nm: "fast-step"},
 						&stepRunnerTimeout,
 						numRetries,
 					)
