@@ -676,14 +676,21 @@ func parseCreateActorAnnotation(promo *kargoapi.Promotion) string {
 	return creator
 }
 
+var defaultRequeueInterval = 5 * time.Minute
+
 func calculateRequeueInterval(p *kargoapi.Promotion) time.Duration {
-	defaultRequeueInterval := 5 * time.Minute
 	step := p.Spec.Steps[p.Status.CurrentStep]
 	runner := promotion.GetStepRunner(step.Uses)
 
 	timeout := (&promotion.Step{
 		Retry: step.Retry,
 	}).GetTimeout(runner)
+
+	// If there is no timeout, or the timeout is 0, we should requeue at the
+	// default interval.
+	if timeout == nil || *timeout == 0 {
+		return defaultRequeueInterval
+	}
 
 	md := p.Status.StepExecutionMetadata[p.Status.CurrentStep]
 	targetTimeout := md.StartedAt.Time.Add(*timeout)

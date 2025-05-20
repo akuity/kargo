@@ -35,7 +35,7 @@ import (
 	promotionStepRunners "github.com/akuity/kargo/internal/promotion/runner/builtin"
 	"github.com/akuity/kargo/internal/server/kubernetes"
 	"github.com/akuity/kargo/internal/types"
-	pkgPromo "github.com/akuity/kargo/pkg/promotion"
+	pkgPromotion "github.com/akuity/kargo/pkg/promotion"
 	versionpkg "github.com/akuity/kargo/pkg/x/version"
 )
 
@@ -414,6 +414,6 @@ func (o *controllerOptions) startManagers(ctx context.Context, kargoMgr, argocdM
 	}
 }
 
-func RegisterPromotionStepRunner(runner pkgPromo.StepRunner) {
+func RegisterPromotionStepRunner(runner pkgPromotion.StepRunner) {
 	promotion.RegisterStepRunner(runner)
 }
