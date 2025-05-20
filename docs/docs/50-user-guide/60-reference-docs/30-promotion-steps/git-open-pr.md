@@ -31,7 +31,10 @@ GitLab pull/merge requests.
 
 | Name | Type | Description |
 |------|------|-------------|
-| `prNumber` | `number` | The numeric identifier of the pull request opened by this step. Typically, a subsequent [`git-wait-for-pr` step](git-wait-for-pr.md) will reference this output to learn what pull request to monitor. |
+| `pr` | `object` | An object containing details about the pull request. |
+| `pr.id` | `number` | The numeric identifier of the pull request opened by this step. Typically, a subsequent [`git-wait-for-pr` step](git-wait-for-pr.md) will reference this output to learn what pull request to monitor. |
+| `pr.url` | `string` | The URL of the pull request. |
+| `prNumber` | `number` | The numeric identifier of the pull request opened by this step. Typically, a subsequent [`git-wait-for-pr` step](git-wait-for-pr.md) will reference this output to learn what pull request to monitor.<br/><br/>__Deprecated: Use the `pr.id` field instead. Will be removed in v1.7.0.__ |
 
 ## Examples
 
