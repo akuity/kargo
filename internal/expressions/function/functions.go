@@ -3,6 +3,7 @@ package function
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/expr-lang/expr"
 	corev1 "k8s.io/api/core/v1"
@@ -11,6 +12,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/freight"
+	"github.com/akuity/kargo/internal/kargo"
 )
 
 type exprFn func(params ...any) (any, error)
@@ -48,12 +50,15 @@ func DataOperations(ctx context.Context, c client.Client, project string) []expr
 
 // StatusOperations returns a slice of expr.Option containing functions for
 // assessing the status of all preceding steps.
-func StatusOperations(stepExecMetas kargoapi.StepExecutionMetadataList) []expr.Option {
+func StatusOperations(
+	currentStepAlias string,
+	stepExecMetas kargoapi.StepExecutionMetadataList,
+) []expr.Option {
 	return []expr.Option{
 		Always(),
 		Failure(stepExecMetas),
 		Success(stepExecMetas),
-		Status(stepExecMetas),
+		Status(currentStepAlias, stepExecMetas),
 	}
 }
 
@@ -190,11 +195,14 @@ func Success(stepExecMetas kargoapi.StepExecutionMetadataList) expr.Option {
 	)
 }
 
-func Status(stepExecMetas kargoapi.StepExecutionMetadataList) expr.Option {
+func Status(
+	currentStepAlias string,
+	stepExecMetas kargoapi.StepExecutionMetadataList,
+) expr.Option {
 	return expr.Function(
 		"status",
-		getStatus(stepExecMetas),
-		new(func(alias string) kargoapi.PromotionStepStatus),
+		getStatus(currentStepAlias, stepExecMetas),
+		new(func(alias string) string),
 	)
 }
 
@@ -441,24 +449,37 @@ func hasFailure(stepExecMetas kargoapi.StepExecutionMetadataList) exprFn {
 	}
 }
 
-func getStatus(stepExecMetas kargoapi.StepExecutionMetadataList) exprFn {
+func getStatus(
+	currentStepAlias string,
+	stepExecMetas kargoapi.StepExecutionMetadataList,
+) exprFn {
+	var currentStepNamespace string
+	if parts := strings.Split(currentStepAlias, kargo.PromotionAliasSeparator); len(parts) == 2 {
+		currentStepNamespace = parts[0]
+	}
 	return func(a ...any) (any, error) {
 		if len(a) != 1 {
-			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
+			return "", fmt.Errorf("expected 1 argument, got %d", len(a))
 		}
 
 		alias, ok := a[0].(string)
 		if !ok {
-			return nil, fmt.Errorf("argument must be string, got %T", a[0])
+			return "", fmt.Errorf("argument must be string, got %T", a[0])
 		}
 
 		if alias == "" {
-			return nil, fmt.Errorf("argument must not be empty")
+			return "", fmt.Errorf("argument must not be empty")
 		}
 
 		for _, stepExecMeta := range stepExecMetas {
-			if stepExecMeta.Alias == alias {
-				return stepExecMeta.Status, nil
+			stepShortAlias := stepExecMeta.Alias
+			var stepNamespace string
+			if parts := strings.Split(stepExecMeta.Alias, kargo.PromotionAliasSeparator); len(parts) == 2 {
+				stepNamespace = parts[0]
+				stepShortAlias = parts[1]
+			}
+			if stepNamespace == currentStepNamespace && stepShortAlias == alias {
+				return string(stepExecMeta.Status), nil
 			}
 		}
 		return "", nil

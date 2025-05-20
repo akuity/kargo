@@ -810,3 +810,124 @@ func Test_getSecret(t *testing.T) {
 		})
 	}
 }
+
+func Test_getStatus(t *testing.T) {
+	tests := []struct {
+		name             string
+		currentStepAlias string
+		stepExecMetas    kargoapi.StepExecutionMetadataList
+		args             []any
+		assertions       func(t *testing.T, result any, err error)
+	}{
+		{
+			name: "no arguments",
+			args: []any{},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "expected 1 argument")
+				assert.Empty(t, result)
+			},
+		},
+		{
+			name: "too many arguments",
+			args: []any{"one", "two"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "expected 1 argument")
+				assert.Empty(t, result)
+			},
+		},
+		{
+			name: "one empty argument",
+			args: []any{""},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "must not be empty")
+				assert.Empty(t, result)
+			},
+		},
+		{
+			name:             "basic usage; no hit",
+			currentStepAlias: "step-2",
+			stepExecMetas: kargoapi.StepExecutionMetadataList{{
+				Alias:  "step-1",
+				Status: kargoapi.PromotionStepStatusSucceeded,
+			}},
+			args: []any{"non-existent-step"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Empty(t, result)
+			},
+		},
+		{
+			name:             "basic usage; hit",
+			currentStepAlias: "step-2",
+			stepExecMetas: kargoapi.StepExecutionMetadataList{{
+				Alias:  "step-1",
+				Status: kargoapi.PromotionStepStatusSucceeded,
+			}},
+			args: []any{"step-1"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, string(kargoapi.PromotionStepStatusSucceeded), result)
+			},
+		},
+		{
+			name:             "used in a task; no alias match",
+			currentStepAlias: "task-2::step-2",
+			stepExecMetas: kargoapi.StepExecutionMetadataList{
+				{
+					Alias:  "step-1", // No task namespace; correct alias
+					Status: kargoapi.PromotionStepStatusSucceeded,
+				},
+				{
+					Alias:  "task-1::step-2", // Correct task namespace; wrong alias
+					Status: kargoapi.PromotionStepStatusSucceeded,
+				},
+			},
+			args: []any{"step-1"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Empty(t, result)
+			},
+		},
+		{
+			name:             "used in a task; no namespace match",
+			currentStepAlias: "task-2::step-2",
+			stepExecMetas: kargoapi.StepExecutionMetadataList{
+				{
+					Alias:  "step-1", // No task namespace; correct alias
+					Status: kargoapi.PromotionStepStatusSucceeded,
+				},
+				{
+					Alias:  "task-1::step-2", // Wrong task namespace; correct alias
+					Status: kargoapi.PromotionStepStatusSucceeded,
+				},
+			},
+			args: []any{"step-1"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Empty(t, result)
+			},
+		},
+		{
+			name:             "used in a task; hit",
+			currentStepAlias: "task-2::step-2",
+			stepExecMetas: kargoapi.StepExecutionMetadataList{
+				{
+					Alias:  "task-2::step-1",
+					Status: kargoapi.PromotionStepStatusSucceeded,
+				},
+			},
+			args: []any{"step-1"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, string(kargoapi.PromotionStepStatusSucceeded), result)
+			},
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			fn := getStatus(testCase.currentStepAlias, testCase.stepExecMetas)
+			result, err := fn(testCase.args...)
+			testCase.assertions(t, result, err)
+		})
+	}
+}
