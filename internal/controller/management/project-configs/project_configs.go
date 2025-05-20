@@ -186,52 +186,72 @@ func (r *reconciler) ensureWebhookReceivers(
 		logger.Debug("ProjectConfig does not have any receiver configurations")
 		return nil
 	}
+
 	logger.Debug("ensuring receivers",
 		"receiver-configs", len(pc.Spec.WebhookReceiverConfigs),
 	)
-	var whReceivers []kargoapi.WebhookReceiver
-	for _, rc := range pc.Spec.WebhookReceiverConfigs {
-		var secret corev1.Secret
-		err := r.client.Get(
-			ctx,
-			types.NamespacedName{
-				Namespace: pc.Namespace,
-				Name:      rc.SecretRef.Name,
-			},
-			&secret,
-		)
-		if err != nil {
-			logger.Error(err, "secret not found",
-				"secret", rc.SecretRef,
-			)
-			if kubeerr.IsNotFound(err) {
-				return fmt.Errorf(
-					"secret-reference %q in namespace %q not found",
-					rc.SecretRef, pc.Namespace,
-				)
-			}
-			return fmt.Errorf(
-				"error getting webhook receiver secret-reference %q in project namespace %q: %w",
-				rc.SecretRef, pc.Name, err,
-			)
-		}
-		logger.Debug("secret found", "secret", secret.Name)
 
-		seed, ok := secret.Data["seed"]
-		if !ok {
-			logger.Error(err, "secret data not found")
+	for _, rc := range pc.Spec.WebhookReceiverConfigs {
+		if rc.GitHub != nil {
+			if err := r.ensureGitHubWebhookReceiver(ctx, pc, rc); err != nil {
+				logger.Error(err, "error ensuring GitHub webhook receiver",
+					"receiver-config", rc,
+				)
+				return fmt.Errorf("error ensuring GitHub webhook receiver: %w", err)
+			}
+		}
+	}
+	return nil
+}
+
+func (r *reconciler) ensureGitHubWebhookReceiver(
+	ctx context.Context,
+	pc *kargoapi.ProjectConfig,
+	rc kargoapi.WebhookReceiverConfig,
+) error {
+	logger := logging.LoggerFromContext(ctx)
+	var secret corev1.Secret
+	err := r.client.Get(
+		ctx,
+		types.NamespacedName{
+			Namespace: pc.Namespace,
+			Name:      rc.GitHub.SecretRef.Name,
+		},
+		&secret,
+	)
+	if err != nil {
+		logger.Error(err, "github secret not found",
+			"github-secret", rc.GitHub.SecretRef.Name,
+		)
+		if kubeerr.IsNotFound(err) {
 			return fmt.Errorf(
-				"error getting receiver secret %q in project namespace %q: %w",
-				rc.SecretRef, pc.Name, err,
+				"secret-reference %q in namespace %q not found",
+				rc.GitHub.SecretRef.Name, pc.Namespace,
 			)
 		}
-		pc.Status.WebhookReceivers = append(whReceivers, kargoapi.WebhookReceiver{
+		return fmt.Errorf(
+			"error getting webhook receiver secret-reference %q in project namespace %q: %w",
+			rc.GitHub.SecretRef.Name, pc.Name, err,
+		)
+	}
+	logger.Debug("secret found", "secret", secret.Name)
+
+	token, ok := secret.StringData["token"]
+	if !ok {
+		logger.Error(err, "'token' key not found in secret data")
+		return fmt.Errorf(
+			"key 'token' not found in secret %q for project config %q",
+			rc.GitHub.SecretRef.Name, pc.Name,
+		)
+	}
+	pc.Status.WebhookReceivers = append(pc.Status.WebhookReceivers,
+		kargoapi.WebhookReceiver{
 			Path: external.GenerateWebhookPath(
 				pc.Name,
-				rc.Type,
-				string(seed),
+				kargoapi.WebhookReceiverTypeGitHub,
+				token,
 			),
-		})
-	}
+		},
+	)
 	return nil
 }

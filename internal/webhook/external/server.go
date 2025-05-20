@@ -8,9 +8,11 @@ import (
 	"net/http"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -104,7 +106,10 @@ func (s *server) refreshWarehouseWebhook(w http.ResponseWriter, r *http.Request)
 	// a hash of the project name, provider and secret.
 	pc := projectConfigs.Items[0]
 
-	wrc, err := s.getWebhookReceiverConfig(r.URL.Path, pc)
+	wrc, err := s.getWebhookReceiverConfig(
+		r.URL.Path,
+		pc,
+	)
 	if err != nil {
 		logger.Error(err, "failed to get receiver config")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -112,9 +117,33 @@ func (s *server) refreshWarehouseWebhook(w http.ResponseWriter, r *http.Request)
 	}
 
 	logger.Debug("webhook receiver config found", "webhook-receiver-config", wrc)
-	switch wrc.Type {
-	case kargoapi.WebhookReceiverTypeGitHub:
-		githubHandler(s.client, wrc.SecretRef)(w, r)
+	switch {
+	case wrc.GitHub != nil:
+		var secret corev1.Secret
+		err := s.client.Get(ctx,
+			client.ObjectKey{
+				Name:      wrc.GitHub.SecretRef.Name,
+				Namespace: pc.Namespace,
+			},
+			&secret,
+		)
+		if err != nil {
+			logger.Error(err, "failed to get github secret")
+			xhttp.WriteErrorJSON(w, xhttp.Error(err, http.StatusInternalServerError))
+			return
+		}
+		token, ok := secret.StringData["token"]
+		if !ok {
+			logger.Error(err, "failed to get github token from secret")
+			xhttp.WriteErrorJSON(w,
+				xhttp.Error(
+					errors.New("failed to get github token"),
+					http.StatusInternalServerError,
+				),
+			)
+			return
+		}
+		githubHandler(s.client, token)(w, r)
 	default:
 		http.Error(w, "not found", http.StatusNotFound)
 	}
@@ -126,13 +155,18 @@ func (s *server) getWebhookReceiverConfig(
 ) (*kargoapi.WebhookReceiverConfig, error) {
 	var whrc *kargoapi.WebhookReceiverConfig
 	for _, config := range pc.Spec.WebhookReceiverConfigs { // nolint: nilness, lll // impossible for project config spec to be empty
+		var configType string
+		if config.GitHub != nil {
+			configType = kargoapi.WebhookReceiverTypeGitHub
+		}
 		target := GenerateWebhookPath(
 			pc.Name,
-			config.Type,
-			config.SecretRef,
+			configType,
+			config.GitHub.SecretRef.Name,
 		)
 		if receiverPath == target {
 			whrc = &config
+			break
 		}
 	}
 	if whrc == nil {

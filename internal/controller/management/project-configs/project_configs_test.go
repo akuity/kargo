@@ -47,8 +47,8 @@ func TestReconciler_syncProjectConfig(t *testing.T) {
 									Name:      "secret-that-exists",
 									Namespace: "fake-namespace",
 								},
-								Data: map[string][]byte{
-									"seed": []byte("fake-secret-data"),
+								StringData: map[string]string{
+									"token": "fake-secret-data",
 								},
 							},
 						).
@@ -91,8 +91,8 @@ func TestReconciler_syncProjectConfig(t *testing.T) {
 									Name:      "secret-that-exists",
 									Namespace: "fake-namespace",
 								},
-								Data: map[string][]byte{
-									"seed": []byte("fake-secret-data"),
+								StringData: map[string]string{
+									"token": "fake-secret-data",
 								},
 							},
 						).
@@ -108,8 +108,11 @@ func TestReconciler_syncProjectConfig(t *testing.T) {
 				Spec: kargoapi.ProjectConfigSpec{
 					WebhookReceiverConfigs: []kargoapi.WebhookReceiverConfig{
 						{
-							Type:      kargoapi.WebhookReceiverTypeGitHub,
-							SecretRef: "secret-that-exists",
+							GitHub: &kargoapi.GitHubWebhookReceiver{
+								SecretRef: corev1.LocalObjectReference{
+									Name: "secret-that-exists",
+								},
+							},
 						},
 					},
 				},
@@ -162,8 +165,11 @@ func TestReconciler_ensureWebhookReceivers(t *testing.T) {
 								Spec: kargoapi.ProjectConfigSpec{
 									WebhookReceiverConfigs: []kargoapi.WebhookReceiverConfig{
 										{
-											Type:      kargoapi.WebhookReceiverTypeGitHub,
-											SecretRef: "secret-ref-that-does-not-exist",
+											GitHub: &kargoapi.GitHubWebhookReceiver{
+												SecretRef: corev1.LocalObjectReference{
+													Name: "secret-ref-that-does-not-exist",
+												},
+											},
 										},
 									},
 								},
@@ -181,8 +187,11 @@ func TestReconciler_ensureWebhookReceivers(t *testing.T) {
 				Spec: kargoapi.ProjectConfigSpec{
 					WebhookReceiverConfigs: []kargoapi.WebhookReceiverConfig{
 						{
-							Type:      kargoapi.WebhookReceiverTypeGitHub,
-							SecretRef: "secret-ref-that-does-not-exist",
+							GitHub: &kargoapi.GitHubWebhookReceiver{
+								SecretRef: corev1.LocalObjectReference{
+									Name: "secret-that-does-not-exist",
+								},
+							},
 						},
 					},
 				},
@@ -216,8 +225,11 @@ func TestReconciler_ensureWebhookReceivers(t *testing.T) {
 								Spec: kargoapi.ProjectConfigSpec{
 									WebhookReceiverConfigs: []kargoapi.WebhookReceiverConfig{
 										{
-											Type:      kargoapi.WebhookReceiverTypeGitHub,
-											SecretRef: "secret-that-exists",
+											GitHub: &kargoapi.GitHubWebhookReceiver{
+												SecretRef: corev1.LocalObjectReference{
+													Name: "secret-that-exists",
+												},
+											},
 										},
 									},
 								},
@@ -227,8 +239,8 @@ func TestReconciler_ensureWebhookReceivers(t *testing.T) {
 									Name:      "secret-that-exists",
 									Namespace: "fake-namespace",
 								},
-								Data: map[string][]byte{
-									"seed": []byte("fake-secret-data"),
+								StringData: map[string]string{
+									"token": "fake-secret-data",
 								},
 							},
 						).
@@ -244,8 +256,11 @@ func TestReconciler_ensureWebhookReceivers(t *testing.T) {
 				Spec: kargoapi.ProjectConfigSpec{
 					WebhookReceiverConfigs: []kargoapi.WebhookReceiverConfig{
 						{
-							Type:      kargoapi.WebhookReceiverTypeGitHub,
-							SecretRef: "secret-that-exists",
+							GitHub: &kargoapi.GitHubWebhookReceiver{
+								SecretRef: corev1.LocalObjectReference{
+									Name: "secret-that-exists",
+								},
+							},
 						},
 					},
 				},
@@ -253,10 +268,7 @@ func TestReconciler_ensureWebhookReceivers(t *testing.T) {
 			assertions: func(t *testing.T, pc *kargoapi.ProjectConfig, err error) {
 				require.NoError(t, err)
 				require.Len(t, pc.Status.WebhookReceivers, 1)
-				require.Equal(t,
-					kargoapi.WebhookReceiverTypeGitHub,
-					pc.Spec.WebhookReceiverConfigs[0].Type, // nolint: staticcheck
-				)
+				require.NotNil(t, pc.Spec.WebhookReceiverConfigs[0].GitHub)
 				require.Equal(t,
 					external.GenerateWebhookPath(
 						pc.Name,
