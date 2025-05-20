@@ -19,6 +19,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
 	"github.com/akuity/kargo/internal/promotion"
+	pkgPromotion "github.com/akuity/kargo/pkg/promotion"
 )
 
 var (
@@ -566,113 +567,113 @@ func Test_parseCreateActorAnnotation(t *testing.T) {
 }
 
 func Test_calculateRequeueInterval(t *testing.T) {
-	defaultTimeout := 5 * time.Minute
-	for _, test := range []struct {
+	testStepKindWithoutTimeout := "fake-step-without-timeout"
+	promotion.RegisterStepRunner(
+		&pkgPromotion.MockStepRunner{Nm: testStepKindWithoutTimeout},
+	)
+
+	testStepKindWithTimeout := "fake-step-with-timeout"
+	testTimeout := 10 * time.Minute
+	promotion.RegisterStepRunner(
+		pkgPromotion.NewRetryableStepRunner(
+			&pkgPromotion.MockStepRunner{Nm: testStepKindWithTimeout},
+			&testTimeout,
+			0, // Retries don't matter for this test
+		),
+	)
+
+	// The test cases are crafted with the assumption that the default requeue
+	// interval is greater than one minute, so we need to assert that this is the
+	// case.
+	require.Greater(t, defaultRequeueInterval, time.Minute)
+
+	// The test cases are crafted with the assumption that the step's timeout is
+	// greater than the default requeue interval, so we need to assert that this
+	// is the case.
+	require.Greater(t, testTimeout, defaultRequeueInterval)
+
+	testCases := []struct {
 		name       string
 		promo      *kargoapi.Promotion
-		setup      func(*testing.T)
 		assertions func(*testing.T, time.Duration)
 	}{
 		{
-			name: "should return default requeue interval",
+			name: "no timeout",
 			promo: &kargoapi.Promotion{
-				ObjectMeta: metav1.ObjectMeta{
-					CreationTimestamp: now,
-					Name:              "fake-name",
-					Namespace:         "fake-namespace",
-				},
 				Spec: kargoapi.PromotionSpec{
-					Stage: "fake-stage",
-					Steps: []kargoapi.PromotionStep{
-						{
-							Uses: "slow-step",
-							Retry: &kargoapi.PromotionStepRetry{
-								Timeout: &metav1.Duration{
-									// exceeds default threshold
-									Duration: 10 * time.Minute,
-								},
-							},
-						},
-					},
+					Steps: []kargoapi.PromotionStep{{
+						Uses: testStepKindWithoutTimeout,
+					}},
 				},
 				Status: kargoapi.PromotionStatus{
-					Phase:       kargoapi.PromotionPhasePending,
 					CurrentStep: 0,
-					StepExecutionMetadata: []kargoapi.StepExecutionMetadata{
-						{StartedAt: &now},
-					},
+					StepExecutionMetadata: []kargoapi.StepExecutionMetadata{{
+						StartedAt: &metav1.Time{Time: time.Now()},
+					}},
 				},
 			},
-			setup: func(tt *testing.T) {
-				tt.Helper()
-				var (
-					// exceeds than the 5 minute default
-					stepRunnerTimeout = 10 * time.Minute
-					numRetries        = uint32(1)
-					runner            = promotion.NewMockRetryableStepRunner(
-						"slow-step",
-						&stepRunnerTimeout,
-						numRetries,
-					)
-				)
-				promotion.RegisterStepRunner(runner)
-			},
-			assertions: func(tt *testing.T, d time.Duration) {
-				require.Equal(tt, d, defaultTimeout)
+			assertions: func(t *testing.T, requeueInterval time.Duration) {
+				// The request should be requeued according to the default.
+				require.Equal(t, defaultRequeueInterval, requeueInterval)
 			},
 		},
 		{
-			name: "requeue interval should return requeue interval less than the default",
+			name: "timeout occurs after next interval",
 			promo: &kargoapi.Promotion{
-				ObjectMeta: metav1.ObjectMeta{
-					CreationTimestamp: now,
-					Name:              "fake-name",
-					Namespace:         "fake-namespace",
-				},
 				Spec: kargoapi.PromotionSpec{
-					Stage: "fake-stage",
-					Steps: []kargoapi.PromotionStep{
-						{
-							Uses: "fast-step",
-							Retry: &kargoapi.PromotionStepRetry{
-								Timeout: &metav1.Duration{
-									// faster than default threshold
-									Duration: 3 * time.Minute,
-								},
-							},
-						},
-					},
+					Steps: []kargoapi.PromotionStep{{
+						Uses: testStepKindWithTimeout,
+					}},
 				},
 				Status: kargoapi.PromotionStatus{
-					Phase:       kargoapi.PromotionPhasePending,
 					CurrentStep: 0,
-					StepExecutionMetadata: []kargoapi.StepExecutionMetadata{
-						{StartedAt: &now},
-					},
+					StepExecutionMetadata: []kargoapi.StepExecutionMetadata{{
+						// If the step started now and times out after an interval greater
+						// than the default requeue interval, then the wall clock time of
+						// the timeout will be AFTER the wall clock time of the next
+						// reconciliation.
+						StartedAt: &metav1.Time{Time: time.Now()},
+					}},
 				},
 			},
-			setup: func(tt *testing.T) {
-				tt.Helper()
-				var (
-					// lower than the 5 minute default
-					stepRunnerTimeout = 3 * time.Minute
-					numRetries        = uint32(1)
-					runner            = promotion.NewMockRetryableStepRunner(
-						"fast-step",
-						&stepRunnerTimeout,
-						numRetries,
-					)
-				)
-				promotion.RegisterStepRunner(runner)
-			},
-			assertions: func(tt *testing.T, d time.Duration) {
-				require.Less(tt, d, defaultTimeout)
+			assertions: func(t *testing.T, requeueInterval time.Duration) {
+				// The request should be requeued according to the default.
+				require.Equal(t, defaultRequeueInterval, requeueInterval)
+				// Sanity check that the requeue interval is always greater than 0.
+				require.Greater(t, requeueInterval, time.Duration(0))
 			},
 		},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			test.setup(t)
-			test.assertions(t, calculateRequeueInterval(test.promo))
+		{
+			name: "timeout occurs before next interval",
+			promo: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{{
+						Uses: testStepKindWithTimeout,
+					}},
+				},
+				Status: kargoapi.PromotionStatus{
+					CurrentStep: 0,
+					StepExecutionMetadata: []kargoapi.StepExecutionMetadata{{
+						// If the step has only a minute to go before timeout, then the wall
+						// clock time of the timeout will be BEFORE the wall clock time of
+						// the next reconciliation.
+						StartedAt: &metav1.Time{
+							Time: metav1.Now().Add(-testTimeout).Add(time.Minute),
+						},
+					}},
+				},
+			},
+			assertions: func(t *testing.T, requeueInterval time.Duration) {
+				// The interval to the next reconciliation should be shortened.
+				require.Less(t, requeueInterval, defaultRequeueInterval)
+				// Sanity check that the requeue interval is always greater than 0.
+				require.Greater(t, requeueInterval, time.Duration(0))
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(t, calculateRequeueInterval(testCase.promo))
 		})
 	}
 }
