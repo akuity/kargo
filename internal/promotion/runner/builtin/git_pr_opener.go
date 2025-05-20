@@ -10,11 +10,12 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/promotion"
+	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/gitprovider"
-	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 
 	_ "github.com/akuity/kargo/internal/gitprovider/azure"     // Azure provider registration
 	_ "github.com/akuity/kargo/internal/gitprovider/bitbucket" // Bitbucket provider registration
@@ -186,13 +187,21 @@ func (g *gitPROpener) run(
 	title := cfg.Title
 	description := commitMsg
 
+	if cfg.Description != "" {
+		description = cfg.Description
+	}
+
 	if title == "" {
 		parts := strings.SplitN(commitMsg, "\n", 2)
 		title = parts[0]
-		description = ""
 
-		if len(parts) > 1 {
-			description = parts[1]
+		// Only override the description if it has not been set in the config.
+		if cfg.Description == "" {
+			if len(parts) > 1 {
+				description = parts[1]
+			} else {
+				description = "" // The commit message is just a title.
+			}
 		}
 	}
 

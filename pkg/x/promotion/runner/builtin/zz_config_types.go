@@ -174,6 +174,9 @@ type GitOpenPRConfig struct {
 	// Indicates whether a new, empty orphan branch should be created and pushed to the remote
 	// if the target branch does not already exist there. Default is false.
 	CreateTargetBranch bool `json:"createTargetBranch,omitempty"`
+	// The description of the pull request. Kargo generates a description based on the commit
+	// messages if it is not explicitly specified.
+	Description string `json:"description,omitempty"`
 	// Indicates whether to skip TLS verification when cloning the repository. Default is false.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 	// Labels to add to the pull request.
@@ -432,7 +435,7 @@ type YAMLUpdate struct {
 	// The key whose value needs to be updated. For nested values, use a YAML dot notation path.
 	Key string `json:"key"`
 	// The new value for the specified key.
-	Value string `json:"value"`
+	Value interface{} `json:"value"`
 }
 
 // The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github',

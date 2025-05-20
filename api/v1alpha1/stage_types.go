@@ -301,6 +301,14 @@ type FreightSources struct {
 	// made available to the Stage. This field is optional. When left unspecified,
 	// the field is implicitly treated as if its value were "OneOf".
 	//
+	// Accepted Values:
+	//
+	// - "All": Freight must be be verified and, if applicable, soaked in all
+	//   upstream Stages to be considered available for promotion.
+	// - "OneOf": Freight must be verified and, if applicable, soaked in at least
+	//    one upstream Stage to be considered available for promotion.
+	// - "": Treated the same as "OneOf".
+	//
 	// +kubebuilder:validation:Optional
 	AvailabilityStrategy FreightAvailabilityStrategy `json:"availabilityStrategy,omitempty" protobuf:"bytes,4,opt,name=availabilityStrategy"`
 }

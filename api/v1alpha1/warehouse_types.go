@@ -67,7 +67,12 @@ type WarehouseSpec struct {
 	// FreightCreationPolicy describes how Freight is created by this Warehouse.
 	// This field is optional. When left unspecified, the field is implicitly
 	// treated as if its value were "Automatic".
-	// Accepted values: Automatic, Manual
+	//
+	// Accepted values:
+	//
+	// - "Automatic": New Freight is created automatically when any new artifact
+	//   is discovered.
+	// - "Manual": New Freight is never created automatically.
 	//
 	// +kubebuilder:default=Automatic
 	// +kubebuilder:validation:Optional
@@ -112,7 +117,25 @@ type GitSubscription struct {
 	// commit of interest in the repository specified by the RepoURL field. This
 	// field is optional. When left unspecified, the field is implicitly treated
 	// as if its value were "NewestFromBranch".
-	// Accepted values: Lexical, NewestFromBranch, NewestTag, SemVer
+	//
+	// Accepted values:
+	//
+	// - "NewestFromBranch": Selects the latest commit on the branch specified
+	//   by the Branch field or the default branch if none is specified. This is
+	//   the default strategy.
+	//
+	// - "SemVer": Selects the commit referenced by the the semantically greatest
+	//   tag. The SemverConstraint field can optionally be used to narrow the set
+	//   of tags eligible for selection.
+	//
+	// - "Lexical": Selects the commit referenced by the lexicographically
+	//   greatest tag. Useful when tags embed a _leading_ date or timestamp. The
+	//   AllowTags and IgnoreTags fields can optionally be used to narrow the set
+	//   of tags eligible for selection.
+	//
+	// - "NewestTag": Selects the commit referenced by the most recently created
+	//   tag. The AllowTags and IgnoreTags fields can optionally be used to
+	//   narrow the set of tags eligible for selection.
 	//
 	// +kubebuilder:default=NewestFromBranch
 	CommitSelectionStrategy CommitSelectionStrategy `json:"commitSelectionStrategy,omitempty" protobuf:"bytes,2,opt,name=commitSelectionStrategy"`
@@ -175,6 +198,7 @@ type GitSubscription struct {
 	//   2. Glob patterns (prefix the pattern with "glob:"; ex. "glob:*.yaml")
 	//   3. Regular expressions (prefix the pattern with "regex:" or "regexp:";
 	//      ex. "regexp:^.*\.yaml$")
+	//
 	// Paths selected by IncludePaths may be unselected by ExcludePaths. This
 	// is a useful method for including a broad set of paths and then excluding a
 	// subset of them.
@@ -229,7 +253,26 @@ type ImageSubscription struct {
 	// of the image specified by the RepoURL field. This field is optional. When
 	// left unspecified, the field is implicitly treated as if its value were
 	// "SemVer".
-	// Accepted values: Digest, Lexical, NewestBuild, SemVer
+	//
+	// Accepted values:
+	//
+	// - "Digest": Selects the image currently referenced by the tag specified
+	//   (unintuitively) by the SemverConstraint field.
+	//
+	// - "Lexical": Selects the image referenced by the lexicographically greatest
+	//   tag. Useful when tags embed a leading date or timestamp. The AllowTags
+	//   and IgnoreTags fields can optionally be used to narrow the set of tags
+	//   eligible for selection.
+	//
+	// - "NewestBuild": Selects the image that was most recently pushed to the
+	//   repository. The AllowTags and IgnoreTags fields can optionally be used
+	//   to narrow the set of tags eligible for selection. This is the least
+	//   efficient and is likely to cause rate limiting affecting this Warehouse
+	//   and possibly others. This strategy should be avoided.
+	//
+	// - "SemVer": Selects the image with the semantically greatest tag. The
+	//   AllowTags and IgnoreTags fields can optionally be used to narrow the set
+	//   of tags eligible for selection.
 	//
 	// +kubebuilder:default=SemVer
 	ImageSelectionStrategy ImageSelectionStrategy `json:"imageSelectionStrategy,omitempty" protobuf:"bytes,3,opt,name=imageSelectionStrategy"`

@@ -102,6 +102,42 @@ func Test_gitPROpener_validate(t *testing.T) {
 				"title":        "custom title",
 			},
 		},
+		{
+			name: "invalid with empty title",
+			config: promotion.Config{
+				"provider":     "github",
+				"repoURL":      "https://github.com/example/repo.git",
+				"sourceBranch": "fake-branch",
+				"targetBranch": "another-fake-branch",
+				"title":        "",
+			},
+			expectedProblems: []string{
+				"title: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "valid with custom description",
+			config: promotion.Config{
+				"provider":     "github",
+				"repoURL":      "https://github.com/example/repo.git",
+				"sourceBranch": "fake-branch",
+				"targetBranch": "another-fake-branch",
+				"description":  "custom description",
+			},
+		},
+		{
+			name: "invalid with empty description",
+			config: promotion.Config{
+				"provider":     "github",
+				"repoURL":      "https://github.com/example/repo.git",
+				"sourceBranch": "fake-branch",
+				"targetBranch": "another-fake-branch",
+				"description":  "",
+			},
+			expectedProblems: []string{
+				"description: String length must be greater than or equal to 1",
+			},
+		},
 	}
 
 	r := newGitPROpener(nil)
@@ -207,6 +243,7 @@ func Test_gitPROpener_run(t *testing.T) {
 			CreateTargetBranch: true,
 			Provider:           ptr.To(builtin.Provider(fakeGitProviderName)),
 			Title:              "kargo",
+			Description:        "kargo description",
 		},
 	)
 	require.NoError(t, err)

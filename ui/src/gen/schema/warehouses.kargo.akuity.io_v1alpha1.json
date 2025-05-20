@@ -18,7 +18,7 @@
       "properties": {
         "freightCreationPolicy": {
           "default": "Automatic",
-          "description": "FreightCreationPolicy describes how Freight is created by this Warehouse.\nThis field is optional. When left unspecified, the field is implicitly\ntreated as if its value were \"Automatic\".\nAccepted values: Automatic, Manual",
+          "description": "FreightCreationPolicy describes how Freight is created by this Warehouse.\nThis field is optional. When left unspecified, the field is implicitly\ntreated as if its value were \"Automatic\".\n\nAccepted values:\n\n- \"Automatic\": New Freight is created automatically when any new artifact\n  is discovered.\n- \"Manual\": New Freight is never created automatically.",
           "enum": [
             "Automatic",
             "Manual"
@@ -87,7 +87,7 @@
                   },
                   "commitSelectionStrategy": {
                     "default": "NewestFromBranch",
-                    "description": "CommitSelectionStrategy specifies the rules for how to identify the newest\ncommit of interest in the repository specified by the RepoURL field. This\nfield is optional. When left unspecified, the field is implicitly treated\nas if its value were \"NewestFromBranch\".\nAccepted values: Lexical, NewestFromBranch, NewestTag, SemVer",
+                    "description": "CommitSelectionStrategy specifies the rules for how to identify the newest\ncommit of interest in the repository specified by the RepoURL field. This\nfield is optional. When left unspecified, the field is implicitly treated\nas if its value were \"NewestFromBranch\".\n\nAccepted values:\n\n- \"NewestFromBranch\": Selects the latest commit on the branch specified\n  by the Branch field or the default branch if none is specified. This is\n  the default strategy.\n\n- \"SemVer\": Selects the commit referenced by the the semantically greatest\n  tag. The SemverConstraint field can optionally be used to narrow the set\n  of tags eligible for selection.\n\n- \"Lexical\": Selects the commit referenced by the lexicographically\n  greatest tag. Useful when tags embed a _leading_ date or timestamp. The\n  AllowTags and IgnoreTags fields can optionally be used to narrow the set\n  of tags eligible for selection.\n\n- \"NewestTag\": Selects the commit referenced by the most recently created\n  tag. The AllowTags and IgnoreTags fields can optionally be used to\n  narrow the set of tags eligible for selection.",
                     "enum": [
                       "Lexical",
                       "NewestFromBranch",
@@ -119,7 +119,7 @@
                     "type": "array"
                   },
                   "includePaths": {
-                    "description": "IncludePaths is a list of selectors that designate paths in the repository\nthat should trigger the production of new Freight when changes are detected\ntherein. When specified, only changes in the identified paths will trigger\nFreight production. When not specified, changes in any path will trigger\nFreight production. Selectors may be defined using:\n  1. Exact paths to files or directories (ex. \"charts/foo\")\n  2. Glob patterns (prefix the pattern with \"glob:\"; ex. \"glob:*.yaml\")\n  3. Regular expressions (prefix the pattern with \"regex:\" or \"regexp:\";\n     ex. \"regexp:^.*\\.yaml$\")\nPaths selected by IncludePaths may be unselected by ExcludePaths. This\nis a useful method for including a broad set of paths and then excluding a\nsubset of them.",
+                    "description": "IncludePaths is a list of selectors that designate paths in the repository\nthat should trigger the production of new Freight when changes are detected\ntherein. When specified, only changes in the identified paths will trigger\nFreight production. When not specified, changes in any path will trigger\nFreight production. Selectors may be defined using:\n  1. Exact paths to files or directories (ex. \"charts/foo\")\n  2. Glob patterns (prefix the pattern with \"glob:\"; ex. \"glob:*.yaml\")\n  3. Regular expressions (prefix the pattern with \"regex:\" or \"regexp:\";\n     ex. \"regexp:^.*\\.yaml$\")\n\nPaths selected by IncludePaths may be unselected by ExcludePaths. This\nis a useful method for including a broad set of paths and then excluding a\nsubset of them.",
                     "items": {
                       "type": "string"
                     },
@@ -180,7 +180,7 @@
                   },
                   "imageSelectionStrategy": {
                     "default": "SemVer",
-                    "description": "ImageSelectionStrategy specifies the rules for how to identify the newest version\nof the image specified by the RepoURL field. This field is optional. When\nleft unspecified, the field is implicitly treated as if its value were\n\"SemVer\".\nAccepted values: Digest, Lexical, NewestBuild, SemVer",
+                    "description": "ImageSelectionStrategy specifies the rules for how to identify the newest version\nof the image specified by the RepoURL field. This field is optional. When\nleft unspecified, the field is implicitly treated as if its value were\n\"SemVer\".\n\nAccepted values:\n\n- \"Digest\": Selects the image currently referenced by the tag specified\n  (unintuitively) by the SemverConstraint field.\n\n- \"Lexical\": Selects the image referenced by the lexicographically greatest\n  tag. Useful when tags embed a leading date or timestamp. The AllowTags\n  and IgnoreTags fields can optionally be used to narrow the set of tags\n  eligible for selection.\n\n- \"NewestBuild\": Selects the image that was most recently pushed to the\n  repository. The AllowTags and IgnoreTags fields can optionally be used\n  to narrow the set of tags eligible for selection. This is the least\n  efficient and is likely to cause rate limiting affecting this Warehouse\n  and possibly others. This strategy should be avoided.\n\n- \"SemVer\": Selects the image with the semantically greatest tag. The\n  AllowTags and IgnoreTags fields can optionally be used to narrow the set\n  of tags eligible for selection.",
                     "enum": [
                       "Digest",
                       "Lexical",
