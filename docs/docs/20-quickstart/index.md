@@ -649,18 +649,18 @@ the previous section.
 
 ## Your First Promotion
 
-1. To promote `Freight` to the `test` `Stage`, select the target icon on the
-   left border of <Hlt>test</Hlt>:
+1. To promote `Freight` to the `test` `Stage`, click the truck-arrow icon next
+   to <Hlt>test</Hlt> and then select <Hlt>Promote</Hlt>:
 
     ![Kargo-Promote](img/kargo-promote-option.png)
 
-    Next, select the `Freight` from the <Hlt>Freight Timeline</Hlt> and confirm
-    the promotion by selecting <Hlt>Yes</Hlt>:
+    Next, <Hlt>Select</Hlt> the `Freight` from the <Hlt>Freight Timeline</Hlt> and confirm
+    the promotion by selecting <Hlt>Promote</Hlt>:
 
     ![Kargo-Promote](img/kargo-promote-option-2.png)
 
-    When promotion process is complete, you'll see a check mark next to
-    <Hlt>test</Hlt>, indicating that the promotion was successful.
+    Once the promotion process completes successfully, the <Hlt>status</Hlt> field in
+    the <Hlt>Promotion</Hlt> tab of the `Stage` view shows <Hlt>Succeeded</Hlt>:
 
     ![Kargo-dashboard-screenshot](img/kargo-dashboard-promotion.png)
 
@@ -673,8 +673,10 @@ the previous section.
     promotion. It is color-coded to indicate which `Stage`s are actively using
     each piece of `Freight`.
 
-1. Select the <Hlt>test</Hlt> to reveal additional details about the `Stage`
-   including its status, current `Freight`, and history.
+1. Select the external link icon on the <Hlt>test</Hlt> `Stage` to reveal additional details about the `Stage`
+   including its status, current `Freight`, and history:
+
+   ![Kargo-external-link](img/kargo-external-link.png)
 
 1. Select the `Freight` from the <Hlt>Freight Timeline</Hlt> to reveal
    additional details. Importantly, you can see that (by virtue of the `test`
