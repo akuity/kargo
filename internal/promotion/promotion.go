@@ -243,7 +243,7 @@ func (s *Step) Skip(
 				),
 				exprfn.DataOperations(ctx, cl, promoCtx.Project)...,
 			),
-			exprfn.StatusOperations(promoCtx.StepExecutionMetadata)...,
+			exprfn.StatusOperations(s.Alias, promoCtx.StepExecutionMetadata)...,
 		)...,
 	)
 	if err != nil {
