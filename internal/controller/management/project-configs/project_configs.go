@@ -196,7 +196,7 @@ func (r *reconciler) ensureWebhookReceivers(
 			ctx,
 			types.NamespacedName{
 				Namespace: pc.Namespace,
-				Name:      rc.SecretRef,
+				Name:      rc.SecretRef.Name,
 			},
 			&secret,
 		)

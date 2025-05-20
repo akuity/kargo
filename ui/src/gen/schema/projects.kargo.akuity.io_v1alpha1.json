@@ -91,21 +91,30 @@
           "type": "array"
         },
         "receivers": {
-          "description": "WebhookReceiverConfigs defines the webhook receivers for the project config.",
+          "description": "ReceiverConfigs defines the webhook receivers for the project config.",
           "items": {
             "description": "WebhookReceiverConfig is a resource type that describes the configuration\nfor a receiver.",
             "properties": {
-              "secretRef": {
-                "description": "Secret is the name of the secret that contains the credentials for the\nreceiver.",
-                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
-                "type": "string"
-              },
-              "type": {
-                "description": "Type is the type of the receiver.\n",
-                "enum": [
-                  "GitHub"
+              "github": {
+                "description": "GitHub contains the configuration for a webhook receiver that is compatible with\nGitHub payloads.",
+                "properties": {
+                  "secretRef": {
+                    "description": "Secret contains a reference to a Secret in the same namespace as the ProjectConfig.\n\nThe Secret is expected to contain a `token` key with the secret token configured for\nin GitHub for the webhook. For more information about this token, please refer to the\nGitHub documentation: https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries",
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "description": "Name of the referent.\nThis field is effectively required, but due to backwards compatibility is\nallowed to be empty. Instances of this type with an empty value here are\nalmost certainly wrong.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
+                        "type": "string"
+                      }
+                    },
+                    "type": "object",
+                    "x-kubernetes-map-type": "atomic"
+                  }
+                },
+                "required": [
+                  "secretRef"
                 ],
-                "type": "string"
+                "type": "object"
               }
             },
             "type": "object"

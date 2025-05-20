@@ -5,6 +5,7 @@ syntax = "proto2";
 
 package github.com.akuity.kargo.api.v1alpha1;
 
+import "k8s.io/api/core/v1/generated.proto";
 import "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.proto";
 import "k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto";
 import "k8s.io/apimachinery/pkg/runtime/generated.proto";
@@ -527,6 +528,15 @@ message GitDiscoveryResult {
   repeated DiscoveredCommit commits = 2;
 }
 
+message GitHubWebhookReceiver {
+  // Secret contains a reference to a Secret in the same namespace as the ProjectConfig.
+  //
+  // The Secret is expected to contain a `token` key with the secret token configured for
+  // in GitHub for the webhook. For more information about this token, please refer to the
+  // GitHub documentation: https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
+  optional .k8s.io.api.core.v1.LocalObjectReference secretRef = 1;
+}
+
 // GitSubscription defines a subscription to a Git repository.
 message GitSubscription {
   // URL is the repository's URL. This is a required field.
@@ -868,7 +878,7 @@ message ProjectConfigSpec {
   // specific Stages within the Project.
   repeated PromotionPolicy promotionPolicies = 1;
 
-  // WebhookReceiverConfigs defines the webhook receivers for the project config.
+  // ReceiverConfigs defines the webhook receivers for the project config.
   repeated WebhookReceiverConfig receivers = 2;
 }
 
@@ -1585,16 +1595,8 @@ message WebhookReceiver {
 // WebhookReceiverConfig is a resource type that describes the configuration
 // for a receiver.
 message WebhookReceiverConfig {
-  // Type is the type of the receiver.
-  //
-  // TODO: Add more receiver enum types(e.g. Dockerhub, Quay, Gitlab, etc...)
-  // +kubebuilder:validation:Enum=GitHub;
-  optional string type = 2;
-
-  // Secret is the name of the secret that contains the credentials for the
-  // receiver.
-  //
-  // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-  optional string secretRef = 4;
+  // GitHub contains the configuration for a webhook receiver that is compatible with
+  // GitHub payloads.
+  optional GitHubWebhookReceiver github = 1;
 }
 

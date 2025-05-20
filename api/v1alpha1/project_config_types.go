@@ -1,6 +1,9 @@
 package v1alpha1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 var (
 	WebhookReceiverTypeGitHub = "GitHub"
@@ -34,7 +37,7 @@ type ProjectConfigSpec struct {
 	// PromotionPolicies defines policies governing the promotion of Freight to
 	// specific Stages within the Project.
 	PromotionPolicies []PromotionPolicy `json:"promotionPolicies,omitempty" protobuf:"bytes,1,rep,name=promotionPolicies"`
-	// WebhookReceiverConfigs defines the webhook receivers for the project config.
+	// ReceiverConfigs defines the webhook receivers for the project config.
 	WebhookReceiverConfigs []WebhookReceiverConfig `json:"receivers,omitempty" protobuf:"bytes,2,rep,name=receivers"`
 }
 
@@ -86,16 +89,18 @@ type PromotionPolicy struct {
 // WebhookReceiverConfig is a resource type that describes the configuration
 // for a receiver.
 type WebhookReceiverConfig struct {
-	// Type is the type of the receiver.
+	// GitHub contains the configuration for a webhook receiver that is compatible with
+	// GitHub payloads.
+	GitHub *GitHubWebhookReceiver `json:"github,omitempty" protobuf:"bytes,1,opt,name=github"`
+}
+
+type GitHubWebhookReceiver struct {
+	// Secret contains a reference to a Secret in the same namespace as the ProjectConfig.
 	//
-	// TODO: Add more receiver enum types(e.g. Dockerhub, Quay, Gitlab, etc...)
-	// +kubebuilder:validation:Enum=GitHub;
-	Type string `json:"type,omitempty" protobuf:"bytes,2,opt,name=type"`
-	// Secret is the name of the secret that contains the credentials for the
-	// receiver.
-	//
-	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-	SecretRef string `json:"secretRef,omitempty" protobuf:"bytes,4,opt,name=secretRef"`
+	// The Secret is expected to contain a `token` key with the secret token configured for
+	// in GitHub for the webhook. For more information about this token, please refer to the
+	// GitHub documentation: https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
+	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
 }
 
 // WebhookReceiver describes a path used to receive warehouse events and

@@ -150,25 +150,40 @@ spec:
                     rule: 'has(self.stage) ? !has(self.stageSelector) : has(self.stageSelector)'
                 type: array
               receivers:
-                description: WebhookReceiverConfigs defines the webhook receivers
-                  for the project config.
+                description: ReceiverConfigs defines the webhook receivers for the
+                  project config.
                 items:
                   description: |-
                     WebhookReceiverConfig is a resource type that describes the configuration
                     for a receiver.
                   properties:
-                    secretRef:
+                    github:
                       description: |-
-                        Secret is the name of the secret that contains the credentials for the
-                        receiver.
-                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-                      type: string
-                    type:
-                      description: |
-                        Type is the type of the receiver.
-                      enum:
-                      - GitHub
-                      type: string
+                        GitHub contains the configuration for a webhook receiver that is compatible with
+                        GitHub payloads.
+                      properties:
+                        secretRef:
+                          description: |-
+                            Secret contains a reference to a Secret in the same namespace as the ProjectConfig.
+
+                            The Secret is expected to contain a `token` key with the secret token configured for
+                            in GitHub for the webhook. For more information about this token, please refer to the
+                            GitHub documentation: https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
+                          properties:
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      required:
+                      - secretRef
+                      type: object
                   type: object
                 type: array
             type: object
