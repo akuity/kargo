@@ -3470,6 +3470,10 @@ export type WebhookReceiverConfig = Message<"github.com.akuity.kargo.api.v1alpha
    * GitHub contains the configuration for a webhook receiver that is compatible with
    * GitHub payloads.
    *
+   * TODO(fuskovic): Make this mutually exclusive with configs for other platforms.
+   *
+   * +kubebuilder:validation:Required
+   *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.GitHubWebhookReceiver github = 1;
    */
   github?: GitHubWebhookReceiver;

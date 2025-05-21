@@ -159,7 +159,7 @@ spec:
                     receiver.
                   properties:
                     github:
-                      description: |-
+                      description: |
                         GitHub contains the configuration for a webhook receiver that is compatible with
                         GitHub payloads.
                       properties:
@@ -187,6 +187,8 @@ spec:
                       required:
                       - secretRef
                       type: object
+                  required:
+                  - github
                   type: object
                 type: array
             type: object
