@@ -93,7 +93,7 @@ func (o *externalWebhooksServerOptions) run(ctx context.Context) error {
 
 	err = cluster.GetFieldIndexer().IndexField(
 		ctx,
-		&kargoapi.Project{},
+		&kargoapi.ProjectConfig{},
 		indexer.ProjectConfigsByWebhookReceiverPathsField,
 		indexer.ProjectConfigsByWebhookReceiverPaths,
 	)

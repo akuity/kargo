@@ -38,7 +38,6 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	mux := http.NewServeMux()
 
 	mux.Handle("POST /", http.HandlerFunc(s.refreshWarehouseWebhook))
-	// TODO(fuskovic): support additional providers
 
 	srv := &http.Server{
 		Handler:           mux,

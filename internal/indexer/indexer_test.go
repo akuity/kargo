@@ -866,7 +866,7 @@ func TestWarehousesByRepoURL(t *testing.T) {
 	}
 }
 
-func TestProjectsByReceiverPath(t *testing.T) {
+func TestProjectConfigsByReceiverPath(t *testing.T) {
 	for _, test := range []struct {
 		name          string
 		projectConfig client.Object
@@ -888,7 +888,7 @@ func TestProjectsByReceiverPath(t *testing.T) {
 			},
 		},
 		{
-			name:          "not a project",
+			name:          "not a project config",
 			projectConfig: &kargoapi.Freight{},
 			expected:      nil,
 		},

@@ -24,7 +24,7 @@ type ProjectConfig struct {
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	// Spec describes the configuration of a Project.
 	Spec ProjectConfigSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
-	// Status describes the current status of a Project.
+	// Status describes the current status of a Project Config.
 	Status ProjectConfigStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
@@ -37,7 +37,7 @@ type ProjectConfigSpec struct {
 	// PromotionPolicies defines policies governing the promotion of Freight to
 	// specific Stages within the Project.
 	PromotionPolicies []PromotionPolicy `json:"promotionPolicies,omitempty" protobuf:"bytes,1,rep,name=promotionPolicies"`
-	// ReceiverConfigs defines the webhook receivers for the project config.
+	// WebhookReceiverConfigs defines the webhook receivers for the project config.
 	WebhookReceiverConfigs []WebhookReceiverConfig `json:"webhookReceivers,omitempty" protobuf:"bytes,2,rep,name=receivers"`
 }
 
@@ -48,7 +48,7 @@ type ProjectConfigStatus struct {
 	// +listType=map
 	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,3,rep,name=conditions"`
-	// WebhookReceivers contains the list of webhook receivers for the
+	// WebhookReceivers contains the list of webhook receivers for the project config.
 	WebhookReceivers []WebhookReceiver `json:"webhookReceivers,omitempty" protobuf:"bytes,5,rep,name=receivers"`
 }
 
@@ -86,8 +86,7 @@ type PromotionPolicy struct {
 	AutoPromotionEnabled bool `json:"autoPromotionEnabled,omitempty" protobuf:"varint,2,opt,name=autoPromotionEnabled"`
 }
 
-// WebhookReceiverConfig is a resource type that describes the configuration
-// for a receiver.
+// WebhookReceiverConfig describes the configuration for webhook receivers.
 type WebhookReceiverConfig struct {
 	// GitHub contains the configuration for a webhook receiver that is compatible with
 	// GitHub payloads.
