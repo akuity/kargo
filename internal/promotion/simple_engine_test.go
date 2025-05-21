@@ -474,18 +474,20 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 			},
 		},
 		{
-			name: "output composition step from task",
+			name: "output propagation to task namespace",
 			stepRunners: []promotion.StepRunner{
-				&promotion.MockStepRunner{
-					Nm: ComposeOutputStepKind,
-					RunResult: promotion.StepResult{
-						Status: kargoapi.PromotionStepStatusSucceeded,
-						Output: map[string]any{"test": "value"},
+				promotion.NewTaskLevelOutputStepRunner(
+					&promotion.MockStepRunner{
+						Nm: "task-level-output-step",
+						RunResult: promotion.StepResult{
+							Status: kargoapi.PromotionStepStatusSucceeded,
+							Output: map[string]any{"test": "value"},
+						},
 					},
-				},
+				),
 			},
 			steps: []Step{{
-				Kind:  ComposeOutputStepKind,
+				Kind:  "task-level-output-step",
 				Alias: "task-1::custom-output",
 			}},
 			assertions: func(t *testing.T, result Result) {
@@ -513,16 +515,18 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 		{
 			name: "stand alone output composition step",
 			stepRunners: []promotion.StepRunner{
-				&promotion.MockStepRunner{
-					Nm: ComposeOutputStepKind,
-					RunResult: promotion.StepResult{
-						Status: kargoapi.PromotionStepStatusSucceeded,
-						Output: map[string]any{"test": "value"},
+				promotion.NewTaskLevelOutputStepRunner(
+					&promotion.MockStepRunner{
+						Nm: "task-level-output-step",
+						RunResult: promotion.StepResult{
+							Status: kargoapi.PromotionStepStatusSucceeded,
+							Output: map[string]any{"test": "value"},
+						},
 					},
-				},
+				),
 			},
 			steps: []Step{{
-				Kind:  ComposeOutputStepKind,
+				Kind:  "task-level-output-step",
 				Alias: "custom-output",
 			}},
 			assertions: func(t *testing.T, result Result) {
