@@ -490,9 +490,9 @@ func ProjectConfigsByWebhookReceiverPaths(obj client.Object) []string {
 		return nil
 	}
 
-	var receiverPaths []string
-	for _, r := range pc.Status.WebhookReceivers {
-		receiverPaths = append(receiverPaths, r.Path)
+	receiverPaths := make([]string, len(pc.Status.WebhookReceivers))
+	for i, r := range pc.Status.WebhookReceivers {
+		receiverPaths[i] = r.Path
 	}
 	return receiverPaths
 }
