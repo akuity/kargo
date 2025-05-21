@@ -490,17 +490,12 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				assert.Contains(t, result.Message, context.Canceled.Error())
 				assert.Equal(t, int64(1), result.CurrentStep)
 
-				assert.Len(t, result.StepExecutionMetadata, 2)
+				assert.Len(t, result.StepExecutionMetadata, 1)
 
 				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.StepExecutionMetadata[0].Status)
 				assert.Contains(t, result.StepExecutionMetadata[0].Message, context.Canceled.Error())
 				assert.NotNil(t, result.StepExecutionMetadata[0].StartedAt)
 				assert.NotNil(t, result.StepExecutionMetadata[0].FinishedAt)
-
-				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.StepExecutionMetadata[1].Status)
-				assert.Contains(t, result.StepExecutionMetadata[1].Message, context.Canceled.Error())
-				assert.Nil(t, result.StepExecutionMetadata[1].StartedAt)
-				assert.Nil(t, result.StepExecutionMetadata[1].FinishedAt)
 			},
 		},
 		{

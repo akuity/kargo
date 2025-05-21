@@ -101,36 +101,17 @@ func (e *simpleEngine) executeSteps(
 
 	var (
 		healthChecks []health.Criteria
-		err          error
 	)
 
 	// Execute each step in sequence, starting from the step index specified in
 	// the Context if provided.
-stepLoop:
 	for i := promoCtx.StartFromStep; i < int64(len(steps)); i++ {
 		step := steps[i]
 
-		// If we don't have metadata for this step yet, create it.
-		if int64(len(promoCtx.StepExecutionMetadata)) == i {
-			promoCtx.StepExecutionMetadata = append(
-				promoCtx.StepExecutionMetadata,
-				kargoapi.StepExecutionMetadata{
-					Alias:           step.Alias,
-					ContinueOnError: step.ContinueOnError,
-				},
-			)
-		}
-		stepExecMeta := &promoCtx.StepExecutionMetadata[i]
+		stepExecMeta := e.prepareStepMetadata(&promoCtx, step)
 
-		select {
-		case <-ctx.Done():
-			stepExecMeta.Status = kargoapi.PromotionStepStatusErrored
-			stepExecMeta.Message = ctx.Err().Error()
-			if stepExecMeta.StartedAt != nil {
-				stepExecMeta.FinishedAt = ptr.To(metav1.Now())
-			}
-			break stepLoop
-		default:
+		if e.isContextCanceled(ctx, stepExecMeta) {
+			break
 		}
 
 		// Shared cache for expression functions that consult the Kubernetes API.
@@ -142,17 +123,8 @@ stepLoop:
 			exprDataCache = e.cacheFunc()
 		}
 
-		// Check if the step should be skipped.
-		var skip bool
-		if skip, err = step.Skip(ctx, e.kargoClient, exprDataCache, promoCtx); err != nil {
-			stepExecMeta.Status = kargoapi.PromotionStepStatusErrored
-			stepExecMeta.Message = fmt.Sprintf("error checking if step %q should be skipped: %s", step.Alias, err)
-			// Continue, because despite this failure, some steps' "if" conditions may
-			// still allow them to run.
+		if e.shouldSkipStep(ctx, exprDataCache, promoCtx, step, stepExecMeta) {
 			continue
-		} else if skip {
-			stepExecMeta.Status = kargoapi.PromotionStepStatusSkipped
-			continue // Move on to the next step
 		}
 
 		// Get the StepRunner for the step.
@@ -162,130 +134,38 @@ stepLoop:
 			stepExecMeta.Message = fmt.Sprintf("no promotion step runner found for kind %q", step.Kind)
 			// Continue, because despite this failure, some steps' "if" conditions may
 			// still allow them to run.
+			//
+			// TODO(hidde): Arguably, we should return a TerminalError here. As
+			// it is an obvious misconfiguration that could have been caught
+			// if our validation webhook was aware of registered steps.
 			continue
 		}
 
-		// Execute the step
+		// Mark the step as started.
 		if stepExecMeta.StartedAt == nil {
 			stepExecMeta.StartedAt = ptr.To(metav1.Now())
 		}
+
+		// Execute the step.
 		result, err := e.executeStep(ctx, exprDataCache, promoCtx, step, runner, workDir)
-		stepExecMeta.Status = result.Status
-		stepExecMeta.Message = result.Message
 
-		// Update the state with the output of the step.
-		promoCtx.State[step.Alias] = result.Output
+		// Propagate the output of the step to the state.
+		e.propagateStepOutput(promoCtx, step, runner, result)
 
-		// If the step instructs that the output should be propagated to the
-		// task namespace, do so.
-		if p, ok := runner.(promotion.TaskLevelOutputStepRunner); ok && p.TaskLevelOutput() {
-			if aliasNamespace := getAliasNamespace(step.Alias); aliasNamespace != "" {
-				if promoCtx.State[aliasNamespace] == nil {
-					promoCtx.State[aliasNamespace] = make(map[string]any)
-				}
-				for k, v := range result.Output {
-					promoCtx.State[aliasNamespace].(map[string]any)[k] = v // nolint: forcetypeassert
-				}
-			}
-		}
-
-		switch result.Status {
-		case kargoapi.PromotionStepStatusErrored, kargoapi.PromotionStepStatusFailed,
-			kargoapi.PromotionStepStatusRunning, kargoapi.PromotionStepStatusSucceeded,
-			kargoapi.PromotionStepStatusSkipped: // Step runners can self-determine they should be skipped
-		default:
-			// Deal with statuses that no step should have returned.
+		// Confirm that the step has a valid status.
+		if !isValidStepStatus(result.Status) {
 			stepExecMeta.FinishedAt = ptr.To(metav1.Now())
 			stepExecMeta.Status = kargoapi.PromotionStepStatusErrored
 			stepExecMeta.Message = fmt.Sprintf("step %q returned an invalid status: %s", step.Alias, result.Status)
-			// Continue, because despite this failure, some steps' "if" conditions may
-			// still allow them to run.
 			continue
 		}
 
-		// Reconcile status and err...
-		if err != nil {
-			if stepExecMeta.Status != kargoapi.PromotionStepStatusFailed {
-				// All states other than Errored and Failed should be mutually exclusive
-				// with a hard error. If we got to here, a step has violated this
-				// assumption. We will prioritize the error over the status and change
-				// the status to Errored.
-				stepExecMeta.Status = kargoapi.PromotionStepStatusErrored
-			}
-			// Let the hard error take precedence over the message.
-			stepExecMeta.Message = err.Error()
-		} else if result.Status == kargoapi.PromotionStepStatusErrored {
-			// A nil err should be mutually exclusive with an Errored status. If we
-			// got to here, a step has violated this assumption. We will prioritize
-			// the Errored status over the nil error and create an error.
-			message := stepExecMeta.Message
-			if message == "" {
-				message = "no details provided"
-			}
-			err = fmt.Errorf("step %q errored: %s", step.Alias, message)
-		}
+		// Update the step execution metadata with the result.
+		err = e.reconcileResultWithMetadata(stepExecMeta, step, result, err)
 
-		// At this point, we've sorted out any discrepancies between the status and
-		// err.
-
-		switch {
-		case stepExecMeta.Status == kargoapi.PromotionStepStatusSucceeded ||
-			stepExecMeta.Status == kargoapi.PromotionStepStatusSkipped:
-			// Note: A step that ran briefly and self-determined it should be
-			// "skipped" is treated similarly to success.
-			stepExecMeta.FinishedAt = ptr.To(metav1.Now())
-			if healthCheck := result.HealthCheck; healthCheck != nil {
-				healthChecks = append(healthChecks, *healthCheck)
-			}
-			continue // Move on to the next step
-		case promotion.IsTerminal(err):
-			// This is an unrecoverable error.
-			stepExecMeta.FinishedAt = ptr.To(metav1.Now())
-			stepExecMeta.Status = kargoapi.PromotionStepStatusErrored
-			stepExecMeta.Message = fmt.Sprintf("an unrecoverable error occurred: %s", err)
-			// Continue, because despite this failure, some steps' "if" conditions may
-			// still allow them to run.
-			continue
-		case err != nil:
-			// If we get to here, the error is POTENTIALLY recoverable.
-			stepExecMeta.ErrorCount++
-			// Check if the error threshold has been met.
-			errorThreshold := step.GetErrorThreshold(runner)
-			if stepExecMeta.ErrorCount >= errorThreshold {
-				// The error threshold has been met.
-				stepExecMeta.FinishedAt = ptr.To(metav1.Now())
-				stepExecMeta.Status = kargoapi.PromotionStepStatusErrored
-				stepExecMeta.Message = fmt.Sprintf(
-					"step %q met error threshold of %d: %s", step.Alias,
-					errorThreshold, stepExecMeta.Message,
-				)
-				// Continue, because despite this failure, some steps' "if" conditions
-				// may still allow them to run.
-				continue
-			}
-		}
-
-		// If we get to here, the step is either Running (waiting for some external
-		// condition to be met) or it Errored/Failed but did not meet the error
-		// threshold. Now we need to check if the timeout has elapsed. A nil timeout
-		// or any non-positive timeout interval are treated as NO timeout, although
-		// a nil timeout really shouldn't happen.
-		timeout := step.GetTimeout(runner)
-		if timeout != nil && *timeout > 0 && metav1.Now().Sub(stepExecMeta.StartedAt.Time) > *timeout {
-			// Timeout has elapsed.
-			stepExecMeta.FinishedAt = ptr.To(metav1.Now())
-			stepExecMeta.Status = kargoapi.PromotionStepStatusErrored
-			stepExecMeta.Message = fmt.Sprintf("step %q timed out after %s", step.Alias, timeout.String())
-			// Continue, because despite this failure, some steps' "if" conditions may
-			// still allow them to run.
-			continue
-		}
-
-		if err != nil {
-			// Treat Errored/Failed as if the step is still running so that the
-			// Promotion will be requeued. The step will be retried on the next
-			// reconciliation.
-			stepExecMeta.Message += "; step will be retried"
+		// Determine what to do based on the result.
+		if !e.determineStepCompletion(step, runner, stepExecMeta, err) {
+			// The step is still running, so we need to wait
 			return Result{
 				Status:                kargoapi.PromotionPhaseRunning,
 				CurrentStep:           i,
@@ -295,15 +175,11 @@ stepLoop:
 			}
 		}
 
-		// If we get to here, the step is still Running (waiting for some external
-		// condition to be met).
-		stepExecMeta.ErrorCount = 0 // Reset the error count
-		return Result{
-			Status:                kargoapi.PromotionPhaseRunning,
-			CurrentStep:           i,
-			StepExecutionMetadata: promoCtx.StepExecutionMetadata,
-			State:                 promoCtx.State,
-			HealthChecks:          healthChecks,
+		// If the step succeeded, we can add any health checks to the list.
+		if stepExecMeta.Status == kargoapi.PromotionStepStatusSucceeded {
+			if result.HealthCheck != nil {
+				healthChecks = append(healthChecks, *result.HealthCheck)
+			}
 		}
 	}
 
@@ -320,6 +196,207 @@ stepLoop:
 	}
 }
 
+func (e *simpleEngine) prepareStepMetadata(promoCtx *Context, step Step) *kargoapi.StepExecutionMetadata {
+	for i := range promoCtx.StepExecutionMetadata {
+		if promoCtx.StepExecutionMetadata[i].Alias == step.Alias {
+			// Found existing metadata for this step, return it.
+			return &promoCtx.StepExecutionMetadata[i]
+		}
+	}
+
+	// If not found, append new metadata
+	promoCtx.StepExecutionMetadata = append(
+		promoCtx.StepExecutionMetadata,
+		kargoapi.StepExecutionMetadata{
+			Alias:           step.Alias,
+			ContinueOnError: step.ContinueOnError,
+		},
+	)
+	return &promoCtx.StepExecutionMetadata[len(promoCtx.StepExecutionMetadata)-1]
+}
+
+func (e *simpleEngine) isContextCanceled(ctx context.Context, meta *kargoapi.StepExecutionMetadata) bool {
+	select {
+	case <-ctx.Done():
+		meta.Status = kargoapi.PromotionStepStatusErrored
+		meta.Message = ctx.Err().Error()
+		if meta.StartedAt != nil {
+			meta.FinishedAt = ptr.To(metav1.Now())
+		}
+		return true
+	default:
+		return false
+	}
+}
+
+func (e *simpleEngine) shouldSkipStep(
+	ctx context.Context,
+	cache *gocache.Cache,
+	promoCtx Context,
+	step Step,
+	meta *kargoapi.StepExecutionMetadata,
+) bool {
+	skip, err := step.Skip(ctx, e.kargoClient, cache, promoCtx)
+	if err != nil {
+		meta.Status = kargoapi.PromotionStepStatusErrored
+		meta.Message = fmt.Sprintf("error checking if step %q should be skipped: %s", step.Alias, err)
+		// Skip the step, because despite this failure, some steps' "if"
+		// conditions may still allow them to run.
+		return true
+	}
+
+	if skip {
+		meta.Status = kargoapi.PromotionStepStatusSkipped
+		// Skip the step because it was explicitly skipped.
+		return true
+	}
+
+	return false
+}
+
+func (e *simpleEngine) propagateStepOutput(
+	promoCtx Context,
+	step Step,
+	runner promotion.StepRunner,
+	result promotion.StepResult,
+) {
+	// Update the state with the output of the step.
+	promoCtx.State[step.Alias] = result.Output
+
+	// If the step instructs that the output should be propagated to the
+	// task namespace, do so.
+	if p, ok := runner.(promotion.TaskLevelOutputStepRunner); ok && p.TaskLevelOutput() {
+		if aliasNamespace := getAliasNamespace(step.Alias); aliasNamespace != "" {
+			if promoCtx.State[aliasNamespace] == nil {
+				promoCtx.State[aliasNamespace] = make(map[string]any)
+			}
+			for k, v := range result.Output {
+				promoCtx.State[aliasNamespace].(map[string]any)[k] = v // nolint: forcetypeassert
+			}
+		}
+	}
+}
+
+func (e *simpleEngine) reconcileResultWithMetadata(
+	meta *kargoapi.StepExecutionMetadata,
+	step Step,
+	result promotion.StepResult,
+	err error,
+) error {
+	meta.Status = result.Status
+	meta.Message = result.Message
+
+	if err != nil {
+		if meta.Status != kargoapi.PromotionStepStatusFailed {
+			// All states other than Errored and Failed should be mutually
+			// exclusive with a hard error. If we got to here, a step has
+			// violated this assumption. We will prioritize the error over the
+			// status and change the status to Errored.
+			meta.Status = kargoapi.PromotionStepStatusErrored
+		}
+		meta.Message = err.Error()
+		return err
+	}
+
+	if result.Status == kargoapi.PromotionStepStatusErrored {
+		message := meta.Message
+		if message == "" {
+			message = "no details provided"
+		}
+		// A nil err should be mutually exclusive with an Errored status. If we
+		// got to here, a step has violated this assumption. We will prioritize
+		// the Errored status over the nil error and create an error.
+		err = fmt.Errorf("step %q errored: %s", step.Alias, message)
+		return err
+	}
+
+	return nil
+}
+
+func (e *simpleEngine) determineStepCompletion(
+	step Step,
+	runner promotion.StepRunner,
+	meta *kargoapi.StepExecutionMetadata,
+	err error,
+) bool {
+	switch {
+	case meta.Status == kargoapi.PromotionStepStatusSucceeded ||
+		meta.Status == kargoapi.PromotionStepStatusSkipped:
+		// Note: A step that ran briefly and self-determined it should be
+		// "skipped" is treated similarly to success.
+		meta.FinishedAt = ptr.To(metav1.Now())
+		return true
+	case promotion.IsTerminal(err):
+		// This is an unrecoverable error.
+		meta.FinishedAt = ptr.To(metav1.Now())
+		meta.Status = kargoapi.PromotionStepStatusErrored
+		meta.Message = fmt.Sprintf("an unrecoverable error occurred: %s", err)
+		// Continue, because despite this failure, some steps' "if" conditions may
+		// still allow them to run.
+		return true
+	case err != nil:
+		// If we get to here, the error is POTENTIALLY recoverable.
+		meta.ErrorCount++
+		// Check if the error threshold has been met.
+		errorThreshold := step.GetErrorThreshold(runner)
+		if meta.ErrorCount >= errorThreshold {
+			// The error threshold has been met.
+			meta.FinishedAt = ptr.To(metav1.Now())
+			meta.Status = kargoapi.PromotionStepStatusErrored
+			meta.Message = fmt.Sprintf(
+				"step %q met error threshold of %d: %s", step.Alias,
+				errorThreshold, meta.Message,
+			)
+			// Continue, because despite this failure, some steps' "if" conditions
+			// may still allow them to run.
+			return true
+		}
+	}
+
+	// If we get to here, the step is either Running (waiting for some external
+	// condition to be met) or it Errored/Failed but did not meet the error
+	// threshold. Now we need to check if the timeout has elapsed. A nil timeout
+	// or any non-positive timeout interval are treated as NO timeout, although
+	// a nil timeout really shouldn't happen.
+	timeout := step.GetTimeout(runner)
+	if timeout != nil && *timeout > 0 && metav1.Now().Sub(meta.StartedAt.Time) > *timeout {
+		// Timeout has elapsed.
+		meta.FinishedAt = ptr.To(metav1.Now())
+		meta.Status = kargoapi.PromotionStepStatusErrored
+		meta.Message = fmt.Sprintf("step %q timed out after %s", step.Alias, timeout.String())
+		// Continue, because despite this failure, some steps' "if" conditions may
+		// still allow them to run.
+		return true
+	}
+
+	if err != nil {
+		// Treat Errored/Failed as if the step is still running so that the
+		// Promotion will be requeued. The step will be retried on the next
+		// reconciliation.
+		meta.Message += "; step will be retried"
+		return false
+	}
+
+	// If we get to here, the step is still Running (waiting for some external
+	// condition to be met).
+	meta.ErrorCount = 0 // Reset the error count
+	return false
+}
+
+func isValidStepStatus(status kargoapi.PromotionStepStatus) bool {
+	switch status {
+	case kargoapi.PromotionStepStatusSucceeded,
+		kargoapi.PromotionStepStatusSkipped,
+		kargoapi.PromotionStepStatusAborted,
+		kargoapi.PromotionStepStatusFailed,
+		kargoapi.PromotionStepStatusErrored,
+		kargoapi.PromotionStepStatusRunning:
+		return true
+	default:
+		return false
+	}
+}
+
 // determinePromoPhase determines the final PromotionPhase as a function of the
 // step configuration and step execution metadata.
 func determinePromoPhase(
@@ -330,7 +407,7 @@ func determinePromoPhase(
 	var worstMsg string
 	for i, stepExecMeta := range stepExecMetas {
 		if steps[i].ContinueOnError {
-			// If continueOnError is set, we don't don't permit this step's outcome
+			// If continueOnError is set, we don't permit this step's outcome
 			// to affect the overall PromotionPhase.
 			continue
 		}
