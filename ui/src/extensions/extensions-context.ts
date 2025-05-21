@@ -12,6 +12,8 @@ export const useExtensionsContext = () => {
   const ctx = React.useContext(ExtensionsContext);
 
   return {
-    stageTabs: ctx?.extensions.filter((extension) => extension.type === 'stageTab') || []
+    stageTabs: ctx?.extensions.filter((extension) => extension.type === 'stageTab') || [],
+    layoutExtensions:
+      ctx?.extensions.filter((extension) => extension.type === 'layoutExtension') || []
   };
 };
