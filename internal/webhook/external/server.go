@@ -156,7 +156,7 @@ func (s *server) getWebhookReceiverConfig(
 	pc kargoapi.ProjectConfig,
 ) (*kargoapi.WebhookReceiverConfig, error) {
 	var whrc *kargoapi.WebhookReceiverConfig
-	for _, config := range pc.Spec.WebhookReceivers { // nolint: nilness, lll // impossible for project config spec to be empty
+	for _, config := range pc.Spec.WebhookReceivers {
 		var configType string
 		if config.GitHub != nil {
 			configType = kargoapi.WebhookReceiverTypeGitHub
