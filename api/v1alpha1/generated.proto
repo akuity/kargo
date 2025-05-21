@@ -904,7 +904,7 @@ message ProjectConfig {
   // Spec describes the configuration of a Project.
   optional ProjectConfigSpec spec = 2;
 
-  // Status describes the current status of a Project.
+  // Status describes the current status of a Project Config.
   optional ProjectConfigStatus status = 3;
 }
 
@@ -924,7 +924,7 @@ message ProjectConfigSpec {
   // specific Stages within the Project.
   repeated PromotionPolicy promotionPolicies = 1;
 
-  // ReceiverConfigs defines the webhook receivers for the project config.
+  // WebhookReceiverConfigs defines the webhook receivers for the project config.
   repeated WebhookReceiverConfig receivers = 2;
 }
 
@@ -936,7 +936,7 @@ message ProjectConfigStatus {
   // +listMapKey=type
   repeated .k8s.io.apimachinery.pkg.apis.meta.v1.Condition conditions = 3;
 
-  // WebhookReceivers contains the list of webhook receivers for the
+  // WebhookReceivers contains the list of webhook receivers for the project config.
   repeated WebhookReceiver receivers = 5;
 }
 
@@ -1643,8 +1643,7 @@ message WebhookReceiver {
   optional string path = 3;
 }
 
-// WebhookReceiverConfig is a resource type that describes the configuration
-// for a receiver.
+// WebhookReceiverConfig describes the configuration for webhook receivers.
 message WebhookReceiverConfig {
   // GitHub contains the configuration for a webhook receiver that is compatible with
   // GitHub payloads.

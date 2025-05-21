@@ -1836,7 +1836,7 @@ export type ProjectConfig = Message<"github.com.akuity.kargo.api.v1alpha1.Projec
   spec?: ProjectConfigSpec;
 
   /**
-   * Status describes the current status of a Project.
+   * Status describes the current status of a Project Config.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.ProjectConfigStatus status = 3;
    */
@@ -1892,7 +1892,7 @@ export type ProjectConfigSpec = Message<"github.com.akuity.kargo.api.v1alpha1.Pr
   promotionPolicies: PromotionPolicy[];
 
   /**
-   * ReceiverConfigs defines the webhook receivers for the project config.
+   * WebhookReceiverConfigs defines the webhook receivers for the project config.
    *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.WebhookReceiverConfig receivers = 2;
    */
@@ -1922,7 +1922,7 @@ export type ProjectConfigStatus = Message<"github.com.akuity.kargo.api.v1alpha1.
   conditions: Condition[];
 
   /**
-   * WebhookReceivers contains the list of webhook receivers for the
+   * WebhookReceivers contains the list of webhook receivers for the project config.
    *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.WebhookReceiver receivers = 5;
    */
@@ -3453,8 +3453,7 @@ export const WebhookReceiverSchema: GenMessage<WebhookReceiver> = /*@__PURE__*/
   messageDesc(file_api_v1alpha1_generated, 74);
 
 /**
- * WebhookReceiverConfig is a resource type that describes the configuration
- * for a receiver.
+ * WebhookReceiverConfig describes the configuration for webhook receivers.
  *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.WebhookReceiverConfig
  */

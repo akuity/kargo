@@ -149,13 +149,12 @@ spec:
                       set
                     rule: 'has(self.stage) ? !has(self.stageSelector) : has(self.stageSelector)'
                 type: array
-              receivers:
-                description: ReceiverConfigs defines the webhook receivers for the
-                  project config.
+              webhookReceivers:
+                description: WebhookReceiverConfigs defines the webhook receivers
+                  for the project config.
                 items:
-                  description: |-
-                    WebhookReceiverConfig is a resource type that describes the configuration
-                    for a receiver.
+                  description: WebhookReceiverConfig describes the configuration for
+                    webhook receivers.
                   properties:
                     github:
                       description: |-
@@ -188,7 +187,7 @@ spec:
                 type: array
             type: object
           status:
-            description: Status describes the current status of a Project.
+            description: Status describes the current status of a Project Config.
             properties:
               conditions:
                 description: Conditions contains the last observations of the Project
@@ -251,9 +250,9 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
-              receivers:
+              webhookReceivers:
                 description: WebhookReceivers contains the list of webhook receivers
-                  for the
+                  for the project config.
                 items:
                   description: |-
                     WebhookReceiver describes a path used to receive warehouse events and

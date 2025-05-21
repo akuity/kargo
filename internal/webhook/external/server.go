@@ -37,7 +37,7 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	logger := logging.LoggerFromContext(ctx)
 	mux := http.NewServeMux()
 
-	mux.Handle("POST /", http.HandlerFunc(s.refreshWarehouseWebhook))
+	mux.Handle("POST /", http.HandlerFunc(s.refreshWarehouseHandler))
 
 	srv := &http.Server{
 		Handler:           mux,
@@ -76,9 +76,10 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	}
 }
 
-func (s *server) refreshWarehouseWebhook(w http.ResponseWriter, r *http.Request) {
+func (s *server) refreshWarehouseHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := (r.Context())
 	logger := logging.LoggerFromContext(ctx)
+	logger.Debug("refresh warehouse handler called", "path", r.URL.Path)
 	var projectConfigs kargoapi.ProjectConfigList
 	err := s.client.List(
 		ctx,
@@ -88,14 +89,14 @@ func (s *server) refreshWarehouseWebhook(w http.ResponseWriter, r *http.Request)
 		},
 	)
 	if err != nil {
-		logger.Error(err, "failed to list project config")
+		logger.Error(err, "failed to list project configs")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	if len(projectConfigs.Items) == 0 {
-		logger.Error(err, "no project configs found")
-		http.Error(w, "not found", http.StatusNotFound)
+		logger.Info("no project configs found")
+		http.Error(w, "no project configs found for the request", http.StatusNotFound)
 		return
 	}
 
@@ -105,14 +106,16 @@ func (s *server) refreshWarehouseWebhook(w http.ResponseWriter, r *http.Request)
 	// a hash of the project name, provider and secret.
 	pc := projectConfigs.Items[0]
 
-	wrc, err := s.getWebhookReceiverConfig(
-		r.URL.Path,
-		pc,
-	)
-	if err != nil {
-		logger.Error(err, "failed to get receiver config")
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	var wrc *kargoapi.WebhookReceiverConfig
+	if len(pc.Spec.WebhookReceiverConfigs) == 1 {
+		wrc = &pc.Spec.WebhookReceiverConfigs[0]
+	} else {
+		wrc, err = s.getWebhookReceiverConfig(r.URL.Path, pc)
+		if err != nil {
+			logger.Error(err, "failed to find webhook receiver config")
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
 	}
 
 	logger.Debug("webhook receiver config found", "webhook-receiver-config", wrc)
@@ -128,15 +131,23 @@ func (s *server) refreshWarehouseWebhook(w http.ResponseWriter, r *http.Request)
 		)
 		if err != nil {
 			logger.Error(err, "failed to get github secret")
-			xhttp.WriteErrorJSON(w, xhttp.Error(err, http.StatusInternalServerError))
+			xhttp.WriteErrorJSON(w,
+				xhttp.Error(
+					fmt.Errorf("failed to get github secret %q: %w", wrc.GitHub.SecretRef.Name, err),
+					http.StatusNotFound,
+				),
+			)
 			return
 		}
 		token, ok := secret.StringData["token"]
 		if !ok {
-			logger.Error(err, "failed to get github token from secret")
+			logger.Error(
+				errors.New("failed to get github token from secret"),
+				"no value for 'token' key",
+			)
 			xhttp.WriteErrorJSON(w,
 				xhttp.Error(
-					errors.New("failed to get github token"),
+					errors.New("missing github token in secret"),
 					http.StatusInternalServerError,
 				),
 			)
@@ -170,7 +181,7 @@ func (s *server) getWebhookReceiverConfig(
 	}
 	if whrc == nil {
 		return nil, fmt.Errorf(
-			"failed to find receiver config with path %q in project config %q",
+			"failed to find webhook receiver config with path %q in project config %q",
 			receiverPath,
 			pc.Name,
 		)

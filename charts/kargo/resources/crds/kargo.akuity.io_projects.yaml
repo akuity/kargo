@@ -154,13 +154,12 @@ spec:
                       set
                     rule: 'has(self.stage) ? !has(self.stageSelector) : has(self.stageSelector)'
                 type: array
-              receivers:
-                description: ReceiverConfigs defines the webhook receivers for the
-                  project config.
+              webhookReceivers:
+                description: WebhookReceiverConfigs defines the webhook receivers
+                  for the project config.
                 items:
-                  description: |-
-                    WebhookReceiverConfig is a resource type that describes the configuration
-                    for a receiver.
+                  description: WebhookReceiverConfig describes the configuration for
+                    webhook receivers.
                   properties:
                     github:
                       description: |-
