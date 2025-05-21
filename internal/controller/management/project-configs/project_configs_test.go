@@ -47,8 +47,8 @@ func TestReconciler_syncProjectConfig(t *testing.T) {
 									Name:      "secret-that-exists",
 									Namespace: "fake-namespace",
 								},
-								StringData: map[string]string{
-									"token": "fake-secret-data",
+								Data: map[string][]byte{
+									"token": []byte("fake-secret-data"),
 								},
 							},
 						).
@@ -91,8 +91,8 @@ func TestReconciler_syncProjectConfig(t *testing.T) {
 									Name:      "secret-that-exists",
 									Namespace: "fake-namespace",
 								},
-								StringData: map[string]string{
-									"token": "fake-secret-data",
+								Data: map[string][]byte{
+									"token": []byte("fake-secret-data"),
 								},
 							},
 						).
@@ -239,8 +239,8 @@ func TestReconciler_ensureWebhookReceivers(t *testing.T) {
 									Name:      "secret-that-exists",
 									Namespace: "fake-namespace",
 								},
-								StringData: map[string]string{
-									"token": "fake-secret-data",
+								Data: map[string][]byte{
+									"token": []byte("fake-secret-data"),
 								},
 							},
 						).

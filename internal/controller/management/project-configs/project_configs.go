@@ -239,7 +239,7 @@ func (r *reconciler) ensureGitHubWebhookReceiver(
 	}
 	logger.Debug("secret found", "secret", secret.Name)
 
-	token, ok := secret.StringData["token"]
+	token, ok := secret.Data["token"]
 	if !ok {
 		logger.Error(err, "'token' key not found in secret data")
 		return nil, fmt.Errorf(
@@ -252,7 +252,7 @@ func (r *reconciler) ensureGitHubWebhookReceiver(
 		Path: external.GenerateWebhookPath(
 			pc.Name,
 			kargoapi.WebhookReceiverTypeGitHub,
-			token,
+			string(token),
 		),
 	}, nil
 }

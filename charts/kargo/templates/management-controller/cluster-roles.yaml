@@ -36,6 +36,7 @@ rules:
   - kargo.akuity.io
   resources:
   - projects
+  - projectconfigs
   verbs:
   - delete
   - get
@@ -46,6 +47,7 @@ rules:
   - kargo.akuity.io
   resources:
   - projects/status
+  - projectconfigs/status
   verbs:
   - patch
 - apiGroups:
