@@ -58,8 +58,8 @@ func TestReconciler_syncProjectConfig(t *testing.T) {
 				r.ensureWebhookReceiversFn = func(
 					_ context.Context,
 					_ *kargoapi.ProjectConfig,
-				) error {
-					return fmt.Errorf("something went wrong")
+				) ([]kargoapi.WebhookReceiver, error) {
+					return nil, fmt.Errorf("something went wrong")
 				}
 				return r
 			},
@@ -284,7 +284,8 @@ func TestReconciler_ensureWebhookReceivers(t *testing.T) {
 			r := test.reconciler()
 			l := logging.NewLogger(logging.DebugLevel)
 			ctx := logging.ContextWithLogger(t.Context(), l)
-			err := r.ensureWebhookReceiversFn(ctx, test.projectConfig)
+			whReceivers, err := r.ensureWebhookReceiversFn(ctx, test.projectConfig)
+			test.projectConfig.Status.WebhookReceivers = whReceivers
 			test.assertions(t, test.projectConfig, err)
 		})
 	}

@@ -41,7 +41,7 @@ type reconciler struct {
 	ensureWebhookReceiversFn func(
 		context.Context,
 		*kargoapi.ProjectConfig,
-	) error
+	) ([]kargoapi.WebhookReceiver, error)
 }
 
 func SetupReconcilerWithManager(
@@ -152,7 +152,8 @@ func (r *reconciler) syncProjectConfig(
 		ObservedGeneration: projectConfig.GetGeneration(),
 	})
 
-	if err := r.ensureWebhookReceiversFn(ctx, projectConfig); err != nil {
+	whReceivers, err := r.ensureWebhookReceiversFn(ctx, projectConfig)
+	if err != nil {
 		logger.Error(err, "error ensuring webhook receivers")
 		conditions.Set(status, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeReady,
@@ -163,7 +164,7 @@ func (r *reconciler) syncProjectConfig(
 		})
 		return *status, true, fmt.Errorf("error ensuring webhook receivers: %w", err)
 	}
-	status.WebhookReceivers = projectConfig.Status.WebhookReceivers
+	status.WebhookReceivers = whReceivers
 
 	conditions.Delete(status, kargoapi.ConditionTypeReconciling)
 	conditions.Set(status, &metav1.Condition{
@@ -179,37 +180,40 @@ func (r *reconciler) syncProjectConfig(
 func (r *reconciler) ensureWebhookReceivers(
 	ctx context.Context,
 	pc *kargoapi.ProjectConfig,
-) error {
+) ([]kargoapi.WebhookReceiver, error) {
 	logger := logging.LoggerFromContext(ctx)
-
 	if pc.Spec.WebhookReceiverConfigs == nil {
 		logger.Debug("ProjectConfig does not have any receiver configurations")
-		return nil
+		return nil, nil
 	}
 
 	logger.Debug("ensuring receivers",
 		"receiver-configs", len(pc.Spec.WebhookReceiverConfigs),
 	)
 
+	var webhookReceivers []kargoapi.WebhookReceiver
 	for _, rc := range pc.Spec.WebhookReceiverConfigs {
 		if rc.GitHub != nil {
-			if err := r.ensureGitHubWebhookReceiver(ctx, pc, rc); err != nil {
+			whReceivers, err := r.ensureGitHubWebhookReceiver(ctx, pc, rc)
+			if err != nil {
 				logger.Error(err, "error ensuring GitHub webhook receiver",
 					"receiver-config", rc,
 				)
-				return fmt.Errorf("error ensuring GitHub webhook receiver: %w", err)
+				return nil, fmt.Errorf("error ensuring GitHub webhook receiver: %w", err)
 			}
+			webhookReceivers = append(webhookReceivers, whReceivers...)
 		}
 	}
-	return nil
+	return webhookReceivers, nil
 }
 
 func (r *reconciler) ensureGitHubWebhookReceiver(
 	ctx context.Context,
 	pc *kargoapi.ProjectConfig,
 	rc kargoapi.WebhookReceiverConfig,
-) error {
+) ([]kargoapi.WebhookReceiver, error) {
 	logger := logging.LoggerFromContext(ctx)
+	var webhookReceivers []kargoapi.WebhookReceiver
 	var secret corev1.Secret
 	err := r.client.Get(
 		ctx,
@@ -224,12 +228,12 @@ func (r *reconciler) ensureGitHubWebhookReceiver(
 			"github-secret", rc.GitHub.SecretRef.Name,
 		)
 		if kubeerr.IsNotFound(err) {
-			return fmt.Errorf(
+			return nil, fmt.Errorf(
 				"secret-reference %q in namespace %q not found",
 				rc.GitHub.SecretRef.Name, pc.Namespace,
 			)
 		}
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"error getting webhook receiver secret-reference %q in project namespace %q: %w",
 			rc.GitHub.SecretRef.Name, pc.Name, err,
 		)
@@ -239,12 +243,12 @@ func (r *reconciler) ensureGitHubWebhookReceiver(
 	token, ok := secret.StringData["token"]
 	if !ok {
 		logger.Error(err, "'token' key not found in secret data")
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"key 'token' not found in secret %q for project config %q",
 			rc.GitHub.SecretRef.Name, pc.Name,
 		)
 	}
-	pc.Status.WebhookReceivers = append(pc.Status.WebhookReceivers,
+	webhookReceivers = append(webhookReceivers,
 		kargoapi.WebhookReceiver{
 			Path: external.GenerateWebhookPath(
 				pc.Name,
@@ -253,5 +257,5 @@ func (r *reconciler) ensureGitHubWebhookReceiver(
 			),
 		},
 	)
-	return nil
+	return webhookReceivers, nil
 }

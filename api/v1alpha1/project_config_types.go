@@ -38,7 +38,7 @@ type ProjectConfigSpec struct {
 	// specific Stages within the Project.
 	PromotionPolicies []PromotionPolicy `json:"promotionPolicies,omitempty" protobuf:"bytes,1,rep,name=promotionPolicies"`
 	// ReceiverConfigs defines the webhook receivers for the project config.
-	WebhookReceiverConfigs []WebhookReceiverConfig `json:"receivers,omitempty" protobuf:"bytes,2,rep,name=receivers"`
+	WebhookReceiverConfigs []WebhookReceiverConfig `json:"webhookReceivers,omitempty" protobuf:"bytes,2,rep,name=receivers"`
 }
 
 type ProjectConfigStatus struct {
@@ -49,7 +49,7 @@ type ProjectConfigStatus struct {
 	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,3,rep,name=conditions"`
 	// WebhookReceivers contains the list of webhook receivers for the
-	WebhookReceivers []WebhookReceiver `json:"receivers,omitempty" protobuf:"bytes,5,rep,name=receivers"`
+	WebhookReceivers []WebhookReceiver `json:"webhookReceivers,omitempty" protobuf:"bytes,5,rep,name=receivers"`
 }
 
 // GetConditions implements the conditions.Getter interface.
