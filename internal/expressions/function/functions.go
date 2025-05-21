@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/expr-lang/expr"
+	"github.com/patrickmn/go-cache"
 	corev1 "k8s.io/api/core/v1"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -47,10 +48,10 @@ func FreightOperations(
 // retrieved ConfigMaps and Secrets to avoid repeated API calls. This can
 // improve performance when the same ConfigMaps and Secrets are accessed
 // multiple times within the same expression evaluation.
-func DataOperations(ctx context.Context, c client.Client, project string, cache bool) []expr.Option {
+func DataOperations(ctx context.Context, c client.Client, project string, useCache bool) []expr.Option {
 	return []expr.Option{
-		ConfigMap(ctx, c, project, cache),
-		Secret(ctx, c, project, cache),
+		ConfigMap(ctx, c, project, useCache),
+		Secret(ctx, c, project, useCache),
 	}
 }
 
@@ -144,10 +145,10 @@ func ChartFrom(
 
 // ConfigMap returns an expr.Option that provides a `configMap()` function for
 // use in expressions.
-func ConfigMap(ctx context.Context, c client.Client, project string, cache bool) expr.Option {
-	var cacheData map[string]map[string]string
-	if cache {
-		cacheData = make(map[string]map[string]string)
+func ConfigMap(ctx context.Context, c client.Client, project string, useCache bool) expr.Option {
+	var cacheData *cache.Cache
+	if useCache {
+		cacheData = cache.New(cache.NoExpiration, cache.NoExpiration)
 	}
 
 	return expr.Function(
@@ -159,10 +160,10 @@ func ConfigMap(ctx context.Context, c client.Client, project string, cache bool)
 
 // Secret returns an expr.Option that provides a `secret()` function for use in
 // expressions.
-func Secret(ctx context.Context, c client.Client, project string, cache bool) expr.Option {
-	var cacheData map[string]map[string]string
-	if cache {
-		cacheData = make(map[string]map[string]string)
+func Secret(ctx context.Context, c client.Client, project string, useCache bool) expr.Option {
+	var cacheData *cache.Cache
+	if useCache {
+		cacheData = cache.New(cache.NoExpiration, cache.NoExpiration)
 	}
 
 	return expr.Function(
@@ -391,7 +392,7 @@ func getChart(
 	}
 }
 
-func getConfigMap(ctx context.Context, c client.Client, project string, cache map[string]map[string]string) exprFn {
+func getConfigMap(ctx context.Context, c client.Client, project string, cacheData *cache.Cache) exprFn {
 	return func(a ...any) (any, error) {
 		if len(a) != 1 {
 			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
@@ -402,35 +403,41 @@ func getConfigMap(ctx context.Context, c client.Client, project string, cache ma
 			return nil, fmt.Errorf("argument must be string, got %T", a[0])
 		}
 
-		data, ok := cache[name]
-		if !ok {
-			var cfgMap corev1.ConfigMap
-			if err := c.Get(
-				ctx,
-				client.ObjectKey{
-					Namespace: project,
-					Name:      name,
-				},
-				&cfgMap,
-			); err != nil {
-				if kubeerr.IsNotFound(err) {
+		if cacheData != nil {
+			if cachedData, ok := cacheData.Get(name); ok {
+				if cachedData == nil {
 					return map[string]string{}, nil
 				}
-				return nil, fmt.Errorf("failed to get configmap %s: %w", name, err)
-			}
-
-			data = cfgMap.Data
-
-			if cache != nil {
-				cache[name] = data
+				if data, ok := cachedData.(map[string]string); ok {
+					return maps.Clone(data), nil
+				}
 			}
 		}
 
-		return maps.Clone(data), nil
+		var cfgMap corev1.ConfigMap
+		if err := c.Get(
+			ctx,
+			client.ObjectKey{
+				Namespace: project,
+				Name:      name,
+			},
+			&cfgMap,
+		); err != nil {
+			if kubeerr.IsNotFound(err) {
+				return map[string]string{}, nil
+			}
+			return nil, fmt.Errorf("failed to get configmap %s: %w", name, err)
+		}
+
+		if cacheData != nil {
+			cacheData.Set(name, maps.Clone(cfgMap.Data), cache.NoExpiration)
+		}
+
+		return cfgMap.Data, nil
 	}
 }
 
-func getSecret(ctx context.Context, c client.Client, project string, cache map[string]map[string]string) exprFn {
+func getSecret(ctx context.Context, c client.Client, project string, cacheData *cache.Cache) exprFn {
 	return func(a ...any) (any, error) {
 		if len(a) != 1 {
 			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
@@ -441,34 +448,43 @@ func getSecret(ctx context.Context, c client.Client, project string, cache map[s
 			return nil, fmt.Errorf("argument must be string, got %T", a[0])
 		}
 
-		data, ok := cache[name]
-		if !ok {
-			var secret corev1.Secret
-			if err := c.Get(
-				ctx,
-				client.ObjectKey{
-					Namespace: project,
-					Name:      name,
-				},
-				&secret,
-			); err != nil {
-				if kubeerr.IsNotFound(err) {
+		if cacheData != nil {
+			cachedData, ok := cacheData.Get(name)
+			if ok {
+				if cachedData == nil {
 					return map[string]string{}, nil
 				}
-				return nil, fmt.Errorf("failed to get secret %s: %w", name, err)
-			}
-
-			data = make(map[string]string, len(secret.Data))
-			for k, v := range secret.Data {
-				data[k] = string(v)
-			}
-
-			if cache != nil {
-				cache[name] = data
+				if data, ok := cachedData.(map[string]string); ok {
+					return maps.Clone(data), nil
+				}
 			}
 		}
 
-		return maps.Clone(data), nil
+		var secret corev1.Secret
+		if err := c.Get(
+			ctx,
+			client.ObjectKey{
+				Namespace: project,
+				Name:      name,
+			},
+			&secret,
+		); err != nil {
+			if kubeerr.IsNotFound(err) {
+				return map[string]string{}, nil
+			}
+			return nil, fmt.Errorf("failed to get secret %s: %w", name, err)
+		}
+
+		data := make(map[string]string)
+		for k, v := range secret.Data {
+			data[k] = string(v)
+		}
+
+		if cacheData != nil {
+			cacheData.Set(name, maps.Clone(data), cache.NoExpiration)
+		}
+
+		return data, nil
 	}
 }
 
