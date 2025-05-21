@@ -166,8 +166,8 @@ func TestRefreshWarehouseHandler(t *testing.T) {
 								Name:      "fakesecret",
 								Namespace: "fakenamespace",
 							},
-							StringData: map[string]string{
-								"not-a-token-key": "doesnt-matter",
+							Data: map[string][]byte{
+								"not-a-token-key": []byte("doesnt-matter"),
 							},
 						},
 						&kargoapi.ProjectConfig{
@@ -237,8 +237,8 @@ func TestRefreshWarehouseHandler(t *testing.T) {
 								Name:      "fakesecret",
 								Namespace: "fakenamespace",
 							},
-							StringData: map[string]string{
-								"token": "mysupersecrettoken",
+							Data: map[string][]byte{
+								"token": []byte("mysupersecrettoken"),
 							},
 						},
 						&kargoapi.ProjectConfig{

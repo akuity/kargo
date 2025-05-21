@@ -139,7 +139,7 @@ func (s *server) refreshWarehouseHandler(w http.ResponseWriter, r *http.Request)
 			)
 			return
 		}
-		token, ok := secret.StringData["token"]
+		token, ok := secret.Data["token"]
 		if !ok {
 			logger.Error(
 				errors.New("failed to get github token from secret"),
@@ -153,7 +153,7 @@ func (s *server) refreshWarehouseHandler(w http.ResponseWriter, r *http.Request)
 			)
 			return
 		}
-		githubHandler(s.client, token)(w, r)
+		githubHandler(s.client, string(token))(w, r)
 	default:
 		http.Error(w, "not found", http.StatusNotFound)
 	}
