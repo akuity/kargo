@@ -2,6 +2,7 @@ package function
 
 import (
 	"context"
+	"maps"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -654,13 +655,13 @@ func Test_getConfigMap(t *testing.T) {
 		name       string
 		objects    []client.Object
 		args       []any
-		cache      map[string]corev1.ConfigMap
-		assertions func(t *testing.T, cache map[string]corev1.ConfigMap, result any, err error)
+		cache      map[string]map[string]string
+		assertions func(t *testing.T, cache map[string]map[string]string, result any, err error)
 	}{
 		{
 			name: "no arguments",
 			args: []any{},
-			assertions: func(t *testing.T, _ map[string]corev1.ConfigMap, result any, err error) {
+			assertions: func(t *testing.T, cache map[string]map[string]string, result any, err error) {
 				assert.ErrorContains(t, err, "expected 1 argument")
 				assert.Nil(t, result)
 			},
@@ -668,7 +669,7 @@ func Test_getConfigMap(t *testing.T) {
 		{
 			name: "too many arguments",
 			args: []any{testConfigMap, "extra"},
-			assertions: func(t *testing.T, _ map[string]corev1.ConfigMap, result any, err error) {
+			assertions: func(t *testing.T, cache map[string]map[string]string, result any, err error) {
 				assert.ErrorContains(t, err, "expected 1 argument")
 				assert.Nil(t, result)
 			},
@@ -676,7 +677,7 @@ func Test_getConfigMap(t *testing.T) {
 		{
 			name: "invalid argument type",
 			args: []any{123},
-			assertions: func(t *testing.T, _ map[string]corev1.ConfigMap, result any, err error) {
+			assertions: func(t *testing.T, cache map[string]map[string]string, result any, err error) {
 				assert.ErrorContains(t, err, "argument must be string")
 				assert.Nil(t, result)
 			},
@@ -684,7 +685,7 @@ func Test_getConfigMap(t *testing.T) {
 		{
 			name: "ConfigMap not found",
 			args: []any{testConfigMap},
-			assertions: func(t *testing.T, cache map[string]corev1.ConfigMap, result any, err error) {
+			assertions: func(t *testing.T, cache map[string]map[string]string, result any, err error) {
 				assert.NoError(t, err)
 				assert.NotNil(t, result)
 				assert.IsType(t, map[string]string{}, result)
@@ -704,7 +705,7 @@ func Test_getConfigMap(t *testing.T) {
 				},
 			},
 			args: []any{testConfigMap},
-			assertions: func(t *testing.T, cache map[string]corev1.ConfigMap, result any, err error) {
+			assertions: func(t *testing.T, cache map[string]map[string]string, result any, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, testData, result)
 				assert.Nil(t, cache)
@@ -722,7 +723,7 @@ func Test_getConfigMap(t *testing.T) {
 				},
 			},
 			args: []any{testConfigMap},
-			assertions: func(t *testing.T, cache map[string]corev1.ConfigMap, result any, err error) {
+			assertions: func(t *testing.T, cache map[string]map[string]string, result any, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, testData, result)
 				assert.Contains(t, cache, testConfigMap)
@@ -730,17 +731,11 @@ func Test_getConfigMap(t *testing.T) {
 		},
 		{
 			name: "success from cache",
-			cache: map[string]corev1.ConfigMap{
-				testConfigMap: {
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProject,
-						Name:      testConfigMap,
-					},
-					Data: testData,
-				},
+			cache: map[string]map[string]string{
+				testConfigMap: maps.Clone(testData),
 			},
 			args: []any{testConfigMap},
-			assertions: func(t *testing.T, cache map[string]corev1.ConfigMap, result any, err error) {
+			assertions: func(t *testing.T, cache map[string]map[string]string, result any, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, testData, result)
 				assert.Contains(t, cache, testConfigMap)
@@ -776,13 +771,13 @@ func Test_getSecret(t *testing.T) {
 		name       string
 		objects    []client.Object
 		args       []any
-		cache 	   map[string]corev1.Secret
-		assertions func(t *testing.T, cache map[string]corev1.Secret, result any, err error)
+		cache 	   map[string]map[string]string
+		assertions func(t *testing.T, cache map[string]map[string]string, result any, err error)
 	}{
 		{
 			name: "no arguments",
 			args: []any{},
-			assertions: func(t *testing.T, _ map[string]corev1.Secret, result any, err error) {
+			assertions: func(t *testing.T, _ map[string]map[string]string, result any, err error) {
 				assert.ErrorContains(t, err, "expected 1 argument")
 				assert.Nil(t, result)
 			},
@@ -790,7 +785,7 @@ func Test_getSecret(t *testing.T) {
 		{
 			name: "too many arguments",
 			args: []any{testSecret, "extra"},
-			assertions: func(t *testing.T, _ map[string]corev1.Secret, result any, err error) {
+			assertions: func(t *testing.T, _ map[string]map[string]string, result any, err error) {
 				assert.ErrorContains(t, err, "expected 1 argument")
 				assert.Nil(t, result)
 			},
@@ -798,7 +793,7 @@ func Test_getSecret(t *testing.T) {
 		{
 			name: "invalid argument type",
 			args: []any{123},
-			assertions: func(t *testing.T, _ map[string]corev1.Secret, result any, err error) {
+			assertions: func(t *testing.T, _ map[string]map[string]string, result any, err error) {
 				assert.ErrorContains(t, err, "argument must be string")
 				assert.Nil(t, result)
 			},
@@ -806,7 +801,7 @@ func Test_getSecret(t *testing.T) {
 		{
 			name: "Secret not found",
 			args: []any{testSecret},
-			assertions: func(t *testing.T, cache map[string]corev1.Secret, result any, err error) {
+			assertions: func(t *testing.T, cache map[string]map[string]string, result any, err error) {
 				assert.NoError(t, err)
 				assert.NotNil(t, result)
 				assert.IsType(t, map[string]string{}, result)
@@ -828,7 +823,7 @@ func Test_getSecret(t *testing.T) {
 				},
 			},
 			args: []any{testSecret},
-			assertions: func(t *testing.T, cache map[string]corev1.Secret, result any, err error) {
+			assertions: func(t *testing.T, cache map[string]map[string]string, result any, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, map[string]string{"foo": "bar"}, result)
 				assert.Nil(t, cache)
@@ -847,9 +842,9 @@ func Test_getSecret(t *testing.T) {
 					},
 				},
 			},
-			cache: make(map[string]corev1.Secret),
+			cache: make(map[string]map[string]string),
 			args: []any{testSecret},
-			assertions: func(t *testing.T, cache map[string]corev1.Secret, result any, err error) {
+			assertions: func(t *testing.T, cache map[string]map[string]string, result any, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, map[string]string{"foo": "bar"}, result)
 				assert.Contains(t, cache, testSecret)
@@ -857,19 +852,13 @@ func Test_getSecret(t *testing.T) {
 		},
 		{
 			name: "success from cache",
-			cache: map[string]corev1.Secret{
+			cache: map[string]map[string]string{
 				testSecret: {
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProject,
-						Name:      testSecret,
-					},
-					Data: map[string][]byte{
-						"foo": []byte("bar"),
-					},
+					"foo": "bar",
 				},
 			},
 			args: []any{testSecret},
-			assertions: func(t *testing.T, cache map[string]corev1.Secret, result any, err error) {
+			assertions: func(t *testing.T, cache map[string]map[string]string, result any, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, map[string]string{"foo": "bar"}, result)
 				assert.Contains(t, cache, testSecret)

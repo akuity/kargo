@@ -3,6 +3,7 @@ package function
 import (
 	"context"
 	"fmt"
+	"maps"
 	"strings"
 
 	"github.com/expr-lang/expr"
@@ -144,14 +145,14 @@ func ChartFrom(
 // ConfigMap returns an expr.Option that provides a `configMap()` function for
 // use in expressions.
 func ConfigMap(ctx context.Context, c client.Client, project string, cache bool) expr.Option {
-	var configMapCache map[string]corev1.ConfigMap
+	var cacheData map[string]map[string]string
 	if cache {
-		configMapCache = make(map[string]corev1.ConfigMap)
+		cacheData = make(map[string]map[string]string)
 	}
 
 	return expr.Function(
 		"configMap",
-		getConfigMap(ctx, c, project, configMapCache),
+		getConfigMap(ctx, c, project, cacheData),
 		new(func(name string) map[string]string),
 	)
 }
@@ -159,14 +160,14 @@ func ConfigMap(ctx context.Context, c client.Client, project string, cache bool)
 // Secret returns an expr.Option that provides a `secret()` function for use in
 // expressions.
 func Secret(ctx context.Context, c client.Client, project string, cache bool) expr.Option {
-	var secretCache map[string]corev1.Secret
+	var cacheData map[string]map[string]string
 	if cache {
-		secretCache = make(map[string]corev1.Secret)
+		cacheData = make(map[string]map[string]string)
 	}
 
 	return expr.Function(
 		"secret",
-		getSecret(ctx, c, project, secretCache),
+		getSecret(ctx, c, project, cacheData),
 		new(func(name string) map[string]string),
 	)
 }
@@ -390,7 +391,7 @@ func getChart(
 	}
 }
 
-func getConfigMap(ctx context.Context, c client.Client, project string, cache map[string]corev1.ConfigMap) exprFn {
+func getConfigMap(ctx context.Context, c client.Client, project string, cache map[string]map[string]string) exprFn {
 	return func(a ...any) (any, error) {
 		if len(a) != 1 {
 			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
@@ -401,8 +402,9 @@ func getConfigMap(ctx context.Context, c client.Client, project string, cache ma
 			return nil, fmt.Errorf("argument must be string, got %T", a[0])
 		}
 
-		cfgMap, ok := cache[name]
+		data, ok := cache[name]
 		if !ok {
+			var cfgMap corev1.ConfigMap
 			if err := c.Get(
 				ctx,
 				client.ObjectKey{
@@ -417,16 +419,18 @@ func getConfigMap(ctx context.Context, c client.Client, project string, cache ma
 				return nil, fmt.Errorf("failed to get configmap %s: %w", name, err)
 			}
 
+			data = cfgMap.Data
+
 			if cache != nil {
-				cache[name] = *cfgMap.DeepCopy()
+				cache[name] = data
 			}
 		}
 
-		return cfgMap.Data, nil
+		return maps.Clone(data), nil
 	}
 }
 
-func getSecret(ctx context.Context, c client.Client, project string, cache map[string]corev1.Secret) exprFn {
+func getSecret(ctx context.Context, c client.Client, project string, cache map[string]map[string]string) exprFn {
 	return func(a ...any) (any, error) {
 		if len(a) != 1 {
 			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
@@ -437,8 +441,9 @@ func getSecret(ctx context.Context, c client.Client, project string, cache map[s
 			return nil, fmt.Errorf("argument must be string, got %T", a[0])
 		}
 
-		secret, ok := cache[name]
+		data, ok := cache[name]
 		if !ok {
+			var secret corev1.Secret
 			if err := c.Get(
 				ctx,
 				client.ObjectKey{
@@ -453,17 +458,17 @@ func getSecret(ctx context.Context, c client.Client, project string, cache map[s
 				return nil, fmt.Errorf("failed to get secret %s: %w", name, err)
 			}
 
+			data = make(map[string]string, len(secret.Data))
+			for k, v := range secret.Data {
+				data[k] = string(v)
+			}
+
 			if cache != nil {
-				cache[name] = *secret.DeepCopy()
+				cache[name] = data
 			}
 		}
 
-		data := make(map[string]string, len(secret.Data))
-		for k, v := range secret.Data {
-			data[k] = string(v)
-		}
-
-		return data, nil
+		return maps.Clone(data), nil
 	}
 }
 
