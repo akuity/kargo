@@ -98,7 +98,17 @@ func (o *externalWebhooksServerOptions) run(ctx context.Context) error {
 		indexer.ProjectConfigsByWebhookReceiverPaths,
 	)
 	if err != nil {
-		return fmt.Errorf("error registering warehouse by repo url indexer: %w", err)
+		return fmt.Errorf("error registering project configs by webhook receiver path indexer: %w", err)
+	}
+
+	go func() {
+		err = cluster.Start(ctx)
+	}()
+	if !cluster.GetCache().WaitForCacheSync(ctx) {
+		return fmt.Errorf("error waiting for cache to sync: %w", err)
+	}
+	if err != nil {
+		return fmt.Errorf("error starting cluster: %w", err)
 	}
 
 	srv := external.NewServer(serverCfg, cluster.GetClient())

@@ -24,7 +24,7 @@ type ProjectConfig struct {
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	// Spec describes the configuration of a Project.
 	Spec ProjectConfigSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
-	// Status describes the current status of a Project Config.
+	// Status describes the current status of a ProjectConfig.
 	Status ProjectConfigStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
@@ -37,19 +37,21 @@ type ProjectConfigSpec struct {
 	// PromotionPolicies defines policies governing the promotion of Freight to
 	// specific Stages within the Project.
 	PromotionPolicies []PromotionPolicy `json:"promotionPolicies,omitempty" protobuf:"bytes,1,rep,name=promotionPolicies"`
-	// WebhookReceiverConfigs defines the webhook receivers for the project config.
-	WebhookReceiverConfigs []WebhookReceiverConfig `json:"webhookReceivers,omitempty" protobuf:"bytes,2,rep,name=receivers"`
+	// WebhookReceivers describes Project-specific webhook receivers used for
+	// processing events from various external platforms
+	WebhookReceivers []WebhookReceiverConfig `json:"webhookReceivers,omitempty" protobuf:"bytes,2,rep,name=receivers"`
 }
 
+// ProjectConfigStatus describes the current status of a ProjectConfig.
 type ProjectConfigStatus struct {
 	// Conditions contains the last observations of the Project Config's current state.
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	// +listType=map
 	// +listMapKey=type
-	Conditions []metav1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,3,rep,name=conditions"`
-	// WebhookReceivers contains the list of webhook receivers for the project config.
-	WebhookReceivers []WebhookReceiver `json:"webhookReceivers,omitempty" protobuf:"bytes,5,rep,name=receivers"`
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,1,rep,name=conditions"`
+	// WebhookReceivers describes the status of Project-specific webhook receivers.
+	WebhookReceivers []WebhookReceiver `json:"webhookReceivers,omitempty" protobuf:"bytes,2,rep,name=receivers"`
 }
 
 // GetConditions implements the conditions.Getter interface.
@@ -86,24 +88,28 @@ type PromotionPolicy struct {
 	AutoPromotionEnabled bool `json:"autoPromotionEnabled,omitempty" protobuf:"varint,2,opt,name=autoPromotionEnabled"`
 }
 
-// WebhookReceiverConfig describes the configuration for webhook receivers.
+// WebhookReceiverConfig describes the configuration for a single webhook
+// receiver.
 type WebhookReceiverConfig struct {
 	// GitHub contains the configuration for a webhook receiver that is compatible with
 	// GitHub payloads.
 	GitHub *GitHubWebhookReceiver `json:"github,omitempty" protobuf:"bytes,1,opt,name=github"`
 }
 
+// GitHubWebhookReceiver describes a webhook receiver that is compatible with
+// GitHub payloads.
 type GitHubWebhookReceiver struct {
-	// Secret contains a reference to a Secret in the same namespace as the ProjectConfig.
+	// SecretRef contains a reference to a Secret in the same namespace as the ProjectConfig.
 	//
 	// The Secret is expected to contain a `token` key with the secret token configured for
 	// in GitHub for the webhook. For more information about this token, please refer to the
 	// GitHub documentation: https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
+	//
+	// The value of the token key goes in the "Secret" field when registering a GitHub App or webhook in the GitHub UI.
 	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
 }
 
-// WebhookReceiver describes a path used to receive warehouse events and
-// trigger refreshes.
+// WebhookReceiver describes a path used to receive webhook events.
 type WebhookReceiver struct {
 	// Path is the path to the receiver's webhook endpoint.
 	Path string `json:"path,omitempty" protobuf:"bytes,3,opt,name=path"`

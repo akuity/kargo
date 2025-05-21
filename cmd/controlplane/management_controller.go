@@ -17,7 +17,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/management/namespaces"
-	projectconfigs "github.com/akuity/kargo/internal/controller/management/project-configs"
+	"github.com/akuity/kargo/internal/controller/management/projectconfigs"
 	"github.com/akuity/kargo/internal/controller/management/projects"
 	"github.com/akuity/kargo/internal/controller/management/serviceaccounts"
 	"github.com/akuity/kargo/internal/logging"

@@ -106,7 +106,7 @@ func TestRefreshWarehouseHandler(t *testing.T) {
 								Name:      "fakename",
 							},
 							Spec: kargoapi.ProjectConfigSpec{
-								WebhookReceiverConfigs: []kargoapi.WebhookReceiverConfig{
+								WebhookReceivers: []kargoapi.WebhookReceiverConfig{
 									{
 										GitHub: &kargoapi.GitHubWebhookReceiver{
 											SecretRef: corev1.LocalObjectReference{
@@ -176,7 +176,7 @@ func TestRefreshWarehouseHandler(t *testing.T) {
 								Name:      "fakename",
 							},
 							Spec: kargoapi.ProjectConfigSpec{
-								WebhookReceiverConfigs: []kargoapi.WebhookReceiverConfig{
+								WebhookReceivers: []kargoapi.WebhookReceiverConfig{
 									{
 										GitHub: &kargoapi.GitHubWebhookReceiver{
 											SecretRef: corev1.LocalObjectReference{
@@ -247,7 +247,7 @@ func TestRefreshWarehouseHandler(t *testing.T) {
 								Name:      "fakename",
 							},
 							Spec: kargoapi.ProjectConfigSpec{
-								WebhookReceiverConfigs: []kargoapi.WebhookReceiverConfig{
+								WebhookReceivers: []kargoapi.WebhookReceiverConfig{
 									{
 										GitHub: &kargoapi.GitHubWebhookReceiver{
 											SecretRef: corev1.LocalObjectReference{

@@ -947,8 +947,8 @@ func (in *ProjectConfigSpec) DeepCopyInto(out *ProjectConfigSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.WebhookReceiverConfigs != nil {
-		in, out := &in.WebhookReceiverConfigs, &out.WebhookReceiverConfigs
+	if in.WebhookReceivers != nil {
+		in, out := &in.WebhookReceivers, &out.WebhookReceivers
 		*out = make([]WebhookReceiverConfig, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])

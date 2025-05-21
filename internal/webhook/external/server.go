@@ -107,8 +107,8 @@ func (s *server) refreshWarehouseHandler(w http.ResponseWriter, r *http.Request)
 	pc := projectConfigs.Items[0]
 
 	var wrc *kargoapi.WebhookReceiverConfig
-	if len(pc.Spec.WebhookReceiverConfigs) == 1 {
-		wrc = &pc.Spec.WebhookReceiverConfigs[0]
+	if len(pc.Spec.WebhookReceivers) == 1 {
+		wrc = &pc.Spec.WebhookReceivers[0]
 	} else {
 		wrc, err = s.getWebhookReceiverConfig(r.URL.Path, pc)
 		if err != nil {
@@ -164,7 +164,7 @@ func (s *server) getWebhookReceiverConfig(
 	pc kargoapi.ProjectConfig,
 ) (*kargoapi.WebhookReceiverConfig, error) {
 	var whrc *kargoapi.WebhookReceiverConfig
-	for _, config := range pc.Spec.WebhookReceiverConfigs { // nolint: nilness, lll // impossible for project config spec to be empty
+	for _, config := range pc.Spec.WebhookReceivers { // nolint: nilness, lll // impossible for project config spec to be empty
 		var configType string
 		if config.GitHub != nil {
 			configType = kargoapi.WebhookReceiverTypeGitHub

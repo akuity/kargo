@@ -106,7 +106,7 @@ func TestReconciler_syncProjectConfig(t *testing.T) {
 					Namespace: "fake-namespace",
 				},
 				Spec: kargoapi.ProjectConfigSpec{
-					WebhookReceiverConfigs: []kargoapi.WebhookReceiverConfig{
+					WebhookReceivers: []kargoapi.WebhookReceiverConfig{
 						{
 							GitHub: &kargoapi.GitHubWebhookReceiver{
 								SecretRef: corev1.LocalObjectReference{
@@ -163,7 +163,7 @@ func TestReconciler_ensureWebhookReceivers(t *testing.T) {
 									Namespace: "fake-namespace",
 								},
 								Spec: kargoapi.ProjectConfigSpec{
-									WebhookReceiverConfigs: []kargoapi.WebhookReceiverConfig{
+									WebhookReceivers: []kargoapi.WebhookReceiverConfig{
 										{
 											GitHub: &kargoapi.GitHubWebhookReceiver{
 												SecretRef: corev1.LocalObjectReference{
@@ -185,7 +185,7 @@ func TestReconciler_ensureWebhookReceivers(t *testing.T) {
 					Name:      "fake-project",
 				},
 				Spec: kargoapi.ProjectConfigSpec{
-					WebhookReceiverConfigs: []kargoapi.WebhookReceiverConfig{
+					WebhookReceivers: []kargoapi.WebhookReceiverConfig{
 						{
 							GitHub: &kargoapi.GitHubWebhookReceiver{
 								SecretRef: corev1.LocalObjectReference{
@@ -223,7 +223,7 @@ func TestReconciler_ensureWebhookReceivers(t *testing.T) {
 									Namespace: "fake-namespace",
 								},
 								Spec: kargoapi.ProjectConfigSpec{
-									WebhookReceiverConfigs: []kargoapi.WebhookReceiverConfig{
+									WebhookReceivers: []kargoapi.WebhookReceiverConfig{
 										{
 											GitHub: &kargoapi.GitHubWebhookReceiver{
 												SecretRef: corev1.LocalObjectReference{
@@ -254,7 +254,7 @@ func TestReconciler_ensureWebhookReceivers(t *testing.T) {
 					Name:      "fake-project",
 				},
 				Spec: kargoapi.ProjectConfigSpec{
-					WebhookReceiverConfigs: []kargoapi.WebhookReceiverConfig{
+					WebhookReceivers: []kargoapi.WebhookReceiverConfig{
 						{
 							GitHub: &kargoapi.GitHubWebhookReceiver{
 								SecretRef: corev1.LocalObjectReference{
@@ -268,7 +268,7 @@ func TestReconciler_ensureWebhookReceivers(t *testing.T) {
 			assertions: func(t *testing.T, pc *kargoapi.ProjectConfig, err error) {
 				require.NoError(t, err)
 				require.Len(t, pc.Status.WebhookReceivers, 1)
-				require.NotNil(t, pc.Spec.WebhookReceiverConfigs[0].GitHub)
+				require.NotNil(t, pc.Spec.WebhookReceivers[0].GitHub)
 				require.Equal(t,
 					external.GenerateWebhookPath(
 						pc.Name,

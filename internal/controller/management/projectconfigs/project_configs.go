@@ -182,17 +182,17 @@ func (r *reconciler) ensureWebhookReceivers(
 	pc *kargoapi.ProjectConfig,
 ) ([]kargoapi.WebhookReceiver, error) {
 	logger := logging.LoggerFromContext(ctx)
-	if pc.Spec.WebhookReceiverConfigs == nil {
+	if pc.Spec.WebhookReceivers == nil {
 		logger.Debug("ProjectConfig does not have any receiver configurations")
 		return nil, nil
 	}
 
 	logger.Debug("ensuring receivers",
-		"receiver-configs", len(pc.Spec.WebhookReceiverConfigs),
+		"receiver-configs", len(pc.Spec.WebhookReceivers),
 	)
 
 	var webhookReceivers []kargoapi.WebhookReceiver
-	for _, rc := range pc.Spec.WebhookReceiverConfigs {
+	for _, rc := range pc.Spec.WebhookReceivers {
 		if rc.GitHub != nil {
 			whr, err := r.ensureGitHubWebhookReceiver(ctx, pc, rc)
 			if err != nil {
