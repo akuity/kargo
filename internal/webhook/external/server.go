@@ -100,22 +100,14 @@ func (s *server) refreshWarehouseHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// There will always be only one project config
-	// because two project configs can never have the same
-	// receiver path because the receiver path is
-	// a hash of the project name, provider and secret.
+	// Projects are allowed to have, at most, a single ProjectConfig
 	pc := projectConfigs.Items[0]
 
-	var wrc *kargoapi.WebhookReceiverConfig
-	if len(pc.Spec.WebhookReceivers) == 1 {
-		wrc = &pc.Spec.WebhookReceivers[0]
-	} else {
-		wrc, err = s.getWebhookReceiverConfig(r.URL.Path, pc)
-		if err != nil {
-			logger.Error(err, "failed to find webhook receiver config")
-			http.Error(w, err.Error(), http.StatusNotFound)
-			return
-		}
+	wrc, err := s.getWebhookReceiverConfig(r.URL.Path, pc)
+	if err != nil {
+		logger.Error(err, "failed to find webhook receiver config")
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
 	}
 
 	logger.Debug("webhook receiver config found", "webhook-receiver-config", wrc)
