@@ -1341,6 +1341,7 @@ func (r *RegularStageReconciler) startVerification(
 				),
 				exprfn.DataOperations(ctx, r.client, stage.Namespace)...,
 			),
+			Vars: stage.Spec.Vars,
 		},
 	}
 	for _, freightRef := range freight.Freight {
