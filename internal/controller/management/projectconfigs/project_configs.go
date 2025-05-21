@@ -38,7 +38,7 @@ type reconciler struct {
 	cfg    ReconcilerConfig
 	client client.Client
 
-	ensureWebhookReceiversFn func(
+	syncWebhookReceiversFn func(
 		context.Context,
 		*kargoapi.ProjectConfig,
 	) ([]kargoapi.WebhookReceiver, error)
@@ -75,7 +75,7 @@ func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
 		cfg:    cfg,
 		client: kubeClient,
 	}
-	r.ensureWebhookReceiversFn = r.ensureWebhookReceivers
+	r.syncWebhookReceiversFn = r.syncWebhookReceivers
 	return r
 }
 
@@ -152,7 +152,7 @@ func (r *reconciler) syncProjectConfig(
 		ObservedGeneration: projectConfig.GetGeneration(),
 	})
 
-	whReceivers, err := r.ensureWebhookReceiversFn(ctx, projectConfig)
+	whReceivers, err := r.syncWebhookReceiversFn(ctx, projectConfig)
 	if err != nil {
 		logger.Error(err, "error ensuring webhook receivers")
 		conditions.Set(status, &metav1.Condition{
@@ -177,7 +177,7 @@ func (r *reconciler) syncProjectConfig(
 	return *status, false, nil
 }
 
-func (r *reconciler) ensureWebhookReceivers(
+func (r *reconciler) syncWebhookReceivers(
 	ctx context.Context,
 	pc *kargoapi.ProjectConfig,
 ) ([]kargoapi.WebhookReceiver, error) {

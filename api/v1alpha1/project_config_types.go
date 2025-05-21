@@ -93,6 +93,10 @@ type PromotionPolicy struct {
 type WebhookReceiverConfig struct {
 	// GitHub contains the configuration for a webhook receiver that is compatible with
 	// GitHub payloads.
+	//
+	// TODO(fuskovic): Make this mutually exclusive with configs for other platforms.
+	//
+	// +kubebuilder:validation:Required
 	GitHub *GitHubWebhookReceiver `json:"github,omitempty" protobuf:"bytes,1,opt,name=github"`
 }
 

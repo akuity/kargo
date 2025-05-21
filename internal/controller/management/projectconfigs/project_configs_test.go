@@ -21,7 +21,7 @@ func TestNewReconciler(t *testing.T) {
 	r := newReconciler(fake.NewClientBuilder().Build(), testCfg)
 	require.Equal(t, testCfg, r.cfg)
 	require.NotNil(t, r.client)
-	require.NotNil(t, r.ensureWebhookReceivers)
+	require.NotNil(t, r.syncWebhookReceivers)
 }
 
 func TestReconciler_syncProjectConfig(t *testing.T) {
@@ -55,7 +55,7 @@ func TestReconciler_syncProjectConfig(t *testing.T) {
 						Build(),
 					ReconcilerConfig{},
 				)
-				r.ensureWebhookReceiversFn = func(
+				r.syncWebhookReceiversFn = func(
 					_ context.Context,
 					_ *kargoapi.ProjectConfig,
 				) ([]kargoapi.WebhookReceiver, error) {
@@ -140,7 +140,7 @@ func TestReconciler_syncProjectConfig(t *testing.T) {
 	}
 }
 
-func TestReconciler_ensureWebhookReceivers(t *testing.T) {
+func TestReconciler_syncWebhookReceivers(t *testing.T) {
 	for _, test := range []struct {
 		name          string
 		reconciler    func() *reconciler
@@ -284,7 +284,7 @@ func TestReconciler_ensureWebhookReceivers(t *testing.T) {
 			r := test.reconciler()
 			l := logging.NewLogger(logging.DebugLevel)
 			ctx := logging.ContextWithLogger(t.Context(), l)
-			whReceivers, err := r.ensureWebhookReceiversFn(ctx, test.projectConfig)
+			whReceivers, err := r.syncWebhookReceiversFn(ctx, test.projectConfig)
 			test.projectConfig.Status.WebhookReceivers = whReceivers
 			test.assertions(t, test.projectConfig, err)
 		})
