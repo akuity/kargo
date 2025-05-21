@@ -1,5 +1,7 @@
-import { useQuery } from '@connectrpc/connect-query';
-import { Descriptions, DescriptionsProps, Drawer, Flex, Tabs } from 'antd';
+import { useMutation, useQuery } from '@connectrpc/connect-query';
+import { faStopCircle } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { Button, Descriptions, DescriptionsProps, Drawer, Flex, message, Modal, Tabs } from 'antd';
 import { formatDistance } from 'date-fns';
 import { useMemo } from 'react';
 
@@ -13,8 +15,11 @@ import {
 } from '@ui/features/common/promotion-status/utils';
 import { useDictionaryContext } from '@ui/features/project/pipelines/context/dictionary-context';
 import { PromotionSteps } from '@ui/features/stage/promotion-steps';
-import { hasAbortRequest } from '@ui/features/stage/utils/promotion';
-import { getPromotion } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { canAbortPromotion, hasAbortRequest } from '@ui/features/stage/utils/promotion';
+import {
+  abortPromotion,
+  getPromotion
+} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { Freight, Promotion as TPromotion } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
@@ -32,6 +37,14 @@ type PromotionProps = ModalComponentProps & {
 const Content = (props: { promotion: TPromotion; yaml: string }) => {
   const dictionaryContext = useDictionaryContext();
   const promotionDescriptions: DescriptionsProps['items'] = [];
+
+  const abortPromotionMutation = useMutation(abortPromotion, {
+    onSuccess: () =>
+      // Abort promotion annotates the Promotion resource and then controller acts
+      message.success({
+        content: `Abort Promotion ${promotion.metadata?.name} requested successfully.`
+      })
+  });
 
   const promotion = props.promotion;
 
@@ -95,6 +108,42 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
     children: getPromotionActor(promotion)
   });
 
+  const confirmAbortRequest = () =>
+    Modal.confirm({
+      width: '656px',
+      icon: <FontAwesomeIcon icon={faStopCircle} className='text-lg text-red-500 mr-5' />,
+      title: 'Abort Promotion Request',
+      onOk: () =>
+        abortPromotionMutation.mutate({
+          project: promotion?.metadata?.namespace,
+          name: promotion?.metadata?.name
+        }),
+      okText: 'Abort',
+      okButtonProps: {
+        danger: true
+      },
+      content: (
+        <Descriptions
+          size='small'
+          className='mt-2'
+          column={1}
+          bordered
+          items={[
+            {
+              key: 'name',
+              label: 'Name',
+              children: promotion.metadata?.name
+            },
+            {
+              key: 'date',
+              label: 'Start Date',
+              children: timestampDate(promotion.metadata?.creationTimestamp)?.toString()
+            }
+          ]}
+        />
+      )
+    });
+
   return (
     <>
       <Tabs
@@ -114,6 +163,19 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
                 />
 
                 <div className='mt-5'>
+                  {canAbortPromotion(promotion) && (
+                    <Flex className='mb-2'>
+                      <Button
+                        className='ml-auto'
+                        danger
+                        size='small'
+                        onClick={confirmAbortRequest}
+                        icon={<FontAwesomeIcon icon={faStopCircle} className='text-xs' />}
+                      >
+                        Abort
+                      </Button>
+                    </Flex>
+                  )}
                   <PromotionSteps promotion={promotion} />
                 </div>
               </>
