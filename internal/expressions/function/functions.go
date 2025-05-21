@@ -41,10 +41,15 @@ func FreightOperations(
 
 // DataOperations returns a slice of expr.Option containing functions for
 // data operations, such as accessing ConfigMaps and Secrets.
-func DataOperations(ctx context.Context, c client.Client, project string) []expr.Option {
+//
+// When the cache parameter is set to true, the functions will cache the
+// retrieved ConfigMaps and Secrets to avoid repeated API calls. This can
+// improve performance when the same ConfigMaps and Secrets are accessed
+// multiple times within the same expression evaluation.
+func DataOperations(ctx context.Context, c client.Client, project string, cache bool) []expr.Option {
 	return []expr.Option{
-		ConfigMap(ctx, c, project),
-		Secret(ctx, c, project),
+		ConfigMap(ctx, c, project, cache),
+		Secret(ctx, c, project, cache),
 	}
 }
 
@@ -138,20 +143,30 @@ func ChartFrom(
 
 // ConfigMap returns an expr.Option that provides a `configMap()` function for
 // use in expressions.
-func ConfigMap(ctx context.Context, c client.Client, project string) expr.Option {
+func ConfigMap(ctx context.Context, c client.Client, project string, cache bool) expr.Option {
+	var configMapCache map[string]corev1.ConfigMap
+	if cache {
+		configMapCache = make(map[string]corev1.ConfigMap)
+	}
+
 	return expr.Function(
 		"configMap",
-		getConfigMap(ctx, c, project),
+		getConfigMap(ctx, c, project, configMapCache),
 		new(func(name string) map[string]string),
 	)
 }
 
 // Secret returns an expr.Option that provides a `secret()` function for use in
 // expressions.
-func Secret(ctx context.Context, c client.Client, project string) expr.Option {
+func Secret(ctx context.Context, c client.Client, project string, cache bool) expr.Option {
+	var secretCache map[string]corev1.Secret
+	if cache {
+		secretCache = make(map[string]corev1.Secret)
+	}
+
 	return expr.Function(
 		"secret",
-		getSecret(ctx, c, project),
+		getSecret(ctx, c, project, secretCache),
 		new(func(name string) map[string]string),
 	)
 }
@@ -375,7 +390,7 @@ func getChart(
 	}
 }
 
-func getConfigMap(ctx context.Context, c client.Client, project string) exprFn {
+func getConfigMap(ctx context.Context, c client.Client, project string, cache map[string]corev1.ConfigMap) exprFn {
 	return func(a ...any) (any, error) {
 		if len(a) != 1 {
 			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
@@ -386,26 +401,32 @@ func getConfigMap(ctx context.Context, c client.Client, project string) exprFn {
 			return nil, fmt.Errorf("argument must be string, got %T", a[0])
 		}
 
-		var cfgMap corev1.ConfigMap
-		if err := c.Get(
-			ctx,
-			client.ObjectKey{
-				Namespace: project,
-				Name:      name,
-			},
-			&cfgMap,
-		); err != nil {
-			if kubeerr.IsNotFound(err) {
-				return map[string]string{}, nil
+		cfgMap, ok := cache[name]
+		if !ok {
+			if err := c.Get(
+				ctx,
+				client.ObjectKey{
+					Namespace: project,
+					Name:      name,
+				},
+				&cfgMap,
+			); err != nil {
+				if kubeerr.IsNotFound(err) {
+					return map[string]string{}, nil
+				}
+				return nil, fmt.Errorf("failed to get configmap %s: %w", name, err)
 			}
-			return nil, fmt.Errorf("failed to get configmap %s: %w", name, err)
+
+			if cache != nil {
+				cache[name] = *cfgMap.DeepCopy()
+			}
 		}
 
 		return cfgMap.Data, nil
 	}
 }
 
-func getSecret(ctx context.Context, c client.Client, project string) exprFn {
+func getSecret(ctx context.Context, c client.Client, project string, cache map[string]corev1.Secret) exprFn {
 	return func(a ...any) (any, error) {
 		if len(a) != 1 {
 			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
@@ -416,19 +437,25 @@ func getSecret(ctx context.Context, c client.Client, project string) exprFn {
 			return nil, fmt.Errorf("argument must be string, got %T", a[0])
 		}
 
-		var secret corev1.Secret
-		if err := c.Get(
-			ctx,
-			client.ObjectKey{
-				Namespace: project,
-				Name:      name,
-			},
-			&secret,
-		); err != nil {
-			if kubeerr.IsNotFound(err) {
-				return map[string]string{}, nil
+		secret, ok := cache[name]
+		if !ok {
+			if err := c.Get(
+				ctx,
+				client.ObjectKey{
+					Namespace: project,
+					Name:      name,
+				},
+				&secret,
+			); err != nil {
+				if kubeerr.IsNotFound(err) {
+					return map[string]string{}, nil
+				}
+				return nil, fmt.Errorf("failed to get secret %s: %w", name, err)
 			}
-			return nil, fmt.Errorf("failed to get secret %s: %w", name, err)
+
+			if cache != nil {
+				cache[name] = *secret.DeepCopy()
+			}
 		}
 
 		data := make(map[string]string, len(secret.Data))

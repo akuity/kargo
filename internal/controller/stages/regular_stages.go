@@ -1339,7 +1339,7 @@ func (r *RegularStageReconciler) startVerification(
 					stage.Spec.RequestedFreight,
 					freight.References(),
 				),
-				exprfn.DataOperations(ctx, r.client, stage.Namespace)...,
+				exprfn.DataOperations(ctx, r.client, stage.Namespace, true)...,
 			),
 			Vars: stage.Spec.Vars,
 		},
