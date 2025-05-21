@@ -5,6 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/types"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 func TestAnalysisRunOptions(t *testing.T) {
@@ -146,11 +148,23 @@ func TestAnalysisRunOptions(t *testing.T) {
 					Env: map[string]any{
 						"key": "value",
 					},
+					Vars: []kargoapi.ExpressionVariable{
+						{Name: "pokemon_1", Value: "pikachu"},
+						{Name: "pokemon_2", Value: "charizard"},
+					},
 				},
 			},
 			assertions: func(t *testing.T, opts *AnalysisRunOptions) {
 				assert.NotNil(t, opts.ExpressionConfig)
 				assert.Equal(t, map[string]any{"key": "value"}, opts.ExpressionConfig.Env)
+				assert.Equal(
+					t,
+					[]kargoapi.ExpressionVariable{
+						{Name: "pokemon_1", Value: "pikachu"},
+						{Name: "pokemon_2", Value: "charizard"},
+					},
+					opts.ExpressionConfig.Vars,
+				)
 			},
 		},
 		{
@@ -168,6 +182,10 @@ func TestAnalysisRunOptions(t *testing.T) {
 					Env: map[string]any{
 						"key": "value",
 					},
+					Vars: []kargoapi.ExpressionVariable{
+						{Name: "pokemon_1", Value: "pikachu"},
+						{Name: "pokemon_2", Value: "charizard"},
+					},
 				},
 			},
 			assertions: func(t *testing.T, opts *AnalysisRunOptions) {
@@ -176,6 +194,14 @@ func TestAnalysisRunOptions(t *testing.T) {
 				assert.Equal(t, map[string]string{"key": "value"}, opts.ExtraLabels)
 				assert.Len(t, opts.Owners, 1)
 				assert.NotNil(t, opts.ExpressionConfig)
+				assert.Equal(
+					t,
+					[]kargoapi.ExpressionVariable{
+						{Name: "pokemon_1", Value: "pikachu"},
+						{Name: "pokemon_2", Value: "charizard"},
+					},
+					opts.ExpressionConfig.Vars,
+				)
 			},
 		},
 	}
