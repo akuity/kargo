@@ -36,7 +36,6 @@ rules:
   - kargo.akuity.io
   resources:
   - projects
-  - projectconfigs
   verbs:
   - delete
   - get
