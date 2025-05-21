@@ -194,14 +194,14 @@ func (r *reconciler) ensureWebhookReceivers(
 	var webhookReceivers []kargoapi.WebhookReceiver
 	for _, rc := range pc.Spec.WebhookReceiverConfigs {
 		if rc.GitHub != nil {
-			whReceivers, err := r.ensureGitHubWebhookReceiver(ctx, pc, rc)
+			whr, err := r.ensureGitHubWebhookReceiver(ctx, pc, rc)
 			if err != nil {
 				logger.Error(err, "error ensuring GitHub webhook receiver",
 					"receiver-config", rc,
 				)
 				return nil, fmt.Errorf("error ensuring GitHub webhook receiver: %w", err)
 			}
-			webhookReceivers = append(webhookReceivers, whReceivers...)
+			webhookReceivers = append(webhookReceivers, *whr)
 		}
 	}
 	return webhookReceivers, nil
@@ -211,9 +211,8 @@ func (r *reconciler) ensureGitHubWebhookReceiver(
 	ctx context.Context,
 	pc *kargoapi.ProjectConfig,
 	rc kargoapi.WebhookReceiverConfig,
-) ([]kargoapi.WebhookReceiver, error) {
+) (*kargoapi.WebhookReceiver, error) {
 	logger := logging.LoggerFromContext(ctx)
-	var webhookReceivers []kargoapi.WebhookReceiver
 	var secret corev1.Secret
 	err := r.client.Get(
 		ctx,
@@ -248,14 +247,12 @@ func (r *reconciler) ensureGitHubWebhookReceiver(
 			rc.GitHub.SecretRef.Name, pc.Name,
 		)
 	}
-	webhookReceivers = append(webhookReceivers,
-		kargoapi.WebhookReceiver{
-			Path: external.GenerateWebhookPath(
-				pc.Name,
-				kargoapi.WebhookReceiverTypeGitHub,
-				token,
-			),
-		},
-	)
-	return webhookReceivers, nil
+
+	return &kargoapi.WebhookReceiver{
+		Path: external.GenerateWebhookPath(
+			pc.Name,
+			kargoapi.WebhookReceiverTypeGitHub,
+			token,
+		),
+	}, nil
 }
