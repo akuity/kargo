@@ -860,7 +860,6 @@ func TestSimpleEngine_executeStep(t *testing.T) {
 				tt.step,
 				tt.runner,
 				t.TempDir(),
-				make(promotion.State),
 			)
 			tt.assertions(t, result, err)
 		})
@@ -903,7 +902,6 @@ func TestSimpleEngine_prepareStepContext(t *testing.T) {
 				tt.promoCtx,
 				tt.step,
 				t.TempDir(),
-				make(promotion.State),
 			)
 			tt.assertions(t, stepCtx, err)
 		})
