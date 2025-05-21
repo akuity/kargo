@@ -617,9 +617,8 @@ the previous section.
 
         ![Kargo-dashboard-screenshot](img/kargo-dashboard-projects.png)
 
-      * An interactive <Hlt>Freight Timeline</Hlt> with `Freight` ordered
-        chronologically, with newer `Freight` to the left and older `Freight` to
-        the right.
+      * An interactive timeline with `Freight` ordered chronologically, with newer
+        `Freight` to the left and older `Freight` to the right.
 
         ![Kargo-Freight-Timeline](img/kargo-frieght-timeline.png)
 
@@ -649,14 +648,16 @@ the previous section.
 
 ## Your First Promotion
 
-1. To promote `Freight` to the `test` `Stage`, click the truck-arrow icon next
+1. To promote `Freight` to the `test` `Stage`, click the truck icon next
    to <Hlt>test</Hlt> and then select <Hlt>Promote</Hlt>:
 
     ![Kargo-Promote](img/kargo-promote-option.png)
 
-    Next, <Hlt>Select</Hlt> the `Freight` from the <Hlt>Freight Timeline</Hlt> and confirm
+    Next, <Hlt>Select</Hlt> the `Freight` from the freight timeline and confirm
     the promotion by selecting <Hlt>Promote</Hlt>:
 
+    ![Kargo-Promote-Confirm](img/kargo-freight-timeline.png)
+    
     ![Kargo-Promote](img/kargo-promote-option-2.png)
 
     Once the promotion process completes successfully, the <Hlt>status</Hlt> field in
@@ -669,16 +670,17 @@ the previous section.
     also verify the status by visiting the test instance of the demo application
     at [localhost:30081](http://localhost:30081).
 
-    The <Hlt>Freight Timeline</Hlt> will also automatically update following the
+    The freight timeline will also automatically update following the
     promotion. It is color-coded to indicate which `Stage`s are actively using
     each piece of `Freight`.
 
-1. Select the external link icon on the <Hlt>test</Hlt> `Stage` to reveal additional details about the `Stage`
-   including its status, current `Freight`, and history:
+1. Click the external link icon on the <Hlt>test</Hlt> `Stage` to open a detailed
+   view of the `Stage`. This will open a slideover panel displaying the `Stage`
+   status, current `Freight`, and history:
 
    ![Kargo-external-link](img/kargo-external-link.png)
 
-1. Select the `Freight` from the <Hlt>Freight Timeline</Hlt> to reveal
+1. Select the `Freight` from the freight timeline to reveal
    additional details. Importantly, you can see that (by virtue of the `test`
    `Stage` having achieved a healthy state) the `Freight` is now _verified_ in
    `test`, which designates it as eligible for promotion to the next `Stage` --
