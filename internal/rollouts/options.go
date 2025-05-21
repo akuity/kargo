@@ -5,6 +5,8 @@ import (
 
 	"github.com/expr-lang/expr"
 	"k8s.io/apimachinery/pkg/types"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 const (
@@ -64,20 +66,11 @@ type ArgumentEvaluationConfig struct {
 	// Vars are the variables that can be used in the expressions. They are
 	// evaluated in the order they are defined. After the evaluation of the
 	// variables, they are available in the Env map as `${{ vars.<name>}}`.
-	Vars []ArgumentVariable
+	Vars []kargoapi.ExpressionVariable
 	// Options are the options for the expression evaluation. It can be used to
 	// configure the behavior of the expression evaluation and the functions
 	// available.
 	Options []expr.Option
-}
-
-// ArgumentVariable represents a variable that can be used in the AnalysisRun
-// arguments.
-type ArgumentVariable struct {
-	// Name is the name of the variable.
-	Name string
-	// Value is the value of the variable.
-	Value string
 }
 
 // Apply applies the given options to the AnalysisRunOptions.
