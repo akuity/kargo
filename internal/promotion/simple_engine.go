@@ -77,23 +77,10 @@ func (e *simpleEngine) executeSteps(
 	steps []Step,
 	workDir string,
 ) Result {
-	// Important: Make a shallow copy of the PromotionContext with a deep copy of
-	// the StepExecutionMetadata. We'll be modifying StepExecutionMetadata
-	// in-place throughout this method, but we don't want to modify the original
-	// StepExecutionMetadata that we were passed in the PromotionContext. If we
-	// did, the status patch operation that will eventually be performed wouldn't
-	// see any difference between the original and the modified
-	// StepExecutionMetadata.
-	promoCtx := pCtx
-	promoCtx.StepExecutionMetadata = promoCtx.StepExecutionMetadata.DeepCopy()
-
-	// Initialize the state which will be passed to each step.
-	// This is the state that will be updated by each step,
-	// and returned as the final state after all steps have
-	// run.
-	state := promoCtx.State.DeepCopy()
-	if state == nil {
-		state = make(promotion.State)
+	// NB: Make a deep copy of the Context so that we don't modify the original.
+	promoCtx := pCtx.DeepCopy()
+	if promoCtx.State == nil {
+		promoCtx.State = make(promotion.State)
 	}
 
 	var (
@@ -132,7 +119,7 @@ stepLoop:
 
 		// Check if the step should be skipped.
 		var skip bool
-		if skip, err = step.Skip(ctx, e.kargoClient, promoCtx, state); err != nil {
+		if skip, err = step.Skip(ctx, e.kargoClient, promoCtx); err != nil {
 			stepExecMeta.Status = kargoapi.PromotionStepStatusErrored
 			stepExecMeta.Message = fmt.Sprintf("error checking if step %q should be skipped: %s", step.Alias, err)
 			// Continue, because despite this failure, some steps' "if" conditions may
@@ -157,23 +144,23 @@ stepLoop:
 		if stepExecMeta.StartedAt == nil {
 			stepExecMeta.StartedAt = ptr.To(metav1.Now())
 		}
-		result, err := e.executeStep(ctx, promoCtx, step, runner, workDir, state)
+		result, err := e.executeStep(ctx, promoCtx, step, runner, workDir)
 		stepExecMeta.Status = result.Status
 		stepExecMeta.Message = result.Message
 
 		// Update the state with the output of the step.
-		state[step.Alias] = result.Output
+		promoCtx.State[step.Alias] = result.Output
 
 		// TODO(hidde): until we have a better way to handle the output of steps
 		// inflated from tasks, we need to apply a special treatment to the output
 		// to allow it to become available under the alias of the "task".
 		aliasNamespace := getAliasNamespace(step.Alias)
 		if aliasNamespace != "" && runner.Name() == ComposeOutputStepKind {
-			if state[aliasNamespace] == nil {
-				state[aliasNamespace] = make(map[string]any)
+			if promoCtx.State[aliasNamespace] == nil {
+				promoCtx.State[aliasNamespace] = make(map[string]any)
 			}
 			for k, v := range result.Output {
-				state[aliasNamespace].(map[string]any)[k] = v // nolint: forcetypeassert
+				promoCtx.State[aliasNamespace].(map[string]any)[k] = v // nolint: forcetypeassert
 			}
 		}
 
@@ -276,7 +263,7 @@ stepLoop:
 				Status:                kargoapi.PromotionPhaseRunning,
 				CurrentStep:           i,
 				StepExecutionMetadata: promoCtx.StepExecutionMetadata,
-				State:                 state,
+				State:                 promoCtx.State,
 				HealthChecks:          healthChecks,
 			}
 		}
@@ -288,7 +275,7 @@ stepLoop:
 			Status:                kargoapi.PromotionPhaseRunning,
 			CurrentStep:           i,
 			StepExecutionMetadata: promoCtx.StepExecutionMetadata,
-			State:                 state,
+			State:                 promoCtx.State,
 			HealthChecks:          healthChecks,
 		}
 	}
@@ -301,7 +288,7 @@ stepLoop:
 		Message:               msg,
 		CurrentStep:           int64(len(steps)) - 1,
 		StepExecutionMetadata: promoCtx.StepExecutionMetadata,
-		State:                 state,
+		State:                 promoCtx.State,
 		HealthChecks:          healthChecks,
 	}
 }
@@ -347,9 +334,8 @@ func (e *simpleEngine) executeStep(
 	step Step,
 	runner promotion.StepRunner,
 	workDir string,
-	state promotion.State,
 ) (promotion.StepResult, error) {
-	stepCtx, err := e.prepareStepContext(ctx, promoCtx, step, workDir, state)
+	stepCtx, err := e.prepareStepContext(ctx, promoCtx, step, workDir)
 	if err != nil {
 		return promotion.StepResult{
 			Status: kargoapi.PromotionStepStatusErrored,
@@ -369,26 +355,31 @@ func (e *simpleEngine) prepareStepContext(
 	promoCtx Context,
 	step Step,
 	workDir string,
-	state promotion.State,
 ) (*promotion.StepContext, error) {
-	stateCopy := state.DeepCopy()
-
-	stepCfg, err := step.GetConfig(ctx, e.kargoClient, promoCtx, stateCopy)
+	stepCfg, err := step.GetConfig(ctx, e.kargoClient, promoCtx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get step config: %w", err)
+	}
+
+	var freightRequests []kargoapi.FreightRequest
+	if promoCtx.FreightRequests != nil {
+		freightRequests = make([]kargoapi.FreightRequest, len(promoCtx.FreightRequests))
+		for i, fr := range promoCtx.FreightRequests {
+			freightRequests[i] = *fr.DeepCopy()
+		}
 	}
 
 	return &promotion.StepContext{
 		UIBaseURL:       promoCtx.UIBaseURL,
 		WorkDir:         workDir,
-		SharedState:     stateCopy,
+		SharedState:     promoCtx.State.DeepCopy(),
 		Alias:           step.Alias,
 		Config:          stepCfg,
 		Project:         promoCtx.Project,
 		Stage:           promoCtx.Stage,
 		Promotion:       promoCtx.Promotion,
-		FreightRequests: promoCtx.FreightRequests,
-		Freight:         promoCtx.Freight,
+		FreightRequests: freightRequests,
+		Freight:         *promoCtx.Freight.DeepCopy(),
 	}, nil
 }
 
