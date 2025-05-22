@@ -228,7 +228,7 @@ all three Argo CD `Application`s have not yet synced because they're not
 configured to do so automatically, and in fact, the branches referenced by their
 `targetRevision` fields do not even exist yet.
 
-![Argo-dashboard-screenshot](img/argo-dashboard.png)
+![Argo Dashboard](img/argo-dashboard.png)
 
 ## Your First Kargo Project
 
@@ -601,7 +601,7 @@ the previous section.
       This will take you to a list of `Project`s.  It currently includes only
       the one created in the previous step.
 
-      ![Kargo-dashboard](img/kargo-projects.png)
+      ![Kargo Projects Dashboard](img/kargo-projects.png)
 
    1. Select <Hlt>kargo-demo</Hlt>:
 
@@ -615,12 +615,12 @@ the previous section.
         * Three `Stage`s representing distinct instances of our demo
           application.
 
-        ![Kargo-dashboard-screenshot](img/kargo-dashboard-projects.png)
+        ![Kargo Project Dashboard](img/kargo-dashboard-projects.png)
 
       * An interactive timeline with `Freight` ordered chronologically, with newer
         `Freight` to the left and older `Freight` to the right.
 
-        ![Kargo-Freight-Timeline](img/kargo-frieght-timeline.png)
+        ![Kargo Freight Timeline](img/kargo-freight-timeline.png)
 
 1. After a few seconds, a piece of `Freight` should appear in the <Hlt>Freight
    Timeline</Hlt>, if it isn't there already.
@@ -651,20 +651,20 @@ the previous section.
 1. To promote `Freight` to the `test` `Stage`, click the truck icon next
    to <Hlt>test</Hlt> and then select <Hlt>Promote</Hlt>:
 
-    ![Kargo-Promote](img/kargo-promote-option.png)
+    ![Kargo Promote Option](img/kargo-promote-option.png)
 
     Next, <Hlt>Select</Hlt> the `Freight` from the freight timeline and confirm
     the promotion by selecting <Hlt>Promote</Hlt>:
 
-    ![Kargo-Promote-Confirm](img/kargo-freight-timeline.png)
-    
-    ![Kargo-Promote](img/kargo-promote-option-2.png)
+    ![Kargo Promote Confirm](img/kargo-promote-confirm.png)
+
+    ![Kargo Promote Confirm](img/kargo-promote-option-2.png)
 
     Once the promotion process completes successfully, the <Hlt>Promotion</Hlt> view will display
     the status as <Hlt>Succeeded</Hlt>, along with details about the promotion process, including
     each step that was executed:
 
-    ![Kargo-dashboard-screenshot](img/kargo-dashboard-promotion.png)
+    ![Kargo Promotion View](img/kargo-promotion-view.png)
 
     Following the promotion, health checks will run periodically. When a `Stage`
     is in a healthy state, this will be reflected with a heart icon. You can
@@ -682,7 +682,7 @@ the previous section.
    <Hlt>test</Hlt> `Stage` in the pipeline and click the button with the arrow icon
    next to the <Hlt>test</Hlt> `Stage`:
 
-   ![Kargo-stage-arrow-button](img/kargo-stage-arrow-button.png)
+   ![Kargo Stage Arrow Button](img/kargo-stage-arrow-button.png)
 
    This opens a slideover panel showing the `Stage`'s status, current `Freight`, and history:
 
@@ -694,7 +694,7 @@ the previous section.
    `test`, which designates it as eligible for promotion to the next `Stage` --
    in our case, `uat`.
 
-   ![Kargo-Freight-Verified](img/kargo-freight-verified.png)
+   ![Kargo Freight Verified](img/kargo-freight-verified.png)
 
     :::note
     Although this example does not demonstrate it, it is also possible to verify
