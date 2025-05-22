@@ -23,6 +23,8 @@ func githubHandler(c client.Client, namespace, token string) http.HandlerFunc {
 		logger := logging.LoggerFromContext(ctx)
 		logger.Debug("identifying source repository")
 
+		// TODO(fuskovic): eventually switch on event type to perform
+		// different actions (e.g. refresh Promotion on PR merge)
 		eventType := r.Header.Get("X-GitHub-Event")
 		if eventType != "push" {
 			xhttp.WriteErrorJSON(w,
