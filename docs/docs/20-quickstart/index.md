@@ -675,11 +675,18 @@ the previous section.
     promotion. It is color-coded to indicate which `Stage`s are actively using
     each piece of `Freight`.
 
-1. Click the button with the arrow icon next to the <Hlt>test</Hlt> `Stage` to open a detailed
-   view of the `Stage`. This will open a slideover panel displaying the `Stage`
-   status, current `Freight`, and history:
+1. After viewing the details of the Promotion, you may want to see the current status
+   of the `test` Stage itself.
+
+   In the Project view, locate the pipeline visualization for your project. Find the
+   <Hlt>test</Hlt> `Stage` in the pipeline and click the button with the arrow icon
+   next to the <Hlt>test</Hlt> `Stage`:
 
    ![Kargo-stage-arrow-button](img/kargo-stage-arrow-button.png)
+
+   This opens a slideover panel showing the `Stage`'s status, current `Freight`, and history:
+
+   ![Kargo Stage View](img/kargo-stage-view.png)
 
 1. Select the `Freight` from the freight timeline to reveal
    additional details. Importantly, you can see that (by virtue of the `test`
