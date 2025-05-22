@@ -4,15 +4,14 @@
 }
 
 .hero {
-  padding: 6rem 0 4rem;
-  margin-bottom: 4rem;
+  padding: 4rem 0;
 }
 
 .heroContent {
   display: flex;
   align-items: center;
   gap: 4rem;
-  max-width: 1200px;
+  max-width: 1000px;
   margin: 0 auto;
 
   @media (max-width: 968px) {
@@ -23,7 +22,7 @@
 }
 
 .heroImage {
-  flex: 0 0 400px;
+  flex: 1;
 
   @media (max-width: 968px) {
     display: none;
@@ -139,7 +138,7 @@
 
 /* Section Styles */
 .section {
-  margin: 5rem 0;
+  padding: 4rem 0;
 }
 
 .sectionHeader {
@@ -318,7 +317,7 @@
     border-color: var(--ifm-color-emphasis-300);
 
     &:hover {
-      border-color: var(--ifm-color-primary);
+      border-color: var(--card-hover-color);
     }
   }
 
