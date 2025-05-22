@@ -579,7 +579,7 @@ message GitSubscription {
   //   by the Branch field or the default branch if none is specified. This is
   //   the default strategy.
   //
-  // - "SemVer": Selects the commit referenced by the the semantically greatest
+  // - "SemVer": Selects the commit referenced by the semantically greatest
   //   tag. The SemverConstraint field can optionally be used to narrow the set
   //   of tags eligible for selection.
   //
@@ -646,6 +646,71 @@ message GitSubscription {
   //
   // +kubebuilder:validation:Optional
   repeated string ignoreTags = 6;
+
+  // CommitExpressionFilter is an expression that can optionally be used to
+  // limit the commits that are considered in determining the newest commit of
+  // interest based on the metadata of the commit. The value in this field
+  // only has any effect when the CommitSelectionStrategy is NewestFromBranch
+  // or left unspecified (which is implicitly the same as NewestFromBranch).
+  //
+  // The expression should be a valid expr-lang expression that evaluates to
+  // true or false. When the expression evaluates to true, the commit is
+  // included in the set of commits that are considered. When the expression
+  // evaluates to false, the commit is excluded from the set of commits that
+  // are considered.
+  //
+  // The following variables are available in the expression:
+  //   - `id`: The ID (sha) of the commit.
+  //   - `commitDate`: The commit date of the commit.
+  //   - `author`: The author of the commit message, in the format
+  //  	"Name <email>".
+  //   - `commiter`: The person who committed the commit, in the format "Name
+  //     <email>".
+  //   - `subject`: The subject (first line) of the commit message.
+  //
+  // For example, the expression `!(author contains "<bot@example.com>")`
+  // would exclude all commits with an author containing the bot's email
+  // address. The expression `!(subject contains "[kargo-ignore]")` would
+  // exclude all commits with a subject containing the string "[kargo-ignore]".
+  //
+  // Refer to the expr-lang documentation for more details on the syntax and
+  // capabilities of the expression language: https://expr-lang.org.
+  optional string commitExpressionFilter = 13;
+
+  // TagExpressionFilter is an expression that can optionally be used to limit
+  // the tags that are considered in determining the newest commit of interest
+  // based on the metadata of the tag. The value in this field only has any
+  // effect when the CommitSelectionStrategy is Lexical, NewestTag, or SemVer.
+  //
+  // The filter is applied after the AllowTags, IgnoreTags, and
+  // SemverConstraint fields, but before the IncludePaths and ExcludePaths.
+  //
+  // The expression should be a valid expr-lang expression that evaluates to
+  // true or false. When the expression evaluates to true, the tag is included
+  // in the set of tags that are considered. When the expression evaluates to
+  // false, the tag is excluded from the set of tags that are considered.
+  //
+  // The following variables are available in the expression:
+  //   - `tag`: The name of the tag.
+  //   - `commitID`: The ID (sha) of the commit associated with the tag.
+  //   - `creatorDate`: The creation date of an annotated tag, or the commit
+  //     date of a lightweight tag.
+  //   - `author`: The author of the commit message associated with the tag,
+  //     in the format "Name <email>".
+  //   - `commiter`: The person who committed the commit associated with the
+  //     tag, in the format "Name <email>".
+  //   - `subject`: The subject (first line) of the commit message associated
+  //     with the tag.
+  //
+  // For example, the expression `!(committer contains "<bot@example.com>")`
+  // would exclude all tags with a commit committed by the bot's email
+  // address.
+  //
+  // Refer to the expr-lang documentation for more details on the syntax and
+  // capabilities of the expression language: https://expr-lang.org.
+  //
+  // +kubebuilder:validation:Optional
+  optional string tagExpressionFilter = 12;
 
   // InsecureSkipTLSVerify specifies whether certificate verification errors
   // should be ignored when connecting to the repository. This should be enabled
