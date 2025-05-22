@@ -33,10 +33,10 @@ func TestReconciler_syncProjectConfig(t *testing.T) {
 		name          string
 		projectConfig *kargoapi.ProjectConfig
 		reconciler    func() *reconciler
-		assertions    func(*testing.T, kargoapi.ProjectConfigStatus, bool, error)
+		assertions    func(*testing.T, kargoapi.ProjectConfigStatus)
 	}{
 		{
-			name: "failure",
+			name: "degraded - secret-ref not found",
 			reconciler: func() *reconciler {
 				r := newReconciler(
 					fake.NewClientBuilder().
@@ -59,7 +59,7 @@ func TestReconciler_syncProjectConfig(t *testing.T) {
 					_ context.Context,
 					_ *kargoapi.ProjectConfig,
 				) ([]kargoapi.WebhookReceiver, error) {
-					return nil, fmt.Errorf("something went wrong")
+					return nil, fmt.Errorf("secret not found")
 				}
 				return r
 			},
@@ -68,15 +68,13 @@ func TestReconciler_syncProjectConfig(t *testing.T) {
 					WebhookReceivers: []kargoapi.WebhookReceiver{},
 				},
 			},
-			assertions: func(t *testing.T, pcs kargoapi.ProjectConfigStatus, shouldRequeue bool, err error) {
-				require.Error(t, err)
-				require.True(t, shouldRequeue)
+			assertions: func(t *testing.T, pcs kargoapi.ProjectConfigStatus) {
 				require.Len(t, pcs.WebhookReceivers, 0)
 				require.Len(t, pcs.Conditions, 2)
-				require.Equal(t, pcs.Conditions[0].Type, kargoapi.ConditionTypeReconciling)
+				require.Equal(t, pcs.Conditions[0].Type, kargoapi.ConditionTypeReady)
 				require.Equal(t, pcs.Conditions[0].Status, metav1.ConditionTrue)
-				require.Equal(t, pcs.Conditions[1].Type, kargoapi.ConditionTypeReady)
-				require.Equal(t, pcs.Conditions[1].Status, metav1.ConditionFalse)
+				require.Equal(t, pcs.Conditions[1].Type, kargoapi.ConditionTypeDegraded)
+				require.Equal(t, pcs.Conditions[1].Status, metav1.ConditionTrue)
 			},
 		},
 		{
@@ -120,9 +118,7 @@ func TestReconciler_syncProjectConfig(t *testing.T) {
 					WebhookReceivers: []kargoapi.WebhookReceiver{},
 				},
 			},
-			assertions: func(t *testing.T, pcs kargoapi.ProjectConfigStatus, shouldRequeue bool, err error) {
-				require.NoError(t, err)
-				require.False(t, shouldRequeue)
+			assertions: func(t *testing.T, pcs kargoapi.ProjectConfigStatus) {
 				require.Len(t, pcs.WebhookReceivers, 1)
 				require.Len(t, pcs.Conditions, 1)
 				require.Equal(t, pcs.Conditions[0].Type, kargoapi.ConditionTypeReady)
@@ -134,8 +130,8 @@ func TestReconciler_syncProjectConfig(t *testing.T) {
 			r := test.reconciler()
 			l := logging.NewLogger(logging.DebugLevel)
 			ctx := logging.ContextWithLogger(t.Context(), l)
-			status, shouldRequeue, err := r.syncProjectConfig(ctx, test.projectConfig)
-			test.assertions(t, status, shouldRequeue, err)
+			status := r.syncProjectConfig(ctx, test.projectConfig)
+			test.assertions(t, status)
 		})
 	}
 }
