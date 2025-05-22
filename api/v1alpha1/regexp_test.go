@@ -12,7 +12,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/akuity/kargo/api/v1alpha1/testhelper"
+	testingPkg "github.com/akuity/kargo/api/testing"
 )
 
 // ValidateResourceExpression checks the regular expression identified by marker
@@ -20,7 +20,7 @@ import (
 func ValidateResourceExpression(t *testing.T, marker string, testCases map[string]bool) {
 	expression, err := findExpression(marker)
 	require.NoError(t, err)
-	testhelper.ValidateRegularExpression(t, expression, testCases)
+	testingPkg.ValidateRegularExpression(t, expression, testCases)
 }
 
 func TestBranchPattern(t *testing.T) {

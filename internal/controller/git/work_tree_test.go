@@ -11,7 +11,7 @@ import (
 	"github.com/sosedoff/gitkit"
 	"github.com/stretchr/testify/require"
 
-	"github.com/akuity/kargo/api/v1alpha1/testhelper"
+	testingPkg "github.com/akuity/kargo/api/testing"
 	"github.com/akuity/kargo/internal/types"
 )
 
@@ -25,7 +25,7 @@ func TestNonFastForwardRegex(t *testing.T) {
 		" ! [rejected]        HEAD -> experiment (fetch first)": true,
 	}
 
-	testhelper.ValidateRegularExpression(t, nonFastForwardRegex, testCases)
+	testingPkg.ValidateRegularExpression(t, nonFastForwardRegex, testCases)
 }
 
 func TestWorkTree(t *testing.T) {
