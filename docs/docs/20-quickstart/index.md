@@ -660,8 +660,9 @@ the previous section.
     
     ![Kargo-Promote](img/kargo-promote-option-2.png)
 
-    Once the promotion process completes successfully, the <Hlt>status</Hlt> field in
-    the <Hlt>Promotion</Hlt> tab of the `Stage` view shows <Hlt>Succeeded</Hlt>:
+    Once the promotion process completes successfully, the <Hlt>Promotion</Hlt> view will display
+    the status as <Hlt>Succeeded</Hlt>, along with details about the promotion process, including
+    each step that was executed:
 
     ![Kargo-dashboard-screenshot](img/kargo-dashboard-promotion.png)
 
@@ -674,11 +675,11 @@ the previous section.
     promotion. It is color-coded to indicate which `Stage`s are actively using
     each piece of `Freight`.
 
-1. Click the external link icon on the <Hlt>test</Hlt> `Stage` to open a detailed
+1. Click the button with the arrow icon next to the <Hlt>test</Hlt> `Stage` to open a detailed
    view of the `Stage`. This will open a slideover panel displaying the `Stage`
    status, current `Freight`, and history:
 
-   ![Kargo-external-link](img/kargo-external-link.png)
+   ![Kargo-stage-arrow-button](img/kargo-stage-arrow-button.png)
 
 1. Select the `Freight` from the freight timeline to reveal
    additional details. Importantly, you can see that (by virtue of the `test`
