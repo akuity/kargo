@@ -24,7 +24,7 @@ func TestRefreshWarehouses(t *testing.T) {
 		expectedErr    error
 	}{
 		{
-			name: "OK",
+			name:      "OK",
 			namespace: "fakenamespace",
 			newKubeClient: func() client.Client {
 				scheme := runtime.NewScheme()
@@ -75,7 +75,7 @@ func TestRefreshWarehouses(t *testing.T) {
 			),
 		},
 		{
-			name: "partial success",
+			name:      "partial success",
 			namespace: "fakenamespace",
 			newKubeClient: func() client.Client {
 				scheme := runtime.NewScheme()
