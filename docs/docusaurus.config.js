@@ -114,6 +114,12 @@ const config = {
         defaultMode: 'light',
       },
       metadata: [{name: 'akuity, argoproj, argo cd, argo workflows, argo events, argo rollouts, kubernetes, gitops, devops', content: 'akuity, documentation, developer documentation'}],
+      algolia: {
+        appId: '3SQ7LK6WD9',
+        apiKey: '5627b8c2efd5b28a5b70c6660cb2b0f3',
+        indexName: 'kargo',
+        contextualSearch: true,
+      }
     }),
 };
 
