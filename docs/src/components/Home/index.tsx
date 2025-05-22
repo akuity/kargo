@@ -29,14 +29,14 @@ export default function Home(): JSX.Element {
             <div className={styles.heroImage}>
               <img
                 src="/img/3d-mascotte.png"
-                alt="Kargo GitOps Illustration"
+                alt="Kargo GitOps Mascot"
                 className={styles.heroImg}
               />
             </div>
             <div className={styles.heroText}>
               <h1 className={styles.heroTitle}>Kargo</h1>
               <p className={styles.heroSubtitle}>
-                Learn how to use Kargo for GitOps promotions of stages
+                Learn how to use Kargo for GitOps promotions
               </p>
               <div className={styles.heroActions}>
                 <Link to='/user-guide/core-concepts' className={styles.heroButton}>
@@ -178,11 +178,14 @@ const Card = ({ title, description, color, href, external, links }: CardProps) =
     </div>
   );
 
+  const wrapperStyle = { '--card-hover-color': color } as React.CSSProperties;
+
   if (href) {
     return (
       <Link
         to={href}
         className={styles.cardWrapper}
+        style={wrapperStyle}
         {...(external && { target: '_blank', rel: 'noopener noreferrer' })}
       >
         {cardContent}
@@ -190,7 +193,11 @@ const Card = ({ title, description, color, href, external, links }: CardProps) =
     );
   }
 
-  return <div className={styles.cardWrapper}>{cardContent}</div>;
+  return (
+    <div className={styles.cardWrapper} style={wrapperStyle}>
+      {cardContent}
+    </div>
+  );
 };
 
 type SectionProps = {

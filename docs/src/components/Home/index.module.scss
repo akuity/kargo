@@ -156,7 +156,7 @@
   justify-content: center;
   gap: 1rem;
 
-  @media (max-width: 768px) {
+  @media (max-width: 968px) {
     font-size: 2rem;
     flex-direction: column;
     gap: 0.5rem;
@@ -212,7 +212,7 @@
   &:hover {
     transform: translateY(-4px);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-    border-color: var(--ifm-color-primary-light);
+    border-color: var(--card-hover-color);
   }
 }
 
@@ -305,10 +305,6 @@
 
 /* Dark mode adjustments */
 [data-theme='dark'] {
-  .heroImg {
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  }
-
   .heroButton {
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 
