@@ -8,7 +8,6 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/promotion"
 	pkgPromotion "github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -48,7 +47,7 @@ func newOutputComposer() pkgPromotion.StepRunner {
 
 // Name implements the promotion.StepRunner interface.
 func (c *outputComposer) Name() string {
-	return promotion.ComposeOutputStepKind
+	return "compose-output"
 }
 
 // Run implements the promotion.StepRunner interface.
