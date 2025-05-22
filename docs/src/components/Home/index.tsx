@@ -28,6 +28,7 @@ export default function Home(): JSX.Element {
           <div className={styles.heroContent}>
             <div className={styles.heroImage}>
               <img
+                loading="lazy"
                 src="/img/3d-mascotte.png"
                 alt="Kargo GitOps Mascot"
                 className={styles.heroImg}
