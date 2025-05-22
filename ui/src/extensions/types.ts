@@ -1,3 +1,4 @@
+import { IconDefinition } from '@fortawesome/free-solid-svg-icons';
 import React from 'react';
 
 import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
@@ -13,9 +14,17 @@ export type ExtensionStageTab = {
   icon?: React.ReactNode;
 };
 
-export type LayoutExtensionTab = {
+export type LayoutExtension = {
   type: 'layoutExtension';
   component: () => React.ReactNode;
 };
 
-export type Extension = ExtensionStageTab | LayoutExtensionTab;
+export type ProjectSubpage = {
+  type: 'projectSubpage';
+  label: string;
+  icon?: IconDefinition;
+  path: string;
+  component: () => React.ReactNode;
+};
+
+export type Extension = ExtensionStageTab | LayoutExtension | ProjectSubpage;

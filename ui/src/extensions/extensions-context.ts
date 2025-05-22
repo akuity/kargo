@@ -14,6 +14,8 @@ export const useExtensionsContext = () => {
   return {
     stageTabs: ctx?.extensions.filter((extension) => extension.type === 'stageTab') || [],
     layoutExtensions:
-      ctx?.extensions.filter((extension) => extension.type === 'layoutExtension') || []
+      ctx?.extensions.filter((extension) => extension.type === 'layoutExtension') || [],
+    projectSubpages:
+      ctx?.extensions.filter((extension) => extension.type === 'projectSubpage') || []
   };
 };

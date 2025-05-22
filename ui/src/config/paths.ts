@@ -11,6 +11,7 @@ export const paths = {
   createStage: '/project/:name/create-stage',
   createWarehouse: '/project/:name/create-warehouse',
   projectSettings: '/project/:name/settings',
+  projectExtensions: '/project/:name/ext',
   user: '/user',
   settings: '/settings',
   analysisRunLogs: '/ext/project/:name/stage/:stageName/analysis-run/:analysisRunId/logs',
