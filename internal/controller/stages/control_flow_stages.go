@@ -315,6 +315,7 @@ func (r *ControlFlowStageReconciler) reconcile(
 	conditions.Set(&newStatus, &metav1.Condition{
 		Type:   kargoapi.ConditionTypeReady,
 		Status: metav1.ConditionTrue,
+		Reason: kargoapi.ConditionTypeReady,
 	})
 	conditions.Delete(&newStatus, kargoapi.ConditionTypeReconciling)
 
