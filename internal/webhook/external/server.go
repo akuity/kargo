@@ -33,15 +33,10 @@ func NewServer(cfg ServerConfig, cl client.Client) Server {
 
 func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	logger := logging.LoggerFromContext(ctx)
-	mux := http.NewServeMux()
-
-	mux.Handle("POST /", http.HandlerFunc(s.route))
-
 	srv := &http.Server{
-		Handler:           mux,
+		Handler:           http.HandlerFunc(s.route),
 		ReadHeaderTimeout: time.Minute,
 	}
-
 	errCh := make(chan error)
 	go func() {
 		if s.cfg.TLSConfig != nil {
