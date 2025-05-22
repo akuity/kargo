@@ -167,13 +167,13 @@ func (r *reconciler) syncProjectConfig(
 		conditions.Set(status, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeReady,
 			Status:             metav1.ConditionFalse,
-			Reason:             "Synced with errors",
-			Message:            err.Error(),
+			Reason:             "SecretMisconfiguration",
+			Message:            "Failed to sync webhook receivers: " + err.Error(),
 			ObservedGeneration: pc.GetGeneration(),
 		})
 		return *status, true, err
 	}
-	
+
 	conditions.Set(status, &metav1.Condition{
 		Type:               kargoapi.ConditionTypeReady,
 		Status:             metav1.ConditionTrue,
