@@ -43,7 +43,7 @@ func TestNewServer(t *testing.T) {
 	require.NotNil(t, s)
 }
 
-func TestRefreshWarehouseHandler(t *testing.T) {
+func TestRouteHandler(t *testing.T) {
 	for _, test := range []struct {
 		name  string
 		setup func(t *testing.T) *server
@@ -197,7 +197,7 @@ func TestRefreshWarehouseHandler(t *testing.T) {
 				req.Header.Set("X-GitHub-Event", "push")
 				req.Header.Set("X-Hub-Signature-256", sign(t, "mysupersecrettoken", newBody().Bytes()))
 			}
-			testServer.refreshWarehouseHandler(w, req)
+			testServer.route(w, req)
 			require.Equal(t, test.code, w.Result().StatusCode)
 			require.Contains(t, w.Body.String(), test.body)
 		})

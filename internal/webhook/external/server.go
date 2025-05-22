@@ -35,7 +35,7 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	logger := logging.LoggerFromContext(ctx)
 	mux := http.NewServeMux()
 
-	mux.Handle("POST /", http.HandlerFunc(s.refreshWarehouseHandler))
+	mux.Handle("POST /", http.HandlerFunc(s.route))
 
 	srv := &http.Server{
 		Handler:           mux,
@@ -74,10 +74,10 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	}
 }
 
-func (s *server) refreshWarehouseHandler(w http.ResponseWriter, r *http.Request) {
+func (s *server) route(w http.ResponseWriter, r *http.Request) {
 	ctx := (r.Context())
 	logger := logging.LoggerFromContext(ctx)
-	logger.Debug("refresh warehouse handler called", "path", r.URL.Path)
+	logger.Debug("refresh route handler called", "path", r.URL.Path)
 	var projectConfigs kargoapi.ProjectConfigList
 	err := s.client.List(
 		ctx,
