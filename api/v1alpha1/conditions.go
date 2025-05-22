@@ -82,11 +82,4 @@ const (
 	// the Freight has been verified, and the absence of the condition or a
 	// status of "False" indicates that the Freight has not been verified.
 	ConditionTypeVerified = "Verified"
-
-	// ConditionTypeDegraded denotes that the resource is degraded.
-	//
-	// The meaning of "degraded" is specific to the resource type. For example,
-	// a webhook receiver may consider itself degraded if it is unable to
-	// successfully sync due to a missing secret.
-	ConditionTypeDegraded = "Degraded"
 )

@@ -104,15 +104,30 @@ func (r *reconciler) Reconcile(
 	}
 
 	logger.Debug("reconciling ProjectConfig")
-	newStatus := r.syncProjectConfig(ctx, projectConfig)
+	newStatus, needsRequeue, reconcileErr := r.syncProjectConfig(ctx, projectConfig)
 	logger.Debug("done reconciling ProjectConfig")
 
 	// Patch the status of the ProjectConfig.
 	if err := kubeclient.PatchStatus(ctx, r.client, projectConfig, func(status *kargoapi.ProjectConfigStatus) {
 		*status = newStatus
 	}); err != nil {
+		// Prioritize the reconcile error if it exists.
+		if reconcileErr != nil {
+			logger.Error(err, "failed to update ProjectConfig status after reconciliation error")
+			return ctrl.Result{}, reconcileErr
+		}
 		return ctrl.Result{}, fmt.Errorf("failed to update ProjectConfig status: %w", err)
 	}
+
+	// Return the reconcile error if it exists.
+	if reconcileErr != nil {
+		return ctrl.Result{}, reconcileErr
+	}
+	// Immediate requeue if needed.
+	if needsRequeue {
+		return ctrl.Result{Requeue: true}, nil
+	}
+	// Otherwise, requeue after a delay.
 	// TODO: Make the requeue delay configurable.
 	return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
 }
@@ -120,7 +135,11 @@ func (r *reconciler) Reconcile(
 func (r *reconciler) syncProjectConfig(
 	ctx context.Context,
 	pc *kargoapi.ProjectConfig,
-) kargoapi.ProjectConfigStatus {
+) (
+	kargoapi.ProjectConfigStatus,
+	bool,
+	error,
+) {
 	logger := logging.LoggerFromContext(ctx)
 	status := pc.Status.DeepCopy()
 
@@ -140,19 +159,21 @@ func (r *reconciler) syncProjectConfig(
 	})
 
 	whReceivers, err := r.syncWebhookReceiversFn(ctx, pc)
+	status.WebhookReceivers = whReceivers
 	if err != nil {
 		logger.Error(err, "error syncing webhook receivers",
 			"project-config", pc.Name,
 		)
 		conditions.Set(status, &metav1.Condition{
-			Type:               kargoapi.ConditionTypeDegraded,
-			Status:             metav1.ConditionTrue,
+			Type:               kargoapi.ConditionTypeReady,
+			Status:             metav1.ConditionFalse,
 			Reason:             "Synced with errors",
 			Message:            err.Error(),
 			ObservedGeneration: pc.GetGeneration(),
 		})
+		return *status, true, err
 	}
-
+	
 	conditions.Set(status, &metav1.Condition{
 		Type:               kargoapi.ConditionTypeReady,
 		Status:             metav1.ConditionTrue,
@@ -160,9 +181,8 @@ func (r *reconciler) syncProjectConfig(
 		Message:            "ProjectConfig is synced and ready for use",
 		ObservedGeneration: pc.GetGeneration(),
 	})
-	status.WebhookReceivers = whReceivers
 	conditions.Delete(status, kargoapi.ConditionTypeReconciling)
-	return *status
+	return *status, false, nil
 }
 
 func (r *reconciler) syncWebhookReceivers(

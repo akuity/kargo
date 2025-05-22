@@ -33,10 +33,10 @@ func TestReconciler_syncProjectConfig(t *testing.T) {
 		name          string
 		projectConfig *kargoapi.ProjectConfig
 		reconciler    func() *reconciler
-		assertions    func(*testing.T, kargoapi.ProjectConfigStatus)
+		assertions    func(*testing.T, kargoapi.ProjectConfigStatus, bool, error)
 	}{
 		{
-			name: "degraded - secret-ref not found",
+			name: "failure",
 			reconciler: func() *reconciler {
 				r := newReconciler(
 					fake.NewClientBuilder().
@@ -68,13 +68,15 @@ func TestReconciler_syncProjectConfig(t *testing.T) {
 					WebhookReceivers: []kargoapi.WebhookReceiver{},
 				},
 			},
-			assertions: func(t *testing.T, pcs kargoapi.ProjectConfigStatus) {
+			assertions: func(t *testing.T, pcs kargoapi.ProjectConfigStatus, needsRequeue bool, err error) {
+				require.Error(t, err)
+				require.True(t, needsRequeue)
 				require.Len(t, pcs.WebhookReceivers, 0)
 				require.Len(t, pcs.Conditions, 2)
-				require.Equal(t, pcs.Conditions[0].Type, kargoapi.ConditionTypeReady)
+				require.Equal(t, pcs.Conditions[0].Type, kargoapi.ConditionTypeReconciling)
 				require.Equal(t, pcs.Conditions[0].Status, metav1.ConditionTrue)
-				require.Equal(t, pcs.Conditions[1].Type, kargoapi.ConditionTypeDegraded)
-				require.Equal(t, pcs.Conditions[1].Status, metav1.ConditionTrue)
+				require.Equal(t, pcs.Conditions[1].Type, kargoapi.ConditionTypeReady)
+				require.Equal(t, pcs.Conditions[1].Status, metav1.ConditionFalse)
 			},
 		},
 		{
@@ -118,7 +120,9 @@ func TestReconciler_syncProjectConfig(t *testing.T) {
 					WebhookReceivers: []kargoapi.WebhookReceiver{},
 				},
 			},
-			assertions: func(t *testing.T, pcs kargoapi.ProjectConfigStatus) {
+			assertions: func(t *testing.T, pcs kargoapi.ProjectConfigStatus, needsRequeu bool, err error) {
+				require.NoError(t, err)
+				require.False(t, needsRequeu)
 				require.Len(t, pcs.WebhookReceivers, 1)
 				require.Len(t, pcs.Conditions, 1)
 				require.Equal(t, pcs.Conditions[0].Type, kargoapi.ConditionTypeReady)
@@ -130,8 +134,8 @@ func TestReconciler_syncProjectConfig(t *testing.T) {
 			r := test.reconciler()
 			l := logging.NewLogger(logging.DebugLevel)
 			ctx := logging.ContextWithLogger(t.Context(), l)
-			status := r.syncProjectConfig(ctx, test.projectConfig)
-			test.assertions(t, status)
+			status, needsRequeue, err := r.syncProjectConfig(ctx, test.projectConfig)
+			test.assertions(t, status, needsRequeue, err)
 		})
 	}
 }
