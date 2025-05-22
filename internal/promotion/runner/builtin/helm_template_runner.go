@@ -3,12 +3,15 @@ package builtin
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
 	"reflect"
 	"strings"
+	"time"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/xeipuuv/gojsonschema"
@@ -16,10 +19,18 @@ import (
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/chartutil"
+	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/cli/values"
+	"helm.sh/helm/v3/pkg/downloader"
+	"helm.sh/helm/v3/pkg/getter"
+	"helm.sh/helm/v3/pkg/registry"
 	"helm.sh/helm/v3/pkg/release"
+	"helm.sh/helm/v3/pkg/repo"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/helm"
+	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -36,12 +47,15 @@ func outPathIsFile(cfg builtin.HelmTemplateConfig) bool {
 // that renders a Helm chart.
 type helmTemplateRunner struct {
 	schemaLoader gojsonschema.JSONLoader
+	credsDB      credentials.Database
 }
 
 // newHelmTemplateRunner returns an implementation of the promotion.StepRunner
 // interface that renders a Helm chart.
-func newHelmTemplateRunner() promotion.StepRunner {
-	r := &helmTemplateRunner{}
+func newHelmTemplateRunner(credsDB credentials.Database) promotion.StepRunner {
+	r := &helmTemplateRunner{
+		credsDB: credsDB,
+	}
 	r.schemaLoader = getConfigSchemaLoader(r.Name())
 	return r
 }
@@ -104,7 +118,18 @@ func (h *helmTemplateRunner) run(
 			fmt.Errorf("failed to join path %q: %w", cfg.OutPath, err)
 	}
 
-	install, err := h.newInstallAction(cfg, stepCtx.Project, absOutPath)
+	helmHome, err := os.MkdirTemp("", "helm-template-")
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+			fmt.Errorf("failed to create temporary Helm home directory: %w", err)
+	}
+	defer os.RemoveAll(helmHome)
+
+	if err := h.buildDependencies(ctx, stepCtx, helmHome, absOutPath); err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, err
+	}
+
+	helmHome, err := os.MkdirTemp("", "helm-template-")
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("failed to initialize Helm action config: %w", err)
@@ -121,6 +146,236 @@ func (h *helmTemplateRunner) run(
 			fmt.Errorf("failed to write rendered chart: %w", err)
 	}
 	return promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, nil
+}
+
+func (h *helmTemplateRunner) setupDependencyRepositories(
+	ctx context.Context,
+	credentialsDB credentials.Database,
+	registryClient *registry.Client,
+	repositoryFile *repo.File,
+	project string,
+	dependencies []chartDependency,
+) error {
+	for _, dep := range dependencies {
+		switch {
+		case strings.HasPrefix(dep.Repository, "file://"):
+			continue
+		case strings.HasPrefix(dep.Repository, "http://"):
+			entry := &repo.Entry{
+				Name: nameForRepositoryURL(dep.Repository),
+				URL:  dep.Repository,
+			}
+			repositoryFile.Update(entry)
+		case strings.HasPrefix(dep.Repository, "https://"):
+			entry := &repo.Entry{
+				Name: nameForRepositoryURL(dep.Repository),
+				URL:  dep.Repository,
+			}
+
+			creds, err := credentialsDB.Get(ctx, project, credentials.TypeHelm, dep.Repository)
+			if err != nil {
+				return fmt.Errorf("failed to obtain credentials for chart repository %q: %w", dep.Repository, err)
+			}
+			if creds != nil {
+				entry.Username = creds.Username
+				entry.Password = creds.Password
+			}
+
+			repositoryFile.Update(entry)
+		case strings.HasPrefix(dep.Repository, "oci://"):
+			credURL := "oci://" + path.Join(helm.NormalizeChartRepositoryURL(dep.Repository), dep.Name)
+			creds, err := credentialsDB.Get(ctx, project, credentials.TypeHelm, credURL)
+			if err != nil {
+				return fmt.Errorf("failed to obtain credentials for chart repository %q: %w", dep.Repository, err)
+			}
+			if creds != nil {
+				if err = registryClient.Login(
+					strings.TrimPrefix(dep.Repository, "oci://"),
+					registry.LoginOptBasicAuth(creds.Username, creds.Password),
+				); err != nil {
+					return fmt.Errorf("failed to authenticate with chart repository %q: %w", dep.Repository, err)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (h *helmTemplateRunner) downloadRepositoryIndexes(
+	repositories []*repo.Entry,
+	env *cli.EnvSettings,
+) error {
+	for _, entry := range repositories {
+		cr, err := repo.NewChartRepository(entry, getter.All(env))
+		if err != nil {
+			return fmt.Errorf("failed to create chart repository for %q: %w", entry.URL, err)
+		}
+
+		// NB: Explicitly overwrite the cache path to avoid using the default
+		// cache path from the environment variables. Without this, the download
+		// manager will not find the repository index files in the cache, and
+		// will attempt to download them again (to the default cache path).
+		// I.e. without this, the download manager will not use the isolated
+		// cache.
+		cr.CachePath = env.RepositoryCache
+
+		if _, err = cr.DownloadIndexFile(); err != nil {
+			return fmt.Errorf("failed to download repository index for %q: %w", entry.URL, err)
+		}
+	}
+	return nil
+}
+
+func (h *helmTemplateRunner) validateFileDependency(workDir, chartPath, dependencyPath string) error {
+	if filepath.IsAbs(dependencyPath) {
+		return errors.New("dependency path must be relative")
+	}
+
+	// Resolve the dependency path relative to the chart directory
+	dependencyPath = filepath.Join(chartPath, dependencyPath)
+
+	// Check if the resolved dependency path is within the work directory
+	resolvedDependencyPath, err := filepath.EvalSymlinks(dependencyPath)
+	if err != nil {
+		return fmt.Errorf("failed to resolve dependency path: %w", sanitizePathError(err, workDir))
+	}
+	if !isSubPath(workDir, resolvedDependencyPath) {
+		return errors.New("dependency path is outside of the work directory")
+	}
+
+	// Recursively check for symlinks that go outside the work directory,
+	// as Helm follows symlinks when packaging charts
+	visited := make(map[string]struct{})
+	return checkSymlinks(workDir, dependencyPath, visited, 0, 100)
+}
+
+// buildDependencies builds the dependencies for the given chart
+func (h *helmTemplateRunner) buildDependencies(
+	ctx context.Context,
+	stepCtx *promotion.StepContext,
+	helmHome, chartPath string,
+) error {
+	registryClient, err := helm.NewRegistryClient(helmHome)
+	if err != nil {
+		return fmt.Errorf("failed to create Helm registry client: %w", err)
+	}
+
+	chartFilePath := filepath.Join(chartPath, "Chart.yaml")
+	chartDependencies, err := readChartDependencies(chartFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to load chart dependencies from %q: %w", chartFilePath, err)
+	}
+
+	repositoryFile := repo.NewFile()
+
+	for _, dep := range chartDependencies {
+		if strings.HasPrefix(dep.Repository, "file://") {
+			depPath := filepath.FromSlash(strings.TrimPrefix(dep.Repository, "file://"))
+			if err = h.validateFileDependency(stepCtx.WorkDir, chartPath, depPath); err != nil {
+				return fmt.Errorf("invalid dependency %q: %w", dep.Repository, err)
+			}
+		}
+	}
+
+	if err = h.setupDependencyRepositories(
+		ctx,
+		h.credsDB,
+		registryClient,
+		repositoryFile,
+		stepCtx.Project,
+		chartDependencies,
+	); err != nil {
+		return err
+	}
+
+	repositoryConfig := filepath.Join(helmHome, "repositories.yaml")
+	if err = repositoryFile.WriteFile(repositoryConfig, 0o600); err != nil {
+		return fmt.Errorf("failed to write Helm repositories file: %w", err)
+	}
+
+	// Check if Chart.lock exists and create a backup if it does
+	lockFile := filepath.Join(chartPath, "Chart.lock")
+	bakLockFile := fmt.Sprintf("%s.%s.bak", lockFile, time.Now().Format("20060102150405"))
+	if _, err = os.Lstat(lockFile); err == nil {
+		if err = backupFile(lockFile, bakLockFile); err != nil {
+			return fmt.Errorf("failed to backup Chart.lock: %w", err)
+		}
+
+		// Ensure backup file is deleted at the end
+		defer func() {
+			if removeErr := os.Remove(bakLockFile); removeErr != nil && !os.IsNotExist(removeErr) {
+				logging.LoggerFromContext(ctx).Error(
+					sanitizePathError(removeErr, stepCtx.WorkDir),
+					"failed to remove backup of Chart.lock",
+				)
+			}
+		}()
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("failed to check Chart.lock: %w", err)
+	}
+
+	// Prepare the environment settings for Helm
+	env := &cli.EnvSettings{
+		RepositoryConfig: repositoryConfig,
+		RepositoryCache:  filepath.Join(helmHome, "cache"),
+	}
+
+	// Download the repository indexes. This is necessary to ensure that the
+	// cache is properly populated, as otherwise the download manager will
+	// attempt to download the repository indexes to the default cache path
+	// instead of using the cache path set in the environment settings.
+	if err = h.downloadRepositoryIndexes(repositoryFile.Repositories, env); err != nil {
+		return err
+	}
+
+	// Run the dependency update
+	manager := downloader.Manager{
+		Out:              io.Discard,
+		ChartPath:        chartPath,
+		Verify:           downloader.VerifyNever,
+		SkipUpdate:       false,
+		Getters:          getter.All(env),
+		RegistryClient:   registryClient,
+		RepositoryConfig: env.RepositoryConfig,
+		RepositoryCache:  env.RepositoryCache,
+	}
+	if err = manager.Build(); err != nil {
+		return fmt.Errorf("failed to build chart dependencies: %w", err)
+	}
+
+	// Read versions from both Chart.lock files after the update.
+	//
+	// NB: We rely on the lock file to determine the version changes because
+	// the dependency update process may change the version of a dependency
+	// without updating the Chart.yaml. For example, because a new version is
+	// available in the repository for a dependency that has a version range
+	// specified in the Chart.yaml.
+	initialVersions, err := readChartLock(bakLockFile)
+	if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf(
+			"failed to read original chart lock file: %w", sanitizePathError(err, stepCtx.WorkDir),
+		)
+	}
+	updatedVersions, err := readChartLock(lockFile)
+	if err != nil {
+		return fmt.Errorf(
+			"failed to read updated chart lock file: %w",
+			sanitizePathError(err, stepCtx.WorkDir),
+		)
+	}
+
+	// Compare the versions to determine if any changes occurred
+	changes := compareChartVersions(initialVersions, updatedVersions)
+
+	// If no versions changed, restore the original Chart.lock
+	if len(changes) == 0 {
+		if err = os.Rename(bakLockFile, lockFile); err != nil {
+			return fmt.Errorf(
+				"failed to restore original Chart.lock: %w", sanitizePathError(err, stepCtx.WorkDir),
+			)
+		}
+	}
+	return nil
 }
 
 // composeValues composes the values from the given values files and set values.
