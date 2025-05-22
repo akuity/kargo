@@ -118,9 +118,6 @@
               },
               "name": {
                 "description": "Name is the name of the webhook receiver.",
-                "maxLength": 63,
-                "minLength": 1,
-                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
                 "type": "string"
               }
             },
@@ -129,7 +126,14 @@
             ],
             "type": "object"
           },
-          "type": "array"
+          "maxItems": 5,
+          "type": "array",
+          "x-kubernetes-validations": [
+            {
+              "message": "WebhookReceiverConfig must have a unique name",
+              "rule": "self.all(i, size(self.filter(j, i.name == j.name)) == 1)"
+            }
+          ]
         }
       },
       "type": "object"

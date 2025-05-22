@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path"
 	"time"
 
 	multierr "github.com/hashicorp/go-multierror"
@@ -272,13 +273,20 @@ func (r *reconciler) newWebhookReceiver(
 		)
 	}
 
-	return &kargoapi.WebhookReceiver{
+	wr := &kargoapi.WebhookReceiver{
+		Name: rc.Name,
 		Path: external.GenerateWebhookPath(
 			pc.Name,
 			kargoapi.WebhookReceiverTypeGitHub,
 			string(secret),
 		),
-	}, nil
+	}
+
+	wr.URL = path.Join(r.cfg.Host, wr.Path)
+	logger.Debug("webhook receiver initialized",
+		"webhook-receiver", wr,
+	)
+	return wr, nil
 }
 
 type providerConfig struct {

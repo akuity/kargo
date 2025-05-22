@@ -1900,6 +1900,9 @@ export type ProjectConfigSpec = Message<"github.com.akuity.kargo.api.v1alpha1.Pr
    * WebhookReceivers describes Project-specific webhook receivers used for
    * processing events from various external platforms
    *
+   * +kubebuilder:validation:MaxItems=5
+   * +kubebuilder:validation:XValidation:message="WebhookReceiverConfig must have a unique name",rule="self.all(i, size(self.filter(j, i.name == j.name)) == 1)"
+   *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.WebhookReceiverConfig receivers = 2;
    */
   receivers: WebhookReceiverConfig[];
@@ -3482,10 +3485,6 @@ export const WebhookReceiverSchema: GenMessage<WebhookReceiver> = /*@__PURE__*/
 export type WebhookReceiverConfig = Message<"github.com.akuity.kargo.api.v1alpha1.WebhookReceiverConfig"> & {
   /**
    * Name is the name of the webhook receiver.
-   *
-   * +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-   * +kubebuilder:validation:MaxLength=63
-   * +kubebuilder:validation:MinLength=1
    *
    * @generated from field: optional string name = 1;
    */

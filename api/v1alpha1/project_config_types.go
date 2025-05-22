@@ -43,6 +43,9 @@ type ProjectConfigSpec struct {
 	PromotionPolicies []PromotionPolicy `json:"promotionPolicies,omitempty" protobuf:"bytes,1,rep,name=promotionPolicies"`
 	// WebhookReceivers describes Project-specific webhook receivers used for
 	// processing events from various external platforms
+	//
+	// +kubebuilder:validation:MaxItems=5
+	// +kubebuilder:validation:XValidation:message="WebhookReceiverConfig must have a unique name",rule="self.all(i, size(self.filter(j, i.name == j.name)) == 1)"
 	WebhookReceivers []WebhookReceiverConfig `json:"webhookReceivers,omitempty" protobuf:"bytes,2,rep,name=receivers"`
 }
 
@@ -96,10 +99,6 @@ type PromotionPolicy struct {
 // receiver.
 type WebhookReceiverConfig struct {
 	// Name is the name of the webhook receiver.
-	//
-	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-	// +kubebuilder:validation:MaxLength=63
-	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
 	// GitHub contains the configuration for a webhook receiver that is compatible with
 	// GitHub payloads.
