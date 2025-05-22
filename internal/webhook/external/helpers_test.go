@@ -19,11 +19,13 @@ func TestRefreshWarehouses(t *testing.T) {
 		name           string
 		newKubeClient  func() client.Client
 		repoName       string
+		namespace      string
 		expectedResult *refreshResult
 		expectedErr    error
 	}{
 		{
 			name: "OK",
+			namespace: "fakenamespace",
 			newKubeClient: func() client.Client {
 				scheme := runtime.NewScheme()
 				require.NoError(t, kargoapi.AddToScheme(scheme))
@@ -74,6 +76,7 @@ func TestRefreshWarehouses(t *testing.T) {
 		},
 		{
 			name: "partial success",
+			namespace: "fakenamespace",
 			newKubeClient: func() client.Client {
 				scheme := runtime.NewScheme()
 				require.NoError(t, kargoapi.AddToScheme(scheme))
@@ -129,6 +132,7 @@ func TestRefreshWarehouses(t *testing.T) {
 			result, err := refreshWarehouses(
 				t.Context(),
 				test.newKubeClient(),
+				test.namespace,
 				test.repoName,
 			)
 			if test.expectedErr != nil {

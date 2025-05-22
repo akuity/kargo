@@ -123,7 +123,8 @@ func TestGithubHandler(t *testing.T) {
 			ctx := logging.ContextWithLogger(req.Context(), l)
 			req = req.WithContext(ctx)
 			w := httptest.NewRecorder()
-			h := githubHandler(kubeClient, testSecret)
+			namespace := "fakenamespace"
+			h := githubHandler(kubeClient, namespace, testSecret)
 			h(w, req)
 			require.Equal(t, test.code, w.Code)
 			require.Contains(t, test.msg, w.Body.String())

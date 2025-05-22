@@ -102,8 +102,8 @@ func (s *server) refreshWarehouseHandler(w http.ResponseWriter, r *http.Request)
 
 	// Projects are allowed to have, at most, a single ProjectConfig
 	pc := projectConfigs.Items[0]
-
-	wrc, err := s.getWebhookReceiverConfig(r.URL.Path, pc)
+	logger.Info("found project config", "project-config", pc)
+	wrc, err := s.getWebhookReceiverConfig(pc, r.URL.Path)
 	if err != nil {
 		logger.Error(err, "failed to find webhook receiver config")
 		http.Error(w, err.Error(), http.StatusNotFound)
@@ -145,29 +145,20 @@ func (s *server) refreshWarehouseHandler(w http.ResponseWriter, r *http.Request)
 			)
 			return
 		}
-		githubHandler(s.client, string(token))(w, r)
+		githubHandler(s.client, pc.Namespace, string(token))(w, r)
 	default:
 		http.Error(w, "not found", http.StatusNotFound)
 	}
 }
 
 func (s *server) getWebhookReceiverConfig(
-	receiverPath string,
 	pc kargoapi.ProjectConfig,
+	receiverPath string,
 ) (*kargoapi.WebhookReceiverConfig, error) {
 	var whrc *kargoapi.WebhookReceiverConfig
-	for _, config := range pc.Spec.WebhookReceivers {
-		var configType string
-		if config.GitHub != nil {
-			configType = kargoapi.WebhookReceiverTypeGitHub
-		}
-		target := GenerateWebhookPath(
-			pc.Name,
-			configType,
-			config.GitHub.SecretRef.Name,
-		)
-		if receiverPath == target {
-			whrc = &config
+	for i, r := range pc.Status.WebhookReceivers {
+		if receiverPath == r.Path {
+			whrc = &pc.Spec.WebhookReceivers[i]
 			break
 		}
 	}

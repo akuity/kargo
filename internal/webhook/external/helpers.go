@@ -22,6 +22,7 @@ type refreshResult struct {
 func refreshWarehouses(
 	ctx context.Context,
 	c client.Client,
+	namespace string,
 	repoURL string,
 ) (*refreshResult, error) {
 	logger := logging.LoggerFromContext(ctx)
@@ -29,6 +30,7 @@ func refreshWarehouses(
 	err := c.List(
 		ctx,
 		&warehouses,
+		client.InNamespace(namespace),
 		client.MatchingFields{
 			indexer.WarehousesBySubscribedURLsField: repoURL,
 		},

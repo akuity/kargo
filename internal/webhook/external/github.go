@@ -17,7 +17,7 @@ import (
 // the kubeclient is queried for all warehouses that contain a subscription
 // to the repo in question. Those warehouses are then patched with a special
 // annotation that signals down stream logic to refresh the warehouse.
-func githubHandler(c client.Client, token string) http.HandlerFunc {
+func githubHandler(c client.Client, namespace, token string) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		logger := logging.LoggerFromContext(ctx)
@@ -92,7 +92,7 @@ func githubHandler(c client.Client, token string) http.HandlerFunc {
 		repo := *pe.Repo.HTMLURL
 		logger.Debug("source repository retrieved", "name", repo)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		result, err := refreshWarehouses(ctx, c, repo)
+		result, err := refreshWarehouses(ctx, c, namespace, repo)
 		if err != nil {
 			xhttp.WriteErrorJSON(w,
 				xhttp.Error(err, http.StatusInternalServerError),
