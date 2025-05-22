@@ -1644,19 +1644,32 @@ message WarehouseStatus {
 
 // WebhookReceiver describes a path used to receive webhook events.
 message WebhookReceiver {
+  // Name is the name of the webhook receiver.
+  optional string name = 1;
+
   // Path is the path to the receiver's webhook endpoint.
   optional string path = 3;
+
+  // URL includes the full address of the receiver's webhook endpoint.
+  optional string url = 4;
 }
 
 // WebhookReceiverConfig describes the configuration for a single webhook
 // receiver.
 message WebhookReceiverConfig {
+  // Name is the name of the webhook receiver.
+  //
+  // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+  // +kubebuilder:validation:MaxLength=63
+  // +kubebuilder:validation:MinLength=1
+  optional string name = 1;
+
   // GitHub contains the configuration for a webhook receiver that is compatible with
   // GitHub payloads.
   //
   // TODO(fuskovic): Make this mutually exclusive with configs for other platforms.
   //
   // +kubebuilder:validation:Required
-  optional GitHubWebhookReceiver github = 1;
+  optional GitHubWebhookReceiver github = 2;
 }
 

@@ -192,6 +192,12 @@ spec:
                       required:
                       - secretRef
                       type: object
+                    name:
+                      description: Name is the name of the webhook receiver.
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
                   required:
                   - github
                   type: object

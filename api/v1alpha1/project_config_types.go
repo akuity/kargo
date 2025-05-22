@@ -95,13 +95,19 @@ type PromotionPolicy struct {
 // WebhookReceiverConfig describes the configuration for a single webhook
 // receiver.
 type WebhookReceiverConfig struct {
+	// Name is the name of the webhook receiver.
+	//
+	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+	// +kubebuilder:validation:MaxLength=63
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
 	// GitHub contains the configuration for a webhook receiver that is compatible with
 	// GitHub payloads.
 	//
 	// TODO(fuskovic): Make this mutually exclusive with configs for other platforms.
 	//
 	// +kubebuilder:validation:Required
-	GitHub *GitHubWebhookReceiver `json:"github,omitempty" protobuf:"bytes,1,opt,name=github"`
+	GitHub *GitHubWebhookReceiver `json:"github,omitempty" protobuf:"bytes,2,opt,name=github"`
 }
 
 // GitHubWebhookReceiver describes a webhook receiver that is compatible with
@@ -119,8 +125,12 @@ type GitHubWebhookReceiver struct {
 
 // WebhookReceiver describes a path used to receive webhook events.
 type WebhookReceiver struct {
+	// Name is the name of the webhook receiver.
+	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
 	// Path is the path to the receiver's webhook endpoint.
 	Path string `json:"path,omitempty" protobuf:"bytes,3,opt,name=path"`
+	// URL includes the full address of the receiver's webhook endpoint.
+	URL string `json:"url,omitempty" protobuf:"bytes,4,opt,name=url"`
 }
 
 // PromotionPolicySelector is a selector that matches the resource to which

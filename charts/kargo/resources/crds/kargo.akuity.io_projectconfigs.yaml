@@ -187,6 +187,12 @@ spec:
                       required:
                       - secretRef
                       type: object
+                    name:
+                      description: Name is the name of the webhook receiver.
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
                   required:
                   - github
                   type: object
@@ -263,8 +269,15 @@ spec:
                   description: WebhookReceiver describes a path used to receive webhook
                     events.
                   properties:
+                    name:
+                      description: Name is the name of the webhook receiver.
+                      type: string
                     path:
                       description: Path is the path to the receiver's webhook endpoint.
+                      type: string
+                    url:
+                      description: URL includes the full address of the receiver's
+                        webhook endpoint.
                       type: string
                   type: object
                 type: array

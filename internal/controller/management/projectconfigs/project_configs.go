@@ -27,7 +27,8 @@ import (
 )
 
 type ReconcilerConfig struct {
-	MaxConcurrentReconciles int `envconfig:"MAX_CONCURRENT_PROJECT_RECONCILES" default:"4"`
+	Host                    string `envconfig:"HOST" default:"localhost"`
+	MaxConcurrentReconciles int    `envconfig:"MAX_CONCURRENT_PROJECT_RECONCILES" default:"4"`
 }
 
 func ReconcilerConfigFromEnv() ReconcilerConfig {
