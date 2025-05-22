@@ -12,7 +12,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -23,26 +26,208 @@ import (
 const testSecret = "testsecret" // nolint: gosec
 
 func TestGithubHandler(t *testing.T) {
-	scheme := runtime.NewScheme()
-	require.NoError(t, kargoapi.AddToScheme(scheme))
-	kubeClient := fake.NewClientBuilder().
-		WithScheme(scheme).
-		WithIndex(
-			&kargoapi.Warehouse{},
-			indexer.WarehousesBySubscribedURLsField,
-			indexer.WarehousesBySubscribedURLs,
-		).Build()
 	url := "http://doesntmatter.com"
-
 	for _, test := range []struct {
-		name  string
-		setup func() *http.Request
-		code  int
-		msg   string
+		name    string
+		kClient func() client.Client
+		req     func() *http.Request
+		secret  string
+		code    int
+		msg     string
 	}{
 		{
+			name: "secret not found",
+			kClient: func() client.Client {
+				scheme := runtime.NewScheme()
+				require.NoError(t, corev1.AddToScheme(scheme))
+				require.NoError(t, kargoapi.AddToScheme(scheme))
+				return fake.NewClientBuilder().
+					WithScheme(scheme).
+					WithObjects(
+						&kargoapi.ProjectConfig{
+							ObjectMeta: metav1.ObjectMeta{
+								Namespace: "fakenamespace",
+								Name:      "fakename",
+							},
+							Spec: kargoapi.ProjectConfigSpec{
+								WebhookReceivers: []kargoapi.WebhookReceiverConfig{
+									{
+										GitHub: &kargoapi.GitHubWebhookReceiver{
+											SecretRef: corev1.LocalObjectReference{
+												Name: "fakesecret",
+											},
+										},
+									},
+								},
+							},
+							Status: kargoapi.ProjectConfigStatus{
+								WebhookReceivers: []kargoapi.WebhookReceiver{
+									{
+										Path: GenerateWebhookPath(
+											"fakename",
+											kargoapi.WebhookReceiverTypeGitHub,
+											"fakesecret",
+										),
+									},
+								},
+							},
+						},
+					).
+					WithIndex(
+						&kargoapi.Warehouse{},
+						indexer.WarehousesBySubscribedURLsField,
+						indexer.WarehousesBySubscribedURLs,
+					).
+					WithIndex(
+						&kargoapi.ProjectConfig{},
+						indexer.ProjectConfigsByWebhookReceiverPathsField,
+						indexer.ProjectConfigsByWebhookReceiverPaths,
+					).
+					Build()
+			},
+			req: func() *http.Request {
+				b := newBody()
+				req := httptest.NewRequest(http.MethodPost, url, b)
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("X-Hub-Signature-256", sign(t, testSecret, b.Bytes()))
+				req.Header.Set("X-GitHub-Event", "push")
+				return req
+			},
+			secret: testSecret,
+			code:   http.StatusNotFound,
+			msg:    "failed to get github secret",
+		},
+		{
+			name: "missing token in secret string data",
+			kClient: func() client.Client {
+				scheme := runtime.NewScheme()
+				require.NoError(t, corev1.AddToScheme(scheme))
+				require.NoError(t, kargoapi.AddToScheme(scheme))
+				return fake.NewClientBuilder().
+					WithScheme(scheme).
+					WithObjects(
+						&corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "fakesecret",
+								Namespace: "fakenamespace",
+							},
+							Data: map[string][]byte{
+								"not-a-token-key": []byte("doesnt-matter"),
+							},
+						},
+						&kargoapi.ProjectConfig{
+							ObjectMeta: metav1.ObjectMeta{
+								Namespace: "fakenamespace",
+								Name:      "fakename",
+							},
+							Spec: kargoapi.ProjectConfigSpec{
+								WebhookReceivers: []kargoapi.WebhookReceiverConfig{
+									{
+										GitHub: &kargoapi.GitHubWebhookReceiver{
+											SecretRef: corev1.LocalObjectReference{
+												Name: "fakesecret",
+											},
+										},
+									},
+								},
+							},
+							Status: kargoapi.ProjectConfigStatus{
+								WebhookReceivers: []kargoapi.WebhookReceiver{
+									{
+										Path: GenerateWebhookPath(
+											"fakename",
+											kargoapi.WebhookReceiverTypeGitHub,
+											"fakesecret",
+										),
+									},
+								},
+							},
+						},
+					).
+					WithIndex(
+						&kargoapi.Warehouse{},
+						indexer.WarehousesBySubscribedURLsField,
+						indexer.WarehousesBySubscribedURLs,
+					).
+					WithIndex(
+						&kargoapi.ProjectConfig{},
+						indexer.ProjectConfigsByWebhookReceiverPathsField,
+						indexer.ProjectConfigsByWebhookReceiverPaths,
+					).
+					Build()
+			},
+			req: func() *http.Request {
+				b := newBody()
+				req := httptest.NewRequest(http.MethodPost, url, b)
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("X-Hub-Signature-256", sign(t, "fakesecret", b.Bytes()))
+				req.Header.Set("X-GitHub-Event", "push")
+				return req
+			},
+			secret: "fakesecret",
+			code:   http.StatusNotFound,
+			msg:    "missing github token in secret",
+		},
+		{
 			name: "bad request - unsupported event type",
-			setup: func() *http.Request {
+			kClient: func() client.Client {
+				scheme := runtime.NewScheme()
+				require.NoError(t, corev1.AddToScheme(scheme))
+				require.NoError(t, kargoapi.AddToScheme(scheme))
+				return fake.NewClientBuilder().
+					WithScheme(scheme).
+					WithObjects(
+						&corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "fakesecret",
+								Namespace: "fakenamespace",
+							},
+							Data: map[string][]byte{
+								"token": []byte("mysupersecrettoken"),
+							},
+						},
+						&kargoapi.ProjectConfig{
+							ObjectMeta: metav1.ObjectMeta{
+								Namespace: "fakenamespace",
+								Name:      "fakename",
+							},
+							Spec: kargoapi.ProjectConfigSpec{
+								WebhookReceivers: []kargoapi.WebhookReceiverConfig{
+									{
+										GitHub: &kargoapi.GitHubWebhookReceiver{
+											SecretRef: corev1.LocalObjectReference{
+												Name: "fakesecret",
+											},
+										},
+									},
+								},
+							},
+							Status: kargoapi.ProjectConfigStatus{
+								WebhookReceivers: []kargoapi.WebhookReceiver{
+									{
+										Path: GenerateWebhookPath(
+											"fakename",
+											kargoapi.WebhookReceiverTypeGitHub,
+											"mysupersecrettoken",
+										),
+									},
+								},
+							},
+						},
+					).
+					WithIndex(
+						&kargoapi.Warehouse{},
+						indexer.WarehousesBySubscribedURLsField,
+						indexer.WarehousesBySubscribedURLs,
+					).
+					WithIndex(
+						&kargoapi.ProjectConfig{},
+						indexer.ProjectConfigsByWebhookReceiverPathsField,
+						indexer.ProjectConfigsByWebhookReceiverPaths,
+					).
+					Build()
+			},
+			req: func() *http.Request {
 				b := newBody()
 				req := httptest.NewRequest(http.MethodPost, url, b)
 				req.Header.Set("Content-Type", "application/json")
@@ -50,12 +235,70 @@ func TestGithubHandler(t *testing.T) {
 				req.Header.Set("X-GitHub-Event", "ping")
 				return req
 			},
-			msg:  "{\"error\":\"only push events are supported\"}\n",
-			code: http.StatusNotImplemented,
+			secret: "fakesecret",
+			msg:    "{\"error\":\"only push events are supported\"}\n",
+			code:   http.StatusNotImplemented,
 		},
 		{
 			name: "request too large",
-			setup: func() *http.Request {
+			kClient: func() client.Client {
+				scheme := runtime.NewScheme()
+				require.NoError(t, corev1.AddToScheme(scheme))
+				require.NoError(t, kargoapi.AddToScheme(scheme))
+				return fake.NewClientBuilder().
+					WithScheme(scheme).
+					WithObjects(
+						&corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "fakesecret",
+								Namespace: "fakenamespace",
+							},
+							Data: map[string][]byte{
+								"token": []byte("mysupersecrettoken"),
+							},
+						},
+						&kargoapi.ProjectConfig{
+							ObjectMeta: metav1.ObjectMeta{
+								Namespace: "fakenamespace",
+								Name:      "fakename",
+							},
+							Spec: kargoapi.ProjectConfigSpec{
+								WebhookReceivers: []kargoapi.WebhookReceiverConfig{
+									{
+										GitHub: &kargoapi.GitHubWebhookReceiver{
+											SecretRef: corev1.LocalObjectReference{
+												Name: "fakesecret",
+											},
+										},
+									},
+								},
+							},
+							Status: kargoapi.ProjectConfigStatus{
+								WebhookReceivers: []kargoapi.WebhookReceiver{
+									{
+										Path: GenerateWebhookPath(
+											"fakename",
+											kargoapi.WebhookReceiverTypeGitHub,
+											"mysupersecrettoken",
+										),
+									},
+								},
+							},
+						},
+					).
+					WithIndex(
+						&kargoapi.Warehouse{},
+						indexer.WarehousesBySubscribedURLsField,
+						indexer.WarehousesBySubscribedURLs,
+					).
+					WithIndex(
+						&kargoapi.ProjectConfig{},
+						indexer.ProjectConfigsByWebhookReceiverPathsField,
+						indexer.ProjectConfigsByWebhookReceiverPaths,
+					).
+					Build()
+			},
+			req: func() *http.Request {
 				const maxBytes = 2 << 20 // 2MB
 				body := make([]byte, maxBytes+1)
 				b := io.NopCloser(bytes.NewBuffer(body))
@@ -64,70 +307,318 @@ func TestGithubHandler(t *testing.T) {
 				req.Header.Set("X-GitHub-Event", "push")
 				return req
 			},
-			msg:  "{\"error\":\"response body exceeds limit of 2097152 bytes\"}\n",
-			code: http.StatusRequestEntityTooLarge,
+			secret: "fakesecret",
+			msg:    "{\"error\":\"response body exceeds limit of 2097152 bytes\"}\n",
+			code:   http.StatusRequestEntityTooLarge,
 		},
 		{
 			name: "unauthorized - missing signature",
-			setup: func() *http.Request {
+			kClient: func() client.Client {
+				scheme := runtime.NewScheme()
+				require.NoError(t, corev1.AddToScheme(scheme))
+				require.NoError(t, kargoapi.AddToScheme(scheme))
+				return fake.NewClientBuilder().
+					WithScheme(scheme).
+					WithObjects(
+						&corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "fakesecret",
+								Namespace: "fakenamespace",
+							},
+							Data: map[string][]byte{
+								"token": []byte("mysupersecrettoken"),
+							},
+						},
+						&kargoapi.ProjectConfig{
+							ObjectMeta: metav1.ObjectMeta{
+								Namespace: "fakenamespace",
+								Name:      "fakename",
+							},
+							Spec: kargoapi.ProjectConfigSpec{
+								WebhookReceivers: []kargoapi.WebhookReceiverConfig{
+									{
+										GitHub: &kargoapi.GitHubWebhookReceiver{
+											SecretRef: corev1.LocalObjectReference{
+												Name: "fakesecret",
+											},
+										},
+									},
+								},
+							},
+							Status: kargoapi.ProjectConfigStatus{
+								WebhookReceivers: []kargoapi.WebhookReceiver{
+									{
+										Path: GenerateWebhookPath(
+											"fakename",
+											kargoapi.WebhookReceiverTypeGitHub,
+											"mysupersecrettoken",
+										),
+									},
+								},
+							},
+						},
+					).
+					WithIndex(
+						&kargoapi.Warehouse{},
+						indexer.WarehousesBySubscribedURLsField,
+						indexer.WarehousesBySubscribedURLs,
+					).
+					WithIndex(
+						&kargoapi.ProjectConfig{},
+						indexer.ProjectConfigsByWebhookReceiverPathsField,
+						indexer.ProjectConfigsByWebhookReceiverPaths,
+					).
+					Build()
+			},
+			req: func() *http.Request {
 				b := newBody()
 				req := httptest.NewRequest(http.MethodPost, url, b)
 				req.Header.Set("X-GitHub-Event", "push")
 				return req
 			},
-			msg:  "{\"error\":\"missing signature\"}\n",
-			code: http.StatusUnauthorized,
+			secret: "fakesecret",
+			msg:    "{\"error\":\"missing signature\"}\n",
+			code:   http.StatusUnauthorized,
 		},
 		{
 			name: "unauthorized - invalid signature",
-			setup: func() *http.Request {
+			kClient: func() client.Client {
+				scheme := runtime.NewScheme()
+				require.NoError(t, corev1.AddToScheme(scheme))
+				require.NoError(t, kargoapi.AddToScheme(scheme))
+				return fake.NewClientBuilder().
+					WithScheme(scheme).
+					WithObjects(
+						&corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "fakesecret",
+								Namespace: "fakenamespace",
+							},
+							Data: map[string][]byte{
+								"token": []byte("mysupersecrettoken"),
+							},
+						},
+						&kargoapi.ProjectConfig{
+							ObjectMeta: metav1.ObjectMeta{
+								Namespace: "fakenamespace",
+								Name:      "fakename",
+							},
+							Spec: kargoapi.ProjectConfigSpec{
+								WebhookReceivers: []kargoapi.WebhookReceiverConfig{
+									{
+										GitHub: &kargoapi.GitHubWebhookReceiver{
+											SecretRef: corev1.LocalObjectReference{
+												Name: "fakesecret",
+											},
+										},
+									},
+								},
+							},
+							Status: kargoapi.ProjectConfigStatus{
+								WebhookReceivers: []kargoapi.WebhookReceiver{
+									{
+										Path: GenerateWebhookPath(
+											"fakename",
+											kargoapi.WebhookReceiverTypeGitHub,
+											"mysupersecrettoken",
+										),
+									},
+								},
+							},
+						},
+					).
+					WithIndex(
+						&kargoapi.Warehouse{},
+						indexer.WarehousesBySubscribedURLsField,
+						indexer.WarehousesBySubscribedURLs,
+					).
+					WithIndex(
+						&kargoapi.ProjectConfig{},
+						indexer.ProjectConfigsByWebhookReceiverPathsField,
+						indexer.ProjectConfigsByWebhookReceiverPaths,
+					).
+					Build()
+			},
+			req: func() *http.Request {
 				b := newBody()
 				req := httptest.NewRequest(http.MethodPost, url, b)
 				req.Header.Set("X-Hub-Signature-256", sign(t, "invalid-sig", b.Bytes()))
 				req.Header.Set("X-GitHub-Event", "push")
 				return req
 			},
-			msg:  "{\"error\":\"unauthorized\"}\n",
-			code: http.StatusUnauthorized,
+			secret: "fakesecret",
+			msg:    "{\"error\":\"unauthorized\"}\n",
+			code:   http.StatusUnauthorized,
 		},
 		{
 			name: "malformed request",
-			setup: func() *http.Request {
+			kClient: func() client.Client {
+				scheme := runtime.NewScheme()
+				require.NoError(t, corev1.AddToScheme(scheme))
+				require.NoError(t, kargoapi.AddToScheme(scheme))
+				return fake.NewClientBuilder().
+					WithScheme(scheme).
+					WithObjects(
+						&corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "fakesecret",
+								Namespace: "fakenamespace",
+							},
+							Data: map[string][]byte{
+								"token": []byte("mysupersecrettoken"),
+							},
+						},
+						&kargoapi.ProjectConfig{
+							ObjectMeta: metav1.ObjectMeta{
+								Namespace: "fakenamespace",
+								Name:      "fakename",
+							},
+							Spec: kargoapi.ProjectConfigSpec{
+								WebhookReceivers: []kargoapi.WebhookReceiverConfig{
+									{
+										GitHub: &kargoapi.GitHubWebhookReceiver{
+											SecretRef: corev1.LocalObjectReference{
+												Name: "fakesecret",
+											},
+										},
+									},
+								},
+							},
+							Status: kargoapi.ProjectConfigStatus{
+								WebhookReceivers: []kargoapi.WebhookReceiver{
+									{
+										Path: GenerateWebhookPath(
+											"fakename",
+											kargoapi.WebhookReceiverTypeGitHub,
+											"mysupersecrettoken",
+										),
+									},
+								},
+							},
+						},
+					).
+					WithIndex(
+						&kargoapi.Warehouse{},
+						indexer.WarehousesBySubscribedURLsField,
+						indexer.WarehousesBySubscribedURLs,
+					).
+					WithIndex(
+						&kargoapi.ProjectConfig{},
+						indexer.ProjectConfigsByWebhookReceiverPathsField,
+						indexer.ProjectConfigsByWebhookReceiverPaths,
+					).
+					Build()
+			},
+			req: func() *http.Request {
 				b := bytes.NewBuffer([]byte("invalid json"))
 				req := httptest.NewRequest(http.MethodPost, url, b)
 				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("X-Hub-Signature-256", sign(t, testSecret, b.Bytes()))
+				req.Header.Set("X-Hub-Signature-256", sign(t, "mysupersecrettoken", b.Bytes()))
 				req.Header.Set("X-GitHub-Event", "push")
 				return req
 			},
-			msg:  "{\"error\":\"failed to parse webhook event: invalid character 'i' looking for beginning of value\"}\n",
-			code: http.StatusBadRequest,
+			secret: "fakesecret",
+			msg:    "{\"error\":\"failed to parse webhook event: invalid character 'i' looking for beginning of value\"}\n",
+			code:   http.StatusBadRequest,
 		},
 		{
 			name: "OK",
-			setup: func() *http.Request {
+			kClient: func() client.Client {
+				scheme := runtime.NewScheme()
+				require.NoError(t, corev1.AddToScheme(scheme))
+				require.NoError(t, kargoapi.AddToScheme(scheme))
+				return fake.NewClientBuilder().
+					WithScheme(scheme).
+					WithObjects(
+						&corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "fakesecret",
+								Namespace: "fakenamespace",
+							},
+							Data: map[string][]byte{
+								"token": []byte("mysupersecrettoken"),
+							},
+						},
+						&kargoapi.ProjectConfig{
+							ObjectMeta: metav1.ObjectMeta{
+								Namespace: "fakenamespace",
+								Name:      "fakename",
+							},
+							Spec: kargoapi.ProjectConfigSpec{
+								WebhookReceivers: []kargoapi.WebhookReceiverConfig{
+									{
+										GitHub: &kargoapi.GitHubWebhookReceiver{
+											SecretRef: corev1.LocalObjectReference{
+												Name: "fakesecret",
+											},
+										},
+									},
+								},
+							},
+							Status: kargoapi.ProjectConfigStatus{
+								WebhookReceivers: []kargoapi.WebhookReceiver{
+									{
+										Path: GenerateWebhookPath(
+											"fakename",
+											kargoapi.WebhookReceiverTypeGitHub,
+											"mysupersecrettoken",
+										),
+									},
+								},
+							},
+						},
+						&kargoapi.Warehouse{
+							ObjectMeta: metav1.ObjectMeta{
+								Namespace: "fakenamespace",
+								Name:      "fakename",
+							},
+							Spec: kargoapi.WarehouseSpec{
+								Subscriptions: []kargoapi.RepoSubscription{
+									{
+										Git: &kargoapi.GitSubscription{
+											RepoURL: "https://github.com/username/repo",
+										},
+									},
+								},
+							},
+						},
+					).
+					WithIndex(
+						&kargoapi.Warehouse{},
+						indexer.WarehousesBySubscribedURLsField,
+						indexer.WarehousesBySubscribedURLs,
+					).
+					WithIndex(
+						&kargoapi.ProjectConfig{},
+						indexer.ProjectConfigsByWebhookReceiverPathsField,
+						indexer.ProjectConfigsByWebhookReceiverPaths,
+					).
+					Build()
+			},
+			req: func() *http.Request {
 				b := newBody()
 				req := httptest.NewRequest(http.MethodPost, url, b)
 				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("X-Hub-Signature-256", sign(t, testSecret, b.Bytes()))
+				req.Header.Set("X-Hub-Signature-256", sign(t, "mysupersecrettoken", b.Bytes()))
 				req.Header.Set("X-GitHub-Event", "push")
 				return req
 			},
-			msg:  "{\"msg\":\"refreshed 0 warehouses\"}\n",
-			code: http.StatusOK,
+			secret: "fakesecret",
+			msg:    "{\"msg\":\"refreshed 1 warehouse(s)\"}\n",
+			code:   http.StatusOK,
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			req := test.setup()
+			req := test.req()
 			l := logging.NewLogger(logging.DebugLevel)
 			ctx := logging.ContextWithLogger(req.Context(), l)
 			req = req.WithContext(ctx)
 			w := httptest.NewRecorder()
 			namespace := "fakenamespace"
-			h := githubHandler(kubeClient, namespace, testSecret)
+			h := githubHandler(test.kClient(), namespace, test.secret)
 			h(w, req)
 			require.Equal(t, test.code, w.Code)
-			require.Contains(t, test.msg, w.Body.String())
+			require.Contains(t, w.Body.String(), test.msg)
 		})
 	}
 }

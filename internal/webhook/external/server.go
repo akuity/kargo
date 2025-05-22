@@ -8,11 +8,9 @@ import (
 	"net/http"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -113,39 +111,11 @@ func (s *server) refreshWarehouseHandler(w http.ResponseWriter, r *http.Request)
 	logger.Debug("webhook receiver config found", "webhook-receiver-config", wrc)
 	switch {
 	case wrc.GitHub != nil:
-		var secret corev1.Secret
-		err := s.client.Get(ctx,
-			client.ObjectKey{
-				Name:      wrc.GitHub.SecretRef.Name,
-				Namespace: pc.Namespace,
-			},
-			&secret,
-		)
-		if err != nil {
-			logger.Error(err, "failed to get github secret")
-			xhttp.WriteErrorJSON(w,
-				xhttp.Error(
-					fmt.Errorf("failed to get github secret %q: %w", wrc.GitHub.SecretRef.Name, err),
-					http.StatusNotFound,
-				),
-			)
-			return
-		}
-		token, ok := secret.Data["token"]
-		if !ok {
-			logger.Error(
-				errors.New("failed to get github token from secret"),
-				"no value for 'token' key",
-			)
-			xhttp.WriteErrorJSON(w,
-				xhttp.Error(
-					errors.New("missing github token in secret"),
-					http.StatusInternalServerError,
-				),
-			)
-			return
-		}
-		githubHandler(s.client, pc.Namespace, string(token))(w, r)
+		githubHandler(
+			s.client,
+			pc.Namespace,
+			wrc.GitHub.SecretRef.Name,
+		)(w, r)
 	default:
 		http.Error(w, "not found", http.StatusNotFound)
 	}

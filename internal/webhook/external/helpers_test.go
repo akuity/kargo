@@ -100,7 +100,7 @@ func TestRefreshWarehouses(t *testing.T) {
 						},
 						&kargoapi.Warehouse{
 							ObjectMeta: metav1.ObjectMeta{
-								Namespace: "",
+								Namespace: "fakenamespace",
 								Name:      "",
 							},
 							Spec: kargoapi.WarehouseSpec{

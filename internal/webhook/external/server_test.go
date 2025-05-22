@@ -92,138 +92,6 @@ func TestRefreshWarehouseHandler(t *testing.T) {
 			body: "no project configs found for the request",
 		},
 		{
-			name: "secret not found",
-			setup: func(t *testing.T) *server {
-				scheme := runtime.NewScheme()
-				require.NoError(t, corev1.AddToScheme(scheme))
-				require.NoError(t, kargoapi.AddToScheme(scheme))
-				kClient := fake.NewClientBuilder().
-					WithScheme(scheme).
-					WithObjects(
-						&kargoapi.ProjectConfig{
-							ObjectMeta: metav1.ObjectMeta{
-								Namespace: "fakenamespace",
-								Name:      "fakename",
-							},
-							Spec: kargoapi.ProjectConfigSpec{
-								WebhookReceivers: []kargoapi.WebhookReceiverConfig{
-									{
-										GitHub: &kargoapi.GitHubWebhookReceiver{
-											SecretRef: corev1.LocalObjectReference{
-												Name: "fakesecret",
-											},
-										},
-									},
-								},
-							},
-							Status: kargoapi.ProjectConfigStatus{
-								WebhookReceivers: []kargoapi.WebhookReceiver{
-									{
-										Path: GenerateWebhookPath(
-											"fakename",
-											kargoapi.WebhookReceiverTypeGitHub,
-											"fakesecret",
-										),
-									},
-								},
-							},
-						},
-					).
-					WithIndex(
-						&kargoapi.Warehouse{},
-						indexer.WarehousesBySubscribedURLsField,
-						indexer.WarehousesBySubscribedURLs,
-					).
-					WithIndex(
-						&kargoapi.ProjectConfig{},
-						indexer.ProjectConfigsByWebhookReceiverPathsField,
-						indexer.ProjectConfigsByWebhookReceiverPaths,
-					).
-					Build()
-				s, ok := NewServer(ServerConfig{}, kClient).(*server)
-				require.True(t, ok)
-				return s
-			},
-			path: GenerateWebhookPath(
-				"fakename",
-				kargoapi.WebhookReceiverTypeGitHub,
-				"fakesecret",
-			),
-			code: http.StatusNotFound,
-			body: "failed to get github secret",
-		},
-		{
-			name: "missing token in secret string data",
-			setup: func(t *testing.T) *server {
-				scheme := runtime.NewScheme()
-				require.NoError(t, corev1.AddToScheme(scheme))
-				require.NoError(t, kargoapi.AddToScheme(scheme))
-				kClient := fake.NewClientBuilder().
-					WithScheme(scheme).
-					WithObjects(
-						&corev1.Secret{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "fakesecret",
-								Namespace: "fakenamespace",
-							},
-							Data: map[string][]byte{
-								"not-a-token-key": []byte("doesnt-matter"),
-							},
-						},
-						&kargoapi.ProjectConfig{
-							ObjectMeta: metav1.ObjectMeta{
-								Namespace: "fakenamespace",
-								Name:      "fakename",
-							},
-							Spec: kargoapi.ProjectConfigSpec{
-								WebhookReceivers: []kargoapi.WebhookReceiverConfig{
-									{
-										GitHub: &kargoapi.GitHubWebhookReceiver{
-											SecretRef: corev1.LocalObjectReference{
-												Name: "fakesecret",
-											},
-										},
-									},
-								},
-							},
-							Status: kargoapi.ProjectConfigStatus{
-								WebhookReceivers: []kargoapi.WebhookReceiver{
-									{
-										Path: GenerateWebhookPath(
-											"fakename",
-											kargoapi.WebhookReceiverTypeGitHub,
-											"fakesecret",
-										),
-									},
-								},
-							},
-						},
-					).
-					WithIndex(
-						&kargoapi.Warehouse{},
-						indexer.WarehousesBySubscribedURLsField,
-						indexer.WarehousesBySubscribedURLs,
-					).
-					WithIndex(
-						&kargoapi.ProjectConfig{},
-						indexer.ProjectConfigsByWebhookReceiverPathsField,
-						indexer.ProjectConfigsByWebhookReceiverPaths,
-					).
-					Build()
-				s, ok := NewServer(ServerConfig{}, kClient).(*server)
-				require.True(t, ok)
-				return s
-			},
-			path: GenerateWebhookPath(
-				"fakename",
-				kargoapi.WebhookReceiverTypeGitHub,
-				"fakesecret",
-			),
-			code: http.StatusInternalServerError,
-			// internal server errors omit sensitive data from the body
-			body: "{}\n",
-		},
-		{
 			name: "success",
 			setup: func(t *testing.T) *server {
 				scheme := runtime.NewScheme()
@@ -306,7 +174,7 @@ func TestRefreshWarehouseHandler(t *testing.T) {
 				"mysupersecrettoken",
 			),
 			code: http.StatusOK,
-			body: "{\"msg\":\"refreshed 1 warehouses\"}\n",
+			body: "{\"msg\":\"refreshed 1 warehouse(s)\"}\n",
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
