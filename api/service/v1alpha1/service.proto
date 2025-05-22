@@ -61,7 +61,7 @@ service KargoService {
   rpc ApproveFreight(ApproveFreightRequest) returns (ApproveFreightResponse);
   rpc DeleteFreight(DeleteFreightRequest) returns (DeleteFreightResponse);
   rpc GetFreight(GetFreightRequest) returns (GetFreightResponse);
-  rpc WatchFreight(WatchFreightRequest) returns (stream WatchFreightResponse);
+  rpc WatchFreights(WatchFreightsRequest) returns (stream WatchFreightsResponse);
   rpc PromoteToStage(PromoteToStageRequest) returns (PromoteToStageResponse);
   rpc PromoteDownstream(PromoteDownstreamRequest) returns (PromoteDownstreamResponse);
   rpc QueryFreight(QueryFreightRequest) returns (QueryFreightResponse);
@@ -450,11 +450,11 @@ message GetFreightResponse {
   }
 }
 
-message WatchFreightRequest {
+message WatchFreightsRequest {
   string project = 1;
 }
 
-message WatchFreightResponse {
+message WatchFreightsResponse {
   github.com.akuity.kargo.api.v1alpha1.Freight freight = 1;
   string type = 2; // ADDED / MODIFIED / DELETED
 }
