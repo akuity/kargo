@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
+	gocache "github.com/patrickmn/go-cache"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -1339,7 +1340,12 @@ func (r *RegularStageReconciler) startVerification(
 					stage.Spec.RequestedFreight,
 					freight.References(),
 				),
-				exprfn.DataOperations(ctx, r.client, stage.Namespace)...,
+				exprfn.DataOperations(
+					ctx,
+					r.client,
+					gocache.New(gocache.NoExpiration, gocache.NoExpiration),
+					stage.Namespace,
+				)...,
 			),
 			Vars: stage.Spec.Vars,
 		},

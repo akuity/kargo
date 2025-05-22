@@ -481,6 +481,7 @@ func TestStep_GetConfig(t *testing.T) {
 			stepCfg, err := promoStep.GetConfig(
 				context.Background(),
 				testClient,
+				nil,
 				testCase.promoCtx,
 				testCase.promoState,
 			)
@@ -852,6 +853,7 @@ func TestStep_GetVars(t *testing.T) {
 			vars, err := testCase.step.GetVars(
 				context.Background(),
 				testClient,
+				nil,
 				testCase.promoCtx,
 				testCase.promoState,
 			)
@@ -986,6 +988,7 @@ func TestStep_Skip(t *testing.T) {
 			got, err := tt.step.Skip(
 				context.Background(),
 				fake.NewClientBuilder().Build(),
+				nil,
 				tt.ctx,
 				tt.state,
 			)

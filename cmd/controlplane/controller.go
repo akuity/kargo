@@ -337,7 +337,7 @@ func (o *controllerOptions) setupReconcilers(
 		ctx,
 		kargoMgr,
 		argocdMgr,
-		promotion.NewSimpleEngine(kargoMgr.GetClient()),
+		promotion.NewSimpleEngine(kargoMgr.GetClient(), promotion.DefaultExprDataCacheFn),
 		promotions.ReconcilerConfigFromEnv(),
 	); err != nil {
 		return fmt.Errorf("error setting up Promotions reconciler: %w", err)
