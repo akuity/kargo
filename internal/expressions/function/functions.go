@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/expr-lang/expr"
-	"github.com/patrickmn/go-cache"
+	gocache "github.com/patrickmn/go-cache"
 	corev1 "k8s.io/api/core/v1"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -44,14 +44,14 @@ func FreightOperations(
 // DataOperations returns a slice of expr.Option containing functions for
 // data operations, such as accessing ConfigMaps and Secrets.
 //
-// When the cache parameter is set to true, the functions will cache the
-// retrieved ConfigMaps and Secrets to avoid repeated API calls. This can
+// When the cache parameter is set, the functions will cache the retrieved
+// ConfigMaps and Secrets to avoid repeated API calls. This can
 // improve performance when the same ConfigMaps and Secrets are accessed
 // multiple times within the same expression evaluation.
-func DataOperations(ctx context.Context, c client.Client, project string, useCache bool) []expr.Option {
+func DataOperations(ctx context.Context, c client.Client, cache *gocache.Cache, project string) []expr.Option {
 	return []expr.Option{
-		ConfigMap(ctx, c, project, useCache),
-		Secret(ctx, c, project, useCache),
+		ConfigMap(ctx, c, cache, project),
+		Secret(ctx, c, cache, project),
 	}
 }
 
@@ -145,30 +145,20 @@ func ChartFrom(
 
 // ConfigMap returns an expr.Option that provides a `configMap()` function for
 // use in expressions.
-func ConfigMap(ctx context.Context, c client.Client, project string, useCache bool) expr.Option {
-	var cacheData *cache.Cache
-	if useCache {
-		cacheData = cache.New(cache.NoExpiration, cache.NoExpiration)
-	}
-
+func ConfigMap(ctx context.Context, c client.Client, cache *gocache.Cache, project string) expr.Option {
 	return expr.Function(
 		"configMap",
-		getConfigMap(ctx, c, project, cacheData),
+		getConfigMap(ctx, c, cache, project),
 		new(func(name string) map[string]string),
 	)
 }
 
 // Secret returns an expr.Option that provides a `secret()` function for use in
 // expressions.
-func Secret(ctx context.Context, c client.Client, project string, useCache bool) expr.Option {
-	var cacheData *cache.Cache
-	if useCache {
-		cacheData = cache.New(cache.NoExpiration, cache.NoExpiration)
-	}
-
+func Secret(ctx context.Context, c client.Client, cache *gocache.Cache, project string) expr.Option {
 	return expr.Function(
 		"secret",
-		getSecret(ctx, c, project, cacheData),
+		getSecret(ctx, c, cache, project),
 		new(func(name string) map[string]string),
 	)
 }
@@ -392,7 +382,16 @@ func getChart(
 	}
 }
 
-func getConfigMap(ctx context.Context, c client.Client, project string, cacheData *cache.Cache) exprFn {
+// getConfigMap returns a function that retrieves a ConfigMap by its name
+// within the specified project namespace. If the ConfigMap is not found,
+// it returns an empty map.
+//
+// If a cache is provided, it will be used to store the retrieved ConfigMap
+// data to avoid repeated API calls. The cache key is generated based on a
+// prefix, project name, and ConfigMap name. Because of this, the same cache
+// can be shared with other functions that accept a cache parameter (e.g.,
+// getSecret) without worrying about key collisions.
+func getConfigMap(ctx context.Context, c client.Client, cache *gocache.Cache, project string) exprFn {
 	return func(a ...any) (any, error) {
 		if len(a) != 1 {
 			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
@@ -403,8 +402,9 @@ func getConfigMap(ctx context.Context, c client.Client, project string, cacheDat
 			return nil, fmt.Errorf("argument must be string, got %T", a[0])
 		}
 
-		if cacheData != nil {
-			if cachedData, ok := cacheData.Get(name); ok {
+		cacheKey := getCacheKey(cacheKeyPrefixConfigMap, project, name)
+		if cache != nil {
+			if cachedData, ok := cache.Get(cacheKey); ok {
 				if cachedData == nil {
 					return map[string]string{}, nil
 				}
@@ -429,15 +429,24 @@ func getConfigMap(ctx context.Context, c client.Client, project string, cacheDat
 			return nil, fmt.Errorf("failed to get configmap %s: %w", name, err)
 		}
 
-		if cacheData != nil {
-			cacheData.Set(name, maps.Clone(cfgMap.Data), cache.NoExpiration)
+		if cache != nil {
+			cache.Set(cacheKey, maps.Clone(cfgMap.Data), gocache.NoExpiration)
 		}
 
 		return cfgMap.Data, nil
 	}
 }
 
-func getSecret(ctx context.Context, c client.Client, project string, cacheData *cache.Cache) exprFn {
+// getSecret returns a function that retrieves a Secret by its name within the
+// specified project namespace. If the Secret is not found, it returns an empty
+// map.
+//
+// If a cache is provided, it will be used to store the retrieved Secret data to
+// avoid repeated API calls. The cache key is generated based on a prefix,
+// project name, and Secret name. Because of this, the same cache can be shared
+// with other functions that accept a cache parameter (e.g., getConfigMap)
+// without worrying about key collisions.
+func getSecret(ctx context.Context, c client.Client, cache *gocache.Cache, project string) exprFn {
 	return func(a ...any) (any, error) {
 		if len(a) != 1 {
 			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
@@ -448,8 +457,9 @@ func getSecret(ctx context.Context, c client.Client, project string, cacheData *
 			return nil, fmt.Errorf("argument must be string, got %T", a[0])
 		}
 
-		if cacheData != nil {
-			cachedData, ok := cacheData.Get(name)
+		cacheKey := getCacheKey(cacheKeyPrefixSecret, project, name)
+		if cache != nil {
+			cachedData, ok := cache.Get(cacheKey)
 			if ok {
 				if cachedData == nil {
 					return map[string]string{}, nil
@@ -480,8 +490,8 @@ func getSecret(ctx context.Context, c client.Client, project string, cacheData *
 			data[k] = string(v)
 		}
 
-		if cacheData != nil {
-			cacheData.Set(name, maps.Clone(data), cache.NoExpiration)
+		if cache != nil {
+			cache.Set(cacheKey, maps.Clone(data), gocache.NoExpiration)
 		}
 
 		return data, nil
@@ -532,4 +542,15 @@ func getStatus(
 		}
 		return "", nil
 	}
+}
+
+const (
+	cacheKeyPrefixConfigMap = "ConfigMap"
+	cacheKeyPrefixSecret    = "Secret"
+)
+
+// getCacheKey generates a cache key for the given prefix, project, and name.
+// The cache key is a string formatted as "<prefix>/<project>/<name>".
+func getCacheKey(prefix, project, name string) string {
+	return fmt.Sprintf("%s/%s/%s", prefix, project, name)
 }

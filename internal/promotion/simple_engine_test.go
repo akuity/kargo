@@ -776,6 +776,7 @@ func TestSimpleEngine_executeStep(t *testing.T) {
 
 			result, err := engine.executeStep(
 				context.Background(),
+				nil,
 				tt.promoCtx,
 				tt.step,
 				tt.runner,
@@ -819,6 +820,7 @@ func TestSimpleEngine_prepareStepContext(t *testing.T) {
 
 			stepCtx, err := engine.prepareStepContext(
 				context.Background(),
+				nil,
 				tt.promoCtx,
 				tt.step,
 				t.TempDir(),

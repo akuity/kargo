@@ -729,7 +729,7 @@ func Test_getConfigMap(t *testing.T) {
 				assert.Equal(t, testData, result)
 
 				// Check if the item is in the cache
-				data, ok := cache.Get(testConfigMap)
+				data, ok := cache.Get(getCacheKey(cacheKeyPrefixConfigMap, testProject, testConfigMap))
 				assert.True(t, ok)
 				assert.Equal(t, testData, data)
 			},
@@ -737,17 +737,29 @@ func Test_getConfigMap(t *testing.T) {
 		{
 			name: "success from cache",
 			cache: cache.NewFrom(cache.NoExpiration, cache.NoExpiration, map[string]cache.Item{
-				testConfigMap: {
+				getCacheKey(cacheKeyPrefixConfigMap, testProject, testConfigMap): {
 					Object: testData,
 				},
 			}),
+			objects: []client.Object{
+				&corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      testConfigMap,
+					},
+					Data: map[string]string{
+						// This data should not be used
+						"foo": "baz",
+					},
+				},
+			},
 			args: []any{testConfigMap},
 			assertions: func(t *testing.T, cache *cache.Cache, result any, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, testData, result)
 
-				// Check if the item is in the cache
-				data, ok := cache.Get(testConfigMap)
+				// Check if the item data did not change
+				data, ok := cache.Get(getCacheKey(cacheKeyPrefixConfigMap, testProject, testConfigMap))
 				assert.True(t, ok)
 				assert.Equal(t, testData, data)
 			},
@@ -763,7 +775,7 @@ func Test_getConfigMap(t *testing.T) {
 				WithObjects(tt.objects...).
 				Build()
 
-			fn := getConfigMap(ctx, c, testProject, tt.cache)
+			fn := getConfigMap(ctx, c, tt.cache, testProject)
 
 			result, err := fn(tt.args...)
 			tt.assertions(t, tt.cache, result, err)
@@ -860,7 +872,7 @@ func Test_getSecret(t *testing.T) {
 				assert.Equal(t, map[string]string{"foo": "bar"}, result)
 
 				// Check if the item is in the cache
-				data, ok := cache.Get(testSecret)
+				data, ok := cache.Get(getCacheKey(cacheKeyPrefixSecret, testProject, testSecret))
 				assert.True(t, ok)
 				assert.Equal(t, map[string]string{"foo": "bar"}, data)
 			},
@@ -868,17 +880,29 @@ func Test_getSecret(t *testing.T) {
 		{
 			name: "success from cache",
 			cache: cache.NewFrom(cache.NoExpiration, cache.NoExpiration, map[string]cache.Item{
-				testSecret: {
+				getCacheKey(cacheKeyPrefixSecret, testProject, testSecret): {
 					Object: map[string]string{"foo": "bar"},
 				},
 			}),
+			objects: []client.Object{
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      testSecret,
+					},
+					Data: map[string][]byte{
+						// This data should not be used
+						"foo": []byte("baz"),
+					},
+				},
+			},
 			args: []any{testSecret},
 			assertions: func(t *testing.T, cache *cache.Cache, result any, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, map[string]string{"foo": "bar"}, result)
 
-				// Check if the item is in the cache
-				data, ok := cache.Get(testSecret)
+				// Check if the item data did not change
+				data, ok := cache.Get(getCacheKey(cacheKeyPrefixSecret, testProject, testSecret))
 				assert.True(t, ok)
 				assert.Equal(t, map[string]string{"foo": "bar"}, data)
 			},
@@ -894,10 +918,83 @@ func Test_getSecret(t *testing.T) {
 				WithObjects(tt.objects...).
 				Build()
 
-			fn := getSecret(ctx, c, testProject, tt.cache)
+			fn := getSecret(ctx, c, tt.cache, testProject)
 
 			result, err := fn(tt.args...)
 			tt.assertions(t, tt.cache, result, err)
+		})
+	}
+}
+
+func Test_getConfigMap_getSecret_no_cache_key_collision(t *testing.T) {
+	const testProject = "fake-project"
+	const testIdenticalName = "fake-name"
+
+	scheme := runtime.NewScheme()
+	assert.NoError(t, corev1.AddToScheme(scheme))
+
+	tests := []struct {
+		name       string
+		objects    []client.Object
+		args       []any
+		cache      *cache.Cache
+		assertions func(t *testing.T, cache *cache.Cache)
+	}{
+		{
+			name: "ConfigMap and Secret with identical names",
+			objects: []client.Object{
+				&corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      testIdenticalName,
+					},
+					Data: map[string]string{
+						"type": "configmap",
+					},
+				},
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      testIdenticalName,
+					},
+					Data: map[string][]byte{
+						"type": []byte("secret"),
+					},
+				},
+			},
+			cache: cache.New(cache.NoExpiration, cache.NoExpiration),
+			args:  []any{testIdenticalName},
+			assertions: func(t *testing.T, cache *cache.Cache) {
+				// Check if both items are in the cache with different keys
+				data, ok := cache.Get(getCacheKey(cacheKeyPrefixConfigMap, testProject, testIdenticalName))
+				assert.True(t, ok)
+				assert.Equal(t, map[string]string{"type": "configmap"}, data)
+
+				data, ok = cache.Get(getCacheKey(cacheKeyPrefixSecret, testProject, testIdenticalName))
+				assert.True(t, ok)
+				assert.Equal(t, map[string]string{"type": "secret"}, data)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(tt.objects...).
+				Build()
+
+			cfgFn := getConfigMap(ctx, c, tt.cache, testProject)
+			_, err := cfgFn(tt.args...)
+			assert.NoError(t, err)
+
+			secretFn := getSecret(ctx, c, tt.cache, testProject)
+			_, err = secretFn(tt.args...)
+			assert.NoError(t, err)
+
+			tt.assertions(t, tt.cache)
 		})
 	}
 }

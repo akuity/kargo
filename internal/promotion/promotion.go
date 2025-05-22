@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	gocache "github.com/patrickmn/go-cache"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	yaml "sigs.k8s.io/yaml/goyaml.v3"
@@ -206,6 +207,7 @@ func (s *Step) BuildEnv(promoCtx Context, opts ...StepEnvOption) map[string]any 
 func (s *Step) Skip(
 	ctx context.Context,
 	cl client.Client,
+	cache *gocache.Cache,
 	promoCtx Context,
 	state promotion.State,
 ) (bool, error) {
@@ -216,7 +218,7 @@ func (s *Step) Skip(
 		return promoCtx.StepExecutionMetadata.HasFailures(), nil
 	}
 
-	vars, err := s.GetVars(ctx, cl, promoCtx, state)
+	vars, err := s.GetVars(ctx, cl, cache, promoCtx, state)
 	if err != nil {
 		return false, err
 	}
@@ -241,7 +243,7 @@ func (s *Step) Skip(
 					promoCtx.FreightRequests,
 					promoCtx.Freight.References(),
 				),
-				exprfn.DataOperations(ctx, cl, promoCtx.Project, true)...,
+				exprfn.DataOperations(ctx, cl, cache, promoCtx.Project)...,
 			),
 			exprfn.StatusOperations(s.Alias, promoCtx.StepExecutionMetadata)...,
 		)...,
@@ -263,6 +265,7 @@ func (s *Step) Skip(
 func (s *Step) GetConfig(
 	ctx context.Context,
 	cl client.Client,
+	cache *gocache.Cache,
 	promoCtx Context,
 	state promotion.State,
 ) (promotion.Config, error) {
@@ -270,7 +273,7 @@ func (s *Step) GetConfig(
 		return nil, nil
 	}
 
-	vars, err := s.GetVars(ctx, cl, promoCtx, state)
+	vars, err := s.GetVars(ctx, cl, cache, promoCtx, state)
 	if err != nil {
 		return nil, err
 	}
@@ -295,7 +298,7 @@ func (s *Step) GetConfig(
 				promoCtx.FreightRequests,
 				promoCtx.Freight.References(),
 			),
-			exprfn.DataOperations(ctx, cl, promoCtx.Project, true)...,
+			exprfn.DataOperations(ctx, cl, cache, promoCtx.Project)...,
 		)...,
 	)
 	if err != nil {
@@ -313,6 +316,7 @@ func (s *Step) GetConfig(
 func (s *Step) GetVars(
 	ctx context.Context,
 	cl client.Client,
+	cache *gocache.Cache,
 	promoCtx Context,
 	state promotion.State,
 ) (map[string]any, error) {
@@ -326,7 +330,7 @@ func (s *Step) GetVars(
 			s.BuildEnv(promoCtx, StepEnvWithVars(vars)),
 			append(
 				exprfn.FreightOperations(ctx, cl, promoCtx.Project, promoCtx.FreightRequests, promoCtx.Freight.References()),
-				exprfn.DataOperations(ctx, cl, promoCtx.Project, true)...,
+				exprfn.DataOperations(ctx, cl, cache, promoCtx.Project)...,
 			)...,
 		)
 		if err != nil {
@@ -349,7 +353,7 @@ func (s *Step) GetVars(
 			),
 			append(
 				exprfn.FreightOperations(ctx, cl, promoCtx.Project, promoCtx.FreightRequests, promoCtx.Freight.References()),
-				exprfn.DataOperations(ctx, cl, promoCtx.Project, true)...,
+				exprfn.DataOperations(ctx, cl, cache, promoCtx.Project)...,
 			)...,
 		)
 		if err != nil {

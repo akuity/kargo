@@ -181,7 +181,7 @@ func RunningPromotionsByArgoCDApplications(
 
 			// As step-level variables are allowed to reference to output, we
 			// need to provide the state.
-			vars, err := dirStep.GetVars(ctx, cl, promoCtx, promoCtx.State)
+			vars, err := dirStep.GetVars(ctx, cl, nil, promoCtx, promoCtx.State)
 			if err != nil {
 				logger.Error(
 					err,
