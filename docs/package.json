@@ -17,7 +17,6 @@
   },
   "packageManager": "pnpm@9.0.3",
   "dependencies": {
-    "@cmfcmf/docusaurus-search-local": "^0.11.0",
     "@docusaurus/core": "^3.0.0",
     "@docusaurus/preset-classic": "^3.0.0",
     "@docusaurus/theme-classic": "^3.7.0",
