@@ -23,7 +23,7 @@ func ValidateResourceExpression(t *testing.T, marker string, testCases map[strin
 	testhelper.ValidateRegularExpression(t, expression, testCases)
 }
 
-func Test_Pattern_Branch(t *testing.T) {
+func TestBranchPattern(t *testing.T) {
 	testCases := map[string]bool{
 		"":             false,
 		"foo/bar":      true,
@@ -40,7 +40,7 @@ func Test_Pattern_Branch(t *testing.T) {
 	ValidateResourceExpression(t, "Branch", testCases)
 }
 
-func Test_Pattern_Digest(t *testing.T) {
+func TestDigestPattern(t *testing.T) {
 	testCases := map[string]bool{
 		"":                        false,
 		"sha256:":                 false,
@@ -54,7 +54,7 @@ func Test_Pattern_Digest(t *testing.T) {
 	ValidateResourceExpression(t, "Digest", testCases)
 }
 
-func Test_Pattern_Duration(t *testing.T) {
+func TestDurationPattern(t *testing.T) {
 	testCases := map[string]bool{
 		"":  false,
 		"s": false,
@@ -81,13 +81,13 @@ func Test_Pattern_Duration(t *testing.T) {
 	ValidateResourceExpression(t, "Duration", testCases)
 }
 
-func Test_Pattern_HelmRepoURL(t *testing.T) {
+func TestHelmRepoURLPattern(t *testing.T) {
 	testCases := map[string]bool{}
 
 	ValidateResourceExpression(t, "HelmRepoURL", testCases)
 }
 
-func Test_Pattern_GitRepoURL(t *testing.T) {
+func TestGitRepoURLPattern(t *testing.T) {
 	testCases := map[string]bool{
 		"":             false,
 		":":            false,
@@ -172,7 +172,7 @@ func Test_Pattern_GitRepoURL(t *testing.T) {
 	ValidateResourceExpression(t, "GitRepoURL", testCases)
 }
 
-func Test_Pattern_ImageRepoURL(t *testing.T) {
+func TestImageRepoURLPattern(t *testing.T) {
 	testCases := map[string]bool{
 		"":  false,
 		".": false,
@@ -181,7 +181,7 @@ func Test_Pattern_ImageRepoURL(t *testing.T) {
 	ValidateResourceExpression(t, "ImageRepoURL", testCases)
 }
 
-func Test_Pattern_KubernetesName(t *testing.T) {
+func TestKubernetesNamePattern(t *testing.T) {
 	testCases := map[string]bool{
 		"": false,
 		// simple cases
@@ -202,7 +202,7 @@ func Test_Pattern_KubernetesName(t *testing.T) {
 	ValidateResourceExpression(t, "KubernetesName", testCases)
 }
 
-func Test_Pattern_Tag(t *testing.T) {
+func TestTagPattern(t *testing.T) {
 	testCases := map[string]bool{
 		"":  false,
 		".": true, // ?
