@@ -48,7 +48,7 @@ func TestListProjectSecrets(t *testing.T) {
 								Namespace: "kargo-demo",
 								Name:      "secret-b",
 								Labels: map[string]string{
-									kargoapi.CredentialTypeLabelKey: kargoapi.CredentialTypeLabelGeneric,
+									kargoapi.CredentialTypeLabelKey: kargoapi.CredentialTypeLabelValueGeneric,
 								},
 							},
 							Data: testData,
