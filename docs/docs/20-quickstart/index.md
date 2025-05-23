@@ -228,7 +228,7 @@ all three Argo CD `Application`s have not yet synced because they're not
 configured to do so automatically, and in fact, the branches referenced by their
 `targetRevision` fields do not even exist yet.
 
-![Argo Dashboard](img/argo-dashboard.png)
+![Argo CD Dashboard](img/argo-dashboard.png)
 
 ## Your First Kargo Project
 
