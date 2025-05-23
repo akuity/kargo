@@ -648,13 +648,14 @@ the previous section.
 
 ## Your First Promotion
 
-1. To promote `Freight` to the `test` `Stage`, click the truck icon next
-   to <Hlt>test</Hlt> and then select <Hlt>Promote</Hlt>:
+1. To promote `Freight` to the `test` `Stage`, click the truck icon in the
+   header of that node and then select <Hlt>Promote</Hlt>:
 
     ![Kargo Promote Option](img/kargo-promote-option.png)
 
-    Next, <Hlt>Select</Hlt> the `Freight` from the freight timeline and confirm
-    the promotion by selecting <Hlt>Promote</Hlt>:
+    Next, click the <Hlt>Select</Hlt> button on the `Freight` in the timeline
+    that you'd like to promote (there's just the one right now), then confirm
+    this action by clicking <Hlt>Promote</Hlt>:
 
     ![Kargo Promote Confirm](img/kargo-promote-confirm.png)
 
