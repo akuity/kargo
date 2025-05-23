@@ -525,7 +525,7 @@ func (e *simpleEngine) getProjectSecrets(
 		&secretList,
 		client.InNamespace(project),
 		client.MatchingLabels{
-			kargoapi.CredentialTypeLabelKey: kargoapi.CredentialTypeLabelGeneric,
+			kargoapi.CredentialTypeLabelKey: kargoapi.CredentialTypeLabelValueGeneric,
 		},
 	); err != nil {
 		return nil, fmt.Errorf("error listing Secrets for Project %q: %w", project, err)

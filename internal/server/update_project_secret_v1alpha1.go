@@ -47,7 +47,7 @@ func (s *server) UpdateProjectSecret(
 	}
 
 	// Check for the label that indicates this is a generic secret.
-	if secret.Labels[kargoapi.CredentialTypeLabelKey] != kargoapi.CredentialTypeLabelGeneric {
+	if secret.Labels[kargoapi.CredentialTypeLabelKey] != kargoapi.CredentialTypeLabelValueGeneric {
 		return nil, connect.NewError(
 			connect.CodeNotFound,
 			fmt.Errorf(
@@ -55,7 +55,7 @@ func (s *server) UpdateProjectSecret(
 				secret.Namespace,
 				secret.Name,
 				kargoapi.CredentialTypeLabelKey,
-				kargoapi.CredentialTypeLabelGeneric,
+				kargoapi.CredentialTypeLabelValueGeneric,
 			),
 		)
 	}
