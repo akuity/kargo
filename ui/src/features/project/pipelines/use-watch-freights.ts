@@ -14,7 +14,7 @@ export const useWatchFreights = (project: string) => {
   useEffect(() => {
     const cancel = new AbortController();
 
-    const watchFreights = async () => {
+    const watchFreight = async () => {
       const promiseClient = createClient(KargoService, transportWithAuth);
 
       const stream = promiseClient.watchFreight(
@@ -73,7 +73,7 @@ export const useWatchFreights = (project: string) => {
       }
     };
 
-    watchFreights();
+    watchFreight();
 
     return () => cancel.abort();
   }, [project]);
