@@ -601,7 +601,7 @@ the previous section.
       This will take you to a list of `Project`s.  It currently includes only
       the one created in the previous step.
 
-      ![Kargo Projects Dashboard](img/kargo-projects.png)
+      ![Kargo Projects List](img/kargo-projects.png)
 
    1. Select <Hlt>kargo-demo</Hlt>:
 
@@ -615,7 +615,7 @@ the previous section.
         * Three `Stage`s representing distinct instances of our demo
           application.
 
-        ![Kargo Project Dashboard](img/kargo-dashboard-projects.png)
+        ![Kargo Project View](img/kargo-dashboard-projects.png)
 
       * An interactive timeline with `Freight` ordered chronologically, with newer
         `Freight` to the left and older `Freight` to the right.
@@ -677,9 +677,10 @@ the previous section.
 
 ## After Your First Promotion
 
-Following your first Kargo will periodically execute a health check on the `test`
-`Stage`. After the first successful health check, the `test` `Stage`'s healthy
-state will be reflected by a heart icon on its node in the pipeline.
+Following your first promotion, Kargo will periodically execute a health check
+on the `test` `Stage`. After the first successful health check, the `test`
+`Stage`'s healthy state will be reflected by a heart icon on its node in the
+pipeline.
     
 Now is a good time to explore the UI some more.
 
