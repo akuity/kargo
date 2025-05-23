@@ -7,6 +7,7 @@ import (
 	"os"
 	"regexp"
 
+	gocache "github.com/patrickmn/go-cache"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -28,19 +29,41 @@ const ComposeOutputStepKind = "compose-output"
 // are reserved for internal use.
 var ReservedStepAliasRegex = regexp.MustCompile(`^(step|task)-\d+$`)
 
+// ExprDataCacheFn is a function that returns a new cache to use in expression
+// functions that consult the Kubernetes API.
+//
+// A new cache is created for each step execution, so that the cache is
+// shared between all expression functions that are executed in the same step.
+// This is important for performance, as our Kubernetes API client does not
+// cache Secrets and ConfigMaps, but also for correctness, as the data may
+// change between calls.
+//
+// It is allowed for the cache to be nil, in which case the expression functions
+// will not cache their results.
+type ExprDataCacheFn func() *gocache.Cache
+
+// DefaultExprDataCacheFn returns a new gocache.Cache instance with
+// default expiration and cleanup intervals. This is used as the default
+// ExprDataCacheFn for the Engine.
+func DefaultExprDataCacheFn() *gocache.Cache {
+	return gocache.New(gocache.NoExpiration, gocache.NoExpiration)
+}
+
 // simpleEngine is a simple implementation of the Engine interface that uses
 // built-in StepRunners.
 type simpleEngine struct {
 	registry    stepRunnerRegistry
 	kargoClient client.Client
+	cacheFunc   ExprDataCacheFn
 }
 
 // NewSimpleEngine returns a simple implementation of the Engine interface that
 // uses built-in StepRunners.
-func NewSimpleEngine(kargoClient client.Client) Engine {
+func NewSimpleEngine(kargoClient client.Client, cacheFunc ExprDataCacheFn) Engine {
 	return &simpleEngine{
 		registry:    stepRunnerReg,
 		kargoClient: kargoClient,
+		cacheFunc:   cacheFunc,
 	}
 }
 
@@ -130,9 +153,18 @@ stepLoop:
 		default:
 		}
 
+		// Shared cache for expression functions that consult the Kubernetes API.
+		// By using a shared cache, we avoid repeated API calls for multiple
+		// expressions that require the same data (e.g. `secret('foo').bar` and
+		// `secret('foo').baz`).
+		var exprDataCache *gocache.Cache
+		if e.cacheFunc != nil {
+			exprDataCache = e.cacheFunc()
+		}
+
 		// Check if the step should be skipped.
 		var skip bool
-		if skip, err = step.Skip(ctx, e.kargoClient, promoCtx, state); err != nil {
+		if skip, err = step.Skip(ctx, e.kargoClient, exprDataCache, promoCtx, state); err != nil {
 			stepExecMeta.Status = kargoapi.PromotionStepStatusErrored
 			stepExecMeta.Message = fmt.Sprintf("error checking if step %q should be skipped: %s", step.Alias, err)
 			// Continue, because despite this failure, some steps' "if" conditions may
@@ -157,7 +189,7 @@ stepLoop:
 		if stepExecMeta.StartedAt == nil {
 			stepExecMeta.StartedAt = ptr.To(metav1.Now())
 		}
-		result, err := e.executeStep(ctx, promoCtx, step, runner, workDir, state)
+		result, err := e.executeStep(ctx, exprDataCache, promoCtx, step, runner, workDir, state)
 		stepExecMeta.Status = result.Status
 		stepExecMeta.Message = result.Message
 
@@ -343,21 +375,32 @@ func determinePromoPhase(
 // executeStep executes a single Step.
 func (e *simpleEngine) executeStep(
 	ctx context.Context,
+	cache *gocache.Cache,
 	promoCtx Context,
 	step Step,
 	runner promotion.StepRunner,
 	workDir string,
 	state promotion.State,
-) (promotion.StepResult, error) {
-	stepCtx, err := e.prepareStepContext(ctx, promoCtx, step, workDir, state)
+) (result promotion.StepResult, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			result = promotion.StepResult{
+				Status: kargoapi.PromotionStepStatusErrored,
+			}
+			err = &promotion.TerminalError{
+				Err: fmt.Errorf("step %q panicked: %v", step.Alias, r),
+			}
+		}
+	}()
+
+	stepCtx, err := e.prepareStepContext(ctx, cache, promoCtx, step, workDir, state)
 	if err != nil {
 		return promotion.StepResult{
 			Status: kargoapi.PromotionStepStatusErrored,
 		}, &promotion.TerminalError{Err: err}
 	}
 
-	result, err := runner.Run(ctx, stepCtx)
-	if err != nil {
+	if result, err = runner.Run(ctx, stepCtx); err != nil {
 		err = fmt.Errorf("error running step %q: %w", step.Alias, err)
 	}
 	return result, err
@@ -366,6 +409,7 @@ func (e *simpleEngine) executeStep(
 // prepareStepContext prepares a StepContext corresponding to the provided Step.
 func (e *simpleEngine) prepareStepContext(
 	ctx context.Context,
+	cache *gocache.Cache,
 	promoCtx Context,
 	step Step,
 	workDir string,
@@ -373,7 +417,7 @@ func (e *simpleEngine) prepareStepContext(
 ) (*promotion.StepContext, error) {
 	stateCopy := state.DeepCopy()
 
-	stepCfg, err := step.GetConfig(ctx, e.kargoClient, promoCtx, stateCopy)
+	stepCfg, err := step.GetConfig(ctx, e.kargoClient, cache, promoCtx, stateCopy)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get step config: %w", err)
 	}

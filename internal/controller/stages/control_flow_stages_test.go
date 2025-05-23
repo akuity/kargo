@@ -602,6 +602,7 @@ func TestControlFlowStageReconciler_reconcile(t *testing.T) {
 				assert.Len(t, status.Conditions, 1)
 				assert.Equal(t, kargoapi.ConditionTypeReady, status.Conditions[0].Type)
 				assert.Equal(t, metav1.ConditionTrue, status.Conditions[0].Status)
+				assert.Equal(t, kargoapi.ConditionTypeReady, status.Conditions[0].Reason)
 			},
 		},
 	}

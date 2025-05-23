@@ -569,14 +569,14 @@ func Test_parseCreateActorAnnotation(t *testing.T) {
 func Test_calculateRequeueInterval(t *testing.T) {
 	testStepKindWithoutTimeout := "fake-step-without-timeout"
 	promotion.RegisterStepRunner(
-		&pkgPromotion.MockStepRunner{Nm: testStepKindWithoutTimeout},
+		&pkgPromotion.MockStepRunner{StepName: testStepKindWithoutTimeout},
 	)
 
 	testStepKindWithTimeout := "fake-step-with-timeout"
 	testTimeout := 10 * time.Minute
 	promotion.RegisterStepRunner(
 		pkgPromotion.NewRetryableStepRunner(
-			&pkgPromotion.MockStepRunner{Nm: testStepKindWithTimeout},
+			&pkgPromotion.MockStepRunner{StepName: testStepKindWithTimeout},
 			&testTimeout,
 			0, // Retries don't matter for this test
 		),

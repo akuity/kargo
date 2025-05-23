@@ -295,7 +295,8 @@ type FreightSources struct {
 	// requirement.
 	//
 	// +kubebuilder:validation:Type=string
-	// +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(s|m|h))+$"
+	// +kubebuilder:validation:Pattern=`^([0-9]+(\.[0-9]+)?(s|m|h))+$`
+	// +akuity:test-kubebuilder-pattern=Duration
 	RequiredSoakTime *metav1.Duration `json:"requiredSoakTime,omitempty" protobuf:"bytes,3,opt,name=requiredSoakTime"`
 	// AvailabilityStrategy specifies the semantics for how requested Freight is
 	// made available to the Stage. This field is optional. When left unspecified,

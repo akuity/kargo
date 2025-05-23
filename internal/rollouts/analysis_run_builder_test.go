@@ -637,7 +637,7 @@ func TestAnalysisRunBuilder_buildArgs(t *testing.T) {
 				{Name: "param1", Value: "${{ vars.test }}"},
 			},
 			exprCfg: &ArgumentEvaluationConfig{
-				Vars: []ArgumentVariable{
+				Vars: []kargoapi.ExpressionVariable{
 					{Name: "test", Value: "value1"},
 					// Ensure overriding and expression evaluation works.
 					{Name: "test", Value: "${{ vars.test + '-suffix'}}"},
@@ -653,7 +653,7 @@ func TestAnalysisRunBuilder_buildArgs(t *testing.T) {
 			name:     "variable evaluation error",
 			template: &rolloutsapi.AnalysisTemplate{},
 			exprCfg: &ArgumentEvaluationConfig{
-				Vars: []ArgumentVariable{
+				Vars: []kargoapi.ExpressionVariable{
 					{Name: "test", Value: "${{ ctx.test }}"},
 				},
 			},
@@ -670,7 +670,7 @@ func TestAnalysisRunBuilder_buildArgs(t *testing.T) {
 						"test": "value1",
 					},
 				},
-				Vars: []ArgumentVariable{
+				Vars: []kargoapi.ExpressionVariable{
 					{Name: "test", Value: "value2"},
 				},
 			},

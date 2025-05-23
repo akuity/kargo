@@ -228,7 +228,7 @@ all three Argo CD `Application`s have not yet synced because they're not
 configured to do so automatically, and in fact, the branches referenced by their
 `targetRevision` fields do not even exist yet.
 
-![Argo-dashboard-screenshot](img/argo-dashboard.png)
+![Argo CD Dashboard](img/argo-dashboard.png)
 
 ## Your First Kargo Project
 
@@ -601,7 +601,7 @@ the previous section.
       This will take you to a list of `Project`s.  It currently includes only
       the one created in the previous step.
 
-      ![Kargo-dashboard](img/kargo-projects.png)
+      ![Kargo Projects List](img/kargo-projects.png)
 
    1. Select <Hlt>kargo-demo</Hlt>:
 
@@ -615,23 +615,15 @@ the previous section.
         * Three `Stage`s representing distinct instances of our demo
           application.
 
-        ![Kargo-dashboard-screenshot](img/kargo-dashboard-projects.png)
+        ![Kargo Project View](img/kargo-dashboard-projects.png)
 
-      * An interactive <Hlt>Freight Timeline</Hlt> with `Freight` ordered
-        chronologically, with newer `Freight` to the left and older `Freight` to
-        the right.
+      * An interactive timeline with `Freight` ordered chronologically, with newer
+        `Freight` to the left and older `Freight` to the right.
 
-        ![Kargo-Freight-Timeline](img/kargo-frieght-timeline.png)
+        ![Kargo Freight Timeline](img/kargo-freight-timeline.png)
 
-1. After a few seconds, a piece of `Freight` should appear in the <Hlt>Freight
-   Timeline</Hlt>, if it isn't there already.
-
-    :::note
-    Note that the timeline _may_ not refresh automatically and you may need to
-    refresh the page to see new `Freight`.
-
-    This inconvenience will be addressed in a forthcoming update.
-    :::
+1. After a few seconds, a node representing a piece of `Freight` should appear
+   in the freight timeline, if it isn't there already.
 
     :::info
     `Freight` is a set of references to one or more versioned artifacts, which
@@ -649,45 +641,68 @@ the previous section.
 
 ## Your First Promotion
 
-1. To promote `Freight` to the `test` `Stage`, select the target icon on the
-   left border of <Hlt>test</Hlt>:
+1. To promote `Freight` to the `test` `Stage`, click the truck icon in the
+   header of that node and then select <Hlt>Promote</Hlt>:
 
-    ![Kargo-Promote](img/kargo-promote-option.png)
+    ![Kargo Promotion Menu](img/kargo-promote-option.png)
 
-    Next, select the `Freight` from the <Hlt>Freight Timeline</Hlt> and confirm
-    the promotion by selecting <Hlt>Yes</Hlt>:
+1. From the timeline at the top of the screen, select the `Freight` you'd like
+   to promote into the `test` `Stage` by clicking <Hlt>Select</Hlt>:
 
-    ![Kargo-Promote](img/kargo-promote-option-2.png)
+   ![Kargo Freight Selection](img/kargo-promote-confirm.png)
 
-    When promotion process is complete, you'll see a check mark next to
-    <Hlt>test</Hlt>, indicating that the promotion was successful.
+1. Confirm the action by clicking <Hlt>Promote</Hlt>:
 
-    ![Kargo-dashboard-screenshot](img/kargo-dashboard-promotion.png)
+   ![Kargo Promotion Confirmation](img/kargo-promote-option-2.png)
 
-    Following the promotion, health checks will run periodically. When a `Stage`
-    is in a healthy state, this will be reflected with a heart icon. You can
-    also verify the status by visiting the test instance of the demo application
-    at [localhost:30081](http://localhost:30081).
+   A summary of the `Promotion` will pop up and will be updated in real-time as
+   the steps of the promotion process complete. Once they have all completed,
+   the `Promotion`'s status will change to <Hlt>Succeeded</Hlt>:
 
-    The <Hlt>Freight Timeline</Hlt> will also automatically update following the
-    promotion. It is color-coded to indicate which `Stage`s are actively using
-    each piece of `Freight`.
+   ![Kargo Promotion View](img/kargo-promotion-view.png)
 
-1. Select the <Hlt>test</Hlt> to reveal additional details about the `Stage`
-   including its status, current `Freight`, and history.
+   You will also notice the freight timeline has been automatically updated.
+   Every piece of `Freight` in the timeline is color-coded to indicate which
+   `Stage`s (if any) are actively using it. You will see the one piece of
+   `Freight` currently in the timeline is marked with the same color as the
+   `test` `Stage`'s node in the pipeline. This indicates this piece of `Freight`
+   is currently used by that `Stage`.
 
-1. Select the `Freight` from the <Hlt>Freight Timeline</Hlt> to reveal
-   additional details. Importantly, you can see that (by virtue of the `test`
-   `Stage` having achieved a healthy state) the `Freight` is now _verified_ in
-   `test`, which designates it as eligible for promotion to the next `Stage` --
-   in our case, `uat`.
+## After Your First Promotion
 
-   ![Kargo-Freight-Verified](img/kargo-freight-verified.png)
+Following your first promotion, Kargo will periodically execute a health check
+on the `test` `Stage`. After the first successful health check, the `test`
+`Stage`'s healthy state will be reflected by a heart icon on its node in the
+pipeline.
+    
+Now is a good time to explore the UI some more.
 
-    :::note
-    Although this example does not demonstrate it, it is also possible to verify
-    the `Freight` in a `Stage` using user-defined processes.
-    :::
+* To see more information about the `test` `Stage`, click the arrow icon in the
+  header of the `Stage`'s node in the pipeline:
+
+  ![Kargo Stage Arrow Button](img/kargo-stage-arrow-button.png)
+
+  This view provides a comprehensive overview of the `Stage`s health, current
+  `Freight`, histories of `Promotion`s and of `Freight` previously promoted to
+  the `Stage`, and more:
+
+  ![Kargo Stage View](img/kargo-stage-view.png)
+
+* To see more information about the one piece of `Freight`, click anywhere on
+  its node in the timeline to open a detailed view:
+
+  ![Kargo Freight View](img/kargo-freight-verified.png)
+
+  Here, you can see that (by virtue of the `test` `Stage` having achieved a
+  healthy state) the `Freight` is now _verified_ in the `test` `Stage`, which
+  makes it available for promotion to the next `Stage` downstream from `test`,
+  `uat`.
+
+  :::note
+  Although this simple example does not demonstrate it, it is also possible to
+  perform more extensive verification of the `Freight` in any `Stage` using
+  user-defined processes.
+  :::
 
 ## Behind the Scenes
 

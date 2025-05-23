@@ -1,6 +1,6 @@
 import { useMutation } from '@connectrpc/connect-query';
 import {
-  faArrowUpRightFromSquare,
+  faBarsStaggered,
   faBolt,
   faExternalLink,
   faMinus,
@@ -185,7 +185,7 @@ export const StageNode = (props: { stage: Stage }) => {
               <Button size='small' icon={<FontAwesomeIcon icon={faTruckArrowRight} size='sm' />} />
             </Dropdown>
             <Button
-              icon={<FontAwesomeIcon icon={faArrowUpRightFromSquare} />}
+              icon={<FontAwesomeIcon icon={faBarsStaggered} className='mt-1' />}
               size='small'
               onClick={() =>
                 navigate(

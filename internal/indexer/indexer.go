@@ -147,14 +147,36 @@ func RunningPromotionsByArgoCDApplications(
 			return nil
 		}
 
+		// Get the Stage for the Promotion. We need this to build the context
+		// for the Promotion step.
+		stage := &kargoapi.Stage{}
+		if err := cl.Get(ctx, client.ObjectKey{
+			Name:      promo.Spec.Stage,
+			Namespace: promo.Namespace,
+		}, stage); err != nil {
+			logger.Error(
+				err,
+				"failed to get Stage for Promotion",
+				"promo", promo.Name,
+				"namespace", promo.Namespace,
+				"stage", promo.Spec.Stage,
+			)
+			return nil
+		}
+
 		// Build just enough context to extract the relevant config from the
 		// argocd-update promotion step.
 		promoCtx := promotion.Context{
-			Project:   promo.Namespace,
-			Stage:     promo.Spec.Stage,
-			Promotion: promo.Name,
-			State:     promo.Status.GetState(),
-			Vars:      promo.Spec.Vars,
+			Project:         promo.Namespace,
+			Stage:           promo.Spec.Stage,
+			FreightRequests: stage.Spec.RequestedFreight,
+			Promotion:       promo.Name,
+			State:           promo.Status.GetState(),
+			Vars:            promo.Spec.Vars,
+		}
+
+		if promo.Status.FreightCollection != nil {
+			promoCtx.Freight = *promo.Status.FreightCollection.DeepCopy()
 		}
 
 		// Extract the Argo CD Applications from the promotion steps.
@@ -182,7 +204,7 @@ func RunningPromotionsByArgoCDApplications(
 
 			// As step-level variables are allowed to reference to output, we
 			// need to provide the state.
-			vars, err := dirStep.GetVars(ctx, cl, promoCtx, promoCtx.State)
+			vars, err := dirStep.GetVars(ctx, cl, nil, promoCtx, promoCtx.State)
 			if err != nil {
 				logger.Error(
 					err,

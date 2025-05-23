@@ -381,6 +381,7 @@ export type ChartSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.Ch
    *
    * +kubebuilder:validation:MinLength=1
    * +kubebuilder:validation:Pattern=`^(((https?)|(oci))://)([\w\d\.\-]+)(:[\d]+)?(/.*)*$`
+   * +akuity:test-kubebuilder-pattern=HelmRepoURL
    *
    * @generated from field: optional string repoURL = 1;
    */
@@ -645,6 +646,7 @@ export type DiscoveredImageReference = Message<"github.com.akuity.kargo.api.v1al
    * +kubebuilder:validation:MinLength=1
    * +kubebuilder:validation:MaxLength=128
    * +kubebuilder:validation:Pattern=`^[\w.\-\_]+$`
+   * +akuity:test-kubebuilder-pattern=Tag
    *
    * @generated from field: optional string tag = 1;
    */
@@ -655,6 +657,7 @@ export type DiscoveredImageReference = Message<"github.com.akuity.kargo.api.v1al
    *
    * +kubebuilder:validation:MinLength=1
    * +kubebuilder:validation:Pattern=`^[a-z0-9]+:[a-f0-9]+$`
+   * +akuity:test-kubebuilder-pattern=Digest
    *
    * @generated from field: optional string digest = 2;
    */
@@ -1025,7 +1028,8 @@ export type FreightSources = Message<"github.com.akuity.kargo.api.v1alpha1.Freig
    * requirement.
    *
    * +kubebuilder:validation:Type=string
-   * +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(s|m|h))+$"
+   * +kubebuilder:validation:Pattern=`^([0-9]+(\.[0-9]+)?(s|m|h))+$`
+   * +akuity:test-kubebuilder-pattern=Duration
    *
    * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration requiredSoakTime = 3;
    */
@@ -1175,6 +1179,7 @@ export type GitDiscoveryResult = Message<"github.com.akuity.kargo.api.v1alpha1.G
    *
    * +kubebuilder:validation:MinLength=1
    * +kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
+   * +akuity:test-kubebuilder-pattern=GitRepoURL
    *
    * @generated from field: optional string repoURL = 1;
    */
@@ -1238,6 +1243,7 @@ export type GitSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.GitS
    *
    * +kubebuilder:validation:MinLength=1
    * +kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
+   * +akuity:test-kubebuilder-pattern=GitRepoURL
    *
    * @generated from field: optional string repoURL = 1;
    */
@@ -1285,6 +1291,7 @@ export type GitSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.GitS
    * +kubebuilder:validation:MinLength=1
    * +kubebuilder:validation:MaxLength=255
    * +kubebuilder:validation:Pattern=`^[a-zA-Z0-9]([a-zA-Z0-9._\/-]*[a-zA-Z0-9_-])?$`
+   * +akuity:test-kubebuilder-pattern=Branch
    *
    * @generated from field: optional string branch = 3;
    */
@@ -1627,6 +1634,7 @@ export type ImageSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.Im
    *
    * +kubebuilder:validation:MinLength=1
    * +kubebuilder:validation:Pattern=`^(\w+([\.-]\w+)*(:[\d]+)?/)?(\w+([\.-]\w+)*)(/\w+([\.-]\w+)*)*$`
+   * +akuity:test-kubebuilder-pattern=ImageRepoURL
    *
    * @generated from field: optional string repoURL = 1;
    */
@@ -2260,7 +2268,8 @@ export type PromotionSpec = Message<"github.com.akuity.kargo.api.v1alpha1.Promot
    * +kubebuilder:validation:Required
    * +kubebuilder:validation:MinLength=1
    * +kubebuilder:validation:MaxLength=253
-   * +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+   * +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+   * +akuity:test-kubebuilder-pattern=KubernetesName
    *
    * @generated from field: optional string stage = 1;
    */
@@ -2273,7 +2282,8 @@ export type PromotionSpec = Message<"github.com.akuity.kargo.api.v1alpha1.Promot
    * +kubebuilder:validation:Required
    * +kubebuilder:validation:MinLength=1
    * +kubebuilder:validation:MaxLength=253
-   * +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+   * +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+   * +akuity:test-kubebuilder-pattern=KubernetesName
    *
    * @generated from field: optional string freight = 2;
    */
@@ -2613,7 +2623,8 @@ export type PromotionTaskReference = Message<"github.com.akuity.kargo.api.v1alph
    * +kubebuilder:validation:Required
    * +kubebuilder:validation:MinLength=1
    * +kubebuilder:validation:MaxLength=253
-   * +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+   * +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+   * +akuity:test-kubebuilder-pattern=KubernetesName
    *
    * @generated from field: optional string name = 1;
    */
@@ -3309,8 +3320,9 @@ export type WarehouseSpec = Message<"github.com.akuity.kargo.api.v1alpha1.Wareho
    * field is implicitly treated as if its value were "5m0s".
    *
    * +kubebuilder:validation:Type=string
-   * +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(s|m|h))+$"
+   * +kubebuilder:validation:Pattern=`^([0-9]+(\.[0-9]+)?(s|m|h))+$`
    * +kubebuilder:default="5m0s"
+   * +akuity:test-kubebuilder-pattern=Duration
    *
    * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration interval = 4;
    */

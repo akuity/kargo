@@ -28,7 +28,7 @@ import (
 //	step: compose-output
 //	as: custom-outputs
 //	config:
-//	  prURL: ${{ vars.repoURL }}/pull/${{ outputs['open-pr'].prNumber }}
+//	  prURL: ${{ vars.repoURL }}/pull/${{ outputs['open-pr'].pr.id }}
 //	  mergeCommit: ${{ outputs['wait-for-pr'].commit }}
 //
 // This would create a new output named `custom-outputs` with the keys
