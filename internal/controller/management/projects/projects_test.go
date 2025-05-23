@@ -1348,7 +1348,8 @@ func TestMigrateSpecToProjectConfig(t *testing.T) {
 				project := &kargoapi.Project{}
 				err = cl.Get(context.Background(), types.NamespacedName{Name: testProject}, project)
 				require.NoError(t, err)
-				require.Nil(t, project.Spec) // nolint:staticcheck
+				require.Contains(t, project.Labels, kargoapi.MigratedLabelKey)
+				require.NotNil(t, project.Spec) // nolint:staticcheck
 				projCfg := &kargoapi.ProjectConfig{}
 				err = cl.Get(
 					context.Background(),
@@ -1397,7 +1398,8 @@ func TestMigrateSpecToProjectConfig(t *testing.T) {
 				project := &kargoapi.Project{}
 				err = cl.Get(context.Background(), types.NamespacedName{Name: testProject}, project)
 				require.NoError(t, err)
-				require.Nil(t, project.Spec) // nolint:staticcheck
+				require.Contains(t, project.Labels, kargoapi.MigratedLabelKey)
+				require.NotNil(t, project.Spec) // nolint:staticcheck
 				projCfg := &kargoapi.ProjectConfig{}
 				err = cl.Get(
 					context.Background(),
