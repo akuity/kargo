@@ -107,10 +107,10 @@ func (h *helmTemplateRunner) run(
 			fmt.Errorf("failed to load chart from %q: %w", cfg.Path, err)
 	}
 
-	if err = h.checkDependencies(chartRequested); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("missing chart dependencies: %w", err)
-	}
+	// if err = h.checkDependencies(chartRequested); err != nil {
+	// 	return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+	// 		fmt.Errorf("missing chart dependencies: %w", err)
+	// }
 
 	absOutPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutPath)
 	if err != nil {
