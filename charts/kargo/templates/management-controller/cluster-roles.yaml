@@ -60,6 +60,7 @@ rules:
   resources:
   - stages
   - warehouses
+  - projectconfigs
   verbs:
   - get
   - list

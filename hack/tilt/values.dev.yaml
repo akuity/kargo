@@ -35,7 +35,7 @@ crds:
   install: true
 externalWebhooksServer:
   logLevel: DEBUG
-  host: localhost:30083
+  host: localhost
   tls:
     enabled: false
   probes:
