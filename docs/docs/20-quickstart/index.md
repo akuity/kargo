@@ -690,8 +690,8 @@ Now is a good time to explore the UI some more.
   ![Kargo Stage Arrow Button](img/kargo-stage-arrow-button.png)
 
   This view provides a comprehensive overview of the `Stage`s health, current
-  `Freight`, a history of `Freight` previously promoted to the `Stage` (there
-  are none at the moment) and more:
+  `Freight`, histories of `Promotion`s and of `Freight` previously promoted to
+  the `Stage`, and more:
 
   ![Kargo Stage View](img/kargo-stage-view.png)
 
