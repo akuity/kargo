@@ -381,7 +381,18 @@ func (e *simpleEngine) executeStep(
 	runner promotion.StepRunner,
 	workDir string,
 	state promotion.State,
-) (promotion.StepResult, error) {
+) (result promotion.StepResult, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			result = promotion.StepResult{
+				Status: kargoapi.PromotionStepStatusErrored,
+			}
+			err = &promotion.TerminalError{
+				Err: fmt.Errorf("step %q panicked: %v", step.Alias, r),
+			}
+		}
+	}()
+
 	stepCtx, err := e.prepareStepContext(ctx, cache, promoCtx, step, workDir, state)
 	if err != nil {
 		return promotion.StepResult{
@@ -389,8 +400,7 @@ func (e *simpleEngine) executeStep(
 		}, &promotion.TerminalError{Err: err}
 	}
 
-	result, err := runner.Run(ctx, stepCtx)
-	if err != nil {
+	if result, err = runner.Run(ctx, stepCtx); err != nil {
 		err = fmt.Errorf("error running step %q: %w", step.Alias, err)
 	}
 	return result, err
