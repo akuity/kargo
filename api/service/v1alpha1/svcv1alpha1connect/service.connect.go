@@ -107,6 +107,9 @@ const (
 	KargoServiceDeleteFreightProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/DeleteFreight"
 	// KargoServiceGetFreightProcedure is the fully-qualified name of the KargoService's GetFreight RPC.
 	KargoServiceGetFreightProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetFreight"
+	// KargoServiceWatchFreightProcedure is the fully-qualified name of the KargoService's WatchFreight
+	// RPC.
+	KargoServiceWatchFreightProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/WatchFreight"
 	// KargoServicePromoteToStageProcedure is the fully-qualified name of the KargoService's
 	// PromoteToStage RPC.
 	KargoServicePromoteToStageProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/PromoteToStage"
@@ -251,6 +254,7 @@ var (
 	kargoServiceApproveFreightMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("ApproveFreight")
 	kargoServiceDeleteFreightMethodDescriptor                 = kargoServiceServiceDescriptor.Methods().ByName("DeleteFreight")
 	kargoServiceGetFreightMethodDescriptor                    = kargoServiceServiceDescriptor.Methods().ByName("GetFreight")
+	kargoServiceWatchFreightMethodDescriptor                  = kargoServiceServiceDescriptor.Methods().ByName("WatchFreight")
 	kargoServicePromoteToStageMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("PromoteToStage")
 	kargoServicePromoteDownstreamMethodDescriptor             = kargoServiceServiceDescriptor.Methods().ByName("PromoteDownstream")
 	kargoServiceQueryFreightMethodDescriptor                  = kargoServiceServiceDescriptor.Methods().ByName("QueryFreight")
@@ -324,6 +328,7 @@ type KargoServiceClient interface {
 	ApproveFreight(context.Context, *connect.Request[v1alpha1.ApproveFreightRequest]) (*connect.Response[v1alpha1.ApproveFreightResponse], error)
 	DeleteFreight(context.Context, *connect.Request[v1alpha1.DeleteFreightRequest]) (*connect.Response[v1alpha1.DeleteFreightResponse], error)
 	GetFreight(context.Context, *connect.Request[v1alpha1.GetFreightRequest]) (*connect.Response[v1alpha1.GetFreightResponse], error)
+	WatchFreight(context.Context, *connect.Request[v1alpha1.WatchFreightRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchFreightResponse], error)
 	PromoteToStage(context.Context, *connect.Request[v1alpha1.PromoteToStageRequest]) (*connect.Response[v1alpha1.PromoteToStageResponse], error)
 	PromoteDownstream(context.Context, *connect.Request[v1alpha1.PromoteDownstreamRequest]) (*connect.Response[v1alpha1.PromoteDownstreamResponse], error)
 	QueryFreight(context.Context, *connect.Request[v1alpha1.QueryFreightRequest]) (*connect.Response[v1alpha1.QueryFreightResponse], error)
@@ -536,6 +541,12 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+KargoServiceGetFreightProcedure,
 			connect.WithSchema(kargoServiceGetFreightMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		watchFreight: connect.NewClient[v1alpha1.WatchFreightRequest, v1alpha1.WatchFreightResponse](
+			httpClient,
+			baseURL+KargoServiceWatchFreightProcedure,
+			connect.WithSchema(kargoServiceWatchFreightMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		promoteToStage: connect.NewClient[v1alpha1.PromoteToStageRequest, v1alpha1.PromoteToStageResponse](
@@ -810,6 +821,7 @@ type kargoServiceClient struct {
 	approveFreight                *connect.Client[v1alpha1.ApproveFreightRequest, v1alpha1.ApproveFreightResponse]
 	deleteFreight                 *connect.Client[v1alpha1.DeleteFreightRequest, v1alpha1.DeleteFreightResponse]
 	getFreight                    *connect.Client[v1alpha1.GetFreightRequest, v1alpha1.GetFreightResponse]
+	watchFreight                  *connect.Client[v1alpha1.WatchFreightRequest, v1alpha1.WatchFreightResponse]
 	promoteToStage                *connect.Client[v1alpha1.PromoteToStageRequest, v1alpha1.PromoteToStageResponse]
 	promoteDownstream             *connect.Client[v1alpha1.PromoteDownstreamRequest, v1alpha1.PromoteDownstreamResponse]
 	queryFreight                  *connect.Client[v1alpha1.QueryFreightRequest, v1alpha1.QueryFreightResponse]
@@ -986,6 +998,11 @@ func (c *kargoServiceClient) DeleteFreight(ctx context.Context, req *connect.Req
 // GetFreight calls akuity.io.kargo.service.v1alpha1.KargoService.GetFreight.
 func (c *kargoServiceClient) GetFreight(ctx context.Context, req *connect.Request[v1alpha1.GetFreightRequest]) (*connect.Response[v1alpha1.GetFreightResponse], error) {
 	return c.getFreight.CallUnary(ctx, req)
+}
+
+// WatchFreight calls akuity.io.kargo.service.v1alpha1.KargoService.WatchFreight.
+func (c *kargoServiceClient) WatchFreight(ctx context.Context, req *connect.Request[v1alpha1.WatchFreightRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchFreightResponse], error) {
+	return c.watchFreight.CallServerStream(ctx, req)
 }
 
 // PromoteToStage calls akuity.io.kargo.service.v1alpha1.KargoService.PromoteToStage.
@@ -1226,6 +1243,7 @@ type KargoServiceHandler interface {
 	ApproveFreight(context.Context, *connect.Request[v1alpha1.ApproveFreightRequest]) (*connect.Response[v1alpha1.ApproveFreightResponse], error)
 	DeleteFreight(context.Context, *connect.Request[v1alpha1.DeleteFreightRequest]) (*connect.Response[v1alpha1.DeleteFreightResponse], error)
 	GetFreight(context.Context, *connect.Request[v1alpha1.GetFreightRequest]) (*connect.Response[v1alpha1.GetFreightResponse], error)
+	WatchFreight(context.Context, *connect.Request[v1alpha1.WatchFreightRequest], *connect.ServerStream[v1alpha1.WatchFreightResponse]) error
 	PromoteToStage(context.Context, *connect.Request[v1alpha1.PromoteToStageRequest]) (*connect.Response[v1alpha1.PromoteToStageResponse], error)
 	PromoteDownstream(context.Context, *connect.Request[v1alpha1.PromoteDownstreamRequest]) (*connect.Response[v1alpha1.PromoteDownstreamResponse], error)
 	QueryFreight(context.Context, *connect.Request[v1alpha1.QueryFreightRequest]) (*connect.Response[v1alpha1.QueryFreightResponse], error)
@@ -1434,6 +1452,12 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		KargoServiceGetFreightProcedure,
 		svc.GetFreight,
 		connect.WithSchema(kargoServiceGetFreightMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	kargoServiceWatchFreightHandler := connect.NewServerStreamHandler(
+		KargoServiceWatchFreightProcedure,
+		svc.WatchFreight,
+		connect.WithSchema(kargoServiceWatchFreightMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	kargoServicePromoteToStageHandler := connect.NewUnaryHandler(
@@ -1732,6 +1756,8 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceDeleteFreightHandler.ServeHTTP(w, r)
 		case KargoServiceGetFreightProcedure:
 			kargoServiceGetFreightHandler.ServeHTTP(w, r)
+		case KargoServiceWatchFreightProcedure:
+			kargoServiceWatchFreightHandler.ServeHTTP(w, r)
 		case KargoServicePromoteToStageProcedure:
 			kargoServicePromoteToStageHandler.ServeHTTP(w, r)
 		case KargoServicePromoteDownstreamProcedure:
@@ -1927,6 +1953,10 @@ func (UnimplementedKargoServiceHandler) DeleteFreight(context.Context, *connect.
 
 func (UnimplementedKargoServiceHandler) GetFreight(context.Context, *connect.Request[v1alpha1.GetFreightRequest]) (*connect.Response[v1alpha1.GetFreightResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.GetFreight is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) WatchFreight(context.Context, *connect.Request[v1alpha1.WatchFreightRequest], *connect.ServerStream[v1alpha1.WatchFreightResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.WatchFreight is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) PromoteToStage(context.Context, *connect.Request[v1alpha1.PromoteToStageRequest]) (*connect.Response[v1alpha1.PromoteToStageResponse], error) {
