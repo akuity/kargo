@@ -654,10 +654,11 @@ the previous section.
     ![Kargo Promote Option](img/kargo-promote-option.png)
 
     Next, click the <Hlt>Select</Hlt> button on the `Freight` in the timeline
-    that you'd like to promote (there's just the one right now), then confirm
-    this action by clicking <Hlt>Promote</Hlt>:
+    that you'd like to promote (there's just the one right now):
 
     ![Kargo Promote Confirm](img/kargo-promote-confirm.png)
+
+    Confirm this action by clicking <Hlt>Promote</Hlt>:
 
     ![Kargo Promote Confirm](img/kargo-promote-option-2.png)
 
