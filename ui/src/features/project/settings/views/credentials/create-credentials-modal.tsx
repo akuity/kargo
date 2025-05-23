@@ -23,34 +23,37 @@ import { SecretEditor } from './secret-editor';
 import { CredentialsType } from './types';
 import { constructDefaults, labelForKey, typeLabel } from './utils';
 
-const createFormSchema = (editing?: boolean) =>
-  z
-    .object({
+const createFormSchema = (genericCreds: boolean, editing?: boolean) => {
+  let schema = z.object({
+    name: zodValidators.requiredString.regex(
+      dnsRegex,
+      'Credentials name must be a valid DNS subdomain.'
+    ),
+    description: z.string().optional(),
+    type: zodValidators.requiredString,
+    repoUrl: zodValidators.requiredString,
+    repoUrlIsRegex: z.boolean().optional(),
+    username: zodValidators.requiredString,
+    password: editing ? z.string().optional() : zodValidators.requiredString
+  });
+
+  if (genericCreds) {
+    // @ts-expect-error err
+    schema = z.object({
       name: zodValidators.requiredString.regex(
         dnsRegex,
         'Credentials name must be a valid DNS subdomain.'
       ),
       description: z.string().optional(),
       type: zodValidators.requiredString,
-      repoUrl: zodValidators.requiredString,
-      repoUrlIsRegex: z.boolean().optional(),
-      username: zodValidators.requiredString,
-      password: editing ? z.string().optional() : zodValidators.requiredString
-    })
-    .or(
-      z.object({
-        name: zodValidators.requiredString.regex(
-          dnsRegex,
-          'Credentials name must be a valid DNS subdomain.'
-        ),
-        description: z.string().optional(),
-        type: zodValidators.requiredString,
-        data: z.array(z.array(z.string()))
-      })
-    )
-    .refine((data) => ['git', 'helm', 'image', 'generic'].includes(data.type), {
-      message: "Type must be one of 'git', 'helm', 'image' or 'generic'."
+      data: z.array(z.array(z.string()))
     });
+  }
+
+  return schema.refine((data) => ['git', 'helm', 'image', 'generic'].includes(data.type), {
+    message: "Type must be one of 'git', 'helm', 'image' or 'generic'."
+  });
+};
 
 const placeholders = {
   name: 'My Credentials',
@@ -78,7 +81,7 @@ type Props = ModalComponentProps & {
 export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...props }: Props) => {
   const { control, handleSubmit, watch } = useForm({
     defaultValues: { ...constructDefaults(init, props.type === 'generic' ? props.type : 'git') },
-    resolver: zodResolver(createFormSchema(editing))
+    resolver: zodResolver(createFormSchema(props.type === 'generic', editing))
   });
 
   const createCredentialsMutation = useMutation(createCredentials, {
@@ -242,8 +245,10 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
         )
       )}
       {credentialType === 'generic' && (
+        // @ts-expect-error expected type is there
         <FieldContainer control={control} name='data' label='Data'>
           {({ field }) => (
+            // @ts-expect-error expectedtype is there
             <SecretEditor secret={field.value as [string, string][]} onChange={field.onChange} />
           )}
         </FieldContainer>
