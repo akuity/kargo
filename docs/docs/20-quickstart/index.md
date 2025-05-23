@@ -651,16 +651,16 @@ the previous section.
 1. To promote `Freight` to the `test` `Stage`, click the truck icon in the
    header of that node and then select <Hlt>Promote</Hlt>:
 
-    ![Kargo Promote Option](img/kargo-promote-option.png)
+    ![Kargo Promotion Menu](img/kargo-promote-option.png)
 
 1. From the timeline at the top of the screen, select the `Freight` you'd like
    to promote into the `test` `Stage` by clicking <Hlt>Select</Hlt>:
 
-   ![Kargo Promote Confirm](img/kargo-promote-confirm.png)
+   ![Kargo Freight Selection](img/kargo-promote-confirm.png)
 
 1. Confirm the action by clicking <Hlt>Promote</Hlt>:
 
-   ![Kargo Promote Confirm](img/kargo-promote-option-2.png)
+   ![Kargo Promotion Confirmation](img/kargo-promote-option-2.png)
 
    A summary of the `Promotion` will pop up and will be updated in real-time as
    the steps of the promotion process complete. Once they have all completed,
@@ -698,7 +698,7 @@ Now is a good time to explore the UI some more.
 * To see more information about the one piece of `Freight`, click anywhere on
   its node in the timeline to open a detailed view:
 
-  ![Kargo Freight Verified](img/kargo-freight-verified.png)
+  ![Kargo Freight View](img/kargo-freight-verified.png)
 
   Here, you can see that (by virtue of the `test` `Stage` having achieved a
   healthy state) the `Freight` is now _verified_ in the `test` `Stage`, which
