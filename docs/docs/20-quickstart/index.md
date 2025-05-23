@@ -626,13 +626,6 @@ the previous section.
 1. After a few seconds, a piece of `Freight` should appear in the <Hlt>Freight
    Timeline</Hlt>, if it isn't there already.
 
-    :::note
-    Note that the timeline _may_ not refresh automatically and you may need to
-    refresh the page to see new `Freight`.
-
-    This inconvenience will be addressed in a forthcoming update.
-    :::
-
     :::info
     `Freight` is a set of references to one or more versioned artifacts, which
     may include:
