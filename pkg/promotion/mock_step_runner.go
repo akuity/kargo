@@ -5,8 +5,8 @@ import "context"
 // MockStepRunner is a mock implementation of the StepRunner interface, which
 // can be used for testing.
 type MockStepRunner struct {
-	// Nm is the name of the StepRunner.
-	Nm string
+	// StepName is the name of the StepRunner.
+	StepName string
 	// RunFunc is the function that the StepRunner should call when Run is called.
 	// If set, this function will be called instead of returning RunResult and
 	// RunErr.
@@ -20,7 +20,7 @@ type MockStepRunner struct {
 
 // Name implements the StepRunner interface.
 func (m *MockStepRunner) Name() string {
-	return m.Nm
+	return m.StepName
 }
 
 // Run implements the StepRunner interface.
