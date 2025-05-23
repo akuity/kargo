@@ -662,9 +662,9 @@ the previous section.
 
     ![Kargo Promote Confirm](img/kargo-promote-option-2.png)
 
-    Once the promotion process completes successfully, the <Hlt>Promotion</Hlt> view will display
-    the status as <Hlt>Succeeded</Hlt>, along with details about the promotion process, including
-    each step that was executed:
+    A summary of the promotion will pop up and will be updated in real-time as
+    the steps of the promotion process complete. Once they have all completed,
+    thew promotion's status will change to <Hlt>Succeeded</Hlt>:
 
     ![Kargo Promotion View](img/kargo-promotion-view.png)
 
