@@ -8,7 +8,7 @@ import { queryCache } from '@ui/features/utils/cache';
 import { queryFreight } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { KargoService } from '@ui/gen/api/service/v1alpha1/service_pb';
 
-export const useWatchFreights = (project: string) => {
+export const useWatchFreight = (project: string) => {
   const client = useQueryClient();
 
   useEffect(() => {
@@ -31,23 +31,23 @@ export const useWatchFreights = (project: string) => {
           continue;
         }
 
-        let currentFreights = queryCache.freight.get(project);
+        let currentFreight = queryCache.freight.get(project);
 
         if (e.type !== 'DELETED') {
-          const exist = currentFreights?.groups?.['']?.freight?.find(
+          const exist = currentFreight?.groups?.['']?.freight?.find(
             (f) => f?.metadata?.name === freight?.metadata?.name
           );
 
           if (!exist) {
-            currentFreights?.groups?.['']?.freight?.push(freight);
+            currentFreight?.groups?.['']?.freight?.push(freight);
           } else {
-            currentFreights = {
-              ...currentFreights,
+            currentFreight = {
+              ...currentFreight,
               groups: {
-                ...currentFreights?.groups,
+                ...currentFreight?.groups,
                 '': {
-                  ...currentFreights?.groups?.[''],
-                  freight: currentFreights?.groups?.['']?.freight?.map((f) => {
+                  ...currentFreight?.groups?.[''],
+                  freight: currentFreight?.groups?.['']?.freight?.map((f) => {
                     if (f?.metadata?.name === freight?.metadata?.name) {
                       return freight;
                     }
@@ -68,7 +68,7 @@ export const useWatchFreights = (project: string) => {
             transport: transportWithAuth
           });
 
-          client.setQueryData(queryFreightKey, currentFreights);
+          client.setQueryData(queryFreightKey, currentFreight);
         }
       }
     };
