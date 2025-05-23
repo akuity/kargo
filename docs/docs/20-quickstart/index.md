@@ -622,8 +622,8 @@ the previous section.
 
         ![Kargo Freight Timeline](img/kargo-freight-timeline.png)
 
-1. After a few seconds, a piece of `Freight` should appear in the <Hlt>Freight
-   Timeline</Hlt>, if it isn't there already.
+1. After a few seconds, a node representing a piece of `Freight` should appear
+   in the freight timeline, if it isn't there already.
 
     :::note
     Note that the timeline _may_ not refresh automatically and you may need to
