@@ -17,7 +17,7 @@ export const useWatchFreights = (project: string) => {
     const watchFreights = async () => {
       const promiseClient = createClient(KargoService, transportWithAuth);
 
-      const stream = promiseClient.watchFreights(
+      const stream = promiseClient.watchFreight(
         {
           project
         },
