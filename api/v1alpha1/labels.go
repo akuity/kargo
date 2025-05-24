@@ -15,6 +15,7 @@ const (
 	ProjectLabelKey           = "kargo.akuity.io/project"
 	ShardLabelKey             = "kargo.akuity.io/shard"
 	StageLabelKey             = "kargo.akuity.io/stage"
+	KeepNamespaceLabelKey     = "kargo.akuity.io/keep-namespace"
 
 	LabelTrueValue = "true"
 
