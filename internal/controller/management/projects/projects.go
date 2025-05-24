@@ -93,6 +93,12 @@ type reconciler struct {
 		...client.CreateOption,
 	) error
 
+	deleteNamespaceFn func(
+		context.Context,
+		client.Object,
+		...client.DeleteOption,
+	) error
+
 	patchOwnerReferencesFn func(
 		context.Context,
 		client.Client,
@@ -104,6 +110,12 @@ type reconciler struct {
 		client.Client,
 		client.Object,
 	) (bool, error)
+
+	removeFinalizerFn func(
+		context.Context,
+		client.Client,
+		client.Object,
+	) error
 
 	ensureSystemPermissionsFn func(context.Context, *kargoapi.Project) error
 
@@ -194,8 +206,10 @@ func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
 	r.patchProjectStatusFn = r.patchProjectStatus
 	r.getNamespaceFn = r.client.Get
 	r.createNamespaceFn = r.client.Create
+	r.deleteNamespaceFn = r.client.Delete
 	r.patchOwnerReferencesFn = api.PatchOwnerReferences
 	r.ensureFinalizerFn = api.EnsureFinalizer
+	r.removeFinalizerFn = api.RemoveFinalizer
 	r.ensureSystemPermissionsFn = r.ensureSystemPermissions
 	r.ensureControllerPermissionsFn = r.ensureControllerPermissions
 	r.ensureDefaultUserRolesFn = r.ensureDefaultUserRoles
@@ -227,8 +241,58 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
+	// ensure the finalizer is present on the Project
+	updated, err := r.ensureFinalizerFn(ctx, r.client, project)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("error ensuring finalizer on Project %q: %w", project.Name, err)
+	}
+	if updated {
+		logger.Debug("added finalizer to Project")
+	}
+
 	if project.DeletionTimestamp != nil {
-		logger.Debug("Project is being deleted; nothing to do")
+		// get namespace for the Project
+		ns := &corev1.Namespace{}
+		err = r.getNamespaceFn(ctx, types.NamespacedName{Name: project.Name}, ns)
+		if err != nil && !kubeerr.IsNotFound(err) {
+			return ctrl.Result{}, fmt.Errorf("error getting namespace %q: %w", project.Name, err)
+		}
+
+		// delete the namespace only if the project and namespace doesn't consist of
+		// the keep-namespace annotation
+		if project.Annotations[kargoapi.AnnotationKeyKeepNamespace] != kargoapi.AnnotationTrueValue &&
+			ns.Annotations[kargoapi.AnnotationKeyKeepNamespace] != kargoapi.AnnotationTrueValue {
+			// delete namespace
+			if err = r.deleteNamespaceFn(ctx, ns); err != nil {
+				return ctrl.Result{}, fmt.Errorf("failed to delete namespace %q: %w", ns.Name, err)
+			}
+			logger.Debug("deleted namespace: %q", ns.Name)
+		} else {
+			logger.Debug("skipping namespace deletion due to keep-namespace annotation")
+		}
+
+		// remove only Project OwnerReference from Namespace
+		var newOwnerRefs []metav1.OwnerReference
+		for _, ref := range ns.OwnerReferences {
+			if ref.UID != project.UID {
+				newOwnerRefs = append(newOwnerRefs, ref)
+			}
+		}
+		ns.OwnerReferences = newOwnerRefs
+		if err = r.patchOwnerReferencesFn(ctx, r.client, ns); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to patch namespace %q: %w", ns.Name, err)
+		}
+
+		// remove finalizer from Namespace
+		if err = r.removeFinalizerFn(ctx, r.client, ns); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to remove finalizer from namespace %q: %w", ns.Name, err)
+		}
+
+		// remove finalizer from Project
+		if err = r.removeFinalizerFn(ctx, r.client, project); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to remove finalizer from project %q: %w", project.Name, err)
+		}
+
 		return ctrl.Result{}, nil
 	}
 
@@ -476,26 +540,20 @@ func (r *reconciler) ensureNamespace(ctx context.Context, project *kargoapi.Proj
 			logger.Debug("added finalizer to namespace")
 		}
 
-		// Before setting project as the owner for the existing namespace check for `keep-namespace`
-		// label in either project/namespace if it's true we don't want to make project as the owner
-		if project.Annotations[kargoapi.AnnotationKeyKeepNamespace] != kargoapi.AnnotationTrueValue &&
-			ns.Annotations[kargoapi.AnnotationKeyKeepNamespace] != kargoapi.AnnotationTrueValue {
-
-			// Note: We allow multiple owners of a namespace due to the not entirely
-			// uncommon scenario where an organization has its own controller that
-			// creates and initializes namespaces to ensure compliance with
-			// internal policies. Such a controller might already own the namespace.
-			ns.OwnerReferences = append(ns.OwnerReferences, *ownerRef)
-			if err = r.patchOwnerReferencesFn(ctx, r.client, ns); err != nil {
-				return fmt.Errorf(
-					"error patching namespace %q with project %q as owner: %w",
-					project.Name,
-					project.Name,
-					err,
-				)
-			}
-			logger.Debug("patched namespace with Project as owner")
+		// Note: We allow multiple owners of a namespace due to the not entirely
+		// uncommon scenario where an organization has its own controller that
+		// creates and initializes namespaces to ensure compliance with
+		// internal policies. Such a controller might already own the namespace.
+		ns.OwnerReferences = append(ns.OwnerReferences, *ownerRef)
+		if err = r.patchOwnerReferencesFn(ctx, r.client, ns); err != nil {
+			return fmt.Errorf(
+				"error patching namespace %q with project %q as owner: %w",
+				project.Name,
+				project.Name,
+				err,
+			)
 		}
+		logger.Debug("patched namespace with Project as owner")
 
 		return nil
 	}

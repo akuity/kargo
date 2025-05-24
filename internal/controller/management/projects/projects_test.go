@@ -36,8 +36,10 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, r.patchProjectStatusFn)
 	require.NotNil(t, r.getNamespaceFn)
 	require.NotNil(t, r.createNamespaceFn)
+	require.NotNil(t, r.deleteNamespaceFn)
 	require.NotNil(t, r.patchOwnerReferencesFn)
 	require.NotNil(t, r.ensureFinalizerFn)
+	require.NotNil(t, r.removeFinalizerFn)
 	require.NotNil(t, r.ensureSystemPermissionsFn)
 	require.NotNil(t, r.ensureControllerPermissionsFn)
 	require.NotNil(t, r.ensureDefaultUserRolesFn)
@@ -100,8 +102,51 @@ func TestReconciler_Reconcile(t *testing.T) {
 					return &kargoapi.Project{
 						ObjectMeta: metav1.ObjectMeta{
 							DeletionTimestamp: &metav1.Time{},
+							Finalizers:        []string{kargoapi.FinalizerName},
 						},
 					}, nil
+				},
+				ensureFinalizerFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) (bool, error) {
+					return false, nil
+				},
+				getNamespaceFn: func(
+					_ context.Context,
+					_ types.NamespacedName,
+					obj client.Object,
+					_ ...client.GetOption,
+				) error {
+					ns, ok := obj.(*corev1.Namespace)
+					require.True(t, ok)
+					ns.Labels = map[string]string{
+						kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
+					}
+					ns.Finalizers = []string{kargoapi.FinalizerName}
+					return nil
+				},
+				deleteNamespaceFn: func(
+					_ context.Context,
+					_ client.Object,
+					_ ...client.DeleteOption,
+				) error {
+					return nil
+				},
+				patchOwnerReferencesFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) error {
+					return nil
+				},
+				removeFinalizerFn: func(
+					_ context.Context,
+					_ client.Client,
+					obj client.Object,
+				) error {
+					return nil
 				},
 			},
 			assertions: func(t *testing.T, result ctrl.Result, err error) {
@@ -131,6 +176,13 @@ func TestReconciler_Reconcile(t *testing.T) {
 				) (kargoapi.ProjectStatus, error) {
 					return kargoapi.ProjectStatus{}, errors.New("something went wrong")
 				},
+				ensureFinalizerFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) (bool, error) {
+					return false, nil
+				},
 				patchProjectStatusFn: func(
 					_ context.Context,
 					_ *kargoapi.Project,
@@ -152,6 +204,13 @@ func TestReconciler_Reconcile(t *testing.T) {
 					string,
 				) (*kargoapi.Project, error) {
 					return &kargoapi.Project{}, nil
+				},
+				ensureFinalizerFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) (bool, error) {
+					return false, nil
 				},
 				reconcileFn: func(
 					context.Context,
