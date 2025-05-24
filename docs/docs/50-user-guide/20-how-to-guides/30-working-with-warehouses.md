@@ -19,7 +19,7 @@ _as a unit_.
 
 :::info
 For a broader, conceptual understanding of warehouses and their relation
-to other Kargo concepts, refer to 
+to other Kargo concepts, refer to
 [Core Concepts](./../10-core-concepts/index.md).
 :::
 
@@ -215,11 +215,19 @@ Git repository subscriptions can be defined using the following fields:
   the desired commit. (See next section.)
 
 - `allowTags`: An optional regular expression that limits the eligibility for
-  selection to commits with tags that match the pattern. (This is not applicable
-  to selection strategies that do not involve tags.)
+  selection to tags that match the pattern. (This is not applicable to selection
+  strategies that do not involve tags.)
 
 - `ignoreTags`: An optional list of tags that should explicitly be ignored.
   (This is not applicable to selection strategies that do not involve tags.)
+
+- `tagExpressionFilter`: An optional expression that filters tags based on their
+  metadata. Only applicable to tag-based selection strategies (`SemVer`, `Lexical`,
+  and `NewestTag`). See [Expression Filtering](#expression-filtering) for details.
+
+- `commitExpressionFilter`: An optional expression that filters commits based on
+  their metadata. Only applicable to the `NewestFromBranch` selection strategy.
+  See [Expression Filtering](#expression-filtering) for details.
 
 - `includePaths`: See
   [Git Subscription Path Filtering](#git-subscription-path-filtering).
@@ -343,6 +351,114 @@ strategies are:
           commitSelectionStrategy: NewestTag
           allowTags: ^nightly
     ```
+
+#### Expression Filtering
+
+Git repository subscriptions support advanced filtering using expressions. These
+expressions allow you to filter commits and tags based on their metadata using
+[expr-lang](https://expr-lang.org) syntax.
+
+:::info
+The expressions must evaluate to a boolean value (`true` or `false`). If an
+expression evaluates to a non-boolean value, an attempt will be made to
+convert it to a boolean (e.g., `0` to `false`, `1` to `true`).
+:::
+
+:::warning
+Invalid expressions will cause the subscription to fail. Always test your
+expressions to ensure they evaluate correctly with your repository's data.
+:::
+
+:::tip
+You can test your expressions using the
+[expr-lang playground](https://expr-lang.org/playground).
+
+The playground allows you to evaluate expressions against sample data and
+see the results in real-time. This is especially useful for debugging and
+validating your expressions before applying them to your `Warehouse` resources.
+:::
+
+##### Tag Expression Filtering
+
+For tag-based selection strategies (`SemVer`, `Lexical`, and `NewestTag`), you
+can use the `tagExpressionFilter` field to filter tags based on their metadata.
+
+The following fields are available in tag expressions:
+
+- `tag`: The name of the tag
+- `commitID`: The commit ID that the tag references
+- `creatorDate`: The tag creation date
+- `author`: The author of the commit that the tag references
+- `committer`: The committer of the commit that the tag references
+- `subject`: The first line of the commit message associated with the tag
+
+Example filtering tags by author name:
+
+```yaml
+spec:
+  subscriptions:
+  - git:
+      repoURL: https://github.com/example/repo.git
+      commitSelectionStrategy: SemVer
+      tagExpressionFilter: author == 'John Doe'
+```
+
+Example filtering tags created after a specific year:
+
+```yaml
+spec:
+  subscriptions:
+  - git:
+      repoURL: https://github.com/example/repo.git
+      commitSelectionStrategy: NewestTag
+      tagExpressionFilter: creatorDate.Year() >= 2024
+```
+
+##### Commit Expression Filtering
+
+For the `NewestFromBranch` selection strategy, you can use the
+`commitExpressionFilter` field to filter commits based on their metadata.
+
+The following fields are available in commit expressions:
+
+- `id`: The ID (SHA) of the commit
+- `commitDate`: The date of the commit
+- `author`: The author of the commit
+- `committer`: The committer of the commit
+- `subject`: The first line of the commit message
+
+Example filtering out commits by author email:
+
+```yaml
+spec:
+  subscriptions:
+  - git:
+      repoURL: https://github.com/example/repo.git
+      commitSelectionStrategy: NewestFromBranch
+      commitExpressionFilter: !(author contains '<bot@example.com>')
+```
+
+Example filtering commits with specific message patterns:
+
+```yaml
+spec:
+  subscriptions:
+  - git:
+      repoURL: https://github.com/example/repo.git
+      commitSelectionStrategy: NewestFromBranch
+      commitExpressionFilter: subject contains 'feat:' || subject contains 'fix:'
+```
+
+Example combining multiple criteria:
+
+```yaml
+spec:
+  subscriptions:
+  - git:
+      repoURL: https://github.com/example/repo.git
+      commitSelectionStrategy: NewestFromBranch
+      commitExpressionFilter: !(author == 'Example Bot') && commitDate.After(date('2025-01-01'))
+```
 
 #### Git Subscription Path Filtering
 
@@ -480,7 +596,7 @@ Helm chart repository subscriptions can be defined using the following fields:
   _single_ chart version; rather it selects the n best fits for the specified
   constraints. The _best_ fit is the zero element in the list of selected
   charts. `discoveryLimit` specifies how many chart versions to discover.
-  
+
   The default is `20`.
 
   Example:
