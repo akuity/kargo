@@ -42,4 +42,10 @@ const (
 	// AnnotationKeyArgoCDContext is an annotation key that is set on a Stage
 	// to reference the last ArgoCD Applications that were part of a Promotion.
 	AnnotationKeyArgoCDContext = "kargo.akuity.io/argocd-context"
+
+	// AnnotationKeyKeepNamespace is an annotation key that can be set on Project or namespace
+	// to disable deletion of namespaces.
+	AnnotationKeyKeepNamespace = "kargo.akuity.io/keep-namespace"
+
+	AnnotationTrueValue = "true"
 )
