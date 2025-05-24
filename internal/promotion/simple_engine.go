@@ -431,6 +431,7 @@ func (e *simpleEngine) prepareStepContext(
 		Project:         promoCtx.Project,
 		Stage:           promoCtx.Stage,
 		Promotion:       promoCtx.Promotion,
+		PromotionActor:  promoCtx.Actor,
 		FreightRequests: promoCtx.FreightRequests,
 		Freight:         promoCtx.Freight,
 	}, nil
