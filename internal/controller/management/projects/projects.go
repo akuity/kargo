@@ -258,19 +258,6 @@ func (r *reconciler) Reconcile(
 			return ctrl.Result{}, fmt.Errorf("error getting namespace %q: %w", project.Name, err)
 		}
 
-		// delete the namespace only if the project and namespace doesn't consist of
-		// the keep-namespace annotation
-		if project.Annotations[kargoapi.AnnotationKeyKeepNamespace] != kargoapi.AnnotationTrueValue &&
-			ns.Annotations[kargoapi.AnnotationKeyKeepNamespace] != kargoapi.AnnotationTrueValue {
-			// delete namespace
-			if err = r.deleteNamespaceFn(ctx, ns); err != nil {
-				return ctrl.Result{}, fmt.Errorf("failed to delete namespace %q: %w", ns.Name, err)
-			}
-			logger.Debug("deleted namespace: %q", ns.Name)
-		} else {
-			logger.Debug("skipping namespace deletion due to keep-namespace annotation")
-		}
-
 		// remove only Project OwnerReference from Namespace
 		var newOwnerRefs []metav1.OwnerReference
 		for _, ref := range ns.OwnerReferences {
@@ -286,6 +273,19 @@ func (r *reconciler) Reconcile(
 		// remove finalizer from Namespace
 		if err = r.removeFinalizerFn(ctx, r.client, ns); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to remove finalizer from namespace %q: %w", ns.Name, err)
+		}
+
+		// delete the namespace only if the project and namespace doesn't consist of
+		// the keep-namespace annotation
+		if project.Annotations[kargoapi.AnnotationKeyKeepNamespace] != kargoapi.AnnotationTrueValue &&
+			ns.Annotations[kargoapi.AnnotationKeyKeepNamespace] != kargoapi.AnnotationTrueValue {
+			// delete namespace
+			if err = r.deleteNamespaceFn(ctx, ns); err != nil {
+				return ctrl.Result{}, fmt.Errorf("failed to delete namespace %q: %w", ns.Name, err)
+			}
+			logger.Debug("deleted namespace: %q", ns.Name)
+		} else {
+			logger.Debug("skipping namespace deletion due to keep-namespace annotation")
 		}
 
 		// remove finalizer from Project
