@@ -63,6 +63,8 @@ func (o *externalWebhooksServerOptions) run(ctx context.Context) error {
 		"commit", version.GitCommit,
 		"GOMAXPROCS", runtime.GOMAXPROCS(0),
 		"GOMEMLIMIT", os.GetEnv("GOMEMLIMIT", ""),
+		"HOST", o.Host,
+		"PORT", o.Port,
 	)
 
 	serverCfg := external.ServerConfigFromEnv()
@@ -91,8 +93,41 @@ func (o *externalWebhooksServerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error registering warehouse by repo url indexer: %w", err)
 	}
 
+	err = cluster.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.ProjectConfig{},
+		indexer.ProjectConfigsByWebhookReceiverPathsField,
+		indexer.ProjectConfigsByWebhookReceiverPaths,
+	)
+	if err != nil {
+		return fmt.Errorf("error registering project configs by webhook receiver path indexer: %w", err)
+	}
+
+	go func() {
+		err = cluster.Start(ctx)
+	}()
+	if !cluster.GetCache().WaitForCacheSync(ctx) {
+		return fmt.Errorf("error waiting for cache to sync: %w", err)
+	}
+	if err != nil {
+		return fmt.Errorf("error starting cluster: %w", err)
+	}
+
 	srv := external.NewServer(serverCfg, cluster.GetClient())
-	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.Host, o.Port))
+
+	// The host MAY contain a port.
+	host, port, _ := net.SplitHostPort(o.Host)
+	if port == "" {
+		o.Logger.Info("No port specified in host, using fallback port", "port", o.Port)
+		port = o.Port
+	}
+
+	addr := fmt.Sprintf("%s:%s", host, port)
+	o.Logger.Info("constructed address for listener",
+		"address", addr,
+	)
+
+	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		return fmt.Errorf("error creating listener: %w", err)
 	}

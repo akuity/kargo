@@ -881,3 +881,39 @@ func TestWarehousesByRepoURL(t *testing.T) {
 		})
 	}
 }
+
+func TestProjectConfigsByReceiverPath(t *testing.T) {
+	for _, test := range []struct {
+		name          string
+		projectConfig client.Object
+		expected      []string
+	}{
+		{
+			name: "simple",
+			projectConfig: &kargoapi.ProjectConfig{
+				Status: kargoapi.ProjectConfigStatus{
+					WebhookReceivers: []kargoapi.WebhookReceiver{
+						{Path: "/webhookpath"},
+						{Path: "/myotherwebhookpath"},
+					},
+				},
+			},
+			expected: []string{
+				"/webhookpath",
+				"/myotherwebhookpath",
+			},
+		},
+		{
+			name:          "not a project config",
+			projectConfig: &kargoapi.Freight{},
+			expected:      nil,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t,
+				test.expected,
+				ProjectConfigsByWebhookReceiverPaths(test.projectConfig),
+			)
+		})
+	}
+}

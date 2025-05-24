@@ -46,6 +46,7 @@ rules:
   - kargo.akuity.io
   resources:
   - projects/status
+  - projectconfigs/status
   verbs:
   - patch
 - apiGroups:
@@ -59,6 +60,7 @@ rules:
   resources:
   - stages
   - warehouses
+  - projectconfigs
   verbs:
   - get
   - list

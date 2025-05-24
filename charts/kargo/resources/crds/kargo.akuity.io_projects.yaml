@@ -154,6 +154,55 @@ spec:
                       set
                     rule: 'has(self.stage) ? !has(self.stageSelector) : has(self.stageSelector)'
                 type: array
+              webhookReceivers:
+                description: |-
+                  WebhookReceivers describes Project-specific webhook receivers used for
+                  processing events from various external platforms
+                items:
+                  description: |-
+                    WebhookReceiverConfig describes the configuration for a single webhook
+                    receiver.
+                  properties:
+                    github:
+                      description: |
+                        GitHub contains the configuration for a webhook receiver that is compatible with
+                        GitHub payloads.
+                      properties:
+                        secretRef:
+                          description: |-
+                            SecretRef contains a reference to a Secret in the same namespace as the ProjectConfig.
+
+                            The Secret is expected to contain a `token` key with the secret token configured for
+                            in GitHub for the webhook. For more information about this token, please refer to the
+                            GitHub documentation: https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
+
+                            The value of the token key goes in the "Secret" field when registering a GitHub App or webhook in the GitHub UI.
+                          properties:
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      required:
+                      - secretRef
+                      type: object
+                    name:
+                      description: Name is the name of the webhook receiver.
+                      type: string
+                  required:
+                  - github
+                  type: object
+                maxItems: 5
+                type: array
+                x-kubernetes-validations:
+                - message: WebhookReceiverConfig must have a unique name
+                  rule: self.all(i, size(self.filter(j, i.name == j.name)) == 1)
             type: object
           status:
             description: Status describes the Project's current status.
