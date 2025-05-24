@@ -94,6 +94,12 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
 
     const code_challenge = await calculatePKCECodeChallenge(code_verifier);
     const url = new URL(as.authorization_endpoint);
+    // Copy in additional parameters first, so they can't be used to override
+    // standard OIDC parameters
+    for (const prop in oidcConfig.additionalParameters) {
+      url.searchParams.set(prop, oidcConfig.additionalParameters[prop]);
+    }
+
     url.searchParams.set('client_id', client.client_id);
     url.searchParams.set('code_challenge', code_challenge);
     url.searchParams.set('code_challenge_method', 'S256');

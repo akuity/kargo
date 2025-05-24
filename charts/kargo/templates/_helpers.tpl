@@ -128,3 +128,13 @@ Prioritizes limits over requests, with a fallback to limits if neither is set.
 {{- $template := index . 2 }}
 {{- include $template (dict "Chart" (dict "Name" $subchart) "Values" (index $dot.Values $subchart) "Release" $dot.Release "Capabilities" $dot.Capabilities) }}
 {{- end }}
+
+{{- define "kargo.api.oidc.additionalParameters" -}}
+    {{- if .Values.api.oidc.additionalParameters -}}
+        {{- $list := list -}}
+        {{- range $key, $value := .Values.api.oidc.additionalParameters -}}
+            {{- $list = printf "%s:%s" $key $value | append $list  -}}
+        {{- end -}}
+        {{- join "," $list -}}
+    {{- end -}}
+{{- end -}}
