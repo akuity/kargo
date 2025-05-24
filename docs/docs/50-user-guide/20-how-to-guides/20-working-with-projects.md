@@ -249,7 +249,7 @@ By default, when a Project is deleted, Kargo will attempt to delete the correspo
 However, in cases where an existing Namespace is adopted by a Project, you may wish to prevent Kargo
 from deleting the Namespace during Project cleanup.
 
-To achieve this, you can apply the following label to the Namespace or the corresponding Project
+To achieve this, you can apply the following annotation to the Namespace or the corresponding Project
 resource with `kargo.akuity.io/keep-namespace: "true"`
 
 ## Interacting with Projects
