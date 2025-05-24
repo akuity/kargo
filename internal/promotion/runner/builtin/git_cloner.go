@@ -107,9 +107,9 @@ func (g *gitCloner) run(
 	var repoUser git.User
 	if cfg.Author != nil {
 		repoUser = git.User{
-			Name:  cfg.Author.Name,
-			Email: cfg.Author.Email,
-			SigningKey:     cfg.Author.SigningKey, // Optional, may be empty
+			Name:       cfg.Author.Name,
+			Email:      cfg.Author.Email,
+			SigningKey: cfg.Author.SigningKey, // Optional, may be empty
 		}
 	} else {
 		repoUser = g.gitUser // Default to the system-level gitUser
