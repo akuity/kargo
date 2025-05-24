@@ -110,6 +110,7 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
     return filtered;
   }, [
     props.freights,
+    props.freights.length,
     freightTimelineControllerContext.preferredFilter.sources,
     freightTimelineControllerContext.preferredFilter.timerange,
     freightTimelineControllerContext.preferredFilter.warehouses,

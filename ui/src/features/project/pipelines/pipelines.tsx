@@ -51,6 +51,7 @@ import { useStageAutoPromotionMap } from './use-stage-auto-promotion-map';
 import { useStageByName } from './use-stage-by-name';
 import { useSubscribersByStage } from './use-subscribers-by-stage';
 import { useSyncFreight } from './use-sync-freight';
+import { useWatchFreight } from './use-watch-freight';
 
 import '@xyflow/react/dist/style.css';
 
@@ -153,6 +154,8 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
   });
 
   const freights = getFreightQuery.data?.groups?.['']?.freight || [];
+
+  useWatchFreight(projectName || '');
 
   if (loading) {
     return <LoadingState />;
