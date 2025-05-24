@@ -52,4 +52,14 @@ const (
 	// The value of the annotation is a JSON object that maps migration types to
 	// booleans indicating whether the migration has been performed.
 	AnnotationKeyMigrated = "kargo.akuity.io/migrated"
+
+	// AnnotationKeyKeepNamespace is an annotation key that can be set on Project
+	// or Namespace to disable the automatic deletion of the namespace when
+	// the Project is deleted. This is useful for cases where the namespace
+	// contains resources that should not be deleted.
+	AnnotationKeyKeepNamespace = "kargo.akuity.io/keep-namespace"
+
+	// AnnotationTrueValue is the value used to indicate that an annotation
+	// is set to true.
+	AnnotationTrueValue = "true"
 )

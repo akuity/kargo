@@ -478,8 +478,8 @@ func (r *reconciler) ensureNamespace(ctx context.Context, project *kargoapi.Proj
 
 		// Before setting project as the owner for the existing namespace check for `keep-namespace`
 		// label in either project/namespace if it's true we don't want to make project as the owner
-		if project.Labels[kargoapi.LabelKeyKeepNamespace] != kargoapi.LabelTrueValue &&
-			ns.Labels[kargoapi.LabelKeyKeepNamespace] != kargoapi.LabelTrueValue {
+		if project.Annotations[kargoapi.AnnotationKeyKeepNamespace] != kargoapi.AnnotationTrueValue &&
+			ns.Annotations[kargoapi.AnnotationKeyKeepNamespace] != kargoapi.AnnotationTrueValue {
 
 			// Note: We allow multiple owners of a namespace due to the not entirely
 			// uncommon scenario where an organization has its own controller that
