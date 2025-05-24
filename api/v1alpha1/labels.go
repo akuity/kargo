@@ -43,7 +43,11 @@ const (
 	// that was created before the creation of the Project.
 	LabelKeyProject = "kargo.akuity.io/project"
 	// LabelKeyShard is used to identify the shard of a resource.
-	LabelKeyShard = "kargo.akuity.io/shard"
+	LabelKeyShard         = "kargo.akuity.io/shard"
+	// LabelKeyKeepNamespace is used to indicate that a namespace should not be
+	// deleted when the Project is deleted. This is useful for retaining a
+	// namespace that contains resources that are not managed by Kargo.
+	LabelKeyKeepNamespace = "kargo.akuity.io/keep-namespace"
 
 	// LabelValueTrue is used to identify a label that has a value of "true".
 	LabelValueTrue = "true"
