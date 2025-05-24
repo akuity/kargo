@@ -296,6 +296,10 @@ func ssoLogin(
 	}
 
 	scopes := res.Msg.OidcConfig.Scopes
+	var additionalParams []oauth2.AuthCodeOption
+	for k, v := range res.Msg.OidcConfig.AdditionalParameters {
+		additionalParams = append(additionalParams, oauth2.SetAuthURLParam(k, v))
+	}
 
 	httpClient := cleanhttp.DefaultClient()
 	if insecureTLS {
@@ -367,8 +371,10 @@ func ssoLogin(
 	}
 	u := cfg.AuthCodeURL(
 		state,
-		oauth2.SetAuthURLParam("code_challenge", codeChallenge),
-		oauth2.SetAuthURLParam("code_challenge_method", "S256"),
+		append([]oauth2.AuthCodeOption{oauth2.SetAuthURLParam("code_challenge", codeChallenge),
+			oauth2.SetAuthURLParam("code_challenge_method", "S256")},
+			additionalParams...,
+		)...,
 	)
 	if err = browser.Open(u); err != nil {
 		return "", "", fmt.Errorf("error opening system default browser: %w", err)
