@@ -243,14 +243,14 @@ spec:
   # ...
 ```
 
-### Preventing Namespace Deletion
+## Preventing Namespace Deletion
 
 By default, when a Project is deleted, Kargo will attempt to delete the corresponding Namespace.
-However, in cases where an existing Namespace is adopted by a Project, you may wish to prevent Kargo
-from deleting the Namespace during Project cleanup.
+However, there are scenarios where you may want to retain the namespace after the associated Project is removed
+whether it was created by Kargo or adopted from an existing setup.
 
-To achieve this, you can apply the following annotation to the Namespace or the corresponding Project
-resource with `kargo.akuity.io/keep-namespace: "true"`
+To achieve this, you can apply the following annotation to the `Namespace` or the corresponding `Project` resource
+with `kargo.akuity.io/keep-namespace: "true"`
 
 ## Interacting with Projects
 
