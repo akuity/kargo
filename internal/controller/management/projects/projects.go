@@ -520,11 +520,19 @@ func (r *reconciler) ensureNamespace(ctx context.Context, project *kargoapi.Proj
 				project.Name, project.Name, errProjectNamespaceExists,
 			)
 		}
-		for _, ownerRef := range ns.OwnerReferences {
+		for i, ownerRef := range ns.OwnerReferences {
 			if ownerRef.UID == project.UID {
 				logger.Debug("namespace exists and is already owned by this Project")
 				if ownerRef.Controller != nil {
-					ownerRef.Controller = nil
+					logger.Debug("owner reference requires update")
+					ns.OwnerReferences[i].Controller = nil // Update in place
+					if err = r.patchOwnerReferencesFn(ctx, r.client, ns); err != nil {
+						return fmt.Errorf(
+							"error patching namespace %q owner references: %w",
+							project.Name,	err,
+						)
+					}
+					logger.Debug("updated owner reference")
 				}
 				return nil
 			}
