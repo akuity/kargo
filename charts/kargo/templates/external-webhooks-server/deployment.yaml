@@ -85,7 +85,7 @@ spec:
         - containerPort: 9443
           name: webhooks-server
           protocol: TCP
-        {{- if .Values.externalWebhooksServer.tls.enabled .Values.kubeconfigSecrets.kargo  }}
+        {{- if or .Values.externalWebhooksServer.tls.enabled .Values.kubeconfigSecrets.kargo  }}
         volumeMounts:
         {{- if .Values.externalWebhooksServer.tls.enabled }}
         - mountPath: /tmp/k8s-webhook-server/serving-certs
@@ -104,7 +104,7 @@ spec:
         {{- end }}
         resources:
           {{- toYaml .Values.externalWebhooksServer.resources | nindent 10 }}
-      {{- if .Values.externalWebhooksServer.tls.enabled .Values.kubeconfigSecrets.kargo  }}
+      {{- if or .Values.externalWebhooksServer.tls.enabled .Values.kubeconfigSecrets.kargo  }}
       volumes:
       {{- if .Values.externalWebhooksServer.tls.enabled }}
         - name: cert
