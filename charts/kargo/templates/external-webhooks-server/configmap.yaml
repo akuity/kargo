@@ -8,7 +8,6 @@ metadata:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.externalWebhooksServer.labels" . | nindent 4 }}
 data:
-  EXTERNAL_WEBHOOK_SERVER_BASE_URL: {{ include "kargo.externalWebhookServer.baseURL" . }}
   KARGO_NAMESPACE: {{ .Release.Namespace }}
   LOG_LEVEL: {{ quote .Values.externalWebhooksServer.logLevel }}
   {{- if .Values.kubeconfigSecrets.kargo }}
