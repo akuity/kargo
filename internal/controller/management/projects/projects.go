@@ -520,6 +520,16 @@ func (r *reconciler) ensureNamespace(ctx context.Context, project *kargoapi.Proj
 				project.Name, project.Name, errProjectNamespaceExists,
 			)
 		}
+
+		// always ensure finalizer is present on the namespace
+		updated, err := r.ensureFinalizerFn(ctx, r.client, ns)
+		if err != nil {
+			return fmt.Errorf("error ensuring finalizer on namespace %q: %w", project.Name, err)
+		}
+		if updated {
+			logger.Debug("added finalizer to namespace")
+		}
+
 		for i, ownerRef := range ns.OwnerReferences {
 			if ownerRef.UID == project.UID {
 				logger.Debug("namespace exists and is already owned by this Project")
@@ -529,7 +539,7 @@ func (r *reconciler) ensureNamespace(ctx context.Context, project *kargoapi.Proj
 					if err = r.patchOwnerReferencesFn(ctx, r.client, ns); err != nil {
 						return fmt.Errorf(
 							"error patching namespace %q owner references: %w",
-							project.Name,	err,
+							project.Name, err,
 						)
 					}
 					logger.Debug("updated owner reference")
@@ -537,20 +547,13 @@ func (r *reconciler) ensureNamespace(ctx context.Context, project *kargoapi.Proj
 				return nil
 			}
 		}
+
 		// If we get to here, the Project is not already an owner of the existing
 		// namespace.
 		logger.Debug(
 			"namespace exists, is not owned by this Project, but has the " +
 				"project label; Project will adopt it",
 		)
-
-		updated, err := r.ensureFinalizerFn(ctx, r.client, ns)
-		if err != nil {
-			return fmt.Errorf("error ensuring finalizer on namespace %q: %w", project.Name, err)
-		}
-		if updated {
-			logger.Debug("added finalizer to namespace")
-		}
 
 		// Note: We allow multiple owners of a namespace due to the not entirely
 		// uncommon scenario where an organization has its own controller that
