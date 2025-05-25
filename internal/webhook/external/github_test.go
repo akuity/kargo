@@ -94,8 +94,8 @@ func TestGithubHandler(t *testing.T) {
 				return req
 			},
 			secret: testSecret,
-			code:   http.StatusNotFound,
-			msg:    "failed to get github secret",
+			code:   http.StatusInternalServerError,
+			msg:    "{}\n", // 500s get obfuscated
 		},
 		{
 			name: "missing token in secret string data",
@@ -165,8 +165,8 @@ func TestGithubHandler(t *testing.T) {
 				return req
 			},
 			secret: "fakesecret",
-			code:   http.StatusNotFound,
-			msg:    "missing github token in secret",
+			code:   http.StatusInternalServerError,
+			msg:    "{}\n", // 500s get obfuscated
 		},
 		{
 			name: "bad request - unsupported event type",

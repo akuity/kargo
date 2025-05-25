@@ -40,12 +40,7 @@ func githubHandler(
 		)
 		if err != nil {
 			logger.Error(err, "failed to get github secret")
-			xhttp.WriteErrorJSON(w,
-				xhttp.Error(
-					fmt.Errorf("failed to get github secret %q: %w", secretName, err),
-					http.StatusNotFound,
-				),
-			)
+			xhttp.WriteErrorJSON(w, errors.New("configuration error"))
 			return
 		}
 		token, ok := secret.Data[kargoapi.WebhookReceiverSecretKeyGithub]
@@ -55,12 +50,7 @@ func githubHandler(
 				"no value for target key",
 				"target-key", kargoapi.WebhookReceiverSecretKeyGithub,
 			)
-			xhttp.WriteErrorJSON(w,
-				xhttp.Error(
-					errors.New("missing github token in secret"),
-					http.StatusNotFound,
-				),
-			)
+			xhttp.WriteErrorJSON(w, errors.New("configuration error"))
 			return
 		}
 		logger.Debug("identifying source repository")
@@ -123,7 +113,7 @@ func githubHandler(
 			xhttp.WriteErrorJSON(w,
 				xhttp.Error(
 					fmt.Errorf("only push events are supported"),
-					http.StatusNotImplemented,
+					http.StatusBadRequest,
 				),
 			)
 			return
