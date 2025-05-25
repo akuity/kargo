@@ -107,7 +107,7 @@ spec:
         - name: cert
           secret:
             defaultMode: 0644
-            secretName: kargo-external-webhooks-server-cert
+            secretName: kargo-external-webhooks-server
       {{- end }}
       {{- if .Values.kubeconfigSecrets.kargo }}
       - name: kubeconfigs

@@ -2,7 +2,7 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: kargo-external-webhooks-server-cert
+  name: kargo-external-webhooks-server
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
@@ -13,5 +13,5 @@ spec:
   issuerRef:
     kind: Issuer
     name: kargo-selfsigned-cert-issuer
-  secretName: kargo-external-webhooks-server-cert
+  secretName: kargo-external-webhooks-server
 {{- end }}

@@ -21,8 +21,8 @@ import (
 type externalWebhooksServerOptions struct {
 	KubeConfig string
 
-	Host string
-	Port string
+	BindAddress string
+	Port        string
 
 	Logger *logging.Logger
 }
@@ -51,8 +51,7 @@ func newExternalWebhooksServerCommand() *cobra.Command {
 
 func (o *externalWebhooksServerOptions) complete() {
 	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
-	o.Host = os.GetEnv("HOST", "0.0.0.0")
-	o.Port = os.GetEnv("PORT", "8080")
+	o.BindAddress = os.GetEnv("BIND_ADDRESS", "0.0.0.0")
 }
 
 func (o *externalWebhooksServerOptions) run(ctx context.Context) error {
@@ -63,8 +62,6 @@ func (o *externalWebhooksServerOptions) run(ctx context.Context) error {
 		"commit", version.GitCommit,
 		"GOMAXPROCS", runtime.GOMAXPROCS(0),
 		"GOMEMLIMIT", os.GetEnv("GOMEMLIMIT", ""),
-		"HOST", o.Host,
-		"PORT", o.Port,
 	)
 
 	serverCfg := external.ServerConfigFromEnv()
@@ -114,20 +111,7 @@ func (o *externalWebhooksServerOptions) run(ctx context.Context) error {
 	}
 
 	srv := external.NewServer(serverCfg, cluster.GetClient())
-
-	// The host MAY contain a port.
-	host, port, _ := net.SplitHostPort(o.Host)
-	if port == "" {
-		o.Logger.Info("No port specified in host, using fallback port", "port", o.Port)
-		port = o.Port
-	}
-
-	addr := fmt.Sprintf("%s:%s", host, port)
-	o.Logger.Info("constructed address for listener",
-		"address", addr,
-	)
-
-	l, err := net.Listen("tcp", addr)
+	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.BindAddress, o.Port))
 	if err != nil {
 		return fmt.Errorf("error creating listener: %w", err)
 	}

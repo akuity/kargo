@@ -4,9 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"path"
-	"strings"
 	"time"
 
 	multierr "github.com/hashicorp/go-multierror"
@@ -30,9 +28,8 @@ import (
 )
 
 type ReconcilerConfig struct {
-	Host                    string `envconfig:"HOST" default:"localhost"`
-	Port                    string `envconfig:"PORT" default:"8080"`
-	MaxConcurrentReconciles int    `envconfig:"MAX_CONCURRENT_PROJECT_RECONCILES" default:"4"`
+	ExternalWebhookServerBaseURL string `envconfig:"EXTERNAL_WEBHOOK_SERVER_BASE_URL"`
+	MaxConcurrentReconciles      int    `envconfig:"MAX_CONCURRENT_PROJECT_RECONCILES" default:"4"`
 }
 
 func ReconcilerConfigFromEnv() ReconcilerConfig {
@@ -284,10 +281,7 @@ func (r *reconciler) newWebhookReceiver(
 			string(secret),
 		),
 	}
-
-	wr.URL = normalizeURL(
-		formatAddress(r.cfg.Host, r.cfg.Port, wr.Path),
-	)
+	wr.URL = path.Join(r.cfg.ExternalWebhookServerBaseURL, wr.Path)
 	logger.Debug("webhook receiver initialized",
 		"webhook-receiver", wr,
 	)
@@ -314,30 +308,4 @@ func getProviderConfig(rc kargoapi.WebhookReceiverConfig) (*providerConfig, erro
 	default:
 		return nil, errors.New("webhook receiver config does not have any valid configs")
 	}
-}
-
-func formatAddress(host, port, handlerPath string) string {
-	if hasPort(host) {
-		return path.Join(host, handlerPath)
-	}
-	return path.Join(host+":"+port, handlerPath)
-}
-
-func normalizeURL(url string) string {
-	if !strings.HasPrefix(url, "http") {
-		scheme := "https"
-		if strings.Contains(url, "localhost") {
-			scheme = "http"
-		}
-		url = fmt.Sprintf("%s://%s", scheme, url)
-	}
-	return url
-}
-
-func hasPort(host string) bool {
-	_, port, err := net.SplitHostPort(host)
-	if err != nil {
-		return false
-	}
-	return port != ""
 }
