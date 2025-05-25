@@ -502,6 +502,7 @@ func (r *reconciler) ensureNamespace(ctx context.Context, project *kargoapi.Proj
 		kargoapi.GroupVersion.WithKind("Project"),
 	)
 	ownerRef.BlockOwnerDeletion = ptr.To(false)
+	ownerRef.Controller = nil
 
 	ns := &corev1.Namespace{}
 	if err := r.getNamespaceFn(
@@ -522,6 +523,9 @@ func (r *reconciler) ensureNamespace(ctx context.Context, project *kargoapi.Proj
 		for _, ownerRef := range ns.OwnerReferences {
 			if ownerRef.UID == project.UID {
 				logger.Debug("namespace exists and is already owned by this Project")
+				if ownerRef.Controller != nil {
+					ownerRef.Controller = nil
+				}
 				return nil
 			}
 		}
