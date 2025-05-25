@@ -21,8 +21,8 @@ import (
 type externalWebhooksServerOptions struct {
 	KubeConfig string
 
-	Host string
-	Port string
+	BindAddress string
+	Port        string
 
 	Logger *logging.Logger
 }
@@ -51,7 +51,7 @@ func newExternalWebhooksServerCommand() *cobra.Command {
 
 func (o *externalWebhooksServerOptions) complete() {
 	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
-	o.Host = os.GetEnv("HOST", "0.0.0.0")
+	o.BindAddress = os.GetEnv("BIND_ADDRESS", "0.0.0.0")
 	o.Port = os.GetEnv("PORT", "8080")
 }
 
@@ -92,7 +92,7 @@ func (o *externalWebhooksServerOptions) run(ctx context.Context) error {
 	}
 
 	srv := external.NewServer(serverCfg, cluster.GetClient())
-	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.Host, o.Port))
+	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.BindAddress, o.Port))
 	if err != nil {
 		return fmt.Errorf("error creating listener: %w", err)
 	}
