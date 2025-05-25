@@ -52,6 +52,7 @@ func newExternalWebhooksServerCommand() *cobra.Command {
 func (o *externalWebhooksServerOptions) complete() {
 	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
 	o.BindAddress = os.GetEnv("BIND_ADDRESS", "0.0.0.0")
+	o.Port = os.GetEnv("PORT", "8080")
 }
 
 func (o *externalWebhooksServerOptions) run(ctx context.Context) error {

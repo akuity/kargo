@@ -21,8 +21,8 @@ import (
 type apiOptions struct {
 	KubeConfig string
 
-	Host string
-	Port string
+	BindAddress string
+	Port        string
 
 	Logger *logging.Logger
 }
@@ -52,7 +52,7 @@ func newAPICommand() *cobra.Command {
 func (o *apiOptions) complete() {
 	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
 
-	o.Host = os.GetEnv("HOST", "0.0.0.0")
+	o.BindAddress = os.GetEnv("BIND_ADDRESS", "0.0.0.0")
 	o.Port = os.GetEnv("PORT", "8080")
 }
 
@@ -128,7 +128,7 @@ func (o *apiOptions) run(ctx context.Context) error {
 			"api",
 		),
 	)
-	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.Host, o.Port))
+	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.BindAddress, o.Port))
 	if err != nil {
 		return fmt.Errorf("error creating listener: %w", err)
 	}
