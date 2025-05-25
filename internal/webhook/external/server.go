@@ -127,9 +127,14 @@ func (s *server) getWebhookReceiverConfig(
 	receiverPath string,
 ) (*kargoapi.WebhookReceiverConfig, error) {
 	var whrc *kargoapi.WebhookReceiverConfig
-	for i, r := range pc.Status.WebhookReceivers {
+	for _, r := range pc.Status.WebhookReceivers {
 		if receiverPath == r.Path {
-			whrc = &pc.Spec.WebhookReceivers[i]
+			for _, cfg := range pc.Spec.WebhookReceivers {
+				if cfg.Name == r.Name {
+					whrc = &cfg
+					break
+				}
+			}
 			break
 		}
 	}

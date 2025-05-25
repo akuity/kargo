@@ -211,7 +211,7 @@ func (r *reconciler) syncWebhookReceivers(
 			)
 			err = multierr.Append(initErr,
 				fmt.Errorf("error initializing webhook receiver %q: %w",
-					"todo(fuskovic): whr name here", initErr,
+					rc.Name, initErr,
 				),
 			)
 			continue
