@@ -2,7 +2,6 @@ package external
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -69,11 +68,4 @@ func refreshWarehouses(
 		failures:  failures,
 		successes: len(warehouses.Items) - failures,
 	}, nil
-}
-
-func GenerateWebhookPath(project, provider, token string) string {
-	input := []byte(project + provider + token)
-	h := sha256.New()
-	h.Write(input)
-	return fmt.Sprintf("/%x", h.Sum(nil))
 }
