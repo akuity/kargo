@@ -32,6 +32,11 @@ func SetCacheHeaders(w http.ResponseWriter, maxAge time.Duration, timeUntilExpir
 	w.Header().Set("Expires", time.Now().Add(timeUntilExpiry).Format(time.RFC1123))
 }
 
+// LimitRead reads from the provided io.ReadCloser up to the specified limit.
+// If the body exceeds the limit, it returns an error. If the body is exactly
+// the limit, it checks for additional content and returns an error if any
+// additional content is found. It returns the read bytes or an error if any
+// issues occur during reading.
 func LimitRead(r io.ReadCloser, limit int64) ([]byte, error) {
 	defer r.Close()
 	lr := io.LimitReader(r, limit)

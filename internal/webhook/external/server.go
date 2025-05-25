@@ -69,6 +69,12 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	}
 }
 
+// route retrieves the project configurations that match the request path and
+// determines the appropriate project + webhook receiver configuration to use.
+// If a matching project configuration is found, it calls the appropriate
+// handler based on the type of webhook receiver configured (e.g., GitHub).
+// If no matching project configuration or webhook receiver is found, it returns
+// a 404 Not Found error.
 func (s *server) route(w http.ResponseWriter, r *http.Request) {
 	ctx := (r.Context())
 	logger := logging.LoggerFromContext(ctx)

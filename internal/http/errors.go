@@ -14,6 +14,8 @@ func (e *httpError) Error() string {
 	return e.err.Error()
 }
 
+// Error returns an error that can be used to write an
+// HTTP response with an error message and a specific status code.
 func Error(err error, code int) error {
 	return &httpError{
 		code: code,
@@ -21,6 +23,10 @@ func Error(err error, code int) error {
 	}
 }
 
+// WriteErrorJSON writes an error response in JSON format to the provided
+// http.ResponseWriter. If the error is an *httpError, it uses the code
+// and error message from that error. Otherwise, it defaults to
+// http.StatusInternalServerError; obfuscating the error message in that case.
 func WriteErrorJSON(w http.ResponseWriter, err error) {
 	code := http.StatusInternalServerError
 	if httpErr, ok := err.(*httpError); ok {
