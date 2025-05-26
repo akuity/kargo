@@ -871,7 +871,7 @@ func (r *reconciler) migrateSpecToProjectConfig(
 		return false, nil
 	}
 
-	if v, ok := project.Labels[kargoapi.MigratedLabelKey]; ok && v == kargoapi.LabelTrueValue {
+	if v, ok := project.Labels[kargoapi.MigratedLabelKey]; ok && v == kargoapi.MigratedLabelValueProjectSpec {
 		return false, nil
 	}
 
@@ -907,7 +907,7 @@ func (r *reconciler) migrateSpecToProjectConfig(
 	if project.Labels == nil {
 		project.Labels = make(map[string]string, 1)
 	}
-	project.Labels[kargoapi.MigratedLabelKey] = kargoapi.LabelTrueValue
+	project.Labels[kargoapi.MigratedLabelKey] = kargoapi.MigratedLabelValueProjectSpec
 	if err := r.client.Update(ctx, project); err != nil {
 		return false, fmt.Errorf(
 			"error updating Project %q to add migrated label: %w",
