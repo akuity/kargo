@@ -133,7 +133,7 @@ func (h *helmTemplateRunner) run(
 	install, err := h.newInstallAction(cfg, stepCtx.Project, absOutPath)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("failed to write rendered chart: %w", err)
+			fmt.Errorf("failed to initialize Helm action config: %w", err)
 	}
 
 	rls, err := install.RunWithContext(ctx, chartRequested, composedValues)
