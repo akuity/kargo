@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -91,34 +90,6 @@ func (h *helmTemplateRunner) Run(
 	return h.run(ctx, stepCtx, cfg)
 }
 
-// GetFileTreeString returns a formatted string representing the file tree under the root
-func GetFileTreeString(root string) (string, error) {
-	var builder strings.Builder
-
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-
-		relPath, err := filepath.Rel(root, path)
-		if err != nil {
-			return err
-		}
-
-		// Indentation based on depth
-		depth := strings.Count(relPath, string(filepath.Separator))
-		indent := strings.Repeat("  ", depth)
-		builder.WriteString(fmt.Sprintf("%s%s\n", indent, d.Name()))
-		return nil
-	})
-
-	if err != nil {
-		return "", err
-	}
-
-	return builder.String(), nil
-}
-
 func (h *helmTemplateRunner) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
@@ -135,11 +106,23 @@ func (h *helmTemplateRunner) run(
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("failed to load chart from %q: %w", cfg.Path, err)
 	}
+	defer os.RemoveAll(helmHome)
 
-	// if err = h.checkDependencies(chartRequested); err != nil {
-	// 	return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-	// 		fmt.Errorf("missing chart dependencies: %w", err)
-	// }
+	absChartPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.Path)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+			fmt.Errorf("failed to join path %q: %w", cfg.Path, err)
+	}
+
+	if err := h.buildDependencies(ctx, stepCtx, helmHome, absChartPath); err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
+	}
+
+	chartRequested, err := h.loadChart(stepCtx.WorkDir, cfg.Path)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+			fmt.Errorf("failed to load chart from %q: %w", cfg.Path, err)
+	}
 
 	absOutPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutPath)
 	if err != nil {
@@ -147,21 +130,10 @@ func (h *helmTemplateRunner) run(
 			fmt.Errorf("failed to join path %q: %w", cfg.OutPath, err)
 	}
 
-	helmHome, err := os.MkdirTemp("", "helm-template-")
-	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
-			fmt.Errorf("failed to create temporary Helm home directory: %w", err)
-	}
-	defer os.RemoveAll(helmHome)
-
-	if err := h.buildDependencies(ctx, stepCtx, helmHome, absOutPath); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, err
-	}
-
-	helmHome, err := os.MkdirTemp("", "helm-template-")
+	install, err := h.newInstallAction(cfg, stepCtx.Project, absOutPath)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("failed to initialize Helm action config: %w", err)
+			fmt.Errorf("failed to write rendered chart: %w", err)
 	}
 
 	rls, err := install.RunWithContext(ctx, chartRequested, composedValues)
@@ -175,11 +147,7 @@ func (h *helmTemplateRunner) run(
 			fmt.Errorf("failed to write rendered chart: %w", err)
 	}
 	return promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, nil
-	treeStr, _ := GetFileTreeString(absChartPath)
 
-	logging.LoggerFromContext(ctx).Info(treeStr, "file tree")
-
-	return promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded}, nil
 }
 
 func (h *helmTemplateRunner) setupDependencyRepositories(
