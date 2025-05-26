@@ -393,8 +393,6 @@ controller:
   serviceAccount:
     ## @param controller.serviceAccount.iamRole Specifies the ARN of an AWS IAM role to be used by the controller in an IRSA-enabled EKS cluster.
     iamRole: ""
-    ## @param controller.serviceAccount.gcpSa Specifies the email of a GCP IAM Service Account to be used by the controller in a GKE cluster. If set, the corresponding annotation will be added to the ServiceAccount.
-    gcpSa: ""
     ## @param controller.serviceAccount.annotations Additional annotations to add to the controller ServiceAccount.
     annotations: {}
     # foo: bar
