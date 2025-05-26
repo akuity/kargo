@@ -139,7 +139,7 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 			},
 			assertions: func(t *testing.T, c client.Client, result ctrl.Result, err error) {
 				require.NoError(t, err)
-				assert.True(t, result.Requeue)
+				assert.Equal(t, 100*time.Millisecond, result.RequeueAfter)
 
 				// Verify finalizer was added
 				stage := &kargoapi.Stage{}

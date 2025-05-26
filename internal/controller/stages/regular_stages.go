@@ -331,7 +331,7 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// The reason to requeue is to ensure that a possible deletion of the Stage
 	// directly after the finalizer was added is handled without delay.
 	if ok, err := api.EnsureFinalizer(ctx, r.client, stage); ok || err != nil {
-		return ctrl.Result{Requeue: ok}, err
+		return ctrl.Result{RequeueAfter: 100 * time.Millisecond}, err
 	}
 
 	// Reconcile the Stage.
@@ -362,7 +362,7 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 	// Immediate requeue if needed.
 	if needsRequeue {
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: 100 * time.Millisecond}, nil
 	}
 	// Otherwise, requeue after a delay.
 	// TODO: Make the requeue delay configurable.
