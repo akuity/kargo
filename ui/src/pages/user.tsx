@@ -1,13 +1,13 @@
-import { IconDefinition } from '@fortawesome/free-solid-svg-icons';
+import { faQuestionCircle, IconDefinition } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Descriptions, Tag } from 'antd';
+import { Descriptions, Popover, Tag } from 'antd';
 import { DescriptionsItemType } from 'antd/es/descriptions';
 import { Navigate } from 'react-router-dom';
 
 import { redirectToQueryParam } from '@ui/config/auth';
 import { paths } from '@ui/config/paths';
 import { useAuthContext } from '@ui/features/auth/context/use-auth-context';
-import { isJWTDirty } from '@ui/features/auth/jwt-utils';
+import { claimsMapping, isJWTDirty } from '@ui/features/auth/jwt-utils';
 import { PageTitle } from '@ui/features/common';
 
 export const User = () => {
@@ -43,8 +43,19 @@ export const User = () => {
   );
 };
 
-User.Label = (props: { icon?: IconDefinition; label: string }) => (
-  <>
-    {props.icon && <FontAwesomeIcon icon={props.icon} className='mr-2' />} {props.label}
-  </>
-);
+User.Label = (props: { icon?: IconDefinition; label: string }) => {
+  const claimHelpers = claimsMapping[props.label];
+  return (
+    <>
+      {props.icon && <FontAwesomeIcon icon={props.icon} className='mr-2' />} {props.label}{' '}
+      {!!claimHelpers && (
+        <>
+          ({claimHelpers.label}){' '}
+          <Popover content={claimHelpers.description}>
+            <FontAwesomeIcon icon={faQuestionCircle} className='text-xs' />
+          </Popover>
+        </>
+      )}
+    </>
+  );
+};

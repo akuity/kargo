@@ -38,3 +38,31 @@ export const getUserEmail = (user?: JWTInfo | null) => {
 
   return meta;
 };
+
+export const claimsMapping: Record<string, { label: string; description: string }> = {
+  iss: {
+    label: 'Issuer',
+    description: 'Identifies the principal that issued the JWT.'
+  },
+  sub: {
+    label: 'Subject',
+    description: 'Identifies the principal that is the subject of the JWT'
+  },
+  aud: {
+    label: 'Audience',
+    description: 'Identifies the recipients the JWT is intended for (can be a string or array).'
+  },
+  exp: {
+    label: 'Expiration Time',
+    description:
+      'Token expiration time (in Unix timestamp). After this time, the token must not be accepted.'
+  },
+  iat: {
+    label: 'Issued At',
+    description: 'The time the JWT was issued (in Unix timestamp).'
+  },
+  jti: {
+    label: 'JWT ID',
+    description: 'Unique identifier for the JWT, used to prevent replay attacks.'
+  }
+};
