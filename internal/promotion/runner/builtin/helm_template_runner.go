@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -90,6 +91,34 @@ func (h *helmTemplateRunner) Run(
 	return h.run(ctx, stepCtx, cfg)
 }
 
+// GetFileTreeString returns a formatted string representing the file tree under the root
+func GetFileTreeString(root string) (string, error) {
+	var builder strings.Builder
+
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		relPath, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+
+		// Indentation based on depth
+		depth := strings.Count(relPath, string(filepath.Separator))
+		indent := strings.Repeat("  ", depth)
+		builder.WriteString(fmt.Sprintf("%s%s\n", indent, d.Name()))
+		return nil
+	})
+
+	if err != nil {
+		return "", err
+	}
+
+	return builder.String(), nil
+}
+
 func (h *helmTemplateRunner) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
@@ -101,7 +130,7 @@ func (h *helmTemplateRunner) run(
 			fmt.Errorf("failed to compose values: %w", err)
 	}
 
-	chartRequested, err := h.loadChart(stepCtx.WorkDir, cfg.Path)
+	helmHome, err := os.MkdirTemp("", "helm-template-")
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("failed to load chart from %q: %w", cfg.Path, err)
@@ -146,6 +175,11 @@ func (h *helmTemplateRunner) run(
 			fmt.Errorf("failed to write rendered chart: %w", err)
 	}
 	return promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, nil
+	treeStr, _ := GetFileTreeString(absChartPath)
+
+	logging.LoggerFromContext(ctx).Info(treeStr, "file tree")
+
+	return promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded}, nil
 }
 
 func (h *helmTemplateRunner) setupDependencyRepositories(
@@ -296,7 +330,10 @@ func (h *helmTemplateRunner) buildDependencies(
 	// Check if Chart.lock exists and create a backup if it does
 	lockFile := filepath.Join(chartPath, "Chart.lock")
 	bakLockFile := fmt.Sprintf("%s.%s.bak", lockFile, time.Now().Format("20060102150405"))
+	lockFileExists := false // Track whether the original Chart.lock file exists
+
 	if _, err = os.Lstat(lockFile); err == nil {
+		lockFileExists = true // Mark that the Chart.lock file exists
 		if err = backupFile(lockFile, bakLockFile); err != nil {
 			return fmt.Errorf("failed to backup Chart.lock: %w", err)
 		}
@@ -350,12 +387,16 @@ func (h *helmTemplateRunner) buildDependencies(
 	// without updating the Chart.yaml. For example, because a new version is
 	// available in the repository for a dependency that has a version range
 	// specified in the Chart.yaml.
-	initialVersions, err := readChartLock(bakLockFile)
-	if err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf(
-			"failed to read original chart lock file: %w", sanitizePathError(err, stepCtx.WorkDir),
-		)
+	initialVersions := map[string]string{}
+	if lockFileExists { // Only read the original Chart.lock if it existed
+		initialVersions, err = readChartLock(bakLockFile)
+		if err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf(
+				"failed to read original chart lock file: %w", sanitizePathError(err, stepCtx.WorkDir),
+			)
+		}
 	}
+
 	updatedVersions, err := readChartLock(lockFile)
 	if err != nil {
 		return fmt.Errorf(
@@ -367,8 +408,8 @@ func (h *helmTemplateRunner) buildDependencies(
 	// Compare the versions to determine if any changes occurred
 	changes := compareChartVersions(initialVersions, updatedVersions)
 
-	// If no versions changed, restore the original Chart.lock
-	if len(changes) == 0 {
+	// If no versions changed, restore the original Chart.lock (only if it existed)
+	if len(changes) == 0 && lockFileExists {
 		if err = os.Rename(bakLockFile, lockFile); err != nil {
 			return fmt.Errorf(
 				"failed to restore original Chart.lock: %w", sanitizePathError(err, stepCtx.WorkDir),
