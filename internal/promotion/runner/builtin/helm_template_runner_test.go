@@ -239,9 +239,9 @@ data:
 name: test-chart
 version: 0.1.0
 dependencies:
-- name: subchart
-  version: 0.1.0
-  repository: https://example.com/charts
+  - name: kargo
+    version: 1.5.0
+    repository: oci://ghcr.io/akuity/kargo-charts
 `,
 			},
 			cfg: builtin.HelmTemplateConfig{
