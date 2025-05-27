@@ -12,14 +12,15 @@ import (
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	kerrors "k8s.io/apimachinery/pkg/util/errors"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/conditions"
 	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/kubeclient"
@@ -100,9 +101,16 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	if projectConfig.DeletionTimestamp != nil {
+	if !projectConfig.DeletionTimestamp.IsZero() {
 		logger.Debug("ProjectConfig is being deleted; nothing to do")
 		return ctrl.Result{}, nil
+	}
+
+	// Ensure the ProjectConfig has a finalizer and requeue if it was added.
+	// The reason to requeue is to ensure that a possible deletion of the ProjectConfig
+	// directly after the finalizer was added is handled without delay.
+	if ok, err := api.EnsureFinalizer(ctx, r.client, projectConfig); ok || err != nil {
+		return ctrl.Result{Requeue: ok}, err
 	}
 
 	logger.Debug("reconciling ProjectConfig")
@@ -148,15 +156,13 @@ func (r *reconciler) syncProjectConfig(
 	conditions.Set(status, &metav1.Condition{
 		Type:               kargoapi.ConditionTypeReconciling,
 		Status:             metav1.ConditionTrue,
-		Reason:             "Syncing",
-		Message:            "Ensuring project config webhook receivers",
+		Reason:             "SyncingWebhooks",
 		ObservedGeneration: pc.GetGeneration(),
 	})
 	conditions.Set(status, &metav1.Condition{
 		Type:               kargoapi.ConditionTypeReady,
 		Status:             metav1.ConditionFalse,
-		Reason:             "Syncing",
-		Message:            "Ensuring project config webhook receivers",
+		Reason:             "SyncingWebhooks",
 		ObservedGeneration: pc.GetGeneration(),
 	})
 
@@ -251,13 +257,13 @@ func (r *reconciler) newWebhookReceiver(
 		)
 		if kubeerr.IsNotFound(err) {
 			return nil, fmt.Errorf(
-				"secret-reference name %q in namespace %q not found",
+				"secret %q in namespace %q not found",
 				cfg.secretName, pc.Namespace,
 			)
 		}
 		return nil, fmt.Errorf(
-			"error getting webhook receiver secret-reference %q in project namespace %q: %w",
-			cfg.secretName, pc.Name, err,
+			"error getting webhook receiver secret %q in project namespace %q: %w",
+			cfg.secretName, pc.Namespace, err,
 		)
 	}
 	logger.Debug("secret found", "secret", cfg.secretName)
@@ -277,7 +283,7 @@ func (r *reconciler) newWebhookReceiver(
 		Name: rc.Name,
 		Path: external.GenerateWebhookPath(
 			pc.Name,
-			kargoapi.WebhookReceiverTypeGitHub,
+			cfg.receiverType,
 			string(secret),
 		),
 	}

@@ -308,7 +308,7 @@ func TestGithubHandler(t *testing.T) {
 				return req
 			},
 			secret: "fakesecret",
-			msg:    "{\"error\":\"response body exceeds limit of 2097152 bytes\"}\n",
+			msg:    "{\"error\":\"failed to read request body: reader exceeds limit of 2097152 bytes\"}\n",
 			code:   http.StatusRequestEntityTooLarge,
 		},
 		{

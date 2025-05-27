@@ -11,6 +11,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	xhttp "github.com/akuity/kargo/internal/http"
+	"github.com/akuity/kargo/internal/io"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -69,9 +70,14 @@ func githubHandler(
 		}
 
 		const maxBytes = 2 << 20 // 2MB
-		b, err := xhttp.LimitRead(r.Body, maxBytes)
+		b, err := io.LimitRead(r.Body, maxBytes)
 		if err != nil {
-			xhttp.WriteErrorJSON(w, err)
+			xhttp.WriteErrorJSON(w,
+				xhttp.Error(
+					fmt.Errorf("failed to read request body: %w", err),
+					http.StatusRequestEntityTooLarge,
+				),
+			)
 			return
 		}
 
