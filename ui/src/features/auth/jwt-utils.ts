@@ -46,7 +46,7 @@ export const claimsMapping: Record<string, { label: string; description: string 
   },
   sub: {
     label: 'Subject',
-    description: 'Identifies the principal that is the subject of the JWT'
+    description: 'Identifies the principal that is the subject of the JWT.'
   },
   aud: {
     label: 'Audience',
