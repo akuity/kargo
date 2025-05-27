@@ -28,7 +28,7 @@ global:
   podAnnotations: {}
   ## Service Account global settings
   serviceAccount:
-    ## @param api.serviceAccount.annotations Additional annotations to add to the API server ServiceAccount.
+    ## @param global.serviceAccount.annotations Global Service Account annotations.
     annotations: {}
     # foo: bar
     # another: value

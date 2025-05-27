@@ -12,7 +12,7 @@
 | `global.nodeSelector`    | Default node selector for all Kargo pods.                                  | `{}`  |
 | `global.labels`          | Labels to add to all resources.                                            | `{}`  |
 | `global.annotations`     | Annotations to add to all resources.                                       | `{}`  |
-| `serviceAccount.annotations` | Service Account annotations.                                           | `{}`  |
+| `global.serviceAccount.annotations` | Service Account annotations.                                    | `{}`  |
 | `global.podLabels`       | Labels to add to all pods.                                                 | `{}`  |
 | `global.podAnnotations`  | Annotations to add to pods.                                                | `{}`  |
 | `global.tolerations`     | Default tolerations for all Kargo pods.                                    | `[]`  |
