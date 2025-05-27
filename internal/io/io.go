@@ -32,7 +32,7 @@ func LimitRead(r io.ReadCloser, limit int64) ([]byte, error) {
 			)
 		}
 		if n > 0 {
-			return nil, fmt.Errorf("reader exceeds limit of %d bytes", limit)
+			return nil, fmt.Errorf("content exceeds limit of %d bytes", limit)
 		}
 	}
 	return bodyBytes, nil

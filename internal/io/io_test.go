@@ -27,7 +27,7 @@ func TestLimitRead(t *testing.T) {
 				b := make([]byte, maxBytes+1)
 				return io.NopCloser(bytes.NewBuffer(b))
 			}(),
-			errMsg: "reader exceeds limit",
+			errMsg: "content exceeds limit",
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
