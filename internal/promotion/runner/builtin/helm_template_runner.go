@@ -104,7 +104,7 @@ func (h *helmTemplateRunner) run(
 	helmHome, err := os.MkdirTemp("", "helm-template-")
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("failed to load chart from %q: %w", cfg.Path, err)
+			fmt.Errorf("failed to create temporary Helm home directory: %w", err)
 	}
 	defer os.RemoveAll(helmHome)
 
