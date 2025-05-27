@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/conditions"
 )
 
@@ -1348,7 +1349,8 @@ func TestMigrateSpecToProjectConfig(t *testing.T) {
 				project := &kargoapi.Project{}
 				err = cl.Get(context.Background(), types.NamespacedName{Name: testProject}, project)
 				require.NoError(t, err)
-				require.Contains(t, project.Labels, kargoapi.MigratedLabelKey)
+				require.Contains(t, project.Annotations, kargoapi.AnnotationKeyMigrated)
+				require.True(t, api.HasMigrationAnnotationValue(project.Annotations, migratedProjectSpecToProjectConfig))
 				require.NotNil(t, project.Spec) // nolint:staticcheck
 				projCfg := &kargoapi.ProjectConfig{}
 				err = cl.Get(
@@ -1398,7 +1400,8 @@ func TestMigrateSpecToProjectConfig(t *testing.T) {
 				project := &kargoapi.Project{}
 				err = cl.Get(context.Background(), types.NamespacedName{Name: testProject}, project)
 				require.NoError(t, err)
-				require.Contains(t, project.Labels, kargoapi.MigratedLabelKey)
+				require.Contains(t, project.Annotations, kargoapi.AnnotationKeyMigrated)
+				require.True(t, api.HasMigrationAnnotationValue(project.Annotations, migratedProjectSpecToProjectConfig))
 				require.NotNil(t, project.Spec) // nolint:staticcheck
 				projCfg := &kargoapi.ProjectConfig{}
 				err = cl.Get(

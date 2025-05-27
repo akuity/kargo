@@ -95,3 +95,38 @@ func AbortPromotionAnnotationValue(annotations map[string]string) (*kargoapi.Abo
 	}
 	return &req, ok
 }
+
+// HasMigrationAnnotationValue checks if the AnnotationKeyMigrated annotation
+// is present in the provided annotations map and if it contains the specified
+// migration type as a key with a value of true.
+func HasMigrationAnnotationValue(annotations map[string]string, migrationType string) bool {
+	if annotations == nil {
+		return false
+	}
+	migrated, ok := annotations[kargoapi.AnnotationKeyMigrated]
+	if !ok {
+		return false
+	}
+	var migrations map[string]bool
+	if err := json.Unmarshal([]byte(migrated), &migrations); err != nil {
+		return false
+	}
+	return migrations[migrationType]
+}
+
+// AddMigrationAnnotationValue updates the AnnotationKeyMigrated annotation
+// in the provided annotations map to indicate that the specified migration
+// type has been performed. If the annotation does not exist, it is created.
+func AddMigrationAnnotationValue(annotations map[string]string, migrationType string) {
+	migrated, ok := annotations[kargoapi.AnnotationKeyMigrated]
+	if !ok {
+		migrated = "{}"
+	}
+	var migrations map[string]bool
+	if err := json.Unmarshal([]byte(migrated), &migrations); err != nil {
+		migrations = make(map[string]bool)
+	}
+	migrations[migrationType] = true
+	b, _ := json.Marshal(migrations)
+	annotations[kargoapi.AnnotationKeyMigrated] = string(b)
+}
