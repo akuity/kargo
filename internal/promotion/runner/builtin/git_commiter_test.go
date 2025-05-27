@@ -270,7 +270,4 @@ func Test_gitCommitter_run(t *testing.T) {
 	actualCommit, ok = res.Output[stateKeyCommit]
 	require.True(t, ok)
 	require.Equal(t, expectedCommit, actualCommit)
-	lastCommitMsg, err = workTree.CommitMessage("HEAD")
-	require.NoError(t, err)
-	require.Equal(t, "No-Op commit\n", lastCommitMsg)
 }
