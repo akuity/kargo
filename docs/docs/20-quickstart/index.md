@@ -677,8 +677,8 @@ pipeline.
     
 Now is a good time to explore the UI some more.
 
-* To see more information about the `test` `Stage`, click the staggered bars icon in the
-  header of the `Stage`'s node in the pipeline:
+* To see more information about the `test` `Stage`, click the staggered bars
+  icon in the header of the `Stage`'s node in the pipeline:
 
   ![Kargo Stage Staggered Bars Button](img/kargo-stage-staggered-bars-button.png)
 
