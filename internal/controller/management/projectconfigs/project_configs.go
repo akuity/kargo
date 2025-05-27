@@ -7,7 +7,6 @@ import (
 	"path"
 	"time"
 
-	multierr "github.com/hashicorp/go-multierror"
 	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
 	kubeerr "k8s.io/apimachinery/pkg/api/errors"
@@ -18,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	kerrors "k8s.io/apimachinery/pkg/util/errors"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/conditions"
@@ -201,24 +201,24 @@ func (r *reconciler) syncWebhookReceivers(
 		"webhook-receiver-configs", len(pc.Spec.WebhookReceivers),
 	)
 
-	var err error
+	var errs []error
 	var webhookReceivers []kargoapi.WebhookReceiver
 	for _, rc := range pc.Spec.WebhookReceivers {
-		whr, initErr := r.newWebhookReceiver(ctx, pc, rc)
-		if initErr != nil {
+		whr, err := r.newWebhookReceiver(ctx, pc, rc)
+		if err != nil {
 			logger.Error(err, "error initializing new webhook receiver",
 				"receiver-config", rc,
 			)
-			err = multierr.Append(initErr,
-				fmt.Errorf("error initializing webhook receiver %q: %w",
-					rc.Name, initErr,
-				),
+			errs = append(errs, fmt.Errorf(
+				"error initializing webhook receiver %q: %w",
+				rc.Name, err,
+			),
 			)
 			continue
 		}
 		webhookReceivers = append(webhookReceivers, *whr)
 	}
-	return webhookReceivers, err
+	return webhookReceivers, kerrors.Flatten(kerrors.NewAggregate(errs))
 }
 
 func (r *reconciler) newWebhookReceiver(
