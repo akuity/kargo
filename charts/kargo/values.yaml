@@ -26,7 +26,12 @@ global:
   podLabels: {}
   ## @param global.podAnnotations Annotations to add to pods.
   podAnnotations: {}
-
+  ## Service Account global settings
+  serviceAccount:
+    ## @param api.serviceAccount.annotations Additional annotations to add to the API server ServiceAccount.
+    annotations: {}
+    # foo: bar
+    # another: value
   ## @param global.tolerations Default tolerations for all Kargo pods.
   tolerations: []
   ## @param global.affinity Default affinity for all Kargo pods.
@@ -96,7 +101,12 @@ api:
   host: localhost
   ## @param api.logLevel The log level for the API server.
   logLevel: INFO
-
+  ## Service Account specific settings
+  serviceAccount:
+    ## @param api.serviceAccount.annotations Additional annotations to add to the API server ServiceAccount.
+    annotations: {}
+    # foo: bar
+    # another: value
   ## @param api.labels Labels to add to the api resources. Merges with `global.labels`, allowing you to override or add to the global labels.
   labels: {}
   ## @param api.annotations Annotations to add to the api resources. Merges with `global.annotations`, allowing you to override or add to the global annotations.
@@ -342,6 +352,12 @@ api:
       annotations: {}
       ## @param api.oidc.dex.securityContext Security context for Dex server pods. Defaults to `global.securityContext`.
       securityContext: {}
+      ## Service Account specific settings
+      serviceAccount:
+        ## @param api.oidc.dex.serviceAccount.annotations Additional annotations to add to the Dex server ServiceAccount.
+        annotations: {}
+        # foo: bar
+        # another: value
 
   argocd:
     ## @param api.argocd.urls Mapping of Argo CD shards names to URLs to support deep links to Argo CD URLs. If sharding is not used, map the empty string to the single Argo CD URL.
@@ -584,6 +600,12 @@ externalWebhooksServer:
     # nodePort:
     ## @param externalWebhooksServer.service.annotations Annotations to add to the external webhook server's service. Merges with `global.annotations`, allowing you to override or add to the global annotations.
     annotations: {}
+  ## Service Account specific settings
+  serviceAccount:
+    ## @param externalWebhooksServer.serviceAccount.annotations Additional annotations to add to the externalWebHooksServer ServiceAccount.
+    annotations: {}
+    # foo: bar
+    # another: value
 
 ## @section Management Controller
 ## All settings for the management controller component
@@ -616,6 +638,12 @@ managementController:
     serviceAccounts:
       ## @param managementController.reconcilers.serviceAccounts.maxConcurrentReconciles optionally overrides the maximum number of ServiceAccount resources the management controller can reconcile concurrently.
       maxConcurrentReconciles:
+  ## Service Account specific settings
+  serviceAccount:
+    ## @param managementController.serviceAccount.annotations Additional annotations to add to the managementController ServiceAccount.
+    annotations: {}
+    # foo: bar
+    # another: value
 
   ## @param managementController.securityContext Security context for management controller pods. Defaults to `global.securityContext`.
   securityContext: {}
@@ -719,7 +747,12 @@ garbageCollector:
   minFreightDeletionAge: 336h # Two weeks
   ## @param garbageCollector.logLevel The log level for the garbage collector.
   logLevel: INFO
-
+  ## Service Account specific settings
+  serviceAccount:
+    ## @param garbageCollector.serviceAccount.annotations Additional annotations to add to the managementController ServiceAccount.
+    annotations: {}
+    # foo: bar
+    # another: value
   ## @param garbageCollector.labels Labels to add to the api resources. Merges with `global.labels`, allowing you to override or add to the global labels.
   labels: {}
   ## @param garbageCollector.annotations Annotations to add to the api resources. Merges with `global.annotations`, allowing you to override or add to the global annotations.
