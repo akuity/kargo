@@ -83,7 +83,7 @@ func (g *gitCommitter) run(
 			fmt.Errorf("error checking for diffs in working tree: %w", err)
 	}
 
-	// only commit if diffs have been found
+	// Only commit if diffs have been found
 	if hasDiffs {
 		commitOpts := &git.CommitOptions{}
 		if cfg.Author != nil {
@@ -106,8 +106,7 @@ func (g *gitCommitter) run(
 	}
 
 	status := kargoapi.PromotionStepStatusSucceeded
-	// if there are no diffs found, the 'git-status' step is skipped
-	// since there's nothing to commit. Hence, marks the status as skipped.
+	// If nothing was committed, return Skipped status instead.
 	if !hasDiffs {
 		status = kargoapi.PromotionStepStatusSkipped
 	}

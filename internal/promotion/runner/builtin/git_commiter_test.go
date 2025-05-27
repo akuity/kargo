@@ -255,6 +255,8 @@ func Test_gitCommitter_run(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "Initial commit\n", lastCommitMsg)
 
+	// Run the step again to confirm a Skipped status is returned when no new
+	// commit is actually made.
 	res, err = runner.run(
 		context.Background(),
 		stepCtx,
@@ -266,7 +268,8 @@ func Test_gitCommitter_run(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, kargoapi.PromotionStepStatusSkipped, res.Status)
 
-	// it should still return the same commit ID
+	// Despite the Skipped status, step output should still contain the commit ID
+	// from the head of the branch.
 	actualCommit, ok = res.Output[stateKeyCommit]
 	require.True(t, ok)
 	require.Equal(t, expectedCommit, actualCommit)
