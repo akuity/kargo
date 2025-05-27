@@ -215,7 +215,7 @@ func (r *ControlFlowStageReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// The reason to requeue is to ensure that a possible deletion of the Stage
 	// directly after the finalizer was added is handled without delay.
 	if ok, err := api.EnsureFinalizer(ctx, r.client, stage); ok || err != nil {
-		return ctrl.Result{Requeue: ok}, err
+		return ctrl.Result{RequeueAfter: 100 * time.Millisecond}, err
 	}
 
 	// Remove any stale annotations from the Stage which are not relevant to
