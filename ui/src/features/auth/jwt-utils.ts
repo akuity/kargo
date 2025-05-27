@@ -59,7 +59,7 @@ export const claimsMapping: Record<string, { label: string; description: string 
   },
   iat: {
     label: 'Issued At',
-    description: 'The time the JWT was issued (in Unix timestamp).'
+    description: 'The time the JWT was issued (as Unix timestamp).'
   },
   jti: {
     label: 'JWT ID',
