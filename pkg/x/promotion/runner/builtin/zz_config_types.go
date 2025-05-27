@@ -211,6 +211,10 @@ type GitPushConfig struct {
 	MaxAttempts *int64 `json:"maxAttempts,omitempty"`
 	// The path to a working directory of a local repository.
 	Path string `json:"path"`
+	// The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github',
+	// and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly
+	// specified.
+	Provider *Provider `json:"provider,omitempty"`
 	// The target branch to push to. Mutually exclusive with 'generateTargetBranch=true'. If
 	// neither of these is provided, the target branch will be the currently checked out branch.
 	TargetBranch string `json:"targetBranch,omitempty"`

@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/sosedoff/gitkit"
 	"github.com/stretchr/testify/require"
+	"k8s.io/utils/ptr"
 
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
@@ -246,6 +247,7 @@ func Test_gitPusher_run(t *testing.T) {
 		builtin.GitPushConfig{
 			Path:                 "master",
 			GenerateTargetBranch: true,
+			Provider:             ptr.To(builtin.Provider(fakeGitProviderName)),
 		},
 	)
 	require.NoError(t, err)

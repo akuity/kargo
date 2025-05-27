@@ -194,7 +194,11 @@ func (g *gitPushPusher) run(
 	// Using git provider to get commit url. Continuing even if provider
 	// cannot be implemented as the push will still have succeeded, we
 	// just can't construct the URL.
-	gitProvider, err := gitprovider.New(workTree.URL(), nil)
+	gpOpts := gitprovider.Options{}
+	if cfg.Provider != nil {
+		gpOpts.Name = string(*cfg.Provider)
+	}
+	gitProvider, err := gitprovider.New(workTree.URL(), &gpOpts)
 	commitURL := ""
 	if err != nil {
 		commitURL = "Unknown"
