@@ -221,13 +221,9 @@ Git repository subscriptions can be defined using the following fields:
 - `ignoreTags`: An optional list of tags that should explicitly be ignored.
   (This is not applicable to selection strategies that do not involve tags.)
 
-- `tagExpressionFilter`: An optional expression that filters tags based on their
-  metadata. Only applicable to tag-based selection strategies (`SemVer`, `Lexical`,
-  and `NewestTag`). See [Expression Filtering](#expression-filtering) for details.
-
-- `commitExpressionFilter`: An optional expression that filters commits based on
-  their metadata. Only applicable to the `NewestFromBranch` selection strategy.
-  See [Expression Filtering](#expression-filtering) for details.
+- `expressionFilter`: An optional expression that filters commits and tags based 
+  on their metadata. See [Expression Filtering](#expression-filtering) for 
+  details.
 
 - `includePaths`: See
   [Git Subscription Path Filtering](#git-subscription-path-filtering).
@@ -378,21 +374,92 @@ see the results in real-time. This is especially useful for debugging and
 validating your expressions before applying them to your `Warehouse` resources.
 :::
 
-##### Tag Expression Filtering
+The `expressionFilter` field provides a unified way to filter commits or tags
+based on the selected commit selection strategy. The behavior and available
+variables depend on your `commitSelectionStrategy`:
 
-For tag-based selection strategies (`SemVer`, `Lexical`, and `NewestTag`), you
-can use the `tagExpressionFilter` field to filter tags based on their metadata.
+**For commit-based filtering** (`NewestFromBranch` strategy):
 
-The following fields are available in tag expressions:
+- Filters commits based on commit metadata
+- Applied when selecting the newest commit from a branch
+
+**For tag-based filtering** (`SemVer`, `Lexical`, and `NewestTag` strategies):
+
+- Filters tags based on tag and associated commit metadata
+- Applied after `allowTags`, `ignoreTags`, and `semverConstraint` fields
+
+##### Available Expression Filtering Variables
+
+The variables available in your expression depend on the commit selection
+strategy:
+
+**For `NewestFromBranch` (commit filtering):**
+
+- `id`: The ID (SHA) of the commit
+- `commitDate`: The date of the commit
+- `author`: The author of the commit, in format "Name <email>"
+- `committer`: The committer of the commit, in format "Name <email>"
+- `subject`: The first line of the commit message
+
+**For `SemVer`, `Lexical`, and `NewestTag` (tag filtering):**
 
 - `tag`: The name of the tag
-- `commitID`: The commit ID that the tag references
-- `creatorDate`: The tag creation date
-- `author`: The author of the commit that the tag references
-- `committer`: The committer of the commit that the tag references
+- `id`: The commit ID that the tag references
+- `creatorDate`: The tag creation date (annotated tag) or commit date
+  (lightweight tag)
+- `author`: The author of the commit that the tag references, in the format of
+  "Name <email>"
+- `committer`: The committer of the commit that the tag references, in the
+  format of "Name <email>"
 - `subject`: The first line of the commit message associated with the tag
 
-Example filtering tags by author name:
+##### Expression Filtering Examples
+
+**Filtering commits by excluding bot authors:**
+
+```yaml
+spec:
+  subscriptions:
+  - git:
+      repoURL: https://github.com/example/repo.git
+      commitSelectionStrategy: NewestFromBranch
+      expressionFilter: !(author contains '<bot@example.com>')
+```
+
+**Filtering commits with specific message patterns:**
+
+```yaml
+spec:
+  subscriptions:
+  - git:
+      repoURL: https://github.com/example/repo.git
+      commitSelectionStrategy: NewestFromBranch
+      expressionFilter: subject contains 'feat:' || subject contains 'fix:'
+```
+
+**Filtering commits with multiple criteria:**
+
+```yaml
+spec:
+  subscriptions:
+  - git:
+      repoURL: https://github.com/example/repo.git
+      commitSelectionStrategy: NewestFromBranch
+      expressionFilter: !(author == 'Example Bot') && commitDate.After(date('2025-01-01'))
+```
+
+**Filtering commits to exclude those with ignore markers:**
+
+```yaml
+spec:
+  subscriptions:
+  - git:
+      repoURL: https://github.com/example/repo.git
+      commitSelectionStrategy: NewestFromBranch
+      expressionFilter: !(subject contains '[kargo-ignore]')
+```
+
+**Filtering tags by author name:**
 
 ```yaml
 spec:
@@ -400,10 +467,10 @@ spec:
   - git:
       repoURL: https://github.com/example/repo.git
       commitSelectionStrategy: SemVer
-      tagExpressionFilter: author == 'John Doe'
+      expressionFilter: author == 'John Doe <john@example.com>'
 ```
 
-Example filtering tags created after a specific year:
+**Filtering tags created after a specific date:**
 
 ```yaml
 spec:
@@ -411,53 +478,29 @@ spec:
   - git:
       repoURL: https://github.com/example/repo.git
       commitSelectionStrategy: NewestTag
-      tagExpressionFilter: creatorDate.Year() >= 2024
+      expressionFilter: creatorDate.Year() >= 2024
 ```
 
-##### Commit Expression Filtering
-
-For the `NewestFromBranch` selection strategy, you can use the
-`commitExpressionFilter` field to filter commits based on their metadata.
-
-The following fields are available in commit expressions:
-
-- `id`: The ID (SHA) of the commit
-- `commitDate`: The date of the commit
-- `author`: The author of the commit
-- `committer`: The committer of the commit
-- `subject`: The first line of the commit message
-
-Example filtering out commits by author email:
+**Filtering tags to exclude those committed by bots:**
 
 ```yaml
 spec:
   subscriptions:
   - git:
       repoURL: https://github.com/example/repo.git
-      commitSelectionStrategy: NewestFromBranch
-      commitExpressionFilter: !(author contains '<bot@example.com>')
+      commitSelectionStrategy: Lexical
+      expressionFilter: !(committer contains '<bot@example.com>')
 ```
 
-Example filtering commits with specific message patterns:
+**Filtering tags with complex conditions:**
 
 ```yaml
 spec:
   subscriptions:
   - git:
       repoURL: https://github.com/example/repo.git
-      commitSelectionStrategy: NewestFromBranch
-      commitExpressionFilter: subject contains 'feat:' || subject contains 'fix:'
-```
-
-Example combining multiple criteria:
-
-```yaml
-spec:
-  subscriptions:
-  - git:
-      repoURL: https://github.com/example/repo.git
-      commitSelectionStrategy: NewestFromBranch
-      commitExpressionFilter: !(author == 'Example Bot') && commitDate.After(date('2025-01-01'))
+      commitSelectionStrategy: SemVer
+      expressionFilter: creatorDate.After(date('2024-01-01')) && !(tag contains 'alpha')
 ```
 
 #### Git Subscription Path Filtering

@@ -161,34 +161,6 @@ spec:
                           minLength: 1
                           pattern: ^[a-zA-Z0-9]([a-zA-Z0-9._\/-]*[a-zA-Z0-9_-])?$
                           type: string
-                        commitExpressionFilter:
-                          description: "CommitExpressionFilter is an expression that
-                            can optionally be used to\nlimit the commits that are
-                            considered in determining the newest commit of\ninterest
-                            based on the metadata of the commit. The value in this
-                            field\nonly has any effect when the CommitSelectionStrategy
-                            is NewestFromBranch\nor left unspecified (which is implicitly
-                            the same as NewestFromBranch).\n\nThe expression should
-                            be a valid expr-lang expression that evaluates to\ntrue
-                            or false. When the expression evaluates to true, the commit
-                            is\nincluded in the set of commits that are considered.
-                            When the expression\nevaluates to false, the commit is
-                            excluded from the set of commits that\nare considered.\n\nThe
-                            following variables are available in the expression:\n
-                            \ - `id`: The ID (sha) of the commit.\n  - `commitDate`:
-                            The commit date of the commit.\n  - `author`: The author
-                            of the commit message, in the format\n \t\"Name <email>\".\n
-                            \ - `commiter`: The person who committed the commit, in
-                            the format \"Name\n    <email>\".\n  - `subject`: The
-                            subject (first line) of the commit message.\n\nFor example,
-                            the expression `!(author contains \"<bot@example.com>\")`\nwould
-                            exclude all commits with an author containing the bot's
-                            email\naddress. The expression `!(subject contains \"[kargo-ignore]\")`
-                            would\nexclude all commits with a subject containing the
-                            string \"[kargo-ignore]\".\n\nRefer to the expr-lang documentation
-                            for more details on the syntax and\ncapabilities of the
-                            expression language: https://expr-lang.org."
-                          type: string
                         commitSelectionStrategy:
                           default: NewestFromBranch
                           description: |-
@@ -251,6 +223,41 @@ spec:
                           items:
                             type: string
                           type: array
+                        expressionFilter:
+                          description: "ExpressionFilter is an expression that can
+                            optionally be used to limit\nthe commits or tags that
+                            are considered in determining the newest commit\nof interest
+                            based on their metadata.\n\nFor commit-based strategies
+                            (NewestFromBranch), the filter applies to\ncommits and
+                            has access to commit metadata variables.\nFor tag-based
+                            strategies (Lexical, NewestTag, SemVer), the filter applies\nto
+                            tags and has access to tag metadata variables. The filter
+                            is applied\nafter AllowTags, IgnoreTags, and SemverConstraint
+                            fields.\n\nThe expression should be a valid expr-lang
+                            expression that evaluates to\ntrue or false. When the
+                            expression evaluates to true, the commit/tag is\nincluded
+                            in the set that is considered. When the expression evaluates
+                            to\nfalse, the commit/tag is excluded.\n\nAvailable variables
+                            depend on the CommitSelectionStrategy:\n\nFor NewestFromBranch
+                            (commit filtering):\n  - `id`: The ID (sha) of the commit.\n
+                            \ - `commitDate`: The commit date of the commit.\n  -
+                            `author`: The author of the commit message, in the format
+                            \"Name <email>\".\n  - `committer`: The person who committed
+                            the commit, in the format\n\t   \"Name <email>\".\n  -
+                            `subject`: The subject (first line) of the commit message.\n\nFor
+                            Lexical, NewestTag, SemVer (tag filtering):\n  - `tag`:
+                            The name of the tag.\n  - `id`: The ID (sha) of the commit
+                            associated with the tag.\n  - `creatorDate`: The creation
+                            date of an annotated tag, or the commit\n\t\tdate of a
+                            lightweight tag.\n  - `author`: The author of the commit
+                            message associated with the tag,\n\t   in the format \"Name
+                            <email>\".\n  - `committer`: The person who committed
+                            the commit associated with the\n\t   tag, in the format
+                            \"Name <email>\".\n  - `subject`: The subject (first line)
+                            of the commit message associated\n\t   with the tag.\n\nRefer
+                            to the expr-lang documentation for more details on syntax
+                            and\ncapabilities of the expression language: https://expr-lang.org."
+                          type: string
                         ignoreTags:
                           description: |-
                             IgnoreTags is a list of tags that must be ignored when determining the
@@ -312,40 +319,6 @@ spec:
                             characters only to be mistaken for a semver string containing the major
                             version number only.
                           type: boolean
-                        tagExpressionFilter:
-                          description: |-
-                            TagExpressionFilter is an expression that can optionally be used to limit
-                            the tags that are considered in determining the newest commit of interest
-                            based on the metadata of the tag. The value in this field only has any
-                            effect when the CommitSelectionStrategy is Lexical, NewestTag, or SemVer.
-
-                            The filter is applied after the AllowTags, IgnoreTags, and
-                            SemverConstraint fields, but before the IncludePaths and ExcludePaths.
-
-                            The expression should be a valid expr-lang expression that evaluates to
-                            true or false. When the expression evaluates to true, the tag is included
-                            in the set of tags that are considered. When the expression evaluates to
-                            false, the tag is excluded from the set of tags that are considered.
-
-                            The following variables are available in the expression:
-                              - `tag`: The name of the tag.
-                              - `commitID`: The ID (sha) of the commit associated with the tag.
-                              - `creatorDate`: The creation date of an annotated tag, or the commit
-                                date of a lightweight tag.
-                              - `author`: The author of the commit message associated with the tag,
-                                in the format "Name <email>".
-                              - `commiter`: The person who committed the commit associated with the
-                                tag, in the format "Name <email>".
-                              - `subject`: The subject (first line) of the commit message associated
-                                with the tag.
-
-                            For example, the expression `!(committer contains "<bot@example.com>")`
-                            would exclude all tags with a commit committed by the bot's email
-                            address.
-
-                            Refer to the expr-lang documentation for more details on the syntax and
-                            capabilities of the expression language: https://expr-lang.org.
-                          type: string
                       required:
                       - repoURL
                       - strictSemvers

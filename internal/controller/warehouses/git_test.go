@@ -252,7 +252,7 @@ func TestDiscoverBranchHistory(t *testing.T) {
 		{
 			name: "error compiling expression filter",
 			sub: kargoapi.GitSubscription{
-				CommitExpressionFilter: "invalid expression (",
+				ExpressionFilter: "invalid expression (",
 			},
 			reconciler: &reconciler{
 				listCommitsFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
@@ -268,8 +268,8 @@ func TestDiscoverBranchHistory(t *testing.T) {
 		{
 			name: "expression filter excludes commits",
 			sub: kargoapi.GitSubscription{
-				CommitExpressionFilter: "id == 'xyz'",
-				DiscoveryLimit:         10,
+				ExpressionFilter: "id == 'xyz'",
+				DiscoveryLimit:   10,
 			},
 			reconciler: &reconciler{
 				listCommitsFn: func(_ git.Repo, _ uint, skip uint) ([]git.CommitMetadata, error) {
@@ -290,7 +290,7 @@ func TestDiscoverBranchHistory(t *testing.T) {
 		{
 			name: "expression filter includes commits",
 			sub: kargoapi.GitSubscription{
-				CommitExpressionFilter: "id == 'abc'",
+				ExpressionFilter: "id == 'abc'",
 			},
 			reconciler: &reconciler{
 				listCommitsFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
@@ -378,8 +378,8 @@ func TestDiscoverBranchHistory(t *testing.T) {
 		{
 			name: "with expression filter and path filters",
 			sub: kargoapi.GitSubscription{
-				CommitExpressionFilter: "author == 'test-author'",
-				IncludePaths:           []string{regexpPrefix + "^.*third_path_to_a/file$"},
+				ExpressionFilter: "author == 'test-author'",
+				IncludePaths:     []string{regexpPrefix + "^.*third_path_to_a/file$"},
 			},
 			reconciler: &reconciler{
 				listCommitsFn: func(_ git.Repo, _ uint, skip uint) ([]git.CommitMetadata, error) {
@@ -471,7 +471,7 @@ func TestDiscoverTags(t *testing.T) {
 		{
 			name: "tag expression filter error",
 			sub: kargoapi.GitSubscription{
-				TagExpressionFilter: "invalid expression (",
+				ExpressionFilter: "invalid expression (",
 			},
 			reconciler: &reconciler{
 				listTagsFn: func(git.Repo) ([]git.TagMetadata, error) {
@@ -488,7 +488,7 @@ func TestDiscoverTags(t *testing.T) {
 		{
 			name: "tag expression filter success",
 			sub: kargoapi.GitSubscription{
-				TagExpressionFilter: "hasPrefix(tag, 'v1.')",
+				ExpressionFilter: "hasPrefix(tag, 'v1.')",
 			},
 			reconciler: &reconciler{
 				listTagsFn: func(git.Repo) ([]git.TagMetadata, error) {
