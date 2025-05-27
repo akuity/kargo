@@ -63,7 +63,7 @@ steps:
   config:
     repoURL: https://github.com/example/repo.git
     createTargetBranch: true
-    sourceBranch: ${{ outputs.push.branch }}
+    sourceBranch: ${{ task.outputs.push.branch }}
     targetBranch: stage/${{ ctx.stage }}
 # Wait for the PR to be merged or closed...
 ```
@@ -92,7 +92,7 @@ steps:
 - uses: git-open-pr
   config:
     repoURL: https://github.com/example/repo.git
-    sourceBranch: ${{ outputs.push.branch }}
+    sourceBranch: ${{ task.outputs.push.branch }}
     targetBranch: stage/${{ ctx.stage }}
     title: Deploy to ${{ ctx.stage }}
     labels: ["infra", "needs-review"]
