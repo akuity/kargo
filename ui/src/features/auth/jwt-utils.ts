@@ -55,7 +55,7 @@ export const claimsMapping: Record<string, { label: string; description: string 
   exp: {
     label: 'Expiration Time',
     description:
-      'Token expiration time (in Unix timestamp). After this time, the token must not be accepted.'
+      'Token expiration time (as Unix timestamp). After this time, the token must not be accepted.'
   },
   iat: {
     label: 'Issued At',
