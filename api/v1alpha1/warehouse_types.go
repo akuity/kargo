@@ -188,69 +188,48 @@ type GitSubscription struct {
 	//
 	// +kubebuilder:validation:Optional
 	IgnoreTags []string `json:"ignoreTags,omitempty" protobuf:"bytes,6,rep,name=ignoreTags"`
-	// CommitExpressionFilter is an expression that can optionally be used to
-	// limit the commits that are considered in determining the newest commit of
-	// interest based on the metadata of the commit. The value in this field
-	// only has any effect when the CommitSelectionStrategy is NewestFromBranch
-	// or left unspecified (which is implicitly the same as NewestFromBranch).
+	// ExpressionFilter is an expression that can optionally be used to limit
+	// the commits or tags that are considered in determining the newest commit
+	// of interest based on their metadata.
+	//
+	// For commit-based strategies (NewestFromBranch), the filter applies to
+	// commits and has access to commit metadata variables.
+	// For tag-based strategies (Lexical, NewestTag, SemVer), the filter applies
+	// to tags and has access to tag metadata variables. The filter is applied
+	// after AllowTags, IgnoreTags, and SemverConstraint fields.
 	//
 	// The expression should be a valid expr-lang expression that evaluates to
-	// true or false. When the expression evaluates to true, the commit is
-	// included in the set of commits that are considered. When the expression
-	// evaluates to false, the commit is excluded from the set of commits that
-	// are considered.
+	// true or false. When the expression evaluates to true, the commit/tag is
+	// included in the set that is considered. When the expression evaluates to
+	// false, the commit/tag is excluded.
 	//
-	// The following variables are available in the expression:
+	// Available variables depend on the CommitSelectionStrategy:
+	//
+	// For NewestFromBranch (commit filtering):
 	//   - `id`: The ID (sha) of the commit.
 	//   - `commitDate`: The commit date of the commit.
-	//   - `author`: The author of the commit message, in the format
-	//  	"Name <email>".
-	//   - `commiter`: The person who committed the commit, in the format "Name
-	//     <email>".
+	//   - `author`: The author of the commit message, in the format "Name <email>".
+	//   - `committer`: The person who committed the commit, in the format
+	//	   "Name <email>".
 	//   - `subject`: The subject (first line) of the commit message.
 	//
-	// For example, the expression `!(author contains "<bot@example.com>")`
-	// would exclude all commits with an author containing the bot's email
-	// address. The expression `!(subject contains "[kargo-ignore]")` would
-	// exclude all commits with a subject containing the string "[kargo-ignore]".
-	//
-	// Refer to the expr-lang documentation for more details on the syntax and
-	// capabilities of the expression language: https://expr-lang.org.
-	CommitExpressionFilter string `json:"commitExpressionFilter,omitempty" protobuf:"bytes,13,opt,name=commitExpressionFilter"`
-	// TagExpressionFilter is an expression that can optionally be used to limit
-	// the tags that are considered in determining the newest commit of interest
-	// based on the metadata of the tag. The value in this field only has any
-	// effect when the CommitSelectionStrategy is Lexical, NewestTag, or SemVer.
-	//
-	// The filter is applied after the AllowTags, IgnoreTags, and
-	// SemverConstraint fields, but before the IncludePaths and ExcludePaths.
-	//
-	// The expression should be a valid expr-lang expression that evaluates to
-	// true or false. When the expression evaluates to true, the tag is included
-	// in the set of tags that are considered. When the expression evaluates to
-	// false, the tag is excluded from the set of tags that are considered.
-	//
-	// The following variables are available in the expression:
+	// For Lexical, NewestTag, SemVer (tag filtering):
 	//   - `tag`: The name of the tag.
-	//   - `commitID`: The ID (sha) of the commit associated with the tag.
+	//   - `id`: The ID (sha) of the commit associated with the tag.
 	//   - `creatorDate`: The creation date of an annotated tag, or the commit
-	//     date of a lightweight tag.
+	//		date of a lightweight tag.
 	//   - `author`: The author of the commit message associated with the tag,
-	//     in the format "Name <email>".
-	//   - `commiter`: The person who committed the commit associated with the
-	//     tag, in the format "Name <email>".
+	//	   in the format "Name <email>".
+	//   - `committer`: The person who committed the commit associated with the
+	//	   tag, in the format "Name <email>".
 	//   - `subject`: The subject (first line) of the commit message associated
-	//     with the tag.
+	//	   with the tag.
 	//
-	// For example, the expression `!(committer contains "<bot@example.com>")`
-	// would exclude all tags with a commit committed by the bot's email
-	// address.
-	//
-	// Refer to the expr-lang documentation for more details on the syntax and
+	// Refer to the expr-lang documentation for more details on syntax and
 	// capabilities of the expression language: https://expr-lang.org.
 	//
 	// +kubebuilder:validation:Optional
-	TagExpressionFilter string `json:"tagExpressionFilter,omitempty" protobuf:"bytes,12,opt,name=tagExpressionFilter"`
+	ExpressionFilter string `json:"expressionFilter,omitempty" protobuf:"bytes,12,opt,name=expressionFilter"`
 	// InsecureSkipTLSVerify specifies whether certificate verification errors
 	// should be ignored when connecting to the repository. This should be enabled
 	// only with great caution.

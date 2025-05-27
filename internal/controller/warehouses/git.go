@@ -202,8 +202,8 @@ func (r *reconciler) discoverCommits(
 func (r *reconciler) discoverBranchHistory(repo git.Repo, sub kargoapi.GitSubscription) ([]git.CommitMetadata, error) {
 	// Compile the commit expression filter if it is specified.
 	var exprProgram *vm.Program
-	if sub.CommitExpressionFilter != "" {
-		program, err := expr.Compile(sub.CommitExpressionFilter)
+	if sub.ExpressionFilter != "" {
+		program, err := expr.Compile(sub.ExpressionFilter)
 		if err != nil {
 			return nil, fmt.Errorf("error compiling expression filter: %w", err)
 		}
@@ -293,7 +293,7 @@ func (r *reconciler) discoverTags(repo git.Repo, sub kargoapi.GitSubscription) (
 		return nil, fmt.Errorf("failed to filter tags: %w", err)
 	}
 
-	if tags, err = filterTagsByExpression(tags, sub.TagExpressionFilter); err != nil {
+	if tags, err = filterTagsByExpression(tags, sub.ExpressionFilter); err != nil {
 		return nil, fmt.Errorf("failed to filter tags by expression: %w", err)
 	}
 
@@ -397,7 +397,7 @@ func filterTagsByExpression(
 	for _, tag := range tags {
 		env := map[string]any{
 			"tag":         tag.Tag,
-			"commitID":    tag.CommitID,
+			"id":          tag.CommitID,
 			"creatorDate": tag.CreatorDate,
 			"author":      tag.Author,
 			"committer":   tag.Committer,
