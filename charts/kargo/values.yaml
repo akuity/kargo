@@ -601,6 +601,7 @@ externalWebhooksServer:
     # nodePort:
     ## @param externalWebhooksServer.service.annotations Annotations to add to the external webhook server's service. Merges with `global.annotations`, allowing you to override or add to the global annotations.
     annotations: {}
+
   ## ServiceAccount specific settings
   serviceAccount:
     ## @param externalWebhooksServer.serviceAccount.annotations Additional annotations to add to the externalWebHooksServer ServiceAccount.
@@ -698,6 +699,13 @@ webhooksServer:
   podLabels: {}
   ## @param webhooksServer.podAnnotations Optional annotations to add to the webhook server pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
   podAnnotations: {}
+
+  ## ServiceAccount specific settings
+  serviceAccount:
+    ## @param webhooksServer.serviceAccount.annotations Additional annotations to add to the webhooks server ServiceAccount.
+    annotations: {}
+    # foo: bar
+    # another: value
 
   tls:
     ## @param webhooksServer.tls.selfSignedCert  Whether to generate a self-signed certificate for the controller's built-in webhook server. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-webhooks-server-cert` **must** be provided in the same namespace as Kargo. There is no provision for webhooks without TLS.
