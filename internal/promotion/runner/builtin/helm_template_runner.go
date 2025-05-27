@@ -130,6 +130,11 @@ func (h *helmTemplateRunner) run(
 			fmt.Errorf("failed to join path %q: %w", cfg.OutPath, err)
 	}
 
+	if err = h.checkDependencies(chartRequested); err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+			fmt.Errorf("missing chart dependencies: %w", err)
+	}
+
 	install, err := h.newInstallAction(cfg, stepCtx.Project, absOutPath)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
