@@ -20,7 +20,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/conditions"
 	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/kubeclient"
@@ -106,12 +105,7 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	// Ensure the ProjectConfig has a finalizer and requeue if it was added.
-	// The reason to requeue is to ensure that a possible deletion of the ProjectConfig
-	// directly after the finalizer was added is handled without delay.
-	if ok, err := api.EnsureFinalizer(ctx, r.client, projectConfig); ok || err != nil {
-		return ctrl.Result{Requeue: ok}, err
-	}
+	// NOTE: If we start requiring cleanup operations or other management of state. Add a finalizer here
 
 	logger.Debug("reconciling ProjectConfig")
 	newStatus, needsRequeue, reconcileErr := r.syncProjectConfig(ctx, projectConfig)
