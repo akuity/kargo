@@ -46,7 +46,7 @@ rules:
   - kargo.akuity.io
   resources:
   - projects/status
-  - projectconfigs
+  - projectconfigs/finalizers
   - projectconfigs/status
   verbs:
   - patch
