@@ -396,12 +396,14 @@ func filterTagsByExpression(
 	filteredTags := make([]git.TagMetadata, 0, len(tags))
 	for _, tag := range tags {
 		env := map[string]any{
-			"tag":         tag.Tag,
-			"id":          tag.CommitID,
-			"creatorDate": tag.CreatorDate,
-			"author":      tag.Author,
-			"committer":   tag.Committer,
-			"subject":     tag.Subject,
+			"tag":           tag.Tag,
+			"id":            tag.CommitID,
+			"creatorDate":   tag.CreatorDate,
+			"author":        tag.Author,
+			"committer":     tag.Committer,
+			"subject":       tag.Subject,
+			"tagger":        tag.Tagger,
+			"annotation": tag.Annotation,
 		}
 
 		result, err := expr.Run(program, env)

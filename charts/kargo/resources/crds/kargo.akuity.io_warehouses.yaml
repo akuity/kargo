@@ -254,9 +254,13 @@ spec:
                             <email>\".\n  - `committer`: The person who committed
                             the commit associated with the\n\t   tag, in the format
                             \"Name <email>\".\n  - `subject`: The subject (first line)
-                            of the commit message associated\n\t   with the tag.\n\nRefer
-                            to the expr-lang documentation for more details on syntax
-                            and\ncapabilities of the expression language: https://expr-lang.org."
+                            of the commit message associated\n\t   with the tag.\n\t
+                            - `tagger`: The person who created the tag, in the format
+                            \"Name <email>\".\n\t   Only available for annotated tags.\n\t
+                            - `annotation`: The subject (first line) of the tag annotation.
+                            Only\n\t   available for annotated tags.\n\nRefer to the
+                            expr-lang documentation for more details on syntax and\ncapabilities
+                            of the expression language: https://expr-lang.org."
                           type: string
                         ignoreTags:
                           description: |-
