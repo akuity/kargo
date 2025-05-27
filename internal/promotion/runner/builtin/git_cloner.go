@@ -107,9 +107,9 @@ func (g *gitCloner) run(
 	var repoUser git.User
 	if cfg.Author != nil {
 		repoUser = git.User{
-			Name:  cfg.Author.Name,
-			Email: cfg.Author.Email,
-			SigningKey:     cfg.Author.SigningKey, // Optional, may be empty
+			Name:       cfg.Author.Name,
+			Email:      cfg.Author.Email,
+			SigningKey: cfg.Author.SigningKey, // Optional, may be empty
 		}
 	} else {
 		repoUser = g.gitUser // Default to the system-level gitUser
@@ -130,6 +130,7 @@ func (g *gitCloner) run(
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error cloning %s: %w", cfg.RepoURL, err)
 	}
+	commits := make(map[string]string)
 	for _, checkout := range cfg.Checkout {
 		var ref string
 		switch {
@@ -151,20 +152,39 @@ func (g *gitCloner) run(
 				checkout.Path, stepCtx.WorkDir, err,
 			)
 		}
-		if _, err = repo.AddWorkTree(
+		worktree, err := repo.AddWorkTree(
 			path,
 			&git.AddWorkTreeOptions{Ref: ref},
-		); err != nil {
+		)
+		if err != nil {
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
 				"error adding work tree %s to repo %s: %w",
 				checkout.Path, cfg.RepoURL, err,
 			)
 		}
+		// Get HEAD commit hash for this worktree
+		headHash, err := worktree.LastCommitID()
+		if err != nil {
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
+				"error resolving HEAD for worktree at %s: %w",
+				path, err,
+			)
+		}
+		key := checkout.Path
+		if checkout.As != "" {
+			key = checkout.As
+		}
+		commits[key] = headHash
 	}
 	// Note: We do NOT defer repo.Close() because we want to keep the repository
 	// around on the FS for subsequent promotion steps to use. The Engine will
 	// handle all work dir cleanup.
-	return promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, nil
+	return promotion.StepResult{
+		Status: kargoapi.PromotionStepStatusSucceeded,
+		Output: map[string]any{
+			"commits": commits,
+		},
+	}, nil
 }
 
 // ensureRemoteBranch checks for the existence of a remote branch. If the remote
