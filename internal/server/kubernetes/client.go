@@ -21,6 +21,7 @@ import (
 	kubescheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"sigs.k8s.io/cli-utils/pkg/flowcontrol"
 	libClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	libCluster "sigs.k8s.io/controller-runtime/pkg/cluster"
@@ -709,6 +710,27 @@ func GetRestConfig(ctx context.Context, path string) (*rest.Config, error) {
 		return cfg, fmt.Errorf("error loading REST config from %q: %w", path, err)
 	}
 	return cfg, nil
+}
+
+// ConfigureQPSBurst configures the provided REST config to use the specified
+// QPS and burst values, unless PriorityAndFairness flow control is enabled in
+// the cluster, in which case, it disables QPS and burst.
+//
+// For more information on PriorityAndFairness flow control, see:
+// https://kubernetes.io/docs/concepts/cluster-administration/flow-control/
+func ConfigureQPSBurst(ctx context.Context, cfg *rest.Config, qps float32, burst int) {
+	logger := logging.LoggerFromContext(ctx)
+
+	if ok, err := flowcontrol.IsEnabled(ctx, cfg); err != nil && ok {
+		logger.Debug("PriorityAndFairness flow control is enabled; disabling QPS and burst")
+		cfg.QPS = -1
+		cfg.Burst = -1
+		return
+	}
+
+	logger.Debug("configuring QPS and burst for REST config", "qps", qps, "burst", burst)
+	cfg.QPS = qps
+	cfg.Burst = burst
 }
 
 // gvrAndKeyFromObj extracts the group, version, and plural resource type

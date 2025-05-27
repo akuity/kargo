@@ -14,12 +14,15 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
 	"github.com/akuity/kargo/internal/server/kubernetes"
+	"github.com/akuity/kargo/internal/types"
 	"github.com/akuity/kargo/internal/webhook/external"
 	versionpkg "github.com/akuity/kargo/pkg/x/version"
 )
 
 type externalWebhooksServerOptions struct {
 	KubeConfig string
+	QPS        float32
+	Burst      int
 
 	BindAddress string
 	Port        string
@@ -51,6 +54,9 @@ func newExternalWebhooksServerCommand() *cobra.Command {
 
 func (o *externalWebhooksServerOptions) complete() {
 	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
+	o.QPS = types.MustParseFloat32(os.GetEnv("KUBE_API_QPS", "50.0"))
+	o.Burst = types.MustParseInt(os.GetEnv("KUBE_API_BURST", "300"))
+
 	o.BindAddress = os.GetEnv("BIND_ADDRESS", "0.0.0.0")
 	o.Port = os.GetEnv("PORT", "8080")
 }
@@ -71,6 +77,7 @@ func (o *externalWebhooksServerOptions) run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("error getting Kubernetes client REST config: %w", err)
 	}
+	kubernetes.ConfigureQPSBurst(ctx, restCfg, o.QPS, o.Burst)
 
 	cluster, err := libCluster.New(restCfg)
 	if err != nil {
