@@ -6,6 +6,7 @@ description: Commits all changes in a working tree to its checked out branch.
 # `git-commit`
 
 `git-commit` commits all changes in a working tree to its checked out branch.
+If there are no differences from the current `HEAD`, this step is skipped and no new commit is created.
 This step is often used after previous steps have put the working tree into the
 desired state and is commonly followed by a [`git-push` step](git-push.md).
 
@@ -66,6 +67,20 @@ steps:
     message: ${{ outputs['update-image'].commitMessage }}
 # Push, etc...
 ```
+
+### Skipped Commit When No Changes
+If there are no differences between the working tree and the current `HEAD` of the branch, 
+the `git-commit` step is skipped. This behavior avoids unnecessary empty commits.
+
+```
+steps:
+- uses: git-commit
+  config:
+    path: ./out
+    message: "Update application image"
+```
+In this example, if `./out` has no changes from the current HEAD of the branch, no commit will be created.
+The step will still succeed and output the SHA of the last commit.
 
 ### Composed Commit Message
 
