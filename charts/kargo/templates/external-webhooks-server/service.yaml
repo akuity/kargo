@@ -1,0 +1,32 @@
+{{- if .Values.webhooksServer.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: kargo-external-webhooks-server
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.externalWebhooksServer.labels" . | nindent 4 }}
+  {{- with (mergeOverwrite (deepCopy .Values.global.annotations) .Values.externalWebhooksServer.service.annotations) }}
+  annotations:
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  {{- end }}
+spec:
+  type: {{ .Values.externalWebhooksServer.service.type }}
+  ports:
+  - protocol: TCP
+    {{- if .Values.externalWebhooksServer.tls.enabled }}
+    port: 443
+    {{- else }}
+    port: 80
+    {{- end }}
+    {{- if and (or (eq .Values.externalWebhooksServer.service.type "NodePort") (eq .Values.externalWebhooksServer.service.type "LoadBalancer")) .Values.externalWebhooksServer.service.nodePort}}
+    nodePort: {{ .Values.externalWebhooksServer.service.nodePort }}
+    {{- end }}
+    targetPort: 8080
+  selector:
+    {{- include "kargo.selectorLabels" . | nindent 4 }}
+    {{- include "kargo.externalWebhooksServer.labels" . | nindent 4 }}
+{{- end }}

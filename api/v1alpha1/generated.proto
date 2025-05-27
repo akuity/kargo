@@ -158,6 +158,7 @@ message ChartSubscription {
   //
   // +kubebuilder:validation:MinLength=1
   // +kubebuilder:validation:Pattern=`^(((https?)|(oci))://)([\w\d\.\-]+)(:[\d]+)?(/.*)*$`
+  // +akuity:test-kubebuilder-pattern=HelmRepoURL
   optional string repoURL = 1;
 
   // Name specifies the name of a Helm chart to subscribe to within a classic
@@ -280,12 +281,14 @@ message DiscoveredImageReference {
   // +kubebuilder:validation:MinLength=1
   // +kubebuilder:validation:MaxLength=128
   // +kubebuilder:validation:Pattern=`^[\w.\-\_]+$`
+  // +akuity:test-kubebuilder-pattern=Tag
   optional string tag = 1;
 
   // Digest is the digest of the image.
   //
   // +kubebuilder:validation:MinLength=1
   // +kubebuilder:validation:Pattern=`^[a-z0-9]+:[a-f0-9]+$`
+  // +akuity:test-kubebuilder-pattern=Digest
   optional string digest = 2;
 
   // Annotations is a map of key-value pairs that provide additional
@@ -401,9 +404,9 @@ message FreightOrigin {
 // FreightReference is a simplified representation of a piece of Freight -- not
 // a root resource type.
 message FreightReference {
-  // Name is system-assigned identifier that is derived deterministically from
-  // the contents of the Freight. i.e. Two pieces of Freight can be compared for
-  // equality by comparing their Names.
+  // Name is a system-assigned identifier derived deterministically from
+  // the contents of the Freight. I.e., two pieces of Freight can be compared
+  // for equality by comparing their Names.
   optional string name = 1;
 
   // Origin describes a kind of Freight in terms of its origin.
@@ -456,12 +459,21 @@ message FreightSources {
   // requirement.
   //
   // +kubebuilder:validation:Type=string
-  // +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(s|m|h))+$"
+  // +kubebuilder:validation:Pattern=`^([0-9]+(\.[0-9]+)?(s|m|h))+$`
+  // +akuity:test-kubebuilder-pattern=Duration
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration requiredSoakTime = 3;
 
   // AvailabilityStrategy specifies the semantics for how requested Freight is
   // made available to the Stage. This field is optional. When left unspecified,
   // the field is implicitly treated as if its value were "OneOf".
+  //
+  // Accepted Values:
+  //
+  // - "All": Freight must be be verified and, if applicable, soaked in all
+  //   upstream Stages to be considered available for promotion.
+  // - "OneOf": Freight must be verified and, if applicable, soaked in at least
+  //    one upstream Stage to be considered available for promotion.
+  // - "": Treated the same as "OneOf".
   //
   // +kubebuilder:validation:Optional
   optional string availabilityStrategy = 4;
@@ -516,7 +528,8 @@ message GitDiscoveryResult {
   // RepoURL is the repository URL of the GitSubscription.
   //
   // +kubebuilder:validation:MinLength=1
-  // +kubebuilder:validation:Pattern=`(?:^(https?)://(?:([\w-]+):(.+)@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
+  // +kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
+  // +akuity:test-kubebuilder-pattern=GitRepoURL
   optional string repoURL = 1;
 
   // Commits is a list of commits discovered by the Warehouse for the
@@ -532,14 +545,33 @@ message GitSubscription {
   // URL is the repository's URL. This is a required field.
   //
   // +kubebuilder:validation:MinLength=1
-  // +kubebuilder:validation:Pattern=`(?:^(https?)://(?:([\w-]+):(.+)@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
+  // +kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
+  // +akuity:test-kubebuilder-pattern=GitRepoURL
   optional string repoURL = 1;
 
   // CommitSelectionStrategy specifies the rules for how to identify the newest
   // commit of interest in the repository specified by the RepoURL field. This
   // field is optional. When left unspecified, the field is implicitly treated
   // as if its value were "NewestFromBranch".
-  // Accepted values: Lexical, NewestFromBranch, NewestTag, SemVer
+  //
+  // Accepted values:
+  //
+  // - "NewestFromBranch": Selects the latest commit on the branch specified
+  //   by the Branch field or the default branch if none is specified. This is
+  //   the default strategy.
+  //
+  // - "SemVer": Selects the commit referenced by the the semantically greatest
+  //   tag. The SemverConstraint field can optionally be used to narrow the set
+  //   of tags eligible for selection.
+  //
+  // - "Lexical": Selects the commit referenced by the lexicographically
+  //   greatest tag. Useful when tags embed a _leading_ date or timestamp. The
+  //   AllowTags and IgnoreTags fields can optionally be used to narrow the set
+  //   of tags eligible for selection.
+  //
+  // - "NewestTag": Selects the commit referenced by the most recently created
+  //   tag. The AllowTags and IgnoreTags fields can optionally be used to
+  //   narrow the set of tags eligible for selection.
   //
   // +kubebuilder:default=NewestFromBranch
   optional string commitSelectionStrategy = 2;
@@ -554,6 +586,7 @@ message GitSubscription {
   // +kubebuilder:validation:MinLength=1
   // +kubebuilder:validation:MaxLength=255
   // +kubebuilder:validation:Pattern=`^[a-zA-Z0-9]([a-zA-Z0-9._\/-]*[a-zA-Z0-9_-])?$`
+  // +akuity:test-kubebuilder-pattern=Branch
   optional string branch = 3;
 
   // StrictSemvers specifies whether only "strict" semver tags should be
@@ -609,6 +642,7 @@ message GitSubscription {
   //   2. Glob patterns (prefix the pattern with "glob:"; ex. "glob:*.yaml")
   //   3. Regular expressions (prefix the pattern with "regex:" or "regexp:";
   //      ex. "regexp:^.*\.yaml$")
+  //
   // Paths selected by IncludePaths may be unselected by ExcludePaths. This
   // is a useful method for including a broad set of paths and then excluding a
   // subset of them.
@@ -672,7 +706,7 @@ message HealthCheckStep {
   optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 2;
 }
 
-// HealthStats contains a summary of the collective health of a some resource
+// HealthStats contains a summary of the collective health of some resource
 // type.
 message HealthStats {
   // Healthy contains the number of resources that are explicitly healthy.
@@ -733,6 +767,7 @@ message ImageSubscription {
   //
   // +kubebuilder:validation:MinLength=1
   // +kubebuilder:validation:Pattern=`^(\w+([\.-]\w+)*(:[\d]+)?/)?(\w+([\.-]\w+)*)(/\w+([\.-]\w+)*)*$`
+  // +akuity:test-kubebuilder-pattern=ImageRepoURL
   optional string repoURL = 1;
 
   // GitRepoURL optionally specifies the URL of a Git repository that contains
@@ -750,7 +785,26 @@ message ImageSubscription {
   // of the image specified by the RepoURL field. This field is optional. When
   // left unspecified, the field is implicitly treated as if its value were
   // "SemVer".
-  // Accepted values: Digest, Lexical, NewestBuild, SemVer
+  //
+  // Accepted values:
+  //
+  // - "Digest": Selects the image currently referenced by the tag specified
+  //   (unintuitively) by the SemverConstraint field.
+  //
+  // - "Lexical": Selects the image referenced by the lexicographically greatest
+  //   tag. Useful when tags embed a leading date or timestamp. The AllowTags
+  //   and IgnoreTags fields can optionally be used to narrow the set of tags
+  //   eligible for selection.
+  //
+  // - "NewestBuild": Selects the image that was most recently pushed to the
+  //   repository. The AllowTags and IgnoreTags fields can optionally be used
+  //   to narrow the set of tags eligible for selection. This is the least
+  //   efficient and is likely to cause rate limiting affecting this Warehouse
+  //   and possibly others. This strategy should be avoided.
+  //
+  // - "SemVer": Selects the image with the semantically greatest tag. The
+  //   AllowTags and IgnoreTags fields can optionally be used to narrow the set
+  //   of tags eligible for selection.
   //
   // +kubebuilder:default=SemVer
   optional string imageSelectionStrategy = 3;
@@ -873,8 +927,8 @@ message ProjectList {
   repeated Project items = 2;
 }
 
-// ProjectStats contains a summary of the of the collective state of a
-// Project's constituent resources.
+// ProjectStats contains a summary of the collective state of a Project's
+// constituent resources.
 message ProjectStats {
   // Warehouses contains a summary of the collective state of the Project's
   // Warehouses.
@@ -894,19 +948,7 @@ message ProjectStatus {
   // +listMapKey=type
   repeated .k8s.io.apimachinery.pkg.apis.meta.v1.Condition conditions = 3;
 
-  // Phase describes the Project's current phase.
-  //
-  // Deprecated: Use the Conditions field instead.
-  optional string phase = 1;
-
-  // Message is a display message about the Project, including any errors
-  // preventing the Project from being reconciled. i.e. If the Phase field has a
-  // value of CreationFailed, this field can be expected to explain why.
-  //
-  // Deprecated: Use the Conditions field instead.
-  optional string message = 2;
-
-  // Stats contains a summary of the of the collective state of a Project's
+  // Stats contains a summary of the collective state of a Project's
   // constituent resources.
   optional ProjectStats stats = 4;
 }
@@ -1023,7 +1065,8 @@ message PromotionSpec {
   // +kubebuilder:validation:Required
   // +kubebuilder:validation:MinLength=1
   // +kubebuilder:validation:MaxLength=253
-  // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+  // +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+  // +akuity:test-kubebuilder-pattern=KubernetesName
   optional string stage = 1;
 
   // Freight specifies the piece of Freight to be promoted into the Stage
@@ -1032,7 +1075,8 @@ message PromotionSpec {
   // +kubebuilder:validation:Required
   // +kubebuilder:validation:MinLength=1
   // +kubebuilder:validation:MaxLength=253
-  // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+  // +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+  // +akuity:test-kubebuilder-pattern=KubernetesName
   optional string freight = 2;
 
   // Vars is a list of variables that can be referenced by expressions in
@@ -1117,6 +1161,12 @@ message PromotionStep {
   // considered to have failed.
   optional string if = 7;
 
+  // ContinueOnError is a boolean value that, if set to true, will cause the
+  // Promotion to continue executing the next step even if this step fails. It
+  // also will not permit this failure to impact the overall status of the
+  // Promotion.
+  optional bool continueOnError = 8;
+
   // Retry is the retry policy for this step.
   optional PromotionStepRetry retry = 4;
 
@@ -1196,7 +1246,8 @@ message PromotionTaskReference {
   // +kubebuilder:validation:Required
   // +kubebuilder:validation:MinLength=1
   // +kubebuilder:validation:MaxLength=253
-  // +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+  // +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+  // +akuity:test-kubebuilder-pattern=KubernetesName
   optional string name = 1;
 
   // Kind is the type of the PromotionTask. Can be either PromotionTask or
@@ -1316,7 +1367,7 @@ message StageSpec {
   optional Verification verification = 3;
 }
 
-// StageStats contains a summary of the collective state of the a Project's
+// StageStats contains a summary of the collective state of a Project's
 // Stages.
 message StageStats {
   // Count contains the total number of Stages in the Project.
@@ -1343,9 +1394,6 @@ message StageStatus {
   // +optional
   optional string lastHandledRefresh = 11;
 
-  // Phase describes where the Stage currently is in its lifecycle.
-  optional string phase = 1;
-
   // FreightHistory is a list of recent Freight selections that were deployed
   // to the Stage. By default, the last ten Freight selections are stored.
   // The first item in the list is the most recent Freight selection and
@@ -1366,10 +1414,6 @@ message StageStatus {
 
   // Health is the Stage's last observed health.
   optional Health health = 8;
-
-  // Message describes any errors that are preventing the Stage controller
-  // from assessing Stage health or from finding new Freight.
-  optional string message = 9;
 
   // ObservedGeneration represents the .metadata.generation that this Stage
   // status was reconciled against.
@@ -1404,6 +1448,12 @@ message StepExecutionMetadata {
 
   // Message is a display message about the step, including any errors.
   optional string message = 6;
+
+  // ContinueOnError is a boolean value that, if set to true, will cause the
+  // Promotion to continue executing the next step even if this step fails. It
+  // also will not permit this failure to impact the overall status of the
+  // Promotion.
+  optional bool continueOnError = 7;
 }
 
 // Verification describes how to verify that a Promotion has been successful
@@ -1505,14 +1555,20 @@ message WarehouseSpec {
   // field is implicitly treated as if its value were "5m0s".
   //
   // +kubebuilder:validation:Type=string
-  // +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(s|m|h))+$"
+  // +kubebuilder:validation:Pattern=`^([0-9]+(\.[0-9]+)?(s|m|h))+$`
   // +kubebuilder:default="5m0s"
+  // +akuity:test-kubebuilder-pattern=Duration
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Duration interval = 4;
 
   // FreightCreationPolicy describes how Freight is created by this Warehouse.
   // This field is optional. When left unspecified, the field is implicitly
   // treated as if its value were "Automatic".
-  // Accepted values: Automatic, Manual
+  //
+  // Accepted values:
+  //
+  // - "Automatic": New Freight is created automatically when any new artifact
+  //   is discovered.
+  // - "Manual": New Freight is never created automatically.
   //
   // +kubebuilder:default=Automatic
   // +kubebuilder:validation:Optional
@@ -1525,7 +1581,7 @@ message WarehouseSpec {
   repeated RepoSubscription subscriptions = 1;
 }
 
-// WarehouseStats contains a summary of the collective state of the a Project's
+// WarehouseStats contains a summary of the collective state of a Project's
 // Warehouses.
 message WarehouseStats {
   // Count contains the total number of Warehouses in the Project.

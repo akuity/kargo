@@ -3,8 +3,11 @@ import Link from 'antd/es/typography/Link';
 import { format } from 'date-fns';
 import moment from 'moment';
 import { useMemo, useState } from 'react';
+import { Link as ReactRouterLink } from 'react-router-dom';
+import { generatePath } from 'react-router-dom';
 
-import { VerificationInfo } from '@ui/gen/api/v1alpha1/generated_pb';
+import { paths } from '@ui/config/paths';
+import { FreightCollection, VerificationInfo } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { AnalysisModal } from '../common/analysis-modal/analysis-modal';
@@ -14,7 +17,7 @@ import { verificationPhaseIsTerminal } from './utils/verification-phase';
 import { VerificationIcon } from './verification-icon';
 
 type Props = {
-  verifications: VerificationInfo[];
+  verifications: Array<VerificationInfo & { freight: FreightCollection }>;
   images: string[];
 };
 
@@ -124,10 +127,26 @@ export const Verifications = ({ verifications, images }: Props) => {
             </Link>
           )}
         />
-        <Table.Column
+        <Table.Column<(typeof verifications)[number]>
           title='Freight'
-          render={(val) => {
-            return val?.id?.substring(0, 7);
+          render={(val, verification) => {
+            const freights = verification?.freight?.items;
+            const freight = Object.values(freights || {})?.[0];
+
+            if (!verification?.analysisRun?.namespace || !freight?.name) {
+              return null;
+            }
+
+            return (
+              <ReactRouterLink
+                to={generatePath(paths.freight, {
+                  name: verification?.analysisRun?.namespace,
+                  freightName: freight?.name
+                })}
+              >
+                {freight?.name?.slice(0, 7)}
+              </ReactRouterLink>
+            );
           }}
           width={120}
         />

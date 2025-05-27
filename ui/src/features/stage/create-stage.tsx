@@ -1,11 +1,5 @@
 import { useMutation } from '@connectrpc/connect-query';
-import {
-  faBook,
-  faCode,
-  faListCheck,
-  faTheaterMasks,
-  faTimes
-} from '@fortawesome/free-solid-svg-icons';
+import { faCode, faListCheck, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button, Col, Drawer, Flex, Input, Row, Select, Tabs, Typography } from 'antd';
@@ -27,8 +21,7 @@ import { PlainMessage } from '@ui/utils/connectrpc-utils';
 import { cleanEmptyObjectValues } from '@ui/utils/helpers';
 import { zodValidators } from '@ui/utils/validators';
 
-import { getStageYAMLExample } from '../project/pipelines/utils/stage-yaml-example';
-
+import { getStageYAMLExample } from './get-stage-yaml-example';
 import { PromotionStepsWizard } from './promotion-steps-wizard/promotion-steps-wizard';
 import { usePromotionWizardStepsState } from './promotion-steps-wizard/use-promotion-wizard-steps-state';
 import { RequestedFreight } from './requested-freight';
@@ -127,6 +120,7 @@ export const CreateStage = ({
           uses: step?.identifier,
           as: step?.as || '',
           if: '',
+          continueOnError: step.continueOnError || false,
           config: step?.state as JSON, // step.state is type 'object' and it is safe to fake JSON type because it doesn't matter for stageFormToYAML function
           vars: []
         }))
@@ -150,25 +144,23 @@ export const CreateStage = ({
   const promotionWizardStepsState = usePromotionWizardStepsState();
 
   return (
-    <Drawer open={!!project} width={'80%'} closable={false} onClose={close}>
-      <Flex align='center' className='mb-4'>
-        <Typography.Title level={1} className='flex items-center !m-0'>
-          <FontAwesomeIcon icon={faTheaterMasks} className='mr-2 text-base text-gray-400' />
-          Create Stage
-        </Typography.Title>
+    <Drawer
+      open={!!project}
+      width={'80%'}
+      onClose={close}
+      title='Create Stage'
+      extra={
         <Typography.Link
           href='https://docs.kargo.io/user-guide/how-to-guides/working-with-stages'
           target='_blank'
           className='ml-3'
         >
-          <FontAwesomeIcon icon={faBook} />
+          Docs
         </Typography.Link>
-        <Button onClick={close} className='ml-auto'>
-          Cancel
-        </Button>
-      </Flex>
-
+      }
+    >
       <Tabs
+        className='-mt-4'
         onChange={(newTab) => {
           if (tab === 'wizard' && newTab === 'yaml') {
             setValue(
@@ -180,6 +172,7 @@ export const CreateStage = ({
                   uses: step?.identifier,
                   as: step?.as || '',
                   if: '',
+                  continueOnError: step?.continueOnError || false,
                   config: step?.state as JSON, // step.state is type 'object' and it is safe to fake JSON type because it doesn't matter for stageFormToYAML function
                   vars: []
                 }))
@@ -323,7 +316,7 @@ export const CreateStage = ({
           </FieldContainer>
         </Tabs.TabPane>
       </Tabs>
-      <Button onClick={onSubmit} loading={isPending}>
+      <Button onClick={onSubmit} loading={isPending} type='primary'>
         Create
       </Button>
     </Drawer>

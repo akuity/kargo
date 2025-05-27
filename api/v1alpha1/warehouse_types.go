@@ -61,13 +61,19 @@ type WarehouseSpec struct {
 	// field is implicitly treated as if its value were "5m0s".
 	//
 	// +kubebuilder:validation:Type=string
-	// +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(s|m|h))+$"
+	// +kubebuilder:validation:Pattern=`^([0-9]+(\.[0-9]+)?(s|m|h))+$`
 	// +kubebuilder:default="5m0s"
+	// +akuity:test-kubebuilder-pattern=Duration
 	Interval metav1.Duration `json:"interval" protobuf:"bytes,4,opt,name=interval"`
 	// FreightCreationPolicy describes how Freight is created by this Warehouse.
 	// This field is optional. When left unspecified, the field is implicitly
 	// treated as if its value were "Automatic".
-	// Accepted values: Automatic, Manual
+	//
+	// Accepted values:
+	//
+	// - "Automatic": New Freight is created automatically when any new artifact
+	//   is discovered.
+	// - "Manual": New Freight is never created automatically.
 	//
 	// +kubebuilder:default=Automatic
 	// +kubebuilder:validation:Optional
@@ -106,13 +112,32 @@ type GitSubscription struct {
 	// URL is the repository's URL. This is a required field.
 	//
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Pattern=`(?:^(https?)://(?:([\w-]+):(.+)@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
+	// +kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
+	// +akuity:test-kubebuilder-pattern=GitRepoURL
 	RepoURL string `json:"repoURL" protobuf:"bytes,1,opt,name=repoURL"`
 	// CommitSelectionStrategy specifies the rules for how to identify the newest
 	// commit of interest in the repository specified by the RepoURL field. This
 	// field is optional. When left unspecified, the field is implicitly treated
 	// as if its value were "NewestFromBranch".
-	// Accepted values: Lexical, NewestFromBranch, NewestTag, SemVer
+	//
+	// Accepted values:
+	//
+	// - "NewestFromBranch": Selects the latest commit on the branch specified
+	//   by the Branch field or the default branch if none is specified. This is
+	//   the default strategy.
+	//
+	// - "SemVer": Selects the commit referenced by the the semantically greatest
+	//   tag. The SemverConstraint field can optionally be used to narrow the set
+	//   of tags eligible for selection.
+	//
+	// - "Lexical": Selects the commit referenced by the lexicographically
+	//   greatest tag. Useful when tags embed a _leading_ date or timestamp. The
+	//   AllowTags and IgnoreTags fields can optionally be used to narrow the set
+	//   of tags eligible for selection.
+	//
+	// - "NewestTag": Selects the commit referenced by the most recently created
+	//   tag. The AllowTags and IgnoreTags fields can optionally be used to
+	//   narrow the set of tags eligible for selection.
 	//
 	// +kubebuilder:default=NewestFromBranch
 	CommitSelectionStrategy CommitSelectionStrategy `json:"commitSelectionStrategy,omitempty" protobuf:"bytes,2,opt,name=commitSelectionStrategy"`
@@ -126,6 +151,7 @@ type GitSubscription struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=255
 	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9]([a-zA-Z0-9._\/-]*[a-zA-Z0-9_-])?$`
+	// +akuity:test-kubebuilder-pattern=Branch
 	Branch string `json:"branch,omitempty" protobuf:"bytes,3,opt,name=branch"`
 	// StrictSemvers specifies whether only "strict" semver tags should be
 	// considered. A "strict" semver tag is one containing ALL of major, minor,
@@ -175,6 +201,7 @@ type GitSubscription struct {
 	//   2. Glob patterns (prefix the pattern with "glob:"; ex. "glob:*.yaml")
 	//   3. Regular expressions (prefix the pattern with "regex:" or "regexp:";
 	//      ex. "regexp:^.*\.yaml$")
+	//
 	// Paths selected by IncludePaths may be unselected by ExcludePaths. This
 	// is a useful method for including a broad set of paths and then excluding a
 	// subset of them.
@@ -214,6 +241,7 @@ type ImageSubscription struct {
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Pattern=`^(\w+([\.-]\w+)*(:[\d]+)?/)?(\w+([\.-]\w+)*)(/\w+([\.-]\w+)*)*$`
+	// +akuity:test-kubebuilder-pattern=ImageRepoURL
 	RepoURL string `json:"repoURL" protobuf:"bytes,1,opt,name=repoURL"`
 	// GitRepoURL optionally specifies the URL of a Git repository that contains
 	// the source code for the image repository referenced by the RepoURL field.
@@ -229,7 +257,26 @@ type ImageSubscription struct {
 	// of the image specified by the RepoURL field. This field is optional. When
 	// left unspecified, the field is implicitly treated as if its value were
 	// "SemVer".
-	// Accepted values: Digest, Lexical, NewestBuild, SemVer
+	//
+	// Accepted values:
+	//
+	// - "Digest": Selects the image currently referenced by the tag specified
+	//   (unintuitively) by the SemverConstraint field.
+	//
+	// - "Lexical": Selects the image referenced by the lexicographically greatest
+	//   tag. Useful when tags embed a leading date or timestamp. The AllowTags
+	//   and IgnoreTags fields can optionally be used to narrow the set of tags
+	//   eligible for selection.
+	//
+	// - "NewestBuild": Selects the image that was most recently pushed to the
+	//   repository. The AllowTags and IgnoreTags fields can optionally be used
+	//   to narrow the set of tags eligible for selection. This is the least
+	//   efficient and is likely to cause rate limiting affecting this Warehouse
+	//   and possibly others. This strategy should be avoided.
+	//
+	// - "SemVer": Selects the image with the semantically greatest tag. The
+	//   AllowTags and IgnoreTags fields can optionally be used to narrow the set
+	//   of tags eligible for selection.
 	//
 	// +kubebuilder:default=SemVer
 	ImageSelectionStrategy ImageSelectionStrategy `json:"imageSelectionStrategy,omitempty" protobuf:"bytes,3,opt,name=imageSelectionStrategy"`
@@ -309,6 +356,7 @@ type ChartSubscription struct {
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Pattern=`^(((https?)|(oci))://)([\w\d\.\-]+)(:[\d]+)?(/.*)*$`
+	// +akuity:test-kubebuilder-pattern=HelmRepoURL
 	RepoURL string `json:"repoURL" protobuf:"bytes,1,opt,name=repoURL"`
 	// Name specifies the name of a Helm chart to subscribe to within a classic
 	// chart repository specified by the RepoURL field. This field is required
@@ -360,10 +408,12 @@ type WarehouseStatus struct {
 	DiscoveredArtifacts *DiscoveredArtifacts `json:"discoveredArtifacts,omitempty" protobuf:"bytes,7,opt,name=discoveredArtifacts"`
 }
 
+// GetConditions implements the conditions.Getter interface.
 func (w *WarehouseStatus) GetConditions() []metav1.Condition {
 	return w.Conditions
 }
 
+// SetConditions implements the conditions.Setter interface.
 func (w *WarehouseStatus) SetConditions(conditions []metav1.Condition) {
 	w.Conditions = conditions
 }
@@ -398,7 +448,8 @@ type GitDiscoveryResult struct {
 	// RepoURL is the repository URL of the GitSubscription.
 	//
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Pattern=`(?:^(https?)://(?:([\w-]+):(.+)@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
+	// +kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
+	// +akuity:test-kubebuilder-pattern=GitRepoURL
 	RepoURL string `json:"repoURL" protobuf:"bytes,1,opt,name=repoURL"`
 	// Commits is a list of commits discovered by the Warehouse for the
 	// GitSubscription. An empty list indicates that the discovery operation was
@@ -463,11 +514,13 @@ type DiscoveredImageReference struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=128
 	// +kubebuilder:validation:Pattern=`^[\w.\-\_]+$`
+	// +akuity:test-kubebuilder-pattern=Tag
 	Tag string `json:"tag" protobuf:"bytes,1,opt,name=tag"`
 	// Digest is the digest of the image.
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]+:[a-f0-9]+$`
+	// +akuity:test-kubebuilder-pattern=Digest
 	Digest string `json:"digest" protobuf:"bytes,2,opt,name=digest"`
 	// Annotations is a map of key-value pairs that provide additional
 	// information about the image.

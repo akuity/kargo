@@ -159,7 +159,7 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 			},
 			assertions: func(t *testing.T, c client.Client, result ctrl.Result, err error) {
 				require.NoError(t, err)
-				assert.True(t, result.Requeue)
+				assert.Equal(t, 100*time.Millisecond, result.RequeueAfter)
 
 				// Verify finalizer was added
 				stage := &kargoapi.Stage{}
@@ -211,7 +211,6 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 					Name:      "test-stage",
 				}, stage)
 				require.NoError(t, err)
-				assert.Contains(t, stage.Status.Message, "something went wrong")
 			},
 		},
 		{
@@ -335,7 +334,6 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 					Name:      "test-stage",
 				}, stage)
 				require.NoError(t, err)
-				assert.Equal(t, kargoapi.StagePhaseSteady, stage.Status.Phase)
 
 				readyCond := conditions.Get(&stage.Status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCond)
@@ -5844,9 +5842,6 @@ func Test_summarizeConditions(t *testing.T) {
 				assert.Equal(t, metav1.ConditionTrue, reconcileCond.Status)
 				assert.Equal(t, "RetryAfterError", reconcileCond.Reason)
 				assert.Equal(t, int64(1), reconcileCond.ObservedGeneration)
-
-				assert.Equal(t, kargoapi.StagePhaseFailed, status.Phase)
-				assert.Equal(t, "something went wrong", status.Message)
 			},
 		},
 		{
@@ -5873,8 +5868,6 @@ func Test_summarizeConditions(t *testing.T) {
 				assert.Equal(t, "Promoting", readyCond.Reason)
 				assert.Equal(t, "Stage is promoting", readyCond.Message)
 				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
-
-				assert.Equal(t, kargoapi.StagePhasePromoting, status.Phase)
 			},
 		},
 		{
@@ -5899,8 +5892,6 @@ func Test_summarizeConditions(t *testing.T) {
 				assert.Equal(t, "LastPromotionFailed", readyCond.Reason)
 				assert.Equal(t, "Promotion failed due to error", readyCond.Message)
 				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
-
-				assert.Equal(t, kargoapi.StagePhaseFailed, status.Phase)
 			},
 		},
 		{
@@ -5928,8 +5919,6 @@ func Test_summarizeConditions(t *testing.T) {
 				assert.Equal(t, "HealthCheckFailed", readyCond.Reason)
 				assert.Equal(t, "Health check failed", readyCond.Message)
 				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
-
-				assert.Equal(t, kargoapi.StagePhaseFailed, status.Phase)
 			},
 		},
 		{
@@ -5947,8 +5936,6 @@ func Test_summarizeConditions(t *testing.T) {
 				assert.Equal(t, "Unhealthy", readyCond.Reason)
 				assert.Equal(t, "Stage is not healthy", readyCond.Message)
 				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
-
-				assert.Equal(t, kargoapi.StagePhaseSteady, status.Phase)
 			},
 		},
 		{
@@ -5975,8 +5962,6 @@ func Test_summarizeConditions(t *testing.T) {
 				assert.Equal(t, "HealthCheckPending", readyCond.Reason)
 				assert.Equal(t, "Health check in progress", readyCond.Message)
 				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
-
-				assert.Equal(t, kargoapi.StagePhaseSteady, status.Phase)
 			},
 		},
 		{
@@ -6009,8 +5994,6 @@ func Test_summarizeConditions(t *testing.T) {
 				assert.Equal(t, "VerificationPending", readyCond.Reason)
 				assert.Equal(t, "Verification is pending", readyCond.Message)
 				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
-
-				assert.Equal(t, kargoapi.StagePhaseVerifying, status.Phase)
 			},
 		},
 		{
@@ -6043,8 +6026,6 @@ func Test_summarizeConditions(t *testing.T) {
 				assert.Equal(t, "VerificationError", readyCond.Reason)
 				assert.Equal(t, "Verification failed", readyCond.Message)
 				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
-
-				assert.Equal(t, kargoapi.StagePhaseFailed, status.Phase)
 			},
 		},
 		{
@@ -6070,7 +6051,6 @@ func Test_summarizeConditions(t *testing.T) {
 				assert.Equal(t, metav1.ConditionFalse, readyCond.Status)
 				assert.Equal(t, "PendingVerification", readyCond.Reason)
 				assert.Equal(t, "Stage is not verified", readyCond.Message)
-				assert.Equal(t, kargoapi.StagePhaseVerifying, status.Phase)
 			},
 		},
 		{
@@ -6105,7 +6085,6 @@ func Test_summarizeConditions(t *testing.T) {
 				assert.Equal(t, "Stage is verified", readyCond.Message)
 				assert.Equal(t, int64(1), readyCond.ObservedGeneration)
 
-				assert.Equal(t, kargoapi.StagePhaseSteady, status.Phase)
 				assert.Equal(t, int64(1), status.ObservedGeneration)
 			},
 		},
@@ -6146,12 +6125,11 @@ func Test_summarizeConditions(t *testing.T) {
 				reconcileCond := conditions.Get(status, kargoapi.ConditionTypeReconciling)
 				assert.Nil(t, reconcileCond, "Reconciling condition should be deleted when ready")
 
-				assert.Equal(t, kargoapi.StagePhaseSteady, status.Phase)
 				assert.Equal(t, int64(1), status.ObservedGeneration)
 			},
 		},
 		{
-			name: "freight summary updated and message cleared",
+			name: "freight summary updated",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Generation: 1,
@@ -6161,7 +6139,6 @@ func Test_summarizeConditions(t *testing.T) {
 				},
 			},
 			status: &kargoapi.StageStatus{
-				Message: "Previous error message",
 				FreightHistory: kargoapi.FreightHistory{
 					&kargoapi.FreightCollection{
 						Freight: map[string]kargoapi.FreightReference{
@@ -6185,7 +6162,6 @@ func Test_summarizeConditions(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, status *kargoapi.StageStatus) {
-				assert.Empty(t, status.Message, "Message should be cleared")
 				assert.Equal(t, "1/2 Fulfilled", status.FreightSummary)
 			},
 		},

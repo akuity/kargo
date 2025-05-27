@@ -469,12 +469,13 @@ func (r *reconciler) promote(
 	steps := make([]promotion.Step, len(workingPromo.Spec.Steps))
 	for i, step := range workingPromo.Spec.Steps {
 		steps[i] = promotion.Step{
-			Kind:   step.Uses,
-			Alias:  step.As,
-			If:     step.If,
-			Retry:  step.Retry,
-			Vars:   step.Vars,
-			Config: step.Config.Raw,
+			Kind:            step.Uses,
+			Alias:           step.As,
+			If:              step.If,
+			ContinueOnError: step.ContinueOnError,
+			Retry:           step.Retry,
+			Vars:            step.Vars,
+			Config:          step.Config.Raw,
 		}
 	}
 
@@ -619,13 +620,24 @@ func (r *reconciler) terminatePromotion(
 	}
 
 	newStatus := promo.Status.DeepCopy()
+
+	now := &metav1.Time{Time: time.Now()}
+
+	// If a step was running, mark the step as aborted.
+	if newStatus.Phase == kargoapi.PromotionPhaseRunning &&
+		int64(len(newStatus.StepExecutionMetadata)) == promo.Status.CurrentStep+1 &&
+		promo.Status.StepExecutionMetadata[promo.Status.CurrentStep].Status == kargoapi.PromotionStepStatusRunning {
+		newStatus.StepExecutionMetadata[promo.Status.CurrentStep].Status = kargoapi.PromotionStepStatusAborted
+		newStatus.StepExecutionMetadata[promo.Status.CurrentStep].FinishedAt = now
+	}
+
 	newStatus.Phase = kargoapi.PromotionPhaseAborted
 	if actor != "" {
 		newStatus.Message = fmt.Sprintf("Promotion terminated by %s", actor)
 	} else {
 		newStatus.Message = "Promotion terminated per user request"
 	}
-	newStatus.FinishedAt = &metav1.Time{Time: time.Now()}
+	newStatus.FinishedAt = now
 
 	if err := kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
 		*status = *newStatus
@@ -664,14 +676,21 @@ func parseCreateActorAnnotation(promo *kargoapi.Promotion) string {
 	return creator
 }
 
+var defaultRequeueInterval = 5 * time.Minute
+
 func calculateRequeueInterval(p *kargoapi.Promotion) time.Duration {
-	defaultRequeueInterval := 5 * time.Minute
 	step := p.Spec.Steps[p.Status.CurrentStep]
 	runner := promotion.GetStepRunner(step.Uses)
 
 	timeout := (&promotion.Step{
 		Retry: step.Retry,
 	}).GetTimeout(runner)
+
+	// If there is no timeout, or the timeout is 0, we should requeue at the
+	// default interval.
+	if timeout == nil || *timeout == 0 {
+		return defaultRequeueInterval
+	}
 
 	md := p.Status.StepExecutionMetadata[p.Status.CurrentStep]
 	targetTimeout := md.StartedAt.Time.Add(*timeout)

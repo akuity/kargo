@@ -13,6 +13,27 @@
    "description": "The URL of a remote Git repository to clone. Required.",
    "minLength": 1
   },
+  "author": {
+   "type": "object",
+   "description": "Default authorship information for any commits made to the cloned repository. If provided, this overrides any system-level defaults. Note: Configuration of the `git-commit` step can override this information.",
+   "additionalProperties": false,
+   "properties": {
+    "email": {
+     "type": "string",
+     "description": "The email of the author.",
+     "format": "email"
+    },
+    "name": {
+     "type": "string",
+     "description": "The name of the author.",
+     "minLength": 1
+    },
+    "signingKey": {
+     "type": "string",
+     "description": "The GPG signing key for the author."
+    }
+   }
+  },
   "checkout": {
    "type": "array",
    "description": "The commits, branches, or tags to check out from the repository and the paths where they should be checked out. At least one must be specified.",

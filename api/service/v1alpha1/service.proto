@@ -53,12 +53,15 @@ service KargoService {
   rpc DeleteProject(DeleteProjectRequest) returns (DeleteProjectResponse);
   rpc GetProject(GetProjectRequest) returns (GetProjectResponse);
   rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
+  rpc DeleteProjectConfig(DeleteProjectConfigRequest) returns (DeleteProjectConfigResponse);
+  rpc GetProjectConfig(GetProjectConfigRequest) returns (GetProjectConfigResponse);
 
   /* Freight APIs */
 
   rpc ApproveFreight(ApproveFreightRequest) returns (ApproveFreightResponse);
   rpc DeleteFreight(DeleteFreightRequest) returns (DeleteFreightResponse);
   rpc GetFreight(GetFreightRequest) returns (GetFreightResponse);
+  rpc WatchFreight(WatchFreightRequest) returns (stream WatchFreightResponse);
   rpc PromoteToStage(PromoteToStageRequest) returns (PromoteToStageResponse);
   rpc PromoteDownstream(PromoteDownstreamRequest) returns (PromoteDownstreamResponse);
   rpc QueryFreight(QueryFreightRequest) returns (QueryFreightResponse);
@@ -369,6 +372,26 @@ message DeleteProjectResponse {
   /* explicitly empty */
 }
 
+message DeleteProjectConfigRequest {
+  string name = 1;
+}
+
+message DeleteProjectConfigResponse {
+  /* explicitly empty */
+}
+
+message GetProjectConfigRequest {
+  string name = 1;
+  RawFormat format = 2;
+}
+
+message GetProjectConfigResponse {
+  oneof result {
+    github.com.akuity.kargo.api.v1alpha1.ProjectConfig project_config = 1;
+    bytes raw = 2;
+  }
+}
+
 message GetProjectRequest {
   string name = 1;
   RawFormat format = 2;
@@ -425,6 +448,15 @@ message GetFreightResponse {
     github.com.akuity.kargo.api.v1alpha1.Freight freight = 1;
     bytes raw = 2;
   }
+}
+
+message WatchFreightRequest {
+  string project = 1;
+}
+
+message WatchFreightResponse {
+  github.com.akuity.kargo.api.v1alpha1.Freight freight = 1;
+  string type = 2; // ADDED / MODIFIED / DELETED
 }
 
 message PromoteToStageRequest {

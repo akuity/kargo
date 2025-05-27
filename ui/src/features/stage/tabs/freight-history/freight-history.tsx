@@ -1,5 +1,4 @@
 import { create } from '@bufbuild/protobuf';
-import { useQuery } from '@connectrpc/connect-query';
 import { Descriptions, Flex, Select, Space, Table, Tag } from 'antd';
 import { useMemo } from 'react';
 import { useState } from 'react';
@@ -7,9 +6,7 @@ import { useEffect } from 'react';
 import { generatePath, Link } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
-import { queryFreight } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import {
-  Freight,
   FreightReference,
   FreightRequest,
   FreightSchema,
@@ -17,8 +14,9 @@ import {
 } from '@ui/gen/api/v1alpha1/generated_pb';
 import { PlainMessage } from '@ui/utils/connectrpc-utils';
 
-import { LoadingState } from '../../../common';
 import { FreightContents } from '../../../freight-timeline/freight-contents';
+
+import { useGetFreightMap } from './use-get-freight-map';
 
 export const FreightHistory = ({
   projectName,
@@ -35,22 +33,8 @@ export const FreightHistory = ({
   currentActiveFreight?: string;
 }) => {
   const [selectedRequestedFreight, setSelectedRequestedFreight] = useState<FreightRequest>();
-  const freightQuery = useQuery(queryFreight, { project: projectName });
 
-  const freightMap = useMemo(() => {
-    const freightData = freightQuery.data;
-    // generate metadata.name -> full freight data (because history doesn't have it all) to show in freight history
-    const freightMap: Record<string, Freight> = {};
-
-    for (const freight of freightData?.groups?.['']?.freight || []) {
-      const freightId = freight?.metadata?.name;
-      if (freightId) {
-        freightMap[freightId] = freight;
-      }
-    }
-
-    return freightMap;
-  }, [freightQuery.data]);
+  const freightMap = useGetFreightMap(projectName);
 
   const freightHistoryPerWarehouse = useMemo(() => {
     // to show the history
@@ -81,10 +65,6 @@ export const FreightHistory = ({
       setSelectedRequestedFreight(requestedFreights[0]);
     }
   }, [requestedFreights]);
-
-  if (freightQuery.isFetching) {
-    return <LoadingState />;
-  }
 
   const freightUniqueIdentifier = `${selectedRequestedFreight?.origin?.kind}/${selectedRequestedFreight?.origin?.name}`;
   const freightReferences =

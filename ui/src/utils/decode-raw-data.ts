@@ -11,7 +11,9 @@ type Data = {
           | 'analysisTemplate'
           | 'clusterAnalysisTemplate'
           | 'warehouse'
-          | 'promotionTask';
+          | 'promotionTask'
+          | 'promotion'
+          | 'projectConfig';
       }
     | {
         value: Uint8Array;

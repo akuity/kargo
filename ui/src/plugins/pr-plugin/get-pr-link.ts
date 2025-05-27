@@ -1,40 +1,33 @@
-import gitUrlParse from 'git-url-parse';
+type gitOpenPrOutput = {
+  pr: {
+    id: string;
+    url: string;
+  };
+};
 
-import { PromotionStep } from '@ui/gen/api/v1alpha1/generated_pb';
-import { getPromotionStepConfig } from '@ui/plugins/atoms/plugin-helper';
+export const getPullRequestLink = (promotionStepOutput: Record<string, unknown>) =>
+  (promotionStepOutput as gitOpenPrOutput)?.pr?.url;
 
-export const getPullRequestLink = (
-  promotionStep: PromotionStep,
-  promotionStepOutput: Record<string, unknown>
-) => {
-  const stepConfig = getPromotionStepConfig(promotionStep);
+export const getGitProviderLink = (promotionStepOutput: Record<string, unknown>) => {
+  const prLink = getPullRequestLink(promotionStepOutput);
 
-  // plugins responsibility to keep up to date with actual promotion step config
-  const provider =
-    (stepConfig?.provider as 'github' | 'gitlab') || 'github'; /* default provider is github */
-
-  const repoURL = stepConfig?.repoURL as string;
-
-  const prNumber = promotionStepOutput?.prNumber;
-
-  if (typeof prNumber !== 'number' || !repoURL) {
-    // TODO: Throw plugin identified error to handle it at plugin level
-    throw new Error(
-      `cannot generate pull request link, either promotion step didn't return proper output or promotion step config is corrupted`
-    );
+  if (!prLink) {
+    return '';
   }
 
-  const parsedUrl = gitUrlParse(repoURL);
+  try {
+    const url = new URL(prLink);
 
-  const url = `${parsedUrl.protocol}://${parsedUrl.resource}/${parsedUrl.full_name}`;
+    const [, owner, repo] = url.pathname.split('/');
 
-  if (provider === 'github') {
-    return `${url}/pull/${prNumber}`;
+    if (!owner || !repo) {
+      throw new Error('Plugin error: missing owner or repo');
+    }
+
+    return `${url.origin}/${owner}/${repo}`;
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error(e);
+    return '';
   }
-
-  if (provider === 'gitlab') {
-    return `${url}/merge_requests/${prNumber}`;
-  }
-
-  throw new Error(`provider ${provider} not supported by this plugin`);
 };

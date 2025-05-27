@@ -12,8 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
-
 	libExec "github.com/akuity/kargo/internal/exec"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -214,21 +212,20 @@ func (w *workTree) Commit(message string, opts *CommitOptions) error {
 		// repository-level author information by creating a temporary home
 		// directory, configuring the author information "globally" within it, and
 		// then ensuring the git commit command uses that home directory.
-		homeDir = filepath.Join(w.homeDir, uuid.New().String())
-		if err := os.MkdirAll(homeDir, 0700); err != nil {
+		var err error
+		if homeDir, err = os.MkdirTemp(w.homeDir, ""); err != nil {
 			return fmt.Errorf(
 				"error creating virtual home directory %q for commit command: %w",
 				homeDir, err,
 			)
 		}
 		defer func() {
-			if err := os.RemoveAll(homeDir); err != nil {
+			if cleanErr := os.RemoveAll(homeDir); cleanErr != nil {
 				logging.LoggerFromContext(context.TODO()).
-					Error(err, "error removing virtual home directory", "path", homeDir)
+					Error(cleanErr, "error removing virtual home directory", "path", homeDir)
 			}
 		}()
-		err := w.setupAuthor(homeDir, opts.Author)
-		if err != nil {
+		if err = w.setupAuthor(homeDir, opts.Author); err != nil {
 			return fmt.Errorf(
 				"error setting up author information for commit command: %w", err,
 			)
@@ -253,7 +250,7 @@ func (w *workTree) Commit(message string, opts *CommitOptions) error {
 
 func (w *workTree) CommitMessage(id string) (string, error) {
 	msgBytes, err := libExec.Exec(
-		w.buildGitCommand("log", "-n", "1", "--pretty=format:%s", id),
+		w.buildGitCommand("log", "-n", "1", "--pretty=format:%B", id),
 	)
 	if err != nil {
 		return "", fmt.Errorf("error obtaining commit message for commit %q: %w", id, err)

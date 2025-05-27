@@ -26,7 +26,8 @@ import uiPlugins from '@ui/plugins';
 import { UiPluginHoles } from '@ui/plugins/atoms/ui-plugin-hole/ui-plugin-holes';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
-import { PromotionDetailsModal } from './promotion-details-modal';
+import { Promotion as PromotionComponent } from '../project/pipelines/promotion/promotion';
+
 import { hasAbortRequest, promotionCompareFn } from './utils/promotion';
 
 export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
@@ -228,14 +229,10 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
       />
 
       {selectedPromotion && (
-        <PromotionDetailsModal
-          // @ts-expect-error // know that there will always be value available of this promotion
-          // IMPORTANT: the reason why selectedPromotion is not used is because promotions are live while selectedPromotion snapshot at particular point
-          promotion={promotions?.find(
-            (p) => p?.metadata?.name === selectedPromotion?.metadata?.name
-          )}
+        <PromotionComponent
           visible={!!selectedPromotion}
           hide={() => setSelectedPromotion(undefined)}
+          promotionId={selectedPromotion?.metadata?.name || ''}
           project={projectName || ''}
         />
       )}

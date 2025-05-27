@@ -116,6 +116,112 @@ func Test_gitCloner_validate(t *testing.T) {
 			},
 		},
 		{
+			name: "author name is missing",
+			config: promotion.Config{
+				"repoURL": "https://github.com/example/repo.git",
+				"checkout": []promotion.Config{
+					{
+						"path": "/fake/path/0",
+					},
+				},
+				"author": promotion.Config{
+					"email": "tony@starkindustries.com",
+					// Missing "name"
+				},
+			},
+			expectedProblems: []string{
+				"invalid git-clone config: author: name is required",
+			},
+		},
+		{
+			name: "author name is empty",
+			config: promotion.Config{
+				"repoURL": "https://github.com/example/repo.git",
+				"checkout": []promotion.Config{
+					{
+						"path": "/fake/path/0",
+					},
+				},
+				"author": promotion.Config{
+					"name":  "",
+					"email": "tony@starkindustries.com",
+				},
+			},
+			expectedProblems: []string{
+				"invalid git-clone config: author.name: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "author email is missing",
+			config: promotion.Config{
+				"repoURL": "https://github.com/example/repo.git",
+				"checkout": []promotion.Config{
+					{
+						"path": "/fake/path/1",
+					},
+				},
+				"author": promotion.Config{
+					"name": "Tony Stark",
+					// Missing "email"
+				},
+			},
+			expectedProblems: []string{
+				"invalid git-clone config: author: email is required",
+			},
+		},
+		{
+			name: "author email is empty",
+			config: promotion.Config{
+				"repoURL": "https://github.com/example/repo.git",
+				"checkout": []promotion.Config{
+					{
+						"path": "/fake/path/1",
+					},
+				},
+				"author": promotion.Config{
+					"name":  "Tony Stark",
+					"email": "",
+				},
+			},
+			expectedProblems: []string{
+				"invalid git-clone config: author.email: Does not match format 'email'",
+			},
+		},
+		{
+			name: "signingKey is missing",
+			config: promotion.Config{
+				"repoURL": "https://github.com/example/repo.git",
+				"checkout": []promotion.Config{
+					{
+						"path": "/fake/path/2",
+					},
+				},
+				"author": promotion.Config{
+					"name":  "Tony Stark",
+					"email": "tony@starkindustries.com",
+					// signingKey is absent
+				},
+			},
+			// No expected problems because signingKey is optional
+		},
+		{
+			name: "signingKey is empty string",
+			config: promotion.Config{
+				"repoURL": "https://github.com/example/repo.git",
+				"checkout": []promotion.Config{
+					{
+						"path": "/fake/path/1",
+					},
+				},
+				"author": promotion.Config{
+					"name":       "Tony Stark",
+					"email":      "tony@starkindustries.com",
+					"signingKey": "", // Empty string for signing key
+				},
+			},
+			// No expected problems because signingKey is optional and empty is valid
+		},
+		{
 			name: "valid kitchen sink",
 			config: promotion.Config{
 				"repoURL": "https://github.com/example/repo.git",
@@ -252,7 +358,7 @@ func Test_gitCloner_run(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	require.Equal(t, kargoapi.PromotionPhaseSucceeded, res.Status)
+	require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
 	require.DirExists(t, filepath.Join(stepCtx.WorkDir, "src"))
 	// The checked out master branch should have the content we know is in the
 	// test remote's master branch.

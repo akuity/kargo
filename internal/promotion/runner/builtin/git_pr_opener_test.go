@@ -102,6 +102,42 @@ func Test_gitPROpener_validate(t *testing.T) {
 				"title":        "custom title",
 			},
 		},
+		{
+			name: "invalid with empty title",
+			config: promotion.Config{
+				"provider":     "github",
+				"repoURL":      "https://github.com/example/repo.git",
+				"sourceBranch": "fake-branch",
+				"targetBranch": "another-fake-branch",
+				"title":        "",
+			},
+			expectedProblems: []string{
+				"title: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "valid with custom description",
+			config: promotion.Config{
+				"provider":     "github",
+				"repoURL":      "https://github.com/example/repo.git",
+				"sourceBranch": "fake-branch",
+				"targetBranch": "another-fake-branch",
+				"description":  "custom description",
+			},
+		},
+		{
+			name: "invalid with empty description",
+			config: promotion.Config{
+				"provider":     "github",
+				"repoURL":      "https://github.com/example/repo.git",
+				"sourceBranch": "fake-branch",
+				"targetBranch": "another-fake-branch",
+				"description":  "",
+			},
+			expectedProblems: []string{
+				"description: String length must be greater than or equal to 1",
+			},
+		},
 	}
 
 	r := newGitPROpener(nil)
@@ -155,6 +191,7 @@ func Test_gitPROpener_run(t *testing.T) {
 	// Set up a fake git provider
 	const fakeGitProviderName = "fake"
 	const testPRNumber int64 = 42
+	const testPRURL = "http://example.com/pull/42"
 	gitprovider.Register(
 		fakeGitProviderName,
 		gitprovider.Registration{
@@ -175,7 +212,10 @@ func Test_gitPROpener_run(t *testing.T) {
 						context.Context,
 						*gitprovider.CreatePullRequestOpts,
 					) (*gitprovider.PullRequest, error) {
-						return &gitprovider.PullRequest{Number: testPRNumber}, nil
+						return &gitprovider.PullRequest{
+							Number: testPRNumber,
+							URL:    testPRURL,
+						}, nil
 					},
 				}, nil
 			},
@@ -203,12 +243,21 @@ func Test_gitPROpener_run(t *testing.T) {
 			CreateTargetBranch: true,
 			Provider:           ptr.To(builtin.Provider(fakeGitProviderName)),
 			Title:              "kargo",
+			Description:        "kargo description",
 		},
 	)
 	require.NoError(t, err)
+	// Validate backward compatibility with prNumber
+	// TODO: Remove in v1.7.0
 	prNumber, ok := res.Output[stateKeyPRNumber]
 	require.True(t, ok)
 	require.Equal(t, testPRNumber, prNumber)
+
+	// Validate the pr.ID and pr.URL fields
+	prOutput, ok := res.Output["pr"].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, testPRNumber, prOutput["id"])
+	require.Equal(t, testPRURL, prOutput["url"])
 
 	// Assert that the target branch, which didn't already exist, was created
 	exists, err := repo.RemoteBranchExists(testTargetBranch)

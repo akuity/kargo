@@ -1,7 +1,7 @@
 import { useMutation } from '@connectrpc/connect-query';
-import { faBook, faBoxes, faCode, faListCheck } from '@fortawesome/free-solid-svg-icons';
+import { faCode, faListCheck } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Drawer, Flex, Tabs, Typography } from 'antd';
+import { Button, Drawer, Tabs, Typography } from 'antd';
 import { JSONSchema4 } from 'json-schema';
 import { useCallback, useState } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
@@ -68,6 +68,7 @@ const Body = () => {
     <>
       <Tabs
         activeKey={tab}
+        className='-mt-4'
         onChange={(newTab) => {
           if (tab === 'wizard' && newTab === 'yaml') {
             setYaml(getWarehouseManifest());
@@ -102,7 +103,12 @@ const Body = () => {
         ]}
       />
 
-      <Button className='mt-5' loading={createResourceMutation.isPending} onClick={onSubmit}>
+      <Button
+        className='mt-5'
+        loading={createResourceMutation.isPending}
+        onClick={onSubmit}
+        type='primary'
+      >
         Create
       </Button>
     </>
@@ -114,21 +120,16 @@ const CreateWarehouse = (props: ModalComponentProps) => {
     <Drawer
       open={props.visible}
       onClose={props.hide}
-      width='60%'
-      title={
-        <Flex align='center'>
-          <Typography.Title level={1} className='flex items-center !m-0'>
-            <FontAwesomeIcon icon={faBoxes} className='mr-2 text-base text-gray-400' />
-            Create Warehouse
-          </Typography.Title>
-          <Typography.Link
-            href='https://docs.kargo.io/user-guide/how-to-guides/working-with-warehouses'
-            target='_blank'
-            className='ml-3'
-          >
-            <FontAwesomeIcon icon={faBook} />
-          </Typography.Link>
-        </Flex>
+      width='80%'
+      title='Create Warehouse'
+      extra={
+        <Typography.Link
+          href='https://docs.kargo.io/user-guide/how-to-guides/working-with-warehouses'
+          target='_blank'
+          className='ml-3'
+        >
+          Docs
+        </Typography.Link>
       }
     >
       {props.visible && <Body />}

@@ -9,6 +9,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -276,6 +277,13 @@ func TestPromotionsByStage(t *testing.T) {
 func TestRunningPromotionsByArgoCDApplications(t *testing.T) {
 	const testShardName = "test-shard"
 
+	fakeStage := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-stage",
+			Namespace: "fake-namespace",
+		},
+	}
+
 	testCases := []struct {
 		name      string
 		obj       client.Object
@@ -328,7 +336,7 @@ func TestRunningPromotionsByArgoCDApplications(t *testing.T) {
 					Namespace: "fake-namespace",
 				},
 				Spec: kargoapi.PromotionSpec{
-					Stage: "fake-stage",
+					Stage: fakeStage.Name,
 					Vars: []kargoapi.ExpressionVariable{
 						{
 							Name:  "app",
@@ -429,7 +437,7 @@ func TestRunningPromotionsByArgoCDApplications(t *testing.T) {
 					Namespace: "fake-namespace",
 				},
 				Spec: kargoapi.PromotionSpec{
-					Stage: "fake-stage",
+					Stage: fakeStage.Name,
 					Steps: []kargoapi.PromotionStep{
 						{
 							Uses: "fake-directive",
@@ -449,12 +457,20 @@ func TestRunningPromotionsByArgoCDApplications(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			scheme := runtime.NewScheme()
+			_ = kargoapi.AddToScheme(scheme)
+
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(fakeStage.DeepCopy()).
+				Build()
+
 			require.Equal(
 				t,
 				testCase.expected,
 				RunningPromotionsByArgoCDApplications(
 					context.TODO(),
-					fake.NewClientBuilder().Build(),
+					c,
 					testCase.shardName,
 				)(testCase.obj),
 			)
@@ -815,6 +831,53 @@ func TestServiceAccountsByOIDCClaims(t *testing.T) {
 				testCase.expected,
 				ServiceAccountsByOIDCClaims(testCase.sa),
 			)
+		})
+	}
+}
+
+func TestWarehousesByRepoURL(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		warehouse client.Object
+		expected  []string
+	}{
+		{
+			name: "simple",
+			warehouse: &kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "https://github.com/username/repo",
+							},
+							Image: &kargoapi.ImageSubscription{
+								RepoURL: "https://registry.hub.docker.com/u/svendowideit/testhook/",
+							},
+							Chart: &kargoapi.ChartSubscription{
+								RepoURL: "https://example.com/charts/alpine-0.1.2",
+							},
+						},
+					},
+				},
+			},
+			expected: []string{
+				"https://github.com/username/repo",
+				"https://example.com/charts/alpine-0.1.2",
+				"https://registry.hub.docker.com/u/svendowideit/testhook/",
+			},
+		},
+		{
+			name:      "not a warehouse",
+			warehouse: &kargoapi.Freight{},
+			expected:  nil,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t,
+				test.expected,
+				WarehousesBySubscribedURLs(test.warehouse),
+			)
+
 		})
 	}
 }

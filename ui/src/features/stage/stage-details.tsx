@@ -16,25 +16,25 @@ import { paths } from '@ui/config/paths';
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { Description } from '@ui/features/common/description';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
-import { StagePhaseIcon } from '@ui/features/common/stage-phase/stage-phase-icon';
-import { StagePhase } from '@ui/features/common/stage-phase/utils';
-import { useImages } from '@ui/features/project/pipelines/utils/useImages';
 import {
   getConfig,
   getStage
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { Stage, VerificationInfo } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 
 import YamlEditor from '../common/code-editor/yaml-editor-lazy';
+import { StageConditionIcon } from '../common/stage-status/stage-condition-icon';
+import { getCurrentFreight } from '../common/utils';
 
 import { Promotions } from './promotions';
 import { RequestedFreight } from './requested-freight';
 import { StageActions } from './stage-actions';
 import { FreightHistory } from './tabs/freight-history/freight-history';
 import { StageSettings } from './tabs/settings/stage-settings';
+import { useImages } from './use-images';
 import { Verifications } from './verifications';
 
 enum TabsTypes {
@@ -65,7 +65,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
           return {
             ...verification,
             freight
-          } as VerificationInfo;
+          };
         })
       )
       .sort((a, b) => moment(timestampDate(b.startTime)).diff(moment(timestampDate(a.startTime))));
@@ -96,6 +96,8 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
 
   const { stageTabs } = useExtensionsContext();
 
+  const stageConditions = useMemo(() => stage.status?.conditions || [], [stage.status?.conditions]);
+
   return (
     <Drawer
       open={!!stageName}
@@ -109,7 +111,9 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                 {stage.metadata?.name}
               </Typography.Title>
               <Flex gap={4}>
-                <StagePhaseIcon phase={stage.status?.phase as StagePhase} />
+                {getCurrentFreight(stage).length > 0 && (
+                  <StageConditionIcon conditions={stageConditions} />
+                )}
                 {!!stage.status?.health && <HealthStatusIcon health={stage.status?.health} />}
               </Flex>
             </Flex>

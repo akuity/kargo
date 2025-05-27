@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.17.3
+    controller-gen.kubebuilder.io/version: v0.18.0
   name: stages.kargo.akuity.io
 spec:
   group: kargo.akuity.io
@@ -24,8 +24,11 @@ spec:
     - jsonPath: .status.health.status
       name: Health
       type: string
-    - jsonPath: .status.phase
-      name: Phase
+    - jsonPath: .status.conditions[?(@.type=="Ready")].status
+      name: Ready
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Ready")].message
+      name: Status
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
@@ -88,6 +91,13 @@ spec:
                                 expressions in defining values at any level of this block.
                                 See https://docs.kargo.io/user-guide/reference-docs/expressions for details.
                               x-kubernetes-preserve-unknown-fields: true
+                            continueOnError:
+                              description: |-
+                                ContinueOnError is a boolean value that, if set to true, will cause the
+                                Promotion to continue executing the next step even if this step fails. It
+                                also will not permit this failure to impact the overall status of the
+                                Promotion.
+                              type: boolean
                             if:
                               description: |-
                                 If is an optional expression that, if present, must evaluate to a boolean
@@ -280,6 +290,14 @@ spec:
                             AvailabilityStrategy specifies the semantics for how requested Freight is
                             made available to the Stage. This field is optional. When left unspecified,
                             the field is implicitly treated as if its value were "OneOf".
+
+                            Accepted Values:
+
+                            - "All": Freight must be be verified and, if applicable, soaked in all
+                              upstream Stages to be considered available for promotion.
+                            - "OneOf": Freight must be verified and, if applicable, soaked in at least
+                               one upstream Stage to be considered available for promotion.
+                            - "": Treated the same as "OneOf".
                           enum:
                           - All
                           - OneOf
@@ -605,9 +623,9 @@ spec:
                         type: array
                       name:
                         description: |-
-                          Name is system-assigned identifier that is derived deterministically from
-                          the contents of the Freight. i.e. Two pieces of Freight can be compared for
-                          equality by comparing their Names.
+                          Name is a system-assigned identifier derived deterministically from
+                          the contents of the Freight. I.e., two pieces of Freight can be compared
+                          for equality by comparing their Names.
                         type: string
                       origin:
                         description: Origin describes a kind of Freight in terms of
@@ -754,9 +772,9 @@ spec:
                             type: array
                           name:
                             description: |-
-                              Name is system-assigned identifier that is derived deterministically from
-                              the contents of the Freight. i.e. Two pieces of Freight can be compared for
-                              equality by comparing their Names.
+                              Name is a system-assigned identifier derived deterministically from
+                              the contents of the Freight. I.e., two pieces of Freight can be compared
+                              for equality by comparing their Names.
                             type: string
                           origin:
                             description: Origin describes a kind of Freight in terms
@@ -899,9 +917,9 @@ spec:
                                   type: array
                                 name:
                                   description: |-
-                                    Name is system-assigned identifier that is derived deterministically from
-                                    the contents of the Freight. i.e. Two pieces of Freight can be compared for
-                                    equality by comparing their Names.
+                                    Name is a system-assigned identifier derived deterministically from
+                                    the contents of the Freight. I.e., two pieces of Freight can be compared
+                                    for equality by comparing their Names.
                                   type: string
                                 origin:
                                   description: Origin describes a kind of Freight
@@ -1049,6 +1067,13 @@ spec:
                             alias:
                               description: Alias is the alias of the step.
                               type: string
+                            continueOnError:
+                              description: |-
+                                ContinueOnError is a boolean value that, if set to true, will cause the
+                                Promotion to continue executing the next step even if this step fails. It
+                                also will not permit this failure to impact the overall status of the
+                                Promotion.
+                              type: boolean
                             errorCount:
                               description: ErrorCount tracks consecutive failed attempts
                                 to execute the step.
@@ -1205,9 +1230,9 @@ spec:
                             type: array
                           name:
                             description: |-
-                              Name is system-assigned identifier that is derived deterministically from
-                              the contents of the Freight. i.e. Two pieces of Freight can be compared for
-                              equality by comparing their Names.
+                              Name is a system-assigned identifier derived deterministically from
+                              the contents of the Freight. I.e., two pieces of Freight can be compared
+                              for equality by comparing their Names.
                             type: string
                           origin:
                             description: Origin describes a kind of Freight in terms
@@ -1454,9 +1479,9 @@ spec:
                         type: array
                       name:
                         description: |-
-                          Name is system-assigned identifier that is derived deterministically from
-                          the contents of the Freight. i.e. Two pieces of Freight can be compared for
-                          equality by comparing their Names.
+                          Name is a system-assigned identifier derived deterministically from
+                          the contents of the Freight. I.e., two pieces of Freight can be compared
+                          for equality by comparing their Names.
                         type: string
                       origin:
                         description: Origin describes a kind of Freight in terms of
@@ -1603,9 +1628,9 @@ spec:
                             type: array
                           name:
                             description: |-
-                              Name is system-assigned identifier that is derived deterministically from
-                              the contents of the Freight. i.e. Two pieces of Freight can be compared for
-                              equality by comparing their Names.
+                              Name is a system-assigned identifier derived deterministically from
+                              the contents of the Freight. I.e., two pieces of Freight can be compared
+                              for equality by comparing their Names.
                             type: string
                           origin:
                             description: Origin describes a kind of Freight in terms
@@ -1748,9 +1773,9 @@ spec:
                                   type: array
                                 name:
                                   description: |-
-                                    Name is system-assigned identifier that is derived deterministically from
-                                    the contents of the Freight. i.e. Two pieces of Freight can be compared for
-                                    equality by comparing their Names.
+                                    Name is a system-assigned identifier derived deterministically from
+                                    the contents of the Freight. I.e., two pieces of Freight can be compared
+                                    for equality by comparing their Names.
                                   type: string
                                 origin:
                                   description: Origin describes a kind of Freight
@@ -1898,6 +1923,13 @@ spec:
                             alias:
                               description: Alias is the alias of the step.
                               type: string
+                            continueOnError:
+                              description: |-
+                                ContinueOnError is a boolean value that, if set to true, will cause the
+                                Promotion to continue executing the next step even if this step fails. It
+                                also will not permit this failure to impact the overall status of the
+                                Promotion.
+                              type: boolean
                             errorCount:
                               description: ErrorCount tracks consecutive failed attempts
                                 to execute the step.
@@ -1929,20 +1961,12 @@ spec:
                 required:
                 - name
                 type: object
-              message:
-                description: |-
-                  Message describes any errors that are preventing the Stage controller
-                  from assessing Stage health or from finding new Freight.
-                type: string
               observedGeneration:
                 description: |-
                   ObservedGeneration represents the .metadata.generation that this Stage
                   status was reconciled against.
                 format: int64
                 type: integer
-              phase:
-                description: Phase describes where the Stage currently is in its lifecycle.
-                type: string
             type: object
         required:
         - spec

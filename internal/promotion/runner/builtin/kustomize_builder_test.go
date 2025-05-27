@@ -46,7 +46,7 @@ metadata:
 			},
 			assertions: func(t *testing.T, dir string, result promotion.StepResult, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
 
 				assert.FileExists(t, filepath.Join(dir, "output.yaml"))
 				b, err := os.ReadFile(filepath.Join(dir, "output.yaml"))
@@ -97,7 +97,7 @@ replicaCount: 3`), 0o600))
 			},
 			assertions: func(t *testing.T, dir string, result promotion.StepResult, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
 
 				assert.FileExists(t, filepath.Join(dir, "output.yaml"))
 				b, err := os.ReadFile(filepath.Join(dir, "output.yaml"))
@@ -133,7 +133,7 @@ metadata:
 			},
 			assertions: func(t *testing.T, dir string, result promotion.StepResult, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
 
 				assert.DirExists(t, filepath.Join(dir, "output"))
 				b, err := os.ReadFile(filepath.Join(dir, "output", "deployment-test-deployment.yaml"))
@@ -150,7 +150,7 @@ metadata:
 			},
 			assertions: func(t *testing.T, dir string, result promotion.StepResult, err error) {
 				require.ErrorContains(t, err, "no such file or directory")
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, result)
 
 				assert.NoFileExists(t, filepath.Join(dir, "output.yaml"))
 			},
@@ -166,7 +166,7 @@ metadata:
 			},
 			assertions: func(t *testing.T, dir string, result promotion.StepResult, err error) {
 				require.ErrorContains(t, err, "invalid Kustomization")
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, result)
 
 				assert.NoFileExists(t, filepath.Join(dir, "output.yaml"))
 			},

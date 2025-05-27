@@ -9,6 +9,7 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/yaml"
 	intyaml "github.com/akuity/kargo/internal/yaml"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
@@ -38,7 +39,7 @@ func (y *yamlUpdater) Run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
-	failure := promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}
+	failure := promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}
 
 	if err := y.validate(stepCtx.Config); err != nil {
 		return failure, err
@@ -71,10 +72,10 @@ func (y *yamlUpdater) run(
 		}
 	}
 
-	result := promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded}
+	result := promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}
 	if len(updates) > 0 {
 		if err := y.updateFile(stepCtx.WorkDir, cfg.Path, updates); err != nil {
-			return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 				fmt.Errorf("values file update failed: %w", err)
 		}
 
@@ -92,7 +93,7 @@ func (y *yamlUpdater) updateFile(workDir string, path string, updates []intyaml.
 	if err != nil {
 		return fmt.Errorf("error joining path %q: %w", path, err)
 	}
-	if err := intyaml.SetStringsInFile(absValuesFile, updates); err != nil {
+	if err := intyaml.SetValuesInFile(absValuesFile, updates); err != nil {
 		return fmt.Errorf("error updating image references in values file %q: %w", path, err)
 	}
 	return nil
@@ -106,7 +107,13 @@ func (y *yamlUpdater) generateCommitMessage(path string, updates []builtin.YAMLU
 	var commitMsg strings.Builder
 	_, _ = commitMsg.WriteString(fmt.Sprintf("Updated %s\n", path))
 	for _, update := range updates {
-		_, _ = commitMsg.WriteString(fmt.Sprintf("\n- %s: %q", update.Key, update.Value))
+		_, _ = commitMsg.WriteString(
+			fmt.Sprintf(
+				"\n- %s: %v",
+				update.Key,
+				yaml.QuoteIfNecessary(update.Value),
+			),
+		)
 	}
 
 	return commitMsg.String()

@@ -67,7 +67,7 @@ type reconciler struct {
 	reconcileFn func(
 		context.Context,
 		*kargoapi.Project,
-	) (kargoapi.ProjectStatus, bool, error)
+	) (kargoapi.ProjectStatus, error)
 
 	ensureNamespaceFn func(context.Context, *kargoapi.Project) error
 
@@ -230,7 +230,7 @@ func (r *reconciler) Reconcile(
 	}
 
 	logger.Debug("reconciling Project")
-	newStatus, needsRequeue, reconcileErr := r.reconcileFn(ctx, project)
+	newStatus, reconcileErr := r.reconcileFn(ctx, project)
 	logger.Debug("done reconciling Project")
 
 	// Patch the status of the Project.
@@ -249,10 +249,6 @@ func (r *reconciler) Reconcile(
 	if reconcileErr != nil {
 		return ctrl.Result{}, reconcileErr
 	}
-	// Immediate requeue if needed.
-	if needsRequeue {
-		return ctrl.Result{Requeue: true}, nil
-	}
 	// Otherwise, requeue after a delay.
 	// TODO: Make the requeue delay configurable.
 	return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
@@ -261,65 +257,48 @@ func (r *reconciler) Reconcile(
 func (r *reconciler) reconcile(
 	ctx context.Context,
 	project *kargoapi.Project,
-) (kargoapi.ProjectStatus, bool, error) {
+) (kargoapi.ProjectStatus, error) {
 	logger := logging.LoggerFromContext(ctx)
 	status := *project.Status.DeepCopy()
 
-	var requestRequeue bool
 	subReconcilers := []struct {
-		name string
-		// Returns updated status, whether to stop the loop, and possibly an error
-		reconcile func() (kargoapi.ProjectStatus, bool, error)
+		name      string
+		reconcile func() (kargoapi.ProjectStatus, error)
 	}{
 		{
-			name: "migrate phase to conditions",
-			reconcile: func() (kargoapi.ProjectStatus, bool, error) {
-				// TODO(krancour): Remove this migration code when the Phase field is
-				// removed from ProjectStatus.
-				if newStatus, migrated := migratePhaseToConditions(project); migrated {
-					logger.Debug("migrated Project phase to conditions")
-					requestRequeue = true
-					return newStatus, true, nil // Stop the loop
-				}
-				return status, false, nil // Continue
-			},
-		},
-		{
 			name: "migrate spec to ProjectConfig",
-			reconcile: func() (kargoapi.ProjectStatus, bool, error) {
+			reconcile: func() (kargoapi.ProjectStatus, error) {
 				// TODO(hidde): Remove this migration code when the spec field is
 				// removed from Project.
 				migrated, err := r.migrateSpecToProjectConfig(ctx, project)
 				if err != nil {
-					return status, true, err // Stop the loop
+					return status, err
 				}
 				if migrated {
 					logger.Debug("migrated Project spec to ProjectConfig")
-					requestRequeue = true
-					return status, true, nil // Stop the loop
+					return status, nil
 				}
-				return status, false, nil // Continue
+				return status, nil
 			},
 		},
 		{
 			name: "syncing project resources",
-			reconcile: func() (kargoapi.ProjectStatus, bool, error) {
+			reconcile: func() (kargoapi.ProjectStatus, error) {
 				newStatus, err := r.syncProject(ctx, project)
 				if err != nil {
-					return newStatus, true, err // Stop the loop
+					return newStatus, err
 				}
-				return newStatus, false, nil // Continue
+				return newStatus, nil
 			},
 		},
 		{
 			name: "collecting project stats",
-			reconcile: func() (kargoapi.ProjectStatus, bool, error) {
+			reconcile: func() (kargoapi.ProjectStatus, error) {
 				newStatus, err := r.collectStats(ctx, project)
 				if err != nil {
-					logger.Error(err, "error collecting project stats")
-					return newStatus, true, err // Stop the loop
+					return newStatus, err
 				}
-				return newStatus, false, nil // Continue
+				return newStatus, nil
 			},
 		},
 	}
@@ -328,13 +307,12 @@ func (r *reconciler) reconcile(
 
 		// Reconcile the Project with the sub-reconciler.
 		var err error
-		var shouldBreak bool
-		status, shouldBreak, err = subR.reconcile()
+		status, err = subR.reconcile()
 
 		// If an error occurred during the sub-reconciler, then we should
 		// return the error which will cause the Project to be requeued.
 		if err != nil {
-			return status, false, err
+			return status, err
 		}
 
 		// Patch the status of the Project after each sub-reconciler to show
@@ -344,13 +322,9 @@ func (r *reconciler) reconcile(
 		}); err != nil {
 			logger.Error(err, fmt.Sprintf("failed to update Project status after %s", subR.name))
 		}
-
-		if shouldBreak {
-			break
-		}
 	}
 
-	return status, requestRequeue, nil
+	return status, nil
 }
 
 // syncProject ensures the existence of the Project's namespace and any
@@ -882,74 +856,6 @@ func (r *reconciler) patchProjectStatus(
 			*s = status
 		},
 	)
-}
-
-// migratePhaseToConditions migrates the Project's Phase and Message fields to
-// Conditions. It returns the updated ProjectStatus and a boolean indicating
-// whether the ProjectStatus was updated.
-func migratePhaseToConditions(project *kargoapi.Project) (kargoapi.ProjectStatus, bool) {
-	status := *project.Status.DeepCopy()
-	if project.Status.Phase == "" { // nolint:staticcheck
-		status.Message = ""                         // nolint:staticcheck
-		return status, project.Status.Message != "" // nolint:staticcheck
-	}
-
-	switch project.Status.Phase { // nolint:staticcheck
-	case kargoapi.ProjectPhaseInitializing:
-		conditions.Set(&status, &metav1.Condition{
-			Type:               kargoapi.ConditionTypeReconciling,
-			Status:             metav1.ConditionTrue,
-			Reason:             "Syncing",
-			Message:            "Ensuring project namespace and permissions",
-			ObservedGeneration: project.GetGeneration(),
-		})
-		conditions.Set(&status, &metav1.Condition{
-			Type:               kargoapi.ConditionTypeReady,
-			Status:             metav1.ConditionFalse,
-			Reason:             "Syncing",
-			Message:            "Ensuring project namespace and permissions",
-			ObservedGeneration: project.GetGeneration(),
-		})
-	case kargoapi.ProjectPhaseInitializationFailed:
-		// If the Project is in the InitializationFailed phase, it means that the
-		// namespace already exists but is not labeled as a Project namespace.
-		conditions.Set(&status, &metav1.Condition{
-			Type:   kargoapi.ConditionTypeStalled,
-			Status: metav1.ConditionTrue,
-			Reason: "ExistingNamespaceMissingLabel",
-			Message: fmt.Sprintf(
-				"Namespace %q already exists but is not labeled as a Project namespace using label %q",
-				project.Name,
-				kargoapi.ProjectLabelKey,
-			),
-			ObservedGeneration: project.GetGeneration(),
-		})
-		conditions.Set(&status, &metav1.Condition{
-			Type:   kargoapi.ConditionTypeReady,
-			Status: metav1.ConditionFalse,
-			Reason: "ExistingNamespaceMissingLabel",
-			Message: fmt.Sprintf(
-				"Namespace %q already exists but is not labeled as a Project namespace using label %q",
-				project.Name,
-				kargoapi.ProjectLabelKey,
-			),
-			ObservedGeneration: project.GetGeneration(),
-		})
-	case kargoapi.ProjectPhaseReady:
-		conditions.Set(&status, &metav1.Condition{
-			Type:               kargoapi.ConditionTypeReady,
-			Status:             metav1.ConditionTrue,
-			Reason:             "Synced",
-			Message:            "Project is synced and ready for use",
-			ObservedGeneration: project.GetGeneration(),
-		})
-	}
-
-	// Clear the phase and message now that we've migrated them to conditions.
-	status.Phase = ""   // nolint:staticcheck
-	status.Message = "" // nolint:staticcheck
-
-	return status, true
 }
 
 // migrateSpecToProjectConfig migrates the Project's Spec to a dedicated

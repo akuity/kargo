@@ -224,27 +224,111 @@ steps:
 
 #### Conditional Steps
 
-You can conditionally execute a step based on the result of a previous step by
+You can conditionally execute a step based on the results of previous steps by
 using the `if` key in the step definition. The value of the `if` key must be a
-valid [expression](40-expressions.md) that evaluates to a boolean value.
-
-```yaml
-steps:
-- uses: step-name
-  if: ${{ outputs.step1.someOutput == 'value' }}
-```
-
-If the expression evaluates to `true`, the step is executed as normal. If the
+valid [expression](40-expressions.md) that evaluates to a boolean value. If the
+expression evaluates to `true`, the step is executed as normal. If the
 expression evaluates to `false`, the step is skipped and the next step in the
 sequence is executed.
 
-:::info
-In a future release, Kargo will be adding support for improved failure and
-error handling, which will supercharge the ability to conditionally execute
-steps based on the outcome of previous steps.
+These conditionals may make use of special functions whose returned values
+depend on the outcome of all previous steps:
 
-Refer to [this issue](https://github.com/akuity/kargo/issues/3228) for more
-information and updates.
+- `always()`: Unconditionally evaluates to `true`.
+- `failure()`: Evaluates to `true` only if _any_ previous step has errored or
+  failed.
+- `success()`: Evaluates to `true` only if _all_ previous steps have completed
+  successfully or been skipped.
+
+Examples:
+
+```yaml
+steps:
+- uses: some-step # Assume this step succeeds
+- uses: some-other-step
+  if: ${{ always() }} # This step will execute; assume it succeeds
+- uses: and-another-step
+  if: ${{ failure() }} # This step will be skipped
+- uses: yet-another-step
+  if: ${{ success() }} # This step will execute; assume it succeeds
+
+# This Promotion will succeed
+```
+
+```yaml
+steps:
+- uses: some-step # Assume this step fails
+- uses: some-other-step
+  if: ${{ always() }} # This step will execute
+- uses: and-another-step
+  if: ${{ failure() }} # This step will execute  
+- uses: yet-another-step
+  if: ${{ success() }} # This step will be skipped
+
+# This Promotion will fail
+```
+
+It is also possible to directly access the status of a specific step using the
+`status()` function with a step alias as an argument:
+
+```yaml
+steps:
+- uses: some-step # Assume this step encounters an error
+  as: my-step
+- uses: some-other-step
+  if: ${{ always() }} # This step will execute
+- uses: and-another-step
+  if: ${{ failure() }} # This step will execute
+- uses: yet-another-step
+  if: ${{ status('my-step') == 'Errored' }} # This step will execute
+
+# This Promotion will fail
+```
+
+A step's `continueOnError` field can be set to `true` to indicate that an error
+or failure should _both_:
+
+- Not be counted as an error or failure when evaluating the `failure()` or
+  `success()` functions.
+- Not affect the overall outcome of the `Promotion`.
+
+Example:
+
+```yaml
+steps:
+- uses: some-step # Assume this step fails
+  continueOnError: true
+- uses: some-other-step
+  if: ${{ always() }} # This step will execute; assume it succeeds
+- uses: and-another-step
+  if: ${{ failure() }} # This step will be skipped
+- uses: yet-another-step
+  if: ${{ success() }} # This step will execute; assume it succeeds
+
+# This Promotion will succeed
+```
+
+Last, when a step's `if` field is empty, the default behavior is to execute the
+step only if _all_ previous steps have either completed successfully, been
+skipped, or completed with some other status, but had `continueOnError` set to
+`true`.
+
+Examples:
+
+```yaml
+steps:
+- uses: some-step # Assume this step succeeds
+- uses: some-other-step # This step will execute; assume it fails
+  continueOnError: true
+- uses: and-another-step # This step will execute; assume it succeeds
+- uses: yet-another-step # This step will execute; assume it succeeds
+
+# This Promotion will succeed
+```
+
+:::tip
+Using the primitives described above, it is possible to create robust error-handling
+logic in your promotion templates.
 :::
 
 :::tip
@@ -285,7 +369,7 @@ steps:
     errorThreshold: 3
     timeout: 48h
   config:
-    prNumber: ${{ outputs['open-pr'].prNumber }}
+    prNumber: ${{ outputs['open-pr'].pr.id }}
 ```
 
 :::info

@@ -13,26 +13,26 @@ import (
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/gitprovider"
 	"github.com/akuity/kargo/pkg/promotion"
-	promoPkg "github.com/akuity/kargo/pkg/promotion"
+	pkgPromotion "github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
 func Test_gitPRWaiter_validate(t *testing.T) {
 	testCases := []struct {
 		name             string
-		config           promoPkg.Config
+		config           pkgPromotion.Config
 		expectedProblems []string
 	}{
 		{
 			name:   "repoURL not specified",
-			config: promoPkg.Config{},
+			config: pkgPromotion.Config{},
 			expectedProblems: []string{
 				"(root): repoURL is required",
 			},
 		},
 		{
 			name: "repoURL is empty string",
-			config: promoPkg.Config{
+			config: pkgPromotion.Config{
 				"repoURL": "",
 			},
 			expectedProblems: []string{
@@ -41,7 +41,7 @@ func Test_gitPRWaiter_validate(t *testing.T) {
 		},
 		{
 			name: "prNumber not specified",
-			config: promoPkg.Config{
+			config: pkgPromotion.Config{
 				"repoURL": "https://github.com/example/repo.git",
 			},
 			expectedProblems: []string{
@@ -50,7 +50,7 @@ func Test_gitPRWaiter_validate(t *testing.T) {
 		},
 		{
 			name: "prNumber is less than 1",
-			config: promoPkg.Config{
+			config: pkgPromotion.Config{
 				"prNumber": 0,
 			},
 			expectedProblems: []string{
@@ -59,7 +59,7 @@ func Test_gitPRWaiter_validate(t *testing.T) {
 		},
 		{
 			name: "provider is an invalid value",
-			config: promoPkg.Config{
+			config: pkgPromotion.Config{
 				"provider": "bogus",
 			},
 			expectedProblems: []string{
@@ -68,14 +68,14 @@ func Test_gitPRWaiter_validate(t *testing.T) {
 		},
 		{
 			name: "valid without explicit provider",
-			config: promoPkg.Config{
+			config: pkgPromotion.Config{
 				"prNumber": 42,
 				"repoURL":  "https://github.com/example/repo.git",
 			},
 		},
 		{
 			name: "valid with explicit provider",
-			config: promoPkg.Config{
+			config: pkgPromotion.Config{
 				"provider": "github",
 				"prNumber": 42,
 				"repoURL":  "https://github.com/example/repo.git",
@@ -105,7 +105,7 @@ func Test_gitPRWaiter_run(t *testing.T) {
 	testCases := []struct {
 		name       string
 		provider   gitprovider.Interface
-		assertions func(*testing.T, promoPkg.StepResult, error)
+		assertions func(*testing.T, pkgPromotion.StepResult, error)
 	}{
 		{
 			name: "error finding PR",
@@ -117,10 +117,10 @@ func Test_gitPRWaiter_run(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, res promoPkg.StepResult, err error) {
+			assertions: func(t *testing.T, res pkgPromotion.StepResult, err error) {
 				require.ErrorContains(t, err, "error getting pull request")
 				require.ErrorContains(t, err, "something went wrong")
-				require.Equal(t, kargoapi.PromotionPhaseErrored, res.Status)
+				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
 			},
 		},
 		{
@@ -135,9 +135,9 @@ func Test_gitPRWaiter_run(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(t *testing.T, res promoPkg.StepResult, err error) {
+			assertions: func(t *testing.T, res pkgPromotion.StepResult, err error) {
 				require.NoError(t, err)
-				require.Equal(t, kargoapi.PromotionPhaseRunning, res.Status)
+				require.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
 			},
 		},
 		{
@@ -153,10 +153,10 @@ func Test_gitPRWaiter_run(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(t *testing.T, res promoPkg.StepResult, err error) {
+			assertions: func(t *testing.T, res pkgPromotion.StepResult, err error) {
 				require.ErrorContains(t, err, "closed without being merged")
 				require.True(t, promotion.IsTerminal(err))
-				require.Equal(t, kargoapi.PromotionPhaseFailed, res.Status)
+				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
 			},
 		},
 		{
@@ -172,9 +172,9 @@ func Test_gitPRWaiter_run(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(t *testing.T, res promoPkg.StepResult, err error) {
+			assertions: func(t *testing.T, res pkgPromotion.StepResult, err error) {
 				require.NoError(t, err)
-				require.Equal(t, kargoapi.PromotionPhaseSucceeded, res.Status)
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
 			},
 		},
 	}
@@ -203,7 +203,7 @@ func Test_gitPRWaiter_run(t *testing.T) {
 
 			res, err := runner.run(
 				context.Background(),
-				&promoPkg.StepContext{},
+				&pkgPromotion.StepContext{},
 				builtin.GitWaitForPRConfig{
 					Provider: ptr.To(builtin.Provider(testGitProviderName)),
 				},

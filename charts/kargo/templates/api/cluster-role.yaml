@@ -65,6 +65,7 @@ rules:
       - promotiontasks
       - stages
       - warehouses
+      - projectconfigs
     verbs:
       - "*"
   - apiGroups:

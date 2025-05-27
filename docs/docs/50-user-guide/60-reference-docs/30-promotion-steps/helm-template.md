@@ -108,5 +108,6 @@ steps:
     valuesFiles:
     - ./src/charts/my-chart/${{ ctx.stage }}-values.yaml
     outPath: ./out
+    releaseName: my-chart
 # Commit, push, etc...
 ```

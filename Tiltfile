@@ -54,7 +54,8 @@ k8s_yaml(
     './charts/kargo',
     name = 'kargo',
     namespace = 'kargo',
-    values = 'hack/tilt/values.dev.yaml'
+    values = 'hack/tilt/values.dev.yaml',
+    set = 'externalWebhooksServer.host=' + os.environ.get('KARGO_EXTERNAL_WEBHOOKS_SERVER_HOSTNAME', 'localhost:30083')
   )
 )
 # Normally the API server serves up the front end, but we want live updates
@@ -125,6 +126,21 @@ k8s_resource(
 )
 
 k8s_resource(
+  workload = 'kargo-external-webhooks-server',
+  new_name = 'external-webhooks-server',
+  port_forwards = [
+    '30083:8080'
+  ],
+  labels = ['kargo'],
+  objects = [
+    'kargo-external-webhooks-server:clusterrole',
+    'kargo-external-webhooks-server:clusterrolebinding',
+    'kargo-external-webhooks-server:configmap',
+    'kargo-external-webhooks-server:serviceaccount'
+  ],
+)
+
+k8s_resource(
   workload = 'kargo-garbage-collector',
   new_name = 'garbage-collector',
   labels = ['kargo'],
@@ -162,7 +178,7 @@ k8s_resource(
 
 k8s_resource(
   workload = 'kargo-webhooks-server',
-  new_name = 'webhooks-server',
+  new_name = 'kubernetes-webhooks-server',
   labels = ['kargo'],
   objects = [
     'kargo:mutatingwebhookconfiguration',
@@ -183,9 +199,12 @@ k8s_resource(
 k8s_resource(
   new_name = 'crds',
   objects = [
+    'clusterpromotiontasks.kargo.akuity.io:customresourcedefinition',
     'freights.kargo.akuity.io:customresourcedefinition',
+    'projectconfigs.kargo.akuity.io:customresourcedefinition',
     'projects.kargo.akuity.io:customresourcedefinition',
     'promotions.kargo.akuity.io:customresourcedefinition',
+    'promotiontasks.kargo.akuity.io:customresourcedefinition',
     'stages.kargo.akuity.io:customresourcedefinition',
     'warehouses.kargo.akuity.io:customresourcedefinition'
   ],

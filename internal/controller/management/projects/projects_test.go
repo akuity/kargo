@@ -127,8 +127,8 @@ func TestReconciler_Reconcile(t *testing.T) {
 				reconcileFn: func(
 					context.Context,
 					*kargoapi.Project,
-				) (kargoapi.ProjectStatus, bool, error) {
-					return kargoapi.ProjectStatus{}, false, errors.New("something went wrong")
+				) (kargoapi.ProjectStatus, error) {
+					return kargoapi.ProjectStatus{}, errors.New("something went wrong")
 				},
 				patchProjectStatusFn: func(
 					_ context.Context,
@@ -155,8 +155,8 @@ func TestReconciler_Reconcile(t *testing.T) {
 				reconcileFn: func(
 					context.Context,
 					*kargoapi.Project,
-				) (kargoapi.ProjectStatus, bool, error) {
-					return kargoapi.ProjectStatus{}, false, nil
+				) (kargoapi.ProjectStatus, error) {
+					return kargoapi.ProjectStatus{}, nil
 				},
 				patchProjectStatusFn: func(
 					_ context.Context,
@@ -193,47 +193,10 @@ func TestReconciler_reconcile(t *testing.T) {
 		assertions  func(
 			t *testing.T,
 			status kargoapi.ProjectStatus,
-			requeue bool,
 			cl client.Client,
 			err error,
 		)
 	}{
-		{
-			name:       "success migrating phase to conditions",
-			reconciler: &reconciler{},
-			project: &kargoapi.Project{
-				ObjectMeta: metav1.ObjectMeta{Name: testProject},
-				Status: kargoapi.ProjectStatus{
-					Phase: kargoapi.ProjectPhaseInitializing,
-				},
-			},
-			assertions: func(
-				t *testing.T,
-				status kargoapi.ProjectStatus,
-				requeue bool,
-				_ client.Client,
-				err error,
-			) {
-				require.NoError(t, err)
-
-				// Phase should be cleared
-				require.Empty(t, status.Phase) // nolint:staticcheck
-
-				// Conditions should be set
-				reconciling := conditions.Get(&status, kargoapi.ConditionTypeReconciling)
-				require.NotNil(t, reconciling)
-				require.Equal(t, metav1.ConditionTrue, reconciling.Status)
-				require.Equal(t, "Syncing", reconciling.Reason)
-
-				ready := conditions.Get(&status, kargoapi.ConditionTypeReady)
-				require.NotNil(t, ready)
-				require.Equal(t, metav1.ConditionFalse, ready.Status)
-				require.Equal(t, "Syncing", ready.Reason)
-
-				// Immediate requeue should be requested
-				require.True(t, requeue)
-			},
-		},
 		{
 			name:       "error migrating spec to ProjectConfig",
 			reconciler: &reconciler{},
@@ -257,7 +220,6 @@ func TestReconciler_reconcile(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				status kargoapi.ProjectStatus,
-				requeue bool,
 				_ client.Client,
 				err error,
 			) {
@@ -265,14 +227,21 @@ func TestReconciler_reconcile(t *testing.T) {
 
 				// Doesn't impact conditions
 				require.Len(t, status.Conditions, 0)
-
-				// Immediate requeue should NOT be requested
-				require.False(t, requeue)
 			},
 		},
 		{
-			name:       "success migrating spec to ProjectConfig",
-			reconciler: &reconciler{},
+			name: "success migrating spec to ProjectConfig",
+			reconciler: &reconciler{
+				ensureNamespaceFn: func(context.Context, *kargoapi.Project) error {
+					return nil
+				},
+				ensureAPIAdminPermissionsFn: func(context.Context, *kargoapi.Project) error {
+					return nil
+				},
+				ensureDefaultUserRolesFn: func(context.Context, *kargoapi.Project) error {
+					return nil
+				},
+			},
 			// Requires no phase --> conditions migration.
 			// Does require spec --> ProjectConfig migration.
 			project: &kargoapi.Project{
@@ -283,7 +252,6 @@ func TestReconciler_reconcile(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				status kargoapi.ProjectStatus,
-				requeue bool,
 				cl client.Client,
 				err error,
 			) {
@@ -297,9 +265,6 @@ func TestReconciler_reconcile(t *testing.T) {
 				err = cl.Get(context.Background(), types.NamespacedName{Name: testProject}, project)
 				require.NoError(t, err)
 				require.Empty(t, project.Spec) // nolint:staticcheck
-
-				// Immediate requeue should be requested
-				require.True(t, requeue)
 			},
 		},
 		{
@@ -317,7 +282,6 @@ func TestReconciler_reconcile(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				status kargoapi.ProjectStatus,
-				requeue bool,
 				_ client.Client,
 				err error,
 			) {
@@ -333,9 +297,6 @@ func TestReconciler_reconcile(t *testing.T) {
 				require.NotNil(t, reconcilingCondition)
 				require.Equal(t, metav1.ConditionTrue, reconcilingCondition.Status)
 				require.Equal(t, "Syncing", reconcilingCondition.Reason)
-
-				// Immediate requeue should NOT be requested
-				require.False(t, requeue)
 			},
 		},
 		{
@@ -377,7 +338,6 @@ func TestReconciler_reconcile(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				status kargoapi.ProjectStatus,
-				requeue bool,
 				_ client.Client,
 				err error,
 			) {
@@ -392,9 +352,6 @@ func TestReconciler_reconcile(t *testing.T) {
 				healthCondition := conditions.Get(&status, kargoapi.ConditionTypeHealthy)
 				require.NotNil(t, healthCondition)
 				require.Equal(t, metav1.ConditionFalse, healthCondition.Status)
-
-				// Immediate requeue should NOT be requested
-				require.False(t, requeue)
 			},
 		},
 		{
@@ -425,7 +382,6 @@ func TestReconciler_reconcile(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				status kargoapi.ProjectStatus,
-				requeue bool,
 				_ client.Client,
 				err error,
 			) {
@@ -436,9 +392,6 @@ func TestReconciler_reconcile(t *testing.T) {
 				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCondition)
 				require.Equal(t, metav1.ConditionTrue, readyCondition.Status)
-
-				// Immediate requeue should NOT be requested
-				require.False(t, requeue)
 
 				// Status has stats
 				require.NotNil(t, status.Stats)
@@ -452,8 +405,8 @@ func TestReconciler_reconcile(t *testing.T) {
 				WithObjects(tt.project).
 				WithInterceptorFuncs(tt.interceptor).
 				Build()
-			status, requeue, err := tt.reconciler.reconcile(context.Background(), tt.project)
-			tt.assertions(t, status, requeue, tt.reconciler.client, err)
+			status, err := tt.reconciler.reconcile(context.Background(), tt.project)
+			tt.assertions(t, status, tt.reconciler.client, err)
 		})
 	}
 }
@@ -876,12 +829,8 @@ func TestReconciler_ensureNamespace(t *testing.T) {
 			},
 		},
 		{
-			name: "namespace does not exist; success creating it",
-			project: &kargoapi.Project{
-				Status: kargoapi.ProjectStatus{
-					Phase: kargoapi.ProjectPhaseInitializing,
-				},
-			},
+			name:    "namespace does not exist; success creating it",
+			project: &kargoapi.Project{},
 			reconciler: &reconciler{
 				getNamespaceFn: func(
 					context.Context,
@@ -1348,152 +1297,6 @@ func TestReconciler_ensureDefaultProjectRoles(t *testing.T) {
 					&kargoapi.Project{},
 				),
 			)
-		})
-	}
-}
-
-func TestReconciler_migratePhaseToConditions(t *testing.T) {
-	tests := []struct {
-		name       string
-		project    *kargoapi.Project
-		assertions func(t *testing.T, status kargoapi.ProjectStatus, ok bool)
-	}{
-		{
-			name: "Empty Phase",
-			project: &kargoapi.Project{
-				Status: kargoapi.ProjectStatus{
-					Phase:   "",
-					Message: "Some message",
-				},
-			},
-			assertions: func(t *testing.T, status kargoapi.ProjectStatus, ok bool) {
-				require.True(t, ok)
-				require.Empty(t, status.Phase)   // nolint:staticcheck
-				require.Empty(t, status.Message) // nolint:staticcheck
-				require.Empty(t, status.Conditions)
-			},
-		},
-		{
-			name: "Initializing Phase",
-			project: &kargoapi.Project{
-				ObjectMeta: metav1.ObjectMeta{
-					Generation: 1,
-				},
-				Status: kargoapi.ProjectStatus{
-					Phase: kargoapi.ProjectPhaseInitializing,
-				},
-			},
-			assertions: func(t *testing.T, status kargoapi.ProjectStatus, ok bool) {
-				require.True(t, ok)
-				require.Empty(t, status.Phase)   // nolint:staticcheck
-				require.Empty(t, status.Message) // nolint:staticcheck
-				require.Len(t, status.Conditions, 2)
-
-				reconcilingCondition := conditions.Get(&status, kargoapi.ConditionTypeReconciling)
-				require.NotNil(t, reconcilingCondition)
-				require.Equal(t, metav1.ConditionTrue, reconcilingCondition.Status)
-				require.Equal(t, "Syncing", reconcilingCondition.Reason)
-				require.Equal(
-					t,
-					"Ensuring project namespace and permissions",
-					reconcilingCondition.Message,
-				)
-				require.Equal(t, int64(1), reconcilingCondition.ObservedGeneration)
-
-				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
-				require.NotNil(t, readyCondition)
-				require.Equal(t, metav1.ConditionFalse, readyCondition.Status)
-				require.Equal(t, "Syncing", readyCondition.Reason)
-				require.Equal(
-					t,
-					"Ensuring project namespace and permissions",
-					readyCondition.Message,
-				)
-				require.Equal(t, int64(1), readyCondition.ObservedGeneration)
-			},
-		},
-		{
-			name: "InitializationFailed Phase",
-			project: &kargoapi.Project{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-project",
-					Generation: 2,
-				},
-				Status: kargoapi.ProjectStatus{
-					Phase: kargoapi.ProjectPhaseInitializationFailed,
-				},
-			},
-			assertions: func(t *testing.T, status kargoapi.ProjectStatus, ok bool) {
-				require.True(t, ok)
-				require.Empty(t, status.Phase)   // nolint:staticcheck
-				require.Empty(t, status.Message) // nolint:staticcheck
-				require.Len(t, status.Conditions, 2)
-
-				stalledCondition := conditions.Get(&status, kargoapi.ConditionTypeStalled)
-				require.NotNil(t, stalledCondition)
-				require.Equal(t, metav1.ConditionTrue, stalledCondition.Status)
-				require.Equal(t, "ExistingNamespaceMissingLabel", stalledCondition.Reason)
-				require.Contains(
-					t,
-					stalledCondition.Message,
-					"already exists but is not labeled as a Project namespace using label",
-				)
-				require.Equal(t, int64(2), stalledCondition.ObservedGeneration)
-
-				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
-				require.NotNil(t, readyCondition)
-				require.Equal(t, metav1.ConditionFalse, readyCondition.Status)
-				require.Equal(t, "ExistingNamespaceMissingLabel", readyCondition.Reason)
-				require.Equal(t, int64(2), readyCondition.ObservedGeneration)
-			},
-		},
-		{
-			name: "Ready Phase",
-			project: &kargoapi.Project{
-				ObjectMeta: metav1.ObjectMeta{
-					Generation: 3,
-				},
-				Status: kargoapi.ProjectStatus{
-					Phase: kargoapi.ProjectPhaseReady,
-				},
-			},
-			assertions: func(t *testing.T, status kargoapi.ProjectStatus, ok bool) {
-				require.True(t, ok)
-				require.Empty(t, status.Phase)   // nolint:staticcheck
-				require.Empty(t, status.Message) // nolint:staticcheck
-				require.Len(t, status.Conditions, 1)
-
-				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
-				require.NotNil(t, readyCondition)
-				require.Equal(t, metav1.ConditionTrue, readyCondition.Status)
-				require.Equal(t, "Synced", readyCondition.Reason)
-				require.Equal(t, "Project is synced and ready for use", readyCondition.Message)
-				require.Equal(t, int64(3), readyCondition.ObservedGeneration)
-			},
-		},
-		{
-			name: "Unknown Phase",
-			project: &kargoapi.Project{
-				ObjectMeta: metav1.ObjectMeta{
-					Generation: 4,
-				},
-				Status: kargoapi.ProjectStatus{
-					Phase: "UnknownPhase",
-				},
-			},
-			assertions: func(t *testing.T, status kargoapi.ProjectStatus, ok bool) {
-				require.True(t, ok)
-				require.Empty(t, status.Phase)   // nolint:staticcheck
-				require.Empty(t, status.Message) // nolint:staticcheck
-				require.Empty(t, status.Conditions)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			status, ok := migratePhaseToConditions(tt.project)
-			tt.assertions(t, status, ok)
 		})
 	}
 }

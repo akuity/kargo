@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
+	gocache "github.com/patrickmn/go-cache"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -330,7 +331,7 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// The reason to requeue is to ensure that a possible deletion of the Stage
 	// directly after the finalizer was added is handled without delay.
 	if ok, err := api.EnsureFinalizer(ctx, r.client, stage); ok || err != nil {
-		return ctrl.Result{Requeue: ok}, err
+		return ctrl.Result{RequeueAfter: 100 * time.Millisecond}, err
 	}
 
 	// Reconcile the Stage.
@@ -361,7 +362,7 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 	// Immediate requeue if needed.
 	if needsRequeue {
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: 100 * time.Millisecond}, nil
 	}
 	// Otherwise, requeue after a delay.
 	// TODO: Make the requeue delay configurable.
@@ -1339,8 +1340,14 @@ func (r *RegularStageReconciler) startVerification(
 					stage.Spec.RequestedFreight,
 					freight.References(),
 				),
-				exprfn.DataOperations(ctx, r.client, stage.Namespace)...,
+				exprfn.DataOperations(
+					ctx,
+					r.client,
+					gocache.New(gocache.NoExpiration, gocache.NoExpiration),
+					stage.Namespace,
+				)...,
 			),
+			Vars: stage.Spec.Vars,
 		},
 	}
 	for _, freightRef := range freight.Freight {
@@ -1966,7 +1973,7 @@ func (r *RegularStageReconciler) clearAnalysisRuns(ctx context.Context, stage *k
 }
 
 // summarizeConditions summarizes the conditions of the given Stage. It sets the
-// Ready condition based on the Promoting, Healthy and Verified conditions.
+// Ready condition based on the Promoting, Healthy, and Verified conditions.
 // If there is an error, the Ready condition is set to False until the error is
 // resolved.
 func summarizeConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus, err error) {
@@ -1986,23 +1993,10 @@ func summarizeConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus,
 			Reason:             "RetryAfterError",
 			ObservedGeneration: stage.Generation,
 		})
-
-		// Backwards compatibility: set the Phase and Message.
-		// TODO: Remove this in a future release.
-		newStatus.Phase = kargoapi.StagePhaseFailed
-		newStatus.Message = err.Error()
-
 		return
 	}
 
-	// By default, the Stage is steady unless we find a more specific condition.
-	// TODO: Remove this in a future release.
-	newStatus.Phase = kargoapi.StagePhaseSteady
-
-	// Backwards compatibility: clear the Message field of the Status
-	// and set the Freight summary.
-	// TODO: Remove this in a future release.
-	newStatus.Message = ""
+	// Set the Freight summary.
 	newStatus.FreightSummary = buildFreightSummary(len(stage.Spec.RequestedFreight), newStatus.FreightHistory.Current())
 
 	// If we are currently Promoting, then we are not Ready.
@@ -2015,11 +2009,6 @@ func summarizeConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus,
 			Message:            promoCond.Message,
 			ObservedGeneration: stage.Generation,
 		})
-
-		// Backwards compatibility: set Phase to Promoting.
-		// TODO: Remove this in a future release.
-		newStatus.Phase = kargoapi.StagePhasePromoting
-
 		return
 	}
 
@@ -2034,11 +2023,6 @@ func summarizeConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus,
 			Message:            lastPromo.Status.Message,
 			ObservedGeneration: stage.Generation,
 		})
-
-		// Backwards compatibility: set Phase to Failed.
-		// TODO: Remove this in a future release.
-		newStatus.Phase = kargoapi.StagePhaseFailed
-
 		return
 	}
 
@@ -2055,25 +2039,14 @@ func summarizeConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus,
 		if healthCond != nil {
 			readyCond.Reason = healthCond.Reason
 			readyCond.Message = healthCond.Message
-
-			if healthCond.Status == metav1.ConditionFalse {
-				// Backwards compatibility: set Phase to Failed on health failure.
-				// TODO: Remove this in a future release.
-				newStatus.Phase = kargoapi.StagePhaseFailed
-			}
 		}
 		conditions.Set(newStatus, readyCond)
-
 		return
 	}
 
 	// If we are not verified, then we are not Ready.
 	verificationCond := conditions.Get(newStatus, kargoapi.ConditionTypeVerified)
 	if verificationCond == nil || verificationCond.Status != metav1.ConditionTrue {
-		// Backwards compatibility: set Phase to Verifying.
-		// TODO: Remove this in a future release.
-		newStatus.Phase = kargoapi.StagePhaseVerifying
-
 		readyCond := &metav1.Condition{
 			Type:               kargoapi.ConditionTypeReady,
 			Status:             metav1.ConditionFalse,
@@ -2084,15 +2057,8 @@ func summarizeConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus,
 		if verificationCond != nil {
 			readyCond.Reason = verificationCond.Reason
 			readyCond.Message = verificationCond.Message
-
-			// Backwards compatibility: set Phase to Failed on verification failure.
-			// TODO: Remove this in a future release.
-			if verificationCond.Status == metav1.ConditionFalse {
-				newStatus.Phase = kargoapi.StagePhaseFailed
-			}
 		}
 		conditions.Set(newStatus, readyCond)
-
 		return
 	}
 
@@ -2110,10 +2076,6 @@ func summarizeConditions(stage *kargoapi.Stage, newStatus *kargoapi.StageStatus,
 	// If we are Ready, then we can also mark the current generation as
 	// observed.
 	newStatus.ObservedGeneration = stage.Generation
-
-	// Backwards compatibility: set Phase to Steady.
-	// TODO: Remove this in a future release.
-	newStatus.Phase = kargoapi.StagePhaseSteady
 }
 
 func buildFreightSummary(requested int, current *kargoapi.FreightCollection) string {

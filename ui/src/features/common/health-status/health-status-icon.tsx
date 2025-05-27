@@ -19,9 +19,27 @@ export const HealthStatusIcon = (props: {
   health?: Health;
   style?: CSSProperties;
   hideColor?: boolean;
+  className?: string;
+  noTooltip?: boolean;
 }) => {
   const { health, hideColor } = props;
   const reason = health?.issues?.join('; ') ?? '';
+
+  const Icon = (
+    <FontAwesomeIcon
+      icon={iconForHealthStatus(health)}
+      spin={healthStatusToEnum(health?.status) === HealthStatus.PROGRESSING}
+      className={props.className}
+      style={{
+        color: !hideColor ? colorForHealthStatus(health) : undefined,
+        ...props.style
+      }}
+    />
+  );
+
+  if (props.noTooltip) {
+    return Icon;
+  }
 
   return (
     <Tooltip
@@ -42,14 +60,7 @@ export const HealthStatusIcon = (props: {
         </>
       }
     >
-      <FontAwesomeIcon
-        icon={iconForHealthStatus(health)}
-        spin={healthStatusToEnum(health?.status) === HealthStatus.PROGRESSING}
-        style={{
-          color: !hideColor ? colorForHealthStatus(health) : undefined,
-          ...props.style
-        }}
-      />
+      {Icon}
     </Tooltip>
   );
 };

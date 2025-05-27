@@ -15,6 +15,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
+	pkgPromotion "github.com/akuity/kargo/pkg/promotion"
 )
 
 func TestStep_GetTimeout(t *testing.T) {
@@ -56,7 +57,7 @@ func TestStep_GetTimeout(t *testing.T) {
 					},
 				},
 			},
-			runner: MockRetryableStepRunner{defaultTimeout: ptr.To(time.Duration(3))},
+			runner: pkgPromotion.NewRetryableStepRunner(nil, ptr.To(time.Duration(3)), 0),
 			assertions: func(t *testing.T, result *time.Duration) {
 				assert.Equal(t, ptr.To(time.Duration(5)), result)
 			},
@@ -66,7 +67,7 @@ func TestStep_GetTimeout(t *testing.T) {
 			step: &Step{
 				Retry: &kargoapi.PromotionStepRetry{},
 			},
-			runner: MockRetryableStepRunner{defaultTimeout: ptr.To(time.Duration(3))},
+			runner: pkgPromotion.NewRetryableStepRunner(nil, ptr.To(time.Duration(3)), 0),
 			assertions: func(t *testing.T, result *time.Duration) {
 				assert.Equal(t, ptr.To(time.Duration(3)), result)
 			},
@@ -480,6 +481,7 @@ func TestStep_GetConfig(t *testing.T) {
 			stepCfg, err := promoStep.GetConfig(
 				context.Background(),
 				testClient,
+				nil,
 				testCase.promoCtx,
 				testCase.promoState,
 			)
@@ -851,6 +853,7 @@ func TestStep_GetVars(t *testing.T) {
 			vars, err := testCase.step.GetVars(
 				context.Background(),
 				testClient,
+				nil,
 				testCase.promoCtx,
 				testCase.promoState,
 			)
@@ -875,7 +878,20 @@ func TestStep_Skip(t *testing.T) {
 		assertions func(*testing.T, bool, error)
 	}{
 		{
-			name: "no if condition",
+			name: "no if condition with failures",
+			step: &Step{},
+			ctx: Context{
+				StepExecutionMetadata: kargoapi.StepExecutionMetadataList{{
+					Status: kargoapi.PromotionStepStatusFailed,
+				}},
+			},
+			assertions: func(t *testing.T, b bool, err error) {
+				assert.True(t, b)
+				assert.NoError(t, err)
+			},
+		},
+		{
+			name: "no if condition without failures",
 			step: &Step{},
 			assertions: func(t *testing.T, b bool, err error) {
 				assert.False(t, b)
@@ -972,6 +988,7 @@ func TestStep_Skip(t *testing.T) {
 			got, err := tt.step.Skip(
 				context.Background(),
 				fake.NewClientBuilder().Build(),
+				nil,
 				tt.ctx,
 				tt.state,
 			)

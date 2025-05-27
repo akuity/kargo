@@ -28,6 +28,8 @@ import (
 
 type managementControllerOptions struct {
 	KubeConfig string
+	QPS        float32
+	Burst      int
 
 	KargoNamespace               string
 	ManageControllerRoleBindings bool
@@ -62,8 +64,12 @@ func newManagementControllerCommand() *cobra.Command {
 
 func (o *managementControllerOptions) complete() {
 	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
+	o.QPS = types.MustParseFloat32(os.GetEnv("KUBE_API_QPS", "50.0"))
+	o.Burst = types.MustParseInt(os.GetEnv("KUBE_API_BURST", "300"))
+
 	o.KargoNamespace = os.GetEnv("KARGO_NAMESPACE", "kargo")
 	o.ManageControllerRoleBindings = types.MustParseBool(os.GetEnv("MANAGE_CONTROLLER_ROLE_BINDINGS", "true"))
+
 	o.MetricsBindAddress = os.GetEnv("METRICS_BIND_ADDRESS", "0")
 	o.PprofBindAddress = os.GetEnv("PPROF_BIND_ADDRESS", "")
 }
@@ -121,6 +127,7 @@ func (o *managementControllerOptions) setupManager(ctx context.Context) (manager
 	if err != nil {
 		return nil, fmt.Errorf("error loading REST config for Kargo controller manager: %w", err)
 	}
+	kubernetes.ConfigureQPSBurst(ctx, restCfg, o.QPS, o.Burst)
 	restCfg.ContentType = runtime.ContentTypeJSON
 
 	scheme := runtime.NewScheme()

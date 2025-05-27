@@ -51,7 +51,7 @@ data:
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
 
 				outPath := filepath.Join(workDir, "output.yaml")
 				require.FileExists(t, outPath)
@@ -97,7 +97,7 @@ data:
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
 
 				outPath := filepath.Join(workDir, "output.yaml")
 				require.FileExists(t, outPath)
@@ -144,7 +144,7 @@ data:
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
 
 				outPath := filepath.Join(workDir, "output.yaml")
 				require.FileExists(t, outPath)
@@ -189,7 +189,7 @@ data:
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseSucceeded}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
 
 				outPath := filepath.Join(workDir, "output", "test-chart")
 				require.DirExists(t, outPath)
@@ -215,7 +215,7 @@ data:
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				require.ErrorContains(t, err, "failed to compose values")
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},
@@ -227,7 +227,7 @@ data:
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				require.ErrorContains(t, err, "failed to load chart")
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},
@@ -250,7 +250,7 @@ dependencies:
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				require.ErrorContains(t, err, "missing chart dependencies")
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},
@@ -268,7 +268,7 @@ version: 0.1.0`,
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				require.ErrorContains(t, err, "failed to initialize Helm action config")
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},
@@ -294,7 +294,7 @@ data:
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				require.ErrorContains(t, err, "failed to render chart")
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},
@@ -319,7 +319,7 @@ metadata:
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				require.ErrorContains(t, err, "failed to write rendered chart")
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, result)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
 			},

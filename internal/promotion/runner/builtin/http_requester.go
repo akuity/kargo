@@ -51,11 +51,11 @@ func (h *httpRequester) Run(
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
 	if err := h.validate(stepCtx.Config); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored}, err
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 	cfg, err := promotion.ConfigToStruct[builtin.HTTPConfig](stepCtx.Config)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("could not convert config into http config: %w", err)
 	}
 	return h.run(ctx, stepCtx, cfg)
@@ -73,54 +73,54 @@ func (h *httpRequester) run(
 ) (promotion.StepResult, error) {
 	req, err := h.buildRequest(cfg)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error building HTTP request: %w", err)
 	}
 	client, err := h.getClient(cfg)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error creating HTTP client: %w", err)
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error sending HTTP request: %w", err)
 	}
 	defer resp.Body.Close()
 	env, err := h.buildExprEnv(ctx, resp)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error building expression context from HTTP response: %w", err)
 	}
 	success, err := h.wasRequestSuccessful(cfg, resp.StatusCode, env)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error evaluating success criteria: %w", err)
 	}
 	failure, err := h.didRequestFail(cfg, resp.StatusCode, env)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error evaluating failure criteria: %w", err)
 	}
 	switch {
 	case success && !failure:
 		outputs, err := h.buildOutputs(cfg.Outputs, env)
 		if err != nil {
-			return promotion.StepResult{Status: kargoapi.PromotionPhaseErrored},
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 				fmt.Errorf("error extracting outputs from HTTP response: %w", err)
 		}
 		return promotion.StepResult{
-			Status: kargoapi.PromotionPhaseSucceeded,
+			Status: kargoapi.PromotionStepStatusSucceeded,
 			Output: outputs,
 		}, nil
 	case failure:
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseFailed},
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
 			&promotion.TerminalError{Err: fmt.Errorf(
 				"HTTP (%d) response met failure criteria",
 				resp.StatusCode,
 			)}
 	default:
-		return promotion.StepResult{Status: kargoapi.PromotionPhaseRunning}, nil
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusRunning}, nil
 	}
 }
 
@@ -195,7 +195,7 @@ func (h *httpRequester) buildExprEnv(
 		if n, err = resp.Body.Read(buf); err != nil && err != io.EOF {
 			return nil, fmt.Errorf("checking for additional content: %w", err)
 		}
-		if n > 0 || err != io.EOF {
+		if n > 0 {
 			return nil, fmt.Errorf("response body exceeds maximum size of %d bytes", maxBytes)
 		}
 	}

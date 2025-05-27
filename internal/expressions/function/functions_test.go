@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -654,12 +655,13 @@ func Test_getConfigMap(t *testing.T) {
 		name       string
 		objects    []client.Object
 		args       []any
-		assertions func(t *testing.T, result any, err error)
+		cache      *cache.Cache
+		assertions func(t *testing.T, cache *cache.Cache, result any, err error)
 	}{
 		{
 			name: "no arguments",
 			args: []any{},
-			assertions: func(t *testing.T, result any, err error) {
+			assertions: func(t *testing.T, _ *cache.Cache, result any, err error) {
 				assert.ErrorContains(t, err, "expected 1 argument")
 				assert.Nil(t, result)
 			},
@@ -667,7 +669,7 @@ func Test_getConfigMap(t *testing.T) {
 		{
 			name: "too many arguments",
 			args: []any{testConfigMap, "extra"},
-			assertions: func(t *testing.T, result any, err error) {
+			assertions: func(t *testing.T, _ *cache.Cache, result any, err error) {
 				assert.ErrorContains(t, err, "expected 1 argument")
 				assert.Nil(t, result)
 			},
@@ -675,7 +677,7 @@ func Test_getConfigMap(t *testing.T) {
 		{
 			name: "invalid argument type",
 			args: []any{123},
-			assertions: func(t *testing.T, result any, err error) {
+			assertions: func(t *testing.T, _ *cache.Cache, result any, err error) {
 				assert.ErrorContains(t, err, "argument must be string")
 				assert.Nil(t, result)
 			},
@@ -683,11 +685,12 @@ func Test_getConfigMap(t *testing.T) {
 		{
 			name: "ConfigMap not found",
 			args: []any{testConfigMap},
-			assertions: func(t *testing.T, result any, err error) {
+			assertions: func(t *testing.T, cache *cache.Cache, result any, err error) {
 				assert.NoError(t, err)
 				assert.NotNil(t, result)
 				assert.IsType(t, map[string]string{}, result)
 				assert.Empty(t, result)
+				assert.Nil(t, cache)
 			},
 		},
 		{
@@ -702,9 +705,63 @@ func Test_getConfigMap(t *testing.T) {
 				},
 			},
 			args: []any{testConfigMap},
-			assertions: func(t *testing.T, result any, err error) {
+			assertions: func(t *testing.T, cache *cache.Cache, result any, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, testData, result)
+				assert.Nil(t, cache)
+			},
+		},
+		{
+			name: "success with cache",
+			objects: []client.Object{
+				&corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      testConfigMap,
+					},
+					Data: testData,
+				},
+			},
+			cache: cache.New(cache.NoExpiration, cache.NoExpiration),
+			args:  []any{testConfigMap},
+			assertions: func(t *testing.T, cache *cache.Cache, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, testData, result)
+
+				// Check if the item is in the cache
+				data, ok := cache.Get(getCacheKey(cacheKeyPrefixConfigMap, testProject, testConfigMap))
+				assert.True(t, ok)
+				assert.Equal(t, testData, data)
+			},
+		},
+		{
+			name: "success from cache",
+			cache: cache.NewFrom(cache.NoExpiration, cache.NoExpiration, map[string]cache.Item{
+				getCacheKey(cacheKeyPrefixConfigMap, testProject, testConfigMap): {
+					Object: testData,
+				},
+			}),
+			objects: []client.Object{
+				&corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      testConfigMap,
+					},
+					Data: map[string]string{
+						// This data should not be used
+						"foo": "baz",
+					},
+				},
+			},
+			args: []any{testConfigMap},
+			assertions: func(t *testing.T, cache *cache.Cache, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, testData, result)
+
+				// Check if the item data did not change
+				data, ok := cache.Get(getCacheKey(cacheKeyPrefixConfigMap, testProject, testConfigMap))
+				assert.True(t, ok)
+				assert.Equal(t, testData, data)
 			},
 		},
 	}
@@ -718,10 +775,10 @@ func Test_getConfigMap(t *testing.T) {
 				WithObjects(tt.objects...).
 				Build()
 
-			fn := getConfigMap(ctx, c, testProject)
+			fn := getConfigMap(ctx, c, tt.cache, testProject)
 
 			result, err := fn(tt.args...)
-			tt.assertions(t, result, err)
+			tt.assertions(t, tt.cache, result, err)
 		})
 	}
 }
@@ -737,12 +794,13 @@ func Test_getSecret(t *testing.T) {
 		name       string
 		objects    []client.Object
 		args       []any
-		assertions func(t *testing.T, result any, err error)
+		cache      *cache.Cache
+		assertions func(t *testing.T, cache *cache.Cache, result any, err error)
 	}{
 		{
 			name: "no arguments",
 			args: []any{},
-			assertions: func(t *testing.T, result any, err error) {
+			assertions: func(t *testing.T, _ *cache.Cache, result any, err error) {
 				assert.ErrorContains(t, err, "expected 1 argument")
 				assert.Nil(t, result)
 			},
@@ -750,7 +808,7 @@ func Test_getSecret(t *testing.T) {
 		{
 			name: "too many arguments",
 			args: []any{testSecret, "extra"},
-			assertions: func(t *testing.T, result any, err error) {
+			assertions: func(t *testing.T, _ *cache.Cache, result any, err error) {
 				assert.ErrorContains(t, err, "expected 1 argument")
 				assert.Nil(t, result)
 			},
@@ -758,7 +816,7 @@ func Test_getSecret(t *testing.T) {
 		{
 			name: "invalid argument type",
 			args: []any{123},
-			assertions: func(t *testing.T, result any, err error) {
+			assertions: func(t *testing.T, _ *cache.Cache, result any, err error) {
 				assert.ErrorContains(t, err, "argument must be string")
 				assert.Nil(t, result)
 			},
@@ -766,11 +824,12 @@ func Test_getSecret(t *testing.T) {
 		{
 			name: "Secret not found",
 			args: []any{testSecret},
-			assertions: func(t *testing.T, result any, err error) {
+			assertions: func(t *testing.T, cache *cache.Cache, result any, err error) {
 				assert.NoError(t, err)
 				assert.NotNil(t, result)
 				assert.IsType(t, map[string]string{}, result)
 				assert.Empty(t, result)
+				assert.Nil(t, cache)
 			},
 		},
 		{
@@ -787,9 +846,65 @@ func Test_getSecret(t *testing.T) {
 				},
 			},
 			args: []any{testSecret},
-			assertions: func(t *testing.T, result any, err error) {
+			assertions: func(t *testing.T, cache *cache.Cache, result any, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, map[string]string{"foo": "bar"}, result)
+				assert.Nil(t, cache)
+			},
+		},
+		{
+			name: "success with cache",
+			objects: []client.Object{
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      testSecret,
+					},
+					Data: map[string][]byte{
+						"foo": []byte("bar"),
+					},
+				},
+			},
+			cache: cache.New(cache.NoExpiration, cache.NoExpiration),
+			args:  []any{testSecret},
+			assertions: func(t *testing.T, cache *cache.Cache, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, map[string]string{"foo": "bar"}, result)
+
+				// Check if the item is in the cache
+				data, ok := cache.Get(getCacheKey(cacheKeyPrefixSecret, testProject, testSecret))
+				assert.True(t, ok)
+				assert.Equal(t, map[string]string{"foo": "bar"}, data)
+			},
+		},
+		{
+			name: "success from cache",
+			cache: cache.NewFrom(cache.NoExpiration, cache.NoExpiration, map[string]cache.Item{
+				getCacheKey(cacheKeyPrefixSecret, testProject, testSecret): {
+					Object: map[string]string{"foo": "bar"},
+				},
+			}),
+			objects: []client.Object{
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      testSecret,
+					},
+					Data: map[string][]byte{
+						// This data should not be used
+						"foo": []byte("baz"),
+					},
+				},
+			},
+			args: []any{testSecret},
+			assertions: func(t *testing.T, cache *cache.Cache, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, map[string]string{"foo": "bar"}, result)
+
+				// Check if the item data did not change
+				data, ok := cache.Get(getCacheKey(cacheKeyPrefixSecret, testProject, testSecret))
+				assert.True(t, ok)
+				assert.Equal(t, map[string]string{"foo": "bar"}, data)
 			},
 		},
 	}
@@ -803,10 +918,204 @@ func Test_getSecret(t *testing.T) {
 				WithObjects(tt.objects...).
 				Build()
 
-			fn := getSecret(ctx, c, testProject)
+			fn := getSecret(ctx, c, tt.cache, testProject)
 
 			result, err := fn(tt.args...)
-			tt.assertions(t, result, err)
+			tt.assertions(t, tt.cache, result, err)
+		})
+	}
+}
+
+func Test_getConfigMap_getSecret_no_cache_key_collision(t *testing.T) {
+	const testProject = "fake-project"
+	const testIdenticalName = "fake-name"
+
+	scheme := runtime.NewScheme()
+	assert.NoError(t, corev1.AddToScheme(scheme))
+
+	tests := []struct {
+		name       string
+		objects    []client.Object
+		args       []any
+		cache      *cache.Cache
+		assertions func(t *testing.T, cache *cache.Cache)
+	}{
+		{
+			name: "ConfigMap and Secret with identical names",
+			objects: []client.Object{
+				&corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      testIdenticalName,
+					},
+					Data: map[string]string{
+						"type": "configmap",
+					},
+				},
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      testIdenticalName,
+					},
+					Data: map[string][]byte{
+						"type": []byte("secret"),
+					},
+				},
+			},
+			cache: cache.New(cache.NoExpiration, cache.NoExpiration),
+			args:  []any{testIdenticalName},
+			assertions: func(t *testing.T, cache *cache.Cache) {
+				// Check if both items are in the cache with different keys
+				data, ok := cache.Get(getCacheKey(cacheKeyPrefixConfigMap, testProject, testIdenticalName))
+				assert.True(t, ok)
+				assert.Equal(t, map[string]string{"type": "configmap"}, data)
+
+				data, ok = cache.Get(getCacheKey(cacheKeyPrefixSecret, testProject, testIdenticalName))
+				assert.True(t, ok)
+				assert.Equal(t, map[string]string{"type": "secret"}, data)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(tt.objects...).
+				Build()
+
+			cfgFn := getConfigMap(ctx, c, tt.cache, testProject)
+			_, err := cfgFn(tt.args...)
+			assert.NoError(t, err)
+
+			secretFn := getSecret(ctx, c, tt.cache, testProject)
+			_, err = secretFn(tt.args...)
+			assert.NoError(t, err)
+
+			tt.assertions(t, tt.cache)
+		})
+	}
+}
+
+func Test_getStatus(t *testing.T) {
+	tests := []struct {
+		name             string
+		currentStepAlias string
+		stepExecMetas    kargoapi.StepExecutionMetadataList
+		args             []any
+		assertions       func(t *testing.T, result any, err error)
+	}{
+		{
+			name: "no arguments",
+			args: []any{},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "expected 1 argument")
+				assert.Empty(t, result)
+			},
+		},
+		{
+			name: "too many arguments",
+			args: []any{"one", "two"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "expected 1 argument")
+				assert.Empty(t, result)
+			},
+		},
+		{
+			name: "one empty argument",
+			args: []any{""},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "must not be empty")
+				assert.Empty(t, result)
+			},
+		},
+		{
+			name:             "basic usage; no hit",
+			currentStepAlias: "step-2",
+			stepExecMetas: kargoapi.StepExecutionMetadataList{{
+				Alias:  "step-1",
+				Status: kargoapi.PromotionStepStatusSucceeded,
+			}},
+			args: []any{"non-existent-step"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Empty(t, result)
+			},
+		},
+		{
+			name:             "basic usage; hit",
+			currentStepAlias: "step-2",
+			stepExecMetas: kargoapi.StepExecutionMetadataList{{
+				Alias:  "step-1",
+				Status: kargoapi.PromotionStepStatusSucceeded,
+			}},
+			args: []any{"step-1"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, string(kargoapi.PromotionStepStatusSucceeded), result)
+			},
+		},
+		{
+			name:             "used in a task; no alias match",
+			currentStepAlias: "task-2::step-2",
+			stepExecMetas: kargoapi.StepExecutionMetadataList{
+				{
+					Alias:  "step-1", // No task namespace; correct alias
+					Status: kargoapi.PromotionStepStatusSucceeded,
+				},
+				{
+					Alias:  "task-1::step-2", // Correct task namespace; wrong alias
+					Status: kargoapi.PromotionStepStatusSucceeded,
+				},
+			},
+			args: []any{"step-1"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Empty(t, result)
+			},
+		},
+		{
+			name:             "used in a task; no namespace match",
+			currentStepAlias: "task-2::step-2",
+			stepExecMetas: kargoapi.StepExecutionMetadataList{
+				{
+					Alias:  "step-1", // No task namespace; correct alias
+					Status: kargoapi.PromotionStepStatusSucceeded,
+				},
+				{
+					Alias:  "task-1::step-2", // Wrong task namespace; correct alias
+					Status: kargoapi.PromotionStepStatusSucceeded,
+				},
+			},
+			args: []any{"step-1"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Empty(t, result)
+			},
+		},
+		{
+			name:             "used in a task; hit",
+			currentStepAlias: "task-2::step-2",
+			stepExecMetas: kargoapi.StepExecutionMetadataList{
+				{
+					Alias:  "task-2::step-1",
+					Status: kargoapi.PromotionStepStatusSucceeded,
+				},
+			},
+			args: []any{"step-1"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, string(kargoapi.PromotionStepStatusSucceeded), result)
+			},
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			fn := getStatus(testCase.currentStepAlias, testCase.stepExecMetas)
+			result, err := fn(testCase.args...)
+			testCase.assertions(t, result, err)
 		})
 	}
 }

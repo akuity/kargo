@@ -32,6 +32,51 @@ type RetryableStepRunner interface {
 	DefaultErrorThreshold() uint32
 }
 
+// retryableStepRunner is a wrapper around a StepRunner that implements
+// RetryableStepRunner.
+type retryableStepRunner struct {
+	runner                StepRunner
+	defaultTimeout        *time.Duration
+	defaultErrorThreshold uint32
+}
+
+// NewRetryableStepRunner returns a wrapper around a StepRunner that implements
+// RetryableStepRunner.
+func NewRetryableStepRunner(
+	runner StepRunner,
+	timeout *time.Duration,
+	errorThreshold uint32,
+) RetryableStepRunner {
+	return &retryableStepRunner{
+		runner:                runner,
+		defaultTimeout:        timeout,
+		defaultErrorThreshold: errorThreshold,
+	}
+}
+
+// Name implements RetryableStepRunner.
+func (r *retryableStepRunner) Name() string {
+	return r.runner.Name()
+}
+
+// Run implements RetryableStepRunner.
+func (r *retryableStepRunner) Run(
+	ctx context.Context,
+	stepCtx *StepContext,
+) (StepResult, error) {
+	return r.runner.Run(ctx, stepCtx)
+}
+
+// DefaultTimeout implements RetryableStepRunner.
+func (r *retryableStepRunner) DefaultTimeout() *time.Duration {
+	return r.defaultTimeout
+}
+
+// DefaultErrorThreshold implements RetryableStepRunner.
+func (r *retryableStepRunner) DefaultErrorThreshold() uint32 {
+	return r.defaultErrorThreshold
+}
+
 // StepContext is a type that represents the context in which a
 // single promotion step is executed by a StepRunner.
 type StepContext struct {
@@ -81,7 +126,7 @@ type StepContext struct {
 // process executed by a StepRunner.
 type StepResult struct {
 	// Status is the high-level outcome of a Step executed by a StepRunner.
-	Status kargoapi.PromotionPhase
+	Status kargoapi.PromotionStepStatus
 	// Message is an optional message that provides additional context about the
 	// outcome of a Step executed by a StepRunner.
 	Message string

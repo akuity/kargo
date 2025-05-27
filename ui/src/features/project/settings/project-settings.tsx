@@ -3,6 +3,7 @@ import {
   faAsterisk,
   faChartBar,
   faGear,
+  faGears,
   faPeopleGroup,
   faTasks
 } from '@fortawesome/free-solid-svg-icons';
@@ -19,6 +20,7 @@ import { useProjectBreadcrumbs } from '../project-utils';
 import { AnalysisTemplatesSettings } from './views/analysis-templates/analysis-templates';
 import { CredentialsSettings } from './views/credentials/credentials';
 import { GeneralSettings } from './views/general/general-settings';
+import { ProjectConfig } from './views/project-config/project-config';
 import { PromotionTasks } from './views/promotion-tasks/promotion-tasks';
 import { RolesSettings } from './views/roles/roles';
 
@@ -34,6 +36,12 @@ export const ProjectSettings = () => {
         icon: faGear,
         path: 'general',
         component: GeneralSettings
+      },
+      projectConfig: {
+        label: 'ProjectConfig',
+        icon: faGears,
+        path: 'project-config',
+        component: ProjectConfig
       },
       analysisTemplates: {
         label: 'Analysis Templates',

@@ -10,6 +10,7 @@ import { Project } from '@ui/pages/project';
 import { paths } from './config/paths';
 import { queryClient } from './config/query-client';
 import { themeConfig } from './config/themeConfig';
+import { ProjectExtensions } from './extensions/pages/project-extensions';
 import { AuthContextProvider } from './features/auth/context/auth-context-provider';
 import { ProtectedRoute } from './features/auth/protected-route';
 import { TokenRenew } from './features/auth/token-renew';
@@ -39,6 +40,8 @@ export const App = () => (
                   <Route path={paths.project} element={<Project />} />
                   <Route path={paths.projectEvents} element={<Events />} />
                   <Route path={paths.stage} element={<Project />} />
+                  <Route path={paths.promotion} element={<Project />} />
+                  <Route path={paths.promote} element={<Project />} />
                   <Route path={paths.freight} element={<Project />} />
                   <Route path={paths.warehouse} element={<Project />} />
                   <Route path={paths.downloads} element={<Downloads />} />
@@ -55,6 +58,9 @@ export const App = () => (
                   <Route path={paths.projectSettings}>
                     <Route index element={<ProjectSettings />} />
                     <Route path='*' element={<ProjectSettings />} />
+                  </Route>
+                  <Route path={paths.projectExtensions}>
+                    <Route path='*' element={<ProjectExtensions />} />
                   </Route>
                   <Route path={paths.settings}>
                     <Route index element={<Settings />} />

@@ -295,7 +295,7 @@ before proceeding with promotion. This practice is commonly known as
 
 `Stage`s may optionally specify a "soak time" when requesting `Freight` from
 upstream `Stage`s. To configure this, a duration can be specified using the
-`spec.requestedFreight[].requiredSoakTime` field. Valid durations are expressed
+`spec.requestedFreight[].sources.requiredSoakTime` field. Valid durations are expressed
 in seconds, minutes or hours (e.g. `180s`, `30m`, `48h`). This duration is the
 minimum duration (following a successful promotion), for which the requested
 `Freight` must have continuously occupied ("soaked in") in an upstream `Stage`
@@ -316,7 +316,7 @@ spec:
     sources:
       stages:
       - uat
-    requiredSoakTime: 1h
+      requiredSoakTime: 1h
  # Omitted for brevity...
 ```
 
