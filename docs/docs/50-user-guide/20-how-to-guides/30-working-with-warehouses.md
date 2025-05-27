@@ -397,8 +397,8 @@ strategy:
 
 - `id`: The ID (SHA) of the commit
 - `commitDate`: The date of the commit
-- `author`: The author of the commit, in format "Name <email>"
-- `committer`: The committer of the commit, in format "Name <email>"
+- `author`: The author of the commit, in format `Name <email>`
+- `committer`: The committer of the commit, in format `Name <email>`
 - `subject`: The first line of the commit message
 
 **For `SemVer`, `Lexical`, and `NewestTag` (tag filtering):**
@@ -412,6 +412,10 @@ strategy:
 - `committer`: The committer of the commit that the tag references, in the
   format of "Name <email>"
 - `subject`: The first line of the commit message associated with the tag
+- `tagger`: The tagger of the tag, in the format of `Name <email>`. Only
+  available for annotated tags.
+- `annotation`: The first line of the tag annotation. Only available for
+  annotated tags.
 
 ##### Expression Filtering Examples
 

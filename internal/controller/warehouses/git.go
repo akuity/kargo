@@ -402,6 +402,8 @@ func filterTagsByExpression(
 			"author":      tag.Author,
 			"committer":   tag.Committer,
 			"subject":     tag.Subject,
+			"tagger":      tag.Tagger,
+			"annotation":  tag.Annotation,
 		}
 
 		result, err := expr.Run(program, env)

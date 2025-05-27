@@ -224,6 +224,10 @@ type GitSubscription struct {
 	//	   tag, in the format "Name <email>".
 	//   - `subject`: The subject (first line) of the commit message associated
 	//	   with the tag.
+	//	 - `tagger`: The person who created the tag, in the format "Name <email>".
+	//	   Only available for annotated tags.
+	//	 - `annotation`: The subject (first line) of the tag annotation. Only
+	//	   available for annotated tags.
 	//
 	// Refer to the expr-lang documentation for more details on syntax and
 	// capabilities of the expression language: https://expr-lang.org.
