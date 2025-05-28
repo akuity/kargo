@@ -13,5 +13,5 @@ spec:
   issuerRef:
     kind: Issuer
     name: kargo-selfsigned-cert-issuer
-  secretName: kargo-external-webhooks-server-cert
+  secretName: kargo-external-webhooks-server
 {{- end }}

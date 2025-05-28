@@ -1,6 +1,6 @@
 module github.com/akuity/kargo
 
-go 1.24.1
+go 1.24.3
 
 replace (
 	github.com/akuity/kargo/api => ./api
@@ -16,7 +16,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/adrg/xdg v0.5.3
 	github.com/akuity/kargo/api v0.0.0
-	github.com/akuity/kargo/pkg v0.0.0
+	github.com/akuity/kargo/pkg v0.0.0-00010101000000-000000000000
 	github.com/aws/aws-sdk-go-v2 v1.36.3
 	github.com/aws/aws-sdk-go-v2/config v1.29.14
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.67
@@ -35,8 +35,8 @@ require (
 	github.com/go-logr/logr v1.4.2
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang-jwt/jwt/v5 v5.2.2
-	github.com/google/go-containerregistry v0.20.5
-	github.com/google/go-github/v56 v56.0.0
+	github.com/google/go-containerregistry v0.20.3
+	github.com/google/go-github/v71 v71.0.0
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/jferrl/go-githubauth v1.2.0
@@ -73,7 +73,7 @@ require (
 	k8s.io/apiextensions-apiserver v0.33.1
 	k8s.io/apimachinery v0.33.1
 	k8s.io/apiserver v0.33.1
-	k8s.io/cli-runtime v0.33.1
+	k8s.io/cli-runtime v0.33.0
 	k8s.io/client-go v0.33.1
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/utils v0.0.0-20250502105355-0f33e8f1c979

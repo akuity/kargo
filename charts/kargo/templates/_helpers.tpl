@@ -106,6 +106,17 @@ Generate the base URL for the API service.
 {{- end -}}
 
 {{/*
+Generate the base URL for the external webhook server.
+*/}}
+{{- define "kargo.externalWebhooksServer.baseURL" -}}
+{{- if or (and .Values.externalWebhooksServer.ingress.enabled .Values.externalWebhooksServer.ingress.tls.enabled) (and (not .Values.externalWebhooksServer.ingress.enabled) .Values.externalWebhooksServer.tls.enabled) .Values.externalWebhooksServer.tls.terminatedUpstream -}}
+{{- printf "https://%s" .Values.externalWebhooksServer.host -}}
+{{- else -}}
+{{- printf "http://%s" .Values.externalWebhooksServer.host -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Determine the most appropriate CPU resource field for GOMAXPROCS.
 Prioritizes limits over requests, with a fallback to limits if neither is set.
 */}}

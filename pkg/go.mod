@@ -1,6 +1,6 @@
 module github.com/akuity/kargo/pkg
 
-go 1.24.1
+go 1.24.3
 
 replace github.com/akuity/kargo/api => ../api
 
@@ -24,6 +24,7 @@ require (
 	golang.org/x/text v0.23.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
+	k8s.io/api v0.33.1 // indirect
 	k8s.io/apiextensions-apiserver v0.33.1 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/utils v0.0.0-20250502105355-0f33e8f1c979 // indirect
