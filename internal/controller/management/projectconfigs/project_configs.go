@@ -108,7 +108,7 @@ func (r *reconciler) Reconcile(
 	// NOTE: If we start requiring cleanup operations or other management of state. Add a finalizer here
 
 	logger.Debug("reconciling ProjectConfig")
-	newStatus, needsRequeue, reconcileErr := r.syncProjectConfig(ctx, projectConfig)
+	newStatus, reconcileErr := r.syncProjectConfig(ctx, projectConfig)
 	logger.Debug("done reconciling ProjectConfig")
 
 	// Patch the status of the ProjectConfig.
@@ -127,11 +127,7 @@ func (r *reconciler) Reconcile(
 	if reconcileErr != nil {
 		return ctrl.Result{}, reconcileErr
 	}
-	// Immediate requeue if needed.
-	if needsRequeue {
-		return ctrl.Result{Requeue: true}, nil
-	}
-	// Otherwise, requeue after a delay.
+
 	// TODO: Make the requeue delay configurable.
 	return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
 }
@@ -141,7 +137,6 @@ func (r *reconciler) syncProjectConfig(
 	pc *kargoapi.ProjectConfig,
 ) (
 	kargoapi.ProjectConfigStatus,
-	bool,
 	error,
 ) {
 	logger := logging.LoggerFromContext(ctx)
@@ -173,7 +168,7 @@ func (r *reconciler) syncProjectConfig(
 			Message:            "Failed to sync webhook receivers: " + err.Error(),
 			ObservedGeneration: pc.GetGeneration(),
 		})
-		return *status, true, err
+		return *status, err
 	}
 
 	conditions.Set(status, &metav1.Condition{
@@ -184,7 +179,7 @@ func (r *reconciler) syncProjectConfig(
 		ObservedGeneration: pc.GetGeneration(),
 	})
 	conditions.Delete(status, kargoapi.ConditionTypeReconciling)
-	return *status, false, nil
+	return *status, nil
 }
 
 func (r *reconciler) syncWebhookReceivers(
@@ -306,6 +301,6 @@ func getProviderConfig(rc kargoapi.WebhookReceiverConfig) (*providerConfig, erro
 			receiverType: kargoapi.WebhookReceiverTypeGitHub,
 		}, nil
 	default:
-		return nil, errors.New("webhook receiver config does not have any valid configs")
+		return nil, errors.New("webhook receiver config has no valid entry")
 	}
 }

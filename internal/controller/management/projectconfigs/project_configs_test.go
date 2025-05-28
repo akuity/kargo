@@ -33,7 +33,7 @@ func TestReconciler_syncProjectConfig(t *testing.T) {
 		name          string
 		projectConfig *kargoapi.ProjectConfig
 		reconciler    func() *reconciler
-		assertions    func(*testing.T, kargoapi.ProjectConfigStatus, bool, error)
+		assertions    func(*testing.T, kargoapi.ProjectConfigStatus, error)
 	}{
 		{
 			name: "failure",
@@ -68,9 +68,8 @@ func TestReconciler_syncProjectConfig(t *testing.T) {
 					WebhookReceivers: []kargoapi.WebhookReceiver{},
 				},
 			},
-			assertions: func(t *testing.T, pcs kargoapi.ProjectConfigStatus, needsRequeue bool, err error) {
+			assertions: func(t *testing.T, pcs kargoapi.ProjectConfigStatus, err error) {
 				require.Error(t, err)
-				require.True(t, needsRequeue)
 				require.Len(t, pcs.WebhookReceivers, 0)
 				require.Len(t, pcs.Conditions, 2)
 				require.Equal(t, pcs.Conditions[0].Type, kargoapi.ConditionTypeReconciling)
@@ -120,9 +119,8 @@ func TestReconciler_syncProjectConfig(t *testing.T) {
 					WebhookReceivers: []kargoapi.WebhookReceiver{},
 				},
 			},
-			assertions: func(t *testing.T, pcs kargoapi.ProjectConfigStatus, needsRequeu bool, err error) {
+			assertions: func(t *testing.T, pcs kargoapi.ProjectConfigStatus, err error) {
 				require.NoError(t, err)
-				require.False(t, needsRequeu)
 				require.Len(t, pcs.WebhookReceivers, 1)
 				require.Len(t, pcs.Conditions, 1)
 				require.Equal(t, pcs.Conditions[0].Type, kargoapi.ConditionTypeReady)
@@ -134,8 +132,8 @@ func TestReconciler_syncProjectConfig(t *testing.T) {
 			r := test.reconciler()
 			l := logging.NewLogger(logging.DebugLevel)
 			ctx := logging.ContextWithLogger(t.Context(), l)
-			status, needsRequeue, err := r.syncProjectConfig(ctx, test.projectConfig)
-			test.assertions(t, status, needsRequeue, err)
+			status, err := r.syncProjectConfig(ctx, test.projectConfig)
+			test.assertions(t, status, err)
 		})
 	}
 }
