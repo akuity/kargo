@@ -884,6 +884,10 @@ func (r *reconciler) migrateSpecToProjectConfig(
 		return false, nil
 	}
 
+	if api.HasMigrationAnnotationValue(project, api.MigratedProjectSpecToProjectConfig) {
+		return false, nil
+	}
+
 	if len(project.Spec.PromotionPolicies) != 0 { // nolint:staticcheck
 		projectCfg := &kargoapi.ProjectConfig{
 			ObjectMeta: metav1.ObjectMeta{
@@ -911,15 +915,15 @@ func (r *reconciler) migrateSpecToProjectConfig(
 		}
 	}
 
-	// Now remove the spec entirely.
-	project.Spec = nil // nolint:staticcheck
+	// Mark the Project as migrated. This will prevent the migration code from
+	// running again in the future.
+	api.AddMigrationAnnotationValue(project, api.MigratedProjectSpecToProjectConfig)
 	if err := r.client.Update(ctx, project); err != nil {
 		return false, fmt.Errorf(
-			"error updating Project %q to remove spec: %w",
+			"error updating Project %q to add migrated label: %w",
 			project.Name, err,
 		)
 	}
-
 	return true, nil
 }
 
