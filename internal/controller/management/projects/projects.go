@@ -871,7 +871,7 @@ func (r *reconciler) migrateSpecToProjectConfig(
 		return false, nil
 	}
 
-	if api.HasMigrationAnnotationValue(project.Annotations, api.MigratedProjectSpecToProjectConfig) {
+	if api.HasMigrationAnnotationValue(project, api.MigratedProjectSpecToProjectConfig) {
 		return false, nil
 	}
 
@@ -904,10 +904,7 @@ func (r *reconciler) migrateSpecToProjectConfig(
 
 	// Mark the Project as migrated. This will prevent the migration code from
 	// running again in the future.
-	if project.Annotations == nil {
-		project.Annotations = make(map[string]string, 1)
-	}
-	api.AddMigrationAnnotationValue(project.Annotations, api.MigratedProjectSpecToProjectConfig)
+	api.AddMigrationAnnotationValue(project, api.MigratedProjectSpecToProjectConfig)
 	if err := r.client.Update(ctx, project); err != nil {
 		return false, fmt.Errorf(
 			"error updating Project %q to add migrated label: %w",

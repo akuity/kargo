@@ -116,7 +116,7 @@ func (w *webhook) ValidateUpdate(
 	// TODO(hidde): Remove this when the deprecated Spec field is removed.
 	var warnings admission.Warnings
 	if newProject.Spec != nil { // nolint: staticcheck
-		if api.HasMigrationAnnotationValue(newProject.Annotations, api.MigratedProjectSpecToProjectConfig) {
+		if api.HasMigrationAnnotationValue(newProject, api.MigratedProjectSpecToProjectConfig) {
 			if !reflect.DeepEqual(oldProject.Spec, newProject.Spec) { // nolint: staticcheck
 				return nil, apierrors.NewInvalid(
 					projectGroupKind,

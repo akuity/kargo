@@ -261,8 +261,7 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 			name: "changes to deprecated spec with migration annotation",
 			oldProject: &kargoapi.Project{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:        testProjectName,
-					Annotations: make(map[string]string),
+					Name: testProjectName,
 				},
 				Spec: &kargoapi.ProjectSpec{ // nolint: staticcheck
 					PromotionPolicies: []kargoapi.PromotionPolicy{
@@ -276,8 +275,7 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 			newProject: func() *kargoapi.Project {
 				p := &kargoapi.Project{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:        testProjectName,
-						Annotations: make(map[string]string),
+						Name: testProjectName,
 					},
 					Spec: &kargoapi.ProjectSpec{ // nolint: staticcheck
 						PromotionPolicies: []kargoapi.PromotionPolicy{
@@ -288,7 +286,7 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 						},
 					},
 				}
-				api.AddMigrationAnnotationValue(p.Annotations, api.MigratedProjectSpecToProjectConfig)
+				api.AddMigrationAnnotationValue(p, api.MigratedProjectSpecToProjectConfig)
 				return p
 			}(),
 			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
@@ -333,7 +331,7 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 						},
 					},
 				}
-				api.AddMigrationAnnotationValue(p.Annotations, api.MigratedProjectSpecToProjectConfig)
+				api.AddMigrationAnnotationValue(p, api.MigratedProjectSpecToProjectConfig)
 				return p
 			}(),
 			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
@@ -524,7 +522,7 @@ func Test_webhook_ensureProjectAdminPermissions(t *testing.T) {
 				},
 			},
 			objects: []client.Object{existingRoleBinding},
-			assertions: func(t *testing.T, err error, c client.Client) {
+			assertions: func(t *testing.T, err error, _ client.Client) {
 				assert.NoError(t, err)
 			},
 		},

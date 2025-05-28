@@ -3,6 +3,8 @@ package api
 import (
 	"encoding/json"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
@@ -108,7 +110,8 @@ func AbortPromotionAnnotationValue(annotations map[string]string) (*kargoapi.Abo
 // HasMigrationAnnotationValue checks if the AnnotationKeyMigrated annotation
 // is present in the provided annotations map and if it contains the specified
 // migration type as a key with a value of true.
-func HasMigrationAnnotationValue(annotations map[string]string, migrationType string) bool {
+func HasMigrationAnnotationValue(obj client.Object, migrationType string) bool {
+	annotations := obj.GetAnnotations()
 	if annotations == nil {
 		return false
 	}
@@ -126,7 +129,8 @@ func HasMigrationAnnotationValue(annotations map[string]string, migrationType st
 // AddMigrationAnnotationValue updates the AnnotationKeyMigrated annotation
 // in the provided annotations map to indicate that the specified migration
 // type has been performed. If the annotation does not exist, it is created.
-func AddMigrationAnnotationValue(annotations map[string]string, migrationType string) {
+func AddMigrationAnnotationValue(obj client.Object, migrationType string) {
+	annotations := obj.GetAnnotations()
 	migrated, ok := annotations[kargoapi.AnnotationKeyMigrated]
 	if !ok {
 		migrated = "{}"
@@ -137,5 +141,9 @@ func AddMigrationAnnotationValue(annotations map[string]string, migrationType st
 	}
 	migrations[migrationType] = true
 	b, _ := json.Marshal(migrations)
+	if annotations == nil {
+		annotations = make(map[string]string, 1)
+	}
 	annotations[kargoapi.AnnotationKeyMigrated] = string(b)
+	obj.SetAnnotations(annotations)
 }
