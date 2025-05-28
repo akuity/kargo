@@ -3,6 +3,7 @@ package v1alpha1
 import (
 	"time"
 
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -108,6 +109,9 @@ type FreightStatus struct {
 	// might wish to promote a piece of Freight to a given Stage without
 	// transiting the entire pipeline.
 	ApprovedFor map[string]ApprovedStage `json:"approvedFor,omitempty" protobuf:"bytes,2,rep,name=approvedFor" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// Metadata is a map of arbitrary metadata associated with the Freight.
+	// This is useful for storing additional information about the Freight that
+	Metadata map[string]apiextensionsv1.JSON `json:"metadata,omitempty" protobuf:"bytes,4,rep,name=metadata" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 }
 
 // IsCurrentlyIn returns whether the Freight is currently in the specified
@@ -222,6 +226,16 @@ func (f *FreightStatus) AddApprovedStage(stage string, approvedAt time.Time) {
 			f.ApprovedFor = map[string]ApprovedStage{stage: record}
 		}
 		f.ApprovedFor[stage] = record
+	}
+}
+
+// UpsertMetadata inserts or updates the given key in Freight status metadata
+func (f *FreightStatus) UpsertMetadata(key string, data []byte) {
+	if len(f.Metadata) == 0 {
+		f.Metadata = make(map[string]apiextensionsv1.JSON)
+	}
+	f.Metadata[key] = apiextensionsv1.JSON{
+		Raw: data,
 	}
 }
 
