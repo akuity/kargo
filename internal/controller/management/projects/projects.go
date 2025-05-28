@@ -35,13 +35,6 @@ const (
 	controllerServiceAccountLabelKey     = "app.kubernetes.io/component"
 	controllerServiceAccountLabelValue   = "controller"
 	controllerReadSecretsClusterRoleName = "kargo-controller-read-secrets"
-
-	// migratedProjectSpecToProjectConfig is the name of the migration type
-	// that is used to indicate that the Project spec has been migrated to
-	// ProjectConfig. This is used to prevent the migration from running again
-	// if the Project is reconciled again after the migration has been
-	// completed.
-	migratedProjectSpecToProjectConfig = "ProjectSpecToProjectConfig"
 )
 
 type ReconcilerConfig struct {
@@ -878,7 +871,7 @@ func (r *reconciler) migrateSpecToProjectConfig(
 		return false, nil
 	}
 
-	if api.HasMigrationAnnotationValue(project.Annotations, migratedProjectSpecToProjectConfig) {
+	if api.HasMigrationAnnotationValue(project.Annotations, api.MigratedProjectSpecToProjectConfig) {
 		return false, nil
 	}
 
@@ -914,7 +907,7 @@ func (r *reconciler) migrateSpecToProjectConfig(
 	if project.Annotations == nil {
 		project.Annotations = make(map[string]string, 1)
 	}
-	api.AddMigrationAnnotationValue(project.Annotations, migratedProjectSpecToProjectConfig)
+	api.AddMigrationAnnotationValue(project.Annotations, api.MigratedProjectSpecToProjectConfig)
 	if err := r.client.Update(ctx, project); err != nil {
 		return false, fmt.Errorf(
 			"error updating Project %q to add migrated label: %w",

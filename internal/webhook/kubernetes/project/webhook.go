@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -67,20 +68,12 @@ func (w *webhook) ValidateCreate(
 	project := obj.(*kargoapi.Project) // nolint: forcetypeassert
 
 	// TODO(hidde): Remove this when the deprecated Spec field is removed.
+	var warnings admission.Warnings
 	if project.Spec != nil { // nolint: staticcheck
-		return nil, apierrors.NewInvalid(
-			projectGroupKind,
+		warnings = append(warnings, fmt.Sprintf(
+			"ProjectSpec is deprecated: create a ProjectConfig named %q with the config instead",
 			project.Name,
-			field.ErrorList{
-				field.Forbidden(
-					field.NewPath("spec"),
-					fmt.Sprintf(
-						"deprecated field: create a ProjectConfig named %q with the config instead",
-						project.Name,
-					),
-				),
-			},
-		)
+		))
 	}
 
 	req, err := admission.RequestFromContext(ctx)
@@ -91,13 +84,13 @@ func (w *webhook) ValidateCreate(
 	}
 
 	if req.DryRun != nil && *req.DryRun {
-		return nil, nil
+		return warnings, nil
 	}
 
 	// We synchronously ensure the existence of a namespace with the same name as
 	// the Project because resources following the Project in a manifest are
 	// likely to be scoped to that namespace.
-	if err := w.ensureNamespace(ctx, project); err != nil {
+	if err = w.ensureNamespace(ctx, project); err != nil {
 		return nil, err
 	}
 
@@ -107,7 +100,7 @@ func (w *webhook) ValidateCreate(
 	// the Kargo API server carte blanche access these resources throughout the
 	// cluster. We do this synchronously because resources of these types are
 	// likely to follow the Project in a manifest.
-	return nil, w.ensureProjectAdminPermissions(ctx, project)
+	return warnings, w.ensureProjectAdminPermissions(ctx, project)
 }
 
 func (w *webhook) ValidateUpdate(
@@ -121,25 +114,33 @@ func (w *webhook) ValidateUpdate(
 	specPath := field.NewPath("spec")
 
 	// TODO(hidde): Remove this when the deprecated Spec field is removed.
+	var warnings admission.Warnings
 	if newProject.Spec != nil { // nolint: staticcheck
-		if !reflect.DeepEqual(oldProject.Spec, newProject.Spec) { // nolint: staticcheck
-			return nil, apierrors.NewInvalid(
-				projectGroupKind,
-				newProject.Name,
-				field.ErrorList{
-					field.Forbidden(
-						specPath,
-						fmt.Sprintf(
-							"deprecated field: create a ProjectConfig named %q with the config instead",
-							newProject.Name,
+		if api.HasMigrationAnnotationValue(newProject.Annotations, api.MigratedProjectSpecToProjectConfig) {
+			if !reflect.DeepEqual(oldProject.Spec, newProject.Spec) { // nolint: staticcheck
+				return nil, apierrors.NewInvalid(
+					projectGroupKind,
+					newProject.Name,
+					field.ErrorList{
+						field.Forbidden(
+							specPath,
+							fmt.Sprintf(
+								"deprecated field: create a ProjectConfig named %q with the config instead",
+								newProject.Name,
+							),
 						),
-					),
-				},
-			)
+					},
+				)
+			}
 		}
+
+		// Warn the user that the ProjectSpec is deprecated.
+		warnings = append(warnings, fmt.Sprintf(
+			"ProjectSpec is deprecated: create a ProjectConfig named %q with the config instead", newProject.Name,
+		))
 	}
 
-	return nil, nil
+	return warnings, nil
 }
 
 func (w *webhook) ValidateDelete(

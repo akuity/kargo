@@ -6,6 +6,15 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
+const (
+	// MigratedProjectSpecToProjectConfig is the migration type for migrating
+	// ProjectSpec resources to ProjectConfig resources. This migration is
+	// performed by the controller when it detects that a Project resource
+	// has a ProjectSpec resource in its spec, which is the case for Projects
+	// created before the introduction of ProjectConfig resources.
+	MigratedProjectSpecToProjectConfig = "ProjectSpecToProjectConfig"
+)
+
 // RefreshAnnotationValue returns the value of the AnnotationKeyRefresh
 // annotation which can be used to detect changes, and a boolean indicating
 // whether the annotation was present.

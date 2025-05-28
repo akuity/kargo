@@ -1350,7 +1350,7 @@ func TestMigrateSpecToProjectConfig(t *testing.T) {
 				err = cl.Get(context.Background(), types.NamespacedName{Name: testProject}, project)
 				require.NoError(t, err)
 				require.Contains(t, project.Annotations, kargoapi.AnnotationKeyMigrated)
-				require.True(t, api.HasMigrationAnnotationValue(project.Annotations, migratedProjectSpecToProjectConfig))
+				require.True(t, api.HasMigrationAnnotationValue(project.Annotations, api.MigratedProjectSpecToProjectConfig))
 				require.NotNil(t, project.Spec) // nolint:staticcheck
 				projCfg := &kargoapi.ProjectConfig{}
 				err = cl.Get(
@@ -1401,7 +1401,7 @@ func TestMigrateSpecToProjectConfig(t *testing.T) {
 				err = cl.Get(context.Background(), types.NamespacedName{Name: testProject}, project)
 				require.NoError(t, err)
 				require.Contains(t, project.Annotations, kargoapi.AnnotationKeyMigrated)
-				require.True(t, api.HasMigrationAnnotationValue(project.Annotations, migratedProjectSpecToProjectConfig))
+				require.True(t, api.HasMigrationAnnotationValue(project.Annotations, api.MigratedProjectSpecToProjectConfig))
 				require.NotNil(t, project.Spec) // nolint:staticcheck
 				projCfg := &kargoapi.ProjectConfig{}
 				err = cl.Get(
