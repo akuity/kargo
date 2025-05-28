@@ -42,4 +42,14 @@ const (
 	// AnnotationKeyArgoCDContext is an annotation key that is set on a Stage
 	// to reference the last ArgoCD Applications that were part of a Promotion.
 	AnnotationKeyArgoCDContext = "kargo.akuity.io/argocd-context"
+
+	// AnnotationKeyMigrated is an annotation set on a resource that has
+	// successfully undergone a migration to a new resource type or other
+	// configuration change. This annotation is used to indicate that the
+	// resource has been successfully migrated and that the controller should
+	// not attempt to perform the migration again.
+	//
+	// The value of the annotation is a JSON object that maps migration types to
+	// booleans indicating whether the migration has been performed.
+	AnnotationKeyMigrated = "kargo.akuity.io/migrated"
 )
