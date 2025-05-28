@@ -1,6 +1,8 @@
 package v1alpha1
 
 import (
+	"encoding/json"
+	"fmt"
 	"time"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -230,13 +232,37 @@ func (f *FreightStatus) AddApprovedStage(stage string, approvedAt time.Time) {
 }
 
 // UpsertMetadata inserts or updates the given key in Freight status metadata
-func (f *FreightStatus) UpsertMetadata(key string, data []byte) {
+func (f *FreightStatus) UpsertMetadata(key string, data any) error {
 	if len(f.Metadata) == 0 {
 		f.Metadata = make(map[string]apiextensionsv1.JSON)
 	}
-	f.Metadata[key] = apiextensionsv1.JSON{
-		Raw: data,
+
+	if key == "" {
+		return fmt.Errorf("key must not be empty")
 	}
+
+	dataBytes, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	f.Metadata[key] = apiextensionsv1.JSON{
+		Raw: dataBytes,
+	}
+	return nil
+}
+
+// GetMetadata inserts or updates the given key in Freight status metadata
+func (f *FreightStatus) GetMetadata(key string, data any) (bool, error) {
+	dataBytes, ok := f.Metadata[key]
+
+	if !ok {
+		return false, nil
+	}
+
+	if err := json.Unmarshal(dataBytes.Raw, data); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // CurrentStage reflects a Stage's current use of Freight.

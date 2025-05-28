@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -451,162 +452,147 @@ func TestFreightStatus_AddApprovedStage(t *testing.T) {
 	})
 }
 
-func TestFreightStatus_UpsertMetadata(t *testing.T) {
-	testCases := []struct {
-		name           string
-		initialStatus  FreightStatus
-		key            string
-		data           []byte
-		expectedResult func(t *testing.T, status FreightStatus)
+func TestFreightStatus_UpsertAndGetMetadata_Integration(t *testing.T) {
+	tests := []struct {
+		name string
+		data any
 	}{
 		{
-			name:          "insert into empty metadata",
-			initialStatus: FreightStatus{},
-			key:           "buildNumber",
-			data:          []byte(`123`),
-			expectedResult: func(t *testing.T, status FreightStatus) {
-				require.NotNil(t, status.Metadata)
-				require.Contains(t, status.Metadata, "buildNumber")
-				require.Equal(t, []byte(`123`), status.Metadata["buildNumber"].Raw)
-			},
+			name: "string value",
+			data: "test-string",
 		},
 		{
-			name: "insert into existing metadata",
-			initialStatus: FreightStatus{
-				Metadata: map[string]apiextensionsv1.JSON{
-					"existingKey": {Raw: []byte(`"existingValue"`)},
+			name: "integer value",
+			data: 42,
+		},
+		{
+			name: "boolean value",
+			data: true,
+		},
+		{
+			name: "complex struct",
+			data: struct {
+				Name    string            `json:"name"`
+				Age     int               `json:"age"`
+				Active  bool              `json:"active"`
+				Tags    []string          `json:"tags"`
+				Configs map[string]string `json:"configs"`
+			}{
+				Name:   "test-user",
+				Age:    30,
+				Active: true,
+				Tags:   []string{"admin", "developer"},
+				Configs: map[string]string{
+					"theme": "dark",
+					"lang":  "en",
 				},
 			},
-			key:  "buildNumber",
-			data: []byte(`456`),
-			expectedResult: func(t *testing.T, status FreightStatus) {
-				require.NotNil(t, status.Metadata)
-				require.Len(t, status.Metadata, 2)
-				require.Contains(t, status.Metadata, "existingKey")
-				require.Contains(t, status.Metadata, "buildNumber")
-				require.Equal(t, []byte(`"existingValue"`), status.Metadata["existingKey"].Raw)
-				require.Equal(t, []byte(`456`), status.Metadata["buildNumber"].Raw)
-			},
 		},
 		{
-			name: "update existing key",
-			initialStatus: FreightStatus{
-				Metadata: map[string]apiextensionsv1.JSON{
-					"buildNumber": {Raw: []byte(`123`)},
-					"otherKey":    {Raw: []byte(`"otherValue"`)},
+			name: "slice of integers",
+			data: []int{1, 2, 3, 4, 5},
+		},
+		{
+			name: "nested map",
+			data: map[string]any{
+				"level1": map[string]any{
+					"level2": map[string]string{
+						"key": "value",
+					},
 				},
-			},
-			key:  "buildNumber",
-			data: []byte(`789`),
-			expectedResult: func(t *testing.T, status FreightStatus) {
-				require.NotNil(t, status.Metadata)
-				require.Len(t, status.Metadata, 2)
-				require.Contains(t, status.Metadata, "buildNumber")
-				require.Contains(t, status.Metadata, "otherKey")
-				require.Equal(t, []byte(`789`), status.Metadata["buildNumber"].Raw)
-				require.Equal(t, []byte(`"otherValue"`), status.Metadata["otherKey"].Raw)
-			},
-		},
-		{
-			name:          "insert complex JSON object",
-			initialStatus: FreightStatus{},
-			key:           "deployment",
-			data:          []byte(`{"region":"us-east-1","replicas":3,"strategy":"rolling"}`),
-			expectedResult: func(t *testing.T, status FreightStatus) {
-				require.NotNil(t, status.Metadata)
-				require.Contains(t, status.Metadata, "deployment")
-				require.Equal(t, []byte(`{"region":"us-east-1","replicas":3,"strategy":"rolling"}`),
-					status.Metadata["deployment"].Raw)
-
-				// Verify it's valid JSON by unmarshaling
-				var deployment map[string]any
-				err := json.Unmarshal(status.Metadata["deployment"].Raw, &deployment)
-				require.NoError(t, err)
-				require.Equal(t, "us-east-1", deployment["region"])
-				require.Equal(t, float64(3), deployment["replicas"]) // JSON numbers unmarshal as float64
-				require.Equal(t, "rolling", deployment["strategy"])
-			},
-		},
-		{
-			name:          "insert JSON array",
-			initialStatus: FreightStatus{},
-			key:           "tags",
-			data:          []byte(`["hotfix","critical","security-patch"]`),
-			expectedResult: func(t *testing.T, status FreightStatus) {
-				require.NotNil(t, status.Metadata)
-				require.Contains(t, status.Metadata, "tags")
-				require.Equal(t, []byte(`["hotfix","critical","security-patch"]`), status.Metadata["tags"].Raw)
-
-				// Verify it's valid JSON by unmarshaling
-				var tags []string
-				err := json.Unmarshal(status.Metadata["tags"].Raw, &tags)
-				require.NoError(t, err)
-				require.Equal(t, []string{"hotfix", "critical", "security-patch"}, tags)
-			},
-		},
-		{
-			name:          "insert string value",
-			initialStatus: FreightStatus{},
-			key:           "approver",
-			data:          []byte(`"john.doe"`),
-			expectedResult: func(t *testing.T, status FreightStatus) {
-				require.NotNil(t, status.Metadata)
-				require.Contains(t, status.Metadata, "approver")
-				require.Equal(t, []byte(`"john.doe"`), status.Metadata["approver"].Raw)
-
-				// Verify it's valid JSON by unmarshaling
-				var approver string
-				err := json.Unmarshal(status.Metadata["approver"].Raw, &approver)
-				require.NoError(t, err)
-				require.Equal(t, "john.doe", approver)
-			},
-		},
-		{
-			name:          "insert boolean value",
-			initialStatus: FreightStatus{},
-			key:           "isHotfix",
-			data:          []byte(`true`),
-			expectedResult: func(t *testing.T, status FreightStatus) {
-				require.NotNil(t, status.Metadata)
-				require.Contains(t, status.Metadata, "isHotfix")
-				require.Equal(t, []byte(`true`), status.Metadata["isHotfix"].Raw)
-
-				// Verify it's valid JSON by unmarshaling
-				var isHotfix bool
-				err := json.Unmarshal(status.Metadata["isHotfix"].Raw, &isHotfix)
-				require.NoError(t, err)
-				require.True(t, isHotfix)
-			},
-		},
-		{
-			name:          "handle empty key",
-			initialStatus: FreightStatus{},
-			key:           "",
-			data:          []byte(`"value"`),
-			expectedResult: func(t *testing.T, status FreightStatus) {
-				require.NotNil(t, status.Metadata)
-				require.Contains(t, status.Metadata, "")
-				require.Equal(t, []byte(`"value"`), status.Metadata[""].Raw)
-			},
-		},
-		{
-			name:          "handle empty data",
-			initialStatus: FreightStatus{},
-			key:           "emptyData",
-			data:          []byte{},
-			expectedResult: func(t *testing.T, status FreightStatus) {
-				require.NotNil(t, status.Metadata)
-				require.Contains(t, status.Metadata, "emptyData")
-				require.Equal(t, []byte{}, status.Metadata["emptyData"].Raw)
 			},
 		},
 	}
 
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			status := testCase.initialStatus
-			status.UpsertMetadata(testCase.key, testCase.data)
-			testCase.expectedResult(t, status)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			status := FreightStatus{}
+			key := "integration-test-key"
+
+			// Test Upsert
+			err1 := status.UpsertMetadata(key, tt.data)
+			require.NoError(t, err1)
+
+			// Verify metadata was stored
+			assert.NotNil(t, status.Metadata)
+			assert.Contains(t, status.Metadata, key)
+
+			// Test Get with correct type
+			switch expected := tt.data.(type) {
+			case string:
+				var result string
+				found, err := status.GetMetadata(key, &result)
+				assert.True(t, found)
+				assert.NoError(t, err)
+				assert.Equal(t, expected, result)
+
+			case int:
+				var result int
+				found, err := status.GetMetadata(key, &result)
+				assert.True(t, found)
+				assert.NoError(t, err)
+				assert.Equal(t, expected, result)
+
+			case bool:
+				var result bool
+				found, err := status.GetMetadata(key, &result)
+				assert.True(t, found)
+				assert.NoError(t, err)
+				assert.Equal(t, expected, result)
+
+			case []int:
+				var result []int
+				found, err := status.GetMetadata(key, &result)
+				assert.True(t, found)
+				assert.NoError(t, err)
+				assert.Equal(t, expected, result)
+
+			default:
+				// For complex types, use any and compare JSON representation
+				var result any
+				found, err := status.GetMetadata(key, &result)
+				assert.True(t, found)
+				assert.NoError(t, err)
+
+				// Compare by marshaling both to JSON
+				expectedJSON, err := json.Marshal(expected)
+				require.NoError(t, err)
+				resultJSON, err := json.Marshal(result)
+				require.NoError(t, err)
+				assert.JSONEq(t, string(expectedJSON), string(resultJSON))
+			}
+
+			// Test updating the same key
+			newData := "updated-value"
+			err := status.UpsertMetadata(key, newData)
+			require.NoError(t, err)
+
+			var updatedResult string
+			found, err := status.GetMetadata(key, &updatedResult)
+			assert.True(t, found)
+			assert.NoError(t, err)
+			assert.Equal(t, newData, updatedResult)
 		})
 	}
+}
+
+func TestFreightStatus_MetadataEdgeCases(t *testing.T) {
+	t.Run("empty key", func(t *testing.T) {
+		status := FreightStatus{}
+		err := status.UpsertMetadata("", "value")
+		assert.Error(t, err)
+	})
+
+	t.Run("nil target for Get", func(t *testing.T) {
+		status := FreightStatus{
+			Metadata: map[string]apiextensionsv1.JSON{
+				"test-key": {Raw: []byte(`"test-value"`)},
+			},
+		}
+
+		// This should cause a panic or error during unmarshal
+		found, err := status.GetMetadata("test-key", nil)
+		assert.False(t, found)
+		assert.Error(t, err)
+	})
 }
