@@ -28,7 +28,9 @@ global:
 
   ## ServiceAccount global settings
   serviceAccount:
-    ## @param global.serviceAccount.annotations Global Service Account annotations.
+    ## @param global.serviceAccount.labels Global ServiceAccount labels.
+    labels: {}
+    ## @param global.serviceAccount.annotations Global ServiceAccount annotations.
     annotations: {}
     # foo: bar
     # another: value
@@ -233,6 +235,8 @@ api:
 
       ## ServiceAccount specific settings
       serviceAccount:
+        ## @param api.oidc.dex.serviceAccount.labels Additional labels to add to the Dex server ServiceAccount.
+        labels: {}
         ## @param api.oidc.dex.serviceAccount.annotations Additional annotations to add to the Dex server ServiceAccount.
         annotations: {}
         # foo: bar
@@ -328,6 +332,8 @@ api:
 
   ## ServiceAccount specific settings
   serviceAccount:
+    ## @param api.serviceAccount.labels Additional labels to add to the API server ServiceAccount.
+    labels: {}
     ## @param api.serviceAccount.annotations Additional annotations to add to the API server ServiceAccount.
     annotations: {}
     # foo: bar
@@ -484,6 +490,8 @@ controller:
   serviceAccount:
     ## @param controller.serviceAccount.iamRole Specifies the ARN of an AWS IAM role to be used by the controller in an IRSA-enabled EKS cluster.
     iamRole: ""
+    ## @param controller.serviceAccount.labels Additional labels to add to the controller ServiceAccount.
+    labels: {}
     ## @param controller.serviceAccount.annotations Additional annotations to add to the controller ServiceAccount.
     annotations: {}
     # foo: bar
@@ -571,6 +579,8 @@ garbageCollector:
 
   ## ServiceAccount specific settings
   serviceAccount:
+    ## @param garbageCollector.serviceAccount.labels Additional labels to add to the managementController ServiceAccount.
+    labels: {}
     ## @param garbageCollector.serviceAccount.annotations Additional annotations to add to the managementController ServiceAccount.
     annotations: {}
     # foo: bar
@@ -630,6 +640,8 @@ externalWebhooksServer:
 
   ## ServiceAccount specific settings
   serviceAccount:
+    ## @param externalWebhooksServer.serviceAccount.labels Additional labels to add to the externalWebHooksServer ServiceAccount.
+    labels: {}
     ## @param externalWebhooksServer.serviceAccount.annotations Additional annotations to add to the externalWebHooksServer ServiceAccount.
     annotations: {}
     # foo: bar
@@ -734,6 +746,8 @@ managementController:
 
   ## ServiceAccount specific settings
   serviceAccount:
+    ## @param managementController.serviceAccount.labels Additional labels to add to the managementController ServiceAccount.
+    labels: {}
     ## @param managementController.serviceAccount.annotations Additional annotations to add to the managementController ServiceAccount.
     annotations: {}
     # foo: bar
@@ -793,6 +807,8 @@ webhooksServer:
 
   ## ServiceAccount specific settings
   serviceAccount:
+    ## @param webhooksServer.serviceAccount.labels Additional labels to add to the webhooks server ServiceAccount.
+    labels: {}
     ## @param webhooksServer.serviceAccount.annotations Additional annotations to add to the webhooks server ServiceAccount.
     annotations: {}
     # foo: bar
