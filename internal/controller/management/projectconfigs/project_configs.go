@@ -202,7 +202,7 @@ func (r *reconciler) syncWebhookReceivers(
 	)
 
 	var errs []error
-	var webhookReceivers []kargoapi.WebhookReceiver
+	webhookReceivers := make([]kargoapi.WebhookReceiver, 0, len(pc.Spec.WebhookReceivers))
 	for _, rc := range pc.Spec.WebhookReceivers {
 		whr, err := r.newWebhookReceiver(ctx, pc, rc)
 		if err != nil {
