@@ -824,7 +824,7 @@ func (r *RegularStageReconciler) syncFreight(ctx context.Context, stage *kargoap
 	for _, f := range freight {
 		if !curFreight.Includes(f.Name) {
 			newStatus := f.Status.DeepCopy()
-			delete(newStatus.CurrentlyIn, stage.Name)
+			newStatus.RemoveCurrentStage(stage.Name)
 			if err := kubeclient.PatchStatus(ctx, r.client, &f, func(status *kargoapi.FreightStatus) {
 				*status = *newStatus
 			}); err != nil {
