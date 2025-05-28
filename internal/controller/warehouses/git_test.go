@@ -5,7 +5,9 @@ import (
 	"errors"
 	"regexp"
 	"testing"
+	"time"
 
+	"github.com/expr-lang/expr"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -248,7 +250,65 @@ func TestDiscoverBranchHistory(t *testing.T) {
 			},
 		},
 		{
-			name: "without path filters",
+			name: "error compiling expression filter",
+			sub: kargoapi.GitSubscription{
+				ExpressionFilter: "invalid expression (",
+			},
+			reconciler: &reconciler{
+				listCommitsFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
+					return []git.CommitMetadata{
+						{ID: "abc"},
+					}, nil
+				},
+			},
+			assertions: func(t *testing.T, _ []git.CommitMetadata, err error) {
+				require.ErrorContains(t, err, "error compiling expression filter")
+			},
+		},
+		{
+			name: "expression filter excludes commits",
+			sub: kargoapi.GitSubscription{
+				ExpressionFilter: "id == 'xyz'",
+				DiscoveryLimit:   10,
+			},
+			reconciler: &reconciler{
+				listCommitsFn: func(_ git.Repo, _ uint, skip uint) ([]git.CommitMetadata, error) {
+					if skip > 0 {
+						return nil, nil
+					}
+					return []git.CommitMetadata{
+						{ID: "abc"},
+						{ID: "def"},
+					}, nil
+				},
+			},
+			assertions: func(t *testing.T, commits []git.CommitMetadata, err error) {
+				require.NoError(t, err)
+				require.Empty(t, commits)
+			},
+		},
+		{
+			name: "expression filter includes commits",
+			sub: kargoapi.GitSubscription{
+				ExpressionFilter: "id == 'abc'",
+			},
+			reconciler: &reconciler{
+				listCommitsFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
+					return []git.CommitMetadata{
+						{ID: "abc"},
+						{ID: "xyz"},
+					}, nil
+				},
+			},
+			assertions: func(t *testing.T, commits []git.CommitMetadata, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []git.CommitMetadata{
+					{ID: "abc"},
+				}, commits)
+			},
+		},
+		{
+			name: "without path filters or expression",
 			reconciler: &reconciler{
 				listCommitsFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
 					return []git.CommitMetadata{
@@ -315,6 +375,36 @@ func TestDiscoverBranchHistory(t *testing.T) {
 				}, commits)
 			},
 		},
+		{
+			name: "with expression filter and path filters",
+			sub: kargoapi.GitSubscription{
+				ExpressionFilter: "author == 'test-author'",
+				IncludePaths:     []string{regexpPrefix + "^.*third_path_to_a/file$"},
+			},
+			reconciler: &reconciler{
+				listCommitsFn: func(_ git.Repo, _ uint, skip uint) ([]git.CommitMetadata, error) {
+					if skip > 0 {
+						return nil, nil
+					}
+					return []git.CommitMetadata{
+						{ID: "abc", Author: "test-author"},
+						{ID: "xyz", Author: "other-author"},
+					}, nil
+				},
+				getDiffPathsForCommitIDFn: func(_ git.Repo, id string) ([]string, error) {
+					if id == "abc" {
+						return []string{"third_path_to_a/file"}, nil
+					}
+					return []string{"first_path_to_a/file", "second_path_to_a/file"}, nil
+				},
+			},
+			assertions: func(t *testing.T, commits []git.CommitMetadata, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []git.CommitMetadata{
+					{ID: "abc", Author: "test-author"},
+				}, commits)
+			},
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -376,6 +466,45 @@ func TestDiscoverTags(t *testing.T) {
 			assertions: func(t *testing.T, _ []git.TagMetadata, err error) {
 				require.ErrorContains(t, err, "failed to filter tags")
 				require.ErrorContains(t, err, "error compiling regular expression")
+			},
+		},
+		{
+			name: "tag expression filter error",
+			sub: kargoapi.GitSubscription{
+				ExpressionFilter: "invalid expression (",
+			},
+			reconciler: &reconciler{
+				listTagsFn: func(git.Repo) ([]git.TagMetadata, error) {
+					return []git.TagMetadata{
+						{Tag: "v1.0.0"},
+					}, nil
+				},
+			},
+			assertions: func(t *testing.T, _ []git.TagMetadata, err error) {
+				require.ErrorContains(t, err, "failed to filter tags by expression")
+				require.ErrorContains(t, err, "error compiling tag expression filter")
+			},
+		},
+		{
+			name: "tag expression filter success",
+			sub: kargoapi.GitSubscription{
+				ExpressionFilter: "hasPrefix(tag, 'v1.')",
+			},
+			reconciler: &reconciler{
+				listTagsFn: func(git.Repo) ([]git.TagMetadata, error) {
+					return []git.TagMetadata{
+						{Tag: "v1.0.0"},
+						{Tag: "v2.0.0"},
+						{Tag: "v1.2.3"},
+					}, nil
+				},
+			},
+			assertions: func(t *testing.T, tags []git.TagMetadata, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []git.TagMetadata{
+					{Tag: "v1.0.0"},
+					{Tag: "v1.2.3"},
+				}, tags)
 			},
 		},
 		{
@@ -521,6 +650,231 @@ func TestDiscoverTags(t *testing.T) {
 				testCase.sub,
 			)
 			testCase.assertions(t, tags, err)
+		})
+	}
+}
+
+func TestFilterTagsByExpression(t *testing.T) {
+	testCases := []struct {
+		name       string
+		tags       []git.TagMetadata
+		expression string
+		assertions func(*testing.T, []git.TagMetadata, error)
+	}{
+		{
+			name:       "empty expression returns all tags",
+			expression: "",
+			tags: []git.TagMetadata{
+				{Tag: "v1.0.0"},
+				{Tag: "v2.0.0"},
+			},
+			assertions: func(t *testing.T, tags []git.TagMetadata, err error) {
+				require.NoError(t, err)
+				require.Len(t, tags, 2)
+			},
+		},
+		{
+			name:       "error compiling expression",
+			expression: "invalid expression (",
+			tags:       []git.TagMetadata{{Tag: "v1.0.0"}},
+			assertions: func(t *testing.T, _ []git.TagMetadata, err error) {
+				require.ErrorContains(t, err, "error compiling tag expression filter")
+			},
+		},
+		{
+			name:       "boolean expression filters correctly",
+			expression: "hasPrefix(tag, 'v1.')",
+			tags: []git.TagMetadata{
+				{Tag: "v1.0.0"},
+				{Tag: "v2.0.0"},
+				{Tag: "v1.2.3"},
+			},
+			assertions: func(t *testing.T, tags []git.TagMetadata, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []git.TagMetadata{
+					{Tag: "v1.0.0"},
+					{Tag: "v1.2.3"},
+				}, tags)
+			},
+		},
+		{
+			name:       "non-boolean expression converted to boolean",
+			expression: "1", // Should be converted to true
+			tags: []git.TagMetadata{
+				{Tag: "v1.0.0"},
+				{Tag: "v2.0.0"},
+			},
+			assertions: func(t *testing.T, tags []git.TagMetadata, err error) {
+				require.NoError(t, err)
+				require.Len(t, tags, 2)
+			},
+		},
+		{
+			name:       "non-boolean expression false",
+			expression: "0", // Should be converted to false
+			tags: []git.TagMetadata{
+				{Tag: "v1.0.0"},
+				{Tag: "v2.0.0"},
+			},
+			assertions: func(t *testing.T, tags []git.TagMetadata, err error) {
+				require.NoError(t, err)
+				require.Empty(t, tags)
+			},
+		},
+		{
+			name:       "error parsing non-boolean result",
+			expression: "'invalid'", // Can't be parsed as boolean
+			tags:       []git.TagMetadata{{Tag: "v1.0.0"}},
+			assertions: func(t *testing.T, _ []git.TagMetadata, err error) {
+				require.ErrorContains(t, err, "error parsing expression result")
+			},
+		},
+		{
+			name:       "complex expression with tag metadata",
+			expression: "tag contains '1.' && author == 'test-author'",
+			tags: []git.TagMetadata{
+				{Tag: "v1.0.0", Author: "test-author"},
+				{Tag: "v1.2.3", Author: "other-author"},
+				{Tag: "v2.0.0", Author: "test-author"},
+			},
+			assertions: func(t *testing.T, tags []git.TagMetadata, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []git.TagMetadata{
+					{Tag: "v1.0.0", Author: "test-author"},
+				}, tags)
+			},
+		},
+		{
+			name:       "expression with date comparison",
+			expression: "creatorDate.Year() >= 2023",
+			tags: []git.TagMetadata{
+				{Tag: "v1.0.0", CreatorDate: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
+				{Tag: "v2.0.0", CreatorDate: time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)},
+			},
+			assertions: func(t *testing.T, tags []git.TagMetadata, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []git.TagMetadata{
+					{Tag: "v1.0.0", CreatorDate: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
+				}, tags)
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			tags, err := filterTagsByExpression(testCase.tags, testCase.expression)
+			testCase.assertions(t, tags, err)
+		})
+	}
+}
+
+func TestEvaluateCommitExpression(t *testing.T) {
+	testCases := []struct {
+		name       string
+		commit     git.CommitMetadata
+		expression string
+		assertions func(*testing.T, bool, error)
+	}{
+		{
+			name:       "boolean true expression",
+			expression: "true",
+			commit:     git.CommitMetadata{ID: "abc"},
+			assertions: func(t *testing.T, result bool, err error) {
+				require.NoError(t, err)
+				require.True(t, result)
+			},
+		},
+		{
+			name:       "boolean false expression",
+			expression: "false",
+			commit:     git.CommitMetadata{ID: "abc"},
+			assertions: func(t *testing.T, result bool, err error) {
+				require.NoError(t, err)
+				require.False(t, result)
+			},
+		},
+		{
+			name:       "expression with commit data",
+			expression: "id == 'abc' && author == 'test-author'",
+			commit: git.CommitMetadata{
+				ID:     "abc",
+				Author: "test-author",
+			},
+			assertions: func(t *testing.T, result bool, err error) {
+				require.NoError(t, err)
+				require.True(t, result)
+			},
+		},
+		{
+			name:       "expression with commit data false",
+			expression: "id == 'xyz'",
+			commit: git.CommitMetadata{
+				ID: "abc",
+			},
+			assertions: func(t *testing.T, result bool, err error) {
+				require.NoError(t, err)
+				require.False(t, result)
+			},
+		},
+		{
+			name:       "non-boolean result converted to true",
+			expression: "1",
+			commit:     git.CommitMetadata{ID: "abc"},
+			assertions: func(t *testing.T, result bool, err error) {
+				require.NoError(t, err)
+				require.True(t, result)
+			},
+		},
+		{
+			name:       "non-boolean result converted to false",
+			expression: "0",
+			commit:     git.CommitMetadata{ID: "abc"},
+			assertions: func(t *testing.T, result bool, err error) {
+				require.NoError(t, err)
+				require.False(t, result)
+			},
+		},
+		{
+			name:       "error parsing non-boolean result",
+			expression: "'invalid'",
+			commit:     git.CommitMetadata{ID: "abc"},
+			assertions: func(t *testing.T, _ bool, err error) {
+				require.ErrorContains(t, err, "invalid syntax")
+			},
+		},
+		{
+			name:       "expression with date comparison",
+			expression: "commitDate.Year() >= 2023",
+			commit: git.CommitMetadata{
+				ID:         "abc",
+				CommitDate: time.Date(2023, 6, 1, 0, 0, 0, 0, time.UTC),
+			},
+			assertions: func(t *testing.T, result bool, err error) {
+				require.NoError(t, err)
+				require.True(t, result)
+			},
+		},
+		{
+			name:       "expression with subject matching",
+			expression: "subject contains 'fix:'",
+			commit: git.CommitMetadata{
+				ID:      "abc",
+				Subject: "fix: resolve issue with authentication",
+			},
+			assertions: func(t *testing.T, result bool, err error) {
+				require.NoError(t, err)
+				require.True(t, result)
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			expression, err := expr.Compile(testCase.expression)
+			require.NoError(t, err)
+
+			result, err := evaluateCommitExpression(testCase.commit, expression)
+			testCase.assertions(t, result, err)
 		})
 	}
 }

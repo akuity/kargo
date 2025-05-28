@@ -460,6 +460,11 @@ type TagMetadata struct {
 	// Subject is the subject (first line) of the commit message associated
 	// with the tag.
 	Subject string
+	// Tagger is the person who created the tag, in the format "Name <email>".
+	// This field is only populated for annotated tags.
+	Tagger string
+	// Annotation is the annotation of the tag, if it is an annotated tag.
+	Annotation string
 }
 
 func (w *workTree) ListTags() ([]TagMetadata, error) {
@@ -478,13 +483,17 @@ func (w *workTree) ListTags() ([]TagMetadata, error) {
 	// - committer name and email
 	// - creator date
 	//
+	// For annotated tags, we also output the following fields:
+	// - tagger name and email
+	// - tag annotation (the first line of the tag message)
+	//
 	// The `if`/`then`/`else` logic is used to ensure that we get the commit ID
 	// and subject of the tag, regardless of whether it's an annotated or
 	// lightweight tag.
 	//
 	// nolint: lll
 	const (
-		formatAnnotatedTag   = `%(refname:short)|*|%(*objectname)|*|%(*contents:subject)|*|%(*authorname) %(*authoremail)|*|%(*committername) %(*committeremail)|*|%(*creatordate:iso8601)`
+		formatAnnotatedTag   = `%(refname:short)|*|%(*objectname)|*|%(*contents:subject)|*|%(*authorname) %(*authoremail)|*|%(*committername) %(*committeremail)|*|%(creatordate:iso8601)|*|%(taggername) %(taggeremail)|*|%(contents:subject)`
 		formatLightweightTag = `%(refname:short)|*|%(objectname)|*|%(contents:subject)|*|%(authorname) %(authoremail)|*|%(committername) %(committeremail)|*|%(creatordate:iso8601)`
 		tagFormat            = `%(if)%(*objectname)%(then)` + formatAnnotatedTag + `%(else)` + formatLightweightTag + `%(end)`
 	)
@@ -504,7 +513,7 @@ func (w *workTree) ListTags() ([]TagMetadata, error) {
 	for scanner.Scan() {
 		line := scanner.Bytes()
 		parts := bytes.SplitN(scanner.Bytes(), []byte("|*|"), 6)
-		if len(parts) != 6 {
+		if len(parts) != 6 && len(parts) != 8 {
 			return nil, fmt.Errorf("unexpected number of fields: %q", line)
 		}
 
@@ -513,14 +522,23 @@ func (w *workTree) ListTags() ([]TagMetadata, error) {
 			return nil, fmt.Errorf("error parsing creator date %q: %w", parts[5], err)
 		}
 
-		tags = append(tags, TagMetadata{
+		tag := TagMetadata{
 			Tag:         string(parts[0]),
 			CommitID:    string(parts[1]),
 			Subject:     string(parts[2]),
 			Author:      string(parts[3]),
 			Committer:   string(parts[4]),
 			CreatorDate: creatorDate,
-		})
+		}
+
+		if len(parts) == 8 {
+			// This is an annotated tag, so we also have the tagger and tag
+			// annotation.
+			tag.Tagger = string(parts[6])
+			tag.Annotation = string(parts[7])
+		}
+
+		tags = append(tags, tag)
 	}
 
 	return tags, nil
