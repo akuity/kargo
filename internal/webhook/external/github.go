@@ -59,10 +59,13 @@ func githubHandler(
 		// TODO(fuskovic): eventually switch on event type to perform
 		// different actions (e.g. refresh Promotion on PR merge)
 		eventType := r.Header.Get("X-GitHub-Event")
-		if eventType != "push" && eventType != "ping" {
-			xhttp.WriteErrorJSON(w,
+		switch eventType {
+		case "ping", "push":
+		default:
+			xhttp.WriteErrorJSON(
+				w,
 				xhttp.Error(
-					fmt.Errorf("only ping + push events are supported"),
+					fmt.Errorf("event type %q is not supported", eventType),
 					http.StatusNotImplemented,
 				),
 			)
