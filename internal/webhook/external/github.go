@@ -132,6 +132,7 @@ func githubHandler(
 		case *gh.PushEvent:
 			repoWebURL := e.GetRepo().GetHTMLURL()
 			logger = logger.WithValues("repoWebURL", repoWebURL)
+			ctx = logging.ContextWithLogger(ctx, logger)
 			result, err := refreshWarehouses(ctx, c, namespace, repoWebURL)
 			if err != nil {
 				xhttp.WriteErrorJSON(w,
