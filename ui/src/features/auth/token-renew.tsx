@@ -53,18 +53,7 @@ export const TokenRenew = () => {
       issuerUrl &&
       discoveryRequest(issuerUrl, {
         [allowInsecureRequests]: shouldAllowHttpRequest()
-      })
-        .then((response) => processDiscoveryResponse(issuerUrl, response))
-        .then((response) => {
-          if (
-            response.code_challenge_methods_supported?.includes('S256') !== true &&
-            !issuerUrl.toString().startsWith('https://login.microsoftonline.com')
-          ) {
-            throw new Error('OIDC config fetch error');
-          }
-
-          return response;
-        }),
+      }).then((response) => processDiscoveryResponse(issuerUrl, response)),
     enabled: !!issuerUrl
   });
 
