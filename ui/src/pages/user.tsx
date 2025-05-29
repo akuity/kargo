@@ -38,7 +38,20 @@ export const User = () => {
     <div className='p-6'>
       <PageTitle title='User' />
 
-      <Descriptions layout='horizontal' column={2} bordered items={items} />
+      <Descriptions
+        title={
+          <>
+            Claims{' '}
+            <Popover content='Decoded from identity token issued by the identity provider'>
+              <FontAwesomeIcon icon={faQuestionCircle} className='text-xs' />
+            </Popover>
+          </>
+        }
+        layout='horizontal'
+        column={2}
+        bordered
+        items={items}
+      />
     </div>
   );
 };
