@@ -236,7 +236,7 @@ func TestGithubHandler(t *testing.T) {
 				return req
 			},
 			secret: "fakesecret",
-			msg:    "{\"error\":\"event type \\\"deployment\\\" is not supported\"}\n",
+			msg:    "{\"error\":\"event type deployment is not supported\"}\n",
 			code:   http.StatusNotImplemented,
 		},
 		{

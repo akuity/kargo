@@ -27,12 +27,9 @@ func githubHandler(
 ) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		logger := logging.LoggerFromContext(ctx).
-			WithValues("path", r.URL.Path)
-
-		logger.Debug("retrieving secret",
-			"secret-name", secretName,
-		)
+		logger := logging.LoggerFromContext(ctx).WithValues("path", r.URL.Path)
+		ctx = logging.ContextWithLogger(ctx, logger)
+		logger.Debug("retrieving secret", "secret-name", secretName)
 		var secret corev1.Secret
 		err := c.Get(ctx,
 			client.ObjectKey{
@@ -67,7 +64,7 @@ func githubHandler(
 			xhttp.WriteErrorJSON(
 				w,
 				xhttp.Error(
-					fmt.Errorf("event type %q is not supported", eventType),
+					fmt.Errorf("event type %s is not supported", eventType),
 					http.StatusNotImplemented,
 				),
 			)
@@ -135,7 +132,6 @@ func githubHandler(
 		case *gh.PushEvent:
 			repoWebURL := e.GetRepo().GetHTMLURL()
 			logger = logger.WithValues("repoWebURL", repoWebURL)
-			ctx = logging.ContextWithLogger(ctx, logger)
 			result, err := refreshWarehouses(ctx, c, namespace, repoWebURL)
 			if err != nil {
 				xhttp.WriteErrorJSON(w,
