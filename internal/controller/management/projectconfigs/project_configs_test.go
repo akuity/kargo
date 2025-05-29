@@ -254,6 +254,7 @@ func TestReconciler_syncWebhookReceivers(t *testing.T) {
 				Spec: kargoapi.ProjectConfigSpec{
 					WebhookReceivers: []kargoapi.WebhookReceiverConfig{
 						{
+							Name: "fake-webhook-receiver-name",
 							GitHub: &kargoapi.GitHubWebhookReceiver{
 								SecretRef: corev1.LocalObjectReference{
 									Name: "secret-that-exists",
@@ -269,6 +270,7 @@ func TestReconciler_syncWebhookReceivers(t *testing.T) {
 				require.NotNil(t, pc.Spec.WebhookReceivers[0].GitHub)
 				require.Equal(t,
 					external.GenerateWebhookPath(
+						"fake-webhook-receiver-name",
 						pc.Name,
 						kargoapi.WebhookReceiverTypeGitHub,
 						"fake-secret-data",
