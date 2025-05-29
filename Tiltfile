@@ -56,6 +56,7 @@ k8s_yaml(
     namespace = 'kargo',
     values = 'hack/tilt/values.dev.yaml',
     set = 'externalWebhooksServer.host=' + os.environ.get('KARGO_EXTERNAL_WEBHOOKS_SERVER_HOSTNAME', 'localhost:30083')
+    set = 'externalWebhooksServer.tls.terminatedUpstream=' + os.environ.get('KARGO_EXTERNAL_WEBHOOKS_SERVER_TLS_TERMINATED_UPSTREAM', 'false'),
   )
 )
 # Normally the API server serves up the front end, but we want live updates
