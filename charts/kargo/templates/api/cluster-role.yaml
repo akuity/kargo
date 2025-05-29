@@ -38,7 +38,10 @@ rules:
     resources:
       - configmaps
     verbs:
-      - "*"
+      - list
+      - get
+      - create
+      - delete
   - apiGroups:
       - authorization.k8s.io
     resources:
