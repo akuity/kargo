@@ -59,10 +59,10 @@ func githubHandler(
 		// TODO(fuskovic): eventually switch on event type to perform
 		// different actions (e.g. refresh Promotion on PR merge)
 		eventType := r.Header.Get("X-GitHub-Event")
-		if eventType != "push" {
+		if eventType != "push" && eventType != "ping" {
 			xhttp.WriteErrorJSON(w,
 				xhttp.Error(
-					fmt.Errorf("only push events are supported"),
+					fmt.Errorf("only ping + push events are supported"),
 					http.StatusNotImplemented,
 				),
 			)
@@ -114,53 +114,57 @@ func githubHandler(
 			return
 		}
 
-		pe, ok := e.(*gh.PushEvent)
-		if !ok {
-			xhttp.WriteErrorJSON(w,
-				xhttp.Error(
-					fmt.Errorf("only push events are supported"),
-					http.StatusBadRequest,
-				),
-			)
-			return
-		}
-
-		repo := *pe.Repo.HTMLURL
-		logger.Debug("source repository retrieved", "name", repo)
-		ctx = logging.ContextWithLogger(ctx, logger)
-		result, err := refreshWarehouses(ctx, c, namespace, repo)
-		if err != nil {
-			xhttp.WriteErrorJSON(w,
-				xhttp.Error(err, http.StatusInternalServerError),
-			)
-			return
-		}
-
-		logger.Debug("execution complete",
-			"successes", result.successes,
-			"failures", result.failures,
-		)
-
-		if result.failures > 0 {
+		switch e := e.(type) {
+		case *gh.PingEvent:
+			repo := e.GetRepo().GetHTMLURL()
+			logger.Debug("received ping event", "repo", repo)
 			xhttp.WriteResponseJSON(w,
-				http.StatusInternalServerError,
+				http.StatusOK,
 				map[string]string{
-					"error": fmt.Sprintf("failed to refresh %d of %d warehouses",
-						result.failures,
-						result.successes+result.failures,
+					"msg": fmt.Sprintf(
+						"ping event received, webhook is configured correctly for %s",
+						repo,
 					),
 				},
 			)
-			return
-		}
+		case *gh.PushEvent:
+			repo := e.GetRepo().GetHTMLURL()
+			logger.Debug("source repository retrieved", "name", repo)
+			ctx = logging.ContextWithLogger(ctx, logger)
+			result, err := refreshWarehouses(ctx, c, namespace, repo)
+			if err != nil {
+				xhttp.WriteErrorJSON(w,
+					xhttp.Error(err, http.StatusInternalServerError),
+				)
+				return
+			}
 
-		xhttp.WriteResponseJSON(w,
-			http.StatusOK,
-			map[string]string{
-				"msg": fmt.Sprintf("refreshed %d warehouse(s)",
-					result.successes,
-				),
-			},
-		)
+			logger.Debug("execution complete",
+				"successes", result.successes,
+				"failures", result.failures,
+			)
+
+			if result.failures > 0 {
+				xhttp.WriteResponseJSON(w,
+					http.StatusInternalServerError,
+					map[string]string{
+						"error": fmt.Sprintf("failed to refresh %d of %d warehouses",
+							result.failures,
+							result.successes+result.failures,
+						),
+					},
+				)
+				return
+			}
+
+			xhttp.WriteResponseJSON(w,
+				http.StatusOK,
+				map[string]string{
+					"msg": fmt.Sprintf("refreshed %d warehouse(s)",
+						result.successes,
+					),
+				},
+			)
+		}
 	})
 }
