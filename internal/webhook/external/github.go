@@ -27,7 +27,9 @@ func githubHandler(
 ) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		logger := logging.LoggerFromContext(ctx)
+		logger := logging.LoggerFromContext(ctx).
+			WithValues("path", r.URL.Path)
+
 		logger.Debug("retrieving secret",
 			"secret-name", secretName,
 		)
@@ -119,22 +121,22 @@ func githubHandler(
 
 		switch e := e.(type) {
 		case *gh.PingEvent:
-			repo := e.GetRepo().GetHTMLURL()
-			logger.Debug("received ping event", "repo", repo)
+			repoWebURL := e.GetRepo().GetHTMLURL()
+			logger.Debug("received ping event", "repo", repoWebURL)
 			xhttp.WriteResponseJSON(w,
 				http.StatusOK,
 				map[string]string{
 					"msg": fmt.Sprintf(
 						"ping event received, webhook is configured correctly for %s",
-						repo,
+						repoWebURL,
 					),
 				},
 			)
 		case *gh.PushEvent:
-			repo := e.GetRepo().GetHTMLURL()
-			logger.Debug("source repository retrieved", "name", repo)
+			repoWebURL := e.GetRepo().GetHTMLURL()
+			logger = logger.WithValues("repoWebURL", repoWebURL)
 			ctx = logging.ContextWithLogger(ctx, logger)
-			result, err := refreshWarehouses(ctx, c, namespace, repo)
+			result, err := refreshWarehouses(ctx, c, namespace, repoWebURL)
 			if err != nil {
 				xhttp.WriteErrorJSON(w,
 					xhttp.Error(err, http.StatusInternalServerError),
