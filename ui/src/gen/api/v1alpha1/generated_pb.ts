@@ -1095,7 +1095,8 @@ export type FreightStatus = Message<"github.com.akuity.kargo.api.v1alpha1.Freigh
 
   /**
    * Metadata is a map of arbitrary metadata associated with the Freight.
-   * This is useful for storing additional information about the Freight that
+   * This is useful for storing additional information about the Freight
+   * or Promotion that can be shared across steps or stages.
    *
    * @generated from field: map<string, k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON> metadata = 4;
    */
