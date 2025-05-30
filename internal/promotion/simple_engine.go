@@ -249,8 +249,10 @@ stepLoop:
 		// err.
 
 		switch {
-		case stepExecMeta.Status == kargoapi.PromotionStepStatusSucceeded:
-			// Best case scenario: The step succeeded.
+		case stepExecMeta.Status == kargoapi.PromotionStepStatusSucceeded ||
+			stepExecMeta.Status == kargoapi.PromotionStepStatusSkipped:
+			// Note: A step that ran briefly and self-determined it should be
+			// "skipped" is treated similarly to success.
 			stepExecMeta.FinishedAt = ptr.To(metav1.Now())
 			if healthCheck := result.HealthCheck; healthCheck != nil {
 				healthChecks = append(healthChecks, *healthCheck)
