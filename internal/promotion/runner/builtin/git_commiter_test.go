@@ -69,7 +69,7 @@ func Test_gitCommitter_validate(t *testing.T) {
 		{
 			name: "author email is not specified",
 			config: promotion.Config{ // If author is specified, email must be specified
-				"author":  promotion.Config{
+				"author": promotion.Config{
 					"name": "Tony Stark",
 				},
 				"path":    "/tmp/foo",
@@ -96,7 +96,7 @@ func Test_gitCommitter_validate(t *testing.T) {
 		{
 			name: "author name is not specified",
 			config: promotion.Config{ // If author is specified, name must be specified
-				"author":  promotion.Config{
+				"author": promotion.Config{
 					"email": "example@example.com",
 				},
 				"path":    "/tmp/foo",
@@ -110,7 +110,7 @@ func Test_gitCommitter_validate(t *testing.T) {
 			name: "author name is empty string",
 			config: promotion.Config{
 				"author": promotion.Config{
-					"name": "",
+					"name":  "",
 					"email": "example@example.com",
 				},
 				"path":    "/tmp/foo",
@@ -150,8 +150,8 @@ func Test_gitCommitter_validate(t *testing.T) {
 			name: "valid kitchen sink",
 			config: promotion.Config{
 				"author": promotion.Config{
-					"email": "tony@starkindustries.com",
-					"name":  "Tony Stark",
+					"email":      "tony@starkindustries.com",
+					"name":       "Tony Stark",
 					"signingKey": "valid-signing-key",
 				},
 				"path":    "/tmp/foo",
