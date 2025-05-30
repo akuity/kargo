@@ -230,7 +230,7 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 					assert.NotNil(t, metadata.FinishedAt)
 				}
 
-				// Verify state contains outputs from both steps
+				// Verify state contains output from both steps
 				assert.Equal(t, promotion.State{
 					"step1": map[string]any{
 						"key": "value",
