@@ -1,9 +1,7 @@
-import { Duration } from 'date-fns';
+import { Duration, milliseconds } from 'date-fns';
 import { useEffect, useMemo, useState } from 'react';
 
 import { queryCache } from '@ui/features/utils/cache';
-
-import { durationToSeconds } from './duration-to-seconds';
 
 export const useSoakTimeCounter = (soakTime?: Duration) => {
   const [counter, setCounter] = useState(soakTime);
@@ -62,8 +60,8 @@ export const useSoakTimePercentage = (initialSoakTime?: Duration, soakTimeLeft?:
       return 0;
     }
 
-    const initialSoakTimeSeconds = durationToSeconds(initialSoakTime);
-    const soakTimeLeftSeconds = durationToSeconds(soakTimeLeft);
+    const initialSoakTimeMs = milliseconds(initialSoakTime);
+    const soakTimeLeftMs = milliseconds(soakTimeLeft);
 
-    return (soakTimeLeftSeconds * 100) / initialSoakTimeSeconds;
+    return (soakTimeLeftMs * 100) / initialSoakTimeMs;
   }, [initialSoakTime, soakTimeLeft]);
