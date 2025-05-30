@@ -29,7 +29,7 @@ multiple working trees.
 | `author.email` | `string` | Y | The committer's email address. |
 | `author.signingKey` | `string` | N | The GPG signing key for the author. This field is optional. |
 | `checkout` | `[]object` | Y | The commits, branches, or tags to check out from the repository and the paths where they should be checked out. At least one must be specified. |
-| `checkout[].as` | `string` | N | If provided, it will be used as the key in the `commits` output map instead of `path`. Useful for referencing checkouts in downstream steps with a stable name. |
+| `checkout[].as` | `string` | N | Used as the key in the `commits` output map. If not specified, the value of the `path` field is used as a key instead. Providing a value for this field is useful when expressions in downstream steps may need to reference specific commits checked out by this step. |
 | `checkout[].branch` | `string` | N | A branch to check out. Mutually exclusive with `commit` and `tag`. If none of these is specified, the default branch will be checked out. |
 | `checkout[].create` | `boolean` | N | In the event `branch` does not already exist on the remote, whether a new, empty, orphaned branch should be created. Default is `false`, but should commonly be set to `true` for Stage-specific branches, which may not exist yet at the time of a Stage's first promotion. |
 | `checkout[].commit` | `string` | N | A specific commit to check out. Mutually exclusive with `branch` and `tag`. If none of these is specified, the default branch will be checked out. |
@@ -40,7 +40,7 @@ multiple working trees.
 
 | Name    | Type                | Description                                                                                      |
 |---------|---------------------|--------------------------------------------------------------------------------------------------|
-| `commits` | `object` | A map of checkout keys (either the `as` alias or the `path` if `as` is not set) to the HEAD commit hash checked out at each path. This allows downstream steps to reference the exact commit checked out for each working tree. |
+| `commits` | `map[string]string` | A map of checkout keys (either the `as` alias or the `path` if `as` is not set) to the HEAD commit hash checked out at each path. This allows downstream steps to reference the exact commit checked out for each working tree. |
 
 ## Examples
 
