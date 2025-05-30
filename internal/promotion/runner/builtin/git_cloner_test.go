@@ -116,6 +116,25 @@ func Test_gitCloner_validate(t *testing.T) {
 			},
 		},
 		{
+			name: "duplicate aliases",
+			config: promotion.Config{
+				"repoURL": "https://github.com/example/repo.git",
+				"checkout": []promotion.Config{
+					{
+						"path": "/fake/path/0",
+						"as":   "alias1",
+					},
+					{
+						"path": "/fake/path/1",
+						"as":   "alias1",
+					},
+				},
+			},
+			expectedProblems: []string{
+				"invalid git-clone config: duplicate checkout.as value \"alias1\" at checkout[1]",
+			},
+		},
+		{
 			name: "author name is missing",
 			config: promotion.Config{
 				"repoURL": "https://github.com/example/repo.git",
@@ -267,36 +286,24 @@ func Test_gitCloner_validate(t *testing.T) {
 					},
 					{
 						"path": "/fake/path/8",
+						"as":   "alias1", // unique as alias
 					},
 					{
 						"branch": "",
 						"commit": "",
 						"tag":    "",
 						"path":   "/fake/path/9",
+						"as":     "alias2", // another unique as alias
 					},
 					{
 						"path": "/fake/path/10",
-					},
-				},
-			},
-		},
-		{
-			name: "duplicate as aliases",
-			config: promotion.Config{
-				"repoURL": "https://github.com/example/repo.git",
-				"checkout": []promotion.Config{
-					{
-						"path": "/fake/path/0",
-						"as":   "alias1",
+						"as":   "", // empty as field
 					},
 					{
-						"path": "/fake/path/1",
-						"as":   "alias1",
+						"path": "/fake/path/11",
+						"as":   "", // another empty as field
 					},
 				},
-			},
-			expectedProblems: []string{
-				"invalid git-clone config: duplicate checkout.as value \"alias1\" at checkout[1]",
 			},
 		},
 		{
