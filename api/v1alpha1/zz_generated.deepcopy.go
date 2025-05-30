@@ -5,8 +5,8 @@
 package v1alpha1
 
 import (
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -584,7 +584,7 @@ func (in *FreightSources) DeepCopyInto(out *FreightSources) {
 	}
 	if in.RequiredSoakTime != nil {
 		in, out := &in.RequiredSoakTime, &out.RequiredSoakTime
-		*out = new(v1.Duration)
+		*out = new(metav1.Duration)
 		**out = **in
 	}
 }
@@ -619,6 +619,13 @@ func (in *FreightStatus) DeepCopyInto(out *FreightStatus) {
 	if in.ApprovedFor != nil {
 		in, out := &in.ApprovedFor, &out.ApprovedFor
 		*out = make(map[string]ApprovedStage, len(*in))
+		for key, val := range *in {
+			(*out)[key] = *val.DeepCopy()
+		}
+	}
+	if in.Metadata != nil {
+		in, out := &in.Metadata, &out.Metadata
+		*out = make(map[string]v1.JSON, len(*in))
 		for key, val := range *in {
 			(*out)[key] = *val.DeepCopy()
 		}
@@ -728,12 +735,12 @@ func (in *Health) DeepCopyInto(out *Health) {
 	}
 	if in.Config != nil {
 		in, out := &in.Config, &out.Config
-		*out = new(apiextensionsv1.JSON)
+		*out = new(v1.JSON)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.Output != nil {
 		in, out := &in.Output, &out.Output
-		*out = new(apiextensionsv1.JSON)
+		*out = new(v1.JSON)
 		(*in).DeepCopyInto(*out)
 	}
 }
@@ -753,7 +760,7 @@ func (in *HealthCheckStep) DeepCopyInto(out *HealthCheckStep) {
 	*out = *in
 	if in.Config != nil {
 		in, out := &in.Config, &out.Config
-		*out = new(apiextensionsv1.JSON)
+		*out = new(v1.JSON)
 		(*in).DeepCopyInto(*out)
 	}
 }
@@ -971,7 +978,7 @@ func (in *ProjectConfigStatus) DeepCopyInto(out *ProjectConfigStatus) {
 	*out = *in
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
-		*out = make([]v1.Condition, len(*in))
+		*out = make([]metav1.Condition, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
@@ -1047,7 +1054,7 @@ func (in *ProjectStatus) DeepCopyInto(out *ProjectStatus) {
 	*out = *in
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
-		*out = make([]v1.Condition, len(*in))
+		*out = make([]metav1.Condition, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
@@ -1153,7 +1160,7 @@ func (in *PromotionPolicySelector) DeepCopyInto(out *PromotionPolicySelector) {
 	*out = *in
 	if in.LabelSelector != nil {
 		in, out := &in.LabelSelector, &out.LabelSelector
-		*out = new(v1.LabelSelector)
+		*out = new(metav1.LabelSelector)
 		(*in).DeepCopyInto(*out)
 	}
 }
@@ -1257,7 +1264,7 @@ func (in *PromotionStatus) DeepCopyInto(out *PromotionStatus) {
 	}
 	if in.State != nil {
 		in, out := &in.State, &out.State
-		*out = new(apiextensionsv1.JSON)
+		*out = new(v1.JSON)
 		(*in).DeepCopyInto(*out)
 	}
 }
@@ -1292,7 +1299,7 @@ func (in *PromotionStep) DeepCopyInto(out *PromotionStep) {
 	}
 	if in.Config != nil {
 		in, out := &in.Config, &out.Config
-		*out = new(apiextensionsv1.JSON)
+		*out = new(v1.JSON)
 		(*in).DeepCopyInto(*out)
 	}
 }
@@ -1312,7 +1319,7 @@ func (in *PromotionStepRetry) DeepCopyInto(out *PromotionStepRetry) {
 	*out = *in
 	if in.Timeout != nil {
 		in, out := &in.Timeout, &out.Timeout
-		*out = new(v1.Duration)
+		*out = new(metav1.Duration)
 		**out = **in
 	}
 }
@@ -1617,7 +1624,7 @@ func (in *StageStatus) DeepCopyInto(out *StageStatus) {
 	*out = *in
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
-		*out = make([]v1.Condition, len(*in))
+		*out = make([]metav1.Condition, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
@@ -1792,7 +1799,7 @@ func (in *VerifiedStage) DeepCopyInto(out *VerifiedStage) {
 	}
 	if in.LongestCompletedSoak != nil {
 		in, out := &in.LongestCompletedSoak, &out.LongestCompletedSoak
-		*out = new(v1.Duration)
+		*out = new(metav1.Duration)
 		**out = **in
 	}
 }
@@ -1910,7 +1917,7 @@ func (in *WarehouseStatus) DeepCopyInto(out *WarehouseStatus) {
 	*out = *in
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
-		*out = make([]v1.Condition, len(*in))
+		*out = make([]metav1.Condition, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
