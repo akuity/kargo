@@ -75,6 +75,38 @@ func TestParseRepoURL(t *testing.T) {
 			expectedRepo: "my.repo",
 			errExpected:  false,
 		},
+		{
+			name:         "self hosted URL format with missing parts",
+			url:          "https://azure.mycompany.org/mycollection/myproject",
+			expectedOrg:  "mycollection",
+			expectedProj: "myproject",
+			expectedRepo: "myrepo",
+			errExpected:  true,
+		},
+		{
+			name:         "self hosted URL format with unsupported path segment /foo",
+			url:          "https://azure.mycompany.org/foo/mycollection/myproject/_git/myrepo",
+			expectedOrg:  "mycollection",
+			expectedProj: "myproject",
+			expectedRepo: "myrepo",
+			errExpected:  true,
+		},
+		{
+			name:         "self hosted URL format with 5 parts",
+			url:          "https://azure.mycompany.org/mycollection/myproject/_git/myrepo",
+			expectedOrg:  "mycollection",
+			expectedProj: "myproject",
+			expectedRepo: "myrepo",
+			errExpected:  false,
+		},
+		{
+			name:         "self hosted URL format with 6 parts",
+			url:          "https://azure.mycompany.org/tfs/mycollection/myproject/_git/myrepo",
+			expectedOrg:  "mycollection",
+			expectedProj: "myproject",
+			expectedRepo: "myrepo",
+			errExpected:  false,
+		},
 	}
 
 	for _, tc := range testCases {

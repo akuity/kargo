@@ -79,6 +79,8 @@ func NewProvider(
 }
 
 // CreatePullRequest implements gitprovider.Interface.
+const errConvertPullRequestFmt = "error converting pull request %d: %w"
+
 func (p *provider) CreatePullRequest(
 	ctx context.Context,
 	opts *gitprovider.CreatePullRequestOpts,
@@ -119,7 +121,7 @@ func (p *provider) CreatePullRequest(
 	}
 	pr, err := convertADOPullRequest(adoPR)
 	if err != nil {
-		return nil, fmt.Errorf("error converting pull request %d: %w", adoPR.PullRequestId, err)
+		return nil, fmt.Errorf(errConvertPullRequestFmt, adoPR.PullRequestId, err)
 	}
 	return pr, nil
 }
@@ -143,7 +145,7 @@ func (p *provider) GetPullRequest(
 	}
 	pr, err := convertADOPullRequest(adoPR)
 	if err != nil {
-		return nil, fmt.Errorf("error converting pull request %d: %w", id, err)
+		return nil, fmt.Errorf(errConvertPullRequestFmt, id, err)
 	}
 	return pr, nil
 }
@@ -174,7 +176,7 @@ func (p *provider) ListPullRequests(
 	for _, adoPR := range *adoPRs {
 		pr, err := convertADOPullRequest(&adoPR)
 		if err != nil {
-			return nil, fmt.Errorf("error converting pull request %d: %w", adoPR.PullRequestId, err)
+			return nil, fmt.Errorf(errConvertPullRequestFmt, adoPR.PullRequestId, err)
 		}
 		pts = append(pts, *pr)
 	}
@@ -218,15 +220,19 @@ func parseRepoURL(repoURL string) (string, string, string, error) {
 		return parseModernRepoURL(u)
 	} else if strings.HasSuffix(u.Host, legacyHostSuffix) {
 		return parseLegacyRepoURL(u)
+	} else if strings.Contains(u.Host, ProviderName) {
+		return parseSelfHostedRepoUrl(u)
 	}
 	return "", "", "", fmt.Errorf("unsupported host %q", u.Host)
 }
+
+const errExtractRepoInfoFmt = "could not extract repository organization, project, and name from URL %q"
 
 // parseModernRepoURL parses a modern Azure DevOps repository URL.
 func parseModernRepoURL(u *url.URL) (string, string, string, error) {
 	parts := strings.Split(u.Path, "/")
 	if len(parts) != 5 {
-		return "", "", "", fmt.Errorf("could not extract repository organization, project, and name from URL %q", u)
+		return "", "", "", fmt.Errorf(errExtractRepoInfoFmt, u)
 	}
 	return parts[1], parts[2], parts[4], nil
 }
@@ -236,7 +242,21 @@ func parseLegacyRepoURL(u *url.URL) (string, string, string, error) {
 	organization := strings.TrimSuffix(u.Host, ".visualstudio.com")
 	parts := strings.Split(u.Path, "/")
 	if len(parts) != 4 {
-		return "", "", "", fmt.Errorf("could not extract repository organization, project, and name from URL %q", u)
+		return "", "", "", fmt.Errorf(errExtractRepoInfoFmt, u)
 	}
 	return organization, parts[1], parts[3], nil
+}
+
+// parseSelfHostedRepoUrl parses a self hosted Azure DevOps Server URL.
+func parseSelfHostedRepoUrl(u *url.URL) (string, string, string, error) {
+	parts := strings.Split(u.Path, "/")
+	// Handle the case where the URL is in the format https://<host>/<collection>/<project>/_git/<repo>
+	if len(parts) == 5 {
+		return parts[1], parts[2], parts[4], nil
+	}
+	// Handle the case where the URL is in the format https://<host>/tfs/<collection>/<project>/_git/<repo>
+	if len(parts) == 6 && parts[1] == "tfs" {
+		return parts[2], parts[3], parts[5], nil
+	}
+	return "", "", "", fmt.Errorf(errExtractRepoInfoFmt, u)
 }
