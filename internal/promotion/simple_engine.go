@@ -162,7 +162,7 @@ stepLoop:
 			exprDataCache = e.cacheFunc()
 		}
 
-		// Check if the step should be skipped based on 'if' conditions set.
+		// Check if the step should be skipped.
 		var skip bool
 		if skip, err = step.Skip(ctx, e.kargoClient, exprDataCache, promoCtx, state); err != nil {
 			stepExecMeta.Status = kargoapi.PromotionStepStatusErrored
