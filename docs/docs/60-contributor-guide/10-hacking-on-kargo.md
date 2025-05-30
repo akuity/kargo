@@ -302,8 +302,9 @@ as native processes.
 
     If you have a paid ngrok account that allows you to use a custom domain name
     for your tunnels, you can specify that domain name using the
-    `KARGO_EXTERNAL_WEBHOOKS_SERVER_HOSTNAME` and (to properly set the protocol scheme) `KARGO_EXTERNAL_WEBHOOKS_SERVER_TLS_TERMINATED_UPSTREAM`  environment variables before running
-    the make target:
+    `KARGO_EXTERNAL_WEBHOOKS_SERVER_HOSTNAME` and (to properly set the protocol
+    scheme) `KARGO_EXTERNAL_WEBHOOKS_SERVER_TLS_TERMINATED_UPSTREAM` environment
+    variables before running the make target:
 
     ```shell
     export KARGO_EXTERNAL_WEBHOOKS_SERVER_HOSTNAME=my-tunnel.ngrok.io
