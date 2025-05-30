@@ -515,10 +515,11 @@ func TestFreightStatus_UpsertMetadata(t *testing.T) {
 			expectedResult: func(t *testing.T, status FreightStatus) {
 				require.NotNil(t, status.Metadata)
 				require.Contains(t, status.Metadata, "deployment")
-				require.Equal(t, []byte(`{"region":"us-east-1","replicas":3,"strategy":"rolling"}`), status.Metadata["deployment"].Raw)
+				require.Equal(t, []byte(`{"region":"us-east-1","replicas":3,"strategy":"rolling"}`),
+					status.Metadata["deployment"].Raw)
 
 				// Verify it's valid JSON by unmarshaling
-				var deployment map[string]interface{}
+				var deployment map[string]any
 				err := json.Unmarshal(status.Metadata["deployment"].Raw, &deployment)
 				require.NoError(t, err)
 				require.Equal(t, "us-east-1", deployment["region"])
