@@ -112,7 +112,8 @@ type FreightStatus struct {
 	// transiting the entire pipeline.
 	ApprovedFor map[string]ApprovedStage `json:"approvedFor,omitempty" protobuf:"bytes,2,rep,name=approvedFor" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// Metadata is a map of arbitrary metadata associated with the Freight.
-	// This is useful for storing additional information about the Freight that
+	// This is useful for storing additional information about the Freight
+	// or Promotion that can be shared across steps or stages.
 	Metadata map[string]apiextensionsv1.JSON `json:"metadata,omitempty" protobuf:"bytes,4,rep,name=metadata" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 }
 
@@ -231,7 +232,7 @@ func (f *FreightStatus) AddApprovedStage(stage string, approvedAt time.Time) {
 	}
 }
 
-// UpsertMetadata inserts or updates the given key in Freight status metadata
+// UpsertMetadata inserts or updates the given key in Freight status Metadata
 func (f *FreightStatus) UpsertMetadata(key string, data any) error {
 	if len(f.Metadata) == 0 {
 		f.Metadata = make(map[string]apiextensionsv1.JSON)
@@ -251,7 +252,7 @@ func (f *FreightStatus) UpsertMetadata(key string, data any) error {
 	return nil
 }
 
-// GetMetadata inserts or updates the given key in Freight status metadata
+// GetMetadata retrieves the data associated with the given key from Freight status Metadata
 func (f *FreightStatus) GetMetadata(key string, data any) (bool, error) {
 	dataBytes, ok := f.Metadata[key]
 
