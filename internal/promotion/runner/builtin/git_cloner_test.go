@@ -423,4 +423,12 @@ func Test_gitCloner_run(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, dirEntries, 1) // Just the .git file
 	require.FileExists(t, filepath.Join(stepCtx.WorkDir, "out", ".git"))
+
+	// Assert output map contains the expected commit hashes for each checkout key
+	commits, ok := res.Output["commits"].(map[string]string)
+	require.True(t, ok, "output.commits should be a map[string]string")
+	require.Contains(t, commits, "src")
+	require.Equal(t, commitID, commits["src"])
+	require.Contains(t, commits, "out")
+	require.NotEmpty(t, commits["out"])
 }
