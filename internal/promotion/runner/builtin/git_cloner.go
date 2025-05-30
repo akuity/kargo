@@ -77,7 +77,26 @@ func (g *gitCloner) Run(
 
 // validate validates gitCloner configuration against a JSON schema.
 func (g *gitCloner) validate(cfg promotion.Config) error {
-	return validate(g.schemaLoader, gojsonschema.NewGoLoader(cfg), g.Name())
+	err := validate(g.schemaLoader, gojsonschema.NewGoLoader(cfg), g.Name())
+	if err != nil {
+		return err
+	}
+
+	// Additional validation: ensure unique 'as' aliases in checkout
+	checkouts, ok := cfg["checkout"].([]promotion.Config)
+	if ok {
+		seen := make(map[string]struct{})
+		for i, c := range checkouts {
+			as, hasAs := c["as"].(string)
+			if hasAs && as != "" {
+				if _, exists := seen[as]; exists {
+					return fmt.Errorf("invalid git-clone config: duplicate checkout.as value %q at checkout[%d]", as, i)
+				}
+				seen[as] = struct{}{}
+			}
+		}
+	}
+	return nil
 }
 
 func (g *gitCloner) run(
@@ -162,19 +181,16 @@ func (g *gitCloner) run(
 				checkout.Path, cfg.RepoURL, err,
 			)
 		}
-		// Get HEAD commit hash for this worktree
-		headHash, err := worktree.LastCommitID()
-		if err != nil {
+		key := checkout.Path
+		if checkout.As != "" {
+			key = checkout.As
+		}
+		if commits[key], err = worktree.LastCommitID(); err != nil {
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
 				"error resolving HEAD for worktree at %s: %w",
 				path, err,
 			)
 		}
-		key := checkout.Path
-		if checkout.As != "" {
-			key = checkout.As
-		}
-		commits[key] = headHash
 	}
 	// Note: We do NOT defer repo.Close() because we want to keep the repository
 	// around on the FS for subsequent promotion steps to use. The Engine will

@@ -280,6 +280,59 @@ func Test_gitCloner_validate(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "duplicate as aliases",
+			config: promotion.Config{
+				"repoURL": "https://github.com/example/repo.git",
+				"checkout": []promotion.Config{
+					{
+						"path": "/fake/path/0",
+						"as":   "alias1",
+					},
+					{
+						"path": "/fake/path/1",
+						"as":   "alias1",
+					},
+				},
+			},
+			expectedProblems: []string{
+				"invalid git-clone config: duplicate checkout.as value \"alias1\" at checkout[1]",
+			},
+		},
+		{
+			name: "unique as aliases",
+			config: promotion.Config{
+				"repoURL": "https://github.com/example/repo.git",
+				"checkout": []promotion.Config{
+					{
+						"path": "/fake/path/0",
+						"as":   "alias1",
+					},
+					{
+						"path": "/fake/path/1",
+						"as":   "alias2",
+					},
+				},
+			},
+			// No expected problems
+		},
+		{
+			name: "empty as fields are ignored for uniqueness",
+			config: promotion.Config{
+				"repoURL": "https://github.com/example/repo.git",
+				"checkout": []promotion.Config{
+					{
+						"path": "/fake/path/0",
+						"as":   "",
+					},
+					{
+						"path": "/fake/path/1",
+						"as":   "",
+					},
+				},
+			},
+			// No expected problems
+		},
 	}
 
 	r := newGitCloner(nil)
