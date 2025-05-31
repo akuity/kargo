@@ -602,6 +602,10 @@ spec:
                             process was started.
                           format: date-time
                           type: string
+                      required:
+                      - id
+                      - phase
+                      - startTime
                       type: object
                     type: array
                 required:

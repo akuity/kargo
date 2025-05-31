@@ -492,6 +492,11 @@
                     "type": "string"
                   }
                 },
+                "required": [
+                  "id",
+                  "phase",
+                  "startTime"
+                ],
                 "type": "object"
               },
               "type": "array"
