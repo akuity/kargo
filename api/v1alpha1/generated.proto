@@ -943,9 +943,6 @@ message ProjectConfigSpec {
 
   // WebhookReceivers describes Project-specific webhook receivers used for
   // processing events from various external platforms
-  //
-  // +kubebuilder:validation:MaxItems=5
-  // +kubebuilder:validation:XValidation:message="WebhookReceiverConfig must have a unique name",rule="self.all(i, size(self.filter(j, i.name == j.name)) == 1)"
   repeated WebhookReceiverConfig receivers = 2;
 }
 

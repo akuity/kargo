@@ -43,9 +43,6 @@ type ProjectConfigSpec struct {
 	PromotionPolicies []PromotionPolicy `json:"promotionPolicies,omitempty" protobuf:"bytes,1,rep,name=promotionPolicies"`
 	// WebhookReceivers describes Project-specific webhook receivers used for
 	// processing events from various external platforms
-	//
-	// +kubebuilder:validation:MaxItems=5
-	// +kubebuilder:validation:XValidation:message="WebhookReceiverConfig must have a unique name",rule="self.all(i, size(self.filter(j, i.name == j.name)) == 1)"
 	WebhookReceivers []WebhookReceiverConfig `json:"webhookReceivers,omitempty" protobuf:"bytes,2,rep,name=receivers"`
 }
 

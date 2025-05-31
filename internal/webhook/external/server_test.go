@@ -129,6 +129,7 @@ func TestRouteHandler(t *testing.T) {
 								WebhookReceivers: []kargoapi.WebhookReceiver{
 									{
 										Path: GenerateWebhookPath(
+											"fake-webhook-receiver-name",
 											"fakename",
 											kargoapi.WebhookReceiverTypeGitHub,
 											"mysupersecrettoken",
@@ -169,6 +170,7 @@ func TestRouteHandler(t *testing.T) {
 				return s
 			},
 			path: GenerateWebhookPath(
+				"fake-webhook-receiver-name",
 				"fakename",
 				kargoapi.WebhookReceiverTypeGitHub,
 				"mysupersecrettoken",

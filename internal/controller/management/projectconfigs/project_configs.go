@@ -271,6 +271,7 @@ func (r *reconciler) newWebhookReceiver(
 	wr := &kargoapi.WebhookReceiver{
 		Name: rc.Name,
 		Path: external.GenerateWebhookPath(
+			rc.Name,
 			pc.Name,
 			cfg.receiverType,
 			string(secret),

@@ -126,14 +126,7 @@
             ],
             "type": "object"
           },
-          "maxItems": 5,
-          "type": "array",
-          "x-kubernetes-validations": [
-            {
-              "message": "WebhookReceiverConfig must have a unique name",
-              "rule": "self.all(i, size(self.filter(j, i.name == j.name)) == 1)"
-            }
-          ]
+          "type": "array"
         }
       },
       "type": "object"
