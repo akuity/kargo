@@ -27,10 +27,9 @@ func githubHandler(
 ) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		logger := logging.LoggerFromContext(ctx)
-		logger.Debug("retrieving secret",
-			"secret-name", secretName,
-		)
+		logger := logging.LoggerFromContext(ctx).WithValues("path", r.URL.Path)
+		ctx = logging.ContextWithLogger(ctx, logger)
+		logger.Debug("retrieving secret", "secret-name", secretName)
 		var secret corev1.Secret
 		err := c.Get(ctx,
 			client.ObjectKey{
@@ -59,10 +58,13 @@ func githubHandler(
 		// TODO(fuskovic): eventually switch on event type to perform
 		// different actions (e.g. refresh Promotion on PR merge)
 		eventType := r.Header.Get("X-GitHub-Event")
-		if eventType != "push" {
-			xhttp.WriteErrorJSON(w,
+		switch eventType {
+		case "ping", "push":
+		default:
+			xhttp.WriteErrorJSON(
+				w,
 				xhttp.Error(
-					fmt.Errorf("only push events are supported"),
+					fmt.Errorf("event type %s is not supported", eventType),
 					http.StatusNotImplemented,
 				),
 			)
@@ -114,53 +116,57 @@ func githubHandler(
 			return
 		}
 
-		pe, ok := e.(*gh.PushEvent)
-		if !ok {
-			xhttp.WriteErrorJSON(w,
-				xhttp.Error(
-					fmt.Errorf("only push events are supported"),
-					http.StatusBadRequest,
-				),
-			)
-			return
-		}
-
-		repo := *pe.Repo.HTMLURL
-		logger.Debug("source repository retrieved", "name", repo)
-		ctx = logging.ContextWithLogger(ctx, logger)
-		result, err := refreshWarehouses(ctx, c, namespace, repo)
-		if err != nil {
-			xhttp.WriteErrorJSON(w,
-				xhttp.Error(err, http.StatusInternalServerError),
-			)
-			return
-		}
-
-		logger.Debug("execution complete",
-			"successes", result.successes,
-			"failures", result.failures,
-		)
-
-		if result.failures > 0 {
+		switch e := e.(type) {
+		case *gh.PingEvent:
+			repoWebURL := e.GetRepo().GetHTMLURL()
+			logger.Debug("received ping event", "repo", repoWebURL)
 			xhttp.WriteResponseJSON(w,
-				http.StatusInternalServerError,
+				http.StatusOK,
 				map[string]string{
-					"error": fmt.Sprintf("failed to refresh %d of %d warehouses",
-						result.failures,
-						result.successes+result.failures,
+					"msg": fmt.Sprintf(
+						"ping event received, webhook is configured correctly for %s",
+						repoWebURL,
 					),
 				},
 			)
-			return
-		}
+		case *gh.PushEvent:
+			repoWebURL := e.GetRepo().GetHTMLURL()
+			logger = logger.WithValues("repoWebURL", repoWebURL)
+			ctx = logging.ContextWithLogger(ctx, logger)
+			result, err := refreshWarehouses(ctx, c, namespace, repoWebURL)
+			if err != nil {
+				xhttp.WriteErrorJSON(w,
+					xhttp.Error(err, http.StatusInternalServerError),
+				)
+				return
+			}
 
-		xhttp.WriteResponseJSON(w,
-			http.StatusOK,
-			map[string]string{
-				"msg": fmt.Sprintf("refreshed %d warehouse(s)",
-					result.successes,
-				),
-			},
-		)
+			logger.Debug("execution complete",
+				"successes", result.successes,
+				"failures", result.failures,
+			)
+
+			if result.failures > 0 {
+				xhttp.WriteResponseJSON(w,
+					http.StatusInternalServerError,
+					map[string]string{
+						"error": fmt.Sprintf("failed to refresh %d of %d warehouses",
+							result.failures,
+							result.successes+result.failures,
+						),
+					},
+				)
+				return
+			}
+
+			xhttp.WriteResponseJSON(w,
+				http.StatusOK,
+				map[string]string{
+					"msg": fmt.Sprintf("refreshed %d warehouse(s)",
+						result.successes,
+					),
+				},
+			)
+		}
 	})
 }

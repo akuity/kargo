@@ -235,11 +235,11 @@ func TestGithubHandler(t *testing.T) {
 				req := httptest.NewRequest(http.MethodPost, url, b)
 				req.Header.Set("Content-Type", "application/json")
 				req.Header.Set("X-Hub-Signature-256", sign(t, testSecret, b.Bytes()))
-				req.Header.Set("X-GitHub-Event", "ping")
+				req.Header.Set("X-GitHub-Event", "deployment")
 				return req
 			},
 			secret: "fakesecret",
-			msg:    "{\"error\":\"only push events are supported\"}\n",
+			msg:    "{\"error\":\"event type deployment is not supported\"}\n",
 			code:   http.StatusNotImplemented,
 		},
 		{
@@ -529,7 +529,7 @@ func TestGithubHandler(t *testing.T) {
 			code:   http.StatusBadRequest,
 		},
 		{
-			name: "OK",
+			name: "success - push event",
 			kClient: func() client.Client {
 				scheme := runtime.NewScheme()
 				require.NoError(t, corev1.AddToScheme(scheme))
@@ -613,6 +613,39 @@ func TestGithubHandler(t *testing.T) {
 			},
 			secret: "fakesecret",
 			msg:    "{\"msg\":\"refreshed 1 warehouse(s)\"}\n",
+			code:   http.StatusOK,
+		},
+		{
+			name: "success - ping event",
+			kClient: func() client.Client {
+				scheme := runtime.NewScheme()
+				require.NoError(t, corev1.AddToScheme(scheme))
+				require.NoError(t, kargoapi.AddToScheme(scheme))
+				return fake.NewClientBuilder().
+					WithScheme(scheme).
+					WithObjects(
+						&corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "fakesecret",
+								Namespace: "fakenamespace",
+							},
+							Data: map[string][]byte{
+								"token": []byte("mysupersecrettoken"),
+							},
+						},
+					).
+					Build()
+			},
+			req: func() *http.Request {
+				b := newBody()
+				req := httptest.NewRequest(http.MethodPost, url, b)
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("X-Hub-Signature-256", sign(t, "mysupersecrettoken", b.Bytes()))
+				req.Header.Set("X-GitHub-Event", "ping")
+				return req
+			},
+			secret: "fakesecret",
+			msg:    "{\"msg\":\"ping event received, webhook is configured correctly for https://github.com/username/repo\"}\n", // nolint: lll
 			code:   http.StatusOK,
 		},
 	} {
