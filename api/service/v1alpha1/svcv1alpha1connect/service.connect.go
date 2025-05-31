@@ -169,6 +169,12 @@ const (
 	// KargoServiceDeleteProjectSecretProcedure is the fully-qualified name of the KargoService's
 	// DeleteProjectSecret RPC.
 	KargoServiceDeleteProjectSecretProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/DeleteProjectSecret"
+	// KargoServiceListProjectConfigMapsProcedure is the fully-qualified name of the KargoService's
+	// ListProjectConfigMaps RPC.
+	KargoServiceListProjectConfigMapsProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListProjectConfigMaps"
+	// KargoServiceGetConfigMapProcedure is the fully-qualified name of the KargoService's GetConfigMap
+	// RPC.
+	KargoServiceGetConfigMapProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetConfigMap"
 	// KargoServiceListAnalysisTemplatesProcedure is the fully-qualified name of the KargoService's
 	// ListAnalysisTemplates RPC.
 	KargoServiceListAnalysisTemplatesProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListAnalysisTemplates"
@@ -275,6 +281,8 @@ var (
 	kargoServiceCreateProjectSecretMethodDescriptor           = kargoServiceServiceDescriptor.Methods().ByName("CreateProjectSecret")
 	kargoServiceUpdateProjectSecretMethodDescriptor           = kargoServiceServiceDescriptor.Methods().ByName("UpdateProjectSecret")
 	kargoServiceDeleteProjectSecretMethodDescriptor           = kargoServiceServiceDescriptor.Methods().ByName("DeleteProjectSecret")
+	kargoServiceListProjectConfigMapsMethodDescriptor         = kargoServiceServiceDescriptor.Methods().ByName("ListProjectConfigMaps")
+	kargoServiceGetConfigMapMethodDescriptor                  = kargoServiceServiceDescriptor.Methods().ByName("GetConfigMap")
 	kargoServiceListAnalysisTemplatesMethodDescriptor         = kargoServiceServiceDescriptor.Methods().ByName("ListAnalysisTemplates")
 	kargoServiceGetAnalysisTemplateMethodDescriptor           = kargoServiceServiceDescriptor.Methods().ByName("GetAnalysisTemplate")
 	kargoServiceDeleteAnalysisTemplateMethodDescriptor        = kargoServiceServiceDescriptor.Methods().ByName("DeleteAnalysisTemplate")
@@ -349,6 +357,8 @@ type KargoServiceClient interface {
 	CreateProjectSecret(context.Context, *connect.Request[v1alpha1.CreateProjectSecretRequest]) (*connect.Response[v1alpha1.CreateProjectSecretResponse], error)
 	UpdateProjectSecret(context.Context, *connect.Request[v1alpha1.UpdateProjectSecretRequest]) (*connect.Response[v1alpha1.UpdateProjectSecretResponse], error)
 	DeleteProjectSecret(context.Context, *connect.Request[v1alpha1.DeleteProjectSecretRequest]) (*connect.Response[v1alpha1.DeleteProjectSecretResponse], error)
+	ListProjectConfigMaps(context.Context, *connect.Request[v1alpha1.ListProjectConfigMapsRequest]) (*connect.Response[v1alpha1.ListProjectConfigMapsResponse], error)
+	GetConfigMap(context.Context, *connect.Request[v1alpha1.GetConfigMapRequest]) (*connect.Response[v1alpha1.GetConfigMapResponse], error)
 	ListAnalysisTemplates(context.Context, *connect.Request[v1alpha1.ListAnalysisTemplatesRequest]) (*connect.Response[v1alpha1.ListAnalysisTemplatesResponse], error)
 	GetAnalysisTemplate(context.Context, *connect.Request[v1alpha1.GetAnalysisTemplateRequest]) (*connect.Response[v1alpha1.GetAnalysisTemplateResponse], error)
 	DeleteAnalysisTemplate(context.Context, *connect.Request[v1alpha1.DeleteAnalysisTemplateRequest]) (*connect.Response[v1alpha1.DeleteAnalysisTemplateResponse], error)
@@ -669,6 +679,18 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(kargoServiceDeleteProjectSecretMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		listProjectConfigMaps: connect.NewClient[v1alpha1.ListProjectConfigMapsRequest, v1alpha1.ListProjectConfigMapsResponse](
+			httpClient,
+			baseURL+KargoServiceListProjectConfigMapsProcedure,
+			connect.WithSchema(kargoServiceListProjectConfigMapsMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getConfigMap: connect.NewClient[v1alpha1.GetConfigMapRequest, v1alpha1.GetConfigMapResponse](
+			httpClient,
+			baseURL+KargoServiceGetConfigMapProcedure,
+			connect.WithSchema(kargoServiceGetConfigMapMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		listAnalysisTemplates: connect.NewClient[v1alpha1.ListAnalysisTemplatesRequest, v1alpha1.ListAnalysisTemplatesResponse](
 			httpClient,
 			baseURL+KargoServiceListAnalysisTemplatesProcedure,
@@ -842,6 +864,8 @@ type kargoServiceClient struct {
 	createProjectSecret           *connect.Client[v1alpha1.CreateProjectSecretRequest, v1alpha1.CreateProjectSecretResponse]
 	updateProjectSecret           *connect.Client[v1alpha1.UpdateProjectSecretRequest, v1alpha1.UpdateProjectSecretResponse]
 	deleteProjectSecret           *connect.Client[v1alpha1.DeleteProjectSecretRequest, v1alpha1.DeleteProjectSecretResponse]
+	listProjectConfigMaps         *connect.Client[v1alpha1.ListProjectConfigMapsRequest, v1alpha1.ListProjectConfigMapsResponse]
+	getConfigMap                  *connect.Client[v1alpha1.GetConfigMapRequest, v1alpha1.GetConfigMapResponse]
 	listAnalysisTemplates         *connect.Client[v1alpha1.ListAnalysisTemplatesRequest, v1alpha1.ListAnalysisTemplatesResponse]
 	getAnalysisTemplate           *connect.Client[v1alpha1.GetAnalysisTemplateRequest, v1alpha1.GetAnalysisTemplateResponse]
 	deleteAnalysisTemplate        *connect.Client[v1alpha1.DeleteAnalysisTemplateRequest, v1alpha1.DeleteAnalysisTemplateResponse]
@@ -1105,6 +1129,16 @@ func (c *kargoServiceClient) DeleteProjectSecret(ctx context.Context, req *conne
 	return c.deleteProjectSecret.CallUnary(ctx, req)
 }
 
+// ListProjectConfigMaps calls akuity.io.kargo.service.v1alpha1.KargoService.ListProjectConfigMaps.
+func (c *kargoServiceClient) ListProjectConfigMaps(ctx context.Context, req *connect.Request[v1alpha1.ListProjectConfigMapsRequest]) (*connect.Response[v1alpha1.ListProjectConfigMapsResponse], error) {
+	return c.listProjectConfigMaps.CallUnary(ctx, req)
+}
+
+// GetConfigMap calls akuity.io.kargo.service.v1alpha1.KargoService.GetConfigMap.
+func (c *kargoServiceClient) GetConfigMap(ctx context.Context, req *connect.Request[v1alpha1.GetConfigMapRequest]) (*connect.Response[v1alpha1.GetConfigMapResponse], error) {
+	return c.getConfigMap.CallUnary(ctx, req)
+}
+
 // ListAnalysisTemplates calls akuity.io.kargo.service.v1alpha1.KargoService.ListAnalysisTemplates.
 func (c *kargoServiceClient) ListAnalysisTemplates(ctx context.Context, req *connect.Request[v1alpha1.ListAnalysisTemplatesRequest]) (*connect.Response[v1alpha1.ListAnalysisTemplatesResponse], error) {
 	return c.listAnalysisTemplates.CallUnary(ctx, req)
@@ -1264,6 +1298,8 @@ type KargoServiceHandler interface {
 	CreateProjectSecret(context.Context, *connect.Request[v1alpha1.CreateProjectSecretRequest]) (*connect.Response[v1alpha1.CreateProjectSecretResponse], error)
 	UpdateProjectSecret(context.Context, *connect.Request[v1alpha1.UpdateProjectSecretRequest]) (*connect.Response[v1alpha1.UpdateProjectSecretResponse], error)
 	DeleteProjectSecret(context.Context, *connect.Request[v1alpha1.DeleteProjectSecretRequest]) (*connect.Response[v1alpha1.DeleteProjectSecretResponse], error)
+	ListProjectConfigMaps(context.Context, *connect.Request[v1alpha1.ListProjectConfigMapsRequest]) (*connect.Response[v1alpha1.ListProjectConfigMapsResponse], error)
+	GetConfigMap(context.Context, *connect.Request[v1alpha1.GetConfigMapRequest]) (*connect.Response[v1alpha1.GetConfigMapResponse], error)
 	ListAnalysisTemplates(context.Context, *connect.Request[v1alpha1.ListAnalysisTemplatesRequest]) (*connect.Response[v1alpha1.ListAnalysisTemplatesResponse], error)
 	GetAnalysisTemplate(context.Context, *connect.Request[v1alpha1.GetAnalysisTemplateRequest]) (*connect.Response[v1alpha1.GetAnalysisTemplateResponse], error)
 	DeleteAnalysisTemplate(context.Context, *connect.Request[v1alpha1.DeleteAnalysisTemplateRequest]) (*connect.Response[v1alpha1.DeleteAnalysisTemplateResponse], error)
@@ -1580,6 +1616,18 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(kargoServiceDeleteProjectSecretMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	kargoServiceListProjectConfigMapsHandler := connect.NewUnaryHandler(
+		KargoServiceListProjectConfigMapsProcedure,
+		svc.ListProjectConfigMaps,
+		connect.WithSchema(kargoServiceListProjectConfigMapsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	kargoServiceGetConfigMapHandler := connect.NewUnaryHandler(
+		KargoServiceGetConfigMapProcedure,
+		svc.GetConfigMap,
+		connect.WithSchema(kargoServiceGetConfigMapMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	kargoServiceListAnalysisTemplatesHandler := connect.NewUnaryHandler(
 		KargoServiceListAnalysisTemplatesProcedure,
 		svc.ListAnalysisTemplates,
@@ -1798,6 +1846,10 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceUpdateProjectSecretHandler.ServeHTTP(w, r)
 		case KargoServiceDeleteProjectSecretProcedure:
 			kargoServiceDeleteProjectSecretHandler.ServeHTTP(w, r)
+		case KargoServiceListProjectConfigMapsProcedure:
+			kargoServiceListProjectConfigMapsHandler.ServeHTTP(w, r)
+		case KargoServiceGetConfigMapProcedure:
+			kargoServiceGetConfigMapHandler.ServeHTTP(w, r)
 		case KargoServiceListAnalysisTemplatesProcedure:
 			kargoServiceListAnalysisTemplatesHandler.ServeHTTP(w, r)
 		case KargoServiceGetAnalysisTemplateProcedure:
@@ -2037,6 +2089,14 @@ func (UnimplementedKargoServiceHandler) UpdateProjectSecret(context.Context, *co
 
 func (UnimplementedKargoServiceHandler) DeleteProjectSecret(context.Context, *connect.Request[v1alpha1.DeleteProjectSecretRequest]) (*connect.Response[v1alpha1.DeleteProjectSecretResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.DeleteProjectSecret is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) ListProjectConfigMaps(context.Context, *connect.Request[v1alpha1.ListProjectConfigMapsRequest]) (*connect.Response[v1alpha1.ListProjectConfigMapsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.ListProjectConfigMaps is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) GetConfigMap(context.Context, *connect.Request[v1alpha1.GetConfigMapRequest]) (*connect.Response[v1alpha1.GetConfigMapResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.GetConfigMap is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) ListAnalysisTemplates(context.Context, *connect.Request[v1alpha1.ListAnalysisTemplatesRequest]) (*connect.Response[v1alpha1.ListAnalysisTemplatesResponse], error) {

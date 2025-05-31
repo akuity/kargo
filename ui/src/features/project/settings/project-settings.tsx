@@ -18,6 +18,7 @@ import { getConfig } from '@ui/gen/api/service/v1alpha1/service-KargoService_con
 import { useProjectBreadcrumbs } from '../project-utils';
 
 import { AnalysisTemplatesSettings } from './views/analysis-templates/analysis-templates';
+import { ConfigMaps } from './views/config-maps/config-maps';
 import { CredentialsSettings } from './views/credentials/credentials';
 import { GeneralSettings } from './views/general/general-settings';
 import { ProjectConfig } from './views/project-config/project-config';
@@ -59,6 +60,11 @@ export const ProjectSettings = () => {
             }
           }
         : {}),
+      configMaps: {
+        label: 'ConfigMaps',
+        path: 'config-maps',
+        component: ConfigMaps
+      },
       roles: {
         label: 'Roles',
         icon: faPeopleGroup,
@@ -102,6 +108,7 @@ export const ProjectSettings = () => {
                   .filter((i) => location.pathname.endsWith(i))}
                 items={Object.values(settingsViews).map((i) => ({
                   label: <NavLink to={`../${i.path}`}>{i.label}</NavLink>,
+                  // @ts-expect-error icon is optional
                   icon: <FontAwesomeIcon icon={i.icon} />,
                   key: i.path
                 }))}
