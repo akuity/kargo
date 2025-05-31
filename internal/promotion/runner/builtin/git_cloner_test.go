@@ -116,6 +116,25 @@ func Test_gitCloner_validate(t *testing.T) {
 			},
 		},
 		{
+			name: "duplicate aliases",
+			config: promotion.Config{
+				"repoURL": "https://github.com/example/repo.git",
+				"checkout": []promotion.Config{
+					{
+						"path": "/fake/path/0",
+						"as":   "alias1",
+					},
+					{
+						"path": "/fake/path/1",
+						"as":   "alias1",
+					},
+				},
+			},
+			expectedProblems: []string{
+				"invalid git-clone config: duplicate checkout.as value \"alias1\" at checkout[1]",
+			},
+		},
+		{
 			name: "author name is missing",
 			config: promotion.Config{
 				"repoURL": "https://github.com/example/repo.git",
@@ -267,18 +286,59 @@ func Test_gitCloner_validate(t *testing.T) {
 					},
 					{
 						"path": "/fake/path/8",
+						"as":   "alias1", // unique as alias
 					},
 					{
 						"branch": "",
 						"commit": "",
 						"tag":    "",
 						"path":   "/fake/path/9",
+						"as":     "alias2", // another unique as alias
 					},
 					{
 						"path": "/fake/path/10",
+						"as":   "", // empty as field
+					},
+					{
+						"path": "/fake/path/11",
+						"as":   "", // another empty as field
 					},
 				},
 			},
+		},
+		{
+			name: "unique as aliases",
+			config: promotion.Config{
+				"repoURL": "https://github.com/example/repo.git",
+				"checkout": []promotion.Config{
+					{
+						"path": "/fake/path/0",
+						"as":   "alias1",
+					},
+					{
+						"path": "/fake/path/1",
+						"as":   "alias2",
+					},
+				},
+			},
+			// No expected problems
+		},
+		{
+			name: "empty as fields are ignored for uniqueness",
+			config: promotion.Config{
+				"repoURL": "https://github.com/example/repo.git",
+				"checkout": []promotion.Config{
+					{
+						"path": "/fake/path/0",
+						"as":   "",
+					},
+					{
+						"path": "/fake/path/1",
+						"as":   "",
+					},
+				},
+			},
+			// No expected problems
 		},
 	}
 
@@ -288,7 +348,7 @@ func Test_gitCloner_validate(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			err := runner.validate(testCase.config)
+			_, err := runner.validateAndUnmarshal(testCase.config)
 			if len(testCase.expectedProblems) == 0 {
 				require.NoError(t, err)
 			} else {
@@ -370,4 +430,12 @@ func Test_gitCloner_run(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, dirEntries, 1) // Just the .git file
 	require.FileExists(t, filepath.Join(stepCtx.WorkDir, "out", ".git"))
+
+	// Assert output map contains the expected commit hashes for each checkout key
+	commits, ok := res.Output["commits"].(map[string]string)
+	require.True(t, ok, "output.commits should be a map[string]string")
+	require.Contains(t, commits, "src")
+	require.Equal(t, commitID, commits["src"])
+	require.Contains(t, commits, "out")
+	require.NotEmpty(t, commits["out"])
 }
