@@ -736,6 +736,13 @@ func TestReconciler_ensureNamespace(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
+				ensureFinalizerFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) (bool, error) {
+					return false, nil
+				},
 				getNamespaceFn: func(
 					_ context.Context,
 					_ types.NamespacedName,
