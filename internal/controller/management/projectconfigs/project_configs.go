@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -276,7 +277,15 @@ func (r *reconciler) newWebhookReceiver(
 			string(secret),
 		),
 	}
-	wr.URL = r.cfg.ExternalWebhookServerBaseURL + wr.Path
+	wr.URL, err = url.JoinPath(r.cfg.ExternalWebhookServerBaseURL + wr.Path)
+	if err != nil {
+		logger.Error(err, "error generating webhook URL",
+			"base-url", r.cfg.ExternalWebhookServerBaseURL,
+			"path", wr.Path,
+		)
+		return nil, fmt.Errorf("error generating webhook URL: %w", err)
+	}
+
 	logger.Debug("webhook receiver initialized",
 		"webhook-receiver", wr,
 	)
