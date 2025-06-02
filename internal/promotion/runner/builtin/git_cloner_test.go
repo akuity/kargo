@@ -18,7 +18,7 @@ import (
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
-func Test_gitCloner_validate(t *testing.T) {
+func Test_gitCloner_validateAndUnmarshal(t *testing.T) {
 	testCases := []struct {
 		name             string
 		config           promotion.Config
