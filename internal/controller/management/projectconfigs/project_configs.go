@@ -258,7 +258,7 @@ func (r *reconciler) newWebhookReceiver(
 	}
 	logger.Debug("secret found", "secret", cfg.secretName)
 
-	secret, ok := s.Data[cfg.targetKey.String()]
+	secret, ok := s.Data[cfg.targetKey]
 	if !ok {
 		logger.Error(err, "target key not found in secret data",
 			"target-key", cfg.targetKey,
@@ -295,7 +295,7 @@ func (r *reconciler) newWebhookReceiver(
 
 type providerConfig struct {
 	secretName   string
-	targetKey    api.WebhookReceiverSecretKey
+	targetKey    string
 	receiverType api.WebhookReceiverType
 }
 

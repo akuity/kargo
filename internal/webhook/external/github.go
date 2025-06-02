@@ -43,7 +43,7 @@ func githubHandler(
 			xhttp.WriteErrorJSON(w, errors.New("configuration error"))
 			return
 		}
-		token, ok := secret.Data[api.WebhookReceiverSecretKeyGithub.String()]
+		token, ok := secret.Data[api.WebhookReceiverSecretKeyGithub]
 		if !ok {
 			logger.Error(
 				errors.New("invalid secret data"),

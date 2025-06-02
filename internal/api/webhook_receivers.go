@@ -15,16 +15,7 @@ const (
 	// TODO(fuskovic): Add more receiver enum types(e.g. Dockerhub, Quay, Gitlab, etc...)
 )
 
-// WebhookReceiverSecretKey is an enum representing the key used in a secret
-// for a webhook receiver. It is used to identify the specific key that contains
-// the secret data required for the webhook receiver to function properly.
-type WebhookReceiverSecretKey string
-
-func (w WebhookReceiverSecretKey) String() string {
-	return string(w)
-}
-
 const (
-	WebhookReceiverSecretKeyGithub WebhookReceiverSecretKey = "token"
-	WebhookReceiverSecretKeyQuay   WebhookReceiverSecretKey = "quay-secret"
+	WebhookReceiverSecretKeyGithub string = "token"
+	WebhookReceiverSecretKeyQuay   string = "quay-secret"
 )
