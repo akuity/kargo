@@ -5,10 +5,6 @@ package api
 // associated with, such as GitHub or Quay.
 type WebhookReceiverType string
 
-func (w WebhookReceiverType) String() string {
-	return string(w)
-}
-
 const (
 	WebhookReceiverTypeGitHub WebhookReceiverType = "GitHub"
 	WebhookReceiverTypeQuay   WebhookReceiverType = "Quay"
@@ -16,6 +12,6 @@ const (
 )
 
 const (
-	WebhookReceiverSecretKeyGithub string = "token"
-	WebhookReceiverSecretKeyQuay   string = "quay-secret"
+	WebhookReceiverSecretKeyGithub = "token"
+	WebhookReceiverSecretKeyQuay   = "quay-secret"
 )

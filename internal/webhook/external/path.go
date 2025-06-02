@@ -25,6 +25,6 @@ func GenerateWebhookPath(
 	h := sha256.New()
 	_, _ = h.Write(input)
 	return fmt.Sprintf("/webhook/%s/%x",
-		strings.ToLower(kind.String()), h.Sum(nil),
+		strings.ToLower(string(kind)), h.Sum(nil),
 	)
 }
