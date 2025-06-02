@@ -9,7 +9,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/io"
 	"github.com/akuity/kargo/internal/logging"
@@ -43,12 +43,12 @@ func githubHandler(
 			xhttp.WriteErrorJSON(w, errors.New("configuration error"))
 			return
 		}
-		token, ok := secret.Data[kargoapi.WebhookReceiverSecretKeyGithub]
+		token, ok := secret.Data[api.WebhookReceiverSecretKeyGithub.String()]
 		if !ok {
 			logger.Error(
 				errors.New("invalid secret data"),
 				"no value for target key",
-				"target-key", kargoapi.WebhookReceiverSecretKeyGithub,
+				"target-key", api.WebhookReceiverSecretKeyGithub,
 			)
 			xhttp.WriteErrorJSON(w, errors.New("configuration error"))
 			return

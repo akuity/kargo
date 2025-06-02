@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/webhook/external"
 )
@@ -272,7 +273,7 @@ func TestReconciler_syncWebhookReceivers(t *testing.T) {
 					external.GenerateWebhookPath(
 						"fake-webhook-receiver-name",
 						pc.Name,
-						kargoapi.WebhookReceiverTypeGitHub,
+						api.WebhookReceiverTypeGitHub,
 						"fake-secret-data",
 					),
 					pc.Status.WebhookReceivers[0].Path,

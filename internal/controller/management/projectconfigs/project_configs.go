@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/conditions"
 	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/kubeclient"
@@ -257,7 +258,7 @@ func (r *reconciler) newWebhookReceiver(
 	}
 	logger.Debug("secret found", "secret", cfg.secretName)
 
-	secret, ok := s.Data[cfg.targetKey]
+	secret, ok := s.Data[cfg.targetKey.String()]
 	if !ok {
 		logger.Error(err, "target key not found in secret data",
 			"target-key", cfg.targetKey,
@@ -294,8 +295,8 @@ func (r *reconciler) newWebhookReceiver(
 
 type providerConfig struct {
 	secretName   string
-	targetKey    string
-	receiverType string
+	targetKey    api.WebhookReceiverSecretKey
+	receiverType api.WebhookReceiverType
 }
 
 func getProviderConfig(rc kargoapi.WebhookReceiverConfig) (*providerConfig, error) {
@@ -306,8 +307,8 @@ func getProviderConfig(rc kargoapi.WebhookReceiverConfig) (*providerConfig, erro
 		}
 		return &providerConfig{
 			secretName:   rc.GitHub.SecretRef.Name,
-			targetKey:    kargoapi.WebhookReceiverSecretKeyGithub,
-			receiverType: kargoapi.WebhookReceiverTypeGitHub,
+			targetKey:    api.WebhookReceiverSecretKeyGithub,
+			receiverType: api.WebhookReceiverTypeGitHub,
 		}, nil
 	default:
 		return nil, errors.New("webhook receiver config has no valid entry")
