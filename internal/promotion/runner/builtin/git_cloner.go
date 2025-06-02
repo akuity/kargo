@@ -60,25 +60,37 @@ func (g *gitCloner) Name() string {
 }
 
 // validateAndUnmarshal validates the config and unmarshals it into a typed struct.
-func (g *gitCloner) validateAndUnmarshal(cfg promotion.Config) (builtin.GitCloneConfig, error) {
+func (g *gitCloner) validateAndUnmarshal(
+	cfg promotion.Config,
+) (builtin.GitCloneConfig, error) {
 	// Schema validation
-	if err := validate(g.schemaLoader, gojsonschema.NewGoLoader(cfg), g.Name()); err != nil {
+	if err := validate(
+		g.schemaLoader,
+		gojsonschema.NewGoLoader(cfg),
+		g.Name(),
+	); err != nil {
 		return builtin.GitCloneConfig{}, err
 	}
 
 	// Unmarshal to typed config
 	typedCfg, err := promotion.ConfigToStruct[builtin.GitCloneConfig](cfg)
 	if err != nil {
-		return builtin.GitCloneConfig{}, fmt.Errorf("could not convert config into %s config: %w", g.Name(), err)
+		return builtin.GitCloneConfig{}, fmt.Errorf(
+			"could not convert config into %s config: %w",
+			g.Name(), err,
+		)
 	}
 
-	// Additional validation: ensure unique 'as' aliases in checkout
+	// Ensure any specified aliases are unique across all checkouts
 	seen := make(map[string]struct{})
 	for i, c := range typedCfg.Checkout {
 		as := c.As
 		if as != "" {
 			if _, exists := seen[as]; exists {
-				return builtin.GitCloneConfig{}, fmt.Errorf("invalid git-clone config: duplicate checkout.as value %q at checkout[%d]", as, i)
+				return builtin.GitCloneConfig{}, fmt.Errorf(
+					"invalid git-clone config: duplicate checkout.as value %q at "+
+						"checkout[%d]", as, i,
+				)
 			}
 			seen[as] = struct{}{}
 		}
@@ -93,7 +105,9 @@ func (g *gitCloner) Run(
 ) (promotion.StepResult, error) {
 	cfg, err := g.validateAndUnmarshal(stepCtx.Config)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusErrored,
+		}, err
 	}
 	return g.run(ctx, stepCtx, cfg)
 }
@@ -111,8 +125,12 @@ func (g *gitCloner) run(
 		cfg.RepoURL,
 	)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("error getting credentials for %s: %w", cfg.RepoURL, err)
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusErrored,
+		}, fmt.Errorf(
+			"error getting credentials for %s: %w",
+			cfg.RepoURL, err,
+		)
 	}
 	if creds != nil {
 		repoCreds = &git.RepoCredentials{
@@ -145,8 +163,12 @@ func (g *gitCloner) run(
 		},
 	)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("error cloning %s: %w", cfg.RepoURL, err)
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusErrored,
+		}, fmt.Errorf(
+			"error cloning %s: %w",
+			cfg.RepoURL, err,
+		)
 	}
 	commits := make(map[string]string)
 	for _, checkout := range cfg.Checkout {
@@ -155,8 +177,12 @@ func (g *gitCloner) run(
 		case checkout.Branch != "":
 			ref = checkout.Branch
 			if err = ensureRemoteBranch(repo, ref, checkout.Create); err != nil {
-				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-					fmt.Errorf("error ensuring existence of remote branch %s: %w", ref, err)
+				return promotion.StepResult{
+					Status: kargoapi.PromotionStepStatusErrored,
+				}, fmt.Errorf(
+					"error ensuring existence of remote branch %s: %w",
+					ref, err,
+				)
 			}
 		case checkout.Commit != "":
 			ref = checkout.Commit
@@ -165,7 +191,9 @@ func (g *gitCloner) run(
 		}
 		path, err := securejoin.SecureJoin(stepCtx.WorkDir, checkout.Path)
 		if err != nil {
-			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
+			return promotion.StepResult{
+				Status: kargoapi.PromotionStepStatusErrored,
+			}, fmt.Errorf(
 				"error joining path %s with work dir %s: %w",
 				checkout.Path, stepCtx.WorkDir, err,
 			)
@@ -175,7 +203,9 @@ func (g *gitCloner) run(
 			&git.AddWorkTreeOptions{Ref: ref},
 		)
 		if err != nil {
-			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
+			return promotion.StepResult{
+				Status: kargoapi.PromotionStepStatusErrored,
+			}, fmt.Errorf(
 				"error adding work tree %s to repo %s: %w",
 				checkout.Path, cfg.RepoURL, err,
 			)
@@ -185,7 +215,9 @@ func (g *gitCloner) run(
 			key = checkout.As
 		}
 		if commits[key], err = worktree.LastCommitID(); err != nil {
-			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
+			return promotion.StepResult{
+				Status: kargoapi.PromotionStepStatusErrored,
+			}, fmt.Errorf(
 				"error resolving HEAD for worktree at %s: %w",
 				path, err,
 			)
@@ -207,7 +239,11 @@ func (g *gitCloner) run(
 // exist and create == true, an empty orphaned branch is created and pushed to
 // the remote. If the branch does not exist and create == false, an error is
 // returned.
-func ensureRemoteBranch(repo git.BareRepo, branch string, create bool) error {
+func ensureRemoteBranch(
+	repo git.BareRepo,
+	branch string,
+	create bool,
+) error {
 	exists, err := repo.RemoteBranchExists(branch)
 	if err != nil {
 		return fmt.Errorf(
@@ -229,9 +265,15 @@ func ensureRemoteBranch(repo git.BareRepo, branch string, create bool) error {
 	}
 	tmpDir, err := os.MkdirTemp("", "repo-")
 	if err != nil {
-		return fmt.Errorf("error creating temporary directory: %w", err)
+		return fmt.Errorf(
+			"error creating temporary directory: %w",
+			err,
+		)
 	}
-	workTree, err := repo.AddWorkTree(tmpDir, &git.AddWorkTreeOptions{Orphan: true})
+	workTree, err := repo.AddWorkTree(
+		tmpDir,
+		&git.AddWorkTreeOptions{Orphan: true},
+	)
 	if err != nil {
 		return fmt.Errorf(
 			"error adding temporary working tree for branch %q of repo %s: %w",
@@ -257,7 +299,9 @@ func ensureRemoteBranch(repo git.BareRepo, branch string, create bool) error {
 			branch, repo.URL(), err,
 		)
 	}
-	if err = workTree.Push(&git.PushOptions{TargetBranch: branch}); err != nil {
+	if err = workTree.Push(
+		&git.PushOptions{TargetBranch: branch},
+	); err != nil {
 		return fmt.Errorf(
 			"error pushing initial commit to new branch %q to repo %s: %w",
 			branch, repo.URL(), err,
