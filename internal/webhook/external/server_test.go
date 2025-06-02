@@ -16,7 +16,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/server/kubernetes"
@@ -132,7 +131,7 @@ func TestRouteHandler(t *testing.T) {
 										Path: GenerateWebhookPath(
 											"fake-webhook-receiver-name",
 											"fakename",
-											api.WebhookReceiverTypeGitHub,
+											kargoapi.WebhookReceiverTypeGitHub,
 											"mysupersecrettoken",
 										),
 									},
@@ -173,7 +172,7 @@ func TestRouteHandler(t *testing.T) {
 			path: GenerateWebhookPath(
 				"fake-webhook-receiver-name",
 				"fakename",
-				api.WebhookReceiverTypeGitHub,
+				kargoapi.WebhookReceiverTypeGitHub,
 				"mysupersecrettoken",
 			),
 			code: http.StatusOK,

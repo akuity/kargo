@@ -19,7 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -67,7 +66,7 @@ func TestGithubHandler(t *testing.T) {
 										Path: GenerateWebhookPath(
 											"fake-webhook-receiver-name",
 											"fakename",
-											api.WebhookReceiverTypeGitHub,
+											kargoapi.WebhookReceiverTypeGitHub,
 											"fakesecret",
 										),
 									},
@@ -139,7 +138,7 @@ func TestGithubHandler(t *testing.T) {
 										Path: GenerateWebhookPath(
 											"fake-webhook-receiver-name",
 											"fakename",
-											api.WebhookReceiverTypeGitHub,
+											kargoapi.WebhookReceiverTypeGitHub,
 											"fakesecret",
 										),
 									},
@@ -211,7 +210,7 @@ func TestGithubHandler(t *testing.T) {
 										Path: GenerateWebhookPath(
 											"fake-webhook-receiver-name",
 											"fakename",
-											api.WebhookReceiverTypeGitHub,
+											kargoapi.WebhookReceiverTypeGitHub,
 											"mysupersecrettoken",
 										),
 									},
@@ -283,7 +282,7 @@ func TestGithubHandler(t *testing.T) {
 										Path: GenerateWebhookPath(
 											"fake-webhook-receiver-name",
 											"fakename",
-											api.WebhookReceiverTypeGitHub,
+											kargoapi.WebhookReceiverTypeGitHub,
 											"mysupersecrettoken",
 										),
 									},
@@ -356,7 +355,7 @@ func TestGithubHandler(t *testing.T) {
 										Path: GenerateWebhookPath(
 											"fake-webhook-receiver-name",
 											"fakename",
-											api.WebhookReceiverTypeGitHub,
+											kargoapi.WebhookReceiverTypeGitHub,
 											"mysupersecrettoken",
 										),
 									},
@@ -426,7 +425,7 @@ func TestGithubHandler(t *testing.T) {
 										Path: GenerateWebhookPath(
 											"fake-webhook-receiver-name",
 											"fakename",
-											api.WebhookReceiverTypeGitHub,
+											kargoapi.WebhookReceiverTypeGitHub,
 											"mysupersecrettoken",
 										),
 									},
@@ -497,7 +496,7 @@ func TestGithubHandler(t *testing.T) {
 										Path: GenerateWebhookPath(
 											"fake-webhook-receiver-name",
 											"fakename",
-											api.WebhookReceiverTypeGitHub,
+											kargoapi.WebhookReceiverTypeGitHub,
 											"mysupersecrettoken",
 										),
 									},
@@ -569,7 +568,7 @@ func TestGithubHandler(t *testing.T) {
 										Path: GenerateWebhookPath(
 											"fake-webhook-receiver-name",
 											"fakename",
-											api.WebhookReceiverTypeGitHub,
+											kargoapi.WebhookReceiverTypeGitHub,
 											"mysupersecrettoken",
 										),
 									},

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/akuity/kargo/internal/api"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 // GenerateWebhookPath generates a unique path for a webhook based on the
@@ -16,7 +16,7 @@ import (
 func GenerateWebhookPath(
 	name string,
 	project string,
-	kind api.WebhookReceiverType,
+	kind kargoapi.WebhookReceiverType,
 	secret string,
 ) string {
 	// Warning: Changes to this line could alter URLs that existing users may

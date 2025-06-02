@@ -5,6 +5,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// WebhookReceiverType is an enum representing the type of a webhook receiver.
+// It is used to identify the platform or service that the webhook receiver is
+// associated with, such as GitHub or Quay.
+//
+// +kubebuilder:validation:Enum={GitHub}
+type WebhookReceiverType string
+
+const (
+	WebhookReceiverTypeGitHub WebhookReceiverType = "GitHub"
+	// TODO(fuskovic): Add more receiver enum types(e.g. Dockerhub, Quay, Gitlab, etc...)
+)
+
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Namespaced
 // +kubebuilder:subresource:status

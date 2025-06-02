@@ -296,7 +296,7 @@ func (r *reconciler) newWebhookReceiver(
 type providerConfig struct {
 	secretName   string
 	targetKey    string
-	receiverType api.WebhookReceiverType
+	receiverType kargoapi.WebhookReceiverType
 }
 
 func getProviderConfig(rc kargoapi.WebhookReceiverConfig) (*providerConfig, error) {
@@ -308,7 +308,7 @@ func getProviderConfig(rc kargoapi.WebhookReceiverConfig) (*providerConfig, erro
 		return &providerConfig{
 			secretName:   rc.GitHub.SecretRef.Name,
 			targetKey:    api.WebhookReceiverSecretKeyGithub,
-			receiverType: api.WebhookReceiverTypeGitHub,
+			receiverType: kargoapi.WebhookReceiverTypeGitHub,
 		}, nil
 	default:
 		return nil, errors.New("webhook receiver config has no valid entry")
