@@ -121,17 +121,17 @@ func Test_gitCloner_validateAndUnmarshal(t *testing.T) {
 				"repoURL": "https://github.com/example/repo.git",
 				"checkout": []promotion.Config{
 					{
-						"path": "/fake/path/0",
 						"as":   "alias1",
+						"path": "/fake/path/0",
 					},
 					{
-						"path": "/fake/path/1",
 						"as":   "alias1",
+						"path": "/fake/path/1",
 					},
 				},
 			},
 			expectedProblems: []string{
-				"invalid git-clone config: duplicate checkout.as value \"alias1\" at checkout[1]",
+				`duplicate checkout alias "alias1" at checkout[1]`,
 			},
 		},
 		{
@@ -149,7 +149,7 @@ func Test_gitCloner_validateAndUnmarshal(t *testing.T) {
 				},
 			},
 			expectedProblems: []string{
-				"invalid git-clone config: author: name is required",
+				"author: name is required",
 			},
 		},
 		{
@@ -167,7 +167,7 @@ func Test_gitCloner_validateAndUnmarshal(t *testing.T) {
 				},
 			},
 			expectedProblems: []string{
-				"invalid git-clone config: author.name: String length must be greater than or equal to 1",
+				"author.name: String length must be greater than or equal to 1",
 			},
 		},
 		{
@@ -185,7 +185,7 @@ func Test_gitCloner_validateAndUnmarshal(t *testing.T) {
 				},
 			},
 			expectedProblems: []string{
-				"invalid git-clone config: author: email is required",
+				"author: email is required",
 			},
 		},
 		{
@@ -203,7 +203,7 @@ func Test_gitCloner_validateAndUnmarshal(t *testing.T) {
 				},
 			},
 			expectedProblems: []string{
-				"invalid git-clone config: author.email: Does not match format 'email'",
+				"author.email: Does not match format 'email'",
 			},
 		},
 		{
@@ -286,59 +286,20 @@ func Test_gitCloner_validateAndUnmarshal(t *testing.T) {
 					},
 					{
 						"path": "/fake/path/8",
-						"as":   "alias1", // unique as alias
+						"as":   "alias1",
 					},
 					{
 						"branch": "",
 						"commit": "",
 						"tag":    "",
 						"path":   "/fake/path/9",
-						"as":     "alias2", // another unique as alias
+						"as":     "alias2",
 					},
 					{
 						"path": "/fake/path/10",
-						"as":   "", // empty as field
-					},
-					{
-						"path": "/fake/path/11",
-						"as":   "", // another empty as field
 					},
 				},
 			},
-		},
-		{
-			name: "unique as aliases",
-			config: promotion.Config{
-				"repoURL": "https://github.com/example/repo.git",
-				"checkout": []promotion.Config{
-					{
-						"path": "/fake/path/0",
-						"as":   "alias1",
-					},
-					{
-						"path": "/fake/path/1",
-						"as":   "alias2",
-					},
-				},
-			},
-			// No expected problems
-		},
-		{
-			name: "empty as fields are ignored for uniqueness",
-			config: promotion.Config{
-				"repoURL": "https://github.com/example/repo.git",
-				"checkout": []promotion.Config{
-					{
-						"path": "/fake/path/0",
-						"as":   "",
-					},
-					{
-						"path": "/fake/path/1",
-						"as":   "",
-					},
-				},
-			},
-			// No expected problems
 		},
 	}
 
@@ -386,7 +347,7 @@ func Test_gitCloner_run(t *testing.T) {
 	err = repo.Push(nil)
 	require.NoError(t, err)
 
-	commitID, err := repo.LastCommitID()
+	srcBranchCommitID, err := repo.LastCommitID()
 	require.NoError(t, err)
 
 	// Now we can proceed to test gitCloner...
@@ -406,7 +367,7 @@ func Test_gitCloner_run(t *testing.T) {
 			RepoURL: fmt.Sprintf("%s/test.git", server.URL),
 			Checkout: []builtin.Checkout{
 				{
-					Commit: commitID,
+					Commit: srcBranchCommitID,
 					Path:   "src",
 				},
 				{
@@ -431,11 +392,17 @@ func Test_gitCloner_run(t *testing.T) {
 	require.Len(t, dirEntries, 1) // Just the .git file
 	require.FileExists(t, filepath.Join(stepCtx.WorkDir, "out", ".git"))
 
-	// Assert output map contains the expected commit hashes for each checkout key
-	commits, ok := res.Output["commits"].(map[string]string)
-	require.True(t, ok, "output.commits should be a map[string]string")
-	require.Contains(t, commits, "src")
-	require.Equal(t, commitID, commits["src"])
-	require.Contains(t, commits, "out")
-	require.NotEmpty(t, commits["out"])
+	// Assert output map contains the expected commit hashes for each checkout
+	outTree, err := git.LoadWorkTree(filepath.Join(stepCtx.WorkDir, "out"), nil)
+	require.NoError(t, err)
+	outBranchCommitID, err := outTree.LastCommitID()
+	require.NoError(t, err)
+	require.Equal(
+		t,
+		map[string]string{
+			"src": srcBranchCommitID,
+			"out": outBranchCommitID,
+		},
+		res.Output["commits"],
+	)
 }
