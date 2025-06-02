@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -277,7 +276,7 @@ func (r *reconciler) newWebhookReceiver(
 			string(secret),
 		),
 	}
-	wr.URL = path.Join(r.cfg.ExternalWebhookServerBaseURL, wr.Path)
+	wr.URL = r.cfg.ExternalWebhookServerBaseURL + wr.Path
 	logger.Debug("webhook receiver initialized",
 		"webhook-receiver", wr,
 	)
