@@ -3147,6 +3147,8 @@ export type VerificationInfo = Message<"github.com.akuity.kargo.api.v1alpha1.Ver
   /**
    * ID is the identifier of the Verification process.
    *
+   * +kubebuilder:validation:Required
+   *
    * @generated from field: optional string id = 4;
    */
   id: string;
@@ -3162,6 +3164,8 @@ export type VerificationInfo = Message<"github.com.akuity.kargo.api.v1alpha1.Ver
   /**
    * StartTime is the time at which the Verification process was started.
    *
+   * +kubebuilder:validation:Required
+   *
    * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.Time startTime = 5;
    */
   startTime?: Time;
@@ -3171,6 +3175,8 @@ export type VerificationInfo = Message<"github.com.akuity.kargo.api.v1alpha1.Ver
    * this will be a reflection of the underlying AnalysisRun's phase, however,
    * there are exceptions to this, such as in the case where an AnalysisRun
    * cannot be launched successfully.
+   *
+   * +kubebuilder:validation:Required
    *
    * @generated from field: optional string phase = 1;
    */
