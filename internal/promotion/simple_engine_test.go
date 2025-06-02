@@ -588,9 +588,9 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				},
 			},
 			steps: []Step{
-				{Kind: "success-step"},
-				{Kind: "panic-step"},
-				{Kind: "success-step"},
+				{Kind: "success-step", Alias: "step1"},
+				{Kind: "panic-step", Alias: "step2"},
+				{Kind: "success-step", Alias: "step3"},
 			},
 			assertions: func(t *testing.T, result Result) {
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
