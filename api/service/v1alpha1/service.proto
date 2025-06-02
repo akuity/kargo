@@ -95,9 +95,9 @@ service KargoService {
   rpc UpdateProjectSecret(UpdateProjectSecretRequest) returns (UpdateProjectSecretResponse);
   rpc DeleteProjectSecret(DeleteProjectSecretRequest) returns (DeleteProjectSecretResponse);
 
-  /* Project ConfigMaps APIs */
+  /* ConfigMaps APIs */
 
-  rpc ListProjectConfigMaps(ListProjectConfigMapsRequest) returns (ListProjectConfigMapsResponse);
+  rpc ListConfigMaps(ListConfigMapsRequest) returns (ListConfigMapsResponse);
   rpc GetConfigMap(GetConfigMapRequest) returns (GetConfigMapResponse);
 
   /* Analysis APIs */
@@ -590,11 +590,11 @@ message ListProjectSecretsResponse {
   repeated k8s.io.api.core.v1.Secret secrets = 1;
 }
 
-message ListProjectConfigMapsRequest {
+message ListConfigMapsRequest {
   string project = 1;
 }
 
-message ListProjectConfigMapsResponse {
+message ListConfigMapsResponse {
   repeated k8s.io.api.core.v1.ConfigMap config_maps = 1;
 }
 

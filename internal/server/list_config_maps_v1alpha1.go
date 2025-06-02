@@ -13,10 +13,10 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 )
 
-func (s *server) ListProjectConfigMaps(
+func (s *server) ListConfigMaps(
 	ctx context.Context,
-	req *connect.Request[svcv1alpha1.ListProjectConfigMapsRequest],
-) (*connect.Response[svcv1alpha1.ListProjectConfigMapsResponse], error) {
+	req *connect.Request[svcv1alpha1.ListConfigMapsRequest],
+) (*connect.Response[svcv1alpha1.ListConfigMapsResponse], error) {
 	project := req.Msg.GetProject()
 	if err := validateFieldNotEmpty("project", project); err != nil {
 		return nil, err
@@ -45,7 +45,7 @@ func (s *server) ListProjectConfigMaps(
 		cmPtrs = append(cmPtrs, cm.DeepCopy())
 	}
 
-	return connect.NewResponse(&svcv1alpha1.ListProjectConfigMapsResponse{
+	return connect.NewResponse(&svcv1alpha1.ListConfigMapsResponse{
 		ConfigMaps: cmPtrs,
 	}), nil
 }

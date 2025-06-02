@@ -9,7 +9,7 @@ import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-m
 import { useModal } from '@ui/features/common/modal/use-modal';
 import {
   deleteResource,
-  listProjectConfigMaps
+  listConfigMaps
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { ConfigMap } from '@ui/gen/k8s.io/api/core/v1/generated_pb';
 
@@ -20,7 +20,7 @@ export const ConfigMaps = () => {
 
   const confirm = useConfirmModal();
 
-  const listProjectConfigMapsQuery = useQuery(listProjectConfigMaps, { project: name });
+  const listProjectConfigMapsQuery = useQuery(listConfigMaps, { project: name });
 
   const deleteResourceMutation = useMutation(deleteResource, {
     onSuccess: () => listProjectConfigMapsQuery.refetch()

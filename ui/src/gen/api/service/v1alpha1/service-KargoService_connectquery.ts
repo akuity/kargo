@@ -223,9 +223,9 @@ export const updateProjectSecret = KargoService.method.updateProjectSecret;
 export const deleteProjectSecret = KargoService.method.deleteProjectSecret;
 
 /**
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListProjectConfigMaps
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListConfigMaps
  */
-export const listProjectConfigMaps = KargoService.method.listProjectConfigMaps;
+export const listConfigMaps = KargoService.method.listConfigMaps;
 
 /**
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetConfigMap

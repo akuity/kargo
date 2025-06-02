@@ -5,6 +5,7 @@ import {
   faGear,
   faGears,
   faPeopleGroup,
+  faScrewdriverWrench,
   faTasks
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -63,6 +64,7 @@ export const ProjectSettings = () => {
       configMaps: {
         label: 'ConfigMaps',
         path: 'config-maps',
+        icon: faScrewdriverWrench,
         component: ConfigMaps
       },
       roles: {
@@ -108,7 +110,6 @@ export const ProjectSettings = () => {
                   .filter((i) => location.pathname.endsWith(i))}
                 items={Object.values(settingsViews).map((i) => ({
                   label: <NavLink to={`../${i.path}`}>{i.label}</NavLink>,
-                  // @ts-expect-error icon is optional
                   icon: <FontAwesomeIcon icon={i.icon} />,
                   key: i.path
                 }))}
