@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/conditions"
 )
 
@@ -127,8 +128,8 @@ func TestReconciler_Reconcile(t *testing.T) {
 				reconcileFn: func(
 					context.Context,
 					*kargoapi.Project,
-				) (kargoapi.ProjectStatus, bool, error) {
-					return kargoapi.ProjectStatus{}, false, errors.New("something went wrong")
+				) (kargoapi.ProjectStatus, error) {
+					return kargoapi.ProjectStatus{}, errors.New("something went wrong")
 				},
 				patchProjectStatusFn: func(
 					_ context.Context,
@@ -155,8 +156,8 @@ func TestReconciler_Reconcile(t *testing.T) {
 				reconcileFn: func(
 					context.Context,
 					*kargoapi.Project,
-				) (kargoapi.ProjectStatus, bool, error) {
-					return kargoapi.ProjectStatus{}, false, nil
+				) (kargoapi.ProjectStatus, error) {
+					return kargoapi.ProjectStatus{}, nil
 				},
 				patchProjectStatusFn: func(
 					_ context.Context,
@@ -193,7 +194,6 @@ func TestReconciler_reconcile(t *testing.T) {
 		assertions  func(
 			t *testing.T,
 			status kargoapi.ProjectStatus,
-			requeue bool,
 			cl client.Client,
 			err error,
 		)
@@ -221,7 +221,6 @@ func TestReconciler_reconcile(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				status kargoapi.ProjectStatus,
-				requeue bool,
 				_ client.Client,
 				err error,
 			) {
@@ -229,14 +228,21 @@ func TestReconciler_reconcile(t *testing.T) {
 
 				// Doesn't impact conditions
 				require.Len(t, status.Conditions, 0)
-
-				// Immediate requeue should NOT be requested
-				require.False(t, requeue)
 			},
 		},
 		{
-			name:       "success migrating spec to ProjectConfig",
-			reconciler: &reconciler{},
+			name: "success migrating spec to ProjectConfig",
+			reconciler: &reconciler{
+				ensureNamespaceFn: func(context.Context, *kargoapi.Project) error {
+					return nil
+				},
+				ensureAPIAdminPermissionsFn: func(context.Context, *kargoapi.Project) error {
+					return nil
+				},
+				ensureDefaultUserRolesFn: func(context.Context, *kargoapi.Project) error {
+					return nil
+				},
+			},
 			// Requires no phase --> conditions migration.
 			// Does require spec --> ProjectConfig migration.
 			project: &kargoapi.Project{
@@ -247,7 +253,6 @@ func TestReconciler_reconcile(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				status kargoapi.ProjectStatus,
-				requeue bool,
 				cl client.Client,
 				err error,
 			) {
@@ -261,9 +266,6 @@ func TestReconciler_reconcile(t *testing.T) {
 				err = cl.Get(context.Background(), types.NamespacedName{Name: testProject}, project)
 				require.NoError(t, err)
 				require.Empty(t, project.Spec) // nolint:staticcheck
-
-				// Immediate requeue should be requested
-				require.True(t, requeue)
 			},
 		},
 		{
@@ -281,7 +283,6 @@ func TestReconciler_reconcile(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				status kargoapi.ProjectStatus,
-				requeue bool,
 				_ client.Client,
 				err error,
 			) {
@@ -297,9 +298,6 @@ func TestReconciler_reconcile(t *testing.T) {
 				require.NotNil(t, reconcilingCondition)
 				require.Equal(t, metav1.ConditionTrue, reconcilingCondition.Status)
 				require.Equal(t, "Syncing", reconcilingCondition.Reason)
-
-				// Immediate requeue should NOT be requested
-				require.False(t, requeue)
 			},
 		},
 		{
@@ -341,7 +339,6 @@ func TestReconciler_reconcile(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				status kargoapi.ProjectStatus,
-				requeue bool,
 				_ client.Client,
 				err error,
 			) {
@@ -356,9 +353,6 @@ func TestReconciler_reconcile(t *testing.T) {
 				healthCondition := conditions.Get(&status, kargoapi.ConditionTypeHealthy)
 				require.NotNil(t, healthCondition)
 				require.Equal(t, metav1.ConditionFalse, healthCondition.Status)
-
-				// Immediate requeue should NOT be requested
-				require.False(t, requeue)
 			},
 		},
 		{
@@ -389,7 +383,6 @@ func TestReconciler_reconcile(t *testing.T) {
 			assertions: func(
 				t *testing.T,
 				status kargoapi.ProjectStatus,
-				requeue bool,
 				_ client.Client,
 				err error,
 			) {
@@ -400,9 +393,6 @@ func TestReconciler_reconcile(t *testing.T) {
 				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCondition)
 				require.Equal(t, metav1.ConditionTrue, readyCondition.Status)
-
-				// Immediate requeue should NOT be requested
-				require.False(t, requeue)
 
 				// Status has stats
 				require.NotNil(t, status.Stats)
@@ -416,8 +406,8 @@ func TestReconciler_reconcile(t *testing.T) {
 				WithObjects(tt.project).
 				WithInterceptorFuncs(tt.interceptor).
 				Build()
-			status, requeue, err := tt.reconciler.reconcile(context.Background(), tt.project)
-			tt.assertions(t, status, requeue, tt.reconciler.client, err)
+			status, err := tt.reconciler.reconcile(context.Background(), tt.project)
+			tt.assertions(t, status, tt.reconciler.client, err)
 		})
 	}
 }
@@ -1359,7 +1349,9 @@ func TestMigrateSpecToProjectConfig(t *testing.T) {
 				project := &kargoapi.Project{}
 				err = cl.Get(context.Background(), types.NamespacedName{Name: testProject}, project)
 				require.NoError(t, err)
-				require.Nil(t, project.Spec) // nolint:staticcheck
+				require.Contains(t, project.Annotations, kargoapi.AnnotationKeyMigrated)
+				require.True(t, api.HasMigrationAnnotationValue(project, api.MigratedProjectSpecToProjectConfig))
+				require.NotNil(t, project.Spec) // nolint:staticcheck
 				projCfg := &kargoapi.ProjectConfig{}
 				err = cl.Get(
 					context.Background(),
@@ -1408,7 +1400,9 @@ func TestMigrateSpecToProjectConfig(t *testing.T) {
 				project := &kargoapi.Project{}
 				err = cl.Get(context.Background(), types.NamespacedName{Name: testProject}, project)
 				require.NoError(t, err)
-				require.Nil(t, project.Spec) // nolint:staticcheck
+				require.Contains(t, project.Annotations, kargoapi.AnnotationKeyMigrated)
+				require.True(t, api.HasMigrationAnnotationValue(project, api.MigratedProjectSpecToProjectConfig))
+				require.NotNil(t, project.Spec) // nolint:staticcheck
 				projCfg := &kargoapi.ProjectConfig{}
 				err = cl.Get(
 					context.Background(),

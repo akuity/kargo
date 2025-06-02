@@ -5,9 +5,11 @@ description: Commits all changes in a working tree to its checked out branch.
 
 # `git-commit`
 
-`git-commit` commits all changes in a working tree to its checked out branch.
-This step is often used after previous steps have put the working tree into the
-desired state and is commonly followed by a [`git-push` step](git-push.md).
+`git-commit` commits all changes in a working tree to its checked out branch. If
+there are no differences from the current `HEAD`, this step is skipped and no
+new commit is created. This step is often used after previous steps have put the
+working tree into the desired state and is commonly followed by a [`git-push`
+step](git-push.md).
 
 ## Configuration
 

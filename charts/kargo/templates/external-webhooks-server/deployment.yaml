@@ -44,7 +44,7 @@ spec:
         {{- end }}
       {{- end }}
     spec:
-      serviceAccount: kargo-webhooks-server
+      serviceAccount: kargo-external-webhooks-server
       {{- with .Values.externalWebhooksServer.affinity | default .Values.global.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
@@ -77,7 +77,7 @@ spec:
         {{- end }}
         envFrom:
         - configMapRef:
-            name: kargo-webhooks-server
+            name: kargo-external-webhooks-server
         {{- with (concat .Values.global.envFrom .Values.externalWebhooksServer.envFrom) }}
           {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -85,14 +85,18 @@ spec:
         - containerPort: 9443
           name: webhooks-server
           protocol: TCP
+        {{- if or .Values.externalWebhooksServer.tls.enabled .Values.kubeconfigSecrets.kargo  }}
         volumeMounts:
+        {{- if .Values.externalWebhooksServer.tls.enabled }}
         - mountPath: /tmp/k8s-webhook-server/serving-certs
           name: cert
           readOnly: true
+        {{- end }}
         {{- if .Values.kubeconfigSecrets.kargo }}
         - mountPath: /etc/kargo/kubeconfigs
           name: kubeconfigs
           readOnly: true
+        {{- end }}
         {{- end }}
         {{- with .Values.externalWebhooksServer.securityContext | default .Values.global.securityContext }}
         securityContext:
@@ -100,16 +104,20 @@ spec:
         {{- end }}
         resources:
           {{- toYaml .Values.externalWebhooksServer.resources | nindent 10 }}
+      {{- if or .Values.externalWebhooksServer.tls.enabled .Values.kubeconfigSecrets.kargo  }}
       volumes:
-      - name: cert
-        secret:
-          defaultMode: 0644
-          secretName: kargo-webhooks-server-cert
+      {{- if .Values.externalWebhooksServer.tls.enabled }}
+        - name: cert
+          secret:
+            defaultMode: 0644
+            secretName: kargo-external-webhooks-server
+      {{- end }}
       {{- if .Values.kubeconfigSecrets.kargo }}
       - name: kubeconfigs
         secret:
           defaultMode: 0644
           secretName: {{ .Values.kubeconfigSecrets.kargo }}
+      {{- end }}
       {{- end }}
       {{- with .Values.externalWebhooksServer.nodeSelector | default .Values.global.nodeSelector }}
       nodeSelector:

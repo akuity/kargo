@@ -159,7 +159,7 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 			},
 			assertions: func(t *testing.T, c client.Client, result ctrl.Result, err error) {
 				require.NoError(t, err)
-				assert.True(t, result.Requeue)
+				assert.Equal(t, 100*time.Millisecond, result.RequeueAfter)
 
 				// Verify finalizer was added
 				stage := &kargoapi.Stage{}
@@ -1414,6 +1414,188 @@ func TestRegularStageReconciler_syncFreight(t *testing.T) {
 				)
 				require.NoError(t, err)
 				require.NotContains(t, freight.Status.CurrentlyIn, testStage.Name)
+			},
+		},
+		{
+			name: "removes verified freight and updates soak time when current soak is longer",
+			objects: []client.Object{
+				&kargoapi.Freight{ // The Stage is using this, and the Freight knows it.
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight-1",
+					},
+					Status: kargoapi.FreightStatus{
+						CurrentlyIn: map[string]kargoapi.CurrentStage{testStage.Name: {}},
+					},
+				},
+				&kargoapi.Freight{ // The Stage is using this, and the Freight knows it.
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight-2",
+					},
+					Status: kargoapi.FreightStatus{
+						CurrentlyIn: map[string]kargoapi.CurrentStage{testStage.Name: {}},
+					},
+				},
+				&kargoapi.Freight{ // Verified freight that should have soak time updated
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "verified-freight",
+					},
+					Status: kargoapi.FreightStatus{
+						CurrentlyIn: map[string]kargoapi.CurrentStage{
+							testStage.Name: {
+								Since: ptr.To(metav1.NewTime(time.Now().Add(-2 * time.Hour))), // In stage for 2 hours
+							},
+						},
+						VerifiedIn: map[string]kargoapi.VerifiedStage{
+							testStage.Name: {
+								LongestCompletedSoak: &metav1.Duration{Duration: 30 * time.Minute}, // Previous soak was 30 min
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, c client.Client, err error) {
+				require.NoError(t, err)
+
+				// Check that expected freight remain in CurrentlyIn (they're in the stage's FreightHistory)
+				freight := &kargoapi.Freight{}
+				err = c.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: testProject, Name: "fake-freight-1"},
+					freight,
+				)
+				require.NoError(t, err)
+				require.Contains(t, freight.Status.CurrentlyIn, testStage.Name)
+
+				err = c.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: testProject, Name: "fake-freight-2"},
+					freight,
+				)
+				require.NoError(t, err)
+				require.Contains(t, freight.Status.CurrentlyIn, testStage.Name)
+
+				// Check verified freight - should be removed from CurrentlyIn and soak time updated
+				err = c.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: testProject, Name: "verified-freight"},
+					freight,
+				)
+				require.NoError(t, err)
+				require.NotContains(t, freight.Status.CurrentlyIn, testStage.Name)
+				require.Contains(t, freight.Status.VerifiedIn, testStage.Name)
+				// Soak time should be updated since 2 hours > 30 minutes
+				assert.True(t, freight.Status.VerifiedIn[testStage.Name].LongestCompletedSoak.Duration > 30*time.Minute)
+				assert.True(t, freight.Status.VerifiedIn[testStage.Name].LongestCompletedSoak.Duration >= time.Hour)
+			},
+		},
+		{
+			name: "removes unverified freight without affecting verification status",
+			objects: []client.Object{
+				&kargoapi.Freight{ // The Stage is using this, and the Freight knows it.
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight-1",
+					},
+					Status: kargoapi.FreightStatus{
+						CurrentlyIn: map[string]kargoapi.CurrentStage{testStage.Name: {}},
+					},
+				},
+				&kargoapi.Freight{ // The Stage is using this, and the Freight knows it.
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight-2",
+					},
+					Status: kargoapi.FreightStatus{
+						CurrentlyIn: map[string]kargoapi.CurrentStage{testStage.Name: {}},
+					},
+				},
+				&kargoapi.Freight{ // Unverified freight that should just be removed
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "unverified-freight",
+					},
+					Status: kargoapi.FreightStatus{
+						CurrentlyIn: map[string]kargoapi.CurrentStage{
+							testStage.Name: {
+								Since: ptr.To(metav1.NewTime(time.Now().Add(-1 * time.Hour))),
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, c client.Client, err error) {
+				require.NoError(t, err)
+
+				// Check unverified freight - should just be removed from CurrentlyIn
+				freight := &kargoapi.Freight{}
+				err = c.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: testProject, Name: "unverified-freight"},
+					freight,
+				)
+				require.NoError(t, err)
+				require.NotContains(t, freight.Status.CurrentlyIn, testStage.Name)
+				require.NotContains(t, freight.Status.VerifiedIn, testStage.Name)
+			},
+		},
+		{
+			name: "preserves longer existing soak time for verified freight",
+			objects: []client.Object{
+				&kargoapi.Freight{ // The Stage is using this, and the Freight knows it.
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight-1",
+					},
+					Status: kargoapi.FreightStatus{
+						CurrentlyIn: map[string]kargoapi.CurrentStage{testStage.Name: {}},
+					},
+				},
+				&kargoapi.Freight{ // The Stage is using this, and the Freight knows it.
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight-2",
+					},
+					Status: kargoapi.FreightStatus{
+						CurrentlyIn: map[string]kargoapi.CurrentStage{testStage.Name: {}},
+					},
+				},
+				&kargoapi.Freight{ // Verified freight with longer existing soak time
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "longer-soak-freight",
+					},
+					Status: kargoapi.FreightStatus{
+						CurrentlyIn: map[string]kargoapi.CurrentStage{
+							testStage.Name: {
+								Since: ptr.To(metav1.NewTime(time.Now().Add(-1 * time.Hour))), // In stage for 1 hour
+							},
+						},
+						VerifiedIn: map[string]kargoapi.VerifiedStage{
+							testStage.Name: {
+								LongestCompletedSoak: &metav1.Duration{Duration: 3 * time.Hour}, // Previous soak was 3 hours
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, c client.Client, err error) {
+				require.NoError(t, err)
+
+				// Check longer soak freight - should be removed but soak time should not be updated
+				freight := &kargoapi.Freight{}
+				err = c.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: testProject, Name: "longer-soak-freight"},
+					freight,
+				)
+				require.NoError(t, err)
+				require.NotContains(t, freight.Status.CurrentlyIn, testStage.Name)
+				require.Contains(t, freight.Status.VerifiedIn, testStage.Name)
+				// Soak time should remain 3 hours since it's longer than the current 1 hour
+				assert.Equal(t, 3*time.Hour, freight.Status.VerifiedIn[testStage.Name].LongestCompletedSoak.Duration)
 			},
 		},
 	}

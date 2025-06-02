@@ -210,6 +210,14 @@ spec:
                 description: CurrentlyIn describes the Stages in which this Freight
                   is currently in use.
                 type: object
+              metadata:
+                additionalProperties:
+                  x-kubernetes-preserve-unknown-fields: true
+                description: |-
+                  Metadata is a map of arbitrary metadata associated with the Freight.
+                  This is useful for storing additional information about the Freight
+                  or Promotion that can be shared across steps or stages.
+                type: object
               verifiedIn:
                 additionalProperties:
                   description: VerifiedStage describes a Stage in which Freight has

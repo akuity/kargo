@@ -40,8 +40,11 @@ import (
 )
 
 type controllerOptions struct {
-	ShardName  string
+	ShardName string
+
 	KubeConfig string
+	QPS        float32
+	Burst      int
 
 	ArgoCDEnabled       bool
 	ArgoCDKubeConfig    string
@@ -77,10 +80,15 @@ func newControllerCommand() *cobra.Command {
 
 func (o *controllerOptions) complete() {
 	o.ShardName = os.GetEnv("SHARD_NAME", "")
+
 	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
+	o.QPS = types.MustParseFloat32(os.GetEnv("KUBE_API_QPS", "50.0"))
+	o.Burst = types.MustParseInt(os.GetEnv("KUBE_API_BURST", "300"))
+
 	o.ArgoCDEnabled = types.MustParseBool(os.GetEnv("ARGOCD_INTEGRATION_ENABLED", "true"))
 	o.ArgoCDKubeConfig = os.GetEnv("ARGOCD_KUBECONFIG", "")
 	o.ArgoCDNamespaceOnly = types.MustParseBool(os.GetEnv("ARGOCD_WATCH_ARGOCD_NAMESPACE_ONLY", "false"))
+
 	o.MetricsBindAddress = os.GetEnv("METRICS_BIND_ADDRESS", "0")
 	o.PprofBindAddress = os.GetEnv("PPROF_BIND_ADDRESS", "")
 }
@@ -148,6 +156,7 @@ func (o *controllerOptions) setupKargoManager(
 		return nil, stagesReconcilerCfg,
 			fmt.Errorf("error loading REST config for Kargo controller manager: %w", err)
 	}
+	kubernetes.ConfigureQPSBurst(ctx, restCfg, o.QPS, o.Burst)
 	restCfg.ContentType = runtime.ContentTypeJSON
 
 	scheme := runtime.NewScheme()
@@ -259,6 +268,7 @@ func (o *controllerOptions) setupArgoCDManager(ctx context.Context) (manager.Man
 	if err != nil {
 		return nil, fmt.Errorf("error loading REST config for Argo CD controller manager: %w", err)
 	}
+	kubernetes.ConfigureQPSBurst(ctx, restCfg, o.QPS, o.Burst)
 	restCfg.ContentType = runtime.ContentTypeJSON
 
 	argocdNamespace := libargocd.Namespace()

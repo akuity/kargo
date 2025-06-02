@@ -68,6 +68,10 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 						{Stage: "stage-1"},
 						{Stage: "stage-2"},
 					},
+					WebhookReceivers: []kargoapi.WebhookReceiverConfig{
+						{Name: "receiver-1"},
+						{Name: "receiver-2"},
+					},
 				},
 			},
 			objects: []client.Object{testNs},
@@ -500,6 +504,46 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, statusErr.ErrStatus.Details.Causes[1].Type)
 				assert.Contains(t, statusErr.ErrStatus.Details.Causes[1].Message,
 					`invalid pattern identifier "badpattern"`)
+			},
+		},
+		{
+			name: "duplicate webhook receiver names",
+			projectConfig: &kargoapi.ProjectConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testProjectName,
+					Namespace: testProjectName,
+				},
+				Spec: kargoapi.ProjectConfigSpec{
+					PromotionPolicies: []kargoapi.PromotionPolicy{
+						{Stage: "stage-1"},
+						{Stage: "stage-2"},
+					},
+					WebhookReceivers: []kargoapi.WebhookReceiverConfig{
+						{Name: "my-webhook-receiver"},
+						{Name: "my-webhook-receiver"},
+					},
+				},
+			},
+			objects: []client.Object{testNs},
+			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
+				assert.Empty(t, warnings)
+				require.Error(t, err)
+
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+
+				assert.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
+				assert.Equal(t, 1, len(statusErr.ErrStatus.Details.Causes))
+
+				// Sort errors for consistent testing
+				sort.Slice(statusErr.ErrStatus.Details.Causes, func(i, j int) bool {
+					return statusErr.ErrStatus.Details.Causes[i].Field < statusErr.ErrStatus.Details.Causes[j].Field
+				})
+
+				assert.Equal(t, "spec.webhookReceivers[1].name", statusErr.ErrStatus.Details.Causes[0].Field)
+				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, statusErr.ErrStatus.Details.Causes[0].Type)
+				assert.Contains(t, statusErr.ErrStatus.Details.Causes[0].Message,
+					"webhook receiver name already defined at spec.webhookReceivers[0]")
 			},
 		},
 	}

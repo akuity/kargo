@@ -14,15 +14,18 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
 	"github.com/akuity/kargo/internal/server/kubernetes"
+	"github.com/akuity/kargo/internal/types"
 	"github.com/akuity/kargo/internal/webhook/external"
 	versionpkg "github.com/akuity/kargo/pkg/x/version"
 )
 
 type externalWebhooksServerOptions struct {
 	KubeConfig string
+	QPS        float32
+	Burst      int
 
-	Host string
-	Port string
+	BindAddress string
+	Port        string
 
 	Logger *logging.Logger
 }
@@ -51,7 +54,10 @@ func newExternalWebhooksServerCommand() *cobra.Command {
 
 func (o *externalWebhooksServerOptions) complete() {
 	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
-	o.Host = os.GetEnv("HOST", "0.0.0.0")
+	o.QPS = types.MustParseFloat32(os.GetEnv("KUBE_API_QPS", "50.0"))
+	o.Burst = types.MustParseInt(os.GetEnv("KUBE_API_BURST", "300"))
+
+	o.BindAddress = os.GetEnv("BIND_ADDRESS", "0.0.0.0")
 	o.Port = os.GetEnv("PORT", "8080")
 }
 
@@ -71,6 +77,7 @@ func (o *externalWebhooksServerOptions) run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("error getting Kubernetes client REST config: %w", err)
 	}
+	kubernetes.ConfigureQPSBurst(ctx, restCfg, o.QPS, o.Burst)
 
 	cluster, err := libCluster.New(restCfg)
 	if err != nil {
@@ -91,8 +98,28 @@ func (o *externalWebhooksServerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error registering warehouse by repo url indexer: %w", err)
 	}
 
+	err = cluster.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.ProjectConfig{},
+		indexer.ProjectConfigsByWebhookReceiverPathsField,
+		indexer.ProjectConfigsByWebhookReceiverPaths,
+	)
+	if err != nil {
+		return fmt.Errorf("error registering project configs by webhook receiver path indexer: %w", err)
+	}
+
+	go func() {
+		err = cluster.Start(ctx)
+	}()
+	if !cluster.GetCache().WaitForCacheSync(ctx) {
+		return fmt.Errorf("error waiting for cache to sync: %w", err)
+	}
+	if err != nil {
+		return fmt.Errorf("error starting cluster: %w", err)
+	}
+
 	srv := external.NewServer(serverCfg, cluster.GetClient())
-	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.Host, o.Port))
+	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.BindAddress, o.Port))
 	if err != nil {
 		return fmt.Errorf("error creating listener: %w", err)
 	}

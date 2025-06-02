@@ -19,6 +19,7 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
 	"github.com/akuity/kargo/internal/server/kubernetes"
+	"github.com/akuity/kargo/internal/types"
 	libWebhook "github.com/akuity/kargo/internal/webhook/kubernetes"
 	"github.com/akuity/kargo/internal/webhook/kubernetes/freight"
 	"github.com/akuity/kargo/internal/webhook/kubernetes/project"
@@ -32,6 +33,8 @@ import (
 
 type kubernetesWebhooksServerOptions struct {
 	KubeConfig string
+	QPS        float32
+	Burst      int
 
 	MetricsBindAddress string
 	PprofBindAddress   string
@@ -63,6 +66,9 @@ func newKubernetesWebhooksServerCommand() *cobra.Command {
 
 func (o *kubernetesWebhooksServerOptions) complete() {
 	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
+	o.QPS = types.MustParseFloat32(os.GetEnv("KUBE_API_QPS", "50.0"))
+	o.Burst = types.MustParseInt(os.GetEnv("KUBE_API_BURST", "300"))
+
 	o.MetricsBindAddress = os.GetEnv("METRICS_BIND_ADDRESS", "0")
 	o.PprofBindAddress = os.GetEnv("PPROF_BIND_ADDRESS", "")
 }
@@ -83,6 +89,7 @@ func (o *kubernetesWebhooksServerOptions) run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("error getting REST config: %w", err)
 	}
+	kubernetes.ConfigureQPSBurst(ctx, restCfg, o.QPS, o.Burst)
 
 	scheme := runtime.NewScheme()
 	if err = corev1.AddToScheme(scheme); err != nil {

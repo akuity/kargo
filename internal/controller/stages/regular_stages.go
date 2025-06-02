@@ -331,7 +331,7 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// The reason to requeue is to ensure that a possible deletion of the Stage
 	// directly after the finalizer was added is handled without delay.
 	if ok, err := api.EnsureFinalizer(ctx, r.client, stage); ok || err != nil {
-		return ctrl.Result{Requeue: ok}, err
+		return ctrl.Result{RequeueAfter: 100 * time.Millisecond}, err
 	}
 
 	// Reconcile the Stage.
@@ -362,7 +362,7 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 	// Immediate requeue if needed.
 	if needsRequeue {
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: 100 * time.Millisecond}, nil
 	}
 	// Otherwise, requeue after a delay.
 	// TODO: Make the requeue delay configurable.
@@ -825,7 +825,7 @@ func (r *RegularStageReconciler) syncFreight(ctx context.Context, stage *kargoap
 	for _, f := range freight {
 		if !curFreight.Includes(f.Name) {
 			newStatus := f.Status.DeepCopy()
-			delete(newStatus.CurrentlyIn, stage.Name)
+			newStatus.RemoveCurrentStage(stage.Name)
 			if err := kubeclient.PatchStatus(ctx, r.client, &f, func(status *kargoapi.FreightStatus) {
 				*status = *newStatus
 			}); err != nil {
@@ -1066,6 +1066,7 @@ func (r *RegularStageReconciler) verifyStageFreight(
 	// verification as successful.
 	if stage.Spec.Verification == nil {
 		newVI := kargoapi.VerificationInfo{
+			ID:         uuid.NewString(),
 			StartTime:  ptr.To(metav1.NewTime(startTime)),
 			FinishTime: ptr.To(metav1.NewTime(endTime())),
 			Phase:      kargoapi.VerificationPhaseSuccessful,

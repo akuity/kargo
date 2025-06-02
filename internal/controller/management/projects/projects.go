@@ -67,7 +67,7 @@ type reconciler struct {
 	reconcileFn func(
 		context.Context,
 		*kargoapi.Project,
-	) (kargoapi.ProjectStatus, bool, error)
+	) (kargoapi.ProjectStatus, error)
 
 	ensureNamespaceFn func(context.Context, *kargoapi.Project) error
 
@@ -230,7 +230,7 @@ func (r *reconciler) Reconcile(
 	}
 
 	logger.Debug("reconciling Project")
-	newStatus, needsRequeue, reconcileErr := r.reconcileFn(ctx, project)
+	newStatus, reconcileErr := r.reconcileFn(ctx, project)
 	logger.Debug("done reconciling Project")
 
 	// Patch the status of the Project.
@@ -249,10 +249,6 @@ func (r *reconciler) Reconcile(
 	if reconcileErr != nil {
 		return ctrl.Result{}, reconcileErr
 	}
-	// Immediate requeue if needed.
-	if needsRequeue {
-		return ctrl.Result{Requeue: true}, nil
-	}
 	// Otherwise, requeue after a delay.
 	// TODO: Make the requeue delay configurable.
 	return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
@@ -261,52 +257,48 @@ func (r *reconciler) Reconcile(
 func (r *reconciler) reconcile(
 	ctx context.Context,
 	project *kargoapi.Project,
-) (kargoapi.ProjectStatus, bool, error) {
+) (kargoapi.ProjectStatus, error) {
 	logger := logging.LoggerFromContext(ctx)
 	status := *project.Status.DeepCopy()
 
-	var requestRequeue bool
 	subReconcilers := []struct {
-		name string
-		// Returns updated status, whether to stop the loop, and possibly an error
-		reconcile func() (kargoapi.ProjectStatus, bool, error)
+		name      string
+		reconcile func() (kargoapi.ProjectStatus, error)
 	}{
 		{
 			name: "migrate spec to ProjectConfig",
-			reconcile: func() (kargoapi.ProjectStatus, bool, error) {
+			reconcile: func() (kargoapi.ProjectStatus, error) {
 				// TODO(hidde): Remove this migration code when the spec field is
 				// removed from Project.
 				migrated, err := r.migrateSpecToProjectConfig(ctx, project)
 				if err != nil {
-					return status, true, err // Stop the loop
+					return status, err
 				}
 				if migrated {
 					logger.Debug("migrated Project spec to ProjectConfig")
-					requestRequeue = true
-					return status, true, nil // Stop the loop
+					return status, nil
 				}
-				return status, false, nil // Continue
+				return status, nil
 			},
 		},
 		{
 			name: "syncing project resources",
-			reconcile: func() (kargoapi.ProjectStatus, bool, error) {
+			reconcile: func() (kargoapi.ProjectStatus, error) {
 				newStatus, err := r.syncProject(ctx, project)
 				if err != nil {
-					return newStatus, true, err // Stop the loop
+					return newStatus, err
 				}
-				return newStatus, false, nil // Continue
+				return newStatus, nil
 			},
 		},
 		{
 			name: "collecting project stats",
-			reconcile: func() (kargoapi.ProjectStatus, bool, error) {
+			reconcile: func() (kargoapi.ProjectStatus, error) {
 				newStatus, err := r.collectStats(ctx, project)
 				if err != nil {
-					logger.Error(err, "error collecting project stats")
-					return newStatus, true, err // Stop the loop
+					return newStatus, err
 				}
-				return newStatus, false, nil // Continue
+				return newStatus, nil
 			},
 		},
 	}
@@ -315,13 +307,12 @@ func (r *reconciler) reconcile(
 
 		// Reconcile the Project with the sub-reconciler.
 		var err error
-		var shouldBreak bool
-		status, shouldBreak, err = subR.reconcile()
+		status, err = subR.reconcile()
 
 		// If an error occurred during the sub-reconciler, then we should
 		// return the error which will cause the Project to be requeued.
 		if err != nil {
-			return status, false, err
+			return status, err
 		}
 
 		// Patch the status of the Project after each sub-reconciler to show
@@ -331,13 +322,9 @@ func (r *reconciler) reconcile(
 		}); err != nil {
 			logger.Error(err, fmt.Sprintf("failed to update Project status after %s", subR.name))
 		}
-
-		if shouldBreak {
-			break
-		}
 	}
 
-	return status, requestRequeue, nil
+	return status, nil
 }
 
 // syncProject ensures the existence of the Project's namespace and any
@@ -884,6 +871,10 @@ func (r *reconciler) migrateSpecToProjectConfig(
 		return false, nil
 	}
 
+	if api.HasMigrationAnnotationValue(project, api.MigratedProjectSpecToProjectConfig) {
+		return false, nil
+	}
+
 	if len(project.Spec.PromotionPolicies) != 0 { // nolint:staticcheck
 		projectCfg := &kargoapi.ProjectConfig{
 			ObjectMeta: metav1.ObjectMeta{
@@ -911,15 +902,15 @@ func (r *reconciler) migrateSpecToProjectConfig(
 		}
 	}
 
-	// Now remove the spec entirely.
-	project.Spec = nil // nolint:staticcheck
+	// Mark the Project as migrated. This will prevent the migration code from
+	// running again in the future.
+	api.AddMigrationAnnotationValue(project, api.MigratedProjectSpecToProjectConfig)
 	if err := r.client.Update(ctx, project); err != nil {
 		return false, fmt.Errorf(
-			"error updating Project %q to remove spec: %w",
+			"error updating Project %q to add migrated label: %w",
 			project.Name, err,
 		)
 	}
-
 	return true, nil
 }
 

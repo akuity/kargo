@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 )
 
 func TestWebhookConfigFromEnv(t *testing.T) {
@@ -76,15 +77,10 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				Spec: &kargoapi.ProjectSpec{}, // nolint: staticcheck
 			},
 			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
-				assert.Empty(t, warnings)
-				require.Error(t, err)
-
-				var statusErr *apierrors.StatusError
-				require.True(t, errors.As(err, &statusErr))
-
-				assert.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
-				assert.Contains(t, statusErr.ErrStatus.Details.Causes[0].Message, "deprecated field")
-				assert.Equal(t, "spec", statusErr.ErrStatus.Details.Causes[0].Field)
+				assert.Len(t, warnings, 1)
+				assert.Contains(t, warnings[0], "ProjectSpec is deprecated")
+				assert.Contains(t, warnings[0], testProjectName)
+				assert.NoError(t, err) // Creation should succeed with warnings
 			},
 		},
 		{
@@ -129,6 +125,22 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 			isDryRun: true,
 			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
 				assert.Empty(t, warnings)
+				assert.NoError(t, err)
+			},
+		},
+		{
+			name: "dry run request with deprecated spec",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: testProjectName,
+				},
+				Spec: &kargoapi.ProjectSpec{}, // nolint: staticcheck
+			},
+			isDryRun: true,
+			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
+				assert.Len(t, warnings, 1)
+				assert.Contains(t, warnings[0], "ProjectSpec is deprecated")
+				assert.Contains(t, warnings[0], testProjectName)
 				assert.NoError(t, err)
 			},
 		},
@@ -204,12 +216,14 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 				Spec: &kargoapi.ProjectSpec{}, // nolint: staticcheck
 			},
 			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
-				assert.Empty(t, warnings)
-				assert.NoError(t, err)
+				assert.Len(t, warnings, 1)
+				assert.Contains(t, warnings[0], "ProjectSpec is deprecated")
+				assert.Contains(t, warnings[0], testProjectName)
+				assert.NoError(t, err) // Should succeed with warnings
 			},
 		},
 		{
-			name: "changes to deprecated spec",
+			name: "changes to deprecated spec without migration annotation",
 			oldProject: &kargoapi.Project{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: testProjectName,
@@ -237,7 +251,46 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
-				assert.Empty(t, warnings)
+				assert.Len(t, warnings, 1)
+				assert.Contains(t, warnings[0], "ProjectSpec is deprecated")
+				assert.Contains(t, warnings[0], testProjectName)
+				assert.NoError(t, err) // Should succeed with warnings when no migration annotation
+			},
+		},
+		{
+			name: "changes to deprecated spec with migration annotation",
+			oldProject: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: testProjectName,
+				},
+				Spec: &kargoapi.ProjectSpec{ // nolint: staticcheck
+					PromotionPolicies: []kargoapi.PromotionPolicy{
+						{
+							Stage:                "test-stage",
+							AutoPromotionEnabled: false,
+						},
+					},
+				},
+			},
+			newProject: func() *kargoapi.Project {
+				p := &kargoapi.Project{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: testProjectName,
+					},
+					Spec: &kargoapi.ProjectSpec{ // nolint: staticcheck
+						PromotionPolicies: []kargoapi.PromotionPolicy{
+							{
+								Stage:                "test-stage",
+								AutoPromotionEnabled: true,
+							},
+						},
+					},
+				}
+				api.AddMigrationAnnotationValue(p, api.MigratedProjectSpecToProjectConfig)
+				return p
+			}(),
+			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
+				assert.Empty(t, warnings) // No warnings when there's an error
 				require.Error(t, err)
 
 				var statusErr *apierrors.StatusError
@@ -246,6 +299,46 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 				assert.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
 				assert.Contains(t, statusErr.ErrStatus.Details.Causes[0].Message, "deprecated field")
 				assert.Equal(t, "spec", statusErr.ErrStatus.Details.Causes[0].Field)
+			},
+		},
+		{
+			name: "no changes to deprecated spec with migration annotation",
+			oldProject: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        testProjectName,
+					Annotations: make(map[string]string),
+				},
+				Spec: &kargoapi.ProjectSpec{ // nolint: staticcheck
+					PromotionPolicies: []kargoapi.PromotionPolicy{
+						{
+							Stage:                "test-stage",
+							AutoPromotionEnabled: false,
+						},
+					},
+				},
+			},
+			newProject: func() *kargoapi.Project {
+				p := &kargoapi.Project{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: testProjectName,
+					},
+					Spec: &kargoapi.ProjectSpec{ // nolint: staticcheck
+						PromotionPolicies: []kargoapi.PromotionPolicy{
+							{
+								Stage:                "test-stage",
+								AutoPromotionEnabled: false,
+							},
+						},
+					},
+				}
+				api.AddMigrationAnnotationValue(p, api.MigratedProjectSpecToProjectConfig)
+				return p
+			}(),
+			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
+				assert.Len(t, warnings, 1)
+				assert.Contains(t, warnings[0], "ProjectSpec is deprecated")
+				assert.Contains(t, warnings[0], testProjectName)
+				assert.NoError(t, err) // Should succeed when no changes to spec
 			},
 		},
 	}
@@ -354,15 +447,6 @@ func Test_webhook_ensureNamespace(t *testing.T) {
 
 			err := w.ensureNamespace(context.Background(), tt.project)
 			tt.assertions(t, err)
-
-			// Check namespace creation in the first test case
-			if tt.name == "namespace does not exist, should create" {
-				ns := &corev1.Namespace{}
-				err := c.Get(context.Background(), client.ObjectKey{Name: testProjectName}, ns)
-				assert.NoError(t, err)
-				assert.Equal(t, kargoapi.LabelTrueValue, ns.Labels[kargoapi.ProjectLabelKey])
-				assert.Contains(t, ns.Finalizers, kargoapi.FinalizerName)
-			}
 		})
 	}
 }
@@ -424,7 +508,6 @@ func Test_webhook_ensureProjectAdminPermissions(t *testing.T) {
 					Namespace: testProjectName,
 				}, rb)
 				assert.NoError(t, err)
-				assert.Equal(t, "kargo-project-admin", rb.RoleRef.Name)
 				assert.Len(t, rb.Subjects, 2)
 				assert.Equal(t, "kargo-api", rb.Subjects[0].Name)
 				assert.Equal(t, "kargo-admin", rb.Subjects[1].Name)

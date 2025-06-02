@@ -5,6 +5,7 @@ syntax = "proto2";
 
 package github.com.akuity.kargo.api.v1alpha1;
 
+import "k8s.io/api/core/v1/generated.proto";
 import "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.proto";
 import "k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto";
 import "k8s.io/apimachinery/pkg/runtime/generated.proto";
@@ -493,6 +494,11 @@ message FreightStatus {
   // might wish to promote a piece of Freight to a given Stage without
   // transiting the entire pipeline.
   map<string, ApprovedStage> approvedFor = 2;
+
+  // Metadata is a map of arbitrary metadata associated with the Freight.
+  // This is useful for storing additional information about the Freight
+  // or Promotion that can be shared across steps or stages.
+  map<string, .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON> metadata = 4;
 }
 
 // GitCommit describes a specific commit from a specific Git repository.
@@ -538,6 +544,19 @@ message GitDiscoveryResult {
   //
   // +optional
   repeated DiscoveredCommit commits = 2;
+}
+
+// GitHubWebhookReceiver describes a webhook receiver that is compatible with
+// GitHub payloads.
+message GitHubWebhookReceiver {
+  // SecretRef contains a reference to a Secret in the same namespace as the ProjectConfig.
+  //
+  // The Secret is expected to contain a `token` key with the secret token configured for
+  // in GitHub for the webhook. For more information about this token, please refer to the
+  // GitHub documentation: https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
+  //
+  // The value of the token key goes in the "Secret" field when registering a GitHub App or webhook in the GitHub UI.
+  optional .k8s.io.api.core.v1.LocalObjectReference secretRef = 1;
 }
 
 // GitSubscription defines a subscription to a Git repository.
@@ -901,6 +920,9 @@ message ProjectConfig {
 
   // Spec describes the configuration of a Project.
   optional ProjectConfigSpec spec = 2;
+
+  // Status describes the current status of a ProjectConfig.
+  optional ProjectConfigStatus status = 3;
 }
 
 // ProjectConfigList is a list of ProjectConfig resources.
@@ -918,6 +940,23 @@ message ProjectConfigSpec {
   // PromotionPolicies defines policies governing the promotion of Freight to
   // specific Stages within the Project.
   repeated PromotionPolicy promotionPolicies = 1;
+
+  // WebhookReceivers describes Project-specific webhook receivers used for
+  // processing events from various external platforms
+  repeated WebhookReceiverConfig receivers = 2;
+}
+
+// ProjectConfigStatus describes the current status of a ProjectConfig.
+message ProjectConfigStatus {
+  // Conditions contains the last observations of the Project Config's current state.
+  // +patchMergeKey=type
+  // +patchStrategy=merge
+  // +listType=map
+  // +listMapKey=type
+  repeated .k8s.io.apimachinery.pkg.apis.meta.v1.Condition conditions = 1;
+
+  // WebhookReceivers describes the status of Project-specific webhook receivers.
+  repeated WebhookReceiver receivers = 2;
 }
 
 // ProjectList is a list of Project resources.
@@ -1476,6 +1515,8 @@ message Verification {
 // process.
 message VerificationInfo {
   // ID is the identifier of the Verification process.
+  //
+  // +kubebuilder:validation:Required
   optional string id = 4;
 
   // Actor is the name of the entity that initiated or aborted the
@@ -1483,12 +1524,16 @@ message VerificationInfo {
   optional string actor = 7;
 
   // StartTime is the time at which the Verification process was started.
+  //
+  // +kubebuilder:validation:Required
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time startTime = 5;
 
   // Phase describes the current phase of the Verification process. Generally,
   // this will be a reflection of the underlying AnalysisRun's phase, however,
   // there are exceptions to this, such as in the case where an AnalysisRun
   // cannot be launched successfully.
+  //
+  // +kubebuilder:validation:Required
   optional string phase = 1;
 
   // Message may contain additional information about why the verification
@@ -1618,5 +1663,32 @@ message WarehouseStatus {
 
   // DiscoveredArtifacts holds the artifacts discovered by the Warehouse.
   optional DiscoveredArtifacts discoveredArtifacts = 7;
+}
+
+// WebhookReceiver describes a path used to receive webhook events.
+message WebhookReceiver {
+  // Name is the name of the webhook receiver.
+  optional string name = 1;
+
+  // Path is the path to the receiver's webhook endpoint.
+  optional string path = 3;
+
+  // URL includes the full address of the receiver's webhook endpoint.
+  optional string url = 4;
+}
+
+// WebhookReceiverConfig describes the configuration for a single webhook
+// receiver.
+message WebhookReceiverConfig {
+  // Name is the name of the webhook receiver.
+  optional string name = 1;
+
+  // GitHub contains the configuration for a webhook receiver that is compatible with
+  // GitHub payloads.
+  //
+  // TODO(fuskovic): Make this mutually exclusive with configs for other platforms.
+  //
+  // +kubebuilder:validation:Required
+  optional GitHubWebhookReceiver github = 2;
 }
 

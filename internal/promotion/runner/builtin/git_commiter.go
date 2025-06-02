@@ -82,6 +82,8 @@ func (g *gitCommitter) run(
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error checking for diffs in working tree: %w", err)
 	}
+
+	// Only commit if diffs have been found
 	if hasDiffs {
 		commitOpts := &git.CommitOptions{}
 		if cfg.Author != nil {
@@ -96,13 +98,20 @@ func (g *gitCommitter) run(
 				fmt.Errorf("error committing to working tree: %w", err)
 		}
 	}
+
 	commitID, err := workTree.LastCommitID()
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error getting last commit ID: %w", err)
 	}
+
+	status := kargoapi.PromotionStepStatusSucceeded
+	// If nothing was committed, return Skipped status instead.
+	if !hasDiffs {
+		status = kargoapi.PromotionStepStatusSkipped
+	}
 	return promotion.StepResult{
-		Status: kargoapi.PromotionStepStatusSucceeded,
+		Status: status,
 		Output: map[string]any{stateKeyCommit: commitID},
 	}, nil
 }

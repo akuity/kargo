@@ -135,10 +135,21 @@ func (w *webhook) validateSpec(
 	f *field.Path,
 	spec kargoapi.ProjectConfigSpec,
 ) field.ErrorList {
-	return w.validatePromotionPolicies(
+	var fieldErrs field.ErrorList
+	if errs := w.validatePromotionPolicies(
 		f.Child("promotionPolicies"),
 		spec.PromotionPolicies,
-	)
+	); errs != nil {
+		fieldErrs = append(fieldErrs, errs...)
+	}
+
+	if errs := w.validateWebhookReceivers(
+		f.Child("webhookReceivers"),
+		spec.WebhookReceivers,
+	); errs != nil {
+		fieldErrs = append(fieldErrs, errs...)
+	}
+	return fieldErrs
 }
 
 func (w *webhook) validatePromotionPolicies(
@@ -212,6 +223,29 @@ func (w *webhook) validatePromotionPolicies(
 		}
 	}
 
+	return errs
+}
+
+func (w *webhook) validateWebhookReceivers(
+	f *field.Path,
+	webhookReceivers []kargoapi.WebhookReceiverConfig,
+) field.ErrorList {
+	var errs field.ErrorList
+	dupes := make(map[string]int)
+	for i, r := range webhookReceivers {
+		if existingIndex, exists := dupes[r.Name]; exists {
+			errs = append(errs, field.Invalid(
+				f.Index(i).Child("name"),
+				r.Name,
+				fmt.Sprintf(
+					"webhook receiver name already defined at %s",
+					f.Index(existingIndex),
+				),
+			))
+			continue
+		}
+		dupes[r.Name] = i
+	}
 	return errs
 }
 

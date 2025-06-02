@@ -15,6 +15,12 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
+    - jsonPath: .status.conditions[?(@.type=="Ready")].status
+      name: Ready
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Ready")].message
+      name: Status
+      type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
@@ -143,8 +149,138 @@ spec:
                       set
                     rule: 'has(self.stage) ? !has(self.stageSelector) : has(self.stageSelector)'
                 type: array
+              webhookReceivers:
+                description: |-
+                  WebhookReceivers describes Project-specific webhook receivers used for
+                  processing events from various external platforms
+                items:
+                  description: |-
+                    WebhookReceiverConfig describes the configuration for a single webhook
+                    receiver.
+                  properties:
+                    github:
+                      description: |
+                        GitHub contains the configuration for a webhook receiver that is compatible with
+                        GitHub payloads.
+                      properties:
+                        secretRef:
+                          description: |-
+                            SecretRef contains a reference to a Secret in the same namespace as the ProjectConfig.
+
+                            The Secret is expected to contain a `token` key with the secret token configured for
+                            in GitHub for the webhook. For more information about this token, please refer to the
+                            GitHub documentation: https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
+
+                            The value of the token key goes in the "Secret" field when registering a GitHub App or webhook in the GitHub UI.
+                          properties:
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      required:
+                      - secretRef
+                      type: object
+                    name:
+                      description: Name is the name of the webhook receiver.
+                      type: string
+                  required:
+                  - github
+                  type: object
+                type: array
+            type: object
+          status:
+            description: Status describes the current status of a ProjectConfig.
+            properties:
+              conditions:
+                description: Conditions contains the last observations of the Project
+                  Config's current state.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              webhookReceivers:
+                description: WebhookReceivers describes the status of Project-specific
+                  webhook receivers.
+                items:
+                  description: WebhookReceiver describes a path used to receive webhook
+                    events.
+                  properties:
+                    name:
+                      description: Name is the name of the webhook receiver.
+                      type: string
+                    path:
+                      description: Path is the path to the receiver's webhook endpoint.
+                      type: string
+                    url:
+                      description: URL includes the full address of the receiver's
+                        webhook endpoint.
+                      type: string
+                  type: object
+                type: array
             type: object
         type: object
     served: true
     storage: true
-    subresources: {}
+    subresources:
+      status: {}

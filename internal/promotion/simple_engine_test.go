@@ -212,6 +212,36 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 			},
 		},
 		{
+			name: "execute the skipped step",
+			steps: []Step{
+				{Kind: "skipped-step", Alias: "step1"},
+				{Kind: "skipped-step", Alias: "step2"},
+			},
+			assertions: func(t *testing.T, result Result) {
+				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.Status)
+				assert.Empty(t, result.Message)
+				assert.Equal(t, int64(1), result.CurrentStep)
+
+				// Verify the result contains metadata from both steps
+				assert.Len(t, result.StepExecutionMetadata, 2)
+				for _, metadata := range result.StepExecutionMetadata {
+					assert.Equal(t, kargoapi.PromotionStepStatusSkipped, metadata.Status)
+					assert.NotNil(t, metadata.StartedAt)
+					assert.NotNil(t, metadata.FinishedAt)
+				}
+
+				// Verify state contains output from both steps
+				assert.Equal(t, promotion.State{
+					"step1": map[string]any{
+						"key": "value",
+					},
+					"step2": map[string]any{
+						"key": "value",
+					},
+				}, result.State)
+			},
+		},
+		{
 			name: "conditional step execution",
 			steps: []Step{
 				{Kind: "success-step", Alias: "step1"},
@@ -598,6 +628,13 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 					StepName: "success-step",
 					RunResult: promotion.StepResult{
 						Status: kargoapi.PromotionStepStatusSucceeded,
+						Output: map[string]any{"key": "value"},
+					},
+				},
+				&promotion.MockStepRunner{
+					StepName: "skipped-step",
+					RunResult: promotion.StepResult{
+						Status: kargoapi.PromotionStepStatusSkipped,
 						Output: map[string]any{"key": "value"},
 					},
 				},

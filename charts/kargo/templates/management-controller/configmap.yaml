@@ -8,6 +8,7 @@ metadata:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.managementController.labels" . | nindent 4 }}
 data:
+  EXTERNAL_WEBHOOK_SERVER_BASE_URL: {{ include "kargo.externalWebhooksServer.baseURL" . }}
   KARGO_NAMESPACE: {{ .Release.Namespace }}
   {{- if .Values.controller.serviceAccount.clusterWideSecretReadingEnabled }}
   MANAGE_CONTROLLER_ROLE_BINDINGS: "false"

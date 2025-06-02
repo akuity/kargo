@@ -677,10 +677,10 @@ pipeline.
     
 Now is a good time to explore the UI some more.
 
-* To see more information about the `test` `Stage`, click the arrow icon in the
-  header of the `Stage`'s node in the pipeline:
+* To see more information about the `test` `Stage`, click the staggered bars
+  icon in the header of the `Stage`'s node in the pipeline:
 
-  ![Kargo Stage Arrow Button](img/kargo-stage-arrow-button.png)
+  ![Kargo Stage Staggered Bars Button](img/kargo-stage-staggered-bars-button.png)
 
   This view provides a comprehensive overview of the `Stage`s health, current
   `Freight`, histories of `Promotion`s and of `Freight` previously promoted to

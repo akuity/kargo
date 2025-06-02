@@ -3,7 +3,18 @@ package api
 import (
 	"encoding/json"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+)
+
+const (
+	// MigratedProjectSpecToProjectConfig is the migration type for migrating
+	// ProjectSpec resources to ProjectConfig resources. This migration is
+	// performed by the controller when it detects that a Project resource
+	// has a ProjectSpec resource in its spec, which is the case for Projects
+	// created before the introduction of ProjectConfig resources.
+	MigratedProjectSpecToProjectConfig = "ProjectSpecToProjectConfig"
 )
 
 // RefreshAnnotationValue returns the value of the AnnotationKeyRefresh
@@ -94,4 +105,45 @@ func AbortPromotionAnnotationValue(annotations map[string]string) (*kargoapi.Abo
 		return nil, false
 	}
 	return &req, ok
+}
+
+// HasMigrationAnnotationValue checks if the AnnotationKeyMigrated annotation
+// is present in the provided annotations map and if it contains the specified
+// migration type as a key with a value of true.
+func HasMigrationAnnotationValue(obj client.Object, migrationType string) bool {
+	annotations := obj.GetAnnotations()
+	if annotations == nil {
+		return false
+	}
+	migrated, ok := annotations[kargoapi.AnnotationKeyMigrated]
+	if !ok {
+		return false
+	}
+	var migrations map[string]bool
+	if err := json.Unmarshal([]byte(migrated), &migrations); err != nil {
+		return false
+	}
+	return migrations[migrationType]
+}
+
+// AddMigrationAnnotationValue updates the AnnotationKeyMigrated annotation
+// in the provided annotations map to indicate that the specified migration
+// type has been performed. If the annotation does not exist, it is created.
+func AddMigrationAnnotationValue(obj client.Object, migrationType string) {
+	annotations := obj.GetAnnotations()
+	migrated, ok := annotations[kargoapi.AnnotationKeyMigrated]
+	if !ok {
+		migrated = "{}"
+	}
+	var migrations map[string]bool
+	if err := json.Unmarshal([]byte(migrated), &migrations); err != nil {
+		migrations = make(map[string]bool)
+	}
+	migrations[migrationType] = true
+	b, _ := json.Marshal(migrations)
+	if annotations == nil {
+		annotations = make(map[string]string, 1)
+	}
+	annotations[kargoapi.AnnotationKeyMigrated] = string(b)
+	obj.SetAnnotations(annotations)
 }
