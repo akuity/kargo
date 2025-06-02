@@ -131,6 +131,9 @@ type GitCloneConfigAuthor struct {
 }
 
 type Checkout struct {
+	// Optional alias for this checkout. If provided, it will be used as the key in the
+	// 'commits' output map.
+	As string `json:"as,omitempty"`
 	// The branch to checkout. Mutually exclusive with 'commit' and 'tag'. If none of these are
 	// specified, the default branch is checked out.
 	Branch string `json:"branch,omitempty"`
