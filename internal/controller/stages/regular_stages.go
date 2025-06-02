@@ -1065,6 +1065,7 @@ func (r *RegularStageReconciler) verifyStageFreight(
 	// verification as successful.
 	if stage.Spec.Verification == nil {
 		newVI := kargoapi.VerificationInfo{
+			ID:         uuid.NewString(),
 			StartTime:  ptr.To(metav1.NewTime(startTime)),
 			FinishTime: ptr.To(metav1.NewTime(endTime())),
 			Phase:      kargoapi.VerificationPhaseSuccessful,
