@@ -668,7 +668,7 @@ func sign(t *testing.T, s string, b []byte) string {
 	t.Helper()
 
 	mac := hmac.New(sha256.New, []byte(s))
-	mac.Write(b)
+	_, _ = mac.Write(b)
 	return fmt.Sprintf("sha256=%s",
 		hex.EncodeToString(mac.Sum(nil)),
 	)
