@@ -199,7 +199,7 @@ func TestReconciler_syncWebhookReceivers(t *testing.T) {
 			},
 		},
 		{
-			name: "success",
+			name: "success - github",
 			reconciler: func() *reconciler {
 				scheme := runtime.NewScheme()
 				require.NoError(t, corev1.AddToScheme(scheme))
@@ -238,7 +238,7 @@ func TestReconciler_syncWebhookReceivers(t *testing.T) {
 									Namespace: "fake-namespace",
 								},
 								Data: map[string][]byte{
-									"token": []byte("fake-secret-data"),
+									kargoapi.WebhookReceiverSecretKeyGithub: []byte("fake-secret-data"),
 								},
 							},
 						).
@@ -273,6 +273,87 @@ func TestReconciler_syncWebhookReceivers(t *testing.T) {
 						"fake-webhook-receiver-name",
 						pc.Name,
 						kargoapi.WebhookReceiverTypeGitHub,
+						"fake-secret-data",
+					),
+					pc.Status.WebhookReceivers[0].Path,
+				)
+			},
+		},
+		{
+			name: "success - quay",
+			reconciler: func() *reconciler {
+				scheme := runtime.NewScheme()
+				require.NoError(t, corev1.AddToScheme(scheme))
+				require.NoError(t, kargoapi.AddToScheme(scheme))
+				return newReconciler(
+					fake.NewClientBuilder().
+						WithScheme(scheme).
+						WithObjects(
+							&kargoapi.ProjectConfig{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "fake-name",
+									Namespace: "fake-namespace",
+								},
+								Spec: kargoapi.ProjectConfigSpec{},
+							},
+							&kargoapi.ProjectConfig{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "fake-project",
+									Namespace: "fake-namespace",
+								},
+								Spec: kargoapi.ProjectConfigSpec{
+									WebhookReceivers: []kargoapi.WebhookReceiverConfig{
+										{
+											Quay: &kargoapi.QuayWebhookReceiver{
+												SecretRef: corev1.LocalObjectReference{
+													Name: "secret-that-exists",
+												},
+											},
+										},
+									},
+								},
+							},
+							&corev1.Secret{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "secret-that-exists",
+									Namespace: "fake-namespace",
+								},
+								Data: map[string][]byte{
+									kargoapi.WebhookReceiverSecretKeyQuay: []byte("fake-secret-data"),
+								},
+							},
+						).
+						Build(),
+					ReconcilerConfig{},
+				)
+			},
+			projectConfig: &kargoapi.ProjectConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-namespace",
+					Name:      "fake-project",
+				},
+				Spec: kargoapi.ProjectConfigSpec{
+					WebhookReceivers: []kargoapi.WebhookReceiverConfig{
+						{
+							Name: "fake-webhook-receiver-name",
+							Quay: &kargoapi.QuayWebhookReceiver{
+								SecretRef: corev1.LocalObjectReference{
+									Name: "secret-that-exists",
+								},
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, pc *kargoapi.ProjectConfig, err error) {
+				require.NoError(t, err)
+				require.Len(t, pc.Status.WebhookReceivers, 1)
+				require.NotNil(t, pc.Spec.WebhookReceivers[0].Quay)
+				require.Equal(t,
+					external.GenerateWebhookPath(
+						"fake-webhook-receiver-name",
+						pc.Name,
+						kargoapi.WebhookReceiverTypeQuay,
 						"fake-secret-data",
 					),
 					pc.Status.WebhookReceivers[0].Path,
