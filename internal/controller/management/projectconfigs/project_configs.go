@@ -302,12 +302,21 @@ func getProviderConfig(rc kargoapi.WebhookReceiverConfig) (*providerConfig, erro
 	switch {
 	case rc.GitHub != nil:
 		if rc.GitHub.SecretRef.Name == "" {
-			return nil, errors.New("receiver config does not have a secret reference name")
+			return nil, errors.New("github receiver config does not have a secret reference name")
 		}
 		return &providerConfig{
 			secretName:   rc.GitHub.SecretRef.Name,
 			targetKey:    kargoapi.WebhookReceiverSecretKeyGithub,
 			receiverType: kargoapi.WebhookReceiverTypeGitHub,
+		}, nil
+	case rc.Quay != nil:
+		if rc.Quay.SecretRef.Name == "" {
+			return nil, errors.New("quay receiver config does not have a secret reference name")
+		}
+		return &providerConfig{
+			secretName:   rc.Quay.SecretRef.Name,
+			targetKey:    kargoapi.WebhookReceiverSecretKeyQuay,
+			receiverType: kargoapi.WebhookReceiverTypeQuay,
 		}, nil
 	default:
 		return nil, errors.New("webhook receiver config has no valid entry")

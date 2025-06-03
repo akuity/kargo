@@ -13,7 +13,7 @@ const (
 
 const (
 	WebhookReceiverSecretKeyGithub = "token"
-	WebhookReceiverSecretQuay      = "quay-secret"
+	WebhookReceiverSecretKeyQuay   = "quay-secret"
 )
 
 // +kubebuilder:object:root=true
