@@ -199,7 +199,7 @@ func TestReconciler_syncWebhookReceivers(t *testing.T) {
 			},
 		},
 		{
-			name: "success",
+			name: "success - github",
 			reconciler: func() *reconciler {
 				scheme := runtime.NewScheme()
 				require.NoError(t, corev1.AddToScheme(scheme))
@@ -238,7 +238,7 @@ func TestReconciler_syncWebhookReceivers(t *testing.T) {
 									Namespace: "fake-namespace",
 								},
 								Data: map[string][]byte{
-									"token": []byte("fake-secret-data"),
+									kargoapi.WebhookReceiverSecretKeyGithub: []byte("fake-secret-data"),
 								},
 							},
 						).
@@ -274,6 +274,81 @@ func TestReconciler_syncWebhookReceivers(t *testing.T) {
 						pc.Name,
 						kargoapi.WebhookReceiverTypeGitHub,
 						"fake-secret-data",
+					),
+					pc.Status.WebhookReceivers[0].Path,
+				)
+			},
+		},
+		{
+			name: "success - dockerhub",
+			reconciler: func() *reconciler {
+				scheme := runtime.NewScheme()
+				require.NoError(t, corev1.AddToScheme(scheme))
+				require.NoError(t, kargoapi.AddToScheme(scheme))
+				return newReconciler(
+					fake.NewClientBuilder().
+						WithScheme(scheme).
+						WithObjects(
+							&kargoapi.ProjectConfig{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "fake-project",
+									Namespace: "fake-namespace",
+								},
+								Spec: kargoapi.ProjectConfigSpec{
+									WebhookReceivers: []kargoapi.WebhookReceiverConfig{
+										{
+											Name: "dockerhub-webhook-receiver",
+											DockerHub: &kargoapi.DockerHubWebhookReceiver{
+												SecretRef: corev1.LocalObjectReference{
+													Name: "dockerhub-secret-that-exists",
+												},
+											},
+										},
+									},
+								},
+							},
+							&corev1.Secret{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "dockerhub-secret-that-exists",
+									Namespace: "fake-namespace",
+								},
+								Data: map[string][]byte{
+									kargoapi.WebhookReceiverSecretKeyDockerHub: []byte("dockerhub-secret-data"),
+								},
+							},
+						).
+						Build(),
+					ReconcilerConfig{},
+				)
+			},
+			projectConfig: &kargoapi.ProjectConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-namespace",
+					Name:      "fake-project",
+				},
+				Spec: kargoapi.ProjectConfigSpec{
+					WebhookReceivers: []kargoapi.WebhookReceiverConfig{
+						{
+							Name: "dockerhub-webhook-receiver",
+							DockerHub: &kargoapi.DockerHubWebhookReceiver{
+								SecretRef: corev1.LocalObjectReference{
+									Name: "dockerhub-secret-that-exists",
+								},
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, pc *kargoapi.ProjectConfig, err error) {
+				require.NoError(t, err)
+				require.Len(t, pc.Status.WebhookReceivers, 1)
+				require.NotNil(t, pc.Spec.WebhookReceivers[0].DockerHub)
+				require.Equal(t,
+					external.GenerateWebhookPath(
+						"dockerhub-webhook-receiver",
+						pc.Name,
+						kargoapi.WebhookReceiverTypeDockerHub,
+						"dockerhub-secret-data",
 					),
 					pc.Status.WebhookReceivers[0].Path,
 				)
