@@ -24,9 +24,11 @@ import (
 
 // Size limits to prevent decompression bombs
 const (
-	// 100 MB maximum total size for all extracted files
+	// MaxDecompressedTarSize is the maximum size of all files extracted from a
+	// tar archive.
 	MaxDecompressedTarSize int64 = 100 * 1024 * 1024
-	// 50 MB maximum size for a single file
+	// MaxDecompressedFileSize is the maximum size of a single file extracted
+	// from a tar archive.
 	MaxDecompressedFileSize int64 = 50 * 1024 * 1024
 
 	// gzipID1 is the first byte of the gzip magic number
@@ -34,8 +36,9 @@ const (
 	// gzipID2 is the second byte of the gzip magic number
 	gzipID2 = 0x8B
 
-	// defaultPermissions is the default permissions for created directories and files
-	defaultPermissions = 0750
+	// defaultDirPermissions is the default permissions for directories created
+	// by the tar extractor.
+	defaultDirPermissions = 0o750
 )
 
 // tarExtractor is an implementation of the promotion.StepRunner interface that
@@ -44,8 +47,8 @@ type tarExtractor struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
-// newTarExtractor returns an implementation of the promotion.StepRunner interface
-// that extracts a tar file.
+// newTarExtractor returns an implementation of the promotion.StepRunner
+// interface that extracts a tar file.
 func newTarExtractor() promotion.StepRunner {
 	r := &tarExtractor{}
 	r.schemaLoader = getConfigSchemaLoader(r.Name())
@@ -95,7 +98,7 @@ func (t *tarExtractor) run(
 	}
 
 	// Ensure the output directory exists
-	if err := os.MkdirAll(outPath, defaultPermissions); err != nil {
+	if err := os.MkdirAll(outPath, defaultDirPermissions); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("failed to create output directory %q: %w", cfg.OutPath, err)
 	}
@@ -120,20 +123,18 @@ func (t *tarExtractor) run(
 
 	// Read the first few bytes to check magic numbers
 	header := make([]byte, 2)
-	_, err = file.Read(header)
-	if err != nil {
+	if 	_, err = file.Read(header); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("failed to read file header: %w", err)
 	}
 
-	// Reset to beginning of file
-	_, err = file.Seek(0, 0)
-	if err != nil {
+	// Reset to the beginning of the file
+	if _, err = file.Seek(0, 0); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("failed to seek in tar file: %w", err)
 	}
 
-	// Check for gzip magic numbers (0x1F 0x8B)
+	// Check for gzip magic numbers
 	if header[0] == gzipID1 && header[1] == gzipID2 {
 		// File is gzipped
 		gzr, err := gzip.NewReader(file)
@@ -159,11 +160,11 @@ func (t *tarExtractor) run(
 		}
 	}
 
-	// Track total size extracted
-	var totalExtractedSize int64 = 0
+	// Track the total size extracted
+	var totalExtractedSize int64
 
 	// Track directories created to avoid duplicates
-	madeDir := map[string]bool{}
+	madeDir := make(map[string]bool)
 
 	for {
 		header, err := tarReader.Next()
@@ -177,7 +178,7 @@ func (t *tarExtractor) run(
 
 		// Skip if this is not a regular file, symlink, or directory
 		if header.Typeflag != tar.TypeReg && header.Typeflag != tar.TypeDir && header.Typeflag != tar.TypeSymlink {
-			logger.Debug("skipping non-regular file", "path", header.Name, "type", header.Typeflag)
+			logger.Trace("skipping non-regular file", "path", header.Name, "type", header.Typeflag)
 			continue
 		}
 
@@ -191,7 +192,7 @@ func (t *tarExtractor) run(
 				targetName = strings.Join(parts[stripComponents:], "/")
 			} else {
 				// Skip this file if we don't have enough components
-				logger.Debug("skipping file with insufficient path components", "path", header.Name)
+				logger.Trace("skipping file with insufficient path components", "path", header.Name)
 				continue
 			}
 		}
@@ -203,13 +204,13 @@ func (t *tarExtractor) run(
 
 		// Validate the target path to prevent directory traversal
 		if !t.validRelPath(targetName) {
-			logger.Debug("skipping file with unsafe path", "path", targetName)
+			logger.Trace("skipping file with unsafe path", "path", targetName)
 			continue
 		}
 
 		// Simple check for exact filename match for ignore patterns
 		if cfg.Ignore != "" && filepath.Base(targetName) == strings.TrimSpace(cfg.Ignore) {
-			logger.Debug("ignoring exact match path", "path", targetName)
+			logger.Trace("ignoring exact match path", "path", targetName)
 			continue
 		}
 
@@ -217,22 +218,22 @@ func (t *tarExtractor) run(
 		isDir := header.Typeflag == tar.TypeDir
 		pathParts := strings.Split(targetName, "/")
 		if matcher.Match(pathParts, isDir) {
-			logger.Debug("ignoring path based on pattern", "path", targetName)
+			logger.Trace("ignoring path based on pattern", "path", targetName)
 			continue
 		}
 
-		// Create destination directory for files and links
+		// Create the destination directory for files and links
 		targetPath := filepath.Join(outPath, targetName)
 
-		// Double check the target path is within the output directory
+		// Double-check the target path is within the output directory
 		relPath, err := filepath.Rel(outPath, targetPath)
 		if err != nil || strings.HasPrefix(relPath, "..") || strings.HasPrefix(relPath, "/") {
-			logger.Debug("skipping path escaping target directory", "path", targetName)
+			logger.Trace("skipping path escaping target directory", "path", targetName)
 			continue
 		}
 
 		destDir := filepath.Dir(targetPath)
-		if err := os.MkdirAll(destDir, defaultPermissions); err != nil {
+		if err = os.MkdirAll(destDir, defaultDirPermissions); err != nil {
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 				fmt.Errorf("failed to create directory %s: %w", destDir, err)
 		}
@@ -240,7 +241,7 @@ func (t *tarExtractor) run(
 		switch header.Typeflag {
 		case tar.TypeDir:
 			// Create directory
-			if err := os.MkdirAll(targetPath, defaultPermissions); err != nil {
+			if err = os.MkdirAll(targetPath, defaultDirPermissions); err != nil {
 				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 					fmt.Errorf("failed to create directory %s: %w", targetPath, err)
 			}
@@ -249,19 +250,18 @@ func (t *tarExtractor) run(
 		case tar.TypeSymlink:
 			// Validate the symlink target to prevent symlink attacks
 			if !t.validRelPath(header.Linkname) {
-				logger.Debug("skipping symlink with unsafe target", "path", targetName, "target", header.Linkname)
+				logger.Trace("skipping symlink with unsafe target", "path", targetName, "target", header.Linkname)
 				continue
 			}
 			// Create symlink
 			if err := os.Symlink(header.Linkname, targetPath); err != nil && !os.IsExist(err) {
-				logger.Debug("failed to create symlink", "path", targetPath, "target", header.Linkname, "error", err)
+				logger.Error(err, "failed to create symlink", "path", targetPath, "target", header.Linkname)
 			}
-
 		case tar.TypeReg:
 			// Check if single file exceeds max size limit
 			logger.Trace("checking file size", "path", targetName, "size", header.Size)
 			if header.Size > MaxDecompressedFileSize {
-				logger.Debug("aborting extraction due to exceeding file size limit",
+				logger.Trace("aborting extraction due to exceeding file size limit",
 					"path", targetName,
 					"size", header.Size,
 					"limit", MaxDecompressedFileSize)
@@ -271,9 +271,9 @@ func (t *tarExtractor) run(
 
 			// Check if total extracted size would exceed limit
 			if totalExtractedSize+header.Size > MaxDecompressedTarSize {
-				logger.Debug("aborting extraction due to exceeding total size limit",
-					"total_size", totalExtractedSize,
-					"file_size", header.Size,
+				logger.Trace("aborting extraction due to exceeding total size limit",
+					"totalSize", totalExtractedSize,
+					"fileSize", header.Size,
 					"limit", MaxDecompressedTarSize)
 				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 					fmt.Errorf("extraction aborted: total size would exceed limit of %d bytes", MaxDecompressedTarSize)
@@ -282,15 +282,16 @@ func (t *tarExtractor) run(
 			dir := filepath.Dir(targetPath)
 			// Create the directory if it doesn't exist
 			if !madeDir[dir] {
-				if err := os.MkdirAll(dir, defaultPermissions); err != nil {
+				if err = os.MkdirAll(dir, defaultDirPermissions); err != nil {
 					return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 						fmt.Errorf("failed to create directory %s: %w", dir, err)
 				}
 				madeDir[dir] = true
 			}
 
-			// Create file
-			outFile, err := os.OpenFile(targetPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, fs.FileMode(header.Mode))
+			// Create a file
+			safeMode := fs.FileMode(header.Mode) & 0o777
+			outFile, err := os.OpenFile(targetPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, safeMode)
 			if err != nil {
 				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 					fmt.Errorf("failed to create file %s: %w", targetPath, err)
@@ -352,7 +353,8 @@ func (t *tarExtractor) loadIgnoreRules(outPath, rules string) (gitignore.Matcher
 		}
 	}
 
-	// If no patterns were provided, add a default pattern to ignore .git directory
+	// If no patterns were provided, add a default pattern to ignore any .git/
+	// directory
 	if len(ps) == 0 {
 		ps = append(ps, gitignore.ParsePattern(".git", domain))
 	}
