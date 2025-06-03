@@ -492,7 +492,7 @@ func Test_httpRequester_buildExprEnv(t *testing.T) {
 		{
 			name: "response body Content-Length exceeds limit",
 			resp: &http.Response{
-				StatusCode:    200,
+				StatusCode:    http.StatusOK,
 				ContentLength: (2 << 20) + 1,
 				Header:        http.Header{"Content-Type": []string{"application/json"}},
 				Body:          io.NopCloser(strings.NewReader(`{"foo": "bar"}`)),
@@ -537,7 +537,7 @@ func Test_httpRequester_buildExprEnv(t *testing.T) {
 		{
 			name: "with body",
 			resp: &http.Response{
-				StatusCode: 200,
+				StatusCode: http.StatusOK,
 				Header:     http.Header{"Content-Type": []string{"application/json"}},
 				Body:       io.NopCloser(strings.NewReader(`{"foo": "bar"}`)),
 			},
@@ -553,7 +553,7 @@ func Test_httpRequester_buildExprEnv(t *testing.T) {
 		{
 			name: "with body as an array",
 			resp: &http.Response{
-				StatusCode: 200,
+				StatusCode: http.StatusOK,
 				Header:     http.Header{"Content-Type": []string{"application/json"}},
 				Body:       io.NopCloser(strings.NewReader(`[{"foo1": "bar1"}, {"foo2": "bar2"}]`)),
 			},
@@ -575,7 +575,7 @@ func Test_httpRequester_buildExprEnv(t *testing.T) {
 		{
 			name: "invalid JSON body",
 			resp: &http.Response{
-				StatusCode: 200,
+				StatusCode: http.StatusOK,
 				Header:     http.Header{"Content-Type": []string{"application/json"}},
 				Body:       io.NopCloser(strings.NewReader(`{"foo":`)),
 			},
@@ -587,7 +587,7 @@ func Test_httpRequester_buildExprEnv(t *testing.T) {
 		{
 			name: "valid JSON but unexpected type string",
 			resp: &http.Response{
-				StatusCode: 200,
+				StatusCode: http.StatusOK,
 				Header:     http.Header{"Content-Type": []string{"application/json"}},
 				Body:       io.NopCloser(strings.NewReader(`"foo"`)),
 			},
@@ -660,7 +660,7 @@ func Test_httpRequester_wasRequestSuccessful(t *testing.T) {
 		},
 		{
 			name:       "no success or failure expression; good status code",
-			statusCode: 200,
+			statusCode: http.StatusOK,
 			assertions: func(t *testing.T, success bool, err error) {
 				require.NoError(t, err)
 				require.True(t, success)
@@ -668,7 +668,7 @@ func Test_httpRequester_wasRequestSuccessful(t *testing.T) {
 		},
 		{
 			name:       "no success or failure expression; bad status code",
-			statusCode: 404,
+			statusCode: http.StatusNotFound,
 			assertions: func(t *testing.T, success bool, err error) {
 				require.NoError(t, err)
 				require.False(t, success)
@@ -738,7 +738,7 @@ func Test_httpRequester_didRequestFail(t *testing.T) {
 		},
 		{
 			name:       "no success or failure expression; good status code",
-			statusCode: 200,
+			statusCode: http.StatusOK,
 			assertions: func(t *testing.T, failed bool, err error) {
 				require.NoError(t, err)
 				require.False(t, failed)
@@ -746,7 +746,7 @@ func Test_httpRequester_didRequestFail(t *testing.T) {
 		},
 		{
 			name:       "no success or failure expression; bad status code",
-			statusCode: 404,
+			statusCode: http.StatusNotFound,
 			assertions: func(t *testing.T, failed bool, err error) {
 				require.NoError(t, err)
 				require.True(t, failed)
