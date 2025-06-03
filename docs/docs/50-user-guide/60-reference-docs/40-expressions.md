@@ -158,13 +158,13 @@ ctx
 ├── project: string           # The name of the Project
 ├── stage: string             # The name of the Stage
 ├── promotion: string         # The name of the Promotion
-├── targetFreight: string     # The name of the Freight that initiated this Promotion
+├── targetFreight
+│   ├── name: string          # The name of the Freight that is initiated this Promotion
+│   └── origin
+│       └── name: string      # The name of the Warehouse that contains the Freight
 └── meta
     └── promotion
         └── actor: string     # The creator of the Promotion
-    └── targetFreight
-        └── origin:
-            └── name: string  # The name of the Warehouse that contains the Freight responsible for this Promotion
 ```
 
 The following example promotion process clones a repository and checks out

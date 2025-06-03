@@ -188,15 +188,15 @@ func (s *Step) BuildEnv(promoCtx Context, opts ...StepEnvOption) map[string]any 
 			"project":       promoCtx.Project,
 			"promotion":     promoCtx.Promotion,
 			"stage":         promoCtx.Stage,
-			"targetFreight": promoCtx.TargetFreightRef.Name,
+			"targetFreight": map[string]any{
+				"name": promoCtx.TargetFreightRef.Name,
+				"origin": map[string]any{
+					"name": promoCtx.TargetFreightRef.Origin.Name,
+				},
+			},
 			"meta": map[string]any{
 				"promotion": map[string]any{
 					"actor": promoCtx.Actor,
-				},
-				"targetFreight": map[string]any{
-					"origin": map[string]any{
-						"name": promoCtx.TargetFreightRef.Origin.Name,
-					},
 				},
 			},
 		},

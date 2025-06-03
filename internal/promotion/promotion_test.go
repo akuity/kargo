@@ -141,7 +141,7 @@ func TestStep_GetConfig(t *testing.T) {
 				"stage": "${{ ctx.stage }}",
 				"promotion": "${{ ctx.promotion }}",
 				"actor": "${{ ctx.meta.promotion.actor }}",
-				"targetFreight": "${{ ctx.meta.targetFreight.origin.name }}"
+				"targetFreight": "${{ ctx.targetFreight.origin.name }}"
 			}`),
 			expectedCfg: promotion.Config{
 				"project":       "fake-project",
@@ -272,7 +272,7 @@ func TestStep_GetConfig(t *testing.T) {
 			rawCfg: []byte(`{
 				"origin1": "${{ warehouse('fake-warehouse') }}",
 				"origin2": "${{ warehouse(vars.warehouseName) }}",
-				"origin3": "${{ warehouse(ctx.meta.targetFreight.origin.name) }}"
+				"origin3": "${{ warehouse(ctx.targetFreight.origin.name) }}"
 			}`),
 			expectedCfg: promotion.Config{
 				"origin1": map[string]any{
@@ -808,7 +808,7 @@ func TestStep_GetVars(t *testing.T) {
 					},
 					{
 						Name:  "targetFreight",
-						Value: "${{ ctx.meta.targetFreight.origin.name }}",
+						Value: "${{ ctx.targetFreight.origin.name }}",
 					},
 				},
 			},
