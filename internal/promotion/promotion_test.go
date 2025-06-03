@@ -130,25 +130,36 @@ func TestStep_GetConfig(t *testing.T) {
 			name: "test context",
 			// Test that expressions can reference promotion context
 			promoCtx: Context{
-				Project:          "fake-project",
-				Stage:            "fake-stage",
-				Promotion:        "fake-promotion",
-				Actor:            "fake-creator",
-				TargetFreightRef: kargoapi.FreightReference{Name: "fake-freight", Origin: kargoapi.FreightOrigin{Name: "fake-warehouse"}},
+				Project:   "fake-project",
+				Stage:     "fake-stage",
+				Promotion: "fake-promotion",
+				Actor:     "fake-creator",
+				TargetFreightRef: kargoapi.FreightReference{
+					Name: "fake-freight",
+					Origin: kargoapi.FreightOrigin{
+						Name: "fake-warehouse",
+					},
+				},
 			},
 			rawCfg: []byte(`{
 				"project": "${{ ctx.project }}",
 				"stage": "${{ ctx.stage }}",
 				"promotion": "${{ ctx.promotion }}",
 				"actor": "${{ ctx.meta.promotion.actor }}",
-				"targetFreight": "${{ ctx.targetFreight.origin.name }}"
+				"targetFreight": {
+					"name": "${{ ctx.targetFreight.name }}",
+					"origin": "${{ ctx.targetFreight.origin.name }}"
+				}
 			}`),
 			expectedCfg: promotion.Config{
-				"project":       "fake-project",
-				"stage":         "fake-stage",
-				"promotion":     "fake-promotion",
-				"actor":         "fake-creator",
-				"targetFreight": "fake-warehouse",
+				"project":   "fake-project",
+				"stage":     "fake-stage",
+				"promotion": "fake-promotion",
+				"actor":     "fake-creator",
+				"targetFreight": map[string]any{
+					"name":   "fake-freight",
+					"origin": "fake-warehouse",
+				},
 			},
 		},
 		{
@@ -263,7 +274,12 @@ func TestStep_GetConfig(t *testing.T) {
 			// Test that the warehouse() function can be used to reference freight
 			// origins
 			promoCtx: Context{
-				TargetFreightRef: kargoapi.FreightReference{Name: "fake-freight", Origin: kargoapi.FreightOrigin{Name: "fake-origin-warehouse"}},
+				TargetFreightRef: kargoapi.FreightReference{
+					Name: "fake-freight",
+					Origin: kargoapi.FreightOrigin{
+						Name: "fake-origin-warehouse",
+					},
+				},
 				Vars: []kargoapi.ExpressionVariable{{
 					Name:  "warehouseName",
 					Value: "fake-warehouse",
@@ -782,11 +798,16 @@ func TestStep_GetVars(t *testing.T) {
 		{
 			name: "context properties in vars",
 			promoCtx: Context{
-				Project:          "fake-project",
-				Stage:            "fake-stage",
-				Promotion:        "fake-promotion",
-				Actor:            "fake-creator",
-				TargetFreightRef: kargoapi.FreightReference{Name: "fake-freight", Origin: kargoapi.FreightOrigin{Name: "fake-warehouse"}},
+				Project:   "fake-project",
+				Stage:     "fake-stage",
+				Promotion: "fake-promotion",
+				Actor:     "fake-creator",
+				TargetFreightRef: kargoapi.FreightReference{
+					Name: "fake-freight",
+					Origin: kargoapi.FreightOrigin{
+						Name: "fake-warehouse",
+					},
+				},
 			},
 			step: Step{
 				Vars: []kargoapi.ExpressionVariable{
