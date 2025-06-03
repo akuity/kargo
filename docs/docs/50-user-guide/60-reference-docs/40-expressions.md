@@ -155,12 +155,16 @@ The `ctx` object has the following structure:
 
 ```console
 ctx
-├── project: string       # The name of the Project
-├── stage: string         # The name of the Stage
-├── promotion: string     # The name of the Promotion
+├── project: string           # The name of the Project
+├── stage: string             # The name of the Stage
+├── promotion: string         # The name of the Promotion
+├── targetFreight
+│   ├── name: string          # The name of the Freight that is initiated this Promotion
+│   └── origin
+│       └── name: string      # The name of the Warehouse that contains the Freight
 └── meta
     └── promotion
-        └── actor: string # The creator of the Promotion
+        └── actor: string     # The creator of the Promotion
 ```
 
 The following example promotion process clones a repository and checks out

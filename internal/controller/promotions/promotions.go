@@ -487,6 +487,7 @@ func (r *reconciler) promote(
 		Promotion:             workingPromo.Name,
 		FreightRequests:       stage.Spec.RequestedFreight,
 		Freight:               *workingPromo.Status.FreightCollection.DeepCopy(),
+		TargetFreightRef:      targetFreightRef,
 		StartFromStep:         promo.Status.CurrentStep,
 		StepExecutionMetadata: promo.Status.StepExecutionMetadata,
 		State:                 pkgPromotion.State(workingPromo.Status.GetState()),
