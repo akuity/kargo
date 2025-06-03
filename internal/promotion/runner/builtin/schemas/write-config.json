@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "WriteConfig",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contents", "outFile"],
+  "properties": {
+    "outFile": {
+      "type": "string",
+      "description": "outFile is the path to the destination file",
+      "minLength": 1
+    },
+    "contents": {
+      "type": "string",
+      "description": "The contents to write to the output file.",
+      "minLength": 1
+    }
+  }
+}

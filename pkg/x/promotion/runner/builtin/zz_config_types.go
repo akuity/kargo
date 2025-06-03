@@ -413,6 +413,13 @@ type Image struct {
 	Tag string `json:"tag,omitempty"`
 }
 
+type WriteConfig struct {
+	// The contents to write to the output file.
+	Contents string `json:"contents"`
+	// outFile is the path to the destination file
+	OutFile string `json:"outFile"`
+}
+
 type YAMLParseConfig struct {
 	// An array of outputs to extract from the YAML file.
 	Outputs []YAMLParse `json:"outputs"`
