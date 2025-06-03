@@ -35,8 +35,8 @@ func quayHandler(
 		}
 
 		payload := struct {
-			// format: https://quay.io/repository/mynamespace/repository
-			RepoWebURL string `json:"homepage"`
+			// format: quay.io/repository/mynamespace/repository
+			RepoWebURL string `json:"docker_url"`
 		}{}
 
 		if err = json.Unmarshal(b, &payload); err != nil {

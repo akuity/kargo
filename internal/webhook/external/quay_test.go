@@ -82,7 +82,7 @@ func TestQuayHandler(t *testing.T) {
 								Namespace: "fakenamespace",
 							},
 							Data: map[string][]byte{
-								"token": []byte("mysupersecrettoken"),
+								kargoapi.WebhookReceiverSecretKeyQuay: []byte("mysupersecrettoken"),
 							},
 						},
 						&kargoapi.ProjectConfig{
@@ -123,7 +123,7 @@ func TestQuayHandler(t *testing.T) {
 								Subscriptions: []kargoapi.RepoSubscription{
 									{
 										Image: &kargoapi.ImageSubscription{
-											RepoURL: "https://quay.io/repository/mynamespace/repository",
+											RepoURL: "quay.io/mynamespace/repository",
 										},
 									},
 								},
