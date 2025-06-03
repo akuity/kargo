@@ -7,11 +7,13 @@ import (
 
 const (
 	WebhookReceiverTypeGitHub = "GitHub"
+	WebhookReceiverTypeQuay   = "Quay"
 	// TODO(fuskovic): Add more receiver enum types(e.g. Dockerhub, Quay, Gitlab, etc...)
 )
 
 const (
 	WebhookReceiverSecretKeyGithub = "token"
+	WebhookReceiverSecretQuay      = "quay-secret"
 )
 
 // +kubebuilder:object:root=true
@@ -102,8 +104,11 @@ type WebhookReceiverConfig struct {
 	//
 	// TODO(fuskovic): Make this mutually exclusive with configs for other platforms.
 	//
-	// +kubebuilder:validation:Required
 	GitHub *GitHubWebhookReceiver `json:"github,omitempty" protobuf:"bytes,2,opt,name=github"`
+
+	// Quay contains the configuration for a webhook receiver that is compatible with
+	// Quay payloads.
+	Quay *QuayWebhookReceiver `json:"quay,omitempty" protobuf:"bytes,3,opt,name=quay"`
 }
 
 // GitHubWebhookReceiver describes a webhook receiver that is compatible with
@@ -116,6 +121,16 @@ type GitHubWebhookReceiver struct {
 	// GitHub documentation: https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
 	//
 	// The value of the token key goes in the "Secret" field when registering a GitHub App or webhook in the GitHub UI.
+	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+}
+
+// QuayWebhookReceiver describes a webhook receiver that is compatible with
+// Quay payloads.
+type QuayWebhookReceiver struct {
+	// SecretRef contains a reference to a Secret in the same namespace as the ProjectConfig.
+	//
+	// The Secret is expected to contain a 'quay-secret' key with the secret token configured for
+	// in Quay for the webhook
 	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
 }
 
