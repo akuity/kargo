@@ -164,7 +164,7 @@ ctx
         └── actor: string     # The creator of the Promotion
     └── targetFreight
         └── origin:
-            └── name: string  # The name of the warehouse that contains the Freight responsible for this Promotion
+            └── name: string  # The name of the Warehouse that contains the Freight responsible for this Promotion
 ```
 
 The following example promotion process clones a repository and checks out
