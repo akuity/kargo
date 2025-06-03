@@ -6,12 +6,14 @@ import (
 )
 
 const (
-	WebhookReceiverTypeGitHub = "GitHub"
-	// TODO(fuskovic): Add more receiver enum types(e.g. Dockerhub, Quay, Gitlab, etc...)
+	WebhookReceiverTypeGitHub    = "GitHub"
+	WebhookReceiverTypeDockerHub = "DockerHub"
+	// TODO(fuskovic): Add more receiver enum types(e.g. Quay, Gitlab, etc...)
 )
 
 const (
-	WebhookReceiverSecretKeyGithub = "token"
+	WebhookReceiverSecretKeyGithub    = "token"
+	WebhookReceiverSecretKeyDockerHub = "dockerhub-secret"
 )
 
 // +kubebuilder:object:root=true
@@ -102,8 +104,10 @@ type WebhookReceiverConfig struct {
 	//
 	// TODO(fuskovic): Make this mutually exclusive with configs for other platforms.
 	//
-	// +kubebuilder:validation:Required
 	GitHub *GitHubWebhookReceiver `json:"github,omitempty" protobuf:"bytes,2,opt,name=github"`
+	// DockerHub contains the configuration for a webhook receiver that is compatible with
+	// DockerHub payloads.
+	DockerHub *DockerHubWebhookReceiver `json:"dockerhub,omitempty" protobuf:"bytes,3,opt,name=dockerhub"`
 }
 
 // GitHubWebhookReceiver describes a webhook receiver that is compatible with
@@ -116,6 +120,17 @@ type GitHubWebhookReceiver struct {
 	// GitHub documentation: https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
 	//
 	// The value of the token key goes in the "Secret" field when registering a GitHub App or webhook in the GitHub UI.
+	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+}
+
+// DockerHubWebhookReceiver describes a webhook receiver that is compatible with
+// DockerHub payloads.
+type DockerHubWebhookReceiver struct {
+	// SecretRef contains a reference to a Secret in the same namespace as the ProjectConfig.
+	//
+	// The Secret is expected to contain a `dockerhub-secret` key with the secret token configured for
+	// the DockerHub webhook. For more information, see:
+	// https://docs.docker.com/docker-hub/webhooks/
 	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
 }
 

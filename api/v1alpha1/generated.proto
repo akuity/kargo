@@ -308,6 +308,17 @@ message DiscoveredImageReference {
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 4;
 }
 
+// DockerHubWebhookReceiver describes a webhook receiver that is compatible with
+// DockerHub payloads.
+message DockerHubWebhookReceiver {
+  // SecretRef contains a reference to a Secret in the same namespace as the ProjectConfig.
+  //
+  // The Secret is expected to contain a `dockerhub-secret` key with the secret token configured for
+  // the DockerHub webhook. For more information, see:
+  // https://docs.docker.com/docker-hub/webhooks/
+  optional .k8s.io.api.core.v1.LocalObjectReference secretRef = 1;
+}
+
 // ExpressionVariable describes a single variable that may be referenced by
 // expressions in the context of a ClusterPromotionTask, PromotionTask,
 // Promotion, AnalysisRun arguments, or other objects that support expressions.
@@ -1687,8 +1698,10 @@ message WebhookReceiverConfig {
   // GitHub payloads.
   //
   // TODO(fuskovic): Make this mutually exclusive with configs for other platforms.
-  //
-  // +kubebuilder:validation:Required
   optional GitHubWebhookReceiver github = 2;
+
+  // DockerHub contains the configuration for a webhook receiver that is compatible with
+  // DockerHub payloads.
+  optional DockerHubWebhookReceiver dockerhub = 3;
 }
 
