@@ -87,7 +87,7 @@ func TestGithubHandler(t *testing.T) {
 					Build()
 			},
 			req: func() *http.Request {
-				b := newBody()
+				b := newGithubPayload()
 				req := httptest.NewRequest(http.MethodPost, url, b)
 				req.Header.Set("Content-Type", "application/json")
 				req.Header.Set("X-Hub-Signature-256", sign(t, testSecret, b.Bytes()))
@@ -159,7 +159,7 @@ func TestGithubHandler(t *testing.T) {
 					Build()
 			},
 			req: func() *http.Request {
-				b := newBody()
+				b := newGithubPayload()
 				req := httptest.NewRequest(http.MethodPost, url, b)
 				req.Header.Set("Content-Type", "application/json")
 				req.Header.Set("X-Hub-Signature-256", sign(t, "fakesecret", b.Bytes()))
@@ -231,7 +231,7 @@ func TestGithubHandler(t *testing.T) {
 					Build()
 			},
 			req: func() *http.Request {
-				b := newBody()
+				b := newGithubPayload()
 				req := httptest.NewRequest(http.MethodPost, url, b)
 				req.Header.Set("Content-Type", "application/json")
 				req.Header.Set("X-Hub-Signature-256", sign(t, testSecret, b.Bytes()))
@@ -376,7 +376,7 @@ func TestGithubHandler(t *testing.T) {
 					Build()
 			},
 			req: func() *http.Request {
-				b := newBody()
+				b := newGithubPayload()
 				req := httptest.NewRequest(http.MethodPost, url, b)
 				req.Header.Set("X-GitHub-Event", "push")
 				return req
@@ -446,7 +446,7 @@ func TestGithubHandler(t *testing.T) {
 					Build()
 			},
 			req: func() *http.Request {
-				b := newBody()
+				b := newGithubPayload()
 				req := httptest.NewRequest(http.MethodPost, url, b)
 				req.Header.Set("X-Hub-Signature-256", sign(t, "invalid-sig", b.Bytes()))
 				req.Header.Set("X-GitHub-Event", "push")
@@ -604,7 +604,7 @@ func TestGithubHandler(t *testing.T) {
 					Build()
 			},
 			req: func() *http.Request {
-				b := newBody()
+				b := newGithubPayload()
 				req := httptest.NewRequest(http.MethodPost, url, b)
 				req.Header.Set("Content-Type", "application/json")
 				req.Header.Set("X-Hub-Signature-256", sign(t, "mysupersecrettoken", b.Bytes()))
@@ -637,7 +637,7 @@ func TestGithubHandler(t *testing.T) {
 					Build()
 			},
 			req: func() *http.Request {
-				b := newBody()
+				b := newGithubPayload()
 				req := httptest.NewRequest(http.MethodPost, url, b)
 				req.Header.Set("Content-Type", "application/json")
 				req.Header.Set("X-Hub-Signature-256", sign(t, "mysupersecrettoken", b.Bytes()))
@@ -674,7 +674,7 @@ func sign(t *testing.T, s string, b []byte) string {
 	)
 }
 
-func newBody() *bytes.Buffer {
+func newGithubPayload() *bytes.Buffer {
 	return bytes.NewBuffer([]byte(`
 {
 	"ref": "refs/heads/main",
