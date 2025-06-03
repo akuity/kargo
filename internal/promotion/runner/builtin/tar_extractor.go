@@ -85,7 +85,9 @@ func (t *tarExtractor) run(
 	stepCtx *promotion.StepContext,
 	cfg builtin.UntarConfig,
 ) (promotion.StepResult, error) {
-	// Secure join the paths to prevent path traversal attacks.
+	logger := logging.LoggerFromContext(ctx)
+
+	// Secure join the paths to prevent path traversal attacks
 	inPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.InPath)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
@@ -97,12 +99,42 @@ func (t *tarExtractor) run(
 			fmt.Errorf("could not secure join outPath %q: %w", cfg.OutPath, err)
 	}
 
-	// Ensure the output directory exists
-	if err := os.MkdirAll(outPath, defaultDirPermissions); err != nil {
+	// Create a temporary directory to atomically extract the tar file
+	tempDir, err := os.MkdirTemp(stepCtx.WorkDir, "." + t.Name() + "-*")
+	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("failed to create output directory %q: %w", cfg.OutPath, err)
+			fmt.Errorf("failed to create temporary directory for extraction: %w", err)
 	}
 
+	// Ensure the temporary directory is cleaned up after extraction
+	defer func() {
+		if err = os.RemoveAll(tempDir); err != nil {
+			logger.Error(err, "failed to remove temporary directory after extraction")
+		}
+	}()
+
+	// Extract the tar file to the temporary directory
+	result, err := t.extractToDir(ctx, cfg, inPath, tempDir)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+			fmt.Errorf("failed to extract tar file %q: %w", inPath, err)
+	}
+
+	// Move the extracted files from the temporary directory to the final output
+	// path atomically
+	if err = t.simpleAtomicMove(tempDir, outPath); err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
+	}
+
+	// Return the result of the extraction
+	return result, nil
+}
+
+func (t *tarExtractor) extractToDir(
+	ctx context.Context,
+	cfg builtin.UntarConfig,
+	inPath, outPath string,
+) (promotion.StepResult, error) {
 	// Load the ignore rules.
 	matcher, err := t.loadIgnoreRules(outPath, cfg.Ignore)
 	if err != nil {
@@ -123,7 +155,7 @@ func (t *tarExtractor) run(
 
 	// Read the first few bytes to check magic numbers
 	header := make([]byte, 2)
-	if 	_, err = file.Read(header); err != nil {
+	if _, err = file.Read(header); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("failed to read file header: %w", err)
 	}
@@ -360,4 +392,22 @@ func (t *tarExtractor) loadIgnoreRules(outPath, rules string) (gitignore.Matcher
 	}
 
 	return gitignore.NewMatcher(ps), nil
+}
+
+func (t *tarExtractor) simpleAtomicMove(src, dst string) error {
+	if err := os.Rename(src, dst); err != nil {
+		if !os.IsExist(err) {
+			return fmt.Errorf("failed to move %s to %s: %w", src, dst, err)
+		}
+
+		// If the destination already exists, remove it and try again
+		if err := os.RemoveAll(dst); err != nil {
+			return fmt.Errorf("failed to remove existing destination %s: %w", dst, err)
+		}
+
+		if err := os.Rename(src, dst); err != nil {
+			return fmt.Errorf("failed to move %s to %s after removing existing: %w", src, dst, err)
+		}
+	}
+	return nil
 }
