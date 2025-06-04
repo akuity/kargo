@@ -210,13 +210,6 @@ func TestReconciler_syncWebhookReceivers(t *testing.T) {
 						WithObjects(
 							&kargoapi.ProjectConfig{
 								ObjectMeta: metav1.ObjectMeta{
-									Name:      "fake-name",
-									Namespace: "fake-namespace",
-								},
-								Spec: kargoapi.ProjectConfigSpec{},
-							},
-							&kargoapi.ProjectConfig{
-								ObjectMeta: metav1.ObjectMeta{
 									Name:      "fake-project",
 									Namespace: "fake-namespace",
 								},
@@ -289,13 +282,6 @@ func TestReconciler_syncWebhookReceivers(t *testing.T) {
 					fake.NewClientBuilder().
 						WithScheme(scheme).
 						WithObjects(
-							&kargoapi.ProjectConfig{
-								ObjectMeta: metav1.ObjectMeta{
-									Name:      "fake-name",
-									Namespace: "fake-namespace",
-								},
-								Spec: kargoapi.ProjectConfigSpec{},
-							},
 							&kargoapi.ProjectConfig{
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      "fake-project",
