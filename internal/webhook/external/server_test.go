@@ -186,7 +186,7 @@ func TestRouteHandler(t *testing.T) {
 			w := httptest.NewRecorder()
 			var body io.Reader
 			if test.code == http.StatusOK {
-				body = newBody()
+				body = newGithubEventBody()
 			}
 			req, err := http.NewRequestWithContext(
 				ctx,
@@ -197,7 +197,8 @@ func TestRouteHandler(t *testing.T) {
 			require.NoError(t, err)
 			if test.code == http.StatusOK {
 				req.Header.Set("X-GitHub-Event", "push")
-				req.Header.Set("X-Hub-Signature-256", sign(t, "mysupersecrettoken", newBody().Bytes()))
+				b := newGithubEventBody().Bytes()
+				req.Header.Set("X-Hub-Signature-256", sign(t, "mysupersecrettoken", b))
 			}
 			testServer.route(w, req)
 			require.Equal(t, test.code, w.Result().StatusCode)

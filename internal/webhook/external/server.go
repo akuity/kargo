@@ -117,6 +117,12 @@ func (s *server) route(w http.ResponseWriter, r *http.Request) {
 			pc.Namespace,
 			wrc.GitHub.SecretRef.Name,
 		)(w, r)
+	case wrc.GitLab != nil:
+		gitlabHandler(
+			s.client,
+			pc.Namespace,
+			wrc.GitLab.SecretRef.Name,
+		)(w, r)
 	default:
 		http.Error(w, "not found", http.StatusNotFound)
 	}

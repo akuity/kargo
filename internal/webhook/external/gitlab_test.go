@@ -2,30 +2,23 @@ package external
 
 import (
 	"bytes"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/indexer"
+	"github.com/akuity/kargo/internal/logging"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/indexer"
-	"github.com/akuity/kargo/internal/logging"
 )
 
-const testSecret = "testsecret" // nolint: gosec
-
-func TestGithubHandler(t *testing.T) {
+func TestGitLabHandler(t *testing.T) {
 	url := "http://doesntmatter.com"
 	for _, test := range []struct {
 		name    string
@@ -52,7 +45,7 @@ func TestGithubHandler(t *testing.T) {
 							Spec: kargoapi.ProjectConfigSpec{
 								WebhookReceivers: []kargoapi.WebhookReceiverConfig{
 									{
-										GitHub: &kargoapi.GitHubWebhookReceiver{
+										GitLab: &kargoapi.GitLabWebhookReceiver{
 											SecretRef: corev1.LocalObjectReference{
 												Name: "fakesecret",
 											},
@@ -66,7 +59,7 @@ func TestGithubHandler(t *testing.T) {
 										Path: GenerateWebhookPath(
 											"fake-webhook-receiver-name",
 											"fakename",
-											kargoapi.WebhookReceiverTypeGitHub,
+											kargoapi.WebhookReceiverTypeGitlab,
 											"fakesecret",
 										),
 									},
@@ -87,11 +80,11 @@ func TestGithubHandler(t *testing.T) {
 					Build()
 			},
 			req: func() *http.Request {
-				b := newGithubEventBody()
+				b := newGitlabEventBody()
 				req := httptest.NewRequest(http.MethodPost, url, b)
 				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("X-Hub-Signature-256", sign(t, testSecret, b.Bytes()))
-				req.Header.Set("X-GitHub-Event", "push")
+				req.Header.Set("X-Gitlab-Token", testSecret)
+				req.Header.Set("X-Gitlab-Event", "push")
 				return req
 			},
 			secret: testSecret,
@@ -124,7 +117,7 @@ func TestGithubHandler(t *testing.T) {
 							Spec: kargoapi.ProjectConfigSpec{
 								WebhookReceivers: []kargoapi.WebhookReceiverConfig{
 									{
-										GitHub: &kargoapi.GitHubWebhookReceiver{
+										GitLab: &kargoapi.GitLabWebhookReceiver{
 											SecretRef: corev1.LocalObjectReference{
 												Name: "fakesecret",
 											},
@@ -138,7 +131,7 @@ func TestGithubHandler(t *testing.T) {
 										Path: GenerateWebhookPath(
 											"fake-webhook-receiver-name",
 											"fakename",
-											kargoapi.WebhookReceiverTypeGitHub,
+											kargoapi.WebhookReceiverTypeGitlab,
 											"fakesecret",
 										),
 									},
@@ -159,11 +152,11 @@ func TestGithubHandler(t *testing.T) {
 					Build()
 			},
 			req: func() *http.Request {
-				b := newGithubEventBody()
+				b := newGitlabEventBody()
 				req := httptest.NewRequest(http.MethodPost, url, b)
 				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("X-Hub-Signature-256", sign(t, "fakesecret", b.Bytes()))
-				req.Header.Set("X-GitHub-Event", "push")
+				req.Header.Set("X-Gitlab-Token", "fakesecret")
+				req.Header.Set("X-Gitlab-Event", "push")
 				return req
 			},
 			secret: "fakesecret",
@@ -196,7 +189,7 @@ func TestGithubHandler(t *testing.T) {
 							Spec: kargoapi.ProjectConfigSpec{
 								WebhookReceivers: []kargoapi.WebhookReceiverConfig{
 									{
-										GitHub: &kargoapi.GitHubWebhookReceiver{
+										GitLab: &kargoapi.GitLabWebhookReceiver{
 											SecretRef: corev1.LocalObjectReference{
 												Name: "fakesecret",
 											},
@@ -210,7 +203,7 @@ func TestGithubHandler(t *testing.T) {
 										Path: GenerateWebhookPath(
 											"fake-webhook-receiver-name",
 											"fakename",
-											kargoapi.WebhookReceiverTypeGitHub,
+											kargoapi.WebhookReceiverTypeGitlab,
 											"mysupersecrettoken",
 										),
 									},
@@ -231,11 +224,11 @@ func TestGithubHandler(t *testing.T) {
 					Build()
 			},
 			req: func() *http.Request {
-				b := newGithubEventBody()
+				b := newGitlabEventBody()
 				req := httptest.NewRequest(http.MethodPost, url, b)
 				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("X-Hub-Signature-256", sign(t, testSecret, b.Bytes()))
-				req.Header.Set("X-GitHub-Event", "deployment")
+				req.Header.Set("X-Gitlab-Token", testSecret)
+				req.Header.Set("X-Gitlab-Event", "deployment")
 				return req
 			},
 			secret: "fakesecret",
@@ -268,7 +261,7 @@ func TestGithubHandler(t *testing.T) {
 							Spec: kargoapi.ProjectConfigSpec{
 								WebhookReceivers: []kargoapi.WebhookReceiverConfig{
 									{
-										GitHub: &kargoapi.GitHubWebhookReceiver{
+										GitLab: &kargoapi.GitLabWebhookReceiver{
 											SecretRef: corev1.LocalObjectReference{
 												Name: "fakesecret",
 											},
@@ -282,7 +275,7 @@ func TestGithubHandler(t *testing.T) {
 										Path: GenerateWebhookPath(
 											"fake-webhook-receiver-name",
 											"fakename",
-											kargoapi.WebhookReceiverTypeGitHub,
+											kargoapi.WebhookReceiverTypeGitlab,
 											"mysupersecrettoken",
 										),
 									},
@@ -307,8 +300,8 @@ func TestGithubHandler(t *testing.T) {
 				body := make([]byte, maxBytes+1)
 				b := io.NopCloser(bytes.NewBuffer(body))
 				req := httptest.NewRequest(http.MethodPost, url, b)
-				req.Header.Set("X-Hub-Signature-256", sign(t, testSecret, body))
-				req.Header.Set("X-GitHub-Event", "push")
+				req.Header.Set("X-Gitlab-Token", sign(t, testSecret, body))
+				req.Header.Set("X-Gitlab-Event", "push")
 				return req
 			},
 			secret: "fakesecret",
@@ -341,7 +334,7 @@ func TestGithubHandler(t *testing.T) {
 							Spec: kargoapi.ProjectConfigSpec{
 								WebhookReceivers: []kargoapi.WebhookReceiverConfig{
 									{
-										GitHub: &kargoapi.GitHubWebhookReceiver{
+										GitLab: &kargoapi.GitLabWebhookReceiver{
 											SecretRef: corev1.LocalObjectReference{
 												Name: "fakesecret",
 											},
@@ -355,7 +348,7 @@ func TestGithubHandler(t *testing.T) {
 										Path: GenerateWebhookPath(
 											"fake-webhook-receiver-name",
 											"fakename",
-											kargoapi.WebhookReceiverTypeGitHub,
+											kargoapi.WebhookReceiverTypeGitlab,
 											"mysupersecrettoken",
 										),
 									},
@@ -376,9 +369,9 @@ func TestGithubHandler(t *testing.T) {
 					Build()
 			},
 			req: func() *http.Request {
-				b := newGithubEventBody()
+				b := newGitlabEventBody()
 				req := httptest.NewRequest(http.MethodPost, url, b)
-				req.Header.Set("X-GitHub-Event", "push")
+				req.Header.Set("X-Gitlab-Event", "push")
 				return req
 			},
 			secret: "fakesecret",
@@ -411,7 +404,7 @@ func TestGithubHandler(t *testing.T) {
 							Spec: kargoapi.ProjectConfigSpec{
 								WebhookReceivers: []kargoapi.WebhookReceiverConfig{
 									{
-										GitHub: &kargoapi.GitHubWebhookReceiver{
+										GitLab: &kargoapi.GitLabWebhookReceiver{
 											SecretRef: corev1.LocalObjectReference{
 												Name: "fakesecret",
 											},
@@ -425,7 +418,7 @@ func TestGithubHandler(t *testing.T) {
 										Path: GenerateWebhookPath(
 											"fake-webhook-receiver-name",
 											"fakename",
-											kargoapi.WebhookReceiverTypeGitHub,
+											kargoapi.WebhookReceiverTypeGitlab,
 											"mysupersecrettoken",
 										),
 									},
@@ -446,10 +439,10 @@ func TestGithubHandler(t *testing.T) {
 					Build()
 			},
 			req: func() *http.Request {
-				b := newGithubEventBody()
+				b := newGitlabEventBody()
 				req := httptest.NewRequest(http.MethodPost, url, b)
-				req.Header.Set("X-Hub-Signature-256", sign(t, "invalid-sig", b.Bytes()))
-				req.Header.Set("X-GitHub-Event", "push")
+				req.Header.Set("X-Gitlab-Token", sign(t, "invalid-sig", b.Bytes()))
+				req.Header.Set("X-Gitlab-Event", "push")
 				return req
 			},
 			secret: "fakesecret",
@@ -482,7 +475,7 @@ func TestGithubHandler(t *testing.T) {
 							Spec: kargoapi.ProjectConfigSpec{
 								WebhookReceivers: []kargoapi.WebhookReceiverConfig{
 									{
-										GitHub: &kargoapi.GitHubWebhookReceiver{
+										GitLab: &kargoapi.GitLabWebhookReceiver{
 											SecretRef: corev1.LocalObjectReference{
 												Name: "fakesecret",
 											},
@@ -496,7 +489,7 @@ func TestGithubHandler(t *testing.T) {
 										Path: GenerateWebhookPath(
 											"fake-webhook-receiver-name",
 											"fakename",
-											kargoapi.WebhookReceiverTypeGitHub,
+											kargoapi.WebhookReceiverTypeGitlab,
 											"mysupersecrettoken",
 										),
 									},
@@ -520,8 +513,8 @@ func TestGithubHandler(t *testing.T) {
 				b := bytes.NewBuffer([]byte("invalid json"))
 				req := httptest.NewRequest(http.MethodPost, url, b)
 				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("X-Hub-Signature-256", sign(t, "mysupersecrettoken", b.Bytes()))
-				req.Header.Set("X-GitHub-Event", "push")
+				req.Header.Set("X-Gitlab-Token", "mysupersecrettoken")
+				req.Header.Set("X-Gitlab-Event", "push")
 				return req
 			},
 			secret: "fakesecret",
@@ -554,7 +547,7 @@ func TestGithubHandler(t *testing.T) {
 							Spec: kargoapi.ProjectConfigSpec{
 								WebhookReceivers: []kargoapi.WebhookReceiverConfig{
 									{
-										GitHub: &kargoapi.GitHubWebhookReceiver{
+										GitLab: &kargoapi.GitLabWebhookReceiver{
 											SecretRef: corev1.LocalObjectReference{
 												Name: "fakesecret",
 											},
@@ -568,7 +561,7 @@ func TestGithubHandler(t *testing.T) {
 										Path: GenerateWebhookPath(
 											"fake-webhook-receiver-name",
 											"fakename",
-											kargoapi.WebhookReceiverTypeGitHub,
+											kargoapi.WebhookReceiverTypeGitlab,
 											"mysupersecrettoken",
 										),
 									},
@@ -604,48 +597,15 @@ func TestGithubHandler(t *testing.T) {
 					Build()
 			},
 			req: func() *http.Request {
-				b := newGithubEventBody()
+				b := newGitlabEventBody()
 				req := httptest.NewRequest(http.MethodPost, url, b)
 				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("X-Hub-Signature-256", sign(t, "mysupersecrettoken", b.Bytes()))
-				req.Header.Set("X-GitHub-Event", "push")
+				req.Header.Set("X-Gitlab-Token", "mysupersecrettoken")
+				req.Header.Set("X-Gitlab-Event", "push")
 				return req
 			},
 			secret: "fakesecret",
 			msg:    "{\"msg\":\"refreshed 1 warehouse(s)\"}\n",
-			code:   http.StatusOK,
-		},
-		{
-			name: "success - ping event",
-			kClient: func() client.Client {
-				scheme := runtime.NewScheme()
-				require.NoError(t, corev1.AddToScheme(scheme))
-				require.NoError(t, kargoapi.AddToScheme(scheme))
-				return fake.NewClientBuilder().
-					WithScheme(scheme).
-					WithObjects(
-						&corev1.Secret{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "fakesecret",
-								Namespace: "fakenamespace",
-							},
-							Data: map[string][]byte{
-								"token": []byte("mysupersecrettoken"),
-							},
-						},
-					).
-					Build()
-			},
-			req: func() *http.Request {
-				b := newGithubEventBody()
-				req := httptest.NewRequest(http.MethodPost, url, b)
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("X-Hub-Signature-256", sign(t, "mysupersecrettoken", b.Bytes()))
-				req.Header.Set("X-GitHub-Event", "ping")
-				return req
-			},
-			secret: "fakesecret",
-			msg:    "{\"msg\":\"ping event received, webhook is configured correctly for https://github.com/username/repo\"}\n", // nolint: lll
 			code:   http.StatusOK,
 		},
 	} {
@@ -656,7 +616,7 @@ func TestGithubHandler(t *testing.T) {
 			req = req.WithContext(ctx)
 			w := httptest.NewRecorder()
 			namespace := "fakenamespace"
-			h := githubHandler(test.kClient(), namespace, test.secret)
+			h := gitlabHandler(test.kClient(), namespace, test.secret)
 			h(w, req)
 			require.Equal(t, test.code, w.Code)
 			require.Contains(t, w.Body.String(), test.msg)
@@ -664,22 +624,15 @@ func TestGithubHandler(t *testing.T) {
 	}
 }
 
-func sign(t *testing.T, s string, b []byte) string {
-	t.Helper()
-
-	mac := hmac.New(sha256.New, []byte(s))
-	_, _ = mac.Write(b)
-	return fmt.Sprintf("sha256=%s",
-		hex.EncodeToString(mac.Sum(nil)),
-	)
-}
-
-func newGithubEventBody() *bytes.Buffer {
+func newGitlabEventBody() *bytes.Buffer {
 	return bytes.NewBufferString(`
 {
-	"repository": {
-	  "html_url": "https://github.com/username/repo"
-	},
+  "repository":{
+    "url": "git@example.com:mike/diaspora.git",
+    "homepage": "http://example.com/mike/diaspora",
+    "git_http_url":"http://example.com/mike/diaspora.git",
+    "git_ssh_url":"git@example.com:mike/diaspora.git",
+  }
   }	
 `)
 }
