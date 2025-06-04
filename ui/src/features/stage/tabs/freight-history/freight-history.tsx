@@ -9,6 +9,7 @@ import { useEffect } from 'react';
 import { generatePath, Link, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { shortVersion } from '@ui/features/project/pipelines/freight/short-version-utils';
 import {
   FreightReference,
   FreightRequest,
@@ -117,28 +118,24 @@ export const FreightHistory = ({
         rowKey={(record, index) => `${record.name}${index}`}
       >
         <Table.Column<PlainMessage<FreightReference>>
-          title='ID'
-          width={100}
-          render={(value, record) =>
-            freightMap[record?.name || '']?.metadata?.name?.substring(0, 7)
-          }
-        />
-        <Table.Column<PlainMessage<FreightReference>>
           title='Alias'
           width={240}
-          render={(value, record, index) => (
-            <Space>
-              <Link
-                to={generatePath(paths.freight, {
-                  name: projectName,
-                  freightName: record.name
-                })}
-              >
-                {freightMap[record?.name || '']?.alias || record.name}
-              </Link>
-              {index === 0 && <Tag color='success'>Active</Tag>}
-            </Space>
-          )}
+          render={(value, record, index) => {
+            const alias = shortVersion(freightMap[record?.name || '']?.alias || record.name, 20);
+            return (
+              <Space>
+                <Link
+                  to={generatePath(paths.freight, {
+                    name: projectName,
+                    freightName: record.name
+                  })}
+                >
+                  {alias}
+                </Link>
+                {index === 0 && <Tag color='success'>Active</Tag>}
+              </Space>
+            );
+          }}
         />
         <Table.Column<PlainMessage<FreightReference>>
           title='Contents'
@@ -156,41 +153,52 @@ export const FreightHistory = ({
             />
           )}
         />
-        <Table.Column<PlainMessage<{ id: string } & FreightReference>>
+        <Table.Column<PlainMessage<FreightReference>>
+          title='Created at'
           render={(_, record) => {
             const freightCreation = timestampDate(
               freightMap[record?.name || '']?.metadata?.creationTimestamp
             );
 
-            let Component;
-
             if (freightCreation) {
-              Component = (
-                <Typography.Text type='secondary' className='text-[10px]'>
-                  Created: {formatDistance(freightCreation, new Date(), { addSuffix: false })}
+              return (
+                <Typography.Text
+                  type='secondary'
+                  className='text-xs'
+                  title={freightCreation?.toString?.()}
+                >
+                  {formatDistance(freightCreation, new Date(), { addSuffix: false })}
                 </Typography.Text>
               );
             }
 
+            return '-';
+          }}
+        />
+        <Table.Column<PlainMessage<{ id: string } & FreightReference>>
+          title='Promoted at'
+          render={(_, record) => {
             const promotion = promotionsByFreightCollection[record.id];
 
             if (promotion) {
               const promotedAt = timestampDate(promotion?.metadata?.creationTimestamp);
 
               if (promotedAt) {
-                Component = (
+                return (
                   <>
-                    {Component}
-                    <br />
-                    <Typography.Text type='secondary' className='text-[10px]'>
-                      Promoted: {formatDistance(promotedAt, new Date(), { addSuffix: false })}
+                    <Typography.Text
+                      type='secondary'
+                      className='text-xs'
+                      title={promotedAt?.toString?.()}
+                    >
+                      {formatDistance(promotedAt, new Date(), { addSuffix: false })}
                     </Typography.Text>
                   </>
                 );
               }
             }
 
-            return Component;
+            return '-';
           }}
         />
         <Table.Column<PlainMessage<FreightReference>>
