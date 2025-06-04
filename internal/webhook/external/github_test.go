@@ -679,7 +679,7 @@ func newGithubEventBody() *bytes.Buffer {
 {
 	"repository": {
 	  "html_url": "https://github.com/username/repo"
-	},
+	}
   }	
 `)
 }

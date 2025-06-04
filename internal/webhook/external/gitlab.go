@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"net/http"
 
+	gl "gitlab.com/gitlab-org/api/client-go"
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/io"
 	"github.com/akuity/kargo/internal/logging"
-	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	gl "gitlab.com/gitlab-org/api/client-go"
 )
 
 func gitlabHandler(
@@ -49,7 +49,6 @@ func gitlabHandler(
 			xhttp.WriteErrorJSON(w, errors.New("configuration error"))
 			return
 		}
-
 
 		if string(token) != gl.HookEventToken(r) {
 			xhttp.WriteErrorJSON(w,

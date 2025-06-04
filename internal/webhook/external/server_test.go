@@ -106,7 +106,7 @@ func TestRouteHandler(t *testing.T) {
 								Namespace: "fakenamespace",
 							},
 							Data: map[string][]byte{
-								"token": []byte("mysupersecrettoken"),
+								kargoapi.WebhookReceiverSecretKeyGithub: []byte("mysupersecrettoken"),
 							},
 						},
 						&kargoapi.ProjectConfig{
