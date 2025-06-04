@@ -54,6 +54,7 @@ import { useSyncFreight } from './use-sync-freight';
 import { useWatchFreight } from './use-watch-freight';
 
 import '@xyflow/react/dist/style.css';
+import { PipelineListView } from './list/list-view';
 
 export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: boolean }) => {
   const { name, stageName, promotionId, freight, stage, warehouseName, freightName } = useParams();
@@ -199,7 +200,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
             <FreightTimeline freights={freights} project={projectName || ''} />
 
             <div className='w-full h-full relative'>
-              <Flex gap={12} className='absolute z-10 top-2 right-2 left-2'>
+              {/* <Flex gap={12} className='absolute z-10 top-2 right-2 left-2'>
                 <GraphFilters
                   warehouses={listWarehousesQuery.data?.warehouses || []}
                   stages={listStagesQuery.data?.stages || []}
@@ -287,6 +288,10 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                 project={project.metadata?.name || ''}
                 warehouses={listWarehousesQuery.data?.warehouses || []}
                 stages={listStagesQuery.data?.stages || []}
+              /> */}
+              <PipelineListView
+                stages={listStagesQuery.data?.stages || []}
+                warehouses={listWarehousesQuery.data?.warehouses || []}
               />
             </div>
 
