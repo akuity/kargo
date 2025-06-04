@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/git"
 	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/io"
 	"github.com/akuity/kargo/internal/logging"
@@ -100,7 +101,7 @@ func gitlabHandler(
 
 		switch e := e.(type) {
 		case *gl.PushEvent:
-			repoWebURL := e.Repository.Homepage
+			repoWebURL := git.NormalizeURL(e.Repository.GitHTTPURL)
 			logger = logger.WithValues("repoWebURL", repoWebURL)
 			ctx = logging.ContextWithLogger(ctx, logger)
 			result, err := refreshWarehouses(ctx, c, namespace, repoWebURL)

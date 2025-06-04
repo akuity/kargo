@@ -489,7 +489,7 @@ func newGitlabEventBody() *bytes.Buffer {
 	return bytes.NewBufferString(`
 {
 	"repository":{
-		"homepage": "http://gitlab.com/username/repo"
+		"git_http_url": "http://gitlab.com/username/repo"
 	}
   }	
 `)
