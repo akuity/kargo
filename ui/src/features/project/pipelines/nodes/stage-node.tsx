@@ -213,7 +213,11 @@ export const StageNode = (props: { stage: Stage }) => {
     dropdownItems.push({
       key: 'quick-promote-upstream-freight-promo',
       label: 'Instant promote from upstream',
-      icon: <Typography.Text type='danger'><FontAwesomeIcon icon={faBoltLightning} /></Typography.Text>,
+      icon: (
+        <Typography.Text type='danger'>
+          <FontAwesomeIcon icon={faBoltLightning} />
+        </Typography.Text>
+      ),
       onClick:
         upstreamFreights?.length === 1
           ? () =>
