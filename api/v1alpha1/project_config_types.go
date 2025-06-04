@@ -7,11 +7,13 @@ import (
 
 const (
 	WebhookReceiverTypeGitHub = "GitHub"
+	WebhookReceiverTypeGitlab = "GitLab"
 	// TODO(fuskovic): Add more receiver enum types(e.g. Dockerhub, Quay, Gitlab, etc...)
 )
 
 const (
 	WebhookReceiverSecretKeyGithub = "token"
+	WebhookReceiverSecretKeyGitlab = "gitlab-secret"
 )
 
 // +kubebuilder:object:root=true
@@ -102,8 +104,11 @@ type WebhookReceiverConfig struct {
 	//
 	// TODO(fuskovic): Make this mutually exclusive with configs for other platforms.
 	//
-	// +kubebuilder:validation:Required
 	GitHub *GitHubWebhookReceiver `json:"github,omitempty" protobuf:"bytes,2,opt,name=github"`
+
+	// GitLab contains the configuration for a webhook receiver that is compatible with
+	// GitLab payloads.
+	GitLab *GitLabWebhookReceiver `json:"gitlab,omitempty" protobuf:"bytes,3,opt,name=gitlab"`
 }
 
 // GitHubWebhookReceiver describes a webhook receiver that is compatible with
@@ -116,6 +121,15 @@ type GitHubWebhookReceiver struct {
 	// GitHub documentation: https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
 	//
 	// The value of the token key goes in the "Secret" field when registering a GitHub App or webhook in the GitHub UI.
+	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+}
+
+type GitLabWebhookReceiver struct {
+	// SecretRef contains a reference to a Secret in the same namespace as the ProjectConfig.
+	//
+	// The secret is expected to contain a `gitlab-secret` key with the secret token configured for
+	// in GitLab for the webhook. For more information about this token, please refer to the
+	// GitLab documentation: hhttps://docs.gitlab.com/user/project/integrations/webhooks/
 	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
 }
 

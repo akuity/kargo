@@ -116,14 +116,32 @@
                 ],
                 "type": "object"
               },
+              "gitlab": {
+                "description": "GitLab contains the configuration for a webhook receiver that is compatible with\nGitLab payloads.",
+                "properties": {
+                  "secretRef": {
+                    "description": "SecretRef contains a reference to a Secret in the same namespace as the ProjectConfig.\n\nThe secret is expected to contain a `gitlab-secret` key with the secret token configured for\nin GitLab for the webhook. For more information about this token, please refer to the\nGitLab documentation: hhttps://docs.gitlab.com/user/project/integrations/webhooks/",
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "description": "Name of the referent.\nThis field is effectively required, but due to backwards compatibility is\nallowed to be empty. Instances of this type with an empty value here are\nalmost certainly wrong.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
+                        "type": "string"
+                      }
+                    },
+                    "type": "object",
+                    "x-kubernetes-map-type": "atomic"
+                  }
+                },
+                "required": [
+                  "secretRef"
+                ],
+                "type": "object"
+              },
               "name": {
                 "description": "Name is the name of the webhook receiver.",
                 "type": "string"
               }
             },
-            "required": [
-              "github"
-            ],
             "type": "object"
           },
           "type": "array"

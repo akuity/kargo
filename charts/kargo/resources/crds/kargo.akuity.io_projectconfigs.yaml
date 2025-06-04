@@ -187,11 +187,36 @@ spec:
                       required:
                       - secretRef
                       type: object
+                    gitlab:
+                      description: |-
+                        GitLab contains the configuration for a webhook receiver that is compatible with
+                        GitLab payloads.
+                      properties:
+                        secretRef:
+                          description: |-
+                            SecretRef contains a reference to a Secret in the same namespace as the ProjectConfig.
+
+                            The secret is expected to contain a `gitlab-secret` key with the secret token configured for
+                            in GitLab for the webhook. For more information about this token, please refer to the
+                            GitLab documentation: hhttps://docs.gitlab.com/user/project/integrations/webhooks/
+                          properties:
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      required:
+                      - secretRef
+                      type: object
                     name:
                       description: Name is the name of the webhook receiver.
                       type: string
-                  required:
-                  - github
                   type: object
                 type: array
             type: object

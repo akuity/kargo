@@ -559,6 +559,15 @@ message GitHubWebhookReceiver {
   optional .k8s.io.api.core.v1.LocalObjectReference secretRef = 1;
 }
 
+message GitLabWebhookReceiver {
+  // SecretRef contains a reference to a Secret in the same namespace as the ProjectConfig.
+  //
+  // The secret is expected to contain a `gitlab-secret` key with the secret token configured for
+  // in GitLab for the webhook. For more information about this token, please refer to the
+  // GitLab documentation: hhttps://docs.gitlab.com/user/project/integrations/webhooks/
+  optional .k8s.io.api.core.v1.LocalObjectReference secretRef = 1;
+}
+
 // GitSubscription defines a subscription to a Git repository.
 message GitSubscription {
   // URL is the repository's URL. This is a required field.
@@ -1687,8 +1696,10 @@ message WebhookReceiverConfig {
   // GitHub payloads.
   //
   // TODO(fuskovic): Make this mutually exclusive with configs for other platforms.
-  //
-  // +kubebuilder:validation:Required
   optional GitHubWebhookReceiver github = 2;
+
+  // GitLab contains the configuration for a webhook receiver that is compatible with
+  // GitLab payloads.
+  optional GitLabWebhookReceiver gitlab = 3;
 }
 
