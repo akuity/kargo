@@ -6,57 +6,66 @@ import (
 	"net/http"
 
 	gh "github.com/google/go-github/v71/github"
-	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/git"
 	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/io"
 	"github.com/akuity/kargo/internal/logging"
 )
 
-// githubHandler handles push events for github.
-// After the request has been authenticated,
-// the kubeclient is queried for all warehouses that contain a subscription
-// to the repo in question. Those warehouses are then patched with a special
-// annotation that signals down stream logic to refresh the warehouse.
-func githubHandler(
+// githubWebhookReceiver is an implementation of WebhookReceiver that handles
+// inbound webhooks from GitHub.
+type githubWebhookReceiver struct {
+	*baseWebhookReceiver
+}
+
+// newGitHubWebhookReceiver returns a new instance of githubWebhookReceiver.
+func newGitHubWebhookReceiver(
 	c client.Client,
-	namespace string,
-	secretName string,
-) http.HandlerFunc {
+	project string,
+	cfg kargoapi.WebhookReceiverConfig,
+) WebhookReceiver {
+	return &githubWebhookReceiver{
+		baseWebhookReceiver: &baseWebhookReceiver{
+			client:     c,
+			project:    project,
+			secretName: cfg.GitHub.SecretRef.Name,
+		},
+	}
+}
+
+// GetDetails implements WebhookReceiver.
+func (g *githubWebhookReceiver) getReceiverType() string {
+	return "github"
+}
+
+// getSecretValues implements WebhookReceiver.
+func (g *githubWebhookReceiver) getSecretValues(
+	secretData map[string][]byte,
+) ([]string, error) {
+	token, ok := secretData["token"]
+	if !ok {
+		return nil,
+			errors.New("Secret data is not valid for a GitHub WebhookReceiver")
+	}
+	return []string{string(token)}, nil
+}
+
+// GetHandler implements WebhookReceiver.
+func (g *githubWebhookReceiver) GetHandler() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		logger := logging.LoggerFromContext(ctx).WithValues("path", r.URL.Path)
-		ctx = logging.ContextWithLogger(ctx, logger)
-		logger.Debug("retrieving secret", "secret-name", secretName)
-		var secret corev1.Secret
-		err := c.Get(ctx,
-			client.ObjectKey{
-				Name:      secretName,
-				Namespace: namespace,
-			},
-			&secret,
-		)
-		if err != nil {
-			logger.Error(err, "failed to get github secret")
-			xhttp.WriteErrorJSON(w, errors.New("configuration error"))
-			return
-		}
-		token, ok := secret.Data[kargoapi.WebhookReceiverSecretKeyGithub]
-		if !ok {
-			logger.Error(
-				errors.New("invalid secret data"),
-				"no value for target key",
-				"target-key", kargoapi.WebhookReceiverSecretKeyGithub,
-			)
-			xhttp.WriteErrorJSON(w, errors.New("configuration error"))
-			return
-		}
-		logger.Debug("identifying source repository")
 
-		// TODO(fuskovic): eventually switch on event type to perform
-		// different actions (e.g. refresh Promotion on PR merge)
+		logger := logging.LoggerFromContext(ctx)
+
+		token, ok := g.secretData["token"]
+		if !ok {
+			xhttp.WriteErrorJSON(w, nil)
+			return
+		}
+
 		eventType := r.Header.Get("X-GitHub-Event")
 		switch eventType {
 		case "ping", "push":
@@ -71,83 +80,74 @@ func githubHandler(
 			return
 		}
 
+		logger = logger.WithValues("eventType", eventType)
+		ctx = logging.ContextWithLogger(ctx, logger)
+
 		const maxBytes = 2 << 20 // 2MB
-		b, err := io.LimitRead(r.Body, maxBytes)
+		body, err := io.LimitRead(r.Body, maxBytes)
 		if err != nil {
-			xhttp.WriteErrorJSON(w,
-				xhttp.Error(
-					fmt.Errorf("failed to read request body: %w", err),
-					http.StatusRequestEntityTooLarge,
-				),
-			)
+			if errors.Is(err, &io.BodyTooLargeError{}) {
+				xhttp.WriteErrorJSON(
+					w,
+					xhttp.Error(err, http.StatusRequestEntityTooLarge),
+				)
+				return
+			}
+			xhttp.WriteErrorJSON(w, err)
 			return
 		}
 
 		sig := r.Header.Get(gh.SHA256SignatureHeader)
 		if sig == "" {
-			xhttp.WriteErrorJSON(w,
-				xhttp.Error(
-					errors.New("missing signature"),
-					http.StatusUnauthorized,
-				),
+			xhttp.WriteErrorJSON(
+				w,
+				xhttp.Error(errors.New("missing signature"), http.StatusUnauthorized),
 			)
 			return
 		}
 
-		if err = gh.ValidateSignature(sig, b, token); err != nil {
-			logger.Error(err, "failed to validate signature")
-			xhttp.WriteErrorJSON(w,
-				xhttp.Error(
-					errors.New("unauthorized"),
-					http.StatusUnauthorized,
-				),
+		if err = gh.ValidateSignature(sig, body, token); err != nil {
+			xhttp.WriteErrorJSON(
+				w,
+				xhttp.Error(errors.New("unauthorized"), http.StatusUnauthorized),
 			)
 			return
 		}
 
-		e, err := gh.ParseWebHook(eventType, b)
+		event, err := gh.ParseWebHook(eventType, body)
 		if err != nil {
-			xhttp.WriteErrorJSON(w,
-				xhttp.Error(
-					fmt.Errorf("failed to parse webhook event: %w", err),
-					http.StatusBadRequest,
-				),
+			xhttp.WriteErrorJSON(
+				w,
+				xhttp.Error(errors.New("invalid request body"), http.StatusBadRequest),
 			)
 			return
 		}
 
-		switch e := e.(type) {
+		switch e := event.(type) {
 		case *gh.PingEvent:
-			repoWebURL := e.GetRepo().GetHTMLURL()
-			logger.Debug("received ping event", "repo", repoWebURL)
-			xhttp.WriteResponseJSON(w,
+			xhttp.WriteResponseJSON(
+				w,
 				http.StatusOK,
 				map[string]string{
-					"msg": fmt.Sprintf(
-						"ping event received, webhook is configured correctly for %s",
-						repoWebURL,
-					),
+					"msg": "ping event received, webhook is configured correctly",
 				},
 			)
 		case *gh.PushEvent:
-			repoWebURL := e.GetRepo().GetHTMLURL()
-			logger = logger.WithValues("repoWebURL", repoWebURL)
+			// TODO(krancour): GetHTMLURL() gives use a repo URL starting with
+			// https://. By refreshing Warehouses using a normalized representation of
+			// that URL, we will miss any Warehouses that are subscribed to the same
+			// repository using a different URL format.
+			repoURL := git.NormalizeURL(e.GetRepo().GetHTMLURL())
+			logger = logger.WithValues("repoWebURL", repoURL)
 			ctx = logging.ContextWithLogger(ctx, logger)
-			result, err := refreshWarehouses(ctx, c, namespace, repoWebURL)
+			result, err := refreshWarehouses(ctx, g.client, g.project, repoURL)
 			if err != nil {
-				xhttp.WriteErrorJSON(w,
-					xhttp.Error(err, http.StatusInternalServerError),
-				)
+				xhttp.WriteErrorJSON(w, err)
 				return
 			}
-
-			logger.Debug("execution complete",
-				"successes", result.successes,
-				"failures", result.failures,
-			)
-
 			if result.failures > 0 {
-				xhttp.WriteResponseJSON(w,
+				xhttp.WriteResponseJSON(
+					w,
 					http.StatusInternalServerError,
 					map[string]string{
 						"error": fmt.Sprintf("failed to refresh %d of %d warehouses",
@@ -158,13 +158,11 @@ func githubHandler(
 				)
 				return
 			}
-
-			xhttp.WriteResponseJSON(w,
+			xhttp.WriteResponseJSON(
+				w,
 				http.StatusOK,
 				map[string]string{
-					"msg": fmt.Sprintf("refreshed %d warehouse(s)",
-						result.successes,
-					),
+					"msg": fmt.Sprintf("refreshed %d warehouse(s)", result.successes),
 				},
 			)
 		}
