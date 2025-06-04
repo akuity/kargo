@@ -782,7 +782,7 @@ func newGitHubEventBody(eventType string) *bytes.Buffer {
 }
 `))
 	case "package":
-	return bytes.NewBuffer([]byte(`
+		return bytes.NewBuffer([]byte(`
 {
   "action": "published",
   "package": {
