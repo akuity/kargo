@@ -3,6 +3,7 @@ import {
   faBarsStaggered,
   faBolt,
   faBoltLightning,
+  faCircleNotch,
   faExternalLink,
   faMinus,
   faTruckArrowRight
@@ -212,11 +213,17 @@ export const StageNode = (props: { stage: Stage }) => {
 
     dropdownItems.push({
       key: 'quick-promote-upstream-freight-promo',
-      label: 'Instant promote from upstream',
-      icon: (
-        <Typography.Text type='danger'>
-          <FontAwesomeIcon icon={faBoltLightning} />
-        </Typography.Text>
+      label: (
+        <>
+          {promoteActionMutation.isPending ? (
+            <FontAwesomeIcon icon={faCircleNotch} className='mr-1' spin />
+          ) : (
+            <Typography.Text type='danger' className='mr-2'>
+              <FontAwesomeIcon icon={faBoltLightning} />
+            </Typography.Text>
+          )}
+          Instant promote from upstream
+        </>
       ),
       onClick:
         upstreamFreights?.length === 1
