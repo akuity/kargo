@@ -764,7 +764,7 @@ func sign(t *testing.T, s string, b []byte) string {
 func newGitHubEventBody(eventType string) *bytes.Buffer {
 	switch eventType {
 	case "push", "ping", "deployment":
-		return bytes.NewBuffer([]byte(`
+		return bytes.NewBufferString(`
 {
 	"ref": "refs/heads/main",
 	"before": "1fe030abc48d0d0ee7b3d650d6e9449775990318",
@@ -780,9 +780,9 @@ func newGitHubEventBody(eventType string) *bytes.Buffer {
 		"id": "f12cd167152d80c0a2e28cb45e827c6311bba910"
 	}
 }
-`))
+`)
 	case "package":
-		return bytes.NewBuffer([]byte(`
+		return bytes.NewBufferString(`
 {
   "action": "published",
   "package": {
@@ -796,7 +796,7 @@ func newGitHubEventBody(eventType string) *bytes.Buffer {
     "login": "username"
   }
 }
-`))
+`)
 	default:
 		return bytes.NewBuffer([]byte(`{}`))
 	}
