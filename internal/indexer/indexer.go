@@ -482,17 +482,17 @@ func WarehousesBySubscribedURLs(obj client.Object) []string {
 	var repoURLs []string
 	for _, sub := range warehouse.Spec.Subscriptions {
 		if sub.Git != nil && sub.Git.RepoURL != "" {
-			repoURLs = append(repoURLs,
-				git.NormalizeURL(sub.Git.RepoURL),
-			)
+			repoURLs = append(repoURLs, git.NormalizeURL(sub.Git.RepoURL))
 		}
 		if sub.Chart != nil && sub.Chart.RepoURL != "" {
-			repoURLs = append(repoURLs,
+			repoURLs = append(
+				repoURLs,
 				helm.NormalizeChartRepositoryURL(sub.Chart.RepoURL),
 			)
 		}
 		if sub.Image != nil && sub.Image.RepoURL != "" {
-			repoURLs = append(repoURLs,
+			repoURLs = append(
+				repoURLs,
 				// TODO(fuskovic): This chart URL normalization logic is adequate for
 				// normalizing image URLs in the near term, but should eventually be
 				// replaced with dedicated image URL normalization logic.
