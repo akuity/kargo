@@ -201,7 +201,7 @@ export const FreightCard = (props: FreightCardProps) => {
                   noOfHelmReleases +
                   noOfContainerImages -
                   (props.freight?.charts?.slice(0, 2)?.length +
-                    props.freight?.charts?.slice(0, 2)?.length +
+                    props.freight?.commits?.slice(0, 2)?.length +
                     props.freight?.images?.slice(0, 2)?.length)}{' '}
                 more
               </Typography.Text>

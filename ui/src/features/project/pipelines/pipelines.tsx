@@ -200,7 +200,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
             <FreightTimeline freights={freights} project={projectName || ''} />
 
             <div className='w-full h-full relative'>
-              {/* <Flex gap={12} className='absolute z-10 top-2 right-2 left-2'>
+              <Flex gap={12} className='z-10 top-2 right-2 left-2' align='center'>
                 <GraphFilters
                   warehouses={listWarehousesQuery.data?.warehouses || []}
                   stages={listStagesQuery.data?.stages || []}
@@ -267,7 +267,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                 />
               </Flex>
 
-              <div
+              {/* <div
                 className={classNames('w-[450px] absolute right-2 top-20 z-10', {
                   hidden: !preferredFilter?.images
                 })}
@@ -292,6 +292,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
               <PipelineListView
                 stages={listStagesQuery.data?.stages || []}
                 warehouses={listWarehousesQuery.data?.warehouses || []}
+                className='mt-2'
               />
             </div>
 
