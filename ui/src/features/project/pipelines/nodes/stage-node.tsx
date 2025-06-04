@@ -4,7 +4,6 @@ import {
   faBolt,
   faBoltLightning,
   faExternalLink,
-  faFire,
   faMinus,
   faTruckArrowRight
 } from '@fortawesome/free-solid-svg-icons';
@@ -183,7 +182,6 @@ export const StageNode = (props: { stage: Stage }) => {
     dropdownItems.push({
       key: 'upstream-freight-promo',
       label: 'Promote from upstream',
-      icon: <FontAwesomeIcon icon={faBoltLightning} className='mt-1' />,
       onClick:
         upstreamFreights?.length === 1
           ? () =>
@@ -214,8 +212,8 @@ export const StageNode = (props: { stage: Stage }) => {
 
     dropdownItems.push({
       key: 'quick-promote-upstream-freight-promo',
-      label: <span className='text-orange-500'>Quick promote from upstream</span>,
-      icon: <FontAwesomeIcon icon={faFire} className='mt-1 text-orange-500' />,
+      label: 'Instant promote from upstream',
+      icon: <Button icon={<FontAwesomeIcon icon={faBoltLightning} />} danger type='text' />,
       onClick:
         upstreamFreights?.length === 1
           ? () =>
