@@ -171,16 +171,9 @@ func TestQuayHandler(t *testing.T) {
 }
 
 func newQuayPayload() *bytes.Buffer {
-	return bytes.NewBuffer([]byte(`
+	return bytes.NewBufferString(`
 		{
-			"name": "repository",
-			"repository": "mynamespace/repository",
-			"namespace": "mynamespace",
 			"docker_url": "quay.io/mynamespace/repository",
-			"homepage": "https://quay.io/repository/mynamespace/repository",
-			"updated_tags": [
-			  "latest"
-			]
 		  }
-	`))
+	`)
 }
