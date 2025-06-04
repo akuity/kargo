@@ -675,21 +675,11 @@ func sign(t *testing.T, s string, b []byte) string {
 }
 
 func newGithubPayload() *bytes.Buffer {
-	return bytes.NewBuffer([]byte(`
+	return bytes.NewBufferString(`
 {
-	"ref": "refs/heads/main",
-	"before": "1fe030abc48d0d0ee7b3d650d6e9449775990318",
-	"after": "f12cd167152d80c0a2e28cb45e827c6311bba910",
 	"repository": {
 	  "html_url": "https://github.com/username/repo"
 	},
-	"pusher": {
-	  "name": "username",
-	  "email": "email@inbox.com"
-	},
-	"head_commit": {
-	  "id": "f12cd167152d80c0a2e28cb45e827c6311bba910"
-	}
   }	
-`))
+`)
 }
