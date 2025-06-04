@@ -54,7 +54,7 @@ func gitlabHandler(
 		if string(token) != gl.HookEventToken(r) {
 			xhttp.WriteErrorJSON(w,
 				xhttp.Error(
-					errors.New("invalid token"),
+					errors.New("unauthorized"),
 					http.StatusUnauthorized,
 				),
 			)
