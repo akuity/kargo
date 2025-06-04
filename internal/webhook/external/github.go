@@ -172,7 +172,7 @@ func githubHandler(
 			ns := e.GetPackage().Namespace
 			// construct the package URL that will be used by the warehouse
 			// based on name and namespace field from the package payload
-			// https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry#pushing-container-images
+			// https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry
 			packageURL := fmt.Sprintf("ghcr.io/%v/%v", *ns, *name)
 			logger = logger.WithValues("packageURL", packageURL)
 			ctx = logging.ContextWithLogger(ctx, logger)
