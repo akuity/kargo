@@ -117,6 +117,11 @@ func (s *server) route(w http.ResponseWriter, r *http.Request) {
 			pc.Namespace,
 			wrc.GitHub.SecretRef.Name,
 		)(w, r)
+	case wrc.DockerHub != nil:
+		dockerHubHandler(
+			s.client,
+			pc.Namespace,
+		)(w, r)
 	default:
 		http.Error(w, "not found", http.StatusNotFound)
 	}

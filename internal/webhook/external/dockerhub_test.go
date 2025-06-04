@@ -1,0 +1,203 @@
+package external
+
+import (
+	"bytes"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/indexer"
+	"github.com/akuity/kargo/internal/logging"
+)
+
+func TestDockerHubHandler(t *testing.T) {
+	url := "http://doesntmatter.com"
+	for _, test := range []struct {
+		name    string
+		kClient func() client.Client
+		req     func() *http.Request
+		code    int
+		msg     string
+	}{
+		{
+			name: "request too large",
+			kClient: func() client.Client {
+				scheme := runtime.NewScheme()
+				require.NoError(t, corev1.AddToScheme(scheme))
+				require.NoError(t, kargoapi.AddToScheme(scheme))
+				return fake.NewClientBuilder().
+					WithScheme(scheme).
+					Build()
+			},
+			req: func() *http.Request {
+				const maxBytes = 2 << 20 // 2MB
+				body := make([]byte, maxBytes+1)
+				b := io.NopCloser(bytes.NewBuffer(body))
+				req := httptest.NewRequest(http.MethodPost, url, b)
+				return req
+			},
+			msg:  "{\"error\":\"failed to read request body: content exceeds limit of 2097152 bytes\"}\n",
+			code: http.StatusRequestEntityTooLarge,
+		},
+		{
+			name: "missing repo_name",
+			kClient: func() client.Client {
+				scheme := runtime.NewScheme()
+				require.NoError(t, corev1.AddToScheme(scheme))
+				require.NoError(t, kargoapi.AddToScheme(scheme))
+				return fake.NewClientBuilder().
+					WithScheme(scheme).
+					Build()
+			},
+			req: func() *http.Request {
+				b := bytes.NewBuffer([]byte(`{"repository":{}}`))
+				req := httptest.NewRequest(http.MethodPost, url, b)
+				return req
+			},
+			msg:  "{\"error\":\"missing repository name in request body\"}\n",
+			code: http.StatusBadRequest,
+		},
+		{
+			name: "success",
+			kClient: func() client.Client {
+				scheme := runtime.NewScheme()
+				require.NoError(t, corev1.AddToScheme(scheme))
+				require.NoError(t, kargoapi.AddToScheme(scheme))
+				return fake.NewClientBuilder().
+					WithScheme(scheme).
+					WithObjects(
+						&corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "fakesecret",
+								Namespace: "fakenamespace",
+							},
+							Data: map[string][]byte{
+								kargoapi.WebhookReceiverSecretKeyDockerHub: []byte("mysupersecrettoken"),
+							},
+						},
+						&kargoapi.ProjectConfig{
+							ObjectMeta: metav1.ObjectMeta{
+								Namespace: "fakenamespace",
+								Name:      "fakename",
+							},
+							Spec: kargoapi.ProjectConfigSpec{
+								WebhookReceivers: []kargoapi.WebhookReceiverConfig{
+									{
+										Name: "fake-webhook-receiver-name",
+										DockerHub: &kargoapi.DockerHubWebhookReceiver{
+											SecretRef: corev1.LocalObjectReference{
+												Name: "fakesecret",
+											},
+										},
+									},
+								},
+							},
+							Status: kargoapi.ProjectConfigStatus{
+								WebhookReceivers: []kargoapi.WebhookReceiver{
+									{
+										Name: "fake-webhook-receiver-name",
+										Path: GenerateWebhookPath(
+											"fake-webhook-receiver-name",
+											"fakename",
+											kargoapi.WebhookReceiverTypeDockerHub,
+											"mysupersecrettoken",
+										),
+									},
+								},
+							},
+						},
+						&kargoapi.Warehouse{
+							ObjectMeta: metav1.ObjectMeta{
+								Namespace: "fakenamespace",
+								Name:      "fakename",
+							},
+							Spec: kargoapi.WarehouseSpec{
+								Subscriptions: []kargoapi.RepoSubscription{
+									{
+										Image: &kargoapi.ImageSubscription{
+											RepoURL: "docker.io/someuser/somerepo",
+										},
+									},
+								},
+							},
+						},
+					).
+					WithIndex(
+						&kargoapi.Warehouse{},
+						indexer.WarehousesBySubscribedURLsField,
+						indexer.WarehousesBySubscribedURLs,
+					).
+					WithIndex(
+						&kargoapi.ProjectConfig{},
+						indexer.ProjectConfigsByWebhookReceiverPathsField,
+						indexer.ProjectConfigsByWebhookReceiverPaths,
+					).
+					Build()
+			},
+			req: func() *http.Request {
+				b := newDockerHubPayload()
+				req := httptest.NewRequest(http.MethodPost, url, b)
+				return req
+			},
+			msg:  "{\"msg\":\"refreshed 1 warehouse(s)\"}\n",
+			code: http.StatusOK,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			req := test.req()
+			l := logging.NewLogger(logging.DebugLevel)
+			ctx := logging.ContextWithLogger(req.Context(), l)
+			req = req.WithContext(ctx)
+			w := httptest.NewRecorder()
+			namespace := "fakenamespace"
+			h := dockerHubHandler(
+				test.kClient(),
+				namespace,
+			)
+			h(w, req)
+			require.Equal(t, test.code, w.Code)
+			require.Contains(t, w.Body.String(), test.msg)
+		})
+	}
+}
+
+func newDockerHubPayload() *bytes.Buffer {
+	return bytes.NewBuffer([]byte(`
+        {
+            "callback_url": 
+				"https://registry.hub.docker.com/u/someuser/somerepo/hook/123456/",
+            "push_data": {
+                "pushed_at": 1710000000,
+                "pusher": "notarealuser",
+                "tag": "notarealtag"
+            },
+            "repository": {
+                "comment_count": 42,
+                "date_created": 1700000000,
+                "description": "A fake repo for testing.",
+                "dockerfile": "FROM scratch",
+                "full_description": "This is not a real Docker image.",
+                "is_official": false,
+                "is_private": false,
+                "is_trusted": false,
+                "name": "somerepo",
+                "namespace": "someuser",
+                "owner": "someuser",
+                "repo_name": "someuser/somerepo",
+                "repo_url": 
+					"https://registry.hub.docker.com/u/someuser/somerepo/",
+                "star_count": 0,
+                "status": "Inactive"
+            }
+        }
+    `))
+}
