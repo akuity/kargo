@@ -13,11 +13,11 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 // configuration.
 type ClusterConfig struct {
 	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	// Spec describes the configuration of a cluster.
-	Spec ClusterConfigSpec `json:"spec,omitempty"`
+	Spec ClusterConfigSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
 	// Status describes the current status of a ClusterConfig.
-	Status ClusterConfigStatus `json:"status,omitempty"`
+	Status ClusterConfigStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
 func (c *ClusterConfig) GetStatus() *ClusterConfigStatus {
@@ -28,7 +28,7 @@ func (c *ClusterConfig) GetStatus() *ClusterConfigStatus {
 type ClusterConfigSpec struct {
 	// WebhookReceivers describes cluster-scoped webhook receivers used for
 	// processing events from various external platforms
-	WebhookReceivers []WebhookReceiverConfig `json:"webhookReceivers,omitempty"`
+	WebhookReceivers []WebhookReceiverConfig `json:"webhookReceivers,omitempty" protobuf:"bytes,1,rep,name=webhookReceivers"`
 }
 
 // ClusterConfigStatus describes the current status of a ClusterConfig.
@@ -40,9 +40,9 @@ type ClusterConfigStatus struct {
 	// +patchStrategy=merge
 	// +listType=map
 	// +listMapKey=type
-	Conditions []metav1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge"`
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,1,rep,name=conditions"`
 	// WebhookReceivers describes the status of cluster-scoped webhook receivers.
-	WebhookReceivers []WebhookReceiverDetails `json:"webhookReceivers,omitempty"`
+	WebhookReceivers []WebhookReceiverDetails `json:"webhookReceivers,omitempty" protobuf:"bytes,2,rep,name=webhookReceivers"`
 }
 
 // GetConditions implements the conditions.Getter interface.
@@ -60,6 +60,6 @@ func (c *ClusterConfigStatus) SetConditions(conditions []metav1.Condition) {
 // ClusterConfigList contains a list of ClusterConfigs.
 type ClusterConfigList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ClusterConfig `json:"items"`
+	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	Items           []ClusterConfig `json:"items" protobuf:"bytes,2,rep,name=items"`
 }

@@ -165,18 +165,21 @@ spec:
                   properties:
                     github:
                       description: |
-                        GitHub contains the configuration for a webhook receiver that is compatible with
-                        GitHub payloads.
+                        GitHub contains the configuration for a webhook receiver that is compatible
+                        with GitHub payloads.
                       properties:
                         secretRef:
                           description: |-
-                            SecretRef contains a reference to a Secret in the same namespace as the ProjectConfig.
+                            SecretRef contains a reference to a Secret in the same namespace as the
+                            ProjectConfig.
 
-                            The Secret is expected to contain a `token` key with the secret token configured for
-                            in GitHub for the webhook. For more information about this token, please refer to the
-                            GitHub documentation: https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
+                            The Secret is expected to contain a `token` key with the secret token
+                            configured for in GitHub for the webhook. For more information about this
+                            token, please refer to the GitHub documentation:
+                              https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
 
-                            The value of the token key goes in the "Secret" field when registering a GitHub App or webhook in the GitHub UI.
+                            The value of the token key goes in the "Secret" field when registering a
+                            GitHub App or webhook in the GitHub UI.
                           properties:
                             name:
                               default: ""
