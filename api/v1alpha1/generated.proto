@@ -579,7 +579,7 @@ message GitSubscription {
   //   by the Branch field or the default branch if none is specified. This is
   //   the default strategy.
   //
-  // - "SemVer": Selects the commit referenced by the the semantically greatest
+  // - "SemVer": Selects the commit referenced by the semantically greatest
   //   tag. The SemverConstraint field can optionally be used to narrow the set
   //   of tags eligible for selection.
   //
@@ -646,6 +646,53 @@ message GitSubscription {
   //
   // +kubebuilder:validation:Optional
   repeated string ignoreTags = 6;
+
+  // ExpressionFilter is an expression that can optionally be used to limit
+  // the commits or tags that are considered in determining the newest commit
+  // of interest based on their metadata.
+  //
+  // For commit-based strategies (NewestFromBranch), the filter applies to
+  // commits and has access to commit metadata variables.
+  // For tag-based strategies (Lexical, NewestTag, SemVer), the filter applies
+  // to tags and has access to tag metadata variables. The filter is applied
+  // after AllowTags, IgnoreTags, and SemverConstraint fields.
+  //
+  // The expression should be a valid expr-lang expression that evaluates to
+  // true or false. When the expression evaluates to true, the commit/tag is
+  // included in the set that is considered. When the expression evaluates to
+  // false, the commit/tag is excluded.
+  //
+  // Available variables depend on the CommitSelectionStrategy:
+  //
+  // For NewestFromBranch (commit filtering):
+  //   - `id`: The ID (sha) of the commit.
+  //   - `commitDate`: The commit date of the commit.
+  //   - `author`: The author of the commit message, in the format "Name <email>".
+  //   - `committer`: The person who committed the commit, in the format
+  // 	   "Name <email>".
+  //   - `subject`: The subject (first line) of the commit message.
+  //
+  // For Lexical, NewestTag, SemVer (tag filtering):
+  //   - `tag`: The name of the tag.
+  //   - `id`: The ID (sha) of the commit associated with the tag.
+  //   - `creatorDate`: The creation date of an annotated tag, or the commit
+  // 		date of a lightweight tag.
+  //   - `author`: The author of the commit message associated with the tag,
+  // 	   in the format "Name <email>".
+  //   - `committer`: The person who committed the commit associated with the
+  // 	   tag, in the format "Name <email>".
+  //   - `subject`: The subject (first line) of the commit message associated
+  // 	   with the tag.
+  // 	 - `tagger`: The person who created the tag, in the format "Name <email>".
+  // 	   Only available for annotated tags.
+  // 	 - `annotation`: The subject (first line) of the tag annotation. Only
+  // 	   available for annotated tags.
+  //
+  // Refer to the expr-lang documentation for more details on syntax and
+  // capabilities of the expression language: https://expr-lang.org.
+  //
+  // +kubebuilder:validation:Optional
+  optional string expressionFilter = 12;
 
   // InsecureSkipTLSVerify specifies whether certificate verification errors
   // should be ignored when connecting to the repository. This should be enabled

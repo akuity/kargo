@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/expr-lang/expr"
+	"github.com/expr-lang/expr/vm"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -197,6 +200,26 @@ func (r *reconciler) discoverCommits(
 // list contains more than 20 commits, it is clipped to the 20 most recent
 // commits.
 func (r *reconciler) discoverBranchHistory(repo git.Repo, sub kargoapi.GitSubscription) ([]git.CommitMetadata, error) {
+	// Compile the commit expression filter if it is specified.
+	var exprProgram *vm.Program
+	if sub.ExpressionFilter != "" {
+		program, err := expr.Compile(sub.ExpressionFilter)
+		if err != nil {
+			return nil, fmt.Errorf("error compiling expression filter: %w", err)
+		}
+		exprProgram = program
+	}
+
+	// Compile include and exclude path selectors.
+	includeSelectors, err := getPathSelectors(sub.IncludePaths)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing include selector: %w", err)
+	}
+	excludeSelectors, err := getPathSelectors(sub.ExcludePaths)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing exclude selector: %w", err)
+	}
+
 	limit := int(sub.DiscoveryLimit)
 	var filteredCommits = make([]git.CommitMetadata, 0, limit)
 	for skip := uint(0); ; skip += uint(limit) { // nolint: gosec
@@ -205,40 +228,42 @@ func (r *reconciler) discoverBranchHistory(repo git.Repo, sub kargoapi.GitSubscr
 			return nil, fmt.Errorf("error listing commits from git repo %q: %w", sub.RepoURL, err)
 		}
 
-		// If no include or exclude paths are specified, return the first commits
-		// up to the limit.
-		if sub.IncludePaths == nil && sub.ExcludePaths == nil {
+		// If no filters are specified, return the first commits up to the limit.
+		if includeSelectors == nil && excludeSelectors == nil && exprProgram == nil {
 			return commits, nil
-		}
-
-		if filteredCommits == nil {
-			filteredCommits = make([]git.CommitMetadata, 0, limit)
-		}
-
-		// Compile include and exclude path selectors.
-		includeSelectors, err := getPathSelectors(sub.IncludePaths)
-		if err != nil {
-			return nil, fmt.Errorf("error parsing include selector: %w", err)
-		}
-		excludeSelectors, err := getPathSelectors(sub.ExcludePaths)
-		if err != nil {
-			return nil, fmt.Errorf("error parsing exclude selector: %w", err)
 		}
 
 		// Filter commits based on include and exclude paths.
 		for _, meta := range commits {
-			diffPaths, err := r.getDiffPathsForCommitIDFn(repo, meta.ID)
-			if err != nil {
-				return nil, fmt.Errorf(
-					"error getting diff paths for commit %q in git repo %q: %w",
-					meta.ID,
-					sub.RepoURL,
-					err,
-				)
+			// If the commit expression filter is specified, evaluate it.
+			if exprProgram != nil {
+				include, err := evaluateCommitExpression(meta, exprProgram)
+				if err != nil {
+					return nil, fmt.Errorf("error evaluating expression commit filter: %w", err)
+				}
+				if !include {
+					continue
+				}
 			}
-			if matchesPathsFilters(includeSelectors, excludeSelectors, diffPaths) {
-				filteredCommits = append(filteredCommits, meta)
+
+			// If include or exclude path selectors are specified, filter the commits.
+			if includeSelectors != nil || excludeSelectors != nil {
+				diffPaths, err := r.getDiffPathsForCommitIDFn(repo, meta.ID)
+				if err != nil {
+					return nil, fmt.Errorf(
+						"error getting diff paths for commit %q in git repo %q: %w",
+						meta.ID,
+						sub.RepoURL,
+						err,
+					)
+				}
+				if !matchesPathsFilters(includeSelectors, excludeSelectors, diffPaths) {
+					continue
+				}
 			}
+
+			// If we reach this point, the commit matches the filters.
+			filteredCommits = append(filteredCommits, meta)
 
 			if len(filteredCommits) >= limit {
 				return trimSlice(filteredCommits, limit), nil
@@ -266,6 +291,10 @@ func (r *reconciler) discoverTags(repo git.Repo, sub kargoapi.GitSubscription) (
 
 	if tags, err = filterTags(tags, sub.IgnoreTags, sub.AllowTags); err != nil {
 		return nil, fmt.Errorf("failed to filter tags: %w", err)
+	}
+
+	if tags, err = filterTagsByExpression(tags, sub.ExpressionFilter); err != nil {
+		return nil, fmt.Errorf("failed to filter tags by expression: %w", err)
 	}
 
 	switch sub.CommitSelectionStrategy {
@@ -338,6 +367,103 @@ func filterTags(tags []git.TagMetadata, ignoreTags []string, allow string) ([]gi
 		filteredTags = append(filteredTags, tag)
 	}
 	return slices.Clip(filteredTags), nil
+}
+
+// filterTagsByExpression filters the given list of tags based on the given
+// expression. It returns the filtered list of tags. If the expression is empty,
+// it returns the original list of tags.
+//
+// The expression is evaluated using the expr package, and the tag metadata is
+// passed as the environment.
+//
+// For a tag to be included in the result, the expression must evaluate to true.
+// If the expression evaluates to a non-boolean value, it is converted to a
+// boolean using strconv.ParseBool. If the conversion fails, an error is
+// returned.
+func filterTagsByExpression(
+	tags []git.TagMetadata,
+	expression string,
+) ([]git.TagMetadata, error) {
+	if expression == "" {
+		return tags, nil
+	}
+
+	program, err := expr.Compile(expression)
+	if err != nil {
+		return nil, fmt.Errorf("error compiling tag expression filter: %w", err)
+	}
+
+	filteredTags := make([]git.TagMetadata, 0, len(tags))
+	for _, tag := range tags {
+		env := map[string]any{
+			"tag":         tag.Tag,
+			"id":          tag.CommitID,
+			"creatorDate": tag.CreatorDate,
+			"author":      tag.Author,
+			"committer":   tag.Committer,
+			"subject":     tag.Subject,
+			"tagger":      tag.Tagger,
+			"annotation":  tag.Annotation,
+		}
+
+		result, err := expr.Run(program, env)
+		if err != nil {
+			return nil, fmt.Errorf("error evaluating tag expression filter: %w", err)
+		}
+
+		switch result := result.(type) {
+		case bool:
+			if !result {
+				continue
+			}
+		default:
+			parsedBool, err := strconv.ParseBool(fmt.Sprintf("%v", result))
+			if err != nil {
+				return nil, fmt.Errorf("error parsing expression result: %w", err)
+			}
+			if !parsedBool {
+				continue
+			}
+		}
+
+		filteredTags = append(filteredTags, tag)
+	}
+	return slices.Clip(filteredTags), nil
+}
+
+// evaluateCommitExpression evaluates the given commit expression against
+// the given commit metadata. The commit metadata is passed as the environment
+// for the expression evaluation. It returns true if the expression evaluates to
+// true, and false otherwise. If the expression is not a boolean, it is
+// converted to a boolean using strconv.ParseBool. If the conversion fails,
+// an error is returned.
+func evaluateCommitExpression(
+	commit git.CommitMetadata,
+	expression *vm.Program,
+) (bool, error) {
+	env := map[string]any{
+		"id":         commit.ID,
+		"commitDate": commit.CommitDate,
+		"author":     commit.Author,
+		"committer":  commit.Committer,
+		"subject":    commit.Subject,
+	}
+
+	result, err := expr.Run(expression, env)
+	if err != nil {
+		return false, err
+	}
+
+	switch result := result.(type) {
+	case bool:
+		return result, nil
+	default:
+		parsedBool, err := strconv.ParseBool(fmt.Sprintf("%v", result))
+		if err != nil {
+			return false, err
+		}
+		return parsedBool, nil
+	}
 }
 
 // allows returns true if the given tag name matches the given regular
