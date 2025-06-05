@@ -156,7 +156,7 @@ func (g *gitCloner) run(
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error cloning %s: %w", cfg.RepoURL, err)
 	}
-	commits := make(map[string]string)
+	commits := make(map[string]any)
 	for _, checkout := range cfg.Checkout {
 		var ref string
 		switch {
