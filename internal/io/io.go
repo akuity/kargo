@@ -11,12 +11,6 @@ type BodyTooLargeError struct {
 	limit int64
 }
 
-func newBodyTooLargeError(limit int64) *BodyTooLargeError {
-	return &BodyTooLargeError{
-		limit: limit,
-	}
-}
-
 func (e *BodyTooLargeError) Error() string {
 	return fmt.Sprintf("content exceeds limit of %d bytes", e.limit)
 }
@@ -53,7 +47,7 @@ func LimitRead(r io.ReadCloser, limit int64) ([]byte, error) {
 			)
 		}
 		if n > 0 {
-			return nil, newBodyTooLargeError(limit)
+			return nil, &BodyTooLargeError{limit: limit}
 		}
 	}
 	return bodyBytes, nil
