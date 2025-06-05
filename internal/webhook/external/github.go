@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 
 	gh "github.com/google/go-github/v71/github"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -19,6 +20,7 @@ import (
 // inbound webhooks from GitHub.
 type githubWebhookReceiver struct {
 	*baseWebhookReceiver
+	baseURL string
 }
 
 // newGitHubWebhookReceiver returns a new instance of githubWebhookReceiver.
@@ -27,12 +29,17 @@ func newGitHubWebhookReceiver(
 	project string,
 	cfg kargoapi.WebhookReceiverConfig,
 ) WebhookReceiver {
+	var baseURL string
+	if cfg.GitHub != nil {
+		baseURL = cfg.GitHub.BaseURL
+	}
 	return &githubWebhookReceiver{
 		baseWebhookReceiver: &baseWebhookReceiver{
 			client:     c,
 			project:    project,
 			secretName: cfg.GitHub.SecretRef.Name,
 		},
+		baseURL: baseURL,
 	}
 }
 
@@ -57,13 +64,35 @@ func (g *githubWebhookReceiver) getSecretValues(
 func (g *githubWebhookReceiver) GetHandler() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-
 		logger := logging.LoggerFromContext(ctx)
 
 		token, ok := g.secretData["token"]
 		if !ok {
 			xhttp.WriteErrorJSON(w, nil)
 			return
+		}
+
+		// Validate GitHub Enterprise Host if baseURL is set
+		if g.baseURL != "" {
+			enterpriseHost := r.Header.Get("X-GitHub-Enterprise-Host")
+			if enterpriseHost != "" {
+				reqHost := enterpriseHost
+				expectedHost := ""
+				// Parse host from baseURL using net/url
+				if u, err := url.Parse(g.baseURL); err == nil {
+					expectedHost = u.Host
+				}
+				if expectedHost != "" && reqHost != expectedHost {
+					xhttp.WriteErrorJSON(
+						w,
+						xhttp.Error(
+							fmt.Errorf("invalid GitHub Enterprise host: got %s, want %s", reqHost, expectedHost),
+							http.StatusUnauthorized,
+						),
+					)
+					return
+				}
+			}
 		}
 
 		eventType := r.Header.Get("X-GitHub-Event")

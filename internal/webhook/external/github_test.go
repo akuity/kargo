@@ -39,6 +39,7 @@ func TestGithubHandler(t *testing.T) {
 		name       string
 		client     client.Client
 		secretData map[string][]byte
+		baseURL    string
 		req        func() *http.Request
 		assertions func(*testing.T, *httptest.ResponseRecorder)
 	}{
@@ -215,7 +216,50 @@ func TestGithubHandler(t *testing.T) {
 				)
 			},
 		},
+		{
+			name:       "enterprise host mismatch",
+			secretData: testSecretData,
+			baseURL:    "https://github.enterprise.com",
+			req: func() *http.Request {
+				bodyBuf := bytes.NewBuffer([]byte("{}"))
+				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
+				req.Header.Set("X-GitHub-Event", "ping")
+				req.Header.Set("X-Hub-Signature-256", sign(testToken, bodyBuf.Bytes()))
+				req.Header.Set("X-GitHub-Enterprise-Host", "wrong.enterprise.com")
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusUnauthorized, rr.Code)
+				require.JSONEq(
+					t,
+					`{"error":"invalid GitHub Enterprise host: got wrong.enterprise.com, want github.enterprise.com"}`,
+					rr.Body.String(),
+				)
+			},
+		},
+		{
+			name:       "enterprise host match",
+			secretData: testSecretData,
+			baseURL:    "https://github.enterprise.com",
+			req: func() *http.Request {
+				bodyBuf := bytes.NewBuffer([]byte("{}"))
+				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
+				req.Header.Set("X-GitHub-Event", "ping")
+				req.Header.Set("X-Hub-Signature-256", sign(testToken, bodyBuf.Bytes()))
+				req.Header.Set("X-GitHub-Enterprise-Host", "github.enterprise.com")
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(
+					t,
+					`{"msg":"ping event received, webhook is configured correctly"}`,
+					rr.Body.String(),
+				)
+			},
+		},
 	}
+
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
@@ -225,6 +269,7 @@ func TestGithubHandler(t *testing.T) {
 					project:    testProjectName,
 					secretData: testCase.secretData,
 				},
+				baseURL: testCase.baseURL,
 			}).GetHandler()(w, testCase.req())
 			testCase.assertions(t, w)
 		})
