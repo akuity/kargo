@@ -23,8 +23,8 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
-	"github.com/akuity/kargo/internal/fs"
 	"github.com/akuity/kargo/internal/helm"
+	fs2 "github.com/akuity/kargo/internal/io/fs"
 	"github.com/akuity/kargo/internal/logging"
 	intyaml "github.com/akuity/kargo/internal/yaml"
 	"github.com/akuity/kargo/pkg/promotion"
@@ -198,7 +198,7 @@ func (h *helmChartUpdater) updateDependencies(
 	lockFile := filepath.Join(chartPath, "Chart.lock")
 	bakLockFile := fmt.Sprintf("%s.%s.bak", lockFile, time.Now().Format("20060102150405"))
 	if _, err = os.Lstat(lockFile); err == nil {
-		if err = fs.CopyFile(lockFile, bakLockFile); err != nil {
+		if err = fs2.CopyFile(lockFile, bakLockFile); err != nil {
 			return nil, fmt.Errorf("failed to backup Chart.lock: %w", err)
 		}
 
@@ -206,7 +206,7 @@ func (h *helmChartUpdater) updateDependencies(
 		defer func() {
 			if removeErr := os.Remove(bakLockFile); removeErr != nil && !os.IsNotExist(removeErr) {
 				logging.LoggerFromContext(ctx).Error(
-					sanitizePathError(removeErr, stepCtx.WorkDir),
+					fs2.SanitizePathError(removeErr, stepCtx.WorkDir),
 					"failed to remove backup of Chart.lock",
 				)
 			}
@@ -254,14 +254,14 @@ func (h *helmChartUpdater) updateDependencies(
 	initialVersions, err := helm.GetChartDependencies(bakLockFile)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, fmt.Errorf(
-			"failed to read original chart lock file: %w", sanitizePathError(err, stepCtx.WorkDir),
+			"failed to read original chart lock file: %w", fs2.SanitizePathError(err, stepCtx.WorkDir),
 		)
 	}
 	updatedVersions, err := helm.GetChartDependencies(lockFile)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, fmt.Errorf(
 			"failed to read updated chart lock file: %w",
-			sanitizePathError(err, stepCtx.WorkDir),
+			fs2.SanitizePathError(err, stepCtx.WorkDir),
 		)
 	}
 
@@ -272,7 +272,7 @@ func (h *helmChartUpdater) updateDependencies(
 	if len(changes) == 0 {
 		if err = os.Rename(bakLockFile, lockFile); err != nil {
 			return nil, fmt.Errorf(
-				"failed to restore original Chart.lock: %w", sanitizePathError(err, stepCtx.WorkDir),
+				"failed to restore original Chart.lock: %w", fs2.SanitizePathError(err, stepCtx.WorkDir),
 			)
 		}
 	}
@@ -290,16 +290,15 @@ func (h *helmChartUpdater) validateFileDependency(workDir, chartPath, dependency
 	// Check if the resolved dependency path is within the work directory
 	resolvedDependencyPath, err := filepath.EvalSymlinks(dependencyPath)
 	if err != nil {
-		return fmt.Errorf("failed to resolve dependency path: %w", sanitizePathError(err, workDir))
+		return fmt.Errorf("failed to resolve dependency path: %w", fs2.SanitizePathError(err, workDir))
 	}
-	if !isSubPath(workDir, resolvedDependencyPath) {
+	if !fs2.IsSubPath(workDir, resolvedDependencyPath) {
 		return errors.New("dependency path is outside of the work directory")
 	}
 
 	// Recursively check for symlinks that go outside the work directory,
 	// as Helm follows symlinks when packaging charts
-	visited := make(map[string]struct{})
-	return checkSymlinks(workDir, dependencyPath, visited, 0, 100)
+	return fs2.ValidateSymlinks(workDir, dependencyPath, 100)
 }
 
 func (h *helmChartUpdater) setupDependencyRepositories(
@@ -430,103 +429,6 @@ func compareChartVersions(before, after []helm.ChartDependency) map[string]strin
 		changes[name] = ""
 	}
 	return changes
-}
-
-// checkSymlinks recursively checks for symlinks that point outside the root path
-// and avoids infinite recursion by using a single map of visited directories
-// (absolute paths). The depth parameter is used to limit the recursion depth,
-// with a value of -1 indicating no limit.
-func checkSymlinks(root, dir string, visited map[string]struct{}, depth, maxDepth int) error {
-	// Get the absolute path of the current directory
-	absDir, err := filepath.Abs(dir)
-	if err != nil {
-		return fmt.Errorf("failed to get absolute path for dir: %v", err)
-	}
-
-	// Check if we've already visited this directory
-	if _, ok := visited[absDir]; ok {
-		// Skip it to avoid infinite recursion or redundant visits
-		return nil
-	}
-
-	// Mark this directory as visited only when starting to process it
-	visited[absDir] = struct{}{}
-
-	// Check if the recursion depth is within the limit
-	if maxDepth >= 0 && depth >= maxDepth {
-		return fmt.Errorf("maximum recursion depth exceeded")
-	}
-
-	// Open the directory
-	dirEntries, err := os.ReadDir(absDir)
-	if err != nil {
-		return fmt.Errorf("failed to read directory: %w", sanitizePathError(err, root))
-	}
-
-	// Process each entry in the directory
-	for _, entry := range dirEntries {
-		entryPath := filepath.Join(dir, entry.Name())
-
-		// If the entry is a symlink, resolve it
-		if entry.Type()&os.ModeSymlink != 0 {
-			// Resolve the symlink to its target
-			target, pathErr := filepath.EvalSymlinks(entryPath)
-			if pathErr != nil {
-				return fmt.Errorf("failed to resolve symlink: %w", sanitizePathError(pathErr, root))
-			}
-
-			// Convert the target path to its absolute form
-			absTarget, pathErr := filepath.Abs(target)
-			if pathErr != nil {
-				return pathErr
-			}
-
-			// Ensure the target is within the root directory
-			if !isSubPath(root, absTarget) {
-				return fmt.Errorf("symlink at %s points outside the path boundary", relativePath(root, entryPath))
-			}
-
-			// Recursively check the symlinked directory or file if not visited yet
-			if _, ok := visited[absTarget]; !ok {
-				// Check if the symlink target is a directory
-				targetInfo, pathErr := os.Stat(absTarget)
-				if pathErr != nil {
-					return fmt.Errorf(
-						"failed to stat symlink target of %s: %w",
-						relativePath(root, entryPath),
-						sanitizePathError(pathErr, root),
-					)
-				}
-
-				if targetInfo.IsDir() {
-					// Recursively call the function for the symlinked directory
-					if err = checkSymlinks(root, absTarget, visited, depth+1, maxDepth); err != nil {
-						return err
-					}
-				}
-
-				// It's a file, no further need for recursion here
-				// We still add it to the visited map to avoid redundant checks
-				visited[absTarget] = struct{}{}
-			}
-		} else if entry.IsDir() {
-			// If it's a directory, manually recurse into it
-			if err = checkSymlinks(root, entryPath, visited, depth+1, maxDepth); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
-// isSubPath checks if the child path is a subpath of the parent path.
-func isSubPath(parent, child string) bool {
-	rel, err := filepath.Rel(parent, child)
-	if err != nil {
-		return false
-	}
-	return !strings.HasPrefix(rel, ".."+string(os.PathSeparator)) && rel != ".."
 }
 
 // nameForRepositoryURL generates an SHA-256 hash of the repository URL to use

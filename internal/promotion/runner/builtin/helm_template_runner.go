@@ -29,8 +29,8 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
-	"github.com/akuity/kargo/internal/fs"
 	"github.com/akuity/kargo/internal/helm"
+	fs2 "github.com/akuity/kargo/internal/io/fs"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
@@ -245,16 +245,15 @@ func (h *helmTemplateRunner) validateFileDependency(workDir, chartPath, dependen
 	// Check if the resolved dependency path is within the work directory
 	resolvedDependencyPath, err := filepath.EvalSymlinks(dependencyPath)
 	if err != nil {
-		return fmt.Errorf("failed to resolve dependency path: %w", sanitizePathError(err, workDir))
+		return fmt.Errorf("failed to resolve dependency path: %w", fs2.SanitizePathError(err, workDir))
 	}
-	if !isSubPath(workDir, resolvedDependencyPath) {
+	if !fs2.IsSubPath(workDir, resolvedDependencyPath) {
 		return errors.New("dependency path is outside of the work directory")
 	}
 
 	// Recursively check for symlinks that go outside the work directory,
 	// as Helm follows symlinks when packaging charts
-	visited := make(map[string]struct{})
-	return checkSymlinks(workDir, dependencyPath, visited, 0, 100)
+	return fs2.ValidateSymlinks(workDir, dependencyPath, 100)
 }
 
 // buildDependencies builds the dependencies for the given chart
@@ -315,7 +314,7 @@ func (h *helmTemplateRunner) buildDependencies(
 
 	if _, err = os.Lstat(lockFile); err == nil {
 		lockFileExists = true // Mark that the Chart.lock file exists
-		if err = fs.CopyFile(lockFile, bakLockFile); err != nil {
+		if err = fs2.CopyFile(lockFile, bakLockFile); err != nil {
 			return fmt.Errorf("failed to backup Chart.lock: %w", err)
 		}
 
@@ -323,7 +322,7 @@ func (h *helmTemplateRunner) buildDependencies(
 		defer func() {
 			if removeErr := os.Remove(bakLockFile); removeErr != nil && !os.IsNotExist(removeErr) {
 				logging.LoggerFromContext(ctx).Error(
-					sanitizePathError(removeErr, stepCtx.WorkDir),
+					fs2.SanitizePathError(removeErr, stepCtx.WorkDir),
 					"failed to remove backup of Chart.lock",
 				)
 			}
@@ -373,7 +372,7 @@ func (h *helmTemplateRunner) buildDependencies(
 		initialVersions, err = helm.GetChartDependencies(bakLockFile)
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf(
-				"failed to read original chart lock file: %w", sanitizePathError(err, stepCtx.WorkDir),
+				"failed to read original chart lock file: %w", fs2.SanitizePathError(err, stepCtx.WorkDir),
 			)
 		}
 	}
@@ -382,7 +381,7 @@ func (h *helmTemplateRunner) buildDependencies(
 	if err != nil {
 		return fmt.Errorf(
 			"failed to read updated chart lock file: %w",
-			sanitizePathError(err, stepCtx.WorkDir),
+			fs2.SanitizePathError(err, stepCtx.WorkDir),
 		)
 	}
 
@@ -393,7 +392,7 @@ func (h *helmTemplateRunner) buildDependencies(
 	if len(changes) == 0 && lockFileExists {
 		if err = os.Rename(bakLockFile, lockFile); err != nil {
 			return fmt.Errorf(
-				"failed to restore original Chart.lock: %w", sanitizePathError(err, stepCtx.WorkDir),
+				"failed to restore original Chart.lock: %w", fs2.SanitizePathError(err, stepCtx.WorkDir),
 			)
 		}
 	}
