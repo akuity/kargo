@@ -6,12 +6,14 @@ import (
 )
 
 const (
-	WebhookReceiverTypeGitHub = "GitHub"
+	WebhookReceiverTypeGitHub    = "GitHub"
+	WebhookReceiverTypeBitbucket = "Bitbucket"
 	// TODO(fuskovic): Add more receiver enum types(e.g. Dockerhub, Quay, Gitlab, etc...)
 )
 
 const (
-	WebhookReceiverSecretKeyGithub = "token"
+	WebhookReceiverSecretKeyGithub    = "token"
+	WebhookReceiverSecretKeyBitbucket = "bitbucket-secret"
 )
 
 // +kubebuilder:object:root=true
@@ -101,9 +103,10 @@ type WebhookReceiverConfig struct {
 	// GitHub payloads.
 	//
 	// TODO(fuskovic): Make this mutually exclusive with configs for other platforms.
-	//
-	// +kubebuilder:validation:Required
 	GitHub *GitHubWebhookReceiver `json:"github,omitempty" protobuf:"bytes,2,opt,name=github"`
+	// Bitbucket contains the configuration for a webhook receiver that is compatible with
+	// Bitbucket payloads.
+	Bitbucket *BitbucketWebhookReceiver `json:"bitbucket,omitempty" protbuf:"bytes,2,opt,name=bitbucket" protobuf:"bytes,3,opt,name=bitbucket"`
 }
 
 // GitHubWebhookReceiver describes a webhook receiver that is compatible with
@@ -116,6 +119,17 @@ type GitHubWebhookReceiver struct {
 	// GitHub documentation: https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
 	//
 	// The value of the token key goes in the "Secret" field when registering a GitHub App or webhook in the GitHub UI.
+	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+}
+
+type BitbucketWebhookReceiver struct {
+	// SecretRef contains a reference to a Secret in the same namespace as the ProjectConfig.
+	//
+	// The Secret is expected to contain a `bitbucket-secret` key with the secret token configured for
+	// in Bitbucket for the webhook. For more information about this token, please refer to the
+	// Bitbucket documentation: https://support.atlassian.com/bitbucket-cloud/docs/manage-webhooks/
+	//
+	// The value of the 'bitbucket-secret' key goes in the "Secret" field when registering a Bitbucket App or webhook in the Bitbucket UI.
 	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
 }
 

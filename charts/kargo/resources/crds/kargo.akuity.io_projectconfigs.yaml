@@ -158,6 +158,35 @@ spec:
                     WebhookReceiverConfig describes the configuration for a single webhook
                     receiver.
                   properties:
+                    bitbucket:
+                      description: |-
+                        Bitbucket contains the configuration for a webhook receiver that is compatible with
+                        Bitbucket payloads.
+                      properties:
+                        secretRef:
+                          description: |-
+                            SecretRef contains a reference to a Secret in the same namespace as the ProjectConfig.
+
+                            The Secret is expected to contain a `bitbucket-secret` key with the secret token configured for
+                            in Bitbucket for the webhook. For more information about this token, please refer to the
+                            Bitbucket documentation: https://support.atlassian.com/bitbucket-cloud/docs/manage-webhooks/
+
+                            The value of the 'bitbucket-secret' key goes in the "Secret" field when registering a Bitbucket App or webhook in the Bitbucket UI.
+                          properties:
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      required:
+                      - secretRef
+                      type: object
                     github:
                       description: |
                         GitHub contains the configuration for a webhook receiver that is compatible with
@@ -190,8 +219,6 @@ spec:
                     name:
                       description: Name is the name of the webhook receiver.
                       type: string
-                  required:
-                  - github
                   type: object
                 type: array
             type: object

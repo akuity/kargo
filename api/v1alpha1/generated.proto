@@ -103,6 +103,17 @@ message ArgoCDAppSyncStatus {
   repeated string revisions = 3;
 }
 
+message BitbucketWebhookReceiver {
+  // SecretRef contains a reference to a Secret in the same namespace as the ProjectConfig.
+  //
+  // The Secret is expected to contain a `bitbucket-secret` key with the secret token configured for
+  // in Bitbucket for the webhook. For more information about this token, please refer to the
+  // Bitbucket documentation: https://support.atlassian.com/bitbucket-cloud/docs/manage-webhooks/
+  //
+  // The value of the 'bitbucket-secret' key goes in the "Secret" field when registering a Bitbucket App or webhook in the Bitbucket UI.
+  optional .k8s.io.api.core.v1.LocalObjectReference secretRef = 1;
+}
+
 // Chart describes a specific version of a Helm chart.
 message Chart {
   // RepoURL specifies the URL of a Helm chart repository. Classic chart
@@ -1687,8 +1698,10 @@ message WebhookReceiverConfig {
   // GitHub payloads.
   //
   // TODO(fuskovic): Make this mutually exclusive with configs for other platforms.
-  //
-  // +kubebuilder:validation:Required
   optional GitHubWebhookReceiver github = 2;
+
+  // Bitbucket contains the configuration for a webhook receiver that is compatible with
+  // Bitbucket payloads.
+  optional BitbucketWebhookReceiver bitbucket = 3;
 }
 

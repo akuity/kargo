@@ -117,6 +117,12 @@ func (s *server) route(w http.ResponseWriter, r *http.Request) {
 			pc.Namespace,
 			wrc.GitHub.SecretRef.Name,
 		)(w, r)
+	case wrc.Bitbucket != nil:
+		bitbucketHandler(
+			s.client,
+			pc.Namespace,
+			wrc.Bitbucket.SecretRef.Name,
+		)(w, r)
 	default:
 		http.Error(w, "not found", http.StatusNotFound)
 	}
