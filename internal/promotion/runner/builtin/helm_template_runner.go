@@ -29,6 +29,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/fs"
 	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/pkg/promotion"
@@ -314,7 +315,7 @@ func (h *helmTemplateRunner) buildDependencies(
 
 	if _, err = os.Lstat(lockFile); err == nil {
 		lockFileExists = true // Mark that the Chart.lock file exists
-		if err = backupFile(lockFile, bakLockFile); err != nil {
+		if err = fs.CopyFile(lockFile, bakLockFile); err != nil {
 			return fmt.Errorf("failed to backup Chart.lock: %w", err)
 		}
 

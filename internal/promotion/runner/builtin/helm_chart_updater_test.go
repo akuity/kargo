@@ -3,7 +3,6 @@ package builtin
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -23,6 +22,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/fs"
 	"github.com/akuity/kargo/internal/helm"
 	intyaml "github.com/akuity/kargo/internal/yaml"
 	"github.com/akuity/kargo/pkg/promotion"
@@ -213,7 +213,7 @@ func Test_helmChartUpdater_run(t *testing.T) {
 			},
 			setupRepository: func(t *testing.T) (string, func()) {
 				httpRepositoryRoot := t.TempDir()
-				require.NoError(t, copyFile(
+				require.NoError(t, fs.CopyFile(
 					"testdata/helm/charts/examplechart-0.1.0.tgz",
 					filepath.Join(httpRepositoryRoot, "examplechart-0.1.0.tgz"),
 				))
@@ -366,7 +366,7 @@ func Test_helmChartUpdater_updateDependencies(t *testing.T) {
 	t.Run("updates dependencies", func(t *testing.T) {
 		// Set up the HTTP repository
 		httpRepositoryRoot := t.TempDir()
-		require.NoError(t, copyFile(
+		require.NoError(t, fs.CopyFile(
 			"testdata/helm/charts/examplechart-0.1.0.tgz",
 			filepath.Join(httpRepositoryRoot, "examplechart-0.1.0.tgz"),
 		))
@@ -1568,78 +1568,6 @@ func Test_isSubPath(t *testing.T) {
 	}
 }
 
-func Test_backupFile(t *testing.T) {
-	tests := []struct {
-		name       string
-		setup      func(*testing.T) (string, string)
-		assertions func(*testing.T, string, string, error)
-	}{
-		{
-			name: "successful backup",
-			setup: func(t *testing.T) (string, string) {
-				tmpDir := t.TempDir()
-				src := filepath.Join(tmpDir, "test_src.txt")
-				dst := filepath.Join(tmpDir, "test_dst.txt")
-				require.NoError(t, os.WriteFile(src, []byte("test content"), 0o600))
-				return src, dst
-			},
-			assertions: func(t *testing.T, src, dst string, err error) {
-				require.NoError(t, err)
-				require.FileExists(t, dst)
-
-				// Compare contents
-				srcContent, err := os.ReadFile(src)
-				require.NoError(t, err)
-				dstContent, err := os.ReadFile(dst)
-				require.NoError(t, err)
-				assert.Equal(t, srcContent, dstContent)
-
-				// Compare permissions
-				srcInfo, err := os.Stat(src)
-				require.NoError(t, err)
-				dstInfo, err := os.Stat(dst)
-				require.NoError(t, err)
-				assert.Equal(t, srcInfo.Mode(), dstInfo.Mode())
-			},
-		},
-		{
-			name: "source file does not exist",
-			setup: func(t *testing.T) (string, string) {
-				tmpDir := t.TempDir()
-				src := filepath.Join(tmpDir, "nonexistent.txt")
-				dst := filepath.Join(tmpDir, "test_dst.txt")
-				return src, dst
-			},
-			assertions: func(t *testing.T, _, _ string, err error) {
-				assert.ErrorIs(t, err, os.ErrNotExist)
-			},
-		},
-		{
-			name: "destination file already exists",
-			setup: func(t *testing.T) (string, string) {
-				tmpDir := t.TempDir()
-
-				src := filepath.Join(tmpDir, "test_src.txt")
-				dst := filepath.Join(tmpDir, "test_dst.txt")
-
-				require.NoError(t, os.WriteFile(src, []byte("test content"), 0o600))
-				require.NoError(t, os.WriteFile(dst, []byte("existing content"), 0o600))
-				return src, dst
-			},
-			assertions: func(t *testing.T, _, _ string, err error) {
-				assert.ErrorIs(t, err, os.ErrExist)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			src, dst := tt.setup(t)
-			tt.assertions(t, src, dst, backupFile(src, dst))
-		})
-	}
-}
-
 // absoluteTempDir returns the absolute path of a temporary directory created
 // by t.TempDir(). This is useful when working with symlinks, as the temporary
 // directory path may actually be a symlink on some platforms like macOS.
@@ -1650,29 +1578,4 @@ func absoluteTempDir(t *testing.T) string {
 	absDir, err := filepath.EvalSymlinks(dir)
 	require.NoError(t, err)
 	return absDir
-}
-
-func copyFile(src, dst string) error {
-	srcF, err := os.Open(src)
-	if err != nil {
-		return fmt.Errorf("error opening source file: %v", err)
-	}
-	defer srcF.Close()
-
-	dstF, err := os.Create(dst)
-	if err != nil {
-		return fmt.Errorf("error creating destination file: %v", err)
-	}
-	defer dstF.Close()
-
-	if _, err = io.Copy(dstF, srcF); err != nil {
-		return fmt.Errorf("error copying file: %v", err)
-	}
-
-	srcI, err := os.Stat(src)
-	if err != nil {
-		return fmt.Errorf("error getting source file info: %v", err)
-	}
-
-	return os.Chmod(dst, srcI.Mode())
 }

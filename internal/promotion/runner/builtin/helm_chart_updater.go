@@ -23,6 +23,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/fs"
 	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/logging"
 	intyaml "github.com/akuity/kargo/internal/yaml"
@@ -197,7 +198,7 @@ func (h *helmChartUpdater) updateDependencies(
 	lockFile := filepath.Join(chartPath, "Chart.lock")
 	bakLockFile := fmt.Sprintf("%s.%s.bak", lockFile, time.Now().Format("20060102150405"))
 	if _, err = os.Lstat(lockFile); err == nil {
-		if err = backupFile(lockFile, bakLockFile); err != nil {
+		if err = fs.CopyFile(lockFile, bakLockFile); err != nil {
 			return nil, fmt.Errorf("failed to backup Chart.lock: %w", err)
 		}
 
@@ -526,48 +527,6 @@ func isSubPath(parent, child string) bool {
 		return false
 	}
 	return !strings.HasPrefix(rel, ".."+string(os.PathSeparator)) && rel != ".."
-}
-
-// backupFile creates a backup of the source file at the destination path.
-func backupFile(src, dst string) (err error) {
-	// Open the source file
-	srcFile, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		closeErr := srcFile.Close()
-		if err == nil {
-			err = closeErr
-		}
-	}()
-
-	// Get file info to retrieve permissions
-	srcInfo, err := os.Stat(src)
-	if err != nil {
-		return err
-	}
-
-	// Create the destination file with the same permissions
-	dstFile, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_EXCL, srcInfo.Mode())
-	if err != nil {
-		return err
-	}
-	defer func() {
-		closeErr := dstFile.Close()
-		if err == nil {
-			err = closeErr
-		}
-		if err != nil {
-			_ = os.Remove(dst)
-		}
-	}()
-
-	// Copy the contents
-	if _, err = io.Copy(dstFile, srcFile); err != nil {
-		return err
-	}
-	return nil
 }
 
 // nameForRepositoryURL generates an SHA-256 hash of the repository URL to use
