@@ -399,7 +399,7 @@ func Test_gitCloner_run(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(
 		t,
-		map[string]string{
+		map[string]any{
 			"src": srcBranchCommitID,
 			"out": outBranchCommitID,
 		},
