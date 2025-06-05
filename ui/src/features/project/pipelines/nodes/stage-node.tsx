@@ -2,6 +2,8 @@ import { useMutation } from '@connectrpc/connect-query';
 import {
   faBarsStaggered,
   faBolt,
+  faBoltLightning,
+  faCircleNotch,
   faExternalLink,
   faMinus,
   faTruckArrowRight
@@ -22,7 +24,10 @@ import { getStagePhase } from '@ui/features/common/stage-status/utils';
 import { getCurrentFreight } from '@ui/features/common/utils';
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import { ColorMapHex, parseColorAnnotation } from '@ui/features/stage/utils';
-import { approveFreight } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import {
+  approveFreight,
+  promoteToStage
+} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
@@ -34,6 +39,7 @@ import { stageIndexer } from '../graph/node-indexer';
 import './stage-node.less';
 import style from './node-size-source-of-truth.module.less';
 import { StageFreight } from './stage-freight';
+import { useGetUpstreamFreight } from './use-get-upstream-freight';
 
 export const StageNode = (props: { stage: Stage }) => {
   const navigate = useNavigate();
@@ -54,6 +60,19 @@ export const StageNode = (props: { stage: Stage }) => {
   const controlFlow = isStageControlFlow(props.stage);
 
   const hideStage = useHideStageIfInPromotionMode(props.stage);
+
+  const upstreamFreights = useGetUpstreamFreight(props.stage);
+
+  const promoteActionMutation = useMutation(promoteToStage, {
+    onSuccess: (response) => {
+      navigate(
+        generatePath(paths.promotion, {
+          name: props.stage?.metadata?.namespace,
+          promotionId: response.promotion?.metadata?.name
+        })
+      );
+    }
+  });
 
   const totalSubscribersToThisStage =
     dictionaryContext?.subscribersByStage?.[props.stage?.metadata?.name || '']?.size || 0;
@@ -160,6 +179,77 @@ export const StageNode = (props: { stage: Stage }) => {
     });
   }
 
+  if ((upstreamFreights?.length || 0) > 0) {
+    dropdownItems.push({
+      key: 'upstream-freight-promo',
+      label: 'Promote from upstream',
+      onClick:
+        upstreamFreights?.length === 1
+          ? () =>
+              navigate(
+                generatePath(paths.promote, {
+                  name: props.stage?.metadata?.namespace,
+                  freight: upstreamFreights?.[0]?.name,
+                  stage: props.stage?.metadata?.name
+                })
+              )
+          : undefined,
+      children:
+        (upstreamFreights?.length || 0) > 1
+          ? upstreamFreights?.map((f) => ({
+              key: f?.name,
+              label: f?.origin?.name,
+              onClick: () =>
+                navigate(
+                  generatePath(paths.promote, {
+                    name: props.stage?.metadata?.namespace,
+                    freight: f?.name,
+                    stage: props.stage?.metadata?.name
+                  })
+                )
+            }))
+          : undefined
+    });
+
+    dropdownItems.push({
+      key: 'quick-promote-upstream-freight-promo',
+      label: (
+        <>
+          {promoteActionMutation.isPending ? (
+            <FontAwesomeIcon icon={faCircleNotch} className='mr-1' spin />
+          ) : (
+            <Typography.Text type='danger' className='mr-2'>
+              <FontAwesomeIcon icon={faBoltLightning} />
+            </Typography.Text>
+          )}
+          Instant promote from upstream
+        </>
+      ),
+      onClick:
+        upstreamFreights?.length === 1
+          ? () =>
+              promoteActionMutation.mutate({
+                stage: props.stage?.metadata?.name,
+                project: props.stage?.metadata?.namespace,
+                freight: upstreamFreights?.[0]?.name
+              })
+          : undefined,
+      children:
+        (upstreamFreights?.length || 0) > 1
+          ? upstreamFreights?.map((f) => ({
+              key: f?.name,
+              label: f?.origin?.name,
+              onClick: () =>
+                promoteActionMutation.mutate({
+                  stage: props.stage?.metadata?.name,
+                  project: props.stage?.metadata?.namespace,
+                  freight: f?.name
+                })
+            }))
+          : undefined
+    });
+  }
+
   return (
     <Card
       styles={{
@@ -177,7 +267,7 @@ export const StageNode = (props: { stage: Stage }) => {
           <Space>
             <Dropdown
               trigger={['hover']}
-              overlayClassName='w-[220px]'
+              overlayClassName='w-fit'
               menu={{
                 items: dropdownItems
               }}
