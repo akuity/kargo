@@ -1336,6 +1336,16 @@ message PromotionTemplateSpec {
   repeated PromotionStep steps = 1;
 }
 
+// QuayWebhookReceiver describes a webhook receiver that is compatible with
+// Quay payloads.
+message QuayWebhookReceiver {
+  // SecretRef contains a reference to a Secret in the same namespace as the ProjectConfig.
+  //
+  // The Secret is expected to contain a 'quay-secret' key with the secret token configured for
+  // in Quay for the webhook
+  optional .k8s.io.api.core.v1.LocalObjectReference secretRef = 1;
+}
+
 // RepoSubscription describes a subscription to ONE OF a Git repository, a
 // container image repository, or a Helm chart repository.
 message RepoSubscription {
@@ -1687,8 +1697,10 @@ message WebhookReceiverConfig {
   // GitHub payloads.
   //
   // TODO(fuskovic): Make this mutually exclusive with configs for other platforms.
-  //
-  // +kubebuilder:validation:Required
   optional GitHubWebhookReceiver github = 2;
+
+  // Quay contains the configuration for a webhook receiver that is compatible with
+  // Quay payloads.
+  optional QuayWebhookReceiver quay = 3;
 }
 
