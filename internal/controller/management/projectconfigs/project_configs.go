@@ -309,6 +309,15 @@ func getProviderConfig(rc kargoapi.WebhookReceiverConfig) (*providerConfig, erro
 			targetKey:    kargoapi.WebhookReceiverSecretKeyGithub,
 			receiverType: kargoapi.WebhookReceiverTypeGitHub,
 		}, nil
+	case rc.Bitbucket != nil:
+		if rc.Bitbucket.SecretRef.Name == "" {
+			return nil, errors.New("bitbucket receiver does not have a secret reference name")
+		}
+		return &providerConfig{
+			secretName:   rc.Bitbucket.SecretRef.Name,
+			targetKey:    kargoapi.WebhookReceiverSecretKeyBitbucket,
+			receiverType: kargoapi.WebhookReceiverTypeBitbucket,
+		}, nil
 	default:
 		return nil, errors.New("webhook receiver config has no valid entry")
 	}
