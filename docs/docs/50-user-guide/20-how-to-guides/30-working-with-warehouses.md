@@ -408,9 +408,9 @@ strategy:
 - `creatorDate`: The tag creation date (annotated tag) or commit date
   (lightweight tag)
 - `author`: The author of the commit that the tag references, in the format of
-  "Name <email>"
+  `Name <email>`
 - `committer`: The committer of the commit that the tag references, in the
-  format of "Name <email>"
+  format of `Name <email>`
 - `subject`: The first line of the commit message associated with the tag
 - `tagger`: The tagger of the tag, in the format of `Name <email>`. Only
   available for annotated tags.
