@@ -13,6 +13,7 @@ import (
 	"helm.sh/helm/v3/pkg/repo"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/fs"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -59,7 +60,7 @@ metadata:
 			setupFiles: func(t *testing.T, dir string) {
 				// Create a temporary HTTP server to serve the Helm chart.
 				httpRepositoryRoot := t.TempDir()
-				require.NoError(t, copyFile(
+				require.NoError(t, fs.CopyFile(
 					"testdata/helm/charts/demo-0.1.0.tgz",
 					filepath.Join(httpRepositoryRoot, "demo-0.1.0.tgz"),
 				))
