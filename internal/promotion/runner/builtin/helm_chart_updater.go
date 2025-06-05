@@ -20,7 +20,6 @@ import (
 	"helm.sh/helm/v3/pkg/getter"
 	"helm.sh/helm/v3/pkg/registry"
 	"helm.sh/helm/v3/pkg/repo"
-	yaml "sigs.k8s.io/yaml/goyaml.v3"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
@@ -90,7 +89,7 @@ func (h *helmChartUpdater) run(
 	}
 
 	chartFilePath := filepath.Join(absChartPath, "Chart.yaml")
-	chartDependencies, err := readChartDependencies(chartFilePath)
+	chartDependencies, err := helm.GetChartDependencies(chartFilePath)
 	if err != nil {
 		return promotion.StepResult{
 			Status: kargoapi.PromotionStepStatusErrored,
@@ -131,7 +130,7 @@ func (h *helmChartUpdater) run(
 
 func (h *helmChartUpdater) processChartUpdates(
 	cfg builtin.HelmUpdateChartConfig,
-	chartDependencies []chartDependency,
+	chartDependencies []helm.ChartDependency,
 ) ([]intyaml.Update, error) {
 	updates := make([]intyaml.Update, len(cfg.Charts))
 	for i, update := range cfg.Charts {
@@ -160,7 +159,7 @@ func (h *helmChartUpdater) updateDependencies(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 	helmHome, chartPath string,
-	chartDependencies []chartDependency,
+	chartDependencies []helm.ChartDependency,
 ) (map[string]string, error) {
 	registryClient, err := helm.NewRegistryClient(helmHome)
 	if err != nil {
@@ -251,14 +250,14 @@ func (h *helmChartUpdater) updateDependencies(
 	// without updating the Chart.yaml. For example, because a new version is
 	// available in the repository for a dependency that has a version range
 	// specified in the Chart.yaml.
-	initialVersions, err := readChartLock(bakLockFile)
-	if err != nil && !os.IsNotExist(err) {
+	initialVersions, err := helm.GetChartDependencies(bakLockFile)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, fmt.Errorf(
 			"failed to read original chart lock file: %w", sanitizePathError(err, stepCtx.WorkDir),
 		)
 	}
-	updatedVersions, err := readChartLock(lockFile)
-	if err != nil {
+	updatedVersions, err := helm.GetChartDependencies(lockFile)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, fmt.Errorf(
 			"failed to read updated chart lock file: %w",
 			sanitizePathError(err, stepCtx.WorkDir),
@@ -308,7 +307,7 @@ func (h *helmChartUpdater) setupDependencyRepositories(
 	registryClient *registry.Client,
 	repositoryFile *repo.File,
 	project string,
-	dependencies []chartDependency,
+	dependencies []helm.ChartDependency,
 ) error {
 	for _, dep := range dependencies {
 		switch {
@@ -405,70 +404,30 @@ func normalizeChartReference(repoURL, chartName string) (string, string) {
 	return repoURL, chartName
 }
 
-type chartDependency struct {
-	Repository string `json:"repository,omitempty"`
-	Name       string `json:"name,omitempty"`
-	Version    string `json:"version,omitempty"`
-}
-
-func readChartDependencies(chartFilePath string) ([]chartDependency, error) {
-	b, err := os.ReadFile(chartFilePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read file %q: %w", chartFilePath, err)
+func compareChartVersions(before, after []helm.ChartDependency) map[string]string {
+	beforeMap := make(map[string]string, len(before))
+	for _, dep := range before {
+		beforeMap[dep.Name] = dep.Version
 	}
 
-	var chartMeta struct {
-		Dependencies []chartDependency `json:"dependencies,omitempty"`
-	}
-	if err := yaml.Unmarshal(b, &chartMeta); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal %q: %w", chartFilePath, err)
-	}
-
-	return chartMeta.Dependencies, nil
-}
-
-func readChartLock(src string) (map[string]string, error) {
-	data, err := os.ReadFile(src)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return make(map[string]string), nil
-		}
-		return nil, fmt.Errorf("failed to read Chart.lock: %w", err)
-	}
-
-	var lockContent struct {
-		Dependencies []chartDependency `yaml:"dependencies"`
-	}
-	if err = yaml.Unmarshal(data, &lockContent); err != nil {
-		return nil, fmt.Errorf("failed to parse Chart.lock: %w", err)
-	}
-
-	versions := make(map[string]string)
-	for _, dep := range lockContent.Dependencies {
-		versions[dep.Name] = dep.Version
-	}
-	return versions, nil
-}
-
-func compareChartVersions(before, after map[string]string) map[string]string {
 	changes := make(map[string]string)
-
-	for name, newVersion := range after {
-		if oldVersion, ok := before[name]; !ok || oldVersion != newVersion {
-			if oldVersion == "" {
-				changes[name] = newVersion
-			} else {
-				changes[name] = fmt.Sprintf("%s -> %s", oldVersion, newVersion)
+	for _, dep := range after {
+		if oldVersion, exists := beforeMap[dep.Name]; exists {
+			if oldVersion != dep.Version {
+				changes[dep.Name] = oldVersion + " -> " + dep.Version
 			}
+			// Remove the dependency from before map to track allow remaining
+			// items to be counted as removed
+			delete(beforeMap, dep.Name)
+		} else {
+			changes[dep.Name] = dep.Version
 		}
 	}
 
-	for name := range before {
-		if _, ok := after[name]; !ok {
-			changes[name] = ""
-		}
+	// Handle any removed dependencies which are still listed in before map
+	for name := range beforeMap {
+		changes[name] = ""
 	}
-
 	return changes
 }
 

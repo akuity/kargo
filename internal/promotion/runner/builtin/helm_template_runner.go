@@ -161,7 +161,7 @@ func (h *helmTemplateRunner) setupDependencyRepositories(
 	registryClient *registry.Client,
 	repositoryFile *repo.File,
 	project string,
-	dependencies []chartDependency,
+	dependencies []helm.ChartDependency,
 ) error {
 	for _, dep := range dependencies {
 		switch {
@@ -268,9 +268,16 @@ func (h *helmTemplateRunner) buildDependencies(
 	}
 
 	chartFilePath := filepath.Join(chartPath, "Chart.yaml")
-	chartDependencies, err := readChartDependencies(chartFilePath)
+	chartDependencies, err := helm.GetChartDependencies(chartFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to load chart dependencies from %q: %w", chartFilePath, err)
+	}
+	if len(chartDependencies) == 0 {
+		logging.LoggerFromContext(ctx).Info(
+			"no chart dependencies found, skipping dependency update",
+			"chart", chartFilePath,
+		)
+		return nil
 	}
 
 	repositoryFile := repo.NewFile()
@@ -360,17 +367,17 @@ func (h *helmTemplateRunner) buildDependencies(
 	// without updating the Chart.yaml. For example, because a new version is
 	// available in the repository for a dependency that has a version range
 	// specified in the Chart.yaml.
-	initialVersions := map[string]string{}
+	var initialVersions []helm.ChartDependency
 	if lockFileExists { // Only read the original Chart.lock if it existed
-		initialVersions, err = readChartLock(bakLockFile)
-		if err != nil && !os.IsNotExist(err) {
+		initialVersions, err = helm.GetChartDependencies(bakLockFile)
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf(
 				"failed to read original chart lock file: %w", sanitizePathError(err, stepCtx.WorkDir),
 			)
 		}
 	}
 
-	updatedVersions, err := readChartLock(lockFile)
+	updatedVersions, err := helm.GetChartDependencies(lockFile)
 	if err != nil {
 		return fmt.Errorf(
 			"failed to read updated chart lock file: %w",
