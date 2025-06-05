@@ -171,33 +171,11 @@ func TestDockerHubHandler(t *testing.T) {
 }
 
 func newDockerHubPayload() *bytes.Buffer {
-	return bytes.NewBuffer([]byte(`
+	return bytes.NewBufferString(`
         {
-            "callback_url": 
-				"https://registry.hub.docker.com/u/someuser/somerepo/hook/123456/",
-            "push_data": {
-                "pushed_at": 1710000000,
-                "pusher": "notarealuser",
-                "tag": "notarealtag"
-            },
             "repository": {
-                "comment_count": 42,
-                "date_created": 1700000000,
-                "description": "A fake repo for testing.",
-                "dockerfile": "FROM scratch",
-                "full_description": "This is not a real Docker image.",
-                "is_official": false,
-                "is_private": false,
-                "is_trusted": false,
-                "name": "somerepo",
-                "namespace": "someuser",
-                "owner": "someuser",
-                "repo_name": "someuser/somerepo",
-                "repo_url": 
-					"https://registry.hub.docker.com/u/someuser/somerepo/",
-                "star_count": 0,
-                "status": "Inactive"
+                "repo_name": "someuser/somerepo"
             }
         }
-    `))
+    `)
 }
