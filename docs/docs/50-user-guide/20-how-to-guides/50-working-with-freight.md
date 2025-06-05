@@ -117,6 +117,7 @@ To update the `Freight` Alias:
 1. Specify a value in the <Hlt>New Alias</Hlt> field and click <Hlt>Submit</Hlt>:
 
    ![update-freight-alias](img/freight-alias-2.png)
+   ![update-freight-alias](img/freight-alias-3.png)
 
 </TabItem>
 <TabItem value="cli" label="Using the CLI">
@@ -237,11 +238,12 @@ kargo get freight \
 1. Click the three dots on the `Freight` in the <Hlt>Freight Timeline</Hlt>,
    then select <Hlt>Promote</Hlt>:
 
-   ![Promote Freight to a Stage](img/freight-promotion.png)
+   ![Promote Freight to a Stage](img/freight-promote.png)
 
 2. Select the `Stage` and click <Hlt>Promote</Hlt>:
 
-   ![Promote Freight to a Stage](img/freight-promotion-2.png)
+   ![Promote Freight to a Stage](img/freight-promote-2.png)
+   ![Promote Freight to a Stage](img/freight-promote-3.png)
 
 </TabItem>
 <TabItem value="cli" label="Using the CLI">
