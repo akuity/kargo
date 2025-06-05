@@ -140,16 +140,16 @@ Three such "Kargo roles" are pre-defined in a project's namespace when a new
 To see all Kargo roles in a project, navigate to your project and click the
 "people" icon in the upper right corner of the screen:
 
-![Project](img/project.png)
+![Project](img/roles-manage.png)
 
 Kargo will display a list of all Kargo roles in the project:
 
-![Roles](img/roles.png)
+![Roles](img/roles-manage-2.png)
 
 This interface also permits users with appropriate permissions to create,
 modify, or delete Kargo roles:
 
-![Edit Role](img/edit-role.png)
+![Edit Role](img/roles-manage-3.png)
 
 :::info
 The Kargo API server translates all such creations, modifications, and deletions

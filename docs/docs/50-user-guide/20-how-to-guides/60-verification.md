@@ -100,7 +100,7 @@ For further documentation and examples of `AnalysisTemplate`s, refer to the
 ## How Verification Works
 
 After a successful `Promotion`, a `Stage` enters the `Verifying` phase. Any
-`AnalysisTemplate`s which were referenced by the `Stage` are are used to spawn
+`AnalysisTemplate`s which were referenced by the `Stage` are used to spawn
 a resource called an `AnalysisRun`, which represents a single execution of
 those templates.
 

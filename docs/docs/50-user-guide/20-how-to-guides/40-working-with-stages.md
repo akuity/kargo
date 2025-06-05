@@ -456,6 +456,7 @@ Users with credentials for and sufficient permissions within the Kargo control p
 2. Select the desired `Freight` from the <Hlt>Freight Timeline</Hlt>, and click <Hlt>Yes</Hlt> to promote:
 
     ![Promote Freight to a Stage](img/promote-freight-to-a-stage-2.png)
+    ![Promote Freight to a Stage](img/promote-freight-to-a-stage-3.png)
 
 </TabItem>
 <TabItem value="cli" label="Using the CLI">
