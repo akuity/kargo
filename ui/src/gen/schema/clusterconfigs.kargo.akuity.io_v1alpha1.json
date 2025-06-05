@@ -24,6 +24,10 @@
               "github": {
                 "description": "GitHub contains the configuration for a webhook receiver that is compatible\nwith GitHub payloads.\n",
                 "properties": {
+                  "baseURL": {
+                    "description": "BaseURL is the base URL of the GitHub instance (for GitHub Enterprise Cloud/Server).\nIf empty, defaults to https://github.com (public GitHub).\nExample: https://github.mycompany.com",
+                    "type": "string"
+                  },
                   "secretRef": {
                     "description": "SecretRef contains a reference to a Secret in the same namespace as the\nProjectConfig.\n\nThe Secret is expected to contain a `token` key with the secret token\nconfigured for in GitHub for the webhook. For more information about this\ntoken, please refer to the GitHub documentation:\n  https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries\n\nThe value of the token key goes in the \"Secret\" field when registering a\nGitHub App or webhook in the GitHub UI.",
                     "properties": {

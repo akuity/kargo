@@ -168,6 +168,12 @@ spec:
                         GitHub contains the configuration for a webhook receiver that is compatible
                         with GitHub payloads.
                       properties:
+                        baseURL:
+                          description: |-
+                            BaseURL is the base URL of the GitHub instance (for GitHub Enterprise Cloud/Server).
+                            If empty, defaults to https://github.com (public GitHub).
+                            Example: https://github.mycompany.com
+                          type: string
                         secretRef:
                           description: |-
                             SecretRef contains a reference to a Secret in the same namespace as the

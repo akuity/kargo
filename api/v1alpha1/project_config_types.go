@@ -114,6 +114,13 @@ type GitHubWebhookReceiverConfig struct {
 	// The value of the token key goes in the "Secret" field when registering a
 	// GitHub App or webhook in the GitHub UI.
 	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+
+	// BaseURL is the base URL of the GitHub instance (for GitHub Enterprise Cloud/Server).
+	// If empty, defaults to https://github.com (public GitHub).
+	// Example: https://github.mycompany.com
+	//
+	// +optional
+	BaseURL string `json:"baseURL,omitempty" protobuf:"bytes,2,opt,name=baseURL"`
 }
 
 // WebhookReceiverDetails encapsulates the details of a webhook receiver.
