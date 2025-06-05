@@ -124,7 +124,7 @@ func TestGithubHandler(t *testing.T) {
 			req: func() *http.Request {
 				bodyBuf := bytes.NewBuffer([]byte("invalid json"))
 				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
-				req.Header.Set("X-Hub-Signature-256", sign(testToken, bodyBuf.Bytes()))
+				req.Header.Set("X-Hub-Signature-256", sign(bodyBuf.Bytes()))
 				req.Header.Set("X-GitHub-Event", "push")
 				return req
 			},
@@ -141,7 +141,7 @@ func TestGithubHandler(t *testing.T) {
 				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
 				req.Header.Set(
 					"X-Hub-Signature-256",
-					sign("mysupersecrettoken", bodyBuf.Bytes()),
+					sign(bodyBuf.Bytes()),
 				)
 				req.Header.Set("X-GitHub-Event", "ping")
 				return req
@@ -202,7 +202,7 @@ func TestGithubHandler(t *testing.T) {
 				)
 				req.Header.Set(
 					"X-Hub-Signature-256",
-					sign("mysupersecrettoken", bodyBuf.Bytes()),
+					sign(bodyBuf.Bytes()),
 				)
 				req.Header.Set("X-GitHub-Event", "push")
 				return req
@@ -224,7 +224,7 @@ func TestGithubHandler(t *testing.T) {
 				bodyBuf := bytes.NewBuffer([]byte("{}"))
 				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
 				req.Header.Set("X-GitHub-Event", "ping")
-				req.Header.Set("X-Hub-Signature-256", sign(testToken, bodyBuf.Bytes()))
+				req.Header.Set("X-Hub-Signature-256", sign(bodyBuf.Bytes()))
 				req.Header.Set("X-GitHub-Enterprise-Host", "wrong.enterprise.com")
 				return req
 			},
@@ -245,7 +245,7 @@ func TestGithubHandler(t *testing.T) {
 				bodyBuf := bytes.NewBuffer([]byte("{}"))
 				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
 				req.Header.Set("X-GitHub-Event", "ping")
-				req.Header.Set("X-Hub-Signature-256", sign(testToken, bodyBuf.Bytes()))
+				req.Header.Set("X-Hub-Signature-256", sign(bodyBuf.Bytes()))
 				req.Header.Set("X-GitHub-Enterprise-Host", "github.enterprise.com")
 				return req
 			},
@@ -276,8 +276,9 @@ func TestGithubHandler(t *testing.T) {
 	}
 }
 
-func sign(s string, b []byte) string {
-	mac := hmac.New(sha256.New, []byte(s))
+func sign(b []byte) string {
+	const testToken = "mysupersecrettoken"
+	mac := hmac.New(sha256.New, []byte(testToken))
 	_, _ = mac.Write(b)
 	return fmt.Sprintf("sha256=%s",
 		hex.EncodeToString(mac.Sum(nil)),

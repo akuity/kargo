@@ -86,7 +86,8 @@ func (g *githubWebhookReceiver) GetHandler() http.HandlerFunc {
 					xhttp.WriteErrorJSON(
 						w,
 						xhttp.Error(
-							fmt.Errorf("invalid GitHub Enterprise host: got %s, want %s", reqHost, expectedHost),
+							fmt.Errorf("invalid GitHub Enterprise host: got %s, want %s",
+								reqHost, expectedHost),
 							http.StatusUnauthorized,
 						),
 					)
