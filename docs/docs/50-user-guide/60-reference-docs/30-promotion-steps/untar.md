@@ -12,7 +12,7 @@ description: Extracts the contents of a tar (or gzipped tar) file to a specified
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
 | `inPath` | `string` | Y | Path to the tar file to extract. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
-| `outPath` | `string` | Y | Path to the destination directory where contents will be extracted. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
+| `outPath` | `string` | Y | Path to the destination directory where contents will be extracted. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. The outPath content will be overriden if it already exists. |
 | `stripComponents` | `integer` | N | Number of leading path components to strip from file names in the archive. Similar to the `--strip-components` option in the tar command. |
 | `ignore` | `string` | N | A multiline string of glob patterns to ignore when extracting files. It accepts the same syntax as `.gitignore` files. |
 

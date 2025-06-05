@@ -12,7 +12,7 @@
     },
     "outPath": {
       "type": "string",
-      "description": "OutPath is the path to the destination directory where contents will be extracted.",
+      "description": "OutPath is the path to the destination directory where contents will be extracted. The outPath content will be overriden if it already exists.",
       "minLength": 1
     },
     "stripComponents": {
