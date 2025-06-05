@@ -85,10 +85,13 @@ func NewReceiver(
 	// Pick an appropriate WebhookReceiver implementation based on the
 	// configuration provided.
 	var receiver WebhookReceiver
-	switch {
-	case cfg.GitHub != nil:
-		receiver = newGitHubWebhookReceiver(c, project, cfg)
-	default:
+	for _, registration := range webhookReceiverRegistry {
+		if registration.predicate(cfg) {
+			receiver = registration.factory(c, project, cfg)
+			break
+		}
+	}
+	if receiver == nil {
 		return nil, errors.New(
 			"WebhookReceiverConfig has no configuration for a known receiver type",
 		)

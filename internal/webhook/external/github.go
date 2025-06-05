@@ -15,6 +15,15 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
+func init() {
+	registerWebhookReceiver(
+		func(cfg kargoapi.WebhookReceiverConfig) bool {
+			return cfg.GitHub != nil
+		},
+		newGitHubWebhookReceiver,
+	)
+}
+
 // githubWebhookReceiver is an implementation of WebhookReceiver that handles
 // inbound webhooks from GitHub.
 type githubWebhookReceiver struct {
