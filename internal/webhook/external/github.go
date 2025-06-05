@@ -15,6 +15,8 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
+const githubSecretDataKey = "secret"
+
 func init() {
 	registerWebhookReceiver(
 		func(cfg kargoapi.WebhookReceiverConfig) bool {
@@ -54,12 +56,12 @@ func (g *githubWebhookReceiver) getReceiverType() string {
 func (g *githubWebhookReceiver) getSecretValues(
 	secretData map[string][]byte,
 ) ([]string, error) {
-	token, ok := secretData["token"]
+	secretValue, ok := secretData[githubSecretDataKey]
 	if !ok {
 		return nil,
 			errors.New("Secret data is not valid for a GitHub WebhookReceiver")
 	}
-	return []string{string(token)}, nil
+	return []string{string(secretValue)}, nil
 }
 
 // GetHandler implements WebhookReceiver.
@@ -69,7 +71,7 @@ func (g *githubWebhookReceiver) GetHandler() http.HandlerFunc {
 
 		logger := logging.LoggerFromContext(ctx)
 
-		token, ok := g.secretData["token"]
+		secretValue, ok := g.secretData[githubSecretDataKey]
 		if !ok {
 			xhttp.WriteErrorJSON(w, nil)
 			return
@@ -115,7 +117,7 @@ func (g *githubWebhookReceiver) GetHandler() http.HandlerFunc {
 			return
 		}
 
-		if err = gh.ValidateSignature(sig, body, token); err != nil {
+		if err = gh.ValidateSignature(sig, body, secretValue); err != nil {
 			xhttp.WriteErrorJSON(
 				w,
 				xhttp.Error(errors.New("unauthorized"), http.StatusUnauthorized),
