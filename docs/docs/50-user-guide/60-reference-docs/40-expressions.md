@@ -251,8 +251,16 @@ ctx
 
 ## Functions
 
-Several functions are built-in to Kargo's expression language. This section
-describes each of them.
+Besides the [built-in functions](https://expr-lang.org/docs/language-definition)
+provided by expr-lang itself, Kargo provides a number of additional functions
+that can be used within expressions in promotion steps and verification
+arguments.
+
+These functions allow you to access Kubernetes resources, manipulate strings,
+and retrieve information about the current promotion context, among other things.
+They are designed to be used in conjunction with the
+[pre-defined variables](#pre-defined-variables) to create dynamic and flexible
+promotion processes and verification steps.
 
 ### `quote(value)`
 
