@@ -306,7 +306,7 @@ func Test_helmChartUpdater_processChartUpdates(t *testing.T) {
 	tests := []struct {
 		name              string
 		cfg               builtin.HelmUpdateChartConfig
-		chartDependencies []chartDependency
+		chartDependencies []helm.ChartDependency
 		assertions        func(*testing.T, []intyaml.Update, error)
 	}{
 		{
@@ -320,7 +320,7 @@ func Test_helmChartUpdater_processChartUpdates(t *testing.T) {
 					},
 				},
 			},
-			chartDependencies: []chartDependency{
+			chartDependencies: []helm.ChartDependency{
 				{Repository: "https://charts.example.com", Name: "origin-chart"},
 			},
 			assertions: func(t *testing.T, updates []intyaml.Update, err error) {
@@ -343,7 +343,7 @@ func Test_helmChartUpdater_processChartUpdates(t *testing.T) {
 					},
 				},
 			},
-			chartDependencies: []chartDependency{},
+			chartDependencies: []helm.ChartDependency{},
 			assertions: func(t *testing.T, _ []intyaml.Update, err error) {
 				assert.ErrorContains(t, err, "no dependency in Chart.yaml matched update")
 			},
@@ -485,7 +485,7 @@ func Test_helmChartUpdater_updateDependencies(t *testing.T) {
 			&promotion.StepContext{},
 			t.TempDir(),
 			chartPath,
-			[]chartDependency{{
+			[]helm.ChartDependency{{
 				Name:       "demo",
 				Repository: "oci://" + repositoryRef,
 			}},
@@ -501,7 +501,7 @@ func Test_helmChartUpdater_updateDependencies(t *testing.T) {
 	tests := []struct {
 		name              string
 		credentialsDB     credentials.Database
-		chartDependencies []chartDependency
+		chartDependencies []helm.ChartDependency
 		assertions        func(*testing.T, string, string, error)
 	}{
 		{
@@ -511,7 +511,7 @@ func Test_helmChartUpdater_updateDependencies(t *testing.T) {
 					return nil, fmt.Errorf("something went wrong")
 				},
 			},
-			chartDependencies: []chartDependency{
+			chartDependencies: []helm.ChartDependency{
 				{
 					Name:       "dep1",
 					Repository: "https://charts.example.com",
@@ -532,7 +532,7 @@ func Test_helmChartUpdater_updateDependencies(t *testing.T) {
 					}, nil
 				},
 			},
-			chartDependencies: []chartDependency{
+			chartDependencies: []helm.ChartDependency{
 				{
 					Name:       "dep1",
 					Repository: "https://charts.example.com",
@@ -557,7 +557,7 @@ func Test_helmChartUpdater_updateDependencies(t *testing.T) {
 		},
 		{
 			name: "error validating file dependency",
-			chartDependencies: []chartDependency{
+			chartDependencies: []helm.ChartDependency{
 				{
 					Name:       "dep1",
 					Repository: "file:///absolute/path",
@@ -709,7 +709,7 @@ func Test_helmChartUpdater_setupDependencyRepositories(t *testing.T) {
 		repositoryFile    *repo.File
 		newRegistryClient func(*testing.T) (string, *helmregistry.Client)
 		newOCIServer      func(*testing.T) string
-		buildDependencies func(string) []chartDependency
+		buildDependencies func(string) []helm.ChartDependency
 		assertions        func(*testing.T, string, string, *repo.File, error)
 	}{
 		{
@@ -726,8 +726,8 @@ func Test_helmChartUpdater_setupDependencyRepositories(t *testing.T) {
 			newRegistryClient: func(*testing.T) (string, *helmregistry.Client) {
 				return "", nil
 			},
-			buildDependencies: func(string) []chartDependency {
-				return []chartDependency{
+			buildDependencies: func(string) []helm.ChartDependency {
+				return []helm.ChartDependency{
 					{
 						Name:       "dep1",
 						Repository: "https://charts.example.com",
@@ -756,8 +756,8 @@ func Test_helmChartUpdater_setupDependencyRepositories(t *testing.T) {
 			newRegistryClient: func(*testing.T) (string, *helmregistry.Client) {
 				return "", nil
 			},
-			buildDependencies: func(string) []chartDependency {
-				return []chartDependency{
+			buildDependencies: func(string) []helm.ChartDependency {
+				return []helm.ChartDependency{
 					{
 						Name:       "dep1",
 						Repository: "http://charts.example.com",
@@ -786,8 +786,8 @@ func Test_helmChartUpdater_setupDependencyRepositories(t *testing.T) {
 			newRegistryClient: func(*testing.T) (string, *helmregistry.Client) {
 				return "", nil
 			},
-			buildDependencies: func(string) []chartDependency {
-				return []chartDependency{
+			buildDependencies: func(string) []helm.ChartDependency {
+				return []helm.ChartDependency{
 					{
 						Name:       "dep1",
 						Repository: "https://charts.example.com",
@@ -833,8 +833,8 @@ func Test_helmChartUpdater_setupDependencyRepositories(t *testing.T) {
 					}, nil
 				},
 			},
-			buildDependencies: func(registryURL string) []chartDependency {
-				return []chartDependency{
+			buildDependencies: func(registryURL string) []helm.ChartDependency {
+				return []helm.ChartDependency{
 					{
 						Name:       "dep1",
 						Repository: "oci://" + registryURL,
@@ -874,8 +874,8 @@ func Test_helmChartUpdater_setupDependencyRepositories(t *testing.T) {
 			newRegistryClient: func(*testing.T) (string, *helmregistry.Client) {
 				return "", nil
 			},
-			buildDependencies: func(string) []chartDependency {
-				return []chartDependency{
+			buildDependencies: func(string) []helm.ChartDependency {
+				return []helm.ChartDependency{
 					{
 						Name:       "dep1",
 						Repository: "https://charts.example.com",
@@ -904,8 +904,8 @@ func Test_helmChartUpdater_setupDependencyRepositories(t *testing.T) {
 					return nil, fmt.Errorf("something went wrong")
 				},
 			},
-			buildDependencies: func(string) []chartDependency {
-				return []chartDependency{
+			buildDependencies: func(string) []helm.ChartDependency {
+				return []helm.ChartDependency{
 					{
 						Name:       "dep1",
 						Repository: "https://charts.example.com",
@@ -928,8 +928,8 @@ func Test_helmChartUpdater_setupDependencyRepositories(t *testing.T) {
 				},
 			},
 			repositoryFile: repo.NewFile(),
-			buildDependencies: func(string) []chartDependency {
-				return []chartDependency{
+			buildDependencies: func(string) []helm.ChartDependency {
+				return []helm.ChartDependency{
 					{
 						Name:       "dep1",
 						Repository: "https://charts.example.com",
@@ -949,8 +949,8 @@ func Test_helmChartUpdater_setupDependencyRepositories(t *testing.T) {
 			name:           "file repository",
 			credentialsDB:  &credentials.FakeDB{},
 			repositoryFile: repo.NewFile(),
-			buildDependencies: func(string) []chartDependency {
-				return []chartDependency{
+			buildDependencies: func(string) []helm.ChartDependency {
+				return []helm.ChartDependency{
 					{
 						Name:       "dep1",
 						Repository: "file:///path/to/charts",
@@ -1178,206 +1178,95 @@ func Test_normalizeChartReference(t *testing.T) {
 	}
 }
 
-func Test_readChartDependencies(t *testing.T) {
-	tests := []struct {
-		name       string
-		setup      func(*testing.T) string
-		assertions func(*testing.T, []chartDependency, error)
-	}{
-		{
-			name: "valid chart.yaml",
-			setup: func(t *testing.T) string {
-				tmpDir := t.TempDir()
-
-				const chartYAML = `---
-apiVersion: v2
-name: test-chart
-version: 0.1.0
-dependencies:
-- name: dep1
-  version: 1.0.0
-  repository: https://charts.example.com
-- name: dep2
-  version: 2.0.0
-  repository: oci://registry.example.com/charts
-`
-				chartPath := filepath.Join(tmpDir, "Chart.yaml")
-				require.NoError(t, os.WriteFile(chartPath, []byte(chartYAML), 0o600))
-
-				return chartPath
-			},
-			assertions: func(t *testing.T, dependencies []chartDependency, err error) {
-				require.NoError(t, err)
-				assert.Len(t, dependencies, 2)
-
-				assert.Equal(t, "dep1", dependencies[0].Name)
-				assert.Equal(t, "https://charts.example.com", dependencies[0].Repository)
-				assert.Equal(t, "dep2", dependencies[1].Name)
-				assert.Equal(t, "oci://registry.example.com/charts", dependencies[1].Repository)
-			},
-		},
-		{
-			name: "invalid Chart.yaml",
-			setup: func(t *testing.T) string {
-				tmpDir := t.TempDir()
-
-				const chartYAML = `---
-this is not a valid chart.yaml
-`
-				chartPath := filepath.Join(tmpDir, "Chart.yaml")
-				require.NoError(t, os.WriteFile(chartPath, []byte(chartYAML), 0o600))
-
-				return chartPath
-			},
-			assertions: func(t *testing.T, dependencies []chartDependency, err error) {
-				require.ErrorContains(t, err, "failed to unmarshal")
-				assert.Nil(t, dependencies)
-			},
-		},
-		{
-			name: "missing Chart.yaml",
-			setup: func(t *testing.T) string {
-				return filepath.Join(t.TempDir(), "Chart.yaml")
-			},
-			assertions: func(t *testing.T, dependencies []chartDependency, err error) {
-				require.ErrorContains(t, err, "failed to read file")
-				assert.Nil(t, dependencies)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			chartPath := tt.setup(t)
-			dependencies, err := readChartDependencies(chartPath)
-			tt.assertions(t, dependencies, err)
-		})
-	}
-}
-
-func Test_readChartLock(t *testing.T) {
-	tests := []struct {
-		name       string
-		setup      func(*testing.T) string
-		assertions func(*testing.T, map[string]string, error)
-	}{
-		{
-			name: "valid Chart.lock",
-			setup: func(t *testing.T) string {
-				tmpDir := t.TempDir()
-
-				const chartLock = `---
-dependencies:
-- name: dep1
-  version: 1.0.0
-  repository: https://charts.example.com
-- name: dep2
-  version: 2.0.0
-  repository: oci://registry.example.com/charts
-`
-				lockPath := filepath.Join(tmpDir, "Chart.lock")
-				require.NoError(t, os.WriteFile(lockPath, []byte(chartLock), 0o600))
-				return lockPath
-			},
-			assertions: func(t *testing.T, charts map[string]string, err error) {
-				require.NoError(t, err)
-
-				assert.Len(t, charts, 2)
-				assert.Equal(t, "1.0.0", charts["dep1"])
-				assert.Equal(t, "2.0.0", charts["dep2"])
-			},
-		},
-		{
-			name: "invalid Chart.lock",
-			setup: func(t *testing.T) string {
-				tmpDir := t.TempDir()
-
-				const chartLock = `---
-this is not a valid Chart.lock
-`
-				lockPath := filepath.Join(tmpDir, "Chart.lock")
-				require.NoError(t, os.WriteFile(lockPath, []byte(chartLock), 0o600))
-				return lockPath
-			},
-			assertions: func(t *testing.T, charts map[string]string, err error) {
-				require.ErrorContains(t, err, "failed to parse Chart.lock")
-				assert.Empty(t, charts)
-			},
-		},
-		{
-			name: "missing Chart.lock",
-			setup: func(t *testing.T) string {
-				return filepath.Join(t.TempDir(), "Chart.lock")
-			},
-			assertions: func(t *testing.T, charts map[string]string, err error) {
-				require.NoError(t, err)
-				assert.Empty(t, charts)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			chartPath := tt.setup(t)
-			charts, err := readChartLock(chartPath)
-			tt.assertions(t, charts, err)
-		})
-	}
-}
-
 func Test_compareChartVersions(t *testing.T) {
 	tests := []struct {
 		name   string
-		before map[string]string
-		after  map[string]string
+		before []helm.ChartDependency
+		after  []helm.ChartDependency
 		want   map[string]string
 	}{
 		{
-			name:   "No changes",
-			before: map[string]string{"chart1": "1.0.0", "chart2": "2.0.0"},
-			after:  map[string]string{"chart1": "1.0.0", "chart2": "2.0.0"},
-			want:   map[string]string{},
+			name: "no changes",
+			before: []helm.ChartDependency{
+				{Name: "chart1", Version: "1.0.0"},
+				{Name: "chart2", Version: "2.0.0"},
+			},
+			after: []helm.ChartDependency{
+				{Name: "chart1", Version: "1.0.0"},
+				{Name: "chart2", Version: "2.0.0"},
+			},
+			want: map[string]string{},
 		},
 		{
-			name:   "version update",
-			before: map[string]string{"chart1": "1.0.0", "chart2": "2.0.0"},
-			after:  map[string]string{"chart1": "1.1.0", "chart2": "2.0.0"},
-			want:   map[string]string{"chart1": "1.0.0 -> 1.1.0"},
+			name: "version update",
+			before: []helm.ChartDependency{
+				{Name: "chart1", Version: "1.0.0"},
+				{Name: "chart2", Version: "2.0.0"},
+			},
+			after: []helm.ChartDependency{
+				{Name: "chart1", Version: "1.1.0"},
+				{Name: "chart2", Version: "2.0.0"},
+			},
+			want: map[string]string{"chart1": "1.0.0 -> 1.1.0"},
 		},
 		{
-			name:   "new chart added",
-			before: map[string]string{"chart1": "1.0.0"},
-			after:  map[string]string{"chart1": "1.0.0", "chart2": "2.0.0"},
-			want:   map[string]string{"chart2": "2.0.0"},
+			name: "new chart added",
+			before: []helm.ChartDependency{
+				{Name: "chart1", Version: "1.0.0"},
+			},
+			after: []helm.ChartDependency{
+				{Name: "chart1", Version: "1.0.0"},
+				{Name: "chart2", Version: "2.0.0"},
+			},
+			want: map[string]string{"chart2": "2.0.0"},
 		},
 		{
-			name:   "chart removed",
-			before: map[string]string{"chart1": "1.0.0", "chart2": "2.0.0"},
-			after:  map[string]string{"chart1": "1.0.0"},
-			want:   map[string]string{"chart2": ""},
+			name: "chart removed",
+			before: []helm.ChartDependency{
+				{Name: "chart1", Version: "1.0.0"},
+				{Name: "chart2", Version: "2.0.0"},
+			},
+			after: []helm.ChartDependency{
+				{Name: "chart1", Version: "1.0.0"},
+			},
+			want: map[string]string{"chart2": ""},
 		},
 		{
-			name:   "multiple changes",
-			before: map[string]string{"chart1": "1.0.0", "chart2": "2.0.0", "chart3": "3.0.0"},
-			after:  map[string]string{"chart1": "1.1.0", "chart2": "2.0.0", "chart4": "4.0.0"},
-			want:   map[string]string{"chart1": "1.0.0 -> 1.1.0", "chart3": "", "chart4": "4.0.0"},
+			name: "multiple changes",
+			before: []helm.ChartDependency{
+				{Name: "chart1", Version: "1.0.0"},
+				{Name: "chart2", Version: "2.0.0"},
+				{Name: "chart3", Version: "3.0.0"},
+			},
+			after: []helm.ChartDependency{
+				{Name: "chart1", Version: "1.1.0"},
+				{Name: "chart2", Version: "2.0.0"},
+				{Name: "chart4", Version: "4.0.0"},
+			},
+			want: map[string]string{"chart1": "1.0.0 -> 1.1.0", "chart3": "", "chart4": "4.0.0"},
 		},
 		{
 			name:   "empty before",
-			before: map[string]string{},
-			after:  map[string]string{"chart1": "1.0.0", "chart2": "2.0.0"},
-			want:   map[string]string{"chart1": "1.0.0", "chart2": "2.0.0"},
+			before: []helm.ChartDependency{},
+			after: []helm.ChartDependency{
+				{Name: "chart1", Version: "1.0.0"},
+				{Name: "chart2", Version: "2.0.0"},
+			},
+			want: map[string]string{"chart1": "1.0.0", "chart2": "2.0.0"},
 		},
 		{
-			name:   "empty after",
-			before: map[string]string{"chart1": "1.0.0", "chart2": "2.0.0"},
-			after:  map[string]string{},
-			want:   map[string]string{"chart1": "", "chart2": ""},
+			name: "empty after",
+			before: []helm.ChartDependency{
+				{Name: "chart1", Version: "1.0.0"},
+				{Name: "chart2", Version: "2.0.0"},
+			},
+			after: []helm.ChartDependency{},
+			want:  map[string]string{"chart1": "", "chart2": ""},
 		},
 		{
 			name:   "both empty",
-			before: map[string]string{},
-			after:  map[string]string{},
+			before: []helm.ChartDependency{},
+			after:  []helm.ChartDependency{},
 			want:   map[string]string{},
 		},
 	}
