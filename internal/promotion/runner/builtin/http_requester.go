@@ -6,9 +6,8 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io"
+	"mime"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/expr-lang/expr"
@@ -16,6 +15,7 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/io"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
@@ -24,6 +24,8 @@ import (
 const (
 	contentTypeHeader = "Content-Type"
 	contentTypeJSON   = "application/json"
+	maxResponseBytes = 2 << 20
+	requestTimeoutDefault = 10 * time.Second
 )
 
 // httpRequester is an implementation of the promotion.StepRunner interface that
@@ -153,7 +155,7 @@ func (h *httpRequester) getClient(cfg builtin.HTTPConfig) (*http.Client, error) 
 			InsecureSkipVerify: true, // nolint: gosec
 		}
 	}
-	timeout := 10 * time.Second
+	timeout := requestTimeoutDefault
 	if cfg.Timeout != "" {
 		var err error
 		if timeout, err = time.ParseDuration(cfg.Timeout); err != nil {
@@ -171,33 +173,15 @@ func (h *httpRequester) buildExprEnv(
 	ctx context.Context,
 	resp *http.Response,
 ) (map[string]any, error) {
-	const maxBytes = 2 << 20
-
 	// Early check of Content-Length if available
-	if contentLength := resp.ContentLength; contentLength > maxBytes {
-		return nil, fmt.Errorf("response body size %d exceeds limit of %d bytes", contentLength, maxBytes)
+	if contentLength := resp.ContentLength; contentLength > maxResponseBytes {
+		return nil, fmt.Errorf("response body size %d exceeds limit of %d bytes", contentLength, maxResponseBytes)
 	}
 
-	// Create a limited reader that will stop after max bytes
-	bodyReader := io.LimitReader(resp.Body, maxBytes)
-
-	// Read as far as we are allowed to
-	bodyBytes, err := io.ReadAll(bodyReader)
+	// Read the response body up to the maximum allowed size
+	bodyBytes, err := io.LimitRead(resp.Body, maxResponseBytes)
 	if err != nil {
 		return nil, fmt.Errorf("reading response body: %w", err)
-	}
-
-	// If we read exactly the maximum, the body might be larger
-	if len(bodyBytes) == maxBytes {
-		// Try to read one more byte
-		buf := make([]byte, 1)
-		var n int
-		if n, err = resp.Body.Read(buf); err != nil && err != io.EOF {
-			return nil, fmt.Errorf("checking for additional content: %w", err)
-		}
-		if n > 0 {
-			return nil, fmt.Errorf("response body exceeds maximum size of %d bytes", maxBytes)
-		}
 	}
 
 	// TODO(hidde): It has proven to be difficult to figure out why a HTTP step
@@ -223,9 +207,7 @@ func (h *httpRequester) buildExprEnv(
 			"body":    map[string]any{},
 		},
 	}
-	contentType := strings.TrimSpace(
-		strings.Split(resp.Header.Get(contentTypeHeader), ";")[0],
-	)
+	contentType, _, err := mime.ParseMediaType(resp.Header.Get(contentTypeHeader))
 	if len(bodyBytes) > 0 && contentType == contentTypeJSON {
 		var parsedBody any
 		if err := json.Unmarshal(bodyBytes, &parsedBody); err != nil {
