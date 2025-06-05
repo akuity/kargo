@@ -3,6 +3,8 @@ package promotion
 import (
 	"context"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 	"time"
 
@@ -34,11 +36,14 @@ type Context struct {
 	// Promotion is the name of the Promotion.
 	Promotion string
 	// FreightRequests is the list of Freight from various origins that is
-	// requested by the Stage targeted by the Promotion. This information is
-	// sometimes useful to Steps that reference a particular artifact and, in the
-	// absence of any explicit information about the origin of that artifact, may
-	// need to examine FreightRequests to determine whether there exists any
-	// ambiguity as to its origin, which a user may then need to resolve.
+	// requested by the Stage targeted by the Promotion.
+	//
+	// This information is sometimes useful to Steps that reference a particular
+	// artifact. When explicit information about the artifact's origin is absent,
+	// Steps may need to examine FreightRequests.
+	// This examination helps determine whether any ambiguity exists regarding
+	// the artifact's origin. If ambiguity is found, a user may need to resolve
+	// it.
 	FreightRequests []kargoapi.FreightRequest
 	// Freight is the collection of all Freight referenced by the Promotion. This
 	// collection contains both the Freight that is actively being promoted and
@@ -55,13 +60,47 @@ type Context struct {
 	StepExecutionMetadata kargoapi.StepExecutionMetadataList
 	// State is the current state of the promotion process.
 	State promotion.State
-	// Vars is a list of variables definitions that can be used by the
+	// Vars is a list of variable definitions that can be used by the
 	// Steps.
 	Vars []kargoapi.ExpressionVariable
 	// Secrets is a map of secrets that can be used by the Steps.
 	Secrets map[string]map[string]string
 	// Actor is the name of the actor triggering the Promotion.
 	Actor string
+}
+
+// DeepCopy creates a deep copy of the Context. It can be used to ensure that
+// modifications to the Context do not affect the original Context.
+func (c Context) DeepCopy() Context {
+	newC := Context{
+		UIBaseURL:             c.UIBaseURL,
+		WorkDir:               c.WorkDir,
+		Project:               c.Project,
+		Stage:                 c.Stage,
+		Promotion:             c.Promotion,
+		Freight:               *c.Freight.DeepCopy(),
+		StartFromStep:         c.StartFromStep,
+		StepExecutionMetadata: c.StepExecutionMetadata.DeepCopy(),
+		State:                 c.State.DeepCopy(),
+		Vars:                  slices.Clone(c.Vars),
+		Actor:                 c.Actor,
+	}
+
+	if c.FreightRequests != nil {
+		newC.FreightRequests = make([]kargoapi.FreightRequest, len(c.FreightRequests))
+		for i, fr := range c.FreightRequests {
+			newC.FreightRequests[i] = *fr.DeepCopy()
+		}
+	}
+
+	if c.Secrets != nil {
+		newC.Secrets = make(map[string]map[string]string, len(c.Secrets))
+		for k, v := range c.Secrets {
+			newC.Secrets[k] = maps.Clone(v)
+		}
+	}
+
+	return newC
 }
 
 // Step describes a single step in a user-defined promotion process. Steps are
@@ -211,13 +250,12 @@ func (s *Step) BuildEnv(promoCtx Context, opts ...StepEnvOption) map[string]any 
 }
 
 // Skip returns true if the Step should be skipped based on the If condition.
-// The If condition is evaluated against the provided Context and State.
+// The If condition is evaluated against the provided Context.
 func (s *Step) Skip(
 	ctx context.Context,
 	cl client.Client,
 	cache *gocache.Cache,
 	promoCtx Context,
-	state promotion.State,
 ) (bool, error) {
 	// If no "if" condition is provided, then this step is automatically skipped
 	// if any of the previous steps have errored or failed and is not skipped
@@ -226,7 +264,7 @@ func (s *Step) Skip(
 		return promoCtx.StepExecutionMetadata.HasFailures(), nil
 	}
 
-	vars, err := s.GetVars(ctx, cl, cache, promoCtx, state)
+	vars, err := s.GetVars(ctx, cl, cache, promoCtx)
 	if err != nil {
 		return false, err
 	}
@@ -234,8 +272,8 @@ func (s *Step) Skip(
 	env := s.BuildEnv(
 		promoCtx,
 		StepEnvWithStepMetas(promoCtx),
-		StepEnvWithOutputs(state),
-		StepEnvWithTaskOutputs(s.Alias, state),
+		StepEnvWithOutputs(promoCtx.State),
+		StepEnvWithTaskOutputs(s.Alias, promoCtx.State),
 		StepEnvWithVars(vars),
 	)
 
@@ -275,13 +313,12 @@ func (s *Step) GetConfig(
 	cl client.Client,
 	cache *gocache.Cache,
 	promoCtx Context,
-	state promotion.State,
 ) (promotion.Config, error) {
 	if s.Config == nil {
 		return nil, nil
 	}
 
-	vars, err := s.GetVars(ctx, cl, cache, promoCtx, state)
+	vars, err := s.GetVars(ctx, cl, cache, promoCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -289,8 +326,8 @@ func (s *Step) GetConfig(
 	env := s.BuildEnv(
 		promoCtx,
 		StepEnvWithStepMetas(promoCtx),
-		StepEnvWithOutputs(state),
-		StepEnvWithTaskOutputs(s.Alias, state),
+		StepEnvWithOutputs(promoCtx.State),
+		StepEnvWithTaskOutputs(s.Alias, promoCtx.State),
 		StepEnvWithVars(vars),
 		StepEnvWithSecrets(promoCtx.Secrets),
 	)
@@ -326,7 +363,6 @@ func (s *Step) GetVars(
 	cl client.Client,
 	cache *gocache.Cache,
 	promoCtx Context,
-	state promotion.State,
 ) (map[string]any, error) {
 	vars := make(map[string]any)
 
@@ -355,8 +391,8 @@ func (s *Step) GetVars(
 			s.BuildEnv(
 				promoCtx,
 				StepEnvWithStepMetas(promoCtx),
-				StepEnvWithOutputs(state),
-				StepEnvWithTaskOutputs(s.Alias, state),
+				StepEnvWithOutputs(promoCtx.State),
+				StepEnvWithTaskOutputs(s.Alias, promoCtx.State),
 				StepEnvWithVars(vars),
 			),
 			append(

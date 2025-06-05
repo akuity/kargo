@@ -122,7 +122,6 @@ func TestStep_GetConfig(t *testing.T) {
 	testCases := []struct {
 		name        string
 		promoCtx    Context
-		promoState  promotion.State
 		rawCfg      []byte
 		expectedCfg promotion.Config
 	}{
@@ -253,10 +252,12 @@ func TestStep_GetConfig(t *testing.T) {
 		{
 			name: "test outputs",
 			// Test that expressions can reference outputs
-			promoState: promotion.State{
-				"strOutput":  "foo",
-				"boolOutput": true,
-				"numOutput":  42,
+			promoCtx: Context{
+				State: promotion.State{
+					"strOutput":  "foo",
+					"boolOutput": true,
+					"numOutput":  42,
+				},
 			},
 			rawCfg: []byte(`{
 				"strOutput": "${{ outputs.strOutput }}",
@@ -507,7 +508,6 @@ func TestStep_GetConfig(t *testing.T) {
 				testClient,
 				nil,
 				testCase.promoCtx,
-				testCase.promoState,
 			)
 			require.NoError(t, err)
 			require.Equal(t, testCase.expectedCfg, stepCfg)
@@ -540,7 +540,6 @@ func TestStep_GetVars(t *testing.T) {
 	testCases := []struct {
 		name         string
 		promoCtx     Context
-		promoState   promotion.State
 		step         Step
 		expectedVars map[string]any
 		expectErr    bool
@@ -701,9 +700,9 @@ func TestStep_GetVars(t *testing.T) {
 			name: "step vars referencing outputs",
 			promoCtx: Context{
 				Project: "fake-project",
-			},
-			promoState: promotion.State{
-				"output1": "output-value",
+				State: promotion.State{
+					"output1": "output-value",
+				},
 			},
 			step: Step{
 				Vars: []kargoapi.ExpressionVariable{
@@ -721,10 +720,10 @@ func TestStep_GetVars(t *testing.T) {
 			name: "step vars referencing task outputs",
 			promoCtx: Context{
 				Project: "fake-project",
-			},
-			promoState: promotion.State{
-				"task::alias": map[string]any{
-					"foo": "baz",
+				State: promotion.State{
+					"task::alias": map[string]any{
+						"foo": "baz",
+					},
 				},
 			},
 			step: Step{
@@ -890,7 +889,6 @@ func TestStep_GetVars(t *testing.T) {
 				testClient,
 				nil,
 				testCase.promoCtx,
-				testCase.promoState,
 			)
 
 			if testCase.expectErr {
@@ -909,7 +907,6 @@ func TestStep_Skip(t *testing.T) {
 		name       string
 		step       *Step
 		ctx        Context
-		state      promotion.State
 		assertions func(*testing.T, bool, error)
 	}{
 		{
@@ -953,11 +950,13 @@ func TestStep_Skip(t *testing.T) {
 		},
 		{
 			name: "if condition uses outputs",
+			ctx: Context{
+				State: promotion.State{
+					"foo": "bar",
+				},
+			},
 			step: &Step{
 				If: "${{ outputs.foo == 'bar' }}",
-			},
-			state: promotion.State{
-				"foo": "bar",
 			},
 			assertions: func(t *testing.T, b bool, err error) {
 				assert.NoError(t, err)
@@ -966,14 +965,16 @@ func TestStep_Skip(t *testing.T) {
 		},
 		{
 			name: "if condition uses task outputs",
+			ctx: Context{
+				State: promotion.State{
+					"task::alias": map[string]any{
+						"foo": "baz",
+					},
+				},
+			},
 			step: &Step{
 				Alias: "task::other-alias",
 				If:    "${{ task.outputs.alias.foo == 'bar' }}",
-			},
-			state: promotion.State{
-				"task::alias": map[string]any{
-					"foo": "baz",
-				},
 			},
 			assertions: func(t *testing.T, b bool, err error) {
 				assert.NoError(t, err)
@@ -1025,7 +1026,6 @@ func TestStep_Skip(t *testing.T) {
 				fake.NewClientBuilder().Build(),
 				nil,
 				tt.ctx,
-				tt.state,
 			)
 			tt.assertions(t, got, err)
 		})
