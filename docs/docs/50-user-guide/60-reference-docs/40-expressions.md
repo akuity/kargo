@@ -64,6 +64,15 @@ provide a comprehensive overview of the language's syntax and capabilities, so
 this reference will continue to focus only on Kargo-specific extensions and
 usage.
 
+:::tip
+You can test your expressions using the
+[expr-lang playground](https://expr-lang.org/playground).
+
+The playground allows you to evaluate expressions against sample data and
+see the results in real-time. This is especially useful for debugging and
+validating your expressions before using them in your Kargo configuration.
+:::
+
 ## Structure and Behavior
 
 ### Config Blocks
