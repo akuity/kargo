@@ -109,6 +109,7 @@ export const useReactFlowPipelineGraph = (
         source: edge.v,
         target: edge.w,
         animated: false,
+        type: 'step',
         sourceHandle: belongsToWarehouse,
         targetHandle: belongsToWarehouse,
         markerEnd: {
