@@ -18,6 +18,10 @@ export const FreightDetails = (props: FreightDetailsProps) => {
   const navigate = useNavigate();
   const freightCreatedAt = useGetFreightCreation(props.freight);
 
+  if (!props.freight) {
+    return null;
+  }
+
   return (
     <>
       <Tabs

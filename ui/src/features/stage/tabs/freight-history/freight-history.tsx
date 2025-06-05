@@ -1,30 +1,37 @@
 import { create } from '@bufbuild/protobuf';
-import { Descriptions, Flex, Select, Space, Table, Tag } from 'antd';
+import { faTruck } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { Button, Descriptions, Flex, Select, Space, Table, Tag, Typography } from 'antd';
+import { formatDistance } from 'date-fns';
 import { useMemo } from 'react';
 import { useState } from 'react';
 import { useEffect } from 'react';
-import { generatePath, Link } from 'react-router-dom';
+import { generatePath, Link, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { shortVersion } from '@ui/features/project/pipelines/freight/short-version-utils';
 import {
   FreightReference,
   FreightRequest,
   FreightSchema,
   StageStatus
 } from '@ui/gen/api/v1alpha1/generated_pb';
-import { PlainMessage } from '@ui/utils/connectrpc-utils';
+import { PlainMessage, timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { FreightContents } from '../../../freight-timeline/freight-contents';
 
 import { useGetFreightMap } from './use-get-freight-map';
+import { usePromotionsByFreightCollection } from './use-promotions-by-freight-collection';
 
 export const FreightHistory = ({
   projectName,
   freightHistory,
-  requestedFreights
+  requestedFreights,
+  stageName
 }: {
   requestedFreights: FreightRequest[];
   projectName: string;
+  stageName: string;
   // show the freight history thats 1:1 with requested freight
   freightHistory?: StageStatus['freightHistory'];
   // freight hash name which is active at the moment
@@ -32,6 +39,12 @@ export const FreightHistory = ({
   // usually last one is active but we have to consider multi-pipeline case
   currentActiveFreight?: string;
 }) => {
+  const navigate = useNavigate();
+  const promotionsByFreightCollection = usePromotionsByFreightCollection({
+    project: projectName,
+    stage: stageName
+  });
+
   const [selectedRequestedFreight, setSelectedRequestedFreight] = useState<FreightRequest>();
 
   const freightMap = useGetFreightMap(projectName);
@@ -40,7 +53,7 @@ export const FreightHistory = ({
     // to show the history
     const freightHistoryPerWarehouse: Record<
       string /* warehouse eg. Warehouse/w-1 or Warehouse/w-2 */,
-      PlainMessage<FreightReference>[]
+      PlainMessage<{ id: string } & FreightReference>[]
     > = {};
 
     for (const freightCollection of freightHistory || []) {
@@ -53,7 +66,10 @@ export const FreightHistory = ({
           freightHistoryPerWarehouse[warehouseIdentifier] = [];
         }
 
-        freightHistoryPerWarehouse[warehouseIdentifier].push(freightReference);
+        freightHistoryPerWarehouse[warehouseIdentifier].push({
+          id: freightCollection?.id,
+          ...freightReference
+        });
       }
     }
 
@@ -102,28 +118,24 @@ export const FreightHistory = ({
         rowKey={(record, index) => `${record.name}${index}`}
       >
         <Table.Column<PlainMessage<FreightReference>>
-          title='ID'
-          width={100}
-          render={(value, record) =>
-            freightMap[record?.name || '']?.metadata?.name?.substring(0, 7)
-          }
-        />
-        <Table.Column<PlainMessage<FreightReference>>
           title='Alias'
           width={240}
-          render={(value, record, index) => (
-            <Space>
-              <Link
-                to={generatePath(paths.freight, {
-                  name: projectName,
-                  freightName: record.name
-                })}
-              >
-                {freightMap[record?.name || '']?.alias || record.name}
-              </Link>
-              {index === 0 && <Tag color='success'>Active</Tag>}
-            </Space>
-          )}
+          render={(value, record, index) => {
+            const alias = shortVersion(freightMap[record?.name || '']?.alias || record.name, 20);
+            return (
+              <Space>
+                <Link
+                  to={generatePath(paths.freight, {
+                    name: projectName,
+                    freightName: record.name
+                  })}
+                >
+                  {alias}
+                </Link>
+                {index === 0 && <Tag color='success'>Active</Tag>}
+              </Space>
+            );
+          }}
         />
         <Table.Column<PlainMessage<FreightReference>>
           title='Contents'
@@ -140,6 +152,76 @@ export const FreightHistory = ({
               })}
             />
           )}
+        />
+        <Table.Column<PlainMessage<FreightReference>>
+          title='Created at'
+          render={(_, record) => {
+            const freightCreation = timestampDate(
+              freightMap[record?.name || '']?.metadata?.creationTimestamp
+            );
+
+            if (freightCreation) {
+              return (
+                <Typography.Text
+                  type='secondary'
+                  className='text-xs'
+                  title={freightCreation?.toString?.()}
+                >
+                  {formatDistance(freightCreation, new Date(), { addSuffix: false })}
+                </Typography.Text>
+              );
+            }
+
+            return '-';
+          }}
+        />
+        <Table.Column<PlainMessage<{ id: string } & FreightReference>>
+          title='Promoted at'
+          render={(_, record) => {
+            const promotion = promotionsByFreightCollection[record.id];
+
+            if (promotion) {
+              const promotedAt = timestampDate(promotion?.metadata?.creationTimestamp);
+
+              if (promotedAt) {
+                return (
+                  <>
+                    <Typography.Text
+                      type='secondary'
+                      className='text-xs'
+                      title={promotedAt?.toString?.()}
+                    >
+                      {formatDistance(promotedAt, new Date(), { addSuffix: false })}
+                    </Typography.Text>
+                  </>
+                );
+              }
+            }
+
+            return '-';
+          }}
+        />
+        <Table.Column<PlainMessage<FreightReference>>
+          render={(_, record, idx) =>
+            idx > 0 &&
+            freightMap[record?.name] && (
+              <Button
+                size='small'
+                icon={<FontAwesomeIcon icon={faTruck} />}
+                onClick={() =>
+                  navigate(
+                    generatePath(paths.promote, {
+                      name: projectName,
+                      freight: record.name,
+                      stage: stageName
+                    })
+                  )
+                }
+              >
+                Promote
+              </Button>
+            )
+          }
         />
       </Table>
     </Flex>
