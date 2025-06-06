@@ -137,12 +137,11 @@ Three such "Kargo roles" are pre-defined in a project's namespace when a new
 
 #### Managing Kargo Roles with the UI
 
-To see all Kargo roles in a project, navigate to your project and click the
-"people" icon in the upper right corner of the screen:
+To see all Kargo roles in a `Project` click <Hlt>Settings</Hlt> in the upper right corner of the `Project` view:
 
 ![Project](img/roles-manage.png)
 
-Kargo will display a list of all Kargo roles in the project:
+Then, go to the <Hlt>Roles</Hlt> tab. This will display a list of all Kargo roles associated with the Project:
 
 ![Roles](img/roles-manage-2.png)
 
