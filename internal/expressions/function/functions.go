@@ -190,7 +190,7 @@ func freightMetadata(
 			Name:      freightRefName,
 		}, &freightData); err != nil {
 			if kubeerr.IsNotFound(err) {
-				return nil, fmt.Errorf("freight %s not found in project %s", freightRefName, project)
+				return nil, nil
 			}
 			return nil, fmt.Errorf("failed to get freight %s: %w", freightRefName, err)
 		}
@@ -201,7 +201,7 @@ func freightMetadata(
 			return nil, fmt.Errorf("failed to get metadata %s from freight %s: %w", key, freightRefName, err)
 		}
 		if !found {
-			return nil, fmt.Errorf("metadata %s not found in freight %s", key, freightRefName)
+			return nil, nil
 		}
 
 		return data, nil

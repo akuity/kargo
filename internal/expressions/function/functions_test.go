@@ -1191,7 +1191,7 @@ func Test_freightMetadata(t *testing.T) {
 			objects: []client.Object{testFreight},
 			args:    []any{testFreightName, "non-existent-key"},
 			assertions: func(t *testing.T, result any, err error) {
-				assert.ErrorContains(t, err, "metadata non-existent-key not found in freight")
+				assert.NoError(t, err)
 				assert.Nil(t, result)
 			},
 		},
@@ -1200,7 +1200,7 @@ func Test_freightMetadata(t *testing.T) {
 			objects: []client.Object{}, // No freight objects
 			args:    []any{testFreightName, "deployment-config"},
 			assertions: func(t *testing.T, result any, err error) {
-				assert.ErrorContains(t, err, "freight fake-freight not found in project")
+				assert.NoError(t, err)
 				assert.Nil(t, result)
 			},
 		},
@@ -1273,7 +1273,7 @@ func Test_freightMetadata(t *testing.T) {
 			},
 			args: []any{testFreightName, "some-key"},
 			assertions: func(t *testing.T, result any, err error) {
-				assert.ErrorContains(t, err, "metadata some-key not found in freight")
+				assert.NoError(t, err)
 				assert.Nil(t, result)
 			},
 		},
