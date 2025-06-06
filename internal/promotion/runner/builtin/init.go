@@ -46,6 +46,7 @@ func Initialize(kargoClient, argocdClient client.Client, credsDB credentials.Dat
 		),
 		newYAMLParser(),
 		newYAMLUpdater(),
+		newFileWriter(),
 	}
 	for _, builtIn := range builtIns {
 		promotion.RegisterStepRunner(builtIn)

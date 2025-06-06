@@ -19,6 +19,7 @@ import kustomizeBuildConfig from '@ui/gen/directives/kustomize-build-config.json
 import kustomizeSetImageConfig from '@ui/gen/directives/kustomize-set-image-config.json';
 import yamlParseConfig from '@ui/gen/directives/yaml-parse-config.json';
 import yamlUpdateConfig from '@ui/gen/directives/yaml-update-config.json';
+import writeConfig from '@ui/gen/directives/write-config.json';
 
 import { PromotionDirectivesRegistry } from './types';
 
@@ -104,6 +105,10 @@ export const useDiscoverPromotionDirectivesRegistries = (): PromotionDirectivesR
       {
         identifier: 'http',
         config: httpConfig as JSONSchema7
+      },
+      {
+        identifier: 'write',
+        config: writeConfig as JSONSchema7
       }
     ]
   };
