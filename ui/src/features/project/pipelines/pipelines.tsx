@@ -292,6 +292,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
               <PipelineListView
                 stages={listStagesQuery.data?.stages || []}
                 warehouses={listWarehousesQuery.data?.warehouses || []}
+                project={projectName || ''}
                 className='mt-2'
               />
             </div>

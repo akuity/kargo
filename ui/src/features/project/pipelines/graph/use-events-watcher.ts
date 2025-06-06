@@ -8,7 +8,7 @@ import { useDocumentEvent } from '@ui/utils/document';
 
 export const useEventsWatcher = (
   project: string,
-  act: {
+  act?: {
     onStage: (stage: Stage) => void;
     onWarehouse: (warehouse: Warehouse) => void;
   }
@@ -26,9 +26,9 @@ export const useEventsWatcher = (
 
     const watcher = new Watcher(project, client);
 
-    watcher.watchStages(act.onStage);
+    watcher.watchStages(act?.onStage);
     watcher.watchWarehouses({
-      onWarehouseEvent: act.onWarehouse,
+      onWarehouseEvent: act?.onWarehouse,
       refreshHook: queryCache.freight.refetchQueryFreight
     });
 
