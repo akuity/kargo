@@ -38,6 +38,7 @@ func FreightOperations(
 		CommitFrom(ctx, c, project, freightRequests, freightRefs),
 		ImageFrom(ctx, c, project, freightRequests, freightRefs),
 		ChartFrom(ctx, c, project, freightRequests, freightRefs),
+		FreightMetadata(ctx, c, project),
 	}
 }
 
@@ -141,6 +142,70 @@ func ChartFrom(
 		new(func(repoURL string, origin kargoapi.FreightOrigin) kargoapi.Chart),
 		new(func(repoURL string) kargoapi.Chart),
 	)
+}
+
+func FreightMetadata(
+	ctx context.Context,
+	c client.Client,
+	project string,
+) expr.Option {
+	return expr.Function(
+		"freightMetadata",
+		freightMetadata(ctx, c, project),
+		new(func(freightRefName, key string) any),
+	)
+}
+
+func freightMetadata(
+	ctx context.Context,
+	c client.Client,
+	project string,
+) exprFn {
+	return func(a ...any) (any, error) {
+		if len(a) != 2 {
+			return nil, fmt.Errorf("expected 2 argument, got %d", len(a))
+		}
+
+		freightRefName, ok := a[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("argument must be string, got %T", a[0])
+		}
+
+		if freightRefName == "" {
+			return nil, fmt.Errorf("freight ref name must not be empty")
+		}
+
+		key, ok := a[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("argument must be string, got %T", a[1])
+		}
+		if key == "" {
+			return nil, fmt.Errorf("metadata key must not be empty")
+		}
+
+		freightData := kargoapi.Freight{}
+
+		if err := c.Get(ctx, client.ObjectKey{
+			Namespace: project,
+			Name:      freightRefName,
+		}, &freightData); err != nil {
+			if kubeerr.IsNotFound(err) {
+				return nil, fmt.Errorf("freight %s not found in project %s", freightRefName, project)
+			}
+			return nil, fmt.Errorf("failed to get freight %s: %w", freightRefName, err)
+		}
+
+		var data any
+		found, err := freightData.Status.GetMetadata(key, &data)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get metadata %s from freight %s: %w", key, freightRefName, err)
+		}
+		if !found {
+			return nil, fmt.Errorf("metadata %s not found in freight %s", key, freightRefName)
+		}
+
+		return data, nil
+	}
 }
 
 // ConfigMap returns an expr.Option that provides a `configMap()` function for

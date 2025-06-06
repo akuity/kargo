@@ -163,6 +163,8 @@ type StepContext struct {
 	// responsible for finding them and furnishing them directly to each
 	// StepRunner.
 	Freight kargoapi.FreightCollection
+	// TargetFreightRef is the actual Freight that triggered this Promotion.
+	TargetFreightRef kargoapi.FreightReference
 }
 
 // StepResult represents the results of a single Step of a user-defined promotion

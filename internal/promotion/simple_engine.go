@@ -486,16 +486,17 @@ func (e *simpleEngine) prepareStepContext(
 	}
 
 	return &promotion.StepContext{
-		UIBaseURL:       promoCtx.UIBaseURL,
-		WorkDir:         workDir,
-		SharedState:     promoCtx.State.DeepCopy(),
-		Alias:           step.Alias,
-		Config:          stepCfg,
-		Project:         promoCtx.Project,
-		Stage:           promoCtx.Stage,
-		Promotion:       promoCtx.Promotion,
-		FreightRequests: freightRequests,
-		Freight:         *promoCtx.Freight.DeepCopy(),
+		UIBaseURL:        promoCtx.UIBaseURL,
+		WorkDir:          workDir,
+		SharedState:      promoCtx.State.DeepCopy(),
+		Alias:            step.Alias,
+		Config:           stepCfg,
+		Project:          promoCtx.Project,
+		Stage:            promoCtx.Stage,
+		Promotion:        promoCtx.Promotion,
+		FreightRequests:  freightRequests,
+		Freight:          *promoCtx.Freight.DeepCopy(),
+		TargetFreightRef: promoCtx.TargetFreightRef,
 	}, nil
 }
 
