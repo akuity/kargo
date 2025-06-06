@@ -94,10 +94,15 @@ type WebhookReceiverConfig struct {
 	// GitHub contains the configuration for a webhook receiver that is compatible
 	// with GitHub payloads.
 	//
-	// TODO(fuskovic): Make this mutually exclusive with configs for other platforms.
-	//
-	// +kubebuilder:validation:Required
+	// TODO(fuskovic): Make this mutually exclusive with configs for other
+	// platforms.
 	GitHub *GitHubWebhookReceiverConfig `json:"github,omitempty" protobuf:"bytes,2,opt,name=github"`
+	// GitLab contains the configuration for a webhook receiver that is compatible
+	// with GitLab payloads.
+	//
+	// TODO(fuskovic): Make this mutually exclusive with configs for other
+	// platforms.
+	GitLab *GitHubWebhookReceiverConfig `json:"gitlab,omitempty"`
 }
 
 // GitHubWebhookReceiverConfig describes a webhook receiver that is compatible
@@ -115,9 +120,27 @@ type GitHubWebhookReceiverConfig struct {
 	// For more information please refer to GitHub documentation:
 	//   https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
 	//
-	// The value of the token key goes in the "Secret" field when registering a
-	// GitHub App or webhook in the GitHub UI.
+	// +kubebuilder:validation:Required
 	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+}
+
+// GitLabWebhookReceiverConfig describes a webhook receiver that is compatible
+// with GitLab payloads.
+type GitLabWebhookReceiverConfig struct {
+	// SecretRef contains a reference to a Secret. For Project-scoped webhook
+	// receivers, the referenced Secret must be in the same namespace as the
+	// ProjectConfig.
+	//
+	// For cluster-scoped webhook receivers, the referenced Secret must be in the
+	// designated "cluster Secrets" namespace.
+	//
+	// The secret is expected to contain a `gitlab-secret` key containing the
+	// shared secret specified when registering the webhook in GitLab. For more
+	// information about this token, please refer to the GitLab documentation:
+	//   https://docs.gitlab.com/user/project/integrations/webhooks/
+	//
+	// +kubebuilder:validation:Required
+	SecretRef corev1.LocalObjectReference `json:"secretRef"`
 }
 
 // WebhookReceiverDetails encapsulates the details of a webhook receiver.
