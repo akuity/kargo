@@ -321,7 +321,7 @@ CLI. This section explains how to handle `Project`s effectively through both int
 
 1. Select the `Project` you want to remove.
 
-1. Go to the <Hlt>Settings</Hlt> in the top right corner of the `Project` View.
+1. Go to the <Hlt>Settings</Hlt> in the top right corner of the `Project` view.
 
    ![delete-project](img/delete-project.png)
 
