@@ -419,7 +419,8 @@ type UntarConfig struct {
 	Ignore string `json:"ignore,omitempty"`
 	// InPath is the path to the tar file to extract.
 	InPath string `json:"inPath"`
-	// OutPath is the path to the destination directory where contents will be extracted.
+	// OutPath is the path to the destination directory where contents will be extracted. The
+	// outPath content will be overriden if it already exists.
 	OutPath string `json:"outPath"`
 	// StripComponents is the number of leading components to strip from file names in the
 	// archive.
