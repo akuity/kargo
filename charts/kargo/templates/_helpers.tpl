@@ -111,6 +111,8 @@ Generate the base URL for the external webhook server.
 {{- define "kargo.externalWebhooksServer.baseURL" -}}
 {{- if or (and .Values.externalWebhooksServer.ingress.enabled .Values.externalWebhooksServer.ingress.tls.enabled) (and (not .Values.externalWebhooksServer.ingress.enabled) .Values.externalWebhooksServer.tls.enabled) .Values.externalWebhooksServer.tls.terminatedUpstream -}}
 {{- printf "https://%s" .Values.externalWebhooksServer.host -}}
+{{- else if and (not .Values.externalWebhooksServer.ingress.enabled) (not .Values.externalWebhooksServer.tls.enabled) (not .Values.externalWebhooksServer.tls.terminatedUpstream) -}}
+{{- include "kargo.api.baseURL" . -}}
 {{- else -}}
 {{- printf "http://%s" .Values.externalWebhooksServer.host -}}
 {{- end -}}

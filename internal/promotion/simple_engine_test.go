@@ -490,32 +490,29 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				assert.Contains(t, result.Message, context.Canceled.Error())
 				assert.Equal(t, int64(1), result.CurrentStep)
 
-				assert.Len(t, result.StepExecutionMetadata, 2)
+				assert.Len(t, result.StepExecutionMetadata, 1)
 
 				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.StepExecutionMetadata[0].Status)
 				assert.Contains(t, result.StepExecutionMetadata[0].Message, context.Canceled.Error())
 				assert.NotNil(t, result.StepExecutionMetadata[0].StartedAt)
 				assert.NotNil(t, result.StepExecutionMetadata[0].FinishedAt)
-
-				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.StepExecutionMetadata[1].Status)
-				assert.Contains(t, result.StepExecutionMetadata[1].Message, context.Canceled.Error())
-				assert.Nil(t, result.StepExecutionMetadata[1].StartedAt)
-				assert.Nil(t, result.StepExecutionMetadata[1].FinishedAt)
 			},
 		},
 		{
-			name: "output composition step from task",
+			name: "output propagation to task namespace",
 			stepRunners: []promotion.StepRunner{
-				&promotion.MockStepRunner{
-					StepName: ComposeOutputStepKind,
-					RunResult: promotion.StepResult{
-						Status: kargoapi.PromotionStepStatusSucceeded,
-						Output: map[string]any{"test": "value"},
+				promotion.NewTaskLevelOutputStepRunner(
+					&promotion.MockStepRunner{
+						StepName: "task-level-output-step",
+						RunResult: promotion.StepResult{
+							Status: kargoapi.PromotionStepStatusSucceeded,
+							Output: map[string]any{"test": "value"},
+						},
 					},
-				},
+				),
 			},
 			steps: []Step{{
-				Kind:  ComposeOutputStepKind,
+				Kind:  "task-level-output-step",
 				Alias: "task-1::custom-output",
 			}},
 			assertions: func(t *testing.T, result Result) {
@@ -543,16 +540,18 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 		{
 			name: "stand alone output composition step",
 			stepRunners: []promotion.StepRunner{
-				&promotion.MockStepRunner{
-					StepName: ComposeOutputStepKind,
-					RunResult: promotion.StepResult{
-						Status: kargoapi.PromotionStepStatusSucceeded,
-						Output: map[string]any{"test": "value"},
+				promotion.NewTaskLevelOutputStepRunner(
+					&promotion.MockStepRunner{
+						StepName: "task-level-output-step",
+						RunResult: promotion.StepResult{
+							Status: kargoapi.PromotionStepStatusSucceeded,
+							Output: map[string]any{"test": "value"},
+						},
 					},
-				},
+				),
 			},
 			steps: []Step{{
-				Kind:  ComposeOutputStepKind,
+				Kind:  "task-level-output-step",
 				Alias: "custom-output",
 			}},
 			assertions: func(t *testing.T, result Result) {
@@ -589,9 +588,9 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				},
 			},
 			steps: []Step{
-				{Kind: "success-step"},
-				{Kind: "panic-step"},
-				{Kind: "success-step"},
+				{Kind: "success-step", Alias: "step1"},
+				{Kind: "panic-step", Alias: "step2"},
+				{Kind: "success-step", Alias: "step3"},
 			},
 			assertions: func(t *testing.T, result Result) {
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
@@ -860,7 +859,6 @@ func TestSimpleEngine_executeStep(t *testing.T) {
 				tt.step,
 				tt.runner,
 				t.TempDir(),
-				make(promotion.State),
 			)
 			tt.assertions(t, result, err)
 		})
@@ -903,7 +901,6 @@ func TestSimpleEngine_prepareStepContext(t *testing.T) {
 				tt.promoCtx,
 				tt.step,
 				t.TempDir(),
-				make(promotion.State),
 			)
 			tt.assertions(t, stepCtx, err)
 		})

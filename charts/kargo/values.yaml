@@ -685,7 +685,7 @@ externalWebhooksServer:
 
   tls:
     ## @param externalWebhooksServer.tls.enabled Whether to enable TLS directly on the external webhook server. This is helpful if you do not intend to use an ingress controller or if you require TLS end-to-end. All other settings in this section EXCEPT `terminatedUpstream` will be ignored when this is set to `false`.
-    enabled: false
+    enabled: true
     ## @param externalWebhooksServer.tls.selfSignedCert Whether to generate a self-signed certificate for use by the external webhooks server. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-external-webhook-server-cert` **must** be provided in the same namespace as Kargo.
     selfSignedCert: true
     ## @param externalWebhooksServer.tls.terminatedUpstream Whether TLS is terminated upstream, i.e. a load balancer, reverse-proxy, or an Ingress controller using a single wildcard cert is terminating it. Setting this to `true` forces all external webhook server URLs to use HTTPS even if the Ingress (if applicable) or external webhook server itself are listening for plain HTTP requests.
