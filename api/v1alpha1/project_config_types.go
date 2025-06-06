@@ -102,7 +102,7 @@ type WebhookReceiverConfig struct {
 	//
 	// TODO(fuskovic): Make this mutually exclusive with configs for other
 	// platforms.
-	DockerHub *DockerHubWebhookReceiverConfig `json:"dockerhub,omitempty"`
+	DockerHub *DockerHubWebhookReceiverConfig `json:"dockerhub,omitempty" protobuf:"bytes,3,opt,name=dockerhub"`
 }
 
 // GitHubWebhookReceiverConfig describes a webhook receiver that is compatible
@@ -138,7 +138,7 @@ type DockerHubWebhookReceiverConfig struct {
 	// serves as a shared secret. For more information about Docker Hub webhooks,
 	// please refer to the Docker documentation:
 	//   https://docs.docker.com/docker-hub/webhooks/
-	SecretRef corev1.LocalObjectReference `json:"secretRef"`
+	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
 }
 
 // WebhookReceiverDetails encapsulates the details of a webhook receiver.

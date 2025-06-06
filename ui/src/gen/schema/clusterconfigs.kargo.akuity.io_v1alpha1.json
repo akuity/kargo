@@ -21,11 +21,32 @@
           "items": {
             "description": "WebhookReceiverConfig describes the configuration for a single webhook\nreceiver.",
             "properties": {
-              "github": {
-                "description": "GitHub contains the configuration for a webhook receiver that is compatible\nwith GitHub payloads.\n",
+              "dockerhub": {
+                "description": "DockerHub contains the configuration for a webhook receiver that is\ncompatible with DockerHub payloads.\n\nplatforms.",
                 "properties": {
                   "secretRef": {
-                    "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster Secrets\" namespace.\n\nThe Secret's data map is expected to contain a `secret` key whose value is\nthe shared secret used to authenticate the webhook requests sent by GitHub.\nFor more information please refer to GitHub documentation:\n  https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries\n\nThe value of the token key goes in the \"Secret\" field when registering a\nGitHub App or webhook in the GitHub UI.",
+                    "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster Secrets\" namespace.\n\nThe Secret data map is expected to contain a `secret`. This value does NOT\nneed to be shared directly with DockerHub when registering a webhook. It is\nused only by Kargo to create a complex, unguessable URL, which implicitly\nserves as a shared secret. For more information about Docker Hub webhooks,\nplease refer to the Docker documentation:\n  https://docs.docker.com/docker-hub/webhooks/",
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "description": "Name of the referent.\nThis field is effectively required, but due to backwards compatibility is\nallowed to be empty. Instances of this type with an empty value here are\nalmost certainly wrong.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
+                        "type": "string"
+                      }
+                    },
+                    "type": "object",
+                    "x-kubernetes-map-type": "atomic"
+                  }
+                },
+                "required": [
+                  "secretRef"
+                ],
+                "type": "object"
+              },
+              "github": {
+                "description": "GitHub contains the configuration for a webhook receiver that is compatible\nwith GitHub payloads.\n\nplatforms.",
+                "properties": {
+                  "secretRef": {
+                    "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster Secrets\" namespace.\n\nThe Secret's data map is expected to contain a `secret` key whose value is\nthe shared secret used to authenticate the webhook requests sent by GitHub.\nFor more information please refer to GitHub documentation:\n  https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries",
                     "properties": {
                       "name": {
                         "default": "",
@@ -47,9 +68,6 @@
                 "type": "string"
               }
             },
-            "required": [
-              "github"
-            ],
             "type": "object"
           },
           "type": "array"
