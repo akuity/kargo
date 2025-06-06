@@ -397,6 +397,24 @@ func TestFreightStatus_RemoveCurrentStage(t *testing.T) {
 		require.GreaterOrEqual(t, record.LongestCompletedSoak.Duration, 2*time.Hour)
 		require.LessOrEqual(t, record.LongestCompletedSoak.Duration, 2*time.Hour+time.Second)
 	})
+	t.Run("verified; no previous longest soak", func(t *testing.T) {
+		status := FreightStatus{
+			CurrentlyIn: map[string]CurrentStage{
+				testStage: {Since: &metav1.Time{Time: time.Now().Add(-time.Hour)}},
+			},
+			VerifiedIn: map[string]VerifiedStage{
+				testStage: {LongestCompletedSoak: nil}, // No previous soak time
+			},
+		}
+		status.RemoveCurrentStage(testStage)
+		require.NotContains(t, status.CurrentlyIn, testStage)
+		record, verified := status.VerifiedIn[testStage]
+		require.True(t, verified)
+		require.NotNil(t, record.LongestCompletedSoak)
+		// Expect the soak time to be approximately 1 hour
+		require.GreaterOrEqual(t, record.LongestCompletedSoak.Duration, time.Hour)
+		require.LessOrEqual(t, record.LongestCompletedSoak.Duration, time.Hour+time.Second)
+	})
 }
 
 func TestFreightStatus_AddVerifiedStage(t *testing.T) {
