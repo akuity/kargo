@@ -25,7 +25,7 @@
                 "description": "GitHub contains the configuration for a webhook receiver that is compatible\nwith GitHub payloads.\n",
                 "properties": {
                   "secretRef": {
-                    "description": "SecretRef contains a reference to a Secret in the same namespace as the\nProjectConfig.\n\nThe Secret is expected to contain a `token` key with the secret token\nconfigured for in GitHub for the webhook. For more information about this\ntoken, please refer to the GitHub documentation:\n  https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries\n\nThe value of the token key goes in the \"Secret\" field when registering a\nGitHub App or webhook in the GitHub UI.",
+                    "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster Secrets\" namespace.\n\nThe Secret's data map is expected to contain a `secret` key whose value is\nthe shared secret used to authenticate the webhook requests sent by GitHub.\nFor more information please refer to GitHub documentation:\n  https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries\n\nThe value of the token key goes in the \"Secret\" field when registering a\nGitHub App or webhook in the GitHub UI.",
                     "properties": {
                       "name": {
                         "default": "",

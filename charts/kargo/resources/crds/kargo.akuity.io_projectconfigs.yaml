@@ -165,12 +165,16 @@ spec:
                       properties:
                         secretRef:
                           description: |-
-                            SecretRef contains a reference to a Secret in the same namespace as the
+                            SecretRef contains a reference to a Secret. For Project-scoped webhook
+                            receivers, the referenced Secret must be in the same namespace as the
                             ProjectConfig.
 
-                            The Secret is expected to contain a `token` key with the secret token
-                            configured for in GitHub for the webhook. For more information about this
-                            token, please refer to the GitHub documentation:
+                            For cluster-scoped webhook receivers, the referenced Secret must be in the
+                            designated "cluster Secrets" namespace.
+
+                            The Secret's data map is expected to contain a `secret` key whose value is
+                            the shared secret used to authenticate the webhook requests sent by GitHub.
+                            For more information please refer to GitHub documentation:
                               https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
 
                             The value of the token key goes in the "Secret" field when registering a
