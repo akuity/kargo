@@ -102,7 +102,7 @@ type WebhookReceiverConfig struct {
 	//
 	// TODO(fuskovic): Make this mutually exclusive with configs for other
 	// platforms.
-	GitLab *GitHubWebhookReceiverConfig `json:"gitlab,omitempty"`
+	GitLab *GitHubWebhookReceiverConfig `json:"gitlab,omitempty" protobuf:"bytes,3,opt,name=gitlab"`
 }
 
 // GitHubWebhookReceiverConfig describes a webhook receiver that is compatible
@@ -140,7 +140,7 @@ type GitLabWebhookReceiverConfig struct {
 	//   https://docs.gitlab.com/user/project/integrations/webhooks/
 	//
 	// +kubebuilder:validation:Required
-	SecretRef corev1.LocalObjectReference `json:"secretRef"`
+	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
 }
 
 // WebhookReceiverDetails encapsulates the details of a webhook receiver.
