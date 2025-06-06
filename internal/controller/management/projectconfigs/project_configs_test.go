@@ -12,6 +12,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/conditions"
+	"github.com/akuity/kargo/internal/webhook/external"
 )
 
 func TestNewReconciler(t *testing.T) {
@@ -56,7 +57,7 @@ func TestReconciler_syncWebhookReceivers(t *testing.T) {
 							Namespace: testProjectName,
 							Name:      "fake-token-secret",
 						},
-						Data: map[string][]byte{"token": []byte("fake-token")},
+						Data: map[string][]byte{external.GithubSecretDataKey: []byte("fake-token")},
 					},
 				).Build(),
 			},
@@ -119,7 +120,7 @@ func TestReconciler_syncWebhookReceivers(t *testing.T) {
 							Namespace: testProjectName,
 							Name:      "fake-token-secret",
 						},
-						Data: map[string][]byte{"token": []byte("fake-token")},
+						Data: map[string][]byte{external.GithubSecretDataKey: []byte("fake-token")},
 					},
 				).Build(),
 			},

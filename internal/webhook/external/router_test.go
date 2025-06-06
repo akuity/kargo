@@ -155,7 +155,7 @@ func TestServer_route(t *testing.T) {
 							Namespace: testProjectName,
 							Name:      "fake-secret",
 						},
-						Data: map[string][]byte{"token": []byte("my-super-secret-token")},
+						Data: map[string][]byte{GithubSecretDataKey: []byte("my-super-secret-token")},
 					},
 				).WithIndex(
 					&kargoapi.ProjectConfig{},
@@ -201,7 +201,7 @@ func TestServer_route(t *testing.T) {
 							Namespace: "fake-namespace",
 							Name:      "fake-secret",
 						},
-						Data: map[string][]byte{"token": []byte("my-super-secret-token")},
+						Data: map[string][]byte{GithubSecretDataKey: []byte("my-super-secret-token")},
 					},
 				).WithIndex(
 					&kargoapi.ProjectConfig{},

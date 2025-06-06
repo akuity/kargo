@@ -32,7 +32,7 @@ func TestGithubHandler(t *testing.T) {
 
 	const testToken = "mysupersecrettoken"
 	testSecretData := map[string][]byte{
-		"token": []byte(testToken),
+		GithubSecretDataKey: []byte(testToken),
 	}
 
 	testCases := []struct {

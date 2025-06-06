@@ -16,12 +16,15 @@ import (
 )
 
 const (
-	githubSecretDataKey       = "secret"
+	GithubSecretDataKey = "secret"
+
+	github                    = "github"
 	githubWebhookBodyMaxBytes = 2 << 20 // 2MB
 )
 
 func init() {
 	registerWebhookReceiver(
+		github,
 		func(cfg kargoapi.WebhookReceiverConfig) bool {
 			return cfg.GitHub != nil
 		},
@@ -52,14 +55,14 @@ func newGitHubWebhookReceiver(
 
 // GetDetails implements WebhookReceiver.
 func (g *githubWebhookReceiver) getReceiverType() string {
-	return "github"
+	return github
 }
 
 // getSecretValues implements WebhookReceiver.
 func (g *githubWebhookReceiver) getSecretValues(
 	secretData map[string][]byte,
 ) ([]string, error) {
-	secretValue, ok := secretData[githubSecretDataKey]
+	secretValue, ok := secretData[GithubSecretDataKey]
 	if !ok {
 		return nil,
 			errors.New("Secret data is not valid for a GitHub WebhookReceiver")
@@ -74,7 +77,7 @@ func (g *githubWebhookReceiver) GetHandler() http.HandlerFunc {
 
 		logger := logging.LoggerFromContext(ctx)
 
-		secretValue, ok := g.secretData[githubSecretDataKey]
+		secretValue, ok := g.secretData[GithubSecretDataKey]
 		if !ok {
 			xhttp.WriteErrorJSON(w, nil)
 			return
@@ -96,6 +99,18 @@ func (g *githubWebhookReceiver) GetHandler() http.HandlerFunc {
 
 		logger = logger.WithValues("eventType", eventType)
 		ctx = logging.ContextWithLogger(ctx, logger)
+
+		// Early check of Content-Length if available
+		if contentLength := r.ContentLength; contentLength > githubWebhookBodyMaxBytes {
+			xhttp.WriteErrorJSON(
+				w,
+				xhttp.Error(
+					fmt.Errorf("content exceeds limit of %d bytes", githubWebhookBodyMaxBytes),
+					http.StatusRequestEntityTooLarge,
+				),
+			)
+			return
+		}
 
 		body, err := io.LimitRead(r.Body, githubWebhookBodyMaxBytes)
 		if err != nil {

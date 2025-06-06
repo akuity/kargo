@@ -1,8 +1,6 @@
 package external
 
 import (
-	"fmt"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -15,9 +13,7 @@ import (
 type webhookReceiverPredicate func(kargoapi.WebhookReceiverConfig) bool
 
 // webhookReceiverFactory is a function that returns an implementation of
-// WebhookReceiver. Such functions MUST NOT access fields of or invoke methods
-// of the provided client.Client because the registration process will invoke
-// this factory function and pass nil for the client.Client parameter.
+// WebhookReceiver.
 type webhookReceiverFactory func(
 	c client.Client,
 	project string,
@@ -40,6 +36,7 @@ var webhookReceiverRegistry = map[string]webhookReceiverRegistration{}
 // WebhookReceiver upon package initialization to associate a
 // webhookReceiverPredicate with a webhookReceiverFactory.
 func registerWebhookReceiver(
+	receiverType string,
 	predicate webhookReceiverPredicate,
 	factory webhookReceiverFactory,
 ) {
@@ -48,11 +45,6 @@ func registerWebhookReceiver(
 	}
 	if factory == nil {
 		panic("factory cannot be nil")
-	}
-	receiver := factory(nil, "", kargoapi.WebhookReceiverConfig{})
-	receiverType := receiver.getReceiverType()
-	if _, alreadyRegistered := webhookReceiverRegistry[receiverType]; alreadyRegistered {
-		panic(fmt.Sprintf("WebhookReceiver %q already registered", receiverType))
 	}
 	webhookReceiverRegistry[receiverType] = webhookReceiverRegistration{
 		predicate: predicate,

@@ -83,7 +83,7 @@ func TestNewReceiver(t *testing.T) {
 						Namespace: testProject,
 						Name:      "fake-secret",
 					},
-					Data: map[string][]byte{"token": []byte("my-super-secret-token")},
+					Data: map[string][]byte{GithubSecretDataKey: []byte("my-super-secret-token")},
 				},
 			).Build(),
 			cfg: kargoapi.WebhookReceiverConfig{
