@@ -49,5 +49,22 @@ func (w webhookReceiverRegistry) register(
 	registry[receiverType] = registration
 }
 
+// getReceiverFactory retrieves a webhookReceiverFactory able to instantiate a
+// WebhookReceiver of the proper type based on the provided
+// kargoapi.WebhookReceiverConfig. If no such factory can be found, an error is
+// returned.
+func (w webhookReceiverRegistry) getReceiverFactory(
+	cfg kargoapi.WebhookReceiverConfig,
+) (webhookReceiverFactory, error) {
+	for _, registration := range registry {
+		if registration.predicate(cfg) {
+			return registration.factory, nil
+		}
+	}
+	return nil, fmt.Errorf(
+		"WebhookReceiverConfig has no configuration for a known receiver type",
+	)
+}
+
 // registry is the registry of webhookReceiverRegistrations.
 var registry = webhookReceiverRegistry{}

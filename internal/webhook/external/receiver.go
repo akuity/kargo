@@ -3,7 +3,6 @@ package external
 import (
 	"context"
 	"crypto/sha256"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -84,21 +83,14 @@ func NewReceiver(
 ) (WebhookReceiver, error) {
 	// Pick an appropriate WebhookReceiver implementation based on the
 	// configuration provided.
-	var receiver WebhookReceiver
-	for _, registration := range registry {
-		if registration.predicate(cfg) {
-			receiver = registration.factory(c, project, cfg)
-			break
-		}
+	receiverFactory, err := registry.getReceiverFactory(cfg)
+	if err != nil {
+		return nil, err
 	}
-	if receiver == nil {
-		return nil, errors.New(
-			"WebhookReceiverConfig has no configuration for a known receiver type",
-		)
-	}
+	receiver := receiverFactory(c, project, cfg)
 	secretName := receiver.getSecretName()
 	secret := &corev1.Secret{}
-	if err := c.Get(
+	if err = c.Get(
 		ctx,
 		client.ObjectKey{
 			Namespace: secretsNamespace,
