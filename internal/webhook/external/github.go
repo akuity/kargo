@@ -23,12 +23,14 @@ const (
 )
 
 func init() {
-	registerWebhookReceiver(
+	registry.register(
 		github,
-		func(cfg kargoapi.WebhookReceiverConfig) bool {
-			return cfg.GitHub != nil
+		webhookReceiverRegistration{
+			predicate: func(cfg kargoapi.WebhookReceiverConfig) bool {
+				return cfg.GitHub != nil
+			},
+			factory: newGitHubWebhookReceiver,
 		},
-		newGitHubWebhookReceiver,
 	)
 }
 

@@ -1,6 +1,8 @@
 package external
 
 import (
+	"fmt"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -30,24 +32,22 @@ type webhookReceiverRegistration struct {
 // webhookReceiverRegistry is a map of webhookReceiverRegistrations indexed by
 // the names of the WebhookReceiver implementations their factory functions
 // instantiate.
-var webhookReceiverRegistry = map[string]webhookReceiverRegistration{}
+type webhookReceiverRegistry map[string]webhookReceiverRegistration
 
-// registerWebhookReceiver is invoked once for each implementation of
+// register is invoked once for each implementation of
 // WebhookReceiver upon package initialization to associate a
 // webhookReceiverPredicate with a webhookReceiverFactory.
-func registerWebhookReceiver(
+func (w webhookReceiverRegistry) register(
 	receiverType string,
-	predicate webhookReceiverPredicate,
-	factory webhookReceiverFactory,
+	registration webhookReceiverRegistration,
 ) {
-	if predicate == nil {
-		panic("predicate cannot be nil")
+	if _, alreadyRegistered := registry[receiverType]; alreadyRegistered {
+		panic(
+			fmt.Sprintf("WebhookReceiver type %q already registered", receiverType),
+		)
 	}
-	if factory == nil {
-		panic("factory cannot be nil")
-	}
-	webhookReceiverRegistry[receiverType] = webhookReceiverRegistration{
-		predicate: predicate,
-		factory:   factory,
-	}
+	registry[receiverType] = registration
 }
+
+// registry is the registry of webhookReceiverRegistrations.
+var registry = webhookReceiverRegistry{}

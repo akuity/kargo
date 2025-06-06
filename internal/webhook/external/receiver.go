@@ -85,7 +85,7 @@ func NewReceiver(
 	// Pick an appropriate WebhookReceiver implementation based on the
 	// configuration provided.
 	var receiver WebhookReceiver
-	for _, registration := range webhookReceiverRegistry {
+	for _, registration := range registry {
 		if registration.predicate(cfg) {
 			receiver = registration.factory(c, project, cfg)
 			break
