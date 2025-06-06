@@ -4,15 +4,18 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.18.0
-  name: projectconfigs.kargo.akuity.io
+  name: clusterconfigs.kargo.akuity.io
 spec:
   group: kargo.akuity.io
   names:
-    kind: ProjectConfig
-    listKind: ProjectConfigList
-    plural: projectconfigs
-    singular: projectconfig
-  scope: Namespaced
+    kind: ClusterConfig
+    listKind: ClusterConfigList
+    plural: clusterconfigs
+    shortNames:
+    - clusterconfig
+    - clusterconfigs
+    singular: clusterconfig
+  scope: Cluster
   versions:
   - additionalPrinterColumns:
     - jsonPath: .status.conditions[?(@.type=="Ready")].status
@@ -28,8 +31,8 @@ spec:
     schema:
       openAPIV3Schema:
         description: |-
-          ProjectConfig is a resource type that describes the configuration of a
-          Project.
+          ClusterConfig is a resource type that describes cluster-level Kargo
+          configuration.
         properties:
           apiVersion:
             description: |-
@@ -49,109 +52,11 @@ spec:
           metadata:
             type: object
           spec:
-            description: Spec describes the configuration of a Project.
+            description: Spec describes the configuration of a cluster.
             properties:
-              promotionPolicies:
-                description: |-
-                  PromotionPolicies defines policies governing the promotion of Freight to
-                  specific Stages within the Project.
-                items:
-                  description: |-
-                    PromotionPolicy defines policies governing the promotion of Freight to a
-                    specific Stage.
-                  properties:
-                    autoPromotionEnabled:
-                      description: |-
-                        AutoPromotionEnabled indicates whether new Freight can automatically be
-                        promoted into the Stage referenced by the Stage field. Note: There are may
-                        be other conditions also required for an auto-promotion to occur. This
-                        field defaults to false, but is commonly set to true for Stages that
-                        subscribe to Warehouses instead of other, upstream Stages. This allows
-                        users to define Stages that are automatically updated as soon as new
-                        artifacts are detected.
-                      type: boolean
-                    stage:
-                      description: |-
-                        Stage is the name of the Stage to which this policy applies.
-
-                        Deprecated: Use StageSelector instead.
-                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-                      type: string
-                    stageSelector:
-                      description: |-
-                        StageSelector is a selector that matches the Stage resource to which
-                        this policy applies.
-                      properties:
-                        matchExpressions:
-                          description: matchExpressions is a list of label selector
-                            requirements. The requirements are ANDed.
-                          items:
-                            description: |-
-                              A label selector requirement is a selector that contains values, a key, and an operator that
-                              relates the key and values.
-                            properties:
-                              key:
-                                description: key is the label key that the selector
-                                  applies to.
-                                type: string
-                              operator:
-                                description: |-
-                                  operator represents a key's relationship to a set of values.
-                                  Valid operators are In, NotIn, Exists and DoesNotExist.
-                                type: string
-                              values:
-                                description: |-
-                                  values is an array of string values. If the operator is In or NotIn,
-                                  the values array must be non-empty. If the operator is Exists or DoesNotExist,
-                                  the values array must be empty. This array is replaced during a strategic
-                                  merge patch.
-                                items:
-                                  type: string
-                                type: array
-                                x-kubernetes-list-type: atomic
-                            required:
-                            - key
-                            - operator
-                            type: object
-                          type: array
-                          x-kubernetes-list-type: atomic
-                        matchLabels:
-                          additionalProperties:
-                            type: string
-                          description: |-
-                            matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
-                            map is equivalent to an element of matchExpressions, whose key field is "key", the
-                            operator is "In", and the values array contains only "value". The requirements are ANDed.
-                          type: object
-                        name:
-                          description: |-
-                            Name is the name of the resource to which this policy applies.
-
-                            It can be an exact name, a regex pattern (with prefix "regex:"), or a
-                            glob pattern (with prefix "glob:").
-
-                            When both Name and LabelSelector are specified, the Name is ANDed with
-                            the LabelSelector. I.e., the resource must match both the Name and
-                            LabelSelector to be selected by this policy.
-
-                            NOTE: Using a specific exact name is the most secure option. Pattern
-                            matching via regex or glob can be exploited by users with permissions to
-                            match promotion policies that weren't intended to apply to their
-                            resources. For example, a user could create a resource with a name
-                            deliberately crafted to match the pattern, potentially bypassing intended
-                            promotion controls.
-                          type: string
-                      type: object
-                      x-kubernetes-map-type: atomic
-                  type: object
-                  x-kubernetes-validations:
-                  - message: PromotionPolicy must have exactly one of stage or stageSelector
-                      set
-                    rule: 'has(self.stage) ? !has(self.stageSelector) : has(self.stageSelector)'
-                type: array
               webhookReceivers:
                 description: |-
-                  WebhookReceivers describes Project-specific webhook receivers used for
+                  WebhookReceivers describes cluster-scoped webhook receivers used for
                   processing events from various external platforms
                 items:
                   description: |-
@@ -203,11 +108,11 @@ spec:
                 type: array
             type: object
           status:
-            description: Status describes the current status of a ProjectConfig.
+            description: Status describes the current status of a ClusterConfig.
             properties:
               conditions:
                 description: |-
-                  Conditions contains the last observations of the Project Config's current
+                  Conditions contains the last observations of the ClusterConfig's current
                   state.
                 items:
                   description: Condition contains details for one aspect of the current
@@ -268,9 +173,8 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               webhookReceivers:
-                description: |-
-                  WebhookReceivers describes the status of Project-specific webhook
-                  receivers.
+                description: WebhookReceivers describes the status of cluster-scoped
+                  webhook receivers.
                 items:
                   description: WebhookReceiverDetails encapsulates the details of
                     a webhook receiver.

@@ -14,20 +14,21 @@
 
 ### Global Parameters
 
-| Name                                | Description                                                                | Value |
-| ----------------------------------- | -------------------------------------------------------------------------- | ----- |
-| `global.labels`                     | Labels to add to all resources.                                            | `{}`  |
-| `global.annotations`                | Annotations to add to all resources.                                       | `{}`  |
-| `global.podLabels`                  | Labels to add to all pods.                                                 | `{}`  |
-| `global.podAnnotations`             | Annotations to add to pods.                                                | `{}`  |
-| `global.serviceAccount.labels`      | Global ServiceAccount labels.                                              | `{}`  |
-| `global.serviceAccount.annotations` | Global ServiceAccount annotations.                                         | `{}`  |
-| `global.env`                        | Environment variables to add to all Kargo pods.                            | `[]`  |
-| `global.envFrom`                    | Environment variables to add to all Kargo pods from ConfigMaps or Secrets. | `[]`  |
-| `global.nodeSelector`               | Default node selector for all Kargo pods.                                  | `{}`  |
-| `global.tolerations`                | Default tolerations for all Kargo pods.                                    | `[]`  |
-| `global.affinity`                   | Default affinity for all Kargo pods.                                       | `{}`  |
-| `global.securityContext`            | Default security context for all Kargo pods.                               | `{}`  |
+| Name                                | Description                                                                                  | Value                   |
+| ----------------------------------- | -------------------------------------------------------------------------------------------- | ----------------------- |
+| `global.clusterSecretsNamespace`    | Indicates a namespace where Secrets associated with cluster-scoped resources can be located. | `kargo-cluster-secrets` |
+| `global.labels`                     | Labels to add to all resources.                                                              | `{}`                    |
+| `global.annotations`                | Annotations to add to all resources.                                                         | `{}`                    |
+| `global.podLabels`                  | Labels to add to all pods.                                                                   | `{}`                    |
+| `global.podAnnotations`             | Annotations to add to pods.                                                                  | `{}`                    |
+| `global.serviceAccount.labels`      | Global ServiceAccount labels.                                                                | `{}`                    |
+| `global.serviceAccount.annotations` | Global ServiceAccount annotations.                                                           | `{}`                    |
+| `global.env`                        | Environment variables to add to all Kargo pods.                                              | `[]`                    |
+| `global.envFrom`                    | Environment variables to add to all Kargo pods from ConfigMaps or Secrets.                   | `[]`                    |
+| `global.nodeSelector`               | Default node selector for all Kargo pods.                                                    | `{}`                    |
+| `global.tolerations`                | Default tolerations for all Kargo pods.                                                      | `[]`                    |
+| `global.affinity`                   | Default affinity for all Kargo pods.                                                         | `{}`                    |
+| `global.securityContext`            | Default security context for all Kargo pods.                                                 | `{}`                    |
 
 ### CRDs
 
@@ -267,6 +268,7 @@ the Kargo controller is running.
 | `managementController.logLevel`                                            | The log level for the management controller.                                                                                                                                         | `INFO` |
 | `managementController.reconcilers.maxConcurrentReconciles`                 | specifies the maximum number of resources EACH of the management controller's reconcilers can reconcile concurrently. This setting may also be overridden on a per-reconciler basis. | `4`    |
 | `managementController.reconcilers.namespaces.maxConcurrentReconciles`      | optionally overrides the maximum number of Namespace resources the management controller can reconcile concurrently.                                                                 | `nil`  |
+| `managementController.reconcilers.projectConfigs.maxConcurrentReconciles`  | optionally overrides the maximum number of ProjectConfig resources the management controller can reconcile concurrently.                                                             | `nil`  |
 | `managementController.reconcilers.projects.maxConcurrentReconciles`        | optionally overrides the maximum number of Project resources the management controller can reconcile concurrently.                                                                   | `nil`  |
 | `managementController.reconcilers.serviceAccounts.maxConcurrentReconciles` | optionally overrides the maximum number of ServiceAccount resources the management controller can reconcile concurrently.                                                            | `nil`  |
 | `managementController.labels`                                              | Labels to add to the api resources. Merges with `global.labels`, allowing you to override or add to the global labels.                                                               | `{}`   |

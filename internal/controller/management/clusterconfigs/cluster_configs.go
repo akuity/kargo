@@ -1,4 +1,4 @@
-package projectconfigs
+package clusterconfigs
 
 import (
 	"context"
@@ -25,7 +25,7 @@ import (
 
 type ReconcilerConfig struct {
 	ExternalWebhookServerBaseURL string `envconfig:"EXTERNAL_WEBHOOK_SERVER_BASE_URL" required:"true"`
-	MaxConcurrentReconciles      int    `envconfig:"MAX_CONCURRENT_PROJECT_CONFIG_RECONCILES" default:"4"`
+	ClusterSecretsNamespace      string `envconfig:"CLUSTER_SECRETS_NAMESPACE" required:"true"`
 }
 
 func ReconcilerConfigFromEnv() ReconcilerConfig {
@@ -44,8 +44,8 @@ func SetupReconcilerWithManager(
 	kargoMgr manager.Manager,
 	cfg ReconcilerConfig,
 ) error {
-	_, err := ctrl.NewControllerManagedBy(kargoMgr).
-		For(&kargoapi.ProjectConfig{}).
+	if _, err := ctrl.NewControllerManagedBy(kargoMgr).
+		For(&kargoapi.ClusterConfig{}).
 		WithEventFilter(
 			predicate.Funcs{
 				DeleteFunc: func(event.DeleteEvent) bool {
@@ -53,15 +53,13 @@ func SetupReconcilerWithManager(
 				},
 			},
 		).
-		WithOptions(controller.CommonOptions(cfg.MaxConcurrentReconciles)).
-		Build(newReconciler(kargoMgr.GetClient(), cfg))
-	if err != nil {
-		return fmt.Errorf("error creating ProjectConfig reconciler: %w", err)
+		WithOptions(controller.CommonOptions(1)). // There's only ever one ClusterConfig resource
+		Build(newReconciler(kargoMgr.GetClient(), cfg)); err != nil {
+		return fmt.Errorf("error creating ClusterConfig reconciler: %w", err)
 	}
-
 	logging.LoggerFromContext(ctx).Info(
-		"Initialized ProjectConfig reconciler",
-		"maxConcurrentReconciles", cfg.MaxConcurrentReconciles,
+		"Initialized ClusterConfig reconciler",
+		"maxConcurrentReconciles", 1,
 	)
 	return nil
 }
@@ -80,36 +78,36 @@ func (r *reconciler) Reconcile(
 	req ctrl.Request,
 ) (ctrl.Result, error) {
 	logger := logging.LoggerFromContext(ctx).WithValues(
-		"project-config", req.NamespacedName.Name,
+		"clusterConfig", req.NamespacedName.Name,
 	)
 	ctx = logging.ContextWithLogger(ctx, logger)
 
-	// Fetch the ProjectConfig
-	projectConfig, err := api.GetProjectConfig(ctx, r.client, req.NamespacedName.Name)
+	// Find the ClusterConfig
+	clusterCfg, err := api.GetClusterConfig(ctx, r.client)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	if projectConfig == nil {
-		// Ignore if not found. This can happen if the ProjectConfig was deleted
+	if clusterCfg == nil {
+		// Ignore if not found. This can happen if the ClusterConfig was deleted
 		// after the current reconciliation request was issued.
 		return ctrl.Result{}, nil
 	}
 
-	if !projectConfig.DeletionTimestamp.IsZero() {
-		logger.Debug("ProjectConfig is being deleted; nothing to do")
+	if !clusterCfg.DeletionTimestamp.IsZero() {
+		logger.Debug("ClusterConfig is being deleted; nothing to do")
 		return ctrl.Result{}, nil
 	}
 
-	logger.Debug("reconciling ProjectConfig")
-	newStatus, reconcileErr := r.reconcile(ctx, projectConfig)
-	logger.Debug("done reconciling ProjectConfig")
+	logger.Debug("reconciling ClusterConfig")
+	newStatus, reconcileErr := r.reconcile(ctx, clusterCfg)
+	logger.Debug("done reconciling ClusterConfig")
 
-	// Patch the status of the ProjectConfig.
+	// Patch the status of the ClusterConfig.
 	if err := kubeclient.PatchStatus(
 		ctx,
 		r.client,
-		projectConfig,
-		func(status *kargoapi.ProjectConfigStatus) {
+		clusterCfg,
+		func(status *kargoapi.ClusterConfigStatus) {
 			*status = newStatus
 		},
 	); err != nil {
@@ -117,12 +115,12 @@ func (r *reconciler) Reconcile(
 		if reconcileErr != nil {
 			logger.Error(
 				err,
-				"failed to update ProjectConfig status after reconciliation error",
+				"failed to update ClusterConfig status after reconciliation error",
 			)
 			return ctrl.Result{}, reconcileErr
 		}
 		return ctrl.Result{},
-			fmt.Errorf("failed to update ProjectConfig status: %w", err)
+			fmt.Errorf("failed to update ClusterConfig status: %w", err)
 	}
 
 	// Return the reconcile error if it exists.
@@ -136,47 +134,44 @@ func (r *reconciler) Reconcile(
 
 func (r *reconciler) reconcile(
 	ctx context.Context,
-	projectCfg *kargoapi.ProjectConfig,
-) (
-	kargoapi.ProjectConfigStatus,
-	error,
-) {
+	clusterCfg *kargoapi.ClusterConfig,
+) (kargoapi.ClusterConfigStatus, error) {
 	logger := logging.LoggerFromContext(ctx)
-	status := *projectCfg.Status.DeepCopy()
+	status := *clusterCfg.Status.DeepCopy()
 
 	subReconcilers := []struct {
 		name      string
-		reconcile func() (kargoapi.ProjectConfigStatus, error)
+		reconcile func() (kargoapi.ClusterConfigStatus, error)
 	}{{
 		name: "syncing WebhookReceivers",
-		reconcile: func() (kargoapi.ProjectConfigStatus, error) {
-			return r.syncWebhookReceivers(ctx, projectCfg)
+		reconcile: func() (kargoapi.ClusterConfigStatus, error) {
+			return r.syncWebhookReceivers(ctx, clusterCfg)
 		},
 	}}
 	for _, subR := range subReconcilers {
 		logger.Debug(subR.name)
 
-		// Reconcile the ProjectConfig with the sub-reconciler.
+		// Reconcile the ClusterConfig with the sub-reconciler.
 		var err error
 		status, err = subR.reconcile()
 
 		// If an error occurred during the sub-reconciler, then we should return the
-		// error which will cause the ProjectConfig to be requeued.
+		// error which will cause the ClusterConfig to be requeued.
 		if err != nil {
 			return status, err
 		}
 
-		// Patch the status of the ProjectConfig after each sub-reconciler to show
+		// Patch the status of the ClusterConfig after each sub-reconciler to show
 		// progress.
 		if err = kubeclient.PatchStatus(
 			ctx,
 			r.client,
-			projectCfg,
-			func(st *kargoapi.ProjectConfigStatus) { *st = status },
+			clusterCfg,
+			func(st *kargoapi.ClusterConfigStatus) { *st = status },
 		); err != nil {
 			logger.Error(
 				err,
-				fmt.Sprintf("failed to update Project status after %s", subR.name),
+				fmt.Sprintf("failed to update ClusterConfig status after %s", subR.name),
 			)
 		}
 	}
@@ -186,20 +181,20 @@ func (r *reconciler) reconcile(
 
 func (r *reconciler) syncWebhookReceivers(
 	ctx context.Context,
-	projectCfg *kargoapi.ProjectConfig,
-) (kargoapi.ProjectConfigStatus, error) {
+	clusterCfg *kargoapi.ClusterConfig,
+) (kargoapi.ClusterConfigStatus, error) {
 	logger := logging.LoggerFromContext(ctx)
-	status := projectCfg.Status.DeepCopy()
+	status := clusterCfg.Status.DeepCopy()
 
-	if len(projectCfg.Spec.WebhookReceivers) == 0 {
-		logger.Debug("ProjectConfig does not define any webhook receiver configurations")
+	if len(clusterCfg.Spec.WebhookReceivers) == 0 {
+		logger.Debug("ClusterConfig does not define any webhook receiver configurations")
 		conditions.Delete(status, kargoapi.ConditionTypeReconciling)
 		conditions.Set(status, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeReady,
 			Status:             metav1.ConditionTrue,
 			Reason:             "Synced",
-			Message:            "ProjectConfig is synced and ready for use",
-			ObservedGeneration: projectCfg.GetGeneration(),
+			Message:            "ClusterConfig is synced and ready for use",
+			ObservedGeneration: clusterCfg.GetGeneration(),
 		})
 		return *status, nil
 	}
@@ -209,14 +204,14 @@ func (r *reconciler) syncWebhookReceivers(
 		Status:             metav1.ConditionTrue,
 		Reason:             "SyncingWebhooks",
 		Message:            "Syncing WebhookReceivers",
-		ObservedGeneration: projectCfg.GetGeneration(),
+		ObservedGeneration: clusterCfg.GetGeneration(),
 	})
 	conditions.Set(status, &metav1.Condition{
 		Type:               kargoapi.ConditionTypeReady,
 		Status:             metav1.ConditionFalse,
 		Reason:             "SyncingWebhooks",
 		Message:            "Syncing WebhookReceivers",
-		ObservedGeneration: projectCfg.GetGeneration(),
+		ObservedGeneration: clusterCfg.GetGeneration(),
 	})
 
 	logger.Debug("syncing WebhookReceivers")
@@ -225,15 +220,15 @@ func (r *reconciler) syncWebhookReceivers(
 	status.WebhookReceivers = make(
 		[]kargoapi.WebhookReceiverDetails,
 		0,
-		len(projectCfg.Spec.WebhookReceivers),
+		len(clusterCfg.Spec.WebhookReceivers),
 	)
-	for _, receiverCfg := range projectCfg.Spec.WebhookReceivers {
+	for _, receiverCfg := range clusterCfg.Spec.WebhookReceivers {
 		receiver, err := external.NewReceiver(
 			ctx,
 			r.client,
 			r.cfg.ExternalWebhookServerBaseURL,
-			projectCfg.Name,
-			projectCfg.Name, // Secret namespace is the same as the Project name/namespace
+			"",                            // No Project name for cluster-level receivers
+			r.cfg.ClusterSecretsNamespace, // Secret namespace is one designated for cluster-level Secrets
 			receiverCfg,
 		)
 		if err != nil {
@@ -252,8 +247,8 @@ func (r *reconciler) syncWebhookReceivers(
 			Type:               kargoapi.ConditionTypeReady,
 			Status:             metav1.ConditionFalse,
 			Reason:             "SyncWebhookReceiversFailed",
-			Message:            "Failed to sync WebhookReceivers: " + flattenedErrs.Error(),
-			ObservedGeneration: projectCfg.GetGeneration(),
+			Message:            "Failed to sync webhook receivers: " + flattenedErrs.Error(),
+			ObservedGeneration: clusterCfg.GetGeneration(),
 		})
 		return *status, flattenedErrs
 	}
@@ -263,8 +258,8 @@ func (r *reconciler) syncWebhookReceivers(
 		Type:               kargoapi.ConditionTypeReady,
 		Status:             metav1.ConditionTrue,
 		Reason:             "Synced",
-		Message:            "ProjectConfig is synced and ready for use",
-		ObservedGeneration: projectCfg.GetGeneration(),
+		Message:            "ClusterConfig is synced and ready for use",
+		ObservedGeneration: clusterCfg.GetGeneration(),
 	})
 	return *status, nil
 }

@@ -276,7 +276,6 @@ func (r *reconciler) reconcile(
 				}
 				if migrated {
 					logger.Debug("migrated Project spec to ProjectConfig")
-					return status, nil
 				}
 				return status, nil
 			},
@@ -284,21 +283,13 @@ func (r *reconciler) reconcile(
 		{
 			name: "syncing project resources",
 			reconcile: func() (kargoapi.ProjectStatus, error) {
-				newStatus, err := r.syncProject(ctx, project)
-				if err != nil {
-					return newStatus, err
-				}
-				return newStatus, nil
+				return r.syncProject(ctx, project)
 			},
 		},
 		{
 			name: "collecting project stats",
 			reconcile: func() (kargoapi.ProjectStatus, error) {
-				newStatus, err := r.collectStats(ctx, project)
-				if err != nil {
-					return newStatus, err
-				}
-				return newStatus, nil
+				return r.collectStats(ctx, project)
 			},
 		},
 	}
@@ -309,18 +300,24 @@ func (r *reconciler) reconcile(
 		var err error
 		status, err = subR.reconcile()
 
-		// If an error occurred during the sub-reconciler, then we should
-		// return the error which will cause the Project to be requeued.
+		// If an error occurred during the sub-reconciler, then we should return the
+		// error which will cause the Project to be requeued.
 		if err != nil {
 			return status, err
 		}
 
 		// Patch the status of the Project after each sub-reconciler to show
 		// progress.
-		if err = kubeclient.PatchStatus(ctx, r.client, project, func(st *kargoapi.ProjectStatus) {
-			*st = status
-		}); err != nil {
-			logger.Error(err, fmt.Sprintf("failed to update Project status after %s", subR.name))
+		if err = kubeclient.PatchStatus(
+			ctx,
+			r.client,
+			project,
+			func(st *kargoapi.ProjectStatus) { *st = status },
+		); err != nil {
+			logger.Error(
+				err,
+				fmt.Sprintf("failed to update Project status after %s", subR.name),
+			)
 		}
 	}
 

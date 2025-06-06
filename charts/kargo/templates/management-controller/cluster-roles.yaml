@@ -45,6 +45,7 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
+  - clusterconfigs/status
   - projects/status
   - projectconfigs/status
   verbs:
@@ -58,6 +59,7 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
+  - clusterconfigs
   - stages
   - warehouses
   - projectconfigs

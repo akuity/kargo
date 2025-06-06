@@ -1,4 +1,4 @@
-package projectconfigs
+package clusterconfigs
 
 import (
 	"context"
@@ -26,19 +26,19 @@ func TestReconciler_syncWebhookReceivers(t *testing.T) {
 	testScheme := runtime.NewScheme()
 	require.NoError(t, corev1.AddToScheme(testScheme))
 
-	const testProjectName = "fake-project"
+	testSecretNamespace := "fake-namespace"
 
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
-		projectCfg *kargoapi.ProjectConfig
-		assertions func(*testing.T, kargoapi.ProjectConfigStatus, error)
+		clusterCfg *kargoapi.ClusterConfig
+		assertions func(*testing.T, kargoapi.ClusterConfigStatus, error)
 	}{
 		{
-			name:       "project config does not define any webhook receivers",
+			name:       "cluster config does not define any webhook receivers",
 			reconciler: &reconciler{},
-			projectCfg: &kargoapi.ProjectConfig{},
-			assertions: func(t *testing.T, status kargoapi.ProjectConfigStatus, err error) {
+			clusterCfg: &kargoapi.ClusterConfig{},
+			assertions: func(t *testing.T, status kargoapi.ClusterConfigStatus, err error) {
 				require.NoError(t, err)
 				require.Empty(t, status.WebhookReceivers)
 				require.Len(t, status.Conditions, 1)
@@ -51,22 +51,22 @@ func TestReconciler_syncWebhookReceivers(t *testing.T) {
 		{
 			name: "error building receiver",
 			reconciler: &reconciler{
+				cfg: ReconcilerConfig{
+					ClusterSecretsNamespace: testSecretNamespace,
+				},
 				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 					&corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
-							Namespace: testProjectName,
+							Namespace: testSecretNamespace,
 							Name:      "fake-token-secret",
 						},
 						Data: map[string][]byte{external.GithubSecretDataKey: []byte("fake-token")},
 					},
 				).Build(),
 			},
-			projectCfg: &kargoapi.ProjectConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: testProjectName,
-					Name:      testProjectName,
-				},
-				Spec: kargoapi.ProjectConfigSpec{
+			clusterCfg: &kargoapi.ClusterConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+				Spec: kargoapi.ClusterConfigSpec{
 					WebhookReceivers: []kargoapi.WebhookReceiverConfig{
 						{
 							Name: "invalid-receiver",
@@ -87,7 +87,7 @@ func TestReconciler_syncWebhookReceivers(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.ProjectConfigStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.ClusterConfigStatus, err error) {
 				// We should get an error because the first receiver's SecretRef could
 				// not be resolved.
 				require.ErrorContains(t, err, "not found")
@@ -98,7 +98,7 @@ func TestReconciler_syncWebhookReceivers(t *testing.T) {
 				require.NotEmpty(t, status.WebhookReceivers[0].Path)
 				require.NotEmpty(t, status.WebhookReceivers[0].URL)
 
-				// The conditions should reflect the error and that the ProjectConfig is
+				// The conditions should reflect the error and that the ClusterConfig is
 				// still syncing.
 				require.Len(t, status.Conditions, 2)
 				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
@@ -114,22 +114,22 @@ func TestReconciler_syncWebhookReceivers(t *testing.T) {
 		{
 			name: "great success!",
 			reconciler: &reconciler{
+				cfg: ReconcilerConfig{
+					ClusterSecretsNamespace: testSecretNamespace,
+				},
 				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 					&corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
-							Namespace: testProjectName,
+							Namespace: testSecretNamespace,
 							Name:      "fake-token-secret",
 						},
 						Data: map[string][]byte{external.GithubSecretDataKey: []byte("fake-token")},
 					},
 				).Build(),
 			},
-			projectCfg: &kargoapi.ProjectConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: testProjectName,
-					Name:      testProjectName,
-				},
-				Spec: kargoapi.ProjectConfigSpec{
+			clusterCfg: &kargoapi.ClusterConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+				Spec: kargoapi.ClusterConfigSpec{
 					WebhookReceivers: []kargoapi.WebhookReceiverConfig{
 						{
 							Name: "valid-receiver",
@@ -142,7 +142,7 @@ func TestReconciler_syncWebhookReceivers(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.ProjectConfigStatus, err error) {
+			assertions: func(t *testing.T, status kargoapi.ClusterConfigStatus, err error) {
 				require.NoError(t, err)
 
 				// But the second receiver should still have been processed.
@@ -164,7 +164,7 @@ func TestReconciler_syncWebhookReceivers(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			status, err := testCase.reconciler.syncWebhookReceivers(
 				context.Background(),
-				testCase.projectCfg,
+				testCase.clusterCfg,
 			)
 			testCase.assertions(t, status, err)
 		})
