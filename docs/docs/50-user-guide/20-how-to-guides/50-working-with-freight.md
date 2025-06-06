@@ -109,14 +109,17 @@ To update the `Freight` Alias:
 <Tabs groupId="update-alias">
 <TabItem value="ui" label="Using the UI" default>
 
-1. Click the three dots on the `Freight` in the <Hlt>Freight Timeline</Hlt>,
-   then select <Hlt>Change Alias</Hlt>:
+1. Select a `Freight` from the `Freight` timeline to open its detailed view:
 
    ![update-freight-alias](img/freight-alias.png)
 
-1. Specify a value in the <Hlt>New Alias</Hlt> field and click <Hlt>Submit</Hlt>:
+1. In the top right corner of the `Freight` view, click <Hlt>Edit Alias</Hlt>
+   to modify the alias:
 
    ![update-freight-alias](img/freight-alias-2.png)
+
+1. Specify a value in the <Hlt>New Alias</Hlt> field and click <Hlt>Submit</Hlt>:
+
    ![update-freight-alias](img/freight-alias-3.png)
 
 </TabItem>
@@ -160,7 +163,7 @@ resource for promotion to any given `Stage`. To manually approve the `Freight`:
 <Tabs groupId="manual-approval">
 <TabItem value="ui" label="Using the UI" default>
 
-1. Click the three dots on the `Freight` in the <Hlt>Freight Timeline</Hlt>,
+1. Click the three dots on the `Freight` in the `Freight` timeline,
    then select <Hlt>Manually Approve</Hlt>:
 
    ![update-freight-alias](img/freight-approval.png)
@@ -201,7 +204,7 @@ bypassed:
 <Tabs groupId="freight-status">
 <TabItem value="ui" label="Using the UI" default>
 
-1. Click on the `Freight` in the <Hlt>Freight Timeline</Hlt>:
+1. Click on the `Freight` in the `Freight` timeline to open the `Freight` view:
 
    ![freight-status](img/freight-status.png)
 
@@ -235,15 +238,31 @@ kargo get freight \
 <Tabs groupId="promoting">
 <TabItem value="ui" label="Using the UI" default>
 
-1. Click the three dots on the `Freight` in the <Hlt>Freight Timeline</Hlt>,
-   then select <Hlt>Promote</Hlt>:
+1. To promote `Freight` to a `Stage`, click the truck icon in the
+   header of the `Stage` node and then select <Hlt>Promote</Hlt>:
 
-   ![Promote Freight to a Stage](img/freight-promote.png)
+   ![Promote Freight to a Stage](img/promote-freight-to-a-stage.png)
 
-2. Select the `Stage` and click <Hlt>Promote</Hlt>:
+1. From the `Freight` timeline at the top of the screen, select the `Freight` you'd like
+   to promote into the `Stage` by clicking <Hlt>Select</Hlt>:
 
-   ![Promote Freight to a Stage](img/freight-promote-2.png)
-   ![Promote Freight to a Stage](img/freight-promote-3.png)
+   ![Promote Freight to a Stage](img/promote-freight-to-a-stage-2.png)
+
+1. Confirm the action by clicking <Hlt>Promote</Hlt>:
+
+   ![Kargo Promotion Confirmation](img/promote-freight-to-a-stage-3.png)
+
+   A summary of the `Promotion` will pop up and will be updated in real-time as
+   the steps of the promotion process complete. Once they have all completed,
+   the `Promotion`'s status will change to <Hlt>Succeeded</Hlt>:
+
+   ![Kargo Promotion View](img/kargo-promotion-view.png)
+
+   You will also notice the freight timeline has been automatically updated.
+   Every piece of `Freight` in the timeline is color-coded to indicate which
+   `Stage`s (if any) are actively using it:
+
+   ![Kargo Freight Timeline](img/kargo-freight.png)
 
 </TabItem>
 <TabItem value="cli" label="Using the CLI">
