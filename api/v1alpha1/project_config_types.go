@@ -94,10 +94,15 @@ type WebhookReceiverConfig struct {
 	// GitHub contains the configuration for a webhook receiver that is compatible
 	// with GitHub payloads.
 	//
-	// TODO(fuskovic): Make this mutually exclusive with configs for other platforms.
-	//
-	// +kubebuilder:validation:Required
+	// TODO(fuskovic): Make this mutually exclusive with configs for other
+	// platforms.
 	GitHub *GitHubWebhookReceiverConfig `json:"github,omitempty" protobuf:"bytes,2,opt,name=github"`
+	// DockerHub contains the configuration for a webhook receiver that is
+	// compatible with DockerHub payloads.
+	//
+	// TODO(fuskovic): Make this mutually exclusive with configs for other
+	// platforms.
+	DockerHub *DockerHubWebhookReceiverConfig `json:"dockerhub,omitempty"`
 }
 
 // GitHubWebhookReceiverConfig describes a webhook receiver that is compatible
@@ -114,10 +119,26 @@ type GitHubWebhookReceiverConfig struct {
 	// the shared secret used to authenticate the webhook requests sent by GitHub.
 	// For more information please refer to GitHub documentation:
 	//   https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
-	//
-	// The value of the token key goes in the "Secret" field when registering a
-	// GitHub App or webhook in the GitHub UI.
 	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+}
+
+// DockerHubWebhookReceiverConfig describes a webhook receiver that is
+// compatible with DockerHub payloads.
+type DockerHubWebhookReceiverConfig struct {
+	// SecretRef contains a reference to a Secret. For Project-scoped webhook
+	// receivers, the referenced Secret must be in the same namespace as the
+	// ProjectConfig.
+	//
+	// For cluster-scoped webhook receivers, the referenced Secret must be in the
+	// designated "cluster Secrets" namespace.
+	//
+	// The Secret data map is expected to contain a `secret`. This value does NOT
+	// need to be shared directly with DockerHub when registering a webhook. It is
+	// used only by Kargo to create a complex, unguessable URL, which implicitly
+	// serves as a shared secret. For more information about Docker Hub webhooks,
+	// please refer to the Docker documentation:
+	//   https://docs.docker.com/docker-hub/webhooks/
+	SecretRef corev1.LocalObjectReference `json:"secretRef"`
 }
 
 // WebhookReceiverDetails encapsulates the details of a webhook receiver.
