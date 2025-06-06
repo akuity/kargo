@@ -349,6 +349,25 @@ message DiscoveredImageReference {
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 4;
 }
 
+// DockerHubWebhookReceiverConfig describes a webhook receiver that is
+// compatible with DockerHub payloads.
+message DockerHubWebhookReceiverConfig {
+  // SecretRef contains a reference to a Secret. For Project-scoped webhook
+  // receivers, the referenced Secret must be in the same namespace as the
+  // ProjectConfig.
+  //
+  // For cluster-scoped webhook receivers, the referenced Secret must be in the
+  // designated "cluster Secrets" namespace.
+  //
+  // The Secret data map is expected to contain a `secret`. This value does NOT
+  // need to be shared directly with DockerHub when registering a webhook. It is
+  // used only by Kargo to create a complex, unguessable URL, which implicitly
+  // serves as a shared secret. For more information about Docker Hub webhooks,
+  // please refer to the Docker documentation:
+  //   https://docs.docker.com/docker-hub/webhooks/
+  optional .k8s.io.api.core.v1.LocalObjectReference secretRef = 1;
+}
+
 // ExpressionVariable describes a single variable that may be referenced by
 // expressions in the context of a ClusterPromotionTask, PromotionTask,
 // Promotion, AnalysisRun arguments, or other objects that support expressions.
@@ -601,9 +620,6 @@ message GitHubWebhookReceiverConfig {
   // the shared secret used to authenticate the webhook requests sent by GitHub.
   // For more information please refer to GitHub documentation:
   //   https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
-  //
-  // The value of the token key goes in the "Secret" field when registering a
-  // GitHub App or webhook in the GitHub UI.
   optional .k8s.io.api.core.v1.LocalObjectReference secretRef = 1;
 }
 
@@ -1772,10 +1788,16 @@ message WebhookReceiverConfig {
   // GitHub contains the configuration for a webhook receiver that is compatible
   // with GitHub payloads.
   //
-  // TODO(fuskovic): Make this mutually exclusive with configs for other platforms.
-  //
-  // +kubebuilder:validation:Required
+  // TODO(fuskovic): Make this mutually exclusive with configs for other
+  // platforms.
   optional GitHubWebhookReceiverConfig github = 2;
+
+  // DockerHub contains the configuration for a webhook receiver that is
+  // compatible with DockerHub payloads.
+  //
+  // TODO(fuskovic): Make this mutually exclusive with configs for other
+  // platforms.
+  optional DockerHubWebhookReceiverConfig dockerhub = 3;
 }
 
 // WebhookReceiverDetails encapsulates the details of a webhook receiver.
