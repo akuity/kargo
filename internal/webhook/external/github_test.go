@@ -87,7 +87,7 @@ func TestGithubHandler(t *testing.T) {
 					Build()
 			},
 			req: func() *http.Request {
-				b := newBody()
+				b := newGitHubEventBody("push")
 				req := httptest.NewRequest(http.MethodPost, url, b)
 				req.Header.Set("Content-Type", "application/json")
 				req.Header.Set("X-Hub-Signature-256", sign(t, testSecret, b.Bytes()))
@@ -159,7 +159,7 @@ func TestGithubHandler(t *testing.T) {
 					Build()
 			},
 			req: func() *http.Request {
-				b := newBody()
+				b := newGitHubEventBody("push")
 				req := httptest.NewRequest(http.MethodPost, url, b)
 				req.Header.Set("Content-Type", "application/json")
 				req.Header.Set("X-Hub-Signature-256", sign(t, "fakesecret", b.Bytes()))
@@ -231,7 +231,7 @@ func TestGithubHandler(t *testing.T) {
 					Build()
 			},
 			req: func() *http.Request {
-				b := newBody()
+				b := newGitHubEventBody("deployment")
 				req := httptest.NewRequest(http.MethodPost, url, b)
 				req.Header.Set("Content-Type", "application/json")
 				req.Header.Set("X-Hub-Signature-256", sign(t, testSecret, b.Bytes()))
@@ -376,7 +376,7 @@ func TestGithubHandler(t *testing.T) {
 					Build()
 			},
 			req: func() *http.Request {
-				b := newBody()
+				b := newGitHubEventBody("push")
 				req := httptest.NewRequest(http.MethodPost, url, b)
 				req.Header.Set("X-GitHub-Event", "push")
 				return req
@@ -446,7 +446,7 @@ func TestGithubHandler(t *testing.T) {
 					Build()
 			},
 			req: func() *http.Request {
-				b := newBody()
+				b := newGitHubEventBody("push")
 				req := httptest.NewRequest(http.MethodPost, url, b)
 				req.Header.Set("X-Hub-Signature-256", sign(t, "invalid-sig", b.Bytes()))
 				req.Header.Set("X-GitHub-Event", "push")
@@ -604,7 +604,7 @@ func TestGithubHandler(t *testing.T) {
 					Build()
 			},
 			req: func() *http.Request {
-				b := newBody()
+				b := newGitHubEventBody("push")
 				req := httptest.NewRequest(http.MethodPost, url, b)
 				req.Header.Set("Content-Type", "application/json")
 				req.Header.Set("X-Hub-Signature-256", sign(t, "mysupersecrettoken", b.Bytes()))
@@ -637,7 +637,7 @@ func TestGithubHandler(t *testing.T) {
 					Build()
 			},
 			req: func() *http.Request {
-				b := newBody()
+				b := newGitHubEventBody("ping")
 				req := httptest.NewRequest(http.MethodPost, url, b)
 				req.Header.Set("Content-Type", "application/json")
 				req.Header.Set("X-Hub-Signature-256", sign(t, "mysupersecrettoken", b.Bytes()))
@@ -646,6 +646,93 @@ func TestGithubHandler(t *testing.T) {
 			},
 			secret: "fakesecret",
 			msg:    "{\"msg\":\"ping event received, webhook is configured correctly for https://github.com/username/repo\"}\n", // nolint: lll
+			code:   http.StatusOK,
+		},
+		{
+			name: "success - package event",
+			kClient: func() client.Client {
+				scheme := runtime.NewScheme()
+				require.NoError(t, corev1.AddToScheme(scheme))
+				require.NoError(t, kargoapi.AddToScheme(scheme))
+				return fake.NewClientBuilder().
+					WithScheme(scheme).
+					WithObjects(
+						&corev1.Secret{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "fakesecret",
+								Namespace: "fakenamespace",
+							},
+							Data: map[string][]byte{
+								"token": []byte("mysupersecrettoken"),
+							},
+						},
+						&kargoapi.ProjectConfig{
+							ObjectMeta: metav1.ObjectMeta{
+								Namespace: "fakenamespace",
+								Name:      "fakename",
+							},
+							Spec: kargoapi.ProjectConfigSpec{
+								WebhookReceivers: []kargoapi.WebhookReceiverConfig{
+									{
+										GitHub: &kargoapi.GitHubWebhookReceiver{
+											SecretRef: corev1.LocalObjectReference{
+												Name: "fakesecret",
+											},
+										},
+									},
+								},
+							},
+							Status: kargoapi.ProjectConfigStatus{
+								WebhookReceivers: []kargoapi.WebhookReceiver{
+									{
+										Path: GenerateWebhookPath(
+											"fake-webhook-receiver-name",
+											"fakename",
+											kargoapi.WebhookReceiverTypeGitHub,
+											"mysupersecrettoken",
+										),
+									},
+								},
+							},
+						},
+						&kargoapi.Warehouse{
+							ObjectMeta: metav1.ObjectMeta{
+								Namespace: "fakenamespace",
+								Name:      "fakename",
+							},
+							Spec: kargoapi.WarehouseSpec{
+								Subscriptions: []kargoapi.RepoSubscription{
+									{
+										Git: &kargoapi.GitSubscription{
+											RepoURL: "ghcr.io/username/repo",
+										},
+									},
+								},
+							},
+						},
+					).
+					WithIndex(
+						&kargoapi.Warehouse{},
+						indexer.WarehousesBySubscribedURLsField,
+						indexer.WarehousesBySubscribedURLs,
+					).
+					WithIndex(
+						&kargoapi.ProjectConfig{},
+						indexer.ProjectConfigsByWebhookReceiverPathsField,
+						indexer.ProjectConfigsByWebhookReceiverPaths,
+					).
+					Build()
+			},
+			req: func() *http.Request {
+				b := newGitHubEventBody("package")
+				req := httptest.NewRequest(http.MethodPost, url, b)
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("X-Hub-Signature-256", sign(t, "mysupersecrettoken", b.Bytes()))
+				req.Header.Set("X-GitHub-Event", "package")
+				return req
+			},
+			secret: "fakesecret",
+			msg:    "{\"msg\":\"refreshed 1 warehouse(s)\"}\n",
 			code:   http.StatusOK,
 		},
 	} {
@@ -674,22 +761,43 @@ func sign(t *testing.T, s string, b []byte) string {
 	)
 }
 
-func newBody() *bytes.Buffer {
-	return bytes.NewBuffer([]byte(`
+func newGitHubEventBody(eventType string) *bytes.Buffer {
+	switch eventType {
+	case "push", "ping", "deployment":
+		return bytes.NewBufferString(`
 {
 	"ref": "refs/heads/main",
 	"before": "1fe030abc48d0d0ee7b3d650d6e9449775990318",
 	"after": "f12cd167152d80c0a2e28cb45e827c6311bba910",
 	"repository": {
-	  "html_url": "https://github.com/username/repo"
+		"html_url": "https://github.com/username/repo"
 	},
 	"pusher": {
-	  "name": "username",
-	  "email": "email@inbox.com"
+		"name": "username",
+		"email": "email@inbox.com"
 	},
 	"head_commit": {
-	  "id": "f12cd167152d80c0a2e28cb45e827c6311bba910"
+		"id": "f12cd167152d80c0a2e28cb45e827c6311bba910"
 	}
-  }	
-`))
+}
+`)
+	case "package":
+		return bytes.NewBufferString(`
+{
+  "action": "published",
+  "package": {
+    "name": "repo",
+    "namespace": "username"
+  },
+  "package_version": {
+    "package_url": "ghcr.io/username/repo:v0.1.6"
+  },
+  "sender": {
+    "login": "username"
+  }
+}
+`)
+	default:
+		return bytes.NewBuffer([]byte(`{}`))
+	}
 }
