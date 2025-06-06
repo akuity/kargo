@@ -265,7 +265,7 @@ CLI. This section explains how to handle `Project`s effectively through both int
 <Tabs groupId="create-project">
 <TabItem value="ui" label="Using the UI" default>
 
-1. Navigate to the Kargo UI and select <Hlt>Create</Hlt> in the top right corner.
+1. Navigate to the Kargo UI and select <Hlt>New Project</Hlt> in the top right corner.
 
    A <Hlt>Form</Hlt> tab will appear where you can enter the name of your `Project`:
 
@@ -321,9 +321,11 @@ CLI. This section explains how to handle `Project`s effectively through both int
 
 1. Select the `Project` you want to remove.
 
-1. Click the dropdown next to the `Project`'s name in the upper left corner of the `Project` dashboard and click <Hlt>Delete</Hlt>:
+1. Go to the <Hlt>Settings</Hlt> in the top right corner of the `Project` View.
 
    ![delete-project](img/delete-project.png)
+
+1. In the <Hlt>General</Hlt> tab, scroll down to the <Hlt>Delete Project</Hlt> section.
 
 1. To confirm deletion, enter the `Project`'s name and click <Hlt>Delete</Hlt> to permanently remove it:
 
