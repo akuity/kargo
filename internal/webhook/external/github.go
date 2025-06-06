@@ -15,7 +15,10 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
-const githubSecretDataKey = "secret"
+const (
+	githubSecretDataKey       = "secret"
+	githubWebhookBodyMaxBytes = 2 << 20 // 2MB
+)
 
 func init() {
 	registerWebhookReceiver(
@@ -94,8 +97,7 @@ func (g *githubWebhookReceiver) GetHandler() http.HandlerFunc {
 		logger = logger.WithValues("eventType", eventType)
 		ctx = logging.ContextWithLogger(ctx, logger)
 
-		const maxBytes = 2 << 20 // 2MB
-		body, err := io.LimitRead(r.Body, maxBytes)
+		body, err := io.LimitRead(r.Body, githubWebhookBodyMaxBytes)
 		if err != nil {
 			if errors.Is(err, &io.BodyTooLargeError{}) {
 				xhttp.WriteErrorJSON(
