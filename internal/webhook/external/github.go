@@ -79,7 +79,7 @@ func (g *githubWebhookReceiver) GetHandler() http.HandlerFunc {
 
 		logger := logging.LoggerFromContext(ctx)
 
-		secretValue, ok := g.secretData[GithubSecretDataKey]
+		signingKey, ok := g.secretData[GithubSecretDataKey] // a.k.a. shared secret
 		if !ok {
 			xhttp.WriteErrorJSON(w, nil)
 			return
@@ -87,7 +87,7 @@ func (g *githubWebhookReceiver) GetHandler() http.HandlerFunc {
 
 		eventType := r.Header.Get("X-GitHub-Event")
 		switch eventType {
-		case "ping", "push":
+		case "ping", "push", "package":
 		default:
 			xhttp.WriteErrorJSON(
 				w,
@@ -136,7 +136,7 @@ func (g *githubWebhookReceiver) GetHandler() http.HandlerFunc {
 			return
 		}
 
-		if err = gh.ValidateSignature(sig, body, secretValue); err != nil {
+		if err = gh.ValidateSignature(sig, body, signingKey); err != nil {
 			xhttp.WriteErrorJSON(
 				w,
 				xhttp.Error(errors.New("unauthorized"), http.StatusUnauthorized),
@@ -153,6 +153,8 @@ func (g *githubWebhookReceiver) GetHandler() http.HandlerFunc {
 			return
 		}
 
+		var repoURL string
+
 		switch e := event.(type) {
 		case *gh.PingEvent:
 			xhttp.WriteResponseJSON(
@@ -162,39 +164,51 @@ func (g *githubWebhookReceiver) GetHandler() http.HandlerFunc {
 					"msg": "ping event received, webhook is configured correctly",
 				},
 			)
+			return
 		case *gh.PushEvent:
 			// TODO(krancour): GetHTMLURL() gives use a repo URL starting with
 			// https://. By refreshing Warehouses using a normalized representation of
 			// that URL, we will miss any Warehouses that are subscribed to the same
 			// repository using a different URL format.
-			repoURL := git.NormalizeURL(e.GetRepo().GetHTMLURL())
-			logger = logger.WithValues("repoWebURL", repoURL)
-			ctx = logging.ContextWithLogger(ctx, logger)
-			result, err := refreshWarehouses(ctx, g.client, g.project, repoURL)
-			if err != nil {
-				xhttp.WriteErrorJSON(w, err)
-				return
-			}
-			if result.failures > 0 {
-				xhttp.WriteResponseJSON(
-					w,
-					http.StatusInternalServerError,
-					map[string]string{
-						"error": fmt.Sprintf("failed to refresh %d of %d warehouses",
-							result.failures,
-							result.successes+result.failures,
-						),
-					},
-				)
-				return
-			}
-			xhttp.WriteResponseJSON(
-				w,
-				http.StatusOK,
-				map[string]string{
-					"msg": fmt.Sprintf("refreshed %d warehouse(s)", result.successes),
-				},
+			repoURL = git.NormalizeURL(e.GetRepo().GetCloneURL())
+		// nolint: lll
+		case *gh.PackageEvent:
+			// Construct the repoURL from the name and namespace fields of the
+			// payload.
+			//   https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry
+			repoURL = fmt.Sprintf(
+				"ghcr.io/%v/%v",
+				*e.GetPackage().Namespace, *e.GetPackage().Name,
 			)
 		}
+
+		logger = logger.WithValues("repoURL", repoURL)
+		ctx = logging.ContextWithLogger(ctx, logger)
+
+		result, err := refreshWarehouses(ctx, g.client, g.project, repoURL)
+		if err != nil {
+			xhttp.WriteErrorJSON(w, err)
+			return
+		}
+		if result.failures > 0 {
+			xhttp.WriteResponseJSON(
+				w,
+				http.StatusInternalServerError,
+				map[string]string{
+					"error": fmt.Sprintf("failed to refresh %d of %d warehouses",
+						result.failures,
+						result.successes+result.failures,
+					),
+				},
+			)
+			return
+		}
+		xhttp.WriteResponseJSON(
+			w,
+			http.StatusOK,
+			map[string]string{
+				"msg": fmt.Sprintf("refreshed %d warehouse(s)", result.successes),
+			},
+		)
 	})
 }
