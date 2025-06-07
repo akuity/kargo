@@ -33,6 +33,15 @@ const githubPushEventRequestBody = `
 	}
 }`
 
+const githubPackageEventRequestBody = `
+{
+	"action": "published",
+	"package": {
+		"namespace": "example",
+		"name": "repo"
+  }
+}`
+
 const githubSigningKey = "mysupersecrettoken"
 
 func TestGithubHandler(t *testing.T) {
@@ -254,6 +263,98 @@ func TestGithubHandler(t *testing.T) {
 				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
 				req.Header.Set("X-Hub-Signature-256", sign(bodyBuf.Bytes()))
 				req.Header.Set("X-GitHub-Event", "push")
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "partial success -- package event",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Image: &kargoapi.ImageSubscription{RepoURL: "ghcr.io/example/repo"},
+						}},
+					},
+				},
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "another-fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Image: &kargoapi.ImageSubscription{RepoURL: "ghcr.io/example/repo"},
+						}},
+					},
+				},
+			).WithInterceptorFuncs(interceptor.Funcs{
+				Patch: func(
+					_ context.Context,
+					_ client.WithWatch,
+					obj client.Object,
+					_ client.Patch,
+					_ ...client.PatchOption,
+				) error {
+					if obj.GetName() == "another-fake-warehouse" {
+						return errors.New("something went wrong")
+					}
+					return nil
+				},
+			}).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBuf := bytes.NewBuffer([]byte(githubPackageEventRequestBody))
+				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
+				req.Header.Set("X-Hub-Signature-256", sign(bodyBuf.Bytes()))
+				req.Header.Set("X-GitHub-Event", "package")
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, rr.Code)
+				require.JSONEq(
+					t,
+					`{"error":"failed to refresh 1 of 2 warehouses"}`,
+					rr.Body.String(),
+				)
+			},
+		},
+		{
+			name:       "complete success -- package event",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Image: &kargoapi.ImageSubscription{RepoURL: "ghcr.io/example/repo"},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBuf := bytes.NewBuffer([]byte(githubPackageEventRequestBody))
+				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
+				req.Header.Set("X-Hub-Signature-256", sign(bodyBuf.Bytes()))
+				req.Header.Set("X-GitHub-Event", "package")
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
