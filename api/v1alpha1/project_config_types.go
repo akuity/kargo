@@ -101,6 +101,12 @@ type WebhookReceiverConfig struct {
 	// with GitLab payloads.
 	//
 	GitLab *GitLabWebhookReceiverConfig `json:"gitlab,omitempty" protobuf:"bytes,3,opt,name=gitlab"`
+	// Bitbucket contains the configuration for a webhook receiver that is
+	// compatible with Bitbucket payloads.
+	//
+	// TODO(fuskovic): Make this mutually exclusive with configs for other
+	// platforms.
+	Bitbucket *BitbucketWebhookReceiverConfig `json:"bitbucket,omitempty" protobuf:"bytes,4,opt,name=bitbucket"`
 }
 
 // GitHubWebhookReceiverConfig describes a webhook receiver that is compatible

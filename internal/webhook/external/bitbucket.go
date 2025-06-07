@@ -112,7 +112,7 @@ func (b *bitbucketWebhookReceiver) GetHandler() http.HandlerFunc {
 			return
 		}
 
-		body, err := io.LimitRead(r.Body, githubWebhookBodyMaxBytes)
+		body, err := io.LimitRead(r.Body, bitbucketWebhookBodyMaxBytes)
 		if err != nil {
 			if errors.Is(err, &io.BodyTooLargeError{}) {
 				xhttp.WriteErrorJSON(

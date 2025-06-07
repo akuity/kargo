@@ -1814,6 +1814,13 @@ message WebhookReceiverConfig {
   // GitLab contains the configuration for a webhook receiver that is compatible
   // with GitLab payloads.
   optional GitLabWebhookReceiverConfig gitlab = 3;
+
+  // Bitbucket contains the configuration for a webhook receiver that is
+  // compatible with Bitbucket payloads.
+  //
+  // TODO(fuskovic): Make this mutually exclusive with configs for other
+  // platforms.
+  optional BitbucketWebhookReceiverConfig bitbucket = 4;
 }
 
 // WebhookReceiverDetails encapsulates the details of a webhook receiver.

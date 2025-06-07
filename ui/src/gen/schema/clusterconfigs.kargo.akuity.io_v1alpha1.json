@@ -21,6 +21,27 @@
           "items": {
             "description": "WebhookReceiverConfig describes the configuration for a single webhook\nreceiver.",
             "properties": {
+              "bitbucket": {
+                "description": "Bitbucket contains the configuration for a webhook receiver that is\ncompatible with Bitbucket payloads.\n\nplatforms.",
+                "properties": {
+                  "secretRef": {
+                    "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster Secrets\" namespace.\n\nThe Secret's data map is expected to contain a `secret` key whose\nvalue is the shared secret used to authenticate the webhook requests sent\nby Bitbucket. For more information please refer to the Bitbucket\ndocumentation:\n  https://support.atlassian.com/bitbucket-cloud/docs/manage-webhooks/",
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "description": "Name of the referent.\nThis field is effectively required, but due to backwards compatibility is\nallowed to be empty. Instances of this type with an empty value here are\nalmost certainly wrong.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
+                        "type": "string"
+                      }
+                    },
+                    "type": "object",
+                    "x-kubernetes-map-type": "atomic"
+                  }
+                },
+                "required": [
+                  "secretRef"
+                ],
+                "type": "object"
+              },
               "github": {
                 "description": "GitHub contains the configuration for a webhook receiver that is compatible\nwith GitHub payloads.",
                 "properties": {
