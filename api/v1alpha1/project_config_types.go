@@ -102,7 +102,7 @@ type WebhookReceiverConfig struct {
 	//
 	// TODO(fuskovic): Make this mutually exclusive with configs for other
 	// platforms.
-	Bitbucket *BitbucketWebhookReceiverConfig `json:"bitbucket,omitempty"`
+	Bitbucket *BitbucketWebhookReceiverConfig `json:"bitbucket,omitempty" protobuf:"bytes,3,opt,name=bitbucket"`
 }
 
 // GitHubWebhookReceiverConfig describes a webhook receiver that is compatible
@@ -137,7 +137,7 @@ type BitbucketWebhookReceiverConfig struct {
 	// by Bitbucket. For more information please refer to the Bitbucket
 	// documentation:
 	//   https://support.atlassian.com/bitbucket-cloud/docs/manage-webhooks/
-	SecretRef corev1.LocalObjectReference `json:"secretRef"`
+	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
 }
 
 // WebhookReceiverDetails encapsulates the details of a webhook receiver.
