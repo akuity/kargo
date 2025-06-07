@@ -2,7 +2,9 @@ package external
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -13,10 +15,18 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/indexer"
 )
+
+const gitlabPushEventRequestBody = `
+{
+	"repository":{
+		"git_http_url": "https://gitlab.com/example/repo"
+	}
+}`
 
 func TestGitLabHandler(t *testing.T) {
 	const testURL = "https://webhooks.kargo.example.com/nonsense"
@@ -114,6 +124,74 @@ func TestGitLabHandler(t *testing.T) {
 			},
 		},
 		{
+			name:       "partial success",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "https://gitlab.com/example/repo",
+							},
+						}},
+					},
+				},
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "another-fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "https://gitlab.com/example/repo",
+							},
+						}},
+					},
+				},
+			).WithInterceptorFuncs(interceptor.Funcs{
+				Patch: func(
+					_ context.Context,
+					_ client.WithWatch,
+					obj client.Object,
+					_ client.Patch,
+					_ ...client.PatchOption,
+				) error {
+					if obj.GetName() == "another-fake-warehouse" {
+						return errors.New("something went wrong")
+					}
+					return nil
+				},
+			}).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBuf := bytes.NewBuffer([]byte(gitlabPushEventRequestBody))
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bodyBuf,
+				)
+				req.Header.Set("X-Gitlab-Token", testToken)
+				req.Header.Set("X-Gitlab-Event", "Push Hook")
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, rr.Code)
+				require.JSONEq(
+					t,
+					`{"error":"failed to refresh 1 of 2 warehouses"}`,
+					rr.Body.String(),
+				)
+			},
+		},
+		{
 			name:       "success",
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
@@ -136,13 +214,7 @@ func TestGitLabHandler(t *testing.T) {
 				indexer.WarehousesBySubscribedURLs,
 			).Build(),
 			req: func() *http.Request {
-				bodyBuf := bytes.NewBuffer(
-					[]byte(`{
-  "repository":{
-    "git_http_url": "https://gitlab.com/example/repo"
-  }
-}`),
-				)
+				bodyBuf := bytes.NewBuffer([]byte(gitlabPushEventRequestBody))
 				req := httptest.NewRequest(
 					http.MethodPost,
 					testURL,
@@ -155,9 +227,7 @@ func TestGitLabHandler(t *testing.T) {
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusOK, rr.Code)
 				require.JSONEq(
-					t,
-					`{"msg":"refreshed 1 warehouse(s)"}`,
-					rr.Body.String(),
+					t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String(),
 				)
 			},
 		},
