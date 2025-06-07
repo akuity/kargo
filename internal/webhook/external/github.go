@@ -55,7 +55,7 @@ func newGitHubWebhookReceiver(
 	}
 }
 
-// GetDetails implements WebhookReceiver.
+// getReceiverType implements WebhookReceiver.
 func (g *githubWebhookReceiver) getReceiverType() string {
 	return github
 }
@@ -79,7 +79,7 @@ func (g *githubWebhookReceiver) GetHandler() http.HandlerFunc {
 
 		logger := logging.LoggerFromContext(ctx)
 
-		secretValue, ok := g.secretData[GithubSecretDataKey]
+		signingKey, ok := g.secretData[GithubSecretDataKey] // a.k.a. shared secret
 		if !ok {
 			xhttp.WriteErrorJSON(w, nil)
 			return
@@ -136,7 +136,7 @@ func (g *githubWebhookReceiver) GetHandler() http.HandlerFunc {
 			return
 		}
 
-		if err = gh.ValidateSignature(sig, body, secretValue); err != nil {
+		if err = gh.ValidateSignature(sig, body, signingKey); err != nil {
 			xhttp.WriteErrorJSON(
 				w,
 				xhttp.Error(errors.New("unauthorized"), http.StatusUnauthorized),
@@ -167,8 +167,8 @@ func (g *githubWebhookReceiver) GetHandler() http.HandlerFunc {
 			// https://. By refreshing Warehouses using a normalized representation of
 			// that URL, we will miss any Warehouses that are subscribed to the same
 			// repository using a different URL format.
-			repoURL := git.NormalizeURL(e.GetRepo().GetHTMLURL())
-			logger = logger.WithValues("repoWebURL", repoURL)
+			repoURL := git.NormalizeURL(e.GetRepo().GetCloneURL())
+			logger = logger.WithValues("repoURL", repoURL)
 			ctx = logging.ContextWithLogger(ctx, logger)
 			result, err := refreshWarehouses(ctx, g.client, g.project, repoURL)
 			if err != nil {
