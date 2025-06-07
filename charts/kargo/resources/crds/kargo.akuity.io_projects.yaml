@@ -164,9 +164,11 @@ spec:
                     receiver.
                   properties:
                     github:
-                      description: |
+                      description: |-
                         GitHub contains the configuration for a webhook receiver that is compatible
                         with GitHub payloads.
+
+                        platforms.
                       properties:
                         secretRef:
                           description: |-
@@ -181,9 +183,41 @@ spec:
                             the shared secret used to authenticate the webhook requests sent by GitHub.
                             For more information please refer to GitHub documentation:
                               https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
+                          properties:
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      required:
+                      - secretRef
+                      type: object
+                    gitlab:
+                      description: |-
+                        GitLab contains the configuration for a webhook receiver that is compatible
+                        with GitLab payloads.
 
-                            The value of the token key goes in the "Secret" field when registering a
-                            GitHub App or webhook in the GitHub UI.
+                        platforms.
+                      properties:
+                        secretRef:
+                          description: |-
+                            SecretRef contains a reference to a Secret. For Project-scoped webhook
+                            receivers, the referenced Secret must be in the same namespace as the
+                            ProjectConfig.
+
+                            For cluster-scoped webhook receivers, the referenced Secret must be in the
+                            designated "cluster Secrets" namespace.
+
+                            The Secret's data map is expected to contain a `secret` key whose value is
+                            the shared secret used to authenticate the webhook requests sent by GitHub.
+                            For more information please refer to GitHub documentation:
+                              https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
                           properties:
                             name:
                               default: ""
@@ -202,8 +236,6 @@ spec:
                     name:
                       description: Name is the name of the webhook receiver.
                       type: string
-                  required:
-                  - github
                   type: object
                 type: array
             type: object
