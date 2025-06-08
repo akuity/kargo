@@ -6,7 +6,7 @@ require (
 	github.com/bufbuild/buf v1.54.0
 	github.com/golangci/golangci-lint v1.64.8
 	golang.org/x/tools v0.33.0
-	helm.sh/helm/v3 v3.18.1
+	helm.sh/helm/v3 v3.18.2
 	k8s.io/code-generator v0.33.1
 	sigs.k8s.io/controller-tools v0.18.0
 )
