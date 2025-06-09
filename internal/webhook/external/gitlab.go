@@ -17,7 +17,7 @@ import (
 
 const (
 	gitlab                    = "gitlab"
-	gitLabSecretDataKey       = "gitlab-secret"
+	gitLabSecretDataKey       = "secret-token"
 	gitlabWebhookBodyMaxBytes = 2 << 20 // 2MB
 )
 
