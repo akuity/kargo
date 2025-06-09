@@ -74,40 +74,36 @@ func (q *quayWebhookReceiver) getSecretValues(
 func (q *quayWebhookReceiver) GetHandler() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		logger := logging.LoggerFromContext(ctx).WithValues("path", r.URL.Path)
-		ctx = logging.ContextWithLogger(ctx, logger)
+		logger := logging.LoggerFromContext(ctx)
 		logger.Debug("identifying source repository")
 
-		const maxBytes = 2 << 20 // 2MB
-		b, err := io.LimitRead(r.Body, maxBytes)
+		b, err := io.LimitRead(r.Body, quayWebhookBodyMaxBytes)
 		if err != nil {
-			xhttp.WriteErrorJSON(w,
-				xhttp.Error(
-					fmt.Errorf("failed to read request body: %w", err),
-					http.StatusRequestEntityTooLarge,
-				),
-			)
-			return
+			if errors.Is(err, &io.BodyTooLargeError{}) {
+				xhttp.WriteErrorJSON(
+					w,
+					xhttp.Error(err, http.StatusRequestEntityTooLarge),
+				)
+				return
+			}
+			xhttp.WriteErrorJSON(w, err)
 		}
 
 		payload := struct {
 			// format: quay.io/mynamespace/repository
-			RepoWebURL string `json:"docker_url"`
+			DockerURL string `json:"docker_url"`
 		}{}
 
 		if err = json.Unmarshal(b, &payload); err != nil {
-			logger.Error(err, "failed to unmarshal request body")
-			xhttp.WriteErrorJSON(w,
-				xhttp.Error(
-					fmt.Errorf("failed to unmarshal request body: %w", err),
+			xhttp.WriteErrorJSON(
+				w,
+				xhttp.Error(errors.New("invalid request body"),
 					http.StatusBadRequest,
 				),
 			)
-			return
 		}
 
-		if payload.RepoWebURL == "" {
-			logger.Debug("missing repository web URL in request body")
+		if payload.DockerURL == "" {
 			xhttp.WriteErrorJSON(w,
 				xhttp.Error(
 					fmt.Errorf("missing repository web URL in request body"),
@@ -117,13 +113,11 @@ func (q *quayWebhookReceiver) GetHandler() http.HandlerFunc {
 			return
 		}
 
-		logger = logger.WithValues("repoWebURL", payload.RepoWebURL)
+		logger = logger.WithValues("repoURL", payload.DockerURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		result, err := refreshWarehouses(ctx, q.client, q.project, payload.RepoWebURL)
+		result, err := refreshWarehouses(ctx, q.client, q.project, payload.DockerURL)
 		if err != nil {
-			xhttp.WriteErrorJSON(w,
-				xhttp.Error(err, http.StatusInternalServerError),
-			)
+			xhttp.WriteErrorJSON(w, err)
 			return
 		}
 
