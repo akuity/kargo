@@ -70,6 +70,7 @@ func (q *quayWebhookReceiver) getSecretValues(
 	return []string{string(secretValue)}, nil
 }
 
+// GetHandler implements WebhookReceiver.
 func (q *quayWebhookReceiver) GetHandler() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
