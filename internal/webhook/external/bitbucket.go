@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 
-	bb "github.com/go-playground/webhooks/v6/bitbucket"
 	gh "github.com/google/go-github/v71/github"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -19,6 +18,7 @@ import (
 const (
 	bitbucket                    = "bitbucket"
 	bitbucketSecretDataKey       = "secret"
+	bitbucketPushEvent           = "repo:push"
 	bitbucketWebhookBodyMaxBytes = 2 << 20 // 2MB
 )
 
@@ -86,9 +86,9 @@ func (b *bitbucketWebhookReceiver) GetHandler() http.HandlerFunc {
 			return
 		}
 
-		eventType := bb.Event(r.Header.Get("X-Event-Key"))
+		eventType := r.Header.Get("X-Event-Key")
 		switch eventType {
-		case bb.RepoPushEvent:
+		case bitbucketPushEvent:
 		default:
 			xhttp.WriteErrorJSON(
 				w,
@@ -145,7 +145,15 @@ func (b *bitbucketWebhookReceiver) GetHandler() http.HandlerFunc {
 			return
 		}
 
-		payload := bb.RepoPushPayload{}
+		payload := struct {
+			Repository struct {
+				Links struct {
+					HTML struct {
+						Href string `json:"href"`
+					} `json:"html"`
+				} `json:"links"`
+			} `json:"repository"`
+		}{}
 		if err = json.Unmarshal(body, &payload); err != nil {
 			xhttp.WriteErrorJSON(
 				w,
