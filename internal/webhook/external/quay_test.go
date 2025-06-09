@@ -102,12 +102,12 @@ func TestQuayHandler(t *testing.T) {
 								},
 							},
 							Status: kargoapi.ProjectConfigStatus{
-								WebhookReceivers: []kargoapi.WebhookReceiver{
+								WebhookReceivers: []kargoapi.WebhookReceiverDetails{
 									{
-										Path: GenerateWebhookPath(
+										Path: buildWebhookPath(
 											"fake-webhook-receiver-name",
 											"fakename",
-											kargoapi.WebhookReceiverTypeQuay,
+											"quay",
 											"mysupersecrettoken",
 										),
 									},

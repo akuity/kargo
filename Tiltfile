@@ -202,6 +202,7 @@ k8s_resource(
 k8s_resource(
   new_name = 'crds',
   objects = [
+    'clusterconfigs.kargo.akuity.io:customresourcedefinition',
     'clusterpromotiontasks.kargo.akuity.io:customresourcedefinition',
     'freights.kargo.akuity.io:customresourcedefinition',
     'projectconfigs.kargo.akuity.io:customresourcedefinition',

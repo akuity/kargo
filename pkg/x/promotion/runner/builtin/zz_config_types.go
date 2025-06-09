@@ -413,6 +413,20 @@ type Image struct {
 	Tag string `json:"tag,omitempty"`
 }
 
+type UntarConfig struct {
+	// Ignore is a (multiline) string of glob patterns to ignore when extracting files. It
+	// accepts the same syntax as .gitignore files.
+	Ignore string `json:"ignore,omitempty"`
+	// InPath is the path to the tar file to extract.
+	InPath string `json:"inPath"`
+	// OutPath is the path to the destination directory where contents will be extracted. The
+	// outPath content will be overriden if it already exists.
+	OutPath string `json:"outPath"`
+	// StripComponents is the number of leading components to strip from file names in the
+	// archive.
+	StripComponents *int64 `json:"stripComponents,omitempty"`
+}
+
 type YAMLParseConfig struct {
 	// An array of outputs to extract from the YAML file.
 	Outputs []YAMLParse `json:"outputs"`

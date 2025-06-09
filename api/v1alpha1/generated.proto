@@ -190,6 +190,47 @@ message ChartSubscription {
   optional int32 discoveryLimit = 4;
 }
 
+// ClusterConfig is a resource type that describes cluster-level Kargo
+// configuration.
+message ClusterConfig {
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
+  // Spec describes the configuration of a cluster.
+  optional ClusterConfigSpec spec = 2;
+
+  // Status describes the current status of a ClusterConfig.
+  optional ClusterConfigStatus status = 3;
+}
+
+// ClusterConfigList contains a list of ClusterConfigs.
+message ClusterConfigList {
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+
+  repeated ClusterConfig items = 2;
+}
+
+// ClusterConfigSpec describes cluster-level Kargo configuration.
+message ClusterConfigSpec {
+  // WebhookReceivers describes cluster-scoped webhook receivers used for
+  // processing events from various external platforms
+  repeated WebhookReceiverConfig webhookReceivers = 1;
+}
+
+// ClusterConfigStatus describes the current status of a ClusterConfig.
+message ClusterConfigStatus {
+  // Conditions contains the last observations of the ClusterConfig's current
+  // state.
+  //
+  // +patchMergeKey=type
+  // +patchStrategy=merge
+  // +listType=map
+  // +listMapKey=type
+  repeated .k8s.io.apimachinery.pkg.apis.meta.v1.Condition conditions = 1;
+
+  // WebhookReceivers describes the status of cluster-scoped webhook receivers.
+  repeated WebhookReceiverDetails webhookReceivers = 2;
+}
+
 message ClusterPromotionTask {
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
@@ -546,16 +587,23 @@ message GitDiscoveryResult {
   repeated DiscoveredCommit commits = 2;
 }
 
-// GitHubWebhookReceiver describes a webhook receiver that is compatible with
-// GitHub payloads.
-message GitHubWebhookReceiver {
-  // SecretRef contains a reference to a Secret in the same namespace as the ProjectConfig.
+// GitHubWebhookReceiverConfig describes a webhook receiver that is compatible
+// with GitHub payloads.
+message GitHubWebhookReceiverConfig {
+  // SecretRef contains a reference to a Secret. For Project-scoped webhook
+  // receivers, the referenced Secret must be in the same namespace as the
+  // ProjectConfig.
   //
-  // The Secret is expected to contain a `token` key with the secret token configured for
-  // in GitHub for the webhook. For more information about this token, please refer to the
-  // GitHub documentation: https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
+  // For cluster-scoped webhook receivers, the referenced Secret must be in the
+  // designated "cluster Secrets" namespace.
   //
-  // The value of the token key goes in the "Secret" field when registering a GitHub App or webhook in the GitHub UI.
+  // The Secret's data map is expected to contain a `secret` key whose value is
+  // the shared secret used to authenticate the webhook requests sent by GitHub.
+  // For more information please refer to GitHub documentation:
+  //   https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
+  //
+  // The value of the token key goes in the "Secret" field when registering a
+  // GitHub App or webhook in the GitHub UI.
   optional .k8s.io.api.core.v1.LocalObjectReference secretRef = 1;
 }
 
@@ -579,7 +627,7 @@ message GitSubscription {
   //   by the Branch field or the default branch if none is specified. This is
   //   the default strategy.
   //
-  // - "SemVer": Selects the commit referenced by the the semantically greatest
+  // - "SemVer": Selects the commit referenced by the semantically greatest
   //   tag. The SemverConstraint field can optionally be used to narrow the set
   //   of tags eligible for selection.
   //
@@ -646,6 +694,53 @@ message GitSubscription {
   //
   // +kubebuilder:validation:Optional
   repeated string ignoreTags = 6;
+
+  // ExpressionFilter is an expression that can optionally be used to limit
+  // the commits or tags that are considered in determining the newest commit
+  // of interest based on their metadata.
+  //
+  // For commit-based strategies (NewestFromBranch), the filter applies to
+  // commits and has access to commit metadata variables.
+  // For tag-based strategies (Lexical, NewestTag, SemVer), the filter applies
+  // to tags and has access to tag metadata variables. The filter is applied
+  // after AllowTags, IgnoreTags, and SemverConstraint fields.
+  //
+  // The expression should be a valid expr-lang expression that evaluates to
+  // true or false. When the expression evaluates to true, the commit/tag is
+  // included in the set that is considered. When the expression evaluates to
+  // false, the commit/tag is excluded.
+  //
+  // Available variables depend on the CommitSelectionStrategy:
+  //
+  // For NewestFromBranch (commit filtering):
+  //   - `id`: The ID (sha) of the commit.
+  //   - `commitDate`: The commit date of the commit.
+  //   - `author`: The author of the commit message, in the format "Name <email>".
+  //   - `committer`: The person who committed the commit, in the format
+  // 	   "Name <email>".
+  //   - `subject`: The subject (first line) of the commit message.
+  //
+  // For Lexical, NewestTag, SemVer (tag filtering):
+  //   - `tag`: The name of the tag.
+  //   - `id`: The ID (sha) of the commit associated with the tag.
+  //   - `creatorDate`: The creation date of an annotated tag, or the commit
+  // 		date of a lightweight tag.
+  //   - `author`: The author of the commit message associated with the tag,
+  // 	   in the format "Name <email>".
+  //   - `committer`: The person who committed the commit associated with the
+  // 	   tag, in the format "Name <email>".
+  //   - `subject`: The subject (first line) of the commit message associated
+  // 	   with the tag.
+  // 	 - `tagger`: The person who created the tag, in the format "Name <email>".
+  // 	   Only available for annotated tags.
+  // 	 - `annotation`: The subject (first line) of the tag annotation. Only
+  // 	   available for annotated tags.
+  //
+  // Refer to the expr-lang documentation for more details on syntax and
+  // capabilities of the expression language: https://expr-lang.org.
+  //
+  // +kubebuilder:validation:Optional
+  optional string expressionFilter = 12;
 
   // InsecureSkipTLSVerify specifies whether certificate verification errors
   // should be ignored when connecting to the repository. This should be enabled
@@ -948,15 +1043,18 @@ message ProjectConfigSpec {
 
 // ProjectConfigStatus describes the current status of a ProjectConfig.
 message ProjectConfigStatus {
-  // Conditions contains the last observations of the Project Config's current state.
+  // Conditions contains the last observations of the Project Config's current
+  // state.
+  //
   // +patchMergeKey=type
   // +patchStrategy=merge
   // +listType=map
   // +listMapKey=type
   repeated .k8s.io.apimachinery.pkg.apis.meta.v1.Condition conditions = 1;
 
-  // WebhookReceivers describes the status of Project-specific webhook receivers.
-  repeated WebhookReceiver receivers = 2;
+  // WebhookReceivers describes the status of Project-specific webhook
+  // receivers.
+  repeated WebhookReceiverDetails receivers = 2;
 }
 
 // ProjectList is a list of Project resources.
@@ -1675,8 +1773,23 @@ message WarehouseStatus {
   optional DiscoveredArtifacts discoveredArtifacts = 7;
 }
 
-// WebhookReceiver describes a path used to receive webhook events.
-message WebhookReceiver {
+// WebhookReceiverConfig describes the configuration for a single webhook
+// receiver.
+message WebhookReceiverConfig {
+  // Name is the name of the webhook receiver.
+  optional string name = 1;
+
+  // GitHub contains the configuration for a webhook receiver that is compatible
+  // with GitHub payloads.
+  //
+  // TODO(fuskovic): Make this mutually exclusive with configs for other platforms.
+  //
+  // +kubebuilder:validation:Required
+  optional GitHubWebhookReceiverConfig github = 2;
+}
+
+// WebhookReceiverDetails encapsulates the details of a webhook receiver.
+message WebhookReceiverDetails {
   // Name is the name of the webhook receiver.
   optional string name = 1;
 
@@ -1687,6 +1800,7 @@ message WebhookReceiver {
   optional string url = 4;
 }
 
+<<<<<<< HEAD
 // WebhookReceiverConfig describes the configuration for a single webhook
 // receiver.
 message WebhookReceiverConfig {
@@ -1704,3 +1818,5 @@ message WebhookReceiverConfig {
   optional QuayWebhookReceiver quay = 3;
 }
 
+=======
+>>>>>>> main

@@ -32,6 +32,19 @@ spec:
               {{- else }}
               number: 80
               {{- end }}
+      {{- if and .Values.externalWebhooksServer.enabled (not .Values.externalWebhooksServer.ingress.enabled) }}
+      - pathType: {{ .Values.api.ingress.pathType | default "ImplementationSpecific" }}
+        path: /webhook
+        backend:
+          service:
+            name: kargo-external-webhooks-server
+            port:
+              {{- if .Values.api.tls.enabled }}
+              number: 443
+              {{- else }}
+              number: 80
+              {{- end }}
+      {{- end }}
   {{- if .Values.api.ingress.tls.enabled }}
   tls:
   - hosts:

@@ -892,7 +892,7 @@ func TestProjectConfigsByReceiverPath(t *testing.T) {
 			name: "simple",
 			projectConfig: &kargoapi.ProjectConfig{
 				Status: kargoapi.ProjectConfigStatus{
-					WebhookReceivers: []kargoapi.WebhookReceiver{
+					WebhookReceivers: []kargoapi.WebhookReceiverDetails{
 						{Path: "/webhookpath"},
 						{Path: "/myotherwebhookpath"},
 					},

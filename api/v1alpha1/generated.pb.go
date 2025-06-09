@@ -338,10 +338,122 @@ func (m *ChartSubscription) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ChartSubscription proto.InternalMessageInfo
 
+func (m *ClusterConfig) Reset()      { *m = ClusterConfig{} }
+func (*ClusterConfig) ProtoMessage() {}
+func (*ClusterConfig) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e26b7f7bbc391025, []int{11}
+}
+func (m *ClusterConfig) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ClusterConfig) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b[:n], nil
+}
+func (m *ClusterConfig) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ClusterConfig.Merge(m, src)
+}
+func (m *ClusterConfig) XXX_Size() int {
+	return m.Size()
+}
+func (m *ClusterConfig) XXX_DiscardUnknown() {
+	xxx_messageInfo_ClusterConfig.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ClusterConfig proto.InternalMessageInfo
+
+func (m *ClusterConfigList) Reset()      { *m = ClusterConfigList{} }
+func (*ClusterConfigList) ProtoMessage() {}
+func (*ClusterConfigList) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e26b7f7bbc391025, []int{12}
+}
+func (m *ClusterConfigList) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ClusterConfigList) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b[:n], nil
+}
+func (m *ClusterConfigList) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ClusterConfigList.Merge(m, src)
+}
+func (m *ClusterConfigList) XXX_Size() int {
+	return m.Size()
+}
+func (m *ClusterConfigList) XXX_DiscardUnknown() {
+	xxx_messageInfo_ClusterConfigList.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ClusterConfigList proto.InternalMessageInfo
+
+func (m *ClusterConfigSpec) Reset()      { *m = ClusterConfigSpec{} }
+func (*ClusterConfigSpec) ProtoMessage() {}
+func (*ClusterConfigSpec) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e26b7f7bbc391025, []int{13}
+}
+func (m *ClusterConfigSpec) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ClusterConfigSpec) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b[:n], nil
+}
+func (m *ClusterConfigSpec) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ClusterConfigSpec.Merge(m, src)
+}
+func (m *ClusterConfigSpec) XXX_Size() int {
+	return m.Size()
+}
+func (m *ClusterConfigSpec) XXX_DiscardUnknown() {
+	xxx_messageInfo_ClusterConfigSpec.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ClusterConfigSpec proto.InternalMessageInfo
+
+func (m *ClusterConfigStatus) Reset()      { *m = ClusterConfigStatus{} }
+func (*ClusterConfigStatus) ProtoMessage() {}
+func (*ClusterConfigStatus) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e26b7f7bbc391025, []int{14}
+}
+func (m *ClusterConfigStatus) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *ClusterConfigStatus) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b[:n], nil
+}
+func (m *ClusterConfigStatus) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ClusterConfigStatus.Merge(m, src)
+}
+func (m *ClusterConfigStatus) XXX_Size() int {
+	return m.Size()
+}
+func (m *ClusterConfigStatus) XXX_DiscardUnknown() {
+	xxx_messageInfo_ClusterConfigStatus.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ClusterConfigStatus proto.InternalMessageInfo
+
 func (m *ClusterPromotionTask) Reset()      { *m = ClusterPromotionTask{} }
 func (*ClusterPromotionTask) ProtoMessage() {}
 func (*ClusterPromotionTask) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{11}
+	return fileDescriptor_e26b7f7bbc391025, []int{15}
 }
 func (m *ClusterPromotionTask) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -369,7 +481,7 @@ var xxx_messageInfo_ClusterPromotionTask proto.InternalMessageInfo
 func (m *ClusterPromotionTaskList) Reset()      { *m = ClusterPromotionTaskList{} }
 func (*ClusterPromotionTaskList) ProtoMessage() {}
 func (*ClusterPromotionTaskList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{12}
+	return fileDescriptor_e26b7f7bbc391025, []int{16}
 }
 func (m *ClusterPromotionTaskList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -397,7 +509,7 @@ var xxx_messageInfo_ClusterPromotionTaskList proto.InternalMessageInfo
 func (m *CurrentStage) Reset()      { *m = CurrentStage{} }
 func (*CurrentStage) ProtoMessage() {}
 func (*CurrentStage) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{13}
+	return fileDescriptor_e26b7f7bbc391025, []int{17}
 }
 func (m *CurrentStage) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -425,7 +537,7 @@ var xxx_messageInfo_CurrentStage proto.InternalMessageInfo
 func (m *DiscoveredArtifacts) Reset()      { *m = DiscoveredArtifacts{} }
 func (*DiscoveredArtifacts) ProtoMessage() {}
 func (*DiscoveredArtifacts) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{14}
+	return fileDescriptor_e26b7f7bbc391025, []int{18}
 }
 func (m *DiscoveredArtifacts) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -453,7 +565,7 @@ var xxx_messageInfo_DiscoveredArtifacts proto.InternalMessageInfo
 func (m *DiscoveredCommit) Reset()      { *m = DiscoveredCommit{} }
 func (*DiscoveredCommit) ProtoMessage() {}
 func (*DiscoveredCommit) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{15}
+	return fileDescriptor_e26b7f7bbc391025, []int{19}
 }
 func (m *DiscoveredCommit) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -481,7 +593,7 @@ var xxx_messageInfo_DiscoveredCommit proto.InternalMessageInfo
 func (m *DiscoveredImageReference) Reset()      { *m = DiscoveredImageReference{} }
 func (*DiscoveredImageReference) ProtoMessage() {}
 func (*DiscoveredImageReference) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{16}
+	return fileDescriptor_e26b7f7bbc391025, []int{20}
 }
 func (m *DiscoveredImageReference) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -509,7 +621,7 @@ var xxx_messageInfo_DiscoveredImageReference proto.InternalMessageInfo
 func (m *ExpressionVariable) Reset()      { *m = ExpressionVariable{} }
 func (*ExpressionVariable) ProtoMessage() {}
 func (*ExpressionVariable) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{17}
+	return fileDescriptor_e26b7f7bbc391025, []int{21}
 }
 func (m *ExpressionVariable) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -537,7 +649,7 @@ var xxx_messageInfo_ExpressionVariable proto.InternalMessageInfo
 func (m *Freight) Reset()      { *m = Freight{} }
 func (*Freight) ProtoMessage() {}
 func (*Freight) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{18}
+	return fileDescriptor_e26b7f7bbc391025, []int{22}
 }
 func (m *Freight) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -565,7 +677,7 @@ var xxx_messageInfo_Freight proto.InternalMessageInfo
 func (m *FreightCollection) Reset()      { *m = FreightCollection{} }
 func (*FreightCollection) ProtoMessage() {}
 func (*FreightCollection) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{19}
+	return fileDescriptor_e26b7f7bbc391025, []int{23}
 }
 func (m *FreightCollection) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -593,7 +705,7 @@ var xxx_messageInfo_FreightCollection proto.InternalMessageInfo
 func (m *FreightList) Reset()      { *m = FreightList{} }
 func (*FreightList) ProtoMessage() {}
 func (*FreightList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{20}
+	return fileDescriptor_e26b7f7bbc391025, []int{24}
 }
 func (m *FreightList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -621,7 +733,7 @@ var xxx_messageInfo_FreightList proto.InternalMessageInfo
 func (m *FreightOrigin) Reset()      { *m = FreightOrigin{} }
 func (*FreightOrigin) ProtoMessage() {}
 func (*FreightOrigin) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{21}
+	return fileDescriptor_e26b7f7bbc391025, []int{25}
 }
 func (m *FreightOrigin) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -649,7 +761,7 @@ var xxx_messageInfo_FreightOrigin proto.InternalMessageInfo
 func (m *FreightReference) Reset()      { *m = FreightReference{} }
 func (*FreightReference) ProtoMessage() {}
 func (*FreightReference) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{22}
+	return fileDescriptor_e26b7f7bbc391025, []int{26}
 }
 func (m *FreightReference) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -677,7 +789,7 @@ var xxx_messageInfo_FreightReference proto.InternalMessageInfo
 func (m *FreightRequest) Reset()      { *m = FreightRequest{} }
 func (*FreightRequest) ProtoMessage() {}
 func (*FreightRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{23}
+	return fileDescriptor_e26b7f7bbc391025, []int{27}
 }
 func (m *FreightRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -705,7 +817,7 @@ var xxx_messageInfo_FreightRequest proto.InternalMessageInfo
 func (m *FreightSources) Reset()      { *m = FreightSources{} }
 func (*FreightSources) ProtoMessage() {}
 func (*FreightSources) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{24}
+	return fileDescriptor_e26b7f7bbc391025, []int{28}
 }
 func (m *FreightSources) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -733,7 +845,7 @@ var xxx_messageInfo_FreightSources proto.InternalMessageInfo
 func (m *FreightStatus) Reset()      { *m = FreightStatus{} }
 func (*FreightStatus) ProtoMessage() {}
 func (*FreightStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{25}
+	return fileDescriptor_e26b7f7bbc391025, []int{29}
 }
 func (m *FreightStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -761,7 +873,7 @@ var xxx_messageInfo_FreightStatus proto.InternalMessageInfo
 func (m *GitCommit) Reset()      { *m = GitCommit{} }
 func (*GitCommit) ProtoMessage() {}
 func (*GitCommit) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{26}
+	return fileDescriptor_e26b7f7bbc391025, []int{30}
 }
 func (m *GitCommit) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -789,7 +901,7 @@ var xxx_messageInfo_GitCommit proto.InternalMessageInfo
 func (m *GitDiscoveryResult) Reset()      { *m = GitDiscoveryResult{} }
 func (*GitDiscoveryResult) ProtoMessage() {}
 func (*GitDiscoveryResult) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{27}
+	return fileDescriptor_e26b7f7bbc391025, []int{31}
 }
 func (m *GitDiscoveryResult) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -814,15 +926,15 @@ func (m *GitDiscoveryResult) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_GitDiscoveryResult proto.InternalMessageInfo
 
-func (m *GitHubWebhookReceiver) Reset()      { *m = GitHubWebhookReceiver{} }
-func (*GitHubWebhookReceiver) ProtoMessage() {}
-func (*GitHubWebhookReceiver) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{28}
+func (m *GitHubWebhookReceiverConfig) Reset()      { *m = GitHubWebhookReceiverConfig{} }
+func (*GitHubWebhookReceiverConfig) ProtoMessage() {}
+func (*GitHubWebhookReceiverConfig) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e26b7f7bbc391025, []int{32}
 }
-func (m *GitHubWebhookReceiver) XXX_Unmarshal(b []byte) error {
+func (m *GitHubWebhookReceiverConfig) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *GitHubWebhookReceiver) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *GitHubWebhookReceiverConfig) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	b = b[:cap(b)]
 	n, err := m.MarshalToSizedBuffer(b)
 	if err != nil {
@@ -830,22 +942,22 @@ func (m *GitHubWebhookReceiver) XXX_Marshal(b []byte, deterministic bool) ([]byt
 	}
 	return b[:n], nil
 }
-func (m *GitHubWebhookReceiver) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GitHubWebhookReceiver.Merge(m, src)
+func (m *GitHubWebhookReceiverConfig) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GitHubWebhookReceiverConfig.Merge(m, src)
 }
-func (m *GitHubWebhookReceiver) XXX_Size() int {
+func (m *GitHubWebhookReceiverConfig) XXX_Size() int {
 	return m.Size()
 }
-func (m *GitHubWebhookReceiver) XXX_DiscardUnknown() {
-	xxx_messageInfo_GitHubWebhookReceiver.DiscardUnknown(m)
+func (m *GitHubWebhookReceiverConfig) XXX_DiscardUnknown() {
+	xxx_messageInfo_GitHubWebhookReceiverConfig.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_GitHubWebhookReceiver proto.InternalMessageInfo
+var xxx_messageInfo_GitHubWebhookReceiverConfig proto.InternalMessageInfo
 
 func (m *GitSubscription) Reset()      { *m = GitSubscription{} }
 func (*GitSubscription) ProtoMessage() {}
 func (*GitSubscription) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{29}
+	return fileDescriptor_e26b7f7bbc391025, []int{33}
 }
 func (m *GitSubscription) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -873,7 +985,7 @@ var xxx_messageInfo_GitSubscription proto.InternalMessageInfo
 func (m *Health) Reset()      { *m = Health{} }
 func (*Health) ProtoMessage() {}
 func (*Health) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{30}
+	return fileDescriptor_e26b7f7bbc391025, []int{34}
 }
 func (m *Health) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -901,7 +1013,7 @@ var xxx_messageInfo_Health proto.InternalMessageInfo
 func (m *HealthCheckStep) Reset()      { *m = HealthCheckStep{} }
 func (*HealthCheckStep) ProtoMessage() {}
 func (*HealthCheckStep) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{31}
+	return fileDescriptor_e26b7f7bbc391025, []int{35}
 }
 func (m *HealthCheckStep) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -929,7 +1041,7 @@ var xxx_messageInfo_HealthCheckStep proto.InternalMessageInfo
 func (m *HealthStats) Reset()      { *m = HealthStats{} }
 func (*HealthStats) ProtoMessage() {}
 func (*HealthStats) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{32}
+	return fileDescriptor_e26b7f7bbc391025, []int{36}
 }
 func (m *HealthStats) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -957,7 +1069,7 @@ var xxx_messageInfo_HealthStats proto.InternalMessageInfo
 func (m *Image) Reset()      { *m = Image{} }
 func (*Image) ProtoMessage() {}
 func (*Image) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{33}
+	return fileDescriptor_e26b7f7bbc391025, []int{37}
 }
 func (m *Image) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -985,7 +1097,7 @@ var xxx_messageInfo_Image proto.InternalMessageInfo
 func (m *ImageDiscoveryResult) Reset()      { *m = ImageDiscoveryResult{} }
 func (*ImageDiscoveryResult) ProtoMessage() {}
 func (*ImageDiscoveryResult) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{34}
+	return fileDescriptor_e26b7f7bbc391025, []int{38}
 }
 func (m *ImageDiscoveryResult) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1013,7 +1125,7 @@ var xxx_messageInfo_ImageDiscoveryResult proto.InternalMessageInfo
 func (m *ImageSubscription) Reset()      { *m = ImageSubscription{} }
 func (*ImageSubscription) ProtoMessage() {}
 func (*ImageSubscription) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{35}
+	return fileDescriptor_e26b7f7bbc391025, []int{39}
 }
 func (m *ImageSubscription) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1041,7 +1153,7 @@ var xxx_messageInfo_ImageSubscription proto.InternalMessageInfo
 func (m *Project) Reset()      { *m = Project{} }
 func (*Project) ProtoMessage() {}
 func (*Project) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{36}
+	return fileDescriptor_e26b7f7bbc391025, []int{40}
 }
 func (m *Project) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1069,7 +1181,7 @@ var xxx_messageInfo_Project proto.InternalMessageInfo
 func (m *ProjectConfig) Reset()      { *m = ProjectConfig{} }
 func (*ProjectConfig) ProtoMessage() {}
 func (*ProjectConfig) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{37}
+	return fileDescriptor_e26b7f7bbc391025, []int{41}
 }
 func (m *ProjectConfig) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1097,7 +1209,7 @@ var xxx_messageInfo_ProjectConfig proto.InternalMessageInfo
 func (m *ProjectConfigList) Reset()      { *m = ProjectConfigList{} }
 func (*ProjectConfigList) ProtoMessage() {}
 func (*ProjectConfigList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{38}
+	return fileDescriptor_e26b7f7bbc391025, []int{42}
 }
 func (m *ProjectConfigList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1125,7 +1237,7 @@ var xxx_messageInfo_ProjectConfigList proto.InternalMessageInfo
 func (m *ProjectConfigSpec) Reset()      { *m = ProjectConfigSpec{} }
 func (*ProjectConfigSpec) ProtoMessage() {}
 func (*ProjectConfigSpec) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{39}
+	return fileDescriptor_e26b7f7bbc391025, []int{43}
 }
 func (m *ProjectConfigSpec) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1153,7 +1265,7 @@ var xxx_messageInfo_ProjectConfigSpec proto.InternalMessageInfo
 func (m *ProjectConfigStatus) Reset()      { *m = ProjectConfigStatus{} }
 func (*ProjectConfigStatus) ProtoMessage() {}
 func (*ProjectConfigStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{40}
+	return fileDescriptor_e26b7f7bbc391025, []int{44}
 }
 func (m *ProjectConfigStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1181,7 +1293,7 @@ var xxx_messageInfo_ProjectConfigStatus proto.InternalMessageInfo
 func (m *ProjectList) Reset()      { *m = ProjectList{} }
 func (*ProjectList) ProtoMessage() {}
 func (*ProjectList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{41}
+	return fileDescriptor_e26b7f7bbc391025, []int{45}
 }
 func (m *ProjectList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1209,7 +1321,7 @@ var xxx_messageInfo_ProjectList proto.InternalMessageInfo
 func (m *ProjectStats) Reset()      { *m = ProjectStats{} }
 func (*ProjectStats) ProtoMessage() {}
 func (*ProjectStats) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{42}
+	return fileDescriptor_e26b7f7bbc391025, []int{46}
 }
 func (m *ProjectStats) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1237,7 +1349,7 @@ var xxx_messageInfo_ProjectStats proto.InternalMessageInfo
 func (m *ProjectStatus) Reset()      { *m = ProjectStatus{} }
 func (*ProjectStatus) ProtoMessage() {}
 func (*ProjectStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{43}
+	return fileDescriptor_e26b7f7bbc391025, []int{47}
 }
 func (m *ProjectStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1265,7 +1377,7 @@ var xxx_messageInfo_ProjectStatus proto.InternalMessageInfo
 func (m *Promotion) Reset()      { *m = Promotion{} }
 func (*Promotion) ProtoMessage() {}
 func (*Promotion) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{44}
+	return fileDescriptor_e26b7f7bbc391025, []int{48}
 }
 func (m *Promotion) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1293,7 +1405,7 @@ var xxx_messageInfo_Promotion proto.InternalMessageInfo
 func (m *PromotionList) Reset()      { *m = PromotionList{} }
 func (*PromotionList) ProtoMessage() {}
 func (*PromotionList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{45}
+	return fileDescriptor_e26b7f7bbc391025, []int{49}
 }
 func (m *PromotionList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1321,7 +1433,7 @@ var xxx_messageInfo_PromotionList proto.InternalMessageInfo
 func (m *PromotionPolicy) Reset()      { *m = PromotionPolicy{} }
 func (*PromotionPolicy) ProtoMessage() {}
 func (*PromotionPolicy) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{46}
+	return fileDescriptor_e26b7f7bbc391025, []int{50}
 }
 func (m *PromotionPolicy) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1349,7 +1461,7 @@ var xxx_messageInfo_PromotionPolicy proto.InternalMessageInfo
 func (m *PromotionPolicySelector) Reset()      { *m = PromotionPolicySelector{} }
 func (*PromotionPolicySelector) ProtoMessage() {}
 func (*PromotionPolicySelector) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{47}
+	return fileDescriptor_e26b7f7bbc391025, []int{51}
 }
 func (m *PromotionPolicySelector) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1377,7 +1489,7 @@ var xxx_messageInfo_PromotionPolicySelector proto.InternalMessageInfo
 func (m *PromotionReference) Reset()      { *m = PromotionReference{} }
 func (*PromotionReference) ProtoMessage() {}
 func (*PromotionReference) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{48}
+	return fileDescriptor_e26b7f7bbc391025, []int{52}
 }
 func (m *PromotionReference) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1405,7 +1517,7 @@ var xxx_messageInfo_PromotionReference proto.InternalMessageInfo
 func (m *PromotionSpec) Reset()      { *m = PromotionSpec{} }
 func (*PromotionSpec) ProtoMessage() {}
 func (*PromotionSpec) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{49}
+	return fileDescriptor_e26b7f7bbc391025, []int{53}
 }
 func (m *PromotionSpec) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1433,7 +1545,7 @@ var xxx_messageInfo_PromotionSpec proto.InternalMessageInfo
 func (m *PromotionStatus) Reset()      { *m = PromotionStatus{} }
 func (*PromotionStatus) ProtoMessage() {}
 func (*PromotionStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{50}
+	return fileDescriptor_e26b7f7bbc391025, []int{54}
 }
 func (m *PromotionStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1461,7 +1573,7 @@ var xxx_messageInfo_PromotionStatus proto.InternalMessageInfo
 func (m *PromotionStep) Reset()      { *m = PromotionStep{} }
 func (*PromotionStep) ProtoMessage() {}
 func (*PromotionStep) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{51}
+	return fileDescriptor_e26b7f7bbc391025, []int{55}
 }
 func (m *PromotionStep) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1489,7 +1601,7 @@ var xxx_messageInfo_PromotionStep proto.InternalMessageInfo
 func (m *PromotionStepRetry) Reset()      { *m = PromotionStepRetry{} }
 func (*PromotionStepRetry) ProtoMessage() {}
 func (*PromotionStepRetry) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{52}
+	return fileDescriptor_e26b7f7bbc391025, []int{56}
 }
 func (m *PromotionStepRetry) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1517,7 +1629,7 @@ var xxx_messageInfo_PromotionStepRetry proto.InternalMessageInfo
 func (m *PromotionTask) Reset()      { *m = PromotionTask{} }
 func (*PromotionTask) ProtoMessage() {}
 func (*PromotionTask) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{53}
+	return fileDescriptor_e26b7f7bbc391025, []int{57}
 }
 func (m *PromotionTask) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1545,7 +1657,7 @@ var xxx_messageInfo_PromotionTask proto.InternalMessageInfo
 func (m *PromotionTaskList) Reset()      { *m = PromotionTaskList{} }
 func (*PromotionTaskList) ProtoMessage() {}
 func (*PromotionTaskList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{54}
+	return fileDescriptor_e26b7f7bbc391025, []int{58}
 }
 func (m *PromotionTaskList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1573,7 +1685,7 @@ var xxx_messageInfo_PromotionTaskList proto.InternalMessageInfo
 func (m *PromotionTaskReference) Reset()      { *m = PromotionTaskReference{} }
 func (*PromotionTaskReference) ProtoMessage() {}
 func (*PromotionTaskReference) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{55}
+	return fileDescriptor_e26b7f7bbc391025, []int{59}
 }
 func (m *PromotionTaskReference) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1601,7 +1713,7 @@ var xxx_messageInfo_PromotionTaskReference proto.InternalMessageInfo
 func (m *PromotionTaskSpec) Reset()      { *m = PromotionTaskSpec{} }
 func (*PromotionTaskSpec) ProtoMessage() {}
 func (*PromotionTaskSpec) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{56}
+	return fileDescriptor_e26b7f7bbc391025, []int{60}
 }
 func (m *PromotionTaskSpec) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1629,7 +1741,7 @@ var xxx_messageInfo_PromotionTaskSpec proto.InternalMessageInfo
 func (m *PromotionTemplate) Reset()      { *m = PromotionTemplate{} }
 func (*PromotionTemplate) ProtoMessage() {}
 func (*PromotionTemplate) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{57}
+	return fileDescriptor_e26b7f7bbc391025, []int{61}
 }
 func (m *PromotionTemplate) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1657,7 +1769,7 @@ var xxx_messageInfo_PromotionTemplate proto.InternalMessageInfo
 func (m *PromotionTemplateSpec) Reset()      { *m = PromotionTemplateSpec{} }
 func (*PromotionTemplateSpec) ProtoMessage() {}
 func (*PromotionTemplateSpec) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{58}
+	return fileDescriptor_e26b7f7bbc391025, []int{62}
 }
 func (m *PromotionTemplateSpec) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1713,7 +1825,11 @@ var xxx_messageInfo_QuayWebhookReceiver proto.InternalMessageInfo
 func (m *RepoSubscription) Reset()      { *m = RepoSubscription{} }
 func (*RepoSubscription) ProtoMessage() {}
 func (*RepoSubscription) Descriptor() ([]byte, []int) {
+<<<<<<< HEAD
 	return fileDescriptor_e26b7f7bbc391025, []int{60}
+=======
+	return fileDescriptor_e26b7f7bbc391025, []int{63}
+>>>>>>> main
 }
 func (m *RepoSubscription) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1741,7 +1857,11 @@ var xxx_messageInfo_RepoSubscription proto.InternalMessageInfo
 func (m *Stage) Reset()      { *m = Stage{} }
 func (*Stage) ProtoMessage() {}
 func (*Stage) Descriptor() ([]byte, []int) {
+<<<<<<< HEAD
 	return fileDescriptor_e26b7f7bbc391025, []int{61}
+=======
+	return fileDescriptor_e26b7f7bbc391025, []int{64}
+>>>>>>> main
 }
 func (m *Stage) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1769,7 +1889,11 @@ var xxx_messageInfo_Stage proto.InternalMessageInfo
 func (m *StageList) Reset()      { *m = StageList{} }
 func (*StageList) ProtoMessage() {}
 func (*StageList) Descriptor() ([]byte, []int) {
+<<<<<<< HEAD
 	return fileDescriptor_e26b7f7bbc391025, []int{62}
+=======
+	return fileDescriptor_e26b7f7bbc391025, []int{65}
+>>>>>>> main
 }
 func (m *StageList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1797,7 +1921,11 @@ var xxx_messageInfo_StageList proto.InternalMessageInfo
 func (m *StageSpec) Reset()      { *m = StageSpec{} }
 func (*StageSpec) ProtoMessage() {}
 func (*StageSpec) Descriptor() ([]byte, []int) {
+<<<<<<< HEAD
 	return fileDescriptor_e26b7f7bbc391025, []int{63}
+=======
+	return fileDescriptor_e26b7f7bbc391025, []int{66}
+>>>>>>> main
 }
 func (m *StageSpec) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1825,7 +1953,11 @@ var xxx_messageInfo_StageSpec proto.InternalMessageInfo
 func (m *StageStats) Reset()      { *m = StageStats{} }
 func (*StageStats) ProtoMessage() {}
 func (*StageStats) Descriptor() ([]byte, []int) {
+<<<<<<< HEAD
 	return fileDescriptor_e26b7f7bbc391025, []int{64}
+=======
+	return fileDescriptor_e26b7f7bbc391025, []int{67}
+>>>>>>> main
 }
 func (m *StageStats) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1853,7 +1985,11 @@ var xxx_messageInfo_StageStats proto.InternalMessageInfo
 func (m *StageStatus) Reset()      { *m = StageStatus{} }
 func (*StageStatus) ProtoMessage() {}
 func (*StageStatus) Descriptor() ([]byte, []int) {
+<<<<<<< HEAD
 	return fileDescriptor_e26b7f7bbc391025, []int{65}
+=======
+	return fileDescriptor_e26b7f7bbc391025, []int{68}
+>>>>>>> main
 }
 func (m *StageStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1881,7 +2017,11 @@ var xxx_messageInfo_StageStatus proto.InternalMessageInfo
 func (m *StepExecutionMetadata) Reset()      { *m = StepExecutionMetadata{} }
 func (*StepExecutionMetadata) ProtoMessage() {}
 func (*StepExecutionMetadata) Descriptor() ([]byte, []int) {
+<<<<<<< HEAD
 	return fileDescriptor_e26b7f7bbc391025, []int{66}
+=======
+	return fileDescriptor_e26b7f7bbc391025, []int{69}
+>>>>>>> main
 }
 func (m *StepExecutionMetadata) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1909,7 +2049,11 @@ var xxx_messageInfo_StepExecutionMetadata proto.InternalMessageInfo
 func (m *Verification) Reset()      { *m = Verification{} }
 func (*Verification) ProtoMessage() {}
 func (*Verification) Descriptor() ([]byte, []int) {
+<<<<<<< HEAD
 	return fileDescriptor_e26b7f7bbc391025, []int{67}
+=======
+	return fileDescriptor_e26b7f7bbc391025, []int{70}
+>>>>>>> main
 }
 func (m *Verification) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1937,7 +2081,11 @@ var xxx_messageInfo_Verification proto.InternalMessageInfo
 func (m *VerificationInfo) Reset()      { *m = VerificationInfo{} }
 func (*VerificationInfo) ProtoMessage() {}
 func (*VerificationInfo) Descriptor() ([]byte, []int) {
+<<<<<<< HEAD
 	return fileDescriptor_e26b7f7bbc391025, []int{68}
+=======
+	return fileDescriptor_e26b7f7bbc391025, []int{71}
+>>>>>>> main
 }
 func (m *VerificationInfo) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1965,7 +2113,11 @@ var xxx_messageInfo_VerificationInfo proto.InternalMessageInfo
 func (m *VerifiedStage) Reset()      { *m = VerifiedStage{} }
 func (*VerifiedStage) ProtoMessage() {}
 func (*VerifiedStage) Descriptor() ([]byte, []int) {
+<<<<<<< HEAD
 	return fileDescriptor_e26b7f7bbc391025, []int{69}
+=======
+	return fileDescriptor_e26b7f7bbc391025, []int{72}
+>>>>>>> main
 }
 func (m *VerifiedStage) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1993,7 +2145,11 @@ var xxx_messageInfo_VerifiedStage proto.InternalMessageInfo
 func (m *Warehouse) Reset()      { *m = Warehouse{} }
 func (*Warehouse) ProtoMessage() {}
 func (*Warehouse) Descriptor() ([]byte, []int) {
+<<<<<<< HEAD
 	return fileDescriptor_e26b7f7bbc391025, []int{70}
+=======
+	return fileDescriptor_e26b7f7bbc391025, []int{73}
+>>>>>>> main
 }
 func (m *Warehouse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2021,7 +2177,11 @@ var xxx_messageInfo_Warehouse proto.InternalMessageInfo
 func (m *WarehouseList) Reset()      { *m = WarehouseList{} }
 func (*WarehouseList) ProtoMessage() {}
 func (*WarehouseList) Descriptor() ([]byte, []int) {
+<<<<<<< HEAD
 	return fileDescriptor_e26b7f7bbc391025, []int{71}
+=======
+	return fileDescriptor_e26b7f7bbc391025, []int{74}
+>>>>>>> main
 }
 func (m *WarehouseList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2049,7 +2209,11 @@ var xxx_messageInfo_WarehouseList proto.InternalMessageInfo
 func (m *WarehouseSpec) Reset()      { *m = WarehouseSpec{} }
 func (*WarehouseSpec) ProtoMessage() {}
 func (*WarehouseSpec) Descriptor() ([]byte, []int) {
+<<<<<<< HEAD
 	return fileDescriptor_e26b7f7bbc391025, []int{72}
+=======
+	return fileDescriptor_e26b7f7bbc391025, []int{75}
+>>>>>>> main
 }
 func (m *WarehouseSpec) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2077,7 +2241,11 @@ var xxx_messageInfo_WarehouseSpec proto.InternalMessageInfo
 func (m *WarehouseStats) Reset()      { *m = WarehouseStats{} }
 func (*WarehouseStats) ProtoMessage() {}
 func (*WarehouseStats) Descriptor() ([]byte, []int) {
+<<<<<<< HEAD
 	return fileDescriptor_e26b7f7bbc391025, []int{73}
+=======
+	return fileDescriptor_e26b7f7bbc391025, []int{76}
+>>>>>>> main
 }
 func (m *WarehouseStats) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2105,7 +2273,11 @@ var xxx_messageInfo_WarehouseStats proto.InternalMessageInfo
 func (m *WarehouseStatus) Reset()      { *m = WarehouseStatus{} }
 func (*WarehouseStatus) ProtoMessage() {}
 func (*WarehouseStatus) Descriptor() ([]byte, []int) {
+<<<<<<< HEAD
 	return fileDescriptor_e26b7f7bbc391025, []int{74}
+=======
+	return fileDescriptor_e26b7f7bbc391025, []int{77}
+>>>>>>> main
 }
 func (m *WarehouseStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2130,6 +2302,7 @@ func (m *WarehouseStatus) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_WarehouseStatus proto.InternalMessageInfo
 
+<<<<<<< HEAD
 func (m *WebhookReceiver) Reset()      { *m = WebhookReceiver{} }
 func (*WebhookReceiver) ProtoMessage() {}
 func (*WebhookReceiver) Descriptor() ([]byte, []int) {
@@ -2162,6 +2335,12 @@ func (m *WebhookReceiverConfig) Reset()      { *m = WebhookReceiverConfig{} }
 func (*WebhookReceiverConfig) ProtoMessage() {}
 func (*WebhookReceiverConfig) Descriptor() ([]byte, []int) {
 	return fileDescriptor_e26b7f7bbc391025, []int{76}
+=======
+func (m *WebhookReceiverConfig) Reset()      { *m = WebhookReceiverConfig{} }
+func (*WebhookReceiverConfig) ProtoMessage() {}
+func (*WebhookReceiverConfig) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e26b7f7bbc391025, []int{78}
+>>>>>>> main
 }
 func (m *WebhookReceiverConfig) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2186,6 +2365,34 @@ func (m *WebhookReceiverConfig) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_WebhookReceiverConfig proto.InternalMessageInfo
 
+func (m *WebhookReceiverDetails) Reset()      { *m = WebhookReceiverDetails{} }
+func (*WebhookReceiverDetails) ProtoMessage() {}
+func (*WebhookReceiverDetails) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e26b7f7bbc391025, []int{79}
+}
+func (m *WebhookReceiverDetails) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *WebhookReceiverDetails) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b[:n], nil
+}
+func (m *WebhookReceiverDetails) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_WebhookReceiverDetails.Merge(m, src)
+}
+func (m *WebhookReceiverDetails) XXX_Size() int {
+	return m.Size()
+}
+func (m *WebhookReceiverDetails) XXX_DiscardUnknown() {
+	xxx_messageInfo_WebhookReceiverDetails.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_WebhookReceiverDetails proto.InternalMessageInfo
+
 func init() {
 	proto.RegisterType((*AnalysisRunArgument)(nil), "github.com.akuity.kargo.api.v1alpha1.AnalysisRunArgument")
 	proto.RegisterType((*AnalysisRunMetadata)(nil), "github.com.akuity.kargo.api.v1alpha1.AnalysisRunMetadata")
@@ -2200,6 +2407,10 @@ func init() {
 	proto.RegisterType((*Chart)(nil), "github.com.akuity.kargo.api.v1alpha1.Chart")
 	proto.RegisterType((*ChartDiscoveryResult)(nil), "github.com.akuity.kargo.api.v1alpha1.ChartDiscoveryResult")
 	proto.RegisterType((*ChartSubscription)(nil), "github.com.akuity.kargo.api.v1alpha1.ChartSubscription")
+	proto.RegisterType((*ClusterConfig)(nil), "github.com.akuity.kargo.api.v1alpha1.ClusterConfig")
+	proto.RegisterType((*ClusterConfigList)(nil), "github.com.akuity.kargo.api.v1alpha1.ClusterConfigList")
+	proto.RegisterType((*ClusterConfigSpec)(nil), "github.com.akuity.kargo.api.v1alpha1.ClusterConfigSpec")
+	proto.RegisterType((*ClusterConfigStatus)(nil), "github.com.akuity.kargo.api.v1alpha1.ClusterConfigStatus")
 	proto.RegisterType((*ClusterPromotionTask)(nil), "github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask")
 	proto.RegisterType((*ClusterPromotionTaskList)(nil), "github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTaskList")
 	proto.RegisterType((*CurrentStage)(nil), "github.com.akuity.kargo.api.v1alpha1.CurrentStage")
@@ -2223,7 +2434,7 @@ func init() {
 	proto.RegisterMapType((map[string]VerifiedStage)(nil), "github.com.akuity.kargo.api.v1alpha1.FreightStatus.VerifiedInEntry")
 	proto.RegisterType((*GitCommit)(nil), "github.com.akuity.kargo.api.v1alpha1.GitCommit")
 	proto.RegisterType((*GitDiscoveryResult)(nil), "github.com.akuity.kargo.api.v1alpha1.GitDiscoveryResult")
-	proto.RegisterType((*GitHubWebhookReceiver)(nil), "github.com.akuity.kargo.api.v1alpha1.GitHubWebhookReceiver")
+	proto.RegisterType((*GitHubWebhookReceiverConfig)(nil), "github.com.akuity.kargo.api.v1alpha1.GitHubWebhookReceiverConfig")
 	proto.RegisterType((*GitSubscription)(nil), "github.com.akuity.kargo.api.v1alpha1.GitSubscription")
 	proto.RegisterType((*Health)(nil), "github.com.akuity.kargo.api.v1alpha1.Health")
 	proto.RegisterType((*HealthCheckStep)(nil), "github.com.akuity.kargo.api.v1alpha1.HealthCheckStep")
@@ -2271,8 +2482,8 @@ func init() {
 	proto.RegisterType((*WarehouseSpec)(nil), "github.com.akuity.kargo.api.v1alpha1.WarehouseSpec")
 	proto.RegisterType((*WarehouseStats)(nil), "github.com.akuity.kargo.api.v1alpha1.WarehouseStats")
 	proto.RegisterType((*WarehouseStatus)(nil), "github.com.akuity.kargo.api.v1alpha1.WarehouseStatus")
-	proto.RegisterType((*WebhookReceiver)(nil), "github.com.akuity.kargo.api.v1alpha1.WebhookReceiver")
 	proto.RegisterType((*WebhookReceiverConfig)(nil), "github.com.akuity.kargo.api.v1alpha1.WebhookReceiverConfig")
+	proto.RegisterType((*WebhookReceiverDetails)(nil), "github.com.akuity.kargo.api.v1alpha1.WebhookReceiverDetails")
 }
 
 func init() {
@@ -2280,6 +2491,7 @@ func init() {
 }
 
 var fileDescriptor_e26b7f7bbc391025 = []byte{
+<<<<<<< HEAD
 	// 4643 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xdc, 0x5c, 0x4b, 0x6c, 0x24, 0xc7,
 	0x79, 0xde, 0x9e, 0xe1, 0xf3, 0x1f, 0x3e, 0x8b, 0xa4, 0x44, 0xd3, 0xd1, 0x52, 0x69, 0x29, 0x82,
@@ -2572,6 +2784,304 @@ var fileDescriptor_e26b7f7bbc391025 = []byte{
 	0xd6, 0xfa, 0xe2, 0xe0, 0xac, 0xf5, 0x6f, 0x07, 0x67, 0xad, 0x8f, 0x7e, 0x76, 0xf6, 0xcc, 0xbd,
 	0x67, 0x7b, 0xf9, 0xf4, 0xee, 0xff, 0x06, 0x00, 0x00, 0xff, 0xff, 0x0c, 0xd5, 0x23, 0x1e, 0xa1,
 	0x57, 0x00, 0x00,
+=======
+	// 4713 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xdc, 0x5c, 0x4d, 0x6c, 0x1c, 0x47,
+	0x76, 0x56, 0xcf, 0x90, 0x43, 0xf2, 0x0d, 0x7f, 0x8b, 0x94, 0xc4, 0xa5, 0x63, 0x51, 0x69, 0x3b,
+	0x86, 0x1d, 0xdb, 0xc3, 0x48, 0xb6, 0x6c, 0x59, 0xf6, 0x2a, 0x98, 0x19, 0x52, 0x12, 0xbd, 0x5c,
+	0x8b, 0xa9, 0xa1, 0xa4, 0xb5, 0x64, 0x43, 0x29, 0xce, 0x14, 0x67, 0x7a, 0x39, 0xd3, 0x3d, 0xee,
+	0xea, 0xa1, 0xc5, 0x38, 0x48, 0x9c, 0x4d, 0x36, 0x58, 0x20, 0x41, 0xe0, 0xc3, 0x06, 0xde, 0x43,
+	0x82, 0x2c, 0xb2, 0xa7, 0x60, 0x81, 0xec, 0x31, 0x87, 0x1c, 0x7c, 0xc8, 0xc5, 0x9b, 0xec, 0x06,
+	0x86, 0x73, 0x88, 0x03, 0x2c, 0x88, 0x98, 0x0b, 0xe4, 0xec, 0x4b, 0x2e, 0x02, 0x82, 0x04, 0xf5,
+	0xd3, 0xdd, 0xd5, 0x3d, 0x3d, 0xe2, 0xf4, 0xf0, 0x27, 0x4a, 0x6e, 0x33, 0xf5, 0xaa, 0xbe, 0x57,
+	0xf5, 0xaa, 0xde, 0xab, 0x57, 0xaf, 0x5e, 0x35, 0xbc, 0x5c, 0xb7, 0xbc, 0x46, 0x67, 0xb3, 0x50,
+	0x75, 0x5a, 0x4b, 0x64, 0xbb, 0x63, 0x79, 0xbb, 0x4b, 0xdb, 0xc4, 0xad, 0x3b, 0x4b, 0xa4, 0x6d,
+	0x2d, 0xed, 0x5c, 0x20, 0xcd, 0x76, 0x83, 0x5c, 0x58, 0xaa, 0x53, 0x9b, 0xba, 0xc4, 0xa3, 0xb5,
+	0x42, 0xdb, 0x75, 0x3c, 0x07, 0x3d, 0x1d, 0xb6, 0x2a, 0xc8, 0x56, 0x05, 0xd1, 0xaa, 0x40, 0xda,
+	0x56, 0xc1, 0x6f, 0xb5, 0xf0, 0xa2, 0x86, 0x5d, 0x77, 0xea, 0xce, 0x92, 0x68, 0xbc, 0xd9, 0xd9,
+	0x12, 0xff, 0xc4, 0x1f, 0xf1, 0x4b, 0x82, 0x2e, 0x98, 0xdb, 0x97, 0x59, 0xc1, 0x92, 0x9c, 0xab,
+	0x8e, 0x4b, 0x97, 0x76, 0xba, 0x18, 0x2f, 0xdc, 0x08, 0xeb, 0xd0, 0x07, 0x1e, 0xb5, 0x99, 0xe5,
+	0xd8, 0xec, 0x45, 0xd2, 0xb6, 0x18, 0x75, 0x77, 0xa8, 0xbb, 0xd4, 0xde, 0xae, 0x73, 0x1a, 0x8b,
+	0x56, 0x48, 0x42, 0x7a, 0x39, 0x44, 0x6a, 0x91, 0x6a, 0xc3, 0xb2, 0xa9, 0xbb, 0x1b, 0x36, 0x6f,
+	0x51, 0x8f, 0x24, 0xb5, 0x5a, 0xea, 0xd5, 0xca, 0xed, 0xd8, 0x9e, 0xd5, 0xa2, 0x5d, 0x0d, 0x5e,
+	0x39, 0xa8, 0x01, 0xab, 0x36, 0x68, 0x8b, 0xc4, 0xdb, 0x99, 0xef, 0xc0, 0x6c, 0xd1, 0x26, 0xcd,
+	0x5d, 0x66, 0x31, 0xdc, 0xb1, 0x8b, 0x6e, 0xbd, 0xd3, 0xa2, 0xb6, 0x87, 0xce, 0xc3, 0x90, 0x4d,
+	0x5a, 0x74, 0xde, 0x38, 0x6f, 0x3c, 0x3b, 0x56, 0x1a, 0xff, 0x74, 0x6f, 0xf1, 0xd4, 0xfe, 0xde,
+	0xe2, 0xd0, 0x5b, 0xa4, 0x45, 0xb1, 0xa0, 0xa0, 0xa7, 0x60, 0x78, 0x87, 0x34, 0x3b, 0x74, 0x3e,
+	0x23, 0xaa, 0x4c, 0xa8, 0x2a, 0xc3, 0xb7, 0x79, 0x21, 0x96, 0x34, 0xf3, 0x0f, 0xb3, 0x11, 0xf8,
+	0x6f, 0x52, 0x8f, 0xd4, 0x88, 0x47, 0x50, 0x0b, 0x72, 0x4d, 0xb2, 0x49, 0x9b, 0x6c, 0xde, 0x38,
+	0x9f, 0x7d, 0x36, 0x7f, 0x71, 0xa5, 0xd0, 0xcf, 0x44, 0x17, 0x12, 0xa0, 0x0a, 0x6b, 0x02, 0x67,
+	0xc5, 0xf6, 0xdc, 0xdd, 0xd2, 0xa4, 0xea, 0x44, 0x4e, 0x16, 0x62, 0xc5, 0x04, 0xfd, 0x81, 0x01,
+	0x79, 0x62, 0xdb, 0x8e, 0x47, 0x3c, 0x3e, 0x4d, 0xf3, 0x19, 0xc1, 0xf4, 0xcd, 0xc1, 0x99, 0x16,
+	0x43, 0x30, 0xc9, 0x79, 0x56, 0x71, 0xce, 0x6b, 0x14, 0xac, 0xf3, 0x5c, 0x78, 0x0d, 0xf2, 0x5a,
+	0x57, 0xd1, 0x34, 0x64, 0xb7, 0xe9, 0xae, 0x94, 0x2f, 0xe6, 0x3f, 0xd1, 0x5c, 0x44, 0xa0, 0x4a,
+	0x82, 0x57, 0x32, 0x97, 0x8d, 0x85, 0xab, 0x30, 0x1d, 0x67, 0x98, 0xa6, 0xbd, 0xf9, 0x67, 0x06,
+	0xcc, 0x69, 0xa3, 0xc0, 0x74, 0x8b, 0xba, 0xd4, 0xae, 0x52, 0xb4, 0x04, 0x63, 0x7c, 0x2e, 0x59,
+	0x9b, 0x54, 0xfd, 0xa9, 0x9e, 0x51, 0x03, 0x19, 0x7b, 0xcb, 0x27, 0xe0, 0xb0, 0x4e, 0xb0, 0x2c,
+	0x32, 0x8f, 0x5a, 0x16, 0xed, 0x06, 0x61, 0x74, 0x3e, 0x1b, 0x5d, 0x16, 0xeb, 0xbc, 0x10, 0x4b,
+	0x9a, 0x79, 0x1f, 0xbe, 0xe6, 0xf7, 0x67, 0x83, 0xb6, 0xda, 0x4d, 0xe2, 0xd1, 0xb0, 0x53, 0x07,
+	0x2f, 0xbd, 0xf3, 0x30, 0xb4, 0x6d, 0xd9, 0xb5, 0x78, 0x2f, 0xbe, 0x61, 0xd9, 0x35, 0x2c, 0x28,
+	0xe6, 0x36, 0x4c, 0x14, 0xdb, 0x6d, 0xd7, 0xd9, 0xa1, 0xb5, 0x8a, 0x47, 0xea, 0x14, 0xdd, 0x05,
+	0x20, 0xaa, 0xa0, 0xe8, 0x09, 0xe8, 0xfc, 0xc5, 0x5f, 0x2f, 0x48, 0x9d, 0x29, 0xe8, 0x3a, 0x53,
+	0x68, 0x6f, 0xd7, 0x79, 0x01, 0x2b, 0x70, 0xd5, 0x2c, 0xec, 0x5c, 0x28, 0x6c, 0x58, 0x2d, 0x5a,
+	0x9a, 0xdc, 0xdf, 0x5b, 0x84, 0x62, 0x80, 0x80, 0x35, 0x34, 0xf3, 0x3b, 0x06, 0x9c, 0x2e, 0xba,
+	0x75, 0xa7, 0xbc, 0x5c, 0x6c, 0xb7, 0x6f, 0x50, 0xd2, 0xf4, 0x1a, 0x15, 0x8f, 0x78, 0x1d, 0x86,
+	0xae, 0x42, 0x8e, 0x89, 0x5f, 0x6a, 0x30, 0xcf, 0xf8, 0xeb, 0x53, 0xd2, 0x1f, 0xee, 0x2d, 0xce,
+	0x25, 0x34, 0xa4, 0x58, 0xb5, 0x42, 0xcf, 0xc1, 0x48, 0x8b, 0x32, 0x46, 0xea, 0xbe, 0xc4, 0xa7,
+	0x14, 0xc0, 0xc8, 0x37, 0x65, 0x31, 0xf6, 0xe9, 0xe6, 0x3f, 0x66, 0x60, 0x2a, 0xc0, 0x52, 0xec,
+	0x8f, 0x61, 0x7a, 0x3b, 0x30, 0xde, 0xd0, 0x46, 0x28, 0x66, 0x39, 0x7f, 0xf1, 0xf5, 0x3e, 0x35,
+	0x29, 0x49, 0x48, 0xa5, 0x39, 0xc5, 0x66, 0x5c, 0x2f, 0xc5, 0x11, 0x36, 0xa8, 0x05, 0xc0, 0x76,
+	0xed, 0xaa, 0x62, 0x3a, 0x24, 0x98, 0xbe, 0x96, 0x92, 0x69, 0x25, 0x00, 0x28, 0x21, 0xc5, 0x12,
+	0xc2, 0x32, 0xac, 0x31, 0x30, 0xff, 0xd6, 0x80, 0xd9, 0x84, 0x76, 0xe8, 0x8d, 0xd8, 0x7c, 0x3e,
+	0xdd, 0x35, 0x9f, 0xa8, 0xab, 0x59, 0x38, 0x9b, 0x2f, 0xc0, 0xa8, 0x4b, 0x77, 0x2c, 0xbe, 0x53,
+	0x28, 0x09, 0x4f, 0xab, 0xf6, 0xa3, 0x58, 0x95, 0xe3, 0xa0, 0x06, 0x7a, 0x1e, 0xc6, 0xfc, 0xdf,
+	0x5c, 0xcc, 0x59, 0xae, 0x4c, 0x7c, 0xe2, 0xfc, 0xaa, 0x0c, 0x87, 0x74, 0xf3, 0xf7, 0x61, 0xb8,
+	0xdc, 0x20, 0xae, 0xc7, 0x57, 0x8c, 0x4b, 0xdb, 0xce, 0x2d, 0xbc, 0xa6, 0xba, 0x18, 0xac, 0x18,
+	0x2c, 0x8b, 0xb1, 0x4f, 0xef, 0x63, 0xb2, 0x9f, 0x83, 0x91, 0x1d, 0xea, 0x8a, 0xfe, 0x66, 0xa3,
+	0x60, 0xb7, 0x65, 0x31, 0xf6, 0xe9, 0xe6, 0xbf, 0x18, 0x30, 0x27, 0x7a, 0xb0, 0x6c, 0xb1, 0xaa,
+	0xb3, 0x43, 0xdd, 0x5d, 0x4c, 0x59, 0xa7, 0x79, 0xc4, 0x1d, 0x5a, 0x86, 0x69, 0x46, 0x5b, 0x3b,
+	0xd4, 0x2d, 0x3b, 0x36, 0xf3, 0x5c, 0x62, 0xd9, 0x9e, 0xea, 0xd9, 0xbc, 0xaa, 0x3d, 0x5d, 0x89,
+	0xd1, 0x71, 0x57, 0x0b, 0xf4, 0x2c, 0x8c, 0xaa, 0x6e, 0xf3, 0xa5, 0xc4, 0x05, 0x3b, 0xce, 0xe7,
+	0x40, 0x8d, 0x89, 0xe1, 0x80, 0x6a, 0xfe, 0x87, 0x01, 0x33, 0x62, 0x54, 0x95, 0xce, 0x26, 0xab,
+	0xba, 0x56, 0x9b, 0x1b, 0xe0, 0xc7, 0x71, 0x48, 0x57, 0x61, 0xb2, 0xe6, 0x0b, 0x7e, 0xcd, 0x6a,
+	0x59, 0x9e, 0xd0, 0x91, 0xe1, 0xd2, 0x19, 0x85, 0x31, 0xb9, 0x1c, 0xa1, 0xe2, 0x58, 0x6d, 0xf3,
+	0x27, 0x19, 0x98, 0x28, 0x37, 0x3b, 0xcc, 0x13, 0xa8, 0x5b, 0x56, 0x1d, 0xfd, 0x36, 0x8c, 0xb6,
+	0xd4, 0x6e, 0xa7, 0xcc, 0xe5, 0x6f, 0xf4, 0x67, 0x2e, 0x6f, 0x6e, 0x7e, 0x9b, 0x56, 0x3d, 0xbe,
+	0x53, 0x86, 0x6a, 0x16, 0x96, 0xe1, 0x00, 0x15, 0xbd, 0x0d, 0x43, 0xac, 0x4d, 0xab, 0x42, 0x36,
+	0xf9, 0x8b, 0xaf, 0xf6, 0xa7, 0xcd, 0x91, 0x4e, 0x56, 0xda, 0xb4, 0x1a, 0x0a, 0x95, 0xff, 0xc3,
+	0x02, 0x12, 0x91, 0x40, 0x4f, 0xb3, 0x69, 0x4c, 0x45, 0x14, 0x5c, 0x9a, 0x8a, 0xc9, 0xa8, 0x8a,
+	0xfb, 0xca, 0x6c, 0xfe, 0x13, 0x5f, 0x1a, 0x7a, 0xfd, 0x35, 0x8b, 0x79, 0xe8, 0x9d, 0x2e, 0xa9,
+	0x15, 0xfa, 0x93, 0x1a, 0x6f, 0x2d, 0x64, 0x16, 0x98, 0x04, 0xbf, 0x44, 0x93, 0xd8, 0xb7, 0x60,
+	0xd8, 0xf2, 0x68, 0xcb, 0xf7, 0x5f, 0x5e, 0x1a, 0x60, 0x54, 0xe1, 0x86, 0xbc, 0xca, 0x91, 0xb0,
+	0x04, 0x34, 0x3f, 0x8e, 0x8f, 0x86, 0x0b, 0x93, 0xbb, 0x4d, 0xd3, 0xef, 0xd3, 0xcd, 0x86, 0xe3,
+	0x6c, 0x63, 0x5a, 0xa5, 0x16, 0xd7, 0x0b, 0xe5, 0xb0, 0xf5, 0x69, 0xf1, 0xef, 0x44, 0x5b, 0xab,
+	0x3e, 0x04, 0x2b, 0x3b, 0x46, 0x66, 0xb8, 0x8b, 0x9d, 0xf9, 0xdf, 0x06, 0xcc, 0x26, 0xcc, 0x0b,
+	0xaa, 0x02, 0x54, 0x1d, 0xbb, 0x66, 0x49, 0x87, 0x4e, 0x76, 0x6a, 0xa9, 0x3f, 0x59, 0x97, 0xfd,
+	0x76, 0xe1, 0x02, 0x0d, 0x8a, 0x18, 0xd6, 0x60, 0xd1, 0x77, 0x92, 0x04, 0x20, 0x85, 0xff, 0xc6,
+	0x40, 0x02, 0x58, 0xa6, 0x1e, 0xb1, 0x9a, 0x2c, 0x95, 0x04, 0x84, 0x69, 0x95, 0x12, 0x58, 0x77,
+	0x9d, 0x96, 0xc3, 0xbb, 0xb6, 0x41, 0xd8, 0xf6, 0xe3, 0xaa, 0xa2, 0x91, 0x4e, 0xf6, 0x52, 0x51,
+	0xf3, 0xdf, 0x0c, 0x98, 0x4f, 0x1a, 0xd5, 0x09, 0xa8, 0xd1, 0xfd, 0xa8, 0x1a, 0x5d, 0x49, 0xa5,
+	0x46, 0x91, 0xce, 0xf6, 0xd0, 0xa6, 0x7b, 0x30, 0x5e, 0xee, 0xb8, 0x2e, 0xb5, 0x3d, 0xe9, 0x7c,
+	0x7e, 0x03, 0x86, 0x99, 0x65, 0x2b, 0x1f, 0x2c, 0x9d, 0xdf, 0x39, 0xc6, 0xc1, 0x2b, 0xbc, 0x31,
+	0x96, 0x18, 0xe6, 0x5f, 0x64, 0x61, 0xd6, 0xb7, 0xe6, 0xb4, 0x56, 0x74, 0x3d, 0x6b, 0x8b, 0x54,
+	0x3d, 0x86, 0x6a, 0x30, 0x5e, 0x0b, 0x8b, 0x3d, 0xe5, 0x24, 0xa5, 0xe1, 0x15, 0x38, 0x62, 0x1a,
+	0xbc, 0x87, 0x23, 0xa8, 0xe8, 0x0e, 0x64, 0xeb, 0x96, 0xa7, 0xf4, 0xed, 0x72, 0x7f, 0x92, 0xbb,
+	0x6e, 0xc5, 0xbd, 0x82, 0x52, 0x5e, 0xb1, 0xca, 0x5e, 0xb7, 0x3c, 0xcc, 0x11, 0xd1, 0x26, 0xe4,
+	0xac, 0x16, 0xa9, 0xd3, 0x94, 0xb3, 0xb2, 0xca, 0xdb, 0xc4, 0xd1, 0x03, 0x9b, 0x2d, 0xa8, 0x0c,
+	0x2b, 0x64, 0xce, 0xa3, 0xca, 0x77, 0x73, 0xe9, 0x4f, 0xf5, 0x3f, 0xf3, 0x09, 0x7e, 0x4d, 0xc8,
+	0x43, 0x50, 0x19, 0x56, 0xc8, 0xe6, 0x17, 0x19, 0x98, 0x0e, 0xe5, 0x57, 0x76, 0x5a, 0x2d, 0xcb,
+	0x43, 0x0b, 0x90, 0xb1, 0x6a, 0xca, 0x59, 0x00, 0xd5, 0x30, 0xb3, 0xba, 0x8c, 0x33, 0x56, 0x0d,
+	0x3d, 0x03, 0xb9, 0x4d, 0x97, 0xd8, 0xd5, 0x86, 0x72, 0x12, 0x02, 0xe0, 0x92, 0x28, 0xc5, 0x8a,
+	0x8a, 0x9e, 0x84, 0xac, 0x47, 0xea, 0xca, 0x37, 0x08, 0xe4, 0xb7, 0x41, 0xea, 0x98, 0x97, 0x73,
+	0xa7, 0x84, 0x75, 0x84, 0x0e, 0x8b, 0x99, 0xd7, 0x9c, 0x92, 0x8a, 0x2c, 0xc6, 0x3e, 0x9d, 0x73,
+	0x24, 0x1d, 0xaf, 0xe1, 0xb8, 0xf3, 0xc3, 0x51, 0x8e, 0x45, 0x51, 0x8a, 0x15, 0x95, 0x1f, 0x1f,
+	0xaa, 0xa2, 0xff, 0x1e, 0x75, 0xe7, 0x73, 0xd1, 0xe3, 0x43, 0xd9, 0x27, 0xe0, 0xb0, 0x0e, 0x7a,
+	0x17, 0xf2, 0x55, 0x97, 0x12, 0xcf, 0x71, 0x97, 0x89, 0x47, 0xe7, 0x47, 0x52, 0xaf, 0xc0, 0x29,
+	0x7e, 0x82, 0x2e, 0x87, 0x10, 0x58, 0xc7, 0x33, 0xff, 0x2e, 0x0b, 0xf3, 0xa1, 0x68, 0xc5, 0xdc,
+	0x86, 0xa7, 0x46, 0x25, 0x1e, 0xa3, 0x87, 0x78, 0x9e, 0x81, 0x5c, 0xcd, 0xaa, 0x53, 0xe6, 0xc5,
+	0xa5, 0xbc, 0x2c, 0x4a, 0xb1, 0xa2, 0xa2, 0x3f, 0x8e, 0x45, 0x0a, 0x86, 0xc5, 0x42, 0xb9, 0xd9,
+	0xdf, 0x42, 0xe9, 0xd5, 0xb9, 0x01, 0xc2, 0x05, 0xe8, 0x22, 0x40, 0xdd, 0xf2, 0x94, 0x43, 0xa9,
+	0x66, 0x3d, 0x30, 0xd6, 0xd7, 0x03, 0x0a, 0xd6, 0x6a, 0xa1, 0x3b, 0x30, 0x26, 0xe4, 0x35, 0xa0,
+	0xfe, 0x8b, 0xe3, 0x45, 0xd9, 0x07, 0xc0, 0x21, 0xd6, 0xa1, 0x03, 0x10, 0xf7, 0x00, 0xad, 0x3c,
+	0x68, 0xbb, 0x94, 0x71, 0xb7, 0xfa, 0x36, 0x71, 0x2d, 0xb2, 0xd9, 0xa4, 0x47, 0x15, 0x63, 0xfa,
+	0x6c, 0x08, 0x46, 0xae, 0xb9, 0xd4, 0xaa, 0x37, 0xbc, 0x13, 0xd8, 0x12, 0x9f, 0x82, 0x61, 0xd2,
+	0xb4, 0x08, 0x13, 0xab, 0x5b, 0xeb, 0x52, 0x91, 0x17, 0x62, 0x49, 0x43, 0xf7, 0x20, 0xe7, 0xb8,
+	0x56, 0xdd, 0xb2, 0xe7, 0xc7, 0x44, 0x27, 0xfa, 0xf4, 0xd4, 0xd4, 0x28, 0x6e, 0x8a, 0xa6, 0xe1,
+	0x12, 0x95, 0xff, 0xb1, 0x82, 0x44, 0x77, 0x61, 0x44, 0xaa, 0x9c, 0x6f, 0xc6, 0x96, 0xfa, 0x36,
+	0xc3, 0x52, 0x6b, 0x43, 0xd3, 0x20, 0xff, 0x33, 0xec, 0x03, 0xa2, 0x4a, 0x60, 0x85, 0x87, 0x04,
+	0xf4, 0xf3, 0x29, 0xac, 0x70, 0x4f, 0xb3, 0x5b, 0x09, 0xcc, 0xee, 0x70, 0x1a, 0x50, 0x61, 0x58,
+	0x7b, 0xd9, 0x59, 0x2e, 0x62, 0xe5, 0xe2, 0xe7, 0x06, 0x10, 0xf1, 0x01, 0xce, 0xfd, 0xf7, 0xb3,
+	0x30, 0xa3, 0x6a, 0x96, 0x9d, 0x66, 0x93, 0x56, 0xc5, 0xb9, 0x4f, 0x5a, 0xf1, 0x6c, 0xa2, 0x15,
+	0xb7, 0x7c, 0x9f, 0x42, 0xee, 0x8c, 0xa5, 0x54, 0xbd, 0x09, 0x79, 0x14, 0x84, 0x1f, 0x21, 0x6d,
+	0x44, 0x30, 0x4b, 0xaa, 0x96, 0xf2, 0x2e, 0xd0, 0x77, 0x0d, 0x98, 0xdd, 0xa1, 0xae, 0xb5, 0x65,
+	0x55, 0x85, 0x3e, 0xde, 0xb0, 0x98, 0xe7, 0xb8, 0xbb, 0x6a, 0xdf, 0x7c, 0xa5, 0x3f, 0xce, 0xb7,
+	0x35, 0x80, 0x55, 0x7b, 0xcb, 0x29, 0x3d, 0xa1, 0xb8, 0xcd, 0xde, 0xee, 0x86, 0xc6, 0x49, 0xfc,
+	0x16, 0xda, 0x00, 0x61, 0x6f, 0x13, 0xcc, 0xc1, 0x9a, 0xae, 0xbc, 0x7d, 0x77, 0xcc, 0x1f, 0xac,
+	0x6f, 0x3b, 0x75, 0x33, 0xf2, 0x89, 0x01, 0x79, 0x45, 0x3f, 0x01, 0x37, 0x11, 0x47, 0xdd, 0xc4,
+	0x17, 0x53, 0xf5, 0xbf, 0x87, 0x67, 0xe8, 0xc2, 0x44, 0x44, 0xc9, 0xd1, 0x25, 0x15, 0xca, 0x94,
+	0x36, 0xf0, 0x57, 0xf5, 0x50, 0xe6, 0xc3, 0xbd, 0xc5, 0x99, 0x48, 0xe5, 0x30, 0xbe, 0x79, 0x70,
+	0x5c, 0xe1, 0xca, 0xe8, 0x0f, 0x7e, 0xb8, 0x78, 0xea, 0xc3, 0x5f, 0x9c, 0x3f, 0x65, 0x7e, 0x9c,
+	0x85, 0xe9, 0xb8, 0x54, 0xfb, 0xb0, 0xbd, 0xa1, 0x0d, 0x1b, 0x3d, 0x56, 0x1b, 0x96, 0x39, 0x3e,
+	0x1b, 0x96, 0x3d, 0x0e, 0x1b, 0x36, 0x74, 0x64, 0x36, 0xcc, 0xfc, 0x67, 0x03, 0x26, 0x83, 0x99,
+	0x79, 0xaf, 0xc3, 0xfd, 0x8f, 0x50, 0xea, 0xc6, 0xd1, 0x4b, 0xfd, 0x3e, 0x8c, 0x30, 0xa7, 0xe3,
+	0x56, 0x85, 0x93, 0xcd, 0xd1, 0x5f, 0x4e, 0x67, 0x34, 0x65, 0x5b, 0xcd, 0xb3, 0x94, 0x05, 0xd8,
+	0x47, 0x35, 0x3f, 0xc9, 0x04, 0x03, 0x52, 0x34, 0xe9, 0x78, 0xb9, 0xdc, 0x2d, 0xe5, 0x03, 0x1a,
+	0xd5, 0x1d, 0x2f, 0x5e, 0x8a, 0x15, 0x15, 0x99, 0xc2, 0x9e, 0xfb, 0xfe, 0xff, 0x58, 0x09, 0x94,
+	0x59, 0x16, 0x93, 0x20, 0x29, 0xa8, 0x0d, 0xd3, 0x2e, 0x7d, 0xaf, 0x63, 0xb9, 0xb4, 0x56, 0x71,
+	0xc8, 0x36, 0x77, 0x5a, 0x54, 0x80, 0xa7, 0x4f, 0xbd, 0x5f, 0xee, 0xb8, 0xc2, 0x84, 0x95, 0xe6,
+	0xf8, 0xd9, 0x1b, 0xc7, 0xb0, 0x70, 0x17, 0x3a, 0x72, 0x60, 0x8e, 0xec, 0x10, 0xab, 0x49, 0x36,
+	0xad, 0xa6, 0xe5, 0xed, 0x56, 0x3c, 0x97, 0x78, 0xb4, 0xbe, 0xab, 0x5c, 0xec, 0xd7, 0xd5, 0x58,
+	0xe6, 0x8a, 0x09, 0x75, 0x1e, 0xee, 0x2d, 0x3e, 0xa1, 0x64, 0x91, 0x44, 0xc6, 0x89, 0xc0, 0xe6,
+	0xcf, 0x47, 0x02, 0x0b, 0xa1, 0x02, 0x1d, 0x1f, 0x40, 0xbe, 0x2a, 0x0f, 0x93, 0xcd, 0xdd, 0x55,
+	0x5b, 0xad, 0xe9, 0xe5, 0x01, 0x76, 0xbb, 0x42, 0x39, 0x84, 0x89, 0x79, 0xa1, 0x1a, 0x05, 0xeb,
+	0xdc, 0xd0, 0xfb, 0x00, 0xd2, 0xf4, 0xd3, 0xda, 0xaa, 0xad, 0xf6, 0xb6, 0xf2, 0x20, 0xbc, 0x6f,
+	0x07, 0x28, 0x92, 0x75, 0xe0, 0x64, 0x85, 0x04, 0xac, 0xb1, 0xe2, 0xa3, 0xf6, 0x6f, 0x58, 0xae,
+	0x39, 0xae, 0x32, 0x12, 0x03, 0x8d, 0xba, 0x18, 0xc2, 0xc4, 0x7d, 0xef, 0x90, 0x82, 0x75, 0x6e,
+	0xc8, 0xd1, 0xf6, 0x15, 0xa9, 0xee, 0xc5, 0x41, 0x38, 0xfb, 0xb7, 0x85, 0x92, 0x6d, 0xb0, 0xd5,
+	0xf8, 0xc5, 0xe1, 0x56, 0xb3, 0xe0, 0xc2, 0x74, 0x7c, 0x72, 0x12, 0x36, 0xd4, 0x1b, 0xd1, 0x0d,
+	0xf5, 0x62, 0x9f, 0x26, 0x48, 0x8b, 0x44, 0xe8, 0x97, 0x8a, 0x2e, 0x4c, 0xc5, 0x26, 0x25, 0x81,
+	0xe5, 0x6a, 0x94, 0xe5, 0x4b, 0x69, 0x9c, 0x0b, 0x75, 0xf5, 0xa6, 0xf3, 0x64, 0x30, 0x1d, 0x9f,
+	0x8e, 0x23, 0x63, 0x1a, 0xb9, 0xef, 0xd3, 0x99, 0x7e, 0x00, 0x13, 0x91, 0x99, 0x48, 0xe0, 0xb8,
+	0x11, 0xe5, 0x78, 0x55, 0xb3, 0x26, 0xe1, 0xe5, 0xfe, 0xfd, 0xe0, 0xf6, 0x3f, 0x34, 0x2c, 0x91,
+	0x0a, 0xdc, 0xc2, 0xbc, 0x59, 0xb9, 0xf9, 0x96, 0xee, 0xb2, 0xfc, 0x65, 0x06, 0xc6, 0x82, 0x4d,
+	0x2b, 0xcd, 0xcd, 0x81, 0x74, 0x36, 0x33, 0x07, 0x84, 0x0c, 0xb2, 0xfd, 0x84, 0x0c, 0x86, 0x7a,
+	0x87, 0x0c, 0xfc, 0xdb, 0xc5, 0xdc, 0xa3, 0x6f, 0x17, 0xb5, 0x90, 0xc1, 0x48, 0xff, 0x21, 0x83,
+	0xd1, 0x83, 0x43, 0x06, 0xe6, 0x5f, 0x1b, 0x80, 0xba, 0xe3, 0x43, 0x69, 0x04, 0x45, 0xe2, 0xae,
+	0xc4, 0x2b, 0x69, 0x0f, 0xeb, 0x07, 0x79, 0x14, 0xe6, 0x03, 0x78, 0xe2, 0xba, 0xe5, 0xdd, 0xe8,
+	0x6c, 0x26, 0x86, 0xb3, 0xd1, 0xdb, 0x30, 0xc6, 0x68, 0xd5, 0xa5, 0xdc, 0xbd, 0x52, 0xdb, 0xf6,
+	0xb3, 0xda, 0x0a, 0x2a, 0x54, 0x1d, 0x97, 0x0a, 0xaf, 0xd3, 0xa9, 0x92, 0xa6, 0x3c, 0x54, 0x06,
+	0x8e, 0x58, 0x28, 0x9e, 0x8a, 0x0f, 0x81, 0x43, 0x34, 0xf3, 0xbb, 0x39, 0x98, 0xba, 0x6e, 0x0d,
+	0x7c, 0xfd, 0xe4, 0xc1, 0x59, 0x39, 0x86, 0x0a, 0x55, 0x07, 0x8c, 0x60, 0x07, 0x93, 0x2b, 0xeb,
+	0x8a, 0x6a, 0x7a, 0xb6, 0x9c, 0x5c, 0xed, 0x61, 0x6f, 0x12, 0xee, 0x05, 0xdd, 0xf7, 0xf2, 0x7c,
+	0x1d, 0x26, 0x98, 0xe7, 0x5a, 0x55, 0x4f, 0x5e, 0x70, 0xb1, 0xf9, 0xbc, 0xf0, 0x10, 0x4e, 0xab,
+	0xea, 0x13, 0x15, 0x9d, 0x88, 0xa3, 0x75, 0x13, 0xef, 0xcd, 0x86, 0x52, 0xdf, 0x9b, 0x2d, 0xc1,
+	0x18, 0x69, 0x36, 0x9d, 0xf7, 0x37, 0x48, 0x9d, 0xa9, 0x68, 0x58, 0x30, 0x21, 0x45, 0x9f, 0x80,
+	0xc3, 0x3a, 0xa8, 0x00, 0x60, 0xd5, 0x6d, 0xc7, 0xa5, 0xa2, 0x45, 0x4e, 0xb8, 0x2a, 0x22, 0x37,
+	0x60, 0x35, 0x28, 0xc5, 0x5a, 0x0d, 0xde, 0x4d, 0x1a, 0x44, 0x3e, 0xae, 0x59, 0x4d, 0xae, 0x17,
+	0xe3, 0xd1, 0x6e, 0xae, 0xc4, 0xe8, 0xb8, 0xab, 0x05, 0xaa, 0xc0, 0x69, 0xcb, 0x66, 0xb4, 0xda,
+	0x71, 0x69, 0x65, 0xdb, 0x6a, 0x6f, 0xac, 0x55, 0x84, 0x89, 0xdd, 0x15, 0xda, 0x38, 0x5a, 0x7a,
+	0x52, 0x41, 0x9d, 0x5e, 0x4d, 0xaa, 0x84, 0x93, 0xdb, 0xa2, 0x97, 0x61, 0xdc, 0xb2, 0xab, 0xcd,
+	0x4e, 0x8d, 0xae, 0x13, 0xaf, 0xc1, 0xe6, 0x47, 0xc5, 0x60, 0xa6, 0xf7, 0xf7, 0x16, 0xc7, 0x57,
+	0xb5, 0x72, 0x1c, 0xa9, 0xc5, 0x5b, 0xd1, 0x07, 0x5a, 0xab, 0xb1, 0xb0, 0xd5, 0xca, 0x03, 0xbd,
+	0x95, 0x5e, 0x2b, 0xe1, 0x7e, 0x12, 0x52, 0xdd, 0x4f, 0xfe, 0x38, 0x03, 0x39, 0x99, 0x1e, 0x80,
+	0x2e, 0xc5, 0xee, 0xe0, 0x9f, 0xec, 0xba, 0x83, 0xcf, 0x27, 0xa5, 0x52, 0x98, 0x90, 0xb3, 0x18,
+	0xeb, 0x44, 0xfd, 0xcb, 0x55, 0x51, 0x82, 0x15, 0x45, 0xc4, 0x87, 0x85, 0x4a, 0xab, 0xe0, 0xd9,
+	0x21, 0xf7, 0x01, 0xc9, 0x43, 0x1a, 0x09, 0xac, 0x90, 0x39, 0x0f, 0xa7, 0xe3, 0xb5, 0x3b, 0x9e,
+	0x58, 0x6e, 0x47, 0xc4, 0xe3, 0xa6, 0x40, 0xc4, 0x0a, 0xd9, 0xfc, 0xd8, 0x80, 0x29, 0x29, 0x83,
+	0x72, 0x83, 0x56, 0xb7, 0x2b, 0x1e, 0x6d, 0xf3, 0x03, 0x5f, 0x87, 0x51, 0x16, 0x3f, 0xf0, 0xdd,
+	0x62, 0x94, 0x61, 0x41, 0xd1, 0x46, 0x9f, 0x39, 0xae, 0xd1, 0x9b, 0x97, 0x41, 0x9b, 0x1c, 0x91,
+	0xdf, 0x22, 0xd3, 0x3c, 0xe4, 0x6e, 0x9c, 0x0d, 0x4d, 0x99, 0xac, 0xb5, 0x8b, 0x7d, 0xba, 0xb9,
+	0x9f, 0x81, 0x61, 0x71, 0x26, 0x4b, 0x63, 0xff, 0xa2, 0x41, 0xd4, 0x4c, 0x5f, 0x41, 0xd4, 0x03,
+	0xe2, 0xec, 0x61, 0x20, 0x79, 0xe8, 0x91, 0x81, 0x64, 0x96, 0x14, 0x47, 0x7e, 0x23, 0xc5, 0x51,
+	0x74, 0x90, 0x1c, 0xb3, 0xc3, 0xc6, 0x69, 0x7f, 0x69, 0xc0, 0x5c, 0xd2, 0x8d, 0x4a, 0x1a, 0x99,
+	0xbf, 0x00, 0xa3, 0xed, 0x26, 0xf1, 0xb6, 0x1c, 0xb7, 0x15, 0xcf, 0x72, 0x59, 0x57, 0xe5, 0x38,
+	0xa8, 0x81, 0x5c, 0x00, 0xd7, 0xdf, 0x0b, 0xfd, 0x03, 0xfb, 0xd5, 0xc3, 0x45, 0xdb, 0xc3, 0x19,
+	0x0e, 0x8a, 0x18, 0xd6, 0xb8, 0x98, 0x7f, 0x32, 0x0c, 0x33, 0xa2, 0xc9, 0xa0, 0xdb, 0xea, 0x20,
+	0xcb, 0xaa, 0x0d, 0x67, 0x44, 0x28, 0xa1, 0x7b, 0x27, 0x96, 0x2b, 0xed, 0xb2, 0x6a, 0x7f, 0x66,
+	0x35, 0xb1, 0xd6, 0xc3, 0x9e, 0x14, 0xdc, 0x03, 0xb7, 0x7b, 0x7b, 0x85, 0xff, 0x7f, 0xdb, 0xab,
+	0xbe, 0xd8, 0x46, 0x0e, 0x5c, 0x6c, 0x3d, 0xb7, 0xd1, 0xd1, 0x43, 0x6c, 0xa3, 0xdd, 0x5b, 0xdb,
+	0x58, 0xaa, 0xad, 0xed, 0xaf, 0x32, 0x30, 0xb2, 0xee, 0x3a, 0xe2, 0x66, 0xee, 0xf8, 0xaf, 0x2f,
+	0x6e, 0x0d, 0x78, 0xa3, 0xcf, 0xa1, 0xb4, 0xa4, 0x9b, 0xd1, 0x58, 0xc2, 0xcd, 0xbd, 0x58, 0xc2,
+	0xcd, 0x4b, 0xa9, 0x80, 0x0f, 0x88, 0xc6, 0xff, 0x24, 0x03, 0x13, 0x91, 0x2e, 0x3c, 0xc6, 0x99,
+	0x0f, 0x31, 0x39, 0x1d, 0x61, 0x72, 0x52, 0x14, 0xfc, 0xe0, 0xe4, 0xa4, 0x48, 0xfd, 0xc7, 0x36,
+	0x39, 0x29, 0xd2, 0xcb, 0x1e, 0x41, 0xf3, 0xef, 0x65, 0x62, 0xa3, 0x11, 0xc9, 0x49, 0xbf, 0x07,
+	0x33, 0x6d, 0x3f, 0x17, 0x63, 0xdd, 0x69, 0x5a, 0x55, 0x8b, 0xfa, 0xb7, 0x2f, 0x97, 0x52, 0x26,
+	0xaa, 0x88, 0xe6, 0xbb, 0xa5, 0xaf, 0x29, 0xee, 0x33, 0xeb, 0x71, 0x5c, 0xdc, 0xcd, 0x0a, 0x31,
+	0x18, 0x73, 0x63, 0x39, 0x41, 0xc7, 0x94, 0x14, 0x15, 0xf2, 0x31, 0xbf, 0x32, 0x60, 0x36, 0x61,
+	0x21, 0x9c, 0x4c, 0x36, 0x94, 0xd7, 0x3d, 0xe2, 0xe3, 0xca, 0x82, 0xd2, 0x86, 0xfc, 0x89, 0x01,
+	0x79, 0x35, 0xe4, 0xc7, 0xf6, 0xd2, 0x47, 0xf5, 0xaf, 0xc7, 0xfa, 0xfd, 0xdc, 0x80, 0x71, 0xcd,
+	0xd2, 0x31, 0xd4, 0x00, 0x78, 0x9f, 0xb8, 0xb4, 0xe1, 0x04, 0x1e, 0x79, 0xdf, 0xa1, 0xf8, 0x3b,
+	0x7e, 0x3b, 0x81, 0x14, 0x4e, 0x59, 0x50, 0xce, 0xb0, 0x86, 0x8d, 0xbe, 0xa5, 0x45, 0xd5, 0xa5,
+	0x99, 0xec, 0x8b, 0x8b, 0x88, 0xa1, 0x49, 0x0e, 0xba, 0x89, 0xd1, 0x62, 0xf1, 0xe6, 0x4f, 0x8d,
+	0xc0, 0x28, 0x27, 0xae, 0xc1, 0xec, 0xf1, 0xac, 0xc1, 0x0a, 0x0c, 0x73, 0x1b, 0xe7, 0xe7, 0x80,
+	0x5f, 0x4c, 0xbd, 0xcf, 0x30, 0x95, 0x52, 0xc5, 0x7f, 0x62, 0x89, 0x65, 0xfe, 0x28, 0x03, 0x63,
+	0x81, 0xce, 0x9f, 0xf8, 0x26, 0xfc, 0x52, 0x4a, 0x6b, 0xd5, 0x73, 0x63, 0x79, 0x37, 0xb6, 0xb1,
+	0xa4, 0x35, 0x83, 0x07, 0x6c, 0x2a, 0xff, 0x20, 0x67, 0x5c, 0xd6, 0x3d, 0x01, 0x55, 0xdc, 0x88,
+	0xaa, 0xe2, 0x52, 0xca, 0xd1, 0xf4, 0x50, 0xc6, 0x0f, 0x33, 0x30, 0x15, 0x33, 0xfc, 0xe8, 0x29,
+	0xb1, 0xa8, 0xea, 0xfe, 0x6d, 0x68, 0xd0, 0x50, 0x85, 0x92, 0x05, 0x0d, 0xed, 0x70, 0x77, 0x3a,
+	0x70, 0xb4, 0x1d, 0x57, 0x09, 0xf9, 0xeb, 0x03, 0xed, 0x35, 0x3e, 0x48, 0x69, 0x46, 0x7a, 0xe2,
+	0x1a, 0x2e, 0x8e, 0xb2, 0x41, 0xeb, 0x30, 0x47, 0x3a, 0x9e, 0x13, 0x00, 0xac, 0xd8, 0x64, 0xb3,
+	0x49, 0x65, 0x68, 0x78, 0xb4, 0xf4, 0x2b, 0xc1, 0x15, 0x54, 0x42, 0x1d, 0x9c, 0xd8, 0xd2, 0xfc,
+	0x1b, 0x03, 0xce, 0xf6, 0xe8, 0x4f, 0x1f, 0xf7, 0xc2, 0x4d, 0x98, 0x10, 0xaf, 0xaa, 0x02, 0x39,
+	0xf8, 0xab, 0xb8, 0xbf, 0x99, 0xd7, 0x9b, 0xca, 0xd1, 0x47, 0x8a, 0x70, 0x14, 0xdc, 0xfc, 0x59,
+	0x06, 0x50, 0xd0, 0xd7, 0x34, 0xd7, 0xd7, 0xef, 0xc2, 0xc8, 0x96, 0xbc, 0x8d, 0x39, 0x5c, 0xfe,
+	0x41, 0x29, 0xaf, 0xa7, 0x60, 0xf8, 0x98, 0xe8, 0xed, 0xa3, 0xd1, 0x35, 0xe8, 0xd6, 0x33, 0x74,
+	0x17, 0x60, 0xcb, 0xb2, 0x2d, 0xd6, 0x18, 0x30, 0x8d, 0x4b, 0x9c, 0x97, 0xae, 0x05, 0x08, 0x58,
+	0x43, 0x33, 0xff, 0x3c, 0xa3, 0xe9, 0xb0, 0x70, 0xa3, 0xfa, 0x5a, 0xfb, 0xcf, 0x45, 0x85, 0x39,
+	0xd6, 0x9d, 0x9b, 0x12, 0x08, 0xe6, 0x2e, 0x0c, 0xed, 0x10, 0xd7, 0xbf, 0x26, 0xef, 0x33, 0x43,
+	0xb4, 0x3b, 0x39, 0x2c, 0x9c, 0xd3, 0xdb, 0xc4, 0x65, 0x58, 0x60, 0x72, 0x17, 0x93, 0x79, 0xb4,
+	0xed, 0x6f, 0x2e, 0xa9, 0x0d, 0xa7, 0x47, 0xdb, 0xfa, 0x00, 0x69, 0x5b, 0xec, 0x00, 0xb4, 0xcd,
+	0xcc, 0xef, 0x8f, 0x68, 0x56, 0x41, 0xed, 0x67, 0x6f, 0x02, 0x6a, 0x12, 0xe6, 0xdd, 0x20, 0x76,
+	0x8d, 0xeb, 0x12, 0xdd, 0x72, 0x29, 0x6b, 0xa8, 0x43, 0xf0, 0x82, 0x42, 0x41, 0x6b, 0x5d, 0x35,
+	0x70, 0x42, 0x2b, 0x74, 0xc9, 0x7f, 0x15, 0x27, 0xa5, 0xbc, 0x18, 0x79, 0x15, 0xf7, 0x70, 0x6f,
+	0x71, 0x32, 0xd4, 0x47, 0xed, 0x9d, 0x5c, 0x8a, 0xf7, 0x5f, 0xfa, 0x7a, 0x1f, 0x3e, 0x86, 0xf5,
+	0xfe, 0xbb, 0x30, 0xb3, 0x15, 0x4f, 0x56, 0x52, 0x09, 0x9e, 0xaf, 0x0e, 0x98, 0xeb, 0x54, 0x3a,
+	0xbd, 0x1f, 0x66, 0xb8, 0x84, 0xc5, 0xb8, 0x9b, 0x11, 0x72, 0xfc, 0x57, 0x67, 0x22, 0x9e, 0x29,
+	0x43, 0xd5, 0x7d, 0xeb, 0x5c, 0x2c, 0x12, 0x1a, 0x7f, 0x6f, 0x26, 0x21, 0x71, 0x84, 0x41, 0x4c,
+	0x07, 0x73, 0x47, 0xa9, 0x83, 0xe8, 0x52, 0x70, 0xa1, 0xcf, 0xbb, 0x23, 0xa2, 0x05, 0xd9, 0xae,
+	0xab, 0x78, 0x4e, 0xc2, 0x7a, 0x3d, 0xf4, 0x91, 0x01, 0xa7, 0xf9, 0x62, 0x5d, 0x79, 0x40, 0xab,
+	0x1d, 0x2e, 0x15, 0xff, 0x52, 0x73, 0x3e, 0x9f, 0xe6, 0xf0, 0x51, 0x49, 0x82, 0x08, 0x43, 0x1f,
+	0x89, 0x64, 0x9c, 0xcc, 0x18, 0xdd, 0x97, 0xce, 0x18, 0x15, 0x91, 0xa5, 0xc3, 0x07, 0x8c, 0x03,
+	0xc7, 0x4c, 0xda, 0x1d, 0x8f, 0x9a, 0x3f, 0x1a, 0xd2, 0xcd, 0x55, 0x7f, 0x61, 0xec, 0xbb, 0x30,
+	0xe4, 0x11, 0xb6, 0xad, 0xb4, 0xe0, 0x8d, 0x01, 0xde, 0x2c, 0x84, 0xba, 0x20, 0xc2, 0x1c, 0xa2,
+	0x48, 0x60, 0xa2, 0x05, 0xc8, 0x10, 0x16, 0xbf, 0x94, 0x2d, 0x32, 0x9c, 0x21, 0x4c, 0x5c, 0xd8,
+	0x6e, 0xa9, 0x20, 0x54, 0x78, 0x61, 0xbb, 0x85, 0x33, 0xd6, 0x16, 0x2a, 0xc2, 0x54, 0xd5, 0xb1,
+	0x3d, 0xcb, 0xee, 0xd0, 0x9b, 0xf6, 0x8a, 0xeb, 0x3a, 0xae, 0x0a, 0x39, 0x9d, 0x55, 0x15, 0xa7,
+	0xca, 0x51, 0x32, 0x8e, 0xd7, 0x47, 0x6f, 0xc3, 0xb0, 0x4b, 0x3d, 0x77, 0x57, 0x6d, 0x08, 0x97,
+	0x07, 0xb0, 0x7d, 0x98, 0xb7, 0x97, 0x52, 0x16, 0x3f, 0xb1, 0x44, 0x0c, 0x4c, 0x76, 0xee, 0x18,
+	0x4c, 0x76, 0x78, 0xa9, 0x90, 0x3d, 0xb6, 0x4b, 0x85, 0x1f, 0x1b, 0x9a, 0x8f, 0x10, 0x0c, 0x14,
+	0xdd, 0x82, 0x11, 0xcf, 0x6a, 0x51, 0xa7, 0xe3, 0xa5, 0x73, 0x4e, 0x83, 0x24, 0x21, 0x61, 0x09,
+	0x37, 0x24, 0x04, 0xf6, 0xb1, 0xd0, 0x55, 0x98, 0xa4, 0x7c, 0x46, 0x36, 0x1a, 0xdc, 0xb2, 0x3b,
+	0x4d, 0xe9, 0x89, 0x4d, 0x84, 0xf1, 0xbe, 0x95, 0x08, 0x15, 0xc7, 0x6a, 0x9b, 0x3f, 0xd3, 0xdd,
+	0xe8, 0xff, 0xfb, 0xef, 0x78, 0x54, 0xa8, 0xe9, 0x44, 0x1f, 0xf0, 0x0c, 0x1c, 0x6a, 0x3a, 0xf0,
+	0xe5, 0xce, 0x3b, 0x70, 0x26, 0xd9, 0x14, 0x1c, 0xc9, 0xab, 0xf4, 0x9f, 0xc6, 0x65, 0x25, 0x3c,
+	0x30, 0x5f, 0xfd, 0x8c, 0xe3, 0xf4, 0x98, 0x32, 0x47, 0xed, 0x31, 0xb9, 0xfa, 0x50, 0xd4, 0x1b,
+	0x7e, 0xf4, 0xae, 0x5a, 0x67, 0x46, 0x9a, 0x57, 0xe1, 0x5d, 0x30, 0x3d, 0xd7, 0xda, 0xcf, 0x0d,
+	0x38, 0x9d, 0x58, 0x3b, 0x90, 0x61, 0xe6, 0x38, 0x65, 0x68, 0x1c, 0xb5, 0x0c, 0x7f, 0x90, 0x81,
+	0x69, 0x4c, 0xdb, 0x4e, 0xe4, 0x1e, 0x6a, 0xdd, 0x7f, 0x61, 0x95, 0xe2, 0x58, 0x11, 0x4b, 0x11,
+	0x29, 0x8d, 0x44, 0x9e, 0x56, 0x71, 0x75, 0x69, 0xf9, 0x3e, 0x64, 0xdf, 0xea, 0xdf, 0x75, 0x43,
+	0x26, 0x77, 0x0e, 0x79, 0xd7, 0x26, 0x01, 0x39, 0xb2, 0x48, 0x65, 0x55, 0xc6, 0xfd, 0xd5, 0x14,
+	0x49, 0xb1, 0xdd, 0xc8, 0xa2, 0x18, 0x4b, 0x40, 0xf3, 0xe3, 0x0c, 0xc8, 0x23, 0xc8, 0x09, 0x58,
+	0xc7, 0xdf, 0x8a, 0x58, 0xc7, 0xa5, 0x34, 0x21, 0xb2, 0x5e, 0xa1, 0x98, 0xf8, 0xf1, 0xf0, 0x42,
+	0xca, 0xb8, 0xdb, 0x23, 0xc2, 0x30, 0x7f, 0x6f, 0xc0, 0x98, 0xa8, 0x77, 0x02, 0x86, 0x76, 0x3d,
+	0x6a, 0x68, 0x9f, 0x4f, 0x31, 0x8a, 0x1e, 0x06, 0xf6, 0xab, 0xac, 0xea, 0x7d, 0x70, 0xf8, 0x6c,
+	0x10, 0xb7, 0xa6, 0x4e, 0x55, 0xa1, 0x96, 0xf0, 0x42, 0x2c, 0x69, 0x81, 0x6e, 0x8f, 0x1c, 0x83,
+	0x6e, 0xff, 0x8e, 0xcc, 0x28, 0xa6, 0xcc, 0xa3, 0xb5, 0x6b, 0xc1, 0xf1, 0x29, 0x9b, 0x3a, 0x35,
+	0x5a, 0xa5, 0x6f, 0x87, 0x11, 0x6d, 0x1c, 0x43, 0xc5, 0x5d, 0x7c, 0xf8, 0x91, 0xaa, 0x1d, 0x37,
+	0x66, 0xea, 0xa8, 0xf1, 0xea, 0x80, 0x96, 0x53, 0x1e, 0xa9, 0xba, 0x8a, 0x71, 0x37, 0x23, 0xd4,
+	0x80, 0x71, 0xfd, 0x51, 0x87, 0x5a, 0xa7, 0x17, 0xd3, 0xbf, 0x1e, 0x91, 0xb9, 0x3f, 0x7a, 0x09,
+	0x8e, 0x20, 0x9b, 0x7f, 0x6a, 0x00, 0x84, 0x01, 0x65, 0x3e, 0xe7, 0x55, 0xa7, 0x63, 0xcb, 0x48,
+	0x42, 0x36, 0x9c, 0xf3, 0x32, 0x2f, 0xc4, 0x92, 0xc6, 0xf5, 0x47, 0x9e, 0xc7, 0xd4, 0xa2, 0xbe,
+	0x90, 0xe6, 0xa8, 0x17, 0x0b, 0x5c, 0xcb, 0x42, 0xac, 0x00, 0xcd, 0x0f, 0x73, 0x90, 0xd7, 0xf4,
+	0x2c, 0x16, 0xb6, 0x9e, 0x38, 0x9e, 0xb0, 0x75, 0x72, 0x2c, 0x21, 0x3f, 0x50, 0x2c, 0x81, 0xc1,
+	0xa4, 0x3a, 0x21, 0xfb, 0x2f, 0x7f, 0x64, 0xac, 0x65, 0xe0, 0x73, 0x38, 0xe2, 0x5e, 0xeb, 0xb5,
+	0x08, 0x24, 0x8e, 0xb1, 0xe0, 0x5e, 0xaf, 0x2a, 0xa9, 0x74, 0x5a, 0x2d, 0xe2, 0xee, 0xaa, 0x2c,
+	0xb6, 0xc0, 0xeb, 0xbd, 0x16, 0xa1, 0xe2, 0x58, 0x6d, 0xb4, 0x1e, 0x4c, 0xa8, 0x7c, 0x4d, 0xf2,
+	0x42, 0x9a, 0x09, 0x95, 0x5e, 0x7f, 0x74, 0x1e, 0xb9, 0x48, 0x9d, 0x4d, 0x71, 0x68, 0xa8, 0x5d,
+	0x97, 0xdf, 0xb4, 0xe2, 0xcb, 0x38, 0x27, 0x16, 0x55, 0x20, 0xd2, 0x9b, 0x5d, 0x35, 0x70, 0x42,
+	0x2b, 0x6e, 0x06, 0xd4, 0x51, 0x3b, 0xd0, 0x1d, 0x15, 0xdc, 0x48, 0x7b, 0xce, 0x0a, 0xcf, 0x8e,
+	0xe2, 0x89, 0x41, 0x39, 0x86, 0x8a, 0xbb, 0xf8, 0xa0, 0xf7, 0x60, 0x82, 0x4f, 0x72, 0xc8, 0x18,
+	0x0e, 0xc9, 0x58, 0x05, 0x55, 0x35, 0x48, 0x1c, 0xe5, 0x60, 0x7e, 0x9e, 0x85, 0xe4, 0x83, 0x7e,
+	0xf8, 0xba, 0xd1, 0x78, 0xc4, 0xeb, 0xc6, 0x3b, 0x30, 0xc6, 0x3c, 0xe2, 0xca, 0x67, 0xa6, 0x99,
+	0xc1, 0x9e, 0x99, 0x56, 0x7c, 0x00, 0x1c, 0x62, 0xc5, 0xa2, 0x2e, 0xd9, 0x23, 0x8d, 0xba, 0x5c,
+	0x04, 0x10, 0x07, 0x31, 0x61, 0x66, 0xc4, 0x7e, 0x33, 0x11, 0x6a, 0xed, 0x4a, 0x40, 0xc1, 0x5a,
+	0x2d, 0xf4, 0xf5, 0x60, 0x17, 0x97, 0xb9, 0x2b, 0xbf, 0xd6, 0x95, 0x6a, 0x38, 0x1b, 0x71, 0xf3,
+	0x62, 0x81, 0xdc, 0x14, 0xf9, 0xd5, 0x09, 0x01, 0x82, 0x91, 0x74, 0x01, 0x02, 0xf3, 0xbf, 0x32,
+	0x10, 0xb1, 0xc2, 0xe8, 0x7b, 0x06, 0xcc, 0x90, 0xd8, 0x57, 0xb6, 0x7c, 0x27, 0xf6, 0x37, 0xd3,
+	0x7d, 0xfa, 0xac, 0xeb, 0x23, 0x5d, 0xe1, 0x5d, 0x79, 0xbc, 0x0a, 0xc3, 0xdd, 0x4c, 0xd1, 0x1f,
+	0x19, 0x30, 0x4b, 0xba, 0x3f, 0xa3, 0xa6, 0x16, 0xcf, 0x6b, 0x03, 0x7f, 0x87, 0xad, 0x74, 0x76,
+	0x7f, 0x6f, 0x31, 0xe9, 0x03, 0x73, 0x38, 0x89, 0x1d, 0xba, 0x07, 0x43, 0xc4, 0xad, 0xfb, 0xe1,
+	0xe3, 0xf4, 0x6c, 0xfd, 0xaf, 0xe3, 0x85, 0xae, 0x44, 0xd1, 0xad, 0x33, 0x2c, 0x40, 0xcd, 0x5f,
+	0x64, 0x61, 0x3a, 0xfe, 0xaa, 0x52, 0x65, 0xf1, 0x0f, 0x25, 0x66, 0xf1, 0x73, 0x5d, 0x13, 0x17,
+	0x28, 0xf1, 0x97, 0xc4, 0xe2, 0x1e, 0x44, 0xd2, 0x02, 0x5d, 0x13, 0x6f, 0x9d, 0x86, 0x0f, 0xa1,
+	0x6b, 0xe2, 0x81, 0x53, 0x88, 0x85, 0x2e, 0x47, 0x23, 0xd2, 0x66, 0x3c, 0x22, 0x3d, 0xa3, 0x8f,
+	0x65, 0xd0, 0xa0, 0x74, 0x0b, 0xf2, 0xda, 0x3c, 0x28, 0x8d, 0xbe, 0x92, 0x5a, 0xee, 0xe1, 0xb2,
+	0x9b, 0x92, 0xe9, 0x8f, 0x21, 0x45, 0xc7, 0x0f, 0xed, 0x87, 0x90, 0xd6, 0xa1, 0xa2, 0xb6, 0x42,
+	0x5c, 0x1a, 0x9a, 0xf9, 0xaf, 0x06, 0x4c, 0x44, 0xde, 0xb5, 0x70, 0x6e, 0xfe, 0x83, 0xa5, 0xc1,
+	0x3f, 0x29, 0x77, 0x3b, 0x40, 0xc0, 0x1a, 0x1a, 0xfa, 0x36, 0xe4, 0x9b, 0x8e, 0x5d, 0xa7, 0xcc,
+	0xab, 0x38, 0x64, 0x5b, 0xe9, 0x49, 0xda, 0xf8, 0xd5, 0xfc, 0xfe, 0xde, 0xe2, 0xdc, 0x9a, 0x84,
+	0x29, 0x3b, 0xad, 0x76, 0x93, 0x7a, 0xf2, 0x69, 0x1b, 0xd6, 0xc1, 0xc5, 0xed, 0x77, 0x90, 0x3e,
+	0xf0, 0xb8, 0xde, 0x7e, 0x87, 0x79, 0x0f, 0x47, 0x7c, 0xfb, 0x1d, 0x49, 0xa8, 0x38, 0xe0, 0xf6,
+	0x3b, 0xa8, 0xfb, 0xd8, 0xde, 0x7e, 0x07, 0x3d, 0xec, 0x71, 0xfc, 0xfa, 0xcf, 0x8c, 0x36, 0x8a,
+	0xe8, 0x11, 0x2c, 0xf3, 0x88, 0x23, 0xd8, 0x3b, 0x30, 0x6a, 0xd9, 0x1e, 0x75, 0x77, 0x48, 0x53,
+	0xc5, 0x9f, 0xd3, 0xae, 0xc5, 0x60, 0xa8, 0xab, 0x0a, 0x07, 0x07, 0x88, 0xa8, 0x09, 0xa7, 0xfd,
+	0x2b, 0x1f, 0x97, 0x92, 0xf0, 0x52, 0x5a, 0x65, 0xc6, 0xbe, 0xe2, 0xdf, 0x4d, 0x5c, 0x4b, 0xaa,
+	0xf4, 0xb0, 0x17, 0x01, 0x27, 0x83, 0x22, 0x06, 0x13, 0x4c, 0x8b, 0x3d, 0xf8, 0x3b, 0x62, 0x9f,
+	0xd7, 0x65, 0xf1, 0x70, 0x8d, 0x96, 0x4e, 0xab, 0x83, 0xe2, 0x28, 0x0f, 0xf3, 0x23, 0x03, 0x26,
+	0xa3, 0xa9, 0x3b, 0xff, 0xeb, 0xe7, 0xa0, 0xcf, 0xb3, 0x30, 0x15, 0x5b, 0xfc, 0xb1, 0xb3, 0xd0,
+	0xd8, 0x49, 0x9e, 0x85, 0x72, 0x03, 0x9d, 0x85, 0x92, 0x0f, 0x01, 0x43, 0x03, 0x1d, 0x02, 0x5e,
+	0x97, 0x8e, 0xb8, 0x5a, 0x4c, 0xab, 0xcb, 0xea, 0xfd, 0x5a, 0x30, 0xc1, 0x6b, 0x3a, 0x11, 0x47,
+	0xeb, 0x0a, 0x0f, 0xa7, 0xd6, 0xfd, 0x55, 0x26, 0x75, 0x8a, 0x78, 0x2d, 0x6d, 0x46, 0x7b, 0x00,
+	0x20, 0x3d, 0x9c, 0x04, 0x02, 0x4e, 0x62, 0x67, 0xfe, 0xd0, 0x80, 0xd3, 0xc9, 0x8f, 0xd4, 0x0e,
+	0x8e, 0x5f, 0x53, 0xc8, 0xc9, 0x5e, 0x2a, 0xcb, 0x5c, 0xec, 0x3b, 0xf6, 0xd8, 0xeb, 0x65, 0x9c,
+	0x3c, 0xb7, 0xc9, 0x0a, 0x58, 0x81, 0x9b, 0x1f, 0xc0, 0x99, 0xe4, 0x74, 0xc0, 0xfe, 0x42, 0xec,
+	0x6d, 0xe2, 0xf9, 0xef, 0xca, 0x82, 0x1a, 0xeb, 0xc4, 0x6b, 0x60, 0x41, 0x41, 0x4f, 0x42, 0xb6,
+	0xe3, 0x36, 0xe3, 0x4f, 0x1e, 0x6f, 0xe1, 0x35, 0xcc, 0xcb, 0x4b, 0x6f, 0x7e, 0xfa, 0xe5, 0xb9,
+	0x53, 0x9f, 0x7d, 0x79, 0xee, 0xd4, 0x17, 0x5f, 0x9e, 0x3b, 0xf5, 0xe1, 0xfe, 0x39, 0xe3, 0xd3,
+	0xfd, 0x73, 0xc6, 0x67, 0xfb, 0xe7, 0x8c, 0x2f, 0xf6, 0xcf, 0x19, 0xff, 0xbe, 0x7f, 0xce, 0xf8,
+	0xe8, 0x97, 0xe7, 0x4e, 0xdd, 0x7d, 0xba, 0x9f, 0x6f, 0x55, 0xff, 0x4f, 0x00, 0x00, 0x00, 0xff,
+	0xff, 0x4c, 0xe1, 0xa2, 0x70, 0xd2, 0x5a, 0x00, 0x00,
+>>>>>>> main
 }
 
 func (m *AnalysisRunArgument) Marshal() (dAtA []byte, err error) {
@@ -3035,6 +3545,194 @@ func (m *ChartSubscription) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i = encodeVarintGenerated(dAtA, i, uint64(len(m.RepoURL)))
 	i--
 	dAtA[i] = 0xa
+	return len(dAtA) - i, nil
+}
+
+func (m *ClusterConfig) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ClusterConfig) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ClusterConfig) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	{
+		size, err := m.Status.MarshalToSizedBuffer(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = encodeVarintGenerated(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0x1a
+	{
+		size, err := m.Spec.MarshalToSizedBuffer(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = encodeVarintGenerated(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0x12
+	{
+		size, err := m.ObjectMeta.MarshalToSizedBuffer(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = encodeVarintGenerated(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0xa
+	return len(dAtA) - i, nil
+}
+
+func (m *ClusterConfigList) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ClusterConfigList) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ClusterConfigList) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.Items) > 0 {
+		for iNdEx := len(m.Items) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Items[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintGenerated(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x12
+		}
+	}
+	{
+		size, err := m.ListMeta.MarshalToSizedBuffer(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = encodeVarintGenerated(dAtA, i, uint64(size))
+	}
+	i--
+	dAtA[i] = 0xa
+	return len(dAtA) - i, nil
+}
+
+func (m *ClusterConfigSpec) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ClusterConfigSpec) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ClusterConfigSpec) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.WebhookReceivers) > 0 {
+		for iNdEx := len(m.WebhookReceivers) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.WebhookReceivers[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintGenerated(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0xa
+		}
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *ClusterConfigStatus) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *ClusterConfigStatus) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *ClusterConfigStatus) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if len(m.WebhookReceivers) > 0 {
+		for iNdEx := len(m.WebhookReceivers) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.WebhookReceivers[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintGenerated(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x12
+		}
+	}
+	if len(m.Conditions) > 0 {
+		for iNdEx := len(m.Conditions) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Conditions[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintGenerated(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0xa
+		}
+	}
 	return len(dAtA) - i, nil
 }
 
@@ -4080,7 +4778,7 @@ func (m *GitDiscoveryResult) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *GitHubWebhookReceiver) Marshal() (dAtA []byte, err error) {
+func (m *GitHubWebhookReceiverConfig) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -4090,12 +4788,12 @@ func (m *GitHubWebhookReceiver) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *GitHubWebhookReceiver) MarshalTo(dAtA []byte) (int, error) {
+func (m *GitHubWebhookReceiverConfig) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *GitHubWebhookReceiver) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *GitHubWebhookReceiverConfig) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -4133,6 +4831,11 @@ func (m *GitSubscription) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	i -= len(m.ExpressionFilter)
+	copy(dAtA[i:], m.ExpressionFilter)
+	i = encodeVarintGenerated(dAtA, i, uint64(len(m.ExpressionFilter)))
+	i--
+	dAtA[i] = 0x62
 	i--
 	if m.StrictSemvers {
 		dAtA[i] = 1
@@ -6672,44 +7375,6 @@ func (m *WarehouseStatus) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *WebhookReceiver) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *WebhookReceiver) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *WebhookReceiver) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	i -= len(m.URL)
-	copy(dAtA[i:], m.URL)
-	i = encodeVarintGenerated(dAtA, i, uint64(len(m.URL)))
-	i--
-	dAtA[i] = 0x22
-	i -= len(m.Path)
-	copy(dAtA[i:], m.Path)
-	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Path)))
-	i--
-	dAtA[i] = 0x1a
-	i -= len(m.Name)
-	copy(dAtA[i:], m.Name)
-	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Name)))
-	i--
-	dAtA[i] = 0xa
-	return len(dAtA) - i, nil
-}
-
 func (m *WebhookReceiverConfig) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -6754,6 +7419,44 @@ func (m *WebhookReceiverConfig) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x12
 	}
+	i -= len(m.Name)
+	copy(dAtA[i:], m.Name)
+	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Name)))
+	i--
+	dAtA[i] = 0xa
+	return len(dAtA) - i, nil
+}
+
+func (m *WebhookReceiverDetails) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *WebhookReceiverDetails) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *WebhookReceiverDetails) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	i -= len(m.URL)
+	copy(dAtA[i:], m.URL)
+	i = encodeVarintGenerated(dAtA, i, uint64(len(m.URL)))
+	i--
+	dAtA[i] = 0x22
+	i -= len(m.Path)
+	copy(dAtA[i:], m.Path)
+	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Path)))
+	i--
+	dAtA[i] = 0x1a
 	i -= len(m.Name)
 	copy(dAtA[i:], m.Name)
 	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Name)))
@@ -6950,6 +7653,74 @@ func (m *ChartSubscription) Size() (n int) {
 	l = len(m.SemverConstraint)
 	n += 1 + l + sovGenerated(uint64(l))
 	n += 1 + sovGenerated(uint64(m.DiscoveryLimit))
+	return n
+}
+
+func (m *ClusterConfig) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = m.ObjectMeta.Size()
+	n += 1 + l + sovGenerated(uint64(l))
+	l = m.Spec.Size()
+	n += 1 + l + sovGenerated(uint64(l))
+	l = m.Status.Size()
+	n += 1 + l + sovGenerated(uint64(l))
+	return n
+}
+
+func (m *ClusterConfigList) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = m.ListMeta.Size()
+	n += 1 + l + sovGenerated(uint64(l))
+	if len(m.Items) > 0 {
+		for _, e := range m.Items {
+			l = e.Size()
+			n += 1 + l + sovGenerated(uint64(l))
+		}
+	}
+	return n
+}
+
+func (m *ClusterConfigSpec) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.WebhookReceivers) > 0 {
+		for _, e := range m.WebhookReceivers {
+			l = e.Size()
+			n += 1 + l + sovGenerated(uint64(l))
+		}
+	}
+	return n
+}
+
+func (m *ClusterConfigStatus) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if len(m.Conditions) > 0 {
+		for _, e := range m.Conditions {
+			l = e.Size()
+			n += 1 + l + sovGenerated(uint64(l))
+		}
+	}
+	if len(m.WebhookReceivers) > 0 {
+		for _, e := range m.WebhookReceivers {
+			l = e.Size()
+			n += 1 + l + sovGenerated(uint64(l))
+		}
+	}
 	return n
 }
 
@@ -7332,7 +8103,7 @@ func (m *GitDiscoveryResult) Size() (n int) {
 	return n
 }
 
-func (m *GitHubWebhookReceiver) Size() (n int) {
+func (m *GitHubWebhookReceiverConfig) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -7380,6 +8151,8 @@ func (m *GitSubscription) Size() (n int) {
 	}
 	n += 1 + sovGenerated(uint64(m.DiscoveryLimit))
 	n += 2
+	l = len(m.ExpressionFilter)
+	n += 1 + l + sovGenerated(uint64(l))
 	return n
 }
 
@@ -8276,21 +9049,6 @@ func (m *WarehouseStatus) Size() (n int) {
 	return n
 }
 
-func (m *WebhookReceiver) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.Name)
-	n += 1 + l + sovGenerated(uint64(l))
-	l = len(m.Path)
-	n += 1 + l + sovGenerated(uint64(l))
-	l = len(m.URL)
-	n += 1 + l + sovGenerated(uint64(l))
-	return n
-}
-
 func (m *WebhookReceiverConfig) Size() (n int) {
 	if m == nil {
 		return 0
@@ -8307,6 +9065,21 @@ func (m *WebhookReceiverConfig) Size() (n int) {
 		l = m.Quay.Size()
 		n += 1 + l + sovGenerated(uint64(l))
 	}
+	return n
+}
+
+func (m *WebhookReceiverDetails) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = len(m.Name)
+	n += 1 + l + sovGenerated(uint64(l))
+	l = len(m.Path)
+	n += 1 + l + sovGenerated(uint64(l))
+	l = len(m.URL)
+	n += 1 + l + sovGenerated(uint64(l))
 	return n
 }
 
@@ -8461,6 +9234,70 @@ func (this *ChartSubscription) String() string {
 		`Name:` + fmt.Sprintf("%v", this.Name) + `,`,
 		`SemverConstraint:` + fmt.Sprintf("%v", this.SemverConstraint) + `,`,
 		`DiscoveryLimit:` + fmt.Sprintf("%v", this.DiscoveryLimit) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *ClusterConfig) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&ClusterConfig{`,
+		`ObjectMeta:` + strings.Replace(strings.Replace(fmt.Sprintf("%v", this.ObjectMeta), "ObjectMeta", "v1.ObjectMeta", 1), `&`, ``, 1) + `,`,
+		`Spec:` + strings.Replace(strings.Replace(this.Spec.String(), "ClusterConfigSpec", "ClusterConfigSpec", 1), `&`, ``, 1) + `,`,
+		`Status:` + strings.Replace(strings.Replace(this.Status.String(), "ClusterConfigStatus", "ClusterConfigStatus", 1), `&`, ``, 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *ClusterConfigList) String() string {
+	if this == nil {
+		return "nil"
+	}
+	repeatedStringForItems := "[]ClusterConfig{"
+	for _, f := range this.Items {
+		repeatedStringForItems += strings.Replace(strings.Replace(f.String(), "ClusterConfig", "ClusterConfig", 1), `&`, ``, 1) + ","
+	}
+	repeatedStringForItems += "}"
+	s := strings.Join([]string{`&ClusterConfigList{`,
+		`ListMeta:` + strings.Replace(strings.Replace(fmt.Sprintf("%v", this.ListMeta), "ListMeta", "v1.ListMeta", 1), `&`, ``, 1) + `,`,
+		`Items:` + repeatedStringForItems + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *ClusterConfigSpec) String() string {
+	if this == nil {
+		return "nil"
+	}
+	repeatedStringForWebhookReceivers := "[]WebhookReceiverConfig{"
+	for _, f := range this.WebhookReceivers {
+		repeatedStringForWebhookReceivers += strings.Replace(strings.Replace(f.String(), "WebhookReceiverConfig", "WebhookReceiverConfig", 1), `&`, ``, 1) + ","
+	}
+	repeatedStringForWebhookReceivers += "}"
+	s := strings.Join([]string{`&ClusterConfigSpec{`,
+		`WebhookReceivers:` + repeatedStringForWebhookReceivers + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *ClusterConfigStatus) String() string {
+	if this == nil {
+		return "nil"
+	}
+	repeatedStringForConditions := "[]Condition{"
+	for _, f := range this.Conditions {
+		repeatedStringForConditions += fmt.Sprintf("%v", f) + ","
+	}
+	repeatedStringForConditions += "}"
+	repeatedStringForWebhookReceivers := "[]WebhookReceiverDetails{"
+	for _, f := range this.WebhookReceivers {
+		repeatedStringForWebhookReceivers += strings.Replace(strings.Replace(f.String(), "WebhookReceiverDetails", "WebhookReceiverDetails", 1), `&`, ``, 1) + ","
+	}
+	repeatedStringForWebhookReceivers += "}"
+	s := strings.Join([]string{`&ClusterConfigStatus{`,
+		`Conditions:` + repeatedStringForConditions + `,`,
+		`WebhookReceivers:` + repeatedStringForWebhookReceivers + `,`,
 		`}`,
 	}, "")
 	return s
@@ -8793,11 +9630,11 @@ func (this *GitDiscoveryResult) String() string {
 	}, "")
 	return s
 }
-func (this *GitHubWebhookReceiver) String() string {
+func (this *GitHubWebhookReceiverConfig) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&GitHubWebhookReceiver{`,
+	s := strings.Join([]string{`&GitHubWebhookReceiverConfig{`,
 		`SecretRef:` + strings.Replace(strings.Replace(fmt.Sprintf("%v", this.SecretRef), "LocalObjectReference", "v12.LocalObjectReference", 1), `&`, ``, 1) + `,`,
 		`}`,
 	}, "")
@@ -8819,6 +9656,7 @@ func (this *GitSubscription) String() string {
 		`ExcludePaths:` + fmt.Sprintf("%v", this.ExcludePaths) + `,`,
 		`DiscoveryLimit:` + fmt.Sprintf("%v", this.DiscoveryLimit) + `,`,
 		`StrictSemvers:` + fmt.Sprintf("%v", this.StrictSemvers) + `,`,
+		`ExpressionFilter:` + fmt.Sprintf("%v", this.ExpressionFilter) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -8987,9 +9825,9 @@ func (this *ProjectConfigStatus) String() string {
 		repeatedStringForConditions += fmt.Sprintf("%v", f) + ","
 	}
 	repeatedStringForConditions += "}"
-	repeatedStringForWebhookReceivers := "[]WebhookReceiver{"
+	repeatedStringForWebhookReceivers := "[]WebhookReceiverDetails{"
 	for _, f := range this.WebhookReceivers {
-		repeatedStringForWebhookReceivers += strings.Replace(strings.Replace(f.String(), "WebhookReceiver", "WebhookReceiver", 1), `&`, ``, 1) + ","
+		repeatedStringForWebhookReceivers += strings.Replace(strings.Replace(f.String(), "WebhookReceiverDetails", "WebhookReceiverDetails", 1), `&`, ``, 1) + ","
 	}
 	repeatedStringForWebhookReceivers += "}"
 	s := strings.Join([]string{`&ProjectConfigStatus{`,
@@ -9534,26 +10372,30 @@ func (this *WarehouseStatus) String() string {
 	}, "")
 	return s
 }
-func (this *WebhookReceiver) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&WebhookReceiver{`,
-		`Name:` + fmt.Sprintf("%v", this.Name) + `,`,
-		`Path:` + fmt.Sprintf("%v", this.Path) + `,`,
-		`URL:` + fmt.Sprintf("%v", this.URL) + `,`,
-		`}`,
-	}, "")
-	return s
-}
 func (this *WebhookReceiverConfig) String() string {
 	if this == nil {
 		return "nil"
 	}
 	s := strings.Join([]string{`&WebhookReceiverConfig{`,
 		`Name:` + fmt.Sprintf("%v", this.Name) + `,`,
+<<<<<<< HEAD
 		`GitHub:` + strings.Replace(this.GitHub.String(), "GitHubWebhookReceiver", "GitHubWebhookReceiver", 1) + `,`,
 		`Quay:` + strings.Replace(this.Quay.String(), "QuayWebhookReceiver", "QuayWebhookReceiver", 1) + `,`,
+=======
+		`GitHub:` + strings.Replace(this.GitHub.String(), "GitHubWebhookReceiverConfig", "GitHubWebhookReceiverConfig", 1) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *WebhookReceiverDetails) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&WebhookReceiverDetails{`,
+		`Name:` + fmt.Sprintf("%v", this.Name) + `,`,
+		`Path:` + fmt.Sprintf("%v", this.Path) + `,`,
+		`URL:` + fmt.Sprintf("%v", this.URL) + `,`,
+>>>>>>> main
 		`}`,
 	}, "")
 	return s
@@ -11238,6 +12080,474 @@ func (m *ChartSubscription) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ClusterConfig) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ClusterConfig: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ClusterConfig: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ObjectMeta", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.ObjectMeta.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Spec", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.Spec.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Status", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.Status.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ClusterConfigList) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ClusterConfigList: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ClusterConfigList: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ListMeta", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.ListMeta.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Items", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Items = append(m.Items, ClusterConfig{})
+			if err := m.Items[len(m.Items)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ClusterConfigSpec) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ClusterConfigSpec: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ClusterConfigSpec: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field WebhookReceivers", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.WebhookReceivers = append(m.WebhookReceivers, WebhookReceiverConfig{})
+			if err := m.WebhookReceivers[len(m.WebhookReceivers)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *ClusterConfigStatus) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: ClusterConfigStatus: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: ClusterConfigStatus: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Conditions", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Conditions = append(m.Conditions, v1.Condition{})
+			if err := m.Conditions[len(m.Conditions)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field WebhookReceivers", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.WebhookReceivers = append(m.WebhookReceivers, WebhookReceiverDetails{})
+			if err := m.WebhookReceivers[len(m.WebhookReceivers)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipGenerated(dAtA[iNdEx:])
@@ -14682,7 +15992,7 @@ func (m *GitDiscoveryResult) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *GitHubWebhookReceiver) Unmarshal(dAtA []byte) error {
+func (m *GitHubWebhookReceiverConfig) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -14705,10 +16015,10 @@ func (m *GitHubWebhookReceiver) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: GitHubWebhookReceiver: wiretype end group for non-group")
+			return fmt.Errorf("proto: GitHubWebhookReceiverConfig: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: GitHubWebhookReceiver: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: GitHubWebhookReceiverConfig: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -15109,6 +16419,38 @@ func (m *GitSubscription) Unmarshal(dAtA []byte) error {
 				}
 			}
 			m.StrictSemvers = bool(v != 0)
+		case 12:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ExpressionFilter", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ExpressionFilter = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipGenerated(dAtA[iNdEx:])
@@ -16917,7 +18259,7 @@ func (m *ProjectConfigStatus) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.WebhookReceivers = append(m.WebhookReceivers, WebhookReceiver{})
+			m.WebhookReceivers = append(m.WebhookReceivers, WebhookReceiverDetails{})
 			if err := m.WebhookReceivers[len(m.WebhookReceivers)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
@@ -22357,7 +23699,7 @@ func (m *WarehouseStatus) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *WebhookReceiver) Unmarshal(dAtA []byte) error {
+func (m *WebhookReceiverConfig) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -22380,10 +23722,128 @@ func (m *WebhookReceiver) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: WebhookReceiver: wiretype end group for non-group")
+			return fmt.Errorf("proto: WebhookReceiverConfig: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: WebhookReceiver: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: WebhookReceiverConfig: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Name", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Name = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field GitHub", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.GitHub == nil {
+				m.GitHub = &GitHubWebhookReceiverConfig{}
+			}
+			if err := m.GitHub.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *WebhookReceiverDetails) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: WebhookReceiverDetails: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: WebhookReceiverDetails: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -22503,6 +23963,7 @@ func (m *WebhookReceiver) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
+<<<<<<< HEAD
 func (m *WebhookReceiverConfig) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -22657,6 +24118,8 @@ func (m *WebhookReceiverConfig) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
+=======
+>>>>>>> main
 func skipGenerated(dAtA []byte) (n int, err error) {
 	l := len(dAtA)
 	iNdEx := 0

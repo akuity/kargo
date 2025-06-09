@@ -2,16 +2,11 @@ package projectconfigs
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"net/url"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
-	corev1 "k8s.io/api/core/v1"
-	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -20,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/conditions"
 	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/kubeclient"
@@ -28,8 +24,8 @@ import (
 )
 
 type ReconcilerConfig struct {
-	ExternalWebhookServerBaseURL string `envconfig:"EXTERNAL_WEBHOOK_SERVER_BASE_URL"`
-	MaxConcurrentReconciles      int    `envconfig:"MAX_CONCURRENT_PROJECT_RECONCILES" default:"4"`
+	ExternalWebhookServerBaseURL string `envconfig:"EXTERNAL_WEBHOOK_SERVER_BASE_URL" required:"true"`
+	MaxConcurrentReconciles      int    `envconfig:"MAX_CONCURRENT_PROJECT_CONFIG_RECONCILES" default:"4"`
 }
 
 func ReconcilerConfigFromEnv() ReconcilerConfig {
@@ -41,11 +37,6 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 type reconciler struct {
 	cfg    ReconcilerConfig
 	client client.Client
-
-	syncWebhookReceiversFn func(
-		context.Context,
-		*kargoapi.ProjectConfig,
-	) ([]kargoapi.WebhookReceiver, error)
 }
 
 func SetupReconcilerWithManager(
@@ -65,22 +56,21 @@ func SetupReconcilerWithManager(
 		WithOptions(controller.CommonOptions(cfg.MaxConcurrentReconciles)).
 		Build(newReconciler(kargoMgr.GetClient(), cfg))
 	if err != nil {
-		return fmt.Errorf("error creating Project reconciler: %w", err)
+		return fmt.Errorf("error creating ProjectConfig reconciler: %w", err)
 	}
 
 	logging.LoggerFromContext(ctx).Info(
 		"Initialized ProjectConfig reconciler",
+		"maxConcurrentReconciles", cfg.MaxConcurrentReconciles,
 	)
 	return nil
 }
 
 func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
-	r := &reconciler{
+	return &reconciler{
 		cfg:    cfg,
 		client: kubeClient,
 	}
-	r.syncWebhookReceiversFn = r.syncWebhookReceivers
-	return r
 }
 
 // Reconcile is part of the main Kubernetes reconciliation loop which aims to
@@ -94,10 +84,15 @@ func (r *reconciler) Reconcile(
 	)
 	ctx = logging.ContextWithLogger(ctx, logger)
 
-	// Fetch the ProjectConfig instance
-	projectConfig := &kargoapi.ProjectConfig{}
-	if err := r.client.Get(ctx, req.NamespacedName, projectConfig); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
+	// Fetch the ProjectConfig
+	projectConfig, err := api.GetProjectConfig(ctx, r.client, req.NamespacedName.Name)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if projectConfig == nil {
+		// Ignore if not found. This can happen if the ProjectConfig was deleted
+		// after the current reconciliation request was issued.
+		return ctrl.Result{}, nil
 	}
 
 	if !projectConfig.DeletionTimestamp.IsZero() {
@@ -105,22 +100,29 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	// NOTE: If we start requiring cleanup operations or other management of state. Add a finalizer here
-
 	logger.Debug("reconciling ProjectConfig")
-	newStatus, reconcileErr := r.syncProjectConfig(ctx, projectConfig)
+	newStatus, reconcileErr := r.reconcile(ctx, projectConfig)
 	logger.Debug("done reconciling ProjectConfig")
 
 	// Patch the status of the ProjectConfig.
-	if err := kubeclient.PatchStatus(ctx, r.client, projectConfig, func(status *kargoapi.ProjectConfigStatus) {
-		*status = newStatus
-	}); err != nil {
+	if err := kubeclient.PatchStatus(
+		ctx,
+		r.client,
+		projectConfig,
+		func(status *kargoapi.ProjectConfigStatus) {
+			*status = newStatus
+		},
+	); err != nil {
 		// Prioritize the reconcile error if it exists.
 		if reconcileErr != nil {
-			logger.Error(err, "failed to update ProjectConfig status after reconciliation error")
+			logger.Error(
+				err,
+				"failed to update ProjectConfig status after reconciliation error",
+			)
 			return ctrl.Result{}, reconcileErr
 		}
-		return ctrl.Result{}, fmt.Errorf("failed to update ProjectConfig status: %w", err)
+		return ctrl.Result{},
+			fmt.Errorf("failed to update ProjectConfig status: %w", err)
 	}
 
 	// Return the reconcile error if it exists.
@@ -132,193 +134,137 @@ func (r *reconciler) Reconcile(
 	return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
 }
 
-func (r *reconciler) syncProjectConfig(
+func (r *reconciler) reconcile(
 	ctx context.Context,
-	pc *kargoapi.ProjectConfig,
+	projectCfg *kargoapi.ProjectConfig,
 ) (
 	kargoapi.ProjectConfigStatus,
 	error,
 ) {
 	logger := logging.LoggerFromContext(ctx)
-	status := pc.Status.DeepCopy()
+	status := *projectCfg.Status.DeepCopy()
+
+	subReconcilers := []struct {
+		name      string
+		reconcile func() (kargoapi.ProjectConfigStatus, error)
+	}{{
+		name: "syncing WebhookReceivers",
+		reconcile: func() (kargoapi.ProjectConfigStatus, error) {
+			return r.syncWebhookReceivers(ctx, projectCfg)
+		},
+	}}
+	for _, subR := range subReconcilers {
+		logger.Debug(subR.name)
+
+		// Reconcile the ProjectConfig with the sub-reconciler.
+		var err error
+		status, err = subR.reconcile()
+
+		// If an error occurred during the sub-reconciler, then we should return the
+		// error which will cause the ProjectConfig to be requeued.
+		if err != nil {
+			return status, err
+		}
+
+		// Patch the status of the ProjectConfig after each sub-reconciler to show
+		// progress.
+		if err = kubeclient.PatchStatus(
+			ctx,
+			r.client,
+			projectCfg,
+			func(st *kargoapi.ProjectConfigStatus) { *st = status },
+		); err != nil {
+			logger.Error(
+				err,
+				fmt.Sprintf("failed to update Project status after %s", subR.name),
+			)
+		}
+	}
+
+	return status, nil
+}
+
+func (r *reconciler) syncWebhookReceivers(
+	ctx context.Context,
+	projectCfg *kargoapi.ProjectConfig,
+) (kargoapi.ProjectConfigStatus, error) {
+	logger := logging.LoggerFromContext(ctx)
+	status := projectCfg.Status.DeepCopy()
+
+	if len(projectCfg.Spec.WebhookReceivers) == 0 {
+		logger.Debug("ProjectConfig does not define any webhook receiver configurations")
+		conditions.Delete(status, kargoapi.ConditionTypeReconciling)
+		conditions.Set(status, &metav1.Condition{
+			Type:               kargoapi.ConditionTypeReady,
+			Status:             metav1.ConditionTrue,
+			Reason:             "Synced",
+			Message:            "ProjectConfig is synced and ready for use",
+			ObservedGeneration: projectCfg.GetGeneration(),
+		})
+		return *status, nil
+	}
 
 	conditions.Set(status, &metav1.Condition{
 		Type:               kargoapi.ConditionTypeReconciling,
 		Status:             metav1.ConditionTrue,
 		Reason:             "SyncingWebhooks",
-		ObservedGeneration: pc.GetGeneration(),
+		Message:            "Syncing WebhookReceivers",
+		ObservedGeneration: projectCfg.GetGeneration(),
 	})
 	conditions.Set(status, &metav1.Condition{
 		Type:               kargoapi.ConditionTypeReady,
 		Status:             metav1.ConditionFalse,
 		Reason:             "SyncingWebhooks",
-		ObservedGeneration: pc.GetGeneration(),
+		Message:            "Syncing WebhookReceivers",
+		ObservedGeneration: projectCfg.GetGeneration(),
 	})
 
-	whReceivers, err := r.syncWebhookReceiversFn(ctx, pc)
-	status.WebhookReceivers = whReceivers
-	if err != nil {
-		logger.Error(err, "error syncing webhook receivers",
-			"project-config", pc.Name,
+	logger.Debug("syncing WebhookReceivers")
+
+	var errs []error
+	status.WebhookReceivers = make(
+		[]kargoapi.WebhookReceiverDetails,
+		0,
+		len(projectCfg.Spec.WebhookReceivers),
+	)
+	for _, receiverCfg := range projectCfg.Spec.WebhookReceivers {
+		receiver, err := external.NewReceiver(
+			ctx,
+			r.client,
+			r.cfg.ExternalWebhookServerBaseURL,
+			projectCfg.Name,
+			projectCfg.Name, // Secret namespace is the same as the Project name/namespace
+			receiverCfg,
 		)
+		if err != nil {
+			errs = append(
+				errs,
+				fmt.Errorf("error syncing WebhookReceiver %q: %w", receiverCfg.Name, err),
+			)
+			continue
+		}
+		status.WebhookReceivers = append(status.WebhookReceivers, receiver.GetDetails())
+	}
+
+	if len(errs) != 0 {
+		flattenedErrs := kerrors.Flatten(kerrors.NewAggregate(errs))
 		conditions.Set(status, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeReady,
 			Status:             metav1.ConditionFalse,
-			Reason:             "SecretMisconfiguration",
-			Message:            "Failed to sync webhook receivers: " + err.Error(),
-			ObservedGeneration: pc.GetGeneration(),
+			Reason:             "SyncWebhookReceiversFailed",
+			Message:            "Failed to sync WebhookReceivers: " + flattenedErrs.Error(),
+			ObservedGeneration: projectCfg.GetGeneration(),
 		})
-		return *status, err
+		return *status, flattenedErrs
 	}
 
+	conditions.Delete(status, kargoapi.ConditionTypeReconciling)
 	conditions.Set(status, &metav1.Condition{
 		Type:               kargoapi.ConditionTypeReady,
 		Status:             metav1.ConditionTrue,
 		Reason:             "Synced",
 		Message:            "ProjectConfig is synced and ready for use",
-		ObservedGeneration: pc.GetGeneration(),
+		ObservedGeneration: projectCfg.GetGeneration(),
 	})
-	conditions.Delete(status, kargoapi.ConditionTypeReconciling)
 	return *status, nil
-}
-
-func (r *reconciler) syncWebhookReceivers(
-	ctx context.Context,
-	pc *kargoapi.ProjectConfig,
-) ([]kargoapi.WebhookReceiver, error) {
-	logger := logging.LoggerFromContext(ctx)
-	if pc.Spec.WebhookReceivers == nil {
-		logger.Debug("ProjectConfig does not have any receiver configurations")
-		return nil, nil
-	}
-
-	logger.Debug("syncing webhook receivers",
-		"webhook-receiver-configs", len(pc.Spec.WebhookReceivers),
-	)
-
-	var errs []error
-	webhookReceivers := make([]kargoapi.WebhookReceiver, 0, len(pc.Spec.WebhookReceivers))
-	for _, rc := range pc.Spec.WebhookReceivers {
-		whr, err := r.newWebhookReceiver(ctx, pc, rc)
-		if err != nil {
-			logger.Error(err, "error initializing new webhook receiver",
-				"receiver-config", rc,
-			)
-			errs = append(errs, fmt.Errorf(
-				"error initializing webhook receiver %q: %w",
-				rc.Name, err,
-			),
-			)
-			continue
-		}
-		webhookReceivers = append(webhookReceivers, *whr)
-	}
-	return webhookReceivers, kerrors.Flatten(kerrors.NewAggregate(errs))
-}
-
-func (r *reconciler) newWebhookReceiver(
-	ctx context.Context,
-	pc *kargoapi.ProjectConfig,
-	rc kargoapi.WebhookReceiverConfig,
-) (*kargoapi.WebhookReceiver, error) {
-	logger := logging.LoggerFromContext(ctx)
-	cfg, err := getProviderConfig(rc)
-	if err != nil {
-		logger.Error(err, "error getting provider config",
-			"receiver-config", rc,
-			"project-config", pc,
-		)
-		return nil, fmt.Errorf("error getting secret name: %w", err)
-	}
-
-	var s corev1.Secret
-	err = r.client.Get(
-		ctx,
-		types.NamespacedName{
-			Namespace: pc.Namespace,
-			Name:      cfg.secretName,
-		},
-		&s,
-	)
-	if err != nil {
-		logger.Error(err, "secret not found",
-			"secret-name", cfg.secretName,
-		)
-		if kubeerr.IsNotFound(err) {
-			return nil, fmt.Errorf(
-				"secret %q in namespace %q not found",
-				cfg.secretName, pc.Namespace,
-			)
-		}
-		return nil, fmt.Errorf(
-			"error getting webhook receiver secret %q in project namespace %q: %w",
-			cfg.secretName, pc.Namespace, err,
-		)
-	}
-	logger.Debug("secret found", "secret", cfg.secretName)
-
-	secret, ok := s.Data[cfg.targetKey]
-	if !ok {
-		logger.Error(err, "target key not found in secret data",
-			"target-key", cfg.targetKey,
-		)
-		return nil, fmt.Errorf(
-			"key %q not found in secret %q for project config %q",
-			cfg.targetKey, cfg.secretName, pc.Name,
-		)
-	}
-
-	wr := &kargoapi.WebhookReceiver{
-		Name: rc.Name,
-		Path: external.GenerateWebhookPath(
-			rc.Name,
-			pc.Name,
-			cfg.receiverType,
-			string(secret),
-		),
-	}
-	wr.URL, err = url.JoinPath(r.cfg.ExternalWebhookServerBaseURL + wr.Path)
-	if err != nil {
-		logger.Error(err, "error generating webhook URL",
-			"base-url", r.cfg.ExternalWebhookServerBaseURL,
-			"path", wr.Path,
-		)
-		return nil, fmt.Errorf("error generating webhook URL: %w", err)
-	}
-
-	logger.Debug("webhook receiver initialized",
-		"webhook-receiver", wr,
-	)
-	return wr, nil
-}
-
-type providerConfig struct {
-	secretName   string
-	targetKey    string
-	receiverType string
-}
-
-func getProviderConfig(rc kargoapi.WebhookReceiverConfig) (*providerConfig, error) {
-	switch {
-	case rc.GitHub != nil:
-		if rc.GitHub.SecretRef.Name == "" {
-			return nil, errors.New("github receiver config does not have a secret reference name")
-		}
-		return &providerConfig{
-			secretName:   rc.GitHub.SecretRef.Name,
-			targetKey:    kargoapi.WebhookReceiverSecretKeyGithub,
-			receiverType: kargoapi.WebhookReceiverTypeGitHub,
-		}, nil
-	case rc.Quay != nil:
-		if rc.Quay.SecretRef.Name == "" {
-			return nil, errors.New("quay receiver config does not have a secret reference name")
-		}
-		return &providerConfig{
-			secretName:   rc.Quay.SecretRef.Name,
-			targetKey:    kargoapi.WebhookReceiverSecretKeyQuay,
-			receiverType: kargoapi.WebhookReceiverTypeQuay,
-		}, nil
-	default:
-		return nil, errors.New("webhook receiver config has no valid entry")
-	}
 }

@@ -96,10 +96,10 @@
             "description": "WebhookReceiverConfig describes the configuration for a single webhook\nreceiver.",
             "properties": {
               "github": {
-                "description": "GitHub contains the configuration for a webhook receiver that is compatible with\nGitHub payloads.\n",
+                "description": "GitHub contains the configuration for a webhook receiver that is compatible\nwith GitHub payloads.\n",
                 "properties": {
                   "secretRef": {
-                    "description": "SecretRef contains a reference to a Secret in the same namespace as the ProjectConfig.\n\nThe Secret is expected to contain a `token` key with the secret token configured for\nin GitHub for the webhook. For more information about this token, please refer to the\nGitHub documentation: https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries\n\nThe value of the token key goes in the \"Secret\" field when registering a GitHub App or webhook in the GitHub UI.",
+                    "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster Secrets\" namespace.\n\nThe Secret's data map is expected to contain a `secret` key whose value is\nthe shared secret used to authenticate the webhook requests sent by GitHub.\nFor more information please refer to GitHub documentation:\n  https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries\n\nThe value of the token key goes in the \"Secret\" field when registering a\nGitHub App or webhook in the GitHub UI.",
                     "properties": {
                       "name": {
                         "default": "",
@@ -153,7 +153,7 @@
       "description": "Status describes the current status of a ProjectConfig.",
       "properties": {
         "conditions": {
-          "description": "Conditions contains the last observations of the Project Config's current state.",
+          "description": "Conditions contains the last observations of the Project Config's current\nstate.",
           "items": {
             "description": "Condition contains details for one aspect of the current state of this API Resource.",
             "properties": {
@@ -213,9 +213,9 @@
           "x-kubernetes-list-type": "map"
         },
         "webhookReceivers": {
-          "description": "WebhookReceivers describes the status of Project-specific webhook receivers.",
+          "description": "WebhookReceivers describes the status of Project-specific webhook\nreceivers.",
           "items": {
-            "description": "WebhookReceiver describes a path used to receive webhook events.",
+            "description": "WebhookReceiverDetails encapsulates the details of a webhook receiver.",
             "properties": {
               "name": {
                 "description": "Name is the name of the webhook receiver.",

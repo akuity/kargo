@@ -41,7 +41,10 @@ func Initialize(kargoClient, argocdClient client.Client, credsDB credentials.Dat
 		newJSONUpdater(),
 		newKustomizeBuilder(),
 		newKustomizeImageSetter(kargoClient),
-		newOutputComposer(),
+		pkgPromotion.NewTaskLevelOutputStepRunner(
+			newOutputComposer(),
+		),
+		newTarExtractor(),
 		newYAMLParser(),
 		newYAMLUpdater(),
 	}

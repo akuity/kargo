@@ -14,20 +14,21 @@
 
 ### Global Parameters
 
-| Name                                | Description                                                                | Value |
-| ----------------------------------- | -------------------------------------------------------------------------- | ----- |
-| `global.labels`                     | Labels to add to all resources.                                            | `{}`  |
-| `global.annotations`                | Annotations to add to all resources.                                       | `{}`  |
-| `global.podLabels`                  | Labels to add to all pods.                                                 | `{}`  |
-| `global.podAnnotations`             | Annotations to add to pods.                                                | `{}`  |
-| `global.serviceAccount.labels`      | Global ServiceAccount labels.                                              | `{}`  |
-| `global.serviceAccount.annotations` | Global ServiceAccount annotations.                                         | `{}`  |
-| `global.env`                        | Environment variables to add to all Kargo pods.                            | `[]`  |
-| `global.envFrom`                    | Environment variables to add to all Kargo pods from ConfigMaps or Secrets. | `[]`  |
-| `global.nodeSelector`               | Default node selector for all Kargo pods.                                  | `{}`  |
-| `global.tolerations`                | Default tolerations for all Kargo pods.                                    | `[]`  |
-| `global.affinity`                   | Default affinity for all Kargo pods.                                       | `{}`  |
-| `global.securityContext`            | Default security context for all Kargo pods.                               | `{}`  |
+| Name                                | Description                                                                                  | Value                   |
+| ----------------------------------- | -------------------------------------------------------------------------------------------- | ----------------------- |
+| `global.clusterSecretsNamespace`    | Indicates a namespace where Secrets associated with cluster-scoped resources can be located. | `kargo-cluster-secrets` |
+| `global.labels`                     | Labels to add to all resources.                                                              | `{}`                    |
+| `global.annotations`                | Annotations to add to all resources.                                                         | `{}`                    |
+| `global.podLabels`                  | Labels to add to all pods.                                                                   | `{}`                    |
+| `global.podAnnotations`             | Annotations to add to pods.                                                                  | `{}`                    |
+| `global.serviceAccount.labels`      | Global ServiceAccount labels.                                                                | `{}`                    |
+| `global.serviceAccount.annotations` | Global ServiceAccount annotations.                                                           | `{}`                    |
+| `global.env`                        | Environment variables to add to all Kargo pods.                                              | `[]`                    |
+| `global.envFrom`                    | Environment variables to add to all Kargo pods from ConfigMaps or Secrets.                   | `[]`                    |
+| `global.nodeSelector`               | Default node selector for all Kargo pods.                                                    | `{}`                    |
+| `global.tolerations`                | Default tolerations for all Kargo pods.                                                      | `[]`                    |
+| `global.affinity`                   | Default affinity for all Kargo pods.                                                         | `{}`                    |
+| `global.securityContext`            | Default security context for all Kargo pods.                                                 | `{}`                    |
 
 ### CRDs
 
@@ -249,7 +250,7 @@ the Kargo controller is running.
 | `externalWebhooksServer.tls.enabled`                | Whether to enable TLS directly on the external webhook server. This is helpful if you do not intend to use an ingress controller or if you require TLS end-to-end. All other settings in this section EXCEPT `terminatedUpstream` will be ignored when this is set to `false`.                                                                                                                                                                                         | `true`                   |
 | `externalWebhooksServer.tls.selfSignedCert`         | Whether to generate a self-signed certificate for use by the external webhooks server. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-external-webhook-server-cert` **must** be provided in the same namespace as Kargo.                                                                                                                               | `true`                   |
 | `externalWebhooksServer.tls.terminatedUpstream`     | Whether TLS is terminated upstream, i.e. a load balancer, reverse-proxy, or an Ingress controller using a single wildcard cert is terminating it. Setting this to `true` forces all external webhook server URLs to use HTTPS even if the Ingress (if applicable) or external webhook server itself are listening for plain HTTP requests.                                                                                                                             | `false`                  |
-| `externalWebhooksServer.ingress.enabled`            | Whether to enable ingress by creating an Ingress resource. By default, this is disabled. Enabling ingress is advanced usage.                                                                                                                                                                                                                                                                                                                                           | `false`                  |
+| `externalWebhooksServer.ingress.enabled`            | Whether to enable separate ingress for webhook by creating an Ingress resource. By default, this is disabled and webhook is exposed as part of kargo-api ingress. Enabling ingress is advanced usage.                                                                                                                                                                                                                                                                  | `false`                  |
 | `externalWebhooksServer.ingress.annotations`        | Annotations specified by your ingress controller to customize the behavior of the Ingress resource.                                                                                                                                                                                                                                                                                                                                                                    | `{}`                     |
 | `externalWebhooksServer.ingress.ingressClassName`   | If implemented by your ingress controller, specifies the ingress class. If your ingress controller does not support this, use the `kubernetes.io/ingress.class` annotation instead.                                                                                                                                                                                                                                                                                    | `nil`                    |
 | `externalWebhooksServer.ingress.tls.enabled`        | Whether to associate a certificate with the Ingress resource.                                                                                                                                                                                                                                                                                                                                                                                                          | `true`                   |
@@ -267,6 +268,7 @@ the Kargo controller is running.
 | `managementController.logLevel`                                            | The log level for the management controller.                                                                                                                                         | `INFO` |
 | `managementController.reconcilers.maxConcurrentReconciles`                 | specifies the maximum number of resources EACH of the management controller's reconcilers can reconcile concurrently. This setting may also be overridden on a per-reconciler basis. | `4`    |
 | `managementController.reconcilers.namespaces.maxConcurrentReconciles`      | optionally overrides the maximum number of Namespace resources the management controller can reconcile concurrently.                                                                 | `nil`  |
+| `managementController.reconcilers.projectConfigs.maxConcurrentReconciles`  | optionally overrides the maximum number of ProjectConfig resources the management controller can reconcile concurrently.                                                             | `nil`  |
 | `managementController.reconcilers.projects.maxConcurrentReconciles`        | optionally overrides the maximum number of Project resources the management controller can reconcile concurrently.                                                                   | `nil`  |
 | `managementController.reconcilers.serviceAccounts.maxConcurrentReconciles` | optionally overrides the maximum number of ServiceAccount resources the management controller can reconcile concurrently.                                                            | `nil`  |
 | `managementController.labels`                                              | Labels to add to the api resources. Merges with `global.labels`, allowing you to override or add to the global labels.                                                               | `{}`   |

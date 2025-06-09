@@ -17,6 +17,9 @@ image:
 
 ## @section Global Parameters
 global:
+  ## @param global.clusterSecretsNamespace Indicates a namespace where Secrets associated with cluster-scoped resources can be located.
+  clusterSecretsNamespace: kargo-cluster-secrets
+
   ## @param global.labels Labels to add to all resources.
   labels: {}
   ## @param global.annotations Annotations to add to all resources.
@@ -689,7 +692,7 @@ externalWebhooksServer:
     terminatedUpstream: false
 
   ingress:
-    ## @param externalWebhooksServer.ingress.enabled Whether to enable ingress by creating an Ingress resource. By default, this is disabled. Enabling ingress is advanced usage.
+    ## @param externalWebhooksServer.ingress.enabled Whether to enable separate ingress for webhook by creating an Ingress resource. By default, this is disabled and webhook is exposed as part of kargo-api ingress. Enabling ingress is advanced usage.
     enabled: false
     ## @param externalWebhooksServer.ingress.annotations Annotations specified by your ingress controller to customize the behavior of the Ingress resource.
     annotations: {}
@@ -727,6 +730,9 @@ managementController:
     maxConcurrentReconciles: 4
     namespaces:
       ## @param managementController.reconcilers.namespaces.maxConcurrentReconciles optionally overrides the maximum number of Namespace resources the management controller can reconcile concurrently.
+      maxConcurrentReconciles:
+    projectConfigs:
+      ## @param managementController.reconcilers.projectConfigs.maxConcurrentReconciles optionally overrides the maximum number of ProjectConfig resources the management controller can reconcile concurrently.
       maxConcurrentReconciles:
     projects:
       ## @param managementController.reconcilers.projects.maxConcurrentReconciles optionally overrides the maximum number of Project resources the management controller can reconcile concurrently.
