@@ -12,6 +12,12 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 )
 
+const (
+	quaySecretDataKey       = "secret"
+	quay                    = "quay"
+	quayWebhookBodyMaxBytes = 2 << 20 // 2MB
+)
+
 func quayHandler(
 	c client.Client,
 	namespace string,

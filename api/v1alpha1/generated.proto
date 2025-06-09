@@ -1434,13 +1434,15 @@ message PromotionTemplateSpec {
   repeated PromotionStep steps = 1;
 }
 
-// QuayWebhookReceiver describes a webhook receiver that is compatible with
-// Quay payloads.
-message QuayWebhookReceiver {
-  // SecretRef contains a reference to a Secret in the same namespace as the ProjectConfig.
+message QuayWebhookReceiverConfig {
+  // SecretRef contains a reference to a Secret. For Project-scoped webhook
+  // receivers, the referenced Secret must be in the same namespace as the
+  // ProjectConfig.
   //
-  // The Secret is expected to contain a 'quay-secret' key with the secret token configured for
-  // in Quay for the webhook
+  // For cluster-scoped webhook receivers, the referenced Secret must be in the
+  // designated "cluster Secrets" namespace.
+  //
+  // The Secret's data map is expected to contain a `secret` key.
   optional .k8s.io.api.core.v1.LocalObjectReference secretRef = 1;
 }
 
@@ -1786,6 +1788,12 @@ message WebhookReceiverConfig {
   //
   // +kubebuilder:validation:Required
   optional GitHubWebhookReceiverConfig github = 2;
+
+  // Quay contains the configuration for a webhook receiver that is compatible
+  // with Quay payloads.
+  //
+  // TODO(fuskovic): Make this mutually exclusive with configs for other platforms.
+  optional QuayWebhookReceiverConfig quay = 3;
 }
 
 // WebhookReceiverDetails encapsulates the details of a webhook receiver.
@@ -1800,23 +1808,3 @@ message WebhookReceiverDetails {
   optional string url = 4;
 }
 
-<<<<<<< HEAD
-// WebhookReceiverConfig describes the configuration for a single webhook
-// receiver.
-message WebhookReceiverConfig {
-  // Name is the name of the webhook receiver.
-  optional string name = 1;
-
-  // GitHub contains the configuration for a webhook receiver that is compatible with
-  // GitHub payloads.
-  //
-  // TODO(fuskovic): Make this mutually exclusive with configs for other platforms.
-  optional GitHubWebhookReceiver github = 2;
-
-  // Quay contains the configuration for a webhook receiver that is compatible with
-  // Quay payloads.
-  optional QuayWebhookReceiver quay = 3;
-}
-
-=======
->>>>>>> main

@@ -82,7 +82,7 @@ func TestQuayHandler(t *testing.T) {
 								Namespace: "fakenamespace",
 							},
 							Data: map[string][]byte{
-								kargoapi.WebhookReceiverSecretKeyQuay: []byte("mysupersecrettoken"),
+								quaySecretDataKey: []byte("mysupersecrettoken"),
 							},
 						},
 						&kargoapi.ProjectConfig{

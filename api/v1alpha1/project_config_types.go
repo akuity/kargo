@@ -5,15 +5,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	WebhookReceiverTypeGitHub = "GitHub"
-	// TODO(fuskovic): Add more receiver enum types(e.g. Dockerhub, Quay, Gitlab, etc...)
-)
-
-const (
-	WebhookReceiverSecretKeyGithub = "token"
-)
-
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Namespaced
 // +kubebuilder:subresource:status
@@ -113,7 +104,7 @@ type WebhookReceiverConfig struct {
 	//
 	// TODO(fuskovic): Make this mutually exclusive with configs for other platforms.
 	//
-	Quay *QuayWebhookReceiver `json:"quay,omitempty" protobuf:"bytes,3,opt,name=quay"`
+	Quay *QuayWebhookReceiverConfig `json:"quay,omitempty" protobuf:"bytes,3,opt,name=quay"`
 }
 
 // GitHubWebhookReceiverConfig describes a webhook receiver that is compatible
@@ -136,13 +127,15 @@ type GitHubWebhookReceiverConfig struct {
 	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
 }
 
-// QuayWebhookReceiver describes a webhook receiver that is compatible with
-// Quay payloads.
-type QuayWebhookReceiver struct {
-	// SecretRef contains a reference to a Secret in the same namespace as the ProjectConfig.
+type QuayWebhookReceiverConfig struct {
+	// SecretRef contains a reference to a Secret. For Project-scoped webhook
+	// receivers, the referenced Secret must be in the same namespace as the
+	// ProjectConfig.
 	//
-	// The Secret is expected to contain a 'quay-secret' key with the secret token configured for
-	// in Quay for the webhook
+	// For cluster-scoped webhook receivers, the referenced Secret must be in the
+	// designated "cluster Secrets" namespace.
+	//
+	// The Secret's data map is expected to contain a `secret` key.
 	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
 }
 

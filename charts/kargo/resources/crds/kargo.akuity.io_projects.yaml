@@ -203,16 +203,20 @@ spec:
                       description: Name is the name of the webhook receiver.
                       type: string
                     quay:
-                      description: |-
-                        Quay contains the configuration for a webhook receiver that is compatible with
-                        Quay payloads.
+                      description: |
+                        Quay contains the configuration for a webhook receiver that is compatible
+                        with Quay payloads.
                       properties:
                         secretRef:
                           description: |-
-                            SecretRef contains a reference to a Secret in the same namespace as the ProjectConfig.
+                            SecretRef contains a reference to a Secret. For Project-scoped webhook
+                            receivers, the referenced Secret must be in the same namespace as the
+                            ProjectConfig.
 
-                            The Secret is expected to contain a 'quay-secret' key with the secret token configured for
-                            in Quay for the webhook
+                            For cluster-scoped webhook receivers, the referenced Secret must be in the
+                            designated "cluster Secrets" namespace.
+
+                            The Secret's data map is expected to contain a `secret` key.
                           properties:
                             name:
                               default: ""
@@ -228,6 +232,8 @@ spec:
                       required:
                       - secretRef
                       type: object
+                  required:
+                  - github
                   type: object
                 type: array
             type: object
