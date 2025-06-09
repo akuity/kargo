@@ -49,6 +49,24 @@ func TestReconciler_syncWebhookReceivers(t *testing.T) {
 			},
 		},
 		{
+			name:       "cluster secrets namespace not specified",
+			reconciler: &reconciler{},
+			clusterCfg: &kargoapi.ClusterConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+				Spec: kargoapi.ClusterConfigSpec{
+					WebhookReceivers: []kargoapi.WebhookReceiverConfig{{}},
+				},
+			},
+			assertions: func(t *testing.T, _ kargoapi.ClusterConfigStatus, err error) {
+				require.ErrorContains(
+					t,
+					err,
+					"no namespace is designated for storing Secrets referenced by "+
+						"cluster-level resources",
+				)
+			},
+		},
+		{
 			name: "error building receiver",
 			reconciler: &reconciler{
 				cfg: ReconcilerConfig{

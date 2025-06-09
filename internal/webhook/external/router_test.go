@@ -171,6 +171,23 @@ func TestServer_route(t *testing.T) {
 			},
 		},
 		{
+			name: "cluster secrets namespace not specified",
+			server: &server{
+				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+					&kargoapi.ClusterConfig{
+						ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+					},
+				).WithIndex(
+					&kargoapi.ProjectConfig{},
+					indexer.ProjectConfigsByWebhookReceiverPathsField,
+					indexer.ProjectConfigsByWebhookReceiverPaths,
+				).Build(),
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, rr.Result().StatusCode)
+			},
+		},
+		{
 			name: "success with ClusterConfig",
 			server: &server{
 				cfg: ServerConfig{
