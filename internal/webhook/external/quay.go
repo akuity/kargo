@@ -41,7 +41,7 @@ func quayHandler(
 		}
 
 		payload := struct {
-			// format: quay.io/repository/mynamespace/repository
+			// format: quay.io/mynamespace/repository
 			RepoWebURL string `json:"docker_url"`
 		}{}
 
