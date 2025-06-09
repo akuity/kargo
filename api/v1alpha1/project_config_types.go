@@ -102,7 +102,7 @@ type WebhookReceiverConfig struct {
 	//
 	// TODO(fuskovic): Make this mutually exclusive with configs for other
 	// platforms.
-	GitLab *GitHubWebhookReceiverConfig `json:"gitlab,omitempty" protobuf:"bytes,3,opt,name=gitlab"`
+	GitLab *GitLabWebhookReceiverConfig `json:"gitlab,omitempty" protobuf:"bytes,3,opt,name=gitlab"`
 }
 
 // GitHubWebhookReceiverConfig describes a webhook receiver that is compatible

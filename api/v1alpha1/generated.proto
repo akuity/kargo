@@ -616,7 +616,7 @@ message GitLabWebhookReceiverConfig {
   // For cluster-scoped webhook receivers, the referenced Secret must be in the
   // designated "cluster Secrets" namespace.
   //
-  // The secret is expected to contain a `gitlab-secret` key containing the
+  // The secret is expected to contain a `secret-token` key containing the
   // shared secret specified when registering the webhook in GitLab. For more
   // information about this token, please refer to the GitLab documentation:
   //   https://docs.gitlab.com/user/project/integrations/webhooks/
@@ -1799,7 +1799,7 @@ message WebhookReceiverConfig {
   //
   // TODO(fuskovic): Make this mutually exclusive with configs for other
   // platforms.
-  optional GitHubWebhookReceiverConfig gitlab = 3;
+  optional GitLabWebhookReceiverConfig gitlab = 3;
 }
 
 // WebhookReceiverDetails encapsulates the details of a webhook receiver.

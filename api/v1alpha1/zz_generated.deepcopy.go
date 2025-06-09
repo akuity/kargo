@@ -2073,7 +2073,7 @@ func (in *WebhookReceiverConfig) DeepCopyInto(out *WebhookReceiverConfig) {
 	}
 	if in.GitLab != nil {
 		in, out := &in.GitLab, &out.GitLab
-		*out = new(GitHubWebhookReceiverConfig)
+		*out = new(GitLabWebhookReceiverConfig)
 		**out = **in
 	}
 }
