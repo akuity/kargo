@@ -2,13 +2,13 @@ package external
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -16,156 +16,97 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/indexer"
-	"github.com/akuity/kargo/internal/logging"
 )
 
 func TestQuayHandler(t *testing.T) {
-	url := "http://doesntmatter.com"
-	for _, test := range []struct {
-		name    string
-		kClient func() client.Client
-		req     func() *http.Request
-		secret  string
-		code    int
-		msg     string
+	const testURL = "https://webhooks.kargo.example.com/nonsense"
+
+	const testProjectName = "fake-project"
+
+	testScheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(testScheme))
+
+	const testToken = "mysupersecrettoken"
+	testSecretData := map[string][]byte{
+		QuaySecretDataKey: []byte(testToken),
+	}
+
+	for _, testCase := range []struct {
+		name       string
+		client     client.Client
+		secretData map[string][]byte
+		req        func() *http.Request
+		assertions func(*testing.T, *httptest.ResponseRecorder)
 	}{
 		{
-			name: "request too large",
-			kClient: func() client.Client {
-				scheme := runtime.NewScheme()
-				require.NoError(t, corev1.AddToScheme(scheme))
-				require.NoError(t, kargoapi.AddToScheme(scheme))
-				return fake.NewClientBuilder().
-					WithScheme(scheme).
-					Build()
-			},
+			name:       "request body too large",
+			secretData: testSecretData,
 			req: func() *http.Request {
-				const maxBytes = 2 << 20 // 2MB
-				body := make([]byte, maxBytes+1)
-				b := io.NopCloser(bytes.NewBuffer(body))
-				req := httptest.NewRequest(http.MethodPost, url, b)
+				body := make([]byte, 2<<20+1)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					io.NopCloser(bytes.NewBuffer(body)),
+				)
 				return req
 			},
-			msg:  "{\"error\":\"failed to read request body: content exceeds limit of 2097152 bytes\"}\n",
-			code: http.StatusRequestEntityTooLarge,
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusRequestEntityTooLarge, rr.Code)
+				res := map[string]string{}
+				err := json.Unmarshal(rr.Body.Bytes(), &res)
+				require.NoError(t, err)
+				require.Contains(t, res["error"], "content exceeds limit")
+			},
 		},
 		{
-			name: "missing payload url",
-			kClient: func() client.Client {
-				scheme := runtime.NewScheme()
-				require.NoError(t, corev1.AddToScheme(scheme))
-				require.NoError(t, kargoapi.AddToScheme(scheme))
-				return fake.NewClientBuilder().
-					WithScheme(scheme).
-					Build()
-			},
+			name:       "success -- push event",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Image: &kargoapi.ImageSubscription{
+								RepoURL: "quay.io/mynamespace/repository",
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
 			req: func() *http.Request {
-				b := bytes.NewBuffer([]byte(`{}`))
-				req := httptest.NewRequest(http.MethodPost, url, b)
-				return req
+				return httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					newQuayPayload(),
+				)
 			},
-			msg:  "{\"error\":\"missing repository web URL in request body\"}\n",
-			code: http.StatusBadRequest,
-		},
-		{
-			name: "success",
-			kClient: func() client.Client {
-				scheme := runtime.NewScheme()
-				require.NoError(t, corev1.AddToScheme(scheme))
-				require.NoError(t, kargoapi.AddToScheme(scheme))
-				return fake.NewClientBuilder().
-					WithScheme(scheme).
-					WithObjects(
-						&corev1.Secret{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "fakesecret",
-								Namespace: "fakenamespace",
-							},
-							Data: map[string][]byte{
-								quaySecretDataKey: []byte("mysupersecrettoken"),
-							},
-						},
-						&kargoapi.ProjectConfig{
-							ObjectMeta: metav1.ObjectMeta{
-								Namespace: "fakenamespace",
-								Name:      "fakename",
-							},
-							Spec: kargoapi.ProjectConfigSpec{
-								WebhookReceivers: []kargoapi.WebhookReceiverConfig{
-									{
-										Quay: &kargoapi.QuayWebhookReceiverConfig{
-											SecretRef: corev1.LocalObjectReference{
-												Name: "fakesecret",
-											},
-										},
-									},
-								},
-							},
-							Status: kargoapi.ProjectConfigStatus{
-								WebhookReceivers: []kargoapi.WebhookReceiverDetails{
-									{
-										Path: buildWebhookPath(
-											"fake-webhook-receiver-name",
-											"fakename",
-											"quay",
-											"mysupersecrettoken",
-										),
-									},
-								},
-							},
-						},
-						&kargoapi.Warehouse{
-							ObjectMeta: metav1.ObjectMeta{
-								Namespace: "fakenamespace",
-								Name:      "fakename",
-							},
-							Spec: kargoapi.WarehouseSpec{
-								Subscriptions: []kargoapi.RepoSubscription{
-									{
-										Image: &kargoapi.ImageSubscription{
-											RepoURL: "quay.io/mynamespace/repository",
-										},
-									},
-								},
-							},
-						},
-					).
-					WithIndex(
-						&kargoapi.Warehouse{},
-						indexer.WarehousesBySubscribedURLsField,
-						indexer.WarehousesBySubscribedURLs,
-					).
-					WithIndex(
-						&kargoapi.ProjectConfig{},
-						indexer.ProjectConfigsByWebhookReceiverPathsField,
-						indexer.ProjectConfigsByWebhookReceiverPaths,
-					).
-					Build()
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(
+					t,
+					`{"msg":"refreshed 1 warehouse(s)"}`,
+					rr.Body.String(),
+				)
 			},
-			req: func() *http.Request {
-				b := newQuayPayload()
-				req := httptest.NewRequest(http.MethodPost, url, b)
-				return req
-			},
-			secret: "fakesecret",
-			msg:    "{\"msg\":\"refreshed 1 warehouse(s)\"}\n",
-			code:   http.StatusOK,
 		},
 	} {
-		t.Run(test.name, func(t *testing.T) {
-			req := test.req()
-			l := logging.NewLogger(logging.DebugLevel)
-			ctx := logging.ContextWithLogger(req.Context(), l)
-			req = req.WithContext(ctx)
+		t.Run(testCase.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
-			namespace := "fakenamespace"
-			h := quayHandler(
-				test.kClient(),
-				namespace,
-			)
-			h(w, req)
-			require.Equal(t, test.code, w.Code)
-			require.Contains(t, w.Body.String(), test.msg)
+			(&quayWebhookReceiver{
+				baseWebhookReceiver: &baseWebhookReceiver{
+					client:     testCase.client,
+					project:    testProjectName,
+					secretData: testCase.secretData,
+				},
+			}).GetHandler()(w, testCase.req())
+			testCase.assertions(t, w)
 		})
 	}
 }

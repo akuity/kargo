@@ -2,26 +2,76 @@ package external
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/io"
 	"github.com/akuity/kargo/internal/logging"
 )
 
 const (
-	quaySecretDataKey       = "secret"
+	QuaySecretDataKey = "secret"
+
 	quay                    = "quay"
 	quayWebhookBodyMaxBytes = 2 << 20 // 2MB
 )
 
-func quayHandler(
+func init() {
+	registry.register(
+		quay,
+		webhookReceiverRegistration{
+			predicate: func(cfg kargoapi.WebhookReceiverConfig) bool {
+				return cfg.Quay != nil
+			},
+			factory: newQuayWebhookReceiver,
+		},
+	)
+}
+
+// quayWebhookReceiver is an implementation of WebhookReceiver that handles
+// inbound webhooks from Quay.
+type quayWebhookReceiver struct {
+	*baseWebhookReceiver
+}
+
+// newQuayWebhookReceiver returns a new instance of quayWebhookReceiver.
+func newQuayWebhookReceiver(
 	c client.Client,
-	namespace string,
-) http.HandlerFunc {
+	project string,
+	cfg kargoapi.WebhookReceiverConfig,
+) WebhookReceiver {
+	return &quayWebhookReceiver{
+		baseWebhookReceiver: &baseWebhookReceiver{
+			client:     c,
+			project:    project,
+			secretName: cfg.Quay.SecretRef.Name,
+		},
+	}
+}
+
+// GetDetails implements WebhookReceiver.
+func (q *quayWebhookReceiver) getReceiverType() string {
+	return quay
+}
+
+// getSecretValues implements WebhookReceiver.
+func (q *quayWebhookReceiver) getSecretValues(
+	secretData map[string][]byte,
+) ([]string, error) {
+	secretValue, ok := secretData[QuaySecretDataKey]
+	if !ok {
+		return nil,
+			errors.New("Secret data is not valid for a Quay WebhookReceiver")
+	}
+	return []string{string(secretValue)}, nil
+}
+
+func (q *quayWebhookReceiver) GetHandler() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		logger := logging.LoggerFromContext(ctx).WithValues("path", r.URL.Path)
@@ -69,7 +119,7 @@ func quayHandler(
 
 		logger = logger.WithValues("repoWebURL", payload.RepoWebURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		result, err := refreshWarehouses(ctx, c, namespace, payload.RepoWebURL)
+		result, err := refreshWarehouses(ctx, q.client, q.project, payload.RepoWebURL)
 		if err != nil {
 			xhttp.WriteErrorJSON(w,
 				xhttp.Error(err, http.StatusInternalServerError),
