@@ -116,10 +116,12 @@ spec:
                             For cluster-scoped webhook receivers, the referenced Secret must be in the
                             designated "cluster Secrets" namespace.
 
-                            The Secret's data map is expected to contain a `secret` key.
-                            Quay does not support a shared secret. However, webhook receivers
-                            account for this by always supporting a secret on our side; allowing us to always generate
-                            a secure webhook receiver URL
+                            The Secret's data map is expected to contain a `secret` key whose value
+                            does NOT need to be shared directly with Quay when registering a
+                            webhook. It is used only by Kargo to create a complex, hard-to-guess URL,
+                            which implicitly serves as a shared secret. For more information about
+                            Quay webhooks, please refer to the Quay documentation:
+                              https://docs.quay.io/guides/notifications.html
                           properties:
                             name:
                               default: ""

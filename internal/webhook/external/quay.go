@@ -62,12 +62,11 @@ func (q *quayWebhookReceiver) getReceiverType() string {
 func (q *quayWebhookReceiver) getSecretValues(
 	secretData map[string][]byte,
 ) ([]string, error) {
-	secretValue, ok := secretData[quaySecretDataKey]
-	if !ok {
-		return nil,
-			errors.New("Secret data is not valid for a Quay WebhookReceiver")
-	}
-	return []string{string(secretValue)}, nil
+	// Because Quay does not provide support for a secret
+	// during configuration, the unguessable URL is it's 
+	// own implicit authentication mechanism. 
+	// So we don't need to do anything here.
+	return nil, nil
 }
 
 // GetHandler implements WebhookReceiver.
