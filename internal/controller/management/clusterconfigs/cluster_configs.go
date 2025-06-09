@@ -2,6 +2,7 @@ package clusterconfigs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -25,7 +26,7 @@ import (
 
 type ReconcilerConfig struct {
 	ExternalWebhookServerBaseURL string `envconfig:"EXTERNAL_WEBHOOK_SERVER_BASE_URL" required:"true"`
-	ClusterSecretsNamespace      string `envconfig:"CLUSTER_SECRETS_NAMESPACE" required:"true"`
+	ClusterSecretsNamespace      string `envconfig:"CLUSTER_SECRETS_NAMESPACE"`
 }
 
 func ReconcilerConfigFromEnv() ReconcilerConfig {
@@ -222,6 +223,21 @@ func (r *reconciler) syncWebhookReceivers(
 		0,
 		len(clusterCfg.Spec.WebhookReceivers),
 	)
+	if len(clusterCfg.Spec.WebhookReceivers) > 0 && r.cfg.ClusterSecretsNamespace == "" {
+		err := errors.New(
+			"no namespace is designated for storing Secrets referenced by " +
+				"cluster-level resources; please ensure environment variable " +
+				`"CLUSTER_SECRETS_NAMESPACE" is set`,
+		)
+		conditions.Set(status, &metav1.Condition{
+			Type:               kargoapi.ConditionTypeReady,
+			Status:             metav1.ConditionFalse,
+			Reason:             "SyncWebhookReceiversFailed",
+			Message:            "Failed to sync webhook receivers: " + err.Error(),
+			ObservedGeneration: clusterCfg.GetGeneration(),
+		})
+		return *status, err
+	}
 	for _, receiverCfg := range clusterCfg.Spec.WebhookReceivers {
 		receiver, err := external.NewReceiver(
 			ctx,
