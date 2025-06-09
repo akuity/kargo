@@ -13,6 +13,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	libCluster "sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
@@ -42,9 +43,9 @@ import (
 type controllerOptions struct {
 	ShardName string
 
-	KubeConfig string
-	QPS        float32
-	Burst      int
+	ControlPlaneKubeConfig string
+	QPS                    float32
+	Burst                  int
 
 	ArgoCDEnabled       bool
 	ArgoCDKubeConfig    string
@@ -81,7 +82,7 @@ func newControllerCommand() *cobra.Command {
 func (o *controllerOptions) complete() {
 	o.ShardName = os.GetEnv("SHARD_NAME", "")
 
-	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
+	o.ControlPlaneKubeConfig = os.GetEnv("KUBECONFIG", "")
 	o.QPS = types.MustParseFloat32(os.GetEnv("KUBE_API_QPS", "50.0"))
 	o.Burst = types.MustParseInt(os.GetEnv("KUBE_API_BURST", "300"))
 
@@ -107,7 +108,7 @@ func (o *controllerOptions) run(ctx context.Context) error {
 	}
 	startupLogger.Info("Starting Kargo Controller")
 
-	kargoMgr, stagesReconcilerCfg, err := o.setupKargoManager(
+	kargoMgr, localClusterClient, stagesReconcilerCfg, err := o.setupKargoManager(
 		ctx,
 		stages.ReconcilerConfigFromEnv(),
 	)
@@ -123,6 +124,7 @@ func (o *controllerOptions) run(ctx context.Context) error {
 	credentialsDB := credsdb.NewDatabase(
 		ctx,
 		kargoMgr.GetClient(),
+		localClusterClient,
 		credsdb.DatabaseConfigFromEnv(),
 	)
 
@@ -142,18 +144,16 @@ func (o *controllerOptions) run(ctx context.Context) error {
 func (o *controllerOptions) setupKargoManager(
 	ctx context.Context,
 	stagesReconcilerCfg stages.ReconcilerConfig,
-) (manager.Manager, stages.ReconcilerConfig, error) {
-	// If the env var is undefined, this will resolve to kubeconfig for the
-	// cluster the controller is running in.
+) (manager.Manager, client.Client, stages.ReconcilerConfig, error) {
+	// If o.ControlPlaneKubeConfig is empty, this will resolve to kubeconfig for
+	// the cluster the controller is running in.
 	//
-	// It is typically defined if this controller is running somewhere other
-	// than where the Kargo resources live. One example of this would be a
-	// sharded topology wherein Kargo controllers run on application
-	// clusters, with Kargo resources hosted in a centralized management
-	// cluster.
-	restCfg, err := kubernetes.GetRestConfig(ctx, o.KubeConfig)
+	// It is typically non-empty only when this controller is running somewhere
+	// other than the Kargo control plane's cluster. i.e. Running in an
+	// application cluster, as part of a sharded topology.
+	restCfg, err := kubernetes.GetRestConfig(ctx, o.ControlPlaneKubeConfig)
 	if err != nil {
-		return nil, stagesReconcilerCfg,
+		return nil, nil, stagesReconcilerCfg,
 			fmt.Errorf("error loading REST config for Kargo controller manager: %w", err)
 	}
 	kubernetes.ConfigureQPSBurst(ctx, restCfg, o.QPS, o.Burst)
@@ -161,13 +161,13 @@ func (o *controllerOptions) setupKargoManager(
 
 	scheme := runtime.NewScheme()
 	if err = corev1.AddToScheme(scheme); err != nil {
-		return nil, stagesReconcilerCfg, fmt.Errorf(
+		return nil, nil, stagesReconcilerCfg, fmt.Errorf(
 			"error adding Kubernetes core API to Kargo controller manager scheme: %w",
 			err,
 		)
 	}
 	if err = kargoapi.AddToScheme(scheme); err != nil {
-		return nil, stagesReconcilerCfg, fmt.Errorf(
+		return nil, nil, stagesReconcilerCfg, fmt.Errorf(
 			"error adding Kargo API to Kargo controller manager scheme: %w",
 			err,
 		)
@@ -177,7 +177,7 @@ func (o *controllerOptions) setupKargoManager(
 		if exists, err = argoRolloutsExists(ctx, restCfg); exists {
 			o.Logger.Info("Argo Rollouts integration is enabled")
 			if err = rollouts.AddToScheme(scheme); err != nil {
-				return nil, stagesReconcilerCfg, fmt.Errorf(
+				return nil, nil, stagesReconcilerCfg, fmt.Errorf(
 					"error adding Argo Rollouts API to Kargo controller manager scheme: %w",
 					err,
 				)
@@ -189,7 +189,7 @@ func (o *controllerOptions) setupKargoManager(
 			// server (e.g. due to network issues), and not if Argo Rollouts is
 			// not installed.
 			if err != nil {
-				return nil, stagesReconcilerCfg, fmt.Errorf(
+				return nil, nil, stagesReconcilerCfg, fmt.Errorf(
 					"unable to determine if Argo Rollouts is installed: %w",
 					err,
 				)
@@ -206,7 +206,8 @@ func (o *controllerOptions) setupKargoManager(
 
 	shardReq, err := controller.GetShardRequirement(stagesReconcilerCfg.ShardName)
 	if err != nil {
-		return nil, stagesReconcilerCfg, fmt.Errorf("error getting shard requirement: %w", err)
+		return nil, nil, stagesReconcilerCfg,
+			fmt.Errorf("error getting shard requirement: %w", err)
 	}
 	shardSelector := labels.NewSelector().Add(*shardReq)
 
@@ -247,7 +248,65 @@ func (o *controllerOptions) setupKargoManager(
 			},
 		},
 	)
-	return mgr, stagesReconcilerCfg, err
+
+	// If the mgr happens to be for the local cluster, or falling back to the
+	// local cluster when searching for credentials is not explicitly enabled,
+	// we're all done.
+	if o.ControlPlaneKubeConfig == "" ||
+		os.GetEnv("LOCAL_CLUSTER_CREDS_FALLBACK", "false") != "true" {
+		return mgr, nil, stagesReconcilerCfg, err
+	}
+
+	// Build a separate client for the local cluster...
+	if restCfg, err =
+		kubernetes.GetRestConfig(ctx, o.ControlPlaneKubeConfig); err != nil {
+		return nil, nil, stagesReconcilerCfg,
+			fmt.Errorf("error loading REST config for local cluster client: %w", err)
+	}
+
+	scheme = runtime.NewScheme()
+	if err = corev1.AddToScheme(scheme); err != nil {
+		return nil, nil, stagesReconcilerCfg, fmt.Errorf(
+			"error adding Kubernetes core API to local client scheme: %w",
+			err,
+		)
+	}
+	localCluster, err := libCluster.New(
+		restCfg,
+		func(clusterOptions *libCluster.Options) {
+			clusterOptions.Scheme = scheme
+			clusterOptions.Client = client.Options{
+				Cache: &client.CacheOptions{
+					DisableFor: []client.Object{
+						// The controller does not have cluster-wide permissions, to
+						// get/list/watch Secrets. Its access to Secrets grows and shrinks
+						// dynamically as Projects are created and deleted. We disable
+						// caching here since the underlying informer will not be able to
+						// watch Secrets in all namespaces.
+						&corev1.Secret{},
+					},
+				},
+			}
+		},
+	)
+	if err != nil {
+		return nil, nil, stagesReconcilerCfg,
+			fmt.Errorf("error creating Kubernetes client for local cluster: %w", err)
+	}
+
+	go func() {
+		err = localCluster.Start(ctx)
+	}()
+	if !localCluster.GetCache().WaitForCacheSync(ctx) {
+		return nil, nil, stagesReconcilerCfg,
+			fmt.Errorf("error waiting for cache to sync: %w", err)
+	}
+	if err != nil {
+		return nil, nil, stagesReconcilerCfg,
+			fmt.Errorf("error starting cluster: %w", err)
+	}
+
+	return mgr, localCluster.GetClient(), stagesReconcilerCfg, nil
 }
 
 func (o *controllerOptions) setupArgoCDManager(ctx context.Context) (manager.Manager, error) {
