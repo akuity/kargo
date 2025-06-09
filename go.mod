@@ -33,7 +33,6 @@ require (
 	github.com/fluxcd/pkg/kustomize v1.17.0
 	github.com/go-git/go-git/v5 v5.16.0
 	github.com/go-logr/logr v1.4.2
-	github.com/go-playground/webhooks/v6 v6.4.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/google/go-containerregistry v0.20.3

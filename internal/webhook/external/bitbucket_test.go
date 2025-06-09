@@ -10,7 +10,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	bb "github.com/go-playground/webhooks/v6/bitbucket"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -89,7 +88,7 @@ func TestBitbucketHandler(t *testing.T) {
 					testURL,
 					io.NopCloser(bytes.NewBuffer(body)),
 				)
-				req.Header.Set("X-Event-Key", string(bb.RepoPushEvent))
+				req.Header.Set("X-Event-Key", bitbucketPushEvent)
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -105,7 +104,7 @@ func TestBitbucketHandler(t *testing.T) {
 			secretData: testSecretData,
 			req: func() *http.Request {
 				req := httptest.NewRequest(http.MethodPost, testURL, nil)
-				req.Header.Set("X-Event-Key", string(bb.RepoPushEvent))
+				req.Header.Set("X-Event-Key", bitbucketPushEvent)
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -118,7 +117,7 @@ func TestBitbucketHandler(t *testing.T) {
 			secretData: testSecretData,
 			req: func() *http.Request {
 				req := httptest.NewRequest(http.MethodPost, testURL, nil)
-				req.Header.Set("X-Event-Key", string(bb.RepoPushEvent))
+				req.Header.Set("X-Event-Key", bitbucketPushEvent)
 				req.Header.Set("X-Hub-Signature", "totally-invalid-signature")
 				return req
 			},
@@ -133,7 +132,7 @@ func TestBitbucketHandler(t *testing.T) {
 			req: func() *http.Request {
 				bodyBuf := bytes.NewBuffer([]byte("invalid json"))
 				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
-				req.Header.Set("X-Event-Key", string(bb.RepoPushEvent))
+				req.Header.Set("X-Event-Key", bitbucketPushEvent)
 				req.Header.Set("X-Hub-Signature", sign(bodyBuf.Bytes()))
 				return req
 			},
@@ -193,7 +192,7 @@ func TestBitbucketHandler(t *testing.T) {
 			req: func() *http.Request {
 				bodyBuf := bytes.NewBuffer([]byte(bitbucketPushEventRequestBody))
 				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
-				req.Header.Set("X-Event-Key", string(bb.RepoPushEvent))
+				req.Header.Set("X-Event-Key", bitbucketPushEvent)
 				req.Header.Set("X-Hub-Signature", sign(bodyBuf.Bytes()))
 				return req
 			},
@@ -231,7 +230,7 @@ func TestBitbucketHandler(t *testing.T) {
 			req: func() *http.Request {
 				bodyBuf := bytes.NewBuffer([]byte(bitbucketPushEventRequestBody))
 				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
-				req.Header.Set("X-Event-Key", string(bb.RepoPushEvent))
+				req.Header.Set("X-Event-Key", bitbucketPushEvent)
 				req.Header.Set("X-Hub-Signature", sign(bodyBuf.Bytes()))
 				return req
 			},
