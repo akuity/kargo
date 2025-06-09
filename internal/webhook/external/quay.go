@@ -77,6 +77,17 @@ func (q *quayWebhookReceiver) GetHandler() http.HandlerFunc {
 		logger := logging.LoggerFromContext(ctx)
 		logger.Debug("identifying source repository")
 
+		if contentLength := r.ContentLength; contentLength > quayWebhookBodyMaxBytes {
+			xhttp.WriteErrorJSON(
+				w,
+				xhttp.Error(
+					fmt.Errorf("content exceeds limit of %d bytes", quayWebhookBodyMaxBytes),
+					http.StatusRequestEntityTooLarge,
+				),
+			)
+			return
+		}
+
 		b, err := io.LimitRead(r.Body, quayWebhookBodyMaxBytes)
 		if err != nil {
 			if errors.Is(err, &io.BodyTooLargeError{}) {

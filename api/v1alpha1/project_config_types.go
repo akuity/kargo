@@ -138,6 +138,9 @@ type QuayWebhookReceiverConfig struct {
 	// designated "cluster Secrets" namespace.
 	//
 	// The Secret's data map is expected to contain a `secret` key.
+	// Quay does not support a shared secret. However, webhook receivers
+	// account for this by always supporting a secret on our side; allowing us to always generate
+	// a secure webhook receiver URL
 	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
 }
 

@@ -2,7 +2,9 @@ package external
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -13,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/indexer"
@@ -42,7 +45,7 @@ func TestQuayHandler(t *testing.T) {
 			name:       "request body too large",
 			secretData: testSecretData,
 			req: func() *http.Request {
-				body := make([]byte, 2<<20+1)
+				body := make([]byte, quayWebhookBodyMaxBytes+1)
 				req := httptest.NewRequest(
 					http.MethodPost,
 					testURL,
@@ -59,7 +62,72 @@ func TestQuayHandler(t *testing.T) {
 			},
 		},
 		{
-			name:       "success -- push event",
+			name:       "partial success",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Image: &kargoapi.ImageSubscription{
+								RepoURL: "quay.io/mynamespace/repository",
+							},
+						}},
+					},
+				},
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "another-fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Image: &kargoapi.ImageSubscription{
+								RepoURL: "quay.io/mynamespace/repository",
+							},
+						}},
+					},
+				},
+			).WithInterceptorFuncs(interceptor.Funcs{
+				Patch: func(
+					_ context.Context,
+					_ client.WithWatch,
+					obj client.Object,
+					_ client.Patch,
+					_ ...client.PatchOption,
+				) error {
+					println("object:", obj.GetName())
+					if obj.GetName() == "another-fake-warehouse" {
+						return errors.New("something went wrong")
+					}
+					return nil
+				},
+			}).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				return httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					newQuayPayload(),
+				)
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, rr.Code)
+				require.JSONEq(
+					t,
+					`{"error":"failed to refresh 1 of 2 warehouses"}`,
+					rr.Body.String(),
+				)
+			},
+		},
+		{
+			name:       "success",
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
