@@ -189,11 +189,12 @@ func (f *FreightStatus) AddCurrentStage(stage string, since time.Time) {
 // necessary.
 func (f *FreightStatus) RemoveCurrentStage(stage string) {
 	if record, in := f.CurrentlyIn[stage]; in {
-		if _, verified := f.VerifiedIn[stage]; verified {
+		if record.Since != nil {
 			soak := time.Since(record.Since.Time)
-			if soak > f.VerifiedIn[stage].LongestCompletedSoak.Duration {
-				f.VerifiedIn[stage] = VerifiedStage{
-					LongestCompletedSoak: &metav1.Duration{Duration: soak},
+			if vi, verified := f.VerifiedIn[stage]; verified {
+				if vi.LongestCompletedSoak == nil || soak > vi.LongestCompletedSoak.Duration {
+					vi.LongestCompletedSoak = &metav1.Duration{Duration: soak}
+					f.VerifiedIn[stage] = vi
 				}
 			}
 		}
