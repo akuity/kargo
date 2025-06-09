@@ -99,7 +99,7 @@
                 "description": "DockerHub contains the configuration for a webhook receiver that is\ncompatible with DockerHub payloads.\n\nplatforms.",
                 "properties": {
                   "secretRef": {
-                    "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster Secrets\" namespace.\n\nThe Secret data map is expected to contain a `secret`. This value does NOT\nneed to be shared directly with DockerHub when registering a webhook. It is\nused only by Kargo to create a complex, unguessable URL, which implicitly\nserves as a shared secret. For more information about Docker Hub webhooks,\nplease refer to the Docker documentation:\n  https://docs.docker.com/docker-hub/webhooks/",
+                    "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster Secrets\" namespace.\n\nThe Secret data map is expected to contain a `secret` key whose value does\nNOT need to be shared directly with Docker Hub when registering a webhook.\nIt is used only by Kargo to create a complex, hard-to-guess URL, which\nimplicitly serves as a shared secret. For more information about Docker Hub\nwebhooks, please refer to the Docker documentation:\n  https://docs.docker.com/docker-hub/webhooks/",
                     "properties": {
                       "name": {
                         "default": "",

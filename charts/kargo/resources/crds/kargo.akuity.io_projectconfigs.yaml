@@ -174,11 +174,11 @@ spec:
                             For cluster-scoped webhook receivers, the referenced Secret must be in the
                             designated "cluster Secrets" namespace.
 
-                            The Secret data map is expected to contain a `secret`. This value does NOT
-                            need to be shared directly with DockerHub when registering a webhook. It is
-                            used only by Kargo to create a complex, unguessable URL, which implicitly
-                            serves as a shared secret. For more information about Docker Hub webhooks,
-                            please refer to the Docker documentation:
+                            The Secret data map is expected to contain a `secret` key whose value does
+                            NOT need to be shared directly with Docker Hub when registering a webhook.
+                            It is used only by Kargo to create a complex, hard-to-guess URL, which
+                            implicitly serves as a shared secret. For more information about Docker Hub
+                            webhooks, please refer to the Docker documentation:
                               https://docs.docker.com/docker-hub/webhooks/
                           properties:
                             name:
