@@ -127,6 +127,8 @@ type GitHubWebhookReceiverConfig struct {
 	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
 }
 
+// QuayWebhookReceiverConfig describes a webhook receiver that is compatible
+// with Quay.io payloads.
 type QuayWebhookReceiverConfig struct {
 	// SecretRef contains a reference to a Secret. For Project-scoped webhook
 	// receivers, the referenced Secret must be in the same namespace as the

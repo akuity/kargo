@@ -2921,6 +2921,9 @@ export const PromotionTemplateSpecSchema: GenMessage<PromotionTemplateSpec> = /*
   messageDesc(file_api_v1alpha1_generated, 62);
 
 /**
+ * QuayWebhookReceiverConfig describes a webhook receiver that is compatible
+ * with Quay.io payloads.
+ *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.QuayWebhookReceiverConfig
  */
 export type QuayWebhookReceiverConfig = Message<"github.com.akuity.kargo.api.v1alpha1.QuayWebhookReceiverConfig"> & {

@@ -1434,6 +1434,8 @@ message PromotionTemplateSpec {
   repeated PromotionStep steps = 1;
 }
 
+// QuayWebhookReceiverConfig describes a webhook receiver that is compatible
+// with Quay.io payloads.
 message QuayWebhookReceiverConfig {
   // SecretRef contains a reference to a Secret. For Project-scoped webhook
   // receivers, the referenced Secret must be in the same namespace as the
