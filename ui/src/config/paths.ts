@@ -1,5 +1,6 @@
 export const paths = {
   home: '/',
+  appExtensions: '/ext',
   projects: '/',
   project: '/project/:name',
   projectEvents: '/project/:name/events',
