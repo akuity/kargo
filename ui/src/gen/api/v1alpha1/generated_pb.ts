@@ -2936,6 +2936,9 @@ export type QuayWebhookReceiverConfig = Message<"github.com.akuity.kargo.api.v1a
    * designated "cluster Secrets" namespace.
    *
    * The Secret's data map is expected to contain a `secret` key.
+   * Quay does not support a shared secret. However, webhook receivers
+   * account for this by always supporting a secret on our side; allowing us to always generate
+   * a secure webhook receiver URL
    *
    * @generated from field: optional k8s.io.api.core.v1.LocalObjectReference secretRef = 1;
    */

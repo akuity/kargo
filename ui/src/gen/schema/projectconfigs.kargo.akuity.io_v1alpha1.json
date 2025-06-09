@@ -124,7 +124,7 @@
                 "description": "Quay contains the configuration for a webhook receiver that is compatible\nwith Quay payloads.\n",
                 "properties": {
                   "secretRef": {
-                    "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster Secrets\" namespace.\n\nThe Secret's data map is expected to contain a `secret` key.",
+                    "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster Secrets\" namespace.\n\nThe Secret's data map is expected to contain a `secret` key.\nQuay does not support a shared secret. However, webhook receivers\naccount for this by always supporting a secret on our side; allowing us to always generate\na secure webhook receiver URL",
                     "properties": {
                       "name": {
                         "default": "",
