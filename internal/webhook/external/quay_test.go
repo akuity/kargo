@@ -28,7 +28,7 @@ func TestQuayHandler(t *testing.T) {
 
 	const testToken = "mysupersecrettoken"
 	testSecretData := map[string][]byte{
-		QuaySecretDataKey: []byte(testToken),
+		quaySecretDataKey: []byte(testToken),
 	}
 
 	for _, testCase := range []struct {

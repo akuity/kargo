@@ -15,8 +15,7 @@ import (
 )
 
 const (
-	QuaySecretDataKey = "secret"
-
+	quaySecretDataKey       = "secret"
 	quay                    = "quay"
 	quayWebhookBodyMaxBytes = 2 << 20 // 2MB
 )
@@ -63,7 +62,7 @@ func (q *quayWebhookReceiver) getReceiverType() string {
 func (q *quayWebhookReceiver) getSecretValues(
 	secretData map[string][]byte,
 ) ([]string, error) {
-	secretValue, ok := secretData[QuaySecretDataKey]
+	secretValue, ok := secretData[quaySecretDataKey]
 	if !ok {
 		return nil,
 			errors.New("Secret data is not valid for a Quay WebhookReceiver")
