@@ -93,7 +93,7 @@ func TestQuayHandler(t *testing.T) {
 							Spec: kargoapi.ProjectConfigSpec{
 								WebhookReceivers: []kargoapi.WebhookReceiverConfig{
 									{
-										Quay: &kargoapi.QuayWebhookReceiver{
+										Quay: &kargoapi.QuayWebhookReceiverConfig{
 											SecretRef: corev1.LocalObjectReference{
 												Name: "fakesecret",
 											},
