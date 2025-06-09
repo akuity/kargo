@@ -134,7 +134,7 @@ type GitLabWebhookReceiverConfig struct {
 	// For cluster-scoped webhook receivers, the referenced Secret must be in the
 	// designated "cluster Secrets" namespace.
 	//
-	// The secret is expected to contain a `gitlab-secret` key containing the
+	// The secret is expected to contain a `secret-token` key containing the
 	// shared secret specified when registering the webhook in GitLab. For more
 	// information about this token, please refer to the GitLab documentation:
 	//   https://docs.gitlab.com/user/project/integrations/webhooks/
