@@ -222,7 +222,7 @@ func splitKey(key string) ([]string, error) {
 
 // parseIndex attempts to parse the provided string as an int. If it is unable
 // to do so, it falls back on parsing according to legacy syntax rules, i.e.
-// extracting n from from a string in the  format "[n]".
+// extracting n from a string in the  format "[n]".
 func parseIndex(s string) (int, error) {
 	if index, err := strconv.Atoi(s); err == nil {
 		if index < -1 {
