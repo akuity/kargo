@@ -887,8 +887,44 @@ func TestReconciler_ensureSystemPermissions(t *testing.T) {
 			},
 		},
 		{
-			name: "role binding already exists",
+			name: "error updating existing role binding",
 			reconciler: &reconciler{
+				client: fake.NewClientBuilder().WithInterceptorFuncs(interceptor.Funcs{
+					Update: func(
+						context.Context,
+						client.WithWatch,
+						client.Object,
+						...client.UpdateOption,
+					) error {
+						return errors.New("something went wrong")
+					},
+				}).Build(),
+				createRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return apierrors.NewAlreadyExists(schema.GroupResource{}, "")
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error updating existing RoleBinding")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "success updating existing role binding",
+			reconciler: &reconciler{
+				client: fake.NewClientBuilder().WithInterceptorFuncs(interceptor.Funcs{
+					Update: func(
+						context.Context,
+						client.WithWatch,
+						client.Object,
+						...client.UpdateOption,
+					) error {
+						return nil
+					},
+				}).Build(),
 				createRoleBindingFn: func(
 					context.Context,
 					client.Object,

@@ -43,6 +43,7 @@ type ReconcilerConfig struct {
 	ManageControllerRoleBindings bool   `envconfig:"MANAGE_CONTROLLER_ROLE_BINDINGS" default:"true"`
 	KargoNamespace               string `envconfig:"KARGO_NAMESPACE" default:"kargo"`
 	MaxConcurrentReconciles      int    `envconfig:"MAX_CONCURRENT_PROJECT_RECONCILES" default:"4"`
+	ClusterSecretsNamespace      string `envconfig:"CLUSTER_SECRETS_NAMESPACE"`
 }
 
 func ReconcilerConfigFromEnv() ReconcilerConfig {
@@ -527,51 +528,73 @@ func (r *reconciler) ensureSystemPermissions(
 	ctx context.Context,
 	project *kargoapi.Project,
 ) error {
-	const roleBindingName = "kargo-project-admin"
-
 	logger := logging.LoggerFromContext(ctx).WithValues(
 		"project", project.Name,
 		"name", project.Name,
 		"namespace", project.Name,
-		"roleBinding", roleBindingName,
 	)
 
-	roleBinding := &rbacv1.RoleBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      roleBindingName,
-			Namespace: project.Name,
-		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: rbacv1.GroupName,
-			Kind:     "ClusterRole",
-			Name:     "kargo-project-admin",
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      "ServiceAccount",
-				Name:      "kargo-api",
-				Namespace: r.cfg.KargoNamespace,
+	roleBindings := []rbacv1.RoleBinding{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "kargo-project-admin",
+				Namespace: project.Name,
 			},
-			{
-				Kind:      "ServiceAccount",
-				Name:      "kargo-admin",
-				Namespace: r.cfg.KargoNamespace,
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     "kargo-project-admin",
 			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      "ServiceAccount",
+					Name:      "kargo-api",
+					Namespace: r.cfg.KargoNamespace,
+				},
+				{
+					Kind:      "ServiceAccount",
+					Name:      "kargo-admin",
+					Namespace: r.cfg.KargoNamespace,
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "kargo-project-secrets-reader",
+				Namespace: project.Name,
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     projectSecretsReaderClusterRoleName,
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      "ServiceAccount",
+				Name:      "kargo-external-webhooks-server",
+				Namespace: r.cfg.KargoNamespace,
+			}},
 		},
 	}
-	if err := r.createRoleBindingFn(ctx, roleBinding); err != nil {
-		if kubeerr.IsAlreadyExists(err) {
-			logger.Debug("RoleBinding already exists in project namespace")
-			return nil
+	for _, roleBinding := range roleBindings {
+		rbLogger := logger.WithValues("roleBinding", roleBinding.Name)
+		if err := r.createRoleBindingFn(ctx, &roleBinding); err != nil {
+			if !kubeerr.IsAlreadyExists(err) {
+				return fmt.Errorf(
+					"error creating RoleBinding %q in Project namespace %q: %w",
+					roleBinding.Name, project.Name, err,
+				)
+			}
+			if err = r.client.Update(ctx, &roleBinding); err != nil {
+				return fmt.Errorf(
+					"error updating existing RoleBinding %q in Project namespace %q: %w",
+					roleBinding.Name, project.Name, err,
+				)
+			}
+			rbLogger.Debug("updated RoleBinding")
+			continue
 		}
-		return fmt.Errorf(
-			"error creating RoleBinding %q in project namespace %q: %w",
-			roleBinding.Name,
-			project.Name,
-			err,
-		)
+		rbLogger.Debug("created RoleBinding in Project namespace")
 	}
-	logger.Debug("granted API server and kargo-admin project admin permissions")
 
 	return nil
 }
@@ -597,7 +620,7 @@ func (r *reconciler) ensureControllerPermissions(
 		return fmt.Errorf("error listing controller ServiceAccounts: %w", err)
 	}
 
-	// Create/update a RoleBinding for each ServiceAccount
+	// Create/update RoleBindings for each ServiceAccount
 	for _, controllerSA := range controllerSAs.Items {
 		sa := &controllerSA
 		if controllerutil.AddFinalizer(sa, kargoapi.FinalizerName) {
