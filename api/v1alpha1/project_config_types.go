@@ -88,20 +88,18 @@ type PromotionPolicy struct {
 
 // WebhookReceiverConfig describes the configuration for a single webhook
 // receiver.
+//
+// +kubebuilder:validation:XValidation:message="WebhookReceiverConfig must have exactly one of github or gitlab set",rule="has(self.github) ? !has(self.gitlab) : has(self.gitlab)"
 type WebhookReceiverConfig struct {
 	// Name is the name of the webhook receiver.
 	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
 	// GitHub contains the configuration for a webhook receiver that is compatible
 	// with GitHub payloads.
 	//
-	// TODO(fuskovic): Make this mutually exclusive with configs for other
-	// platforms.
 	GitHub *GitHubWebhookReceiverConfig `json:"github,omitempty" protobuf:"bytes,2,opt,name=github"`
 	// GitLab contains the configuration for a webhook receiver that is compatible
 	// with GitLab payloads.
 	//
-	// TODO(fuskovic): Make this mutually exclusive with configs for other
-	// platforms.
 	GitLab *GitLabWebhookReceiverConfig `json:"gitlab,omitempty" protobuf:"bytes,3,opt,name=gitlab"`
 }
 

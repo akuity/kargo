@@ -96,7 +96,7 @@
             "description": "WebhookReceiverConfig describes the configuration for a single webhook\nreceiver.",
             "properties": {
               "github": {
-                "description": "GitHub contains the configuration for a webhook receiver that is compatible\nwith GitHub payloads.\n\nplatforms.",
+                "description": "GitHub contains the configuration for a webhook receiver that is compatible\nwith GitHub payloads.",
                 "properties": {
                   "secretRef": {
                     "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster Secrets\" namespace.\n\nThe Secret's data map is expected to contain a `secret` key whose value is\nthe shared secret used to authenticate the webhook requests sent by GitHub.\nFor more information please refer to GitHub documentation:\n  https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries",
@@ -117,7 +117,7 @@
                 "type": "object"
               },
               "gitlab": {
-                "description": "GitLab contains the configuration for a webhook receiver that is compatible\nwith GitLab payloads.\n\nplatforms.",
+                "description": "GitLab contains the configuration for a webhook receiver that is compatible\nwith GitLab payloads.",
                 "properties": {
                   "secretRef": {
                     "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster Secrets\" namespace.\n\nThe secret is expected to contain a `secret-token` key containing the\nshared secret specified when registering the webhook in GitLab. For more\ninformation about this token, please refer to the GitLab documentation:\n  https://docs.gitlab.com/user/project/integrations/webhooks/",
@@ -142,7 +142,13 @@
                 "type": "string"
               }
             },
-            "type": "object"
+            "type": "object",
+            "x-kubernetes-validations": [
+              {
+                "message": "WebhookReceiverConfig must have exactly one of github or gitlab set",
+                "rule": "has(self.github) ? !has(self.gitlab) : has(self.gitlab)"
+              }
+            ]
           },
           "type": "array"
         }

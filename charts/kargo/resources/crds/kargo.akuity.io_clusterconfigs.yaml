@@ -67,8 +67,6 @@ spec:
                       description: |-
                         GitHub contains the configuration for a webhook receiver that is compatible
                         with GitHub payloads.
-
-                        platforms.
                       properties:
                         secretRef:
                           description: |-
@@ -102,8 +100,6 @@ spec:
                       description: |-
                         GitLab contains the configuration for a webhook receiver that is compatible
                         with GitLab payloads.
-
-                        platforms.
                       properties:
                         secretRef:
                           description: |-
@@ -137,6 +133,10 @@ spec:
                       description: Name is the name of the webhook receiver.
                       type: string
                   type: object
+                  x-kubernetes-validations:
+                  - message: WebhookReceiverConfig must have exactly one of github
+                      or gitlab set
+                    rule: 'has(self.github) ? !has(self.gitlab) : has(self.gitlab)'
                 type: array
             type: object
           status:

@@ -3677,6 +3677,8 @@ export const WarehouseStatusSchema: GenMessage<WarehouseStatus> = /*@__PURE__*/
  * WebhookReceiverConfig describes the configuration for a single webhook
  * receiver.
  *
+ * +kubebuilder:validation:XValidation:message="WebhookReceiverConfig must have exactly one of github or gitlab set",rule="has(self.github) ? !has(self.gitlab) : has(self.gitlab)"
+ *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.WebhookReceiverConfig
  */
 export type WebhookReceiverConfig = Message<"github.com.akuity.kargo.api.v1alpha1.WebhookReceiverConfig"> & {
@@ -3691,9 +3693,6 @@ export type WebhookReceiverConfig = Message<"github.com.akuity.kargo.api.v1alpha
    * GitHub contains the configuration for a webhook receiver that is compatible
    * with GitHub payloads.
    *
-   * TODO(fuskovic): Make this mutually exclusive with configs for other
-   * platforms.
-   *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.GitHubWebhookReceiverConfig github = 2;
    */
   github?: GitHubWebhookReceiverConfig;
@@ -3701,9 +3700,6 @@ export type WebhookReceiverConfig = Message<"github.com.akuity.kargo.api.v1alpha
   /**
    * GitLab contains the configuration for a webhook receiver that is compatible
    * with GitLab payloads.
-   *
-   * TODO(fuskovic): Make this mutually exclusive with configs for other
-   * platforms.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.GitLabWebhookReceiverConfig gitlab = 3;
    */
