@@ -35,6 +35,8 @@ const (
 	controllerServiceAccountLabelKey     = "app.kubernetes.io/component"
 	controllerServiceAccountLabelValue   = "controller"
 	controllerReadSecretsClusterRoleName = "kargo-controller-read-secrets"
+	// nolint: gosec
+	projectSecretsReaderClusterRoleName = "kargo-project-secrets-reader"
 )
 
 type ReconcilerConfig struct {
@@ -102,7 +104,7 @@ type reconciler struct {
 		client.Object,
 	) (bool, error)
 
-	ensureAPIAdminPermissionsFn func(context.Context, *kargoapi.Project) error
+	ensureSystemPermissionsFn func(context.Context, *kargoapi.Project) error
 
 	ensureControllerPermissionsFn func(context.Context, *kargoapi.Project) error
 
@@ -193,7 +195,7 @@ func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
 	r.createNamespaceFn = r.client.Create
 	r.patchOwnerReferencesFn = api.PatchOwnerReferences
 	r.ensureFinalizerFn = api.EnsureFinalizer
-	r.ensureAPIAdminPermissionsFn = r.ensureAPIAdminPermissions
+	r.ensureSystemPermissionsFn = r.ensureSystemPermissions
 	r.ensureControllerPermissionsFn = r.ensureControllerPermissions
 	r.ensureDefaultUserRolesFn = r.ensureDefaultUserRoles
 	r.createServiceAccountFn = r.client.Create
@@ -376,15 +378,19 @@ func (r *reconciler) syncProject(
 		return *status, fmt.Errorf("error ensuring namespace: %w", err)
 	}
 
-	if err := r.ensureAPIAdminPermissionsFn(ctx, project); err != nil {
+	if err := r.ensureSystemPermissionsFn(ctx, project); err != nil {
 		conditions.Set(status, &metav1.Condition{
-			Type:               kargoapi.ConditionTypeReady,
-			Status:             metav1.ConditionFalse,
-			Reason:             "EnsuringAPIServerPermissionsFailed",
-			Message:            "Failed to ensure project permissions for API server: " + err.Error(),
+			Type:   kargoapi.ConditionTypeReady,
+			Status: metav1.ConditionFalse,
+			Reason: "EnsuringSystemPermissionsFailed",
+			Message: "Failed to ensure Project permissions for system " +
+				"ServiceAccounts: " + err.Error(),
 			ObservedGeneration: project.GetGeneration(),
 		})
-		return *status, fmt.Errorf("error ensuring API server permissions: %w", err)
+		return *status, fmt.Errorf(
+			"error ensuring Project permissions for system ServiceAccounts: %w",
+			err,
+		)
 	}
 
 	if r.cfg.ManageControllerRoleBindings {
@@ -513,7 +519,11 @@ func (r *reconciler) ensureNamespace(ctx context.Context, project *kargoapi.Proj
 	return nil
 }
 
-func (r *reconciler) ensureAPIAdminPermissions(
+// ensureSystemPermissions ensures that system-level ServiceAccounts, including
+// that for the Kargo admin, have all necessary permissions to operate on the
+// specified Project. This excludes permissions for the controllers, which have
+// their own dedicated method for ensuring their permissions.
+func (r *reconciler) ensureSystemPermissions(
 	ctx context.Context,
 	project *kargoapi.Project,
 ) error {
