@@ -75,6 +75,8 @@ k8s_resource(
     'kargo-admin:clusterrole',
     'kargo-admin:clusterrolebinding',
     'kargo-admin:serviceaccount',
+    'kargo-cluster-secrets-reader:role',
+    'kargo-cluster-secrets-reader:rolebinding',
     'kargo-viewer:clusterrole',
     'kargo-viewer:serviceaccount',
     'kargo-viewer:clusterrolebinding',
