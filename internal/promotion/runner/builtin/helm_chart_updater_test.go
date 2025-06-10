@@ -208,7 +208,7 @@ func Test_helmChartUpdater_run(t *testing.T) {
 			setupRepository: func(t *testing.T) (string, func()) {
 				httpRepositoryRoot := t.TempDir()
 				require.NoError(t, fs.CopyFile(
-					"testdata/helm/charts/examplechart-0.1.0.tgz",
+					"../../../helm/testdata/charts/examplechart-0.1.0.tgz",
 					filepath.Join(httpRepositoryRoot, "examplechart-0.1.0.tgz"),
 				))
 				httpRepository := httptest.NewServer(http.FileServer(http.Dir(httpRepositoryRoot)))

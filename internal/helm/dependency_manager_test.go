@@ -1132,23 +1132,18 @@ func Test_backupFile_Restore(t *testing.T) {
 			},
 		},
 		{
-			name: "permission denied",
+			name: "target exists as directory",
 			setup: func(t *testing.T) *backupFile {
-				originalPath := filepath.Join(tempDir, "readonly", "original.txt")
-				backupPath := filepath.Join(tempDir, "backup.txt")
-
 				// Create backup file
+				backupPath := filepath.Join(tempDir, "dir_backup.txt")
 				require.NoError(t, os.WriteFile(backupPath, []byte("content"), 0o600))
 
-				// Create readonly directory
-				readonlyDir := filepath.Dir(originalPath)
-				require.NoError(t, os.Mkdir(readonlyDir, 0o700))
-				require.NoError(t, os.Chmod(readonlyDir, 0o555))
+				// Create a directory where we want to restore the file
+				originalPath := filepath.Join(tempDir, "target_dir")
+				require.NoError(t, os.Mkdir(originalPath, 0o755))
 
-				// Restore permissions to ensure test tears down correctly
-				t.Cleanup(func() {
-					_ = os.Chmod(readonlyDir, 0o700)
-				})
+				// Put a file inside to make sure it's not empty
+				require.NoError(t, os.WriteFile(filepath.Join(originalPath, "dummy.txt"), []byte("content"), 0o600))
 
 				return &backupFile{
 					originalPath: originalPath,
@@ -1158,6 +1153,15 @@ func Test_backupFile_Restore(t *testing.T) {
 			assertions: func(t *testing.T, bf *backupFile, err error) {
 				assert.ErrorContains(t, err, "failed to restore backup file")
 				assert.NotEmpty(t, bf.backupPath)
+
+				// Verify backup file still exists since restore failed
+				_, err = os.Stat(bf.backupPath)
+				assert.NoError(t, err)
+
+				// Verify target directory still exists
+				stat, statErr := os.Stat(bf.originalPath)
+				assert.NoError(t, statErr)
+				assert.True(t, stat.IsDir())
 			},
 		},
 	}
@@ -1223,22 +1227,14 @@ func Test_backupFile_Remove(t *testing.T) {
 			},
 		},
 		{
-			name: "permission denied",
+			name: "try to remove directory instead of file",
 			setup: func(t *testing.T) *backupFile {
-				// Create a backup file in a readonly directory
-				readonlyDir := filepath.Join(tempDir, "readonly")
-				require.NoError(t, os.Mkdir(readonlyDir, 0o700))
+				// Create a directory where we expect a file
+				backupPath := filepath.Join(tempDir, "backup_dir")
+				require.NoError(t, os.Mkdir(backupPath, 0o755))
 
-				backupPath := filepath.Join(readonlyDir, "backup.txt")
-				require.NoError(t, os.WriteFile(backupPath, []byte("content"), 0o600))
-
-				// Make directory readonly
-				require.NoError(t, os.Chmod(readonlyDir, 0o555))
-
-				// Restore permissions to ensure test tears down correctly
-				t.Cleanup(func() {
-					_ = os.Chmod(readonlyDir, 0o700)
-				})
+				// Put a file inside to make sure it's not empty
+				require.NoError(t, os.WriteFile(filepath.Join(backupPath, "dummy.txt"), []byte("content"), 0o600))
 
 				return &backupFile{
 					originalPath: filepath.Join(tempDir, "original.txt"),
@@ -1248,9 +1244,10 @@ func Test_backupFile_Remove(t *testing.T) {
 			assertions: func(t *testing.T, bf *backupFile, err error) {
 				assert.ErrorContains(t, err, "failed to remove backup file")
 
-				// Verify file still exists
-				_, statErr := os.Stat(bf.backupPath)
+				// Verify directory still exists
+				stat, statErr := os.Stat(bf.backupPath)
 				assert.NoError(t, statErr)
+				assert.True(t, stat.IsDir())
 			},
 		},
 	}
@@ -1260,12 +1257,6 @@ func Test_backupFile_Remove(t *testing.T) {
 			bf := tt.setup(t)
 			err := bf.Remove()
 			tt.assertions(t, bf, err)
-
-			// Cleanup: restore permissions if needed
-			if strings.Contains(tt.name, "permission denied") {
-				readonlyDir := filepath.Dir(bf.backupPath)
-				_ = os.Chmod(readonlyDir, 0755)
-			}
 		})
 	}
 }
