@@ -164,6 +164,21 @@ func RunningPromotionsByArgoCDApplications(
 			return nil
 		}
 
+		freight := &kargoapi.Freight{}
+		if err := cl.Get(ctx, client.ObjectKey{
+			Name:      promo.Spec.Freight,
+			Namespace: promo.Namespace,
+		}, freight); err != nil {
+			logger.Error(
+				err,
+				"failed to get Freight for Promotion",
+				"promo", promo.Name,
+				"namespace", promo.Namespace,
+				"freight", promo.Spec.Freight,
+				"stage", promo.Spec.Stage,
+			)
+		}
+
 		// Build just enough context to extract the relevant config from the
 		// argocd-update promotion step.
 		promoCtx := promotion.Context{
@@ -173,6 +188,13 @@ func RunningPromotionsByArgoCDApplications(
 			Promotion:       promo.Name,
 			State:           promo.Status.GetState(),
 			Vars:            promo.Spec.Vars,
+			TargetFreightRef: kargoapi.FreightReference{
+				Name:    freight.Name,
+				Commits: freight.Commits,
+				Images:  freight.Images,
+				Charts:  freight.Charts,
+				Origin:  freight.Origin,
+			},
 		}
 
 		if promo.Status.FreightCollection != nil {
