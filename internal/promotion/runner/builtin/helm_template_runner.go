@@ -262,7 +262,7 @@ func (h *helmTemplateRunner) buildDependencies(
 	stepCtx *promotion.StepContext,
 	helmHome, chartPath string,
 ) error {
-	registryClient, err := helm.NewRegistryClient(helmHome)
+	registryClient, err := helm.NewRegistryClient(helm.NewEphemeralAuthorizer().Client)
 	if err != nil {
 		return fmt.Errorf("failed to create Helm registry client: %w", err)
 	}

@@ -105,7 +105,7 @@ this is not a valid chart.yaml
 				return chartPath
 			},
 			assertions: func(t *testing.T, dependencies []ChartDependency, err error) {
-				require.ErrorContains(t, err, "failed to unmarshal")
+				require.ErrorContains(t, err, "unmarshal")
 				assert.Nil(t, dependencies)
 			},
 		},
@@ -115,7 +115,7 @@ this is not a valid chart.yaml
 				return filepath.Join(t.TempDir(), "Chart.yaml")
 			},
 			assertions: func(t *testing.T, dependencies []ChartDependency, err error) {
-				require.ErrorContains(t, err, "failed to read file")
+				require.ErrorContains(t, err, "read file")
 				assert.Nil(t, dependencies)
 			},
 		},

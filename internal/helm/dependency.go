@@ -30,12 +30,12 @@ type chartMetadata struct {
 func GetChartDependencies(p string) ([]ChartDependency, error) {
 	b, err := os.ReadFile(p)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read file %q: %w", p, err)
+		return nil, fmt.Errorf("read file %q: %w", p, err)
 	}
 
 	var meta chartMetadata
 	if err = yaml.Unmarshal(b, &meta); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal %q: %w", p, err)
+		return nil, fmt.Errorf("unmarshal %q: %w", p, err)
 	}
 	return meta.Dependencies, nil
 }
