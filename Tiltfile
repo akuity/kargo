@@ -44,8 +44,11 @@ docker_build(
 
 namespace_create('kargo')
 k8s_resource(
-  new_name = 'namespace',
-  objects = ['kargo:namespace'],
+  new_name = 'namespaces',
+  objects = [
+    'kargo:namespace',
+    'kargo-cluster-secrets:namespace'
+  ],
   labels = ['kargo']
 )
 
