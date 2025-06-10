@@ -39,7 +39,10 @@ const githubPackageEventRequestBody = `
 	"package": {
 		"namespace": "example",
 		"name": "repo"
-  }
+    },
+    "repository": {
+		"html_url": "https://github.com/example/repo"
+	}
 }`
 
 const githubSigningKey = "mysupersecrettoken"
@@ -374,6 +377,60 @@ func TestGithubHandler(t *testing.T) {
 				},
 			}).GetHandler()(w, testCase.req())
 			testCase.assertions(t, w)
+		})
+	}
+}
+
+func TestGitHubURLDomain(t *testing.T) {
+	tests := []struct {
+		name             string
+		url              string
+		expectedHostName string
+		expectedResult   bool
+	}{
+		{
+			name:             "Valid GitHub URL",
+			url:              "https://github.com/nitishfy/my-repo",
+			expectedHostName: "github.com",
+			expectedResult:   true,
+		},
+		{
+			name:             "Valid Enterprise Server URL",
+			url:              "https://github.enterprise.com/org/repo",
+			expectedHostName: "github.enterprise.com",
+			expectedResult:   false,
+		},
+		{
+			name:             "GitHub URL with port",
+			url:              "https://github.com:443/nitishfy/my-repo",
+			expectedHostName: "github.com",
+			expectedResult:   true,
+		},
+		{
+			name:             "Enterprise Server URL with port",
+			url:              "https://github.enterprise.com:8443/org/repo",
+			expectedHostName: "github.enterprise.com",
+			expectedResult:   false,
+		},
+		{
+			name:             "Malformed URL",
+			url:              "https://%",
+			expectedHostName: "",
+			expectedResult:   false,
+		},
+		{
+			name:             "Empty string",
+			url:              "",
+			expectedHostName: "",
+			expectedResult:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			host, result := isGitHubURL(tt.url)
+			require.Equal(t, tt.expectedHostName, host)
+			require.Equal(t, tt.expectedResult, result)
 		})
 	}
 }
