@@ -18,6 +18,7 @@ import (
 	"helm.sh/helm/v3/pkg/downloader"
 	"helm.sh/helm/v3/pkg/getter"
 	"helm.sh/helm/v3/pkg/repo"
+	kerrors "k8s.io/apimachinery/pkg/util/errors"
 
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/io/fs"
@@ -121,6 +122,39 @@ func (em *EphemeralDependencyManager) Update(
 	return em.update(absChartPath)
 }
 
+// Build builds the chart dependencies for the given chart path. It reads the
+// Chart.yaml file to get the list of dependencies, validates them, and then
+// uses the Helm downloader manager to build the dependencies.
+//
+// Note that if the chart currently does not have a Chart.lock file, the
+// build operation will create one by performing an update operation.
+func (em *EphemeralDependencyManager) Build(ctx context.Context, chartPath string) error {
+	absChartPath, err := securejoin.SecureJoin(em.workDir, chartPath)
+	if err != nil {
+		return err
+	}
+
+	absChartFilePath := filepath.Join(absChartPath, "Chart.yaml")
+	dependencies, err := GetChartDependencies(absChartFilePath)
+	if err != nil {
+		return fmt.Errorf("get chart dependencies: %w", err)
+	}
+
+	if len(dependencies) == 0 {
+		return nil
+	}
+
+	if err = em.validateDependencies(absChartPath, dependencies); err != nil {
+		return fmt.Errorf("validate dependencies: %w", err)
+	}
+
+	if err = em.setupRepositories(ctx, dependencies); err != nil {
+		return fmt.Errorf("setup repositories: %w", err)
+	}
+
+	return em.build(absChartPath)
+}
+
 // update performs the actual update of the chart dependencies. It reads the
 // initial versions from the Chart.lock file, creates a backup of the lock file,
 // and then uses the Helm downloader manager to update the dependencies.
@@ -135,12 +169,12 @@ func (em *EphemeralDependencyManager) Update(
 // will be an empty string. If a dependency was updated, the value will be a
 // string indicating the old and new versions in the format
 // "oldVersion -> newVersion".
-func (em *EphemeralDependencyManager) update(chartPath string) (map[string]string, error) {
+func (em *EphemeralDependencyManager) update(chartPath string) (_ map[string]string, err error) {
 	// Download the repository indexes. This is necessary to ensure that the
 	// cache is properly populated, as otherwise the download manager will
 	// attempt to download the repository indexes to the default cache path
 	// instead of using the cache path set in the environment settings.
-	if err := em.fetchRepositoryIndexes(); err != nil {
+	if err = em.fetchRepositoryIndexes(); err != nil {
 		return nil, fmt.Errorf("fetch repository indexes: %w", err)
 	}
 
@@ -158,7 +192,11 @@ func (em *EphemeralDependencyManager) update(chartPath string) (map[string]strin
 	if err != nil {
 		return nil, fmt.Errorf("create backup of Chart.lock: %w", err)
 	}
-	defer lockBackup.Remove()
+	defer func() {
+		if restoreErr := lockBackup.Restore(); restoreErr != nil {
+			err = kerrors.Reduce(kerrors.NewAggregate([]error{err, restoreErr}))
+		}
+	}()
 
 	regClient, err := NewRegistryClient(em.authorizer.Client)
 	if err != nil {
@@ -209,6 +247,51 @@ func (em *EphemeralDependencyManager) update(chartPath string) (map[string]strin
 		}
 	}
 	return changes, nil
+}
+
+// build builds the chart dependencies for the given chart path. It reads the
+// Chart.yaml file to get the list of dependencies, validates them, and then
+// uses the Helm downloader manager to build the dependencies.
+//
+// It returns an error if any of the dependencies are invalid or if the
+// dependencies cannot be built for any reason, such as if the repository
+// indexes cannot be fetched or if the downloader manager fails to build the
+// dependencies.
+func (em *EphemeralDependencyManager) build(chartPath string) error {
+	// Download the repository indexes. This is necessary to ensure that the
+	// cache is properly populated, as otherwise the download manager will
+	// attempt to download the repository indexes to the default cache path
+	// instead of using the cache path set in the environment settings.
+	if err := em.fetchRepositoryIndexes(); err != nil {
+		return fmt.Errorf("fetch repository indexes: %w", err)
+	}
+
+	regClient, err := NewRegistryClient(em.authorizer.Client)
+	if err != nil {
+		return fmt.Errorf("create registry client: %w", err)
+	}
+
+	// Build the chart dependencies using the downloader manager
+	m := &downloader.Manager{
+		Out:       io.Discard,
+		ChartPath: chartPath,
+		Verify:    downloader.VerifyNever,
+		// Note: because we fetched the repository indexes earlier, we can skip
+		// the update step here. The download manager will use the cached indexes
+		// to resolve the dependencies.
+		SkipUpdate: true,
+		Getters: getter.All(&cli.EnvSettings{
+			RepositoryConfig: em.repositoryConfig(),
+			RepositoryCache:  em.repositoryCache(),
+		}),
+		RegistryClient:   regClient,
+		RepositoryConfig: em.repositoryConfig(),
+		RepositoryCache:  em.repositoryCache(),
+	}
+	if err = m.Build(); err != nil {
+		return fmt.Errorf("build chart dependencies: %w", err)
+	}
+	return nil
 }
 
 // validateDependencies checks if the dependencies specified in the chart's

@@ -61,7 +61,7 @@ metadata:
 				// Create a temporary HTTP server to serve the Helm chart.
 				httpRepositoryRoot := t.TempDir()
 				require.NoError(t, fs.CopyFile(
-					"testdata/helm/charts/demo-0.1.0.tgz",
+					"../../../helm/testdata/charts/demo-0.1.0.tgz",
 					filepath.Join(httpRepositoryRoot, "demo-0.1.0.tgz"),
 				))
 				httpRepository := httptest.NewServer(http.FileServer(http.Dir(httpRepositoryRoot)))

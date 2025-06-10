@@ -2,10 +2,7 @@ package builtin
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
-	"net/url"
-	"path/filepath"
 	"strings"
 
 	"github.com/xeipuuv/gojsonschema"
@@ -113,55 +110,4 @@ func (h *helmChartUpdater) generateCommitMessage(chartPath string, newVersions m
 		_, _ = commitMsg.WriteString(fmt.Sprintf("\n- %s: %s", name, change))
 	}
 	return commitMsg.String()
-}
-
-func compareChartVersions(before, after []helm.ChartDependency) map[string]string {
-	beforeMap := make(map[string]string, len(before))
-	for _, dep := range before {
-		beforeMap[dep.Name] = dep.Version
-	}
-
-	changes := make(map[string]string)
-	for _, dep := range after {
-		if oldVersion, exists := beforeMap[dep.Name]; exists {
-			if oldVersion != dep.Version {
-				changes[dep.Name] = oldVersion + " -> " + dep.Version
-			}
-			// Remove the dependency from before map to track allow remaining
-			// items to be counted as removed
-			delete(beforeMap, dep.Name)
-		} else {
-			changes[dep.Name] = dep.Version
-		}
-	}
-
-	// Handle any removed dependencies which are still listed in before map
-	for name := range beforeMap {
-		changes[name] = ""
-	}
-	return changes
-}
-
-// nameForRepositoryURL generates an SHA-256 hash of the repository URL to use
-// as the name for the repository in the Helm repository cache.
-//
-// The repository URL is normalized before hashing using the same logic as
-// urlutil.Equal from Helm, which is used to compare repository URLs in the
-// download manager when looking at cached repository indexes to find the
-// correct chart URL.
-func nameForRepositoryURL(repoURL string) string {
-	u, err := url.Parse(repoURL)
-	if err != nil {
-		repoURL = filepath.Clean(repoURL)
-	}
-
-	if u != nil {
-		if u.Path == "" {
-			u.Path = "/"
-		}
-		u.Path = filepath.Clean(u.Path)
-		repoURL = u.String()
-	}
-
-	return fmt.Sprintf("%x", sha256.Sum256([]byte(repoURL)))
 }
