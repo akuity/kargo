@@ -3,7 +3,10 @@ package external
 import (
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
+	"net/url"
+	"strings"
 
 	gh "github.com/google/go-github/v71/github"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -173,15 +176,29 @@ func (g *githubWebhookReceiver) GetHandler() http.HandlerFunc {
 			repoURL = git.NormalizeURL(e.GetRepo().GetCloneURL())
 		// nolint: lll
 		case *gh.PackageEvent:
-			// Construct the repoURL from the name and namespace fields of the
-			// payload.
-			//   https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry
-			repoURL = fmt.Sprintf(
-				"ghcr.io/%v/%v",
-				*e.GetPackage().Namespace, *e.GetPackage().Name,
-			)
-		}
+			// default registry domain stands for "ghcr.io"
+			// Free, Pro & Team account will be using the default registry domain
+			// Enterprise plan lets you define a URL for the container registry
+			// such as `https://containers.SUBDOMAIN.ghe.com`
+			// https://docs.github.com/en/enterprise-cloud@latest/packages/working-with-a-github-packages-registry/working-with-the-container-registry#url-for-the-container-registry
+			registryDomain := "ghcr.io"
+			// Fetch the html url field from the package event
+			// and check the domain configured
+			htmlUrl := e.GetRepo().GetHTMLURL()
+			host, valid := isGitHubURL(htmlUrl)
+			// if the host is not simply 'github.com'
+			// it means the team is using the GitHub enterprise version
+			// hence change the registry domain
+			if !valid {
+				registryDomain = fmt.Sprintf("containers.%s.ghe.com", host)
+			}
 
+			repoURL = fmt.Sprintf(
+				"%s/%v/%v",
+				registryDomain, *e.GetPackage().Namespace, *e.GetPackage().Name,
+			)
+			// nolint: lll
+		}
 		logger = logger.WithValues("repoURL", repoURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
 
@@ -211,4 +228,21 @@ func (g *githubWebhookReceiver) GetHandler() http.HandlerFunc {
 			},
 		)
 	})
+}
+
+// isGitHubURL checks whether the given URL belongs to github.com.
+// It returns the hostname and a boolean indicating whether the host is exactly "github.com".
+func isGitHubURL(input string) (string, bool) {
+	u, err := url.Parse(input)
+	if err != nil {
+		return "", false
+	}
+	host := u.Host
+	if strings.Contains(host, ":") {
+		host, _, err = net.SplitHostPort(host)
+		if err != nil {
+			return "", false
+		}
+	}
+	return host, host == "github.com"
 }
