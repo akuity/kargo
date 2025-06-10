@@ -79,12 +79,12 @@ func (c Context) DeepCopy() Context {
 		Stage:                 c.Stage,
 		Promotion:             c.Promotion,
 		Freight:               *c.Freight.DeepCopy(),
+		TargetFreightRef:      *c.TargetFreightRef.DeepCopy(),
 		StartFromStep:         c.StartFromStep,
 		StepExecutionMetadata: c.StepExecutionMetadata.DeepCopy(),
 		State:                 c.State.DeepCopy(),
 		Vars:                  slices.Clone(c.Vars),
 		Actor:                 c.Actor,
-		TargetFreightRef:      *c.TargetFreightRef.DeepCopy(),
 	}
 
 	if c.FreightRequests != nil {

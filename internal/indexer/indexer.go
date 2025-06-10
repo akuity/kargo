@@ -185,9 +185,6 @@ func RunningPromotionsByArgoCDApplications(
 			Project:         promo.Namespace,
 			Stage:           promo.Spec.Stage,
 			FreightRequests: stage.Spec.RequestedFreight,
-			Promotion:       promo.Name,
-			State:           promo.Status.GetState(),
-			Vars:            promo.Spec.Vars,
 			TargetFreightRef: kargoapi.FreightReference{
 				Name:    freight.Name,
 				Commits: freight.Commits,
@@ -195,6 +192,9 @@ func RunningPromotionsByArgoCDApplications(
 				Charts:  freight.Charts,
 				Origin:  freight.Origin,
 			},
+			Promotion: promo.Name,
+			State:     promo.Status.GetState(),
+			Vars:      promo.Spec.Vars,
 		}
 
 		if promo.Status.FreightCollection != nil {
