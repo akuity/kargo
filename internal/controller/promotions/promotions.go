@@ -445,7 +445,7 @@ func (r *reconciler) promote(
 		)
 	}
 
-	logger = logger.WithValues("targetFreight", targetFreight.Name)
+	logger = logger.WithValues("targetFreightRef", targetFreight.Name)
 
 	targetFreightRef := kargoapi.FreightReference{
 		Name:    targetFreight.Name,

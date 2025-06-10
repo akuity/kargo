@@ -145,7 +145,7 @@ func TestStep_GetConfig(t *testing.T) {
 				"stage": "${{ ctx.stage }}",
 				"promotion": "${{ ctx.promotion }}",
 				"actor": "${{ ctx.meta.promotion.actor }}",
-				"targetFreight": {
+				"targetFreightRef": {
 					"name": "${{ ctx.targetFreight.name }}",
 					"origin": "${{ ctx.targetFreight.origin.name }}"
 				}
@@ -155,7 +155,7 @@ func TestStep_GetConfig(t *testing.T) {
 				"stage":     "fake-stage",
 				"promotion": "fake-promotion",
 				"actor":     "fake-creator",
-				"targetFreight": map[string]any{
+				"targetFreightRef": map[string]any{
 					"name":   "fake-freight",
 					"origin": "fake-warehouse",
 				},
@@ -827,17 +827,17 @@ func TestStep_GetVars(t *testing.T) {
 						Value: "${{ ctx.meta.promotion.actor }}",
 					},
 					{
-						Name:  "targetFreight",
+						Name:  "targetFreightRef",
 						Value: "${{ ctx.targetFreight.origin.name }}",
 					},
 				},
 			},
 			expectedVars: map[string]any{
-				"proj":          "fake-project",
-				"stage":         "fake-stage",
-				"promo":         "fake-promotion",
-				"actor":         "fake-creator",
-				"targetFreight": "fake-warehouse",
+				"proj":             "fake-project",
+				"stage":            "fake-stage",
+				"promo":            "fake-promotion",
+				"actor":            "fake-creator",
+				"targetFreightRef": "fake-warehouse",
 			},
 		},
 		{
