@@ -29,21 +29,14 @@ func TestQuayHandler(t *testing.T) {
 	testScheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(testScheme))
 
-	const testToken = "mysupersecrettoken"
-	testSecretData := map[string][]byte{
-		quaySecretDataKey: []byte(testToken),
-	}
-
 	for _, testCase := range []struct {
 		name       string
 		client     client.Client
-		secretData map[string][]byte
 		req        func() *http.Request
 		assertions func(*testing.T, *httptest.ResponseRecorder)
 	}{
 		{
-			name:       "request body too large",
-			secretData: testSecretData,
+			name: "request body too large",
 			req: func() *http.Request {
 				body := make([]byte, quayWebhookBodyMaxBytes+1)
 				req := httptest.NewRequest(
@@ -62,8 +55,7 @@ func TestQuayHandler(t *testing.T) {
 			},
 		},
 		{
-			name:       "partial success",
-			secretData: testSecretData,
+			name: "partial success",
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
 					ObjectMeta: metav1.ObjectMeta{
@@ -127,8 +119,7 @@ func TestQuayHandler(t *testing.T) {
 			},
 		},
 		{
-			name:       "success",
-			secretData: testSecretData,
+			name: "success",
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
 					ObjectMeta: metav1.ObjectMeta{
@@ -169,9 +160,8 @@ func TestQuayHandler(t *testing.T) {
 			w := httptest.NewRecorder()
 			(&quayWebhookReceiver{
 				baseWebhookReceiver: &baseWebhookReceiver{
-					client:     testCase.client,
-					project:    testProjectName,
-					secretData: testCase.secretData,
+					client:  testCase.client,
+					project: testProjectName,
 				},
 			}).GetHandler()(w, testCase.req())
 			testCase.assertions(t, w)

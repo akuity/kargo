@@ -60,13 +60,14 @@ func (q *quayWebhookReceiver) getReceiverType() string {
 
 // getSecretValues implements WebhookReceiver.
 func (q *quayWebhookReceiver) getSecretValues(
-	_ map[string][]byte,
+	secretData map[string][]byte,
 ) ([]string, error) {
-	// Because Quay does not provide support for a secret
-	// during configuration, the unguessable URL is it's
-	// own implicit authentication mechanism.
-	// So we don't need to do anything here.
-	return nil, nil
+	secretValue, ok := secretData[quaySecretDataKey]
+	if !ok {
+		return nil,
+			errors.New("Secret data is not valid for a Quay.io WebhookReceiver")
+	}
+	return []string{string(secretValue)}, nil
 }
 
 // GetHandler implements WebhookReceiver.
@@ -123,9 +124,12 @@ func (q *quayWebhookReceiver) GetHandler() http.HandlerFunc {
 			return
 		}
 
-		logger = logger.WithValues("repoURL", payload.DockerURL)
+		repoURL := payload.DockerURL
+
+		logger = logger.WithValues("repoURL", repoURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		result, err := refreshWarehouses(ctx, q.client, q.project, payload.DockerURL)
+
+		result, err := refreshWarehouses(ctx, q.client, q.project, repoURL)
 		if err != nil {
 			xhttp.WriteErrorJSON(w, err)
 			return
