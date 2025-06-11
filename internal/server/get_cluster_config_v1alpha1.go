@@ -11,14 +11,13 @@ import (
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 )
 
 func (s *server) GetClusterConfig(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.GetClusterConfigRequest],
 ) (*connect.Response[svcv1alpha1.GetClusterConfigResponse], error) {
-	const name = "cluster" // TODO(hidde): Define this in the (internal) API?
-
 	// Get the ClusterConfig from the Kubernetes API as an unstructured object.
 	// Using an unstructured object allows us to return the object _as presented
 	// by the API_ if a raw format is requested.
@@ -28,9 +27,9 @@ func (s *server) GetClusterConfig(
 			"kind":       "ClusterConfig",
 		},
 	}
-	if err := s.client.Get(ctx, client.ObjectKey{Name: name}, &u); err != nil {
+	if err := s.client.Get(ctx, client.ObjectKey{Name: api.ClusterConfigName}, &u); err != nil {
 		if client.IgnoreNotFound(err) == nil {
-			err = fmt.Errorf("ClusterConfig %q not found", name)
+			err = fmt.Errorf("ClusterConfig %q not found", api.ClusterConfigName)
 			return nil, connect.NewError(connect.CodeNotFound, err)
 		}
 		return nil, err

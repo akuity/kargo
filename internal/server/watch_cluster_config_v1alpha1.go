@@ -13,6 +13,7 @@ import (
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 )
 
 func (s *server) WatchClusterConfig(
@@ -20,18 +21,16 @@ func (s *server) WatchClusterConfig(
 	_ *connect.Request[svcv1alpha1.WatchClusterConfigRequest],
 	stream *connect.ServerStream[svcv1alpha1.WatchClusterConfigResponse],
 ) error {
-	const name = "cluster" // TODO(hidde): Define this in the (internal) API?
-
 	if err := s.client.Get(ctx, client.ObjectKey{
-		Name: name,
+		Name: api.ClusterConfigName,
 	}, &kargoapi.ClusterConfig{}); err != nil {
 		return fmt.Errorf("get ClusterConfig: %w", err)
 	}
 
 	opts := metav1.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(metav1.ObjectNameField, name).String(),
+		FieldSelector: fields.OneTermEqualSelector(metav1.ObjectNameField, api.ClusterConfigName).String(),
 	}
-	w, err := s.client.Watch(ctx, &kargoapi.ClusterConfig{}, name, opts)
+	w, err := s.client.Watch(ctx, &kargoapi.ClusterConfig{}, api.ClusterConfigName, opts)
 	if err != nil {
 		return fmt.Errorf("watch ClusterConfig: %w", err)
 	}

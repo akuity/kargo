@@ -9,19 +9,18 @@ import (
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 )
 
 func (s *server) DeleteClusterConfig(
 	ctx context.Context,
 	_ *connect.Request[svcv1alpha1.DeleteClusterConfigRequest],
 ) (*connect.Response[svcv1alpha1.DeleteClusterConfigResponse], error) {
-	const name = "cluster" // TODO(hidde): Define this in the (internal) API?
-
 	if err := s.client.Delete(
 		ctx,
 		&kargoapi.ClusterConfig{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: name,
+				Name: api.ClusterConfigName,
 			},
 		},
 	); err != nil {
