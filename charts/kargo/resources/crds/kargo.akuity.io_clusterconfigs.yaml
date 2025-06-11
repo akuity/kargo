@@ -132,11 +132,42 @@ spec:
                     name:
                       description: Name is the name of the webhook receiver.
                       type: string
+                    quay:
+                      description: |-
+                        Quay contains the configuration for a webhook receiver that is compatible
+                        with Quay payloads.
+                      properties:
+                        secretRef:
+                          description: |-
+                            SecretRef contains a reference to a Secret. For Project-scoped webhook
+                            receivers, the referenced Secret must be in the same namespace as the
+                            ProjectConfig.
+
+                            For cluster-scoped webhook receivers, the referenced Secret must be in the
+                            designated "cluster Secrets" namespace.
+
+                            The Secret's data map is expected to contain a `secret` key whose value
+                            does NOT need to be shared directly with Quay when registering a
+                            webhook. It is used only by Kargo to create a complex, hard-to-guess URL,
+                            which implicitly serves as a shared secret. For more information about
+                            Quay webhooks, please refer to the Quay documentation:
+                              https://docs.quay.io/guides/notifications.html
+                          properties:
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      required:
+                      - secretRef
+                      type: object
                   type: object
-                  x-kubernetes-validations:
-                  - message: WebhookReceiverConfig must have exactly one of github
-                      or gitlab set
-                    rule: 'has(self.github) ? !has(self.gitlab) : has(self.gitlab)'
                 type: array
             type: object
           status:

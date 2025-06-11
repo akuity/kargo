@@ -88,19 +88,18 @@ type PromotionPolicy struct {
 
 // WebhookReceiverConfig describes the configuration for a single webhook
 // receiver.
-//
-// +kubebuilder:validation:XValidation:message="WebhookReceiverConfig must have exactly one of github or gitlab set",rule="has(self.github) ? !has(self.gitlab) : has(self.gitlab)"
 type WebhookReceiverConfig struct {
 	// Name is the name of the webhook receiver.
 	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
 	// GitHub contains the configuration for a webhook receiver that is compatible
 	// with GitHub payloads.
-	//
 	GitHub *GitHubWebhookReceiverConfig `json:"github,omitempty" protobuf:"bytes,2,opt,name=github"`
 	// GitLab contains the configuration for a webhook receiver that is compatible
 	// with GitLab payloads.
-	//
 	GitLab *GitLabWebhookReceiverConfig `json:"gitlab,omitempty" protobuf:"bytes,3,opt,name=gitlab"`
+	// Quay contains the configuration for a webhook receiver that is compatible
+	// with Quay payloads.
+	Quay *QuayWebhookReceiverConfig `json:"quay,omitempty" protobuf:"bytes,4,opt,name=quay"`
 }
 
 // GitHubWebhookReceiverConfig describes a webhook receiver that is compatible
@@ -138,6 +137,25 @@ type GitLabWebhookReceiverConfig struct {
 	//   https://docs.gitlab.com/user/project/integrations/webhooks/
 	//
 	// +kubebuilder:validation:Required
+	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+}
+
+// QuayWebhookReceiverConfig describes a webhook receiver that is compatible
+// with Quay.io payloads.
+type QuayWebhookReceiverConfig struct {
+	// SecretRef contains a reference to a Secret. For Project-scoped webhook
+	// receivers, the referenced Secret must be in the same namespace as the
+	// ProjectConfig.
+	//
+	// For cluster-scoped webhook receivers, the referenced Secret must be in the
+	// designated "cluster Secrets" namespace.
+	//
+	// The Secret's data map is expected to contain a `secret` key whose value
+	// does NOT need to be shared directly with Quay when registering a
+	// webhook. It is used only by Kargo to create a complex, hard-to-guess URL,
+	// which implicitly serves as a shared secret. For more information about
+	// Quay webhooks, please refer to the Quay documentation:
+	//   https://docs.quay.io/guides/notifications.html
 	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
 }
 
