@@ -2470,6 +2470,91 @@ func (x *WatchClusterConfigResponse) GetType() string {
 	return ""
 }
 
+type RefreshClusterConfigRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+}
+
+func (x *RefreshClusterConfigRequest) Reset() {
+	*x = RefreshClusterConfigRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[44]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *RefreshClusterConfigRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RefreshClusterConfigRequest) ProtoMessage() {}
+
+func (x *RefreshClusterConfigRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[44]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RefreshClusterConfigRequest.ProtoReflect.Descriptor instead.
+func (*RefreshClusterConfigRequest) Descriptor() ([]byte, []int) {
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{44}
+}
+
+type RefreshClusterConfigResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	ClusterConfig *v1alpha1.ClusterConfig `protobuf:"bytes,1,opt,name=cluster_config,json=clusterConfig,proto3" json:"cluster_config,omitempty"`
+}
+
+func (x *RefreshClusterConfigResponse) Reset() {
+	*x = RefreshClusterConfigResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[45]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *RefreshClusterConfigResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RefreshClusterConfigResponse) ProtoMessage() {}
+
+func (x *RefreshClusterConfigResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[45]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RefreshClusterConfigResponse.ProtoReflect.Descriptor instead.
+func (*RefreshClusterConfigResponse) Descriptor() ([]byte, []int) {
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{45}
+}
+
+func (x *RefreshClusterConfigResponse) GetClusterConfig() *v1alpha1.ClusterConfig {
+	if x != nil {
+		return x.ClusterConfig
+	}
+	return nil
+}
+
 type ListPromotionsRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -2482,7 +2567,7 @@ type ListPromotionsRequest struct {
 func (x *ListPromotionsRequest) Reset() {
 	*x = ListPromotionsRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[44]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[46]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2495,7 +2580,7 @@ func (x *ListPromotionsRequest) String() string {
 func (*ListPromotionsRequest) ProtoMessage() {}
 
 func (x *ListPromotionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[44]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[46]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2508,7 +2593,7 @@ func (x *ListPromotionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPromotionsRequest.ProtoReflect.Descriptor instead.
 func (*ListPromotionsRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{44}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *ListPromotionsRequest) GetProject() string {
@@ -2536,7 +2621,7 @@ type ListPromotionsResponse struct {
 func (x *ListPromotionsResponse) Reset() {
 	*x = ListPromotionsResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[45]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[47]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2549,7 +2634,7 @@ func (x *ListPromotionsResponse) String() string {
 func (*ListPromotionsResponse) ProtoMessage() {}
 
 func (x *ListPromotionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[45]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[47]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2562,7 +2647,7 @@ func (x *ListPromotionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPromotionsResponse.ProtoReflect.Descriptor instead.
 func (*ListPromotionsResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{45}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *ListPromotionsResponse) GetPromotions() []*v1alpha1.Promotion {
@@ -2584,7 +2669,7 @@ type WatchPromotionsRequest struct {
 func (x *WatchPromotionsRequest) Reset() {
 	*x = WatchPromotionsRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[46]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[48]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2597,7 +2682,7 @@ func (x *WatchPromotionsRequest) String() string {
 func (*WatchPromotionsRequest) ProtoMessage() {}
 
 func (x *WatchPromotionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[46]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[48]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2610,7 +2695,7 @@ func (x *WatchPromotionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchPromotionsRequest.ProtoReflect.Descriptor instead.
 func (*WatchPromotionsRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{46}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *WatchPromotionsRequest) GetProject() string {
@@ -2639,7 +2724,7 @@ type WatchPromotionsResponse struct {
 func (x *WatchPromotionsResponse) Reset() {
 	*x = WatchPromotionsResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[47]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[49]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2652,7 +2737,7 @@ func (x *WatchPromotionsResponse) String() string {
 func (*WatchPromotionsResponse) ProtoMessage() {}
 
 func (x *WatchPromotionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[47]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[49]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2665,7 +2750,7 @@ func (x *WatchPromotionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchPromotionsResponse.ProtoReflect.Descriptor instead.
 func (*WatchPromotionsResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{47}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *WatchPromotionsResponse) GetPromotion() *v1alpha1.Promotion {
@@ -2695,7 +2780,7 @@ type GetPromotionRequest struct {
 func (x *GetPromotionRequest) Reset() {
 	*x = GetPromotionRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[48]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[50]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2708,7 +2793,7 @@ func (x *GetPromotionRequest) String() string {
 func (*GetPromotionRequest) ProtoMessage() {}
 
 func (x *GetPromotionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[48]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[50]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2721,7 +2806,7 @@ func (x *GetPromotionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPromotionRequest.ProtoReflect.Descriptor instead.
 func (*GetPromotionRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{48}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *GetPromotionRequest) GetProject() string {
@@ -2760,7 +2845,7 @@ type GetPromotionResponse struct {
 func (x *GetPromotionResponse) Reset() {
 	*x = GetPromotionResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[49]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[51]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2773,7 +2858,7 @@ func (x *GetPromotionResponse) String() string {
 func (*GetPromotionResponse) ProtoMessage() {}
 
 func (x *GetPromotionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[49]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[51]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2786,7 +2871,7 @@ func (x *GetPromotionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPromotionResponse.ProtoReflect.Descriptor instead.
 func (*GetPromotionResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{49}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{51}
 }
 
 func (m *GetPromotionResponse) GetResult() isGetPromotionResponse_Result {
@@ -2838,7 +2923,7 @@ type WatchPromotionRequest struct {
 func (x *WatchPromotionRequest) Reset() {
 	*x = WatchPromotionRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[50]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[52]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2851,7 +2936,7 @@ func (x *WatchPromotionRequest) String() string {
 func (*WatchPromotionRequest) ProtoMessage() {}
 
 func (x *WatchPromotionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[50]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[52]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2864,7 +2949,7 @@ func (x *WatchPromotionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchPromotionRequest.ProtoReflect.Descriptor instead.
 func (*WatchPromotionRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{50}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *WatchPromotionRequest) GetProject() string {
@@ -2893,7 +2978,7 @@ type WatchPromotionResponse struct {
 func (x *WatchPromotionResponse) Reset() {
 	*x = WatchPromotionResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[51]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[53]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2906,7 +2991,7 @@ func (x *WatchPromotionResponse) String() string {
 func (*WatchPromotionResponse) ProtoMessage() {}
 
 func (x *WatchPromotionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[51]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[53]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2919,7 +3004,7 @@ func (x *WatchPromotionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchPromotionResponse.ProtoReflect.Descriptor instead.
 func (*WatchPromotionResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{51}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *WatchPromotionResponse) GetPromotion() *v1alpha1.Promotion {
@@ -2948,7 +3033,7 @@ type AbortPromotionRequest struct {
 func (x *AbortPromotionRequest) Reset() {
 	*x = AbortPromotionRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[52]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[54]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2961,7 +3046,7 @@ func (x *AbortPromotionRequest) String() string {
 func (*AbortPromotionRequest) ProtoMessage() {}
 
 func (x *AbortPromotionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[52]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[54]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2974,7 +3059,7 @@ func (x *AbortPromotionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AbortPromotionRequest.ProtoReflect.Descriptor instead.
 func (*AbortPromotionRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{52}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *AbortPromotionRequest) GetProject() string {
@@ -3000,7 +3085,7 @@ type AbortPromotionResponse struct {
 func (x *AbortPromotionResponse) Reset() {
 	*x = AbortPromotionResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[53]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[55]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3013,7 +3098,7 @@ func (x *AbortPromotionResponse) String() string {
 func (*AbortPromotionResponse) ProtoMessage() {}
 
 func (x *AbortPromotionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[53]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[55]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3026,7 +3111,7 @@ func (x *AbortPromotionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AbortPromotionResponse.ProtoReflect.Descriptor instead.
 func (*AbortPromotionResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{53}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{55}
 }
 
 type DeleteProjectRequest struct {
@@ -3040,7 +3125,7 @@ type DeleteProjectRequest struct {
 func (x *DeleteProjectRequest) Reset() {
 	*x = DeleteProjectRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[54]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[56]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3053,7 +3138,7 @@ func (x *DeleteProjectRequest) String() string {
 func (*DeleteProjectRequest) ProtoMessage() {}
 
 func (x *DeleteProjectRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[54]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[56]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3066,7 +3151,7 @@ func (x *DeleteProjectRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteProjectRequest.ProtoReflect.Descriptor instead.
 func (*DeleteProjectRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{54}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{56}
 }
 
 func (x *DeleteProjectRequest) GetName() string {
@@ -3085,7 +3170,7 @@ type DeleteProjectResponse struct {
 func (x *DeleteProjectResponse) Reset() {
 	*x = DeleteProjectResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[55]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[57]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3098,7 +3183,7 @@ func (x *DeleteProjectResponse) String() string {
 func (*DeleteProjectResponse) ProtoMessage() {}
 
 func (x *DeleteProjectResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[55]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[57]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3111,7 +3196,7 @@ func (x *DeleteProjectResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteProjectResponse.ProtoReflect.Descriptor instead.
 func (*DeleteProjectResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{55}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{57}
 }
 
 type GetProjectRequest struct {
@@ -3126,7 +3211,7 @@ type GetProjectRequest struct {
 func (x *GetProjectRequest) Reset() {
 	*x = GetProjectRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[56]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[58]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3139,7 +3224,7 @@ func (x *GetProjectRequest) String() string {
 func (*GetProjectRequest) ProtoMessage() {}
 
 func (x *GetProjectRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[56]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[58]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3152,7 +3237,7 @@ func (x *GetProjectRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetProjectRequest.ProtoReflect.Descriptor instead.
 func (*GetProjectRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{56}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{58}
 }
 
 func (x *GetProjectRequest) GetName() string {
@@ -3184,7 +3269,7 @@ type GetProjectResponse struct {
 func (x *GetProjectResponse) Reset() {
 	*x = GetProjectResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[57]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[59]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3197,7 +3282,7 @@ func (x *GetProjectResponse) String() string {
 func (*GetProjectResponse) ProtoMessage() {}
 
 func (x *GetProjectResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[57]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[59]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3210,7 +3295,7 @@ func (x *GetProjectResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetProjectResponse.ProtoReflect.Descriptor instead.
 func (*GetProjectResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{57}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{59}
 }
 
 func (m *GetProjectResponse) GetResult() isGetProjectResponse_Result {
@@ -3263,7 +3348,7 @@ type ListProjectsRequest struct {
 func (x *ListProjectsRequest) Reset() {
 	*x = ListProjectsRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[58]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[60]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3276,7 +3361,7 @@ func (x *ListProjectsRequest) String() string {
 func (*ListProjectsRequest) ProtoMessage() {}
 
 func (x *ListProjectsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[58]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[60]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3289,7 +3374,7 @@ func (x *ListProjectsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProjectsRequest.ProtoReflect.Descriptor instead.
 func (*ListProjectsRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{58}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *ListProjectsRequest) GetPageSize() int32 {
@@ -3325,7 +3410,7 @@ type ListProjectsResponse struct {
 func (x *ListProjectsResponse) Reset() {
 	*x = ListProjectsResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[59]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[61]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3338,7 +3423,7 @@ func (x *ListProjectsResponse) String() string {
 func (*ListProjectsResponse) ProtoMessage() {}
 
 func (x *ListProjectsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[59]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[61]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3351,7 +3436,7 @@ func (x *ListProjectsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProjectsResponse.ProtoReflect.Descriptor instead.
 func (*ListProjectsResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{59}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *ListProjectsResponse) GetProjects() []*v1alpha1.Project {
@@ -3380,7 +3465,7 @@ type GetProjectConfigRequest struct {
 func (x *GetProjectConfigRequest) Reset() {
 	*x = GetProjectConfigRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[60]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[62]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3393,7 +3478,7 @@ func (x *GetProjectConfigRequest) String() string {
 func (*GetProjectConfigRequest) ProtoMessage() {}
 
 func (x *GetProjectConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[60]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[62]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3406,7 +3491,7 @@ func (x *GetProjectConfigRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetProjectConfigRequest.ProtoReflect.Descriptor instead.
 func (*GetProjectConfigRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{60}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *GetProjectConfigRequest) GetProject() string {
@@ -3438,7 +3523,7 @@ type GetProjectConfigResponse struct {
 func (x *GetProjectConfigResponse) Reset() {
 	*x = GetProjectConfigResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[61]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[63]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3451,7 +3536,7 @@ func (x *GetProjectConfigResponse) String() string {
 func (*GetProjectConfigResponse) ProtoMessage() {}
 
 func (x *GetProjectConfigResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[61]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[63]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3464,7 +3549,7 @@ func (x *GetProjectConfigResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetProjectConfigResponse.ProtoReflect.Descriptor instead.
 func (*GetProjectConfigResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{61}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{63}
 }
 
 func (m *GetProjectConfigResponse) GetResult() isGetProjectConfigResponse_Result {
@@ -3515,7 +3600,7 @@ type DeleteProjectConfigRequest struct {
 func (x *DeleteProjectConfigRequest) Reset() {
 	*x = DeleteProjectConfigRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[62]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[64]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3528,7 +3613,7 @@ func (x *DeleteProjectConfigRequest) String() string {
 func (*DeleteProjectConfigRequest) ProtoMessage() {}
 
 func (x *DeleteProjectConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[62]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[64]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3541,7 +3626,7 @@ func (x *DeleteProjectConfigRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteProjectConfigRequest.ProtoReflect.Descriptor instead.
 func (*DeleteProjectConfigRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{62}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{64}
 }
 
 func (x *DeleteProjectConfigRequest) GetProject() string {
@@ -3560,7 +3645,7 @@ type DeleteProjectConfigResponse struct {
 func (x *DeleteProjectConfigResponse) Reset() {
 	*x = DeleteProjectConfigResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[63]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[65]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3573,7 +3658,7 @@ func (x *DeleteProjectConfigResponse) String() string {
 func (*DeleteProjectConfigResponse) ProtoMessage() {}
 
 func (x *DeleteProjectConfigResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[63]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[65]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3586,7 +3671,7 @@ func (x *DeleteProjectConfigResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteProjectConfigResponse.ProtoReflect.Descriptor instead.
 func (*DeleteProjectConfigResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{63}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{65}
 }
 
 type WatchProjectConfigRequest struct {
@@ -3600,7 +3685,7 @@ type WatchProjectConfigRequest struct {
 func (x *WatchProjectConfigRequest) Reset() {
 	*x = WatchProjectConfigRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[64]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[66]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3613,7 +3698,7 @@ func (x *WatchProjectConfigRequest) String() string {
 func (*WatchProjectConfigRequest) ProtoMessage() {}
 
 func (x *WatchProjectConfigRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[64]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[66]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3626,7 +3711,7 @@ func (x *WatchProjectConfigRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchProjectConfigRequest.ProtoReflect.Descriptor instead.
 func (*WatchProjectConfigRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{64}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{66}
 }
 
 func (x *WatchProjectConfigRequest) GetProject() string {
@@ -3648,7 +3733,7 @@ type WatchProjectConfigResponse struct {
 func (x *WatchProjectConfigResponse) Reset() {
 	*x = WatchProjectConfigResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[65]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[67]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3661,7 +3746,7 @@ func (x *WatchProjectConfigResponse) String() string {
 func (*WatchProjectConfigResponse) ProtoMessage() {}
 
 func (x *WatchProjectConfigResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[65]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[67]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3674,7 +3759,7 @@ func (x *WatchProjectConfigResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchProjectConfigResponse.ProtoReflect.Descriptor instead.
 func (*WatchProjectConfigResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{65}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *WatchProjectConfigResponse) GetProjectConfig() *v1alpha1.ProjectConfig {
@@ -3691,6 +3776,100 @@ func (x *WatchProjectConfigResponse) GetType() string {
 	return ""
 }
 
+type RefreshProjectConfigRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+}
+
+func (x *RefreshProjectConfigRequest) Reset() {
+	*x = RefreshProjectConfigRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[68]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *RefreshProjectConfigRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RefreshProjectConfigRequest) ProtoMessage() {}
+
+func (x *RefreshProjectConfigRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[68]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RefreshProjectConfigRequest.ProtoReflect.Descriptor instead.
+func (*RefreshProjectConfigRequest) Descriptor() ([]byte, []int) {
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{68}
+}
+
+func (x *RefreshProjectConfigRequest) GetProject() string {
+	if x != nil {
+		return x.Project
+	}
+	return ""
+}
+
+type RefreshProjectConfigResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	ProjectConfig *v1alpha1.ProjectConfig `protobuf:"bytes,1,opt,name=project_config,json=projectConfig,proto3" json:"project_config,omitempty"`
+}
+
+func (x *RefreshProjectConfigResponse) Reset() {
+	*x = RefreshProjectConfigResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[69]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *RefreshProjectConfigResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RefreshProjectConfigResponse) ProtoMessage() {}
+
+func (x *RefreshProjectConfigResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[69]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RefreshProjectConfigResponse.ProtoReflect.Descriptor instead.
+func (*RefreshProjectConfigResponse) Descriptor() ([]byte, []int) {
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{69}
+}
+
+func (x *RefreshProjectConfigResponse) GetProjectConfig() *v1alpha1.ProjectConfig {
+	if x != nil {
+		return x.ProjectConfig
+	}
+	return nil
+}
+
 type ApproveFreightRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3705,7 +3884,7 @@ type ApproveFreightRequest struct {
 func (x *ApproveFreightRequest) Reset() {
 	*x = ApproveFreightRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[66]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[70]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3718,7 +3897,7 @@ func (x *ApproveFreightRequest) String() string {
 func (*ApproveFreightRequest) ProtoMessage() {}
 
 func (x *ApproveFreightRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[66]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[70]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3731,7 +3910,7 @@ func (x *ApproveFreightRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApproveFreightRequest.ProtoReflect.Descriptor instead.
 func (*ApproveFreightRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{66}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{70}
 }
 
 func (x *ApproveFreightRequest) GetProject() string {
@@ -3771,7 +3950,7 @@ type ApproveFreightResponse struct {
 func (x *ApproveFreightResponse) Reset() {
 	*x = ApproveFreightResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[67]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[71]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3784,7 +3963,7 @@ func (x *ApproveFreightResponse) String() string {
 func (*ApproveFreightResponse) ProtoMessage() {}
 
 func (x *ApproveFreightResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[67]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[71]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3797,7 +3976,7 @@ func (x *ApproveFreightResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApproveFreightResponse.ProtoReflect.Descriptor instead.
 func (*ApproveFreightResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{67}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{71}
 }
 
 type DeleteFreightRequest struct {
@@ -3813,7 +3992,7 @@ type DeleteFreightRequest struct {
 func (x *DeleteFreightRequest) Reset() {
 	*x = DeleteFreightRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[68]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[72]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3826,7 +4005,7 @@ func (x *DeleteFreightRequest) String() string {
 func (*DeleteFreightRequest) ProtoMessage() {}
 
 func (x *DeleteFreightRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[68]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[72]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3839,7 +4018,7 @@ func (x *DeleteFreightRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteFreightRequest.ProtoReflect.Descriptor instead.
 func (*DeleteFreightRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{68}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{72}
 }
 
 func (x *DeleteFreightRequest) GetProject() string {
@@ -3872,7 +4051,7 @@ type DeleteFreightResponse struct {
 func (x *DeleteFreightResponse) Reset() {
 	*x = DeleteFreightResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[69]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[73]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3885,7 +4064,7 @@ func (x *DeleteFreightResponse) String() string {
 func (*DeleteFreightResponse) ProtoMessage() {}
 
 func (x *DeleteFreightResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[69]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[73]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3898,7 +4077,7 @@ func (x *DeleteFreightResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteFreightResponse.ProtoReflect.Descriptor instead.
 func (*DeleteFreightResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{69}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{73}
 }
 
 type GetFreightRequest struct {
@@ -3915,7 +4094,7 @@ type GetFreightRequest struct {
 func (x *GetFreightRequest) Reset() {
 	*x = GetFreightRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[70]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[74]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3928,7 +4107,7 @@ func (x *GetFreightRequest) String() string {
 func (*GetFreightRequest) ProtoMessage() {}
 
 func (x *GetFreightRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[70]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[74]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3941,7 +4120,7 @@ func (x *GetFreightRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFreightRequest.ProtoReflect.Descriptor instead.
 func (*GetFreightRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{70}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{74}
 }
 
 func (x *GetFreightRequest) GetProject() string {
@@ -3987,7 +4166,7 @@ type GetFreightResponse struct {
 func (x *GetFreightResponse) Reset() {
 	*x = GetFreightResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[71]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[75]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4000,7 +4179,7 @@ func (x *GetFreightResponse) String() string {
 func (*GetFreightResponse) ProtoMessage() {}
 
 func (x *GetFreightResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[71]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[75]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4013,7 +4192,7 @@ func (x *GetFreightResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFreightResponse.ProtoReflect.Descriptor instead.
 func (*GetFreightResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{71}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{75}
 }
 
 func (m *GetFreightResponse) GetResult() isGetFreightResponse_Result {
@@ -4064,7 +4243,7 @@ type WatchFreightRequest struct {
 func (x *WatchFreightRequest) Reset() {
 	*x = WatchFreightRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[72]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[76]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4077,7 +4256,7 @@ func (x *WatchFreightRequest) String() string {
 func (*WatchFreightRequest) ProtoMessage() {}
 
 func (x *WatchFreightRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[72]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[76]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4090,7 +4269,7 @@ func (x *WatchFreightRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchFreightRequest.ProtoReflect.Descriptor instead.
 func (*WatchFreightRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{72}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{76}
 }
 
 func (x *WatchFreightRequest) GetProject() string {
@@ -4112,7 +4291,7 @@ type WatchFreightResponse struct {
 func (x *WatchFreightResponse) Reset() {
 	*x = WatchFreightResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[73]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[77]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4125,7 +4304,7 @@ func (x *WatchFreightResponse) String() string {
 func (*WatchFreightResponse) ProtoMessage() {}
 
 func (x *WatchFreightResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[73]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[77]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4138,7 +4317,7 @@ func (x *WatchFreightResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchFreightResponse.ProtoReflect.Descriptor instead.
 func (*WatchFreightResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{73}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{77}
 }
 
 func (x *WatchFreightResponse) GetFreight() *v1alpha1.Freight {
@@ -4169,7 +4348,7 @@ type PromoteToStageRequest struct {
 func (x *PromoteToStageRequest) Reset() {
 	*x = PromoteToStageRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[74]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[78]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4182,7 +4361,7 @@ func (x *PromoteToStageRequest) String() string {
 func (*PromoteToStageRequest) ProtoMessage() {}
 
 func (x *PromoteToStageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[74]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[78]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4195,7 +4374,7 @@ func (x *PromoteToStageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromoteToStageRequest.ProtoReflect.Descriptor instead.
 func (*PromoteToStageRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{74}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{78}
 }
 
 func (x *PromoteToStageRequest) GetProject() string {
@@ -4237,7 +4416,7 @@ type PromoteToStageResponse struct {
 func (x *PromoteToStageResponse) Reset() {
 	*x = PromoteToStageResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[75]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[79]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4250,7 +4429,7 @@ func (x *PromoteToStageResponse) String() string {
 func (*PromoteToStageResponse) ProtoMessage() {}
 
 func (x *PromoteToStageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[75]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[79]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4263,7 +4442,7 @@ func (x *PromoteToStageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromoteToStageResponse.ProtoReflect.Descriptor instead.
 func (*PromoteToStageResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{75}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{79}
 }
 
 func (x *PromoteToStageResponse) GetPromotion() *v1alpha1.Promotion {
@@ -4287,7 +4466,7 @@ type PromoteDownstreamRequest struct {
 func (x *PromoteDownstreamRequest) Reset() {
 	*x = PromoteDownstreamRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[76]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[80]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4300,7 +4479,7 @@ func (x *PromoteDownstreamRequest) String() string {
 func (*PromoteDownstreamRequest) ProtoMessage() {}
 
 func (x *PromoteDownstreamRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[76]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[80]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4313,7 +4492,7 @@ func (x *PromoteDownstreamRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromoteDownstreamRequest.ProtoReflect.Descriptor instead.
 func (*PromoteDownstreamRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{76}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{80}
 }
 
 func (x *PromoteDownstreamRequest) GetProject() string {
@@ -4355,7 +4534,7 @@ type PromoteDownstreamResponse struct {
 func (x *PromoteDownstreamResponse) Reset() {
 	*x = PromoteDownstreamResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[77]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[81]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4368,7 +4547,7 @@ func (x *PromoteDownstreamResponse) String() string {
 func (*PromoteDownstreamResponse) ProtoMessage() {}
 
 func (x *PromoteDownstreamResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[77]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[81]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4381,7 +4560,7 @@ func (x *PromoteDownstreamResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PromoteDownstreamResponse.ProtoReflect.Descriptor instead.
 func (*PromoteDownstreamResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{77}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{81}
 }
 
 func (x *PromoteDownstreamResponse) GetPromotions() []*v1alpha1.Promotion {
@@ -4408,7 +4587,7 @@ type QueryFreightRequest struct {
 func (x *QueryFreightRequest) Reset() {
 	*x = QueryFreightRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[78]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[82]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4421,7 +4600,7 @@ func (x *QueryFreightRequest) String() string {
 func (*QueryFreightRequest) ProtoMessage() {}
 
 func (x *QueryFreightRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[78]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[82]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4434,7 +4613,7 @@ func (x *QueryFreightRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QueryFreightRequest.ProtoReflect.Descriptor instead.
 func (*QueryFreightRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{78}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{82}
 }
 
 func (x *QueryFreightRequest) GetProject() string {
@@ -4497,7 +4676,7 @@ type QueryFreightResponse struct {
 func (x *QueryFreightResponse) Reset() {
 	*x = QueryFreightResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[79]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[83]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4510,7 +4689,7 @@ func (x *QueryFreightResponse) String() string {
 func (*QueryFreightResponse) ProtoMessage() {}
 
 func (x *QueryFreightResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[79]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[83]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4523,7 +4702,7 @@ func (x *QueryFreightResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QueryFreightResponse.ProtoReflect.Descriptor instead.
 func (*QueryFreightResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{79}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{83}
 }
 
 func (x *QueryFreightResponse) GetGroups() map[string]*FreightList {
@@ -4544,7 +4723,7 @@ type FreightList struct {
 func (x *FreightList) Reset() {
 	*x = FreightList{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[80]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[84]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4557,7 +4736,7 @@ func (x *FreightList) String() string {
 func (*FreightList) ProtoMessage() {}
 
 func (x *FreightList) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[80]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[84]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4570,7 +4749,7 @@ func (x *FreightList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FreightList.ProtoReflect.Descriptor instead.
 func (*FreightList) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{80}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{84}
 }
 
 func (x *FreightList) GetFreight() []*v1alpha1.Freight {
@@ -4594,7 +4773,7 @@ type UpdateFreightAliasRequest struct {
 func (x *UpdateFreightAliasRequest) Reset() {
 	*x = UpdateFreightAliasRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[81]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[85]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4607,7 +4786,7 @@ func (x *UpdateFreightAliasRequest) String() string {
 func (*UpdateFreightAliasRequest) ProtoMessage() {}
 
 func (x *UpdateFreightAliasRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[81]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[85]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4620,7 +4799,7 @@ func (x *UpdateFreightAliasRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateFreightAliasRequest.ProtoReflect.Descriptor instead.
 func (*UpdateFreightAliasRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{81}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{85}
 }
 
 func (x *UpdateFreightAliasRequest) GetProject() string {
@@ -4660,7 +4839,7 @@ type UpdateFreightAliasResponse struct {
 func (x *UpdateFreightAliasResponse) Reset() {
 	*x = UpdateFreightAliasResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[82]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[86]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4673,7 +4852,7 @@ func (x *UpdateFreightAliasResponse) String() string {
 func (*UpdateFreightAliasResponse) ProtoMessage() {}
 
 func (x *UpdateFreightAliasResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[82]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[86]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4686,7 +4865,7 @@ func (x *UpdateFreightAliasResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateFreightAliasResponse.ProtoReflect.Descriptor instead.
 func (*UpdateFreightAliasResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{82}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{86}
 }
 
 type ReverifyRequest struct {
@@ -4701,7 +4880,7 @@ type ReverifyRequest struct {
 func (x *ReverifyRequest) Reset() {
 	*x = ReverifyRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[83]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[87]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4714,7 +4893,7 @@ func (x *ReverifyRequest) String() string {
 func (*ReverifyRequest) ProtoMessage() {}
 
 func (x *ReverifyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[83]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[87]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4727,7 +4906,7 @@ func (x *ReverifyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReverifyRequest.ProtoReflect.Descriptor instead.
 func (*ReverifyRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{83}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{87}
 }
 
 func (x *ReverifyRequest) GetProject() string {
@@ -4753,7 +4932,7 @@ type ReverifyResponse struct {
 func (x *ReverifyResponse) Reset() {
 	*x = ReverifyResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[84]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[88]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4766,7 +4945,7 @@ func (x *ReverifyResponse) String() string {
 func (*ReverifyResponse) ProtoMessage() {}
 
 func (x *ReverifyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[84]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[88]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4779,7 +4958,7 @@ func (x *ReverifyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReverifyResponse.ProtoReflect.Descriptor instead.
 func (*ReverifyResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{84}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{88}
 }
 
 type AbortVerificationRequest struct {
@@ -4794,7 +4973,7 @@ type AbortVerificationRequest struct {
 func (x *AbortVerificationRequest) Reset() {
 	*x = AbortVerificationRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[85]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[89]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4807,7 +4986,7 @@ func (x *AbortVerificationRequest) String() string {
 func (*AbortVerificationRequest) ProtoMessage() {}
 
 func (x *AbortVerificationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[85]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[89]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4820,7 +4999,7 @@ func (x *AbortVerificationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AbortVerificationRequest.ProtoReflect.Descriptor instead.
 func (*AbortVerificationRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{85}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{89}
 }
 
 func (x *AbortVerificationRequest) GetProject() string {
@@ -4846,7 +5025,7 @@ type AbortVerificationResponse struct {
 func (x *AbortVerificationResponse) Reset() {
 	*x = AbortVerificationResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[86]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[90]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4859,7 +5038,7 @@ func (x *AbortVerificationResponse) String() string {
 func (*AbortVerificationResponse) ProtoMessage() {}
 
 func (x *AbortVerificationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[86]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[90]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4872,7 +5051,7 @@ func (x *AbortVerificationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AbortVerificationResponse.ProtoReflect.Descriptor instead.
 func (*AbortVerificationResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{86}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{90}
 }
 
 type ListWarehousesRequest struct {
@@ -4886,7 +5065,7 @@ type ListWarehousesRequest struct {
 func (x *ListWarehousesRequest) Reset() {
 	*x = ListWarehousesRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[87]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[91]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4899,7 +5078,7 @@ func (x *ListWarehousesRequest) String() string {
 func (*ListWarehousesRequest) ProtoMessage() {}
 
 func (x *ListWarehousesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[87]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[91]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4912,7 +5091,7 @@ func (x *ListWarehousesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListWarehousesRequest.ProtoReflect.Descriptor instead.
 func (*ListWarehousesRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{87}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{91}
 }
 
 func (x *ListWarehousesRequest) GetProject() string {
@@ -4933,7 +5112,7 @@ type ListWarehousesResponse struct {
 func (x *ListWarehousesResponse) Reset() {
 	*x = ListWarehousesResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[88]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[92]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4946,7 +5125,7 @@ func (x *ListWarehousesResponse) String() string {
 func (*ListWarehousesResponse) ProtoMessage() {}
 
 func (x *ListWarehousesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[88]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[92]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4959,7 +5138,7 @@ func (x *ListWarehousesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListWarehousesResponse.ProtoReflect.Descriptor instead.
 func (*ListWarehousesResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{88}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{92}
 }
 
 func (x *ListWarehousesResponse) GetWarehouses() []*v1alpha1.Warehouse {
@@ -4982,7 +5161,7 @@ type GetWarehouseRequest struct {
 func (x *GetWarehouseRequest) Reset() {
 	*x = GetWarehouseRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[89]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[93]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4995,7 +5174,7 @@ func (x *GetWarehouseRequest) String() string {
 func (*GetWarehouseRequest) ProtoMessage() {}
 
 func (x *GetWarehouseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[89]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[93]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5008,7 +5187,7 @@ func (x *GetWarehouseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWarehouseRequest.ProtoReflect.Descriptor instead.
 func (*GetWarehouseRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{89}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{93}
 }
 
 func (x *GetWarehouseRequest) GetProject() string {
@@ -5047,7 +5226,7 @@ type GetWarehouseResponse struct {
 func (x *GetWarehouseResponse) Reset() {
 	*x = GetWarehouseResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[90]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[94]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5060,7 +5239,7 @@ func (x *GetWarehouseResponse) String() string {
 func (*GetWarehouseResponse) ProtoMessage() {}
 
 func (x *GetWarehouseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[90]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[94]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5073,7 +5252,7 @@ func (x *GetWarehouseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWarehouseResponse.ProtoReflect.Descriptor instead.
 func (*GetWarehouseResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{90}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{94}
 }
 
 func (m *GetWarehouseResponse) GetResult() isGetWarehouseResponse_Result {
@@ -5125,7 +5304,7 @@ type WatchWarehousesRequest struct {
 func (x *WatchWarehousesRequest) Reset() {
 	*x = WatchWarehousesRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[91]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[95]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5138,7 +5317,7 @@ func (x *WatchWarehousesRequest) String() string {
 func (*WatchWarehousesRequest) ProtoMessage() {}
 
 func (x *WatchWarehousesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[91]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[95]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5151,7 +5330,7 @@ func (x *WatchWarehousesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchWarehousesRequest.ProtoReflect.Descriptor instead.
 func (*WatchWarehousesRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{91}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{95}
 }
 
 func (x *WatchWarehousesRequest) GetProject() string {
@@ -5180,7 +5359,7 @@ type WatchWarehousesResponse struct {
 func (x *WatchWarehousesResponse) Reset() {
 	*x = WatchWarehousesResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[92]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[96]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5193,7 +5372,7 @@ func (x *WatchWarehousesResponse) String() string {
 func (*WatchWarehousesResponse) ProtoMessage() {}
 
 func (x *WatchWarehousesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[92]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[96]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5206,7 +5385,7 @@ func (x *WatchWarehousesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchWarehousesResponse.ProtoReflect.Descriptor instead.
 func (*WatchWarehousesResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{92}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{96}
 }
 
 func (x *WatchWarehousesResponse) GetWarehouse() *v1alpha1.Warehouse {
@@ -5235,7 +5414,7 @@ type DeleteWarehouseRequest struct {
 func (x *DeleteWarehouseRequest) Reset() {
 	*x = DeleteWarehouseRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[93]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[97]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5248,7 +5427,7 @@ func (x *DeleteWarehouseRequest) String() string {
 func (*DeleteWarehouseRequest) ProtoMessage() {}
 
 func (x *DeleteWarehouseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[93]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[97]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5261,7 +5440,7 @@ func (x *DeleteWarehouseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteWarehouseRequest.ProtoReflect.Descriptor instead.
 func (*DeleteWarehouseRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{93}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{97}
 }
 
 func (x *DeleteWarehouseRequest) GetProject() string {
@@ -5287,7 +5466,7 @@ type DeleteWarehouseResponse struct {
 func (x *DeleteWarehouseResponse) Reset() {
 	*x = DeleteWarehouseResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[94]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[98]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5300,7 +5479,7 @@ func (x *DeleteWarehouseResponse) String() string {
 func (*DeleteWarehouseResponse) ProtoMessage() {}
 
 func (x *DeleteWarehouseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[94]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[98]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5313,7 +5492,7 @@ func (x *DeleteWarehouseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteWarehouseResponse.ProtoReflect.Descriptor instead.
 func (*DeleteWarehouseResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{94}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{98}
 }
 
 type RefreshWarehouseRequest struct {
@@ -5328,7 +5507,7 @@ type RefreshWarehouseRequest struct {
 func (x *RefreshWarehouseRequest) Reset() {
 	*x = RefreshWarehouseRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[95]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[99]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5341,7 +5520,7 @@ func (x *RefreshWarehouseRequest) String() string {
 func (*RefreshWarehouseRequest) ProtoMessage() {}
 
 func (x *RefreshWarehouseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[95]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[99]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5354,7 +5533,7 @@ func (x *RefreshWarehouseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RefreshWarehouseRequest.ProtoReflect.Descriptor instead.
 func (*RefreshWarehouseRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{95}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{99}
 }
 
 func (x *RefreshWarehouseRequest) GetProject() string {
@@ -5382,7 +5561,7 @@ type RefreshWarehouseResponse struct {
 func (x *RefreshWarehouseResponse) Reset() {
 	*x = RefreshWarehouseResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[96]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[100]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5395,7 +5574,7 @@ func (x *RefreshWarehouseResponse) String() string {
 func (*RefreshWarehouseResponse) ProtoMessage() {}
 
 func (x *RefreshWarehouseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[96]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[100]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5408,7 +5587,7 @@ func (x *RefreshWarehouseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RefreshWarehouseResponse.ProtoReflect.Descriptor instead.
 func (*RefreshWarehouseResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{96}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{100}
 }
 
 func (x *RefreshWarehouseResponse) GetWarehouse() *v1alpha1.Warehouse {
@@ -5437,7 +5616,7 @@ type CreateCredentialsRequest struct {
 func (x *CreateCredentialsRequest) Reset() {
 	*x = CreateCredentialsRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[97]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[101]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5450,7 +5629,7 @@ func (x *CreateCredentialsRequest) String() string {
 func (*CreateCredentialsRequest) ProtoMessage() {}
 
 func (x *CreateCredentialsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[97]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[101]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5463,7 +5642,7 @@ func (x *CreateCredentialsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateCredentialsRequest.ProtoReflect.Descriptor instead.
 func (*CreateCredentialsRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{97}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{101}
 }
 
 func (x *CreateCredentialsRequest) GetProject() string {
@@ -5533,7 +5712,7 @@ type CreateCredentialsResponse struct {
 func (x *CreateCredentialsResponse) Reset() {
 	*x = CreateCredentialsResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[98]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[102]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5546,7 +5725,7 @@ func (x *CreateCredentialsResponse) String() string {
 func (*CreateCredentialsResponse) ProtoMessage() {}
 
 func (x *CreateCredentialsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[98]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[102]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5559,7 +5738,7 @@ func (x *CreateCredentialsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateCredentialsResponse.ProtoReflect.Descriptor instead.
 func (*CreateCredentialsResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{98}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{102}
 }
 
 func (x *CreateCredentialsResponse) GetCredentials() *v1.Secret {
@@ -5581,7 +5760,7 @@ type DeleteCredentialsRequest struct {
 func (x *DeleteCredentialsRequest) Reset() {
 	*x = DeleteCredentialsRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[99]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[103]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5594,7 +5773,7 @@ func (x *DeleteCredentialsRequest) String() string {
 func (*DeleteCredentialsRequest) ProtoMessage() {}
 
 func (x *DeleteCredentialsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[99]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[103]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5607,7 +5786,7 @@ func (x *DeleteCredentialsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteCredentialsRequest.ProtoReflect.Descriptor instead.
 func (*DeleteCredentialsRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{99}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{103}
 }
 
 func (x *DeleteCredentialsRequest) GetProject() string {
@@ -5633,7 +5812,7 @@ type DeleteCredentialsResponse struct {
 func (x *DeleteCredentialsResponse) Reset() {
 	*x = DeleteCredentialsResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[100]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[104]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5646,7 +5825,7 @@ func (x *DeleteCredentialsResponse) String() string {
 func (*DeleteCredentialsResponse) ProtoMessage() {}
 
 func (x *DeleteCredentialsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[100]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[104]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5659,7 +5838,7 @@ func (x *DeleteCredentialsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteCredentialsResponse.ProtoReflect.Descriptor instead.
 func (*DeleteCredentialsResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{100}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{104}
 }
 
 type GetCredentialsRequest struct {
@@ -5675,7 +5854,7 @@ type GetCredentialsRequest struct {
 func (x *GetCredentialsRequest) Reset() {
 	*x = GetCredentialsRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[101]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[105]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5688,7 +5867,7 @@ func (x *GetCredentialsRequest) String() string {
 func (*GetCredentialsRequest) ProtoMessage() {}
 
 func (x *GetCredentialsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[101]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[105]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5701,7 +5880,7 @@ func (x *GetCredentialsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCredentialsRequest.ProtoReflect.Descriptor instead.
 func (*GetCredentialsRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{101}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{105}
 }
 
 func (x *GetCredentialsRequest) GetProject() string {
@@ -5740,7 +5919,7 @@ type GetCredentialsResponse struct {
 func (x *GetCredentialsResponse) Reset() {
 	*x = GetCredentialsResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[102]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[106]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5753,7 +5932,7 @@ func (x *GetCredentialsResponse) String() string {
 func (*GetCredentialsResponse) ProtoMessage() {}
 
 func (x *GetCredentialsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[102]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[106]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5766,7 +5945,7 @@ func (x *GetCredentialsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCredentialsResponse.ProtoReflect.Descriptor instead.
 func (*GetCredentialsResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{102}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{106}
 }
 
 func (m *GetCredentialsResponse) GetResult() isGetCredentialsResponse_Result {
@@ -5817,7 +5996,7 @@ type ListCredentialsRequest struct {
 func (x *ListCredentialsRequest) Reset() {
 	*x = ListCredentialsRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[103]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[107]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5830,7 +6009,7 @@ func (x *ListCredentialsRequest) String() string {
 func (*ListCredentialsRequest) ProtoMessage() {}
 
 func (x *ListCredentialsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[103]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[107]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5843,7 +6022,7 @@ func (x *ListCredentialsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCredentialsRequest.ProtoReflect.Descriptor instead.
 func (*ListCredentialsRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{103}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{107}
 }
 
 func (x *ListCredentialsRequest) GetProject() string {
@@ -5864,7 +6043,7 @@ type ListCredentialsResponse struct {
 func (x *ListCredentialsResponse) Reset() {
 	*x = ListCredentialsResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[104]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[108]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5877,7 +6056,7 @@ func (x *ListCredentialsResponse) String() string {
 func (*ListCredentialsResponse) ProtoMessage() {}
 
 func (x *ListCredentialsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[104]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[108]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5890,7 +6069,7 @@ func (x *ListCredentialsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCredentialsResponse.ProtoReflect.Descriptor instead.
 func (*ListCredentialsResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{104}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{108}
 }
 
 func (x *ListCredentialsResponse) GetCredentials() []*v1.Secret {
@@ -5918,7 +6097,7 @@ type UpdateCredentialsRequest struct {
 func (x *UpdateCredentialsRequest) Reset() {
 	*x = UpdateCredentialsRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[105]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[109]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5931,7 +6110,7 @@ func (x *UpdateCredentialsRequest) String() string {
 func (*UpdateCredentialsRequest) ProtoMessage() {}
 
 func (x *UpdateCredentialsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[105]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[109]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5944,7 +6123,7 @@ func (x *UpdateCredentialsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateCredentialsRequest.ProtoReflect.Descriptor instead.
 func (*UpdateCredentialsRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{105}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{109}
 }
 
 func (x *UpdateCredentialsRequest) GetProject() string {
@@ -6014,7 +6193,7 @@ type UpdateCredentialsResponse struct {
 func (x *UpdateCredentialsResponse) Reset() {
 	*x = UpdateCredentialsResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[106]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[110]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6027,7 +6206,7 @@ func (x *UpdateCredentialsResponse) String() string {
 func (*UpdateCredentialsResponse) ProtoMessage() {}
 
 func (x *UpdateCredentialsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[106]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[110]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6040,7 +6219,7 @@ func (x *UpdateCredentialsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateCredentialsResponse.ProtoReflect.Descriptor instead.
 func (*UpdateCredentialsResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{106}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{110}
 }
 
 func (x *UpdateCredentialsResponse) GetCredentials() *v1.Secret {
@@ -6061,7 +6240,7 @@ type ListProjectSecretsRequest struct {
 func (x *ListProjectSecretsRequest) Reset() {
 	*x = ListProjectSecretsRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[107]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[111]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6074,7 +6253,7 @@ func (x *ListProjectSecretsRequest) String() string {
 func (*ListProjectSecretsRequest) ProtoMessage() {}
 
 func (x *ListProjectSecretsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[107]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[111]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6087,7 +6266,7 @@ func (x *ListProjectSecretsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProjectSecretsRequest.ProtoReflect.Descriptor instead.
 func (*ListProjectSecretsRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{107}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{111}
 }
 
 func (x *ListProjectSecretsRequest) GetProject() string {
@@ -6108,7 +6287,7 @@ type ListProjectSecretsResponse struct {
 func (x *ListProjectSecretsResponse) Reset() {
 	*x = ListProjectSecretsResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[108]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[112]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6121,7 +6300,7 @@ func (x *ListProjectSecretsResponse) String() string {
 func (*ListProjectSecretsResponse) ProtoMessage() {}
 
 func (x *ListProjectSecretsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[108]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[112]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6134,7 +6313,7 @@ func (x *ListProjectSecretsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProjectSecretsResponse.ProtoReflect.Descriptor instead.
 func (*ListProjectSecretsResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{108}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{112}
 }
 
 func (x *ListProjectSecretsResponse) GetSecrets() []*v1.Secret {
@@ -6158,7 +6337,7 @@ type CreateProjectSecretRequest struct {
 func (x *CreateProjectSecretRequest) Reset() {
 	*x = CreateProjectSecretRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[109]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[113]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6171,7 +6350,7 @@ func (x *CreateProjectSecretRequest) String() string {
 func (*CreateProjectSecretRequest) ProtoMessage() {}
 
 func (x *CreateProjectSecretRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[109]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[113]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6184,7 +6363,7 @@ func (x *CreateProjectSecretRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateProjectSecretRequest.ProtoReflect.Descriptor instead.
 func (*CreateProjectSecretRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{109}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{113}
 }
 
 func (x *CreateProjectSecretRequest) GetProject() string {
@@ -6226,7 +6405,7 @@ type CreateProjectSecretResponse struct {
 func (x *CreateProjectSecretResponse) Reset() {
 	*x = CreateProjectSecretResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[110]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[114]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6239,7 +6418,7 @@ func (x *CreateProjectSecretResponse) String() string {
 func (*CreateProjectSecretResponse) ProtoMessage() {}
 
 func (x *CreateProjectSecretResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[110]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[114]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6252,7 +6431,7 @@ func (x *CreateProjectSecretResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateProjectSecretResponse.ProtoReflect.Descriptor instead.
 func (*CreateProjectSecretResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{110}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{114}
 }
 
 func (x *CreateProjectSecretResponse) GetSecret() *v1.Secret {
@@ -6276,7 +6455,7 @@ type UpdateProjectSecretRequest struct {
 func (x *UpdateProjectSecretRequest) Reset() {
 	*x = UpdateProjectSecretRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[111]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[115]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6289,7 +6468,7 @@ func (x *UpdateProjectSecretRequest) String() string {
 func (*UpdateProjectSecretRequest) ProtoMessage() {}
 
 func (x *UpdateProjectSecretRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[111]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[115]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6302,7 +6481,7 @@ func (x *UpdateProjectSecretRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateProjectSecretRequest.ProtoReflect.Descriptor instead.
 func (*UpdateProjectSecretRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{111}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{115}
 }
 
 func (x *UpdateProjectSecretRequest) GetProject() string {
@@ -6344,7 +6523,7 @@ type UpdateProjectSecretResponse struct {
 func (x *UpdateProjectSecretResponse) Reset() {
 	*x = UpdateProjectSecretResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[112]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[116]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6357,7 +6536,7 @@ func (x *UpdateProjectSecretResponse) String() string {
 func (*UpdateProjectSecretResponse) ProtoMessage() {}
 
 func (x *UpdateProjectSecretResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[112]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[116]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6370,7 +6549,7 @@ func (x *UpdateProjectSecretResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateProjectSecretResponse.ProtoReflect.Descriptor instead.
 func (*UpdateProjectSecretResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{112}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{116}
 }
 
 func (x *UpdateProjectSecretResponse) GetSecret() *v1.Secret {
@@ -6392,7 +6571,7 @@ type DeleteProjectSecretRequest struct {
 func (x *DeleteProjectSecretRequest) Reset() {
 	*x = DeleteProjectSecretRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[113]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[117]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6405,7 +6584,7 @@ func (x *DeleteProjectSecretRequest) String() string {
 func (*DeleteProjectSecretRequest) ProtoMessage() {}
 
 func (x *DeleteProjectSecretRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[113]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[117]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6418,7 +6597,7 @@ func (x *DeleteProjectSecretRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteProjectSecretRequest.ProtoReflect.Descriptor instead.
 func (*DeleteProjectSecretRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{113}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{117}
 }
 
 func (x *DeleteProjectSecretRequest) GetProject() string {
@@ -6444,7 +6623,7 @@ type DeleteProjectSecretResponse struct {
 func (x *DeleteProjectSecretResponse) Reset() {
 	*x = DeleteProjectSecretResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[114]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[118]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6457,7 +6636,7 @@ func (x *DeleteProjectSecretResponse) String() string {
 func (*DeleteProjectSecretResponse) ProtoMessage() {}
 
 func (x *DeleteProjectSecretResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[114]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[118]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6470,7 +6649,7 @@ func (x *DeleteProjectSecretResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteProjectSecretResponse.ProtoReflect.Descriptor instead.
 func (*DeleteProjectSecretResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{114}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{118}
 }
 
 type ListAnalysisTemplatesRequest struct {
@@ -6484,7 +6663,7 @@ type ListAnalysisTemplatesRequest struct {
 func (x *ListAnalysisTemplatesRequest) Reset() {
 	*x = ListAnalysisTemplatesRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[115]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[119]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6497,7 +6676,7 @@ func (x *ListAnalysisTemplatesRequest) String() string {
 func (*ListAnalysisTemplatesRequest) ProtoMessage() {}
 
 func (x *ListAnalysisTemplatesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[115]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[119]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6510,7 +6689,7 @@ func (x *ListAnalysisTemplatesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAnalysisTemplatesRequest.ProtoReflect.Descriptor instead.
 func (*ListAnalysisTemplatesRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{115}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{119}
 }
 
 func (x *ListAnalysisTemplatesRequest) GetProject() string {
@@ -6531,7 +6710,7 @@ type ListAnalysisTemplatesResponse struct {
 func (x *ListAnalysisTemplatesResponse) Reset() {
 	*x = ListAnalysisTemplatesResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[116]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[120]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6544,7 +6723,7 @@ func (x *ListAnalysisTemplatesResponse) String() string {
 func (*ListAnalysisTemplatesResponse) ProtoMessage() {}
 
 func (x *ListAnalysisTemplatesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[116]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[120]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6557,7 +6736,7 @@ func (x *ListAnalysisTemplatesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAnalysisTemplatesResponse.ProtoReflect.Descriptor instead.
 func (*ListAnalysisTemplatesResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{116}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{120}
 }
 
 func (x *ListAnalysisTemplatesResponse) GetAnalysisTemplates() []*v1alpha11.AnalysisTemplate {
@@ -6580,7 +6759,7 @@ type GetAnalysisTemplateRequest struct {
 func (x *GetAnalysisTemplateRequest) Reset() {
 	*x = GetAnalysisTemplateRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[117]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[121]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6593,7 +6772,7 @@ func (x *GetAnalysisTemplateRequest) String() string {
 func (*GetAnalysisTemplateRequest) ProtoMessage() {}
 
 func (x *GetAnalysisTemplateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[117]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[121]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6606,7 +6785,7 @@ func (x *GetAnalysisTemplateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAnalysisTemplateRequest.ProtoReflect.Descriptor instead.
 func (*GetAnalysisTemplateRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{117}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{121}
 }
 
 func (x *GetAnalysisTemplateRequest) GetProject() string {
@@ -6645,7 +6824,7 @@ type GetAnalysisTemplateResponse struct {
 func (x *GetAnalysisTemplateResponse) Reset() {
 	*x = GetAnalysisTemplateResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[118]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[122]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6658,7 +6837,7 @@ func (x *GetAnalysisTemplateResponse) String() string {
 func (*GetAnalysisTemplateResponse) ProtoMessage() {}
 
 func (x *GetAnalysisTemplateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[118]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[122]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6671,7 +6850,7 @@ func (x *GetAnalysisTemplateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAnalysisTemplateResponse.ProtoReflect.Descriptor instead.
 func (*GetAnalysisTemplateResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{118}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{122}
 }
 
 func (m *GetAnalysisTemplateResponse) GetResult() isGetAnalysisTemplateResponse_Result {
@@ -6723,7 +6902,7 @@ type DeleteAnalysisTemplateRequest struct {
 func (x *DeleteAnalysisTemplateRequest) Reset() {
 	*x = DeleteAnalysisTemplateRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[119]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[123]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6736,7 +6915,7 @@ func (x *DeleteAnalysisTemplateRequest) String() string {
 func (*DeleteAnalysisTemplateRequest) ProtoMessage() {}
 
 func (x *DeleteAnalysisTemplateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[119]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[123]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6749,7 +6928,7 @@ func (x *DeleteAnalysisTemplateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAnalysisTemplateRequest.ProtoReflect.Descriptor instead.
 func (*DeleteAnalysisTemplateRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{119}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{123}
 }
 
 func (x *DeleteAnalysisTemplateRequest) GetProject() string {
@@ -6775,7 +6954,7 @@ type DeleteAnalysisTemplateResponse struct {
 func (x *DeleteAnalysisTemplateResponse) Reset() {
 	*x = DeleteAnalysisTemplateResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[120]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[124]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6788,7 +6967,7 @@ func (x *DeleteAnalysisTemplateResponse) String() string {
 func (*DeleteAnalysisTemplateResponse) ProtoMessage() {}
 
 func (x *DeleteAnalysisTemplateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[120]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[124]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6801,7 +6980,7 @@ func (x *DeleteAnalysisTemplateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteAnalysisTemplateResponse.ProtoReflect.Descriptor instead.
 func (*DeleteAnalysisTemplateResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{120}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{124}
 }
 
 type ListClusterAnalysisTemplatesRequest struct {
@@ -6813,7 +6992,7 @@ type ListClusterAnalysisTemplatesRequest struct {
 func (x *ListClusterAnalysisTemplatesRequest) Reset() {
 	*x = ListClusterAnalysisTemplatesRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[121]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[125]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6826,7 +7005,7 @@ func (x *ListClusterAnalysisTemplatesRequest) String() string {
 func (*ListClusterAnalysisTemplatesRequest) ProtoMessage() {}
 
 func (x *ListClusterAnalysisTemplatesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[121]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[125]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6839,7 +7018,7 @@ func (x *ListClusterAnalysisTemplatesRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use ListClusterAnalysisTemplatesRequest.ProtoReflect.Descriptor instead.
 func (*ListClusterAnalysisTemplatesRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{121}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{125}
 }
 
 type ListClusterAnalysisTemplatesResponse struct {
@@ -6853,7 +7032,7 @@ type ListClusterAnalysisTemplatesResponse struct {
 func (x *ListClusterAnalysisTemplatesResponse) Reset() {
 	*x = ListClusterAnalysisTemplatesResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[122]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[126]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6866,7 +7045,7 @@ func (x *ListClusterAnalysisTemplatesResponse) String() string {
 func (*ListClusterAnalysisTemplatesResponse) ProtoMessage() {}
 
 func (x *ListClusterAnalysisTemplatesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[122]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[126]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6879,7 +7058,7 @@ func (x *ListClusterAnalysisTemplatesResponse) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use ListClusterAnalysisTemplatesResponse.ProtoReflect.Descriptor instead.
 func (*ListClusterAnalysisTemplatesResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{122}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{126}
 }
 
 func (x *ListClusterAnalysisTemplatesResponse) GetClusterAnalysisTemplates() []*v1alpha11.ClusterAnalysisTemplate {
@@ -6901,7 +7080,7 @@ type GetClusterAnalysisTemplateRequest struct {
 func (x *GetClusterAnalysisTemplateRequest) Reset() {
 	*x = GetClusterAnalysisTemplateRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[123]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[127]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6914,7 +7093,7 @@ func (x *GetClusterAnalysisTemplateRequest) String() string {
 func (*GetClusterAnalysisTemplateRequest) ProtoMessage() {}
 
 func (x *GetClusterAnalysisTemplateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[123]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[127]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6927,7 +7106,7 @@ func (x *GetClusterAnalysisTemplateRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use GetClusterAnalysisTemplateRequest.ProtoReflect.Descriptor instead.
 func (*GetClusterAnalysisTemplateRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{123}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{127}
 }
 
 func (x *GetClusterAnalysisTemplateRequest) GetName() string {
@@ -6959,7 +7138,7 @@ type GetClusterAnalysisTemplateResponse struct {
 func (x *GetClusterAnalysisTemplateResponse) Reset() {
 	*x = GetClusterAnalysisTemplateResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[124]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[128]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6972,7 +7151,7 @@ func (x *GetClusterAnalysisTemplateResponse) String() string {
 func (*GetClusterAnalysisTemplateResponse) ProtoMessage() {}
 
 func (x *GetClusterAnalysisTemplateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[124]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[128]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6985,7 +7164,7 @@ func (x *GetClusterAnalysisTemplateResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use GetClusterAnalysisTemplateResponse.ProtoReflect.Descriptor instead.
 func (*GetClusterAnalysisTemplateResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{124}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{128}
 }
 
 func (m *GetClusterAnalysisTemplateResponse) GetResult() isGetClusterAnalysisTemplateResponse_Result {
@@ -7037,7 +7216,7 @@ type DeleteClusterAnalysisTemplateRequest struct {
 func (x *DeleteClusterAnalysisTemplateRequest) Reset() {
 	*x = DeleteClusterAnalysisTemplateRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[125]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[129]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7050,7 +7229,7 @@ func (x *DeleteClusterAnalysisTemplateRequest) String() string {
 func (*DeleteClusterAnalysisTemplateRequest) ProtoMessage() {}
 
 func (x *DeleteClusterAnalysisTemplateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[125]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[129]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7063,7 +7242,7 @@ func (x *DeleteClusterAnalysisTemplateRequest) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use DeleteClusterAnalysisTemplateRequest.ProtoReflect.Descriptor instead.
 func (*DeleteClusterAnalysisTemplateRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{125}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{129}
 }
 
 func (x *DeleteClusterAnalysisTemplateRequest) GetName() string {
@@ -7082,7 +7261,7 @@ type DeleteClusterAnalysisTemplateResponse struct {
 func (x *DeleteClusterAnalysisTemplateResponse) Reset() {
 	*x = DeleteClusterAnalysisTemplateResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[126]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[130]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7095,7 +7274,7 @@ func (x *DeleteClusterAnalysisTemplateResponse) String() string {
 func (*DeleteClusterAnalysisTemplateResponse) ProtoMessage() {}
 
 func (x *DeleteClusterAnalysisTemplateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[126]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[130]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7108,7 +7287,7 @@ func (x *DeleteClusterAnalysisTemplateResponse) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use DeleteClusterAnalysisTemplateResponse.ProtoReflect.Descriptor instead.
 func (*DeleteClusterAnalysisTemplateResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{126}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{130}
 }
 
 type GetAnalysisRunRequest struct {
@@ -7124,7 +7303,7 @@ type GetAnalysisRunRequest struct {
 func (x *GetAnalysisRunRequest) Reset() {
 	*x = GetAnalysisRunRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[127]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[131]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7137,7 +7316,7 @@ func (x *GetAnalysisRunRequest) String() string {
 func (*GetAnalysisRunRequest) ProtoMessage() {}
 
 func (x *GetAnalysisRunRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[127]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[131]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7150,7 +7329,7 @@ func (x *GetAnalysisRunRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAnalysisRunRequest.ProtoReflect.Descriptor instead.
 func (*GetAnalysisRunRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{127}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{131}
 }
 
 func (x *GetAnalysisRunRequest) GetNamespace() string {
@@ -7189,7 +7368,7 @@ type GetAnalysisRunResponse struct {
 func (x *GetAnalysisRunResponse) Reset() {
 	*x = GetAnalysisRunResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[128]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[132]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7202,7 +7381,7 @@ func (x *GetAnalysisRunResponse) String() string {
 func (*GetAnalysisRunResponse) ProtoMessage() {}
 
 func (x *GetAnalysisRunResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[128]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[132]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7215,7 +7394,7 @@ func (x *GetAnalysisRunResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAnalysisRunResponse.ProtoReflect.Descriptor instead.
 func (*GetAnalysisRunResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{128}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{132}
 }
 
 func (m *GetAnalysisRunResponse) GetResult() isGetAnalysisRunResponse_Result {
@@ -7269,7 +7448,7 @@ type GetAnalysisRunLogsRequest struct {
 func (x *GetAnalysisRunLogsRequest) Reset() {
 	*x = GetAnalysisRunLogsRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[129]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[133]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7282,7 +7461,7 @@ func (x *GetAnalysisRunLogsRequest) String() string {
 func (*GetAnalysisRunLogsRequest) ProtoMessage() {}
 
 func (x *GetAnalysisRunLogsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[129]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[133]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7295,7 +7474,7 @@ func (x *GetAnalysisRunLogsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAnalysisRunLogsRequest.ProtoReflect.Descriptor instead.
 func (*GetAnalysisRunLogsRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{129}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{133}
 }
 
 func (x *GetAnalysisRunLogsRequest) GetNamespace() string {
@@ -7337,7 +7516,7 @@ type GetAnalysisRunLogsResponse struct {
 func (x *GetAnalysisRunLogsResponse) Reset() {
 	*x = GetAnalysisRunLogsResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[130]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[134]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7350,7 +7529,7 @@ func (x *GetAnalysisRunLogsResponse) String() string {
 func (*GetAnalysisRunLogsResponse) ProtoMessage() {}
 
 func (x *GetAnalysisRunLogsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[130]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[134]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7363,7 +7542,7 @@ func (x *GetAnalysisRunLogsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetAnalysisRunLogsResponse.ProtoReflect.Descriptor instead.
 func (*GetAnalysisRunLogsResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{130}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{134}
 }
 
 func (x *GetAnalysisRunLogsResponse) GetChunk() string {
@@ -7384,7 +7563,7 @@ type ListProjectEventsRequest struct {
 func (x *ListProjectEventsRequest) Reset() {
 	*x = ListProjectEventsRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[131]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[135]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7397,7 +7576,7 @@ func (x *ListProjectEventsRequest) String() string {
 func (*ListProjectEventsRequest) ProtoMessage() {}
 
 func (x *ListProjectEventsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[131]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[135]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7410,7 +7589,7 @@ func (x *ListProjectEventsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProjectEventsRequest.ProtoReflect.Descriptor instead.
 func (*ListProjectEventsRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{131}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{135}
 }
 
 func (x *ListProjectEventsRequest) GetProject() string {
@@ -7431,7 +7610,7 @@ type ListProjectEventsResponse struct {
 func (x *ListProjectEventsResponse) Reset() {
 	*x = ListProjectEventsResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[132]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[136]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7444,7 +7623,7 @@ func (x *ListProjectEventsResponse) String() string {
 func (*ListProjectEventsResponse) ProtoMessage() {}
 
 func (x *ListProjectEventsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[132]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[136]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7457,7 +7636,7 @@ func (x *ListProjectEventsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProjectEventsResponse.ProtoReflect.Descriptor instead.
 func (*ListProjectEventsResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{132}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{136}
 }
 
 func (x *ListProjectEventsResponse) GetEvents() []*v1.Event {
@@ -7478,7 +7657,7 @@ type ListPromotionTasksRequest struct {
 func (x *ListPromotionTasksRequest) Reset() {
 	*x = ListPromotionTasksRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[133]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[137]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7491,7 +7670,7 @@ func (x *ListPromotionTasksRequest) String() string {
 func (*ListPromotionTasksRequest) ProtoMessage() {}
 
 func (x *ListPromotionTasksRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[133]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[137]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7504,7 +7683,7 @@ func (x *ListPromotionTasksRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPromotionTasksRequest.ProtoReflect.Descriptor instead.
 func (*ListPromotionTasksRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{133}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{137}
 }
 
 func (x *ListPromotionTasksRequest) GetProject() string {
@@ -7525,7 +7704,7 @@ type ListPromotionTasksResponse struct {
 func (x *ListPromotionTasksResponse) Reset() {
 	*x = ListPromotionTasksResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[134]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[138]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7538,7 +7717,7 @@ func (x *ListPromotionTasksResponse) String() string {
 func (*ListPromotionTasksResponse) ProtoMessage() {}
 
 func (x *ListPromotionTasksResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[134]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[138]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7551,7 +7730,7 @@ func (x *ListPromotionTasksResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListPromotionTasksResponse.ProtoReflect.Descriptor instead.
 func (*ListPromotionTasksResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{134}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{138}
 }
 
 func (x *ListPromotionTasksResponse) GetPromotionTasks() []*v1alpha1.PromotionTask {
@@ -7574,7 +7753,7 @@ type GetPromotionTaskRequest struct {
 func (x *GetPromotionTaskRequest) Reset() {
 	*x = GetPromotionTaskRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[135]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[139]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7587,7 +7766,7 @@ func (x *GetPromotionTaskRequest) String() string {
 func (*GetPromotionTaskRequest) ProtoMessage() {}
 
 func (x *GetPromotionTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[135]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[139]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7600,7 +7779,7 @@ func (x *GetPromotionTaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPromotionTaskRequest.ProtoReflect.Descriptor instead.
 func (*GetPromotionTaskRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{135}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{139}
 }
 
 func (x *GetPromotionTaskRequest) GetProject() string {
@@ -7639,7 +7818,7 @@ type GetPromotionTaskResponse struct {
 func (x *GetPromotionTaskResponse) Reset() {
 	*x = GetPromotionTaskResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[136]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[140]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7652,7 +7831,7 @@ func (x *GetPromotionTaskResponse) String() string {
 func (*GetPromotionTaskResponse) ProtoMessage() {}
 
 func (x *GetPromotionTaskResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[136]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[140]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7665,7 +7844,7 @@ func (x *GetPromotionTaskResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetPromotionTaskResponse.ProtoReflect.Descriptor instead.
 func (*GetPromotionTaskResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{136}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{140}
 }
 
 func (m *GetPromotionTaskResponse) GetResult() isGetPromotionTaskResponse_Result {
@@ -7714,7 +7893,7 @@ type ListClusterPromotionTasksRequest struct {
 func (x *ListClusterPromotionTasksRequest) Reset() {
 	*x = ListClusterPromotionTasksRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[137]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[141]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7727,7 +7906,7 @@ func (x *ListClusterPromotionTasksRequest) String() string {
 func (*ListClusterPromotionTasksRequest) ProtoMessage() {}
 
 func (x *ListClusterPromotionTasksRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[137]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[141]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7740,7 +7919,7 @@ func (x *ListClusterPromotionTasksRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListClusterPromotionTasksRequest.ProtoReflect.Descriptor instead.
 func (*ListClusterPromotionTasksRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{137}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{141}
 }
 
 type ListClusterPromotionTasksResponse struct {
@@ -7754,7 +7933,7 @@ type ListClusterPromotionTasksResponse struct {
 func (x *ListClusterPromotionTasksResponse) Reset() {
 	*x = ListClusterPromotionTasksResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[138]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[142]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7767,7 +7946,7 @@ func (x *ListClusterPromotionTasksResponse) String() string {
 func (*ListClusterPromotionTasksResponse) ProtoMessage() {}
 
 func (x *ListClusterPromotionTasksResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[138]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[142]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7780,7 +7959,7 @@ func (x *ListClusterPromotionTasksResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ListClusterPromotionTasksResponse.ProtoReflect.Descriptor instead.
 func (*ListClusterPromotionTasksResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{138}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{142}
 }
 
 func (x *ListClusterPromotionTasksResponse) GetClusterPromotionTasks() []*v1alpha1.ClusterPromotionTask {
@@ -7802,7 +7981,7 @@ type GetClusterPromotionTaskRequest struct {
 func (x *GetClusterPromotionTaskRequest) Reset() {
 	*x = GetClusterPromotionTaskRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[139]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[143]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7815,7 +7994,7 @@ func (x *GetClusterPromotionTaskRequest) String() string {
 func (*GetClusterPromotionTaskRequest) ProtoMessage() {}
 
 func (x *GetClusterPromotionTaskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[139]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[143]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7828,7 +8007,7 @@ func (x *GetClusterPromotionTaskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetClusterPromotionTaskRequest.ProtoReflect.Descriptor instead.
 func (*GetClusterPromotionTaskRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{139}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{143}
 }
 
 func (x *GetClusterPromotionTaskRequest) GetName() string {
@@ -7860,7 +8039,7 @@ type GetClusterPromotionTaskResponse struct {
 func (x *GetClusterPromotionTaskResponse) Reset() {
 	*x = GetClusterPromotionTaskResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[140]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[144]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7873,7 +8052,7 @@ func (x *GetClusterPromotionTaskResponse) String() string {
 func (*GetClusterPromotionTaskResponse) ProtoMessage() {}
 
 func (x *GetClusterPromotionTaskResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[140]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[144]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7886,7 +8065,7 @@ func (x *GetClusterPromotionTaskResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetClusterPromotionTaskResponse.ProtoReflect.Descriptor instead.
 func (*GetClusterPromotionTaskResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{140}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{144}
 }
 
 func (m *GetClusterPromotionTaskResponse) GetResult() isGetClusterPromotionTaskResponse_Result {
@@ -7937,7 +8116,7 @@ type CreateRoleRequest struct {
 func (x *CreateRoleRequest) Reset() {
 	*x = CreateRoleRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[141]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[145]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7950,7 +8129,7 @@ func (x *CreateRoleRequest) String() string {
 func (*CreateRoleRequest) ProtoMessage() {}
 
 func (x *CreateRoleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[141]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[145]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7963,7 +8142,7 @@ func (x *CreateRoleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateRoleRequest.ProtoReflect.Descriptor instead.
 func (*CreateRoleRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{141}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{145}
 }
 
 func (x *CreateRoleRequest) GetRole() *v1alpha12.Role {
@@ -7984,7 +8163,7 @@ type CreateRoleResponse struct {
 func (x *CreateRoleResponse) Reset() {
 	*x = CreateRoleResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[142]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[146]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7997,7 +8176,7 @@ func (x *CreateRoleResponse) String() string {
 func (*CreateRoleResponse) ProtoMessage() {}
 
 func (x *CreateRoleResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[142]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[146]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8010,7 +8189,7 @@ func (x *CreateRoleResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateRoleResponse.ProtoReflect.Descriptor instead.
 func (*CreateRoleResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{142}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{146}
 }
 
 func (x *CreateRoleResponse) GetRole() *v1alpha12.Role {
@@ -8032,7 +8211,7 @@ type DeleteRoleRequest struct {
 func (x *DeleteRoleRequest) Reset() {
 	*x = DeleteRoleRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[143]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[147]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8045,7 +8224,7 @@ func (x *DeleteRoleRequest) String() string {
 func (*DeleteRoleRequest) ProtoMessage() {}
 
 func (x *DeleteRoleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[143]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[147]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8058,7 +8237,7 @@ func (x *DeleteRoleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteRoleRequest.ProtoReflect.Descriptor instead.
 func (*DeleteRoleRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{143}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{147}
 }
 
 func (x *DeleteRoleRequest) GetProject() string {
@@ -8084,7 +8263,7 @@ type DeleteRoleResponse struct {
 func (x *DeleteRoleResponse) Reset() {
 	*x = DeleteRoleResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[144]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[148]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8097,7 +8276,7 @@ func (x *DeleteRoleResponse) String() string {
 func (*DeleteRoleResponse) ProtoMessage() {}
 
 func (x *DeleteRoleResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[144]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[148]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8110,7 +8289,7 @@ func (x *DeleteRoleResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteRoleResponse.ProtoReflect.Descriptor instead.
 func (*DeleteRoleResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{144}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{148}
 }
 
 type GetRoleRequest struct {
@@ -8127,7 +8306,7 @@ type GetRoleRequest struct {
 func (x *GetRoleRequest) Reset() {
 	*x = GetRoleRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[145]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[149]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8140,7 +8319,7 @@ func (x *GetRoleRequest) String() string {
 func (*GetRoleRequest) ProtoMessage() {}
 
 func (x *GetRoleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[145]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[149]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8153,7 +8332,7 @@ func (x *GetRoleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRoleRequest.ProtoReflect.Descriptor instead.
 func (*GetRoleRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{145}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{149}
 }
 
 func (x *GetRoleRequest) GetProject() string {
@@ -8200,7 +8379,7 @@ type GetRoleResponse struct {
 func (x *GetRoleResponse) Reset() {
 	*x = GetRoleResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[146]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[150]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8213,7 +8392,7 @@ func (x *GetRoleResponse) String() string {
 func (*GetRoleResponse) ProtoMessage() {}
 
 func (x *GetRoleResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[146]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[150]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8226,7 +8405,7 @@ func (x *GetRoleResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRoleResponse.ProtoReflect.Descriptor instead.
 func (*GetRoleResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{146}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{150}
 }
 
 func (m *GetRoleResponse) GetResult() isGetRoleResponse_Result {
@@ -8291,7 +8470,7 @@ type Claims struct {
 func (x *Claims) Reset() {
 	*x = Claims{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[147]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[151]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8304,7 +8483,7 @@ func (x *Claims) String() string {
 func (*Claims) ProtoMessage() {}
 
 func (x *Claims) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[147]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[151]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8317,7 +8496,7 @@ func (x *Claims) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Claims.ProtoReflect.Descriptor instead.
 func (*Claims) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{147}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{151}
 }
 
 func (x *Claims) GetClaims() []*v1alpha12.Claim {
@@ -8344,7 +8523,7 @@ type GrantRequest struct {
 func (x *GrantRequest) Reset() {
 	*x = GrantRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[148]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[152]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8357,7 +8536,7 @@ func (x *GrantRequest) String() string {
 func (*GrantRequest) ProtoMessage() {}
 
 func (x *GrantRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[148]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[152]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8370,7 +8549,7 @@ func (x *GrantRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GrantRequest.ProtoReflect.Descriptor instead.
 func (*GrantRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{148}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{152}
 }
 
 func (x *GrantRequest) GetProject() string {
@@ -8435,7 +8614,7 @@ type GrantResponse struct {
 func (x *GrantResponse) Reset() {
 	*x = GrantResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[149]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[153]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8448,7 +8627,7 @@ func (x *GrantResponse) String() string {
 func (*GrantResponse) ProtoMessage() {}
 
 func (x *GrantResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[149]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[153]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8461,7 +8640,7 @@ func (x *GrantResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GrantResponse.ProtoReflect.Descriptor instead.
 func (*GrantResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{149}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{153}
 }
 
 func (x *GrantResponse) GetRole() *v1alpha12.Role {
@@ -8483,7 +8662,7 @@ type ListRolesRequest struct {
 func (x *ListRolesRequest) Reset() {
 	*x = ListRolesRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[150]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[154]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8496,7 +8675,7 @@ func (x *ListRolesRequest) String() string {
 func (*ListRolesRequest) ProtoMessage() {}
 
 func (x *ListRolesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[150]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[154]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8509,7 +8688,7 @@ func (x *ListRolesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRolesRequest.ProtoReflect.Descriptor instead.
 func (*ListRolesRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{150}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{154}
 }
 
 func (x *ListRolesRequest) GetProject() string {
@@ -8539,7 +8718,7 @@ type ListRolesResponse struct {
 func (x *ListRolesResponse) Reset() {
 	*x = ListRolesResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[151]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[155]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8552,7 +8731,7 @@ func (x *ListRolesResponse) String() string {
 func (*ListRolesResponse) ProtoMessage() {}
 
 func (x *ListRolesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[151]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[155]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8565,7 +8744,7 @@ func (x *ListRolesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRolesResponse.ProtoReflect.Descriptor instead.
 func (*ListRolesResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{151}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{155}
 }
 
 func (x *ListRolesResponse) GetRoles() []*v1alpha12.Role {
@@ -8599,7 +8778,7 @@ type RevokeRequest struct {
 func (x *RevokeRequest) Reset() {
 	*x = RevokeRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[152]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[156]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8612,7 +8791,7 @@ func (x *RevokeRequest) String() string {
 func (*RevokeRequest) ProtoMessage() {}
 
 func (x *RevokeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[152]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[156]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8625,7 +8804,7 @@ func (x *RevokeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeRequest.ProtoReflect.Descriptor instead.
 func (*RevokeRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{152}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{156}
 }
 
 func (x *RevokeRequest) GetProject() string {
@@ -8690,7 +8869,7 @@ type RevokeResponse struct {
 func (x *RevokeResponse) Reset() {
 	*x = RevokeResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[153]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[157]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8703,7 +8882,7 @@ func (x *RevokeResponse) String() string {
 func (*RevokeResponse) ProtoMessage() {}
 
 func (x *RevokeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[153]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[157]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8716,7 +8895,7 @@ func (x *RevokeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevokeResponse.ProtoReflect.Descriptor instead.
 func (*RevokeResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{153}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{157}
 }
 
 func (x *RevokeResponse) GetRole() *v1alpha12.Role {
@@ -8737,7 +8916,7 @@ type UpdateRoleRequest struct {
 func (x *UpdateRoleRequest) Reset() {
 	*x = UpdateRoleRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[154]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[158]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8750,7 +8929,7 @@ func (x *UpdateRoleRequest) String() string {
 func (*UpdateRoleRequest) ProtoMessage() {}
 
 func (x *UpdateRoleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[154]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[158]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8763,7 +8942,7 @@ func (x *UpdateRoleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateRoleRequest.ProtoReflect.Descriptor instead.
 func (*UpdateRoleRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{154}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{158}
 }
 
 func (x *UpdateRoleRequest) GetRole() *v1alpha12.Role {
@@ -8784,7 +8963,7 @@ type UpdateRoleResponse struct {
 func (x *UpdateRoleResponse) Reset() {
 	*x = UpdateRoleResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[155]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[159]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8797,7 +8976,7 @@ func (x *UpdateRoleResponse) String() string {
 func (*UpdateRoleResponse) ProtoMessage() {}
 
 func (x *UpdateRoleResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[155]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[159]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8810,7 +8989,7 @@ func (x *UpdateRoleResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateRoleResponse.ProtoReflect.Descriptor instead.
 func (*UpdateRoleResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{155}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{159}
 }
 
 func (x *UpdateRoleResponse) GetRole() *v1alpha12.Role {
@@ -9122,139 +9301,160 @@ var file_api_service_v1alpha1_service_proto_rawDesc = []byte{
 	0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x43, 0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x43,
 	0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x0d, 0x63, 0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x43, 0x6f,
 	0x6e, 0x66, 0x69, 0x67, 0x12, 0x12, 0x0a, 0x04, 0x74, 0x79, 0x70, 0x65, 0x18, 0x02, 0x20, 0x01,
-	0x28, 0x09, 0x52, 0x04, 0x74, 0x79, 0x70, 0x65, 0x22, 0x56, 0x0a, 0x15, 0x4c, 0x69, 0x73, 0x74,
-	0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
-	0x74, 0x12, 0x18, 0x0a, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x18, 0x01, 0x20, 0x01,
-	0x28, 0x09, 0x52, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x12, 0x19, 0x0a, 0x05, 0x73,
-	0x74, 0x61, 0x67, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x48, 0x00, 0x52, 0x05, 0x73, 0x74,
-	0x61, 0x67, 0x65, 0x88, 0x01, 0x01, 0x42, 0x08, 0x0a, 0x06, 0x5f, 0x73, 0x74, 0x61, 0x67, 0x65,
-	0x22, 0x69, 0x0a, 0x16, 0x4c, 0x69, 0x73, 0x74, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f,
-	0x6e, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x4f, 0x0a, 0x0a, 0x70, 0x72,
-	0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x2f,
-	0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69,
-	0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x61,
-	0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x52,
-	0x0a, 0x70, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x22, 0x57, 0x0a, 0x16, 0x57,
-	0x61, 0x74, 0x63, 0x68, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x52, 0x65,
-	0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x18, 0x0a, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74,
-	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x12,
-	0x19, 0x0a, 0x05, 0x73, 0x74, 0x61, 0x67, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x48, 0x00,
-	0x52, 0x05, 0x73, 0x74, 0x61, 0x67, 0x65, 0x88, 0x01, 0x01, 0x42, 0x08, 0x0a, 0x06, 0x5f, 0x73,
-	0x74, 0x61, 0x67, 0x65, 0x22, 0x7c, 0x0a, 0x17, 0x57, 0x61, 0x74, 0x63, 0x68, 0x50, 0x72, 0x6f,
-	0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12,
-	0x4d, 0x0a, 0x09, 0x70, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x01, 0x20, 0x01,
-	0x28, 0x0b, 0x32, 0x2f, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2e,
-	0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x61, 0x70, 0x69,
-	0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74,
-	0x69, 0x6f, 0x6e, 0x52, 0x09, 0x70, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x12,
-	0x0a, 0x04, 0x74, 0x79, 0x70, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x74, 0x79,
-	0x70, 0x65, 0x22, 0x88, 0x01, 0x0a, 0x13, 0x47, 0x65, 0x74, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74,
-	0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x18, 0x0a, 0x07, 0x70, 0x72,
-	0x6f, 0x6a, 0x65, 0x63, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x70, 0x72, 0x6f,
-	0x6a, 0x65, 0x63, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01,
-	0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x43, 0x0a, 0x06, 0x66, 0x6f, 0x72, 0x6d,
-	0x61, 0x74, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x2b, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74,
-	0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69,
-	0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x52, 0x61, 0x77, 0x46,
-	0x6f, 0x72, 0x6d, 0x61, 0x74, 0x52, 0x06, 0x66, 0x6f, 0x72, 0x6d, 0x61, 0x74, 0x22, 0x85, 0x01,
-	0x0a, 0x14, 0x47, 0x65, 0x74, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65,
-	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x4f, 0x0a, 0x09, 0x70, 0x72, 0x6f, 0x6d, 0x6f, 0x74,
-	0x69, 0x6f, 0x6e, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x2f, 0x2e, 0x67, 0x69, 0x74, 0x68,
-	0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61,
-	0x72, 0x67, 0x6f, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31,
-	0x2e, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x48, 0x00, 0x52, 0x09, 0x70, 0x72,
-	0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x12, 0x0a, 0x03, 0x72, 0x61, 0x77, 0x18, 0x02,
-	0x20, 0x01, 0x28, 0x0c, 0x48, 0x00, 0x52, 0x03, 0x72, 0x61, 0x77, 0x42, 0x08, 0x0a, 0x06, 0x72,
-	0x65, 0x73, 0x75, 0x6c, 0x74, 0x22, 0x45, 0x0a, 0x15, 0x57, 0x61, 0x74, 0x63, 0x68, 0x50, 0x72,
-	0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x18,
-	0x0a, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
-	0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65,
-	0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x22, 0x7b, 0x0a, 0x16,
-	0x57, 0x61, 0x74, 0x63, 0x68, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65,
-	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x4d, 0x0a, 0x09, 0x70, 0x72, 0x6f, 0x6d, 0x6f, 0x74,
-	0x69, 0x6f, 0x6e, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x2f, 0x2e, 0x67, 0x69, 0x74, 0x68,
-	0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61,
-	0x72, 0x67, 0x6f, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31,
-	0x2e, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x09, 0x70, 0x72, 0x6f, 0x6d,
-	0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x12, 0x0a, 0x04, 0x74, 0x79, 0x70, 0x65, 0x18, 0x02, 0x20,
-	0x01, 0x28, 0x09, 0x52, 0x04, 0x74, 0x79, 0x70, 0x65, 0x22, 0x45, 0x0a, 0x15, 0x41, 0x62, 0x6f,
-	0x72, 0x74, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65,
-	0x73, 0x74, 0x12, 0x18, 0x0a, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x18, 0x01, 0x20,
-	0x01, 0x28, 0x09, 0x52, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x12, 0x12, 0x0a, 0x04,
-	0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65,
-	0x22, 0x18, 0x0a, 0x16, 0x41, 0x62, 0x6f, 0x72, 0x74, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69,
-	0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x2a, 0x0a, 0x14, 0x44, 0x65,
-	0x6c, 0x65, 0x74, 0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65,
-	0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x22, 0x17, 0x0a, 0x15, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65,
-	0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22,
-	0x6c, 0x0a, 0x11, 0x47, 0x65, 0x74, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x52, 0x65, 0x71,
-	0x75, 0x65, 0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01,
-	0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x43, 0x0a, 0x06, 0x66, 0x6f, 0x72, 0x6d,
-	0x61, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x2b, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74,
-	0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69,
-	0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x52, 0x61, 0x77, 0x46,
-	0x6f, 0x72, 0x6d, 0x61, 0x74, 0x52, 0x06, 0x66, 0x6f, 0x72, 0x6d, 0x61, 0x74, 0x22, 0x7d, 0x0a,
-	0x12, 0x47, 0x65, 0x74, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f,
-	0x6e, 0x73, 0x65, 0x12, 0x49, 0x0a, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x18, 0x01,
-	0x20, 0x01, 0x28, 0x0b, 0x32, 0x2d, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f,
-	0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x61,
-	0x70, 0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x50, 0x72, 0x6f, 0x6a,
-	0x65, 0x63, 0x74, 0x48, 0x00, 0x52, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x12, 0x12,
-	0x0a, 0x03, 0x72, 0x61, 0x77, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x48, 0x00, 0x52, 0x03, 0x72,
-	0x61, 0x77, 0x42, 0x08, 0x0a, 0x06, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x22, 0x8f, 0x01, 0x0a,
-	0x13, 0x4c, 0x69, 0x73, 0x74, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x73, 0x52, 0x65, 0x71,
-	0x75, 0x65, 0x73, 0x74, 0x12, 0x20, 0x0a, 0x09, 0x70, 0x61, 0x67, 0x65, 0x5f, 0x73, 0x69, 0x7a,
-	0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x48, 0x00, 0x52, 0x08, 0x70, 0x61, 0x67, 0x65, 0x53,
-	0x69, 0x7a, 0x65, 0x88, 0x01, 0x01, 0x12, 0x17, 0x0a, 0x04, 0x70, 0x61, 0x67, 0x65, 0x18, 0x02,
-	0x20, 0x01, 0x28, 0x05, 0x48, 0x01, 0x52, 0x04, 0x70, 0x61, 0x67, 0x65, 0x88, 0x01, 0x01, 0x12,
-	0x1b, 0x0a, 0x06, 0x66, 0x69, 0x6c, 0x74, 0x65, 0x72, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x48,
-	0x02, 0x52, 0x06, 0x66, 0x69, 0x6c, 0x74, 0x65, 0x72, 0x88, 0x01, 0x01, 0x42, 0x0c, 0x0a, 0x0a,
-	0x5f, 0x70, 0x61, 0x67, 0x65, 0x5f, 0x73, 0x69, 0x7a, 0x65, 0x42, 0x07, 0x0a, 0x05, 0x5f, 0x70,
-	0x61, 0x67, 0x65, 0x42, 0x09, 0x0a, 0x07, 0x5f, 0x66, 0x69, 0x6c, 0x74, 0x65, 0x72, 0x22, 0x77,
-	0x0a, 0x14, 0x4c, 0x69, 0x73, 0x74, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x73, 0x52, 0x65,
-	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x49, 0x0a, 0x08, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63,
-	0x74, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x2d, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75,
-	0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72,
-	0x67, 0x6f, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e,
-	0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x52, 0x08, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74,
-	0x73, 0x12, 0x14, 0x0a, 0x05, 0x74, 0x6f, 0x74, 0x61, 0x6c, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05,
-	0x52, 0x05, 0x74, 0x6f, 0x74, 0x61, 0x6c, 0x22, 0x78, 0x0a, 0x17, 0x47, 0x65, 0x74, 0x50, 0x72,
-	0x6f, 0x6a, 0x65, 0x63, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65,
-	0x73, 0x74, 0x12, 0x18, 0x0a, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x18, 0x01, 0x20,
-	0x01, 0x28, 0x09, 0x52, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x12, 0x43, 0x0a, 0x06,
-	0x66, 0x6f, 0x72, 0x6d, 0x61, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x2b, 0x2e, 0x61,
-	0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73,
-	0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e,
-	0x52, 0x61, 0x77, 0x46, 0x6f, 0x72, 0x6d, 0x61, 0x74, 0x52, 0x06, 0x66, 0x6f, 0x72, 0x6d, 0x61,
-	0x74, 0x22, 0x96, 0x01, 0x0a, 0x18, 0x47, 0x65, 0x74, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74,
-	0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x5c,
-	0x0a, 0x0e, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x5f, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x67,
-	0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x33, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e,
-	0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f,
-	0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x50, 0x72,
-	0x6f, 0x6a, 0x65, 0x63, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x48, 0x00, 0x52, 0x0d, 0x70,
-	0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x12, 0x12, 0x0a, 0x03,
-	0x72, 0x61, 0x77, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x48, 0x00, 0x52, 0x03, 0x72, 0x61, 0x77,
-	0x42, 0x08, 0x0a, 0x06, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x22, 0x36, 0x0a, 0x1a, 0x44, 0x65,
-	0x6c, 0x65, 0x74, 0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69,
-	0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x18, 0x0a, 0x07, 0x70, 0x72, 0x6f, 0x6a,
-	0x65, 0x63, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65,
-	0x63, 0x74, 0x22, 0x1d, 0x0a, 0x1b, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x50, 0x72, 0x6f, 0x6a,
-	0x65, 0x63, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
-	0x65, 0x22, 0x35, 0x0a, 0x19, 0x57, 0x61, 0x74, 0x63, 0x68, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63,
-	0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x18,
-	0x0a, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
-	0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x22, 0x8c, 0x01, 0x0a, 0x1a, 0x57, 0x61, 0x74,
-	0x63, 0x68, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52,
-	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x5a, 0x0a, 0x0e, 0x70, 0x72, 0x6f, 0x6a, 0x65,
-	0x63, 0x74, 0x5f, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32,
+	0x28, 0x09, 0x52, 0x04, 0x74, 0x79, 0x70, 0x65, 0x22, 0x1d, 0x0a, 0x1b, 0x52, 0x65, 0x66, 0x72,
+	0x65, 0x73, 0x68, 0x43, 0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67,
+	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x22, 0x7a, 0x0a, 0x1c, 0x52, 0x65, 0x66, 0x72, 0x65,
+	0x73, 0x68, 0x43, 0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52,
+	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x5a, 0x0a, 0x0e, 0x63, 0x6c, 0x75, 0x73, 0x74,
+	0x65, 0x72, 0x5f, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32,
 	0x33, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75,
 	0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31,
-	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x43, 0x6f,
-	0x6e, 0x66, 0x69, 0x67, 0x52, 0x0d, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x43, 0x6f, 0x6e,
-	0x66, 0x69, 0x67, 0x12, 0x12, 0x0a, 0x04, 0x74, 0x79, 0x70, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28,
-	0x09, 0x52, 0x04, 0x74, 0x79, 0x70, 0x65, 0x22, 0x71, 0x0a, 0x15, 0x41, 0x70, 0x70, 0x72, 0x6f,
+	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x43, 0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x43, 0x6f,
+	0x6e, 0x66, 0x69, 0x67, 0x52, 0x0d, 0x63, 0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x43, 0x6f, 0x6e,
+	0x66, 0x69, 0x67, 0x22, 0x56, 0x0a, 0x15, 0x4c, 0x69, 0x73, 0x74, 0x50, 0x72, 0x6f, 0x6d, 0x6f,
+	0x74, 0x69, 0x6f, 0x6e, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x18, 0x0a, 0x07,
+	0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x70,
+	0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x12, 0x19, 0x0a, 0x05, 0x73, 0x74, 0x61, 0x67, 0x65, 0x18,
+	0x02, 0x20, 0x01, 0x28, 0x09, 0x48, 0x00, 0x52, 0x05, 0x73, 0x74, 0x61, 0x67, 0x65, 0x88, 0x01,
+	0x01, 0x42, 0x08, 0x0a, 0x06, 0x5f, 0x73, 0x74, 0x61, 0x67, 0x65, 0x22, 0x69, 0x0a, 0x16, 0x4c,
+	0x69, 0x73, 0x74, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x52, 0x65, 0x73,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x4f, 0x0a, 0x0a, 0x70, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69,
+	0x6f, 0x6e, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x2f, 0x2e, 0x67, 0x69, 0x74, 0x68,
+	0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61,
+	0x72, 0x67, 0x6f, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31,
+	0x2e, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x0a, 0x70, 0x72, 0x6f, 0x6d,
+	0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x22, 0x57, 0x0a, 0x16, 0x57, 0x61, 0x74, 0x63, 0x68, 0x50,
+	0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x12, 0x18, 0x0a, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x12, 0x19, 0x0a, 0x05, 0x73, 0x74,
+	0x61, 0x67, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x48, 0x00, 0x52, 0x05, 0x73, 0x74, 0x61,
+	0x67, 0x65, 0x88, 0x01, 0x01, 0x42, 0x08, 0x0a, 0x06, 0x5f, 0x73, 0x74, 0x61, 0x67, 0x65, 0x22,
+	0x7c, 0x0a, 0x17, 0x57, 0x61, 0x74, 0x63, 0x68, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f,
+	0x6e, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x4d, 0x0a, 0x09, 0x70, 0x72,
+	0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x2f, 0x2e,
+	0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74,
+	0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c,
+	0x70, 0x68, 0x61, 0x31, 0x2e, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x09,
+	0x70, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x12, 0x0a, 0x04, 0x74, 0x79, 0x70,
+	0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x74, 0x79, 0x70, 0x65, 0x22, 0x88, 0x01,
+	0x0a, 0x13, 0x47, 0x65, 0x74, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65,
+	0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x18, 0x0a, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x12,
+	0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e,
+	0x61, 0x6d, 0x65, 0x12, 0x43, 0x0a, 0x06, 0x66, 0x6f, 0x72, 0x6d, 0x61, 0x74, 0x18, 0x03, 0x20,
+	0x01, 0x28, 0x0e, 0x32, 0x2b, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e,
+	0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31,
+	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x52, 0x61, 0x77, 0x46, 0x6f, 0x72, 0x6d, 0x61, 0x74,
+	0x52, 0x06, 0x66, 0x6f, 0x72, 0x6d, 0x61, 0x74, 0x22, 0x85, 0x01, 0x0a, 0x14, 0x47, 0x65, 0x74,
+	0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
+	0x65, 0x12, 0x4f, 0x0a, 0x09, 0x70, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x0b, 0x32, 0x2f, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f,
+	0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x61,
+	0x70, 0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x50, 0x72, 0x6f, 0x6d,
+	0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x48, 0x00, 0x52, 0x09, 0x70, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69,
+	0x6f, 0x6e, 0x12, 0x12, 0x0a, 0x03, 0x72, 0x61, 0x77, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x48,
+	0x00, 0x52, 0x03, 0x72, 0x61, 0x77, 0x42, 0x08, 0x0a, 0x06, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74,
+	0x22, 0x45, 0x0a, 0x15, 0x57, 0x61, 0x74, 0x63, 0x68, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69,
+	0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x18, 0x0a, 0x07, 0x70, 0x72, 0x6f,
+	0x6a, 0x65, 0x63, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x70, 0x72, 0x6f, 0x6a,
+	0x65, 0x63, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x22, 0x7b, 0x0a, 0x16, 0x57, 0x61, 0x74, 0x63, 0x68,
+	0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
+	0x65, 0x12, 0x4d, 0x0a, 0x09, 0x70, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x0b, 0x32, 0x2f, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f,
+	0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x61,
+	0x70, 0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x50, 0x72, 0x6f, 0x6d,
+	0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x09, 0x70, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e,
+	0x12, 0x12, 0x0a, 0x04, 0x74, 0x79, 0x70, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04,
+	0x74, 0x79, 0x70, 0x65, 0x22, 0x45, 0x0a, 0x15, 0x41, 0x62, 0x6f, 0x72, 0x74, 0x50, 0x72, 0x6f,
+	0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x18, 0x0a,
+	0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07,
+	0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18,
+	0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x22, 0x18, 0x0a, 0x16, 0x41,
+	0x62, 0x6f, 0x72, 0x74, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x2a, 0x0a, 0x14, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x50,
+	0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x12, 0x0a,
+	0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d,
+	0x65, 0x22, 0x17, 0x0a, 0x15, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65,
+	0x63, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x6c, 0x0a, 0x11, 0x47, 0x65,
+	0x74, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12,
+	0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e,
+	0x61, 0x6d, 0x65, 0x12, 0x43, 0x0a, 0x06, 0x66, 0x6f, 0x72, 0x6d, 0x61, 0x74, 0x18, 0x02, 0x20,
+	0x01, 0x28, 0x0e, 0x32, 0x2b, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e,
+	0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31,
+	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x52, 0x61, 0x77, 0x46, 0x6f, 0x72, 0x6d, 0x61, 0x74,
+	0x52, 0x06, 0x66, 0x6f, 0x72, 0x6d, 0x61, 0x74, 0x22, 0x7d, 0x0a, 0x12, 0x47, 0x65, 0x74, 0x50,
+	0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x49,
+	0x0a, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32,
+	0x2d, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75,
+	0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31,
+	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x48, 0x00,
+	0x52, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x12, 0x12, 0x0a, 0x03, 0x72, 0x61, 0x77,
+	0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x48, 0x00, 0x52, 0x03, 0x72, 0x61, 0x77, 0x42, 0x08, 0x0a,
+	0x06, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x22, 0x8f, 0x01, 0x0a, 0x13, 0x4c, 0x69, 0x73, 0x74,
+	0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12,
+	0x20, 0x0a, 0x09, 0x70, 0x61, 0x67, 0x65, 0x5f, 0x73, 0x69, 0x7a, 0x65, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x05, 0x48, 0x00, 0x52, 0x08, 0x70, 0x61, 0x67, 0x65, 0x53, 0x69, 0x7a, 0x65, 0x88, 0x01,
+	0x01, 0x12, 0x17, 0x0a, 0x04, 0x70, 0x61, 0x67, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05, 0x48,
+	0x01, 0x52, 0x04, 0x70, 0x61, 0x67, 0x65, 0x88, 0x01, 0x01, 0x12, 0x1b, 0x0a, 0x06, 0x66, 0x69,
+	0x6c, 0x74, 0x65, 0x72, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x48, 0x02, 0x52, 0x06, 0x66, 0x69,
+	0x6c, 0x74, 0x65, 0x72, 0x88, 0x01, 0x01, 0x42, 0x0c, 0x0a, 0x0a, 0x5f, 0x70, 0x61, 0x67, 0x65,
+	0x5f, 0x73, 0x69, 0x7a, 0x65, 0x42, 0x07, 0x0a, 0x05, 0x5f, 0x70, 0x61, 0x67, 0x65, 0x42, 0x09,
+	0x0a, 0x07, 0x5f, 0x66, 0x69, 0x6c, 0x74, 0x65, 0x72, 0x22, 0x77, 0x0a, 0x14, 0x4c, 0x69, 0x73,
+	0x74, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
+	0x65, 0x12, 0x49, 0x0a, 0x08, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x73, 0x18, 0x01, 0x20,
+	0x03, 0x28, 0x0b, 0x32, 0x2d, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d,
+	0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x61, 0x70,
+	0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x50, 0x72, 0x6f, 0x6a, 0x65,
+	0x63, 0x74, 0x52, 0x08, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x73, 0x12, 0x14, 0x0a, 0x05,
+	0x74, 0x6f, 0x74, 0x61, 0x6c, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05, 0x52, 0x05, 0x74, 0x6f, 0x74,
+	0x61, 0x6c, 0x22, 0x78, 0x0a, 0x17, 0x47, 0x65, 0x74, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74,
+	0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x18, 0x0a,
+	0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07,
+	0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x12, 0x43, 0x0a, 0x06, 0x66, 0x6f, 0x72, 0x6d, 0x61,
+	0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x2b, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79,
+	0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63,
+	0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x52, 0x61, 0x77, 0x46, 0x6f,
+	0x72, 0x6d, 0x61, 0x74, 0x52, 0x06, 0x66, 0x6f, 0x72, 0x6d, 0x61, 0x74, 0x22, 0x96, 0x01, 0x0a,
+	0x18, 0x47, 0x65, 0x74, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69,
+	0x67, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x5c, 0x0a, 0x0e, 0x70, 0x72, 0x6f,
+	0x6a, 0x65, 0x63, 0x74, 0x5f, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x0b, 0x32, 0x33, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2e, 0x61,
+	0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x61, 0x70, 0x69, 0x2e,
+	0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74,
+	0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x48, 0x00, 0x52, 0x0d, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63,
+	0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x12, 0x12, 0x0a, 0x03, 0x72, 0x61, 0x77, 0x18, 0x02,
+	0x20, 0x01, 0x28, 0x0c, 0x48, 0x00, 0x52, 0x03, 0x72, 0x61, 0x77, 0x42, 0x08, 0x0a, 0x06, 0x72,
+	0x65, 0x73, 0x75, 0x6c, 0x74, 0x22, 0x36, 0x0a, 0x1a, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x50,
+	0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x71, 0x75,
+	0x65, 0x73, 0x74, 0x12, 0x18, 0x0a, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x22, 0x1d, 0x0a,
+	0x1b, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x43, 0x6f,
+	0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x35, 0x0a, 0x19,
+	0x57, 0x61, 0x74, 0x63, 0x68, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x43, 0x6f, 0x6e, 0x66,
+	0x69, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x18, 0x0a, 0x07, 0x70, 0x72, 0x6f,
+	0x6a, 0x65, 0x63, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x70, 0x72, 0x6f, 0x6a,
+	0x65, 0x63, 0x74, 0x22, 0x8c, 0x01, 0x0a, 0x1a, 0x57, 0x61, 0x74, 0x63, 0x68, 0x50, 0x72, 0x6f,
+	0x6a, 0x65, 0x63, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x73, 0x65, 0x12, 0x5a, 0x0a, 0x0e, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x5f, 0x63, 0x6f,
+	0x6e, 0x66, 0x69, 0x67, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x33, 0x2e, 0x67, 0x69, 0x74,
+	0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b,
+	0x61, 0x72, 0x67, 0x6f, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61,
+	0x31, 0x2e, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52,
+	0x0d, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x12, 0x12,
+	0x0a, 0x04, 0x74, 0x79, 0x70, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x74, 0x79,
+	0x70, 0x65, 0x22, 0x37, 0x0a, 0x1b, 0x52, 0x65, 0x66, 0x72, 0x65, 0x73, 0x68, 0x50, 0x72, 0x6f,
+	0x6a, 0x65, 0x63, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
+	0x74, 0x12, 0x18, 0x0a, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x22, 0x7a, 0x0a, 0x1c, 0x52,
+	0x65, 0x66, 0x72, 0x65, 0x73, 0x68, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x43, 0x6f, 0x6e,
+	0x66, 0x69, 0x67, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x5a, 0x0a, 0x0e, 0x70,
+	0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x5f, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x18, 0x01, 0x20,
+	0x01, 0x28, 0x0b, 0x32, 0x33, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d,
+	0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x61, 0x70,
+	0x69, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x50, 0x72, 0x6f, 0x6a, 0x65,
+	0x63, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x0d, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63,
+	0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x22, 0x71, 0x0a, 0x15, 0x41, 0x70, 0x70, 0x72, 0x6f,
 	0x76, 0x65, 0x46, 0x72, 0x65, 0x69, 0x67, 0x68, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
 	0x12, 0x18, 0x0a, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28,
 	0x09, 0x52, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61,
@@ -9877,7 +10077,7 @@ var file_api_service_v1alpha1_service_proto_rawDesc = []byte{
 	0x53, 0x50, 0x45, 0x43, 0x49, 0x46, 0x49, 0x45, 0x44, 0x10, 0x00, 0x12, 0x13, 0x0a, 0x0f, 0x52,
 	0x41, 0x57, 0x5f, 0x46, 0x4f, 0x52, 0x4d, 0x41, 0x54, 0x5f, 0x4a, 0x53, 0x4f, 0x4e, 0x10, 0x01,
 	0x12, 0x13, 0x0a, 0x0f, 0x52, 0x41, 0x57, 0x5f, 0x46, 0x4f, 0x52, 0x4d, 0x41, 0x54, 0x5f, 0x59,
-	0x41, 0x4d, 0x4c, 0x10, 0x02, 0x32, 0x8c, 0x4d, 0x0a, 0x0c, 0x4b, 0x61, 0x72, 0x67, 0x6f, 0x53,
+	0x41, 0x4d, 0x4c, 0x10, 0x02, 0x32, 0xbc, 0x4f, 0x0a, 0x0c, 0x4b, 0x61, 0x72, 0x67, 0x6f, 0x53,
 	0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x12, 0x83, 0x01, 0x0a, 0x0e, 0x47, 0x65, 0x74, 0x56, 0x65,
 	0x72, 0x73, 0x69, 0x6f, 0x6e, 0x49, 0x6e, 0x66, 0x6f, 0x12, 0x37, 0x2e, 0x61, 0x6b, 0x75, 0x69,
 	0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76,
@@ -10018,100 +10218,119 @@ var file_api_service_v1alpha1_service_proto_rawDesc = []byte{
 	0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63,
 	0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x57, 0x61, 0x74, 0x63, 0x68,
 	0x43, 0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x73,
-	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x30, 0x01, 0x12, 0x83, 0x01, 0x0a, 0x0e, 0x4c, 0x69, 0x73, 0x74,
-	0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x12, 0x37, 0x2e, 0x61, 0x6b, 0x75,
-	0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72,
-	0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x4c, 0x69,
-	0x73, 0x74, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x52, 0x65, 0x71, 0x75,
-	0x65, 0x73, 0x74, 0x1a, 0x38, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e,
-	0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31,
-	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x50, 0x72, 0x6f, 0x6d, 0x6f,
-	0x74, 0x69, 0x6f, 0x6e, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x88, 0x01,
-	0x0a, 0x0f, 0x57, 0x61, 0x74, 0x63, 0x68, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e,
-	0x73, 0x12, 0x38, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61,
-	0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c,
-	0x70, 0x68, 0x61, 0x31, 0x2e, 0x57, 0x61, 0x74, 0x63, 0x68, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74,
-	0x69, 0x6f, 0x6e, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x39, 0x2e, 0x61, 0x6b,
-	0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65,
-	0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x57,
-	0x61, 0x74, 0x63, 0x68, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x52, 0x65,
-	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x30, 0x01, 0x12, 0x7d, 0x0a, 0x0c, 0x47, 0x65, 0x74, 0x50,
-	0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x35, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74,
-	0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69,
-	0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x47, 0x65, 0x74, 0x50,
-	0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a,
-	0x36, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x30, 0x01, 0x12, 0x95, 0x01, 0x0a, 0x14, 0x52, 0x65, 0x66, 0x72,
+	0x65, 0x73, 0x68, 0x43, 0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67,
+	0x12, 0x3d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72,
+	0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70,
+	0x68, 0x61, 0x31, 0x2e, 0x52, 0x65, 0x66, 0x72, 0x65, 0x73, 0x68, 0x43, 0x6c, 0x75, 0x73, 0x74,
+	0x65, 0x72, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a,
+	0x3e, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67,
 	0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68,
-	0x61, 0x31, 0x2e, 0x47, 0x65, 0x74, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x52,
-	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x85, 0x01, 0x0a, 0x0e, 0x57, 0x61, 0x74, 0x63,
-	0x68, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x37, 0x2e, 0x61, 0x6b, 0x75,
-	0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72,
-	0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x57, 0x61,
-	0x74, 0x63, 0x68, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75,
-	0x65, 0x73, 0x74, 0x1a, 0x38, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e,
+	0x61, 0x31, 0x2e, 0x52, 0x65, 0x66, 0x72, 0x65, 0x73, 0x68, 0x43, 0x6c, 0x75, 0x73, 0x74, 0x65,
+	0x72, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12,
+	0x83, 0x01, 0x0a, 0x0e, 0x4c, 0x69, 0x73, 0x74, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f,
+	0x6e, 0x73, 0x12, 0x37, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b,
+	0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61,
+	0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74,
+	0x69, 0x6f, 0x6e, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x38, 0x2e, 0x61, 0x6b,
+	0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65,
+	0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x4c,
+	0x69, 0x73, 0x74, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x52, 0x65, 0x73,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x88, 0x01, 0x0a, 0x0f, 0x57, 0x61, 0x74, 0x63, 0x68, 0x50,
+	0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x12, 0x38, 0x2e, 0x61, 0x6b, 0x75, 0x69,
+	0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76,
+	0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x57, 0x61, 0x74,
+	0x63, 0x68, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x52, 0x65, 0x71, 0x75,
+	0x65, 0x73, 0x74, 0x1a, 0x39, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e,
 	0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31,
 	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x57, 0x61, 0x74, 0x63, 0x68, 0x50, 0x72, 0x6f, 0x6d,
-	0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x30, 0x01, 0x12,
-	0x83, 0x01, 0x0a, 0x0e, 0x41, 0x62, 0x6f, 0x72, 0x74, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69,
+	0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x30, 0x01,
+	0x12, 0x7d, 0x0a, 0x0c, 0x47, 0x65, 0x74, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e,
+	0x12, 0x35, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72,
+	0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70,
+	0x68, 0x61, 0x31, 0x2e, 0x47, 0x65, 0x74, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e,
+	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x36, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79,
+	0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63,
+	0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x47, 0x65, 0x74, 0x50, 0x72,
+	0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12,
+	0x85, 0x01, 0x0a, 0x0e, 0x57, 0x61, 0x74, 0x63, 0x68, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69,
 	0x6f, 0x6e, 0x12, 0x37, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b,
 	0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61,
-	0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x41, 0x62, 0x6f, 0x72, 0x74, 0x50, 0x72, 0x6f, 0x6d, 0x6f,
+	0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x57, 0x61, 0x74, 0x63, 0x68, 0x50, 0x72, 0x6f, 0x6d, 0x6f,
 	0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x38, 0x2e, 0x61, 0x6b,
 	0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65,
-	0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x41,
-	0x62, 0x6f, 0x72, 0x74, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73,
-	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x80, 0x01, 0x0a, 0x0d, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65,
-	0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x12, 0x36, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79,
-	0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63,
-	0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74,
-	0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a,
-	0x37, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67,
+	0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x57,
+	0x61, 0x74, 0x63, 0x68, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x30, 0x01, 0x12, 0x83, 0x01, 0x0a, 0x0e, 0x41, 0x62, 0x6f, 0x72,
+	0x74, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x37, 0x2e, 0x61, 0x6b, 0x75,
+	0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72,
+	0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x41, 0x62,
+	0x6f, 0x72, 0x74, 0x50, 0x72, 0x6f, 0x6d, 0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75,
+	0x65, 0x73, 0x74, 0x1a, 0x38, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e,
+	0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31,
+	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x41, 0x62, 0x6f, 0x72, 0x74, 0x50, 0x72, 0x6f, 0x6d,
+	0x6f, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x80, 0x01,
+	0x0a, 0x0d, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x12,
+	0x36, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67,
 	0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68,
 	0x61, 0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74,
-	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x77, 0x0a, 0x0a, 0x47, 0x65, 0x74, 0x50,
-	0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x12, 0x33, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e,
-	0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65,
-	0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x47, 0x65, 0x74, 0x50, 0x72, 0x6f,
-	0x6a, 0x65, 0x63, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x34, 0x2e, 0x61, 0x6b,
-	0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65,
-	0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x47,
-	0x65, 0x74, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
-	0x65, 0x12, 0x7d, 0x0a, 0x0c, 0x4c, 0x69, 0x73, 0x74, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74,
-	0x73, 0x12, 0x35, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61,
-	0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c,
-	0x70, 0x68, 0x61, 0x31, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74,
-	0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x36, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74,
-	0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69,
-	0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x4c, 0x69, 0x73, 0x74,
-	0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
-	0x12, 0x89, 0x01, 0x0a, 0x10, 0x47, 0x65, 0x74, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x43,
-	0x6f, 0x6e, 0x66, 0x69, 0x67, 0x12, 0x39, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69,
-	0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e,
-	0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x47, 0x65, 0x74, 0x50, 0x72, 0x6f, 0x6a,
-	0x65, 0x63, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
-	0x1a, 0x3a, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72,
+	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x37, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79,
+	0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63,
+	0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74,
+	0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
+	0x12, 0x77, 0x0a, 0x0a, 0x47, 0x65, 0x74, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x12, 0x33,
+	0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f,
+	0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61,
+	0x31, 0x2e, 0x47, 0x65, 0x74, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x52, 0x65, 0x71, 0x75,
+	0x65, 0x73, 0x74, 0x1a, 0x34, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e,
+	0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31,
+	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x47, 0x65, 0x74, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63,
+	0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x7d, 0x0a, 0x0c, 0x4c, 0x69, 0x73,
+	0x74, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x73, 0x12, 0x35, 0x2e, 0x61, 0x6b, 0x75, 0x69,
+	0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76,
+	0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x4c, 0x69, 0x73,
+	0x74, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x1a, 0x36, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72,
 	0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70,
-	0x68, 0x61, 0x31, 0x2e, 0x47, 0x65, 0x74, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x43, 0x6f,
-	0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x92, 0x01, 0x0a,
-	0x13, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x43, 0x6f,
-	0x6e, 0x66, 0x69, 0x67, 0x12, 0x3c, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f,
-	0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76,
-	0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x50, 0x72,
-	0x6f, 0x6a, 0x65, 0x63, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65,
-	0x73, 0x74, 0x1a, 0x3d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b,
-	0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61,
-	0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x50, 0x72, 0x6f, 0x6a,
-	0x65, 0x63, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
-	0x65, 0x12, 0x91, 0x01, 0x0a, 0x12, 0x57, 0x61, 0x74, 0x63, 0x68, 0x50, 0x72, 0x6f, 0x6a, 0x65,
-	0x63, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x12, 0x3b, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74,
+	0x68, 0x61, 0x31, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x73,
+	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x89, 0x01, 0x0a, 0x10, 0x47, 0x65, 0x74,
+	0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x12, 0x39, 0x2e,
+	0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e,
+	0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31,
+	0x2e, 0x47, 0x65, 0x74, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69,
+	0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x3a, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74,
 	0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69,
-	0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x57, 0x61, 0x74, 0x63,
+	0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x47, 0x65, 0x74, 0x50,
+	0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x73, 0x70,
+	0x6f, 0x6e, 0x73, 0x65, 0x12, 0x92, 0x01, 0x0a, 0x13, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x50,
+	0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x12, 0x3c, 0x2e, 0x61,
+	0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73,
+	0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e,
+	0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x43, 0x6f, 0x6e,
+	0x66, 0x69, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x3d, 0x2e, 0x61, 0x6b, 0x75,
+	0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72,
+	0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x44, 0x65,
+	0x6c, 0x65, 0x74, 0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69,
+	0x67, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x91, 0x01, 0x0a, 0x12, 0x57, 0x61,
+	0x74, 0x63, 0x68, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67,
+	0x12, 0x3b, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72,
+	0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70,
+	0x68, 0x61, 0x31, 0x2e, 0x57, 0x61, 0x74, 0x63, 0x68, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74,
+	0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x3c, 0x2e,
+	0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e,
+	0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31,
+	0x2e, 0x57, 0x61, 0x74, 0x63, 0x68, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x43, 0x6f, 0x6e,
+	0x66, 0x69, 0x67, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x30, 0x01, 0x12, 0x95, 0x01,
+	0x0a, 0x14, 0x52, 0x65, 0x66, 0x72, 0x65, 0x73, 0x68, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74,
+	0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x12, 0x3d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e,
+	0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65,
+	0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x52, 0x65, 0x66, 0x72, 0x65, 0x73,
 	0x68, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65,
-	0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x3c, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69,
+	0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x3e, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69,
 	0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e,
-	0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x57, 0x61, 0x74, 0x63, 0x68, 0x50, 0x72,
-	0x6f, 0x6a, 0x65, 0x63, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x73, 0x70, 0x6f,
-	0x6e, 0x73, 0x65, 0x30, 0x01, 0x12, 0x83, 0x01, 0x0a, 0x0e, 0x41, 0x70, 0x70, 0x72, 0x6f, 0x76,
+	0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x52, 0x65, 0x66, 0x72, 0x65, 0x73, 0x68,
+	0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x73,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x83, 0x01, 0x0a, 0x0e, 0x41, 0x70, 0x70, 0x72, 0x6f, 0x76,
 	0x65, 0x46, 0x72, 0x65, 0x69, 0x67, 0x68, 0x74, 0x12, 0x37, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74,
 	0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69,
 	0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x41, 0x70, 0x70, 0x72,
@@ -10528,7 +10747,7 @@ func file_api_service_v1alpha1_service_proto_rawDescGZIP() []byte {
 }
 
 var file_api_service_v1alpha1_service_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_api_service_v1alpha1_service_proto_msgTypes = make([]protoimpl.MessageInfo, 163)
+var file_api_service_v1alpha1_service_proto_msgTypes = make([]protoimpl.MessageInfo, 167)
 var file_api_service_v1alpha1_service_proto_goTypes = []interface{}{
 	(RawFormat)(0),                                // 0: akuity.io.kargo.service.v1alpha1.RawFormat
 	(*ComponentVersions)(nil),                     // 1: akuity.io.kargo.service.v1alpha1.ComponentVersions
@@ -10575,384 +10794,394 @@ var file_api_service_v1alpha1_service_proto_goTypes = []interface{}{
 	(*DeleteClusterConfigResponse)(nil),           // 42: akuity.io.kargo.service.v1alpha1.DeleteClusterConfigResponse
 	(*WatchClusterConfigRequest)(nil),             // 43: akuity.io.kargo.service.v1alpha1.WatchClusterConfigRequest
 	(*WatchClusterConfigResponse)(nil),            // 44: akuity.io.kargo.service.v1alpha1.WatchClusterConfigResponse
-	(*ListPromotionsRequest)(nil),                 // 45: akuity.io.kargo.service.v1alpha1.ListPromotionsRequest
-	(*ListPromotionsResponse)(nil),                // 46: akuity.io.kargo.service.v1alpha1.ListPromotionsResponse
-	(*WatchPromotionsRequest)(nil),                // 47: akuity.io.kargo.service.v1alpha1.WatchPromotionsRequest
-	(*WatchPromotionsResponse)(nil),               // 48: akuity.io.kargo.service.v1alpha1.WatchPromotionsResponse
-	(*GetPromotionRequest)(nil),                   // 49: akuity.io.kargo.service.v1alpha1.GetPromotionRequest
-	(*GetPromotionResponse)(nil),                  // 50: akuity.io.kargo.service.v1alpha1.GetPromotionResponse
-	(*WatchPromotionRequest)(nil),                 // 51: akuity.io.kargo.service.v1alpha1.WatchPromotionRequest
-	(*WatchPromotionResponse)(nil),                // 52: akuity.io.kargo.service.v1alpha1.WatchPromotionResponse
-	(*AbortPromotionRequest)(nil),                 // 53: akuity.io.kargo.service.v1alpha1.AbortPromotionRequest
-	(*AbortPromotionResponse)(nil),                // 54: akuity.io.kargo.service.v1alpha1.AbortPromotionResponse
-	(*DeleteProjectRequest)(nil),                  // 55: akuity.io.kargo.service.v1alpha1.DeleteProjectRequest
-	(*DeleteProjectResponse)(nil),                 // 56: akuity.io.kargo.service.v1alpha1.DeleteProjectResponse
-	(*GetProjectRequest)(nil),                     // 57: akuity.io.kargo.service.v1alpha1.GetProjectRequest
-	(*GetProjectResponse)(nil),                    // 58: akuity.io.kargo.service.v1alpha1.GetProjectResponse
-	(*ListProjectsRequest)(nil),                   // 59: akuity.io.kargo.service.v1alpha1.ListProjectsRequest
-	(*ListProjectsResponse)(nil),                  // 60: akuity.io.kargo.service.v1alpha1.ListProjectsResponse
-	(*GetProjectConfigRequest)(nil),               // 61: akuity.io.kargo.service.v1alpha1.GetProjectConfigRequest
-	(*GetProjectConfigResponse)(nil),              // 62: akuity.io.kargo.service.v1alpha1.GetProjectConfigResponse
-	(*DeleteProjectConfigRequest)(nil),            // 63: akuity.io.kargo.service.v1alpha1.DeleteProjectConfigRequest
-	(*DeleteProjectConfigResponse)(nil),           // 64: akuity.io.kargo.service.v1alpha1.DeleteProjectConfigResponse
-	(*WatchProjectConfigRequest)(nil),             // 65: akuity.io.kargo.service.v1alpha1.WatchProjectConfigRequest
-	(*WatchProjectConfigResponse)(nil),            // 66: akuity.io.kargo.service.v1alpha1.WatchProjectConfigResponse
-	(*ApproveFreightRequest)(nil),                 // 67: akuity.io.kargo.service.v1alpha1.ApproveFreightRequest
-	(*ApproveFreightResponse)(nil),                // 68: akuity.io.kargo.service.v1alpha1.ApproveFreightResponse
-	(*DeleteFreightRequest)(nil),                  // 69: akuity.io.kargo.service.v1alpha1.DeleteFreightRequest
-	(*DeleteFreightResponse)(nil),                 // 70: akuity.io.kargo.service.v1alpha1.DeleteFreightResponse
-	(*GetFreightRequest)(nil),                     // 71: akuity.io.kargo.service.v1alpha1.GetFreightRequest
-	(*GetFreightResponse)(nil),                    // 72: akuity.io.kargo.service.v1alpha1.GetFreightResponse
-	(*WatchFreightRequest)(nil),                   // 73: akuity.io.kargo.service.v1alpha1.WatchFreightRequest
-	(*WatchFreightResponse)(nil),                  // 74: akuity.io.kargo.service.v1alpha1.WatchFreightResponse
-	(*PromoteToStageRequest)(nil),                 // 75: akuity.io.kargo.service.v1alpha1.PromoteToStageRequest
-	(*PromoteToStageResponse)(nil),                // 76: akuity.io.kargo.service.v1alpha1.PromoteToStageResponse
-	(*PromoteDownstreamRequest)(nil),              // 77: akuity.io.kargo.service.v1alpha1.PromoteDownstreamRequest
-	(*PromoteDownstreamResponse)(nil),             // 78: akuity.io.kargo.service.v1alpha1.PromoteDownstreamResponse
-	(*QueryFreightRequest)(nil),                   // 79: akuity.io.kargo.service.v1alpha1.QueryFreightRequest
-	(*QueryFreightResponse)(nil),                  // 80: akuity.io.kargo.service.v1alpha1.QueryFreightResponse
-	(*FreightList)(nil),                           // 81: akuity.io.kargo.service.v1alpha1.FreightList
-	(*UpdateFreightAliasRequest)(nil),             // 82: akuity.io.kargo.service.v1alpha1.UpdateFreightAliasRequest
-	(*UpdateFreightAliasResponse)(nil),            // 83: akuity.io.kargo.service.v1alpha1.UpdateFreightAliasResponse
-	(*ReverifyRequest)(nil),                       // 84: akuity.io.kargo.service.v1alpha1.ReverifyRequest
-	(*ReverifyResponse)(nil),                      // 85: akuity.io.kargo.service.v1alpha1.ReverifyResponse
-	(*AbortVerificationRequest)(nil),              // 86: akuity.io.kargo.service.v1alpha1.AbortVerificationRequest
-	(*AbortVerificationResponse)(nil),             // 87: akuity.io.kargo.service.v1alpha1.AbortVerificationResponse
-	(*ListWarehousesRequest)(nil),                 // 88: akuity.io.kargo.service.v1alpha1.ListWarehousesRequest
-	(*ListWarehousesResponse)(nil),                // 89: akuity.io.kargo.service.v1alpha1.ListWarehousesResponse
-	(*GetWarehouseRequest)(nil),                   // 90: akuity.io.kargo.service.v1alpha1.GetWarehouseRequest
-	(*GetWarehouseResponse)(nil),                  // 91: akuity.io.kargo.service.v1alpha1.GetWarehouseResponse
-	(*WatchWarehousesRequest)(nil),                // 92: akuity.io.kargo.service.v1alpha1.WatchWarehousesRequest
-	(*WatchWarehousesResponse)(nil),               // 93: akuity.io.kargo.service.v1alpha1.WatchWarehousesResponse
-	(*DeleteWarehouseRequest)(nil),                // 94: akuity.io.kargo.service.v1alpha1.DeleteWarehouseRequest
-	(*DeleteWarehouseResponse)(nil),               // 95: akuity.io.kargo.service.v1alpha1.DeleteWarehouseResponse
-	(*RefreshWarehouseRequest)(nil),               // 96: akuity.io.kargo.service.v1alpha1.RefreshWarehouseRequest
-	(*RefreshWarehouseResponse)(nil),              // 97: akuity.io.kargo.service.v1alpha1.RefreshWarehouseResponse
-	(*CreateCredentialsRequest)(nil),              // 98: akuity.io.kargo.service.v1alpha1.CreateCredentialsRequest
-	(*CreateCredentialsResponse)(nil),             // 99: akuity.io.kargo.service.v1alpha1.CreateCredentialsResponse
-	(*DeleteCredentialsRequest)(nil),              // 100: akuity.io.kargo.service.v1alpha1.DeleteCredentialsRequest
-	(*DeleteCredentialsResponse)(nil),             // 101: akuity.io.kargo.service.v1alpha1.DeleteCredentialsResponse
-	(*GetCredentialsRequest)(nil),                 // 102: akuity.io.kargo.service.v1alpha1.GetCredentialsRequest
-	(*GetCredentialsResponse)(nil),                // 103: akuity.io.kargo.service.v1alpha1.GetCredentialsResponse
-	(*ListCredentialsRequest)(nil),                // 104: akuity.io.kargo.service.v1alpha1.ListCredentialsRequest
-	(*ListCredentialsResponse)(nil),               // 105: akuity.io.kargo.service.v1alpha1.ListCredentialsResponse
-	(*UpdateCredentialsRequest)(nil),              // 106: akuity.io.kargo.service.v1alpha1.UpdateCredentialsRequest
-	(*UpdateCredentialsResponse)(nil),             // 107: akuity.io.kargo.service.v1alpha1.UpdateCredentialsResponse
-	(*ListProjectSecretsRequest)(nil),             // 108: akuity.io.kargo.service.v1alpha1.ListProjectSecretsRequest
-	(*ListProjectSecretsResponse)(nil),            // 109: akuity.io.kargo.service.v1alpha1.ListProjectSecretsResponse
-	(*CreateProjectSecretRequest)(nil),            // 110: akuity.io.kargo.service.v1alpha1.CreateProjectSecretRequest
-	(*CreateProjectSecretResponse)(nil),           // 111: akuity.io.kargo.service.v1alpha1.CreateProjectSecretResponse
-	(*UpdateProjectSecretRequest)(nil),            // 112: akuity.io.kargo.service.v1alpha1.UpdateProjectSecretRequest
-	(*UpdateProjectSecretResponse)(nil),           // 113: akuity.io.kargo.service.v1alpha1.UpdateProjectSecretResponse
-	(*DeleteProjectSecretRequest)(nil),            // 114: akuity.io.kargo.service.v1alpha1.DeleteProjectSecretRequest
-	(*DeleteProjectSecretResponse)(nil),           // 115: akuity.io.kargo.service.v1alpha1.DeleteProjectSecretResponse
-	(*ListAnalysisTemplatesRequest)(nil),          // 116: akuity.io.kargo.service.v1alpha1.ListAnalysisTemplatesRequest
-	(*ListAnalysisTemplatesResponse)(nil),         // 117: akuity.io.kargo.service.v1alpha1.ListAnalysisTemplatesResponse
-	(*GetAnalysisTemplateRequest)(nil),            // 118: akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateRequest
-	(*GetAnalysisTemplateResponse)(nil),           // 119: akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateResponse
-	(*DeleteAnalysisTemplateRequest)(nil),         // 120: akuity.io.kargo.service.v1alpha1.DeleteAnalysisTemplateRequest
-	(*DeleteAnalysisTemplateResponse)(nil),        // 121: akuity.io.kargo.service.v1alpha1.DeleteAnalysisTemplateResponse
-	(*ListClusterAnalysisTemplatesRequest)(nil),   // 122: akuity.io.kargo.service.v1alpha1.ListClusterAnalysisTemplatesRequest
-	(*ListClusterAnalysisTemplatesResponse)(nil),  // 123: akuity.io.kargo.service.v1alpha1.ListClusterAnalysisTemplatesResponse
-	(*GetClusterAnalysisTemplateRequest)(nil),     // 124: akuity.io.kargo.service.v1alpha1.GetClusterAnalysisTemplateRequest
-	(*GetClusterAnalysisTemplateResponse)(nil),    // 125: akuity.io.kargo.service.v1alpha1.GetClusterAnalysisTemplateResponse
-	(*DeleteClusterAnalysisTemplateRequest)(nil),  // 126: akuity.io.kargo.service.v1alpha1.DeleteClusterAnalysisTemplateRequest
-	(*DeleteClusterAnalysisTemplateResponse)(nil), // 127: akuity.io.kargo.service.v1alpha1.DeleteClusterAnalysisTemplateResponse
-	(*GetAnalysisRunRequest)(nil),                 // 128: akuity.io.kargo.service.v1alpha1.GetAnalysisRunRequest
-	(*GetAnalysisRunResponse)(nil),                // 129: akuity.io.kargo.service.v1alpha1.GetAnalysisRunResponse
-	(*GetAnalysisRunLogsRequest)(nil),             // 130: akuity.io.kargo.service.v1alpha1.GetAnalysisRunLogsRequest
-	(*GetAnalysisRunLogsResponse)(nil),            // 131: akuity.io.kargo.service.v1alpha1.GetAnalysisRunLogsResponse
-	(*ListProjectEventsRequest)(nil),              // 132: akuity.io.kargo.service.v1alpha1.ListProjectEventsRequest
-	(*ListProjectEventsResponse)(nil),             // 133: akuity.io.kargo.service.v1alpha1.ListProjectEventsResponse
-	(*ListPromotionTasksRequest)(nil),             // 134: akuity.io.kargo.service.v1alpha1.ListPromotionTasksRequest
-	(*ListPromotionTasksResponse)(nil),            // 135: akuity.io.kargo.service.v1alpha1.ListPromotionTasksResponse
-	(*GetPromotionTaskRequest)(nil),               // 136: akuity.io.kargo.service.v1alpha1.GetPromotionTaskRequest
-	(*GetPromotionTaskResponse)(nil),              // 137: akuity.io.kargo.service.v1alpha1.GetPromotionTaskResponse
-	(*ListClusterPromotionTasksRequest)(nil),      // 138: akuity.io.kargo.service.v1alpha1.ListClusterPromotionTasksRequest
-	(*ListClusterPromotionTasksResponse)(nil),     // 139: akuity.io.kargo.service.v1alpha1.ListClusterPromotionTasksResponse
-	(*GetClusterPromotionTaskRequest)(nil),        // 140: akuity.io.kargo.service.v1alpha1.GetClusterPromotionTaskRequest
-	(*GetClusterPromotionTaskResponse)(nil),       // 141: akuity.io.kargo.service.v1alpha1.GetClusterPromotionTaskResponse
-	(*CreateRoleRequest)(nil),                     // 142: akuity.io.kargo.service.v1alpha1.CreateRoleRequest
-	(*CreateRoleResponse)(nil),                    // 143: akuity.io.kargo.service.v1alpha1.CreateRoleResponse
-	(*DeleteRoleRequest)(nil),                     // 144: akuity.io.kargo.service.v1alpha1.DeleteRoleRequest
-	(*DeleteRoleResponse)(nil),                    // 145: akuity.io.kargo.service.v1alpha1.DeleteRoleResponse
-	(*GetRoleRequest)(nil),                        // 146: akuity.io.kargo.service.v1alpha1.GetRoleRequest
-	(*GetRoleResponse)(nil),                       // 147: akuity.io.kargo.service.v1alpha1.GetRoleResponse
-	(*Claims)(nil),                                // 148: akuity.io.kargo.service.v1alpha1.Claims
-	(*GrantRequest)(nil),                          // 149: akuity.io.kargo.service.v1alpha1.GrantRequest
-	(*GrantResponse)(nil),                         // 150: akuity.io.kargo.service.v1alpha1.GrantResponse
-	(*ListRolesRequest)(nil),                      // 151: akuity.io.kargo.service.v1alpha1.ListRolesRequest
-	(*ListRolesResponse)(nil),                     // 152: akuity.io.kargo.service.v1alpha1.ListRolesResponse
-	(*RevokeRequest)(nil),                         // 153: akuity.io.kargo.service.v1alpha1.RevokeRequest
-	(*RevokeResponse)(nil),                        // 154: akuity.io.kargo.service.v1alpha1.RevokeResponse
-	(*UpdateRoleRequest)(nil),                     // 155: akuity.io.kargo.service.v1alpha1.UpdateRoleRequest
-	(*UpdateRoleResponse)(nil),                    // 156: akuity.io.kargo.service.v1alpha1.UpdateRoleResponse
-	nil,                                           // 157: akuity.io.kargo.service.v1alpha1.GetConfigResponse.ArgocdShardsEntry
-	nil,                                           // 158: akuity.io.kargo.service.v1alpha1.ListImagesResponse.ImagesEntry
-	nil,                                           // 159: akuity.io.kargo.service.v1alpha1.TagMap.TagsEntry
-	nil,                                           // 160: akuity.io.kargo.service.v1alpha1.ImageStageMap.StagesEntry
-	nil,                                           // 161: akuity.io.kargo.service.v1alpha1.QueryFreightResponse.GroupsEntry
-	nil,                                           // 162: akuity.io.kargo.service.v1alpha1.CreateProjectSecretRequest.DataEntry
-	nil,                                           // 163: akuity.io.kargo.service.v1alpha1.UpdateProjectSecretRequest.DataEntry
-	(*timestamppb.Timestamp)(nil),                 // 164: google.protobuf.Timestamp
-	(*v1alpha1.Stage)(nil),                        // 165: github.com.akuity.kargo.api.v1alpha1.Stage
-	(*v1alpha1.ClusterConfig)(nil),                // 166: github.com.akuity.kargo.api.v1alpha1.ClusterConfig
-	(*v1alpha1.Promotion)(nil),                    // 167: github.com.akuity.kargo.api.v1alpha1.Promotion
-	(*v1alpha1.Project)(nil),                      // 168: github.com.akuity.kargo.api.v1alpha1.Project
-	(*v1alpha1.ProjectConfig)(nil),                // 169: github.com.akuity.kargo.api.v1alpha1.ProjectConfig
-	(*v1alpha1.Freight)(nil),                      // 170: github.com.akuity.kargo.api.v1alpha1.Freight
-	(*v1alpha1.Warehouse)(nil),                    // 171: github.com.akuity.kargo.api.v1alpha1.Warehouse
-	(*v1.Secret)(nil),                             // 172: k8s.io.api.core.v1.Secret
-	(*v1alpha11.AnalysisTemplate)(nil),            // 173: github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisTemplate
-	(*v1alpha11.ClusterAnalysisTemplate)(nil),     // 174: github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.ClusterAnalysisTemplate
-	(*v1alpha11.AnalysisRun)(nil),                 // 175: github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisRun
-	(*v1.Event)(nil),                              // 176: k8s.io.api.core.v1.Event
-	(*v1alpha1.PromotionTask)(nil),                // 177: github.com.akuity.kargo.api.v1alpha1.PromotionTask
-	(*v1alpha1.ClusterPromotionTask)(nil),         // 178: github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask
-	(*v1alpha12.Role)(nil),                        // 179: github.com.akuity.kargo.api.rbac.v1alpha1.Role
-	(*v1alpha12.RoleResources)(nil),               // 180: github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources
-	(*v1alpha12.Claim)(nil),                       // 181: github.com.akuity.kargo.api.rbac.v1alpha1.Claim
-	(*v1alpha12.ResourceDetails)(nil),             // 182: github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails
+	(*RefreshClusterConfigRequest)(nil),           // 45: akuity.io.kargo.service.v1alpha1.RefreshClusterConfigRequest
+	(*RefreshClusterConfigResponse)(nil),          // 46: akuity.io.kargo.service.v1alpha1.RefreshClusterConfigResponse
+	(*ListPromotionsRequest)(nil),                 // 47: akuity.io.kargo.service.v1alpha1.ListPromotionsRequest
+	(*ListPromotionsResponse)(nil),                // 48: akuity.io.kargo.service.v1alpha1.ListPromotionsResponse
+	(*WatchPromotionsRequest)(nil),                // 49: akuity.io.kargo.service.v1alpha1.WatchPromotionsRequest
+	(*WatchPromotionsResponse)(nil),               // 50: akuity.io.kargo.service.v1alpha1.WatchPromotionsResponse
+	(*GetPromotionRequest)(nil),                   // 51: akuity.io.kargo.service.v1alpha1.GetPromotionRequest
+	(*GetPromotionResponse)(nil),                  // 52: akuity.io.kargo.service.v1alpha1.GetPromotionResponse
+	(*WatchPromotionRequest)(nil),                 // 53: akuity.io.kargo.service.v1alpha1.WatchPromotionRequest
+	(*WatchPromotionResponse)(nil),                // 54: akuity.io.kargo.service.v1alpha1.WatchPromotionResponse
+	(*AbortPromotionRequest)(nil),                 // 55: akuity.io.kargo.service.v1alpha1.AbortPromotionRequest
+	(*AbortPromotionResponse)(nil),                // 56: akuity.io.kargo.service.v1alpha1.AbortPromotionResponse
+	(*DeleteProjectRequest)(nil),                  // 57: akuity.io.kargo.service.v1alpha1.DeleteProjectRequest
+	(*DeleteProjectResponse)(nil),                 // 58: akuity.io.kargo.service.v1alpha1.DeleteProjectResponse
+	(*GetProjectRequest)(nil),                     // 59: akuity.io.kargo.service.v1alpha1.GetProjectRequest
+	(*GetProjectResponse)(nil),                    // 60: akuity.io.kargo.service.v1alpha1.GetProjectResponse
+	(*ListProjectsRequest)(nil),                   // 61: akuity.io.kargo.service.v1alpha1.ListProjectsRequest
+	(*ListProjectsResponse)(nil),                  // 62: akuity.io.kargo.service.v1alpha1.ListProjectsResponse
+	(*GetProjectConfigRequest)(nil),               // 63: akuity.io.kargo.service.v1alpha1.GetProjectConfigRequest
+	(*GetProjectConfigResponse)(nil),              // 64: akuity.io.kargo.service.v1alpha1.GetProjectConfigResponse
+	(*DeleteProjectConfigRequest)(nil),            // 65: akuity.io.kargo.service.v1alpha1.DeleteProjectConfigRequest
+	(*DeleteProjectConfigResponse)(nil),           // 66: akuity.io.kargo.service.v1alpha1.DeleteProjectConfigResponse
+	(*WatchProjectConfigRequest)(nil),             // 67: akuity.io.kargo.service.v1alpha1.WatchProjectConfigRequest
+	(*WatchProjectConfigResponse)(nil),            // 68: akuity.io.kargo.service.v1alpha1.WatchProjectConfigResponse
+	(*RefreshProjectConfigRequest)(nil),           // 69: akuity.io.kargo.service.v1alpha1.RefreshProjectConfigRequest
+	(*RefreshProjectConfigResponse)(nil),          // 70: akuity.io.kargo.service.v1alpha1.RefreshProjectConfigResponse
+	(*ApproveFreightRequest)(nil),                 // 71: akuity.io.kargo.service.v1alpha1.ApproveFreightRequest
+	(*ApproveFreightResponse)(nil),                // 72: akuity.io.kargo.service.v1alpha1.ApproveFreightResponse
+	(*DeleteFreightRequest)(nil),                  // 73: akuity.io.kargo.service.v1alpha1.DeleteFreightRequest
+	(*DeleteFreightResponse)(nil),                 // 74: akuity.io.kargo.service.v1alpha1.DeleteFreightResponse
+	(*GetFreightRequest)(nil),                     // 75: akuity.io.kargo.service.v1alpha1.GetFreightRequest
+	(*GetFreightResponse)(nil),                    // 76: akuity.io.kargo.service.v1alpha1.GetFreightResponse
+	(*WatchFreightRequest)(nil),                   // 77: akuity.io.kargo.service.v1alpha1.WatchFreightRequest
+	(*WatchFreightResponse)(nil),                  // 78: akuity.io.kargo.service.v1alpha1.WatchFreightResponse
+	(*PromoteToStageRequest)(nil),                 // 79: akuity.io.kargo.service.v1alpha1.PromoteToStageRequest
+	(*PromoteToStageResponse)(nil),                // 80: akuity.io.kargo.service.v1alpha1.PromoteToStageResponse
+	(*PromoteDownstreamRequest)(nil),              // 81: akuity.io.kargo.service.v1alpha1.PromoteDownstreamRequest
+	(*PromoteDownstreamResponse)(nil),             // 82: akuity.io.kargo.service.v1alpha1.PromoteDownstreamResponse
+	(*QueryFreightRequest)(nil),                   // 83: akuity.io.kargo.service.v1alpha1.QueryFreightRequest
+	(*QueryFreightResponse)(nil),                  // 84: akuity.io.kargo.service.v1alpha1.QueryFreightResponse
+	(*FreightList)(nil),                           // 85: akuity.io.kargo.service.v1alpha1.FreightList
+	(*UpdateFreightAliasRequest)(nil),             // 86: akuity.io.kargo.service.v1alpha1.UpdateFreightAliasRequest
+	(*UpdateFreightAliasResponse)(nil),            // 87: akuity.io.kargo.service.v1alpha1.UpdateFreightAliasResponse
+	(*ReverifyRequest)(nil),                       // 88: akuity.io.kargo.service.v1alpha1.ReverifyRequest
+	(*ReverifyResponse)(nil),                      // 89: akuity.io.kargo.service.v1alpha1.ReverifyResponse
+	(*AbortVerificationRequest)(nil),              // 90: akuity.io.kargo.service.v1alpha1.AbortVerificationRequest
+	(*AbortVerificationResponse)(nil),             // 91: akuity.io.kargo.service.v1alpha1.AbortVerificationResponse
+	(*ListWarehousesRequest)(nil),                 // 92: akuity.io.kargo.service.v1alpha1.ListWarehousesRequest
+	(*ListWarehousesResponse)(nil),                // 93: akuity.io.kargo.service.v1alpha1.ListWarehousesResponse
+	(*GetWarehouseRequest)(nil),                   // 94: akuity.io.kargo.service.v1alpha1.GetWarehouseRequest
+	(*GetWarehouseResponse)(nil),                  // 95: akuity.io.kargo.service.v1alpha1.GetWarehouseResponse
+	(*WatchWarehousesRequest)(nil),                // 96: akuity.io.kargo.service.v1alpha1.WatchWarehousesRequest
+	(*WatchWarehousesResponse)(nil),               // 97: akuity.io.kargo.service.v1alpha1.WatchWarehousesResponse
+	(*DeleteWarehouseRequest)(nil),                // 98: akuity.io.kargo.service.v1alpha1.DeleteWarehouseRequest
+	(*DeleteWarehouseResponse)(nil),               // 99: akuity.io.kargo.service.v1alpha1.DeleteWarehouseResponse
+	(*RefreshWarehouseRequest)(nil),               // 100: akuity.io.kargo.service.v1alpha1.RefreshWarehouseRequest
+	(*RefreshWarehouseResponse)(nil),              // 101: akuity.io.kargo.service.v1alpha1.RefreshWarehouseResponse
+	(*CreateCredentialsRequest)(nil),              // 102: akuity.io.kargo.service.v1alpha1.CreateCredentialsRequest
+	(*CreateCredentialsResponse)(nil),             // 103: akuity.io.kargo.service.v1alpha1.CreateCredentialsResponse
+	(*DeleteCredentialsRequest)(nil),              // 104: akuity.io.kargo.service.v1alpha1.DeleteCredentialsRequest
+	(*DeleteCredentialsResponse)(nil),             // 105: akuity.io.kargo.service.v1alpha1.DeleteCredentialsResponse
+	(*GetCredentialsRequest)(nil),                 // 106: akuity.io.kargo.service.v1alpha1.GetCredentialsRequest
+	(*GetCredentialsResponse)(nil),                // 107: akuity.io.kargo.service.v1alpha1.GetCredentialsResponse
+	(*ListCredentialsRequest)(nil),                // 108: akuity.io.kargo.service.v1alpha1.ListCredentialsRequest
+	(*ListCredentialsResponse)(nil),               // 109: akuity.io.kargo.service.v1alpha1.ListCredentialsResponse
+	(*UpdateCredentialsRequest)(nil),              // 110: akuity.io.kargo.service.v1alpha1.UpdateCredentialsRequest
+	(*UpdateCredentialsResponse)(nil),             // 111: akuity.io.kargo.service.v1alpha1.UpdateCredentialsResponse
+	(*ListProjectSecretsRequest)(nil),             // 112: akuity.io.kargo.service.v1alpha1.ListProjectSecretsRequest
+	(*ListProjectSecretsResponse)(nil),            // 113: akuity.io.kargo.service.v1alpha1.ListProjectSecretsResponse
+	(*CreateProjectSecretRequest)(nil),            // 114: akuity.io.kargo.service.v1alpha1.CreateProjectSecretRequest
+	(*CreateProjectSecretResponse)(nil),           // 115: akuity.io.kargo.service.v1alpha1.CreateProjectSecretResponse
+	(*UpdateProjectSecretRequest)(nil),            // 116: akuity.io.kargo.service.v1alpha1.UpdateProjectSecretRequest
+	(*UpdateProjectSecretResponse)(nil),           // 117: akuity.io.kargo.service.v1alpha1.UpdateProjectSecretResponse
+	(*DeleteProjectSecretRequest)(nil),            // 118: akuity.io.kargo.service.v1alpha1.DeleteProjectSecretRequest
+	(*DeleteProjectSecretResponse)(nil),           // 119: akuity.io.kargo.service.v1alpha1.DeleteProjectSecretResponse
+	(*ListAnalysisTemplatesRequest)(nil),          // 120: akuity.io.kargo.service.v1alpha1.ListAnalysisTemplatesRequest
+	(*ListAnalysisTemplatesResponse)(nil),         // 121: akuity.io.kargo.service.v1alpha1.ListAnalysisTemplatesResponse
+	(*GetAnalysisTemplateRequest)(nil),            // 122: akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateRequest
+	(*GetAnalysisTemplateResponse)(nil),           // 123: akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateResponse
+	(*DeleteAnalysisTemplateRequest)(nil),         // 124: akuity.io.kargo.service.v1alpha1.DeleteAnalysisTemplateRequest
+	(*DeleteAnalysisTemplateResponse)(nil),        // 125: akuity.io.kargo.service.v1alpha1.DeleteAnalysisTemplateResponse
+	(*ListClusterAnalysisTemplatesRequest)(nil),   // 126: akuity.io.kargo.service.v1alpha1.ListClusterAnalysisTemplatesRequest
+	(*ListClusterAnalysisTemplatesResponse)(nil),  // 127: akuity.io.kargo.service.v1alpha1.ListClusterAnalysisTemplatesResponse
+	(*GetClusterAnalysisTemplateRequest)(nil),     // 128: akuity.io.kargo.service.v1alpha1.GetClusterAnalysisTemplateRequest
+	(*GetClusterAnalysisTemplateResponse)(nil),    // 129: akuity.io.kargo.service.v1alpha1.GetClusterAnalysisTemplateResponse
+	(*DeleteClusterAnalysisTemplateRequest)(nil),  // 130: akuity.io.kargo.service.v1alpha1.DeleteClusterAnalysisTemplateRequest
+	(*DeleteClusterAnalysisTemplateResponse)(nil), // 131: akuity.io.kargo.service.v1alpha1.DeleteClusterAnalysisTemplateResponse
+	(*GetAnalysisRunRequest)(nil),                 // 132: akuity.io.kargo.service.v1alpha1.GetAnalysisRunRequest
+	(*GetAnalysisRunResponse)(nil),                // 133: akuity.io.kargo.service.v1alpha1.GetAnalysisRunResponse
+	(*GetAnalysisRunLogsRequest)(nil),             // 134: akuity.io.kargo.service.v1alpha1.GetAnalysisRunLogsRequest
+	(*GetAnalysisRunLogsResponse)(nil),            // 135: akuity.io.kargo.service.v1alpha1.GetAnalysisRunLogsResponse
+	(*ListProjectEventsRequest)(nil),              // 136: akuity.io.kargo.service.v1alpha1.ListProjectEventsRequest
+	(*ListProjectEventsResponse)(nil),             // 137: akuity.io.kargo.service.v1alpha1.ListProjectEventsResponse
+	(*ListPromotionTasksRequest)(nil),             // 138: akuity.io.kargo.service.v1alpha1.ListPromotionTasksRequest
+	(*ListPromotionTasksResponse)(nil),            // 139: akuity.io.kargo.service.v1alpha1.ListPromotionTasksResponse
+	(*GetPromotionTaskRequest)(nil),               // 140: akuity.io.kargo.service.v1alpha1.GetPromotionTaskRequest
+	(*GetPromotionTaskResponse)(nil),              // 141: akuity.io.kargo.service.v1alpha1.GetPromotionTaskResponse
+	(*ListClusterPromotionTasksRequest)(nil),      // 142: akuity.io.kargo.service.v1alpha1.ListClusterPromotionTasksRequest
+	(*ListClusterPromotionTasksResponse)(nil),     // 143: akuity.io.kargo.service.v1alpha1.ListClusterPromotionTasksResponse
+	(*GetClusterPromotionTaskRequest)(nil),        // 144: akuity.io.kargo.service.v1alpha1.GetClusterPromotionTaskRequest
+	(*GetClusterPromotionTaskResponse)(nil),       // 145: akuity.io.kargo.service.v1alpha1.GetClusterPromotionTaskResponse
+	(*CreateRoleRequest)(nil),                     // 146: akuity.io.kargo.service.v1alpha1.CreateRoleRequest
+	(*CreateRoleResponse)(nil),                    // 147: akuity.io.kargo.service.v1alpha1.CreateRoleResponse
+	(*DeleteRoleRequest)(nil),                     // 148: akuity.io.kargo.service.v1alpha1.DeleteRoleRequest
+	(*DeleteRoleResponse)(nil),                    // 149: akuity.io.kargo.service.v1alpha1.DeleteRoleResponse
+	(*GetRoleRequest)(nil),                        // 150: akuity.io.kargo.service.v1alpha1.GetRoleRequest
+	(*GetRoleResponse)(nil),                       // 151: akuity.io.kargo.service.v1alpha1.GetRoleResponse
+	(*Claims)(nil),                                // 152: akuity.io.kargo.service.v1alpha1.Claims
+	(*GrantRequest)(nil),                          // 153: akuity.io.kargo.service.v1alpha1.GrantRequest
+	(*GrantResponse)(nil),                         // 154: akuity.io.kargo.service.v1alpha1.GrantResponse
+	(*ListRolesRequest)(nil),                      // 155: akuity.io.kargo.service.v1alpha1.ListRolesRequest
+	(*ListRolesResponse)(nil),                     // 156: akuity.io.kargo.service.v1alpha1.ListRolesResponse
+	(*RevokeRequest)(nil),                         // 157: akuity.io.kargo.service.v1alpha1.RevokeRequest
+	(*RevokeResponse)(nil),                        // 158: akuity.io.kargo.service.v1alpha1.RevokeResponse
+	(*UpdateRoleRequest)(nil),                     // 159: akuity.io.kargo.service.v1alpha1.UpdateRoleRequest
+	(*UpdateRoleResponse)(nil),                    // 160: akuity.io.kargo.service.v1alpha1.UpdateRoleResponse
+	nil,                                           // 161: akuity.io.kargo.service.v1alpha1.GetConfigResponse.ArgocdShardsEntry
+	nil,                                           // 162: akuity.io.kargo.service.v1alpha1.ListImagesResponse.ImagesEntry
+	nil,                                           // 163: akuity.io.kargo.service.v1alpha1.TagMap.TagsEntry
+	nil,                                           // 164: akuity.io.kargo.service.v1alpha1.ImageStageMap.StagesEntry
+	nil,                                           // 165: akuity.io.kargo.service.v1alpha1.QueryFreightResponse.GroupsEntry
+	nil,                                           // 166: akuity.io.kargo.service.v1alpha1.CreateProjectSecretRequest.DataEntry
+	nil,                                           // 167: akuity.io.kargo.service.v1alpha1.UpdateProjectSecretRequest.DataEntry
+	(*timestamppb.Timestamp)(nil),                 // 168: google.protobuf.Timestamp
+	(*v1alpha1.Stage)(nil),                        // 169: github.com.akuity.kargo.api.v1alpha1.Stage
+	(*v1alpha1.ClusterConfig)(nil),                // 170: github.com.akuity.kargo.api.v1alpha1.ClusterConfig
+	(*v1alpha1.Promotion)(nil),                    // 171: github.com.akuity.kargo.api.v1alpha1.Promotion
+	(*v1alpha1.Project)(nil),                      // 172: github.com.akuity.kargo.api.v1alpha1.Project
+	(*v1alpha1.ProjectConfig)(nil),                // 173: github.com.akuity.kargo.api.v1alpha1.ProjectConfig
+	(*v1alpha1.Freight)(nil),                      // 174: github.com.akuity.kargo.api.v1alpha1.Freight
+	(*v1alpha1.Warehouse)(nil),                    // 175: github.com.akuity.kargo.api.v1alpha1.Warehouse
+	(*v1.Secret)(nil),                             // 176: k8s.io.api.core.v1.Secret
+	(*v1alpha11.AnalysisTemplate)(nil),            // 177: github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisTemplate
+	(*v1alpha11.ClusterAnalysisTemplate)(nil),     // 178: github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.ClusterAnalysisTemplate
+	(*v1alpha11.AnalysisRun)(nil),                 // 179: github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisRun
+	(*v1.Event)(nil),                              // 180: k8s.io.api.core.v1.Event
+	(*v1alpha1.PromotionTask)(nil),                // 181: github.com.akuity.kargo.api.v1alpha1.PromotionTask
+	(*v1alpha1.ClusterPromotionTask)(nil),         // 182: github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask
+	(*v1alpha12.Role)(nil),                        // 183: github.com.akuity.kargo.api.rbac.v1alpha1.Role
+	(*v1alpha12.RoleResources)(nil),               // 184: github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources
+	(*v1alpha12.Claim)(nil),                       // 185: github.com.akuity.kargo.api.rbac.v1alpha1.Claim
+	(*v1alpha12.ResourceDetails)(nil),             // 186: github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails
 }
 var file_api_service_v1alpha1_service_proto_depIdxs = []int32{
 	2,   // 0: akuity.io.kargo.service.v1alpha1.ComponentVersions.server:type_name -> akuity.io.kargo.service.v1alpha1.VersionInfo
 	2,   // 1: akuity.io.kargo.service.v1alpha1.ComponentVersions.cli:type_name -> akuity.io.kargo.service.v1alpha1.VersionInfo
-	164, // 2: akuity.io.kargo.service.v1alpha1.VersionInfo.build_time:type_name -> google.protobuf.Timestamp
+	168, // 2: akuity.io.kargo.service.v1alpha1.VersionInfo.build_time:type_name -> google.protobuf.Timestamp
 	2,   // 3: akuity.io.kargo.service.v1alpha1.GetVersionInfoResponse.version_info:type_name -> akuity.io.kargo.service.v1alpha1.VersionInfo
-	157, // 4: akuity.io.kargo.service.v1alpha1.GetConfigResponse.argocd_shards:type_name -> akuity.io.kargo.service.v1alpha1.GetConfigResponse.ArgocdShardsEntry
+	161, // 4: akuity.io.kargo.service.v1alpha1.GetConfigResponse.argocd_shards:type_name -> akuity.io.kargo.service.v1alpha1.GetConfigResponse.ArgocdShardsEntry
 	10,  // 5: akuity.io.kargo.service.v1alpha1.GetPublicConfigResponse.oidc_config:type_name -> akuity.io.kargo.service.v1alpha1.OIDCConfig
 	14,  // 6: akuity.io.kargo.service.v1alpha1.CreateResourceResponse.results:type_name -> akuity.io.kargo.service.v1alpha1.CreateResourceResult
 	17,  // 7: akuity.io.kargo.service.v1alpha1.CreateOrUpdateResourceResponse.results:type_name -> akuity.io.kargo.service.v1alpha1.CreateOrUpdateResourceResult
 	20,  // 8: akuity.io.kargo.service.v1alpha1.UpdateResourceResponse.results:type_name -> akuity.io.kargo.service.v1alpha1.UpdateResourceResult
 	23,  // 9: akuity.io.kargo.service.v1alpha1.DeleteResourceResponse.results:type_name -> akuity.io.kargo.service.v1alpha1.DeleteResourceResult
-	165, // 10: akuity.io.kargo.service.v1alpha1.ListStagesResponse.stages:type_name -> github.com.akuity.kargo.api.v1alpha1.Stage
-	158, // 11: akuity.io.kargo.service.v1alpha1.ListImagesResponse.images:type_name -> akuity.io.kargo.service.v1alpha1.ListImagesResponse.ImagesEntry
-	159, // 12: akuity.io.kargo.service.v1alpha1.TagMap.tags:type_name -> akuity.io.kargo.service.v1alpha1.TagMap.TagsEntry
-	160, // 13: akuity.io.kargo.service.v1alpha1.ImageStageMap.stages:type_name -> akuity.io.kargo.service.v1alpha1.ImageStageMap.StagesEntry
+	169, // 10: akuity.io.kargo.service.v1alpha1.ListStagesResponse.stages:type_name -> github.com.akuity.kargo.api.v1alpha1.Stage
+	162, // 11: akuity.io.kargo.service.v1alpha1.ListImagesResponse.images:type_name -> akuity.io.kargo.service.v1alpha1.ListImagesResponse.ImagesEntry
+	163, // 12: akuity.io.kargo.service.v1alpha1.TagMap.tags:type_name -> akuity.io.kargo.service.v1alpha1.TagMap.TagsEntry
+	164, // 13: akuity.io.kargo.service.v1alpha1.ImageStageMap.stages:type_name -> akuity.io.kargo.service.v1alpha1.ImageStageMap.StagesEntry
 	0,   // 14: akuity.io.kargo.service.v1alpha1.GetStageRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
-	165, // 15: akuity.io.kargo.service.v1alpha1.GetStageResponse.stage:type_name -> github.com.akuity.kargo.api.v1alpha1.Stage
-	165, // 16: akuity.io.kargo.service.v1alpha1.WatchStagesResponse.stage:type_name -> github.com.akuity.kargo.api.v1alpha1.Stage
-	165, // 17: akuity.io.kargo.service.v1alpha1.RefreshStageResponse.stage:type_name -> github.com.akuity.kargo.api.v1alpha1.Stage
+	169, // 15: akuity.io.kargo.service.v1alpha1.GetStageResponse.stage:type_name -> github.com.akuity.kargo.api.v1alpha1.Stage
+	169, // 16: akuity.io.kargo.service.v1alpha1.WatchStagesResponse.stage:type_name -> github.com.akuity.kargo.api.v1alpha1.Stage
+	169, // 17: akuity.io.kargo.service.v1alpha1.RefreshStageResponse.stage:type_name -> github.com.akuity.kargo.api.v1alpha1.Stage
 	0,   // 18: akuity.io.kargo.service.v1alpha1.GetClusterConfigRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
-	166, // 19: akuity.io.kargo.service.v1alpha1.GetClusterConfigResponse.cluster_config:type_name -> github.com.akuity.kargo.api.v1alpha1.ClusterConfig
-	166, // 20: akuity.io.kargo.service.v1alpha1.WatchClusterConfigResponse.cluster_config:type_name -> github.com.akuity.kargo.api.v1alpha1.ClusterConfig
-	167, // 21: akuity.io.kargo.service.v1alpha1.ListPromotionsResponse.promotions:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
-	167, // 22: akuity.io.kargo.service.v1alpha1.WatchPromotionsResponse.promotion:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
-	0,   // 23: akuity.io.kargo.service.v1alpha1.GetPromotionRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
-	167, // 24: akuity.io.kargo.service.v1alpha1.GetPromotionResponse.promotion:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
-	167, // 25: akuity.io.kargo.service.v1alpha1.WatchPromotionResponse.promotion:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
-	0,   // 26: akuity.io.kargo.service.v1alpha1.GetProjectRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
-	168, // 27: akuity.io.kargo.service.v1alpha1.GetProjectResponse.project:type_name -> github.com.akuity.kargo.api.v1alpha1.Project
-	168, // 28: akuity.io.kargo.service.v1alpha1.ListProjectsResponse.projects:type_name -> github.com.akuity.kargo.api.v1alpha1.Project
-	0,   // 29: akuity.io.kargo.service.v1alpha1.GetProjectConfigRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
-	169, // 30: akuity.io.kargo.service.v1alpha1.GetProjectConfigResponse.project_config:type_name -> github.com.akuity.kargo.api.v1alpha1.ProjectConfig
-	169, // 31: akuity.io.kargo.service.v1alpha1.WatchProjectConfigResponse.project_config:type_name -> github.com.akuity.kargo.api.v1alpha1.ProjectConfig
-	0,   // 32: akuity.io.kargo.service.v1alpha1.GetFreightRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
-	170, // 33: akuity.io.kargo.service.v1alpha1.GetFreightResponse.freight:type_name -> github.com.akuity.kargo.api.v1alpha1.Freight
-	170, // 34: akuity.io.kargo.service.v1alpha1.WatchFreightResponse.freight:type_name -> github.com.akuity.kargo.api.v1alpha1.Freight
-	167, // 35: akuity.io.kargo.service.v1alpha1.PromoteToStageResponse.promotion:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
-	167, // 36: akuity.io.kargo.service.v1alpha1.PromoteDownstreamResponse.promotions:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
-	161, // 37: akuity.io.kargo.service.v1alpha1.QueryFreightResponse.groups:type_name -> akuity.io.kargo.service.v1alpha1.QueryFreightResponse.GroupsEntry
-	170, // 38: akuity.io.kargo.service.v1alpha1.FreightList.freight:type_name -> github.com.akuity.kargo.api.v1alpha1.Freight
-	171, // 39: akuity.io.kargo.service.v1alpha1.ListWarehousesResponse.warehouses:type_name -> github.com.akuity.kargo.api.v1alpha1.Warehouse
-	0,   // 40: akuity.io.kargo.service.v1alpha1.GetWarehouseRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
-	171, // 41: akuity.io.kargo.service.v1alpha1.GetWarehouseResponse.warehouse:type_name -> github.com.akuity.kargo.api.v1alpha1.Warehouse
-	171, // 42: akuity.io.kargo.service.v1alpha1.WatchWarehousesResponse.warehouse:type_name -> github.com.akuity.kargo.api.v1alpha1.Warehouse
-	171, // 43: akuity.io.kargo.service.v1alpha1.RefreshWarehouseResponse.warehouse:type_name -> github.com.akuity.kargo.api.v1alpha1.Warehouse
-	172, // 44: akuity.io.kargo.service.v1alpha1.CreateCredentialsResponse.credentials:type_name -> k8s.io.api.core.v1.Secret
-	0,   // 45: akuity.io.kargo.service.v1alpha1.GetCredentialsRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
-	172, // 46: akuity.io.kargo.service.v1alpha1.GetCredentialsResponse.credentials:type_name -> k8s.io.api.core.v1.Secret
-	172, // 47: akuity.io.kargo.service.v1alpha1.ListCredentialsResponse.credentials:type_name -> k8s.io.api.core.v1.Secret
-	172, // 48: akuity.io.kargo.service.v1alpha1.UpdateCredentialsResponse.credentials:type_name -> k8s.io.api.core.v1.Secret
-	172, // 49: akuity.io.kargo.service.v1alpha1.ListProjectSecretsResponse.secrets:type_name -> k8s.io.api.core.v1.Secret
-	162, // 50: akuity.io.kargo.service.v1alpha1.CreateProjectSecretRequest.data:type_name -> akuity.io.kargo.service.v1alpha1.CreateProjectSecretRequest.DataEntry
-	172, // 51: akuity.io.kargo.service.v1alpha1.CreateProjectSecretResponse.secret:type_name -> k8s.io.api.core.v1.Secret
-	163, // 52: akuity.io.kargo.service.v1alpha1.UpdateProjectSecretRequest.data:type_name -> akuity.io.kargo.service.v1alpha1.UpdateProjectSecretRequest.DataEntry
-	172, // 53: akuity.io.kargo.service.v1alpha1.UpdateProjectSecretResponse.secret:type_name -> k8s.io.api.core.v1.Secret
-	173, // 54: akuity.io.kargo.service.v1alpha1.ListAnalysisTemplatesResponse.analysis_templates:type_name -> github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisTemplate
-	0,   // 55: akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
-	173, // 56: akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateResponse.analysis_template:type_name -> github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisTemplate
-	174, // 57: akuity.io.kargo.service.v1alpha1.ListClusterAnalysisTemplatesResponse.cluster_analysis_templates:type_name -> github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.ClusterAnalysisTemplate
-	0,   // 58: akuity.io.kargo.service.v1alpha1.GetClusterAnalysisTemplateRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
-	174, // 59: akuity.io.kargo.service.v1alpha1.GetClusterAnalysisTemplateResponse.cluster_analysis_template:type_name -> github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.ClusterAnalysisTemplate
-	0,   // 60: akuity.io.kargo.service.v1alpha1.GetAnalysisRunRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
-	175, // 61: akuity.io.kargo.service.v1alpha1.GetAnalysisRunResponse.analysis_run:type_name -> github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisRun
-	176, // 62: akuity.io.kargo.service.v1alpha1.ListProjectEventsResponse.events:type_name -> k8s.io.api.core.v1.Event
-	177, // 63: akuity.io.kargo.service.v1alpha1.ListPromotionTasksResponse.promotion_tasks:type_name -> github.com.akuity.kargo.api.v1alpha1.PromotionTask
-	0,   // 64: akuity.io.kargo.service.v1alpha1.GetPromotionTaskRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
-	177, // 65: akuity.io.kargo.service.v1alpha1.GetPromotionTaskResponse.promotion_task:type_name -> github.com.akuity.kargo.api.v1alpha1.PromotionTask
-	178, // 66: akuity.io.kargo.service.v1alpha1.ListClusterPromotionTasksResponse.cluster_promotion_tasks:type_name -> github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask
-	0,   // 67: akuity.io.kargo.service.v1alpha1.GetClusterPromotionTaskRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
-	178, // 68: akuity.io.kargo.service.v1alpha1.GetClusterPromotionTaskResponse.promotion_task:type_name -> github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask
-	179, // 69: akuity.io.kargo.service.v1alpha1.CreateRoleRequest.role:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Role
-	179, // 70: akuity.io.kargo.service.v1alpha1.CreateRoleResponse.role:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Role
-	0,   // 71: akuity.io.kargo.service.v1alpha1.GetRoleRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
-	179, // 72: akuity.io.kargo.service.v1alpha1.GetRoleResponse.role:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Role
-	180, // 73: akuity.io.kargo.service.v1alpha1.GetRoleResponse.resources:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources
-	181, // 74: akuity.io.kargo.service.v1alpha1.Claims.claims:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Claim
-	148, // 75: akuity.io.kargo.service.v1alpha1.GrantRequest.user_claims:type_name -> akuity.io.kargo.service.v1alpha1.Claims
-	182, // 76: akuity.io.kargo.service.v1alpha1.GrantRequest.resource_details:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails
-	179, // 77: akuity.io.kargo.service.v1alpha1.GrantResponse.role:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Role
-	179, // 78: akuity.io.kargo.service.v1alpha1.ListRolesResponse.roles:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Role
-	180, // 79: akuity.io.kargo.service.v1alpha1.ListRolesResponse.resources:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources
-	148, // 80: akuity.io.kargo.service.v1alpha1.RevokeRequest.user_claims:type_name -> akuity.io.kargo.service.v1alpha1.Claims
-	182, // 81: akuity.io.kargo.service.v1alpha1.RevokeRequest.resource_details:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails
-	179, // 82: akuity.io.kargo.service.v1alpha1.RevokeResponse.role:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Role
-	179, // 83: akuity.io.kargo.service.v1alpha1.UpdateRoleRequest.role:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Role
-	179, // 84: akuity.io.kargo.service.v1alpha1.UpdateRoleResponse.role:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Role
-	6,   // 85: akuity.io.kargo.service.v1alpha1.GetConfigResponse.ArgocdShardsEntry.value:type_name -> akuity.io.kargo.service.v1alpha1.ArgoCDShard
-	29,  // 86: akuity.io.kargo.service.v1alpha1.ListImagesResponse.ImagesEntry.value:type_name -> akuity.io.kargo.service.v1alpha1.TagMap
-	30,  // 87: akuity.io.kargo.service.v1alpha1.TagMap.TagsEntry.value:type_name -> akuity.io.kargo.service.v1alpha1.ImageStageMap
-	81,  // 88: akuity.io.kargo.service.v1alpha1.QueryFreightResponse.GroupsEntry.value:type_name -> akuity.io.kargo.service.v1alpha1.FreightList
-	3,   // 89: akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo:input_type -> akuity.io.kargo.service.v1alpha1.GetVersionInfoRequest
-	5,   // 90: akuity.io.kargo.service.v1alpha1.KargoService.GetConfig:input_type -> akuity.io.kargo.service.v1alpha1.GetConfigRequest
-	8,   // 91: akuity.io.kargo.service.v1alpha1.KargoService.GetPublicConfig:input_type -> akuity.io.kargo.service.v1alpha1.GetPublicConfigRequest
-	11,  // 92: akuity.io.kargo.service.v1alpha1.KargoService.AdminLogin:input_type -> akuity.io.kargo.service.v1alpha1.AdminLoginRequest
-	13,  // 93: akuity.io.kargo.service.v1alpha1.KargoService.CreateResource:input_type -> akuity.io.kargo.service.v1alpha1.CreateResourceRequest
-	16,  // 94: akuity.io.kargo.service.v1alpha1.KargoService.CreateOrUpdateResource:input_type -> akuity.io.kargo.service.v1alpha1.CreateOrUpdateResourceRequest
-	19,  // 95: akuity.io.kargo.service.v1alpha1.KargoService.UpdateResource:input_type -> akuity.io.kargo.service.v1alpha1.UpdateResourceRequest
-	22,  // 96: akuity.io.kargo.service.v1alpha1.KargoService.DeleteResource:input_type -> akuity.io.kargo.service.v1alpha1.DeleteResourceRequest
-	25,  // 97: akuity.io.kargo.service.v1alpha1.KargoService.ListStages:input_type -> akuity.io.kargo.service.v1alpha1.ListStagesRequest
-	27,  // 98: akuity.io.kargo.service.v1alpha1.KargoService.ListImages:input_type -> akuity.io.kargo.service.v1alpha1.ListImagesRequest
-	31,  // 99: akuity.io.kargo.service.v1alpha1.KargoService.GetStage:input_type -> akuity.io.kargo.service.v1alpha1.GetStageRequest
-	33,  // 100: akuity.io.kargo.service.v1alpha1.KargoService.WatchStages:input_type -> akuity.io.kargo.service.v1alpha1.WatchStagesRequest
-	35,  // 101: akuity.io.kargo.service.v1alpha1.KargoService.DeleteStage:input_type -> akuity.io.kargo.service.v1alpha1.DeleteStageRequest
-	37,  // 102: akuity.io.kargo.service.v1alpha1.KargoService.RefreshStage:input_type -> akuity.io.kargo.service.v1alpha1.RefreshStageRequest
-	39,  // 103: akuity.io.kargo.service.v1alpha1.KargoService.GetClusterConfig:input_type -> akuity.io.kargo.service.v1alpha1.GetClusterConfigRequest
-	41,  // 104: akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterConfig:input_type -> akuity.io.kargo.service.v1alpha1.DeleteClusterConfigRequest
-	43,  // 105: akuity.io.kargo.service.v1alpha1.KargoService.WatchClusterConfig:input_type -> akuity.io.kargo.service.v1alpha1.WatchClusterConfigRequest
-	45,  // 106: akuity.io.kargo.service.v1alpha1.KargoService.ListPromotions:input_type -> akuity.io.kargo.service.v1alpha1.ListPromotionsRequest
-	47,  // 107: akuity.io.kargo.service.v1alpha1.KargoService.WatchPromotions:input_type -> akuity.io.kargo.service.v1alpha1.WatchPromotionsRequest
-	49,  // 108: akuity.io.kargo.service.v1alpha1.KargoService.GetPromotion:input_type -> akuity.io.kargo.service.v1alpha1.GetPromotionRequest
-	51,  // 109: akuity.io.kargo.service.v1alpha1.KargoService.WatchPromotion:input_type -> akuity.io.kargo.service.v1alpha1.WatchPromotionRequest
-	53,  // 110: akuity.io.kargo.service.v1alpha1.KargoService.AbortPromotion:input_type -> akuity.io.kargo.service.v1alpha1.AbortPromotionRequest
-	55,  // 111: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProject:input_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectRequest
-	57,  // 112: akuity.io.kargo.service.v1alpha1.KargoService.GetProject:input_type -> akuity.io.kargo.service.v1alpha1.GetProjectRequest
-	59,  // 113: akuity.io.kargo.service.v1alpha1.KargoService.ListProjects:input_type -> akuity.io.kargo.service.v1alpha1.ListProjectsRequest
-	61,  // 114: akuity.io.kargo.service.v1alpha1.KargoService.GetProjectConfig:input_type -> akuity.io.kargo.service.v1alpha1.GetProjectConfigRequest
-	63,  // 115: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProjectConfig:input_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectConfigRequest
-	65,  // 116: akuity.io.kargo.service.v1alpha1.KargoService.WatchProjectConfig:input_type -> akuity.io.kargo.service.v1alpha1.WatchProjectConfigRequest
-	67,  // 117: akuity.io.kargo.service.v1alpha1.KargoService.ApproveFreight:input_type -> akuity.io.kargo.service.v1alpha1.ApproveFreightRequest
-	69,  // 118: akuity.io.kargo.service.v1alpha1.KargoService.DeleteFreight:input_type -> akuity.io.kargo.service.v1alpha1.DeleteFreightRequest
-	71,  // 119: akuity.io.kargo.service.v1alpha1.KargoService.GetFreight:input_type -> akuity.io.kargo.service.v1alpha1.GetFreightRequest
-	73,  // 120: akuity.io.kargo.service.v1alpha1.KargoService.WatchFreight:input_type -> akuity.io.kargo.service.v1alpha1.WatchFreightRequest
-	75,  // 121: akuity.io.kargo.service.v1alpha1.KargoService.PromoteToStage:input_type -> akuity.io.kargo.service.v1alpha1.PromoteToStageRequest
-	77,  // 122: akuity.io.kargo.service.v1alpha1.KargoService.PromoteDownstream:input_type -> akuity.io.kargo.service.v1alpha1.PromoteDownstreamRequest
-	79,  // 123: akuity.io.kargo.service.v1alpha1.KargoService.QueryFreight:input_type -> akuity.io.kargo.service.v1alpha1.QueryFreightRequest
-	82,  // 124: akuity.io.kargo.service.v1alpha1.KargoService.UpdateFreightAlias:input_type -> akuity.io.kargo.service.v1alpha1.UpdateFreightAliasRequest
-	84,  // 125: akuity.io.kargo.service.v1alpha1.KargoService.Reverify:input_type -> akuity.io.kargo.service.v1alpha1.ReverifyRequest
-	86,  // 126: akuity.io.kargo.service.v1alpha1.KargoService.AbortVerification:input_type -> akuity.io.kargo.service.v1alpha1.AbortVerificationRequest
-	88,  // 127: akuity.io.kargo.service.v1alpha1.KargoService.ListWarehouses:input_type -> akuity.io.kargo.service.v1alpha1.ListWarehousesRequest
-	90,  // 128: akuity.io.kargo.service.v1alpha1.KargoService.GetWarehouse:input_type -> akuity.io.kargo.service.v1alpha1.GetWarehouseRequest
-	92,  // 129: akuity.io.kargo.service.v1alpha1.KargoService.WatchWarehouses:input_type -> akuity.io.kargo.service.v1alpha1.WatchWarehousesRequest
-	94,  // 130: akuity.io.kargo.service.v1alpha1.KargoService.DeleteWarehouse:input_type -> akuity.io.kargo.service.v1alpha1.DeleteWarehouseRequest
-	96,  // 131: akuity.io.kargo.service.v1alpha1.KargoService.RefreshWarehouse:input_type -> akuity.io.kargo.service.v1alpha1.RefreshWarehouseRequest
-	98,  // 132: akuity.io.kargo.service.v1alpha1.KargoService.CreateCredentials:input_type -> akuity.io.kargo.service.v1alpha1.CreateCredentialsRequest
-	100, // 133: akuity.io.kargo.service.v1alpha1.KargoService.DeleteCredentials:input_type -> akuity.io.kargo.service.v1alpha1.DeleteCredentialsRequest
-	102, // 134: akuity.io.kargo.service.v1alpha1.KargoService.GetCredentials:input_type -> akuity.io.kargo.service.v1alpha1.GetCredentialsRequest
-	104, // 135: akuity.io.kargo.service.v1alpha1.KargoService.ListCredentials:input_type -> akuity.io.kargo.service.v1alpha1.ListCredentialsRequest
-	106, // 136: akuity.io.kargo.service.v1alpha1.KargoService.UpdateCredentials:input_type -> akuity.io.kargo.service.v1alpha1.UpdateCredentialsRequest
-	108, // 137: akuity.io.kargo.service.v1alpha1.KargoService.ListProjectSecrets:input_type -> akuity.io.kargo.service.v1alpha1.ListProjectSecretsRequest
-	110, // 138: akuity.io.kargo.service.v1alpha1.KargoService.CreateProjectSecret:input_type -> akuity.io.kargo.service.v1alpha1.CreateProjectSecretRequest
-	112, // 139: akuity.io.kargo.service.v1alpha1.KargoService.UpdateProjectSecret:input_type -> akuity.io.kargo.service.v1alpha1.UpdateProjectSecretRequest
-	114, // 140: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProjectSecret:input_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectSecretRequest
-	116, // 141: akuity.io.kargo.service.v1alpha1.KargoService.ListAnalysisTemplates:input_type -> akuity.io.kargo.service.v1alpha1.ListAnalysisTemplatesRequest
-	118, // 142: akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisTemplate:input_type -> akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateRequest
-	120, // 143: akuity.io.kargo.service.v1alpha1.KargoService.DeleteAnalysisTemplate:input_type -> akuity.io.kargo.service.v1alpha1.DeleteAnalysisTemplateRequest
-	122, // 144: akuity.io.kargo.service.v1alpha1.KargoService.ListClusterAnalysisTemplates:input_type -> akuity.io.kargo.service.v1alpha1.ListClusterAnalysisTemplatesRequest
-	124, // 145: akuity.io.kargo.service.v1alpha1.KargoService.GetClusterAnalysisTemplate:input_type -> akuity.io.kargo.service.v1alpha1.GetClusterAnalysisTemplateRequest
-	126, // 146: akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterAnalysisTemplate:input_type -> akuity.io.kargo.service.v1alpha1.DeleteClusterAnalysisTemplateRequest
-	128, // 147: akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisRun:input_type -> akuity.io.kargo.service.v1alpha1.GetAnalysisRunRequest
-	130, // 148: akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisRunLogs:input_type -> akuity.io.kargo.service.v1alpha1.GetAnalysisRunLogsRequest
-	132, // 149: akuity.io.kargo.service.v1alpha1.KargoService.ListProjectEvents:input_type -> akuity.io.kargo.service.v1alpha1.ListProjectEventsRequest
-	134, // 150: akuity.io.kargo.service.v1alpha1.KargoService.ListPromotionTasks:input_type -> akuity.io.kargo.service.v1alpha1.ListPromotionTasksRequest
-	138, // 151: akuity.io.kargo.service.v1alpha1.KargoService.ListClusterPromotionTasks:input_type -> akuity.io.kargo.service.v1alpha1.ListClusterPromotionTasksRequest
-	136, // 152: akuity.io.kargo.service.v1alpha1.KargoService.GetPromotionTask:input_type -> akuity.io.kargo.service.v1alpha1.GetPromotionTaskRequest
-	140, // 153: akuity.io.kargo.service.v1alpha1.KargoService.GetClusterPromotionTask:input_type -> akuity.io.kargo.service.v1alpha1.GetClusterPromotionTaskRequest
-	142, // 154: akuity.io.kargo.service.v1alpha1.KargoService.CreateRole:input_type -> akuity.io.kargo.service.v1alpha1.CreateRoleRequest
-	144, // 155: akuity.io.kargo.service.v1alpha1.KargoService.DeleteRole:input_type -> akuity.io.kargo.service.v1alpha1.DeleteRoleRequest
-	146, // 156: akuity.io.kargo.service.v1alpha1.KargoService.GetRole:input_type -> akuity.io.kargo.service.v1alpha1.GetRoleRequest
-	149, // 157: akuity.io.kargo.service.v1alpha1.KargoService.Grant:input_type -> akuity.io.kargo.service.v1alpha1.GrantRequest
-	151, // 158: akuity.io.kargo.service.v1alpha1.KargoService.ListRoles:input_type -> akuity.io.kargo.service.v1alpha1.ListRolesRequest
-	153, // 159: akuity.io.kargo.service.v1alpha1.KargoService.Revoke:input_type -> akuity.io.kargo.service.v1alpha1.RevokeRequest
-	155, // 160: akuity.io.kargo.service.v1alpha1.KargoService.UpdateRole:input_type -> akuity.io.kargo.service.v1alpha1.UpdateRoleRequest
-	4,   // 161: akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo:output_type -> akuity.io.kargo.service.v1alpha1.GetVersionInfoResponse
-	7,   // 162: akuity.io.kargo.service.v1alpha1.KargoService.GetConfig:output_type -> akuity.io.kargo.service.v1alpha1.GetConfigResponse
-	9,   // 163: akuity.io.kargo.service.v1alpha1.KargoService.GetPublicConfig:output_type -> akuity.io.kargo.service.v1alpha1.GetPublicConfigResponse
-	12,  // 164: akuity.io.kargo.service.v1alpha1.KargoService.AdminLogin:output_type -> akuity.io.kargo.service.v1alpha1.AdminLoginResponse
-	15,  // 165: akuity.io.kargo.service.v1alpha1.KargoService.CreateResource:output_type -> akuity.io.kargo.service.v1alpha1.CreateResourceResponse
-	18,  // 166: akuity.io.kargo.service.v1alpha1.KargoService.CreateOrUpdateResource:output_type -> akuity.io.kargo.service.v1alpha1.CreateOrUpdateResourceResponse
-	21,  // 167: akuity.io.kargo.service.v1alpha1.KargoService.UpdateResource:output_type -> akuity.io.kargo.service.v1alpha1.UpdateResourceResponse
-	24,  // 168: akuity.io.kargo.service.v1alpha1.KargoService.DeleteResource:output_type -> akuity.io.kargo.service.v1alpha1.DeleteResourceResponse
-	26,  // 169: akuity.io.kargo.service.v1alpha1.KargoService.ListStages:output_type -> akuity.io.kargo.service.v1alpha1.ListStagesResponse
-	28,  // 170: akuity.io.kargo.service.v1alpha1.KargoService.ListImages:output_type -> akuity.io.kargo.service.v1alpha1.ListImagesResponse
-	32,  // 171: akuity.io.kargo.service.v1alpha1.KargoService.GetStage:output_type -> akuity.io.kargo.service.v1alpha1.GetStageResponse
-	34,  // 172: akuity.io.kargo.service.v1alpha1.KargoService.WatchStages:output_type -> akuity.io.kargo.service.v1alpha1.WatchStagesResponse
-	36,  // 173: akuity.io.kargo.service.v1alpha1.KargoService.DeleteStage:output_type -> akuity.io.kargo.service.v1alpha1.DeleteStageResponse
-	38,  // 174: akuity.io.kargo.service.v1alpha1.KargoService.RefreshStage:output_type -> akuity.io.kargo.service.v1alpha1.RefreshStageResponse
-	40,  // 175: akuity.io.kargo.service.v1alpha1.KargoService.GetClusterConfig:output_type -> akuity.io.kargo.service.v1alpha1.GetClusterConfigResponse
-	42,  // 176: akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterConfig:output_type -> akuity.io.kargo.service.v1alpha1.DeleteClusterConfigResponse
-	44,  // 177: akuity.io.kargo.service.v1alpha1.KargoService.WatchClusterConfig:output_type -> akuity.io.kargo.service.v1alpha1.WatchClusterConfigResponse
-	46,  // 178: akuity.io.kargo.service.v1alpha1.KargoService.ListPromotions:output_type -> akuity.io.kargo.service.v1alpha1.ListPromotionsResponse
-	48,  // 179: akuity.io.kargo.service.v1alpha1.KargoService.WatchPromotions:output_type -> akuity.io.kargo.service.v1alpha1.WatchPromotionsResponse
-	50,  // 180: akuity.io.kargo.service.v1alpha1.KargoService.GetPromotion:output_type -> akuity.io.kargo.service.v1alpha1.GetPromotionResponse
-	52,  // 181: akuity.io.kargo.service.v1alpha1.KargoService.WatchPromotion:output_type -> akuity.io.kargo.service.v1alpha1.WatchPromotionResponse
-	54,  // 182: akuity.io.kargo.service.v1alpha1.KargoService.AbortPromotion:output_type -> akuity.io.kargo.service.v1alpha1.AbortPromotionResponse
-	56,  // 183: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProject:output_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectResponse
-	58,  // 184: akuity.io.kargo.service.v1alpha1.KargoService.GetProject:output_type -> akuity.io.kargo.service.v1alpha1.GetProjectResponse
-	60,  // 185: akuity.io.kargo.service.v1alpha1.KargoService.ListProjects:output_type -> akuity.io.kargo.service.v1alpha1.ListProjectsResponse
-	62,  // 186: akuity.io.kargo.service.v1alpha1.KargoService.GetProjectConfig:output_type -> akuity.io.kargo.service.v1alpha1.GetProjectConfigResponse
-	64,  // 187: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProjectConfig:output_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectConfigResponse
-	66,  // 188: akuity.io.kargo.service.v1alpha1.KargoService.WatchProjectConfig:output_type -> akuity.io.kargo.service.v1alpha1.WatchProjectConfigResponse
-	68,  // 189: akuity.io.kargo.service.v1alpha1.KargoService.ApproveFreight:output_type -> akuity.io.kargo.service.v1alpha1.ApproveFreightResponse
-	70,  // 190: akuity.io.kargo.service.v1alpha1.KargoService.DeleteFreight:output_type -> akuity.io.kargo.service.v1alpha1.DeleteFreightResponse
-	72,  // 191: akuity.io.kargo.service.v1alpha1.KargoService.GetFreight:output_type -> akuity.io.kargo.service.v1alpha1.GetFreightResponse
-	74,  // 192: akuity.io.kargo.service.v1alpha1.KargoService.WatchFreight:output_type -> akuity.io.kargo.service.v1alpha1.WatchFreightResponse
-	76,  // 193: akuity.io.kargo.service.v1alpha1.KargoService.PromoteToStage:output_type -> akuity.io.kargo.service.v1alpha1.PromoteToStageResponse
-	78,  // 194: akuity.io.kargo.service.v1alpha1.KargoService.PromoteDownstream:output_type -> akuity.io.kargo.service.v1alpha1.PromoteDownstreamResponse
-	80,  // 195: akuity.io.kargo.service.v1alpha1.KargoService.QueryFreight:output_type -> akuity.io.kargo.service.v1alpha1.QueryFreightResponse
-	83,  // 196: akuity.io.kargo.service.v1alpha1.KargoService.UpdateFreightAlias:output_type -> akuity.io.kargo.service.v1alpha1.UpdateFreightAliasResponse
-	85,  // 197: akuity.io.kargo.service.v1alpha1.KargoService.Reverify:output_type -> akuity.io.kargo.service.v1alpha1.ReverifyResponse
-	87,  // 198: akuity.io.kargo.service.v1alpha1.KargoService.AbortVerification:output_type -> akuity.io.kargo.service.v1alpha1.AbortVerificationResponse
-	89,  // 199: akuity.io.kargo.service.v1alpha1.KargoService.ListWarehouses:output_type -> akuity.io.kargo.service.v1alpha1.ListWarehousesResponse
-	91,  // 200: akuity.io.kargo.service.v1alpha1.KargoService.GetWarehouse:output_type -> akuity.io.kargo.service.v1alpha1.GetWarehouseResponse
-	93,  // 201: akuity.io.kargo.service.v1alpha1.KargoService.WatchWarehouses:output_type -> akuity.io.kargo.service.v1alpha1.WatchWarehousesResponse
-	95,  // 202: akuity.io.kargo.service.v1alpha1.KargoService.DeleteWarehouse:output_type -> akuity.io.kargo.service.v1alpha1.DeleteWarehouseResponse
-	97,  // 203: akuity.io.kargo.service.v1alpha1.KargoService.RefreshWarehouse:output_type -> akuity.io.kargo.service.v1alpha1.RefreshWarehouseResponse
-	99,  // 204: akuity.io.kargo.service.v1alpha1.KargoService.CreateCredentials:output_type -> akuity.io.kargo.service.v1alpha1.CreateCredentialsResponse
-	101, // 205: akuity.io.kargo.service.v1alpha1.KargoService.DeleteCredentials:output_type -> akuity.io.kargo.service.v1alpha1.DeleteCredentialsResponse
-	103, // 206: akuity.io.kargo.service.v1alpha1.KargoService.GetCredentials:output_type -> akuity.io.kargo.service.v1alpha1.GetCredentialsResponse
-	105, // 207: akuity.io.kargo.service.v1alpha1.KargoService.ListCredentials:output_type -> akuity.io.kargo.service.v1alpha1.ListCredentialsResponse
-	107, // 208: akuity.io.kargo.service.v1alpha1.KargoService.UpdateCredentials:output_type -> akuity.io.kargo.service.v1alpha1.UpdateCredentialsResponse
-	109, // 209: akuity.io.kargo.service.v1alpha1.KargoService.ListProjectSecrets:output_type -> akuity.io.kargo.service.v1alpha1.ListProjectSecretsResponse
-	111, // 210: akuity.io.kargo.service.v1alpha1.KargoService.CreateProjectSecret:output_type -> akuity.io.kargo.service.v1alpha1.CreateProjectSecretResponse
-	113, // 211: akuity.io.kargo.service.v1alpha1.KargoService.UpdateProjectSecret:output_type -> akuity.io.kargo.service.v1alpha1.UpdateProjectSecretResponse
-	115, // 212: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProjectSecret:output_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectSecretResponse
-	117, // 213: akuity.io.kargo.service.v1alpha1.KargoService.ListAnalysisTemplates:output_type -> akuity.io.kargo.service.v1alpha1.ListAnalysisTemplatesResponse
-	119, // 214: akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisTemplate:output_type -> akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateResponse
-	121, // 215: akuity.io.kargo.service.v1alpha1.KargoService.DeleteAnalysisTemplate:output_type -> akuity.io.kargo.service.v1alpha1.DeleteAnalysisTemplateResponse
-	123, // 216: akuity.io.kargo.service.v1alpha1.KargoService.ListClusterAnalysisTemplates:output_type -> akuity.io.kargo.service.v1alpha1.ListClusterAnalysisTemplatesResponse
-	125, // 217: akuity.io.kargo.service.v1alpha1.KargoService.GetClusterAnalysisTemplate:output_type -> akuity.io.kargo.service.v1alpha1.GetClusterAnalysisTemplateResponse
-	127, // 218: akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterAnalysisTemplate:output_type -> akuity.io.kargo.service.v1alpha1.DeleteClusterAnalysisTemplateResponse
-	129, // 219: akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisRun:output_type -> akuity.io.kargo.service.v1alpha1.GetAnalysisRunResponse
-	131, // 220: akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisRunLogs:output_type -> akuity.io.kargo.service.v1alpha1.GetAnalysisRunLogsResponse
-	133, // 221: akuity.io.kargo.service.v1alpha1.KargoService.ListProjectEvents:output_type -> akuity.io.kargo.service.v1alpha1.ListProjectEventsResponse
-	135, // 222: akuity.io.kargo.service.v1alpha1.KargoService.ListPromotionTasks:output_type -> akuity.io.kargo.service.v1alpha1.ListPromotionTasksResponse
-	139, // 223: akuity.io.kargo.service.v1alpha1.KargoService.ListClusterPromotionTasks:output_type -> akuity.io.kargo.service.v1alpha1.ListClusterPromotionTasksResponse
-	137, // 224: akuity.io.kargo.service.v1alpha1.KargoService.GetPromotionTask:output_type -> akuity.io.kargo.service.v1alpha1.GetPromotionTaskResponse
-	141, // 225: akuity.io.kargo.service.v1alpha1.KargoService.GetClusterPromotionTask:output_type -> akuity.io.kargo.service.v1alpha1.GetClusterPromotionTaskResponse
-	143, // 226: akuity.io.kargo.service.v1alpha1.KargoService.CreateRole:output_type -> akuity.io.kargo.service.v1alpha1.CreateRoleResponse
-	145, // 227: akuity.io.kargo.service.v1alpha1.KargoService.DeleteRole:output_type -> akuity.io.kargo.service.v1alpha1.DeleteRoleResponse
-	147, // 228: akuity.io.kargo.service.v1alpha1.KargoService.GetRole:output_type -> akuity.io.kargo.service.v1alpha1.GetRoleResponse
-	150, // 229: akuity.io.kargo.service.v1alpha1.KargoService.Grant:output_type -> akuity.io.kargo.service.v1alpha1.GrantResponse
-	152, // 230: akuity.io.kargo.service.v1alpha1.KargoService.ListRoles:output_type -> akuity.io.kargo.service.v1alpha1.ListRolesResponse
-	154, // 231: akuity.io.kargo.service.v1alpha1.KargoService.Revoke:output_type -> akuity.io.kargo.service.v1alpha1.RevokeResponse
-	156, // 232: akuity.io.kargo.service.v1alpha1.KargoService.UpdateRole:output_type -> akuity.io.kargo.service.v1alpha1.UpdateRoleResponse
-	161, // [161:233] is the sub-list for method output_type
-	89,  // [89:161] is the sub-list for method input_type
-	89,  // [89:89] is the sub-list for extension type_name
-	89,  // [89:89] is the sub-list for extension extendee
-	0,   // [0:89] is the sub-list for field type_name
+	170, // 19: akuity.io.kargo.service.v1alpha1.GetClusterConfigResponse.cluster_config:type_name -> github.com.akuity.kargo.api.v1alpha1.ClusterConfig
+	170, // 20: akuity.io.kargo.service.v1alpha1.WatchClusterConfigResponse.cluster_config:type_name -> github.com.akuity.kargo.api.v1alpha1.ClusterConfig
+	170, // 21: akuity.io.kargo.service.v1alpha1.RefreshClusterConfigResponse.cluster_config:type_name -> github.com.akuity.kargo.api.v1alpha1.ClusterConfig
+	171, // 22: akuity.io.kargo.service.v1alpha1.ListPromotionsResponse.promotions:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
+	171, // 23: akuity.io.kargo.service.v1alpha1.WatchPromotionsResponse.promotion:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
+	0,   // 24: akuity.io.kargo.service.v1alpha1.GetPromotionRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
+	171, // 25: akuity.io.kargo.service.v1alpha1.GetPromotionResponse.promotion:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
+	171, // 26: akuity.io.kargo.service.v1alpha1.WatchPromotionResponse.promotion:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
+	0,   // 27: akuity.io.kargo.service.v1alpha1.GetProjectRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
+	172, // 28: akuity.io.kargo.service.v1alpha1.GetProjectResponse.project:type_name -> github.com.akuity.kargo.api.v1alpha1.Project
+	172, // 29: akuity.io.kargo.service.v1alpha1.ListProjectsResponse.projects:type_name -> github.com.akuity.kargo.api.v1alpha1.Project
+	0,   // 30: akuity.io.kargo.service.v1alpha1.GetProjectConfigRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
+	173, // 31: akuity.io.kargo.service.v1alpha1.GetProjectConfigResponse.project_config:type_name -> github.com.akuity.kargo.api.v1alpha1.ProjectConfig
+	173, // 32: akuity.io.kargo.service.v1alpha1.WatchProjectConfigResponse.project_config:type_name -> github.com.akuity.kargo.api.v1alpha1.ProjectConfig
+	173, // 33: akuity.io.kargo.service.v1alpha1.RefreshProjectConfigResponse.project_config:type_name -> github.com.akuity.kargo.api.v1alpha1.ProjectConfig
+	0,   // 34: akuity.io.kargo.service.v1alpha1.GetFreightRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
+	174, // 35: akuity.io.kargo.service.v1alpha1.GetFreightResponse.freight:type_name -> github.com.akuity.kargo.api.v1alpha1.Freight
+	174, // 36: akuity.io.kargo.service.v1alpha1.WatchFreightResponse.freight:type_name -> github.com.akuity.kargo.api.v1alpha1.Freight
+	171, // 37: akuity.io.kargo.service.v1alpha1.PromoteToStageResponse.promotion:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
+	171, // 38: akuity.io.kargo.service.v1alpha1.PromoteDownstreamResponse.promotions:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
+	165, // 39: akuity.io.kargo.service.v1alpha1.QueryFreightResponse.groups:type_name -> akuity.io.kargo.service.v1alpha1.QueryFreightResponse.GroupsEntry
+	174, // 40: akuity.io.kargo.service.v1alpha1.FreightList.freight:type_name -> github.com.akuity.kargo.api.v1alpha1.Freight
+	175, // 41: akuity.io.kargo.service.v1alpha1.ListWarehousesResponse.warehouses:type_name -> github.com.akuity.kargo.api.v1alpha1.Warehouse
+	0,   // 42: akuity.io.kargo.service.v1alpha1.GetWarehouseRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
+	175, // 43: akuity.io.kargo.service.v1alpha1.GetWarehouseResponse.warehouse:type_name -> github.com.akuity.kargo.api.v1alpha1.Warehouse
+	175, // 44: akuity.io.kargo.service.v1alpha1.WatchWarehousesResponse.warehouse:type_name -> github.com.akuity.kargo.api.v1alpha1.Warehouse
+	175, // 45: akuity.io.kargo.service.v1alpha1.RefreshWarehouseResponse.warehouse:type_name -> github.com.akuity.kargo.api.v1alpha1.Warehouse
+	176, // 46: akuity.io.kargo.service.v1alpha1.CreateCredentialsResponse.credentials:type_name -> k8s.io.api.core.v1.Secret
+	0,   // 47: akuity.io.kargo.service.v1alpha1.GetCredentialsRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
+	176, // 48: akuity.io.kargo.service.v1alpha1.GetCredentialsResponse.credentials:type_name -> k8s.io.api.core.v1.Secret
+	176, // 49: akuity.io.kargo.service.v1alpha1.ListCredentialsResponse.credentials:type_name -> k8s.io.api.core.v1.Secret
+	176, // 50: akuity.io.kargo.service.v1alpha1.UpdateCredentialsResponse.credentials:type_name -> k8s.io.api.core.v1.Secret
+	176, // 51: akuity.io.kargo.service.v1alpha1.ListProjectSecretsResponse.secrets:type_name -> k8s.io.api.core.v1.Secret
+	166, // 52: akuity.io.kargo.service.v1alpha1.CreateProjectSecretRequest.data:type_name -> akuity.io.kargo.service.v1alpha1.CreateProjectSecretRequest.DataEntry
+	176, // 53: akuity.io.kargo.service.v1alpha1.CreateProjectSecretResponse.secret:type_name -> k8s.io.api.core.v1.Secret
+	167, // 54: akuity.io.kargo.service.v1alpha1.UpdateProjectSecretRequest.data:type_name -> akuity.io.kargo.service.v1alpha1.UpdateProjectSecretRequest.DataEntry
+	176, // 55: akuity.io.kargo.service.v1alpha1.UpdateProjectSecretResponse.secret:type_name -> k8s.io.api.core.v1.Secret
+	177, // 56: akuity.io.kargo.service.v1alpha1.ListAnalysisTemplatesResponse.analysis_templates:type_name -> github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisTemplate
+	0,   // 57: akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
+	177, // 58: akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateResponse.analysis_template:type_name -> github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisTemplate
+	178, // 59: akuity.io.kargo.service.v1alpha1.ListClusterAnalysisTemplatesResponse.cluster_analysis_templates:type_name -> github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.ClusterAnalysisTemplate
+	0,   // 60: akuity.io.kargo.service.v1alpha1.GetClusterAnalysisTemplateRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
+	178, // 61: akuity.io.kargo.service.v1alpha1.GetClusterAnalysisTemplateResponse.cluster_analysis_template:type_name -> github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.ClusterAnalysisTemplate
+	0,   // 62: akuity.io.kargo.service.v1alpha1.GetAnalysisRunRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
+	179, // 63: akuity.io.kargo.service.v1alpha1.GetAnalysisRunResponse.analysis_run:type_name -> github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisRun
+	180, // 64: akuity.io.kargo.service.v1alpha1.ListProjectEventsResponse.events:type_name -> k8s.io.api.core.v1.Event
+	181, // 65: akuity.io.kargo.service.v1alpha1.ListPromotionTasksResponse.promotion_tasks:type_name -> github.com.akuity.kargo.api.v1alpha1.PromotionTask
+	0,   // 66: akuity.io.kargo.service.v1alpha1.GetPromotionTaskRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
+	181, // 67: akuity.io.kargo.service.v1alpha1.GetPromotionTaskResponse.promotion_task:type_name -> github.com.akuity.kargo.api.v1alpha1.PromotionTask
+	182, // 68: akuity.io.kargo.service.v1alpha1.ListClusterPromotionTasksResponse.cluster_promotion_tasks:type_name -> github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask
+	0,   // 69: akuity.io.kargo.service.v1alpha1.GetClusterPromotionTaskRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
+	182, // 70: akuity.io.kargo.service.v1alpha1.GetClusterPromotionTaskResponse.promotion_task:type_name -> github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask
+	183, // 71: akuity.io.kargo.service.v1alpha1.CreateRoleRequest.role:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Role
+	183, // 72: akuity.io.kargo.service.v1alpha1.CreateRoleResponse.role:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Role
+	0,   // 73: akuity.io.kargo.service.v1alpha1.GetRoleRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
+	183, // 74: akuity.io.kargo.service.v1alpha1.GetRoleResponse.role:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Role
+	184, // 75: akuity.io.kargo.service.v1alpha1.GetRoleResponse.resources:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources
+	185, // 76: akuity.io.kargo.service.v1alpha1.Claims.claims:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Claim
+	152, // 77: akuity.io.kargo.service.v1alpha1.GrantRequest.user_claims:type_name -> akuity.io.kargo.service.v1alpha1.Claims
+	186, // 78: akuity.io.kargo.service.v1alpha1.GrantRequest.resource_details:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails
+	183, // 79: akuity.io.kargo.service.v1alpha1.GrantResponse.role:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Role
+	183, // 80: akuity.io.kargo.service.v1alpha1.ListRolesResponse.roles:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Role
+	184, // 81: akuity.io.kargo.service.v1alpha1.ListRolesResponse.resources:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources
+	152, // 82: akuity.io.kargo.service.v1alpha1.RevokeRequest.user_claims:type_name -> akuity.io.kargo.service.v1alpha1.Claims
+	186, // 83: akuity.io.kargo.service.v1alpha1.RevokeRequest.resource_details:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails
+	183, // 84: akuity.io.kargo.service.v1alpha1.RevokeResponse.role:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Role
+	183, // 85: akuity.io.kargo.service.v1alpha1.UpdateRoleRequest.role:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Role
+	183, // 86: akuity.io.kargo.service.v1alpha1.UpdateRoleResponse.role:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Role
+	6,   // 87: akuity.io.kargo.service.v1alpha1.GetConfigResponse.ArgocdShardsEntry.value:type_name -> akuity.io.kargo.service.v1alpha1.ArgoCDShard
+	29,  // 88: akuity.io.kargo.service.v1alpha1.ListImagesResponse.ImagesEntry.value:type_name -> akuity.io.kargo.service.v1alpha1.TagMap
+	30,  // 89: akuity.io.kargo.service.v1alpha1.TagMap.TagsEntry.value:type_name -> akuity.io.kargo.service.v1alpha1.ImageStageMap
+	85,  // 90: akuity.io.kargo.service.v1alpha1.QueryFreightResponse.GroupsEntry.value:type_name -> akuity.io.kargo.service.v1alpha1.FreightList
+	3,   // 91: akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo:input_type -> akuity.io.kargo.service.v1alpha1.GetVersionInfoRequest
+	5,   // 92: akuity.io.kargo.service.v1alpha1.KargoService.GetConfig:input_type -> akuity.io.kargo.service.v1alpha1.GetConfigRequest
+	8,   // 93: akuity.io.kargo.service.v1alpha1.KargoService.GetPublicConfig:input_type -> akuity.io.kargo.service.v1alpha1.GetPublicConfigRequest
+	11,  // 94: akuity.io.kargo.service.v1alpha1.KargoService.AdminLogin:input_type -> akuity.io.kargo.service.v1alpha1.AdminLoginRequest
+	13,  // 95: akuity.io.kargo.service.v1alpha1.KargoService.CreateResource:input_type -> akuity.io.kargo.service.v1alpha1.CreateResourceRequest
+	16,  // 96: akuity.io.kargo.service.v1alpha1.KargoService.CreateOrUpdateResource:input_type -> akuity.io.kargo.service.v1alpha1.CreateOrUpdateResourceRequest
+	19,  // 97: akuity.io.kargo.service.v1alpha1.KargoService.UpdateResource:input_type -> akuity.io.kargo.service.v1alpha1.UpdateResourceRequest
+	22,  // 98: akuity.io.kargo.service.v1alpha1.KargoService.DeleteResource:input_type -> akuity.io.kargo.service.v1alpha1.DeleteResourceRequest
+	25,  // 99: akuity.io.kargo.service.v1alpha1.KargoService.ListStages:input_type -> akuity.io.kargo.service.v1alpha1.ListStagesRequest
+	27,  // 100: akuity.io.kargo.service.v1alpha1.KargoService.ListImages:input_type -> akuity.io.kargo.service.v1alpha1.ListImagesRequest
+	31,  // 101: akuity.io.kargo.service.v1alpha1.KargoService.GetStage:input_type -> akuity.io.kargo.service.v1alpha1.GetStageRequest
+	33,  // 102: akuity.io.kargo.service.v1alpha1.KargoService.WatchStages:input_type -> akuity.io.kargo.service.v1alpha1.WatchStagesRequest
+	35,  // 103: akuity.io.kargo.service.v1alpha1.KargoService.DeleteStage:input_type -> akuity.io.kargo.service.v1alpha1.DeleteStageRequest
+	37,  // 104: akuity.io.kargo.service.v1alpha1.KargoService.RefreshStage:input_type -> akuity.io.kargo.service.v1alpha1.RefreshStageRequest
+	39,  // 105: akuity.io.kargo.service.v1alpha1.KargoService.GetClusterConfig:input_type -> akuity.io.kargo.service.v1alpha1.GetClusterConfigRequest
+	41,  // 106: akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterConfig:input_type -> akuity.io.kargo.service.v1alpha1.DeleteClusterConfigRequest
+	43,  // 107: akuity.io.kargo.service.v1alpha1.KargoService.WatchClusterConfig:input_type -> akuity.io.kargo.service.v1alpha1.WatchClusterConfigRequest
+	45,  // 108: akuity.io.kargo.service.v1alpha1.KargoService.RefreshClusterConfig:input_type -> akuity.io.kargo.service.v1alpha1.RefreshClusterConfigRequest
+	47,  // 109: akuity.io.kargo.service.v1alpha1.KargoService.ListPromotions:input_type -> akuity.io.kargo.service.v1alpha1.ListPromotionsRequest
+	49,  // 110: akuity.io.kargo.service.v1alpha1.KargoService.WatchPromotions:input_type -> akuity.io.kargo.service.v1alpha1.WatchPromotionsRequest
+	51,  // 111: akuity.io.kargo.service.v1alpha1.KargoService.GetPromotion:input_type -> akuity.io.kargo.service.v1alpha1.GetPromotionRequest
+	53,  // 112: akuity.io.kargo.service.v1alpha1.KargoService.WatchPromotion:input_type -> akuity.io.kargo.service.v1alpha1.WatchPromotionRequest
+	55,  // 113: akuity.io.kargo.service.v1alpha1.KargoService.AbortPromotion:input_type -> akuity.io.kargo.service.v1alpha1.AbortPromotionRequest
+	57,  // 114: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProject:input_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectRequest
+	59,  // 115: akuity.io.kargo.service.v1alpha1.KargoService.GetProject:input_type -> akuity.io.kargo.service.v1alpha1.GetProjectRequest
+	61,  // 116: akuity.io.kargo.service.v1alpha1.KargoService.ListProjects:input_type -> akuity.io.kargo.service.v1alpha1.ListProjectsRequest
+	63,  // 117: akuity.io.kargo.service.v1alpha1.KargoService.GetProjectConfig:input_type -> akuity.io.kargo.service.v1alpha1.GetProjectConfigRequest
+	65,  // 118: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProjectConfig:input_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectConfigRequest
+	67,  // 119: akuity.io.kargo.service.v1alpha1.KargoService.WatchProjectConfig:input_type -> akuity.io.kargo.service.v1alpha1.WatchProjectConfigRequest
+	69,  // 120: akuity.io.kargo.service.v1alpha1.KargoService.RefreshProjectConfig:input_type -> akuity.io.kargo.service.v1alpha1.RefreshProjectConfigRequest
+	71,  // 121: akuity.io.kargo.service.v1alpha1.KargoService.ApproveFreight:input_type -> akuity.io.kargo.service.v1alpha1.ApproveFreightRequest
+	73,  // 122: akuity.io.kargo.service.v1alpha1.KargoService.DeleteFreight:input_type -> akuity.io.kargo.service.v1alpha1.DeleteFreightRequest
+	75,  // 123: akuity.io.kargo.service.v1alpha1.KargoService.GetFreight:input_type -> akuity.io.kargo.service.v1alpha1.GetFreightRequest
+	77,  // 124: akuity.io.kargo.service.v1alpha1.KargoService.WatchFreight:input_type -> akuity.io.kargo.service.v1alpha1.WatchFreightRequest
+	79,  // 125: akuity.io.kargo.service.v1alpha1.KargoService.PromoteToStage:input_type -> akuity.io.kargo.service.v1alpha1.PromoteToStageRequest
+	81,  // 126: akuity.io.kargo.service.v1alpha1.KargoService.PromoteDownstream:input_type -> akuity.io.kargo.service.v1alpha1.PromoteDownstreamRequest
+	83,  // 127: akuity.io.kargo.service.v1alpha1.KargoService.QueryFreight:input_type -> akuity.io.kargo.service.v1alpha1.QueryFreightRequest
+	86,  // 128: akuity.io.kargo.service.v1alpha1.KargoService.UpdateFreightAlias:input_type -> akuity.io.kargo.service.v1alpha1.UpdateFreightAliasRequest
+	88,  // 129: akuity.io.kargo.service.v1alpha1.KargoService.Reverify:input_type -> akuity.io.kargo.service.v1alpha1.ReverifyRequest
+	90,  // 130: akuity.io.kargo.service.v1alpha1.KargoService.AbortVerification:input_type -> akuity.io.kargo.service.v1alpha1.AbortVerificationRequest
+	92,  // 131: akuity.io.kargo.service.v1alpha1.KargoService.ListWarehouses:input_type -> akuity.io.kargo.service.v1alpha1.ListWarehousesRequest
+	94,  // 132: akuity.io.kargo.service.v1alpha1.KargoService.GetWarehouse:input_type -> akuity.io.kargo.service.v1alpha1.GetWarehouseRequest
+	96,  // 133: akuity.io.kargo.service.v1alpha1.KargoService.WatchWarehouses:input_type -> akuity.io.kargo.service.v1alpha1.WatchWarehousesRequest
+	98,  // 134: akuity.io.kargo.service.v1alpha1.KargoService.DeleteWarehouse:input_type -> akuity.io.kargo.service.v1alpha1.DeleteWarehouseRequest
+	100, // 135: akuity.io.kargo.service.v1alpha1.KargoService.RefreshWarehouse:input_type -> akuity.io.kargo.service.v1alpha1.RefreshWarehouseRequest
+	102, // 136: akuity.io.kargo.service.v1alpha1.KargoService.CreateCredentials:input_type -> akuity.io.kargo.service.v1alpha1.CreateCredentialsRequest
+	104, // 137: akuity.io.kargo.service.v1alpha1.KargoService.DeleteCredentials:input_type -> akuity.io.kargo.service.v1alpha1.DeleteCredentialsRequest
+	106, // 138: akuity.io.kargo.service.v1alpha1.KargoService.GetCredentials:input_type -> akuity.io.kargo.service.v1alpha1.GetCredentialsRequest
+	108, // 139: akuity.io.kargo.service.v1alpha1.KargoService.ListCredentials:input_type -> akuity.io.kargo.service.v1alpha1.ListCredentialsRequest
+	110, // 140: akuity.io.kargo.service.v1alpha1.KargoService.UpdateCredentials:input_type -> akuity.io.kargo.service.v1alpha1.UpdateCredentialsRequest
+	112, // 141: akuity.io.kargo.service.v1alpha1.KargoService.ListProjectSecrets:input_type -> akuity.io.kargo.service.v1alpha1.ListProjectSecretsRequest
+	114, // 142: akuity.io.kargo.service.v1alpha1.KargoService.CreateProjectSecret:input_type -> akuity.io.kargo.service.v1alpha1.CreateProjectSecretRequest
+	116, // 143: akuity.io.kargo.service.v1alpha1.KargoService.UpdateProjectSecret:input_type -> akuity.io.kargo.service.v1alpha1.UpdateProjectSecretRequest
+	118, // 144: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProjectSecret:input_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectSecretRequest
+	120, // 145: akuity.io.kargo.service.v1alpha1.KargoService.ListAnalysisTemplates:input_type -> akuity.io.kargo.service.v1alpha1.ListAnalysisTemplatesRequest
+	122, // 146: akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisTemplate:input_type -> akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateRequest
+	124, // 147: akuity.io.kargo.service.v1alpha1.KargoService.DeleteAnalysisTemplate:input_type -> akuity.io.kargo.service.v1alpha1.DeleteAnalysisTemplateRequest
+	126, // 148: akuity.io.kargo.service.v1alpha1.KargoService.ListClusterAnalysisTemplates:input_type -> akuity.io.kargo.service.v1alpha1.ListClusterAnalysisTemplatesRequest
+	128, // 149: akuity.io.kargo.service.v1alpha1.KargoService.GetClusterAnalysisTemplate:input_type -> akuity.io.kargo.service.v1alpha1.GetClusterAnalysisTemplateRequest
+	130, // 150: akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterAnalysisTemplate:input_type -> akuity.io.kargo.service.v1alpha1.DeleteClusterAnalysisTemplateRequest
+	132, // 151: akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisRun:input_type -> akuity.io.kargo.service.v1alpha1.GetAnalysisRunRequest
+	134, // 152: akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisRunLogs:input_type -> akuity.io.kargo.service.v1alpha1.GetAnalysisRunLogsRequest
+	136, // 153: akuity.io.kargo.service.v1alpha1.KargoService.ListProjectEvents:input_type -> akuity.io.kargo.service.v1alpha1.ListProjectEventsRequest
+	138, // 154: akuity.io.kargo.service.v1alpha1.KargoService.ListPromotionTasks:input_type -> akuity.io.kargo.service.v1alpha1.ListPromotionTasksRequest
+	142, // 155: akuity.io.kargo.service.v1alpha1.KargoService.ListClusterPromotionTasks:input_type -> akuity.io.kargo.service.v1alpha1.ListClusterPromotionTasksRequest
+	140, // 156: akuity.io.kargo.service.v1alpha1.KargoService.GetPromotionTask:input_type -> akuity.io.kargo.service.v1alpha1.GetPromotionTaskRequest
+	144, // 157: akuity.io.kargo.service.v1alpha1.KargoService.GetClusterPromotionTask:input_type -> akuity.io.kargo.service.v1alpha1.GetClusterPromotionTaskRequest
+	146, // 158: akuity.io.kargo.service.v1alpha1.KargoService.CreateRole:input_type -> akuity.io.kargo.service.v1alpha1.CreateRoleRequest
+	148, // 159: akuity.io.kargo.service.v1alpha1.KargoService.DeleteRole:input_type -> akuity.io.kargo.service.v1alpha1.DeleteRoleRequest
+	150, // 160: akuity.io.kargo.service.v1alpha1.KargoService.GetRole:input_type -> akuity.io.kargo.service.v1alpha1.GetRoleRequest
+	153, // 161: akuity.io.kargo.service.v1alpha1.KargoService.Grant:input_type -> akuity.io.kargo.service.v1alpha1.GrantRequest
+	155, // 162: akuity.io.kargo.service.v1alpha1.KargoService.ListRoles:input_type -> akuity.io.kargo.service.v1alpha1.ListRolesRequest
+	157, // 163: akuity.io.kargo.service.v1alpha1.KargoService.Revoke:input_type -> akuity.io.kargo.service.v1alpha1.RevokeRequest
+	159, // 164: akuity.io.kargo.service.v1alpha1.KargoService.UpdateRole:input_type -> akuity.io.kargo.service.v1alpha1.UpdateRoleRequest
+	4,   // 165: akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo:output_type -> akuity.io.kargo.service.v1alpha1.GetVersionInfoResponse
+	7,   // 166: akuity.io.kargo.service.v1alpha1.KargoService.GetConfig:output_type -> akuity.io.kargo.service.v1alpha1.GetConfigResponse
+	9,   // 167: akuity.io.kargo.service.v1alpha1.KargoService.GetPublicConfig:output_type -> akuity.io.kargo.service.v1alpha1.GetPublicConfigResponse
+	12,  // 168: akuity.io.kargo.service.v1alpha1.KargoService.AdminLogin:output_type -> akuity.io.kargo.service.v1alpha1.AdminLoginResponse
+	15,  // 169: akuity.io.kargo.service.v1alpha1.KargoService.CreateResource:output_type -> akuity.io.kargo.service.v1alpha1.CreateResourceResponse
+	18,  // 170: akuity.io.kargo.service.v1alpha1.KargoService.CreateOrUpdateResource:output_type -> akuity.io.kargo.service.v1alpha1.CreateOrUpdateResourceResponse
+	21,  // 171: akuity.io.kargo.service.v1alpha1.KargoService.UpdateResource:output_type -> akuity.io.kargo.service.v1alpha1.UpdateResourceResponse
+	24,  // 172: akuity.io.kargo.service.v1alpha1.KargoService.DeleteResource:output_type -> akuity.io.kargo.service.v1alpha1.DeleteResourceResponse
+	26,  // 173: akuity.io.kargo.service.v1alpha1.KargoService.ListStages:output_type -> akuity.io.kargo.service.v1alpha1.ListStagesResponse
+	28,  // 174: akuity.io.kargo.service.v1alpha1.KargoService.ListImages:output_type -> akuity.io.kargo.service.v1alpha1.ListImagesResponse
+	32,  // 175: akuity.io.kargo.service.v1alpha1.KargoService.GetStage:output_type -> akuity.io.kargo.service.v1alpha1.GetStageResponse
+	34,  // 176: akuity.io.kargo.service.v1alpha1.KargoService.WatchStages:output_type -> akuity.io.kargo.service.v1alpha1.WatchStagesResponse
+	36,  // 177: akuity.io.kargo.service.v1alpha1.KargoService.DeleteStage:output_type -> akuity.io.kargo.service.v1alpha1.DeleteStageResponse
+	38,  // 178: akuity.io.kargo.service.v1alpha1.KargoService.RefreshStage:output_type -> akuity.io.kargo.service.v1alpha1.RefreshStageResponse
+	40,  // 179: akuity.io.kargo.service.v1alpha1.KargoService.GetClusterConfig:output_type -> akuity.io.kargo.service.v1alpha1.GetClusterConfigResponse
+	42,  // 180: akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterConfig:output_type -> akuity.io.kargo.service.v1alpha1.DeleteClusterConfigResponse
+	44,  // 181: akuity.io.kargo.service.v1alpha1.KargoService.WatchClusterConfig:output_type -> akuity.io.kargo.service.v1alpha1.WatchClusterConfigResponse
+	46,  // 182: akuity.io.kargo.service.v1alpha1.KargoService.RefreshClusterConfig:output_type -> akuity.io.kargo.service.v1alpha1.RefreshClusterConfigResponse
+	48,  // 183: akuity.io.kargo.service.v1alpha1.KargoService.ListPromotions:output_type -> akuity.io.kargo.service.v1alpha1.ListPromotionsResponse
+	50,  // 184: akuity.io.kargo.service.v1alpha1.KargoService.WatchPromotions:output_type -> akuity.io.kargo.service.v1alpha1.WatchPromotionsResponse
+	52,  // 185: akuity.io.kargo.service.v1alpha1.KargoService.GetPromotion:output_type -> akuity.io.kargo.service.v1alpha1.GetPromotionResponse
+	54,  // 186: akuity.io.kargo.service.v1alpha1.KargoService.WatchPromotion:output_type -> akuity.io.kargo.service.v1alpha1.WatchPromotionResponse
+	56,  // 187: akuity.io.kargo.service.v1alpha1.KargoService.AbortPromotion:output_type -> akuity.io.kargo.service.v1alpha1.AbortPromotionResponse
+	58,  // 188: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProject:output_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectResponse
+	60,  // 189: akuity.io.kargo.service.v1alpha1.KargoService.GetProject:output_type -> akuity.io.kargo.service.v1alpha1.GetProjectResponse
+	62,  // 190: akuity.io.kargo.service.v1alpha1.KargoService.ListProjects:output_type -> akuity.io.kargo.service.v1alpha1.ListProjectsResponse
+	64,  // 191: akuity.io.kargo.service.v1alpha1.KargoService.GetProjectConfig:output_type -> akuity.io.kargo.service.v1alpha1.GetProjectConfigResponse
+	66,  // 192: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProjectConfig:output_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectConfigResponse
+	68,  // 193: akuity.io.kargo.service.v1alpha1.KargoService.WatchProjectConfig:output_type -> akuity.io.kargo.service.v1alpha1.WatchProjectConfigResponse
+	70,  // 194: akuity.io.kargo.service.v1alpha1.KargoService.RefreshProjectConfig:output_type -> akuity.io.kargo.service.v1alpha1.RefreshProjectConfigResponse
+	72,  // 195: akuity.io.kargo.service.v1alpha1.KargoService.ApproveFreight:output_type -> akuity.io.kargo.service.v1alpha1.ApproveFreightResponse
+	74,  // 196: akuity.io.kargo.service.v1alpha1.KargoService.DeleteFreight:output_type -> akuity.io.kargo.service.v1alpha1.DeleteFreightResponse
+	76,  // 197: akuity.io.kargo.service.v1alpha1.KargoService.GetFreight:output_type -> akuity.io.kargo.service.v1alpha1.GetFreightResponse
+	78,  // 198: akuity.io.kargo.service.v1alpha1.KargoService.WatchFreight:output_type -> akuity.io.kargo.service.v1alpha1.WatchFreightResponse
+	80,  // 199: akuity.io.kargo.service.v1alpha1.KargoService.PromoteToStage:output_type -> akuity.io.kargo.service.v1alpha1.PromoteToStageResponse
+	82,  // 200: akuity.io.kargo.service.v1alpha1.KargoService.PromoteDownstream:output_type -> akuity.io.kargo.service.v1alpha1.PromoteDownstreamResponse
+	84,  // 201: akuity.io.kargo.service.v1alpha1.KargoService.QueryFreight:output_type -> akuity.io.kargo.service.v1alpha1.QueryFreightResponse
+	87,  // 202: akuity.io.kargo.service.v1alpha1.KargoService.UpdateFreightAlias:output_type -> akuity.io.kargo.service.v1alpha1.UpdateFreightAliasResponse
+	89,  // 203: akuity.io.kargo.service.v1alpha1.KargoService.Reverify:output_type -> akuity.io.kargo.service.v1alpha1.ReverifyResponse
+	91,  // 204: akuity.io.kargo.service.v1alpha1.KargoService.AbortVerification:output_type -> akuity.io.kargo.service.v1alpha1.AbortVerificationResponse
+	93,  // 205: akuity.io.kargo.service.v1alpha1.KargoService.ListWarehouses:output_type -> akuity.io.kargo.service.v1alpha1.ListWarehousesResponse
+	95,  // 206: akuity.io.kargo.service.v1alpha1.KargoService.GetWarehouse:output_type -> akuity.io.kargo.service.v1alpha1.GetWarehouseResponse
+	97,  // 207: akuity.io.kargo.service.v1alpha1.KargoService.WatchWarehouses:output_type -> akuity.io.kargo.service.v1alpha1.WatchWarehousesResponse
+	99,  // 208: akuity.io.kargo.service.v1alpha1.KargoService.DeleteWarehouse:output_type -> akuity.io.kargo.service.v1alpha1.DeleteWarehouseResponse
+	101, // 209: akuity.io.kargo.service.v1alpha1.KargoService.RefreshWarehouse:output_type -> akuity.io.kargo.service.v1alpha1.RefreshWarehouseResponse
+	103, // 210: akuity.io.kargo.service.v1alpha1.KargoService.CreateCredentials:output_type -> akuity.io.kargo.service.v1alpha1.CreateCredentialsResponse
+	105, // 211: akuity.io.kargo.service.v1alpha1.KargoService.DeleteCredentials:output_type -> akuity.io.kargo.service.v1alpha1.DeleteCredentialsResponse
+	107, // 212: akuity.io.kargo.service.v1alpha1.KargoService.GetCredentials:output_type -> akuity.io.kargo.service.v1alpha1.GetCredentialsResponse
+	109, // 213: akuity.io.kargo.service.v1alpha1.KargoService.ListCredentials:output_type -> akuity.io.kargo.service.v1alpha1.ListCredentialsResponse
+	111, // 214: akuity.io.kargo.service.v1alpha1.KargoService.UpdateCredentials:output_type -> akuity.io.kargo.service.v1alpha1.UpdateCredentialsResponse
+	113, // 215: akuity.io.kargo.service.v1alpha1.KargoService.ListProjectSecrets:output_type -> akuity.io.kargo.service.v1alpha1.ListProjectSecretsResponse
+	115, // 216: akuity.io.kargo.service.v1alpha1.KargoService.CreateProjectSecret:output_type -> akuity.io.kargo.service.v1alpha1.CreateProjectSecretResponse
+	117, // 217: akuity.io.kargo.service.v1alpha1.KargoService.UpdateProjectSecret:output_type -> akuity.io.kargo.service.v1alpha1.UpdateProjectSecretResponse
+	119, // 218: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProjectSecret:output_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectSecretResponse
+	121, // 219: akuity.io.kargo.service.v1alpha1.KargoService.ListAnalysisTemplates:output_type -> akuity.io.kargo.service.v1alpha1.ListAnalysisTemplatesResponse
+	123, // 220: akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisTemplate:output_type -> akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateResponse
+	125, // 221: akuity.io.kargo.service.v1alpha1.KargoService.DeleteAnalysisTemplate:output_type -> akuity.io.kargo.service.v1alpha1.DeleteAnalysisTemplateResponse
+	127, // 222: akuity.io.kargo.service.v1alpha1.KargoService.ListClusterAnalysisTemplates:output_type -> akuity.io.kargo.service.v1alpha1.ListClusterAnalysisTemplatesResponse
+	129, // 223: akuity.io.kargo.service.v1alpha1.KargoService.GetClusterAnalysisTemplate:output_type -> akuity.io.kargo.service.v1alpha1.GetClusterAnalysisTemplateResponse
+	131, // 224: akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterAnalysisTemplate:output_type -> akuity.io.kargo.service.v1alpha1.DeleteClusterAnalysisTemplateResponse
+	133, // 225: akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisRun:output_type -> akuity.io.kargo.service.v1alpha1.GetAnalysisRunResponse
+	135, // 226: akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisRunLogs:output_type -> akuity.io.kargo.service.v1alpha1.GetAnalysisRunLogsResponse
+	137, // 227: akuity.io.kargo.service.v1alpha1.KargoService.ListProjectEvents:output_type -> akuity.io.kargo.service.v1alpha1.ListProjectEventsResponse
+	139, // 228: akuity.io.kargo.service.v1alpha1.KargoService.ListPromotionTasks:output_type -> akuity.io.kargo.service.v1alpha1.ListPromotionTasksResponse
+	143, // 229: akuity.io.kargo.service.v1alpha1.KargoService.ListClusterPromotionTasks:output_type -> akuity.io.kargo.service.v1alpha1.ListClusterPromotionTasksResponse
+	141, // 230: akuity.io.kargo.service.v1alpha1.KargoService.GetPromotionTask:output_type -> akuity.io.kargo.service.v1alpha1.GetPromotionTaskResponse
+	145, // 231: akuity.io.kargo.service.v1alpha1.KargoService.GetClusterPromotionTask:output_type -> akuity.io.kargo.service.v1alpha1.GetClusterPromotionTaskResponse
+	147, // 232: akuity.io.kargo.service.v1alpha1.KargoService.CreateRole:output_type -> akuity.io.kargo.service.v1alpha1.CreateRoleResponse
+	149, // 233: akuity.io.kargo.service.v1alpha1.KargoService.DeleteRole:output_type -> akuity.io.kargo.service.v1alpha1.DeleteRoleResponse
+	151, // 234: akuity.io.kargo.service.v1alpha1.KargoService.GetRole:output_type -> akuity.io.kargo.service.v1alpha1.GetRoleResponse
+	154, // 235: akuity.io.kargo.service.v1alpha1.KargoService.Grant:output_type -> akuity.io.kargo.service.v1alpha1.GrantResponse
+	156, // 236: akuity.io.kargo.service.v1alpha1.KargoService.ListRoles:output_type -> akuity.io.kargo.service.v1alpha1.ListRolesResponse
+	158, // 237: akuity.io.kargo.service.v1alpha1.KargoService.Revoke:output_type -> akuity.io.kargo.service.v1alpha1.RevokeResponse
+	160, // 238: akuity.io.kargo.service.v1alpha1.KargoService.UpdateRole:output_type -> akuity.io.kargo.service.v1alpha1.UpdateRoleResponse
+	165, // [165:239] is the sub-list for method output_type
+	91,  // [91:165] is the sub-list for method input_type
+	91,  // [91:91] is the sub-list for extension type_name
+	91,  // [91:91] is the sub-list for extension extendee
+	0,   // [0:91] is the sub-list for field type_name
 }
 
 func init() { file_api_service_v1alpha1_service_proto_init() }
@@ -11490,7 +11719,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[44].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListPromotionsRequest); i {
+			switch v := v.(*RefreshClusterConfigRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11502,7 +11731,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[45].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListPromotionsResponse); i {
+			switch v := v.(*RefreshClusterConfigResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11514,7 +11743,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[46].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*WatchPromotionsRequest); i {
+			switch v := v.(*ListPromotionsRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11526,7 +11755,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[47].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*WatchPromotionsResponse); i {
+			switch v := v.(*ListPromotionsResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11538,7 +11767,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[48].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetPromotionRequest); i {
+			switch v := v.(*WatchPromotionsRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11550,7 +11779,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[49].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetPromotionResponse); i {
+			switch v := v.(*WatchPromotionsResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11562,7 +11791,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[50].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*WatchPromotionRequest); i {
+			switch v := v.(*GetPromotionRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11574,7 +11803,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[51].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*WatchPromotionResponse); i {
+			switch v := v.(*GetPromotionResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11586,7 +11815,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[52].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*AbortPromotionRequest); i {
+			switch v := v.(*WatchPromotionRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11598,7 +11827,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[53].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*AbortPromotionResponse); i {
+			switch v := v.(*WatchPromotionResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11610,7 +11839,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[54].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteProjectRequest); i {
+			switch v := v.(*AbortPromotionRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11622,7 +11851,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[55].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteProjectResponse); i {
+			switch v := v.(*AbortPromotionResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11634,7 +11863,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[56].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetProjectRequest); i {
+			switch v := v.(*DeleteProjectRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11646,7 +11875,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[57].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetProjectResponse); i {
+			switch v := v.(*DeleteProjectResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11658,7 +11887,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[58].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListProjectsRequest); i {
+			switch v := v.(*GetProjectRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11670,7 +11899,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[59].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListProjectsResponse); i {
+			switch v := v.(*GetProjectResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11682,7 +11911,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[60].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetProjectConfigRequest); i {
+			switch v := v.(*ListProjectsRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11694,7 +11923,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[61].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetProjectConfigResponse); i {
+			switch v := v.(*ListProjectsResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11706,7 +11935,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[62].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteProjectConfigRequest); i {
+			switch v := v.(*GetProjectConfigRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11718,7 +11947,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[63].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteProjectConfigResponse); i {
+			switch v := v.(*GetProjectConfigResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11730,7 +11959,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[64].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*WatchProjectConfigRequest); i {
+			switch v := v.(*DeleteProjectConfigRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11742,7 +11971,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[65].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*WatchProjectConfigResponse); i {
+			switch v := v.(*DeleteProjectConfigResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11754,7 +11983,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[66].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ApproveFreightRequest); i {
+			switch v := v.(*WatchProjectConfigRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11766,7 +11995,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[67].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ApproveFreightResponse); i {
+			switch v := v.(*WatchProjectConfigResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11778,7 +12007,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[68].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteFreightRequest); i {
+			switch v := v.(*RefreshProjectConfigRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11790,7 +12019,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[69].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteFreightResponse); i {
+			switch v := v.(*RefreshProjectConfigResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11802,7 +12031,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[70].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetFreightRequest); i {
+			switch v := v.(*ApproveFreightRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11814,7 +12043,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[71].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetFreightResponse); i {
+			switch v := v.(*ApproveFreightResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11826,7 +12055,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[72].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*WatchFreightRequest); i {
+			switch v := v.(*DeleteFreightRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11838,7 +12067,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[73].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*WatchFreightResponse); i {
+			switch v := v.(*DeleteFreightResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11850,7 +12079,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[74].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PromoteToStageRequest); i {
+			switch v := v.(*GetFreightRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11862,7 +12091,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[75].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PromoteToStageResponse); i {
+			switch v := v.(*GetFreightResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11874,7 +12103,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[76].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PromoteDownstreamRequest); i {
+			switch v := v.(*WatchFreightRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11886,7 +12115,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[77].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PromoteDownstreamResponse); i {
+			switch v := v.(*WatchFreightResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11898,7 +12127,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[78].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*QueryFreightRequest); i {
+			switch v := v.(*PromoteToStageRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11910,7 +12139,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[79].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*QueryFreightResponse); i {
+			switch v := v.(*PromoteToStageResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11922,7 +12151,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[80].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*FreightList); i {
+			switch v := v.(*PromoteDownstreamRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11934,7 +12163,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[81].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*UpdateFreightAliasRequest); i {
+			switch v := v.(*PromoteDownstreamResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11946,7 +12175,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[82].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*UpdateFreightAliasResponse); i {
+			switch v := v.(*QueryFreightRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11958,7 +12187,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[83].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ReverifyRequest); i {
+			switch v := v.(*QueryFreightResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11970,7 +12199,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[84].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ReverifyResponse); i {
+			switch v := v.(*FreightList); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11982,7 +12211,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[85].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*AbortVerificationRequest); i {
+			switch v := v.(*UpdateFreightAliasRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11994,7 +12223,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[86].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*AbortVerificationResponse); i {
+			switch v := v.(*UpdateFreightAliasResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12006,7 +12235,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[87].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListWarehousesRequest); i {
+			switch v := v.(*ReverifyRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12018,7 +12247,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[88].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListWarehousesResponse); i {
+			switch v := v.(*ReverifyResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12030,7 +12259,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[89].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetWarehouseRequest); i {
+			switch v := v.(*AbortVerificationRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12042,7 +12271,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[90].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetWarehouseResponse); i {
+			switch v := v.(*AbortVerificationResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12054,7 +12283,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[91].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*WatchWarehousesRequest); i {
+			switch v := v.(*ListWarehousesRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12066,7 +12295,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[92].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*WatchWarehousesResponse); i {
+			switch v := v.(*ListWarehousesResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12078,7 +12307,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[93].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteWarehouseRequest); i {
+			switch v := v.(*GetWarehouseRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12090,7 +12319,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[94].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteWarehouseResponse); i {
+			switch v := v.(*GetWarehouseResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12102,7 +12331,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[95].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RefreshWarehouseRequest); i {
+			switch v := v.(*WatchWarehousesRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12114,7 +12343,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[96].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RefreshWarehouseResponse); i {
+			switch v := v.(*WatchWarehousesResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12126,7 +12355,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[97].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CreateCredentialsRequest); i {
+			switch v := v.(*DeleteWarehouseRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12138,7 +12367,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[98].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CreateCredentialsResponse); i {
+			switch v := v.(*DeleteWarehouseResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12150,7 +12379,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[99].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteCredentialsRequest); i {
+			switch v := v.(*RefreshWarehouseRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12162,7 +12391,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[100].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteCredentialsResponse); i {
+			switch v := v.(*RefreshWarehouseResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12174,7 +12403,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[101].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetCredentialsRequest); i {
+			switch v := v.(*CreateCredentialsRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12186,7 +12415,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[102].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetCredentialsResponse); i {
+			switch v := v.(*CreateCredentialsResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12198,7 +12427,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[103].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListCredentialsRequest); i {
+			switch v := v.(*DeleteCredentialsRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12210,7 +12439,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[104].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListCredentialsResponse); i {
+			switch v := v.(*DeleteCredentialsResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12222,7 +12451,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[105].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*UpdateCredentialsRequest); i {
+			switch v := v.(*GetCredentialsRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12234,7 +12463,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[106].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*UpdateCredentialsResponse); i {
+			switch v := v.(*GetCredentialsResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12246,7 +12475,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[107].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListProjectSecretsRequest); i {
+			switch v := v.(*ListCredentialsRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12258,7 +12487,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[108].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListProjectSecretsResponse); i {
+			switch v := v.(*ListCredentialsResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12270,7 +12499,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[109].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CreateProjectSecretRequest); i {
+			switch v := v.(*UpdateCredentialsRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12282,7 +12511,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[110].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CreateProjectSecretResponse); i {
+			switch v := v.(*UpdateCredentialsResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12294,7 +12523,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[111].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*UpdateProjectSecretRequest); i {
+			switch v := v.(*ListProjectSecretsRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12306,7 +12535,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[112].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*UpdateProjectSecretResponse); i {
+			switch v := v.(*ListProjectSecretsResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12318,7 +12547,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[113].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteProjectSecretRequest); i {
+			switch v := v.(*CreateProjectSecretRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12330,7 +12559,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[114].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteProjectSecretResponse); i {
+			switch v := v.(*CreateProjectSecretResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12342,7 +12571,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[115].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListAnalysisTemplatesRequest); i {
+			switch v := v.(*UpdateProjectSecretRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12354,7 +12583,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[116].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListAnalysisTemplatesResponse); i {
+			switch v := v.(*UpdateProjectSecretResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12366,7 +12595,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[117].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetAnalysisTemplateRequest); i {
+			switch v := v.(*DeleteProjectSecretRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12378,7 +12607,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[118].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetAnalysisTemplateResponse); i {
+			switch v := v.(*DeleteProjectSecretResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12390,7 +12619,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[119].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteAnalysisTemplateRequest); i {
+			switch v := v.(*ListAnalysisTemplatesRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12402,7 +12631,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[120].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteAnalysisTemplateResponse); i {
+			switch v := v.(*ListAnalysisTemplatesResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12414,7 +12643,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[121].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListClusterAnalysisTemplatesRequest); i {
+			switch v := v.(*GetAnalysisTemplateRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12426,7 +12655,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[122].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListClusterAnalysisTemplatesResponse); i {
+			switch v := v.(*GetAnalysisTemplateResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12438,7 +12667,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[123].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetClusterAnalysisTemplateRequest); i {
+			switch v := v.(*DeleteAnalysisTemplateRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12450,7 +12679,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[124].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetClusterAnalysisTemplateResponse); i {
+			switch v := v.(*DeleteAnalysisTemplateResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12462,7 +12691,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[125].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteClusterAnalysisTemplateRequest); i {
+			switch v := v.(*ListClusterAnalysisTemplatesRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12474,7 +12703,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[126].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteClusterAnalysisTemplateResponse); i {
+			switch v := v.(*ListClusterAnalysisTemplatesResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12486,7 +12715,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[127].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetAnalysisRunRequest); i {
+			switch v := v.(*GetClusterAnalysisTemplateRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12498,7 +12727,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[128].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetAnalysisRunResponse); i {
+			switch v := v.(*GetClusterAnalysisTemplateResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12510,7 +12739,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[129].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetAnalysisRunLogsRequest); i {
+			switch v := v.(*DeleteClusterAnalysisTemplateRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12522,7 +12751,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[130].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetAnalysisRunLogsResponse); i {
+			switch v := v.(*DeleteClusterAnalysisTemplateResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12534,7 +12763,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[131].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListProjectEventsRequest); i {
+			switch v := v.(*GetAnalysisRunRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12546,7 +12775,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[132].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListProjectEventsResponse); i {
+			switch v := v.(*GetAnalysisRunResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12558,7 +12787,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[133].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListPromotionTasksRequest); i {
+			switch v := v.(*GetAnalysisRunLogsRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12570,7 +12799,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[134].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListPromotionTasksResponse); i {
+			switch v := v.(*GetAnalysisRunLogsResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12582,7 +12811,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[135].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetPromotionTaskRequest); i {
+			switch v := v.(*ListProjectEventsRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12594,7 +12823,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[136].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetPromotionTaskResponse); i {
+			switch v := v.(*ListProjectEventsResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12606,7 +12835,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[137].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListClusterPromotionTasksRequest); i {
+			switch v := v.(*ListPromotionTasksRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12618,7 +12847,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[138].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListClusterPromotionTasksResponse); i {
+			switch v := v.(*ListPromotionTasksResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12630,7 +12859,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[139].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetClusterPromotionTaskRequest); i {
+			switch v := v.(*GetPromotionTaskRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12642,7 +12871,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[140].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetClusterPromotionTaskResponse); i {
+			switch v := v.(*GetPromotionTaskResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12654,7 +12883,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[141].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CreateRoleRequest); i {
+			switch v := v.(*ListClusterPromotionTasksRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12666,7 +12895,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[142].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CreateRoleResponse); i {
+			switch v := v.(*ListClusterPromotionTasksResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12678,7 +12907,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[143].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteRoleRequest); i {
+			switch v := v.(*GetClusterPromotionTaskRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12690,7 +12919,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[144].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteRoleResponse); i {
+			switch v := v.(*GetClusterPromotionTaskResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12702,7 +12931,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[145].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetRoleRequest); i {
+			switch v := v.(*CreateRoleRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12714,7 +12943,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[146].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetRoleResponse); i {
+			switch v := v.(*CreateRoleResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12726,7 +12955,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[147].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Claims); i {
+			switch v := v.(*DeleteRoleRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12738,7 +12967,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[148].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GrantRequest); i {
+			switch v := v.(*DeleteRoleResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12750,7 +12979,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[149].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GrantResponse); i {
+			switch v := v.(*GetRoleRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12762,7 +12991,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[150].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListRolesRequest); i {
+			switch v := v.(*GetRoleResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12774,7 +13003,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[151].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListRolesResponse); i {
+			switch v := v.(*Claims); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12786,7 +13015,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[152].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RevokeRequest); i {
+			switch v := v.(*GrantRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12798,7 +13027,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[153].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RevokeResponse); i {
+			switch v := v.(*GrantResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12810,7 +13039,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[154].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*UpdateRoleRequest); i {
+			switch v := v.(*ListRolesRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12822,6 +13051,54 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[155].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ListRolesResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_service_v1alpha1_service_proto_msgTypes[156].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*RevokeRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_service_v1alpha1_service_proto_msgTypes[157].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*RevokeResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_service_v1alpha1_service_proto_msgTypes[158].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*UpdateRoleRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_service_v1alpha1_service_proto_msgTypes[159].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*UpdateRoleResponse); i {
 			case 0:
 				return &v.state
@@ -12860,63 +13137,63 @@ func file_api_service_v1alpha1_service_proto_init() {
 		(*GetClusterConfigResponse_ClusterConfig)(nil),
 		(*GetClusterConfigResponse_Raw)(nil),
 	}
-	file_api_service_v1alpha1_service_proto_msgTypes[44].OneofWrappers = []interface{}{}
 	file_api_service_v1alpha1_service_proto_msgTypes[46].OneofWrappers = []interface{}{}
-	file_api_service_v1alpha1_service_proto_msgTypes[49].OneofWrappers = []interface{}{
+	file_api_service_v1alpha1_service_proto_msgTypes[48].OneofWrappers = []interface{}{}
+	file_api_service_v1alpha1_service_proto_msgTypes[51].OneofWrappers = []interface{}{
 		(*GetPromotionResponse_Promotion)(nil),
 		(*GetPromotionResponse_Raw)(nil),
 	}
-	file_api_service_v1alpha1_service_proto_msgTypes[57].OneofWrappers = []interface{}{
+	file_api_service_v1alpha1_service_proto_msgTypes[59].OneofWrappers = []interface{}{
 		(*GetProjectResponse_Project)(nil),
 		(*GetProjectResponse_Raw)(nil),
 	}
-	file_api_service_v1alpha1_service_proto_msgTypes[58].OneofWrappers = []interface{}{}
-	file_api_service_v1alpha1_service_proto_msgTypes[61].OneofWrappers = []interface{}{
+	file_api_service_v1alpha1_service_proto_msgTypes[60].OneofWrappers = []interface{}{}
+	file_api_service_v1alpha1_service_proto_msgTypes[63].OneofWrappers = []interface{}{
 		(*GetProjectConfigResponse_ProjectConfig)(nil),
 		(*GetProjectConfigResponse_Raw)(nil),
 	}
-	file_api_service_v1alpha1_service_proto_msgTypes[71].OneofWrappers = []interface{}{
+	file_api_service_v1alpha1_service_proto_msgTypes[75].OneofWrappers = []interface{}{
 		(*GetFreightResponse_Freight)(nil),
 		(*GetFreightResponse_Raw)(nil),
 	}
-	file_api_service_v1alpha1_service_proto_msgTypes[90].OneofWrappers = []interface{}{
+	file_api_service_v1alpha1_service_proto_msgTypes[94].OneofWrappers = []interface{}{
 		(*GetWarehouseResponse_Warehouse)(nil),
 		(*GetWarehouseResponse_Raw)(nil),
 	}
-	file_api_service_v1alpha1_service_proto_msgTypes[102].OneofWrappers = []interface{}{
+	file_api_service_v1alpha1_service_proto_msgTypes[106].OneofWrappers = []interface{}{
 		(*GetCredentialsResponse_Credentials)(nil),
 		(*GetCredentialsResponse_Raw)(nil),
 	}
-	file_api_service_v1alpha1_service_proto_msgTypes[118].OneofWrappers = []interface{}{
+	file_api_service_v1alpha1_service_proto_msgTypes[122].OneofWrappers = []interface{}{
 		(*GetAnalysisTemplateResponse_AnalysisTemplate)(nil),
 		(*GetAnalysisTemplateResponse_Raw)(nil),
 	}
-	file_api_service_v1alpha1_service_proto_msgTypes[124].OneofWrappers = []interface{}{
+	file_api_service_v1alpha1_service_proto_msgTypes[128].OneofWrappers = []interface{}{
 		(*GetClusterAnalysisTemplateResponse_ClusterAnalysisTemplate)(nil),
 		(*GetClusterAnalysisTemplateResponse_Raw)(nil),
 	}
-	file_api_service_v1alpha1_service_proto_msgTypes[128].OneofWrappers = []interface{}{
+	file_api_service_v1alpha1_service_proto_msgTypes[132].OneofWrappers = []interface{}{
 		(*GetAnalysisRunResponse_AnalysisRun)(nil),
 		(*GetAnalysisRunResponse_Raw)(nil),
 	}
-	file_api_service_v1alpha1_service_proto_msgTypes[136].OneofWrappers = []interface{}{
+	file_api_service_v1alpha1_service_proto_msgTypes[140].OneofWrappers = []interface{}{
 		(*GetPromotionTaskResponse_PromotionTask)(nil),
 		(*GetPromotionTaskResponse_Raw)(nil),
 	}
-	file_api_service_v1alpha1_service_proto_msgTypes[140].OneofWrappers = []interface{}{
+	file_api_service_v1alpha1_service_proto_msgTypes[144].OneofWrappers = []interface{}{
 		(*GetClusterPromotionTaskResponse_PromotionTask)(nil),
 		(*GetClusterPromotionTaskResponse_Raw)(nil),
 	}
-	file_api_service_v1alpha1_service_proto_msgTypes[146].OneofWrappers = []interface{}{
+	file_api_service_v1alpha1_service_proto_msgTypes[150].OneofWrappers = []interface{}{
 		(*GetRoleResponse_Role)(nil),
 		(*GetRoleResponse_Resources)(nil),
 		(*GetRoleResponse_Raw)(nil),
 	}
-	file_api_service_v1alpha1_service_proto_msgTypes[148].OneofWrappers = []interface{}{
+	file_api_service_v1alpha1_service_proto_msgTypes[152].OneofWrappers = []interface{}{
 		(*GrantRequest_UserClaims)(nil),
 		(*GrantRequest_ResourceDetails)(nil),
 	}
-	file_api_service_v1alpha1_service_proto_msgTypes[152].OneofWrappers = []interface{}{
+	file_api_service_v1alpha1_service_proto_msgTypes[156].OneofWrappers = []interface{}{
 		(*RevokeRequest_UserClaims)(nil),
 		(*RevokeRequest_ResourceDetails)(nil),
 	}
@@ -12926,7 +13203,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_api_service_v1alpha1_service_proto_rawDesc,
 			NumEnums:      1,
-			NumMessages:   163,
+			NumMessages:   167,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -45,6 +45,7 @@ service KargoService {
   rpc GetClusterConfig(GetClusterConfigRequest) returns (GetClusterConfigResponse);
   rpc DeleteClusterConfig(DeleteClusterConfigRequest) returns (DeleteClusterConfigResponse);
   rpc WatchClusterConfig(WatchClusterConfigRequest) returns (stream WatchClusterConfigResponse);
+  rpc RefreshClusterConfig(RefreshClusterConfigRequest) returns (RefreshClusterConfigResponse);
 
   /* Promotion APIs */
 
@@ -64,6 +65,7 @@ service KargoService {
   rpc GetProjectConfig(GetProjectConfigRequest) returns (GetProjectConfigResponse);
   rpc DeleteProjectConfig(DeleteProjectConfigRequest) returns (DeleteProjectConfigResponse);
   rpc WatchProjectConfig(WatchProjectConfigRequest) returns (stream WatchProjectConfigResponse);
+  rpc RefreshProjectConfig(RefreshProjectConfigRequest) returns (RefreshProjectConfigResponse);
 
   /* Freight APIs */
 
@@ -358,6 +360,14 @@ message WatchClusterConfigResponse {
   string type = 2; // ADDED / MODIFIED / DELETED
 }
 
+message RefreshClusterConfigRequest {
+  /* explicitly empty */
+}
+
+message RefreshClusterConfigResponse {
+  github.com.akuity.kargo.api.v1alpha1.ClusterConfig cluster_config = 1;
+}
+
 /* Promotion Messages */
 
 message ListPromotionsRequest {
@@ -473,6 +483,14 @@ message WatchProjectConfigRequest {
 message WatchProjectConfigResponse {
   github.com.akuity.kargo.api.v1alpha1.ProjectConfig project_config = 1;
   string type = 2; // ADDED / MODIFIED / DELETED
+}
+
+message RefreshProjectConfigRequest {
+  string project = 1;
+}
+
+message RefreshProjectConfigResponse {
+  github.com.akuity.kargo.api.v1alpha1.ProjectConfig project_config = 1;
 }
 
 /* Freight Messages */
