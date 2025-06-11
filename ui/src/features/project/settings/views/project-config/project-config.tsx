@@ -30,7 +30,7 @@ export const ProjectConfig = () => {
 
   const projectConfigQuery = useQuery(
     getProjectConfig,
-    { name, format: RawFormat.YAML },
+    { project: name, format: RawFormat.YAML },
     {
       transport: projectConfigTransport
     }
