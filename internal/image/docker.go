@@ -17,16 +17,6 @@ func NormalizeURL(repoURL string) (string, error) {
 
 	reg := parsed.Context().Registry.Name()
 	repo := parsed.Context().RepositoryStr()
-	tag := ""
-	digest := ""
-
-	// Extract tag or digest
-	switch r := parsed.(type) {
-	case name.Tag:
-		tag = r.TagStr()
-	case name.Digest:
-		digest = r.DigestStr()
-	}
 
 	// Normalize registry: drop docker.io/index.docker.io
 	if reg == "docker.io" || reg == "index.docker.io" {
@@ -35,20 +25,12 @@ func NormalizeURL(repoURL string) (string, error) {
 		repo = strings.TrimPrefix(repo, "library/")
 	}
 
-	// Compose normalized reference
+	// Compose normalized reference (no tag or digest)
 	var sb strings.Builder
 	if reg != "" {
 		sb.WriteString(reg)
 		sb.WriteString("/")
 	}
 	sb.WriteString(repo)
-	if tag != "" && tag != "latest" {
-		sb.WriteString(":")
-		sb.WriteString(tag)
-	}
-	if digest != "" {
-		sb.WriteString("@")
-		sb.WriteString(digest)
-	}
 	return sb.String(), nil
 }
