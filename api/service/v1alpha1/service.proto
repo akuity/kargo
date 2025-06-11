@@ -447,7 +447,7 @@ message ListProjectsResponse {
 /* ProjectConfig Messages */
 
 message GetProjectConfigRequest {
-  string name = 1;
+  string project = 1;
   RawFormat format = 2;
 }
 
@@ -459,7 +459,7 @@ message GetProjectConfigResponse {
 }
 
 message DeleteProjectConfigRequest {
-  string name = 1;
+  string project = 1;
 }
 
 message DeleteProjectConfigResponse {

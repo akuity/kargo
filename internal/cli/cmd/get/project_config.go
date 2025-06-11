@@ -100,7 +100,7 @@ func (o *getProjectConfigOptions) run(ctx context.Context) error {
 		ctx,
 		connect.NewRequest(
 			&v1alpha1.GetProjectConfigRequest{
-				Name: o.Project,
+				Project: o.Project,
 			},
 		),
 	)

@@ -99,7 +99,7 @@ func (o *deleteProjectConfigOptions) run(ctx context.Context) error {
 	if _, err = kargoSvcCli.DeleteProjectConfig(
 		ctx,
 		connect.NewRequest(&v1alpha1.DeleteProjectConfigRequest{
-			Name: o.Project,
+			Project: o.Project,
 		}),
 	); err != nil {
 		return fmt.Errorf("delete project configuration: %w", err)
