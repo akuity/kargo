@@ -3711,8 +3711,6 @@ export const WarehouseStatusSchema: GenMessage<WarehouseStatus> = /*@__PURE__*/
  * WebhookReceiverConfig describes the configuration for a single webhook
  * receiver.
  *
- * +kubebuilder:validation:XValidation:message="WebhookReceiverConfig must have exactly one of github or gitlab set",rule="has(self.github) ? !has(self.gitlab) : has(self.gitlab)"
- *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.WebhookReceiverConfig
  */
 export type WebhookReceiverConfig = Message<"github.com.akuity.kargo.api.v1alpha1.WebhookReceiverConfig"> & {
@@ -3742,8 +3740,6 @@ export type WebhookReceiverConfig = Message<"github.com.akuity.kargo.api.v1alpha
   /**
    * Quay contains the configuration for a webhook receiver that is compatible
    * with Quay payloads.
-   *
-   * TODO(fuskovic): Make this mutually exclusive with configs for other platforms.
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.QuayWebhookReceiverConfig quay = 4;
    */

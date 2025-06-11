@@ -1802,8 +1802,6 @@ message WarehouseStatus {
 
 // WebhookReceiverConfig describes the configuration for a single webhook
 // receiver.
-//
-// +kubebuilder:validation:XValidation:message="WebhookReceiverConfig must have exactly one of github or gitlab set",rule="has(self.github) ? !has(self.gitlab) : has(self.gitlab)"
 message WebhookReceiverConfig {
   // Name is the name of the webhook receiver.
   optional string name = 1;
@@ -1818,8 +1816,6 @@ message WebhookReceiverConfig {
 
   // Quay contains the configuration for a webhook receiver that is compatible
   // with Quay payloads.
-  //
-  // TODO(fuskovic): Make this mutually exclusive with configs for other platforms.
   optional QuayWebhookReceiverConfig quay = 4;
 }
 

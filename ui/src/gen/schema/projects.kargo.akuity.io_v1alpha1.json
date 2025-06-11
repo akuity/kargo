@@ -142,7 +142,7 @@
                 "type": "string"
               },
               "quay": {
-                "description": "Quay contains the configuration for a webhook receiver that is compatible\nwith Quay payloads.\n",
+                "description": "Quay contains the configuration for a webhook receiver that is compatible\nwith Quay payloads.",
                 "properties": {
                   "secretRef": {
                     "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster Secrets\" namespace.\n\nThe Secret's data map is expected to contain a `secret` key whose value\ndoes NOT need to be shared directly with Quay when registering a\nwebhook. It is used only by Kargo to create a complex, hard-to-guess URL,\nwhich implicitly serves as a shared secret. For more information about\nQuay webhooks, please refer to the Quay documentation:\n  https://docs.quay.io/guides/notifications.html",
@@ -163,13 +163,7 @@
                 "type": "object"
               }
             },
-            "type": "object",
-            "x-kubernetes-validations": [
-              {
-                "message": "WebhookReceiverConfig must have exactly one of github or gitlab set",
-                "rule": "has(self.github) ? !has(self.gitlab) : has(self.gitlab)"
-              }
-            ]
+            "type": "object"
           },
           "type": "array"
         }

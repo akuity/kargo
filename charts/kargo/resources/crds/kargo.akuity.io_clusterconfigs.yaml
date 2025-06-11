@@ -133,7 +133,7 @@ spec:
                       description: Name is the name of the webhook receiver.
                       type: string
                     quay:
-                      description: |
+                      description: |-
                         Quay contains the configuration for a webhook receiver that is compatible
                         with Quay payloads.
                       properties:
@@ -168,10 +168,6 @@ spec:
                       - secretRef
                       type: object
                   type: object
-                  x-kubernetes-validations:
-                  - message: WebhookReceiverConfig must have exactly one of github
-                      or gitlab set
-                    rule: 'has(self.github) ? !has(self.gitlab) : has(self.gitlab)'
                 type: array
             type: object
           status:
