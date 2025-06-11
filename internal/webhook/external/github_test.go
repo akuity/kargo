@@ -3,12 +3,8 @@ package external
 import (
 	"bytes"
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -468,12 +464,4 @@ func TestGithubHandler(t *testing.T) {
 			testCase.assertions(t, w)
 		})
 	}
-}
-
-func sign(content []byte) string {
-	mac := hmac.New(sha256.New, []byte(githubSigningKey))
-	_, _ = mac.Write(content)
-	return fmt.Sprintf("sha256=%s",
-		hex.EncodeToString(mac.Sum(nil)),
-	)
 }

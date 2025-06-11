@@ -51,14 +51,14 @@ func (s *server) GetCredentials(
 	}
 
 	// If this isn't labeled as repository credentials, return not found.
-	if _, isCredentials := secret.Labels[kargoapi.CredentialTypeLabelKey]; !isCredentials {
+	if _, isCredentials := secret.Labels[kargoapi.LabelKeyCredentialType]; !isCredentials {
 		return nil, connect.NewError(
 			connect.CodeNotFound,
 			fmt.Errorf(
 				"secret %s/%s exists, but is not labeled with %s",
 				secret.Namespace,
 				secret.Name,
-				kargoapi.CredentialTypeLabelKey,
+				kargoapi.LabelKeyCredentialType,
 			),
 		)
 	}

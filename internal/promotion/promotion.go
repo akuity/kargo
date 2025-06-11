@@ -79,6 +79,7 @@ func (c Context) DeepCopy() Context {
 		Stage:                 c.Stage,
 		Promotion:             c.Promotion,
 		Freight:               *c.Freight.DeepCopy(),
+		TargetFreightRef:      *c.TargetFreightRef.DeepCopy(),
 		StartFromStep:         c.StartFromStep,
 		StepExecutionMetadata: c.StepExecutionMetadata.DeepCopy(),
 		State:                 c.State.DeepCopy(),

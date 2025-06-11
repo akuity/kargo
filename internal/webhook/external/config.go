@@ -28,10 +28,6 @@ func ServerConfigFromEnv() ServerConfig {
 	if cfg.BaseURL == "" {
 		panic("EXTERNAL_WEBHOOK_SERVER_BASE_URL must be set")
 	}
-
-	if cfg.ClusterSecretsNamespace == "" {
-		panic("CLUSTER_SECRETS_NAMESPACE must be set")
-	}
 	envconfig.MustProcess("", &cfg.StandardConfig)
 	if types.MustParseBool(os.GetEnv("TLS_ENABLED", "false")) {
 		tlsCfg := TLSConfigFromEnv()

@@ -164,7 +164,7 @@ func TestDefault(t *testing.T) {
 			},
 			assertions: func(t *testing.T, promo *kargoapi.Promotion, err error) {
 				require.NoError(t, err)
-				require.Equal(t, "fake-shard", promo.Labels[kargoapi.ShardLabelKey])
+				require.Equal(t, "fake-shard", promo.Labels[kargoapi.LabelKeyShard])
 				require.NotEmpty(t, promo.OwnerReferences)
 			},
 		},

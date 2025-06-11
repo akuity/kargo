@@ -102,7 +102,7 @@ func TestGetCredentials(t *testing.T) {
 						Namespace: "kargo-demo",
 						Name:      "test",
 						Labels: map[string]string{
-							kargoapi.CredentialTypeLabelKey: "repository",
+							kargoapi.LabelKeyCredentialType: "repository",
 						},
 						Annotations: map[string]string{
 							"last-applied-configuration": "fake-configuration",
@@ -150,7 +150,7 @@ func TestGetCredentials(t *testing.T) {
 						Namespace: "kargo-demo",
 						Name:      "test",
 						Labels: map[string]string{
-							kargoapi.CredentialTypeLabelKey: "repository",
+							kargoapi.LabelKeyCredentialType: "repository",
 						},
 						Annotations: map[string]string{
 							"last-applied-configuration": "fake-configuration",
@@ -206,7 +206,7 @@ func TestGetCredentials(t *testing.T) {
 						Namespace: "kargo-demo",
 						Name:      "test",
 						Labels: map[string]string{
-							kargoapi.CredentialTypeLabelKey: "repository",
+							kargoapi.LabelKeyCredentialType: "repository",
 						},
 						Annotations: map[string]string{
 							"last-applied-configuration": "fake-configuration",
