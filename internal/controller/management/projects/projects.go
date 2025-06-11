@@ -359,7 +359,7 @@ func (r *reconciler) syncProject(
 				Message: fmt.Sprintf(
 					"Namespace %q already exists but is not labeled as a Project namespace using label %q",
 					project.Name,
-					kargoapi.ProjectLabelKey,
+					kargoapi.LabelKeyProject,
 				),
 				ObservedGeneration: project.GetGeneration(),
 			})
@@ -442,7 +442,7 @@ func (r *reconciler) ensureNamespace(ctx context.Context, project *kargoapi.Proj
 	} else if err == nil {
 		// We found an existing namespace with the same name as the Project. It's
 		// only a problem if it is not labeled as a Project namespace.
-		if ns.Labels[kargoapi.ProjectLabelKey] != kargoapi.LabelTrueValue {
+		if ns.Labels[kargoapi.LabelKeyProject] != kargoapi.LabelValueTrue {
 			return fmt.Errorf(
 				"failed to sync Project %q with namespace %q: %w",
 				project.Name, project.Name, errProjectNamespaceExists,
@@ -494,7 +494,7 @@ func (r *reconciler) ensureNamespace(ctx context.Context, project *kargoapi.Proj
 		ObjectMeta: metav1.ObjectMeta{
 			Name: project.Name,
 			Labels: map[string]string{
-				kargoapi.ProjectLabelKey: kargoapi.LabelTrueValue,
+				kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
 			},
 			OwnerReferences: []metav1.OwnerReference{*ownerRef},
 		},

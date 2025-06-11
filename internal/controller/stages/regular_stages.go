@@ -1323,8 +1323,8 @@ func (r *RegularStageReconciler) startVerification(
 		rollouts.WithNamePrefix(stage.Name),
 		rollouts.WithNameSuffix(freight.ID),
 		rollouts.WithExtraLabels(map[string]string{
-			kargoapi.StageLabelKey:             stage.Name,
-			kargoapi.FreightCollectionLabelKey: freight.ID,
+			kargoapi.LabelKeyStage:             stage.Name,
+			kargoapi.LabelKeyFreightCollection: freight.ID,
 		}),
 		rollouts.WithArgumentEvaluationConfig{
 			Env: map[string]any{
@@ -1587,8 +1587,8 @@ func (r *RegularStageReconciler) findExistingAnalysisRun(
 		client.InNamespace(stage.Namespace),
 		client.MatchingLabelsSelector{
 			Selector: labels.SelectorFromSet(map[string]string{
-				kargoapi.StageLabelKey:             stage.Name,
-				kargoapi.FreightCollectionLabelKey: freightColID,
+				kargoapi.LabelKeyStage:             stage.Name,
+				kargoapi.LabelKeyFreightCollection: freightColID,
 			}),
 		},
 	); err != nil {
@@ -1961,7 +1961,7 @@ func (r *RegularStageReconciler) clearAnalysisRuns(ctx context.Context, stage *k
 		&rolloutsapi.AnalysisRun{},
 		client.InNamespace(stage.Namespace),
 		client.MatchingLabels(map[string]string{
-			kargoapi.StageLabelKey: stage.Name,
+			kargoapi.LabelKeyStage: stage.Name,
 		}),
 	); err != nil {
 		return fmt.Errorf("error deleting AnalysisRuns for Stage %q in namespace %q: %w",

@@ -235,14 +235,14 @@ func (w *webhook) ensureProjectNamespace(ctx context.Context, meta metav1.Object
 		)
 	}
 
-	v, ok := ns.Labels[kargoapi.ProjectLabelKey]
-	if !ok || v != kargoapi.LabelTrueValue {
+	v, ok := ns.Labels[kargoapi.LabelKeyProject]
+	if !ok || v != kargoapi.LabelValueTrue {
 		return apierrors.NewForbidden(
 			projectConfigGroupResource,
 			meta.Name,
 			fmt.Errorf(
 				"namespace %q does not belong to Kargo project (missing %q label)",
-				meta.Namespace, kargoapi.ProjectLabelKey,
+				meta.Namespace, kargoapi.LabelKeyProject,
 			),
 		)
 	}

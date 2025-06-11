@@ -72,9 +72,9 @@ func (s *server) validateCredentials(creds credentials) error {
 		return err
 	}
 	switch creds.credType {
-	case kargoapi.CredentialTypeLabelValueGit,
-		kargoapi.CredentialTypeLabelValueHelm,
-		kargoapi.CredentialTypeLabelValueImage:
+	case kargoapi.LabelValueCredentialTypeGit,
+		kargoapi.LabelValueCredentialTypeHelm,
+		kargoapi.LabelValueCredentialTypeImage:
 	default:
 		return connect.NewError(
 			connect.CodeInvalidArgument,
@@ -99,7 +99,7 @@ func credentialsToK8sSecret(creds credentials) *corev1.Secret {
 			Namespace: creds.project,
 			Name:      creds.name,
 			Labels: map[string]string{
-				kargoapi.CredentialTypeLabelKey: creds.credType,
+				kargoapi.LabelKeyCredentialType: creds.credType,
 			},
 		},
 		Data: map[string][]byte{

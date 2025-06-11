@@ -72,7 +72,7 @@ func StagesByAnalysisRun(shardName string) client.IndexerFunc {
 		//
 		// 2. This is a shard-specific controller, but the object is not labeled for
 		//    this shard.
-		objShardName, labeled := obj.GetLabels()[kargoapi.ShardLabelKey]
+		objShardName, labeled := obj.GetLabels()[kargoapi.LabelKeyShard]
 		if (shardName == "" && labeled) ||
 			(shardName != "" && shardName != objShardName) {
 			return nil
@@ -132,7 +132,7 @@ func RunningPromotionsByArgoCDApplications(
 		//
 		// 2. This is a shard-specific controller, but the object is not labeled for
 		//    this shard.
-		objShardName, labeled := obj.GetLabels()[kargoapi.ShardLabelKey]
+		objShardName, labeled := obj.GetLabels()[kargoapi.LabelKeyShard]
 		if (shardName == "" && labeled) || (shardName != "" && shardName != objShardName) {
 			return nil
 		}

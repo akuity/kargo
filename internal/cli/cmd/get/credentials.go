@@ -171,7 +171,7 @@ func newCredentialsTable(list *metav1.List) *metav1.Table {
 		rows[i] = metav1.TableRow{
 			Cells: []any{
 				secret.Name,
-				secret.ObjectMeta.Labels[kargoapi.CredentialTypeLabelKey],
+				secret.ObjectMeta.Labels[kargoapi.LabelKeyCredentialType],
 				secret.StringData[libCreds.FieldRepoURLIsRegex],
 				secret.StringData[libCreds.FieldRepoURL],
 				duration.HumanDuration(time.Since(secret.CreationTimestamp.Time)),

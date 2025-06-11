@@ -91,9 +91,9 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 		if stage.Labels == nil {
 			stage.Labels = make(map[string]string, 1)
 		}
-		stage.Labels[kargoapi.ShardLabelKey] = stage.Spec.Shard
+		stage.Labels[kargoapi.LabelKeyShard] = stage.Spec.Shard
 	} else {
-		delete(stage.Labels, kargoapi.ShardLabelKey)
+		delete(stage.Labels, kargoapi.LabelKeyShard)
 	}
 
 	req, err := w.admissionRequestFromContextFn(ctx)

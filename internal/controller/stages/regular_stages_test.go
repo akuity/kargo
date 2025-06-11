@@ -2661,8 +2661,8 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 						Name:      "existing-analysis",
 						Namespace: "fake-project",
 						Labels: map[string]string{
-							kargoapi.StageLabelKey:             "test-stage",
-							kargoapi.FreightCollectionLabelKey: "test-freight-collection",
+							kargoapi.LabelKeyStage:             "test-stage",
+							kargoapi.LabelKeyFreightCollection: "test-freight-collection",
 						},
 					},
 					Status: rolloutsapi.AnalysisRunStatus{
@@ -3643,8 +3643,8 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 						Name:      "existing-analysis",
 						Namespace: "fake-project",
 						Labels: map[string]string{
-							kargoapi.StageLabelKey:             "test-stage",
-							kargoapi.FreightCollectionLabelKey: "test-collection",
+							kargoapi.LabelKeyStage:             "test-stage",
+							kargoapi.LabelKeyFreightCollection: "test-collection",
 						},
 					},
 					Status: rolloutsapi.AnalysisRunStatus{
@@ -4551,8 +4551,8 @@ func TestRegularStageReconciler_findExistingAnalysisRun(t *testing.T) {
 						Namespace:         "fake-project",
 						CreationTimestamp: metav1.Time{Time: twoHoursAgo},
 						Labels: map[string]string{
-							kargoapi.StageLabelKey:             "test-stage",
-							kargoapi.FreightCollectionLabelKey: "test-collection",
+							kargoapi.LabelKeyStage:             "test-stage",
+							kargoapi.LabelKeyFreightCollection: "test-collection",
 						},
 					},
 					Status: rolloutsapi.AnalysisRunStatus{
@@ -4565,8 +4565,8 @@ func TestRegularStageReconciler_findExistingAnalysisRun(t *testing.T) {
 						Namespace:         "fake-project",
 						CreationTimestamp: metav1.Time{Time: hourAgo},
 						Labels: map[string]string{
-							kargoapi.StageLabelKey:             "test-stage",
-							kargoapi.FreightCollectionLabelKey: "test-collection",
+							kargoapi.LabelKeyStage:             "test-stage",
+							kargoapi.LabelKeyFreightCollection: "test-collection",
 						},
 					},
 					Status: rolloutsapi.AnalysisRunStatus{
@@ -4596,8 +4596,8 @@ func TestRegularStageReconciler_findExistingAnalysisRun(t *testing.T) {
 						Namespace:         "fake-project",
 						CreationTimestamp: metav1.Time{Time: hourAgo},
 						Labels: map[string]string{
-							kargoapi.StageLabelKey:             "other-stage",
-							kargoapi.FreightCollectionLabelKey: "test-collection",
+							kargoapi.LabelKeyStage:             "other-stage",
+							kargoapi.LabelKeyFreightCollection: "test-collection",
 						},
 					},
 				},
@@ -4607,8 +4607,8 @@ func TestRegularStageReconciler_findExistingAnalysisRun(t *testing.T) {
 						Namespace:         "fake-project",
 						CreationTimestamp: metav1.Time{Time: twoHoursAgo},
 						Labels: map[string]string{
-							kargoapi.StageLabelKey:             "test-stage",
-							kargoapi.FreightCollectionLabelKey: "test-collection",
+							kargoapi.LabelKeyStage:             "test-stage",
+							kargoapi.LabelKeyFreightCollection: "test-collection",
 						},
 					},
 				},
@@ -4634,8 +4634,8 @@ func TestRegularStageReconciler_findExistingAnalysisRun(t *testing.T) {
 						Namespace:         "fake-project",
 						CreationTimestamp: metav1.Time{Time: hourAgo},
 						Labels: map[string]string{
-							kargoapi.StageLabelKey:             "test-stage",
-							kargoapi.FreightCollectionLabelKey: "other-collection",
+							kargoapi.LabelKeyStage:             "test-stage",
+							kargoapi.LabelKeyFreightCollection: "other-collection",
 						},
 					},
 				},
@@ -4645,8 +4645,8 @@ func TestRegularStageReconciler_findExistingAnalysisRun(t *testing.T) {
 						Namespace:         "fake-project",
 						CreationTimestamp: metav1.Time{Time: twoHoursAgo},
 						Labels: map[string]string{
-							kargoapi.StageLabelKey:             "test-stage",
-							kargoapi.FreightCollectionLabelKey: "test-collection",
+							kargoapi.LabelKeyStage:             "test-stage",
+							kargoapi.LabelKeyFreightCollection: "test-collection",
 						},
 					},
 				},
@@ -4672,8 +4672,8 @@ func TestRegularStageReconciler_findExistingAnalysisRun(t *testing.T) {
 						Namespace:         "fake-project",
 						CreationTimestamp: metav1.Time{Time: hourAgo},
 						Labels: map[string]string{
-							kargoapi.StageLabelKey:             "test-stage",
-							kargoapi.FreightCollectionLabelKey: "test-collection",
+							kargoapi.LabelKeyStage:             "test-stage",
+							kargoapi.LabelKeyFreightCollection: "test-collection",
 						},
 					},
 				},
@@ -4683,8 +4683,8 @@ func TestRegularStageReconciler_findExistingAnalysisRun(t *testing.T) {
 						Namespace:         "test-namespace",
 						CreationTimestamp: metav1.Time{Time: twoHoursAgo},
 						Labels: map[string]string{
-							kargoapi.StageLabelKey:             "test-stage",
-							kargoapi.FreightCollectionLabelKey: "test-collection",
+							kargoapi.LabelKeyStage:             "test-stage",
+							kargoapi.LabelKeyFreightCollection: "test-collection",
 						},
 					},
 				},
@@ -4710,8 +4710,8 @@ func TestRegularStageReconciler_findExistingAnalysisRun(t *testing.T) {
 						Name:      "test-analysis",
 						Namespace: "fake-project",
 						Labels: map[string]string{
-							kargoapi.StageLabelKey:             "test-stage",
-							kargoapi.FreightCollectionLabelKey: "",
+							kargoapi.LabelKeyStage:             "test-stage",
+							kargoapi.LabelKeyFreightCollection: "",
 						},
 					},
 				},
@@ -5096,7 +5096,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 						Namespace: "fake-project",
 						Name:      "existing-promotion",
 						Labels: map[string]string{
-							kargoapi.StageLabelKey: "test-stage",
+							kargoapi.LabelKeyStage: "test-stage",
 						},
 					},
 					Spec: kargoapi.PromotionSpec{

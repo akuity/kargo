@@ -31,7 +31,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: testProjectName,
 			Labels: map[string]string{
-				kargoapi.ProjectLabelKey: kargoapi.LabelTrueValue,
+				kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
 			},
 		},
 	}
@@ -44,7 +44,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: testProjectName,
 			Labels: map[string]string{
-				kargoapi.ProjectLabelKey: "false",
+				kargoapi.LabelKeyProject: "false",
 			},
 		},
 	}
@@ -176,7 +176,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 					statusErr.ErrStatus.Message,
 					fmt.Sprintf(
 						`namespace %q does not belong to Kargo project (missing %q label)`,
-						testProjectName, kargoapi.ProjectLabelKey,
+						testProjectName, kargoapi.LabelKeyProject,
 					),
 				)
 			},
@@ -203,7 +203,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 					statusErr.ErrStatus.Message,
 					fmt.Sprintf(
 						`namespace %q does not belong to Kargo project (missing %q label)`,
-						testProjectName, kargoapi.ProjectLabelKey,
+						testProjectName, kargoapi.LabelKeyProject,
 					),
 				)
 			},
