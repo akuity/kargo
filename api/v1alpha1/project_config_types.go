@@ -88,23 +88,25 @@ type PromotionPolicy struct {
 
 // WebhookReceiverConfig describes the configuration for a single webhook
 // receiver.
+//
+// +kubebuilder:validation:XValidation:message="WebhookReceiverConfig must have exactly one of github or gitlab set",rule="has(self.github) ? !has(self.gitlab) : has(self.gitlab)"
 type WebhookReceiverConfig struct {
 	// Name is the name of the webhook receiver.
 	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
 	// GitHub contains the configuration for a webhook receiver that is compatible
 	// with GitHub payloads.
 	//
-	// TODO(fuskovic): Make this mutually exclusive with configs for other platforms.
-	//
-	// +kubebuilder:validation:Required
 	GitHub *GitHubWebhookReceiverConfig `json:"github,omitempty" protobuf:"bytes,2,opt,name=github"`
-
+	// GitLab contains the configuration for a webhook receiver that is compatible
+	// with GitLab payloads.
+	//
+	GitLab *GitLabWebhookReceiverConfig `json:"gitlab,omitempty" protobuf:"bytes,3,opt,name=gitlab"`
 	// Quay contains the configuration for a webhook receiver that is compatible
 	// with Quay payloads.
 	//
 	// TODO(fuskovic): Make this mutually exclusive with configs for other platforms.
 	//
-	Quay *QuayWebhookReceiverConfig `json:"quay,omitempty" protobuf:"bytes,3,opt,name=quay"`
+	Quay *QuayWebhookReceiverConfig `json:"quay,omitempty" protobuf:"bytes,4,opt,name=quay"`
 }
 
 // GitHubWebhookReceiverConfig describes a webhook receiver that is compatible
@@ -122,8 +124,26 @@ type GitHubWebhookReceiverConfig struct {
 	// For more information please refer to GitHub documentation:
 	//   https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
 	//
-	// The value of the token key goes in the "Secret" field when registering a
-	// GitHub App or webhook in the GitHub UI.
+	// +kubebuilder:validation:Required
+	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+}
+
+// GitLabWebhookReceiverConfig describes a webhook receiver that is compatible
+// with GitLab payloads.
+type GitLabWebhookReceiverConfig struct {
+	// SecretRef contains a reference to a Secret. For Project-scoped webhook
+	// receivers, the referenced Secret must be in the same namespace as the
+	// ProjectConfig.
+	//
+	// For cluster-scoped webhook receivers, the referenced Secret must be in the
+	// designated "cluster Secrets" namespace.
+	//
+	// The secret is expected to contain a `secret-token` key containing the
+	// shared secret specified when registering the webhook in GitLab. For more
+	// information about this token, please refer to the GitLab documentation:
+	//   https://docs.gitlab.com/user/project/integrations/webhooks/
+	//
+	// +kubebuilder:validation:Required
 	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
 }
 

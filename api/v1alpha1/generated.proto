@@ -602,8 +602,26 @@ message GitHubWebhookReceiverConfig {
   // For more information please refer to GitHub documentation:
   //   https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
   //
-  // The value of the token key goes in the "Secret" field when registering a
-  // GitHub App or webhook in the GitHub UI.
+  // +kubebuilder:validation:Required
+  optional .k8s.io.api.core.v1.LocalObjectReference secretRef = 1;
+}
+
+// GitLabWebhookReceiverConfig describes a webhook receiver that is compatible
+// with GitLab payloads.
+message GitLabWebhookReceiverConfig {
+  // SecretRef contains a reference to a Secret. For Project-scoped webhook
+  // receivers, the referenced Secret must be in the same namespace as the
+  // ProjectConfig.
+  //
+  // For cluster-scoped webhook receivers, the referenced Secret must be in the
+  // designated "cluster Secrets" namespace.
+  //
+  // The secret is expected to contain a `secret-token` key containing the
+  // shared secret specified when registering the webhook in GitLab. For more
+  // information about this token, please refer to the GitLab documentation:
+  //   https://docs.gitlab.com/user/project/integrations/webhooks/
+  //
+  // +kubebuilder:validation:Required
   optional .k8s.io.api.core.v1.LocalObjectReference secretRef = 1;
 }
 
@@ -1784,23 +1802,25 @@ message WarehouseStatus {
 
 // WebhookReceiverConfig describes the configuration for a single webhook
 // receiver.
+//
+// +kubebuilder:validation:XValidation:message="WebhookReceiverConfig must have exactly one of github or gitlab set",rule="has(self.github) ? !has(self.gitlab) : has(self.gitlab)"
 message WebhookReceiverConfig {
   // Name is the name of the webhook receiver.
   optional string name = 1;
 
   // GitHub contains the configuration for a webhook receiver that is compatible
   // with GitHub payloads.
-  //
-  // TODO(fuskovic): Make this mutually exclusive with configs for other platforms.
-  //
-  // +kubebuilder:validation:Required
   optional GitHubWebhookReceiverConfig github = 2;
+
+  // GitLab contains the configuration for a webhook receiver that is compatible
+  // with GitLab payloads.
+  optional GitLabWebhookReceiverConfig gitlab = 3;
 
   // Quay contains the configuration for a webhook receiver that is compatible
   // with Quay payloads.
   //
   // TODO(fuskovic): Make this mutually exclusive with configs for other platforms.
-  optional QuayWebhookReceiverConfig quay = 3;
+  optional QuayWebhookReceiverConfig quay = 4;
 }
 
 // WebhookReceiverDetails encapsulates the details of a webhook receiver.
