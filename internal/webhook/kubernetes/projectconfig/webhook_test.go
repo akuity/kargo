@@ -583,7 +583,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				assert.Equal(t, "spec.webhookReceivers[0]", statusErr.ErrStatus.Details.Causes[0].Field)
 				assert.Equal(t, metav1.CauseTypeForbidden, statusErr.ErrStatus.Details.Causes[0].Type)
 				assert.Contains(t, statusErr.ErrStatus.Details.Causes[0].Message,
-					"only one webhook receiver can be defined at a time, found 3: [GitHub GitLab Quay]")
+					"cannot define a receiver that is of more than one type, found 3: [GitHub GitLab Quay]")
 			},
 		},
 	}
