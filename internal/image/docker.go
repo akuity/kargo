@@ -1,88 +1,56 @@
 package image
 
 import (
-	"errors"
 	"fmt"
-	"regexp"
 	"strings"
+
+	"github.com/google/go-containerregistry/pkg/name"
 )
 
-const (
-	DefaultDockerHost      = "docker.io"
-	DefaultDockerNamespace = "library"
-	DefaultDockerTag       = "latest"
-)
-
-var (
-	RepoNameComponentRegexp = regexp.MustCompile(`^[a-z0-9]+(?:[._-][a-z0-9]+)*$`)
-)
-
-// NormalizeRef normalizes Docker image references of the following forms:
-//
-//   - [docker.io/][namespace/]repo[:tag]
-//   - [docker.io/][namespace/]repo[@digest]
-//
-// This is useful for the purposes of comparison and also in cases where a
-// canonical representation of a Docker Hub image reference is needed. Any reference
-// that cannot be normalized will return an error.
-//
-// Examples:
-//
-//	"nginx"                    -> "docker.io/library/nginx:latest"
-//	"user/repo:v1.0"           -> "docker.io/user/repo:v1.0"
-//	"docker.io/library/nginx"  -> "docker.io/library/nginx:latest"
-//	"nginx@sha256:..."         -> "docker.io/library/nginx@sha256:..."
-func NormalizeRef(ref string) (string, error) {
-	ref = strings.TrimSpace(ref)
-	if ref == "" {
-		return "", errors.New("empty image reference")
-	}
-	ref = strings.ToLower(ref)
-
-	// Remove leading docker.io/ if present
-	if strings.HasPrefix(ref, DefaultDockerHost+"/") {
-		ref = strings.TrimPrefix(ref, DefaultDockerHost+"/")
+// NormalizeRef returns a short, canonical Docker reference for comparison and display.
+// E.g. "docker.io/library/nginx:latest" -> "nginx"
+func NormalizeURL(repoURL string) (string, error) {
+	parsed, err := name.ParseReference(repoURL, name.WeakValidation)
+	if err != nil {
+		return "", fmt.Errorf("invalid image reference: %w", err)
 	}
 
-	// Extract digest if present
-	var digest string
-	if at := strings.LastIndex(ref, "@"); at != -1 {
-		digest = ref[at:]
-		ref = ref[:at]
-		matched, _ := regexp.MatchString(`^@sha256:[a-f0-9]{64}$`, digest)
-		if !matched {
-			return "", fmt.Errorf("invalid digest format: %q", digest)
+	reg := parsed.Context().Registry.Name()
+	repo := parsed.Context().RepositoryStr()
+	tag := ""
+	digest := ""
+
+	// Extract tag or digest
+	switch r := parsed.(type) {
+	case name.Tag:
+		tag = r.TagStr()
+	case name.Digest:
+		digest = r.DigestStr()
+	}
+
+	// Normalize registry: drop docker.io/index.docker.io
+	if reg == "docker.io" || reg == "index.docker.io" {
+		reg = ""
+		// Drop "library/" prefix for official images
+		if strings.HasPrefix(repo, "library/") {
+			repo = strings.TrimPrefix(repo, "library/")
 		}
 	}
 
-	// Extract tag if present (only if no digest)
-	var tag string
-	if digest == "" {
-		if colon := strings.LastIndex(ref, ":"); colon != -1 && colon > strings.LastIndex(ref, "/") {
-			tag = ref[colon+1:]
-			ref = ref[:colon]
-			if tag == "" {
-				return "", errors.New("image reference has a colon but no tag")
-			}
-		} else {
-			tag = DefaultDockerTag
-		}
+	// Compose normalized reference
+	var sb strings.Builder
+	if reg != "" {
+		sb.WriteString(reg)
+		sb.WriteString("/")
 	}
-
-	// Normalize path: always at least namespace/repo
-	parts := strings.Split(ref, "/")
-	if len(parts) == 1 {
-		parts = []string{DefaultDockerNamespace, parts[0]}
+	sb.WriteString(repo)
+	if tag != "" && tag != "latest" {
+		sb.WriteString(":")
+		sb.WriteString(tag)
 	}
-	for _, part := range parts {
-		if !RepoNameComponentRegexp.MatchString(part) {
-			return "", fmt.Errorf("invalid repository name component: %q", part)
-		}
-	}
-	path := strings.Join(parts, "/")
-
 	if digest != "" {
-		return fmt.Sprintf("%s/%s%s", DefaultDockerHost, path, digest), nil
+		sb.WriteString("@")
+		sb.WriteString(digest)
 	}
-	return fmt.Sprintf("%s/%s:%s", DefaultDockerHost, path, tag), nil
+	return sb.String(), nil
 }
