@@ -37,11 +37,11 @@ func validateMutuallyExclusive(
 			receivers = append(receivers, "Quay")
 		}
 		if len(receivers) > 1 {
-			errs = append(errs, field.Invalid(
+			errs = append(errs, field.Forbidden(
 				f.Index(i),
-				receivers,
 				fmt.Sprintf(
-					"only one webhook receiver can be defined at a time, found: %s",
+					"only one webhook receiver can be defined at a time, found %d: %s",
+					len(receivers),
 					receivers,
 				),
 			))
