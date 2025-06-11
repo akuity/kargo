@@ -3,11 +3,9 @@ package external
 import (
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
-	"net/url"
-	"strings"
 
+	"github.com/google/go-containerregistry/pkg/name"
 	gh "github.com/google/go-github/v71/github"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -23,6 +21,9 @@ const (
 
 	github                    = "github"
 	githubWebhookBodyMaxBytes = 2 << 20 // 2MB
+
+	ghcrPackageTypeContainer = "CONTAINER"
+	ghcrPackageTypeDocker    = "docker"
 )
 
 func init() {
@@ -90,7 +91,7 @@ func (g *githubWebhookReceiver) GetHandler() http.HandlerFunc {
 
 		eventType := r.Header.Get("X-GitHub-Event")
 		switch eventType {
-		case "ping", "push", "package":
+		case "package", "ping", "push":
 		default:
 			xhttp.WriteErrorJSON(
 				w,
@@ -159,6 +160,38 @@ func (g *githubWebhookReceiver) GetHandler() http.HandlerFunc {
 		var repoURL string
 
 		switch e := event.(type) {
+		case *gh.PackageEvent:
+			switch e.GetAction() {
+			// These are the only actions that should refresh Warehouses.
+			case "published", "updated":
+			default:
+				xhttp.WriteResponseJSON(w, http.StatusOK, nil)
+				return
+			}
+			pkg := e.GetPackage()
+			if pkg == nil || pkg.GetPackageVersion() == nil {
+				xhttp.WriteErrorJSON(
+					w,
+					xhttp.Error(errors.New("invalid request body"), http.StatusBadRequest),
+				)
+				return
+			}
+			switch pkg.GetPackageType() {
+			// These are the only types of packages we care about.
+			case ghcrPackageTypeContainer, ghcrPackageTypeDocker:
+			default:
+				xhttp.WriteResponseJSON(w, http.StatusOK, nil)
+				return
+			}
+			var ref name.Reference
+			if ref, err = name.ParseReference(
+				*pkg.GetPackageVersion().PackageURL,
+			); err != nil {
+				xhttp.WriteErrorJSON(w, err)
+				return
+			}
+			repoURL = ref.Context().Name()
+
 		case *gh.PingEvent:
 			xhttp.WriteResponseJSON(
 				w,
@@ -168,37 +201,15 @@ func (g *githubWebhookReceiver) GetHandler() http.HandlerFunc {
 				},
 			)
 			return
+
 		case *gh.PushEvent:
 			// TODO(krancour): GetHTMLURL() gives use a repo URL starting with
 			// https://. By refreshing Warehouses using a normalized representation of
 			// that URL, we will miss any Warehouses that are subscribed to the same
 			// repository using a different URL format.
 			repoURL = git.NormalizeURL(e.GetRepo().GetCloneURL())
-		// nolint: lll
-		case *gh.PackageEvent:
-			// default registry domain stands for "ghcr.io"
-			// Free, Pro & Team account will be using the default registry domain
-			// Enterprise plan lets you define a URL for the container registry
-			// such as `https://containers.SUBDOMAIN.ghe.com`
-			// https://docs.github.com/en/enterprise-cloud@latest/packages/working-with-a-github-packages-registry/working-with-the-container-registry#url-for-the-container-registry
-			registryDomain := "ghcr.io"
-			// Fetch the html url field from the package event
-			// and check the domain configured
-			htmlUrl := e.GetRepo().GetHTMLURL()
-			host, valid := isGitHubURL(htmlUrl)
-			// if the host is not simply 'github.com'
-			// it means the team is using the GitHub enterprise version
-			// hence change the registry domain
-			if !valid {
-				registryDomain = fmt.Sprintf("containers.%s.ghe.com", host)
-			}
-
-			repoURL = fmt.Sprintf(
-				"%s/%v/%v",
-				registryDomain, *e.GetPackage().Namespace, *e.GetPackage().Name,
-			)
-			// nolint: lll
 		}
+
 		logger = logger.WithValues("repoURL", repoURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
 
@@ -228,21 +239,4 @@ func (g *githubWebhookReceiver) GetHandler() http.HandlerFunc {
 			},
 		)
 	})
-}
-
-// isGitHubURL checks whether the given URL belongs to github.com.
-// It returns the hostname and a boolean indicating whether the host is exactly "github.com".
-func isGitHubURL(input string) (string, bool) {
-	u, err := url.Parse(input)
-	if err != nil {
-		return "", false
-	}
-	host := u.Host
-	if strings.Contains(host, ":") {
-		host, _, err = net.SplitHostPort(host)
-		if err != nil {
-			return "", false
-		}
-	}
-	return host, host == "github.com"
 }

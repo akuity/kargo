@@ -14,6 +14,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	gh "github.com/google/go-github/v71/github"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -25,32 +26,28 @@ import (
 	"github.com/akuity/kargo/internal/indexer"
 )
 
-const githubPushEventRequestBody = `
-{
-	"ref": "refs/heads/main",
-	"repository": {
-		"clone_url": "https://github.com/example/repo"
-	}
-}`
-
-const githubPackageEventRequestBody = `
-{
-	"action": "published",
-	"package": {
-		"namespace": "example",
-		"name": "repo"
-    },
-    "repository": {
-		"html_url": "https://github.com/example/repo"
-	}
-}`
-
 const githubSigningKey = "mysupersecrettoken"
 
 func TestGithubHandler(t *testing.T) {
 	const testURL = "https://webhooks.kargo.example.com/nonsense"
 
 	const testProjectName = "fake-project"
+
+	var validPushEvent = &gh.PushEvent{
+		Ref: gh.Ptr("refs/heads/main"),
+		Repo: &gh.PushEventRepository{
+			CloneURL: gh.Ptr("https://github.com/example/repo"),
+		},
+	}
+	var validPackageEvent = &gh.PackageEvent{
+		Action: gh.Ptr("published"),
+		Package: &gh.Package{
+			PackageType: gh.Ptr(ghcrPackageTypeContainer),
+			PackageVersion: &gh.PackageVersion{
+				PackageURL: gh.Ptr("ghcr.io/example/repo:latest"),
+			},
+		},
+	}
 
 	testScheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(testScheme))
@@ -97,7 +94,7 @@ func TestGithubHandler(t *testing.T) {
 			name:       "request body too large",
 			secretData: testSecretData,
 			req: func() *http.Request {
-				body := make([]byte, 2<<20+1)
+				body := make([]byte, githubWebhookBodyMaxBytes+1)
 				req := httptest.NewRequest(
 					http.MethodPost,
 					testURL,
@@ -176,6 +173,180 @@ func TestGithubHandler(t *testing.T) {
 			},
 		},
 		{
+			name:       "unsupported package event action",
+			secretData: testSecretData,
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(
+					&gh.PackageEvent{Action: gh.Ptr("deleted")},
+				)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set("X-Hub-Signature-256", sign(bodyBytes))
+				req.Header.Set("X-GitHub-Event", "package")
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, "{}", rr.Body.String())
+			},
+		},
+		{
+			name:       "package event missing package",
+			secretData: testSecretData,
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(
+					&gh.PackageEvent{Action: gh.Ptr("published")},
+				)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set("X-Hub-Signature-256", sign(bodyBytes))
+				req.Header.Set("X-GitHub-Event", "package")
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, rr.Code)
+				require.JSONEq(t, `{"error":"invalid request body"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "unsupported package type",
+			secretData: testSecretData,
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(
+					&gh.PackageEvent{
+						Action: gh.Ptr("published"),
+						Package: &gh.Package{
+							PackageType:    gh.Ptr("npm"),
+							PackageVersion: &gh.PackageVersion{},
+						},
+					},
+				)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set("X-Hub-Signature-256", sign(bodyBytes))
+				req.Header.Set("X-GitHub-Event", "package")
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, "{}", rr.Body.String())
+			},
+		},
+		{
+			name:       "partial success -- package event",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Image: &kargoapi.ImageSubscription{RepoURL: "ghcr.io/example/repo"},
+						}},
+					},
+				},
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "another-fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Image: &kargoapi.ImageSubscription{RepoURL: "ghcr.io/example/repo"},
+						}},
+					},
+				},
+			).WithInterceptorFuncs(interceptor.Funcs{
+				Patch: func(
+					_ context.Context,
+					_ client.WithWatch,
+					obj client.Object,
+					_ client.Patch,
+					_ ...client.PatchOption,
+				) error {
+					if obj.GetName() == "another-fake-warehouse" {
+						return errors.New("something went wrong")
+					}
+					return nil
+				},
+			}).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(validPackageEvent)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set("X-Hub-Signature-256", sign(bodyBytes))
+				req.Header.Set("X-GitHub-Event", "package")
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, rr.Code)
+				require.JSONEq(
+					t,
+					`{"error":"failed to refresh 1 of 2 warehouses"}`,
+					rr.Body.String(),
+				)
+			},
+		},
+		{
+			name:       "complete success -- package event",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Image: &kargoapi.ImageSubscription{RepoURL: "ghcr.io/example/repo"},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(validPackageEvent)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set("X-Hub-Signature-256", sign(bodyBytes))
+				req.Header.Set("X-GitHub-Event", "package")
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
 			name:       "partial success -- push event",
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
@@ -224,9 +395,14 @@ func TestGithubHandler(t *testing.T) {
 				indexer.WarehousesBySubscribedURLs,
 			).Build(),
 			req: func() *http.Request {
-				bodyBuf := bytes.NewBuffer([]byte(githubPushEventRequestBody))
-				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
-				req.Header.Set("X-Hub-Signature-256", sign(bodyBuf.Bytes()))
+				bodyBytes, err := json.Marshal(validPushEvent)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set("X-Hub-Signature-256", sign(bodyBytes))
 				req.Header.Set("X-GitHub-Event", "push")
 				return req
 			},
@@ -262,102 +438,15 @@ func TestGithubHandler(t *testing.T) {
 				indexer.WarehousesBySubscribedURLs,
 			).Build(),
 			req: func() *http.Request {
-				bodyBuf := bytes.NewBuffer([]byte(githubPushEventRequestBody))
-				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
-				req.Header.Set("X-Hub-Signature-256", sign(bodyBuf.Bytes()))
-				req.Header.Set("X-GitHub-Event", "push")
-				return req
-			},
-			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusOK, rr.Code)
-				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
-			},
-		},
-		{
-			name:       "partial success -- package event",
-			secretData: testSecretData,
-			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
-				&kargoapi.Warehouse{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProjectName,
-						Name:      "fake-warehouse",
-					},
-					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
-							Image: &kargoapi.ImageSubscription{RepoURL: "ghcr.io/example/repo"},
-						}},
-					},
-				},
-				&kargoapi.Warehouse{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProjectName,
-						Name:      "another-fake-warehouse",
-					},
-					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
-							Image: &kargoapi.ImageSubscription{RepoURL: "ghcr.io/example/repo"},
-						}},
-					},
-				},
-			).WithInterceptorFuncs(interceptor.Funcs{
-				Patch: func(
-					_ context.Context,
-					_ client.WithWatch,
-					obj client.Object,
-					_ client.Patch,
-					_ ...client.PatchOption,
-				) error {
-					if obj.GetName() == "another-fake-warehouse" {
-						return errors.New("something went wrong")
-					}
-					return nil
-				},
-			}).WithIndex(
-				&kargoapi.Warehouse{},
-				indexer.WarehousesBySubscribedURLsField,
-				indexer.WarehousesBySubscribedURLs,
-			).Build(),
-			req: func() *http.Request {
-				bodyBuf := bytes.NewBuffer([]byte(githubPackageEventRequestBody))
-				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
-				req.Header.Set("X-Hub-Signature-256", sign(bodyBuf.Bytes()))
-				req.Header.Set("X-GitHub-Event", "package")
-				return req
-			},
-			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusInternalServerError, rr.Code)
-				require.JSONEq(
-					t,
-					`{"error":"failed to refresh 1 of 2 warehouses"}`,
-					rr.Body.String(),
+				bodyBytes, err := json.Marshal(validPushEvent)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
 				)
-			},
-		},
-		{
-			name:       "complete success -- package event",
-			secretData: testSecretData,
-			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
-				&kargoapi.Warehouse{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProjectName,
-						Name:      "fake-warehouse",
-					},
-					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
-							Image: &kargoapi.ImageSubscription{RepoURL: "ghcr.io/example/repo"},
-						}},
-					},
-				},
-			).WithIndex(
-				&kargoapi.Warehouse{},
-				indexer.WarehousesBySubscribedURLsField,
-				indexer.WarehousesBySubscribedURLs,
-			).Build(),
-			req: func() *http.Request {
-				bodyBuf := bytes.NewBuffer([]byte(githubPackageEventRequestBody))
-				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
-				req.Header.Set("X-Hub-Signature-256", sign(bodyBuf.Bytes()))
-				req.Header.Set("X-GitHub-Event", "package")
+				req.Header.Set("X-Hub-Signature-256", sign(bodyBytes))
+				req.Header.Set("X-GitHub-Event", "push")
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -377,60 +466,6 @@ func TestGithubHandler(t *testing.T) {
 				},
 			}).GetHandler()(w, testCase.req())
 			testCase.assertions(t, w)
-		})
-	}
-}
-
-func TestGitHubURLDomain(t *testing.T) {
-	tests := []struct {
-		name             string
-		url              string
-		expectedHostName string
-		expectedResult   bool
-	}{
-		{
-			name:             "Valid GitHub URL",
-			url:              "https://github.com/nitishfy/my-repo",
-			expectedHostName: "github.com",
-			expectedResult:   true,
-		},
-		{
-			name:             "Valid Enterprise Server URL",
-			url:              "https://github.enterprise.com/org/repo",
-			expectedHostName: "github.enterprise.com",
-			expectedResult:   false,
-		},
-		{
-			name:             "GitHub URL with port",
-			url:              "https://github.com:443/nitishfy/my-repo",
-			expectedHostName: "github.com",
-			expectedResult:   true,
-		},
-		{
-			name:             "Enterprise Server URL with port",
-			url:              "https://github.enterprise.com:8443/org/repo",
-			expectedHostName: "github.enterprise.com",
-			expectedResult:   false,
-		},
-		{
-			name:             "Malformed URL",
-			url:              "https://%",
-			expectedHostName: "",
-			expectedResult:   false,
-		},
-		{
-			name:             "Empty string",
-			url:              "",
-			expectedHostName: "",
-			expectedResult:   false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			host, result := isGitHubURL(tt.url)
-			require.Equal(t, tt.expectedHostName, host)
-			require.Equal(t, tt.expectedResult, result)
 		})
 	}
 }
