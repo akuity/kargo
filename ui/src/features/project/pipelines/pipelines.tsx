@@ -260,15 +260,17 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                 >
                   <Button icon={<FontAwesomeIcon icon={faPlus} />}>Create</Button>
                 </Dropdown>
-                <Button
-                  icon={<FontAwesomeIcon icon={faDocker} />}
-                  onClick={() =>
-                    setPreferredFilter({
-                      ...preferredFilter,
-                      images: !preferredFilter?.images
-                    })
-                  }
-                />
+                {pipelineView === 'graph' && (
+                  <Button
+                    icon={<FontAwesomeIcon icon={faDocker} />}
+                    onClick={() =>
+                      setPreferredFilter({
+                        ...preferredFilter,
+                        images: !preferredFilter?.images
+                      })
+                    }
+                  />
+                )}
               </Flex>
 
               {pipelineView === 'graph' && (
