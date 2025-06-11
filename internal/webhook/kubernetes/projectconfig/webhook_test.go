@@ -547,7 +547,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 			},
 		},
 		{
-			name: "mutually exclusive webhook receiver config",
+			name: "webhook receiver contains config for multiple receiver types",
 			projectConfig: &kargoapi.ProjectConfig{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      testProjectName,
