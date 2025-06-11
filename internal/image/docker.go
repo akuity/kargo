@@ -32,9 +32,7 @@ func NormalizeURL(repoURL string) (string, error) {
 	if reg == "docker.io" || reg == "index.docker.io" {
 		reg = ""
 		// Drop "library/" prefix for official images
-		if strings.HasPrefix(repo, "library/") {
-			repo = strings.TrimPrefix(repo, "library/")
-		}
+		repo = strings.TrimPrefix(repo, "library/")
 	}
 
 	// Compose normalized reference

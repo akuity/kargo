@@ -39,9 +39,24 @@ func TestNormalizeRef(t *testing.T) {
 		{"quay.io/org/repo:tag", "quay.io/org/repo:tag", "quay.io/org/repo:tag", false},
 
 		// Digest references
-		{"nginx with digest", "nginx@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", "nginx@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", false},
-		{"docker.io/library/nginx with digest", "docker.io/library/nginx@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", "nginx@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", false},
-		{"gcr.io/myproj/app with digest", "gcr.io/myproj/app@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", "gcr.io/myproj/app@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", false},
+		{
+			"nginx with digest",
+			"nginx@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+			"nginx@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+			false,
+		},
+		{
+			"docker.io/library/nginx with digest",
+			"docker.io/library/nginx@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+			"nginx@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+			false,
+		},
+		{
+			"gcr.io/myproj/app with digest",
+			"gcr.io/myproj/app@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+			"gcr.io/myproj/app@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+			false,
+		},
 
 		// Edge cases
 		{"trailing colon", "nginx:", "nginx", false},
