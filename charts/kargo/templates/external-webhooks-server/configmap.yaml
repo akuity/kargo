@@ -8,7 +8,9 @@ metadata:
     {{- include "kargo.labels" . | nindent 4 }}
     {{- include "kargo.externalWebhooksServer.labels" . | nindent 4 }}
 data:
+  EXTERNAL_WEBHOOK_SERVER_BASE_URL: {{ include "kargo.externalWebhooksServer.baseURL" . }}
   KARGO_NAMESPACE: {{ .Release.Namespace }}
+  CLUSTER_SECRETS_NAMESPACE: {{ .Values.global.clusterSecretsNamespace }}
   LOG_LEVEL: {{ quote .Values.externalWebhooksServer.logLevel }}
   {{- if .Values.kubeconfigSecrets.kargo }}
   KUBECONFIG: /etc/kargo/kubeconfig.yaml

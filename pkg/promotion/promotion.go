@@ -77,6 +77,49 @@ func (r *retryableStepRunner) DefaultErrorThreshold() uint32 {
 	return r.defaultErrorThreshold
 }
 
+// TaskLevelOutputStepRunner is an interface that defines a method to instruct
+// the engine to propagate the output of a step to the task namespace in the
+// shared state of the promotion result.
+type TaskLevelOutputStepRunner interface {
+	StepRunner
+	// TaskLevelOutput returns true if the StepRunner produces output that
+	// should be propagated to the task namespace in the state of the promotion
+	// result by the engine after the step is executed.
+	TaskLevelOutput() bool
+}
+
+// NewTaskLevelOutputStepRunner returns a wrapper around a StepRunner that
+// implements TaskLevelOutputStepRunner.
+func NewTaskLevelOutputStepRunner(runner StepRunner) TaskLevelOutputStepRunner {
+	return &taskLevelOutputStepRunner{
+		runner: runner,
+	}
+}
+
+// taskLevelOutputStepRunner is a wrapper around a StepRunner that implements
+// TaskLevelOutputStepRunner.
+type taskLevelOutputStepRunner struct {
+	runner StepRunner
+}
+
+// Name implements StepRunner.
+func (r *taskLevelOutputStepRunner) Name() string {
+	return r.runner.Name()
+}
+
+// Run implements StepRunner.
+func (r *taskLevelOutputStepRunner) Run(
+	ctx context.Context,
+	stepCtx *StepContext,
+) (StepResult, error) {
+	return r.runner.Run(ctx, stepCtx)
+}
+
+// TaskLevelOutput implements TaskLevelOutputStepRunner.
+func (r *taskLevelOutputStepRunner) TaskLevelOutput() bool {
+	return true
+}
+
 // StepContext is a type that represents the context in which a
 // single promotion step is executed by a StepRunner.
 type StepContext struct {
@@ -120,9 +163,11 @@ type StepContext struct {
 	// responsible for finding them and furnishing them directly to each
 	// StepRunner.
 	Freight kargoapi.FreightCollection
+	// TargetFreightRef is the actual Freight that triggered this Promotion.
+	TargetFreightRef kargoapi.FreightReference
 }
 
-// StepResult represents the results of single Step of a user-defined promotion
+// StepResult represents the results of a single Step of a user-defined promotion
 // process executed by a StepRunner.
 type StepResult struct {
 	// Status is the high-level outcome of a Step executed by a StepRunner.
@@ -131,7 +176,7 @@ type StepResult struct {
 	// outcome of a Step executed by a StepRunner.
 	Message string
 	// Output is the opaque output of a Step executed by a StepRunner. The Engine
-	// will update shared state with this output, making it available to the
+	// will update the shared state with this output, making it available to the
 	// StepRunners executing subsequent Steps.
 	Output map[string]any
 	// HealthCheck identifies criteria for a health check process. This is

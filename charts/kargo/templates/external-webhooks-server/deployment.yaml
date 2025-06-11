@@ -1,4 +1,4 @@
-{{- if .Values.webhooksServer.enabled }}
+{{- if .Values.externalWebhooksServer.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:

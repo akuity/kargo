@@ -12,6 +12,7 @@ data:
   API_SERVER_BASE_URL: {{ include "kargo.api.baseURL" . }}
   {{- end }}
   LOG_LEVEL: {{ quote .Values.controller.logLevel }}
+  CLUSTER_SECRETS_NAMESPACE: {{ .Values.global.clusterSecretsNamespace }}
   {{- if .Values.controller.shardName }}
   SHARD_NAME: {{ .Values.controller.shardName }}
   {{- end }}

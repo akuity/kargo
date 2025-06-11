@@ -160,18 +160,25 @@ spec:
                   properties:
                     github:
                       description: |
-                        GitHub contains the configuration for a webhook receiver that is compatible with
-                        GitHub payloads.
+                        GitHub contains the configuration for a webhook receiver that is compatible
+                        with GitHub payloads.
                       properties:
                         secretRef:
                           description: |-
-                            SecretRef contains a reference to a Secret in the same namespace as the ProjectConfig.
+                            SecretRef contains a reference to a Secret. For Project-scoped webhook
+                            receivers, the referenced Secret must be in the same namespace as the
+                            ProjectConfig.
 
-                            The Secret is expected to contain a `token` key with the secret token configured for
-                            in GitHub for the webhook. For more information about this token, please refer to the
-                            GitHub documentation: https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
+                            For cluster-scoped webhook receivers, the referenced Secret must be in the
+                            designated "cluster Secrets" namespace.
 
-                            The value of the token key goes in the "Secret" field when registering a GitHub App or webhook in the GitHub UI.
+                            The Secret's data map is expected to contain a `secret` key whose value is
+                            the shared secret used to authenticate the webhook requests sent by GitHub.
+                            For more information please refer to GitHub documentation:
+                              https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
+
+                            The value of the token key goes in the "Secret" field when registering a
+                            GitHub App or webhook in the GitHub UI.
                           properties:
                             name:
                               default: ""
@@ -199,8 +206,9 @@ spec:
             description: Status describes the current status of a ProjectConfig.
             properties:
               conditions:
-                description: Conditions contains the last observations of the Project
-                  Config's current state.
+                description: |-
+                  Conditions contains the last observations of the Project Config's current
+                  state.
                 items:
                   description: Condition contains details for one aspect of the current
                     state of this API Resource.
@@ -260,11 +268,12 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               webhookReceivers:
-                description: WebhookReceivers describes the status of Project-specific
-                  webhook receivers.
+                description: |-
+                  WebhookReceivers describes the status of Project-specific webhook
+                  receivers.
                 items:
-                  description: WebhookReceiver describes a path used to receive webhook
-                    events.
+                  description: WebhookReceiverDetails encapsulates the details of
+                    a webhook receiver.
                   properties:
                     name:
                       description: Name is the name of the webhook receiver.

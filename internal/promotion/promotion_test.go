@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -88,7 +87,7 @@ func TestStep_GetConfig(t *testing.T) {
 
 	testClient := fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 		&kargoapi.Warehouse{
-			ObjectMeta: v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name:      "fake-warehouse",
 				Namespace: "fake-project",
 			},
@@ -123,7 +122,6 @@ func TestStep_GetConfig(t *testing.T) {
 	testCases := []struct {
 		name        string
 		promoCtx    Context
-		promoState  promotion.State
 		rawCfg      []byte
 		expectedCfg promotion.Config
 	}{
@@ -135,18 +133,32 @@ func TestStep_GetConfig(t *testing.T) {
 				Stage:     "fake-stage",
 				Promotion: "fake-promotion",
 				Actor:     "fake-creator",
+				TargetFreightRef: kargoapi.FreightReference{
+					Name: "fake-freight",
+					Origin: kargoapi.FreightOrigin{
+						Name: "fake-warehouse",
+					},
+				},
 			},
 			rawCfg: []byte(`{
 				"project": "${{ ctx.project }}",
 				"stage": "${{ ctx.stage }}",
 				"promotion": "${{ ctx.promotion }}",
-				"actor": "${{ ctx.meta.promotion.actor }}"
+				"actor": "${{ ctx.meta.promotion.actor }}",
+				"targetFreight": {
+					"name": "${{ ctx.targetFreight.name }}",
+					"origin": "${{ ctx.targetFreight.origin.name }}"
+				}
 			}`),
 			expectedCfg: promotion.Config{
 				"project":   "fake-project",
 				"stage":     "fake-stage",
 				"promotion": "fake-promotion",
 				"actor":     "fake-creator",
+				"targetFreight": map[string]any{
+					"name":   "fake-freight",
+					"origin": "fake-warehouse",
+				},
 			},
 		},
 		{
@@ -240,10 +252,12 @@ func TestStep_GetConfig(t *testing.T) {
 		{
 			name: "test outputs",
 			// Test that expressions can reference outputs
-			promoState: promotion.State{
-				"strOutput":  "foo",
-				"boolOutput": true,
-				"numOutput":  42,
+			promoCtx: Context{
+				State: promotion.State{
+					"strOutput":  "foo",
+					"boolOutput": true,
+					"numOutput":  42,
+				},
 			},
 			rawCfg: []byte(`{
 				"strOutput": "${{ outputs.strOutput }}",
@@ -261,6 +275,12 @@ func TestStep_GetConfig(t *testing.T) {
 			// Test that the warehouse() function can be used to reference freight
 			// origins
 			promoCtx: Context{
+				TargetFreightRef: kargoapi.FreightReference{
+					Name: "fake-freight",
+					Origin: kargoapi.FreightOrigin{
+						Name: "fake-origin-warehouse",
+					},
+				},
 				Vars: []kargoapi.ExpressionVariable{{
 					Name:  "warehouseName",
 					Value: "fake-warehouse",
@@ -268,7 +288,8 @@ func TestStep_GetConfig(t *testing.T) {
 			},
 			rawCfg: []byte(`{
 				"origin1": "${{ warehouse('fake-warehouse') }}",
-				"origin2": "${{ warehouse(vars.warehouseName) }}"
+				"origin2": "${{ warehouse(vars.warehouseName) }}",
+				"origin3": "${{ warehouse(ctx.targetFreight.origin.name) }}"
 			}`),
 			expectedCfg: promotion.Config{
 				"origin1": map[string]any{
@@ -278,6 +299,10 @@ func TestStep_GetConfig(t *testing.T) {
 				"origin2": map[string]any{
 					"kind": "Warehouse",
 					"name": "fake-warehouse",
+				},
+				"origin3": map[string]any{
+					"kind": "Warehouse",
+					"name": "fake-origin-warehouse",
 				},
 			},
 		},
@@ -483,7 +508,6 @@ func TestStep_GetConfig(t *testing.T) {
 				testClient,
 				nil,
 				testCase.promoCtx,
-				testCase.promoState,
 			)
 			require.NoError(t, err)
 			require.Equal(t, testCase.expectedCfg, stepCfg)
@@ -497,7 +521,7 @@ func TestStep_GetVars(t *testing.T) {
 
 	testClient := fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 		&kargoapi.Warehouse{
-			ObjectMeta: v1.ObjectMeta{
+			ObjectMeta: metav1.ObjectMeta{
 				Name:      "fake-warehouse",
 				Namespace: "fake-project",
 			},
@@ -516,7 +540,6 @@ func TestStep_GetVars(t *testing.T) {
 	testCases := []struct {
 		name         string
 		promoCtx     Context
-		promoState   promotion.State
 		step         Step
 		expectedVars map[string]any
 		expectErr    bool
@@ -677,9 +700,9 @@ func TestStep_GetVars(t *testing.T) {
 			name: "step vars referencing outputs",
 			promoCtx: Context{
 				Project: "fake-project",
-			},
-			promoState: promotion.State{
-				"output1": "output-value",
+				State: promotion.State{
+					"output1": "output-value",
+				},
 			},
 			step: Step{
 				Vars: []kargoapi.ExpressionVariable{
@@ -697,10 +720,10 @@ func TestStep_GetVars(t *testing.T) {
 			name: "step vars referencing task outputs",
 			promoCtx: Context{
 				Project: "fake-project",
-			},
-			promoState: promotion.State{
-				"task::alias": map[string]any{
-					"foo": "baz",
+				State: promotion.State{
+					"task::alias": map[string]any{
+						"foo": "baz",
+					},
 				},
 			},
 			step: Step{
@@ -778,6 +801,12 @@ func TestStep_GetVars(t *testing.T) {
 				Stage:     "fake-stage",
 				Promotion: "fake-promotion",
 				Actor:     "fake-creator",
+				TargetFreightRef: kargoapi.FreightReference{
+					Name: "fake-freight",
+					Origin: kargoapi.FreightOrigin{
+						Name: "fake-warehouse",
+					},
+				},
 			},
 			step: Step{
 				Vars: []kargoapi.ExpressionVariable{
@@ -797,13 +826,18 @@ func TestStep_GetVars(t *testing.T) {
 						Name:  "actor",
 						Value: "${{ ctx.meta.promotion.actor }}",
 					},
+					{
+						Name:  "targetFreight",
+						Value: "${{ ctx.targetFreight.origin.name }}",
+					},
 				},
 			},
 			expectedVars: map[string]any{
-				"proj":  "fake-project",
-				"stage": "fake-stage",
-				"promo": "fake-promotion",
-				"actor": "fake-creator",
+				"proj":          "fake-project",
+				"stage":         "fake-stage",
+				"promo":         "fake-promotion",
+				"actor":         "fake-creator",
+				"targetFreight": "fake-warehouse",
 			},
 		},
 		{
@@ -855,7 +889,6 @@ func TestStep_GetVars(t *testing.T) {
 				testClient,
 				nil,
 				testCase.promoCtx,
-				testCase.promoState,
 			)
 
 			if testCase.expectErr {
@@ -874,7 +907,6 @@ func TestStep_Skip(t *testing.T) {
 		name       string
 		step       *Step
 		ctx        Context
-		state      promotion.State
 		assertions func(*testing.T, bool, error)
 	}{
 		{
@@ -918,11 +950,13 @@ func TestStep_Skip(t *testing.T) {
 		},
 		{
 			name: "if condition uses outputs",
+			ctx: Context{
+				State: promotion.State{
+					"foo": "bar",
+				},
+			},
 			step: &Step{
 				If: "${{ outputs.foo == 'bar' }}",
-			},
-			state: promotion.State{
-				"foo": "bar",
 			},
 			assertions: func(t *testing.T, b bool, err error) {
 				assert.NoError(t, err)
@@ -931,14 +965,16 @@ func TestStep_Skip(t *testing.T) {
 		},
 		{
 			name: "if condition uses task outputs",
+			ctx: Context{
+				State: promotion.State{
+					"task::alias": map[string]any{
+						"foo": "baz",
+					},
+				},
+			},
 			step: &Step{
 				Alias: "task::other-alias",
 				If:    "${{ task.outputs.alias.foo == 'bar' }}",
-			},
-			state: promotion.State{
-				"task::alias": map[string]any{
-					"foo": "baz",
-				},
 			},
 			assertions: func(t *testing.T, b bool, err error) {
 				assert.NoError(t, err)
@@ -990,7 +1026,6 @@ func TestStep_Skip(t *testing.T) {
 				fake.NewClientBuilder().Build(),
 				nil,
 				tt.ctx,
-				tt.state,
 			)
 			tt.assertions(t, got, err)
 		})

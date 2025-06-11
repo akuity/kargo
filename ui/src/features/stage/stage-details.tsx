@@ -189,6 +189,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                       freightHistory={stage?.status?.freightHistory}
                       currentActiveFreight={stage?.status?.lastPromotion?.freight?.name}
                       projectName={projectName || ''}
+                      stageName={stageName || ''}
                     />
                   )
                 },

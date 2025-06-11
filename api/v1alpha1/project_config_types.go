@@ -5,15 +5,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	WebhookReceiverTypeGitHub = "GitHub"
-	// TODO(fuskovic): Add more receiver enum types(e.g. Dockerhub, Quay, Gitlab, etc...)
-)
-
-const (
-	WebhookReceiverSecretKeyGithub = "token"
-)
-
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Namespaced
 // +kubebuilder:subresource:status
@@ -48,24 +39,27 @@ type ProjectConfigSpec struct {
 
 // ProjectConfigStatus describes the current status of a ProjectConfig.
 type ProjectConfigStatus struct {
-	// Conditions contains the last observations of the Project Config's current state.
+	// Conditions contains the last observations of the Project Config's current
+	// state.
+	//
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	// +listType=map
 	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,1,rep,name=conditions"`
-	// WebhookReceivers describes the status of Project-specific webhook receivers.
-	WebhookReceivers []WebhookReceiver `json:"webhookReceivers,omitempty" protobuf:"bytes,2,rep,name=receivers"`
+	// WebhookReceivers describes the status of Project-specific webhook
+	// receivers.
+	WebhookReceivers []WebhookReceiverDetails `json:"webhookReceivers,omitempty" protobuf:"bytes,2,rep,name=receivers"`
 }
 
 // GetConditions implements the conditions.Getter interface.
-func (w *ProjectConfigStatus) GetConditions() []metav1.Condition {
-	return w.Conditions
+func (p *ProjectConfigStatus) GetConditions() []metav1.Condition {
+	return p.Conditions
 }
 
 // SetConditions implements the conditions.Setter interface.
-func (w *ProjectConfigStatus) SetConditions(conditions []metav1.Condition) {
-	w.Conditions = conditions
+func (p *ProjectConfigStatus) SetConditions(conditions []metav1.Condition) {
+	p.Conditions = conditions
 }
 
 // PromotionPolicy defines policies governing the promotion of Freight to a
@@ -97,30 +91,37 @@ type PromotionPolicy struct {
 type WebhookReceiverConfig struct {
 	// Name is the name of the webhook receiver.
 	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
-	// GitHub contains the configuration for a webhook receiver that is compatible with
-	// GitHub payloads.
+	// GitHub contains the configuration for a webhook receiver that is compatible
+	// with GitHub payloads.
 	//
 	// TODO(fuskovic): Make this mutually exclusive with configs for other platforms.
 	//
 	// +kubebuilder:validation:Required
-	GitHub *GitHubWebhookReceiver `json:"github,omitempty" protobuf:"bytes,2,opt,name=github"`
+	GitHub *GitHubWebhookReceiverConfig `json:"github,omitempty" protobuf:"bytes,2,opt,name=github"`
 }
 
-// GitHubWebhookReceiver describes a webhook receiver that is compatible with
-// GitHub payloads.
-type GitHubWebhookReceiver struct {
-	// SecretRef contains a reference to a Secret in the same namespace as the ProjectConfig.
+// GitHubWebhookReceiverConfig describes a webhook receiver that is compatible
+// with GitHub payloads.
+type GitHubWebhookReceiverConfig struct {
+	// SecretRef contains a reference to a Secret. For Project-scoped webhook
+	// receivers, the referenced Secret must be in the same namespace as the
+	// ProjectConfig.
 	//
-	// The Secret is expected to contain a `token` key with the secret token configured for
-	// in GitHub for the webhook. For more information about this token, please refer to the
-	// GitHub documentation: https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
+	// For cluster-scoped webhook receivers, the referenced Secret must be in the
+	// designated "cluster Secrets" namespace.
 	//
-	// The value of the token key goes in the "Secret" field when registering a GitHub App or webhook in the GitHub UI.
+	// The Secret's data map is expected to contain a `secret` key whose value is
+	// the shared secret used to authenticate the webhook requests sent by GitHub.
+	// For more information please refer to GitHub documentation:
+	//   https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
+	//
+	// The value of the token key goes in the "Secret" field when registering a
+	// GitHub App or webhook in the GitHub UI.
 	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
 }
 
-// WebhookReceiver describes a path used to receive webhook events.
-type WebhookReceiver struct {
+// WebhookReceiverDetails encapsulates the details of a webhook receiver.
+type WebhookReceiverDetails struct {
 	// Name is the name of the webhook receiver.
 	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
 	// Path is the path to the receiver's webhook endpoint.

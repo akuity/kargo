@@ -164,15 +164,37 @@ func RunningPromotionsByArgoCDApplications(
 			return nil
 		}
 
+		freight := &kargoapi.Freight{}
+		if err := cl.Get(ctx, client.ObjectKey{
+			Name:      promo.Spec.Freight,
+			Namespace: promo.Namespace,
+		}, freight); err != nil {
+			logger.Error(
+				err,
+				"failed to get Freight for Promotion",
+				"promo", promo.Name,
+				"namespace", promo.Namespace,
+				"freight", promo.Spec.Freight,
+				"stage", promo.Spec.Stage,
+			)
+		}
+
 		// Build just enough context to extract the relevant config from the
 		// argocd-update promotion step.
 		promoCtx := promotion.Context{
 			Project:         promo.Namespace,
 			Stage:           promo.Spec.Stage,
 			FreightRequests: stage.Spec.RequestedFreight,
-			Promotion:       promo.Name,
-			State:           promo.Status.GetState(),
-			Vars:            promo.Spec.Vars,
+			TargetFreightRef: kargoapi.FreightReference{
+				Name:    freight.Name,
+				Commits: freight.Commits,
+				Images:  freight.Images,
+				Charts:  freight.Charts,
+				Origin:  freight.Origin,
+			},
+			Promotion: promo.Name,
+			State:     promo.Status.GetState(),
+			Vars:      promo.Spec.Vars,
 		}
 
 		if promo.Status.FreightCollection != nil {
@@ -204,7 +226,7 @@ func RunningPromotionsByArgoCDApplications(
 
 			// As step-level variables are allowed to reference to output, we
 			// need to provide the state.
-			vars, err := dirStep.GetVars(ctx, cl, nil, promoCtx, promoCtx.State)
+			vars, err := dirStep.GetVars(ctx, cl, nil, promoCtx)
 			if err != nil {
 				logger.Error(
 					err,
@@ -482,17 +504,17 @@ func WarehousesBySubscribedURLs(obj client.Object) []string {
 	var repoURLs []string
 	for _, sub := range warehouse.Spec.Subscriptions {
 		if sub.Git != nil && sub.Git.RepoURL != "" {
-			repoURLs = append(repoURLs,
-				git.NormalizeURL(sub.Git.RepoURL),
-			)
+			repoURLs = append(repoURLs, git.NormalizeURL(sub.Git.RepoURL))
 		}
 		if sub.Chart != nil && sub.Chart.RepoURL != "" {
-			repoURLs = append(repoURLs,
+			repoURLs = append(
+				repoURLs,
 				helm.NormalizeChartRepositoryURL(sub.Chart.RepoURL),
 			)
 		}
 		if sub.Image != nil && sub.Image.RepoURL != "" {
-			repoURLs = append(repoURLs,
+			repoURLs = append(
+				repoURLs,
 				// TODO(fuskovic): This chart URL normalization logic is adequate for
 				// normalizing image URLs in the near term, but should eventually be
 				// replaced with dedicated image URL normalization logic.
