@@ -132,7 +132,7 @@ type BitbucketWebhookReceiverConfig struct {
 	// For cluster-scoped webhook receivers, the referenced Secret must be in the
 	// designated "cluster Secrets" namespace.
 	//
-	// The Secret's data map is expected to contain a `bitbucket-secret` key whose
+	// The Secret's data map is expected to contain a `secret` key whose
 	// value is the shared secret used to authenticate the webhook requests sent
 	// by Bitbucket. For more information please refer to the Bitbucket
 	// documentation:
