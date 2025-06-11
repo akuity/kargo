@@ -155,7 +155,7 @@ func (k *database) getCredentialsSecret(
 		&client.ListOptions{
 			Namespace: namespace,
 			LabelSelector: labels.Set(map[string]string{
-				kargoapi.CredentialTypeLabelKey: credType.String(),
+				kargoapi.LabelKeyCredentialType: credType.String(),
 			}).AsSelector(),
 		},
 	); err != nil {

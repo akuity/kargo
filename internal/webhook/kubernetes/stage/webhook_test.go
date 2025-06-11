@@ -90,7 +90,7 @@ func TestDefault(t *testing.T) {
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
 				require.Equal(t, testShardName, stage.Spec.Shard)
-				require.Equal(t, testShardName, stage.Labels[kargoapi.ShardLabelKey])
+				require.Equal(t, testShardName, stage.Labels[kargoapi.LabelKeyShard])
 			},
 		},
 		{
@@ -109,14 +109,14 @@ func TestDefault(t *testing.T) {
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						kargoapi.ShardLabelKey: testShardName,
+						kargoapi.LabelKeyShard: testShardName,
 					},
 				},
 			},
 			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
 				require.NoError(t, err)
 				require.Empty(t, stage.Spec.Shard)
-				_, ok := stage.Labels[kargoapi.ShardLabelKey]
+				_, ok := stage.Labels[kargoapi.LabelKeyShard]
 				require.False(t, ok)
 			},
 		},

@@ -54,7 +54,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 					ObjectMeta: v1.ObjectMeta{
 						Name: "fake-project",
 						Labels: map[string]string{
-							kargoapi.ProjectLabelKey: kargoapi.LabelTrueValue,
+							kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
 						},
 					},
 				},

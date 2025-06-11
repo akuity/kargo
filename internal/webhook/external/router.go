@@ -71,6 +71,19 @@ func (s *server) route(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		logger.Debug("found ClusterConfig")
+		if s.cfg.ClusterSecretsNamespace == "" {
+			logger.Error(
+				nil,
+				"no namespace is designated for storing Secrets referenced by "+
+					"cluster-level resources; please ensure environment variable "+
+					`"CLUSTER_SECRETS_NAMESPACE" is set`,
+			)
+			xhttp.WriteErrorJSON(
+				w,
+				xhttp.Error(nil, http.StatusInternalServerError),
+			)
+			return
+		}
 		secretsNamespace = s.cfg.ClusterSecretsNamespace
 		receiverCfgs = clusterCfg.Spec.WebhookReceivers
 		receivers = clusterCfg.Status.WebhookReceivers

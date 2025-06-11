@@ -158,12 +158,10 @@ spec:
                     WebhookReceiverConfig describes the configuration for a single webhook
                     receiver.
                   properties:
-                    dockerhub:
+                    bitbucket:
                       description: |-
-                        DockerHub contains the configuration for a webhook receiver that is
-                        compatible with DockerHub payloads.
-
-                        platforms.
+                        Bitbucket contains the configuration for a webhook receiver that is
+                        compatible with Bitbucket payloads.
                       properties:
                         secretRef:
                           description: |-
@@ -174,11 +172,42 @@ spec:
                             For cluster-scoped webhook receivers, the referenced Secret must be in the
                             designated "cluster Secrets" namespace.
 
-                            The Secret data map is expected to contain a `secret` key whose value does
-                            NOT need to be shared directly with Docker Hub when registering a webhook.
-                            It is used only by Kargo to create a complex, hard-to-guess URL, which
-                            implicitly serves as a shared secret. For more information about Docker Hub
-                            webhooks, please refer to the Docker documentation:
+                            The Secret's data map is expected to contain a `secret` key whose
+                            value is the shared secret used to authenticate the webhook requests sent
+                            by Bitbucket. For more information please refer to the Bitbucket
+                            documentation:
+                              https://support.atlassian.com/bitbucket-cloud/docs/manage-webhooks/
+                          properties:
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      required:
+                      - secretRef
+                      type: object
+                    dockerhub:
+                      description: |-
+                        DockerHub contains the configuration for a webhook receiver that is
+                        compatible with DockerHub payloads.
+                      properties:
+                        secretRef:
+                          description: |-
+                            SecretRef contains a reference to a Secret. For Project-scoped webhook
+                            receivers, the referenced Secret must be in the same namespace as the
+                            ProjectConfig.
+
+                            The Secret's data map is expected to contain a `secret` key whose value
+                            does NOT need to be shared directly with Docker Hub when registering a
+                            webhook. It is used only by Kargo to create a complex, hard-to-guess URL,
+                            which implicitly serves as a shared secret. For more information about
+                            Docker Hub webhooks, please refer to the Docker documentation:
                               https://docs.docker.com/docker-hub/webhooks/
                           properties:
                             name:
@@ -199,8 +228,6 @@ spec:
                       description: |-
                         GitHub contains the configuration for a webhook receiver that is compatible
                         with GitHub payloads.
-
-                        platforms.
                       properties:
                         secretRef:
                           description: |-
@@ -230,9 +257,82 @@ spec:
                       required:
                       - secretRef
                       type: object
+                    gitlab:
+                      description: |-
+                        GitLab contains the configuration for a webhook receiver that is compatible
+                        with GitLab payloads.
+                      properties:
+                        secretRef:
+                          description: |-
+                            SecretRef contains a reference to a Secret. For Project-scoped webhook
+                            receivers, the referenced Secret must be in the same namespace as the
+                            ProjectConfig.
+
+                            For cluster-scoped webhook receivers, the referenced Secret must be in the
+                            designated "cluster Secrets" namespace.
+
+                            The secret is expected to contain a `secret-token` key containing the
+                            shared secret specified when registering the webhook in GitLab. For more
+                            information about this token, please refer to the GitLab documentation:
+                              https://docs.gitlab.com/user/project/integrations/webhooks/
+                          properties:
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      required:
+                      - secretRef
+                      type: object
                     name:
                       description: Name is the name of the webhook receiver.
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                       type: string
+                    quay:
+                      description: |-
+                        Quay contains the configuration for a webhook receiver that is compatible
+                        with Quay payloads.
+                      properties:
+                        secretRef:
+                          description: |-
+                            SecretRef contains a reference to a Secret. For Project-scoped webhook
+                            receivers, the referenced Secret must be in the same namespace as the
+                            ProjectConfig.
+
+                            For cluster-scoped webhook receivers, the referenced Secret must be in the
+                            designated "cluster Secrets" namespace.
+
+                            The Secret's data map is expected to contain a `secret` key whose value
+                            does NOT need to be shared directly with Quay when registering a
+                            webhook. It is used only by Kargo to create a complex, hard-to-guess URL,
+                            which implicitly serves as a shared secret. For more information about
+                            Quay webhooks, please refer to the Quay documentation:
+                              https://docs.quay.io/guides/notifications.html
+                          properties:
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      required:
+                      - secretRef
+                      type: object
+                  required:
+                  - name
                   type: object
                 type: array
             type: object

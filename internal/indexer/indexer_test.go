@@ -91,7 +91,7 @@ func TestStagesByAnalysisRun(t *testing.T) {
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						kargoapi.ShardLabelKey: "another-shard",
+						kargoapi.LabelKeyShard: "another-shard",
 					},
 				},
 			},
@@ -105,7 +105,7 @@ func TestStagesByAnalysisRun(t *testing.T) {
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						kargoapi.ShardLabelKey: testShardName,
+						kargoapi.LabelKeyShard: testShardName,
 					},
 				},
 				Status: kargoapi.StageStatus{
@@ -310,7 +310,7 @@ func TestRunningPromotionsByArgoCDApplications(t *testing.T) {
 			obj: &kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						kargoapi.ShardLabelKey: "another",
+						kargoapi.LabelKeyShard: "another",
 					},
 				},
 			},
@@ -322,7 +322,7 @@ func TestRunningPromotionsByArgoCDApplications(t *testing.T) {
 			obj: &kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						kargoapi.ShardLabelKey: testShardName,
+						kargoapi.LabelKeyShard: testShardName,
 					},
 				},
 			},

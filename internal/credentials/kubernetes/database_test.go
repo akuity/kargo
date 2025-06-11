@@ -45,11 +45,11 @@ func TestGet(t *testing.T) {
 	)
 
 	testGitLabels := map[string]string{
-		kargoapi.CredentialTypeLabelKey: credentials.TypeGit.String(),
+		kargoapi.LabelKeyCredentialType: credentials.TypeGit.String(),
 	}
 
 	testImageLabels := map[string]string{
-		kargoapi.CredentialTypeLabelKey: credentials.TypeImage.String(),
+		kargoapi.LabelKeyCredentialType: credentials.TypeImage.String(),
 	}
 
 	projectGitCredentialWithRepoURL := &corev1.Secret{

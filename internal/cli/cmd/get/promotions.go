@@ -182,7 +182,7 @@ func newPromotionTable(list *metav1.List) *metav1.Table {
 		promo := item.Object.(*kargoapi.Promotion) // nolint: forcetypeassert
 		var shard string
 		if promo.Labels != nil {
-			shard = promo.Labels[kargoapi.ShardLabelKey]
+			shard = promo.Labels[kargoapi.LabelKeyShard]
 		}
 		rows[i] = metav1.TableRow{
 			Cells: []any{
