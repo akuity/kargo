@@ -27,6 +27,9 @@ func validateMutuallyExclusive(
 	var errs field.ErrorList
 	for i, r := range webhookReceivers {
 		var receivers []string
+		if r.Bitbucket != nil {
+			receivers = append(receivers, "Bitbucket")
+		}
 		if r.GitHub != nil {
 			receivers = append(receivers, "GitHub")
 		}

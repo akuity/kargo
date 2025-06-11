@@ -90,7 +90,16 @@ type PromotionPolicy struct {
 // receiver.
 type WebhookReceiverConfig struct {
 	// Name is the name of the webhook receiver.
-	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
+	//
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+	// +akuity:test-kubebuilder-pattern=KubernetesName
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	// Bitbucket contains the configuration for a webhook receiver that is
+	// compatible with Bitbucket payloads.
+	Bitbucket *BitbucketWebhookReceiverConfig `json:"bitbucket,omitempty" protobuf:"bytes,5,opt,name=bitbucket"`
 	// GitHub contains the configuration for a webhook receiver that is compatible
 	// with GitHub payloads.
 	GitHub *GitHubWebhookReceiverConfig `json:"github,omitempty" protobuf:"bytes,2,opt,name=github"`
@@ -100,6 +109,26 @@ type WebhookReceiverConfig struct {
 	// Quay contains the configuration for a webhook receiver that is compatible
 	// with Quay payloads.
 	Quay *QuayWebhookReceiverConfig `json:"quay,omitempty" protobuf:"bytes,4,opt,name=quay"`
+}
+
+// BitbucketWebhookReceiverConfig describes a webhook receiver that is
+// compatible with Bitbucket payloads.
+type BitbucketWebhookReceiverConfig struct {
+	// SecretRef contains a reference to a Secret. For Project-scoped webhook
+	// receivers, the referenced Secret must be in the same namespace as the
+	// ProjectConfig.
+	//
+	// For cluster-scoped webhook receivers, the referenced Secret must be in the
+	// designated "cluster Secrets" namespace.
+	//
+	// The Secret's data map is expected to contain a `secret` key whose
+	// value is the shared secret used to authenticate the webhook requests sent
+	// by Bitbucket. For more information please refer to the Bitbucket
+	// documentation:
+	//   https://support.atlassian.com/bitbucket-cloud/docs/manage-webhooks/
+	//
+	// +kubebuilder:validation:Required
+	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
 }
 
 // GitHubWebhookReceiverConfig describes a webhook receiver that is compatible
@@ -156,6 +185,8 @@ type QuayWebhookReceiverConfig struct {
 	// which implicitly serves as a shared secret. For more information about
 	// Quay webhooks, please refer to the Quay documentation:
 	//   https://docs.quay.io/guides/notifications.html
+	//
+	// +kubebuilder:validation:Required
 	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
 }
 

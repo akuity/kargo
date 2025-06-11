@@ -2,7 +2,9 @@ package external
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -13,22 +15,33 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/indexer"
 )
 
-func TestGithubHandler(t *testing.T) {
+func TestBitbucketHandler(t *testing.T) {
 	const testURL = "https://webhooks.kargo.example.com/nonsense"
 
 	const testProjectName = "fake-project"
 
+	const pushEventRequestBody = `
+{
+	"repository": {
+		"links": {
+			"html": {
+				"href": "https://bitbucket.org/example/repo"
+			}
+		}
+	}
+}`
+
 	testScheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(testScheme))
 
-	const testToken = "mysupersecrettoken"
 	testSecretData := map[string][]byte{
-		GithubSecretDataKey: []byte(testToken),
+		bitbucketSecretDataKey: []byte(testSigningKey),
 	}
 
 	testCases := []struct {
@@ -39,7 +52,7 @@ func TestGithubHandler(t *testing.T) {
 		assertions func(*testing.T, *httptest.ResponseRecorder)
 	}{
 		{
-			name: "token missing from Secret data",
+			name: "signing key (shared secret) missing from Secret data",
 			req: func() *http.Request {
 				return httptest.NewRequest(http.MethodPost, testURL, nil)
 			},
@@ -53,7 +66,7 @@ func TestGithubHandler(t *testing.T) {
 			secretData: testSecretData,
 			req: func() *http.Request {
 				req := httptest.NewRequest(http.MethodPost, testURL, nil)
-				req.Header.Set("X-GitHub-Event", "nonsense")
+				req.Header.Set("X-Event-Key", "nonsense")
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -75,7 +88,7 @@ func TestGithubHandler(t *testing.T) {
 					testURL,
 					io.NopCloser(bytes.NewBuffer(body)),
 				)
-				req.Header.Set("X-GitHub-Event", "push")
+				req.Header.Set("X-Event-Key", bitbucketPushEvent)
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -91,7 +104,7 @@ func TestGithubHandler(t *testing.T) {
 			secretData: testSecretData,
 			req: func() *http.Request {
 				req := httptest.NewRequest(http.MethodPost, testURL, nil)
-				req.Header.Set("X-GitHub-Event", "push")
+				req.Header.Set("X-Event-Key", bitbucketPushEvent)
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -104,8 +117,8 @@ func TestGithubHandler(t *testing.T) {
 			secretData: testSecretData,
 			req: func() *http.Request {
 				req := httptest.NewRequest(http.MethodPost, testURL, nil)
-				req.Header.Set("X-GitHub-Event", "push")
-				req.Header.Set("X-Hub-Signature-256", "totally-invalid-signature")
+				req.Header.Set("X-Event-Key", bitbucketPushEvent)
+				req.Header.Set("X-Hub-Signature", "totally-invalid-signature")
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -119,8 +132,8 @@ func TestGithubHandler(t *testing.T) {
 			req: func() *http.Request {
 				bodyBuf := bytes.NewBuffer([]byte("invalid json"))
 				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
-				req.Header.Set("X-Hub-Signature-256", sign(bodyBuf.Bytes()))
-				req.Header.Set("X-GitHub-Event", "push")
+				req.Header.Set("X-Event-Key", bitbucketPushEvent)
+				req.Header.Set("X-Hub-Signature", sign(bodyBuf.Bytes()))
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -129,26 +142,7 @@ func TestGithubHandler(t *testing.T) {
 			},
 		},
 		{
-			name:       "success -- ping event",
-			secretData: testSecretData,
-			req: func() *http.Request {
-				bodyBuf := bytes.NewBuffer([]byte("{}"))
-				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
-				req.Header.Set("X-Hub-Signature-256", sign(bodyBuf.Bytes()))
-				req.Header.Set("X-GitHub-Event", "ping")
-				return req
-			},
-			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusOK, rr.Code)
-				require.JSONEq(
-					t,
-					`{"msg":"ping event received, webhook is configured correctly"}`,
-					rr.Body.String(),
-				)
-			},
-		},
-		{
-			name:       "success -- push event",
+			name:       "partial success",
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
@@ -159,7 +153,71 @@ func TestGithubHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{
-								RepoURL: "https://github.com/example/repo",
+								RepoURL: "https://bitbucket.org/example/repo",
+							},
+						}},
+					},
+				},
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "another-fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "https://bitbucket.org/example/repo",
+							},
+						}},
+					},
+				},
+			).WithInterceptorFuncs(interceptor.Funcs{
+				Patch: func(
+					_ context.Context,
+					_ client.WithWatch,
+					obj client.Object,
+					_ client.Patch,
+					_ ...client.PatchOption,
+				) error {
+					if obj.GetName() == "another-fake-warehouse" {
+						return errors.New("something went wrong")
+					}
+					return nil
+				},
+			}).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBuf := bytes.NewBuffer([]byte(pushEventRequestBody))
+				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
+				req.Header.Set("X-Event-Key", bitbucketPushEvent)
+				req.Header.Set("X-Hub-Signature", sign(bodyBuf.Bytes()))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, rr.Code)
+				require.JSONEq(
+					t,
+					`{"error":"failed to refresh 1 of 2 warehouses"}`,
+					rr.Body.String(),
+				)
+			},
+		},
+		{
+			name:       "complete success -- push event",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "https://bitbucket.org/example/repo",
 							},
 						}},
 					},
@@ -170,30 +228,10 @@ func TestGithubHandler(t *testing.T) {
 				indexer.WarehousesBySubscribedURLs,
 			).Build(),
 			req: func() *http.Request {
-				bodyBuf := bytes.NewBuffer(
-					[]byte(`{
-		"ref": "refs/heads/main",
-		"before": "1fe030abc48d0d0ee7b3d650d6e9449775990318",
-		"after": "f12cd167152d80c0a2e28cb45e827c6311bba910",
-		"repository": {
-		  "html_url": "https://github.com/example/repo"
-		},
-		"pusher": {
-		  "name": "username",
-		  "email": "email@inbox.com"
-		},
-		"head_commit": {
-		  "id": "f12cd167152d80c0a2e28cb45e827c6311bba910"
-		}
-		}`),
-				)
-				req := httptest.NewRequest(
-					http.MethodPost,
-					testURL,
-					bodyBuf,
-				)
-				req.Header.Set("X-Hub-Signature-256", sign(bodyBuf.Bytes()))
-				req.Header.Set("X-GitHub-Event", "push")
+				bodyBuf := bytes.NewBuffer([]byte(pushEventRequestBody))
+				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
+				req.Header.Set("X-Event-Key", bitbucketPushEvent)
+				req.Header.Set("X-Hub-Signature", sign(bodyBuf.Bytes()))
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -209,7 +247,7 @@ func TestGithubHandler(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
-			(&githubWebhookReceiver{
+			(&bitbucketWebhookReceiver{
 				baseWebhookReceiver: &baseWebhookReceiver{
 					client:     testCase.client,
 					project:    testProjectName,
