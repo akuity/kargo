@@ -185,7 +185,7 @@ func (g *githubWebhookReceiver) GetHandler() http.HandlerFunc {
 			}
 			var ref name.Reference
 			if ref, err = name.ParseReference(
-				*pkg.GetPackageVersion().PackageURL,
+				pkg.GetPackageVersion().GetPackageURL(),
 			); err != nil {
 				xhttp.WriteErrorJSON(w, err)
 				return
