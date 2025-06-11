@@ -21,7 +21,12 @@ import (
 	"github.com/akuity/kargo/internal/indexer"
 )
 
-const bitbucketPushEventRequestBody = `
+func TestBitbucketHandler(t *testing.T) {
+	const testURL = "https://webhooks.kargo.example.com/nonsense"
+
+	const testProjectName = "fake-project"
+
+	const pushEventRequestBody = `
 {
 	"repository": {
 		"links": {
@@ -31,11 +36,6 @@ const bitbucketPushEventRequestBody = `
 		}
 	}
 }`
-
-func TestBitbucketHandler(t *testing.T) {
-	const testURL = "https://webhooks.kargo.example.com/nonsense"
-
-	const testProjectName = "fake-project"
 
 	testScheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(testScheme))
@@ -190,7 +190,7 @@ func TestBitbucketHandler(t *testing.T) {
 				indexer.WarehousesBySubscribedURLs,
 			).Build(),
 			req: func() *http.Request {
-				bodyBuf := bytes.NewBuffer([]byte(bitbucketPushEventRequestBody))
+				bodyBuf := bytes.NewBuffer([]byte(pushEventRequestBody))
 				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
 				req.Header.Set("X-Event-Key", bitbucketPushEvent)
 				req.Header.Set("X-Hub-Signature", sign(bodyBuf.Bytes()))
@@ -228,7 +228,7 @@ func TestBitbucketHandler(t *testing.T) {
 				indexer.WarehousesBySubscribedURLs,
 			).Build(),
 			req: func() *http.Request {
-				bodyBuf := bytes.NewBuffer([]byte(bitbucketPushEventRequestBody))
+				bodyBuf := bytes.NewBuffer([]byte(pushEventRequestBody))
 				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
 				req.Header.Set("X-Event-Key", bitbucketPushEvent)
 				req.Header.Set("X-Hub-Signature", sign(bodyBuf.Bytes()))
