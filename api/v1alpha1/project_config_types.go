@@ -141,6 +141,24 @@ type GitLabWebhookReceiverConfig struct {
 	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
 }
 
+// BitbucketWebhookReceiverConfig describes a webhook receiver that is
+// compatible with Bitbucket payloads.
+type BitbucketWebhookReceiverConfig struct {
+	// SecretRef contains a reference to a Secret. For Project-scoped webhook
+	// receivers, the referenced Secret must be in the same namespace as the
+	// ProjectConfig.
+	//
+	// For cluster-scoped webhook receivers, the referenced Secret must be in the
+	// designated "cluster Secrets" namespace.
+	//
+	// The Secret's data map is expected to contain a `secret` key whose
+	// value is the shared secret used to authenticate the webhook requests sent
+	// by Bitbucket. For more information please refer to the Bitbucket
+	// documentation:
+	//   https://support.atlassian.com/bitbucket-cloud/docs/manage-webhooks/
+	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+}
+
 // WebhookReceiverDetails encapsulates the details of a webhook receiver.
 type WebhookReceiverDetails struct {
 	// Name is the name of the webhook receiver.
