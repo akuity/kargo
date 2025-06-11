@@ -167,7 +167,7 @@ func (b *bitbucketWebhookReceiver) GetHandler() http.HandlerFunc {
 		//
 		// A naive option would be combining https://bitbucket.org/ with the value
 		// of the payload's repository.full_name field, but that does not hold up
-		// for events originating from BitBucket Data Center, which will utilize a
+		// for events originating from Bitbucket Data Center, which will utilize a
 		// custom domain name.
 		//
 		// A slightly better approach would be to parse the protocol and hostname
