@@ -39,7 +39,7 @@ func (s *server) ListProjectSecrets(
 		&secretsList,
 		client.InNamespace(req.Msg.GetProject()),
 		client.MatchingLabels{
-			kargoapi.CredentialTypeLabelKey: kargoapi.CredentialTypeLabelValueGeneric,
+			kargoapi.LabelKeyCredentialType: kargoapi.LabelValueCredentialTypeGeneric,
 		},
 	); err != nil {
 		return nil, fmt.Errorf("list secrets: %w", err)

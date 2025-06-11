@@ -48,21 +48,21 @@ func TestDefault(t *testing.T) {
 		err := w.Default(context.Background(), warehouse)
 		require.NoError(t, err)
 		require.Equal(t, testShardName, warehouse.Spec.Shard)
-		require.Equal(t, testShardName, warehouse.Labels[kargoapi.ShardLabelKey])
+		require.Equal(t, testShardName, warehouse.Labels[kargoapi.LabelKeyShard])
 	})
 
 	t.Run("sync shard label to empty shard field", func(t *testing.T) {
 		warehouse := &kargoapi.Warehouse{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels: map[string]string{
-					kargoapi.ShardLabelKey: testShardName,
+					kargoapi.LabelKeyShard: testShardName,
 				},
 			},
 		}
 		err := w.Default(context.Background(), warehouse)
 		require.NoError(t, err)
 		require.Empty(t, warehouse.Spec.Shard)
-		_, ok := warehouse.Labels[kargoapi.ShardLabelKey]
+		_, ok := warehouse.Labels[kargoapi.LabelKeyShard]
 		require.False(t, ok)
 	})
 }

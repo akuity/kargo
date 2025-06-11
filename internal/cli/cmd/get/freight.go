@@ -204,7 +204,7 @@ func newFreightTable(list *metav1.List) *metav1.Table {
 		freight := item.Object.(*kargoapi.Freight) // nolint: forcetypeassert
 		var alias string
 		if freight.Labels != nil {
-			alias = freight.Labels[kargoapi.AliasLabelKey]
+			alias = freight.Labels[kargoapi.LabelKeyAlias]
 		}
 		rows[i] = metav1.TableRow{
 			Cells: []any{

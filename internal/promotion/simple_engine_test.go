@@ -973,7 +973,7 @@ func TestSimpleEngine_getProjectSecrets(t *testing.T) {
 						Name:      "test-secret-b",
 						Namespace: "test-project",
 						Labels: map[string]string{
-							kargoapi.CredentialTypeLabelKey: kargoapi.CredentialTypeLabelValueGeneric,
+							kargoapi.LabelKeyCredentialType: kargoapi.LabelValueCredentialTypeGeneric,
 						},
 					},
 					Data: testData,

@@ -571,7 +571,7 @@ func (r *ControlFlowStageReconciler) clearAnalysisRuns(ctx context.Context, stag
 		&rollouts.AnalysisRun{},
 		client.InNamespace(stage.Namespace),
 		client.MatchingLabels(map[string]string{
-			kargoapi.StageLabelKey: stage.Name,
+			kargoapi.LabelKeyStage: stage.Name,
 		}),
 	); err != nil {
 		return fmt.Errorf("error deleting AnalysisRuns for Stage %q in namespace %q: %w",

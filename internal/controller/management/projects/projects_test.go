@@ -686,7 +686,7 @@ func TestReconciler_ensureNamespace(t *testing.T) {
 					ns, ok := obj.(*corev1.Namespace)
 					require.True(t, ok)
 					ns.Labels = map[string]string{
-						kargoapi.ProjectLabelKey: kargoapi.LabelTrueValue,
+						kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
 					}
 					ns.OwnerReferences = []metav1.OwnerReference{{
 						UID: "fake-uid",
@@ -712,7 +712,7 @@ func TestReconciler_ensureNamespace(t *testing.T) {
 					ns, ok := obj.(*corev1.Namespace)
 					require.True(t, ok)
 					ns.Labels = map[string]string{
-						kargoapi.ProjectLabelKey: kargoapi.LabelTrueValue,
+						kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
 					}
 					return nil
 				},
@@ -743,7 +743,7 @@ func TestReconciler_ensureNamespace(t *testing.T) {
 					ns, ok := obj.(*corev1.Namespace)
 					require.True(t, ok)
 					ns.Labels = map[string]string{
-						kargoapi.ProjectLabelKey: kargoapi.LabelTrueValue,
+						kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
 					}
 					return nil
 				},
@@ -781,7 +781,7 @@ func TestReconciler_ensureNamespace(t *testing.T) {
 					ns, ok := obj.(*corev1.Namespace)
 					require.True(t, ok)
 					ns.Labels = map[string]string{
-						kargoapi.ProjectLabelKey: kargoapi.LabelTrueValue,
+						kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
 					}
 					return nil
 				},

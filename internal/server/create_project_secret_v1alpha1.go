@@ -81,7 +81,7 @@ func (s *server) projectSecretToK8sSecret(projSecret projectSecret) *corev1.Secr
 			Namespace: projSecret.project,
 			Name:      projSecret.name,
 			Labels: map[string]string{
-				kargoapi.CredentialTypeLabelKey: kargoapi.CredentialTypeLabelValueGeneric,
+				kargoapi.LabelKeyCredentialType: kargoapi.LabelValueCredentialTypeGeneric,
 			},
 		},
 		Data: secretsData,

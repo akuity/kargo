@@ -40,7 +40,7 @@ func TestDeleteProjectSecret(t *testing.T) {
 								Namespace: "kargo-demo",
 								Name:      "secret-a",
 								Labels: map[string]string{
-									kargoapi.CredentialTypeLabelKey: kargoapi.CredentialTypeLabelValueGeneric,
+									kargoapi.LabelKeyCredentialType: kargoapi.LabelValueCredentialTypeGeneric,
 								},
 							},
 						},

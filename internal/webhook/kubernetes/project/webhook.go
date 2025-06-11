@@ -172,7 +172,7 @@ func (w *webhook) ensureNamespace(
 	} else if err == nil {
 		// We found an existing namespace with the same name as the Project. It's
 		// only a problem if it is not labeled as a Project namespace.
-		if ns.Labels[kargoapi.ProjectLabelKey] != kargoapi.LabelTrueValue {
+		if ns.Labels[kargoapi.LabelKeyProject] != kargoapi.LabelValueTrue {
 			return apierrors.NewConflict(
 				projectGroupResource,
 				project.Name,
@@ -197,7 +197,7 @@ func (w *webhook) ensureNamespace(
 		ObjectMeta: metav1.ObjectMeta{
 			Name: project.Name,
 			Labels: map[string]string{
-				kargoapi.ProjectLabelKey: kargoapi.LabelTrueValue,
+				kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
 			},
 			// Note: We no longer use an owner reference here. If we did, and too
 			// much time were to pass between namespace creation and the completion of
