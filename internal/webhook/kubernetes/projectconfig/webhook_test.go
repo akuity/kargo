@@ -546,6 +546,46 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 					"webhook receiver name already defined at spec.webhookReceivers[0]")
 			},
 		},
+		{
+			name: "webhook receiver contains config for multiple receiver types",
+			projectConfig: &kargoapi.ProjectConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testProjectName,
+					Namespace: testProjectName,
+				},
+				Spec: kargoapi.ProjectConfigSpec{
+					WebhookReceivers: []kargoapi.WebhookReceiverConfig{
+						{
+							Name:   "my-webhook-receiver",
+							GitHub: &kargoapi.GitHubWebhookReceiverConfig{},
+							GitLab: &kargoapi.GitLabWebhookReceiverConfig{},
+							Quay:   &kargoapi.QuayWebhookReceiverConfig{},
+						},
+					},
+				},
+			},
+			objects: []client.Object{testNs},
+			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
+				assert.Empty(t, warnings)
+				require.Error(t, err)
+
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+
+				assert.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
+				assert.Equal(t, 1, len(statusErr.ErrStatus.Details.Causes))
+
+				// Sort errors for consistent testing
+				sort.Slice(statusErr.ErrStatus.Details.Causes, func(i, j int) bool {
+					return statusErr.ErrStatus.Details.Causes[i].Field < statusErr.ErrStatus.Details.Causes[j].Field
+				})
+
+				assert.Equal(t, "spec.webhookReceivers[0]", statusErr.ErrStatus.Details.Causes[0].Field)
+				assert.Equal(t, metav1.CauseTypeForbidden, statusErr.ErrStatus.Details.Causes[0].Type)
+				assert.Contains(t, statusErr.ErrStatus.Details.Causes[0].Message,
+					"cannot define a receiver that is of more than one type, found 3: [GitHub GitLab Quay]")
+			},
+		},
 	}
 
 	for _, tt := range tests {
