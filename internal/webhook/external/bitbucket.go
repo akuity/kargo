@@ -162,6 +162,22 @@ func (b *bitbucketWebhookReceiver) GetHandler() http.HandlerFunc {
 			return
 		}
 
+		// Note: It may seem peculiar to obtain the repo URL from the payload's
+		// repository.links.html.href field, however, there is no better option.
+		//
+		// A naive option would be combining https://bitbucket.org/ with the value
+		// of the payload's repository.full_name field, but that does not hold up
+		// for events originating from BitBucket Data Center, which will utilize a
+		// custom domain name.
+		//
+		// A slightly better approach would be to parse the protocol and hostname
+		// from the value of the payload's repository.links.html.href field and
+		// combine that with the value of the payload's repository.full_name field,
+		// however, in all (currently known) cases, that yields the same result as
+		// simply using the value of the repository.links.html.href field directly.
+		//
+		// TODO(krancour): There are very likely some yet-to-be-identified edge
+		// cases where this choice does not hold up.
 		repoURL := payload.Repository.Links.HTML.Href
 
 		logger = logger.WithValues("repoURL", repoURL)
