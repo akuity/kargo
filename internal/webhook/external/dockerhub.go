@@ -5,13 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"regexp"
-	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	xhttp "github.com/akuity/kargo/internal/http"
+	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/io"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -20,10 +19,6 @@ const (
 	dockerhub                    = "dockerhub"
 	dockerhubSecretDataKey       = "secret"
 	dockerhubWebhookBodyMaxBytes = 2 << 20 // 2MB
-)
-
-var (
-	repoNameComponentRegexp = regexp.MustCompile(`^[a-z0-9]+(?:[._-][a-z0-9]+)*$`)
 )
 
 func init() {
@@ -77,84 +72,6 @@ func (d *dockerhubWebhookReceiver) getSecretValues(
 	return []string{string(secretValue)}, nil
 }
 
-// normalizeDockerImageRef normalizes Docker image references of the following forms:
-//
-//   - [docker.io/][namespace/]repo[:tag]
-//   - [docker.io/][namespace/]repo[@digest]
-//
-// This is useful for the purposes of comparison and also in cases where a
-// canonical representation of a Docker Hub image reference is needed. Any reference
-// that cannot be normalized will return an error.
-//
-// Examples:
-//
-//	"nginx"                    -> "docker.io/library/nginx:latest"
-//	"user/repo:v1.0"           -> "docker.io/user/repo:v1.0"
-//	"docker.io/library/nginx"  -> "docker.io/library/nginx:latest"
-//	"nginx@sha256:..."         -> "docker.io/library/nginx@sha256:..."
-func normalizeDockerImageRef(ref string) (string, error) {
-	const (
-		defaultHost      = "docker.io"
-		defaultNamespace = "library"
-		defaultTag       = "latest"
-	)
-
-	ref = strings.TrimSpace(ref)
-	if ref == "" {
-		return "", errors.New("empty image reference")
-	}
-	ref = strings.ToLower(ref)
-
-	// Remove leading docker.io/ if present
-	if strings.HasPrefix(ref, defaultHost+"/") {
-		ref = strings.TrimPrefix(ref, defaultHost+"/")
-	}
-
-	// Extract digest if present
-	var digest string
-	if at := strings.LastIndex(ref, "@"); at != -1 {
-		digest = ref[at:]
-		ref = ref[:at]
-		// Validate digest format: must be @sha256:<64 hex>
-		matched, _ := regexp.MatchString(`^@sha256:[a-f0-9]{64}$`, digest)
-		if !matched {
-			return "", fmt.Errorf("invalid digest format: %q", digest)
-		}
-	}
-
-	// Extract tag if present (only if no digest)
-	var tag string
-	if digest == "" {
-		if colon := strings.LastIndex(ref, ":"); colon != -1 && colon > strings.LastIndex(ref, "/") {
-			tag = ref[colon+1:]
-			ref = ref[:colon]
-			if tag == "" {
-				return "", errors.New("image reference has a colon but no tag")
-			}
-		} else {
-			tag = defaultTag
-		}
-	}
-
-	// Normalize path: always at least namespace/repo
-	parts := strings.Split(ref, "/")
-	if len(parts) == 1 {
-		parts = []string{defaultNamespace, parts[0]}
-	}
-	// Validate path parts
-	for _, part := range parts {
-		if !repoNameComponentRegexp.MatchString(part) {
-			return "", fmt.Errorf("invalid repository name component: %q", part)
-		}
-	}
-	path := strings.Join(parts, "/")
-
-	if digest != "" {
-		return fmt.Sprintf("%s/%s%s", defaultHost, path, digest), nil
-	}
-	return fmt.Sprintf("%s/%s:%s", defaultHost, path, tag), nil
-}
-
 // GetHandler implements WebhookReceiver.
 func (d *dockerhubWebhookReceiver) GetHandler() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -202,7 +119,7 @@ func (d *dockerhubWebhookReceiver) GetHandler() http.HandlerFunc {
 		}
 
 		// Normalize the repo name
-		repoURL, err := normalizeDockerImageRef(payload.Repository.RepoName)
+		repoURL, err := image.NormalizeRef(payload.Repository.RepoName)
 		if err != nil {
 			xhttp.WriteErrorJSON(w, err)
 			return
