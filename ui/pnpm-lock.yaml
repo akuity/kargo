@@ -89,6 +89,9 @@ importers:
       oauth4webapi:
         specifier: ^3.5.1
         version: 3.5.1
+      rc-picker:
+        specifier: ^4.11.3
+        version: 4.11.3(date-fns@4.1.0)(dayjs@1.11.13)(moment@2.30.1)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       react:
         specifier: ^19.1.0
         version: 19.1.0

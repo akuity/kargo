@@ -1,6 +1,6 @@
-import { faObjectGroup } from '@fortawesome/free-solid-svg-icons';
+import { faCircleNodes, faList, faObjectGroup } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Card, Select, Typography } from 'antd';
+import { Button, Card, Segmented, Select, Typography } from 'antd';
 import { useMemo } from 'react';
 
 import { Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
@@ -11,6 +11,8 @@ import { groupNodes } from './group-nodes';
 type GraphFiltersProps = {
   warehouses: Warehouse[];
   stages: Stage[];
+  pipelineView: 'graph' | 'list';
+  setPipelineView: (view: 'graph' | 'list') => void;
 };
 
 export const GraphFilters = (props: GraphFiltersProps) => {
@@ -56,6 +58,16 @@ export const GraphFilters = (props: GraphFiltersProps) => {
           });
         }}
         disabled={stackedNodesParents.length < 1}
+      />
+
+      <Segmented
+        className='ml-3'
+        value={props.pipelineView}
+        options={[
+          { value: 'graph', icon: <FontAwesomeIcon icon={faCircleNodes} /> },
+          { value: 'list', icon: <FontAwesomeIcon icon={faList} /> }
+        ]}
+        onChange={props.setPipelineView}
       />
     </Card>
   );

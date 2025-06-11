@@ -33,6 +33,54 @@ export const catalogueFreights = (freights: Freight[]) => {
   return catalogue;
 };
 
+export const catalogueFreightVersions = (freights: Freight[]) => {
+  const catalogue = {
+    images: new Set<string>(),
+    commits: new Set<string>(),
+    charts: new Set<string>()
+  };
+
+  for (const freight of freights) {
+    if (freight?.images?.length) {
+      for (const image of freight.images) {
+        catalogue.images.add(image.tag);
+      }
+    }
+
+    if (freight?.commits?.length) {
+      for (const commit of freight.commits) {
+        catalogue.commits.add(commit.id);
+      }
+    }
+
+    if (freight?.charts?.length) {
+      for (const chart of freight.charts) {
+        catalogue.charts.add(chart.version);
+      }
+    }
+  }
+
+  return catalogue;
+};
+
+export const filterFreightByVersion = (versions: string[]) => (_freight: Freight) => {
+  const freight = { ..._freight };
+
+  if (!versions.length) {
+    return freight;
+  }
+
+  freight.images = freight.images?.filter((image) => versions.includes(image.tag));
+  freight.commits = freight.commits?.filter((commit) => versions.includes(commit.tag));
+  freight.charts = freight.charts?.filter((chart) => versions.includes(chart.version));
+
+  if (!freight.images.length && !freight.charts.length && !freight.commits.length) {
+    return null;
+  }
+
+  return freight;
+};
+
 export const filterFreightBySource = (repoURLs: string[]) => (_freight: Freight) => {
   // clone is must
   const freight = { ..._freight };

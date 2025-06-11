@@ -1,8 +1,13 @@
 import { ColumnType } from 'antd/es/table';
-import { formatDistance } from 'date-fns';
+import { formatDistance, isAfter, isBefore } from 'date-fns';
 import { generatePath, Link } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import CustomDatePicker from '@ui/features/common/date-picker';
+import {
+  Filter,
+  useFilterContext
+} from '@ui/features/project/pipelines/list/context/filter-context';
 import {
   getLastPromotionDate,
   isStageControlFlow
@@ -10,7 +15,7 @@ import {
 import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
-export const lastPromotionColumn = (): ColumnType<Stage> => ({
+export const lastPromotionColumn = (filter: Filter): ColumnType<Stage> => ({
   title: 'Last Promotion',
   width: '15%',
   render: (_, stage) => {
@@ -35,6 +40,43 @@ export const lastPromotionColumn = (): ColumnType<Stage> => ({
       >
         {formatDistance(date, new Date(), { addSuffix: true })}
       </Link>
+    );
+  },
+  filterDropdown: () => {
+    const filters = useFilterContext();
+
+    return (
+      <div style={{ padding: 8 }}>
+        <CustomDatePicker.RangePicker
+          value={filter.lastPromotion}
+          onChange={(dates) => {
+            filters?.onFilter({
+              ...filters.filters,
+              // @ts-expect-error expected date
+              lastPromotion: dates
+            });
+          }}
+        />
+      </div>
+    );
+  },
+  filteredValue: filter?.lastPromotion?.map((d) => d.toString()),
+  onFilter: (_, record) => {
+    const stageLastPromotion = record?.status?.lastPromotion?.finishedAt;
+
+    if (!filter?.lastPromotion?.filter(Boolean).length) {
+      return true;
+    }
+
+    const stageLastPromotionDate = timestampDate(stageLastPromotion);
+
+    if (!stageLastPromotionDate) {
+      return false;
+    }
+
+    return (
+      isBefore(stageLastPromotionDate, filter?.lastPromotion[1]) &&
+      isAfter(stageLastPromotionDate, filter?.lastPromotion[0])
     );
   }
 });
