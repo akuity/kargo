@@ -31,6 +31,9 @@ data:
   {{- if .Values.api.oidc.enabled }}
   OIDC_ENABLED: "true"
   OIDC_ADDITIONAL_SCOPES: {{ join "," .Values.api.oidc.additionalScopes }}
+  {{- if .Values.api.oidc.additionalParameters }}
+  OIDC_ADDITIONAL_PARAMS: {{ include "kargo.api.oidc.additionalParameters" . }}
+  {{- end }}
   {{- if .Values.api.oidc.globalServiceAccounts.namespaces }}
   GLOBAL_SERVICE_ACCOUNT_NAMESPACES: {{ .Release.Namespace }},{{ join "," .Values.api.oidc.globalServiceAccounts.namespaces }}
   {{- else }}

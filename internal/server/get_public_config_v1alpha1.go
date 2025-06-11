@@ -15,10 +15,11 @@ func (s *server) GetPublicConfig(
 	var oidcCfg *svcv1alpha1.OIDCConfig
 	if s.cfg.OIDCConfig != nil {
 		oidcCfg = &svcv1alpha1.OIDCConfig{
-			IssuerUrl:   s.cfg.OIDCConfig.IssuerURL,
-			ClientId:    s.cfg.OIDCConfig.ClientID,
-			CliClientId: s.cfg.OIDCConfig.CLIClientID,
-			Scopes:      append(s.cfg.OIDCConfig.DefaultScopes, s.cfg.OIDCConfig.AdditionalScopes...),
+			IssuerUrl:            s.cfg.OIDCConfig.IssuerURL,
+			ClientId:             s.cfg.OIDCConfig.ClientID,
+			CliClientId:          s.cfg.OIDCConfig.CLIClientID,
+			Scopes:               append(s.cfg.OIDCConfig.DefaultScopes, s.cfg.OIDCConfig.AdditionalScopes...),
+			AdditionalParameters: s.cfg.OIDCConfig.AdditionalParameters,
 		}
 	}
 	resp := &svcv1alpha1.GetPublicConfigResponse{
