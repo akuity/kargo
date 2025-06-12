@@ -11,17 +11,25 @@ func TestNormalizeURL(t *testing.T) {
 		input    string
 		expected string
 	}{
-		// Official images, docker.io registry
+		// Official images on Docker Hub
+		{"index.docker.io/library/busybox", "busybox"},
+		{"index.docker.io/busybox", "busybox"},
 		{"docker.io/library/busybox", "busybox"},
-		// Official images, index.docker.io registry
-		{"index.docker.io/library/redis", "redis"},
-		// Custom repo in docker.io
-		{"docker.io/myuser/myapp", "myuser/myapp"},
-		// Other registries
-		{"gcr.io/myproj/app", "gcr.io/myproj/app"},
-		{"quay.io/org/repo", "quay.io/org/repo"},
-		// Invalid input: should return input as-is
-		{"not a valid ref", "not a valid ref"},
+		{"docker.io/busybox", "busybox"},
+		{"library/busybox", "busybox"},
+		{"busybox", "busybox"},
+
+		// Other images on Docker Hub
+		{"index.docker.io/example/repo", "example/repo"},
+		{"docker.io/example/repo", "example/repo"},
+		{"example/repo", "example/repo"},
+
+		// Images from other registries
+		{"ghcr.io/example/repo", "ghcr.io/example/repo"},
+		{"quay.io/example/repo", "quay.io/example/repo"},
+
+		// Input that cannot be normalized (invalid URL)
+		{"invalid url", "invalid url"},
 	}
 
 	for _, tc := range tests {
