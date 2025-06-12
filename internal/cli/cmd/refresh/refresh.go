@@ -18,6 +18,7 @@ import (
 
 const (
 	refreshResourceTypeClusterConfig = "clusterconfig"
+	refreshResourceTypeProjectConfig = "projectconfig"
 	refreshResourceTypeStage         = "stage"
 	refreshResourceTypeWarehouse     = "warehouse"
 )
@@ -46,11 +47,15 @@ kargo refresh stage --project=my-project my-stage
 
 # Refresh the cluster configuration
 kargo refresh clusterconfig
+
+# Refresh the project configuration
+kargo refresh projectconfig --project=my-project
 `),
 	}
 
 	// Register subcommands.
 	cmd.AddCommand(newRefreshClusterConfigCommand(cfg))
+	cmd.AddCommand(newRefreshProjectConfigCommand(cfg))
 	cmd.AddCommand(newRefreshStageCommand(cfg))
 	cmd.AddCommand(newRefreshWarehouseCommand(cfg))
 
@@ -70,9 +75,12 @@ func (o *refreshOptions) addFlags(cmd *cobra.Command, projectScoped bool) {
 
 // complete sets the resource type for the refresh options, and further parses
 // the command arguments to set the resource name.
-func (o *refreshOptions) complete(resourceType, name string) {
+func (o *refreshOptions) complete(resourceType string, args []string) {
 	o.ResourceType = resourceType
-	o.Name = strings.TrimSpace(name)
+
+	if len(args) > 0 {
+		o.Name = strings.TrimSpace(args[0])
+	}
 }
 
 // validate performs validation of the options. If the options are invalid, an
@@ -105,6 +113,10 @@ func (o *refreshOptions) run(ctx context.Context) error {
 	switch o.ResourceType {
 	case refreshResourceTypeClusterConfig:
 		_, err = kargoSvcCli.RefreshClusterConfig(ctx, connect.NewRequest(&v1alpha1.RefreshClusterConfigRequest{}))
+	case refreshResourceTypeProjectConfig:
+		_, err = kargoSvcCli.RefreshProjectConfig(ctx, connect.NewRequest(&v1alpha1.RefreshProjectConfigRequest{
+			Project: o.Project,
+		}))
 	case refreshResourceTypeStage:
 		_, err = kargoSvcCli.RefreshStage(ctx, connect.NewRequest(&v1alpha1.RefreshStageRequest{
 			Project: o.Project,
@@ -124,6 +136,8 @@ func (o *refreshOptions) run(ctx context.Context) error {
 		switch o.ResourceType {
 		case refreshResourceTypeClusterConfig:
 			err = waitForClusterConfig(ctx, kargoSvcCli)
+		case refreshResourceTypeProjectConfig:
+			err = waitForProjectConfig(ctx, kargoSvcCli, o.Project)
 		case refreshResourceTypeStage:
 			err = waitForStage(ctx, kargoSvcCli, o.Project, o.Name)
 		case refreshResourceTypeWarehouse:
@@ -133,13 +147,16 @@ func (o *refreshOptions) run(ctx context.Context) error {
 			return fmt.Errorf("wait %s: %w", o.ResourceType, err)
 		}
 	}
-	fmt.Printf("%s '%s/%s' refreshed\n", o.ResourceType, formatName(o.Project, o.Name))
+	fmt.Printf("%s '%s' refreshed\n", o.ResourceType, formatName(o.Project, o.Name))
 	return nil
 }
 
 func formatName(project, name string) string {
 	if project == "" {
 		return name
+	}
+	if name == "" {
+		return project
 	}
 	return fmt.Sprintf("%s/%s", project, name)
 }

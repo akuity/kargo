@@ -33,7 +33,7 @@ kargo refresh clusterconfig
 kargo refresh clusterconfig --wait
 `),
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			cmdOpts.complete(refreshResourceTypeClusterConfig, "")
+			cmdOpts.complete(refreshResourceTypeClusterConfig, nil)
 
 			if err := cmdOpts.validate(false, false); err != nil {
 				return err

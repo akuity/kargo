@@ -37,7 +37,7 @@ kargo config set-project my-project
 kargo refresh stage my-stage
 `),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cmdOpts.complete(refreshResourceTypeStage, args[0])
+			cmdOpts.complete(refreshResourceTypeStage, args)
 
 			if err := cmdOpts.validate(true, true); err != nil {
 				return err
