@@ -857,11 +857,6 @@
                             "type": "string"
                           }
                         },
-                        "required": [
-                          "id",
-                          "phase",
-                          "startTime"
-                        ],
                         "type": "object"
                       },
                       "type": "array"
@@ -1154,11 +1149,6 @@
                       "type": "string"
                     }
                   },
-                  "required": [
-                    "id",
-                    "phase",
-                    "startTime"
-                  ],
                   "type": "object"
                 },
                 "type": "array"
@@ -1669,11 +1659,6 @@
                             "type": "string"
                           }
                         },
-                        "required": [
-                          "id",
-                          "phase",
-                          "startTime"
-                        ],
                         "type": "object"
                       },
                       "type": "array"
