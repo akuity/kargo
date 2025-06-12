@@ -325,11 +325,11 @@ the previous section.
       steps:
       - uses: git-clone
         config:
-          repoURL: \${{ vars.gitopsRepo }}
+          repoURL: ${{ vars.gitopsRepo }}
           checkout:
           - branch: main
             path: ./src
-          - branch: stage/\${{ ctx.stage }}
+          - branch: stage/${{ ctx.stage }}
             create: true
             path: ./out
       - uses: git-clear
@@ -340,27 +340,27 @@ the previous section.
         config:
           path: ./src/base
           images:
-          - image: \${{ vars.imageRepo }}
-            tag: \${{ imageFrom(vars.imageRepo).Tag }}
+          - image: ${{ vars.imageRepo }}
+            tag: ${{ imageFrom(vars.imageRepo).Tag }}
       - uses: kustomize-build
         config:
-          path: ./src/stages/\${{ ctx.stage }}
+          path: ./src/stages/${{ ctx.stage }}
           outPath: ./out
       - uses: git-commit
         as: commit
         config:
           path: ./out
-          message: \${{ task.outputs.update.commitMessage }}
+          message: ${{ task.outputs.update.commitMessage }}
       - uses: git-push
         config:
           path: ./out
       - uses: argocd-update
         config:
           apps:
-          - name: kargo-demo-\${{ ctx.stage }}
+          - name: kargo-demo-${{ ctx.stage }}
             sources:
-            - repoURL: \${{ vars.gitopsRepo }}
-              desiredRevision: \${{ task.outputs.commit.commit }}
+            - repoURL: ${{ vars.gitopsRepo }}
+              desiredRevision: ${{ task.outputs.commit.commit }}
     ---
     apiVersion: kargo.akuity.io/v1alpha1
     kind: Stage
@@ -493,11 +493,11 @@ the previous section.
       steps:
       - uses: git-clone
         config:
-          repoURL: \${{ vars.gitopsRepo }}
+          repoURL: ${{ vars.gitopsRepo }}
           checkout:
           - branch: main
             path: ./src
-          - branch: stage/\${{ ctx.stage }}
+          - branch: stage/${{ ctx.stage }}
             create: true
             path: ./out
       - uses: git-clear
@@ -508,27 +508,27 @@ the previous section.
         config:
           path: ./src/base
           images:
-          - image: \${{ vars.imageRepo }}
-            tag: \${{ imageFrom(vars.imageRepo).Tag }}
+          - image: ${{ vars.imageRepo }}
+            tag: ${{ imageFrom(vars.imageRepo).Tag }}
       - uses: kustomize-build
         config:
-          path: ./src/stages/\${{ ctx.stage }}
+          path: ./src/stages/${{ ctx.stage }}
           outPath: ./out
       - uses: git-commit
         as: commit
         config:
           path: ./out
-          message: \${{ task.outputs.update.commitMessage }}
+          message: ${{ task.outputs.update.commitMessage }}
       - uses: git-push
         config:
           path: ./out
       - uses: argocd-update
         config:
           apps:
-          - name: kargo-demo-\${{ ctx.stage }}
+          - name: kargo-demo-${{ ctx.stage }}
             sources:
-            - repoURL: \${{ vars.gitopsRepo }}
-              desiredRevision: \${{ task.outputs.commit.commit }}
+            - repoURL: ${{ vars.gitopsRepo }}
+              desiredRevision: ${{ task.outputs.commit.commit }}
     ---
     apiVersion: kargo.akuity.io/v1alpha1
     kind: Stage
