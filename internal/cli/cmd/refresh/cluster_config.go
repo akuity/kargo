@@ -19,7 +19,8 @@ import (
 
 func newRefreshClusterConfigCommand(cfg config.CLIConfig) *cobra.Command {
 	cmdOpts := &refreshOptions{
-		Config: cfg,
+		Config:       cfg,
+		ResourceType: refreshResourceTypeClusterConfig,
 	}
 
 	cmd := &cobra.Command{
@@ -33,9 +34,9 @@ kargo refresh clusterconfig
 kargo refresh clusterconfig --wait
 `),
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			cmdOpts.complete(refreshResourceTypeClusterConfig, nil)
+			cmdOpts.complete(nil)
 
-			if err := cmdOpts.validate(false, false); err != nil {
+			if err := cmdOpts.validate(); err != nil {
 				return err
 			}
 
@@ -44,7 +45,7 @@ kargo refresh clusterconfig --wait
 	}
 
 	// Register the option flags on the command.
-	cmdOpts.addFlags(cmd, false)
+	cmdOpts.addFlags(cmd)
 
 	return cmd
 }

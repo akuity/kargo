@@ -17,18 +17,42 @@ import (
 )
 
 const (
-	refreshResourceTypeClusterConfig = "clusterconfig"
-	refreshResourceTypeProjectConfig = "projectconfig"
-	refreshResourceTypeStage         = "stage"
-	refreshResourceTypeWarehouse     = "warehouse"
+	refreshResourceTypeClusterConfig refreshResourceType = "clusterconfig"
+	refreshResourceTypeProjectConfig refreshResourceType = "projectconfig"
+	refreshResourceTypeStage         refreshResourceType = "stage"
+	refreshResourceTypeWarehouse     refreshResourceType = "warehouse"
 )
+
+type refreshResourceType string
+
+func (t refreshResourceType) String() string {
+	return string(t)
+}
+
+func (t refreshResourceType) requiresName() bool {
+	switch t {
+	case refreshResourceTypeStage, refreshResourceTypeWarehouse:
+		return true
+	default:
+		return false
+	}
+}
+
+func (t refreshResourceType) requiresProject() bool {
+	switch t {
+	case refreshResourceTypeProjectConfig, refreshResourceTypeStage, refreshResourceTypeWarehouse:
+		return true
+	default:
+		return false
+	}
+}
 
 type refreshOptions struct {
 	Config        config.CLIConfig
 	ClientOptions client.Options
 
 	Project      string
-	ResourceType string
+	ResourceType refreshResourceType
 	Name         string
 	Wait         bool
 }
@@ -63,10 +87,10 @@ kargo refresh projectconfig --project=my-project
 }
 
 // addFlags adds the flags for the refresh options to the provided command.
-func (o *refreshOptions) addFlags(cmd *cobra.Command, projectScoped bool) {
+func (o *refreshOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 
-	if projectScoped {
+	if o.ResourceType.requiresProject() {
 		option.Project(cmd.Flags(), &o.Project, o.Config.Project,
 			"The Project the resource belongs to. If not set, the default project will be used.")
 	}
@@ -75,28 +99,26 @@ func (o *refreshOptions) addFlags(cmd *cobra.Command, projectScoped bool) {
 
 // complete sets the resource type for the refresh options, and further parses
 // the command arguments to set the resource name.
-func (o *refreshOptions) complete(resourceType string, args []string) {
-	o.ResourceType = resourceType
-
-	if len(args) > 0 {
+func (o *refreshOptions) complete(args []string) {
+	if o.ResourceType.requiresName() {
 		o.Name = strings.TrimSpace(args[0])
 	}
 }
 
 // validate performs validation of the options. If the options are invalid, an
 // error is returned.
-func (o *refreshOptions) validate(projectScoped, nameBased bool) error {
+func (o *refreshOptions) validate() error {
 	var errs []error
 
 	if o.ResourceType == "" {
 		errs = append(errs, errors.New("resource type is required"))
 	}
 
-	if projectScoped && o.Project == "" {
+	if o.ResourceType.requiresProject() && o.Project == "" {
 		errs = append(errs, errors.New("project is required"))
 	}
 
-	if nameBased && o.Name == "" {
+	if o.ResourceType.requiresName() && o.Name == "" {
 		errs = append(errs, errors.New("name is required"))
 	}
 

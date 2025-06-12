@@ -19,7 +19,8 @@ import (
 
 func newRefreshStageCommand(cfg config.CLIConfig) *cobra.Command {
 	cmdOpts := &refreshOptions{
-		Config: cfg,
+		Config:       cfg,
+		ResourceType: refreshResourceTypeStage,
 	}
 
 	cmd := &cobra.Command{
@@ -37,9 +38,9 @@ kargo config set-project my-project
 kargo refresh stage my-stage
 `),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cmdOpts.complete(refreshResourceTypeStage, args)
+			cmdOpts.complete(args)
 
-			if err := cmdOpts.validate(true, true); err != nil {
+			if err := cmdOpts.validate(); err != nil {
 				return err
 			}
 
@@ -48,7 +49,7 @@ kargo refresh stage my-stage
 	}
 
 	// Register the option flags on the command.
-	cmdOpts.addFlags(cmd, true)
+	cmdOpts.addFlags(cmd)
 
 	return cmd
 }

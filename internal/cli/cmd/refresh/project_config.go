@@ -19,11 +19,12 @@ import (
 
 func newRefreshProjectConfigCommand(cfg config.CLIConfig) *cobra.Command {
 	cmdOpts := &refreshOptions{
-		Config: cfg,
+		Config:       cfg,
+		ResourceType: refreshResourceTypeProjectConfig,
 	}
 
 	cmd := &cobra.Command{
-		Use:  "projectconfig [--wait]",
+		Use:  "projectconfig [--project=project] [--wait]",
 		Args: option.NoArgs,
 		Example: templates.Example(`
 # Refresh the project configuration
@@ -37,9 +38,9 @@ kargo config set-project my-project
 kargo refresh projectconfig
 `),
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			cmdOpts.complete(refreshResourceTypeProjectConfig, nil)
+			cmdOpts.complete(nil)
 
-			if err := cmdOpts.validate(true, false); err != nil {
+			if err := cmdOpts.validate(); err != nil {
 				return err
 			}
 
@@ -48,7 +49,7 @@ kargo refresh projectconfig
 	}
 
 	// Register the option flags on the command.
-	cmdOpts.addFlags(cmd, true)
+	cmdOpts.addFlags(cmd)
 
 	return cmd
 }

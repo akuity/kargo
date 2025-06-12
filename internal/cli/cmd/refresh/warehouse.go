@@ -19,7 +19,8 @@ import (
 
 func newRefreshWarehouseCommand(cfg config.CLIConfig) *cobra.Command {
 	cmdOpts := &refreshOptions{
-		Config: cfg,
+		Config:       cfg,
+		ResourceType: refreshResourceTypeWarehouse,
 	}
 
 	cmd := &cobra.Command{
@@ -37,9 +38,9 @@ kargo config set-project my-project
 kargo refresh warehouse my-warehouse
 `),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cmdOpts.complete(refreshResourceTypeWarehouse, args)
+			cmdOpts.complete(args)
 
-			if err := cmdOpts.validate(true, true); err != nil {
+			if err := cmdOpts.validate(); err != nil {
 				return err
 			}
 
@@ -48,7 +49,7 @@ kargo refresh warehouse my-warehouse
 	}
 
 	// Register the option flags on the command.
-	cmdOpts.addFlags(cmd, true)
+	cmdOpts.addFlags(cmd)
 
 	return cmd
 }
