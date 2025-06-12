@@ -259,7 +259,7 @@ func (o *controllerOptions) setupKargoManager(
 
 	// Build a separate client for the local cluster...
 	if restCfg, err =
-		kubernetes.GetRestConfig(ctx, o.ControlPlaneKubeConfig); err != nil {
+		kubernetes.GetRestConfig(ctx, ""); err != nil {
 		return nil, nil, stagesReconcilerCfg,
 			fmt.Errorf("error loading REST config for local cluster client: %w", err)
 	}
