@@ -10,8 +10,8 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/git"
-	"github.com/akuity/kargo/internal/image"
 	xhttp "github.com/akuity/kargo/internal/http"
+	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/io"
 	"github.com/akuity/kargo/internal/logging"
 )
