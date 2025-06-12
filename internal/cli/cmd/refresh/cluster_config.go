@@ -17,29 +17,25 @@ import (
 	"github.com/akuity/kargo/internal/cli/templates"
 )
 
-func newRefreshStageCommand(cfg config.CLIConfig) *cobra.Command {
+func newRefreshClusterConfigCommand(cfg config.CLIConfig) *cobra.Command {
 	cmdOpts := &refreshOptions{
 		Config: cfg,
 	}
 
 	cmd := &cobra.Command{
-		Use:  "stage [--project=project] NAME [--wait]",
-		Args: option.ExactArgs(1),
+		Use:  "clusterconfig [--wait]",
+		Args: option.NoArgs,
 		Example: templates.Example(`
-# Refresh a stage
-kargo refresh stage --project=my-project my-stage
+# Refresh the cluster configuration
+kargo refresh clusterconfig
 
-# Refresh a stage and wait for it to complete
-kargo refresh stage --project=my-project my-stage --wait
-
-# Refresh a stage in the default project
-kargo config set-project my-project
-kargo refresh stage my-stage
+# Refresh the cluster configuration and wait for it to complete
+kargo refresh clusterconfig --wait
 `),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			cmdOpts.complete(refreshResourceTypeStage, args[0])
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			cmdOpts.complete(refreshResourceTypeClusterConfig, "")
 
-			if err := cmdOpts.validate(true, true); err != nil {
+			if err := cmdOpts.validate(false, false); err != nil {
 				return err
 			}
 
@@ -48,23 +44,18 @@ kargo refresh stage my-stage
 	}
 
 	// Register the option flags on the command.
-	cmdOpts.addFlags(cmd, true)
+	cmdOpts.addFlags(cmd, false)
 
 	return cmd
 }
 
-func waitForStage(
+func waitForClusterConfig(
 	ctx context.Context,
 	kargoSvcCli svcv1alpha1connect.KargoServiceClient,
-	project string,
-	name string,
 ) error {
-	res, err := kargoSvcCli.WatchStages(ctx, connect.NewRequest(&v1alpha1.WatchStagesRequest{
-		Project: project,
-		Name:    name,
-	}))
+	res, err := kargoSvcCli.WatchClusterConfig(ctx, connect.NewRequest(&v1alpha1.WatchClusterConfigRequest{}))
 	if err != nil {
-		return fmt.Errorf("watch stage: %w", err)
+		return fmt.Errorf("watch clusterconfig: %w", err)
 	}
 	defer func() {
 		if conn, connErr := res.Conn(); connErr == nil {
@@ -74,22 +65,22 @@ func waitForStage(
 	for {
 		if !res.Receive() {
 			if err = res.Err(); err != nil {
-				return fmt.Errorf("watch stage: %w", err)
+				return fmt.Errorf("watch clusterconfig: %w", err)
 			}
 			return errors.New("unexpected end of watch stream")
 		}
 		msg := res.Msg()
-		if msg == nil || msg.Stage == nil {
+		if msg == nil || msg.ClusterConfig == nil {
 			return errors.New("unexpected response")
 		}
-		token, ok := api.RefreshAnnotationValue(msg.Stage.GetAnnotations())
+		token, ok := api.RefreshAnnotationValue(msg.ClusterConfig.GetAnnotations())
 		if !ok {
 			return fmt.Errorf(
-				"Stage %q in Project %q has no %q annotation",
-				name, project, kargoapi.AnnotationKeyRefresh,
+				"ClusterConfig %q has no %q annotation",
+				msg.ClusterConfig.Name, kargoapi.AnnotationKeyRefresh,
 			)
 		}
-		if msg.Stage.Status.LastHandledRefresh == token {
+		if msg.ClusterConfig.Status.LastHandledRefresh == token {
 			return nil
 		}
 	}

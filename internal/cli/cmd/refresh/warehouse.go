@@ -37,9 +37,9 @@ kargo config set-project my-project
 kargo refresh warehouse my-warehouse
 `),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cmdOpts.complete(refreshResourceTypeWarehouse, args)
+			cmdOpts.complete(refreshResourceTypeWarehouse, args[0])
 
-			if err := cmdOpts.validate(); err != nil {
+			if err := cmdOpts.validate(true, true); err != nil {
 				return err
 			}
 
@@ -48,7 +48,7 @@ kargo refresh warehouse my-warehouse
 	}
 
 	// Register the option flags on the command.
-	cmdOpts.addFlags(cmd)
+	cmdOpts.addFlags(cmd, true)
 
 	return cmd
 }
