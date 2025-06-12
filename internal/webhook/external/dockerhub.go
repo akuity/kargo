@@ -119,11 +119,7 @@ func (d *dockerhubWebhookReceiver) GetHandler() http.HandlerFunc {
 		}
 
 		// Normalize the repo name
-		repoURL, err := image.NormalizeURL(payload.Repository.RepoName)
-		if err != nil {
-			xhttp.WriteErrorJSON(w, err)
-			return
-		}
+		repoURL := image.NormalizeURL(payload.Repository.RepoName)
 
 		logger = logger.WithValues("repoURL", repoURL)
 		ctx = logging.ContextWithLogger(ctx, logger)

@@ -10,6 +10,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/git"
+	"github.com/akuity/kargo/internal/image"
 	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/io"
 	"github.com/akuity/kargo/internal/logging"
@@ -163,12 +164,23 @@ func (g *githubWebhookReceiver) GetHandler() http.HandlerFunc {
 				},
 			)
 		case *gh.PushEvent:
-			// TODO(krancour): GetHTMLURL() gives use a repo URL starting with
+			// TODO(krancour): GetHTMLURL() gives us a repo URL starting with
 			// https://. By refreshing Warehouses using a normalized representation of
 			// that URL, we will miss any Warehouses that are subscribed to the same
 			// repository using a different URL format.
-			repoURL := git.NormalizeURL(e.GetRepo().GetHTMLURL())
-			logger = logger.WithValues("repoWebURL", repoURL)
+
+			repoWebURL := e.GetRepo().GetHTMLURL()
+			repoFullName := e.GetRepo().GetFullName()
+
+			// Default: treat as a Git repo
+			repoURL := git.NormalizeURL(repoWebURL)
+
+			// Special case: ghcr.io package event
+			if repoWebURL == "https://ghcr.io/"+repoFullName {
+				repoURL = image.NormalizeURL("ghcr.io/" + repoFullName)
+			}
+
+			logger = logger.WithValues("repoWebURL", repoWebURL, "repoURL", repoURL)
 			ctx = logging.ContextWithLogger(ctx, logger)
 			result, err := refreshWarehouses(ctx, g.client, g.project, repoURL)
 			if err != nil {

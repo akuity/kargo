@@ -514,9 +514,7 @@ func WarehousesBySubscribedURLs(obj client.Object) []string {
 			)
 		}
 		if sub.Image != nil && sub.Image.RepoURL != "" {
-			if normalized, err := image.NormalizeURL(sub.Image.RepoURL); err == nil {
-				repoURLs = append(repoURLs, normalized)
-			}
+			repoURLs = append(repoURLs, image.NormalizeURL(sub.Image.RepoURL))
 		}
 	}
 	return repoURLs
