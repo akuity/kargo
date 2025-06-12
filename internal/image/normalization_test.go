@@ -20,15 +20,12 @@ func TestNormalizeURL(t *testing.T) {
 		// Other registries
 		{"gcr.io/myproj/app", "gcr.io/myproj/app"},
 		{"quay.io/org/repo", "quay.io/org/repo"},
+		// Invalid input: should return input as-is
+		{"not a valid ref", "not a valid ref"},
 	}
 
 	for _, tc := range tests {
 		got := NormalizeURL(tc.input)
 		require.Equal(t, tc.expected, got, "input: %s", tc.input)
 	}
-
-	// Invalid input: should return input as-is
-	input := "not a valid ref"
-	got := NormalizeURL(input)
-	require.Equal(t, input, got)
 }
