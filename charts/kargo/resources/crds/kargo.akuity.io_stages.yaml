@@ -999,10 +999,6 @@ spec:
                                     Verification process was started.
                                   format: date-time
                                   type: string
-                              required:
-                              - id
-                              - phase
-                              - startTime
                               type: object
                             type: array
                         required:
@@ -1315,10 +1311,6 @@ spec:
                               process was started.
                             format: date-time
                             type: string
-                        required:
-                        - id
-                        - phase
-                        - startTime
                         type: object
                       type: array
                   required:
@@ -1863,10 +1855,6 @@ spec:
                                     Verification process was started.
                                   format: date-time
                                   type: string
-                              required:
-                              - id
-                              - phase
-                              - startTime
                               type: object
                             type: array
                         required:

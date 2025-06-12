@@ -695,23 +695,17 @@ type AnalysisRunArgument struct {
 // process.
 type VerificationInfo struct {
 	// ID is the identifier of the Verification process.
-	//
-	// +kubebuilder:validation:Required
-	ID string `json:"id" protobuf:"bytes,4,opt,name=id"`
+	ID string `json:"id,omitempty" protobuf:"bytes,4,opt,name=id"`
 	// Actor is the name of the entity that initiated or aborted the
 	// Verification process.
 	Actor string `json:"actor,omitempty" protobuf:"bytes,7,opt,name=actor"`
 	// StartTime is the time at which the Verification process was started.
-	//
-	// +kubebuilder:validation:Required
-	StartTime *metav1.Time `json:"startTime" protobuf:"bytes,5,opt,name=startTime"`
+	StartTime *metav1.Time `json:"startTime,omitempty" protobuf:"bytes,5,opt,name=startTime"`
 	// Phase describes the current phase of the Verification process. Generally,
 	// this will be a reflection of the underlying AnalysisRun's phase, however,
 	// there are exceptions to this, such as in the case where an AnalysisRun
 	// cannot be launched successfully.
-	//
-	// +kubebuilder:validation:Required
-	Phase VerificationPhase `json:"phase" protobuf:"bytes,1,opt,name=phase"`
+	Phase VerificationPhase `json:"phase,omitempty" protobuf:"bytes,1,opt,name=phase"`
 	// Message may contain additional information about why the verification
 	// process is in its current phase.
 	Message string `json:"message,omitempty" protobuf:"bytes,2,opt,name=message"`
