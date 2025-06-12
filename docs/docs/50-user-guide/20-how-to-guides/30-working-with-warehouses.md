@@ -46,7 +46,7 @@ spec:
       repoURL: https://github.com/example/kargo-demo.git
 ```
 
-The remainder of this document focuses on the configuration of the individual
+The remainder of this section focuses on the configuration of the individual
 subscription types.
 
 ### Container Image Subscriptions
@@ -59,10 +59,16 @@ fields:
 - `imageSelectionStrategy`: One of four pre-defined strategies for selecting the
   desired image. (See next section.)
 
+<a name="allow-tags-constraint"></a>
+
 - `allowTags`: An optional regular expression that limits the eligibility for
   selection to tags that match the pattern.
 
+<a name="ignore-tags-constraint"></a>
+
 - `ignoreTags`: An optional list of tags that should explicitly be ignored.
+
+<a name="platform-constraint"></a>
 
 - `platform`: An optional identifier that constrains image selection to those
   images supporting the specified operating system and system architecture.
@@ -84,8 +90,8 @@ fields:
     encountering rate limits -- decreasing this limit may improve performance.
     :::
 
-- `gitRepoURL`: (Deprecated as of version 1.5, will be removed in version 1.7) 
-  Optional metadata to inform Kargo of the Git repository that contains the 
+- `gitRepoURL`: (Deprecated as of version 1.5, will be removed in version 1.7)
+  Optional metadata to inform Kargo of the Git repository that contains the
   image's Dockerfile or other build context.
 
 - `insecureSkipTLSVerify`: Set to `true` to disable validation of the
@@ -154,7 +160,7 @@ strategies are:
 
 - `Digest`: This selects the image _currently_ referenced by some "mutable tag,"
    such as `latest`.
-   
+
     __Unintuitively, the mutable tag name must be specified using the
     `semverConstraint` field.__ Importantly, the _digest_ will change every time
     the tag is updated.
@@ -181,6 +187,8 @@ strategies are:
           imageSelectionStrategy: Digest
           semverConstraint: latest
     ```
+
+<a name="newest-build"></a>
 
 - `NewestBuild`: This strategy selects the image with the most recent build
   time.
@@ -221,8 +229,8 @@ Git repository subscriptions can be defined using the following fields:
 - `ignoreTags`: An optional list of tags that should explicitly be ignored.
   (This is not applicable to selection strategies that do not involve tags.)
 
-- `expressionFilter`: An optional expression that filters commits and tags based 
-  on their metadata. See [Expression Filtering](#expression-filtering) for 
+- `expressionFilter`: An optional expression that filters commits and tags based
+  on their metadata. See [Expression Filtering](#expression-filtering) for
   details.
 
 - `includePaths`: See
@@ -378,12 +386,12 @@ The `expressionFilter` field provides a unified way to filter commits or tags
 based on the selected commit selection strategy. The behavior and available
 variables depend on your `commitSelectionStrategy`:
 
-**For commit-based filtering** (`NewestFromBranch` strategy):
+__For commit-based filtering__ (`NewestFromBranch` strategy):
 
 - Filters commits based on commit metadata
 - Applied when selecting the newest commit from a branch
 
-**For tag-based filtering** (`SemVer`, `Lexical`, and `NewestTag` strategies):
+__For tag-based filtering__ (`SemVer`, `Lexical`, and `NewestTag` strategies):
 
 - Filters tags based on tag and associated commit metadata
 - Applied after `allowTags`, `ignoreTags`, and `semverConstraint` fields
@@ -393,7 +401,7 @@ variables depend on your `commitSelectionStrategy`:
 The variables available in your expression depend on the commit selection
 strategy:
 
-**For `NewestFromBranch` (commit filtering):**
+__For `NewestFromBranch` (commit filtering):__
 
 - `id`: The ID (SHA) of the commit
 - `commitDate`: The date of the commit
@@ -401,7 +409,7 @@ strategy:
 - `committer`: The committer of the commit, in format `Name <email>`
 - `subject`: The first line of the commit message
 
-**For `SemVer`, `Lexical`, and `NewestTag` (tag filtering):**
+__For `SemVer`, `Lexical`, and `NewestTag` (tag filtering):__
 
 - `tag`: The name of the tag
 - `id`: The commit ID that the tag references
@@ -419,7 +427,7 @@ strategy:
 
 ##### Expression Filtering Examples
 
-**Filtering commits by excluding bot authors:**
+__Filtering commits by excluding bot authors:__
 
 ```yaml
 spec:
@@ -430,7 +438,7 @@ spec:
       expressionFilter: !(author contains '<bot@example.com>')
 ```
 
-**Filtering commits with specific message patterns:**
+__Filtering commits with specific message patterns:__
 
 ```yaml
 spec:
@@ -441,7 +449,7 @@ spec:
       expressionFilter: subject contains 'feat:' || subject contains 'fix:'
 ```
 
-**Filtering commits with multiple criteria:**
+__Filtering commits with multiple criteria:__
 
 ```yaml
 spec:
@@ -452,7 +460,7 @@ spec:
       expressionFilter: !(author == 'Example Bot') && commitDate.After(date('2025-01-01'))
 ```
 
-**Filtering commits to exclude those with ignore markers:**
+__Filtering commits to exclude those with ignore markers:__
 
 ```yaml
 spec:
@@ -463,7 +471,7 @@ spec:
       expressionFilter: !(subject contains '[kargo-ignore]')
 ```
 
-**Filtering tags by author name:**
+__Filtering tags by author name:__
 
 ```yaml
 spec:
@@ -474,7 +482,7 @@ spec:
       expressionFilter: author == 'John Doe <john@example.com>'
 ```
 
-**Filtering tags created after a specific date:**
+__Filtering tags created after a specific date:__
 
 ```yaml
 spec:
@@ -485,7 +493,7 @@ spec:
       expressionFilter: creatorDate.Year() >= 2024
 ```
 
-**Filtering tags to exclude those committed by bots:**
+__Filtering tags to exclude those committed by bots:__
 
 ```yaml
 spec:
@@ -496,7 +504,7 @@ spec:
       expressionFilter: !(committer contains '<bot@example.com>')
 ```
 
-**Filtering tags with complex conditions:**
+__Filtering tags with complex conditions:__
 
 ```yaml
 spec:
@@ -594,7 +602,8 @@ _even a single change_ that is:
 
     AND
 
-2. Not explicitly excluded via `excludePaths`.
+1. Not explicitly excluded via `excludePaths`.
+
 :::
 
 :::note
@@ -656,3 +665,254 @@ Helm chart repository subscriptions can be defined using the following fields:
         name: my-chart
         semverConstraint: ^1.0.0
   ```
+
+## Performance Considerations
+
+`Warehouse` resources periodically poll the repositories to which they subscribe
+in an attempt to discover new artifact revisions. By default, and under nominal
+conditions, this discovery process occurs at an interval configured at the
+system-level, however, the effective interval can be much longer if the system
+is under heavy load or `Warehouse`s are poorly configured.
+
+:::info
+Discovery of container images, in particular, can be time-consuming.
+
+Both the [`NewestBuild` selection strategy](#newest-build) and any
+[`platform` constraints](#platform-constraint) are heavily dependent on the
+retrieval of image metadata for every image in the repository not eliminated
+from consideration up-front by other, more efficient constraints such as
+[`allowTags`](#allow-tags-constraint) or
+[`ignoreTags`](#ignore-tags-constraint). Registry architecture, unfortunately,
+requires such metadata be retrieved image-by-image with a separate API call for
+each. Even with aggressive caching, and especially when the number of image
+revisions to consider is large, this process can take quite some time. The time
+required to complete discovery can be protracted even further if the registry's
+rate limit has been exceeded.
+
+Kargo can execute a finite number of these discovery processes concurrently and
+registries enforce rate limits on the basis of your public IP or, if applicable,
+your credentials. (i.e. Rate limits are not enforced on a
+`Warehouse`-by-`Warehouse` basis. Registries know nothing about your
+`Warehouse`s.)
+
+__Due to the above, even a well-tuned `Warehouse` that avoids inefficient image
+selection criteria may experience large intervals between executions of its
+discovery process (or slow discovery) if _other_ `Warehouse`s are configured
+inefficiently.__
+:::
+
+With the goal of less frequent polling to reduce load on registries, avoid
+encountering rate limits, and reduce occurrences of discovery running for a
+prolonged period, only to find no new artifacts, you may wish to configure
+your `Warehouse` resources to execute artifact discovery less frequently than
+the system-wide default. (i.e. You may wish to _increase_ the polling interval.)
+This can be done by tuning the `spec.interval` field of any `Warehouse`.
+
+:::note
+The effective polling interval is the _greater_ of the system-wide default and
+any interval specified by `spec.interval`. i.e. You can configure a `Warehouse`
+to execute its artifact discovery process _less_ frequently than the system-wide
+default, _but not more frequently._
+:::
+
+:::info
+If you're an operator wishing to reduce the frequency with which _all_
+`Warehouse`s execute their discovery processes (increase the polling interval),
+refer to the
+[Common Configurations](../../40-operator-guide/20-advanced-installation/30-common-configurations.md#tuning-warehouse-reconciliation-intervals)
+section of the of the Operator's Guide for more information.
+:::
+
+With reduced polling frequency, overall system performance may improve, but will
+be accompanied by the undesired side effect of increasing the average time
+required for `Warehouse`s to notice new artifacts (of any kind; not just
+container images). _This can be overcome by configuring repositories to alert
+Kargo to the presence of new artifacts via webhooks._
+
+## Triggering Artifact Discovery Using Webhooks
+
+Configuring Kargo to receive webhook payloads from popular Git hosting providers
+and container image / OCI registry providers is easy, and can be configured
+[globally by an operator](../../40-operator-guide/35-cluster-configuration.md#triggering-artifact-discovery-using-webhooks)
+or at the Project level by a Project admin.
+
+The remainder of this section focuses on configuring webhook receivers at the
+Project level.
+
+:::info
+__Not what you were looking for?__
+
+If you're an operator looking to understand how you can configure Kargo to
+listen for inbound webhook requests to trigger the discovery processes of all
+applicable `Warehouse`s across all Projects, refer to the
+[Cluster Level Configuration](../../40-operator-guide/35-cluster-configuration.md#triggering-artifact-discovery-using-webhooks)
+section of the Operator's Guide.
+:::
+
+### Configuring a Receiver
+
+Creating and configuring a webhook receiver at the Project level is accomplished
+by updating your `ProjectConfig` resource's `spec.webhookReceivers` field. If
+your Project does not already have a `ProjectConfig` resource, you can create
+one.
+
+:::note
+Every Kargo Project is permitted to have at most _one_ `ProjectConfig` resource.
+This limit is enforced by requiring all `ProjectConfig` resources to be named
+_the same_ as the Project / `Project` resource / namespace to which they belong.
+
+For a Project `kargo-demo`, for example, the corresponding `ProjectConfig` must
+be contained within the Project's namespace (`kargo-demo`) and must, itself, be
+named `kargo-demo`.
+:::
+
+A `ProjectConfig` resource's `spec.webhookReceivers` field may define one or
+more _webhook receivers_. A webhook receiver is an endpoint on a (typically)
+internet-facing HTTP server that is configured to receive and process requests
+from specific sources, and in response, trigger the discovery process of any
+`Warehouse` within the Project that subscribes to a repository URL referenced by
+the request payload.
+
+Most types of webhook receivers require you only to specify a unique (within the
+Project) name and a reference to a `Secret`. The expected keys and values for
+each kind of webhook receiver vary, and are documented on
+[each receiver type's own page](../60-reference-docs/80-webhook-receivers).
+
+:::info
+`Secret`s referenced by a webhook receiver typically serve _two_ purposes.
+
+1. _Often_, some value(s) from the `Secret`'s data map are shared with the
+   webhook sender (GitHub, for instance) and used to help authenticate requests.
+   Some senders may use such "shared secrets" as bearer tokens. Others may use
+   them as keys for signing requests. In such cases, the corresponding webhook
+   receiver knows exactly what to do with this information in order to
+   authenticate inbound requests.
+
+1. _Always_, some value(s) from the `Secret`'s data map are used as a seed in
+   deterministically constructing a complex, hard-to-guess URL where the
+   receiver will listen for inbound requests.
+
+    Some webhook senders (Docker Hub, for instance), do not natively implement
+    any sort of authentication mechanism. No secret value(s) need to be shared
+    with such a sender and requests from the sender contain no bearer token, nor
+    are they signed. For cases such as these, a hard-to-guess URL is, itself,
+    a _de facto_ shared secret and authentication mechanism.
+
+    __Note that if a `Secret`'s value(s) are rotated, the URL where the receiver
+    listens for inbound requests will also change. This is by design.__
+
+    Kargo does not watch `Secret`s for changes because it lacks the permissions
+    to do so, so it can be some time _after_ its `Secret`'s value(s) are rotated
+    that a webhook receiver's URL will be updated. To expedite that update, your
+    `ProjectConfig` resource can be manually "refreshed" using the `kargo` CLI:
+
+      ```shell
+      kargo refresh projectconfig --project <project name>
+      ```
+
+:::
+
+The following example `ProjectConfig` configures two webhook receivers:
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  webhookReceivers:
+  - name: my-first-receiver
+    github:
+      secretRef:
+        name: my-first-secret
+  - name: my-second-receiver
+    gitlab:  
+      secretRef:
+        name: my-second-secret
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: my-first-secret
+  namespace: kargo-demo
+data:
+  secret: c295bGVudCBncmVlbiBpcyBwZW9wbGUK
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: my-second-secret
+  namespace: kargo-demo
+data:
+  secret-token: cm9zZWJ1ZCB3YXMgYSBzbGVkCg==
+```
+
+For each properly configured webhook receiver, Kargo will update the
+`ProjectConfig` resource's `status` to reflect the URLs that can be registered
+as endpoints with the senders.
+
+For instance, the `ProjectConfig` and `Secret`s above result in the following:
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  # ... omitted for brevity ...
+status:
+  conditions:
+  - lastTransitionTime: "2025-06-11T22:53:21Z"
+    message: ProjectConfig is synced and ready for use
+    observedGeneration: 1
+    reason: Synced
+    status: "True"
+    type: Ready
+  webhookReceivers:
+  - name: my-first-receiver
+    path: /webhook/github/804b6f6bb40eb1f0e371f971d71dd95549be4bc9cbf868046941115f44073c67
+    url: https://kargo.example.com/webhook/github/804b6f6bb40eb1f0e371f971d71dd95549be4bc9cbf868046941115f44073c67
+  - name: my-second-receiver
+    path: /webhook/gitlab/0eba9ff2a91f04f7787404b8f8f0edaf8cf8c39add34082651a474803cc99015
+    url: https://kargo.example.com/webhook/gitlab/0eba9ff2a91f04f7787404b8f8f0edaf8cf8c39add34082651a474803cc99015
+```
+
+Above, you can see the URLs that can be registered with GitHub and GitLab as
+endpoints to receive webhook requests from those platforms.
+
+:::info
+For more information about registering these endpoints with specific senders,
+refer to
+[each receiver type's own page](../60-reference-docs/80-webhook-receivers).
+:::
+
+:::info
+If you're working with a large number of Kargo Projects and/or repositories and
+wish for `Warehouse`s in all Projects to execute their discovery processes in
+response to applicable events, it will likely be impractical to configure webhook
+receivers Project-by-Project.
+
+Refer to
+[Cluster Level Configuration](../../40-operator-guide/35-cluster-configuration.md#triggering-artifact-discovery-using-webhooks)
+section of the Operator's Guide to learn how to register cluster-scoped webhook
+receivers that can trigger discovery for all applicable `Warehouse`s across all
+Projects.
+:::
+
+### Receivers in Action
+
+Once a webhook receiver has been assigned a URL and that URL has been registered
+with a compatible sender, the receiver will begin receiving webhook requests in
+response to events in your repositories. The payload (body) of such a request
+contains structured information (usually JSON) the sender wishes to share about
+some event. Invariably, among this information, is the URL of the repository
+from which the event originated.
+
+A webhook receiver's only job is to extract a repository URL from the webhook
+request's payload, query for all `Warehouse` resources within the Project having
+subscriptions to that repository, and request each to execute their discovery
+process.
