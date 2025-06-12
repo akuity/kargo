@@ -18,6 +18,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/io"
 	"github.com/akuity/kargo/internal/cli/kubernetes"
+	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/cli/templates"
 )
 
@@ -46,20 +47,19 @@ func newGetProjectConfigCommand(
 	}
 
 	cmd := &cobra.Command{
-		Use:     "projectconfig [PROJECT] [--no-headers]",
+		Use:     "projectconfig [--project=project] [--no-headers]",
 		Aliases: []string{"projectconfigs"},
 		Short:   "Display project configuration",
-		Args:    cobra.MaximumNArgs(1),
+		Args:    cobra.NoArgs,
 		Example: templates.Example(`
 # Get project configuration for my-project
-kargo get projectconfig my-project
+kargo get projectconfig --project=my-project
 
 # Get project configuration for the default project
 kargo config set-project my-project
 kargo get projectconfig
 `),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			cmdOpts.complete(args)
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			return cmdOpts.run(cmd.Context())
 		},
 	}
@@ -78,14 +78,11 @@ kargo get projectconfig
 func (o *getProjectConfigOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
-}
 
-// complete sets the options from the command arguments.
-func (o *getProjectConfigOptions) complete(args []string) {
-	o.Project = o.Config.Project
-	if len(args) > 0 {
-		o.Project = args[0]
-	}
+	option.Project(
+		cmd.Flags(), &o.Project, o.Config.Project,
+		"The project for which to get the configuration. If not set, the default project will be used.",
+	)
 }
 
 // run gets the project config from the server and prints it to the console.
