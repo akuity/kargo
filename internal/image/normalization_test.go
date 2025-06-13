@@ -14,8 +14,8 @@ func TestNormalizeURL(t *testing.T) {
 		// Official images on Docker Hub
 		{"index.docker.io/library/busybox", "busybox"},
 		{"index.docker.io/busybox", "busybox"},
-		{"registry-1.io/library/busybox", "busybox"},
-		{"registry-1.io/busybox", "busybox"},
+		{"registry-1.docker.io/library/busybox", "busybox"},
+		{"registry-1.docker.io/busybox", "busybox"},
 		{"docker.io/library/busybox", "busybox"},
 		{"docker.io/busybox", "busybox"},
 		{"library/busybox", "busybox"},
