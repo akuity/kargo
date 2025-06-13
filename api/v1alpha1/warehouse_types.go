@@ -1,6 +1,10 @@
 package v1alpha1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 // +kubebuilder:validation:Enum={Lexical,NewestFromBranch,NewestTag,SemVer}
 type CommitSelectionStrategy string
@@ -37,6 +41,29 @@ type Warehouse struct {
 	Spec WarehouseSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
 	// Status describes the Warehouse's most recently observed state.
 	Status WarehouseStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
+}
+
+// GetInterval calculates and returns interval time remaining until the next
+// requeue should occur. If the interval has passed, it returns a zero duration.
+func (w *Warehouse) GetInterval(minInterval time.Duration) time.Duration {
+	effectiveInterval := w.Spec.Interval.Duration
+	if effectiveInterval < minInterval {
+		effectiveInterval = minInterval
+	}
+
+	if w.Status.DiscoveredArtifacts == nil || w.Status.DiscoveredArtifacts.DiscoveredAt.IsZero() {
+		return effectiveInterval
+	}
+
+	interval := w.Status.DiscoveredArtifacts.DiscoveredAt.
+		Add(effectiveInterval).
+		Sub(metav1.Now().Time)
+
+	if interval > 0 {
+		return interval
+	}
+
+	return 0
 }
 
 func (w *Warehouse) GetStatus() *WarehouseStatus {

@@ -20,12 +20,16 @@ import (
 
 func TestNewReconciler(t *testing.T) {
 	kubeClient := fake.NewClientBuilder().Build()
+	minReconciliationInterval := time.Duration(1000)
+
 	e := newReconciler(
 		kubeClient,
 		&credentials.FakeDB{},
+		minReconciliationInterval,
 	)
 	require.NotNil(t, e.client)
 	require.NotNil(t, e.credentialsDB)
+	require.Equal(t, minReconciliationInterval, e.minReconciliationInterval)
 	require.NotEmpty(t, e.imageSourceURLFnsByBaseURL)
 
 	// Assert that all overridable behaviors were initialized to a default:
@@ -1001,64 +1005,6 @@ func TestShouldDiscoverArtifacts(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := shouldDiscoverArtifacts(tt.warehouse, tt.refreshToken)
 			require.Equal(t, tt.expected, result)
-		})
-	}
-}
-
-func TestGetRequeueInterval(t *testing.T) {
-	testCases := []struct {
-		name       string
-		warehouse  *kargoapi.Warehouse
-		assertions func(t *testing.T, warehouse *kargoapi.Warehouse, interval time.Duration)
-	}{
-		{
-			name: "no discovery has taken place yet",
-			warehouse: &kargoapi.Warehouse{
-				Spec: kargoapi.WarehouseSpec{
-					Interval: metav1.Duration{Duration: 5 * time.Minute},
-				},
-			},
-			assertions: func(t *testing.T, warehouse *kargoapi.Warehouse, interval time.Duration) {
-				require.Equal(t, warehouse.Spec.Interval.Duration, interval)
-			},
-		},
-		{
-			name: "next discovery is overdue",
-			warehouse: &kargoapi.Warehouse{
-				Spec: kargoapi.WarehouseSpec{
-					Interval: metav1.Duration{Duration: 5 * time.Minute},
-				},
-				Status: kargoapi.WarehouseStatus{
-					DiscoveredArtifacts: &kargoapi.DiscoveredArtifacts{
-						DiscoveredAt: metav1.NewTime(time.Now().Add(-6 * time.Minute)),
-					},
-				},
-			},
-			assertions: func(t *testing.T, _ *kargoapi.Warehouse, interval time.Duration) {
-				require.Zero(t, interval)
-			},
-		},
-		{
-			name: "next discovery is not overdue",
-			warehouse: &kargoapi.Warehouse{
-				Spec: kargoapi.WarehouseSpec{
-					Interval: metav1.Duration{Duration: 5 * time.Minute},
-				},
-				Status: kargoapi.WarehouseStatus{
-					DiscoveredArtifacts: &kargoapi.DiscoveredArtifacts{
-						DiscoveredAt: metav1.NewTime(time.Now().Add(-3 * time.Minute)),
-					},
-				},
-			},
-			assertions: func(t *testing.T, warehouse *kargoapi.Warehouse, interval time.Duration) {
-				require.NotZero(t, interval)
-				require.Less(t, interval, warehouse.Spec.Interval.Duration)
-			},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(t, testCase.warehouse, getRequeueInterval(testCase.warehouse))
 		})
 	}
 }
