@@ -54,7 +54,7 @@ func TestWarehouse_GetInterval(t *testing.T) {
 			},
 			minInterval: 2 * time.Minute,
 			assertions: func(t *testing.T, _ *Warehouse, interval time.Duration, _ time.Duration) {
-				require.Equal(t, interval, 100 *time.Millisecond)
+				require.Equal(t, interval, 100*time.Millisecond)
 			},
 		},
 		{
@@ -71,7 +71,7 @@ func TestWarehouse_GetInterval(t *testing.T) {
 			},
 			minInterval: 5 * time.Minute,
 			assertions: func(t *testing.T, _ *Warehouse, interval time.Duration, _ time.Duration) {
-				require.Equal(t, interval, 100 *time.Millisecond)
+				require.Equal(t, interval, 100*time.Millisecond)
 			},
 		},
 		{
