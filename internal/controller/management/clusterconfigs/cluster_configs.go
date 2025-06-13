@@ -177,6 +177,10 @@ func (r *reconciler) reconcile(
 		}
 	}
 
+	// At this point, we have successfully reconciled the ClusterConfig and
+	// can set the observed generation.
+	status.ObservedGeneration = clusterCfg.GetGeneration()
+
 	return status, nil
 }
 
