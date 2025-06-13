@@ -401,6 +401,18 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              lastHandledRefresh:
+                description: |-
+                  LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+                  annotation that was handled by the controller. This field can be used to
+                  determine whether the request to refresh the resource has been handled.
+                type: string
+              observedGeneration:
+                description: |-
+                  ObservedGeneration represents the .metadata.generation that this
+                  ProjectConfig was reconciled against.
+                format: int64
+                type: integer
               webhookReceivers:
                 description: |-
                   WebhookReceivers describes the status of Project-specific webhook

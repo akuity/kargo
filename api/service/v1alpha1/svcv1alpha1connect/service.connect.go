@@ -70,6 +70,18 @@ const (
 	// KargoServiceRefreshStageProcedure is the fully-qualified name of the KargoService's RefreshStage
 	// RPC.
 	KargoServiceRefreshStageProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/RefreshStage"
+	// KargoServiceGetClusterConfigProcedure is the fully-qualified name of the KargoService's
+	// GetClusterConfig RPC.
+	KargoServiceGetClusterConfigProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetClusterConfig"
+	// KargoServiceDeleteClusterConfigProcedure is the fully-qualified name of the KargoService's
+	// DeleteClusterConfig RPC.
+	KargoServiceDeleteClusterConfigProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/DeleteClusterConfig"
+	// KargoServiceWatchClusterConfigProcedure is the fully-qualified name of the KargoService's
+	// WatchClusterConfig RPC.
+	KargoServiceWatchClusterConfigProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/WatchClusterConfig"
+	// KargoServiceRefreshClusterConfigProcedure is the fully-qualified name of the KargoService's
+	// RefreshClusterConfig RPC.
+	KargoServiceRefreshClusterConfigProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/RefreshClusterConfig"
 	// KargoServiceListPromotionsProcedure is the fully-qualified name of the KargoService's
 	// ListPromotions RPC.
 	KargoServiceListPromotionsProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListPromotions"
@@ -93,12 +105,18 @@ const (
 	// KargoServiceListProjectsProcedure is the fully-qualified name of the KargoService's ListProjects
 	// RPC.
 	KargoServiceListProjectsProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListProjects"
-	// KargoServiceDeleteProjectConfigProcedure is the fully-qualified name of the KargoService's
-	// DeleteProjectConfig RPC.
-	KargoServiceDeleteProjectConfigProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/DeleteProjectConfig"
 	// KargoServiceGetProjectConfigProcedure is the fully-qualified name of the KargoService's
 	// GetProjectConfig RPC.
 	KargoServiceGetProjectConfigProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetProjectConfig"
+	// KargoServiceDeleteProjectConfigProcedure is the fully-qualified name of the KargoService's
+	// DeleteProjectConfig RPC.
+	KargoServiceDeleteProjectConfigProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/DeleteProjectConfig"
+	// KargoServiceWatchProjectConfigProcedure is the fully-qualified name of the KargoService's
+	// WatchProjectConfig RPC.
+	KargoServiceWatchProjectConfigProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/WatchProjectConfig"
+	// KargoServiceRefreshProjectConfigProcedure is the fully-qualified name of the KargoService's
+	// RefreshProjectConfig RPC.
+	KargoServiceRefreshProjectConfigProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/RefreshProjectConfig"
 	// KargoServiceApproveFreightProcedure is the fully-qualified name of the KargoService's
 	// ApproveFreight RPC.
 	KargoServiceApproveFreightProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ApproveFreight"
@@ -241,6 +259,10 @@ var (
 	kargoServiceWatchStagesMethodDescriptor                   = kargoServiceServiceDescriptor.Methods().ByName("WatchStages")
 	kargoServiceDeleteStageMethodDescriptor                   = kargoServiceServiceDescriptor.Methods().ByName("DeleteStage")
 	kargoServiceRefreshStageMethodDescriptor                  = kargoServiceServiceDescriptor.Methods().ByName("RefreshStage")
+	kargoServiceGetClusterConfigMethodDescriptor              = kargoServiceServiceDescriptor.Methods().ByName("GetClusterConfig")
+	kargoServiceDeleteClusterConfigMethodDescriptor           = kargoServiceServiceDescriptor.Methods().ByName("DeleteClusterConfig")
+	kargoServiceWatchClusterConfigMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("WatchClusterConfig")
+	kargoServiceRefreshClusterConfigMethodDescriptor          = kargoServiceServiceDescriptor.Methods().ByName("RefreshClusterConfig")
 	kargoServiceListPromotionsMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("ListPromotions")
 	kargoServiceWatchPromotionsMethodDescriptor               = kargoServiceServiceDescriptor.Methods().ByName("WatchPromotions")
 	kargoServiceGetPromotionMethodDescriptor                  = kargoServiceServiceDescriptor.Methods().ByName("GetPromotion")
@@ -249,8 +271,10 @@ var (
 	kargoServiceDeleteProjectMethodDescriptor                 = kargoServiceServiceDescriptor.Methods().ByName("DeleteProject")
 	kargoServiceGetProjectMethodDescriptor                    = kargoServiceServiceDescriptor.Methods().ByName("GetProject")
 	kargoServiceListProjectsMethodDescriptor                  = kargoServiceServiceDescriptor.Methods().ByName("ListProjects")
-	kargoServiceDeleteProjectConfigMethodDescriptor           = kargoServiceServiceDescriptor.Methods().ByName("DeleteProjectConfig")
 	kargoServiceGetProjectConfigMethodDescriptor              = kargoServiceServiceDescriptor.Methods().ByName("GetProjectConfig")
+	kargoServiceDeleteProjectConfigMethodDescriptor           = kargoServiceServiceDescriptor.Methods().ByName("DeleteProjectConfig")
+	kargoServiceWatchProjectConfigMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("WatchProjectConfig")
+	kargoServiceRefreshProjectConfigMethodDescriptor          = kargoServiceServiceDescriptor.Methods().ByName("RefreshProjectConfig")
 	kargoServiceApproveFreightMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("ApproveFreight")
 	kargoServiceDeleteFreightMethodDescriptor                 = kargoServiceServiceDescriptor.Methods().ByName("DeleteFreight")
 	kargoServiceGetFreightMethodDescriptor                    = kargoServiceServiceDescriptor.Methods().ByName("GetFreight")
@@ -315,6 +339,10 @@ type KargoServiceClient interface {
 	WatchStages(context.Context, *connect.Request[v1alpha1.WatchStagesRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchStagesResponse], error)
 	DeleteStage(context.Context, *connect.Request[v1alpha1.DeleteStageRequest]) (*connect.Response[v1alpha1.DeleteStageResponse], error)
 	RefreshStage(context.Context, *connect.Request[v1alpha1.RefreshStageRequest]) (*connect.Response[v1alpha1.RefreshStageResponse], error)
+	GetClusterConfig(context.Context, *connect.Request[v1alpha1.GetClusterConfigRequest]) (*connect.Response[v1alpha1.GetClusterConfigResponse], error)
+	DeleteClusterConfig(context.Context, *connect.Request[v1alpha1.DeleteClusterConfigRequest]) (*connect.Response[v1alpha1.DeleteClusterConfigResponse], error)
+	WatchClusterConfig(context.Context, *connect.Request[v1alpha1.WatchClusterConfigRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchClusterConfigResponse], error)
+	RefreshClusterConfig(context.Context, *connect.Request[v1alpha1.RefreshClusterConfigRequest]) (*connect.Response[v1alpha1.RefreshClusterConfigResponse], error)
 	ListPromotions(context.Context, *connect.Request[v1alpha1.ListPromotionsRequest]) (*connect.Response[v1alpha1.ListPromotionsResponse], error)
 	WatchPromotions(context.Context, *connect.Request[v1alpha1.WatchPromotionsRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchPromotionsResponse], error)
 	GetPromotion(context.Context, *connect.Request[v1alpha1.GetPromotionRequest]) (*connect.Response[v1alpha1.GetPromotionResponse], error)
@@ -323,8 +351,11 @@ type KargoServiceClient interface {
 	DeleteProject(context.Context, *connect.Request[v1alpha1.DeleteProjectRequest]) (*connect.Response[v1alpha1.DeleteProjectResponse], error)
 	GetProject(context.Context, *connect.Request[v1alpha1.GetProjectRequest]) (*connect.Response[v1alpha1.GetProjectResponse], error)
 	ListProjects(context.Context, *connect.Request[v1alpha1.ListProjectsRequest]) (*connect.Response[v1alpha1.ListProjectsResponse], error)
-	DeleteProjectConfig(context.Context, *connect.Request[v1alpha1.DeleteProjectConfigRequest]) (*connect.Response[v1alpha1.DeleteProjectConfigResponse], error)
+	// ProjectConfig APIs
 	GetProjectConfig(context.Context, *connect.Request[v1alpha1.GetProjectConfigRequest]) (*connect.Response[v1alpha1.GetProjectConfigResponse], error)
+	DeleteProjectConfig(context.Context, *connect.Request[v1alpha1.DeleteProjectConfigRequest]) (*connect.Response[v1alpha1.DeleteProjectConfigResponse], error)
+	WatchProjectConfig(context.Context, *connect.Request[v1alpha1.WatchProjectConfigRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchProjectConfigResponse], error)
+	RefreshProjectConfig(context.Context, *connect.Request[v1alpha1.RefreshProjectConfigRequest]) (*connect.Response[v1alpha1.RefreshProjectConfigResponse], error)
 	ApproveFreight(context.Context, *connect.Request[v1alpha1.ApproveFreightRequest]) (*connect.Response[v1alpha1.ApproveFreightResponse], error)
 	DeleteFreight(context.Context, *connect.Request[v1alpha1.DeleteFreightRequest]) (*connect.Response[v1alpha1.DeleteFreightResponse], error)
 	GetFreight(context.Context, *connect.Request[v1alpha1.GetFreightRequest]) (*connect.Response[v1alpha1.GetFreightResponse], error)
@@ -465,6 +496,30 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(kargoServiceRefreshStageMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		getClusterConfig: connect.NewClient[v1alpha1.GetClusterConfigRequest, v1alpha1.GetClusterConfigResponse](
+			httpClient,
+			baseURL+KargoServiceGetClusterConfigProcedure,
+			connect.WithSchema(kargoServiceGetClusterConfigMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		deleteClusterConfig: connect.NewClient[v1alpha1.DeleteClusterConfigRequest, v1alpha1.DeleteClusterConfigResponse](
+			httpClient,
+			baseURL+KargoServiceDeleteClusterConfigProcedure,
+			connect.WithSchema(kargoServiceDeleteClusterConfigMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		watchClusterConfig: connect.NewClient[v1alpha1.WatchClusterConfigRequest, v1alpha1.WatchClusterConfigResponse](
+			httpClient,
+			baseURL+KargoServiceWatchClusterConfigProcedure,
+			connect.WithSchema(kargoServiceWatchClusterConfigMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		refreshClusterConfig: connect.NewClient[v1alpha1.RefreshClusterConfigRequest, v1alpha1.RefreshClusterConfigResponse](
+			httpClient,
+			baseURL+KargoServiceRefreshClusterConfigProcedure,
+			connect.WithSchema(kargoServiceRefreshClusterConfigMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		listPromotions: connect.NewClient[v1alpha1.ListPromotionsRequest, v1alpha1.ListPromotionsResponse](
 			httpClient,
 			baseURL+KargoServiceListPromotionsProcedure,
@@ -513,16 +568,28 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(kargoServiceListProjectsMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		getProjectConfig: connect.NewClient[v1alpha1.GetProjectConfigRequest, v1alpha1.GetProjectConfigResponse](
+			httpClient,
+			baseURL+KargoServiceGetProjectConfigProcedure,
+			connect.WithSchema(kargoServiceGetProjectConfigMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		deleteProjectConfig: connect.NewClient[v1alpha1.DeleteProjectConfigRequest, v1alpha1.DeleteProjectConfigResponse](
 			httpClient,
 			baseURL+KargoServiceDeleteProjectConfigProcedure,
 			connect.WithSchema(kargoServiceDeleteProjectConfigMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
-		getProjectConfig: connect.NewClient[v1alpha1.GetProjectConfigRequest, v1alpha1.GetProjectConfigResponse](
+		watchProjectConfig: connect.NewClient[v1alpha1.WatchProjectConfigRequest, v1alpha1.WatchProjectConfigResponse](
 			httpClient,
-			baseURL+KargoServiceGetProjectConfigProcedure,
-			connect.WithSchema(kargoServiceGetProjectConfigMethodDescriptor),
+			baseURL+KargoServiceWatchProjectConfigProcedure,
+			connect.WithSchema(kargoServiceWatchProjectConfigMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		refreshProjectConfig: connect.NewClient[v1alpha1.RefreshProjectConfigRequest, v1alpha1.RefreshProjectConfigResponse](
+			httpClient,
+			baseURL+KargoServiceRefreshProjectConfigProcedure,
+			connect.WithSchema(kargoServiceRefreshProjectConfigMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		approveFreight: connect.NewClient[v1alpha1.ApproveFreightRequest, v1alpha1.ApproveFreightResponse](
@@ -808,6 +875,10 @@ type kargoServiceClient struct {
 	watchStages                   *connect.Client[v1alpha1.WatchStagesRequest, v1alpha1.WatchStagesResponse]
 	deleteStage                   *connect.Client[v1alpha1.DeleteStageRequest, v1alpha1.DeleteStageResponse]
 	refreshStage                  *connect.Client[v1alpha1.RefreshStageRequest, v1alpha1.RefreshStageResponse]
+	getClusterConfig              *connect.Client[v1alpha1.GetClusterConfigRequest, v1alpha1.GetClusterConfigResponse]
+	deleteClusterConfig           *connect.Client[v1alpha1.DeleteClusterConfigRequest, v1alpha1.DeleteClusterConfigResponse]
+	watchClusterConfig            *connect.Client[v1alpha1.WatchClusterConfigRequest, v1alpha1.WatchClusterConfigResponse]
+	refreshClusterConfig          *connect.Client[v1alpha1.RefreshClusterConfigRequest, v1alpha1.RefreshClusterConfigResponse]
 	listPromotions                *connect.Client[v1alpha1.ListPromotionsRequest, v1alpha1.ListPromotionsResponse]
 	watchPromotions               *connect.Client[v1alpha1.WatchPromotionsRequest, v1alpha1.WatchPromotionsResponse]
 	getPromotion                  *connect.Client[v1alpha1.GetPromotionRequest, v1alpha1.GetPromotionResponse]
@@ -816,8 +887,10 @@ type kargoServiceClient struct {
 	deleteProject                 *connect.Client[v1alpha1.DeleteProjectRequest, v1alpha1.DeleteProjectResponse]
 	getProject                    *connect.Client[v1alpha1.GetProjectRequest, v1alpha1.GetProjectResponse]
 	listProjects                  *connect.Client[v1alpha1.ListProjectsRequest, v1alpha1.ListProjectsResponse]
-	deleteProjectConfig           *connect.Client[v1alpha1.DeleteProjectConfigRequest, v1alpha1.DeleteProjectConfigResponse]
 	getProjectConfig              *connect.Client[v1alpha1.GetProjectConfigRequest, v1alpha1.GetProjectConfigResponse]
+	deleteProjectConfig           *connect.Client[v1alpha1.DeleteProjectConfigRequest, v1alpha1.DeleteProjectConfigResponse]
+	watchProjectConfig            *connect.Client[v1alpha1.WatchProjectConfigRequest, v1alpha1.WatchProjectConfigResponse]
+	refreshProjectConfig          *connect.Client[v1alpha1.RefreshProjectConfigRequest, v1alpha1.RefreshProjectConfigResponse]
 	approveFreight                *connect.Client[v1alpha1.ApproveFreightRequest, v1alpha1.ApproveFreightResponse]
 	deleteFreight                 *connect.Client[v1alpha1.DeleteFreightRequest, v1alpha1.DeleteFreightResponse]
 	getFreight                    *connect.Client[v1alpha1.GetFreightRequest, v1alpha1.GetFreightResponse]
@@ -935,6 +1008,26 @@ func (c *kargoServiceClient) RefreshStage(ctx context.Context, req *connect.Requ
 	return c.refreshStage.CallUnary(ctx, req)
 }
 
+// GetClusterConfig calls akuity.io.kargo.service.v1alpha1.KargoService.GetClusterConfig.
+func (c *kargoServiceClient) GetClusterConfig(ctx context.Context, req *connect.Request[v1alpha1.GetClusterConfigRequest]) (*connect.Response[v1alpha1.GetClusterConfigResponse], error) {
+	return c.getClusterConfig.CallUnary(ctx, req)
+}
+
+// DeleteClusterConfig calls akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterConfig.
+func (c *kargoServiceClient) DeleteClusterConfig(ctx context.Context, req *connect.Request[v1alpha1.DeleteClusterConfigRequest]) (*connect.Response[v1alpha1.DeleteClusterConfigResponse], error) {
+	return c.deleteClusterConfig.CallUnary(ctx, req)
+}
+
+// WatchClusterConfig calls akuity.io.kargo.service.v1alpha1.KargoService.WatchClusterConfig.
+func (c *kargoServiceClient) WatchClusterConfig(ctx context.Context, req *connect.Request[v1alpha1.WatchClusterConfigRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchClusterConfigResponse], error) {
+	return c.watchClusterConfig.CallServerStream(ctx, req)
+}
+
+// RefreshClusterConfig calls akuity.io.kargo.service.v1alpha1.KargoService.RefreshClusterConfig.
+func (c *kargoServiceClient) RefreshClusterConfig(ctx context.Context, req *connect.Request[v1alpha1.RefreshClusterConfigRequest]) (*connect.Response[v1alpha1.RefreshClusterConfigResponse], error) {
+	return c.refreshClusterConfig.CallUnary(ctx, req)
+}
+
 // ListPromotions calls akuity.io.kargo.service.v1alpha1.KargoService.ListPromotions.
 func (c *kargoServiceClient) ListPromotions(ctx context.Context, req *connect.Request[v1alpha1.ListPromotionsRequest]) (*connect.Response[v1alpha1.ListPromotionsResponse], error) {
 	return c.listPromotions.CallUnary(ctx, req)
@@ -975,14 +1068,24 @@ func (c *kargoServiceClient) ListProjects(ctx context.Context, req *connect.Requ
 	return c.listProjects.CallUnary(ctx, req)
 }
 
+// GetProjectConfig calls akuity.io.kargo.service.v1alpha1.KargoService.GetProjectConfig.
+func (c *kargoServiceClient) GetProjectConfig(ctx context.Context, req *connect.Request[v1alpha1.GetProjectConfigRequest]) (*connect.Response[v1alpha1.GetProjectConfigResponse], error) {
+	return c.getProjectConfig.CallUnary(ctx, req)
+}
+
 // DeleteProjectConfig calls akuity.io.kargo.service.v1alpha1.KargoService.DeleteProjectConfig.
 func (c *kargoServiceClient) DeleteProjectConfig(ctx context.Context, req *connect.Request[v1alpha1.DeleteProjectConfigRequest]) (*connect.Response[v1alpha1.DeleteProjectConfigResponse], error) {
 	return c.deleteProjectConfig.CallUnary(ctx, req)
 }
 
-// GetProjectConfig calls akuity.io.kargo.service.v1alpha1.KargoService.GetProjectConfig.
-func (c *kargoServiceClient) GetProjectConfig(ctx context.Context, req *connect.Request[v1alpha1.GetProjectConfigRequest]) (*connect.Response[v1alpha1.GetProjectConfigResponse], error) {
-	return c.getProjectConfig.CallUnary(ctx, req)
+// WatchProjectConfig calls akuity.io.kargo.service.v1alpha1.KargoService.WatchProjectConfig.
+func (c *kargoServiceClient) WatchProjectConfig(ctx context.Context, req *connect.Request[v1alpha1.WatchProjectConfigRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchProjectConfigResponse], error) {
+	return c.watchProjectConfig.CallServerStream(ctx, req)
+}
+
+// RefreshProjectConfig calls akuity.io.kargo.service.v1alpha1.KargoService.RefreshProjectConfig.
+func (c *kargoServiceClient) RefreshProjectConfig(ctx context.Context, req *connect.Request[v1alpha1.RefreshProjectConfigRequest]) (*connect.Response[v1alpha1.RefreshProjectConfigResponse], error) {
+	return c.refreshProjectConfig.CallUnary(ctx, req)
 }
 
 // ApproveFreight calls akuity.io.kargo.service.v1alpha1.KargoService.ApproveFreight.
@@ -1230,6 +1333,10 @@ type KargoServiceHandler interface {
 	WatchStages(context.Context, *connect.Request[v1alpha1.WatchStagesRequest], *connect.ServerStream[v1alpha1.WatchStagesResponse]) error
 	DeleteStage(context.Context, *connect.Request[v1alpha1.DeleteStageRequest]) (*connect.Response[v1alpha1.DeleteStageResponse], error)
 	RefreshStage(context.Context, *connect.Request[v1alpha1.RefreshStageRequest]) (*connect.Response[v1alpha1.RefreshStageResponse], error)
+	GetClusterConfig(context.Context, *connect.Request[v1alpha1.GetClusterConfigRequest]) (*connect.Response[v1alpha1.GetClusterConfigResponse], error)
+	DeleteClusterConfig(context.Context, *connect.Request[v1alpha1.DeleteClusterConfigRequest]) (*connect.Response[v1alpha1.DeleteClusterConfigResponse], error)
+	WatchClusterConfig(context.Context, *connect.Request[v1alpha1.WatchClusterConfigRequest], *connect.ServerStream[v1alpha1.WatchClusterConfigResponse]) error
+	RefreshClusterConfig(context.Context, *connect.Request[v1alpha1.RefreshClusterConfigRequest]) (*connect.Response[v1alpha1.RefreshClusterConfigResponse], error)
 	ListPromotions(context.Context, *connect.Request[v1alpha1.ListPromotionsRequest]) (*connect.Response[v1alpha1.ListPromotionsResponse], error)
 	WatchPromotions(context.Context, *connect.Request[v1alpha1.WatchPromotionsRequest], *connect.ServerStream[v1alpha1.WatchPromotionsResponse]) error
 	GetPromotion(context.Context, *connect.Request[v1alpha1.GetPromotionRequest]) (*connect.Response[v1alpha1.GetPromotionResponse], error)
@@ -1238,8 +1345,11 @@ type KargoServiceHandler interface {
 	DeleteProject(context.Context, *connect.Request[v1alpha1.DeleteProjectRequest]) (*connect.Response[v1alpha1.DeleteProjectResponse], error)
 	GetProject(context.Context, *connect.Request[v1alpha1.GetProjectRequest]) (*connect.Response[v1alpha1.GetProjectResponse], error)
 	ListProjects(context.Context, *connect.Request[v1alpha1.ListProjectsRequest]) (*connect.Response[v1alpha1.ListProjectsResponse], error)
-	DeleteProjectConfig(context.Context, *connect.Request[v1alpha1.DeleteProjectConfigRequest]) (*connect.Response[v1alpha1.DeleteProjectConfigResponse], error)
+	// ProjectConfig APIs
 	GetProjectConfig(context.Context, *connect.Request[v1alpha1.GetProjectConfigRequest]) (*connect.Response[v1alpha1.GetProjectConfigResponse], error)
+	DeleteProjectConfig(context.Context, *connect.Request[v1alpha1.DeleteProjectConfigRequest]) (*connect.Response[v1alpha1.DeleteProjectConfigResponse], error)
+	WatchProjectConfig(context.Context, *connect.Request[v1alpha1.WatchProjectConfigRequest], *connect.ServerStream[v1alpha1.WatchProjectConfigResponse]) error
+	RefreshProjectConfig(context.Context, *connect.Request[v1alpha1.RefreshProjectConfigRequest]) (*connect.Response[v1alpha1.RefreshProjectConfigResponse], error)
 	ApproveFreight(context.Context, *connect.Request[v1alpha1.ApproveFreightRequest]) (*connect.Response[v1alpha1.ApproveFreightResponse], error)
 	DeleteFreight(context.Context, *connect.Request[v1alpha1.DeleteFreightRequest]) (*connect.Response[v1alpha1.DeleteFreightResponse], error)
 	GetFreight(context.Context, *connect.Request[v1alpha1.GetFreightRequest]) (*connect.Response[v1alpha1.GetFreightResponse], error)
@@ -1376,6 +1486,30 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(kargoServiceRefreshStageMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	kargoServiceGetClusterConfigHandler := connect.NewUnaryHandler(
+		KargoServiceGetClusterConfigProcedure,
+		svc.GetClusterConfig,
+		connect.WithSchema(kargoServiceGetClusterConfigMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	kargoServiceDeleteClusterConfigHandler := connect.NewUnaryHandler(
+		KargoServiceDeleteClusterConfigProcedure,
+		svc.DeleteClusterConfig,
+		connect.WithSchema(kargoServiceDeleteClusterConfigMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	kargoServiceWatchClusterConfigHandler := connect.NewServerStreamHandler(
+		KargoServiceWatchClusterConfigProcedure,
+		svc.WatchClusterConfig,
+		connect.WithSchema(kargoServiceWatchClusterConfigMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	kargoServiceRefreshClusterConfigHandler := connect.NewUnaryHandler(
+		KargoServiceRefreshClusterConfigProcedure,
+		svc.RefreshClusterConfig,
+		connect.WithSchema(kargoServiceRefreshClusterConfigMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	kargoServiceListPromotionsHandler := connect.NewUnaryHandler(
 		KargoServiceListPromotionsProcedure,
 		svc.ListPromotions,
@@ -1424,16 +1558,28 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(kargoServiceListProjectsMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	kargoServiceGetProjectConfigHandler := connect.NewUnaryHandler(
+		KargoServiceGetProjectConfigProcedure,
+		svc.GetProjectConfig,
+		connect.WithSchema(kargoServiceGetProjectConfigMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	kargoServiceDeleteProjectConfigHandler := connect.NewUnaryHandler(
 		KargoServiceDeleteProjectConfigProcedure,
 		svc.DeleteProjectConfig,
 		connect.WithSchema(kargoServiceDeleteProjectConfigMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
-	kargoServiceGetProjectConfigHandler := connect.NewUnaryHandler(
-		KargoServiceGetProjectConfigProcedure,
-		svc.GetProjectConfig,
-		connect.WithSchema(kargoServiceGetProjectConfigMethodDescriptor),
+	kargoServiceWatchProjectConfigHandler := connect.NewServerStreamHandler(
+		KargoServiceWatchProjectConfigProcedure,
+		svc.WatchProjectConfig,
+		connect.WithSchema(kargoServiceWatchProjectConfigMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	kargoServiceRefreshProjectConfigHandler := connect.NewUnaryHandler(
+		KargoServiceRefreshProjectConfigProcedure,
+		svc.RefreshProjectConfig,
+		connect.WithSchema(kargoServiceRefreshProjectConfigMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceApproveFreightHandler := connect.NewUnaryHandler(
@@ -1730,6 +1876,14 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceDeleteStageHandler.ServeHTTP(w, r)
 		case KargoServiceRefreshStageProcedure:
 			kargoServiceRefreshStageHandler.ServeHTTP(w, r)
+		case KargoServiceGetClusterConfigProcedure:
+			kargoServiceGetClusterConfigHandler.ServeHTTP(w, r)
+		case KargoServiceDeleteClusterConfigProcedure:
+			kargoServiceDeleteClusterConfigHandler.ServeHTTP(w, r)
+		case KargoServiceWatchClusterConfigProcedure:
+			kargoServiceWatchClusterConfigHandler.ServeHTTP(w, r)
+		case KargoServiceRefreshClusterConfigProcedure:
+			kargoServiceRefreshClusterConfigHandler.ServeHTTP(w, r)
 		case KargoServiceListPromotionsProcedure:
 			kargoServiceListPromotionsHandler.ServeHTTP(w, r)
 		case KargoServiceWatchPromotionsProcedure:
@@ -1746,10 +1900,14 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceGetProjectHandler.ServeHTTP(w, r)
 		case KargoServiceListProjectsProcedure:
 			kargoServiceListProjectsHandler.ServeHTTP(w, r)
-		case KargoServiceDeleteProjectConfigProcedure:
-			kargoServiceDeleteProjectConfigHandler.ServeHTTP(w, r)
 		case KargoServiceGetProjectConfigProcedure:
 			kargoServiceGetProjectConfigHandler.ServeHTTP(w, r)
+		case KargoServiceDeleteProjectConfigProcedure:
+			kargoServiceDeleteProjectConfigHandler.ServeHTTP(w, r)
+		case KargoServiceWatchProjectConfigProcedure:
+			kargoServiceWatchProjectConfigHandler.ServeHTTP(w, r)
+		case KargoServiceRefreshProjectConfigProcedure:
+			kargoServiceRefreshProjectConfigHandler.ServeHTTP(w, r)
 		case KargoServiceApproveFreightProcedure:
 			kargoServiceApproveFreightHandler.ServeHTTP(w, r)
 		case KargoServiceDeleteFreightProcedure:
@@ -1903,6 +2061,22 @@ func (UnimplementedKargoServiceHandler) RefreshStage(context.Context, *connect.R
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.RefreshStage is not implemented"))
 }
 
+func (UnimplementedKargoServiceHandler) GetClusterConfig(context.Context, *connect.Request[v1alpha1.GetClusterConfigRequest]) (*connect.Response[v1alpha1.GetClusterConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.GetClusterConfig is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) DeleteClusterConfig(context.Context, *connect.Request[v1alpha1.DeleteClusterConfigRequest]) (*connect.Response[v1alpha1.DeleteClusterConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterConfig is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) WatchClusterConfig(context.Context, *connect.Request[v1alpha1.WatchClusterConfigRequest], *connect.ServerStream[v1alpha1.WatchClusterConfigResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.WatchClusterConfig is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) RefreshClusterConfig(context.Context, *connect.Request[v1alpha1.RefreshClusterConfigRequest]) (*connect.Response[v1alpha1.RefreshClusterConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.RefreshClusterConfig is not implemented"))
+}
+
 func (UnimplementedKargoServiceHandler) ListPromotions(context.Context, *connect.Request[v1alpha1.ListPromotionsRequest]) (*connect.Response[v1alpha1.ListPromotionsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.ListPromotions is not implemented"))
 }
@@ -1935,12 +2109,20 @@ func (UnimplementedKargoServiceHandler) ListProjects(context.Context, *connect.R
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.ListProjects is not implemented"))
 }
 
+func (UnimplementedKargoServiceHandler) GetProjectConfig(context.Context, *connect.Request[v1alpha1.GetProjectConfigRequest]) (*connect.Response[v1alpha1.GetProjectConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.GetProjectConfig is not implemented"))
+}
+
 func (UnimplementedKargoServiceHandler) DeleteProjectConfig(context.Context, *connect.Request[v1alpha1.DeleteProjectConfigRequest]) (*connect.Response[v1alpha1.DeleteProjectConfigResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.DeleteProjectConfig is not implemented"))
 }
 
-func (UnimplementedKargoServiceHandler) GetProjectConfig(context.Context, *connect.Request[v1alpha1.GetProjectConfigRequest]) (*connect.Response[v1alpha1.GetProjectConfigResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.GetProjectConfig is not implemented"))
+func (UnimplementedKargoServiceHandler) WatchProjectConfig(context.Context, *connect.Request[v1alpha1.WatchProjectConfigRequest], *connect.ServerStream[v1alpha1.WatchProjectConfigResponse]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.WatchProjectConfig is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) RefreshProjectConfig(context.Context, *connect.Request[v1alpha1.RefreshProjectConfigRequest]) (*connect.Response[v1alpha1.RefreshProjectConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.RefreshProjectConfig is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) ApproveFreight(context.Context, *connect.Request[v1alpha1.ApproveFreightRequest]) (*connect.Response[v1alpha1.ApproveFreightResponse], error) {

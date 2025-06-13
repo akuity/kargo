@@ -44,8 +44,11 @@ docker_build(
 
 namespace_create('kargo')
 k8s_resource(
-  new_name = 'namespace',
-  objects = ['kargo:namespace'],
+  new_name = 'namespaces',
+  objects = [
+    'kargo:namespace',
+    'kargo-cluster-secrets:namespace'
+  ],
   labels = ['kargo']
 )
 
@@ -72,6 +75,10 @@ k8s_resource(
     'kargo-admin:clusterrole',
     'kargo-admin:clusterrolebinding',
     'kargo-admin:serviceaccount',
+    'kargo-cluster-secrets-reader:role',
+    'kargo-cluster-secrets-reader:rolebinding',
+    'kargo-project-admin:clusterrole',
+    'kargo-project-secrets-reader:clusterrole',
     'kargo-viewer:clusterrole',
     'kargo-viewer:serviceaccount',
     'kargo-viewer:clusterrolebinding',
@@ -93,8 +100,7 @@ k8s_resource(
     'kargo-api:secret',
     'kargo-api:serviceaccount',
     'kargo-api-rollouts:clusterrole',
-    'kargo-api-rollouts:clusterrolebinding',
-    'kargo-project-admin:clusterrole'
+    'kargo-api-rollouts:clusterrolebinding'
   ],
   resource_deps=['back-end-compile','dex-server']
 )

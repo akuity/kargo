@@ -38,7 +38,7 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, r.createNamespaceFn)
 	require.NotNil(t, r.patchOwnerReferencesFn)
 	require.NotNil(t, r.ensureFinalizerFn)
-	require.NotNil(t, r.ensureAPIAdminPermissionsFn)
+	require.NotNil(t, r.ensureSystemPermissionsFn)
 	require.NotNil(t, r.ensureControllerPermissionsFn)
 	require.NotNil(t, r.ensureDefaultUserRolesFn)
 	require.NotNil(t, r.createServiceAccountFn)
@@ -236,7 +236,7 @@ func TestReconciler_reconcile(t *testing.T) {
 				ensureNamespaceFn: func(context.Context, *kargoapi.Project) error {
 					return nil
 				},
-				ensureAPIAdminPermissionsFn: func(context.Context, *kargoapi.Project) error {
+				ensureSystemPermissionsFn: func(context.Context, *kargoapi.Project) error {
 					return nil
 				},
 				ensureDefaultUserRolesFn: func(context.Context, *kargoapi.Project) error {
@@ -306,7 +306,7 @@ func TestReconciler_reconcile(t *testing.T) {
 				ensureNamespaceFn: func(context.Context, *kargoapi.Project) error {
 					return nil
 				},
-				ensureAPIAdminPermissionsFn: func(context.Context, *kargoapi.Project) error {
+				ensureSystemPermissionsFn: func(context.Context, *kargoapi.Project) error {
 					return nil
 				},
 				ensureDefaultUserRolesFn: func(context.Context, *kargoapi.Project) error {
@@ -361,7 +361,7 @@ func TestReconciler_reconcile(t *testing.T) {
 				ensureNamespaceFn: func(context.Context, *kargoapi.Project) error {
 					return nil
 				},
-				ensureAPIAdminPermissionsFn: func(context.Context, *kargoapi.Project) error {
+				ensureSystemPermissionsFn: func(context.Context, *kargoapi.Project) error {
 					return nil
 				},
 				ensureDefaultUserRolesFn: func(context.Context, *kargoapi.Project) error {
@@ -481,7 +481,7 @@ func TestReconciler_syncProject(t *testing.T) {
 				ensureNamespaceFn: func(context.Context, *kargoapi.Project) error {
 					return nil
 				},
-				ensureAPIAdminPermissionsFn: func(
+				ensureSystemPermissionsFn: func(
 					context.Context,
 					*kargoapi.Project,
 				) error {
@@ -498,7 +498,7 @@ func TestReconciler_syncProject(t *testing.T) {
 				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCondition)
 				require.Equal(t, metav1.ConditionFalse, readyCondition.Status)
-				require.Equal(t, "EnsuringAPIServerPermissionsFailed", readyCondition.Reason)
+				require.Equal(t, "EnsuringSystemPermissionsFailed", readyCondition.Reason)
 
 				reconcilingCondition := conditions.Get(&status, kargoapi.ConditionTypeReconciling)
 				require.NotNil(t, reconcilingCondition)
@@ -515,7 +515,7 @@ func TestReconciler_syncProject(t *testing.T) {
 				ensureNamespaceFn: func(context.Context, *kargoapi.Project) error {
 					return nil
 				},
-				ensureAPIAdminPermissionsFn: func(
+				ensureSystemPermissionsFn: func(
 					context.Context,
 					*kargoapi.Project,
 				) error {
@@ -552,7 +552,7 @@ func TestReconciler_syncProject(t *testing.T) {
 				ensureNamespaceFn: func(context.Context, *kargoapi.Project) error {
 					return nil
 				},
-				ensureAPIAdminPermissionsFn: func(
+				ensureSystemPermissionsFn: func(
 					context.Context,
 					*kargoapi.Project,
 				) error {
@@ -589,7 +589,7 @@ func TestReconciler_syncProject(t *testing.T) {
 				ensureNamespaceFn: func(context.Context, *kargoapi.Project) error {
 					return nil
 				},
-				ensureAPIAdminPermissionsFn: func(
+				ensureSystemPermissionsFn: func(
 					context.Context,
 					*kargoapi.Project,
 				) error {
@@ -864,7 +864,7 @@ func TestReconciler_ensureNamespace(t *testing.T) {
 	}
 }
 
-func TestReconciler_ensureAPIAdminPermissions(t *testing.T) {
+func TestReconciler_ensureSystemPermissions(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
@@ -887,8 +887,44 @@ func TestReconciler_ensureAPIAdminPermissions(t *testing.T) {
 			},
 		},
 		{
-			name: "role binding already exists",
+			name: "error updating existing role binding",
 			reconciler: &reconciler{
+				client: fake.NewClientBuilder().WithInterceptorFuncs(interceptor.Funcs{
+					Update: func(
+						context.Context,
+						client.WithWatch,
+						client.Object,
+						...client.UpdateOption,
+					) error {
+						return errors.New("something went wrong")
+					},
+				}).Build(),
+				createRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return apierrors.NewAlreadyExists(schema.GroupResource{}, "")
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error updating existing RoleBinding")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "success updating existing role binding",
+			reconciler: &reconciler{
+				client: fake.NewClientBuilder().WithInterceptorFuncs(interceptor.Funcs{
+					Update: func(
+						context.Context,
+						client.WithWatch,
+						client.Object,
+						...client.UpdateOption,
+					) error {
+						return nil
+					},
+				}).Build(),
 				createRoleBindingFn: func(
 					context.Context,
 					client.Object,
@@ -921,7 +957,7 @@ func TestReconciler_ensureAPIAdminPermissions(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
 				t,
-				testCase.reconciler.ensureAPIAdminPermissions(
+				testCase.reconciler.ensureSystemPermissions(
 					context.Background(),
 					&kargoapi.Project{},
 				),

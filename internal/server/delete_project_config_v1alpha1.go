@@ -15,12 +15,12 @@ func (s *server) DeleteProjectConfig(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.DeleteProjectConfigRequest],
 ) (*connect.Response[svcv1alpha1.DeleteProjectConfigResponse], error) {
-	name := req.Msg.GetName()
-	if err := validateFieldNotEmpty("name", name); err != nil {
+	project := req.Msg.GetProject()
+	if err := validateFieldNotEmpty("project", project); err != nil {
 		return nil, err
 	}
 
-	if err := s.validateProjectExists(ctx, name); err != nil {
+	if err := s.validateProjectExists(ctx, project); err != nil {
 		return nil, err
 	}
 
@@ -28,7 +28,8 @@ func (s *server) DeleteProjectConfig(
 		ctx,
 		&kargoapi.ProjectConfig{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: name,
+				Name:      project,
+				Namespace: project,
 			},
 		},
 	); err != nil {

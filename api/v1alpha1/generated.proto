@@ -247,6 +247,16 @@ message ClusterConfigStatus {
   // +listMapKey=type
   repeated .k8s.io.apimachinery.pkg.apis.meta.v1.Condition conditions = 1;
 
+  // ObservedGeneration represents the .metadata.generation that this
+  // ClusterConfig was reconciled against.
+  optional int64 observedGeneration = 3;
+
+  // LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+  // annotation that was handled by the controller. This field can be used to
+  // determine whether the request to refresh the resource has been handled.
+  // +optional
+  optional string lastHandledRefresh = 4;
+
   // WebhookReceivers describes the status of cluster-scoped webhook receivers.
   repeated WebhookReceiverDetails webhookReceivers = 2;
 }
@@ -1108,6 +1118,16 @@ message ProjectConfigStatus {
   // +listMapKey=type
   repeated .k8s.io.apimachinery.pkg.apis.meta.v1.Condition conditions = 1;
 
+  // ObservedGeneration represents the .metadata.generation that this
+  // ProjectConfig was reconciled against.
+  optional int64 observedGeneration = 3;
+
+  // LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+  // annotation that was handled by the controller. This field can be used to
+  // determine whether the request to refresh the resource has been handled.
+  // +optional
+  optional string lastHandledRefresh = 4;
+
   // WebhookReceivers describes the status of Project-specific webhook
   // receivers.
   repeated WebhookReceiverDetails receivers = 2;
@@ -1690,8 +1710,6 @@ message Verification {
 // process.
 message VerificationInfo {
   // ID is the identifier of the Verification process.
-  //
-  // +kubebuilder:validation:Required
   optional string id = 4;
 
   // Actor is the name of the entity that initiated or aborted the
@@ -1699,16 +1717,12 @@ message VerificationInfo {
   optional string actor = 7;
 
   // StartTime is the time at which the Verification process was started.
-  //
-  // +kubebuilder:validation:Required
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time startTime = 5;
 
   // Phase describes the current phase of the Verification process. Generally,
   // this will be a reflection of the underlying AnalysisRun's phase, however,
   // there are exceptions to this, such as in the case where an AnalysisRun
   // cannot be launched successfully.
-  //
-  // +kubebuilder:validation:Required
   optional string phase = 1;
 
   // Message may contain additional information about why the verification
