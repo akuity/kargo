@@ -47,6 +47,9 @@ type ProjectConfigStatus struct {
 	// +listType=map
 	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,1,rep,name=conditions"`
+	// ObservedGeneration represents the .metadata.generation that this
+	// ProjectConfig was reconciled against.
+	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,3,opt,name=observedGeneration"`
 	// WebhookReceivers describes the status of Project-specific webhook
 	// receivers.
 	WebhookReceivers []WebhookReceiverDetails `json:"webhookReceivers,omitempty" protobuf:"bytes,2,rep,name=receivers"`

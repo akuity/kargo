@@ -181,6 +181,10 @@ func (r *reconciler) reconcile(
 		}
 	}
 
+	// At this point, we have successfully reconciled the ProjectConfig and
+	// can set the observed generation.
+	status.ObservedGeneration = projectCfg.GetGeneration()
+
 	return status, nil
 }
 
