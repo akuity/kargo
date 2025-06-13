@@ -25,7 +25,7 @@ artifact repositories, or if developers have
 [configured any of those `Warehouse`s poorly](../50-user-guide/20-how-to-guides/30-working-with-warehouses.md#performance-considerations),
 you may have elected to reduce the frequency with which all `Warehouse`s execute
 their artifact discovery processes (i.e. You may have elected to _increase_ the
-polling interval. See
+minimum polling interval. See
 [Common Configurations](./20-advanced-installation/30-common-configurations.md/#tuning-warehouse-reconciliation-intervals).
 )
 

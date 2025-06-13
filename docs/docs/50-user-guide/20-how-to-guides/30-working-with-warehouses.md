@@ -709,16 +709,16 @@ the system-wide default. (i.e. You may wish to _increase_ the polling interval.)
 This can be done by tuning the `spec.interval` field of any `Warehouse`.
 
 :::note
-The effective polling interval is the _greater_ of the system-wide default and
+The effective polling interval is the _greater_ of a system-wide minimum and
 any interval specified by `spec.interval`. i.e. You can configure a `Warehouse`
 to execute its artifact discovery process _less_ frequently than the system-wide
-default, _but not more frequently._
+minimum, _but not more frequently._
 :::
 
 :::info
 If you're an operator wishing to reduce the frequency with which _all_
-`Warehouse`s execute their discovery processes (increase the polling interval),
-refer to the
+`Warehouse`s execute their discovery processes (increase the minimum polling
+interval), refer to the
 [Common Configurations](../../40-operator-guide/20-advanced-installation/30-common-configurations.md#tuning-warehouse-reconciliation-intervals)
 section of the of the Operator's Guide for more information.
 :::
