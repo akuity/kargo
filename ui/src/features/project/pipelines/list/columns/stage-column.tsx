@@ -61,5 +61,7 @@ export const stageColumn = (filter: Filter): ColumnType<Stage> => ({
     return !!record?.metadata?.name?.toLowerCase?.()?.includes((value as string).toLowerCase());
   },
   filteredValue: filter?.stage ? [filter.stage] : null,
-  filtered: !!filter?.stage
+  filtered: !!filter?.stage,
+  sorter: (stage1, stage2) =>
+    stage1.metadata?.name?.localeCompare(stage2?.metadata?.name || '') || 0
 });

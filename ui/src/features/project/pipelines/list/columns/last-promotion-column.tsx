@@ -78,5 +78,21 @@ export const lastPromotionColumn = (filter: Filter): ColumnType<Stage> => ({
       isBefore(stageLastPromotionDate, filter?.lastPromotion[1]) &&
       isAfter(stageLastPromotionDate, filter?.lastPromotion[0])
     );
+  },
+  sorter: (stage1, stage2) => {
+    if (isStageControlFlow(stage1)) {
+      return -1;
+    }
+
+    if (isStageControlFlow(stage2)) {
+      return 1;
+    }
+
+    const stage1LastPromotionDate = getLastPromotionDate(stage1);
+    const stage2LastPromotionDate = getLastPromotionDate(stage2);
+
+    return Number(stage2LastPromotionDate?.seconds) > Number(stage1LastPromotionDate?.seconds)
+      ? 1
+      : -1;
   }
 });
