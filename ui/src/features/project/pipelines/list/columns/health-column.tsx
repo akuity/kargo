@@ -35,6 +35,12 @@ export const healthColumn = (filter: Filter): ColumnType<Stage> => ({
         health: (props.selectedKeys as string[]) || []
       });
 
+    const onReset = () =>
+      filters?.onFilter({
+        ...filters.filters,
+        health: []
+      });
+
     return (
       <div style={{ padding: 8 }}>
         <Flex vertical gap={8}>
@@ -62,6 +68,10 @@ export const healthColumn = (filter: Filter): ColumnType<Stage> => ({
 
           <Button type='primary' size='small' onClick={onApply}>
             Apply
+          </Button>
+
+          <Button size='small' onClick={onReset}>
+            Reset
           </Button>
         </Flex>
       </div>

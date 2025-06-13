@@ -210,7 +210,9 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                   setPipelineView={setPipelineView}
                 />
                 <Dropdown
-                  className='ml-auto'
+                  className={classNames('ml-auto', {
+                    'mr-5': pipelineView === 'list'
+                  })}
                   trigger={['click']}
                   menu={{
                     items: [

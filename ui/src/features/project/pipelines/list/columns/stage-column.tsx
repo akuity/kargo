@@ -60,6 +60,6 @@ export const stageColumn = (filter: Filter): ColumnType<Stage> => ({
   onFilter: (value, record) => {
     return !!record?.metadata?.name?.toLowerCase?.()?.includes((value as string).toLowerCase());
   },
-  filteredValue: [filter?.stage || ''],
+  filteredValue: filter?.stage ? [filter.stage] : null,
   filtered: !!filter?.stage
 });

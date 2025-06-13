@@ -101,6 +101,17 @@ export const versionColumn = (
       return opts;
     }, [cataloguedFreights]);
 
+    const onApply = () =>
+      filters?.onFilter({
+        ...filters.filters,
+        version: {
+          source: sources,
+          version: [...commits, ...images, ...helm]
+        }
+      });
+
+    const onReset = () => filters?.onFilter({ ...filters.filters, version: {} });
+
     return (
       <Flex style={{ padding: 16 }} vertical gap={16}>
         <Flex align='center' gap={8}>
@@ -164,21 +175,11 @@ export const versionColumn = (
           />
         </Flex>
 
-        <Button
-          type='primary'
-          size='small'
-          onClick={() =>
-            filters?.onFilter({
-              ...filters.filters,
-              version: {
-                source: sources,
-                version: [...commits, ...images, ...helm]
-              }
-            })
-          }
-        >
+        <Button type='primary' size='small' onClick={onApply}>
           Apply
         </Button>
+
+        <Button onClick={onReset}>Reset</Button>
       </Flex>
     );
   },
