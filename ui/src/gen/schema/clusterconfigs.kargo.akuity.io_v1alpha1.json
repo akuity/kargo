@@ -186,6 +186,10 @@
           ],
           "x-kubernetes-list-type": "map"
         },
+        "lastHandledRefresh": {
+          "description": "LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh\nannotation that was handled by the controller. This field can be used to\ndetermine whether the request to refresh the resource has been handled.",
+          "type": "string"
+        },
         "observedGeneration": {
           "description": "ObservedGeneration represents the .metadata.generation that this\nClusterConfig was reconciled against.",
           "format": "int64",

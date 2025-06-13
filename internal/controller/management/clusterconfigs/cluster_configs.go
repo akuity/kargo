@@ -11,7 +11,6 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -19,8 +18,10 @@ import (
 	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/conditions"
 	"github.com/akuity/kargo/internal/controller"
+	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
+	intpredicate "github.com/akuity/kargo/internal/predicate"
 	"github.com/akuity/kargo/internal/webhook/external"
 )
 
@@ -45,22 +46,24 @@ func SetupReconcilerWithManager(
 	kargoMgr manager.Manager,
 	cfg ReconcilerConfig,
 ) error {
+	const maxConcurrentReconciles = 1 // There's only ever one ClusterConfig resource
+
 	if _, err := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&kargoapi.ClusterConfig{}).
+		WithOptions(controller.CommonOptions(maxConcurrentReconciles)).
+		WithEventFilter(intpredicate.IgnoreDelete[client.Object]{}).
 		WithEventFilter(
-			predicate.Funcs{
-				DeleteFunc: func(event.DeleteEvent) bool {
-					return false
-				},
-			},
+			predicate.Or(
+				predicate.GenerationChangedPredicate{},
+				kargo.RefreshRequested{},
+			),
 		).
-		WithOptions(controller.CommonOptions(1)). // There's only ever one ClusterConfig resource
 		Build(newReconciler(kargoMgr.GetClient(), cfg)); err != nil {
 		return fmt.Errorf("error creating ClusterConfig reconciler: %w", err)
 	}
 	logging.LoggerFromContext(ctx).Info(
 		"Initialized ClusterConfig reconciler",
-		"maxConcurrentReconciles", 1,
+		"maxConcurrentReconciles", maxConcurrentReconciles,
 	)
 	return nil
 }
@@ -102,6 +105,11 @@ func (r *reconciler) Reconcile(
 	logger.Debug("reconciling ClusterConfig")
 	newStatus, reconcileErr := r.reconcile(ctx, clusterCfg)
 	logger.Debug("done reconciling ClusterConfig")
+
+	// Record the current refresh token as having been handled.
+	if token, ok := api.RefreshAnnotationValue(clusterCfg.GetAnnotations()); ok {
+		newStatus.LastHandledRefresh = token
+	}
 
 	// Patch the status of the ClusterConfig.
 	if err := kubeclient.PatchStatus(

@@ -10,7 +10,6 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -18,8 +17,10 @@ import (
 	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/conditions"
 	"github.com/akuity/kargo/internal/controller"
+	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
+	intpredicate "github.com/akuity/kargo/internal/predicate"
 	"github.com/akuity/kargo/internal/webhook/external"
 )
 
@@ -46,14 +47,14 @@ func SetupReconcilerWithManager(
 ) error {
 	_, err := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&kargoapi.ProjectConfig{}).
-		WithEventFilter(
-			predicate.Funcs{
-				DeleteFunc: func(event.DeleteEvent) bool {
-					return false
-				},
-			},
-		).
 		WithOptions(controller.CommonOptions(cfg.MaxConcurrentReconciles)).
+		WithEventFilter(intpredicate.IgnoreDelete[client.Object]{}).
+		WithEventFilter(
+			predicate.Or(
+				predicate.GenerationChangedPredicate{},
+				kargo.RefreshRequested{},
+			),
+		).
 		Build(newReconciler(kargoMgr.GetClient(), cfg))
 	if err != nil {
 		return fmt.Errorf("error creating ProjectConfig reconciler: %w", err)
@@ -103,6 +104,11 @@ func (r *reconciler) Reconcile(
 	logger.Debug("reconciling ProjectConfig")
 	newStatus, reconcileErr := r.reconcile(ctx, projectConfig)
 	logger.Debug("done reconciling ProjectConfig")
+
+	// Record the current refresh token as having been handled.
+	if token, ok := api.RefreshAnnotationValue(projectConfig.GetAnnotations()); ok {
+		newStatus.LastHandledRefresh = token
+	}
 
 	// Patch the status of the ProjectConfig.
 	if err := kubeclient.PatchStatus(

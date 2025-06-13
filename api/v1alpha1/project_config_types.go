@@ -50,6 +50,11 @@ type ProjectConfigStatus struct {
 	// ObservedGeneration represents the .metadata.generation that this
 	// ProjectConfig was reconciled against.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,3,opt,name=observedGeneration"`
+	// LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+	// annotation that was handled by the controller. This field can be used to
+	// determine whether the request to refresh the resource has been handled.
+	// +optional
+	LastHandledRefresh string `json:"lastHandledRefresh,omitempty" protobuf:"bytes,4,opt,name=lastHandledRefresh"`
 	// WebhookReceivers describes the status of Project-specific webhook
 	// receivers.
 	WebhookReceivers []WebhookReceiverDetails `json:"webhookReceivers,omitempty" protobuf:"bytes,2,rep,name=receivers"`

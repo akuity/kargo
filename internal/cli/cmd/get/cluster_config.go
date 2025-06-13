@@ -18,11 +18,10 @@ import (
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/io"
 	"github.com/akuity/kargo/internal/cli/kubernetes"
-	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/cli/templates"
 )
 
-type getProjectConfigOptions struct {
+type getClusterConfigOptions struct {
 	genericiooptions.IOStreams
 	*genericclioptions.PrintFlags
 
@@ -30,16 +29,14 @@ type getProjectConfigOptions struct {
 
 	Config        config.CLIConfig
 	ClientOptions client.Options
-
-	Project string
 }
 
-func newGetProjectConfigCommand(
+func newGetClusterConfigCommand(
 	cfg config.CLIConfig,
 	streams genericiooptions.IOStreams,
 	getOptions *getOptions,
 ) *cobra.Command {
-	cmdOpts := &getProjectConfigOptions{
+	cmdOpts := &getClusterConfigOptions{
 		Config:     cfg,
 		IOStreams:  streams,
 		getOptions: getOptions,
@@ -47,17 +44,13 @@ func newGetProjectConfigCommand(
 	}
 
 	cmd := &cobra.Command{
-		Use:     "projectconfig [--project=project] [--no-headers]",
-		Aliases: []string{"projectconfigs"},
-		Short:   "Display project configuration",
+		Use:     "clusterconfig [--no-headers]",
+		Aliases: []string{"clusterconfigs"},
+		Short:   "Display cluster configuration",
 		Args:    cobra.NoArgs,
 		Example: templates.Example(`
-# Get project configuration for my-project
-kargo get projectconfig --project=my-project
-
-# Get project configuration for the default project
-kargo config set-project my-project
-kargo get projectconfig
+# Get cluster configuration
+kargo get clusterconfig
 `),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return cmdOpts.run(cmd.Context())
@@ -73,51 +66,44 @@ kargo get projectconfig
 	return cmd
 }
 
-// addFlags adds the flags for the get project config options to the provided
+// addFlags adds the flags for the get cluster config options to the provided
 // command.
-func (o *getProjectConfigOptions) addFlags(cmd *cobra.Command) {
+func (o *getClusterConfigOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
-
-	option.Project(
-		cmd.Flags(), &o.Project, o.Config.Project,
-		"The project for which to get the configuration. If not set, the default project will be used.",
-	)
 }
 
-// run gets the project config from the server and prints it to the console.
-func (o *getProjectConfigOptions) run(ctx context.Context) error {
+// run gets the cluster config from the server and prints it to the console.
+func (o *getClusterConfigOptions) run(ctx context.Context) error {
 	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	res := make([]*kargoapi.ProjectConfig, 0, 1)
-	resp, err := kargoSvcCli.GetProjectConfig(
+	res := make([]*kargoapi.ClusterConfig, 0, 1)
+	resp, err := kargoSvcCli.GetClusterConfig(
 		ctx,
 		connect.NewRequest(
-			&v1alpha1.GetProjectConfigRequest{
-				Project: o.Project,
-			},
+			&v1alpha1.GetClusterConfigRequest{},
 		),
 	)
 	if err != nil {
-		return fmt.Errorf("get project configuration: %w", err)
+		return fmt.Errorf("get cluster configuration: %w", err)
 	}
-	if resp.Msg.GetProjectConfig() != nil {
-		res = append(res, resp.Msg.GetProjectConfig())
+	if resp.Msg.GetClusterConfig() != nil {
+		res = append(res, resp.Msg.GetClusterConfig())
 	}
 
 	if err = printObjects(res, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
-		return fmt.Errorf("print project configuration: %w", err)
+		return fmt.Errorf("print cluster configuration: %w", err)
 	}
 	return nil
 }
 
-func newProjectConfigTable(list *metav1.List) *metav1.Table {
+func newClusterConfigTable(list *metav1.List) *metav1.Table {
 	rows := make([]metav1.TableRow, len(list.Items))
 	for i, item := range list.Items {
-		cfg := item.Object.(*kargoapi.ProjectConfig) // nolint: forcetypeassert
+		cfg := item.Object.(*kargoapi.ClusterConfig) // nolint: forcetypeassert
 
 		rows[i] = metav1.TableRow{
 			Cells: []any{

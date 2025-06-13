@@ -20,7 +20,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/templates"
 )
 
-type deleteProjectConfigOptions struct {
+type deleteClusterConfigOptions struct {
 	genericiooptions.IOStreams
 	*genericclioptions.PrintFlags
 
@@ -30,11 +30,11 @@ type deleteProjectConfigOptions struct {
 	Project string
 }
 
-func newProjectConfigCommand(
+func newClusterConfigCommand(
 	cfg config.CLIConfig,
 	streams genericiooptions.IOStreams,
 ) *cobra.Command {
-	cmdOpts := &deleteProjectConfigOptions{
+	cmdOpts := &deleteClusterConfigOptions{
 		Config:    cfg,
 		IOStreams: streams,
 		PrintFlags: genericclioptions.NewPrintFlags("deleted").
@@ -42,17 +42,13 @@ func newProjectConfigCommand(
 	}
 
 	cmd := &cobra.Command{
-		Use:     "projectconfig [--project=project]",
-		Aliases: []string{"projectconfigs"},
-		Short:   "Delete project configuration",
+		Use:     "clusterconfig",
+		Aliases: []string{"clusterconfigs"},
+		Short:   "Delete cluster configuration",
 		Args:    option.NoArgs,
 		Example: templates.Example(`
-# Delete project configuration for my-project
-kargo delete projectconfig --project=my-project
-
-# Delete project configuration for the default project
-kargo config set-project my-project
-kargo delete projectconfig
+# Delete the cluster configuration
+kargo delete clusterconfig
 `),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return cmdOpts.run(cmd.Context())
@@ -70,16 +66,13 @@ kargo delete projectconfig
 
 // addFlags adds the flags for the delete project config options to the provided
 // command.
-func (o *deleteProjectConfigOptions) addFlags(cmd *cobra.Command) {
+func (o *deleteClusterConfigOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
-
-	option.Project(cmd.Flags(), &o.Project, o.Config.Project,
-		"The Project for which to delete the configuration. If not set, the default project will be used.")
 }
 
 // run removes the project config from the project.
-func (o *deleteProjectConfigOptions) run(ctx context.Context) error {
+func (o *deleteClusterConfigOptions) run(ctx context.Context) error {
 	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
@@ -90,20 +83,17 @@ func (o *deleteProjectConfigOptions) run(ctx context.Context) error {
 		return fmt.Errorf("create printer: %w", err)
 	}
 
-	if _, err = kargoSvcCli.DeleteProjectConfig(
+	if _, err = kargoSvcCli.DeleteClusterConfig(
 		ctx,
-		connect.NewRequest(&v1alpha1.DeleteProjectConfigRequest{
-			Project: o.Project,
-		}),
+		connect.NewRequest(&v1alpha1.DeleteClusterConfigRequest{}),
 	); err != nil {
-		return fmt.Errorf("delete project configuration: %w", err)
+		return fmt.Errorf("delete cluster configuration: %w", err)
 	}
 
 	if err = printer.PrintObj(
-		&kargoapi.ProjectConfig{
+		&kargoapi.ClusterConfig{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      o.Project,
-				Namespace: o.Project,
+				Name: o.Project,
 			},
 		}, o.IOStreams.Out); err != nil {
 		return fmt.Errorf("print project configuration: %w", err)

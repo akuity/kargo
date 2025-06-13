@@ -17,28 +17,28 @@ import (
 	"github.com/akuity/kargo/internal/cli/templates"
 )
 
-func newRefreshWarehouseCommand(cfg config.CLIConfig) *cobra.Command {
+func newRefreshProjectConfigCommand(cfg config.CLIConfig) *cobra.Command {
 	cmdOpts := &refreshOptions{
 		Config:       cfg,
-		ResourceType: refreshResourceTypeWarehouse,
+		ResourceType: refreshResourceTypeProjectConfig,
 	}
 
 	cmd := &cobra.Command{
-		Use:  "warehouse [--project=project] NAME [--wait]",
-		Args: option.ExactArgs(1),
+		Use:  "projectconfig [--project=project] [--wait]",
+		Args: option.NoArgs,
 		Example: templates.Example(`
-# Refresh a warehouse
-kargo refresh warehouse --project=my-project my-warehouse
+# Refresh the project configuration
+kargo refresh projectconfig --project=my-project
 
-# Refresh a warehouse and wait for it to complete
-kargo refresh warehouse --project=my-project my-warehouse --wait
+# Refresh the project configuration and wait for it to complete
+kargo refresh projectconfig --project=my-project --wait
 
-# Refresh a warehouse in the default project
+# Refresh the project configuration in the default project
 kargo config set-project my-project
-kargo refresh warehouse my-warehouse
+kargo refresh projectconfig
 `),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			cmdOpts.complete(args)
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			cmdOpts.complete(nil)
 
 			if err := cmdOpts.validate(); err != nil {
 				return err
@@ -54,18 +54,16 @@ kargo refresh warehouse my-warehouse
 	return cmd
 }
 
-func waitForWarehouse(
+func waitForProjectConfig(
 	ctx context.Context,
 	kargoSvcCli svcv1alpha1connect.KargoServiceClient,
 	project string,
-	name string,
 ) error {
-	res, err := kargoSvcCli.WatchWarehouses(ctx, connect.NewRequest(&v1alpha1.WatchWarehousesRequest{
+	res, err := kargoSvcCli.WatchProjectConfig(ctx, connect.NewRequest(&v1alpha1.WatchProjectConfigRequest{
 		Project: project,
-		Name:    name,
 	}))
 	if err != nil {
-		return fmt.Errorf("watch warehouse: %w", err)
+		return fmt.Errorf("watch projectconfig: %w", err)
 	}
 	defer func() {
 		if conn, connErr := res.Conn(); connErr == nil {
@@ -75,22 +73,22 @@ func waitForWarehouse(
 	for {
 		if !res.Receive() {
 			if err = res.Err(); err != nil {
-				return fmt.Errorf("watch warehouse: %w", err)
+				return fmt.Errorf("watch projectconfig: %w", err)
 			}
 			return errors.New("unexpected end of watch stream")
 		}
 		msg := res.Msg()
-		if msg == nil || msg.Warehouse == nil {
+		if msg == nil || msg.ProjectConfig == nil {
 			return errors.New("unexpected response")
 		}
-		token, ok := api.RefreshAnnotationValue(msg.Warehouse.GetAnnotations())
+		token, ok := api.RefreshAnnotationValue(msg.ProjectConfig.GetAnnotations())
 		if !ok {
 			return fmt.Errorf(
-				"Warehouse %q in Project %q has no %q annotation",
-				name, project, kargoapi.AnnotationKeyRefresh,
+				"ProjectConfig %q has no %q annotation",
+				msg.ProjectConfig.Name, kargoapi.AnnotationKeyRefresh,
 			)
 		}
-		if msg.Warehouse.Status.LastHandledRefresh == token {
+		if msg.ProjectConfig.Status.LastHandledRefresh == token {
 			return nil
 		}
 	}

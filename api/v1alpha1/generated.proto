@@ -251,6 +251,12 @@ message ClusterConfigStatus {
   // ClusterConfig was reconciled against.
   optional int64 observedGeneration = 3;
 
+  // LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+  // annotation that was handled by the controller. This field can be used to
+  // determine whether the request to refresh the resource has been handled.
+  // +optional
+  optional string lastHandledRefresh = 4;
+
   // WebhookReceivers describes the status of cluster-scoped webhook receivers.
   repeated WebhookReceiverDetails webhookReceivers = 2;
 }
@@ -1097,6 +1103,12 @@ message ProjectConfigStatus {
   // ObservedGeneration represents the .metadata.generation that this
   // ProjectConfig was reconciled against.
   optional int64 observedGeneration = 3;
+
+  // LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+  // annotation that was handled by the controller. This field can be used to
+  // determine whether the request to refresh the resource has been handled.
+  // +optional
+  optional string lastHandledRefresh = 4;
 
   // WebhookReceivers describes the status of Project-specific webhook
   // receivers.

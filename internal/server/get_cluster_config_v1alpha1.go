@@ -11,33 +11,25 @@ import (
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 )
 
-func (s *server) GetProjectConfig(
+func (s *server) GetClusterConfig(
 	ctx context.Context,
-	req *connect.Request[svcv1alpha1.GetProjectConfigRequest],
-) (*connect.Response[svcv1alpha1.GetProjectConfigResponse], error) {
-	project := req.Msg.GetProject()
-	if err := validateFieldNotEmpty("project", project); err != nil {
-		return nil, err
-	}
-
-	if err := s.validateProjectExists(ctx, project); err != nil {
-		return nil, err
-	}
-
-	// Get the ProjectConfig from the Kubernetes API as an unstructured object.
+	req *connect.Request[svcv1alpha1.GetClusterConfigRequest],
+) (*connect.Response[svcv1alpha1.GetClusterConfigResponse], error) {
+	// Get the ClusterConfig from the Kubernetes API as an unstructured object.
 	// Using an unstructured object allows us to return the object _as presented
 	// by the API_ if a raw format is requested.
 	u := unstructured.Unstructured{
 		Object: map[string]any{
 			"apiVersion": kargoapi.GroupVersion.String(),
-			"kind":       "ProjectConfig",
+			"kind":       "ClusterConfig",
 		},
 	}
-	if err := s.client.Get(ctx, client.ObjectKey{Name: project, Namespace: project}, &u); err != nil {
+	if err := s.client.Get(ctx, client.ObjectKey{Name: api.ClusterConfigName}, &u); err != nil {
 		if client.IgnoreNotFound(err) == nil {
-			err = fmt.Errorf("ProjectConfig %q not found", project)
+			err = fmt.Errorf("ClusterConfig %q not found", api.ClusterConfigName)
 			return nil, connect.NewError(connect.CodeNotFound, err)
 		}
 		return nil, err
@@ -49,13 +41,13 @@ func (s *server) GetProjectConfig(
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInternal, err)
 		}
-		return connect.NewResponse(&svcv1alpha1.GetProjectConfigResponse{
-			Result: &svcv1alpha1.GetProjectConfigResponse_Raw{
+		return connect.NewResponse(&svcv1alpha1.GetClusterConfigResponse{
+			Result: &svcv1alpha1.GetClusterConfigResponse_Raw{
 				Raw: raw,
 			},
 		}), nil
 	default:
-		p := kargoapi.ProjectConfig{}
+		p := kargoapi.ClusterConfig{}
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &p); err != nil {
 			return nil, connect.NewError(connect.CodeInternal, err)
 		}
@@ -63,9 +55,9 @@ func (s *server) GetProjectConfig(
 		if err != nil {
 			return nil, connect.NewError(connect.CodeInternal, err)
 		}
-		return connect.NewResponse(&svcv1alpha1.GetProjectConfigResponse{
-			Result: &svcv1alpha1.GetProjectConfigResponse_ProjectConfig{
-				ProjectConfig: obj,
+		return connect.NewResponse(&svcv1alpha1.GetClusterConfigResponse{
+			Result: &svcv1alpha1.GetClusterConfigResponse_ClusterConfig{
+				ClusterConfig: obj,
 			},
 		}), nil
 	}
