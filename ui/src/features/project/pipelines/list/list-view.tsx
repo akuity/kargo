@@ -13,6 +13,7 @@ import { Freight, Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { useFreightTimelineControllerContext } from '../context/freight-timeline-controller-context';
 
+import { AppliedFilters } from './applied-filters';
 import { actionColumn } from './columns/action-column';
 import { healthColumn } from './columns/health-column';
 import { lastPromotionColumn } from './columns/last-promotion-column';
@@ -71,6 +72,7 @@ export const PipelineListView = (props: PipelineListViewProps) => {
         onFilter: setFilters
       }}
     >
+      <AppliedFilters className='px-2 py-2' />
       <div className={classNames(props.className, 'px-2')}>
         <Table
           dataSource={filteredStages}
