@@ -108,6 +108,9 @@ type WebhookReceiverConfig struct {
 	// Bitbucket contains the configuration for a webhook receiver that is
 	// compatible with Bitbucket payloads.
 	Bitbucket *BitbucketWebhookReceiverConfig `json:"bitbucket,omitempty" protobuf:"bytes,5,opt,name=bitbucket"`
+	// DockerHub contains the configuration for a webhook receiver that is
+	// compatible with DockerHub payloads.
+	DockerHub *DockerHubWebhookReceiverConfig `json:"dockerhub,omitempty" protobuf:"bytes,6,opt,name=dockerhub"`
 	// GitHub contains the configuration for a webhook receiver that is compatible
 	// with GitHub payloads.
 	GitHub *GitHubWebhookReceiverConfig `json:"github,omitempty" protobuf:"bytes,2,opt,name=github"`
@@ -134,6 +137,24 @@ type BitbucketWebhookReceiverConfig struct {
 	// by Bitbucket. For more information please refer to the Bitbucket
 	// documentation:
 	//   https://support.atlassian.com/bitbucket-cloud/docs/manage-webhooks/
+	//
+	// +kubebuilder:validation:Required
+	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+}
+
+// DockerHubWebhookReceiverConfig describes a webhook receiver that is
+// compatible with Docker Hub payloads.
+type DockerHubWebhookReceiverConfig struct {
+	// SecretRef contains a reference to a Secret. For Project-scoped webhook
+	// receivers, the referenced Secret must be in the same namespace as the
+	// ProjectConfig.
+	//
+	// The Secret's data map is expected to contain a `secret` key whose value
+	// does NOT need to be shared directly with Docker Hub when registering a
+	// webhook. It is used only by Kargo to create a complex, hard-to-guess URL,
+	// which implicitly serves as a shared secret. For more information about
+	// Docker Hub webhooks, please refer to the Docker documentation:
+	//   https://docs.docker.com/docker-hub/webhooks/
 	//
 	// +kubebuilder:validation:Required
 	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`

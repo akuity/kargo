@@ -16,80 +16,82 @@ import (
 )
 
 const (
-	quaySecretDataKey       = "secret"
-	quay                    = "quay"
-	quayWebhookBodyMaxBytes = 2 << 20 // 2MB
+	dockerhub                    = "dockerhub"
+	dockerhubSecretDataKey       = "secret"
+	dockerhubWebhookBodyMaxBytes = 2 << 20 // 2MB
 )
 
 func init() {
 	registry.register(
-		quay,
+		dockerhub,
 		webhookReceiverRegistration{
 			predicate: func(cfg kargoapi.WebhookReceiverConfig) bool {
-				return cfg.Quay != nil
+				return cfg.DockerHub != nil
 			},
-			factory: newQuayWebhookReceiver,
+			factory: newDockerHubWebhookReceiver,
 		},
 	)
 }
 
-// quayWebhookReceiver is an implementation of WebhookReceiver that handles
-// inbound webhooks from Quay.
-type quayWebhookReceiver struct {
+// dockerhubWebhookReceiver is an implementation of WebhookReceiver that handles
+// inbound webhooks from Docker Hub.
+type dockerhubWebhookReceiver struct {
 	*baseWebhookReceiver
 }
 
-// newQuayWebhookReceiver returns a new instance of quayWebhookReceiver.
-func newQuayWebhookReceiver(
+// newDockerHubWebhookReceiver returns a new instance of
+// dockerhubWebhookReceiver.
+func newDockerHubWebhookReceiver(
 	c client.Client,
 	project string,
 	cfg kargoapi.WebhookReceiverConfig,
 ) WebhookReceiver {
-	return &quayWebhookReceiver{
+	return &dockerhubWebhookReceiver{
 		baseWebhookReceiver: &baseWebhookReceiver{
 			client:     c,
 			project:    project,
-			secretName: cfg.Quay.SecretRef.Name,
+			secretName: cfg.GitHub.SecretRef.Name,
 		},
 	}
 }
 
-// GetDetails implements WebhookReceiver.
-func (q *quayWebhookReceiver) getReceiverType() string {
-	return quay
+// getReceiverType implements WebhookReceiver.
+func (d *dockerhubWebhookReceiver) getReceiverType() string {
+	return dockerhub
 }
 
 // getSecretValues implements WebhookReceiver.
-func (q *quayWebhookReceiver) getSecretValues(
+func (d *dockerhubWebhookReceiver) getSecretValues(
 	secretData map[string][]byte,
 ) ([]string, error) {
-	secretValue, ok := secretData[quaySecretDataKey]
+	secretValue, ok := secretData[dockerhubSecretDataKey]
 	if !ok {
 		return nil,
-			errors.New("Secret data is not valid for a Quay.io WebhookReceiver")
+			errors.New("Secret data is not valid for a Docker Hub WebhookReceiver")
 	}
 	return []string{string(secretValue)}, nil
 }
 
 // GetHandler implements WebhookReceiver.
-func (q *quayWebhookReceiver) GetHandler() http.HandlerFunc {
+func (d *dockerhubWebhookReceiver) GetHandler() http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		logger := logging.LoggerFromContext(ctx)
-		logger.Debug("identifying source repository")
 
-		if contentLength := r.ContentLength; contentLength > quayWebhookBodyMaxBytes {
+		logger := logging.LoggerFromContext(ctx)
+
+		// Early check of Content-Length if available
+		if contentLength := r.ContentLength; contentLength > dockerhubWebhookBodyMaxBytes {
 			xhttp.WriteErrorJSON(
 				w,
 				xhttp.Error(
-					fmt.Errorf("content exceeds limit of %d bytes", quayWebhookBodyMaxBytes),
+					fmt.Errorf("content exceeds limit of %d bytes", dockerhubWebhookBodyMaxBytes),
 					http.StatusRequestEntityTooLarge,
 				),
 			)
 			return
 		}
 
-		b, err := io.LimitRead(r.Body, quayWebhookBodyMaxBytes)
+		body, err := io.LimitRead(r.Body, dockerhubWebhookBodyMaxBytes)
 		if err != nil {
 			if errors.Is(err, &io.BodyTooLargeError{}) {
 				xhttp.WriteErrorJSON(
@@ -99,50 +101,37 @@ func (q *quayWebhookReceiver) GetHandler() http.HandlerFunc {
 				return
 			}
 			xhttp.WriteErrorJSON(w, err)
+			return
 		}
 
 		payload := struct {
-			// format: quay.io/mynamespace/repository
-			DockerURL string `json:"docker_url"`
+			Repository struct {
+				RepoName string `json:"repo_name"`
+			} `json:"repository"`
 		}{}
 
-		if err = json.Unmarshal(b, &payload); err != nil {
+		if err = json.Unmarshal(body, &payload); err != nil {
 			xhttp.WriteErrorJSON(
 				w,
-				xhttp.Error(errors.New("invalid request body"),
-					http.StatusBadRequest,
-				),
-			)
-		}
-
-		if payload.DockerURL == "" {
-			xhttp.WriteErrorJSON(w,
-				xhttp.Error(
-					fmt.Errorf("missing repository web URL in request body"),
-					http.StatusBadRequest,
-				),
+				xhttp.Error(errors.New("invalid request body"), http.StatusBadRequest),
 			)
 			return
 		}
 
-		repoURL := image.NormalizeURL(payload.DockerURL)
+		// Normalize the repo name
+		repoURL := image.NormalizeURL(payload.Repository.RepoName)
 
 		logger = logger.WithValues("repoURL", repoURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
 
-		result, err := refreshWarehouses(ctx, q.client, q.project, repoURL)
+		result, err := refreshWarehouses(ctx, d.client, d.project, repoURL)
 		if err != nil {
 			xhttp.WriteErrorJSON(w, err)
 			return
 		}
-
-		logger.Debug("execution complete",
-			"successes", result.successes,
-			"failures", result.failures,
-		)
-
 		if result.failures > 0 {
-			xhttp.WriteResponseJSON(w,
+			xhttp.WriteResponseJSON(
+				w,
 				http.StatusInternalServerError,
 				map[string]string{
 					"error": fmt.Sprintf("failed to refresh %d of %d warehouses",
@@ -153,14 +142,13 @@ func (q *quayWebhookReceiver) GetHandler() http.HandlerFunc {
 			)
 			return
 		}
-
-		xhttp.WriteResponseJSON(w,
+		xhttp.WriteResponseJSON(
+			w,
 			http.StatusOK,
 			map[string]string{
-				"msg": fmt.Sprintf("refreshed %d warehouse(s)",
-					result.successes,
-				),
+				"msg": fmt.Sprintf("refreshed %d warehouse(s)", result.successes),
 			},
 		)
+
 	})
 }

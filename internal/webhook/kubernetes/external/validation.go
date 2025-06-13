@@ -30,6 +30,9 @@ func validateMutuallyExclusive(
 		if r.Bitbucket != nil {
 			receivers = append(receivers, "Bitbucket")
 		}
+		if r.DockerHub != nil {
+			receivers = append(receivers, "DockerHub")
+		}
 		if r.GitHub != nil {
 			receivers = append(receivers, "GitHub")
 		}

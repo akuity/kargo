@@ -17,6 +17,7 @@ import (
 	"github.com/akuity/kargo/internal/expressions"
 	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/helm"
+	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/promotion"
 )
@@ -513,14 +514,7 @@ func WarehousesBySubscribedURLs(obj client.Object) []string {
 			)
 		}
 		if sub.Image != nil && sub.Image.RepoURL != "" {
-			repoURLs = append(
-				repoURLs,
-				// TODO(fuskovic): This chart URL normalization logic is adequate for
-				// normalizing image URLs in the near term, but should eventually be
-				// replaced with dedicated image URL normalization logic.
-				// See https://github.com/akuity/kargo/issues/3999
-				helm.NormalizeChartRepositoryURL(sub.Image.RepoURL),
-			)
+			repoURLs = append(repoURLs, image.NormalizeURL(sub.Image.RepoURL))
 		}
 	}
 	return repoURLs
