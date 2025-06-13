@@ -23,7 +23,7 @@ import { NavItem } from './nav-item/nav-item';
 
 export const MainLayout = () => {
   const { logout, JWTInfo } = useAuthContext();
-  const { layoutExtensions } = useExtensionsContext();
+  const { appSubpages, layoutExtensions } = useExtensionsContext();
 
   return (
     <ErrorBoundary>
@@ -49,6 +49,15 @@ export const MainLayout = () => {
                   User
                 </NavItem>
               )}
+              {appSubpages.map((page) => (
+                <NavItem
+                  key={page.path}
+                  icon={page.icon}
+                  path={`${paths.appExtensions}/${page.path}`}
+                >
+                  {page.label}
+                </NavItem>
+              ))}
               <NavItem icon={faGear} path={paths.settings}>
                 Settings
               </NavItem>
