@@ -22,9 +22,8 @@ func NormalizeURL(repoURL string) string {
 	}
 	reg := parsed.Context().Registry.Name()
 	repo := parsed.Context().RepositoryStr()
-	// For all images from Docker Hub, reg will be one of docker.io, index.docker.io,
-	// or registry-1.docker.io after parsing.
-	// See https://github.com/moby/moby/blob/v24.0.2/registry/config.go#L32-L47
+	// For all images from Docker Hub, reg will be "index.docker.io" after parsing,
+	// except when the input explicitly uses "registry-1.docker.io", which is preserved.
 	if reg == "index.docker.io" || reg == "registry-1.docker.io" {
 		return strings.TrimPrefix(repo, "library/")
 	}
