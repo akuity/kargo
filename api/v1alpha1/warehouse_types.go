@@ -44,7 +44,8 @@ type Warehouse struct {
 }
 
 // GetInterval calculates and returns interval time remaining until the next
-// requeue should occur. If the interval has passed, it returns a zero duration.
+// requeue should occur. If the interval has passed, it returns a short duration
+// to ensure the Warehouse is requeued promptly.
 func (w *Warehouse) GetInterval(minInterval time.Duration) time.Duration {
 	effectiveInterval := w.Spec.Interval.Duration
 	if effectiveInterval < minInterval {
@@ -55,15 +56,12 @@ func (w *Warehouse) GetInterval(minInterval time.Duration) time.Duration {
 		return effectiveInterval
 	}
 
-	interval := w.Status.DiscoveredArtifacts.DiscoveredAt.
+	if interval := w.Status.DiscoveredArtifacts.DiscoveredAt.
 		Add(effectiveInterval).
-		Sub(metav1.Now().Time)
-
-	if interval > 0 {
+		Sub(metav1.Now().Time); interval > 0 {
 		return interval
 	}
-
-	return 0
+	return 100 * time.Millisecond
 }
 
 func (w *Warehouse) GetStatus() *WarehouseStatus {
