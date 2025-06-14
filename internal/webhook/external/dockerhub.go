@@ -3,7 +3,6 @@ package external
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -11,14 +10,12 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/image"
-	"github.com/akuity/kargo/internal/io"
 	"github.com/akuity/kargo/internal/logging"
 )
 
 const (
-	dockerhub                    = "dockerhub"
-	dockerhubSecretDataKey       = "secret"
-	dockerhubWebhookBodyMaxBytes = 2 << 20 // 2MB
+	dockerhub              = "dockerhub"
+	dockerhubSecretDataKey = "secret"
 )
 
 func init() {
@@ -72,37 +69,12 @@ func (d *dockerhubWebhookReceiver) getSecretValues(
 	return []string{string(secretValue)}, nil
 }
 
-// GetHandler implements WebhookReceiver.
-func (d *dockerhubWebhookReceiver) GetHandler() http.HandlerFunc {
+// getHandler implements WebhookReceiver.
+func (d *dockerhubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
 		logger := logging.LoggerFromContext(ctx)
-
-		// Early check of Content-Length if available
-		if contentLength := r.ContentLength; contentLength > dockerhubWebhookBodyMaxBytes {
-			xhttp.WriteErrorJSON(
-				w,
-				xhttp.Error(
-					fmt.Errorf("content exceeds limit of %d bytes", dockerhubWebhookBodyMaxBytes),
-					http.StatusRequestEntityTooLarge,
-				),
-			)
-			return
-		}
-
-		body, err := io.LimitRead(r.Body, dockerhubWebhookBodyMaxBytes)
-		if err != nil {
-			if errors.Is(err, &io.BodyTooLargeError{}) {
-				xhttp.WriteErrorJSON(
-					w,
-					xhttp.Error(err, http.StatusRequestEntityTooLarge),
-				)
-				return
-			}
-			xhttp.WriteErrorJSON(w, err)
-			return
-		}
 
 		payload := struct {
 			Repository struct {
@@ -110,7 +82,7 @@ func (d *dockerhubWebhookReceiver) GetHandler() http.HandlerFunc {
 			} `json:"repository"`
 		}{}
 
-		if err = json.Unmarshal(body, &payload); err != nil {
+		if err := json.Unmarshal(requestBody, &payload); err != nil {
 			xhttp.WriteErrorJSON(
 				w,
 				xhttp.Error(errors.New("invalid request body"), http.StatusBadRequest),
@@ -124,31 +96,6 @@ func (d *dockerhubWebhookReceiver) GetHandler() http.HandlerFunc {
 		logger = logger.WithValues("repoURL", repoURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
 
-		result, err := refreshWarehouses(ctx, d.client, d.project, repoURL)
-		if err != nil {
-			xhttp.WriteErrorJSON(w, err)
-			return
-		}
-		if result.failures > 0 {
-			xhttp.WriteResponseJSON(
-				w,
-				http.StatusInternalServerError,
-				map[string]string{
-					"error": fmt.Sprintf("failed to refresh %d of %d warehouses",
-						result.failures,
-						result.successes+result.failures,
-					),
-				},
-			)
-			return
-		}
-		xhttp.WriteResponseJSON(
-			w,
-			http.StatusOK,
-			map[string]string{
-				"msg": fmt.Sprintf("refreshed %d warehouse(s)", result.successes),
-			},
-		)
-
+		refreshWarehouses(ctx, w, d.client, d.project, repoURL)
 	})
 }

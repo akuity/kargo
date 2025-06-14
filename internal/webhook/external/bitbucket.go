@@ -11,15 +11,13 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	xhttp "github.com/akuity/kargo/internal/http"
-	"github.com/akuity/kargo/internal/io"
 	"github.com/akuity/kargo/internal/logging"
 )
 
 const (
-	bitbucket                    = "bitbucket"
-	bitbucketSecretDataKey       = "secret"
-	bitbucketPushEvent           = "repo:push"
-	bitbucketWebhookBodyMaxBytes = 2 << 20 // 2MB
+	bitbucket              = "bitbucket"
+	bitbucketSecretDataKey = "secret"
+	bitbucketPushEvent     = "repo:push"
 )
 
 func init() {
@@ -73,8 +71,8 @@ func (b *bitbucketWebhookReceiver) getSecretValues(
 	return []string{string(secretValue)}, nil
 }
 
-// GetHandler implements WebhookReceiver.
-func (b *bitbucketWebhookReceiver) GetHandler() http.HandlerFunc {
+// getHandler implements WebhookReceiver.
+func (b *bitbucketWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
@@ -100,31 +98,6 @@ func (b *bitbucketWebhookReceiver) GetHandler() http.HandlerFunc {
 			return
 		}
 
-		// Early check of Content-Length if available
-		if contentLength := r.ContentLength; contentLength > bitbucketWebhookBodyMaxBytes {
-			xhttp.WriteErrorJSON(
-				w,
-				xhttp.Error(
-					fmt.Errorf("content exceeds limit of %d bytes", bitbucketWebhookBodyMaxBytes),
-					http.StatusRequestEntityTooLarge,
-				),
-			)
-			return
-		}
-
-		body, err := io.LimitRead(r.Body, bitbucketWebhookBodyMaxBytes)
-		if err != nil {
-			if errors.Is(err, &io.BodyTooLargeError{}) {
-				xhttp.WriteErrorJSON(
-					w,
-					xhttp.Error(err, http.StatusRequestEntityTooLarge),
-				)
-				return
-			}
-			xhttp.WriteErrorJSON(w, err)
-			return
-		}
-
 		sig := r.Header.Get("X-Hub-Signature")
 		if sig == "" {
 			xhttp.WriteErrorJSON(
@@ -137,7 +110,7 @@ func (b *bitbucketWebhookReceiver) GetHandler() http.HandlerFunc {
 		// Note: github.com/google/go-github/v71/github has a great implementation
 		// of HMAC signature validation that isn't GitHub-specific, so we've opted
 		// to use it here for Bitbucket as well.
-		if err = gh.ValidateSignature(sig, body, signingKey); err != nil {
+		if err := gh.ValidateSignature(sig, requestBody, signingKey); err != nil {
 			xhttp.WriteErrorJSON(
 				w,
 				xhttp.Error(errors.New("unauthorized"), http.StatusUnauthorized),
@@ -154,7 +127,7 @@ func (b *bitbucketWebhookReceiver) GetHandler() http.HandlerFunc {
 				} `json:"links"`
 			} `json:"repository"`
 		}{}
-		if err = json.Unmarshal(body, &payload); err != nil {
+		if err := json.Unmarshal(requestBody, &payload); err != nil {
 			xhttp.WriteErrorJSON(
 				w,
 				xhttp.Error(errors.New("invalid request body"), http.StatusBadRequest),
@@ -183,30 +156,6 @@ func (b *bitbucketWebhookReceiver) GetHandler() http.HandlerFunc {
 		logger = logger.WithValues("repoURL", repoURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
 
-		result, err := refreshWarehouses(ctx, b.client, b.project, repoURL)
-		if err != nil {
-			xhttp.WriteErrorJSON(w, err)
-			return
-		}
-		if result.failures > 0 {
-			xhttp.WriteResponseJSON(
-				w,
-				http.StatusInternalServerError,
-				map[string]string{
-					"error": fmt.Sprintf("failed to refresh %d of %d warehouses",
-						result.failures,
-						result.successes+result.failures,
-					),
-				},
-			)
-			return
-		}
-		xhttp.WriteResponseJSON(
-			w,
-			http.StatusOK,
-			map[string]string{
-				"msg": fmt.Sprintf("refreshed %d warehouse(s)", result.successes),
-			},
-		)
+		refreshWarehouses(ctx, w, b.client, b.project, repoURL)
 	})
 }
