@@ -1,4 +1,6 @@
 import { useMutation, useQuery } from '@connectrpc/connect-query';
+import { faPlus } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button, Card, Flex, message } from 'antd';
 import type { JSONSchema4 } from 'json-schema';
@@ -9,6 +11,7 @@ import { z } from 'zod';
 
 import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
 import { FieldContainer } from '@ui/features/common/form/field-container';
+import { useModal } from '@ui/features/common/modal/use-modal';
 import { projectConfigYAMLExample } from '@ui/features/project/list/utils/project-yaml-example';
 import {
   createOrUpdateResource,
@@ -20,6 +23,7 @@ import { decodeRawData } from '@ui/utils/decode-raw-data';
 import { zodValidators } from '@ui/utils/validators';
 
 import { projectConfigTransport } from './transport';
+import { CreateWebhookModal } from './webhook/create-webhook-modal';
 
 const formSchema = z.object({
   value: zodValidators.requiredString
@@ -61,6 +65,10 @@ export const ProjectConfig = () => {
     });
   });
 
+  const createWebhookModal = useModal((props) => (
+    <CreateWebhookModal projectConfigYAML={projectConfigYAML} project={name || ''} {...props} />
+  ));
+
   return (
     <Flex gap={16} vertical>
       <Card title='ProjectConfig' type='inner'>
@@ -78,8 +86,15 @@ export const ProjectConfig = () => {
             />
           )}
         </FieldContainer>
-        <Flex justify='flex-end'>
+        <Flex>
           <Button
+            icon={<FontAwesomeIcon icon={faPlus} />}
+            onClick={() => createWebhookModal.show()}
+          >
+            Add Webhook
+          </Button>
+          <Button
+            className='ml-auto'
             type='primary'
             onClick={onSubmitConfig}
             loading={createOrUpdateMutation.isPending}
