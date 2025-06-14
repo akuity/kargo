@@ -1053,3 +1053,39 @@ func Test_registration(t *testing.T) {
 		assert.NotNil(t, provider)
 	})
 }
+
+func TestGetCommitURL(t *testing.T) {
+	testCases := []struct {
+		repoURL           string
+		sha               string
+		expectedCommitURL string
+	}{
+		{
+			repoURL:           "ssh://git@bitbucket.org/akuity/kargo.git",
+			sha:               "sha",
+			expectedCommitURL: "https://bitbucket.org/akuity/kargo/commits/sha",
+		},
+		{
+			repoURL:           "git@bitbucket.org:akuity/kargo.git",
+			sha:               "sha",
+			expectedCommitURL: "https://bitbucket.org/akuity/kargo/commits/sha",
+		},
+		{
+			repoURL:           "https://username@bitbucket.org/akuity/kargo",
+			sha:               "sha",
+			expectedCommitURL: "https://bitbucket.org/akuity/kargo/commits/sha",
+		},
+		{
+			repoURL:           "http://bitbucket.org/akuity/kargo.git",
+			sha:               "sha",
+			expectedCommitURL: "https://bitbucket.org/akuity/kargo/commits/sha",
+		},
+	}
+	for _, testCase := range testCases {
+		// call the code we are testing
+		g := provider{}
+		commitURL, err := g.GetCommitURL(testCase.repoURL, testCase.sha)
+		require.NoError(t, err)
+		require.Equal(t, testCase.expectedCommitURL, commitURL)
+	}
+}
