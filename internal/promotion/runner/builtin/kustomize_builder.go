@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/kustomize/kyaml/filesys"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/io/fs"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -73,13 +74,13 @@ func (k *kustomizeBuilder) run(
 	cfg builtin.KustomizeBuildConfig,
 ) (promotion.StepResult, error) {
 	// Create a "chrooted" filesystem for the kustomize build.
-	fs, err := securefs.MakeFsOnDiskSecureBuild(stepCtx.WorkDir)
+	diskFS, err := securefs.MakeFsOnDiskSecureBuild(stepCtx.WorkDir)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
 	// Build the manifests.
-	rm, err := kustomizeBuild(fs, filepath.Join(stepCtx.WorkDir, cfg.Path), cfg.Plugin)
+	rm, err := kustomizeBuild(diskFS, filepath.Join(stepCtx.WorkDir, cfg.Path), cfg.Plugin)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
@@ -94,7 +95,7 @@ func (k *kustomizeBuilder) run(
 	if err := k.writeResult(rm, outPath); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
 			"failed to write built manifests to %q: %w", cfg.OutPath,
-			sanitizePathError(err, stepCtx.WorkDir),
+			fs.SanitizePathError(err, stepCtx.WorkDir),
 		)
 	}
 	return promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, nil
