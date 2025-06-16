@@ -20,6 +20,9 @@ export const stackNodes = (
   }> = [];
 
   const ignoreList = new Set<string>();
+  const afterNodesSet = new Set(afterNodes);
+  const processedParents = new Set<string>();
+  const visited = new Set<string>();
 
   // @ts-expect-error it is string array
   const traverseQueue: string[] = [...sources];
@@ -27,14 +30,21 @@ export const stackNodes = (
   while (traverseQueue.length > 0) {
     const currentNode = traverseQueue.shift();
 
-    if (currentNode) {
+    if (currentNode && !visited.has(currentNode)) {
+      visited.add(currentNode);
+
       const currentNodeSuccessors = graph.successors(currentNode) || [];
 
       for (const _successor of currentNodeSuccessors) {
         // @ts-expect-error type of successor is string
         const successor = _successor as string;
 
-        if (afterNodes.includes(successor)) {
+        if (afterNodesSet.has(successor)) {
+          if (processedParents.has(successor)) {
+            continue;
+          }
+          processedParents.add(successor);
+
           const stackedNode: { count: number; parentNode: string; actualNode: string } = {
             count: 0,
             parentNode: successor,
@@ -58,27 +68,27 @@ export const stackNodes = (
             ignoreList.add(s);
           }
 
-          if (!stackNodes.find((s) => s.parentNode === successor)) {
-            stackNodes.push(stackedNode);
+          stackNodes.push(stackedNode);
 
-            const index = stackedIndexer.index(successor);
+          const index = stackedIndexer.index(successor);
 
-            graph.setNode(index, {
-              ...stackedLabelling.label(
-                stageByName[stageIndexer.getStageName(successor)],
-                successor,
-                stackedNode.count
-              ),
-              ...stackSizer.size()
-            });
+          graph.setNode(index, {
+            ...stackedLabelling.label(
+              stageByName[stageIndexer.getStageName(successor)],
+              successor,
+              stackedNode.count
+            ),
+            ...stackSizer.size()
+          });
 
-            graph.setEdge(successor, index);
-          }
+          graph.setEdge(successor, index);
 
           continue;
         }
 
-        traverseQueue.push(successor);
+        if (!visited.has(successor)) {
+          traverseQueue.push(successor);
+        }
       }
     }
   }
