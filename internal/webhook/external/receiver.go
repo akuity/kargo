@@ -74,7 +74,7 @@ func (b *baseWebhookReceiver) GetDetails() kargoapi.WebhookReceiverDetails {
 	return b.details
 }
 
-// getMaxRequestBodyBytes
+// getMaxRequestBodyBytes implements WebhookReceiver.
 func (b *baseWebhookReceiver) getMaxRequestBodyBytes() int64 {
 	return 2 << 20 // 2MB
 }

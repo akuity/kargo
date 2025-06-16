@@ -87,7 +87,9 @@ func TestQuayHandler(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			requestBody, err := io.ReadAll(testCase.req().Body)
 			require.NoError(t, err)
-			defer testCase.req().Body.Close()
+			t.Cleanup(func() {
+				_ = testCase.req().Body.Close()
+			})
 
 			w := httptest.NewRecorder()
 			(&quayWebhookReceiver{
