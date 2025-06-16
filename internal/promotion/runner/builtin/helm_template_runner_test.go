@@ -227,7 +227,7 @@ data:
 				Path: "./",
 			},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
-				require.ErrorContains(t, err, "get chart dependencies")
+				require.ErrorContains(t, err, "failed to load chart")
 				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, result)
 
 				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
