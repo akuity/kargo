@@ -164,6 +164,9 @@ func TestNewProvider(t *testing.T) {
 		args        args
 		wantErr     bool
 		errContains string
+		wantBaseUrl string
+		wantProject string
+		wantRepo    string
 	}{
 		{
 			name:        "nil options",
@@ -184,19 +187,36 @@ func TestNewProvider(t *testing.T) {
 			errContains: "invalid Azure DevOps Server URL",
 		},
 		{
-			name:    "valid modern url",
-			args:    args{repoURL: "https://dev.azure.com/org/proj/_git/repo", opts: &gitprovider.Options{Token: "token"}},
-			wantErr: false,
+			name:        "valid modern url",
+			args:        args{repoURL: "https://dev.azure.com/org/proj/_git/repo", opts: &gitprovider.Options{Token: "token"}},
+			wantErr:     false,
+			wantBaseUrl: "dev.azure.com",
+			wantProject: "proj",
+			wantRepo:    "repo",
 		},
 		{
-			name:    "valid legacy url",
-			args:    args{repoURL: "https://org.visualstudio.com/proj/_git/repo", opts: &gitprovider.Options{Token: "token"}},
-			wantErr: false,
+			name:        "valid legacy url",
+			args:        args{repoURL: "https://org.visualstudio.com/proj/_git/repo", opts: &gitprovider.Options{Token: "token"}},
+			wantErr:     false,
+			wantBaseUrl: "dev.azure.com",
+			wantProject: "proj",
+			wantRepo:    "repo",
 		},
 		{
-			name:    "valid self-hosted url",
-			args:    args{repoURL: "https://azure.mycompany.org/mycollection/myproject/_git/myrepo", opts: &gitprovider.Options{Token: "token"}},
-			wantErr: false,
+			name:        "valid self-hosted url",
+			args:        args{repoURL: "https://azure.mycompany.org/mycollection/myproject/_git/myrepo", opts: &gitprovider.Options{Token: "token"}},
+			wantErr:     false,
+			wantBaseUrl: "azure.mycompany.org",
+			wantProject: "myproject",
+			wantRepo:    "myrepo",
+		},
+		{
+			name:        "valid self-hosted url",
+			args:        args{repoURL: "https://azure.mycompany.org/tfs/mycollection/myproject/_git/myrepo", opts: &gitprovider.Options{Token: "token"}},
+			wantErr:     false,
+			wantBaseUrl: "azure.mycompany.org/tfs",
+			wantProject: "myproject",
+			wantRepo:    "myrepo",
 		},
 		{
 			name:        "invalid self-hosted url",
@@ -205,6 +225,7 @@ func TestNewProvider(t *testing.T) {
 			errContains: "invalid Azure DevOps Server URL",
 		},
 	}
+
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := NewProvider(tt.args.repoURL, tt.args.opts)
@@ -217,6 +238,13 @@ func TestNewProvider(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.NotNil(t, got)
+				// Use type assertion to access internal fields for further validation
+				p, ok := got.(*provider)
+				require.True(t, ok)
+				require.Equal(t, tt.wantProject, p.project)
+				require.Equal(t, tt.wantRepo, p.repo)
+				require.NotNil(t, p.connection)
+				require.NotNil(t, tt.wantBaseUrl, p.connection.BaseUrl)
 			}
 		})
 	}
