@@ -11,14 +11,6 @@ export const stackNodes = (
   graph: graphlib.Graph,
   stageByName: Record<string, Stage>
 ) => {
-  if (afterNodes.length === 0) {
-    return {
-      stackNodes: [],
-      ignoreList: new Set<string>(),
-      graph
-    };
-  }
-
   const sources = graph.sources();
 
   const stackNodes: Array<{
@@ -30,6 +22,14 @@ export const stackNodes = (
   const ignoreList = new Set<string>();
   const processedParents = new Set<string>();
   const visited = new Set<string>();
+
+  if (afterNodes.length === 0) {
+    return {
+      stackNodes,
+      ignoreList,
+      graph
+    };
+  }
 
   // @ts-expect-error it is string array
   const traverseQueue: string[] = [...sources];
