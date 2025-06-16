@@ -141,6 +141,8 @@ type: Opaque
 metadata:
   name: my-first-secret
   namespace: kargo-cluster-secrets
+  labels:
+    kargo.akuity.io/cred-type: generic
 data:
   secret: c295bGVudCBncmVlbiBpcyBwZW9wbGUK
 ---
@@ -150,9 +152,17 @@ type: Opaque
 metadata:
   name: my-second-secret
   namespace: kargo-cluster-secrets
+  labels:
+    kargo.akuity.io/cred-type: generic
 data:
   secret-token: cm9zZWJ1ZCB3YXMgYSBzbGVkCg==
 ```
+
+:::note
+The `kargo.akuity.io/cred-type: generic` label on `Secret`s referenced by
+webhook receivers is not strictly required, but we _strongly_ recommend
+including it.
+:::
 
 For each properly configured webhook receiver, Kargo will update the
 `ClusterConfig` resource's `status` to reflect the URLs that can be registered
