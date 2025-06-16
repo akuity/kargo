@@ -178,8 +178,6 @@ type GitMergePRConfig struct {
 	DeleteBranchAfterMerge bool `json:"deleteBranchAfterMerge,omitempty"`
 	// Skip TLS verification when interacting with the Git provider. Default is false.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
-	// Maximum number of seconds to wait for checks to pass. Default is 600 (10 minutes).
-	MaxWaitSeconds *int64 `json:"maxWaitSeconds,omitempty"`
 	// The merge strategy to use. If not specified, the provider's default will be used.
 	MergeMethod *MergeMethod `json:"mergeMethod,omitempty"`
 	// The number of the pull request to merge.
@@ -190,7 +188,10 @@ type GitMergePRConfig struct {
 	Provider *Provider `json:"provider,omitempty"`
 	// The URL of the remote Git repository containing the pull request.
 	RepoURL string `json:"repoURL"`
-	// If true, waits for all required status checks to pass before merging. Default is true.
+	// If true, the step will only attempt to merge after all required status checks pass. If
+	// false, the step will attempt to merge immediately. Note: Bypassing required checks
+	// requires admin or bypass permissions on some providers. If you lack these permissions,
+	// the merge will fail.
 	WaitForChecks bool `json:"waitForChecks,omitempty"`
 }
 
