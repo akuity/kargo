@@ -111,6 +111,9 @@ type WebhookReceiverConfig struct {
 	// DockerHub contains the configuration for a webhook receiver that is
 	// compatible with DockerHub payloads.
 	DockerHub *DockerHubWebhookReceiverConfig `json:"dockerhub,omitempty" protobuf:"bytes,6,opt,name=dockerhub"`
+	// Generic contains the configuration for a webhook receiver that uses
+	// user-defined logic to handle inbound webhooks from any source.
+	Generic *GenericWebhookReceiverConfig `json:"generic,omitempty"`
 	// GitHub contains the configuration for a webhook receiver that is compatible
 	// with GitHub payloads.
 	GitHub *GitHubWebhookReceiverConfig `json:"github,omitempty" protobuf:"bytes,2,opt,name=github"`
@@ -158,6 +161,47 @@ type DockerHubWebhookReceiverConfig struct {
 	//
 	// +kubebuilder:validation:Required
 	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+}
+
+// GenericWebhookReceiverConfig describes a webhook receiver that uses
+// user-defined logic to handle inbound webhooks from any source.
+type GenericWebhookReceiverConfig struct {
+	// WarehouseRefresh encapsulates user-defined expressions that can be used
+	// to identify if a request is one that should trigger the refresh of
+	// one or more Warehouses, and if so, which ones.
+	//
+	// +kubebuilder:validation:Required
+	WarehouseRefresh *GenericWarehouseRefreshConfig `json:"warehouseRefresh"`
+	// SecretRef contains a reference to a Secret. For Project-scoped webhook
+	// receivers, the referenced Secret must be in the same namespace as the
+	// ProjectConfig.
+	//
+	// For cluster-scoped webhook receivers, the referenced Secret must be in the
+	// designated "cluster Secrets" namespace.
+	//
+	// The Secret's data map is expected to contain a `secret` key whose value
+	// does NOT need to be shared directly with the sender when registering a
+	// webhook. It is used only by Kargo to create a complex, hard-to-guess URL,
+	// which implicitly serves as a shared secret.
+	//
+	// +kubebuilder:validation:Required
+	SecretRef corev1.LocalObjectReference `json:"secretRef"`
+}
+
+// GenericWarehouseRefreshConfig encapsulates user-defined expressions that can
+// be used to identify if a request is one that should trigger the refresh of
+// one or more Warehouses, and if so, which ones.
+type GenericWarehouseRefreshConfig struct {
+	// Predicate is a user-defined expression that should evaluate to true if a
+	// request is one that should trigger the refresh of one or more Warehouses.
+	//
+	// +kubebuilder:validation:Required
+	Predicate string `json:"predicate"`
+	// RepoURL is a user-defined expression that should return the URL for which
+	// all subscribed Warehouses should be refreshed.
+	//
+	// +kubebuilder:validation:Required
+	RepoURL string `json:"repoURL"`
 }
 
 // GitHubWebhookReceiverConfig describes a webhook receiver that is compatible
