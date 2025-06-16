@@ -455,6 +455,31 @@ type YAMLUpdate struct {
 	Value interface{} `json:"value"`
 }
 
+type HelmPullConfig struct {
+	// Chart specifies the details of a specific chart to pull. This is mutually exclusive with 'chartFromFreight'.
+	Chart *HelmPullChart `json:"chart,omitempty"`
+	// ChartFromFreight specifies how to find a chart from the freight. This is mutually exclusive with 'chart'.
+	ChartFromFreight *HelmPullChartFromFreight `json:"chartFromFreight,omitempty"`
+	// OutPath is the path where the chart should be extracted to.
+	OutPath string `json:"outPath"`
+}
+
+type HelmPullChart struct {
+	// RepoURL is the URL of the Helm chart repository.
+	RepoURL string `json:"repoURL"`
+	// Name is the name of the chart.
+	Name string `json:"name"`
+	// Version is the version of the chart to pull.
+	Version string `json:"version"`
+}
+
+type HelmPullChartFromFreight struct {
+	// RepoURL is the URL of the Helm chart repository to match against freight.
+	RepoURL string `json:"repoURL"`
+	// Name is the name of the chart to match. If not specified, any chart from the repository will match.
+	Name string `json:"name,omitempty"`
+}
+
 // The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github',
 // and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly
 // specified.

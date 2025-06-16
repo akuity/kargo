@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HelmPullConfig",
+
+  "definitions": {
+    "helmPullChart": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "repoURL": {
+          "type": "string",
+          "description": "RepoURL is the URL of the Helm chart repository.",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "description": "Name is the name of the chart.",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "description": "Version is the version of the chart to pull.",
+          "minLength": 1
+        }
+      },
+      "required": ["repoURL", "name", "version"]
+    },
+    "helmPullChartFromFreight": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "repoURL": {
+          "type": "string",
+          "description": "RepoURL is the URL of the Helm chart repository to match against freight.",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "description": "Name is the name of the chart to match. If not specified, any chart from the repository will match."
+        }
+      },
+      "required": ["repoURL"]
+    }
+  },
+
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["outPath"],
+  "properties": {
+    "chart": {
+      "$ref": "#/definitions/helmPullChart",
+      "description": "Chart specifies the details of a specific chart to pull. This is mutually exclusive with 'chartFromFreight'."
+    },
+    "chartFromFreight": {
+      "$ref": "#/definitions/helmPullChartFromFreight",
+      "description": "ChartFromFreight specifies how to find a chart from the freight. This is mutually exclusive with 'chart'."
+    },
+    "outPath": {
+      "type": "string",
+      "description": "OutPath is the path where the chart should be extracted to.",
+      "minLength": 1
+    }
+  },
+  "oneOf": [
+    {
+      "required": ["chart"],
+      "not": {
+        "required": ["chartFromFreight"]
+      }
+    },
+    {
+      "required": ["chartFromFreight"],
+      "not": {
+        "required": ["chart"]
+      }
+    }
+  ]
+}
