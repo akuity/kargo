@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from '@connectrpc/connect-query';
-import { faStopCircle } from '@fortawesome/free-solid-svg-icons';
+import { faRefresh, faStopCircle } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Descriptions, DescriptionsProps, Drawer, Flex, message, Modal, Tabs } from 'antd';
 import { formatDistance } from 'date-fns';
@@ -18,7 +18,8 @@ import { PromotionSteps } from '@ui/features/stage/promotion-steps';
 import { canAbortPromotion, hasAbortRequest } from '@ui/features/stage/utils/promotion';
 import {
   abortPromotion,
-  getPromotion
+  getPromotion,
+  refreshStage
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { Freight, Promotion as TPromotion } from '@ui/gen/api/v1alpha1/generated_pb';
@@ -27,6 +28,7 @@ import { decodeRawData } from '@ui/utils/decode-raw-data';
 
 import { FreightDetails } from './freight-details';
 import { getPromotionActor } from './get-promotion-actor';
+import { getPromotionStage } from './get-promotion-stage';
 import { useWatchPromotion } from './use-watch-promotion';
 
 type PromotionProps = ModalComponentProps & {
@@ -46,7 +48,10 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
       })
   });
 
+  const refreshStageMutation = useMutation(refreshStage);
+
   const promotion = props.promotion;
+  const affiliatedStage = getPromotionStage(promotion);
 
   const isPromotionTerminal = isPromotionPhaseTerminal(getPromotionStatusPhase(promotion));
   const isAbortRequestPending = hasAbortRequest(promotion) && !isPromotionTerminal;
@@ -146,6 +151,25 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
 
   return (
     <>
+      {affiliatedStage && (
+        <Flex align='center' gap={8} className='mb-2'>
+          <h1 className='text-sm font-semibold m-0'>Stage: </h1>
+          {affiliatedStage}
+          <Button
+            size='small'
+            icon={<FontAwesomeIcon icon={faRefresh} size='1x' />}
+            onClick={() =>
+              refreshStageMutation.mutate({
+                project: promotion?.metadata?.namespace,
+                name: affiliatedStage
+              })
+            }
+            loading={refreshStageMutation.isPending}
+          >
+            Refresh
+          </Button>
+        </Flex>
+      )}
       <Tabs
         className='mb-5'
         items={[
