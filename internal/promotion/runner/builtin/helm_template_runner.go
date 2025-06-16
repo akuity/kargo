@@ -92,8 +92,11 @@ func (h *helmTemplateRunner) run(
 			fmt.Errorf("failed to compose values: %w", err)
 	}
 
-	if err := h.buildDependencies(ctx, stepCtx, cfg.Path); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
+	if cfg.BuildDependencies {
+		if err = h.buildDependencies(ctx, stepCtx, cfg.Path); err != nil {
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+				fmt.Errorf("failed to build chart dependencies: %w", err)
+		}
 	}
 
 	chartRequested, err := h.loadChart(stepCtx.WorkDir, cfg.Path)
