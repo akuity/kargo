@@ -161,23 +161,42 @@ spec:
                           x-kubernetes-map-type: atomic
                         warehouseRefresh:
                           description: |-
-                            WarehouseRefresh encapsulates user-defined expressions that can be used
+                            ArtifactPush encapsulates user-defined expressions that can be used
                             to identify if a request is one that should trigger the refresh of
                             one or more Warehouses, and if so, which ones.
                           properties:
+                            chartRepoURL:
+                              description: |-
+                                ChartRepoURL is a user-defined expression that should return a Helm
+                                chart repository URL for which all subscribed Warehouses should be
+                                refreshed. If an empty string is returned, no Warehouses will be refreshed.
+                                If a non-empty string is returned, Helm chart repo URL normalization
+                                will be applied before the URL is used to find Warehouses to refresh.
+                              type: string
+                            gitRepoURL:
+                              description: |-
+                                GitRepoURL is a user-defined expression that should return a Git repository
+                                URL for which all subscribed Warehouses should be refreshed. If an empty
+                                string is returned, no Warehouses will be refreshed. If a non-empty string
+                                is returned, Git repo URL normalization will be applied before the URL is
+                                used to find Warehouses to refresh.
+                              type: string
+                            imageRepoURL:
+                              description: |-
+                                ImageRepoURL is a user-defined expression that should return a container
+                                image repository URL for which all subscribed Warehouses should be
+                                refreshed. If an empty string is returned, no Warehouses will be refreshed.
+                                If a non-empty string is returned, container image repo URL normalization
+                                will be applied before the URL is used to find Warehouses to refresh.
+                              type: string
                             predicate:
                               description: |-
                                 Predicate is a user-defined expression that should evaluate to true if a
-                                request is one that should trigger the refresh of one or more Warehouses.
-                              type: string
-                            repoURL:
-                              description: |-
-                                RepoURL is a user-defined expression that should return the URL for which
-                                all subscribed Warehouses should be refreshed.
+                                request is one that represents notification of a new or updated artifact
+                                having been pushed to a repository.
                               type: string
                           required:
                           - predicate
-                          - repoURL
                           type: object
                       required:
                       - secretRef

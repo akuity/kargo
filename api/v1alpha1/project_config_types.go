@@ -207,7 +207,7 @@ type GenericArtifactPushConfig struct {
 	// used to find Warehouses to refresh.
 	//
 	// +optional
-	GitRepoURL string `json:"gitRepoURL,omitempty"`
+	GitRepoURL string `json:"gitRepoURL,omitempty" protobuf:"bytes,2,opt,name=gitRepoURL"`
 	// ImageRepoURL is a user-defined expression that should return a container
 	// image repository URL for which all subscribed Warehouses should be
 	// refreshed. If an empty string is returned, no Warehouses will be refreshed.
@@ -215,7 +215,7 @@ type GenericArtifactPushConfig struct {
 	// will be applied before the URL is used to find Warehouses to refresh.
 	//
 	// +optional
-	ImageRepoURL string `json:"imageRepoURL,omitempty"`
+	ImageRepoURL string `json:"imageRepoURL,omitempty" protobuf:"bytes,3,opt,name=imageRepoURL"`
 	// ChartRepoURL is a user-defined expression that should return a Helm
 	// chart repository URL for which all subscribed Warehouses should be
 	// refreshed. If an empty string is returned, no Warehouses will be refreshed.
@@ -223,7 +223,7 @@ type GenericArtifactPushConfig struct {
 	// will be applied before the URL is used to find Warehouses to refresh.
 	//
 	// +optional
-	ChartRepoURL string `json:"chartRepoURL,omitempty"`
+	ChartRepoURL string `json:"chartRepoURL,omitempty" protobuf:"bytes,4,opt,name=chartRepoURL"`
 }
 
 // GitHubWebhookReceiverConfig describes a webhook receiver that is compatible
