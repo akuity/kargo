@@ -48,21 +48,25 @@ The secret (among other things) will be used as an input to generate
 a secure URL for our newly created webhook receiver. We can obtain
 this URL using the following command:
 
+```
     kubectl \
         get projectconfigs \
         my-project-config \
         -n my-namespace \
         -o=jsonpath='{.status.webhookReceivers[0].url}'
+```
 
 
 ## Configure on Github
 
 When configuring on Github, you can configure either a webhook or an app. We will outline instructions for both, starting with webhooks.
 
+```
     kubectl \
         get secrets \
         my-secret \
         --template={{.data.secret}} | base64 -d
+```
 
 #### Webhooks
 
