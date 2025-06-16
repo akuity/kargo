@@ -90,7 +90,11 @@ export const CreateWebhookModal = (props: CreateWebhookModalProps) => {
 
       <FieldContainer control={secretForm.control} name='webhookReceiverName' label='Name'>
         {({ field }) => (
-          <Input value={field.value as string} onChange={(e) => field.onChange(e.target.value)} />
+          <Input
+            placeholder='my-webhook-receiver'
+            value={field.value as string}
+            onChange={(e) => field.onChange(e.target.value)}
+          />
         )}
       </FieldContainer>
 

@@ -24,6 +24,7 @@ import { zodValidators } from '@ui/utils/validators';
 
 import { projectConfigTransport } from './transport';
 import { CreateWebhookModal } from './webhook/create-webhook-modal';
+import { Webhooks } from './webhooks';
 
 const formSchema = z.object({
   value: zodValidators.requiredString
@@ -103,6 +104,8 @@ export const ProjectConfig = () => {
           </Button>
         </Flex>
       </Card>
+
+      <Webhooks projectConfigYAML={projectConfigYAML} className='mt-5' />
     </Flex>
   );
 };
