@@ -52,8 +52,6 @@ func init() {
 }
 
 type provider struct {
-	baseUrl    string
-	org        string
 	project    string
 	repo       string
 	connection *azuredevops.Connection
@@ -75,8 +73,6 @@ func NewProvider(
 	connection := azuredevops.NewPatConnection(organizationUrl, opts.Token)
 
 	return &provider{
-		baseUrl:    baseUrl,
-		org:        org,
 		project:    project,
 		repo:       repo,
 		connection: connection,
