@@ -113,7 +113,7 @@ type WebhookReceiverConfig struct {
 	DockerHub *DockerHubWebhookReceiverConfig `json:"dockerhub,omitempty" protobuf:"bytes,6,opt,name=dockerhub"`
 	// Generic contains the configuration for a webhook receiver that uses
 	// user-defined logic to handle inbound webhooks from any source.
-	Generic *GenericWebhookReceiverConfig `json:"generic,omitempty"`
+	Generic *GenericWebhookReceiverConfig `json:"generic,omitempty" protobuf:"bytes,7,opt,name=generic"`
 	// GitHub contains the configuration for a webhook receiver that is compatible
 	// with GitHub payloads.
 	GitHub *GitHubWebhookReceiverConfig `json:"github,omitempty" protobuf:"bytes,2,opt,name=github"`
@@ -171,7 +171,7 @@ type GenericWebhookReceiverConfig struct {
 	// one or more Warehouses, and if so, which ones.
 	//
 	// +kubebuilder:validation:Required
-	WarehouseRefresh *GenericWarehouseRefreshConfig `json:"warehouseRefresh"`
+	WarehouseRefresh *GenericWarehouseRefreshConfig `json:"warehouseRefresh" protobuf:"bytes,1,opt,name=warehouseRefresh"`
 	// SecretRef contains a reference to a Secret. For Project-scoped webhook
 	// receivers, the referenced Secret must be in the same namespace as the
 	// ProjectConfig.
@@ -185,7 +185,7 @@ type GenericWebhookReceiverConfig struct {
 	// which implicitly serves as a shared secret.
 	//
 	// +kubebuilder:validation:Required
-	SecretRef corev1.LocalObjectReference `json:"secretRef"`
+	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,2,opt,name=secretRef"`
 }
 
 // GenericWarehouseRefreshConfig encapsulates user-defined expressions that can
@@ -196,12 +196,12 @@ type GenericWarehouseRefreshConfig struct {
 	// request is one that should trigger the refresh of one or more Warehouses.
 	//
 	// +kubebuilder:validation:Required
-	Predicate string `json:"predicate"`
+	Predicate string `json:"predicate" protobuf:"bytes,1,opt,name=predicate"`
 	// RepoURL is a user-defined expression that should return the URL for which
 	// all subscribed Warehouses should be refreshed.
 	//
 	// +kubebuilder:validation:Required
-	RepoURL string `json:"repoURL"`
+	RepoURL string `json:"repoURL" protobuf:"bytes,2,opt,name=repoURL"`
 }
 
 // GitHubWebhookReceiverConfig describes a webhook receiver that is compatible

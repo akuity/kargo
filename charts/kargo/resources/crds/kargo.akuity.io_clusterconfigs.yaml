@@ -129,6 +129,60 @@ spec:
                       required:
                       - secretRef
                       type: object
+                    generic:
+                      description: |-
+                        Generic contains the configuration for a webhook receiver that uses
+                        user-defined logic to handle inbound webhooks from any source.
+                      properties:
+                        secretRef:
+                          description: |-
+                            SecretRef contains a reference to a Secret. For Project-scoped webhook
+                            receivers, the referenced Secret must be in the same namespace as the
+                            ProjectConfig.
+
+                            For cluster-scoped webhook receivers, the referenced Secret must be in the
+                            designated "cluster Secrets" namespace.
+
+                            The Secret's data map is expected to contain a `secret` key whose value
+                            does NOT need to be shared directly with the sender when registering a
+                            webhook. It is used only by Kargo to create a complex, hard-to-guess URL,
+                            which implicitly serves as a shared secret.
+                          properties:
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        warehouseRefresh:
+                          description: |-
+                            WarehouseRefresh encapsulates user-defined expressions that can be used
+                            to identify if a request is one that should trigger the refresh of
+                            one or more Warehouses, and if so, which ones.
+                          properties:
+                            predicate:
+                              description: |-
+                                Predicate is a user-defined expression that should evaluate to true if a
+                                request is one that should trigger the refresh of one or more Warehouses.
+                              type: string
+                            repoURL:
+                              description: |-
+                                RepoURL is a user-defined expression that should return the URL for which
+                                all subscribed Warehouses should be refreshed.
+                              type: string
+                          required:
+                          - predicate
+                          - repoURL
+                          type: object
+                      required:
+                      - secretRef
+                      - warehouseRefresh
+                      type: object
                     github:
                       description: |-
                         GitHub contains the configuration for a webhook receiver that is compatible
