@@ -17,9 +17,21 @@ import (
 	"github.com/akuity/kargo/internal/indexer"
 )
 
-var genericRequestBody = []byte(`{
+var genericGitPushRequestBody = []byte(`{
 	"repository": {
 		"repo_name": "https://git.example.com/repo.git"
+	}
+}`)
+
+var genericImagePushRequestBody = []byte(`{
+	"repository": {
+		"repo_name": "example/repo"
+	}
+}`)
+
+var genericChartPushRequestBody = []byte(`{
+	"repository": {
+		"repo_name": "oci://charts.example.com/example/repo"
 	}
 }`)
 
@@ -55,7 +67,7 @@ func TestGenericHandler(t *testing.T) {
 		{
 			name: "error compiling predicate expression",
 			cfg: kargoapi.GenericWebhookReceiverConfig{
-				WarehouseRefresh: &kargoapi.GenericWarehouseRefreshConfig{
+				ArtifactPush: &kargoapi.GenericArtifactPushConfig{
 					Predicate: "not a valid expression",
 				},
 			},
@@ -63,7 +75,7 @@ func TestGenericHandler(t *testing.T) {
 				return httptest.NewRequest(
 					http.MethodPost,
 					testURL,
-					bytes.NewBuffer(genericRequestBody),
+					bytes.NewBuffer(genericGitPushRequestBody),
 				)
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -74,7 +86,7 @@ func TestGenericHandler(t *testing.T) {
 		{
 			name: "error evaluating predicate expression",
 			cfg: kargoapi.GenericWebhookReceiverConfig{
-				WarehouseRefresh: &kargoapi.GenericWarehouseRefreshConfig{
+				ArtifactPush: &kargoapi.GenericArtifactPushConfig{
 					Predicate: "nonexistent()",
 				},
 			},
@@ -82,7 +94,7 @@ func TestGenericHandler(t *testing.T) {
 				return httptest.NewRequest(
 					http.MethodPost,
 					testURL,
-					bytes.NewBuffer(genericRequestBody),
+					bytes.NewBuffer(genericGitPushRequestBody),
 				)
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -93,7 +105,7 @@ func TestGenericHandler(t *testing.T) {
 		{
 			name: "predicate evaluates to a non-boolean",
 			cfg: kargoapi.GenericWebhookReceiverConfig{
-				WarehouseRefresh: &kargoapi.GenericWarehouseRefreshConfig{
+				ArtifactPush: &kargoapi.GenericArtifactPushConfig{
 					Predicate: "'not a boolean'",
 				},
 			},
@@ -101,7 +113,7 @@ func TestGenericHandler(t *testing.T) {
 				return httptest.NewRequest(
 					http.MethodPost,
 					testURL,
-					bytes.NewBuffer(genericRequestBody),
+					bytes.NewBuffer(genericGitPushRequestBody),
 				)
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -112,7 +124,7 @@ func TestGenericHandler(t *testing.T) {
 		{
 			name: "predicate evaluates to false",
 			cfg: kargoapi.GenericWebhookReceiverConfig{
-				WarehouseRefresh: &kargoapi.GenericWarehouseRefreshConfig{
+				ArtifactPush: &kargoapi.GenericArtifactPushConfig{
 					Predicate: "false",
 				},
 			},
@@ -120,7 +132,7 @@ func TestGenericHandler(t *testing.T) {
 				return httptest.NewRequest(
 					http.MethodPost,
 					testURL,
-					bytes.NewBuffer(genericRequestBody),
+					bytes.NewBuffer(genericGitPushRequestBody),
 				)
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -131,16 +143,16 @@ func TestGenericHandler(t *testing.T) {
 		{
 			name: "error compiling repo URL expression",
 			cfg: kargoapi.GenericWebhookReceiverConfig{
-				WarehouseRefresh: &kargoapi.GenericWarehouseRefreshConfig{
-					Predicate: "true",
-					RepoURL:   "not a valid expression",
+				ArtifactPush: &kargoapi.GenericArtifactPushConfig{
+					Predicate:  "true",
+					GitRepoURL: "not a valid expression",
 				},
 			},
 			req: func() *http.Request {
 				return httptest.NewRequest(
 					http.MethodPost,
 					testURL,
-					bytes.NewBuffer(genericRequestBody),
+					bytes.NewBuffer(genericGitPushRequestBody),
 				)
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -151,16 +163,16 @@ func TestGenericHandler(t *testing.T) {
 		{
 			name: "error evaluating repo URL expression",
 			cfg: kargoapi.GenericWebhookReceiverConfig{
-				WarehouseRefresh: &kargoapi.GenericWarehouseRefreshConfig{
-					Predicate: "true",
-					RepoURL:   "nonexistent()",
+				ArtifactPush: &kargoapi.GenericArtifactPushConfig{
+					Predicate:  "true",
+					GitRepoURL: "nonexistent()",
 				},
 			},
 			req: func() *http.Request {
 				return httptest.NewRequest(
 					http.MethodPost,
 					testURL,
-					bytes.NewBuffer(genericRequestBody),
+					bytes.NewBuffer(genericGitPushRequestBody),
 				)
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -171,16 +183,16 @@ func TestGenericHandler(t *testing.T) {
 		{
 			name: "repo URL expression evaluates to a non-string",
 			cfg: kargoapi.GenericWebhookReceiverConfig{
-				WarehouseRefresh: &kargoapi.GenericWarehouseRefreshConfig{
-					Predicate: "true",
-					RepoURL:   "42",
+				ArtifactPush: &kargoapi.GenericArtifactPushConfig{
+					Predicate:  "true",
+					GitRepoURL: "42",
 				},
 			},
 			req: func() *http.Request {
 				return httptest.NewRequest(
 					http.MethodPost,
 					testURL,
-					bytes.NewBuffer(genericRequestBody),
+					bytes.NewBuffer(genericGitPushRequestBody),
 				)
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -189,11 +201,11 @@ func TestGenericHandler(t *testing.T) {
 			},
 		},
 		{
-			name: "success",
+			name: "success -- git commit pushed",
 			cfg: kargoapi.GenericWebhookReceiverConfig{
-				WarehouseRefresh: &kargoapi.GenericWarehouseRefreshConfig{
-					Predicate: "request.header('X-Kargo-Git-Event') == 'push'",
-					RepoURL:   "request.body.repository.repo_name",
+				ArtifactPush: &kargoapi.GenericArtifactPushConfig{
+					Predicate:  "request.header('X-Kargo-Event') == 'push'",
+					GitRepoURL: "request.body.repository.repo_name",
 				},
 			},
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
@@ -219,9 +231,91 @@ func TestGenericHandler(t *testing.T) {
 				req := httptest.NewRequest(
 					http.MethodPost,
 					testURL,
-					bytes.NewBuffer(genericRequestBody),
+					bytes.NewBuffer(genericGitPushRequestBody),
 				)
-				req.Header.Set("X-Kargo-Git-Event", "push")
+				req.Header.Set("X-Kargo-Event", "push")
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name: "success -- container image pushed",
+			cfg: kargoapi.GenericWebhookReceiverConfig{
+				ArtifactPush: &kargoapi.GenericArtifactPushConfig{
+					Predicate:    "request.header('X-Kargo-Event') == 'push'",
+					ImageRepoURL: "request.body.repository.repo_name",
+				},
+			},
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Image: &kargoapi.ImageSubscription{
+								RepoURL: "example/repo",
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(genericImagePushRequestBody),
+				)
+				req.Header.Set("X-Kargo-Event", "push")
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name: "success -- chart pushed",
+			cfg: kargoapi.GenericWebhookReceiverConfig{
+				ArtifactPush: &kargoapi.GenericArtifactPushConfig{
+					Predicate:    "request.header('X-Kargo-Event') == 'push'",
+					ChartRepoURL: "request.body.repository.repo_name",
+				},
+			},
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Chart: &kargoapi.ChartSubscription{
+								RepoURL: "oci://charts.example.com/example/repo",
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(genericChartPushRequestBody),
+				)
+				req.Header.Set("X-Kargo-Event", "push")
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {

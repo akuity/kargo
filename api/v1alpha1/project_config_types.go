@@ -166,12 +166,12 @@ type DockerHubWebhookReceiverConfig struct {
 // GenericWebhookReceiverConfig describes a webhook receiver that uses
 // user-defined logic to handle inbound webhooks from any source.
 type GenericWebhookReceiverConfig struct {
-	// WarehouseRefresh encapsulates user-defined expressions that can be used
+	// ArtifactPush encapsulates user-defined expressions that can be used
 	// to identify if a request is one that should trigger the refresh of
 	// one or more Warehouses, and if so, which ones.
 	//
 	// +kubebuilder:validation:Required
-	WarehouseRefresh *GenericWarehouseRefreshConfig `json:"warehouseRefresh" protobuf:"bytes,1,opt,name=warehouseRefresh"`
+	ArtifactPush *GenericArtifactPushConfig `json:"warehouseRefresh" protobuf:"bytes,1,opt,name=warehouseRefresh"`
 	// SecretRef contains a reference to a Secret. For Project-scoped webhook
 	// receivers, the referenced Secret must be in the same namespace as the
 	// ProjectConfig.
@@ -188,20 +188,42 @@ type GenericWebhookReceiverConfig struct {
 	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,2,opt,name=secretRef"`
 }
 
-// GenericWarehouseRefreshConfig encapsulates user-defined expressions that can
-// be used to identify if a request is one that should trigger the refresh of
-// one or more Warehouses, and if so, which ones.
-type GenericWarehouseRefreshConfig struct {
+// GenericArtifactPushConfig encapsulates user-defined expressions that can be
+// used to identify whether an inbound webhook request represents notification
+// of a new or updated artifact having been pushed to a repository, and if so,
+// how to identify the URL for which subscribed Warehouses should be
+// refreshed.
+type GenericArtifactPushConfig struct {
 	// Predicate is a user-defined expression that should evaluate to true if a
-	// request is one that should trigger the refresh of one or more Warehouses.
+	// request is one that represents notification of a new or updated artifact
+	// having been pushed to a repository.
 	//
 	// +kubebuilder:validation:Required
 	Predicate string `json:"predicate" protobuf:"bytes,1,opt,name=predicate"`
-	// RepoURL is a user-defined expression that should return the URL for which
-	// all subscribed Warehouses should be refreshed.
+	// GitRepoURL is a user-defined expression that should return a Git repository
+	// URL for which all subscribed Warehouses should be refreshed. If an empty
+	// string is returned, no Warehouses will be refreshed. If a non-empty string
+	// is returned, Git repo URL normalization will be applied before the URL is
+	// used to find Warehouses to refresh.
 	//
-	// +kubebuilder:validation:Required
-	RepoURL string `json:"repoURL" protobuf:"bytes,2,opt,name=repoURL"`
+	// +optional
+	GitRepoURL string `json:"gitRepoURL,omitempty"`
+	// ImageRepoURL is a user-defined expression that should return a container
+	// image repository URL for which all subscribed Warehouses should be
+	// refreshed. If an empty string is returned, no Warehouses will be refreshed.
+	// If a non-empty string is returned, container image repo URL normalization
+	// will be applied before the URL is used to find Warehouses to refresh.
+	//
+	// +optional
+	ImageRepoURL string `json:"imageRepoURL,omitempty"`
+	// ChartRepoURL is a user-defined expression that should return a Helm
+	// chart repository URL for which all subscribed Warehouses should be
+	// refreshed. If an empty string is returned, no Warehouses will be refreshed.
+	// If a non-empty string is returned, Helm chart repo URL normalization
+	// will be applied before the URL is used to find Warehouses to refresh.
+	//
+	// +optional
+	ChartRepoURL string `json:"chartRepoURL,omitempty"`
 }
 
 // GitHubWebhookReceiverConfig describes a webhook receiver that is compatible

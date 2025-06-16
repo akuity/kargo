@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"slices"
 
 	"github.com/expr-lang/expr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/git"
+	"github.com/akuity/kargo/internal/helm"
 	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -96,16 +98,16 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 		}
 		env["request"].(map[string]any)["body"] = parsedBody // nolint: forcetypeassert
 
-		program, err := expr.Compile(g.cfg.WarehouseRefresh.Predicate)
+		program, err := expr.Compile(g.cfg.ArtifactPush.Predicate)
 		if err != nil {
-			logger.Error(err, "error compiling warehouse refresh predicate")
+			logger.Error(err, "error compiling artifact push predicate")
 			xhttp.WriteErrorJSON(w, err)
 			return
 		}
 
 		resultAny, err := expr.Run(program, env)
 		if err != nil {
-			logger.Error(err, "error evaluating warehouse refresh predicate")
+			logger.Error(err, "error evaluating artifact push predicate")
 			xhttp.WriteErrorJSON(w, err)
 			return
 		}
@@ -124,31 +126,61 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 			return
 		}
 
-		program, err = expr.Compile(g.cfg.WarehouseRefresh.RepoURL)
-		if err != nil {
-			logger.Error(err, "error compiling repo URL expression")
-			xhttp.WriteErrorJSON(w, err)
-			return
+		repoURLs := []string{}
+
+		repoURLExprs := []struct {
+			expr        string
+			normalizeFn func(string) string
+		}{
+			{
+				expr:        g.cfg.ArtifactPush.GitRepoURL,
+				normalizeFn: git.NormalizeURL,
+			},
+			{
+				expr:        g.cfg.ArtifactPush.ImageRepoURL,
+				normalizeFn: git.NormalizeURL,
+			},
+			{
+				expr:        g.cfg.ArtifactPush.ChartRepoURL,
+				normalizeFn: helm.NormalizeChartRepositoryURL,
+			},
+		}
+		for _, repoURLExpr := range repoURLExprs {
+			if repoURLExpr.expr == "" {
+				continue
+			}
+			exprLogger := logger.WithValues("expression", repoURLExpr.expr)
+			if program, err = expr.Compile(repoURLExpr.expr); err != nil {
+				exprLogger.Error(err, "error compiling expression")
+				xhttp.WriteErrorJSON(w, err)
+				return
+			}
+			if resultAny, err = expr.Run(program, env); err != nil {
+				exprLogger.Error(err, "error evaluating expression")
+				xhttp.WriteErrorJSON(w, err)
+				return
+			}
+			repoURL, ok := resultAny.(string)
+			if !ok {
+				exprLogger.Error(nil, "expression did not evaluate to a string")
+				xhttp.WriteErrorJSON(w, nil)
+				return
+			}
+			if repoURL == "" {
+				continue
+			}
+			repoURLs = append(repoURLs, repoURLExpr.normalizeFn(repoURL))
 		}
 
-		if resultAny, err = expr.Run(program, env); err != nil {
-			logger.Error(err, "error evaluating repo URL expression")
-			xhttp.WriteErrorJSON(w, err)
-			return
-		}
+		// For a properly configured Generic WebhookReceiver, we shouldn't really
+		// end up with any duplicate repo URLs, but to be on the safe side, we will
+		// sort and deduplicate them.
+		slices.Sort(repoURLs)
+		repoURLs = slices.Compact(repoURLs)
 
-		repoURL, ok := resultAny.(string)
-		if !ok {
-			logger.Error(nil, "repo URL expression did not evaluate to a string")
-			xhttp.WriteErrorJSON(w, nil)
-			return
-		}
-
-		repoURL = git.NormalizeURL(repoURL)
-
-		logger = logger.WithValues("repoURL", repoURL)
+		logger = logger.WithValues("repoURLs", repoURLs)
 		ctx = logging.ContextWithLogger(ctx, logger)
 
-		refreshWarehouses(ctx, w, g.client, g.project, repoURL)
+		refreshWarehouses(ctx, w, g.client, g.project, repoURLs...)
 	})
 }

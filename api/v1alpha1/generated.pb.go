@@ -926,15 +926,15 @@ func (m *FreightStatus) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_FreightStatus proto.InternalMessageInfo
 
-func (m *GenericWarehouseRefreshConfig) Reset()      { *m = GenericWarehouseRefreshConfig{} }
-func (*GenericWarehouseRefreshConfig) ProtoMessage() {}
-func (*GenericWarehouseRefreshConfig) Descriptor() ([]byte, []int) {
+func (m *GenericArtifactPushConfig) Reset()      { *m = GenericArtifactPushConfig{} }
+func (*GenericArtifactPushConfig) ProtoMessage() {}
+func (*GenericArtifactPushConfig) Descriptor() ([]byte, []int) {
 	return fileDescriptor_e26b7f7bbc391025, []int{32}
 }
-func (m *GenericWarehouseRefreshConfig) XXX_Unmarshal(b []byte) error {
+func (m *GenericArtifactPushConfig) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *GenericWarehouseRefreshConfig) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *GenericArtifactPushConfig) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	b = b[:cap(b)]
 	n, err := m.MarshalToSizedBuffer(b)
 	if err != nil {
@@ -942,13 +942,13 @@ func (m *GenericWarehouseRefreshConfig) XXX_Marshal(b []byte, deterministic bool
 	}
 	return b[:n], nil
 }
-func (m *GenericWarehouseRefreshConfig) XXX_Merge(src proto.Message) {
+func (m *GenericArtifactPushConfig) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_GenericWarehouseRefreshConfig.Merge(m, src)
 }
-func (m *GenericWarehouseRefreshConfig) XXX_Size() int {
+func (m *GenericArtifactPushConfig) XXX_Size() int {
 	return m.Size()
 }
-func (m *GenericWarehouseRefreshConfig) XXX_DiscardUnknown() {
+func (m *GenericArtifactPushConfig) XXX_DiscardUnknown() {
 	xxx_messageInfo_GenericWarehouseRefreshConfig.DiscardUnknown(m)
 }
 
@@ -2479,7 +2479,7 @@ func init() {
 	proto.RegisterMapType((map[string]CurrentStage)(nil), "github.com.akuity.kargo.api.v1alpha1.FreightStatus.CurrentlyInEntry")
 	proto.RegisterMapType((map[string]v12.JSON)(nil), "github.com.akuity.kargo.api.v1alpha1.FreightStatus.MetadataEntry")
 	proto.RegisterMapType((map[string]VerifiedStage)(nil), "github.com.akuity.kargo.api.v1alpha1.FreightStatus.VerifiedInEntry")
-	proto.RegisterType((*GenericWarehouseRefreshConfig)(nil), "github.com.akuity.kargo.api.v1alpha1.GenericWarehouseRefreshConfig")
+	proto.RegisterType((*GenericArtifactPushConfig)(nil), "github.com.akuity.kargo.api.v1alpha1.GenericWarehouseRefreshConfig")
 	proto.RegisterType((*GenericWebhookReceiverConfig)(nil), "github.com.akuity.kargo.api.v1alpha1.GenericWebhookReceiverConfig")
 	proto.RegisterType((*GitCommit)(nil), "github.com.akuity.kargo.api.v1alpha1.GitCommit")
 	proto.RegisterType((*GitDiscoveryResult)(nil), "github.com.akuity.kargo.api.v1alpha1.GitDiscoveryResult")
@@ -4521,7 +4521,7 @@ func (m *FreightStatus) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *GenericWarehouseRefreshConfig) Marshal() (dAtA []byte, err error) {
+func (m *GenericArtifactPushConfig) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -4531,12 +4531,12 @@ func (m *GenericWarehouseRefreshConfig) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *GenericWarehouseRefreshConfig) MarshalTo(dAtA []byte) (int, error) {
+func (m *GenericArtifactPushConfig) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *GenericWarehouseRefreshConfig) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *GenericArtifactPushConfig) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -4584,9 +4584,9 @@ func (m *GenericWebhookReceiverConfig) MarshalToSizedBuffer(dAtA []byte) (int, e
 	}
 	i--
 	dAtA[i] = 0x12
-	if m.WarehouseRefresh != nil {
+	if m.ArtifactPush != nil {
 		{
-			size, err := m.WarehouseRefresh.MarshalToSizedBuffer(dAtA[:i])
+			size, err := m.ArtifactPush.MarshalToSizedBuffer(dAtA[:i])
 			if err != nil {
 				return 0, err
 			}
@@ -8098,7 +8098,7 @@ func (m *FreightStatus) Size() (n int) {
 	return n
 }
 
-func (m *GenericWarehouseRefreshConfig) Size() (n int) {
+func (m *GenericArtifactPushConfig) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -8117,8 +8117,8 @@ func (m *GenericWebhookReceiverConfig) Size() (n int) {
 	}
 	var l int
 	_ = l
-	if m.WarehouseRefresh != nil {
-		l = m.WarehouseRefresh.Size()
+	if m.ArtifactPush != nil {
+		l = m.ArtifactPush.Size()
 		n += 1 + l + sovGenerated(uint64(l))
 	}
 	l = m.SecretRef.Size()
@@ -9713,7 +9713,7 @@ func (this *FreightStatus) String() string {
 	}, "")
 	return s
 }
-func (this *GenericWarehouseRefreshConfig) String() string {
+func (this *GenericArtifactPushConfig) String() string {
 	if this == nil {
 		return "nil"
 	}
@@ -9729,7 +9729,7 @@ func (this *GenericWebhookReceiverConfig) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&GenericWebhookReceiverConfig{`,
-		`WarehouseRefresh:` + strings.Replace(this.WarehouseRefresh.String(), "GenericWarehouseRefreshConfig", "GenericWarehouseRefreshConfig", 1) + `,`,
+		`WarehouseRefresh:` + strings.Replace(this.ArtifactPush.String(), "GenericWarehouseRefreshConfig", "GenericWarehouseRefreshConfig", 1) + `,`,
 		`SecretRef:` + strings.Replace(strings.Replace(fmt.Sprintf("%v", this.SecretRef), "LocalObjectReference", "v11.LocalObjectReference", 1), `&`, ``, 1) + `,`,
 		`}`,
 	}, "")
@@ -15968,7 +15968,7 @@ func (m *FreightStatus) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *GenericWarehouseRefreshConfig) Unmarshal(dAtA []byte) error {
+func (m *GenericArtifactPushConfig) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -16140,10 +16140,10 @@ func (m *GenericWebhookReceiverConfig) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			if m.WarehouseRefresh == nil {
-				m.WarehouseRefresh = &GenericWarehouseRefreshConfig{}
+			if m.ArtifactPush == nil {
+				m.ArtifactPush = &GenericArtifactPushConfig{}
 			}
-			if err := m.WarehouseRefresh.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+			if err := m.ArtifactPush.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
