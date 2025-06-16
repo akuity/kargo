@@ -3,6 +3,8 @@ package external
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -30,7 +32,7 @@ func TestRefreshWarehouses(t *testing.T) {
 		name       string
 		client     client.Client
 		project    string
-		assertions func(*testing.T, *refreshResult, error)
+		assertions func(*testing.T, *httptest.ResponseRecorder)
 	}{
 		{
 			name: "error listing Warehouses",
@@ -46,13 +48,13 @@ func TestRefreshWarehouses(t *testing.T) {
 					},
 				},
 			).Build(),
-			assertions: func(t *testing.T, _ *refreshResult, err error) {
-				require.ErrorContains(t, err, "error listing Warehouses")
-				require.ErrorContains(t, err, "something went wrong")
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, rr.Code)
+				require.JSONEq(t, "{}", rr.Body.String())
 			},
 		},
 		{
-			name: "success -- Project not specified",
+			name: "partial success -- Project not specified",
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
 					ObjectMeta: metav1.ObjectMeta{
@@ -94,15 +96,37 @@ func TestRefreshWarehouses(t *testing.T) {
 				indexer.WarehousesBySubscribedURLsField,
 				indexer.WarehousesBySubscribedURLs,
 			).Build(),
-			assertions: func(t *testing.T, result *refreshResult, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, result)
-				require.Equal(t, 1, result.successes)
-				require.Equal(t, 1, result.failures)
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, rr.Code)
+				require.JSONEq(t, `{"error":"failed to refresh 1 of 2 warehouses"}`, rr.Body.String())
 			},
 		},
 		{
-			name:    "success -- Project specified",
+			name: "complete success -- Project not specified",
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "some-namespace",
+						Name:      "some-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{RepoURL: testRepoURL},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:    "partial success -- Project specified",
 			project: testProject,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
@@ -145,23 +169,48 @@ func TestRefreshWarehouses(t *testing.T) {
 				indexer.WarehousesBySubscribedURLsField,
 				indexer.WarehousesBySubscribedURLs,
 			).Build(),
-			assertions: func(t *testing.T, result *refreshResult, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, result)
-				require.Equal(t, 1, result.successes)
-				require.Equal(t, 1, result.failures)
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, rr.Code)
+				require.JSONEq(t, `{"error":"failed to refresh 1 of 2 warehouses"}`, rr.Body.String())
+			},
+		},
+		{
+			name:    "complete success -- Project specified",
+			project: testProject,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "some-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{RepoURL: testRepoURL},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			result, err := refreshWarehouses(
+			w := httptest.NewRecorder()
+			refreshWarehouses(
 				t.Context(),
+				w,
 				testCase.client,
 				testCase.project,
 				testRepoURL,
 			)
-			testCase.assertions(t, result, err)
+			testCase.assertions(t, w)
 		})
 	}
 }

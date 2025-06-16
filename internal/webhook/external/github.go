@@ -13,15 +13,13 @@ import (
 	"github.com/akuity/kargo/internal/git"
 	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/image"
-	"github.com/akuity/kargo/internal/io"
 	"github.com/akuity/kargo/internal/logging"
 )
 
 const (
 	GithubSecretDataKey = "secret"
 
-	github                    = "github"
-	githubWebhookBodyMaxBytes = 2 << 20 // 2MB
+	github = "github"
 
 	ghcrPackageTypeContainer = "CONTAINER"
 	ghcrPackageTypeDocker    = "docker"
@@ -77,8 +75,8 @@ func (g *githubWebhookReceiver) getSecretValues(
 	return []string{string(secretValue)}, nil
 }
 
-// GetHandler implements WebhookReceiver.
-func (g *githubWebhookReceiver) GetHandler() http.HandlerFunc {
+// getHandler implements WebhookReceiver.
+func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
@@ -107,31 +105,6 @@ func (g *githubWebhookReceiver) GetHandler() http.HandlerFunc {
 		logger = logger.WithValues("eventType", eventType)
 		ctx = logging.ContextWithLogger(ctx, logger)
 
-		// Early check of Content-Length if available
-		if contentLength := r.ContentLength; contentLength > githubWebhookBodyMaxBytes {
-			xhttp.WriteErrorJSON(
-				w,
-				xhttp.Error(
-					fmt.Errorf("content exceeds limit of %d bytes", githubWebhookBodyMaxBytes),
-					http.StatusRequestEntityTooLarge,
-				),
-			)
-			return
-		}
-
-		body, err := io.LimitRead(r.Body, githubWebhookBodyMaxBytes)
-		if err != nil {
-			if errors.Is(err, &io.BodyTooLargeError{}) {
-				xhttp.WriteErrorJSON(
-					w,
-					xhttp.Error(err, http.StatusRequestEntityTooLarge),
-				)
-				return
-			}
-			xhttp.WriteErrorJSON(w, err)
-			return
-		}
-
 		sig := r.Header.Get(gh.SHA256SignatureHeader)
 		if sig == "" {
 			xhttp.WriteErrorJSON(
@@ -141,7 +114,7 @@ func (g *githubWebhookReceiver) GetHandler() http.HandlerFunc {
 			return
 		}
 
-		if err = gh.ValidateSignature(sig, body, signingKey); err != nil {
+		if err := gh.ValidateSignature(sig, requestBody, signingKey); err != nil {
 			xhttp.WriteErrorJSON(
 				w,
 				xhttp.Error(errors.New("unauthorized"), http.StatusUnauthorized),
@@ -149,7 +122,7 @@ func (g *githubWebhookReceiver) GetHandler() http.HandlerFunc {
 			return
 		}
 
-		event, err := gh.ParseWebHook(eventType, body)
+		event, err := gh.ParseWebHook(eventType, requestBody)
 		if err != nil {
 			xhttp.WriteErrorJSON(
 				w,
@@ -214,30 +187,6 @@ func (g *githubWebhookReceiver) GetHandler() http.HandlerFunc {
 		logger = logger.WithValues("repoURL", repoURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
 
-		result, err := refreshWarehouses(ctx, g.client, g.project, repoURL)
-		if err != nil {
-			xhttp.WriteErrorJSON(w, err)
-			return
-		}
-		if result.failures > 0 {
-			xhttp.WriteResponseJSON(
-				w,
-				http.StatusInternalServerError,
-				map[string]string{
-					"error": fmt.Sprintf("failed to refresh %d of %d warehouses",
-						result.failures,
-						result.successes+result.failures,
-					),
-				},
-			)
-			return
-		}
-		xhttp.WriteResponseJSON(
-			w,
-			http.StatusOK,
-			map[string]string{
-				"msg": fmt.Sprintf("refreshed %d warehouse(s)", result.successes),
-			},
-		)
+		refreshWarehouses(ctx, w, g.client, g.project, repoURL)
 	})
 }

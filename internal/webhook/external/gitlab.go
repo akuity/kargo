@@ -11,14 +11,12 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/git"
 	xhttp "github.com/akuity/kargo/internal/http"
-	"github.com/akuity/kargo/internal/io"
 	"github.com/akuity/kargo/internal/logging"
 )
 
 const (
-	gitlab                    = "gitlab"
-	gitLabSecretDataKey       = "secret-token"
-	gitlabWebhookBodyMaxBytes = 2 << 20 // 2MB
+	gitlab              = "gitlab"
+	gitLabSecretDataKey = "secret-token"
 )
 
 func init() {
@@ -71,8 +69,8 @@ func (g *gitlabWebhookReceiver) getSecretValues(
 	return []string{string(token)}, nil
 }
 
-// GetHandler implements WebhookReceiver.
-func (g *gitlabWebhookReceiver) GetHandler() http.HandlerFunc {
+// getHandler implements WebhookReceiver.
+func (g *gitlabWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
@@ -106,32 +104,7 @@ func (g *gitlabWebhookReceiver) GetHandler() http.HandlerFunc {
 		logger = logger.WithValues("eventType", eventType)
 		ctx = logging.ContextWithLogger(ctx, logger)
 
-		// Early check of Content-Length if available
-		if contentLength := r.ContentLength; contentLength > gitlabWebhookBodyMaxBytes {
-			xhttp.WriteErrorJSON(
-				w,
-				xhttp.Error(
-					fmt.Errorf("content exceeds limit of %d bytes", gitlabWebhookBodyMaxBytes),
-					http.StatusRequestEntityTooLarge,
-				),
-			)
-			return
-		}
-
-		body, err := io.LimitRead(r.Body, gitlabWebhookBodyMaxBytes)
-		if err != nil {
-			if errors.Is(err, &io.BodyTooLargeError{}) {
-				xhttp.WriteErrorJSON(
-					w,
-					xhttp.Error(err, http.StatusRequestEntityTooLarge),
-				)
-				return
-			}
-			xhttp.WriteErrorJSON(w, err)
-			return
-		}
-
-		event, err := gl.ParseWebhook(eventType, body)
+		event, err := gl.ParseWebhook(eventType, requestBody)
 		if err != nil {
 			xhttp.WriteErrorJSON(
 				w,
@@ -145,31 +118,7 @@ func (g *gitlabWebhookReceiver) GetHandler() http.HandlerFunc {
 			repoURL := git.NormalizeURL(e.Repository.GitHTTPURL)
 			logger = logger.WithValues("repoURL", repoURL)
 			ctx = logging.ContextWithLogger(ctx, logger)
-			result, err := refreshWarehouses(ctx, g.client, g.project, repoURL)
-			if err != nil {
-				xhttp.WriteErrorJSON(w, err)
-				return
-			}
-			if result.failures > 0 {
-				xhttp.WriteResponseJSON(
-					w,
-					http.StatusInternalServerError,
-					map[string]string{
-						"error": fmt.Sprintf("failed to refresh %d of %d warehouses",
-							result.failures,
-							result.successes+result.failures,
-						),
-					},
-				)
-				return
-			}
-			xhttp.WriteResponseJSON(
-				w,
-				http.StatusOK,
-				map[string]string{
-					"msg": fmt.Sprintf("refreshed %d warehouse(s)", result.successes),
-				},
-			)
+			refreshWarehouses(ctx, w, g.client, g.project, repoURL)
 		}
 	})
 }
