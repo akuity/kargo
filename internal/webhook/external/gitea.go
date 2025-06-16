@@ -45,7 +45,7 @@ func newGiteaWebhookReceiver(
 	project string,
 	cfg kargoapi.WebhookReceiverConfig,
 ) WebhookReceiver {
-	return &githubWebhookReceiver{
+	return &giteaWebhookReceiver{
 		baseWebhookReceiver: &baseWebhookReceiver{
 			client:     c,
 			project:    project,
@@ -56,7 +56,7 @@ func newGiteaWebhookReceiver(
 
 // getReceiverType implements WebhookReceiver.
 func (g *giteaWebhookReceiver) getReceiverType() string {
-	return github
+	return gitea
 }
 
 // getSecretValues implements WebhookReceiver.
