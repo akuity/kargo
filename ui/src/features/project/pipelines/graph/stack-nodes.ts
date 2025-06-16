@@ -11,6 +11,14 @@ export const stackNodes = (
   graph: graphlib.Graph,
   stageByName: Record<string, Stage>
 ) => {
+  if (afterNodes.length === 0) {
+    return {
+      stackNodes: [],
+      ignoreList: new Set<string>(),
+      graph
+    };
+  }
+
   const sources = graph.sources();
 
   const stackNodes: Array<{
@@ -20,7 +28,6 @@ export const stackNodes = (
   }> = [];
 
   const ignoreList = new Set<string>();
-  const afterNodesSet = new Set(afterNodes);
   const processedParents = new Set<string>();
   const visited = new Set<string>();
 
@@ -39,7 +46,7 @@ export const stackNodes = (
         // @ts-expect-error type of successor is string
         const successor = _successor as string;
 
-        if (afterNodesSet.has(successor)) {
+        if (afterNodes.includes(successor)) {
           if (processedParents.has(successor)) {
             continue;
           }
