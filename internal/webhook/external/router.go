@@ -1,6 +1,8 @@
 package external
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -9,6 +11,7 @@ import (
 	"github.com/akuity/kargo/internal/api"
 	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/indexer"
+	"github.com/akuity/kargo/internal/io"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -111,7 +114,33 @@ func (s *server) route(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	receiver.GetHandler()(w, r)
+	// Early check of Content-Length if available
+	maxBodyBytes := receiver.getMaxRequestBodyBytes()
+	if contentLength := r.ContentLength; contentLength > maxBodyBytes {
+		xhttp.WriteErrorJSON(
+			w,
+			xhttp.Error(
+				fmt.Errorf("content exceeds limit of %d bytes", maxBodyBytes),
+				http.StatusRequestEntityTooLarge,
+			),
+		)
+		return
+	}
+
+	body, err := io.LimitRead(r.Body, maxBodyBytes)
+	if err != nil {
+		if errors.Is(err, &io.BodyTooLargeError{}) {
+			xhttp.WriteErrorJSON(
+				w,
+				xhttp.Error(err, http.StatusRequestEntityTooLarge),
+			)
+			return
+		}
+		xhttp.WriteErrorJSON(w, err)
+		return
+	}
+
+	receiver.getHandler(body)(w, r)
 }
 
 // getWebhookReceiverConfig attempts to find and return WebhookReceiverConfig

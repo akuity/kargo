@@ -6,6 +6,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -17,6 +18,7 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/server/kubernetes"
+	"github.com/akuity/kargo/internal/server/validation"
 )
 
 func TestGetProjectConfig(t *testing.T) {
@@ -26,11 +28,12 @@ func TestGetProjectConfig(t *testing.T) {
 		interceptor interceptor.Funcs
 		assertions  func(*testing.T, *connect.Response[svcv1alpha1.GetProjectConfigResponse], error)
 	}{
-		"empty name": {
+		"empty project": {
 			req: &svcv1alpha1.GetProjectConfigRequest{
-				Name: "",
+				Project: "",
 			},
 			objects: []client.Object{
+				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
 				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "kargo-demo",
@@ -43,9 +46,9 @@ func TestGetProjectConfig(t *testing.T) {
 				require.Nil(t, r)
 			},
 		},
-		"non-existing ProjectConfig": {
+		"non-existing project": {
 			req: &svcv1alpha1.GetProjectConfigRequest{
-				Name: "kargo-x",
+				Project: "kargo-x",
 			},
 			objects: []client.Object{},
 			assertions: func(t *testing.T, r *connect.Response[svcv1alpha1.GetProjectConfigResponse], err error) {
@@ -56,9 +59,10 @@ func TestGetProjectConfig(t *testing.T) {
 		},
 		"existing ProjectConfig": {
 			req: &svcv1alpha1.GetProjectConfigRequest{
-				Name: "kargo-demo",
+				Project: "kargo-demo",
 			},
 			objects: []client.Object{
+				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
 				&kargoapi.ProjectConfig{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "kargo-demo",
@@ -78,10 +82,11 @@ func TestGetProjectConfig(t *testing.T) {
 		},
 		"raw format JSON": {
 			req: &svcv1alpha1.GetProjectConfigRequest{
-				Name:   "kargo-demo",
-				Format: svcv1alpha1.RawFormat_RAW_FORMAT_JSON,
+				Project: "kargo-demo",
+				Format:  svcv1alpha1.RawFormat_RAW_FORMAT_JSON,
 			},
 			objects: []client.Object{
+				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
 				&kargoapi.ProjectConfig{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       "ProjectConfig",
@@ -131,10 +136,11 @@ func TestGetProjectConfig(t *testing.T) {
 		},
 		"raw format YAML": {
 			req: &svcv1alpha1.GetProjectConfigRequest{
-				Name:   "kargo-demo",
-				Format: svcv1alpha1.RawFormat_RAW_FORMAT_YAML,
+				Project: "kargo-demo",
+				Format:  svcv1alpha1.RawFormat_RAW_FORMAT_YAML,
 			},
 			objects: []client.Object{
+				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
 				&kargoapi.ProjectConfig{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       "ProjectConfig",
@@ -211,7 +217,8 @@ func TestGetProjectConfig(t *testing.T) {
 			require.NoError(t, err)
 
 			svr := &server{
-				client: client,
+				client:                    client,
+				externalValidateProjectFn: validation.ValidateProject,
 			}
 
 			res, err := (svr).GetProjectConfig(ctx, connect.NewRequest(testCase.req))

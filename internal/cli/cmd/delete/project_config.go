@@ -42,20 +42,19 @@ func newProjectConfigCommand(
 	}
 
 	cmd := &cobra.Command{
-		Use:     "projectconfig [PROJECT]",
+		Use:     "projectconfig [--project=project]",
 		Aliases: []string{"projectconfigs"},
 		Short:   "Delete project configuration",
-		Args:    option.MaximumNArgs(1),
+		Args:    option.NoArgs,
 		Example: templates.Example(`
 # Delete project configuration for my-project
-kargo delete projectconfig my-project
+kargo delete projectconfig --project=my-project
 
 # Delete project configuration for the default project
 kargo config set-project my-project
 kargo delete projectconfig
 `),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			cmdOpts.complete(args)
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			return cmdOpts.run(cmd.Context())
 		},
 	}
@@ -74,14 +73,9 @@ kargo delete projectconfig
 func (o *deleteProjectConfigOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.PrintFlags.AddFlags(cmd)
-}
 
-// complete sets the options from the command arguments.
-func (o *deleteProjectConfigOptions) complete(args []string) {
-	o.Project = o.Config.Project
-	if len(args) > 0 {
-		o.Project = args[0]
-	}
+	option.Project(cmd.Flags(), &o.Project, o.Config.Project,
+		"The Project for which to delete the configuration. If not set, the default project will be used.")
 }
 
 // run removes the project config from the project.
@@ -99,7 +93,7 @@ func (o *deleteProjectConfigOptions) run(ctx context.Context) error {
 	if _, err = kargoSvcCli.DeleteProjectConfig(
 		ctx,
 		connect.NewRequest(&v1alpha1.DeleteProjectConfigRequest{
-			Name: o.Project,
+			Project: o.Project,
 		}),
 	); err != nil {
 		return fmt.Errorf("delete project configuration: %w", err)
@@ -108,7 +102,8 @@ func (o *deleteProjectConfigOptions) run(ctx context.Context) error {
 	if err = printer.PrintObj(
 		&kargoapi.ProjectConfig{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: o.Project,
+				Name:      o.Project,
+				Namespace: o.Project,
 			},
 		}, o.IOStreams.Out); err != nil {
 		return fmt.Errorf("print project configuration: %w", err)

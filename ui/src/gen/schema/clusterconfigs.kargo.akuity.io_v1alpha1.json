@@ -42,6 +42,27 @@
                 ],
                 "type": "object"
               },
+              "dockerhub": {
+                "description": "DockerHub contains the configuration for a webhook receiver that is\ncompatible with DockerHub payloads.",
+                "properties": {
+                  "secretRef": {
+                    "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nThe Secret's data map is expected to contain a `secret` key whose value\ndoes NOT need to be shared directly with Docker Hub when registering a\nwebhook. It is used only by Kargo to create a complex, hard-to-guess URL,\nwhich implicitly serves as a shared secret. For more information about\nDocker Hub webhooks, please refer to the Docker documentation:\n  https://docs.docker.com/docker-hub/webhooks/",
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "description": "Name of the referent.\nThis field is effectively required, but due to backwards compatibility is\nallowed to be empty. Instances of this type with an empty value here are\nalmost certainly wrong.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
+                        "type": "string"
+                      }
+                    },
+                    "type": "object",
+                    "x-kubernetes-map-type": "atomic"
+                  }
+                },
+                "required": [
+                  "secretRef"
+                ],
+                "type": "object"
+              },
               "github": {
                 "description": "GitHub contains the configuration for a webhook receiver that is compatible\nwith GitHub payloads.",
                 "properties": {
@@ -185,6 +206,17 @@
             "type"
           ],
           "x-kubernetes-list-type": "map"
+        },
+        "lastHandledRefresh": {
+          "description": "LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh\nannotation that was handled by the controller. This field can be used to\ndetermine whether the request to refresh the resource has been handled.",
+          "type": "string"
+        },
+        "observedGeneration": {
+          "description": "ObservedGeneration represents the .metadata.generation that this\nClusterConfig was reconciled against.",
+          "format": "int64",
+          "maximum": 9223372036854776000,
+          "minimum": -9223372036854776000,
+          "type": "integer"
         },
         "webhookReceivers": {
           "description": "WebhookReceivers describes the status of cluster-scoped webhook receivers.",

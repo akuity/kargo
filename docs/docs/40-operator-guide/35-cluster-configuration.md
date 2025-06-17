@@ -26,7 +26,7 @@ artifact repositories, or if developers have
 you may have elected to reduce the frequency with which all `Warehouse`s execute
 their artifact discovery processes (i.e. You may have elected to _increase_ the
 minimum polling interval. See
-[Common Configurations](./20-advanced-installation/30-common-configurations.md/#tuning-warehouse-reconciliation-intervals).
+[Common Configurations](./20-advanced-installation/30-common-configurations.md#tuning-warehouse-reconciliation-intervals).
 )
 
 If you have done this, it may have relieved degraded performance and helped to
@@ -71,7 +71,7 @@ by the request payload.
 Most types of webhook receivers require you only to specify a unique name and a
 reference to a `Secret`. The expected keys and values for each kind of webhook
 receiver vary, and are documented on
-[each receiver type's own page](../50-user-guide/60-reference-docs/80-webhook-receivers).
+[each receiver type's own page](../50-user-guide/60-reference-docs/80-webhook-receivers/index.md).
 
 :::note
 Because `ClusterConfig` resources are _cluster-scoped_ resources and Kubernetes
@@ -200,7 +200,7 @@ endpoints to receive webhook requests from those platforms.
 :::info
 For more information about registering these endpoints with specific senders,
 refer to
-[each receiver type's own page](../50-user-guide/60-reference-docs/80-webhook-receivers).
+[each receiver type's own page](../50-user-guide/60-reference-docs/80-webhook-receivers/index.md).
 :::
 
 ### Receivers in Action

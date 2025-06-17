@@ -494,6 +494,7 @@ func (e *simpleEngine) prepareStepContext(
 		Project:          promoCtx.Project,
 		Stage:            promoCtx.Stage,
 		Promotion:        promoCtx.Promotion,
+		PromotionActor:   promoCtx.Actor,
 		FreightRequests:  freightRequests,
 		Freight:          *promoCtx.Freight.DeepCopy(),
 		TargetFreightRef: promoCtx.TargetFreightRef,

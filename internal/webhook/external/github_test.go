@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	gh "github.com/google/go-github/v71/github"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -18,17 +19,34 @@ import (
 	"github.com/akuity/kargo/internal/indexer"
 )
 
+const githubSigningKey = "mysupersecrettoken"
+
 func TestGithubHandler(t *testing.T) {
 	const testURL = "https://webhooks.kargo.example.com/nonsense"
 
 	const testProjectName = "fake-project"
 
+	var validPushEvent = &gh.PushEvent{
+		Ref: gh.Ptr("refs/heads/main"),
+		Repo: &gh.PushEventRepository{
+			CloneURL: gh.Ptr("https://github.com/example/repo"),
+		},
+	}
+	var validPackageEvent = &gh.PackageEvent{
+		Action: gh.Ptr("published"),
+		Package: &gh.Package{
+			PackageType: gh.Ptr(ghcrPackageTypeContainer),
+			PackageVersion: &gh.PackageVersion{
+				PackageURL: gh.Ptr("ghcr.io/example/repo:latest"),
+			},
+		},
+	}
+
 	testScheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(testScheme))
 
-	const testToken = "mysupersecrettoken"
 	testSecretData := map[string][]byte{
-		GithubSecretDataKey: []byte(testToken),
+		GithubSecretDataKey: []byte(githubSigningKey),
 	}
 
 	testCases := []struct {
@@ -39,7 +57,7 @@ func TestGithubHandler(t *testing.T) {
 		assertions func(*testing.T, *httptest.ResponseRecorder)
 	}{
 		{
-			name: "token missing from Secret data",
+			name: "signing key (shared secret) missing from Secret data",
 			req: func() *http.Request {
 				return httptest.NewRequest(http.MethodPost, testURL, nil)
 			},
@@ -63,27 +81,6 @@ func TestGithubHandler(t *testing.T) {
 					`{"error":"event type nonsense is not supported"}`,
 					rr.Body.String(),
 				)
-			},
-		},
-		{
-			name:       "request body too large",
-			secretData: testSecretData,
-			req: func() *http.Request {
-				body := make([]byte, 2<<20+1)
-				req := httptest.NewRequest(
-					http.MethodPost,
-					testURL,
-					io.NopCloser(bytes.NewBuffer(body)),
-				)
-				req.Header.Set("X-GitHub-Event", "push")
-				return req
-			},
-			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusRequestEntityTooLarge, rr.Code)
-				res := map[string]string{}
-				err := json.Unmarshal(rr.Body.Bytes(), &res)
-				require.NoError(t, err)
-				require.Contains(t, res["error"], "content exceeds limit")
 			},
 		},
 		{
@@ -148,6 +145,115 @@ func TestGithubHandler(t *testing.T) {
 			},
 		},
 		{
+			name:       "unsupported package event action",
+			secretData: testSecretData,
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(
+					&gh.PackageEvent{Action: gh.Ptr("deleted")},
+				)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set("X-Hub-Signature-256", sign(bodyBytes))
+				req.Header.Set("X-GitHub-Event", "package")
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, "{}", rr.Body.String())
+			},
+		},
+		{
+			name:       "package event missing package",
+			secretData: testSecretData,
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(
+					&gh.PackageEvent{Action: gh.Ptr("published")},
+				)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set("X-Hub-Signature-256", sign(bodyBytes))
+				req.Header.Set("X-GitHub-Event", "package")
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, rr.Code)
+				require.JSONEq(t, `{"error":"invalid request body"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "unsupported package type",
+			secretData: testSecretData,
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(
+					&gh.PackageEvent{
+						Action: gh.Ptr("published"),
+						Package: &gh.Package{
+							PackageType:    gh.Ptr("npm"),
+							PackageVersion: &gh.PackageVersion{},
+						},
+					},
+				)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set("X-Hub-Signature-256", sign(bodyBytes))
+				req.Header.Set("X-GitHub-Event", "package")
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, "{}", rr.Body.String())
+			},
+		},
+		{
+			name:       "success -- package event",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Image: &kargoapi.ImageSubscription{RepoURL: "ghcr.io/example/repo"},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(validPackageEvent)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set("X-Hub-Signature-256", sign(bodyBytes))
+				req.Header.Set("X-GitHub-Event", "package")
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
 			name:       "success -- push event",
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
@@ -170,44 +276,31 @@ func TestGithubHandler(t *testing.T) {
 				indexer.WarehousesBySubscribedURLs,
 			).Build(),
 			req: func() *http.Request {
-				bodyBuf := bytes.NewBuffer(
-					[]byte(`{
-		"ref": "refs/heads/main",
-		"before": "1fe030abc48d0d0ee7b3d650d6e9449775990318",
-		"after": "f12cd167152d80c0a2e28cb45e827c6311bba910",
-		"repository": {
-		  "html_url": "https://github.com/example/repo"
-		},
-		"pusher": {
-		  "name": "username",
-		  "email": "email@inbox.com"
-		},
-		"head_commit": {
-		  "id": "f12cd167152d80c0a2e28cb45e827c6311bba910"
-		}
-		}`),
-				)
+				bodyBytes, err := json.Marshal(validPushEvent)
+				require.NoError(t, err)
 				req := httptest.NewRequest(
 					http.MethodPost,
 					testURL,
-					bodyBuf,
+					bytes.NewBuffer(bodyBytes),
 				)
-				req.Header.Set("X-Hub-Signature-256", sign(bodyBuf.Bytes()))
+				req.Header.Set("X-Hub-Signature-256", sign(bodyBytes))
 				req.Header.Set("X-GitHub-Event", "push")
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusOK, rr.Code)
-				require.JSONEq(
-					t,
-					`{"msg":"refreshed 1 warehouse(s)"}`,
-					rr.Body.String(),
-				)
+				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			requestBody, err := io.ReadAll(testCase.req().Body)
+			require.NoError(t, err)
+			t.Cleanup(func() {
+				_ = testCase.req().Body.Close()
+			})
+
 			w := httptest.NewRecorder()
 			(&githubWebhookReceiver{
 				baseWebhookReceiver: &baseWebhookReceiver{
@@ -215,7 +308,8 @@ func TestGithubHandler(t *testing.T) {
 					project:    testProjectName,
 					secretData: testCase.secretData,
 				},
-			}).GetHandler()(w, testCase.req())
+			}).getHandler(requestBody)(w, testCase.req())
+
 			testCase.assertions(t, w)
 		})
 	}

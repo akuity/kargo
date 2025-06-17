@@ -13,10 +13,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/webhook/kubernetes/external"
 )
-
-const acceptedName = "cluster"
 
 var clusterConfigGroupKind = schema.GroupKind{
 	Group: kargoapi.GroupVersion.Group,
@@ -87,12 +86,12 @@ func (w *webhook) validateObjectMeta(
 	f *field.Path,
 	meta metav1.ObjectMeta,
 ) field.ErrorList {
-	if meta.Name != acceptedName {
+	if meta.Name != api.ClusterConfigName {
 		return field.ErrorList{
 			field.Invalid(
 				f.Child("name"),
 				meta.Name,
-				fmt.Sprintf("name %q must be %q", meta.Name, acceptedName),
+				fmt.Sprintf("name %q must be %q", meta.Name, api.ClusterConfigName),
 			),
 		}
 	}
