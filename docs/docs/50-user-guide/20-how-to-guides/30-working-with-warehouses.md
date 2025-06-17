@@ -776,7 +776,7 @@ the request payload.
 Most types of webhook receivers require you only to specify a unique (within the
 Project) name and a reference to a `Secret`. The expected keys and values for
 each kind of webhook receiver vary, and are documented on
-[each receiver type's own page](../60-reference-docs/80-webhook-receivers).
+[each receiver type's own page](../60-reference-docs/80-webhook-receivers/index.md).
 
 :::info
 `Secret`s referenced by a webhook receiver typically serve _two_ purposes.
@@ -897,7 +897,7 @@ endpoints to receive webhook requests from those platforms.
 :::info
 For more information about registering these endpoints with specific senders,
 refer to
-[each receiver type's own page](../60-reference-docs/80-webhook-receivers).
+[each receiver type's own page](../60-reference-docs/80-webhook-receivers/index.md).
 :::
 
 :::info
