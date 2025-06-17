@@ -59,11 +59,11 @@ this URL using the following command:
 
 ### Step 1: Navigate to Settings -> Webhooks
 
-![Step 1](/img/gitlab/1.png "Settings")
+![Step 1](./img/1.png "Settings")
 
 ### Step 2: Click Add New Webhook
 
-![Step 2](/img/gitlab/2.png "Add Webhook Button")
+![Step 2](./img/2.png "Add Webhook Button")
 
 ### Step 3: Complete Form
 
@@ -71,32 +71,32 @@ Our webhook receiver URL goes in the `URL` field.
 
 In the `Secret token` field, we will input the value we assigned to the `secret-token` key in [Required Secrets for Gitlab](#required-secrets-for-gitlab).
 
-![Step 3](/img/gitlab/3.png "Add Webhook Form")
+![Step 3](./img/3.png "Add Webhook Form")
 
 ### Step 4: Submit Form
 
-![Step 4](/img/gitlab/4.png "Submit Form")
+![Step 4](./img/4.png "Submit Form")
 
-![Step 5](/img/gitlab/5.png "Created")
+![Step 5](./img/5.png "Created")
 
 ### Step 5: Test
 
 Select a `Push events` from the `Test` dropdown menu.
 
-![Step 6](/img/gitlab/6.png "Test Button")
+![Step 6](./img/6.png "Test Button")
 
 ### Step 6: Verify
 
 Click the `Edit` button.
 
-![Step 7](/img/gitlab/7.png "Edit Button")
+![Step 7](./img/7.png "Edit Button")
 
 Scroll down to `Recent Events` and click `View Details`.
 
-![Step 8](/img/gitlab/8.png "Recent Events")
+![Step 8](./img/8.png "Recent Events")
 
 Confirm successful response.
 
-![Step 9](/img/gitlab/9.png "Response")
+![Step 9](./img/9.png "Response")
 
 For additional information on configuring GitLab webhooks, refer to the [GitLab Docs](https://docs.gitlab.com/user/project/integrations/webhooks/).
