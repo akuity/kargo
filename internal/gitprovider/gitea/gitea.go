@@ -257,6 +257,20 @@ func (p *provider) ListPullRequests(
 	return prs, nil
 }
 
+// GetCommitURL implements gitprovider.Interface.
+func (p *provider) GetCommitURL(repoURL string, sha string) (string, error) {
+	normalizedURL := git.NormalizeURL(repoURL)
+
+	parsedURL, err := url.Parse(normalizedURL)
+	if err != nil {
+		return "", fmt.Errorf("error processing repository URL: %s: %s", repoURL, err)
+	}
+
+	commitURL := fmt.Sprintf("https://%s%s/commit/%s", parsedURL.Host, parsedURL.Path, sha)
+
+	return commitURL, nil
+}
+
 func convertGiteaPR(giteaPR gitea.PullRequest) gitprovider.PullRequest {
 	pr := gitprovider.PullRequest{
 		Number:  giteaPR.Index,
