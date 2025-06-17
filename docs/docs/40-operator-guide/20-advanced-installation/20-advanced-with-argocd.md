@@ -65,7 +65,7 @@ spec:
   source:
     repoURL: ghcr.io/akuity/kargo-charts
     chart: kargo
-    targetRevision: 1.2.0
+    targetRevision: <desired version of Kargo>
     helm:
       parameters:
         - name: api.adminAccount.passwordHash
@@ -102,7 +102,7 @@ spec:
   source:
     repoURL: ghcr.io/akuity/kargo-charts
     chart: kargo
-    targetRevision: 1.2.0
+    targetRevision: <desired version of Kargo>
     helm:
       valuesObject:
         api:
@@ -158,7 +158,7 @@ spec:
   sources:
     - repoURL: ghcr.io/akuity/kargo-charts
       chart: kargo
-      targetRevision: 1.2.0
+      targetRevision: <desired version of Kargo>
       helm:
         valueFiles:
           - $values/kargo/values.yaml
