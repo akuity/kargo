@@ -383,8 +383,8 @@ func (r *reconciler) cleanupProject(ctx context.Context, project *kargoapi.Proje
 
 	// delete the namespace only if the project and namespace doesn't consist of
 	// the keep-namespace annotation
-	if project.Annotations[kargoapi.AnnotationKeyKeepNamespace] != kargoapi.AnnotationTrueValue &&
-		ns.Annotations[kargoapi.AnnotationKeyKeepNamespace] != kargoapi.AnnotationTrueValue {
+	if project.Annotations[kargoapi.AnnotationKeyKeepNamespace] != kargoapi.AnnotationValueTrue &&
+		ns.Annotations[kargoapi.AnnotationKeyKeepNamespace] != kargoapi.AnnotationValueTrue {
 		// delete namespace
 		if err = r.deleteNamespaceFn(ctx, ns); err != nil {
 			return fmt.Errorf("failed to delete namespace %q: %w", ns.Name, err)

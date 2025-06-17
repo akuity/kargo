@@ -59,7 +59,7 @@ const (
 	// contains resources that should not be deleted.
 	AnnotationKeyKeepNamespace = "kargo.akuity.io/keep-namespace"
 
-	// AnnotationTrueValue is the value used to indicate that an annotation
+	// AnnotationValueTrue is the value used to indicate that an annotation
 	// is set to true.
-	AnnotationTrueValue = "true"
+	AnnotationValueTrue = "true"
 )

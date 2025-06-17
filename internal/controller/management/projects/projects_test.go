@@ -144,7 +144,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 				removeFinalizerFn: func(
 					_ context.Context,
 					_ client.Client,
-					obj client.Object,
+					_ client.Object,
 				) error {
 					return nil
 				},
