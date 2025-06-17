@@ -1081,11 +1081,14 @@ func TestGetCommitURL(t *testing.T) {
 			expectedCommitURL: "https://bitbucket.org/akuity/kargo/commits/sha",
 		},
 	}
+
+	prov := &provider{}
+
 	for _, testCase := range testCases {
-		// call the code we are testing
-		g := provider{}
-		commitURL, err := g.GetCommitURL(testCase.repoURL, testCase.sha)
-		require.NoError(t, err)
-		require.Equal(t, testCase.expectedCommitURL, commitURL)
+		t.Run(testCase.repoURL, func(t *testing.T) {
+			commitURL, err := prov.GetCommitURL(testCase.repoURL, testCase.sha)
+			require.NoError(t, err)
+			require.Equal(t, testCase.expectedCommitURL, commitURL)
+		})
 	}
 }
