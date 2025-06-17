@@ -4,6 +4,9 @@ sidebar_label: GitHub
 
 # GitHub
 
+The following instructions will work for Github,
+Github Enterprise Cloud, and GitHub Enterprise Server.
+
 ## GitHub Webhook Receiver Configuration
 
 The Kargo GitHub webhook receiver will require a Kubernetes Secret. This Secret is required to contain a `secret` key in its data map. You will be required to provide the value assigned to the `secret` key to GitHub in a later step so keep it handy.
@@ -122,6 +125,8 @@ Click on the `ping` event and ensure a successful response was returned.
 
 #### Apps
 
+It may be tedious to configure webhooks for each of your Github repositories. You can instead opt to configure a [Github App](https://docs.github.com/en/apps); allowing you to receive events from all or select repositories.
+
 1. Navigate to Settings
 
 This will be listed in a dropdown menu that is
@@ -186,6 +191,8 @@ Click on the `ping` event and then the `response` tab to
 verify the connection was established successfully.
 
 ![Step 12](/img/github/apps/12.png "Response")
+
+#### Additional Documentation
 
 For more additional information on configuring Github Webhooks or Apps, refer to the [Github Docs](https://docs.github.com/en/webhooks/using-webhooks/creating-webhooks)
 
