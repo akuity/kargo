@@ -44,8 +44,7 @@ spec:
 
 ## Retrieving the Webhook URL
 
-The secret (among other things) will be used as an input to generate
-a secure URL for our newly created webhook receiver. We can obtain
+Kargo will generate a hard-to-guess URL from the configuration. We can obtain 
 this URL using the following command:
 
 ```shell
