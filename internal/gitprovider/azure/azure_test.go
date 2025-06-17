@@ -3,8 +3,9 @@ package azure
 import (
 	"testing"
 
-	"github.com/akuity/kargo/internal/gitprovider"
 	"github.com/stretchr/testify/require"
+
+	"github.com/akuity/kargo/internal/gitprovider"
 )
 
 func TestParseRepoURL(t *testing.T) {
@@ -162,7 +163,7 @@ func TestNewProvider(t *testing.T) {
 	testCases := []struct {
 		name        string
 		args        args
-		wantErr     bool
+		errExpected bool
 		errContains string
 		wantBaseUrl string
 		wantProject string
@@ -171,49 +172,61 @@ func TestNewProvider(t *testing.T) {
 		{
 			name:        "nil options",
 			args:        args{repoURL: "https://dev.azure.com/org/proj/_git/repo", opts: nil},
-			wantErr:     true,
+			errExpected: true,
 			errContains: "token is required",
 		},
 		{
 			name:        "empty token",
 			args:        args{repoURL: "https://dev.azure.com/org/proj/_git/repo", opts: &gitprovider.Options{Token: ""}},
-			wantErr:     true,
+			errExpected: true,
 			errContains: "token is required",
 		},
 		{
-			name:        "invalid repo url",
-			args:        args{repoURL: "not-a-url", opts: &gitprovider.Options{Token: "token"}},
-			wantErr:     true,
-			errContains: "invalid Azure DevOps Server URL",
+			name:        "invalid repo url missing protocol",
+			args:        args{repoURL: ":dev.azure.com", opts: &gitprovider.Options{Token: "token"}},
+			errExpected: true,
+			errContains: "error parsing Azure DevOps repository URL",
 		},
 		{
-			name:        "valid modern url",
-			args:        args{repoURL: "https://dev.azure.com/org/proj/_git/repo", opts: &gitprovider.Options{Token: "token"}},
-			wantErr:     false,
+			name: "valid modern url",
+			args: args{
+				repoURL: "https://dev.azure.com/org/proj/_git/repo",
+				opts:    &gitprovider.Options{Token: "token"},
+			},
+			errExpected: false,
 			wantBaseUrl: "dev.azure.com",
 			wantProject: "proj",
 			wantRepo:    "repo",
 		},
 		{
-			name:        "valid legacy url",
-			args:        args{repoURL: "https://org.visualstudio.com/proj/_git/repo", opts: &gitprovider.Options{Token: "token"}},
-			wantErr:     false,
+			name: "valid legacy url",
+			args: args{
+				repoURL: "https://org.visualstudio.com/proj/_git/repo",
+				opts:    &gitprovider.Options{Token: "token"},
+			},
+			errExpected: false,
 			wantBaseUrl: "dev.azure.com",
 			wantProject: "proj",
 			wantRepo:    "repo",
 		},
 		{
-			name:        "valid self-hosted url",
-			args:        args{repoURL: "https://azure.mycompany.org/mycollection/myproject/_git/myrepo", opts: &gitprovider.Options{Token: "token"}},
-			wantErr:     false,
+			name: "valid self-hosted url",
+			args: args{
+				repoURL: "https://azure.mycompany.org/mycollection/myproject/_git/myrepo",
+				opts:    &gitprovider.Options{Token: "token"},
+			},
+			errExpected: false,
 			wantBaseUrl: "azure.mycompany.org",
 			wantProject: "myproject",
 			wantRepo:    "myrepo",
 		},
 		{
-			name:        "valid self-hosted url",
-			args:        args{repoURL: "https://azure.mycompany.org/tfs/mycollection/myproject/_git/myrepo", opts: &gitprovider.Options{Token: "token"}},
-			wantErr:     false,
+			name: "valid self-hosted url",
+			args: args{
+				repoURL: "https://azure.mycompany.org/tfs/mycollection/myproject/_git/myrepo",
+				opts:    &gitprovider.Options{Token: "token"},
+			},
+			errExpected: false,
 			wantBaseUrl: "azure.mycompany.org/tfs",
 			wantProject: "myproject",
 			wantRepo:    "myrepo",
@@ -221,18 +234,18 @@ func TestNewProvider(t *testing.T) {
 		{
 			name:        "invalid self-hosted url",
 			args:        args{repoURL: "https://azure.mycompany.org/foo/bar", opts: &gitprovider.Options{Token: "token"}},
-			wantErr:     true,
+			errExpected: true,
 			errContains: "invalid Azure DevOps Server URL",
 		},
 	}
 
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewProvider(tt.args.repoURL, tt.args.opts)
-			if tt.wantErr {
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := NewProvider(tc.args.repoURL, tc.args.opts)
+			if tc.errExpected {
 				require.Error(t, err)
-				if tt.errContains != "" {
-					require.Contains(t, err.Error(), tt.errContains)
+				if tc.errContains != "" {
+					require.Contains(t, err.Error(), tc.errContains)
 				}
 				require.Nil(t, got)
 			} else {
@@ -241,10 +254,10 @@ func TestNewProvider(t *testing.T) {
 				// Use type assertion to access internal fields for further validation
 				p, ok := got.(*provider)
 				require.True(t, ok)
-				require.Equal(t, tt.wantProject, p.project)
-				require.Equal(t, tt.wantRepo, p.repo)
+				require.Equal(t, tc.wantProject, p.project)
+				require.Equal(t, tc.wantRepo, p.repo)
 				require.NotNil(t, p.connection)
-				require.NotNil(t, tt.wantBaseUrl, p.connection.BaseUrl)
+				require.NotNil(t, tc.wantBaseUrl, p.connection.BaseUrl)
 			}
 		})
 	}
