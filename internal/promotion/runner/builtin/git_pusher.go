@@ -15,7 +15,6 @@ import (
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/gitprovider"
-	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -79,9 +78,6 @@ func (g *gitPushPusher) run(
 	stepCtx *promotion.StepContext,
 	cfg builtin.GitPushConfig,
 ) (promotion.StepResult, error) {
-
-	logger := logging.LoggerFromContext(ctx)
-
 	// This is kind of hacky, but we needed to load the working tree to get the
 	// URL of the repository. With that in hand, we can look for applicable
 	// credentials and, if found, reload the work tree with the credentials.
@@ -199,11 +195,8 @@ func (g *gitPushPusher) run(
 		gpOpts.Name = string(*cfg.Provider)
 	}
 	gitProvider, err := gitprovider.New(workTree.URL(), &gpOpts)
-	commitURL := ""
-	if err != nil {
-		commitURL = "Unknown"
-		logger.Info("unable to construct commit URL from %s: %s", workTree.URL(), err)
-	} else {
+	var commitURL string
+	if err == nil {
 		commitURL, _ = gitProvider.GetCommitURL(workTree.URL(), commitID)
 	}
 
