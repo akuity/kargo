@@ -43,7 +43,7 @@ const (
 	// that was created before the creation of the Project.
 	LabelKeyProject = "kargo.akuity.io/project"
 	// LabelKeyShard is used to identify the shard of a resource.
-	LabelKeyShard         = "kargo.akuity.io/shard"
+	LabelKeyShard = "kargo.akuity.io/shard"
 
 	// LabelValueTrue is used to identify a label that has a value of "true".
 	LabelValueTrue = "true"

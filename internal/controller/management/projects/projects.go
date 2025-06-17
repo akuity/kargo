@@ -353,52 +353,64 @@ func (r *reconciler) reconcile(
 	return status, nil
 }
 
-// cleanupProject handles the deletion and cleanup of a Project's associated resources
+// cleanupProject handles the deletion and cleanup of a Project's associated
+// resources.
 func (r *reconciler) cleanupProject(ctx context.Context, project *kargoapi.Project) error {
 	logger := logging.LoggerFromContext(ctx)
 
-	// get namespace for the Project
+	// Get namespace for the Project
 	ns := &corev1.Namespace{}
 	err := r.getNamespaceFn(ctx, types.NamespacedName{Name: project.Name}, ns)
-	if err != nil && !kubeerr.IsNotFound(err) {
+	if err != nil {
+		if kubeerr.IsNotFound(err) {
+			// Namespace already deleted or never existed, just remove finalizer
+			// from project
+			logger.Debug("namespace not found, removing project finalizer")
+			if err = r.removeFinalizerFn(ctx, r.client, project); err != nil {
+				return fmt.Errorf("failed to remove finalizer from project %q: %w", project.Name, err)
+			}
+			return nil
+		}
 		return fmt.Errorf("error getting namespace %q: %w", project.Name, err)
 	}
 
-	// remove only Project OwnerReference from Namespace
-	var newOwnerRefs []metav1.OwnerReference
-	for _, ref := range ns.OwnerReferences {
-		if ref.UID != project.UID {
-			newOwnerRefs = append(newOwnerRefs, ref)
+	if shouldKeepNamespace(project, ns) {
+		logger.Debug("keeping namespace due to keep-namespace annotation")
+
+		// Remove only this Project's OwnerReference from the Namespace
+		var newOwnerRefs []metav1.OwnerReference
+		for _, ref := range ns.OwnerReferences {
+			if ref.UID != project.UID {
+				newOwnerRefs = append(newOwnerRefs, ref)
+			}
 		}
-	}
-	ns.OwnerReferences = newOwnerRefs
-	if err = r.patchOwnerReferencesFn(ctx, r.client, ns); err != nil {
-		return fmt.Errorf("failed to patch namespace %q: %w", ns.Name, err)
-	}
 
-	// remove finalizer from Namespace
-	if err = r.removeFinalizerFn(ctx, r.client, ns); err != nil {
-		return fmt.Errorf("failed to remove finalizer from namespace %q: %w", ns.Name, err)
-	}
+		// Only update owner references if we actually found and removed one
+		if len(newOwnerRefs) < len(ns.OwnerReferences) {
+			ns.OwnerReferences = newOwnerRefs
+			if err = r.patchOwnerReferencesFn(ctx, r.client, ns); err != nil {
+				return fmt.Errorf("failed to patch namespace %q owner references: %w", ns.Name, err)
+			}
+			logger.Debug("removed project owner reference from namespace")
+		}
 
-	// delete the namespace only if the project and namespace doesn't consist of
-	// the keep-namespace annotation
-	if project.Annotations[kargoapi.AnnotationKeyKeepNamespace] != kargoapi.AnnotationValueTrue &&
-		ns.Annotations[kargoapi.AnnotationKeyKeepNamespace] != kargoapi.AnnotationValueTrue {
-		// delete namespace
-		if err = r.deleteNamespaceFn(ctx, ns); err != nil {
+		// Remove finalizer from namespace
+		if err = r.removeFinalizerFn(ctx, r.client, ns); err != nil {
+			return fmt.Errorf("failed to remove finalizer from namespace %q: %w", ns.Name, err)
+		}
+	} else {
+		// Delete the namespace
+		logger.Debug("deleting namespace")
+		if err = r.deleteNamespaceFn(ctx, ns); err != nil && !kubeerr.IsNotFound(err) {
 			return fmt.Errorf("failed to delete namespace %q: %w", ns.Name, err)
 		}
-		logger.Debug("deleted namespace: %q", ns.Name)
-	} else {
-		logger.Debug("skipping namespace deletion due to keep-namespace annotation")
+		logger.Debug("deleted namespace", "namespace", ns.Name)
 	}
 
-	// remove finalizer from Project
+	// Remove finalizer from Project
 	if err = r.removeFinalizerFn(ctx, r.client, project); err != nil {
 		return fmt.Errorf("failed to remove finalizer from project %q: %w", project.Name, err)
 	}
-
 	return nil
 }
 
@@ -1034,6 +1046,14 @@ func (r *reconciler) migrateSpecToProjectConfig(
 		)
 	}
 	return true, nil
+}
+
+// shouldKeepNamespace determines if a Namespace should be kept during Project
+// cleanup based on the keep-namespace annotation on either the Project or
+// Namespace.
+func shouldKeepNamespace(project *kargoapi.Project, ns *corev1.Namespace) bool {
+	return project.Annotations[kargoapi.AnnotationKeyKeepNamespace] == kargoapi.AnnotationValueTrue ||
+		ns.Annotations[kargoapi.AnnotationKeyKeepNamespace] == kargoapi.AnnotationValueTrue
 }
 
 func getRoleBindingName(serviceAccountName string) string {

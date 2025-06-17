@@ -101,6 +101,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 				) (*kargoapi.Project, error) {
 					return &kargoapi.Project{
 						ObjectMeta: metav1.ObjectMeta{
+							Name:              "test-project",
 							DeletionTimestamp: &metav1.Time{},
 							Finalizers:        []string{kargoapi.FinalizerName},
 						},
@@ -131,13 +132,6 @@ func TestReconciler_Reconcile(t *testing.T) {
 					_ context.Context,
 					_ client.Object,
 					_ ...client.DeleteOption,
-				) error {
-					return nil
-				},
-				patchOwnerReferencesFn: func(
-					context.Context,
-					client.Client,
-					client.Object,
 				) error {
 					return nil
 				},
@@ -467,6 +461,376 @@ func TestReconciler_reconcile(t *testing.T) {
 				Build()
 			status, err := tt.reconciler.reconcile(context.Background(), tt.project)
 			tt.assertions(t, status, tt.reconciler.client, err)
+		})
+	}
+}
+
+func TestReconciler_cleanupProject(t *testing.T) {
+	testCases := []struct {
+		name       string
+		project    *kargoapi.Project
+		reconciler *reconciler
+		assertions func(*testing.T, error)
+	}{
+		{
+			name: "error getting namespace",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-project",
+				},
+			},
+			reconciler: &reconciler{
+				getNamespaceFn: func(
+					context.Context,
+					types.NamespacedName,
+					client.Object,
+					...client.GetOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error getting namespace")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "namespace not found - success",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-project",
+				},
+			},
+			reconciler: &reconciler{
+				getNamespaceFn: func(
+					context.Context,
+					types.NamespacedName,
+					client.Object,
+					...client.GetOption,
+				) error {
+					return kubeerr.NewNotFound(schema.GroupResource{}, "test-project")
+				},
+				removeFinalizerFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "namespace not found - error removing project finalizer",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-project",
+				},
+			},
+			reconciler: &reconciler{
+				getNamespaceFn: func(
+					context.Context,
+					types.NamespacedName,
+					client.Object,
+					...client.GetOption,
+				) error {
+					return kubeerr.NewNotFound(schema.GroupResource{}, "test-project")
+				},
+				removeFinalizerFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) error {
+					return errors.New("finalizer removal failed")
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "failed to remove finalizer from project")
+				require.ErrorContains(t, err, "finalizer removal failed")
+			},
+		},
+		{
+			name: "keep namespace - success",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-project",
+					UID:  "project-uid",
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyKeepNamespace: kargoapi.AnnotationValueTrue,
+					},
+				},
+			},
+			reconciler: &reconciler{
+				getNamespaceFn: func(
+					_ context.Context,
+					_ types.NamespacedName,
+					obj client.Object,
+					_ ...client.GetOption,
+				) error {
+					ns, ok := obj.(*corev1.Namespace)
+					require.True(t, ok)
+					ns.Name = "test-project"
+					ns.OwnerReferences = []metav1.OwnerReference{
+						{UID: "project-uid"},
+						{UID: "other-uid"},
+					}
+					return nil
+				},
+				patchOwnerReferencesFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) error {
+					return nil
+				},
+				removeFinalizerFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "keep namespace - error patching owner references",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-project",
+					UID:  "project-uid",
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyKeepNamespace: kargoapi.AnnotationValueTrue,
+					},
+				},
+			},
+			reconciler: &reconciler{
+				getNamespaceFn: func(
+					_ context.Context,
+					_ types.NamespacedName,
+					obj client.Object,
+					_ ...client.GetOption,
+				) error {
+					ns, ok := obj.(*corev1.Namespace)
+					require.True(t, ok)
+					ns.Name = "test-project"
+					ns.OwnerReferences = []metav1.OwnerReference{
+						{UID: "project-uid"},
+					}
+					return nil
+				},
+				patchOwnerReferencesFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) error {
+					return errors.New("patch failed")
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "failed to patch namespace")
+				require.ErrorContains(t, err, "patch failed")
+			},
+		},
+		{
+			name: "keep namespace - no owner reference to remove",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-project",
+					UID:  "project-uid",
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyKeepNamespace: kargoapi.AnnotationValueTrue,
+					},
+				},
+			},
+			reconciler: &reconciler{
+				getNamespaceFn: func(
+					_ context.Context,
+					_ types.NamespacedName,
+					obj client.Object,
+					_ ...client.GetOption,
+				) error {
+					ns, ok := obj.(*corev1.Namespace)
+					require.True(t, ok)
+					ns.Name = "test-project"
+					ns.OwnerReferences = []metav1.OwnerReference{
+						{UID: "other-uid"},
+					}
+					return nil
+				},
+				removeFinalizerFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "delete namespace - success",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "test-project",
+					Annotations: map[string]string{},
+				},
+			},
+			reconciler: &reconciler{
+				getNamespaceFn: func(
+					_ context.Context,
+					_ types.NamespacedName,
+					obj client.Object,
+					_ ...client.GetOption,
+				) error {
+					ns, ok := obj.(*corev1.Namespace)
+					require.True(t, ok)
+					ns.Name = "test-project"
+					return nil
+				},
+				deleteNamespaceFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				removeFinalizerFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "delete namespace - namespace already deleted",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "test-project",
+					Annotations: map[string]string{},
+				},
+			},
+			reconciler: &reconciler{
+				getNamespaceFn: func(
+					_ context.Context,
+					_ types.NamespacedName,
+					obj client.Object,
+					_ ...client.GetOption,
+				) error {
+					ns, ok := obj.(*corev1.Namespace)
+					require.True(t, ok)
+					ns.Name = "test-project"
+					return nil
+				},
+				deleteNamespaceFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return kubeerr.NewNotFound(schema.GroupResource{}, "test-project")
+				},
+				removeFinalizerFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "delete namespace - error deleting",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "test-project",
+					Annotations: map[string]string{},
+				},
+			},
+			reconciler: &reconciler{
+				getNamespaceFn: func(
+					_ context.Context,
+					_ types.NamespacedName,
+					obj client.Object,
+					_ ...client.GetOption,
+				) error {
+					ns, ok := obj.(*corev1.Namespace)
+					require.True(t, ok)
+					ns.Name = "test-project"
+					return nil
+				},
+				deleteNamespaceFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return errors.New("delete failed")
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "failed to delete namespace")
+				require.ErrorContains(t, err, "delete failed")
+			},
+		},
+		{
+			name: "error removing project finalizer",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "test-project",
+					Annotations: map[string]string{},
+				},
+			},
+			reconciler: &reconciler{
+				getNamespaceFn: func(
+					_ context.Context,
+					_ types.NamespacedName,
+					obj client.Object,
+					_ ...client.GetOption,
+				) error {
+					ns, ok := obj.(*corev1.Namespace)
+					require.True(t, ok)
+					ns.Name = "test-project"
+					return nil
+				},
+				deleteNamespaceFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				removeFinalizerFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) error {
+					return errors.New("finalizer removal failed")
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "failed to remove finalizer from project")
+				require.ErrorContains(t, err, "finalizer removal failed")
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			err := testCase.reconciler.cleanupProject(context.Background(), testCase.project)
+			testCase.assertions(t, err)
 		})
 	}
 }
@@ -1529,6 +1893,131 @@ func TestMigrateSpecToProjectConfig(t *testing.T) {
 			r := &reconciler{client: cl}
 			migrated, err := r.migrateSpecToProjectConfig(context.Background(), tt.project)
 			tt.assertions(t, migrated, cl, err)
+		})
+	}
+}
+
+func Test_shouldKeepNamespace(t *testing.T) {
+	testCases := []struct {
+		name      string
+		project   *kargoapi.Project
+		namespace *corev1.Namespace
+		expected  bool
+	}{
+		{
+			name: "no keep annotation on either",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{},
+				},
+			},
+			namespace: &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "keep annotation on project",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyKeepNamespace: kargoapi.AnnotationValueTrue,
+					},
+				},
+			},
+			namespace: &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "keep annotation on namespace",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{},
+				},
+			},
+			namespace: &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyKeepNamespace: kargoapi.AnnotationValueTrue,
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "keep annotation on both",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyKeepNamespace: kargoapi.AnnotationValueTrue,
+					},
+				},
+			},
+			namespace: &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyKeepNamespace: kargoapi.AnnotationValueTrue,
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "false value on project",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyKeepNamespace: "false",
+					},
+				},
+			},
+			namespace: &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "nil annotations on project",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: nil,
+				},
+			},
+			namespace: &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "nil annotations on namespace",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{},
+				},
+			},
+			namespace: &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: nil,
+				},
+			},
+			expected: false,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			result := shouldKeepNamespace(testCase.project, testCase.namespace)
+			require.Equal(t, testCase.expected, result)
 		})
 	}
 }
