@@ -23,7 +23,7 @@ stringData:
 apiVersion: kargo.akuity.io/v1alpha1
 kind: ProjectConfig
 metadata:
-  name: my-project-config
+  name: kargo-demo
   namespace: kargo-demo
 spec:
   webhookReceivers: 
@@ -53,7 +53,7 @@ this URL using the following command:
 ```shell
   kubectl \
     get projectconfigs \
-    my-project-config \
+    kargo-demo \
     -n kargo-demo \
     -o=jsonpath='{.status.webhookReceivers}'
 ```
