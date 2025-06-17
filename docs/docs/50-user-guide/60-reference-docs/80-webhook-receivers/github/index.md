@@ -33,7 +33,7 @@ spec:
           name: gh-wh-secret
 ```
 
-Github will sign payloads using this secret via HMAC signature. Our webhook receiver will use this secret to verify the signature.
+Github will sign payloads using this `secret` via HMAC signature. Our webhook receiver will use this secret to verify the signature.
 
 :::note
 The following command can be used to generate a sufficiently secure secret:
@@ -63,15 +63,7 @@ this URL using the following command:
 
 When configuring on Github, you can configure either a webhook or an app. We will outline instructions for both, starting with webhooks.
 
-```shell
-  kubectl \
-    get secrets \
-    my-secret \
-    -n kargo-demo \
-    --template={{.data.secret}} | base64 -d
-```
-
-#### Webhooks
+### Webhooks
 
 1. Navigate to Settings
 
@@ -83,17 +75,17 @@ When configuring on Github, you can configure either a webhook or an app. We wil
 
 3. Create A New Webhook
 
-3.a Click the `Add Webhook` button.
+:::note
+The `Payload URL` will use the value we retrieved from the [Retrieving the Webhook URL](#retrieving-the-webhook-url) step.
 
-3.b For the `Payload URL`, we will use the value we retrieved from the [Retrieving the Webhook URL](#retrieving-the-webhook-url) step.
+The `Content type` field must be set to `application/json`.
 
-3.c Select `application/json` for the `Content type` field.
-
-3.d In the `Secret` field, we will input the value we assigned to the `secret` key in [Required Secrets for GitHub](#required-secrets-for-github).
+The `Secret` field must be set to the `secret` key from the [Github Webhook Receiver Configuration](#github-webhook-receiver-configuration) step.
+:::
 
 ![Step 3](/img/github/webhooks/4.png "Add Webhook")
 
-Leave `Just the push event` field checked unless you're
+Leave the `Just the push event` field checked unless you're
 looking to subscribe to `ghcr` events.
 
 :::note
@@ -123,7 +115,7 @@ Click on the `ping` event and ensure a successful response was returned.
 ![Step 9](/img/github/webhooks/9.png "Response")
 
 
-#### Apps
+### Apps
 
 It may be tedious to configure webhooks for each of your Github repositories. You can instead opt to configure a [Github App](https://docs.github.com/en/apps); allowing you to receive events from all or select repositories.
 
@@ -146,15 +138,15 @@ This will be in the bottom left-hand corner of the settings UI.
 
 4. Register a new Github App
 
-4.a Click the `New Github App` button.
-
-4.b Add a unique name and a homepage URL (this can be repo URL).
+Add a unique name and a homepage URL (this can be repo URL).
 
 ![Step 4](/img/github/apps/4.png "Register New App")
 
-For the `Webhook URL` field, we will use the value we retrieved from the [Retrieving the Webhook URL](#retrieving-the-webhook-url) step.
+:::note
+The `Webhook URL` requires the value we retrieved from the [Retrieving the Webhook URL](#retrieving-the-webhook-url) step.
 
-In the `Secret` field, we will input the value we assigned to the `secret` key in [Required Secrets for GitHub](#required-secrets-for-github).
+The `Secret` field must be set to the `secret` key from the [Github Webhook Receiver Configuration](#github-webhook-receiver-configuration) step.
+:::
 
 ![Step 5](/img/github/apps/5.png "Configure Webhook")
 
