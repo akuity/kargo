@@ -273,6 +273,25 @@ type SetValues struct {
 	Value string `json:"value"`
 }
 
+type HelmPullConfig struct {
+	// The path where the charts should be extracted to.
+	Path string `json:"path"`
+	// A list of charts to pull from repositories.
+	Charts []HelmPullChart `json:"charts"`
+}
+
+type HelmPullChart struct {
+	// The name of the chart to pull.
+	Name string `json:"name"`
+	// The repository URL where the chart is located. Supports both classic HTTP/S repositories
+	// and OCI repositories (using oci:// prefix).
+	Repository string `json:"repository"`
+	// The version of the chart to pull.
+	Version string `json:"version"`
+	// The output path where this specific chart should be extracted to, relative to the main path.
+	OutPath string `json:"outPath"`
+}
+
 type HelmUpdateChartConfig struct {
 	// A list of chart dependencies which should receive updates.
 	Charts []Chart `json:"charts"`

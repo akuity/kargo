@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HelmPullConfig",
+
+  "definitions": {
+    "helmPullChart": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the chart to pull.",
+          "minLength": 1
+        },
+        "repository": {
+          "type": "string",
+          "description": "The repository URL where the chart is located. Supports both classic HTTP/S repositories and OCI repositories (using oci:// prefix).",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "description": "The version of the chart to pull.",
+          "minLength": 1
+        },
+        "outPath": {
+          "type": "string",
+          "description": "The output path where this specific chart should be extracted to, relative to the main path.",
+          "minLength": 1
+        }
+      },
+      "required": ["name", "repository", "version", "outPath"]
+    }
+  },
+
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["path", "charts"],
+  "properties": {
+    "path": {
+      "type": "string",
+      "description": "The path where the charts should be extracted to.",
+      "minLength": 1
+    },
+    "charts": {
+      "type": "array",
+      "description": "A list of charts to pull from repositories.",
+      "items": {
+        "$ref": "#/definitions/helmPullChart"
+      },
+      "minItems": 1
+    }
+  }
+}

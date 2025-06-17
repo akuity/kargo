@@ -27,6 +27,7 @@ func Initialize(kargoClient, argocdClient client.Client, credsDB credentials.Dat
 			0,
 		),
 		newHelmChartUpdater(credsDB),
+		newHelmPullRunner(credsDB),
 		newFileCopier(),
 		newFileDeleter(),
 		newGitCloner(credsDB),

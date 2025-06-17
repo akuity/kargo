@@ -1,0 +1,37 @@
+# Example usage of the helm-pull promotion step
+# This step pulls Helm charts from repositories and extracts them to specified paths
+
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: example-stage
+  namespace: example-project
+spec:
+  promotionTemplate:
+    spec:
+      steps:
+      # Pull charts from repositories
+      - uses: helm-pull
+        config:
+          path: ./src/charts
+          charts:
+          # Pull from OCI repository
+          - name: my-chart
+            repository: oci://registry.example.com/charts/my-chart
+            version: ${{ chartFrom("oci://registry.example.com/charts/my-chart", warehouse("my-warehouse")).Version }}
+            outPath: my-chart
+          # Pull from classic HTTP repository
+          - name: another-chart
+            repository: https://charts.example.com
+            version: "1.2.3"
+            outPath: another-chart
+      
+      # After pulling, you can use helm-template to render the charts
+      - uses: helm-template
+        config:
+          path: ./src/charts/my-chart
+          outPath: ./manifests/my-chart.yaml
+          releaseName: my-release
+          namespace: production
+          valuesFiles:
+          - ./values/production.yaml
