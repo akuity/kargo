@@ -89,8 +89,8 @@ Leave the `Just the push event` field checked unless you're
 looking to subscribe to `ghcr` events.
 
 :::note
-	If you're looking to subscribe to `ghcr` events you should select `Let me select individual events` and then select `Packages`.
-  This requires that you have connected the repository and package. For more information on connecting repositories and packages refer to the [Github Docs here](https://docs.github.com/en/packages/learn-github-packages/connecting-a-repository-to-a-package).
+If you're looking to subscribe to `ghcr` events you should select `Let me select individual events` and then select `Packages`.
+This requires that you have connected the repository and package. For more information on connecting repositories and packages refer to the [Github Docs here](https://docs.github.com/en/packages/learn-github-packages/connecting-a-repository-to-a-package).
 :::
 
 ![Step 5](/img/github/webhooks/5.png "Event Subscription")
@@ -128,7 +128,7 @@ toggled by clicking your Github avatar.
 
 2. Navigate to Developer Settings
 
-This will be in the bottom left-hand corner of the settings UI.
+This will be in the bottom left-hand corner of the settings dashboard.
 
 ![Step 2](/img/github/apps/2.png "Developer Settings")
 
@@ -175,7 +175,7 @@ on the permissions you selected in the previous step.
 
 8. Verify
 
-In the Github Apps UI, navigate to `Advanced` in the left-hand side menu and click `Recent Deliveries`.
+In the Github Apps dashboard, navigate to `Advanced` in the left-hand side menu and click `Recent Deliveries`.
 
 ![Step 11](/img/github/apps/11.png "Recent Deliveries")
 
