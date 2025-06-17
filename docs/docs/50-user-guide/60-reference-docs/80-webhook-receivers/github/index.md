@@ -9,7 +9,7 @@ Github Enterprise Cloud, and GitHub Enterprise Server.
 
 ## Configuring the Receiver
 
-The Kargo GitHub webhook receiver will require a Kubernetes Secret. This Secret is required to contain a `secret` key in its data map. Github will sign payloads using this `secret` via HMAC signature. Our webhook receiver will use this secret to verify the signature.
+The Kargo GitHub webhook receiver will require a Kubernetes Secret. This Secret is required to contain a `secret` key in its data map. Github will sign payloads using this `secret` via HMAC signature. Our webhook receiver will use this `secret` to verify the signature.
 
 :::note
 The following command can be used to generate a sufficiently secure secret:
