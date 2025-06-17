@@ -113,11 +113,11 @@ export const versionColumn = (
     const onReset = () => filters?.onFilter({ ...filters.filters, version: {} });
 
     return (
-      <Flex style={{ padding: 16 }} vertical gap={16}>
+      <Flex style={{ padding: 16 }} vertical gap={16} className='min-w-[500px]'>
         <Flex align='center' gap={8}>
           <label>Source: </label>
           <Select
-            className='min-w-[580px] ml-auto'
+            className='min-w-[80%] ml-auto'
             placeholder='source'
             options={sourcesDropdownOptions}
             mode='multiple'
@@ -130,7 +130,7 @@ export const versionColumn = (
         <Flex align='center' gap={8}>
           <label>Commit: </label>
           <Select
-            className='min-w-[580px] ml-auto'
+            className='min-w-[80%] ml-auto'
             placeholder='commit'
             mode='multiple'
             maxTagCount={1}
@@ -146,7 +146,7 @@ export const versionColumn = (
         <Flex align='center' gap={8}>
           <label>Image: </label>
           <Select
-            className='min-w-[580px] ml-auto'
+            className='min-w-[80%] ml-auto'
             placeholder='image'
             options={[...cataloguedFreightVersions.images].map((image) => ({
               value: image,
@@ -162,7 +162,7 @@ export const versionColumn = (
         <Flex align='center' gap={8}>
           <label>Helm: </label>
           <Select
-            className='min-w-[580px] ml-auto'
+            className='min-w-[80%] ml-auto'
             placeholder='helm'
             mode='multiple'
             maxTagCount={4}
