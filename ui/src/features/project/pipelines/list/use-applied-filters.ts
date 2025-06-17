@@ -1,3 +1,4 @@
+import { format } from 'date-fns';
 import { useMemo } from 'react';
 
 import { useFilterContext } from './context/filter-context';
@@ -5,6 +6,7 @@ import { useFilterContext } from './context/filter-context';
 type AppliedFilter = {
   key: string;
   value: string;
+  onClear(): void;
 };
 
 export const useAppliedFilters = () => {
@@ -18,7 +20,8 @@ export const useAppliedFilters = () => {
     if (filters?.stage) {
       appliedFilters.push({
         key: 'stage',
-        value: filters.stage
+        value: filters.stage,
+        onClear: () => filterContext?.onFilter({ ...filterContext?.filters, stage: '' })
       });
     }
 
@@ -26,7 +29,12 @@ export const useAppliedFilters = () => {
       for (const phase of filters.phase) {
         appliedFilters.push({
           key: 'phase',
-          value: phase
+          value: phase,
+          onClear: () =>
+            filterContext?.onFilter({
+              ...filterContext?.filters,
+              phase: filterContext?.filters?.phase?.filter((p) => p !== phase)
+            })
         });
       }
     }
@@ -35,7 +43,12 @@ export const useAppliedFilters = () => {
       for (const health of filters.health) {
         appliedFilters.push({
           key: 'health',
-          value: health
+          value: health,
+          onClear: () =>
+            filterContext?.onFilter({
+              ...filterContext?.filters,
+              health: filterContext?.filters?.health?.filter((h) => h !== health)
+            })
         });
       }
     }
@@ -44,7 +57,15 @@ export const useAppliedFilters = () => {
       for (const source of filters.version.source) {
         appliedFilters.push({
           key: 'source',
-          value: source
+          value: source,
+          onClear: () =>
+            filterContext?.onFilter({
+              ...filterContext?.filters,
+              version: {
+                ...filterContext?.filters?.version,
+                source: filterContext?.filters?.version?.source?.filter((s) => s !== source)
+              }
+            })
         });
       }
     }
@@ -53,23 +74,28 @@ export const useAppliedFilters = () => {
       for (const version of filters.version.version) {
         appliedFilters.push({
           key: 'version',
-          value: version
+          value: version,
+          onClear: () =>
+            filterContext?.onFilter({
+              ...filterContext?.filters,
+              version: {
+                ...filterContext?.filters?.version,
+                version: filterContext?.filters?.version?.version?.filter((v) => v !== version)
+              }
+            })
         });
       }
     }
 
     if (filters?.lastPromotion?.length) {
       appliedFilters.push({
-        key: 'start time',
-        value: filters.lastPromotion[0].toString()
-      });
-
-      appliedFilters.push({
-        key: 'end time',
-        value: filters.lastPromotion[1].toString()
+        key: 'time',
+        value: `${format(filters.lastPromotion[0], 'LLL co, yy')} - ${format(filters.lastPromotion[1], 'LLL co, yy')}`,
+        onClear: () =>
+          filterContext?.onFilter({ ...filterContext?.filters, lastPromotion: undefined })
       });
     }
 
     return appliedFilters;
-  }, [filterContext?.filters]);
+  }, [filterContext?.filters, filterContext?.onFilter]);
 };

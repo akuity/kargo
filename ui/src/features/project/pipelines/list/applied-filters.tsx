@@ -18,7 +18,7 @@ export const AppliedFilters = (props: AppliedFiltersProps) => {
     <div className={classNames(props.className, 'space-y-2')}>
       <span className='text-xs mr-2 font-bold'>Applied filters: </span>
       {appliedFilters.map((appliedFilter, idx) => (
-        <Tag key={idx}>
+        <Tag key={idx} onClose={appliedFilter.onClear} closeIcon>
           {appliedFilter.key}: {appliedFilter.value}
         </Tag>
       ))}
