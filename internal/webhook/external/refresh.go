@@ -3,69 +3,77 @@ package external
 import (
 	"context"
 	"fmt"
+	"net/http"
 
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
+	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/logging"
 )
 
-type refreshResult struct {
-	successes int
-	failures  int
-}
-
+// refreshWarehouses refreshes all Warehouses in the given namespace that are
+// subscribed to the given repository URL. If the namespace is empty, all
+// Warehouses in the cluster subscribed to the given repository URL are
+// refreshed. Note: Callers are responsible for normalizing the provided
+// repository URL.
 func refreshWarehouses(
 	ctx context.Context,
+	w http.ResponseWriter,
 	c client.Client,
-	namespace string,
+	project string,
 	repoURL string,
-) (*refreshResult, error) {
+) {
 	logger := logging.LoggerFromContext(ctx)
-	var warehouses v1alpha1.WarehouseList
-	err := c.List(
-		ctx,
-		&warehouses,
-		client.InNamespace(namespace),
-		client.MatchingFields{
-			indexer.WarehousesBySubscribedURLsField: repoURL,
-		},
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list warehouses: %w", err)
+
+	listOpts := make([]client.ListOption, 1, 2)
+	listOpts[0] = client.MatchingFields{
+		indexer.WarehousesBySubscribedURLsField: repoURL,
+	}
+	if project != "" {
+		listOpts = append(listOpts, client.InNamespace(project))
 	}
 
-	logger.Debug("listed warehouses",
-		"count", len(warehouses.Items),
-	)
+	warehouses := v1alpha1.WarehouseList{}
+	if err := c.List(ctx, &warehouses, listOpts...); err != nil {
+		logger.Error(err, "error listing Warehouses")
+		xhttp.WriteErrorJSON(w, err)
+		return
+	}
+
+	logger.Debug("found Warehouses to refresh", "count", len(warehouses.Items))
 
 	var failures int
 	for _, wh := range warehouses.Items {
-		_, err = api.RefreshWarehouse(
-			ctx,
-			c,
-			types.NamespacedName{
-				Namespace: wh.GetNamespace(),
-				Name:      wh.GetName(),
-			},
-		)
-		if err != nil {
-			logger.Error(err, "failed to refresh warehouse",
-				"warehouse", wh.GetName(),
-				"error", err.Error(),
-			)
+		objKey := client.ObjectKeyFromObject(&wh)
+		if _, err := api.RefreshWarehouse(ctx, c, objKey); err != nil {
+			logger.Error(err, "error refreshing Warehouse", "objectKey", objKey)
 			failures++
 		} else {
-			logger.Debug("successfully patched annotations",
-				"warehouse", wh.GetName(),
-			)
+			logger.Debug("refreshed Warehouse", "objectKey", objKey)
 		}
 	}
-	return &refreshResult{
-		failures:  failures,
-		successes: len(warehouses.Items) - failures,
-	}, nil
+
+	if failures > 0 {
+		xhttp.WriteResponseJSON(
+			w,
+			http.StatusInternalServerError,
+			map[string]string{
+				"error": fmt.Sprintf("failed to refresh %d of %d warehouses",
+					failures,
+					len(warehouses.Items),
+				),
+			},
+		)
+		return
+	}
+	xhttp.WriteResponseJSON(
+		w,
+		http.StatusOK,
+		map[string]string{
+			"msg": fmt.Sprintf("refreshed %d warehouse(s)", len(warehouses.Items)),
+		},
+	)
 }

@@ -109,6 +109,11 @@ export const useReactFlowPipelineGraph = (
         source: edge.v,
         target: edge.w,
         animated: false,
+        type:
+          (graph.successors(edge.v)?.length || 0) > 1 ||
+          (graph.predecessors(edge.w)?.length || 0) > 1
+            ? 'step'
+            : '',
         sourceHandle: belongsToWarehouse,
         targetHandle: belongsToWarehouse,
         markerEnd: {

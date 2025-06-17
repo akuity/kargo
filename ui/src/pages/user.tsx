@@ -1,13 +1,13 @@
-import { faLink, faUserShield, IconDefinition } from '@fortawesome/free-solid-svg-icons';
+import { faQuestionCircle, IconDefinition } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Descriptions, Tag, Typography } from 'antd';
+import { Descriptions, Popover, Tag } from 'antd';
 import { DescriptionsItemType } from 'antd/es/descriptions';
 import { Navigate } from 'react-router-dom';
 
 import { redirectToQueryParam } from '@ui/config/auth';
 import { paths } from '@ui/config/paths';
 import { useAuthContext } from '@ui/features/auth/context/use-auth-context';
-import { isAdmin, isJWTDirty } from '@ui/features/auth/jwt-utils';
+import { claimsMapping, isJWTDirty } from '@ui/features/auth/jwt-utils';
 import { PageTitle } from '@ui/features/common';
 
 export const User = () => {
@@ -21,47 +21,16 @@ export const User = () => {
 
   const items: DescriptionsItemType[] = [];
 
-  if (isAdmin(JWTInfo)) {
+  for (const [key, value] of Object.entries(JWTInfo || {})) {
     items.push({
-      children: <User.Label icon={faUserShield} label='Admin' />,
-      labelStyle: {
-        display: 'none'
-      }
-    });
-  }
-
-  items.push({
-    label: <User.Label icon={faLink} label='Issuer' />,
-    children: JWTInfo?.iss
-  });
-
-  if (JWTInfo?.email) {
-    items.push({
-      label: <User.Label label='Email' />,
-      children: JWTInfo.email
-    });
-  }
-
-  if (JWTInfo?.preferred_username) {
-    items.push({
-      label: <User.Label label='Username' />,
-      children: JWTInfo.preferred_username
-    });
-  }
-
-  if (JWTInfo && Object.hasOwn(JWTInfo, 'groups')) {
-    items.push({
-      label: <User.Label label='Groups' />,
-      children:
-        (JWTInfo.groups?.length || 0) > 0 ? (
-          JWTInfo.groups?.map((group) => (
-            <Tag key={group} className='m-2'>
-              {group}
+      label: <User.Label label={key} />,
+      children: Array.isArray(value)
+        ? value.map((v) => (
+            <Tag key={v} className='m-2'>
+              {v}
             </Tag>
           ))
-        ) : (
-          <Typography.Text type='secondary'>No Groups</Typography.Text>
-        )
+        : `${value}`
     });
   }
 
@@ -69,13 +38,37 @@ export const User = () => {
     <div className='p-6'>
       <PageTitle title='User' />
 
-      <Descriptions layout='horizontal' column={1} className='w-5/12' bordered items={items} />
+      <Descriptions
+        title={
+          <>
+            Claims{' '}
+            <Popover content='Decoded from identity token issued by the identity provider'>
+              <FontAwesomeIcon icon={faQuestionCircle} className='text-xs' />
+            </Popover>
+          </>
+        }
+        layout='horizontal'
+        column={2}
+        bordered
+        items={items}
+      />
     </div>
   );
 };
 
-User.Label = (props: { icon?: IconDefinition; label: string }) => (
-  <>
-    {props.icon && <FontAwesomeIcon icon={props.icon} className='mr-2' />} {props.label}
-  </>
-);
+User.Label = (props: { icon?: IconDefinition; label: string }) => {
+  const claimHelpers = claimsMapping[props.label];
+  return (
+    <>
+      {props.icon && <FontAwesomeIcon icon={props.icon} className='mr-2' />} {props.label}{' '}
+      {!!claimHelpers && (
+        <>
+          ({claimHelpers.label}){' '}
+          <Popover content={claimHelpers.description}>
+            <FontAwesomeIcon icon={faQuestionCircle} className='text-xs' />
+          </Popover>
+        </>
+      )}
+    </>
+  );
+};

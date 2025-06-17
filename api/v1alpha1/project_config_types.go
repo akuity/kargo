@@ -5,15 +5,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	WebhookReceiverTypeGitHub = "GitHub"
-	// TODO(fuskovic): Add more receiver enum types(e.g. Dockerhub, Quay, Gitlab, etc...)
-)
-
-const (
-	WebhookReceiverSecretKeyGithub = "token"
-)
-
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Namespaced
 // +kubebuilder:subresource:status
@@ -43,32 +34,40 @@ type ProjectConfigSpec struct {
 	PromotionPolicies []PromotionPolicy `json:"promotionPolicies,omitempty" protobuf:"bytes,1,rep,name=promotionPolicies"`
 	// WebhookReceivers describes Project-specific webhook receivers used for
 	// processing events from various external platforms
-	//
-	// +kubebuilder:validation:MaxItems=5
-	// +kubebuilder:validation:XValidation:message="WebhookReceiverConfig must have a unique name",rule="self.all(i, size(self.filter(j, i.name == j.name)) == 1)"
 	WebhookReceivers []WebhookReceiverConfig `json:"webhookReceivers,omitempty" protobuf:"bytes,2,rep,name=receivers"`
 }
 
 // ProjectConfigStatus describes the current status of a ProjectConfig.
 type ProjectConfigStatus struct {
-	// Conditions contains the last observations of the Project Config's current state.
+	// Conditions contains the last observations of the Project Config's current
+	// state.
+	//
 	// +patchMergeKey=type
 	// +patchStrategy=merge
 	// +listType=map
 	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,1,rep,name=conditions"`
-	// WebhookReceivers describes the status of Project-specific webhook receivers.
-	WebhookReceivers []WebhookReceiver `json:"webhookReceivers,omitempty" protobuf:"bytes,2,rep,name=receivers"`
+	// ObservedGeneration represents the .metadata.generation that this
+	// ProjectConfig was reconciled against.
+	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,3,opt,name=observedGeneration"`
+	// LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+	// annotation that was handled by the controller. This field can be used to
+	// determine whether the request to refresh the resource has been handled.
+	// +optional
+	LastHandledRefresh string `json:"lastHandledRefresh,omitempty" protobuf:"bytes,4,opt,name=lastHandledRefresh"`
+	// WebhookReceivers describes the status of Project-specific webhook
+	// receivers.
+	WebhookReceivers []WebhookReceiverDetails `json:"webhookReceivers,omitempty" protobuf:"bytes,2,rep,name=receivers"`
 }
 
 // GetConditions implements the conditions.Getter interface.
-func (w *ProjectConfigStatus) GetConditions() []metav1.Condition {
-	return w.Conditions
+func (p *ProjectConfigStatus) GetConditions() []metav1.Condition {
+	return p.Conditions
 }
 
 // SetConditions implements the conditions.Setter interface.
-func (w *ProjectConfigStatus) SetConditions(conditions []metav1.Condition) {
-	w.Conditions = conditions
+func (p *ProjectConfigStatus) SetConditions(conditions []metav1.Condition) {
+	p.Conditions = conditions
 }
 
 // PromotionPolicy defines policies governing the promotion of Freight to a
@@ -99,31 +98,129 @@ type PromotionPolicy struct {
 // receiver.
 type WebhookReceiverConfig struct {
 	// Name is the name of the webhook receiver.
-	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
-	// GitHub contains the configuration for a webhook receiver that is compatible with
-	// GitHub payloads.
-	//
-	// TODO(fuskovic): Make this mutually exclusive with configs for other platforms.
 	//
 	// +kubebuilder:validation:Required
-	GitHub *GitHubWebhookReceiver `json:"github,omitempty" protobuf:"bytes,2,opt,name=github"`
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+	// +akuity:test-kubebuilder-pattern=KubernetesName
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	// Bitbucket contains the configuration for a webhook receiver that is
+	// compatible with Bitbucket payloads.
+	Bitbucket *BitbucketWebhookReceiverConfig `json:"bitbucket,omitempty" protobuf:"bytes,5,opt,name=bitbucket"`
+	// DockerHub contains the configuration for a webhook receiver that is
+	// compatible with DockerHub payloads.
+	DockerHub *DockerHubWebhookReceiverConfig `json:"dockerhub,omitempty" protobuf:"bytes,6,opt,name=dockerhub"`
+	// GitHub contains the configuration for a webhook receiver that is compatible
+	// with GitHub payloads.
+	GitHub *GitHubWebhookReceiverConfig `json:"github,omitempty" protobuf:"bytes,2,opt,name=github"`
+	// GitLab contains the configuration for a webhook receiver that is compatible
+	// with GitLab payloads.
+	GitLab *GitLabWebhookReceiverConfig `json:"gitlab,omitempty" protobuf:"bytes,3,opt,name=gitlab"`
+	// Quay contains the configuration for a webhook receiver that is compatible
+	// with Quay payloads.
+	Quay *QuayWebhookReceiverConfig `json:"quay,omitempty" protobuf:"bytes,4,opt,name=quay"`
 }
 
-// GitHubWebhookReceiver describes a webhook receiver that is compatible with
-// GitHub payloads.
-type GitHubWebhookReceiver struct {
-	// SecretRef contains a reference to a Secret in the same namespace as the ProjectConfig.
+// BitbucketWebhookReceiverConfig describes a webhook receiver that is
+// compatible with Bitbucket payloads.
+type BitbucketWebhookReceiverConfig struct {
+	// SecretRef contains a reference to a Secret. For Project-scoped webhook
+	// receivers, the referenced Secret must be in the same namespace as the
+	// ProjectConfig.
 	//
-	// The Secret is expected to contain a `token` key with the secret token configured for
-	// in GitHub for the webhook. For more information about this token, please refer to the
-	// GitHub documentation: https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
+	// For cluster-scoped webhook receivers, the referenced Secret must be in the
+	// designated "cluster Secrets" namespace.
 	//
-	// The value of the token key goes in the "Secret" field when registering a GitHub App or webhook in the GitHub UI.
+	// The Secret's data map is expected to contain a `secret` key whose
+	// value is the shared secret used to authenticate the webhook requests sent
+	// by Bitbucket. For more information please refer to the Bitbucket
+	// documentation:
+	//   https://support.atlassian.com/bitbucket-cloud/docs/manage-webhooks/
+	//
+	// +kubebuilder:validation:Required
 	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
 }
 
-// WebhookReceiver describes a path used to receive webhook events.
-type WebhookReceiver struct {
+// DockerHubWebhookReceiverConfig describes a webhook receiver that is
+// compatible with Docker Hub payloads.
+type DockerHubWebhookReceiverConfig struct {
+	// SecretRef contains a reference to a Secret. For Project-scoped webhook
+	// receivers, the referenced Secret must be in the same namespace as the
+	// ProjectConfig.
+	//
+	// The Secret's data map is expected to contain a `secret` key whose value
+	// does NOT need to be shared directly with Docker Hub when registering a
+	// webhook. It is used only by Kargo to create a complex, hard-to-guess URL,
+	// which implicitly serves as a shared secret. For more information about
+	// Docker Hub webhooks, please refer to the Docker documentation:
+	//   https://docs.docker.com/docker-hub/webhooks/
+	//
+	// +kubebuilder:validation:Required
+	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+}
+
+// GitHubWebhookReceiverConfig describes a webhook receiver that is compatible
+// with GitHub payloads.
+type GitHubWebhookReceiverConfig struct {
+	// SecretRef contains a reference to a Secret. For Project-scoped webhook
+	// receivers, the referenced Secret must be in the same namespace as the
+	// ProjectConfig.
+	//
+	// For cluster-scoped webhook receivers, the referenced Secret must be in the
+	// designated "cluster Secrets" namespace.
+	//
+	// The Secret's data map is expected to contain a `secret` key whose value is
+	// the shared secret used to authenticate the webhook requests sent by GitHub.
+	// For more information please refer to GitHub documentation:
+	//   https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
+	//
+	// +kubebuilder:validation:Required
+	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+}
+
+// GitLabWebhookReceiverConfig describes a webhook receiver that is compatible
+// with GitLab payloads.
+type GitLabWebhookReceiverConfig struct {
+	// SecretRef contains a reference to a Secret. For Project-scoped webhook
+	// receivers, the referenced Secret must be in the same namespace as the
+	// ProjectConfig.
+	//
+	// For cluster-scoped webhook receivers, the referenced Secret must be in the
+	// designated "cluster Secrets" namespace.
+	//
+	// The secret is expected to contain a `secret-token` key containing the
+	// shared secret specified when registering the webhook in GitLab. For more
+	// information about this token, please refer to the GitLab documentation:
+	//   https://docs.gitlab.com/user/project/integrations/webhooks/
+	//
+	// +kubebuilder:validation:Required
+	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+}
+
+// QuayWebhookReceiverConfig describes a webhook receiver that is compatible
+// with Quay.io payloads.
+type QuayWebhookReceiverConfig struct {
+	// SecretRef contains a reference to a Secret. For Project-scoped webhook
+	// receivers, the referenced Secret must be in the same namespace as the
+	// ProjectConfig.
+	//
+	// For cluster-scoped webhook receivers, the referenced Secret must be in the
+	// designated "cluster Secrets" namespace.
+	//
+	// The Secret's data map is expected to contain a `secret` key whose value
+	// does NOT need to be shared directly with Quay when registering a
+	// webhook. It is used only by Kargo to create a complex, hard-to-guess URL,
+	// which implicitly serves as a shared secret. For more information about
+	// Quay webhooks, please refer to the Quay documentation:
+	//   https://docs.quay.io/guides/notifications.html
+	//
+	// +kubebuilder:validation:Required
+	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+}
+
+// WebhookReceiverDetails encapsulates the details of a webhook receiver.
+type WebhookReceiverDetails struct {
 	// Name is the name of the webhook receiver.
 	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
 	// Path is the path to the receiver's webhook endpoint.

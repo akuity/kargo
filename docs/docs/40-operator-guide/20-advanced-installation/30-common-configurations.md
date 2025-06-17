@@ -410,6 +410,36 @@ For more information, refer to the
 
 ## Resource Management
 
+### Tuning Warehouse Reconciliation Intervals
+
+If your cluster contains many `Warehouse` resources, which periodically poll
+artifact repositories, or if developers have
+[configured any of those `Warehouse`s poorly](../../50-user-guide/20-how-to-guides/30-working-with-warehouses.md#performance-considerations),
+you may wish to reduce the frequency with which all `Warehouse`s execute their
+artifact discovery processes (i.e. You may wish to _increase_ the minimum
+polling interval.)
+
+:::info
+Developers can tune this interval on individual `Warehouse` resources, but the
+effective interval for any `Warehouse` will be the _greater_ of any specified
+there and the minimum specified here. i.e. Developers cannot configure a
+`Warehouse`'s artifact discovery process to run more frequently than you permit.
+:::
+
+:::note
+If you do this, you will increase the average time required for every
+`Warehouse` to notice new artifacts. You can compensate for this by configuring
+`Warehouse` artifact discovery processes to be
+[triggered by webhooks](../35-cluster-configuration.md#triggering-artifact-discovery-using-webhooks).
+:::
+
+```yaml
+controller:
+  reconcilers:
+    warehouses:
+      minReconciliationInterval: 15m
+```
+
 ### Tuning Concurrent Reconciliation Limits
 
 By default, Kargo will reconcile up to four resources of the same kind

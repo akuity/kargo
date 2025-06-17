@@ -1,8 +1,11 @@
 package v1alpha1
 
 import (
+	"encoding/json"
+	"fmt"
 	"time"
 
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -108,6 +111,10 @@ type FreightStatus struct {
 	// might wish to promote a piece of Freight to a given Stage without
 	// transiting the entire pipeline.
 	ApprovedFor map[string]ApprovedStage `json:"approvedFor,omitempty" protobuf:"bytes,2,rep,name=approvedFor" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// Metadata is a map of arbitrary metadata associated with the Freight.
+	// This is useful for storing additional information about the Freight
+	// or Promotion that can be shared across steps or stages.
+	Metadata map[string]apiextensionsv1.JSON `json:"metadata,omitempty" protobuf:"bytes,4,rep,name=metadata" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 }
 
 // IsCurrentlyIn returns whether the Freight is currently in the specified
@@ -189,11 +196,12 @@ func (f *FreightStatus) AddCurrentStage(stage string, since time.Time) {
 // necessary.
 func (f *FreightStatus) RemoveCurrentStage(stage string) {
 	if record, in := f.CurrentlyIn[stage]; in {
-		if _, verified := f.VerifiedIn[stage]; verified {
+		if record.Since != nil {
 			soak := time.Since(record.Since.Time)
-			if soak > f.VerifiedIn[stage].LongestCompletedSoak.Duration {
-				f.VerifiedIn[stage] = VerifiedStage{
-					LongestCompletedSoak: &metav1.Duration{Duration: soak},
+			if vi, verified := f.VerifiedIn[stage]; verified {
+				if vi.LongestCompletedSoak == nil || soak > vi.LongestCompletedSoak.Duration {
+					vi.LongestCompletedSoak = &metav1.Duration{Duration: soak}
+					f.VerifiedIn[stage] = vi
 				}
 			}
 		}
@@ -223,6 +231,40 @@ func (f *FreightStatus) AddApprovedStage(stage string, approvedAt time.Time) {
 		}
 		f.ApprovedFor[stage] = record
 	}
+}
+
+// UpsertMetadata inserts or updates the given key in Freight status Metadata
+func (f *FreightStatus) UpsertMetadata(key string, data any) error {
+	if len(f.Metadata) == 0 {
+		f.Metadata = make(map[string]apiextensionsv1.JSON)
+	}
+
+	if key == "" {
+		return fmt.Errorf("key must not be empty")
+	}
+
+	dataBytes, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	f.Metadata[key] = apiextensionsv1.JSON{
+		Raw: dataBytes,
+	}
+	return nil
+}
+
+// GetMetadata retrieves the data associated with the given key from Freight status Metadata
+func (f *FreightStatus) GetMetadata(key string, data any) (bool, error) {
+	dataBytes, ok := f.Metadata[key]
+
+	if !ok {
+		return false, nil
+	}
+
+	if err := json.Unmarshal(dataBytes.Raw, data); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // CurrentStage reflects a Stage's current use of Freight.

@@ -69,7 +69,7 @@ func Test_gitCommitter_validate(t *testing.T) {
 		{
 			name: "author email is not specified",
 			config: promotion.Config{ // If author is specified, email must be specified
-				"author":  promotion.Config{
+				"author": promotion.Config{
 					"name": "Tony Stark",
 				},
 				"path":    "/tmp/foo",
@@ -96,7 +96,7 @@ func Test_gitCommitter_validate(t *testing.T) {
 		{
 			name: "author name is not specified",
 			config: promotion.Config{ // If author is specified, name must be specified
-				"author":  promotion.Config{
+				"author": promotion.Config{
 					"email": "example@example.com",
 				},
 				"path":    "/tmp/foo",
@@ -110,7 +110,7 @@ func Test_gitCommitter_validate(t *testing.T) {
 			name: "author name is empty string",
 			config: promotion.Config{
 				"author": promotion.Config{
-					"name": "",
+					"name":  "",
 					"email": "example@example.com",
 				},
 				"path":    "/tmp/foo",
@@ -150,8 +150,8 @@ func Test_gitCommitter_validate(t *testing.T) {
 			name: "valid kitchen sink",
 			config: promotion.Config{
 				"author": promotion.Config{
-					"email": "tony@starkindustries.com",
-					"name":  "Tony Stark",
+					"email":      "tony@starkindustries.com",
+					"name":       "Tony Stark",
 					"signingKey": "valid-signing-key",
 				},
 				"path":    "/tmp/foo",
@@ -254,4 +254,23 @@ func Test_gitCommitter_run(t *testing.T) {
 	lastCommitMsg, err := workTree.CommitMessage("HEAD")
 	require.NoError(t, err)
 	require.Equal(t, "Initial commit\n", lastCommitMsg)
+
+	// Run the step again to confirm a Skipped status is returned when no new
+	// commit is actually made.
+	res, err = runner.run(
+		context.Background(),
+		stepCtx,
+		builtin.GitCommitConfig{
+			Path:    "master",
+			Message: "No-Op commit",
+		},
+	)
+	require.NoError(t, err)
+	require.Equal(t, kargoapi.PromotionStepStatusSkipped, res.Status)
+
+	// Despite the Skipped status, step output should still contain the commit ID
+	// from the head of the branch.
+	actualCommit, ok = res.Output[stateKeyCommit]
+	require.True(t, ok)
+	require.Equal(t, expectedCommit, actualCommit)
 }

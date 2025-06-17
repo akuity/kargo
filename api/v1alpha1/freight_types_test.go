@@ -1,10 +1,13 @@
 package v1alpha1
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -394,6 +397,24 @@ func TestFreightStatus_RemoveCurrentStage(t *testing.T) {
 		require.GreaterOrEqual(t, record.LongestCompletedSoak.Duration, 2*time.Hour)
 		require.LessOrEqual(t, record.LongestCompletedSoak.Duration, 2*time.Hour+time.Second)
 	})
+	t.Run("verified; no previous longest soak", func(t *testing.T) {
+		status := FreightStatus{
+			CurrentlyIn: map[string]CurrentStage{
+				testStage: {Since: &metav1.Time{Time: time.Now().Add(-time.Hour)}},
+			},
+			VerifiedIn: map[string]VerifiedStage{
+				testStage: {LongestCompletedSoak: nil}, // No previous soak time
+			},
+		}
+		status.RemoveCurrentStage(testStage)
+		require.NotContains(t, status.CurrentlyIn, testStage)
+		record, verified := status.VerifiedIn[testStage]
+		require.True(t, verified)
+		require.NotNil(t, record.LongestCompletedSoak)
+		// Expect the soak time to be approximately 1 hour
+		require.GreaterOrEqual(t, record.LongestCompletedSoak.Duration, time.Hour)
+		require.LessOrEqual(t, record.LongestCompletedSoak.Duration, time.Hour+time.Second)
+	})
 }
 
 func TestFreightStatus_AddVerifiedStage(t *testing.T) {
@@ -446,5 +467,150 @@ func TestFreightStatus_AddApprovedStage(t *testing.T) {
 		record, approved := status.ApprovedFor[testStage]
 		require.True(t, approved)
 		require.Equal(t, now, record.ApprovedAt.Time)
+	})
+}
+
+func TestFreightStatus_UpsertAndGetMetadata_Integration(t *testing.T) {
+	tests := []struct {
+		name string
+		data any
+	}{
+		{
+			name: "string value",
+			data: "test-string",
+		},
+		{
+			name: "integer value",
+			data: 42,
+		},
+		{
+			name: "boolean value",
+			data: true,
+		},
+		{
+			name: "complex struct",
+			data: struct {
+				Name    string            `json:"name"`
+				Age     int               `json:"age"`
+				Active  bool              `json:"active"`
+				Tags    []string          `json:"tags"`
+				Configs map[string]string `json:"configs"`
+			}{
+				Name:   "test-user",
+				Age:    30,
+				Active: true,
+				Tags:   []string{"admin", "developer"},
+				Configs: map[string]string{
+					"theme": "dark",
+					"lang":  "en",
+				},
+			},
+		},
+		{
+			name: "slice of integers",
+			data: []int{1, 2, 3, 4, 5},
+		},
+		{
+			name: "nested map",
+			data: map[string]any{
+				"level1": map[string]any{
+					"level2": map[string]string{
+						"key": "value",
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			status := FreightStatus{}
+			key := "integration-test-key"
+
+			// Test Upsert
+			err1 := status.UpsertMetadata(key, tt.data)
+			require.NoError(t, err1)
+
+			// Verify metadata was stored
+			assert.NotNil(t, status.Metadata)
+			assert.Contains(t, status.Metadata, key)
+
+			// Test Get with correct type
+			switch expected := tt.data.(type) {
+			case string:
+				var result string
+				found, err := status.GetMetadata(key, &result)
+				assert.True(t, found)
+				assert.NoError(t, err)
+				assert.Equal(t, expected, result)
+
+			case int:
+				var result int
+				found, err := status.GetMetadata(key, &result)
+				assert.True(t, found)
+				assert.NoError(t, err)
+				assert.Equal(t, expected, result)
+
+			case bool:
+				var result bool
+				found, err := status.GetMetadata(key, &result)
+				assert.True(t, found)
+				assert.NoError(t, err)
+				assert.Equal(t, expected, result)
+
+			case []int:
+				var result []int
+				found, err := status.GetMetadata(key, &result)
+				assert.True(t, found)
+				assert.NoError(t, err)
+				assert.Equal(t, expected, result)
+
+			default:
+				// For complex types, use any and compare JSON representation
+				var result any
+				found, err := status.GetMetadata(key, &result)
+				assert.True(t, found)
+				assert.NoError(t, err)
+
+				// Compare by marshaling both to JSON
+				expectedJSON, err := json.Marshal(expected)
+				require.NoError(t, err)
+				resultJSON, err := json.Marshal(result)
+				require.NoError(t, err)
+				assert.JSONEq(t, string(expectedJSON), string(resultJSON))
+			}
+
+			// Test updating the same key
+			newData := "updated-value"
+			err := status.UpsertMetadata(key, newData)
+			require.NoError(t, err)
+
+			var updatedResult string
+			found, err := status.GetMetadata(key, &updatedResult)
+			assert.True(t, found)
+			assert.NoError(t, err)
+			assert.Equal(t, newData, updatedResult)
+		})
+	}
+}
+
+func TestFreightStatus_MetadataEdgeCases(t *testing.T) {
+	t.Run("empty key", func(t *testing.T) {
+		status := FreightStatus{}
+		err := status.UpsertMetadata("", "value")
+		assert.Error(t, err)
+	})
+
+	t.Run("nil target for Get", func(t *testing.T) {
+		status := FreightStatus{
+			Metadata: map[string]apiextensionsv1.JSON{
+				"test-key": {Raw: []byte(`"test-value"`)},
+			},
+		}
+
+		// This should cause a panic or error during unmarshal
+		found, err := status.GetMetadata("test-key", nil)
+		assert.False(t, found)
+		assert.Error(t, err)
 	})
 }

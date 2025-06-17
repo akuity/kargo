@@ -70,9 +70,9 @@ func (w *webhook) Default(_ context.Context, obj runtime.Object) error {
 		if warehouse.Labels == nil {
 			warehouse.Labels = make(map[string]string, 1)
 		}
-		warehouse.Labels[kargoapi.ShardLabelKey] = warehouse.Spec.Shard
+		warehouse.Labels[kargoapi.LabelKeyShard] = warehouse.Spec.Shard
 	} else {
-		delete(warehouse.Labels, kargoapi.ShardLabelKey)
+		delete(warehouse.Labels, kargoapi.LabelKeyShard)
 	}
 
 	return nil

@@ -59,9 +59,9 @@ const Body = () => {
   const onSubmit = useCallback(
     () =>
       createResourceMutation.mutate({
-        manifest: new TextEncoder().encode(getWarehouseManifest())
+        manifest: new TextEncoder().encode(tab === 'yaml' ? yaml : getWarehouseManifest())
       }),
-    [getWarehouseManifest, createResourceMutation.mutate]
+    [getWarehouseManifest, createResourceMutation.mutate, tab, yaml]
   );
 
   return (

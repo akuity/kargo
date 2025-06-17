@@ -17,8 +17,12 @@ func (s *server) GetProjectConfig(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.GetProjectConfigRequest],
 ) (*connect.Response[svcv1alpha1.GetProjectConfigResponse], error) {
-	name := req.Msg.GetName()
-	if err := validateFieldNotEmpty("name", name); err != nil {
+	project := req.Msg.GetProject()
+	if err := validateFieldNotEmpty("project", project); err != nil {
+		return nil, err
+	}
+
+	if err := s.validateProjectExists(ctx, project); err != nil {
 		return nil, err
 	}
 
@@ -31,9 +35,9 @@ func (s *server) GetProjectConfig(
 			"kind":       "ProjectConfig",
 		},
 	}
-	if err := s.client.Get(ctx, client.ObjectKey{Name: name, Namespace: name}, &u); err != nil {
+	if err := s.client.Get(ctx, client.ObjectKey{Name: project, Namespace: project}, &u); err != nil {
 		if client.IgnoreNotFound(err) == nil {
-			err = fmt.Errorf("ProjectConfig %q not found", name)
+			err = fmt.Errorf("ProjectConfig %q not found", project)
 			return nil, connect.NewError(connect.CodeNotFound, err)
 		}
 		return nil, err

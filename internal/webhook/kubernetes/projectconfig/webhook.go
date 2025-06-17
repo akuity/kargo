@@ -18,6 +18,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/pattern"
+	"github.com/akuity/kargo/internal/webhook/kubernetes/external"
 )
 
 var (
@@ -135,10 +136,21 @@ func (w *webhook) validateSpec(
 	f *field.Path,
 	spec kargoapi.ProjectConfigSpec,
 ) field.ErrorList {
-	return w.validatePromotionPolicies(
+	var fieldErrs field.ErrorList
+	if errs := w.validatePromotionPolicies(
 		f.Child("promotionPolicies"),
 		spec.PromotionPolicies,
-	)
+	); errs != nil {
+		fieldErrs = append(fieldErrs, errs...)
+	}
+
+	if errs := external.ValidateWebhookReceivers(
+		f.Child("webhookReceivers"),
+		spec.WebhookReceivers,
+	); errs != nil {
+		fieldErrs = append(fieldErrs, errs...)
+	}
+	return fieldErrs
 }
 
 func (w *webhook) validatePromotionPolicies(
@@ -223,14 +235,14 @@ func (w *webhook) ensureProjectNamespace(ctx context.Context, meta metav1.Object
 		)
 	}
 
-	v, ok := ns.Labels[kargoapi.ProjectLabelKey]
-	if !ok || v != kargoapi.LabelTrueValue {
+	v, ok := ns.Labels[kargoapi.LabelKeyProject]
+	if !ok || v != kargoapi.LabelValueTrue {
 		return apierrors.NewForbidden(
 			projectConfigGroupResource,
 			meta.Name,
 			fmt.Errorf(
 				"namespace %q does not belong to Kargo project (missing %q label)",
-				meta.Namespace, kargoapi.ProjectLabelKey,
+				meta.Namespace, kargoapi.LabelKeyProject,
 			),
 		)
 	}

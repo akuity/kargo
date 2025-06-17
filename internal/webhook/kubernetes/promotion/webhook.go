@@ -205,9 +205,9 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 		if promo.Labels == nil {
 			promo.Labels = make(map[string]string, 1)
 		}
-		promo.Labels[kargoapi.ShardLabelKey] = stage.Spec.Shard
+		promo.Labels[kargoapi.LabelKeyShard] = stage.Spec.Shard
 	} else {
-		delete(promo.Labels, kargoapi.ShardLabelKey)
+		delete(promo.Labels, kargoapi.LabelKeyShard)
 	}
 
 	ownerRef := metav1.NewControllerRef(stage, kargoapi.GroupVersion.WithKind("Stage"))

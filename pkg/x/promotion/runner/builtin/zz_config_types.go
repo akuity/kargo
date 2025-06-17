@@ -131,6 +131,9 @@ type GitCloneConfigAuthor struct {
 }
 
 type Checkout struct {
+	// Optional alias for this checkout. If provided, it will be used as the key in the
+	// 'commits' output map.
+	As string `json:"as,omitempty"`
 	// The branch to checkout. Mutually exclusive with 'commit' and 'tag'. If none of these are
 	// specified, the default branch is checked out.
 	Branch string `json:"branch,omitempty"`
@@ -408,6 +411,20 @@ type Image struct {
 	NewName string `json:"newName,omitempty"`
 	// Tag of the image to set in the Kustomization file. Mutually exclusive with 'digest'.
 	Tag string `json:"tag,omitempty"`
+}
+
+type UntarConfig struct {
+	// Ignore is a (multiline) string of glob patterns to ignore when extracting files. It
+	// accepts the same syntax as .gitignore files.
+	Ignore string `json:"ignore,omitempty"`
+	// InPath is the path to the tar file to extract.
+	InPath string `json:"inPath"`
+	// OutPath is the path to the destination directory where contents will be extracted. The
+	// outPath content will be overriden if it already exists.
+	OutPath string `json:"outPath"`
+	// StripComponents is the number of leading components to strip from file names in the
+	// archive.
+	StripComponents *int64 `json:"stripComponents,omitempty"`
 }
 
 type YAMLParseConfig struct {

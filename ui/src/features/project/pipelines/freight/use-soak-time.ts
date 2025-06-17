@@ -1,11 +1,10 @@
-import { Duration } from 'date-fns';
+import { Duration, milliseconds } from 'date-fns';
 import { useMemo } from 'react';
 
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import { useDictionaryContext } from '@ui/features/project/pipelines/context/dictionary-context';
 import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 
-import { durationToSeconds } from './duration-to-seconds';
 import { getSoakTime } from './get-soak-time';
 
 /**
@@ -74,7 +73,7 @@ const soakTimeForPromotingStage = (payload: {
 
     if (soakTimesForFreight.length > 0) {
       const maxSoakTime = soakTimesForFreight.reduce((max, curr) =>
-        durationToSeconds(curr) > durationToSeconds(max) ? curr : max
+        milliseconds(curr) > milliseconds(max) ? curr : max
       );
 
       if (!payload.soakTimesByFreight[freightName]) {
@@ -84,7 +83,7 @@ const soakTimeForPromotingStage = (payload: {
         // that means we are looking for "downstream" promotion mode
         const existingSoakTime = payload.soakTimesByFreight[freightName];
         payload.soakTimesByFreight[freightName] =
-          durationToSeconds(existingSoakTime) > durationToSeconds(maxSoakTime)
+          milliseconds(existingSoakTime) > milliseconds(maxSoakTime)
             ? existingSoakTime
             : maxSoakTime;
       }

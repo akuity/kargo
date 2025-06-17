@@ -25,7 +25,7 @@ func ValidateProject(ctx context.Context, kc client.Client, project string) erro
 		}
 		return fmt.Errorf("get project: %w", err)
 	}
-	if ns.GetLabels()[kargoapi.ProjectLabelKey] != kargoapi.LabelTrueValue {
+	if ns.GetLabels()[kargoapi.LabelKeyProject] != kargoapi.LabelValueTrue {
 		return field.Invalid(field.NewPath("metadata", "namespace"),
 			project, fmt.Sprintf("namespace %q is not a project", project))
 	}

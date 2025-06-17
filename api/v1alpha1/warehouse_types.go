@@ -1,6 +1,10 @@
 package v1alpha1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 // +kubebuilder:validation:Enum={Lexical,NewestFromBranch,NewestTag,SemVer}
 type CommitSelectionStrategy string
@@ -37,6 +41,27 @@ type Warehouse struct {
 	Spec WarehouseSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
 	// Status describes the Warehouse's most recently observed state.
 	Status WarehouseStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
+}
+
+// GetInterval calculates and returns interval time remaining until the next
+// requeue should occur. If the interval has passed, it returns a short duration
+// to ensure the Warehouse is requeued promptly.
+func (w *Warehouse) GetInterval(minInterval time.Duration) time.Duration {
+	effectiveInterval := w.Spec.Interval.Duration
+	if effectiveInterval < minInterval {
+		effectiveInterval = minInterval
+	}
+
+	if w.Status.DiscoveredArtifacts == nil || w.Status.DiscoveredArtifacts.DiscoveredAt.IsZero() {
+		return effectiveInterval
+	}
+
+	if interval := w.Status.DiscoveredArtifacts.DiscoveredAt.
+		Add(effectiveInterval).
+		Sub(metav1.Now().Time); interval > 0 {
+		return interval
+	}
+	return 100 * time.Millisecond
 }
 
 func (w *Warehouse) GetStatus() *WarehouseStatus {
@@ -126,7 +151,7 @@ type GitSubscription struct {
 	//   by the Branch field or the default branch if none is specified. This is
 	//   the default strategy.
 	//
-	// - "SemVer": Selects the commit referenced by the the semantically greatest
+	// - "SemVer": Selects the commit referenced by the semantically greatest
 	//   tag. The SemverConstraint field can optionally be used to narrow the set
 	//   of tags eligible for selection.
 	//
@@ -188,6 +213,52 @@ type GitSubscription struct {
 	//
 	// +kubebuilder:validation:Optional
 	IgnoreTags []string `json:"ignoreTags,omitempty" protobuf:"bytes,6,rep,name=ignoreTags"`
+	// ExpressionFilter is an expression that can optionally be used to limit
+	// the commits or tags that are considered in determining the newest commit
+	// of interest based on their metadata.
+	//
+	// For commit-based strategies (NewestFromBranch), the filter applies to
+	// commits and has access to commit metadata variables.
+	// For tag-based strategies (Lexical, NewestTag, SemVer), the filter applies
+	// to tags and has access to tag metadata variables. The filter is applied
+	// after AllowTags, IgnoreTags, and SemverConstraint fields.
+	//
+	// The expression should be a valid expr-lang expression that evaluates to
+	// true or false. When the expression evaluates to true, the commit/tag is
+	// included in the set that is considered. When the expression evaluates to
+	// false, the commit/tag is excluded.
+	//
+	// Available variables depend on the CommitSelectionStrategy:
+	//
+	// For NewestFromBranch (commit filtering):
+	//   - `id`: The ID (sha) of the commit.
+	//   - `commitDate`: The commit date of the commit.
+	//   - `author`: The author of the commit message, in the format "Name <email>".
+	//   - `committer`: The person who committed the commit, in the format
+	//	   "Name <email>".
+	//   - `subject`: The subject (first line) of the commit message.
+	//
+	// For Lexical, NewestTag, SemVer (tag filtering):
+	//   - `tag`: The name of the tag.
+	//   - `id`: The ID (sha) of the commit associated with the tag.
+	//   - `creatorDate`: The creation date of an annotated tag, or the commit
+	//		date of a lightweight tag.
+	//   - `author`: The author of the commit message associated with the tag,
+	//	   in the format "Name <email>".
+	//   - `committer`: The person who committed the commit associated with the
+	//	   tag, in the format "Name <email>".
+	//   - `subject`: The subject (first line) of the commit message associated
+	//	   with the tag.
+	//	 - `tagger`: The person who created the tag, in the format "Name <email>".
+	//	   Only available for annotated tags.
+	//	 - `annotation`: The subject (first line) of the tag annotation. Only
+	//	   available for annotated tags.
+	//
+	// Refer to the expr-lang documentation for more details on syntax and
+	// capabilities of the expression language: https://expr-lang.org.
+	//
+	// +kubebuilder:validation:Optional
+	ExpressionFilter string `json:"expressionFilter,omitempty" protobuf:"bytes,12,opt,name=expressionFilter"`
 	// InsecureSkipTLSVerify specifies whether certificate verification errors
 	// should be ignored when connecting to the repository. This should be enabled
 	// only with great caution.

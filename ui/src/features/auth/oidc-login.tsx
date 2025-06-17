@@ -62,18 +62,7 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
       issuerUrl &&
       discoveryRequest(issuerUrl, {
         [allowInsecureRequests]: shouldAllowHttpRequest()
-      })
-        .then((response) => processDiscoveryResponse(issuerUrl, response))
-        .then((response) => {
-          if (
-            response.code_challenge_methods_supported?.includes('S256') !== true &&
-            !issuerUrl.toString().startsWith('https://login.microsoftonline.com')
-          ) {
-            throw new Error('OIDC config fetch error');
-          }
-
-          return response;
-        }),
+      }).then((response) => processDiscoveryResponse(issuerUrl, response)),
     enabled: !!issuerUrl
   });
 
@@ -110,7 +99,7 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
       const code_verifier = sessionStorage.getItem(codeVerifierKey);
       const searchParams = new URLSearchParams(location.search);
 
-      if (!as || !code_verifier || !searchParams.get('code') || !searchParams.get('code')) {
+      if (!as || !code_verifier || !searchParams.get('code')) {
         return;
       }
 

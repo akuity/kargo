@@ -189,12 +189,9 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
             {filteredFreights.map((freight) => {
               const freightSoakTime = soakTime?.[freight?.metadata?.name || ''];
 
-              const promotionEligible =
-                Boolean(
-                  promotionEligibleFreight?.find(
-                    (f) => f?.metadata?.name === freight?.metadata?.name
-                  )
-                ) && !freightSoakTime;
+              const promotionEligible = Boolean(
+                promotionEligibleFreight?.find((f) => f?.metadata?.name === freight?.metadata?.name)
+              );
 
               return (
                 <FreightCard

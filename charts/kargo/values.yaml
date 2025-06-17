@@ -3,37 +3,6 @@
 ## This is a YAML-formatted file.
 ## Declare variables to be passed into your templates.
 
-## @section Global Parameters
-global:
-  ## @param global.env Environment variables to add to all Kargo pods.
-  env: []
-  #  - name: ENV_NAME
-  #    value: value
-  ## @param global.envFrom Environment variables to add to all Kargo pods from ConfigMaps or Secrets.
-  envFrom: []
-  #  - configMapRef:
-  #      name: config-map-name
-  #  - secretRef:
-  #      name: secret-name
-  ## @param global.nodeSelector Default node selector for all Kargo pods.
-  nodeSelector: {}
-
-  ## @param global.labels Labels to add to all resources.
-  labels: {}
-  ## @param global.annotations Annotations to add to all resources.
-  annotations: {}
-  ## @param global.podLabels Labels to add to all pods.
-  podLabels: {}
-  ## @param global.podAnnotations Annotations to add to pods.
-  podAnnotations: {}
-
-  ## @param global.tolerations Default tolerations for all Kargo pods.
-  tolerations: []
-  ## @param global.affinity Default affinity for all Kargo pods.
-  affinity: {}
-  ## @param global.securityContext Default security context for all Kargo pods.
-  securityContext: {}
-
 ## @section Image Parameters
 image:
   ## @param image.repository Image repository of Kargo
@@ -46,12 +15,48 @@ image:
   pullSecrets: []
   # - name: regcred
 
-## @section RBAC
-rbac:
-  ## @param rbac.installClusterRoles Indicates if `ClusterRoles` should be installed.
-  installClusterRoles: true
-  ## @param rbac.installClusterRoleBindings Indicates if `ClusterRoleBindings` should be installed.
-  installClusterRoleBindings: true
+## @section Global Parameters
+global:
+  ## @param global.clusterSecretsNamespace Indicates a namespace where Secrets associated with cluster-scoped resources can be located.
+  clusterSecretsNamespace: kargo-cluster-secrets
+
+  ## @param global.labels Labels to add to all resources.
+  labels: {}
+  ## @param global.annotations Annotations to add to all resources.
+  annotations: {}
+  ## @param global.podLabels Labels to add to all pods.
+  podLabels: {}
+  ## @param global.podAnnotations Annotations to add to pods.
+  podAnnotations: {}
+
+  ## ServiceAccount global settings
+  serviceAccount:
+    ## @param global.serviceAccount.labels Global ServiceAccount labels.
+    labels: {}
+    ## @param global.serviceAccount.annotations Global ServiceAccount annotations.
+    annotations: {}
+    # foo: bar
+    # another: value
+
+  ## @param global.env Environment variables to add to all Kargo pods.
+  env: []
+  #  - name: ENV_NAME
+  #    value: value
+  ## @param global.envFrom Environment variables to add to all Kargo pods from ConfigMaps or Secrets.
+  envFrom: []
+  #  - configMapRef:
+  #      name: config-map-name
+  #  - secretRef:
+  #      name: secret-name
+  
+  ## @param global.nodeSelector Default node selector for all Kargo pods.
+  nodeSelector: {}
+  ## @param global.tolerations Default tolerations for all Kargo pods.
+  tolerations: []
+  ## @param global.affinity Default affinity for all Kargo pods.
+  affinity: {}
+  ## @param global.securityContext Default security context for all Kargo pods.
+  securityContext: {}
 
 ## @section CRDs
 crds:
@@ -59,6 +64,18 @@ crds:
   install: true
   ## @param crds.keep Indicates if Custom Resource Definitions should be kept when a release is uninstalled.
   keep: true
+
+## @section RBAC
+rbac:
+  ## @param rbac.installClusterRoles Indicates if `ClusterRoles` should be installed.
+  installClusterRoles: true
+  ## @param rbac.installClusterRoleBindings Indicates if `ClusterRoleBindings` should be installed.
+  installClusterRoleBindings: true
+
+## @section Webhooks
+webhooks:
+  ## @param webhooks.register Whether to create `ValidatingWebhookConfiguration` and `MutatingWebhookConfiguration` resources.
+  register: true
 
 ## @section KubeConfigs
 ## @descriptionStart
@@ -90,95 +107,21 @@ kubeconfigSecrets: {}
 api:
   ## @param api.enabled Whether the API server is enabled.
   enabled: true
+
   ## @param api.replicas The number of API server pods.
   replicas: 1
+
   ## @param api.host The domain name where Kargo's API server will be accessible. When applicable, this is used for generation of an Ingress resource, certificates, and the OpenID Connect issuer and callback URLs. Note: The value in this field MAY include a port number and MUST NOT specify the protocol (http vs https), which is automatically inferred from other configuration options.
   host: localhost
+
   ## @param api.logLevel The log level for the API server.
   logLevel: INFO
-
-  ## @param api.labels Labels to add to the api resources. Merges with `global.labels`, allowing you to override or add to the global labels.
-  labels: {}
-  ## @param api.annotations Annotations to add to the api resources. Merges with `global.annotations`, allowing you to override or add to the global annotations.
-  annotations: {}
-  ## @param api.podLabels Optional labels to add to pods. Merges with `global.podLabels`, allowing you to override or add to the global labels.
-  podLabels: {}
-  ## @param api.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
-  podAnnotations: {}
 
   ## @param api.secretManagementEnabled Specifies whether Secret management is enabled. This affects the API server's ability to manage repository credentials and other Project-level Secrets, such as those used by AnalysisRuns for verification purposes. If using GitOps to manage Kargo Projects declaratively, the API's Secret management capabilities are not needed and can be disabled to effectively reduce the API server's attackable surface.
   secretManagementEnabled: true
 
-  ## @param api.resources Resources limits and requests for the api containers.
-  resources: {}
-    # limits:
-    #   cpu: 100m
-    #   memory: 128Mi
-    # requests:
-    #   cpu: 100m
-    #   memory: 128Mi
-  ## @param api.nodeSelector Node selector for api pods. Defaults to `global.nodeSelector`.
-  nodeSelector: {}
-  ## @param api.tolerations Tolerations for api pods. Defaults to `global.tolerations`.
-  tolerations: []
-  ## @param api.affinity Specifies pod affinity for api pods. Defaults to `global.affinity`.
-  affinity: {}
-  ## @param api.securityContext Security context for api pods. Defaults to `global.securityContext`.
-  securityContext: {}
-  cabundle:
-    ## @param api.cabundle.configMapName Specifies the name of an optional ConfigMap containing CA certs that is managed "out of band." Values in the ConfigMap named here should each contain a single PEM-encoded CA cert. If secretName is also defined, it will take precedence over this field.
-    configMapName: ""
-    ## @param api.cabundle.secretName Specifies the name of an optional Secret containing CA certs that is managed "out of band." Values in the Secret named here should each contain a single PEM-encoded CA cert. If defined, the value of this field takes precedence over any in configMapName.
-    secretName: ""
-  ## @param api.env Environment variables to add to API server pods.
-  env: []
-  #  - name: ENV_NAME
-  #    value: value
-  ## @param api.envFrom Environment variables to add to API server pods from ConfigMaps or Secrets.
-  envFrom: []
-  #  - configMapRef:
-  #      name: config-map-name
-  #  - secretRef:
-  #      name: secret-name
-
-  probes:
-    ## @param api.probes.enabled Whether liveness and readiness probes should be included in the API server deployment. It is sometimes advantageous to disable these during local development.
-    enabled: true
-
-  tls:
-    ## @param api.tls.enabled Whether to enable TLS directly on the API server. This is helpful if you do not intend to use an ingress controller or if you require TLS end-to-end. All other settings in this section EXCEPT `terminatedUpstream` will be ignored when this is set to `false`.
-    enabled: true
-    ## @param api.tls.selfSignedCert Whether to generate a self-signed certificate for use by the API server. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-api-cert` **must** be provided in the same namespace as Kargo.
-    selfSignedCert: true
-    ## @param api.tls.terminatedUpstream Whether TLS is terminated upstream, i.e. a load balancer, reverse-proxy, or an Ingress controller using a single wildcard cert is terminating it. Setting this to `true` forces all API server URLs to use HTTPS even if the Ingress (if applicable) or API server itself are listening for plain HTTP requests.
-    terminatedUpstream: false
-
   ## @param api.permissiveCORSPolicyEnabled Whether to enable a permissive CORS (Cross Origin Resource Sharing) policy. This is sometimes advantageous during local development, but otherwise, should generally be left disabled.
   permissiveCORSPolicyEnabled: false
-
-  ingress:
-    ## @param api.ingress.enabled Whether to enable ingress by creating an Ingress resource. By default, this is disabled. Enabling ingress is advanced usage.
-    enabled: false
-    ## @param api.ingress.annotations Annotations specified by your ingress controller to customize the behavior of the Ingress resource.
-    annotations: {}
-      # kubernetes.io/ingress.class: nginx
-    ## @param api.ingress.ingressClassName If implemented by your ingress controller, specifies the ingress class. If your ingress controller does not support this, use the `kubernetes.io/ingress.class` annotation instead.
-    ingressClassName:
-    tls:
-      ## @param api.ingress.tls.enabled Whether to associate a certificate with the Ingress resource.
-      enabled: true
-      ## @param api.ingress.tls.selfSignedCert Whether to generate a self-signed certificate for use with the API server's Ingress resource. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-api-ingress-cert` **must** be provided in the same namespace as Kargo. The value in this field has no effect if `api.ingress.tls.enabled` is `false`.
-      selfSignedCert: true
-    ## @param api.ingress.pathType You may want to use `Prefix` for some controllers (like AWS LoadBalancer Ingress controller), which don't support `/` as wildcard path when pathType is set to `ImplementationSpecific`
-    pathType: ImplementationSpecific
-
-  service:
-    ## @param api.service.type If you're not going to use an ingress controller, you may want to change this value to `LoadBalancer` for production deployments. If running locally, you may want to change it to `NodePort` OR leave it as `ClusterIP` and use `kubectl port-forward` to map a port on the local network interface to the service.
-    type: ClusterIP
-    ## @param api.service.nodePort [nullable] Host port the `Service` will be mapped to when `type` is either `NodePort` or `LoadBalancer`. If not specified, Kubernetes chooses.
-    # nodePort:
-    ## @param api.service.annotations Annotations to add to the API server's service. Merges with `global.annotations`, allowing you to override or add to the global annotations.
-    annotations: {}
 
   secret:
     ## @param api.secret.name Specifies the name of an existing Secret which contains the `ADMIN_ACCOUNT_PASSWORD_HASH` and `ADMIN_ACCOUNT_TOKEN_SIGNING_KEY` values. By setting this, the Secret will **not** be generated by Helm.
@@ -202,6 +145,7 @@ api:
     ## Note also: The PKCE code challenge used by Kargo is SHA256 hashed.
     ## For more information about PKCE, please visit: https://oauth.net/2/pkce/
     enabled: false
+
     ## @param api.oidc.issuerURL The issuer URL for the identity provider. If Dex is enabled, this value will be ignored and the issuer URL will be automatically configured. If Dex is not enabled, this should be set to the issuer URL provided to you by your identity provider.
     issuerURL:
     ## @param api.oidc.clientID The client ID for the OIDC client. If Dex is enabled, this value will be ignored and the client ID will be automatically configured. If Dex is not enabled, this should be set to the client ID provided to you by your identity provider.
@@ -211,6 +155,7 @@ api:
     ## @param api.oidc.additionalScopes The additional scopes to send to the OIDC provider. This should be set to the scopes you wish to be provided to your identity provider from clients of Kargo, the scopes openid, profile and email are always requested and don't need to be added, this value is intended for any additional ones you require.
     additionalScopes:
     - groups
+
     ## @param api.oidc.usernameClaim The claim to use as the username for the user.
     usernameClaim: email
 
@@ -257,42 +202,9 @@ api:
         pullSecrets: []
         # - name: regcred
 
-      ## @param api.oidc.dex.env Environment variables to add to Dex server pods. This is convenient for cases where api.oidc.dex.connectors needs to reference environment variables from a Secret that is managed "out of band" with a secret management solution such as Sealed Secrets.
-      env: []
-      # - name: CLIENT_SECRET
-      #   valueFrom:
-      #     secretKeyRef:
-      #       name: github-dex
-      #       key: dex.github.clientSecret
-      ## @param api.oidc.dex.envFrom Environment variables to add to Dex server pods from ConfigMaps or Secrets. This is especially convenient for cases where api.oidc.dex.connectors needs to reference environment variables from a Secret that is managed "out of band" with a secret management solution such as Sealed Secrets.
-      envFrom: []
-      #  - configMapRef:
-      #      name: config-map-name
-      #  - secretRef:
-      #      name: secret-name
-
-      ## @param api.oidc.dex.volumes Add additional volumes to Dex pods. This is convenient for cases where api.oidc.dex.connectors needs to reference mounted data from a Secret that is managed "out of band" with a secret management solution such as Sealed Secrets.
-      volumes: []
-      # - name: google-json
-      #   secret:
-      #     defaultMode: 420
-      #     secretName: kargo-google-groups-json
-
-      ## @param api.oidc.dex.volumeMounts Add additional volume mounts to Dex pods. This is convenient for cases where api.oidc.dex.connectors needs to reference mounted data from a Secret that is managed "out of band" with a secret management solution such as Sealed Secrets.
-      volumeMounts:
-      # - mountPath: /tmp/oidc
-      #   name: google-json
-      #   readOnly: true
-
-      probes:
-        ## @param api.oidc.dex.probes.enabled Whether liveness and readiness probes should be included in the Dex server deployment. It is sometimes advantageous to disable these during local development.
-        enabled: true
-
-      tls:
-        ## @param api.oidc.dex.tls.selfSignedCert Whether to generate a self-signed certificate for use with Dex. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-dex-server-cert` **must** be provided in the same namespace as Kargo. There is no provision for running Dex without TLS.
-        selfSignedCert: true
       ## @param api.oidc.dex.skipApprovalScreen Whether to skip Dex's own approval screen. Since upstream identity providers will already request user consent, this second approval screen from Dex can be both superfluous and confusing.
       skipApprovalScreen: true
+      
       ## @param api.oidc.dex.connectors Configure [Dex connectors](https://dexidp.io/docs/connectors/) to one or more upstream identity providers.
       connectors: []
       # - id: mock
@@ -324,6 +236,41 @@ api:
       #     redirectURI: <http(s)>://<api.host>/dex/callback
       #     tenant: <tenant ID>
 
+      ## ServiceAccount specific settings
+      serviceAccount:
+        ## @param api.oidc.dex.serviceAccount.labels Additional labels to add to the Dex server ServiceAccount.
+        labels: {}
+        ## @param api.oidc.dex.serviceAccount.annotations Additional annotations to add to the Dex server ServiceAccount.
+        annotations: {}
+        # foo: bar
+        # another: value
+
+      ## @param api.oidc.dex.env Environment variables to add to Dex server pods. This is convenient for cases where api.oidc.dex.connectors needs to reference environment variables from a Secret that is managed "out of band" with a secret management solution such as Sealed Secrets.
+      env: []
+      # - name: CLIENT_SECRET
+      #   valueFrom:
+      #     secretKeyRef:
+      #       name: github-dex
+      #       key: dex.github.clientSecret
+      ## @param api.oidc.dex.envFrom Environment variables to add to Dex server pods from ConfigMaps or Secrets. This is especially convenient for cases where api.oidc.dex.connectors needs to reference environment variables from a Secret that is managed "out of band" with a secret management solution such as Sealed Secrets.
+      envFrom: []
+      #  - configMapRef:
+      #      name: config-map-name
+      #  - secretRef:
+      #      name: secret-name
+
+      ## @param api.oidc.dex.volumes Add additional volumes to Dex pods. This is convenient for cases where api.oidc.dex.connectors needs to reference mounted data from a Secret that is managed "out of band" with a secret management solution such as Sealed Secrets.
+      volumes: []
+      # - name: google-json
+      #   secret:
+      #     defaultMode: 420
+      #     secretName: kargo-google-groups-json
+      ## @param api.oidc.dex.volumeMounts Add additional volume mounts to Dex pods. This is convenient for cases where api.oidc.dex.connectors needs to reference mounted data from a Secret that is managed "out of band" with a secret management solution such as Sealed Secrets.
+      volumeMounts:
+      # - mountPath: /tmp/oidc
+      #   name: google-json
+      #   readOnly: true
+
       ## @param api.oidc.dex.resources Resources limits and requests for the Dex server containers.
       resources: {}
         # limits:
@@ -332,6 +279,7 @@ api:
         # requests:
         #   cpu: 100m
         #   memory: 128Mi
+
       ## @param api.oidc.dex.nodeSelector Node selector for Dex server pods. Defaults to `global.nodeSelector`.
       nodeSelector: {}
       ## @param api.oidc.dex.tolerations Tolerations for Dex server pods. Defaults to `global.tolerations`.
@@ -342,6 +290,14 @@ api:
       annotations: {}
       ## @param api.oidc.dex.securityContext Security context for Dex server pods. Defaults to `global.securityContext`.
       securityContext: {}
+
+      probes:
+        ## @param api.oidc.dex.probes.enabled Whether liveness and readiness probes should be included in the Dex server deployment. It is sometimes advantageous to disable these during local development.
+        enabled: true
+
+      tls:
+        ## @param api.oidc.dex.tls.selfSignedCert Whether to generate a self-signed certificate for use with Dex. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-dex-server-cert` **must** be provided in the same namespace as Kargo. There is no provision for running Dex without TLS.
+        selfSignedCert: true      
 
   argocd:
     ## @param api.argocd.urls Mapping of Argo CD shards names to URLs to support deep links to Argo CD URLs. If sharding is not used, map the empty string to the single Argo CD URL.
@@ -367,34 +323,107 @@ api:
       ## @param api.rollouts.logs.httpHeaders Specifies HTTP headers to include in the HTTP GET request for log retrieval. These are typically used for authentication. The header values support expressions offset by ${{ }}, with the same variables documented for urlTemplate pre-defined and injected with values.
       httpHeaders: {}
 
+
+  ## @param api.labels Labels to add to the api resources. Merges with `global.labels`, allowing you to override or add to the global labels.
+  labels: {}
+  ## @param api.annotations Annotations to add to the api resources. Merges with `global.annotations`, allowing you to override or add to the global annotations.
+  annotations: {}
+  ## @param api.podLabels Optional labels to add to pods. Merges with `global.podLabels`, allowing you to override or add to the global labels.
+  podLabels: {}
+  ## @param api.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
+  podAnnotations: {}
+
+  ## ServiceAccount specific settings
+  serviceAccount:
+    ## @param api.serviceAccount.labels Additional labels to add to the API server ServiceAccount.
+    labels: {}
+    ## @param api.serviceAccount.annotations Additional annotations to add to the API server ServiceAccount.
+    annotations: {}
+    # foo: bar
+    # another: value
+
+  ## @param api.env Environment variables to add to API server pods.
+  env: []
+  #  - name: ENV_NAME
+  #    value: value
+  ## @param api.envFrom Environment variables to add to API server pods from ConfigMaps or Secrets.
+  envFrom: []
+  #  - configMapRef:
+  #      name: config-map-name
+  #  - secretRef:
+  #      name: secret-name
+
+  ## @param api.resources Resources limits and requests for the api containers.
+  resources: {}
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+
+  ## @param api.nodeSelector Node selector for api pods. Defaults to `global.nodeSelector`.
+  nodeSelector: {}
+  ## @param api.tolerations Tolerations for api pods. Defaults to `global.tolerations`.
+  tolerations: []
+  ## @param api.affinity Specifies pod affinity for api pods. Defaults to `global.affinity`.
+  affinity: {}
+  ## @param api.securityContext Security context for api pods. Defaults to `global.securityContext`.
+  securityContext: {}
+
+  cabundle:
+    ## @param api.cabundle.configMapName Specifies the name of an optional ConfigMap containing CA certs that is managed "out of band." Values in the ConfigMap named here should each contain a single PEM-encoded CA cert. If secretName is also defined, it will take precedence over this field.
+    configMapName: ""
+    ## @param api.cabundle.secretName Specifies the name of an optional Secret containing CA certs that is managed "out of band." Values in the Secret named here should each contain a single PEM-encoded CA cert. If defined, the value of this field takes precedence over any in configMapName.
+    secretName: ""
+
+  probes:
+    ## @param api.probes.enabled Whether liveness and readiness probes should be included in the API server deployment. It is sometimes advantageous to disable these during local development.
+    enabled: true
+
+  tls:
+    ## @param api.tls.enabled Whether to enable TLS directly on the API server. This is helpful if you do not intend to use an ingress controller or if you require TLS end-to-end. All other settings in this section EXCEPT `terminatedUpstream` will be ignored when this is set to `false`.
+    enabled: true
+    ## @param api.tls.selfSignedCert Whether to generate a self-signed certificate for use by the API server. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-api-cert` **must** be provided in the same namespace as Kargo.
+    selfSignedCert: true
+    ## @param api.tls.terminatedUpstream Whether TLS is terminated upstream, i.e. a load balancer, reverse-proxy, or an Ingress controller using a single wildcard cert is terminating it. Setting this to `true` forces all API server URLs to use HTTPS even if the Ingress (if applicable) or API server itself are listening for plain HTTP requests.
+    terminatedUpstream: false
+
+  ingress:
+    ## @param api.ingress.enabled Whether to enable ingress by creating an Ingress resource. By default, this is disabled. Enabling ingress is advanced usage.
+    enabled: false
+    ## @param api.ingress.annotations Annotations specified by your ingress controller to customize the behavior of the Ingress resource.
+    annotations: {}
+      # kubernetes.io/ingress.class: nginx
+    ## @param api.ingress.ingressClassName If implemented by your ingress controller, specifies the ingress class. If your ingress controller does not support this, use the `kubernetes.io/ingress.class` annotation instead.
+    ingressClassName:
+    tls:
+      ## @param api.ingress.tls.enabled Whether to associate a certificate with the Ingress resource.
+      enabled: true
+      ## @param api.ingress.tls.selfSignedCert Whether to generate a self-signed certificate for use with the API server's Ingress resource. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-api-ingress-cert` **must** be provided in the same namespace as Kargo. The value in this field has no effect if `api.ingress.tls.enabled` is `false`.
+      selfSignedCert: true
+    ## @param api.ingress.pathType You may want to use `Prefix` for some controllers (like AWS LoadBalancer Ingress controller), which don't support `/` as wildcard path when pathType is set to `ImplementationSpecific`
+    pathType: ImplementationSpecific
+
+  service:
+    ## @param api.service.type If you're not going to use an ingress controller, you may want to change this value to `LoadBalancer` for production deployments. If running locally, you may want to change it to `NodePort` OR leave it as `ClusterIP` and use `kubectl port-forward` to map a port on the local network interface to the service.
+    type: ClusterIP
+    ## @param api.service.nodePort [nullable] Host port the `Service` will be mapped to when `type` is either `NodePort` or `LoadBalancer`. If not specified, Kubernetes chooses.
+    # nodePort:
+    ## @param api.service.annotations Annotations to add to the API server's service. Merges with `global.annotations`, allowing you to override or add to the global annotations.
+    annotations: {}
+
 ## @section Controller
 ## All settings for the controller component
 controller:
   ## @param controller.enabled Whether the controller is enabled.
   enabled: true
 
-  ## @param controller.labels Labels to add to the api resources. Merges with `global.labels`, allowing you to override or add to the global labels.
-  labels: {}
-  ## @param controller.annotations Annotations to add to the api resources. Merges with `global.annotations`, allowing you to override or add to the global annotations.
-  annotations: {}
-  ## @param controller.podLabels Optional labels to add to pods. Merges with `global.podLabels`, allowing you to override or add to the global labels.
-  podLabels: {}
-  ## @param controller.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
-  podAnnotations: {}
-  ## @param controller.initContainers Optional init containers to add to the controller pods. This is rendered as the literal YAML.
-  initContainers: []
-    # - name: download-tools
-    #   image: alpine:3.8
-    #   command: [ sh, -c ]
-    #   args:
-    #    - ls
+  ## @param controller.logLevel The log level for the controller.
+  logLevel: INFO
 
-  ## All settings relating to the service account for the controller
-  serviceAccount:
-    ## @param controller.serviceAccount.iamRole Specifies the ARN of an AWS IAM role to be used by the controller in an IRSA-enabled EKS cluster.
-    iamRole: ""
-    ## @param controller.serviceAccount.clusterWideSecretReadingEnabled Specifies whether the controller's ServiceAccount should be granted read permissions to Secrets CLUSTER-WIDE in the Kargo control plane's cluster. Enabling this is highly discouraged and you do so at your own peril. When this is NOT enabled, the Kargo management controller will dynamically expand and contract the controller's permissions to read Secrets on a Project-by-Project basis.
-    clusterWideSecretReadingEnabled: false
+  ## @param controller.shardName [nullable] Set a shard name only if you are running multiple controllers backed by a single underlying control plane. Setting a shard name will cause this controller to operate **only** on resources with a matching shard name. Leaving the shard name undefined will designate this controller as the default controller that is responsible exclusively for resources that are **not** assigned to a specific shard. Leaving this undefined is the correct choice when you are not using sharding at all. It is also the correct setting if you are using sharding and want to designate a controller as the default for handling resources not assigned to a specific shard. In most cases, this setting should simply be left alone.
+  # shardName:
 
   ## All settings relating to shared credentials (used across multiple kargo projects)
   globalCredentials:
@@ -420,6 +449,8 @@ controller:
     warehouses:
       ## @param controller.reconcilers.warehouses.maxConcurrentReconciles optionally overrides the maximum number of Warehouse resources the controller can reconcile concurrently.
       maxConcurrentReconciles:
+      ## @param controller.reconcilers.warehouses.minReconciliationInterval optionally sets the minimum reconciliation interval for Warehouse resources. Accepts duration format (e.g., "5m", "1h", "30s"). If a Warehouse specifies an interval lower than this minimum, the minimum value will be enforced instead. If not set, no minimum is enforced.
+      minReconciliationInterval: "5m0s"
 
   gitClient:
     ## @param controller.gitClient.name Specifies the name of the Kargo controller (used when authoring Git commits).
@@ -432,18 +463,6 @@ controller:
       name: ""
       ## @param controller.gitClient.signingKeySecret.type Specifies the type of the signing key. The currently supported and default option is `gpg`.
       type: ""
-
-  ## @param controller.securityContext Security context for controller pods. Defaults to `global.securityContext`.
-  securityContext: {}
-
-  cabundle:
-    ## @param controller.cabundle.configMapName Specifies the name of an optional ConfigMap containing CA certs that is managed "out of band." Values in the ConfigMap named here should each contain a single PEM-encoded CA cert. If secretName is also defined, it will take precedence over this field.
-    configMapName: ""
-    ## @param controller.cabundle.secretName Specifies the name of an optional Secret containing CA certs that is managed "out of band." Values in the Secret named here should each contain a single PEM-encoded CA cert. If defined, the value of this field takes precedence over any in configMapName.
-    secretName: ""
-
-  ## @param controller.shardName [nullable] Set a shard name only if you are running multiple controllers backed by a single underlying control plane. Setting a shard name will cause this controller to operate **only** on resources with a matching shard name. Leaving the shard name undefined will designate this controller as the default controller that is responsible exclusively for resources that are **not** assigned to a specific shard. Leaving this undefined is the correct choice when you are not using sharding at all. It is also the correct setting if you are using sharding and want to designate a controller as the default for handling resources not assigned to a specific shard. In most cases, this setting should simply be left alone.
-  # shardName:
 
   ## All settings relating to the Argo CD control plane this controller might
   ## integrate with.
@@ -463,27 +482,36 @@ controller:
     ## @param controller.rollouts.controllerInstanceID Specifies a cluster on which Jobs corresponding to an AnalysisRun (used for Freight/Stage verification purposes) will be executed. This is useful in cases where the cluster hosting the Kargo control plane is not a suitable environment for executing user-defined logic. Kargo will use this as the value of the rgo-rollouts.argoproj.io/controller-instance-id label when creating AnalysisRuns. When this is left empty/undefined, no such label will be added to AnalysisRuns.
     controllerInstanceID: ""
 
-  ## @param controller.logLevel The log level for the controller.
-  logLevel: INFO
+  ## @param controller.labels Labels to add to the api resources. Merges with `global.labels`, allowing you to override or add to the global labels.
+  labels: {}
+  ## @param controller.annotations Annotations to add to the api resources. Merges with `global.annotations`, allowing you to override or add to the global annotations.
+  annotations: {}
+  ## @param controller.podLabels Optional labels to add to pods. Merges with `global.podLabels`, allowing you to override or add to the global labels.
+  podLabels: {}
+  ## @param controller.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
+  podAnnotations: {}
 
-  ## @param controller.resources Resources limits and requests for the controller containers.
-  resources: {}
-    # limits:
-    #   cpu: 100m
-    #   memory: 128Mi
-    # requests:
-    #   cpu: 100m
-    #   memory: 128Mi
-  ## @param controller.volumes Volumes for the controller pods.
-  volumes: []
-  ## @param controller.volumeMounts Volume mounts for the controller pods.
-  volumeMounts: []
-  ## @param controller.nodeSelector Node selector for controller pods. Defaults to `global.nodeSelector`.
-  nodeSelector: {}
-  ## @param controller.tolerations Tolerations for controller pods. Defaults to `global.tolerations`.
-  tolerations: []
-  ## @param controller.affinity Specifies pod affinity for controller pods. Defaults to `global.affinity`.
-  affinity: {}
+  ## All settings relating to the service account for the controller
+  serviceAccount:
+    ## @param controller.serviceAccount.iamRole Specifies the ARN of an AWS IAM role to be used by the controller in an IRSA-enabled EKS cluster.
+    iamRole: ""
+    ## @param controller.serviceAccount.labels Additional labels to add to the controller ServiceAccount.
+    labels: {}
+    ## @param controller.serviceAccount.annotations Additional annotations to add to the controller ServiceAccount.
+    annotations: {}
+    # foo: bar
+    # another: value
+    ## @param controller.serviceAccount.clusterWideSecretReadingEnabled Specifies whether the controller's ServiceAccount should be granted read permissions to Secrets CLUSTER-WIDE in the Kargo control plane's cluster. Enabling this is highly discouraged and you do so at your own peril. When this is NOT enabled, the Kargo management controller will dynamically expand and contract the controller's permissions to read Secrets on a Project-by-Project basis.
+    clusterWideSecretReadingEnabled: false
+
+  ## @param controller.initContainers Optional init containers to add to the controller pods. This is rendered as the literal YAML.
+  initContainers: []
+    # - name: download-tools
+    #   image: alpine:3.8
+    #   command: [ sh, -c ]
+    #   args:
+    #    - ls
+
   ## @param controller.env Environment variables to add to controller pods.
   env: []
   #  - name: ENV_NAME
@@ -495,14 +523,114 @@ controller:
   #  - secretRef:
   #      name: secret-name
 
+  ## @param controller.volumes Volumes for the controller pods.
+  volumes: []
+  ## @param controller.volumeMounts Volume mounts for the controller pods.
+  volumeMounts: []
+
+  ## @param controller.resources Resources limits and requests for the controller containers.
+  resources: {}
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+
+  ## @param controller.nodeSelector Node selector for controller pods. Defaults to `global.nodeSelector`.
+  nodeSelector: {}
+  ## @param controller.tolerations Tolerations for controller pods. Defaults to `global.tolerations`.
+  tolerations: []
+  ## @param controller.affinity Specifies pod affinity for controller pods. Defaults to `global.affinity`.
+  affinity: {}
+  ## @param controller.securityContext Security context for controller pods. Defaults to `global.securityContext`.
+  securityContext: {}
+
+  cabundle:
+    ## @param controller.cabundle.configMapName Specifies the name of an optional ConfigMap containing CA certs that is managed "out of band." Values in the ConfigMap named here should each contain a single PEM-encoded CA cert. If secretName is also defined, it will take precedence over this field.
+    configMapName: ""
+    ## @param controller.cabundle.secretName Specifies the name of an optional Secret containing CA certs that is managed "out of band." Values in the Secret named here should each contain a single PEM-encoded CA cert. If defined, the value of this field takes precedence over any in configMapName.
+    secretName: ""
+
+## @section Garbage Collector
+garbageCollector:
+  ## @param garbageCollector.enabled Whether the garbage collector is enabled.
+  enabled: true
+
+  ## @param garbageCollector.logLevel The log level for the garbage collector.
+  logLevel: INFO
+
+  ## @param garbageCollector.schedule When to run the garbage collector.
+  schedule: "0 * * * *"
+  ## @param garbageCollector.workers The number of concurrent workers to run. Tuning this too low will result in slow garbage collection. Tuning this too high will result in too many API calls and may result in throttling.
+  workers: 3
+  ## @param garbageCollector.maxRetainedPromotions The ideal maximum number of Promotions OLDER than the oldest Promotion in a non-terminal phase (for each Stage) that may be spared by the garbage collector. The ACTUAL number of older Promotions spared may exceed this ideal if some Promotions that would otherwise be deleted do not meet the minimum age criterion.
+  maxRetainedPromotions: 20
+  ## @param garbageCollector.minPromotionDeletionAge The minimum age a Promotion must be before considered eligible for garbage collection.
+  minPromotionDeletionAge: 336h # Two weeks
+  ## @param garbageCollector.maxRetainedFreight The ideal maximum number of Freight OLDER than the oldest still in use (from each Warehouse) that may be spared by the garbage collector. The ACTUAL number of older Freight spared may exceed this ideal if some Freight that would otherwise be deleted do not meet the minimum age criterion.
+  maxRetainedFreight: 20
+  ## @param garbageCollector.minFreightDeletionAge The minimum age Freight must be before considered eligible for garbage collection.
+  minFreightDeletionAge: 336h # Two weeks
+
+  ## @param garbageCollector.labels Labels to add to the api resources. Merges with `global.labels`, allowing you to override or add to the global labels.
+  labels: {}
+  ## @param garbageCollector.annotations Annotations to add to the api resources. Merges with `global.annotations`, allowing you to override or add to the global annotations.
+  annotations: {}
+  ## @param garbageCollector.podLabels Optional labels to add to pods. Merges with `global.podLabels`, allowing you to override or add to the global labels.
+  podLabels: {}
+  ## @param garbageCollector.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
+  podAnnotations: {}
+
+  ## ServiceAccount specific settings
+  serviceAccount:
+    ## @param garbageCollector.serviceAccount.labels Additional labels to add to the managementController ServiceAccount.
+    labels: {}
+    ## @param garbageCollector.serviceAccount.annotations Additional annotations to add to the managementController ServiceAccount.
+    annotations: {}
+    # foo: bar
+    # another: value
+
+  ## @param garbageCollector.env Environment variables to add to garbage collector pods.
+  env: []
+  #  - name: ENV_NAME
+  #    value: value
+  ## @param garbageCollector.envFrom Environment variables to add to garbage collector pods from ConfigMaps or Secrets.
+  envFrom: []
+  #  - configMapRef:
+  #      name: config-map-name
+  #  - secretRef:
+  #      name: secret-name
+
+  ## @param garbageCollector.resources Resources limits and requests for the garbage collector containers.
+  resources: {}
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+
+  ## @param garbageCollector.nodeSelector Node selector for the garbage collector pods. Defaults to `global.nodeSelector`.
+  nodeSelector: {}
+  ## @param garbageCollector.tolerations Tolerations for the garbage collector pods. Defaults to `global.tolerations`.
+  tolerations: []
+  ## @param garbageCollector.affinity Specifies pod affinity for the garbage collector pods. Defaults to `global.affinity`.
+  affinity: {}
+  ## @param garbageCollector.securityContext Security context for garbage collector pods. Defaults to `global.securityContext`.
+  securityContext: {}
+
 ## @section External Webhooks Server
 externalWebhooksServer:
   ## @param externalWebhooksServer.enabled Whether the external webhooks server is enabled.
   enabled: true
+
   ## @param externalWebhooksServer.replicas The number of external webhooks server pods.
   replicas: 1
+
   ## @param externalWebhooksServer.host The domain name where Kargo's external webhooks server will be accessible. When applicable, this is used for generation of an Ingress resource and certificates. Note: The value in this field MAY include a port number and MUST NOT specify the protocol (http vs https), which is automatically inferred from other configuration options.
   host: localhost
+
   ## @param externalWebhooksServer.logLevel The log level for the external webhooks server.
   logLevel: INFO
 
@@ -514,6 +642,26 @@ externalWebhooksServer:
   podLabels: {}
   ## @param externalWebhooksServer.podAnnotations Optional annotations to add to the external webhook server pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
   podAnnotations: {}
+
+  ## ServiceAccount specific settings
+  serviceAccount:
+    ## @param externalWebhooksServer.serviceAccount.labels Additional labels to add to the externalWebHooksServer ServiceAccount.
+    labels: {}
+    ## @param externalWebhooksServer.serviceAccount.annotations Additional annotations to add to the externalWebHooksServer ServiceAccount.
+    annotations: {}
+    # foo: bar
+    # another: value
+
+  ## @param externalWebhooksServer.env Environment variables to add to external webhook server pods.
+  env: []
+  #  - name: ENV_NAME
+  #    value: value
+  ## @param externalWebhooksServer.envFrom Environment variables to add to external webhook server pods from ConfigMaps or Secrets.
+  envFrom: []
+  #  - configMapRef:
+  #      name: config-map-name
+  #  - secretRef:
+  #      name: secret-name
 
   ## @param externalWebhooksServer.resources Resources limits and requests for the external webhook server containers.
   resources: {}
@@ -530,20 +678,8 @@ externalWebhooksServer:
   tolerations: []
   ## @param externalWebhooksServer.affinity Specifies pod affinity for external webhook server pods. Defaults to `global.affinity`.
   affinity: {}
-  
   ## @param externalWebhooksServer.securityContext Security context for external webhook server pods. Defaults to `global.securityContext`.
   securityContext: {}
-  
-  ## @param externalWebhooksServer.env Environment variables to add to external webhook server pods.
-  env: []
-  #  - name: ENV_NAME
-  #    value: value
-  ## @param externalWebhooksServer.envFrom Environment variables to add to external webhook server pods from ConfigMaps or Secrets.
-  envFrom: []
-  #  - configMapRef:
-  #      name: config-map-name
-  #  - secretRef:
-  #      name: secret-name
 
   probes:
     ## @param externalWebhooksServer.probes.enabled Whether liveness and readiness probes should be included in the external webhook server deployment. It is sometimes advantageous to disable these during local development.
@@ -558,7 +694,7 @@ externalWebhooksServer:
     terminatedUpstream: false
 
   ingress:
-    ## @param externalWebhooksServer.ingress.enabled Whether to enable ingress by creating an Ingress resource. By default, this is disabled. Enabling ingress is advanced usage.
+    ## @param externalWebhooksServer.ingress.enabled Whether to enable separate ingress for webhook by creating an Ingress resource. By default, this is disabled and webhook is exposed as part of kargo-api ingress. Enabling ingress is advanced usage.
     enabled: false
     ## @param externalWebhooksServer.ingress.annotations Annotations specified by your ingress controller to customize the behavior of the Ingress resource.
     annotations: {}
@@ -590,6 +726,23 @@ managementController:
   ## @param managementController.logLevel The log level for the management controller.
   logLevel: INFO
 
+  ## Reconciler-specific settings
+  reconcilers:
+    ## @param managementController.reconcilers.maxConcurrentReconciles specifies the maximum number of resources EACH of the management controller's reconcilers can reconcile concurrently. This setting may also be overridden on a per-reconciler basis.
+    maxConcurrentReconciles: 4
+    namespaces:
+      ## @param managementController.reconcilers.namespaces.maxConcurrentReconciles optionally overrides the maximum number of Namespace resources the management controller can reconcile concurrently.
+      maxConcurrentReconciles:
+    projectConfigs:
+      ## @param managementController.reconcilers.projectConfigs.maxConcurrentReconciles optionally overrides the maximum number of ProjectConfig resources the management controller can reconcile concurrently.
+      maxConcurrentReconciles:
+    projects:
+      ## @param managementController.reconcilers.projects.maxConcurrentReconciles optionally overrides the maximum number of Project resources the management controller can reconcile concurrently.
+      maxConcurrentReconciles:
+    serviceAccounts:
+      ## @param managementController.reconcilers.serviceAccounts.maxConcurrentReconciles optionally overrides the maximum number of ServiceAccount resources the management controller can reconcile concurrently.
+      maxConcurrentReconciles:
+
   ## @param managementController.labels Labels to add to the api resources. Merges with `global.labels`, allowing you to override or add to the global labels.
   labels: {}
   ## @param managementController.annotations Annotations to add to the api resources. Merges with `global.annotations`, allowing you to override or add to the global annotations.
@@ -599,37 +752,15 @@ managementController:
   ## @param managementController.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
   podAnnotations: {}
 
-  ## Reconciler-specific settings
-  reconcilers:
-    ## @param managementController.reconcilers.maxConcurrentReconciles specifies the maximum number of resources EACH of the management controller's reconcilers can reconcile concurrently. This setting may also be overridden on a per-reconciler basis.
-    maxConcurrentReconciles: 4
-    namespaces:
-      ## @param managementController.reconcilers.namespaces.maxConcurrentReconciles optionally overrides the maximum number of Namespace resources the management controller can reconcile concurrently.
-      maxConcurrentReconciles:
-    projects:
-      ## @param managementController.reconcilers.projects.maxConcurrentReconciles optionally overrides the maximum number of Project resources the management controller can reconcile concurrently.
-      maxConcurrentReconciles:
-    serviceAccounts:
-      ## @param managementController.reconcilers.serviceAccounts.maxConcurrentReconciles optionally overrides the maximum number of ServiceAccount resources the management controller can reconcile concurrently.
-      maxConcurrentReconciles:
+  ## ServiceAccount specific settings
+  serviceAccount:
+    ## @param managementController.serviceAccount.labels Additional labels to add to the managementController ServiceAccount.
+    labels: {}
+    ## @param managementController.serviceAccount.annotations Additional annotations to add to the managementController ServiceAccount.
+    annotations: {}
+    # foo: bar
+    # another: value
 
-  ## @param managementController.securityContext Security context for management controller pods. Defaults to `global.securityContext`.
-  securityContext: {}
-
-  ## @param managementController.resources Resources limits and requests for the management controller containers.
-  resources: {}
-    # limits:
-    #   cpu: 100m
-    #   memory: 128Mi
-    # requests:
-    #   cpu: 100m
-    #   memory: 128Mi
-  ## @param managementController.nodeSelector Node selector for management controller pods. Defaults to `global.nodeSelector`.
-  nodeSelector: {}
-  ## @param managementController.tolerations Tolerations for management controller pods. Defaults to `global.tolerations`.
-  tolerations: []
-  ## @param managementController.affinity Specifies pod affinity for management controller pods. Defaults to `global.affinity`.
-  affinity: {}
   ## @param managementController.env Environment variables to add to management controller pods.
   env: []
   #  - name: ENV_NAME
@@ -641,19 +772,35 @@ managementController:
   #  - secretRef:
   #      name: secret-name
 
-## @section Webhooks
-webhooks:
-  ## @param webhooks.register Whether to create `ValidatingWebhookConfiguration` and `MutatingWebhookConfiguration` resources.
-  register: true
+  ## @param managementController.resources Resources limits and requests for the management controller containers.
+  resources: {}
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+
+  ## @param managementController.nodeSelector Node selector for management controller pods. Defaults to `global.nodeSelector`.
+  nodeSelector: {}
+  ## @param managementController.tolerations Tolerations for management controller pods. Defaults to `global.tolerations`.
+  tolerations: []
+  ## @param managementController.affinity Specifies pod affinity for management controller pods. Defaults to `global.affinity`.
+  affinity: {}
+  ## @param managementController.securityContext Security context for management controller pods. Defaults to `global.securityContext`.
+  securityContext: {}
 
 ## @section Webhooks Server
 webhooksServer:
   ## @param webhooksServer.enabled Whether the webhooks server is enabled.
   enabled: true
+
   ## @param webhooksServer.replicas The number of webhooks server pods.
   replicas: 1
+  
   ## @param webhooksServer.logLevel The log level for the webhooks server.
   logLevel: INFO
+  
   ## @param webhooksServer.controlplaneUserRegex Regular expression for matching controlplane users.
   controlplaneUserRegex: "" # ^system:serviceaccount:kargo:[a-z0-9]([-a-z0-9]*[a-z0-9])?$
 
@@ -666,26 +813,15 @@ webhooksServer:
   ## @param webhooksServer.podAnnotations Optional annotations to add to the webhook server pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
   podAnnotations: {}
 
-  tls:
-    ## @param webhooksServer.tls.selfSignedCert  Whether to generate a self-signed certificate for the controller's built-in webhook server. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-webhooks-server-cert` **must** be provided in the same namespace as Kargo. There is no provision for webhooks without TLS.
-    selfSignedCert: true
+  ## ServiceAccount specific settings
+  serviceAccount:
+    ## @param webhooksServer.serviceAccount.labels Additional labels to add to the webhooks server ServiceAccount.
+    labels: {}
+    ## @param webhooksServer.serviceAccount.annotations Additional annotations to add to the webhooks server ServiceAccount.
+    annotations: {}
+    # foo: bar
+    # another: value
 
-  ## @param webhooksServer.resources Resources limits and requests for the webhooks server containers.
-  resources: {}
-    # limits:
-    #   cpu: 100m
-    #   memory: 128Mi
-    # requests:
-    #   cpu: 100m
-    #   memory: 128Mi
-  ## @param webhooksServer.nodeSelector Node selector for the webhooks server pods. Defaults to `global.nodeSelector`.
-  nodeSelector: {}
-  ## @param webhooksServer.tolerations Tolerations for the webhooks server pods. Defaults to `global.tolerations`.
-  tolerations: []
-  ## @param webhooksServer.affinity Specifies pod affinity for the webhooks server pods. Defaults to `global.affinity`.
-  affinity: {}
-  ## @param webhooksServer.securityContext Security context for webhooks server pods. Defaults to `global.securityContext`.
-  securityContext: {}
   ## @param webhooksServer.env Environment variables to add to webhook server pods.
   env: []
   #  - name: ENV_NAME
@@ -697,35 +833,7 @@ webhooksServer:
   #  - secretRef:
   #      name: secret-name
 
-## @section Garbage Collector
-garbageCollector:
-  ## @param garbageCollector.enabled Whether the garbage collector is enabled.
-  enabled: true
-  ## @param garbageCollector.schedule When to run the garbage collector.
-  schedule: "0 * * * *"
-  ## @param garbageCollector.workers The number of concurrent workers to run. Tuning this too low will result in slow garbage collection. Tuning this too high will result in too many API calls and may result in throttling.
-  workers: 3
-  ## @param garbageCollector.maxRetainedPromotions The ideal maximum number of Promotions OLDER than the oldest Promotion in a non-terminal phase (for each Stage) that may be spared by the garbage collector. The ACTUAL number of older Promotions spared may exceed this ideal if some Promotions that would otherwise be deleted do not meet the minimum age criterion.
-  maxRetainedPromotions: 20
-  ## @param garbageCollector.minPromotionDeletionAge The minimum age a Promotion must be before considered eligible for garbage collection.
-  minPromotionDeletionAge: 336h # Two weeks
-  ## @param garbageCollector.maxRetainedFreight The ideal maximum number of Freight OLDER than the oldest still in use (from each Warehouse) that may be spared by the garbage collector. The ACTUAL number of older Freight spared may exceed this ideal if some Freight that would otherwise be deleted do not meet the minimum age criterion.
-  maxRetainedFreight: 20
-  ## @param garbageCollector.minFreightDeletionAge The minimum age Freight must be before considered eligible for garbage collection.
-  minFreightDeletionAge: 336h # Two weeks
-  ## @param garbageCollector.logLevel The log level for the garbage collector.
-  logLevel: INFO
-
-  ## @param garbageCollector.labels Labels to add to the api resources. Merges with `global.labels`, allowing you to override or add to the global labels.
-  labels: {}
-  ## @param garbageCollector.annotations Annotations to add to the api resources. Merges with `global.annotations`, allowing you to override or add to the global annotations.
-  annotations: {}
-  ## @param garbageCollector.podLabels Optional labels to add to pods. Merges with `global.podLabels`, allowing you to override or add to the global labels.
-  podLabels: {}
-  ## @param garbageCollector.podAnnotations Optional annotations to add to pods. Merges with `global.podAnnotations`, allowing you to override or add to the global annotations.
-  podAnnotations: {}
-
-  ## @param garbageCollector.resources Resources limits and requests for the garbage collector containers.
+  ## @param webhooksServer.resources Resources limits and requests for the webhooks server containers.
   resources: {}
     # limits:
     #   cpu: 100m
@@ -733,21 +841,16 @@ garbageCollector:
     # requests:
     #   cpu: 100m
     #   memory: 128Mi
-  ## @param garbageCollector.nodeSelector Node selector for the garbage collector pods. Defaults to `global.nodeSelector`.
+
+  ## @param webhooksServer.nodeSelector Node selector for the webhooks server pods. Defaults to `global.nodeSelector`.
   nodeSelector: {}
-  ## @param garbageCollector.tolerations Tolerations for the garbage collector pods. Defaults to `global.tolerations`.
+  ## @param webhooksServer.tolerations Tolerations for the webhooks server pods. Defaults to `global.tolerations`.
   tolerations: []
-  ## @param garbageCollector.affinity Specifies pod affinity for the garbage collector pods. Defaults to `global.affinity`.
+  ## @param webhooksServer.affinity Specifies pod affinity for the webhooks server pods. Defaults to `global.affinity`.
   affinity: {}
-  ## @param garbageCollector.securityContext Security context for garbage collector pods. Defaults to `global.securityContext`.
+  ## @param webhooksServer.securityContext Security context for webhooks server pods. Defaults to `global.securityContext`.
   securityContext: {}
-  ## @param garbageCollector.env Environment variables to add to garbage collector pods.
-  env: []
-  #  - name: ENV_NAME
-  #    value: value
-  ## @param garbageCollector.envFrom Environment variables to add to garbage collector pods from ConfigMaps or Secrets.
-  envFrom: []
-  #  - configMapRef:
-  #      name: config-map-name
-  #  - secretRef:
-  #      name: secret-name
+
+  tls:
+    ## @param webhooksServer.tls.selfSignedCert  Whether to generate a self-signed certificate for the controller's built-in webhook server. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-webhooks-server-cert` **must** be provided in the same namespace as Kargo. There is no provision for webhooks without TLS.
+    selfSignedCert: true

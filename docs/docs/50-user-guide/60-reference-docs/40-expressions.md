@@ -64,6 +64,15 @@ provide a comprehensive overview of the language's syntax and capabilities, so
 this reference will continue to focus only on Kargo-specific extensions and
 usage.
 
+:::tip
+You can test your expressions using the
+[expr-lang playground](https://expr-lang.org/playground).
+
+The playground allows you to evaluate expressions against sample data and
+see the results in real-time. This is especially useful for debugging and
+validating your expressions before using them in your Kargo configuration.
+:::
+
 ## Structure and Behavior
 
 ### Config Blocks
@@ -155,12 +164,16 @@ The `ctx` object has the following structure:
 
 ```console
 ctx
-├── project: string       # The name of the Project
-├── stage: string         # The name of the Stage
-├── promotion: string     # The name of the Promotion
+├── project: string           # The name of the Project
+├── stage: string             # The name of the Stage
+├── promotion: string         # The name of the Promotion
+├── targetFreight
+│   ├── name: string          # The name of the Freight that is initiated this Promotion
+│   └── origin
+│       └── name: string      # The name of the Warehouse that contains the Freight
 └── meta
     └── promotion
-        └── actor: string # The creator of the Promotion
+        └── actor: string     # The creator of the Promotion
 ```
 
 The following example promotion process clones a repository and checks out
@@ -247,8 +260,16 @@ ctx
 
 ## Functions
 
-Several functions are built-in to Kargo's expression language. This section
-describes each of them.
+Besides the [built-in functions](https://expr-lang.org/docs/language-definition)
+provided by expr-lang itself, Kargo provides a number of additional functions
+that can be used within expressions in promotion steps and verification
+arguments.
+
+These functions allow you to access Kubernetes resources, manipulate strings,
+and retrieve information about the current promotion context, among other things.
+They are designed to be used in conjunction with the
+[pre-defined variables](#pre-defined-variables) to create dynamic and flexible
+promotion processes and verification steps.
 
 ### `quote(value)`
 

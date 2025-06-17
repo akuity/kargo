@@ -800,19 +800,19 @@ func Test_argoCDUpdater_mustPerformUpdate(t *testing.T) {
 						InitiatedBy: argocd.OperationInitiator{
 							Username: "someone-else",
 						},
+						Info: nil, // promotionInfoKey is not set
 					},
 				}
 			},
 			assertions: func(t *testing.T, phase argocd.OperationPhase, mustUpdate bool, err error) {
 				require.ErrorContains(t, err, "current operation was initiated by")
-				require.ErrorContains(t, err, "and not by")
 				require.ErrorContains(t, err, "waiting for operation to complete")
 				require.Equal(t, argocd.OperationRunning, phase)
 				require.False(t, mustUpdate)
 			},
 		},
 		{
-			name: "completed operation initiated by different user",
+			name: "completed operation initiated by non-kargo",
 			modifyApplication: func(app *argocd.Application) {
 				app.Status.OperationState = &argocd.OperationState{
 					Phase: argocd.OperationSucceeded,
@@ -820,6 +820,7 @@ func Test_argoCDUpdater_mustPerformUpdate(t *testing.T) {
 						InitiatedBy: argocd.OperationInitiator{
 							Username: "someone-else",
 						},
+						Info: nil, // promotionInfoKey is not set
 					},
 				}
 			},

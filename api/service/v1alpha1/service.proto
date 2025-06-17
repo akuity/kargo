@@ -40,6 +40,13 @@ service KargoService {
   rpc DeleteStage(DeleteStageRequest) returns (DeleteStageResponse);
   rpc RefreshStage(RefreshStageRequest) returns (RefreshStageResponse);
 
+  /* ClusterConfig APIs */
+
+  rpc GetClusterConfig(GetClusterConfigRequest) returns (GetClusterConfigResponse);
+  rpc DeleteClusterConfig(DeleteClusterConfigRequest) returns (DeleteClusterConfigResponse);
+  rpc WatchClusterConfig(WatchClusterConfigRequest) returns (stream WatchClusterConfigResponse);
+  rpc RefreshClusterConfig(RefreshClusterConfigRequest) returns (RefreshClusterConfigResponse);
+
   /* Promotion APIs */
 
   rpc ListPromotions(ListPromotionsRequest) returns (ListPromotionsResponse);
@@ -53,8 +60,12 @@ service KargoService {
   rpc DeleteProject(DeleteProjectRequest) returns (DeleteProjectResponse);
   rpc GetProject(GetProjectRequest) returns (GetProjectResponse);
   rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
-  rpc DeleteProjectConfig(DeleteProjectConfigRequest) returns (DeleteProjectConfigResponse);
+
+  /* ProjectConfig APIs */
   rpc GetProjectConfig(GetProjectConfigRequest) returns (GetProjectConfigResponse);
+  rpc DeleteProjectConfig(DeleteProjectConfigRequest) returns (DeleteProjectConfigResponse);
+  rpc WatchProjectConfig(WatchProjectConfigRequest) returns (stream WatchProjectConfigResponse);
+  rpc RefreshProjectConfig(RefreshProjectConfigRequest) returns (RefreshProjectConfigResponse);
 
   /* Freight APIs */
 
@@ -133,6 +144,8 @@ service KargoService {
   rpc UpdateRole(UpdateRoleRequest) returns (UpdateRoleResponse);
 }
 
+/* Version and Configuration Messages */
+
 message ComponentVersions {
   optional VersionInfo server = 1;
   optional VersionInfo cli = 2;
@@ -188,6 +201,8 @@ message AdminLoginRequest {
 message AdminLoginResponse {
   string id_token = 1;
 }
+
+/* Resource Management Messages */
 
 message CreateResourceRequest {
   bytes manifest = 1;
@@ -249,6 +264,8 @@ message DeleteResourceResult {
 message DeleteResourceResponse {
   repeated DeleteResourceResult results = 1;
 }
+
+/* Stage Messages */
 
 message ListStagesRequest {
   string project = 1;
@@ -318,6 +335,46 @@ message RefreshStageResponse {
   github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
 }
 
+/* ClusterConfig Messages */
+
+message GetClusterConfigRequest {
+  RawFormat format = 1;
+}
+
+message GetClusterConfigResponse {
+  oneof result {
+    github.com.akuity.kargo.api.v1alpha1.ClusterConfig cluster_config = 1;
+    bytes raw = 2;
+  }
+}
+
+message DeleteClusterConfigRequest {
+  /* explicitly empty */
+}
+
+message DeleteClusterConfigResponse {
+  /* explicitly empty */
+}
+
+message WatchClusterConfigRequest {
+  /* explicitly empty */
+}
+
+message WatchClusterConfigResponse {
+  github.com.akuity.kargo.api.v1alpha1.ClusterConfig cluster_config = 1;
+  string type = 2; // ADDED / MODIFIED / DELETED
+}
+
+message RefreshClusterConfigRequest {
+  /* explicitly empty */
+}
+
+message RefreshClusterConfigResponse {
+  github.com.akuity.kargo.api.v1alpha1.ClusterConfig cluster_config = 1;
+}
+
+/* Promotion Messages */
+
 message ListPromotionsRequest {
   string project = 1;
   optional string stage = 2;
@@ -369,32 +426,14 @@ message AbortPromotionResponse {
   /* explicitly empty */
 }
 
+/* Project Messages */
+
 message DeleteProjectRequest {
   string name = 1;
 }
 
 message DeleteProjectResponse {
   /* explicitly empty */
-}
-
-message DeleteProjectConfigRequest {
-  string name = 1;
-}
-
-message DeleteProjectConfigResponse {
-  /* explicitly empty */
-}
-
-message GetProjectConfigRequest {
-  string name = 1;
-  RawFormat format = 2;
-}
-
-message GetProjectConfigResponse {
-  oneof result {
-    github.com.akuity.kargo.api.v1alpha1.ProjectConfig project_config = 1;
-    bytes raw = 2;
-  }
 }
 
 message GetProjectRequest {
@@ -419,6 +458,47 @@ message ListProjectsResponse {
   repeated github.com.akuity.kargo.api.v1alpha1.Project projects = 1;
   int32 total = 2;
 }
+
+/* ProjectConfig Messages */
+
+message GetProjectConfigRequest {
+  string project = 1;
+  RawFormat format = 2;
+}
+
+message GetProjectConfigResponse {
+  oneof result {
+    github.com.akuity.kargo.api.v1alpha1.ProjectConfig project_config = 1;
+    bytes raw = 2;
+  }
+}
+
+message DeleteProjectConfigRequest {
+  string project = 1;
+}
+
+message DeleteProjectConfigResponse {
+  /* explicitly empty */
+}
+
+message WatchProjectConfigRequest {
+  string project = 1;
+}
+
+message WatchProjectConfigResponse {
+  github.com.akuity.kargo.api.v1alpha1.ProjectConfig project_config = 1;
+  string type = 2; // ADDED / MODIFIED / DELETED
+}
+
+message RefreshProjectConfigRequest {
+  string project = 1;
+}
+
+message RefreshProjectConfigResponse {
+  github.com.akuity.kargo.api.v1alpha1.ProjectConfig project_config = 1;
+}
+
+/* Freight Messages */
 
 message ApproveFreightRequest {
   string project = 1;
@@ -515,6 +595,8 @@ message UpdateFreightAliasResponse {
   /* explicitly empty */
 }
 
+/* Verification Messages */
+
 message ReverifyRequest {
   string project = 1;
   string stage = 2;
@@ -532,6 +614,8 @@ message AbortVerificationRequest {
 message AbortVerificationResponse {
   /* explicitly empty */
 }
+
+/* Warehouse Messages */
 
 message ListWarehousesRequest {
   string project = 1;
@@ -582,14 +666,6 @@ message RefreshWarehouseResponse {
   github.com.akuity.kargo.api.v1alpha1.Warehouse warehouse = 1;
 }
 
-message ListProjectSecretsRequest {
-  string project = 1;
-}
-
-message ListProjectSecretsResponse {
-  repeated k8s.io.api.core.v1.Secret secrets = 1;
-}
-
 message ListConfigMapsRequest {
   string project = 1;
 }
@@ -611,36 +687,7 @@ message GetConfigMapResponse {
   }
 }
 
-message CreateProjectSecretRequest {
-  string project = 1;
-  string name = 2;
-  string description = 3;
-  map<string, string> data = 4;
-}
-
-message CreateProjectSecretResponse {
-  k8s.io.api.core.v1.Secret secret = 1;
-}
-
-message UpdateProjectSecretRequest {
-  string project = 1;
-  string name = 2;
-  string description = 3;
-  map<string, string> data = 4;
-}
-
-message UpdateProjectSecretResponse {
-  k8s.io.api.core.v1.Secret secret = 1;
-}
-
-message DeleteProjectSecretRequest {
-  string project = 1;
-  string name = 2;
-}
-
-message DeleteProjectSecretResponse {
-  /* explicitly empty */
-}
+/* Credential Messages */
 
 message CreateCredentialsRequest {
   string project = 1;
@@ -703,26 +750,55 @@ message UpdateCredentialsResponse {
   k8s.io.api.core.v1.Secret credentials = 1;
 }
 
+/* Project Secrets Messages */
+
+message ListProjectSecretsRequest {
+  string project = 1;
+}
+
+message ListProjectSecretsResponse {
+  repeated k8s.io.api.core.v1.Secret secrets = 1;
+}
+
+message CreateProjectSecretRequest {
+  string project = 1;
+  string name = 2;
+  string description = 3;
+  map<string, string> data = 4;
+}
+
+message CreateProjectSecretResponse {
+  k8s.io.api.core.v1.Secret secret = 1;
+}
+
+message UpdateProjectSecretRequest {
+  string project = 1;
+  string name = 2;
+  string description = 3;
+  map<string, string> data = 4;
+}
+
+message UpdateProjectSecretResponse {
+  k8s.io.api.core.v1.Secret secret = 1;
+}
+
+message DeleteProjectSecretRequest {
+  string project = 1;
+  string name = 2;
+}
+
+message DeleteProjectSecretResponse {
+  /* explicitly empty */
+}
+
+/* Analysis Messages */
+
 message ListAnalysisTemplatesRequest {
   string project = 1;
 }
 
 message ListAnalysisTemplatesResponse {
   repeated github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisTemplate analysis_templates = 1 [json_name = "analysisTemplates"];
-}
-
-message ListPromotionTasksRequest {
-  string project = 1;
-}
-
-message ListPromotionTasksResponse {
-  repeated github.com.akuity.kargo.api.v1alpha1.PromotionTask promotion_tasks = 1;
-}
-
-message ListClusterPromotionTasksRequest {}
-
-message ListClusterPromotionTasksResponse {
-  repeated github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask cluster_promotion_tasks = 1;
 }
 
 message GetAnalysisTemplateRequest {
@@ -738,29 +814,13 @@ message GetAnalysisTemplateResponse {
   }
 }
 
-message GetPromotionTaskRequest {
+message DeleteAnalysisTemplateRequest {
   string project = 1;
   string name = 2;
-  RawFormat format = 3;
 }
 
-message GetPromotionTaskResponse {
-  oneof result {
-    github.com.akuity.kargo.api.v1alpha1.PromotionTask promotion_task = 1 [json_name = "promotionTask"];
-    bytes raw = 2;
-  }
-}
-
-message GetClusterPromotionTaskRequest {
-  string name = 2;
-  RawFormat format = 3;
-}
-
-message GetClusterPromotionTaskResponse {
-  oneof result {
-    github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask promotion_task = 1 [json_name = "clusterPromotionTask"];
-    bytes raw = 2;
-  }
+message DeleteAnalysisTemplateResponse {
+  /* explicitly empty */
 }
 
 message ListClusterAnalysisTemplatesRequest {}
@@ -779,6 +839,14 @@ message GetClusterAnalysisTemplateResponse {
     github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.ClusterAnalysisTemplate cluster_analysis_template = 1 [json_name = "clusterAnalysisTemplate"];
     bytes raw = 2;
   }
+}
+
+message DeleteClusterAnalysisTemplateRequest {
+  string name = 2;
+}
+
+message DeleteClusterAnalysisTemplateResponse {
+  /* explicitly empty */
 }
 
 message GetAnalysisRunRequest {
@@ -805,22 +873,7 @@ message GetAnalysisRunLogsResponse {
   string chunk = 1;
 }
 
-message DeleteAnalysisTemplateRequest {
-  string project = 1;
-  string name = 2;
-}
-
-message DeleteAnalysisTemplateResponse {
-  /* explicitly empty */
-}
-
-message DeleteClusterAnalysisTemplateRequest {
-  string name = 2;
-}
-
-message DeleteClusterAnalysisTemplateResponse {
-  /* explicitly empty */
-}
+/* Event Messages */
 
 message ListProjectEventsRequest {
   string project = 1;
@@ -829,6 +882,49 @@ message ListProjectEventsRequest {
 message ListProjectEventsResponse {
   repeated k8s.io.api.core.v1.Event events = 1;
 }
+
+/* Promotion Task Messages */
+
+message ListPromotionTasksRequest {
+  string project = 1;
+}
+
+message ListPromotionTasksResponse {
+  repeated github.com.akuity.kargo.api.v1alpha1.PromotionTask promotion_tasks = 1;
+}
+
+message GetPromotionTaskRequest {
+  string project = 1;
+  string name = 2;
+  RawFormat format = 3;
+}
+
+message GetPromotionTaskResponse {
+  oneof result {
+    github.com.akuity.kargo.api.v1alpha1.PromotionTask promotion_task = 1 [json_name = "promotionTask"];
+    bytes raw = 2;
+  }
+}
+
+message ListClusterPromotionTasksRequest {}
+
+message ListClusterPromotionTasksResponse {
+  repeated github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask cluster_promotion_tasks = 1;
+}
+
+message GetClusterPromotionTaskRequest {
+  string name = 2;
+  RawFormat format = 3;
+}
+
+message GetClusterPromotionTaskResponse {
+  oneof result {
+    github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask promotion_task = 1 [json_name = "clusterPromotionTask"];
+    bytes raw = 2;
+  }
+}
+
+/* Role Messages */
 
 message CreateRoleRequest {
   github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;

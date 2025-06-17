@@ -36,6 +36,8 @@ jobs:
         # Copy associated people to the backport PR
         copy_assignees: true
         copy_requested_reviewers: true
+        # Copy any milestone to the backport PR
+        copy_milestone: true
         # Skip any merge commits in the source PR
         merge_commits: 'skip'
         # Automatically detect "squash and merge" instead of copying all

@@ -15,15 +15,22 @@ import (
 )
 
 func TestNewKubernetesDatabase(t *testing.T) {
-	testClient := fake.NewClientBuilder().Build()
+	testControlPlaneClient := fake.NewClientBuilder().Build()
+	testLocalClusterClient := fake.NewClientBuilder().Build()
 	testCfg := DatabaseConfig{
 		GlobalCredentialsNamespaces: []string{"fake-namespace"},
 	}
-	d := NewDatabase(context.Background(), testClient, testCfg)
+	d := NewDatabase(
+		context.Background(),
+		testControlPlaneClient,
+		testLocalClusterClient,
+		testCfg,
+	)
 	require.NotNil(t, d)
 	k, ok := d.(*database)
 	require.True(t, ok)
-	require.Same(t, testClient, k.kargoClient)
+	require.Same(t, testControlPlaneClient, k.controlPlaneClient)
+	require.Same(t, testLocalClusterClient, k.localClusterClient)
 	require.Equal(t, testCfg, k.cfg)
 }
 
@@ -45,11 +52,11 @@ func TestGet(t *testing.T) {
 	)
 
 	testGitLabels := map[string]string{
-		kargoapi.CredentialTypeLabelKey: credentials.TypeGit.String(),
+		kargoapi.LabelKeyCredentialType: credentials.TypeGit.String(),
 	}
 
 	testImageLabels := map[string]string{
-		kargoapi.CredentialTypeLabelKey: credentials.TypeImage.String(),
+		kargoapi.LabelKeyCredentialType: credentials.TypeImage.String(),
 	}
 
 	projectGitCredentialWithRepoURL := &corev1.Secret{
@@ -330,6 +337,7 @@ func TestGet(t *testing.T) {
 			creds, err := NewDatabase(
 				context.Background(),
 				fake.NewClientBuilder().WithObjects(testCase.secrets...).Build(),
+				nil,
 				testCase.cfg,
 			).Get(
 				context.Background(),

@@ -2,7 +2,6 @@ package projectconfigs
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -12,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/internal/conditions"
 	"github.com/akuity/kargo/internal/webhook/external"
 )
 
@@ -21,270 +20,153 @@ func TestNewReconciler(t *testing.T) {
 	r := newReconciler(fake.NewClientBuilder().Build(), testCfg)
 	require.Equal(t, testCfg, r.cfg)
 	require.NotNil(t, r.client)
-	require.NotNil(t, r.syncWebhookReceivers)
-}
-
-func TestReconciler_syncProjectConfig(t *testing.T) {
-	scheme := runtime.NewScheme()
-	require.NoError(t, corev1.AddToScheme(scheme))
-	require.NoError(t, kargoapi.AddToScheme(scheme))
-
-	for _, test := range []struct {
-		name          string
-		projectConfig *kargoapi.ProjectConfig
-		reconciler    func() *reconciler
-		assertions    func(*testing.T, kargoapi.ProjectConfigStatus, error)
-	}{
-		{
-			name: "failure",
-			reconciler: func() *reconciler {
-				r := newReconciler(
-					fake.NewClientBuilder().
-						WithScheme(scheme).
-						WithObjects(
-							&corev1.Secret{
-								ObjectMeta: metav1.ObjectMeta{
-									Name:      "secret-that-exists",
-									Namespace: "fake-namespace",
-								},
-								Data: map[string][]byte{
-									"token": []byte("fake-secret-data"),
-								},
-							},
-						).
-						Build(),
-					ReconcilerConfig{},
-				)
-				r.syncWebhookReceiversFn = func(
-					_ context.Context,
-					_ *kargoapi.ProjectConfig,
-				) ([]kargoapi.WebhookReceiver, error) {
-					return nil, fmt.Errorf("secret not found")
-				}
-				return r
-			},
-			projectConfig: &kargoapi.ProjectConfig{
-				Status: kargoapi.ProjectConfigStatus{
-					WebhookReceivers: []kargoapi.WebhookReceiver{},
-				},
-			},
-			assertions: func(t *testing.T, pcs kargoapi.ProjectConfigStatus, err error) {
-				require.Error(t, err)
-				require.Len(t, pcs.WebhookReceivers, 0)
-				require.Len(t, pcs.Conditions, 2)
-				require.Equal(t, pcs.Conditions[0].Type, kargoapi.ConditionTypeReconciling)
-				require.Equal(t, pcs.Conditions[0].Status, metav1.ConditionTrue)
-				require.Equal(t, pcs.Conditions[1].Type, kargoapi.ConditionTypeReady)
-				require.Equal(t, pcs.Conditions[1].Status, metav1.ConditionFalse)
-			},
-		},
-		{
-			name: "success",
-			reconciler: func() *reconciler {
-				return newReconciler(
-					fake.NewClientBuilder().
-						WithScheme(scheme).
-						WithObjects(
-							&corev1.Secret{
-								ObjectMeta: metav1.ObjectMeta{
-									Name:      "secret-that-exists",
-									Namespace: "fake-namespace",
-								},
-								Data: map[string][]byte{
-									"token": []byte("fake-secret-data"),
-								},
-							},
-						).
-						Build(),
-					ReconcilerConfig{},
-				)
-			},
-			projectConfig: &kargoapi.ProjectConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "fake-project-config",
-					Namespace: "fake-namespace",
-				},
-				Spec: kargoapi.ProjectConfigSpec{
-					WebhookReceivers: []kargoapi.WebhookReceiverConfig{
-						{
-							GitHub: &kargoapi.GitHubWebhookReceiver{
-								SecretRef: corev1.LocalObjectReference{
-									Name: "secret-that-exists",
-								},
-							},
-						},
-					},
-				},
-				Status: kargoapi.ProjectConfigStatus{
-					WebhookReceivers: []kargoapi.WebhookReceiver{},
-				},
-			},
-			assertions: func(t *testing.T, pcs kargoapi.ProjectConfigStatus, err error) {
-				require.NoError(t, err)
-				require.Len(t, pcs.WebhookReceivers, 1)
-				require.Len(t, pcs.Conditions, 1)
-				require.Equal(t, pcs.Conditions[0].Type, kargoapi.ConditionTypeReady)
-				require.Equal(t, pcs.Conditions[0].Status, metav1.ConditionTrue)
-			},
-		},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			r := test.reconciler()
-			l := logging.NewLogger(logging.DebugLevel)
-			ctx := logging.ContextWithLogger(t.Context(), l)
-			status, err := r.syncProjectConfig(ctx, test.projectConfig)
-			test.assertions(t, status, err)
-		})
-	}
 }
 
 func TestReconciler_syncWebhookReceivers(t *testing.T) {
-	for _, test := range []struct {
-		name          string
-		reconciler    func() *reconciler
-		projectConfig *kargoapi.ProjectConfig
-		assertions    func(*testing.T, *kargoapi.ProjectConfig, error)
+	testScheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(testScheme))
+
+	const testProjectName = "fake-project"
+
+	testCases := []struct {
+		name       string
+		reconciler *reconciler
+		projectCfg *kargoapi.ProjectConfig
+		assertions func(*testing.T, kargoapi.ProjectConfigStatus, error)
 	}{
 		{
-			name: "secret-ref not found",
-			reconciler: func() *reconciler {
-				scheme := runtime.NewScheme()
-				require.NoError(t, corev1.AddToScheme(scheme))
-				require.NoError(t, kargoapi.AddToScheme(scheme))
-				return newReconciler(
-					fake.NewClientBuilder().
-						WithScheme(scheme).
-						WithObjects(
-							&kargoapi.ProjectConfig{
-								ObjectMeta: metav1.ObjectMeta{
-									Name:      "fake-project",
-									Namespace: "fake-namespace",
-								},
-								Spec: kargoapi.ProjectConfigSpec{
-									WebhookReceivers: []kargoapi.WebhookReceiverConfig{
-										{
-											GitHub: &kargoapi.GitHubWebhookReceiver{
-												SecretRef: corev1.LocalObjectReference{
-													Name: "secret-ref-that-does-not-exist",
-												},
-											},
-										},
-									},
-								},
-							},
-						).
-						Build(),
-					ReconcilerConfig{},
-				)
-			},
-			projectConfig: &kargoapi.ProjectConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-namespace",
-					Name:      "fake-project",
-				},
-				Spec: kargoapi.ProjectConfigSpec{
-					WebhookReceivers: []kargoapi.WebhookReceiverConfig{
-						{
-							GitHub: &kargoapi.GitHubWebhookReceiver{
-								SecretRef: corev1.LocalObjectReference{
-									Name: "secret-that-does-not-exist",
-								},
-							},
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, _ *kargoapi.ProjectConfig, err error) {
-				require.ErrorContains(t, err, "not found")
+			name:       "project config does not define any webhook receivers",
+			reconciler: &reconciler{},
+			projectCfg: &kargoapi.ProjectConfig{},
+			assertions: func(t *testing.T, status kargoapi.ProjectConfigStatus, err error) {
+				require.NoError(t, err)
+				require.Empty(t, status.WebhookReceivers)
+				require.Len(t, status.Conditions, 1)
+				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCondition)
+				require.Equal(t, metav1.ConditionTrue, readyCondition.Status)
+				require.Equal(t, "Synced", readyCondition.Reason)
 			},
 		},
 		{
-			name: "success",
-			reconciler: func() *reconciler {
-				scheme := runtime.NewScheme()
-				require.NoError(t, corev1.AddToScheme(scheme))
-				require.NoError(t, kargoapi.AddToScheme(scheme))
-				return newReconciler(
-					fake.NewClientBuilder().
-						WithScheme(scheme).
-						WithObjects(
-							&kargoapi.ProjectConfig{
-								ObjectMeta: metav1.ObjectMeta{
-									Name:      "fake-name",
-									Namespace: "fake-namespace",
-								},
-								Spec: kargoapi.ProjectConfigSpec{},
-							},
-							&kargoapi.ProjectConfig{
-								ObjectMeta: metav1.ObjectMeta{
-									Name:      "fake-project",
-									Namespace: "fake-namespace",
-								},
-								Spec: kargoapi.ProjectConfigSpec{
-									WebhookReceivers: []kargoapi.WebhookReceiverConfig{
-										{
-											GitHub: &kargoapi.GitHubWebhookReceiver{
-												SecretRef: corev1.LocalObjectReference{
-													Name: "secret-that-exists",
-												},
-											},
-										},
-									},
-								},
-							},
-							&corev1.Secret{
-								ObjectMeta: metav1.ObjectMeta{
-									Name:      "secret-that-exists",
-									Namespace: "fake-namespace",
-								},
-								Data: map[string][]byte{
-									"token": []byte("fake-secret-data"),
-								},
-							},
-						).
-						Build(),
-					ReconcilerConfig{},
-				)
+			name: "error building receiver",
+			reconciler: &reconciler{
+				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+					&corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: testProjectName,
+							Name:      "fake-token-secret",
+						},
+						Data: map[string][]byte{external.GithubSecretDataKey: []byte("fake-token")},
+					},
+				).Build(),
 			},
-			projectConfig: &kargoapi.ProjectConfig{
+			projectCfg: &kargoapi.ProjectConfig{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "fake-namespace",
-					Name:      "fake-project",
+					Namespace: testProjectName,
+					Name:      testProjectName,
 				},
 				Spec: kargoapi.ProjectConfigSpec{
 					WebhookReceivers: []kargoapi.WebhookReceiverConfig{
 						{
-							GitHub: &kargoapi.GitHubWebhookReceiver{
+							Name: "invalid-receiver",
+							GitHub: &kargoapi.GitHubWebhookReceiverConfig{
 								SecretRef: corev1.LocalObjectReference{
-									Name: "secret-that-exists",
+									Name: "non-existent-secret",
+								},
+							},
+						},
+						{
+							Name: "valid-receiver",
+							GitHub: &kargoapi.GitHubWebhookReceiverConfig{
+								SecretRef: corev1.LocalObjectReference{
+									Name: "fake-token-secret",
 								},
 							},
 						},
 					},
 				},
 			},
-			assertions: func(t *testing.T, pc *kargoapi.ProjectConfig, err error) {
-				require.NoError(t, err)
-				require.Len(t, pc.Status.WebhookReceivers, 1)
-				require.NotNil(t, pc.Spec.WebhookReceivers[0].GitHub)
-				require.Equal(t,
-					external.GenerateWebhookPath(
-						pc.Name,
-						kargoapi.WebhookReceiverTypeGitHub,
-						"fake-secret-data",
-					),
-					pc.Status.WebhookReceivers[0].Path,
-				)
+			assertions: func(t *testing.T, status kargoapi.ProjectConfigStatus, err error) {
+				// We should get an error because the first receiver's SecretRef could
+				// not be resolved.
+				require.ErrorContains(t, err, "not found")
+
+				// But the second receiver should still have been processed.
+				require.Len(t, status.WebhookReceivers, 1)
+				require.Equal(t, "valid-receiver", status.WebhookReceivers[0].Name)
+				require.NotEmpty(t, status.WebhookReceivers[0].Path)
+				require.NotEmpty(t, status.WebhookReceivers[0].URL)
+
+				// The conditions should reflect the error and that the ProjectConfig is
+				// still syncing.
+				require.Len(t, status.Conditions, 2)
+				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCondition)
+				require.Equal(t, metav1.ConditionFalse, readyCondition.Status)
+				require.Equal(t, "SyncWebhookReceiversFailed", readyCondition.Reason)
+				reconcilingCondition := conditions.Get(&status, kargoapi.ConditionTypeReconciling)
+				require.NotNil(t, reconcilingCondition)
+				require.Equal(t, metav1.ConditionTrue, reconcilingCondition.Status)
+				require.Equal(t, "Syncing WebhookReceivers", reconcilingCondition.Message)
 			},
 		},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			r := test.reconciler()
-			l := logging.NewLogger(logging.DebugLevel)
-			ctx := logging.ContextWithLogger(t.Context(), l)
-			whReceivers, err := r.syncWebhookReceiversFn(ctx, test.projectConfig)
-			test.projectConfig.Status.WebhookReceivers = whReceivers
-			test.assertions(t, test.projectConfig, err)
+		{
+			name: "great success!",
+			reconciler: &reconciler{
+				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+					&corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: testProjectName,
+							Name:      "fake-token-secret",
+						},
+						Data: map[string][]byte{external.GithubSecretDataKey: []byte("fake-token")},
+					},
+				).Build(),
+			},
+			projectCfg: &kargoapi.ProjectConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: testProjectName,
+					Name:      testProjectName,
+				},
+				Spec: kargoapi.ProjectConfigSpec{
+					WebhookReceivers: []kargoapi.WebhookReceiverConfig{
+						{
+							Name: "valid-receiver",
+							GitHub: &kargoapi.GitHubWebhookReceiverConfig{
+								SecretRef: corev1.LocalObjectReference{
+									Name: "fake-token-secret",
+								},
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, status kargoapi.ProjectConfigStatus, err error) {
+				require.NoError(t, err)
+
+				// But the second receiver should still have been processed.
+				require.Len(t, status.WebhookReceivers, 1)
+				require.Equal(t, "valid-receiver", status.WebhookReceivers[0].Name)
+				require.NotEmpty(t, status.WebhookReceivers[0].Path)
+				require.NotEmpty(t, status.WebhookReceivers[0].URL)
+
+				// The conditions should reflect success.
+				require.Len(t, status.Conditions, 1)
+				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCondition)
+				require.Equal(t, metav1.ConditionTrue, readyCondition.Status)
+				require.Equal(t, "Synced", readyCondition.Reason)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			status, err := testCase.reconciler.syncWebhookReceivers(
+				context.Background(),
+				testCase.projectCfg,
+			)
+			testCase.assertions(t, status, err)
 		})
 	}
 }

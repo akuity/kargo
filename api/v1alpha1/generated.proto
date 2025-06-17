@@ -103,6 +103,26 @@ message ArgoCDAppSyncStatus {
   repeated string revisions = 3;
 }
 
+// BitbucketWebhookReceiverConfig describes a webhook receiver that is
+// compatible with Bitbucket payloads.
+message BitbucketWebhookReceiverConfig {
+  // SecretRef contains a reference to a Secret. For Project-scoped webhook
+  // receivers, the referenced Secret must be in the same namespace as the
+  // ProjectConfig.
+  //
+  // For cluster-scoped webhook receivers, the referenced Secret must be in the
+  // designated "cluster Secrets" namespace.
+  //
+  // The Secret's data map is expected to contain a `secret` key whose
+  // value is the shared secret used to authenticate the webhook requests sent
+  // by Bitbucket. For more information please refer to the Bitbucket
+  // documentation:
+  //   https://support.atlassian.com/bitbucket-cloud/docs/manage-webhooks/
+  //
+  // +kubebuilder:validation:Required
+  optional .k8s.io.api.core.v1.LocalObjectReference secretRef = 1;
+}
+
 // Chart describes a specific version of a Helm chart.
 message Chart {
   // RepoURL specifies the URL of a Helm chart repository. Classic chart
@@ -188,6 +208,57 @@ message ChartSubscription {
   // +kubebuilder:validation:Maximum=100
   // +kubebuilder:default=20
   optional int32 discoveryLimit = 4;
+}
+
+// ClusterConfig is a resource type that describes cluster-level Kargo
+// configuration.
+message ClusterConfig {
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
+  // Spec describes the configuration of a cluster.
+  optional ClusterConfigSpec spec = 2;
+
+  // Status describes the current status of a ClusterConfig.
+  optional ClusterConfigStatus status = 3;
+}
+
+// ClusterConfigList contains a list of ClusterConfigs.
+message ClusterConfigList {
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+
+  repeated ClusterConfig items = 2;
+}
+
+// ClusterConfigSpec describes cluster-level Kargo configuration.
+message ClusterConfigSpec {
+  // WebhookReceivers describes cluster-scoped webhook receivers used for
+  // processing events from various external platforms
+  repeated WebhookReceiverConfig webhookReceivers = 1;
+}
+
+// ClusterConfigStatus describes the current status of a ClusterConfig.
+message ClusterConfigStatus {
+  // Conditions contains the last observations of the ClusterConfig's current
+  // state.
+  //
+  // +patchMergeKey=type
+  // +patchStrategy=merge
+  // +listType=map
+  // +listMapKey=type
+  repeated .k8s.io.apimachinery.pkg.apis.meta.v1.Condition conditions = 1;
+
+  // ObservedGeneration represents the .metadata.generation that this
+  // ClusterConfig was reconciled against.
+  optional int64 observedGeneration = 3;
+
+  // LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+  // annotation that was handled by the controller. This field can be used to
+  // determine whether the request to refresh the resource has been handled.
+  // +optional
+  optional string lastHandledRefresh = 4;
+
+  // WebhookReceivers describes the status of cluster-scoped webhook receivers.
+  repeated WebhookReceiverDetails webhookReceivers = 2;
 }
 
 message ClusterPromotionTask {
@@ -306,6 +377,24 @@ message DiscoveredImageReference {
   // CreatedAt is the time the image was created. This field is optional, and
   // not populated for every ImageSelectionStrategy.
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 4;
+}
+
+// DockerHubWebhookReceiverConfig describes a webhook receiver that is
+// compatible with Docker Hub payloads.
+message DockerHubWebhookReceiverConfig {
+  // SecretRef contains a reference to a Secret. For Project-scoped webhook
+  // receivers, the referenced Secret must be in the same namespace as the
+  // ProjectConfig.
+  //
+  // The Secret's data map is expected to contain a `secret` key whose value
+  // does NOT need to be shared directly with Docker Hub when registering a
+  // webhook. It is used only by Kargo to create a complex, hard-to-guess URL,
+  // which implicitly serves as a shared secret. For more information about
+  // Docker Hub webhooks, please refer to the Docker documentation:
+  //   https://docs.docker.com/docker-hub/webhooks/
+  //
+  // +kubebuilder:validation:Required
+  optional .k8s.io.api.core.v1.LocalObjectReference secretRef = 1;
 }
 
 // ExpressionVariable describes a single variable that may be referenced by
@@ -494,6 +583,11 @@ message FreightStatus {
   // might wish to promote a piece of Freight to a given Stage without
   // transiting the entire pipeline.
   map<string, ApprovedStage> approvedFor = 2;
+
+  // Metadata is a map of arbitrary metadata associated with the Freight.
+  // This is useful for storing additional information about the Freight
+  // or Promotion that can be shared across steps or stages.
+  map<string, .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON> metadata = 4;
 }
 
 // GitCommit describes a specific commit from a specific Git repository.
@@ -541,16 +635,41 @@ message GitDiscoveryResult {
   repeated DiscoveredCommit commits = 2;
 }
 
-// GitHubWebhookReceiver describes a webhook receiver that is compatible with
-// GitHub payloads.
-message GitHubWebhookReceiver {
-  // SecretRef contains a reference to a Secret in the same namespace as the ProjectConfig.
+// GitHubWebhookReceiverConfig describes a webhook receiver that is compatible
+// with GitHub payloads.
+message GitHubWebhookReceiverConfig {
+  // SecretRef contains a reference to a Secret. For Project-scoped webhook
+  // receivers, the referenced Secret must be in the same namespace as the
+  // ProjectConfig.
   //
-  // The Secret is expected to contain a `token` key with the secret token configured for
-  // in GitHub for the webhook. For more information about this token, please refer to the
-  // GitHub documentation: https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
+  // For cluster-scoped webhook receivers, the referenced Secret must be in the
+  // designated "cluster Secrets" namespace.
   //
-  // The value of the token key goes in the "Secret" field when registering a GitHub App or webhook in the GitHub UI.
+  // The Secret's data map is expected to contain a `secret` key whose value is
+  // the shared secret used to authenticate the webhook requests sent by GitHub.
+  // For more information please refer to GitHub documentation:
+  //   https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
+  //
+  // +kubebuilder:validation:Required
+  optional .k8s.io.api.core.v1.LocalObjectReference secretRef = 1;
+}
+
+// GitLabWebhookReceiverConfig describes a webhook receiver that is compatible
+// with GitLab payloads.
+message GitLabWebhookReceiverConfig {
+  // SecretRef contains a reference to a Secret. For Project-scoped webhook
+  // receivers, the referenced Secret must be in the same namespace as the
+  // ProjectConfig.
+  //
+  // For cluster-scoped webhook receivers, the referenced Secret must be in the
+  // designated "cluster Secrets" namespace.
+  //
+  // The secret is expected to contain a `secret-token` key containing the
+  // shared secret specified when registering the webhook in GitLab. For more
+  // information about this token, please refer to the GitLab documentation:
+  //   https://docs.gitlab.com/user/project/integrations/webhooks/
+  //
+  // +kubebuilder:validation:Required
   optional .k8s.io.api.core.v1.LocalObjectReference secretRef = 1;
 }
 
@@ -574,7 +693,7 @@ message GitSubscription {
   //   by the Branch field or the default branch if none is specified. This is
   //   the default strategy.
   //
-  // - "SemVer": Selects the commit referenced by the the semantically greatest
+  // - "SemVer": Selects the commit referenced by the semantically greatest
   //   tag. The SemverConstraint field can optionally be used to narrow the set
   //   of tags eligible for selection.
   //
@@ -641,6 +760,53 @@ message GitSubscription {
   //
   // +kubebuilder:validation:Optional
   repeated string ignoreTags = 6;
+
+  // ExpressionFilter is an expression that can optionally be used to limit
+  // the commits or tags that are considered in determining the newest commit
+  // of interest based on their metadata.
+  //
+  // For commit-based strategies (NewestFromBranch), the filter applies to
+  // commits and has access to commit metadata variables.
+  // For tag-based strategies (Lexical, NewestTag, SemVer), the filter applies
+  // to tags and has access to tag metadata variables. The filter is applied
+  // after AllowTags, IgnoreTags, and SemverConstraint fields.
+  //
+  // The expression should be a valid expr-lang expression that evaluates to
+  // true or false. When the expression evaluates to true, the commit/tag is
+  // included in the set that is considered. When the expression evaluates to
+  // false, the commit/tag is excluded.
+  //
+  // Available variables depend on the CommitSelectionStrategy:
+  //
+  // For NewestFromBranch (commit filtering):
+  //   - `id`: The ID (sha) of the commit.
+  //   - `commitDate`: The commit date of the commit.
+  //   - `author`: The author of the commit message, in the format "Name <email>".
+  //   - `committer`: The person who committed the commit, in the format
+  // 	   "Name <email>".
+  //   - `subject`: The subject (first line) of the commit message.
+  //
+  // For Lexical, NewestTag, SemVer (tag filtering):
+  //   - `tag`: The name of the tag.
+  //   - `id`: The ID (sha) of the commit associated with the tag.
+  //   - `creatorDate`: The creation date of an annotated tag, or the commit
+  // 		date of a lightweight tag.
+  //   - `author`: The author of the commit message associated with the tag,
+  // 	   in the format "Name <email>".
+  //   - `committer`: The person who committed the commit associated with the
+  // 	   tag, in the format "Name <email>".
+  //   - `subject`: The subject (first line) of the commit message associated
+  // 	   with the tag.
+  // 	 - `tagger`: The person who created the tag, in the format "Name <email>".
+  // 	   Only available for annotated tags.
+  // 	 - `annotation`: The subject (first line) of the tag annotation. Only
+  // 	   available for annotated tags.
+  //
+  // Refer to the expr-lang documentation for more details on syntax and
+  // capabilities of the expression language: https://expr-lang.org.
+  //
+  // +kubebuilder:validation:Optional
+  optional string expressionFilter = 12;
 
   // InsecureSkipTLSVerify specifies whether certificate verification errors
   // should be ignored when connecting to the repository. This should be enabled
@@ -938,23 +1104,33 @@ message ProjectConfigSpec {
 
   // WebhookReceivers describes Project-specific webhook receivers used for
   // processing events from various external platforms
-  //
-  // +kubebuilder:validation:MaxItems=5
-  // +kubebuilder:validation:XValidation:message="WebhookReceiverConfig must have a unique name",rule="self.all(i, size(self.filter(j, i.name == j.name)) == 1)"
   repeated WebhookReceiverConfig receivers = 2;
 }
 
 // ProjectConfigStatus describes the current status of a ProjectConfig.
 message ProjectConfigStatus {
-  // Conditions contains the last observations of the Project Config's current state.
+  // Conditions contains the last observations of the Project Config's current
+  // state.
+  //
   // +patchMergeKey=type
   // +patchStrategy=merge
   // +listType=map
   // +listMapKey=type
   repeated .k8s.io.apimachinery.pkg.apis.meta.v1.Condition conditions = 1;
 
-  // WebhookReceivers describes the status of Project-specific webhook receivers.
-  repeated WebhookReceiver receivers = 2;
+  // ObservedGeneration represents the .metadata.generation that this
+  // ProjectConfig was reconciled against.
+  optional int64 observedGeneration = 3;
+
+  // LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+  // annotation that was handled by the controller. This field can be used to
+  // determine whether the request to refresh the resource has been handled.
+  // +optional
+  optional string lastHandledRefresh = 4;
+
+  // WebhookReceivers describes the status of Project-specific webhook
+  // receivers.
+  repeated WebhookReceiverDetails receivers = 2;
 }
 
 // ProjectList is a list of Project resources.
@@ -1334,6 +1510,27 @@ message PromotionTemplateSpec {
   repeated PromotionStep steps = 1;
 }
 
+// QuayWebhookReceiverConfig describes a webhook receiver that is compatible
+// with Quay.io payloads.
+message QuayWebhookReceiverConfig {
+  // SecretRef contains a reference to a Secret. For Project-scoped webhook
+  // receivers, the referenced Secret must be in the same namespace as the
+  // ProjectConfig.
+  //
+  // For cluster-scoped webhook receivers, the referenced Secret must be in the
+  // designated "cluster Secrets" namespace.
+  //
+  // The Secret's data map is expected to contain a `secret` key whose value
+  // does NOT need to be shared directly with Quay when registering a
+  // webhook. It is used only by Kargo to create a complex, hard-to-guess URL,
+  // which implicitly serves as a shared secret. For more information about
+  // Quay webhooks, please refer to the Quay documentation:
+  //   https://docs.quay.io/guides/notifications.html
+  //
+  // +kubebuilder:validation:Required
+  optional .k8s.io.api.core.v1.LocalObjectReference secretRef = 1;
+}
+
 // RepoSubscription describes a subscription to ONE OF a Git repository, a
 // container image repository, or a Helm chart repository.
 message RepoSubscription {
@@ -1657,8 +1854,41 @@ message WarehouseStatus {
   optional DiscoveredArtifacts discoveredArtifacts = 7;
 }
 
-// WebhookReceiver describes a path used to receive webhook events.
-message WebhookReceiver {
+// WebhookReceiverConfig describes the configuration for a single webhook
+// receiver.
+message WebhookReceiverConfig {
+  // Name is the name of the webhook receiver.
+  //
+  // +kubebuilder:validation:Required
+  // +kubebuilder:validation:MinLength=1
+  // +kubebuilder:validation:MaxLength=253
+  // +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+  // +akuity:test-kubebuilder-pattern=KubernetesName
+  optional string name = 1;
+
+  // Bitbucket contains the configuration for a webhook receiver that is
+  // compatible with Bitbucket payloads.
+  optional BitbucketWebhookReceiverConfig bitbucket = 5;
+
+  // DockerHub contains the configuration for a webhook receiver that is
+  // compatible with DockerHub payloads.
+  optional DockerHubWebhookReceiverConfig dockerhub = 6;
+
+  // GitHub contains the configuration for a webhook receiver that is compatible
+  // with GitHub payloads.
+  optional GitHubWebhookReceiverConfig github = 2;
+
+  // GitLab contains the configuration for a webhook receiver that is compatible
+  // with GitLab payloads.
+  optional GitLabWebhookReceiverConfig gitlab = 3;
+
+  // Quay contains the configuration for a webhook receiver that is compatible
+  // with Quay payloads.
+  optional QuayWebhookReceiverConfig quay = 4;
+}
+
+// WebhookReceiverDetails encapsulates the details of a webhook receiver.
+message WebhookReceiverDetails {
   // Name is the name of the webhook receiver.
   optional string name = 1;
 
@@ -1667,20 +1897,5 @@ message WebhookReceiver {
 
   // URL includes the full address of the receiver's webhook endpoint.
   optional string url = 4;
-}
-
-// WebhookReceiverConfig describes the configuration for a single webhook
-// receiver.
-message WebhookReceiverConfig {
-  // Name is the name of the webhook receiver.
-  optional string name = 1;
-
-  // GitHub contains the configuration for a webhook receiver that is compatible with
-  // GitHub payloads.
-  //
-  // TODO(fuskovic): Make this mutually exclusive with configs for other platforms.
-  //
-  // +kubebuilder:validation:Required
-  optional GitHubWebhookReceiver github = 2;
 }
 
