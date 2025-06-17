@@ -46,22 +46,24 @@ The secret (among other things) will be used as an input to generate
 a secure URL for our newly created webhook receiver. We can obtain
 this URL using the following command:
 
+```shell
     kubectl \
         get projectconfigs \
         my-project-config \
         -n my-namespace \
-        -o=jsonpath='{.status.webhookReceivers[0].url}'
+        -o=jsonpath='{.status.webhookReceivers}'
+```
 
 
 ## Configure on Quay
 
 ### Step 1: Navigate to Repository Settings
 
-![Step 1](/img/quay/1.png "Settings")
+![Step 1](./img/1.png "Settings")
 
 ### Step 2: Click Create Notification
 
-![Step 2](/img/quay/2.png "Create Notification Button")
+![Step 2](./img/2.png "Create Notification Button")
 
 ### Step 3: Fill out the form
 
@@ -71,14 +73,14 @@ Select `Webhook POST` from the second dropdown menu.
 
 For the third input field (`Webhook URL`) we will input our webhook receiver URL.
 
-![Step 3](/img/quay/3.png "Create Notification Form")
+![Step 3](./img/3.png "Create Notification Form")
 
 ### Step 3: Submit
 
 Click the `Create Notification` button.
 
-![Step 4](/img/quay/4.png "Submit Form")
+![Step 4](./img/4.png "Submit Form")
 
-![Step 5](/img/quay/5.png "Created")
+![Step 5](./img/5.png "Created")
 
 For additional information on configuring Quay notifications/webhooks, refer to the [Quay Docs](https://docs.quay.io/guides/notifications.html).
