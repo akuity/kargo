@@ -11,6 +11,15 @@ Github Enterprise Cloud, and GitHub Enterprise Server.
 
 The Kargo GitHub webhook receiver will require a Kubernetes Secret. This Secret is required to contain a `secret` key in its data map. You will be required to provide the value assigned to the `secret` key to GitHub in a later step so keep it handy.
 
+:::note
+The following command can be used to generate a sufficiently secure secret:
+
+```shell
+echo "$(openssl rand -base64 48 | tr -d '=+/' | head -c 32)"
+```
+
+:::
+
 ```yaml
 apiVersion: v1
 kind: Secret
@@ -34,15 +43,6 @@ spec:
 ```
 
 Github will sign payloads using this `secret` via HMAC signature. Our webhook receiver will use this secret to verify the signature.
-
-:::note
-The following command can be used to generate a sufficiently secure secret:
-
-```shell
-echo "$(openssl rand -base64 48 | tr -d '=+/' | head -c 32)"
-```
-
-:::
 
 ## Retrieving the Webhook URL
 
