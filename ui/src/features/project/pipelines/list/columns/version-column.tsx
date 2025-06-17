@@ -179,7 +179,9 @@ export const versionColumn = (
           Apply
         </Button>
 
-        <Button onClick={onReset}>Reset</Button>
+        <Button onClick={onReset} size='small'>
+          Reset
+        </Button>
       </Flex>
     );
   },
