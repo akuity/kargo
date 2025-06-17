@@ -4,43 +4,42 @@ sidebar_label: GitHub
 
 # GitHub
 
-## Required Secrets for Github
+## GitHub Webhook Receiver Configuration
 
-Our webhook receiver will require a Kubernetes secret. This secret is required to contain a `secret` key in its `stringData`. We will need to provide the value we assigned to the `secret` key to GitHub in a later step so keep it handy.
-
-```yaml
-    apiVersion: v1
-    kind: Secret
-    metadata:
-      name: my-secret
-      namespace: my-namespace
-    stringData:
-    # Replace 'your-secret-here' with any non-empty
-    # arbitrary string data.
-    # The key here literally needs to be named 'secret'.
-      secret: your-secret-here
-```
-
-Github will sign payloads using this secret via HMAC signature. Our webhook receiver will use this secret to verify the signature.
-
-## Github Webhook Receiver Configuration
-
-Create a new project config; specifying a Github webhook receiver that
-targets the secret we created in the last step.
+The Kargo GitHub webhook receiver will require a Kubernetes Secret. This Secret is required to contain a `secret` key in its data map. You will be required to provide the value assigned to the `secret` key to GitHub in a later step so keep it handy.
 
 ```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gh-wh-secret
+  namespace: kargo-demo
+stringData:
+  secret: your-secret-here
+---
 apiVersion: kargo.akuity.io/v1alpha1
 kind: ProjectConfig
 metadata:
   name: my-project-config
-  namespace: my-namespace
+  namespace: kargo-demo
 spec:
   webhookReceivers: 
-    - name: my-receiver
+    - name: gh-wh-receiver
       github:
         secretRef:
-          name: my-secret
+          name: gh-wh-secret
 ```
+
+Github will sign payloads using this secret via HMAC signature. Our webhook receiver will use this secret to verify the signature.
+
+:::note
+The following command can be used to generate a sufficiently secure secret:
+
+```shell
+echo "$(openssl rand -base64 48 | tr -d '=+/' | head -c 32)"
+```
+
+:::
 
 ## Retrieving the Webhook URL
 
@@ -48,12 +47,12 @@ The secret (among other things) will be used as an input to generate
 a secure URL for our newly created webhook receiver. We can obtain
 this URL using the following command:
 
-```
-    kubectl \
-        get projectconfigs \
-        my-project-config \
-        -n my-namespace \
-        -o=jsonpath='{.status.webhookReceivers[0].url}'
+```shell
+  kubectl \
+    get projectconfigs \
+    my-project-config \
+    -n kargo-demo \
+    -o=jsonpath='{.status.webhookReceivers}'
 ```
 
 
@@ -61,41 +60,43 @@ this URL using the following command:
 
 When configuring on Github, you can configure either a webhook or an app. We will outline instructions for both, starting with webhooks.
 
-```
-    kubectl \
-        get secrets \
-        my-secret \
-        --template={{.data.secret}} | base64 -d
+```shell
+  kubectl \
+    get secrets \
+    my-secret \
+    -n kargo-demo \
+    --template={{.data.secret}} | base64 -d
 ```
 
 #### Webhooks
 
-### Step 1: Navigate to Settings
+1. Navigate to Settings
 
 ![Step 1](/img/github/webhooks/1.png "Settings")
 
-### Step 2: Navigate to Webhooks
+2. Navigate to Webhooks
 
 ![Step 2](/img/github/webhooks/2.png "Webhooks")
 
-### Step 3: Create A New Webhook
+3. Create A New Webhook
 
-Click the `Add Webhook` button.
+3.a Click the `Add Webhook` button.
 
-![Step 3](/img/github/webhooks/3.png "Add Webhook Button")
+3.b For the `Payload URL`, we will use the value we retrieved from the [Retrieving the Webhook URL](#retrieving-the-webhook-url) step.
 
-1. For the `Payload URL`, we will use the value we retrieved from the [Retrieving the Webhook URL](#retrieving-the-webhook-url) step.
+3.c Select `application/json` for the `Content type` field.
 
-2. Select `application/json` for the `Content type` field.
+3.d In the `Secret` field, we will input the value we assigned to the `secret` key in [Required Secrets for GitHub](#required-secrets-for-github).
 
-3. In the `Secret` field, we will input the value we assigned to the `secret` key in [Required Secrets for GitHub](#required-secrets-for-github).
-
-![Step 4](/img/github/webhooks/4.png "Add Webhook")
+![Step 3](/img/github/webhooks/4.png "Add Webhook")
 
 Leave `Just the push event` field checked unless you're
 looking to subscribe to `ghcr` events.
 
-If you're looking to subscribe to `ghcr` events you should select `Let me select individual events` and then select `Packages`.
+:::note
+	If you're looking to subscribe to `ghcr` events you should select `Let me select individual events` and then select `Packages`.
+  This requires that you have connected the repository and package. For more information on connecting repositories and packages refer to the [Github Docs here](https://docs.github.com/en/packages/learn-github-packages/connecting-a-repository-to-a-package).
+:::
 
 ![Step 5](/img/github/webhooks/5.png "Event Subscription")
 
@@ -104,13 +105,13 @@ press `Add webhook`.
 
 ![Step 6](/img/github/webhooks/6.png "Submit Form")
 
-### Step 4: Verify Connectivity
+4. Verify Connectivity
 
 Click on the webhook URL in the view below.
 
 ![Step 7](/img/github/webhooks/7.png "Created")
 
-Navigate toe `Recent Deliveries`.
+Navigate to `Recent Deliveries`.
 
 ![Step 8](/img/github/webhooks/8.png "Recent Deliveries")
 
@@ -121,28 +122,28 @@ Click on the `ping` event and ensure a successful response was returned.
 
 #### Apps
 
-### Step 1: Navigate to Settings
+1. Navigate to Settings
 
 This will be listed in a dropdown menu that is
 toggled by clicking your Github avatar.
 
 ![Step 1](/img/github/apps/1.png "Settings")
 
-### Step 2: Navigate to Developer Settings
+2. Navigate to Developer Settings
 
 This will be in the bottom left-hand corner of the settings UI.
 
 ![Step 2](/img/github/apps/2.png "Developer Settings")
 
-### Step 3: Navigate to Github Apps
+3. Navigate to Github Apps
 
 ![Step 3](/img/github/apps/3.png "Github Apps")
 
-### Step 4: Register a new Github App
+4. Register a new Github App
 
-1. Click the `New Github App` button.
+4.a Click the `New Github App` button.
 
-2. Add a unique name and a homepage URL (this can be repo URL).
+4.b Add a unique name and a homepage URL (this can be repo URL).
 
 ![Step 4](/img/github/apps/4.png "Register New App")
 
@@ -152,7 +153,7 @@ In the `Secret` field, we will input the value we assigned to the `secret` key i
 
 ![Step 5](/img/github/apps/5.png "Configure Webhook")
 
-### Step 5: Configure Permissions
+5. Configure Permissions
 
 ![Step 6](/img/github/apps/6.png "Permissions")
 
@@ -164,18 +165,18 @@ For the option to subscribe to registry push events(ghcr), we will need `read + 
 
 ![Step 8](/img/github/apps/8.png "Permissions - Packages")
 
-### Step 6: Configure Event Subscriptions
+6. Configure Event Subscriptions
 
 Here we can subscribe to `push` or `package` events depending
 on the permissions you selected in the previous step.
 
 ![Step 9](/img/github/apps/9.png "Subscribe to Events")
 
-### Step 7: Confirm Visibility + Create
+7. Confirm Visibility + Create
 
 ![Step 10](/img/github/apps/10.png "Submit Form")
 
-### Step 8: Verify
+8. Verify
 
 In the Github Apps UI, navigate to `Advanced` in the left-hand side menu and click `Recent Deliveries`.
 
