@@ -2,12 +2,12 @@
 sidebar_label: GitHub
 ---
 
-# GitHub
+# The GitHub Webhook Receiver
 
 The following instructions will work for Github,
 Github Enterprise Cloud, and GitHub Enterprise Server.
 
-## GitHub Webhook Receiver Configuration
+## Configuring the Receiver
 
 The Kargo GitHub webhook receiver will require a Kubernetes Secret. This Secret is required to contain a `secret` key in its data map. You will be required to provide the value assigned to the `secret` key to GitHub in a later step so keep it handy.
 
