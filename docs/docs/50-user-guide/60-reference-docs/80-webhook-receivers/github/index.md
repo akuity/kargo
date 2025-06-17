@@ -72,126 +72,111 @@ When configuring on Github, you can configure either a webhook or an app. We wil
 
 ### Webhooks
 
-1. Navigate to Settings
+1. Navigating to the Webhooks Dashboard
 
-![Step 1](./img/webhooks/1.png "Settings")
+    1. Navigate to <Hlt>Settings</Hlt>
+    1. Click <Hlt>Webhooks</Hlt>
+    1. Click <Hlt>Add webhook</Hlt>
 
-2. Navigate to Webhooks
+![Step 1](./img/webhooks/123.png "Settings")
 
-![Step 2](./img/webhooks/2.png "Webhooks")
+2. Registering the Webhook
 
-3. Create A New Webhook
-
-:::note
-The `Payload URL` will use the value we retrieved from the [Retrieving the Webhook URL](#retrieving-the-webhook-url) step.
-
-The `Content type` field must be set to `application/json`.
-
-The `Secret` field must be set to the `secret` key from the [Github Webhook Receiver Configuration](#github-webhook-receiver-configuration) step.
-:::
+    1. Set the <Hlt>Payload URL</Hlt> to the value we retrieved from the 
+    [Retrieving the Receiver's URL](#retrieving-the-receivers-url) step.
+    1. Set the <Hlt>Content type</Hlt> field to `application/json`.
+    1. Set the <Hlt>Secret</Hlt> field to the value we assigned the `secret` key 
+    from the [Configuring the Receiver](#configuring-the-receiver) step.
 
 ![Step 3](./img/webhooks/4.png "Add Webhook")
 
-Leave the `Just the push event` field checked unless you're
-looking to subscribe to `ghcr` events.
-
 :::note
-If you're looking to subscribe to `ghcr` events you should select `Let me select individual events` and then select `Packages`.
-This requires that you have connected the repository and package. For more information on connecting repositories and packages refer to the [Github Docs here](https://docs.github.com/en/packages/learn-github-packages/connecting-a-repository-to-a-package).
+Leave the <Hlt>Just the push event</Hlt> field checked unless you're
+looking to subscribe to `ghcr` events. If you're looking to subscribe to `ghcr` events you should select <Hlt>Let me select individual events</Hlt> and then 
+select <Hlt>Packages</Hlt>. This requires that you have connected the repository
+and package. For more information on connecting repositories and packages refer to the 
+[Github Docs here](https://docs.github.com/en/packages/learn-github-packages/connecting-a-repository-to-a-package).
 :::
 
 ![Step 5](./img/webhooks/5.png "Event Subscription")
-
-Then finally make sure to toggle the webhook as `Active` and
-press `Add webhook`.
+  
+Finally, confirm <Hlt>Active</Hlt> is toggled and click <Hlt>Add webhook</Hlt>.
 
 ![Step 6](./img/webhooks/6.png "Submit Form")
 
-4. Verify Connectivity
+3. Verifying Connectivity
 
-Click on the webhook URL in the view below.
+From your Webhooks Dashboard, click on the webhook you just created.
 
 ![Step 7](./img/webhooks/7.png "Created")
 
-Navigate to `Recent Deliveries`.
+Navigate to <Hlt>Recent Deliveries</Hlt>.
 
 ![Step 8](./img/webhooks/8.png "Recent Deliveries")
 
-Click on the `ping` event and ensure a successful response was returned.
+Click on the <Hlt>ping</Hlt> event and ensure a successful response was returned.
 
 ![Step 9](./img/webhooks/9.png "Response")
 
 
 ### Apps
 
-It may be tedious to configure webhooks for each of your Github repositories. You can instead opt to configure a [Github App](https://docs.github.com/en/apps); allowing you to receive events from all or select repositories.
+It may be tedious to configure webhooks for each of your Github repositories. 
+You can instead opt to configure a 
+[Github App](https://docs.github.com/en/apps); allowing you to receive events 
+from all or select repositories.
 
-1. Navigate to Settings
+1. Navigate to the Github Apps Dashboard
 
-This will be listed in a dropdown menu that is
-toggled by clicking your Github avatar.
+    1. Navigate to <Hlt>Settings</Hlt>. This will be listed in a dropdown menu that is toggled by clicking your Github avatar.
+    1. Click <Hlt>Developer Settings</Hlt>.This will be in the bottom left-hand corner of the settings dashboard.
+    1. Click <Hlt>Github Apps</Hlt>.
 
-![Step 1](./img/apps/1.png "Settings")
+![Step 1](./img/apps/123.png "Settings")
 
-2. Navigate to Developer Settings
+2. Register a new Github App
 
-This will be in the bottom left-hand corner of the settings dashboard.
+    1. Set a unique name in the <Hlt>Github App name</Hlt> field.
+    1. For the <Hlt>Homepage URL</Hlt> field you can use an arbitrary URL
+    or the repository URL.
+    ![Step 4](./img/apps/4.png "Register New App")
+    1. Set the <Hlt>Webhook URL</Hlt> to the value we retrieved from the 
+    [Retrieving the Receiver's URL](#retrieving-the-receivers-url) step.
+    1. Set the <Hlt>Secret</Hlt> field to the value we set to the `secret` key 
+    from the [Configuring the Receiver](#configuring-the-receiver) 
+    step.
+    ![Step 5](./img/apps/5.png "Configure Webhook")
+    1. Scroll down to <Hlt>Configure Permissions</Hlt> -> 
+    <Hlt>Repository Permissions</Hlt>
+     :::note
+      For the option to subscribe to repo push events, we will need 
+      <Hlt>read + write</Hlt> access for the <Hlt>Contents</Hlt> permission. For the option to subscribe to registry push events(ghcr), we will need <Hlt>read + write</Hlt>
+      access for the <Hlt>Packages</Hlt> permission.
+    :::
+    ![Step 7](./img/apps/7.png "Permissions - Contents")
+    ![Step 8](./img/apps/8.png "Permissions - Packages")
+    1. Scroll down to <Hlt>Subscribe to events</Hlt>
+    1. Select options based on your choices for the previous step.
+    :::note
+      If you set the <Hlt>Contents</Hlt> permission to <Hlt>read + write</Hlt> 
+      you will have the <Hlt>Push</Hlt> option available to you. If you set <Hlt>Packages</Hlt> to <Hlt>read + write</Hlt> you will have the <Hlt>Registry package</Hlt> option available to you.
+    :::
+    ![Step 9](./img/apps/9.png "Subscribe to Events")
+    1. Finally, click <Hlt>Create GitHub App</Hlt>.
+    ![Step 10](./img/apps/10.png "Submit Form")
 
-![Step 2](./img/apps/2.png "Developer Settings")
-
-3. Navigate to Github Apps
-
-![Step 3](./img/apps/3.png "Github Apps")
-
-4. Register a new Github App
-
-Add a unique name and a homepage URL (this can be repo URL).
-
-![Step 4](./img/apps/4.png "Register New App")
-
-:::note
-The `Webhook URL` requires the value we retrieved from the [Retrieving the Webhook URL](#retrieving-the-webhook-url) step.
-
-The `Secret` field must be set to the `secret` key from the [Github Webhook Receiver Configuration](#github-webhook-receiver-configuration) step.
-:::
-
-![Step 5](./img/apps/5.png "Configure Webhook")
-
-5. Configure Permissions
-
-![Step 6](./img/apps/6.png "Permissions")
-
-For the option to subscribe to repo push events, we will need `read + write` access for the `Contents` permission.
-
-![Step 7](./img/apps/7.png "Permissions - Contents")
-
-For the option to subscribe to registry push events(ghcr), we will need `read + write` access for the `Packages` permission.
-
-![Step 8](./img/apps/8.png "Permissions - Packages")
-
-6. Configure Event Subscriptions
-
-Here we can subscribe to `push` or `package` events depending
-on the permissions you selected in the previous step.
-
-![Step 9](./img/apps/9.png "Subscribe to Events")
-
-7. Confirm Visibility + Create
-
-![Step 10](./img/apps/10.png "Submit Form")
-
-8. Verify
-
-In the Github Apps dashboard, navigate to `Advanced` in the left-hand side menu and click `Recent Deliveries`.
-
-![Step 11](./img/apps/11.png "Recent Deliveries")
-
-Click on the `ping` event and then the `response` tab to
-verify the connection was established successfully.
-
-![Step 12](./img/apps/12.png "Response")
+3. Verifying Connectivity
+  
+    1. In your new App's dashboard, click <Hlt>Advanced</Hlt> on the left-hand 
+    side.
+    1. Click <Hlt>Recent Deliveries</Hlt>.
+    1. Click on the <Hlt>ping</Hlt> event.
+    ![Step 11](./img/apps/11.png "Recent Deliveries")
+    1. Click <Hlt>Response</Hlt> and verify a 200 was received.
+    ![Step 12](./img/apps/12.png "Response")
 
 #### Additional Documentation
 
-For more additional information on configuring Github Webhooks or Apps, refer to the [Github Docs](https://docs.github.com/en/webhooks/using-webhooks/creating-webhooks)
+For more additional information on configuring Github Webhooks or Apps, refer 
+to the [Github Docs](https://docs.github.com/en/webhooks/using-webhooks/creating-webhooks)
 
