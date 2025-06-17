@@ -60,6 +60,7 @@ rules:
   - apiGroups:
       - kargo.akuity.io
     resources:
+      - clusterconfigs
       - clusterpromotiontasks
       - projects
       - promotiontasks
