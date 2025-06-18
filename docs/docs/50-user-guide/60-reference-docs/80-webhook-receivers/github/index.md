@@ -159,7 +159,13 @@ To configure a single repository to notify the receiver of relevant events:
        `200` was received from the webhook receiver.
         ![Step 9](./img/webhooks/9.png "Response")
 
+When these steps are complete, the repository will send events to the webhook
+receiver.
 
+:::info
+For additional information on configuring webhooks, refer directly to the
+[Github Docs](https://docs.github.com/en/webhooks/using-webhooks/creating-webhooks).
+:::
 ### GitHub Apps
 
 It may be tedious to configure webhooks for each of your Github repositories. 
