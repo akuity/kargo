@@ -217,20 +217,15 @@ from all or select repositories.
 
     1. Click <Hlt>Create GitHub App</Hlt>.
 
-1. Verifying Connectivity
-  
-    1. In your new App's dashboard, click <Hlt>Advanced</Hlt> on the left-hand 
-    side.
+1. Verify connectivity:
+    1. From the new App's settings page, select <Hlt>Advanced</Hlt> from the
+       left sidebar.
 
-    1. Click <Hlt>Recent Deliveries</Hlt>.
+    1. Under <Hlt>Recent Deliveries</Hlt>, select the <Hlt>ping</Hlt> event and
+       ensure an HTTP response status of `200` was received from the webhook
+       receiver.
 
-    1. Click on the <Hlt>ping</Hlt> event.
-
-    ![Step 11](./img/apps/11.png "Recent Deliveries")
-
-    1. Click <Hlt>Response</Hlt> and verify a 200 was received.
-
-    ![Step 12](./img/apps/12.png "Response")
+        ![Step 12](./img/apps/12.png "Response")
 
 #### Additional Documentation
 
