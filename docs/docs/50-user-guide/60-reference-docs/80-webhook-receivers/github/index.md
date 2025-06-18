@@ -73,7 +73,7 @@ When configuring on Github, you can configure either a webhook or an app. We wil
 
 ### Webhooks
 
-1. Navigate to `https://github.com/<account>/<repository>/settings/hooks` where
+1. Navigate to `https://github.com/<account>/<repository>/settings/hooks`, where
    `<account>` has been replaced with your GitHub username or an organization
    for which you are an administrator and `repository` has been replaced with
    the name of a repository belonging to that account.
@@ -115,19 +115,18 @@ When configuring on Github, you can configure either a webhook or an app. We wil
 
     1. Click <Hlt>Add webhook</Hlt>.
 
-1. Verifying Connectivity
+1. Verify connectivity:
 
-From your Webhooks Dashboard, click on the webhook you just created.
+    1. From the <Hlt>Webhooks</Hlt> dashboard, select the webhook you registered
+       above.
+        ![Step 7](./img/webhooks/7.png "Created")
 
-![Step 7](./img/webhooks/7.png "Created")
+    1. Select the <Hlt>Recent Deliveries</Hlt> tab.
+        ![Step 8](./img/webhooks/8.png "Recent Deliveries")
 
-Navigate to <Hlt>Recent Deliveries</Hlt>.
-
-![Step 8](./img/webhooks/8.png "Recent Deliveries")
-
-Click on the <Hlt>ping</Hlt> event and ensure a successful response was returned.
-
-![Step 9](./img/webhooks/9.png "Response")
+    1. Select the <Hlt>ping</Hlt> event and ensure an HTTP response status of
+       `200` was received from the webhook receiver.
+        ![Step 9](./img/webhooks/9.png "Response")
 
 
 ### Apps
