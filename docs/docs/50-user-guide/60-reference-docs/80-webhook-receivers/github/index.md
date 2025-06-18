@@ -175,13 +175,12 @@ For additional information on configuring webhooks, refer directly to the
 
 ### Webhooks from a GitHub App
 
-It may be tedious to configure webhooks for each of your Github repositories.
-You can instead opt to configure a
-[Github App](https://docs.github.com/en/apps); allowing you to receive events
-from all or select repositories.
+To configure a [Github App](https://docs.github.com/en/apps) to notify the
+receiver of relevant events from any repository into which it's been installed:
 
-1. Navigate to [https://github.com/settings/apps] to create a new GitHub App
-   owned by your own account
+1. Navigate to
+   [https://github.com/settings/apps](https://github.com/settings/apps)
+   to create a new GitHub App owned by your own account
 
     OR
 
