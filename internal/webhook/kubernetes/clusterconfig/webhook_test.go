@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 )
 
 func Test_webhook_ValidateCreate(t *testing.T) {
@@ -46,7 +47,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 			name: "duplicate webhook receiver names",
 			cfg: &kargoapi.ClusterConfig{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: acceptedName,
+					Name: api.ClusterConfigName,
 				},
 				Spec: kargoapi.ClusterConfigSpec{
 					WebhookReceivers: []kargoapi.WebhookReceiverConfig{
@@ -87,7 +88,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 			name: "valid cluster config",
 			cfg: &kargoapi.ClusterConfig{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: acceptedName,
+					Name: api.ClusterConfigName,
 				},
 				Spec: kargoapi.ClusterConfigSpec{
 					WebhookReceivers: []kargoapi.WebhookReceiverConfig{
@@ -121,7 +122,7 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 			name: "duplicate webhook receiver names",
 			cfg: &kargoapi.ClusterConfig{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: acceptedName,
+					Name: api.ClusterConfigName,
 				},
 				Spec: kargoapi.ClusterConfigSpec{
 					WebhookReceivers: []kargoapi.WebhookReceiverConfig{
@@ -162,7 +163,7 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 			name: "valid cluster config",
 			cfg: &kargoapi.ClusterConfig{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: acceptedName,
+					Name: api.ClusterConfigName,
 				},
 				Spec: kargoapi.ClusterConfigSpec{
 					WebhookReceivers: []kargoapi.WebhookReceiverConfig{

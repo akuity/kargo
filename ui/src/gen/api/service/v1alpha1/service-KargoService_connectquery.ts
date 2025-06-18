@@ -73,6 +73,21 @@ export const deleteStage = KargoService.method.deleteStage;
 export const refreshStage = KargoService.method.refreshStage;
 
 /**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetClusterConfig
+ */
+export const getClusterConfig = KargoService.method.getClusterConfig;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterConfig
+ */
+export const deleteClusterConfig = KargoService.method.deleteClusterConfig;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.RefreshClusterConfig
+ */
+export const refreshClusterConfig = KargoService.method.refreshClusterConfig;
+
+/**
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListPromotions
  */
 export const listPromotions = KargoService.method.listPromotions;
@@ -103,14 +118,21 @@ export const getProject = KargoService.method.getProject;
 export const listProjects = KargoService.method.listProjects;
 
 /**
+ * ProjectConfig APIs 
+ *
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetProjectConfig
+ */
+export const getProjectConfig = KargoService.method.getProjectConfig;
+
+/**
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteProjectConfig
  */
 export const deleteProjectConfig = KargoService.method.deleteProjectConfig;
 
 /**
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetProjectConfig
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.RefreshProjectConfig
  */
-export const getProjectConfig = KargoService.method.getProjectConfig;
+export const refreshProjectConfig = KargoService.method.refreshProjectConfig;
 
 /**
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ApproveFreight

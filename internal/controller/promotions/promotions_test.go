@@ -598,6 +598,59 @@ func Test_calculateRequeueInterval(t *testing.T) {
 		assertions func(*testing.T, time.Duration)
 	}{
 		{
+			name: "current step out of bounds",
+			promo: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{{
+						Uses: testStepKindWithoutTimeout,
+					}},
+				},
+				Status: kargoapi.PromotionStatus{
+					CurrentStep: 1,
+					StepExecutionMetadata: []kargoapi.StepExecutionMetadata{{
+						StartedAt: &metav1.Time{Time: time.Now()},
+					}},
+				},
+			},
+			assertions: func(t *testing.T, requeueInterval time.Duration) {
+				require.Equal(t, defaultRequeueInterval, requeueInterval)
+			},
+		},
+		{
+			name: "nil step execution metadata",
+			promo: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{{
+						Uses: testStepKindWithoutTimeout,
+					}},
+				},
+				Status: kargoapi.PromotionStatus{
+					CurrentStep:           0,
+					StepExecutionMetadata: nil,
+				},
+			},
+			assertions: func(t *testing.T, requeueInterval time.Duration) {
+				require.Equal(t, defaultRequeueInterval, requeueInterval)
+			},
+		},
+		{
+			name: "step execution metadata out of bounds",
+			promo: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{{
+						Uses: testStepKindWithoutTimeout,
+					}},
+				},
+				Status: kargoapi.PromotionStatus{
+					CurrentStep:           0,
+					StepExecutionMetadata: []kargoapi.StepExecutionMetadata{},
+				},
+			},
+			assertions: func(t *testing.T, requeueInterval time.Duration) {
+				require.Equal(t, defaultRequeueInterval, requeueInterval)
+			},
+		},
+		{
 			name: "no timeout",
 			promo: &kargoapi.Promotion{
 				Spec: kargoapi.PromotionSpec{

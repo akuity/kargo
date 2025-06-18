@@ -7,6 +7,8 @@ import (
 	"runtime"
 
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	libCluster "sigs.k8s.io/controller-runtime/pkg/cluster"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -79,7 +81,18 @@ func (o *externalWebhooksServerOptions) run(ctx context.Context) error {
 	}
 	kubernetes.ConfigureQPSBurst(ctx, restCfg, o.QPS, o.Burst)
 
-	cluster, err := libCluster.New(restCfg)
+	cluster, err := libCluster.New(
+		restCfg,
+		func(clusterOptions *libCluster.Options) {
+			clusterOptions.Client = client.Options{
+				Cache: &client.CacheOptions{
+					DisableFor: []client.Object{
+						&corev1.Secret{},
+					},
+				},
+			}
+		},
+	)
 	if err != nil {
 		return fmt.Errorf("error creating Kubernetes client: %w", err)
 	}

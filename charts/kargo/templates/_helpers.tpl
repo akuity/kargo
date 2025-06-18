@@ -22,26 +22,86 @@ Create chart name and version as used by the chart label.
 {{- end -}}
 
 {{/*
-Create default controlplane user regular expression with well-known service accounts
+Check if TLS should be used for a service.
+*/}}
+{{- define "kargo.useTLS" -}}
+{{- $service := . -}}
+{{- or (and $service.ingress.enabled $service.ingress.tls.enabled)
+       (and (not $service.ingress.enabled) $service.tls.enabled)
+       $service.tls.terminatedUpstream -}}
+{{- end -}}
+
+{{/*
+Generate base URL for a service.
+*/}}
+{{- define "kargo.baseURL" -}}
+{{- $service := .service -}}
+{{- $host := .host -}}
+{{- if include "kargo.useTLS" $service -}}
+{{- printf "https://%s" $host -}}
+{{- else -}}
+{{- printf "http://%s" $host -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Generate the base URL for the API service.
+*/}}
+{{- define "kargo.api.baseURL" -}}
+{{- include "kargo.baseURL" (dict "service" .Values.api "host" .Values.api.host) -}}
+{{- end -}}
+
+{{/*
+Generate the base URL for the external webhook server.
+*/}}
+{{- define "kargo.externalWebhooksServer.baseURL" -}}
+{{- $webhookService := .Values.externalWebhooksServer -}}
+{{- if and (not $webhookService.ingress.enabled) (not $webhookService.tls.enabled) (not $webhookService.tls.terminatedUpstream) -}}
+{{- include "kargo.api.baseURL" . -}}
+{{- else -}}
+{{- include "kargo.baseURL" (dict "service" $webhookService "host" $webhookService.host) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Create default controlplane user regular expression with well-known service accounts.
 */}}
 {{- define "kargo.controlplane.defaultUserRegex" -}}
-{{- $list := list }}
-{{- if .Values.api.enabled }}
-{{- $list = append $list "kargo-api" }}
-{{- end }}
-{{- if .Values.controller.enabled }}
-{{- $list = append $list "kargo-controller" }}
-{{- end }}
-{{- if .Values.garbageCollector.enabled }}
-{{- $list = append $list "kargo-garbage-collector" }}
-{{- end }}
-{{- if .Values.managementController.enabled }}
-{{- $list = append $list "kargo-management-controller" }}
-{{- end }}
-{{- if $list }}
-{{- printf "^system:serviceaccount:%s:(%s)$" .Release.Namespace (join "|" $list) }}
-{{- end }}
-{{- end }}
+{{- $components := dict
+    "api" .Values.api.enabled
+    "controller" .Values.controller.enabled
+    "garbage-collector" .Values.garbageCollector.enabled
+    "management-controller" .Values.managementController.enabled -}}
+{{- $serviceAccounts := list -}}
+{{- range $name, $enabled := $components -}}
+{{- if $enabled -}}
+{{- $serviceAccounts = append $serviceAccounts (printf "kargo-%s" $name) -}}
+{{- end -}}
+{{- end -}}
+{{- if $serviceAccounts -}}
+{{- printf "^system:serviceaccount:%s:(%s)$" .Release.Namespace (join "|" $serviceAccounts) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Determine the most appropriate CPU resource field for GOMAXPROCS.
+*/}}
+{{- define "kargo.selectCpuResourceField" -}}
+{{- $resources := .resources -}}
+{{- $cpu := dict -}}
+{{- if $resources -}}
+{{- if and $resources.limits $resources.limits.cpu -}}
+{{- $cpu = set $cpu "field" "limits.cpu" -}}
+{{- else if and $resources.requests $resources.requests.cpu -}}
+{{- $cpu = set $cpu "field" "requests.cpu" -}}
+{{- else -}}
+{{- $cpu = set $cpu "field" "limits.cpu" -}}
+{{- end -}}
+{{- else -}}
+{{- $cpu = set $cpu "field" "limits.cpu" -}}
+{{- end -}}
+{{- $cpu.field -}}
+{{- end -}}
 
 {{/*
 Common labels
@@ -93,51 +153,3 @@ app.kubernetes.io/component: kubernetes-webhooks-server
 {{- define "kargo.managementController.labels" -}}
 app.kubernetes.io/component: management-controller
 {{- end -}}
-
-{{/*
-Generate the base URL for the API service.
-*/}}
-{{- define "kargo.api.baseURL" -}}
-{{- if or (and .Values.api.ingress.enabled .Values.api.ingress.tls.enabled) (and (not .Values.api.ingress.enabled) .Values.api.tls.enabled) .Values.api.tls.terminatedUpstream -}}
-{{- printf "https://%s" .Values.api.host -}}
-{{- else -}}
-{{- printf "http://%s" .Values.api.host -}}
-{{- end -}}
-{{- end -}}
-
-{{/*
-Generate the base URL for the external webhook server.
-*/}}
-{{- define "kargo.externalWebhooksServer.baseURL" -}}
-{{- if or (and .Values.externalWebhooksServer.ingress.enabled .Values.externalWebhooksServer.ingress.tls.enabled) (and (not .Values.externalWebhooksServer.ingress.enabled) .Values.externalWebhooksServer.tls.enabled) .Values.externalWebhooksServer.tls.terminatedUpstream -}}
-{{- printf "https://%s" .Values.externalWebhooksServer.host -}}
-{{- else if and (not .Values.externalWebhooksServer.ingress.enabled) (not .Values.externalWebhooksServer.tls.enabled) (not .Values.externalWebhooksServer.tls.terminatedUpstream) -}}
-{{- include "kargo.api.baseURL" . -}}
-{{- else -}}
-{{- printf "http://%s" .Values.externalWebhooksServer.host -}}
-{{- end -}}
-{{- end -}}
-
-{{/*
-Determine the most appropriate CPU resource field for GOMAXPROCS.
-Prioritizes limits over requests, with a fallback to limits if neither is set.
-*/}}
-{{- define "kargo.selectCpuResourceField" -}}
-  {{- $resources := .resources -}}
-  {{- $hasLimits := and $resources (hasKey $resources "limits") (ne (toString $resources.limits.cpu) "") -}}
-  {{- $hasRequests := and $resources (hasKey $resources "requests") (ne (toString $resources.requests.cpu) "") -}}
-  {{- if $hasLimits -}}
-    limits.cpu
-  {{- else if $hasRequests -}}
-    requests.cpu
-  {{- else -}}
-    limits.cpu
-  {{- end -}}
-{{- end -}}
-
-{{- define "call-nested" }}
-{{- $dot := index . 0 }}
-{{- $subchart := index . 1 }}
-{{- $template := index . 2 }}
-{{- include $template (dict "Chart" (dict "Name" $subchart) "Values" (index $dot.Values $subchart) "Release" $dot.Release "Capabilities" $dot.Capabilities) }}
-{{- end }}

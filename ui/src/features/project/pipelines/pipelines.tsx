@@ -63,7 +63,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
   const projectConfigQuery = useQuery(
     getProjectConfig,
     {
-      name
+      project: name
     },
     {
       transport: projectConfigTransport

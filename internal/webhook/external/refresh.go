@@ -3,19 +3,16 @@ package external
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
+	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/logging"
 )
-
-type refreshResult struct {
-	successes int
-	failures  int
-}
 
 // refreshWarehouses refreshes all Warehouses in the given namespace that are
 // subscribed to the given repository URL. If the namespace is empty, all
@@ -24,10 +21,11 @@ type refreshResult struct {
 // repository URL.
 func refreshWarehouses(
 	ctx context.Context,
+	w http.ResponseWriter,
 	c client.Client,
 	project string,
 	repoURL string,
-) (*refreshResult, error) {
+) {
 	logger := logging.LoggerFromContext(ctx)
 
 	listOpts := make([]client.ListOption, 1, 2)
@@ -40,7 +38,9 @@ func refreshWarehouses(
 
 	warehouses := v1alpha1.WarehouseList{}
 	if err := c.List(ctx, &warehouses, listOpts...); err != nil {
-		return nil, fmt.Errorf("error listing Warehouses: %w", err)
+		logger.Error(err, "error listing Warehouses")
+		xhttp.WriteErrorJSON(w, err)
+		return
 	}
 
 	logger.Debug("found Warehouses to refresh", "count", len(warehouses.Items))
@@ -55,8 +55,25 @@ func refreshWarehouses(
 			logger.Debug("refreshed Warehouse", "objectKey", objKey)
 		}
 	}
-	return &refreshResult{
-		failures:  failures,
-		successes: len(warehouses.Items) - failures,
-	}, nil
+
+	if failures > 0 {
+		xhttp.WriteResponseJSON(
+			w,
+			http.StatusInternalServerError,
+			map[string]string{
+				"error": fmt.Sprintf("failed to refresh %d of %d warehouses",
+					failures,
+					len(warehouses.Items),
+				),
+			},
+		)
+		return
+	}
+	xhttp.WriteResponseJSON(
+		w,
+		http.StatusOK,
+		map[string]string{
+			"msg": fmt.Sprintf("refreshed %d warehouse(s)", len(warehouses.Items)),
+		},
+	)
 }

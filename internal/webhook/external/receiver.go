@@ -30,12 +30,15 @@ type WebhookReceiver interface {
 	// setDetails sets the details of the WebhookReceiver in the form of
 	// kargoapi.WebhookReceiverDetails.
 	setDetails(kargoapi.WebhookReceiverDetails)
+	// getMaxRequestBodyBytes returns the maximum allowed size for the request
+	// body.
+	getMaxRequestBodyBytes() int64
+	// getHandler returns an http.HandlerFunc for handling inbound webhook
+	// requests.
+	getHandler(requestBody []byte) http.HandlerFunc
 	// GetDetails returns the details of the WebhookReceiver in the form of
 	// kargoapi.WebhookReceiverDetails.
 	GetDetails() kargoapi.WebhookReceiverDetails
-	// GetHandler returns an http.HandlerFunc for handling inbound webhook
-	// requests.
-	GetHandler() http.HandlerFunc
 }
 
 // baseWebhookReceiver is a base implementation of WebhookReceiver that provides
@@ -69,6 +72,11 @@ func (b *baseWebhookReceiver) setDetails(
 // GetDetails implements WebhookReceiver.
 func (b *baseWebhookReceiver) GetDetails() kargoapi.WebhookReceiverDetails {
 	return b.details
+}
+
+// getMaxRequestBodyBytes implements WebhookReceiver.
+func (b *baseWebhookReceiver) getMaxRequestBodyBytes() int64 {
+	return 2 << 20 // 2MB
 }
 
 // NewReceiver returns an appropriate implementation of WebhookReceiver based on
