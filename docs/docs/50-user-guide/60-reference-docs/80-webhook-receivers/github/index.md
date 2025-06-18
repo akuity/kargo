@@ -110,7 +110,7 @@ To configure a single repository to notify the receiver of relevant events:
 
 1. Click <Hlt>Add webhook</Hlt>.
 
-![Step 1](./img/webhooks/123.png "Settings")
+    ![Step 1](./img/webhooks/123.png "Settings")
 
 1. Complete the <Hlt>Add webhook</Hlt> form:
 
