@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { faPencil, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Card, Space, Table, Tag } from 'antd';
+import { Button, Card, Flex, Table, Tag } from 'antd';
 import { useParams } from 'react-router-dom';
 import { stringify } from 'yaml';
 
@@ -112,8 +112,9 @@ export const ConfigMaps = () => {
           },
           {
             key: 'actions',
+            width: '256px',
             render: (_, record) => (
-              <Space>
+              <Flex justify='flex-end'>
                 <Button
                   icon={<FontAwesomeIcon icon={faPencil} size='sm' />}
                   color='default'
@@ -140,7 +141,7 @@ export const ConfigMaps = () => {
                 >
                   Delete
                 </Button>
-              </Space>
+              </Flex>
             )
           }
         ]}
