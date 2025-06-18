@@ -81,7 +81,23 @@ this URL using the following command:
 
 ## Registering with Github
 
-When configuring on Github, you can configure either a webhook or an app. We will outline instructions for both, starting with webhooks.
+There are two options whereby GitHub repositories can be configured to send
+events to the webhook receiver:
+
+1. Configure webhooks directly for a single repository.
+
+    The advantage of this approach is that is is comparatively simple, however,
+    its large disadvantage is that it is tedious and most likely infeasible to
+    repeat this configuration for a large number of repositories.
+
+1. Create a [Github App](https://docs.github.com/en/apps).
+
+    The disadvantage of this approach is that it is comparatively complex,
+    however, its large advantage is that once created and configured, the App
+    can be easily [installed]() into any number of GitHub repositories
+    (belonging to the same account that owns the App).
+
+In the following sections, we will present instructions for both options.
 
 ### Webhooks
 
