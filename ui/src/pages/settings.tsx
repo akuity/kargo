@@ -1,13 +1,20 @@
-import { faBarChart, faTasks } from '@fortawesome/free-solid-svg-icons';
+import { faBarChart, faGear, faTasks } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Breadcrumb, Flex, Menu, Typography } from 'antd';
 import { NavLink, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 import { BaseHeader } from '@ui/features/common/layout/base-header';
 import { ClusterAnalysisTemplatesList } from '@ui/features/settings/analysis-templates/analysis-templates';
+import { ClusterConfig } from '@ui/features/settings/cluster-config/cluster-config';
 import { ClusterPromotionTasks } from '@ui/features/settings/cluster-promotion-tasks/cluster-promotion-tasks';
 
 const settingsViews = {
+  clusterConfig: {
+    label: 'Cluster Config',
+    icon: faGear,
+    path: 'cluster-config',
+    component: ClusterConfig
+  },
   verification: {
     label: 'Verification',
     icon: faBarChart,

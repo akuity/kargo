@@ -13,7 +13,8 @@ type Data = {
           | 'warehouse'
           | 'promotionTask'
           | 'promotion'
-          | 'projectConfig';
+          | 'projectConfig'
+          | 'clusterConfig';
       }
     | {
         value: Uint8Array;
