@@ -96,9 +96,9 @@ When configuring on Github, you can configure either a webhook or an app. We wil
        [webhook receiver's configuration](#configuring-the-receiver).
 
     1. Under <Hlt>Which events would you like to trigger this webhook?</Hlt>:
-        Leave <Hlt>Just the push event.</Hlt> selected, unless you would
-        like to receive events when container images or Helm charts are
-        pushed to associated GHCR repositories.
+       Leave <Hlt>Just the push event.</Hlt> selected, unless you would
+       like to receive events when container images or Helm charts are
+       pushed to associated GHCR repositories.
 
         To receive such events, select
         <Hlt>Let me select individual events.</Hlt>, then ensure
