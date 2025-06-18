@@ -91,6 +91,12 @@ func (q *quayWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 			return
 		}
 
+		// Payloads from Quay contain no information about media type, so we
+		// normalize the URL BOTH as if it were an image repo URL and as if it were
+		// a chart repository URL. These will coincidentally be the same, but by
+		// doing this, we safeguard against future changes to normalization logic.
+		// Note: The refresh logic will dedupe the URLs, so this does not create
+		// the possibility of a double refresh.
 		repoURLs := []string{
 			image.NormalizeURL(payload.DockerURL),
 			helm.NormalizeChartRepositoryURL(payload.DockerURL),
