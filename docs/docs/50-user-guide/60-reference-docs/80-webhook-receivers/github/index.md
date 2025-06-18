@@ -84,24 +84,27 @@ When configuring on Github, you can configure either a webhook or an app. We wil
 
 1. Complete the <Hlt>Add webhook</Hlt> form:
 
+    ![Add webook](./img/webhooks/4.png)
+
     1. Set <Hlt>Payload URL</Hlt> to the URL we
-        [retrieved earlier](#retrieving-the-receivers-url).
+       [retrieved earlier](#retrieving-the-receivers-url).
 
     1. Set <Hlt>Content type</Hlt> to `application/json`.
 
     1. Set <Hlt>Secret</Hlt> to the value previously assigned to the `secret`
-        key of the `Secret` referenced by the
-        [webhook receiver's configuration](#configuring-the-receiver).
+       key of the `Secret` referenced by the
+       [webhook receiver's configuration](#configuring-the-receiver).
 
     1. Under <Hlt>Which events would you like to trigger this webhook?</Hlt>:
         Leave <Hlt>Just the push event.</Hlt> selected, unless you would
         like to receive events when container images or Helm charts are
         pushed to associated GHCR repositories.
+        
         To receive such events, select
         <Hlt>Let me select individual events.</Hlt>, then ensure
         <Hlt>Pushes</Hlt> and <Hlt>Packages</Hlt> are both checked.
-        
         :::note
+
         You will only receive events from those GHCR repositories explicitly
         associated with your Git repository.
         For more information on this topic, refer to
@@ -109,7 +112,7 @@ When configuring on Github, you can configure either a webhook or an app. We wil
         :::
 
     1. Ensure <Hlt>Active</Hlt> remains checked.
-    
+
     1. Click <Hlt>Add webhook</Hlt>.
 
 1. Verifying Connectivity
