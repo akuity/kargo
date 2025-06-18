@@ -1,6 +1,4 @@
 import { useMutation, useQuery } from '@connectrpc/connect-query';
-import { faAsterisk } from '@fortawesome/free-solid-svg-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { message, Modal } from 'antd';
 import { useEffect, useState } from 'react';
 import { stringify } from 'yaml';
@@ -36,8 +34,6 @@ export const UpsertConfigMaps = (props: Props) => {
 
   const configMapYaml = decodeRawData(getConfigMapQuery.data);
 
-  const creation = !configMapYaml;
-
   const [yaml, setYaml] = useState(stringify(configMapYAMLExample));
 
   useEffect(() => {
@@ -49,10 +45,10 @@ export const UpsertConfigMaps = (props: Props) => {
   const createOrUpdateMutation = useMutation(createOrUpdateResource, {
     onSuccess: () => {
       message.success({
-        content: `ConfigMap has been ${creation ? 'created' : 'updated'}`
+        content: `ConfigMap has been ${!props.editing ? 'created' : 'updated'}`
       });
 
-      if (creation) {
+      if (!props.editing) {
         props.onSuccess?.();
         props.hide();
       } else {
@@ -74,17 +70,12 @@ export const UpsertConfigMaps = (props: Props) => {
       okButtonProps={{
         loading: createOrUpdateMutation.isPending
       }}
-      okText={creation ? 'Create' : 'Update'}
+      okText={!props.editing ? 'Create' : 'Update'}
       onOk={onSubmit}
       onCancel={props.hide}
       open={props.visible}
       width='612px'
-      title={
-        <>
-          <FontAwesomeIcon icon={faAsterisk} className='mr-2' />
-          {creation ? 'Create' : 'Edit'} ConfigMap
-        </>
-      }
+      title={<>{!props.editing ? 'Create' : 'Edit'} ConfigMap</>}
     >
       <YamlEditor
         label='YAML'

@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { faPencil, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Card, Flex, Space, Table, Tag } from 'antd';
+import { Button, Card, Space, Table, Tag } from 'antd';
 import { useParams } from 'react-router-dom';
 import { stringify } from 'yaml';
 
@@ -32,12 +32,7 @@ export const ConfigMaps = () => {
 
   const deleteConfigMap = (record: ConfigMap) => {
     confirm({
-      title: (
-        <Flex align='center'>
-          <FontAwesomeIcon icon={faTrash} className='mr-2' />
-          Delete ConfigMap
-        </Flex>
-      ),
+      title: <>Delete ConfigMap</>,
       content: (
         <p>
           Are you sure you want to delete ConfigMap <b>{record?.metadata?.name}</b>?
@@ -90,7 +85,7 @@ export const ConfigMaps = () => {
         key={configMaps.length}
         dataSource={configMaps}
         loading={listProjectConfigMapsQuery.isLoading}
-        pagination={{ defaultPageSize: 5, hideOnSinglePage: true }}
+        pagination={{ defaultPageSize: 10, hideOnSinglePage: true }}
         size='small'
         columns={[
           {
