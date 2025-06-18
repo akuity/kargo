@@ -73,25 +73,23 @@ When configuring on Github, you can configure either a webhook or an app. We wil
 
 ### Webhooks
 
-1. Navigating to the Webhooks Dashboard
+1. Navigate to `https://github.com/<account>/<repository>/settings/hooks` where
+   `<account>` has been replaced with your GitHub username or an organization
+   for which you are an administrator and `repository` has been replaced with
+   the name of a repository belonging to that account.
 
-    1. Navigate to `https://github.com/<account>/<repository>/settings/hooks` where
-      `<account>` has been replaced with your GitHub username or an organization
-      for which you are an administrator and `repository` has been replaced with
-      the name of a repository belonging to that account.
-    1. Click <Hlt>Add Webhook</Hlt>
+1. Click <Hlt>Add webhook</Hlt>.
 
 ![Step 1](./img/webhooks/123.png "Settings")
 
-2. Registering the Webhook
+1. Complete the <Hlt>Add webhook</Hlt> form:
 
-    1. Set the <Hlt>Payload URL</Hlt> to the value we retrieved from the 
-    [Retrieving the Receiver's URL](#retrieving-the-receivers-url) section.
-
-    1. Set the <Hlt>Content type</Hlt> field to `application/json`.
-
-    1. Set the <Hlt>Secret</Hlt> field to the value we assigned the `secret` key 
-    from the [Configuring the Receiver](#configuring-the-receiver) section.
+   1. Set <Hlt>Payload URL</Hlt> to the URL we
+       [retrieved earlier](#retrieving-the-receivers-url).
+    1. Set <Hlt>Content type</Hlt> to `application/json`.
+    1. Set <Hlt>Secret</Hlt> to the value previously assigned to the `secret`
+       key of the `Secret` referenced by the
+       [webhook receiver's configuration](#configuring-the-receiver).
 
 ![Step 3](./img/webhooks/4.png "Add Webhook")
 
@@ -109,7 +107,7 @@ Finally, confirm <Hlt>Active</Hlt> is toggled and click <Hlt>Add webhook</Hlt>.
 
 ![Step 6](./img/webhooks/6.png "Submit Form")
 
-3. Verifying Connectivity
+1. Verifying Connectivity
 
 From your Webhooks Dashboard, click on the webhook you just created.
 
