@@ -7,6 +7,7 @@ export type Filter = {
   version: {
     source?: string[];
     version?: string[];
+    alias?: string[];
   };
   lastPromotion?: [Date, Date];
 };

@@ -4,13 +4,20 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Flex, Select, SelectProps, Typography } from 'antd';
 import { ColumnType } from 'antd/es/table';
 import { useMemo, useState } from 'react';
+import { generatePath, Link } from 'react-router-dom';
 
+import { paths } from '@ui/config/paths';
 import { getCurrentFreight } from '@ui/features/common/utils';
-import { DictionaryContextType } from '@ui/features/project/pipelines/context/dictionary-context';
+import {
+  DictionaryContextType,
+  useDictionaryContext
+} from '@ui/features/project/pipelines/context/dictionary-context';
+import { useFreightTimelineControllerContext } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
 import { FreightArtifact } from '@ui/features/project/pipelines/freight/freight-artifact';
 import {
   catalogueFreights,
   catalogueFreightVersions,
+  filterFreightByAlias,
   filterFreightBySource,
   filterFreightByVersion
 } from '@ui/features/project/pipelines/freight/source-catalogue-utils';
@@ -28,6 +35,8 @@ export const versionColumn = (
 ): ColumnType<Stage> => ({
   title: 'Version',
   render: (_, stage) => {
+    const dictionaryContext = useDictionaryContext();
+    const freightTimelineControllerContext = useFreightTimelineControllerContext();
     const currentFreight = getCurrentFreight(stage);
 
     // TODO: filter by sources
@@ -38,36 +47,53 @@ export const versionColumn = (
       (firstFreight?.charts?.length || 0) +
       (firstFreight?.images?.length || 0);
 
+    const alias = dictionaryContext?.freightById?.[firstFreight?.name || '']?.alias;
+
     return (
-      <>
-        {firstFreight?.commits
-          ?.slice(0, 2)
-          .map((commit) => <FreightArtifact expand key={commit?.repoURL} artifact={commit} />)}
+      <Flex vertical gap={8}>
+        {alias && freightTimelineControllerContext?.preferredFilter?.showAlias ? (
+          <Link
+            className='text-xs'
+            to={generatePath(paths.freight, {
+              name: stage?.metadata?.namespace,
+              freightName: firstFreight?.name
+            })}
+          >
+            {alias}
+          </Link>
+        ) : null}
 
-        {firstFreight?.charts
-          ?.slice(0, 2)
-          .map((chart) => <FreightArtifact expand key={chart?.repoURL} artifact={chart} />)}
+        <div>
+          {firstFreight?.commits
+            ?.slice(0, 2)
+            .map((commit) => <FreightArtifact expand key={commit?.repoURL} artifact={commit} />)}
 
-        {firstFreight?.images
-          ?.slice(0, 2)
-          .map((image) => <FreightArtifact expand key={image?.repoURL} artifact={image} />)}
+          {firstFreight?.charts
+            ?.slice(0, 2)
+            .map((chart) => <FreightArtifact expand key={chart?.repoURL} artifact={chart} />)}
 
-        {totalArtifacts > 6 && (
-          <Typography.Text type='secondary' className='text-[10px]'>
-            +{' '}
-            {totalArtifacts -
-              (firstFreight?.charts?.slice(0, 2)?.length +
-                firstFreight?.commits?.slice(0, 2)?.length +
-                firstFreight?.images?.slice(0, 2)?.length)}{' '}
-            more
-          </Typography.Text>
-        )}
-      </>
+          {firstFreight?.images
+            ?.slice(0, 2)
+            .map((image) => <FreightArtifact expand key={image?.repoURL} artifact={image} />)}
+
+          {totalArtifacts > 6 && (
+            <Typography.Text type='secondary' className='text-[10px]'>
+              +{' '}
+              {totalArtifacts -
+                (firstFreight?.charts?.slice(0, 2)?.length +
+                  firstFreight?.commits?.slice(0, 2)?.length +
+                  firstFreight?.images?.slice(0, 2)?.length)}{' '}
+              more
+            </Typography.Text>
+          )}
+        </div>
+      </Flex>
     );
   },
   filterDropdown: () => {
     const filters = useFilterContext();
 
+    const [alias, setAlias] = useState<string[]>([]);
     const [sources, setSources] = useState<string[]>([]);
     const [commits, setCommits] = useState<string[]>([]);
     const [images, setImages] = useState<string[]>([]);
@@ -106,7 +132,8 @@ export const versionColumn = (
         ...filters.filters,
         version: {
           source: sources,
-          version: [...commits, ...images, ...helm]
+          version: [...commits, ...images, ...helm],
+          alias
         }
       });
 
@@ -114,6 +141,21 @@ export const versionColumn = (
 
     return (
       <Flex style={{ padding: 16 }} vertical gap={16} className='min-w-[500px]'>
+        <Flex align='center' gap={8}>
+          <label>Alias: </label>
+          <Select
+            className='min-w-[80%] ml-auto'
+            placeholder='freight alias'
+            options={Object.values(freightById).map((f) => ({
+              label: f?.alias,
+              value: f?.alias
+            }))}
+            maxTagCount={1}
+            value={alias}
+            onChange={setAlias}
+            mode='multiple'
+          />
+        </Flex>
         <Flex align='center' gap={8}>
           <label>Source: </label>
           <Select
@@ -185,13 +227,31 @@ export const versionColumn = (
       </Flex>
     );
   },
-  filteredValue: [...(filter?.version?.source || []), ...(filter?.version?.version || [])],
+  filteredValue: [
+    ...(filter?.version?.source || []),
+    ...(filter?.version?.version || []),
+    ...(filter?.version?.alias || [])
+  ],
   onFilter: (_, record) => {
-    if (!filter?.version?.source?.length && !filter?.version?.version?.length) {
+    if (
+      !filter?.version?.source?.length &&
+      !filter?.version?.version?.length &&
+      !filter?.version?.alias?.length
+    ) {
       return true;
     }
 
     const currentFreight = getCurrentFreight(record);
+
+    if ((filter?.version?.alias?.length || 0) > 0) {
+      const filteredFreights = currentFreight.filter((f) =>
+        filterFreightByAlias(filter.version.alias || [])(freightById[f.name])
+      );
+
+      if (filteredFreights.length === 0) {
+        return false;
+      }
+    }
 
     if ((filter?.version?.source?.length || 0) > 0) {
       const filteredFreights = currentFreight.filter((f) =>

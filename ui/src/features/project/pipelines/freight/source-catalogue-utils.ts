@@ -102,6 +102,9 @@ export const filterFreightBySource = (repoURLs: string[]) => (_freight: Freight)
   return freight;
 };
 
+export const filterFreightByAlias = (alias: string[]) => (freight: Freight) =>
+  alias?.includes(freight?.alias);
+
 export const filterFreightByTimerange = (till: Date) => (freight: Freight) => {
   const creationTimestamp = timestampDate(freight.metadata?.creationTimestamp);
 
