@@ -181,6 +181,22 @@ func (p *provider) ListPullRequests(
 	return pts, nil
 }
 
+// GetCommitURL implements gitprovider.Interface.
+func (p *provider) GetCommitURL(repoURL string, sha string) (string, error) {
+	normalizedURL := git.NormalizeURL(repoURL)
+
+	parsedURL, err := url.Parse(normalizedURL)
+	if err != nil {
+		return "", fmt.Errorf("error processing repository URL: %s: %s", repoURL, err)
+	}
+
+	formattedPath := strings.TrimPrefix(parsedURL.Path, "/v3")
+
+	commitURL := fmt.Sprintf("https://dev.azure.com%s/commit/%s", formattedPath, sha)
+
+	return commitURL, nil
+}
+
 // mapADOPrState maps a gitprovider.PullRequestState to an adogit.PullRequestStatus.
 func mapADOPrState(state gitprovider.PullRequestState) adogit.PullRequestStatus {
 	switch state {

@@ -1,6 +1,8 @@
 package gitprovider
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // Registration holds details on how to instantiate a correct implementation of
 // Interface based on parameters (i.e. repo URL). It allows programs to
