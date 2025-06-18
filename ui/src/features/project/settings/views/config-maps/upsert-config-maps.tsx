@@ -50,7 +50,6 @@ export const UpsertConfigMaps = (props: Props) => {
 
       if (!props.editing) {
         props.onSuccess?.();
-        props.hide();
       } else {
         getConfigMapQuery.refetch();
       }
