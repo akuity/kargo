@@ -147,8 +147,6 @@ from all or select repositories.
     an administrator, to create a new GitHub App owned by that organization.
 
 
-![Step 1](./img/apps/123.png "Settings")
-
 1. Complete the <Hlt>Register new GitHub App</Hlt> form:
 
     1. Set <Hlt>Github App name</Hlt> to a name of your choosing.
