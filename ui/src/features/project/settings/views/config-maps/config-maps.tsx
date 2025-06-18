@@ -13,7 +13,7 @@ import {
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { ConfigMap } from '@ui/gen/k8s.io/api/core/v1/generated_pb';
 
-import { UpsertConfigMaps } from './upsert-config-maps';
+import { UpsertConfigMapsModal } from './upsert-config-maps';
 
 export const ConfigMaps = () => {
   const { name } = useParams();
@@ -64,7 +64,7 @@ export const ConfigMaps = () => {
           icon={<FontAwesomeIcon icon={faPlus} />}
           onClick={() =>
             actionModal.show((p) => (
-              <UpsertConfigMaps
+              <UpsertConfigMapsModal
                 {...p}
                 project={name || ''}
                 onSuccess={() => {
@@ -122,7 +122,7 @@ export const ConfigMaps = () => {
                   size='small'
                   onClick={() =>
                     actionModal.show((p) => (
-                      <UpsertConfigMaps
+                      <UpsertConfigMapsModal
                         {...p}
                         project={name || ''}
                         editing={record?.metadata?.name}

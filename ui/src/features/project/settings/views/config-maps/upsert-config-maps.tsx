@@ -21,7 +21,7 @@ type Props = ModalComponentProps & {
   onSuccess?: () => void;
 };
 
-export const UpsertConfigMaps = (props: Props) => {
+export const UpsertConfigMapsModal = (props: Props) => {
   const getConfigMapQuery = useQuery(
     getConfigMap,
     {
