@@ -160,7 +160,7 @@ To configure a single repository to notify the receiver of relevant events:
         ![Step 9](./img/webhooks/9.png "Response")
 
 
-### Apps
+### GitHub Apps
 
 It may be tedious to configure webhooks for each of your Github repositories. 
 You can instead opt to configure a 
