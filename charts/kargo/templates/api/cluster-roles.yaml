@@ -41,6 +41,7 @@ rules:
       - list
       - get
       - create
+      - watch
       - delete
   - apiGroups:
       - authorization.k8s.io
