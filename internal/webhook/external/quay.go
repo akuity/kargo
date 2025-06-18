@@ -8,6 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/helm"
 	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/logging"
@@ -90,11 +91,14 @@ func (q *quayWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 			return
 		}
 
-		repoURL := image.NormalizeURL(payload.DockerURL)
+		repoURLs := []string{
+			image.NormalizeURL(payload.DockerURL),
+			helm.NormalizeChartRepositoryURL(payload.DockerURL),
+		}
 
-		logger = logger.WithValues("repoURL", repoURL)
+		logger = logger.WithValues("repoURLs", repoURLs)
 		ctx = logging.ContextWithLogger(ctx, logger)
 
-		refreshWarehouses(ctx, w, q.client, q.project, repoURL)
+		refreshWarehouses(ctx, w, q.client, q.project, repoURLs...)
 	})
 }
