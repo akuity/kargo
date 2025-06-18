@@ -34,6 +34,16 @@ rules:
       - create
       - patch
   - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - list
+      - get
+      - create
+      - watch
+      - delete
+  - apiGroups:
       - authorization.k8s.io
     resources:
       - subjectaccessreviews

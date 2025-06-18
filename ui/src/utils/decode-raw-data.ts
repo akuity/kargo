@@ -14,7 +14,8 @@ type Data = {
           | 'promotionTask'
           | 'promotion'
           | 'projectConfig'
-          | 'clusterConfig';
+          | 'clusterConfig'
+          | 'configMap';
       }
     | {
         value: Uint8Array;
