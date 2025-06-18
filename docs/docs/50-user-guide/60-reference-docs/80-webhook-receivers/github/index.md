@@ -158,6 +158,7 @@ To configure a single repository to notify the receiver of relevant events:
 
     1. Select the <Hlt>ping</Hlt> event and ensure an HTTP response status of
        `200` was received from the webhook receiver.
+
         ![Step 9](./img/webhooks/9.png "Response")
 
 When these steps are complete, the repository will send events to the webhook
