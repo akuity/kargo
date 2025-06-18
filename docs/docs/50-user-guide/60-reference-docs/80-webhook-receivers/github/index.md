@@ -136,16 +136,14 @@ You can instead opt to configure a
 [Github App](https://docs.github.com/en/apps); allowing you to receive events 
 from all or select repositories.
 
-1. Navigate to Github Apps dashboard
+1. Navigate to https://github.com/settings/apps to create a new GitHub App
+   owned by your own account
 
-    1. To create a new GitHub App owned by your own account and installable into
-   your own repositories, navigate to https://github.com/settings/apps.
     OR
-    To create a new GitHub App owned by an organization, of which you are an
-    administrator, and installable into that organization's repositories,
-    navigate to `https://github.com/organizations/<org name>/settings/apps`,
-    where `<org name>` has been replaced with the organization's actual name.
-    1. From there, click <Hlt>New Github App</Hlt>.
+    
+    Navigate to `https://github.com/organizations/<org name>/settings/apps`,
+    where `<org name>` has been replaced with an organization for which you are
+    an administrator, to create a new GitHub App owned by that organization.
 
 
 ![Step 1](./img/apps/123.png "Settings")
