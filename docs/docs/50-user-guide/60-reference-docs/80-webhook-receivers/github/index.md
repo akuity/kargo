@@ -5,7 +5,7 @@ sidebar_label: GitHub
 # The GitHub Webhook Receiver
 
 The Github Webhook Receiver will respond to `ping`, `push`, and `package`
-events originating from GitHub repositories. 
+events originating from GitHub repositories.
 
 The receiver unconditionally responds to `ping` events with an HTTP `200` status
 code.
@@ -68,7 +68,7 @@ spec:
 
 ## Retrieving the Receiver's URL
 
-Kargo will generate a hard-to-guess URL from the configuration. We can obtain 
+Kargo will generate a hard-to-guess URL from the configuration. We can obtain
 this URL using the following command:
 
 ```shell
@@ -171,18 +171,19 @@ receiver.
 For additional information on configuring webhooks, refer directly to the
 [Github Docs](https://docs.github.com/en/webhooks/using-webhooks/creating-webhooks).
 :::
+
 ### GitHub Apps
 
-It may be tedious to configure webhooks for each of your Github repositories. 
-You can instead opt to configure a 
-[Github App](https://docs.github.com/en/apps); allowing you to receive events 
+It may be tedious to configure webhooks for each of your Github repositories.
+You can instead opt to configure a
+[Github App](https://docs.github.com/en/apps); allowing you to receive events
 from all or select repositories.
 
-1. Navigate to https://github.com/settings/apps to create a new GitHub App
+1. Navigate to [https://github.com/settings/apps] to create a new GitHub App
    owned by your own account
 
     OR
-    
+
     Navigate to `https://github.com/organizations/<org name>/settings/apps`,
     where `<org name>` has been replaced with an organization for which you are
     an administrator, to create a new GitHub App owned by that organization.
@@ -211,7 +212,7 @@ from all or select repositories.
     1. Set <Hlt>Secret</Hlt> to the value previously assigned to the `secret`
        key of the `Secret` referenced by the
        [webhook receiver's configuration](#configuring-the-receiver).
-    
+
     1. In the <Hlt>Permissions</Hlt> section of the form, expand
        <Hlt>Repository Permissions</Hlt>.
 
@@ -279,9 +280,9 @@ from all or select repositories.
 
     1. Click <Hlt>Install</Hlt> next to the account into which you wish to
        install the App.
-       
+
         An installation dialog will appear.
-       
+
     1. Under <Hlt>for these repositories</Hlt>, select:
 
         * <Hlt>All repositories</Hlt> if you wish for all repositories owned
