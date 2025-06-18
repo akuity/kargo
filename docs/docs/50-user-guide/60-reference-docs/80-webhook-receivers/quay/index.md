@@ -2,84 +2,89 @@
 sidebar_label: Quay.io
 ---
 
-# Quay
+# The Quay Webhook Receiver
 
-## Required Secrets for Github
+The Quay Webhook Receiver will respond to push events by refreshing any 
+Warehouses subscribed to the repository from which the event originated.
 
-Our webhook receiver will require a Kubernetes secret. This secret is required to contain a `secret` key in its `stringData`.
+## Configuring the Receiver
 
-```yaml
-    apiVersion: v1
-    kind: Secret
-    metadata:
-      name: my-secret
-      namespace: my-namespace
-    stringData:
-    # Replace 'your-secret-here' with any non-empty
-    # arbitrary string data.
-    # The key here literally needs to be named 'secret'.
-      secret: your-secret-here
+The Quay webhook receiver will need to reference a Kubernetes `Secret` with a
+`secret` key in its data map.
+
+:::note
+The following command is suggested for generating a complex secret:
+
+```shell
+openssl rand -base64 48 | tr -d '=+/' | head -c 32
 ```
 
-## Quay Webhook Receiver Configuration
-
-Create a new project config; specifying a Quay webhook receiver that
-targets the secret we created in the last step.
+:::
 
 ```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: q-wh-secret
+  namespace: kargo-demo
+stringData:
+  secret: <your-secret-here>
+---
 apiVersion: kargo.akuity.io/v1alpha1
 kind: ProjectConfig
 metadata:
-  name: my-project-config
-  namespace: my-namespace
+  name: kargo-demo
+  namespace: kargo-demo
 spec:
   webhookReceivers: 
-    - name: my-receiver
-      quay:
+    - name: q-wh-receiver
+      github:
         secretRef:
-          name: my-secret
+          name: q-wh-secret
 ```
 
-## Retrieving the Webhook URL
+## Retrieving the Receiver's URL
 
-The secret (among other things) will be used as an input to generate
-a secure URL for our newly created webhook receiver. We can obtain
+Kargo will generate a hard-to-guess URL from the configuration. We can obtain 
 this URL using the following command:
 
 ```shell
-    kubectl \
-        get projectconfigs \
-        my-project-config \
-        -n my-namespace \
-        -o=jsonpath='{.status.webhookReceivers}'
+  kubectl \
+    get projectconfigs \
+    kargo-demo \
+    -n kargo-demo \
+    -o=jsonpath='{.status.webhookReceivers}'
 ```
 
 
-## Configure on Quay
+## Registering with Quay
 
-### Step 1: Navigate to Repository Settings
+1. In your repository dashboard, click <Hlt>Settings</Hlt> on the
+  left-hand-side.
 
 ![Step 1](./img/1.png "Settings")
 
-### Step 2: Click Create Notification
+1. Scroll down to <Hlt>Events and Notifications</Hlt>.
+
+1. Click <Hlt>Create Notification</Hlt>.
 
 ![Step 2](./img/2.png "Create Notification Button")
 
-### Step 3: Fill out the form
+1. Select <Hlt>Push to Repository</Hlt> from the first dropdown menu( This is the only supported event for Quay at this time).
 
-Select `Push to Repository` from the first dropdown menu( This is the only supported event for Quay at this time).
+1. Select <Hlt>Webhook POST</Hlt> from the second dropdown menu.
 
-Select `Webhook POST` from the second dropdown menu.
-
-For the third input field (`Webhook URL`) we will input our webhook receiver URL.
+ 1. Set the <Hlt>Webhook URL</Hlt> to the value we retrieved from the 
+    [Retrieving the Receiver's URL](#retrieving-the-receivers-url) section.
 
 ![Step 3](./img/3.png "Create Notification Form")
 
-### Step 3: Submit
-
-Click the `Create Notification` button.
+1. Click the <Hlt>Create Notification</Hlt> button.
 
 ![Step 4](./img/4.png "Submit Form")
+
+1. You'll be redirected to your repository settings dashboard where you
+  will see the webhook listed.
 
 ![Step 5](./img/5.png "Created")
 
