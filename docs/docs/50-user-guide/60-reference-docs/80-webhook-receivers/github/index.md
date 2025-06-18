@@ -152,6 +152,7 @@ To configure a single repository to notify the receiver of relevant events:
        above.
         ![Step 7](./img/webhooks/7.png "Created")
 
+
     1. Select the <Hlt>Recent Deliveries</Hlt> tab.
         ![Step 8](./img/webhooks/8.png "Recent Deliveries")
 
