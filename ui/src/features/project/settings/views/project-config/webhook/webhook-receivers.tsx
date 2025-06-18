@@ -70,7 +70,7 @@ export const dockerhub: WebhookReceiverT = {
 
 const github: WebhookReceiverT = {
   key: 'github',
-  label: 'Github',
+  label: 'Github / Github Enterprise',
   icon: faGithub,
   secrets: [
     {
