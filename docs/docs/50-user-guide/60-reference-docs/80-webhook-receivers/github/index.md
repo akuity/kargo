@@ -36,7 +36,7 @@ GitHub to sign requests. The receiver will use it to authenticate those requests
 by verifying their signatures.
 
 :::note
-The following command is suggested for generating a complex secret:
+The following command is suggested for generating a complex shared secret:
 
 ```shell
 openssl rand -base64 48 | tr -d '=+/' | head -c 32
