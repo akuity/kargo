@@ -4,11 +4,23 @@ sidebar_label: GitHub
 
 # The GitHub Webhook Receiver
 
-The Github Webhook Receiver will respond to ping, push, and package events.
-For ping events, a 200 is returned to verify connectivity. Push events refresh
-any Warehouses subscribed to the repository from which the event originated. A
-package event refreshes any Warehouses subscribed to images from a ghcr.io
-package registry.
+The Github Webhook Receiver will respond to `ping`, `push`, and `package`
+events originating from GitHub repositories. 
+
+The receiver unconditionally responds to `ping` events with an HTTP `200` status
+code.
+
+In response a `push` event, the receiver "refreshes" `Warehouse`s subscribed
+to the Git repository from which the event originated.
+
+In response to a `package` event, the receiver "refreshes" `Warehouse`s
+subscribed to the GHCR repository from which the event originated.
+
+:::info
+"Refreshing" a `Warehouse` resource means enqueuing it for immediate
+reconciliation by the Kargo controller, which will execute the discovery of
+new artifacts from all repositories to which that `Warehouse` subscribes.
+:::
 
 :::info
 The Github webhook receiver also works with Github Enterprise Cloud and GitHub
