@@ -173,7 +173,7 @@ For additional information on configuring webhooks, refer directly to the
 [Github Docs](https://docs.github.com/en/webhooks/using-webhooks/creating-webhooks).
 :::
 
-### GitHub Apps
+### Webhooks from a GitHub App
 
 It may be tedious to configure webhooks for each of your Github repositories.
 You can instead opt to configure a
