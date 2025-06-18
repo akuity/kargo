@@ -94,7 +94,7 @@ events to the webhook receiver:
 
     The disadvantage of this approach is that it is comparatively complex,
     however, its large advantage is that once created and configured, the App
-    can be easily [installed]() into any number of GitHub repositories
+    can be easily [installed](https://docs.github.com/en/apps/using-github-apps/installing-your-own-github-app) into any number of GitHub repositories
     (belonging to the same account that owns the App).
 
 In the following sections, we will present instructions for both options.
