@@ -148,54 +148,75 @@ from all or select repositories.
 
 ![Step 1](./img/apps/123.png "Settings")
 
-1. Register a new Github App
+1. Complete the <Hlt>Register new GitHub App</Hlt> form:
 
-    ![Step 4](./img/apps/4.png "Register New App")
+    1. Set <Hlt>Github App name</Hlt> to a name of your choosing.
 
-    1. Set a unique name in the <Hlt>Github App name</Hlt> field.
+        :::note
+        This name must be _globally unique_ across all of GitHub.
 
-    :::note
-    This must be globally unique for all of GitHub.
-    :::
+        Unfortunately, you will not learn whether your selected name is
+        unavailable until you have submitted the form.
+        :::
 
-    1. For the <Hlt>Homepage URL</Hlt> field you can use an arbitrary URL
-    or the repository URL.
+    1. Set <Hlt>Homepage URL</Hlt> to a URL of your choosing. The value of this
+       field is unimportant.
 
-    ![Step 5](./img/apps/5.png "Configure Webhook")
+    1. Skip the <Hlt>Identifying and authorizing users</Hlt> and
+       <Hlt>Post installation</Hlt> sections of the form. These are not relevant
+       to our present goal.
 
-      1. Set the <Hlt>Webhook URL</Hlt> to the value we retrieved from the 
-    [Retrieving the Receiver's URL](#retrieving-the-receivers-url) section.
+    1. Set <Hlt>Webhook URL</Hlt> to the URL we
+       [retrieved earlier](#retrieving-the-receivers-url).
 
-    1. Set the <Hlt>Secret</Hlt> field to the value we set to the `secret` key 
-    from the [Configuring the Receiver](#configuring-the-receiver) 
-    step.
+    1. Set <Hlt>Secret</Hlt> to the value previously assigned to the `secret`
+       key of the `Secret` referenced by the
+       [webhook receiver's configuration](#configuring-the-receiver).
     
-    1. Scroll down to <Hlt>Configure Permissions</Hlt> -> 
-    <Hlt>Repository Permissions</Hlt>.
+    1. In the <Hlt>Permissions</Hlt> section of the form, expand
+       <Hlt>Repository Permissions</Hlt>.
 
-     :::note
-      For the option to subscribe to repo push events, we will need 
-      <Hlt>read + write</Hlt> access for the <Hlt>Contents</Hlt> permission. For the option to subscribe to registry push events(ghcr), we will need <Hlt>read + write</Hlt>
-      access for the <Hlt>Packages</Hlt> permission.
-    :::
+    1. Ensure <Hlt>Contents</Hlt> is set to <Hlt>Read-only</Hlt>.
 
-    ![Step 7](./img/apps/7.png "Permissions - Contents")
+    1. If you would like to receive events when container images or Helm charts
+       are pushed to associated GHCR repositories, set <Hlt>Packages</Hlt> to
+       <Hlt>Read-only</Hlt>.
 
-    ![Step 8](./img/apps/8.png "Permissions - Packages")
+        :::note
+        You will only receive events from those GHCR repositories explicitly
+        associated with your Git repository.
 
-    1. Scroll down to <Hlt>Subscribe to events</Hlt>
+        For more information on this topic, refer to
+        [these GitHub docs](https://docs.github.com/en/packages/learn-github-packages/connecting-a-repository-to-a-package).
+        :::
 
-    1. Select options based on your choices for the previous section.
+    1. In the <Hlt>Subscribe to events</Hlt> section of the form, ensure
+       <Hlt>Push</Hlt> is checked.
 
-    :::note
-      If you set the <Hlt>Contents</Hlt> permission to <Hlt>read + write</Hlt> 
-      you will have the <Hlt>Push</Hlt> option available to you. If you set <Hlt>Packages</Hlt> to <Hlt>read + write</Hlt> you will have the <Hlt>Registry package</Hlt> option available to you.
-    :::
+        If you would like to receive events when container images or Helm charts
+        are pushed to associated GHCR repositories, ensure
+        <Hlt>Registry package</Hlt> is also checked.
 
-    ![Step 9](./img/apps/9.png "Subscribe to Events")
+        :::note
+        The events available for selection in this section of the form are
+        dynamic and dependent on your selections in the <Hlt>Permissions</Hlt>
+        section.
+        :::
 
-    1. Finally, click <Hlt>Create GitHub App</Hlt>.
-    ![Step 10](./img/apps/10.png "Submit Form")
+        ![Step 9](./img/apps/9.png "Subscribe to Events")
+
+    1. Under <Hlt>Where can this GitHub App be installed?</Hlt> ensure
+       <Hlt>Only this account</Hlt> is selected.
+
+        :::danger
+        If you select the other option (<Hlt>Any account</Hlt>), your
+        App will be installable into any repository in GitHub, regardless
+        of what account owns it. _All_ repositories into which your App
+        is installed will send events to the webhook receiver. __You almost
+        certainly do not want this!__
+        :::
+
+    1. Click <Hlt>Create GitHub App</Hlt>.
 
 1. Verifying Connectivity
   
