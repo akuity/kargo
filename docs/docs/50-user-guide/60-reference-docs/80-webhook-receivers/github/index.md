@@ -103,10 +103,11 @@ When configuring on Github, you can configure either a webhook or an app. We wil
         To receive such events, select
         <Hlt>Let me select individual events.</Hlt>, then ensure
         <Hlt>Pushes</Hlt> and <Hlt>Packages</Hlt> are both checked.
-        :::note
 
+        :::note
         You will only receive events from those GHCR repositories explicitly
         associated with your Git repository.
+
         For more information on this topic, refer to
         [these GitHub docs](https://docs.github.com/en/packages/learn-github-packages/connecting-a-repository-to-a-package).
         :::
