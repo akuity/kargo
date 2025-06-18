@@ -101,6 +101,8 @@ In the following sections, we will present instructions for both options.
 
 ### Webhooks
 
+To configure a single repository to notify the receiver of relevant events:
+
 1. Navigate to `https://github.com/<account>/<repository>/settings/hooks`, where
    `<account>` has been replaced with your GitHub username or an organization
    for which you are an administrator and `repository` has been replaced with
