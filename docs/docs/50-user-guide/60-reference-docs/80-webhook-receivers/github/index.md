@@ -99,7 +99,7 @@ When configuring on Github, you can configure either a webhook or an app. We wil
         Leave <Hlt>Just the push event.</Hlt> selected, unless you would
         like to receive events when container images or Helm charts are
         pushed to associated GHCR repositories.
-        
+
         To receive such events, select
         <Hlt>Let me select individual events.</Hlt>, then ensure
         <Hlt>Pushes</Hlt> and <Hlt>Packages</Hlt> are both checked.
@@ -153,6 +153,8 @@ from all or select repositories.
 
 1. Register a new Github App
 
+    ![Step 4](./img/apps/4.png "Register New App")
+
     1. Set a unique name in the <Hlt>Github App name</Hlt> field.
 
     :::note
@@ -162,16 +164,14 @@ from all or select repositories.
     1. For the <Hlt>Homepage URL</Hlt> field you can use an arbitrary URL
     or the repository URL.
 
-    ![Step 4](./img/apps/4.png "Register New App")
+    ![Step 5](./img/apps/5.png "Configure Webhook")
 
-    1. Set the <Hlt>Webhook URL</Hlt> to the value we retrieved from the 
+      1. Set the <Hlt>Webhook URL</Hlt> to the value we retrieved from the 
     [Retrieving the Receiver's URL](#retrieving-the-receivers-url) section.
 
     1. Set the <Hlt>Secret</Hlt> field to the value we set to the `secret` key 
     from the [Configuring the Receiver](#configuring-the-receiver) 
     step.
-
-    ![Step 5](./img/apps/5.png "Configure Webhook")
     
     1. Scroll down to <Hlt>Configure Permissions</Hlt> -> 
     <Hlt>Repository Permissions</Hlt>.
