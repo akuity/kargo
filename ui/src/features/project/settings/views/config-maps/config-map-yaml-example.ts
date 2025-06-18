@@ -1,0 +1,11 @@
+export const configMapYAMLExample = {
+  apiVersion: 'v1',
+  kind: 'ConfigMap',
+  metadata: {
+    name: 'cm-1',
+    namespace: 'kargo-demo'
+  },
+  data: {
+    foo: 'bar'
+  }
+};
