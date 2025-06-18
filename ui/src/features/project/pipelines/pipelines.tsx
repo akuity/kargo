@@ -204,9 +204,10 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
             <div className='w-full h-full relative'>
               <Flex
                 gap={12}
-                className={classNames('z-10 top-2 right-2 left-2', {
-                  absolute: pipelineView === 'graph'
-                })}
+                className={classNames(
+                  'z-10 top-2 right-2 left-2',
+                  pipelineView === 'graph' ? 'absolute' : 'pt-2 px-2'
+                )}
                 align='center'
               >
                 <GraphFilters
@@ -216,9 +217,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                   setPipelineView={setPipelineView}
                 />
                 <Dropdown
-                  className={classNames('ml-auto', {
-                    'mr-5': pipelineView === 'list'
-                  })}
+                  className='ml-auto'
                   trigger={['click']}
                   menu={{
                     items: [
