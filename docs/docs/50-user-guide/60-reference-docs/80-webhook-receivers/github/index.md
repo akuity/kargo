@@ -10,7 +10,7 @@ events originating from GitHub repositories.
 The receiver unconditionally responds to `ping` events with an HTTP `200` status
 code.
 
-In response a `push` event, the receiver "refreshes" `Warehouse`s subscribed
+In response to a `push` event, the receiver "refreshes" `Warehouse`s subscribed
 to the Git repository from which the event originated.
 
 In response to a `package` event, the receiver "refreshes" `Warehouse`s
@@ -86,7 +86,7 @@ events to the webhook receiver:
 
 1. Configure webhooks directly for a single repository.
 
-    The advantage of this approach is that is is comparatively simple, however,
+    The advantage of this approach is that it is comparatively simple, however,
     its large disadvantage is that it is tedious and most likely infeasible to
     repeat this configuration for a large number of repositories.
 
@@ -94,12 +94,14 @@ events to the webhook receiver:
 
     The disadvantage of this approach is that it is comparatively complex,
     however, its large advantage is that once created and configured, the App
-    can be easily [installed](https://docs.github.com/en/apps/using-github-apps/installing-your-own-github-app) into any number of GitHub repositories
-    (belonging to the same account that owns the App).
+    can be easily
+    [installed](https://docs.github.com/en/apps/using-github-apps/installing-your-own-github-app)
+    into any number of GitHub repositories (belonging to the same account that
+    owns the App).
 
 In the following sections, we will present instructions for both options.
 
-### Webhooks
+### Webhooks from a Single Repository
 
 To configure a single repository to notify the receiver of relevant events:
 
@@ -150,10 +152,11 @@ To configure a single repository to notify the receiver of relevant events:
 
     1. From the <Hlt>Webhooks</Hlt> dashboard, select the webhook you registered
        above.
+
         ![Step 7](./img/webhooks/7.png "Created")
 
-
     1. Select the <Hlt>Recent Deliveries</Hlt> tab.
+
         ![Step 8](./img/webhooks/8.png "Recent Deliveries")
 
     1. Select the <Hlt>ping</Hlt> event and ensure an HTTP response status of
@@ -183,7 +186,6 @@ from all or select repositories.
     Navigate to `https://github.com/organizations/<org name>/settings/apps`,
     where `<org name>` has been replaced with an organization for which you are
     an administrator, to create a new GitHub App owned by that organization.
-
 
 1. Complete the <Hlt>Register new GitHub App</Hlt> form:
 
@@ -248,14 +250,15 @@ from all or select repositories.
         :::danger
         If you select the other option (<Hlt>Any account</Hlt>), your
         App will be installable into any repository in GitHub, regardless
-        of what account owns it. _All_ repositories into which your App
-        is installed will send events to the webhook receiver. __You almost
+        of what account owns it. _Every_ repository into which your App is
+        installed will send events to the webhook receiver. __You almost
         certainly do not want this!__
         :::
 
     1. Click <Hlt>Create GitHub App</Hlt>.
 
 1. Verify connectivity:
+
     1. From the new App's settings page, select <Hlt>Advanced</Hlt> from the
        left sidebar.
 
