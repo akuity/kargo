@@ -48,11 +48,8 @@ export const UpsertConfigMapsModal = (props: Props) => {
         content: `ConfigMap has been ${!props.editing ? 'created' : 'updated'}`
       });
 
-      if (!props.editing) {
-        props.onSuccess?.();
-      } else {
-        getConfigMapQuery.refetch();
-      }
+      props.onSuccess?.();
+      props.hide();
     }
   });
 

@@ -68,7 +68,6 @@ export const ConfigMaps = () => {
                 {...p}
                 project={name || ''}
                 onSuccess={() => {
-                  p.hide();
                   listProjectConfigMapsQuery.refetch();
                 }}
               />
@@ -126,6 +125,7 @@ export const ConfigMaps = () => {
                         {...p}
                         project={name || ''}
                         editing={record?.metadata?.name}
+                        onSuccess={() => listProjectConfigMapsQuery.refetch()}
                       />
                     ))
                   }
