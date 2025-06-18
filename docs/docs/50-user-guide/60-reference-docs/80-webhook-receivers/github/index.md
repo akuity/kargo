@@ -303,8 +303,3 @@ from all or select repositories.
 
 When these steps are complete, all repositories into which your GitHub App have
 been installed will send events to the webhook receiver.
-#### Additional Documentation
-
-For more additional information on configuring Github Webhooks or Apps, refer 
-to the [Github Docs](https://docs.github.com/en/webhooks/using-webhooks/creating-webhooks)
-
