@@ -97,13 +97,16 @@ kubectl \
    
 1. After you entered all the necessary information for your webhook, click <Hlt>Save</Hlt>.
 
-![Step 3](/img/bitbucket/06.png "Create New Webhook")
+![Step 3](./img/01.png "Create New Webhook")
 
 **Step 4:** Once the webhook has been registered, it'll be visible under <Hlt>Repository hook</Hlt>. 
 1. Click on <Hlt>View requests</Hlt> under <Hlt>Actions</Hlt>
    
-1. In the <Hlt> View request logs </Hlt> page, Click on <Hlt>Enable History</Hlt>.
+2. In the <Hlt> View request logs </Hlt> page, Click on <Hlt>Enable History</Hlt>.
    
-   ![Step 4](/img/bitbucket/07.png "Enabled history")
+   ![Step 4](./img/02.png "Enabled history")
 
-**Step 5:**
+**Step 5:** In order to test the connectivity, Push your changes to the Bitbucket repository that the warehouse is subsribed to. Once the changes have been pushed, the <Hlt>Request details</Hlt> page will indicate that a successful response ws returned.
+
+  ![Step 5](./img/03.png "Request details")
+  
