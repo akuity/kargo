@@ -1,4 +1,10 @@
-import { faBitbucket, faGithub, faGitlab, faRedhat } from '@fortawesome/free-brands-svg-icons';
+import {
+  faBitbucket,
+  faDocker,
+  faGithub,
+  faGitlab,
+  faRedhat
+} from '@fortawesome/free-brands-svg-icons';
 import { IconDefinition } from '@fortawesome/free-solid-svg-icons';
 import { ReactNode } from 'react';
 
@@ -33,6 +39,28 @@ const bitbucket: WebhookReceiverT = {
             target='_blank'
           >
             Bitbucket documentation
+          </a>
+        </>
+      )
+    }
+  ]
+};
+
+export const dockerhub: WebhookReceiverT = {
+  key: 'dockerhub',
+  label: 'Dockerhub',
+  icon: faDocker,
+  secrets: [
+    {
+      dataKey: 'secret',
+      description: (
+        <>
+          The Secret's data map is expected to contain a `secret` key whose value does NOT need to
+          be shared directly with Docker Hub when registering a webhook. It is used only by Kargo to
+          create a complex, hard-to-guess URL, which implicitly serves as a shared secret. For more
+          information about Docker Hub webhooks, please refer to the{' '}
+          <a href='https://docs.docker.com/docker-hub/webhooks/' target='_blank'>
+            Docker documentation
           </a>
         </>
       )
@@ -107,4 +135,4 @@ const quay: WebhookReceiverT = {
   ]
 };
 
-export const webhookReceivers: WebhookReceiverT[] = [bitbucket, github, gitlab, quay];
+export const webhookReceivers: WebhookReceiverT[] = [bitbucket, dockerhub, github, gitlab, quay];
