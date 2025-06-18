@@ -14,6 +14,7 @@ type Data = {
           | 'promotionTask'
           | 'promotion'
           | 'projectConfig'
+          | 'clusterConfig'
           | 'configMap';
       }
     | {
