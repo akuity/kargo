@@ -305,5 +305,5 @@ receiver of relevant events from any repository into which it's been installed:
 
     1. Click <Hlt>Install</Hlt>.
 
-When these steps are complete, all repositories into which your GitHub App have
+When these steps are complete, all repositories into which your GitHub App has
 been installed will send events to the webhook receiver.
