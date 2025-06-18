@@ -257,6 +257,44 @@ from all or select repositories.
 
         ![Step 12](./img/apps/12.png "Response")
 
+1. Install the new GitHub App into one or more repositories:
+
+    1. Select <Hlt>Install App</Hlt> from the left sidebar.
+
+        You will be presented with a list of accounts (users or organizations)
+        into which you may install the App. If you followed the instructions for
+        creating the App as presented above, _only_ the account owning the App
+        should be listed here.
+
+    1. Click <Hlt>Install</Hlt> next to the account into which you wish to
+       install the App.
+       
+        An installation dialog will appear.
+       
+    1. Under <Hlt>for these repositories</Hlt>, select:
+
+        * <Hlt>All repositories</Hlt> if you wish for all repositories owned
+          by the account to send events to the webhook receiver.
+
+            :::note
+            Selecting this option will result in the App also being installed
+            to _new_ repositories belonging to the account as they are created.
+            :::
+
+        * <Hlt>Only select repositories</Hlt> if you wish for only specific,
+          existing repositories owned by the account to send events to the
+          webhook receiver.
+
+            :::note
+            If this option is selected, the installation process can be
+            repeated in the future to install the App into additional
+            repositories.
+            :::
+
+    1. Click <Hlt>Install</Hlt>.
+
+When these steps are complete, all repositories into which your GitHub App have
+been installed will send events to the webhook receiver.
 #### Additional Documentation
 
 For more additional information on configuring Github Webhooks or Apps, refer 
