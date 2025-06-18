@@ -1,6 +1,7 @@
 import { faClipboard, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Flex, notification, Table, Typography } from 'antd';
+import Card from 'antd/es/card/Card';
 import classNames from 'classnames';
 import { useMemo, useState } from 'react';
 import { parse } from 'yaml';
@@ -23,23 +24,25 @@ export const Webhooks = (props: WebhooksProps) => {
     []) as WebhookReceiverDetails[];
 
   return (
-    <Table
-      className={classNames(props.className)}
-      dataSource={webhookReceivers}
-      columns={[
-        {
-          key: 'name',
-          dataIndex: 'name',
-          title: 'Webhook Name'
-        },
-        {
-          key: 'url',
-          title: 'Webhook URL',
-          width: '60%',
-          render: (_, record) => <WebhookURLColumn details={record} />
-        }
-      ]}
-    />
+    <Card title='Webhooks' type='inner'>
+      <Table
+        className={classNames(props.className)}
+        dataSource={webhookReceivers}
+        columns={[
+          {
+            key: 'name',
+            dataIndex: 'name',
+            title: 'Webhook Name'
+          },
+          {
+            key: 'url',
+            title: 'Webhook URL',
+            width: '60%',
+            render: (_, record) => <WebhookURLColumn details={record} />
+          }
+        ]}
+      />
+    </Card>
   );
 };
 
