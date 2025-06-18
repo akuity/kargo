@@ -110,13 +110,13 @@ To configure a single repository to notify the receiver of relevant events:
    for which you are an administrator and `<repository>` has been replaced with
    the name of a repository belonging to that account.
 
-1. Click <Hlt>Add webhook</Hlt>.
+    ![Settings](./img/webhooks/settings.png "Settings")
 
-    ![Step 1](./img/webhooks/123.png "Settings")
+1. Click <Hlt>Add webhook</Hlt>.
 
 1. Complete the <Hlt>Add webhook</Hlt> form:
 
-    ![Add webook](./img/webhooks/4.png)
+    ![Add Webhook Form](./img/webhooks/add-webhook-form.png "Add Webhook Form")
 
     1. Set <Hlt>Payload URL</Hlt> to the URL we
        [retrieved earlier](#retrieving-the-receivers-url).
@@ -154,16 +154,16 @@ To configure a single repository to notify the receiver of relevant events:
     1. From the <Hlt>Webhooks</Hlt> dashboard, select the webhook you registered
        above.
 
-        ![Step 7](./img/webhooks/7.png "Created")
+        ![Webhooks](./img/webhooks/webhooks.png "Webhooks")
 
     1. Select the <Hlt>Recent Deliveries</Hlt> tab.
 
-        ![Step 8](./img/webhooks/8.png "Recent Deliveries")
+        ![Recent Deliveries](./img/webhooks/recent-deliveries.png "Recent Deliveries")
 
     1. Select the <Hlt>ping</Hlt> event and ensure an HTTP response status of
        `200` was received from the webhook receiver.
 
-        ![Step 9](./img/webhooks/9.png "Response")
+        ![Ping Response](./img/webhooks/ping-response.png "Ping Response")
 
 When these steps are complete, the repository will send events to the webhook
 receiver.
@@ -189,6 +189,8 @@ receiver of relevant events from any repository into which it's been installed:
     an administrator, to create a new GitHub App owned by that organization.
 
 1. Complete the <Hlt>Register new GitHub App</Hlt> form:
+
+    ![Register New GitHub App Form](./img/apps/register.png "Register New GitHub App Form")
 
     1. Set <Hlt>Github App name</Hlt> to a name of your choosing.
 
@@ -243,7 +245,7 @@ receiver of relevant events from any repository into which it's been installed:
         section.
         :::
 
-        ![Step 9](./img/apps/9.png "Subscribe to Events")
+        ![Subscribe to Events](./img/apps/subscribe.png "Subscribe to Events")
 
     1. Under <Hlt>Where can this GitHub App be installed?</Hlt> ensure
        <Hlt>Only this account</Hlt> is selected.
@@ -267,7 +269,7 @@ receiver of relevant events from any repository into which it's been installed:
        ensure an HTTP response status of `200` was received from the webhook
        receiver.
 
-        ![Step 12](./img/apps/12.png "Response")
+        ![Ping Response](./img/apps/ping-response.png "Ping Response")
 
 1. Install the new GitHub App into one or more repositories:
 
