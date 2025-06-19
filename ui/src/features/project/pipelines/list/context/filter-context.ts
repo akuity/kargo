@@ -2,14 +2,6 @@ import { createContext, useContext } from 'react';
 
 export type Filter = {
   stage: string;
-  phase: string[];
-  health: string[];
-  version: {
-    source?: string[];
-    version?: string[];
-    alias?: string[];
-  };
-  lastPromotion?: [Date, Date];
 };
 
 export type FilterContextType = {

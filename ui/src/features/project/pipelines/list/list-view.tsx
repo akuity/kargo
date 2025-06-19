@@ -3,11 +3,6 @@ import classNames from 'classnames';
 import { useMemo, useState } from 'react';
 
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
-import { useDictionaryContext } from '@ui/features/project/pipelines/context/dictionary-context';
-import {
-  catalogueFreights,
-  catalogueFreightVersions
-} from '@ui/features/project/pipelines/freight/source-catalogue-utils';
 import { useEventsWatcher } from '@ui/features/project/pipelines/graph/use-events-watcher';
 import { Freight, Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
@@ -32,23 +27,12 @@ type PipelineListViewProps = {
 
 export const PipelineListView = (props: PipelineListViewProps) => {
   const actionContext = useActionContext();
-  const dictionaryContext = useDictionaryContext();
   const freightTimelineControllerContext = useFreightTimelineControllerContext();
 
   useEventsWatcher(props.project);
 
-  const catalogouedFreights = useMemo(() => catalogueFreights(props.freights), [props.freights]);
-
-  const cataloguedFreightVersions = useMemo(
-    () => catalogueFreightVersions(props.freights),
-    [props.freights]
-  );
-
   const [filters, setFilters] = useState<Filter>({
-    stage: '',
-    phase: [],
-    health: [],
-    version: {}
+    stage: ''
   });
 
   const filteredStages = useMemo(() => {
@@ -80,15 +64,10 @@ export const PipelineListView = (props: PipelineListViewProps) => {
           size='small'
           columns={[
             stageColumn(filters),
-            phaseColumn(filters),
-            healthColumn(filters),
-            versionColumn(
-              filters,
-              catalogouedFreights,
-              cataloguedFreightVersions,
-              dictionaryContext?.freightById || {}
-            ),
-            lastPromotionColumn(filters),
+            phaseColumn(),
+            healthColumn(),
+            versionColumn(),
+            lastPromotionColumn(),
             actionColumn({
               onPromote: (stage) => actionContext?.actPromote(IAction.PROMOTE, stage)
             })
