@@ -193,7 +193,7 @@ func (em *EphemeralDependencyManager) update(chartPath string) (_ map[string]str
 		return nil, fmt.Errorf("create backup of Chart.lock: %w", err)
 	}
 	defer func() {
-		if restoreErr := lockBackup.Restore(); restoreErr != nil {
+		if restoreErr := lockBackup.Remove(); restoreErr != nil {
 			err = kerrors.Reduce(kerrors.NewAggregate([]error{err, restoreErr}))
 		}
 	}()
