@@ -47,18 +47,20 @@ export const GraphFilters = (props: GraphFiltersProps) => {
         }
       />
 
-      <Button
-        className='ml-3'
-        title='Group stages'
-        icon={<FontAwesomeIcon icon={faObjectGroup} />}
-        onClick={() => {
-          filterContext?.setPreferredFilter({
-            ...filterContext?.preferredFilter,
-            stackedNodesParents
-          });
-        }}
-        disabled={stackedNodesParents.length < 1}
-      />
+      {props.pipelineView === 'graph' && (
+        <Button
+          className='ml-3'
+          title='Group stages'
+          icon={<FontAwesomeIcon icon={faObjectGroup} />}
+          onClick={() => {
+            filterContext?.setPreferredFilter({
+              ...filterContext?.preferredFilter,
+              stackedNodesParents
+            });
+          }}
+          disabled={stackedNodesParents.length < 1}
+        />
+      )}
 
       <Segmented
         className='ml-3'
