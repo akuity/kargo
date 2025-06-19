@@ -4,7 +4,16 @@ sidebar_label: Bitbucket
 
 # The Bitbucket Webhook Receiver
 
-The Bitbucket Webhook Receiver will only respond to Repsitory pushevent as by now.
+The Bitbucket Webhook Receiver will only respond to Repsitory pushevent as originating from
+Bitbucket repositories.
+
+In response to a `repo:push` event, the receiver "refreshes" `Warehouse's` subscribed to the Bitbucket repository from which the event originated.
+
+:::info
+"Refreshing" a `Warehouse` resource means enqueuing it for immediate
+reconciliation by the Kargo controller, which will execute the discovery of
+new artifacts from all repositories to which that `Warehouse` subscribes.
+:::
 
 ## Configuring the Receiver
 
