@@ -8,11 +8,11 @@ sidebar_label: Working with Freight
 **Freight** is an important Kargo concept. A single "piece of freight" is a set
 of references to one or more versioned artifacts, which may include one or more:
 
-* Container images (from image repositories)
+- Container images (from image repositories)
 
-* Kubernetes manifests (from Git repositories)
+- Kubernetes manifests (from Git repositories)
 
-* Helm charts (from chart repositories)
+- Helm charts (from chart repositories)
 
 Freight can therefore be thought of as a sort of meta-artifact. Freight is what
 Kargo seeks to progress from one stage to another.
@@ -91,6 +91,11 @@ only, but a `Freight` resource's `name` can always be discovered by hovering
 over its alias.
 :::
 
+By default, the freight timeline shows the `Warehouse` name for each freight.
+You can also enable alias display in the freight timeline filter: click the _funnel icon_ in the freight timeline, then check the box next to <Hlt>Alias</Hlt> to show alias names on the freight timeline:
+
+![Freight Alias Name](./img/freight-alias-name.png)
+
 :::note
 Kargo CLI commands will accept `Freight` aliases as an alternative to a
 `Freight` name. Refer to the help text for the `kargo` command for more
@@ -131,6 +136,7 @@ kargo update freight \
   --name f5f87aa23c9e97f43eb83dd63768ee41f5ba3766 \
   --new-alias frozen-tauntaun
 ```
+
 Alternatively, you can reference the `Freight` to which you want to assign a new alias using its existing alias:
 
 ```shell
@@ -290,38 +296,38 @@ kargo promote \
 
 ## OCI Image Annotations
 
-Kargo understands 
+Kargo understands
 [OCI Image Annotations](https://github.com/opencontainers/image-spec/blob/main/annotations.md)
-and uses them to generate helpful links in the UI. When the following 
+and uses them to generate helpful links in the UI. When the following
 annotations are present in your container images, Kargo can display
 direct references to the source code and revision:
 
-* `org.opencontainers.image.source`
-* `org.opencontainers.image.revision`
+- `org.opencontainers.image.source`
+- `org.opencontainers.image.revision`
 
-   ![oci-annotations](img/freight-oci-annotations.png)
+  ![oci-annotations](img/freight-oci-annotations.png)
 
 ### Adding Annotations with GitHub Actions
 
 If you're using Docker's `build-and-push` GitHub Action, you can
-automatically  include these annotations using the 
+automatically include these annotations using the
 [`metadata-action` action](https://github.com/docker/metadata-action?tab=readme-ov-file#annotations).
 Here's an example workflow snippet:
 
 ```yaml
-  - name: Docker meta
-    id: meta
-    uses: docker/metadata-action@v5
-    with:
-      images: akuity/guestbook
-    env:
-      DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index  
+- name: Docker meta
+  id: meta
+  uses: docker/metadata-action@v5
+  with:
+    images: akuity/guestbook
+  env:
+    DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
 
-  - name: Build and push
-    uses: docker/build-push-action@v6
-    with:
-      tags: ${{ steps.meta.outputs.tags }}
-      annotations: ${{ steps.meta.outputs.annotations }}
+- name: Build and push
+  uses: docker/build-push-action@v6
+  with:
+    tags: ${{ steps.meta.outputs.tags }}
+    annotations: ${{ steps.meta.outputs.annotations }}
 ```
 
 ### Adding Annotations with `docker buildx`
