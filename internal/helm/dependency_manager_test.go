@@ -75,6 +75,7 @@ func TestEphemeralDependencyManager_update(t *testing.T) {
 		chartMetadata     *chart.Metadata
 		setupHTTPRegistry func(t *testing.T) string
 		setupOCIRegistry  func(t *testing.T) string
+		existingLock      func(serverURL string) string
 		assertions        func(t *testing.T, chartDir string, updates map[string]string, err error)
 	}{
 		{
@@ -149,6 +150,86 @@ func TestEphemeralDependencyManager_update(t *testing.T) {
 				assert.FileExists(t, filepath.Join(chartDir, "charts", "demo-0.1.0.tgz"))
 			},
 		},
+		{
+			name: "update with existing Chart.lock",
+			setupHTTPRegistry: func(t *testing.T) string {
+				root := t.TempDir()
+				require.NoError(
+					t,
+					fs.CopyFile(
+						"testdata/charts/examplechart-0.1.0.tgz",
+						filepath.Join(root, "examplechart-0.1.0.tgz"),
+					),
+				)
+
+				server := httptest.NewServer(http.FileServer(http.Dir(root)))
+				t.Cleanup(server.Close)
+
+				index, err := repo.IndexDirectory(root, server.URL)
+				require.NoError(t, err)
+				require.NoError(t, index.WriteFile(filepath.Join(root, "index.yaml"), 0o600))
+				return server.URL
+			},
+			chartMetadata: &chart.Metadata{
+				APIVersion: chart.APIVersionV2,
+				Name:       "test-chart",
+				Version:    "1.0.0",
+				Dependencies: []*chart.Dependency{
+					{
+						Name:       "examplechart",
+						Repository: testHTTPHostReplace,
+						Version:    "0.1.*",
+					},
+				},
+			},
+			existingLock: func(serverURL string) string {
+				return fmt.Sprintf(`# This is an existing Chart.lock file
+dependencies:
+- name: examplechart
+  repository: %s
+  version: 0.0.9
+digest: sha256:old-digest-should-be-replaced
+generated: "2023-01-01T00:00:00Z"
+`, serverURL)
+			},
+			assertions: func(t *testing.T, chartDir string, updates map[string]string, err error) {
+				assert.NoError(t, err)
+				assert.Len(t, updates, 1)
+
+				// Verify the version change was reported correctly
+				expectedUpdates := map[string]string{
+					"examplechart": "0.0.9 -> 0.1.0",
+				}
+				assert.Equal(t, expectedUpdates, updates)
+
+				// Verify Chart.lock contains the NEW content
+				lockFile := filepath.Join(chartDir, "Chart.lock")
+				assert.FileExists(t, lockFile)
+
+				content, err := os.ReadFile(lockFile)
+				assert.NoError(t, err)
+
+				// Should contain the NEW version (0.1.0), not the old version (0.0.9)
+				assert.Contains(t, string(content), "version: 0.1.0")
+				assert.NotContains(t, string(content), "version: 0.0.9")
+
+				// Should NOT contain the old digest
+				assert.NotContains(t, string(content), "old-digest-should-be-replaced")
+				// Should still contain a digest
+				assert.Contains(t, string(content), "digest: sha256:")
+
+				// Verify the charts were downloaded
+				assert.FileExists(t, filepath.Join(chartDir, "charts", "examplechart-0.1.0.tgz"))
+
+				// No backup files should remain
+				entries, readDirErr := os.ReadDir(chartDir)
+				assert.NoError(t, readDirErr)
+				for _, entry := range entries {
+					assert.False(t, strings.HasSuffix(entry.Name(), ".bak"),
+						"backup file should be cleaned up: %s", entry.Name())
+				}
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -160,6 +241,9 @@ func TestEphemeralDependencyManager_update(t *testing.T) {
 				helmHome:   absoluteTempDir(t),
 			}
 
+			chartDir := filepath.Join(em.workDir, "test-chart")
+			require.NoError(t, os.Mkdir(chartDir, 0o700))
+
 			if tt.setupHTTPRegistry != nil {
 				httpURL := tt.setupHTTPRegistry(t)
 				for i, dep := range tt.chartMetadata.Dependencies {
@@ -168,6 +252,12 @@ func TestEphemeralDependencyManager_update(t *testing.T) {
 							dep.Repository, testHTTPHostReplace, httpURL, 1,
 						)
 					}
+				}
+
+				if tt.existingLock != nil {
+					lockContent := tt.existingLock(httpURL)
+					lockFile := filepath.Join(chartDir, "Chart.lock")
+					require.NoError(t, os.WriteFile(lockFile, []byte(lockContent), 0o600))
 				}
 			}
 
@@ -185,9 +275,6 @@ func TestEphemeralDependencyManager_update(t *testing.T) {
 					}
 				}
 			}
-
-			chartDir := filepath.Join(em.workDir, "test-chart")
-			require.NoError(t, os.Mkdir(chartDir, 0o700))
 
 			if tt.chartMetadata != nil {
 				chartFile := filepath.Join(chartDir, "Chart.yaml")
