@@ -19,13 +19,13 @@ export const Webhooks = (props: WebhooksProps) => {
     [props.projectConfigYAML]
   );
 
-  // @ts-expect-error todo - update types in backend from 'receivers' to 'webhookReceivers'
   const webhookReceivers = (projectConfig?.status?.webhookReceivers ||
     []) as WebhookReceiverDetails[];
 
   return (
     <Card title='Webhooks' type='inner'>
       <Table
+        pagination={{ defaultPageSize: 5, hideOnSinglePage: true }}
         className={classNames(props.className)}
         dataSource={webhookReceivers}
         columns={[

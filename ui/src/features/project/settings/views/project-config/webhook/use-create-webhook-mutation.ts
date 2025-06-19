@@ -10,6 +10,7 @@ import {
   deleteProjectSecret
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { ProjectConfig } from '@ui/gen/api/v1alpha1/generated_pb';
+import { PartialRecursive } from '@ui/utils/connectrpc-utils';
 
 type createWebhookPayload = {
   projectConfigYAML: string;
@@ -35,19 +36,18 @@ export const useCreateWebhookMutation = (opts?: { onSuccess?: () => void }) => {
         data: payload.secret.data
       });
 
-      let projectConfig = parse(payload.projectConfigYAML) as ProjectConfig;
+      let projectConfig = parse(payload.projectConfigYAML) as PartialRecursive<ProjectConfig>;
 
       if (payload.projectConfigYAML === '') {
         projectConfig = {
+          // @ts-expect-error apiVersion required when creating resource
           apiVersion: 'kargo.akuity.io/v1alpha1',
           kind: 'ProjectConfig',
-          // @ts-expect-error expected
           metadata: {
             name: payload.secret.namespace,
             namespace: payload.secret.namespace
           },
           spec: {
-            // @ts-expect-error expected
             webhookReceivers: []
           }
         };
@@ -55,18 +55,14 @@ export const useCreateWebhookMutation = (opts?: { onSuccess?: () => void }) => {
 
       if (!projectConfig.spec) {
         projectConfig.spec = {
-          // @ts-expect-error expected
           webhookReceivers: []
         };
       }
 
-      // @ts-expect-error expected
       if (!projectConfig.spec?.webhookReceivers?.length) {
-        // @ts-expect-error expected
         projectConfig.spec.webhookReceivers = [];
       }
 
-      // @ts-expect-error expected
       projectConfig.spec?.webhookReceivers.push({
         name: payload.webhookReceiverName,
         [payload.webhookReceiver]: {
