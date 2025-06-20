@@ -99,7 +99,7 @@ events to the webhook receiver:
     into any number of GitHub repositories (belonging to the same account that
     owns the App).
 
-In the following sections, we will present instructions for both options.
+In the sections below, we will present instructions for both options.
 
 ### Webhooks from a Single Repository
 
@@ -118,13 +118,13 @@ To configure a single repository to notify the receiver of relevant events:
 
     ![Add Webhook Form](./img/webhooks/add-webhook-form.png "Add Webhook Form")
 
-    1. Set <Hlt>Payload URL</Hlt> to the URL we
-       [retrieved earlier](#retrieving-the-receivers-url).
+    1. Set <Hlt>Payload URL</Hlt> to the URL
+       [retrieved for the webhook receiver](#retrieving-the-receivers-url).
 
     1. Set <Hlt>Content type</Hlt> to `application/json`.
 
-    1. Set <Hlt>Secret</Hlt> to the value previously assigned to the `secret`
-       key of the `Secret` referenced by the
+    1. Set <Hlt>Secret</Hlt> to the value assigned to the `secret` key of the
+       `Secret` referenced by the
        [webhook receiver's configuration](#configuring-the-receiver).
 
     1. Under <Hlt>Which events would you like to trigger this webhook?</Hlt>:
@@ -208,11 +208,11 @@ receiver of relevant events from any repository into which it's been installed:
        <Hlt>Post installation</Hlt> sections of the form. These are not relevant
        to our present goal.
 
-    1. Set <Hlt>Webhook URL</Hlt> to the URL we
-       [retrieved earlier](#retrieving-the-receivers-url).
+    1. Set <Hlt>Webhook URL</Hlt> to the URL
+       [retrieved for the webhook receiver](#retrieving-the-receivers-url).
 
-    1. Set <Hlt>Secret</Hlt> to the value previously assigned to the `secret`
-       key of the `Secret` referenced by the
+    1. Set <Hlt>Secret</Hlt> to the value assigned to the `secret` key of the
+       `Secret` referenced by the
        [webhook receiver's configuration](#configuring-the-receiver).
 
     1. In the <Hlt>Permissions</Hlt> section of the form, expand
