@@ -19,8 +19,8 @@ subscribed repositories.
 
 ## Configuring the Receiver
 
-To enable webhook support for Docker Hub, you must configure a Kubernetes
-`Secret` and reference it in your `ProjectConfig`.
+To enable webhook support for Docker Hub, configure a Kubernetes
+`Secret` and reference it in the `ProjectConfig`.
 
 The `Secret` must include a `secret` key in its data map. This value is used to
 generate a unique, hard-to-guess URL for the webhook receiver, providing basic
@@ -62,7 +62,7 @@ spec:
 ## Retrieving the Receiver's URL
 
 After applying the `ProjectConfig`, you can retrieve the unique URL for the
-Docker Hub webhook receiver using the following command:
+Docker Hub webhook receiver with this command:
 
 ```shell
 kubectl get projectconfigs kargo-demo \
@@ -74,7 +74,7 @@ kubectl get projectconfigs kargo-demo \
 
 To configure a Docker Hub repository to send events to the webhook receiver:
 
-1. Navigate to your Docker Hub repository and select the <Hlt>Webhooks</Hlt> tab.
+1. Open your Docker Hub repository and select the <Hlt>Webhooks</Hlt> tab.
 
    ![Webhooks Tab](./img/webhooks-tab.png "Webhooks Tab")
 
@@ -87,13 +87,13 @@ To configure a Docker Hub repository to send events to the webhook receiver:
    1. Set <Hlt>Webhook URL</Hlt> to the
       [receiver URL](#retrieving-the-receivers-url).
 
-   1. Click <Hlt>+</Hlt> to create webhook.
+   1. Click <Hlt>+</Hlt> to create the webhook.
 
       ![Create Webhook](./img/create-webhook.png "Create Webhook Button")
 
-## Verifying connectivity when a new image is pushed
+## Verifying connectivity
 
-1. Return to the <Hlt>Webhooks</Hlt> tab of your repository.
+1. Go to the <Hlt>Webhooks</Hlt> tab of your repository.
 
 1. In the <Hlt>Current Webhooks</Hlt> section, hover over your webhook,
    select the _menu options_ icon, and click <Hlt>View History</Hlt>.
@@ -104,6 +104,6 @@ To configure a Docker Hub repository to send events to the webhook receiver:
 
    ![Delivery Detail](./img/delivery-detail.png "Webhook Delivery Detail")
 
-If everything is configured correctly, Kargo will automatically refresh the
-corresponding `Warehouse` and initiate artifact discovery whenever new images
-or charts are pushed to your Docker Hub repository.
+Once configured, Kargo automatically refreshes the corresponding `Warehouse`
+and begins artifact discovery whenever new images or charts are pushed to the
+Docker Hub repository.
