@@ -240,6 +240,9 @@ type HelmTemplateConfig struct {
 	// APIVersions allows a manual set of supported API Versions to be passed when rendering the
 	// manifests.
 	APIVersions []string `json:"apiVersions,omitempty"`
+	// Whether to build dependencies before rendering the manifests. If no Chart.lock file is
+	// present, the dependencies will be built from the Chart.yaml file (and may be updated).
+	BuildDependencies bool `json:"buildDependencies,omitempty"`
 	// Whether to disable hooks in the rendered manifests.
 	DisableHooks bool `json:"disableHooks,omitempty"`
 	// Whether to include CRDs in the rendered manifests.

@@ -21,6 +21,7 @@ commonly preceded by a [`git-clear` step](git-clear.md) and followed by
 | `useReleaseName` | `boolean` | N | Whether to use the release name in the output path (instead of the chart name). This is `false` by default, and only has an effect when `outPath` is set to a directory. |
 | `namespace` | `string` | N | Optional namespace to use when rendering the manifests. This is commonly omitted. GitOps agents such as Argo CD will generally ensure the installation of manifests into the namespace specified by their own configuration. |
 | `valuesFiles` | `[]string` | N | Helm values files (apart from the chart's default `values.yaml`) to be used when rendering the manifests.  |
+| `buildDependencies` | `bool` | N | Whether to build dependencies before rendering the manifests. If no Chart.lock file is present, the dependencies will be built from the Chart.yaml file (and may be updated). This is `false` by default. |
 | `includeCRDs` | `boolean` | N | Whether to include CRDs in the rendered manifests. This is `false` by default. |
 | `disableHooks` | `boolean` | N | Whether to disable hooks in the rendered manifests. This is `false` by default. |
 | `skipTests` | `boolean` | N | Whether to skip tests when rendering the manifests. This is `false` by default. |

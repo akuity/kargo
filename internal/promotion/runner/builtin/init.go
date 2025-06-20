@@ -35,7 +35,7 @@ func Initialize(kargoClient, argocdClient client.Client, credsDB credentials.Dat
 		newGitPRWaiter(credsDB),
 		newGitPusher(credsDB),
 		newGitTreeClearer(),
-		newHelmTemplateRunner(),
+		newHelmTemplateRunner(credsDB),
 		newHTTPRequester(),
 		newJSONParser(),
 		newJSONUpdater(),

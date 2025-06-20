@@ -12,6 +12,7 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/io/fs"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -88,7 +89,7 @@ func (f *fileDeleter) run(
 			removePath(pathToDelete),
 		); err != nil {
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-				fmt.Errorf("failed to delete %q: %w", cfg.Path, sanitizePathError(err, stepCtx.WorkDir))
+				fmt.Errorf("failed to delete %q: %w", cfg.Path, fs.SanitizePathError(err, stepCtx.WorkDir))
 		}
 	}
 

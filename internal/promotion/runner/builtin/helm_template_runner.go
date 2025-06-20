@@ -20,6 +20,8 @@ import (
 	"helm.sh/helm/v3/pkg/release"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -36,12 +38,15 @@ func outPathIsFile(cfg builtin.HelmTemplateConfig) bool {
 // that renders a Helm chart.
 type helmTemplateRunner struct {
 	schemaLoader gojsonschema.JSONLoader
+	credsDB      credentials.Database
 }
 
 // newHelmTemplateRunner returns an implementation of the promotion.StepRunner
 // interface that renders a Helm chart.
-func newHelmTemplateRunner() promotion.StepRunner {
-	r := &helmTemplateRunner{}
+func newHelmTemplateRunner(credsDB credentials.Database) promotion.StepRunner {
+	r := &helmTemplateRunner{
+		credsDB: credsDB,
+	}
 	r.schemaLoader = getConfigSchemaLoader(r.Name())
 	return r
 }
@@ -87,21 +92,28 @@ func (h *helmTemplateRunner) run(
 			fmt.Errorf("failed to compose values: %w", err)
 	}
 
+	if cfg.BuildDependencies {
+		if err = h.buildDependencies(ctx, stepCtx, cfg.Path); err != nil {
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+				fmt.Errorf("failed to build chart dependencies: %w", err)
+		}
+	}
+
 	chartRequested, err := h.loadChart(stepCtx.WorkDir, cfg.Path)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("failed to load chart from %q: %w", cfg.Path, err)
 	}
 
-	if err = h.checkDependencies(chartRequested); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("missing chart dependencies: %w", err)
-	}
-
 	absOutPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutPath)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("failed to join path %q: %w", cfg.OutPath, err)
+	}
+
+	if err = h.checkDependencies(chartRequested); err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+			fmt.Errorf("missing chart dependencies: %w", err)
 	}
 
 	install, err := h.newInstallAction(cfg, stepCtx.Project, absOutPath)
@@ -121,6 +133,20 @@ func (h *helmTemplateRunner) run(
 			fmt.Errorf("failed to write rendered chart: %w", err)
 	}
 	return promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, nil
+
+}
+
+// buildDependencies builds the dependencies for the given chart
+func (h *helmTemplateRunner) buildDependencies(
+	ctx context.Context,
+	stepCtx *promotion.StepContext,
+	relPath string,
+) error {
+	manager, err := helm.NewEphemeralDependencyManager(h.credsDB, stepCtx.Project, stepCtx.WorkDir)
+	if err != nil {
+		return fmt.Errorf("failed to create Helm dependency manager: %w", err)
+	}
+	return manager.Build(ctx, relPath)
 }
 
 // composeValues composes the values from the given values files and set values.
