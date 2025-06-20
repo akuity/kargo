@@ -1,5 +1,6 @@
 ---
 sidebar_label: Bitbucket
+description: How to configure Bitbucket webhook receiver with Kargo for instant artifact discovery
 ---
 
 # The Bitbucket Webhook Receiver
@@ -69,7 +70,11 @@ kubectl \
 
 ## Registering with Bitbucket
 
-1. Navigate to `https://bitbucket.org/<workspace>/<repository_name>/admin/webhooks` where `<workspace>` has been replaced with your Bitbucket workspace for which you are an administrator and `<repository_name>` has been replaced with the name of a repository belonging to that workspace.
+1. Navigate to
+   `https://bitbucket.org/<workspace>/<repository_name>/admin/webhooks` where
+   `<workspace>` has been replaced with your Bitbucket workspace for which you
+   are an administrator and `<repository_name>` has been replaced with the name
+   of a repository belonging to that workspace.
 
 1. Click the <Hlt>Add webhook</Hlt> button to create a webhook for the repository.
 
@@ -80,9 +85,9 @@ kubectl \
    1. Set <Hlt>URL</Hlt> to the URL we [retriveved
       earlier](#retrieving-the-receivers-url).
 
-   1. (Recommended) Set the <Hlt>Secret</Hlt> field to the value we assigned the
-  `secret` key from the [Configuring the Receiver](#configuring-the-receiver)
-  step.
+   1. Set <Hlt>Secret</Hlt> to the value previously assigned to the secret key
+      of the Secret referenced by the [webhook receiver's
+      configuration](https://main.docs.kargo.io/user-guide/reference-docs/webhook-receivers/github/#configuring-the-receiver).
     
       :::note
       Do not use the **Generate secret** button in the Bitbucket UI. Instead,
@@ -103,7 +108,7 @@ kubectl \
    
    1. Click on <Hlt>View requests</Hlt> under <Hlt>Actions</Hlt>
    
-   2. In the <Hlt> View request logs </Hlt> page, Click on <Hlt>Enable History</Hlt>.
+   1. In the <Hlt> View request logs </Hlt> page, click on <Hlt>Enable History</Hlt>.
    
    ![Step 4](./img/02.png "Enabled history")
 
