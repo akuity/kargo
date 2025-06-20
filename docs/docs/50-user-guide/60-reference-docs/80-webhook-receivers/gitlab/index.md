@@ -107,9 +107,9 @@ this URL using the following command:
 
     1. Click <Hlt>Edit</Hlt>.
 
-    1. Scroll down to <Hlt>Recent Events</Hlt> and click <Hlt>View Details</Hlt>.
+    1. Scroll down to <Hlt>Recent events</Hlt> and click <Hlt>View details</Hlt>.
 
-    ![Recent Events](./img/recent-events.png "Recent Events")
+    ![Recent events](./img/recent-events.png "Recent events")
 
     1. Confirm a successful response.
 
