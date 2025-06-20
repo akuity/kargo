@@ -6,7 +6,8 @@ import {
   faCircleNotch,
   faExternalLink,
   faMinus,
-  faTruckArrowRight
+  faTruckArrowRight,
+  faUndo
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Card, Dropdown, Flex, message, Space, Typography } from 'antd';
@@ -19,6 +20,10 @@ import { generatePath, Link, useNavigate } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
+import {
+  isPromotionRetryable,
+  PromotionStatusPhase
+} from '@ui/features/common/promotion-status/utils';
 import { StageConditionIcon } from '@ui/features/common/stage-status/stage-condition-icon';
 import { getStagePhase } from '@ui/features/common/stage-status/utils';
 import { getCurrentFreight } from '@ui/features/common/utils';
@@ -92,6 +97,17 @@ export const StageNode = (props: { stage: Stage }) => {
   if (!controlFlow) {
     const lastPromotion = getLastPromotionDate(props.stage);
     const date = timestampDate(lastPromotion) as Date;
+    const lastPromotionPhase = props.stage?.status?.lastPromotion?.status
+      ?.phase as PromotionStatusPhase;
+    const canRetryPromotion = isPromotionRetryable(lastPromotionPhase);
+
+    const onRetryPromotion = () => {
+      promoteActionMutation.mutate({
+        project: props.stage?.metadata?.namespace,
+        stage: props.stage?.metadata?.name,
+        freight: props.stage?.status?.lastPromotion?.freight?.name
+      });
+    };
 
     let Phase = null;
 
@@ -154,6 +170,17 @@ export const StageNode = (props: { stage: Stage }) => {
                 {formatDistance(date, new Date(), { addSuffix: true })}
               </span>
               <FontAwesomeIcon icon={faExternalLink} className='text-[6px]' />
+              {canRetryPromotion && (
+                <FontAwesomeIcon
+                  icon={faUndo}
+                  className='text-[6px] hover:text-[10px] transition-all'
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onRetryPromotion();
+                  }}
+                />
+              )}
             </Flex>
           </Link>
         )}

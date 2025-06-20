@@ -25,3 +25,14 @@ export const isPromotionPhaseTerminal = (promotionPhase: PromotionStatusPhase) =
 
   return false;
 };
+
+export const isPromotionRetryable = (phase: PromotionStatusPhase) => {
+  switch (phase) {
+    case PromotionStatusPhase.FAILED:
+    case PromotionStatusPhase.ERRORED:
+    case PromotionStatusPhase.ABORTED:
+      return true;
+  }
+
+  return false;
+};
