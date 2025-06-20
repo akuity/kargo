@@ -13,7 +13,9 @@ type Data = {
           | 'warehouse'
           | 'promotionTask'
           | 'promotion'
-          | 'projectConfig';
+          | 'projectConfig'
+          | 'clusterConfig'
+          | 'configMap';
       }
     | {
         value: Uint8Array;

@@ -14,6 +14,8 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/gitprovider"
+	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -21,6 +23,10 @@ import (
 // stateKeyBranch is the key used to store the branch that was pushed to in the
 // shared State.
 const stateKeyBranch = "branch"
+
+// stateKeyCommitURL is the key used to store the URL of the commit that was
+// pushed to in the shared State.
+const stateKeyCommitURL = "commitURL"
 
 // gitPushPusher is an implementation of the promotion.StepRunner interface that
 // pushes commits from a local Git repository to a remote Git repository.
@@ -73,6 +79,8 @@ func (g *gitPushPusher) run(
 	stepCtx *promotion.StepContext,
 	cfg builtin.GitPushConfig,
 ) (promotion.StepResult, error) {
+	logger := logging.LoggerFromContext(ctx)
+
 	// This is kind of hacky, but we needed to load the working tree to get the
 	// URL of the repository. With that in hand, we can look for applicable
 	// credentials and, if found, reload the work tree with the credentials.
@@ -181,11 +189,28 @@ func (g *gitPushPusher) run(
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error getting last commit ID: %w", err)
 	}
+
+	// Use the Git provider to get the commit URL, if possible. We continue
+	// even if the provider or URL cannot be determined, as the push will
+	// still have succeeded which is the primary goal of this step.
+	gpOpts := gitprovider.Options{}
+	if cfg.Provider != nil {
+		gpOpts.Name = string(*cfg.Provider)
+	}
+	gitProvider, err := gitprovider.New(workTree.URL(), &gpOpts)
+	var commitURL string
+	if err == nil {
+		if commitURL, err = gitProvider.GetCommitURL(workTree.URL(), commitID); err != nil {
+			logger.Error(err, "unable to get commit URL from Git provider")
+		}
+	}
+
 	return promotion.StepResult{
 		Status: kargoapi.PromotionStepStatusSucceeded,
 		Output: map[string]any{
-			stateKeyBranch: pushOpts.TargetBranch,
-			stateKeyCommit: commitID,
+			stateKeyBranch:    pushOpts.TargetBranch,
+			stateKeyCommit:    commitID,
+			stateKeyCommitURL: commitURL,
 		},
 	}, nil
 }

@@ -9,7 +9,7 @@ Webhooks cannot be registered directly on a GHCR image repository. Instead,
 the event precipitating the delivery had occurred there.
 
 Refer to documentation for the
-[GitHub Webhooks Receiver](./github.md) for further instructions.
+[GitHub Webhooks Receiver](./github/index.md) for further instructions.
 
 :::note
 If your GHCR image repository has not yet been associated with a source code

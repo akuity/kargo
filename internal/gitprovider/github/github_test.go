@@ -365,3 +365,42 @@ func TestListPullRequests(t *testing.T) {
 	require.Equal(t, *mockClient.pr.URL, prs[0].URL)
 	require.True(t, prs[0].Open)
 }
+
+func TestGetCommitURL(t *testing.T) {
+	testCases := []struct {
+		repoURL           string
+		sha               string
+		expectedCommitURL string
+	}{
+		{
+			repoURL:           "ssh://git@github.com/akuity/kargo.git",
+			sha:               "sha",
+			expectedCommitURL: "https://github.com/akuity/kargo/commit/sha",
+		},
+		{
+			repoURL:           "git@github.com:akuity/kargo.git",
+			sha:               "sha",
+			expectedCommitURL: "https://github.com/akuity/kargo/commit/sha",
+		},
+		{
+			repoURL:           "https://username@github.com/akuity/kargo",
+			sha:               "sha",
+			expectedCommitURL: "https://github.com/akuity/kargo/commit/sha",
+		},
+		{
+			repoURL:           "http://github.com/akuity/kargo.git",
+			sha:               "sha",
+			expectedCommitURL: "https://github.com/akuity/kargo/commit/sha",
+		},
+	}
+
+	prov := provider{}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.repoURL, func(t *testing.T) {
+			commitURL, err := prov.GetCommitURL(testCase.repoURL, testCase.sha)
+			require.NoError(t, err)
+			require.Equal(t, testCase.expectedCommitURL, commitURL)
+		})
+	}
+}
