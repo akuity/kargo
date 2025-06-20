@@ -84,12 +84,12 @@ kubectl \
   `secret` key from the [Configuring the Receiver](#configuring-the-receiver)
   step.
     
-    :::note
-    Do not use the **Generate secret** button in the Bitbucket UI. Instead,
-    define the secret yourself and use the same value when configuring the
-    receiver. This ensures the webhook URL remains consistent and avoids the
-    need to reconfigure it later.
-    :::
+      :::note
+      Do not use the **Generate secret** button in the Bitbucket UI. Instead,
+      define the secret yourself and use the same value when configuring the
+      receiver. This ensures the webhook URL remains consistent and avoids the
+      need to reconfigure it later.
+      :::
    
    1. (Optional) If you're using a self-signed certificate and want to disable certificate verification, select <Hlt>Skip certificate verification</Hlt>.
 
@@ -97,7 +97,7 @@ kubectl \
 
    1. Click <Hlt>Save</Hlt>.
 
-![Step 3](./img/01.png "Create New Webhook")
+    ![Step 3](./img/01.png "Create New Webhook")
 
 1. Verify that the webhook appears under <Hlt>Repository hook</Hlt>.. 
    
