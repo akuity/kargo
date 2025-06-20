@@ -229,6 +229,105 @@ spec:
                       required:
                       - secretRef
                       type: object
+                    generic:
+                      description: |-
+                        Generic contains the configuration for a webhook receiver that uses
+                        user-defined logic to handle inbound webhooks from any source.
+                      properties:
+                        refresh:
+                          description: |-
+                            Refresh encapsulates user-defined expressions that can be used
+                            to identify if a request is one that should trigger the refresh of
+                            one or more Warehouses, and if so, which ones.
+                          properties:
+                            predicate:
+                              description: |-
+                                Predicate is a user-defined expression or exact value that should
+                                evaluate to a boolean value indicating whether the intent is to refresh
+                                objects based on the request.
+
+                                This can be an exact string value or a string containing one or more
+                                expr-lang template expressions enclosed in ${{ }} syntax.
+
+                                If the expression evaluates to false, the request will not trigger a
+                                refresh of the selected resources.
+
+                                An empty string means that the request will always trigger a
+                                refresh of the selected resources.
+                              type: string
+                            selectors:
+                              description: |-
+                                Selectors contains a set of selectors that can be used to identify which
+                                resources should be refreshed.
+                              properties:
+                                chartRepoURL:
+                                  description: |-
+                                    ChartRepoURL is a user-defined expression or exact value that should
+                                    return a Helm chart repository URL for which all subscribed Warehouses
+                                    should be refreshed. This can be an exact string value or a string
+                                    containing one or more expr-lang template expressions enclosed in
+                                    ${{ }} syntax.
+
+                                    If an empty string is returned, no Warehouses will be refreshed.
+                                    If a non-empty string is returned, Helm chart repo URL normalization
+                                    will be applied before the URL is used to find Warehouses to refresh.
+                                  type: string
+                                gitRepoURL:
+                                  description: |-
+                                    GitRepoURL is a user-defined expression or exact value that should return
+                                    a Git repository URL for which all subscribed Warehouses should be
+                                    refreshed. This can be an exact string value or a string containing one
+                                    or more expr-lang template expressions enclosed in ${{ }} syntax.
+
+                                    If an empty string is returned, no Warehouses will be refreshed.
+                                    If a non-empty string is returned, Git repo URL normalization will be
+                                    applied before the URL is used to find Warehouses to refresh.
+                                  type: string
+                                imageRepoURL:
+                                  description: |-
+                                    ImageRepoURL is a user-defined expression or exact value that should
+                                    return a container image repository URL for which all subscribed
+                                    Warehouses should be refreshed. This can be an exact string value or a
+                                    string containing one or more expr-lang template expressions enclosed in
+                                    ${{ }} syntax.
+
+                                    If an empty string is returned, no Warehouses will be refreshed.
+                                    If a non-empty string is returned, container image repo URL normalization
+                                    will be applied before the URL is used to find Warehouses to refresh.
+                                  type: string
+                              type: object
+                          required:
+                          - selectors
+                          type: object
+                        secretRef:
+                          description: |-
+                            SecretRef contains a reference to a Secret. For Project-scoped webhook
+                            receivers, the referenced Secret must be in the same namespace as the
+                            ProjectConfig.
+
+                            For cluster-scoped webhook receivers, the referenced Secret must be in the
+                            designated "cluster Secrets" namespace.
+
+                            The Secret's data map is expected to contain a `secret` key whose value
+                            does NOT need to be shared directly with the sender when registering a
+                            webhook. It is used only by Kargo to create a complex, hard-to-guess URL,
+                            which implicitly serves as a shared secret.
+                          properties:
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      required:
+                      - refresh
+                      - secretRef
+                      type: object
                     github:
                       description: |-
                         GitHub contains the configuration for a webhook receiver that is compatible

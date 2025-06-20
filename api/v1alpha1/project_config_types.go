@@ -111,6 +111,9 @@ type WebhookReceiverConfig struct {
 	// DockerHub contains the configuration for a webhook receiver that is
 	// compatible with DockerHub payloads.
 	DockerHub *DockerHubWebhookReceiverConfig `json:"dockerhub,omitempty" protobuf:"bytes,6,opt,name=dockerhub"`
+	// Generic contains the configuration for a webhook receiver that uses
+	// user-defined logic to handle inbound webhooks from any source.
+	Generic *GenericWebhookReceiverConfig `json:"generic,omitempty" protobuf:"bytes,7,opt,name=generic"`
 	// GitHub contains the configuration for a webhook receiver that is compatible
 	// with GitHub payloads.
 	GitHub *GitHubWebhookReceiverConfig `json:"github,omitempty" protobuf:"bytes,2,opt,name=github"`
@@ -158,6 +161,99 @@ type DockerHubWebhookReceiverConfig struct {
 	//
 	// +kubebuilder:validation:Required
 	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+}
+
+// GenericWebhookReceiverConfig describes a webhook receiver that uses
+// user-defined logic to handle inbound webhooks from any source.
+type GenericWebhookReceiverConfig struct {
+	// Refresh encapsulates user-defined expressions that can be used
+	// to identify if a request is one that should trigger the refresh of
+	// one or more Warehouses, and if so, which ones.
+	//
+	// +kubebuilder:validation:Required
+	Refresh *GenericRefreshConfig `json:"refresh" protobuf:"bytes,1,opt,name=warehouseRefresh"`
+	// SecretRef contains a reference to a Secret. For Project-scoped webhook
+	// receivers, the referenced Secret must be in the same namespace as the
+	// ProjectConfig.
+	//
+	// For cluster-scoped webhook receivers, the referenced Secret must be in the
+	// designated "cluster Secrets" namespace.
+	//
+	// The Secret's data map is expected to contain a `secret` key whose value
+	// does NOT need to be shared directly with the sender when registering a
+	// webhook. It is used only by Kargo to create a complex, hard-to-guess URL,
+	// which implicitly serves as a shared secret.
+	//
+	// +kubebuilder:validation:Required
+	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,2,opt,name=secretRef"`
+}
+
+// GenericRefreshConfig encapsulates user-defined expressions or exact values
+// that can be used to identify whether an inbound webhook request represents
+// notification of a new or updated artifact having been pushed to a repository,
+// and if so, how to identify the Kargo resources that should be refreshed.
+type GenericRefreshConfig struct {
+	// Predicate is a user-defined expression or exact value that should
+	// evaluate to a boolean value indicating whether the intent is to refresh
+	// objects based on the request.
+	//
+	// This can be an exact string value or a string containing one or more
+	// expr-lang template expressions enclosed in ${{ }} syntax.
+	//
+	// If the expression evaluates to false, the request will not trigger a
+	// refresh of the selected resources.
+	//
+	// An empty string means that the request will always trigger a
+	// refresh of the selected resources.
+	//
+	// +optional
+	Predicate string `json:"predicate" protobuf:"bytes,1,opt,name=predicate"`
+
+	// Selectors contains a set of selectors that can be used to identify which
+	// resources should be refreshed.
+	//
+	// +kubebuilder:validation:Required
+	Selectors GenericRefreshSelectors `json:"selectors" protobuf:"bytes,2,opt,name=selectors"`
+}
+
+// GenericRefreshSelectors contains a set of selectors that can be used to
+// identify which resources should be refreshed.
+type GenericRefreshSelectors struct {
+	// GitRepoURL is a user-defined expression or exact value that should return
+	// a Git repository URL for which all subscribed Warehouses should be
+	// refreshed. This can be an exact string value or a string containing one
+	// or more expr-lang template expressions enclosed in ${{ }} syntax.
+	//
+	// If an empty string is returned, no Warehouses will be refreshed.
+	// If a non-empty string is returned, Git repo URL normalization will be
+	// applied before the URL is used to find Warehouses to refresh.
+	//
+	// +optional
+	GitRepoURL string `json:"gitRepoURL,omitempty" protobuf:"bytes,1,opt,name=gitRepoURL"`
+	// ImageRepoURL is a user-defined expression or exact value that should
+	// return a container image repository URL for which all subscribed
+	// Warehouses should be refreshed. This can be an exact string value or a
+	// string containing one or more expr-lang template expressions enclosed in
+	// ${{ }} syntax.
+	//
+	// If an empty string is returned, no Warehouses will be refreshed.
+	// If a non-empty string is returned, container image repo URL normalization
+	// will be applied before the URL is used to find Warehouses to refresh.
+	//
+	// +optional
+	ImageRepoURL string `json:"imageRepoURL,omitempty" protobuf:"bytes,2,opt,name=imageRepoURL"`
+	// ChartRepoURL is a user-defined expression or exact value that should
+	// return a Helm chart repository URL for which all subscribed Warehouses
+	// should be refreshed. This can be an exact string value or a string
+	// containing one or more expr-lang template expressions enclosed in
+	// ${{ }} syntax.
+	//
+	// If an empty string is returned, no Warehouses will be refreshed.
+	// If a non-empty string is returned, Helm chart repo URL normalization
+	// will be applied before the URL is used to find Warehouses to refresh.
+	//
+	// +optional
+	ChartRepoURL string `json:"chartRepoURL,omitempty" protobuf:"bytes,3,opt,name=chartRepoURL"`
 }
 
 // GitHubWebhookReceiverConfig describes a webhook receiver that is compatible

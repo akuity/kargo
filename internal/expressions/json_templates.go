@@ -12,6 +12,13 @@ import (
 	"github.com/valyala/fasttemplate"
 )
 
+const (
+	// startTag is the opening tag for expr-lang expressions in templates.
+	startTag = "${{"
+	// endTag is the closing tag for expr-lang expressions in templates.
+	endTag = "}}"
+)
+
 // EvaluateJSONTemplate evaluates a JSON byte slice, which is presumed to be a
 // template containing expr-lang expressions offset by ${{ and }}, using the
 // provided environment as context. The evaluated JSON is returned as a new byte
@@ -100,7 +107,7 @@ func evaluateExpressions(collection any, env map[string]any, exprOpts ...expr.Op
 // environment. Note that a single template string can contain multiple
 // expressions.
 func EvaluateTemplate(template string, env map[string]any, exprOpts ...expr.Option) (any, error) {
-	if !strings.Contains(template, "${{") {
+	if !IsTemplate(template) {
 		// Don't do anything fancy if the "template" doesn't contain any
 		// expressions. If we did, a simple string like "42" would be evaluated as
 		// the number 42. That would force users to use ${{ quote(42) }} when it
@@ -123,7 +130,7 @@ func EvaluateTemplate(template string, env map[string]any, exprOpts ...expr.Opti
 			new(func(any) string),
 		),
 	)
-	t, err := fasttemplate.NewTemplate(template, "${{", "}}")
+	t, err := fasttemplate.NewTemplate(template, startTag, endTag)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing template: %w", err)
 	}
@@ -180,6 +187,12 @@ func EvaluateTemplate(template string, env map[string]any, exprOpts ...expr.Opti
 		result += "\n"
 	}
 	return result, nil
+}
+
+// IsTemplate checks if the provided string is a template by looking for the
+// presence of the start tag "${{".
+func IsTemplate(template string) bool {
+	return strings.Contains(template, startTag)
 }
 
 // getExpressionEvaluator returns a fasttemplate.TagFunc that evaluates input
