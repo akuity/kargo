@@ -36,12 +36,12 @@ GitHub to sign requests. The receiver will use it to authenticate those requests
 by verifying their signatures.
 
 :::note
-The following command is suggested for generating a complex shared secret:
+The following command is suggested for generating a complex shared secret and
+encoding it for use in the `data` field:
 
 ```shell
-openssl rand -base64 48 | tr -d '=+/' | head -c 32
+openssl rand -base64 48 | tr -d '=+/' | head -c 32 | base64
 ```
-
 :::
 
 ```yaml
@@ -50,7 +50,7 @@ kind: Secret
 metadata:
   name: gh-wh-secret
   namespace: kargo-demo
-stringData:
+data:
   secret: <your-secret-here>
 ---
 apiVersion: kargo.akuity.io/v1alpha1
