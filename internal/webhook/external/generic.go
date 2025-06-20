@@ -98,7 +98,7 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 		}
 		env["request"].(map[string]any)["body"] = parsedBody // nolint: forcetypeassert
 
-		program, err := expr.Compile(g.cfg.ArtifactPush.Predicate)
+		program, err := expr.Compile(g.cfg.Refresh.Predicate)
 		if err != nil {
 			logger.Error(err, "error compiling artifact push predicate")
 			xhttp.WriteErrorJSON(w, err)
@@ -133,15 +133,15 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 			normalizeFn func(string) string
 		}{
 			{
-				expr:        g.cfg.ArtifactPush.GitRepoURL,
+				expr:        g.cfg.Refresh.Selectors.GitRepoURL,
 				normalizeFn: git.NormalizeURL,
 			},
 			{
-				expr:        g.cfg.ArtifactPush.ImageRepoURL,
+				expr:        g.cfg.Refresh.Selectors.ImageRepoURL,
 				normalizeFn: git.NormalizeURL,
 			},
 			{
-				expr:        g.cfg.ArtifactPush.ChartRepoURL,
+				expr:        g.cfg.Refresh.Selectors.ChartRepoURL,
 				normalizeFn: helm.NormalizeChartRepositoryURL,
 			},
 		}

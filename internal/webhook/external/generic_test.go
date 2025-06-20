@@ -67,7 +67,7 @@ func TestGenericHandler(t *testing.T) {
 		{
 			name: "error compiling predicate expression",
 			cfg: kargoapi.GenericWebhookReceiverConfig{
-				ArtifactPush: &kargoapi.GenericArtifactPushConfig{
+				Refresh: &kargoapi.GenericRefreshConfig{
 					Predicate: "not a valid expression",
 				},
 			},
@@ -86,7 +86,7 @@ func TestGenericHandler(t *testing.T) {
 		{
 			name: "error evaluating predicate expression",
 			cfg: kargoapi.GenericWebhookReceiverConfig{
-				ArtifactPush: &kargoapi.GenericArtifactPushConfig{
+				Refresh: &kargoapi.GenericRefreshConfig{
 					Predicate: "nonexistent()",
 				},
 			},
@@ -105,7 +105,7 @@ func TestGenericHandler(t *testing.T) {
 		{
 			name: "predicate evaluates to a non-boolean",
 			cfg: kargoapi.GenericWebhookReceiverConfig{
-				ArtifactPush: &kargoapi.GenericArtifactPushConfig{
+				Refresh: &kargoapi.GenericRefreshConfig{
 					Predicate: "'not a boolean'",
 				},
 			},
@@ -124,7 +124,7 @@ func TestGenericHandler(t *testing.T) {
 		{
 			name: "predicate evaluates to false",
 			cfg: kargoapi.GenericWebhookReceiverConfig{
-				ArtifactPush: &kargoapi.GenericArtifactPushConfig{
+				Refresh: &kargoapi.GenericRefreshConfig{
 					Predicate: "false",
 				},
 			},
@@ -143,9 +143,11 @@ func TestGenericHandler(t *testing.T) {
 		{
 			name: "error compiling repo URL expression",
 			cfg: kargoapi.GenericWebhookReceiverConfig{
-				ArtifactPush: &kargoapi.GenericArtifactPushConfig{
-					Predicate:  "true",
-					GitRepoURL: "not a valid expression",
+				Refresh: &kargoapi.GenericRefreshConfig{
+					Predicate: "true",
+					Selectors: kargoapi.GenericRefreshSelectors{
+						ChartRepoURL: "not a valid expression",
+					},
 				},
 			},
 			req: func() *http.Request {
@@ -163,9 +165,11 @@ func TestGenericHandler(t *testing.T) {
 		{
 			name: "error evaluating repo URL expression",
 			cfg: kargoapi.GenericWebhookReceiverConfig{
-				ArtifactPush: &kargoapi.GenericArtifactPushConfig{
-					Predicate:  "true",
-					GitRepoURL: "nonexistent()",
+				Refresh: &kargoapi.GenericRefreshConfig{
+					Predicate: "true",
+					Selectors: kargoapi.GenericRefreshSelectors{
+						GitRepoURL: "nonexistent()",
+					},
 				},
 			},
 			req: func() *http.Request {
@@ -183,9 +187,11 @@ func TestGenericHandler(t *testing.T) {
 		{
 			name: "repo URL expression evaluates to a non-string",
 			cfg: kargoapi.GenericWebhookReceiverConfig{
-				ArtifactPush: &kargoapi.GenericArtifactPushConfig{
-					Predicate:  "true",
-					GitRepoURL: "42",
+				Refresh: &kargoapi.GenericRefreshConfig{
+					Predicate: "true",
+					Selectors: kargoapi.GenericRefreshSelectors{
+						GitRepoURL: "42",
+					},
 				},
 			},
 			req: func() *http.Request {
@@ -203,9 +209,11 @@ func TestGenericHandler(t *testing.T) {
 		{
 			name: "success -- git commit pushed",
 			cfg: kargoapi.GenericWebhookReceiverConfig{
-				ArtifactPush: &kargoapi.GenericArtifactPushConfig{
-					Predicate:  "request.header('X-Kargo-Event') == 'push'",
-					GitRepoURL: "request.body.repository.repo_name",
+				Refresh: &kargoapi.GenericRefreshConfig{
+					Predicate: "request.header('X-Kargo-Event') == 'push'",
+					Selectors: kargoapi.GenericRefreshSelectors{
+						GitRepoURL: "request.body.repository.repo_name",
+					},
 				},
 			},
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
@@ -244,9 +252,11 @@ func TestGenericHandler(t *testing.T) {
 		{
 			name: "success -- container image pushed",
 			cfg: kargoapi.GenericWebhookReceiverConfig{
-				ArtifactPush: &kargoapi.GenericArtifactPushConfig{
-					Predicate:    "request.header('X-Kargo-Event') == 'push'",
-					ImageRepoURL: "request.body.repository.repo_name",
+				Refresh: &kargoapi.GenericRefreshConfig{
+					Predicate: "request.header('X-Kargo-Event') == 'push'",
+					Selectors: kargoapi.GenericRefreshSelectors{
+						ImageRepoURL: "request.body.repository.repo_name",
+					},
 				},
 			},
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
@@ -285,9 +295,11 @@ func TestGenericHandler(t *testing.T) {
 		{
 			name: "success -- chart pushed",
 			cfg: kargoapi.GenericWebhookReceiverConfig{
-				ArtifactPush: &kargoapi.GenericArtifactPushConfig{
-					Predicate:    "request.header('X-Kargo-Event') == 'push'",
-					ChartRepoURL: "request.body.repository.repo_name",
+				Refresh: &kargoapi.GenericRefreshConfig{
+					Predicate: "request.header('X-Kargo-Event') == 'push'",
+					Selectors: kargoapi.GenericRefreshSelectors{
+						ChartRepoURL: "request.body.repository.repo_name",
+					},
 				},
 			},
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(

@@ -590,12 +590,12 @@ message FreightStatus {
   map<string, .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON> metadata = 4;
 }
 
-// GenericArtifactPushConfig encapsulates user-defined expressions that can be
+// GenericRefreshConfig encapsulates user-defined expressions that can be
 // used to identify whether an inbound webhook request represents notification
 // of a new or updated artifact having been pushed to a repository, and if so,
 // how to identify the URL for which subscribed Warehouses should be
 // refreshed.
-message GenericArtifactPushConfig {
+message GenericRefreshConfig {
   // Predicate is a user-defined expression that should evaluate to true if a
   // request is one that represents notification of a new or updated artifact
   // having been pushed to a repository.
@@ -603,6 +603,16 @@ message GenericArtifactPushConfig {
   // +kubebuilder:validation:Required
   optional string predicate = 1;
 
+  // Selectors contains a set of selectors that can be used to identify which
+  // Warehouses should be refreshed.
+  //
+  // +kubebuilder:validation:Required
+  optional GenericRefreshSelectors selectors = 2;
+}
+
+// GenericRefreshSelectors contains a set of selectors that can be used to
+// identify which Warehouses should be refreshed.
+message GenericRefreshSelectors {
   // GitRepoURL is a user-defined expression that should return a Git repository
   // URL for which all subscribed Warehouses should be refreshed. If an empty
   // string is returned, no Warehouses will be refreshed. If a non-empty string
@@ -610,7 +620,7 @@ message GenericArtifactPushConfig {
   // used to find Warehouses to refresh.
   //
   // +optional
-  optional string gitRepoURL = 2;
+  optional string gitRepoURL = 1;
 
   // ImageRepoURL is a user-defined expression that should return a container
   // image repository URL for which all subscribed Warehouses should be
@@ -619,7 +629,7 @@ message GenericArtifactPushConfig {
   // will be applied before the URL is used to find Warehouses to refresh.
   //
   // +optional
-  optional string imageRepoURL = 3;
+  optional string imageRepoURL = 2;
 
   // ChartRepoURL is a user-defined expression that should return a Helm
   // chart repository URL for which all subscribed Warehouses should be
@@ -628,18 +638,18 @@ message GenericArtifactPushConfig {
   // will be applied before the URL is used to find Warehouses to refresh.
   //
   // +optional
-  optional string chartRepoURL = 4;
+  optional string chartRepoURL = 3;
 }
 
 // GenericWebhookReceiverConfig describes a webhook receiver that uses
 // user-defined logic to handle inbound webhooks from any source.
 message GenericWebhookReceiverConfig {
-  // ArtifactPush encapsulates user-defined expressions that can be used
+  // Refresh encapsulates user-defined expressions that can be used
   // to identify if a request is one that should trigger the refresh of
   // one or more Warehouses, and if so, which ones.
   //
   // +kubebuilder:validation:Required
-  optional GenericArtifactPushConfig warehouseRefresh = 1;
+  optional GenericRefreshConfig warehouseRefresh = 1;
 
   // SecretRef contains a reference to a Secret. For Project-scoped webhook
   // receivers, the referenced Secret must be in the same namespace as the

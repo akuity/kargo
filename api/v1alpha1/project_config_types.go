@@ -166,12 +166,12 @@ type DockerHubWebhookReceiverConfig struct {
 // GenericWebhookReceiverConfig describes a webhook receiver that uses
 // user-defined logic to handle inbound webhooks from any source.
 type GenericWebhookReceiverConfig struct {
-	// ArtifactPush encapsulates user-defined expressions that can be used
+	// Refresh encapsulates user-defined expressions that can be used
 	// to identify if a request is one that should trigger the refresh of
 	// one or more Warehouses, and if so, which ones.
 	//
 	// +kubebuilder:validation:Required
-	ArtifactPush *GenericArtifactPushConfig `json:"warehouseRefresh" protobuf:"bytes,1,opt,name=warehouseRefresh"`
+	Refresh *GenericRefreshConfig `json:"refresh" protobuf:"bytes,1,opt,name=warehouseRefresh"`
 	// SecretRef contains a reference to a Secret. For Project-scoped webhook
 	// receivers, the referenced Secret must be in the same namespace as the
 	// ProjectConfig.
@@ -188,18 +188,29 @@ type GenericWebhookReceiverConfig struct {
 	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,2,opt,name=secretRef"`
 }
 
-// GenericArtifactPushConfig encapsulates user-defined expressions that can be
+// GenericRefreshConfig encapsulates user-defined expressions that can be
 // used to identify whether an inbound webhook request represents notification
 // of a new or updated artifact having been pushed to a repository, and if so,
 // how to identify the URL for which subscribed Warehouses should be
 // refreshed.
-type GenericArtifactPushConfig struct {
+type GenericRefreshConfig struct {
 	// Predicate is a user-defined expression that should evaluate to true if a
 	// request is one that represents notification of a new or updated artifact
 	// having been pushed to a repository.
 	//
 	// +kubebuilder:validation:Required
 	Predicate string `json:"predicate" protobuf:"bytes,1,opt,name=predicate"`
+
+	// Selectors contains a set of selectors that can be used to identify which
+	// Warehouses should be refreshed.
+	//
+	// +kubebuilder:validation:Required
+	Selectors GenericRefreshSelectors `json:"selectors" protobuf:"bytes,2,opt,name=selectors"`
+}
+
+// GenericRefreshSelectors contains a set of selectors that can be used to
+// identify which Warehouses should be refreshed.
+type GenericRefreshSelectors struct {
 	// GitRepoURL is a user-defined expression that should return a Git repository
 	// URL for which all subscribed Warehouses should be refreshed. If an empty
 	// string is returned, no Warehouses will be refreshed. If a non-empty string
@@ -207,7 +218,7 @@ type GenericArtifactPushConfig struct {
 	// used to find Warehouses to refresh.
 	//
 	// +optional
-	GitRepoURL string `json:"gitRepoURL,omitempty" protobuf:"bytes,2,opt,name=gitRepoURL"`
+	GitRepoURL string `json:"gitRepoURL,omitempty" protobuf:"bytes,1,opt,name=gitRepoURL"`
 	// ImageRepoURL is a user-defined expression that should return a container
 	// image repository URL for which all subscribed Warehouses should be
 	// refreshed. If an empty string is returned, no Warehouses will be refreshed.
@@ -215,7 +226,7 @@ type GenericArtifactPushConfig struct {
 	// will be applied before the URL is used to find Warehouses to refresh.
 	//
 	// +optional
-	ImageRepoURL string `json:"imageRepoURL,omitempty" protobuf:"bytes,3,opt,name=imageRepoURL"`
+	ImageRepoURL string `json:"imageRepoURL,omitempty" protobuf:"bytes,2,opt,name=imageRepoURL"`
 	// ChartRepoURL is a user-defined expression that should return a Helm
 	// chart repository URL for which all subscribed Warehouses should be
 	// refreshed. If an empty string is returned, no Warehouses will be refreshed.
@@ -223,7 +234,7 @@ type GenericArtifactPushConfig struct {
 	// will be applied before the URL is used to find Warehouses to refresh.
 	//
 	// +optional
-	ChartRepoURL string `json:"chartRepoURL,omitempty" protobuf:"bytes,4,opt,name=chartRepoURL"`
+	ChartRepoURL string `json:"chartRepoURL,omitempty" protobuf:"bytes,3,opt,name=chartRepoURL"`
 }
 
 // GitHubWebhookReceiverConfig describes a webhook receiver that is compatible

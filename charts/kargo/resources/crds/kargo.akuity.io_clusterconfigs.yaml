@@ -134,6 +134,52 @@ spec:
                         Generic contains the configuration for a webhook receiver that uses
                         user-defined logic to handle inbound webhooks from any source.
                       properties:
+                        refresh:
+                          description: |-
+                            Refresh encapsulates user-defined expressions that can be used
+                            to identify if a request is one that should trigger the refresh of
+                            one or more Warehouses, and if so, which ones.
+                          properties:
+                            predicate:
+                              description: |-
+                                Predicate is a user-defined expression that should evaluate to true if a
+                                request is one that represents notification of a new or updated artifact
+                                having been pushed to a repository.
+                              type: string
+                            selectors:
+                              description: |-
+                                Selectors contains a set of selectors that can be used to identify which
+                                Warehouses should be refreshed.
+                              properties:
+                                chartRepoURL:
+                                  description: |-
+                                    ChartRepoURL is a user-defined expression that should return a Helm
+                                    chart repository URL for which all subscribed Warehouses should be
+                                    refreshed. If an empty string is returned, no Warehouses will be refreshed.
+                                    If a non-empty string is returned, Helm chart repo URL normalization
+                                    will be applied before the URL is used to find Warehouses to refresh.
+                                  type: string
+                                gitRepoURL:
+                                  description: |-
+                                    GitRepoURL is a user-defined expression that should return a Git repository
+                                    URL for which all subscribed Warehouses should be refreshed. If an empty
+                                    string is returned, no Warehouses will be refreshed. If a non-empty string
+                                    is returned, Git repo URL normalization will be applied before the URL is
+                                    used to find Warehouses to refresh.
+                                  type: string
+                                imageRepoURL:
+                                  description: |-
+                                    ImageRepoURL is a user-defined expression that should return a container
+                                    image repository URL for which all subscribed Warehouses should be
+                                    refreshed. If an empty string is returned, no Warehouses will be refreshed.
+                                    If a non-empty string is returned, container image repo URL normalization
+                                    will be applied before the URL is used to find Warehouses to refresh.
+                                  type: string
+                              type: object
+                          required:
+                          - predicate
+                          - selectors
+                          type: object
                         secretRef:
                           description: |-
                             SecretRef contains a reference to a Secret. For Project-scoped webhook
@@ -159,48 +205,9 @@ spec:
                               type: string
                           type: object
                           x-kubernetes-map-type: atomic
-                        warehouseRefresh:
-                          description: |-
-                            ArtifactPush encapsulates user-defined expressions that can be used
-                            to identify if a request is one that should trigger the refresh of
-                            one or more Warehouses, and if so, which ones.
-                          properties:
-                            chartRepoURL:
-                              description: |-
-                                ChartRepoURL is a user-defined expression that should return a Helm
-                                chart repository URL for which all subscribed Warehouses should be
-                                refreshed. If an empty string is returned, no Warehouses will be refreshed.
-                                If a non-empty string is returned, Helm chart repo URL normalization
-                                will be applied before the URL is used to find Warehouses to refresh.
-                              type: string
-                            gitRepoURL:
-                              description: |-
-                                GitRepoURL is a user-defined expression that should return a Git repository
-                                URL for which all subscribed Warehouses should be refreshed. If an empty
-                                string is returned, no Warehouses will be refreshed. If a non-empty string
-                                is returned, Git repo URL normalization will be applied before the URL is
-                                used to find Warehouses to refresh.
-                              type: string
-                            imageRepoURL:
-                              description: |-
-                                ImageRepoURL is a user-defined expression that should return a container
-                                image repository URL for which all subscribed Warehouses should be
-                                refreshed. If an empty string is returned, no Warehouses will be refreshed.
-                                If a non-empty string is returned, container image repo URL normalization
-                                will be applied before the URL is used to find Warehouses to refresh.
-                              type: string
-                            predicate:
-                              description: |-
-                                Predicate is a user-defined expression that should evaluate to true if a
-                                request is one that represents notification of a new or updated artifact
-                                having been pushed to a repository.
-                              type: string
-                          required:
-                          - predicate
-                          type: object
                       required:
+                      - refresh
                       - secretRef
-                      - warehouseRefresh
                       type: object
                     github:
                       description: |-
