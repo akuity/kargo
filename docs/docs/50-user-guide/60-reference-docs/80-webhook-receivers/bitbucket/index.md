@@ -111,7 +111,6 @@ kubectl \
 
   ![Step 5](./img/03.png "Request details")
 
-
 When these steps are complete, the repository will send events to the webhook
 receiver.
 
