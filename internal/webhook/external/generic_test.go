@@ -68,14 +68,14 @@ func TestGenericHandler(t *testing.T) {
 			name: "error compiling predicate expression",
 			cfg: kargoapi.GenericWebhookReceiverConfig{
 				Refresh: &kargoapi.GenericRefreshConfig{
-					Predicate: "not a valid expression",
+					Predicate: "${{ not a valid expression",
 				},
 			},
 			req: func() *http.Request {
 				return httptest.NewRequest(
-					http.MethodPost,
+					http.MethodGet,
 					testURL,
-					bytes.NewBuffer(genericGitPushRequestBody),
+					nil,
 				)
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -87,14 +87,14 @@ func TestGenericHandler(t *testing.T) {
 			name: "error evaluating predicate expression",
 			cfg: kargoapi.GenericWebhookReceiverConfig{
 				Refresh: &kargoapi.GenericRefreshConfig{
-					Predicate: "nonexistent()",
+					Predicate: "${{ nonexistent() }}",
 				},
 			},
 			req: func() *http.Request {
 				return httptest.NewRequest(
-					http.MethodPost,
+					http.MethodGet,
 					testURL,
-					bytes.NewBuffer(genericGitPushRequestBody),
+					nil,
 				)
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -103,17 +103,17 @@ func TestGenericHandler(t *testing.T) {
 			},
 		},
 		{
-			name: "predicate evaluates to a non-boolean",
+			name: "predicate parses to a non-boolean",
 			cfg: kargoapi.GenericWebhookReceiverConfig{
 				Refresh: &kargoapi.GenericRefreshConfig{
-					Predicate: "'not a boolean'",
+					Predicate: "not a boolean",
 				},
 			},
 			req: func() *http.Request {
 				return httptest.NewRequest(
-					http.MethodPost,
+					http.MethodGet,
 					testURL,
-					bytes.NewBuffer(genericGitPushRequestBody),
+					nil,
 				)
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -121,8 +121,28 @@ func TestGenericHandler(t *testing.T) {
 				require.JSONEq(t, "{}", rr.Body.String())
 			},
 		},
+
 		{
 			name: "predicate evaluates to false",
+			cfg: kargoapi.GenericWebhookReceiverConfig{
+				Refresh: &kargoapi.GenericRefreshConfig{
+					Predicate: "${{ false }}",
+				},
+			},
+			req: func() *http.Request {
+				return httptest.NewRequest(
+					http.MethodGet,
+					testURL,
+					nil,
+				)
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"no action taken"}`, rr.Body.String())
+			},
+		},
+		{
+			name: "predicate parses to false",
 			cfg: kargoapi.GenericWebhookReceiverConfig{
 				Refresh: &kargoapi.GenericRefreshConfig{
 					Predicate: "false",
@@ -130,9 +150,9 @@ func TestGenericHandler(t *testing.T) {
 			},
 			req: func() *http.Request {
 				return httptest.NewRequest(
-					http.MethodPost,
+					http.MethodGet,
 					testURL,
-					bytes.NewBuffer(genericGitPushRequestBody),
+					nil,
 				)
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -144,17 +164,16 @@ func TestGenericHandler(t *testing.T) {
 			name: "error compiling repo URL expression",
 			cfg: kargoapi.GenericWebhookReceiverConfig{
 				Refresh: &kargoapi.GenericRefreshConfig{
-					Predicate: "true",
 					Selectors: kargoapi.GenericRefreshSelectors{
-						ChartRepoURL: "not a valid expression",
+						ChartRepoURL: "${{ not a valid expression",
 					},
 				},
 			},
 			req: func() *http.Request {
 				return httptest.NewRequest(
-					http.MethodPost,
+					http.MethodGet,
 					testURL,
-					bytes.NewBuffer(genericGitPushRequestBody),
+					nil,
 				)
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -166,17 +185,16 @@ func TestGenericHandler(t *testing.T) {
 			name: "error evaluating repo URL expression",
 			cfg: kargoapi.GenericWebhookReceiverConfig{
 				Refresh: &kargoapi.GenericRefreshConfig{
-					Predicate: "true",
 					Selectors: kargoapi.GenericRefreshSelectors{
-						GitRepoURL: "nonexistent()",
+						GitRepoURL: "${{ nonexistent() }}",
 					},
 				},
 			},
 			req: func() *http.Request {
 				return httptest.NewRequest(
-					http.MethodPost,
+					http.MethodGet,
 					testURL,
-					bytes.NewBuffer(genericGitPushRequestBody),
+					nil,
 				)
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -188,17 +206,16 @@ func TestGenericHandler(t *testing.T) {
 			name: "repo URL expression evaluates to a non-string",
 			cfg: kargoapi.GenericWebhookReceiverConfig{
 				Refresh: &kargoapi.GenericRefreshConfig{
-					Predicate: "true",
 					Selectors: kargoapi.GenericRefreshSelectors{
-						GitRepoURL: "42",
+						GitRepoURL: "${{ 42 }}",
 					},
 				},
 			},
 			req: func() *http.Request {
 				return httptest.NewRequest(
-					http.MethodPost,
+					http.MethodGet,
 					testURL,
-					bytes.NewBuffer(genericGitPushRequestBody),
+					nil,
 				)
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -207,12 +224,74 @@ func TestGenericHandler(t *testing.T) {
 			},
 		},
 		{
-			name: "success -- git commit pushed",
+			name: "repo URL expression references body field that doesn't exist",
 			cfg: kargoapi.GenericWebhookReceiverConfig{
 				Refresh: &kargoapi.GenericRefreshConfig{
-					Predicate: "request.header('X-Kargo-Event') == 'push'",
 					Selectors: kargoapi.GenericRefreshSelectors{
-						GitRepoURL: "request.body.repository.repo_name",
+						GitRepoURL: "${{ request.body.nonexistent_field }}",
+					},
+				},
+			},
+			req: func() *http.Request {
+				return httptest.NewRequest(
+					http.MethodGet,
+					testURL,
+					nil,
+				)
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, rr.Code)
+				require.JSONEq(t, "{}", rr.Body.String())
+			},
+		},
+		{
+			name: "success with exact Git repository URL",
+			cfg: kargoapi.GenericWebhookReceiverConfig{
+				Refresh: &kargoapi.GenericRefreshConfig{
+					Selectors: kargoapi.GenericRefreshSelectors{
+						GitRepoURL: "https://git.example.com/repo.git",
+					},
+				},
+			},
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "https://git.example.com/repo.git",
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				req := httptest.NewRequest(
+					http.MethodGet,
+					testURL,
+					nil,
+				)
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name: "success with Git repository URL expression",
+			cfg: kargoapi.GenericWebhookReceiverConfig{
+				Refresh: &kargoapi.GenericRefreshConfig{
+					Predicate: "${{ request.header('X-Kargo-Event') == 'push' }}",
+					Selectors: kargoapi.GenericRefreshSelectors{
+						GitRepoURL: "${{ request.body.repository.repo_name }}",
 					},
 				},
 			},
@@ -250,12 +329,53 @@ func TestGenericHandler(t *testing.T) {
 			},
 		},
 		{
-			name: "success -- container image pushed",
+			name: "success with exact image repository URL",
 			cfg: kargoapi.GenericWebhookReceiverConfig{
 				Refresh: &kargoapi.GenericRefreshConfig{
-					Predicate: "request.header('X-Kargo-Event') == 'push'",
 					Selectors: kargoapi.GenericRefreshSelectors{
-						ImageRepoURL: "request.body.repository.repo_name",
+						ImageRepoURL: "example/repo",
+					},
+				},
+			},
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Image: &kargoapi.ImageSubscription{
+								RepoURL: "example/repo",
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				req := httptest.NewRequest(
+					http.MethodGet,
+					testURL,
+					nil,
+				)
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name: "success with image repository URL expression",
+			cfg: kargoapi.GenericWebhookReceiverConfig{
+				Refresh: &kargoapi.GenericRefreshConfig{
+					Predicate: "${{ request.header('X-Kargo-Event') == 'push' }}",
+					Selectors: kargoapi.GenericRefreshSelectors{
+						ImageRepoURL: "${{ request.body.repository.repo_name }}",
 					},
 				},
 			},
@@ -293,12 +413,53 @@ func TestGenericHandler(t *testing.T) {
 			},
 		},
 		{
-			name: "success -- chart pushed",
+			name: "success with exact chart repository URL",
 			cfg: kargoapi.GenericWebhookReceiverConfig{
 				Refresh: &kargoapi.GenericRefreshConfig{
-					Predicate: "request.header('X-Kargo-Event') == 'push'",
 					Selectors: kargoapi.GenericRefreshSelectors{
-						ChartRepoURL: "request.body.repository.repo_name",
+						ChartRepoURL: "oci://charts.example.com/example/repo",
+					},
+				},
+			},
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Chart: &kargoapi.ChartSubscription{
+								RepoURL: "oci://charts.example.com/example/repo",
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				req := httptest.NewRequest(
+					http.MethodGet,
+					testURL,
+					nil,
+				)
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name: "success with chart repository URL expression",
+			cfg: kargoapi.GenericWebhookReceiverConfig{
+				Refresh: &kargoapi.GenericRefreshConfig{
+					Predicate: "${{ request.header('X-Kargo-Event') == 'push' }}",
+					Selectors: kargoapi.GenericRefreshSelectors{
+						ChartRepoURL: "${{ request.body.repository.repo_name }}",
 					},
 				},
 			},

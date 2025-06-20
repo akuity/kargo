@@ -31,8 +31,7 @@ func refreshWarehouses(
 ) {
 	logger := logging.LoggerFromContext(ctx)
 
-	warehouses := []kargoapi.Warehouse{}
-
+	var warehouses []kargoapi.Warehouse
 	for _, repoURL := range repoURLs {
 		repoLogger := logger.WithValues("repositoryURL", repoURL)
 

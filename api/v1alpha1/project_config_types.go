@@ -198,7 +198,13 @@ type GenericRefreshConfig struct {
 	// request is one that represents notification of a new or updated artifact
 	// having been pushed to a repository.
 	//
-	// +kubebuilder:validation:Required
+	// If the expression evaluates to false, the request will not trigger a
+	// refresh of the selected Warehouses.
+	//
+	// An empty string means that the request will always trigger a
+	// refresh of the selected Warehouses.
+	//
+	// +optional
 	Predicate string `json:"predicate" protobuf:"bytes,1,opt,name=predicate"`
 
 	// Selectors contains a set of selectors that can be used to identify which

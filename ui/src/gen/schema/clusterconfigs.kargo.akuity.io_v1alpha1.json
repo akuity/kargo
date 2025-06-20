@@ -70,7 +70,7 @@
                     "description": "Refresh encapsulates user-defined expressions that can be used\nto identify if a request is one that should trigger the refresh of\none or more Warehouses, and if so, which ones.",
                     "properties": {
                       "predicate": {
-                        "description": "Predicate is a user-defined expression that should evaluate to true if a\nrequest is one that represents notification of a new or updated artifact\nhaving been pushed to a repository.",
+                        "description": "Predicate is a user-defined expression that should evaluate to true if a\nrequest is one that represents notification of a new or updated artifact\nhaving been pushed to a repository.\n\nIf the expression evaluates to false, the request will not trigger a\nrefresh of the selected Warehouses.\n\nAn empty string means that the request will always trigger a\nrefresh of the selected Warehouses.",
                         "type": "string"
                       },
                       "selectors": {
@@ -93,7 +93,6 @@
                       }
                     },
                     "required": [
-                      "predicate",
                       "selectors"
                     ],
                     "type": "object"

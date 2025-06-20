@@ -1325,7 +1325,13 @@ export type GenericRefreshConfig = Message<"github.com.akuity.kargo.api.v1alpha1
    * request is one that represents notification of a new or updated artifact
    * having been pushed to a repository.
    *
-   * +kubebuilder:validation:Required
+   * If the expression evaluates to false, the request will not trigger a
+   * refresh of the selected Warehouses.
+   *
+   * An empty string means that the request will always trigger a
+   * refresh of the selected Warehouses.
+   *
+   * +optional
    *
    * @generated from field: optional string predicate = 1;
    */

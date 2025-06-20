@@ -145,6 +145,12 @@ spec:
                                 Predicate is a user-defined expression that should evaluate to true if a
                                 request is one that represents notification of a new or updated artifact
                                 having been pushed to a repository.
+
+                                If the expression evaluates to false, the request will not trigger a
+                                refresh of the selected Warehouses.
+
+                                An empty string means that the request will always trigger a
+                                refresh of the selected Warehouses.
                               type: string
                             selectors:
                               description: |-
@@ -177,7 +183,6 @@ spec:
                                   type: string
                               type: object
                           required:
-                          - predicate
                           - selectors
                           type: object
                         secretRef:
