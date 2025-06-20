@@ -8,6 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/helm"
 	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/logging"
@@ -90,11 +91,20 @@ func (q *quayWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 			return
 		}
 
-		repoURL := image.NormalizeURL(payload.DockerURL)
+		// Payloads from Quay contain no information about media type, so we
+		// normalize the URL BOTH as if it were an image repo URL and as if it were
+		// a chart repository URL. These will coincidentally be the same, but by
+		// doing this, we safeguard against future changes to normalization logic.
+		// Note: The refresh logic will dedupe the URLs, so this does not create
+		// the possibility of a double refresh.
+		repoURLs := []string{
+			image.NormalizeURL(payload.DockerURL),
+			helm.NormalizeChartRepositoryURL(payload.DockerURL),
+		}
 
-		logger = logger.WithValues("repoURL", repoURL)
+		logger = logger.WithValues("repoURLs", repoURLs)
 		ctx = logging.ContextWithLogger(ctx, logger)
 
-		refreshWarehouses(ctx, w, q.client, q.project, repoURL)
+		refreshWarehouses(ctx, w, q.client, q.project, repoURLs...)
 	})
 }

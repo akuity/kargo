@@ -17,9 +17,19 @@ import (
 	"github.com/akuity/kargo/internal/indexer"
 )
 
-const dockerhubWebhookRequestBody = `
+const dockerhubWebhookRequestBodyImage = `
 {
 	"repository": {
+		"repo_name": "example/repo"
+	}
+}`
+
+const dockerhubWebhookRequestBodyChart = `
+{
+	"repository": {
+		"push_data": {
+			"media_type": "application/vnd.cncf.helm.config.v1+json"
+	},
 		"repo_name": "example/repo"
 	}
 }`
@@ -57,7 +67,7 @@ func TestDockerHubHandler(t *testing.T) {
 			},
 		},
 		{
-			name: "complete success",
+			name: "success -- image",
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
 					ObjectMeta: metav1.ObjectMeta{
@@ -76,7 +86,41 @@ func TestDockerHubHandler(t *testing.T) {
 				indexer.WarehousesBySubscribedURLs,
 			).Build(),
 			req: func() *http.Request {
-				bodyBuf := bytes.NewBuffer([]byte(dockerhubWebhookRequestBody))
+				bodyBuf := bytes.NewBuffer([]byte(dockerhubWebhookRequestBodyImage))
+				return httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(
+					t,
+					`{"msg":"refreshed 1 warehouse(s)"}`,
+					rr.Body.String(),
+				)
+			},
+		},
+		{
+			name: "success -- chart",
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Chart: &kargoapi.ChartSubscription{
+								RepoURL: "oci://docker.io/example/repo",
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBuf := bytes.NewBuffer([]byte(dockerhubWebhookRequestBodyChart))
 				return httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {

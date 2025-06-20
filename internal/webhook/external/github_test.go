@@ -32,12 +32,28 @@ func TestGithubHandler(t *testing.T) {
 			CloneURL: gh.Ptr("https://github.com/example/repo"),
 		},
 	}
-	var validPackageEvent = &gh.PackageEvent{
+	var validPackageEventImage = &gh.PackageEvent{
 		Action: gh.Ptr("published"),
 		Package: &gh.Package{
 			PackageType: gh.Ptr(ghcrPackageTypeContainer),
 			PackageVersion: &gh.PackageVersion{
 				PackageURL: gh.Ptr("ghcr.io/example/repo:latest"),
+			},
+		},
+	}
+	var validPackageEventChart = &gh.PackageEvent{
+		Action: gh.Ptr("published"),
+		Package: &gh.Package{
+			PackageType: gh.Ptr(ghcrPackageTypeContainer),
+			PackageVersion: &gh.PackageVersion{
+				PackageURL: gh.Ptr("ghcr.io/example/repo:latest"),
+				ContainerMetadata: &gh.PackageEventContainerMetadata{
+					Manifest: map[string]any{
+						"config": map[string]any{
+							"media_type": "application/vnd.cncf.helm.config.v1+json",
+						},
+					},
+				},
 			},
 		},
 	}
@@ -217,7 +233,7 @@ func TestGithubHandler(t *testing.T) {
 			},
 		},
 		{
-			name:       "success -- package event",
+			name:       "success -- package event -- image",
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
@@ -237,7 +253,46 @@ func TestGithubHandler(t *testing.T) {
 				indexer.WarehousesBySubscribedURLs,
 			).Build(),
 			req: func() *http.Request {
-				bodyBytes, err := json.Marshal(validPackageEvent)
+				bodyBytes, err := json.Marshal(validPackageEventImage)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set("X-Hub-Signature-256", sign(bodyBytes))
+				req.Header.Set("X-GitHub-Event", "package")
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "success -- package event -- chart",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Chart: &kargoapi.ChartSubscription{
+								RepoURL: "oci://ghcr.io/example/repo",
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(validPackageEventChart)
 				require.NoError(t, err)
 				req := httptest.NewRequest(
 					http.MethodPost,

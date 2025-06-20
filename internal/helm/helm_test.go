@@ -346,6 +346,37 @@ func TestNormalizeChartRepositoryURL(t *testing.T) {
 			input:    "OCI://Repo",
 			expected: "repo",
 		},
+		// Check correct normalization of Docker Hub URLs
+		{
+			name:     "docker.io URL with oci prefix",
+			input:    "oci://docker.io/example/repo",
+			expected: "example/repo",
+		},
+		{
+			name:     "docker.io URL without oci prefix",
+			input:    "docker.io/example/repo",
+			expected: "example/repo",
+		},
+		{
+			name:     "index.docker.io URL with oci prefix",
+			input:    "oci://index.docker.io/example/repo",
+			expected: "example/repo",
+		},
+		{
+			name:     "index.docker.io URL without oci prefix",
+			input:    "index.docker.io/example/repo",
+			expected: "example/repo",
+		},
+		{
+			name:     "registry-1.docker.io URL with oci prefix",
+			input:    "oci://registry-1.docker.io/example/repo",
+			expected: "example/repo",
+		},
+		{
+			name:     "registry-1.docker.io URL without oci prefix",
+			input:    "registry-1.docker.io/example/repo",
+			expected: "example/repo",
+		},
 	}
 
 	for _, tc := range testCases {

@@ -8,6 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/helm"
 	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/logging"
@@ -77,6 +78,9 @@ func (d *dockerhubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 		logger := logging.LoggerFromContext(ctx)
 
 		payload := struct {
+			PushData struct {
+				MediaType string `json:"media_type"`
+			} `json:"push_data"`
 			Repository struct {
 				RepoName string `json:"repo_name"`
 			} `json:"repository"`
@@ -90,8 +94,13 @@ func (d *dockerhubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 			return
 		}
 
-		// Normalize the repo name
-		repoURL := image.NormalizeURL(payload.Repository.RepoName)
+		var repoURL string
+		switch payload.PushData.MediaType {
+		case helmChartMediaType:
+			repoURL = helm.NormalizeChartRepositoryURL(payload.Repository.RepoName)
+		default:
+			repoURL = image.NormalizeURL(payload.Repository.RepoName)
+		}
 
 		logger = logger.WithValues("repoURL", repoURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
