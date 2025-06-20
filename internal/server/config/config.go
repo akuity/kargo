@@ -31,6 +31,7 @@ type ServerConfig struct {
 	AnalysisRunLogURLTemplate   string
 	AnalysisRunLogToken         string
 	AnalysisRunLogHTTPHeaders   map[string]string
+	ClusterSecretNamespace      string
 }
 
 func ServerConfigFromEnv() ServerConfig {
@@ -72,6 +73,9 @@ func ServerConfigFromEnv() ServerConfig {
 				cfg.AnalysisRunLogHTTPHeaders[strings.TrimSpace(kv[0])] = strings.TrimSpace(kv[1])
 			}
 		}
+	}
+	if cfg.SecretManagementEnabled {
+		cfg.ClusterSecretNamespace = os.GetEnv("CLUSTER_SECRETS_NAMESPACE", "")
 	}
 	return cfg
 }

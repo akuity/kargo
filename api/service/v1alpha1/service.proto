@@ -142,6 +142,12 @@ service KargoService {
   rpc ListRoles(ListRolesRequest) returns (ListRolesResponse);
   rpc Revoke(RevokeRequest) returns (RevokeResponse);
   rpc UpdateRole(UpdateRoleRequest) returns (UpdateRoleResponse);
+
+  /* Cluster Secrets APIs */
+  rpc ListClusterSecrets(ListClusterSecretsRequest) returns (ListClusterSecretsResponse);
+  rpc CreateClusterSecret(CreateClusterSecretRequest) returns (CreateClusterSecretResponse);
+  rpc UpdateClusterSecret(UpdateClusterSecretRequest) returns (UpdateClusterSecretResponse);
+  rpc DeleteClusterSecret(DeleteClusterSecretRequest) returns (DeleteClusterSecretResponse);
 }
 
 /* Version and Configuration Messages */
@@ -1006,4 +1012,38 @@ message UpdateRoleRequest {
 
 message UpdateRoleResponse {
   github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
+}
+
+message ListClusterSecretsRequest {
+  /* explicitly empty */
+}
+
+message ListClusterSecretsResponse {
+  repeated k8s.io.api.core.v1.Secret secrets = 1;
+}
+
+message CreateClusterSecretRequest {
+  string name = 1;
+  map<string, string> data = 2;
+}
+
+message CreateClusterSecretResponse {
+  k8s.io.api.core.v1.Secret secret = 1;
+}
+
+message UpdateClusterSecretRequest {
+  string name = 1;
+  map<string, string> data = 2;
+}
+
+message UpdateClusterSecretResponse {
+  k8s.io.api.core.v1.Secret secret = 1;
+}
+
+message DeleteClusterSecretRequest {
+  string name = 1;
+}
+
+message DeleteClusterSecretResponse {
+  /* explicitly empty */
 }
