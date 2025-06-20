@@ -237,42 +237,56 @@ spec:
                           properties:
                             predicate:
                               description: |-
-                                Predicate is a user-defined expression that should evaluate to true if a
-                                request is one that represents notification of a new or updated artifact
-                                having been pushed to a repository.
+                                Predicate is a user-defined expression or exact value that should
+                                evaluate to a boolean value indicating whether the intent is to refresh
+                                objects based on the request.
+
+                                This can be an exact string value or a string containing one or more
+                                expr-lang template expressions enclosed in ${{ }} syntax.
 
                                 If the expression evaluates to false, the request will not trigger a
-                                refresh of the selected Warehouses.
+                                refresh of the selected resources.
 
                                 An empty string means that the request will always trigger a
-                                refresh of the selected Warehouses.
+                                refresh of the selected resources.
                               type: string
                             selectors:
                               description: |-
                                 Selectors contains a set of selectors that can be used to identify which
-                                Warehouses should be refreshed.
+                                resources should be refreshed.
                               properties:
                                 chartRepoURL:
                                   description: |-
-                                    ChartRepoURL is a user-defined expression that should return a Helm
-                                    chart repository URL for which all subscribed Warehouses should be
-                                    refreshed. If an empty string is returned, no Warehouses will be refreshed.
+                                    ChartRepoURL is a user-defined expression or exact value that should
+                                    return a Helm chart repository URL for which all subscribed Warehouses
+                                    should be refreshed. This can be an exact string value or a string
+                                    containing one or more expr-lang template expressions enclosed in
+                                    ${{ }} syntax.
+
+                                    If an empty string is returned, no Warehouses will be refreshed.
                                     If a non-empty string is returned, Helm chart repo URL normalization
                                     will be applied before the URL is used to find Warehouses to refresh.
                                   type: string
                                 gitRepoURL:
                                   description: |-
-                                    GitRepoURL is a user-defined expression that should return a Git repository
-                                    URL for which all subscribed Warehouses should be refreshed. If an empty
-                                    string is returned, no Warehouses will be refreshed. If a non-empty string
-                                    is returned, Git repo URL normalization will be applied before the URL is
-                                    used to find Warehouses to refresh.
+                                    GitRepoURL is a user-defined expression or exact value that should return
+                                    a Git repository URL for which all subscribed Warehouses should be
+                                    refreshed. This can be an exact string value or a string containing one
+                                    or more expr-lang template expressions enclosed in ${{ }} syntax.
+
+                                    If an empty string is returned, no Warehouses will be refreshed.
+                                    If a non-empty string is returned, Git repo URL normalization will be
+                                    applied before the URL is used to find Warehouses to refresh.
                                   type: string
                                 imageRepoURL:
                                   description: |-
-                                    ImageRepoURL is a user-defined expression that should return a container
-                                    image repository URL for which all subscribed Warehouses should be
-                                    refreshed. If an empty string is returned, no Warehouses will be refreshed.
+                                    ImageRepoURL is a user-defined expression or exact value that should
+                                    return a container image repository URL for which all subscribed
+                                    Warehouses should be refreshed. This can be an exact string value or a
+                                    string containing one or more expr-lang template expressions enclosed in
+                                    ${{ }} syntax.
+
+                                    If an empty string is returned, no Warehouses will be refreshed.
                                     If a non-empty string is returned, container image repo URL normalization
                                     will be applied before the URL is used to find Warehouses to refresh.
                                   type: string

@@ -188,54 +188,67 @@ type GenericWebhookReceiverConfig struct {
 	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,2,opt,name=secretRef"`
 }
 
-// GenericRefreshConfig encapsulates user-defined expressions that can be
-// used to identify whether an inbound webhook request represents notification
-// of a new or updated artifact having been pushed to a repository, and if so,
-// how to identify the URL for which subscribed Warehouses should be
-// refreshed.
+// GenericRefreshConfig encapsulates user-defined expressions or exact values
+// that can be used to identify whether an inbound webhook request represents
+// notification of a new or updated artifact having been pushed to a repository,
+// and if so, how to identify the Kargo resources that should be refreshed.
 type GenericRefreshConfig struct {
-	// Predicate is a user-defined expression that should evaluate to true if a
-	// request is one that represents notification of a new or updated artifact
-	// having been pushed to a repository.
+	// Predicate is a user-defined expression or exact value that should
+	// evaluate to a boolean value indicating whether the intent is to refresh
+	// objects based on the request.
+	//
+	// This can be an exact string value or a string containing one or more
+	// expr-lang template expressions enclosed in ${{ }} syntax.
 	//
 	// If the expression evaluates to false, the request will not trigger a
-	// refresh of the selected Warehouses.
+	// refresh of the selected resources.
 	//
 	// An empty string means that the request will always trigger a
-	// refresh of the selected Warehouses.
+	// refresh of the selected resources.
 	//
 	// +optional
 	Predicate string `json:"predicate" protobuf:"bytes,1,opt,name=predicate"`
 
 	// Selectors contains a set of selectors that can be used to identify which
-	// Warehouses should be refreshed.
+	// resources should be refreshed.
 	//
 	// +kubebuilder:validation:Required
 	Selectors GenericRefreshSelectors `json:"selectors" protobuf:"bytes,2,opt,name=selectors"`
 }
 
 // GenericRefreshSelectors contains a set of selectors that can be used to
-// identify which Warehouses should be refreshed.
+// identify which resources should be refreshed.
 type GenericRefreshSelectors struct {
-	// GitRepoURL is a user-defined expression that should return a Git repository
-	// URL for which all subscribed Warehouses should be refreshed. If an empty
-	// string is returned, no Warehouses will be refreshed. If a non-empty string
-	// is returned, Git repo URL normalization will be applied before the URL is
-	// used to find Warehouses to refresh.
+	// GitRepoURL is a user-defined expression or exact value that should return
+	// a Git repository URL for which all subscribed Warehouses should be
+	// refreshed. This can be an exact string value or a string containing one
+	// or more expr-lang template expressions enclosed in ${{ }} syntax.
+	//
+	// If an empty string is returned, no Warehouses will be refreshed.
+	// If a non-empty string is returned, Git repo URL normalization will be
+	// applied before the URL is used to find Warehouses to refresh.
 	//
 	// +optional
 	GitRepoURL string `json:"gitRepoURL,omitempty" protobuf:"bytes,1,opt,name=gitRepoURL"`
-	// ImageRepoURL is a user-defined expression that should return a container
-	// image repository URL for which all subscribed Warehouses should be
-	// refreshed. If an empty string is returned, no Warehouses will be refreshed.
+	// ImageRepoURL is a user-defined expression or exact value that should
+	// return a container image repository URL for which all subscribed
+	// Warehouses should be refreshed. This can be an exact string value or a
+	// string containing one or more expr-lang template expressions enclosed in
+	// ${{ }} syntax.
+	//
+	// If an empty string is returned, no Warehouses will be refreshed.
 	// If a non-empty string is returned, container image repo URL normalization
 	// will be applied before the URL is used to find Warehouses to refresh.
 	//
 	// +optional
 	ImageRepoURL string `json:"imageRepoURL,omitempty" protobuf:"bytes,2,opt,name=imageRepoURL"`
-	// ChartRepoURL is a user-defined expression that should return a Helm
-	// chart repository URL for which all subscribed Warehouses should be
-	// refreshed. If an empty string is returned, no Warehouses will be refreshed.
+	// ChartRepoURL is a user-defined expression or exact value that should
+	// return a Helm chart repository URL for which all subscribed Warehouses
+	// should be refreshed. This can be an exact string value or a string
+	// containing one or more expr-lang template expressions enclosed in
+	// ${{ }} syntax.
+	//
+	// If an empty string is returned, no Warehouses will be refreshed.
 	// If a non-empty string is returned, Helm chart repo URL normalization
 	// will be applied before the URL is used to find Warehouses to refresh.
 	//
