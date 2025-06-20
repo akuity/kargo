@@ -84,9 +84,9 @@ this URL using the following command:
 
 1. Click <Hlt>Add new webhook</Hlt>.
 
-1. Complete the <Hlt>Add webhook</Hlt> form:
+1. Complete the <Hlt>Webhooks</Hlt> form:
 
-    ![Add Webhook Form](./img/add-webhook-form.png "Add Webhook Form")
+    ![Webhooks Form](./img/add-webhook-form.png " Webhooks Form")
 
     1. Set the <Hlt>URL</Hlt> to the URL
         [retrieved for the webhook receiver](#retrieving-the-receivers-url).
