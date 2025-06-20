@@ -5,11 +5,11 @@ description: How to configure Docker Hub webhooks with Kargo for automated artif
 
 # Docker Hub Webhook Receiver
 
-The Docker Hub Webhook Receiver responds when container images or charts are
-pushed to Docker Hub repositories.
+The Docker Hub Webhook Receiver responds to webhook notifications from Docker
+Hub when container images or charts are pushed to your repositories.
 
-When this happens, the receiver "refreshes" `Warehouse` resources subscribed to
-the corresponding Docker Hub repository.
+When a webhook request is received, the receiver "refreshes" `Warehouse`
+resources subscribed to the corresponding Docker Hub repository.
 
 :::info
 "Refreshing" a `Warehouse` means enqueuing it for immediate reconciliation by
@@ -28,13 +28,12 @@ protection against unauthorized requests. Because Docker Hub webhook payloads
 are **not** signed, Kargo uses this static token for basic validation.
 
 :::note
-The following command is suggested for generating a complex shared secret and
+The following command is suggested for generating a complex random token and
 encoding it for use in the `data` field:
 
 ```shell
 openssl rand -base64 48 | tr -d '=+/' | head -c 32 | base64
 ```
-
 :::
 
 ```yaml
@@ -44,7 +43,7 @@ metadata:
   name: dh-wh-secret
   namespace: kargo-demo
 data:
-  secret: <your-base64-encoded-token-here>
+  secret: <your-secret-token-here>
 ---
 apiVersion: kargo.akuity.io/v1alpha1
 kind: ProjectConfig

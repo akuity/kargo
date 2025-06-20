@@ -51,7 +51,7 @@ metadata:
   name: gh-wh-secret
   namespace: kargo-demo
 data:
-  secret: <your-base64-encoded-token-here>
+  secret: <your-secret-here>
 ---
 apiVersion: kargo.akuity.io/v1alpha1
 kind: ProjectConfig
