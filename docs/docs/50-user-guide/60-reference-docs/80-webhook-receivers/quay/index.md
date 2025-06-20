@@ -4,8 +4,17 @@ sidebar_label: Quay.io
 
 # The Quay Webhook Receiver
 
-The Quay Webhook Receiver will respond to push events by refreshing any 
-Warehouses subscribed to the repository from which the event originated.
+The Quay Webhook Receiver will respond to `Push to Repository` events by 
+refreshing any Warehouses subscribed to the repository from which the event originated.
+
+In response to a `Push to Repository` event, the receiver "refreshes" 
+`Warehouse`s subscribed to the Image repository from which the event originated.
+
+:::info
+"Refreshing" a `Warehouse` resource means enqueuing it for immediate
+reconciliation by the Kargo controller, which will execute the discovery of
+new artifacts from all repositories to which that `Warehouse` subscribes.
+:::
 
 ## Configuring the Receiver
 
@@ -13,7 +22,7 @@ The Quay webhook receiver will need to reference a Kubernetes `Secret` with a
 `secret` key in its data map.
 
 :::note
-The following command is suggested for generating a complex secret:
+The following command is suggested for generating a complex shared secret:
 
 ```shell
 openssl rand -base64 48 | tr -d '=+/' | head -c 32
@@ -45,7 +54,7 @@ spec:
 
 ## Retrieving the Receiver's URL
 
-Kargo will generate a hard-to-guess URL from the configuration. We can obtain 
+Kargo will generate a hard-to-guess URL from the configuration. We can obtain
 this URL using the following command:
 
 ```shell
@@ -59,33 +68,36 @@ this URL using the following command:
 
 ## Registering with Quay
 
-1. In your repository dashboard, click <Hlt>Settings</Hlt> on the
-  left-hand-side.
+1. Navigate to `https://quay.io/repository/<account>/<repository>?tab=settings`, where `<account>` has been replaced with your Quay username or an organization
+   for which you are an administrator and `<repository>` has been replaced with
+   the name of a repository belonging to that account.
 
-![Step 1](./img/1.png "Settings")
+    ![Repository Settings](./img/repository-settings.png "Repository Settings")
 
-1. Scroll down to <Hlt>Events and Notifications</Hlt>.
+    1. Scroll down to <Hlt>Events and Notifications</Hlt>.
 
-1. Click <Hlt>Create Notification</Hlt>.
+    1. Click <Hlt>Create Notification</Hlt>.
 
-![Step 2](./img/2.png "Create Notification Button")
+1. Complete the <Hlt>Create repository notification</Hlt> form.
 
-1. Select <Hlt>Push to Repository</Hlt> from the first dropdown menu( This is the only supported event for Quay at this time).
+    ![Create Repository Notification](./img/create-repository-notification.png "Create Notification Form")
 
-1. Select <Hlt>Webhook POST</Hlt> from the second dropdown menu.
+    1. Select <Hlt>Push to Repository</Hlt> from the <Hlt>When this event 
+    occurs</Hlt> dropdown menu.
 
- 1. Set the <Hlt>Webhook URL</Hlt> to the value we retrieved from the 
-    [Retrieving the Receiver's URL](#retrieving-the-receivers-url) section.
+    1. Select <Hlt>Webhook POST</Hlt> from the 
+    <Hlt>Then issue a notification</Hlt> dropdown menu.
 
-![Step 3](./img/3.png "Create Notification Form")
+    1. Set the <Hlt>Webhook URL</Hlt> to the URL 
+    [retrieved for the webhook receiver](#retrieving-the-receivers-url).
 
-1. Click the <Hlt>Create Notification</Hlt> button.
+    1. Click <Hlt>Create Notification</Hlt>.
 
-![Step 4](./img/4.png "Submit Form")
+:::info
+You will then be redirected to the <Hlt>Repository Settings</Hlt> dashboard
+where you should now see the notification you just created.
+:::
 
-1. You'll be redirected to your repository settings dashboard where you
-  will see the webhook listed.
+![Created](./img/created.png "Created")
 
-![Step 5](./img/5.png "Created")
-
-For additional information on configuring Quay notifications/webhooks, refer to the [Quay Docs](https://docs.quay.io/guides/notifications.html).
+For additional information on configuring Quay notifications, refer to the [Quay Docs](https://docs.quay.io/guides/notifications.html).
