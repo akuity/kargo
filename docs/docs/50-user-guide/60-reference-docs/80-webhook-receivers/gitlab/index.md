@@ -4,8 +4,15 @@ sidebar_label: GitLab
 
 # The GitLab Webhook Receiver
 
-The GitLab Webhook Receiver responds to push events
-by refreshing any Warehouses subscribed to the repository from which the event originated.
+The GitLab Webhook Receiver will respond to `push` events originating from GitLab repositories.
+
+In response to a push event, the receiver "refreshes" Warehouses subscribed to the Git repository from which the event originated.
+
+:::info
+"Refreshing" a `Warehouse` resource means enqueuing it for immediate
+reconciliation by the Kargo controller, which will execute the discovery of
+new artifacts from all repositories to which that `Warehouse` subscribes.
+:::
 
 :::info
 The GitLab webhook receiver also works with GitLab Dedicated and GitLab Self-Managed.
@@ -21,7 +28,7 @@ the request for the presence of this header and ensure it's value matches
 the one configured.
 
 :::note
-The following command is suggested for generating a complex secret:
+The following command is suggested for generating a complex shared secret:
 
 ```shell
 openssl rand -base64 48 | tr -d '=+/' | head -c 32
@@ -67,48 +74,45 @@ this URL using the following command:
 
 ## Registering with GitLab
 
-1. Navigating to the Webhooks Dashboard
+1. Navigate to `https://gitlab.com/<account>/<repository>/-/hooks`
+   `<account>` has been replaced with your GitLab username or an organization
+   for which you are an administrator and `<repository>` has been replaced with
+   the name of a repository belonging to that account.
 
-  1. From the repository dashboard of your choosing, hover over 
-  <Hlt>Settings</Hlt> on the left-hand-side. This will render a new menu
-  containing a <Hlt>Webhooks</Hlt> option.
-  1. Click <Hlt>Webhooks</Hlt>.
+![Settings](./img/settings.png "Settings")
 
-![Step 1](./img/1.png "Settings")
 
-1. In the Webhooks dashboard, click <Hlt>Add new webhook</Hlt>.
+1. Click <Hlt>Add new webhook</Hlt>.
 
-![Step 2](./img/2.png "Add Webhook Button")
+1. Complete the <Hlt>Add webhook</Hlt> form:
 
-1. Set the <Hlt>URL</Hlt> to the value we retrieved from the 
-    [Retrieving the Receiver's URL](#retrieving-the-receivers-url) section.
+    ![Add Webhook Form](./img/add-webhook-form.png "Add Webhook Form")
 
-2. In the <Hlt>Secret token</Hlt> field, we will input the value we assigned to the `secret-token` key from the [Configuring the Receiver](#configuring-the-receiver) section.
+    1. Set the <Hlt>URL</Hlt> to the URL
+        [retrieved for the webhook receiver](#retrieving-the-receivers-url).
 
-![Step 3](./img/3.png "Add Webhook Form")
+    1. Set <Hlt>Secret token</Hlt> to the value assigned to the `secret-token` key from the [Configuring the Receiver](#configuring-the-receiver) section.
 
-1. Click <Hlt>Add webhook</Hlt>
+    1. Click <Hlt>Add webhook</Hlt>
 
-![Step 4](./img/4.png "Submit Form")
+1. Verify connectivity:
 
-1. Back in your Webhooks dashboard, you'll see the newly created webhook listed.
+    1. From the <Hlt>Webhooks</Hlt> dashboard select the <Hlt>Push events</Hlt> option 
+    from the <Hlt>Test</Hlt> 
+    dropdown menu.
 
-![Step 5](./img/5.png "Created")
+    ![Webhooks](./img/webhooks.png "Webhooks")
 
-1. Select the <Hlt>Push events</Hlt> option from the <Hlt>Test</Hlt> dropdown menu.
+    ![Test Button](./img/test-button.png "Test Button")
 
-![Step 6](./img/6.png "Test Button")
+    1. Click <Hlt>Edit</Hlt>.
 
-1. Click <Hlt>Edit</Hlt>.
+    1. Scroll down to <Hlt>Recent Events</Hlt> and click <Hlt>View Details</Hlt>.
 
-![Step 7](./img/7.png "Edit Button")
+    ![Recent Events](./img/recent-events.png "Recent Events")
 
-1. Scroll down to <Hlt>Recent Events</Hlt> and click <Hlt>View Details</Hlt>.
+    1. Confirm a successful response.
 
-![Step 8](./img/8.png "Recent Events")
-
-1. Confirm a successful response.
-
-![Step 9](./img/9.png "Response")
+    ![Response](./img/response.png "Response")
 
 For additional information on configuring GitLab webhooks, refer to the [GitLab Docs](https://docs.gitlab.com/user/project/integrations/webhooks/).
