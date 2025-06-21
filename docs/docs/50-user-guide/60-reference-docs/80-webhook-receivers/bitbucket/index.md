@@ -82,11 +82,11 @@ kubectl \
    
    1. Enter a <Hlt>Title</Hlt> with a short description.
    
-   1. Set <Hlt>URL</Hlt> to the URL we [retriveved
-      earlier](#retrieving-the-receivers-url).
+   1. Set <Hlt>URL</Hlt> to the URL [for the webhook
+      receiver](#retrieving-the-receivers-url).
 
-   1. Set <Hlt>Secret</Hlt> to the value previously assigned to the secret key
-      of the Secret referenced by the [webhook receiver's
+   1. Set <Hlt>Secret</Hlt> to the value assigned to the `secret` key
+      of the `Secret` referenced by the [webhook receiver's
       configuration](https://main.docs.kargo.io/user-guide/reference-docs/webhook-receivers/github/#configuring-the-receiver).
     
       :::note
