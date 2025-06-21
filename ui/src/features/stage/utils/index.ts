@@ -72,7 +72,7 @@ export function getColors<T extends HasMetadata>(
       for (const stage of objects) {
         const color = parseColorAnnotation(stage);
         if (color) {
-          m[stage?.metadata?.name || ''] = ColorMapHex[color];
+          m[stage?.metadata?.name || ''] = ColorMapHex[color] ?? color;
         }
       }
       return m;
@@ -114,7 +114,7 @@ export function generateStageColors<T extends HasMetadata>(sortedObjects: T[], p
     const color = parseColorAnnotation(stage);
     if (color) {
       delete curColors[color];
-      finalMap[stage?.metadata?.name || ''] = ColorMapHex[color];
+      finalMap[stage?.metadata?.name || ''] = ColorMapHex[color] ?? color;
     }
   }
   const colors = Object.values(curColors);
