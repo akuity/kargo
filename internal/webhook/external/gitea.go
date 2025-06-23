@@ -112,7 +112,7 @@ func (g *giteaWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 
 		// Note: github.com/google/go-github/v71/github has a great implementation
 		// of HMAC signature validation that isn't GitHub-specific, so we've opted
-		// to use it here for Bitbucket as well.
+		// to use it here for Gitea as well.
 		if err := gh.ValidateSignature(sig, requestBody, signingKey); err != nil {
 			xhttp.WriteErrorJSON(
 				w,
