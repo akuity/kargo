@@ -139,7 +139,6 @@ func (g *giteaWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 
 		logger = logger.WithValues("repoURL", repoURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		logger.Info("Received Gitea webhook event")
 
 		refreshWarehouses(ctx, w, g.client, g.project, repoURL)
 	})
