@@ -75,9 +75,9 @@ To configure a single repository to notify the receiver of relevant events:
 
 1. Navigate to
    `https://bitbucket.org/<workspace>/<repository>/admin/webhooks` where
-   `<workspace>` has been replaced with a Bitbucket workspace for which you are
-   an administrator and `<repository>` has been replaced with the name of a
-   repository belonging to that workspace.
+   `<workspace>` has been replaced with a Bitbucket workspace and `<repository>`
+   has been replaced with the name of a repository belonging to that workspace
+   and for which you are an administrator.
 
 1. Click <Hlt>Add webhook</Hlt>.
 

@@ -28,7 +28,8 @@ _This secret does not need to be shared directly with Docker Hub._
 Docker Hub does not natively implement any mechanism whereby receivers may
 authenticate inbound webhook requests. To compensate for this, Kargo
 incorporates the secret into the generation of a hard-to-guess URL for the
-receiver. This URL serves as a _de facto_ shared secret and authentication
+receiver. This URL serves as a _de facto_
+[shared secret](https://en.wikipedia.org/wiki/Shared_secret) and authentication
 mechanism.
 :::
 
@@ -104,8 +105,8 @@ container images or Helm charts) have been pushed to it:
 
 :::note
 If you'd like to review outbound webhook requests for troubleshooting purposes,
-select the three dots to the right of a webhook, then select <Hlt>View
-history</Hlt> from the context menu.
+select the three dots to the right of a webhook, then select
+<Hlt>View history</Hlt> from the context menu.
 :::
 
 :::info
