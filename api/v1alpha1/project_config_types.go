@@ -34,7 +34,7 @@ type ProjectConfigSpec struct {
 	PromotionPolicies []PromotionPolicy `json:"promotionPolicies,omitempty" protobuf:"bytes,1,rep,name=promotionPolicies"`
 	// WebhookReceivers describes Project-specific webhook receivers used for
 	// processing events from various external platforms
-	WebhookReceivers []WebhookReceiverConfig `json:"webhookReceivers,omitempty" protobuf:"bytes,2,rep,name=receivers"`
+	WebhookReceivers []WebhookReceiverConfig `json:"webhookReceivers,omitempty" protobuf:"bytes,2,rep,name=webhookReceivers"`
 }
 
 // ProjectConfigStatus describes the current status of a ProjectConfig.
@@ -57,7 +57,7 @@ type ProjectConfigStatus struct {
 	LastHandledRefresh string `json:"lastHandledRefresh,omitempty" protobuf:"bytes,4,opt,name=lastHandledRefresh"`
 	// WebhookReceivers describes the status of Project-specific webhook
 	// receivers.
-	WebhookReceivers []WebhookReceiverDetails `json:"webhookReceivers,omitempty" protobuf:"bytes,2,rep,name=receivers"`
+	WebhookReceivers []WebhookReceiverDetails `json:"webhookReceivers,omitempty" protobuf:"bytes,2,rep,name=webhookReceivers"`
 }
 
 // GetConditions implements the conditions.Getter interface.

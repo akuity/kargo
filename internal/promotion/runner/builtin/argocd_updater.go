@@ -326,18 +326,16 @@ func (a *argocdUpdater) mustPerformUpdate(
 		return "", true, nil
 	}
 
-	// Deal with the possibility that the operation was not initiated by the
-	// expected user.
-	if status.Operation.InitiatedBy.Username != applicationOperationInitiator {
-		// The operation was not initiated by the expected user.
+	// Deal with the possibility that the operation was not initiated by Kargo
+	if !isKargoInitiatedOperation(status.Operation) {
 		if !status.Phase.Completed() {
 			// We should wait for the operation to complete before attempting to
 			// apply an update ourselves.
 			// NB: We return the current phase here because we want the caller
 			//     to know that an operation is still running.
 			return status.Phase, false, fmt.Errorf(
-				"current operation was initiated by %q and not by %q: waiting for operation to complete",
-				status.Operation.InitiatedBy.Username, applicationOperationInitiator,
+				"current operation was initiated by %q: waiting for operation to complete",
+				status.Operation.InitiatedBy.Username,
 			)
 		}
 		// Initiate our own operation.
@@ -409,6 +407,17 @@ func (a *argocdUpdater) mustPerformUpdate(
 	return status.Phase, false, nil
 }
 
+// isKargoInitiatedOperation returns true if the given operation was initiated
+// by Kargo, based on the info key we set on all kargo initiated operations.
+func isKargoInitiatedOperation(op argocd.Operation) bool {
+	for _, info := range op.Info {
+		if info != nil && info.Name == promotionInfoKey {
+			return true
+		}
+	}
+	return false
+}
+
 func (a *argocdUpdater) syncApplication(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
@@ -429,14 +438,20 @@ func (a *argocdUpdater) syncApplication(
 	}
 
 	// Initiate a new operation.
+	actor := applicationOperationInitiator
+	automated := true
+	if stepCtx.PromotionActor != "" {
+		// PromotionActor is extracted from the `create-actor` annotation of the Promotion
+		// object. If set, it implies it was a manually triggered promotion, which we
+		// carry over to the Argo CD operation. This is important so that Argo CD sync
+		// windows will be respected
+		actor = stepCtx.PromotionActor
+		automated = false
+	}
 	app.Operation = &argocd.Operation{
 		InitiatedBy: argocd.OperationInitiator{
-			Username: applicationOperationInitiator,
-			// NB: While this field may make it look like the operation was
-			// initiated by a machine, it is actually dedicated to indicate
-			// whether the operation was initiated by Argo CD's own
-			// application controller (i.e. auto-sync), which we are not.
-			Automated: false,
+			Username:  actor,
+			Automated: automated,
 		},
 		Info: []*argocd.Info{
 			{

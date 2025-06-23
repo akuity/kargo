@@ -11,6 +11,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/git"
+	"github.com/akuity/kargo/internal/helm"
 	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/logging"
@@ -164,7 +165,17 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 				xhttp.WriteErrorJSON(w, err)
 				return
 			}
-			repoURL = image.NormalizeURL(ref.Context().Name())
+			manifest := pkg.GetPackageVersion().GetContainerMetadata().GetManifest()
+			// Determine if the package is a Helm chart
+			if cfg, ok := manifest["config"].(map[string]any); ok {
+				if mediaType, ok := cfg["media_type"].(string); ok && mediaType == helmChartMediaType {
+					repoURL = helm.NormalizeChartRepositoryURL(ref.Context().Name())
+				}
+			}
+			if repoURL == "" {
+				// Assume the package is a container image
+				repoURL = image.NormalizeURL(ref.Context().Name())
+			}
 
 		case *gh.PingEvent:
 			xhttp.WriteResponseJSON(
@@ -177,7 +188,7 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			return
 
 		case *gh.PushEvent:
-			// TODO(krancour): GetHTMLURL() gives use a repo URL starting with
+			// TODO(krancour): GetHTMLURL() gives us a repo URL starting with
 			// https://. By refreshing Warehouses using a normalized representation of
 			// that URL, we will miss any Warehouses that are subscribed to the same
 			// repository using a different URL format.

@@ -141,6 +141,8 @@ type StepContext struct {
 	Stage string
 	// Promotion is the name of the Promotion.
 	Promotion string
+	// PromotionActor is the name of the actor triggering the Promotion.
+	PromotionActor string
 	// FreightRequests is the list of Freight from various origins that is
 	// requested by the Stage targeted by the Promotion. This information is
 	// sometimes useful to Step that reference a particular artifact and, in the

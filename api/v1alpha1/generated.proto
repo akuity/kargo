@@ -1121,7 +1121,7 @@ message ProjectConfigSpec {
 
   // WebhookReceivers describes Project-specific webhook receivers used for
   // processing events from various external platforms
-  repeated WebhookReceiverConfig receivers = 2;
+  repeated WebhookReceiverConfig webhookReceivers = 2;
 }
 
 // ProjectConfigStatus describes the current status of a ProjectConfig.
@@ -1147,7 +1147,7 @@ message ProjectConfigStatus {
 
   // WebhookReceivers describes the status of Project-specific webhook
   // receivers.
-  repeated WebhookReceiverDetails receivers = 2;
+  repeated WebhookReceiverDetails webhookReceivers = 2;
 }
 
 // ProjectList is a list of Project resources.

@@ -5,6 +5,7 @@ import {
   faGear,
   faGears,
   faPeopleGroup,
+  faScrewdriverWrench,
   faTasks
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -18,6 +19,7 @@ import { getConfig } from '@ui/gen/api/service/v1alpha1/service-KargoService_con
 import { useProjectBreadcrumbs } from '../project-utils';
 
 import { AnalysisTemplatesSettings } from './views/analysis-templates/analysis-templates';
+import { ConfigMaps } from './views/config-maps/config-maps';
 import { CredentialsSettings } from './views/credentials/credentials';
 import { GeneralSettings } from './views/general/general-settings';
 import { ProjectConfig } from './views/project-config/project-config';
@@ -59,6 +61,12 @@ export const ProjectSettings = () => {
             }
           }
         : {}),
+      configMaps: {
+        label: 'ConfigMaps',
+        path: 'config-maps',
+        icon: faScrewdriverWrench,
+        component: ConfigMaps
+      },
       roles: {
         label: 'Roles',
         icon: faPeopleGroup,
