@@ -14,6 +14,8 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
+const helmChartMediaType = "application/vnd.cncf.helm.config.v1+json"
+
 // WebhookReceiver is an interface for components that handle inbound webhooks.
 type WebhookReceiver interface {
 	// getReceiverType returns the type of this receiver.
