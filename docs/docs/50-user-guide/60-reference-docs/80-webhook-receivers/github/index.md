@@ -4,7 +4,7 @@ sidebar_label: GitHub
 
 # The GitHub Webhook Receiver
 
-The Github Webhook Receiver will respond to `ping`, `push`, and `package`
+The Github webhook receiver will respond to `ping`, `push`, and `package`
 events originating from GitHub repositories.
 
 The receiver unconditionally responds to `ping` events with an HTTP `200` status
@@ -36,10 +36,13 @@ GitHub to sign requests. The receiver will use it to authenticate those requests
 by verifying their signatures.
 
 :::note
-The following command is suggested for generating a complex shared secret:
+The following commands are suggested for generating and base64-encoding a
+complex secret:
 
 ```shell
-openssl rand -base64 48 | tr -d '=+/' | head -c 32
+secret=$(openssl rand -base64 48 | tr -d '=+/' | head -c 32)
+echo "Secret: $secret"
+echo "Encoded secret: $(echo -n $secret | base64)"
 ```
 
 :::
@@ -50,8 +53,8 @@ kind: Secret
 metadata:
   name: gh-wh-secret
   namespace: kargo-demo
-stringData:
-  secret: <your-secret-here>
+data:
+  secret: <base64-encoded secret>
 ---
 apiVersion: kargo.akuity.io/v1alpha1
 kind: ProjectConfig
@@ -72,11 +75,9 @@ Kargo will generate a hard-to-guess URL from the configuration. We can obtain
 this URL using the following command:
 
 ```shell
-  kubectl \
-    get projectconfigs \
-    kargo-demo \
-    -n kargo-demo \
-    -o=jsonpath='{.status.webhookReceivers}'
+kubectl get projectconfigs kargo-demo \
+  -n kargo-demo \
+  -o=jsonpath='{.status.webhookReceivers}'
 ```
 
 ## Registering with Github
