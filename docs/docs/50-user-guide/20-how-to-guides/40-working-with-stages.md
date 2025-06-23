@@ -123,10 +123,10 @@ spec:
       kind: Warehouse
       name: my-warehouse
     sources:
+      availabilityStrategy: All
       stages:
       - qa
       - uat
-    availabilityStrategy: All
   # ...
 ```
 
@@ -552,7 +552,7 @@ as desired.
     If you wish to stop the in-progress verification, you can click <Hlt>Abort Verification</Hlt>.
     :::
 
-1. To check the `Stage`s where the `Freight` has been successfully verified, return to 
+1. To check the `Stage`s where the `Freight` has been successfully verified, return to
     the <Hlt>Freight Timeline</Hlt> and select the `Freight`. Verified `Stage` names will appear under <Hlt>VERIFIED IN</Hlt>:
 
     ![verify-stage](img/verified-in.png)
@@ -564,7 +564,7 @@ as desired.
 1. To rerun verification using the CLI, run:
 
     ```shell
-    kargo verify stage <stage> --project <project> 
+    kargo verify stage <stage> --project <project>
     ```
 
     If you want to *stop* this ongoing verification process, use:

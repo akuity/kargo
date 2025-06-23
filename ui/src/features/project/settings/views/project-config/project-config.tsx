@@ -22,6 +22,7 @@ import projectConfigSchema from '@ui/gen/schema/projectconfigs.kargo.akuity.io_v
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 import { zodValidators } from '@ui/utils/validators';
 
+import { Refresh } from './refresh';
 import { projectConfigTransport } from './transport';
 import { CreateWebhookModal } from './webhook/create-webhook-modal';
 import { Webhooks } from './webhooks';
@@ -72,7 +73,11 @@ export const ProjectConfig = () => {
 
   return (
     <Flex gap={16} vertical>
-      <Card title='ProjectConfig' type='inner'>
+      <Card
+        title='ProjectConfig'
+        type='inner'
+        extra={projectConfigYAML !== '' && <Refresh project={name || ''} />}
+      >
         <FieldContainer control={projectConfigForm.control} name='value'>
           {({ field }) => (
             <YamlEditor
