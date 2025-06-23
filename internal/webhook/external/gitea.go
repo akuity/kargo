@@ -123,7 +123,7 @@ func (g *giteaWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 
 		payload := struct {
 			Repo struct {
-				Name string `json:"full_name"`
+				URL string `json:"html_url"`
 			} `json:"repository"`
 		}{}
 		if err := json.Unmarshal(requestBody, &payload); err != nil {
@@ -135,10 +135,11 @@ func (g *giteaWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 		}
 
 		// Normalize the repo name
-		repoURL := git.NormalizeURL(payload.Repo.Name)
+		repoURL := git.NormalizeURL(payload.Repo.URL)
 
 		logger = logger.WithValues("repoURL", repoURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
+		logger.Info("Received Gitea webhook event")
 
 		refreshWarehouses(ctx, w, g.client, g.project, repoURL)
 	})

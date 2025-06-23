@@ -27,10 +27,10 @@ func TestGiteaHandler(t *testing.T) {
 
 	var validPushEvent = struct {
 		Repo struct {
-			Name string `json:"full_name"`
+			Name string `json:"html_url"`
 		} `json:"repository"`
 	}{Repo: struct {
-		Name string `json:"full_name"`
+		Name string `json:"html_url"`
 	}{Name: "https://gitea.com/example/repo"}}
 
 	testScheme := runtime.NewScheme()
