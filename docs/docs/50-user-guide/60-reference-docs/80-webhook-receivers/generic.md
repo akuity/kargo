@@ -4,4 +4,6 @@ sidebar_label: Generic
 
 # The Generic Webhook Receiver
 
-Placeholder
+:::info
+__Coming soon!__
+:::
