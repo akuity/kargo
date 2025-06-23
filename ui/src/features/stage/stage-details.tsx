@@ -16,10 +16,8 @@ import { paths } from '@ui/config/paths';
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { Description } from '@ui/features/common/description';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
-import {
-  getConfig,
-  getStage
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { useConfigContext } from '@ui/features/config/use-config-context';
+import { getStage } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
@@ -90,7 +88,8 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
     [rawStageYamlQuery.data]
   );
 
-  const { data: config } = useQuery(getConfig);
+  const { config } = useConfigContext();
+
   const shardKey = stage?.metadata?.labels['kargo.akuity.io/shard'] || '';
   const argocdShard = config?.argocdShards?.[shardKey];
 

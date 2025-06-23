@@ -1,4 +1,3 @@
-import { useQuery } from '@connectrpc/connect-query';
 import {
   faAsterisk,
   faChartBar,
@@ -14,7 +13,7 @@ import React from 'react';
 import { NavLink, Route, Routes, useLocation, Navigate } from 'react-router-dom';
 
 import { BaseHeader } from '@ui/features/common/layout/base-header';
-import { getConfig } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { useConfigContext } from '@ui/features/config/use-config-context';
 
 import { useProjectBreadcrumbs } from '../project-utils';
 
@@ -29,7 +28,7 @@ import { RolesSettings } from './views/roles/roles';
 export const ProjectSettings = () => {
   const location = useLocation();
 
-  const { data: config, isFetching } = useQuery(getConfig);
+  const { config, isFetching } = useConfigContext();
 
   const settingsViews = React.useMemo(() => {
     return {
