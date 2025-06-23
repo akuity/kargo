@@ -13,6 +13,8 @@ import (
 	"oras.land/oras-go/pkg/registry"
 	"oras.land/oras-go/pkg/registry/remote"
 	"oras.land/oras-go/pkg/registry/remote/auth"
+
+	"github.com/akuity/kargo/internal/image"
 )
 
 // DiscoverChartVersions connects to the specified Helm chart repository and
@@ -241,10 +243,15 @@ func filterSemVers(semvers semver.Collection, semverConstraint string) (semver.C
 // of comparison. Crucially, this function removes the oci:// prefix from the
 // URL if there is one.
 func NormalizeChartRepositoryURL(repo string) string {
-	return strings.TrimPrefix(
-		strings.ToLower(
-			strings.TrimSpace(repo),
+	// Note: We lean a bit on image.NormalizeURL() because it is excellent at
+	// normalizing the many different forms of equivalent URLs for Docker Hub
+	// repositories.
+	return image.NormalizeURL(
+		strings.TrimPrefix(
+			strings.ToLower(
+				strings.TrimSpace(repo),
+			),
+			"oci://",
 		),
-		"oci://",
 	)
 }
