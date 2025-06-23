@@ -115,7 +115,10 @@ func (g *gitlabWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 
 		switch e := event.(type) {
 		case *gl.PushEvent:
-			repoURL := git.NormalizeURL(e.Repository.GitHTTPURL)
+			var repoURL string
+			if e.Repository != nil {
+				repoURL = git.NormalizeURL(e.Repository.GitHTTPURL)
+			}
 			logger = logger.WithValues("repoURL", repoURL)
 			ctx = logging.ContextWithLogger(ctx, logger)
 			refreshWarehouses(ctx, w, g.client, g.project, repoURL)
