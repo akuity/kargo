@@ -5,9 +5,10 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+
+	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 )
 
 func (s *server) DeleteClusterSecret(
