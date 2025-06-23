@@ -1,9 +1,6 @@
 package external
 
 import (
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,6 +12,7 @@ import (
 	"github.com/akuity/kargo/internal/git"
 	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/logging"
+	gh "github.com/google/go-github/v71/github"
 )
 
 const (
@@ -103,7 +101,7 @@ func (g *giteaWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 		logger = logger.WithValues("eventType", eventType)
 		ctx = logging.ContextWithLogger(ctx, logger)
 
-		sig := r.Header.Get("X-Gitea-Signature")
+		sig := r.Header.Get(gh.SHA256SignatureHeader)
 		if sig == "" {
 			xhttp.WriteErrorJSON(
 				w,
@@ -112,11 +110,10 @@ func (g *giteaWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 			return
 		}
 
-		mac := hmac.New(sha256.New, []byte(signingKey))
-		mac.Write(requestBody)
-		computedSig := hex.EncodeToString(mac.Sum(nil))
-
-		if !hmac.Equal([]byte(sig), []byte(computedSig)) {
+		// Note: github.com/google/go-github/v71/github has a great implementation
+		// of HMAC signature validation that isn't GitHub-specific, so we've opted
+		// to use it here for Bitbucket as well.
+		if err := gh.ValidateSignature(sig, requestBody, signingKey); err != nil {
 			xhttp.WriteErrorJSON(
 				w,
 				xhttp.Error(errors.New("unauthorized"), http.StatusUnauthorized),

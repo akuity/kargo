@@ -93,7 +93,7 @@ func TestGiteaHandler(t *testing.T) {
 			req: func() *http.Request {
 				req := httptest.NewRequest(http.MethodPost, testURL, nil)
 				req.Header.Set("X-Gitea-Event", "push")
-				req.Header.Set("X-Gitea-Signature", "totally-invalid-signature")
+				req.Header.Set("X-Hub-Signature-256", "totally-invalid-signature")
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -107,7 +107,7 @@ func TestGiteaHandler(t *testing.T) {
 			req: func() *http.Request {
 				bodyBuf := bytes.NewBuffer([]byte("invalid json"))
 				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
-				req.Header.Set("X-Gitea-Signature", signGitea(bodyBuf.Bytes()))
+				req.Header.Set("X-Hub-Signature-256", sign(bodyBuf.Bytes()))
 				req.Header.Set("X-Gitea-Event", "push")
 				return req
 			},
@@ -146,7 +146,7 @@ func TestGiteaHandler(t *testing.T) {
 					testURL,
 					bytes.NewBuffer(bodyBytes),
 				)
-				req.Header.Set("X-Gitea-Signature", signGitea(bodyBytes))
+				req.Header.Set("X-Hub-Signature-256", sign(bodyBytes))
 				req.Header.Set("X-Gitea-Event", "push")
 				return req
 			},
