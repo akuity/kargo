@@ -44,6 +44,7 @@ secret=$(openssl rand -base64 48 | tr -d '=+/' | head -c 32)
 echo "Secret: $secret"
 echo "Encoded secret: $(echo -n $secret | base64)"
 ```
+
 :::
 
 ```yaml
@@ -53,7 +54,7 @@ metadata:
   name: gh-wh-secret
   namespace: kargo-demo
 data:
-  secret: <your-secret-here>
+  secret: <base64-encoded secret>
 ---
 apiVersion: kargo.akuity.io/v1alpha1
 kind: ProjectConfig
