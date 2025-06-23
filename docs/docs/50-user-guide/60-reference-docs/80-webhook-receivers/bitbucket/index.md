@@ -7,7 +7,7 @@ sidebar_label: Bitbucket
 The Bitbucket webhook receiver will respond to `repo:push` events originating
 from Bitbucket repositories.
 
-In response to a `repo:push` event, the receiver "refreshes" `Warehouse's`
+In response to a `repo:push` event, the receiver "refreshes" `Warehouse`s
 subscribed to the Bitbucket repository from which the event originated.
 
 :::info
@@ -85,7 +85,7 @@ To configure a single repository to notify the receiver of relevant events:
 
     ![Add New Webhook Form](./img/add-new-webhook-form.png "Add New Webhook Form")
 
-    1. Enter a <Hlt>Title</Hlt> with a short description.
+    1. Enter a descriptive name in the <Hlt>Title</Hlt> field.
 
     1. Set <Hlt>URL</Hlt> to the URL
        [for the webhook receiver](#retrieving-the-receivers-url).
