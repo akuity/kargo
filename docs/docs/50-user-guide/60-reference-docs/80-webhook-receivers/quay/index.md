@@ -5,7 +5,8 @@ sidebar_label: Quay.io
 # The Quay Webhook Receiver
 
 The Quay Webhook Receiver will respond to `Push to Repository` events by 
-refreshing any Warehouses subscribed to the repository from which the event originated.
+refreshing any Warehouses subscribed to the repository from which the event
+originated.
 
 In response to a `Push to Repository` event, the receiver "refreshes" 
 `Warehouse`s subscribed to the Image repository from which the event originated.
@@ -27,7 +28,6 @@ The following command is suggested for generating a complex shared secret:
 ```shell
 openssl rand -base64 48 | tr -d '=+/' | head -c 32
 ```
-
 :::
 
 ```yaml
@@ -68,7 +68,8 @@ this URL using the following command:
 
 ## Registering with Quay
 
-1. Navigate to `https://quay.io/repository/<account>/<repository>?tab=settings`, where `<account>` has been replaced with your Quay username or an organization
+1. Navigate to `https://quay.io/repository/<account>/<repository>?tab=settings`,
+   where `<account>` has been replaced with your Quay username or an organization
    for which you are an administrator and `<repository>` has been replaced with
    the name of a repository belonging to that account.
 
@@ -100,4 +101,5 @@ where you should now see the notification you just created.
 
 ![Created](./img/created.png "Created")
 
-For additional information on configuring Quay notifications, refer to the [Quay Docs](https://docs.quay.io/guides/notifications.html).
+For additional information on configuring Quay notifications, refer to the
+[Quay Docs](https://docs.quay.io/guides/notifications.html).
