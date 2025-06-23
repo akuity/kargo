@@ -7,7 +7,7 @@ sidebar_label: GitLab
 The GitLab Webhook Receiver will respond to `push` events originating from
 GitLab repositories.
 
-In response to a push event, the receiver "refreshes" Warehouses subscribed to
+In response to a `push` event, the receiver "refreshes" Warehouses subscribed to
 the Git repository from which the event originated.
 
 :::info
@@ -26,26 +26,34 @@ Self-Managed.
 The GitLab webhook receiver will need to reference a Kubernetes `Secret` with a
 `secret-token` key in its data map. This
 [shared secret](https://en.wikipedia.org/wiki/Shared_secret) will be used by
-GitLab to provision an `X-Gitlab-Token` HTTP header. The receiver will check
-the request for the presence of this header and ensure its value matches
-the one configured.
+GitLab to sign requests. The receiver will use it to authenticate those requests
+by verifying their signatures.
 
 :::note
-The following command is suggested for generating a complex shared secret:
+The following commands are suggested for generating and base64-encoding a
+complex secret:
 
 ```shell
-openssl rand -base64 48 | tr -d '=+/' | head -c 32
+secret_token=$(openssl rand -base64 48 | tr -d '=+/' | head -c 32)
+echo "Secret token: $secret_token"
+echo "Encoded secret token: $(echo -n $secret_token | base64)"
 ```
+
 :::
 
 ```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: kargo-demo
+---
 apiVersion: v1
 kind: Secret
 metadata:
   name: gl-wh-secret
   namespace: kargo-demo
-stringData:
-  secret-token: <your-secret-here>
+data:
+  secret-token: <base64-encoded secret token>
 ---
 apiVersion: kargo.akuity.io/v1alpha1
 kind: ProjectConfig
@@ -62,23 +70,21 @@ spec:
 
 ## Retrieving the Receiver's URL
 
-Kargo will generate a hard-to-guess URL from the configuration. We can obtain 
+Kargo will generate a hard-to-guess URL from the configuration. We can obtain
 this URL using the following command:
 
 ```shell
-  kubectl \
-    get projectconfigs \
-    kargo-demo \
-    -n kargo-demo \
-    -o=jsonpath='{.status.webhookReceivers}'
+kubectl get projectconfigs kargo-demo \
+  -n kargo-demo \
+  -o=jsonpath='{.status.webhookReceivers}'
 ```
 
 ## Registering with GitLab
 
-1. Navigate to `https://gitlab.com/<account>/<repository>/-/hooks`
-   `<account>` has been replaced with your GitLab username or an organization
-   for which you are an administrator and `<repository>` has been replaced with
-   the name of a repository belonging to that account.
+1. Navigate to `https://gitlab.com/<namespace>/<project>/-/hooks`, where
+   `<namespace>` has been replaced with a GitLab username or group name and
+   `<project>` has been replaced with the name of a project belonging to that
+   namespace and for which you are an administrator.
 
     ![Settings](./img/settings.png "Settings")
 
@@ -88,33 +94,44 @@ this URL using the following command:
 
     ![Webhooks Form](./img/add-webhook-form.png " Webhooks Form")
 
+    1. Enter a descriptive name in the <Hlt>Name</Hlt> field.
+
     1. Set the <Hlt>URL</Hlt> to the URL
-        [retrieved for the webhook receiver](#retrieving-the-receivers-url).
+       [for the webhook receiver](#retrieving-the-receivers-url).
 
     1. Set <Hlt>Secret token</Hlt> to the value assigned to the `secret-token`
-       key from the [Configuring the Receiver](#configuring-the-receiver)
-       section.
+       key of the `Secret` referenced by the
+       [webhook receiver's configuration](#configuring-the-receiver).
 
-    1. Click <Hlt>Add webhook</Hlt>
+    1. In the <Hlt>Trigger</Hlt> section, ensure <Hlt>Push events</Hlt> is
+       checked.
 
-1. Verify connectivity:
+    1. Click <Hlt>Add webhook</Hlt>.
 
-    1. From the <Hlt>Webhooks</Hlt> dashboard select the <Hlt>Push events</Hlt>
-       option from the <Hlt>Test</Hlt> dropdown menu.
+1. From the <Hlt>Webhooks settings</Hlt> page, verify connectivity by expanding
+   the <Hlt>Test</Hlt> dropdown menu next to your webhook and selecting
+   <Hlt>Push events</Hlt>.
 
-        ![Webhooks](./img/webhooks.png "Webhooks")
+    ![Webhooks](./img/webhooks.png "Webhooks")
 
-        ![Test Button](./img/test-button.png "Test Button")
+    ![Test Button](./img/test-button.png "Test Button")
 
-    1. Click <Hlt>Edit</Hlt>.
+    :::note
+    This is safe to do because the test payload will lack the necessary
+    details to successfully refresh `Warehouse` resources subscribed to the
+    repository.
+    :::
 
-    1. Scroll down to <Hlt>Recent events</Hlt> and click <Hlt>View details</Hlt>.
+    If the test `push` event was delivered successfully, a success message will
+    appear at the top of the <Hlt>Webhooks settings</Hlt> page.
 
-        ![Recent events](./img/recent-events.png "Recent events")
+    :::info
+    If the test `push` is not successful, troubleshoot by clicking the
+    <Hlt>Edit</Hlt> button next to your webhook, then scrolling down to the
+    <Hlt>Recent events</Hlt> section to view details of the failed request.
+    :::
 
-    1. Confirm a successful response.
-
-        ![Response](./img/response.png "Response")
-
-For additional information on configuring GitLab webhooks, refer to the
+:::info
+For additional information on configuring GitLab webhooks, refer directly to the
 [GitLab Docs](https://docs.gitlab.com/user/project/integrations/webhooks/).
+:::
