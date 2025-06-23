@@ -1,12 +1,14 @@
 package external
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 
-	gh "github.com/google/go-github/v71/github"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -86,7 +88,7 @@ func (g *giteaWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 
 		eventType := r.Header.Get("X-Gitea-Event")
 		switch eventType {
-		case "ping", "push":
+		case "push":
 		default:
 			xhttp.WriteErrorJSON(
 				w,
@@ -110,10 +112,11 @@ func (g *giteaWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 			return
 		}
 
-		// Note: github.com/google/go-github/v71/github has a great implementation
-		// of HMAC signature validation that isn't GitHub-specific, so we've opted
-		// to use it here for Gitea as well.
-		if err := gh.ValidateSignature(sig, requestBody, signingKey); err != nil {
+		mac := hmac.New(sha256.New, []byte(signingKey))
+		mac.Write(requestBody)
+		computedSig := hex.EncodeToString(mac.Sum(nil))
+
+		if !hmac.Equal([]byte(sig), []byte(computedSig)) {
 			xhttp.WriteErrorJSON(
 				w,
 				xhttp.Error(errors.New("unauthorized"), http.StatusUnauthorized),

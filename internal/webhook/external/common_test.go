@@ -16,3 +16,9 @@ func sign(content []byte) string {
 		hex.EncodeToString(mac.Sum(nil)),
 	)
 }
+
+func signGitea(content []byte) string {
+	mac := hmac.New(sha256.New, []byte(testSigningKey))
+	mac.Write(content)
+	return hex.EncodeToString(mac.Sum(nil))
+}
