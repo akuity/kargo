@@ -1,39 +1,47 @@
 ---
 sidebar_label: Docker Hub
-description: How to configure Docker Hub webhooks with Kargo for automated artifact discovery.
 ---
 
 # Docker Hub Webhook Receiver
 
-The Docker Hub Webhook Receiver responds to webhook notifications from Docker
-Hub when container images or charts are pushed to your repositories.
+The Docker Hub webhook receiver responds to webhook requests originating from
+Docker Hub repositories when container images or Helm charts have been pushed to
+those repositories.
 
-When a webhook request is received, the receiver "refreshes" `Warehouse`
-resources subscribed to the corresponding Docker Hub repository.
+In response to such an event, the receiver "refreshes" `Warehouse`s subscribed
+to the Docker Hub repository from which the event originated.
 
 :::info
-"Refreshing" a `Warehouse` means enqueuing it for immediate reconciliation by
-the Kargo controller, which will attempt to discover new artifacts from all
-subscribed repositories.
+"Refreshing" a `Warehouse` resource means enqueuing it for immediate
+reconciliation by the Kargo controller, which will execute the discovery of
+new artifacts from all repositories to which that `Warehouse` subscribes.
 :::
 
 ## Configuring the Receiver
 
-To enable webhook support for Docker Hub, configure a Kubernetes
-`Secret` and reference it in the `ProjectConfig`.
+The Docker Hub webhook receiver will need to reference a Kubernetes `Secret`
+with a `secret` key in its data map.
 
-The `Secret` must include a `secret` key in its data map. This value is used to
-generate a unique, hard-to-guess URL for the webhook receiver, providing basic
-protection against unauthorized requests. Because Docker Hub webhook payloads
-are **not** signed, Kargo uses this static token for basic validation.
+:::info
+_This secret does not need to be shared directly with Docker Hub._
+
+Docker Hub does not natively implement any mechanism whereby receivers may
+authenticate inbound webhook requests. To compensate for this, Kargo
+incorporates the secret into the generation of a hard-to-guess URL for the
+receiver. This URL serves as a _de facto_ shared secret and authentication
+mechanism.
+:::
 
 :::note
-The following command is suggested for generating a complex random token and
-encoding it for use in the `data` field:
+The following commands are suggested for generating and base64-encoding a
+complex secret:
 
 ```shell
-openssl rand -base64 48 | tr -d '=+/' | head -c 32 | base64
+secret=$(openssl rand -base64 48 | tr -d '=+/' | head -c 32)
+echo "Secret: $secret"
+echo "Encoded secret: $(echo -n $secret | base64)"
 ```
+
 :::
 
 ```yaml
@@ -43,7 +51,7 @@ metadata:
   name: dh-wh-secret
   namespace: kargo-demo
 data:
-  secret: <your-secret-token-here>
+  secret: <base64-encoded secret>
 ---
 apiVersion: kargo.akuity.io/v1alpha1
 kind: ProjectConfig
@@ -60,8 +68,8 @@ spec:
 
 ## Retrieving the Receiver's URL
 
-After applying the `ProjectConfig`, you can retrieve the unique URL for the
-Docker Hub webhook receiver with this command:
+Kargo will generate a hard-to-guess URL from the configuration. We can obtain
+this URL using the following command:
 
 ```shell
 kubectl get projectconfigs kargo-demo \
@@ -71,38 +79,36 @@ kubectl get projectconfigs kargo-demo \
 
 ## Registering with Docker Hub
 
-To configure a Docker Hub repository to send events to the webhook receiver:
+To configure a single repository to notify the receiver when objects (like
+container images or Helm charts) have been pushed to it:
 
-1. Open your Docker Hub repository and select the <Hlt>Webhooks</Hlt> tab.
+1. Navigate to a Docker Hub repository for which you are an administrator and
+   select the <Hlt>Webhooks</Hlt> tab.
 
    ![Webhooks Tab](./img/webhooks-tab.png "Webhooks Tab")
 
-1. In the <Hlt>Webhooks</Hlt> form:
+1. Complete the <Hlt>New webhook</Hlt> form:
 
-   ![New Webhook](./img/new-webhook.png "New Webhook Form")
+    ![New Webhook Form](./img/new-webhook.png "New Webhook Form")
 
-   1. Provide a name for the webhook.
+    1. Enter a descriptive name in the <Hlt>Webhook name</Hlt> field.
 
-   1. Set <Hlt>Webhook URL</Hlt> to the
-      [receiver URL](#retrieving-the-receivers-url).
+    1. Set <Hlt>Webhook URL</Hlt> to the
+       [for the webhook receiver](#retrieving-the-receivers-url).
 
-   1. Click <Hlt>+</Hlt> to create the webhook.
+    1. Click <Hlt>+</Hlt>.
 
-      ![Create Webhook](./img/create-webhook.png "Create Webhook Button")
+    ![Create Webhook Button](./img/create-webhook.png "Create Webhook Button")
 
-## Verifying connectivity
+1. Verify the new webhook appears under <Hlt>Current webhooks</Hlt>.
 
-1. Go to the <Hlt>Webhooks</Hlt> tab of your repository.
+:::note
+If you'd like to review outbound webhook requests for troubleshooting purposes,
+select the three dots to the right of a webhook, then select <Hlt>View
+history</Hlt> from the context menu.
+:::
 
-1. In the <Hlt>Current Webhooks</Hlt> section, hover over your webhook,
-   select the _menu options_ icon, and click <Hlt>View History</Hlt>.
-
-   ![View Webhook History](./img/view-history.png "View History")
-
-1. Check the delivery log to confirm a successful webhook request.
-
-   ![Delivery Detail](./img/delivery-detail.png "Webhook Delivery Detail")
-
-Once configured, Kargo automatically refreshes the corresponding `Warehouse`
-and begins artifact discovery whenever new images or charts are pushed to the
-Docker Hub repository.
+:::info
+For additional information on configuring webhooks, refer directly to the
+[Docker Hub Docs](https://docs.docker.com/docker-hub/repos/manage/webhooks/).
+:::
