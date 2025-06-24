@@ -37,7 +37,7 @@ Generate base URL for a service.
 {{- define "kargo.baseURL" -}}
 {{- $service := .service -}}
 {{- $host := .host -}}
-{{- if include "kargo.useTLS" $service -}}
+{{- if eq (include "kargo.useTLS" $service) "true" -}}
 {{- printf "https://%s" $host -}}
 {{- else -}}
 {{- printf "http://%s" $host -}}
