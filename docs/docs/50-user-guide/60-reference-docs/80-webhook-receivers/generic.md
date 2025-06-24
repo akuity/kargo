@@ -6,4 +6,6 @@ sidebar_label: Generic
 
 :::info
 __Coming soon!__
+
+Expected in v1.7.0
 :::
