@@ -3,9 +3,9 @@ package azure
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/akuity/kargo/internal/gitprovider"
+	adogit "github.com/microsoft/azure-devops-go-api/azuredevops/v7/git"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParseRepoURL(t *testing.T) {
@@ -259,6 +259,42 @@ func TestNewProvider(t *testing.T) {
 				require.NotNil(t, p.connection)
 				require.NotNil(t, tc.wantBaseUrl, p.connection.BaseUrl)
 			}
+		})
+	}
+}
+
+func TestMapADOPrState(t *testing.T) {
+	tests := []struct {
+		name     string
+		state    gitprovider.PullRequestState
+		expected adogit.PullRequestStatus
+	}{
+		{
+			name:     "Open state",
+			state:    gitprovider.PullRequestStateOpen,
+			expected: adogit.PullRequestStatusValues.Active,
+		},
+		{
+			name:     "Closed state",
+			state:    gitprovider.PullRequestStateClosed,
+			expected: adogit.PullRequestStatusValues.Completed,
+		},
+		{
+			name:     "Unknown/empty state returns All",
+			state:    "",
+			expected: adogit.PullRequestStatusValues.All,
+		},
+		{
+			name:     "Random state returns All",
+			state:    "some-random-state",
+			expected: adogit.PullRequestStatusValues.All,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := mapADOPrState(tc.state)
+			require.Equal(t, tc.expected, got)
 		})
 	}
 }
