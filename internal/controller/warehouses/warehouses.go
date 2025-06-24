@@ -64,7 +64,7 @@ type reconciler struct {
 
 	gitCloneFn func(string, *git.ClientOptions, *git.CloneOptions) (git.Repo, error)
 
-	listCommitsFn func(repo git.Repo, limit, skip uint) ([]git.CommitMetadata, error)
+	listCommitsFn func(repo git.Repo, limit, skip uint, paths []string) ([]git.CommitMetadata, error)
 
 	listTagsFn func(repo git.Repo) ([]git.TagMetadata, error)
 

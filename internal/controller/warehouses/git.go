@@ -223,7 +223,7 @@ func (r *reconciler) discoverBranchHistory(repo git.Repo, sub kargoapi.GitSubscr
 	limit := int(sub.DiscoveryLimit)
 	var filteredCommits = make([]git.CommitMetadata, 0, limit)
 	for skip := uint(0); ; skip += uint(limit) { // nolint: gosec
-		commits, err := r.listCommitsFn(repo, uint(limit), skip) // nolint: gosec
+		commits, err := r.listCommitsFn(repo, uint(limit), skip, sub.IncludePaths) // nolint: gosec
 		if err != nil {
 			return nil, fmt.Errorf("error listing commits from git repo %q: %w", sub.RepoURL, err)
 		}
@@ -571,8 +571,8 @@ func selectSemVerTags(tags []git.TagMetadata, strict bool, constraint string) ([
 	return semverTags, nil
 }
 
-func (r *reconciler) listCommits(repo git.Repo, limit, skip uint) ([]git.CommitMetadata, error) {
-	return repo.ListCommits(limit, skip)
+func (r *reconciler) listCommits(repo git.Repo, limit, skip uint, paths []string) ([]git.CommitMetadata, error) {
+	return repo.ListCommits(limit, skip, paths)
 }
 
 func (r *reconciler) listTags(repo git.Repo) ([]git.TagMetadata, error) {
