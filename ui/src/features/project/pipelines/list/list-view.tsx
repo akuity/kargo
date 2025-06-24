@@ -1,4 +1,4 @@
-import { Table } from 'antd';
+import { Card, Table } from 'antd';
 import classNames from 'classnames';
 import { useMemo, useState } from 'react';
 
@@ -56,9 +56,10 @@ export const PipelineListView = (props: PipelineListViewProps) => {
         onFilter: setFilters
       }}
     >
-      <AppliedFilters className='px-2 py-2' />
-      <div className={classNames(props.className, 'px-2')}>
+      <Card className={classNames(props.className, 'm-2')} size='small'>
+        <AppliedFilters className='px-2 pb-4' />
         <Table
+          pagination={{ hideOnSinglePage: true }}
           dataSource={filteredStages}
           rowKey={(stage) => `${stage?.metadata?.name}-${stage?.status?.observedGeneration}`}
           size='small'
@@ -73,7 +74,7 @@ export const PipelineListView = (props: PipelineListViewProps) => {
             })
           ]}
         />
-      </div>
+      </Card>
     </FilterContext.Provider>
   );
 };
