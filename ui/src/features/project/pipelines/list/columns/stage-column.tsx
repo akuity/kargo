@@ -1,6 +1,6 @@
 import { faSearch } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Input, Space } from 'antd';
+import { Badge, Button, Input, Space } from 'antd';
 import { ColumnType } from 'antd/es/table';
 import { generatePath, Link } from 'react-router-dom';
 
@@ -9,13 +9,20 @@ import {
   Filter,
   useFilterContext
 } from '@ui/features/project/pipelines/list/context/filter-context';
-import { isStageControlFlow } from '@ui/features/project/pipelines/nodes/stage-meta-utils';
+import {
+  isStageControlFlow,
+  useStageHeaderStyle
+} from '@ui/features/project/pipelines/nodes/stage-meta-utils';
 import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 
 export const stageColumn = (filter: Filter): ColumnType<Stage> => ({
   title: 'Stage',
   width: '20%',
   render: (_, stage) => {
+    const stageHeader = useStageHeaderStyle(stage);
+
+    const background = stageHeader?.backgroundColor;
+
     return (
       <Link
         to={generatePath(paths.stage, {
@@ -23,6 +30,7 @@ export const stageColumn = (filter: Filter): ColumnType<Stage> => ({
           stageName: stage?.metadata?.name
         })}
       >
+        {!!background && <Badge color={background} className='mr-2' />}
         {stage?.metadata?.name}
         {isStageControlFlow(stage) ? <span className='text-xs ml-1'>(Control Flow)</span> : ''}
       </Link>

@@ -208,7 +208,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                   'z-10 top-2 right-2 left-2',
                   pipelineView === 'graph' ? 'absolute' : 'pt-2 px-2'
                 )}
-                align='center'
+                align='flex-start'
               >
                 <GraphFilters
                   warehouses={listWarehousesQuery.data?.warehouses || []}
@@ -267,38 +267,37 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                 >
                   <Button icon={<FontAwesomeIcon icon={faPlus} />}>Create</Button>
                 </Dropdown>
-                {pipelineView === 'graph' && (
-                  <Button
-                    icon={<FontAwesomeIcon icon={faDocker} />}
-                    onClick={() =>
-                      setPreferredFilter({
-                        ...preferredFilter,
-                        images: !preferredFilter?.images
-                      })
-                    }
-                  />
-                )}
+                <Button
+                  icon={<FontAwesomeIcon icon={faDocker} />}
+                  onClick={() =>
+                    setPreferredFilter({
+                      ...preferredFilter,
+                      images: !preferredFilter?.images
+                    })
+                  }
+                />
               </Flex>
+
+              <div
+                className={classNames('w-[450px] absolute right-2 top-20 z-10', {
+                  hidden: !preferredFilter?.images
+                })}
+              >
+                <Images
+                  hide={() =>
+                    setPreferredFilter({
+                      ...preferredFilter,
+                      images: !preferredFilter?.images
+                    })
+                  }
+                  images={listImagesQuery.data?.images || {}}
+                  project={projectName || ''}
+                  stages={listStagesQuery.data?.stages || []}
+                />
+              </div>
 
               {pipelineView === 'graph' && (
                 <>
-                  <div
-                    className={classNames('w-[450px] absolute right-2 top-20 z-10', {
-                      hidden: !preferredFilter?.images
-                    })}
-                  >
-                    <Images
-                      hide={() =>
-                        setPreferredFilter({
-                          ...preferredFilter,
-                          images: !preferredFilter?.images
-                        })
-                      }
-                      images={listImagesQuery.data?.images || {}}
-                      project={projectName || ''}
-                      stages={listStagesQuery.data?.stages || []}
-                    />
-                  </div>
                   <Graph
                     project={project.metadata?.name || ''}
                     warehouses={listWarehousesQuery.data?.warehouses || []}
