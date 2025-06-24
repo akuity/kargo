@@ -49,7 +49,7 @@ export const ClusterSecret = () => {
         dataSource={listClusterSecretsQuery.data?.secrets || []}
         rowKey={(record) => record?.metadata?.name || ''}
         loading={listClusterSecretsQuery.isLoading}
-        pagination={{ defaultPageSize: 5, hideOnSinglePage: true }}
+        pagination={{ defaultPageSize: 10, hideOnSinglePage: true }}
         size='small'
         columns={[
           {
@@ -77,13 +77,12 @@ export const ClusterSecret = () => {
           {
             key: 'actions',
             render: (_, record) => (
-              <Flex>
+              <Flex justify='flex-end' gap={8}>
                 <Button
                   icon={<FontAwesomeIcon icon={faPencil} size='sm' />}
                   color='default'
                   variant='filled'
                   size='small'
-                  className='ml-auto'
                   onClick={() =>
                     createSecretModal.show((p) => (
                       <CreateClusterSecretModal
@@ -101,15 +100,9 @@ export const ClusterSecret = () => {
                   color='danger'
                   variant='filled'
                   size='small'
-                  className='ml-2'
                   onClick={() => {
                     confirm({
-                      title: (
-                        <div className='flex items-center'>
-                          <FontAwesomeIcon icon={faTrash} className='mr-2' />
-                          Delete Secret
-                        </div>
-                      ),
+                      title: 'Delete Secret',
                       content: (
                         <p>Are you sure you want to delete secret {record?.metadata?.name}?</p>
                       ),

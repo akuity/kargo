@@ -1,6 +1,4 @@
 import { useMutation } from '@connectrpc/connect-query';
-import { faAsterisk } from '@fortawesome/free-solid-svg-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Input, Modal } from 'antd';
 import { useForm } from 'react-hook-form';
@@ -79,12 +77,7 @@ export const CreateClusterSecretModal = (props: CreateClusterSecretModalProps) =
       open={props.visible}
       onCancel={props.hide}
       okText={editing ? 'Update' : 'Create'}
-      title={
-        <>
-          <FontAwesomeIcon icon={faAsterisk} className='mr-2' />
-          {editing ? 'Edit' : 'Create'} Secret
-        </>
-      }
+      title={`${editing ? 'Edit' : 'Create'} Secret`}
       onOk={onSubmit}
       width='612px'
     >
