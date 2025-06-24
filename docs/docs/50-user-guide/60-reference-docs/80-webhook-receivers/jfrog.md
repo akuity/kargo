@@ -1,8 +1,8 @@
 ---
-sidebar_label: Generic
+sidebar_label: JFrog
 ---
 
-# The Generic Webhook Receiver
+# The JFrog Webhook Receiver
 
 :::info
 __Coming soon!__
