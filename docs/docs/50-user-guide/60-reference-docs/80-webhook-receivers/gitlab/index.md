@@ -4,11 +4,9 @@ sidebar_label: GitLab
 
 # The GitLab Webhook Receiver
 
-The GitLab Webhook Receiver will respond to `push` events originating from
-GitLab repositories.
-
-In response to a `push` event, the receiver "refreshes" Warehouses subscribed to
-the Git repository from which the event originated.
+The GitLab Webhook Receiver responds to `push` events originating from GitLab
+repositories by _refreshing_ all `Warehouse` resources subscribed to those
+repositories.
 
 :::info
 "Refreshing" a `Warehouse` resource means enqueuing it for immediate
@@ -18,16 +16,16 @@ new artifacts from all repositories to which that `Warehouse` subscribes.
 
 :::info
 The GitLab webhook receiver also works with GitLab Dedicated and GitLab
-Self-Managed.
+Self Managed, although some URLs in this document may need to be adjusted
+accordingly.
 :::
 
 ## Configuring the Receiver
 
-The GitLab webhook receiver will need to reference a Kubernetes `Secret` with a
+A GitLab webhook receiver must reference a Kubernetes `Secret` resource with a
 `secret-token` key in its data map. This
 [shared secret](https://en.wikipedia.org/wiki/Shared_secret) will be used by
-GitLab to sign requests. The receiver will use it to authenticate those requests
-by verifying their signatures.
+GitLab to sign requests any by the receiver to verify those signatures.
 
 :::note
 The following commands are suggested for generating and base64-encoding a
@@ -70,8 +68,8 @@ spec:
 
 ## Retrieving the Receiver's URL
 
-Kargo will generate a hard-to-guess URL from the configuration. We can obtain
-this URL using the following command:
+Kargo will generate a hard-to-guess URL from the receiver's configuration. This
+URL can be obtained using a command such as the following:
 
 ```shell
 kubectl get projectconfigs kargo-demo \
@@ -80,6 +78,8 @@ kubectl get projectconfigs kargo-demo \
 ```
 
 ## Registering with GitLab
+
+To configure a single GitLab repository to notify a receiver of `push` events:
 
 1. Navigate to `https://gitlab.com/<namespace>/<project>/-/hooks`, where
    `<namespace>` has been replaced with a GitLab username or group name and
@@ -92,19 +92,20 @@ kubectl get projectconfigs kargo-demo \
 
 1. Complete the <Hlt>Webhooks</Hlt> form:
 
-    ![Webhooks Form](./img/add-webhook-form.png " Webhooks Form")
+    ![Webhooks Form](./img/add-webhook-form.png "Webhooks Form")
 
     1. Enter a descriptive name in the <Hlt>Name</Hlt> field.
 
-    1. Set the <Hlt>URL</Hlt> to the URL
+    1. Complete the <Hlt>URL</Hlt> filed using the URL
        [for the webhook receiver](#retrieving-the-receivers-url).
 
-    1. Set <Hlt>Secret token</Hlt> to the value assigned to the `secret-token`
-       key of the `Secret` referenced by the
+    1. Complete the <Hlt>Secret token</Hlt> field using to the (unencoded) value
+       assigned to the `secret-token` key of the `Secret` resource referenced by
+       the
        [webhook receiver's configuration](#configuring-the-receiver).
 
     1. In the <Hlt>Trigger</Hlt> section, ensure <Hlt>Push events</Hlt> is
-       checked.
+       selected.
 
     1. Click <Hlt>Add webhook</Hlt>.
 
@@ -126,7 +127,7 @@ kubectl get projectconfigs kargo-demo \
     appear at the top of the <Hlt>Webhooks settings</Hlt> page.
 
     :::info
-    If the test `push` is not successful, troubleshoot by clicking the
+    If the test event is not successful, troubleshoot by clicking the
     <Hlt>Edit</Hlt> button next to your webhook, then scrolling down to the
     <Hlt>Recent events</Hlt> section to view details of the failed request.
     :::

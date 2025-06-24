@@ -4,25 +4,28 @@ sidebar_label: Bitbucket
 
 # The Bitbucket Webhook Receiver
 
-The Bitbucket webhook receiver will respond to `repo:push` events originating
-from Bitbucket repositories.
-
-In response to a `repo:push` event, the receiver "refreshes" `Warehouse`s
-subscribed to the Bitbucket repository from which the event originated.
+The Bitbucket webhook receiver responds to `repo:push` events originating from
+Bitbucket repositories by _refreshing_ all `Warehouse` resources subscribed to
+those repositories.
 
 :::info
 "Refreshing" a `Warehouse` resource means enqueuing it for immediate
-reconciliation by the Kargo controller, which will execute the discovery of
-new artifacts from all repositories to which that `Warehouse` subscribes.
+reconciliation by the Kargo controller, which will execute the discovery of new
+artifacts from all repositories to which that `Warehouse` subscribes.
+:::
+
+:::info
+The Bitbucket webhook receiver also works with Bitbucket Server and Bitbucket
+Data Center, although some URLs in this document may need to be adjusted
+accordingly.
 :::
 
 ## Configuring the Receiver
 
-The Bitbucket webhook receiver will need to reference a Kubernetes `Secret` with
+A Bitbucket webhook receiver must reference a Kubernetes `Secret` resource with
 a `secret` key in its data map. This
 [shared secret](https://en.wikipedia.org/wiki/Shared_secret) will be used by
-Bitbucket to sign requests. The receiver will use it to authenticate those
-requests by verifying their signatures.
+Bitbucket to sign requests and by the receiver to verify those signatures.
 
 :::note
 The following commands are suggested for generating and base64-encoding a
@@ -60,8 +63,8 @@ spec:
 
 ## Retrieving the Receiver's URL
 
-Kargo will generate a hard-to-guess URL from the configuration. We can obtain
-this URL using the following command:
+Kargo will generate a hard-to-guess URL from the receiver's configuration. This
+URL can be obtained using a command such as the following:
 
 ```shell
 kubectl get projectconfigs kargo-demo \
@@ -71,7 +74,8 @@ kubectl get projectconfigs kargo-demo \
 
 ## Registering with Bitbucket
 
-To configure a single repository to notify the receiver of relevant events:
+To configure a single Bitbucket repository to notify a receiver of `repo:push`
+events:
 
 1. Navigate to
    `https://bitbucket.org/<workspace>/<repository>/admin/webhooks` where
@@ -87,11 +91,11 @@ To configure a single repository to notify the receiver of relevant events:
 
     1. Enter a descriptive name in the <Hlt>Title</Hlt> field.
 
-    1. Set <Hlt>URL</Hlt> to the URL
+    1. Complete the <Hlt>URL</Hlt> field using the URL
        [for the webhook receiver](#retrieving-the-receivers-url).
 
-    1. Set <Hlt>Secret</Hlt> to the value assigned to the `secret` key
-       of the `Secret` referenced by the
+    1. Complete the <Hlt>Secret</Hlt> field using the (unencoded) value assigned
+       to the `secret` key of the `Secret` resource referenced by the
        [webhook receiver's configuration](#configuring-the-receiver).
 
         :::danger
@@ -104,14 +108,14 @@ To configure a single repository to notify the receiver of relevant events:
         URL._
         :::
 
-    1. Under <Hlt>Status</Hlt>, ensure <Hlt>Active</Hlt> is checked.
+    1. Under <Hlt>Status</Hlt>, ensure <Hlt>Active</Hlt> is selected.
 
     1. Under <Hlt>Triggers</Hlt> → <Hlt>Repository</Hlt>, ensure <Hlt>Push</Hlt>
-       is checked.
+       is selected.
 
     1. Click <Hlt>Save</Hlt>.
 
-1. Verify that the webhook appears under <Hlt>Repository hooks</Hlt>.
+1. Verify that the new webhook appears under <Hlt>Repository hooks</Hlt>.
 
 1. If you'd like to record outbound webhook requests for troubleshooting
    purposes:
@@ -121,6 +125,9 @@ To configure a single repository to notify the receiver of relevant events:
     1. Click on <Hlt>Enable History</Hlt>.
 
     ![Enable History](./img/enable-history.png "Enabled History")
+
+When these steps are complete, the repository will send events to the webhook
+receiver.
 
 :::info
 For additional information on configuring webhooks, refer directly to the

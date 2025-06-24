@@ -4,26 +4,23 @@ sidebar_label: Docker Hub
 
 # Docker Hub Webhook Receiver
 
-The Docker Hub webhook receiver responds to webhook requests originating from
-Docker Hub repositories when container images or Helm charts have been pushed to
-those repositories.
-
-In response to such an event, the receiver "refreshes" `Warehouse`s subscribed
-to the Docker Hub repository from which the event originated.
+The Docker Hub webhook receiver responds to events originating from Docker Hub
+repositories by _refreshing_ all `Warehouse` resources subscribed to those
+repositories.
 
 :::info
 "Refreshing" a `Warehouse` resource means enqueuing it for immediate
-reconciliation by the Kargo controller, which will execute the discovery of
-new artifacts from all repositories to which that `Warehouse` subscribes.
+reconciliation by the Kargo controller, which will execute the discovery of new
+artifacts from all repositories to which that `Warehouse` subscribes.
 :::
 
 ## Configuring the Receiver
 
-The Docker Hub webhook receiver will need to reference a Kubernetes `Secret`
-with a `secret` key in its data map.
+A Docker Hub webhook receiver must reference a Kubernetes `Secret` resource with
+a `secret` key in its data map.
 
 :::info
-_This secret does not need to be shared directly with Docker Hub._
+_This secret will not be shared directly with Docker Hub._
 
 Docker Hub does not natively implement any mechanism whereby receivers may
 authenticate inbound webhook requests. To compensate for this, Kargo
@@ -69,8 +66,8 @@ spec:
 
 ## Retrieving the Receiver's URL
 
-Kargo will generate a hard-to-guess URL from the configuration. We can obtain
-this URL using the following command:
+Kargo will generate a hard-to-guess URL from the receiver's configuration. This
+URL can be obtained using a command such as the following:
 
 ```shell
 kubectl get projectconfigs kargo-demo \
@@ -80,11 +77,12 @@ kubectl get projectconfigs kargo-demo \
 
 ## Registering with Docker Hub
 
-To configure a single repository to notify the receiver when objects (like
-container images or Helm charts) have been pushed to it:
+To configure a single Docker Hub repository to notify a receiver when objects
+(like container images or Helm charts) have been pushed to it:
 
-1. Navigate to a Docker Hub repository for which you are an administrator and
-   select the <Hlt>Webhooks</Hlt> tab.
+1. Navigate to a Docker Hub repository for which you are an administrator.
+
+1. Select the <Hlt>Webhooks</Hlt> tab.
 
    ![Webhooks Tab](./img/webhooks-tab.png "Webhooks Tab")
 
@@ -94,7 +92,7 @@ container images or Helm charts) have been pushed to it:
 
     1. Enter a descriptive name in the <Hlt>Webhook name</Hlt> field.
 
-    1. Set <Hlt>Webhook URL</Hlt> to the
+    1. Complete the <Hlt>Webhook URL</Hlt> field using the URL
        [for the webhook receiver](#retrieving-the-receivers-url).
 
     1. Click <Hlt>+</Hlt>.
@@ -108,6 +106,9 @@ If you'd like to review outbound webhook requests for troubleshooting purposes,
 select the three dots to the right of a webhook, then select
 <Hlt>View history</Hlt> from the context menu.
 :::
+
+When these steps are complete, the repository will send events to the webhook
+receiver.
 
 :::info
 For additional information on configuring webhooks, refer directly to the
