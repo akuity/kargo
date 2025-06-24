@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,6 +15,7 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/io/fs"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
@@ -98,7 +98,7 @@ func (f *fileCopier) run(
 			return matcher.Match(strings.Split(src, string(filepath.Separator)), f.IsDir()), nil
 		},
 		OnError: func(_, _ string, err error) error {
-			return sanitizePathError(err, stepCtx.WorkDir)
+			return fs.SanitizePathError(err, stepCtx.WorkDir)
 		},
 	}
 	if err = copy.Copy(inPath, outPath, opts); err != nil {
@@ -148,36 +148,4 @@ func (f *fileCopier) loadIgnoreRules(inPath, rules string) (gitignore.Matcher, e
 	}
 
 	return gitignore.NewMatcher(ps), nil
-}
-
-// sanitizePathError sanitizes the path in a path error to be relative to the
-// work directory. If the path cannot be made relative, the filename is used
-// instead.
-//
-// This is useful for making error messages more user-friendly, as the work
-// directory is typically a temporary directory that the user does not care
-// about.
-func sanitizePathError(err error, workDir string) error {
-	var pathErr *fs.PathError
-	if errors.As(err, &pathErr) {
-		// Reconstruct the error with the sanitized path.
-		return &fs.PathError{
-			Op:   pathErr.Op,
-			Path: relativePath(workDir, pathErr.Path),
-			Err:  pathErr.Err,
-		}
-	}
-	// Return the original error if it's not a path error.
-	return err
-}
-
-// relativePath returns a path relative to the base path, or the base if
-// the path cannot be made relative.
-func relativePath(base, path string) string {
-	rel, err := filepath.Rel(base, path)
-	if err != nil || strings.Contains(rel, "..") {
-		// If we can't make it relative, just use the filename.
-		return filepath.Base(path)
-	}
-	return rel
 }
