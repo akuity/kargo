@@ -262,7 +262,7 @@ type of resource you are working with, recognizable by the `apiVersion` and
 `kind` fields.
 :::
 
-If you pass arguments using `args:` in your `Stage` spec, the corresponding
+If you pass arguments using `args` in the `spec` of your `Stage`, the corresponding
 `AnalysisTemplate` must define those arguments in its `spec.args` field.
 Arguments that aren't declared in the template cannot be used in metrics and will
 cause the `AnalysisRun` to fail.
