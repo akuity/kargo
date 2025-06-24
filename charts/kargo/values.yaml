@@ -184,7 +184,7 @@ api:
         # - kargo-viewer
 
     users:
-      ## @param api.oidc.viewers.claims Subjects having any of these claims will automatically receive read-only access to all cluster-scoped Kargo resources. This is the minimum level of permissions that can be granted to a user to allow them to view the list of Projects and system-level configuration. This does not include any access to Secrets.
+      ## @param api.oidc.users.claims Subjects having any of these claims will automatically receive read-only access to all cluster-scoped Kargo resources. This is the minimum level of permissions that can be granted to a user to allow them to view the list of Projects and system-level configuration. This does not include any access to Secrets.
       claims: {}
       # sub:
       # - alice
