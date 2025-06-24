@@ -75,14 +75,23 @@ k8s_resource(
     'kargo-admin:clusterrole',
     'kargo-admin:clusterrolebinding',
     'kargo-admin:serviceaccount',
-    'kargo-cluster-secrets-reader:role',
-    'kargo-cluster-secrets-reader:rolebinding',
     'kargo-project-admin:clusterrole',
     'kargo-project-secrets-reader:clusterrole',
     'kargo-viewer:clusterrole',
     'kargo-viewer:serviceaccount',
     'kargo-viewer:clusterrolebinding',
     'kargo-selfsigned-cert-issuer:issuer'
+  ]
+)
+
+k8s_resource(
+  new_name = 'cluster-secrets',
+  labels = ['kargo'],
+  objects = [
+    'kargo-cluster-secrets-admin:role',
+    'kargo-cluster-secrets-admin:rolebinding',
+    'kargo-cluster-secrets-reader:role',
+    'kargo-cluster-secrets-reader:rolebinding'
   ]
 )
 
