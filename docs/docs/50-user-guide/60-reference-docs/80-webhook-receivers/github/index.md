@@ -4,42 +4,46 @@ sidebar_label: GitHub
 
 # The GitHub Webhook Receiver
 
-The Github Webhook Receiver will respond to `ping`, `push`, and `package`
-events originating from GitHub repositories.
+The GitHub webhook receiver responds to `ping`, `push`, and `package` events
+originating from GitHub.
 
 The receiver unconditionally responds to `ping` events with an HTTP `200` status
 code.
 
-In response to a `push` event, the receiver "refreshes" `Warehouse`s subscribed
-to the Git repository from which the event originated.
+The receiver responds to `push` events by _refreshing_ all `Warehouse` resources
+subscribed to the Git repositories from which those events originated.
 
-In response to a `package` event, the receiver "refreshes" `Warehouse`s
-subscribed to the GHCR repository from which the event originated.
+The receiver responds to  `package` events by _refreshing_ all `Warehouse`
+resources subscribed to the GHCR repositories from which those events
+originated.
 
 :::info
 "Refreshing" a `Warehouse` resource means enqueuing it for immediate
-reconciliation by the Kargo controller, which will execute the discovery of
-new artifacts from all repositories to which that `Warehouse` subscribes.
+reconciliation by the Kargo controller, which will execute the discovery of new
+artifacts from all repositories to which that `Warehouse` subscribes.
 :::
 
 :::info
 The Github webhook receiver also works with Github Enterprise Cloud and GitHub
-Enterprise Server.
+Enterprise Server, although some URLs in this document may need to be adjusted
+accordingly.
 :::
 
 ## Configuring the Receiver
 
-The GitHub webhook receiver will need to reference a Kubernetes `Secret` with a
+A GitHub webhook receiver must reference a Kubernetes `Secret` resource with a
 `secret` key in its data map. This
 [shared secret](https://en.wikipedia.org/wiki/Shared_secret) will be used by
-GitHub to sign requests. The receiver will use it to authenticate those requests
-by verifying their signatures.
+GitHub to sign requests and by the receiver to verify those signatures.
 
 :::note
-The following command is suggested for generating a complex shared secret:
+The following commands are suggested for generating and base64-encoding a
+complex secret:
 
 ```shell
-openssl rand -base64 48 | tr -d '=+/' | head -c 32
+secret=$(openssl rand -base64 48 | tr -d '=+/' | head -c 32)
+echo "Secret: $secret"
+echo "Encoded secret: $(echo -n $secret | base64)"
 ```
 
 :::
@@ -50,8 +54,8 @@ kind: Secret
 metadata:
   name: gh-wh-secret
   namespace: kargo-demo
-stringData:
-  secret: <your-secret-here>
+data:
+  secret: <base64-encoded secret>
 ---
 apiVersion: kargo.akuity.io/v1alpha1
 kind: ProjectConfig
@@ -68,15 +72,13 @@ spec:
 
 ## Retrieving the Receiver's URL
 
-Kargo will generate a hard-to-guess URL from the configuration. We can obtain
-this URL using the following command:
+Kargo will generate a hard-to-guess URL from the receiver's configuration. This
+URL can be obtained using a command such as the following:
 
 ```shell
-  kubectl \
-    get projectconfigs \
-    kargo-demo \
-    -n kargo-demo \
-    -o=jsonpath='{.status.webhookReceivers}'
+kubectl get projectconfigs kargo-demo \
+  -n kargo-demo \
+  -o=jsonpath='{.status.webhookReceivers}'
 ```
 
 ## Registering with Github
@@ -99,16 +101,16 @@ events to the webhook receiver:
     into any number of GitHub repositories (belonging to the same account that
     owns the App).
 
-In the following sections, we will present instructions for both options.
+In the sections below, you will find instructions for both options.
 
 ### Webhooks from a Single Repository
 
-To configure a single repository to notify the receiver of relevant events:
+To configure a single GitHub repository to notify a receiver of relevant events:
 
 1. Navigate to `https://github.com/<account>/<repository>/settings/hooks`, where
-   `<account>` has been replaced with your GitHub username or an organization
-   for which you are an administrator and `<repository>` has been replaced with
-   the name of a repository belonging to that account.
+   `<account>` has been replaced with a GitHub username or organization name
+   and `<repository>` has been replaced with the name of a repository belonging
+   to that account and for which you are an administrator.
 
     ![Settings](./img/webhooks/settings.png "Settings")
 
@@ -118,24 +120,24 @@ To configure a single repository to notify the receiver of relevant events:
 
     ![Add Webhook Form](./img/webhooks/add-webhook-form.png "Add Webhook Form")
 
-    1. Set <Hlt>Payload URL</Hlt> to the URL we
-       [retrieved earlier](#retrieving-the-receivers-url).
+    1. Complete the <Hlt>Payload URL</Hlt> field using the URL
+       [for the webhook receiver](#retrieving-the-receivers-url).
 
     1. Set <Hlt>Content type</Hlt> to `application/json`.
 
-    1. Set <Hlt>Secret</Hlt> to the value previously assigned to the `secret`
-       key of the `Secret` referenced by the
+    1. Complete the <Hlt>Secret</Hlt> field using to the (unencoded) value
+       assigned to the `secret` key of the `Secret` resource referenced by the
        [webhook receiver's configuration](#configuring-the-receiver).
 
     1. Under <Hlt>Which events would you like to trigger this webhook?</Hlt>:
 
-       Leave <Hlt>Just the push event.</Hlt> selected, unless you would
-       like to receive events when container images or Helm charts are
-       pushed to associated GHCR repositories.
+        Leave <Hlt>Just the push event.</Hlt> selected, unless you would
+        like to receive events when container images or Helm charts are
+        pushed to associated GHCR repositories.
 
         To receive such events, select
         <Hlt>Let me select individual events.</Hlt>, then ensure
-        <Hlt>Pushes</Hlt> and <Hlt>Packages</Hlt> are both checked.
+        <Hlt>Pushes</Hlt> and <Hlt>Packages</Hlt> are both selected.
 
         :::note
         You will only receive events from those GHCR repositories explicitly
@@ -145,14 +147,13 @@ To configure a single repository to notify the receiver of relevant events:
         [these GitHub docs](https://docs.github.com/en/packages/learn-github-packages/connecting-a-repository-to-a-package).
         :::
 
-    1. Ensure <Hlt>Active</Hlt> remains checked.
+    1. Ensure <Hlt>Active</Hlt> is selected.
 
     1. Click <Hlt>Add webhook</Hlt>.
 
 1. Verify connectivity:
 
-    1. From the <Hlt>Webhooks</Hlt> dashboard, select the webhook you registered
-       above.
+    1. From the <Hlt>Webhooks</Hlt> dashboard, select the new webhook.
 
         ![Webhooks](./img/webhooks/webhooks.png "Webhooks")
 
@@ -184,35 +185,43 @@ receiver of relevant events from any repository into which it's been installed:
 
     OR
 
-    Navigate to `https://github.com/organizations/<org name>/settings/apps`,
-    where `<org name>` has been replaced with an organization for which you are
-    an administrator, to create a new GitHub App owned by that organization.
+    Navigate to `https://github.com/organizations/<organization>/settings/apps`,
+    where `<organization>` has been replaced with an organization for which you
+    are an administrator to create a new GitHub App owned by that organization.
 
 1. Complete the <Hlt>Register new GitHub App</Hlt> form:
 
     ![Register New GitHub App Form](./img/apps/register.png "Register New GitHub App Form")
 
-    1. Set <Hlt>Github App name</Hlt> to a name of your choosing.
+    1. Complete the <Hlt>Github App name</Hlt> field using a name of your
+       choosing.
 
         :::note
         This name must be _globally unique_ across all of GitHub.
 
-        Unfortunately, you will not learn whether your selected name is
-        unavailable until you have submitted the form.
+        Unfortunately, you will not learn whether the name you've selected is
+        available or not until you have submitted the form.
         :::
 
-    1. Set <Hlt>Homepage URL</Hlt> to a URL of your choosing. The value of this
-       field is unimportant.
+    1. Complete the <Hlt>Homepage URL</Hlt> field using a URL of your choosing.
+
+        :::info
+        This is a required field, but for our purposes, its value is
+        unimportant.
+        :::
 
     1. Skip the <Hlt>Identifying and authorizing users</Hlt> and
-       <Hlt>Post installation</Hlt> sections of the form. These are not relevant
-       to our present goal.
+       <Hlt>Post installation</Hlt> sections of the form.
 
-    1. Set <Hlt>Webhook URL</Hlt> to the URL we
-       [retrieved earlier](#retrieving-the-receivers-url).
+        :::info
+        These sections are not relevant to webhook delivery.
+        :::
 
-    1. Set <Hlt>Secret</Hlt> to the value previously assigned to the `secret`
-       key of the `Secret` referenced by the
+    1. Complete the <Hlt>Webhook URL</Hlt> field using the URL
+       [for the webhook receiver](#retrieving-the-receivers-url).
+
+    1. Complete the <Hlt>Secret</Hlt> field using the the (unencoded) value
+       assigned to the `secret` key of the `Secret` resource referenced by the
        [webhook receiver's configuration](#configuring-the-receiver).
 
     1. In the <Hlt>Permissions</Hlt> section of the form, expand
@@ -233,11 +242,11 @@ receiver of relevant events from any repository into which it's been installed:
         :::
 
     1. In the <Hlt>Subscribe to events</Hlt> section of the form, ensure
-       <Hlt>Push</Hlt> is checked.
+       <Hlt>Push</Hlt> is selected.
 
         If you would like to receive events when container images or Helm charts
         are pushed to associated GHCR repositories, ensure
-        <Hlt>Registry package</Hlt> is also checked.
+        <Hlt>Registry package</Hlt> is also selected.
 
         :::note
         The events available for selection in this section of the form are
@@ -292,7 +301,7 @@ receiver of relevant events from any repository into which it's been installed:
 
             :::note
             Selecting this option will result in the App also being installed
-            to _new_ repositories belonging to the account as they are created.
+            in _new_ repositories belonging to the account as they are created.
             :::
 
         * <Hlt>Only select repositories</Hlt> if you wish for only specific,
@@ -309,3 +318,9 @@ receiver of relevant events from any repository into which it's been installed:
 
 When these steps are complete, all repositories into which your GitHub App has
 been installed will send events to the webhook receiver.
+
+:::info
+For additional information on configuring webhooks for GitHub Apps, refer
+directly to the
+[Github Docs](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/using-webhooks-with-github-apps).
+:::

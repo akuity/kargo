@@ -45,10 +45,13 @@ ARG GIT_COMMIT
 ARG GIT_TREE_STATE
 
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
+      -trimpath \
+      -ldflags "-w -s" \
       -o bin/credential-helper \
       ./cmd/credential-helper
 
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
+      -trimpath \
       -ldflags "-w -X ${VERSION_PACKAGE}.version=${VERSION} -X ${VERSION_PACKAGE}.buildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ') -X ${VERSION_PACKAGE}.gitCommit=${GIT_COMMIT} -X ${VERSION_PACKAGE}.gitTreeState=${GIT_TREE_STATE}" \
       -o bin/kargo \
       ./cmd/controlplane \
@@ -61,7 +64,7 @@ WORKDIR /kargo/bin
 ####################################################################################################
 # `tools` stage allows us to take the leverage of the parallel build.
 # For example, this stage can be cached and re-used when we have to rebuild code base.
-FROM curlimages/curl:8.13.0 AS tools
+FROM curlimages/curl:8.14.1 AS tools
 
 ARG TARGETOS
 ARG TARGETARCH
