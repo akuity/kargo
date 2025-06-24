@@ -5,8 +5,8 @@ sidebar_label: GitLab
 # The GitLab Webhook Receiver
 
 The GitLab Webhook Receiver responds to `push` events originating from GitLab
-repositories by _refreshing_ all `Warehouse` resources subscribed to the
-repositories from which those events originated.
+repositories by _refreshing_ all `Warehouse` resources subscribed to those
+repositories.
 
 :::info
 "Refreshing" a `Warehouse` resource means enqueuing it for immediate

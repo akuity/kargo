@@ -6,7 +6,7 @@ sidebar_label: Quay.io
 
 The Quay.io webhook receiver responds to "Push to Repository" events originating
 from Quay.io repositories by "refreshing" all `Warehouse` resources subscribed
-to the repositories from which those events originated.
+to those repositories.
 
 :::info
 "Refreshing" a `Warehouse` resource means enqueuing it for immediate

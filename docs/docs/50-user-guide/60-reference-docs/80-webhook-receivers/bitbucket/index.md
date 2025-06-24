@@ -6,7 +6,7 @@ sidebar_label: Bitbucket
 
 The Bitbucket webhook receiver responds to `repo:push` events originating from
 Bitbucket repositories by _refreshing_ all `Warehouse` resources subscribed to
-the repositories from which those events originated.
+those repositories.
 
 :::info
 "Refreshing" a `Warehouse` resource means enqueuing it for immediate
