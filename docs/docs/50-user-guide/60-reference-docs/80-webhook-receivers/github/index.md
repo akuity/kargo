@@ -4,7 +4,7 @@ sidebar_label: GitHub
 
 # The GitHub Webhook Receiver
 
-The Github Webhook Receiver will respond to `ping`, `push`, and `package`
+The Github webhook receiver will respond to `ping`, `push`, and `package`
 events originating from GitHub repositories.
 
 The receiver unconditionally responds to `ping` events with an HTTP `200` status
@@ -36,10 +36,13 @@ GitHub to sign requests. The receiver will use it to authenticate those requests
 by verifying their signatures.
 
 :::note
-The following command is suggested for generating a complex shared secret:
+The following commands are suggested for generating and base64-encoding a
+complex secret:
 
 ```shell
-openssl rand -base64 48 | tr -d '=+/' | head -c 32
+secret=$(openssl rand -base64 48 | tr -d '=+/' | head -c 32)
+echo "Secret: $secret"
+echo "Encoded secret: $(echo -n $secret | base64)"
 ```
 
 :::
@@ -50,8 +53,8 @@ kind: Secret
 metadata:
   name: gh-wh-secret
   namespace: kargo-demo
-stringData:
-  secret: <your-secret-here>
+data:
+  secret: <base64-encoded secret>
 ---
 apiVersion: kargo.akuity.io/v1alpha1
 kind: ProjectConfig
@@ -72,11 +75,9 @@ Kargo will generate a hard-to-guess URL from the configuration. We can obtain
 this URL using the following command:
 
 ```shell
-  kubectl \
-    get projectconfigs \
-    kargo-demo \
-    -n kargo-demo \
-    -o=jsonpath='{.status.webhookReceivers}'
+kubectl get projectconfigs kargo-demo \
+  -n kargo-demo \
+  -o=jsonpath='{.status.webhookReceivers}'
 ```
 
 ## Registering with Github
@@ -99,16 +100,16 @@ events to the webhook receiver:
     into any number of GitHub repositories (belonging to the same account that
     owns the App).
 
-In the following sections, we will present instructions for both options.
+In the sections below, we will present instructions for both options.
 
 ### Webhooks from a Single Repository
 
 To configure a single repository to notify the receiver of relevant events:
 
 1. Navigate to `https://github.com/<account>/<repository>/settings/hooks`, where
-   `<account>` has been replaced with your GitHub username or an organization
-   for which you are an administrator and `<repository>` has been replaced with
-   the name of a repository belonging to that account.
+   `<account>` has been replaced with a GitHub username or organization name
+   and `<repository>` has been replaced with the name of a repository belonging
+   to that account and for which you are an administrator.
 
     ![Settings](./img/webhooks/settings.png "Settings")
 
@@ -118,13 +119,13 @@ To configure a single repository to notify the receiver of relevant events:
 
     ![Add Webhook Form](./img/webhooks/add-webhook-form.png "Add Webhook Form")
 
-    1. Set <Hlt>Payload URL</Hlt> to the URL we
-       [retrieved earlier](#retrieving-the-receivers-url).
+    1. Set <Hlt>Payload URL</Hlt> to the URL
+       [retrieved for the webhook receiver](#retrieving-the-receivers-url).
 
     1. Set <Hlt>Content type</Hlt> to `application/json`.
 
-    1. Set <Hlt>Secret</Hlt> to the value previously assigned to the `secret`
-       key of the `Secret` referenced by the
+    1. Set <Hlt>Secret</Hlt> to the value assigned to the `secret` key of the
+       `Secret` referenced by the
        [webhook receiver's configuration](#configuring-the-receiver).
 
     1. Under <Hlt>Which events would you like to trigger this webhook?</Hlt>:
@@ -208,11 +209,11 @@ receiver of relevant events from any repository into which it's been installed:
        <Hlt>Post installation</Hlt> sections of the form. These are not relevant
        to our present goal.
 
-    1. Set <Hlt>Webhook URL</Hlt> to the URL we
-       [retrieved earlier](#retrieving-the-receivers-url).
+    1. Set <Hlt>Webhook URL</Hlt> to the URL
+       [retrieved for the webhook receiver](#retrieving-the-receivers-url).
 
-    1. Set <Hlt>Secret</Hlt> to the value previously assigned to the `secret`
-       key of the `Secret` referenced by the
+    1. Set <Hlt>Secret</Hlt> to the value assigned to the `secret` key of the
+       `Secret` referenced by the
        [webhook receiver's configuration](#configuring-the-receiver).
 
     1. In the <Hlt>Permissions</Hlt> section of the form, expand
