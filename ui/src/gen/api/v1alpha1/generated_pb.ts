@@ -285,7 +285,7 @@ export type ArtifactoryWebhookReceiverConfig = Message<"github.com.akuity.kargo.
    * For cluster-scoped webhook receivers, the referenced Secret must be in the
    * designated "cluster Secrets" namespace.
    *
-   * The Secret's data map is expected to contain a `secret` key whose value is
+   * The Secret's data map is expected to contain a `secret-token` key whose value is
    * the shared secret used to authenticate the webhook requests sent by
    * JFrog Artifactory. For more information please refer to the
    * JFrog Artifactory documentation:
