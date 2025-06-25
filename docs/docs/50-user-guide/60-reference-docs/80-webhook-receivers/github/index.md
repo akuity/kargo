@@ -2,7 +2,7 @@
 sidebar_label: GitHub
 ---
 
-# The GitHub Webhook Receiver
+# GitHub Webhook Receiver
 
 The GitHub webhook receiver responds to `ping`, `push`, and `package` events
 originating from GitHub.

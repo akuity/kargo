@@ -2,7 +2,7 @@
 sidebar_label: Generic
 ---
 
-# The Generic Webhook Receiver
+# Generic Webhook Receiver
 
 :::info
 __Coming soon!__

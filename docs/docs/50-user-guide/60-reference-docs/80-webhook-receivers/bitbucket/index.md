@@ -2,7 +2,7 @@
 sidebar_label: Bitbucket
 ---
 
-# The Bitbucket Webhook Receiver
+# Bitbucket Webhook Receiver
 
 The Bitbucket webhook receiver responds to `repo:push` events originating from
 Bitbucket repositories by _refreshing_ all `Warehouse` resources subscribed to
