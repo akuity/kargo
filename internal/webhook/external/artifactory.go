@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -131,8 +130,19 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 
 		switch payload.EventType {
 		case "pushed":
+			parsed, err := url.Parse(payload.Origin)
+			if err != nil {
+				xhttp.WriteErrorJSON(
+					w,
+					xhttp.Error(
+						fmt.Errorf("failed to parse origin URL: %w", err),
+						http.StatusBadRequest,
+					),
+				)
+				return
+			}
 			repoURL, err := url.JoinPath(
-				strings.TrimPrefix(payload.Origin, "https://"),
+				parsed.Hostname(),
 				payload.Data.RepoKey,
 				payload.Data.ImageName,
 			)
