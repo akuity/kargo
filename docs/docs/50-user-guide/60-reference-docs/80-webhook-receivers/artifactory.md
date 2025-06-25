@@ -2,7 +2,7 @@
 sidebar_label: Artifactory
 ---
 
-# The Artifactory Webhook Receiver
+# Artifactory Webhook Receiver
 
 :::info
 __Coming soon!__

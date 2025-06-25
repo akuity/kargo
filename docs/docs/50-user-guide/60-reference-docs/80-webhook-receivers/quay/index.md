@@ -2,7 +2,7 @@
 sidebar_label: Quay.io
 ---
 
-# The Quay.io Webhook Receiver
+# Quay.io Webhook Receiver
 
 The Quay.io webhook receiver responds to "Push to Repository" events originating
 from Quay.io repositories by "refreshing" all `Warehouse` resources subscribed
