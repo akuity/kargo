@@ -5,9 +5,6 @@ import (
 	"testing"
 
 	"connectrpc.com/connect"
-	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
-	"github.com/akuity/kargo/internal/server/config"
-	"github.com/akuity/kargo/internal/server/kubernetes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -16,6 +13,10 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
+	"github.com/akuity/kargo/internal/server/config"
+	"github.com/akuity/kargo/internal/server/kubernetes"
 )
 
 func TestCreateClusterSecret(t *testing.T) {
