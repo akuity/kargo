@@ -38,7 +38,7 @@ func init() {
 }
 
 // artifactoryWebhookReceiver is an implementation of WebhookReceiver that handles
-// inbound webhooks from Quay.
+// inbound webhooks from Jfrog Artifactory.
 type artifactoryWebhookReceiver struct {
 	*baseWebhookReceiver
 }
