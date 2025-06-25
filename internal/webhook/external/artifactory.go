@@ -117,7 +117,7 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 			"raw event", string(requestBody),
 		)
 
-		var payload artifactoryPushEvent
+		var payload artifactoryEvent
 		if err := json.Unmarshal(requestBody, &payload); err != nil {
 			xhttp.WriteErrorJSON(
 				w,
@@ -184,13 +184,13 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 	})
 }
 
-type artifactoryPushEvent struct {
-	EventType string                   `json:"event_type"`
-	Data      artifactoryPushEventData `json:"data"`
-	Origin    string                   `json:"jpd_origin"`
+type artifactoryEvent struct {
+	EventType string               `json:"event_type"`
+	Data      artifactoryEventData `json:"data"`
+	Origin    string               `json:"jpd_origin"`
 }
 
-type artifactoryPushEventData struct {
+type artifactoryEventData struct {
 	RepoKey   string `json:"repo_key"`
 	ImageName string `json:"image_name"`
 }

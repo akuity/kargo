@@ -26,9 +26,9 @@ func TestArtifactoryHandler(t *testing.T) {
 
 	const testProjectName = "fake-project"
 
-	validPushEvent := artifactoryPushEvent{
+	validPushEvent := artifactoryEvent{
 		EventType: "pushed",
-		Data: artifactoryPushEventData{
+		Data: artifactoryEventData{
 			RepoKey:   "test-repo",
 			ImageName: "test-image",
 		},
