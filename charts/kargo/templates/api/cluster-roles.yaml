@@ -37,12 +37,14 @@ rules:
       - ""
     resources:
       - configmaps
+      - secrets
     verbs:
       - list
       - get
       - create
       - watch
       - delete
+      - update
   - apiGroups:
       - authorization.k8s.io
     resources:
