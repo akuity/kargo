@@ -1,3 +1,4 @@
+import { useQuery } from '@connectrpc/connect-query';
 import {
   faAsterisk,
   faChartBar,
@@ -13,7 +14,7 @@ import React from 'react';
 import { NavLink, Route, Routes, useLocation, Navigate } from 'react-router-dom';
 
 import { BaseHeader } from '@ui/features/common/layout/base-header';
-import { useConfigContext } from '@ui/features/config/use-config-context';
+import { getConfig } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 
 import { useProjectBreadcrumbs } from '../project-utils';
 
@@ -28,7 +29,8 @@ import { RolesSettings } from './views/roles/roles';
 export const ProjectSettings = () => {
   const location = useLocation();
 
-  const { config, isFetching } = useConfigContext();
+  const getConfigQuery = useQuery(getConfig);
+  const config = getConfigQuery.data;
 
   const settingsViews = React.useMemo(() => {
     return {
@@ -100,7 +102,7 @@ export const ProjectSettings = () => {
         <Typography.Title level={3}>Project Settings</Typography.Title>
         <Flex gap={24} className='mt-2'>
           <div style={{ width: 240 }}>
-            <Skeleton loading={isFetching} active paragraph={{ rows: 6 }}>
+            <Skeleton loading={getConfigQuery.isFetching} active paragraph={{ rows: 6 }}>
               <Menu
                 className='-ml-2 -mt-1'
                 style={{ border: 0, background: 'transparent' }}
@@ -116,7 +118,7 @@ export const ProjectSettings = () => {
             </Skeleton>
           </div>
           <div className='flex-1 overflow-hidden' style={{ maxWidth: '920px', minHeight: '700px' }}>
-            <Skeleton loading={isFetching} active paragraph={{ rows: 16 }}>
+            <Skeleton loading={getConfigQuery.isFetching} active paragraph={{ rows: 16 }}>
               <Routes>
                 <Route
                   index

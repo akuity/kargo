@@ -5,9 +5,9 @@ import { Button, Card, Flex, Table, Tag } from 'antd';
 
 import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
 import { useModal } from '@ui/features/common/modal/use-modal';
-import { useConfigContext } from '@ui/features/config/use-config-context';
 import {
   deleteClusterSecret,
+  getConfig,
   listClusterSecrets
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 
@@ -16,7 +16,9 @@ import { CreateClusterSecretModal } from './create-cluster-secret-modal';
 export const ClusterSecret = () => {
   const listClusterSecretsQuery = useQuery(listClusterSecrets);
   const confirm = useConfirmModal();
-  const { config } = useConfigContext();
+
+  const getConfigQuery = useQuery(getConfig);
+  const config = getConfigQuery.data;
 
   const createSecretModal = useModal((p) => (
     <CreateClusterSecretModal {...p} onSuccess={listClusterSecretsQuery.refetch} />
