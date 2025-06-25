@@ -5,7 +5,6 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { transport, transportWithAuth } from '@ui/config/transport';
 import { ModalContextProvider } from '@ui/features/common/modal/modal-context-provider';
-import { ConfigContextProvider } from '@ui/features/config/config-context-provider';
 import { PromotionDirectivesRegistryContextProvider } from '@ui/features/promotion-directives/registry/context/registry-context-provider';
 import { getPublicConfig } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 
@@ -33,15 +32,13 @@ export const ProtectedRoute = () => {
         Not a concern as of now but something to keep in mind
       */}
       <PromotionDirectivesRegistryContextProvider>
-        <ConfigContextProvider>
-          <div ref={modalRef}>
-            {modalRoot && (
-              <ModalContextProvider container={modalRoot}>
-                <Outlet />
-              </ModalContextProvider>
-            )}
-          </div>
-        </ConfigContextProvider>
+        <div ref={modalRef}>
+          {modalRoot && (
+            <ModalContextProvider container={modalRoot}>
+              <Outlet />
+            </ModalContextProvider>
+          )}
+        </div>
       </PromotionDirectivesRegistryContextProvider>
     </TransportProvider>
   );
