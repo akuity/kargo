@@ -262,15 +262,13 @@ type of resource you are working with, recognizable by the `apiVersion` and
 `kind` fields.
 :::
 
-If you pass arguments using `args` in the `spec` of your `Stage`, the corresponding
-`AnalysisTemplate` must define those arguments in its `spec.args` field.
-Arguments that aren't declared in the template cannot be used in metrics and will
-cause the `AnalysisRun` to fail.
-
-For example, the following `AnalysisTemplate` contains the definition of the
-argument `commit`, which must match the argument passed from the `Stage` in order
-for the value to be used during verification:
-
+:::caution
+If specifying arguments to be used in creation of an `AnalysisRun`using a
+`Stage`'s `spec.verification.args` field, the `AnalysisTemplate`(s) referenced
+by `spec.verification.analysisTemplates` _must_ declare those arguments in their
+`spec.args` fields.
+The following example `AnalysisTemplate` would complement the example `Stage`
+(above):
 ```yaml
 apiVersion: argoproj.io/v1alpha1
 kind: AnalysisTemplate
@@ -283,9 +281,12 @@ spec:
   metrics:
     # ...
 ```
-
-This is consistent with Argo Rollouts behavior for
-[Analysis Template Arguments](https://argo-rollouts.readthedocs.io/en/stable/features/analysis/#analysis-template-arguments).
+Failure to declare arguments will cause `AnalysisRun`s (and therefore,
+verification) to fail.
+Refer directly to
+[Rollouts Docs](https://argo-rollouts.readthedocs.io/en/stable/features/analysis/#analysis-template-arguments)
+for further details.
+:::
 
 ## Implicit Argo CD Verification
 
