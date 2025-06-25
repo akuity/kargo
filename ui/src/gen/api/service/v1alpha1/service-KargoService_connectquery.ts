@@ -348,3 +348,25 @@ export const revoke = KargoService.method.revoke;
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.UpdateRole
  */
 export const updateRole = KargoService.method.updateRole;
+
+/**
+ * Cluster Secrets APIs 
+ *
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListClusterSecrets
+ */
+export const listClusterSecrets = KargoService.method.listClusterSecrets;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateClusterSecret
+ */
+export const createClusterSecret = KargoService.method.createClusterSecret;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.UpdateClusterSecret
+ */
+export const updateClusterSecret = KargoService.method.updateClusterSecret;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterSecret
+ */
+export const deleteClusterSecret = KargoService.method.deleteClusterSecret;

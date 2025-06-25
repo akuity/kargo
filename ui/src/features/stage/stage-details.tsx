@@ -90,7 +90,9 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
     [rawStageYamlQuery.data]
   );
 
-  const { data: config } = useQuery(getConfig);
+  const getConfigQuery = useQuery(getConfig);
+  const config = getConfigQuery.data;
+
   const shardKey = stage?.metadata?.labels['kargo.akuity.io/shard'] || '';
   const argocdShard = config?.argocdShards?.[shardKey];
 
