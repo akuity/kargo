@@ -306,6 +306,9 @@ func (b *baseRepo) buildGitCommand(arg ...string) *exec.Cmd {
 	if httpsProxy := os.Getenv("https_proxy"); httpsProxy != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("https_proxy=%s", httpsProxy))
 	}
+	if noProxy := os.Getenv("no_proxy"); noProxy != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("no_proxy=%s", noProxy))
+	}
 	return cmd
 }
 
