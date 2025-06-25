@@ -48,7 +48,7 @@ func newDockerHubWebhookReceiver(
 		baseWebhookReceiver: &baseWebhookReceiver{
 			client:     c,
 			project:    project,
-			secretName: cfg.GitHub.SecretRef.Name,
+			secretName: cfg.DockerHub.SecretRef.Name,
 		},
 	}
 }
