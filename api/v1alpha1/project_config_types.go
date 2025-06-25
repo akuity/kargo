@@ -120,6 +120,10 @@ type WebhookReceiverConfig struct {
 	// Quay contains the configuration for a webhook receiver that is compatible
 	// with Quay payloads.
 	Quay *QuayWebhookReceiverConfig `json:"quay,omitempty" protobuf:"bytes,4,opt,name=quay"`
+	// Artifactory contains the configuration for a webhook receiver that is compatible
+	// with JFrog Artifactory payloads.
+	Artifactory *ArtifactoryWebhookReceiverConfig `json:"artifactory,omitempty" protobuf:"bytes,7,opt,name=artifactory"`
+	// Path is the path to the
 }
 
 // BitbucketWebhookReceiverConfig describes a webhook receiver that is
@@ -214,6 +218,26 @@ type QuayWebhookReceiverConfig struct {
 	// which implicitly serves as a shared secret. For more information about
 	// Quay webhooks, please refer to the Quay documentation:
 	//   https://docs.quay.io/guides/notifications.html
+	//
+	// +kubebuilder:validation:Required
+	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+}
+
+// ArtifactoryWebhookReceiverConfig describes a webhook receiver that is
+// compatible with JFrog Artifactory payloads.
+type ArtifactoryWebhookReceiverConfig struct {
+	// SecretRef contains a reference to a Secret. For Project-scoped webhook
+	// receivers, the referenced Secret must be in the same namespace as the
+	// ProjectConfig.
+	//
+	// For cluster-scoped webhook receivers, the referenced Secret must be in the
+	// designated "cluster Secrets" namespace.
+	//
+	// The Secret's data map is expected to contain a `secret` key whose value is
+	// the shared secret used to authenticate the webhook requests sent by
+	// JFrog Artifactory. For more information please refer to the
+	// JFrog Artifactory documentation:
+	//   https://jfrog.com/help/r/jfrog-platform-administration-documentation/webhooks
 	//
 	// +kubebuilder:validation:Required
 	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
