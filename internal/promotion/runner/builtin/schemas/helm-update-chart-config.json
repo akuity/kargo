@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "HelmUpdateChartConfig",
   "type": "object",
-  "required": ["path", "charts"],
+  "required": ["path"],
   "additionalProperties": false,
   "properties": {
     "path": {
