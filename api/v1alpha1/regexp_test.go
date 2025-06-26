@@ -169,7 +169,7 @@ func TestGitRepoURLPattern(t *testing.T) {
 		"git@github.com:example/repo.git/": true,
 	}
 
-	ValidateResourceExpression(t, "GitRepoURL", testCases)
+	ValidateResourceExpression(t, "GitRepoURLPattern", testCases)
 }
 
 func TestImageRepoURLPattern(t *testing.T) {

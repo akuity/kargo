@@ -602,14 +602,6 @@ spec:
                                 Digest identifies a specific version of the image in the repository
                                 specified by RepoURL. This is a more precise identifier than Tag.
                               type: string
-                            gitRepoURL:
-                              description: |-
-                                GitRepoURL specifies the URL of a Git repository that contains the source
-                                code for the image repository referenced by the RepoURL field if Kargo was
-                                able to infer it.
-
-                                Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
-                              type: string
                             repoURL:
                               description: RepoURL describes the repository in which
                                 the image can be found.
@@ -751,14 +743,6 @@ spec:
                                     Digest identifies a specific version of the image in the repository
                                     specified by RepoURL. This is a more precise identifier than Tag.
                                   type: string
-                                gitRepoURL:
-                                  description: |-
-                                    GitRepoURL specifies the URL of a Git repository that contains the source
-                                    code for the image repository referenced by the RepoURL field if Kargo was
-                                    able to infer it.
-
-                                    Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
-                                  type: string
                                 repoURL:
                                   description: RepoURL describes the repository in
                                     which the image can be found.
@@ -895,14 +879,6 @@ spec:
                                         description: |-
                                           Digest identifies a specific version of the image in the repository
                                           specified by RepoURL. This is a more precise identifier than Tag.
-                                        type: string
-                                      gitRepoURL:
-                                        description: |-
-                                          GitRepoURL specifies the URL of a Git repository that contains the source
-                                          code for the image repository referenced by the RepoURL field if Kargo was
-                                          able to infer it.
-
-                                          Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
                                         type: string
                                       repoURL:
                                         description: RepoURL describes the repository
@@ -1209,14 +1185,6 @@ spec:
                                     Digest identifies a specific version of the image in the repository
                                     specified by RepoURL. This is a more precise identifier than Tag.
                                   type: string
-                                gitRepoURL:
-                                  description: |-
-                                    GitRepoURL specifies the URL of a Git repository that contains the source
-                                    code for the image repository referenced by the RepoURL field if Kargo was
-                                    able to infer it.
-
-                                    Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
-                                  type: string
                                 repoURL:
                                   description: RepoURL describes the repository in
                                     which the image can be found.
@@ -1458,14 +1426,6 @@ spec:
                                 Digest identifies a specific version of the image in the repository
                                 specified by RepoURL. This is a more precise identifier than Tag.
                               type: string
-                            gitRepoURL:
-                              description: |-
-                                GitRepoURL specifies the URL of a Git repository that contains the source
-                                code for the image repository referenced by the RepoURL field if Kargo was
-                                able to infer it.
-
-                                Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
-                              type: string
                             repoURL:
                               description: RepoURL describes the repository in which
                                 the image can be found.
@@ -1607,14 +1567,6 @@ spec:
                                     Digest identifies a specific version of the image in the repository
                                     specified by RepoURL. This is a more precise identifier than Tag.
                                   type: string
-                                gitRepoURL:
-                                  description: |-
-                                    GitRepoURL specifies the URL of a Git repository that contains the source
-                                    code for the image repository referenced by the RepoURL field if Kargo was
-                                    able to infer it.
-
-                                    Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
-                                  type: string
                                 repoURL:
                                   description: RepoURL describes the repository in
                                     which the image can be found.
@@ -1751,14 +1703,6 @@ spec:
                                         description: |-
                                           Digest identifies a specific version of the image in the repository
                                           specified by RepoURL. This is a more precise identifier than Tag.
-                                        type: string
-                                      gitRepoURL:
-                                        description: |-
-                                          GitRepoURL specifies the URL of a Git repository that contains the source
-                                          code for the image repository referenced by the RepoURL field if Kargo was
-                                          able to infer it.
-
-                                          Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
                                         type: string
                                       repoURL:
                                         description: RepoURL describes the repository
