@@ -72,7 +72,7 @@ type WorkTree interface {
 	ListTags() ([]TagMetadata, error)
 	// ListCommits returns a slice of commits in the current branch with
 	// metadata such as commit ID, commit date, and subject.
-	ListCommits(limit, skip uint) ([]CommitMetadata, error)
+	ListCommits(limit, skip uint, paths []string) ([]CommitMetadata, error)
 	// CommitMessage returns the text of the most recent commit message associated
 	// with the specified commit ID.
 	CommitMessage(id string) (string, error)
@@ -391,7 +391,7 @@ type CommitMetadata struct {
 	Subject string
 }
 
-func (w *workTree) ListCommits(limit, skip uint) ([]CommitMetadata, error) {
+func (w *workTree) ListCommits(limit, skip uint, paths []string) ([]CommitMetadata, error) {
 	args := []string{
 		"log",
 		// This format is designed to output the following fields, separated by
@@ -409,6 +409,11 @@ func (w *workTree) ListCommits(limit, skip uint) ([]CommitMetadata, error) {
 	}
 	if skip > 0 {
 		args = append(args, fmt.Sprintf("--skip=%d", skip))
+	}
+
+	if len(paths) > 0 {
+		args = append(args, "--")
+		args = append(args, paths...)
 	}
 
 	commitsBytes, err := libExec.Exec(w.buildGitCommand(args...))
