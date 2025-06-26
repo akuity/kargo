@@ -19,7 +19,7 @@ new artifacts from all repositories to which that `Warehouse` subscribes.
 An Artifactory webhook receiver must reference a Kubernetes `Secret` resource 
 with a `secret-token` key in its data map. This
 [shared secret](https://en.wikipedia.org/wiki/Shared_secret) will be used by
-Artifactory to sign requests any by the receiver to verify those signatures.
+Artifactory to sign requests and by the receiver to verify those signatures.
 
 :::note
 The following commands are suggested for generating and base64-encoding a
