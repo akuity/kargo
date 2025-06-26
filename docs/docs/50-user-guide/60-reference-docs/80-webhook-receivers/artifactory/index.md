@@ -122,23 +122,23 @@ kubectl get projectconfigs kargo-demo \
   1. Scroll down to <Hlt>Events</Hlt> and select <Hlt>Docker and OCI</Hlt> > 
   <Hlt>Tag was pushed</Hlt>.
 
-![Select Trigger](./img/select-trigger.png "Select Trigger")
+   ![Select Trigger](./img/select-trigger.png "Select Trigger")
 
-  1. Upon clicking out of the input menu, an <Hlt>Add Repositories</Hlt> modal 
-  will appear.
+1. Upon clicking out of the input menu, an <Hlt>Add Repositories</Hlt> modal 
+   will appear.
 
-![Select Repos](./img/select-repos.png "Select Repos")
+   ![Select Repos](./img/select-repos.png "Select Repos")
 
-  1. Check any boxes corresponding to repositores this applies to.
+1. Check any boxes corresponding to repositores this applies to.
 
-  1. Click <Hlt>></Hlt> to move selected repositores into the selected window.
+1. Click <Hlt>></Hlt> to move selected repositores into the selected window.
 
-  :::info
-    Upon moving repositores to the selected section, the <Hlt>Save</Hlt> will
-    become enabled.
-  :::
+   :::info
+   Upon moving repositores to the selected section, the <Hlt>Save</Hlt> will
+   become enabled.
+   :::
 
-![Repos Selected](./img/repos-selected.png "Repos Selected")
+   ![Repos Selected](./img/repos-selected.png "Repos Selected")
 
   1. Click <Hlt>Save</Hlt>.
 
