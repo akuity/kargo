@@ -4,9 +4,9 @@ sidebar_label: Artifactory
 
 # Artifactory Webhook Receiver
 
-The Artifactory Webhook Receiver responds to `pushed` events originating from Artifactory
-repositories by _refreshing_ all `Warehouse` resources subscribed to those
-repositories.
+The Artifactory Webhook Receiver responds to `pushed` events originating from 
+Artifactory repositories by _refreshing_ all `Warehouse` resources subscribed to 
+those repositories.
 
 :::info
 "Refreshing" a `Warehouse` resource means enqueuing it for immediate
@@ -16,8 +16,8 @@ new artifacts from all repositories to which that `Warehouse` subscribes.
 
 ## Configuring the Receiver
 
-An Artifactory webhook receiver must reference a Kubernetes `Secret` resource with a
-`secret-token` key in its data map. This
+An Artifactory webhook receiver must reference a Kubernetes `Secret` resource 
+with a `secret-token` key in its data map. This
 [shared secret](https://en.wikipedia.org/wiki/Shared_secret) will be used by
 Artifactory to sign requests any by the receiver to verify those signatures.
 
@@ -72,3 +72,17 @@ kubectl get projectconfigs kargo-demo \
 ```
 
 ## Registering with Artifactory
+
+![Webhooks Dashboard](./img/webhooks.png "Webhooks Dashboard")
+
+![Add Webhook](./img/add-webhook.png "Add Webhook")
+
+![Select Trigger](./img/select-trigger.png "Select Trigger")
+
+![Select Repos](./img/select-repos.png "Select Repos")
+
+![Repos Selected](./img/repos-selected.png "Repos Selected")
+
+![Setup Auth](./img/setup-auth.png "Setup Auth")
+
+![Created](./img/created.png "Created")
