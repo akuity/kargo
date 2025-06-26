@@ -19,7 +19,7 @@ nodes:
   - containerPort: 31444 # Kargo dashboard
     hostPort: 31444
   - containerPort: 31445 # External webhooks server
-    hostPort: 31444
+    hostPort: 31445
   - containerPort: 30081 # test application instance
     hostPort: 30081
   - containerPort: 30082 # UAT application instance
