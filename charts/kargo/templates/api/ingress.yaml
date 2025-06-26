@@ -39,7 +39,7 @@ spec:
           service:
             name: kargo-external-webhooks-server
             port:
-              {{- if .Values.api.tls.enabled }}
+              {{- if .Values.externalWebhooksServer.tls.enabled }}
               number: 443
               {{- else }}
               number: 80
