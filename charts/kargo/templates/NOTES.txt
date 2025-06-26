@@ -7,17 +7,18 @@
 |                   |___/                |___/                           |___/     |
 '----------------------------------------------------------------------------------'
 
+{{- if or .Values.api.enabled .Values.externalWebhooksServer.enabled }}
+
+Ready to get started?
+{{- end }}
+
 {{- if .Values.api.enabled }}
 
-{{- $https := false }}
 {{- $selfSignedCert := false }}
 {{- $url := "" }}
 
-Ready to get started?
-
 {{- if .Values.api.ingress.enabled }}
 
-{{- $https = or .Values.api.ingress.tls.enabled .Values.api.tls.terminatedUpstream }}
 {{- $selfSignedCert = and .Values.api.ingress.tls.enabled .Values.api.ingress.tls.selfSignedCert (not .Values.api.tls.terminatedUpstream) }}
 {{- $url = include "kargo.api.baseURL" . }}
 
@@ -29,7 +30,6 @@ Ready to get started?
 
 {{- else if eq .Values.api.service.type "LoadBalancer" }}
 
-{{- $https = or .Values.api.tls.enabled .Values.api.tls.terminatedUpstream }}
 {{- $selfSignedCert = and .Values.api.tls.enabled .Values.api.tls.selfSignedCert (not .Values.api.tls.terminatedUpstream) }}
 {{- $url = include "kargo.api.baseURL" . }}
 
@@ -40,13 +40,12 @@ Ready to get started?
 
 {{- else if eq .Values.api.service.type "NodePort" }}
 
-{{- $https = or .Values.api.tls.enabled }}
-{{- $selfSignedCert = and .Values.api.tls.enabled .Values.api.tls.selfSignedCert }}
 {{- $nodePort := 3000 }}
 {{- if .Values.api.service.nodePort }}
 {{- $nodePort = .Values.api.service.nodePort }}
 {{- end }}
-{{- if $https }}
+{{- if .Values.api.tls.enabled }}
+{{- $selfSignedCert = .Values.api.tls.selfSignedCert }}
 {{- $url = printf "https://localhost:%d" $nodePort -}}
 {{- else }}
 {{- $url = printf "http://localhost:%d" $nodePort -}}
@@ -77,10 +76,9 @@ Ready to get started?
 
 {{- else if eq .Values.api.service.type "ClusterIP" }}
 
-{{- $https = or .Values.api.tls.enabled }}
-{{- $selfSignedCert = and .Values.api.tls.enabled .Values.api.tls.selfSignedCert }}
 {{- $localPort := 3000 -}}
-{{- if $https }}
+{{- if .Values.api.tls.enabled }}
+{{- $selfSignedCert = .Values.api.tls.selfSignedCert }}
 {{- $url = printf "https://localhost:%d" $localPort -}}
 {{- else }}
 {{- $url = printf "http://localhost:%d" $localPort -}}
@@ -101,7 +99,7 @@ Ready to get started?
 
 🖥️  To access Kargo's web-based UI, navigate to the address above.
 
-{{- if and $https $selfSignedCert }}
+{{- if $selfSignedCert }}
 
 ⚠️  Your API server is using a self-signed certificate and you should expect a
    warning from your browser. You may safely disregard this.
@@ -117,11 +115,119 @@ Ready to get started?
 {{- if not .Values.api.oidc.enabled }}
 {{- $loginFlags = "--admin" -}}
 {{- end }}
-{{- if and $https $selfSignedCert }}
+{{- if $selfSignedCert }}
 {{- $loginFlags = printf "%s --insecure-skip-tls-verify" $loginFlags -}}
 {{- end }}
 
       kargo login {{ $url }} {{ $loginFlags }}
+
+{{- end }}
+
+{{- if .Values.externalWebhooksServer.enabled }}
+
+{{- $selfSignedCert := false }}
+{{- $url := "" }}
+
+{{- if or .Values.externalWebhooksServer.ingress.enabled (and .Values.api.enabled .Values.api.ingress.enabled) }}
+
+⚙️  You've configured Kargo's external webhooks server to be accessible through
+   an Ingress controller.
+
+   If DNS and your Ingress controller are configured correctly, the external
+   webhooks server is reachable at:
+
+{{- end }}
+
+{{- if .Values.externalWebhooksServer.ingress.enabled }}
+
+{{- $selfSignedCert = and .Values.externalWebhooksServer.ingress.tls.enabled .Values.externalWebhooksServer.ingress.tls.selfSignedCert (not .Values.externalWebhooksServer.tls.terminatedUpstream) }}
+{{- $url = include "kargo.externalWebhooksServer.baseURL" . }}
+
+{{- else if and .Values.api.enabled .Values.api.ingress.enabled }}
+
+{{- $selfSignedCert = and .Values.api.ingress.tls.enabled .Values.api.ingress.tls.selfSignedCert (not .Values.api.tls.terminatedUpstream) }}
+{{- $url = include "kargo.externalWebhooksServer.baseURL" . }}
+
+{{- else if eq .Values.externalWebhooksServer.service.type "LoadBalancer" }}
+
+{{- $selfSignedCert = and .Values.externalWebhooksServer.tls.enabled .Values.externalWebhooksServer.tls.selfSignedCert (not .Values.externalWebhooksServer.tls.terminatedUpstream) }}
+{{- $url = include "kargo.externalWebhooksServer.baseURL" . }}
+
+⚙️  You've configured Kargo's external webhooks server with a Service of type
+   LoadBalancer.
+
+   If DNS and your load balancer are configured correctly, the external webhooks
+   server is reachable at:
+
+{{- else if eq .Values.externalWebhooksServer.service.type "NodePort" }}
+
+{{- $nodePort := 3001 }}
+{{- if .Values.externalWebhooksServer.service.nodePort }}
+{{- $nodePort = .Values.externalWebhooksServer.service.nodePort }}
+{{- end }}
+{{- if .Values.externalWebhooksServer.tls.enabled }}
+{{- $selfSignedCert = .Values.externalWebhooksServer.tls.selfSignedCert }}
+{{- $url = printf "https://localhost:%d" $nodePort -}}
+{{- else }}
+{{- $url = printf "http://localhost:%d" $nodePort -}}
+{{- end }}
+
+⚙️  You've configured Kargo's external webhooks server with a Service of type
+   NodePort.
+
+{{- if .Values.externalWebhooksServer.service.nodePort }}
+
+   The Kargo external webhooks server is reachable on port {{ $nodePort }} of
+   any reachable node in your Kubernetes cluster.
+
+   If a node in a local cluster were addressable as localhost, the Kargo
+   external webhooks server would be reachable at:
+
+{{- else }}
+
+   You did not specify a node port in your configuration.
+
+   You may determine the node port Kubernetes selected for you by running:
+
+      kubectl get service --namespace {{ .Release.Namespace }} kargo-external-webhooks-server -o jsonpath='{.spec.ports[0].nodePort}'
+
+   If a node in a local cluster were addressable as localhost, and the node port
+   assigned by Kubernetes were {{ $nodePort }}, the external webhooks server
+   would be reachable at:
+
+{{- end }}
+
+{{- else if eq .Values.externalWebhooksServer.service.type "ClusterIP" }}
+
+{{- $localPort := 3001 -}}
+{{- if .Values.externalWebhooksServer.tls.enabled }}
+{{- $selfSignedCert = .Values.externalWebhooksServer.tls.selfSignedCert }}
+{{- $url = printf "https://localhost:%d" $localPort -}}
+{{- else }}
+{{- $url = printf "http://localhost:%d" $localPort -}}
+{{- end }}
+
+⚙️  You've configured Kargo's external webhooks server with a Service of type
+   ClusterIP, so the external webhooks server can only be reached through port
+   forwarding.
+
+   For instance, to forward traffic from localhost:{{ $localPort }} to the
+   external webhooks server:
+
+      kubectl port-forward --namespace {{ .Release.Namespace }} svc/kargo-external-webhooks-server {{ $localPort }}:{{ if .Values.externalWebhooksServer.tls.enabled }}443{{ else }}80{{ end }}
+
+   While port-forwarding is in effect, the address of your external webhooks server will be:
+
+{{- end }}
+
+      {{ $url }}
+
+{{- if $selfSignedCert }}
+
+⚠️  Your external webhooks server is using a self-signed certificate and webhook
+   request senders should expect cert validation errors unless configured to
+   ignore them.
+{{- end }}
 
 {{- end }}
 
