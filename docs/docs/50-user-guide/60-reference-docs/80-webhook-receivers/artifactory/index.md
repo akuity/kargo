@@ -140,22 +140,21 @@ kubectl get projectconfigs kargo-demo \
 
    ![Repos Selected](./img/repos-selected.png "Repos Selected")
 
-  1. Click <Hlt>Save</Hlt>.
+1. Click <Hlt>Save</Hlt>.
 
-  1. Scroll down to <Hlt>Authentication</Hlt>.
+1. Scroll down to <Hlt>Authentication</Hlt>.
 
-![Setup Auth](./img/setup-auth.png "Setup Auth")
+   ![Setup Auth](./img/setup-auth.png "Setup Auth")
 
-  1. Complete the <Hlt>Secret token</Hlt> field using to the (unencoded) value
-      assigned to the `secret-token` key of the `Secret` resource referenced by
-      the
-      [webhook receiver's configuration](#configuring-the-receiver).
+1. Complete the <Hlt>Secret token</Hlt> field using to the (unencoded) value
+   assigned to the `secret-token` key of the `Secret` resource referenced by
+   the [webhook receiver's configuration](#configuring-the-receiver).
 
-  1. Select <Hlt>Use secret for payload signing</Hlt>.
+1. Select <Hlt>Use secret for payload signing</Hlt>.
 
-  1. Click <Hlt>Save</Hlt>.
+1. Click <Hlt>Save</Hlt>.
 
-  1. You will then be redirected to the <Hlt>Webhooks Dashboard</Hlt> where the 
-  newly created webhook will now be rendered.
+1. You will then be redirected to the <Hlt>Webhooks Dashboard</Hlt> where the 
+   newly created webhook will now be rendered.
 
-![Created](./img/created.png "Created")
+   ![Created](./img/created.png "Created")
