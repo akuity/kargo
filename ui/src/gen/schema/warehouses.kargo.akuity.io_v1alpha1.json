@@ -170,11 +170,6 @@
                     "minimum": 1,
                     "type": "integer"
                   },
-                  "gitRepoURL": {
-                    "description": "GitRepoURL optionally specifies the URL of a Git repository that contains\nthe source code for the image repository referenced by the RepoURL field.\nWhen this is specified, Kargo MAY be able to infer and link to the exact\nrevision of that source code that was used to build the image.\n\nDeprecated: Use OCI annotations instead. Will be removed in v1.7.0.",
-                    "pattern": "^https?://(\\w+([\\.-]\\w+)*@)?\\w+([\\.-]\\w+)*(:[\\d]+)?(/.*)?$",
-                    "type": "string"
-                  },
                   "ignoreTags": {
                     "description": "IgnoreTags is a list of tags that must be ignored when determining the\nnewest version of an image. No regular expressions or glob patterns are\nsupported yet. This field is optional.",
                     "items": {
@@ -429,10 +424,6 @@
                           "description": "Digest is the digest of the image.",
                           "minLength": 1,
                           "pattern": "^[a-z0-9]+:[a-f0-9]+$",
-                          "type": "string"
-                        },
-                        "gitRepoURL": {
-                          "description": "GitRepoURL is the URL of the Git repository that contains the source\ncode for this image. This field is optional, and only populated if the\nImageSubscription specifies a GitRepoURL.\n\nDeprecated: Use OCI annotations instead. Will be removed in v1.7.0.",
                           "type": "string"
                         },
                         "tag": {

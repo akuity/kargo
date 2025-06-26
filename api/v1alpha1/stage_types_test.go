@@ -845,18 +845,6 @@ func TestImageDeepEquals(t *testing.T) {
 			expectedResult: false,
 		},
 		{
-			name: "git repo URLs differ",
-			a: &Image{
-				RepoURL:    "fake-url",
-				GitRepoURL: "foo",
-			},
-			b: &Image{
-				RepoURL:    "fake-url",
-				GitRepoURL: "bar",
-			},
-			expectedResult: false,
-		},
-		{
 			name: "image tags differ",
 			a: &Image{
 				RepoURL: "fake-url",
@@ -883,16 +871,14 @@ func TestImageDeepEquals(t *testing.T) {
 		{
 			name: "perfect match",
 			a: &Image{
-				RepoURL:    "fake-url",
-				GitRepoURL: "fake-repo-url",
-				Tag:        "fake-tag",
-				Digest:     "fake-digest",
+				RepoURL: "fake-url",
+				Tag:     "fake-tag",
+				Digest:  "fake-digest",
 			},
 			b: &Image{
-				RepoURL:    "fake-url",
-				GitRepoURL: "fake-repo-url",
-				Tag:        "fake-tag",
-				Digest:     "fake-digest",
+				RepoURL: "fake-url",
+				Tag:     "fake-tag",
+				Digest:  "fake-digest",
 			},
 			expectedResult: true,
 		},
