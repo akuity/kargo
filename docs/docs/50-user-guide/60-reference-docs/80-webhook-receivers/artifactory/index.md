@@ -93,34 +93,34 @@ kubectl get projectconfigs kargo-demo \
 ## Registering with Artifactory
 
 1. Navigate to 
-  `https://<jfrog-instance>.jfrog.io/ui/admin/configuration/webhooks`, where
-  `<jfrog-instance>` has been replaced with na Artifactory instance for which 
-  you are an administrator.
+   `https://<jfrog-instance>.jfrog.io/ui/admin/configuration/webhooks`, where
+   `<jfrog-instance>` has been replaced with na Artifactory instance for which 
+   you are an administrator.
 
 1. Click <Hlt>New Webhook</Hlt>.
 
-![Webhooks Dashboard](./img/webhooks.png "Webhooks Dashboard")
+   ![Webhooks Dashboard](./img/webhooks.png "Webhooks Dashboard")
 
 1. Complete the <Hlt>Create new webhook</Hlt> form:
 
-![Add Webhook](./img/add-webhook.png "Add Webhook")
+   ![Add Webhook](./img/add-webhook.png "Add Webhook")
 
-  1. Enter a descriptive name in the <Hlt>Name</Hlt> field.
+1. Enter a descriptive name in the <Hlt>Name</Hlt> field.
 
-  1. Complete the <Hlt>URL</Hlt> field using the URL
-      [for the webhook receiver](#retrieving-the-receivers-url).
+1. Complete the <Hlt>URL</Hlt> field using the URL
+   [for the webhook receiver](#retrieving-the-receivers-url).
   
-  1. Under <Hlt>Execution Results</Hlt> check <Hlt>Show status of successful 
-  executions in Troubleshooting tab.</Hlt>
+1. Under <Hlt>Execution Results</Hlt> check <Hlt>Show status of successful 
+   executions in the Troubleshooting tab</Hlt>.
 
-  :::info
-    Although Artifactory supports sending test/dummy events to the URL,
-    only organically triggered events will show up in the troubleshooting tab.
-    Not test/dummy events. Even if they're successful.
-  :::
+   :::info
+   Although Artifactory supports sending test/dummy events to the URL,
+   only organically triggered events will show up in the troubleshooting tab.
+   Not test/dummy events. Even if they're successful.
+   :::
 
-  1. Scroll down to <Hlt>Events</Hlt> and select <Hlt>Docker and OCI</Hlt> > 
-  <Hlt>Tag was pushed</Hlt>.
+1. Scroll down to <Hlt>Events</Hlt> and select <Hlt>Docker and OCI</Hlt> > 
+   <Hlt>Tag was pushed</Hlt>.
 
    ![Select Trigger](./img/select-trigger.png "Select Trigger")
 
