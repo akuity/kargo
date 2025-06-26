@@ -263,13 +263,13 @@ type of resource you are working with, recognizable by the `apiVersion` and
 :::
 
 :::caution
-If you specify arguments for use in the creation of an `AnalysisRun` via a
+If specifying arguments for use in the creation of an `AnalysisRun` via a
 `Stage`'s `spec.verification.args` field, each `AnalysisTemplate` referenced in
 `spec.verification.analysisTemplates` _must_ declare those arguments in its
 own `spec.args` field.
 
-For example, the following `AnalysisTemplate` would complement the example `Stage`
-shown above:
+The following example `AnalysisTemplate` complements the example `Stage` shown
+above:
 
 ```yaml
 apiVersion: argoproj.io/v1alpha1
@@ -284,10 +284,10 @@ spec:
     # ...
 ```
 
-If an argument is not declared in the template, any `AnalysisRun` that tries to use
-it will fail, causing verification to fail as well.
+Failure to declare arguments will cause `AnalysisRun`s (and therefore,
+verification) to fail.
 
-Refer to the
+Refer directly to the
 [Rollouts Docs](https://argo-rollouts.readthedocs.io/en/stable/features/analysis/#analysis-template-arguments)
 for further details.
 :::
