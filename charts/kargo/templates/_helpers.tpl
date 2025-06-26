@@ -58,7 +58,7 @@ Generate the base URL for the external webhook server.
 {{- $apiService := .Values.api -}}
 {{- $webhookService := .Values.externalWebhooksServer -}}
 {{- if and (not $webhookService.ingress.enabled) $apiService.enabled $apiService.ingress.enabled -}}
-{{- printf "%s/webhook" (include "kargo.api.baseURL" .) -}}
+{{- printf "%s/webhooks" (include "kargo.api.baseURL" .) -}}
 {{- else -}}
 {{- include "kargo.baseURL" (dict "service" $webhookService "host" $webhookService.host) -}}
 {{- end -}}
