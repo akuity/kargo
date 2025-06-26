@@ -42,7 +42,7 @@ metadata:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: artifactory-wh-secret
+  name: private-repo-creds
   namespace: kargo-demo
   labels:
     kargo.akuity.io/cred-type: image
@@ -50,6 +50,13 @@ data:
   repoURL: <jfrog-instance>.jfrog.io/<repo-key>/<image-name>
   username: <jfrog username>
   password: <jfrog docker login password>
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: artifactory-wh-secret
+  namespace: kargo-demo
+data:
   secret-token: <base64-encoded secret token>
 ---
 apiVersion: kargo.akuity.io/v1alpha1
@@ -66,6 +73,7 @@ spec:
 ```
 
 :::note
+The first secret in the example is used for private repository authentication.
 Artifactory repositories are private by default, if you have configured your
 repository to be publicly available, you can omit the `repoURL`, `username`, and
 `password` fields.
