@@ -2,6 +2,7 @@ package external
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -116,6 +117,76 @@ func TestNewReceiver(t *testing.T) {
 				testCase.cfg,
 			)
 			testCase.assertions(t, receiver, err)
+		})
+	}
+}
+
+func TestGetDetails(t *testing.T) {
+	testCases := []struct {
+		baseURL            string
+		expectedPathPrefix string
+		expectedURLPrefix  string
+	}{
+		{
+			baseURL:            "http://webhooks.kargo.example.com",
+			expectedPathPrefix: "/github/",
+			expectedURLPrefix:  "http://webhooks.kargo.example.com/github/",
+		},
+		{
+			baseURL:            "http://webhooks.kargo.example.com/",
+			expectedPathPrefix: "/github/",
+			expectedURLPrefix:  "http://webhooks.kargo.example.com/github/",
+		},
+		{
+			baseURL:            "https://webhooks.kargo.example.com",
+			expectedPathPrefix: "/github/",
+			expectedURLPrefix:  "https://webhooks.kargo.example.com/github/",
+		},
+		{
+			baseURL:            "https://webhooks.kargo.example.com/",
+			expectedPathPrefix: "/github/",
+			expectedURLPrefix:  "https://webhooks.kargo.example.com/github/",
+		},
+		{
+			baseURL:            "http://kargo.example.com/webhook",
+			expectedPathPrefix: "/webhook/github/",
+			expectedURLPrefix:  "http://kargo.example.com/webhook/github/",
+		},
+		{
+			baseURL:            "http://kargo.example.com/webhook/",
+			expectedPathPrefix: "/webhook/github/",
+			expectedURLPrefix:  "http://kargo.example.com/webhook/github/",
+		},
+		{
+			baseURL:            "https://kargo.example.com/webhook",
+			expectedPathPrefix: "/webhook/github/",
+			expectedURLPrefix:  "https://kargo.example.com/webhook/github/",
+		},
+		{
+			baseURL:            "https://kargo.example.com/webhook/",
+			expectedPathPrefix: "/webhook/github/",
+			expectedURLPrefix:  "https://kargo.example.com/webhook/github/",
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.baseURL, func(t *testing.T) {
+			details, err := getDetails(
+				testCase.baseURL,
+				"fake-project",
+				"github",
+				"fake-receiver",
+				"fake-secret",
+			)
+			require.NoError(t, err)
+			require.Equal(t, details.Name, "fake-receiver")
+			require.True(
+				t,
+				strings.HasPrefix(details.Path, testCase.expectedPathPrefix),
+			)
+			require.True(
+				t,
+				strings.HasPrefix(details.URL, testCase.expectedURLPrefix),
+			)
 		})
 	}
 }
