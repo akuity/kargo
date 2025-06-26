@@ -155,33 +155,46 @@ func getDetails(
 	receiverName string,
 	secretValues ...string,
 ) (kargoapi.WebhookReceiverDetails, error) {
-	receiverPath := buildWebhookPath(project, receiverType, receiverName, secretValues...)
-	receiverURL, err := url.JoinPath(baseURL, receiverPath)
+	u, err := url.Parse(baseURL)
 	if err != nil {
-		return kargoapi.WebhookReceiverDetails{}, err
+		return kargoapi.WebhookReceiverDetails{},
+			fmt.Errorf("error parsing base URL %q: %w", baseURL, err)
+	}
+	if u.Path, err = buildWebhookPath(u.Path, project, receiverType, receiverName, secretValues...); err != nil {
+		return kargoapi.WebhookReceiverDetails{},
+			fmt.Errorf("error building webhook path: %w", err)
 	}
 	return kargoapi.WebhookReceiverDetails{
 		Name: receiverName,
-		Path: receiverPath,
-		URL:  receiverURL,
+		Path: u.Path,
+		URL:  u.String(),
 	}, nil
 }
 
 // buildWebhookPath generates a unique path for inbound webhooks based on the
 // provided Project name, receiver type, receiver name, and secret values. The
-// path is formatted as "/webhook/{receiverType}/{hash}" where the hash is a
+// path is formatted as "/{basePath}/{receiverType}/{hash}" where the hash is a
 // SHA-256 hash of the concatenated project name, receiver name, and secret
 // values.
+//
+// Warning: Changes to this function could alter URLs that users may already be
+// using!!!
 func buildWebhookPath(
+	basePath string,
 	project string,
 	receiverType string,
 	receiverName string,
 	secretValues ...string,
-) string {
-	// Warning: Changes to this line could alter URLs that users may already be
-	// using!!!
+) (string, error) {
+	if basePath == "" {
+		basePath = "/"
+	}
 	input := []byte(project + receiverName + strings.Join(secretValues, ""))
 	h := sha256.New()
 	_, _ = h.Write(input)
-	return fmt.Sprintf("/webhook/%s/%x", receiverType, h.Sum(nil))
+	return url.JoinPath(
+		basePath,
+		receiverType,
+		fmt.Sprintf("%x", h.Sum(nil)),
+	)
 }
