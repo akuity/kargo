@@ -376,6 +376,9 @@ type StageStatus struct {
 	CurrentPromotion *PromotionReference `json:"currentPromotion,omitempty" protobuf:"bytes,7,opt,name=currentPromotion"`
 	// LastPromotion is a reference to the last completed promotion.
 	LastPromotion *PromotionReference `json:"lastPromotion,omitempty" protobuf:"bytes,10,opt,name=lastPromotion"`
+	// AutoPromotionEnabled indicates whether automatic promotion is enabled
+	// for the Stage based on the ProjectConfig.
+	AutoPromotionEnabled bool `json:"autoPromotionEnabled,omitempty" protobuf:"varint,14,opt,name=autoPromotionEnabled"`
 }
 
 // GetConditions implements the conditions.Getter interface.

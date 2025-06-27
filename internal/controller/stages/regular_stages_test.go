@@ -4826,10 +4826,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				t *testing.T,
 				_ *fakeevent.EventRecorder,
 				c client.Client,
-				_ kargoapi.StageStatus,
+				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
+
+				assert.False(t, status.AutoPromotionEnabled)
 
 				// Verify no promotions were created
 				promoList := &kargoapi.PromotionList{}
@@ -4859,10 +4861,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				t *testing.T,
 				_ *fakeevent.EventRecorder,
 				c client.Client,
-				_ kargoapi.StageStatus,
+				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
+
+				assert.False(t, status.AutoPromotionEnabled)
 
 				// Verify no promotions were created
 				promoList := &kargoapi.PromotionList{}
@@ -4948,10 +4952,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				t *testing.T,
 				_ *fakeevent.EventRecorder,
 				c client.Client,
-				_ kargoapi.StageStatus,
+				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
+
+				assert.True(t, status.AutoPromotionEnabled)
 
 				// Verify promotion was created for newest freight
 				promoList := &kargoapi.PromotionList{}
@@ -5027,10 +5033,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				t *testing.T,
 				_ *fakeevent.EventRecorder,
 				c client.Client,
-				_ kargoapi.StageStatus,
+				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
+
+				assert.True(t, status.AutoPromotionEnabled)
 
 				// Verify no promotions were created
 				promoList := &kargoapi.PromotionList{}
@@ -5109,10 +5117,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				t *testing.T,
 				_ *fakeevent.EventRecorder,
 				c client.Client,
-				_ kargoapi.StageStatus,
+				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
+
+				assert.True(t, status.AutoPromotionEnabled)
 
 				// Verify no new promotions were created
 				promoList := &kargoapi.PromotionList{}
@@ -5193,10 +5203,12 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				t *testing.T,
 				_ *fakeevent.EventRecorder,
 				c client.Client,
-				_ kargoapi.StageStatus,
+				status kargoapi.StageStatus,
 				err error,
 			) {
 				require.NoError(t, err)
+
+				assert.True(t, status.AutoPromotionEnabled)
 
 				// Verify promotion was created
 				promoList := &kargoapi.PromotionList{}
