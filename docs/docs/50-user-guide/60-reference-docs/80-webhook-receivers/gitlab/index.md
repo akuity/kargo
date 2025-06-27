@@ -50,6 +50,8 @@ kind: Secret
 metadata:
   name: gl-wh-secret
   namespace: kargo-demo
+  labels:
+    kargo.akuity.io/cred-type: generic
 data:
   secret-token: <base64-encoded secret token>
 ---
