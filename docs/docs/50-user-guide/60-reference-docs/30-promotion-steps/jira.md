@@ -6,7 +6,7 @@ description: Integrates with Jira to manage issues, comments, and track promotio
 # `jira`
 
 :::info Enterprise Feature
-This extension is only available for AKP Enterprise Kargo, you can use this feature in Kargo v1.6+ offered on [Akuity Platform](https://akuity.io/akuity-platform).
+This extension is only available in Akuity Promote, you can use this feature in Kargo v1.6+ offered on [Akuity Platform](https://akuity.io/akuity-platform).
 :::
 
 The `jira` extension provides comprehensive integration with Jira, allowing you to create, update, delete, and search for issues, manage comments, and track promotion workflows. This extension is particularly useful for maintaining traceability between your deployment processes and project management activities.
