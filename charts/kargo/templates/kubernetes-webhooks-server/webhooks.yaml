@@ -17,6 +17,9 @@ webhooks:
       namespace: {{ .Release.Namespace }}
       name: kargo-webhooks-server
       path: /mutate-kargo-akuity-io-v1alpha1-freight
+    {{- if and (not .Values.webhooksServer.tls.selfSignedCert) .Values.webhooksServer.tls.cert }}
+    caBundle: {{ .Values.webhooksServer.tls.cert | b64enc }}
+    {{- end }}
   rules:
   - scope: Namespaced
     apiGroups: ["kargo.akuity.io"]
@@ -32,6 +35,9 @@ webhooks:
       namespace: {{ .Release.Namespace }}
       name: kargo-webhooks-server
       path: /mutate-kargo-akuity-io-v1alpha1-promotion
+    {{- if and (not .Values.webhooksServer.tls.selfSignedCert) .Values.webhooksServer.tls.cert }}
+    caBundle: {{ .Values.webhooksServer.tls.cert | b64enc }}
+    {{- end }}
   rules:
   - scope: Namespaced
     apiGroups: ["kargo.akuity.io"]
@@ -47,6 +53,9 @@ webhooks:
       namespace: {{ .Release.Namespace }}
       name: kargo-webhooks-server
       path: /mutate-kargo-akuity-io-v1alpha1-stage
+    {{- if and (not .Values.webhooksServer.tls.selfSignedCert) .Values.webhooksServer.tls.cert }}
+    caBundle: {{ .Values.webhooksServer.tls.cert | b64enc }}
+    {{- end }}
   rules:
   - scope: Namespaced
     apiGroups: ["kargo.akuity.io"]
@@ -62,6 +71,9 @@ webhooks:
       namespace: {{ .Release.Namespace }}
       name: kargo-webhooks-server
       path: /mutate-kargo-akuity-io-v1alpha1-warehouse
+    {{- if and (not .Values.webhooksServer.tls.selfSignedCert) .Values.webhooksServer.tls.cert }}
+    caBundle: {{ .Values.webhooksServer.tls.cert | b64enc }}
+    {{- end }}
   rules:
   - scope: Namespaced
     apiGroups: ["kargo.akuity.io"]
@@ -88,6 +100,9 @@ webhooks:
       namespace: {{ .Release.Namespace }}
       name: kargo-webhooks-server
       path: /validate-kargo-akuity-io-v1alpha1-clusterconfig
+    {{- if and (not .Values.webhooksServer.tls.selfSignedCert) .Values.webhooksServer.tls.cert }}
+    caBundle: {{ .Values.webhooksServer.tls.cert | b64enc }}
+    {{- end }}
   rules:
   - scope: Cluster
     apiGroups: ["kargo.akuity.io"]
@@ -103,6 +118,9 @@ webhooks:
       namespace: {{ .Release.Namespace }}
       name: kargo-webhooks-server
       path: /validate-kargo-akuity-io-v1alpha1-freight
+    {{- if and (not .Values.webhooksServer.tls.selfSignedCert) .Values.webhooksServer.tls.cert }}
+    caBundle: {{ .Values.webhooksServer.tls.cert | b64enc }}
+    {{- end }}
   rules:
   - scope: Namespaced
     apiGroups: ["kargo.akuity.io"]
@@ -118,6 +136,9 @@ webhooks:
       namespace: {{ .Release.Namespace }}
       name: kargo-webhooks-server
       path: /validate-kargo-akuity-io-v1alpha1-project
+    {{- if and (not .Values.webhooksServer.tls.selfSignedCert) .Values.webhooksServer.tls.cert }}
+    caBundle: {{ .Values.webhooksServer.tls.cert | b64enc }}
+    {{- end }}
   rules:
   - scope: Cluster
     apiGroups: ["kargo.akuity.io"]
@@ -133,6 +154,9 @@ webhooks:
       namespace: {{ .Release.Namespace }}
       name: kargo-webhooks-server
       path: /validate-kargo-akuity-io-v1alpha1-projectconfig
+    {{- if and (not .Values.webhooksServer.tls.selfSignedCert) .Values.webhooksServer.tls.cert }}
+    caBundle: {{ .Values.webhooksServer.tls.cert | b64enc }}
+    {{- end }}
   rules:
     - scope: Namespaced
       apiGroups: ["kargo.akuity.io"]
@@ -148,6 +172,9 @@ webhooks:
       namespace: {{ .Release.Namespace }}
       name: kargo-webhooks-server
       path: /validate-kargo-akuity-io-v1alpha1-promotion
+    {{- if and (not .Values.webhooksServer.tls.selfSignedCert) .Values.webhooksServer.tls.cert }}
+    caBundle: {{ .Values.webhooksServer.tls.cert | b64enc }}
+    {{- end }}
   rules:
   - scope: Namespaced
     apiGroups: ["kargo.akuity.io"]
@@ -163,6 +190,9 @@ webhooks:
       namespace: {{ .Release.Namespace }}
       name: kargo-webhooks-server
       path: /validate-kargo-akuity-io-v1alpha1-promotiontask
+    {{- if and (not .Values.webhooksServer.tls.selfSignedCert) .Values.webhooksServer.tls.cert }}
+    caBundle: {{ .Values.webhooksServer.tls.cert | b64enc }}
+    {{- end }}
   rules:
   - scope: Namespaced
     apiGroups: ["kargo.akuity.io"]
@@ -178,6 +208,9 @@ webhooks:
       namespace: {{ .Release.Namespace }}
       name: kargo-webhooks-server
       path: /validate-kargo-akuity-io-v1alpha1-stage
+    {{- if and (not .Values.webhooksServer.tls.selfSignedCert) .Values.webhooksServer.tls.cert }}
+    caBundle: {{ .Values.webhooksServer.tls.cert | b64enc }}
+    {{- end }}
   rules:
   - scope: Namespaced
     apiGroups: ["kargo.akuity.io"]
@@ -193,6 +226,9 @@ webhooks:
       namespace: {{ .Release.Namespace }}
       name: kargo-webhooks-server
       path: /validate-kargo-akuity-io-v1alpha1-warehouse
+    {{- if and (not .Values.webhooksServer.tls.selfSignedCert) .Values.webhooksServer.tls.cert }}
+    caBundle: {{ .Values.webhooksServer.tls.cert | b64enc }}
+    {{- end }}
   rules:
   - scope: Namespaced
     apiGroups: ["kargo.akuity.io"]

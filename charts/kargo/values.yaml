@@ -866,3 +866,5 @@ webhooksServer:
   tls:
     ## @param webhooksServer.tls.selfSignedCert  Whether to generate a self-signed certificate for the controller's built-in webhook server. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-webhooks-server-cert` **must** be provided in the same namespace as Kargo. There is no provision for webhooks without TLS.
     selfSignedCert: true
+    ## @param webhooksServer.tls.cert  PEM-encoded TLS certificate (which should also be stored in `kargo-webhooks-server-cert`) to trust when `webhooksServer.tls.selfSignedCert` is **false**. When that cert is *already* trusted by the cluster, ignore this parameter. When it is *not* trusted (e.g. self-signed), configure the cert here.
+    cert: ""
