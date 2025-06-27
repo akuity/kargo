@@ -9,6 +9,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libargocd "github.com/akuity/kargo/internal/argocd"
+	"github.com/akuity/kargo/internal/expressions"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -95,7 +96,27 @@ func NewPromotionAnnotations(
 		if err != nil {
 			logger.Error(err, "marshal ArgoCD apps in JSON")
 		} else {
-			annotations[kargoapi.AnnotationKeyEventApplications] = string(data)
+			result := string(data)
+			env := map[string]any{
+				"ctx": map[string]any{
+					"project":   p.GetNamespace(),
+					"promotion": p.GetName(),
+					"stage":     p.Spec.Stage,
+				},
+				"vars": func() map[string]any {
+					vars := map[string]any{}
+					for _, v := range p.Spec.Vars {
+						vars[v.Name] = v.Value
+					}
+					return vars
+				}(),
+			}
+			if evaled, err := expressions.EvaluateTemplate(string(data), env); err == nil {
+				if evaledBytes, err := json.Marshal(evaled); err == nil {
+					result = string(evaledBytes)
+				}
+			}
+			annotations[kargoapi.AnnotationKeyEventApplications] = result
 		}
 	}
 

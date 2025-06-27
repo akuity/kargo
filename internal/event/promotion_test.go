@@ -82,6 +82,80 @@ func TestNewPromotionAnnotations(t *testing.T) {
 					`{"name":"test-app-2","namespace":"test-namespace"}]`,
 			},
 		},
+		"promotion with template variables in argocd app names": {
+			actor: "test-user",
+			promotion: &v1alpha1.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-promotion",
+					Namespace: "kargo-demo",
+					CreationTimestamp: metav1.Time{
+						Time: time.Date(2024, 10, 22, 0, 0, 0, 0, time.UTC),
+					},
+					Annotations: map[string]string{
+						v1alpha1.AnnotationKeyCreateActor: "admin",
+					},
+				},
+				Spec: v1alpha1.PromotionSpec{
+					Freight: "test-freight",
+					Stage:   "test",
+					Vars: []v1alpha1.ExpressionVariable{
+						{
+							Name:  "argocdApp",
+							Value: "my-application",
+						},
+						{
+							Name:  "appNamespace",
+							Value: "test-namespace",
+						},
+					},
+					Steps: []v1alpha1.PromotionStep{
+						{
+							Uses: "argocd-update",
+							Config: &v1.JSON{Raw: []byte(`{
+  "apps": [
+    {
+      "name": "kargo-demo-${{ ctx.stage }}"
+    },
+    {
+      "name": "${{ vars.argocdApp }}",
+      "namespace": "argocd"
+    },
+    {
+      "name": "${{ vars.argocdApp }}-${{ ctx.stage }}",
+      "namespace": "${{ vars.appNamespace }}"
+    }
+  ]
+}`)},
+						},
+					},
+				},
+			},
+			freight: &v1alpha1.Freight{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-freight",
+					CreationTimestamp: metav1.Time{
+						Time: time.Date(2024, 10, 22, 0, 0, 0, 0, time.UTC),
+					},
+				},
+				Origin: v1alpha1.FreightOrigin{
+					Name: "test-warehouse",
+				},
+				Alias: "test-alias",
+			},
+			expected: map[string]string{
+				v1alpha1.AnnotationKeyEventProject:             "kargo-demo",
+				v1alpha1.AnnotationKeyEventPromotionName:       "test-promotion",
+				v1alpha1.AnnotationKeyEventFreightName:         "test-freight",
+				v1alpha1.AnnotationKeyEventFreightAlias:        "test-alias",
+				v1alpha1.AnnotationKeyEventStageName:           "test",
+				v1alpha1.AnnotationKeyEventPromotionCreateTime: "2024-10-22T00:00:00Z",
+				v1alpha1.AnnotationKeyEventActor:               "admin",
+				v1alpha1.AnnotationKeyEventFreightCreateTime:   "2024-10-22T00:00:00Z",
+				v1alpha1.AnnotationKeyEventApplications: `[{"name":"kargo-demo-test","namespace":"argocd"},` +
+					`{"name":"my-application","namespace":"argocd"},` +
+					`{"name":"my-application-test","namespace":"test-namespace"}]`,
+			},
+		},
 	}
 
 	for name, tc := range testCases {
