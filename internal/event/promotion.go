@@ -112,8 +112,11 @@ func NewPromotionAnnotations(
 				}(),
 			}
 			if evaled, err := expressions.EvaluateTemplate(string(data), env); err == nil {
-				if evaledBytes, err := json.Marshal(evaled); err == nil {
-					result = string(evaledBytes)
+				// may be the same string after evaluation
+				if _, ok := evaled.(string); !ok {
+					if evaledBytes, err := json.Marshal(evaled); err == nil {
+						result = string(evaledBytes)
+					}
 				}
 			}
 			annotations[kargoapi.AnnotationKeyEventApplications] = result
