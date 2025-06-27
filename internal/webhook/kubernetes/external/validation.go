@@ -42,6 +42,9 @@ func validateMutuallyExclusive(
 		if r.Quay != nil {
 			receivers = append(receivers, "Quay")
 		}
+		if r.ACR != nil {
+			receivers = append(receivers, "ACR")
+		}
 		if len(receivers) > 1 {
 			errs = append(errs, field.Forbidden(
 				f.Index(i),

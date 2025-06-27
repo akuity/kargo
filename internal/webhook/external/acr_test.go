@@ -17,7 +17,7 @@ import (
 	"github.com/akuity/kargo/internal/indexer"
 )
 
-func TestQuayHandler(t *testing.T) {
+func TestACRHandler(t *testing.T) {
 	const testURL = "https://webhooks.kargo.example.com/nonsense"
 
 	const testProjectName = "fake-project"
@@ -46,7 +46,7 @@ func TestQuayHandler(t *testing.T) {
 			},
 		},
 		{
-			name: "success -- image",
+			name: "success -- ping",
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
 					ObjectMeta: metav1.ObjectMeta{
@@ -56,7 +56,7 @@ func TestQuayHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
-								RepoURL: "quay.io/mynamespace/repository",
+								RepoURL: "fakeregistry.azurecr.io/fakeimage",
 							},
 						}},
 					},
@@ -70,20 +70,20 @@ func TestQuayHandler(t *testing.T) {
 				return httptest.NewRequest(
 					http.MethodPost,
 					testURL,
-					newQuayPayload(),
+					newACRPayload("ping"),
 				)
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusOK, rr.Code)
 				require.JSONEq(
 					t,
-					`{"msg":"refreshed 1 warehouse(s)"}`,
+					`{"msg":"ping event received, webhook is configured correctly"}`,
 					rr.Body.String(),
 				)
 			},
 		},
 		{
-			name: "success -- chart",
+			name: "success -- push",
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
 					ObjectMeta: metav1.ObjectMeta{
@@ -92,8 +92,8 @@ func TestQuayHandler(t *testing.T) {
 					},
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
-							Chart: &kargoapi.ChartSubscription{
-								RepoURL: "oci://quay.io/mynamespace/repository",
+							Image: &kargoapi.ImageSubscription{
+								RepoURL: "fakeregistry.azurecr.io/fakeimage",
 							},
 						}},
 					},
@@ -107,7 +107,7 @@ func TestQuayHandler(t *testing.T) {
 				return httptest.NewRequest(
 					http.MethodPost,
 					testURL,
-					newQuayPayload(),
+					newACRPayload("push"),
 				)
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -129,7 +129,7 @@ func TestQuayHandler(t *testing.T) {
 			})
 
 			w := httptest.NewRecorder()
-			(&quayWebhookReceiver{
+			(&acrWebhookReceiver{
 				baseWebhookReceiver: &baseWebhookReceiver{
 					client:  testCase.client,
 					project: testProjectName,
@@ -141,8 +141,19 @@ func TestQuayHandler(t *testing.T) {
 	}
 }
 
-func newQuayPayload() *bytes.Buffer {
-	return bytes.NewBufferString(
-		`{"docker_url": "quay.io/mynamespace/repository"}`,
-	)
+func newACRPayload(event string) *bytes.Buffer {
+	switch event {
+	case "ping":
+		return bytes.NewBufferString(`{"action": "ping"}`)
+	case "push":
+		return bytes.NewBufferString(`
+		{
+			"action": "push",
+			"target": {"repository": "fakeimage"},
+			"request": {"host": "fakeregistry.azurecr.io"}
+		}`,
+		)
+	default:
+		return bytes.NewBufferString(`{"action": "unknown"}`)
+	}
 }
