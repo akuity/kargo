@@ -322,7 +322,7 @@ type PromotionStatus struct {
 	// the Promotion has completed.
 	HealthChecks []HealthCheckStep `json:"healthChecks,omitempty" protobuf:"bytes,8,rep,name=healthChecks"`
 	// StartedAt is the time when the promotion started.
-	StartedAt *metav1.Time `json:"startedAt,omitempty"`
+	StartedAt *metav1.Time `json:"startedAt,omitempty" protobuf:"bytes,12,opt,name=startedAt"`
 	// FinishedAt is the time when the promotion was completed.
 	FinishedAt *metav1.Time `json:"finishedAt,omitempty" protobuf:"bytes,6,opt,name=finishedAt"`
 	// CurrentStep is the index of the current promotion step being executed. This
