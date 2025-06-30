@@ -39,6 +39,7 @@ import { FreightTimeline } from './freight/freight-timeline';
 import { Graph } from './graph/graph';
 import { GraphFilters } from './graph-filters';
 import { Images } from './images';
+import { PipelineListView } from './list/list-view';
 import { Promote } from './promotion/promote';
 import { Promotion } from './promotion/promotion';
 import { useAction } from './use-action';
@@ -63,7 +64,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
   const projectConfigQuery = useQuery(
     getProjectConfig,
     {
-      name
+      project: name
     },
     {
       transport: projectConfigTransport
@@ -74,6 +75,8 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
   const projectConfig = projectConfigQuery.data?.result?.value as ProjectConfig;
 
   const projectName = name;
+
+  const [pipelineView, setPipelineView] = useState<'graph' | 'list'>('graph');
 
   const listImagesQuery = useQuery(listImages, { project: name });
 
@@ -119,7 +122,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
   const [preferredFilter, setPreferredFilter] = useState<
     FreightTimelineControllerContextType['preferredFilter']
   >({
-    showAlias: false,
+    showAlias: true,
     sources: [],
     timerange: 'all-time',
     showColors: true,
@@ -199,10 +202,19 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
             <FreightTimeline freights={freights} project={projectName || ''} />
 
             <div className='w-full h-full relative'>
-              <Flex gap={12} className='absolute z-10 top-2 right-2 left-2'>
+              <Flex
+                gap={12}
+                className={classNames(
+                  'z-10 top-2 right-2 left-2',
+                  pipelineView === 'graph' ? 'absolute' : 'pt-2 px-2'
+                )}
+                align='flex-start'
+              >
                 <GraphFilters
                   warehouses={listWarehousesQuery.data?.warehouses || []}
                   stages={listStagesQuery.data?.stages || []}
+                  pipelineView={pipelineView}
+                  setPipelineView={setPipelineView}
                 />
                 <Dropdown
                   className='ml-auto'
@@ -283,11 +295,26 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                   stages={listStagesQuery.data?.stages || []}
                 />
               </div>
-              <Graph
-                project={project.metadata?.name || ''}
-                warehouses={listWarehousesQuery.data?.warehouses || []}
-                stages={listStagesQuery.data?.stages || []}
-              />
+
+              {pipelineView === 'graph' && (
+                <>
+                  <Graph
+                    project={project.metadata?.name || ''}
+                    warehouses={listWarehousesQuery.data?.warehouses || []}
+                    stages={listStagesQuery.data?.stages || []}
+                  />
+                </>
+              )}
+
+              {pipelineView === 'list' && (
+                <PipelineListView
+                  stages={listStagesQuery.data?.stages || []}
+                  warehouses={listWarehousesQuery.data?.warehouses || []}
+                  project={projectName || ''}
+                  freights={freights}
+                  className='mt-2'
+                />
+              )}
             </div>
 
             {!!freightDrawer && (

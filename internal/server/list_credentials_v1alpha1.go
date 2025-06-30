@@ -37,12 +37,12 @@ func (s *server) ListCredentials(
 	credsLabelSelector := labels.NewSelector()
 
 	credsLabelSelectorRequirement, err := labels.NewRequirement(
-		kargoapi.CredentialTypeLabelKey,
+		kargoapi.LabelKeyCredentialType,
 		selection.In,
 		[]string{
-			kargoapi.CredentialTypeLabelValueGit,
-			kargoapi.CredentialTypeLabelValueHelm,
-			kargoapi.CredentialTypeLabelValueImage,
+			kargoapi.LabelValueCredentialTypeGit,
+			kargoapi.LabelValueCredentialTypeHelm,
+			kargoapi.LabelValueCredentialTypeImage,
 		})
 
 	if err != nil {

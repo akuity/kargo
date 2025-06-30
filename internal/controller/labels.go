@@ -22,7 +22,7 @@ func GetShardPredicate(shard string) (predicate.Predicate, error) {
 			metav1.LabelSelector{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{
-						Key:      kargoapi.ShardLabelKey,
+						Key:      kargoapi.LabelKeyShard,
 						Operator: metav1.LabelSelectorOpDoesNotExist,
 					},
 				},
@@ -37,7 +37,7 @@ func GetShardPredicate(shard string) (predicate.Predicate, error) {
 		*metav1.SetAsLabelSelector(
 			labels.Set(
 				map[string]string{
-					kargoapi.ShardLabelKey: shard,
+					kargoapi.LabelKeyShard: shard,
 				},
 			),
 		),
@@ -49,12 +49,12 @@ func GetShardPredicate(shard string) (predicate.Predicate, error) {
 }
 
 func GetShardRequirement(shard string) (*labels.Requirement, error) {
-	req, err := labels.NewRequirement(kargoapi.ShardLabelKey, selection.Equals, []string{shard})
+	req, err := labels.NewRequirement(kargoapi.LabelKeyShard, selection.Equals, []string{shard})
 	if err != nil {
 		return nil, fmt.Errorf("error creating shard label selector: %w", err)
 	}
 	if shard == "" {
-		req, err = labels.NewRequirement(kargoapi.ShardLabelKey, selection.DoesNotExist, nil)
+		req, err = labels.NewRequirement(kargoapi.LabelKeyShard, selection.DoesNotExist, nil)
 		if err != nil {
 			return nil, fmt.Errorf("error creating default label selector: %w", err)
 		}

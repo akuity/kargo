@@ -44,8 +44,11 @@ docker_build(
 
 namespace_create('kargo')
 k8s_resource(
-  new_name = 'namespace',
-  objects = ['kargo:namespace'],
+  new_name = 'namespaces',
+  objects = [
+    'kargo:namespace',
+    'kargo-cluster-secrets:namespace'
+  ],
   labels = ['kargo']
 )
 
@@ -72,10 +75,23 @@ k8s_resource(
     'kargo-admin:clusterrole',
     'kargo-admin:clusterrolebinding',
     'kargo-admin:serviceaccount',
+    'kargo-project-admin:clusterrole',
+    'kargo-project-secrets-reader:clusterrole',
     'kargo-viewer:clusterrole',
     'kargo-viewer:serviceaccount',
     'kargo-viewer:clusterrolebinding',
     'kargo-selfsigned-cert-issuer:issuer'
+  ]
+)
+
+k8s_resource(
+  new_name = 'cluster-secrets',
+  labels = ['kargo'],
+  objects = [
+    'kargo-cluster-secrets-admin:role',
+    'kargo-cluster-secrets-admin:rolebinding',
+    'kargo-cluster-secrets-reader:role',
+    'kargo-cluster-secrets-reader:rolebinding'
   ]
 )
 
@@ -93,8 +109,7 @@ k8s_resource(
     'kargo-api:secret',
     'kargo-api:serviceaccount',
     'kargo-api-rollouts:clusterrole',
-    'kargo-api-rollouts:clusterrolebinding',
-    'kargo-project-admin:clusterrole'
+    'kargo-api-rollouts:clusterrolebinding'
   ],
   resource_deps=['back-end-compile','dex-server']
 )
@@ -202,6 +217,7 @@ k8s_resource(
 k8s_resource(
   new_name = 'crds',
   objects = [
+    'clusterconfigs.kargo.akuity.io:customresourcedefinition',
     'clusterpromotiontasks.kargo.akuity.io:customresourcedefinition',
     'freights.kargo.akuity.io:customresourcedefinition',
     'projectconfigs.kargo.akuity.io:customresourcedefinition',

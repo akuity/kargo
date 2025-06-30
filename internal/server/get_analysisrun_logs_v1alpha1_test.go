@@ -372,7 +372,7 @@ func TestServer_getStageFromAnalysisRun(t *testing.T) {
 			run: &rolloutsapi.AnalysisRun{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						kargoapi.StageLabelKey: testStageName,
+						kargoapi.LabelKeyStage: testStageName,
 					},
 				},
 			},
@@ -399,7 +399,7 @@ func TestServer_getStageFromAnalysisRun(t *testing.T) {
 			run: &rolloutsapi.AnalysisRun{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						kargoapi.StageLabelKey: testStageName,
+						kargoapi.LabelKeyStage: testStageName,
 					},
 				},
 			},
@@ -426,7 +426,7 @@ func TestServer_getStageFromAnalysisRun(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNamespace,
 					Labels: map[string]string{
-						kargoapi.StageLabelKey: testStageName,
+						kargoapi.LabelKeyStage: testStageName,
 					},
 				},
 			},

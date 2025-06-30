@@ -134,7 +134,7 @@ func GetFreightByAlias(
 		&freightList,
 		client.InNamespace(project),
 		client.MatchingLabels{
-			kargoapi.AliasLabelKey: alias,
+			kargoapi.LabelKeyAlias: alias,
 		},
 	); err != nil {
 		return nil, fmt.Errorf(

@@ -3,7 +3,7 @@ ARG BASE_IMAGE=kargo-base
 ####################################################################################################
 # ui-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM docker.io/library/node:22.15.0 AS ui-builder
+FROM --platform=$BUILDPLATFORM docker.io/library/node:24.3.0 AS ui-builder
 
 ARG PNPM_VERSION=9.0.3
 RUN npm install --global pnpm@${PNPM_VERSION}
@@ -20,7 +20,7 @@ RUN NODE_ENV='production' VERSION=${VERSION} pnpm run build
 ####################################################################################################
 # back-end-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM golang:1.24.3-bookworm AS back-end-builder
+FROM --platform=$BUILDPLATFORM golang:1.24.4-bookworm AS back-end-builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -45,10 +45,13 @@ ARG GIT_COMMIT
 ARG GIT_TREE_STATE
 
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
+      -trimpath \
+      -ldflags "-w -s" \
       -o bin/credential-helper \
       ./cmd/credential-helper
 
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
+      -trimpath \
       -ldflags "-w -X ${VERSION_PACKAGE}.version=${VERSION} -X ${VERSION_PACKAGE}.buildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ') -X ${VERSION_PACKAGE}.gitCommit=${GIT_COMMIT} -X ${VERSION_PACKAGE}.gitTreeState=${GIT_TREE_STATE}" \
       -o bin/kargo \
       ./cmd/controlplane \
@@ -61,7 +64,7 @@ WORKDIR /kargo/bin
 ####################################################################################################
 # `tools` stage allows us to take the leverage of the parallel build.
 # For example, this stage can be cached and re-used when we have to rebuild code base.
-FROM curlimages/curl:8.13.0 AS tools
+FROM curlimages/curl:8.14.1 AS tools
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -99,7 +102,7 @@ CMD ["/usr/local/bin/kargo"]
 # - supports development
 # - not used for official image builds
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM docker.io/library/node:22.15.0 AS ui-dev
+FROM --platform=$BUILDPLATFORM docker.io/library/node:24.3.0 AS ui-dev
 
 ARG PNPM_VERSION=9.0.3
 RUN npm install --global pnpm@${PNPM_VERSION}

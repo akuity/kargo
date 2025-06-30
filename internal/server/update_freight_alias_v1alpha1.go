@@ -66,7 +66,7 @@ func (s *server) UpdateFreightAlias(
 		ctx,
 		&freightList,
 		client.InNamespace(project),
-		client.MatchingLabels{kargoapi.AliasLabelKey: newAlias},
+		client.MatchingLabels{kargoapi.LabelKeyAlias: newAlias},
 	); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
@@ -100,7 +100,7 @@ func (s *server) patchFreightAlias(
 	patchBytes := []byte(
 		fmt.Sprintf(
 			`{"metadata":{"labels":{%q:%q}},"alias":%q}`,
-			kargoapi.AliasLabelKey,
+			kargoapi.LabelKeyAlias,
 			alias,
 			alias,
 		),

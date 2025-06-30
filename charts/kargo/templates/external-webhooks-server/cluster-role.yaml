@@ -8,16 +8,9 @@ metadata:
     {{- include "kargo.externalWebhooksServer.labels" . | nindent 4 }}
 rules:
 - apiGroups:
-  - ""
-  resources:
-  - secrets
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
   - kargo.akuity.io
   resources:
+  - clusterconfigs
   - projectconfigs
   verbs:
   - get

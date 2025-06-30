@@ -80,6 +80,21 @@ metadata:
   annotations:
     cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/kargo-webhooks-server
 webhooks:
+- name: clusterconfig.kargo.akuity.io
+  admissionReviewVersions: ["v1"]
+  sideEffects: None
+  clientConfig:
+    service:
+      namespace: {{ .Release.Namespace }}
+      name: kargo-webhooks-server
+      path: /validate-kargo-akuity-io-v1alpha1-clusterconfig
+  rules:
+  - scope: Cluster
+    apiGroups: ["kargo.akuity.io"]
+    apiVersions: ["v1alpha1"]
+    resources: ["clusterconfigs"]
+    operations: ["CREATE", "UPDATE"]
+  failurePolicy: Fail
 - name: freight.kargo.akuity.io
   admissionReviewVersions: ["v1"]
   sideEffects: None

@@ -15,7 +15,7 @@ func TestApplyCredentialsUpdateToK8sSecret(t *testing.T) {
 	baseSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
-				kargoapi.CredentialTypeLabelKey: kargoapi.CredentialTypeLabelValueGit,
+				kargoapi.LabelKeyCredentialType: kargoapi.LabelValueCredentialTypeGit,
 			},
 		},
 		Data: map[string][]byte{

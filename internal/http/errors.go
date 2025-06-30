@@ -26,7 +26,7 @@ func Error(err error, code int) error {
 // WriteErrorJSON writes an error response in JSON format to the provided
 // http.ResponseWriter. If the error is an *httpError, it uses the code
 // and error message from that error. Otherwise, it defaults to
-// http.StatusInternalServerError; obfuscating the error message in that case.
+// http.StatusInternalServerError, obfuscating the error message in that case.
 func WriteErrorJSON(w http.ResponseWriter, err error) {
 	code := http.StatusInternalServerError
 	if httpErr, ok := err.(*httpError); ok {
@@ -38,7 +38,7 @@ func WriteErrorJSON(w http.ResponseWriter, err error) {
 	resp := struct {
 		Error string `json:"error,omitempty"`
 	}{}
-	if code != http.StatusInternalServerError {
+	if code != http.StatusInternalServerError && err != nil {
 		resp.Error = err.Error()
 	}
 	_ = json.NewEncoder(w).Encode(resp)

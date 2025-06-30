@@ -65,14 +65,14 @@ func (s *server) UpdateCredentials(
 	}
 
 	// If this isn't labeled as repository credentials, return not found.
-	if _, isCredentials := secret.Labels[kargoapi.CredentialTypeLabelKey]; !isCredentials {
+	if _, isCredentials := secret.Labels[kargoapi.LabelKeyCredentialType]; !isCredentials {
 		return nil, connect.NewError(
 			connect.CodeNotFound,
 			fmt.Errorf(
 				"secret %s/%s exists, but is not labeled with %s",
 				secret.Namespace,
 				secret.Name,
-				kargoapi.CredentialTypeLabelKey,
+				kargoapi.LabelKeyCredentialType,
 			),
 		)
 	}
@@ -104,7 +104,7 @@ func applyCredentialsUpdateToK8sSecret(
 	}
 
 	if credsUpdate.credType != "" {
-		secret.Labels[kargoapi.CredentialTypeLabelKey] = credsUpdate.credType
+		secret.Labels[kargoapi.LabelKeyCredentialType] = credsUpdate.credType
 	}
 	if credsUpdate.repoURL != "" {
 		secret.Data[libCreds.FieldRepoURL] = []byte(credsUpdate.repoURL)

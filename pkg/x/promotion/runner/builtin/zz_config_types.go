@@ -131,6 +131,9 @@ type GitCloneConfigAuthor struct {
 }
 
 type Checkout struct {
+	// Optional alias for this checkout. If provided, it will be used as the key in the
+	// 'commits' output map.
+	As string `json:"as,omitempty"`
 	// The branch to checkout. Mutually exclusive with 'commit' and 'tag'. If none of these are
 	// specified, the default branch is checked out.
 	Branch string `json:"branch,omitempty"`
@@ -211,6 +214,10 @@ type GitPushConfig struct {
 	MaxAttempts *int64 `json:"maxAttempts,omitempty"`
 	// The path to a working directory of a local repository.
 	Path string `json:"path"`
+	// The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github',
+	// and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly
+	// specified.
+	Provider *Provider `json:"provider,omitempty"`
 	// The target branch to push to. Mutually exclusive with 'generateTargetBranch=true'. If
 	// neither of these is provided, the target branch will be the currently checked out branch.
 	TargetBranch string `json:"targetBranch,omitempty"`
@@ -233,6 +240,9 @@ type HelmTemplateConfig struct {
 	// APIVersions allows a manual set of supported API Versions to be passed when rendering the
 	// manifests.
 	APIVersions []string `json:"apiVersions,omitempty"`
+	// Whether to build dependencies before rendering the manifests. If no Chart.lock file is
+	// present, the dependencies will be built from the Chart.yaml file (and may be updated).
+	BuildDependencies bool `json:"buildDependencies,omitempty"`
 	// Whether to disable hooks in the rendered manifests.
 	DisableHooks bool `json:"disableHooks,omitempty"`
 	// Whether to include CRDs in the rendered manifests.
@@ -408,6 +418,20 @@ type Image struct {
 	NewName string `json:"newName,omitempty"`
 	// Tag of the image to set in the Kustomization file. Mutually exclusive with 'digest'.
 	Tag string `json:"tag,omitempty"`
+}
+
+type UntarConfig struct {
+	// Ignore is a (multiline) string of glob patterns to ignore when extracting files. It
+	// accepts the same syntax as .gitignore files.
+	Ignore string `json:"ignore,omitempty"`
+	// InPath is the path to the tar file to extract.
+	InPath string `json:"inPath"`
+	// OutPath is the path to the destination directory where contents will be extracted. The
+	// outPath content will be overriden if it already exists.
+	OutPath string `json:"outPath"`
+	// StripComponents is the number of leading components to strip from file names in the
+	// archive.
+	StripComponents *int64 `json:"stripComponents,omitempty"`
 }
 
 type YAMLParseConfig struct {

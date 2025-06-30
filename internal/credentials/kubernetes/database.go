@@ -26,7 +26,8 @@ import (
 // utilizes a Kubernetes controller runtime client to retrieve credentials
 // stored in Kubernetes Secrets.
 type database struct {
-	kargoClient         client.Client
+	controlPlaneClient  client.Client
+	localClusterClient  client.Client
 	credentialProviders []credentials.Provider
 	cfg                 DatabaseConfig
 }
@@ -50,7 +51,8 @@ func DatabaseConfigFromEnv() DatabaseConfig {
 // client to retrieve Credentials stored in Kubernetes Secrets.
 func NewDatabase(
 	ctx context.Context,
-	kargoClient client.Client,
+	controlPlaneClient client.Client,
+	localClusterClient client.Client,
 	cfg DatabaseConfig,
 ) credentials.Database {
 	var credentialProviders = []credentials.Provider{
@@ -63,8 +65,9 @@ func NewDatabase(
 	}
 
 	db := &database{
-		kargoClient: kargoClient,
-		cfg:         cfg,
+		controlPlaneClient: controlPlaneClient,
+		localClusterClient: localClusterClient,
+		cfg:                cfg,
 	}
 
 	for _, p := range credentialProviders {
@@ -92,24 +95,35 @@ func (k *database) Get(
 		return nil, nil
 	}
 
+	clients := make([]client.Client, 1, 2)
+	clients[0] = k.controlPlaneClient
+	if k.localClusterClient != nil {
+		clients = append(clients, k.localClusterClient)
+	}
+
 	var secret *corev1.Secret
 	var err error
 
-	// Check namespace for credentials
-	if secret, err = k.getCredentialsSecret(
-		ctx,
-		namespace,
-		credType,
-		repoURL,
-	); err != nil {
-		return nil, err
-	}
-
-	if secret == nil {
+clientLoop:
+	for _, c := range clients {
+		// Check namespace for credentials
+		if secret, err = k.getCredentialsSecret(
+			ctx,
+			c,
+			namespace,
+			credType,
+			repoURL,
+		); err != nil {
+			return nil, err
+		}
+		if secret != nil {
+			break clientLoop
+		}
 		// Check global credentials namespaces for credentials
 		for _, globalCredsNamespace := range k.cfg.GlobalCredentialsNamespaces {
 			if secret, err = k.getCredentialsSecret(
 				ctx,
+				c,
 				globalCredsNamespace,
 				credType,
 				repoURL,
@@ -117,7 +131,7 @@ func (k *database) Get(
 				return nil, err
 			}
 			if secret != nil {
-				break
+				break clientLoop
 			}
 		}
 	}
@@ -142,6 +156,7 @@ func (k *database) Get(
 
 func (k *database) getCredentialsSecret(
 	ctx context.Context,
+	c client.Client,
 	namespace string,
 	credType credentials.Type,
 	repoURL string,
@@ -149,13 +164,13 @@ func (k *database) getCredentialsSecret(
 	// List all secrets in the namespace that are labeled with the credential
 	// type.
 	secrets := corev1.SecretList{}
-	if err := k.kargoClient.List(
+	if err := c.List(
 		ctx,
 		&secrets,
 		&client.ListOptions{
 			Namespace: namespace,
 			LabelSelector: labels.Set(map[string]string{
-				kargoapi.CredentialTypeLabelKey: credType.String(),
+				kargoapi.LabelKeyCredentialType: credType.String(),
 			}).AsSelector(),
 		},
 	); err != nil {

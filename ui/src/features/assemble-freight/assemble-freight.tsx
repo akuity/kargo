@@ -60,8 +60,7 @@ const constructFreight = (
         repoURL: artifact.repoURL,
         tag: imageRef.tag,
         digest: imageRef.digest,
-        // Deprecated: Use OCI annotations instead. Will be removed in version 1.7.
-        gitRepoURL: imageRef.gitRepoURL
+        annotations: imageRef.annotations
       } as Image);
     } else if ('versions' in artifact) {
       freight.charts.push({
@@ -201,7 +200,7 @@ export const AssembleFreight = ({
   return (
     <div>
       <div className='text-xs font-medium text-gray-500 mb-2'>FREIGHT CONTENTS</div>
-      <div className='mb-4 h-12 flex items-center'>
+      <div className='mt-3 mb-5 flex items-center'>
         {Object.keys(chosenItems)?.length > 0 ? (
           <>
             <FreightContents

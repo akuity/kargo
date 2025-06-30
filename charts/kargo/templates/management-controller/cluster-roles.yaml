@@ -13,6 +13,7 @@ rules:
   - namespaces
   verbs:
   - create
+  - delete
   - get
   - list
   - patch
@@ -40,11 +41,13 @@ rules:
   - delete
   - get
   - list
-  - watch
+  - patch
   - update
+  - watch
 - apiGroups:
   - kargo.akuity.io
   resources:
+  - clusterconfigs/status
   - projects/status
   - projectconfigs/status
   verbs:
@@ -58,6 +61,7 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
+  - clusterconfigs
   - stages
   - warehouses
   - projectconfigs

@@ -487,6 +487,7 @@ func (r *reconciler) promote(
 		Promotion:             workingPromo.Name,
 		FreightRequests:       stage.Spec.RequestedFreight,
 		Freight:               *workingPromo.Status.FreightCollection.DeepCopy(),
+		TargetFreightRef:      targetFreightRef,
 		StartFromStep:         promo.Status.CurrentStep,
 		StepExecutionMetadata: promo.Status.StepExecutionMetadata,
 		State:                 pkgPromotion.State(workingPromo.Status.GetState()),
@@ -679,6 +680,11 @@ func parseCreateActorAnnotation(promo *kargoapi.Promotion) string {
 var defaultRequeueInterval = 5 * time.Minute
 
 func calculateRequeueInterval(p *kargoapi.Promotion) time.Duration {
+	// Ensure we have a step for the current step index.
+	if int(p.Status.CurrentStep) >= len(p.Spec.Steps) {
+		return defaultRequeueInterval
+	}
+
 	step := p.Spec.Steps[p.Status.CurrentStep]
 	runner := promotion.GetStepRunner(step.Uses)
 
@@ -689,6 +695,11 @@ func calculateRequeueInterval(p *kargoapi.Promotion) time.Duration {
 	// If there is no timeout, or the timeout is 0, we should requeue at the
 	// default interval.
 	if timeout == nil || *timeout == 0 {
+		return defaultRequeueInterval
+	}
+
+	// Ensure we have an execution metadata entry for the current step.
+	if int(p.Status.CurrentStep) >= len(p.Status.StepExecutionMetadata) {
 		return defaultRequeueInterval
 	}
 

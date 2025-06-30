@@ -175,7 +175,7 @@ spec:
                               by the Branch field or the default branch if none is specified. This is
                               the default strategy.
 
-                            - "SemVer": Selects the commit referenced by the the semantically greatest
+                            - "SemVer": Selects the commit referenced by the semantically greatest
                               tag. The SemverConstraint field can optionally be used to narrow the set
                               of tags eligible for selection.
 
@@ -223,6 +223,45 @@ spec:
                           items:
                             type: string
                           type: array
+                        expressionFilter:
+                          description: "ExpressionFilter is an expression that can
+                            optionally be used to limit\nthe commits or tags that
+                            are considered in determining the newest commit\nof interest
+                            based on their metadata.\n\nFor commit-based strategies
+                            (NewestFromBranch), the filter applies to\ncommits and
+                            has access to commit metadata variables.\nFor tag-based
+                            strategies (Lexical, NewestTag, SemVer), the filter applies\nto
+                            tags and has access to tag metadata variables. The filter
+                            is applied\nafter AllowTags, IgnoreTags, and SemverConstraint
+                            fields.\n\nThe expression should be a valid expr-lang
+                            expression that evaluates to\ntrue or false. When the
+                            expression evaluates to true, the commit/tag is\nincluded
+                            in the set that is considered. When the expression evaluates
+                            to\nfalse, the commit/tag is excluded.\n\nAvailable variables
+                            depend on the CommitSelectionStrategy:\n\nFor NewestFromBranch
+                            (commit filtering):\n  - `id`: The ID (sha) of the commit.\n
+                            \ - `commitDate`: The commit date of the commit.\n  -
+                            `author`: The author of the commit message, in the format
+                            \"Name <email>\".\n  - `committer`: The person who committed
+                            the commit, in the format\n\t   \"Name <email>\".\n  -
+                            `subject`: The subject (first line) of the commit message.\n\nFor
+                            Lexical, NewestTag, SemVer (tag filtering):\n  - `tag`:
+                            The name of the tag.\n  - `id`: The ID (sha) of the commit
+                            associated with the tag.\n  - `creatorDate`: The creation
+                            date of an annotated tag, or the commit\n\t\tdate of a
+                            lightweight tag.\n  - `author`: The author of the commit
+                            message associated with the tag,\n\t   in the format \"Name
+                            <email>\".\n  - `committer`: The person who committed
+                            the commit associated with the\n\t   tag, in the format
+                            \"Name <email>\".\n  - `subject`: The subject (first line)
+                            of the commit message associated\n\t   with the tag.\n\t
+                            - `tagger`: The person who created the tag, in the format
+                            \"Name <email>\".\n\t   Only available for annotated tags.\n\t
+                            - `annotation`: The subject (first line) of the tag annotation.
+                            Only\n\t   available for annotated tags.\n\nRefer to the
+                            expr-lang documentation for more details on syntax and\ncapabilities
+                            of the expression language: https://expr-lang.org."
+                          type: string
                         ignoreTags:
                           description: |-
                             IgnoreTags is a list of tags that must be ignored when determining the
@@ -310,16 +349,6 @@ spec:
                           maximum: 100
                           minimum: 1
                           type: integer
-                        gitRepoURL:
-                          description: |-
-                            GitRepoURL optionally specifies the URL of a Git repository that contains
-                            the source code for the image repository referenced by the RepoURL field.
-                            When this is specified, Kargo MAY be able to infer and link to the exact
-                            revision of that source code that was used to build the image.
-
-                            Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
-                          pattern: ^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$
-                          type: string
                         ignoreTags:
                           description: |-
                             IgnoreTags is a list of tags that must be ignored when determining the
@@ -640,14 +669,6 @@ spec:
                                 description: Digest is the digest of the image.
                                 minLength: 1
                                 pattern: ^[a-z0-9]+:[a-f0-9]+$
-                                type: string
-                              gitRepoURL:
-                                description: |-
-                                  GitRepoURL is the URL of the Git repository that contains the source
-                                  code for this image. This field is optional, and only populated if the
-                                  ImageSubscription specifies a GitRepoURL.
-
-                                  Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
                                 type: string
                               tag:
                                 description: Tag is the tag of the image.

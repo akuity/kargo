@@ -60,7 +60,7 @@ func (s *server) GetFreight(
 			&ul,
 			client.InNamespace(project),
 			client.MatchingLabels{
-				kargoapi.AliasLabelKey: alias,
+				kargoapi.LabelKeyAlias: alias,
 			},
 		); err != nil {
 			return nil, err

@@ -15,11 +15,19 @@ type StandardConfig struct {
 
 type ServerConfig struct {
 	StandardConfig
-	TLSConfig *TLSConfig
+	TLSConfig               *TLSConfig
+	BaseURL                 string
+	ClusterSecretsNamespace string
 }
 
 func ServerConfigFromEnv() ServerConfig {
-	cfg := ServerConfig{}
+	cfg := ServerConfig{
+		BaseURL:                 os.GetEnv("EXTERNAL_WEBHOOK_SERVER_BASE_URL", ""),
+		ClusterSecretsNamespace: os.GetEnv("CLUSTER_SECRETS_NAMESPACE", ""),
+	}
+	if cfg.BaseURL == "" {
+		panic("EXTERNAL_WEBHOOK_SERVER_BASE_URL must be set")
+	}
 	envconfig.MustProcess("", &cfg.StandardConfig)
 	if types.MustParseBool(os.GetEnv("TLS_ENABLED", "false")) {
 		tlsCfg := TLSConfigFromEnv()

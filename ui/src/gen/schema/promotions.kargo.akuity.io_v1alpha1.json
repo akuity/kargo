@@ -257,10 +257,6 @@
                     "description": "Digest identifies a specific version of the image in the repository\nspecified by RepoURL. This is a more precise identifier than Tag.",
                     "type": "string"
                   },
-                  "gitRepoURL": {
-                    "description": "GitRepoURL specifies the URL of a Git repository that contains the source\ncode for the image repository referenced by the RepoURL field if Kargo was\nable to infer it.\n\nDeprecated: Use OCI annotations instead. Will be removed in v1.7.0.",
-                    "type": "string"
-                  },
                   "repoURL": {
                     "description": "RepoURL describes the repository in which the image can be found.",
                     "type": "string"
@@ -389,10 +385,6 @@
                           "description": "Digest identifies a specific version of the image in the repository\nspecified by RepoURL. This is a more precise identifier than Tag.",
                           "type": "string"
                         },
-                        "gitRepoURL": {
-                          "description": "GitRepoURL specifies the URL of a Git repository that contains the source\ncode for the image repository referenced by the RepoURL field if Kargo was\nable to infer it.\n\nDeprecated: Use OCI annotations instead. Will be removed in v1.7.0.",
-                          "type": "string"
-                        },
                         "repoURL": {
                           "description": "RepoURL describes the repository in which the image can be found.",
                           "type": "string"
@@ -492,11 +484,6 @@
                     "type": "string"
                   }
                 },
-                "required": [
-                  "id",
-                  "phase",
-                  "startTime"
-                ],
                 "type": "object"
               },
               "type": "array"

@@ -18,7 +18,7 @@ import (
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
-func Test_gitCloner_validate(t *testing.T) {
+func Test_gitCloner_validateAndUnmarshal(t *testing.T) {
 	testCases := []struct {
 		name             string
 		config           promotion.Config
@@ -116,6 +116,25 @@ func Test_gitCloner_validate(t *testing.T) {
 			},
 		},
 		{
+			name: "duplicate aliases",
+			config: promotion.Config{
+				"repoURL": "https://github.com/example/repo.git",
+				"checkout": []promotion.Config{
+					{
+						"as":   "alias1",
+						"path": "/fake/path/0",
+					},
+					{
+						"as":   "alias1",
+						"path": "/fake/path/1",
+					},
+				},
+			},
+			expectedProblems: []string{
+				`duplicate checkout alias "alias1" at checkout[1]`,
+			},
+		},
+		{
 			name: "author name is missing",
 			config: promotion.Config{
 				"repoURL": "https://github.com/example/repo.git",
@@ -130,7 +149,7 @@ func Test_gitCloner_validate(t *testing.T) {
 				},
 			},
 			expectedProblems: []string{
-				"invalid git-clone config: author: name is required",
+				"author: name is required",
 			},
 		},
 		{
@@ -148,7 +167,7 @@ func Test_gitCloner_validate(t *testing.T) {
 				},
 			},
 			expectedProblems: []string{
-				"invalid git-clone config: author.name: String length must be greater than or equal to 1",
+				"author.name: String length must be greater than or equal to 1",
 			},
 		},
 		{
@@ -166,7 +185,7 @@ func Test_gitCloner_validate(t *testing.T) {
 				},
 			},
 			expectedProblems: []string{
-				"invalid git-clone config: author: email is required",
+				"author: email is required",
 			},
 		},
 		{
@@ -184,7 +203,7 @@ func Test_gitCloner_validate(t *testing.T) {
 				},
 			},
 			expectedProblems: []string{
-				"invalid git-clone config: author.email: Does not match format 'email'",
+				"author.email: Does not match format 'email'",
 			},
 		},
 		{
@@ -267,12 +286,14 @@ func Test_gitCloner_validate(t *testing.T) {
 					},
 					{
 						"path": "/fake/path/8",
+						"as":   "alias1",
 					},
 					{
 						"branch": "",
 						"commit": "",
 						"tag":    "",
 						"path":   "/fake/path/9",
+						"as":     "alias2",
 					},
 					{
 						"path": "/fake/path/10",
@@ -288,7 +309,7 @@ func Test_gitCloner_validate(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			err := runner.validate(testCase.config)
+			_, err := runner.validateAndUnmarshal(testCase.config)
 			if len(testCase.expectedProblems) == 0 {
 				require.NoError(t, err)
 			} else {
@@ -326,7 +347,7 @@ func Test_gitCloner_run(t *testing.T) {
 	err = repo.Push(nil)
 	require.NoError(t, err)
 
-	commitID, err := repo.LastCommitID()
+	srcBranchCommitID, err := repo.LastCommitID()
 	require.NoError(t, err)
 
 	// Now we can proceed to test gitCloner...
@@ -346,7 +367,7 @@ func Test_gitCloner_run(t *testing.T) {
 			RepoURL: fmt.Sprintf("%s/test.git", server.URL),
 			Checkout: []builtin.Checkout{
 				{
-					Commit: commitID,
+					Commit: srcBranchCommitID,
 					Path:   "src",
 				},
 				{
@@ -370,4 +391,18 @@ func Test_gitCloner_run(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, dirEntries, 1) // Just the .git file
 	require.FileExists(t, filepath.Join(stepCtx.WorkDir, "out", ".git"))
+
+	// Assert output map contains the expected commit hashes for each checkout
+	outTree, err := git.LoadWorkTree(filepath.Join(stepCtx.WorkDir, "out"), nil)
+	require.NoError(t, err)
+	outBranchCommitID, err := outTree.LastCommitID()
+	require.NoError(t, err)
+	require.Equal(
+		t,
+		map[string]any{
+			"src": srcBranchCommitID,
+			"out": outBranchCommitID,
+		},
+		res.Output["commits"],
+	)
 }

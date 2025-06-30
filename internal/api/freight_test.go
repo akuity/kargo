@@ -147,7 +147,7 @@ func TestGetFreightByAlias(t *testing.T) {
 						Name:      "fake-freight",
 						Namespace: "fake-namespace",
 						Labels: map[string]string{
-							kargoapi.AliasLabelKey: "fake-alias",
+							kargoapi.LabelKeyAlias: "fake-alias",
 						},
 					},
 				},

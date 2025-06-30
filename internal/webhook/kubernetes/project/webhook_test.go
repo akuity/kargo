@@ -39,7 +39,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: testProjectName,
 			Labels: map[string]string{
-				kargoapi.ProjectLabelKey: kargoapi.LabelTrueValue,
+				kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
 			},
 		},
 	}
@@ -376,7 +376,7 @@ func Test_webhook_ensureNamespace(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: testProjectName,
 			Labels: map[string]string{
-				kargoapi.ProjectLabelKey: kargoapi.LabelTrueValue,
+				kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
 			},
 		},
 	}

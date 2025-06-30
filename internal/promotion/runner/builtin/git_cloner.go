@@ -59,25 +59,51 @@ func (g *gitCloner) Name() string {
 	return "git-clone"
 }
 
+// validateAndUnmarshal validates the config and unmarshals it into a typed
+// struct.
+func (g *gitCloner) validateAndUnmarshal(
+	cfg promotion.Config,
+) (builtin.GitCloneConfig, error) {
+	// Schema validation
+	if err := validate(
+		g.schemaLoader,
+		gojsonschema.NewGoLoader(cfg),
+		g.Name(),
+	); err != nil {
+		return builtin.GitCloneConfig{}, err
+	}
+
+	// Unmarshal to typed config
+	typedCfg, err := promotion.ConfigToStruct[builtin.GitCloneConfig](cfg)
+	if err != nil {
+		return builtin.GitCloneConfig{},
+			fmt.Errorf("could not convert config into %s config: %w", g.Name(), err)
+	}
+
+	// Ensure any specified aliases are unique across all checkouts
+	seen := make(map[string]struct{})
+	for i, checkout := range typedCfg.Checkout {
+		if checkout.As != "" {
+			if _, exists := seen[checkout.As]; exists {
+				return builtin.GitCloneConfig{},
+					fmt.Errorf("duplicate checkout alias %q at checkout[%d]", checkout.As, i)
+			}
+			seen[checkout.As] = struct{}{}
+		}
+	}
+	return typedCfg, nil
+}
+
 // Run implements the promotion.StepRunner interface.
 func (g *gitCloner) Run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
-	if err := g.validate(stepCtx.Config); err != nil {
+	cfg, err := g.validateAndUnmarshal(stepCtx.Config)
+	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
-	cfg, err := promotion.ConfigToStruct[builtin.GitCloneConfig](stepCtx.Config)
-	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("could not convert config into %s config: %w", g.Name(), err)
-	}
 	return g.run(ctx, stepCtx, cfg)
-}
-
-// validate validates gitCloner configuration against a JSON schema.
-func (g *gitCloner) validate(cfg promotion.Config) error {
-	return validate(g.schemaLoader, gojsonschema.NewGoLoader(cfg), g.Name())
 }
 
 func (g *gitCloner) run(
@@ -107,9 +133,9 @@ func (g *gitCloner) run(
 	var repoUser git.User
 	if cfg.Author != nil {
 		repoUser = git.User{
-			Name:  cfg.Author.Name,
-			Email: cfg.Author.Email,
-			SigningKey:     cfg.Author.SigningKey, // Optional, may be empty
+			Name:       cfg.Author.Name,
+			Email:      cfg.Author.Email,
+			SigningKey: cfg.Author.SigningKey, // Optional, may be empty
 		}
 	} else {
 		repoUser = g.gitUser // Default to the system-level gitUser
@@ -130,6 +156,7 @@ func (g *gitCloner) run(
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error cloning %s: %w", cfg.RepoURL, err)
 	}
+	commits := make(map[string]any)
 	for _, checkout := range cfg.Checkout {
 		var ref string
 		switch {
@@ -151,20 +178,33 @@ func (g *gitCloner) run(
 				checkout.Path, stepCtx.WorkDir, err,
 			)
 		}
-		if _, err = repo.AddWorkTree(
+		worktree, err := repo.AddWorkTree(
 			path,
 			&git.AddWorkTreeOptions{Ref: ref},
-		); err != nil {
-			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
-				"error adding work tree %s to repo %s: %w",
-				checkout.Path, cfg.RepoURL, err,
-			)
+		)
+		if err != nil {
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+				fmt.Errorf(
+					"error adding work tree %s to repo %s: %w",
+					checkout.Path, cfg.RepoURL, err,
+				)
+		}
+		key := checkout.Path
+		if checkout.As != "" {
+			key = checkout.As
+		}
+		if commits[key], err = worktree.LastCommitID(); err != nil {
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+				fmt.Errorf("error resolving HEAD for worktree at %s: %w", path, err)
 		}
 	}
 	// Note: We do NOT defer repo.Close() because we want to keep the repository
 	// around on the FS for subsequent promotion steps to use. The Engine will
 	// handle all work dir cleanup.
-	return promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, nil
+	return promotion.StepResult{
+		Status: kargoapi.PromotionStepStatusSucceeded,
+		Output: map[string]any{"commits": commits},
+	}, nil
 }
 
 // ensureRemoteBranch checks for the existence of a remote branch. If the remote

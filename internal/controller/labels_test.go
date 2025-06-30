@@ -20,7 +20,7 @@ func TestGetShardPredicate(t *testing.T) {
 		Object: &kargoapi.Stage{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels: map[string]string{
-					kargoapi.ShardLabelKey: testShardName,
+					kargoapi.LabelKeyShard: testShardName,
 				},
 			},
 		},

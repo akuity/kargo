@@ -23,6 +23,11 @@
     "targetBranch": {
       "type": "string",
       "description": "The target branch to push to. Mutually exclusive with 'generateTargetBranch=true'. If neither of these is provided, the target branch will be the currently checked out branch."
+    },
+    "provider": {
+      "type": "string",
+      "description": "The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github', and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly specified.",
+      "enum": ["azure", "bitbucket", "gitea", "github", "gitlab"]
     }
   },
   "oneOf": [

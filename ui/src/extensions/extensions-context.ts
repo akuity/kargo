@@ -16,6 +16,8 @@ export const useExtensionsContext = () => {
     layoutExtensions:
       ctx?.extensions.filter((extension) => extension.type === 'layoutExtension') || [],
     projectSubpages:
-      ctx?.extensions.filter((extension) => extension.type === 'projectSubpage') || []
+      ctx?.extensions.filter((extension) => extension.type === 'projectSubpage') || [],
+    appSubpages: ctx?.extensions.filter((extension) => extension.type === 'appSubpage') || [],
+    promoteTabs: ctx?.extensions.filter((extension) => extension.type === 'promoteTab') || []
   };
 };

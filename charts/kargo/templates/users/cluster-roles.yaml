@@ -29,6 +29,7 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
+  - clusterconfigs
   - clusterpromotiontasks
   - freights
   - projects
@@ -114,6 +115,7 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
+  - clusterconfigs
   - clusterpromotiontasks
   - freights
   - projects
@@ -132,6 +134,42 @@ rules:
   resources:
   - analysisruns
   - analysistemplates
+  - clusteranalysistemplates
+  verbs:
+  - get
+  - list
+  - watch
+{{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kargo-user
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - clusterconfigs
+  - clusterpromotiontasks
+  - projects
+  verbs:
+  - get
+  - list
+  - watch
+{{- if .Values.api.rollouts.integrationEnabled }}
+- apiGroups:
+  - argoproj.io
+  resources:
   - clusteranalysistemplates
   verbs:
   - get

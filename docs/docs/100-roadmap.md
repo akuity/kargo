@@ -17,28 +17,38 @@ Project](https://github.com/akuity/kargo/milestones)
 
 ## In Progress
 
-### v1.3.0
+### v1.6.0
 
 __Expected:__ TBD
 
-v1.3.0 will focus on isolating user-defined promotion processes (or possibly
-individual steps thereof) in their own ephemeral execution environments. This
-is intended to pave the way for eventual support for custom/third-party
-promotion steps.
-
-## Upcoming
-
-### v1.4.0 and Beyond
-
-__Expected:__ TBD
-
-v1.4.0 will leverage the improved isolation of user-defined promotion processes
-to begin supporting custom/third-party promotion steps. This work will include
-establishing a formal specification for developers wishing to implement their
-own promotion steps, as well as building the mechanisms whereby operators may
-install and users may leverage such promotion steps.
+The anchor feature of v1.6.0 is support for triggering applicable Warehouses to
+execute their artifact discovery process in response to inbound webhooks from
+source code and container image repositories. Initial support will favor the
+most popular platforms, such as GitHub, GitLab, Docker Hub and Quay.io, although
+support for many others will be phased in over time.
 
 ## Completed
+
+### v1.5.0
+
+This release focused on UI improvement and streamlining `Project` configuration
+through the introduction of a new `ProjectConfig` resource type. Conditional
+execution of promotion steps was also improved such that the success or failure
+of previous steps can be taken into account. This permits users to define
+more robust promotion processes by defining steps that conditionally execute
+error recovery or cleanup.
+
+### v1.4.0
+
+This release focused on small QOL improvements, notably access to logs generated
+by `Job` metrics as part of verification processes and support for enriching
+`Freight` with additional metadata by reading OIDC annotations from container
+images.
+
+### v1.3.0
+
+This release focused primarily on introducing support for conditional execution
+of promotion steps as determined by user-defined expressions.
 
 ### v1.2.0
 

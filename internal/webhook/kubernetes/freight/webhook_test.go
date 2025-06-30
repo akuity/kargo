@@ -74,7 +74,7 @@ func TestDefault(t *testing.T) {
 				require.NoError(t, err)
 				require.NotEmpty(t, freight.Name)
 				require.Equal(t, "fake-alias", freight.Alias)
-				require.Equal(t, "fake-alias", freight.Labels[kargoapi.AliasLabelKey])
+				require.Equal(t, "fake-alias", freight.Labels[kargoapi.LabelKeyAlias])
 			},
 		},
 		{
@@ -104,7 +104,7 @@ func TestDefault(t *testing.T) {
 				require.NoError(t, err)
 				require.NotEmpty(t, freight.Name)
 				require.Equal(t, "fake-alias", freight.Alias)
-				require.Equal(t, "fake-alias", freight.Labels[kargoapi.AliasLabelKey])
+				require.Equal(t, "fake-alias", freight.Labels[kargoapi.LabelKeyAlias])
 			},
 		},
 		{
@@ -126,14 +126,14 @@ func TestDefault(t *testing.T) {
 			freight: &kargoapi.Freight{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						kargoapi.AliasLabelKey: "fake-alias",
+						kargoapi.LabelKeyAlias: "fake-alias",
 					},
 				},
 			},
 			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
 				require.NoError(t, err)
 				require.Empty(t, freight.Alias)
-				_, ok := freight.Labels[kargoapi.AliasLabelKey]
+				_, ok := freight.Labels[kargoapi.LabelKeyAlias]
 				require.False(t, ok)
 			},
 		},
@@ -186,7 +186,7 @@ func TestValidateCreate(t *testing.T) {
 			freight: kargoapi.Freight{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						kargoapi.AliasLabelKey: "fake-alias",
+						kargoapi.LabelKeyAlias: "fake-alias",
 					},
 				},
 			},
@@ -222,7 +222,7 @@ func TestValidateCreate(t *testing.T) {
 			freight: kargoapi.Freight{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						kargoapi.AliasLabelKey: "fake-alias",
+						kargoapi.LabelKeyAlias: "fake-alias",
 					},
 				},
 			},
@@ -445,7 +445,7 @@ func TestValidateUpdate(t *testing.T) {
 				return &kargoapi.Freight{}, &kargoapi.Freight{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
-							kargoapi.AliasLabelKey: "fake-alias",
+							kargoapi.LabelKeyAlias: "fake-alias",
 						},
 					},
 				}
@@ -483,7 +483,7 @@ func TestValidateUpdate(t *testing.T) {
 				return &kargoapi.Freight{}, &kargoapi.Freight{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
-							kargoapi.AliasLabelKey: "fake-alias",
+							kargoapi.LabelKeyAlias: "fake-alias",
 						},
 					},
 				}

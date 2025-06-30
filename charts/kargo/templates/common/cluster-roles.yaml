@@ -1,0 +1,60 @@
+{{- if and .Values.rbac.installClusterRoles }}
+# This role is bound to the API server's and the Kargo admin's ServiceAccounts
+# in project namespaces as they are created. This dynamically extends their most
+# sensitive permissions on a per-namespace basis instead of granting them
+# cluster-wide.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kargo-project-admin
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+    - ""
+  resources:
+    - configmaps
+    {{- if .Values.api.secretManagementEnabled }}
+    - secrets
+    {{- end }}
+    - serviceaccounts
+  verbs:
+    - "*"
+- apiGroups:
+    - rbac.authorization.k8s.io
+  resources:
+    - rolebindings
+    - roles
+  verbs:
+    - "*"
+---
+# This role is bound to the external webhooks server's ServiceAccount in
+# project namespaces as they are created. This dynamically extends its most
+# sensitive permissions on a per-namespace basis instead of granting them
+# cluster-wide. Additional uses for this role are anticipated in the future.
+#
+# NOTE: Controller ServiceAccounts are bound to a DIFFERENT role
+# (kargo-controller-read-secrets) as new project namespaces are created. That
+# role has the same permissions as this one. The external webhooks server is the
+# second (after the controller) component requiring permission to read secrets
+# in project namespaces only, so this role was created as a generic role for
+# that purpose in the likely event that still more components will require these
+# permissions in the future. The controller is NOT transitioning to use this
+# more generically named role because its existing kargo-controller-read-secrets
+# role is publicly documented in places and is therefore hard to change.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kargo-project-secrets-reader
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+{{- end }}

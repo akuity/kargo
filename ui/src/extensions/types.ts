@@ -1,15 +1,22 @@
 import { IconDefinition } from '@fortawesome/free-solid-svg-icons';
 import React from 'react';
 
-import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 
-export type ExtensionStageTabComponentProps = {
+type Subpage = {
+  label: string;
+  icon: IconDefinition;
+  path: string;
+  component: () => React.ReactNode;
+};
+
+export type StageTabComponentProps = {
   stage: Stage;
 };
 
-export type ExtensionStageTab = {
+export type StageTab = {
   type: 'stageTab';
-  component: ({ stage }: ExtensionStageTabComponentProps) => React.ReactNode;
+  component: ({ stage }: StageTabComponentProps) => React.ReactNode;
   label: string;
   icon?: React.ReactNode;
 };
@@ -19,12 +26,22 @@ export type LayoutExtension = {
   component: () => React.ReactNode;
 };
 
-export type ProjectSubpage = {
+export type ProjectSubpage = Subpage & {
   type: 'projectSubpage';
-  label: string;
-  icon?: IconDefinition;
-  path: string;
-  component: () => React.ReactNode;
 };
 
-export type Extension = ExtensionStageTab | LayoutExtension | ProjectSubpage;
+export type AppSubpage = Subpage & {
+  type: 'appSubpage';
+};
+
+export type PromoteTabComponentProps = {
+  freight: Freight;
+};
+export type PromoteTab = {
+  type: 'promoteTab';
+  component: ({ freight }: PromoteTabComponentProps) => React.ReactNode;
+  label: string;
+  icon?: React.ReactNode;
+};
+
+export type Extension = StageTab | LayoutExtension | ProjectSubpage | AppSubpage | PromoteTab;

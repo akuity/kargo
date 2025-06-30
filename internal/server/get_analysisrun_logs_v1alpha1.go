@@ -343,7 +343,7 @@ func (s *server) getStageFromAnalysisRun(
 	ctx context.Context,
 	run *rolloutsapi.AnalysisRun,
 ) (*kargoapi.Stage, error) {
-	stageName, ok := run.Labels[kargoapi.StageLabelKey]
+	stageName, ok := run.Labels[kargoapi.LabelKeyStage]
 	if !ok {
 		return nil, connect.NewError(
 			connect.CodeNotFound,

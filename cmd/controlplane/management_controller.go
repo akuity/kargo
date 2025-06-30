@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/controller/management/clusterconfigs"
 	"github.com/akuity/kargo/internal/controller/management/namespaces"
 	"github.com/akuity/kargo/internal/controller/management/projectconfigs"
 	"github.com/akuity/kargo/internal/controller/management/projects"
@@ -89,6 +90,14 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 	kargoMgr, err := o.setupManager(ctx)
 	if err != nil {
 		return fmt.Errorf("error initializing Kargo controller manager: %w", err)
+	}
+
+	if err := clusterconfigs.SetupReconcilerWithManager(
+		ctx,
+		kargoMgr,
+		clusterconfigs.ReconcilerConfigFromEnv(),
+	); err != nil {
+		return fmt.Errorf("error setting up ClusterConfigs reconciler: %w", err)
 	}
 
 	if err := namespaces.SetupReconcilerWithManager(

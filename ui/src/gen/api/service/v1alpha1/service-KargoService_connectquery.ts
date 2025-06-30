@@ -73,6 +73,21 @@ export const deleteStage = KargoService.method.deleteStage;
 export const refreshStage = KargoService.method.refreshStage;
 
 /**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetClusterConfig
+ */
+export const getClusterConfig = KargoService.method.getClusterConfig;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterConfig
+ */
+export const deleteClusterConfig = KargoService.method.deleteClusterConfig;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.RefreshClusterConfig
+ */
+export const refreshClusterConfig = KargoService.method.refreshClusterConfig;
+
+/**
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListPromotions
  */
 export const listPromotions = KargoService.method.listPromotions;
@@ -103,14 +118,21 @@ export const getProject = KargoService.method.getProject;
 export const listProjects = KargoService.method.listProjects;
 
 /**
+ * ProjectConfig APIs 
+ *
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetProjectConfig
+ */
+export const getProjectConfig = KargoService.method.getProjectConfig;
+
+/**
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteProjectConfig
  */
 export const deleteProjectConfig = KargoService.method.deleteProjectConfig;
 
 /**
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetProjectConfig
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.RefreshProjectConfig
  */
-export const getProjectConfig = KargoService.method.getProjectConfig;
+export const refreshProjectConfig = KargoService.method.refreshProjectConfig;
 
 /**
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ApproveFreight
@@ -223,6 +245,16 @@ export const updateProjectSecret = KargoService.method.updateProjectSecret;
 export const deleteProjectSecret = KargoService.method.deleteProjectSecret;
 
 /**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListConfigMaps
+ */
+export const listConfigMaps = KargoService.method.listConfigMaps;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetConfigMap
+ */
+export const getConfigMap = KargoService.method.getConfigMap;
+
+/**
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListAnalysisTemplates
  */
 export const listAnalysisTemplates = KargoService.method.listAnalysisTemplates;
@@ -316,3 +348,25 @@ export const revoke = KargoService.method.revoke;
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.UpdateRole
  */
 export const updateRole = KargoService.method.updateRole;
+
+/**
+ * Cluster Secrets APIs 
+ *
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListClusterSecrets
+ */
+export const listClusterSecrets = KargoService.method.listClusterSecrets;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateClusterSecret
+ */
+export const createClusterSecret = KargoService.method.createClusterSecret;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.UpdateClusterSecret
+ */
+export const updateClusterSecret = KargoService.method.updateClusterSecret;
+
+/**
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterSecret
+ */
+export const deleteClusterSecret = KargoService.method.deleteClusterSecret;

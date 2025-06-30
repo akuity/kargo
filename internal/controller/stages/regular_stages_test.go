@@ -1598,6 +1598,171 @@ func TestRegularStageReconciler_syncFreight(t *testing.T) {
 				assert.Equal(t, 3*time.Hour, freight.Status.VerifiedIn[testStage.Name].LongestCompletedSoak.Duration)
 			},
 		},
+		{
+			name: "handles freight with nil Since field gracefully",
+			objects: []client.Object{
+				&kargoapi.Freight{ // The Stage is using this, and the Freight knows it.
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight-1",
+					},
+					Status: kargoapi.FreightStatus{
+						CurrentlyIn: map[string]kargoapi.CurrentStage{
+							testStage.Name: {
+								Since: ptr.To(metav1.NewTime(time.Now())),
+							},
+						},
+					},
+				},
+				&kargoapi.Freight{ // The Stage is using this, and the Freight knows it.
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight-2",
+					},
+					Status: kargoapi.FreightStatus{
+						CurrentlyIn: map[string]kargoapi.CurrentStage{
+							testStage.Name: {
+								Since: ptr.To(metav1.NewTime(time.Now())),
+							},
+						},
+					},
+				},
+				&kargoapi.Freight{ // Freight with nil Since field - should not panic
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "nil-since-freight",
+					},
+					Status: kargoapi.FreightStatus{
+						CurrentlyIn: map[string]kargoapi.CurrentStage{
+							testStage.Name: {
+								Since: nil,
+							},
+						},
+						VerifiedIn: map[string]kargoapi.VerifiedStage{
+							testStage.Name: {
+								LongestCompletedSoak: &metav1.Duration{Duration: 1 * time.Hour},
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, c client.Client, err error) {
+				require.NoError(t, err)
+
+				// Check that expected freight remains in CurrentlyIn (they're in the stage's FreightHistory)
+				freight := &kargoapi.Freight{}
+				err = c.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: testProject, Name: "fake-freight-1"},
+					freight,
+				)
+				require.NoError(t, err)
+				require.Contains(t, freight.Status.CurrentlyIn, testStage.Name)
+
+				err = c.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: testProject, Name: "fake-freight-2"},
+					freight,
+				)
+				require.NoError(t, err)
+				require.Contains(t, freight.Status.CurrentlyIn, testStage.Name)
+
+				// Should handle nil Since field gracefully without panic
+				err = c.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: testProject, Name: "nil-since-freight"},
+					freight,
+				)
+				require.NoError(t, err)
+				require.NotContains(t, freight.Status.CurrentlyIn, testStage.Name)
+				require.Contains(t, freight.Status.VerifiedIn, testStage.Name)
+				// Soak time should remain unchanged as Since was nil
+				assert.Equal(t, 1*time.Hour, freight.Status.VerifiedIn[testStage.Name].LongestCompletedSoak.Duration)
+			},
+		},
+		{
+			name: "handles freight with nil LongestCompletedSoak gracefully",
+			objects: []client.Object{
+				&kargoapi.Freight{ // The Stage is using this, and the Freight knows it.
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight-1",
+					},
+					Status: kargoapi.FreightStatus{
+						CurrentlyIn: map[string]kargoapi.CurrentStage{
+							testStage.Name: {
+								Since: ptr.To(metav1.NewTime(time.Now())),
+							},
+						},
+					},
+				},
+				&kargoapi.Freight{ // The Stage is using this, and the Freight knows it.
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight-2",
+					},
+					Status: kargoapi.FreightStatus{
+						CurrentlyIn: map[string]kargoapi.CurrentStage{
+							testStage.Name: {
+								Since: ptr.To(metav1.NewTime(time.Now())),
+							},
+						},
+					},
+				},
+				&kargoapi.Freight{ // Freight with nil LongestCompletedSoak
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "nil-soak-freight",
+					},
+					Status: kargoapi.FreightStatus{
+						CurrentlyIn: map[string]kargoapi.CurrentStage{
+							testStage.Name: {
+								Since: ptr.To(metav1.NewTime(time.Now().Add(-2 * time.Hour))),
+							},
+						},
+						VerifiedIn: map[string]kargoapi.VerifiedStage{
+							testStage.Name: {
+								LongestCompletedSoak: nil,
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, c client.Client, err error) {
+				require.NoError(t, err)
+
+				// Check that expected freight remains in CurrentlyIn (they're in the stage's FreightHistory)
+				freight := &kargoapi.Freight{}
+				err = c.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: testProject, Name: "fake-freight-1"},
+					freight,
+				)
+				require.NoError(t, err)
+				require.Contains(t, freight.Status.CurrentlyIn, testStage.Name)
+
+				err = c.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: testProject, Name: "fake-freight-2"},
+					freight,
+				)
+				require.NoError(t, err)
+				require.Contains(t, freight.Status.CurrentlyIn, testStage.Name)
+
+				// Should handle nil LongestCompletedSoak gracefully
+				err = c.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: testProject, Name: "nil-soak-freight"},
+					freight,
+				)
+				require.NoError(t, err)
+				require.NotContains(t, freight.Status.CurrentlyIn, testStage.Name)
+				require.Contains(t, freight.Status.VerifiedIn, testStage.Name)
+				// Should have created a new LongestCompletedSoak since the original was nil
+				require.NotNil(t, freight.Status.VerifiedIn[testStage.Name].LongestCompletedSoak)
+				assert.True(t, freight.Status.VerifiedIn[testStage.Name].LongestCompletedSoak.Duration >= time.Hour)
+			},
+		},
 	}
 
 	scheme := runtime.NewScheme()
@@ -2496,8 +2661,8 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 						Name:      "existing-analysis",
 						Namespace: "fake-project",
 						Labels: map[string]string{
-							kargoapi.StageLabelKey:             "test-stage",
-							kargoapi.FreightCollectionLabelKey: "test-freight-collection",
+							kargoapi.LabelKeyStage:             "test-stage",
+							kargoapi.LabelKeyFreightCollection: "test-freight-collection",
 						},
 					},
 					Status: rolloutsapi.AnalysisRunStatus{
@@ -3478,8 +3643,8 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 						Name:      "existing-analysis",
 						Namespace: "fake-project",
 						Labels: map[string]string{
-							kargoapi.StageLabelKey:             "test-stage",
-							kargoapi.FreightCollectionLabelKey: "test-collection",
+							kargoapi.LabelKeyStage:             "test-stage",
+							kargoapi.LabelKeyFreightCollection: "test-collection",
 						},
 					},
 					Status: rolloutsapi.AnalysisRunStatus{
@@ -4386,8 +4551,8 @@ func TestRegularStageReconciler_findExistingAnalysisRun(t *testing.T) {
 						Namespace:         "fake-project",
 						CreationTimestamp: metav1.Time{Time: twoHoursAgo},
 						Labels: map[string]string{
-							kargoapi.StageLabelKey:             "test-stage",
-							kargoapi.FreightCollectionLabelKey: "test-collection",
+							kargoapi.LabelKeyStage:             "test-stage",
+							kargoapi.LabelKeyFreightCollection: "test-collection",
 						},
 					},
 					Status: rolloutsapi.AnalysisRunStatus{
@@ -4400,8 +4565,8 @@ func TestRegularStageReconciler_findExistingAnalysisRun(t *testing.T) {
 						Namespace:         "fake-project",
 						CreationTimestamp: metav1.Time{Time: hourAgo},
 						Labels: map[string]string{
-							kargoapi.StageLabelKey:             "test-stage",
-							kargoapi.FreightCollectionLabelKey: "test-collection",
+							kargoapi.LabelKeyStage:             "test-stage",
+							kargoapi.LabelKeyFreightCollection: "test-collection",
 						},
 					},
 					Status: rolloutsapi.AnalysisRunStatus{
@@ -4431,8 +4596,8 @@ func TestRegularStageReconciler_findExistingAnalysisRun(t *testing.T) {
 						Namespace:         "fake-project",
 						CreationTimestamp: metav1.Time{Time: hourAgo},
 						Labels: map[string]string{
-							kargoapi.StageLabelKey:             "other-stage",
-							kargoapi.FreightCollectionLabelKey: "test-collection",
+							kargoapi.LabelKeyStage:             "other-stage",
+							kargoapi.LabelKeyFreightCollection: "test-collection",
 						},
 					},
 				},
@@ -4442,8 +4607,8 @@ func TestRegularStageReconciler_findExistingAnalysisRun(t *testing.T) {
 						Namespace:         "fake-project",
 						CreationTimestamp: metav1.Time{Time: twoHoursAgo},
 						Labels: map[string]string{
-							kargoapi.StageLabelKey:             "test-stage",
-							kargoapi.FreightCollectionLabelKey: "test-collection",
+							kargoapi.LabelKeyStage:             "test-stage",
+							kargoapi.LabelKeyFreightCollection: "test-collection",
 						},
 					},
 				},
@@ -4469,8 +4634,8 @@ func TestRegularStageReconciler_findExistingAnalysisRun(t *testing.T) {
 						Namespace:         "fake-project",
 						CreationTimestamp: metav1.Time{Time: hourAgo},
 						Labels: map[string]string{
-							kargoapi.StageLabelKey:             "test-stage",
-							kargoapi.FreightCollectionLabelKey: "other-collection",
+							kargoapi.LabelKeyStage:             "test-stage",
+							kargoapi.LabelKeyFreightCollection: "other-collection",
 						},
 					},
 				},
@@ -4480,8 +4645,8 @@ func TestRegularStageReconciler_findExistingAnalysisRun(t *testing.T) {
 						Namespace:         "fake-project",
 						CreationTimestamp: metav1.Time{Time: twoHoursAgo},
 						Labels: map[string]string{
-							kargoapi.StageLabelKey:             "test-stage",
-							kargoapi.FreightCollectionLabelKey: "test-collection",
+							kargoapi.LabelKeyStage:             "test-stage",
+							kargoapi.LabelKeyFreightCollection: "test-collection",
 						},
 					},
 				},
@@ -4507,8 +4672,8 @@ func TestRegularStageReconciler_findExistingAnalysisRun(t *testing.T) {
 						Namespace:         "fake-project",
 						CreationTimestamp: metav1.Time{Time: hourAgo},
 						Labels: map[string]string{
-							kargoapi.StageLabelKey:             "test-stage",
-							kargoapi.FreightCollectionLabelKey: "test-collection",
+							kargoapi.LabelKeyStage:             "test-stage",
+							kargoapi.LabelKeyFreightCollection: "test-collection",
 						},
 					},
 				},
@@ -4518,8 +4683,8 @@ func TestRegularStageReconciler_findExistingAnalysisRun(t *testing.T) {
 						Namespace:         "test-namespace",
 						CreationTimestamp: metav1.Time{Time: twoHoursAgo},
 						Labels: map[string]string{
-							kargoapi.StageLabelKey:             "test-stage",
-							kargoapi.FreightCollectionLabelKey: "test-collection",
+							kargoapi.LabelKeyStage:             "test-stage",
+							kargoapi.LabelKeyFreightCollection: "test-collection",
 						},
 					},
 				},
@@ -4545,8 +4710,8 @@ func TestRegularStageReconciler_findExistingAnalysisRun(t *testing.T) {
 						Name:      "test-analysis",
 						Namespace: "fake-project",
 						Labels: map[string]string{
-							kargoapi.StageLabelKey:             "test-stage",
-							kargoapi.FreightCollectionLabelKey: "",
+							kargoapi.LabelKeyStage:             "test-stage",
+							kargoapi.LabelKeyFreightCollection: "",
 						},
 					},
 				},
@@ -4931,7 +5096,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 						Namespace: "fake-project",
 						Name:      "existing-promotion",
 						Labels: map[string]string{
-							kargoapi.StageLabelKey: "test-stage",
+							kargoapi.LabelKeyStage: "test-stage",
 						},
 					},
 					Spec: kargoapi.PromotionSpec{

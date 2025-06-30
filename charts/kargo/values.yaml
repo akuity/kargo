@@ -17,6 +17,9 @@ image:
 
 ## @section Global Parameters
 global:
+  ## @param global.clusterSecretsNamespace Indicates a namespace where Secrets associated with cluster-scoped resources can be located.
+  clusterSecretsNamespace: kargo-cluster-secrets
+
   ## @param global.labels Labels to add to all resources.
   labels: {}
   ## @param global.annotations Annotations to add to all resources.
@@ -152,7 +155,7 @@ api:
     ## @param api.oidc.additionalScopes The additional scopes to send to the OIDC provider. This should be set to the scopes you wish to be provided to your identity provider from clients of Kargo, the scopes openid, profile and email are always requested and don't need to be added, this value is intended for any additional ones you require.
     additionalScopes:
     - groups
-    ## @param api.oidc.Parameters The additional parameters to send to the OIDC provider during the auth code exchange. Generally used for support special OIDC provider features like multi-audience tokens.
+    ## @param api.oidc.additionalParameters The additional parameters to send to the OIDC provider during the auth code exchange. Generally used for support special OIDC provider features like multi-audience tokens.
     additionalParameters: {}
     ## @param api.oidc.usernameClaim The claim to use as the username for the user.
     usernameClaim: email
@@ -170,7 +173,7 @@ api:
         # - kargo-admin
 
     viewers:
-      ## @param api.oidc.viewers.claims Subjects having any of these claims will automatically receive read-only access to all Kargo resources.
+      ## @param api.oidc.viewers.claims Subjects having any of these claims will automatically receive read-only access to all Kargo resources. This does not include any access to Secrets.
       claims: {}
         # sub:
         # - alice
@@ -180,6 +183,18 @@ api:
         # - bob@examples.com
         # groups:
         # - kargo-viewer
+
+    users:
+      ## @param api.oidc.users.claims Subjects having any of these claims will automatically receive read-only access to all cluster-scoped Kargo resources. This is the minimum level of permissions that can be granted to a user to allow them to view the list of Projects and system-level configuration. This does not include any access to Secrets.
+      claims: {}
+      # sub:
+      # - alice
+      # - bob
+      # email:
+      # - alice@example.com
+      # - bob@examples.com
+      # groups:
+      # - kargo-viewer
 
     globalServiceAccounts:
       ## @param api.oidc.globalServiceAccounts.namespaces List of namespaces to look for shared service accounts.
@@ -447,6 +462,8 @@ controller:
     warehouses:
       ## @param controller.reconcilers.warehouses.maxConcurrentReconciles optionally overrides the maximum number of Warehouse resources the controller can reconcile concurrently.
       maxConcurrentReconciles:
+      ## @param controller.reconcilers.warehouses.minReconciliationInterval optionally sets the minimum reconciliation interval for Warehouse resources. Accepts duration format (e.g., "5m", "1h", "30s"). If a Warehouse specifies an interval lower than this minimum, the minimum value will be enforced instead. If not set, no minimum is enforced.
+      minReconciliationInterval: "5m0s"
 
   gitClient:
     ## @param controller.gitClient.name Specifies the name of the Kargo controller (used when authoring Git commits).
@@ -690,7 +707,7 @@ externalWebhooksServer:
     terminatedUpstream: false
 
   ingress:
-    ## @param externalWebhooksServer.ingress.enabled Whether to enable ingress by creating an Ingress resource. By default, this is disabled. Enabling ingress is advanced usage.
+    ## @param externalWebhooksServer.ingress.enabled Whether to enable separate ingress for webhook by creating an Ingress resource. By default, this is disabled and webhook is exposed as part of kargo-api ingress. Enabling ingress is advanced usage.
     enabled: false
     ## @param externalWebhooksServer.ingress.annotations Annotations specified by your ingress controller to customize the behavior of the Ingress resource.
     annotations: {}
@@ -728,6 +745,9 @@ managementController:
     maxConcurrentReconciles: 4
     namespaces:
       ## @param managementController.reconcilers.namespaces.maxConcurrentReconciles optionally overrides the maximum number of Namespace resources the management controller can reconcile concurrently.
+      maxConcurrentReconciles:
+    projectConfigs:
+      ## @param managementController.reconcilers.projectConfigs.maxConcurrentReconciles optionally overrides the maximum number of ProjectConfig resources the management controller can reconcile concurrently.
       maxConcurrentReconciles:
     projects:
       ## @param managementController.reconcilers.projects.maxConcurrentReconciles optionally overrides the maximum number of Project resources the management controller can reconcile concurrently.

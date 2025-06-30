@@ -35,12 +35,15 @@ const (
 	controllerServiceAccountLabelKey     = "app.kubernetes.io/component"
 	controllerServiceAccountLabelValue   = "controller"
 	controllerReadSecretsClusterRoleName = "kargo-controller-read-secrets"
+	// nolint: gosec
+	projectSecretsReaderClusterRoleName = "kargo-project-secrets-reader"
 )
 
 type ReconcilerConfig struct {
 	ManageControllerRoleBindings bool   `envconfig:"MANAGE_CONTROLLER_ROLE_BINDINGS" default:"true"`
 	KargoNamespace               string `envconfig:"KARGO_NAMESPACE" default:"kargo"`
 	MaxConcurrentReconciles      int    `envconfig:"MAX_CONCURRENT_PROJECT_RECONCILES" default:"4"`
+	ClusterSecretsNamespace      string `envconfig:"CLUSTER_SECRETS_NAMESPACE"`
 }
 
 func ReconcilerConfigFromEnv() ReconcilerConfig {
@@ -90,6 +93,12 @@ type reconciler struct {
 		...client.CreateOption,
 	) error
 
+	deleteNamespaceFn func(
+		context.Context,
+		client.Object,
+		...client.DeleteOption,
+	) error
+
 	patchOwnerReferencesFn func(
 		context.Context,
 		client.Client,
@@ -102,7 +111,13 @@ type reconciler struct {
 		client.Object,
 	) (bool, error)
 
-	ensureAPIAdminPermissionsFn func(context.Context, *kargoapi.Project) error
+	removeFinalizerFn func(
+		context.Context,
+		client.Client,
+		client.Object,
+	) error
+
+	ensureSystemPermissionsFn func(context.Context, *kargoapi.Project) error
 
 	ensureControllerPermissionsFn func(context.Context, *kargoapi.Project) error
 
@@ -191,9 +206,11 @@ func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
 	r.patchProjectStatusFn = r.patchProjectStatus
 	r.getNamespaceFn = r.client.Get
 	r.createNamespaceFn = r.client.Create
+	r.deleteNamespaceFn = r.client.Delete
 	r.patchOwnerReferencesFn = api.PatchOwnerReferences
 	r.ensureFinalizerFn = api.EnsureFinalizer
-	r.ensureAPIAdminPermissionsFn = r.ensureAPIAdminPermissions
+	r.removeFinalizerFn = api.RemoveFinalizer
+	r.ensureSystemPermissionsFn = r.ensureSystemPermissions
 	r.ensureControllerPermissionsFn = r.ensureControllerPermissions
 	r.ensureDefaultUserRolesFn = r.ensureDefaultUserRoles
 	r.createServiceAccountFn = r.client.Create
@@ -224,8 +241,20 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
+	// ensure the finalizer is present on the Project
+	updated, err := r.ensureFinalizerFn(ctx, r.client, project)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("error ensuring finalizer on Project %q: %w", project.Name, err)
+	}
+	if updated {
+		logger.Debug("added finalizer to Project")
+	}
+
 	if project.DeletionTimestamp != nil {
-		logger.Debug("Project is being deleted; nothing to do")
+		if err = r.cleanupProject(ctx, project); err != nil {
+			return ctrl.Result{}, err
+		}
+
 		return ctrl.Result{}, nil
 	}
 
@@ -276,7 +305,6 @@ func (r *reconciler) reconcile(
 				}
 				if migrated {
 					logger.Debug("migrated Project spec to ProjectConfig")
-					return status, nil
 				}
 				return status, nil
 			},
@@ -284,21 +312,13 @@ func (r *reconciler) reconcile(
 		{
 			name: "syncing project resources",
 			reconcile: func() (kargoapi.ProjectStatus, error) {
-				newStatus, err := r.syncProject(ctx, project)
-				if err != nil {
-					return newStatus, err
-				}
-				return newStatus, nil
+				return r.syncProject(ctx, project)
 			},
 		},
 		{
 			name: "collecting project stats",
 			reconcile: func() (kargoapi.ProjectStatus, error) {
-				newStatus, err := r.collectStats(ctx, project)
-				if err != nil {
-					return newStatus, err
-				}
-				return newStatus, nil
+				return r.collectStats(ctx, project)
 			},
 		},
 	}
@@ -309,22 +329,89 @@ func (r *reconciler) reconcile(
 		var err error
 		status, err = subR.reconcile()
 
-		// If an error occurred during the sub-reconciler, then we should
-		// return the error which will cause the Project to be requeued.
+		// If an error occurred during the sub-reconciler, then we should return the
+		// error which will cause the Project to be requeued.
 		if err != nil {
 			return status, err
 		}
 
 		// Patch the status of the Project after each sub-reconciler to show
 		// progress.
-		if err = kubeclient.PatchStatus(ctx, r.client, project, func(st *kargoapi.ProjectStatus) {
-			*st = status
-		}); err != nil {
-			logger.Error(err, fmt.Sprintf("failed to update Project status after %s", subR.name))
+		if err = kubeclient.PatchStatus(
+			ctx,
+			r.client,
+			project,
+			func(st *kargoapi.ProjectStatus) { *st = status },
+		); err != nil {
+			logger.Error(
+				err,
+				fmt.Sprintf("failed to update Project status after %s", subR.name),
+			)
 		}
 	}
 
 	return status, nil
+}
+
+// cleanupProject handles the deletion and cleanup of a Project's associated
+// resources.
+func (r *reconciler) cleanupProject(ctx context.Context, project *kargoapi.Project) error {
+	logger := logging.LoggerFromContext(ctx)
+
+	// Get namespace for the Project
+	ns := &corev1.Namespace{}
+	err := r.getNamespaceFn(ctx, types.NamespacedName{Name: project.Name}, ns)
+	if err != nil {
+		if kubeerr.IsNotFound(err) {
+			// Namespace already deleted or never existed, just remove finalizer
+			// from project
+			logger.Debug("namespace not found, removing project finalizer")
+			if err = r.removeFinalizerFn(ctx, r.client, project); err != nil {
+				return fmt.Errorf("failed to remove finalizer from project %q: %w", project.Name, err)
+			}
+			return nil
+		}
+		return fmt.Errorf("error getting namespace %q: %w", project.Name, err)
+	}
+
+	if shouldKeepNamespace(project, ns) {
+		logger.Debug("keeping namespace due to keep-namespace annotation")
+
+		// Remove only this Project's OwnerReference from the Namespace
+		var newOwnerRefs []metav1.OwnerReference
+		for _, ref := range ns.OwnerReferences {
+			if ref.UID != project.UID {
+				newOwnerRefs = append(newOwnerRefs, ref)
+			}
+		}
+
+		// Only update owner references if we actually found and removed one
+		if len(newOwnerRefs) < len(ns.OwnerReferences) {
+			ns.OwnerReferences = newOwnerRefs
+			if err = r.patchOwnerReferencesFn(ctx, r.client, ns); err != nil {
+				return fmt.Errorf("failed to patch namespace %q owner references: %w", ns.Name, err)
+			}
+			logger.Debug("removed project owner reference from namespace")
+		}
+
+		// Remove finalizer from namespace
+		if err = r.removeFinalizerFn(ctx, r.client, ns); err != nil {
+			return fmt.Errorf("failed to remove finalizer from namespace %q: %w", ns.Name, err)
+		}
+	} else {
+		// Delete the namespace
+		logger.Debug("deleting namespace")
+		if err = r.deleteNamespaceFn(ctx, ns); err != nil && !kubeerr.IsNotFound(err) {
+			return fmt.Errorf("failed to delete namespace %q: %w", ns.Name, err)
+		}
+		logger.Debug("deleted namespace", "namespace", ns.Name)
+	}
+
+	// Remove finalizer from Project
+	if err = r.removeFinalizerFn(ctx, r.client, project); err != nil {
+		return fmt.Errorf("failed to remove finalizer from project %q: %w", project.Name, err)
+	}
+	return nil
 }
 
 // syncProject ensures the existence of the Project's namespace and any
@@ -362,7 +449,7 @@ func (r *reconciler) syncProject(
 				Message: fmt.Sprintf(
 					"Namespace %q already exists but is not labeled as a Project namespace using label %q",
 					project.Name,
-					kargoapi.ProjectLabelKey,
+					kargoapi.LabelKeyProject,
 				),
 				ObservedGeneration: project.GetGeneration(),
 			})
@@ -379,15 +466,19 @@ func (r *reconciler) syncProject(
 		return *status, fmt.Errorf("error ensuring namespace: %w", err)
 	}
 
-	if err := r.ensureAPIAdminPermissionsFn(ctx, project); err != nil {
+	if err := r.ensureSystemPermissionsFn(ctx, project); err != nil {
 		conditions.Set(status, &metav1.Condition{
-			Type:               kargoapi.ConditionTypeReady,
-			Status:             metav1.ConditionFalse,
-			Reason:             "EnsuringAPIServerPermissionsFailed",
-			Message:            "Failed to ensure project permissions for API server: " + err.Error(),
+			Type:   kargoapi.ConditionTypeReady,
+			Status: metav1.ConditionFalse,
+			Reason: "EnsuringSystemPermissionsFailed",
+			Message: "Failed to ensure Project permissions for system " +
+				"ServiceAccounts: " + err.Error(),
 			ObservedGeneration: project.GetGeneration(),
 		})
-		return *status, fmt.Errorf("error ensuring API server permissions: %w", err)
+		return *status, fmt.Errorf(
+			"error ensuring Project permissions for system ServiceAccounts: %w",
+			err,
+		)
 	}
 
 	if r.cfg.ManageControllerRoleBindings {
@@ -434,6 +525,7 @@ func (r *reconciler) ensureNamespace(ctx context.Context, project *kargoapi.Proj
 		kargoapi.GroupVersion.WithKind("Project"),
 	)
 	ownerRef.BlockOwnerDeletion = ptr.To(false)
+	ownerRef.Controller = nil
 
 	ns := &corev1.Namespace{}
 	if err := r.getNamespaceFn(
@@ -445,28 +537,14 @@ func (r *reconciler) ensureNamespace(ctx context.Context, project *kargoapi.Proj
 	} else if err == nil {
 		// We found an existing namespace with the same name as the Project. It's
 		// only a problem if it is not labeled as a Project namespace.
-		if ns.Labels[kargoapi.ProjectLabelKey] != kargoapi.LabelTrueValue {
+		if ns.Labels[kargoapi.LabelKeyProject] != kargoapi.LabelValueTrue {
 			return fmt.Errorf(
 				"failed to sync Project %q with namespace %q: %w",
 				project.Name, project.Name, errProjectNamespaceExists,
 			)
 		}
-		for _, ownerRef := range ns.OwnerReferences {
-			if ownerRef.UID == project.UID {
-				logger.Debug("namespace exists and is already owned by this Project")
-				return nil
-			}
-		}
-		// If we get to here, the Project is not already an owner of the existing
-		// namespace.
-		logger.Debug(
-			"namespace exists, is not owned by this Project, but has the " +
-				"project label; Project will adopt it",
-		)
-		// Note: We allow multiple owners of a namespace due to the not entirely
-		// uncommon scenario where an organization has its own controller that
-		// creates and initializes namespaces to ensure compliance with
-		// internal policies. Such a controller might already own the namespace.
+
+		// always ensure finalizer is present on the namespace
 		updated, err := r.ensureFinalizerFn(ctx, r.client, ns)
 		if err != nil {
 			return fmt.Errorf("error ensuring finalizer on namespace %q: %w", project.Name, err)
@@ -474,6 +552,36 @@ func (r *reconciler) ensureNamespace(ctx context.Context, project *kargoapi.Proj
 		if updated {
 			logger.Debug("added finalizer to namespace")
 		}
+
+		for i, ownerRef := range ns.OwnerReferences {
+			if ownerRef.UID == project.UID {
+				logger.Debug("namespace exists and is already owned by this Project")
+				if ownerRef.Controller != nil {
+					logger.Debug("owner reference requires update")
+					ns.OwnerReferences[i].Controller = nil // Update in place
+					if err = r.patchOwnerReferencesFn(ctx, r.client, ns); err != nil {
+						return fmt.Errorf(
+							"error patching namespace %q owner references: %w",
+							project.Name, err,
+						)
+					}
+					logger.Debug("updated owner reference")
+				}
+				return nil
+			}
+		}
+
+		// If we get to here, the Project is not already an owner of the existing
+		// namespace.
+		logger.Debug(
+			"namespace exists, is not owned by this Project, but has the " +
+				"project label; Project will adopt it",
+		)
+
+		// Note: We allow multiple owners of a namespace due to the not entirely
+		// uncommon scenario where an organization has its own controller that
+		// creates and initializes namespaces to ensure compliance with
+		// internal policies. Such a controller might already own the namespace.
 		ns.OwnerReferences = append(ns.OwnerReferences, *ownerRef)
 		if err = r.patchOwnerReferencesFn(ctx, r.client, ns); err != nil {
 			return fmt.Errorf(
@@ -497,7 +605,7 @@ func (r *reconciler) ensureNamespace(ctx context.Context, project *kargoapi.Proj
 		ObjectMeta: metav1.ObjectMeta{
 			Name: project.Name,
 			Labels: map[string]string{
-				kargoapi.ProjectLabelKey: kargoapi.LabelTrueValue,
+				kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
 			},
 			OwnerReferences: []metav1.OwnerReference{*ownerRef},
 		},
@@ -516,55 +624,81 @@ func (r *reconciler) ensureNamespace(ctx context.Context, project *kargoapi.Proj
 	return nil
 }
 
-func (r *reconciler) ensureAPIAdminPermissions(
+// ensureSystemPermissions ensures that system-level ServiceAccounts, including
+// that for the Kargo admin, have all necessary permissions to operate on the
+// specified Project. This excludes permissions for the controllers, which have
+// their own dedicated method for ensuring their permissions.
+func (r *reconciler) ensureSystemPermissions(
 	ctx context.Context,
 	project *kargoapi.Project,
 ) error {
-	const roleBindingName = "kargo-project-admin"
-
 	logger := logging.LoggerFromContext(ctx).WithValues(
 		"project", project.Name,
 		"name", project.Name,
 		"namespace", project.Name,
-		"roleBinding", roleBindingName,
 	)
 
-	roleBinding := &rbacv1.RoleBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      roleBindingName,
-			Namespace: project.Name,
-		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: rbacv1.GroupName,
-			Kind:     "ClusterRole",
-			Name:     "kargo-project-admin",
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      "ServiceAccount",
-				Name:      "kargo-api",
-				Namespace: r.cfg.KargoNamespace,
+	roleBindings := []rbacv1.RoleBinding{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "kargo-project-admin",
+				Namespace: project.Name,
 			},
-			{
-				Kind:      "ServiceAccount",
-				Name:      "kargo-admin",
-				Namespace: r.cfg.KargoNamespace,
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     "kargo-project-admin",
 			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      "ServiceAccount",
+					Name:      "kargo-api",
+					Namespace: r.cfg.KargoNamespace,
+				},
+				{
+					Kind:      "ServiceAccount",
+					Name:      "kargo-admin",
+					Namespace: r.cfg.KargoNamespace,
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "kargo-project-secrets-reader",
+				Namespace: project.Name,
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     projectSecretsReaderClusterRoleName,
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      "ServiceAccount",
+				Name:      "kargo-external-webhooks-server",
+				Namespace: r.cfg.KargoNamespace,
+			}},
 		},
 	}
-	if err := r.createRoleBindingFn(ctx, roleBinding); err != nil {
-		if kubeerr.IsAlreadyExists(err) {
-			logger.Debug("RoleBinding already exists in project namespace")
-			return nil
+	for _, roleBinding := range roleBindings {
+		rbLogger := logger.WithValues("roleBinding", roleBinding.Name)
+		if err := r.createRoleBindingFn(ctx, &roleBinding); err != nil {
+			if !kubeerr.IsAlreadyExists(err) {
+				return fmt.Errorf(
+					"error creating RoleBinding %q in Project namespace %q: %w",
+					roleBinding.Name, project.Name, err,
+				)
+			}
+			if err = r.client.Update(ctx, &roleBinding); err != nil {
+				return fmt.Errorf(
+					"error updating existing RoleBinding %q in Project namespace %q: %w",
+					roleBinding.Name, project.Name, err,
+				)
+			}
+			rbLogger.Debug("updated RoleBinding")
+			continue
 		}
-		return fmt.Errorf(
-			"error creating RoleBinding %q in project namespace %q: %w",
-			roleBinding.Name,
-			project.Name,
-			err,
-		)
+		rbLogger.Debug("created RoleBinding in Project namespace")
 	}
-	logger.Debug("granted API server and kargo-admin project admin permissions")
 
 	return nil
 }
@@ -590,7 +724,7 @@ func (r *reconciler) ensureControllerPermissions(
 		return fmt.Errorf("error listing controller ServiceAccounts: %w", err)
 	}
 
-	// Create/update a RoleBinding for each ServiceAccount
+	// Create/update RoleBindings for each ServiceAccount
 	for _, controllerSA := range controllerSAs.Items {
 		sa := &controllerSA
 		if controllerutil.AddFinalizer(sa, kargoapi.FinalizerName) {
@@ -912,6 +1046,14 @@ func (r *reconciler) migrateSpecToProjectConfig(
 		)
 	}
 	return true, nil
+}
+
+// shouldKeepNamespace determines if a Namespace should be kept during Project
+// cleanup based on the keep-namespace annotation on either the Project or
+// Namespace.
+func shouldKeepNamespace(project *kargoapi.Project, ns *corev1.Namespace) bool {
+	return project.Annotations[kargoapi.AnnotationKeyKeepNamespace] == kargoapi.AnnotationValueTrue ||
+		ns.Annotations[kargoapi.AnnotationKeyKeepNamespace] == kargoapi.AnnotationValueTrue
 }
 
 func getRoleBindingName(serviceAccountName string) string {

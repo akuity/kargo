@@ -1,24 +1,29 @@
 import { useMutation, useQuery } from '@connectrpc/connect-query';
-import { faStopCircle } from '@fortawesome/free-solid-svg-icons';
+import { faRefresh, faStopCircle, faUndo } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Descriptions, DescriptionsProps, Drawer, Flex, message, Modal, Tabs } from 'antd';
 import { formatDistance } from 'date-fns';
 import { useMemo } from 'react';
+import { generatePath, useNavigate } from 'react-router-dom';
 
+import { paths } from '@ui/config/paths';
 import { LoadingState } from '@ui/features/common';
 import YamlEditor from '@ui/features/common/code-editor/yaml-editor-lazy';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import { PromotionStatusIcon } from '@ui/features/common/promotion-status/promotion-status-icon';
 import {
   getPromotionStatusPhase,
-  isPromotionPhaseTerminal
+  isPromotionPhaseTerminal,
+  isPromotionRetryable
 } from '@ui/features/common/promotion-status/utils';
 import { useDictionaryContext } from '@ui/features/project/pipelines/context/dictionary-context';
 import { PromotionSteps } from '@ui/features/stage/promotion-steps';
 import { canAbortPromotion, hasAbortRequest } from '@ui/features/stage/utils/promotion';
 import {
   abortPromotion,
-  getPromotion
+  getPromotion,
+  promoteToStage,
+  refreshStage
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { Freight, Promotion as TPromotion } from '@ui/gen/api/v1alpha1/generated_pb';
@@ -27,6 +32,7 @@ import { decodeRawData } from '@ui/utils/decode-raw-data';
 
 import { FreightDetails } from './freight-details';
 import { getPromotionActor } from './get-promotion-actor';
+import { getPromotionStage } from './get-promotion-stage';
 import { useWatchPromotion } from './use-watch-promotion';
 
 type PromotionProps = ModalComponentProps & {
@@ -35,6 +41,7 @@ type PromotionProps = ModalComponentProps & {
 };
 
 const Content = (props: { promotion: TPromotion; yaml: string }) => {
+  const navigate = useNavigate();
   const dictionaryContext = useDictionaryContext();
   const promotionDescriptions: DescriptionsProps['items'] = [];
 
@@ -46,9 +53,37 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
       })
   });
 
-  const promotion = props.promotion;
+  const promoteMutation = useMutation(promoteToStage, {
+    onSuccess(data) {
+      navigate(
+        generatePath(paths.promotion, {
+          name: props.promotion?.metadata?.namespace,
+          promotionId: data.promotion?.metadata?.name
+        })
+      );
+    }
+  });
 
-  const isPromotionTerminal = isPromotionPhaseTerminal(getPromotionStatusPhase(promotion));
+  const refreshStageMutation = useMutation(refreshStage);
+
+  const promotion = props.promotion;
+  const affiliatedStage = getPromotionStage(promotion);
+
+  const onRetryPromotion = () => {
+    const stage = affiliatedStage;
+    const project = props.promotion?.metadata?.namespace;
+    const freight = promotion?.spec?.freight;
+
+    promoteMutation.mutate({
+      stage,
+      project,
+      freight
+    });
+  };
+
+  const promotionStatusPhase = getPromotionStatusPhase(promotion);
+  const isPromotionTerminal = isPromotionPhaseTerminal(promotionStatusPhase);
+  const canRetry = isPromotionRetryable(promotionStatusPhase);
   const isAbortRequestPending = hasAbortRequest(promotion) && !isPromotionTerminal;
 
   const freight = useMemo(
@@ -68,8 +103,18 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
           status={promotion?.status}
           color={isAbortRequestPending ? 'red' : ''}
         />
-
         <span>{promotion?.status?.phase}</span>
+
+        {canRetry && (
+          <Button
+            loading={promoteMutation.isPending}
+            size='small'
+            icon={<FontAwesomeIcon icon={faUndo} />}
+            onClick={onRetryPromotion}
+          >
+            Retry
+          </Button>
+        )}
       </Flex>
     )
   });
@@ -146,6 +191,25 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
 
   return (
     <>
+      {affiliatedStage && (
+        <Flex align='center' gap={8} className='mb-2'>
+          <h1 className='text-sm font-semibold m-0'>Stage: </h1>
+          {affiliatedStage}
+          <Button
+            size='small'
+            icon={<FontAwesomeIcon icon={faRefresh} size='1x' />}
+            onClick={() =>
+              refreshStageMutation.mutate({
+                project: promotion?.metadata?.namespace,
+                name: affiliatedStage
+              })
+            }
+            loading={refreshStageMutation.isPending}
+          >
+            Refresh
+          </Button>
+        </Flex>
+      )}
       <Tabs
         className='mb-5'
         items={[

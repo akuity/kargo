@@ -18,6 +18,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/pattern"
+	"github.com/akuity/kargo/internal/webhook/kubernetes/external"
 )
 
 var (
@@ -143,7 +144,7 @@ func (w *webhook) validateSpec(
 		fieldErrs = append(fieldErrs, errs...)
 	}
 
-	if errs := w.validateWebhookReceivers(
+	if errs := external.ValidateWebhookReceivers(
 		f.Child("webhookReceivers"),
 		spec.WebhookReceivers,
 	); errs != nil {
@@ -226,29 +227,6 @@ func (w *webhook) validatePromotionPolicies(
 	return errs
 }
 
-func (w *webhook) validateWebhookReceivers(
-	f *field.Path,
-	webhookReceivers []kargoapi.WebhookReceiverConfig,
-) field.ErrorList {
-	var errs field.ErrorList
-	dupes := make(map[string]int)
-	for i, r := range webhookReceivers {
-		if existingIndex, exists := dupes[r.Name]; exists {
-			errs = append(errs, field.Invalid(
-				f.Index(i).Child("name"),
-				r.Name,
-				fmt.Sprintf(
-					"webhook receiver name already defined at %s",
-					f.Index(existingIndex),
-				),
-			))
-			continue
-		}
-		dupes[r.Name] = i
-	}
-	return errs
-}
-
 func (w *webhook) ensureProjectNamespace(ctx context.Context, meta metav1.ObjectMeta) error {
 	ns := &corev1.Namespace{}
 	if err := w.client.Get(ctx, types.NamespacedName{Name: meta.Namespace}, ns); err != nil {
@@ -257,14 +235,14 @@ func (w *webhook) ensureProjectNamespace(ctx context.Context, meta metav1.Object
 		)
 	}
 
-	v, ok := ns.Labels[kargoapi.ProjectLabelKey]
-	if !ok || v != kargoapi.LabelTrueValue {
+	v, ok := ns.Labels[kargoapi.LabelKeyProject]
+	if !ok || v != kargoapi.LabelValueTrue {
 		return apierrors.NewForbidden(
 			projectConfigGroupResource,
 			meta.Name,
 			fmt.Errorf(
 				"namespace %q does not belong to Kargo project (missing %q label)",
-				meta.Namespace, kargoapi.ProjectLabelKey,
+				meta.Namespace, kargoapi.LabelKeyProject,
 			),
 		)
 	}

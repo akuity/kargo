@@ -1562,7 +1562,7 @@ func TestControlFlowStageReconciler_clearAnalysisRuns(t *testing.T) {
 						Namespace: "default",
 						Name:      "analysis-1",
 						Labels: map[string]string{
-							kargoapi.StageLabelKey: "test-stage",
+							kargoapi.LabelKeyStage: "test-stage",
 						},
 					},
 				},
@@ -1571,7 +1571,7 @@ func TestControlFlowStageReconciler_clearAnalysisRuns(t *testing.T) {
 						Namespace: "default",
 						Name:      "analysis-2",
 						Labels: map[string]string{
-							kargoapi.StageLabelKey: "test-stage",
+							kargoapi.LabelKeyStage: "test-stage",
 						},
 					},
 				},
@@ -1580,7 +1580,7 @@ func TestControlFlowStageReconciler_clearAnalysisRuns(t *testing.T) {
 						Namespace: "default",
 						Name:      "analysis-other",
 						Labels: map[string]string{
-							kargoapi.StageLabelKey: "other-stage",
+							kargoapi.LabelKeyStage: "other-stage",
 						},
 					},
 				},
@@ -1592,7 +1592,7 @@ func TestControlFlowStageReconciler_clearAnalysisRuns(t *testing.T) {
 				var runs rollouts.AnalysisRunList
 				err = c.List(context.Background(), &runs,
 					client.InNamespace("default"),
-					client.MatchingLabels{kargoapi.StageLabelKey: "test-stage"},
+					client.MatchingLabels{kargoapi.LabelKeyStage: "test-stage"},
 				)
 				require.NoError(t, err)
 				assert.Empty(t, runs.Items)
@@ -1600,7 +1600,7 @@ func TestControlFlowStageReconciler_clearAnalysisRuns(t *testing.T) {
 				// Verify other analysis runs still exist
 				err = c.List(context.Background(), &runs,
 					client.InNamespace("default"),
-					client.MatchingLabels{kargoapi.StageLabelKey: "other-stage"},
+					client.MatchingLabels{kargoapi.LabelKeyStage: "other-stage"},
 				)
 				require.NoError(t, err)
 				assert.Len(t, runs.Items, 1)
@@ -1624,7 +1624,7 @@ func TestControlFlowStageReconciler_clearAnalysisRuns(t *testing.T) {
 						Namespace: "default",
 						Name:      "analysis-1",
 						Labels: map[string]string{
-							kargoapi.StageLabelKey: "test-stage",
+							kargoapi.LabelKeyStage: "test-stage",
 						},
 					},
 				},

@@ -291,7 +291,7 @@ func (a *authInterceptor) listServiceAccounts(
 	// Find all project namespaces.
 	nsList := &corev1.NamespaceList{}
 	if err := a.internalClient.List(ctx, nsList, libClient.MatchingLabels{
-		kargoapi.ProjectLabelKey: kargoapi.LabelTrueValue,
+		kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
 	}); err != nil {
 		return nil, fmt.Errorf("list namespaces: %w", err)
 	}

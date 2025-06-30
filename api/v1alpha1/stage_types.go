@@ -520,12 +520,6 @@ func (f *FreightHistory) truncate() {
 type Image struct {
 	// RepoURL describes the repository in which the image can be found.
 	RepoURL string `json:"repoURL,omitempty" protobuf:"bytes,1,opt,name=repoURL"`
-	// GitRepoURL specifies the URL of a Git repository that contains the source
-	// code for the image repository referenced by the RepoURL field if Kargo was
-	// able to infer it.
-	//
-	// Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
-	GitRepoURL string `json:"gitRepoURL,omitempty" protobuf:"bytes,2,opt,name=gitRepoURL"`
 	// Tag identifies a specific version of the image in the repository specified
 	// by RepoURL.
 	Tag string `json:"tag,omitempty" protobuf:"bytes,3,opt,name=tag"`
@@ -546,7 +540,6 @@ func (i *Image) DeepEquals(other *Image) bool {
 		return false
 	}
 	return i.RepoURL == other.RepoURL &&
-		i.GitRepoURL == other.GitRepoURL &&
 		i.Tag == other.Tag &&
 		i.Digest == other.Digest &&
 		maps.Equal(i.Annotations, other.Annotations)
@@ -704,23 +697,17 @@ type AnalysisRunArgument struct {
 // process.
 type VerificationInfo struct {
 	// ID is the identifier of the Verification process.
-	//
-	// +kubebuilder:validation:Required
-	ID string `json:"id" protobuf:"bytes,4,opt,name=id"`
+	ID string `json:"id,omitempty" protobuf:"bytes,4,opt,name=id"`
 	// Actor is the name of the entity that initiated or aborted the
 	// Verification process.
 	Actor string `json:"actor,omitempty" protobuf:"bytes,7,opt,name=actor"`
 	// StartTime is the time at which the Verification process was started.
-	//
-	// +kubebuilder:validation:Required
-	StartTime *metav1.Time `json:"startTime" protobuf:"bytes,5,opt,name=startTime"`
+	StartTime *metav1.Time `json:"startTime,omitempty" protobuf:"bytes,5,opt,name=startTime"`
 	// Phase describes the current phase of the Verification process. Generally,
 	// this will be a reflection of the underlying AnalysisRun's phase, however,
 	// there are exceptions to this, such as in the case where an AnalysisRun
 	// cannot be launched successfully.
-	//
-	// +kubebuilder:validation:Required
-	Phase VerificationPhase `json:"phase" protobuf:"bytes,1,opt,name=phase"`
+	Phase VerificationPhase `json:"phase,omitempty" protobuf:"bytes,1,opt,name=phase"`
 	// Message may contain additional information about why the verification
 	// process is in its current phase.
 	Message string `json:"message,omitempty" protobuf:"bytes,2,opt,name=message"`

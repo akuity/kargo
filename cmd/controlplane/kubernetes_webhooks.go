@@ -21,6 +21,7 @@ import (
 	"github.com/akuity/kargo/internal/server/kubernetes"
 	"github.com/akuity/kargo/internal/types"
 	libWebhook "github.com/akuity/kargo/internal/webhook/kubernetes"
+	"github.com/akuity/kargo/internal/webhook/kubernetes/clusterconfig"
 	"github.com/akuity/kargo/internal/webhook/kubernetes/freight"
 	"github.com/akuity/kargo/internal/webhook/kubernetes/project"
 	"github.com/akuity/kargo/internal/webhook/kubernetes/projectconfig"
@@ -134,6 +135,9 @@ func (o *kubernetesWebhooksServerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("index Stages by Freight: %w", err)
 	}
 
+	if err = clusterconfig.SetupWebhookWithManager(mgr); err != nil {
+		return fmt.Errorf("setup ClusterConfig webhook: %w", err)
+	}
 	if err = freight.SetupWebhookWithManager(ctx, webhookCfg, mgr); err != nil {
 		return fmt.Errorf("setup Freight webhook: %w", err)
 	}

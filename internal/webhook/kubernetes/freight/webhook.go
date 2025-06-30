@@ -136,7 +136,7 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 	}
 	if freight.Alias != "" {
 		// Alias field has a value, so just copy it to the label
-		freight.Labels[kargoapi.AliasLabelKey] = freight.Alias
+		freight.Labels[kargoapi.LabelKeyAlias] = freight.Alias
 	} else if req.Operation == admissionv1.Create {
 		// Alias field is empty and this is a create operation, so generate a new
 		// alias and assign it to both the alias field and the label
@@ -144,11 +144,11 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 		if freight.Alias, err = w.getAvailableFreightAliasFn(ctx); err != nil {
 			return fmt.Errorf("get available freight alias: %w", err)
 		}
-		freight.Labels[kargoapi.AliasLabelKey] = freight.Alias
+		freight.Labels[kargoapi.LabelKeyAlias] = freight.Alias
 	} else {
 		// Alias field is empty and this is an update operation, so ensure the
 		// label does not exist
-		delete(freight.Labels, kargoapi.AliasLabelKey)
+		delete(freight.Labels, kargoapi.LabelKeyAlias)
 	}
 
 	return nil
@@ -168,7 +168,7 @@ func (w *webhook) ValidateCreate(
 		ctx,
 		&freightList,
 		client.InNamespace(freight.Namespace),
-		client.MatchingLabels{kargoapi.AliasLabelKey: freight.Alias},
+		client.MatchingLabels{kargoapi.LabelKeyAlias: freight.Alias},
 	); err != nil {
 		return nil, apierrors.NewInternalError(err)
 	}
@@ -239,7 +239,7 @@ func (w *webhook) ValidateUpdate(
 		ctx,
 		&freightList,
 		client.InNamespace(newFreight.Namespace),
-		client.MatchingLabels{kargoapi.AliasLabelKey: newFreight.Alias},
+		client.MatchingLabels{kargoapi.LabelKeyAlias: newFreight.Alias},
 	); err != nil {
 		return nil, apierrors.NewInternalError(err)
 	}

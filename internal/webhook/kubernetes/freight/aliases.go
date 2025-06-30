@@ -18,7 +18,7 @@ func (w *webhook) getAvailableFreightAlias(
 		if err := w.client.List(
 			ctx,
 			&freight,
-			client.MatchingLabels{kargoapi.AliasLabelKey: alias},
+			client.MatchingLabels{kargoapi.LabelKeyAlias: alias},
 		); err != nil {
 			return "", fmt.Errorf(
 				"error checking for existence of Freight with alias %q: %w",

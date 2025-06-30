@@ -10,6 +10,7 @@ metadata:
 data:
   EXTERNAL_WEBHOOK_SERVER_BASE_URL: {{ include "kargo.externalWebhooksServer.baseURL" . }}
   KARGO_NAMESPACE: {{ .Release.Namespace }}
+  CLUSTER_SECRETS_NAMESPACE: {{ .Values.global.clusterSecretsNamespace }}
   {{- if .Values.controller.serviceAccount.clusterWideSecretReadingEnabled }}
   MANAGE_CONTROLLER_ROLE_BINDINGS: "false"
   {{- end }}
@@ -19,5 +20,6 @@ data:
   {{- end }}
   MAX_CONCURRENT_NAMESPACE_RECONCILES: {{ .Values.managementController.reconcilers.namespaces.maxConcurrentReconciles | default .Values.managementController.reconcilers.maxConcurrentReconciles | quote }}
   MAX_CONCURRENT_PROJECT_RECONCILES: {{ .Values.managementController.reconcilers.projects.maxConcurrentReconciles | default .Values.managementController.reconcilers.maxConcurrentReconciles | quote }}
+  MAX_CONCURRENT_PROJECT_CONFIG_RECONCILES: {{ .Values.managementController.reconcilers.projectConfigs.maxConcurrentReconciles | default .Values.managementController.reconcilers.maxConcurrentReconciles | quote }}
   MAX_CONCURRENT_SERVICE_ACCOUNT_RECONCILES: {{ .Values.managementController.reconcilers.serviceAccounts.maxConcurrentReconciles | default .Values.managementController.reconcilers.maxConcurrentReconciles | quote }}
 {{- end }}

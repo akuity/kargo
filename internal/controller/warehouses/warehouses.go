@@ -28,8 +28,9 @@ import (
 )
 
 type ReconcilerConfig struct {
-	ShardName               string `envconfig:"SHARD_NAME"`
-	MaxConcurrentReconciles int    `envconfig:"MAX_CONCURRENT_WAREHOUSE_RECONCILES" default:"4"`
+	ShardName                 string        `envconfig:"SHARD_NAME"`
+	MaxConcurrentReconciles   int           `envconfig:"MAX_CONCURRENT_WAREHOUSE_RECONCILES" default:"4"`
+	MinReconciliationInterval time.Duration `envconfig:"MIN_WAREHOUSE_RECONCILIATION_INTERVAL"`
 }
 
 func ReconcilerConfigFromEnv() ReconcilerConfig {
@@ -40,9 +41,9 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 
 // reconciler reconciles Warehouse resources.
 type reconciler struct {
-	client                     client.Client
-	credentialsDB              credentials.Database
-	imageSourceURLFnsByBaseURL map[string]func(string, string) string
+	client                    client.Client
+	credentialsDB             credentials.Database
+	minReconciliationInterval time.Duration
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -101,7 +102,7 @@ func SetupReconcilerWithManager(
 		).
 		WithEventFilter(shardPredicate).
 		WithOptions(controller.CommonOptions(cfg.MaxConcurrentReconciles)).
-		Complete(newReconciler(mgr.GetClient(), credentialsDB)); err != nil {
+		Complete(newReconciler(mgr.GetClient(), credentialsDB, cfg.MinReconciliationInterval)); err != nil {
 		return fmt.Errorf("error building Warehouse reconciler: %w", err)
 	}
 
@@ -116,16 +117,15 @@ func SetupReconcilerWithManager(
 func newReconciler(
 	kubeClient client.Client,
 	credentialsDB credentials.Database,
+	minReconciliationInterval time.Duration,
 ) *reconciler {
 	r := &reconciler{
-		client:                  kubeClient,
-		credentialsDB:           credentialsDB,
-		gitCloneFn:              git.Clone,
-		discoverChartVersionsFn: helm.DiscoverChartVersions,
-		imageSourceURLFnsByBaseURL: map[string]func(string, string) string{
-			githubURLPrefix: getGithubImageSourceURL,
-		},
-		createFreightFn: kubeClient.Create,
+		client:                    kubeClient,
+		credentialsDB:             credentialsDB,
+		minReconciliationInterval: minReconciliationInterval,
+		gitCloneFn:                git.Clone,
+		discoverChartVersionsFn:   helm.DiscoverChartVersions,
+		createFreightFn:           kubeClient.Create,
 	}
 
 	r.discoverArtifactsFn = r.discoverArtifacts
@@ -200,7 +200,9 @@ func (r *reconciler) Reconcile(
 	}
 
 	// Everything succeeded, look for new changes on the defined interval.
-	return ctrl.Result{RequeueAfter: getRequeueInterval(warehouse)}, nil
+	return ctrl.Result{
+		RequeueAfter: warehouse.GetInterval(r.minReconciliationInterval),
+	}, nil
 }
 
 func (r *reconciler) syncWarehouse(
@@ -697,21 +699,4 @@ func shouldDiscoverArtifacts(
 	default:
 		return false
 	}
-}
-
-// getRequeueInterval calculates and returns the time interval remaining until
-// the next requeue should occur. If the interval has already passed, it returns
-// a zero duration.
-func getRequeueInterval(warehouse *kargoapi.Warehouse) time.Duration {
-	if warehouse.Status.DiscoveredArtifacts == nil ||
-		warehouse.Status.DiscoveredArtifacts.DiscoveredAt.IsZero() {
-		return warehouse.Spec.Interval.Duration
-	}
-	interval := warehouse.Status.DiscoveredArtifacts.DiscoveredAt.
-		Add(warehouse.Spec.Interval.Duration).
-		Sub(metav1.Now().Time)
-	if interval < 0 {
-		return 0
-	}
-	return interval
 }
