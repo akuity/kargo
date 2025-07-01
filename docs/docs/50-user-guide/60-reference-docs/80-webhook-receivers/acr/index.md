@@ -130,7 +130,7 @@ the screen.
 
     1. Click <Hlt>Refresh</Hlt>.
 
-    ![Ping](./img/ping.png "Ping")
+       ![Ping](./img/ping.png "Ping")
 
     1. Confirm a 200 <Hlt>Http Status</Hlt> for the <Hlt>Ping</Hlt> action.
 
