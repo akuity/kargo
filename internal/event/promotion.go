@@ -96,12 +96,17 @@ func NewPromotionAnnotations(
 		if err != nil {
 			logger.Error(err, "marshal ArgoCD apps in JSON")
 		} else {
-			result := string(data)
+			var result string
 			env := map[string]any{
 				"ctx": map[string]any{
 					"project":   p.GetNamespace(),
 					"promotion": p.GetName(),
 					"stage":     p.Spec.Stage,
+					"meta": map[string]any{
+						"promotion": map[string]any{
+							"actor": p.Annotations[kargoapi.AnnotationKeyCreateActor],
+						},
+					},
 				},
 				"vars": func() map[string]any {
 					vars := map[string]any{}
@@ -111,15 +116,32 @@ func NewPromotionAnnotations(
 					return vars
 				}(),
 			}
+
+			if f != nil {
+				targetFreight := map[string]any{
+					"name": f.Name,
+				}
+				if f.Origin.Name != "" {
+					targetFreight["origin"] = map[string]any{
+						"name": f.Origin.Name,
+					}
+				}
+				env["ctx"].(map[string]any)["targetFreight"] = targetFreight
+			}
+
 			if evaled, err := expressions.EvaluateTemplate(string(data), env); err == nil {
 				// may be the same string after evaluation
-				if _, ok := evaled.(string); !ok {
+				if v, ok := evaled.(string); !ok {
 					if evaledBytes, err := json.Marshal(evaled); err == nil {
 						result = string(evaledBytes)
 					}
+				} else {
+					result = v
 				}
 			}
-			annotations[kargoapi.AnnotationKeyEventApplications] = result
+			if result != "" {
+				annotations[kargoapi.AnnotationKeyEventApplications] = result
+			}
 		}
 	}
 

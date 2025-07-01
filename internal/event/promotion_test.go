@@ -16,10 +16,11 @@ import (
 
 func TestNewPromotionAnnotations(t *testing.T) {
 	testCases := map[string]struct {
-		actor     string
-		promotion *v1alpha1.Promotion
-		freight   *v1alpha1.Freight
-		expected  map[string]string
+		actor        string
+		promotion    *v1alpha1.Promotion
+		freight      *v1alpha1.Freight
+		expected     map[string]string
+		expectedFunc func(t *testing.T, result map[string]string)
 	}{
 		"promotion with freight and argocd apps": {
 			actor: "test-user",
@@ -123,6 +124,10 @@ func TestNewPromotionAnnotations(t *testing.T) {
     {
       "name": "${{ vars.argocdApp }}-${{ ctx.stage }}",
       "namespace": "${{ vars.appNamespace }}"
+    },
+    {
+      "name": "${{ ctx.promotion }}-${{ ctx.meta.promotion.actor }}",
+      "namespace": "${{ ctx.targetFreight.name }}-${{ ctx.targetFreight.origin.name }}"
     }
   ]
 }`)},
@@ -153,7 +158,46 @@ func TestNewPromotionAnnotations(t *testing.T) {
 				v1alpha1.AnnotationKeyEventFreightCreateTime:   "2024-10-22T00:00:00Z",
 				v1alpha1.AnnotationKeyEventApplications: `[{"name":"kargo-demo-test","namespace":"argocd"},` +
 					`{"name":"my-application","namespace":"argocd"},` +
-					`{"name":"my-application-test","namespace":"test-namespace"}]`,
+					`{"name":"my-application-test","namespace":"test-namespace"},` +
+					`{"name":"test-promotion-admin","namespace":"test-freight-test-warehouse"}]`,
+			},
+		},
+		"template evaluation failure - graceful failing": {
+			actor: "test-user",
+			promotion: &v1alpha1.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-promotion",
+					Namespace: "test-namespace",
+					CreationTimestamp: metav1.Time{
+						Time: time.Date(2024, 10, 22, 0, 0, 0, 0, time.UTC),
+					},
+				},
+				Spec: v1alpha1.PromotionSpec{
+					Freight: "test-freight",
+					Stage:   "test-stage",
+					Steps: []v1alpha1.PromotionStep{
+						{
+							Uses: "argocd-update",
+							Config: &v1.JSON{Raw: []byte(`{
+  "apps": [{"name": "${{ invalid.template.syntax }}"}]
+}`)},
+						},
+					},
+				},
+			},
+			freight: &v1alpha1.Freight{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-freight",
+					CreationTimestamp: metav1.Time{
+						Time: time.Date(2024, 10, 22, 0, 0, 0, 0, time.UTC),
+					},
+				},
+				Origin: v1alpha1.FreightOrigin{
+					Name: "test-warehouse",
+				},
+			},
+			expectedFunc: func(t *testing.T, result map[string]string) {
+				require.NotContains(t, result, v1alpha1.AnnotationKeyEventApplications)
 			},
 		},
 	}
@@ -161,6 +205,10 @@ func TestNewPromotionAnnotations(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			result := NewPromotionAnnotations(context.TODO(), tc.actor, tc.promotion, tc.freight)
+			if tc.expectedFunc != nil {
+				tc.expectedFunc(t, result)
+				return
+			}
 			require.Equal(t, len(tc.expected), len(result), "Number of annotations doesn't match")
 			for key, expectedValue := range tc.expected {
 				if key == v1alpha1.AnnotationKeyEventApplications {
