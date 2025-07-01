@@ -17,6 +17,7 @@ func (s *server) DeleteAnalysisTemplate(
 	req *connect.Request[svcv1alpha1.DeleteAnalysisTemplateRequest],
 ) (*connect.Response[svcv1alpha1.DeleteAnalysisTemplateResponse], error) {
 	if !s.cfg.RolloutsIntegrationEnabled {
+		// nolint:staticcheck
 		return nil, connect.NewError(
 			connect.CodeUnimplemented,
 			errors.New("Argo Rollouts integration is not enabled"),

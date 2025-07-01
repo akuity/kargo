@@ -79,7 +79,7 @@ func TestQueryFreight(t *testing.T) {
 				var connErr *connect.Error
 				require.True(t, errors.As(err, &connErr))
 				require.Equal(t, connect.CodeInvalidArgument, connErr.Code())
-				require.Equal(t, "Invalid group by: bogus-group-by", connErr.Message())
+				require.Equal(t, "invalid group by: bogus-group-by", connErr.Message())
 			},
 		},
 

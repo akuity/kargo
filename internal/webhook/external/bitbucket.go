@@ -65,8 +65,7 @@ func (b *bitbucketWebhookReceiver) getSecretValues(
 ) ([]string, error) {
 	secretValue, ok := secretData[bitbucketSecretDataKey]
 	if !ok {
-		return nil,
-			errors.New("Secret data is not valid for a Bitbucket WebhookReceiver")
+		return nil, fmt.Errorf("missing data key %q for Bitbucket WebhookReceiver", bitbucketSecretDataKey)
 	}
 	return []string{string(secretValue)}, nil
 }

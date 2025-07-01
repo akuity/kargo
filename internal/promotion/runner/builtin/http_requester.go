@@ -289,7 +289,7 @@ func (h *httpRequester) buildExprEnv(
 			"body":    map[string]any{},
 		},
 	}
-	contentType, _, err := mime.ParseMediaType(resp.Header.Get(contentTypeHeader))
+	contentType, _, _ := mime.ParseMediaType(resp.Header.Get(contentTypeHeader))
 	if len(bodyBytes) > 0 && contentType == contentTypeJSON {
 		var parsedBody any
 		if err := json.Unmarshal(bodyBytes, &parsedBody); err != nil {
@@ -299,7 +299,7 @@ func (h *httpRequester) buildExprEnv(
 		// Unmarshal into map[string]any or []any
 		switch parsedBody.(type) {
 		case map[string]any, []any:
-			env["response"].(map[string]any)["body"] = parsedBody
+			env["response"].(map[string]any)["body"] = parsedBody // nolint: forcetypeassert
 		default:
 			return nil, fmt.Errorf("unexpected type when unmarshaling response: %T", parsedBody)
 		}

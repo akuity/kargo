@@ -66,6 +66,7 @@ func (s *server) GetFreight(
 			return nil, err
 		}
 		if len(ul.Items) == 0 {
+			// nolint:staticcheck
 			return nil, connect.NewError(
 				connect.CodeNotFound,
 				fmt.Errorf("Freight with alias %q not found in namespace %q", alias, project),
@@ -78,6 +79,7 @@ func (s *server) GetFreight(
 			Name:      name,
 		}, &u); err != nil {
 			if client.IgnoreNotFound(err) == nil {
+				// nolint:staticcheck
 				err = fmt.Errorf("Freight %q not found in namespace %q", name, project)
 				return nil, connect.NewError(connect.CodeNotFound, err)
 			}

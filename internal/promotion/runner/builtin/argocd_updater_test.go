@@ -15,7 +15,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/pkg/promotion"
@@ -360,7 +359,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					context.Context,
 					*promotion.StepContext,
 					client.ObjectKey,
-				) (*v1alpha1.Application, error) {
+				) (*argocd.Application, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
@@ -381,7 +380,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					context.Context,
 					*promotion.StepContext,
 					client.ObjectKey,
-				) (*v1alpha1.Application, error) {
+				) (*argocd.Application, error) {
 					return &argocd.Application{}, nil
 				},
 				mustPerformUpdateFn: func(
@@ -408,7 +407,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					context.Context,
 					*promotion.StepContext,
 					client.ObjectKey,
-				) (*v1alpha1.Application, error) {
+				) (*argocd.Application, error) {
 					return &argocd.Application{}, nil
 				},
 				buildDesiredSourcesFn: func(
@@ -450,7 +449,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					context.Context,
 					*promotion.StepContext,
 					client.ObjectKey,
-				) (*v1alpha1.Application, error) {
+				) (*argocd.Application, error) {
 					return &argocd.Application{}, nil
 				},
 				mustPerformUpdateFn: func(
@@ -477,7 +476,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					context.Context,
 					*promotion.StepContext,
 					client.ObjectKey,
-				) (*v1alpha1.Application, error) {
+				) (*argocd.Application, error) {
 					return &argocd.Application{}, nil
 				},
 				mustPerformUpdateFn: func(
@@ -504,7 +503,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					context.Context,
 					*promotion.StepContext,
 					client.ObjectKey,
-				) (*v1alpha1.Application, error) {
+				) (*argocd.Application, error) {
 					return &argocd.Application{}, nil
 				},
 				mustPerformUpdateFn: func(
@@ -539,7 +538,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					context.Context,
 					*promotion.StepContext,
 					client.ObjectKey,
-				) (*v1alpha1.Application, error) {
+				) (*argocd.Application, error) {
 					return &argocd.Application{}, nil
 				},
 				mustPerformUpdateFn: func(
@@ -582,7 +581,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					context.Context,
 					*promotion.StepContext,
 					client.ObjectKey,
-				) (*v1alpha1.Application, error) {
+				) (*argocd.Application, error) {
 					return &argocd.Application{}, nil
 				},
 				mustPerformUpdateFn: func() func(
@@ -635,7 +634,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					context.Context,
 					*promotion.StepContext,
 					client.ObjectKey,
-				) (*v1alpha1.Application, error) {
+				) (*argocd.Application, error) {
 					return &argocd.Application{}, nil
 				},
 				mustPerformUpdateFn: func(
@@ -661,7 +660,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					context.Context,
 					*promotion.StepContext,
 					client.ObjectKey,
-				) (*v1alpha1.Application, error) {
+				) (*argocd.Application, error) {
 					return &argocd.Application{}, nil
 				},
 				mustPerformUpdateFn: func(

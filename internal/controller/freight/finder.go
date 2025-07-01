@@ -52,6 +52,7 @@ func FindCommit(
 				)
 			}
 			if warehouse == nil {
+				// nolint:staticcheck
 				return nil, fmt.Errorf(
 					"Warehouse %q not found in namespace %q",
 					requestedFreight.Origin.Name, project,
@@ -121,6 +122,7 @@ func FindImage(
 				return nil, err
 			}
 			if warehouse == nil {
+				// nolint:staticcheck
 				return nil, fmt.Errorf(
 					"Warehouse %q not found in namespace %q",
 					requestedFreight.Origin.Name, project,
@@ -184,6 +186,7 @@ func HasAmbiguousImageRequest(
 			return false, err
 		}
 		if warehouse == nil {
+			// nolint:staticcheck
 			return false, fmt.Errorf(
 				"Warehouse %q not found in namespace %q",
 				requestedFreight.Origin.Name, project,
@@ -235,6 +238,7 @@ func FindChart(
 				return nil, err
 			}
 			if warehouse == nil {
+				// nolint:staticcheck
 				return nil, fmt.Errorf(
 					"Warehouse %q not found in namespace %q",
 					requestedFreight.Origin.Name, project,

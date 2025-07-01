@@ -17,6 +17,7 @@ func (s *server) DeleteClusterAnalysisTemplate(
 	req *connect.Request[svcv1alpha1.DeleteClusterAnalysisTemplateRequest],
 ) (*connect.Response[svcv1alpha1.DeleteClusterAnalysisTemplateResponse], error) {
 	if !s.cfg.RolloutsIntegrationEnabled {
+		// nolint:staticcheck
 		return nil, connect.NewError(
 			connect.CodeUnimplemented,
 			errors.New("Argo Rollouts integration is not enabled"),

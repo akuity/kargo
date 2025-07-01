@@ -9,7 +9,6 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/akuity/kargo/api/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
 	xhttp "github.com/akuity/kargo/internal/http"
@@ -48,7 +47,7 @@ func refreshWarehouses(
 			listOpts = append(listOpts, client.InNamespace(project))
 		}
 
-		ws := v1alpha1.WarehouseList{}
+		ws := kargoapi.WarehouseList{}
 		if err := c.List(ctx, &ws, listOpts...); err != nil {
 			repoLogger.Error(err, "error listing subscribed Warehouses")
 			xhttp.WriteErrorJSON(w, err)
