@@ -302,8 +302,8 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				require.Equal(t, kargoapi.HealthStateUnhealthy, stageHealth)
 				require.Equal(t, testApp.Namespace, appStatus.Namespace)
 				require.Equal(t, testApp.Name, appStatus.Name)
-				require.Equal(t, argocd.HealthStatusHealthy, appStatus.ApplicationStatus.Health.Status)
-				require.Equal(t, argocd.SyncStatusCodeSynced, appStatus.ApplicationStatus.Sync.Status)
+				require.Equal(t, argocd.HealthStatusHealthy, appStatus.Health.Status)
+				require.Equal(t, argocd.SyncStatusCodeSynced, appStatus.Sync.Status)
 			},
 		},
 		{
@@ -327,8 +327,8 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				require.Equal(t, kargoapi.HealthStateHealthy, stageHealth)
 				require.Equal(t, testApp.Namespace, appStatus.Namespace)
 				require.Equal(t, testApp.Name, appStatus.Name)
-				require.Equal(t, argocd.HealthStatusHealthy, appStatus.ApplicationStatus.Health.Status)
-				require.Equal(t, argocd.SyncStatusCodeSynced, appStatus.ApplicationStatus.Sync.Status)
+				require.Equal(t, argocd.HealthStatusHealthy, appStatus.Health.Status)
+				require.Equal(t, argocd.SyncStatusCodeSynced, appStatus.Sync.Status)
 			},
 		},
 		{
@@ -358,8 +358,8 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				require.Equal(t, kargoapi.HealthStateUnhealthy, stageHealth)
 				require.Equal(t, testApp.Namespace, appStatus.Namespace)
 				require.Equal(t, testApp.Name, appStatus.Name)
-				require.Equal(t, argocd.HealthStatusHealthy, appStatus.ApplicationStatus.Health.Status)
-				require.Equal(t, argocd.SyncStatusCodeSynced, appStatus.ApplicationStatus.Sync.Status)
+				require.Equal(t, argocd.HealthStatusHealthy, appStatus.Health.Status)
+				require.Equal(t, argocd.SyncStatusCodeSynced, appStatus.Sync.Status)
 			},
 		},
 		{
@@ -387,8 +387,8 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				require.Equal(t, kargoapi.HealthStateHealthy, stageHealth)
 				require.Equal(t, testApp.Namespace, appStatus.Namespace)
 				require.Equal(t, testApp.Name, appStatus.Name)
-				require.Equal(t, argocd.HealthStatusHealthy, appStatus.ApplicationStatus.Health.Status)
-				require.Equal(t, argocd.SyncStatusCodeSynced, appStatus.ApplicationStatus.Sync.Status)
+				require.Equal(t, argocd.HealthStatusHealthy, appStatus.Health.Status)
+				require.Equal(t, argocd.SyncStatusCodeSynced, appStatus.Sync.Status)
 			},
 		},
 	}

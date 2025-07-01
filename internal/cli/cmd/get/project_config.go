@@ -77,7 +77,7 @@ kargo get projectconfig
 // command.
 func (o *getProjectConfigOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
-	o.PrintFlags.AddFlags(cmd)
+	o.AddFlags(cmd)
 
 	option.Project(
 		cmd.Flags(), &o.Project, o.Config.Project,

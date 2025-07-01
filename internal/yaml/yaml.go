@@ -107,9 +107,8 @@ func SetValuesInBytes(inBytes []byte, updates []Update) ([]byte, error) {
 					return nil, fmt.Errorf("%s: %w", errMsg, err)
 				}
 			}
-			if _, err := outBuf.WriteString(
-				fmt.Sprintf("%v", QuoteIfNecessary(change.value)),
-			); err != nil {
+			if _, err := fmt.Fprintf(outBuf,
+				"%v", QuoteIfNecessary(change.value)); err != nil {
 				return nil, fmt.Errorf("%s: %w", errMsg, err)
 			}
 			if _, err := outBuf.WriteString("\n"); err != nil {

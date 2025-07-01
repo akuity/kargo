@@ -189,8 +189,8 @@ func (r *ControlFlowStageReconciler) SetupWithManager(
 // Reconcile reconciles the given control flow Stage.
 func (r *ControlFlowStageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := logging.LoggerFromContext(ctx).WithValues(
-		"namespace", req.NamespacedName.Namespace,
-		"stage", req.NamespacedName.Name,
+		"namespace", req.Namespace,
+		"stage", req.Name,
 		"controlFlow", true,
 	)
 	ctx = logging.ContextWithLogger(ctx, logger)

@@ -74,7 +74,7 @@ kargo delete project my-project1 my-project2
 // command.
 func (o *deleteProjectOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
-	o.PrintFlags.AddFlags(cmd)
+	o.AddFlags(cmd)
 }
 
 // complete sets the options from the command arguments.
@@ -98,7 +98,7 @@ func (o *deleteProjectOptions) run(ctx context.Context) error {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	printer, err := o.PrintFlags.ToPrinter()
+	printer, err := o.ToPrinter()
 	if err != nil {
 		return fmt.Errorf("create printer: %w", err)
 	}
@@ -115,7 +115,7 @@ func (o *deleteProjectOptions) run(ctx context.Context) error {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: name,
 			},
-		}, o.IOStreams.Out)
+		}, o.Out)
 	}
 	return errors.Join(errs...)
 }

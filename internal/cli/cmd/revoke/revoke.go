@@ -81,7 +81,7 @@ kargo revoke --project=my-project --role=my-role \
 // addFlags adds the flags for the revoke options to the provided command.
 func (o *revokeOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
-	o.PrintFlags.AddFlags(cmd)
+	o.AddFlags(cmd)
 	option.Project(
 		cmd.Flags(), &o.Project, o.Config.Project,
 		"The project in which to manage a role. If not set, the default project will be used.",
@@ -170,10 +170,10 @@ func (o *revokeOptions) run(ctx context.Context) error {
 		return fmt.Errorf("revoke: %w", err)
 	}
 
-	printer, err := o.PrintFlags.ToPrinter()
+	printer, err := o.ToPrinter()
 	if err != nil {
 		return fmt.Errorf("new printer: %w", err)
 	}
 
-	return printer.PrintObj(resp.Msg.Role, o.IOStreams.Out)
+	return printer.PrintObj(resp.Msg.Role, o.Out)
 }

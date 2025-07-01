@@ -126,7 +126,7 @@ func (o *logsOptions) displayLogs(
 			return ctx.Err()
 		default:
 		}
-		_, _ = fmt.Fprint(o.IOStreams.Out, stream.Msg().Chunk)
+		_, _ = fmt.Fprint(o.Out, stream.Msg().Chunk)
 	}
 	if err := stream.Err(); err != nil {
 		return fmt.Errorf("receive logs: %w", err)

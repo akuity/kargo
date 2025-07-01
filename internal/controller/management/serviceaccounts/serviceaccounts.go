@@ -87,8 +87,8 @@ func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
 // move the current state of the cluster closer to the desired state.
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := logging.LoggerFromContext(ctx).WithValues(
-		"serviceAccount", req.NamespacedName.Name,
-		"serviceAccount.namespace", req.NamespacedName.Namespace,
+		"serviceAccount", req.Name,
+		"serviceAccount.namespace", req.Namespace,
 	)
 	ctx = logging.ContextWithLogger(ctx, logger)
 	logger.Debug("reconciling ServiceAccount")
@@ -102,7 +102,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 		return ctrl.Result{}, fmt.Errorf(
 			"error getting ServiceAccount %q in namespace %q: %w",
-			req.NamespacedName.Name, req.NamespacedName.Namespace, err,
+			req.Name, req.Namespace, err,
 		)
 	}
 

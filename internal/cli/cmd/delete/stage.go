@@ -78,7 +78,7 @@ kargo delete stage my-stage
 // addFlags adds the flags for the delete stage options to the provided command.
 func (o *deleteStageOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
-	o.PrintFlags.AddFlags(cmd)
+	o.AddFlags(cmd)
 
 	option.Project(cmd.Flags(), &o.Project, o.Config.Project,
 		"The Project for which to delete Stages. If not set, the default project will be used.")
@@ -112,7 +112,7 @@ func (o *deleteStageOptions) run(ctx context.Context) error {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	printer, err := o.PrintFlags.ToPrinter()
+	printer, err := o.ToPrinter()
 	if err != nil {
 		return fmt.Errorf("create printer: %w", err)
 	}
@@ -131,7 +131,7 @@ func (o *deleteStageOptions) run(ctx context.Context) error {
 				Name:      name,
 				Namespace: o.Project,
 			},
-		}, o.IOStreams.Out)
+		}, o.Out)
 	}
 	return errors.Join(errs...)
 }

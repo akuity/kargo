@@ -728,7 +728,7 @@ func TestEphemeralDependencyManager_setupRepositories(t *testing.T) {
 
 				// Verify an entry exists for the OCI host
 				ociHost := hostForRepositoryURL(ociServer)
-				entry, err := em.authorizer.Store.Get(context.Background(), ociHost)
+				entry, err := em.authorizer.Get(context.Background(), ociHost)
 				assert.NoError(t, err)
 				assert.NotNil(t, entry)
 			},
@@ -819,7 +819,7 @@ func TestEphemeralDependencyManager_setupRepositories(t *testing.T) {
 
 				// Verify an entry exists for the OCI host
 				ociHost := hostForRepositoryURL(ociServer)
-				entry, err := em.authorizer.Store.Get(context.Background(), ociHost)
+				entry, err := em.authorizer.Get(context.Background(), ociHost)
 				assert.NoError(t, err)
 				assert.NotNil(t, entry)
 			},

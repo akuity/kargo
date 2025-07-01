@@ -96,7 +96,7 @@ kargo get role dev
 // addFlags adds the flags for the get roles options to the provided command.
 func (o *getRolesOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
-	o.PrintFlags.AddFlags(cmd)
+	o.AddFlags(cmd)
 
 	option.Project(
 		cmd.Flags(), &o.Project, o.Config.Project,
@@ -204,9 +204,9 @@ func newRoleTable(list *metav1.List) *metav1.Table {
 		role := item.Object.(*rbacapi.Role) // nolint: forcetypeassert
 		rows[i] = metav1.TableRow{
 			Cells: []any{
-				role.ObjectMeta.Name,
+				role.Name,
 				role.KargoManaged,
-				duration.HumanDuration(time.Since(role.ObjectMeta.CreationTimestamp.Time)),
+				duration.HumanDuration(time.Since(role.CreationTimestamp.Time)),
 			},
 			Object: list.Items[i],
 		}

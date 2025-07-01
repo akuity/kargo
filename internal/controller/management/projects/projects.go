@@ -226,12 +226,12 @@ func (r *reconciler) Reconcile(
 	req ctrl.Request,
 ) (ctrl.Result, error) {
 	logger := logging.LoggerFromContext(ctx).WithValues(
-		"project", req.NamespacedName.Name,
+		"project", req.Name,
 	)
 	ctx = logging.ContextWithLogger(ctx, logger)
 
 	// Find the Project
-	project, err := r.getProjectFn(ctx, r.client, req.NamespacedName.Name)
+	project, err := r.getProjectFn(ctx, r.client, req.Name)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

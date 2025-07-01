@@ -79,7 +79,7 @@ kargo delete credentials my-credentials`),
 // command.
 func (o *deleteCredentialsOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
-	o.PrintFlags.AddFlags(cmd)
+	o.AddFlags(cmd)
 
 	option.Project(
 		cmd.Flags(), &o.Project, o.Config.Project,
@@ -115,7 +115,7 @@ func (o *deleteCredentialsOptions) run(ctx context.Context) error {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	printer, err := o.PrintFlags.ToPrinter()
+	printer, err := o.ToPrinter()
 	if err != nil {
 		return fmt.Errorf("create printer: %w", err)
 	}
@@ -141,7 +141,7 @@ func (o *deleteCredentialsOptions) run(ctx context.Context) error {
 					Namespace: o.Project,
 				},
 			},
-			o.IOStreams.Out,
+			o.Out,
 		)
 	}
 	return errors.Join(errs...)

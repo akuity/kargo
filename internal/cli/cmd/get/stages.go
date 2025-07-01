@@ -95,7 +95,7 @@ kargo get stage qa
 // addFlags adds the flags for the get stages options to the provided command.
 func (o *getStagesOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
-	o.PrintFlags.AddFlags(cmd)
+	o.AddFlags(cmd)
 
 	option.Project(
 		cmd.Flags(), &o.Project, o.Config.Project,

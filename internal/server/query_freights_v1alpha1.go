@@ -287,7 +287,7 @@ func sortFreightGroups(orderBy string, reverse bool, groups map[string]*svcv1alp
 					return strings.Compare(lhsTag, rhsTag)
 				}
 			}
-			return lhs.CreationTimestamp.Time.Compare(rhs.CreationTimestamp.Time)
+			return lhs.CreationTimestamp.Compare(rhs.CreationTimestamp.Time)
 		})
 		if reverse {
 			slices.Reverse(groups[k].Freight)

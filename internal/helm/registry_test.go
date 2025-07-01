@@ -54,10 +54,10 @@ func TestNewEphemeralAuthorizer(t *testing.T) {
 	assert.NotNil(t, authorizer.Client)
 	assert.NotNil(t, authorizer.Store)
 	assert.NotNil(t, authorizer.Client.Client)
-	assert.NotNil(t, authorizer.Client.Cache)
-	assert.NotNil(t, authorizer.Client.Credential)
+	assert.NotNil(t, authorizer.Cache)
+	assert.NotNil(t, authorizer.Credential)
 
 	// Verify the user agent is set correctly
 	expectedUserAgent := "Kargo/" + version.GetVersion().Version
-	assert.Contains(t, authorizer.Client.Header.Get("User-Agent"), expectedUserAgent)
+	assert.Contains(t, authorizer.Header.Get("User-Agent"), expectedUserAgent)
 }
