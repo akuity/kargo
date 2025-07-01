@@ -111,7 +111,7 @@ kubectl get projectconfigs kargo-demo \
 
    ![Select Repos](./img/select-repos.png "Select Repos")
 
-1. Check any boxes corresponding to repositores this applies to.
+1. Check any boxes corresponding to repositories this applies to.
 
 1. Click <Hlt>></Hlt> to move selected repositores into the selected window.
 
