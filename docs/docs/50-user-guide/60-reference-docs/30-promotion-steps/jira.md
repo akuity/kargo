@@ -6,23 +6,23 @@ description: Integrates with Jira to manage issues, comments, and track promotio
 # `jira`
 
 :::info Enterprise Feature
-This extension is only available in Akuity Promote, you can use this feature in Kargo v1.6+ offered on [Akuity Platform](https://akuity.io/akuity-platform).
+This promotion step is only available in Akuity Promote, you can use this feature in Kargo v1.6+ offered on [Akuity Platform](https://akuity.io/akuity-platform).
 :::
 
-The `jira` extension provides comprehensive integration with Jira, allowing you to create, update, delete, and search for issues, manage comments, and track promotion workflows. This extension is particularly useful for maintaining traceability between your deployment processes and project management activities.
+The `jira` promotion step provides comprehensive integration with Jira, allowing you to create, update, delete, and search for issues, manage comments, and track promotion workflows. This is particularly useful for maintaining traceability between your deployment processes and project management activities.
 
-The extension supports various operations including issue management, comment handling, and status tracking, making it a powerful tool for promotion workflows that require coordination with project management systems.
+This promotion step supports various operations including issue management, comment handling, and status tracking, making it a powerful tool for promotion workflows that require coordination with project management systems.
 
 ## Credentials Configuration
 
-All Jira operations require proper authentication credentials stored in a Kubernetes secret.
+All Jira operations require proper authentication credentials stored in a Kubernetes `Secret`.
 
 | Name                     | Type     | Required | Description                                                                                                                |
 | ------------------------ | -------- | -------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `credentials.secretName` | `string` | Y        | Name of the secret containing the Jira credentials.                                                                        |
-| `credentials.namespace`  | `string` | N        | Namespace for the credentials secret. Can be project or cluster secret namespace. If empty, the project namespace is used. |
+| `credentials.secretName` | `string` | Y        | Name of the `Secret` containing the Jira credentials.                                                                        |
+| `credentials.namespace`  | `string` | N        | Namespace for the credentials `Secret`. Can be project or cluster secret namespace. If empty, the project namespace is used. |
 
-The referenced secret should contain the following keys:
+The referenced `Secret` should contain the following keys:
 
 - `domain`: The domain of your Jira instance or Jira api (e.g., `https://yourcompany.atlassian.net`)
 - `username`: Your Jira username or email
@@ -64,29 +64,29 @@ This example creates a new Jira issue to track a deployment, assigns it to a tea
 
 ```yaml
 steps:
-  - uses: jira
-    as: create-deployment-issue
-    config:
-      credentials:
-        secretName: jira-credentials
-      createIssue:
-        projectKey: DEPLOY
-        summary: "Deploy ${{ imageFrom(vars.imageRepo).Tag }} to ${{ ctx.stage.name }}"
-        description: "Deploying ${{ imageFrom(vars.imageRepo).RepoURL }}:${{ imageFrom(vars.imageRepo).Tag }} to ${{ ctx.stage.name }} environment. Promotion ID: ${{ ctx.promotion.name }}. Freight: ${{ ctx.targetFreight.name }}."
-        issueType: Task
-        assigneeEmail: devops@company.com
-        labels:
-          - deployment
-          - "${{ ctx.stage.name }}"
-          - "release-${{ imageFrom(vars.imageRepo).Tag }}"
-  # Use the created issue key in subsequent steps
-  - uses: jira
-    config:
-      credentials:
-        secretName: jira-credentials
-      updateIssue:
-        issueKey: "${{ outputs['create-deployment-issue'].key }}"
-        status: "IN PROGRESS"
+- uses: jira
+  as: create-deployment-issue
+  config:
+    credentials:
+      secretName: jira-credentials
+    createIssue:
+      projectKey: DEPLOY
+      summary: "Deploy ${{ imageFrom(vars.imageRepo).Tag }} to ${{ ctx.stage.name }}"
+      description: "Deploying ${{ imageFrom(vars.imageRepo).RepoURL }}:${{ imageFrom(vars.imageRepo).Tag }} to ${{ ctx.stage.name }} environment. Promotion ID: ${{ ctx.promotion.name }}. Freight: ${{ ctx.targetFreight.name }}."
+      issueType: Task
+      assigneeEmail: devops@company.com
+      labels:
+      - deployment
+      - "${{ ctx.stage.name }}"
+      - "release-${{ imageFrom(vars.imageRepo).Tag }}"
+# Use the created issue key in subsequent steps
+- uses: jira
+  config:
+    credentials:
+      secretName: jira-credentials
+    updateIssue:
+      issueKey: "${{ outputs['create-deployment-issue'].key }}"
+      status: "IN PROGRESS"
 ```
 
 ### Update Issue
@@ -118,20 +118,20 @@ This example updates an existing issue's status and adds a comment with deployme
 
 ```yaml
 steps:
-  - uses: jira
-    config:
-      credentials:
-        secretName: jira-credentials
-      updateIssue:
-        issueKey: DEPLOY-123
-        status: "IN PROGRESS"
-        summary: "Deploy ${{ imageFrom(vars.imageRepo).Tag }} to ${{ ctx.stage.name }} - IN PROGRESS"
-        addLabels:
-          - deploying
-          - "${{ ctx.stage.name }}-deployment"
-        customFields:
-          customfield_10000: "${{ ctx.stage.name }} Environment"
-          customfield_10001: "${{ ctx.promotion.name }}"
+- uses: jira
+  config:
+    credentials:
+      secretName: jira-credentials
+    updateIssue:
+      issueKey: DEPLOY-123
+      status: "IN PROGRESS"
+      summary: "Deploy ${{ imageFrom(vars.imageRepo).Tag }} to ${{ ctx.stage.name }} - IN PROGRESS"
+      addLabels:
+      - deploying
+      - "${{ ctx.stage.name }}-deployment"
+      customFields:
+        customfield_10000: "${{ ctx.stage.name }} Environment"
+        customfield_10001: "${{ ctx.promotion.name }}"
 ```
 
 ### Delete Issue
@@ -155,13 +155,13 @@ This example deletes a Jira issue and all its subtasks when a deployment is roll
 
 ```yaml
 steps:
-  - uses: jira
-    config:
-      credentials:
-        secretName: jira-credentials
-      deleteIssue:
-        issueKey: "${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}"
-        deleteSubtasks: true
+- uses: jira
+  config:
+    credentials:
+      secretName: jira-credentials
+    deleteIssue:
+      issueKey: "${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}"
+      deleteSubtasks: true
 ```
 
 ### Search Issues
@@ -189,22 +189,22 @@ This example searches for open deployment issues in a specific project and expec
 
 ```yaml
 steps:
-  - uses: jira
-    as: find-open-deployments
-    config:
-      credentials:
-        secretName: jira-credentials
-      searchIssue:
-        jql: 'project = DEPLOY AND status != "Done" AND labels = "${{ ctx.stage.name }}-deployment" AND created >= -7d'
-        expectMultiple: true
-        fields:
-          - summary
-          - status
-          - assignee
-          - created
-        expands:
-          - changelog
-  # Use search results in subsequent steps to notify team
+- uses: jira
+  as: find-open-deployments
+  config:
+    credentials:
+      secretName: jira-credentials
+    searchIssue:
+      jql: 'project = DEPLOY AND status != "Done" AND labels = "${{ ctx.stage.name }}-deployment" AND created >= -7d'
+      expectMultiple: true
+      fields:
+      - summary
+      - status
+      - assignee
+      - created
+      expands:
+      - changelog
+# Use search results in subsequent steps to notify team
 # Note: This is just an example of using search outputs and may not be syntactically valid
 - uses: http
   config:
@@ -248,22 +248,22 @@ This example adds a comment to a Jira issue with deployment progress information
 
 ```yaml
 steps:
-  - uses: jira
-    as: add-progress-comment
-    config:
-      credentials:
-        secretName: jira-credentials
-      commentOnIssue:
-        issueKey: "${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}"
-        body: "Deployment started at ${{ ctx.promotion.creationTimestamp }}. Environment: ${{ ctx.stage.name }}. Image: ${{ imageFrom(vars.imageRepo).RepoURL }}:${{ imageFrom(vars.imageRepo).Tag }}. Promotion: ${{ ctx.promotion.name }}. Status: Deploying to ${{ ctx.stage.name }} environment..."
-  # Later use the comment ID if needed
-  - uses: jira
-    config:
-      credentials:
-        secretName: jira-credentials
-      deleteComment:
-        issueKey: "${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}"
-        commentID: "${{ outputs['add-progress-comment'].commentID }}"
+- uses: jira
+  as: add-progress-comment
+  config:
+    credentials:
+      secretName: jira-credentials
+    commentOnIssue:
+      issueKey: "${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}"
+      body: "Deployment started at ${{ ctx.promotion.creationTimestamp }}. Environment: ${{ ctx.stage.name }}. Image: ${{ imageFrom(vars.imageRepo).RepoURL }}:${{ imageFrom(vars.imageRepo).Tag }}. Promotion: ${{ ctx.promotion.name }}. Status: Deploying to ${{ ctx.stage.name }} environment..."
+# Later use the comment ID if needed
+- uses: jira
+  config:
+    credentials:
+      secretName: jira-credentials
+    deleteComment:
+      issueKey: "${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}"
+      commentID: "${{ outputs['add-progress-comment'].commentID }}"
 ```
 
 ### Delete Comment
@@ -287,13 +287,13 @@ This example deletes a specific comment from a Jira issue.
 
 ```yaml
 steps:
-  - uses: jira
-    config:
-      credentials:
-        secretName: jira-credentials
-      deleteComment:
-        issueKey: "${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}"
-        commentID: "${{ outputs['previous-comment-step'].commentID }}"
+- uses: jira
+  config:
+    credentials:
+      secretName: jira-credentials
+    deleteComment:
+      issueKey: "${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}"
+      commentID: "${{ outputs['previous-comment-step'].commentID }}"
 ```
 
 ## Status Tracking
@@ -319,29 +319,29 @@ This example waits for a change request issue to be approved before proceeding w
 
 ```yaml
 steps:
-  - uses: jira
-    config:
-      credentials:
-        secretName: jira-credentials
-      waitForStatus:
-        issueKey: "${{ freightMetadata(ctx.targetFreight.name, 'change-request-key') }}"
-        expectedStatus: "Approved"
-  # Deployment steps continue after approval...
-  - uses: helm-template
-    config:
-      path: ./charts
-      vars:
-        imageTag: "${{ imageFrom(vars.imageRepo).Tag }}"
-        environment: "${{ ctx.stage.name }}"
+- uses: jira
+  config:
+    credentials:
+      secretName: jira-credentials
+    waitForStatus:
+      issueKey: "${{ freightMetadata(ctx.targetFreight.name, 'change-request-key') }}"
+      expectedStatus: "Approved"
+# Deployment steps continue after approval...
+- uses: helm-template
+  config:
+    path: ./charts
+    vars:
+      imageTag: "${{ imageFrom(vars.imageRepo).Tag }}"
+      environment: "${{ ctx.stage.name }}"
 ```
 
-## Freight Metadata Integration
+## Multi-Stage Workflow
 
-The Jira extension automatically stores created issue keys in the Freight metadata, allowing subsequent stages to reference the same issue. This enables tracking a single Jira issue across multiple promotion stages.
+The Jira promotion step automatically stores created issue keys in the Freight metadata, allowing subsequent stages to reference the same issue. This enables tracking a single Jira issue across multiple promotion stages.
 
 ### Accessing Issue Keys from Freight Metadata
 
-Use the `freightMetadata` template function to retrieve issue keys stored by previous stages:
+Use the `freightMetadata()` template function to retrieve issue keys stored by previous stages:
 
 ```yaml
 # Access the default issue key
@@ -351,9 +351,9 @@ issueKey: ${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}
 issueKey: ${{ freightMetadata(ctx.targetFreight.name, 'my-custom-alias') }}
 ```
 
-## Multi-Stage Workflow Example
+### Example
 
-This comprehensive example demonstrates how to use the Jira extension across multiple stages in a promotion pipeline, tracking a single issue from creation through production deployment:
+This comprehensive example demonstrates how to use the Jira promotion step across multiple stages in a promotion pipeline, tracking a single issue from creation through production deployment:
 
 ```yaml
 ---
@@ -372,102 +372,102 @@ spec:
   promotionTemplate:
     spec:
       vars:
-        - name: imageRepo
-          value: public.ecr.aws/nginx/nginx
+      - name: imageRepo
+        value: public.ecr.aws/nginx/nginx
       steps:
         # Create initial deployment ticket
-        - as: create-deployment-ticket
-          uses: jira
-          config:
-            credentials:
-              secretName: jira
-            createIssue:
-              projectKey: KD
-              issueType: Task
-              summary: "Deploy Release ${{ imageFrom(vars.imageRepo).Tag }}"
-              assigneeEmail: "devops@company.com"
-              adfDescription:
-                type: doc
-                version: 1
+      - as: create-deployment-ticket
+        uses: jira
+        config:
+          credentials:
+            secretName: jira
+          createIssue:
+            projectKey: KD
+            issueType: Task
+            summary: "Deploy Release ${{ imageFrom(vars.imageRepo).Tag }}"
+            assigneeEmail: "devops@company.com"
+            adfDescription:
+              type: doc
+              version: 1
+              content:
+              - type: paragraph
                 content:
-                  - type: paragraph
-                    content:
-                      - type: text
-                        text: " "
-                  - type: heading
-                    attrs:
-                      level: 3
-                    content:
-                      - type: text
-                        text: "Automated deployment ticket for release "
-                      - type: text
-                        text: "${{ imageFrom(vars.imageRepo).Tag }}"
-                        marks:
-                          - type: code
-                  - type: paragraph
-                    content:
-                      - type: text
-                        text: "Image:"
-                        marks:
-                          - type: strong
-                      - type: text
-                        text: " "
-                      - type: text
-                        text: "${{ imageFrom(vars.imageRepo).RepoURL }}:${{ imageFrom(vars.imageRepo).Tag }}"
-                        marks:
-                          - type: code
-                  - type: paragraph
-                    content:
-                      - type: text
-                        text: "Project:"
-                        marks:
-                          - type: strong
-                      - type: text
-                        text: " "
-                      - type: text
-                        text: "${{ ctx.project }}"
-                        marks:
-                          - type: code
-              labels:
-                - "automated-deployment"
-                - "env-${{ ctx.stage.name }}"
-                - "release-${{ imageFrom(vars.imageRepo).Tag }}"
-                - "project-${{ ctx.project }}"
+                - type: text
+                  text: " "
+              - type: heading
+                attrs:
+                  level: 3
+                content:
+                - type: text
+                  text: "Automated deployment ticket for release "
+                - type: text
+                  text: "${{ imageFrom(vars.imageRepo).Tag }}"
+                  marks:
+                  - type: code
+              - type: paragraph
+                content:
+                - type: text
+                  text: "Image:"
+                  marks:
+                  - type: strong
+                - type: text
+                  text: " "
+                - type: text
+                  text: "${{ imageFrom(vars.imageRepo).RepoURL }}:${{ imageFrom(vars.imageRepo).Tag }}"
+                  marks:
+                  - type: code
+              - type: paragraph
+                content:
+                - type: text
+                  text: "Project:"
+                  marks:
+                  - type: strong
+                - type: text
+                  text: " "
+                - type: text
+                  text: "${{ ctx.project }}"
+                  marks:
+                  - type: code
+            labels:
+            - "automated-deployment"
+            - "env-${{ ctx.stage.name }}"
+            - "release-${{ imageFrom(vars.imageRepo).Tag }}"
+            - "project-${{ ctx.project }}"
 
-        # Update application
-        - as: update-app
-          uses: argocd-update
-          config:
-            apps:
-              - name: test-app
-                namespace: argocd
-                sources:
-                  - repoURL: https://github.com/company/app-config.git
-                    kustomize:
-                      images:
-                        - repoURL: public.ecr.aws/nginx/nginx
-                          tag: ${{ imageFrom("public.ecr.aws/nginx/nginx").Tag }}
+      # Update application
+      - as: update-app
+        uses: argocd-update
+        config:
+          apps:
+          - name: test-app
+            namespace: argocd
+            sources:
+            - repoURL: https://github.com/company/app-config.git
+              kustomize:
+                images:
+                - repoURL: public.ecr.aws/nginx/nginx
+                  tag: ${{ imageFrom("public.ecr.aws/nginx/nginx").Tag }}
 
-        # Add progress comment
-        - as: comment-on-ticket
-          uses: jira
-          config:
-            credentials:
-              secretName: jira
-            commentOnIssue:
-              issueKey: ${{ outputs['create-deployment-ticket'].key }}
-              body: "Release ${{ imageFrom(vars.imageRepo).Tag }} has been promoted to ${{ ctx.stage.name }} environment at ${{ ctx.promotion.creationTimestamp }}. Freight: ${{ ctx.targetFreight.name }}. Ready for testing."
+      # Add progress comment
+      - as: comment-on-ticket
+        uses: jira
+        config:
+          credentials:
+            secretName: jira
+          commentOnIssue:
+            issueKey: ${{ outputs['create-deployment-ticket'].key }}
+            body: "Release ${{ imageFrom(vars.imageRepo).Tag }} has been promoted to ${{ ctx.stage.name }} environment at ${{ ctx.promotion.creationTimestamp }}. Freight: ${{ ctx.targetFreight.name }}. Ready for testing."
 
-        # Cleanup on failure
-        - as: on-failure-cleanup-issue
-          uses: jira
-          if: ${{ failure() }}
-          config:
-            credentials:
-              secretName: jira
-            deleteIssue:
-              issueKey: ${{ outputs['create-deployment-ticket'].key }}
-              deleteSubtasks: true
+      # Cleanup on failure
+      - as: on-failure-cleanup-issue
+        uses: jira
+        if: ${{ failure() }}
+        config:
+          credentials:
+            secretName: jira
+          deleteIssue:
+            issueKey: ${{ outputs['create-deployment-ticket'].key }}
+            deleteSubtasks: true
 
 ---
 apiVersion: kargo.akuity.io/v1alpha1
@@ -477,76 +477,76 @@ metadata:
   namespace: kargo-proj
 spec:
   requestedFreight:
-    - origin:
-        kind: Warehouse
-        name: nginx
-      sources:
-        stages:
-          - test
+  - origin:
+      kind: Warehouse
+      name: nginx
+    sources:
+      stages:
+      - test
   promotionTemplate:
     spec:
       vars:
-        - name: imageRepo
-          value: public.ecr.aws/nginx/nginx
+      - name: imageRepo
+        value: public.ecr.aws/nginx/nginx
       steps:
-        # Wait for manual approval to proceed to staging
-        - as: wait-approval
-          uses: jira
-          config:
-            credentials:
-              secretName: jira
-            waitForStatus:
-              issueKey: ${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}
-              expectedStatus: STAGED
+      # Wait for manual approval to proceed to staging
+      - as: wait-approval
+        uses: jira
+        config:
+          credentials:
+            secretName: jira
+          waitForStatus:
+            issueKey: ${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}
+            expectedStatus: STAGED
 
-        # Update staging application
-        - as: update-app
-          uses: argocd-update
-          config:
-            apps:
-              - name: stage-app
-                namespace: argocd
-                sources:
-                  - repoURL: https://github.com/company/app-config.git
-                    kustomize:
-                      images:
-                        - repoURL: ${{ vars.imageRepo }}
-                          tag: ${{ imageFrom(vars.imageRepo).Tag }}
+      # Update staging application
+      - as: update-app
+        uses: argocd-update
+        config:
+          apps:
+            - name: stage-app
+              namespace: argocd
+              sources:
+              - repoURL: https://github.com/company/app-config.git
+                kustomize:
+                  images:
+                  - repoURL: ${{ vars.imageRepo }}
+                    tag: ${{ imageFrom(vars.imageRepo).Tag }}
 
-        # Update ticket with staging progress
-        - as: comment-on-ticket
-          uses: jira
-          config:
-            credentials:
-              secretName: jira
-            commentOnIssue:
-              issueKey: ${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}
-              body: "Release ${{ imageFrom(vars.imageRepo).Tag }} has been promoted to ${{ ctx.stage.name }} environment at ${{ ctx.promotion.creationTimestamp }}. Promotion: ${{ ctx.promotion.name }}. Status: Deployed and ready for staging validation."
+      # Update ticket with staging progress
+      - as: comment-on-ticket
+        uses: jira
+        config:
+          credentials:
+            secretName: jira
+          commentOnIssue:
+            issueKey: ${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}
+            body: "Release ${{ imageFrom(vars.imageRepo).Tag }} has been promoted to ${{ ctx.stage.name }} environment at ${{ ctx.promotion.creationTimestamp }}. Promotion: ${{ ctx.promotion.name }}. Status: Deployed and ready for staging validation."
 
-        # Update environment labels
-        - as: update-ticket-labels
-          uses: jira
-          config:
-            credentials:
-              secretName: jira
-            updateIssue:
-              issueKey: ${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}
-              removeLabels:
-                - "env-test"
-              addLabels:
-                - "env-${{ ctx.stage.name }}"
-                - "promotion-${{ ctx.promotion.name }}"
+      # Update environment labels
+      - as: update-ticket-labels
+        uses: jira
+        config:
+          credentials:
+            secretName: jira
+          updateIssue:
+            issueKey: ${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}
+            removeLabels:
+            - "env-test"
+            addLabels:
+            - "env-${{ ctx.stage.name }}"
+            - "promotion-${{ ctx.promotion.name }}"
 
-        # Cleanup comments on failure
-        - as: on-failure-cleanup-comment
-          uses: jira
-          if: ${{ failure() && status('comment-on-ticket') == 'Succeeded' }}
-          config:
-            credentials:
-              secretName: jira
-            deleteComment:
-              issueKey: ${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}
-              commentID: ${{ quote(outputs['comment-on-ticket'].commentID) }}
+      # Cleanup comments on failure
+      - as: on-failure-cleanup-comment
+        uses: jira
+        if: ${{ failure() && status('comment-on-ticket') == 'Succeeded' }}
+        config:
+          credentials:
+            secretName: jira
+          deleteComment:
+            issueKey: ${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}
+            commentID: ${{ quote(outputs['comment-on-ticket'].commentID) }}
 
 ---
 apiVersion: kargo.akuity.io/v1alpha1
@@ -556,89 +556,89 @@ metadata:
   namespace: kargo-proj
 spec:
   requestedFreight:
-    - origin:
-        kind: Warehouse
-        name: nginx
-      sources:
-        stages:
-          - stage
+  - origin:
+      kind: Warehouse
+      name: nginx
+    sources:
+      stages:
+      - stage
   promotionTemplate:
     spec:
       vars:
-        - name: imageRepo
-          value: public.ecr.aws/nginx/nginx
+      - name: imageRepo
+        value: public.ecr.aws/nginx/nginx
       steps:
         # Find the issue by searching for release label
-        - as: search-issue
-          uses: jira
-          config:
-            credentials:
-              secretName: jira
-            searchIssue:
-              jql: "created <= 1d and labels IN (release-${{ imageFrom(vars.imageRepo).Tag }}) ORDER BY created DESC"
-              expectMultiple: true
-              fields:
-                - key
+      - as: search-issue
+        uses: jira
+        config:
+          credentials:
+            secretName: jira
+          searchIssue:
+            jql: "created <= 1d and labels IN (release-${{ imageFrom(vars.imageRepo).Tag }}) ORDER BY created DESC"
+            expectMultiple: true
+            fields:
+              - key
 
-        # Wait for final production approval
-        - as: wait-approval
-          uses: jira
-          config:
-            credentials:
-              secretName: jira
-            waitForStatus:
-              issueKey: ${{ outputs['search-issue'].key }}
-              expectedStatus: RELEASED
+      # Wait for final production approval
+      - as: wait-approval
+        uses: jira
+        config:
+          credentials:
+            secretName: jira
+          waitForStatus:
+            issueKey: ${{ outputs['search-issue'].key }}
+            expectedStatus: RELEASED
 
-        # Deploy to production
-        - as: update-app
-          uses: argocd-update
-          config:
-            apps:
-              - name: prod-app
-                namespace: argocd
-                sources:
-                  - repoURL: https://github.com/company/app-config.git
-                    kustomize:
-                      images:
-                        - repoURL: public.ecr.aws/nginx/nginx
-                          tag: ${{ imageFrom("public.ecr.aws/nginx/nginx").Tag }}
+      # Deploy to production
+      - as: update-app
+        uses: argocd-update
+        config:
+          apps:
+            - name: prod-app
+              namespace: argocd
+              sources:
+              - repoURL: https://github.com/company/app-config.git
+                kustomize:
+                  images:
+                  - repoURL: public.ecr.aws/nginx/nginx
+                    tag: ${{ imageFrom("public.ecr.aws/nginx/nginx").Tag }}
 
-        # Add final completion comment
-        - as: comment-on-ticket
-          uses: jira
-          config:
-            credentials:
-              secretName: jira
-            commentOnIssue:
-              issueKey: ${{ outputs['search-issue'].key }}
-              body: "Release ${{ imageFrom(vars.imageRepo).Tag }} has been successfully promoted to ${{ ctx.stage.name }} environment at ${{ ctx.promotion.creationTimestamp }}. Deployment completed for promotion ${{ ctx.promotion.name }}. All systems operational and release is live!"
+      # Add final completion comment
+      - as: comment-on-ticket
+        uses: jira
+        config:
+          credentials:
+            secretName: jira
+          commentOnIssue:
+            issueKey: ${{ outputs['search-issue'].key }}
+            body: "Release ${{ imageFrom(vars.imageRepo).Tag }} has been successfully promoted to ${{ ctx.stage.name }} environment at ${{ ctx.promotion.creationTimestamp }}. Deployment completed for promotion ${{ ctx.promotion.name }}. All systems operational and release is live!"
 
-        # Update to production labels
-        - as: update-ticket-labels
-          uses: jira
-          config:
-            credentials:
-              secretName: jira
-            updateIssue:
-              issueKey: ${{ outputs['search-issue'].key }}
-              removeLabels:
-                - "env-stage"
-              addLabels:
-                - "env-${{ ctx.stage.name }}"
-                - "released-${{ imageFrom(vars.imageRepo).Tag }}"
-                - "promotion-${{ ctx.promotion.name }}"
+      # Update to production labels
+      - as: update-ticket-labels
+        uses: jira
+        config:
+          credentials:
+            secretName: jira
+          updateIssue:
+            issueKey: ${{ outputs['search-issue'].key }}
+            removeLabels:
+            - "env-stage"
+            addLabels:
+            - "env-${{ ctx.stage.name }}"
+            - "released-${{ imageFrom(vars.imageRepo).Tag }}"
+            - "promotion-${{ ctx.promotion.name }}"
 
-        # Cleanup on failure
-        - as: on-failure-cleanup-comment
-          uses: jira
-          if: ${{ failure() && status('comment-on-ticket') == 'Succeeded' }}
-          config:
-            credentials:
-              secretName: jira
-            deleteComment:
-              issueKey: ${{ outputs['search-issue'].key }}
-              commentID: ${{ quote(outputs['comment-on-ticket'].commentID) }}
+      # Cleanup on failure
+      - as: on-failure-cleanup-comment
+        uses: jira
+        if: ${{ failure() && status('comment-on-ticket') == 'Succeeded' }}
+        config:
+          credentials:
+            secretName: jira
+          deleteComment:
+            issueKey: ${{ outputs['search-issue'].key }}
+            commentID: ${{ quote(outputs['comment-on-ticket'].commentID) }}
 ```
 
 This multi-stage workflow demonstrates:
