@@ -91,8 +91,8 @@ kubectl get projectconfigs kargo-demo \
 
 1. Click on <Hlt>Webhooks</Hlt>.
 
-1. Now in your <Hlt>Webhooks dashboard</Hlt>, click <Hlt>Add</Hlt> at the top of 
-the screen.
+1. Now in your <Hlt>Webhooks dashboard</Hlt>, click <Hlt>Add</Hlt> at the top of
+   the screen.
 
     ![Webhooks](./img/webhooks.png "Webhooks")
 
