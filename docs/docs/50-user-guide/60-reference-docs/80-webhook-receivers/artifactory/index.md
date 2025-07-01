@@ -116,7 +116,7 @@ kubectl get projectconfigs kargo-demo \
 1. Click <Hlt>></Hlt> to move selected repositories into the selected window.
 
    :::info
-   Upon moving repositores to the selected section, the <Hlt>Save</Hlt> will
+   Upon moving repositories to the selected section, the <Hlt>Save</Hlt> will
    become enabled.
    :::
 
