@@ -15,6 +15,6 @@ export type Runner = {
   identifier: string;
   // UI helper
   // this accepts font-awesome icon
-  unstable_icons: IconDefinition[];
+  unstable_icons?: IconDefinition[];
   config: JSONSchema7;
 };

@@ -3,6 +3,7 @@ package promotions
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -15,10 +16,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
-	"github.com/akuity/kargo/api/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/directives"
 	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
+	"github.com/akuity/kargo/internal/promotion"
+	pkgPromotion "github.com/akuity/kargo/pkg/promotion"
 )
 
 var (
@@ -31,12 +32,12 @@ func TestNewPromotionReconciler(t *testing.T) {
 	r := newReconciler(
 		kubeClient,
 		&fakeevent.EventRecorder{},
-		&directives.FakeEngine{},
+		&promotion.MockEngine{},
 		ReconcilerConfig{},
 	)
 	require.NotNil(t, r.kargoClient)
 	require.NotNil(t, r.recorder)
-	require.NotNil(t, r.directivesEngine)
+	require.NotNil(t, r.promoEngine)
 	require.NotNil(t, r.getStageFn)
 	require.NotNil(t, r.promoteFn)
 }
@@ -53,7 +54,7 @@ func newFakeReconciler(
 	return newReconciler(
 		kargoClient,
 		recorder,
-		&directives.FakeEngine{},
+		&promotion.MockEngine{},
 		ReconcilerConfig{},
 	)
 }
@@ -62,8 +63,8 @@ func TestReconcile(t *testing.T) {
 	testCases := []struct {
 		name      string
 		promos    []client.Object
-		promoteFn func(context.Context, v1alpha1.Promotion,
-			*v1alpha1.Freight) (*kargoapi.PromotionStatus, error)
+		promoteFn func(context.Context, kargoapi.Promotion,
+			*kargoapi.Freight) (*kargoapi.PromotionStatus, error)
 		terminateFn             func(context.Context, *kargoapi.Promotion) error
 		promoToReconcile        *types.NamespacedName // if nil, uses the first of the promos
 		expectPromoteFnCalled   bool
@@ -217,7 +218,7 @@ func TestReconcile(t *testing.T) {
 				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhasePending, before),
 			},
 			promoToReconcile: &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo"},
-			promoteFn: func(_ context.Context, _ v1alpha1.Promotion, _ *v1alpha1.Freight) (*kargoapi.PromotionStatus, error) {
+			promoteFn: func(_ context.Context, _ kargoapi.Promotion, _ *kargoapi.Freight) (*kargoapi.PromotionStatus, error) {
 				panic("expected panic")
 			},
 		},
@@ -242,7 +243,7 @@ func TestReconcile(t *testing.T) {
 				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhasePending, before),
 			},
 			promoToReconcile: &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo"},
-			promoteFn: func(_ context.Context, _ v1alpha1.Promotion, _ *v1alpha1.Freight) (*kargoapi.PromotionStatus, error) {
+			promoteFn: func(_ context.Context, _ kargoapi.Promotion, _ *kargoapi.Freight) (*kargoapi.PromotionStatus, error) {
 				return nil, errors.New("expected error")
 			},
 		},
@@ -276,9 +277,9 @@ func TestReconcile(t *testing.T) {
 			promoteWasCalled := false
 			r.promoteFn = func(
 				ctx context.Context,
-				p v1alpha1.Promotion,
-				_ *v1alpha1.Stage,
-				f *v1alpha1.Freight,
+				p kargoapi.Promotion,
+				_ *kargoapi.Stage,
+				f *kargoapi.Freight,
 			) (*kargoapi.PromotionStatus, error) {
 				promoteWasCalled = true
 				if tc.promoteFn != nil {
@@ -361,7 +362,41 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, kargoapi.PromotionPhaseAborted, promo.Status.Phase)
 				require.Contains(t, promo.Status.Message, "terminated")
-				require.NotNil(t, now, promo.Status.FinishedAt)
+				require.NotNil(t, promo.Status.FinishedAt)
+
+				require.Len(t, recorder.Events, 1)
+				event := <-recorder.Events
+				require.Equal(t, kargoapi.EventReasonPromotionAborted, event.Reason)
+			},
+		},
+		{
+			name: "terminates running promotion",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					CreationTimestamp: now,
+					Name:              "fake-promo",
+					Namespace:         "fake-namespace",
+				},
+				Spec: kargoapi.PromotionSpec{
+					Stage: "fake-stage",
+				},
+				Status: kargoapi.PromotionStatus{
+					Phase:       kargoapi.PromotionPhaseRunning,
+					CurrentStep: 0,
+					StepExecutionMetadata: []kargoapi.StepExecutionMetadata{{
+						StartedAt: &now,
+						Status:    kargoapi.PromotionStepStatusRunning,
+					}},
+				},
+			},
+			assertions: func(t *testing.T, recorder *fakeevent.EventRecorder, promo *kargoapi.Promotion, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionPhaseAborted, promo.Status.Phase)
+				require.Contains(t, promo.Status.Message, "terminated")
+				require.NotNil(t, promo.Status.FinishedAt)
+
+				require.Equal(t, kargoapi.PromotionStepStatusAborted, promo.Status.StepExecutionMetadata[0].Status)
+				require.NotNil(t, promo.Status.StepExecutionMetadata[0].FinishedAt)
 
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
@@ -384,7 +419,7 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, kargoapi.PromotionPhaseAborted, promo.Status.Phase)
 				require.Contains(t, promo.Status.Message, "terminated")
-				require.NotNil(t, now, promo.Status.FinishedAt)
+				require.NotNil(t, promo.Status.FinishedAt)
 
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
@@ -459,6 +494,239 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 			req := tt.req
 			err := r.terminatePromotion(context.Background(), &req, tt.promo, tt.freight)
 			tt.assertions(t, recorder, tt.promo, err)
+		})
+	}
+}
+
+func Test_parseCreateActorAnnotation(t *testing.T) {
+	tests := []struct {
+		name  string
+		promo *kargoapi.Promotion
+		want  string
+	}{
+		{
+			name: "basic case",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-promo",
+					Namespace: "fake-namespace",
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyCreateActor: fmt.Sprintf(
+							"%s%s", kargoapi.EventActorEmailPrefix, "fake-actor",
+						),
+					},
+				},
+			},
+			want: "fake-actor",
+		},
+		{
+			name: "single element",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-promo",
+					Namespace: "fake-namespace",
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyCreateActor: kargoapi.EventActorAdmin,
+					},
+				},
+			},
+			want: kargoapi.EventActorAdmin,
+		},
+		{
+			name: "unknown actor",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-promo",
+					Namespace: "fake-namespace",
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyCreateActor: kargoapi.EventActorUnknown,
+					},
+				},
+			},
+			want: "",
+		},
+		{
+
+			name: "no annotation",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-promo",
+					Namespace: "fake-namespace",
+				},
+			},
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := parseCreateActorAnnotation(tt.promo)
+			require.Equal(t, tt.want, result)
+		})
+	}
+}
+
+func Test_calculateRequeueInterval(t *testing.T) {
+	testStepKindWithoutTimeout := "fake-step-without-timeout"
+	promotion.RegisterStepRunner(
+		&pkgPromotion.MockStepRunner{StepName: testStepKindWithoutTimeout},
+	)
+
+	testStepKindWithTimeout := "fake-step-with-timeout"
+	testTimeout := 10 * time.Minute
+	promotion.RegisterStepRunner(
+		pkgPromotion.NewRetryableStepRunner(
+			&pkgPromotion.MockStepRunner{StepName: testStepKindWithTimeout},
+			&testTimeout,
+			0, // Retries don't matter for this test
+		),
+	)
+
+	// The test cases are crafted with the assumption that the default requeue
+	// interval is greater than one minute, so we need to assert that this is the
+	// case.
+	require.Greater(t, defaultRequeueInterval, time.Minute)
+
+	// The test cases are crafted with the assumption that the step's timeout is
+	// greater than the default requeue interval, so we need to assert that this
+	// is the case.
+	require.Greater(t, testTimeout, defaultRequeueInterval)
+
+	testCases := []struct {
+		name       string
+		promo      *kargoapi.Promotion
+		assertions func(*testing.T, time.Duration)
+	}{
+		{
+			name: "current step out of bounds",
+			promo: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{{
+						Uses: testStepKindWithoutTimeout,
+					}},
+				},
+				Status: kargoapi.PromotionStatus{
+					CurrentStep: 1,
+					StepExecutionMetadata: []kargoapi.StepExecutionMetadata{{
+						StartedAt: &metav1.Time{Time: time.Now()},
+					}},
+				},
+			},
+			assertions: func(t *testing.T, requeueInterval time.Duration) {
+				require.Equal(t, defaultRequeueInterval, requeueInterval)
+			},
+		},
+		{
+			name: "nil step execution metadata",
+			promo: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{{
+						Uses: testStepKindWithoutTimeout,
+					}},
+				},
+				Status: kargoapi.PromotionStatus{
+					CurrentStep:           0,
+					StepExecutionMetadata: nil,
+				},
+			},
+			assertions: func(t *testing.T, requeueInterval time.Duration) {
+				require.Equal(t, defaultRequeueInterval, requeueInterval)
+			},
+		},
+		{
+			name: "step execution metadata out of bounds",
+			promo: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{{
+						Uses: testStepKindWithoutTimeout,
+					}},
+				},
+				Status: kargoapi.PromotionStatus{
+					CurrentStep:           0,
+					StepExecutionMetadata: []kargoapi.StepExecutionMetadata{},
+				},
+			},
+			assertions: func(t *testing.T, requeueInterval time.Duration) {
+				require.Equal(t, defaultRequeueInterval, requeueInterval)
+			},
+		},
+		{
+			name: "no timeout",
+			promo: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{{
+						Uses: testStepKindWithoutTimeout,
+					}},
+				},
+				Status: kargoapi.PromotionStatus{
+					CurrentStep: 0,
+					StepExecutionMetadata: []kargoapi.StepExecutionMetadata{{
+						StartedAt: &metav1.Time{Time: time.Now()},
+					}},
+				},
+			},
+			assertions: func(t *testing.T, requeueInterval time.Duration) {
+				// The request should be requeued according to the default.
+				require.Equal(t, defaultRequeueInterval, requeueInterval)
+			},
+		},
+		{
+			name: "timeout occurs after next interval",
+			promo: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{{
+						Uses: testStepKindWithTimeout,
+					}},
+				},
+				Status: kargoapi.PromotionStatus{
+					CurrentStep: 0,
+					StepExecutionMetadata: []kargoapi.StepExecutionMetadata{{
+						// If the step started now and times out after an interval greater
+						// than the default requeue interval, then the wall clock time of
+						// the timeout will be AFTER the wall clock time of the next
+						// reconciliation.
+						StartedAt: &metav1.Time{Time: time.Now()},
+					}},
+				},
+			},
+			assertions: func(t *testing.T, requeueInterval time.Duration) {
+				// The request should be requeued according to the default.
+				require.Equal(t, defaultRequeueInterval, requeueInterval)
+				// Sanity check that the requeue interval is always greater than 0.
+				require.Greater(t, requeueInterval, time.Duration(0))
+			},
+		},
+		{
+			name: "timeout occurs before next interval",
+			promo: &kargoapi.Promotion{
+				Spec: kargoapi.PromotionSpec{
+					Steps: []kargoapi.PromotionStep{{
+						Uses: testStepKindWithTimeout,
+					}},
+				},
+				Status: kargoapi.PromotionStatus{
+					CurrentStep: 0,
+					StepExecutionMetadata: []kargoapi.StepExecutionMetadata{{
+						// If the step has only a minute to go before timeout, then the wall
+						// clock time of the timeout will be BEFORE the wall clock time of
+						// the next reconciliation.
+						StartedAt: &metav1.Time{
+							Time: metav1.Now().Add(-testTimeout).Add(time.Minute),
+						},
+					}},
+				},
+			},
+			assertions: func(t *testing.T, requeueInterval time.Duration) {
+				// The interval to the next reconciliation should be shortened.
+				require.Less(t, requeueInterval, defaultRequeueInterval)
+				// Sanity check that the requeue interval is always greater than 0.
+				require.Greater(t, requeueInterval, time.Duration(0))
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(t, calculateRequeueInterval(testCase.promo))
 		})
 	}
 }

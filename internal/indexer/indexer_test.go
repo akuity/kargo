@@ -11,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -90,7 +91,7 @@ func TestStagesByAnalysisRun(t *testing.T) {
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						kargoapi.ShardLabelKey: "another-shard",
+						kargoapi.LabelKeyShard: "another-shard",
 					},
 				},
 			},
@@ -104,7 +105,7 @@ func TestStagesByAnalysisRun(t *testing.T) {
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						kargoapi.ShardLabelKey: testShardName,
+						kargoapi.LabelKeyShard: testShardName,
 					},
 				},
 				Status: kargoapi.StageStatus{
@@ -276,6 +277,13 @@ func TestPromotionsByStage(t *testing.T) {
 func TestRunningPromotionsByArgoCDApplications(t *testing.T) {
 	const testShardName = "test-shard"
 
+	fakeStage := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-stage",
+			Namespace: "fake-namespace",
+		},
+	}
+
 	testCases := []struct {
 		name      string
 		obj       client.Object
@@ -302,7 +310,7 @@ func TestRunningPromotionsByArgoCDApplications(t *testing.T) {
 			obj: &kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						kargoapi.ShardLabelKey: "another",
+						kargoapi.LabelKeyShard: "another",
 					},
 				},
 			},
@@ -314,7 +322,7 @@ func TestRunningPromotionsByArgoCDApplications(t *testing.T) {
 			obj: &kargoapi.Promotion{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						kargoapi.ShardLabelKey: testShardName,
+						kargoapi.LabelKeyShard: testShardName,
 					},
 				},
 			},
@@ -328,7 +336,13 @@ func TestRunningPromotionsByArgoCDApplications(t *testing.T) {
 					Namespace: "fake-namespace",
 				},
 				Spec: kargoapi.PromotionSpec{
-					Stage: "fake-stage",
+					Stage: fakeStage.Name,
+					Vars: []kargoapi.ExpressionVariable{
+						{
+							Name:  "app",
+							Value: "fake-app-from-var",
+						},
+					},
 					Steps: []kargoapi.PromotionStep{
 						{
 							Uses: "argocd-update",
@@ -342,18 +356,78 @@ func TestRunningPromotionsByArgoCDApplications(t *testing.T) {
 						{
 							Uses: "argocd-update",
 							Config: &apiextensionsv1.JSON{
-								Raw: []byte(`{"apps":[{"name":"fake-app-2"}]}`),
+								// Note that this uses an expression
+								Raw: []byte(`{"apps":[{"name":"fake-app-${{ ctx.stage }}"}]}`),
+							},
+						},
+						{
+							Uses: "argocd-update",
+							Config: &apiextensionsv1.JSON{
+								// Note that this uses a variable within the expression
+								Raw: []byte(`{"apps":[{"name":"${{ vars.app }}"}]}`),
+							},
+						},
+						{
+							Uses: "argocd-update",
+							Vars: []kargoapi.ExpressionVariable{
+								{
+									Name:  "app",
+									Value: "fake-app-from-step-var",
+								},
+							},
+							Config: &apiextensionsv1.JSON{
+								// Note that this uses a step-level variable within the expression
+								Raw: []byte(`{"apps":[{"name":"${{ vars.app }}"}]}`),
+							},
+						},
+						{
+							Uses: "argocd-update",
+							Config: &apiextensionsv1.JSON{
+								// Note that this uses output from a (fake) previous step within the expression
+								Raw: []byte(`{"apps":[{"name":"fake-app-${{ outputs.push.branch }}"}]}`),
+							},
+						},
+						{
+							Uses: "argocd-update",
+							Vars: []kargoapi.ExpressionVariable{
+								{
+									Name:  "input",
+									Value: "${{ outputs.composition.name }}",
+								},
+							},
+							Config: &apiextensionsv1.JSON{
+								// Note that this uses output from a previous step through a variable
+								Raw: []byte(`{"apps":[{"name":"fake-app-${{ vars.input }}"}]}`),
+							},
+						},
+						{
+							Uses: "argocd-update",
+							As:   "task-1::update",
+							Config: &apiextensionsv1.JSON{
+								// Note that this uses output from a "task" step within the expression
+								Raw: []byte(`{"apps":[{"name":"fake-app-${{ task.outputs.fake.name }}"}]}`),
 							},
 						},
 					},
 				},
 				Status: kargoapi.PromotionStatus{
 					Phase: kargoapi.PromotionPhaseRunning,
+					State: &apiextensionsv1.JSON{
+						// Mock the output of the previous steps
+						// nolint:lll
+						Raw: []byte(`{"push":{"branch":"from-branch"},"composition":{"name":"from-composition"},"task-1::fake":{"name":"from-task"}}`),
+					},
+					CurrentStep: 7, // Ensure all steps above are considered
 				},
 			},
 			expected: []string{
 				"fake-namespace:fake-app",
-				fmt.Sprintf("%s:%s", argocd.Namespace(), "fake-app-2"),
+				fmt.Sprintf("%s:%s", argocd.Namespace(), "fake-app-fake-stage"),
+				fmt.Sprintf("%s:%s", argocd.Namespace(), "fake-app-from-var"),
+				fmt.Sprintf("%s:%s", argocd.Namespace(), "fake-app-from-step-var"),
+				fmt.Sprintf("%s:%s", argocd.Namespace(), "fake-app-from-branch"),
+				fmt.Sprintf("%s:%s", argocd.Namespace(), "fake-app-from-composition"),
+				fmt.Sprintf("%s:%s", argocd.Namespace(), "fake-app-from-task"),
 			},
 		},
 		{
@@ -363,7 +437,7 @@ func TestRunningPromotionsByArgoCDApplications(t *testing.T) {
 					Namespace: "fake-namespace",
 				},
 				Spec: kargoapi.PromotionSpec{
-					Stage: "fake-stage",
+					Stage: fakeStage.Name,
 					Steps: []kargoapi.PromotionStep{
 						{
 							Uses: "fake-directive",
@@ -374,7 +448,8 @@ func TestRunningPromotionsByArgoCDApplications(t *testing.T) {
 					},
 				},
 				Status: kargoapi.PromotionStatus{
-					Phase: kargoapi.PromotionPhaseRunning,
+					Phase:       kargoapi.PromotionPhaseRunning,
+					CurrentStep: 1, // Ensure all steps above are considered
 				},
 			},
 			expected: nil,
@@ -383,12 +458,19 @@ func TestRunningPromotionsByArgoCDApplications(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			scheme := runtime.NewScheme()
-			require.NoError(t, kargoapi.AddToScheme(scheme))
+			_ = kargoapi.AddToScheme(scheme)
+
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(fakeStage.DeepCopy()).
+				Build()
+
 			require.Equal(
 				t,
 				testCase.expected,
 				RunningPromotionsByArgoCDApplications(
 					context.TODO(),
+					c,
 					testCase.shardName,
 				)(testCase.obj),
 			)
@@ -436,6 +518,40 @@ func TestFreightByWarehouse(t *testing.T) {
 				testCase.expected,
 				FreightByWarehouse(testCase.freight),
 			)
+		})
+	}
+}
+
+func TestFreightByCurrentStages(t *testing.T) {
+	testCases := []struct {
+		name     string
+		freight  *kargoapi.Freight
+		expected []string
+	}{
+		{
+			name:     "Freight is not currently in use by any Stages",
+			freight:  &kargoapi.Freight{},
+			expected: []string{},
+		},
+		{
+			name: "Freight is currently in use by a Stage",
+			freight: &kargoapi.Freight{
+				Status: kargoapi.FreightStatus{
+					CurrentlyIn: map[string]kargoapi.CurrentStage{"fake-stage": {}},
+				},
+			},
+			expected: []string{"fake-stage"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Run(testCase.name, func(t *testing.T) {
+				require.Equal(
+					t,
+					testCase.expected,
+					FreightByCurrentStages(testCase.freight),
+				)
+			})
 		})
 	}
 }
@@ -714,6 +830,89 @@ func TestServiceAccountsByOIDCClaims(t *testing.T) {
 				t,
 				testCase.expected,
 				ServiceAccountsByOIDCClaims(testCase.sa),
+			)
+		})
+	}
+}
+
+func TestWarehousesByRepoURL(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		warehouse client.Object
+		expected  []string
+	}{
+		{
+			name: "simple",
+			warehouse: &kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "https://github.com/username/repo",
+							},
+							Image: &kargoapi.ImageSubscription{
+								RepoURL: "https://registry.hub.docker.com/u/svendowideit/testhook/",
+							},
+							Chart: &kargoapi.ChartSubscription{
+								RepoURL: "https://example.com/charts/alpine-0.1.2",
+							},
+						},
+					},
+				},
+			},
+			expected: []string{
+				"https://github.com/username/repo",
+				"https://example.com/charts/alpine-0.1.2",
+				"https://registry.hub.docker.com/u/svendowideit/testhook/",
+			},
+		},
+		{
+			name:      "not a warehouse",
+			warehouse: &kargoapi.Freight{},
+			expected:  nil,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t,
+				test.expected,
+				WarehousesBySubscribedURLs(test.warehouse),
+			)
+
+		})
+	}
+}
+
+func TestProjectConfigsByReceiverPath(t *testing.T) {
+	for _, test := range []struct {
+		name          string
+		projectConfig client.Object
+		expected      []string
+	}{
+		{
+			name: "simple",
+			projectConfig: &kargoapi.ProjectConfig{
+				Status: kargoapi.ProjectConfigStatus{
+					WebhookReceivers: []kargoapi.WebhookReceiverDetails{
+						{Path: "/webhookpath"},
+						{Path: "/myotherwebhookpath"},
+					},
+				},
+			},
+			expected: []string{
+				"/webhookpath",
+				"/myotherwebhookpath",
+			},
+		},
+		{
+			name:          "not a project config",
+			projectConfig: &kargoapi.Freight{},
+			expected:      nil,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			require.Equal(t,
+				test.expected,
+				ProjectConfigsByWebhookReceiverPaths(test.projectConfig),
 			)
 		})
 	}

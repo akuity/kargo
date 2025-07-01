@@ -64,14 +64,23 @@ spec:
             valueFrom:
               resourceFieldRef:
                 containerName: api
+                divisor: "1"
                 resource: limits.memory
           - name: GOMAXPROCS
             valueFrom:
               resourceFieldRef:
                 containerName: api
-                resource: limits.cpu
+                divisor: "1"
+                resource: {{ include "kargo.selectCpuResourceField" (dict "resources" .Values.api.resources) }}
           {{- with (concat .Values.global.env .Values.api.env) }}
           {{- toYaml . | nindent 10 }}
+          {{- end }}
+          {{- if and .Values.api.rollouts.integrationEnabled .Values.api.rollouts.logs.enabled .Values.api.rollouts.logs.tokenSecret.name .Values.api.rollouts.logs.tokenSecret.key }}
+          - name: ANALYSIS_RUN_LOG_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.api.rollouts.logs.tokenSecret.name }}
+                key: {{ .Values.api.rollouts.logs.tokenSecret.key }}
           {{- end }}
           envFrom:
           - configMapRef:
@@ -87,24 +96,30 @@ spec:
               protocol: TCP
 {{- if .Values.api.probes.enabled }}
           livenessProbe:
+            {{- if .Values.api.tls.enabled }}
             exec:
               command:
                 - /usr/local/bin/grpc_health_probe
                 - -addr=:8080
-{{- if .Values.api.tls.enabled }}
                 - -tls
                 - -tls-no-verify
-{{- end }}
+            {{- else }}
+            grpc:
+              port: 8080
+            {{- end }}
             initialDelaySeconds: 10
           readinessProbe:
+            {{- if .Values.api.tls.enabled }}
             exec:
               command:
                 - /usr/local/bin/grpc_health_probe
                 - -addr=:8080
-{{- if .Values.api.tls.enabled }}
                 - -tls
                 - -tls-no-verify
-{{- end }}
+            {{- else }}
+            grpc:
+              port: 8080
+            {{- end }}
             initialDelaySeconds: 5
 {{- end }}
 {{- if or .Values.kubeconfigSecrets.kargo (and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled) .Values.api.tls.enabled .Values.api.cabundle.configMapName .Values.api.cabundle.secretName }}

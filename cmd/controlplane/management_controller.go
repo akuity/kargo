@@ -16,23 +16,28 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/api/kubernetes"
+	"github.com/akuity/kargo/internal/controller/management/clusterconfigs"
 	"github.com/akuity/kargo/internal/controller/management/namespaces"
+	"github.com/akuity/kargo/internal/controller/management/projectconfigs"
 	"github.com/akuity/kargo/internal/controller/management/projects"
 	"github.com/akuity/kargo/internal/controller/management/serviceaccounts"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
+	"github.com/akuity/kargo/internal/server/kubernetes"
 	"github.com/akuity/kargo/internal/types"
-	versionpkg "github.com/akuity/kargo/internal/version"
+	versionpkg "github.com/akuity/kargo/pkg/x/version"
 )
 
 type managementControllerOptions struct {
 	KubeConfig string
+	QPS        float32
+	Burst      int
 
 	KargoNamespace               string
 	ManageControllerRoleBindings bool
 
-	PprofBindAddress string
+	MetricsBindAddress string
+	PprofBindAddress   string
 
 	Logger *logging.Logger
 }
@@ -61,8 +66,13 @@ func newManagementControllerCommand() *cobra.Command {
 
 func (o *managementControllerOptions) complete() {
 	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
+	o.QPS = types.MustParseFloat32(os.GetEnv("KUBE_API_QPS", "50.0"))
+	o.Burst = types.MustParseInt(os.GetEnv("KUBE_API_BURST", "300"))
+
 	o.KargoNamespace = os.GetEnv("KARGO_NAMESPACE", "kargo")
 	o.ManageControllerRoleBindings = types.MustParseBool(os.GetEnv("MANAGE_CONTROLLER_ROLE_BINDINGS", "true"))
+
+	o.MetricsBindAddress = os.GetEnv("METRICS_BIND_ADDRESS", "0")
 	o.PprofBindAddress = os.GetEnv("PPROF_BIND_ADDRESS", "")
 }
 
@@ -82,6 +92,14 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error initializing Kargo controller manager: %w", err)
 	}
 
+	if err := clusterconfigs.SetupReconcilerWithManager(
+		ctx,
+		kargoMgr,
+		clusterconfigs.ReconcilerConfigFromEnv(),
+	); err != nil {
+		return fmt.Errorf("error setting up ClusterConfigs reconciler: %w", err)
+	}
+
 	if err := namespaces.SetupReconcilerWithManager(
 		ctx,
 		kargoMgr,
@@ -96,6 +114,14 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		projects.ReconcilerConfigFromEnv(),
 	); err != nil {
 		return fmt.Errorf("error setting up Projects reconciler: %w", err)
+	}
+
+	if err := projectconfigs.SetupReconcilerWithManager(
+		ctx,
+		kargoMgr,
+		projectconfigs.ReconcilerConfigFromEnv(),
+	); err != nil {
+		return fmt.Errorf("error setting up ProjectConfigs reconciler: %w", err)
 	}
 
 	if o.ManageControllerRoleBindings {
@@ -119,6 +145,7 @@ func (o *managementControllerOptions) setupManager(ctx context.Context) (manager
 	if err != nil {
 		return nil, fmt.Errorf("error loading REST config for Kargo controller manager: %w", err)
 	}
+	kubernetes.ConfigureQPSBurst(ctx, restCfg, o.QPS, o.Burst)
 	restCfg.ContentType = runtime.ContentTypeJSON
 
 	scheme := runtime.NewScheme()
@@ -146,7 +173,7 @@ func (o *managementControllerOptions) setupManager(ctx context.Context) (manager
 		ctrl.Options{
 			Scheme: scheme,
 			Metrics: server.Options{
-				BindAddress: "0",
+				BindAddress: o.MetricsBindAddress,
 			},
 			PprofBindAddress: o.PprofBindAddress,
 			Cache: cache.Options{

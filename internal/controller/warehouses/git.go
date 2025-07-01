@@ -3,13 +3,15 @@ package warehouses
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/expr-lang/expr"
+	"github.com/expr-lang/expr/vm"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -17,6 +19,7 @@ import (
 	libSemver "github.com/akuity/kargo/internal/controller/semver"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/internal/pattern"
 )
 
 const (
@@ -24,8 +27,6 @@ const (
 	regexPrefix  = "regex:"
 	globPrefix   = "glob:"
 )
-
-type pathSelector func(path string) (bool, error)
 
 // discoverCommits discovers commits from the given Git repositories based on the
 // given subscriptions. It returns a list of GitDiscoveryResult objects, each
@@ -64,7 +65,7 @@ func (r *reconciler) discoverCommits(
 		repoLogger := logger.WithValues("repo", sub.RepoURL)
 
 		// Obtain credentials for the Git repository.
-		creds, ok, err := r.credentialsDB.Get(ctx, namespace, credentials.TypeGit, sub.RepoURL)
+		creds, err := r.credentialsDB.Get(ctx, namespace, credentials.TypeGit, sub.RepoURL)
 		if err != nil {
 			return nil, fmt.Errorf(
 				"error obtaining credentials for git repo %q: %w",
@@ -73,7 +74,7 @@ func (r *reconciler) discoverCommits(
 			)
 		}
 		var repoCreds *git.RepoCredentials
-		if ok {
+		if creds != nil {
 			repoCreds = &git.RepoCredentials{
 				Username:      creds.Username,
 				Password:      creds.Password,
@@ -199,6 +200,26 @@ func (r *reconciler) discoverCommits(
 // list contains more than 20 commits, it is clipped to the 20 most recent
 // commits.
 func (r *reconciler) discoverBranchHistory(repo git.Repo, sub kargoapi.GitSubscription) ([]git.CommitMetadata, error) {
+	// Compile the commit expression filter if it is specified.
+	var exprProgram *vm.Program
+	if sub.ExpressionFilter != "" {
+		program, err := expr.Compile(sub.ExpressionFilter)
+		if err != nil {
+			return nil, fmt.Errorf("error compiling expression filter: %w", err)
+		}
+		exprProgram = program
+	}
+
+	// Compile include and exclude path selectors.
+	includeSelectors, err := getPathSelectors(sub.IncludePaths)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing include selector: %w", err)
+	}
+	excludeSelectors, err := getPathSelectors(sub.ExcludePaths)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing exclude selector: %w", err)
+	}
+
 	limit := int(sub.DiscoveryLimit)
 	var filteredCommits = make([]git.CommitMetadata, 0, limit)
 	for skip := uint(0); ; skip += uint(limit) { // nolint: gosec
@@ -207,49 +228,42 @@ func (r *reconciler) discoverBranchHistory(repo git.Repo, sub kargoapi.GitSubscr
 			return nil, fmt.Errorf("error listing commits from git repo %q: %w", sub.RepoURL, err)
 		}
 
-		// If no include or exclude paths are specified, return the first commits
-		// up to the limit.
-		if sub.IncludePaths == nil && sub.ExcludePaths == nil {
+		// If no filters are specified, return the first commits up to the limit.
+		if includeSelectors == nil && excludeSelectors == nil && exprProgram == nil {
 			return commits, nil
-		}
-
-		if filteredCommits == nil {
-			filteredCommits = make([]git.CommitMetadata, 0, limit)
-		}
-
-		// Compile include and exclude path selectors.
-		includeSelectors, err := getPathSelectors(sub.IncludePaths)
-		if err != nil {
-			return nil, fmt.Errorf("error parsing include selector: %w", err)
-		}
-		excludeSelectors, err := getPathSelectors(sub.ExcludePaths)
-		if err != nil {
-			return nil, fmt.Errorf("error parsing exclude selector: %w", err)
 		}
 
 		// Filter commits based on include and exclude paths.
 		for _, meta := range commits {
-			diffPaths, err := r.getDiffPathsForCommitIDFn(repo, meta.ID)
-			if err != nil {
-				return nil, fmt.Errorf(
-					"error getting diff paths for commit %q in git repo %q: %w",
-					meta.ID,
-					sub.RepoURL,
-					err,
-				)
+			// If the commit expression filter is specified, evaluate it.
+			if exprProgram != nil {
+				include, err := evaluateCommitExpression(meta, exprProgram)
+				if err != nil {
+					return nil, fmt.Errorf("error evaluating expression commit filter: %w", err)
+				}
+				if !include {
+					continue
+				}
 			}
-			match, err := matchesPathsFilters(includeSelectors, excludeSelectors, diffPaths)
-			if err != nil {
-				return nil, fmt.Errorf(
-					"error checking includePaths/excludePaths match for commit %q for git repo %q: %w",
-					meta.ID,
-					sub.RepoURL,
-					err,
-				)
+
+			// If include or exclude path selectors are specified, filter the commits.
+			if includeSelectors != nil || excludeSelectors != nil {
+				diffPaths, err := r.getDiffPathsForCommitIDFn(repo, meta.ID)
+				if err != nil {
+					return nil, fmt.Errorf(
+						"error getting diff paths for commit %q in git repo %q: %w",
+						meta.ID,
+						sub.RepoURL,
+						err,
+					)
+				}
+				if !matchesPathsFilters(includeSelectors, excludeSelectors, diffPaths) {
+					continue
+				}
 			}
-			if match {
-				filteredCommits = append(filteredCommits, meta)
-			}
+
+			// If we reach this point, the commit matches the filters.
+			filteredCommits = append(filteredCommits, meta)
 
 			if len(filteredCommits) >= limit {
 				return trimSlice(filteredCommits, limit), nil
@@ -277,6 +291,10 @@ func (r *reconciler) discoverTags(repo git.Repo, sub kargoapi.GitSubscription) (
 
 	if tags, err = filterTags(tags, sub.IgnoreTags, sub.AllowTags); err != nil {
 		return nil, fmt.Errorf("failed to filter tags: %w", err)
+	}
+
+	if tags, err = filterTagsByExpression(tags, sub.ExpressionFilter); err != nil {
+		return nil, fmt.Errorf("failed to filter tags by expression: %w", err)
 	}
 
 	switch sub.CommitSelectionStrategy {
@@ -323,16 +341,7 @@ func (r *reconciler) discoverTags(repo git.Repo, sub kargoapi.GitSubscription) (
 				err,
 			)
 		}
-		match, err := matchesPathsFilters(includeSelectors, excludeSelectors, diffPaths)
-		if err != nil {
-			return nil, fmt.Errorf(
-				"error checking includePaths/excludePaths match for tag %q for git repo %q: %w",
-				meta.Tag,
-				sub.RepoURL,
-				err,
-			)
-		}
-		if match {
+		if matchesPathsFilters(includeSelectors, excludeSelectors, diffPaths) {
 			filteredTags = append(filteredTags, meta)
 		}
 
@@ -360,6 +369,103 @@ func filterTags(tags []git.TagMetadata, ignoreTags []string, allow string) ([]gi
 	return slices.Clip(filteredTags), nil
 }
 
+// filterTagsByExpression filters the given list of tags based on the given
+// expression. It returns the filtered list of tags. If the expression is empty,
+// it returns the original list of tags.
+//
+// The expression is evaluated using the expr package, and the tag metadata is
+// passed as the environment.
+//
+// For a tag to be included in the result, the expression must evaluate to true.
+// If the expression evaluates to a non-boolean value, it is converted to a
+// boolean using strconv.ParseBool. If the conversion fails, an error is
+// returned.
+func filterTagsByExpression(
+	tags []git.TagMetadata,
+	expression string,
+) ([]git.TagMetadata, error) {
+	if expression == "" {
+		return tags, nil
+	}
+
+	program, err := expr.Compile(expression)
+	if err != nil {
+		return nil, fmt.Errorf("error compiling tag expression filter: %w", err)
+	}
+
+	filteredTags := make([]git.TagMetadata, 0, len(tags))
+	for _, tag := range tags {
+		env := map[string]any{
+			"tag":         tag.Tag,
+			"id":          tag.CommitID,
+			"creatorDate": tag.CreatorDate,
+			"author":      tag.Author,
+			"committer":   tag.Committer,
+			"subject":     tag.Subject,
+			"tagger":      tag.Tagger,
+			"annotation":  tag.Annotation,
+		}
+
+		result, err := expr.Run(program, env)
+		if err != nil {
+			return nil, fmt.Errorf("error evaluating tag expression filter: %w", err)
+		}
+
+		switch result := result.(type) {
+		case bool:
+			if !result {
+				continue
+			}
+		default:
+			parsedBool, err := strconv.ParseBool(fmt.Sprintf("%v", result))
+			if err != nil {
+				return nil, fmt.Errorf("error parsing expression result: %w", err)
+			}
+			if !parsedBool {
+				continue
+			}
+		}
+
+		filteredTags = append(filteredTags, tag)
+	}
+	return slices.Clip(filteredTags), nil
+}
+
+// evaluateCommitExpression evaluates the given commit expression against
+// the given commit metadata. The commit metadata is passed as the environment
+// for the expression evaluation. It returns true if the expression evaluates to
+// true, and false otherwise. If the expression is not a boolean, it is
+// converted to a boolean using strconv.ParseBool. If the conversion fails,
+// an error is returned.
+func evaluateCommitExpression(
+	commit git.CommitMetadata,
+	expression *vm.Program,
+) (bool, error) {
+	env := map[string]any{
+		"id":         commit.ID,
+		"commitDate": commit.CommitDate,
+		"author":     commit.Author,
+		"committer":  commit.Committer,
+		"subject":    commit.Subject,
+	}
+
+	result, err := expr.Run(expression, env)
+	if err != nil {
+		return false, err
+	}
+
+	switch result := result.(type) {
+	case bool:
+		return result, nil
+	default:
+		parsedBool, err := strconv.ParseBool(fmt.Sprintf("%v", result))
+		if err != nil {
+			return false, err
+		}
+		return parsedBool, nil
+	}
+}
+
 // allows returns true if the given tag name matches the given regular
 // expression or if the regular expression is nil. It returns false otherwise.
 func allows(tagName string, allowRegex *regexp.Regexp) bool {
@@ -380,82 +486,44 @@ func ignores(tagName string, ignore []string) bool {
 	return false
 }
 
-func getPathSelectors(selectorStrs []string) ([]pathSelector, error) {
-	selectors := make([]pathSelector, len(selectorStrs))
-	for i, selectorStr := range selectorStrs {
-		switch {
-		case strings.HasPrefix(selectorStr, regexpPrefix):
-			regex, err := regexp.Compile(strings.TrimPrefix(selectorStr, regexpPrefix))
-			if err != nil {
-				return nil, err
-			}
-			selectors[i] = func(path string) (bool, error) {
-				return regex.MatchString(path), nil
-			}
-		case strings.HasPrefix(selectorStr, regexPrefix):
-			regex, err := regexp.Compile(strings.TrimPrefix(selectorStr, regexPrefix))
-			if err != nil {
-				return nil, err
-			}
-			selectors[i] = func(path string) (bool, error) {
-				return regex.MatchString(path), nil
-			}
-		case strings.HasPrefix(selectorStr, globPrefix):
-			pattern := strings.TrimPrefix(selectorStr, globPrefix)
-			selectors[i] = func(path string) (bool, error) {
-				return filepath.Match(pattern, path)
-			}
-		default:
-			basePath := selectorStr
-			selectors[i] = func(path string) (bool, error) {
-				relPath, err := filepath.Rel(basePath, path)
-				if err != nil {
-					return false, err
-				}
-				return !strings.Contains(relPath, ".."), nil
-			}
-		}
+func getPathSelectors(selectors []string) (pattern.Matcher, error) {
+	if len(selectors) == 0 {
+		return nil, nil
 	}
-	return selectors, nil
+
+	matchers := make(pattern.Matchers, len(selectors))
+	for i := range selectors {
+		matcher, err := pattern.ParsePathPattern(selectors[i])
+		if err != nil {
+			return nil, fmt.Errorf("parse error path selector %q: %w", selectors[i], err)
+		}
+		matchers[i] = matcher
+	}
+	return matchers, nil
 }
 
-func matchesPathsFilters(includeSelectors, excludeSelectors []pathSelector, diffs []string) (bool, error) {
-pathLoop:
+func matchesPathsFilters(include, exclude pattern.Matcher, diffs []string) bool {
 	for _, path := range diffs {
-		if len(includeSelectors) > 0 {
-			var selected bool
-			var err error
-			for _, selector := range includeSelectors {
-				if selected, err = selector(path); err != nil {
-					return false, err
-				}
-				if selected {
-					// Path was explicitly included, so we can move on to checking if
-					// it should be excluded
-					break
-				}
-			}
-			if !selected {
-				// Path was not explicitly included, so we can move on to the next path
-				continue pathLoop
-			}
+		// If include is nil, all paths are implicitly included
+		// Otherwise, check if the path matches the include pattern
+		if include != nil && !include.Matches(path) {
+			// Path not included, skip to next path
+			continue
 		}
-		// If we reach this point, the path was either implicitly or explicitly
-		// included. Now check if it should be excluded.
-		for _, selector := range excludeSelectors {
-			selected, err := selector(path)
-			if err != nil {
-				return false, err
-			}
-			if selected {
-				// Path was explicitly excluded, so we can move on to the next path
-				continue pathLoop
-			}
+
+		// Path is included (either implicitly or explicitly)
+		// Now check if it should be excluded
+		if exclude != nil && exclude.Matches(path) {
+			// Path is explicitly excluded, skip to next path
+			continue
 		}
-		// If we reach this point, the path was not explicitly excluded
-		return true, nil
+
+		// If we reach here, the path is included and not excluded
+		return true
 	}
-	return false, nil
+
+	// None of the paths match our criteria
+	return false
 }
 
 func selectSemVerTags(tags []git.TagMetadata, strict bool, constraint string) ([]git.TagMetadata, error) {

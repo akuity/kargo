@@ -1,17 +1,24 @@
 import { useQuery as useConnectQuery } from '@connectrpc/connect-query';
 import { useQuery } from '@tanstack/react-query';
 import { notification } from 'antd';
-import * as oauth from 'oauth4webapi';
+import {
+  allowInsecureRequests,
+  discoveryRequest,
+  processDiscoveryResponse,
+  refreshTokenGrantRequest,
+  processRefreshTokenResponse
+} from 'oauth4webapi';
 import React from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { redirectToQueryParam, refreshTokenKey } from '@ui/config/auth';
 import { paths } from '@ui/config/paths';
-import { getPublicConfig } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { getPublicConfig } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 
 import { LoadingState } from '../common';
 
 import { useAuthContext } from './context/use-auth-context';
+import { oidcClientAuth, shouldAllowIdpHttpRequest as shouldAllowHttpRequest } from './oidc-utils';
 
 export const TokenRenew = () => {
   const navigate = useNavigate();
@@ -44,16 +51,9 @@ export const TokenRenew = () => {
     queryKey: [issuerUrl],
     queryFn: () =>
       issuerUrl &&
-      oauth
-        .discoveryRequest(issuerUrl)
-        .then((response) => oauth.processDiscoveryResponse(issuerUrl, response))
-        .then((response) => {
-          if (response.code_challenge_methods_supported?.includes('S256') !== true) {
-            throw new Error('OIDC config fetch error');
-          }
-
-          return response;
-        }),
+      discoveryRequest(issuerUrl, {
+        [allowInsecureRequests]: shouldAllowHttpRequest()
+      }).then((response) => processDiscoveryResponse(issuerUrl, response)),
     enabled: !!issuerUrl
   });
 
@@ -71,21 +71,30 @@ export const TokenRenew = () => {
     }
 
     (async () => {
-      const response = await oauth.refreshTokenGrantRequest(as, client, refreshToken);
-
-      const result = await oauth.processRefreshTokenResponse(as, client, response);
-      if (oauth.isOAuth2Error(result) || !result.id_token) {
-        notification.error({
-          message: 'OIDC: Proccess Authorization Code Grant Response error',
-          placement: 'bottomRight'
+      try {
+        const response = await refreshTokenGrantRequest(as, client, oidcClientAuth, refreshToken, {
+          [allowInsecureRequests]: shouldAllowHttpRequest(),
+          additionalParameters: [['client_id', client.client_id]]
         });
+
+        const result = await processRefreshTokenResponse(as, client, response);
+
+        if (!result.id_token) {
+          notification.error({
+            message: 'OIDC: Proccess Authorization Code Grant Response error',
+            placement: 'bottomRight'
+          });
+          logout();
+          navigate(paths.login);
+          return;
+        }
+
+        onLogin(result.id_token, result.refresh_token);
+        navigate(searchParams.get(redirectToQueryParam) || paths.home);
+      } catch (err) {
         logout();
         navigate(paths.login);
-        return;
       }
-
-      onLogin(result.id_token, result.refresh_token);
-      navigate(searchParams.get(redirectToQueryParam) || paths.home);
     })();
   }, [as, client]);
 

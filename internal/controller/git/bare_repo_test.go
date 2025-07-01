@@ -58,7 +58,7 @@ func TestBareRepo(t *testing.T) {
 	defer setupRep.Close()
 	err = os.WriteFile(fmt.Sprintf("%s/%s", setupRep.Dir(), "test.txt"), []byte("foo"), 0600)
 	require.NoError(t, err)
-	err = setupRep.AddAllAndCommit(fmt.Sprintf("initial commit %s", uuid.NewString()))
+	err = setupRep.AddAllAndCommit(fmt.Sprintf("initial commit %s", uuid.NewString()), nil)
 	require.NoError(t, err)
 	err = setupRep.Push(nil)
 	require.NoError(t, err)

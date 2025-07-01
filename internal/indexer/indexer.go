@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
-	"strconv"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -15,19 +14,23 @@ import (
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libargocd "github.com/akuity/kargo/internal/argocd"
-	"github.com/akuity/kargo/internal/directives"
+	"github.com/akuity/kargo/internal/expressions"
+	"github.com/akuity/kargo/internal/git"
+	"github.com/akuity/kargo/internal/helm"
+	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/internal/promotion"
 )
 
 const (
 	EventsByInvolvedObjectAPIGroupField = "involvedObject.apiGroup"
 
+	FreightByWarehouseField       = "warehouse"
+	FreightByCurrentStagesField   = "currentlyIn"
 	FreightByVerifiedStagesField  = "verifiedIn"
 	FreightApprovedForStagesField = "approvedFor"
-	FreightByWarehouseField       = "warehouse"
 
 	PromotionsByStageAndFreightField = "stageAndFreight"
-	PromotionsByTerminalField        = "terminal"
 	PromotionsByStageField           = "stage"
 
 	RunningPromotionsByArgoCDApplicationsField = "applications"
@@ -38,6 +41,9 @@ const (
 	StagesByWarehouseField      = "warehouse"
 
 	ServiceAccountsByOIDCClaimsField = "claims"
+
+	WarehousesBySubscribedURLsField           = "subscribedURLs"
+	ProjectConfigsByWebhookReceiverPathsField = "receiverPaths"
 )
 
 // EventsByInvolvedObjectAPIGroup is a client.IndexerFunc that indexes
@@ -67,7 +73,7 @@ func StagesByAnalysisRun(shardName string) client.IndexerFunc {
 		//
 		// 2. This is a shard-specific controller, but the object is not labeled for
 		//    this shard.
-		objShardName, labeled := obj.GetLabels()[kargoapi.ShardLabelKey]
+		objShardName, labeled := obj.GetLabels()[kargoapi.LabelKeyShard]
 		if (shardName == "" && labeled) ||
 			(shardName != "" && shardName != objShardName) {
 			return nil
@@ -114,6 +120,7 @@ func PromotionsByStage(obj client.Object) []string {
 // Promotions not labeled with a shardName are indexed.
 func RunningPromotionsByArgoCDApplications(
 	ctx context.Context,
+	cl client.Client,
 	shardName string,
 ) client.IndexerFunc {
 	logger := logging.LoggerFromContext(ctx)
@@ -126,7 +133,7 @@ func RunningPromotionsByArgoCDApplications(
 		//
 		// 2. This is a shard-specific controller, but the object is not labeled for
 		//    this shard.
-		objShardName, labeled := obj.GetLabels()[kargoapi.ShardLabelKey]
+		objShardName, labeled := obj.GetLabels()[kargoapi.LabelKeyShard]
 		if (shardName == "" && labeled) || (shardName != "" && shardName != objShardName) {
 			return nil
 		}
@@ -141,25 +148,91 @@ func RunningPromotionsByArgoCDApplications(
 			return nil
 		}
 
+		// Get the Stage for the Promotion. We need this to build the context
+		// for the Promotion step.
+		stage := &kargoapi.Stage{}
+		if err := cl.Get(ctx, client.ObjectKey{
+			Name:      promo.Spec.Stage,
+			Namespace: promo.Namespace,
+		}, stage); err != nil {
+			logger.Error(
+				err,
+				"failed to get Stage for Promotion",
+				"promo", promo.Name,
+				"namespace", promo.Namespace,
+				"stage", promo.Spec.Stage,
+			)
+			return nil
+		}
+
+		freight := &kargoapi.Freight{}
+		if err := cl.Get(ctx, client.ObjectKey{
+			Name:      promo.Spec.Freight,
+			Namespace: promo.Namespace,
+		}, freight); err != nil {
+			logger.Error(
+				err,
+				"failed to get Freight for Promotion",
+				"promo", promo.Name,
+				"namespace", promo.Namespace,
+				"freight", promo.Spec.Freight,
+				"stage", promo.Spec.Stage,
+			)
+		}
+
+		// Build just enough context to extract the relevant config from the
+		// argocd-update promotion step.
+		promoCtx := promotion.Context{
+			Project:         promo.Namespace,
+			Stage:           promo.Spec.Stage,
+			FreightRequests: stage.Spec.RequestedFreight,
+			TargetFreightRef: kargoapi.FreightReference{
+				Name:    freight.Name,
+				Commits: freight.Commits,
+				Images:  freight.Images,
+				Charts:  freight.Charts,
+				Origin:  freight.Origin,
+			},
+			Promotion: promo.Name,
+			State:     promo.Status.GetState(),
+			Vars:      promo.Spec.Vars,
+		}
+
+		if promo.Status.FreightCollection != nil {
+			promoCtx.Freight = *promo.Status.FreightCollection.DeepCopy()
+		}
+
 		// Extract the Argo CD Applications from the promotion steps.
 		//
-		// TODO(hidde): While this is arguably already better than the "legacy"
-		// approach further down, which had to query the Stage to get the
-		// Applications, it is still not ideal as it requires parsing the
-		// directives and treating some of them as special cases. We should
-		// consider a more general approach in the future.
+		// TODO(hidde): This is not ideal as it requires parsing the step configs
+		// and treating some of them as special cases. We should consider a more
+		// general approach in the future.
 		var res []string
 		for i, step := range promo.Spec.Steps {
+			if int64(i) > promo.Status.CurrentStep {
+				// We are only interested in steps that have already been executed or
+				// are about to be.
+				break
+			}
 			if step.Uses != "argocd-update" || step.Config == nil {
 				continue
 			}
 
-			config := directives.ArgoCDUpdateConfig{}
-			if err := json.Unmarshal(step.Config.Raw, &config); err != nil {
+			dirStep := promotion.Step{
+				Kind:   step.Uses,
+				Alias:  step.As,
+				Vars:   step.Vars,
+				Config: step.Config.Raw,
+			}
+
+			// As step-level variables are allowed to reference to output, we
+			// need to provide the state.
+			vars, err := dirStep.GetVars(ctx, cl, nil, promoCtx)
+			if err != nil {
 				logger.Error(
 					err,
 					fmt.Sprintf(
-						"failed to extract config from Promotion step %d:"+
+						"failed to extract relevant config from Promotion step %d:"+
 							"ignoring any Argo CD Applications from this step",
 						i,
 					),
@@ -168,13 +241,78 @@ func RunningPromotionsByArgoCDApplications(
 				)
 				continue
 			}
+			// Unpack the raw config into a map. We're not unpacking it into a struct
+			// because:
+			// 1. We don't want to evaluate expressions throughout the entire config
+			//    because we may not have all context required to do so available.
+			//    We will only evaluate expressions in specific fields.
+			// 2. If there are expressions in the config, some fields that may not be
+			//    strings in the struct may be strings in the unevaluated config and
+			//    this could lead to unmarshaling errors.
+			cfgMap := map[string]any{}
+			if err = json.Unmarshal(step.Config.Raw, &cfgMap); err != nil {
+				logger.Error(
+					err,
+					fmt.Sprintf(
+						"failed to extract relevant config from Promotion step %d:"+
+							"ignoring any Argo CD Applications from this step",
+						i,
+					),
+					"promo", promo.Name,
+					"namespace", promo.Namespace,
+				)
+				continue
+			}
+			// Dig through the map to find the names and namespaces of related Argo CD
+			// Applications. Treat these as templates and evaluate expressions in
+			// these individual fields without evaluating the entire config.
+			if apps, ok := cfgMap["apps"]; ok {
+				if appsList, ok := apps.([]any); ok {
+					for _, app := range appsList {
+						if app, ok := app.(map[string]any); ok {
+							if nameTemplate, ok := app["name"].(string); ok {
+								env := dirStep.BuildEnv(
+									promoCtx,
+									promotion.StepEnvWithOutputs(promoCtx.State),
+									promotion.StepEnvWithTaskOutputs(dirStep.Alias, promoCtx.State),
+									promotion.StepEnvWithVars(vars),
+								)
 
-			for _, app := range config.Apps {
-				namespace := app.Namespace
-				if namespace == "" {
-					namespace = libargocd.Namespace()
+								var namespace any = libargocd.Namespace()
+								if namespaceTemplate, ok := app["namespace"].(string); ok {
+									if namespace, err = expressions.EvaluateTemplate(namespaceTemplate, env); err != nil {
+										logger.Error(
+											err,
+											fmt.Sprintf(
+												"failed to extract relevant config from Promotion step %d:"+
+													"ignoring any Argo CD Applications from this step",
+												i,
+											),
+											"promo", promo.Name,
+											"namespace", promo.Namespace,
+										)
+										continue
+									}
+								}
+								name, err := expressions.EvaluateTemplate(nameTemplate, env)
+								if err != nil {
+									logger.Error(
+										err,
+										fmt.Sprintf(
+											"failed to extract relevant config from Promotion step %d:"+
+												"ignoring any Argo CD Applications from this step",
+											i,
+										),
+										"promo", promo.Name,
+										"namespace", promo.Namespace,
+									)
+									continue
+								}
+								res = append(res, fmt.Sprintf("%s:%s", namespace, name))
+							}
+						}
+					}
 				}
-				res = append(res, fmt.Sprintf("%s:%s", namespace, app.Name))
 			}
 		}
 		return res
@@ -212,6 +350,23 @@ func FreightByWarehouse(obj client.Object) []string {
 		return []string{freight.Origin.Name}
 	}
 	return nil
+}
+
+// FreightByCurrentStages is a client.IndexerFunc that indexes Freight by the
+// Stages in which it is currently in use.
+func FreightByCurrentStages(obj client.Object) []string {
+	freight, ok := obj.(*kargoapi.Freight)
+	if !ok {
+		return nil
+	}
+
+	currentStages := make([]string, len(freight.Status.CurrentlyIn))
+	var i int
+	for stage := range freight.Status.CurrentlyIn {
+		currentStages[i] = stage
+		i++
+	}
+	return currentStages
 }
 
 // FreightByVerifiedStages is a client.IndexerFunc that indexes Freight by the
@@ -339,16 +494,43 @@ func ServiceAccountsByOIDCClaims(obj client.Object) []string {
 	return refinedClaimValues
 }
 
-// PromotionsByTerminal is a client.IndexerFunc that indexes Promotions if
-// their phase is terminal.
-func PromotionsByTerminal(obj client.Object) []string {
-	promo, ok := obj.(*kargoapi.Promotion)
+// WarehousesBySubscribedURLs is a client.IndexerFunc that indexes Warehouses by the
+// repositories they subscribe to.
+func WarehousesBySubscribedURLs(obj client.Object) []string {
+	warehouse, ok := obj.(*kargoapi.Warehouse)
 	if !ok {
 		return nil
 	}
-	return []string{strconv.FormatBool(isPromotionPhaseNonTerminal(promo))}
+
+	var repoURLs []string
+	for _, sub := range warehouse.Spec.Subscriptions {
+		if sub.Git != nil && sub.Git.RepoURL != "" {
+			repoURLs = append(repoURLs, git.NormalizeURL(sub.Git.RepoURL))
+		}
+		if sub.Chart != nil && sub.Chart.RepoURL != "" {
+			repoURLs = append(
+				repoURLs,
+				helm.NormalizeChartRepositoryURL(sub.Chart.RepoURL),
+			)
+		}
+		if sub.Image != nil && sub.Image.RepoURL != "" {
+			repoURLs = append(repoURLs, image.NormalizeURL(sub.Image.RepoURL))
+		}
+	}
+	return repoURLs
 }
 
-func isPromotionPhaseNonTerminal(promo *kargoapi.Promotion) bool {
-	return !promo.Status.Phase.IsTerminal()
+// ProjectConfigsByWebhookReceiverPaths is a client.IndexerFunc that indexes Projects by the
+// paths of their receivers.
+func ProjectConfigsByWebhookReceiverPaths(obj client.Object) []string {
+	pc, ok := obj.(*kargoapi.ProjectConfig)
+	if !ok {
+		return nil
+	}
+
+	receiverPaths := make([]string, len(pc.Status.WebhookReceivers))
+	for i, r := range pc.Status.WebhookReceivers {
+		receiverPaths[i] = r.Path
+	}
+	return receiverPaths
 }

@@ -1,16 +1,17 @@
 import { useQuery } from '@connectrpc/connect-query';
-import { faChartLine, faFileLines } from '@fortawesome/free-solid-svg-icons';
+import { faChartLine, faFileLines, faHistory } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Modal, Tabs } from 'antd';
 import classNames from 'classnames';
 import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
-import { AnalysisRun } from '@ui/gen/rollouts/api/v1alpha1/generated_pb';
-import { getAnalysisRun } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { RawFormat } from '@ui/gen/service/v1alpha1/service_pb';
+import { getAnalysisRun } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
+import { AnalysisRun } from '@ui/gen/api/stubs/rollouts/v1alpha1/generated_pb';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 
+import { AnalysisRunLogs } from '../analysis-run-logs/analysis-run-logs';
 import YamlEditor from '../code-editor/yaml-editor-lazy';
 import { ModalProps } from '../modal/use-modal';
 
@@ -118,6 +119,13 @@ export const AnalysisModal = ({
             isLoading={isLoading}
             disabled
             isHideManagedFieldsDisplayed
+          />
+        </Tabs.TabPane>
+
+        <Tabs.TabPane key='logs' tab='Logs' icon={<FontAwesomeIcon icon={faHistory} />}>
+          <AnalysisRunLogs
+            linkFullScreen
+            analysisRun={analysisRunData?.result?.value as AnalysisRun}
           />
         </Tabs.TabPane>
       </Tabs>

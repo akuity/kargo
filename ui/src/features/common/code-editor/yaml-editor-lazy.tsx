@@ -89,6 +89,7 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
       validate: true,
       isKubernetes: true,
       format: true,
+      // @ts-expect-error correct schema
       schemas: schema && [
         {
           uri: `https://raw.githubusercontent.com/akuity/kargo/${__UI_VERSION__ && __UI_VERSION__ !== 'development' ? __UI_VERSION__ : 'main'}/ui/src/gen/schema/${resourceType || 'stages'}.kargo.akuity.io_v1alpha1.json`,
@@ -183,7 +184,7 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
 
         {placeholder && (
           <p
-            className={`${styles.placeholderWrapper} font-mono`}
+            className={`${styles.placeholderWrapper} font-mono mt-9`}
             onClick={() => {
               editorRef.current?.focus?.();
             }}

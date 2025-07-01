@@ -8,11 +8,11 @@ import (
 	yaml "sigs.k8s.io/yaml/goyaml.v3"
 )
 
-func TestSetStringsInBytes(t *testing.T) {
+func TestSetValuesInBytes(t *testing.T) {
 	testCases := []struct {
 		name       string
 		inBytes    []byte
-		changes    map[string]string
+		updates    []Update
 		assertions func(*testing.T, []byte, error)
 	}{
 		{
@@ -29,14 +29,69 @@ characters:
 			},
 		},
 		{
+			name: "no extra quotes around true number",
+			inBytes: []byte(`
+characters:
+- name: Arthur Dent
+  answer: idk
+`),
+			updates: []Update{
+				{
+					Key:   "characters.0.answer",
+					Value: 42,
+				},
+			},
+			assertions: func(t *testing.T, bytes []byte, err error) {
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					[]byte(`
+characters:
+- name: Arthur Dent
+  answer: 42
+`),
+					bytes,
+				)
+			},
+		},
+		{
+			name: "extra quotes around string containing a valid number",
+			inBytes: []byte(`
+characters:
+- name: Arthur Dent
+  answer: idk
+`),
+			updates: []Update{
+				{
+					Key:   "characters.0.answer",
+					Value: "42",
+				},
+			},
+			assertions: func(t *testing.T, bytes []byte, err error) {
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					[]byte(`
+characters:
+- name: Arthur Dent
+  answer: "42"
+`),
+					bytes,
+				)
+			},
+		},
+		{
 			name: "success",
 			inBytes: []byte(`
 characters:
 - name: Anakin
   affiliation: Light side
 `),
-			changes: map[string]string{
-				"characters.0.affiliation": "Dark side",
+			updates: []Update{
+				{
+					Key:   "characters.0.affiliation",
+					Value: "Dark side",
+				},
 			},
 			assertions: func(t *testing.T, bytes []byte, err error) {
 				require.NoError(t, err)
@@ -54,7 +109,7 @@ characters:
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			b, err := SetStringsInBytes(testCase.inBytes, testCase.changes)
+			b, err := SetValuesInBytes(testCase.inBytes, testCase.updates)
 			testCase.assertions(t, b, err)
 		})
 	}

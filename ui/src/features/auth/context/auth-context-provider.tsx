@@ -2,7 +2,7 @@ import React, { PropsWithChildren, useMemo } from 'react';
 
 import { authTokenKey, refreshTokenKey } from '@ui/config/auth';
 
-import { extractInfoFromJWT, JWTInfo } from '../utils';
+import { extractInfoFromJWT, JWTInfo } from '../jwt-utils';
 
 import { AuthContext, AuthContextType } from './auth-context';
 

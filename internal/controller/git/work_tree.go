@@ -3,13 +3,17 @@ package git
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
 	libExec "github.com/akuity/kargo/internal/exec"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 // WorkTree is an interface for interacting with any working tree of a Git
@@ -20,7 +24,7 @@ type WorkTree interface {
 	// AddAllAndCommit is a convenience function that stages pending changes for
 	// commit to the current branch and then commits them using the provided
 	// commit message.
-	AddAllAndCommit(message string) error
+	AddAllAndCommit(message string, commitOpts *CommitOptions) error
 	// Clean cleans the working tree.
 	Clean() error
 	// Clear executes `git rm -rf .` to remove all files from the working tree.
@@ -57,6 +61,9 @@ type WorkTree interface {
 	GetDiffPathsForCommitID(commitID string) ([]string, error)
 	// IsAncestor returns true if parent branch is an ancestor of child
 	IsAncestor(parent string, child string) (bool, error)
+	// IsRebasing returns a bool indicating whether the working tree is currently
+	// in the middle of a rebase operation.
+	IsRebasing() (bool, error)
 	// LastCommitID returns the ID (sha) of the most recent commit to the current
 	// branch.
 	LastCommitID() (string, error)
@@ -118,7 +125,7 @@ func LoadWorkTree(path string, opts *LoadWorkTreeOptions) (WorkTree, error) {
 		return nil,
 			fmt.Errorf(`error reading URL of remote "origin" from config: %w`, err)
 	}
-	if err = w.setupAuth(); err != nil {
+	if err = w.setupAuth(w.homeDir); err != nil {
 		return nil, fmt.Errorf("error configuring the credentials: %w", err)
 	}
 	br, err := LoadBareRepo(repoPath, &LoadBareRepoOptions{
@@ -138,11 +145,11 @@ func (w *workTree) AddAll() error {
 	return nil
 }
 
-func (w *workTree) AddAllAndCommit(message string) error {
+func (w *workTree) AddAllAndCommit(message string, commitOpts *CommitOptions) error {
 	if err := w.AddAll(); err != nil {
 		return err
 	}
-	return w.Commit(message, nil)
+	return w.Commit(message, commitOpts)
 }
 
 func (w *workTree) Clean() error {
@@ -198,23 +205,44 @@ func (w *workTree) Commit(message string, opts *CommitOptions) error {
 	if opts == nil {
 		opts = &CommitOptions{}
 	}
-	cmdTokens := []string{"commit", "-m", message}
+
+	var homeDir string
 	if opts.Author != nil {
-		name := opts.Author.Name
-		if name == "" {
-			name = defaultUsername
+		// This author information is specific to this commit, so we will override
+		// repository-level author information by creating a temporary home
+		// directory, configuring the author information "globally" within it, and
+		// then ensuring the git commit command uses that home directory.
+		var err error
+		if homeDir, err = os.MkdirTemp(w.homeDir, ""); err != nil {
+			return fmt.Errorf(
+				"error creating virtual home directory %q for commit command: %w",
+				homeDir, err,
+			)
 		}
-		email := opts.Author.Email
-		if email == "" {
-			email = defaultEmail
+		defer func() {
+			if cleanErr := os.RemoveAll(homeDir); cleanErr != nil {
+				logging.LoggerFromContext(context.TODO()).
+					Error(cleanErr, "error removing virtual home directory", "path", homeDir)
+			}
+		}()
+		if err = w.setupAuthor(homeDir, opts.Author); err != nil {
+			return fmt.Errorf(
+				"error setting up author information for commit command: %w", err,
+			)
 		}
-		cmdTokens = append(cmdTokens, "--author", fmt.Sprintf("%s <%s>", name, email))
 	}
+
+	cmdTokens := []string{"commit", "-m", message}
 	if opts.AllowEmpty {
 		cmdTokens = append(cmdTokens, "--allow-empty")
 	}
 
-	if _, err := libExec.Exec(w.buildGitCommand(cmdTokens...)); err != nil {
+	cmd := w.buildGitCommand(cmdTokens...)
+	if homeDir != "" {
+		// Override the home directory set by b.buildGitCommand().
+		w.setCmdHome(cmd, homeDir)
+	}
+	if _, err := libExec.Exec(cmd); err != nil {
 		return fmt.Errorf("error committing changes: %w", err)
 	}
 	return nil
@@ -222,7 +250,7 @@ func (w *workTree) Commit(message string, opts *CommitOptions) error {
 
 func (w *workTree) CommitMessage(id string) (string, error) {
 	msgBytes, err := libExec.Exec(
-		w.buildGitCommand("log", "-n", "1", "--pretty=format:%s", id),
+		w.buildGitCommand("log", "-n", "1", "--pretty=format:%B", id),
 	)
 	if err != nil {
 		return "", fmt.Errorf("error obtaining commit message for commit %q: %w", id, err)
@@ -316,6 +344,31 @@ func (w *workTree) IsAncestor(parent string, child string) (bool, error) {
 	return false, fmt.Errorf("error testing ancestry of branches %q, %q: %w", parent, child, err)
 }
 
+func (w *workTree) IsRebasing() (bool, error) {
+	res, err := libExec.Exec(w.buildGitCommand("rev-parse", "--git-path", "rebase-merge"))
+	if err != nil {
+		return false, fmt.Errorf("error determining rebase status: %w", err)
+	}
+	rebaseMerge := filepath.Join(w.dir, strings.TrimSpace(string(res)))
+	if _, err = os.Stat(rebaseMerge); !os.IsNotExist(err) {
+		if err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+	if res, err = libExec.Exec(w.buildGitCommand("rev-parse", "--git-path", "rebase-apply")); err != nil {
+		return false, fmt.Errorf("error determining rebase status: %w", err)
+	}
+	rebaseApply := filepath.Join(w.dir, strings.TrimSpace(string(res)))
+	if _, err = os.Stat(rebaseApply); !os.IsNotExist(err) {
+		if err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+	return false, nil
+}
+
 func (w *workTree) LastCommitID() (string, error) {
 	shaBytes, err := libExec.Exec(w.buildGitCommand("rev-parse", "HEAD"))
 	if err != nil {
@@ -407,6 +460,11 @@ type TagMetadata struct {
 	// Subject is the subject (first line) of the commit message associated
 	// with the tag.
 	Subject string
+	// Tagger is the person who created the tag, in the format "Name <email>".
+	// This field is only populated for annotated tags.
+	Tagger string
+	// Annotation is the annotation of the tag, if it is an annotated tag.
+	Annotation string
 }
 
 func (w *workTree) ListTags() ([]TagMetadata, error) {
@@ -425,13 +483,17 @@ func (w *workTree) ListTags() ([]TagMetadata, error) {
 	// - committer name and email
 	// - creator date
 	//
+	// For annotated tags, we also output the following fields:
+	// - tagger name and email
+	// - tag annotation (the first line of the tag message)
+	//
 	// The `if`/`then`/`else` logic is used to ensure that we get the commit ID
 	// and subject of the tag, regardless of whether it's an annotated or
 	// lightweight tag.
 	//
 	// nolint: lll
 	const (
-		formatAnnotatedTag   = `%(refname:short)|*|%(*objectname)|*|%(*contents:subject)|*|%(*authorname) %(*authoremail)|*|%(*committername) %(*committeremail)|*|%(*creatordate:iso8601)`
+		formatAnnotatedTag   = `%(refname:short)|*|%(*objectname)|*|%(*contents:subject)|*|%(*authorname) %(*authoremail)|*|%(*committername) %(*committeremail)|*|%(creatordate:iso8601)|*|%(taggername) %(taggeremail)|*|%(contents:subject)`
 		formatLightweightTag = `%(refname:short)|*|%(objectname)|*|%(contents:subject)|*|%(authorname) %(authoremail)|*|%(committername) %(committeremail)|*|%(creatordate:iso8601)`
 		tagFormat            = `%(if)%(*objectname)%(then)` + formatAnnotatedTag + `%(else)` + formatLightweightTag + `%(end)`
 	)
@@ -451,7 +513,7 @@ func (w *workTree) ListTags() ([]TagMetadata, error) {
 	for scanner.Scan() {
 		line := scanner.Bytes()
 		parts := bytes.SplitN(scanner.Bytes(), []byte("|*|"), 6)
-		if len(parts) != 6 {
+		if len(parts) != 6 && len(parts) != 8 {
 			return nil, fmt.Errorf("unexpected number of fields: %q", line)
 		}
 
@@ -460,14 +522,23 @@ func (w *workTree) ListTags() ([]TagMetadata, error) {
 			return nil, fmt.Errorf("error parsing creator date %q: %w", parts[5], err)
 		}
 
-		tags = append(tags, TagMetadata{
+		tag := TagMetadata{
 			Tag:         string(parts[0]),
 			CommitID:    string(parts[1]),
 			Subject:     string(parts[2]),
 			Author:      string(parts[3]),
 			Committer:   string(parts[4]),
 			CreatorDate: creatorDate,
-		})
+		}
+
+		if len(parts) == 8 {
+			// This is an annotated tag, so we also have the tagger and tag
+			// annotation.
+			tag.Tagger = string(parts[6])
+			tag.Annotation = string(parts[7])
+		}
+
+		tags = append(tags, tag)
 	}
 
 	return tags, nil
@@ -481,22 +552,56 @@ type PushOptions struct {
 	// TargetBranch specifies the branch to push to. If empty, the current branch
 	// will be pushed to a remote branch by the same name.
 	TargetBranch string
+	// PullRebase indicates whether to pull and rebase before pushing. This can
+	// be useful when pushing changes to a remote branch that has been updated
+	// in the time since the local branch was last pulled.
+	PullRebase bool
 }
+
+// https://regex101.com/r/aNYjHP/1
+//
+// nolint: lll
+var nonFastForwardRegex = regexp.MustCompile(`(?m)^\s*!\s+\[(?:remote )?rejected].+\((?:non-fast-forward|fetch first|cannot lock ref.*)\)\s*$`)
 
 func (w *workTree) Push(opts *PushOptions) error {
 	if opts == nil {
 		opts = &PushOptions{}
 	}
-	args := []string{"push", "origin"}
-	if opts.TargetBranch != "" {
-		args = append(args, fmt.Sprintf("HEAD:%s", opts.TargetBranch))
-	} else {
-		args = append(args, "HEAD")
+	targetBranch := opts.TargetBranch
+	if targetBranch == "" {
+		var err error
+		if targetBranch, err = w.CurrentBranch(); err != nil {
+			return err
+		}
 	}
+	if opts.PullRebase {
+		exists, err := w.RemoteBranchExists(targetBranch)
+		if err != nil {
+			return err
+		}
+		// We only want to pull and rebase if the remote branch exists.
+		if exists {
+			if _, err = libExec.Exec(w.buildGitCommand("pull", "--rebase", "origin", targetBranch)); err != nil {
+				// The error we're most concerned with is a merge conflict requiring
+				// manual resolution, because it's an error that no amount of retries
+				// will fix. If we find that a rebase is in progress, this is what
+				// has happened.
+				if isRebasing, isRebasingErr := w.IsRebasing(); isRebasingErr == nil && isRebasing {
+					return ErrMergeConflict
+				}
+				// If we get to here, the error isn't a merge conflict.
+				return fmt.Errorf("error pulling and rebasing branch: %w", err)
+			}
+		}
+	}
+	args := []string{"push", "origin", fmt.Sprintf("HEAD:%s", targetBranch)}
 	if opts.Force {
 		args = append(args, "--force")
 	}
-	if _, err := libExec.Exec(w.buildGitCommand(args...)); err != nil {
+	if res, err := libExec.Exec(w.buildGitCommand(args...)); err != nil {
+		if nonFastForwardRegex.MatchString(string(res)) {
+			return fmt.Errorf("error pushing branch: %w", ErrNonFastForward)
+		}
 		return fmt.Errorf("error pushing branch: %w", err)
 	}
 	return nil

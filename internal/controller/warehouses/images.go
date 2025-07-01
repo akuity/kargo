@@ -3,13 +3,11 @@ package warehouses
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
-	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -33,7 +31,7 @@ func (r *reconciler) discoverImages(
 		logger := logging.LoggerFromContext(ctx).WithValues("repo", sub.RepoURL)
 
 		// Obtain credentials for the image repository.
-		creds, ok, err := r.credentialsDB.Get(ctx, namespace, credentials.TypeImage, sub.RepoURL)
+		creds, err := r.credentialsDB.Get(ctx, namespace, credentials.TypeImage, sub.RepoURL)
 		if err != nil {
 			return nil, fmt.Errorf(
 				"error obtaining credentials for image repo %q: %w",
@@ -42,7 +40,7 @@ func (r *reconciler) discoverImages(
 			)
 		}
 		var regCreds *image.Credentials
-		if ok {
+		if creds != nil {
 			regCreds = &image.Credentials{
 				Username: creds.Username,
 				Password: creds.Password,
@@ -76,9 +74,9 @@ func (r *reconciler) discoverImages(
 		discoveredImages := make([]kargoapi.DiscoveredImageReference, 0, len(images))
 		for _, img := range images {
 			discovery := kargoapi.DiscoveredImageReference{
-				Tag:        img.Tag,
-				Digest:     img.Digest,
-				GitRepoURL: r.getImageSourceURL(sub.GitRepoURL, img.Tag),
+				Tag:         img.Tag,
+				Digest:      img.Digest,
+				Annotations: img.Annotations,
 			}
 			if img.CreatedAt != nil {
 				discovery.CreatedAt = &metav1.Time{Time: *img.CreatedAt}
@@ -125,19 +123,6 @@ func (r *reconciler) discoverImageRefs(
 	return images, nil
 }
 
-const (
-	githubURLPrefix = "https://github.com"
-)
-
-func (r *reconciler) getImageSourceURL(gitRepoURL, tag string) string {
-	for baseUrl, fn := range r.imageSourceURLFnsByBaseURL {
-		if strings.HasPrefix(gitRepoURL, baseUrl) {
-			return fn(gitRepoURL, tag)
-		}
-	}
-	return ""
-}
-
 func imageDiscoveryLogFields(sub kargoapi.ImageSubscription) []any {
 	f := []any{
 		"imageSelectionStrategy", sub.ImageSelectionStrategy,
@@ -176,8 +161,4 @@ func imageSelectorForSubscription(
 			DiscoveryLimit:        int(sub.DiscoveryLimit),
 		},
 	)
-}
-
-func getGithubImageSourceURL(gitRepoURL, tag string) string {
-	return fmt.Sprintf("%s/tree/%s", git.NormalizeURL(gitRepoURL), tag)
 }

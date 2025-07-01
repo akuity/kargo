@@ -14,9 +14,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	rollouts "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
-	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -130,10 +130,10 @@ func (v *downstreamStageEnqueuer[T]) Update(
 	}
 }
 
-func getNewlyVerifiedStages(old, new *kargoapi.Freight) []string {
+func getNewlyVerifiedStages(existing, updated *kargoapi.Freight) []string {
 	var stages []string
-	for stage := range new.Status.VerifiedIn {
-		if _, ok := old.Status.VerifiedIn[stage]; !ok {
+	for stage := range updated.Status.VerifiedIn {
+		if !existing.IsVerifiedIn(stage) {
 			stages = append(stages, stage)
 		}
 	}
@@ -208,10 +208,10 @@ func (a *stageEnqueuerForApprovedFreight[T]) Update(
 	}
 }
 
-func getNewlyApprovedStages(old, new *kargoapi.Freight) []string {
+func getNewlyApprovedStages(existing, updated *kargoapi.Freight) []string {
 	var stages []string
-	for stage := range new.Status.ApprovedFor {
-		if _, ok := old.Status.ApprovedFor[stage]; !ok {
+	for stage := range updated.Status.ApprovedFor {
+		if !existing.IsApprovedFor(stage) {
 			stages = append(stages, stage)
 		}
 	}

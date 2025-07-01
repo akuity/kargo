@@ -29,8 +29,12 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
+  - clusterconfigs
+  - clusterpromotiontasks
   - freights
   - projects
+  - projectconfigs
+  - promotiontasks
   - stages
   - warehouses
   verbs:
@@ -74,6 +78,12 @@ rules:
   - analysistemplates
   verbs:
   - "*" # full access to analysistemplates
+- apiGroups:
+  - argoproj.io
+  resources:
+  - clusteranalysistemplates
+  verbs:
+  - "*" # full access to clusteranalysistemplates
 {{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -105,9 +115,13 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
+  - clusterconfigs
+  - clusterpromotiontasks
   - freights
   - projects
+  - projectconfigs
   - promotions
+  - promotiontasks
   - stages
   - warehouses
   verbs:
@@ -120,6 +134,43 @@ rules:
   resources:
   - analysisruns
   - analysistemplates
+  - clusteranalysistemplates
+  verbs:
+  - get
+  - list
+  - watch
+{{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kargo-user
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - clusterconfigs
+  - clusterpromotiontasks
+  - projects
+  verbs:
+  - get
+  - list
+  - watch
+{{- if .Values.api.rollouts.integrationEnabled }}
+- apiGroups:
+  - argoproj.io
+  resources:
+  - clusteranalysistemplates
   verbs:
   - get
   - list

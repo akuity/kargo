@@ -34,7 +34,7 @@ const config = {
           routeBasePath: '/', // Serve the docs at the site's roo
         },
         blog: false,
-        pages: false,
+        pages: {},
         theme: {
           customCss: require.resolve('./src/css/custom.css'),
         },
@@ -50,12 +50,7 @@ const config = {
         anonymizeIP: true,
       },
     ],
-    [
-      require.resolve("@cmfcmf/docusaurus-search-local"),
-      {
-        indexBlog: false,
-      },
-    ]
+    'docusaurus-plugin-sass'
   ],
 
   themeConfig:
@@ -79,6 +74,10 @@ const config = {
             href: 'https://akuity.io/',
             label: 'Akuity.io',
             position: 'left',
+          },
+          {
+            type: 'custom-version-dropdown',
+            position: 'right',
           },
           {
             href: 'https://kargo.io/',
@@ -109,6 +108,12 @@ const config = {
         defaultMode: 'light',
       },
       metadata: [{name: 'akuity, argoproj, argo cd, argo workflows, argo events, argo rollouts, kubernetes, gitops, devops', content: 'akuity, documentation, developer documentation'}],
+      algolia: {
+        appId: '3SQ7LK6WD9',
+        apiKey: '5627b8c2efd5b28a5b70c6660cb2b0f3',
+        indexName: 'kargo',
+        contextualSearch: true,
+      }
     }),
 };
 

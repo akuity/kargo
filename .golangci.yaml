@@ -7,8 +7,8 @@ run:
 
 issues:
   exclude-files:
-    - api/.*/*_types.go
-    - api/.*/groupversion_info.go
+    - .*/*_types.go
+    - .*/groupversion_info.go
 
 linters:
   disable-all: true

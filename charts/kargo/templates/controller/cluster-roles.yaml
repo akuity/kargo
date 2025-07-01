@@ -10,6 +10,14 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
   - events
   verbs:
   - create
@@ -28,6 +36,7 @@ rules:
   - kargo.akuity.io
   resources:
   - projects
+  - projectconfigs
   verbs:
   - get
   - list
@@ -55,6 +64,8 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
+  - clusterpromotiontasks
+  - promotiontasks
   - warehouses
   verbs:
   - get
@@ -123,6 +134,14 @@ rules:
   - argoproj.io
   resources:
   - analysistemplates
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - argoproj.io
+  resources:
+  - clusteranalysistemplates
   verbs:
   - get
   - list

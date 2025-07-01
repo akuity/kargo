@@ -11,14 +11,21 @@ import (
 	yaml "sigs.k8s.io/yaml/goyaml.v3"
 )
 
-// SetStringsInFile overwrites the specified file with the changes specified by
-// the changes map applied. The changes map maps keys to new values. Keys are of
-// the form <key 0>.<key 1>...<key n>. Integers may be used as keys in cases
-// where a specific node needs to be selected from a sequence. An error is
-// returned for any attempted update to a key that does not exist or does not
-// address a scalar node. Importantly, all comments and style choices in the
-// input bytes are preserved in the output.
-func SetStringsInFile(file string, changes map[string]string) error {
+// Update represents a discrete update to be made to a YAML document.
+type Update struct {
+	// Key is the dot-separated path to the field to update.
+	Key string
+	// Value is the new value to set for the field.
+	Value any
+}
+
+// SetValuesInFile overwrites the specified file with the changes specified by
+// the the list of Updates. Keys are of the form <key 0>.<key 1>...<key n>.
+// Integers may be used as keys in cases where a specific node needs to be
+// selected from a sequence. An error is returned for any attempted update to a
+// key that does not exist or does not address a scalar node. Importantly, all
+// comments and style choices in the input bytes are preserved in the output.
+func SetValuesInFile(file string, updates []Update) error {
 	inBytes, err := os.ReadFile(file)
 	if err != nil {
 		return fmt.Errorf(
@@ -27,7 +34,7 @@ func SetStringsInFile(file string, changes map[string]string) error {
 			err,
 		)
 	}
-	outBytes, err := SetStringsInBytes(inBytes, changes)
+	outBytes, err := SetValuesInBytes(inBytes, updates)
 	if err != nil {
 		return fmt.Errorf("error mutating bytes: %w", err)
 	}
@@ -46,17 +53,13 @@ func SetStringsInFile(file string, changes map[string]string) error {
 	return nil
 }
 
-// SetStringsInBytes returns a copy of the provided bytes with the changes
-// specified by the changes map applied. The changes map maps keys to new
-// values. Keys are of the form <key 0>.<key 1>...<key n>. Integers may be used
-// as keys in cases where a specific node needs to be selected from a sequence.
-// An error is returned for any attempted update to a key that does not exist or
-// does not address a scalar node. Importantly, all comments and style choices
-// in the input bytes are preserved in the output.
-func SetStringsInBytes(
-	inBytes []byte,
-	changes map[string]string,
-) ([]byte, error) {
+// SetValuesInBytes returns a copy of the provided bytes with the changes
+// specified by Updates applied. Keys are of the form <key 0>.<key 1>...<key n>.
+// Integers may be used as keys in cases where a specific node needs to be
+// selected from a sequence. An error is returned for any attempted update to a
+// key that does not exist or does not address a scalar node. Importantly, all
+// comments and style choices in the input bytes are preserved in the output.
+func SetValuesInBytes(inBytes []byte, updates []Update) ([]byte, error) {
 	doc := &yaml.Node{}
 	if err := yaml.Unmarshal(inBytes, doc); err != nil {
 		return nil, fmt.Errorf("error unmarshaling input: %w", err)
@@ -64,18 +67,18 @@ func SetStringsInBytes(
 
 	type change struct {
 		col   int
-		value string
+		value any
 	}
 	changesByLine := map[int]change{}
-	for k, v := range changes {
-		keyPath := strings.Split(k, ".")
+	for _, update := range updates {
+		keyPath := strings.Split(update.Key, ".")
 		line, col, err := findScalarNode(doc, keyPath)
 		if err != nil {
-			return nil, fmt.Errorf("error finding key %s: %w", k, err)
+			return nil, fmt.Errorf("error finding key %s: %w", update.Key, err)
 		}
 		changesByLine[line] = change{
 			col:   col,
-			value: v,
+			value: update.Value,
 		}
 	}
 
@@ -104,7 +107,9 @@ func SetStringsInBytes(
 					return nil, fmt.Errorf("%s: %w", errMsg, err)
 				}
 			}
-			if _, err := outBuf.WriteString(change.value); err != nil {
+			if _, err := outBuf.WriteString(
+				fmt.Sprintf("%v", QuoteIfNecessary(change.value)),
+			); err != nil {
 				return nil, fmt.Errorf("%s: %w", errMsg, err)
 			}
 			if _, err := outBuf.WriteString("\n"); err != nil {

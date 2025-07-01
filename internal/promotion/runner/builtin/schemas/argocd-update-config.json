@@ -1,0 +1,191 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ArgoCDUpdateConfig",
+  
+  "definitions": {
+
+    "argoCDAppUpdate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Specifies the name of an Argo CD Application resource to be updated.",
+          "minLength": 1
+        },
+        "namespace": {
+          "type": "string",
+          "description": "Specifies the namespace of an Argo CD Application resource to be updated. If left unspecified, the namespace will be the controller's configured default.",
+          "minLength": 1
+        },
+        "sources": {
+          "type": "array",
+          "description": "Describes updates to be applied to various sources of an Argo CD Application resource.",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/argoCDAppSourceUpdate"
+          }
+        }
+      }
+    },
+
+    "argoCDAppSourceUpdate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repoURL"],
+      "properties": {
+        "chart": {
+          "type": "string",
+          "description": "If applicable, identifies a specific chart within the Helm chart repository specified by the 'repoURL' field. When the source to be updated references a Helm chart repository, the values of the 'repoURL' and 'chart' fields should exactly match the values of the same fields in the source. i.e. Do not match the values of these two fields to your Warehouse; match them to the Application source you wish to update.",
+          "minLength": 1
+        },
+        "desiredRevision": {
+          "type": "string",
+          "description": "Specifies the desired revision for the source. If left undefined, the desired revision will be determined by Freight (if possible). Note that the source's 'targetRevision' will not be updated to this commit unless 'updateTargetRevision=true' is set. The utility of this field, on its own, is to specify the revision that the source should be observably synced to during a health check.",
+          "minLength": 1
+        },
+        "helm": {
+          "$ref": "#/definitions/argoCDHelmParameterUpdates"
+        },
+        "kustomize": {
+          "$ref": "#/definitions/argoCDKustomizeImageUpdates"
+        },
+        "repoURL": {
+          "type": "string",
+          "description": "With possible help from the 'chart' field, identifies which of an Argo CD Application's sources is to be updated. When the source to be updated references a Helm chart repository, the values of the 'repoURL' and 'chart' fields should exactly match the values of the same fields in the source. i.e. Do not match the values of these two fields to your Warehouse; match them to the Application source you wish to update.",
+          "minLength": 1
+        },
+        "updateTargetRevision": {
+          "type": "boolean",
+          "description": "Indicates whether the source should be updated such that its 'targetRevision' field points directly at the desired revision. If set to true, 'desiredRevision' must be specified."
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "desiredRevision": {  "enum": ["", null] },
+            "updateTargetRevision": {  "enum": [false, null] }
+          }
+        },
+        {
+          "required": ["desiredRevision"],
+          "properties": {
+            "desiredRevision": {  "minLength": 1 }
+          }
+        }
+      ]
+    },
+
+    "argoCDHelmParameterUpdates": {
+      "type": "object",
+      "description": "Describes updates to an Argo CD Application source's Helm parameters.",
+      "additionalProperties": false,
+      "required": ["images"],
+      "properties": {
+        "images": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/argoCDHelmImageUpdate"
+          }
+        }
+      }
+    },
+
+    "argoCDHelmImageUpdate": {
+      "type": "object",
+      "description": "Describes how to update a Helm parameter to reference a specific version of a container image.",
+      "additionalProperties": false,
+      "required": ["key", "value"],
+      "properties": {
+        "key": {
+          "type": "string",
+          "description": "Specifies a key within an Argo CD Application source's Helm parameters that is to be updated.",
+          "minLength": 1
+        },
+        "value": {
+          "type": "string",
+          "description": "Specifies a new value for the setting within an Argo CD Application source's Helm parameters identified by the 'key' field."
+        }
+      }
+    },
+
+    "argoCDKustomizeImageUpdates": {
+      "type": "object",
+      "description": "Describes updates to an Argo CD Application source's Kustomize images.",
+      "additionalProperties": false,
+      "properties": {
+        "images": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/argoCDKustomizeImageUpdate"
+          }
+        }
+      }
+    },    
+
+    "argoCDKustomizeImageUpdate": {
+      "type": "object",
+      "description": "Describes how to update a Kustomize image to reference a specific version of a container image.",
+      "additionalProperties": false,
+      "required": ["repoURL"],
+      "properties": {
+        "digest": {
+          "type": "string",
+          "description": "Digest of the image to set. Mutually exclusive with 'tag'."
+        },
+        "newName": {
+          "type": "string",
+          "description": "Specifies a container image name override.",
+          "minLength": 1
+        },
+        "repoURL": {
+          "type": "string",
+          "description": "The URL of a container image repository.",
+          "minLength": 1
+        },
+        "tag": {
+          "type": "string",
+          "description": "Tag of the image to set. Mutually exclusive with 'digest'."
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "digest": { "enum": [null, ""] },
+            "tag": { "enum": [null, ""] }
+          }
+        },
+        {
+          "required": ["digest"],
+          "properties": {
+            "digest": { "minLength": 1 },
+            "tag": { "enum": [null, ""] }
+          }
+        },
+        {
+          "required": ["tag"],
+          "properties": {
+            "digest": { "enum": [null, ""] },
+            "tag": { "minLength": 1 }
+          }
+        }
+      ]
+    }
+  },
+  
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apps"],
+  "properties": {
+    "apps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/argoCDAppUpdate"
+      }
+    }
+  }
+}

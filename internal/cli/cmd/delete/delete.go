@@ -12,13 +12,13 @@ import (
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	sigyaml "sigs.k8s.io/yaml"
 
+	kargosvcapi "github.com/akuity/kargo/api/service/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/io"
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/cli/templates"
-	kargosvcapi "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
 type deleteOptions struct {
@@ -75,8 +75,10 @@ kargo delete warehouse --project=my-project my-warehouse
 	io.SetIOStreams(cmd, cmdOpts.IOStreams)
 
 	// Register subcommands.
+	cmd.AddCommand(newClusterConfigCommand(cfg, streams))
 	cmd.AddCommand(newCredentialsCommand(cfg, streams))
 	cmd.AddCommand(newProjectCommand(cfg, streams))
+	cmd.AddCommand(newProjectConfigCommand(cfg, streams))
 	cmd.AddCommand(newRoleCommand(cfg, streams))
 	cmd.AddCommand(newStageCommand(cfg, streams))
 	cmd.AddCommand(newWarehouseCommand(cfg, streams))

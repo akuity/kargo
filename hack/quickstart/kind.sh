@@ -3,7 +3,7 @@
 set -x
 
 argo_cd_chart_version=7.7.0
-argo_rollouts_chart_version=2.37.7
+argo_rollouts_chart_version=2.39.1
 cert_manager_chart_version=1.16.1
 
 kind create cluster \
@@ -18,6 +18,8 @@ nodes:
     hostPort: 31443
   - containerPort: 31444 # Kargo dashboard
     hostPort: 31444
+  - containerPort: 31445 # External webhooks server
+    hostPort: 31445
   - containerPort: 30081 # test application instance
     hostPort: 30081
   - containerPort: 30082 # UAT application instance
@@ -32,7 +34,7 @@ helm install cert-manager cert-manager \
   --version $cert_manager_chart_version \
   --namespace cert-manager \
   --create-namespace \
-  --set installCRDs=true \
+  --set crds.enabled=true \
   --wait
 
 helm install argocd argo-cd \
@@ -66,4 +68,6 @@ helm install kargo \
   --set api.service.nodePort=31444 \
   --set api.adminAccount.passwordHash='$2a$10$Zrhhie4vLz5ygtVSaif6o.qN36jgs6vjtMBdM6yrU1FOeiAAMMxOm' \
   --set api.adminAccount.tokenSigningKey=iwishtowashmyirishwristwatch \
+  --set externalWebhooksServer.service.type=NodePort \
+  --set externalWebhooksServer.service.nodePort=31445 \
   --wait

@@ -21,7 +21,3 @@ assignees: ''
 # Motivation
 
 <!-- Please give examples of your use case. i.e. When would someone use this? -->
-
-# Suggested Implementation
-
-<!-- Do you have thoughts about how this should be implemented? -->

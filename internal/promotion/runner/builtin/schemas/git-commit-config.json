@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GitCommitConfig",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["path", "message"],
+  "properties": {
+    "author": {
+      "type": "object",
+      "description": "Optional authorship information for the commit. If provided, this takes precedence over both system-level defaults and any optional, default authorship information configured in the `git-clone` step.",
+      "additionalProperties": false,
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "The email of the author.",
+          "format": "email"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the author.",
+          "minLength": 1
+        },
+        "signingKey": {
+          "type": "string",
+          "description": "The GPG signing key for the author."
+        }
+      },
+      "required": ["name", "email"]
+    },
+    "message": {
+      "type": "string",
+      "description": "The commit message.",
+      "minLength": 1
+    },
+    "path": {
+      "type": "string",
+      "description": "The path to a working directory of a local repository.",
+      "minLength": 1
+    }
+  }
+}

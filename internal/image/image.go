@@ -8,10 +8,12 @@ import (
 
 // Image is a representation of a container image.
 type Image struct {
-	Tag       string
-	Digest    string
-	CreatedAt *time.Time
-	semVer    *semver.Version
+	Tag         string
+	Digest      string
+	Annotations map[string]string
+	CreatedAt   *time.Time
+
+	semVer *semver.Version
 }
 
 // newImage initializes and returns an Image.

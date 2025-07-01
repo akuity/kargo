@@ -1,30 +1,9 @@
-import {
-  faArrowUp,
-  faChartLine,
-  faCheck,
-  faClock,
-  faClone,
-  faCloudUploadAlt,
-  faCodeBranch,
-  faCodePullRequest,
-  faCopy,
-  faDraftingCompass,
-  faFileCode,
-  faFileEdit,
-  faFileImage,
-  faHammer,
-  faHeart,
-  faRedoAlt,
-  faSyncAlt,
-  faUpDown,
-  faUpload,
-  faWrench
-} from '@fortawesome/free-solid-svg-icons';
 import { JSONSchema7 } from 'json-schema';
 
 // IMPORTANT(Marvin9): this must be replaced with proper discovery mechanism
 import argocdUpdateConfig from '@ui/gen/directives/argocd-update-config.json';
 import copyConfig from '@ui/gen/directives/copy-config.json';
+import deleteConfig from '@ui/gen/directives/delete-config.json';
 import gitOverwriteConfig from '@ui/gen/directives/git-clear-config.json';
 import gitCloneConfig from '@ui/gen/directives/git-clone-config.json';
 import gitCommitConfig from '@ui/gen/directives/git-commit-config.json';
@@ -33,9 +12,13 @@ import gitPushConfig from '@ui/gen/directives/git-push-config.json';
 import gitWaitForPR from '@ui/gen/directives/git-wait-for-pr-config.json';
 import helmTemplateConfig from '@ui/gen/directives/helm-template-config.json';
 import helmUpdateChartConfig from '@ui/gen/directives/helm-update-chart-config.json';
-import helmUpdateImageConfig from '@ui/gen/directives/helm-update-image-config.json';
+import httpConfig from '@ui/gen/directives/http-config.json';
+import jsonParseConfig from '@ui/gen/directives/json-parse-config.json';
+import jsonUpdateConfig from '@ui/gen/directives/json-update-config.json';
 import kustomizeBuildConfig from '@ui/gen/directives/kustomize-build-config.json';
 import kustomizeSetImageConfig from '@ui/gen/directives/kustomize-set-image-config.json';
+import yamlParseConfig from '@ui/gen/directives/yaml-parse-config.json';
+import yamlUpdateConfig from '@ui/gen/directives/yaml-update-config.json';
 
 import { PromotionDirectivesRegistry } from './types';
 
@@ -47,73 +30,80 @@ export const useDiscoverPromotionDirectivesRegistries = (): PromotionDirectivesR
     runners: [
       {
         identifier: 'argocd-update',
-        unstable_icons: [faUpDown, faHeart],
         config: argocdUpdateConfig as JSONSchema7
       },
       {
         identifier: 'copy',
-        unstable_icons: [faCopy],
         config: copyConfig as JSONSchema7
       },
       {
+        identifier: 'delete',
+        unstable_icons: [],
+        config: deleteConfig as JSONSchema7
+      },
+      {
         identifier: 'git-clone',
-        unstable_icons: [faCodeBranch, faClone],
         config: gitCloneConfig as JSONSchema7
       },
       {
         identifier: 'git-push',
-        unstable_icons: [faArrowUp, faCloudUploadAlt, faUpload],
         config: gitPushConfig as JSONSchema7
       },
       {
         identifier: 'git-commit',
-        unstable_icons: [faCheck, faCodeBranch],
         config: gitCommitConfig as unknown as JSONSchema7
       },
       {
         identifier: 'git-open-pr',
-        unstable_icons: [faCodePullRequest, faFileCode],
         config: gitOpenPR as unknown as JSONSchema7
       },
       {
         identifier: 'git-wait-for-pr',
-        unstable_icons: [faClock, faCodePullRequest],
         config: gitWaitForPR as unknown as JSONSchema7
       },
       {
+        identifier: 'yaml-parse',
+        config: yamlParseConfig as JSONSchema7
+      },
+      {
+        identifier: 'yaml-update',
+        config: yamlUpdateConfig as unknown as JSONSchema7
+      },
+      {
+        identifier: 'json-parse',
+        config: jsonParseConfig as JSONSchema7
+      },
+      {
+        identifier: 'json-update',
+        config: jsonUpdateConfig as unknown as JSONSchema7
+      },
+      {
         identifier: 'git-push',
-        unstable_icons: [faArrowUp, faCloudUploadAlt],
         config: gitPushConfig as unknown as JSONSchema7
       },
       {
         identifier: 'git-clear',
-        unstable_icons: [faRedoAlt, faCodeBranch],
         config: gitOverwriteConfig as JSONSchema7
       },
       {
         identifier: 'helm-update-chart',
-        unstable_icons: [faSyncAlt, faChartLine],
         config: helmUpdateChartConfig as JSONSchema7
       },
       {
-        identifier: 'helm-update-image',
-        unstable_icons: [faSyncAlt, faFileImage],
-        config: helmUpdateImageConfig as JSONSchema7
-      },
-      {
         identifier: 'helm-template',
-        unstable_icons: [faFileCode, faDraftingCompass],
         config: helmTemplateConfig as JSONSchema7
       },
       {
         identifier: 'kustomize-build',
-        unstable_icons: [faWrench, faHammer],
         config: kustomizeBuildConfig as JSONSchema7
       },
       {
         identifier: 'kustomize-set-image',
-        unstable_icons: [faFileImage, faFileEdit],
         config: kustomizeSetImageConfig as JSONSchema7
+      },
+      {
+        identifier: 'http',
+        config: httpConfig as JSONSchema7
       }
     ]
   };

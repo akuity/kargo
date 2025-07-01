@@ -2,7 +2,6 @@ package ecr
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"strings"
@@ -12,7 +11,6 @@ import (
 	awscreds "github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/ecr"
 	"github.com/patrickmn/go-cache"
-	corev1 "k8s.io/api/core/v1"
 
 	"github.com/akuity/kargo/internal/credentials"
 )
@@ -23,118 +21,101 @@ const (
 	secretKey = "awsSecretAccessKey"
 )
 
-type accessKeyCredentialHelper struct {
+type AccessKeyProvider struct {
 	tokenCache *cache.Cache
 
-	// The following behaviors are overridable for testing purposes:
-
-	getAuthTokenFn func(
-		ctx context.Context,
-		region string,
-		accessKeyID string,
-		secretAccessKey string,
-	) (string, error)
+	getAuthTokenFn func(ctx context.Context, region, accessKeyID, secretAccessKey string) (string, error)
 }
 
-// NewAccessKeyCredentialHelper returns an implementation of credentials.Helper
-// that utilizes a cache to avoid unnecessary calls to AWS.
-func NewAccessKeyCredentialHelper() credentials.Helper {
-	a := &accessKeyCredentialHelper{
+func NewAccessKeyProvider() credentials.Provider {
+	p := &AccessKeyProvider{
 		tokenCache: cache.New(
 			// Tokens live for 12 hours. We'll hang on to them for 10.
 			10*time.Hour, // Default ttl for each entry
 			time.Hour,    // Cleanup interval
 		),
 	}
-	a.getAuthTokenFn = a.getAuthToken
-	return a.getCredentials
+	p.getAuthTokenFn = p.getAuthToken
+	return p
 }
 
-func (a *accessKeyCredentialHelper) getCredentials(
+func (p *AccessKeyProvider) Supports(credType credentials.Type, repoURL string, data map[string][]byte) bool {
+	if (credType != credentials.TypeImage && credType != credentials.TypeHelm) || len(data) == 0 {
+		return false
+	}
+
+	if credType == credentials.TypeHelm && !strings.HasPrefix(repoURL, "oci://") {
+		return false
+	}
+
+	if matches := ecrURLRegex.FindStringSubmatch(repoURL); len(matches) != 2 {
+		return false
+	}
+
+	return data[regionKey] != nil && data[idKey] != nil && data[secretKey] != nil
+}
+
+func (p *AccessKeyProvider) GetCredentials(
 	ctx context.Context,
 	_ string,
 	credType credentials.Type,
 	repoURL string,
-	secret *corev1.Secret,
+	data map[string][]byte,
 ) (*credentials.Credentials, error) {
-	if (credType != credentials.TypeImage && credType != credentials.TypeHelm) || secret == nil {
-		// This helper can't handle this
+	if !p.Supports(credType, repoURL, data) {
 		return nil, nil
 	}
 
-	if credType == credentials.TypeHelm && !strings.HasPrefix(repoURL, "oci://") {
-		// Only OCI Helm repos are supported in ECR
-		return nil, nil
-	}
+	var (
+		region, accessKeyID, secretAccessKey = string(data[regionKey]), string(data[idKey]), string(data[secretKey])
+		cacheKey                             = tokenCacheKey(region, accessKeyID, secretAccessKey)
+	)
 
-	matches := ecrURLRegex.FindStringSubmatch(repoURL)
-	if len(matches) != 2 { // This doesn't look like an ECR URL
-		return nil, nil
-	}
-
-	region := string(secret.Data[regionKey])
-	accessKeyID := string(secret.Data[idKey])
-	secretAccessKey := string(secret.Data[secretKey])
-	if region == "" && accessKeyID == "" && secretAccessKey == "" {
-		// None of these fields are set, so there's nothing to do here.
-		return nil, nil
-	}
-	// If we get to here, at least one of the fields is set. Now if they aren't
-	// all set, we should return an error.
-	if region == "" || accessKeyID == "" || secretAccessKey == "" {
-		return nil, fmt.Errorf(
-			"%s, %s, and %s must all be set or all be unset",
-			regionKey, idKey, secretKey,
-		)
-	}
-
-	cacheKey := a.tokenCacheKey(region, accessKeyID, secretAccessKey)
-
-	if entry, exists := a.tokenCache.Get(cacheKey); exists {
+	// Check the cache for the token
+	if entry, exists := p.tokenCache.Get(cacheKey); exists {
 		return decodeAuthToken(entry.(string)) // nolint: forcetypeassert
 	}
 
-	encodedToken, err := a.getAuthTokenFn(ctx, region, accessKeyID, secretAccessKey)
-	if err != nil {
-		return nil, fmt.Errorf("error getting ECR auth token: %w", err)
-	}
-
-	if encodedToken == "" {
-		return nil, nil
+	// Cache miss, get a new token
+	encodedToken, err := p.getAuthTokenFn(ctx, region, accessKeyID, secretAccessKey)
+	if err != nil || encodedToken == "" {
+		if err != nil {
+			err = fmt.Errorf("error getting ECR auth token: %w", err)
+		}
+		return nil, err
 	}
 
 	// Cache the encoded token
-	a.tokenCache.Set(cacheKey, encodedToken, cache.DefaultExpiration)
+	p.tokenCache.Set(cacheKey, encodedToken, cache.DefaultExpiration)
 
 	return decodeAuthToken(encodedToken)
 }
 
-// tokenCacheKey returns a cache key for an ECR authorization token. The key is
-// a hash of the region, access key ID, and secret access key. Using a hash
-// ensures that the secret access key is not stored in plaintext in the cache.
-func (a *accessKeyCredentialHelper) tokenCacheKey(region, accessKeyID, secretAccessKey string) string {
-	return fmt.Sprintf(
-		"%x",
-		sha256.Sum256([]byte(
-			fmt.Sprintf("%s:%s:%s", region, accessKeyID, secretAccessKey),
-		)),
-	)
-}
-
-// getAuthToken returns an ECR authorization token by calling out to AWS with
-// the provided credentials.
-func (a *accessKeyCredentialHelper) getAuthToken(
+// getAuthToken gets an ECR authorization token using the provided access key ID
+// and secret access key. It returns the encoded token, which is a base64 string
+// containing a username and password separated by a colon.
+func (p *AccessKeyProvider) getAuthToken(
 	ctx context.Context, region, accessKeyID, secretAccessKey string,
 ) (string, error) {
 	svc := ecr.NewFromConfig(aws.Config{
 		Region:      region,
 		Credentials: awscreds.NewStaticCredentialsProvider(accessKeyID, secretAccessKey, ""),
 	})
+
 	output, err := svc.GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenInput{})
 	if err != nil {
 		return "", fmt.Errorf("error getting ECR authorization token: %w", err)
 	}
-	return *output.AuthorizationData[0].AuthorizationToken, nil
+
+	if output == nil || len(output.AuthorizationData) == 0 {
+		return "", fmt.Errorf("no authorization data returned")
+	}
+
+	if token := output.AuthorizationData[0].AuthorizationToken; token != nil {
+		return *token, nil
+	}
+
+	return "", fmt.Errorf("no authorization token returned")
 }
 
 // decodeAuthToken decodes an ECR authorization token by base64 decoding it and

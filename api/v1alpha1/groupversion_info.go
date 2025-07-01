@@ -27,14 +27,22 @@ var (
 // addKnownTypes adds the set of types defined in this package to the supplied scheme.
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(GroupVersion,
+		&ClusterConfig{},
+		&ClusterConfigList{},
+		&ClusterPromotionTask{},
+		&ClusterPromotionTaskList{},
 		&Freight{},
 		&FreightList{},
 		&Stage{},
 		&StageList{},
 		&Project{},
 		&ProjectList{},
+		&ProjectConfig{},
+		&ProjectConfigList{},
 		&Promotion{},
 		&PromotionList{},
+		&PromotionTask{},
+		&PromotionTaskList{},
 		&Warehouse{},
 		&WarehouseList{},
 	)

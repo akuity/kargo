@@ -14,18 +14,22 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/api/kubernetes"
 	"github.com/akuity/kargo/internal/garbage"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
-	versionpkg "github.com/akuity/kargo/internal/version"
+	"github.com/akuity/kargo/internal/server/kubernetes"
+	"github.com/akuity/kargo/internal/types"
+	versionpkg "github.com/akuity/kargo/pkg/x/version"
 )
 
 type garbageCollectorOptions struct {
 	KubeConfig string
+	QPS        float32
+	Burst      int
 
-	PprofBindAddress string
+	MetricsBindAddress string
+	PprofBindAddress   string
 
 	Logger *logging.Logger
 }
@@ -54,6 +58,10 @@ func newGarbageCollectorCommand() *cobra.Command {
 
 func (o *garbageCollectorOptions) complete() {
 	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
+	o.QPS = types.MustParseFloat32(os.GetEnv("KUBE_API_QPS", "50.0"))
+	o.Burst = types.MustParseInt(os.GetEnv("KUBE_API_BURST", "300"))
+
+	o.MetricsBindAddress = os.GetEnv("METRICS_BIND_ADDRESS", "0")
 	o.PprofBindAddress = os.GetEnv("PPROF_BIND_ADDRESS", "")
 }
 
@@ -95,6 +103,7 @@ func (o *garbageCollectorOptions) setupManager(ctx context.Context) (manager.Man
 	if err != nil {
 		return nil, fmt.Errorf("error loading REST config: %w", err)
 	}
+	kubernetes.ConfigureQPSBurst(ctx, restCfg, o.QPS, o.Burst)
 
 	scheme := runtime.NewScheme()
 	if err = corev1.AddToScheme(scheme); err != nil {
@@ -109,7 +118,7 @@ func (o *garbageCollectorOptions) setupManager(ctx context.Context) (manager.Man
 		ctrl.Options{
 			Scheme: scheme,
 			Metrics: server.Options{
-				BindAddress: "0",
+				BindAddress: o.MetricsBindAddress,
 			},
 			PprofBindAddress: o.PprofBindAddress,
 		},

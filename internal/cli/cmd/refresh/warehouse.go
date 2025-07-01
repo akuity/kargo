@@ -8,17 +8,19 @@ import (
 	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 
+	v1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
+	"github.com/akuity/kargo/api/service/v1alpha1/svcv1alpha1connect"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/cli/templates"
-	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
-	"github.com/akuity/kargo/pkg/api/service/v1alpha1/svcv1alpha1connect"
 )
 
 func newRefreshWarehouseCommand(cfg config.CLIConfig) *cobra.Command {
 	cmdOpts := &refreshOptions{
-		Config: cfg,
+		Config:       cfg,
+		ResourceType: refreshResourceTypeWarehouse,
 	}
 
 	cmd := &cobra.Command{
@@ -36,7 +38,7 @@ kargo config set-project my-project
 kargo refresh warehouse my-warehouse
 `),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cmdOpts.complete(refreshResourceTypeWarehouse, args)
+			cmdOpts.complete(args)
 
 			if err := cmdOpts.validate(); err != nil {
 				return err
@@ -81,7 +83,7 @@ func waitForWarehouse(
 		if msg == nil || msg.Warehouse == nil {
 			return errors.New("unexpected response")
 		}
-		token, ok := kargoapi.RefreshAnnotationValue(msg.Warehouse.GetAnnotations())
+		token, ok := api.RefreshAnnotationValue(msg.Warehouse.GetAnnotations())
 		if !ok {
 			return fmt.Errorf(
 				"Warehouse %q in Project %q has no %q annotation",

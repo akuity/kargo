@@ -2,159 +2,209 @@ package gar
 
 import (
 	"context"
-	"encoding/base64"
-	"fmt"
+	"errors"
 	"testing"
 
 	"github.com/patrickmn/go-cache"
-	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/akuity/kargo/internal/credentials"
 )
 
-func TestServiceAccountKeyCredentialHelper(t *testing.T) {
-	const (
-		testGCPProjectID      = "fake-project-123456"
-		testRegion            = "fake-region"
-		testServiceAccountKey = "fake-key"
-		testAccessToken       = "fake-token"
-	)
-	testRepoURL := fmt.Sprintf("%s-docker.pkg.dev/%s/debian/debian", testRegion, testGCPProjectID)
-	testEncodedServiceAccountKey := base64.StdEncoding.EncodeToString([]byte(testServiceAccountKey))
+func TestNewServiceAccountKeyProvider(t *testing.T) {
+	provider := NewServiceAccountKeyProvider().(*ServiceAccountKeyProvider) // nolint:forcetypeassert
+	assert.NotNil(t, provider)
 
-	warmTokenCache := cache.New(0, 0)
-	warmTokenCache.Set(
-		(&serviceAccountKeyCredentialHelper{}).tokenCacheKey(testEncodedServiceAccountKey),
-		testAccessToken,
-		cache.DefaultExpiration,
+	assert.NotNil(t, provider.tokenCache)
+	assert.NotNil(t, provider.getAccessTokenFn)
+}
+
+func TestServiceAccountKeyProvider_Supports(t *testing.T) {
+	const (
+		fakeGCRRepoURL        = "gcr.io/my-project/my-repo"
+		fakeGARRepoURL        = "us-central1-docker.pkg.dev/my-project/my-repo"
+		fakeServiceAccountKey = "base64-encoded-service-account-key"
 	)
 
 	testCases := []struct {
-		name       string
-		credType   credentials.Type
-		repoURL    string
-		secret     *corev1.Secret
-		helper     *serviceAccountKeyCredentialHelper
-		assertions func(*testing.T, *credentials.Credentials, *cache.Cache, error)
+		name     string
+		credType credentials.Type
+		repoURL  string
+		data     map[string][]byte
+		expected bool
 	}{
 		{
-			name:     "cred type is not image",
-			credType: credentials.TypeGit,
-			secret:   &corev1.Secret{},
-			helper:   &serviceAccountKeyCredentialHelper{},
-			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
-				require.NoError(t, err)
-				require.Nil(t, creds)
+			name:     "valid GAR repo with service account key",
+			credType: credentials.TypeImage,
+			repoURL:  fakeGARRepoURL,
+			data: map[string][]byte{
+				serviceAccountKeyKey: []byte(fakeServiceAccountKey),
 			},
+			expected: true,
 		},
 		{
-			name:     "secret is nil",
+			name:     "valid GCR repo with service account key",
 			credType: credentials.TypeImage,
-			helper:   &serviceAccountKeyCredentialHelper{},
-			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
-				require.NoError(t, err)
-				require.Nil(t, creds)
+			repoURL:  fakeGCRRepoURL,
+			data: map[string][]byte{
+				serviceAccountKeyKey: []byte(fakeServiceAccountKey),
 			},
+			expected: true,
 		},
 		{
-			name:     "not a gar url",
-			credType: credentials.TypeImage,
-			repoURL:  "not-a-gar-url",
-			secret:   &corev1.Secret{},
-			helper:   &serviceAccountKeyCredentialHelper{},
-			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
-				require.NoError(t, err)
-				require.Nil(t, creds)
+			name:     "wrong credential type",
+			credType: credentials.TypeHelm,
+			repoURL:  fakeGARRepoURL,
+			data: map[string][]byte{
+				serviceAccountKeyKey: []byte(fakeServiceAccountKey),
 			},
+			expected: false,
 		},
 		{
-			name:     "no service account key provided",
+			name:     "missing service account key",
 			credType: credentials.TypeImage,
-			repoURL:  testRepoURL,
-			secret:   &corev1.Secret{},
-			helper:   &serviceAccountKeyCredentialHelper{},
-			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
-				require.NoError(t, err)
-				require.Nil(t, creds)
+			repoURL:  fakeGARRepoURL,
+			data:     map[string][]byte{},
+			expected: false,
+		},
+		{
+			name:     "nil data",
+			credType: credentials.TypeImage,
+			repoURL:  fakeGARRepoURL,
+			data:     nil,
+			expected: false,
+		},
+		{
+			name:     "non-GAR/GCR URL",
+			credType: credentials.TypeImage,
+			repoURL:  "docker.io/library/nginx",
+			data: map[string][]byte{
+				serviceAccountKeyKey: []byte(fakeServiceAccountKey),
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			provider := NewServiceAccountKeyProvider()
+			result := provider.Supports(tt.credType, tt.repoURL, tt.data)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestServiceAccountKeyProvider_GetCredentials(t *testing.T) {
+	ctx := context.Background()
+
+	const (
+		fakeGARRepoURL        = "us-central1-docker.pkg.dev/my-project/my-repo"
+		fakeServiceAccountKey = "base64-encoded-service-account-key"
+		fakeAccessToken       = "fake-access-token"
+	)
+
+	testCases := []struct {
+		name             string
+		credType         credentials.Type
+		repoURL          string
+		data             map[string][]byte
+		getAccessTokenFn func(ctx context.Context, encodedServiceAccountKey string) (string, error)
+		setupCache       func(c *cache.Cache)
+		assertions       func(t *testing.T, c *cache.Cache, creds *credentials.Credentials, err error)
+	}{
+		{
+			name:     "unsupported credentials",
+			credType: credentials.TypeHelm,
+			repoURL:  fakeGARRepoURL,
+			data:     map[string][]byte{},
+			assertions: func(t *testing.T, _ *cache.Cache, creds *credentials.Credentials, err error) {
+				assert.Nil(t, creds)
+				assert.NoError(t, err)
 			},
 		},
 		{
 			name:     "cache hit",
 			credType: credentials.TypeImage,
-			repoURL:  testRepoURL,
-			secret: &corev1.Secret{
-				Data: map[string][]byte{
-					serviceAccountKeyKey: []byte(testEncodedServiceAccountKey),
-				},
+			repoURL:  fakeGARRepoURL,
+			data: map[string][]byte{
+				serviceAccountKeyKey: []byte(fakeServiceAccountKey),
 			},
-			helper: &serviceAccountKeyCredentialHelper{
-				tokenCache: warmTokenCache,
+			setupCache: func(c *cache.Cache) {
+				cacheKey := tokenCacheKey(fakeServiceAccountKey)
+				c.Set(cacheKey, fakeAccessToken, cache.DefaultExpiration)
 			},
-			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, creds)
-				require.Equal(t, accessTokenUsername, creds.Username)
-				require.Equal(t, testAccessToken, creds.Password)
-			},
-		},
-		{
-			name:     "cache miss; error getting access token",
-			credType: credentials.TypeImage,
-			repoURL:  testRepoURL,
-			secret: &corev1.Secret{
-				Data: map[string][]byte{
-					serviceAccountKeyKey: []byte(testEncodedServiceAccountKey),
-				},
-			},
-			helper: &serviceAccountKeyCredentialHelper{
-				tokenCache: cache.New(0, 0),
-				getAccessTokenFn: func(context.Context, string) (string, error) {
-					return "", fmt.Errorf("something went wrong")
-				},
-			},
-			assertions: func(t *testing.T, _ *credentials.Credentials, _ *cache.Cache, err error) {
-				require.ErrorContains(t, err, "error getting GCP access token")
-				require.ErrorContains(t, err, "something went wrong")
+			assertions: func(t *testing.T, _ *cache.Cache, creds *credentials.Credentials, err error) {
+				assert.NoError(t, err)
+				assert.NotNil(t, creds)
+				assert.Equal(t, accessTokenUsername, creds.Username)
+				assert.Equal(t, fakeAccessToken, creds.Password)
 			},
 		},
 		{
-			name:     "cache miss; success",
+			name:     "cache miss, successful token fetch",
 			credType: credentials.TypeImage,
-			repoURL:  testRepoURL,
-			secret: &corev1.Secret{
-				Data: map[string][]byte{
-					serviceAccountKeyKey: []byte(testEncodedServiceAccountKey),
-				},
+			repoURL:  fakeGARRepoURL,
+			data: map[string][]byte{
+				serviceAccountKeyKey: []byte(fakeServiceAccountKey),
 			},
-			helper: &serviceAccountKeyCredentialHelper{
-				tokenCache: cache.New(0, 0),
-				getAccessTokenFn: func(context.Context, string) (string, error) {
-					return testAccessToken, nil
-				},
+			getAccessTokenFn: func(_ context.Context, _ string) (string, error) {
+				return fakeAccessToken, nil
 			},
-			assertions: func(t *testing.T, creds *credentials.Credentials, c *cache.Cache, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, creds)
-				require.Equal(t, accessTokenUsername, creds.Username)
-				require.Equal(t, testAccessToken, creds.Password)
-				_, found := c.Get(
-					(&serviceAccountKeyCredentialHelper{}).tokenCacheKey(testEncodedServiceAccountKey),
-				)
-				require.True(t, found)
+			assertions: func(t *testing.T, c *cache.Cache, creds *credentials.Credentials, err error) {
+				assert.NoError(t, err)
+				assert.NotNil(t, creds)
+				assert.Equal(t, accessTokenUsername, creds.Username)
+				assert.Equal(t, fakeAccessToken, creds.Password)
+
+				// Verify the token was cached
+				cachedToken, found := c.Get(tokenCacheKey(fakeServiceAccountKey))
+				assert.True(t, found)
+				assert.Equal(t, fakeAccessToken, cachedToken)
+			},
+		},
+		{
+			name:     "error in getAccessToken",
+			credType: credentials.TypeImage,
+			repoURL:  fakeGARRepoURL,
+			data: map[string][]byte{
+				serviceAccountKeyKey: []byte(fakeServiceAccountKey),
+			},
+			getAccessTokenFn: func(_ context.Context, _ string) (string, error) {
+				return "", errors.New("access token error")
+			},
+			assertions: func(t *testing.T, _ *cache.Cache, creds *credentials.Credentials, err error) {
+				assert.ErrorContains(t, err, "error getting GCP access token")
+				assert.Nil(t, creds)
+			},
+		},
+		{
+			name:     "empty token from getAccessToken",
+			credType: credentials.TypeImage,
+			repoURL:  fakeGARRepoURL,
+			data: map[string][]byte{
+				serviceAccountKeyKey: []byte(fakeServiceAccountKey),
+			},
+			getAccessTokenFn: func(_ context.Context, _ string) (string, error) {
+				return "", nil
+			},
+			assertions: func(t *testing.T, _ *cache.Cache, creds *credentials.Credentials, err error) {
+				assert.Nil(t, creds)
+				assert.NoError(t, err)
 			},
 		},
 	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			creds, err := testCase.helper.getCredentials(
-				context.Background(),
-				"", // project is irrelevant for this helper
-				testCase.credType,
-				testCase.repoURL,
-				testCase.secret,
-			)
-			testCase.assertions(t, creds, testCase.helper.tokenCache, err)
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			provider := NewServiceAccountKeyProvider().(*ServiceAccountKeyProvider) // nolint:forcetypeassert
+			provider.getAccessTokenFn = tt.getAccessTokenFn
+
+			if tt.setupCache != nil {
+				tt.setupCache(provider.tokenCache)
+			}
+
+			creds, err := provider.GetCredentials(ctx, "", tt.credType, tt.repoURL, tt.data)
+			tt.assertions(t, provider.tokenCache, creds, err)
 		})
 	}
 }

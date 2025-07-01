@@ -2,18 +2,21 @@ import { faDocker, faGitAlt } from '@fortawesome/free-brands-svg-icons';
 import { faAnchor } from '@fortawesome/free-solid-svg-icons';
 import classNames from 'classnames';
 
-import { Freight } from '@ui/gen/v1alpha1/generated_pb';
+import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
 import { urlForImage } from '@ui/utils/url';
 
 import { CommitInfo } from '../common/commit-info';
 
 import { FreightContentItem } from './freight-content-item';
+import { getImageBuiltDate, getImageSource } from './open-container-initiative-utils';
 
 export const FreightContents = (props: {
   freight?: Freight;
   highlighted: boolean;
   horizontal?: boolean;
   dark?: boolean;
+  // don't truncate any content
+  fullContentVisibility?: boolean;
 }) => {
   const { freight, highlighted, horizontal, dark } = props;
   const linkClass = `${highlighted ? 'text-blue-500' : 'text-gray-400'} hover:text-blue-400 hover:underline max-w-full min-w-0 flex-shrink`;
@@ -25,7 +28,7 @@ export const FreightContents = (props: {
         {
           'text-gray-700 hover:text-gray-800': highlighted,
           'text-gray-400 hover:text-gray-500': !highlighted,
-          'flex-col w-20 overflow-y-auto flex-grow-0 flex-nowrap': !horizontal
+          'flex-col w-44 overflow-y-auto flex-grow-0 flex-nowrap': !horizontal
         }
       )}
     >
@@ -39,6 +42,7 @@ export const FreightContents = (props: {
           overlay={<CommitInfo commit={c} />}
           icon={faGitAlt}
           href={`${c.repoURL?.replace('.git', '')}/commit/${c.id}`}
+          fullContentVisibility={props.fullContentVisibility}
         >
           {c.tag && c.tag.length > 12
             ? c.tag.substring(0, 12) + '...'
@@ -55,6 +59,9 @@ export const FreightContents = (props: {
           title={`${i.repoURL}:${i.tag}`}
           icon={faDocker}
           href={urlForImage(i.repoURL || '')}
+          fullContentVisibility={props.fullContentVisibility}
+          artifactSource={getImageSource(i?.annotations)}
+          artifactBuildDate={getImageBuiltDate(i?.annotations)}
         >
           {`${props.horizontal ? i.repoURL + ':' : ''}${i.tag}`}
         </FreightContentItem>
@@ -67,6 +74,7 @@ export const FreightContents = (props: {
           highlighted={highlighted}
           key={`${c.repoURL}:${c.version}`}
           title={`${c.repoURL}:${c.version}`}
+          fullContentVisibility={props.fullContentVisibility}
           icon={faAnchor}
         >
           {c.version}

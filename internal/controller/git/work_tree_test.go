@@ -11,8 +11,22 @@ import (
 	"github.com/sosedoff/gitkit"
 	"github.com/stretchr/testify/require"
 
+	testingPkg "github.com/akuity/kargo/api/testing"
 	"github.com/akuity/kargo/internal/types"
 )
+
+func TestNonFastForwardRegex(t *testing.T) {
+	testCases := map[string]bool{
+		// source: https://regex101.com/r/aNYjHP/1
+		" ! [rejected]        krancour/foo -> krancour/foo (non-fast-forward)": true,
+		" ! [rejected]        main -> main (fetch first)":                      true,
+		" ! [remote rejected] HEAD -> experiment (cannot lock ref 'refs/heads/experiment': is at " +
+			"7dc98ee9c0b75be429e300bb59b3cf6d091ca9ed but expected 1bdf96c8c868981a0e24c43c98aef09a8970a1b8)": true,
+		" ! [rejected]        HEAD -> experiment (fetch first)": true,
+	}
+
+	testingPkg.ValidateRegularExpression(t, nonFastForwardRegex, testCases)
+}
 
 func TestWorkTree(t *testing.T) {
 	testRepoCreds := RepoCredentials{
@@ -56,7 +70,7 @@ func TestWorkTree(t *testing.T) {
 	defer setupRep.Close()
 	err = os.WriteFile(fmt.Sprintf("%s/%s", setupRep.Dir(), "test.txt"), []byte("foo"), 0600)
 	require.NoError(t, err)
-	err = setupRep.AddAllAndCommit(fmt.Sprintf("initial commit %s", uuid.NewString()))
+	err = setupRep.AddAllAndCommit(fmt.Sprintf("initial commit %s", uuid.NewString()), nil)
 	require.NoError(t, err)
 	err = setupRep.Push(nil)
 	require.NoError(t, err)

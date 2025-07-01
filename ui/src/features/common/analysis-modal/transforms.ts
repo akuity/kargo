@@ -1,5 +1,4 @@
 // eslint-disable-file @typescript-eslint/ban-ts-comment
-import { IntOrString } from '@ui/gen/k8s.io/apimachinery/pkg/util/intstr/generated_pb';
 import {
   AnalysisRunSpec,
   AnalysisRunStatus,
@@ -9,7 +8,8 @@ import {
   Measurement,
   MetricProvider,
   MetricResult
-} from '@ui/gen/rollouts/api/v1alpha1/generated_pb';
+} from '@ui/gen/api/stubs/rollouts/v1alpha1/generated_pb';
+import { IntOrString } from '@ui/gen/k8s.io/apimachinery/pkg/util/intstr/generated_pb';
 
 import {
   AnalysisStatus,
@@ -486,12 +486,13 @@ export const printableDatadogQuery = (datadog?: DatadogMetric, args?: Argument[]
     return interpolatedQueryArray(datadog.query, args);
   }
   if (datadog && (datadog?.apiVersion ?? '').toLowerCase() === 'v2') {
-    if ('query' in datadog) {
-      return 'formula' in datadog
-        ? [`query: ${interpolateQuery(datadog.query, args)}, formula: ${datadog.formula}`]
-        : interpolatedQueryArray(datadog.query, args);
+    if (datadog?.query) {
+      if (datadog?.formula) {
+        return [`query: ${interpolateQuery(datadog.query, args)}, formula: ${datadog.formula}`];
+      }
+      return interpolatedQueryArray(datadog.query, args);
     }
-    if ('queries' in datadog) {
+    if (datadog?.queries) {
       const interpolatedQueries: { [key: string]: string } = {};
       Object.keys(datadog.queries).forEach((queryKey) => {
         const interpolated = interpolateQuery(datadog.queries[queryKey], args);
@@ -499,7 +500,7 @@ export const printableDatadogQuery = (datadog?: DatadogMetric, args?: Argument[]
           interpolatedQueries[queryKey] = interpolated;
         }
       });
-      return 'formula' in datadog
+      return datadog?.formula
         ? [`queries: ${JSON.stringify(interpolatedQueries)}, formula: ${datadog.formula}`]
         : Object.values(datadog.queries).reduce((result, query) => {
             const interpolated = interpolateQuery(query, args);

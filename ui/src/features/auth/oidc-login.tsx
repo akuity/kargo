@@ -1,12 +1,29 @@
 import { useQuery } from '@tanstack/react-query';
 import { Button, notification } from 'antd';
-import * as oauth from 'oauth4webapi';
+import {
+  discoveryRequest,
+  processDiscoveryResponse,
+  generateRandomCodeVerifier,
+  generateRandomState,
+  calculatePKCECodeChallenge,
+  validateAuthResponse,
+  authorizationCodeGrantRequest,
+  processAuthorizationCodeResponse,
+  AuthorizationResponseError,
+  WWWAuthenticateChallengeError,
+  allowInsecureRequests
+} from 'oauth4webapi';
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 
-import { OIDCConfig } from '@ui/gen/service/v1alpha1/service_pb';
+import { OIDCConfig } from '@ui/gen/api/service/v1alpha1/service_pb';
 
 import { useAuthContext } from './context/use-auth-context';
+import {
+  getOIDCScopes,
+  oidcClientAuth,
+  shouldAllowIdpHttpRequest as shouldAllowHttpRequest
+} from './oidc-utils';
 
 const codeVerifierKey = 'PKCE_code_verifier';
 const stateKey = 'PKCE_state';
@@ -45,23 +62,16 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
     queryKey: [issuerUrl],
     queryFn: () =>
       issuerUrl &&
-      oauth
-        .discoveryRequest(issuerUrl)
-        .then((response) => oauth.processDiscoveryResponse(issuerUrl, response))
-        .then((response) => {
-          if (response.code_challenge_methods_supported?.includes('S256') !== true) {
-            throw new Error('OIDC config fetch error');
-          }
-
-          return response;
-        }),
+      discoveryRequest(issuerUrl, {
+        [allowInsecureRequests]: shouldAllowHttpRequest()
+      }).then((response) => processDiscoveryResponse(issuerUrl, response)),
     enabled: !!issuerUrl
   });
 
   React.useEffect(() => {
     if (error) {
       const errorMessage = error instanceof Error ? error.message : 'OIDC config fetch error';
-      notification.error({ message: errorMessage, placement: 'bottomRight' });
+      notification.error({ message: `OIDC: ${errorMessage}`, placement: 'bottomRight' });
     }
   }, [error]);
 
@@ -70,20 +80,20 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
       return;
     }
 
-    const code_verifier = oauth.generateRandomCodeVerifier();
+    const code_verifier = generateRandomCodeVerifier();
     sessionStorage.setItem(codeVerifierKey, code_verifier);
-    const state = oauth.generateRandomState();
+    const state = generateRandomState();
     sessionStorage.setItem(stateKey, state);
 
-    const code_challenge = await oauth.calculatePKCECodeChallenge(code_verifier);
+    const code_challenge = await calculatePKCECodeChallenge(code_verifier);
     const url = new URL(as.authorization_endpoint);
     url.searchParams.set('client_id', client.client_id);
     url.searchParams.set('code_challenge', code_challenge);
     url.searchParams.set('code_challenge_method', 'S256');
     url.searchParams.set('redirect_uri', redirectURI);
     url.searchParams.set('response_type', 'code');
+    url.searchParams.set('scope', getOIDCScopes(oidcConfig, as).join(' '));
     url.searchParams.set('state', state);
-    url.searchParams.set('scope', oidcConfig.scopes.join(' '));
 
     window.location.replace(url.toString());
   };
@@ -99,49 +109,63 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
         !as ||
         !code_verifier ||
         !searchParams.get('code') ||
-        !searchParams.get('code') ||
         !state ||
         !searchParams.get('state')
       ) {
         return;
       }
 
-      const params = oauth.validateAuthResponse(as, client, searchParams, state);
+      try {
+        const params = validateAuthResponse(as, client, searchParams, state);
 
-      if (oauth.isOAuth2Error(params)) {
+        const response = await authorizationCodeGrantRequest(
+          as,
+          client,
+          oidcClientAuth,
+          params,
+          redirectURI,
+          code_verifier,
+          {
+            [allowInsecureRequests]: shouldAllowHttpRequest(),
+            additionalParameters: [['client_id', client.client_id]]
+          }
+        );
+
+        const result = await processAuthorizationCodeResponse(as, client, response, {
+          requireIdToken: true
+        });
+
+        if (!result.id_token) {
+          notification.error({
+            message: 'OIDC: Proccess Authorization Code Grant Response error',
+            placement: 'bottomRight'
+          });
+          return;
+        }
+
+        onLogin(result.id_token, result.refresh_token);
+      } catch (err) {
+        if (err instanceof AuthorizationResponseError) {
+          notification.error({
+            message: 'OIDC: Validation Auth Response error',
+            placement: 'bottomRight'
+          });
+          return;
+        }
+
+        if (err instanceof WWWAuthenticateChallengeError) {
+          notification.error({
+            message: 'OIDC: Parsing Authenticate Challenges error',
+            placement: 'bottomRight'
+          });
+          return;
+        }
+
         notification.error({
-          message: 'OIDC: Validation Auth Response error',
+          message: `OIDC: ${JSON.stringify(err)}`,
           placement: 'bottomRight'
         });
-        return;
       }
-
-      const response = await oauth.authorizationCodeGrantRequest(
-        as,
-        client,
-        params,
-        redirectURI,
-        code_verifier
-      );
-
-      if (oauth.parseWwwAuthenticateChallenges(response)) {
-        notification.error({
-          message: 'OIDC: Parsing Authenticate Challenges error',
-          placement: 'bottomRight'
-        });
-        return;
-      }
-
-      const result = await oauth.processAuthorizationCodeOpenIDResponse(as, client, response);
-      if (oauth.isOAuth2Error(result) || !result.id_token) {
-        notification.error({
-          message: 'OIDC: Proccess Authorization Code Grant Response error',
-          placement: 'bottomRight'
-        });
-        return;
-      }
-
-      onLogin(result.id_token, result.refresh_token);
     })();
   }, [as, client, location]);
 

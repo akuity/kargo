@@ -8,21 +8,24 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/akuity/kargo/internal/api"
-	"github.com/akuity/kargo/internal/api/config"
-	"github.com/akuity/kargo/internal/api/kubernetes"
-	"github.com/akuity/kargo/internal/api/rbac"
 	"github.com/akuity/kargo/internal/kubernetes/event"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
-	versionpkg "github.com/akuity/kargo/internal/version"
+	"github.com/akuity/kargo/internal/server"
+	"github.com/akuity/kargo/internal/server/config"
+	"github.com/akuity/kargo/internal/server/kubernetes"
+	"github.com/akuity/kargo/internal/server/rbac"
+	"github.com/akuity/kargo/internal/types"
+	versionpkg "github.com/akuity/kargo/pkg/x/version"
 )
 
 type apiOptions struct {
 	KubeConfig string
+	QPS        float32
+	Burst      int
 
-	Host string
-	Port string
+	BindAddress string
+	Port        string
 
 	Logger *logging.Logger
 }
@@ -51,8 +54,10 @@ func newAPICommand() *cobra.Command {
 
 func (o *apiOptions) complete() {
 	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
+	o.QPS = types.MustParseFloat32(os.GetEnv("KUBE_API_QPS", "50.0"))
+	o.Burst = types.MustParseInt(os.GetEnv("KUBE_API_BURST", "300"))
 
-	o.Host = os.GetEnv("HOST", "0.0.0.0")
+	o.BindAddress = os.GetEnv("BIND_ADDRESS", "0.0.0.0")
 	o.Port = os.GetEnv("PORT", "8080")
 }
 
@@ -72,6 +77,8 @@ func (o *apiOptions) run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("error getting Kubernetes client REST config: %w", err)
 	}
+	kubernetes.ConfigureQPSBurst(ctx, restCfg, o.QPS, o.Burst)
+
 	kubeClientOptions := kubernetes.ClientOptions{}
 	if serverCfg.OIDCConfig != nil {
 		kubeClientOptions.GlobalServiceAccountNamespaces = serverCfg.OIDCConfig.GlobalServiceAccountNamespaces
@@ -81,17 +88,28 @@ func (o *apiOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error creating Kubernetes client for Kargo API server: %w", err)
 	}
 
-	switch {
-	case !serverCfg.RolloutsIntegrationEnabled:
-		o.Logger.Info("Argo Rollouts integration is disabled")
-	case !argoRolloutsExists(ctx, restCfg):
-		o.Logger.Info(
-			"Argo Rollouts integration was enabled, but no Argo Rollouts " +
-				"CRDs were found. Proceeding without Argo Rollouts integration.",
-		)
-		serverCfg.RolloutsIntegrationEnabled = false
-	default:
-		o.Logger.Info("Argo Rollouts integration is enabled")
+	if serverCfg.RolloutsIntegrationEnabled {
+		var exists bool
+		if exists, err = argoRolloutsExists(ctx, restCfg); !exists || err != nil {
+			// If we are unable to determine if Argo Rollouts is installed, we
+			// will return an error and fail to start the server. Note this
+			// will only happen if we get an inconclusive response from the API
+			// server (e.g. due to network issues), and not if Argo Rollouts is
+			// not installed.
+			if err != nil {
+				return fmt.Errorf("unable to determine if Argo Rollouts is installed: %w", err)
+			}
+
+			o.Logger.Info(
+				"Argo Rollouts integration was enabled, but no Argo Rollouts " +
+					"CRDs were found. Proceeding without Argo Rollouts integration.",
+			)
+			serverCfg.RolloutsIntegrationEnabled = false
+		} else {
+			o.Logger.Debug("Argo Rollouts integration is enabled")
+		}
+	} else {
+		o.Logger.Debug("Argo Rollouts integration is disabled")
 	}
 
 	if serverCfg.AdminConfig != nil {
@@ -106,7 +124,7 @@ func (o *apiOptions) run(ctx context.Context) error {
 		)
 	}
 
-	srv := api.NewServer(
+	srv := server.NewServer(
 		serverCfg,
 		kubeClient,
 		rbac.NewKubernetesRolesDatabase(kubeClient),
@@ -117,7 +135,7 @@ func (o *apiOptions) run(ctx context.Context) error {
 			"api",
 		),
 	)
-	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.Host, o.Port))
+	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.BindAddress, o.Port))
 	if err != nil {
 		return fmt.Errorf("error creating listener: %w", err)
 	}

@@ -26,15 +26,17 @@ import (
 // utilizes a Kubernetes controller runtime client to retrieve credentials
 // stored in Kubernetes Secrets.
 type database struct {
-	kargoClient       client.Client
-	credentialHelpers []credentials.Helper
-	cfg               DatabaseConfig
+	controlPlaneClient  client.Client
+	localClusterClient  client.Client
+	credentialProviders []credentials.Provider
+	cfg                 DatabaseConfig
 }
 
 // DatabaseConfig represents configuration for a Kubernetes based implementation
 // of the credentials.Database interface.
 type DatabaseConfig struct {
 	GlobalCredentialsNamespaces []string `envconfig:"GLOBAL_CREDENTIALS_NAMESPACES" default:""`
+	AllowCredentialsOverHTTP    bool     `envconfig:"ALLOW_CREDENTIALS_OVER_HTTP" default:"false"`
 }
 
 func DatabaseConfigFromEnv() DatabaseConfig {
@@ -49,28 +51,32 @@ func DatabaseConfigFromEnv() DatabaseConfig {
 // client to retrieve Credentials stored in Kubernetes Secrets.
 func NewDatabase(
 	ctx context.Context,
-	kargoClient client.Client,
+	controlPlaneClient client.Client,
+	localClusterClient client.Client,
 	cfg DatabaseConfig,
 ) credentials.Database {
-	credentialHelpers := []credentials.Helper{
-		basic.SecretToCreds,
-		ecr.NewAccessKeyCredentialHelper(),
-		ecr.NewManagedIdentityCredentialHelper(ctx),
-		gar.NewServiceAccountKeyCredentialHelper(),
-		gar.NewWorkloadIdentityFederationCredentialHelper(ctx),
-		github.NewAppCredentialHelper(),
+	var credentialProviders = []credentials.Provider{
+		&basic.CredentialProvider{},
+		ecr.NewAccessKeyProvider(),
+		ecr.NewManagedIdentityProvider(ctx),
+		gar.NewServiceAccountKeyProvider(),
+		gar.NewWorkloadIdentityFederationProvider(ctx),
+		github.NewAppCredentialProvider(),
 	}
-	finalCredentialHelpers := make([]credentials.Helper, 0, len(credentialHelpers))
-	for _, helper := range credentialHelpers {
-		if helper != nil {
-			finalCredentialHelpers = append(finalCredentialHelpers, helper)
+
+	db := &database{
+		controlPlaneClient: controlPlaneClient,
+		localClusterClient: localClusterClient,
+		cfg:                cfg,
+	}
+
+	for _, p := range credentialProviders {
+		if p != nil {
+			db.credentialProviders = append(db.credentialProviders, p)
 		}
 	}
-	return &database{
-		kargoClient:       kargoClient,
-		credentialHelpers: finalCredentialHelpers,
-		cfg:               cfg,
-	}
+
+	return db
 }
 
 func (k *database) Get(
@@ -78,62 +84,79 @@ func (k *database) Get(
 	namespace string,
 	credType credentials.Type,
 	repoURL string,
-) (credentials.Credentials, bool, error) {
+) (*credentials.Credentials, error) {
 	// If we are dealing with an insecure HTTP endpoint (of any type),
 	// refuse to return any credentials
-	if strings.HasPrefix(repoURL, "http://") {
+	if !k.cfg.AllowCredentialsOverHTTP && strings.HasPrefix(repoURL, "http://") {
 		logging.LoggerFromContext(ctx).Info(
 			"refused to get credentials for insecure HTTP endpoint",
 			"repoURL", repoURL,
 		)
-		return credentials.Credentials{}, false, nil
+		return nil, nil
+	}
+
+	clients := make([]client.Client, 1, 2)
+	clients[0] = k.controlPlaneClient
+	if k.localClusterClient != nil {
+		clients = append(clients, k.localClusterClient)
 	}
 
 	var secret *corev1.Secret
 	var err error
 
-	// Check namespace for credentials
-	if secret, err = k.getCredentialsSecret(
-		ctx,
-		namespace,
-		credType,
-		repoURL,
-	); err != nil {
-		return credentials.Credentials{}, false, err
-	}
-
-	if secret == nil {
+clientLoop:
+	for _, c := range clients {
+		// Check namespace for credentials
+		if secret, err = k.getCredentialsSecret(
+			ctx,
+			c,
+			namespace,
+			credType,
+			repoURL,
+		); err != nil {
+			return nil, err
+		}
+		if secret != nil {
+			break clientLoop
+		}
 		// Check global credentials namespaces for credentials
 		for _, globalCredsNamespace := range k.cfg.GlobalCredentialsNamespaces {
 			if secret, err = k.getCredentialsSecret(
 				ctx,
+				c,
 				globalCredsNamespace,
 				credType,
 				repoURL,
 			); err != nil {
-				return credentials.Credentials{}, false, err
+				return nil, err
 			}
 			if secret != nil {
-				break
+				break clientLoop
 			}
 		}
 	}
 
-	for _, helper := range k.credentialHelpers {
-		creds, err := helper(ctx, namespace, credType, repoURL, secret)
+	var data map[string][]byte
+	if secret != nil {
+		data = secret.Data
+	}
+
+	for _, p := range k.credentialProviders {
+		creds, err := p.GetCredentials(ctx, namespace, credType, repoURL, data)
 		if err != nil {
-			return credentials.Credentials{}, false, err
+			return nil, err
 		}
 		if creds != nil {
-			return *creds, true, nil
+			return creds, nil
 		}
 	}
 
-	return credentials.Credentials{}, false, nil
+	return nil, nil
 }
 
 func (k *database) getCredentialsSecret(
 	ctx context.Context,
+	c client.Client,
 	namespace string,
 	credType credentials.Type,
 	repoURL string,
@@ -141,13 +164,13 @@ func (k *database) getCredentialsSecret(
 	// List all secrets in the namespace that are labeled with the credential
 	// type.
 	secrets := corev1.SecretList{}
-	if err := k.kargoClient.List(
+	if err := c.List(
 		ctx,
 		&secrets,
 		&client.ListOptions{
 			Namespace: namespace,
 			LabelSelector: labels.Set(map[string]string{
-				kargoapi.CredentialTypeLabelKey: credType.String(),
+				kargoapi.LabelKeyCredentialType: credType.String(),
 			}).AsSelector(),
 		},
 	); err != nil {
@@ -160,14 +183,20 @@ func (k *database) getCredentialsSecret(
 		return strings.Compare(lhs.Name, rhs.Name)
 	})
 
-	// Normalize the repository URL. These normalizations should be safe even
-	// if not applicable to the URL type.
-	repoURL = helm.NormalizeChartRepositoryURL(git.NormalizeURL(repoURL))
+	// Note: We formerly applied these normalizations to any URL, thinking them
+	// generally safe. We no longer do this as it was discovered that an image
+	// repository URL with a port number could be mistaken for an SCP-style URL of
+	// the form host.xz:path/to/repo
+	switch credType {
+	case credentials.TypeGit:
+		repoURL = git.NormalizeURL(repoURL)
+	case credentials.TypeHelm:
+		repoURL = helm.NormalizeChartRepositoryURL(repoURL)
+	}
 
 	logger := logging.LoggerFromContext(ctx)
 
 	// Search for a matching Secret.
-	var matchingSecret *corev1.Secret
 	for _, secret := range secrets.Items {
 		if secret.Data == nil {
 			continue
@@ -190,12 +219,22 @@ func (k *database) getCredentialsSecret(
 				continue
 			}
 			if regex.MatchString(repoURL) {
-				matchingSecret = &secret
-				break
+				return &secret, nil
 			}
-		} else if repoURL == helm.NormalizeChartRepositoryURL(git.NormalizeURL(string(urlBytes))) {
+			continue
+		}
+
+		// Not a regex
+		secretURL := string(urlBytes)
+		switch credType {
+		case credentials.TypeGit:
+			secretURL = git.NormalizeURL(secretURL)
+		case credentials.TypeHelm:
+			secretURL = helm.NormalizeChartRepositoryURL(secretURL)
+		}
+		if secretURL == repoURL {
 			return &secret, nil
 		}
 	}
-	return matchingSecret, nil
+	return nil, nil
 }

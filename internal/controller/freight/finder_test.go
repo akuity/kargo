@@ -59,8 +59,10 @@ func TestFindCommit(t *testing.T) {
 					Commits: []kargoapi.GitCommit{testCommit2},
 				},
 			},
-			assertions: func(t *testing.T, _ *kargoapi.GitCommit, err error) {
-				require.ErrorContains(t, err, "not found in referenced Freight")
+			assertions: func(t *testing.T, commit *kargoapi.GitCommit, err error) {
+				require.NoError(t, err)
+				require.Nil(t, commit)
+
 			},
 		},
 		{
@@ -127,8 +129,9 @@ func TestFindCommit(t *testing.T) {
 					RequestedFreight: []kargoapi.FreightRequest{{Origin: testOrigin1}},
 				},
 			},
-			assertions: func(t *testing.T, _ *kargoapi.GitCommit, err error) {
-				require.ErrorContains(t, err, "not found in referenced Freight")
+			assertions: func(t *testing.T, commit *kargoapi.GitCommit, err error) {
+				require.NoError(t, err)
+				require.Nil(t, commit)
 			},
 		},
 		{
@@ -293,8 +296,9 @@ func TestFindImage(t *testing.T) {
 					Images: []kargoapi.Image{testImage2},
 				},
 			},
-			assertions: func(t *testing.T, _ *kargoapi.Image, err error) {
-				require.ErrorContains(t, err, "not found in referenced Freight")
+			assertions: func(t *testing.T, image *kargoapi.Image, err error) {
+				require.NoError(t, err)
+				require.Nil(t, image)
 			},
 		},
 		{
@@ -359,8 +363,9 @@ func TestFindImage(t *testing.T) {
 					RequestedFreight: []kargoapi.FreightRequest{{Origin: testOrigin1}},
 				},
 			},
-			assertions: func(t *testing.T, _ *kargoapi.Image, err error) {
-				require.ErrorContains(t, err, "not found in referenced Freight")
+			assertions: func(t *testing.T, image *kargoapi.Image, err error) {
+				require.NoError(t, err)
+				require.Nil(t, image)
 			},
 		},
 		{
@@ -480,6 +485,135 @@ func TestFindImage(t *testing.T) {
 	}
 }
 
+func TestHasAmbiguousImageRequest(t *testing.T) {
+	const testNamespace = "test-namespace"
+	const testRepoURL = "fake-repo-url"
+
+	testOrigin1 := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "test-warehouse",
+	}
+	testOrigin2 := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "some-other-warehouse",
+	}
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	testCases := []struct {
+		name       string
+		client     func() client.Client
+		freight    []kargoapi.FreightRequest
+		assertions func(*testing.T, bool, error)
+	}{
+		{
+			name: "no ambiguous image request",
+			client: func() client.Client {
+				return fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+					&kargoapi.Warehouse{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: testNamespace,
+							Name:      testOrigin1.Name,
+						},
+						Spec: kargoapi.WarehouseSpec{
+							Subscriptions: []kargoapi.RepoSubscription{{
+								Image: &kargoapi.ImageSubscription{
+									RepoURL: testRepoURL,
+								},
+							}},
+						},
+					},
+				).Build()
+			},
+			freight: []kargoapi.FreightRequest{
+				{
+					Origin: testOrigin1,
+				},
+			},
+			assertions: func(t *testing.T, ambiguous bool, err error) {
+				require.NoError(t, err)
+				require.False(t, ambiguous)
+			},
+		},
+		{
+			name: "ambiguous image request",
+			client: func() client.Client {
+				return fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+					&kargoapi.Warehouse{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: testNamespace,
+							Name:      testOrigin1.Name,
+						},
+						Spec: kargoapi.WarehouseSpec{
+							Subscriptions: []kargoapi.RepoSubscription{{
+								Image: &kargoapi.ImageSubscription{
+									RepoURL: testRepoURL,
+								},
+							}},
+						},
+					},
+					&kargoapi.Warehouse{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: testNamespace,
+							Name:      testOrigin2.Name,
+						},
+						Spec: kargoapi.WarehouseSpec{
+							Subscriptions: []kargoapi.RepoSubscription{{
+								Image: &kargoapi.ImageSubscription{
+									RepoURL: testRepoURL,
+								},
+							}},
+						},
+					},
+				).Build()
+			},
+			freight: []kargoapi.FreightRequest{
+				{
+					Origin: testOrigin1,
+				},
+				{
+					Origin: testOrigin2,
+				},
+			},
+			assertions: func(t *testing.T, ambiguous bool, err error) {
+				require.True(t, ambiguous)
+				require.ErrorContains(t, err, "multiple requested Freight could potentially provide")
+			},
+		},
+		{
+			name: "origin not found",
+			client: func() client.Client {
+				return fake.NewClientBuilder().WithScheme(scheme).Build()
+			},
+			freight: []kargoapi.FreightRequest{
+				{
+					Origin: testOrigin1,
+				},
+			},
+			assertions: func(t *testing.T, _ bool, err error) {
+				require.ErrorContains(t, err, "not found in namespace")
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			var cl client.Client
+			if testCase.client != nil {
+				cl = testCase.client()
+			}
+			ok, err := HasAmbiguousImageRequest(
+				context.Background(),
+				cl,
+				testNamespace,
+				testCase.freight,
+			)
+			testCase.assertions(t, ok, err)
+		})
+	}
+}
+
 func TestFindChart(t *testing.T) {
 	const testNamespace = "test-namespace"
 	const testRepoURL = "fake-repo-url"
@@ -527,8 +661,9 @@ func TestFindChart(t *testing.T) {
 					Charts: []kargoapi.Chart{testChart2},
 				},
 			},
-			assertions: func(t *testing.T, _ *kargoapi.Chart, err error) {
-				require.ErrorContains(t, err, "not found in referenced Freight")
+			assertions: func(t *testing.T, chart *kargoapi.Chart, err error) {
+				require.NoError(t, err)
+				require.Nil(t, chart)
 			},
 		},
 		{

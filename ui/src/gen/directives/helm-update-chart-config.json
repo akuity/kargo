@@ -23,25 +23,13 @@
      },
      "name": {
       "type": "string",
-      "description": "The name of the subchart, as defined in `Chart.yaml`."
+      "description": "The name of the subchart, as defined in `Chart.yaml`.",
+      "minLength": 1
      },
-     "fromOrigin": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-       "kind": {
-        "type": "string",
-        "description": "The kind of origin. Currently only 'Warehouse' is supported. Required.",
-        "enum": [
-         "Warehouse"
-        ]
-       },
-       "name": {
-        "type": "string",
-        "description": "The name of the origin. Required.",
-        "minLength": 1
-       }
-      }
+     "version": {
+      "type": "string",
+      "description": "The version of the subchart to update to.",
+      "minLength": 1
      }
     }
    }

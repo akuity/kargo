@@ -4,7 +4,7 @@ import { Button, Input } from 'antd';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
-import { adminLogin } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { adminLogin } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { zodValidators } from '@ui/utils/validators';
 
 import { FieldContainer } from '../common/form/field-container';

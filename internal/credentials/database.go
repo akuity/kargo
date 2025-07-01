@@ -9,7 +9,7 @@ type Database interface {
 		namespace string,
 		credType Type,
 		repo string,
-	) (Credentials, bool, error)
+	) (*Credentials, error)
 }
 
 // FakeDB is a mock implementation of the Database interface that is used to
@@ -20,7 +20,7 @@ type FakeDB struct {
 		namespace string,
 		credType Type,
 		repo string,
-	) (Credentials, bool, error)
+	) (*Credentials, error)
 }
 
 func (f *FakeDB) Get(
@@ -28,9 +28,9 @@ func (f *FakeDB) Get(
 	namespace string,
 	credType Type,
 	repo string,
-) (Credentials, bool, error) {
+) (*Credentials, error) {
 	if f.GetFn == nil {
-		return Credentials{}, false, nil
+		return nil, nil
 	}
 	return f.GetFn(ctx, namespace, credType, repo)
 }

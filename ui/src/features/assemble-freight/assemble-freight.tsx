@@ -8,7 +8,7 @@ import { useParams } from 'react-router-dom';
 import yaml from 'yaml';
 
 import { newErrorHandler, newTransportWithAuth } from '@ui/config/transport';
-import { createResource } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { createResource } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import {
   Chart,
   ChartDiscoveryResult,
@@ -20,7 +20,7 @@ import {
   Image,
   ImageDiscoveryResult,
   Warehouse
-} from '@ui/gen/v1alpha1/generated_pb';
+} from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { FreightContents } from '../freight-timeline/freight-contents';
 
@@ -60,7 +60,7 @@ const constructFreight = (
         repoURL: artifact.repoURL,
         tag: imageRef.tag,
         digest: imageRef.digest,
-        gitRepoURL: imageRef.gitRepoURL
+        annotations: imageRef.annotations
       } as Image);
     } else if ('versions' in artifact) {
       freight.charts.push({
@@ -192,40 +192,6 @@ export const AssembleFreight = ({
     }
   }
 
-  const DiscoveryTable = () => {
-    if (!selected) {
-      return null;
-    }
-
-    const selectedItem = chosenItems[selected?.repoURL as string]?.info;
-
-    if ('references' in selected) {
-      return (
-        <ImageTable
-          references={(selected as ImageDiscoveryResult).references}
-          select={select}
-          selected={selectedItem as DiscoveredImageReference}
-        />
-      );
-    } else if ('commits' in selected) {
-      return (
-        <CommitTable
-          commits={(selected as GitDiscoveryResult).commits}
-          select={select}
-          selected={selectedItem as DiscoveredCommit}
-        />
-      );
-    } else if ('versions' in selected) {
-      return (
-        <ChartTable
-          versions={(selected as ChartDiscoveryResult).versions}
-          select={select}
-          selected={selectedItem as string}
-        />
-      );
-    }
-  };
-
   const commonProps = {
     onClick: setSelected,
     selected: selected
@@ -234,13 +200,14 @@ export const AssembleFreight = ({
   return (
     <div>
       <div className='text-xs font-medium text-gray-500 mb-2'>FREIGHT CONTENTS</div>
-      <div className='mb-4 h-12 flex items-center'>
+      <div className='mt-3 mb-5 flex items-center'>
         {Object.keys(chosenItems)?.length > 0 ? (
           <>
             <FreightContents
               freight={constructFreight(chosenItems, warehouse?.metadata?.name || '')}
               highlighted
               horizontal
+              fullContentVisibility
             />
             <Button
               className='ml-auto'
@@ -276,12 +243,58 @@ export const AssembleFreight = ({
             <ArtifactMenuGroup icon={faGitAlt} label='Git' items={git} {...commonProps} />
           </div>
           <div className='w-full p-4 overflow-auto'>
-            <DiscoveryTable />
+            <DiscoveryTable selected={selected} chosenItems={chosenItems} select={select} />
           </div>
         </div>
       ) : (
         <div className='text-gray-500 text-sm mt-2'>Please select a warehouse to continue.</div>
       )}
     </div>
+  );
+};
+
+const DiscoveryTable = ({
+  selected,
+  chosenItems,
+  select
+}: {
+  selected?: DiscoveryResult;
+  chosenItems: {
+    [key: string]: {
+      artifact: DiscoveryResult;
+      info: FreightInfo;
+    };
+  };
+  select: (item?: FreightInfo) => void;
+}) => {
+  if (!selected) {
+    return null;
+  }
+
+  const selectedItem = chosenItems[selected?.repoURL as string]?.info;
+
+  return (
+    <>
+      <ImageTable
+        references={(selected as ImageDiscoveryResult).references || []}
+        select={select}
+        selected={selectedItem as DiscoveredImageReference}
+        show={'references' in selected}
+      />
+
+      <CommitTable
+        commits={(selected as GitDiscoveryResult).commits || []}
+        select={select}
+        selected={selectedItem as DiscoveredCommit}
+        show={'commits' in selected}
+      />
+
+      <ChartTable
+        versions={(selected as ChartDiscoveryResult).versions || []}
+        select={select}
+        selected={selectedItem as string}
+        show={'versions' in selected}
+      />
+    </>
   );
 };

@@ -1,0 +1,39 @@
+.version_dropdown {
+    appearance: none;
+    -webkit-appearance: none; /* For Safari */
+    -moz-appearance: none; /* For Firefox */
+    position: relative;
+    background-color: transparent;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    cursor: pointer;
+    padding: 5px 10px;
+    font-size: 1rem;
+    width: fit-content;
+    font-weight: bold;
+    text-align: center;
+}
+
+.version_dropdown option {
+    font-weight: normal; /* Keeps options normal weight */
+}
+
+@media (max-width: 996px) {
+    .navbar__items--right .version_dropdown {
+        display: none;
+    }
+
+    .version_dropdown {
+        display: flex;
+        flex-direction: column;
+        order: -1;
+        width: fit-content;
+        margin: 10px 0px 10px 10px;
+    }
+
+    .menu__list {
+        display: flex;
+        flex-direction: column;
+    }
+
+}

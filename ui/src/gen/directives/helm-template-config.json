@@ -1,6 +1,23 @@
 {
  "$schema": "https://json-schema.org/draft/2020-12/schema",
  "title": "HelmTemplateConfig",
+ "definitions": {
+  "setValues": {
+   "type": "object",
+   "additionalProperties": false,
+   "properties": {
+    "key": {
+     "type": "string",
+     "description": "The key whose value should be set. For nested values, use dots to delimit key parts. e.g. `image.tag`.",
+     "minLength": 1
+    },
+    "value": {
+     "type": "string",
+     "description": "The new value for the key."
+    }
+   }
+  }
+ },
  "type": "object",
  "additionalProperties": false,
  "properties": {
@@ -35,6 +52,30 @@
     "type": "string",
     "minLength": 1
    }
+  },
+  "setValues": {
+   "type": "array",
+   "description": "Allows for amending chart configuration inline as one would with the `helm template` command's `--set` flag.",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+     "key": {
+      "type": "string",
+      "description": "The key whose value should be set. For nested values, use dots to delimit key parts. e.g. `image.tag`.",
+      "minLength": 1
+     },
+     "value": {
+      "type": "string",
+      "description": "The new value for the key."
+     }
+    }
+   }
+  },
+  "buildDependencies": {
+   "type": "boolean",
+   "description": "Whether to build dependencies before rendering the manifests. If no Chart.lock file is present, the dependencies will be built from the Chart.yaml file (and may be updated).",
+   "default": false
   },
   "includeCRDs": {
    "type": "boolean",

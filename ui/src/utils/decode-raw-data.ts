@@ -4,7 +4,18 @@ type Data = {
   result:
     | {
         value: unknown;
-        case: 'stage' | 'project' | 'analysisRun' | 'analysisTemplate' | 'warehouse';
+        case:
+          | 'stage'
+          | 'project'
+          | 'analysisRun'
+          | 'analysisTemplate'
+          | 'clusterAnalysisTemplate'
+          | 'warehouse'
+          | 'promotionTask'
+          | 'promotion'
+          | 'projectConfig'
+          | 'clusterConfig'
+          | 'configMap';
       }
     | {
         value: Uint8Array;

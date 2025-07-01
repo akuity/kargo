@@ -9,13 +9,13 @@ import (
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
-	"github.com/akuity/kargo/internal/api"
-	apiconfig "github.com/akuity/kargo/internal/api/config"
-	"github.com/akuity/kargo/internal/api/kubernetes"
-	"github.com/akuity/kargo/internal/api/rbac"
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/cli/templates"
 	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
+	"github.com/akuity/kargo/internal/server"
+	apiconfig "github.com/akuity/kargo/internal/server/config"
+	"github.com/akuity/kargo/internal/server/kubernetes"
+	"github.com/akuity/kargo/internal/server/rbac"
 )
 
 type serverOptions struct {
@@ -89,7 +89,7 @@ func (o *serverOptions) run(ctx context.Context) error {
 	}
 	defer l.Close() // nolint: errcheck
 
-	srv := api.NewServer(
+	srv := server.NewServer(
 		apiconfig.ServerConfig{
 			LocalMode: true,
 		},

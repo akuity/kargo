@@ -97,7 +97,7 @@ func Clone(
 			baseRepo: baseRepo,
 		},
 	}
-	if err = r.setupClient(clientOpts); err != nil {
+	if err = r.setupClient(homeDir, clientOpts); err != nil {
 		return nil, err
 	}
 	if err = r.clone(cloneOpts); err != nil {
@@ -157,7 +157,7 @@ func LoadRepo(path string, opts *LoadRepoOptions) (Repo, error) {
 		return nil,
 			fmt.Errorf(`error reading URL of remote "origin" from config: %w`, err)
 	}
-	if err := r.setupAuth(); err != nil {
+	if err := r.setupAuth(r.homeDir); err != nil {
 		return nil, fmt.Errorf("error configuring the credentials: %w", err)
 	}
 	return r, nil

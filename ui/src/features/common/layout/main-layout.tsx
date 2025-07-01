@@ -1,5 +1,6 @@
 import {
   faArrowRightFromBracket,
+  faGear,
   faBook,
   faBoxes,
   faTerminal,
@@ -12,8 +13,9 @@ import { Suspense } from 'react';
 import { Outlet } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { useAuthContext } from '@ui/features/auth/context/use-auth-context';
-import { isJWTDirty } from '@ui/features/auth/utils';
+import { isJWTDirty } from '@ui/features/auth/jwt-utils';
 import { KargoLogo } from '@ui/features/common/logo/logo';
 
 import * as styles from './main-layout.module.less';
@@ -21,6 +23,7 @@ import { NavItem } from './nav-item/nav-item';
 
 export const MainLayout = () => {
   const { logout, JWTInfo } = useAuthContext();
+  const { appSubpages, layoutExtensions } = useExtensionsContext();
 
   return (
     <ErrorBoundary>
@@ -46,6 +49,18 @@ export const MainLayout = () => {
                   User
                 </NavItem>
               )}
+              {appSubpages.map((page) => (
+                <NavItem
+                  key={page.path}
+                  icon={page.icon}
+                  path={`${paths.appExtensions}/${page.path}`}
+                >
+                  {page.label}
+                </NavItem>
+              ))}
+              <NavItem icon={faGear} path={paths.settings}>
+                Settings
+              </NavItem>
               <NavItem icon={faBook} path='https://docs.kargo.io' target='_blank'>
                 Docs
               </NavItem>
@@ -69,6 +84,9 @@ export const MainLayout = () => {
             </div>
           </div>
         </div>
+        {layoutExtensions.map(({ component: Comp }, index) => (
+          <Comp key={index} />
+        ))}
       </Suspense>
     </ErrorBoundary>
   );

@@ -13,6 +13,7 @@ import (
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
+	v1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
@@ -20,7 +21,6 @@ import (
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/cli/templates"
-	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
 type getFreightOptions struct {
@@ -204,7 +204,7 @@ func newFreightTable(list *metav1.List) *metav1.Table {
 		freight := item.Object.(*kargoapi.Freight) // nolint: forcetypeassert
 		var alias string
 		if freight.Labels != nil {
-			alias = freight.Labels[kargoapi.AliasLabelKey]
+			alias = freight.Labels[kargoapi.LabelKeyAlias]
 		}
 		rows[i] = metav1.TableRow{
 			Cells: []any{

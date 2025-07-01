@@ -1,6 +1,10 @@
 package v1alpha1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 // +kubebuilder:validation:Enum={Lexical,NewestFromBranch,NewestTag,SemVer}
 type CommitSelectionStrategy string
@@ -39,6 +43,27 @@ type Warehouse struct {
 	Status WarehouseStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
+// GetInterval calculates and returns interval time remaining until the next
+// requeue should occur. If the interval has passed, it returns a short duration
+// to ensure the Warehouse is requeued promptly.
+func (w *Warehouse) GetInterval(minInterval time.Duration) time.Duration {
+	effectiveInterval := w.Spec.Interval.Duration
+	if effectiveInterval < minInterval {
+		effectiveInterval = minInterval
+	}
+
+	if w.Status.DiscoveredArtifacts == nil || w.Status.DiscoveredArtifacts.DiscoveredAt.IsZero() {
+		return effectiveInterval
+	}
+
+	if interval := w.Status.DiscoveredArtifacts.DiscoveredAt.
+		Add(effectiveInterval).
+		Sub(metav1.Now().Time); interval > 0 {
+		return interval
+	}
+	return 100 * time.Millisecond
+}
+
 func (w *Warehouse) GetStatus() *WarehouseStatus {
 	return &w.Status
 }
@@ -61,12 +86,19 @@ type WarehouseSpec struct {
 	// field is implicitly treated as if its value were "5m0s".
 	//
 	// +kubebuilder:validation:Type=string
-	// +kubebuilder:validation:Pattern="^([0-9]+(\\.[0-9]+)?(s|m|h))+$"
+	// +kubebuilder:validation:Pattern=`^([0-9]+(\.[0-9]+)?(s|m|h))+$`
 	// +kubebuilder:default="5m0s"
+	// +akuity:test-kubebuilder-pattern=Duration
 	Interval metav1.Duration `json:"interval" protobuf:"bytes,4,opt,name=interval"`
 	// FreightCreationPolicy describes how Freight is created by this Warehouse.
 	// This field is optional. When left unspecified, the field is implicitly
 	// treated as if its value were "Automatic".
+	//
+	// Accepted values:
+	//
+	// - "Automatic": New Freight is created automatically when any new artifact
+	//   is discovered.
+	// - "Manual": New Freight is never created automatically.
 	//
 	// +kubebuilder:default=Automatic
 	// +kubebuilder:validation:Optional
@@ -105,12 +137,32 @@ type GitSubscription struct {
 	// URL is the repository's URL. This is a required field.
 	//
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Pattern=`(?:^(https?)://(?:([\w-]+):(.+)@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
+	// +kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
+	// +akuity:test-kubebuilder-pattern=GitRepoURLPattern
 	RepoURL string `json:"repoURL" protobuf:"bytes,1,opt,name=repoURL"`
 	// CommitSelectionStrategy specifies the rules for how to identify the newest
 	// commit of interest in the repository specified by the RepoURL field. This
 	// field is optional. When left unspecified, the field is implicitly treated
 	// as if its value were "NewestFromBranch".
+	//
+	// Accepted values:
+	//
+	// - "NewestFromBranch": Selects the latest commit on the branch specified
+	//   by the Branch field or the default branch if none is specified. This is
+	//   the default strategy.
+	//
+	// - "SemVer": Selects the commit referenced by the semantically greatest
+	//   tag. The SemverConstraint field can optionally be used to narrow the set
+	//   of tags eligible for selection.
+	//
+	// - "Lexical": Selects the commit referenced by the lexicographically
+	//   greatest tag. Useful when tags embed a _leading_ date or timestamp. The
+	//   AllowTags and IgnoreTags fields can optionally be used to narrow the set
+	//   of tags eligible for selection.
+	//
+	// - "NewestTag": Selects the commit referenced by the most recently created
+	//   tag. The AllowTags and IgnoreTags fields can optionally be used to
+	//   narrow the set of tags eligible for selection.
 	//
 	// +kubebuilder:default=NewestFromBranch
 	CommitSelectionStrategy CommitSelectionStrategy `json:"commitSelectionStrategy,omitempty" protobuf:"bytes,2,opt,name=commitSelectionStrategy"`
@@ -122,7 +174,9 @@ type GitSubscription struct {
 	// subscription is implicitly to the repository's default branch.
 	//
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Pattern=`^\w+([-/]\w+)*$`
+	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9]([a-zA-Z0-9._\/-]*[a-zA-Z0-9_-])?$`
+	// +akuity:test-kubebuilder-pattern=Branch
 	Branch string `json:"branch,omitempty" protobuf:"bytes,3,opt,name=branch"`
 	// StrictSemvers specifies whether only "strict" semver tags should be
 	// considered. A "strict" semver tag is one containing ALL of major, minor,
@@ -159,6 +213,52 @@ type GitSubscription struct {
 	//
 	// +kubebuilder:validation:Optional
 	IgnoreTags []string `json:"ignoreTags,omitempty" protobuf:"bytes,6,rep,name=ignoreTags"`
+	// ExpressionFilter is an expression that can optionally be used to limit
+	// the commits or tags that are considered in determining the newest commit
+	// of interest based on their metadata.
+	//
+	// For commit-based strategies (NewestFromBranch), the filter applies to
+	// commits and has access to commit metadata variables.
+	// For tag-based strategies (Lexical, NewestTag, SemVer), the filter applies
+	// to tags and has access to tag metadata variables. The filter is applied
+	// after AllowTags, IgnoreTags, and SemverConstraint fields.
+	//
+	// The expression should be a valid expr-lang expression that evaluates to
+	// true or false. When the expression evaluates to true, the commit/tag is
+	// included in the set that is considered. When the expression evaluates to
+	// false, the commit/tag is excluded.
+	//
+	// Available variables depend on the CommitSelectionStrategy:
+	//
+	// For NewestFromBranch (commit filtering):
+	//   - `id`: The ID (sha) of the commit.
+	//   - `commitDate`: The commit date of the commit.
+	//   - `author`: The author of the commit message, in the format "Name <email>".
+	//   - `committer`: The person who committed the commit, in the format
+	//	   "Name <email>".
+	//   - `subject`: The subject (first line) of the commit message.
+	//
+	// For Lexical, NewestTag, SemVer (tag filtering):
+	//   - `tag`: The name of the tag.
+	//   - `id`: The ID (sha) of the commit associated with the tag.
+	//   - `creatorDate`: The creation date of an annotated tag, or the commit
+	//		date of a lightweight tag.
+	//   - `author`: The author of the commit message associated with the tag,
+	//	   in the format "Name <email>".
+	//   - `committer`: The person who committed the commit associated with the
+	//	   tag, in the format "Name <email>".
+	//   - `subject`: The subject (first line) of the commit message associated
+	//	   with the tag.
+	//	 - `tagger`: The person who created the tag, in the format "Name <email>".
+	//	   Only available for annotated tags.
+	//	 - `annotation`: The subject (first line) of the tag annotation. Only
+	//	   available for annotated tags.
+	//
+	// Refer to the expr-lang documentation for more details on syntax and
+	// capabilities of the expression language: https://expr-lang.org.
+	//
+	// +kubebuilder:validation:Optional
+	ExpressionFilter string `json:"expressionFilter,omitempty" protobuf:"bytes,12,opt,name=expressionFilter"`
 	// InsecureSkipTLSVerify specifies whether certificate verification errors
 	// should be ignored when connecting to the repository. This should be enabled
 	// only with great caution.
@@ -172,6 +272,7 @@ type GitSubscription struct {
 	//   2. Glob patterns (prefix the pattern with "glob:"; ex. "glob:*.yaml")
 	//   3. Regular expressions (prefix the pattern with "regex:" or "regexp:";
 	//      ex. "regexp:^.*\.yaml$")
+	//
 	// Paths selected by IncludePaths may be unselected by ExcludePaths. This
 	// is a useful method for including a broad set of paths and then excluding a
 	// subset of them.
@@ -211,19 +312,32 @@ type ImageSubscription struct {
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Pattern=`^(\w+([\.-]\w+)*(:[\d]+)?/)?(\w+([\.-]\w+)*)(/\w+([\.-]\w+)*)*$`
+	// +akuity:test-kubebuilder-pattern=ImageRepoURL
 	RepoURL string `json:"repoURL" protobuf:"bytes,1,opt,name=repoURL"`
-	// GitRepoURL optionally specifies the URL of a Git repository that contains
-	// the source code for the image repository referenced by the RepoURL field.
-	// When this is specified, Kargo MAY be able to infer and link to the exact
-	// revision of that source code that was used to build the image.
-	//
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:validation:Pattern=`^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
-	GitRepoURL string `json:"gitRepoURL,omitempty" protobuf:"bytes,2,opt,name=gitRepoURL"`
 	// ImageSelectionStrategy specifies the rules for how to identify the newest version
 	// of the image specified by the RepoURL field. This field is optional. When
 	// left unspecified, the field is implicitly treated as if its value were
 	// "SemVer".
+	//
+	// Accepted values:
+	//
+	// - "Digest": Selects the image currently referenced by the tag specified
+	//   (unintuitively) by the SemverConstraint field.
+	//
+	// - "Lexical": Selects the image referenced by the lexicographically greatest
+	//   tag. Useful when tags embed a leading date or timestamp. The AllowTags
+	//   and IgnoreTags fields can optionally be used to narrow the set of tags
+	//   eligible for selection.
+	//
+	// - "NewestBuild": Selects the image that was most recently pushed to the
+	//   repository. The AllowTags and IgnoreTags fields can optionally be used
+	//   to narrow the set of tags eligible for selection. This is the least
+	//   efficient and is likely to cause rate limiting affecting this Warehouse
+	//   and possibly others. This strategy should be avoided.
+	//
+	// - "SemVer": Selects the image with the semantically greatest tag. The
+	//   AllowTags and IgnoreTags fields can optionally be used to narrow the set
+	//   of tags eligible for selection.
 	//
 	// +kubebuilder:default=SemVer
 	ImageSelectionStrategy ImageSelectionStrategy `json:"imageSelectionStrategy,omitempty" protobuf:"bytes,3,opt,name=imageSelectionStrategy"`
@@ -246,7 +360,7 @@ type ImageSubscription struct {
 	// constraints, which means the latest semantically tagged version of an image
 	// will always be used. Care should be taken with leaving this field
 	// unspecified, as it can lead to the unanticipated rollout of breaking
-	// changes. Refer to Image Updater documentation for more details.
+	// changes.
 	// More info: https://github.com/masterminds/semver#checking-version-constraints
 	//
 	// +kubebuilder:validation:Optional
@@ -303,6 +417,7 @@ type ChartSubscription struct {
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Pattern=`^(((https?)|(oci))://)([\w\d\.\-]+)(:[\d]+)?(/.*)*$`
+	// +akuity:test-kubebuilder-pattern=HelmRepoURL
 	RepoURL string `json:"repoURL" protobuf:"bytes,1,opt,name=repoURL"`
 	// Name specifies the name of a Helm chart to subscribe to within a classic
 	// chart repository specified by the RepoURL field. This field is required
@@ -354,10 +469,12 @@ type WarehouseStatus struct {
 	DiscoveredArtifacts *DiscoveredArtifacts `json:"discoveredArtifacts,omitempty" protobuf:"bytes,7,opt,name=discoveredArtifacts"`
 }
 
+// GetConditions implements the conditions.Getter interface.
 func (w *WarehouseStatus) GetConditions() []metav1.Condition {
 	return w.Conditions
 }
 
+// SetConditions implements the conditions.Setter interface.
 func (w *WarehouseStatus) SetConditions(conditions []metav1.Condition) {
 	w.Conditions = conditions
 }
@@ -392,7 +509,8 @@ type GitDiscoveryResult struct {
 	// RepoURL is the repository URL of the GitSubscription.
 	//
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Pattern=`(?:^(https?)://(?:([\w-]+):(.+)@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
+	// +kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
+	// +akuity:test-kubebuilder-pattern=GitRepoURLPattern
 	RepoURL string `json:"repoURL" protobuf:"bytes,1,opt,name=repoURL"`
 	// Commits is a list of commits discovered by the Warehouse for the
 	// GitSubscription. An empty list indicates that the discovery operation was
@@ -457,16 +575,17 @@ type DiscoveredImageReference struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=128
 	// +kubebuilder:validation:Pattern=`^[\w.\-\_]+$`
+	// +akuity:test-kubebuilder-pattern=Tag
 	Tag string `json:"tag" protobuf:"bytes,1,opt,name=tag"`
 	// Digest is the digest of the image.
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]+:[a-f0-9]+$`
+	// +akuity:test-kubebuilder-pattern=Digest
 	Digest string `json:"digest" protobuf:"bytes,2,opt,name=digest"`
-	// GitRepoURL is the URL of the Git repository that contains the source
-	// code for this image. This field is optional, and only populated if the
-	// ImageSubscription specifies a GitRepoURL.
-	GitRepoURL string `json:"gitRepoURL,omitempty" protobuf:"bytes,3,opt,name=gitRepoURL"`
+	// Annotations is a map of key-value pairs that provide additional
+	// information about the image.
+	Annotations map[string]string `json:"annotations,omitempty" protobuf:"bytes,5,rep,name=annotations" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// CreatedAt is the time the image was created. This field is optional, and
 	// not populated for every ImageSelectionStrategy.
 	CreatedAt *metav1.Time `json:"createdAt,omitempty" protobuf:"bytes,4,opt,name=createdAt"`

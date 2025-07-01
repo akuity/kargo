@@ -1,16 +1,12 @@
 package v1alpha1
 
 import (
-	"crypto/sha1"
+	"encoding/json"
 	"fmt"
-	"path"
-	"slices"
-	"strings"
+	"time"
 
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/akuity/kargo/internal/git"
-	"github.com/akuity/kargo/internal/helm"
 )
 
 // +kubebuilder:object:root=true
@@ -50,63 +46,6 @@ type Freight struct {
 
 func (f *Freight) GetStatus() *FreightStatus {
 	return &f.Status
-}
-
-// GenerateID deterministically calculates a piece of Freight's ID based on its
-// contents and returns it.
-func (f *Freight) GenerateID() string {
-	size := len(f.Commits) + len(f.Images) + len(f.Charts)
-	artifacts := make([]string, 0, size)
-	for _, commit := range f.Commits {
-		if commit.Tag != "" {
-			// If we have a tag, incorporate it into the canonical representation of a
-			// commit used when calculating Freight ID. This is necessary because one
-			// commit could have multiple tags. Suppose we have already detected a
-			// commit with a tag v1.0.0-rc.1 and produced the corresponding Freight.
-			// Later, that same commit is tagged as v1.0.0. If we don't incorporate
-			// the tag into the ID, we will never produce a new/distinct piece of
-			// Freight for the new tag.
-			artifacts = append(
-				artifacts,
-				fmt.Sprintf("%s:%s:%s", git.NormalizeURL(commit.RepoURL), commit.Tag, commit.ID),
-			)
-		} else {
-			artifacts = append(
-				artifacts,
-				fmt.Sprintf("%s:%s", git.NormalizeURL(commit.RepoURL), commit.ID),
-			)
-		}
-	}
-	for _, image := range f.Images {
-		artifacts = append(
-			artifacts,
-			// Note: This isn't the usual image representation using EITHER :<tag> OR @<digest>.
-			// It is possible to have found an image with a tag that is already known, but with a
-			// new digest -- as in the case of "mutable" tags like "latest". It is equally possible to
-			// have found an image with a digest that is already known, but has been re-tagged.
-			// To cover both cases, we incorporate BOTH tag and digest into the canonical
-			// representation of an image used when calculating Freight ID.
-			fmt.Sprintf("%s:%s@%s", image.RepoURL, image.Tag, image.Digest),
-		)
-	}
-	for _, chart := range f.Charts {
-		artifacts = append(
-			artifacts,
-			fmt.Sprintf(
-				"%s:%s",
-				// path.Join accounts for the possibility that chart.Name is empty
-				path.Join(helm.NormalizeChartRepositoryURL(chart.RepoURL), chart.Name),
-				chart.Version,
-			),
-		)
-	}
-	slices.Sort(artifacts)
-	return fmt.Sprintf(
-		"%x",
-		sha1.Sum([]byte(
-			fmt.Sprintf("%s:%s", f.Origin.String(), strings.Join(artifacts, "|")),
-		)),
-	)
 }
 
 // GitCommit describes a specific commit from a specific Git repository.
@@ -162,6 +101,8 @@ func (g *GitCommit) Equals(rhs *GitCommit) bool {
 
 // FreightStatus describes a piece of Freight's most recently observed state.
 type FreightStatus struct {
+	// CurrentlyIn describes the Stages in which this Freight is currently in use.
+	CurrentlyIn map[string]CurrentStage `json:"currentlyIn,omitempty" protobuf:"bytes,3,rep,name=currentlyIn" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// VerifiedIn describes the Stages in which this Freight has been verified
 	// through promotion and subsequent health checks.
 	VerifiedIn map[string]VerifiedStage `json:"verifiedIn,omitempty" protobuf:"bytes,1,rep,name=verifiedIn" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
@@ -170,14 +111,188 @@ type FreightStatus struct {
 	// might wish to promote a piece of Freight to a given Stage without
 	// transiting the entire pipeline.
 	ApprovedFor map[string]ApprovedStage `json:"approvedFor,omitempty" protobuf:"bytes,2,rep,name=approvedFor" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// Metadata is a map of arbitrary metadata associated with the Freight.
+	// This is useful for storing additional information about the Freight
+	// or Promotion that can be shared across steps or stages.
+	Metadata map[string]apiextensionsv1.JSON `json:"metadata,omitempty" protobuf:"bytes,4,rep,name=metadata" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+}
+
+// IsCurrentlyIn returns whether the Freight is currently in the specified
+// Stage.
+func (f *Freight) IsCurrentlyIn(stage string) bool {
+	// NB: This method exists for convenience. It doesn't require the caller to
+	// know anything about the Freight status' internal data structure.
+	_, in := f.Status.CurrentlyIn[stage]
+	return in
+}
+
+// IsVerifiedIn returns whether the Freight has been verified in the specified
+// Stage.
+func (f *Freight) IsVerifiedIn(stage string) bool {
+	// NB: This method exists for convenience. It doesn't require the caller to
+	// know anything about the Freight status' internal data structure.
+	_, verified := f.Status.VerifiedIn[stage]
+	return verified
+}
+
+// IsApprovedFor returns whether the Freight has been approved for the specified
+// Stage.
+func (f *Freight) IsApprovedFor(stage string) bool {
+	// NB: This method exists for convenience. It doesn't require the caller to
+	// know anything about the Freight status' internal data structure.
+	_, approved := f.Status.ApprovedFor[stage]
+	return approved
+}
+
+// GetLongestSoak returns the longest soak time for the Freight in the specified
+// Stage if it's been verified in that Stage. If it has not, zero will be
+// returned instead. If the Freight is currently in use by the specified Stage,
+// the current soak time is calculated and compared to the longest completed
+// soak time on record.
+func (f *Freight) GetLongestSoak(stage string) time.Duration {
+	if _, verified := f.Status.VerifiedIn[stage]; !verified {
+		return 0
+	}
+	var longestCompleted time.Duration
+	if record, isVerified := f.Status.VerifiedIn[stage]; isVerified && record.LongestCompletedSoak != nil {
+		longestCompleted = record.LongestCompletedSoak.Duration
+	}
+	var current time.Duration
+	if record, isCurrent := f.Status.CurrentlyIn[stage]; isCurrent {
+		current = time.Since(record.Since.Time)
+	}
+	return time.Duration(max(longestCompleted.Nanoseconds(), current.Nanoseconds()))
+}
+
+// HasSoakedIn returns whether the Freight has soaked in the specified Stage for
+// at least the specified duration. If the specified duration is nil, this
+// method will return true.
+func (f *Freight) HasSoakedIn(stage string, dur *metav1.Duration) bool {
+	if f == nil {
+		return false
+	}
+	if dur == nil {
+		return true
+	}
+	return f.GetLongestSoak(stage) >= dur.Duration
+}
+
+// AddCurrentStage updates the Freight status to reflect that the Freight is
+// currently in the specified Stage.
+func (f *FreightStatus) AddCurrentStage(stage string, since time.Time) {
+	if _, alreadyIn := f.CurrentlyIn[stage]; !alreadyIn {
+		if f.CurrentlyIn == nil {
+			f.CurrentlyIn = make(map[string]CurrentStage)
+		}
+		f.CurrentlyIn[stage] = CurrentStage{
+			Since: &metav1.Time{Time: since},
+		}
+	}
+}
+
+// RemoveCurrentStage updates the Freight status to reflect that the Freight is
+// no longer in the specified Stage. If the Freight was verified in the
+// specified Stage, the longest completed soak time will be updated if
+// necessary.
+func (f *FreightStatus) RemoveCurrentStage(stage string) {
+	if record, in := f.CurrentlyIn[stage]; in {
+		if record.Since != nil {
+			soak := time.Since(record.Since.Time)
+			if vi, verified := f.VerifiedIn[stage]; verified {
+				if vi.LongestCompletedSoak == nil || soak > vi.LongestCompletedSoak.Duration {
+					vi.LongestCompletedSoak = &metav1.Duration{Duration: soak}
+					f.VerifiedIn[stage] = vi
+				}
+			}
+		}
+		delete(f.CurrentlyIn, stage)
+	}
+}
+
+// AddVerifiedStage updates the Freight status to reflect that the Freight has
+// been verified in the specified Stage.
+func (f *FreightStatus) AddVerifiedStage(stage string, verifiedAt time.Time) {
+	if _, verified := f.VerifiedIn[stage]; !verified {
+		record := VerifiedStage{VerifiedAt: &metav1.Time{Time: verifiedAt}}
+		if f.VerifiedIn == nil {
+			f.VerifiedIn = map[string]VerifiedStage{stage: record}
+		}
+		f.VerifiedIn[stage] = record
+	}
+}
+
+// AddApprovedStage updates the Freight status to reflect that the Freight has
+// been approved for the specified Stage.
+func (f *FreightStatus) AddApprovedStage(stage string, approvedAt time.Time) {
+	if _, approved := f.ApprovedFor[stage]; !approved {
+		record := ApprovedStage{ApprovedAt: &metav1.Time{Time: approvedAt}}
+		if f.ApprovedFor == nil {
+			f.ApprovedFor = map[string]ApprovedStage{stage: record}
+		}
+		f.ApprovedFor[stage] = record
+	}
+}
+
+// UpsertMetadata inserts or updates the given key in Freight status Metadata
+func (f *FreightStatus) UpsertMetadata(key string, data any) error {
+	if len(f.Metadata) == 0 {
+		f.Metadata = make(map[string]apiextensionsv1.JSON)
+	}
+
+	if key == "" {
+		return fmt.Errorf("key must not be empty")
+	}
+
+	dataBytes, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	f.Metadata[key] = apiextensionsv1.JSON{
+		Raw: dataBytes,
+	}
+	return nil
+}
+
+// GetMetadata retrieves the data associated with the given key from Freight status Metadata
+func (f *FreightStatus) GetMetadata(key string, data any) (bool, error) {
+	dataBytes, ok := f.Metadata[key]
+
+	if !ok {
+		return false, nil
+	}
+
+	if err := json.Unmarshal(dataBytes.Raw, data); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// CurrentStage reflects a Stage's current use of Freight.
+type CurrentStage struct {
+	// Since is the time at which the Stage most recently started using the
+	// Freight. This can be used to calculate how long the Freight has been in use
+	// by the Stage.
+	Since *metav1.Time `json:"since,omitempty" protobuf:"bytes,1,opt,name=since"`
 }
 
 // VerifiedStage describes a Stage in which Freight has been verified.
-type VerifiedStage struct{}
+type VerifiedStage struct {
+	// VerifiedAt is the time at which the Freight was verified in the Stage.
+	VerifiedAt *metav1.Time `json:"verifiedAt,omitempty" protobuf:"bytes,1,opt,name=verifiedAt"`
+	// LongestCompletedSoak represents the longest definite time interval wherein
+	// the Freight was in CONTINUOUS use by the Stage. This value is updated as
+	// Freight EXITS the Stage. If the Freight is currently in use by the Stage,
+	// the time elapsed since the Freight ENTERED the Stage is its current soak
+	// time, which may exceed the value of this field.
+	LongestCompletedSoak *metav1.Duration `json:"longestSoak,omitempty" protobuf:"bytes,2,opt,name=longestSoak"`
+}
 
 // ApprovedStage describes a Stage for which Freight has been (manually)
 // approved.
-type ApprovedStage struct{}
+type ApprovedStage struct {
+	// ApprovedAt is the time at which the Freight was approved for the Stage.
+	ApprovedAt *metav1.Time `json:"approvedAt,omitempty" protobuf:"bytes,1,opt,name=approvedAt"`
+}
 
 // +kubebuilder:object:root=true
 

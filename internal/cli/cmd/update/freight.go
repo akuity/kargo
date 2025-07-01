@@ -8,11 +8,11 @@ import (
 	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 
+	v1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	"github.com/akuity/kargo/internal/cli/client"
 	"github.com/akuity/kargo/internal/cli/config"
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/cli/templates"
-	v1alpha1 "github.com/akuity/kargo/pkg/api/service/v1alpha1"
 )
 
 type updateFreightAliasOptions struct {

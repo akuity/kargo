@@ -15,15 +15,22 @@ import (
 )
 
 func TestNewKubernetesDatabase(t *testing.T) {
-	testClient := fake.NewClientBuilder().Build()
+	testControlPlaneClient := fake.NewClientBuilder().Build()
+	testLocalClusterClient := fake.NewClientBuilder().Build()
 	testCfg := DatabaseConfig{
 		GlobalCredentialsNamespaces: []string{"fake-namespace"},
 	}
-	d := NewDatabase(context.Background(), testClient, testCfg)
+	d := NewDatabase(
+		context.Background(),
+		testControlPlaneClient,
+		testLocalClusterClient,
+		testCfg,
+	)
 	require.NotNil(t, d)
 	k, ok := d.(*database)
 	require.True(t, ok)
-	require.Same(t, testClient, k.kargoClient)
+	require.Same(t, testControlPlaneClient, k.controlPlaneClient)
+	require.Same(t, testLocalClusterClient, k.localClusterClient)
 	require.Equal(t, testCfg, k.cfg)
 }
 
@@ -34,38 +41,45 @@ func TestGet(t *testing.T) {
 		testProjectNamespace = "fake-namespace"
 		testGlobalNamespace  = "another-fake-namespace"
 
-		testCredType = credentials.TypeGit
-
 		// This deliberately omits the trailing .git to test normalization
-		testRepoURL     = "https://github.com/akuity/kargo"
-		insecureTestURL = "http://github.com/akuity/bogus.git"
+		testGitRepoURL     = "https://github.com/akuity/kargo"
+		testInsecureGitURL = "http://github.com/akuity/bogus.git"
+
+		// This is deliberately an image URL that could be mistaken for an SCP-style
+		// Git URL to verify that Git URL normalization is not applied to image
+		// URLs.
+		testImageURL = "my-registry.io:5000/image"
 	)
 
-	testLabels := map[string]string{
-		kargoapi.CredentialTypeLabelKey: testCredType.String(),
+	testGitLabels := map[string]string{
+		kargoapi.LabelKeyCredentialType: credentials.TypeGit.String(),
 	}
 
-	projectCredentialWithRepoURL := &corev1.Secret{
+	testImageLabels := map[string]string{
+		kargoapi.LabelKeyCredentialType: credentials.TypeImage.String(),
+	}
+
+	projectGitCredentialWithRepoURL := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "project-credential-repo-url",
+			Name:      "project-credential-git-repo-url",
 			Namespace: testProjectNamespace,
-			Labels:    testLabels,
+			Labels:    testGitLabels,
 		},
 		Data: map[string][]byte{
-			credentials.FieldRepoURL:  []byte(testRepoURL),
+			credentials.FieldRepoURL:  []byte(testGitRepoURL),
 			credentials.FieldUsername: []byte("project-exact"),
 			credentials.FieldPassword: []byte("fake-password"),
 		},
 	}
 
-	projectCredentialWithRepoURLPattern := &corev1.Secret{
+	projectGitCredentialWithRepoURLPattern := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "project-credential-repo-url-pattern",
+			Name:      "project-credential-git-repo-url-pattern",
 			Namespace: testProjectNamespace,
-			Labels:    testLabels,
+			Labels:    testGitLabels,
 		},
 		Data: map[string][]byte{
-			credentials.FieldRepoURL:        []byte(testRepoURL),
+			credentials.FieldRepoURL:        []byte(testGitRepoURL),
 			credentials.FieldRepoURLIsRegex: []byte("true"),
 			credentials.FieldUsername:       []byte("project-pattern"),
 			credentials.FieldPassword:       []byte("fake-password"),
@@ -76,40 +90,94 @@ func TestGet(t *testing.T) {
 	// Kargo will refuse to look for credentials for insecure URLs. However,
 	// this is a secret that WOULD be matched if not for that check. This helps
 	// us test that the check is working.
-	projectCredentialWithInsecureRepoURL := &corev1.Secret{
+	projectGitCredentialWithInsecureRepoURL := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "project-credential-insecure-repo-url",
+			Name:      "project-credential-git-insecure-repo-url",
 			Namespace: testProjectNamespace,
-			Labels:    testLabels,
+			Labels:    testGitLabels,
 		},
 		Data: map[string][]byte{
-			credentials.FieldRepoURL:  []byte(insecureTestURL),
+			credentials.FieldRepoURL:  []byte(testInsecureGitURL),
 			credentials.FieldUsername: []byte("project-insecure"),
 			credentials.FieldPassword: []byte("fake-password"),
 		},
 	}
 
-	globalCredentialWithRepoURL := &corev1.Secret{
+	globalGitCredentialWithRepoURL := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "global-credential-repo-url",
+			Name:      "global-credential-git-repo-url",
 			Namespace: testGlobalNamespace,
-			Labels:    testLabels,
+			Labels:    testGitLabels,
 		},
 		Data: map[string][]byte{
-			credentials.FieldRepoURL:  []byte(testRepoURL),
+			credentials.FieldRepoURL:  []byte(testGitRepoURL),
 			credentials.FieldUsername: []byte("global-exact"),
 			credentials.FieldPassword: []byte("fake-password"),
 		},
 	}
 
-	globalCredentialWithRepoURLPattern := &corev1.Secret{
+	globalGitCredentialWithRepoURLPattern := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "global-credential-repo-url-pattern",
+			Name:      "global-credential-git-repo-url-pattern",
 			Namespace: testGlobalNamespace,
-			Labels:    testLabels,
+			Labels:    testGitLabels,
 		},
 		Data: map[string][]byte{
-			credentials.FieldRepoURL:        []byte(testRepoURL),
+			credentials.FieldRepoURL:        []byte(testGitRepoURL),
+			credentials.FieldRepoURLIsRegex: []byte("true"),
+			credentials.FieldUsername:       []byte("global-pattern"),
+			credentials.FieldPassword:       []byte("fake-password"),
+		},
+	}
+
+	projectImageCredentialWithRepoURL := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "project-credential-image-repo-url",
+			Namespace: testProjectNamespace,
+			Labels:    testImageLabels,
+		},
+		Data: map[string][]byte{
+			credentials.FieldRepoURL:  []byte(testImageURL),
+			credentials.FieldUsername: []byte("project-exact"),
+			credentials.FieldPassword: []byte("fake-password"),
+		},
+	}
+
+	projectImageCredentialWithRepoURLPattern := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "project-credential-image-repo-url-pattern",
+			Namespace: testProjectNamespace,
+			Labels:    testImageLabels,
+		},
+		Data: map[string][]byte{
+			credentials.FieldRepoURL:        []byte(testImageURL),
+			credentials.FieldRepoURLIsRegex: []byte("true"),
+			credentials.FieldUsername:       []byte("project-pattern"),
+			credentials.FieldPassword:       []byte("fake-password"),
+		},
+	}
+
+	globalImageCredentialWithRepoURL := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "global-credential-image-repo-url",
+			Namespace: testGlobalNamespace,
+			Labels:    testImageLabels,
+		},
+		Data: map[string][]byte{
+			credentials.FieldRepoURL:  []byte(testImageURL),
+			credentials.FieldUsername: []byte("global-exact"),
+			credentials.FieldPassword: []byte("fake-password"),
+		},
+	}
+
+	globalImageCredentialWithRepoURLPattern := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "global-credential-image-repo-url-pattern",
+			Namespace: testGlobalNamespace,
+			Labels:    testImageLabels,
+		},
+		Data: map[string][]byte{
+			credentials.FieldRepoURL:        []byte(testImageURL),
 			credentials.FieldRepoURLIsRegex: []byte("true"),
 			credentials.FieldUsername:       []byte("global-pattern"),
 			credentials.FieldPassword:       []byte("fake-password"),
@@ -119,103 +187,172 @@ func TestGet(t *testing.T) {
 	testCases := []struct {
 		name     string
 		secrets  []client.Object
+		cfg      DatabaseConfig
+		credType credentials.Type
 		repoURL  string
 		expected *corev1.Secret
 	}{
 		{
-			name:     "exact match in project namespace",
-			secrets:  []client.Object{projectCredentialWithRepoURL},
-			repoURL:  testRepoURL,
-			expected: projectCredentialWithRepoURL,
+			name:     "git URL exact match in project namespace",
+			secrets:  []client.Object{projectGitCredentialWithRepoURL},
+			credType: credentials.TypeGit,
+			repoURL:  testGitRepoURL,
+			expected: projectGitCredentialWithRepoURL,
 		},
 		{
-			name:     "pattern match in project namespace",
-			secrets:  []client.Object{projectCredentialWithRepoURLPattern},
-			repoURL:  testRepoURL,
-			expected: projectCredentialWithRepoURLPattern,
+			name:     "git URL pattern match in project namespace",
+			secrets:  []client.Object{projectGitCredentialWithRepoURLPattern},
+			credType: credentials.TypeGit,
+			repoURL:  testGitRepoURL,
+			expected: projectGitCredentialWithRepoURLPattern,
 		},
 		{
-			name:     "exact match in global namespace",
-			secrets:  []client.Object{globalCredentialWithRepoURL},
-			repoURL:  testRepoURL,
-			expected: globalCredentialWithRepoURL,
+			name:    "git URL exact match in global namespace",
+			secrets: []client.Object{globalGitCredentialWithRepoURL},
+			cfg: DatabaseConfig{
+				GlobalCredentialsNamespaces: []string{testGlobalNamespace},
+			},
+			credType: credentials.TypeGit,
+			repoURL:  testGitRepoURL,
+			expected: globalGitCredentialWithRepoURL,
 		},
 		{
-			name:     "pattern match in global namespace",
-			secrets:  []client.Object{globalCredentialWithRepoURLPattern},
-			repoURL:  testRepoURL,
-			expected: globalCredentialWithRepoURLPattern,
+			name:    "git URL pattern match in global namespace",
+			secrets: []client.Object{globalGitCredentialWithRepoURLPattern},
+			cfg: DatabaseConfig{
+				GlobalCredentialsNamespaces: []string{testGlobalNamespace},
+			},
+			credType: credentials.TypeGit,
+			repoURL:  testGitRepoURL,
+			expected: globalGitCredentialWithRepoURLPattern,
 		},
+		// Image URLs of the form host:port/image can be mistaken for SCP-style Git
+		// URLs. The next several test cases verify that Git URL normalization is
+		// not being applied to image URLs and incorrectly normalizing
+		// host:port/image as ssh://host:port/image.
+		{
+			name:     "image URL exact match in project namespace",
+			secrets:  []client.Object{projectImageCredentialWithRepoURL},
+			credType: credentials.TypeImage,
+			repoURL:  testImageURL,
+			expected: projectImageCredentialWithRepoURL,
+		},
+		{
+			name:     "image URL pattern match in project namespace",
+			secrets:  []client.Object{projectImageCredentialWithRepoURLPattern},
+			credType: credentials.TypeImage,
+			repoURL:  testImageURL,
+			expected: projectImageCredentialWithRepoURLPattern,
+		},
+		{
+			name:    "image URL exact match in global namespace",
+			secrets: []client.Object{globalImageCredentialWithRepoURL},
+			cfg: DatabaseConfig{
+				GlobalCredentialsNamespaces: []string{testGlobalNamespace},
+			},
+			credType: credentials.TypeImage,
+			repoURL:  testImageURL,
+			expected: globalImageCredentialWithRepoURL,
+		},
+		{
+			name:    "image URL pattern match in global namespace",
+			secrets: []client.Object{globalImageCredentialWithRepoURLPattern},
+			cfg: DatabaseConfig{
+				GlobalCredentialsNamespaces: []string{testGlobalNamespace},
+			},
+			credType: credentials.TypeImage,
+			repoURL:  testImageURL,
+			expected: globalImageCredentialWithRepoURLPattern,
+		},
+		// The next several tests cases confirm the precedence rules for credential
+		// matching.
 		{
 			name: "precedence: exact match in project namespace over pattern match",
 			secrets: []client.Object{
-				projectCredentialWithRepoURL,
-				projectCredentialWithRepoURLPattern,
+				projectGitCredentialWithRepoURL,
+				projectGitCredentialWithRepoURLPattern,
 			},
-			repoURL:  testRepoURL,
-			expected: projectCredentialWithRepoURL,
+			credType: credentials.TypeGit,
+			repoURL:  testGitRepoURL,
+			expected: projectGitCredentialWithRepoURL,
 		},
 		{
 			name: "precedence: exact match in global namespace over pattern match",
 			secrets: []client.Object{
-				globalCredentialWithRepoURL,
-				globalCredentialWithRepoURLPattern,
+				globalGitCredentialWithRepoURL,
+				globalGitCredentialWithRepoURLPattern,
 			},
-			repoURL:  testRepoURL,
-			expected: globalCredentialWithRepoURL,
+			cfg: DatabaseConfig{
+				GlobalCredentialsNamespaces: []string{testGlobalNamespace},
+			},
+			credType: credentials.TypeGit,
+			repoURL:  testGitRepoURL,
+			expected: globalGitCredentialWithRepoURL,
 		},
 		{
 			name: "precedence: match in project namespace over match in global namespace",
 			secrets: []client.Object{
-				projectCredentialWithRepoURL,
-				globalCredentialWithRepoURL,
+				projectGitCredentialWithRepoURL,
+				globalGitCredentialWithRepoURL,
 			},
-			repoURL:  testRepoURL,
-			expected: projectCredentialWithRepoURL,
+			credType: credentials.TypeGit,
+			repoURL:  testGitRepoURL,
+			expected: projectGitCredentialWithRepoURL,
 		},
 		{
 			name: "no match",
 			secrets: []client.Object{
-				projectCredentialWithRepoURL,
-				projectCredentialWithRepoURLPattern,
-				globalCredentialWithRepoURL,
-				globalCredentialWithRepoURLPattern,
+				projectGitCredentialWithRepoURL,
+				projectGitCredentialWithRepoURLPattern,
+				globalGitCredentialWithRepoURL,
+				globalGitCredentialWithRepoURLPattern,
 			},
+			credType: credentials.TypeGit,
 			repoURL:  "http://github.com/no/secrets/should/match/this.git",
 			expected: nil,
 		},
 		{
 			name: "insecure HTTP endpoint",
 			// Would match if not for the insecure URL check
-			secrets:  []client.Object{projectCredentialWithInsecureRepoURL},
-			repoURL:  insecureTestURL,
+			secrets:  []client.Object{projectGitCredentialWithInsecureRepoURL},
+			credType: credentials.TypeGit,
+			repoURL:  testInsecureGitURL,
 			expected: nil,
+		},
+		{
+			name: "insecure HTTP endpoint allowed",
+			// Matches because credentials for insecure URLs are allowed
+			secrets: []client.Object{projectGitCredentialWithInsecureRepoURL},
+			cfg: DatabaseConfig{
+				AllowCredentialsOverHTTP: true,
+			},
+			credType: credentials.TypeGit,
+			repoURL:  testInsecureGitURL,
+			expected: projectGitCredentialWithInsecureRepoURL,
 		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			creds, found, err := NewDatabase(
+			creds, err := NewDatabase(
 				context.Background(),
 				fake.NewClientBuilder().WithObjects(testCase.secrets...).Build(),
-				DatabaseConfig{
-					GlobalCredentialsNamespaces: []string{testGlobalNamespace},
-				},
+				nil,
+				testCase.cfg,
 			).Get(
 				context.Background(),
 				testProjectNamespace,
-				testCredType,
+				testCase.credType,
 				testCase.repoURL,
 			)
 			require.NoError(t, err)
 
 			if testCase.expected == nil {
-				require.False(t, found)
-				require.Empty(t, creds)
+				require.Nil(t, creds)
 				return
 			}
 
-			require.True(t, found)
+			require.NotNil(t, creds)
 			require.Equal(
 				t,
 				string(testCase.expected.Data["username"]),

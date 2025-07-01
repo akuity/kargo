@@ -8,7 +8,7 @@ import {
 import { theme } from 'antd';
 
 import { MessageTooltip } from '@ui/features/project/pipelines/message-tooltip';
-import { PromotionStatus } from '@ui/gen/v1alpha1/generated_pb';
+import { PromotionStatus } from '@ui/gen/api/v1alpha1/generated_pb';
 
 const PhaseAndMessage = ({ status }: { status: PromotionStatus }) => (
   <div>

@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -93,5 +94,54 @@ func TestRandStringFromCharset(t *testing.T) {
 			require.False(t, ok)
 			set[str] = struct{}{}
 		}
+	}
+}
+
+func Test_normalizeURL(t *testing.T) {
+	tests := []struct {
+		address string
+		want    string
+	}{
+		{
+			address: "example.com",
+			want:    "https://example.com",
+		},
+		{
+			address: "example.com:8080",
+			want:    "https://example.com:8080",
+		},
+		{
+			address: "http://example.com",
+			want:    "http://example.com",
+		},
+		{
+			address: "https://example.com",
+			want:    "https://example.com",
+		},
+		{
+			address: " ftp://example.com",
+			want:    "ftp://example.com",
+		},
+		{
+			address: "  example.com/path  ",
+			want:    "https://example.com/path",
+		},
+		{
+			address: "localhost",
+			want:    "https://localhost",
+		},
+		{
+			address: "localhost:3000",
+			want:    "https://localhost:3000",
+		},
+		{
+			address: "",
+			want:    "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run("", func(t *testing.T) {
+			assert.Equal(t, tt.want, normalizeURL(tt.address))
+		})
 	}
 }

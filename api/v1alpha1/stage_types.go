@@ -3,28 +3,12 @@ package v1alpha1
 import (
 	"crypto/sha1"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-type StagePhase string
-
-const (
-	// StagePhaseNotApplicable denotes a Stage that has no Freight.
-	StagePhaseNotApplicable StagePhase = "NotApplicable"
-	// StagePhaseSteady denotes a Stage that has Freight and is not currently
-	// being promoted or verified.
-	StagePhaseSteady StagePhase = "Steady"
-	// StagePhasePromoting denotes a Stage that is currently being promoted.
-	StagePhasePromoting StagePhase = "Promoting"
-	// StagePhaseVerifying denotes a Stage that is currently being verified.
-	StagePhaseVerifying StagePhase = "Verifying"
-	// StagePhaseFailed denotes a Stage that is in a failed state. For example,
-	// the Stage may have failed to promote or verify its Freight.
-	StagePhaseFailed StagePhase = "Failed"
 )
 
 type VerificationPhase string
@@ -128,12 +112,21 @@ type FreightOriginKind string
 
 const FreightOriginKindWarehouse FreightOriginKind = "Warehouse"
 
+// +kubebuilder:validation:Enum={All,OneOf,""}
+type FreightAvailabilityStrategy string
+
+const (
+	FreightAvailabilityStrategyAll   FreightAvailabilityStrategy = "All"
+	FreightAvailabilityStrategyOneOf FreightAvailabilityStrategy = "OneOf"
+)
+
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name=Shard,type=string,JSONPath=`.spec.shard`
 // +kubebuilder:printcolumn:name=Current Freight,type=string,JSONPath=`.status.freightSummary`
 // +kubebuilder:printcolumn:name=Health,type=string,JSONPath=`.status.health.status`
-// +kubebuilder:printcolumn:name=Phase,type=string,JSONPath=`.status.phase`
+// +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].status"
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.type==\"Ready\")].message"
 // +kubebuilder:printcolumn:name=Age,type=date,JSONPath=`.metadata.creationTimestamp`
 
 // Stage is the Kargo API's main type.
@@ -162,6 +155,42 @@ func (s *Stage) IsControlFlow() bool {
 	}
 }
 
+// IsFreightAvailable answers whether the specified Freight is available to the
+// Stage.
+func (s *Stage) IsFreightAvailable(freight *Freight) bool {
+	if s == nil || freight == nil || s.Namespace != freight.Namespace {
+		return false
+	}
+	if freight.IsApprovedFor(s.Name) {
+		return true
+	}
+	for _, req := range s.Spec.RequestedFreight {
+		if !freight.Origin.Equals(&req.Origin) {
+			continue
+		}
+
+		if req.Sources.Direct {
+			return true
+		}
+		if req.Sources.AvailabilityStrategy == FreightAvailabilityStrategyAll {
+			// Make sure Freight is verified and soaked in all upstream Stages
+			for _, upstream := range req.Sources.Stages {
+				if !freight.IsVerifiedIn(upstream) || !freight.HasSoakedIn(upstream, req.Sources.RequiredSoakTime) {
+					return false
+				}
+			}
+			return true
+		}
+		// Make sure Freight is verified and soaked in at least one upstream Stage
+		for _, upstream := range req.Sources.Stages {
+			if freight.IsVerifiedIn(upstream) && freight.HasSoakedIn(upstream, req.Sources.RequiredSoakTime) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func (s *Stage) GetStatus() *StageStatus {
 	return &s.Status
 }
@@ -175,6 +204,10 @@ type StageSpec struct {
 	// kargo.akuity.io/shard label with the value of this field. When this field
 	// is empty, the webhook will ensure that label is absent.
 	Shard string `json:"shard,omitempty" protobuf:"bytes,4,opt,name=shard"`
+	// Vars is a list of variables that can be referenced anywhere in the
+	// StageSpec that supports expressions. For example, the PromotionTemplate
+	// and arguments of the Verification.
+	Vars []ExpressionVariable `json:"vars,omitempty" protobuf:"bytes,7,rep,name=vars"`
 	// RequestedFreight expresses the Stage's need for certain pieces of Freight,
 	// each having originated from a particular Warehouse. This list must be
 	// non-empty. In the common case, a Stage will request Freight having
@@ -218,7 +251,7 @@ type FreightOrigin struct {
 	// +kubebuilder:validation:Required
 	Kind FreightOriginKind `json:"kind" protobuf:"bytes,1,opt,name=kind"`
 	// Name is the name of the resource of the kind indicated by the Kind field
-	// from which Freight may originated.
+	// from which Freight may originate.
 	//
 	// +kubebuilder:validation:Required
 	Name string `json:"name" protobuf:"bytes,2,opt,name=name"`
@@ -252,6 +285,33 @@ type FreightSources struct {
 	// Direct field must be true. i.e. Between the two fields, at least on source
 	// must be specified.
 	Stages []string `json:"stages,omitempty" protobuf:"bytes,2,rep,name=stages"`
+	// RequiredSoakTime specifies a minimum duration for which the requested
+	// Freight must have continuously occupied ("soaked in") in an upstream Stage
+	// before becoming available for promotion to this Stage. This is an optional
+	// field. If nil or zero, no soak time is required. Any soak time requirement
+	// is in ADDITION to the requirement that Freight be verified in an upstream
+	// Stage to become available for promotion to this Stage, although a manual
+	// approval for promotion to this Stage will supersede any soak time
+	// requirement.
+	//
+	// +kubebuilder:validation:Type=string
+	// +kubebuilder:validation:Pattern=`^([0-9]+(\.[0-9]+)?(s|m|h))+$`
+	// +akuity:test-kubebuilder-pattern=Duration
+	RequiredSoakTime *metav1.Duration `json:"requiredSoakTime,omitempty" protobuf:"bytes,3,opt,name=requiredSoakTime"`
+	// AvailabilityStrategy specifies the semantics for how requested Freight is
+	// made available to the Stage. This field is optional. When left unspecified,
+	// the field is implicitly treated as if its value were "OneOf".
+	//
+	// Accepted Values:
+	//
+	// - "All": Freight must be be verified and, if applicable, soaked in all
+	//   upstream Stages to be considered available for promotion.
+	// - "OneOf": Freight must be verified and, if applicable, soaked in at least
+	//    one upstream Stage to be considered available for promotion.
+	// - "": Treated the same as "OneOf".
+	//
+	// +kubebuilder:validation:Optional
+	AvailabilityStrategy FreightAvailabilityStrategy `json:"availabilityStrategy,omitempty" protobuf:"bytes,4,opt,name=availabilityStrategy"`
 }
 
 // PromotionTemplate defines a template for a Promotion that can be used to
@@ -264,24 +324,33 @@ type PromotionTemplate struct {
 // for a Stage. This is a template that can be used to create a Promotion for a
 // Stage.
 type PromotionTemplateSpec struct {
+	// Vars is a list of variables that can be referenced by expressions in
+	// promotion steps.
+	Vars []ExpressionVariable `json:"vars,omitempty" protobuf:"bytes,2,rep,name=vars"`
 	// Steps specifies the directives to be executed as part of a Promotion.
 	// The order in which the directives are executed is the order in which they
 	// are listed in this field.
 	//
 	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:items:XValidation:message="PromotionTemplate step must have exactly one of uses or task set",rule="(has(self.uses) ? !has(self.task) : has(self.task))"
 	Steps []PromotionStep `json:"steps,omitempty" protobuf:"bytes,1,rep,name=steps"`
 }
 
 // StageStatus describes a Stages's current and recent Freight, health, and
 // more.
 type StageStatus struct {
+	// Conditions contains the last observations of the Stage's current
+	// state.
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	// +listType=map
+	// +listMapKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchMergeKey:"type" patchStrategy:"merge" protobuf:"bytes,13,rep,name=conditions"`
 	// LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
 	// annotation that was handled by the controller. This field can be used to
 	// determine whether the request to refresh the resource has been handled.
 	// +optional
 	LastHandledRefresh string `json:"lastHandledRefresh,omitempty" protobuf:"bytes,11,opt,name=lastHandledRefresh"`
-	// Phase describes where the Stage currently is in its lifecycle.
-	Phase StagePhase `json:"phase,omitempty" protobuf:"bytes,1,opt,name=phase"`
 	// FreightHistory is a list of recent Freight selections that were deployed
 	// to the Stage. By default, the last ten Freight selections are stored.
 	// The first item in the list is the most recent Freight selection and
@@ -300,9 +369,6 @@ type StageStatus struct {
 	FreightSummary string `json:"freightSummary,omitempty" protobuf:"bytes,12,opt,name=freightSummary"`
 	// Health is the Stage's last observed health.
 	Health *Health `json:"health,omitempty" protobuf:"bytes,8,opt,name=health"`
-	// Message describes any errors that are preventing the Stage controller
-	// from assessing Stage health or from finding new Freight.
-	Message string `json:"message,omitempty" protobuf:"bytes,9,opt,name=message"`
 	// ObservedGeneration represents the .metadata.generation that this Stage
 	// status was reconciled against.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty" protobuf:"varint,6,opt,name=observedGeneration"`
@@ -312,12 +378,22 @@ type StageStatus struct {
 	LastPromotion *PromotionReference `json:"lastPromotion,omitempty" protobuf:"bytes,10,opt,name=lastPromotion"`
 }
 
+// GetConditions implements the conditions.Getter interface.
+func (w *StageStatus) GetConditions() []metav1.Condition {
+	return w.Conditions
+}
+
+// SetConditions implements the conditions.Setter interface.
+func (w *StageStatus) SetConditions(conditions []metav1.Condition) {
+	w.Conditions = conditions
+}
+
 // FreightReference is a simplified representation of a piece of Freight -- not
 // a root resource type.
 type FreightReference struct {
-	// Name is system-assigned identifier that is derived deterministically from
-	// the contents of the Freight. i.e. Two pieces of Freight can be compared for
-	// equality by comparing their Names.
+	// Name is a system-assigned identifier derived deterministically from
+	// the contents of the Freight. I.e., two pieces of Freight can be compared
+	// for equality by comparing their Names.
 	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
 	// Origin describes a kind of Freight in terms of its origin.
 	Origin FreightOrigin `json:"origin,omitempty" protobuf:"bytes,8,opt,name=origin"`
@@ -342,6 +418,20 @@ type FreightCollection struct {
 	// VerificationHistory is a stack of recent VerificationInfo. By default,
 	// the last ten VerificationInfo are stored.
 	VerificationHistory VerificationInfoStack `json:"verificationHistory,omitempty" protobuf:"bytes,2,rep,name=verificationHistory"`
+}
+
+// Includes returns true if the FreightCollection includes Freight with the
+// specified name and false otherwise.
+func (f *FreightCollection) Includes(freightName string) bool {
+	if f == nil {
+		return false
+	}
+	for _, freight := range f.Freight {
+		if freight.Name == freightName {
+			return true
+		}
+	}
+	return false
 }
 
 // UpdateOrPush updates the entry in the FreightCollection based on the
@@ -384,6 +474,18 @@ func (f *FreightCollection) References() []FreightReference {
 	return refs
 }
 
+// HasNonTerminalVerification returns true if the FreightCollection has any
+// verification which is not in a terminal state, indicating verification is
+// still in progress.
+func (f *FreightCollection) HasNonTerminalVerification() bool {
+	for _, v := range f.VerificationHistory {
+		if !v.Phase.IsTerminal() {
+			return true
+		}
+	}
+	return false
+}
+
 // FreightHistory is a linear list of FreightCollection items. The list is
 // ordered by the time at which the FreightCollection was recorded, with the
 // most recent (current) FreightCollection at the top of the list.
@@ -418,16 +520,14 @@ func (f *FreightHistory) truncate() {
 type Image struct {
 	// RepoURL describes the repository in which the image can be found.
 	RepoURL string `json:"repoURL,omitempty" protobuf:"bytes,1,opt,name=repoURL"`
-	// GitRepoURL specifies the URL of a Git repository that contains the source
-	// code for the image repository referenced by the RepoURL field if Kargo was
-	// able to infer it.
-	GitRepoURL string `json:"gitRepoURL,omitempty" protobuf:"bytes,2,opt,name=gitRepoURL"`
 	// Tag identifies a specific version of the image in the repository specified
 	// by RepoURL.
 	Tag string `json:"tag,omitempty" protobuf:"bytes,3,opt,name=tag"`
 	// Digest identifies a specific version of the image in the repository
 	// specified by RepoURL. This is a more precise identifier than Tag.
 	Digest string `json:"digest,omitempty" protobuf:"bytes,4,opt,name=digest"`
+	// Annotations is a map of arbitrary metadata for the image.
+	Annotations map[string]string `json:"annotations,omitempty" protobuf:"bytes,5,rep,name=annotations" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 }
 
 // DeepEquals returns a bool indicating whether the receiver deep-equals the
@@ -440,9 +540,9 @@ func (i *Image) DeepEquals(other *Image) bool {
 		return false
 	}
 	return i.RepoURL == other.RepoURL &&
-		i.GitRepoURL == other.GitRepoURL &&
 		i.Tag == other.Tag &&
-		i.Digest == other.Digest
+		i.Digest == other.Digest &&
+		maps.Equal(i.Annotations, other.Annotations)
 }
 
 // Chart describes a specific version of a Helm chart.
@@ -481,8 +581,6 @@ type Health struct {
 	// Issues clarifies why a Stage in any state other than Healthy is in that
 	// state. This field will always be the empty when a Stage is Healthy.
 	Issues []string `json:"issues,omitempty" protobuf:"bytes,2,rep,name=issues"`
-	// ArgoCDApps describes the current state of any related ArgoCD Applications.
-	ArgoCDApps []ArgoCDAppStatus `json:"argoCDApps,omitempty" protobuf:"bytes,3,rep,name=argoCDApps"`
 	// Config is the opaque configuration of all health checks performed on this
 	// Stage.
 	Config *apiextensionsv1.JSON `json:"config,omitempty" protobuf:"bytes,4,opt,name=config"`
@@ -566,6 +664,12 @@ type AnalysisTemplateReference struct {
 	//
 	// +kubebuilder:validation:Required
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+	// Kind is the type of the AnalysisTemplate. Can be either AnalysisTemplate or
+	// ClusterAnalysisTemplate, default is AnalysisTemplate.
+	//
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Enum=AnalysisTemplate;ClusterAnalysisTemplate
+	Kind string `json:"kind,omitempty" protobuf:"bytes,2,opt,name=kind"`
 }
 
 // AnalysisRunMetadata contains optional metadata that should be applied to all

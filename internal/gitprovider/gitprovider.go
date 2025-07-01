@@ -43,7 +43,7 @@ type Interface interface {
 	// CreatePullRequest creates a pull request.
 	CreatePullRequest(context.Context, *CreatePullRequestOpts) (*PullRequest, error)
 
-	// Get gets an existing pull request by ID
+	// GetPullRequest gets an existing pull request by ID
 	GetPullRequest(context.Context, int64) (*PullRequest, error)
 
 	// ListPullRequests lists pull requests by the given options. Implementations
@@ -51,6 +51,10 @@ type Interface interface {
 	// to differences in the underlying provider APIs. It is the responsibility of
 	// the caller to sort the results as needed.
 	ListPullRequests(context.Context, *ListPullRequestOptions) ([]PullRequest, error)
+
+	// GetCommitURL returns a commit URL inferred from the provided repository URL
+	// and commit ID.
+	GetCommitURL(repoURL string, commitID string) (string, error)
 }
 
 // CreatePullRequestOpts encapsulates the options used when creating a pull
@@ -64,6 +68,8 @@ type CreatePullRequestOpts struct {
 	Head string
 	// Base is the name of the target branch.
 	Base string
+	// Labels is an array of strings that should be added as labels to the pull request.
+	Labels []string
 }
 
 // ListPullRequestOptions encapsulates the options used when listing pull
@@ -124,6 +130,8 @@ type Fake struct {
 		context.Context,
 		*ListPullRequestOptions,
 	) ([]PullRequest, error)
+	// GetCommitURLFn defines the functionality of the GetCommitURL method.
+	GetCommitURLFn func(repoURL string, commitID string) (string, error)
 }
 
 // CreatePullRequest implements gitprovider.Interface.
@@ -148,4 +156,9 @@ func (f *Fake) ListPullRequests(
 	opts *ListPullRequestOptions,
 ) ([]PullRequest, error) {
 	return f.ListPullRequestsFn(ctx, opts)
+}
+
+// GetCommitURL implements gitprovider.Interface.
+func (f *Fake) GetCommitURL(repoURL string, sha string) (string, error) {
+	return f.GetCommitURLFn(repoURL, sha)
 }

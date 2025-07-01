@@ -16,6 +16,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/cmd/grant"
 	"github.com/akuity/kargo/internal/cli/cmd/login"
 	"github.com/akuity/kargo/internal/cli/cmd/logout"
+	"github.com/akuity/kargo/internal/cli/cmd/logs"
 	"github.com/akuity/kargo/internal/cli/cmd/promote"
 	"github.com/akuity/kargo/internal/cli/cmd/refresh"
 	"github.com/akuity/kargo/internal/cli/cmd/revoke"
@@ -50,6 +51,7 @@ func NewRootCommand(cfg clicfg.CLIConfig) *cobra.Command {
 	cmd.AddCommand(get.NewCommand(cfg, streams))
 	cmd.AddCommand(grant.NewCommand(cfg, streams))
 	cmd.AddCommand(login.NewCommand(cfg))
+	cmd.AddCommand(logs.NewCommand(cfg, streams))
 	cmd.AddCommand(logout.NewCommand())
 	cmd.AddCommand(refresh.NewCommand(cfg))
 	cmd.AddCommand(revoke.NewCommand(cfg, streams))

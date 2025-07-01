@@ -311,8 +311,8 @@ func TestSelectImageDockerHub(t *testing.T) {
 		image := images[0]
 		semVer, err := semver.NewVersion(image.Tag)
 		require.NoError(t, err)
-		min := semver.MustParse("12.0.0")
-		require.True(t, semVer.GreaterThan(min) || semVer.Equal(min))
+		minimum := semver.MustParse("12.0.0")
+		require.True(t, semVer.GreaterThan(minimum) || semVer.Equal(minimum))
 		require.True(t, semVer.LessThan(semver.MustParse("13.0.0")))
 		require.NotEmpty(t, image.Digest)
 		require.NotNil(t, image.CreatedAt)
@@ -356,8 +356,8 @@ func TestSelectImageDockerHub(t *testing.T) {
 		image := images[0]
 		semVer, err := semver.NewVersion(image.Tag)
 		require.NoError(t, err)
-		min := semver.MustParse("12.0.0")
-		require.True(t, semVer.GreaterThan(min) || semVer.Equal(min))
+		minimum := semver.MustParse("12.0.0")
+		require.True(t, semVer.GreaterThan(minimum) || semVer.Equal(minimum))
 		require.True(t, semVer.LessThan(semver.MustParse("13.0.0")))
 		require.NotEmpty(t, image.Digest)
 		require.NotNil(t, image.CreatedAt)

@@ -40,6 +40,8 @@ func init() {
 
 // CLIConfig represents CLI configuration.
 type CLIConfig struct {
+	// AuthMethod is the method used to authenticate with the Kargo API server.
+	AuthMethod string `json:"authMethod,omitempty"`
 	// APIAddress is the address of the Kargo API server.
 	APIAddress string `json:"apiAddress,omitempty"`
 	// BearerToken is used to authenticate with the Kargo API server. This could

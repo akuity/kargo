@@ -10,11 +10,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/conditions"
 	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/controller/git"
@@ -24,11 +24,13 @@ import (
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
+	intpredicate "github.com/akuity/kargo/internal/predicate"
 )
 
 type ReconcilerConfig struct {
-	ShardName               string `envconfig:"SHARD_NAME"`
-	MaxConcurrentReconciles int    `envconfig:"MAX_CONCURRENT_WAREHOUSE_RECONCILES" default:"4"`
+	ShardName                 string        `envconfig:"SHARD_NAME"`
+	MaxConcurrentReconciles   int           `envconfig:"MAX_CONCURRENT_WAREHOUSE_RECONCILES" default:"4"`
+	MinReconciliationInterval time.Duration `envconfig:"MIN_WAREHOUSE_RECONCILIATION_INTERVAL"`
 }
 
 func ReconcilerConfigFromEnv() ReconcilerConfig {
@@ -39,9 +41,9 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 
 // reconciler reconciles Warehouse resources.
 type reconciler struct {
-	client                     client.Client
-	credentialsDB              credentials.Database
-	imageSourceURLFnsByBaseURL map[string]func(string, string) string
+	client                    client.Client
+	credentialsDB             credentials.Database
+	minReconciliationInterval time.Duration
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -91,14 +93,7 @@ func SetupReconcilerWithManager(
 
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&kargoapi.Warehouse{}).
-		WithEventFilter(
-			predicate.Funcs{
-				DeleteFunc: func(event.DeleteEvent) bool {
-					// We're not interested in any deletes
-					return false
-				},
-			},
-		).
+		WithEventFilter(intpredicate.IgnoreDelete[client.Object]{}).
 		WithEventFilter(
 			predicate.Or(
 				predicate.GenerationChangedPredicate{},
@@ -107,7 +102,7 @@ func SetupReconcilerWithManager(
 		).
 		WithEventFilter(shardPredicate).
 		WithOptions(controller.CommonOptions(cfg.MaxConcurrentReconciles)).
-		Complete(newReconciler(mgr.GetClient(), credentialsDB)); err != nil {
+		Complete(newReconciler(mgr.GetClient(), credentialsDB, cfg.MinReconciliationInterval)); err != nil {
 		return fmt.Errorf("error building Warehouse reconciler: %w", err)
 	}
 
@@ -122,16 +117,15 @@ func SetupReconcilerWithManager(
 func newReconciler(
 	kubeClient client.Client,
 	credentialsDB credentials.Database,
+	minReconciliationInterval time.Duration,
 ) *reconciler {
 	r := &reconciler{
-		client:                  kubeClient,
-		credentialsDB:           credentialsDB,
-		gitCloneFn:              git.Clone,
-		discoverChartVersionsFn: helm.DiscoverChartVersions,
-		imageSourceURLFnsByBaseURL: map[string]func(string, string) string{
-			githubURLPrefix: getGithubImageSourceURL,
-		},
-		createFreightFn: kubeClient.Create,
+		client:                    kubeClient,
+		credentialsDB:             credentialsDB,
+		minReconciliationInterval: minReconciliationInterval,
+		gitCloneFn:                git.Clone,
+		discoverChartVersionsFn:   helm.DiscoverChartVersions,
+		createFreightFn:           kubeClient.Create,
 	}
 
 	r.discoverArtifactsFn = r.discoverArtifacts
@@ -165,7 +159,7 @@ func (r *reconciler) Reconcile(
 	logger.Debug("reconciling Warehouse")
 
 	// Find the Warehouse
-	warehouse, err := kargoapi.GetWarehouse(ctx, r.client, req.NamespacedName)
+	warehouse, err := api.GetWarehouse(ctx, r.client, req.NamespacedName)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -206,7 +200,9 @@ func (r *reconciler) Reconcile(
 	}
 
 	// Everything succeeded, look for new changes on the defined interval.
-	return ctrl.Result{RequeueAfter: getRequeueInterval(warehouse)}, nil
+	return ctrl.Result{
+		RequeueAfter: warehouse.GetInterval(r.minReconciliationInterval),
+	}, nil
 }
 
 func (r *reconciler) syncWarehouse(
@@ -218,7 +214,7 @@ func (r *reconciler) syncWarehouse(
 	status := *warehouse.Status.DeepCopy()
 
 	// Record the current refresh token as having been handled.
-	if token, ok := kargoapi.RefreshAnnotationValue(warehouse.GetAnnotations()); ok {
+	if token, ok := api.RefreshAnnotationValue(warehouse.GetAnnotations()); ok {
 		status.LastHandledRefresh = token
 	}
 
@@ -467,10 +463,10 @@ func (r *reconciler) buildFreightFromLatestArtifacts(
 		}
 		latestImage := result.References[0]
 		freight.Images = append(freight.Images, kargoapi.Image{
-			RepoURL:    result.RepoURL,
-			GitRepoURL: latestImage.GitRepoURL,
-			Tag:        latestImage.Tag,
-			Digest:     latestImage.Digest,
+			RepoURL:     result.RepoURL,
+			Tag:         latestImage.Tag,
+			Digest:      latestImage.Digest,
+			Annotations: latestImage.Annotations,
 		})
 	}
 
@@ -491,7 +487,7 @@ func (r *reconciler) buildFreightFromLatestArtifacts(
 	}
 
 	// Generate a unique ID for the Freight based on its contents.
-	freight.Name = freight.GenerateID()
+	freight.Name = api.GenerateFreightID(freight)
 
 	return freight, nil
 }
@@ -703,21 +699,4 @@ func shouldDiscoverArtifacts(
 	default:
 		return false
 	}
-}
-
-// getRequeueInterval calculates and returns the time interval remaining until
-// the next requeue should occur. If the interval has already passed, it returns
-// a zero duration.
-func getRequeueInterval(warehouse *kargoapi.Warehouse) time.Duration {
-	if warehouse.Status.DiscoveredArtifacts == nil ||
-		warehouse.Status.DiscoveredArtifacts.DiscoveredAt.IsZero() {
-		return warehouse.Spec.Interval.Duration
-	}
-	interval := warehouse.Status.DiscoveredArtifacts.DiscoveredAt.
-		Add(warehouse.Spec.Interval.Duration).
-		Sub(metav1.Now().Time)
-	if interval < 0 {
-		return 0
-	}
-	return interval
 }

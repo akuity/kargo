@@ -2,173 +2,222 @@ package ecr
 
 import (
 	"context"
-	"encoding/base64"
-	"fmt"
+	"errors"
 	"testing"
+	"time"
 
 	"github.com/patrickmn/go-cache"
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/akuity/kargo/internal/credentials"
 )
 
-func TestPodIdentityCredentialHelper(t *testing.T) {
+func TestManagedIdentityProvider_Supports(t *testing.T) {
 	const (
-		testAWSAccountID = "123456789012"
-		testRegion       = "fake-region"
-		testProject      = "fake-project"
-		testUsername     = "fake-username"
-		testPassword     = "fake-password"
+		fakeAccountID  = "123456789012"
+		fakeRepoURL    = "123456789012.dkr.ecr.us-west-2.amazonaws.com/my-repo"
+		fakeOCIRepoURL = "oci://123456789012.dkr.ecr.us-west-2.amazonaws.com/my-repo"
 	)
-	testRepoURL := fmt.Sprintf("%s.dkr.ecr.%s.amazonaws.com/fake/repo/", testAWSAccountID, testRegion)
-	testToken := fmt.Sprintf("%s:%s", testUsername, testPassword)
-	testEncodedToken := base64.StdEncoding.EncodeToString([]byte(testToken))
 
-	warmTokenCache := cache.New(0, 0)
-	warmTokenCache.Set(
-		(&managedIdentityCredentialHelper{}).tokenCacheKey(testRegion, testProject),
-		testEncodedToken,
-		cache.DefaultExpiration,
+	testCases := []struct {
+		name     string
+		provider *ManagedIdentityProvider
+		credType credentials.Type
+		repoURL  string
+		expected bool
+	}{
+		{
+			name: "no account ID configured",
+			provider: &ManagedIdentityProvider{
+				accountID: "",
+			},
+			credType: credentials.TypeImage,
+			repoURL:  fakeRepoURL,
+			expected: false,
+		},
+		{
+			name: "image credentials supported",
+			provider: &ManagedIdentityProvider{
+				accountID: fakeAccountID,
+			},
+			credType: credentials.TypeImage,
+			repoURL:  fakeRepoURL,
+			expected: true,
+		},
+		{
+			name: "OCI helm credentials supported",
+			provider: &ManagedIdentityProvider{
+				accountID: fakeAccountID,
+			},
+			credType: credentials.TypeHelm,
+			repoURL:  fakeOCIRepoURL,
+			expected: true,
+		},
+		{
+			name: "non-OCI helm credentials not supported",
+			provider: &ManagedIdentityProvider{
+				accountID: fakeAccountID,
+			},
+			credType: credentials.TypeHelm,
+			repoURL:  "https://123456789012.dkr.ecr.us-west-2.amazonaws.com/repo",
+			expected: false,
+		},
+		{
+			name: "git credentials not supported",
+			provider: &ManagedIdentityProvider{
+				accountID: fakeAccountID,
+			},
+			credType: credentials.TypeGit,
+			repoURL:  fakeRepoURL,
+			expected: false,
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.provider.Supports(tt.credType, tt.repoURL, nil)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestManagedIdentityProvider_GetCredentials(t *testing.T) {
+	ctx := context.Background()
+
+	const (
+		fakeAccountID = "123456789012"
+		fakeProject   = "fake-project"
+		fakeRepoURL   = "123456789012.dkr.ecr.us-west-2.amazonaws.com/repo"
+		fakeRegion    = "us-west-2"
+		// base64 of "AWS:password"
+		fakeToken = "QVdTOnBhc3N3b3Jk" // nolint:gosec
 	)
 
 	testCases := []struct {
 		name       string
+		provider   *ManagedIdentityProvider
+		project    string
 		credType   credentials.Type
 		repoURL    string
-		helper     *managedIdentityCredentialHelper
-		assertions func(*testing.T, *credentials.Credentials, *cache.Cache, error)
+		setupCache func(cache *cache.Cache)
+		assertions func(t *testing.T, c *cache.Cache, creds *credentials.Credentials, err error)
 	}{
 		{
-			name:     "cred type is not image",
+			name: "not supported",
+			provider: &ManagedIdentityProvider{
+				accountID:  fakeAccountID,
+				tokenCache: cache.New(10*time.Hour, time.Hour),
+			},
+			project:  fakeProject,
 			credType: credentials.TypeGit,
-			helper: &managedIdentityCredentialHelper{
-				awsAccountID: testAWSAccountID,
-			},
-			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
-				require.NoError(t, err)
-				require.Nil(t, creds)
+			repoURL:  "git://repo",
+			assertions: func(t *testing.T, _ *cache.Cache, creds *credentials.Credentials, err error) {
+				assert.Nil(t, creds)
+				assert.NoError(t, err)
 			},
 		},
 		{
-			name:     "EKS Pod Identity not in use",
+			name: "non-ECR URL",
+			provider: &ManagedIdentityProvider{
+				accountID:  fakeAccountID,
+				tokenCache: cache.New(10*time.Hour, time.Hour),
+			},
+			project:  fakeProject,
 			credType: credentials.TypeImage,
-			repoURL:  testRepoURL,
-			helper:   &managedIdentityCredentialHelper{},
-			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
-				require.NoError(t, err)
-				require.Nil(t, creds)
+			repoURL:  "not-an-ecr-url",
+			assertions: func(t *testing.T, _ *cache.Cache, creds *credentials.Credentials, err error) {
+				assert.Nil(t, creds)
+				assert.NoError(t, err)
 			},
 		},
 		{
-			name:     "repo URL does not match ECR URL regex",
+			name: "cache hit",
+			provider: &ManagedIdentityProvider{
+				accountID:  fakeAccountID,
+				tokenCache: cache.New(10*time.Hour, time.Hour),
+			},
+			project:  fakeProject,
 			credType: credentials.TypeImage,
-			repoURL:  "ghcr.io/fake-org/fake-repo",
-			helper: &managedIdentityCredentialHelper{
-				awsAccountID: testAWSAccountID,
+			repoURL:  fakeRepoURL,
+			setupCache: func(c *cache.Cache) {
+				cacheKey := tokenCacheKey(fakeRegion, fakeProject)
+				c.Set(cacheKey, fakeToken, cache.DefaultExpiration)
 			},
-			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
-				require.NoError(t, err)
-				require.Nil(t, creds)
-			},
-		},
-		{
-			name:     "helm repo URL does not match ECR URL regex",
-			credType: credentials.TypeHelm,
-			repoURL:  testRepoURL,
-			helper: &managedIdentityCredentialHelper{
-				awsAccountID: testAWSAccountID,
-			},
-			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
-				require.NoError(t, err)
-				require.Nil(t, creds)
+			assertions: func(t *testing.T, _ *cache.Cache, creds *credentials.Credentials, err error) {
+				assert.NoError(t, err)
+				assert.NotNil(t, creds)
+				assert.Equal(t, "AWS", creds.Username)
+				assert.Equal(t, "password", creds.Password)
 			},
 		},
 		{
-			name:     "cache hit",
-			credType: credentials.TypeImage,
-			repoURL:  testRepoURL,
-			helper: &managedIdentityCredentialHelper{
-				awsAccountID: testAWSAccountID,
-				tokenCache:   warmTokenCache,
-			},
-			assertions: func(t *testing.T, creds *credentials.Credentials, _ *cache.Cache, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, creds)
-				require.Equal(t, testUsername, creds.Username)
-				require.Equal(t, testPassword, creds.Password)
-			},
-		},
-		{
-			name:     "cache miss; error getting auth token",
-			credType: credentials.TypeImage,
-			repoURL:  testRepoURL,
-			helper: &managedIdentityCredentialHelper{
-				awsAccountID: testAWSAccountID,
-				tokenCache:   cache.New(0, 0),
-				getAuthTokenFn: func(context.Context, string, string) (string, error) {
-					return "", fmt.Errorf("something went wrong")
+			name: "cache miss, successful token fetch",
+			provider: &ManagedIdentityProvider{
+				accountID:  fakeAccountID,
+				tokenCache: cache.New(10*time.Hour, time.Hour),
+				getAuthTokenFn: func(_ context.Context, _, _ string) (string, error) {
+					return fakeToken, nil
 				},
 			},
-			assertions: func(t *testing.T, _ *credentials.Credentials, _ *cache.Cache, err error) {
-				require.ErrorContains(t, err, "error getting ECR auth token")
-				require.ErrorContains(t, err, "something went wrong")
-			},
-		},
-		{
-			name:     "cache miss; success",
+			project:  fakeProject,
 			credType: credentials.TypeImage,
-			repoURL:  testRepoURL,
-			helper: &managedIdentityCredentialHelper{
-				awsAccountID: testAWSAccountID,
-				tokenCache:   cache.New(0, 0),
-				getAuthTokenFn: func(context.Context, string, string) (string, error) {
-					return testEncodedToken, nil
-				},
-			},
-			assertions: func(t *testing.T, creds *credentials.Credentials, c *cache.Cache, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, creds)
-				require.Equal(t, testUsername, creds.Username)
-				require.Equal(t, testPassword, creds.Password)
-				_, found := c.Get(
-					(&managedIdentityCredentialHelper{}).tokenCacheKey(testRegion, testProject),
-				)
-				require.True(t, found)
+			repoURL:  fakeRepoURL,
+			assertions: func(t *testing.T, c *cache.Cache, creds *credentials.Credentials, err error) {
+				assert.NoError(t, err)
+				assert.NotNil(t, creds)
+				assert.Equal(t, "AWS", creds.Username)
+				assert.Equal(t, "password", creds.Password)
+
+				// Verify the token was cached
+				cachedToken, found := c.Get(tokenCacheKey(fakeRegion, fakeProject))
+				assert.True(t, found)
+				assert.Equal(t, fakeToken, cachedToken)
 			},
 		},
 		{
-			name:     "cache miss; success (helm)",
-			credType: credentials.TypeHelm,
-			repoURL:  fmt.Sprintf("oci://%s", testRepoURL),
-			helper: &managedIdentityCredentialHelper{
-				awsAccountID: testAWSAccountID,
-				tokenCache:   cache.New(0, 0),
-				getAuthTokenFn: func(context.Context, string, string) (string, error) {
-					return testEncodedToken, nil
+			name: "error in getAuthToken",
+			provider: &ManagedIdentityProvider{
+				accountID:  fakeAccountID,
+				tokenCache: cache.New(10*time.Hour, time.Hour),
+				getAuthTokenFn: func(_ context.Context, _, _ string) (string, error) {
+					return "", errors.New("auth token error")
 				},
 			},
-			assertions: func(t *testing.T, creds *credentials.Credentials, c *cache.Cache, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, creds)
-				require.Equal(t, testUsername, creds.Username)
-				require.Equal(t, testPassword, creds.Password)
-				_, found := c.Get(
-					(&managedIdentityCredentialHelper{}).tokenCacheKey(testRegion, testProject),
-				)
-				require.True(t, found)
+			project:  fakeProject,
+			credType: credentials.TypeImage,
+			repoURL:  fakeRepoURL,
+			assertions: func(t *testing.T, _ *cache.Cache, creds *credentials.Credentials, err error) {
+				assert.ErrorContains(t, err, "error getting ECR auth token")
+				assert.Nil(t, creds)
+			},
+		},
+		{
+			name: "empty token from getAuthToken",
+			provider: &ManagedIdentityProvider{
+				accountID:  fakeAccountID,
+				tokenCache: cache.New(10*time.Hour, time.Hour),
+				getAuthTokenFn: func(_ context.Context, _, _ string) (string, error) {
+					return "", nil
+				},
+			},
+			project:  fakeProject,
+			credType: credentials.TypeImage,
+			repoURL:  fakeRepoURL,
+			assertions: func(t *testing.T, _ *cache.Cache, creds *credentials.Credentials, err error) {
+				assert.Nil(t, creds)
+				assert.NoError(t, err)
 			},
 		},
 	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			creds, err := testCase.helper.getCredentials(
-				context.Background(),
-				testProject,
-				testCase.credType,
-				testCase.repoURL,
-				nil, // Secret not used by this helper
-			)
-			testCase.assertions(t, creds, testCase.helper.tokenCache, err)
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.setupCache != nil {
+				tt.setupCache(tt.provider.tokenCache)
+			}
+
+			creds, err := tt.provider.GetCredentials(ctx, tt.project, tt.credType, tt.repoURL, nil)
+			tt.assertions(t, tt.provider.tokenCache, creds, err)
 		})
 	}
 }

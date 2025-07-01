@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/json"
 	"net/http"
 	"time"
 )
@@ -27,4 +28,13 @@ func SetCacheHeaders(w http.ResponseWriter, maxAge time.Duration, timeUntilExpir
 	}
 	w.Header().Set("Cache-Control", "public, max-age="+maxAge.String())
 	w.Header().Set("Expires", time.Now().Add(timeUntilExpiry).Format(time.RFC1123))
+}
+
+func WriteResponseJSON(w http.ResponseWriter, code int, body any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	if body == nil {
+		body = struct{}{}
+	}
+	_ = json.NewEncoder(w).Encode(body)
 }

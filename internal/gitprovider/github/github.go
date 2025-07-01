@@ -4,11 +4,11 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"net/http"
 	"net/url"
 	"strings"
 
-	"github.com/google/go-github/v56/github"
+	"github.com/google/go-github/v71/github"
+	"github.com/hashicorp/go-cleanhttp"
 	"k8s.io/utils/ptr"
 
 	"github.com/akuity/kargo/internal/git"
@@ -41,11 +41,42 @@ func init() {
 	gitprovider.Register(ProviderName, registration)
 }
 
+type githubClient interface {
+	CreatePullRequest(
+		ctx context.Context,
+		owner string,
+		repo string,
+		pull *github.NewPullRequest,
+	) (*github.PullRequest, *github.Response, error)
+
+	ListPullRequests(
+		ctx context.Context,
+		owner string,
+		repo string,
+		opts *github.PullRequestListOptions,
+	) ([]*github.PullRequest, *github.Response, error)
+
+	GetPullRequests(
+		ctx context.Context,
+		owner string,
+		repo string,
+		number int,
+	) (*github.PullRequest, *github.Response, error)
+
+	AddLabelsToIssue(
+		ctx context.Context,
+		owner string,
+		repo string,
+		number int,
+		labels []string,
+	) ([]*github.Label, *github.Response, error)
+}
+
 // provider is a GitHub implementation of gitprovider.Interface.
 type provider struct { // nolint: revive
 	owner  string
 	repo   string
-	client *github.Client
+	client githubClient
 }
 
 // NewProvider returns a GitHub-based implementation of gitprovider.Interface.
@@ -56,19 +87,25 @@ func NewProvider(
 	if opts == nil {
 		opts = &gitprovider.Options{}
 	}
-	host, owner, repo, err := parseRepoURL(repoURL)
+
+	scheme, host, owner, repo, err := parseRepoURL(repoURL)
 	if err != nil {
 		return nil, err
 	}
-	client := github.NewClient(&http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: opts.InsecureSkipTLSVerify, // nolint: gosec
-			},
-		},
-	})
+
+	httpClient := cleanhttp.DefaultClient()
+	if opts.InsecureSkipTLSVerify {
+		transport := cleanhttp.DefaultTransport()
+		transport.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true, // nolint: gosec
+		}
+		httpClient.Transport = transport
+	}
+
+	client := github.NewClient(httpClient)
+
 	if host != "github.com" {
-		baseURL := fmt.Sprintf("https://%s", host)
+		baseURL := fmt.Sprintf("%s://%s", scheme, host)
 		// This function call will automatically add correct paths to the base URL
 		client, err = client.WithEnterpriseURLs(baseURL, baseURL)
 		if err != nil {
@@ -78,11 +115,53 @@ func NewProvider(
 	if opts.Token != "" {
 		client = client.WithAuthToken(opts.Token)
 	}
+
 	return &provider{
 		owner:  owner,
 		repo:   repo,
-		client: client,
+		client: &githubClientWrapper{client},
 	}, nil
+}
+
+type githubClientWrapper struct {
+	client *github.Client
+}
+
+func (g githubClientWrapper) CreatePullRequest(
+	ctx context.Context,
+	owner string,
+	repo string,
+	pull *github.NewPullRequest,
+) (*github.PullRequest, *github.Response, error) {
+	return g.client.PullRequests.Create(ctx, owner, repo, pull)
+}
+
+func (g githubClientWrapper) ListPullRequests(
+	ctx context.Context,
+	owner string,
+	repo string,
+	opts *github.PullRequestListOptions,
+) ([]*github.PullRequest, *github.Response, error) {
+	return g.client.PullRequests.List(ctx, owner, repo, opts)
+}
+
+func (g githubClientWrapper) GetPullRequests(
+	ctx context.Context,
+	owner string,
+	repo string,
+	number int,
+) (*github.PullRequest, *github.Response, error) {
+	return g.client.PullRequests.Get(ctx, owner, repo, number)
+}
+
+func (g githubClientWrapper) AddLabelsToIssue(
+	ctx context.Context,
+	owner string,
+	repo string,
+	number int,
+	labels []string,
+) ([]*github.Label, *github.Response, error) {
+	return g.client.Issues.AddLabelsToIssue(ctx, owner, repo, number, labels)
 }
 
 // CreatePullRequest implements gitprovider.Interface.
@@ -93,7 +172,7 @@ func (p *provider) CreatePullRequest(
 	if opts == nil {
 		opts = &gitprovider.CreatePullRequestOpts{}
 	}
-	ghPR, _, err := p.client.PullRequests.Create(ctx,
+	ghPR, _, err := p.client.CreatePullRequest(ctx,
 		p.owner,
 		p.repo,
 		&github.NewPullRequest{
@@ -101,7 +180,7 @@ func (p *provider) CreatePullRequest(
 			Head:                &opts.Head,
 			Base:                &opts.Base,
 			Body:                &opts.Description,
-			MaintainerCanModify: github.Bool(false),
+			MaintainerCanModify: github.Ptr(false),
 		},
 	)
 	if err != nil {
@@ -111,6 +190,17 @@ func (p *provider) CreatePullRequest(
 		return nil, fmt.Errorf("unexpected nil pull request")
 	}
 	pr := convertGithubPR(*ghPR)
+	if len(opts.Labels) > 0 {
+		_, _, err = p.client.AddLabelsToIssue(ctx,
+			p.owner,
+			p.repo,
+			int(pr.Number),
+			opts.Labels,
+		)
+	}
+	if err != nil {
+		return nil, err
+	}
 	return &pr, nil
 }
 
@@ -119,7 +209,7 @@ func (p *provider) GetPullRequest(
 	ctx context.Context,
 	id int64,
 ) (*gitprovider.PullRequest, error) {
-	ghPR, _, err := p.client.PullRequests.Get(ctx, p.owner, p.repo, int(id))
+	ghPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
 	if err != nil {
 		return nil, err
 	}
@@ -158,9 +248,9 @@ func (p *provider) ListPullRequests(
 	default:
 		return nil, fmt.Errorf("unknown pull request state %q", opts.State)
 	}
-	prs := []gitprovider.PullRequest{}
+	var prs []gitprovider.PullRequest
 	for {
-		ghPRs, res, err := p.client.PullRequests.List(ctx, p.owner, p.repo, &listOpts)
+		ghPRs, res, err := p.client.ListPullRequests(ctx, p.owner, p.repo, &listOpts)
 		if err != nil {
 			return nil, err
 		}
@@ -176,6 +266,23 @@ func (p *provider) ListPullRequests(
 	}
 
 	return prs, nil
+}
+
+// GetCommitURL implements gitprovider.Interface.
+func (p *provider) GetCommitURL(
+	repoURL string,
+	sha string,
+) (string, error) {
+	normalizedURL := git.NormalizeURL(repoURL)
+
+	parsedURL, err := url.Parse(normalizedURL)
+	if err != nil {
+		return "", fmt.Errorf("error processing repository URL: %s: %s", repoURL, err)
+	}
+
+	commitURL := fmt.Sprintf("https://%s%s/commit/%s", parsedURL.Host, parsedURL.Path, sha)
+
+	return commitURL, nil
 }
 
 func convertGithubPR(ghPR github.PullRequest) gitprovider.PullRequest {
@@ -194,15 +301,26 @@ func convertGithubPR(ghPR github.PullRequest) gitprovider.PullRequest {
 	return pr
 }
 
-func parseRepoURL(repoURL string) (string, string, string, error) {
+func parseRepoURL(repoURL string) (string, string, string, string, error) {
 	u, err := url.Parse(git.NormalizeURL(repoURL))
 	if err != nil {
-		return "", "", "", fmt.Errorf("error parsing github repository URL %q: %w", u, err)
+		return "", "", "", "", fmt.Errorf(
+			"error parsing github repository URL %q: %w", u, err,
+		)
 	}
+
+	scheme := u.Scheme
+	if scheme != "https" && scheme != "http" {
+		scheme = "https"
+	}
+
 	path := strings.TrimPrefix(u.Path, "/")
 	parts := strings.Split(path, "/")
 	if len(parts) != 2 {
-		return "", "", "", fmt.Errorf("could not extract repository owner and name from URL %q", u)
+		return "", "", "", "", fmt.Errorf(
+			"could not extract repository owner and name from URL %q", u,
+		)
 	}
-	return u.Host, parts[0], parts[1], nil
+
+	return scheme, u.Host, parts[0], parts[1], nil
 }
