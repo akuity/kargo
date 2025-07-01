@@ -126,8 +126,6 @@ https://gitea.com/farisakuity/webhook-poc/settings/hooks
 1. Click the <Hlt>Response</Hlt> tab and verify it was successful.
 
     ![Response](./img/response.png "Response")
-
-
 :::info
 For additional information on configuring Gitea webhooks, refer directly to the
 [Gitea Docs](https://docs.gitea.com/usage/webhooks).
