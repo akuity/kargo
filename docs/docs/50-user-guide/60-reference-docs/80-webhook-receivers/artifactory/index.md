@@ -30,7 +30,6 @@ secret_token=$(openssl rand -base64 48 | tr -d '=+/' | head -c 32)
 echo "Secret token: $secret_token"
 echo "Encoded secret token: $(echo -n $secret_token | base64)"
 ```
-
 :::
 
 ```yaml
