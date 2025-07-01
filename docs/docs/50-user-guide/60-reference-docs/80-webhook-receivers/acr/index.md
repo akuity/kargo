@@ -114,13 +114,12 @@ the screen.
 
     1. Set the <Hlt>Scope</Hlt> using the format `<repository>:<tag>`.
 
-    1. Click <Hlt>Create</Hlt>.
+       :::note
+       Wild-cards are supported in both the `repository` and `tag` part of the 
+       <Hlt>Scope</Hlt> string.
+       :::
 
-:::note
-Wild-cards are supported in both the `repository` and `tag` part of the 
-<Hlt>Scope</Hlt>
-string.
-:::
+    1. Click <Hlt>Create</Hlt>.
 
     1. Back in your <Hlt>Webhooks dashboard</Hlt>, click on the newly created
     webhook.
