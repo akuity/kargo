@@ -103,7 +103,7 @@ the screen.
     1. Enter a descriptive name in the <Hlt>Webhook name</Hlt> field.
 
     1. Select the <Hlt>Location</Hlt> closest to where your Kargo instance
-    is running.
+       is running.
 
     1. Complete the <Hlt>Service URI</Hlt> filed using the URL
        [for the webhook receiver](#retrieving-the-receivers-url).
