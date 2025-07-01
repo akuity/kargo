@@ -126,7 +126,9 @@ func NewPromotionAnnotations(
 						"name": f.Origin.Name,
 					}
 				}
-				env["ctx"].(map[string]any)["targetFreight"] = targetFreight
+				if ctx, ok := env["ctx"].(map[string]any); ok {
+					ctx["targetFreight"] = targetFreight
+				}
 			}
 
 			if evaled, err := expressions.EvaluateTemplate(string(data), env); err == nil {
