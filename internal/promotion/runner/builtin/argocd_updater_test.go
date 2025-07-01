@@ -1158,11 +1158,11 @@ func Test_argoCDUpdater_logAppEvent(t *testing.T) {
 				event := events.Items[0]
 				require.Equal(t, corev1.ObjectReference{
 					APIVersion:      argocd.GroupVersion.String(),
-					Kind:            app.TypeMeta.Kind,
-					Name:            app.ObjectMeta.Name,
-					Namespace:       app.ObjectMeta.Namespace,
-					UID:             app.ObjectMeta.UID,
-					ResourceVersion: app.ObjectMeta.ResourceVersion,
+					Kind:            app.Kind,
+					Name:            app.Name,
+					Namespace:       app.Namespace,
+					UID:             app.UID,
+					ResourceVersion: app.ResourceVersion,
 				}, event.InvolvedObject)
 				require.NotNil(t, event.FirstTimestamp)
 				require.NotNil(t, event.LastTimestamp)

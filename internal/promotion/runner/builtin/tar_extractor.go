@@ -100,7 +100,7 @@ func (t *tarExtractor) run(
 	}
 
 	// Create a temporary directory to atomically extract the tar file
-	tempDir, err := os.MkdirTemp(stepCtx.WorkDir, "." + t.Name() + "-*")
+	tempDir, err := os.MkdirTemp(stepCtx.WorkDir, "."+t.Name()+"-*")
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("failed to create temporary directory for extraction: %w", err)

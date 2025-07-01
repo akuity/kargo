@@ -62,8 +62,8 @@ func TestCreateCredentials(t *testing.T) {
 
 	creds := resp.Msg.GetCredentials()
 	assert.Equal(t, "kargo-demo", creds.Namespace)
-	assert.Equal(t, "creds", creds.ObjectMeta.Name)
-	assert.Equal(t, "my credentials", creds.ObjectMeta.Annotations[kargoapi.AnnotationKeyDescription])
+	assert.Equal(t, "creds", creds.Name)
+	assert.Equal(t, "my credentials", creds.Annotations[kargoapi.AnnotationKeyDescription])
 	assert.Equal(t, "https://github.com/example/repo", creds.StringData[libCreds.FieldRepoURL])
 	assert.Equal(t, "username", creds.StringData[libCreds.FieldUsername])
 	assert.Equal(t, redacted, creds.StringData[libCreds.FieldPassword])
@@ -81,8 +81,8 @@ func TestCreateCredentials(t *testing.T) {
 
 	data := secret.Data
 	assert.Equal(t, "kargo-demo", secret.Namespace)
-	assert.Equal(t, "creds", secret.ObjectMeta.Name)
-	assert.Equal(t, "my credentials", secret.ObjectMeta.Annotations[kargoapi.AnnotationKeyDescription])
+	assert.Equal(t, "creds", secret.Name)
+	assert.Equal(t, "my credentials", secret.Annotations[kargoapi.AnnotationKeyDescription])
 	assert.Equal(t, "https://github.com/example/repo", string(data[libCreds.FieldRepoURL]))
 	assert.Equal(t, "username", string(data[libCreds.FieldUsername]))
 	assert.Equal(t, "password", string(data[libCreds.FieldPassword]))

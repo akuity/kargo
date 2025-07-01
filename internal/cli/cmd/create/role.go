@@ -86,7 +86,7 @@ kargo create role my-role \
 // addFlags adds the flags for the create role options to the provided command.
 func (o *createRoleOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
-	o.PrintFlags.AddFlags(cmd)
+	o.AddFlags(cmd)
 
 	option.Project(
 		cmd.Flags(), &o.Project, o.Config.Project,
@@ -157,10 +157,10 @@ func (o *createRoleOptions) run(ctx context.Context) error {
 		return fmt.Errorf("create role: %w", err)
 	}
 
-	printer, err := o.PrintFlags.ToPrinter()
+	printer, err := o.ToPrinter()
 	if err != nil {
 		return fmt.Errorf("new printer: %w", err)
 	}
 
-	return printer.PrintObj(resp.Msg.Role, o.IOStreams.Out)
+	return printer.PrintObj(resp.Msg.Role, o.Out)
 }

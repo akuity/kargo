@@ -22,9 +22,9 @@ import (
 )
 
 const (
-	contentTypeHeader = "Content-Type"
-	contentTypeJSON   = "application/json"
-	maxResponseBytes = 2 << 20
+	contentTypeHeader     = "Content-Type"
+	contentTypeJSON       = "application/json"
+	maxResponseBytes      = 2 << 20
 	requestTimeoutDefault = 10 * time.Second
 )
 

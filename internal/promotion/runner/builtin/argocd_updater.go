@@ -425,10 +425,10 @@ func (a *argocdUpdater) syncApplication(
 	desiredSources argocd.ApplicationSources,
 ) error {
 	// Initiate a "hard" refresh.
-	if app.ObjectMeta.Annotations == nil {
-		app.ObjectMeta.Annotations = make(map[string]string, 1)
+	if app.Annotations == nil {
+		app.Annotations = make(map[string]string, 1)
 	}
-	app.ObjectMeta.Annotations[argocd.AnnotationKeyRefresh] = string(argocd.RefreshTypeHard)
+	app.Annotations[argocd.AnnotationKeyRefresh] = string(argocd.RefreshTypeHard)
 
 	// Update the desired source(s) in the Argo CD Application.
 	if app.Spec.Source != nil {
@@ -587,11 +587,11 @@ func (a *argocdUpdater) logAppEvent(
 		},
 		InvolvedObject: corev1.ObjectReference{
 			APIVersion:      argocd.GroupVersion.String(),
-			Kind:            app.TypeMeta.Kind,
-			Namespace:       app.ObjectMeta.Namespace,
-			Name:            app.ObjectMeta.Name,
-			UID:             app.ObjectMeta.UID,
-			ResourceVersion: app.ObjectMeta.ResourceVersion,
+			Kind:            app.Kind,
+			Namespace:       app.Namespace,
+			Name:            app.Name,
+			UID:             app.UID,
+			ResourceVersion: app.ResourceVersion,
 		},
 		FirstTimestamp: t,
 		LastTimestamp:  t,

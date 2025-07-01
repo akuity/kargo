@@ -305,8 +305,8 @@ func (r *RegularStageReconciler) SetupWithManager(
 
 func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := logging.LoggerFromContext(ctx).WithValues(
-		"namespace", req.NamespacedName.Namespace,
-		"stage", req.NamespacedName.Name,
+		"namespace", req.Namespace,
+		"stage", req.Name,
 		"controlFlow", false,
 	)
 	ctx = logging.ContextWithLogger(ctx, logger)
@@ -1605,7 +1605,7 @@ func (r *RegularStageReconciler) findExistingAnalysisRun(
 	// Sort the AnalysisRuns by creation timestamp, so that the most recent
 	// one is first.
 	slices.SortFunc(analysisRuns.Items, func(lhs, rhs rolloutsapi.AnalysisRun) int {
-		return rhs.CreationTimestamp.Time.Compare(lhs.CreationTimestamp.Time)
+		return rhs.CreationTimestamp.Compare(lhs.CreationTimestamp.Time)
 	})
 	return &analysisRuns.Items[0], nil
 }
@@ -1651,7 +1651,7 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 		// Find the latest Freight by sorting the available Freight by creation time
 		// in descending order.
 		slices.SortFunc(freight, func(lhs, rhs kargoapi.Freight) int {
-			return rhs.CreationTimestamp.Time.Compare(lhs.CreationTimestamp.Time)
+			return rhs.CreationTimestamp.Compare(lhs.CreationTimestamp.Time)
 		})
 		latestFreight := freight[0]
 

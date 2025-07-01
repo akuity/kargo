@@ -82,7 +82,7 @@ func (r *reconciler) Reconcile(
 	req ctrl.Request,
 ) (ctrl.Result, error) {
 	logger := logging.LoggerFromContext(ctx).WithValues(
-		"clusterConfig", req.NamespacedName.Name,
+		"clusterConfig", req.Name,
 	)
 	ctx = logging.ContextWithLogger(ctx, logger)
 

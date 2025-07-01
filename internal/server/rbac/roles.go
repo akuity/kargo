@@ -676,7 +676,7 @@ func ResourcesToRole(
 			kargoRole.Claims = append(
 				kargoRole.Claims,
 				rbacapi.Claim{
-					Name:   strings.Replace(annotationKey, rbacapi.AnnotationKeyOIDCClaimNamePrefix, "", -1),
+					Name:   strings.ReplaceAll(annotationKey, rbacapi.AnnotationKeyOIDCClaimNamePrefix, ""),
 					Values: strings.Split(annotationValue, ","),
 				},
 			)

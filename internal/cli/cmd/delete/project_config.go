@@ -72,7 +72,7 @@ kargo delete projectconfig
 // command.
 func (o *deleteProjectConfigOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
-	o.PrintFlags.AddFlags(cmd)
+	o.AddFlags(cmd)
 
 	option.Project(cmd.Flags(), &o.Project, o.Config.Project,
 		"The Project for which to delete the configuration. If not set, the default project will be used.")
@@ -85,7 +85,7 @@ func (o *deleteProjectConfigOptions) run(ctx context.Context) error {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	printer, err := o.PrintFlags.ToPrinter()
+	printer, err := o.ToPrinter()
 	if err != nil {
 		return fmt.Errorf("create printer: %w", err)
 	}
@@ -105,7 +105,7 @@ func (o *deleteProjectConfigOptions) run(ctx context.Context) error {
 				Name:      o.Project,
 				Namespace: o.Project,
 			},
-		}, o.IOStreams.Out); err != nil {
+		}, o.Out); err != nil {
 		return fmt.Errorf("print project configuration: %w", err)
 	}
 
