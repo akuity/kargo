@@ -363,20 +363,27 @@ type ImageSubscription struct {
 	// changes.
 	// More info: https://github.com/masterminds/semver#checking-version-constraints
 	//
+	// Deprecated: Use constraint instead.
+	//
 	// +kubebuilder:validation:Optional
 	SemverConstraint string `json:"semverConstraint,omitempty" protobuf:"bytes,4,opt,name=semverConstraint"`
+	// Constraint specifies constraints on what new image versions are permissible.
+	// This field takes precedence over the deprecated SemverConstraint field
+	// and can be used with any image strategy.
+	// +kubebuilder:validation:Optional
+	Constraint string `json:"constraint,omitempty" protobuf:"bytes,5,opt,name=constraint"`
 	// AllowTags is a regular expression that can optionally be used to limit the
 	// image tags that are considered in determining the newest version of an
 	// image. This field is optional.
 	//
 	// +kubebuilder:validation:Optional
-	AllowTags string `json:"allowTags,omitempty" protobuf:"bytes,5,opt,name=allowTags"`
+	AllowTags string `json:"allowTags,omitempty" protobuf:"bytes,6,opt,name=allowTags"`
 	// IgnoreTags is a list of tags that must be ignored when determining the
 	// newest version of an image. No regular expressions or glob patterns are
 	// supported yet. This field is optional.
 	//
 	// +kubebuilder:validation:Optional
-	IgnoreTags []string `json:"ignoreTags,omitempty" protobuf:"bytes,6,rep,name=ignoreTags"`
+	IgnoreTags []string `json:"ignoreTags,omitempty" protobuf:"bytes,7,rep,name=ignoreTags"`
 	// Platform is a string of the form <os>/<arch> that limits the tags that can
 	// be considered when searching for new versions of an image. This field is
 	// optional. When left unspecified, it is implicitly equivalent to the
@@ -387,11 +394,11 @@ type ImageSubscription struct {
 	// not unheard of.
 	//
 	// +kubebuilder:validation:Optional
-	Platform string `json:"platform,omitempty" protobuf:"bytes,7,opt,name=platform"`
+	Platform string `json:"platform,omitempty" protobuf:"bytes,8,opt,name=platform"`
 	// InsecureSkipTLSVerify specifies whether certificate verification errors
 	// should be ignored when connecting to the repository. This should be enabled
 	// only with great caution.
-	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty" protobuf:"varint,8,opt,name=insecureSkipTLSVerify"`
+	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty" protobuf:"varint,9,opt,name=insecureSkipTLSVerify"`
 	// DiscoveryLimit is an optional limit on the number of image references
 	// that can be discovered for this subscription. The limit is applied after
 	// filtering images based on the AllowTags and IgnoreTags fields.
@@ -401,7 +408,7 @@ type ImageSubscription struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=100
 	// +kubebuilder:default=20
-	DiscoveryLimit int32 `json:"discoveryLimit,omitempty" protobuf:"varint,9,opt,name=discoveryLimit"`
+	DiscoveryLimit int32 `json:"discoveryLimit,omitempty" protobuf:"varint,11,opt,name=discoveryLimit"`
 }
 
 // ChartSubscription defines a subscription to a Helm chart repository.

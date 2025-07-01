@@ -337,6 +337,12 @@ spec:
                             image tags that are considered in determining the newest version of an
                             image. This field is optional.
                           type: string
+                        constraint:
+                          description: |-
+                            Constraint specifies constraints on what new image versions are permissible.
+                            This field takes precedence over the deprecated SemverConstraint field
+                            and can be used with any image strategy.
+                          type: string
                         discoveryLimit:
                           default: 20
                           description: |-
@@ -426,6 +432,8 @@ spec:
                             unspecified, as it can lead to the unanticipated rollout of breaking
                             changes.
                             More info: https://github.com/masterminds/semver#checking-version-constraints
+
+                            Deprecated: Use constraint instead.
                           type: string
                         strictSemvers:
                           default: true
