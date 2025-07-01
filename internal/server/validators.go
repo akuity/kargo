@@ -39,7 +39,7 @@ func validateGroupByOrderBy(group string, groupBy string, orderBy string) error 
 	if group != "" && groupBy == "" {
 		return connect.NewError(
 			connect.CodeInvalidArgument,
-			errors.New("Cannot filter by group without group by"),
+			errors.New("cannot filter by group without group by"),
 		)
 	}
 	switch groupBy {
@@ -47,21 +47,21 @@ func validateGroupByOrderBy(group string, groupBy string, orderBy string) error 
 	default:
 		return connect.NewError(
 			connect.CodeInvalidArgument,
-			fmt.Errorf("Invalid group by: %s", groupBy),
+			fmt.Errorf("invalid group by: %s", groupBy),
 		)
 	}
 	switch orderBy {
 	case OrderByTag:
 		if groupBy != GroupByImageRepository && groupBy != GroupByChartRepository {
 			return connect.NewError(connect.CodeInvalidArgument,
-				fmt.Errorf("Tag ordering only valid when grouping by: %s, %s",
+				fmt.Errorf("tag ordering only valid when grouping by: %s, %s",
 					GroupByImageRepository, GroupByChartRepository))
 		}
 	case OrderByFirstSeen, "":
 	default:
 		return connect.NewError(
 			connect.CodeInvalidArgument,
-			fmt.Errorf("Invalid order by: %s", orderBy),
+			fmt.Errorf("invalid order by: %s", orderBy),
 		)
 	}
 

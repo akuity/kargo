@@ -153,7 +153,7 @@ func TestValidateGroupByOrderBy(t *testing.T) {
 				require.Equal(t, connect.CodeInvalidArgument, connErr.Code())
 				require.Equal(
 					t,
-					"Cannot filter by group without group by",
+					"cannot filter by group without group by",
 					connErr.Message(),
 				)
 			},
@@ -166,7 +166,7 @@ func TestValidateGroupByOrderBy(t *testing.T) {
 				var connErr *connect.Error
 				require.True(t, errors.As(err, &connErr))
 				require.Equal(t, connect.CodeInvalidArgument, connErr.Code())
-				require.Contains(t, connErr.Message(), "Invalid group by")
+				require.Contains(t, connErr.Message(), "invalid group by")
 			},
 		},
 		{
@@ -181,7 +181,7 @@ func TestValidateGroupByOrderBy(t *testing.T) {
 				require.Contains(
 					t,
 					connErr.Message(),
-					"Tag ordering only valid when grouping by",
+					"tag ordering only valid when grouping by",
 				)
 			},
 		},
@@ -193,7 +193,7 @@ func TestValidateGroupByOrderBy(t *testing.T) {
 				var connErr *connect.Error
 				require.True(t, errors.As(err, &connErr))
 				require.Equal(t, connect.CodeInvalidArgument, connErr.Code())
-				require.Contains(t, connErr.Message(), "Invalid order by")
+				require.Contains(t, connErr.Message(), "invalid order by")
 			},
 		},
 		{

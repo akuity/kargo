@@ -8,7 +8,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
-	kubeerr "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
@@ -62,7 +62,7 @@ func TestErrorInterceptor(t *testing.T) {
 			) (*connect.Response[svcv1alpha1.GetVersionInfoResponse], error) {
 				return nil, connect.NewError(
 					connect.CodeInternal,
-					kubeerr.NewForbidden(schema.GroupResource{}, "", nil),
+					apierrors.NewForbidden(schema.GroupResource{}, "", nil),
 				)
 			},
 			errExpected:        true,
@@ -75,7 +75,7 @@ func TestErrorInterceptor(t *testing.T) {
 			) (*connect.Response[svcv1alpha1.GetVersionInfoResponse], error) {
 				return nil, connect.NewError(
 					connect.CodeUnknown,
-					kubeerr.NewForbidden(schema.GroupResource{}, "", nil),
+					apierrors.NewForbidden(schema.GroupResource{}, "", nil),
 				)
 			},
 			errExpected:        true,
@@ -86,7 +86,7 @@ func TestErrorInterceptor(t *testing.T) {
 				context.Context,
 				*connect.Request[svcv1alpha1.GetVersionInfoRequest],
 			) (*connect.Response[svcv1alpha1.GetVersionInfoResponse], error) {
-				return nil, kubeerr.NewForbidden(schema.GroupResource{}, "", nil)
+				return nil, apierrors.NewForbidden(schema.GroupResource{}, "", nil)
 			},
 			errExpected:        true,
 			expectedStatusCode: connect.CodePermissionDenied,

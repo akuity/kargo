@@ -39,6 +39,9 @@ const (
 	// defaultDirPermissions is the default permissions for directories created
 	// by the tar extractor.
 	defaultDirPermissions = 0o750
+
+	// stepNameUntar is the name of the "untar" step.
+	stepNameUntar = "untar"
 )
 
 // tarExtractor is an implementation of the promotion.StepRunner interface that
@@ -57,7 +60,7 @@ func newTarExtractor() promotion.StepRunner {
 
 // Name implements the promotion.StepRunner interface.
 func (t *tarExtractor) Name() string {
-	return "untar"
+	return stepNameUntar
 }
 
 // Run implements the promotion.StepRunner interface.
@@ -136,11 +139,7 @@ func (t *tarExtractor) extractToDir(
 	inPath, outPath string,
 ) (promotion.StepResult, error) {
 	// Load the ignore rules.
-	matcher, err := t.loadIgnoreRules(outPath, cfg.Ignore)
-	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("failed to load ignore rules: %w", err)
-	}
+	matcher := t.loadIgnoreRules(outPath, cfg.Ignore)
 
 	// Open the tar file
 	file, err := os.Open(inPath)
@@ -220,13 +219,13 @@ func (t *tarExtractor) extractToDir(
 			// Get parts of the path
 			parts := strings.Split(header.Name, "/")
 			// Only strip if we have enough components
-			if len(parts) > int(stripComponents) {
-				targetName = strings.Join(parts[stripComponents:], "/")
-			} else {
+			if len(parts) <= int(stripComponents) {
 				// Skip this file if we don't have enough components
-				logger.Trace("skipping file with insufficient path components", "path", header.Name)
+				logger.Trace("skipping file with insufficient path components for stripping",
+					"path", header.Name, "components", len(parts), "stripComponents", stripComponents)
 				continue
 			}
+			targetName = strings.Join(parts[stripComponents:], "/")
 		}
 
 		// Skip any empty targetName which can happen if we're processing a directory entry
@@ -255,7 +254,7 @@ func (t *tarExtractor) extractToDir(
 		}
 
 		// Create the destination directory for files and links
-		targetPath := filepath.Join(outPath, targetName)
+		targetPath := filepath.Join(outPath, targetName) // nolint:gosec
 
 		// Double-check the target path is within the output directory
 		relPath, err := filepath.Rel(outPath, targetPath)
@@ -286,7 +285,7 @@ func (t *tarExtractor) extractToDir(
 				continue
 			}
 			// Create symlink
-			if err := os.Symlink(header.Linkname, targetPath); err != nil && !os.IsExist(err) {
+			if err = os.Symlink(header.Linkname, targetPath); err != nil && !os.IsExist(err) {
 				logger.Error(err, "failed to create symlink", "path", targetPath, "target", header.Linkname)
 			}
 		case tar.TypeReg:
@@ -322,7 +321,11 @@ func (t *tarExtractor) extractToDir(
 			}
 
 			// Create a file
-			safeMode := fs.FileMode(header.Mode) & 0o777
+			mode := header.Mode & 0o777
+			if mode > 0o777 || mode < 0 {
+				mode = 0o600 // Default to 0o600 if mode is invalid
+			}
+			safeMode := fs.FileMode(mode) // nolint:gosec
 			outFile, err := os.OpenFile(targetPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, safeMode)
 			if err != nil {
 				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
@@ -331,7 +334,9 @@ func (t *tarExtractor) extractToDir(
 
 			// Limit copying to the declared size
 			written, err := io.CopyN(outFile, tarReader, header.Size)
-			outFile.Close()
+			if closeErr := outFile.Close(); closeErr != nil {
+				logger.Error(err, fmt.Sprintf("failed to close file %s", targetPath))
+			}
 			if err != nil && err != io.EOF {
 				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 					fmt.Errorf("failed to write to file %s: %w", targetPath, err)
@@ -369,7 +374,7 @@ func (t *tarExtractor) validRelPath(p string) bool {
 // separated by newlines, and comments are allowed with the '#' character.
 // It returns a gitignore.Matcher that can be used to match paths against the
 // rules.
-func (t *tarExtractor) loadIgnoreRules(outPath, rules string) (gitignore.Matcher, error) {
+func (t *tarExtractor) loadIgnoreRules(outPath, rules string) gitignore.Matcher {
 	// Determine the domain for the ignore rules
 	domain := strings.Split(outPath, string(filepath.Separator))
 
@@ -391,7 +396,7 @@ func (t *tarExtractor) loadIgnoreRules(outPath, rules string) (gitignore.Matcher
 		ps = append(ps, gitignore.ParsePattern(".git", domain))
 	}
 
-	return gitignore.NewMatcher(ps), nil
+	return gitignore.NewMatcher(ps)
 }
 
 func (t *tarExtractor) simpleAtomicMove(src, dst string) error {

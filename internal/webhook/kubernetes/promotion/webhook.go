@@ -193,6 +193,7 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 		)
 	}
 	if len(promo.Spec.Steps) == 0 {
+		// nolint:staticcheck
 		return fmt.Errorf(
 			"Stage %q in namespace %q defines no promotion steps",
 			promo.Spec.Stage,

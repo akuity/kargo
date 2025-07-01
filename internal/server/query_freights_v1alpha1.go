@@ -71,6 +71,7 @@ func (s *server) QueryFreight(
 			return nil, fmt.Errorf("get stage: %w", err)
 		}
 		if stage == nil {
+			// nolint:staticcheck
 			return nil, connect.NewError(
 				connect.CodeNotFound,
 				fmt.Errorf(

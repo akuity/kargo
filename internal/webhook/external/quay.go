@@ -3,6 +3,7 @@ package external
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -63,8 +64,7 @@ func (q *quayWebhookReceiver) getSecretValues(
 ) ([]string, error) {
 	secretValue, ok := secretData[quaySecretDataKey]
 	if !ok {
-		return nil,
-			errors.New("Secret data is not valid for a Quay.io WebhookReceiver")
+		return nil, fmt.Errorf("missing %q data key for Quay.io WebhookReceiver", quaySecretDataKey)
 	}
 	return []string{string(secretValue)}, nil
 }

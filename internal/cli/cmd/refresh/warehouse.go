@@ -85,6 +85,7 @@ func waitForWarehouse(
 		}
 		token, ok := api.RefreshAnnotationValue(msg.Warehouse.GetAnnotations())
 		if !ok {
+			// nolint:staticcheck
 			return fmt.Errorf(
 				"Warehouse %q in Project %q has no %q annotation",
 				name, project, kargoapi.AnnotationKeyRefresh,

@@ -433,10 +433,12 @@ func (r *reconciler) promote(
 	stageNamespace := promo.Namespace
 
 	if targetFreight == nil {
+		// nolint:staticcheck
 		return nil, fmt.Errorf("Freight %q not found in namespace %q", promo.Spec.Freight, promo.Namespace)
 	}
 
 	if !stage.IsFreightAvailable(targetFreight) {
+		// nolint:staticcheck
 		return nil, fmt.Errorf(
 			"Freight %q is not available to Stage %q in namespace %q",
 			promo.Spec.Freight,

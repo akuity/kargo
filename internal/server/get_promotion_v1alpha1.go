@@ -45,6 +45,7 @@ func (s *server) GetPromotion(
 		Namespace: project,
 	}, &u); err != nil {
 		if client.IgnoreNotFound(err) == nil {
+			// nolint:staticcheck
 			err = fmt.Errorf("Promotion %q not found in project %q", name, project)
 			return nil, connect.NewError(connect.CodeNotFound, err)
 		}

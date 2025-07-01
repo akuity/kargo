@@ -56,6 +56,7 @@ func (s *server) PromoteDownstream(
 		return nil, fmt.Errorf("get stage: %w", err)
 	}
 	if stage == nil {
+		// nolint:staticcheck
 		return nil, connect.NewError(
 			connect.CodeNotFound,
 			fmt.Errorf(
@@ -118,6 +119,7 @@ func (s *server) PromoteDownstream(
 
 	for _, downstream := range downstreams {
 		if !downstream.IsFreightAvailable(freight) {
+			// nolint:staticcheck
 			return nil, connect.NewError(
 				connect.CodeInvalidArgument,
 				fmt.Errorf(

@@ -30,6 +30,7 @@ func (s *server) GetAnalysisRunLogs(
 	stream *connect.ServerStream[svcv1alpha1.GetAnalysisRunLogsResponse],
 ) error {
 	if !s.cfg.RolloutsIntegrationEnabled {
+		// nolint:staticcheck
 		return connect.NewError(
 			connect.CodeUnimplemented,
 			errors.New("Argo Rollouts integration is not enabled"),
@@ -37,6 +38,7 @@ func (s *server) GetAnalysisRunLogs(
 	}
 
 	if s.cfg.AnalysisRunLogURLTemplate == "" {
+		// nolint:staticcheck
 		return connect.NewError(
 			connect.CodeUnimplemented,
 			errors.New("AnalysisRun log streaming is not configured"),
@@ -368,6 +370,7 @@ func (s *server) getStageFromAnalysisRun(
 		)
 	}
 	if stage == nil {
+		// nolint:staticcheck
 		return nil, connect.NewError(
 			connect.CodeNotFound,
 			fmt.Errorf("Stage %q in namespace %q not found", stageName, run.Namespace),

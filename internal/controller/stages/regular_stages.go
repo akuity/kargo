@@ -862,6 +862,7 @@ func (r *RegularStageReconciler) syncFreight(ctx context.Context, stage *kargoap
 			)
 		}
 		if f == nil {
+			// nolint:staticcheck
 			return fmt.Errorf("Freight %q not found in namespace %q", fr.Name, stage.Namespace)
 		}
 		if !f.IsCurrentlyIn(stage.Name) {

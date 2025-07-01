@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	kubeerr "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -183,7 +183,7 @@ func (a *argocdChecker) getApplicationHealth(
 	}
 	app := &argocd.Application{}
 	if err := a.argocdClient.Get(ctx, appKey, app); err != nil {
-		if kubeerr.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			err = fmt.Errorf(
 				"unable to find Argo CD Application %q in namespace %q",
 				appKey.Name, appKey.Namespace,
@@ -206,6 +206,7 @@ func (a *argocdChecker) getApplicationHealth(
 	if errConditions := a.filterAppConditions(app, healthErrorConditions...); len(errConditions) > 0 {
 		issues := make([]error, len(errConditions))
 		for i, condition := range errConditions {
+			// nolint:staticcheck
 			issues[i] = fmt.Errorf(
 				"Argo CD Application %q in namespace %q has %q condition: %s",
 				appKey.Name,
@@ -240,7 +241,7 @@ func (a *argocdChecker) getApplicationHealth(
 				time.Sleep(duration)
 				// Re-fetch the application to get the latest state.
 				if err := a.argocdClient.Get(ctx, appKey, app); err != nil {
-					if kubeerr.IsNotFound(err) {
+					if apierrors.IsNotFound(err) {
 						err = fmt.Errorf(
 							"unable to find Argo CD Application %q in namespace %q",
 							appKey.Name, appKey.Namespace,
@@ -277,6 +278,7 @@ func (a *argocdChecker) stageHealthForAppSync(
 	if (app.Operation != nil && app.Operation.Sync != nil) ||
 		app.Status.OperationState == nil || app.Status.OperationState.FinishedAt.IsZero() {
 		// A sync appears to be in progress
+		// nolint:staticcheck
 		return kargoapi.HealthStateUnknown, fmt.Errorf(
 			"Argo CD Application %q in namespace %q is being synced",
 			app.Name, app.Namespace,
@@ -289,6 +291,7 @@ func (a *argocdChecker) stageHealthForAppSync(
 	if len(sources) != len(desiredRevisions) {
 		// This really shouldn't happen because the sources would have been
 		// consulted when determining the desired revisions.
+		// nolint:staticcheck
 		return kargoapi.HealthStateUnknown, fmt.Errorf(
 			"Argo CD Application %q in namespace %q has %d sources but %d desired revisions",
 			app.Name, app.Namespace, len(sources), len(desiredRevisions),
@@ -300,6 +303,7 @@ func (a *argocdChecker) stageHealthForAppSync(
 	}
 	if len(observedRevisions) != len(desiredRevisions) {
 		// This really shouldn't happen.
+		// nolint:staticcheck
 		return kargoapi.HealthStateUnknown, fmt.Errorf(
 			"Argo CD Application %q in namespace %q has %d observed revisions but %d desired revisions",
 			app.Name, app.Namespace, len(observedRevisions), len(desiredRevisions),
@@ -325,6 +329,7 @@ func (a *argocdChecker) stageHealthForAppSync(
 		}
 	}
 	if len(issues) > 0 {
+		// nolint:staticcheck
 		return kargoapi.HealthStateUnhealthy, fmt.Errorf(
 			"Not all sources of Application %q in namespace %q "+
 				"are synced to the desired revisions. Issues: %s",
@@ -341,6 +346,7 @@ func (a *argocdChecker) stageHealthForAppHealth(
 ) (kargoapi.HealthState, error) {
 	switch app.Status.Health.Status {
 	case argocd.HealthStatusProgressing, "":
+		// nolint:staticcheck
 		err := fmt.Errorf(
 			"Argo CD Application %q in namespace %q is progressing",
 			app.GetName(),
@@ -348,6 +354,7 @@ func (a *argocdChecker) stageHealthForAppHealth(
 		)
 		return kargoapi.HealthStateProgressing, err
 	case argocd.HealthStatusSuspended:
+		// nolint:staticcheck
 		err := fmt.Errorf(
 			"Argo CD Application %q in namespace %q is suspended",
 			app.GetName(),
@@ -360,6 +367,7 @@ func (a *argocdChecker) stageHealthForAppHealth(
 	case argocd.HealthStatusHealthy:
 		return kargoapi.HealthStateHealthy, nil
 	default:
+		// nolint:staticcheck
 		err := fmt.Errorf(
 			"Argo CD Application %q in namespace %q has health state %q",
 			app.GetName(),

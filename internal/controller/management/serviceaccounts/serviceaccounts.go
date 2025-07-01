@@ -7,7 +7,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	kubeerr "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -95,7 +95,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	sa := &corev1.ServiceAccount{}
 	if err := r.client.Get(ctx, req.NamespacedName, sa); err != nil {
-		if kubeerr.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			// Ignore if not found. This can happen if the ServiceAccount was deleted
 			// after the current reconciliation request was issued.
 			return ctrl.Result{}, nil
@@ -186,7 +186,7 @@ func (r *reconciler) ensureControllerPermissions(ctx context.Context, sa types.N
 			},
 		}
 		if err := r.client.Create(ctx, roleBinding); err != nil {
-			if !kubeerr.IsAlreadyExists(err) {
+			if !apierrors.IsAlreadyExists(err) {
 				return fmt.Errorf(
 					"error creating RoleBinding %q for ServiceAccount %q in Project namespace %q: %w",
 					roleBinding.Name, sa.Name, project.Name, err,
@@ -234,7 +234,7 @@ func (r *reconciler) removeControllerPermissions(ctx context.Context, sa types.N
 				},
 			},
 		); err != nil {
-			if kubeerr.IsNotFound(err) {
+			if apierrors.IsNotFound(err) {
 				projectLogger.Debug("RoleBinding not found")
 				continue
 			}

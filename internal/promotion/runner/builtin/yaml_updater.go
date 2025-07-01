@@ -10,7 +10,6 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/yaml"
-	intyaml "github.com/akuity/kargo/internal/yaml"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -64,9 +63,9 @@ func (y *yamlUpdater) run(
 	stepCtx *promotion.StepContext,
 	cfg builtin.YAMLUpdateConfig,
 ) (promotion.StepResult, error) {
-	updates := make([]intyaml.Update, len(cfg.Updates))
+	updates := make([]yaml.Update, len(cfg.Updates))
 	for i, update := range cfg.Updates {
-		updates[i] = intyaml.Update{
+		updates[i] = yaml.Update{
 			Key:   update.Key,
 			Value: update.Value,
 		}
@@ -88,12 +87,12 @@ func (y *yamlUpdater) run(
 	return result, nil
 }
 
-func (y *yamlUpdater) updateFile(workDir string, path string, updates []intyaml.Update) error {
+func (y *yamlUpdater) updateFile(workDir string, path string, updates []yaml.Update) error {
 	absValuesFile, err := securejoin.SecureJoin(workDir, path)
 	if err != nil {
 		return fmt.Errorf("error joining path %q: %w", path, err)
 	}
-	if err := intyaml.SetValuesInFile(absValuesFile, updates); err != nil {
+	if err := yaml.SetValuesInFile(absValuesFile, updates); err != nil {
 		return fmt.Errorf("error updating image references in values file %q: %w", path, err)
 	}
 	return nil
