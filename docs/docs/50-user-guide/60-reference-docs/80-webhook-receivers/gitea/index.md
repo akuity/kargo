@@ -33,7 +33,6 @@ secret=$(openssl rand -base64 48 | tr -d '=+/' | head -c 32)
 echo "Secret: $secret"
 echo "Encoded secret: $(echo -n $secret | base64)"
 ```
-
 :::
 
 ```yaml
