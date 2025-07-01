@@ -864,5 +864,11 @@ webhooksServer:
   securityContext: {}
 
   tls:
-    ## @param webhooksServer.tls.selfSignedCert  Whether to generate a self-signed certificate for the controller's built-in webhook server. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-webhooks-server-cert` **must** be provided in the same namespace as Kargo. There is no provision for webhooks without TLS.
+    ## @param webhooksServer.tls.selfSignedCert  Whether to generate a self-signed certificate for the controller's built-in webhook server. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-webhooks-server-cert` **must** be provided in the same namespace as Kargo. If this cert is not trusted by the Kubernetes API server, you must set `webhooksServer.tls.caBundle`, as Kubernetes does not support referencing CA bundles from secrets. This is why it is strongly recommended to use `cert-manager`. Note that this configuration is mandatory, because Kubernetes requires TLS for webhooks.
     selfSignedCert: true
+    ## @param webhooksServer.tls.caBundle  PEM-encoded TLS certificates (which should also be stored in `kargo-webhooks-server-cert`) to trust when `webhooksServer.tls.selfSignedCert` is **false**. When the cert is *already* trusted by the Kubernetes API server, ignore this parameter. When it is **not** trusted (e.g. self-signed), configure the cert (with intermediate certificates) here.
+    caBundle: ""
+    # caBundle: |
+    #   -----BEGIN CERTIFICATE-----
+    #   ...
+    #   -----END CERTIFICATE-----
