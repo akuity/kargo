@@ -122,9 +122,9 @@ the screen.
     1. Click <Hlt>Create</Hlt>.
 
     1. Back in your <Hlt>Webhooks dashboard</Hlt>, click on the newly created
-    webhook.
+       webhook.
 
-    ![Created](./img/created.png "Created")
+       ![Created](./img/created.png "Created")
 
     1. Click <Hlt>Ping</Hlt>.
 
