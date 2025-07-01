@@ -113,7 +113,7 @@ kubectl get projectconfigs kargo-demo \
 
 1. Check any boxes corresponding to repositories this applies to.
 
-1. Click <Hlt>></Hlt> to move selected repositores into the selected window.
+1. Click <Hlt>></Hlt> to move selected repositories into the selected window.
 
    :::info
    Upon moving repositores to the selected section, the <Hlt>Save</Hlt> will
