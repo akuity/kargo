@@ -134,7 +134,7 @@ the screen.
 
     1. Confirm a 200 <Hlt>Http Status</Hlt> for the <Hlt>Ping</Hlt> action.
 
-    ![Success](./img/success.png "Success")
+       ![Success](./img/success.png "Success")
 
 
 :::info
