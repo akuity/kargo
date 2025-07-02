@@ -3,6 +3,8 @@ sidebar_label: jira
 description: Integrates with Jira to manage issues, comments, and track promotion workflows.
 ---
 
+<span class="tag enterprise"></span>
+<span class="tag beta"></span>
 # `jira`
 
 :::info Enterprise Feature
