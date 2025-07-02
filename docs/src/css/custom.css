@@ -94,3 +94,12 @@ main.landing-page {
   background: #FBCFA8;
   color: #000;
 }
+
+.tag-small::after {
+  display: inline-block;
+  padding: 0.05em 0.25em;
+  border-radius: 0.3em;
+  vertical-align: middle;
+  font-weight: normal;
+  font-size: x-small;
+}
