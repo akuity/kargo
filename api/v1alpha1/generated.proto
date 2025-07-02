@@ -14,6 +14,27 @@ import "k8s.io/apimachinery/pkg/runtime/schema/generated.proto";
 // Package-wide variables from generator "generated".
 option go_package = "github.com/akuity/kargo/api/v1alpha1";
 
+// ACRWebhookReceiverConfig describes a webhook receiver that is compatible
+// with Azure Container Registry (ACR) payloads.
+message ACRWebhookReceiverConfig {
+  // SecretRef contains a reference to a Secret. For Project-scoped webhook
+  // receivers, the referenced Secret must be in the same namespace as the
+  // ProjectConfig.
+  //
+  // For cluster-scoped webhook receivers, the referenced Secret must be in the
+  // designated "cluster Secrets" namespace.
+  //
+  // The Secret's data map is expected to contain a `secret` key whose value
+  // does NOT need to be shared directly with ACR when registering a webhook.
+  // It is used only by Kargo to create a complex, hard-to-guess URL,
+  // which implicitly serves as a shared secret. For more information about
+  // ACR webhooks, please refer to the Azure documentation:
+  // 	https://learn.microsoft.com/en-us/azure/container-registry/container-registry-repositories
+  //
+  // +kubebuilder:validation:Required
+  optional .k8s.io.api.core.v1.LocalObjectReference secretRef = 1;
+}
+
 // AnalysisRunArgument represents an argument to be added to an AnalysisRun.
 message AnalysisRunArgument {
   // Name is the name of the argument.
@@ -1860,6 +1881,10 @@ message WebhookReceiverConfig {
   // Quay contains the configuration for a webhook receiver that is compatible
   // with Quay payloads.
   optional QuayWebhookReceiverConfig quay = 4;
+
+  // ACR contains the configuration for a webhook receiver that is compatible
+  // with Azure Container Registry (ACR) payloads.
+  optional ACRWebhookReceiverConfig acr = 7;
 }
 
 // WebhookReceiverDetails encapsulates the details of a webhook receiver.
