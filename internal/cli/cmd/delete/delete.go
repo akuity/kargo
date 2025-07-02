@@ -89,7 +89,7 @@ kargo delete warehouse --project=my-project my-warehouse
 // addFlags adds the flags for the delete options to the provided command.
 func (o *deleteOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
-	o.PrintFlags.AddFlags(cmd)
+	o.AddFlags(cmd)
 
 	option.Filenames(cmd.Flags(), &o.Filenames, "Filename or directory to use to delete resource(s).")
 	option.Recursive(cmd.Flags(), &o.Recursive)
@@ -148,7 +148,7 @@ func (o *deleteOptions) run(ctx context.Context) error {
 		}
 	}
 
-	printer, err := o.PrintFlags.ToPrinter()
+	printer, err := o.ToPrinter()
 	if err != nil {
 		return fmt.Errorf("create printer: %w", err)
 	}
@@ -156,11 +156,11 @@ func (o *deleteOptions) run(ctx context.Context) error {
 	for _, r := range successRes {
 		var obj unstructured.Unstructured
 		if err := sigyaml.Unmarshal(r.DeletedResourceManifest, &obj); err != nil {
-			_, _ = fmt.Fprintf(o.IOStreams.ErrOut, "Error: %s",
+			_, _ = fmt.Fprintf(o.ErrOut, "Error: %s",
 				fmt.Errorf("unmarshal deleted manifest: %w", err))
 			continue
 		}
-		_ = printer.PrintObj(&obj, o.IOStreams.Out)
+		_ = printer.PrintObj(&obj, o.Out)
 	}
 	return errors.Join(deleteErrs...)
 }

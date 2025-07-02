@@ -76,7 +76,7 @@ kargo create project my-project
 // addFlags adds the flags for the create options to the provided command.
 func (o *createOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
-	o.PrintFlags.AddFlags(cmd)
+	o.AddFlags(cmd)
 
 	option.Filenames(cmd.Flags(), &o.Filenames, "Filename or directory to use to create resource(s).")
 	option.Recursive(cmd.Flags(), &o.Recursive)
@@ -111,7 +111,7 @@ func (o *createOptions) run(ctx context.Context) error {
 		return fmt.Errorf("read manifests: %w", err)
 	}
 
-	printer, err := o.PrintFlags.ToPrinter()
+	printer, err := o.ToPrinter()
 	if err != nil {
 		return fmt.Errorf("create printer: %w", err)
 	}
@@ -142,11 +142,11 @@ func (o *createOptions) run(ctx context.Context) error {
 	for _, r := range successRes {
 		var obj unstructured.Unstructured
 		if err := sigyaml.Unmarshal(r.CreatedResourceManifest, &obj); err != nil {
-			_, _ = fmt.Fprintf(o.IOStreams.ErrOut, "Error: %s",
+			_, _ = fmt.Fprintf(o.ErrOut, "Error: %s",
 				fmt.Errorf("unmarshal created manifest: %w", err))
 			continue
 		}
-		_ = printer.PrintObj(&obj, o.IOStreams.Out)
+		_ = printer.PrintObj(&obj, o.Out)
 	}
 	return errors.Join(createErrs...)
 }

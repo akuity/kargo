@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"connectrpc.com/connect"
-	kubeerr "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 var (
@@ -52,7 +52,7 @@ func (*errorInterceptor) toConnectError(err error) error {
 	if ok := errors.As(err, &connectErr); ok {
 		return err
 	}
-	var statusErr *kubeerr.StatusError
+	var statusErr *apierrors.StatusError
 	if ok := errors.As(err, &statusErr); ok {
 		return connect.NewError(httpStatusToConnectCode(statusErr.Status().Code), statusErr)
 	}

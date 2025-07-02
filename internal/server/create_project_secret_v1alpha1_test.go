@@ -56,8 +56,8 @@ func TestCreateProjectSecret(t *testing.T) {
 
 	projSecret := resp.Msg.GetSecret()
 	assert.Equal(t, "kargo-demo", projSecret.Namespace)
-	assert.Equal(t, "secret", projSecret.ObjectMeta.Name)
-	assert.Equal(t, "my secret", projSecret.ObjectMeta.Annotations[kargoapi.AnnotationKeyDescription])
+	assert.Equal(t, "secret", projSecret.Name)
+	assert.Equal(t, "my secret", projSecret.Annotations[kargoapi.AnnotationKeyDescription])
 	assert.Equal(t, redacted, projSecret.StringData["TOKEN_1"])
 	assert.Equal(t, redacted, projSecret.StringData["TOKEN_2"])
 
@@ -72,8 +72,8 @@ func TestCreateProjectSecret(t *testing.T) {
 
 	data := secret.Data
 	assert.Equal(t, "kargo-demo", secret.Namespace)
-	assert.Equal(t, "secret", secret.ObjectMeta.Name)
-	assert.Equal(t, "my secret", secret.ObjectMeta.Annotations[kargoapi.AnnotationKeyDescription])
+	assert.Equal(t, "secret", secret.Name)
+	assert.Equal(t, "my secret", secret.Annotations[kargoapi.AnnotationKeyDescription])
 	assert.Equal(t, "foo", string(data["TOKEN_1"]))
 	assert.Equal(t, "bar", string(data["TOKEN_2"]))
 }

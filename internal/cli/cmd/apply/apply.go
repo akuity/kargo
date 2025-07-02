@@ -72,7 +72,7 @@ kargo apply -f stages/
 // addFlags adds the flags for the apply options to the provided command.
 func (o *applyOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
-	o.PrintFlags.AddFlags(cmd)
+	o.AddFlags(cmd)
 
 	option.Filenames(cmd.Flags(), &o.Filenames, "Filename or directory to use to apply the resource(s)")
 	option.Recursive(cmd.Flags(), &o.Recursive)
@@ -146,11 +146,11 @@ func (o *applyOptions) run(ctx context.Context) error {
 	for _, res := range createdRes {
 		var obj unstructured.Unstructured
 		if err = sigyaml.Unmarshal(res.CreatedResourceManifest, &obj); err != nil {
-			_, _ = fmt.Fprintf(o.IOStreams.ErrOut, "Error: %s",
+			_, _ = fmt.Fprintf(o.ErrOut, "Error: %s",
 				fmt.Errorf("uunmarshal created manifest: %w", err))
 			continue
 		}
-		_ = printer.PrintObj(&obj, o.IOStreams.Out)
+		_ = printer.PrintObj(&obj, o.Out)
 	}
 
 	printer, err = o.toPrinter("updated")
@@ -161,16 +161,16 @@ func (o *applyOptions) run(ctx context.Context) error {
 	for _, res := range updatedRes {
 		var obj unstructured.Unstructured
 		if err = sigyaml.Unmarshal(res.UpdatedResourceManifest, &obj); err != nil {
-			_, _ = fmt.Fprintf(o.IOStreams.ErrOut, "Error: %s",
+			_, _ = fmt.Fprintf(o.ErrOut, "Error: %s",
 				fmt.Errorf("unmarshal updated manifest: %w", err))
 			continue
 		}
-		_ = printer.PrintObj(&obj, o.IOStreams.Out)
+		_ = printer.PrintObj(&obj, o.Out)
 	}
 	return errors.Join(errs...)
 }
 
 func (o *applyOptions) toPrinter(operation string) (printers.ResourcePrinter, error) {
-	o.PrintFlags.NamePrintFlags.Operation = operation
-	return o.PrintFlags.ToPrinter()
+	o.NamePrintFlags.Operation = operation
+	return o.ToPrinter()
 }

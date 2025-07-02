@@ -320,7 +320,7 @@ func writeToHelmFile(outputDir string, name string, data string, appendMode bool
 		}
 	}()
 
-	if _, err = f.WriteString(fmt.Sprintf("---\n# Source: %s\n%s\n", name, data)); err != nil {
+	if _, err = fmt.Fprintf(f, "---\n# Source: %s\n%s\n", name, data); err != nil {
 		return err
 	}
 

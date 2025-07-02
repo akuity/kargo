@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	kubeerr "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	sigyaml "sigs.k8s.io/yaml"
@@ -58,7 +58,7 @@ func (s *server) createOrUpdateResource(
 	// create or update it.
 	existingObj := obj.DeepCopy()
 	if err := s.client.Get(ctx, client.ObjectKeyFromObject(obj), existingObj); err != nil {
-		if !kubeerr.IsNotFound(err) {
+		if !apierrors.IsNotFound(err) {
 			return &svcv1alpha1.CreateOrUpdateResourceResult{
 				Result: &svcv1alpha1.CreateOrUpdateResourceResult_Error{
 					Error: fmt.Errorf("get resource: %w", err).Error(),

@@ -105,7 +105,7 @@ kargo update credentials my-credentials --git
 // command.
 func (o *updateCredentialsOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
-	o.PrintFlags.AddFlags(cmd)
+	o.AddFlags(cmd)
 	option.Project(
 		cmd.Flags(), &o.Project, o.Config.Project,
 		"The project in which to update credentials. If not set, the default project will be used.",
@@ -160,10 +160,8 @@ func (o *updateCredentialsOptions) validate() error {
 // run creates the credentials in the project based on the options.
 func (o *updateCredentialsOptions) run(ctx context.Context) error {
 	if o.ChangePasswordInteractively {
-		for {
-			if o.Password != "" {
-				break
-			}
+		for o.Password == "" {
+
 			prompt := &survey.Password{
 				Message: "Repository password",
 			}
@@ -205,9 +203,9 @@ func (o *updateCredentialsOptions) run(ctx context.Context) error {
 		return fmt.Errorf("update credentials: %w", err)
 	}
 
-	printer, err := o.PrintFlags.ToPrinter()
+	printer, err := o.ToPrinter()
 	if err != nil {
 		return fmt.Errorf("new printer: %w", err)
 	}
-	return printer.PrintObj(resp.Msg.GetCredentials(), o.IOStreams.Out)
+	return printer.PrintObj(resp.Msg.GetCredentials(), o.Out)
 }

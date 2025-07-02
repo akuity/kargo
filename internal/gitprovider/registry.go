@@ -30,21 +30,21 @@ func New(repoURL string, opts *Options) (Interface, error) {
 		if reg, found := registeredProviders[opts.Name]; found {
 			return reg.NewProvider(repoURL, opts)
 		}
-		return nil, fmt.Errorf("No registered providers with name %q", opts.Name)
+		return nil, fmt.Errorf("no registered providers with name %q", opts.Name)
 	}
 	for _, reg := range registeredProviders {
 		if reg.Predicate(repoURL) {
 			return reg.NewProvider(repoURL, opts)
 		}
 	}
-	return nil, fmt.Errorf("No registered providers for %s", repoURL)
+	return nil, fmt.Errorf("no registered providers for %s", repoURL)
 }
 
 // Register is called by provider implementation packages to register themselves
 // as a git provider.
 func Register(name string, reg Registration) {
 	if _, alreadyRegistered := registeredProviders[name]; alreadyRegistered {
-		panic(fmt.Sprintf("Provider %q already registered", name))
+		panic(fmt.Sprintf("provider %q already registered", name))
 	}
 	registeredProviders[name] = reg
 }

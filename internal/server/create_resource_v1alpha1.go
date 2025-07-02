@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
-	kubeerr "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -61,7 +61,7 @@ func (s *server) createResource(
 	if err == nil {
 		// Whoops! This resource already exists. Make the error look just like we'd
 		// gotten it from directly calling s.client.Create.
-		err := kubeerr.NewAlreadyExists(
+		err := apierrors.NewAlreadyExists(
 			schema.GroupResource{
 				Group:    existingObj.GetObjectKind().GroupVersionKind().Group,
 				Resource: strings.ToLower(existingObj.GetKind()),
@@ -74,7 +74,7 @@ func (s *server) createResource(
 			},
 		}, err
 	}
-	if !kubeerr.IsNotFound(err) {
+	if !apierrors.IsNotFound(err) {
 		return &svcv1alpha1.CreateResourceResult{
 			Result: &svcv1alpha1.CreateResourceResult_Error{
 				Error: fmt.Errorf("get resource: %w", err).Error(),

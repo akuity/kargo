@@ -59,6 +59,7 @@ func (s *server) PromoteToStage(
 		return nil, fmt.Errorf("get stage: %w", err)
 	}
 	if stage == nil {
+		// nolint:staticcheck
 		return nil, connect.NewError(
 			connect.CodeNotFound,
 			fmt.Errorf(
@@ -89,6 +90,7 @@ func (s *server) PromoteToStage(
 	}
 
 	if !s.isFreightAvailableFn(stage, freight) {
+		// nolint:staticcheck
 		return nil, connect.NewError(
 			connect.CodeInvalidArgument,
 			fmt.Errorf(

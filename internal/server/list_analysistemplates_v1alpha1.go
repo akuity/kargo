@@ -18,6 +18,7 @@ func (s *server) ListAnalysisTemplates(
 	req *connect.Request[svcv1alpha1.ListAnalysisTemplatesRequest],
 ) (*connect.Response[svcv1alpha1.ListAnalysisTemplatesResponse], error) {
 	if !s.cfg.RolloutsIntegrationEnabled {
+		// nolint:staticcheck
 		return nil, connect.NewError(
 			connect.CodeUnimplemented,
 			fmt.Errorf("Argo Rollouts integration is not enabled"),

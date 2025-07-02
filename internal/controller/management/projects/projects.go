@@ -9,7 +9,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	kubeerr "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
@@ -226,12 +226,12 @@ func (r *reconciler) Reconcile(
 	req ctrl.Request,
 ) (ctrl.Result, error) {
 	logger := logging.LoggerFromContext(ctx).WithValues(
-		"project", req.NamespacedName.Name,
+		"project", req.Name,
 	)
 	ctx = logging.ContextWithLogger(ctx, logger)
 
 	// Find the Project
-	project, err := r.getProjectFn(ctx, r.client, req.NamespacedName.Name)
+	project, err := r.getProjectFn(ctx, r.client, req.Name)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -362,7 +362,7 @@ func (r *reconciler) cleanupProject(ctx context.Context, project *kargoapi.Proje
 	ns := &corev1.Namespace{}
 	err := r.getNamespaceFn(ctx, types.NamespacedName{Name: project.Name}, ns)
 	if err != nil {
-		if kubeerr.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			// Namespace already deleted or never existed, just remove finalizer
 			// from project
 			logger.Debug("namespace not found, removing project finalizer")
@@ -401,7 +401,7 @@ func (r *reconciler) cleanupProject(ctx context.Context, project *kargoapi.Proje
 	} else {
 		// Delete the namespace
 		logger.Debug("deleting namespace")
-		if err = r.deleteNamespaceFn(ctx, ns); err != nil && !kubeerr.IsNotFound(err) {
+		if err = r.deleteNamespaceFn(ctx, ns); err != nil && !apierrors.IsNotFound(err) {
 			return fmt.Errorf("failed to delete namespace %q: %w", ns.Name, err)
 		}
 		logger.Debug("deleted namespace", "namespace", ns.Name)
@@ -532,7 +532,7 @@ func (r *reconciler) ensureNamespace(ctx context.Context, project *kargoapi.Proj
 		ctx,
 		types.NamespacedName{Name: project.Name},
 		ns,
-	); err != nil && !kubeerr.IsNotFound(err) {
+	); err != nil && !apierrors.IsNotFound(err) {
 		return fmt.Errorf("error getting namespace %q: %w", project.Name, err)
 	} else if err == nil {
 		// We found an existing namespace with the same name as the Project. It's
@@ -682,7 +682,7 @@ func (r *reconciler) ensureSystemPermissions(
 	for _, roleBinding := range roleBindings {
 		rbLogger := logger.WithValues("roleBinding", roleBinding.Name)
 		if err := r.createRoleBindingFn(ctx, &roleBinding); err != nil {
-			if !kubeerr.IsAlreadyExists(err) {
+			if !apierrors.IsAlreadyExists(err) {
 				return fmt.Errorf(
 					"error creating RoleBinding %q in Project namespace %q: %w",
 					roleBinding.Name, project.Name, err,
@@ -763,7 +763,7 @@ func (r *reconciler) ensureControllerPermissions(
 		}
 
 		if err := r.client.Create(ctx, roleBinding); err != nil {
-			if !kubeerr.IsAlreadyExists(err) {
+			if !apierrors.IsAlreadyExists(err) {
 				return fmt.Errorf(
 					"error creating RoleBinding %q for ServiceAccount %q in Project namespace %q: %w",
 					roleBinding.Name, sa.Name, project.Name, err,
@@ -812,7 +812,7 @@ func (r *reconciler) ensureDefaultUserRoles(
 				},
 			},
 		); err != nil {
-			if kubeerr.IsAlreadyExists(err) {
+			if apierrors.IsAlreadyExists(err) {
 				saLogger.Debug("ServiceAccount already exists in project namespace")
 				continue
 			}
@@ -921,7 +921,7 @@ func (r *reconciler) ensureDefaultUserRoles(
 			"namespace", project.Name,
 		)
 		if err := r.createRoleFn(ctx, role); err != nil {
-			if kubeerr.IsAlreadyExists(err) {
+			if apierrors.IsAlreadyExists(err) {
 				roleLogger.Debug("Role already exists in project namespace")
 				continue
 			}
@@ -962,7 +962,7 @@ func (r *reconciler) ensureDefaultUserRoles(
 				},
 			},
 		); err != nil {
-			if kubeerr.IsAlreadyExists(err) {
+			if apierrors.IsAlreadyExists(err) {
 				rbLogger.Debug("RoleBinding already exists in project namespace")
 				continue
 			}
@@ -1024,7 +1024,7 @@ func (r *reconciler) migrateSpecToProjectConfig(
 			// could happen because the ProjectConfig was created by the user without
 			// them removing the spec from the Project. It could also be the result of
 			// a partial migration by a previous reconciliation attempt.
-			if !kubeerr.IsAlreadyExists(err) {
+			if !apierrors.IsAlreadyExists(err) {
 				return false, fmt.Errorf(
 					"error creating ProjectConfig in project namespace %q: %w",
 					project.Name, err,

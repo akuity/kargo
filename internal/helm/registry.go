@@ -111,19 +111,24 @@ func newTransport(base http.RoundTripper) *fallbackTransport {
 
 // RoundTrip wraps base round trip with conditional insecure retry.
 func (t *fallbackTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	const (
+		httpScheme  = "http"
+		httpsScheme = "https"
+	)
+
 	host := req.URL.Host
 	if forceHTTP, ok := t.httpHosts.Load(host); ok && forceHTTP.(bool) { // nolint:forcetypeassert
-		req.URL.Scheme = "http"
+		req.URL.Scheme = httpScheme
 		return t.Base.RoundTrip(req)
 	}
 
 	resp, err := t.Base.RoundTrip(req)
-	if err != nil && req.URL.Scheme == "https" {
+	if err != nil && req.URL.Scheme == httpsScheme {
 		var tlsErr tls.RecordHeaderError
 		if errors.As(err, &tlsErr) {
 			if string(tlsErr.RecordHeader[:]) == "HTTP/" {
 				t.httpHosts.Store(host, true)
-				req.URL.Scheme = "http"
+				req.URL.Scheme = httpScheme
 				return t.Base.RoundTrip(req)
 			}
 		}

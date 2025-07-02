@@ -135,6 +135,7 @@ func (a *argocdUpdater) run(
 	stepCfg builtin.ArgoCDUpdateConfig,
 ) (promotion.StepResult, error) {
 	if a.argocdClient == nil {
+		// nolint:staticcheck
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, errors.New(
 			"Argo CD integration is disabled on this controller; cannot update " +
 				"Argo CD Application resources",
@@ -194,6 +195,7 @@ func (a *argocdUpdater) run(
 			if phase.Failed() {
 				// Record the reason for the failure if available.
 				if app.Status.OperationState != nil {
+					// nolint:staticcheck
 					return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
 						"Argo CD Application %q in namespace %q failed with: %s",
 						app.Name,
@@ -278,6 +280,7 @@ func (a *argocdUpdater) buildDesiredSources(
 	}
 	if len(desiredSources) != len(desiredRevisions) {
 		// This really shouldn't happen.
+		// nolint:staticcheck
 		return nil, fmt.Errorf(
 			"Argo CD Application %q in namespace %q has %d sources but %d desired revisions",
 			app.Name, app.Namespace, len(desiredSources), len(desiredRevisions),
@@ -425,10 +428,10 @@ func (a *argocdUpdater) syncApplication(
 	desiredSources argocd.ApplicationSources,
 ) error {
 	// Initiate a "hard" refresh.
-	if app.ObjectMeta.Annotations == nil {
-		app.ObjectMeta.Annotations = make(map[string]string, 1)
+	if app.Annotations == nil {
+		app.Annotations = make(map[string]string, 1)
 	}
-	app.ObjectMeta.Annotations[argocd.AnnotationKeyRefresh] = string(argocd.RefreshTypeHard)
+	app.Annotations[argocd.AnnotationKeyRefresh] = string(argocd.RefreshTypeHard)
 
 	// Update the desired source(s) in the Argo CD Application.
 	if app.Spec.Source != nil {
@@ -587,11 +590,11 @@ func (a *argocdUpdater) logAppEvent(
 		},
 		InvolvedObject: corev1.ObjectReference{
 			APIVersion:      argocd.GroupVersion.String(),
-			Kind:            app.TypeMeta.Kind,
-			Namespace:       app.ObjectMeta.Namespace,
-			Name:            app.ObjectMeta.Name,
-			UID:             app.ObjectMeta.UID,
-			ResourceVersion: app.ObjectMeta.ResourceVersion,
+			Kind:            app.Kind,
+			Namespace:       app.Namespace,
+			Name:            app.Name,
+			UID:             app.UID,
+			ResourceVersion: app.ResourceVersion,
 		},
 		FirstTimestamp: t,
 		LastTimestamp:  t,
@@ -651,6 +654,7 @@ func (a *argocdUpdater) authorizeArgoCDAppUpdate(
 	stepCtx *promotion.StepContext,
 	appMeta metav1.ObjectMeta,
 ) error {
+	// nolint:staticcheck
 	permErr := fmt.Errorf(
 		"Argo CD Application %q in namespace %q does not permit mutation by "+
 			"Kargo Stage %s in namespace %s",
@@ -678,6 +682,7 @@ func (a *argocdUpdater) authorizeArgoCDAppUpdate(
 
 	projectName, stageName := tokens[0], tokens[1]
 	if strings.Contains(projectName, "*") || strings.Contains(stageName, "*") {
+		// nolint:staticcheck
 		return fmt.Errorf(
 			"Argo CD Application %q in namespace %q has deprecated glob expression in annotation %q (%q)",
 			appMeta.Name,

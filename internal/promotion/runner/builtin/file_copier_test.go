@@ -368,4 +368,3 @@ func Test_fileCopier_loadIgnoreRules(t *testing.T) {
 		})
 	}
 }
-

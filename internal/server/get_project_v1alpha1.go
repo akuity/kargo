@@ -33,6 +33,7 @@ func (s *server) GetProject(
 	}
 	if err := s.client.Get(ctx, client.ObjectKey{Name: name}, &u); err != nil {
 		if client.IgnoreNotFound(err) == nil {
+			// nolint:staticcheck
 			err = fmt.Errorf("Project %q not found", name)
 			return nil, connect.NewError(connect.CodeNotFound, err)
 		}

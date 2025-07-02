@@ -76,7 +76,7 @@ func TestCreateClusterSecret(t *testing.T) {
 
 	secret := resp.Msg.GetSecret()
 	assert.Equal(t, "kargo-cluster-secrts", secret.Namespace)
-	assert.Equal(t, "secret-1", secret.ObjectMeta.Name)
+	assert.Equal(t, "secret-1", secret.Name)
 	assert.Equal(t, redacted, secret.StringData["foo"])
 	assert.Equal(t, redacted, secret.StringData["baz"])
 

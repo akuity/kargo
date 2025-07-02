@@ -89,7 +89,7 @@ func (c *collector) cleanWarehouseFreight(
 
 	// Sort by creation timestamp descending
 	slices.SortFunc(freight.Items, func(lhs, rhs kargoapi.Freight) int {
-		return rhs.CreationTimestamp.Time.Compare(lhs.CreationTimestamp.Time)
+		return rhs.CreationTimestamp.Compare(lhs.CreationTimestamp.Time)
 	})
 
 	// Step through all Freight and find the oldest that is still in use

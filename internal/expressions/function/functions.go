@@ -9,7 +9,7 @@ import (
 	"github.com/expr-lang/expr"
 	gocache "github.com/patrickmn/go-cache"
 	corev1 "k8s.io/api/core/v1"
-	kubeerr "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -189,7 +189,7 @@ func freightMetadata(
 			Namespace: project,
 			Name:      freightRefName,
 		}, &freightData); err != nil {
-			if kubeerr.IsNotFound(err) {
+			if apierrors.IsNotFound(err) {
 				return nil, nil
 			}
 			return nil, fmt.Errorf("failed to get freight %s: %w", freightRefName, err)
@@ -488,7 +488,7 @@ func getConfigMap(ctx context.Context, c client.Client, cache *gocache.Cache, pr
 			},
 			&cfgMap,
 		); err != nil {
-			if kubeerr.IsNotFound(err) {
+			if apierrors.IsNotFound(err) {
 				return map[string]string{}, nil
 			}
 			return nil, fmt.Errorf("failed to get configmap %s: %w", name, err)
@@ -544,7 +544,7 @@ func getSecret(ctx context.Context, c client.Client, cache *gocache.Cache, proje
 			},
 			&secret,
 		); err != nil {
-			if kubeerr.IsNotFound(err) {
+			if apierrors.IsNotFound(err) {
 				return map[string]string{}, nil
 			}
 			return nil, fmt.Errorf("failed to get secret %s: %w", name, err)

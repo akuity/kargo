@@ -20,6 +20,7 @@ func (s *server) GetClusterAnalysisTemplate(
 	req *connect.Request[svcv1alpha1.GetClusterAnalysisTemplateRequest],
 ) (*connect.Response[svcv1alpha1.GetClusterAnalysisTemplateResponse], error) {
 	if !s.cfg.RolloutsIntegrationEnabled {
+		// nolint:staticcheck
 		return nil, connect.NewError(
 			connect.CodeUnimplemented,
 			errors.New("Argo Rollouts integration is not enabled"),

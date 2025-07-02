@@ -10,7 +10,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -508,7 +507,7 @@ func TestReconciler_cleanupProject(t *testing.T) {
 					client.Object,
 					...client.GetOption,
 				) error {
-					return kubeerr.NewNotFound(schema.GroupResource{}, "test-project")
+					return apierrors.NewNotFound(schema.GroupResource{}, "test-project")
 				},
 				removeFinalizerFn: func(
 					context.Context,
@@ -536,7 +535,7 @@ func TestReconciler_cleanupProject(t *testing.T) {
 					client.Object,
 					...client.GetOption,
 				) error {
-					return kubeerr.NewNotFound(schema.GroupResource{}, "test-project")
+					return apierrors.NewNotFound(schema.GroupResource{}, "test-project")
 				},
 				removeFinalizerFn: func(
 					context.Context,
@@ -738,7 +737,7 @@ func TestReconciler_cleanupProject(t *testing.T) {
 					client.Object,
 					...client.DeleteOption,
 				) error {
-					return kubeerr.NewNotFound(schema.GroupResource{}, "test-project")
+					return apierrors.NewNotFound(schema.GroupResource{}, "test-project")
 				},
 				removeFinalizerFn: func(
 					context.Context,
@@ -1798,7 +1797,7 @@ func TestMigrateSpecToProjectConfig(t *testing.T) {
 					},
 					projCfg,
 				)
-				require.True(t, kubeerr.IsNotFound(err))
+				require.True(t, apierrors.IsNotFound(err))
 			},
 		},
 		{
@@ -1827,7 +1826,7 @@ func TestMigrateSpecToProjectConfig(t *testing.T) {
 					},
 					projCfg,
 				)
-				require.True(t, kubeerr.IsNotFound(err))
+				require.True(t, apierrors.IsNotFound(err))
 			},
 		},
 		{

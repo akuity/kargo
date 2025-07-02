@@ -70,18 +70,18 @@ kargo version --client
 // addFlags adds the flags for the version options to the provided command.
 func (o *versionOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
-	o.PrintFlags.AddFlags(cmd)
+	o.AddFlags(cmd)
 
 	cmd.Flags().BoolVar(&o.ClientOnly, "client", o.ClientOnly, "If true, shows client version only (no server required)")
 }
 
 // run prints the client and server version information.
 func (o *versionOptions) run(ctx context.Context) error {
-	printToStdout := o.PrintFlags.OutputFlagSpecified == nil || !o.PrintFlags.OutputFlagSpecified()
+	printToStdout := o.OutputFlagSpecified == nil || !o.OutputFlagSpecified()
 
 	cliVersion := api.ToVersionProto(versionpkg.GetVersion())
 	if printToStdout {
-		_, _ = fmt.Fprintln(o.IOStreams.Out, "Client Version:", cliVersion.GetVersion())
+		_, _ = fmt.Fprintln(o.Out, "Client Version:", cliVersion.GetVersion())
 	}
 
 	var serverVersion *svcv1alpha1.VersionInfo
@@ -92,12 +92,12 @@ func (o *versionOptions) run(ctx context.Context) error {
 
 	if printToStdout {
 		if serverVersion != nil {
-			_, _ = fmt.Fprintln(o.IOStreams.Out, "Server Version:", serverVersion.GetVersion())
+			_, _ = fmt.Fprintln(o.Out, "Server Version:", serverVersion.GetVersion())
 		}
 		return serverErr
 	}
 
-	printer, err := o.PrintFlags.ToPrinter()
+	printer, err := o.ToPrinter()
 	if err != nil {
 		return fmt.Errorf("new printer: %w", err)
 	}
@@ -109,7 +109,7 @@ func (o *versionOptions) run(ctx context.Context) error {
 		return fmt.Errorf("map component versions to runtime object: %w", err)
 	}
 
-	if err := printer.PrintObj(obj, o.IOStreams.Out); err != nil {
+	if err := printer.PrintObj(obj, o.Out); err != nil {
 		return fmt.Errorf("printing object: %w", err)
 	}
 	return serverErr

@@ -8,7 +8,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	kubeerr "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -123,7 +123,7 @@ func (r *rolesDatabase) Create(
 			"error getting ServiceAccount %q in namespace %q: %w", kargoRole.Name, kargoRole.Namespace, err,
 		)
 	} else if err == nil {
-		return nil, kubeerr.NewAlreadyExists(
+		return nil, apierrors.NewAlreadyExists(
 			schema.GroupResource{
 				Group:    sa.GetObjectKind().GroupVersionKind().Group,
 				Resource: strings.ToLower(sa.GetObjectKind().GroupVersionKind().Kind),
@@ -139,7 +139,7 @@ func (r *rolesDatabase) Create(
 			"error getting Role %q in namespace %q: %w", kargoRole.Name, kargoRole.Namespace, err,
 		)
 	} else if err == nil {
-		return nil, kubeerr.NewAlreadyExists(
+		return nil, apierrors.NewAlreadyExists(
 			schema.GroupResource{
 				Group:    role.GetObjectKind().GroupVersionKind().Group,
 				Resource: strings.ToLower(role.GetObjectKind().GroupVersionKind().Kind),
@@ -155,7 +155,7 @@ func (r *rolesDatabase) Create(
 			"error getting RoleBinding %q in namespace %q: %w", kargoRole.Name, kargoRole.Namespace, err,
 		)
 	} else if err == nil {
-		return nil, kubeerr.NewAlreadyExists(
+		return nil, apierrors.NewAlreadyExists(
 			schema.GroupResource{
 				Group:    rb.GetObjectKind().GroupVersionKind().Group,
 				Resource: strings.ToLower(rb.GetObjectKind().GroupVersionKind().Kind),
@@ -676,7 +676,7 @@ func ResourcesToRole(
 			kargoRole.Claims = append(
 				kargoRole.Claims,
 				rbacapi.Claim{
-					Name:   strings.Replace(annotationKey, rbacapi.AnnotationKeyOIDCClaimNamePrefix, "", -1),
+					Name:   strings.ReplaceAll(annotationKey, rbacapi.AnnotationKeyOIDCClaimNamePrefix, ""),
 					Values: strings.Split(annotationValue, ","),
 				},
 			)
@@ -868,7 +868,7 @@ func manageableResources(
 	rbs []rbacv1.RoleBinding,
 ) (*rbacv1.Role, *rbacv1.RoleBinding, error) {
 	if !isKargoManaged(&sa) {
-		return nil, nil, kubeerr.NewBadRequest(
+		return nil, nil, apierrors.NewBadRequest(
 			fmt.Sprintf(
 				"ServiceAccount %q in namespace %q is not annotated as Kargo-managed",
 				sa.Name, sa.Namespace,
@@ -876,7 +876,7 @@ func manageableResources(
 		)
 	}
 	if len(roles) > 1 {
-		return nil, nil, kubeerr.NewBadRequest(
+		return nil, nil, apierrors.NewBadRequest(
 			fmt.Sprintf(
 				"multiple Roles associated with ServiceAccount %q in namespace %q",
 				sa.Name, sa.Namespace,
@@ -887,7 +887,7 @@ func manageableResources(
 	if len(roles) == 1 {
 		role = &roles[0]
 		if !isKargoManaged(role) {
-			return nil, nil, kubeerr.NewBadRequest(
+			return nil, nil, apierrors.NewBadRequest(
 				fmt.Sprintf(
 					"Role %q in namespace %q is not annotated as Kargo-managed",
 					role.Name, role.Namespace,
@@ -896,7 +896,7 @@ func manageableResources(
 		}
 	}
 	if len(rbs) > 1 {
-		return nil, nil, kubeerr.NewBadRequest(
+		return nil, nil, apierrors.NewBadRequest(
 			fmt.Sprintf(
 				"multiple RoleBindings associated with ServiceAccount %q in namespace %q",
 				sa.Name, sa.Namespace,
@@ -907,7 +907,7 @@ func manageableResources(
 	if len(rbs) == 1 {
 		rb = &rbs[0]
 		if !isKargoManaged(rb) {
-			return nil, nil, kubeerr.NewBadRequest(
+			return nil, nil, apierrors.NewBadRequest(
 				fmt.Sprintf(
 					"RoleBinding %q in namespace %q is not annotated as Kargo-managed",
 					rb.Name, rb.Namespace,

@@ -71,6 +71,7 @@ func (s *server) QueryFreight(
 			return nil, fmt.Errorf("get stage: %w", err)
 		}
 		if stage == nil {
+			// nolint:staticcheck
 			return nil, connect.NewError(
 				connect.CodeNotFound,
 				fmt.Errorf(
@@ -287,7 +288,7 @@ func sortFreightGroups(orderBy string, reverse bool, groups map[string]*svcv1alp
 					return strings.Compare(lhsTag, rhsTag)
 				}
 			}
-			return lhs.CreationTimestamp.Time.Compare(rhs.CreationTimestamp.Time)
+			return lhs.CreationTimestamp.Compare(rhs.CreationTimestamp.Time)
 		})
 		if reverse {
 			slices.Reverse(groups[k].Freight)

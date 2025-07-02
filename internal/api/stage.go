@@ -68,6 +68,7 @@ func ListFreightAvailableToStage(
 			return nil, err
 		}
 		if warehouse == nil {
+			// nolint:staticcheck
 			return nil, fmt.Errorf(
 				"Warehouse %q not found in namespace %q",
 				req.Origin.Name,
@@ -186,6 +187,7 @@ func ReverifyStageFreight(
 	stage, err := GetStage(ctx, c, namespacedName)
 	if err != nil || stage == nil {
 		if stage == nil {
+			// nolint:staticcheck
 			err = fmt.Errorf("Stage %q in namespace %q not found", namespacedName.Name, namespacedName.Namespace)
 		}
 		return err
@@ -228,6 +230,7 @@ func AbortStageFreightVerification(
 	stage, err := GetStage(ctx, c, namespacedName)
 	if err != nil || stage == nil {
 		if stage == nil {
+			// nolint:staticcheck
 			err = fmt.Errorf("Stage %q in namespace %q not found", namespacedName.Name, namespacedName.Namespace)
 		}
 		return err

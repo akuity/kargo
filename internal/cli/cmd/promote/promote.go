@@ -105,7 +105,7 @@ kargo promote --freight-alias=wonky-wombat --downstream-from=qas
 // addFlags adds the flags for the promotion options to the provided command.
 func (o *promotionOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
-	o.PrintFlags.AddFlags(cmd)
+	o.AddFlags(cmd)
 
 	option.Project(
 		cmd.Flags(), &o.Project, o.Config.Project,
@@ -179,7 +179,7 @@ func (o *promotionOptions) run(ctx context.Context) error {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	printer, err := o.PrintFlags.ToPrinter()
+	printer, err := o.ToPrinter()
 	if err != nil {
 		return fmt.Errorf("new printer: %w", err)
 	}
@@ -218,7 +218,7 @@ func (o *promotionOptions) run(ctx context.Context) error {
 				return fmt.Errorf("wait for promotion: %w", err)
 			}
 		}
-		_ = printer.PrintObj(res.Msg.GetPromotion(), o.IOStreams.Out)
+		_ = printer.PrintObj(res.Msg.GetPromotion(), o.Out)
 		return nil
 	case o.DownstreamFrom != "":
 		res, err := kargoSvcCli.PromoteDownstream(
@@ -241,7 +241,7 @@ func (o *promotionOptions) run(ctx context.Context) error {
 			}
 		}
 		for _, p := range res.Msg.GetPromotions() {
-			_ = printer.PrintObj(p, o.IOStreams.Out)
+			_ = printer.PrintObj(p, o.Out)
 		}
 		return nil
 	}

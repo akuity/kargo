@@ -3,6 +3,7 @@ package external
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -64,8 +65,7 @@ func (d *dockerhubWebhookReceiver) getSecretValues(
 ) ([]string, error) {
 	secretValue, ok := secretData[dockerhubSecretDataKey]
 	if !ok {
-		return nil,
-			errors.New("Secret data is not valid for a Docker Hub WebhookReceiver")
+		return nil, fmt.Errorf("missing data key %q for DockerHub WebhookReceiver", dockerhubSecretDataKey)
 	}
 	return []string{string(secretValue)}, nil
 }
