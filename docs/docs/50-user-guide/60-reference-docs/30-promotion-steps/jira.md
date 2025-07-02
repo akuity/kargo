@@ -69,13 +69,13 @@ steps:
       secretName: jira-credentials
     createIssue:
       projectKey: DEPLOY
-      summary: "Deploy ${{ imageFrom(vars.imageRepo).Tag }} to ${{ ctx.stage.name }}"
-      description: "Deploying ${{ imageFrom(vars.imageRepo).RepoURL }}:${{ imageFrom(vars.imageRepo).Tag }} to ${{ ctx.stage.name }} environment. Promotion ID: ${{ ctx.promotion.name }}. Freight: ${{ ctx.targetFreight.name }}."
+      summary: "Deploy ${{ imageFrom(vars.imageRepo).Tag }} to ${{ ctx.stage }}"
+      description: "Deploying ${{ imageFrom(vars.imageRepo).RepoURL }}:${{ imageFrom(vars.imageRepo).Tag }} to ${{ ctx.stage }} environment. Promotion ID: ${{ ctx.promotion }}. Freight: ${{ ctx.targetFreight.name }}."
       issueType: Task
       assigneeEmail: devops@company.com
       labels:
       - promotion
-      - "${{ ctx.stage.name }}"
+      - "${{ ctx.stage }}"
       - "release-${{ imageFrom(vars.imageRepo).Tag }}"
 # Use the created issue key in subsequent steps
 - uses: jira
@@ -123,13 +123,13 @@ steps:
     updateIssue:
       issueKey: DEPLOY-123
       status: "IN PROGRESS"
-      summary: "Deploy ${{ imageFrom(vars.imageRepo).Tag }} to ${{ ctx.stage.name }} - IN PROGRESS"
+      summary: "Deploy ${{ imageFrom(vars.imageRepo).Tag }} to ${{ ctx.stage }} - IN PROGRESS"
       addLabels:
       - deploying
-      - "${{ ctx.stage.name }}-promotion"
+      - "${{ ctx.stage }}-promotion"
       customFields:
-        customfield_10000: "${{ ctx.stage.name }} Environment"
-        customfield_10001: "${{ ctx.promotion.name }}"
+        customfield_10000: "${{ ctx.stage }} Environment"
+        customfield_10001: "${{ ctx.promotion }}"
 ```
 
 ### Delete Issue
@@ -199,7 +199,7 @@ steps:
     credentials:
       secretName: jira-credentials
     searchIssue:
-      jql: 'project = DEPLOY AND status != "Done" AND labels = "${{ ctx.stage.name }}-promotion" AND created >= -7d'
+      jql: 'project = DEPLOY AND status != "Done" AND labels = "${{ ctx.stage }}-promotion" AND created >= -7d'
       expectMultiple: true
       fields:
       - summary
@@ -222,7 +222,7 @@ steps:
     body: |
       ${{ quote({
         "channel": "#promotions",
-        "text": "Found issue" + outputs['find-open-promotions'].issue.key + " for " + ctx.stage.name + " environment"
+        "text": "Found issue" + outputs['find-open-promotions'].issue.key + " for " + ctx.stage + " environment"
       }) }}
 ```
 
@@ -259,7 +259,7 @@ steps:
       secretName: jira-credentials
     commentOnIssue:
       issueKey: "${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}"
-      body: "promotion started at ${{ ctx.promotion.creationTimestamp }}. Environment: ${{ ctx.stage.name }}. Image: ${{ imageFrom(vars.imageRepo).RepoURL }}:${{ imageFrom(vars.imageRepo).Tag }}. Promotion: ${{ ctx.promotion.name }}. Status: Deploying to ${{ ctx.stage.name }} environment..."
+      body: "Promotion started. Environment: ${{ ctx.stage }}. Image: ${{ imageFrom(vars.imageRepo).RepoURL }}:${{ imageFrom(vars.imageRepo).Tag }}. Promotion: ${{ ctx.promotion }}. Status: Deploying to ${{ ctx.stage }} environment..."
 # Later use the comment ID if needed
 - uses: jira
   config:
@@ -336,7 +336,7 @@ steps:
     path: ./charts
     vars:
       imageTag: "${{ imageFrom(vars.imageRepo).Tag }}"
-      environment: "${{ ctx.stage.name }}"
+      environment: "${{ ctx.stage }}"
 ```
 
 :::info Content Formatting
@@ -438,7 +438,7 @@ spec:
                   - type: code
             labels:
             - "automated-promotion"
-            - "env-${{ ctx.stage.name }}"
+            - "env-${{ ctx.stage }}"
             - "release-${{ imageFrom(vars.imageRepo).Tag }}"
             - "project-${{ ctx.project }}"
 
@@ -464,7 +464,7 @@ spec:
             secretName: jira
           commentOnIssue:
             issueKey: ${{ outputs['create-promotion-ticket'].key }}
-            body: "Release ${{ imageFrom(vars.imageRepo).Tag }} has been promoted to ${{ ctx.stage.name }} environment at ${{ ctx.promotion.creationTimestamp }}. Freight: ${{ ctx.targetFreight.name }}. Ready for testing."
+            body: "Release ${{ imageFrom(vars.imageRepo).Tag }} has been promoted to ${{ ctx.stage }} environment. Freight: ${{ ctx.targetFreight.name }}. Ready for testing."
 
       # Cleanup on failure
       - as: on-failure-cleanup-issue
@@ -529,7 +529,7 @@ spec:
             secretName: jira
           commentOnIssue:
             issueKey: ${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}
-            body: "Release ${{ imageFrom(vars.imageRepo).Tag }} has been promoted to ${{ ctx.stage.name }} environment at ${{ ctx.promotion.creationTimestamp }}. Promotion: ${{ ctx.promotion.name }}. Status: Deployed and ready for uat validation."
+            body: "Release ${{ imageFrom(vars.imageRepo).Tag }} has been promoted to ${{ ctx.stage }} environment. Promotion: ${{ ctx.promotion }}. Status: Deployed and ready for uat validation."
 
       # Update environment labels
       - as: update-ticket-labels
@@ -542,8 +542,8 @@ spec:
             removeLabels:
             - "env-test"
             addLabels:
-            - "env-${{ ctx.stage.name }}"
-            - "promotion-${{ ctx.promotion.name }}"
+            - "env-${{ ctx.stage }}"
+            - "promotion-${{ ctx.promotion }}"
 
       # Cleanup comments on failure
       - as: on-failure-cleanup-comment
@@ -620,7 +620,7 @@ spec:
             secretName: jira
           commentOnIssue:
             issueKey: ${{ outputs['search-issue'].key }}
-            body: "Release ${{ imageFrom(vars.imageRepo).Tag }} has been successfully promoted to ${{ ctx.stage.name }} environment at ${{ ctx.promotion.creationTimestamp }}. promotion completed for promotion ${{ ctx.promotion.name }}. All systems operational and release is live!"
+            body: "Release ${{ imageFrom(vars.imageRepo).Tag }} has been successfully promoted to ${{ ctx.stage }} environment. promotion completed for promotion ${{ ctx.promotion }}. All systems operational and release is live!"
 
       # Update to production labels
       - as: update-ticket-labels
@@ -633,9 +633,9 @@ spec:
             removeLabels:
             - "env-stage"
             addLabels:
-            - "env-${{ ctx.stage.name }}"
+            - "env-${{ ctx.stage }}"
             - "released-${{ imageFrom(vars.imageRepo).Tag }}"
-            - "promotion-${{ ctx.promotion.name }}"
+            - "promotion-${{ ctx.promotion }}"
 
       # Cleanup on failure
       - as: on-failure-cleanup-comment
