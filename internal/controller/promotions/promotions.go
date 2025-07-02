@@ -289,6 +289,7 @@ func (r *reconciler) Reconcile(
 	if promo.Status.Phase != kargoapi.PromotionPhaseRunning {
 		if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
 			status.Phase = kargoapi.PromotionPhaseRunning
+			status.StartedAt = &metav1.Time{Time: time.Now()}
 		}); err != nil {
 			return ctrl.Result{}, err
 		}
