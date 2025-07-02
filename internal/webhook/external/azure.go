@@ -16,62 +16,62 @@ import (
 )
 
 const (
-	acrSecretDataKey = "secret"
-	acr              = "acr"
+	azureSecretDataKey = "secret"
+	azure              = "azure"
 )
 
 func init() {
 	registry.register(
-		acr,
+		azure,
 		webhookReceiverRegistration{
 			predicate: func(cfg kargoapi.WebhookReceiverConfig) bool {
-				return cfg.ACR != nil
+				return cfg.Azure != nil
 			},
-			factory: newACRWebhookReceiver,
+			factory: newAzureWebhookReceiver,
 		},
 	)
 }
 
-// acrWebhookReceiver is an implementation of WebhookReceiver that handles
-// inbound webhooks from acr.
-type acrWebhookReceiver struct {
+// azureWebhookReceiver is an implementation of WebhookReceiver that handles
+// inbound webhooks from azure.
+type azureWebhookReceiver struct {
 	*baseWebhookReceiver
 }
 
-// newACRWebhookReceiver returns a new instance of acrWebhookReceiver.
-func newACRWebhookReceiver(
+// newazureWebhookReceiver returns a new instance of azureWebhookReceiver.
+func newAzureWebhookReceiver(
 	c client.Client,
 	project string,
 	cfg kargoapi.WebhookReceiverConfig,
 ) WebhookReceiver {
-	return &acrWebhookReceiver{
+	return &azureWebhookReceiver{
 		baseWebhookReceiver: &baseWebhookReceiver{
 			client:     c,
 			project:    project,
-			secretName: cfg.ACR.SecretRef.Name,
+			secretName: cfg.Azure.SecretRef.Name,
 		},
 	}
 }
 
 // GetDetails implements WebhookReceiver.
-func (q *acrWebhookReceiver) getReceiverType() string {
-	return acr
+func (q *azureWebhookReceiver) getReceiverType() string {
+	return azure
 }
 
 // getSecretValues implements WebhookReceiver.
-func (q *acrWebhookReceiver) getSecretValues(
+func (q *azureWebhookReceiver) getSecretValues(
 	secretData map[string][]byte,
 ) ([]string, error) {
-	secretValue, ok := secretData[acrSecretDataKey]
+	secretValue, ok := secretData[azureSecretDataKey]
 	if !ok {
 		return nil,
-			errors.New("Secret data is not valid for an ACR WebhookReceiver")
+			errors.New("Secret data is not valid for an Azure WebhookReceiver")
 	}
 	return []string{string(secretValue)}, nil
 }
 
 // getHandler implements WebhookReceiver.
-func (q *acrWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
+func (q *azureWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		logger := logging.LoggerFromContext(ctx)
@@ -113,7 +113,7 @@ func (q *acrWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 				payload.Target.Repository,
 			)
 
-			// Payloads from acr contain no information about media type, so we
+			// Payloads from azure contain no information about media type, so we
 			// normalize the URL BOTH as if it were an image repo URL and as if it were
 			// a chart repository URL. These will coincidentally be the same, but by
 			// doing this, we safeguard against future changes to normalization logic.

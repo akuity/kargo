@@ -17,7 +17,7 @@ import (
 	"github.com/akuity/kargo/internal/indexer"
 )
 
-func TestACRHandler(t *testing.T) {
+func TestAzureHandler(t *testing.T) {
 	const testURL = "https://webhooks.kargo.example.com/nonsense"
 
 	const testProjectName = "fake-project"
@@ -129,7 +129,7 @@ func TestACRHandler(t *testing.T) {
 			})
 
 			w := httptest.NewRecorder()
-			(&acrWebhookReceiver{
+			(&azureWebhookReceiver{
 				baseWebhookReceiver: &baseWebhookReceiver{
 					client:  testCase.client,
 					project: testProjectName,
