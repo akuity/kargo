@@ -22,7 +22,7 @@ All Jira operations require proper authentication credentials stored in a Kubern
 | Name                     | Type     | Required | Description                                                                                                                  |
 | ------------------------ | -------- | -------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | `credentials.secretName` | `string` | Y        | Name of the `Secret` containing the Jira credentials.                                                                        |
-| `credentials.namespace`  | `string` | N        | Namespace containing the credentials `Secret`. This can be the Project's namespace or the cluster secrets namespace (`kargo-cluster-secrets`). If empty, the Project's namespace is assumed.|
+| `credentials.namespace`  | `string` | N        | Namespace containing the credentials `Secret`. This can be the Project's namespace, the cluster secrets namespace (`kargo-cluster-secrets`) or any of the configured global credential namespaces. If empty, the Project's namespace is assumed.|
 
 The referenced `Secret` should contain the following keys:
 
@@ -62,29 +62,29 @@ This example creates a new Jira issue to track a promotion, assigns it to a team
 
 ```yaml
 steps:
-  - uses: jira
-    as: create-promotion-issue
-    config:
-      credentials:
-        secretName: jira-credentials
-      createIssue:
-        projectKey: DEPLOY
-        summary: "Deploy ${{ imageFrom(vars.imageRepo).Tag }} to ${{ ctx.stage.name }}"
-        description: "Deploying ${{ imageFrom(vars.imageRepo).RepoURL }}:${{ imageFrom(vars.imageRepo).Tag }} to ${{ ctx.stage.name }} environment. Promotion ID: ${{ ctx.promotion.name }}. Freight: ${{ ctx.targetFreight.name }}."
-        issueType: Task
-        assigneeEmail: devops@company.com
-        labels:
-          - promotion
-          - "${{ ctx.stage.name }}"
-          - "release-${{ imageFrom(vars.imageRepo).Tag }}"
-  # Use the created issue key in subsequent steps
-  - uses: jira
-    config:
-      credentials:
-        secretName: jira-credentials
-      updateIssue:
-        issueKey: "${{ outputs['create-promotion-issue'].key }}"
-        status: "IN PROGRESS"
+- uses: jira
+  as: create-promotion-issue
+  config:
+    credentials:
+      secretName: jira-credentials
+    createIssue:
+      projectKey: DEPLOY
+      summary: "Deploy ${{ imageFrom(vars.imageRepo).Tag }} to ${{ ctx.stage.name }}"
+      description: "Deploying ${{ imageFrom(vars.imageRepo).RepoURL }}:${{ imageFrom(vars.imageRepo).Tag }} to ${{ ctx.stage.name }} environment. Promotion ID: ${{ ctx.promotion.name }}. Freight: ${{ ctx.targetFreight.name }}."
+      issueType: Task
+      assigneeEmail: devops@company.com
+      labels:
+      - promotion
+      - "${{ ctx.stage.name }}"
+      - "release-${{ imageFrom(vars.imageRepo).Tag }}"
+# Use the created issue key in subsequent steps
+- uses: jira
+  config:
+    credentials:
+      secretName: jira-credentials
+    updateIssue:
+      issueKey: "${{ outputs['create-promotion-issue'].key }}"
+      status: "IN PROGRESS"
 ```
 
 ### Update Issue
@@ -116,20 +116,20 @@ This example updates an existing issue's status and adds a comment with promotio
 
 ```yaml
 steps:
-  - uses: jira
-    config:
-      credentials:
-        secretName: jira-credentials
-      updateIssue:
-        issueKey: DEPLOY-123
-        status: "IN PROGRESS"
-        summary: "Deploy ${{ imageFrom(vars.imageRepo).Tag }} to ${{ ctx.stage.name }} - IN PROGRESS"
-        addLabels:
-          - deploying
-          - "${{ ctx.stage.name }}-promotion"
-        customFields:
-          customfield_10000: "${{ ctx.stage.name }} Environment"
-          customfield_10001: "${{ ctx.promotion.name }}"
+- uses: jira
+  config:
+    credentials:
+      secretName: jira-credentials
+    updateIssue:
+      issueKey: DEPLOY-123
+      status: "IN PROGRESS"
+      summary: "Deploy ${{ imageFrom(vars.imageRepo).Tag }} to ${{ ctx.stage.name }} - IN PROGRESS"
+      addLabels:
+      - deploying
+      - "${{ ctx.stage.name }}-promotion"
+      customFields:
+        customfield_10000: "${{ ctx.stage.name }} Environment"
+        customfield_10001: "${{ ctx.promotion.name }}"
 ```
 
 ### Delete Issue
@@ -153,19 +153,19 @@ This example deletes a Jira issue and all its subtasks when a promotion fails.
 
 ```yaml
 steps:
-  # existing steps create issue and other promotion steps
-  # ....
-  # ....
-  # on failure cleanup logic
-  - as: on-failure-cleanup-issue
-    uses: jira
-    if: ${{ failure() }}
-    config:
-      credentials:
-        secretName: jira-credentials
-      deleteIssue:
-        issueKey: "${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}"
-        deleteSubtasks: true
+# existing steps create issue and other promotion steps
+# ....
+# ....
+# on failure cleanup logic
+- as: on-failure-cleanup-issue
+  uses: jira
+  if: ${{ failure() }}
+  config:
+    credentials:
+      secretName: jira-credentials
+    deleteIssue:
+      issueKey: "${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}"
+      deleteSubtasks: true
 ```
 
 ### Search Issues
@@ -417,7 +417,7 @@ spec:
                 - type: text
                   text: "Image:"
                   marks:
-                    - type: strong
+                  - type: strong
                 - type: text
                   text: " "
                 - type: text
@@ -429,7 +429,7 @@ spec:
                 - type: text
                   text: "Project:"
                   marks:
-                    - type: strong
+                  - type: strong
                 - type: text
                   text: " "
                 - type: text
