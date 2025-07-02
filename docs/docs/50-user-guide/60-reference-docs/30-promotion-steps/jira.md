@@ -267,7 +267,7 @@ steps:
       secretName: jira-credentials
     deleteComment:
       issueKey: "${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}"
-      commentID: "${{ outputs['add-progress-comment'].commentID }}"
+      commentID: "${{ quote(outputs['add-progress-comment'].commentID) }}"
 ```
 
 ### Delete Comment
