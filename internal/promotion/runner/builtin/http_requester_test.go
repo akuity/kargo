@@ -626,7 +626,7 @@ func Test_httpRequester_wasRequestSuccessful(t *testing.T) {
 			cfg:  builtin.HTTPConfig{SuccessExpression: "invalid()"},
 			assertions: func(t *testing.T, _ bool, err error) {
 				require.ErrorContains(t, err, "error evaluating success expression")
-				require.True(t, promotion.IsTerminal(err))
+				require.False(t, promotion.IsTerminal(err))
 			},
 		},
 		{
@@ -635,7 +635,7 @@ func Test_httpRequester_wasRequestSuccessful(t *testing.T) {
 			assertions: func(t *testing.T, _ bool, err error) {
 				require.ErrorContains(t, err, "success expression")
 				require.ErrorContains(t, err, "did not evaluate to a boolean")
-				require.True(t, promotion.IsTerminal(err))
+				require.False(t, promotion.IsTerminal(err))
 			},
 		},
 		{
@@ -708,7 +708,7 @@ func Test_httpRequester_didRequestFail(t *testing.T) {
 			cfg:  builtin.HTTPConfig{FailureExpression: "invalid()"},
 			assertions: func(t *testing.T, _ bool, err error) {
 				require.ErrorContains(t, err, "error evaluating failure expression")
-				require.True(t, promotion.IsTerminal(err))
+				require.False(t, promotion.IsTerminal(err))
 			},
 		},
 		{
@@ -716,7 +716,7 @@ func Test_httpRequester_didRequestFail(t *testing.T) {
 			cfg:  builtin.HTTPConfig{FailureExpression: `"foo"`},
 			assertions: func(t *testing.T, _ bool, err error) {
 				require.ErrorContains(t, err, "did not evaluate to a boolean")
-				require.True(t, promotion.IsTerminal(err))
+				require.False(t, promotion.IsTerminal(err))
 			},
 		},
 		{
@@ -801,7 +801,7 @@ func Test_httpRequester_buildOutputs(t *testing.T) {
 			}},
 			assertions: func(t *testing.T, _ map[string]any, err error) {
 				require.ErrorContains(t, err, "error evaluating output expression")
-				require.True(t, promotion.IsTerminal(err))
+				require.False(t, promotion.IsTerminal(err))
 			},
 		},
 		{

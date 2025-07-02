@@ -239,16 +239,12 @@ func (h *httpRequester) wasRequestSuccessful(
 		}
 		successAny, err := expr.Run(program, env)
 		if err != nil {
-			return false, &promotion.TerminalError{
-				Err: fmt.Errorf("error evaluating success expression %q: %w", cfg.SuccessExpression, err),
-			}
+			return false, fmt.Errorf("error evaluating success expression %q: %w", cfg.SuccessExpression, err)
 		}
 		if success, ok := successAny.(bool); ok {
 			return success, nil
 		}
-		return false, &promotion.TerminalError{
-			Err: fmt.Errorf("success expression %q did not evaluate to a boolean (got %T)", cfg.SuccessExpression, successAny),
-		}
+		return false, fmt.Errorf("success expression %q did not evaluate to a boolean (got %T)", cfg.SuccessExpression, successAny)
 	case cfg.FailureExpression != "":
 		failure, err := h.didRequestFail(cfg, statusCode, env)
 		if err != nil {
@@ -277,16 +273,12 @@ func (h *httpRequester) didRequestFail(
 		}
 		failureAny, err := expr.Run(program, env)
 		if err != nil {
-			return true, &promotion.TerminalError{
-				Err: fmt.Errorf("error evaluating failure expression %q: %w", cfg.FailureExpression, err),
-			}
+			return true, fmt.Errorf("error evaluating failure expression %q: %w", cfg.FailureExpression, err)
 		}
 		if failure, ok := failureAny.(bool); ok {
 			return failure, nil
 		}
-		return true, &promotion.TerminalError{
-			Err: fmt.Errorf("failure expression %q did not evaluate to a boolean (got %T)", cfg.FailureExpression, failureAny),
-		}
+		return true, fmt.Errorf("failure expression %q did not evaluate to a boolean (got %T)", cfg.FailureExpression, failureAny)
 	case cfg.SuccessExpression != "":
 		success, err := h.wasRequestSuccessful(cfg, statusCode, env)
 		if err != nil {
@@ -313,9 +305,7 @@ func (h *httpRequester) buildOutputs(
 			}
 		}
 		if outputs[output.Name], err = expr.Run(program, env); err != nil {
-			return nil, &promotion.TerminalError{
-				Err: fmt.Errorf("error evaluating output expression %q: %w", output.Name, err),
-			}
+			return nil, fmt.Errorf("error evaluating output expression %q: %w", output.Name, err)
 		}
 	}
 	return outputs, nil
