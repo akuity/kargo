@@ -449,8 +449,9 @@ func TestValidateSub(t *testing.T) {
 					RepoURL: "bogus",
 				},
 				Image: &kargoapi.ImageSubscription{
-					SemverConstraint: "bogus",
-					Platform:         "bogus",
+					ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+					SemverConstraint:       "bogus",
+					Platform:               "bogus",
 				},
 				Chart: &kargoapi.ChartSubscription{
 					SemverConstraint: "bogus",
@@ -595,9 +596,10 @@ func TestValidateImageSub(t *testing.T) {
 		{
 			name: "invalid",
 			sub: kargoapi.ImageSubscription{
-				RepoURL:          "bogus",
-				SemverConstraint: "bogus",
-				Platform:         "bogus",
+				RepoURL:                "bogus",
+				ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+				SemverConstraint:       "bogus",
+				Platform:               "bogus",
 			},
 			seen: uniqueSubSet{
 				subscriptionKey{
