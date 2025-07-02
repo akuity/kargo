@@ -71,3 +71,26 @@ main.landing-page {
     text-decoration: none !important;
   }
 }
+
+.tag::after {
+  display: inline-block;
+  padding: 0.1em 0.5em;
+  border-radius: 0.3em;
+  vertical-align: middle;
+  font-weight: normal;
+  font-size: small;
+}
+
+.enterprise::after {
+  content: "Enterprise";
+  margin-bottom: 0.5em;
+  background: #1976d2;
+  color: #fff;
+}
+
+.beta::after {
+  content: "Beta";
+  margin-bottom: 0.5em;
+  background: #FBCFA8;
+  color: #000;
+}
