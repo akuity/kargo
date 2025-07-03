@@ -366,18 +366,18 @@ type ImageSubscription struct {
 	// Deprecated: Use constraint instead.
 	//
 	// +kubebuilder:validation:Optional
-	SemverConstraint string `json:"semverConstraint,omitempty" protobuf:"bytes,4,opt,name=semverConstraint"`
+	SemverConstraint string `json:"semverConstraint,omitempty" protobuf:"bytes,12,opt,name=semverConstraint"`
 	// Constraint specifies constraints on what new image versions are permissible.
 	// This field takes precedence over the deprecated SemverConstraint field
 	// and can be used with any image strategy.
 	// +kubebuilder:validation:Optional
-	Constraint string `json:"constraint,omitempty" protobuf:"bytes,5,opt,name=constraint"`
+	Constraint string `json:"constraint,omitempty" protobuf:"bytes,13,opt,name=constraint"`
 	// AllowTags is a regular expression that can optionally be used to limit the
 	// image tags that are considered in determining the newest version of an
 	// image. This field is optional.
 	//
 	// +kubebuilder:validation:Optional
-	AllowTags string `json:"allowTags,omitempty" protobuf:"bytes,6,opt,name=allowTags"`
+	AllowTags string `json:"allowTags,omitempty" protobuf:"bytes,5,opt,name=allowTags"`
 	// IgnoreTags is a list of tags that must be ignored when determining the
 	// newest version of an image. No regular expressions or glob patterns are
 	// supported yet. This field is optional.

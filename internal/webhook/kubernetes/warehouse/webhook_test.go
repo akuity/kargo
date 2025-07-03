@@ -261,8 +261,9 @@ func TestValidateSpec(t *testing.T) {
 							RepoURL: "bogus",
 						},
 						Image: &kargoapi.ImageSubscription{
-							SemverConstraint: "bogus",
-							Platform:         "bogus",
+							ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+							SemverConstraint:       "bogus",
+							Platform:               "bogus",
 						},
 						Chart: &kargoapi.ChartSubscription{
 							SemverConstraint: "bogus",
@@ -362,8 +363,9 @@ func TestValidateSubs(t *testing.T) {
 						RepoURL: "bogus",
 					},
 					Image: &kargoapi.ImageSubscription{
-						SemverConstraint: "bogus",
-						Platform:         "bogus",
+						ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+						SemverConstraint:       "bogus",
+						Platform:               "bogus",
 					},
 					Chart: &kargoapi.ChartSubscription{
 						SemverConstraint: "bogus",
