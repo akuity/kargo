@@ -82,7 +82,7 @@ main.landing-page {
 }
 
 .enterprise::after {
-  content: "Enterprise";
+  content: "Kargo Promote";
   margin-bottom: 0.5em;
   background: #1976d2;
   color: #fff;
