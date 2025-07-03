@@ -992,13 +992,13 @@ message ImageSubscription {
   // Deprecated: Use constraint instead.
   //
   // +kubebuilder:validation:Optional
-  optional string semverConstraint = 12;
+  optional string semverConstraint = 4;
 
   // Constraint specifies constraints on what new image versions are permissible.
   // This field takes precedence over the deprecated SemverConstraint field
   // and can be used with any image strategy.
   // +kubebuilder:validation:Optional
-  optional string constraint = 13;
+  optional string constraint = 11;
 
   // AllowTags is a regular expression that can optionally be used to limit the
   // image tags that are considered in determining the newest version of an
@@ -1012,7 +1012,7 @@ message ImageSubscription {
   // supported yet. This field is optional.
   //
   // +kubebuilder:validation:Optional
-  repeated string ignoreTags = 7;
+  repeated string ignoreTags = 6;
 
   // Platform is a string of the form <os>/<arch> that limits the tags that can
   // be considered when searching for new versions of an image. This field is
@@ -1024,12 +1024,12 @@ message ImageSubscription {
   // not unheard of.
   //
   // +kubebuilder:validation:Optional
-  optional string platform = 8;
+  optional string platform = 7;
 
   // InsecureSkipTLSVerify specifies whether certificate verification errors
   // should be ignored when connecting to the repository. This should be enabled
   // only with great caution.
-  optional bool insecureSkipTLSVerify = 9;
+  optional bool insecureSkipTLSVerify = 8;
 
   // DiscoveryLimit is an optional limit on the number of image references
   // that can be discovered for this subscription. The limit is applied after
@@ -1040,7 +1040,7 @@ message ImageSubscription {
   // +kubebuilder:validation:Minimum=1
   // +kubebuilder:validation:Maximum=100
   // +kubebuilder:default=20
-  optional int32 discoveryLimit = 11;
+  optional int32 discoveryLimit = 9;
 }
 
 // Project is a resource type that reconciles to a specially labeled namespace
