@@ -3,7 +3,6 @@ package stage
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -16,7 +15,6 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
-	"github.com/akuity/kargo/internal/promotion"
 	libWebhook "github.com/akuity/kargo/internal/webhook/kubernetes"
 )
 
@@ -44,7 +42,7 @@ type webhook struct {
 
 	validateCreateOrUpdateFn func(*kargoapi.Stage) (admission.Warnings, error)
 
-	validateSpecFn func(*field.Path, *kargoapi.StageSpec) field.ErrorList
+	validateSpecFn func(*field.Path, kargoapi.StageSpec) field.ErrorList
 
 	isRequestFromKargoControlplaneFn libWebhook.IsRequestFromKargoControlplaneFn
 }
@@ -184,7 +182,7 @@ func (w *webhook) ValidateDelete(
 func (w *webhook) validateCreateOrUpdate(
 	s *kargoapi.Stage,
 ) (admission.Warnings, error) {
-	if errs := w.validateSpecFn(field.NewPath("spec"), &s.Spec); len(errs) > 0 {
+	if errs := w.validateSpecFn(field.NewPath("spec"), s.Spec); len(errs) > 0 {
 		return nil, apierrors.NewInvalid(stageGroupKind, s.Name, errs)
 	}
 	return nil, nil
@@ -192,15 +190,18 @@ func (w *webhook) validateCreateOrUpdate(
 
 func (w *webhook) validateSpec(
 	f *field.Path,
-	spec *kargoapi.StageSpec,
+	spec kargoapi.StageSpec,
 ) field.ErrorList {
-	if spec == nil { // nil spec is caught by declarative validations
-		return nil
-	}
 	errs := w.validateRequestedFreight(f.Child("requestedFreight"), spec.RequestedFreight)
+	if spec.PromotionTemplate == nil {
+		return errs
+	}
 	return append(
 		errs,
-		w.ValidatePromotionTemplate(f.Child("promotionTemplate"), spec.PromotionTemplate)...,
+		libWebhook.ValidatePromotionSteps(
+			f.Child("promotionTemplate").Child("spec").Child("steps"),
+			spec.PromotionTemplate.Spec.Steps,
+		)...,
 	)
 }
 
@@ -227,25 +228,4 @@ func (w *webhook) validateRequestedFreight(
 		seenOrigins[req.Origin.String()] = struct{}{}
 	}
 	return nil
-}
-
-func (w *webhook) ValidatePromotionTemplate(
-	f *field.Path,
-	promoTemplate *kargoapi.PromotionTemplate,
-) field.ErrorList {
-	if promoTemplate == nil {
-		return nil
-	}
-	errs := field.ErrorList{}
-	for i, step := range promoTemplate.Spec.Steps {
-		stepAlias := strings.TrimSpace(step.As)
-		if promotion.ReservedStepAliasRegex.MatchString(stepAlias) {
-			errs = append(errs, field.Invalid(
-				f.Child("spec", "steps").Index(i).Child("as"),
-				stepAlias,
-				"step alias is reserved",
-			))
-		}
-	}
-	return errs
 }

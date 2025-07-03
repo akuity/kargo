@@ -37,7 +37,7 @@ func TestNewWebhook(t *testing.T) {
 	require.NotNil(t, w.isRequestFromKargoControlplaneFn)
 }
 
-func TestDefault(t *testing.T) {
+func Test_webhook_Default(t *testing.T) {
 	const testShardName = "fake-shard"
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
@@ -834,7 +834,7 @@ func TestDefault(t *testing.T) {
 	}
 }
 
-func TestValidateCreate(t *testing.T) {
+func Test_webhook_ValidateCreate(t *testing.T) {
 	testCases := []struct {
 		name       string
 		webhook    *webhook
@@ -912,7 +912,7 @@ func TestValidateCreate(t *testing.T) {
 	}
 }
 
-func TestValidateUpdate(t *testing.T) {
+func Test_webhook_ValidateUpdate(t *testing.T) {
 	testCases := []struct {
 		name       string
 		webhook    *webhook
@@ -958,7 +958,7 @@ func TestValidateUpdate(t *testing.T) {
 	}
 }
 
-func TestValidateDelete(t *testing.T) {
+func Test_webhook_ValidateDelete(t *testing.T) {
 	w := &webhook{}
 	_, err := w.ValidateDelete(context.Background(), nil)
 	require.NoError(t, err)
@@ -975,7 +975,7 @@ func TestValidateCreateOrUpdate(t *testing.T) {
 			webhook: &webhook{
 				validateSpecFn: func(
 					*field.Path,
-					*kargoapi.StageSpec,
+					kargoapi.StageSpec,
 				) field.ErrorList {
 					return field.ErrorList{{}}
 				},
@@ -989,7 +989,7 @@ func TestValidateCreateOrUpdate(t *testing.T) {
 			webhook: &webhook{
 				validateSpecFn: func(
 					*field.Path,
-					*kargoapi.StageSpec,
+					kargoapi.StageSpec,
 				) field.ErrorList {
 					return nil
 				},
@@ -1007,7 +1007,7 @@ func TestValidateCreateOrUpdate(t *testing.T) {
 	}
 }
 
-func TestValidateSpec(t *testing.T) {
+func Test_webhook_ValidateSpec(t *testing.T) {
 	testFreightRequest := kargoapi.FreightRequest{
 		Origin: kargoapi.FreightOrigin{
 			Kind: kargoapi.FreightOriginKindWarehouse,
@@ -1016,19 +1016,12 @@ func TestValidateSpec(t *testing.T) {
 	}
 	testCases := []struct {
 		name       string
-		spec       *kargoapi.StageSpec
-		assertions func(*testing.T, *kargoapi.StageSpec, field.ErrorList)
+		spec       kargoapi.StageSpec
+		assertions func(*testing.T, kargoapi.StageSpec, field.ErrorList)
 	}{
 		{
-			name: "nil",
-			assertions: func(t *testing.T, _ *kargoapi.StageSpec, errs field.ErrorList) {
-				require.Nil(t, errs)
-			},
-		},
-
-		{
 			name: "invalid",
-			spec: &kargoapi.StageSpec{
+			spec: kargoapi.StageSpec{
 				// Has multiple sources for one Freight origin...
 				RequestedFreight: []kargoapi.FreightRequest{
 					testFreightRequest,
@@ -1036,12 +1029,15 @@ func TestValidateSpec(t *testing.T) {
 				},
 				PromotionTemplate: &kargoapi.PromotionTemplate{
 					Spec: kargoapi.PromotionTemplateSpec{
-						// This step alias matches a reserved pattern
-						Steps: []kargoapi.PromotionStep{{As: "step-42"}},
+						Steps: []kargoapi.PromotionStep{
+							{As: "step-42"}, // This step alias matches a reserved pattern
+							{As: "commit"},
+							{As: "commit"}, // Duplicate!
+						},
 					},
 				},
 			},
-			assertions: func(t *testing.T, spec *kargoapi.StageSpec, errs field.ErrorList) {
+			assertions: func(t *testing.T, spec kargoapi.StageSpec, errs field.ErrorList) {
 				// We really want to see that all underlying errors have been bubbled up
 				// to this level and been aggregated.
 				require.Equal(
@@ -1060,20 +1056,34 @@ func TestValidateSpec(t *testing.T) {
 							BadValue: "step-42",
 							Detail:   "step alias is reserved",
 						},
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "spec.promotionTemplate.spec.steps[2].as",
+							BadValue: "commit",
+							Detail:   "step alias duplicates that of spec.promotionTemplate.spec.steps[1]",
+						},
 					},
 					errs,
 				)
 			},
 		},
-
 		{
 			name: "valid",
-			spec: &kargoapi.StageSpec{
+			spec: kargoapi.StageSpec{
 				RequestedFreight: []kargoapi.FreightRequest{
 					testFreightRequest,
 				},
+				PromotionTemplate: &kargoapi.PromotionTemplate{
+					Spec: kargoapi.PromotionTemplateSpec{
+						Steps: []kargoapi.PromotionStep{
+							{As: "foo"},
+							{As: "bar"},
+							{As: "baz"},
+						},
+					},
+				},
 			},
-			assertions: func(t *testing.T, _ *kargoapi.StageSpec, errs field.ErrorList) {
+			assertions: func(t *testing.T, _ kargoapi.StageSpec, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
@@ -1093,7 +1103,7 @@ func TestValidateSpec(t *testing.T) {
 	}
 }
 
-func TestValidateRequestedFreight(t *testing.T) {
+func Test_webhook_ValidateRequestedFreight(t *testing.T) {
 	testFreightRequest := kargoapi.FreightRequest{
 		Origin: kargoapi.FreightOrigin{
 			Kind: kargoapi.FreightOriginKindWarehouse,
@@ -1147,72 +1157,6 @@ func TestValidateRequestedFreight(t *testing.T) {
 				w.validateRequestedFreight(
 					field.NewPath("requestedFreight"),
 					testCase.reqs,
-				),
-			)
-		})
-	}
-}
-
-func TestValidatePromotionTemplate(t *testing.T) {
-	testCases := []struct {
-		name          string
-		promoTemplate *kargoapi.PromotionTemplate
-		assertions    func(*testing.T, field.ErrorList)
-	}{
-		{
-			name: "promotionTemplate is nil",
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.Empty(t, errs)
-			},
-		},
-		{
-			name: "promotionTemplate is valid",
-			promoTemplate: &kargoapi.PromotionTemplate{
-				Spec: kargoapi.PromotionTemplateSpec{
-					Steps: []kargoapi.PromotionStep{
-						{},
-						{As: "fake-step"},
-					},
-				},
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.Empty(t, errs)
-			},
-		},
-		{
-			name: "promotionTemplate is invalid",
-			promoTemplate: &kargoapi.PromotionTemplate{
-				Spec: kargoapi.PromotionTemplateSpec{
-					Steps: []kargoapi.PromotionStep{
-						{},
-						{As: "step-42"}, // This step alias matches a reserved pattern
-					},
-				},
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.Equal(
-					t,
-					field.ErrorList{
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "promotionTemplate.spec.steps[1].as",
-							BadValue: "step-42",
-							Detail:   "step alias is reserved",
-						},
-					},
-					errs,
-				)
-			},
-		},
-	}
-	w := &webhook{}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				t,
-				w.ValidatePromotionTemplate(
-					field.NewPath("promotionTemplate"),
-					testCase.promoTemplate,
 				),
 			)
 		})
