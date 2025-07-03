@@ -990,20 +990,20 @@ message ImageSubscription {
   // Deprecated: Use constraint instead.
   //
   // +kubebuilder:validation:Optional
-  optional string semverConstraint = 4;
+  optional string semverConstraint = 12;
 
   // Constraint specifies constraints on what new image versions are permissible.
   // This field takes precedence over the deprecated SemverConstraint field
   // and can be used with any image strategy.
   // +kubebuilder:validation:Optional
-  optional string constraint = 5;
+  optional string constraint = 13;
 
   // AllowTags is a regular expression that can optionally be used to limit the
   // image tags that are considered in determining the newest version of an
   // image. This field is optional.
   //
   // +kubebuilder:validation:Optional
-  optional string allowTags = 6;
+  optional string allowTags = 5;
 
   // IgnoreTags is a list of tags that must be ignored when determining the
   // newest version of an image. No regular expressions or glob patterns are

@@ -214,18 +214,23 @@ func (w *webhook) validateImageSub(
 	// Give precedence to the constraint field
 	// However, validate semVerConstraint field if
 	// semVer image strategy is used
-	if sub.SemverConstraint != "" && sub.ImageSelectionStrategy == kargoapi.ImageSelectionStrategySemVer {
-		if err := validateSemverConstraint(
-			f.Child("semverConstraint"),
-			sub.SemverConstraint,
-		); err != nil {
-			errs = field.ErrorList{err}
+	if sub.ImageSelectionStrategy == kargoapi.ImageSelectionStrategySemVer {
+		if sub.SemverConstraint != "" {
+			if err := validateSemverConstraint(
+				f.Child("semverConstraint"),
+				sub.SemverConstraint,
+			); err != nil {
+				errs = field.ErrorList{err}
+			}
+		} else if sub.Constraint != "" {
+			if err := validateSemverConstraint(
+				f.Child("constraint"),
+				sub.Constraint,
+			); err != nil {
+				errs = field.ErrorList{err}
+			}
 		}
 	}
-	// TODO(@nitishfy) we should conditionally validate the
-	// constratins field that it is a validd semver range
-	// expression if and only if the semver selection
-	// strategy is being used
 	if sub.Platform != "" {
 		if !image.ValidatePlatformConstraint(sub.Platform) {
 			errs = append(errs, field.Invalid(f.Child("platform"), sub.Platform, ""))
