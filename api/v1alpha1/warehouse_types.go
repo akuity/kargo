@@ -306,6 +306,8 @@ type GitSubscription struct {
 }
 
 // ImageSubscription defines a subscription to an image repository.
+//
+// +kubebuilder:validation:XValidation:message="ImageSubscription cannot have both semverConstraint and constraint set",rule="!(has(self.semverConstraint) && has(self.constraint))"
 type ImageSubscription struct {
 	// RepoURL specifies the URL of the image repository to subscribe to. The
 	// value in this field MUST NOT include an image tag. This field is required.
