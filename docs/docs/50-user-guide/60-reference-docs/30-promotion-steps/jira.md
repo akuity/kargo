@@ -7,8 +7,8 @@ description: Integrates with Jira to manage issues, comments, and track promotio
 <span class="tag beta"></span>
 # `jira`
 
-:::info Enterprise Feature
-This promotion step is only available in Akuity Promote, you can use this feature in Kargo v1.6+ offered on [Akuity Platform](https://akuity.io/akuity-platform).
+:::info
+This promotion step is only available with Akuity Promote version v1.6 and above on [Akuity Platform](https://akuity.io/akuity-platform).
 :::
 
 The `jira` promotion step provides comprehensive integration with Jira, allowing you to create, update, delete, and search for issues, manage comments, and track promotion workflows. This is particularly useful for maintaining traceability between your promotion processes and project management activities.
@@ -22,7 +22,7 @@ All Jira operations require proper authentication credentials stored in a Kubern
 | Name                     | Type     | Required | Description                                                                                                                  |
 | ------------------------ | -------- | -------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | `credentials.secretName` | `string` | Y        | Name of the `Secret` containing the Jira credentials.                                                                        |
-| `credentials.namespace`  | `string` | N        | Namespace containing the credentials `Secret`. This can be the Project's namespace, the cluster secrets namespace (`kargo-cluster-secrets`) or any of the configured global credential namespaces. If empty, the Project's namespace is assumed.|
+
 
 The referenced `Secret` should contain the following keys:
 
@@ -68,9 +68,9 @@ steps:
     credentials:
       secretName: jira-credentials
     createIssue:
-      projectKey: DEPLOY
-      summary: "Deploy ${{ imageFrom(vars.imageRepo).Tag }} to ${{ ctx.stage }}"
-      description: "Deploying ${{ imageFrom(vars.imageRepo).RepoURL }}:${{ imageFrom(vars.imageRepo).Tag }} to ${{ ctx.stage }} environment. Promotion ID: ${{ ctx.promotion }}. Freight: ${{ ctx.targetFreight.name }}."
+      projectKey: PROMOTE
+      summary: "Promote ${{ imageFrom(vars.imageRepo).Tag }} to ${{ ctx.stage }}"
+      description: "Promoteing ${{ imageFrom(vars.imageRepo).RepoURL }}:${{ imageFrom(vars.imageRepo).Tag }} to ${{ ctx.stage }} environment. Promotion ID: ${{ ctx.promotion }}. Freight: ${{ ctx.targetFreight.name }}."
       issueType: Task
       assigneeEmail: devops@company.com
       labels:
@@ -108,7 +108,7 @@ Updates an existing Jira issue with new information.
 
 #### Output
 
-This step does not produce any output values.
+This step does not produce any output.
 
 #### Example
 
@@ -121,11 +121,11 @@ steps:
     credentials:
       secretName: jira-credentials
     updateIssue:
-      issueKey: DEPLOY-123
+      issueKey: PROMOTE-123
       status: "IN PROGRESS"
-      summary: "Deploy ${{ imageFrom(vars.imageRepo).Tag }} to ${{ ctx.stage }} - IN PROGRESS"
+      summary: "Promote ${{ imageFrom(vars.imageRepo).Tag }} to ${{ ctx.stage }} - IN PROGRESS"
       addLabels:
-      - deploying
+      - promoting
       - "${{ ctx.stage }}-promotion"
       customFields:
         customfield_10000: "${{ ctx.stage }} Environment"
@@ -134,7 +134,7 @@ steps:
 
 ### Delete Issue
 
-Deletes a Jira issue and optionally its subtasks.
+Deletes a Jira issue and, optionally, its subtasks.
 
 #### Configuration
 
@@ -145,7 +145,7 @@ Deletes a Jira issue and optionally its subtasks.
 
 #### Output
 
-This step does not produce any output values.
+This step does not produce any output.
 
 #### Example
 
@@ -199,7 +199,7 @@ steps:
     credentials:
       secretName: jira-credentials
     searchIssue:
-      jql: 'project = DEPLOY AND status != "Done" AND labels = "${{ ctx.stage }}-promotion" AND created >= -7d'
+      jql: 'project = PROMOTE AND status != "Done" AND labels = "${{ ctx.stage }}-promotion" AND created >= -7d'
       expectMultiple: true
       fields:
       - summary
@@ -259,7 +259,7 @@ steps:
       secretName: jira-credentials
     commentOnIssue:
       issueKey: "${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}"
-      body: "Promotion started. Environment: ${{ ctx.stage }}. Image: ${{ imageFrom(vars.imageRepo).RepoURL }}:${{ imageFrom(vars.imageRepo).Tag }}. Promotion: ${{ ctx.promotion }}. Status: Deploying to ${{ ctx.stage }} environment..."
+      body: "Promotion started. Environment: ${{ ctx.stage }}. Image: ${{ imageFrom(vars.imageRepo).RepoURL }}:${{ imageFrom(vars.imageRepo).Tag }}. Promotion: ${{ ctx.promotion }}. Status: Promoting to ${{ ctx.stage }} environment..."
 # Later use the comment ID if needed
 - uses: jira
   config:
@@ -283,7 +283,7 @@ Removes a specific comment from a Jira issue.
 
 #### Output
 
-This step does not produce any output values.
+This step does not produce any output.
 
 #### Example
 
@@ -315,7 +315,7 @@ Waits for a Jira issue to reach a specific status before proceeding.
 
 #### Output
 
-This step does not produce any output values.
+This step does not produce any output.
 
 #### Example
 
@@ -383,16 +383,16 @@ spec:
       - name: imageRepo
         value: public.ecr.aws/nginx/nginx
       steps:
-      # Create initial promotion ticket
-      - as: create-promotion-ticket
+      # Create initial promotion issue
+      - as: create-promotion-issue
         uses: jira
         config:
           credentials:
             secretName: jira
           createIssue:
-            projectKey: KD
+            projectKey: PROMOTE
             issueType: Task
-            summary: "Deploy Release ${{ imageFrom(vars.imageRepo).Tag }}"
+            summary: "Promote Release ${{ imageFrom(vars.imageRepo).Tag }}"
             assigneeEmail: "devops@company.com"
             adfDescription:
               type: doc
@@ -407,7 +407,7 @@ spec:
                   level: 3
                 content:
                 - type: text
-                  text: "Automated promotion ticket for release "
+                  text: "Automated promotion issue for release "
                 - type: text
                   text: "${{ imageFrom(vars.imageRepo).Tag }}"
                   marks:
@@ -442,7 +442,7 @@ spec:
             - "release-${{ imageFrom(vars.imageRepo).Tag }}"
             - "project-${{ ctx.project }}"
 
-      # Update application, directly updates app for demonstration. Not ideal for practical purposes.
+      # Update the Argo CD Application directly. Not ideal for practical purposes.
       - as: update-app
         uses: argocd-update
         config:
@@ -457,13 +457,13 @@ spec:
                   tag: ${{ imageFrom("public.ecr.aws/nginx/nginx").Tag }}
 
       # Add progress comment
-      - as: comment-on-ticket
+      - as: comment-on-issue
         uses: jira
         config:
           credentials:
             secretName: jira
           commentOnIssue:
-            issueKey: ${{ outputs['create-promotion-ticket'].key }}
+            issueKey: ${{ outputs['create-promotion-issue'].key }}
             body: "Release ${{ imageFrom(vars.imageRepo).Tag }} has been promoted to ${{ ctx.stage }} environment. Freight: ${{ ctx.targetFreight.name }}. Ready for testing."
 
       # Cleanup on failure
@@ -474,7 +474,7 @@ spec:
           credentials:
             secretName: jira
           deleteIssue:
-            issueKey: ${{ outputs['create-promotion-ticket'].key }}
+            issueKey: ${{ outputs['create-promotion-issue'].key }}
             deleteSubtasks: true
 
 ---
@@ -497,7 +497,7 @@ spec:
       - name: imageRepo
         value: public.ecr.aws/nginx/nginx
       steps:
-        # Wait for manual approval to proceed to staging
+        # Wait for manual approval to proceed to UAT
       - as: wait-approval
         uses: jira
         config:
@@ -507,7 +507,7 @@ spec:
             issueKey: ${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}
             expectedStatus: UAT
 
-      # Update application, directly updates app for demonstration. Not ideal for practical purposes.
+      # Update the Argo CD Application directly. Not ideal for practical purposes.
       - as: update-app
         uses: argocd-update
         config:
@@ -521,18 +521,18 @@ spec:
                   - repoURL: ${{ vars.imageRepo }}
                     tag: ${{ imageFrom(vars.imageRepo).Tag }}
 
-      # Update ticket with staging progress
-      - as: comment-on-ticket
+      # Update issue with UAT progress
+      - as: comment-on-issue
         uses: jira
         config:
           credentials:
             secretName: jira
           commentOnIssue:
             issueKey: ${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}
-            body: "Release ${{ imageFrom(vars.imageRepo).Tag }} has been promoted to ${{ ctx.stage }} environment. Promotion: ${{ ctx.promotion }}. Status: Deployed and ready for uat validation."
+            body: "Release ${{ imageFrom(vars.imageRepo).Tag }} has been promoted to ${{ ctx.stage }} environment. Promotion: ${{ ctx.promotion }}. Status: Promoteed and ready for uat validation."
 
       # Update environment labels
-      - as: update-ticket-labels
+      - as: update-issue-labels
         uses: jira
         config:
           credentials:
@@ -548,13 +548,13 @@ spec:
       # Cleanup comments on failure
       - as: on-failure-cleanup-comment
         uses: jira
-        if: ${{ failure() && status('comment-on-ticket') == 'Succeeded' }}
+        if: ${{ failure() && status('comment-on-issue') == 'Succeeded' }}
         config:
           credentials:
             secretName: jira
           deleteComment:
             issueKey: ${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}
-            commentID: ${{ quote(outputs['comment-on-ticket'].commentID) }}
+            commentID: ${{ quote(outputs['comment-on-issue'].commentID) }}
 
 ---
 apiVersion: kargo.akuity.io/v1alpha1
@@ -598,7 +598,7 @@ spec:
             issueKey: ${{ outputs['search-issue'].key }}
             expectedStatus: RELEASED
 
-      # Update application, directly updates app for demonstration. Not ideal for practical purposes.
+      # Update the Argo CD Application directly. Not ideal for practical purposes.
       - as: update-app
         uses: argocd-update
         config:
@@ -613,7 +613,7 @@ spec:
                   tag: ${{ imageFrom("public.ecr.aws/nginx/nginx").Tag }}
 
       # Add final completion comment
-      - as: comment-on-ticket
+      - as: comment-on-issue
         uses: jira
         config:
           credentials:
@@ -623,7 +623,7 @@ spec:
             body: "Release ${{ imageFrom(vars.imageRepo).Tag }} has been successfully promoted to ${{ ctx.stage }} environment. promotion completed for promotion ${{ ctx.promotion }}. All systems operational and release is live!"
 
       # Update to production labels
-      - as: update-ticket-labels
+      - as: update-issue-labels
         uses: jira
         config:
           credentials:
@@ -640,13 +640,13 @@ spec:
       # Cleanup on failure
       - as: on-failure-cleanup-comment
         uses: jira
-        if: ${{ failure() && status('comment-on-ticket') == 'Succeeded' }}
+        if: ${{ failure() && status('comment-on-issue') == 'Succeeded' }}
         config:
           credentials:
             secretName: jira
           deleteComment:
             issueKey: ${{ outputs['search-issue'].key }}
-            commentID: ${{ quote(outputs['comment-on-ticket'].commentID) }}
+            commentID: ${{ quote(outputs['comment-on-issue'].commentID) }}
 ```
 
 This multi-stage workflow demonstrates:
