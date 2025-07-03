@@ -46,10 +46,9 @@ func Test_helmChartUpdater_validate(t *testing.T) {
 			},
 		},
 		{
-			name:   "charts is null",
-			config: promotion.Config{},
-			expectedProblems: []string{
-				"(root): charts is required",
+			name: "charts is null",
+			config: promotion.Config{
+				"path": "fake-path",
 			},
 		},
 		{
@@ -192,6 +191,63 @@ func Test_helmChartUpdater_run(t *testing.T) {
 						Version:    "0.1.0",
 					},
 				},
+			},
+			chartMetadata: &chart.Metadata{
+				APIVersion: chart.APIVersionV2,
+				Name:       "test-chart",
+				Version:    "0.1.0",
+				Dependencies: []*chart.Dependency{
+					{
+						Name:       "examplechart",
+						Version:    ">=0.0.1",
+						Repository: "https://charts.example.com",
+					},
+				},
+			},
+			setupRepository: func(t *testing.T) (string, func()) {
+				httpRepositoryRoot := t.TempDir()
+				require.NoError(t, fs.CopyFile(
+					"../../../helm/testdata/charts/examplechart-0.1.0.tgz",
+					filepath.Join(httpRepositoryRoot, "examplechart-0.1.0.tgz"),
+				))
+				httpRepository := httptest.NewServer(http.FileServer(http.Dir(httpRepositoryRoot)))
+
+				repoIndex, err := repo.IndexDirectory(httpRepositoryRoot, httpRepository.URL)
+				require.NoError(t, err)
+				require.NoError(t, repoIndex.WriteFile(filepath.Join(httpRepositoryRoot, "index.yaml"), 0o600))
+
+				return httpRepository.URL, httpRepository.Close
+			},
+			assertions: func(t *testing.T, tempDir string, result promotion.StepResult, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, promotion.StepResult{
+					Status: kargoapi.PromotionStepStatusSucceeded,
+					Output: map[string]any{
+						"commitMessage": `Updated chart dependencies for testchart
+
+- examplechart: 0.1.0`,
+					},
+				}, result)
+
+				// Check if Chart.yaml was updated correctly
+				updatedChartYaml, err := os.ReadFile(filepath.Join(tempDir, "testchart", "Chart.yaml"))
+				require.NoError(t, err)
+				assert.Contains(t, string(updatedChartYaml), "version: 0.1.0")
+
+				// Check if the dependency was downloaded
+				assert.FileExists(t, filepath.Join(tempDir, "testchart", "charts", "examplechart-0.1.0.tgz"))
+
+				// Check if the Chart.lock file was created
+				assert.FileExists(t, filepath.Join(tempDir, "testchart", "Chart.lock"))
+			},
+		},
+		{
+			name: "successful run with SemVer range",
+			context: &promotion.StepContext{
+				Project: "test-project",
+			},
+			cfg: builtin.HelmUpdateChartConfig{
+				Path: "testchart",
 			},
 			chartMetadata: &chart.Metadata{
 				APIVersion: chart.APIVersionV2,

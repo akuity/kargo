@@ -282,7 +282,7 @@ type SetValues struct {
 
 type HelmUpdateChartConfig struct {
 	// A list of chart dependencies which should receive updates.
-	Charts []Chart `json:"charts"`
+	Charts []Chart `json:"charts,omitempty"`
 	// The path at which the umbrella chart with the dependency can be found.
 	Path string `json:"path"`
 }
