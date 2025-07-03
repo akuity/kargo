@@ -156,10 +156,8 @@ func imageSelectorForSubscription(
 	sub kargoapi.ImageSubscription,
 	creds *image.Credentials,
 ) (image.Selector, error) {
-	var constraint string
-	if sub.Constraint != "" {
-		constraint = sub.Constraint
-	} else if sub.ImageSelectionStrategy == kargoapi.ImageSelectionStrategySemVer && sub.SemverConstraint != "" {
+	constraint := sub.Constraint
+	if constraint == "" && sub.ImageSelectionStrategy == kargoapi.ImageSelectionStrategySemVer {
 		constraint = sub.SemverConstraint
 	}
 	return image.NewSelector(
