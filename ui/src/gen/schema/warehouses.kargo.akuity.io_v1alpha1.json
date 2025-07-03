@@ -220,7 +220,13 @@
                   "repoURL",
                   "strictSemvers"
                 ],
-                "type": "object"
+                "type": "object",
+                "x-kubernetes-validations": [
+                  {
+                    "message": "ImageSubscription cannot have both semverConstraint and constraint set",
+                    "rule": "!(has(self.semverConstraint) && has(self.constraint))"
+                  }
+                ]
               }
             },
             "type": "object"
