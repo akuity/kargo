@@ -9,6 +9,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -24,7 +25,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 	tests := []struct {
 		name       string
 		objects    []client.Object
-		template   *kargoapi.PromotionTask
+		task       *kargoapi.PromotionTask
 		assertions func(*testing.T, admission.Warnings, error)
 	}{
 		{
@@ -36,7 +37,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 					},
 				},
 			},
-			template: &kargoapi.PromotionTask{
+			task: &kargoapi.PromotionTask{
 				ObjectMeta: v1.ObjectMeta{
 					Name:      "fake-template",
 					Namespace: "fake-project",
@@ -64,7 +65,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 					},
 				},
 			},
-			template: &kargoapi.PromotionTask{
+			task: &kargoapi.PromotionTask{
 				ObjectMeta: v1.ObjectMeta{
 					Name:      "fake-template",
 					Namespace: "fake-project",
@@ -87,8 +88,71 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				client: c,
 			}
 
-			got, err := w.ValidateCreate(context.Background(), tt.template)
+			got, err := w.ValidateCreate(context.Background(), tt.task)
 			tt.assertions(t, got, err)
+		})
+	}
+}
+
+func Test_webhook_ValidateSpec(t *testing.T) {
+	testCases := []struct {
+		name       string
+		spec       kargoapi.PromotionTaskSpec
+		assertions func(*testing.T, field.ErrorList)
+	}{
+		{
+			name: "invalid",
+			spec: kargoapi.PromotionTaskSpec{
+				Steps: []kargoapi.PromotionStep{
+					{As: "step-42"}, // This step alias matches a reserved pattern
+					{As: "commit"},
+					{As: "commit"}, // Duplicate!
+				},
+			},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				// We really want to see that all underlying errors have been bubbled up
+				// to this level and been aggregated.
+				require.Equal(
+					t,
+					field.ErrorList{
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "spec.steps[0].as",
+							BadValue: "step-42",
+							Detail:   "step alias is reserved",
+						},
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "spec.steps[2].as",
+							BadValue: "commit",
+							Detail:   "step alias duplicates that of spec.steps[1]",
+						},
+					},
+					errs,
+				)
+			},
+		},
+		{
+			name: "valid",
+			spec: kargoapi.PromotionTaskSpec{
+				Steps: []kargoapi.PromotionStep{
+					{As: "foo"},
+					{As: "bar"},
+					{As: "baz"},
+				},
+			},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Empty(t, errs)
+			},
+		},
+	}
+	w := &webhook{}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				t,
+				w.validateSpec(field.NewPath("spec"), testCase.spec),
+			)
 		})
 	}
 }

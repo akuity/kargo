@@ -2,6 +2,7 @@ package promotion
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -62,7 +63,6 @@ type webhook struct {
 	validateProjectFn func(
 		context.Context,
 		client.Client,
-		schema.GroupKind,
 		client.Object,
 	) error
 
@@ -220,18 +220,32 @@ func (w *webhook) ValidateCreate(
 	obj runtime.Object,
 ) (admission.Warnings, error) {
 	promo := obj.(*kargoapi.Promotion) // nolint: forcetypeassert
-	if err :=
-		w.validateProjectFn(ctx, w.client, promotionGroupKind, promo); err != nil {
-		return nil, err
+
+	if err := w.validateProjectFn(ctx, w.client, promo); err != nil {
+		var statusErr *apierrors.StatusError
+		if ok := errors.As(err, &statusErr); ok {
+			return nil, statusErr
+		}
+		var fieldErr *field.Error
+		if ok := errors.As(err, &fieldErr); !ok {
+			return nil, apierrors.NewInternalError(err)
+		}
+		return nil, apierrors.NewInvalid(
+			promotionGroupKind,
+			promo.Name,
+			field.ErrorList{fieldErr},
+		)
 	}
 
 	if err := w.authorizeFn(ctx, promo, "create"); err != nil {
-		return nil, err
+		return nil, apierrors.NewInternalError(err)
 	}
 
 	req, err := w.admissionRequestFromContextFn(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("get admission request from context: %w", err)
+		return nil, apierrors.NewInternalError(
+			fmt.Errorf("get admission request from context: %w", err),
+		)
 	}
 
 	stage, err := w.getStageFn(ctx, w.client, types.NamespacedName{
@@ -239,7 +253,7 @@ func (w *webhook) ValidateCreate(
 		Name:      promo.Spec.Stage,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("get stage: %w", err)
+		return nil, apierrors.NewInternalError(fmt.Errorf("get stage: %w", err))
 	}
 
 	freight, err := w.getFreightFn(ctx, w.client, types.NamespacedName{
@@ -247,7 +261,7 @@ func (w *webhook) ValidateCreate(
 		Name:      promo.Spec.Freight,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("get freight: %w", err)
+		return nil, apierrors.NewInternalError(fmt.Errorf("get freight: %w", err))
 	}
 
 	if !stage.IsFreightAvailable(freight) {
@@ -268,6 +282,7 @@ func (w *webhook) ValidateCreate(
 	if !w.isRequestFromKargoControlplaneFn(req) {
 		w.recordPromotionCreatedEvent(ctx, req, promo, freight)
 	}
+
 	return nil, nil
 }
 
@@ -278,11 +293,12 @@ func (w *webhook) ValidateUpdate(
 ) (admission.Warnings, error) {
 	promo := newObj.(*kargoapi.Promotion) // nolint: forcetypeassert
 	if err := w.authorizeFn(ctx, promo, "update"); err != nil {
-		return nil, err
+		return nil, apierrors.NewInternalError(err)
 	}
 
 	// PromotionSpecs are meant to be immutable
-	if !reflect.DeepEqual(promo.Spec, oldObj.(*kargoapi.Promotion).Spec) { // nolint: forcetypeassert
+	// nolint: forcetypeassert
+	if !reflect.DeepEqual(promo.Spec, oldObj.(*kargoapi.Promotion).Spec) {
 		return nil, apierrors.NewInvalid(
 			promotionGroupKind,
 			promo.Name,
@@ -295,6 +311,7 @@ func (w *webhook) ValidateUpdate(
 			},
 		)
 	}
+
 	return nil, nil
 }
 
