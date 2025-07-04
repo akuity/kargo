@@ -211,11 +211,25 @@ func (w *webhook) validateImageSub(
 	seen uniqueSubSet,
 ) field.ErrorList {
 	var errs field.ErrorList
-	if err := validateSemverConstraint(
-		f.Child("semverConstraint"),
-		sub.SemverConstraint,
-	); err != nil {
-		errs = field.ErrorList{err}
+	// Give precedence to the constraint field
+	// However, validate semVerConstraint field if
+	// semVer image strategy is used
+	if sub.ImageSelectionStrategy == kargoapi.ImageSelectionStrategySemVer {
+		if sub.SemverConstraint != "" {
+			if err := validateSemverConstraint(
+				f.Child("semverConstraint"),
+				sub.SemverConstraint,
+			); err != nil {
+				errs = field.ErrorList{err}
+			}
+		} else if sub.Constraint != "" {
+			if err := validateSemverConstraint(
+				f.Child("constraint"),
+				sub.Constraint,
+			); err != nil {
+				errs = field.ErrorList{err}
+			}
+		}
 	}
 	if sub.Platform != "" {
 		if !image.ValidatePlatformConstraint(sub.Platform) {
