@@ -66,11 +66,12 @@ export const Promote = (props: PromoteProps) => {
       freight: props.freight?.metadata?.name
     };
 
-    if (actionContext?.action?.type === IAction.PROMOTE) {
-      promoteActionMutation.mutate(payload);
-    } else if (actionContext?.action?.type === IAction.PROMOTE_DOWNSTREAM) {
+    if (actionContext?.action?.type === IAction.PROMOTE_DOWNSTREAM) {
       promoteDownstreamActionMutation.mutate(payload);
+      return;
     }
+
+    promoteActionMutation.mutate(payload);
   };
 
   return (
