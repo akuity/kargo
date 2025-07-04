@@ -2,8 +2,8 @@ package stage
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"strings"
 
 	admissionv1 "k8s.io/api/admission/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -16,7 +16,6 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
-	"github.com/akuity/kargo/internal/promotion"
 	libWebhook "github.com/akuity/kargo/internal/webhook/kubernetes"
 )
 
@@ -38,13 +37,10 @@ type webhook struct {
 	validateProjectFn func(
 		context.Context,
 		client.Client,
-		schema.GroupKind,
 		client.Object,
 	) error
 
-	validateCreateOrUpdateFn func(*kargoapi.Stage) (admission.Warnings, error)
-
-	validateSpecFn func(*field.Path, *kargoapi.StageSpec) field.ErrorList
+	validateSpecFn func(*field.Path, kargoapi.StageSpec) field.ErrorList
 
 	isRequestFromKargoControlplaneFn libWebhook.IsRequestFromKargoControlplaneFn
 }
@@ -76,7 +72,6 @@ func newWebhook(
 	}
 	w.admissionRequestFromContextFn = admission.RequestFromContext
 	w.validateProjectFn = libWebhook.ValidateProject
-	w.validateCreateOrUpdateFn = w.validateCreateOrUpdate
 	w.validateSpecFn = w.validateSpec
 	w.isRequestFromKargoControlplaneFn =
 		libWebhook.IsRequestFromKargoControlplane(cfg.ControlplaneUserRegex)
@@ -157,11 +152,25 @@ func (w *webhook) ValidateCreate(
 	obj runtime.Object,
 ) (admission.Warnings, error) {
 	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
-	if err :=
-		w.validateProjectFn(ctx, w.client, stageGroupKind, stage); err != nil {
-		return nil, err
+	var errs field.ErrorList
+	if err := w.validateProjectFn(ctx, w.client, stage); err != nil {
+		var statusErr *apierrors.StatusError
+		if ok := errors.As(err, &statusErr); ok {
+			return nil, statusErr
+		}
+		var fieldErr *field.Error
+		if ok := errors.As(err, &fieldErr); !ok {
+			return nil, apierrors.NewInternalError(err)
+		}
+		errs = append(errs, fieldErr)
 	}
-	return w.validateCreateOrUpdateFn(stage)
+	if errs = append(
+		errs,
+		w.validateSpecFn(field.NewPath("spec"), stage.Spec)...,
+	); len(errs) > 0 {
+		return nil, apierrors.NewInvalid(stageGroupKind, stage.Name, errs)
+	}
+	return nil, nil
 }
 
 func (w *webhook) ValidateUpdate(
@@ -170,7 +179,10 @@ func (w *webhook) ValidateUpdate(
 	newObj runtime.Object,
 ) (admission.Warnings, error) {
 	stage := newObj.(*kargoapi.Stage) // nolint: forcetypeassert
-	return w.validateCreateOrUpdateFn(stage)
+	if errs := w.validateSpecFn(field.NewPath("spec"), stage.Spec); len(errs) > 0 {
+		return nil, apierrors.NewInvalid(stageGroupKind, stage.Name, errs)
+	}
+	return nil, nil
 }
 
 func (w *webhook) ValidateDelete(
@@ -181,26 +193,20 @@ func (w *webhook) ValidateDelete(
 	return nil, nil
 }
 
-func (w *webhook) validateCreateOrUpdate(
-	s *kargoapi.Stage,
-) (admission.Warnings, error) {
-	if errs := w.validateSpecFn(field.NewPath("spec"), &s.Spec); len(errs) > 0 {
-		return nil, apierrors.NewInvalid(stageGroupKind, s.Name, errs)
-	}
-	return nil, nil
-}
-
 func (w *webhook) validateSpec(
 	f *field.Path,
-	spec *kargoapi.StageSpec,
+	spec kargoapi.StageSpec,
 ) field.ErrorList {
-	if spec == nil { // nil spec is caught by declarative validations
-		return nil
-	}
 	errs := w.validateRequestedFreight(f.Child("requestedFreight"), spec.RequestedFreight)
+	if spec.PromotionTemplate == nil {
+		return errs
+	}
 	return append(
 		errs,
-		w.ValidatePromotionTemplate(f.Child("promotionTemplate"), spec.PromotionTemplate)...,
+		libWebhook.ValidatePromotionSteps(
+			f.Child("promotionTemplate").Child("spec").Child("steps"),
+			spec.PromotionTemplate.Spec.Steps,
+		)...,
 	)
 }
 
@@ -227,25 +233,4 @@ func (w *webhook) validateRequestedFreight(
 		seenOrigins[req.Origin.String()] = struct{}{}
 	}
 	return nil
-}
-
-func (w *webhook) ValidatePromotionTemplate(
-	f *field.Path,
-	promoTemplate *kargoapi.PromotionTemplate,
-) field.ErrorList {
-	if promoTemplate == nil {
-		return nil
-	}
-	errs := field.ErrorList{}
-	for i, step := range promoTemplate.Spec.Steps {
-		stepAlias := strings.TrimSpace(step.As)
-		if promotion.ReservedStepAliasRegex.MatchString(stepAlias) {
-			errs = append(errs, field.Invalid(
-				f.Child("spec", "steps").Index(i).Child("as"),
-				stepAlias,
-				"step alias is reserved",
-			))
-		}
-	}
-	return errs
 }

@@ -16,7 +16,6 @@ import (
 func ValidateProject(
 	ctx context.Context,
 	kubeClient client.Client,
-	gk schema.GroupKind,
 	obj client.Object,
 ) error {
 	if err := validation.ValidateProject(
@@ -35,11 +34,7 @@ func ValidateProject(
 		}
 		var fieldErr *field.Error
 		if ok := errors.As(err, &fieldErr); ok {
-			return apierrors.NewInvalid(
-				gk,
-				obj.GetName(),
-				field.ErrorList{fieldErr},
-			)
+			return fieldErr
 		}
 		return apierrors.NewInternalError(err)
 	}

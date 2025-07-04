@@ -110,6 +110,24 @@ webhooks:
     resources: ["clusterconfigs"]
     operations: ["CREATE", "UPDATE"]
   failurePolicy: Fail
+- name: clusterpromotiontask.kargo.akuity.io
+  admissionReviewVersions: [ "v1" ]
+  sideEffects: None
+  clientConfig:
+    service:
+      namespace: {{ .Release.Namespace }}
+      name: kargo-webhooks-server
+      path: /validate-kargo-akuity-io-v1alpha1-clusterpromotiontask
+    {{- if and (not .Values.webhooksServer.tls.selfSignedCert) .Values.webhooksServer.tls.caBundle }}
+    caBundle: {{ .Values.webhooksServer.tls.caBundle | b64enc }}
+    {{- end }}
+  rules:
+  - scope: Cluster
+    apiGroups: ["kargo.akuity.io"]
+    apiVersions: ["v1alpha1"]
+    resources: ["clusterpromotiontasks"]
+    operations: ["CREATE", "UPDATE"]
+  failurePolicy: Fail
 - name: freight.kargo.akuity.io
   admissionReviewVersions: ["v1"]
   sideEffects: None
@@ -198,7 +216,7 @@ webhooks:
     apiGroups: ["kargo.akuity.io"]
     apiVersions: ["v1alpha1"]
     resources: ["promotiontasks"]
-    operations: ["CREATE"]
+    operations: ["CREATE", "UPDATE"]
   failurePolicy: Fail
 - name: stage.kargo.akuity.io
   admissionReviewVersions: ["v1"]
