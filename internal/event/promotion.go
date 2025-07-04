@@ -9,6 +9,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libargocd "github.com/akuity/kargo/internal/argocd"
+	"github.com/akuity/kargo/internal/expressions"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -95,7 +96,54 @@ func NewPromotionAnnotations(
 		if err != nil {
 			logger.Error(err, "marshal ArgoCD apps in JSON")
 		} else {
-			annotations[kargoapi.AnnotationKeyEventApplications] = string(data)
+			var result string
+			env := map[string]any{
+				"ctx": map[string]any{
+					"project":   p.GetNamespace(),
+					"promotion": p.GetName(),
+					"stage":     p.Spec.Stage,
+					"meta": map[string]any{
+						"promotion": map[string]any{
+							"actor": p.Annotations[kargoapi.AnnotationKeyCreateActor],
+						},
+					},
+				},
+				"vars": func() map[string]any {
+					vars := map[string]any{}
+					for _, v := range p.Spec.Vars {
+						vars[v.Name] = v.Value
+					}
+					return vars
+				}(),
+			}
+
+			if f != nil {
+				targetFreight := map[string]any{
+					"name": f.Name,
+				}
+				if f.Origin.Name != "" {
+					targetFreight["origin"] = map[string]any{
+						"name": f.Origin.Name,
+					}
+				}
+				if ctx, ok := env["ctx"].(map[string]any); ok {
+					ctx["targetFreight"] = targetFreight
+				}
+			}
+
+			if evaled, err := expressions.EvaluateTemplate(string(data), env); err == nil {
+				// may be the same string after evaluation
+				if v, ok := evaled.(string); !ok {
+					if evaledBytes, err := json.Marshal(evaled); err == nil {
+						result = string(evaledBytes)
+					}
+				} else {
+					result = v
+				}
+			}
+			if result != "" {
+				annotations[kargoapi.AnnotationKeyEventApplications] = result
+			}
 		}
 	}
 
