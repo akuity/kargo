@@ -4,9 +4,10 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button, Card, Flex, message } from 'antd';
 import type { JSONSchema4 } from 'json-schema';
+import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useParams } from 'react-router-dom';
-import yaml from 'yaml';
+import yaml, { parse } from 'yaml';
 import { z } from 'zod';
 
 import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
@@ -18,6 +19,10 @@ import {
   getProjectConfig
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
+import {
+  ProjectConfig as ProjectConfigT,
+  WebhookReceiverDetails
+} from '@ui/gen/api/v1alpha1/generated_pb';
 import projectConfigSchema from '@ui/gen/schema/projectconfigs.kargo.akuity.io_v1alpha1.json';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 import { zodValidators } from '@ui/utils/validators';
@@ -43,6 +48,14 @@ export const ProjectConfig = () => {
   );
 
   const projectConfigYAML = decodeRawData(projectConfigQuery.data);
+
+  const projectConfig = useMemo(
+    () => parse(projectConfigYAML) as ProjectConfigT,
+    [projectConfigYAML]
+  );
+
+  const webhookReceivers = (projectConfig?.status?.webhookReceivers ||
+    []) as WebhookReceiverDetails[];
 
   const creation = !projectConfigYAML;
 
@@ -110,7 +123,7 @@ export const ProjectConfig = () => {
         </Flex>
       </Card>
 
-      <Webhooks projectConfigYAML={projectConfigYAML} className='mt-5' />
+      <Webhooks webhookReceivers={webhookReceivers} className='mt-5' />
     </Flex>
   );
 };

@@ -3,24 +3,17 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Flex, notification, Table, Typography } from 'antd';
 import Card from 'antd/es/card/Card';
 import classNames from 'classnames';
-import { useMemo, useState } from 'react';
-import { parse } from 'yaml';
+import { useState } from 'react';
 
-import { ProjectConfig, WebhookReceiverDetails } from '@ui/gen/api/v1alpha1/generated_pb';
+import { WebhookReceiverDetails } from '@ui/gen/api/v1alpha1/generated_pb';
 
 type WebhooksProps = {
-  projectConfigYAML: string;
+  webhookReceivers: WebhookReceiverDetails[];
   className?: string;
 };
 
 export const Webhooks = (props: WebhooksProps) => {
-  const projectConfig = useMemo(
-    () => parse(props.projectConfigYAML) as ProjectConfig,
-    [props.projectConfigYAML]
-  );
-
-  const webhookReceivers = (projectConfig?.status?.webhookReceivers ||
-    []) as WebhookReceiverDetails[];
+  const webhookReceivers = props.webhookReceivers;
 
   return (
     <Card title='Webhooks' type='inner'>

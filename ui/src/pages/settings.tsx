@@ -36,7 +36,7 @@ const settingsViews = {
   }
 };
 
-const defaultView = settingsViews.verification;
+const defaultView = settingsViews.clusterConfig;
 
 export const Settings = () => {
   const location = useLocation();
