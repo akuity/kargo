@@ -2,6 +2,7 @@ package promotiontask
 
 import (
 	"context"
+	"errors"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -39,23 +40,37 @@ func (w *webhook) ValidateCreate(
 	obj runtime.Object,
 ) (admission.Warnings, error) {
 	task := obj.(*kargoapi.PromotionTask) // nolint: forcetypeassert
-	if err := libWebhook.ValidateProject(
-		ctx,
-		w.client,
-		promotionTaskGroupKind,
-		task,
-	); err != nil {
-		return nil, err
+	var errs field.ErrorList
+	if err := libWebhook.ValidateProject(ctx, w.client, task); err != nil {
+		var statusErr *apierrors.StatusError
+		if ok := errors.As(err, &statusErr); ok {
+			return nil, statusErr
+		}
+		var fieldErr *field.Error
+		if ok := errors.As(err, &fieldErr); !ok {
+			return nil, apierrors.NewInternalError(err)
+		}
+		errs = append(errs, fieldErr)
 	}
-	return w.validateCreateOrUpdate(task)
+	if errs = append(
+		errs,
+		w.validateSpec(field.NewPath("spec"), task.Spec)...,
+	); len(errs) > 0 {
+		return nil, apierrors.NewInvalid(promotionTaskGroupKind, task.Name, errs)
+	}
+	return nil, nil
 }
 
 func (w *webhook) ValidateUpdate(
 	_ context.Context,
 	_ runtime.Object,
-	newObj runtime.Object) (admission.Warnings, error) {
+	newObj runtime.Object,
+) (admission.Warnings, error) {
 	task := newObj.(*kargoapi.PromotionTask) // nolint: forcetypeassert
-	return w.validateCreateOrUpdate(task)
+	if errs := w.validateSpec(field.NewPath("spec"), task.Spec); len(errs) > 0 {
+		return nil, apierrors.NewInvalid(promotionTaskGroupKind, task.Name, errs)
+	}
+	return nil, nil
 }
 
 func (w *webhook) ValidateDelete(
@@ -63,15 +78,6 @@ func (w *webhook) ValidateDelete(
 	runtime.Object,
 ) (admission.Warnings, error) {
 	// No-op
-	return nil, nil
-}
-
-func (w *webhook) validateCreateOrUpdate(
-	task *kargoapi.PromotionTask,
-) (admission.Warnings, error) {
-	if errs := w.validateSpec(field.NewPath("spec"), task.Spec); len(errs) > 0 {
-		return nil, apierrors.NewInvalid(promotionTaskGroupKind, task.Name, errs)
-	}
 	return nil, nil
 }
 

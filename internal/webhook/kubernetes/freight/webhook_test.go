@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"regexp"
 	"testing"
 
@@ -14,7 +13,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
@@ -47,7 +45,7 @@ func TestNewWebhook(t *testing.T) {
 	require.NotNil(t, w.isRequestFromKargoControlplaneFn)
 }
 
-func TestDefault(t *testing.T) {
+func Test_webhook_Default(t *testing.T) {
 	testCases := []struct {
 		name       string
 		op         admissionv1.Operation
@@ -157,7 +155,7 @@ func TestDefault(t *testing.T) {
 	}
 }
 
-func TestValidateCreate(t *testing.T) {
+func Test_webhook_ValidateCreate(t *testing.T) {
 	testCases := []struct {
 		name       string
 		webhook    *webhook
@@ -170,7 +168,6 @@ func TestValidateCreate(t *testing.T) {
 				validateProjectFn: func(
 					context.Context,
 					client.Client,
-					schema.GroupKind,
 					client.Object,
 				) error {
 					return errors.New("something went wrong")
@@ -178,7 +175,14 @@ func TestValidateCreate(t *testing.T) {
 			},
 			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
-				require.Equal(t, "something went wrong", err.Error())
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+				require.Equal(
+					t,
+					metav1.StatusReasonInternalError,
+					statusErr.ErrStatus.Reason,
+				)
+				require.Contains(t, statusErr.ErrStatus.Message, "something went wrong")
 			},
 		},
 		{
@@ -194,7 +198,6 @@ func TestValidateCreate(t *testing.T) {
 				validateProjectFn: func(
 					context.Context,
 					client.Client,
-					schema.GroupKind,
 					client.Object,
 				) error {
 					return nil
@@ -208,13 +211,15 @@ func TestValidateCreate(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, err error) {
-				statusErr, ok := err.(*apierrors.StatusError)
-				require.True(t, ok)
+				require.Error(t, err)
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
 				require.Equal(
 					t,
-					int32(http.StatusInternalServerError),
-					statusErr.Status().Code,
+					metav1.StatusReasonInternalError,
+					statusErr.ErrStatus.Reason,
 				)
+				require.Contains(t, statusErr.ErrStatus.Message, "something went wrong")
 			},
 		},
 		{
@@ -230,7 +235,6 @@ func TestValidateCreate(t *testing.T) {
 				validateProjectFn: func(
 					context.Context,
 					client.Client,
-					schema.GroupKind,
 					client.Object,
 				) error {
 					return nil
@@ -245,11 +249,25 @@ func TestValidateCreate(t *testing.T) {
 					freight.Items = []kargoapi.Freight{{}}
 					return nil
 				},
+				getWarehouseFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Warehouse, error) {
+					return &kargoapi.Warehouse{}, nil
+				},
+				validateFreightArtifactsFn: func(
+					*kargoapi.Freight,
+					*kargoapi.Warehouse,
+				) field.ErrorList {
+					return nil
+				},
 			},
 			assertions: func(t *testing.T, err error) {
-				statusErr, ok := err.(*apierrors.StatusError)
-				require.True(t, ok)
-				require.Equal(t, int32(http.StatusConflict), statusErr.Status().Code)
+				require.Error(t, err)
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+				require.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
 			},
 		},
 		{
@@ -258,7 +276,6 @@ func TestValidateCreate(t *testing.T) {
 				validateProjectFn: func(
 					context.Context,
 					client.Client,
-					schema.GroupKind,
 					client.Object,
 				) error {
 					return nil
@@ -270,10 +287,29 @@ func TestValidateCreate(t *testing.T) {
 				) error {
 					return nil
 				},
+				getWarehouseFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Warehouse, error) {
+					return &kargoapi.Warehouse{}, nil
+				},
+				validateFreightArtifactsFn: func(
+					*kargoapi.Freight,
+					*kargoapi.Warehouse,
+				) field.ErrorList {
+					return nil
+				},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.ErrorContains(
-					t, err, "freight must contain at least one commit, image, or chart",
+				require.Error(t, err)
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+				require.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
+				require.Contains(
+					t,
+					statusErr.ErrStatus.Message,
+					"freight must contain at least one commit, image, or chart",
 				)
 			},
 		},
@@ -283,7 +319,6 @@ func TestValidateCreate(t *testing.T) {
 				validateProjectFn: func(
 					context.Context,
 					client.Client,
-					schema.GroupKind,
 					client.Object,
 				) error {
 					return nil
@@ -307,7 +342,15 @@ func TestValidateCreate(t *testing.T) {
 				Commits: []kargoapi.GitCommit{{}},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "something went wrong")
+				require.Error(t, err)
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+				require.Equal(
+					t,
+					metav1.StatusReasonInternalError,
+					statusErr.ErrStatus.Reason,
+				)
+				require.Contains(t, statusErr.ErrStatus.Message, "something went wrong")
 			},
 		},
 		{
@@ -316,7 +359,6 @@ func TestValidateCreate(t *testing.T) {
 				validateProjectFn: func(
 					context.Context,
 					client.Client,
-					schema.GroupKind,
 					client.Object,
 				) error {
 					return nil
@@ -335,12 +377,26 @@ func TestValidateCreate(t *testing.T) {
 				) (*kargoapi.Warehouse, error) {
 					return nil, nil
 				},
+				validateFreightArtifactsFn: func(
+					*kargoapi.Freight,
+					*kargoapi.Warehouse,
+				) field.ErrorList {
+					return nil
+				},
 			},
 			freight: kargoapi.Freight{
 				Commits: []kargoapi.GitCommit{{}},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "warehouse does not exist")
+				require.Error(t, err)
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+				require.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
+				require.Contains(
+					t,
+					statusErr.ErrStatus.Message,
+					"warehouse does not exist",
+				)
 			},
 		},
 		{
@@ -349,7 +405,6 @@ func TestValidateCreate(t *testing.T) {
 				validateProjectFn: func(
 					context.Context,
 					client.Client,
-					schema.GroupKind,
 					client.Object,
 				) error {
 					return nil
@@ -371,15 +426,21 @@ func TestValidateCreate(t *testing.T) {
 				validateFreightArtifactsFn: func(
 					*kargoapi.Freight,
 					*kargoapi.Warehouse,
-				) error {
-					return errors.New("something went wrong")
+				) field.ErrorList {
+					return field.ErrorList{
+						field.Invalid(field.NewPath(""), "", "something went wrong"),
+					}
 				},
 			},
 			freight: kargoapi.Freight{
 				Commits: []kargoapi.GitCommit{{}},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "something went wrong")
+				require.Error(t, err)
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+				require.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
+				require.Contains(t, statusErr.ErrStatus.Message, "something went wrong")
 			},
 		},
 		{
@@ -388,7 +449,6 @@ func TestValidateCreate(t *testing.T) {
 				validateProjectFn: func(
 					context.Context,
 					client.Client,
-					schema.GroupKind,
 					client.Object,
 				) error {
 					return nil
@@ -410,7 +470,7 @@ func TestValidateCreate(t *testing.T) {
 				validateFreightArtifactsFn: func(
 					*kargoapi.Freight,
 					*kargoapi.Warehouse,
-				) error {
+				) field.ErrorList {
 					return nil
 				},
 			},
@@ -431,7 +491,7 @@ func TestValidateCreate(t *testing.T) {
 	}
 }
 
-func TestValidateUpdate(t *testing.T) {
+func Test_webhook_ValidateUpdate(t *testing.T) {
 	testCases := []struct {
 		name       string
 		webhook    *webhook
@@ -454,7 +514,6 @@ func TestValidateUpdate(t *testing.T) {
 				validateProjectFn: func(
 					context.Context,
 					client.Client,
-					schema.GroupKind,
 					client.Object,
 				) error {
 					return nil
@@ -468,13 +527,15 @@ func TestValidateUpdate(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
-				statusErr, ok := err.(*apierrors.StatusError)
-				require.True(t, ok)
+				require.Error(t, err)
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
 				require.Equal(
 					t,
-					int32(http.StatusInternalServerError),
-					statusErr.Status().Code,
+					metav1.StatusReasonInternalError,
+					statusErr.ErrStatus.Reason,
 				)
+				require.Contains(t, statusErr.ErrStatus.Message, "something went wrong")
 			},
 		},
 		{
@@ -492,7 +553,6 @@ func TestValidateUpdate(t *testing.T) {
 				validateProjectFn: func(
 					context.Context,
 					client.Client,
-					schema.GroupKind,
 					client.Object,
 				) error {
 					return nil
@@ -509,12 +569,21 @@ func TestValidateUpdate(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
-				statusErr, ok := err.(*apierrors.StatusError)
-				require.True(t, ok)
-				require.Equal(t, int32(http.StatusConflict), statusErr.Status().Code)
+				require.Error(t, err)
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+				require.Equal(
+					t,
+					metav1.StatusReasonConflict,
+					statusErr.ErrStatus.Reason,
+				)
+				require.Contains(
+					t,
+					statusErr.ErrStatus.Message,
+					"already used by another piece of Freight",
+				)
 			},
 		},
-
 		{
 			name: "attempt to mutate artifacts",
 			setup: func() (*kargoapi.Freight, *kargoapi.Freight) {
@@ -544,8 +613,11 @@ func TestValidateUpdate(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
-				require.ErrorContains(t, err, "is invalid")
-				require.ErrorContains(t, err, "Freight is immutable")
+				require.Error(t, err)
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+				require.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
+				require.Contains(t, statusErr.ErrStatus.Message, "Freight is immutable")
 			},
 		},
 
@@ -579,8 +651,11 @@ func TestValidateUpdate(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
-				require.ErrorContains(t, err, "is invalid")
-				require.ErrorContains(t, err, "Freight is immutable")
+				require.Error(t, err)
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+				require.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
+				require.Contains(t, statusErr.ErrStatus.Message, "Freight is immutable")
 			},
 		},
 		{
@@ -738,7 +813,7 @@ func TestValidateUpdate(t *testing.T) {
 	}
 }
 
-func TestValidateDelete(t *testing.T) {
+func Test_webhook_ValidateDelete(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
@@ -810,12 +885,12 @@ func TestValidateDelete(t *testing.T) {
 	}
 }
 
-func TestValidateFreightArtifacts(t *testing.T) {
+func Test_webhook_ValidateFreightArtifacts(t *testing.T) {
 	testCases := []struct {
 		name       string
 		freight    *kargoapi.Freight
 		warehouse  *kargoapi.Warehouse
-		assertions func(*testing.T, error)
+		assertions func(*testing.T, field.ErrorList)
 	}{
 		{
 			name: "Freight missing artifact",
@@ -833,8 +908,9 @@ func TestValidateFreightArtifacts(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "no artifact found for subscription")
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Len(t, errs, 1)
+				require.ErrorContains(t, errs[0], "no artifact found for subscription")
 			},
 		},
 		{
@@ -860,8 +936,13 @@ func TestValidateFreightArtifacts(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "multiple artifacts found for subscription")
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Len(t, errs, 1)
+				require.ErrorContains(
+					t,
+					errs[0],
+					"multiple artifacts found for subscription",
+				)
 			},
 		},
 		{
@@ -887,8 +968,13 @@ func TestValidateFreightArtifacts(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "multiple artifacts found for subscription")
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Len(t, errs, 1)
+				require.ErrorContains(
+					t,
+					errs[0],
+					"multiple artifacts found for subscription",
+				)
 			},
 		},
 		{
@@ -917,8 +1003,13 @@ func TestValidateFreightArtifacts(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "multiple artifacts found for subscription")
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Len(t, errs, 1)
+				require.ErrorContains(
+					t,
+					errs[0],
+					"multiple artifacts found for subscription",
+				)
 			},
 		},
 		{
@@ -931,8 +1022,13 @@ func TestValidateFreightArtifacts(t *testing.T) {
 				},
 			},
 			warehouse: &kargoapi.Warehouse{},
-			assertions: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "no subscription found for Git repository in Warehouse")
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Len(t, errs, 1)
+				require.ErrorContains(
+					t,
+					errs[0],
+					"no subscription found for Git repository in Warehouse",
+				)
 			},
 		},
 		{
@@ -945,8 +1041,13 @@ func TestValidateFreightArtifacts(t *testing.T) {
 				},
 			},
 			warehouse: &kargoapi.Warehouse{},
-			assertions: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "no subscription found for image repository in Warehouse")
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Len(t, errs, 1)
+				require.ErrorContains(
+					t,
+					errs[0],
+					"no subscription found for image repository in Warehouse",
+				)
 			},
 		},
 		{
@@ -960,8 +1061,13 @@ func TestValidateFreightArtifacts(t *testing.T) {
 				},
 			},
 			warehouse: &kargoapi.Warehouse{},
-			assertions: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "no subscription found for Helm chart in Warehouse")
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Len(t, errs, 1)
+				require.ErrorContains(
+					t,
+					errs[0],
+					"no subscription found for Helm chart in Warehouse",
+				)
 			},
 		},
 		{
@@ -1040,20 +1146,20 @@ func TestValidateFreightArtifacts(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, err error) {
-				require.NoError(t, err)
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Empty(t, errs)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			err := validateFreightArtifacts(testCase.freight, testCase.warehouse)
-			testCase.assertions(t, err)
+			errs := validateFreightArtifacts(testCase.freight, testCase.warehouse)
+			testCase.assertions(t, errs)
 		})
 	}
 }
 
-func TestCompareFreight(t *testing.T) {
+func Test_webhook_CompareFreight(t *testing.T) {
 	tests := []struct {
 		name       string
 		old        *kargoapi.Freight

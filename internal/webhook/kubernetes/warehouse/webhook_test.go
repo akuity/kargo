@@ -6,12 +6,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/git"
@@ -22,11 +21,10 @@ func TestNewWebhook(t *testing.T) {
 	w := newWebhook(kubeClient)
 	// Assert that all overridable behaviors were initialized to a default:
 	require.NotNil(t, w.validateProjectFn)
-	require.NotNil(t, w.validateCreateOrUpdateFn)
 	require.NotNil(t, w.validateSpecFn)
 }
 
-func TestDefault(t *testing.T) {
+func Test_webhook_Default(t *testing.T) {
 	const testShardName = "fake-shard"
 
 	w := &webhook{}
@@ -67,7 +65,7 @@ func TestDefault(t *testing.T) {
 	})
 }
 
-func TestValidateCreate(t *testing.T) {
+func Test_webhook_ValidateCreate(t *testing.T) {
 	testCases := []struct {
 		name       string
 		webhook    *webhook
@@ -79,7 +77,6 @@ func TestValidateCreate(t *testing.T) {
 				validateProjectFn: func(
 					context.Context,
 					client.Client,
-					schema.GroupKind,
 					client.Object,
 				) error {
 					return errors.New("something went wrong")
@@ -87,7 +84,14 @@ func TestValidateCreate(t *testing.T) {
 			},
 			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
-				require.Equal(t, "something went wrong", err.Error())
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+				require.Equal(
+					t,
+					metav1.StatusReasonInternalError,
+					statusErr.ErrStatus.Reason,
+				)
+				require.Contains(t, statusErr.ErrStatus.Message, "something went wrong")
 			},
 		},
 		{
@@ -96,20 +100,21 @@ func TestValidateCreate(t *testing.T) {
 				validateProjectFn: func(
 					context.Context,
 					client.Client,
-					schema.GroupKind,
 					client.Object,
 				) error {
 					return nil
 				},
-				validateCreateOrUpdateFn: func(
-					*kargoapi.Warehouse,
-				) (admission.Warnings, error) {
-					return nil, errors.New("something went wrong")
+				validateSpecFn: func(*field.Path, *kargoapi.WarehouseSpec) field.ErrorList {
+					return field.ErrorList{
+						field.Invalid(field.NewPath(""), "", "something went wrong"),
+					}
 				},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Equal(t, "something went wrong", err.Error())
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+				require.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
+				require.Contains(t, statusErr.ErrStatus.Message, "something went wrong")
 			},
 		},
 		{
@@ -118,15 +123,12 @@ func TestValidateCreate(t *testing.T) {
 				validateProjectFn: func(
 					context.Context,
 					client.Client,
-					schema.GroupKind,
 					client.Object,
 				) error {
 					return nil
 				},
-				validateCreateOrUpdateFn: func(
-					*kargoapi.Warehouse,
-				) (admission.Warnings, error) {
-					return nil, nil
+				validateSpecFn: func(*field.Path, *kargoapi.WarehouseSpec) field.ErrorList {
+					return nil
 				},
 			},
 			assertions: func(t *testing.T, err error) {
@@ -145,7 +147,7 @@ func TestValidateCreate(t *testing.T) {
 	}
 }
 
-func TestValidateUpdate(t *testing.T) {
+func Test_webhook_ValidateUpdate(t *testing.T) {
 	testCases := []struct {
 		name       string
 		webhook    *webhook
@@ -154,24 +156,24 @@ func TestValidateUpdate(t *testing.T) {
 		{
 			name: "error validating warehouse",
 			webhook: &webhook{
-				validateCreateOrUpdateFn: func(
-					*kargoapi.Warehouse,
-				) (admission.Warnings, error) {
-					return nil, errors.New("something went wrong")
+				validateSpecFn: func(*field.Path, *kargoapi.WarehouseSpec) field.ErrorList {
+					return field.ErrorList{
+						field.Invalid(field.NewPath(""), "", "something went wrong"),
+					}
 				},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-				require.Equal(t, "something went wrong", err.Error())
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+				require.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
+				require.Contains(t, statusErr.ErrStatus.Message, "something went wrong")
 			},
 		},
 		{
 			name: "success",
 			webhook: &webhook{
-				validateCreateOrUpdateFn: func(
-					*kargoapi.Warehouse,
-				) (admission.Warnings, error) {
-					return nil, nil
+				validateSpecFn: func(*field.Path, *kargoapi.WarehouseSpec) field.ErrorList {
+					return nil
 				},
 			},
 			assertions: func(t *testing.T, err error) {
@@ -191,53 +193,10 @@ func TestValidateUpdate(t *testing.T) {
 	}
 }
 
-func TestValidateDelete(t *testing.T) {
+func Test_webhook_ValidateDelete(t *testing.T) {
 	w := &webhook{}
 	_, err := w.ValidateDelete(context.Background(), nil)
 	require.NoError(t, err, nil)
-}
-
-func TestValidateCreateOrUpdate(t *testing.T) {
-	testCases := []struct {
-		name       string
-		webhook    *webhook
-		assertions func(*testing.T, error)
-	}{
-		{
-			name: "error validating spec",
-			webhook: &webhook{
-				validateSpecFn: func(
-					*field.Path,
-					*kargoapi.WarehouseSpec,
-				) field.ErrorList {
-					return field.ErrorList{{}}
-				},
-			},
-			assertions: func(t *testing.T, err error) {
-				require.Error(t, err)
-			},
-		},
-		{
-			name: "success",
-			webhook: &webhook{
-				validateSpecFn: func(
-					*field.Path,
-					*kargoapi.WarehouseSpec,
-				) field.ErrorList {
-					return nil
-				},
-			},
-			assertions: func(t *testing.T, err error) {
-				require.NoError(t, err)
-			},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			_, err := testCase.webhook.validateCreateOrUpdate(&kargoapi.Warehouse{})
-			testCase.assertions(t, err)
-		})
-	}
 }
 
 func TestValidateSpec(t *testing.T) {

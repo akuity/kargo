@@ -2,6 +2,7 @@ package stage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	admissionv1 "k8s.io/api/admission/v1"
@@ -36,11 +37,8 @@ type webhook struct {
 	validateProjectFn func(
 		context.Context,
 		client.Client,
-		schema.GroupKind,
 		client.Object,
 	) error
-
-	validateCreateOrUpdateFn func(*kargoapi.Stage) (admission.Warnings, error)
 
 	validateSpecFn func(*field.Path, kargoapi.StageSpec) field.ErrorList
 
@@ -74,7 +72,6 @@ func newWebhook(
 	}
 	w.admissionRequestFromContextFn = admission.RequestFromContext
 	w.validateProjectFn = libWebhook.ValidateProject
-	w.validateCreateOrUpdateFn = w.validateCreateOrUpdate
 	w.validateSpecFn = w.validateSpec
 	w.isRequestFromKargoControlplaneFn =
 		libWebhook.IsRequestFromKargoControlplane(cfg.ControlplaneUserRegex)
@@ -155,11 +152,25 @@ func (w *webhook) ValidateCreate(
 	obj runtime.Object,
 ) (admission.Warnings, error) {
 	stage := obj.(*kargoapi.Stage) // nolint: forcetypeassert
-	if err :=
-		w.validateProjectFn(ctx, w.client, stageGroupKind, stage); err != nil {
-		return nil, err
+	var errs field.ErrorList
+	if err := w.validateProjectFn(ctx, w.client, stage); err != nil {
+		var statusErr *apierrors.StatusError
+		if ok := errors.As(err, &statusErr); ok {
+			return nil, statusErr
+		}
+		var fieldErr *field.Error
+		if ok := errors.As(err, &fieldErr); !ok {
+			return nil, apierrors.NewInternalError(err)
+		}
+		errs = append(errs, fieldErr)
 	}
-	return w.validateCreateOrUpdateFn(stage)
+	if errs = append(
+		errs,
+		w.validateSpecFn(field.NewPath("spec"), stage.Spec)...,
+	); len(errs) > 0 {
+		return nil, apierrors.NewInvalid(stageGroupKind, stage.Name, errs)
+	}
+	return nil, nil
 }
 
 func (w *webhook) ValidateUpdate(
@@ -168,7 +179,10 @@ func (w *webhook) ValidateUpdate(
 	newObj runtime.Object,
 ) (admission.Warnings, error) {
 	stage := newObj.(*kargoapi.Stage) // nolint: forcetypeassert
-	return w.validateCreateOrUpdateFn(stage)
+	if errs := w.validateSpecFn(field.NewPath("spec"), stage.Spec); len(errs) > 0 {
+		return nil, apierrors.NewInvalid(stageGroupKind, stage.Name, errs)
+	}
+	return nil, nil
 }
 
 func (w *webhook) ValidateDelete(
@@ -176,15 +190,6 @@ func (w *webhook) ValidateDelete(
 	runtime.Object,
 ) (admission.Warnings, error) {
 	// No-op
-	return nil, nil
-}
-
-func (w *webhook) validateCreateOrUpdate(
-	s *kargoapi.Stage,
-) (admission.Warnings, error) {
-	if errs := w.validateSpecFn(field.NewPath("spec"), s.Spec); len(errs) > 0 {
-		return nil, apierrors.NewInvalid(stageGroupKind, s.Name, errs)
-	}
 	return nil, nil
 }
 

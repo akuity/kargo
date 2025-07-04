@@ -33,15 +33,30 @@ func (w *webhook) ValidateCreate(
 	obj runtime.Object,
 ) (admission.Warnings, error) {
 	task := obj.(*kargoapi.ClusterPromotionTask) // nolint: forcetypeassert
-	return w.validateCreateOrUpdate(task)
+	if errs := w.validateSpec(field.NewPath("spec"), task.Spec); len(errs) > 0 {
+		return nil, apierrors.NewInvalid(
+			clusterPromotionTaskGroupKind,
+			task.Name,
+			errs,
+		)
+	}
+	return nil, nil
 }
 
 func (w *webhook) ValidateUpdate(
 	_ context.Context,
 	_ runtime.Object,
-	newObj runtime.Object) (admission.Warnings, error) {
+	newObj runtime.Object,
+) (admission.Warnings, error) {
 	task := newObj.(*kargoapi.ClusterPromotionTask) // nolint: forcetypeassert
-	return w.validateCreateOrUpdate(task)
+	if errs := w.validateSpec(field.NewPath("spec"), task.Spec); len(errs) > 0 {
+		return nil, apierrors.NewInvalid(
+			clusterPromotionTaskGroupKind,
+			task.Name,
+			errs,
+		)
+	}
+	return nil, nil
 }
 
 func (w *webhook) ValidateDelete(
@@ -49,15 +64,6 @@ func (w *webhook) ValidateDelete(
 	runtime.Object,
 ) (admission.Warnings, error) {
 	// No-op
-	return nil, nil
-}
-
-func (w *webhook) validateCreateOrUpdate(
-	task *kargoapi.ClusterPromotionTask,
-) (admission.Warnings, error) {
-	if errs := w.validateSpec(field.NewPath("spec"), task.Spec); len(errs) > 0 {
-		return nil, apierrors.NewInvalid(clusterPromotionTaskGroupKind, task.Name, errs)
-	}
 	return nil, nil
 }
 
