@@ -848,6 +848,16 @@ message GitSubscription {
   // +kubebuilder:validation:Maximum=100
   // +kubebuilder:default=20
   optional int32 discoveryLimit = 10;
+
+  // CommitBatchSize is the number of commits to batch together when discovering
+  // commits. This field is optional. When left unspecified, the field is
+  // implicitly set to DicoveryLimit. The upper limit for this
+  // field is 100.
+  //
+  // +kubebuilder:validation:Minimum=1
+  // +kubebuilder:validation:Maximum=1000
+  // +kubebuilder:default=0
+  optional int32 commitBatchSize = 13;
 }
 
 // Health describes the health of a Stage.

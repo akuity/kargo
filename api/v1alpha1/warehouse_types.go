@@ -303,6 +303,16 @@ type GitSubscription struct {
 	// +kubebuilder:validation:Maximum=100
 	// +kubebuilder:default=20
 	DiscoveryLimit int32 `json:"discoveryLimit,omitempty" protobuf:"varint,10,opt,name=discoveryLimit"`
+
+	// CommitBatchSize is the number of commits to batch together when discovering
+	// commits. This field is optional. When left unspecified, the field is
+	// implicitly set to DicoveryLimit. The upper limit for this
+	// field is 1000.
+	//
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1000
+	// +kubebuilder:default=0
+	CommitBatchSize int32 `json:"commitBatchSize,omitempty" protobuf:"varint,13,opt,name=commitBatchSize"`
 }
 
 // ImageSubscription defines a subscription to an image repository.
