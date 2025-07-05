@@ -59,8 +59,8 @@ Optionally point to Kubernetes Secrets containing kubeconfig for:
 2. A remote cluster hosting Argo CD resources
 
 3. A remote cluster that is running Argo Rollouts and is a suitable location
-to execute user-defined verification processes in the form of Argo
-Rollouts AnalysisRuns
+   to execute user-defined verification processes in the form of Argo
+   Rollouts AnalysisRuns
 
 This flexibility is useful for various advanced use cases -- especially
 topologies where Kargo data may be sharded, with Kargo controllers distributed
