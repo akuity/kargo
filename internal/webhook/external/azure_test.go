@@ -119,6 +119,43 @@ func TestAzureHandler(t *testing.T) {
 				)
 			},
 		},
+		{
+			name: "success -- git push",
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "https://dev.azure.com/testorg/testproject/_git/testrepo",
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				return httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					newACRPayload("git.push"),
+				)
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(
+					t,
+					`{"msg":"refreshed 1 warehouse(s)"}`,
+					rr.Body.String(),
+				)
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -153,6 +190,16 @@ func newACRPayload(event string) *bytes.Buffer {
 			"request": {"host": "fakeregistry.azurecr.io"}
 		}`,
 		)
+	case "git.push":
+		return bytes.NewBufferString(`
+		{
+			"eventType": "git.push",
+			"resource": {
+				"repository": {
+					"remoteUrl": "https://dev.azure.com/testorg/testproject/_git/testrepo"
+				}
+			}
+		}`)
 	default:
 		return bytes.NewBufferString(`{"action": "unknown"}`)
 	}
