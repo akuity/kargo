@@ -23,10 +23,10 @@ artifacts from all repositories to which that `Warehouse` subscribes.
 ## Configuring the Receiver
 
 An Azure webhook receiver must reference a Kubernetes `Secret` resource with a
-`secret-token` key in its data map.
+`secret` key in its data map.
 
 :::info
-_This secret will not be shared directly with Azure Container Registry._
+_This secret will not be shared directly with Azure._
 
 Azure does not natively implement any mechanism whereby receivers may
 authenticate inbound webhook requests. To compensate for this, Kargo
@@ -41,9 +41,9 @@ The following commands are suggested for generating and base64-encoding a
 complex secret:
 
 ```shell
-secret_token=$(openssl rand -base64 48 | tr -d '=+/' | head -c 32)
-echo "Secret token: $secret_token"
-echo "Encoded secret token: $(echo -n $secret_token | base64)"
+secret=$(openssl rand -base64 48 | tr -d '=+/' | head -c 32)
+echo "Secret: $secret"
+echo "Encoded secret: $(echo -n $secret | base64)"
 ```
 :::
 
@@ -59,7 +59,7 @@ metadata:
   name: azure-wh-secret
   namespace: kargo-demo
 data:
-  secret-token: <base64-encoded secret token>
+  secret: <base64-encoded secret>
 ---
 apiVersion: kargo.akuity.io/v1alpha1
 kind: ProjectConfig
