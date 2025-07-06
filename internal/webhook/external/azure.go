@@ -130,7 +130,7 @@ func (q *azureWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 			// as opposed to a "ping" event like Azure Container Registry does.
 		case event.EventType == "git.push":
 			repoURL := git.NormalizeURL(event.Resource.Repository.RemoteURL)
-			logger = logger.WithValues("repoURLs", repoURL)
+			logger = logger.WithValues("repoURL", repoURL)
 			ctx = logging.ContextWithLogger(ctx, logger)
 			refreshWarehouses(ctx, w, q.client, q.project, repoURL)
 		default:
@@ -155,8 +155,12 @@ func (q *azureWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 //	Azure Container Registry
 //		https://learn.microsoft.com/en-us/azure/container-registry/container-registry-webhook-reference#payload-example-image-push-event
 //
+// nolint:lll
+//
 //	Azure DevOps
 //		https://learn.microsoft.com/en-us/azure/devops/service-hooks/services/webhooks?view=azure-devops#resource-details-to-send
+//
+// nolint:lll
 //
 // Note: there are no overlapping fields between the two services, so we can
 // use a single struct to represent both payloads.
