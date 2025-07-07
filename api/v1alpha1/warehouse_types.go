@@ -138,7 +138,7 @@ type GitSubscription struct {
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
-	// +akuity:test-kubebuilder-pattern=GitRepoURL
+	// +akuity:test-kubebuilder-pattern=GitRepoURLPattern
 	RepoURL string `json:"repoURL" protobuf:"bytes,1,opt,name=repoURL"`
 	// CommitSelectionStrategy specifies the rules for how to identify the newest
 	// commit of interest in the repository specified by the RepoURL field. This
@@ -314,16 +314,6 @@ type ImageSubscription struct {
 	// +kubebuilder:validation:Pattern=`^(\w+([\.-]\w+)*(:[\d]+)?/)?(\w+([\.-]\w+)*)(/\w+([\.-]\w+)*)*$`
 	// +akuity:test-kubebuilder-pattern=ImageRepoURL
 	RepoURL string `json:"repoURL" protobuf:"bytes,1,opt,name=repoURL"`
-	// GitRepoURL optionally specifies the URL of a Git repository that contains
-	// the source code for the image repository referenced by the RepoURL field.
-	// When this is specified, Kargo MAY be able to infer and link to the exact
-	// revision of that source code that was used to build the image.
-	//
-	// Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
-	//
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:validation:Pattern=`^https?://(\w+([\.-]\w+)*@)?\w+([\.-]\w+)*(:[\d]+)?(/.*)?$`
-	GitRepoURL string `json:"gitRepoURL,omitempty" protobuf:"bytes,2,opt,name=gitRepoURL"`
 	// ImageSelectionStrategy specifies the rules for how to identify the newest version
 	// of the image specified by the RepoURL field. This field is optional. When
 	// left unspecified, the field is implicitly treated as if its value were
@@ -520,7 +510,7 @@ type GitDiscoveryResult struct {
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
-	// +akuity:test-kubebuilder-pattern=GitRepoURL
+	// +akuity:test-kubebuilder-pattern=GitRepoURLPattern
 	RepoURL string `json:"repoURL" protobuf:"bytes,1,opt,name=repoURL"`
 	// Commits is a list of commits discovered by the Warehouse for the
 	// GitSubscription. An empty list indicates that the discovery operation was
@@ -596,12 +586,6 @@ type DiscoveredImageReference struct {
 	// Annotations is a map of key-value pairs that provide additional
 	// information about the image.
 	Annotations map[string]string `json:"annotations,omitempty" protobuf:"bytes,5,rep,name=annotations" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	// GitRepoURL is the URL of the Git repository that contains the source
-	// code for this image. This field is optional, and only populated if the
-	// ImageSubscription specifies a GitRepoURL.
-	//
-	// Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
-	GitRepoURL string `json:"gitRepoURL,omitempty" protobuf:"bytes,3,opt,name=gitRepoURL"`
 	// CreatedAt is the time the image was created. This field is optional, and
 	// not populated for every ImageSelectionStrategy.
 	CreatedAt *metav1.Time `json:"createdAt,omitempty" protobuf:"bytes,4,opt,name=createdAt"`

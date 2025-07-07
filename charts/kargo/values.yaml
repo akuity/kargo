@@ -172,7 +172,7 @@ api:
         # - kargo-admin
 
     viewers:
-      ## @param api.oidc.viewers.claims Subjects having any of these claims will automatically receive read-only access to all Kargo resources.
+      ## @param api.oidc.viewers.claims Subjects having any of these claims will automatically receive read-only access to all Kargo resources. This does not include any access to Secrets.
       claims: {}
         # sub:
         # - alice
@@ -182,6 +182,18 @@ api:
         # - bob@examples.com
         # groups:
         # - kargo-viewer
+
+    users:
+      ## @param api.oidc.users.claims Subjects having any of these claims will automatically receive read-only access to all cluster-scoped Kargo resources. This is the minimum level of permissions that can be granted to a user to allow them to view the list of Projects and system-level configuration. This does not include any access to Secrets.
+      claims: {}
+      # sub:
+      # - alice
+      # - bob
+      # email:
+      # - alice@example.com
+      # - bob@examples.com
+      # groups:
+      # - kargo-viewer
 
     globalServiceAccounts:
       ## @param api.oidc.globalServiceAccounts.namespaces List of namespaces to look for shared service accounts.
@@ -852,5 +864,11 @@ webhooksServer:
   securityContext: {}
 
   tls:
-    ## @param webhooksServer.tls.selfSignedCert  Whether to generate a self-signed certificate for the controller's built-in webhook server. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-webhooks-server-cert` **must** be provided in the same namespace as Kargo. There is no provision for webhooks without TLS.
+    ## @param webhooksServer.tls.selfSignedCert  Whether to generate a self-signed certificate for the controller's built-in webhook server. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-webhooks-server-cert` **must** be provided in the same namespace as Kargo. If this cert is not trusted by the Kubernetes API server, you must set `webhooksServer.tls.caBundle`, as Kubernetes does not support referencing CA bundles from secrets. This is why it is strongly recommended to use `cert-manager`. Note that this configuration is mandatory, because Kubernetes requires TLS for webhooks.
     selfSignedCert: true
+    ## @param webhooksServer.tls.caBundle  PEM-encoded TLS certificates (which should also be stored in `kargo-webhooks-server-cert`) to trust when `webhooksServer.tls.selfSignedCert` is **false**. When the cert is *already* trusted by the Kubernetes API server, ignore this parameter. When it is **not** trusted (e.g. self-signed), configure the cert (with intermediate certificates) here.
+    caBundle: ""
+    # caBundle: |
+    #   -----BEGIN CERTIFICATE-----
+    #   ...
+    #   -----END CERTIFICATE-----

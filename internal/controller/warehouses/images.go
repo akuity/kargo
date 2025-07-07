@@ -3,13 +3,11 @@ package warehouses
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
-	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -125,19 +123,6 @@ func (r *reconciler) discoverImageRefs(
 	return images, nil
 }
 
-const (
-	githubURLPrefix = "https://github.com"
-)
-
-func (r *reconciler) getImageSourceURL(gitRepoURL, tag string) string {
-	for baseUrl, fn := range r.imageSourceURLFnsByBaseURL {
-		if strings.HasPrefix(gitRepoURL, baseUrl) {
-			return fn(gitRepoURL, tag)
-		}
-	}
-	return ""
-}
-
 func imageDiscoveryLogFields(sub kargoapi.ImageSubscription) []any {
 	f := []any{
 		"imageSelectionStrategy", sub.ImageSelectionStrategy,
@@ -176,8 +161,4 @@ func imageSelectorForSubscription(
 			DiscoveryLimit:        int(sub.DiscoveryLimit),
 		},
 	)
-}
-
-func getGithubImageSourceURL(gitRepoURL, tag string) string {
-	return fmt.Sprintf("%s/tree/%s", git.NormalizeURL(gitRepoURL), tag)
 }

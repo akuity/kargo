@@ -26,8 +26,8 @@ export const User = () => {
       label: <User.Label label={key} />,
       children: Array.isArray(value)
         ? value.map((v) => (
-            <Tag key={v} className='m-2'>
-              {v}
+            <Tag key={String(v)} className='m-2'>
+              {String(v)}
             </Tag>
           ))
         : `${value}`

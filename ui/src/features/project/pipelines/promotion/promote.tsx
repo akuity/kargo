@@ -6,6 +6,7 @@ import classNames from 'classnames';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import {
@@ -25,6 +26,7 @@ type PromoteProps = ModalComponentProps & {
 export const Promote = (props: PromoteProps) => {
   const actionContext = useActionContext();
   const navigate = useNavigate();
+  const { promoteTabs } = useExtensionsContext();
 
   const freightAlias = props.freight?.alias;
   const stageName = props.stage?.metadata?.name;
@@ -64,11 +66,12 @@ export const Promote = (props: PromoteProps) => {
       freight: props.freight?.metadata?.name
     };
 
-    if (actionContext?.action?.type === IAction.PROMOTE) {
-      promoteActionMutation.mutate(payload);
-    } else if (actionContext?.action?.type === IAction.PROMOTE_DOWNSTREAM) {
+    if (actionContext?.action?.type === IAction.PROMOTE_DOWNSTREAM) {
       promoteDownstreamActionMutation.mutate(payload);
+      return;
     }
+
+    promoteActionMutation.mutate(payload);
   };
 
   return (
@@ -94,7 +97,17 @@ export const Promote = (props: PromoteProps) => {
         </Button>
       }
     >
-      <FreightDetails freight={props.freight} />
+      <div className='-mt-4'>
+        <FreightDetails
+          freight={props.freight}
+          additionalTabs={promoteTabs.map((data, index) => ({
+            children: <data.component freight={props.freight} />,
+            key: String(data.label + index),
+            label: data.label,
+            icon: data.icon
+          }))}
+        />
+      </div>
     </Drawer>
   );
 };

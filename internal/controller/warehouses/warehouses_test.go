@@ -30,7 +30,6 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, e.client)
 	require.NotNil(t, e.credentialsDB)
 	require.Equal(t, minReconciliationInterval, e.minReconciliationInterval)
-	require.NotEmpty(t, e.imageSourceURLFnsByBaseURL)
 
 	// Assert that all overridable behaviors were initialized to a default:
 	require.NotNil(t, e.discoverArtifactsFn)

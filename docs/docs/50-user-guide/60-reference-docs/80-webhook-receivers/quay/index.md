@@ -2,25 +2,25 @@
 sidebar_label: Quay.io
 ---
 
-# The Quay.io Webhook Receiver
+# Quay.io Webhook Receiver
 
-The Quay.io webhook receiver responds to `Push to Repository` events by
-refreshing any `Warehouse`s subscribed to the repository from which those events
-originated.
+The Quay.io webhook receiver responds to "Push to Repository" events originating
+from Quay.io repositories by "refreshing" all `Warehouse` resources subscribed
+to those repositories.
 
 :::info
 "Refreshing" a `Warehouse` resource means enqueuing it for immediate
-reconciliation by the Kargo controller, which will execute the discovery of
-new artifacts from all repositories to which that `Warehouse` subscribes.
+reconciliation by the Kargo controller, which will execute the discovery of new
+artifacts from all repositories to which that `Warehouse` subscribes.
 :::
 
 ## Configuring the Receiver
 
-The Quay.io webhook receiver will need to reference a Kubernetes `Secret` with a
+A Quay.io webhook receiver must reference a Kubernetes `Secret` resource with a
 `secret` key in its data map.
 
 :::info
-_This secret does not need to be shared directly with Quay.io._
+_This secret will not be shared directly with Quay.io._
 
 Quay.io does not natively implement any mechanism whereby receivers may
 authenticate inbound webhook requests. To compensate for this, Kargo
@@ -66,8 +66,8 @@ spec:
 
 ## Retrieving the Receiver's URL
 
-Kargo will generate a hard-to-guess URL from the configuration. We can obtain
-this URL using the following command:
+Kargo will generate a hard-to-guess URL from the receiver's configuration. This
+URL can be obtained using a command such as the following:
 
 ```shell
 kubectl get projectconfigs kargo-demo \
@@ -76,6 +76,9 @@ kubectl get projectconfigs kargo-demo \
 ```
 
 ## Registering with Quay.io
+
+To configure a single Quay.io repository to notify a receiver when objects (like
+container images or Helm charts) have been pushed to it:
 
 1. Navigate to `https://quay.io/repository/<account>/<repository>?tab=settings`,
    where `<account>` has been replaced with a Quay.io username or organization
@@ -97,7 +100,7 @@ kubectl get projectconfigs kargo-demo \
     1. In the <Hlt>Then issue a notification</Hlt> dropdown, select
        <Hlt>Webhook POST</Hlt>.
 
-    1. Set <Hlt>Webhook URL</Hlt> to the URL
+    1. Complete the <Hlt>Webhook URL</Hlt> field using the URL
        [for the webhook receiver](#retrieving-the-receivers-url).
 
     1. Click <Hlt>Create Notification</Hlt>.

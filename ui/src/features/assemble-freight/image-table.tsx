@@ -45,15 +45,17 @@ export const ImageTable = ({
         },
         {
           title: 'Source Repo',
-          render: (record: DiscoveredImageReference) =>
-            record?.gitRepoURL ? (
-              // Deprecated: Use OCI annotations instead. Will be removed in version 1.7.
-              <a href={record?.gitRepoURL} target='_blank' rel='noreferrer'>
-                {record?.gitRepoURL}
+          render: (record: DiscoveredImageReference) => {
+            // Use OCI annotation for source repository URL
+            const sourceUrl = record?.annotations?.['org.opencontainers.image.source'];
+            return sourceUrl ? (
+              <a href={sourceUrl} target='_blank' rel='noreferrer'>
+                {sourceUrl}
               </a>
             ) : (
               <FontAwesomeIcon icon={faQuestionCircle} className='text-gray-400' />
-            )
+            );
+          }
         },
         {
           title: 'Created At',

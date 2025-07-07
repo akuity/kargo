@@ -14,6 +14,7 @@ import (
 	"helm.sh/helm/v3/pkg/release"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -233,29 +234,6 @@ data:
 			},
 		},
 		{
-			name: "missing dependencies",
-			files: map[string]string{
-				"charts/test-chart/Chart.yaml": `apiVersion: v2
-name: test-chart
-version: 0.1.0
-dependencies:
-- name: subchart
-  version: 0.1.0
-  repository: https://example.com/charts
-`,
-			},
-			cfg: builtin.HelmTemplateConfig{
-				Path:    "charts/test-chart",
-				OutPath: "output.yaml",
-			},
-			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
-				require.ErrorContains(t, err, "missing chart dependencies")
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, result)
-
-				require.NoFileExists(t, filepath.Join(workDir, "output.yaml"))
-			},
-		},
-		{
 			name: "Helm action initialization error",
 			files: map[string]string{
 				"charts/test-chart/Chart.yaml": `apiVersion: v1
@@ -326,7 +304,10 @@ metadata:
 		},
 	}
 
-	runner := &helmTemplateRunner{}
+	r := newHelmTemplateRunner(&credentials.FakeDB{})
+	runner, ok := r.(*helmTemplateRunner)
+
+	require.True(t, ok)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -532,6 +513,9 @@ func Test_helmTemplateRunner_newInstallAction(t *testing.T) {
 }
 
 func Test_helmTemplateRunner_loadChart(t *testing.T) {
+	absWorkDir, err := filepath.Abs("../../../helm/testdata/charts")
+	require.NoError(t, err)
+
 	tests := []struct {
 		name       string
 		workDir    string
@@ -540,7 +524,7 @@ func Test_helmTemplateRunner_loadChart(t *testing.T) {
 	}{
 		{
 			name:    "successful load",
-			workDir: "testdata/helm/charts",
+			workDir: absWorkDir,
 			path:    "demo-0.1.0.tgz",
 			assertions: func(t *testing.T, c *chart.Chart, err error) {
 				assert.NoError(t, err)

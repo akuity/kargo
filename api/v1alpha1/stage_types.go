@@ -520,12 +520,6 @@ func (f *FreightHistory) truncate() {
 type Image struct {
 	// RepoURL describes the repository in which the image can be found.
 	RepoURL string `json:"repoURL,omitempty" protobuf:"bytes,1,opt,name=repoURL"`
-	// GitRepoURL specifies the URL of a Git repository that contains the source
-	// code for the image repository referenced by the RepoURL field if Kargo was
-	// able to infer it.
-	//
-	// Deprecated: Use OCI annotations instead. Will be removed in v1.7.0.
-	GitRepoURL string `json:"gitRepoURL,omitempty" protobuf:"bytes,2,opt,name=gitRepoURL"`
 	// Tag identifies a specific version of the image in the repository specified
 	// by RepoURL.
 	Tag string `json:"tag,omitempty" protobuf:"bytes,3,opt,name=tag"`
@@ -546,7 +540,6 @@ func (i *Image) DeepEquals(other *Image) bool {
 		return false
 	}
 	return i.RepoURL == other.RepoURL &&
-		i.GitRepoURL == other.GitRepoURL &&
 		i.Tag == other.Tag &&
 		i.Digest == other.Digest &&
 		maps.Equal(i.Annotations, other.Annotations)

@@ -2,6 +2,7 @@ package freight
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path"
 	"strings"
@@ -51,12 +52,7 @@ type webhook struct {
 
 	getAvailableFreightAliasFn func(context.Context) (string, error)
 
-	validateProjectFn func(
-		context.Context,
-		client.Client,
-		schema.GroupKind,
-		client.Object,
-	) error
+	validateProjectFn func(context.Context, client.Client, client.Object) error
 
 	listFreightFn func(
 		context.Context,
@@ -72,7 +68,10 @@ type webhook struct {
 
 	getWarehouseFn func(context.Context, client.Client, types.NamespacedName) (*kargoapi.Warehouse, error)
 
-	validateFreightArtifactsFn func(*kargoapi.Freight, *kargoapi.Warehouse) error
+	validateFreightArtifactsFn func(
+		*kargoapi.Freight,
+		*kargoapi.Warehouse,
+	) field.ErrorList
 
 	isRequestFromKargoControlplaneFn libWebhook.IsRequestFromKargoControlplaneFn
 }
@@ -159,8 +158,30 @@ func (w *webhook) ValidateCreate(
 	obj runtime.Object,
 ) (admission.Warnings, error) {
 	freight := obj.(*kargoapi.Freight) // nolint: forcetypeassert
-	if err := w.validateProjectFn(ctx, w.client, freightGroupKind, freight); err != nil {
-		return nil, err
+
+	var errs field.ErrorList
+
+	if err := w.validateProjectFn(ctx, w.client, freight); err != nil {
+		var statusErr *apierrors.StatusError
+		if ok := errors.As(err, &statusErr); ok {
+			return nil, statusErr
+		}
+		var fieldErr *field.Error
+		if ok := errors.As(err, &fieldErr); !ok {
+			return nil, apierrors.NewInternalError(err)
+		}
+		errs = append(errs, fieldErr)
+	}
+
+	if len(freight.Commits) == 0 && len(freight.Images) == 0 && len(freight.Charts) == 0 {
+		errs = append(
+			errs,
+			field.Invalid(
+				field.NewPath(""),
+				freight,
+				"freight must contain at least one commit, image, or chart",
+			),
+		)
 	}
 
 	freightList := kargoapi.FreightList{}
@@ -173,28 +194,16 @@ func (w *webhook) ValidateCreate(
 		return nil, apierrors.NewInternalError(err)
 	}
 	if len(freightList.Items) > 0 {
-		return nil, apierrors.NewConflict(
-			freightGroupResource,
-			freight.Name,
-			fmt.Errorf(
-				"alias %q already used by another piece of Freight in namespace %q",
+		errs = append(
+			errs,
+			field.Invalid(
+				field.NewPath("alias"),
 				freight.Alias,
-				freight.Namespace,
-			),
-		)
-	}
-
-	if len(freight.Commits) == 0 && len(freight.Images) == 0 && len(freight.Charts) == 0 {
-		return nil, apierrors.NewInvalid(
-			freightGroupKind,
-			freight.Name,
-			field.ErrorList{
-				field.Invalid(
-					field.NewPath(""),
-					freight,
-					"freight must contain at least one commit, image, or chart",
+				fmt.Sprintf(
+					"alias already used by another piece of Freight in namespace %q",
+					freight.Namespace,
 				),
-			},
+			),
 		)
 	}
 
@@ -203,24 +212,24 @@ func (w *webhook) ValidateCreate(
 		Name:      freight.Origin.Name,
 	})
 	if err != nil {
-		return nil, err
+		return nil, apierrors.NewInternalError(err)
 	}
 	if warehouse == nil {
-		return nil, apierrors.NewInvalid(
-			freightGroupKind,
-			freight.Name,
-			field.ErrorList{
-				field.Invalid(
-					field.NewPath("warehouse"),
-					freight.Origin.Name,
-					"warehouse does not exist",
-				),
-			},
+		errs = append(
+			errs,
+			field.Invalid(
+				field.NewPath("warehouse"),
+				freight.Origin.Name,
+				"warehouse does not exist",
+			),
 		)
 	}
 
-	if err := w.validateFreightArtifactsFn(freight, warehouse); err != nil {
-		return nil, err
+	if errs = append(
+		errs,
+		w.validateFreightArtifactsFn(freight, warehouse)...,
+	); len(errs) > 0 {
+		return nil, apierrors.NewInvalid(freightGroupKind, freight.Name, errs)
 	}
 
 	return nil, nil
@@ -273,7 +282,9 @@ func (w *webhook) ValidateUpdate(
 
 	req, err := w.admissionRequestFromContextFn(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("get admission request from context: %w", err)
+		return nil, apierrors.NewInternalError(
+			fmt.Errorf("get admission request from context: %w", err),
+		)
 	}
 	// Record Freight approved events if the request doesn't come from Kargo controlplane.
 	if !w.isRequestFromKargoControlplaneFn(req) {
@@ -283,6 +294,7 @@ func (w *webhook) ValidateUpdate(
 			}
 		}
 	}
+
 	return nil, nil
 }
 
@@ -370,7 +382,7 @@ type artifactSubscription struct {
 func validateFreightArtifacts(
 	freight *kargoapi.Freight,
 	warehouse *kargoapi.Warehouse,
-) error {
+) field.ErrorList {
 	var subscriptions = make(map[artifactSubscription]bool, len(warehouse.Spec.Subscriptions))
 	var counts = make(map[artifactSubscription]int)
 
@@ -396,6 +408,8 @@ func validateFreightArtifacts(
 		}
 	}
 
+	var errs field.ErrorList
+
 	// Mark the subscription as found for each artifact in the Freight, and count
 	// the number of times each subscription is found.
 	for _, commit := range freight.Commits {
@@ -408,18 +422,16 @@ func validateFreightArtifacts(
 			counts[sub]++
 			continue
 		}
-		return apierrors.NewInvalid(
-			freightGroupKind,
-			freight.Name,
-			field.ErrorList{
-				field.Invalid(
-					field.NewPath("commits"),
-					commit,
-					fmt.Sprintf("no subscription found for Git repository in Warehouse %q", warehouse.Name),
-				),
-			},
+		errs = append(
+			errs,
+			field.Invalid(
+				field.NewPath("commits"),
+				commit,
+				fmt.Sprintf("no subscription found for Git repository in Warehouse %q", warehouse.Name),
+			),
 		)
 	}
+
 	for _, image := range freight.Images {
 		sub := artifactSubscription{
 			URL:  image.RepoURL,
@@ -430,18 +442,16 @@ func validateFreightArtifacts(
 			counts[sub]++
 			continue
 		}
-		return apierrors.NewInvalid(
-			freightGroupKind,
-			freight.Name,
-			field.ErrorList{
-				field.Invalid(
-					field.NewPath("images"),
-					image,
-					fmt.Sprintf("no subscription found for image repository in Warehouse %q", warehouse.Name),
-				),
-			},
+		errs = append(
+			errs,
+			field.Invalid(
+				field.NewPath("images"),
+				image,
+				fmt.Sprintf("no subscription found for image repository in Warehouse %q", warehouse.Name),
+			),
 		)
 	}
+
 	for _, chart := range freight.Charts {
 		sub := artifactSubscription{
 			URL:  path.Join(helm.NormalizeChartRepositoryURL(chart.RepoURL), chart.Name),
@@ -452,56 +462,48 @@ func validateFreightArtifacts(
 			counts[sub]++
 			continue
 		}
-		return apierrors.NewInvalid(
-			freightGroupKind,
-			freight.Name,
-			field.ErrorList{
-				field.Invalid(
-					field.NewPath("charts"),
-					chart,
-					fmt.Sprintf("no subscription found for Helm chart in Warehouse %q", warehouse.Name),
-				),
-			},
+		errs = append(
+			errs,
+			field.Invalid(
+				field.NewPath("charts"),
+				chart,
+				fmt.Sprintf("no subscription found for Helm chart in Warehouse %q", warehouse.Name),
+			),
 		)
 	}
 
 	// Check that each subscription is found exactly once.
 	for sub, found := range subscriptions {
 		if !found {
-			return apierrors.NewInvalid(
-				freightGroupKind,
-				freight.Name,
-				field.ErrorList{
-					field.Invalid(
-						field.NewPath(sub.Type.FreightPath()),
-						nil,
-						fmt.Sprintf(
-							"no artifact found for subscription %q of Warehouse %q",
-							sub.URL, warehouse.Name,
-						),
+			errs = append(
+				errs,
+				field.Invalid(
+					field.NewPath(sub.Type.FreightPath()),
+					nil,
+					fmt.Sprintf(
+						"no artifact found for subscription %q of Warehouse %q",
+						sub.URL, warehouse.Name,
 					),
-				},
+				),
 			)
+			continue
 		}
 		if counts[sub] > 1 {
-			return apierrors.NewInvalid(
-				freightGroupKind,
-				freight.Name,
-				field.ErrorList{
-					field.Invalid(
-						field.NewPath(sub.Type.FreightPath()),
-						nil,
-						fmt.Sprintf(
-							"multiple artifacts found for subscription %q of Warehouse %q",
-							sub.URL, warehouse.Name,
-						),
+			errs = append(
+				errs,
+				field.Invalid(
+					field.NewPath(sub.Type.FreightPath()),
+					nil,
+					fmt.Sprintf(
+						"multiple artifacts found for subscription %q of Warehouse %q",
+						sub.URL, warehouse.Name,
 					),
-				},
+				),
 			)
 		}
 	}
 
-	return nil
+	return errs
 }
 
 // compareFreight compares two Freight objects and returns the first field path

@@ -43,8 +43,7 @@ export const stackNodes = (
       const currentNodeSuccessors = graph.successors(currentNode) || [];
 
       for (const _successor of currentNodeSuccessors) {
-        // @ts-expect-error type of successor is string
-        const successor = _successor as string;
+        const successor = _successor;
 
         if (afterNodes.includes(successor)) {
           if (processedParents.has(successor)) {
@@ -55,7 +54,6 @@ export const stackNodes = (
           const stackedNode: { count: number; parentNode: string; actualNode: string } = {
             count: 0,
             parentNode: successor,
-            // @ts-expect-error it is string
             actualNode: graph.successors(successor)?.[0] as string
           };
 
@@ -117,7 +115,6 @@ const getAllSuccessors = (afterNode: string, graph: graphlib.Graph) => {
 
     if (currentNode) {
       for (const _successor of graph.successors(currentNode) || []) {
-        // @ts-expect-error type of successor is string
         const successor = _successor as string;
 
         successors.add(successor);

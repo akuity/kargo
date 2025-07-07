@@ -1,5 +1,5 @@
 import { toJson } from '@bufbuild/protobuf';
-import { Descriptions, Tabs } from 'antd';
+import { Descriptions, Tabs, TabsProps } from 'antd';
 import Link from 'antd/es/typography/Link';
 import { generatePath, useNavigate } from 'react-router-dom';
 
@@ -12,6 +12,7 @@ import { Freight, FreightSchema } from '@ui/gen/api/v1alpha1/generated_pb';
 
 type FreightDetailsProps = {
   freight: Freight;
+  additionalTabs?: TabsProps['items'];
 };
 
 export const FreightDetails = (props: FreightDetailsProps) => {
@@ -80,7 +81,8 @@ export const FreightDetails = (props: FreightDetailsProps) => {
             children: (
               <ManifestPreview object={toJson(FreightSchema, props.freight)} height='500px' />
             )
-          }
+          },
+          ...(props.additionalTabs || [])
         ]}
       />
     </>
