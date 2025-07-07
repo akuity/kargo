@@ -439,7 +439,8 @@ func (a *argocdUpdater) syncApplication(
 
 	// Initiate a new operation.
 	actor := applicationOperationInitiator
-	automated := true
+	// TODO(hidde): force to to "false" to debug Argo CD not handling it properly
+	automated := false
 	if stepCtx.PromotionActor != "" {
 		// PromotionActor is extracted from the `create-actor` annotation of the Promotion
 		// object. If set, it implies it was a manually triggered promotion, which we
