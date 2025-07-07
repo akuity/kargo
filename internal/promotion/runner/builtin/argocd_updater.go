@@ -323,7 +323,7 @@ func (a *argocdUpdater) mustPerformUpdate(
 	status := app.Status.OperationState
 	if status == nil {
 		// The application has no operation.
-		return "", true, nil
+		return "", true, fmt.Errorf("no operation state found on Application")
 	}
 
 	// Deal with the possibility that the operation was not initiated by Kargo
@@ -364,7 +364,10 @@ func (a *argocdUpdater) mustPerformUpdate(
 			)
 		}
 		// Initiate our own operation.
-		return "", true, nil
+		return "", true, fmt.Errorf(
+			"previous operation was initiated for different promotion, need to start new operation for %s",
+			stepCtx.Promotion,
+		)
 	}
 
 	if !status.Phase.Completed() {
