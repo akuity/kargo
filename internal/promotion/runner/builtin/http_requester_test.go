@@ -369,7 +369,7 @@ func Test_httpRequester_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.ErrorContains(t, err, "HTTP (404) response met failure criteria")
-				require.False(t, promotion.IsTerminal(err))
+				require.True(t, promotion.IsTerminal(err))
 				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
 			},
 		},
@@ -382,7 +382,7 @@ func Test_httpRequester_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.ErrorContains(t, err, "HTTP (200) response met failure criteria")
-				require.False(t, promotion.IsTerminal(err))
+				require.True(t, promotion.IsTerminal(err))
 				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
 			},
 		},
@@ -398,6 +398,32 @@ func Test_httpRequester_run(t *testing.T) {
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.NoError(t, err)
 				require.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
+			},
+		},
+		{
+			name: "undefined criteria with 2xx response",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusOK)
+			},
+			cfg: builtin.HTTPConfig{
+				// No success or failure expressions
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+			},
+		},
+		{
+			name: "undefined criteria with non-2xx response",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusNotFound)
+			},
+			cfg: builtin.HTTPConfig{
+				// No success or failure expressions
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err) // Not terminal, should be retried
+				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
 			},
 		},
 	}
@@ -606,165 +632,141 @@ func Test_httpRequester_buildExprEnv(t *testing.T) {
 	}
 }
 
-func Test_httpRequester_wasRequestSuccessful(t *testing.T) {
+func Test_httpRequester_evaluateSuccessCriteria(t *testing.T) {
 	testCases := []struct {
 		name       string
 		cfg        builtin.HTTPConfig
-		statusCode int
-		assertions func(t *testing.T, success bool, err error)
+		assertions func(t *testing.T, result *bool, err error)
 	}{
+		{
+			name: "no success expression",
+			cfg:  builtin.HTTPConfig{},
+			assertions: func(t *testing.T, result *bool, err error) {
+				require.NoError(t, err)
+				require.Nil(t, result)
+			},
+		},
 		{
 			name: "error compiling success expression",
 			cfg:  builtin.HTTPConfig{SuccessExpression: "(1 + 2"},
-			assertions: func(t *testing.T, _ bool, err error) {
+			assertions: func(t *testing.T, result *bool, err error) {
 				require.ErrorContains(t, err, "error compiling success expression")
 				require.True(t, promotion.IsTerminal(err))
+				require.Nil(t, result)
 			},
 		},
 		{
 			name: "error evaluating success expression",
 			cfg:  builtin.HTTPConfig{SuccessExpression: "invalid()"},
-			assertions: func(t *testing.T, _ bool, err error) {
+			assertions: func(t *testing.T, result *bool, err error) {
 				require.ErrorContains(t, err, "error evaluating success expression")
 				require.False(t, promotion.IsTerminal(err))
+				require.Nil(t, result)
 			},
 		},
 		{
 			name: "success expression evaluates to non-boolean",
 			cfg:  builtin.HTTPConfig{SuccessExpression: `"foo"`},
-			assertions: func(t *testing.T, _ bool, err error) {
+			assertions: func(t *testing.T, result *bool, err error) {
 				require.ErrorContains(t, err, "success expression")
 				require.ErrorContains(t, err, "did not evaluate to a boolean")
 				require.False(t, promotion.IsTerminal(err))
+				require.Nil(t, result)
 			},
 		},
 		{
 			name: "success expression evaluates to true",
 			cfg:  builtin.HTTPConfig{SuccessExpression: "true"},
-			assertions: func(t *testing.T, success bool, err error) {
+			assertions: func(t *testing.T, result *bool, err error) {
 				require.NoError(t, err)
-				require.True(t, success)
+				require.NotNil(t, result)
+				require.True(t, *result)
 			},
 		},
 		{
 			name: "success expression evaluates to false",
 			cfg:  builtin.HTTPConfig{SuccessExpression: "false"},
-			assertions: func(t *testing.T, success bool, err error) {
+			assertions: func(t *testing.T, result *bool, err error) {
 				require.NoError(t, err)
-				require.False(t, success)
-			},
-		},
-		{
-			name: "no success expression, but failure expression",
-			cfg:  builtin.HTTPConfig{FailureExpression: "true"},
-			assertions: func(t *testing.T, success bool, err error) {
-				require.NoError(t, err)
-				require.False(t, success)
-			},
-		},
-		{
-			name:       "no success or failure expression; good status code",
-			statusCode: http.StatusOK,
-			assertions: func(t *testing.T, success bool, err error) {
-				require.NoError(t, err)
-				require.True(t, success)
-			},
-		},
-		{
-			name:       "no success or failure expression; bad status code",
-			statusCode: http.StatusNotFound,
-			assertions: func(t *testing.T, success bool, err error) {
-				require.NoError(t, err)
-				require.False(t, success)
+				require.NotNil(t, result)
+				require.False(t, *result)
 			},
 		},
 	}
 	h := &httpRequester{}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			success, err := h.wasRequestSuccessful(testCase.cfg, testCase.statusCode, nil)
-			testCase.assertions(t, success, err)
+			result, err := h.evaluateSuccessCriteria(testCase.cfg, nil)
+			testCase.assertions(t, result, err)
 		})
 	}
 }
 
-func Test_httpRequester_didRequestFail(t *testing.T) {
+func Test_httpRequester_evaluateFailureCriteria(t *testing.T) {
 	testCases := []struct {
 		name       string
 		cfg        builtin.HTTPConfig
-		statusCode int
-		assertions func(t *testing.T, failed bool, err error)
+		assertions func(t *testing.T, result *bool, err error)
 	}{
+		{
+			name: "no failure expression",
+			cfg:  builtin.HTTPConfig{},
+			assertions: func(t *testing.T, result *bool, err error) {
+				require.NoError(t, err)
+				require.Nil(t, result)
+			},
+		},
 		{
 			name: "error compiling failure expression",
 			cfg:  builtin.HTTPConfig{FailureExpression: "(1 + 2"},
-			assertions: func(t *testing.T, _ bool, err error) {
+			assertions: func(t *testing.T, result *bool, err error) {
 				require.ErrorContains(t, err, "error compiling failure expression")
 				require.True(t, promotion.IsTerminal(err))
+				require.Nil(t, result)
 			},
 		},
 		{
 			name: "error evaluating failure expression",
 			cfg:  builtin.HTTPConfig{FailureExpression: "invalid()"},
-			assertions: func(t *testing.T, _ bool, err error) {
+			assertions: func(t *testing.T, result *bool, err error) {
 				require.ErrorContains(t, err, "error evaluating failure expression")
 				require.False(t, promotion.IsTerminal(err))
+				require.Nil(t, result)
 			},
 		},
 		{
 			name: "failure expression evaluates to non-boolean",
 			cfg:  builtin.HTTPConfig{FailureExpression: `"foo"`},
-			assertions: func(t *testing.T, _ bool, err error) {
+			assertions: func(t *testing.T, result *bool, err error) {
 				require.ErrorContains(t, err, "did not evaluate to a boolean")
 				require.False(t, promotion.IsTerminal(err))
+				require.Nil(t, result)
 			},
 		},
 		{
 			name: "failure expression evaluates to true",
 			cfg:  builtin.HTTPConfig{FailureExpression: "true"},
-			assertions: func(t *testing.T, failed bool, err error) {
+			assertions: func(t *testing.T, result *bool, err error) {
 				require.NoError(t, err)
-				require.True(t, failed)
+				require.NotNil(t, result)
+				require.True(t, *result)
 			},
 		},
 		{
 			name: "failure expression evaluates to false",
 			cfg:  builtin.HTTPConfig{FailureExpression: "false"},
-			assertions: func(t *testing.T, failed bool, err error) {
+			assertions: func(t *testing.T, result *bool, err error) {
 				require.NoError(t, err)
-				require.False(t, failed)
-			},
-		},
-		{
-			name: "no failure expression, but success expression",
-			cfg:  builtin.HTTPConfig{SuccessExpression: "true"},
-			assertions: func(t *testing.T, failed bool, err error) {
-				require.NoError(t, err)
-				require.False(t, failed)
-			},
-		},
-		{
-			name:       "no success or failure expression; good status code",
-			statusCode: http.StatusOK,
-			assertions: func(t *testing.T, failed bool, err error) {
-				require.NoError(t, err)
-				require.False(t, failed)
-			},
-		},
-		{
-			name:       "no success or failure expression; bad status code",
-			statusCode: http.StatusNotFound,
-			assertions: func(t *testing.T, failed bool, err error) {
-				require.NoError(t, err)
-				require.True(t, failed)
+				require.NotNil(t, result)
+				require.False(t, *result)
 			},
 		},
 	}
 	h := &httpRequester{}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			failed, err := h.didRequestFail(testCase.cfg, testCase.statusCode, nil)
-			testCase.assertions(t, failed, err)
+			result, err := h.evaluateFailureCriteria(testCase.cfg, nil)
+			testCase.assertions(t, result, err)
 		})
 	}
 }
