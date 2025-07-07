@@ -2,6 +2,7 @@ package builtin
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -497,6 +498,12 @@ func (a *argocdUpdater) syncApplication(
 
 	// Patch the Argo CD Application.
 	if err := a.argoCDAppPatchFn(ctx, app, func(src, dst unstructured.Unstructured) error {
+		logging.LoggerFromContext(ctx).Debug("patch function called for Argo CD Application",
+			"app", app.Name,
+			"src", jsonDebugObject(src),
+			"dst", jsonDebugObject(dst),
+		)
+
 		dst.SetAnnotations(src.GetAnnotations())
 		dst.Object["spec"] = a.recursiveMerge(src.Object["spec"], dst.Object["spec"])
 		dst.Object["operation"] = src.Object["operation"]
@@ -522,6 +529,13 @@ func (a *argocdUpdater) syncApplication(
 			dst.Object["status"].(map[string]any)["operationState"] =
 				src.Object["status"].(map[string]any)["operationState"]
 		}
+
+		logging.LoggerFromContext(ctx).Debug("patch function completed for Argo CD Application",
+			"app", app.Name,
+			"src", jsonDebugObject(src),
+			"dst", jsonDebugObject(dst),
+		)
+
 		return nil
 	}); err != nil {
 		return fmt.Errorf("error patching Argo CD Application %q: %w", app.Name, err)
@@ -855,4 +869,15 @@ func (a *argocdUpdater) recursiveMerge(src, dst any) any {
 		return src
 	}
 	return dst
+}
+
+func jsonDebugObject(obj any) string {
+	if obj == nil {
+		return ""
+	}
+	data, err := json.Marshal(obj)
+	if err != nil {
+		return fmt.Sprintf("error marshaling object: %v", err)
+	}
+	return string(data)
 }
