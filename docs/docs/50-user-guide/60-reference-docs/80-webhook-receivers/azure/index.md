@@ -200,6 +200,6 @@ the [ACR Docs](https://learn.microsoft.com/en-us/azure/container-registry/contai
 
 
 :::info
-For additional information on configuring ACR webhooks, refer directly to
+For additional information on configuring Azure DevOps webhooks, refer directly to
 the [Azure DevOps Docs](https://learn.microsoft.com/en-us/azure/devops/service-hooks/services/webhooks?view=azure-devops).
 :::
