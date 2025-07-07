@@ -75,8 +75,6 @@ kubectl get projectconfigs kargo-demo \
 
 ## Registering with Gitea
 
-https://gitea.com/farisakuity/webhook-poc/settings/hooks
-
 1. Navigate to `https://gitea.com/<namespace>/<repo>/settings/hooks`, where
    `<namespace>` has been replaced with a Gitea username or group name and
    `<project>` has been replaced with the name of a project belonging to that
