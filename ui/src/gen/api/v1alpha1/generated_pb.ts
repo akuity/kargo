@@ -1903,7 +1903,7 @@ export const ImageDiscoveryResultSchema: GenMessage<ImageDiscoveryResult> = /*@_
 /**
  * ImageSubscription defines a subscription to an image repository.
  *
- * +kubebuilder:validation:XValidation:message="ImageSubscription cannot have both semverConstraint and constraint set",rule="!(has(self.semverConstraint) && has(self.constraint))"
+ * +kubebuilder:validation:XValidation:message="semverConstraint and constraint fields are mutually exclusive",rule="!(has(self.semverConstraint) && has(self.constraint))"
  *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.ImageSubscription
  */

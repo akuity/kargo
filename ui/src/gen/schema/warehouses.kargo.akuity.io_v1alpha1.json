@@ -223,7 +223,7 @@
                 "type": "object",
                 "x-kubernetes-validations": [
                   {
-                    "message": "ImageSubscription cannot have both semverConstraint and constraint set",
+                    "message": "semverConstraint and constraint fields are mutually exclusive",
                     "rule": "!(has(self.semverConstraint) && has(self.constraint))"
                   }
                 ]

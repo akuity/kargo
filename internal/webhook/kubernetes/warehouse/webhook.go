@@ -216,14 +216,16 @@ func (w *webhook) validateImageSub(
 				f.Child("semverConstraint"),
 				sub.SemverConstraint,
 			); err != nil {
-				errs = field.ErrorList{err}
+				errs = append(errs, err)
 			}
-		} else if sub.Constraint != "" {
+		}
+
+		if sub.Constraint != "" {
 			if err := validateSemverConstraint(
 				f.Child("constraint"),
 				sub.Constraint,
 			); err != nil {
-				errs = field.ErrorList{err}
+				errs = append(errs, err)
 			}
 		}
 	}
