@@ -112,7 +112,7 @@ CLI). `Freight` which have not passed verification in a `Stage` are blocked
 from continuing further downstream.
 
 :::tip
-It is sometimes desired to skip the verification process entirely (e.g. a 
+It is sometimes desired to skip the verification process entirely (e.g. a
 hotfix needs to be fast-tracked to production). Verification (and the entire
 Pipeline for that matter) can be bypassed by
 [manually approving](./50-working-with-freight.md#manual-approvals) `Freight`
@@ -201,7 +201,7 @@ An `AnalysisTemplate` _defines_ a verification process, while an `AnalysisRun`
 tracks the _progress and result_ of an execution of that process.
 :::
 
-##  Arguments and Metadata
+## Arguments and Metadata
 
 It is also possible to specify additional labels, annotations, and arguments
 that should be applied to `AnalysisRun` resources spawned from the referenced
@@ -260,6 +260,36 @@ Argo Rollouts `AnalysisTemplate`s require expressions to be enclosed within
 Ensure that expressions are enclosed within the correct syntax for the
 type of resource you are working with, recognizable by the `apiVersion` and
 `kind` fields.
+:::
+
+:::caution
+If specifying arguments for use in the creation of an `AnalysisRun` via a
+`Stage`'s `spec.verification.args` field, each `AnalysisTemplate` referenced in
+`spec.verification.analysisTemplates` _must_ declare those arguments in its
+own `spec.args` field.
+
+The following example `AnalysisTemplate` complements the example `Stage` shown
+above:
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: integration-test
+  namespace: guestbook
+spec:
+  args:
+  - name: commit
+  metrics:
+    # ...
+```
+
+Failure to declare arguments will cause `AnalysisRun`s (and therefore,
+verification) to fail.
+
+Refer directly to the
+[Rollouts Docs](https://argo-rollouts.readthedocs.io/en/stable/features/analysis/#analysis-template-arguments)
+for further details.
 :::
 
 ## Implicit Argo CD Verification

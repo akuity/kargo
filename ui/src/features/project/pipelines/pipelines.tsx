@@ -122,7 +122,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
   const [preferredFilter, setPreferredFilter] = useState<
     FreightTimelineControllerContextType['preferredFilter']
   >({
-    showAlias: false,
+    showAlias: true,
     sources: [],
     timerange: 'all-time',
     showColors: true,

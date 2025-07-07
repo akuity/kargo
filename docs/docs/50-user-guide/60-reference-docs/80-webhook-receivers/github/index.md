@@ -2,7 +2,7 @@
 sidebar_label: GitHub
 ---
 
-# The GitHub Webhook Receiver
+# GitHub Webhook Receiver
 
 The GitHub webhook receiver responds to `ping`, `push`, and `package` events
 originating from GitHub.
@@ -24,7 +24,7 @@ artifacts from all repositories to which that `Warehouse` subscribes.
 :::
 
 :::info
-The Github webhook receiver also works with Github Enterprise Cloud and GitHub
+The GitHub webhook receiver also works with GitHub Enterprise Cloud and GitHub
 Enterprise Server, although some URLs in this document may need to be adjusted
 accordingly.
 :::
@@ -81,7 +81,7 @@ kubectl get projectconfigs kargo-demo \
   -o=jsonpath='{.status.webhookReceivers}'
 ```
 
-## Registering with Github
+## Registering with GitHub
 
 There are two options whereby GitHub repositories can be configured to send
 events to the webhook receiver:
@@ -92,7 +92,7 @@ events to the webhook receiver:
     its large disadvantage is that it is tedious and most likely infeasible to
     repeat this configuration for a large number of repositories.
 
-1. Create a [Github App](https://docs.github.com/en/apps).
+1. Create a [GitHub App](https://docs.github.com/en/apps).
 
     The disadvantage of this approach is that it is comparatively complex,
     however, its large advantage is that once created and configured, the App
@@ -171,12 +171,12 @@ receiver.
 
 :::info
 For additional information on configuring webhooks, refer directly to the
-[Github Docs](https://docs.github.com/en/webhooks/using-webhooks/creating-webhooks).
+[GitHub Docs](https://docs.github.com/en/webhooks/using-webhooks/creating-webhooks).
 :::
 
 ### Webhooks from a GitHub App
 
-To configure a [Github App](https://docs.github.com/en/apps) to notify the
+To configure a [GitHub App](https://docs.github.com/en/apps) to notify the
 receiver of relevant events from any repository into which it's been installed:
 
 1. Navigate to
@@ -193,7 +193,7 @@ receiver of relevant events from any repository into which it's been installed:
 
     ![Register New GitHub App Form](./img/apps/register.png "Register New GitHub App Form")
 
-    1. Complete the <Hlt>Github App name</Hlt> field using a name of your
+    1. Complete the <Hlt>GitHub App name</Hlt> field using a name of your
        choosing.
 
         :::note
@@ -220,7 +220,7 @@ receiver of relevant events from any repository into which it's been installed:
     1. Complete the <Hlt>Webhook URL</Hlt> field using the URL
        [for the webhook receiver](#retrieving-the-receivers-url).
 
-    1. Complete the <Hlt>Secret</Hlt> field using the the (unencoded) value
+    1. Complete the <Hlt>Secret</Hlt> field using the (unencoded) value
        assigned to the `secret` key of the `Secret` resource referenced by the
        [webhook receiver's configuration](#configuring-the-receiver).
 
@@ -246,7 +246,7 @@ receiver of relevant events from any repository into which it's been installed:
 
         If you would like to receive events when container images or Helm charts
         are pushed to associated GHCR repositories, ensure
-        <Hlt>Registry package</Hlt> is also selected.
+        <Hlt>Packages</Hlt> is also selected.
 
         :::note
         The events available for selection in this section of the form are
@@ -322,5 +322,5 @@ been installed will send events to the webhook receiver.
 :::info
 For additional information on configuring webhooks for GitHub Apps, refer
 directly to the
-[Github Docs](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/using-webhooks-with-github-apps).
+[GitHub Docs](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/using-webhooks-with-github-apps).
 :::

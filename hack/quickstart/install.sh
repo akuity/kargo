@@ -45,4 +45,6 @@ helm install kargo \
   --set api.service.nodePort=31444 \
   --set api.adminAccount.passwordHash='$2a$10$Zrhhie4vLz5ygtVSaif6o.qN36jgs6vjtMBdM6yrU1FOeiAAMMxOm' \
   --set api.adminAccount.tokenSigningKey=iwishtowashmyirishwristwatch \
+  --set externalWebhooksServer.service.type=NodePort \
+  --set externalWebhooksServer.service.nodePort=31445 \
   --wait

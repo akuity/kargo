@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -146,20 +147,36 @@ func getKeySet(ctx context.Context, cfg config.ServerConfig) (oidc.KeySet, error
 	httpClient := cleanhttp.DefaultClient()
 
 	var discoURL string
+	var err error
 	if cfg.DexProxyConfig == nil {
-		discoURL = fmt.Sprintf(
-			"%s/.well-known/openid-configuration",
+		if discoURL, err = url.JoinPath(
 			cfg.OIDCConfig.IssuerURL,
-		)
+			".well-known",
+			"openid-configuration",
+		); err != nil {
+			return nil, fmt.Errorf(
+				"error constructing discovery URL from issuer URL %q: %w",
+				cfg.OIDCConfig.IssuerURL,
+				err,
+			)
+		}
 	} else {
-		discoURL = fmt.Sprintf(
-			"%s/dex/.well-known/openid-configuration",
+		if discoURL, err = url.JoinPath(
 			cfg.DexProxyConfig.ServerAddr,
-		)
+			"dex",
+			".well-known",
+			"openid-configuration",
+		); err != nil {
+			return nil, fmt.Errorf(
+				"error constructing discovery URL from issuer URL %q: %w",
+				cfg.OIDCConfig.IssuerURL,
+				err,
+			)
+		}
 		var caCertPool *x509.CertPool
 		if cfg.DexProxyConfig.CACertPath != "" {
-			caCertBytes, err := os.ReadFile(cfg.DexProxyConfig.CACertPath)
-			if err != nil {
+			var caCertBytes []byte
+			if caCertBytes, err = os.ReadFile(cfg.DexProxyConfig.CACertPath); err != nil {
 				return nil, fmt.Errorf("error reading CA cert file %q: %w", cfg.DexProxyConfig.CACertPath, err)
 			}
 			caCertPool = x509.NewCertPool()
@@ -337,9 +354,14 @@ func (a *authInterceptor) authenticate(
 	procedure string,
 	header http.Header,
 ) (context.Context, error) {
+	logger := logging.LoggerFromContext(ctx).WithValues("procedure", procedure)
+
 	if _, ok := exemptProcedures[procedure]; ok {
+		logger.Debug("skipping authentication for exempt procedure")
 		return ctx, nil
 	}
+
+	logger.Debug("authenticating request")
 
 	rawToken := strings.TrimPrefix(header.Get(authHeaderKey), "Bearer ")
 	if rawToken == "" {
@@ -364,6 +386,8 @@ func (a *authInterceptor) authenticate(
 		), nil
 	}
 
+	logger.Debug("found untrusted claims in token", "claims", untrustedClaims)
+
 	// If we get to here, we're dealing with a JWT. It could have been issued:
 	//
 	//   1. Directly by the Kargo API server (in the case of admin)
@@ -374,7 +398,9 @@ func (a *authInterceptor) authenticate(
 	if a.cfg.AdminConfig != nil &&
 		untrustedClaims.Issuer == a.cfg.AdminConfig.TokenIssuer {
 		// Case 1: This token was allegedly issued directly by the Kargo API server.
+		logger.Debug("admin token allegedly issued by Kargo API server")
 		if a.verifyKargoIssuedTokenFn(rawToken) {
+			logger.Debug("admin token verified as issued by Kargo API server")
 			return user.ContextWithInfo(
 				ctx,
 				user.Info{
@@ -390,10 +416,16 @@ func (a *authInterceptor) authenticate(
 		untrustedClaims.Issuer == a.cfg.OIDCConfig.IssuerURL {
 		// Case 2: This token was allegedly issued by Kargo's OpenID Connect
 		// identity provider.
+		logger.Debug(
+			"token allegedly issued by Kargo's OpenID Connect identity provider",
+		)
 		c, err := a.verifyIDPIssuedTokenFn(ctx, rawToken)
 		if err != nil {
 			return ctx, err
 		}
+		logger.Debug(
+			"token verified as issued by Kargo's OpenID Connect identity provider",
+		)
 		sa, err := a.listServiceAccountsFn(ctx, c)
 		if err != nil {
 			return ctx, fmt.Errorf("list service accounts for user: %w", err)
@@ -424,6 +456,12 @@ func (a *authInterceptor) authenticate(
 	// issued by the Kubernetes cluster's identity provider. Just run with it. If
 	// we're wrong, Kubernetes API calls will simply have auth errors that will
 	// bubble back to the client.
+
+	logger.Debug(
+		"could not verify token; assuming it might have been issued by " +
+			"Kubernetes cluster identity provider",
+	)
+
 	return user.ContextWithInfo(
 		ctx,
 		user.Info{

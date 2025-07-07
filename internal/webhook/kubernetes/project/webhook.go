@@ -2,6 +2,7 @@ package project
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -91,7 +92,11 @@ func (w *webhook) ValidateCreate(
 	// the Project because resources following the Project in a manifest are
 	// likely to be scoped to that namespace.
 	if err = w.ensureNamespace(ctx, project); err != nil {
-		return nil, err
+		statusErr := &apierrors.StatusError{}
+		if ok := errors.As(err, &statusErr); ok {
+			return nil, statusErr
+		}
+		return nil, apierrors.NewInternalError(err)
 	}
 
 	// Ensure the Kargo API server and kargo-admin ServiceAccount receive
@@ -100,7 +105,11 @@ func (w *webhook) ValidateCreate(
 	// the Kargo API server carte blanche access these resources throughout the
 	// cluster. We do this synchronously because resources of these types are
 	// likely to follow the Project in a manifest.
-	return warnings, w.ensureProjectAdminPermissions(ctx, project)
+	if err = w.ensureProjectAdminPermissions(ctx, project); err != nil {
+		return warnings, apierrors.NewInternalError(err)
+	}
+
+	return warnings, nil
 }
 
 func (w *webhook) ValidateUpdate(
@@ -110,8 +119,6 @@ func (w *webhook) ValidateUpdate(
 ) (admission.Warnings, error) {
 	oldProject := oldObj.(*kargoapi.Project) // nolint: forcetypeassert
 	newProject := newObj.(*kargoapi.Project) // nolint: forcetypeassert
-
-	specPath := field.NewPath("spec")
 
 	// TODO(hidde): Remove this when the deprecated Spec field is removed.
 	var warnings admission.Warnings
@@ -123,7 +130,7 @@ func (w *webhook) ValidateUpdate(
 					newProject.Name,
 					field.ErrorList{
 						field.Forbidden(
-							specPath,
+							field.NewPath("spec"),
 							fmt.Sprintf(
 								"deprecated field: create a ProjectConfig named %q with the config instead",
 								newProject.Name,

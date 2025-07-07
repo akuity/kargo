@@ -10,9 +10,9 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"gopkg.in/yaml.v3"
-	"oras.land/oras-go/pkg/registry"
-	"oras.land/oras-go/pkg/registry/remote"
-	"oras.land/oras-go/pkg/registry/remote/auth"
+	"oras.land/oras-go/v2/registry"
+	"oras.land/oras-go/v2/registry/remote"
+	"oras.land/oras-go/v2/registry/remote/auth"
 
 	"github.com/akuity/kargo/internal/image"
 )
@@ -174,7 +174,7 @@ func getChartVersionsFromOCIRepo(
 	}
 
 	versions := make([]string, 0, rep.TagListPageSize)
-	if err := rep.Tags(ctx, func(t []string) error {
+	if err = rep.Tags(ctx, "", func(t []string) error {
 		versions = append(versions, t...)
 		return nil
 	}); err != nil {

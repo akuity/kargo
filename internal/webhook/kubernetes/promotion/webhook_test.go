@@ -11,9 +11,9 @@ import (
 	admissionv1 "k8s.io/api/admission/v1"
 	authnv1 "k8s.io/api/authentication/v1"
 	authzv1 "k8s.io/api/authorization/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -44,7 +44,7 @@ func TestNewWebhook(t *testing.T) {
 	require.NotNil(t, w.isRequestFromKargoControlplaneFn)
 }
 
-func TestDefault(t *testing.T) {
+func Test_webhook_Default(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
 
@@ -634,7 +634,7 @@ func TestDefault(t *testing.T) {
 	}
 }
 
-func TestValidateCreate(t *testing.T) {
+func Test_webhook_ValidateCreate(t *testing.T) {
 	const testWarehouse = "fake-warehouse"
 
 	testCases := []struct {
@@ -649,15 +649,20 @@ func TestValidateCreate(t *testing.T) {
 				validateProjectFn: func(
 					context.Context,
 					client.Client,
-					schema.GroupKind,
 					client.Object,
 				) error {
 					return errors.New("something went wrong")
 				},
 			},
 			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
-				require.Error(t, err)
-				require.Equal(t, "something went wrong", err.Error())
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+				require.Equal(
+					t,
+					metav1.StatusReasonInternalError,
+					statusErr.ErrStatus.Reason,
+				)
+				require.Contains(t, statusErr.ErrStatus.Message, "something went wrong")
 			},
 		},
 		{
@@ -666,7 +671,6 @@ func TestValidateCreate(t *testing.T) {
 				validateProjectFn: func(
 					context.Context,
 					client.Client,
-					schema.GroupKind,
 					client.Object,
 				) error {
 					return nil
@@ -676,8 +680,14 @@ func TestValidateCreate(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
-				require.Error(t, err)
-				require.Equal(t, "something went wrong", err.Error())
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+				require.Equal(
+					t,
+					metav1.StatusReasonInternalError,
+					statusErr.ErrStatus.Reason,
+				)
+				require.Contains(t, statusErr.ErrStatus.Message, "something went wrong")
 			},
 		},
 		{
@@ -686,7 +696,6 @@ func TestValidateCreate(t *testing.T) {
 				validateProjectFn: func(
 					context.Context,
 					client.Client,
-					schema.GroupKind,
 					client.Object,
 				) error {
 					return nil
@@ -704,8 +713,14 @@ func TestValidateCreate(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
-				require.ErrorContains(t, err, "get stage")
-				require.ErrorContains(t, err, "something went wrong")
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+				require.Equal(
+					t,
+					metav1.StatusReasonInternalError,
+					statusErr.ErrStatus.Reason,
+				)
+				require.Contains(t, statusErr.ErrStatus.Message, "something went wrong")
 			},
 		},
 		{
@@ -714,7 +729,6 @@ func TestValidateCreate(t *testing.T) {
 				validateProjectFn: func(
 					context.Context,
 					client.Client,
-					schema.GroupKind,
 					client.Object,
 				) error {
 					return nil
@@ -739,8 +753,14 @@ func TestValidateCreate(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
-				require.ErrorContains(t, err, "get freight")
-				require.ErrorContains(t, err, "something went wrong")
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+				require.Equal(
+					t,
+					metav1.StatusReasonInternalError,
+					statusErr.ErrStatus.Reason,
+				)
+				require.Contains(t, statusErr.ErrStatus.Message, "something went wrong")
 			},
 		},
 		{
@@ -749,7 +769,6 @@ func TestValidateCreate(t *testing.T) {
 				validateProjectFn: func(
 					context.Context,
 					client.Client,
-					schema.GroupKind,
 					client.Object,
 				) error {
 					return nil
@@ -774,7 +793,14 @@ func TestValidateCreate(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
-				require.ErrorContains(t, err, "Freight is not available to this Stage")
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+				require.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
+				require.Contains(
+					t,
+					statusErr.ErrStatus.Message,
+					"Freight is not available to this Stage",
+				)
 			},
 		},
 		{
@@ -783,7 +809,6 @@ func TestValidateCreate(t *testing.T) {
 				validateProjectFn: func(
 					context.Context,
 					client.Client,
-					schema.GroupKind,
 					client.Object,
 				) error {
 					return nil
@@ -841,7 +866,6 @@ func TestValidateCreate(t *testing.T) {
 				validateProjectFn: func(
 					context.Context,
 					client.Client,
-					schema.GroupKind,
 					client.Object,
 				) error {
 					return nil
@@ -916,7 +940,7 @@ func TestValidateCreate(t *testing.T) {
 	}
 }
 
-func TestValidateUpdate(t *testing.T) {
+func Tes_webhook_tValidateUpdate(t *testing.T) {
 	testCases := []struct {
 		name        string
 		setup       func() (*kargoapi.Promotion, *kargoapi.Promotion)
@@ -936,7 +960,14 @@ func TestValidateUpdate(t *testing.T) {
 				return errors.New("something went wrong")
 			},
 			assertions: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "something went wrong")
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+				require.Equal(
+					t,
+					metav1.StatusReasonInternalError,
+					statusErr.ErrStatus.Reason,
+				)
+				require.Contains(t, statusErr.ErrStatus.Message, "something went wrong")
 			},
 		},
 
@@ -961,8 +992,10 @@ func TestValidateUpdate(t *testing.T) {
 				return nil
 			},
 			assertions: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, `"fake-name" is invalid`)
-				require.ErrorContains(t, err, "spec is immutable")
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+				require.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
+				require.Contains(t, statusErr.ErrStatus.Message, "spec is immutable")
 			},
 		},
 
@@ -1002,7 +1035,7 @@ func TestValidateUpdate(t *testing.T) {
 	}
 }
 
-func TestValidateDelete(t *testing.T) {
+func Test_webhook_ValidateDelete(t *testing.T) {
 	testCases := []struct {
 		name       string
 		webhook    *webhook
@@ -1042,7 +1075,7 @@ func TestValidateDelete(t *testing.T) {
 	}
 }
 
-func TestAuthorize(t *testing.T) {
+func Test_webhook_Authorize(t *testing.T) {
 	testCases := []struct {
 		name                          string
 		admissionRequestFromContextFn func(

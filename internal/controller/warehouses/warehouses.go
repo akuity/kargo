@@ -41,10 +41,9 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 
 // reconciler reconciles Warehouse resources.
 type reconciler struct {
-	client                     client.Client
-	credentialsDB              credentials.Database
-	minReconciliationInterval  time.Duration
-	imageSourceURLFnsByBaseURL map[string]func(string, string) string
+	client                    client.Client
+	credentialsDB             credentials.Database
+	minReconciliationInterval time.Duration
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -126,10 +125,7 @@ func newReconciler(
 		minReconciliationInterval: minReconciliationInterval,
 		gitCloneFn:                git.Clone,
 		discoverChartVersionsFn:   helm.DiscoverChartVersions,
-		imageSourceURLFnsByBaseURL: map[string]func(string, string) string{
-			githubURLPrefix: getGithubImageSourceURL,
-		},
-		createFreightFn: kubeClient.Create,
+		createFreightFn:           kubeClient.Create,
 	}
 
 	r.discoverArtifactsFn = r.discoverArtifacts

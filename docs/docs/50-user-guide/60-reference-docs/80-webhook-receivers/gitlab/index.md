@@ -2,7 +2,7 @@
 sidebar_label: GitLab
 ---
 
-# The GitLab Webhook Receiver
+# GitLab Webhook Receiver
 
 The GitLab Webhook Receiver responds to `push` events originating from GitLab
 repositories by _refreshing_ all `Warehouse` resources subscribed to those
