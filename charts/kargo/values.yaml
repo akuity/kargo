@@ -875,7 +875,6 @@ webhooksServer:
 
 ## @param extraObjects is an array describing additional, arbitrary Kubernetes resources to include when rendering this chart. Items in the array may be YAML objects or strings. Either may be templated. Templates will be evaluated against the same set of values as the rest of the chart.
 extraObjects: []
-# - apiVersion: external-secrets.io/v1beta1
 # - apiVersion: v1
 #   kind: ConfigMap
 #   metadata:
