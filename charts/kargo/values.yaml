@@ -876,14 +876,16 @@ webhooksServer:
 ## @param extraObjects is an array describing additional, arbitrary Kubernetes resources to include when rendering this chart. Items in the array may be YAML objects or strings. Either may be templated. Templates will be evaluated against the same set of values as the rest of the chart.
 extraObjects: []
 # - apiVersion: external-secrets.io/v1beta1
-#   kind: SecretStore
+# - apiVersion: v1
+#   kind: ConfigMap
 #   metadata:
-#     name: aws-store-cloudability
-#     annotations:
-#       argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
-#       argocd.argoproj.io/sync-wave: "99"
-#   spec:
-#     provider:
-#       aws:
-#         service: SecretsManager
-#         region: us-west-2
+#     name: custom-cm-1
+#   data:
+#     host: '{{ .Values.api.host }}'
+# - |
+#   apiVersion: v1
+#   kind: ConfigMap
+#   metadata:
+#     name: custom-cm-2
+#   data:
+#     host: {{ .Values.api.host }}
