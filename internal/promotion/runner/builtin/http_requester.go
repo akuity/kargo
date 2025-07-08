@@ -53,12 +53,13 @@ func (h *httpRequester) Run(
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
 	if err := h.validate(stepCtx.Config); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+			&promotion.TerminalError{Err: err}
 	}
 	cfg, err := promotion.ConfigToStruct[builtin.HTTPConfig](stepCtx.Config)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("could not convert config into http config: %w", err)
+			&promotion.TerminalError{Err: fmt.Errorf("could not convert config into http config: %w", err)}
 	}
 	return h.run(ctx, stepCtx, cfg)
 }
@@ -76,12 +77,12 @@ func (h *httpRequester) run(
 	req, err := h.buildRequest(cfg)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("error building HTTP request: %w", err)
+			&promotion.TerminalError{Err: fmt.Errorf("error building HTTP request: %w", err)}
 	}
 	client, err := h.getClient(cfg)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("error creating HTTP client: %w", err)
+			&promotion.TerminalError{Err: fmt.Errorf("error creating HTTP client: %w", err)}
 	}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -94,18 +95,31 @@ func (h *httpRequester) run(
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error building expression context from HTTP response: %w", err)
 	}
-	success, err := h.wasRequestSuccessful(cfg, resp.StatusCode, env)
+
+	// Evaluate success and failure criteria
+	successResult, err := h.evaluateSuccessCriteria(cfg, env)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error evaluating success criteria: %w", err)
 	}
-	failure, err := h.didRequestFail(cfg, resp.StatusCode, env)
+
+	failureResult, err := h.evaluateFailureCriteria(cfg, env)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error evaluating failure criteria: %w", err)
 	}
+
+	// Determine outcome based on criteria evaluation results
 	switch {
-	case success && !failure:
+	case failureResult != nil && *failureResult:
+		// Failure criteria met: terminal failure
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
+			&promotion.TerminalError{Err: fmt.Errorf(
+				"HTTP (%d) response met failure criteria",
+				resp.StatusCode,
+			)}
+	case successResult != nil && *successResult:
+		// Success criteria met: success
 		outputs, err := h.buildOutputs(cfg.Outputs, env)
 		if err != nil {
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
@@ -115,15 +129,83 @@ func (h *httpRequester) run(
 			Status: kargoapi.PromotionStepStatusSucceeded,
 			Output: outputs,
 		}, nil
-	case failure:
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
-			&promotion.TerminalError{Err: fmt.Errorf(
-				"HTTP (%d) response met failure criteria",
-				resp.StatusCode,
-			)}
+	case successResult == nil && failureResult == nil:
+		// Both criteria undefined: fall back to response code logic
+		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			// 2xx: success
+			outputs, err := h.buildOutputs(cfg.Outputs, env)
+			if err != nil {
+				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+					fmt.Errorf("error extracting outputs from HTTP response: %w", err)
+			}
+			return promotion.StepResult{
+				Status: kargoapi.PromotionStepStatusSucceeded,
+				Output: outputs,
+			}, nil
+		} else {
+			// Non-2xx: retried failure (not terminal)
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed}, nil
+		}
 	default:
+		// All other cases: running (retried)
+		// This includes:
+		// - Success unmet, failure undefined
+		// - Success undefined, failure unmet
+		// - Success unmet, failure unmet
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusRunning}, nil
 	}
+}
+
+// evaluateSuccessCriteria evaluates the success criteria expression if defined.
+// If the expression is not defined, it returns nil.
+func (h *httpRequester) evaluateSuccessCriteria(
+	cfg builtin.HTTPConfig,
+	env map[string]any,
+) (*bool, error) {
+	if cfg.SuccessExpression == "" {
+		return nil, nil
+	}
+
+	program, err := expr.Compile(cfg.SuccessExpression)
+	if err != nil {
+		return nil, &promotion.TerminalError{
+			Err: fmt.Errorf("error compiling success expression %q: %w", cfg.SuccessExpression, err),
+		}
+	}
+	successAny, err := expr.Run(program, env)
+	if err != nil {
+		return nil, fmt.Errorf("error evaluating success expression %q: %w", cfg.SuccessExpression, err)
+	}
+	if success, ok := successAny.(bool); ok {
+		return &success, nil
+	}
+	return nil, fmt.Errorf("success expression %q did not evaluate to a boolean (got %T)", cfg.SuccessExpression, successAny)
+}
+
+// evaluateFailureCriteria evaluates the failure criteria expression if defined.
+// If the expression is not defined, it returns nil as the result.
+func (h *httpRequester) evaluateFailureCriteria(
+	cfg builtin.HTTPConfig,
+	env map[string]any,
+) (*bool, error) {
+	if cfg.FailureExpression == "" {
+		return nil, nil
+	}
+
+	program, err := expr.Compile(cfg.FailureExpression)
+	if err != nil {
+		return nil, &promotion.TerminalError{
+			Err: fmt.Errorf("error compiling failure expression %q: %w", cfg.FailureExpression, err),
+		}
+	}
+	failureAny, err := expr.Run(program, env)
+	if err != nil {
+		return nil, fmt.Errorf("error evaluating failure expression %q: %w", cfg.FailureExpression, err)
+	}
+	if failure, ok := failureAny.(bool); ok {
+		return &failure, nil
+	}
+	return nil, fmt.Errorf("failure expression %q did not evaluate to a boolean (got %T)", cfg.FailureExpression, failureAny)
 }
 
 func (h *httpRequester) buildRequest(cfg builtin.HTTPConfig) (*http.Request, error) {
@@ -226,70 +308,6 @@ func (h *httpRequester) buildExprEnv(
 	return env, nil
 }
 
-func (h *httpRequester) wasRequestSuccessful(
-	cfg builtin.HTTPConfig,
-	statusCode int,
-	env map[string]any,
-) (bool, error) {
-	switch {
-	case cfg.SuccessExpression != "":
-		program, err := expr.Compile(cfg.SuccessExpression)
-		if err != nil {
-			return false, fmt.Errorf("error compiling success expression: %w", err)
-		}
-		successAny, err := expr.Run(program, env)
-		if err != nil {
-			return false, fmt.Errorf("error evaluating success expression: %w", err)
-		}
-		if success, ok := successAny.(bool); ok {
-			return success, nil
-		}
-		return false, fmt.Errorf("success expression did not evaluate to a boolean")
-	case cfg.FailureExpression != "":
-		failure, err := h.didRequestFail(cfg, statusCode, env)
-		if err != nil {
-			return false, err
-		}
-		return !failure, nil
-	default:
-		// The client automatically follows redirects, so we consider only
-		// 2xx status codes successful.
-		return statusCode >= 200 && statusCode < 300, nil
-	}
-}
-
-func (h *httpRequester) didRequestFail(
-	cfg builtin.HTTPConfig,
-	statusCode int,
-	env map[string]any,
-) (bool, error) {
-	switch {
-	case cfg.FailureExpression != "":
-		program, err := expr.Compile(cfg.FailureExpression)
-		if err != nil {
-			return true, fmt.Errorf("error compiling failure expression: %w", err)
-		}
-		failureAny, err := expr.Run(program, env)
-		if err != nil {
-			return true, fmt.Errorf("error evaluating failure expression: %w", err)
-		}
-		if failure, ok := failureAny.(bool); ok {
-			return failure, nil
-		}
-		return true, fmt.Errorf("failure expression did not evaluate to a boolean")
-	case cfg.SuccessExpression != "":
-		success, err := h.wasRequestSuccessful(cfg, statusCode, env)
-		if err != nil {
-			return true, err
-		}
-		return !success, nil
-	default:
-		// The client automatically follows redirects, so we consider any
-		// non-2xx status code a failure.
-		return statusCode < 200 || statusCode >= 300, nil
-	}
-}
-
 func (h *httpRequester) buildOutputs(
 	outputExprs []builtin.HTTPOutput,
 	env map[string]any,
@@ -298,10 +316,12 @@ func (h *httpRequester) buildOutputs(
 	for _, output := range outputExprs {
 		program, err := expr.Compile(output.FromExpression)
 		if err != nil {
-			return nil, fmt.Errorf("error compiling expression: %w", err)
+			return nil, &promotion.TerminalError{
+				Err: fmt.Errorf("error compiling output expression %q: %w", output.Name, err),
+			}
 		}
 		if outputs[output.Name], err = expr.Run(program, env); err != nil {
-			return nil, fmt.Errorf("error evaluating expression: %w", err)
+			return nil, fmt.Errorf("error evaluating output expression %q: %w", output.Name, err)
 		}
 	}
 	return outputs, nil
