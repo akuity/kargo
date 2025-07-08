@@ -97,8 +97,7 @@ webhooks:
 ## the Kargo controller is running.
 ## @descriptionEnd
 ## @skip kubeconfigSecrets
-kubeconfigSecrets:
-  {}
+kubeconfigSecrets: {}
   ## @param kubeconfigSecrets.kargo [nullable] Kubernetes `Secret` name containing kubeconfig for a remote Kubernetes cluster hosting Kargo resources. Used by all Kargo components.
   # kargo: ""
   ## @param kubeconfigSecrets.argocd [nullable] Kubernetes `Secret` name containing kubeconfig for a remote Kubernetes cluster hosting Argo CD resources. Used by Kargo controller(s) only.
