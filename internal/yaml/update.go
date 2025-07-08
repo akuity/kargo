@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	yaml "sigs.k8s.io/yaml/goyaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 // UpdateField updates the value of a field in a YAML document. The field is
