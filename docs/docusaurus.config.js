@@ -47,7 +47,7 @@ const config = {
 
                 item.customProps = {
                   beta: tags.isBeta(item),
-                  enterprise: tags.isEnterprise(item)
+                  pro: tags.isProfessional(item)
                 };
 
                 return item;
