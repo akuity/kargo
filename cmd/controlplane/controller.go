@@ -455,8 +455,16 @@ func (o *controllerOptions) startManagers(ctx context.Context, kargoMgr, argocdM
 		go func() {
 			defer wg.Done()
 			if err := argocdMgr.Start(ctx); err != nil {
-				errChan <- fmt.Errorf("error starting argo cd manager: %w", err)
+				errChan <- fmt.Errorf("error starting Argo CD manager: %w", err)
+				return
 			}
+			o.Logger.Debug("Argo CD manager started successfully")
+
+			if !argocdMgr.GetCache().WaitForCacheSync(ctx) {
+				errChan <- fmt.Errorf("failed to wait for Argo CD cache to sync")
+				return
+			}
+			o.Logger.Debug("Argo CD cache synced successfully")
 		}()
 	}
 
@@ -464,8 +472,16 @@ func (o *controllerOptions) startManagers(ctx context.Context, kargoMgr, argocdM
 	go func() {
 		defer wg.Done()
 		if err := kargoMgr.Start(ctx); err != nil {
-			errChan <- fmt.Errorf("error starting kargo manager: %w", err)
+			errChan <- fmt.Errorf("error starting Kargo manager: %w", err)
+			return
 		}
+		o.Logger.Debug("Kargo manager started successfully")
+
+		if !kargoMgr.GetCache().WaitForCacheSync(ctx) {
+			errChan <- fmt.Errorf("failed to wait for Kargo cache to sync")
+			return
+		}
+		o.Logger.Debug("Kargo cache synced successfully")
 	}()
 
 	// Adapt wg to a channel that can be used in a select
