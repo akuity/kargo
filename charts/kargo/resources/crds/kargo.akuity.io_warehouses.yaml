@@ -161,17 +161,6 @@ spec:
                           minLength: 1
                           pattern: ^[a-zA-Z0-9]([a-zA-Z0-9._\/-]*[a-zA-Z0-9_-])?$
                           type: string
-                        commitBatchSize:
-                          default: 0
-                          description: |-
-                            CommitBatchSize is the number of commits to batch together when discovering
-                            commits. This field is optional. When left unspecified, the field is
-                            implicitly set to DicoveryLimit. The upper limit for this
-                            field is 100.
-                          format: int32
-                          maximum: 1000
-                          minimum: 1
-                          type: integer
                         commitSelectionStrategy:
                           default: NewestFromBranch
                           description: |-

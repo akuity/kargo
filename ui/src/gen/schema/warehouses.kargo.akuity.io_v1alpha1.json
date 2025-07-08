@@ -85,14 +85,6 @@
                     "pattern": "^[a-zA-Z0-9]([a-zA-Z0-9._\\/-]*[a-zA-Z0-9_-])?$",
                     "type": "string"
                   },
-                  "commitBatchSize": {
-                    "default": 0,
-                    "description": "CommitBatchSize is the number of commits to batch together when discovering\ncommits. This field is optional. When left unspecified, the field is\nimplicitly set to DicoveryLimit. The upper limit for this\nfield is 100.",
-                    "format": "int32",
-                    "maximum": 1000,
-                    "minimum": 1,
-                    "type": "integer"
-                  },
                   "commitSelectionStrategy": {
                     "default": "NewestFromBranch",
                     "description": "CommitSelectionStrategy specifies the rules for how to identify the newest\ncommit of interest in the repository specified by the RepoURL field. This\nfield is optional. When left unspecified, the field is implicitly treated\nas if its value were \"NewestFromBranch\".\n\nAccepted values:\n\n- \"NewestFromBranch\": Selects the latest commit on the branch specified\n  by the Branch field or the default branch if none is specified. This is\n  the default strategy.\n\n- \"SemVer\": Selects the commit referenced by the semantically greatest\n  tag. The SemverConstraint field can optionally be used to narrow the set\n  of tags eligible for selection.\n\n- \"Lexical\": Selects the commit referenced by the lexicographically\n  greatest tag. Useful when tags embed a _leading_ date or timestamp. The\n  AllowTags and IgnoreTags fields can optionally be used to narrow the set\n  of tags eligible for selection.\n\n- \"NewestTag\": Selects the commit referenced by the most recently created\n  tag. The AllowTags and IgnoreTags fields can optionally be used to\n  narrow the set of tags eligible for selection.",
