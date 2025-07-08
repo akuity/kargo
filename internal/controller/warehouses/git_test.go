@@ -1004,7 +1004,7 @@ func TestAllows(t *testing.T) {
 			require.Equal(
 				t,
 				testCase.allowed,
-				allows(testCase.tag, testCase.regex),
+				Allows(testCase.tag, testCase.regex),
 			)
 		})
 	}
@@ -1035,7 +1035,7 @@ func TestIgnores(t *testing.T) {
 			require.Equal(
 				t,
 				testCase.ignored,
-				ignores(testCase.tag, testCase.ignore),
+				Ignores(testCase.tag, testCase.ignore),
 			)
 		})
 	}
@@ -1331,12 +1331,12 @@ func TestMatchesPathsFilters(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			includeSelectors, err := getPathSelectors(testCase.includePaths)
+			includeSelectors, err := GetPathSelectors(testCase.includePaths)
 			require.NoError(t, err)
-			excludeSelectors, err := getPathSelectors(testCase.excludePaths)
+			excludeSelectors, err := GetPathSelectors(testCase.excludePaths)
 			require.NoError(t, err)
 
-			matchFound := matchesPathsFilters(includeSelectors, excludeSelectors, testCase.diffs)
+			matchFound := MatchesPathsFilters(includeSelectors, excludeSelectors, testCase.diffs)
 			testCase.assertions(t, matchFound)
 		})
 	}

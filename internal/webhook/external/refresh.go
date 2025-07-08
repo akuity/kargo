@@ -27,6 +27,7 @@ func refreshWarehouses(
 	w http.ResponseWriter,
 	c client.Client,
 	project string,
+	rc refreshConstraint,
 	repoURLs ...string,
 ) {
 	logger := logging.LoggerFromContext(ctx)
@@ -63,6 +64,9 @@ func refreshWarehouses(
 	})
 	warehouses = slices.CompactFunc(warehouses, func(lhs, rhs kargoapi.Warehouse) bool {
 		return lhs.Namespace == rhs.Namespace && lhs.Name == rhs.Name
+	})
+	warehouses = slices.DeleteFunc(warehouses, func(w kargoapi.Warehouse) bool {
+		return !rc.needsRefresh(ctx, w.Spec.Subscriptions)
 	})
 
 	logger.Debug("found Warehouses to refresh", "count", len(warehouses))

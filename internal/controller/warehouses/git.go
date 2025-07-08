@@ -211,11 +211,11 @@ func (r *reconciler) discoverBranchHistory(repo git.Repo, sub kargoapi.GitSubscr
 	}
 
 	// Compile include and exclude path selectors.
-	includeSelectors, err := getPathSelectors(sub.IncludePaths)
+	includeSelectors, err := GetPathSelectors(sub.IncludePaths)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing include selector: %w", err)
 	}
-	excludeSelectors, err := getPathSelectors(sub.ExcludePaths)
+	excludeSelectors, err := GetPathSelectors(sub.ExcludePaths)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing exclude selector: %w", err)
 	}
@@ -257,7 +257,7 @@ func (r *reconciler) discoverBranchHistory(repo git.Repo, sub kargoapi.GitSubscr
 						err,
 					)
 				}
-				if !matchesPathsFilters(includeSelectors, excludeSelectors, diffPaths) {
+				if !MatchesPathsFilters(includeSelectors, excludeSelectors, diffPaths) {
 					continue
 				}
 			}
@@ -320,11 +320,11 @@ func (r *reconciler) discoverTags(repo git.Repo, sub kargoapi.GitSubscription) (
 	}
 
 	// Compile include and exclude path selectors.
-	includeSelectors, err := getPathSelectors(sub.IncludePaths)
+	includeSelectors, err := GetPathSelectors(sub.IncludePaths)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing include selector: %w", err)
 	}
-	excludeSelectors, err := getPathSelectors(sub.ExcludePaths)
+	excludeSelectors, err := GetPathSelectors(sub.ExcludePaths)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing exclude selector: %w", err)
 	}
@@ -341,7 +341,7 @@ func (r *reconciler) discoverTags(repo git.Repo, sub kargoapi.GitSubscription) (
 				err,
 			)
 		}
-		if matchesPathsFilters(includeSelectors, excludeSelectors, diffPaths) {
+		if MatchesPathsFilters(includeSelectors, excludeSelectors, diffPaths) {
 			filteredTags = append(filteredTags, meta)
 		}
 
@@ -361,7 +361,7 @@ func filterTags(tags []git.TagMetadata, ignoreTags []string, allow string) ([]gi
 	}
 	filteredTags := make([]git.TagMetadata, 0, len(tags))
 	for _, tag := range tags {
-		if ignores(tag.Tag, ignoreTags) || !allows(tag.Tag, allowRegex) {
+		if Ignores(tag.Tag, ignoreTags) || !Allows(tag.Tag, allowRegex) {
 			continue
 		}
 		filteredTags = append(filteredTags, tag)
@@ -466,18 +466,18 @@ func evaluateCommitExpression(
 	}
 }
 
-// allows returns true if the given tag name matches the given regular
+// Allows returns true if the given tag name matches the given regular
 // expression or if the regular expression is nil. It returns false otherwise.
-func allows(tagName string, allowRegex *regexp.Regexp) bool {
+func Allows(tagName string, allowRegex *regexp.Regexp) bool {
 	if allowRegex == nil {
 		return true
 	}
 	return allowRegex.MatchString(tagName)
 }
 
-// ignores returns true if the given tag name is in the given list of ignored
+// Ignores returns true if the given tag name is in the given list of ignored
 // tag names. It returns false otherwise.
-func ignores(tagName string, ignore []string) bool {
+func Ignores(tagName string, ignore []string) bool {
 	for _, i := range ignore {
 		if i == tagName {
 			return true
@@ -486,7 +486,7 @@ func ignores(tagName string, ignore []string) bool {
 	return false
 }
 
-func getPathSelectors(selectors []string) (pattern.Matcher, error) {
+func GetPathSelectors(selectors []string) (pattern.Matcher, error) {
 	if len(selectors) == 0 {
 		return nil, nil
 	}
@@ -502,7 +502,7 @@ func getPathSelectors(selectors []string) (pattern.Matcher, error) {
 	return matchers, nil
 }
 
-func matchesPathsFilters(include, exclude pattern.Matcher, diffs []string) bool {
+func MatchesPathsFilters(include, exclude pattern.Matcher, diffs []string) bool {
 	for _, path := range diffs {
 		// If include is nil, all paths are implicitly included
 		// Otherwise, check if the path matches the include pattern
