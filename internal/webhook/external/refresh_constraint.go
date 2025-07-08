@@ -121,14 +121,14 @@ func (rc refreshConstraint) matchesSemVerConstraint(
 		)
 		return false
 	}
-	return matchesPathFilters(ctx, sub, rc.Git.Diffs) &&
-		matchesExpression(ctx,
-			sub.ExpressionFilter,
-			git.TagMetadata{
-				// TODO(Faris): Fill this in with actual tag metadata
-			},
-			rc.Git.Expression,
-		)
+	return rc.matchesBaseFilters(
+		ctx,
+		sub,
+		rc.Git.Expression,
+		git.TagMetadata{
+			// TODO(Faris): Fill this in with actual tag metadata
+		},
+	)
 }
 
 func (rc refreshConstraint) matchesLexicalConstraint(
@@ -149,14 +149,14 @@ func (rc refreshConstraint) matchesLexicalConstraint(
 	if warehouses.Ignores(tag, sub.IgnoreTags) || !warehouses.Allows(tag, allowRegex) {
 		return false
 	}
-	return matchesPathFilters(ctx, sub, rc.Git.Diffs) &&
-		matchesExpression(ctx,
-			sub.ExpressionFilter,
-			git.TagMetadata{
-				// TODO(Faris): Fill this in with actual tag metadata
-			},
-			rc.Git.Expression,
-		)
+	return rc.matchesBaseFilters(
+		ctx,
+		sub,
+		rc.Git.Expression,
+		git.TagMetadata{
+			// TODO(Faris): Fill this in with actual tag metadata
+		},
+	)
 }
 
 func (rc refreshConstraint) matchesNewestFromBranchConstraint(
