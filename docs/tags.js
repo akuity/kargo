@@ -1,4 +1,4 @@
-export const isEnterprise = (item) => {
+export const isProfessional = (item) => {
     return item.label === 'jira';
 };
 
