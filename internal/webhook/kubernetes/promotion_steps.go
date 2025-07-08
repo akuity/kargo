@@ -18,6 +18,9 @@ func ValidatePromotionSteps(
 	indicesByAlias := make(map[string]int)
 	for i, step := range steps {
 		stepAlias := strings.TrimSpace(step.As)
+		if stepAlias == "" {
+			continue
+		}
 		if existingIndex, exists := indicesByAlias[stepAlias]; exists {
 			errs = append(
 				errs,
