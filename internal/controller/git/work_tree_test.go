@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/sosedoff/gitkit"
@@ -116,4 +117,57 @@ func TestWorkTree(t *testing.T) {
 		require.True(t, os.IsNotExist(err))
 	})
 
+}
+
+func TestParseTagMetadataLine(t *testing.T) {
+	tests := []struct {
+		name    string
+		line    string
+		want    TagMetadata
+		wantErr bool
+	}{
+		{
+			name: "lightweight tag",
+			line: "tag1|*|commitid1|*|subject1|*|author1|*|committer1|*|2024-01-01 12:00:00 -0500",
+			want: TagMetadata{
+				Tag:         "tag1",
+				CommitID:    "commitid1",
+				Subject:     "subject1",
+				Author:      "author1",
+				Committer:   "committer1",
+				CreatorDate: mustParseTime("2024-01-01 12:00:00 -0500"),
+			},
+		},
+		{
+			name: "annotated tag with extra |*| in annotation",
+			line: "tag2|*|commitid2|*|subject2|*|author2|*|committer2|*|2024-01-01 12:00:00 -0500|*|tagger2|*|annotation with |*| inside",
+			want: TagMetadata{
+				Tag:         "tag2",
+				CommitID:    "commitid2",
+				Subject:     "subject2",
+				Author:      "author2",
+				Committer:   "committer2",
+				CreatorDate: mustParseTime("2024-01-01 12:00:00 -0500"),
+				Tagger:      "tagger2",
+				Annotation:  "annotation with |*| inside",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseTagMetadataLine([]byte(tt.line))
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.want, got)
+			}
+		})
+	}
+}
+
+func mustParseTime(s string) time.Time {
+	t, _ := time.Parse("2006-01-02 15:04:05 -0700", s)
+	return t
 }
