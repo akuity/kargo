@@ -467,6 +467,34 @@ type TagMetadata struct {
 	Annotation string
 }
 
+func parseTagMetadataLine(line []byte) (TagMetadata, error) {
+	parts := bytes.Split(line, []byte("|*|"))
+	if l := len(parts); l < 6 || l == 7 {
+		return TagMetadata{}, fmt.Errorf("unexpected number of fields: %q", line)
+	}
+
+	creatorDate, err := time.Parse("2006-01-02 15:04:05 -0700", string(parts[5]))
+	if err != nil {
+		return TagMetadata{}, fmt.Errorf("error parsing creator date %q: %w", parts[5], err)
+	}
+
+	metadata := TagMetadata{
+		Tag:         string(parts[0]),
+		CommitID:    string(parts[1]),
+		Subject:     string(parts[2]),
+		Author:      string(parts[3]),
+		Committer:   string(parts[4]),
+		CreatorDate: creatorDate,
+	}
+
+	if len(parts) >= 8 {
+		metadata.Tagger = string(parts[6])
+		metadata.Annotation = string(bytes.Join(parts[7:], []byte("|*|")))
+	}
+
+	return metadata, nil
+}
+
 func (w *workTree) ListTags() ([]TagMetadata, error) {
 	if _, err := libExec.Exec(w.buildGitCommand("fetch", "origin", "--tags")); err != nil {
 		return nil, fmt.Errorf("error fetching tags from repo %q: %w", w.url, err)
@@ -511,33 +539,10 @@ func (w *workTree) ListTags() ([]TagMetadata, error) {
 	var tags []TagMetadata
 	scanner := bufio.NewScanner(bytes.NewReader(tagsBytes))
 	for scanner.Scan() {
-		line := scanner.Bytes()
-		parts := bytes.SplitN(scanner.Bytes(), []byte("|*|"), 6)
-		if len(parts) != 6 && len(parts) != 8 {
-			return nil, fmt.Errorf("unexpected number of fields: %q", line)
-		}
-
-		creatorDate, err := time.Parse("2006-01-02 15:04:05 -0700", string(parts[5]))
+		tag, err := parseTagMetadataLine(scanner.Bytes())
 		if err != nil {
-			return nil, fmt.Errorf("error parsing creator date %q: %w", parts[5], err)
+			return nil, err
 		}
-
-		tag := TagMetadata{
-			Tag:         string(parts[0]),
-			CommitID:    string(parts[1]),
-			Subject:     string(parts[2]),
-			Author:      string(parts[3]),
-			Committer:   string(parts[4]),
-			CreatorDate: creatorDate,
-		}
-
-		if len(parts) == 8 {
-			// This is an annotated tag, so we also have the tagger and tag
-			// annotation.
-			tag.Tagger = string(parts[6])
-			tag.Annotation = string(parts[7])
-		}
-
 		tags = append(tags, tag)
 	}
 
