@@ -153,7 +153,7 @@ func (rc *refreshEligibilityChecker) matchesSemVerConstraint(ctx context.Context
 
 	version := libSemver.Parse(tag, strict)
 	if version == nil {
-		logger.Error(nil, "tag is not semver formatted")
+		logger.Info("tag is not semver formatted")
 		return false
 	}
 

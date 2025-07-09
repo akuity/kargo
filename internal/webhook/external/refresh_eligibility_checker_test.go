@@ -23,9 +23,7 @@ func Test_needsRefresh_Git(t *testing.T) {
 			repoURLs: []string{"https://github.com/username/repo.git"},
 			rc: &refreshEligibilityChecker{
 				git: &codeChange{
-					tag: &libGit.TagMetadata{
-						Tag: "v1.0.0",
-					},
+					tag: &libGit.TagMetadata{Tag: "v1.0.0"},
 				},
 			},
 			rs: kargoapi.RepoSubscription{
@@ -45,9 +43,7 @@ func Test_needsRefresh_Git(t *testing.T) {
 			repoURLs: []string{"https://github.com/username/repo.git"},
 			rc: &refreshEligibilityChecker{
 				git: &codeChange{
-					tag: &libGit.TagMetadata{
-						Tag: "not-semver-tag",
-					},
+					tag: &libGit.TagMetadata{Tag: "not-semver-tag"},
 				},
 			},
 			rs: kargoapi.RepoSubscription{
@@ -65,9 +61,7 @@ func Test_needsRefresh_Git(t *testing.T) {
 			repoURLs: []string{"https://github.com/username/repo.git"},
 			rc: &refreshEligibilityChecker{
 				git: &codeChange{
-					tag: &libGit.TagMetadata{
-						Tag: "v1.2.3",
-					},
+					tag: &libGit.TagMetadata{Tag: "v1.2.3"},
 				},
 			},
 			rs: kargoapi.RepoSubscription{
@@ -85,9 +79,7 @@ func Test_needsRefresh_Git(t *testing.T) {
 			repoURLs: []string{"https://github.com/username/repo.git"},
 			rc: &refreshEligibilityChecker{
 				git: &codeChange{
-					tag: &libGit.TagMetadata{
-						Tag: "v1.2.3",
-					},
+					tag: &libGit.TagMetadata{Tag: "v1.2.3"},
 				},
 			},
 			rs: kargoapi.RepoSubscription{
@@ -121,9 +113,7 @@ func Test_needsRefresh_Git(t *testing.T) {
 			rc: &refreshEligibilityChecker{
 				git: &codeChange{
 					branch: "main",
-					tag: &libGit.TagMetadata{
-						Tag: "v1.0.0",
-					},
+					tag:    &libGit.TagMetadata{Tag: "v1.0.0"},
 				},
 			},
 			rs: kargoapi.RepoSubscription{
@@ -141,9 +131,7 @@ func Test_needsRefresh_Git(t *testing.T) {
 			rc: &refreshEligibilityChecker{
 				git: &codeChange{
 					branch: "main",
-					tag: &libGit.TagMetadata{
-						Tag: "v1.0.0",
-					},
+					tag:    &libGit.TagMetadata{Tag: "v1.0.0"},
 				},
 			},
 			rs: kargoapi.RepoSubscription{
@@ -162,9 +150,7 @@ func Test_needsRefresh_Git(t *testing.T) {
 			rc: &refreshEligibilityChecker{
 				git: &codeChange{
 					branch: "main",
-					tag: &libGit.TagMetadata{
-						Tag: "nightly-20231001",
-					},
+					tag:    &libGit.TagMetadata{Tag: "nightly-20231001"},
 				},
 			},
 			rs: kargoapi.RepoSubscription{
@@ -187,9 +173,7 @@ func Test_needsRefresh_Git(t *testing.T) {
 			repoURLs: []string{"https://github.com/username/repo.git"},
 			rc: &refreshEligibilityChecker{
 				git: &codeChange{
-					tag: &libGit.TagMetadata{
-						Tag: "v1.0.0",
-					},
+					tag:   &libGit.TagMetadata{Tag: "v1.0.0"},
 					diffs: []string{"src/file.txt"},
 				},
 			},
@@ -208,9 +192,7 @@ func Test_needsRefresh_Git(t *testing.T) {
 			repoURLs: []string{"https://github.com/username/repo.git"},
 			rc: &refreshEligibilityChecker{
 				git: &codeChange{
-					tag: &libGit.TagMetadata{
-						Tag: "v1.0.0",
-					},
+					tag:   &libGit.TagMetadata{Tag: "v1.0.0"},
 					diffs: []string{"docs/file.txt"},
 				},
 			},
@@ -230,7 +212,7 @@ func Test_needsRefresh_Git(t *testing.T) {
 			rc: &refreshEligibilityChecker{
 				git: &codeChange{
 					tag: &libGit.TagMetadata{
-						Tag:    "v1.0.0",
+						Tag:         "v1.0.0",
 						CreatorDate: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
 					},
 				},
@@ -251,7 +233,7 @@ func Test_needsRefresh_Git(t *testing.T) {
 			rc: &refreshEligibilityChecker{
 				git: &codeChange{
 					tag: &libGit.TagMetadata{
-						Tag:    "v1.0.0",
+						Tag:         "v1.0.0",
 						CreatorDate: time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
 					},
 				},
@@ -280,13 +262,165 @@ func Test_needsRefresh_Git(t *testing.T) {
 
 func Test_needsRefresh_Image(t *testing.T) {
 	for _, test := range []struct {
-		name string
+		name         string
+		rc           *refreshEligibilityChecker
+		rs           kargoapi.RepoSubscription
+		repoURLs     []string
+		needsRefresh bool
 	}{
 		{
-			name: "test case 1",
+			name:     "lexical - not matching",
+			repoURLs: []string{"testregistry.io/hello-world"},
+			rc: &refreshEligibilityChecker{
+				image: &imageChange{tag: "v1.0.0"},
+			},
+			rs: kargoapi.RepoSubscription{
+				Image: &kargoapi.ImageSubscription{
+					RepoURL:                "testregistry.io/hello-world",
+					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyLexical,
+					AllowTags:              "^nightly-\\d{8}$",
+				},
+			},
+			needsRefresh: false,
+		},
+		{
+			name:     "lexical - matching",
+			repoURLs: []string{"testregistry.io/hello-world"},
+			rc: &refreshEligibilityChecker{
+				image: &imageChange{tag: "nightly-20231001"},
+			},
+			rs: kargoapi.RepoSubscription{
+				Image: &kargoapi.ImageSubscription{
+					RepoURL:                "testregistry.io/hello-world",
+					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyLexical,
+					AllowTags:              `^nightly-\d{8}$`,
+				},
+			},
+			needsRefresh: true,
+		},
+		{
+			name:     "semver - invalid semver constraint",
+			repoURLs: []string{"testregistry.io/hello-world"},
+			rc: &refreshEligibilityChecker{
+				image: &imageChange{tag: "v1.0.0"},
+			},
+			rs: kargoapi.RepoSubscription{
+				Image: &kargoapi.ImageSubscription{
+					RepoURL:                "testregistry.io/hello-world",
+					ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+					// validation is optional for warehouse semver constraints
+					// so we have to consider an invalid input.
+					SemverConstraint: "invalid-semver-constraint",
+				},
+			},
+			needsRefresh: false,
+		},
+		{
+			name:     "semver - tag is not semver formatted",
+			repoURLs: []string{"testregistry.io/hello-world"},
+			rc: &refreshEligibilityChecker{
+				image: &imageChange{
+					tag: "invalid-semver-tag",
+				},
+			},
+			rs: kargoapi.RepoSubscription{
+				Image: &kargoapi.ImageSubscription{
+					RepoURL:                "testregistry.io/hello-world",
+					ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+					SemverConstraint:       "^v1.0.0",
+				},
+			},
+			needsRefresh: false,
+		},
+		{
+			name:     "semver - not matching",
+			repoURLs: []string{"testregistry.io/hello-world"},
+			rc: &refreshEligibilityChecker{
+				image: &imageChange{tag: "v1.0.0"},
+			},
+			rs: kargoapi.RepoSubscription{
+				Image: &kargoapi.ImageSubscription{
+					RepoURL:                "testregistry.io/hello-world",
+					ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+					SemverConstraint:       "^v2.2.3",
+				},
+			},
+			needsRefresh: false,
+		},
+		{
+			name:     "semver - matching",
+			repoURLs: []string{"testregistry.io/hello-world"},
+			rc: &refreshEligibilityChecker{
+				image: &imageChange{tag: "v1.0.0"},
+			},
+			rs: kargoapi.RepoSubscription{
+				Image: &kargoapi.ImageSubscription{
+					RepoURL:                "testregistry.io/hello-world",
+					ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+					SemverConstraint:       "^v1.0.0",
+				},
+			},
+			needsRefresh: true,
+		},
+		{
+			name:     "newest build - matching",
+			repoURLs: []string{"testregistry.io/hello-world"},
+			rc: &refreshEligibilityChecker{
+				image: &imageChange{tag: "v1.0.0"},
+			},
+			rs: kargoapi.RepoSubscription{
+				Image: &kargoapi.ImageSubscription{
+					RepoURL:                "testregistry.io/hello-world",
+					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyNewestBuild,
+					SemverConstraint:       "^v1.0.0",
+				},
+			},
+			needsRefresh: true,
+		},
+		{
+			name:     "digest - not matching",
+			repoURLs: []string{"testregistry.io/hello-world"},
+			rc: &refreshEligibilityChecker{
+				image: &imageChange{
+					tag:    "v1.0.0",
+					digest: "latest",
+				},
+			},
+			rs: kargoapi.RepoSubscription{
+				Image: &kargoapi.ImageSubscription{
+					RepoURL:                "testregistry.io/hello-world",
+					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
+					SemverConstraint:       "^v1.0.0",
+				},
+			},
+			needsRefresh: false,
+		},
+		{
+			name:     "digest - matching",
+			repoURLs: []string{"testregistry.io/hello-world"},
+			rc: &refreshEligibilityChecker{
+				image: &imageChange{
+					tag:    "v1.0.0",
+					digest: "latest",
+				},
+			},
+			rs: kargoapi.RepoSubscription{
+				Image: &kargoapi.ImageSubscription{
+					RepoURL:                "testregistry.io/hello-world",
+					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
+					SemverConstraint:       "latest",
+				},
+			},
+			needsRefresh: false,
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
+			ctx := logging.ContextWithLogger(t.Context(),
+				logging.NewLogger(logging.DebugLevel),
+			)
+			require.Equal(t, test.needsRefresh,
+				test.rc.needsRefresh(ctx, []kargoapi.RepoSubscription{test.rs}, test.repoURLs...),
+			)
 		})
 	}
 }
