@@ -158,7 +158,6 @@ func (rc *refreshEligibilityChecker) matchesSemVerConstraint(
 }
 
 // matchesGitBaseFilters checks that path, expression, and tag filters match.
-// If there are no path, expression, or tag filters the check returns true.
 func (rc *refreshEligibilityChecker) matchesGitBaseFilters(ctx context.Context, sub *kargoapi.GitSubscription) bool {
 	return rc.matchesPathFilters(ctx, sub) &&
 		rc.matchesAllowIgnoreRules(ctx, rc.Git.Tag.Tag, sub.AllowTags, sub.IgnoreTags) &&
