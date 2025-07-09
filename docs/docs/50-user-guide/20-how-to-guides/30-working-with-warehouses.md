@@ -109,6 +109,13 @@ strategies are:
   semantically greatest tag. All tags that are not valid semantic versions are
   ignored.
 
+    :::note
+    Starting Kargo v1.7, the `semverConstraint` field is deprecated for
+    container image subscriptions. It is recommended to use the `constraint`
+    field instead. When using the `SemVer` strategy, `constratint` should be a
+    valid semantic version range.
+    :::
+
    The `strictSemvers` field defaults to `true`, meaning only tags containing
    all three parts of a semantic version (major, minor, and patch) are
    considered. Disabling this should be approached with caution because any
@@ -159,7 +166,9 @@ strategies are:
 
     __Unintuitively, the mutable tag name must be specified using the
     `semverConstraint` field.__ Importantly, the _digest_ will change every time
-    the tag is updated.
+    the tag is updated. Since the `semverConstraint` field is deprecated
+    starting v1.7, it is recommended to use the `constraint` field that shouldd
+    be set to a valid mutable tag name.
 
     :::warning
     "Mutable tags": Tags like `latest` that are sometimes, perhaps frequently,
