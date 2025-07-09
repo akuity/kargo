@@ -142,10 +142,9 @@ func (h *httpRequester) run(
 				Status: kargoapi.PromotionStepStatusSucceeded,
 				Output: outputs,
 			}, nil
-		} else {
-			// Non-2xx: retried failure (not terminal)
-			return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed}, nil
 		}
+		// Non-2xx: retried failure (not terminal)
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed}, nil
 	default:
 		// All other cases: running (retried)
 		// This includes:
@@ -179,7 +178,10 @@ func (h *httpRequester) evaluateSuccessCriteria(
 	if success, ok := successAny.(bool); ok {
 		return &success, nil
 	}
-	return nil, fmt.Errorf("success expression %q did not evaluate to a boolean (got %T)", cfg.SuccessExpression, successAny)
+	return nil, fmt.Errorf(
+		"success expression %q did not evaluate to a boolean (got %T)",
+		cfg.SuccessExpression, successAny,
+	)
 }
 
 // evaluateFailureCriteria evaluates the failure criteria expression if defined.
@@ -205,7 +207,10 @@ func (h *httpRequester) evaluateFailureCriteria(
 	if failure, ok := failureAny.(bool); ok {
 		return &failure, nil
 	}
-	return nil, fmt.Errorf("failure expression %q did not evaluate to a boolean (got %T)", cfg.FailureExpression, failureAny)
+	return nil, fmt.Errorf(
+		"failure expression %q did not evaluate to a boolean (got %T)",
+		cfg.FailureExpression, failureAny,
+	)
 }
 
 func (h *httpRequester) buildRequest(cfg builtin.HTTPConfig) (*http.Request, error) {
