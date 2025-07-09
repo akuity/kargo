@@ -21,6 +21,8 @@ type refreshConstraint struct {
 		Branch string
 		Diffs  []string
 	}
+	// TODO(Faris): which data type to use
+	// GC *kargoapi.GitCommit
 	Image *kargoapi.Image
 	Chart *struct {
 		Tag string
