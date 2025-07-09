@@ -106,7 +106,7 @@ func (rc *refreshEligibilityChecker) matchesImageConstraint(
 		return true
 	case kargoapi.ImageSelectionStrategyDigest:
 		// Unintuitively, the mutable tag name is specified using the semverConstraint field. 
-		return rc.Image.Digest == sub.SemverConstraint
+		return rc.Image.Tag == sub.SemverConstraint
 	default: // SemVer is the default case for Image subscriptions.
 		return rc.matchesSemVerConstraint(ctx, rc.Image.Tag, sub.SemverConstraint, sub.StrictSemvers)
 	}
