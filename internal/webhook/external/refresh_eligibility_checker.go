@@ -122,7 +122,7 @@ func (rc *refreshEligibilityChecker) matchesChartConstraint(
 	// " If left unspecified, the subscription implicitly selects the semantically greatest version of the chart."
 	//		source: https://docs.kargo.io/user-guide/how-to-guides/working-with-warehouses
 	//
-	// Since we're working with the greatest version of the chart in the context (webhooks),
+	// Since we're always working with the greatest version of the chart in the context (webhooks),
 	// we can simply return true if the semverConstraint is empty.
 	if sub.SemverConstraint == "" {
 		return true
