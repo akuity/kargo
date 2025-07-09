@@ -42,9 +42,8 @@ type chartChange struct {
 
 // needsRefresh filters out all subscriptions that do not match any of the
 // provided repository URLs and then evaluates whether any of the remaining
-// subscriptions' constraints are satisfied by the inbound request data.
-// If any of the subscriptions match, it returns true, indicating that a refresh
-// is needed. If no subscriptions match, it returns false.
+// subscriptions' constraints are satisfied by the inbound request data;
+// indicating whether a refresh is needed.
 func (rc *refreshEligibilityChecker) needsRefresh(
 	ctx context.Context,
 	subs []kargoapi.RepoSubscription,
