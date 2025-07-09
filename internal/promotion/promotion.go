@@ -9,9 +9,9 @@ import (
 	"time"
 
 	gocache "github.com/patrickmn/go-cache"
+	"go.yaml.in/yaml/v3"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	yaml "sigs.k8s.io/yaml/goyaml.v3"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/expressions"

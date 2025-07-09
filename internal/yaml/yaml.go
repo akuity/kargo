@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	yaml "sigs.k8s.io/yaml/goyaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 // Update represents a discrete update to be made to a YAML document.
