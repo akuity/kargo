@@ -223,7 +223,7 @@ func (r *reconciler) discoverBranchHistory(repo git.Repo, sub kargoapi.GitSubscr
 	limit := int(sub.DiscoveryLimit)
 
 	var filteredCommits = make([]git.CommitMetadata, 0, limit)
-	for skip, batchSize := uint(0), uint(limit); ; skip, batchSize = skip+batchSize, batchSize*2 { // nolint: gosec
+	for skip, batchSize := uint(0), uint(limit); ; skip, batchSize = skip+batchSize, min(batchSize*2, 1000) { // nolint: gosec
 		commits, err := r.listCommitsFn(repo, uint(batchSize), skip) // nolint: gosec
 		if err != nil {
 			return nil, fmt.Errorf("error listing commits from git repo %q: %w", sub.RepoURL, err)
