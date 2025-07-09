@@ -7,7 +7,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/controller/git"
+	libGit "github.com/akuity/kargo/internal/controller/git"
 	libSemver "github.com/akuity/kargo/internal/controller/semver"
 	"github.com/akuity/kargo/internal/controller/warehouses"
 	"github.com/akuity/kargo/internal/logging"
@@ -18,16 +18,26 @@ import (
 // request. The checker compares this information against the constraints defined
 // in various repo subscription types to determine if a refresh is needed.
 type refreshEligibilityChecker struct {
-	Git *struct {
-		Tag    *git.TagMetadata
-		Commit *git.CommitMetadata
-		Branch string
-		Diffs  []string
-	}
-	// TODO(Faris): which data type to use
-	// GC *kargoapi.GitCommit
-	Image *kargoapi.Image
-	Chart *kargoapi.Chart
+	git   *codeChange
+	image *imageChange
+	chart *chartChange
+}
+
+type codeChange struct {
+	tag    *libGit.TagMetadata
+	commit *libGit.CommitMetadata
+	branch string
+	diffs  []string
+}
+
+type imageChange struct {
+	tag    string
+	digest string
+}
+
+type chartChange struct {
+	name string
+	tag  string
 }
 
 // needsRefresh filters out all subscriptions that do not match any of the
@@ -70,12 +80,12 @@ func filterSubsByRepoURL(
 }
 
 func (rc *refreshEligibilityChecker) matchesGitConstraint(ctx context.Context, sub *kargoapi.GitSubscription) bool {
-	if rc.Git == nil || sub == nil {
+	if rc.git == nil || sub == nil {
 		return false
 	}
 	switch sub.CommitSelectionStrategy {
 	case kargoapi.CommitSelectionStrategySemVer:
-		return rc.matchesSemVerConstraint(ctx, rc.Git.Tag.Tag, sub.SemverConstraint, sub.StrictSemvers) &&
+		return rc.matchesSemVerConstraint(ctx, rc.git.tag.Tag, sub.SemverConstraint, sub.StrictSemvers) &&
 			rc.matchesGitBaseFilters(ctx, sub)
 	case kargoapi.CommitSelectionStrategyNewestTag,
 		kargoapi.CommitSelectionStrategyLexical:
@@ -85,7 +95,7 @@ func (rc *refreshEligibilityChecker) matchesGitConstraint(ctx context.Context, s
 	default: // NewestFromBranch is the default case for Git subscriptions.
 		// We are always dealing with the newest commit from the branch in this context
 		// (webhooks), so we only need to check if the branch matches the one we are looking for.
-		return rc.Git.Branch == sub.Branch && rc.matchesGitBaseFilters(ctx, sub)
+		return rc.git.branch == sub.Branch && rc.matchesGitBaseFilters(ctx, sub)
 	}
 }
 
@@ -93,22 +103,22 @@ func (rc *refreshEligibilityChecker) matchesImageConstraint(
 	ctx context.Context,
 	sub *kargoapi.ImageSubscription,
 ) bool {
-	if rc.Image == nil || sub == nil {
+	if rc.image == nil || sub == nil {
 		return false
 	}
 
 	switch sub.ImageSelectionStrategy {
 	case kargoapi.ImageSelectionStrategyLexical:
-		return rc.matchesAllowIgnoreRules(ctx, rc.Image.Tag, sub.AllowTags, sub.IgnoreTags)
+		return rc.matchesAllowIgnoreRules(ctx, rc.image.tag, sub.AllowTags, sub.IgnoreTags)
 	case kargoapi.ImageSelectionStrategyNewestBuild:
 		// this strategy is always true in the context of webhooks, as we are
 		// always dealing with the newest build of the image.
 		return true
 	case kargoapi.ImageSelectionStrategyDigest:
 		// Unintuitively, the mutable tag name is specified using the semverConstraint field.
-		return rc.Image.Tag == sub.SemverConstraint
+		return rc.image.tag == sub.SemverConstraint
 	default: // SemVer is the default case for Image subscriptions.
-		return rc.matchesSemVerConstraint(ctx, rc.Image.Tag, sub.SemverConstraint, sub.StrictSemvers)
+		return rc.matchesSemVerConstraint(ctx, rc.image.tag, sub.SemverConstraint, sub.StrictSemvers)
 	}
 }
 
@@ -116,7 +126,7 @@ func (rc *refreshEligibilityChecker) matchesChartConstraint(
 	ctx context.Context,
 	sub *kargoapi.ChartSubscription,
 ) bool {
-	if rc.Chart == nil || sub == nil {
+	if rc.chart == nil || sub == nil {
 		return false
 	}
 	// " If left unspecified, the subscription implicitly selects the semantically greatest version of the chart."
@@ -128,7 +138,7 @@ func (rc *refreshEligibilityChecker) matchesChartConstraint(
 		return true
 	}
 	strict := true // SemVer constraints are always strict for charts.
-	return rc.matchesSemVerConstraint(ctx, rc.Image.Tag, sub.SemverConstraint, strict)
+	return rc.matchesSemVerConstraint(ctx, rc.image.tag, sub.SemverConstraint, strict)
 }
 
 func (rc *refreshEligibilityChecker) matchesSemVerConstraint(
@@ -160,7 +170,7 @@ func (rc *refreshEligibilityChecker) matchesSemVerConstraint(
 // matchesGitBaseFilters checks that path, expression, and tag filters match.
 func (rc *refreshEligibilityChecker) matchesGitBaseFilters(ctx context.Context, sub *kargoapi.GitSubscription) bool {
 	return rc.matchesPathFilters(ctx, sub) &&
-		rc.matchesAllowIgnoreRules(ctx, rc.Git.Tag.Tag, sub.AllowTags, sub.IgnoreTags) &&
+		rc.matchesAllowIgnoreRules(ctx, rc.git.tag.Tag, sub.AllowTags, sub.IgnoreTags) &&
 		rc.matchesExpressionFilter(ctx, sub)
 
 }
@@ -199,7 +209,7 @@ func (rc *refreshEligibilityChecker) matchesPathFilters(ctx context.Context, sub
 	return warehouses.MatchesPathsFilters(
 		includeSelectors,
 		excludeSelectors,
-		rc.Git.Diffs,
+		rc.git.diffs,
 	)
 }
 
@@ -226,14 +236,14 @@ func (rc *refreshEligibilityChecker) matchesExpressionFilter(ctx context.Context
 
 	var matches bool
 	switch {
-	case rc.Git.Tag != nil:
-		matches, err = warehouses.EvaluateTagExpression(*rc.Git.Tag, program)
+	case rc.git.tag != nil:
+		matches, err = warehouses.EvaluateTagExpression(*rc.git.tag, program)
 		if err != nil {
 			logger.Error(err, "error evaluating tag expression filter")
 			return false
 		}
-	case rc.Git.Commit != nil:
-		matches, err = warehouses.EvaluateCommitExpression(*rc.Git.Commit, program)
+	case rc.git.commit != nil:
+		matches, err = warehouses.EvaluateCommitExpression(*rc.git.commit, program)
 		if err != nil {
 			logger.Error(err, "error evaluating commit expression filter")
 			return false
