@@ -3,6 +3,7 @@
 
 const path = require('path');
 const {themes} = require('prism-react-renderer');
+const tags = require('./tags');
 const lightCodeTheme = themes.github;
 const darkCodeTheme = themes.dracula;
 
@@ -32,6 +33,29 @@ const config = {
           sidebarPath: require.resolve('./sidebars.js'),
           sidebarCollapsible: false,
           routeBasePath: '/', // Serve the docs at the site's roo
+          sidebarItemsGenerator: async function ({
+            defaultSidebarItemsGenerator,
+            ...args
+          }) {
+            const sidebarItems = await defaultSidebarItemsGenerator(args);
+
+            function addBadges(items) {
+              return items.map((item) => {
+                if (item.type === 'category') {
+                  item.items = addBadges(item.items);
+                }
+
+                item.customProps = {
+                  beta: tags.isBeta(item),
+                  enterprise: tags.isEnterprise(item)
+                };
+
+                return item;
+              });
+            }
+
+            return addBadges(sidebarItems);
+          },
         },
         blog: false,
         pages: {},
