@@ -10,6 +10,8 @@ CERT_MANAGER_CHART_VERSION 	:= 1.16.1
 BUF_LINT_ERROR_FORMAT	?= text
 GO_LINT_EXTRA_FLAGS 	?= --output.text.print-issued-lines --output.text.colors
 
+GO_TEST_ARGS ?=
+
 VERSION_PACKAGE := github.com/akuity/kargo/pkg/x/version
 
 # Default to docker, but support alternative container runtimes that are CLI-compatible with Docker
@@ -138,7 +140,7 @@ test-unit: install-helm
 				-race \
 				-coverprofile=coverage.txt \
 				-covermode=atomic \
-				./...; \
+				./... $(GO_TEST_ARGS); \
 			cd - > /dev/null; \
 		done; \
 	}
@@ -249,12 +251,13 @@ codegen-docs:
 # that is pre-loaded with required tools.                                      #
 ################################################################################
 
-# Prevents issues with vcs stamping within docker containers. 
+# Prevents issues with vcs stamping within docker containers.
 GOFLAGS="-buildvcs=false"
 
 DOCKER_OPTS := -it \
 	--rm \
 	-e GOFLAGS=$(GOFLAGS) \
+	-e GO_TEST_ARGS=$(GO_TEST_ARGS) \
 	-v gomodcache:/home/user/gocache \
 	-v $(dir $(realpath $(firstword $(MAKEFILE_LIST)))):/workspaces/kargo \
 	-v /workspaces/kargo/ui/node_modules \
