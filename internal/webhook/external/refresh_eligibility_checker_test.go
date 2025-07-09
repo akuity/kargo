@@ -4,10 +4,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libGit "github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/logging"
-	"github.com/stretchr/testify/require"
 )
 
 func Test_needsRefresh_Git(t *testing.T) {
@@ -427,13 +428,94 @@ func Test_needsRefresh_Image(t *testing.T) {
 
 func Test_needsRefresh_Chart(t *testing.T) {
 	for _, test := range []struct {
-		name string
+		name         string
+		rc           *refreshEligibilityChecker
+		rs           kargoapi.RepoSubscription
+		repoURLs     []string
+		needsRefresh bool
 	}{
 		{
-			name: "test case 1",
+			name:     "semver - unset",
+			repoURLs: []string{"testregistry.io/hello-world"},
+			rc: &refreshEligibilityChecker{
+				chart: &chartChange{tag: "v1.0.0"},
+			},
+			rs: kargoapi.RepoSubscription{
+				Chart: &kargoapi.ChartSubscription{
+					RepoURL:          "testregistry.io/hello-world",
+					SemverConstraint: "",
+				},
+			},
+			needsRefresh: true,
+		},
+		{
+			name:     "semver - invalid semver constraint",
+			repoURLs: []string{"testregistry.io/hello-world"},
+			rc: &refreshEligibilityChecker{
+				chart: &chartChange{tag: "v1.0.0"},
+			},
+			rs: kargoapi.RepoSubscription{
+				Chart: &kargoapi.ChartSubscription{
+					RepoURL: "testregistry.io/hello-world",
+					// validation is optional for warehouse semver constraints
+					// so we have to consider an invalid input.
+					SemverConstraint: "invalid-semver-constraint",
+				},
+			},
+			needsRefresh: false,
+		},
+		{
+			name:     "semver - tag is not semver formatted",
+			repoURLs: []string{"testregistry.io/hello-world"},
+			rc: &refreshEligibilityChecker{
+				chart: &chartChange{
+					tag: "invalid-semver-tag",
+				},
+			},
+			rs: kargoapi.RepoSubscription{
+				Chart: &kargoapi.ChartSubscription{
+					RepoURL:          "testregistry.io/hello-world",
+					SemverConstraint: "^v1.0.0",
+				},
+			},
+			needsRefresh: false,
+		},
+		{
+			name:     "semver - not matching",
+			repoURLs: []string{"testregistry.io/hello-world"},
+			rc: &refreshEligibilityChecker{
+				chart: &chartChange{tag: "v1.0.0"},
+			},
+			rs: kargoapi.RepoSubscription{
+				Chart: &kargoapi.ChartSubscription{
+					RepoURL:          "testregistry.io/hello-world",
+					SemverConstraint: "^v2.2.3",
+				},
+			},
+			needsRefresh: false,
+		},
+		{
+			name:     "semver - matching",
+			repoURLs: []string{"testregistry.io/hello-world"},
+			rc: &refreshEligibilityChecker{
+				chart: &chartChange{tag: "v1.0.0"},
+			},
+			rs: kargoapi.RepoSubscription{
+				Chart: &kargoapi.ChartSubscription{
+					RepoURL:          "testregistry.io/hello-world",
+					SemverConstraint: "^v1.0.0",
+				},
+			},
+			needsRefresh: true,
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
+			ctx := logging.ContextWithLogger(t.Context(),
+				logging.NewLogger(logging.DebugLevel),
+			)
+			require.Equal(t, test.needsRefresh,
+				test.rc.needsRefresh(ctx, []kargoapi.RepoSubscription{test.rs}, test.repoURLs...),
+			)
 		})
 	}
 }

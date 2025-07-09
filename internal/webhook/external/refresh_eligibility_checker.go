@@ -6,12 +6,13 @@ import (
 	"slices"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/expr-lang/expr"
+
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libGit "github.com/akuity/kargo/internal/controller/git"
 	libSemver "github.com/akuity/kargo/internal/controller/semver"
 	"github.com/akuity/kargo/internal/controller/warehouses"
 	"github.com/akuity/kargo/internal/logging"
-	"github.com/expr-lang/expr"
 )
 
 // refreshEligibilityChecker encompasses information that came from the inbound
@@ -36,8 +37,7 @@ type imageChange struct {
 }
 
 type chartChange struct {
-	name string
-	tag  string
+	tag string
 }
 
 // needsRefresh filters out all subscriptions that do not match any of the
@@ -135,7 +135,7 @@ func (rc *refreshEligibilityChecker) matchesChartConstraint(ctx context.Context,
 		return true
 	}
 	strict := true // SemVer constraints are always strict for charts.
-	return rc.matchesSemVerConstraint(ctx, rc.image.tag, sub.SemverConstraint, strict)
+	return rc.matchesSemVerConstraint(ctx, rc.chart.tag, sub.SemverConstraint, strict)
 }
 
 func (rc *refreshEligibilityChecker) matchesSemVerConstraint(ctx context.Context, tag, rule string, strict bool) bool {
