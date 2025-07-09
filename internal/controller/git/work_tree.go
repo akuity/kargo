@@ -468,33 +468,38 @@ type TagMetadata struct {
 }
 
 func ParseTagMetadataLine(line []byte) (TagMetadata, error) {
-	parts := bytes.SplitN(line, []byte("|*|"), 6)
-	if len(parts) != 6 && len(parts) != 8 {
-		return TagMetadata{}, fmt.Errorf("unexpected number of fields: %q", line)
+	parts := bytes.Split(line, []byte("|*|"))
+	if len(parts) == 6 {
+		creatorDate, err := time.Parse("2006-01-02 15:04:05 -0700", string(parts[5]))
+		if err != nil {
+			return TagMetadata{}, fmt.Errorf("error parsing creator date %q: %w", parts[5], err)
+		}
+		return TagMetadata{
+			Tag:         string(parts[0]),
+			CommitID:    string(parts[1]),
+			Subject:     string(parts[2]),
+			Author:      string(parts[3]),
+			Committer:   string(parts[4]),
+			CreatorDate: creatorDate,
+		}, nil
 	}
-
-	creatorDate, err := time.Parse("2006-01-02 15:04:05 -0700", string(parts[5]))
-	if err != nil {
-		return TagMetadata{}, fmt.Errorf("error parsing creator date %q: %w", parts[5], err)
+	if len(parts) >= 8 {
+		creatorDate, err := time.Parse("2006-01-02 15:04:05 -0700", string(parts[5]))
+		if err != nil {
+			return TagMetadata{}, fmt.Errorf("error parsing creator date %q: %w", parts[5], err)
+		}
+		return TagMetadata{
+			Tag:         string(parts[0]),
+			CommitID:    string(parts[1]),
+			Subject:     string(parts[2]),
+			Author:      string(parts[3]),
+			Committer:   string(parts[4]),
+			CreatorDate: creatorDate,
+			Tagger:      string(parts[6]),
+			Annotation:  string(bytes.Join(parts[7:], []byte("|*|"))),
+		}, nil
 	}
-
-	tag := TagMetadata{
-		Tag:         string(parts[0]),
-		CommitID:    string(parts[1]),
-		Subject:     string(parts[2]),
-		Author:      string(parts[3]),
-		Committer:   string(parts[4]),
-		CreatorDate: creatorDate,
-	}
-
-	if len(parts) == 8 {
-		// This is an annotated tag, so we also have the tagger and tag
-		// annotation.
-		tag.Tagger = string(parts[6])
-		tag.Annotation = string(parts[7])
-	}
-
-	return tag, nil
+	return TagMetadata{}, fmt.Errorf("unexpected number of fields: %q", line)
 }
 
 func (w *workTree) ListTags() ([]TagMetadata, error) {
