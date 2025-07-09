@@ -19,10 +19,7 @@ import {
   getProjectConfig
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
-import {
-  ProjectConfig as ProjectConfigT,
-  WebhookReceiverDetails
-} from '@ui/gen/api/v1alpha1/generated_pb';
+import { ProjectConfig as ProjectConfigT } from '@ui/gen/api/v1alpha1/generated_pb';
 import projectConfigSchema from '@ui/gen/schema/projectconfigs.kargo.akuity.io_v1alpha1.json';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 import { zodValidators } from '@ui/utils/validators';
@@ -54,8 +51,7 @@ export const ProjectConfig = () => {
     [projectConfigYAML]
   );
 
-  const webhookReceivers = (projectConfig?.status?.webhookReceivers ||
-    []) as WebhookReceiverDetails[];
+  const webhookReceivers = projectConfig?.status?.webhookReceivers || [];
 
   const creation = !projectConfigYAML;
 

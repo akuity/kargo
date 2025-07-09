@@ -90,7 +90,7 @@ export const CreateWebhookModal = (props: CreateWebhookModalProps) => {
         {({ field }) => (
           <Input
             placeholder='my-webhook-receiver'
-            value={field.value as string}
+            value={field.value}
             onChange={(e) => field.onChange(e.target.value)}
           />
         )}
@@ -102,7 +102,7 @@ export const CreateWebhookModal = (props: CreateWebhookModalProps) => {
         {({ field }) => (
           <Input
             placeholder={`my-${webhookReceiver}-secret`}
-            value={field.value as string}
+            value={field.value}
             onChange={field.onChange}
           />
         )}
@@ -110,7 +110,7 @@ export const CreateWebhookModal = (props: CreateWebhookModalProps) => {
 
       <FieldContainer control={secretForm.control} name='data'>
         {({ field }) => {
-          const value = field.value as Record<string, string>;
+          const value = field.value;
           return webhookReceiverExpand.secrets.map((secret) => {
             return (
               <Form key={secret.dataKey} layout='vertical'>
