@@ -162,7 +162,7 @@ func TestParseTagMetadataLine(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ParseTagMetadataLine([]byte(tt.line))
+			got, err := parseTagMetadataLine([]byte(tt.line))
 			if tt.wantErr {
 				require.Error(t, err)
 			} else {

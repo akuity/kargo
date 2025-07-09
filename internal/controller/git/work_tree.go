@@ -467,39 +467,32 @@ type TagMetadata struct {
 	Annotation string
 }
 
-func ParseTagMetadataLine(line []byte) (TagMetadata, error) {
+func parseTagMetadataLine(line []byte) (TagMetadata, error) {
 	parts := bytes.Split(line, []byte("|*|"))
-	if len(parts) == 6 {
-		creatorDate, err := time.Parse("2006-01-02 15:04:05 -0700", string(parts[5]))
-		if err != nil {
-			return TagMetadata{}, fmt.Errorf("error parsing creator date %q: %w", parts[5], err)
-		}
-		return TagMetadata{
-			Tag:         string(parts[0]),
-			CommitID:    string(parts[1]),
-			Subject:     string(parts[2]),
-			Author:      string(parts[3]),
-			Committer:   string(parts[4]),
-			CreatorDate: creatorDate,
-		}, nil
+	if l := len(parts); l < 6 || l == 7 {
+		return TagMetadata{}, fmt.Errorf("unexpected number of fields: %q", line)
 	}
+
+	creatorDate, err := time.Parse("2006-01-02 15:04:05 -0700", string(parts[5]))
+	if err != nil {
+		return TagMetadata{}, fmt.Errorf("error parsing creator date %q: %w", parts[5], err)
+	}
+
+	metadata := TagMetadata{
+		Tag:         string(parts[0]),
+		CommitID:    string(parts[1]),
+		Subject:     string(parts[2]),
+		Author:      string(parts[3]),
+		Committer:   string(parts[4]),
+		CreatorDate: creatorDate,
+	}
+
 	if len(parts) >= 8 {
-		creatorDate, err := time.Parse("2006-01-02 15:04:05 -0700", string(parts[5]))
-		if err != nil {
-			return TagMetadata{}, fmt.Errorf("error parsing creator date %q: %w", parts[5], err)
-		}
-		return TagMetadata{
-			Tag:         string(parts[0]),
-			CommitID:    string(parts[1]),
-			Subject:     string(parts[2]),
-			Author:      string(parts[3]),
-			Committer:   string(parts[4]),
-			CreatorDate: creatorDate,
-			Tagger:      string(parts[6]),
-			Annotation:  string(bytes.Join(parts[7:], []byte("|*|"))),
-		}, nil
+		metadata.Tagger = string(parts[6])
+		metadata.Annotation = string(bytes.Join(parts[7:], []byte("|*|")))
 	}
-	return TagMetadata{}, fmt.Errorf("unexpected number of fields: %q", line)
+
+	return metadata, nil
 }
 
 func (w *workTree) ListTags() ([]TagMetadata, error) {
@@ -546,7 +539,7 @@ func (w *workTree) ListTags() ([]TagMetadata, error) {
 	var tags []TagMetadata
 	scanner := bufio.NewScanner(bytes.NewReader(tagsBytes))
 	for scanner.Scan() {
-		tag, err := ParseTagMetadataLine(scanner.Bytes())
+		tag, err := parseTagMetadataLine(scanner.Bytes())
 		if err != nil {
 			return nil, err
 		}
