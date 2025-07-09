@@ -22,9 +22,9 @@ import (
 )
 
 const (
-	contentTypeHeader = "Content-Type"
-	contentTypeJSON   = "application/json"
-	maxResponseBytes = 2 << 20
+	contentTypeHeader     = "Content-Type"
+	contentTypeJSON       = "application/json"
+	maxResponseBytes      = 2 << 20
 	requestTimeoutDefault = 10 * time.Second
 )
 
@@ -142,10 +142,9 @@ func (h *httpRequester) run(
 				Status: kargoapi.PromotionStepStatusSucceeded,
 				Output: outputs,
 			}, nil
-		} else {
-			// Non-2xx: retried failure (not terminal)
-			return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed}, nil
 		}
+		// Non-2xx: retried failure (not terminal)
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed}, nil
 	default:
 		// All other cases: running (retried)
 		// This includes:
@@ -179,7 +178,10 @@ func (h *httpRequester) evaluateSuccessCriteria(
 	if success, ok := successAny.(bool); ok {
 		return &success, nil
 	}
-	return nil, fmt.Errorf("success expression %q did not evaluate to a boolean (got %T)", cfg.SuccessExpression, successAny)
+	return nil, fmt.Errorf(
+		"success expression %q did not evaluate to a boolean (got %T)",
+		cfg.SuccessExpression, successAny,
+	)
 }
 
 // evaluateFailureCriteria evaluates the failure criteria expression if defined.
@@ -205,7 +207,10 @@ func (h *httpRequester) evaluateFailureCriteria(
 	if failure, ok := failureAny.(bool); ok {
 		return &failure, nil
 	}
-	return nil, fmt.Errorf("failure expression %q did not evaluate to a boolean (got %T)", cfg.FailureExpression, failureAny)
+	return nil, fmt.Errorf(
+		"failure expression %q did not evaluate to a boolean (got %T)",
+		cfg.FailureExpression, failureAny,
+	)
 }
 
 func (h *httpRequester) buildRequest(cfg builtin.HTTPConfig) (*http.Request, error) {
@@ -289,7 +294,7 @@ func (h *httpRequester) buildExprEnv(
 			"body":    map[string]any{},
 		},
 	}
-	contentType, _, err := mime.ParseMediaType(resp.Header.Get(contentTypeHeader))
+	contentType, _, _ := mime.ParseMediaType(resp.Header.Get(contentTypeHeader))
 	if len(bodyBytes) > 0 && contentType == contentTypeJSON {
 		var parsedBody any
 		if err := json.Unmarshal(bodyBytes, &parsedBody); err != nil {
@@ -299,7 +304,7 @@ func (h *httpRequester) buildExprEnv(
 		// Unmarshal into map[string]any or []any
 		switch parsedBody.(type) {
 		case map[string]any, []any:
-			env["response"].(map[string]any)["body"] = parsedBody
+			env["response"].(map[string]any)["body"] = parsedBody // nolint: forcetypeassert
 		default:
 			return nil, fmt.Errorf("unexpected type when unmarshaling response: %T", parsedBody)
 		}

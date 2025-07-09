@@ -102,7 +102,7 @@ kargo get promotion abc1234
 // addFlags adds the flags for the get promotions options to the provided command.
 func (o *getPromotionsOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
-	o.PrintFlags.AddFlags(cmd)
+	o.AddFlags(cmd)
 
 	option.Project(
 		cmd.Flags(), &o.Project, o.Config.Project,

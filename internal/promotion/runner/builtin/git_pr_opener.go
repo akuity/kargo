@@ -10,12 +10,11 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
-
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/gitprovider"
+	"github.com/akuity/kargo/pkg/promotion"
+	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 
 	_ "github.com/akuity/kargo/internal/gitprovider/azure"     // Azure provider registration
 	_ "github.com/akuity/kargo/internal/gitprovider/bitbucket" // Bitbucket provider registration

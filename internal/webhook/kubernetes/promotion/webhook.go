@@ -193,6 +193,7 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 		)
 	}
 	if len(promo.Spec.Steps) == 0 {
+		// nolint:staticcheck
 		return fmt.Errorf(
 			"Stage %q in namespace %q defines no promotion steps",
 			promo.Spec.Stage,
@@ -211,7 +212,7 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 	}
 
 	ownerRef := metav1.NewControllerRef(stage, kargoapi.GroupVersion.WithKind("Stage"))
-	promo.ObjectMeta.OwnerReferences = []metav1.OwnerReference{*ownerRef}
+	promo.OwnerReferences = []metav1.OwnerReference{*ownerRef}
 	return nil
 }
 

@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	kubeerr "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -20,7 +20,7 @@ var (
 func ValidateProject(ctx context.Context, kc client.Client, project string) error {
 	var ns corev1.Namespace
 	if err := kc.Get(ctx, client.ObjectKey{Name: project}, &ns); err != nil {
-		if kubeerr.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			return ErrProjectNotFound
 		}
 		return fmt.Errorf("get project: %w", err)

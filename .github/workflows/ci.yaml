@@ -98,8 +98,6 @@ jobs:
     - name: Configure Git
       run: git config --global --add safe.directory '*'
     - name: Run linter
-      env:
-        GO_LINT_ERROR_FORMAT: colored-line-number
       run: make lint-go
 
   lint-charts:

@@ -46,7 +46,7 @@ func (s *server) ListProjectEvents(
 
 	// Sort descending by last timestamp
 	slices.SortFunc(eventsList.Items, func(lhs, rhs corev1.Event) int {
-		return rhs.LastTimestamp.Time.Compare(lhs.LastTimestamp.Time)
+		return rhs.LastTimestamp.Compare(lhs.LastTimestamp.Time)
 	})
 
 	events := make([]*corev1.Event, len(eventsList.Items))

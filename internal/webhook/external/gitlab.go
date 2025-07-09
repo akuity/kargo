@@ -63,8 +63,7 @@ func (g *gitlabWebhookReceiver) getSecretValues(
 ) ([]string, error) {
 	token, ok := secretData[gitLabSecretDataKey]
 	if !ok {
-		return nil,
-			errors.New("Secret data is not valid for a GitLab WebhookReceiver")
+		return nil, fmt.Errorf("missing data key %q for GitLab WebhookReceiver", gitLabSecretDataKey)
 	}
 	return []string{string(token)}, nil
 }

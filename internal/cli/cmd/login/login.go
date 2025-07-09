@@ -167,10 +167,8 @@ func (o *loginOptions) run(ctx context.Context) error {
 	switch {
 	case o.UseAdmin:
 		authMethod = authMethodAdmin
-		for {
-			if o.Password != "" {
-				break
-			}
+		for o.Password == "" {
+
 			prompt := &survey.Password{
 				Message: "Admin user password",
 			}

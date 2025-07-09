@@ -195,8 +195,8 @@ func (r *reconciler) Reconcile(
 	req ctrl.Request,
 ) (ctrl.Result, error) {
 	logger := logging.LoggerFromContext(ctx).WithValues(
-		"namespace", req.NamespacedName.Namespace,
-		"promotion", req.NamespacedName.Name,
+		"namespace", req.Namespace,
+		"promotion", req.Name,
 	)
 	ctx = logging.ContextWithLogger(ctx, logger)
 	logger.Debug("reconciling Promotion")
@@ -226,8 +226,8 @@ func (r *reconciler) Reconcile(
 	}
 
 	logger = logger.WithValues(
-		"namespace", req.NamespacedName.Namespace,
-		"promotion", req.NamespacedName.Name,
+		"namespace", req.Namespace,
+		"promotion", req.Name,
 		"stage", promo.Spec.Stage,
 		"freight", promo.Spec.Freight,
 	)
@@ -433,10 +433,12 @@ func (r *reconciler) promote(
 	stageNamespace := promo.Namespace
 
 	if targetFreight == nil {
+		// nolint:staticcheck
 		return nil, fmt.Errorf("Freight %q not found in namespace %q", promo.Spec.Freight, promo.Namespace)
 	}
 
 	if !stage.IsFreightAvailable(targetFreight) {
+		// nolint:staticcheck
 		return nil, fmt.Errorf(
 			"Freight %q is not available to Stage %q in namespace %q",
 			promo.Spec.Freight,
@@ -704,7 +706,7 @@ func calculateRequeueInterval(p *kargoapi.Promotion) time.Duration {
 	}
 
 	md := p.Status.StepExecutionMetadata[p.Status.CurrentStep]
-	targetTimeout := md.StartedAt.Time.Add(*timeout)
+	targetTimeout := md.StartedAt.Add(*timeout)
 	if targetTimeout.Before(time.Now().Add(defaultRequeueInterval)) {
 		return time.Until(targetTimeout)
 	}

@@ -605,7 +605,7 @@ func Test_httpRequester_buildExprEnv(t *testing.T) {
 				Header:     http.Header{"Content-Type": []string{"application/json"}},
 				Body:       io.NopCloser(strings.NewReader(`{"foo":`)),
 			},
-			assertions: func(t *testing.T, env map[string]any, err error) {
+			assertions: func(t *testing.T, _ map[string]any, err error) {
 				require.Error(t, err)
 				require.ErrorContains(t, err, "failed to parse response")
 			},
@@ -617,7 +617,7 @@ func Test_httpRequester_buildExprEnv(t *testing.T) {
 				Header:     http.Header{"Content-Type": []string{"application/json"}},
 				Body:       io.NopCloser(strings.NewReader(`"foo"`)),
 			},
-			assertions: func(t *testing.T, env map[string]any, err error) {
+			assertions: func(t *testing.T, _ map[string]any, err error) {
 				require.Error(t, err)
 				require.ErrorContains(t, err, "unexpected type when unmarshaling")
 			},
