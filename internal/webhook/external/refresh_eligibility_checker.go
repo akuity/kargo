@@ -24,6 +24,22 @@ type refreshEligibilityChecker struct {
 	chart *chartChange
 }
 
+func (rc *refreshEligibilityChecker) isValid(changeType any) bool {
+	switch changeType := changeType.(type) {
+	case *codeChange:
+		return rc.git != nil && rc.git.tag != nil && rc.git.tag.Tag != "" &&
+			rc.git.commit == changeType.commit && rc.git.branch == changeType.branch &&
+			slices.Equal(rc.git.diffs, changeType.diffs)
+	case *imageChange:
+		return rc.image != nil && rc.image.tag == changeType.tag &&
+			rc.image.digest == changeType.digest
+	case *chartChange:
+		return rc.chart != nil && rc.chart.tag == changeType.tag
+	default:
+		return false
+	}
+}
+
 type codeChange struct {
 	tag    *libGit.TagMetadata
 	commit *libGit.CommitMetadata
@@ -41,8 +57,10 @@ type chartChange struct {
 }
 
 // needsRefresh filters out all subscriptions that do not match any of the
-// provided repository URLs, and then deletes any subscriptions whos constraints
-// are not satisfied by the inbound request data.
+// provided repository URLs and then evaluates whether any of the remaining
+// subscriptions' constraints are satisfied by the inbound request data.
+// If any of the subscriptions match, it returns true, indicating that a refresh
+// is needed. If no subscriptions match, it returns false.
 func (rc *refreshEligibilityChecker) needsRefresh(
 	ctx context.Context,
 	subs []kargoapi.RepoSubscription,
@@ -50,14 +68,17 @@ func (rc *refreshEligibilityChecker) needsRefresh(
 ) bool {
 	subs = filterSubsByRepoURL(subs, repoURLs...) // only interested in subs that contain any of the repo URLs.
 	return slices.ContainsFunc(subs, func(sub kargoapi.RepoSubscription) bool {
-		return rc.matches(ctx, sub)
+		var shouldRefresh bool
+		switch {
+		case sub.Git != nil:
+			shouldRefresh = rc.matchesGitConstraint(ctx, sub.Git)
+		case sub.Image != nil:
+			shouldRefresh = rc.matchesImageConstraint(ctx, sub.Image)
+		case sub.Chart != nil:
+			shouldRefresh = rc.matchesChartConstraint(ctx, sub.Chart)
+		}
+		return shouldRefresh
 	})
-}
-
-func (rc *refreshEligibilityChecker) matches(ctx context.Context, sub kargoapi.RepoSubscription) bool {
-	return rc.matchesGitConstraint(ctx, sub.Git) ||
-		rc.matchesImageConstraint(ctx, sub.Image) ||
-		rc.matchesChartConstraint(ctx, sub.Chart)
 }
 
 // filterSubsByRepoURL deletes all subscriptions from subs that do not
@@ -244,22 +265,24 @@ func (rc *refreshEligibilityChecker) matchesExpressionFilter(ctx context.Context
 		return false
 	}
 
-	var matches bool
-	switch {
-	case rc.git.tag != nil:
-		matches, err = warehouses.EvaluateTagExpression(*rc.git.tag, program)
+	switch sub.CommitSelectionStrategy {
+	case kargoapi.CommitSelectionStrategySemVer,
+		kargoapi.CommitSelectionStrategyNewestTag,
+		kargoapi.CommitSelectionStrategyLexical:
+		matches, err := warehouses.EvaluateTagExpression(*rc.git.tag, program)
 		if err != nil {
 			logger.Error(err, "error evaluating tag expression filter")
 			return false
 		}
-	case rc.git.commit != nil:
-		matches, err = warehouses.EvaluateCommitExpression(*rc.git.commit, program)
+		return matches
+	default:
+		matches, err := warehouses.EvaluateCommitExpression(*rc.git.commit, program)
 		if err != nil {
 			logger.Error(err, "error evaluating commit expression filter")
 			return false
 		}
+		return matches
 	}
-	return matches
 }
 
 // matchesAllowIgnoreRules checks if the tag matches the allow and ignore rules
