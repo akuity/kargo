@@ -133,7 +133,7 @@ func imageDiscoveryLogFields(sub kargoapi.ImageSubscription) []any {
 		if sub.Constraint != "" {
 			f = append(f, "constraint", sub.Constraint)
 		} else {
-			f = append(f, "semverConstraint", sub.SemverConstraint)
+			f = append(f, "semverConstraint", sub.SemverConstraint) //nolint:staticcheck
 		}
 	case kargoapi.ImageSelectionStrategyDigest:
 		if sub.Constraint != "" {
@@ -151,7 +151,7 @@ func imageSelectorForSubscription(
 ) (image.Selector, error) {
 	constraint := sub.Constraint
 	if constraint == "" && sub.ImageSelectionStrategy == kargoapi.ImageSelectionStrategySemVer {
-		constraint = sub.SemverConstraint
+		constraint = sub.SemverConstraint //nolint:staticcheck
 	}
 	return image.NewSelector(
 		sub.RepoURL,
