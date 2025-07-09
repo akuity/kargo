@@ -112,7 +112,7 @@ strategies are:
     :::note
     Starting Kargo v1.7, the `semverConstraint` field is deprecated for
     container image subscriptions. It is recommended to use the `constraint`
-    field instead. When using the `SemVer` strategy, `constratint` should be a
+    field instead. When using the `SemVer` strategy, `constraint` should be a
     valid semantic version range.
     :::
 
@@ -167,7 +167,7 @@ strategies are:
     __Unintuitively, the mutable tag name must be specified using the
     `semverConstraint` field.__ Importantly, the _digest_ will change every time
     the tag is updated. Since the `semverConstraint` field is deprecated
-    starting v1.7, it is recommended to use the `constraint` field that shouldd
+    starting v1.7, it is recommended to use the `constraint` field that should
     be set to a valid mutable tag name.
 
     :::warning
