@@ -54,10 +54,7 @@ func (rc *refreshEligibilityChecker) needsRefresh(
 	})
 }
 
-func (rc *refreshEligibilityChecker) matches(
-	ctx context.Context,
-	sub kargoapi.RepoSubscription,
-) bool {
+func (rc *refreshEligibilityChecker) matches(ctx context.Context, sub kargoapi.RepoSubscription) bool {
 	return rc.matchesGitConstraint(ctx, sub.Git) ||
 		rc.matchesImageConstraint(ctx, sub.Image) ||
 		rc.matchesChartConstraint(ctx, sub.Chart)
@@ -65,10 +62,7 @@ func (rc *refreshEligibilityChecker) matches(
 
 // filterSubsByRepoURL deletes all subscriptions from subs that do not
 // match any of the provided repository URLs; omitting them from processing.
-func filterSubsByRepoURL(
-	subs []kargoapi.RepoSubscription,
-	repoURLs ...string,
-) []kargoapi.RepoSubscription {
+func filterSubsByRepoURL(subs []kargoapi.RepoSubscription, repoURLs ...string) []kargoapi.RepoSubscription {
 	containsRepoURL := func(sub kargoapi.RepoSubscription) bool {
 		return sub.Image != nil && slices.Contains(repoURLs, sub.Image.RepoURL) ||
 			sub.Git != nil && slices.Contains(repoURLs, sub.Git.RepoURL) ||
@@ -122,10 +116,7 @@ func (rc *refreshEligibilityChecker) matchesImageConstraint(
 	}
 }
 
-func (rc *refreshEligibilityChecker) matchesChartConstraint(
-	ctx context.Context,
-	sub *kargoapi.ChartSubscription,
-) bool {
+func (rc *refreshEligibilityChecker) matchesChartConstraint(ctx context.Context, sub *kargoapi.ChartSubscription) bool {
 	if rc.chart == nil || sub == nil {
 		return false
 	}
@@ -141,12 +132,7 @@ func (rc *refreshEligibilityChecker) matchesChartConstraint(
 	return rc.matchesSemVerConstraint(ctx, rc.image.tag, sub.SemverConstraint, strict)
 }
 
-func (rc *refreshEligibilityChecker) matchesSemVerConstraint(
-	ctx context.Context,
-	tag string,
-	rule string,
-	strict bool,
-) bool {
+func (rc *refreshEligibilityChecker) matchesSemVerConstraint(ctx context.Context, tag, rule string, strict bool) bool {
 	logger := logging.LoggerFromContext(ctx).WithValues(
 		"tag", tag,
 		"constraint", rule,
