@@ -14,7 +14,7 @@ import (
 	"github.com/expr-lang/expr"
 )
 
-// refreshEligibilityChecker encompasses information that came from the inbound 
+// refreshEligibilityChecker encompasses information that came from the inbound
 // request. The checker compares this information against the constraints defined
 // in various repo subscription types to determine if a refresh is needed.
 type refreshEligibilityChecker struct {
@@ -105,7 +105,7 @@ func (rc *refreshEligibilityChecker) matchesImageConstraint(
 		// always dealing with the newest build of the image.
 		return true
 	case kargoapi.ImageSelectionStrategyDigest:
-		// Unintuitively, the mutable tag name is specified using the semverConstraint field. 
+		// Unintuitively, the mutable tag name is specified using the semverConstraint field.
 		return rc.Image.Tag == sub.SemverConstraint
 	default: // SemVer is the default case for Image subscriptions.
 		return rc.matchesSemVerConstraint(ctx, rc.Image.Tag, sub.SemverConstraint, sub.StrictSemvers)
@@ -210,40 +210,34 @@ func (rc *refreshEligibilityChecker) matchesPathFilters(ctx context.Context, sub
 // If the commit is not nil, it evaluates the commit metadata against the
 // expression.
 func (rc *refreshEligibilityChecker) matchesExpressionFilter(ctx context.Context, sub *kargoapi.GitSubscription) bool {
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"expression", sub.ExpressionFilter,
+		"value", sub.ExpressionFilter,
+	)
+
+	if sub.ExpressionFilter == "" {
+		return true // no expression filter specified, so all tags are allowed
+	}
+
+	program, err := expr.Compile(sub.ExpressionFilter)
+	if err != nil {
+		logger.Error(err, "error compiling tag expression filter")
+		return false
+	}
+
 	var matches bool
 	switch {
-	case sub.ExpressionFilter == "":
-		matches = true
-	case rc.Git.Tag == nil && rc.Git.Commit == nil:
-		matches = true
-	default:
-		logger := logging.LoggerFromContext(ctx).WithValues(
-			"expression", sub.ExpressionFilter,
-			"value", sub.ExpressionFilter,
-		)
-
-		program, err := expr.Compile(sub.ExpressionFilter)
+	case rc.Git.Tag != nil:
+		matches, err = warehouses.EvaluateTagExpression(*rc.Git.Tag, program)
 		if err != nil {
-			logger.Error(err, "error compiling tag expression filter")
+			logger.Error(err, "error evaluating tag expression filter")
 			return false
 		}
-
-		if rc.Git.Tag != nil {
-			ok, err := warehouses.EvaluateTagExpression(*rc.Git.Tag, program)
-			if err != nil {
-				logger.Error(err, "error evaluating tag expression filter")
-				return false
-			}
-			matches = ok
-		}
-
-		if rc.Git.Commit != nil {
-			ok, err := warehouses.EvaluateCommitExpression(*rc.Git.Commit, program)
-			if err != nil {
-				logger.Error(err, "error evaluating commit expression filter")
-				return false
-			}
-			matches = ok
+	case rc.Git.Commit != nil:
+		matches, err = warehouses.EvaluateCommitExpression(*rc.Git.Commit, program)
+		if err != nil {
+			logger.Error(err, "error evaluating commit expression filter")
+			return false
 		}
 	}
 	return matches
