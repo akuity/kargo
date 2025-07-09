@@ -2,10 +2,8 @@ package external
 
 import (
 	"context"
-	"fmt"
 	"regexp"
 	"slices"
-	"strconv"
 
 	"github.com/Masterminds/semver/v3"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -18,10 +16,10 @@ import (
 
 type refreshConstraint struct {
 	Git *struct {
-		Tag        string
+		Tag        *git.TagMetadata
+		Commit     *git.CommitMetadata
 		Branch     string
 		Diffs      []string
-		Expression string
 	}
 	Image *struct {
 		Tag string
@@ -36,12 +34,10 @@ func (rc refreshConstraint) needsRefresh(
 	subs []kargoapi.RepoSubscription,
 	repoURLs ...string,
 ) bool {
-	return slices.ContainsFunc(
-		filterSubsByRepoURL(subs, repoURLs...),
-		func(sub kargoapi.RepoSubscription) bool {
-			return rc.matches(ctx, sub)
-		},
-	)
+	subs = filterSubsByRepoURL(subs, repoURLs...) // only interested in subs that contain any of the repo URLs.
+	return slices.ContainsFunc(subs, func(sub kargoapi.RepoSubscription) bool {
+		return rc.matches(ctx, sub)
+	})
 }
 
 // filterSubsByRepoURL deletes all subscriptions from subs that do not
@@ -69,16 +65,13 @@ func (rc refreshConstraint) matches(
 		rc.matchesChartConstraint(sub.Chart)
 }
 
-func (rc refreshConstraint) matchesGitConstraint(
-	ctx context.Context,
-	sub *kargoapi.GitSubscription,
-) bool {
+func (rc refreshConstraint) matchesGitConstraint(ctx context.Context, sub *kargoapi.GitSubscription) bool {
 	if rc.Git == nil || sub == nil {
 		return false
 	}
 	switch sub.CommitSelectionStrategy {
 	case kargoapi.CommitSelectionStrategyLexical:
-		return rc.matchesLexicalConstraint(ctx, rc.Git.Tag, sub)
+		return rc.matchesLexicalConstraint(ctx, sub)
 	case kargoapi.CommitSelectionStrategySemVer:
 		return rc.matchesSemVerConstraint(ctx, sub)
 	case kargoapi.CommitSelectionStrategyNewestTag:
@@ -88,104 +81,47 @@ func (rc refreshConstraint) matchesGitConstraint(
 	}
 }
 
-func (rc refreshConstraint) matchesSemVerConstraint(
-	ctx context.Context,
-	sub *kargoapi.GitSubscription,
-) bool {
-	logger := logging.LoggerFromContext(ctx)
+func (rc refreshConstraint) matchesSemVerConstraint(ctx context.Context, sub *kargoapi.GitSubscription) bool {
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"tag", rc.Git.Tag.Tag,
+		"constraint", sub.SemverConstraint,
+		"strictSemvers", sub.StrictSemvers,
+	)
 
 	constraint, err := semver.NewConstraint(sub.SemverConstraint)
 	if err != nil {
-		logger.Debug("failed to parse semver constraint",
-			"tag", rc.Git.Tag,
-			"constraint", sub.SemverConstraint,
-			"error", err.Error(),
-		)
+		logger.Debug("failed to parse semver constraint", "error", err.Error())
 		return false
 	}
 
-	version := libSemver.Parse(rc.Git.Tag, sub.StrictSemvers)
+	version := libSemver.Parse(rc.Git.Tag.Tag, sub.StrictSemvers)
 	if version == nil {
-		logger.Debug("tag is not semver formatted",
-			"tag", rc.Git.Tag,
-			"constraint", sub.SemverConstraint,
-			"strictSemvers", sub.StrictSemvers,
-		)
+		logger.Debug("tag is not semver formatted")
 		return false
 	}
 
 	if !constraint.Check(version) {
-		logger.Debug("tag does not satisfy semver constraint",
-			"tag", rc.Git.Tag,
-			"constraint", sub.SemverConstraint,
-		)
+		logger.Debug("tag does not satisfy semver constraint")
 		return false
 	}
-	return rc.matchesBaseFilters(
-		ctx,
-		sub,
-		rc.Git.Expression,
-		git.TagMetadata{
-			// TODO(Faris): Fill this in with actual tag metadata
-		},
-	)
+	return rc.matchesBaseFilters(ctx, sub)
 }
 
-func (rc refreshConstraint) matchesLexicalConstraint(
-	ctx context.Context,
-	tag string,
-	sub *kargoapi.GitSubscription,
-) bool {
-	logger := logging.LoggerFromContext(ctx)
-	allowRegex, err := regexp.Compile(sub.AllowTags)
-	if err != nil {
-		logger.Debug("failed to compile allow regex",
-			"tag", tag,
-			"allow", sub.AllowTags,
-			"error", err.Error(),
-		)
-		return false
-	}
-	if warehouses.Ignores(tag, sub.IgnoreTags) || !warehouses.Allows(tag, allowRegex) {
-		return false
-	}
-	return rc.matchesBaseFilters(
-		ctx,
-		sub,
-		rc.Git.Expression,
-		git.TagMetadata{
-			// TODO(Faris): Fill this in with actual tag metadata
-		},
-	)
+func (rc refreshConstraint) matchesLexicalConstraint(ctx context.Context, sub *kargoapi.GitSubscription) bool {
+	// base filters are enough here because we are only dealing with one tag e.g. no sorting required.
+	return rc.matchesBaseFilters(ctx, sub)
 }
 
-func (rc refreshConstraint) matchesNewestFromBranchConstraint(
-	ctx context.Context,
-	sub *kargoapi.GitSubscription,
-) bool {
-	if rc.Git.Branch != sub.Branch {
-		return false
-	}
-	return rc.matchesBaseFilters(
-		ctx,
-		sub,
-		rc.Git.Expression,
-		git.TagMetadata{},
-	)
+func (rc refreshConstraint) matchesNewestFromBranchConstraint(ctx context.Context, sub *kargoapi.GitSubscription) bool {
+	// we are only dealing with the newest commit from the branch, so we only need to check if the branch matches
+	// the one we are looking for + the base filters.
+	return rc.Git.Branch == sub.Branch && rc.matchesBaseFilters(ctx, sub)
 }
 
-func (rc refreshConstraint) matchesNewestTagConstraint(
-	ctx context.Context,
-	sub *kargoapi.GitSubscription,
-) bool {
-	// TODO(Faris): evaluates if tag is newest
-
-	return rc.matchesBaseFilters(
-		ctx,
-		sub,
-		rc.Git.Expression,
-		git.TagMetadata{},
-	)
+func (rc refreshConstraint) matchesNewestTagConstraint(ctx context.Context, sub *kargoapi.GitSubscription) bool {
+	// we are always dealing with the newest tag in this context (webhooks),
+	// so we only need to check if the tag matches the base filters.
+	return rc.matchesBaseFilters(ctx, sub)
 }
 
 func (rc refreshConstraint) matchesImageConstraint(
@@ -212,11 +148,18 @@ func (rc refreshConstraint) matchesChartConstraint(
 	return false
 }
 
-func matchesPathFilters(
-	ctx context.Context,
-	sub *kargoapi.GitSubscription,
-	diffPaths []string,
-) bool {
+// matchesBaseFilters checks that path, expression, and tag filters match.
+// If there are no path, expression, or tag filters the check returns true.
+func (rc refreshConstraint) matchesBaseFilters(ctx context.Context, sub *kargoapi.GitSubscription) bool {
+	return rc.matchesPathFilters(ctx, sub) &&
+		rc.matchesExpressionFilter(ctx, sub) &&
+		rc.matchesAllowIgnoreRules(ctx, sub)
+}
+
+// matchesPathFilters checks if the provided diffPaths match the
+// include and exclude path filters defined in the subscription.
+// If there are no include or exclude paths, it returns true.
+func (rc refreshConstraint) matchesPathFilters(ctx context.Context, sub *kargoapi.GitSubscription) bool {
 	if sub.IncludePaths == nil && sub.ExcludePaths == nil {
 		return true
 	}
@@ -247,73 +190,72 @@ func matchesPathFilters(
 	return warehouses.MatchesPathsFilters(
 		includeSelectors,
 		excludeSelectors,
-		diffPaths,
+		rc.Git.Diffs,
 	)
 }
 
-func matchesExpression(
-	ctx context.Context,
-	expression string,
-	tag git.TagMetadata,
-	value string,
-) bool {
-	if expression == "" {
-		return true
-	}
-
-	logger := logging.LoggerFromContext(ctx).WithValues(
-		"expression", expression,
-		"value", value,
-	)
-
-	program, err := expr.Compile(expression)
-	if err != nil {
-		logger.Error(err, "error compiling tag expression filter")
-		return false
-	}
-
-	env := map[string]any{
-		"tag":         tag.Tag,
-		"id":          tag.CommitID,
-		"creatorDate": tag.CreatorDate,
-		"author":      tag.Author,
-		"committer":   tag.Committer,
-		"subject":     tag.Subject,
-		"tagger":      tag.Tagger,
-		"annotation":  tag.Annotation,
-	}
-
-	result, err := expr.Run(program, env)
-	if err != nil {
-		logger.Error(err, "error evaluating tag expression filter")
-		return false
-	}
-
-	switch result := result.(type) {
-	case bool:
-		return result
+// matchesExpression returns true if expression is empty.
+// If the expression is not valid an error is logged and false is returned.
+// if the tag is not nil, it evaluates the tag metadata against the expression.
+// If the commit is not nil, it evaluates the commit metadata against the
+// expression.
+func (rc refreshConstraint) matchesExpressionFilter(ctx context.Context, sub *kargoapi.GitSubscription) bool {
+	var matches bool
+	switch {
+	case sub.ExpressionFilter == "":
+		matches = true
+	case rc.Git.Tag == nil && rc.Git.Commit == nil:
+		matches = true
 	default:
-		parsedBool, err := strconv.ParseBool(fmt.Sprintf("%v", result))
+		logger := logging.LoggerFromContext(ctx).WithValues(
+			"expression", sub.ExpressionFilter,
+			"value", sub.ExpressionFilter,
+		)
+
+		program, err := expr.Compile(sub.ExpressionFilter)
 		if err != nil {
-			logger.Error(err, "error parsing expression result")
+			logger.Error(err, "error compiling tag expression filter")
 			return false
 		}
-		return parsedBool
+
+		if rc.Git.Tag != nil {
+			ok, err := warehouses.EvaluateTagExpression(*rc.Git.Tag, program)
+			if err != nil {
+				logger.Error(err, "error evaluating tag expression filter")
+				return false
+			}
+			matches = ok
+		}
+
+		if rc.Git.Commit != nil {
+			ok, err := warehouses.EvaluateCommitExpression(*rc.Git.Commit, program)
+			if err != nil {
+				logger.Error(err, "error evaluating commit expression filter")
+				return false
+			}
+			matches = ok
+		}
 	}
+	return matches
 }
 
-func (rc refreshConstraint) matchesBaseFilters(
-	ctx context.Context,
-	sub *kargoapi.GitSubscription,
-	expression string,
-	tag git.TagMetadata,
-) bool {
-	return matchesPathFilters(ctx, sub, rc.Git.Diffs) &&
-		matchesExpression(ctx,
-			sub.ExpressionFilter,
-			git.TagMetadata{
-				// TODO(Faris): Fill this in with actual tag metadata
-			},
-			rc.Git.Expression,
+// matchesAllowIgnoreRules checks if the tag matches the allow and ignore rules
+// if no allow tags are specified, it returns true.
+func (rc refreshConstraint) matchesAllowIgnoreRules(ctx context.Context, sub *kargoapi.GitSubscription) bool {
+	logger := logging.LoggerFromContext(ctx)
+	if sub.AllowTags == "" {
+		return true // no allow tags specified, so all tags are allowed
+	}
+
+	allowRegex, err := regexp.Compile(sub.AllowTags)
+	if err != nil {
+		logger.Debug("failed to compile allow regex",
+			"tag", rc.Git.Tag,
+			"allow", sub.AllowTags,
+			"error", err.Error(),
 		)
+		return false
+	}
+	return warehouses.Ignores(rc.Git.Tag.Tag, sub.IgnoreTags) ||
+		!warehouses.Allows(rc.Git.Tag.Tag, allowRegex)
 }
