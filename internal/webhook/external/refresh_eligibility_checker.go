@@ -14,7 +14,8 @@ import (
 	"github.com/expr-lang/expr"
 )
 
-type refreshConstraint struct {
+// refreshEligibilityChecker contains information that came from the inbound request. 
+type refreshEligibilityChecker struct {
 	Git *struct {
 		Tag    *git.TagMetadata
 		Commit *git.CommitMetadata
@@ -24,12 +25,10 @@ type refreshConstraint struct {
 	// TODO(Faris): which data type to use
 	// GC *kargoapi.GitCommit
 	Image *kargoapi.Image
-	Chart *struct {
-		Tag string
-	}
+	Chart *kargoapi.Chart
 }
 
-func (rc refreshConstraint) needsRefresh(
+func (rc *refreshEligibilityChecker) needsRefresh(
 	ctx context.Context,
 	subs []kargoapi.RepoSubscription,
 	repoURLs ...string,
@@ -40,7 +39,7 @@ func (rc refreshConstraint) needsRefresh(
 	})
 }
 
-func (rc refreshConstraint) matches(
+func (rc *refreshEligibilityChecker) matches(
 	ctx context.Context,
 	sub kargoapi.RepoSubscription,
 ) bool {
@@ -65,7 +64,7 @@ func filterSubsByRepoURL(
 	})
 }
 
-func (rc refreshConstraint) matchesGitConstraint(ctx context.Context, sub *kargoapi.GitSubscription) bool {
+func (rc *refreshEligibilityChecker) matchesGitConstraint(ctx context.Context, sub *kargoapi.GitSubscription) bool {
 	if rc.Git == nil || sub == nil {
 		return false
 	}
@@ -85,7 +84,7 @@ func (rc refreshConstraint) matchesGitConstraint(ctx context.Context, sub *kargo
 	}
 }
 
-func (rc refreshConstraint) matchesImageConstraint(
+func (rc *refreshEligibilityChecker) matchesImageConstraint(
 	ctx context.Context,
 	sub *kargoapi.ImageSubscription,
 ) bool {
@@ -108,7 +107,7 @@ func (rc refreshConstraint) matchesImageConstraint(
 	}
 }
 
-func (rc refreshConstraint) matchesChartConstraint(
+func (rc *refreshEligibilityChecker) matchesChartConstraint(
 	ctx context.Context,
 	sub *kargoapi.ChartSubscription,
 ) bool {
@@ -121,7 +120,7 @@ func (rc refreshConstraint) matchesChartConstraint(
 	return false
 }
 
-func (rc refreshConstraint) matchesSemVerConstraint(
+func (rc *refreshEligibilityChecker) matchesSemVerConstraint(
 	ctx context.Context,
 	tag string,
 	rule string,
@@ -149,7 +148,7 @@ func (rc refreshConstraint) matchesSemVerConstraint(
 
 // matchesGitBaseFilters checks that path, expression, and tag filters match.
 // If there are no path, expression, or tag filters the check returns true.
-func (rc refreshConstraint) matchesGitBaseFilters(ctx context.Context, sub *kargoapi.GitSubscription) bool {
+func (rc *refreshEligibilityChecker) matchesGitBaseFilters(ctx context.Context, sub *kargoapi.GitSubscription) bool {
 	return rc.matchesPathFilters(ctx, sub) &&
 		rc.matchesAllowIgnoreRules(ctx, rc.Git.Tag.Tag, sub.AllowTags, sub.IgnoreTags) &&
 		rc.matchesExpressionFilter(ctx, sub)
@@ -159,7 +158,7 @@ func (rc refreshConstraint) matchesGitBaseFilters(ctx context.Context, sub *karg
 // matchesPathFilters checks if the provided diffPaths match the
 // include and exclude path filters defined in the subscription.
 // If there are no include or exclude paths, it returns true.
-func (rc refreshConstraint) matchesPathFilters(ctx context.Context, sub *kargoapi.GitSubscription) bool {
+func (rc *refreshEligibilityChecker) matchesPathFilters(ctx context.Context, sub *kargoapi.GitSubscription) bool {
 	if sub.IncludePaths == nil && sub.ExcludePaths == nil {
 		return true
 	}
@@ -199,7 +198,7 @@ func (rc refreshConstraint) matchesPathFilters(ctx context.Context, sub *kargoap
 // if the tag is not nil, it evaluates the tag metadata against the expression.
 // If the commit is not nil, it evaluates the commit metadata against the
 // expression.
-func (rc refreshConstraint) matchesExpressionFilter(ctx context.Context, sub *kargoapi.GitSubscription) bool {
+func (rc *refreshEligibilityChecker) matchesExpressionFilter(ctx context.Context, sub *kargoapi.GitSubscription) bool {
 	var matches bool
 	switch {
 	case sub.ExpressionFilter == "":
@@ -241,7 +240,7 @@ func (rc refreshConstraint) matchesExpressionFilter(ctx context.Context, sub *ka
 
 // matchesAllowIgnoreRules checks if the tag matches the allow and ignore rules
 // if no allow tags are specified, it returns true.
-func (rc refreshConstraint) matchesAllowIgnoreRules(
+func (rc *refreshEligibilityChecker) matchesAllowIgnoreRules(
 	ctx context.Context,
 	tag string,
 	allowTags string,

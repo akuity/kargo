@@ -208,6 +208,7 @@ func TestRefreshWarehouses(t *testing.T) {
 				w,
 				testCase.client,
 				testCase.project,
+				refreshEligibilityChecker{},
 				testRepoURL,
 			)
 			testCase.assertions(t, w)

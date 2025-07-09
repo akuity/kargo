@@ -27,7 +27,7 @@ func refreshWarehouses(
 	w http.ResponseWriter,
 	c client.Client,
 	project string,
-	rc refreshConstraint,
+	rc refreshEligibilityChecker,
 	repoURLs ...string,
 ) {
 	logger := logging.LoggerFromContext(ctx)
