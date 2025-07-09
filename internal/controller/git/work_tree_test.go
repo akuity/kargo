@@ -145,7 +145,8 @@ func TestParseTagMetadataLine(t *testing.T) {
 		},
 		{
 			name: "annotated tag with extra |*| in annotation",
-			line: "tag2|*|commitid2|*|subject2|*|author2|*|committer2|*|2024-01-01 12:00:00 -0500|*|tagger2|*|annotation with |*| inside",
+			line: "tag2|*|commitid2|*|subject2|*|author2|*|committer2|*|" +
+				"2024-01-01 12:00:00 -0500|*|tagger2|*|annotation with |*| inside",
 			want: TagMetadata{
 				Tag:         "tag2",
 				CommitID:    "commitid2",
