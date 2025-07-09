@@ -119,7 +119,7 @@ func TestWorkTree(t *testing.T) {
 
 }
 
-func TestParseTagMetadataLine(t *testing.T) {
+func Test_parseTagMetadataLine(t *testing.T) {
 	tests := []struct {
 		name    string
 		line    string
