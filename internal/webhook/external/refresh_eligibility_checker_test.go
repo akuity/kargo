@@ -20,6 +20,13 @@ func Test_needsRefresh_Git(t *testing.T) {
 		needsRefresh bool
 	}{
 		{
+			name:         "refresh checker code change unset",
+			repoURLs:     []string{"https://github.com/username/repo.git"},
+			rc:           &refreshEligibilityChecker{git: nil},
+			rs:           kargoapi.RepoSubscription{Git: nil},
+			needsRefresh: false,
+		},
+		{
 			name:     "semver - invalid semver constraint",
 			repoURLs: []string{"https://github.com/username/repo.git"},
 			rc: &refreshEligibilityChecker{
@@ -270,6 +277,13 @@ func Test_needsRefresh_Image(t *testing.T) {
 		needsRefresh bool
 	}{
 		{
+			name:         "refresh checker image change unset",
+			repoURLs:     []string{"testregistry.io/hello-world"},
+			rc:           &refreshEligibilityChecker{image: nil},
+			rs:           kargoapi.RepoSubscription{Image: nil},
+			needsRefresh: false,
+		},
+		{
 			name:     "lexical - not matching",
 			repoURLs: []string{"testregistry.io/hello-world"},
 			rc: &refreshEligibilityChecker{
@@ -435,14 +449,21 @@ func Test_needsRefresh_Chart(t *testing.T) {
 		needsRefresh bool
 	}{
 		{
+			name:         "refresh checker chart change unset",
+			repoURLs:     []string{"https://charts.example.com/hello-world"},
+			rc:           &refreshEligibilityChecker{image: nil},
+			rs:           kargoapi.RepoSubscription{Image: nil},
+			needsRefresh: false,
+		},
+		{
 			name:     "semver - unset",
-			repoURLs: []string{"testregistry.io/hello-world"},
+			repoURLs: []string{"https://charts.example.com/hello-world"},
 			rc: &refreshEligibilityChecker{
 				chart: &chartChange{tag: "v1.0.0"},
 			},
 			rs: kargoapi.RepoSubscription{
 				Chart: &kargoapi.ChartSubscription{
-					RepoURL:          "testregistry.io/hello-world",
+					RepoURL:          "https://charts.example.com/hello-world",
 					SemverConstraint: "",
 				},
 			},
@@ -450,13 +471,13 @@ func Test_needsRefresh_Chart(t *testing.T) {
 		},
 		{
 			name:     "semver - invalid semver constraint",
-			repoURLs: []string{"testregistry.io/hello-world"},
+			repoURLs: []string{"https://charts.example.com/hello-world"},
 			rc: &refreshEligibilityChecker{
 				chart: &chartChange{tag: "v1.0.0"},
 			},
 			rs: kargoapi.RepoSubscription{
 				Chart: &kargoapi.ChartSubscription{
-					RepoURL: "testregistry.io/hello-world",
+					RepoURL: "https://charts.example.com/hello-world",
 					// validation is optional for warehouse semver constraints
 					// so we have to consider an invalid input.
 					SemverConstraint: "invalid-semver-constraint",
@@ -466,7 +487,7 @@ func Test_needsRefresh_Chart(t *testing.T) {
 		},
 		{
 			name:     "semver - tag is not semver formatted",
-			repoURLs: []string{"testregistry.io/hello-world"},
+			repoURLs: []string{"https://charts.example.com/hello-world"},
 			rc: &refreshEligibilityChecker{
 				chart: &chartChange{
 					tag: "invalid-semver-tag",
@@ -474,7 +495,7 @@ func Test_needsRefresh_Chart(t *testing.T) {
 			},
 			rs: kargoapi.RepoSubscription{
 				Chart: &kargoapi.ChartSubscription{
-					RepoURL:          "testregistry.io/hello-world",
+					RepoURL:          "https://charts.example.com/hello-world",
 					SemverConstraint: "^v1.0.0",
 				},
 			},
@@ -482,13 +503,13 @@ func Test_needsRefresh_Chart(t *testing.T) {
 		},
 		{
 			name:     "semver - not matching",
-			repoURLs: []string{"testregistry.io/hello-world"},
+			repoURLs: []string{"https://charts.example.com/hello-world"},
 			rc: &refreshEligibilityChecker{
 				chart: &chartChange{tag: "v1.0.0"},
 			},
 			rs: kargoapi.RepoSubscription{
 				Chart: &kargoapi.ChartSubscription{
-					RepoURL:          "testregistry.io/hello-world",
+					RepoURL:          "https://charts.example.com/hello-world",
 					SemverConstraint: "^v2.2.3",
 				},
 			},
@@ -496,13 +517,13 @@ func Test_needsRefresh_Chart(t *testing.T) {
 		},
 		{
 			name:     "semver - matching",
-			repoURLs: []string{"testregistry.io/hello-world"},
+			repoURLs: []string{"https://charts.example.com/hello-world"},
 			rc: &refreshEligibilityChecker{
 				chart: &chartChange{tag: "v1.0.0"},
 			},
 			rs: kargoapi.RepoSubscription{
 				Chart: &kargoapi.ChartSubscription{
-					RepoURL:          "testregistry.io/hello-world",
+					RepoURL:          "https://charts.example.com/hello-world",
 					SemverConstraint: "^v1.0.0",
 				},
 			},
