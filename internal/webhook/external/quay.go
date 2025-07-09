@@ -105,6 +105,6 @@ func (q *quayWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 		logger = logger.WithValues("repoURLs", repoURLs)
 		ctx = logging.ContextWithLogger(ctx, logger)
 
-		refreshWarehouses(ctx, w, q.client, q.project, repoURLs...)
+		refreshWarehouses(ctx, w, q.client, q.project, new(refreshEligibilityChecker), repoURLs...)
 	})
 }

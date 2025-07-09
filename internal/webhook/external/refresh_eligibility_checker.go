@@ -89,14 +89,20 @@ func (rc *refreshEligibilityChecker) matchesGitConstraint(ctx context.Context, s
 	default: // NewestFromBranch is the default case for Git subscriptions.
 		// We are always dealing with the newest commit from the branch in this context
 		// (webhooks), so we only need to check if the branch matches the one we are looking for.
-		return rc.git.branch == sub.Branch && rc.matchesGitBaseFilters(ctx, sub)
+		logger := logging.LoggerFromContext(ctx).WithValues(
+			"branch", rc.git.branch,
+			"target-branch", sub.Branch,
+		)
+		if rc.git.branch != sub.Branch {
+			logger.Info("branch does not match subscription branch")
+			return false
+		}
+		logger.Info("branch matches subscription branch")
+		return rc.matchesGitBaseFilters(ctx, sub)
 	}
 }
 
-func (rc *refreshEligibilityChecker) matchesImageConstraint(
-	ctx context.Context,
-	sub *kargoapi.ImageSubscription,
-) bool {
+func (rc *refreshEligibilityChecker) matchesImageConstraint(ctx context.Context, sub *kargoapi.ImageSubscription) bool {
 	if rc.image == nil || sub == nil {
 		return false
 	}
@@ -141,23 +147,44 @@ func (rc *refreshEligibilityChecker) matchesSemVerConstraint(ctx context.Context
 
 	constraint, err := semver.NewConstraint(rule)
 	if err != nil {
-		logger.Debug("failed to parse semver constraint", "error", err.Error())
+		logger.Error(err, "failed to parse semver constraint")
 		return false
 	}
 
 	version := libSemver.Parse(tag, strict)
 	if version == nil {
-		logger.Debug("tag is not semver formatted")
+		logger.Error(nil, "tag is not semver formatted")
 		return false
 	}
-	return constraint.Check(version)
+
+	matches := constraint.Check(version)
+	if !matches {
+		logger.Info("tag does not match semver constraint")
+	}
+	return matches
 }
 
 // matchesGitBaseFilters checks that path, expression, and tag filters match.
 func (rc *refreshEligibilityChecker) matchesGitBaseFilters(ctx context.Context, sub *kargoapi.GitSubscription) bool {
-	return rc.matchesPathFilters(ctx, sub) &&
-		rc.matchesAllowIgnoreRules(ctx, rc.git.tag.Tag, sub.AllowTags, sub.IgnoreTags) &&
-		rc.matchesExpressionFilter(ctx, sub)
+	logger := logging.LoggerFromContext(ctx)
+	if ok := rc.matchesPathFilters(ctx, sub); !ok {
+		logger.Debug("path filters not satisfied")
+		return false
+	}
+	logger.Debug("path filters satisfied")
+
+	if ok := rc.matchesAllowIgnoreRules(ctx, rc.git.tag.Tag, sub.AllowTags, sub.IgnoreTags); !ok {
+		logger.Debug("allow/ignore rules not satisfied")
+		return false
+	}
+	logger.Debug("allow/ignore rules satisfied")
+
+	if ok := rc.matchesExpressionFilter(ctx, sub); !ok {
+		logger.Debug("expression filters not satisfied")
+		return false
+	}
+	logger.Debug("expression filters satisfied")
+	return true
 
 }
 
@@ -165,32 +192,29 @@ func (rc *refreshEligibilityChecker) matchesGitBaseFilters(ctx context.Context, 
 // include and exclude path filters defined in the subscription.
 // If there are no include or exclude paths, it returns true.
 func (rc *refreshEligibilityChecker) matchesPathFilters(ctx context.Context, sub *kargoapi.GitSubscription) bool {
+	logger := logging.LoggerFromContext(ctx)
+
 	if sub.IncludePaths == nil && sub.ExcludePaths == nil {
+		logger.Debug("no path filters specified, all paths are allowed")
 		return true
 	}
 
-	logger := logging.LoggerFromContext(ctx)
+	logger.WithValues(
+		"includePaths", sub.IncludePaths,
+		"excludePaths", sub.ExcludePaths,
+	)
 
 	includeSelectors, err := warehouses.GetPathSelectors(sub.IncludePaths)
 	if err != nil {
-		logger.Error(err, "error parsing include selector",
-			"include-selectors", sub.IncludePaths,
-		)
+		logger.Error(err, "error parsing include selector")
 		return false
 	}
 
 	excludeSelectors, err := warehouses.GetPathSelectors(sub.ExcludePaths)
 	if err != nil {
-		logger.Error(err, "error parsing exclude selector",
-			"exclude-selectors", sub.ExcludePaths,
-		)
+		logger.Error(err, "error parsing exclude selector")
 		return false
 	}
-
-	logger.Debug("checking path filters",
-		"includeSelectors", includeSelectors,
-		"excludeSelectors", excludeSelectors,
-	)
 
 	return warehouses.MatchesPathsFilters(
 		includeSelectors,
@@ -246,19 +270,27 @@ func (rc *refreshEligibilityChecker) matchesAllowIgnoreRules(
 	allowTags string,
 	ignoreTags []string,
 ) bool {
-	logger := logging.LoggerFromContext(ctx)
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"tag", tag,
+		"allowTags", allowTags,
+		"ignoreTags", ignoreTags,
+	)
+
 	if allowTags == "" {
-		return true // no allow tags specified, so all tags are allowed
+		logger.Debug("no allow tags specified, all tags are allowed")
+		return true
 	}
 
 	allowRegex, err := regexp.Compile(allowTags)
 	if err != nil {
-		logger.Debug("failed to compile allow regex",
-			"tag", tag,
-			"allow", allowTags,
-			"error", err.Error(),
-		)
+		logger.Error(err, "failed to compile allow regex")
 		return false
 	}
-	return warehouses.Ignores(tag, ignoreTags) || !warehouses.Allows(tag, allowRegex)
+
+	allowed := warehouses.Allows(tag, allowRegex)
+	if !allowed {
+		logger.Debug("tag found on allow list")
+		return false
+	}
+	return true
 }

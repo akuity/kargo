@@ -198,6 +198,6 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 		logger = logger.WithValues("repoURL", repoURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
 
-		refreshWarehouses(ctx, w, g.client, g.project, repoURL)
+		refreshWarehouses(ctx, w, g.client, g.project, new(refreshEligibilityChecker), repoURL)
 	})
 }
