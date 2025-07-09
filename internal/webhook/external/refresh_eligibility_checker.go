@@ -14,7 +14,9 @@ import (
 	"github.com/expr-lang/expr"
 )
 
-// refreshEligibilityChecker contains information that came from the inbound request. 
+// refreshEligibilityChecker encompasses information that came from the inbound 
+// request. The checker compares this information against the constraints defined
+// in various repo subscription types to determine if a refresh is needed.
 type refreshEligibilityChecker struct {
 	Git *struct {
 		Tag    *git.TagMetadata
@@ -28,6 +30,9 @@ type refreshEligibilityChecker struct {
 	Chart *kargoapi.Chart
 }
 
+// needsRefresh filters out all subscriptions that do not match any of the
+// provided repository URLs, and then deletes any subscriptions whos constraints
+// are not satisfied by the inbound request data.
 func (rc *refreshEligibilityChecker) needsRefresh(
 	ctx context.Context,
 	subs []kargoapi.RepoSubscription,
@@ -114,10 +119,16 @@ func (rc *refreshEligibilityChecker) matchesChartConstraint(
 	if rc.Chart == nil || sub == nil {
 		return false
 	}
-	// get strategy
-
-	// check for match
-	return false
+	// " If left unspecified, the subscription implicitly selects the semantically greatest version of the chart."
+	//		source: https://docs.kargo.io/user-guide/how-to-guides/working-with-warehouses
+	//
+	// Since we're working with the greatest version of the chart in the context (webhooks),
+	// we can simply return true if the semverConstraint is empty.
+	if sub.SemverConstraint == "" {
+		return true
+	}
+	strict := true // SemVer constraints are always strict for charts.
+	return rc.matchesSemVerConstraint(ctx, rc.Image.Tag, sub.SemverConstraint, strict)
 }
 
 func (rc *refreshEligibilityChecker) matchesSemVerConstraint(
