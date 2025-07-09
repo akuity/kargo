@@ -2,7 +2,7 @@ import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { faPlus } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, Flex, message } from 'antd';
+import { Button, Flex, message, notification } from 'antd';
 import Card from 'antd/es/card/Card';
 import { JSONSchema4 } from 'json-schema';
 import { useMemo } from 'react';
@@ -45,10 +45,16 @@ export const ClusterConfig = () => {
 
   const clusterConfigYAML = decodeRawData(getClusterConfigQuery.data);
 
-  const clusterConfig = useMemo(
-    () => parse(clusterConfigYAML) as ClusterConfigT,
-    [clusterConfigYAML]
-  );
+  const clusterConfig = useMemo(() => {
+    try {
+      return parse(clusterConfigYAML) as ClusterConfigT;
+    } catch (e) {
+      notification.error({
+        message: (e as Error)?.message || 'Failed to parse ClusterConfig YAML',
+        placement: 'bottomRight'
+      });
+    }
+  }, [clusterConfigYAML]);
 
   const webhookReceivers = clusterConfig?.status?.webhookReceivers || [];
 

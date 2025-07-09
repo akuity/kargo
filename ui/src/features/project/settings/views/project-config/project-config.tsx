@@ -2,7 +2,7 @@ import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { faPlus } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, Card, Flex, message } from 'antd';
+import { Button, Card, Flex, message, notification } from 'antd';
 import type { JSONSchema4 } from 'json-schema';
 import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
@@ -46,10 +46,16 @@ export const ProjectConfig = () => {
 
   const projectConfigYAML = decodeRawData(projectConfigQuery.data);
 
-  const projectConfig = useMemo(
-    () => parse(projectConfigYAML) as ProjectConfigT,
-    [projectConfigYAML]
-  );
+  const projectConfig = useMemo(() => {
+    try {
+      return parse(projectConfigYAML) as ProjectConfigT;
+    } catch (e) {
+      notification.error({
+        message: (e as Error)?.message || 'Failed to parse ProjectConfig YAML',
+        placement: 'bottomRight'
+      });
+    }
+  }, [projectConfigYAML]);
 
   const webhookReceivers = projectConfig?.status?.webhookReceivers || [];
 
