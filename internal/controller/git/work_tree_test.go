@@ -127,6 +127,11 @@ func TestParseTagMetadataLine(t *testing.T) {
 		wantErr bool
 	}{
 		{
+			name:    "incorrect number of fields",
+			line:    "tag3|*|commitid3|*|subject3|*|author3",
+			wantErr: true,
+		},
+		{
 			name: "lightweight tag",
 			line: "tag1|*|commitid1|*|subject1|*|author1|*|committer1|*|2024-01-01 12:00:00 -0500",
 			want: TagMetadata{
