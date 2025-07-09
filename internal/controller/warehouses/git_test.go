@@ -873,7 +873,7 @@ func TestEvaluateCommitExpression(t *testing.T) {
 			expression, err := expr.Compile(testCase.expression)
 			require.NoError(t, err)
 
-			result, err := evaluateCommitExpression(testCase.commit, expression)
+			result, err := EvaluateCommitExpression(testCase.commit, expression)
 			testCase.assertions(t, result, err)
 		})
 	}

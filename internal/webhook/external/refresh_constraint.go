@@ -21,9 +21,7 @@ type refreshConstraint struct {
 		Branch string
 		Diffs  []string
 	}
-	Image *struct {
-		Tag string
-	}
+	Image *kargoapi.Image
 	Chart *struct {
 		Tag string
 	}
@@ -45,8 +43,8 @@ func (rc refreshConstraint) matches(
 	sub kargoapi.RepoSubscription,
 ) bool {
 	return rc.matchesGitConstraint(ctx, sub.Git) ||
-		rc.matchesImageConstraint(sub.Image) ||
-		rc.matchesChartConstraint(sub.Chart)
+		rc.matchesImageConstraint(ctx, sub.Image) ||
+		rc.matchesChartConstraint(ctx, sub.Chart)
 }
 
 // filterSubsByRepoURL deletes all subscriptions from subs that do not
@@ -86,6 +84,7 @@ func (rc refreshConstraint) matchesGitConstraint(ctx context.Context, sub *kargo
 }
 
 func (rc refreshConstraint) matchesImageConstraint(
+	ctx context.Context,
 	sub *kargoapi.ImageSubscription,
 ) bool {
 	if rc.Image == nil || sub == nil {
@@ -94,17 +93,21 @@ func (rc refreshConstraint) matchesImageConstraint(
 
 	switch sub.ImageSelectionStrategy {
 	case kargoapi.ImageSelectionStrategyLexical:
-		return rc.matchesLexicalConstraint(ctx, sub)
+		return rc.matchesAllowIgnoreRules(ctx, rc.Image.Tag, sub.AllowTags, sub.IgnoreTags)
 	case kargoapi.ImageSelectionStrategyNewestBuild:
-		return rc.matchesNewestBuildConstraint(ctx, sub)
+		// this strategy is always true in the context of webhooks, as we are
+		// always dealing with the newest build of the image.
+		return true
 	case kargoapi.ImageSelectionStrategyDigest:
-		return rc.matchesDigestConstraint(ctx, sub)
+		// Unintuitively, the mutable tag name is specified using the semverConstraint field. 
+		return rc.Image.Digest == sub.SemverConstraint
 	default: // SemVer is the default case for Image subscriptions.
-		return rc.matchesSemVerConstraint(ctx, sub)
+		return rc.matchesSemVerConstraint(ctx, rc.Image.Tag, sub.SemverConstraint, sub.StrictSemvers)
 	}
 }
 
 func (rc refreshConstraint) matchesChartConstraint(
+	ctx context.Context,
 	sub *kargoapi.ChartSubscription,
 ) bool {
 	if rc.Chart == nil || sub == nil {
@@ -145,16 +148,16 @@ func (rc refreshConstraint) matchesSemVerConstraint(
 // matchesGitBaseFilters checks that path, expression, and tag filters match.
 // If there are no path, expression, or tag filters the check returns true.
 func (rc refreshConstraint) matchesGitBaseFilters(ctx context.Context, sub *kargoapi.GitSubscription) bool {
-	return rc.matchesGitPathFilters(ctx, sub) &&
+	return rc.matchesPathFilters(ctx, sub) &&
 		rc.matchesAllowIgnoreRules(ctx, rc.Git.Tag.Tag, sub.AllowTags, sub.IgnoreTags) &&
-		rc.matchesGitExpressionFilter(ctx, sub)
+		rc.matchesExpressionFilter(ctx, sub)
 
 }
 
-// matchesGitPathFilters checks if the provided diffPaths match the
+// matchesPathFilters checks if the provided diffPaths match the
 // include and exclude path filters defined in the subscription.
 // If there are no include or exclude paths, it returns true.
-func (rc refreshConstraint) matchesGitPathFilters(ctx context.Context, sub *kargoapi.GitSubscription) bool {
+func (rc refreshConstraint) matchesPathFilters(ctx context.Context, sub *kargoapi.GitSubscription) bool {
 	if sub.IncludePaths == nil && sub.ExcludePaths == nil {
 		return true
 	}
@@ -189,12 +192,12 @@ func (rc refreshConstraint) matchesGitPathFilters(ctx context.Context, sub *karg
 	)
 }
 
-// matchesGitExpressionFilter returns true if expression is empty.
+// matchesExpressionFilter returns true if expression is empty.
 // If the expression is not valid an error is logged and false is returned.
 // if the tag is not nil, it evaluates the tag metadata against the expression.
 // If the commit is not nil, it evaluates the commit metadata against the
 // expression.
-func (rc refreshConstraint) matchesGitExpressionFilter(ctx context.Context, sub *kargoapi.GitSubscription) bool {
+func (rc refreshConstraint) matchesExpressionFilter(ctx context.Context, sub *kargoapi.GitSubscription) bool {
 	var matches bool
 	switch {
 	case sub.ExpressionFilter == "":
