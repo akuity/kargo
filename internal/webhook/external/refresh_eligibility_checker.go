@@ -24,22 +24,6 @@ type refreshEligibilityChecker struct {
 	chart *chartChange
 }
 
-func (rc *refreshEligibilityChecker) isValid(changeType any) bool {
-	switch changeType := changeType.(type) {
-	case *codeChange:
-		return rc.git != nil && rc.git.tag != nil && rc.git.tag.Tag != "" &&
-			rc.git.commit == changeType.commit && rc.git.branch == changeType.branch &&
-			slices.Equal(rc.git.diffs, changeType.diffs)
-	case *imageChange:
-		return rc.image != nil && rc.image.tag == changeType.tag &&
-			rc.image.digest == changeType.digest
-	case *chartChange:
-		return rc.chart != nil && rc.chart.tag == changeType.tag
-	default:
-		return false
-	}
-}
-
 type codeChange struct {
 	tag    *libGit.TagMetadata
 	commit *libGit.CommitMetadata
