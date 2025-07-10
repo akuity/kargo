@@ -136,8 +136,8 @@ const quay: WebhookReceiverT = {
 };
 
 const jfrog: WebhookReceiverT = {
-  key: 'jfrog',
-  label: 'JFrog',
+  key: 'artifactory',
+  label: 'JFrog Artifactory',
   secrets: [
     {
       dataKey: 'secret-token',
