@@ -135,4 +135,34 @@ const quay: WebhookReceiverT = {
   ]
 };
 
-export const webhookReceivers: WebhookReceiverT[] = [bitbucket, dockerhub, github, gitlab, quay];
+const jfrog: WebhookReceiverT = {
+  key: 'jfrog',
+  label: 'JFrog',
+  secrets: [
+    {
+      dataKey: 'secret-token',
+      description: (
+        <>
+          The Secret's data map is expected to contain a `secret-token` key whose value is the
+          shared secret used to authenticate the webhook requests sent by JFrog Artifactory. For
+          more information please refer to the
+          <a
+            href='https://jfrog.com/help/r/jfrog-platform-administration-documentation/webhooks'
+            target='_blank'
+          >
+            JFrog Artifactory documentation
+          </a>
+        </>
+      )
+    }
+  ]
+};
+
+export const webhookReceivers: WebhookReceiverT[] = [
+  bitbucket,
+  dockerhub,
+  github,
+  gitlab,
+  jfrog,
+  quay
+];
