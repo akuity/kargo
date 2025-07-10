@@ -4,11 +4,14 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
+	"time"
 
 	gl "gitlab.com/gitlab-org/api/client-go"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	libGit "github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/git"
 	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/logging"
@@ -121,7 +124,59 @@ func (g *gitlabWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			}
 			logger = logger.WithValues("repoURL", repoURL)
 			ctx = logging.ContextWithLogger(ctx, logger)
-			refreshWarehouses(ctx, w, g.client, g.project, new(refreshEligibilityChecker), repoURL)
+			rc := &refreshEligibilityChecker{
+				git: newGitlabCodeChange(e),
+			}
+			refreshWarehouses(ctx, w, g.client, g.project, rc, repoURL)
 		}
 	})
+}
+
+func newGitlabCodeChange(e *gl.PushEvent) *codeChange {
+	hc := e.Commits[len(e.Commits)-1] // last commit is the newest
+
+	// expected format "Name <email>".
+	author := fmt.Sprintf("%s <%s>",
+		hc.Author.Name,
+		hc.Author.Email,
+	)
+
+	var createdAt time.Time
+	if hc.Timestamp != nil {
+		createdAt = *hc.Timestamp
+	}
+
+	var diffs []string
+	if hc != nil {
+		if len(hc.Added) > 0 {
+			diffs = append(diffs, hc.Added...)
+		}
+		if len(hc.Modified) > 0 {
+			diffs = append(diffs, hc.Modified...)
+		}
+		if len(hc.Removed) > 0 {
+			diffs = append(diffs, hc.Removed...)
+		}
+	}
+
+	return &codeChange{
+		tag: &libGit.TagMetadata{
+			Tag:         strings.TrimPrefix(e.Ref, "refs/tags/"),
+			CommitID:    hc.ID,
+			CreatorDate: createdAt,
+			Author:      author,
+			Committer:   author,
+			Subject:     hc.Message,
+			Tagger:      author,
+		},
+		commit: &libGit.CommitMetadata{
+			ID:         hc.ID,
+			CommitDate: createdAt,
+			Author:     author,
+			Committer:  author,
+			Subject:    hc.Message,
+		},
+		branch: strings.TrimPrefix(e.Ref, "refs/heads/"),
+		diffs:  diffs,
+	}
 }

@@ -231,7 +231,6 @@ func newGitHubCodeChange(e *gh.PushEvent) *codeChange {
 	commitID := hc.GetID()
 	createdAt := hc.GetAuthor().GetDate().Time
 
-	// used for path filters
 	var diffs []string
 	if hc != nil {
 		if len(hc.Added) > 0 {

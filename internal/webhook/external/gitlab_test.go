@@ -19,9 +19,26 @@ import (
 
 const gitlabPushEventRequestBody = `
 {
+	"ref": "refs/heads/main",
 	"repository":{
 		"git_http_url": "https://gitlab.com/example/repo"
-	}
+	},
+	"commits": [
+		{
+			"id": "da1560886d4f094c3e6c9ef40349f7d38b5d27d7",
+			"message": "fixed readme",
+			"title": "fixed readme",
+			"timestamp": "2012-01-03T23:36:29+02:00",
+			"url": "https://gitlab.com/example/repo/commit/da1560886d4f094c3e6c9ef40349f7d38b5d27d7",
+			"author": {
+				"name": "John Doe",
+				"email": "email@inbox.com"
+			},
+			"added": ["CHANGELOG"],
+			"modified": ["app/controller/application.go"],
+			"removed": []
+		}
+	]
 }`
 
 func TestGitLabHandler(t *testing.T) {
@@ -109,7 +126,9 @@ func TestGitLabHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{
-								RepoURL: "https://gitlab.com/example/repo",
+								CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+								Branch:                  "main",
+								RepoURL:                 "https://gitlab.com/example/repo",
 							},
 						}},
 					},
