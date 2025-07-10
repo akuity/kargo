@@ -129,16 +129,18 @@ func imageDiscoveryLogFields(sub kargoapi.ImageSubscription) []any {
 		"platformConstrained", sub.Platform != "",
 	}
 	switch sub.ImageSelectionStrategy {
-	case kargoapi.ImageSelectionStrategySemVer, kargoapi.ImageSelectionStrategyDigest:
-		f = append(
-			f,
-			"semverConstraint", sub.SemverConstraint,
-		)
+	case kargoapi.ImageSelectionStrategySemVer:
+		if sub.Constraint != "" {
+			f = append(f, "constraint", sub.Constraint)
+		} else {
+			f = append(f, "semverConstraint", sub.SemverConstraint) //nolint:staticcheck
+		}
+	case kargoapi.ImageSelectionStrategyDigest:
+		if sub.Constraint != "" {
+			f = append(f, "constraint", sub.Constraint)
+		}
 	case kargoapi.ImageSelectionStrategyLexical, kargoapi.ImageSelectionStrategyNewestBuild:
-		f = append(
-			f,
-			"tagConstrained", sub.AllowTags != "" || len(sub.IgnoreTags) > 0,
-		)
+		f = append(f, "tagConstrained", sub.AllowTags != "" || len(sub.IgnoreTags) > 0)
 	}
 	return f
 }
@@ -147,12 +149,16 @@ func imageSelectorForSubscription(
 	sub kargoapi.ImageSubscription,
 	creds *image.Credentials,
 ) (image.Selector, error) {
+	constraint := sub.Constraint
+	if constraint == "" && sub.ImageSelectionStrategy == kargoapi.ImageSelectionStrategySemVer {
+		constraint = sub.SemverConstraint //nolint:staticcheck
+	}
 	return image.NewSelector(
 		sub.RepoURL,
 		image.SelectionStrategy(sub.ImageSelectionStrategy),
 		&image.SelectorOptions{
 			StrictSemvers:         sub.StrictSemvers,
-			Constraint:            sub.SemverConstraint,
+			Constraint:            constraint,
 			AllowRegex:            sub.AllowTags,
 			Ignore:                sub.IgnoreTags,
 			Platform:              sub.Platform,

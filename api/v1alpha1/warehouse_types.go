@@ -306,6 +306,8 @@ type GitSubscription struct {
 }
 
 // ImageSubscription defines a subscription to an image repository.
+//
+// +kubebuilder:validation:XValidation:message="semverConstraint and constraint fields are mutually exclusive",rule="!(has(self.semverConstraint) && has(self.constraint))"
 type ImageSubscription struct {
 	// RepoURL specifies the URL of the image repository to subscribe to. The
 	// value in this field MUST NOT include an image tag. This field is required.
@@ -363,8 +365,15 @@ type ImageSubscription struct {
 	// changes.
 	// More info: https://github.com/masterminds/semver#checking-version-constraints
 	//
+	// Deprecated: Use constraint instead.
+	//
 	// +kubebuilder:validation:Optional
 	SemverConstraint string `json:"semverConstraint,omitempty" protobuf:"bytes,4,opt,name=semverConstraint"`
+	// Constraint specifies constraints on what new image versions are permissible.
+	// This field takes precedence over the deprecated SemverConstraint field
+	// and can be used with any image strategy.
+	// +kubebuilder:validation:Optional
+	Constraint string `json:"constraint,omitempty" protobuf:"bytes,11,opt,name=constraint"`
 	// AllowTags is a regular expression that can optionally be used to limit the
 	// image tags that are considered in determining the newest version of an
 	// image. This field is optional.
