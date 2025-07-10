@@ -12,6 +12,7 @@ import (
 	libGit "github.com/akuity/kargo/internal/controller/git"
 	libSemver "github.com/akuity/kargo/internal/controller/semver"
 	"github.com/akuity/kargo/internal/controller/warehouses"
+	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -49,7 +50,9 @@ func (rc *refreshEligibilityChecker) needsRefresh(
 	subs []kargoapi.RepoSubscription,
 	repoURLs ...string,
 ) bool {
+	println(len(subs))
 	subs = filterSubsByRepoURL(subs, repoURLs...) // only interested in subs that contain any of the repo URLs.
+	println(len(subs))
 	return slices.ContainsFunc(subs, func(sub kargoapi.RepoSubscription) bool {
 		var shouldRefresh bool
 		switch {
@@ -70,7 +73,9 @@ func filterSubsByRepoURL(subs []kargoapi.RepoSubscription, repoURLs ...string) [
 	containsRepoURL := func(sub kargoapi.RepoSubscription) bool {
 		return sub.Image != nil && slices.Contains(repoURLs, sub.Image.RepoURL) ||
 			sub.Git != nil && slices.Contains(repoURLs, sub.Git.RepoURL) ||
-			sub.Chart != nil && slices.Contains(repoURLs, sub.Chart.RepoURL)
+			sub.Chart != nil && slices.Contains(repoURLs,
+				helm.NormalizeChartRepositoryURL(sub.Chart.RepoURL),
+			)
 	}
 	return slices.DeleteFunc(subs, func(sub kargoapi.RepoSubscription) bool {
 		return !containsRepoURL(sub)
