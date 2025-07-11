@@ -208,7 +208,10 @@ func TestRefreshWarehouses(t *testing.T) {
 				w,
 				testCase.client,
 				testCase.project,
-				new(refreshEligibilityChecker),
+				// no refresh eligibility checker is used here
+				// because it is already exhaustively tested in
+				// refresh_eligibility_checker_test.go
+				nil,
 				testRepoURL,
 			)
 			testCase.assertions(t, w)

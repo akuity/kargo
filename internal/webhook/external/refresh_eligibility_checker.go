@@ -143,6 +143,10 @@ func (rc *refreshEligibilityChecker) matchesSemVerConstraint(ctx context.Context
 		"strictSemvers", strict,
 	)
 
+	if rule == "" {
+		return true // no semver constraint specified, so all tags are allowed
+	}
+
 	constraint, err := semver.NewConstraint(rule)
 	if err != nil {
 		logger.Error(err, "failed to parse semver constraint")

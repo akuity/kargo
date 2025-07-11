@@ -56,7 +56,8 @@ func TestQuayHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
-								RepoURL: "quay.io/mynamespace/repository",
+								ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+								RepoURL:                "quay.io/mynamespace/repository",
 							},
 						}},
 					},
@@ -144,7 +145,8 @@ func TestQuayHandler(t *testing.T) {
 func newQuayPayload() *bytes.Buffer {
 	return bytes.NewBufferString(`
 		{
-			"docker_url": "quay.io/mynamespace/repository"
-		  }
+			"docker_url": "quay.io/mynamespace/repository",
+			"updated_tags": ["v1.0.0"]
+		}
 	`)
 }

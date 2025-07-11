@@ -103,9 +103,7 @@ func (d *dockerhubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 			rc.chart = &chartChange{tag: payload.PushData.Tag}
 		default:
 			repoURL = image.NormalizeURL(payload.Repository.RepoName)
-			rc.image = &imageChange{
-				tag: payload.PushData.Tag,
-			}
+			rc.image = &imageChange{tag: payload.PushData.Tag}
 		}
 
 		logger = logger.WithValues("repoURL", repoURL)
