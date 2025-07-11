@@ -225,13 +225,16 @@ func (w *webhook) ValidateCreate(
 		)
 	}
 
-	if errs = append(
-		errs,
-		w.validateFreightArtifactsFn(freight, warehouse)...,
-	); len(errs) > 0 {
-		return nil, apierrors.NewInvalid(freightGroupKind, freight.Name, errs)
+	if warehouse != nil {
+		errs = append(
+			errs,
+			w.validateFreightArtifactsFn(freight, warehouse)...,
+		)
 	}
 
+	if len(errs) > 0 {
+		return nil, apierrors.NewInvalid(freightGroupKind, freight.Name, errs)
+	}
 	return nil, nil
 }
 
