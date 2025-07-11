@@ -96,14 +96,15 @@ func (d *dockerhubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 		}
 
 		var repoURL string
+		newestTag := strPtr(payload.PushData.Tag)
 		rc := new(refreshEligibilityChecker)
 		switch payload.PushData.MediaType {
 		case helmChartMediaType:
 			repoURL = helm.NormalizeChartRepositoryURL(payload.Repository.RepoName)
-			rc.chart = &chartChange{tag: payload.PushData.Tag}
+			rc.newChartTag = newestTag
 		default:
 			repoURL = image.NormalizeURL(payload.Repository.RepoName)
-			rc.image = &imageChange{tag: payload.PushData.Tag}
+			rc.newImageTag = newestTag
 		}
 
 		logger = logger.WithValues("repoURL", repoURL)

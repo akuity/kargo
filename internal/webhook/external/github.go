@@ -167,19 +167,16 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 				xhttp.WriteErrorJSON(w, err)
 				return
 			}
-			manifest := pkg.GetPackageVersion().GetContainerMetadata().GetManifest()
+			v := pkg.GetPackageVersion()
+			manifest := v.GetContainerMetadata().GetManifest()
 			// Determine if the package is a Helm chart
 			if cfg, ok := manifest["config"].(map[string]any); ok {
 				if mediaType, ok := cfg["media_type"].(string); ok && mediaType == helmChartMediaType {
 					repoURL = helm.NormalizeChartRepositoryURL(ref.Context().Name())
 				}
-				rc.chart = &chartChange{
-					tag: pkg.GetPackageVersion().GetVersion(),
-				}
+				rc.newChartTag = v.Version
 			} else {
-				rc.image = &imageChange{
-					tag: pkg.GetPackageVersion().GetVersion(),
-				}
+				rc.newImageTag = v.Version
 				repoURL = image.NormalizeURL(ref.Context().Name())
 			}
 

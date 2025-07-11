@@ -279,7 +279,7 @@ func Test_needsRefresh_Image(t *testing.T) {
 		{
 			name:         "refresh checker image change unset",
 			repoURLs:     []string{"testregistry.io/hello-world"},
-			rc:           &refreshEligibilityChecker{image: nil},
+			rc:           &refreshEligibilityChecker{newImageTag: nil},
 			rs:           kargoapi.RepoSubscription{Image: nil},
 			needsRefresh: false,
 		},
@@ -287,7 +287,7 @@ func Test_needsRefresh_Image(t *testing.T) {
 			name:     "lexical - not matching",
 			repoURLs: []string{"testregistry.io/hello-world"},
 			rc: &refreshEligibilityChecker{
-				image: &imageChange{tag: "v1.0.0"},
+				newImageTag: strPtr("v1.0.0"),
 			},
 			rs: kargoapi.RepoSubscription{
 				Image: &kargoapi.ImageSubscription{
@@ -302,7 +302,7 @@ func Test_needsRefresh_Image(t *testing.T) {
 			name:     "lexical - matching",
 			repoURLs: []string{"testregistry.io/hello-world"},
 			rc: &refreshEligibilityChecker{
-				image: &imageChange{tag: "nightly-20231001"},
+				newImageTag: strPtr("nightly-20231001"),
 			},
 			rs: kargoapi.RepoSubscription{
 				Image: &kargoapi.ImageSubscription{
@@ -317,7 +317,7 @@ func Test_needsRefresh_Image(t *testing.T) {
 			name:     "semver - invalid semver constraint",
 			repoURLs: []string{"testregistry.io/hello-world"},
 			rc: &refreshEligibilityChecker{
-				image: &imageChange{tag: "v1.0.0"},
+				newImageTag: strPtr("v1.0.0"),
 			},
 			rs: kargoapi.RepoSubscription{
 				Image: &kargoapi.ImageSubscription{
@@ -334,9 +334,7 @@ func Test_needsRefresh_Image(t *testing.T) {
 			name:     "semver - tag is not semver formatted",
 			repoURLs: []string{"testregistry.io/hello-world"},
 			rc: &refreshEligibilityChecker{
-				image: &imageChange{
-					tag: "invalid-semver-tag",
-				},
+				newImageTag: strPtr("invalid-semver-tag"),
 			},
 			rs: kargoapi.RepoSubscription{
 				Image: &kargoapi.ImageSubscription{
@@ -351,7 +349,7 @@ func Test_needsRefresh_Image(t *testing.T) {
 			name:     "semver - not matching",
 			repoURLs: []string{"testregistry.io/hello-world"},
 			rc: &refreshEligibilityChecker{
-				image: &imageChange{tag: "v1.0.0"},
+				newImageTag: strPtr("v1.0.0"),
 			},
 			rs: kargoapi.RepoSubscription{
 				Image: &kargoapi.ImageSubscription{
@@ -366,7 +364,7 @@ func Test_needsRefresh_Image(t *testing.T) {
 			name:     "semver - matching",
 			repoURLs: []string{"testregistry.io/hello-world"},
 			rc: &refreshEligibilityChecker{
-				image: &imageChange{tag: "v1.0.0"},
+				newImageTag: strPtr("v1.0.0"),
 			},
 			rs: kargoapi.RepoSubscription{
 				Image: &kargoapi.ImageSubscription{
@@ -381,7 +379,7 @@ func Test_needsRefresh_Image(t *testing.T) {
 			name:     "newest build - matching",
 			repoURLs: []string{"testregistry.io/hello-world"},
 			rc: &refreshEligibilityChecker{
-				image: &imageChange{tag: "v1.0.0"},
+				newImageTag: strPtr("v1.0.0"),
 			},
 			rs: kargoapi.RepoSubscription{
 				Image: &kargoapi.ImageSubscription{
@@ -396,7 +394,7 @@ func Test_needsRefresh_Image(t *testing.T) {
 			name:     "digest - not matching",
 			repoURLs: []string{"testregistry.io/hello-world"},
 			rc: &refreshEligibilityChecker{
-				image: &imageChange{tag: "v1.0.0"},
+				newImageTag: strPtr("v1.0.0"),
 			},
 			rs: kargoapi.RepoSubscription{
 				Image: &kargoapi.ImageSubscription{
@@ -411,7 +409,7 @@ func Test_needsRefresh_Image(t *testing.T) {
 			name:     "digest - matching",
 			repoURLs: []string{"testregistry.io/hello-world"},
 			rc: &refreshEligibilityChecker{
-				image: &imageChange{tag: "v1.0.0"},
+				newImageTag: strPtr("v1.0.0"),
 			},
 			rs: kargoapi.RepoSubscription{
 				Image: &kargoapi.ImageSubscription{
@@ -445,15 +443,15 @@ func Test_needsRefresh_Chart(t *testing.T) {
 		{
 			name:         "refresh checker chart change unset",
 			repoURLs:     []string{"https://charts.example.com/hello-world"},
-			rc:           &refreshEligibilityChecker{image: nil},
-			rs:           kargoapi.RepoSubscription{Image: nil},
+			rc:           &refreshEligibilityChecker{newChartTag: nil},
+			rs:           kargoapi.RepoSubscription{Chart: nil},
 			needsRefresh: false,
 		},
 		{
 			name:     "semver - unset",
 			repoURLs: []string{"https://charts.example.com/hello-world"},
 			rc: &refreshEligibilityChecker{
-				chart: &chartChange{tag: "v1.0.0"},
+				newChartTag: strPtr("v1.0.0"),
 			},
 			rs: kargoapi.RepoSubscription{
 				Chart: &kargoapi.ChartSubscription{
@@ -467,7 +465,7 @@ func Test_needsRefresh_Chart(t *testing.T) {
 			name:     "semver - invalid semver constraint",
 			repoURLs: []string{"https://charts.example.com/hello-world"},
 			rc: &refreshEligibilityChecker{
-				chart: &chartChange{tag: "v1.0.0"},
+				newChartTag: strPtr("v1.0.0"),
 			},
 			rs: kargoapi.RepoSubscription{
 				Chart: &kargoapi.ChartSubscription{
@@ -483,9 +481,7 @@ func Test_needsRefresh_Chart(t *testing.T) {
 			name:     "semver - tag is not semver formatted",
 			repoURLs: []string{"https://charts.example.com/hello-world"},
 			rc: &refreshEligibilityChecker{
-				chart: &chartChange{
-					tag: "invalid-semver-tag",
-				},
+				newChartTag: strPtr("invalid-semver-tag"),
 			},
 			rs: kargoapi.RepoSubscription{
 				Chart: &kargoapi.ChartSubscription{
@@ -499,7 +495,7 @@ func Test_needsRefresh_Chart(t *testing.T) {
 			name:     "semver - not matching",
 			repoURLs: []string{"https://charts.example.com/hello-world"},
 			rc: &refreshEligibilityChecker{
-				chart: &chartChange{tag: "v1.0.0"},
+				newChartTag: strPtr("v1.0.0"),
 			},
 			rs: kargoapi.RepoSubscription{
 				Chart: &kargoapi.ChartSubscription{
@@ -513,7 +509,7 @@ func Test_needsRefresh_Chart(t *testing.T) {
 			name:     "semver - matching",
 			repoURLs: []string{"https://charts.example.com/hello-world"},
 			rc: &refreshEligibilityChecker{
-				chart: &chartChange{tag: "v1.0.0"},
+				newChartTag: strPtr("v1.0.0"),
 			},
 			rs: kargoapi.RepoSubscription{
 				Chart: &kargoapi.ChartSubscription{

@@ -20,9 +20,9 @@ import (
 // request. The checker compares this information against the constraints defined
 // in various repo subscription types to determine if a refresh is needed.
 type refreshEligibilityChecker struct {
-	git   *codeChange
-	image *imageChange
-	chart *chartChange
+	git         *codeChange
+	newImageTag *string
+	newChartTag *string
 }
 
 type codeChange struct {
@@ -30,14 +30,6 @@ type codeChange struct {
 	commit *libGit.CommitMetadata
 	branch string
 	diffs  []string
-}
-
-type imageChange struct {
-	tag string
-}
-
-type chartChange struct {
-	tag string
 }
 
 // needsRefresh filters out all subscriptions that do not match any of the
@@ -101,27 +93,27 @@ func (rc *refreshEligibilityChecker) matchesGitConstraint(ctx context.Context, s
 }
 
 func (rc *refreshEligibilityChecker) matchesImageConstraint(ctx context.Context, sub *kargoapi.ImageSubscription) bool {
-	if rc.image == nil || sub == nil {
+	if rc.newImageTag == nil || sub == nil {
 		return false
 	}
 
 	switch sub.ImageSelectionStrategy {
 	case kargoapi.ImageSelectionStrategyLexical:
-		return rc.matchesAllowIgnoreRules(ctx, rc.image.tag, sub.AllowTags, sub.IgnoreTags)
+		return rc.matchesAllowIgnoreRules(ctx, *rc.newImageTag, sub.AllowTags, sub.IgnoreTags)
 	case kargoapi.ImageSelectionStrategyNewestBuild:
 		// this strategy is always true in the context of webhooks, as we are
 		// always dealing with the newest build of the image.
 		return true
 	case kargoapi.ImageSelectionStrategyDigest:
 		// Unintuitively, the mutable tag name is specified using the semverConstraint field.
-		return rc.image.tag == sub.SemverConstraint
+		return *rc.newImageTag == sub.SemverConstraint
 	default: // SemVer is the default case for Image subscriptions.
-		return rc.matchesSemVerConstraint(ctx, rc.image.tag, sub.SemverConstraint, sub.StrictSemvers)
+		return rc.matchesSemVerConstraint(ctx, *rc.newImageTag, sub.SemverConstraint, sub.StrictSemvers)
 	}
 }
 
 func (rc *refreshEligibilityChecker) matchesChartConstraint(ctx context.Context, sub *kargoapi.ChartSubscription) bool {
-	if rc.chart == nil || sub == nil {
+	if rc.newChartTag == nil || sub == nil {
 		return false
 	}
 	// " If left unspecified, the subscription implicitly selects the semantically greatest version of the chart."
@@ -133,7 +125,7 @@ func (rc *refreshEligibilityChecker) matchesChartConstraint(ctx context.Context,
 		return true
 	}
 	strict := true // SemVer constraints are always strict for charts.
-	return rc.matchesSemVerConstraint(ctx, rc.chart.tag, sub.SemverConstraint, strict)
+	return rc.matchesSemVerConstraint(ctx, *rc.newChartTag, sub.SemverConstraint, strict)
 }
 
 func (rc *refreshEligibilityChecker) matchesSemVerConstraint(ctx context.Context, tag, rule string, strict bool) bool {
@@ -313,4 +305,11 @@ func (rc *refreshEligibilityChecker) matchesAllowIgnoreRules(
 		return false
 	}
 	return true
+}
+
+func strPtr(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
 }

@@ -105,13 +105,10 @@ func (q *quayWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 
 		logger = logger.WithValues("repoURLs", repoURLs)
 		ctx = logging.ContextWithLogger(ctx, logger)
+		newestTag := strPtr(payload.UpdatedTags[len(payload.UpdatedTags)-1])
 		rc := &refreshEligibilityChecker{
-			image: &imageChange{
-				tag: payload.UpdatedTags[0],
-			},
-			chart: &chartChange{
-				tag: payload.UpdatedTags[0],
-			},
+			newImageTag: newestTag,
+			newChartTag: newestTag,
 		}
 		refreshWarehouses(ctx, w, q.client, q.project, rc, repoURLs...)
 	})
