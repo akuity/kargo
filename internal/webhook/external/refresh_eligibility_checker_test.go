@@ -22,7 +22,7 @@ func Test_needsRefresh_Git(t *testing.T) {
 		{
 			name:         "refresh checker code change unset",
 			repoURLs:     []string{"https://github.com/username/repo.git"},
-			rc:           &refreshEligibilityChecker{git: nil},
+			rc:           &refreshEligibilityChecker{newCode: nil},
 			rs:           kargoapi.RepoSubscription{Git: nil},
 			needsRefresh: false,
 		},
@@ -30,7 +30,7 @@ func Test_needsRefresh_Git(t *testing.T) {
 			name:     "semver - invalid semver constraint",
 			repoURLs: []string{"https://github.com/username/repo.git"},
 			rc: &refreshEligibilityChecker{
-				git: &codeChange{
+				newCode: &codeChange{
 					tag: &libGit.TagMetadata{Tag: "v1.0.0"},
 				},
 			},
@@ -50,7 +50,7 @@ func Test_needsRefresh_Git(t *testing.T) {
 			name:     "semver - tag is not semver formatted",
 			repoURLs: []string{"https://github.com/username/repo.git"},
 			rc: &refreshEligibilityChecker{
-				git: &codeChange{
+				newCode: &codeChange{
 					tag: &libGit.TagMetadata{Tag: "not-semver-tag"},
 				},
 			},
@@ -68,7 +68,7 @@ func Test_needsRefresh_Git(t *testing.T) {
 			name:     "semver - not matching",
 			repoURLs: []string{"https://github.com/username/repo.git"},
 			rc: &refreshEligibilityChecker{
-				git: &codeChange{
+				newCode: &codeChange{
 					tag: &libGit.TagMetadata{Tag: "v1.2.3"},
 				},
 			},
@@ -86,7 +86,7 @@ func Test_needsRefresh_Git(t *testing.T) {
 			name:     "semver - matching",
 			repoURLs: []string{"https://github.com/username/repo.git"},
 			rc: &refreshEligibilityChecker{
-				git: &codeChange{
+				newCode: &codeChange{
 					tag: &libGit.TagMetadata{Tag: "v1.2.3"},
 				},
 			},
@@ -104,7 +104,7 @@ func Test_needsRefresh_Git(t *testing.T) {
 			name:     "newest from branch - not matching",
 			repoURLs: []string{"https://github.com/username/repo.git"},
 			rc: &refreshEligibilityChecker{
-				git: &codeChange{branch: "release-1.0"},
+				newCode: &codeChange{branch: "release-1.0"},
 			},
 			rs: kargoapi.RepoSubscription{
 				Git: &kargoapi.GitSubscription{
@@ -119,7 +119,7 @@ func Test_needsRefresh_Git(t *testing.T) {
 			name:     "newest from branch - matching",
 			repoURLs: []string{"https://github.com/username/repo.git"},
 			rc: &refreshEligibilityChecker{
-				git: &codeChange{
+				newCode: &codeChange{
 					branch: "main",
 					tag:    &libGit.TagMetadata{Tag: "v1.0.0"},
 				},
@@ -137,7 +137,7 @@ func Test_needsRefresh_Git(t *testing.T) {
 			name:     "lexical - not matching",
 			repoURLs: []string{"https://github.com/username/repo.git"},
 			rc: &refreshEligibilityChecker{
-				git: &codeChange{
+				newCode: &codeChange{
 					branch: "main",
 					tag:    &libGit.TagMetadata{Tag: "v1.0.0"},
 				},
@@ -156,7 +156,7 @@ func Test_needsRefresh_Git(t *testing.T) {
 			name:     "lexical - matching",
 			repoURLs: []string{"https://github.com/username/repo.git"},
 			rc: &refreshEligibilityChecker{
-				git: &codeChange{
+				newCode: &codeChange{
 					branch: "main",
 					tag:    &libGit.TagMetadata{Tag: "nightly-20231001"},
 				},
@@ -180,7 +180,7 @@ func Test_needsRefresh_Git(t *testing.T) {
 			name:     "newest tag - path filters not matching",
 			repoURLs: []string{"https://github.com/username/repo.git"},
 			rc: &refreshEligibilityChecker{
-				git: &codeChange{
+				newCode: &codeChange{
 					tag:   &libGit.TagMetadata{Tag: "v1.0.0"},
 					diffs: []string{"src/file.txt"},
 				},
@@ -199,7 +199,7 @@ func Test_needsRefresh_Git(t *testing.T) {
 			name:     "newest tag - path filters matching",
 			repoURLs: []string{"https://github.com/username/repo.git"},
 			rc: &refreshEligibilityChecker{
-				git: &codeChange{
+				newCode: &codeChange{
 					tag:   &libGit.TagMetadata{Tag: "v1.0.0"},
 					diffs: []string{"docs/file.txt"},
 				},
@@ -218,7 +218,7 @@ func Test_needsRefresh_Git(t *testing.T) {
 			name:     "newest tag - expression filters not matching",
 			repoURLs: []string{"https://github.com/username/repo.git"},
 			rc: &refreshEligibilityChecker{
-				git: &codeChange{
+				newCode: &codeChange{
 					tag: &libGit.TagMetadata{
 						Tag:         "v1.0.0",
 						CreatorDate: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
@@ -239,7 +239,7 @@ func Test_needsRefresh_Git(t *testing.T) {
 			name:     "newest tag - expression filters matching",
 			repoURLs: []string{"https://github.com/username/repo.git"},
 			rc: &refreshEligibilityChecker{
-				git: &codeChange{
+				newCode: &codeChange{
 					tag: &libGit.TagMetadata{
 						Tag:         "v1.0.0",
 						CreatorDate: time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),

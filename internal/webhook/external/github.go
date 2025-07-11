@@ -191,7 +191,7 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			return
 
 		case *gh.PushEvent:
-			rc.git = newGitHubCodeChange(e)
+			rc.newCode = newGitHubCodeChange(e)
 			// TODO(krancour): GetHTMLURL() gives us a repo URL starting with
 			// https://. By refreshing Warehouses using a normalized representation of
 			// that URL, we will miss any Warehouses that are subscribed to the same

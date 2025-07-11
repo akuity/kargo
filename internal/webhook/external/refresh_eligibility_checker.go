@@ -20,7 +20,7 @@ import (
 // request. The checker compares this information against the constraints defined
 // in various repo subscription types to determine if a refresh is needed.
 type refreshEligibilityChecker struct {
-	git         *codeChange
+	newCode     *codeChange
 	newImageTag *string
 	newChartTag *string
 }
@@ -72,12 +72,12 @@ func filterSubsByRepoURL(subs []kargoapi.RepoSubscription, repoURLs ...string) [
 }
 
 func (rc *refreshEligibilityChecker) matchesGitConstraint(ctx context.Context, sub *kargoapi.GitSubscription) bool {
-	if rc.git == nil || sub == nil {
+	if rc.newCode == nil || sub == nil {
 		return false
 	}
 	switch sub.CommitSelectionStrategy {
 	case kargoapi.CommitSelectionStrategySemVer:
-		return rc.matchesSemVerConstraint(ctx, rc.git.tag.Tag, sub.SemverConstraint, sub.StrictSemvers) &&
+		return rc.matchesSemVerConstraint(ctx, rc.newCode.tag.Tag, sub.SemverConstraint, sub.StrictSemvers) &&
 			rc.matchesGitBaseFilters(ctx, sub)
 	case kargoapi.CommitSelectionStrategyNewestTag,
 		kargoapi.CommitSelectionStrategyLexical:
@@ -163,10 +163,10 @@ func (rc *refreshEligibilityChecker) matchesNewestBranchConstraint(
 	sub *kargoapi.GitSubscription,
 ) bool {
 	logger := logging.LoggerFromContext(ctx).WithValues(
-		"branch", rc.git.branch,
+		"branch", rc.newCode.branch,
 		"target-branch", sub.Branch,
 	)
-	if rc.git.branch != sub.Branch {
+	if rc.newCode.branch != sub.Branch {
 		logger.Debug("branch does not match subscription branch")
 		return false
 	}
@@ -183,7 +183,7 @@ func (rc *refreshEligibilityChecker) matchesGitBaseFilters(ctx context.Context, 
 	}
 	logger.Debug("path filters satisfied")
 
-	if ok := rc.matchesAllowIgnoreRules(ctx, rc.git.tag.Tag, sub.AllowTags, sub.IgnoreTags); !ok {
+	if ok := rc.matchesAllowIgnoreRules(ctx, rc.newCode.tag.Tag, sub.AllowTags, sub.IgnoreTags); !ok {
 		logger.Debug("allow/ignore rules not satisfied")
 		return false
 	}
@@ -229,7 +229,7 @@ func (rc *refreshEligibilityChecker) matchesPathFilters(ctx context.Context, sub
 	return warehouses.MatchesPathsFilters(
 		includeSelectors,
 		excludeSelectors,
-		rc.git.diffs,
+		rc.newCode.diffs,
 	)
 }
 
@@ -258,14 +258,14 @@ func (rc *refreshEligibilityChecker) matchesExpressionFilter(ctx context.Context
 	case kargoapi.CommitSelectionStrategySemVer,
 		kargoapi.CommitSelectionStrategyNewestTag,
 		kargoapi.CommitSelectionStrategyLexical:
-		matches, err := warehouses.EvaluateTagExpression(*rc.git.tag, program)
+		matches, err := warehouses.EvaluateTagExpression(*rc.newCode.tag, program)
 		if err != nil {
 			logger.Error(err, "error evaluating tag expression filter")
 			return false
 		}
 		return matches
 	default:
-		matches, err := warehouses.EvaluateCommitExpression(*rc.git.commit, program)
+		matches, err := warehouses.EvaluateCommitExpression(*rc.newCode.commit, program)
 		if err != nil {
 			logger.Error(err, "error evaluating commit expression filter")
 			return false

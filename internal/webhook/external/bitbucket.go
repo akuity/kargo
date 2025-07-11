@@ -150,7 +150,7 @@ func (b *bitbucketWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 		logger = logger.WithValues("repoURL", repoURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
 		rc := &refreshEligibilityChecker{
-			git: newBitBucketCodeChange(payload),
+			newCode: newBitBucketCodeChange(payload),
 		}
 		refreshWarehouses(ctx, w, b.client, b.project, rc, repoURL)
 	})

@@ -125,7 +125,7 @@ func (g *gitlabWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			logger = logger.WithValues("repoURL", repoURL)
 			ctx = logging.ContextWithLogger(ctx, logger)
 			rc := &refreshEligibilityChecker{
-				git: newGitlabCodeChange(e),
+				newCode: newGitlabCodeChange(e),
 			}
 			refreshWarehouses(ctx, w, g.client, g.project, rc, repoURL)
 		}
