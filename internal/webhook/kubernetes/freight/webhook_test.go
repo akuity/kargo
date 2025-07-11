@@ -377,12 +377,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				) (*kargoapi.Warehouse, error) {
 					return nil, nil
 				},
-				validateFreightArtifactsFn: func(
-					*kargoapi.Freight,
-					*kargoapi.Warehouse,
-				) field.ErrorList {
-					return nil
-				},
+				validateFreightArtifactsFn: validateFreightArtifacts,
 			},
 			freight: kargoapi.Freight{
 				Commits: []kargoapi.GitCommit{{}},
