@@ -178,8 +178,7 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 				}
 			} else {
 				rc.image = &imageChange{
-					tag:    pkg.GetPackageVersion().GetVersion(),
-					digest: pkg.GetPackageVersion().GetContainerMetadata().GetTag().GetDigest(),
+					tag: pkg.GetPackageVersion().GetVersion(),
 				}
 				repoURL = image.NormalizeURL(ref.Context().Name())
 			}

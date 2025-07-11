@@ -33,8 +33,7 @@ type codeChange struct {
 }
 
 type imageChange struct {
-	tag    string
-	digest string
+	tag string
 }
 
 type chartChange struct {

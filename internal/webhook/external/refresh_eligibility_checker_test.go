@@ -396,10 +396,7 @@ func Test_needsRefresh_Image(t *testing.T) {
 			name:     "digest - not matching",
 			repoURLs: []string{"testregistry.io/hello-world"},
 			rc: &refreshEligibilityChecker{
-				image: &imageChange{
-					tag:    "v1.0.0",
-					digest: "latest",
-				},
+				image: &imageChange{tag: "v1.0.0"},
 			},
 			rs: kargoapi.RepoSubscription{
 				Image: &kargoapi.ImageSubscription{
@@ -414,10 +411,7 @@ func Test_needsRefresh_Image(t *testing.T) {
 			name:     "digest - matching",
 			repoURLs: []string{"testregistry.io/hello-world"},
 			rc: &refreshEligibilityChecker{
-				image: &imageChange{
-					tag:    "v1.0.0",
-					digest: "latest",
-				},
+				image: &imageChange{tag: "v1.0.0"},
 			},
 			rs: kargoapi.RepoSubscription{
 				Image: &kargoapi.ImageSubscription{
