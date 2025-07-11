@@ -5,11 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	gh "github.com/google/go-github/v71/github"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	libGit "github.com/akuity/kargo/internal/controller/git"
 	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -118,15 +120,7 @@ func (b *bitbucketWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 			return
 		}
 
-		payload := struct {
-			Repository struct {
-				Links struct {
-					HTML struct {
-						Href string `json:"href"`
-					} `json:"html"`
-				} `json:"links"`
-			} `json:"repository"`
-		}{}
+		payload := new(bitBucketPushEvent)
 		if err := json.Unmarshal(requestBody, &payload); err != nil {
 			xhttp.WriteErrorJSON(
 				w,
@@ -155,7 +149,88 @@ func (b *bitbucketWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 
 		logger = logger.WithValues("repoURL", repoURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
-
-		refreshWarehouses(ctx, w, b.client, b.project, new(refreshEligibilityChecker), repoURL)
+		rc := &refreshEligibilityChecker{
+			git: newBitBucketCodeChange(payload),
+		}
+		refreshWarehouses(ctx, w, b.client, b.project, rc, repoURL)
 	})
+}
+
+type bitBucketPushEvent struct {
+	Actor struct {
+		Name         string `json:"name"`
+		EmailAddress string `json:"emailAddress"`
+	} `json:"actor"`
+	Push struct {
+		Changes []struct {
+			New struct {
+				Name   string `json:"name"`
+				Target struct {
+					Hash    string `json:"hash"`
+					Message string `json:"message"`
+					Date    string `json:"date"`
+				} `json:"target"`
+			} `json:"new"`
+		} `json:"changes"`
+	} `json:"push"`
+	Repository struct {
+		Links struct {
+			HTML struct {
+				Href string `json:"href"`
+			} `json:"html"`
+		} `json:"links"`
+	} `json:"repository"`
+}
+
+// newBitBucketCodeChange creates a new codeChange instance from a Bitbucket push event.
+// It extracts the metadata from the event payload. This is used downstream to determine which Warehouses
+// should be refreshed in response to the event based on the commit selection
+// strategy configured for the Warehouse.
+//
+// See the Bitbucket Push event payload documentation for more details:
+//
+//	https://support.atlassian.com/bitbucket-cloud/docs/event-payloads/#Push
+func newBitBucketCodeChange(e *bitBucketPushEvent) *codeChange {
+	hc := e.Push.Changes[0].New
+
+	// expected format "Name <email>".
+	author := fmt.Sprintf("%s <%s>",
+		e.Actor.Name,
+		e.Actor.EmailAddress,
+	)
+
+	subject := hc.Target.Message
+	commitID := hc.Target.Hash
+
+	// example format: "2015-06-09T03:34:49+00:00"
+	// which conforms to the RFC 3339 format.
+	createdAt, err := time.Parse(time.RFC3339, hc.Target.Date)
+	if err != nil {
+		logger := logging.NewLogger(logging.InfoLevel)
+		logger.Error(err, "failed to parse commit date", "date", hc.Target.Date)
+		return nil
+	}
+
+	return &codeChange{
+		tag: &libGit.TagMetadata{
+			Tag:         hc.Name, // this will be the tag name for tag pushes
+			CommitID:    commitID,
+			CreatorDate: createdAt,
+			Author:      author,
+			Committer:   author,
+			Subject:     subject,
+			Tagger:      author,
+		},
+		commit: &libGit.CommitMetadata{
+			ID:         commitID,
+			CommitDate: createdAt,
+			Author:     author,
+			Committer:  author,
+			Subject:    subject,
+		},
+		branch: hc.Name, // this will be the branch name for branch pushes
+		// Bitbucket does not provide diffs in the push event payload
+		// so we won't be able to properly apply path filters here.
+		diffs: []string{}, //
+	}
 }

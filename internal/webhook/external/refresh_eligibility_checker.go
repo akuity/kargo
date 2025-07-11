@@ -50,9 +50,7 @@ func (rc *refreshEligibilityChecker) needsRefresh(
 	subs []kargoapi.RepoSubscription,
 	repoURLs ...string,
 ) bool {
-	println(len(subs))
 	subs = filterSubsByRepoURL(subs, repoURLs...) // only interested in subs that contain any of the repo URLs.
-	println(len(subs))
 	return slices.ContainsFunc(subs, func(sub kargoapi.RepoSubscription) bool {
 		var shouldRefresh bool
 		switch {
@@ -98,16 +96,8 @@ func (rc *refreshEligibilityChecker) matchesGitConstraint(ctx context.Context, s
 	default: // NewestFromBranch is the default case for Git subscriptions.
 		// We are always dealing with the newest commit from the branch in this context
 		// (webhooks), so we only need to check if the branch matches the one we are looking for.
-		logger := logging.LoggerFromContext(ctx).WithValues(
-			"branch", rc.git.branch,
-			"target-branch", sub.Branch,
-		)
-		if rc.git.branch != sub.Branch {
-			logger.Info("branch does not match subscription branch")
-			return false
-		}
-		logger.Info("branch matches subscription branch")
-		return rc.matchesGitBaseFilters(ctx, sub)
+		return rc.matchesNewestBranchConstraint(ctx, sub) &&
+			rc.matchesGitBaseFilters(ctx, sub)
 	}
 }
 
@@ -171,6 +161,22 @@ func (rc *refreshEligibilityChecker) matchesSemVerConstraint(ctx context.Context
 		logger.Info("tag does not match semver constraint")
 	}
 	return matches
+}
+
+func (rc *refreshEligibilityChecker) matchesNewestBranchConstraint(
+	ctx context.Context,
+	sub *kargoapi.GitSubscription,
+) bool {
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"branch", rc.git.branch,
+		"target-branch", sub.Branch,
+	)
+	if rc.git.branch != sub.Branch {
+		logger.Debug("branch does not match subscription branch")
+		return false
+	}
+	logger.Debug("branch matches subscription branch")
+	return true
 }
 
 // matchesGitBaseFilters checks that path, expression, and tag filters match.

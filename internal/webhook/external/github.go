@@ -214,6 +214,14 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 // GitHub PushEvent. This is used downstream to determine which Warehouses
 // should be refreshed in response to the event based on the commit selection
 // strategy configured for the Warehouse.
+//
+// See the GitHub docs for more information:
+//
+//	 Push event payload documentation:
+//		https://docs.github.com/en/webhooks/webhook-events-and-payloads#push
+//
+//	 Package event documentation:
+//		https://docs.github.com/en/webhooks/webhook-events-and-payloads#package
 func newGitHubCodeChange(e *gh.PushEvent) *codeChange {
 	hc := e.GetHeadCommit()
 
