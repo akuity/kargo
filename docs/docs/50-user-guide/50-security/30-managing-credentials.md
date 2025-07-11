@@ -347,6 +347,28 @@ create or install a GitHub App.
       repoURLIsRegex: <true if repoURL is a pattern matching multiple repositories>
     ```
 
+    :::tip
+    GitHub now recommends using the **Client ID** instead of the numeric App ID for authentication. You can use either `githubAppID` or `githubAppClientID` in your secret:
+    
+    ```yaml
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: <name>
+      namespace: <project namespace>
+      labels:
+        kargo.akuity.io/cred-type: git
+    stringData:
+      githubAppClientID: <client id>
+      githubAppPrivateKey: <PEM-encoded private key>
+      githubAppInstallationID: <installation id>
+      repoURL: <repo url>
+      repoURLIsRegex: <true if repoURL is a pattern matching multiple repositories>
+    ```
+    
+    Both the numeric App ID and the Client ID work identically for authentication purposes.
+    :::
+
     :::note
     The `kargo create/update credentials` commands do not support creating or
     updating non username/password credentials. To create or update a `Secret`

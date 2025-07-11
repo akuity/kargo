@@ -32,7 +32,7 @@ func TestAppCredentialProvider_Supports(t *testing.T) {
 		expected bool
 	}{
 		{
-			name:     "supports valid Git credential with all required fields",
+			name:     "supports valid Git credential with all required fields (appID)",
 			credType: credentials.TypeGit,
 			repoURL:  "https://github.com/akuity/kargo",
 			data: map[string][]byte{
@@ -41,6 +41,29 @@ func TestAppCredentialProvider_Supports(t *testing.T) {
 				privateKeyKey:     []byte("private-key"),
 			},
 			expected: true,
+		},
+		{
+			name:     "supports valid Git credential with all required fields (clientID)",
+			credType: credentials.TypeGit,
+			repoURL:  "https://github.com/akuity/kargo",
+			data: map[string][]byte{
+				clientIDKey:       []byte("123"),
+				installationIDKey: []byte("456"),
+				privateKeyKey:     []byte("private-key"),
+			},
+			expected: true,
+		},
+		{
+			name:     "does not support both appID and clientID",
+			credType: credentials.TypeGit,
+			repoURL:  "https://github.com/akuity/kargo",
+			data: map[string][]byte{
+				appIDKey:          []byte("123"),
+				clientIDKey:       []byte("123"),
+				installationIDKey: []byte("456"),
+				privateKeyKey:     []byte("private-key"),
+			},
+			expected: false,
 		},
 		{
 			name:     "does not support non-Git credential type",
@@ -61,7 +84,7 @@ func TestAppCredentialProvider_Supports(t *testing.T) {
 			expected: false,
 		},
 		{
-			name:     "does not support missing appID",
+			name:     "does not support missing appID and clientID",
 			credType: credentials.TypeGit,
 			repoURL:  "https://github.com/akuity/kargo",
 			data: map[string][]byte{
@@ -141,6 +164,21 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 			},
 		},
 		{
+			name:     "invalid client ID",
+			credType: credentials.TypeGit,
+			repoURL:  "https://github.com/akuity/kargo",
+			data: map[string][]byte{
+				clientIDKey:       []byte("invalid"),
+				installationIDKey: []byte("456"),
+				privateKeyKey:     []byte("private-key"),
+			},
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
+				assert.Nil(t, creds)
+				assert.Error(t, err)
+				assert.ErrorContains(t, err, "error parsing client ID")
+			},
+		},
+		{
 			name:     "invalid installation ID",
 			credType: credentials.TypeGit,
 			repoURL:  "https://github.com/akuity/kargo",
@@ -189,11 +227,30 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 			},
 		},
 		{
-			name:     "successful token retrieval",
+			name:     "successful token retrieval with appID",
 			credType: credentials.TypeGit,
 			repoURL:  "https://github.com/akuity/kargo",
 			data: map[string][]byte{
 				appIDKey:          []byte("123"),
+				installationIDKey: []byte("456"),
+				privateKeyKey:     []byte("private-key"),
+			},
+			getAccessTokenFn: func(_, _ int64, _, _ string) (string, error) {
+				return "test-token", nil
+			},
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
+				assert.NoError(t, err)
+				assert.NotNil(t, creds)
+				assert.Equal(t, accessTokenUsername, creds.Username)
+				assert.Equal(t, "test-token", creds.Password)
+			},
+		},
+		{
+			name:     "successful token retrieval with clientID",
+			credType: credentials.TypeGit,
+			repoURL:  "https://github.com/akuity/kargo",
+			data: map[string][]byte{
+				clientIDKey:       []byte("123"),
 				installationIDKey: []byte("456"),
 				privateKeyKey:     []byte("private-key"),
 			},
@@ -399,6 +456,69 @@ func Test_extractBaseURL(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestClientIDEdgeCases(t *testing.T) {
+	provider := NewAppCredentialProvider()
+	ctx := context.Background()
+
+	testCases := []struct {
+		name       string
+		data       map[string][]byte
+		expectsErr bool
+		errMsg     string
+	}{
+		{
+			name: "clientID with valid numeric string",
+			data: map[string][]byte{
+				clientIDKey:       []byte("123456"),
+				installationIDKey: []byte("789012"),
+				privateKeyKey:     []byte("fake-private-key"),
+			},
+			expectsErr: false,
+		},
+		{
+			name: "clientID with non-numeric string",
+			data: map[string][]byte{
+				clientIDKey:       []byte("Iv1.abc123def456"),
+				installationIDKey: []byte("789012"),
+				privateKeyKey:     []byte("fake-private-key"),
+			},
+			expectsErr: true,
+			errMsg:     "error parsing client ID",
+		},
+		{
+			name: "clientID with decimal number",
+			data: map[string][]byte{
+				clientIDKey:       []byte("123.456"),
+				installationIDKey: []byte("789012"),
+				privateKeyKey:     []byte("fake-private-key"),
+			},
+			expectsErr: true,
+			errMsg:     "error parsing client ID",
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			// Mock the getAccessToken function to avoid network calls
+			p := provider.(*AppCredentialProvider)
+			p.getAccessTokenFn = func(_, _ int64, _, _ string) (string, error) {
+				return "test-token", nil
+			}
+
+			_, err := provider.GetCredentials(ctx, "", credentials.TypeGit, "https://github.com/test/repo", tt.data)
+			
+			if tt.expectsErr {
+				assert.Error(t, err)
+				if tt.errMsg != "" {
+					assert.ErrorContains(t, err, tt.errMsg)
+				}
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}

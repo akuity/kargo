@@ -21,6 +21,7 @@ import (
 
 const (
 	appIDKey          = "githubAppID"
+	clientIDKey       = "githubAppClientID"
 	installationIDKey = "githubAppInstallationID"
 	privateKeyKey     = "githubAppPrivateKey"
 
@@ -55,7 +56,11 @@ func (p *AppCredentialProvider) Supports(credType credentials.Type, _ string, da
 		return false
 	}
 
-	return data[appIDKey] != nil && data[installationIDKey] != nil && data[privateKeyKey] != nil
+	// Either appID or clientID must be present, but not both
+	hasAppID := data[appIDKey] != nil
+	hasClientID := data[clientIDKey] != nil
+
+	return (hasAppID || hasClientID) && !(hasAppID && hasClientID) && data[installationIDKey] != nil && data[privateKeyKey] != nil
 }
 
 func (p *AppCredentialProvider) GetCredentials(
@@ -69,9 +74,22 @@ func (p *AppCredentialProvider) GetCredentials(
 		return nil, nil
 	}
 
-	appID, err := strconv.ParseInt(string(data[appIDKey]), 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing app ID: %w", err)
+	// Parse the app ID from either appID or clientID
+	var appID int64
+	var err error
+	
+	if data[appIDKey] != nil {
+		appID, err = strconv.ParseInt(string(data[appIDKey]), 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing app ID: %w", err)
+		}
+	} else if data[clientIDKey] != nil {
+		appID, err = strconv.ParseInt(string(data[clientIDKey]), 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing client ID: %w", err)
+		}
+	} else {
+		return nil, fmt.Errorf("either githubAppID or githubAppClientID must be provided")
 	}
 
 	installID, err := strconv.ParseInt(string(data[installationIDKey]), 10, 64)
