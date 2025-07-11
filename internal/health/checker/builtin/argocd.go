@@ -229,14 +229,27 @@ func (a *argocdChecker) getApplicationHealth(
 		//
 		// xref: https://github.com/akuity/kargo/issues/2196
 		//
-		// TODO: revisit this when https://github.com/argoproj/argo-cd/pull/18660
-		// 	 is merged and released.
+		// When the health status has a LastTransitionTime (from ArgoCD PR #18660),
+		// use that for a more precise cooldown. Otherwise, fall back to the
+		// operation-based cooldown for backward compatibility.
 		if app.Status.OperationState != nil {
-			cooldown := time.Now()
-			if !app.Status.OperationState.FinishedAt.IsZero() {
-				cooldown = app.Status.OperationState.FinishedAt.Time
+			var cooldown time.Time
+			var cooldownDuration time.Duration
+
+			// Prefer using health status LastTransitionTime if available
+			if app.Status.Health.LastTransitionTime != nil && !app.Status.Health.LastTransitionTime.IsZero() {
+				cooldown = app.Status.Health.LastTransitionTime.Time
+				cooldownDuration = 10 * time.Second
+			} else {
+				// Fall back to operation-based cooldown for backward compatibility
+				cooldown = time.Now()
+				if !app.Status.OperationState.FinishedAt.IsZero() {
+					cooldown = app.Status.OperationState.FinishedAt.Time
+				}
+				cooldownDuration = 10 * time.Second
 			}
-			cooldown = cooldown.Add(10 * time.Second)
+
+			cooldown = cooldown.Add(cooldownDuration)
 			if duration := time.Until(cooldown); duration > 0 {
 				time.Sleep(duration)
 				// Re-fetch the application to get the latest state.

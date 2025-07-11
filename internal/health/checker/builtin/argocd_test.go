@@ -3,6 +3,7 @@ package builtin
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -447,7 +448,11 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 						appCopy.Status.Health.Status = argocd.HealthStatusHealthy
 					}
 
-					*obj.(*argocd.Application) = *appCopy // nolint: forcetypeassert
+					appObj, ok := obj.(*argocd.Application)
+					if !ok {
+						return fmt.Errorf("expected *argocd.Application, got %T", obj)
+					}
+					*appObj = *appCopy
 					return nil
 				},
 			}).Build(),
@@ -463,6 +468,124 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 		elapsed := time.Since(app.Status.OperationState.FinishedAt.Time)
 		require.NoError(t, err)
 		// We wait for 10 seconds after the sync operation has finished. As such,
+		// the elapsed time should be greater than 8 seconds, but less than 12
+		// seconds. To ensure we do not introduce flakes in the tests.
+		require.Greater(t, elapsed, 8*time.Second)
+		require.Less(t, elapsed, 12*time.Second)
+		require.Equal(t, 2, count)
+	})
+
+	t.Run("uses health LastTransitionTime for cooldown when available", func(t *testing.T) {
+		app := testApp.DeepCopy()
+		// Set health LastTransitionTime to a time in the past
+		healthTransitionTime := metav1.NewTime(time.Now().Add(-5 * time.Second))
+		app.Status = argocd.ApplicationStatus{
+			Health: argocd.HealthStatus{
+				Status:             argocd.HealthStatusProgressing,
+				LastTransitionTime: &healthTransitionTime,
+			},
+			Sync: argocd.SyncStatus{
+				Status:    argocd.SyncStatusCodeSynced,
+				Revisions: []string{"fake-version", "fake-commit", "another-fake-commit"},
+			},
+			OperationState: &argocd.OperationState{
+				FinishedAt: ptr.To(metav1.Now()),
+			},
+		}
+		var count int
+		runner := &argocdChecker{
+			argocdClient: fake.NewClientBuilder().WithInterceptorFuncs(interceptor.Funcs{
+				Get: func(
+					_ context.Context,
+					_ client.WithWatch,
+					_ client.ObjectKey,
+					obj client.Object,
+					_ ...client.GetOption,
+				) error {
+					count++
+
+					appCopy := app.DeepCopy()
+					if count > 1 {
+						appCopy.Status.Health.Status = argocd.HealthStatusHealthy
+					}
+					appObj, ok := obj.(*argocd.Application)
+					if !ok {
+						return fmt.Errorf("expected *argocd.Application, got %T", obj)
+					}
+					*appObj = *appCopy
+					return nil
+				},
+			}).Build(),
+		}
+		_, _, err := runner.getApplicationHealth(
+			context.Background(),
+			client.ObjectKey{
+				Namespace: testApp.Namespace,
+				Name:      testApp.Name,
+			},
+			[]string{"fake-version", "fake-commit", "another-fake-commit"},
+		)
+		elapsed := time.Since(healthTransitionTime.Time)
+		require.NoError(t, err)
+		// We wait for 10 seconds after the health transition time. As such,
+		// the elapsed time should be greater than 8 seconds, but less than 12
+		// seconds. To ensure we do not introduce flakes in the tests.
+		require.Greater(t, elapsed, 8*time.Second)
+		require.Less(t, elapsed, 12*time.Second)
+		require.Equal(t, 2, count)
+	})
+
+	t.Run("falls back to operation cooldown when health LastTransitionTime is nil", func(t *testing.T) {
+		app := testApp.DeepCopy()
+		app.Status = argocd.ApplicationStatus{
+			Health: argocd.HealthStatus{
+				Status:             argocd.HealthStatusProgressing,
+				LastTransitionTime: nil, // Explicitly nil to test fallback
+			},
+			Sync: argocd.SyncStatus{
+				Status:    argocd.SyncStatusCodeSynced,
+				Revisions: []string{"fake-version", "fake-commit", "another-fake-commit"},
+			},
+			OperationState: &argocd.OperationState{
+				FinishedAt: ptr.To(metav1.Now()),
+			},
+		}
+		var count int
+		runner := &argocdChecker{
+			argocdClient: fake.NewClientBuilder().WithInterceptorFuncs(interceptor.Funcs{
+				Get: func(
+					_ context.Context,
+					_ client.WithWatch,
+					_ client.ObjectKey,
+					obj client.Object,
+					_ ...client.GetOption,
+				) error {
+					count++
+
+					appCopy := app.DeepCopy()
+					if count > 1 {
+						appCopy.Status.Health.Status = argocd.HealthStatusHealthy
+					}
+					appObj, ok := obj.(*argocd.Application)
+					if !ok {
+						return fmt.Errorf("expected *argocd.Application, got %T", obj)
+					}
+					*appObj = *appCopy
+					return nil
+				},
+			}).Build(),
+		}
+		_, _, err := runner.getApplicationHealth(
+			context.Background(),
+			client.ObjectKey{
+				Namespace: testApp.Namespace,
+				Name:      testApp.Name,
+			},
+			[]string{"fake-version", "fake-commit", "another-fake-commit"},
+		)
+		elapsed := time.Since(app.Status.OperationState.FinishedAt.Time)
+		require.NoError(t, err)
+		// We wait for 10 seconds after the operation finished. As such,
 		// the elapsed time should be greater than 8 seconds, but less than 12
 		// seconds. To ensure we do not introduce flakes in the tests.
 		require.Greater(t, elapsed, 8*time.Second)
