@@ -1767,6 +1767,112 @@ func TestReconciler_ensureDefaultProjectRoles(t *testing.T) {
 	}
 }
 
+func TestReconciler_ensureDefaultUserRoles_PromoterRole(t *testing.T) {
+	ctx := context.Background()
+	project := &kargoapi.Project{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-project",
+			Namespace: "test-project",
+		},
+	}
+
+	// Track which resources were created
+	var createdServiceAccounts []string
+	var createdRoles []string
+	var createdRoleBindings []string
+
+	reconciler := &reconciler{
+		createServiceAccountFn: func(
+			ctx context.Context,
+			obj client.Object,
+			opts ...client.CreateOption,
+		) error {
+			sa := obj.(*corev1.ServiceAccount)
+			createdServiceAccounts = append(createdServiceAccounts, sa.Name)
+			return nil
+		},
+		createRoleFn: func(
+			ctx context.Context,
+			obj client.Object,
+			opts ...client.CreateOption,
+		) error {
+			role := obj.(*rbacv1.Role)
+			createdRoles = append(createdRoles, role.Name)
+			
+			// Verify the kargo-promoter role has the correct permissions
+			if role.Name == "kargo-promoter" {
+				hasPromoteVerb := false
+				hasPromotionsCreate := false
+				hasFreightStatusPatch := false
+				hasViewPermissions := false
+				
+				for _, rule := range role.Rules {
+					for _, apiGroup := range rule.APIGroups {
+						if apiGroup == kargoapi.GroupVersion.Group {
+							for _, resource := range rule.Resources {
+								if resource == "stages" {
+									for _, verb := range rule.Verbs {
+										if verb == "promote" {
+											hasPromoteVerb = true
+										}
+									}
+								}
+								if resource == "promotions" {
+									for _, verb := range rule.Verbs {
+										if verb == "create" {
+											hasPromotionsCreate = true
+										}
+									}
+								}
+								if resource == "freights/status" {
+									for _, verb := range rule.Verbs {
+										if verb == "patch" {
+											hasFreightStatusPatch = true
+										}
+									}
+								}
+								if resource == "freights" || resource == "stages" || resource == "warehouses" {
+									for _, verb := range rule.Verbs {
+										if verb == "get" || verb == "list" || verb == "watch" {
+											hasViewPermissions = true
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+				
+				require.True(t, hasPromoteVerb, "kargo-promoter role should have promote verb on stages")
+				require.True(t, hasPromotionsCreate, "kargo-promoter role should have create verb on promotions")
+				require.True(t, hasFreightStatusPatch, "kargo-promoter role should have patch verb on freights/status")
+				require.True(t, hasViewPermissions, "kargo-promoter role should have view permissions on kargo resources")
+			}
+			
+			return nil
+		},
+		createRoleBindingFn: func(
+			ctx context.Context,
+			obj client.Object,
+			opts ...client.CreateOption,
+		) error {
+			rb := obj.(*rbacv1.RoleBinding)
+			createdRoleBindings = append(createdRoleBindings, rb.Name)
+			return nil
+		},
+	}
+
+	// Execute the function
+	err := reconciler.ensureDefaultUserRoles(ctx, project)
+	require.NoError(t, err)
+
+	// Verify all three roles were created
+	expectedRoles := []string{"kargo-admin", "kargo-viewer", "kargo-promoter"}
+	require.ElementsMatch(t, expectedRoles, createdServiceAccounts)
+	require.ElementsMatch(t, expectedRoles, createdRoles)
+	require.ElementsMatch(t, expectedRoles, createdRoleBindings)
+}
+
 func TestMigrateSpecToProjectConfig(t *testing.T) {
 	const testProject = "fake-project"
 	testScheme := runtime.NewScheme()
