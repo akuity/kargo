@@ -1,0 +1,212 @@
+syntax = "proto3";
+
+package freight.v1;
+
+option go_package = "github.com/akuity/kargo/pkg/generated/freight/v1;freightv1";
+
+import "google/protobuf/timestamp.proto";
+
+// FreightProcessorService defines the gRPC service for processing freight
+service FreightProcessorService {
+  // ProcessFreight sends freight data to be processed and returns the modified freight
+  rpc ProcessFreight(ProcessFreightRequest) returns (ProcessFreightResponse);
+  
+  // HealthCheck returns the health status of the processor
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+// ProcessFreightRequest contains the freight data and context to be processed
+message ProcessFreightRequest {
+  // Context information about the promotion
+  PromotionContext context = 1;
+  
+  // The freight collection being processed
+  FreightCollection freight = 2;
+  
+  // The specific freight that triggered this promotion
+  FreightReference target_freight = 3;
+  
+  // Step configuration passed from the Kargo step
+  map<string, string> config = 4;
+  
+  // Environment variables
+  map<string, string> env = 5;
+}
+
+// ProcessFreightResponse contains the processed freight and any metadata
+message ProcessFreightResponse {
+  // Status of the processing
+  ProcessingStatus status = 1;
+  
+  // Modified freight collection (if any changes were made)
+  FreightCollection modified_freight = 2;
+  
+  // Output metadata that can be used by subsequent steps
+  map<string, string> output = 3;
+  
+  // Logs or messages from the processing
+  repeated string logs = 4;
+  
+  // Error message if status is ERROR
+  string error_message = 5;
+}
+
+// PromotionContext provides context about the current promotion
+message PromotionContext {
+  // Project name
+  string project = 1;
+  
+  // Stage name
+  string stage = 2;
+  
+  // Promotion name
+  string promotion = 3;
+  
+  // Step alias
+  string step_alias = 4;
+  
+  // Actor who triggered the promotion
+  string actor = 5;
+}
+
+// FreightCollection represents a collection of freight references
+message FreightCollection {
+  // Unique identifier for this collection
+  string id = 1;
+  
+  // Map of freight references indexed by warehouse origin
+  map<string, FreightReference> freight = 2;
+}
+
+// FreightReference represents a reference to a piece of freight
+message FreightReference {
+  // System-assigned identifier
+  string name = 1;
+  
+  // Origin of the freight
+  FreightOrigin origin = 2;
+  
+  // Git commits in this freight
+  repeated GitCommit commits = 3;
+  
+  // Container images in this freight
+  repeated Image images = 4;
+  
+  // Helm charts in this freight
+  repeated Chart charts = 5;
+  
+  // Metadata associated with this freight
+  map<string, string> metadata = 6;
+}
+
+// FreightOrigin describes where freight originated from
+message FreightOrigin {
+  // Kind of origin (e.g., "Warehouse")
+  string kind = 1;
+  
+  // Name of the origin resource
+  string name = 2;
+}
+
+// GitCommit represents a Git commit
+message GitCommit {
+  // Repository URL
+  string repo_url = 1;
+  
+  // Commit ID/hash
+  string id = 2;
+  
+  // Branch name
+  string branch = 3;
+  
+  // Tag name (if any)
+  string tag = 4;
+  
+  // Commit message
+  string message = 5;
+  
+  // Author information
+  GitUser author = 6;
+  
+  // Committer information
+  GitUser committer = 7;
+  
+  // Commit timestamp
+  google.protobuf.Timestamp timestamp = 8;
+}
+
+// GitUser represents a Git user (author or committer)
+message GitUser {
+  // User name
+  string name = 1;
+  
+  // User email
+  string email = 2;
+  
+  // Timestamp
+  google.protobuf.Timestamp when = 3;
+}
+
+// Image represents a container image
+message Image {
+  // Repository URL
+  string repo_url = 1;
+  
+  // Image tag
+  string tag = 2;
+  
+  // Image digest
+  string digest = 3;
+  
+  // Creation timestamp
+  google.protobuf.Timestamp created_at = 4;
+  
+  // Image annotations/labels
+  map<string, string> annotations = 5;
+}
+
+// Chart represents a Helm chart
+message Chart {
+  // Repository URL
+  string repo_url = 1;
+  
+  // Chart name
+  string name = 2;
+  
+  // Chart version
+  string version = 3;
+  
+  // Chart metadata
+  map<string, string> metadata = 4;
+}
+
+// ProcessingStatus indicates the result of freight processing
+enum ProcessingStatus {
+  PROCESSING_STATUS_UNSPECIFIED = 0;
+  PROCESSING_STATUS_SUCCESS = 1;
+  PROCESSING_STATUS_ERROR = 2;
+  PROCESSING_STATUS_PENDING = 3;
+}
+
+// HealthCheckRequest for service health checks
+message HealthCheckRequest {
+  // Optional service name to check
+  string service = 1;
+}
+
+// HealthCheckResponse returns health status
+message HealthCheckResponse {
+  // Health status
+  HealthStatus status = 1;
+  
+  // Optional message
+  string message = 2;
+}
+
+// HealthStatus indicates service health
+enum HealthStatus {
+  HEALTH_STATUS_UNSPECIFIED = 0;
+  HEALTH_STATUS_SERVING = 1;
+  HEALTH_STATUS_NOT_SERVING = 2;
+  HEALTH_STATUS_SERVICE_UNKNOWN = 3;
+} 
