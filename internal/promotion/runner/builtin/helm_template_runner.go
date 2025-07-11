@@ -1,9 +1,12 @@
 package builtin
 
 import (
+	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -18,6 +21,8 @@ import (
 	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/cli/values"
 	"helm.sh/helm/v3/pkg/release"
+	"k8s.io/apimachinery/pkg/util/yaml"
+	libyaml "sigs.k8s.io/yaml"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
@@ -26,9 +31,24 @@ import (
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
+// outLayoutIsFlat returns true if the output layout is "flat".
+func outLayoutIsFlat(cfg builtin.HelmTemplateConfig) bool {
+	return cfg.OutLayout != nil && *cfg.OutLayout == builtin.Flat
+}
+
+// outLayoutIsHelm returns true if the output layout is "helm" or not specified
+// (default).
+func outLayoutIsHelm(cfg builtin.HelmTemplateConfig) bool {
+	if cfg.OutLayout == nil {
+		return true
+	}
+	return cfg.OutLayout != nil && *cfg.OutLayout == builtin.Helm
+}
+
 // outPathIsFile returns true if the output path contains a YAML extension.
+// When true, all rendered manifests will be written to a single file.
 // Otherwise, the output path is considered to target a directory where the
-// rendered manifest will be written to.
+// rendered manifests will be written according to the specified outLayout.
 func outPathIsFile(cfg builtin.HelmTemplateConfig) bool {
 	ext := filepath.Ext(cfg.OutPath)
 	return ext == ".yaml" || ext == ".yml"
@@ -192,9 +212,9 @@ func (h *helmTemplateRunner) newInstallAction(
 	client.APIVersions = cfg.APIVersions
 	client.DisableHooks = cfg.DisableHooks
 
-	// If the output path does not have a YAML extension, it is considered a
-	// directory where the manifest will be written to.
-	if !outPathIsFile(cfg) {
+	// If the output path is a directory AND the output layout is "helm" or not
+	// specified, set the output directory to the output path.
+	if !outPathIsFile(cfg) && outLayoutIsHelm(cfg) {
 		client.OutputDir = absOutPath
 	}
 
@@ -228,42 +248,62 @@ func (h *helmTemplateRunner) checkDependencies(chartRequested *chart.Chart) erro
 	return nil
 }
 
-// writeOutput writes the rendered manifest to the output path.
+// writeOutput writes the rendered manifest to the output path based on the
+// configured layout.
 func (h *helmTemplateRunner) writeOutput(cfg builtin.HelmTemplateConfig, rls *release.Release, outPath string) error {
 	var (
-		manifests     bytes.Buffer
-		outPathIsFile = outPathIsFile(cfg)
+		manifests       bytes.Buffer
+		outPathIsFile   = outPathIsFile(cfg)
+		outLayoutIsFlat = outLayoutIsFlat(cfg)
 	)
 
-	if outPathIsFile {
+	// Handle the main manifest resources based on the output layout.
+	switch {
+	case outPathIsFile:
 		_, _ = fmt.Fprintln(&manifests, strings.TrimSpace(rls.Manifest))
+	case outLayoutIsFlat:
+		// Flat layout: write the main manifest resources to individual files.
+		if err := h.writeManifestFlat(outPath, rls.Manifest); err != nil {
+			return fmt.Errorf("failed to write rendered manifest: %w", err)
+		}
 	}
 
 	if !cfg.DisableHooks {
-		for _, h := range rls.Hooks {
-			if cfg.SkipTests && isTestHook(h) {
+		for _, hook := range rls.Hooks {
+			if cfg.SkipTests && isTestHook(hook) {
 				continue
 			}
 
 			if outPathIsFile {
-				_, _ = fmt.Fprintf(&manifests, "---\n# Source: %s\n%s\n", h.Path, h.Manifest)
+				_, _ = fmt.Fprintf(&manifests, "---\n# Source: %s\n%s\n", hook.Path, hook.Manifest)
 				continue
 			}
 
-			exists := true
-			outDir := outPath
-			if cfg.UseReleaseName {
-				outDir = filepath.Join(outDir, cfg.ReleaseName)
-			}
-			if _, err := os.Stat(filepath.Join(outDir, h.Path)); err != nil {
-				if !os.IsNotExist(err) {
-					return fmt.Errorf("failed to check if file %q exists: %w", h.Path, err)
+			// Handle hooks based on the output layout.
+			switch {
+			case outLayoutIsFlat:
+				// Flat layout: write hook manifest resources to individual
+				// files.
+				if err := h.writeHookFlat(outPath, hook); err != nil {
+					return fmt.Errorf("failed to write hook %q: %w", hook.Path, err)
 				}
-				exists = false
-			}
+			case outLayoutIsHelm(cfg):
+				// Helm layout: use Helm's file writing logic.
+				exists := true
+				outDir := outPath
+				if cfg.UseReleaseName {
+					outDir = filepath.Join(outDir, cfg.ReleaseName)
+				}
+				if _, err := os.Stat(filepath.Join(outDir, hook.Path)); err != nil {
+					if !os.IsNotExist(err) {
+						return fmt.Errorf("failed to check if file %q exists: %w", hook.Path, err)
+					}
+					exists = false
+				}
 
-			if err := writeToHelmFile(outPath, h.Path, h.Manifest, exists); err != nil {
-				return fmt.Errorf("failed to write hook %q: %w", h.Path, err)
+				if err := writeToHelmFile(outDir, hook.Path, hook.Manifest, exists); err != nil {
+					return fmt.Errorf("failed to write hook %q: %w", hook.Path, err)
+				}
 			}
 		}
 	}
@@ -276,6 +316,119 @@ func (h *helmTemplateRunner) writeOutput(cfg builtin.HelmTemplateConfig, rls *re
 		return fmt.Errorf("failed to create directory %q: %w", cfg.OutPath, err)
 	}
 	return os.WriteFile(outPath, manifests.Bytes(), 0o600)
+}
+
+// writeManifestFlat writes the main manifest resources to individual files in
+// the output directory.
+func (h *helmTemplateRunner) writeManifestFlat(outPath, manifest string) error {
+	if manifest == "" {
+		return nil
+	}
+
+	// Ensure the output directory exists.
+	if err := os.MkdirAll(outPath, 0o700); err != nil {
+		return fmt.Errorf("failed to create output directory %q: %w", outPath, err)
+	}
+
+	// Write the manifest resources to individual files.
+	return h.writeResourcesFlat(outPath, manifest)
+}
+
+// writeHookFlat writes a hook's resources to individual files in the output
+// directory.
+func (h *helmTemplateRunner) writeHookFlat(outPath string, hook *release.Hook) error {
+	// Ensure the output directory exists.
+	if err := os.MkdirAll(outPath, 0o700); err != nil {
+		return fmt.Errorf("failed to create output directory %q: %w", outPath, err)
+	}
+
+	// Write the hook's manifest resources to individual files.
+	return h.writeResourcesFlat(outPath, hook.Manifest)
+}
+
+// writeResourcesFlat reads YAML documents from a manifest and writes each
+// resource to its own file.
+func (h *helmTemplateRunner) writeResourcesFlat(outPath, manifest string) error {
+	if strings.TrimSpace(manifest) == "" {
+		return nil
+	}
+
+	reader := yaml.NewYAMLReader(bufio.NewReader(strings.NewReader(manifest)))
+
+	var i int
+
+	for {
+		document, err := reader.Read()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("failed to read YAML document: %w", err)
+		}
+
+		// Skip empty documents.
+		resource := bytes.TrimSpace(document)
+		if resource == nil {
+			continue
+		}
+
+		// Generate a filename for the resource.
+		fileName := h.generateResourceFilename(resource)
+		if fileName == "" {
+			fileName = fmt.Sprintf("resource-%d.yaml", i)
+		}
+
+		// Write the resource to the output directory.
+		if err = os.WriteFile(filepath.Join(outPath, fileName), resource, 0o600); err != nil {
+			return fmt.Errorf("failed to write resource to file %q: %w", fileName, err)
+		}
+	}
+
+	return nil
+}
+
+// generateResourceFilename generates a descriptive filename based on the
+// Kubernetes resource metadata in the format of [group-]kind-namespace-name.yaml.
+func (h *helmTemplateRunner) generateResourceFilename(resource []byte) string {
+	group, kind, namespace, name := extractObjectMetadata(resource)
+
+	if kind == "" || name == "" {
+		return ""
+	}
+
+	fileName := kind
+	if group != "" {
+		fileName = strings.ReplaceAll(group, ".", "_") + "-" + fileName
+	}
+	if namespace != "" {
+		fileName += "-" + namespace
+	}
+	fileName += "-" + name
+
+	return fmt.Sprintf("%s.yaml", strings.ToLower(fileName))
+}
+
+// extractObjectMetadata extracts the group, kind, namespace, and name from the
+// metadata of a Kubernetes YAML resource.
+func extractObjectMetadata(resource []byte) (group, kind, namespace, name string) {
+	var metaObj struct {
+		APIVersion string `json:"apiVersion,omitempty"`
+		Kind       string `json:"kind,omitempty"`
+		Metadata   struct {
+			Name      string `json:"name,omitempty"`
+			Namespace string `json:"namespace,omitempty"`
+		} `json:"metadata,omitempty"`
+	}
+
+	if err := libyaml.Unmarshal(resource, &metaObj); err != nil {
+		return "", "", "", ""
+	}
+
+	if parts := strings.Split(metaObj.APIVersion, "/"); len(parts) > 1 {
+		group = strings.Join(parts[:len(parts)-1], "/")
+	}
+
+	return group, metaObj.Kind, metaObj.Metadata.Namespace, metaObj.Metadata.Name
 }
 
 // defaultValue returns the value if it is not zero or empty, otherwise it
