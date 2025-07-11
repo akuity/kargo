@@ -1630,8 +1630,10 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 
 	// Confirm that auto-promotion is allowed for the Stage.
 	if autoPromotionAllowed, err := r.autoPromotionAllowed(ctx, stage.ObjectMeta); err != nil || !autoPromotionAllowed {
+		newStatus.AutoPromotionEnabled = false
 		return newStatus, err
 	}
+	newStatus.AutoPromotionEnabled = true
 
 	// Retrieve promotable Freight for the Stage.
 	promotableFreight, err := r.getPromotableFreight(ctx, stage)
