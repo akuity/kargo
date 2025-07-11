@@ -12,6 +12,7 @@ import (
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/release"
+	"k8s.io/utils/ptr"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
@@ -68,6 +69,68 @@ metadata:
 data:
   value: value
 `, string(content))
+			},
+		},
+		{
+			name: "successful run with flat layout",
+			files: map[string]string{
+				"values.yaml": "key: value",
+				"charts/test-chart/Chart.yaml": `apiVersion: v1
+name: test-chart
+version: 0.1.0`,
+				"charts/test-chart/templates/configmap.yaml": `---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-configmap
+  namespace: test-namespace
+data:
+  value: {{ .Values.key }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: test-secret
+  namespace: test-namespace
+data:
+  secret: dGVzdA==
+`,
+			},
+			cfg: builtin.HelmTemplateConfig{
+				Path:        "charts/test-chart",
+				ValuesFiles: []string{"values.yaml"},
+				OutPath:     "output",
+				OutLayout:   ptr.To(builtin.Flat),
+				ReleaseName: "test-release",
+				Namespace:   "test-namespace",
+			},
+			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
+
+				outDir := filepath.Join(workDir, "output")
+				require.DirExists(t, outDir)
+
+				// Check that individual resource files were created
+				files, err := os.ReadDir(outDir)
+				require.NoError(t, err)
+				assert.Len(t, files, 2) // Should have 2 files for ConfigMap and Secret
+
+				// Check ConfigMap file
+				configMapFile := filepath.Join(outDir, "configmap-test-namespace-test-configmap.yaml")
+				require.FileExists(t, configMapFile)
+				content, err := os.ReadFile(configMapFile)
+				require.NoError(t, err)
+				assert.Contains(t, string(content), "kind: ConfigMap")
+				assert.Contains(t, string(content), "name: test-configmap")
+
+				// Check Secret file
+				secretFile := filepath.Join(outDir, "secret-test-namespace-test-secret.yaml")
+				require.FileExists(t, secretFile)
+				content, err = os.ReadFile(secretFile)
+				require.NoError(t, err)
+				assert.Contains(t, string(content), "kind: Secret")
+				assert.Contains(t, string(content), "name: test-secret")
 			},
 		},
 		{
@@ -165,7 +228,7 @@ data:
 			},
 		},
 		{
-			name: "successful run with output directory",
+			name: "successful run with output directory (helm layout)",
 			files: map[string]string{
 				"values.yaml": "key: value",
 				"charts/test-chart/Chart.yaml": `apiVersion: v1
@@ -193,6 +256,52 @@ data:
 				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
 
 				outPath := filepath.Join(workDir, "output", "test-chart")
+				require.DirExists(t, outPath)
+
+				content, err := os.ReadFile(filepath.Join(outPath, "templates/test.yaml"))
+				require.NoError(t, err)
+				assert.Equal(t, `---
+# Source: test-chart/templates/test.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-release-configmap
+  namespace: test-namespace
+data:
+  value: value
+`, string(content))
+			},
+		},
+		{
+			name: "successful run with UseReleaseName",
+			files: map[string]string{
+				"values.yaml": "key: value",
+				"charts/test-chart/Chart.yaml": `apiVersion: v1
+name: test-chart
+version: 0.1.0`,
+				"charts/test-chart/templates/test.yaml": `---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-configmap
+  namespace: {{ .Release.Namespace }}
+data:
+  value: {{ .Values.key }}
+`,
+			},
+			cfg: builtin.HelmTemplateConfig{
+				Path:           "charts/test-chart",
+				ValuesFiles:    []string{"values.yaml"},
+				OutPath:        "output/",
+				ReleaseName:    "test-release",
+				UseReleaseName: true,
+				Namespace:      "test-namespace",
+			},
+			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
+
+				outPath := filepath.Join(workDir, "output", "test-release", "test-chart")
 				require.DirExists(t, outPath)
 
 				content, err := os.ReadFile(filepath.Join(outPath, "templates/test.yaml"))
@@ -436,36 +545,55 @@ func Test_helmTemplateRunner_newInstallAction(t *testing.T) {
 				assert.False(t, client.IncludeCRDs)
 				assert.Empty(t, client.APIVersions)
 				assert.Nil(t, client.KubeVersion)
+				assert.False(t, client.UseReleaseName)
+				assert.False(t, client.DisableHooks)
 			},
 		},
 		{
 			name: "custom values",
 			cfg: builtin.HelmTemplateConfig{
-				ReleaseName: "custom-release",
-				Namespace:   "custom-namespace",
-				IncludeCRDs: true,
-				APIVersions: []string{"v1", "v2"},
-				KubeVersion: "1.20.0",
+				ReleaseName:    "custom-release",
+				UseReleaseName: true,
+				Namespace:      "custom-namespace",
+				IncludeCRDs:    true,
+				APIVersions:    []string{"v1", "v2"},
+				KubeVersion:    "1.20.0",
+				DisableHooks:   true,
 			},
 			assertions: func(t *testing.T, client *action.Install, err error) {
 				require.NoError(t, err)
 				assert.Equal(t, "custom-release", client.ReleaseName)
+				assert.True(t, client.UseReleaseName)
 				assert.Equal(t, "custom-namespace", client.Namespace)
 				assert.True(t, client.IncludeCRDs)
 				assert.Equal(t, chartutil.VersionSet{"v1", "v2"}, client.APIVersions)
 				assert.NotNil(t, client.KubeVersion)
 				assert.Equal(t, "v1.20.0", client.KubeVersion.String())
+				assert.True(t, client.DisableHooks)
 			},
 		},
 		{
-			name: "output directory",
+			name: "output directory with helm layout",
 			cfg: builtin.HelmTemplateConfig{
-				OutPath: "output/",
+				OutPath:   "output/",
+				OutLayout: ptr.To(builtin.Helm),
 			},
 			absOutPath: "/tmp/output",
 			assertions: func(t *testing.T, client *action.Install, err error) {
 				require.NoError(t, err)
 				assert.Equal(t, "/tmp/output", client.OutputDir)
+			},
+		},
+		{
+			name: "output directory with flat layout",
+			cfg: builtin.HelmTemplateConfig{
+				OutPath:   "output/",
+				OutLayout: ptr.To(builtin.Flat),
+			},
+			absOutPath: "/tmp/output",
+			assertions: func(t *testing.T, client *action.Install, err error) {
+				require.NoError(t, err)
+				assert.Empty(t, client.OutputDir) // Should not set OutputDir for flat layout
 			},
 		},
 		{
@@ -488,6 +616,15 @@ func Test_helmTemplateRunner_newInstallAction(t *testing.T) {
 			assertions: func(t *testing.T, client *action.Install, err error) {
 				require.NoError(t, err)
 				assert.Empty(t, client.OutputDir)
+			},
+		},
+		{
+			name:    "project used as default namespace",
+			cfg:     builtin.HelmTemplateConfig{},
+			project: "test-project",
+			assertions: func(t *testing.T, client *action.Install, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, "test-project", client.Namespace)
 			},
 		},
 		{
@@ -669,6 +806,75 @@ func Test_helmTemplateRunner_writeOutput(t *testing.T) {
 			},
 		},
 		{
+			name: "write manifest and hooks to flat layout",
+			cfg: builtin.HelmTemplateConfig{
+				OutPath:   "output",
+				OutLayout: ptr.To(builtin.Flat),
+			},
+			rls: &release.Release{
+				Manifest: `---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-configmap
+  namespace: test-ns
+data:
+  key: value
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: test-secret
+  namespace: test-ns
+data:
+  secret: dGVzdA==`,
+				Hooks: []*release.Hook{
+					{
+						Path: "hook1.yaml",
+						Manifest: `---
+apiVersion: v1
+kind: Job
+metadata:
+  name: test-job
+  namespace: test-ns
+spec:
+  template:
+    spec:
+      containers:
+      - name: test
+        image: test`,
+					},
+				},
+			},
+			setup: func(t *testing.T) (outPath string) {
+				return t.TempDir()
+			},
+			assertions: func(t *testing.T, workDir string, err error) {
+				require.NoError(t, err)
+
+				outDir := filepath.Join(workDir, "output")
+				files, err := os.ReadDir(outDir)
+				require.NoError(t, err)
+				assert.Len(t, files, 3) // ConfigMap, Secret, and Job
+
+				// Check that files are named descriptively
+				expectedFiles := []string{
+					"configmap-test-ns-test-configmap.yaml",
+					"secret-test-ns-test-secret.yaml",
+					"job-test-ns-test-job.yaml",
+				}
+
+				actualFiles := make([]string, len(files))
+				for i, f := range files {
+					actualFiles[i] = f.Name()
+				}
+
+				for _, expected := range expectedFiles {
+					assert.Contains(t, actualFiles, expected)
+				}
+			},
+		},
+		{
 			name: "skip test hooks",
 			cfg: builtin.HelmTemplateConfig{
 				OutPath:   "output",
@@ -775,6 +981,30 @@ hook2: content
 				assert.Equal(t, "existing content\n---\n# Source: hook1.yaml\nnew content\n", string(content))
 			},
 		},
+		{
+			name: "UseReleaseName with helm layout",
+			cfg: builtin.HelmTemplateConfig{
+				OutPath:        "output",
+				ReleaseName:    "my-release",
+				UseReleaseName: true,
+			},
+			rls: &release.Release{
+				Manifest: "main: manifest",
+				Hooks: []*release.Hook{
+					{Path: "hook1.yaml", Manifest: "hook1: content"},
+				},
+			},
+			setup: func(t *testing.T) (outPath string) {
+				return t.TempDir()
+			},
+			assertions: func(t *testing.T, workDir string, err error) {
+				require.NoError(t, err)
+
+				hookContent, err := os.ReadFile(filepath.Join(workDir, "output", "my-release", "hook1.yaml"))
+				require.NoError(t, err)
+				assert.Equal(t, "---\n# Source: hook1.yaml\nhook1: content\n", string(hookContent))
+			},
+		},
 	}
 
 	runner := &helmTemplateRunner{}
@@ -784,6 +1014,272 @@ hook2: content
 			workDir := tt.setup(t)
 			err := runner.writeOutput(tt.cfg, tt.rls, filepath.Join(workDir, tt.cfg.OutPath))
 			tt.assertions(t, workDir, err)
+		})
+	}
+}
+
+func Test_generateResourceFilename(t *testing.T) {
+	runner := &helmTemplateRunner{}
+
+	tests := []struct {
+		name     string
+		resource string
+		expected string
+	}{
+		{
+			name: "simple ConfigMap",
+			resource: `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-config
+  namespace: default
+data:
+  key: value`,
+			expected: "configmap-default-test-config.yaml",
+		},
+		{
+			name: "resource with API group",
+			resource: `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-deployment
+  namespace: prod
+spec:
+  replicas: 3`,
+			expected: "apps-deployment-prod-test-deployment.yaml",
+		},
+		{
+			name: "cluster-scoped resource",
+			resource: `apiVersion: v1
+kind: ClusterRole
+metadata:
+  name: test-cluster-role
+rules: []`,
+			expected: "clusterrole-test-cluster-role.yaml",
+		},
+		{
+			name: "resource with complex API group",
+			resource: `apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: test-netpol
+  namespace: kube-system
+spec: {}`,
+			expected: "networking_k8s_io-networkpolicy-kube-system-test-netpol.yaml",
+		},
+		{
+			name:     "invalid YAML",
+			resource: `invalid: yaml: content: [`,
+			expected: "",
+		},
+		{
+			name: "missing kind",
+			resource: `apiVersion: v1
+metadata:
+  name: test-resource`,
+			expected: "",
+		},
+		{
+			name: "missing name",
+			resource: `apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: default`,
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := runner.generateResourceFilename([]byte(tt.resource))
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func Test_extractObjectMetadata(t *testing.T) {
+	tests := []struct {
+		name              string
+		resource          string
+		expectedGroup     string
+		expectedKind      string
+		expectedNamespace string
+		expectedName      string
+	}{
+		{
+			name: "core API resource",
+			resource: `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-config
+  namespace: default`,
+			expectedGroup:     "",
+			expectedKind:      "ConfigMap",
+			expectedNamespace: "default",
+			expectedName:      "test-config",
+		},
+		{
+			name: "resource with API group",
+			resource: `
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-deployment
+  namespace: prod`,
+			expectedGroup:     "apps",
+			expectedKind:      "Deployment",
+			expectedNamespace: "prod",
+			expectedName:      "test-deployment",
+		},
+		{
+			name: "cluster-scoped resource",
+			resource: `apiVersion: v1
+kind: ClusterRole
+metadata:
+  name: test-cluster-role`,
+			expectedGroup:     "",
+			expectedKind:      "ClusterRole",
+			expectedNamespace: "",
+			expectedName:      "test-cluster-role",
+		},
+		{
+			name:              "invalid YAML",
+			resource:          `invalid: yaml: content: [`,
+			expectedGroup:     "",
+			expectedKind:      "",
+			expectedNamespace: "",
+			expectedName:      "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			group, kind, namespace, name := extractObjectMetadata([]byte(tt.resource))
+			assert.Equal(t, tt.expectedGroup, group)
+			assert.Equal(t, tt.expectedKind, kind)
+			assert.Equal(t, tt.expectedNamespace, namespace)
+			assert.Equal(t, tt.expectedName, name)
+		})
+	}
+}
+
+func Test_outLayoutIsFlat(t *testing.T) {
+	tests := []struct {
+		name     string
+		cfg      builtin.HelmTemplateConfig
+		expected bool
+	}{
+		{
+			name:     "nil layout (default)",
+			cfg:      builtin.HelmTemplateConfig{},
+			expected: false,
+		},
+		{
+			name: "flat layout",
+			cfg: builtin.HelmTemplateConfig{
+				OutLayout: ptr.To(builtin.Flat),
+			},
+			expected: true,
+		},
+		{
+			name: "helm layout",
+			cfg: builtin.HelmTemplateConfig{
+				OutLayout: ptr.To(builtin.Helm),
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := outLayoutIsFlat(tt.cfg)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func Test_outLayoutIsHelm(t *testing.T) {
+	tests := []struct {
+		name     string
+		cfg      builtin.HelmTemplateConfig
+		expected bool
+	}{
+		{
+			name:     "nil layout (default)",
+			cfg:      builtin.HelmTemplateConfig{},
+			expected: true,
+		},
+		{
+			name: "flat layout",
+			cfg: builtin.HelmTemplateConfig{
+				OutLayout: ptr.To(builtin.Flat),
+			},
+			expected: false,
+		},
+		{
+			name: "helm layout",
+			cfg: builtin.HelmTemplateConfig{
+				OutLayout: ptr.To(builtin.Helm),
+			},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := outLayoutIsHelm(tt.cfg)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func Test_outPathIsFile(t *testing.T) {
+	tests := []struct {
+		name     string
+		cfg      builtin.HelmTemplateConfig
+		expected bool
+	}{
+		{
+			name: "YAML file",
+			cfg: builtin.HelmTemplateConfig{
+				OutPath: "output.yaml",
+			},
+			expected: true,
+		},
+		{
+			name: "YML file",
+			cfg: builtin.HelmTemplateConfig{
+				OutPath: "output.yml",
+			},
+			expected: true,
+		},
+		{
+			name: "directory",
+			cfg: builtin.HelmTemplateConfig{
+				OutPath: "output/",
+			},
+			expected: false,
+		},
+		{
+			name: "directory without slash",
+			cfg: builtin.HelmTemplateConfig{
+				OutPath: "output",
+			},
+			expected: false,
+		},
+		{
+			name: "other file extension",
+			cfg: builtin.HelmTemplateConfig{
+				OutPath: "output.txt",
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := outPathIsFile(tt.cfg)
+			assert.Equal(t, tt.expected, result)
 		})
 	}
 }
@@ -836,6 +1332,50 @@ func Test_defaultValue(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.expected, defaultValue(tt.value, tt.defValue))
+		})
+	}
+}
+
+func Test_isTestHook(t *testing.T) {
+	tests := []struct {
+		name     string
+		hook     *release.Hook
+		expected bool
+	}{
+		{
+			name: "test hook",
+			hook: &release.Hook{
+				Events: []release.HookEvent{release.HookTest},
+			},
+			expected: true,
+		},
+		{
+			name: "pre-install hook",
+			hook: &release.Hook{
+				Events: []release.HookEvent{release.HookPreInstall},
+			},
+			expected: false,
+		},
+		{
+			name: "multiple events including test",
+			hook: &release.Hook{
+				Events: []release.HookEvent{release.HookPreInstall, release.HookTest},
+			},
+			expected: true,
+		},
+		{
+			name: "no events",
+			hook: &release.Hook{
+				Events: []release.HookEvent{},
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isTestHook(tt.hook)
+			assert.Equal(t, tt.expected, result)
 		})
 	}
 }
