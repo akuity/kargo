@@ -221,7 +221,6 @@ func (r *reconciler) discoverBranchHistory(repo git.Repo, sub kargoapi.GitSubscr
 	}
 
 	limit := int(sub.DiscoveryLimit)
-
 	var filteredCommits = make([]git.CommitMetadata, 0, limit)
 	for skip := uint(0); ; skip += uint(limit) { // nolint: gosec
 		commits, err := r.listCommitsFn(repo, uint(limit), skip) // nolint: gosec
