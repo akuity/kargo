@@ -101,7 +101,7 @@ func (rc *refreshEligibilityChecker) matchesImageConstraint(ctx context.Context,
 }
 
 func (rc *refreshEligibilityChecker) matchesChartConstraint(ctx context.Context, sub *kargoapi.ChartSubscription) bool {
-	if rc.newChartTag == nil || sub == nil {
+	if sub == nil {
 		return false
 	}
 	// " If left unspecified, the subscription implicitly selects the semantically greatest version of the chart."
