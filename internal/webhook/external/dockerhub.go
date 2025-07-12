@@ -80,6 +80,7 @@ func (d *dockerhubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 		payload := struct {
 			PushData struct {
 				MediaType string `json:"media_type"`
+				Tag       string `json:"tag"`
 			} `json:"push_data"`
 			Repository struct {
 				RepoName string `json:"repo_name"`
@@ -95,16 +96,20 @@ func (d *dockerhubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 		}
 
 		var repoURL string
+		newestTag := strPtr(payload.PushData.Tag)
+		var rc *refreshEligibilityChecker
 		switch payload.PushData.MediaType {
 		case helmChartMediaType:
 			repoURL = helm.NormalizeChartRepositoryURL(payload.Repository.RepoName)
+			rc = &refreshEligibilityChecker{newChartTag: newestTag}
 		default:
 			repoURL = image.NormalizeURL(payload.Repository.RepoName)
+			rc = &refreshEligibilityChecker{newImageTag: newestTag}
 		}
 
 		logger = logger.WithValues("repoURL", repoURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
 
-		refreshWarehouses(ctx, w, d.client, d.project, repoURL)
+		refreshWarehouses(ctx, w, d.client, d.project, rc, repoURL)
 	})
 }

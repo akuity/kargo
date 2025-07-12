@@ -1004,7 +1004,7 @@ func TestAllows(t *testing.T) {
 			require.Equal(
 				t,
 				testCase.allowed,
-				allows(testCase.tag, testCase.regex),
+				Allows(testCase.tag, testCase.regex),
 			)
 		})
 	}

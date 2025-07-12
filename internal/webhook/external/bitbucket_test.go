@@ -24,6 +24,7 @@ func TestBitbucketHandler(t *testing.T) {
 
 	const pushEventRequestBody = `
 {
+	"push": {"changes": [{"new": {"name": "refs/heads/main"}}]},
 	"repository": {
 		"links": {
 			"html": {
@@ -128,7 +129,9 @@ func TestBitbucketHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{
-								RepoURL: "https://bitbucket.org/example/repo",
+								Branch:                  "main",
+								RepoURL:                 "https://bitbucket.org/example/repo",
+								CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
 							},
 						}},
 					},

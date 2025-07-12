@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	gh "github.com/google/go-github/v71/github"
@@ -132,7 +133,7 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 		}
 
 		var repoURL string
-
+		rc := new(refreshEligibilityChecker)
 		switch e := event.(type) {
 		case *gh.PackageEvent:
 			switch e.GetAction() {
@@ -164,15 +165,16 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 				xhttp.WriteErrorJSON(w, err)
 				return
 			}
-			manifest := pkg.GetPackageVersion().GetContainerMetadata().GetManifest()
+			v := pkg.GetPackageVersion()
+			manifest := v.GetContainerMetadata().GetManifest()
 			// Determine if the package is a Helm chart
 			if cfg, ok := manifest["config"].(map[string]any); ok {
 				if mediaType, ok := cfg["media_type"].(string); ok && mediaType == helmChartMediaType {
 					repoURL = helm.NormalizeChartRepositoryURL(ref.Context().Name())
 				}
-			}
-			if repoURL == "" {
-				// Assume the package is a container image
+				rc.newChartTag = v.Version
+			} else {
+				rc.newImageTag = v.Version
 				repoURL = image.NormalizeURL(ref.Context().Name())
 			}
 
@@ -187,6 +189,7 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			return
 
 		case *gh.PushEvent:
+			rc = newGitHubRefreshCheck(e)
 			// TODO(krancour): GetHTMLURL() gives us a repo URL starting with
 			// https://. By refreshing Warehouses using a normalized representation of
 			// that URL, we will miss any Warehouses that are subscribed to the same
@@ -197,6 +200,35 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 		logger = logger.WithValues("repoURL", repoURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
 
-		refreshWarehouses(ctx, w, g.client, g.project, repoURL)
+		refreshWarehouses(ctx, w, g.client, g.project, rc, repoURL)
 	})
+}
+
+// newGitHubRefreshCheck hydrates a refresh eligibility checker codeChange from a
+// GitHub PushEvent. This is used downstream to determine which Warehouses
+// should be refreshed in response to the event based on the commit selection
+// strategy configured for the Warehouse.
+//
+// See the GitHub docs for more information:
+//
+//	 Push event payload documentation:
+//		https://docs.github.com/en/webhooks/webhook-events-and-payloads#push
+//
+//	 Package event documentation:
+//		https://docs.github.com/en/webhooks/webhook-events-and-payloads#package
+func newGitHubRefreshCheck(e *gh.PushEvent) *refreshEligibilityChecker {
+	var branchName, tag *string
+	if e.GetRef() != "" {
+		switch {
+		case strings.HasPrefix(e.GetRef(), "refs/tags/"):
+			tag = strPtr(strings.TrimPrefix(e.GetRef(), "refs/tags/"))
+		case strings.HasPrefix(e.GetRef(), "refs/heads/"):
+			branchName = strPtr(strings.TrimPrefix(e.GetRef(), "refs/heads/"))
+		}
+	}
+
+	return &refreshEligibilityChecker{
+		newGitTag:  tag,
+		branchName: branchName,
+	}
 }
