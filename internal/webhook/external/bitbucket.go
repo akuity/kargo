@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	gh "github.com/google/go-github/v71/github"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -118,7 +119,22 @@ func (b *bitbucketWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 			return
 		}
 
-		payload := new(bitBucketPushEvent)
+		payload := struct {
+			Push struct {
+				Changes []struct {
+					New struct {
+						Name string `json:"name"` // branch name
+					} `json:"new"`
+				} `json:"changes"`
+			} `json:"push"`
+			Repository struct {
+				Links struct {
+					HTML struct {
+						Href string `json:"href"`
+					} `json:"html"`
+				} `json:"links"`
+			} `json:"repository"`
+		}{}
 		if err := json.Unmarshal(requestBody, &payload); err != nil {
 			xhttp.WriteErrorJSON(
 				w,
@@ -147,45 +163,11 @@ func (b *bitbucketWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 
 		logger = logger.WithValues("repoURL", repoURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		rc := newBitBucketRefreshCheck(payload)
+		branchName := strings.TrimPrefix(
+			payload.Push.Changes[len(payload.Push.Changes)-1].New.Name,
+			"refs/heads/",
+		)
+		rc := &refreshEligibilityChecker{branchName: strPtr(branchName)}
 		refreshWarehouses(ctx, w, b.client, b.project, rc, repoURL)
 	})
-}
-
-type bitBucketPushEvent struct {
-	Push struct {
-		Changes []struct {
-			New struct {
-				Name string `json:"name"` // branch name
-			} `json:"new"`
-		} `json:"changes"`
-	} `json:"push"`
-	Repository struct {
-		Links struct {
-			HTML struct {
-				Href string `json:"href"`
-			} `json:"html"`
-		} `json:"links"`
-	} `json:"repository"`
-}
-
-// newBitBucketRefreshCheck creates a new refresh checker from a Bitbucket push event.
-// It extracts the metadata from the event payload. This is used downstream to determine which Warehouses
-// should be refreshed in response to the event based on the commit selection
-// strategy configured for the Warehouse.
-//
-// See the Bitbucket Push event payload documentation for more details:
-//
-//	https://support.atlassian.com/bitbucket-cloud/docs/event-payloads/#Push
-func newBitBucketRefreshCheck(e *bitBucketPushEvent) *refreshEligibilityChecker {
-	newestCommit := e.Push.Changes[len(e.Push.Changes)-1].New
-	return &refreshEligibilityChecker{
-		// Commit and tag metadata is not populated for Bitbucket since the push events
-		// we receive do not allow us properly hydrate them.
-		// This will result in the refresh eligibility checker
-		// giving the event the benefit of the doubt and letting
-		// the down stream controller handle evaluating the commit
-		// selection strategy during freight discovery.
-		branchName: &newestCommit.Name,
-	}
 }
