@@ -235,68 +235,59 @@ func (a *argocdChecker) getApplicationHealth(
 		if app.Status.OperationState != nil && !app.Status.OperationState.FinishedAt.IsZero() {
 			operationFinishTime := app.Status.OperationState.FinishedAt.Time
 			startTime := time.Now()
-			
-			// Only wait if the operation finished very recently (within last 10 seconds)
-			// If operation finished longer ago, assume health status is already stable
-			if time.Since(operationFinishTime) > 10*time.Second {
-				// Operation finished long ago, health status should be stable
-				// No need to wait
-			} else {
-				// Operation finished recently, wait for LastTransitionTime to be updated
-				maxWaitTime := 30 * time.Second
-				backoffInterval := 100 * time.Millisecond
-				maxBackoffInterval := 1 * time.Second
+			maxWaitTime := 30 * time.Second
+			backoffInterval := 100 * time.Millisecond
+			maxBackoffInterval := 1 * time.Second
 
-				for {
-					// Check if LastTransitionTime is available and greater than operation finish time
-					if app.Status.Health.LastTransitionTime != nil && 
-						!app.Status.Health.LastTransitionTime.IsZero() &&
-						app.Status.Health.LastTransitionTime.Time.After(operationFinishTime) {
-						// Health status is trustworthy, break out of retry loop
+			for {
+				// Check if LastTransitionTime is available and greater than operation finish time
+				if app.Status.Health.LastTransitionTime != nil && 
+					!app.Status.Health.LastTransitionTime.IsZero() &&
+					app.Status.Health.LastTransitionTime.Time.After(operationFinishTime) {
+					// Health status is trustworthy, break out of retry loop
+					break
+				}
+
+				// Check if we've exceeded the maximum wait time
+				if time.Since(startTime) >= maxWaitTime {
+					// After 30 seconds, decide based on LastTransitionTime availability
+					if app.Status.Health.LastTransitionTime == nil || app.Status.Health.LastTransitionTime.IsZero() {
+						// Assume older ArgoCD version, trust the health status
 						break
-					}
-
-					// Check if we've exceeded the maximum wait time
-					if time.Since(startTime) >= maxWaitTime {
-						// After 30 seconds, decide based on LastTransitionTime availability
-						if app.Status.Health.LastTransitionTime == nil || app.Status.Health.LastTransitionTime.IsZero() {
-							// Assume older ArgoCD version, trust the health status
-							break
-						} else {
-							// Newer ArgoCD version but health info not updating properly
-							err := fmt.Errorf(
-								"Argo CD Application %q in namespace %q health status LastTransitionTime "+
-									"has not been updated after sync operation completed at %s",
-								appKey.Name, appKey.Namespace, operationFinishTime.Format(time.RFC3339),
-							)
-							return kargoapi.HealthStateUnknown, appStatus, err
-						}
-					}
-
-					// Sleep with progressive backoff
-					time.Sleep(backoffInterval)
-					if backoffInterval < maxBackoffInterval {
-						backoffInterval = backoffInterval * 2
-						if backoffInterval > maxBackoffInterval {
-							backoffInterval = maxBackoffInterval
-						}
-					}
-
-					// Re-fetch the application to get the latest state
-					if err := a.argocdClient.Get(ctx, appKey, app); err != nil {
-						if apierrors.IsNotFound(err) {
-							err = fmt.Errorf(
-								"unable to find Argo CD Application %q in namespace %q",
-								appKey.Name, appKey.Namespace,
-							)
-						} else {
-							err = fmt.Errorf(
-								"error finding Argo CD Application %q in namespace %q: %w",
-								appKey.Name, appKey.Namespace, err,
-							)
-						}
+					} else {
+						// Newer ArgoCD version but health info not updating properly
+						err := fmt.Errorf(
+							"Argo CD Application %q in namespace %q health status LastTransitionTime "+
+								"has not been updated after sync operation completed at %s",
+							appKey.Name, appKey.Namespace, operationFinishTime.Format(time.RFC3339),
+						)
 						return kargoapi.HealthStateUnknown, appStatus, err
 					}
+				}
+
+				// Sleep with progressive backoff
+				time.Sleep(backoffInterval)
+				if backoffInterval < maxBackoffInterval {
+					backoffInterval = backoffInterval * 2
+					if backoffInterval > maxBackoffInterval {
+						backoffInterval = maxBackoffInterval
+					}
+				}
+
+				// Re-fetch the application to get the latest state
+				if err := a.argocdClient.Get(ctx, appKey, app); err != nil {
+					if apierrors.IsNotFound(err) {
+						err = fmt.Errorf(
+							"unable to find Argo CD Application %q in namespace %q",
+							appKey.Name, appKey.Namespace,
+						)
+					} else {
+						err = fmt.Errorf(
+							"error finding Argo CD Application %q in namespace %q: %w",
+							appKey.Name, appKey.Namespace, err,
+						)
+					}
+					return kargoapi.HealthStateUnknown, appStatus, err
 				}
 			}
 		}
