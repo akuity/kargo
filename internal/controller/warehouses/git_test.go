@@ -873,7 +873,7 @@ func TestEvaluateCommitExpression(t *testing.T) {
 			expression, err := expr.Compile(testCase.expression)
 			require.NoError(t, err)
 
-			result, err := EvaluateCommitExpression(testCase.commit, expression)
+			result, err := evaluateCommitExpression(testCase.commit, expression)
 			testCase.assertions(t, result, err)
 		})
 	}
@@ -1035,7 +1035,7 @@ func TestIgnores(t *testing.T) {
 			require.Equal(
 				t,
 				testCase.ignored,
-				Ignores(testCase.tag, testCase.ignore),
+				ignores(testCase.tag, testCase.ignore),
 			)
 		})
 	}
@@ -1331,12 +1331,12 @@ func TestMatchesPathsFilters(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			includeSelectors, err := GetPathSelectors(testCase.includePaths)
+			includeSelectors, err := getPathSelectors(testCase.includePaths)
 			require.NoError(t, err)
-			excludeSelectors, err := GetPathSelectors(testCase.excludePaths)
+			excludeSelectors, err := getPathSelectors(testCase.excludePaths)
 			require.NoError(t, err)
 
-			matchFound := MatchesPathsFilters(includeSelectors, excludeSelectors, testCase.diffs)
+			matchFound := matchesPathsFilters(includeSelectors, excludeSelectors, testCase.diffs)
 			testCase.assertions(t, matchFound)
 		})
 	}

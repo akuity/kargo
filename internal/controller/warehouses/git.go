@@ -211,19 +211,20 @@ func (r *reconciler) discoverBranchHistory(repo git.Repo, sub kargoapi.GitSubscr
 	}
 
 	// Compile include and exclude path selectors.
-	includeSelectors, err := GetPathSelectors(sub.IncludePaths)
+	includeSelectors, err := getPathSelectors(sub.IncludePaths)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing include selector: %w", err)
 	}
-	excludeSelectors, err := GetPathSelectors(sub.ExcludePaths)
+	excludeSelectors, err := getPathSelectors(sub.ExcludePaths)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing exclude selector: %w", err)
 	}
 
 	limit := int(sub.DiscoveryLimit)
+
 	var filteredCommits = make([]git.CommitMetadata, 0, limit)
-	for skip := uint(0); ; skip += uint(limit) { // nolint: gosec
-		commits, err := r.listCommitsFn(repo, uint(limit), skip) // nolint: gosec
+	for skip, batch := uint(0), uint(limit); ; skip, batch = skip+batch, min(batch*2, 1000) { // nolint: gosec
+		commits, err := r.listCommitsFn(repo, batch, skip) // nolint: gosec
 		if err != nil {
 			return nil, fmt.Errorf("error listing commits from git repo %q: %w", sub.RepoURL, err)
 		}
@@ -237,7 +238,7 @@ func (r *reconciler) discoverBranchHistory(repo git.Repo, sub kargoapi.GitSubscr
 		for _, meta := range commits {
 			// If the commit expression filter is specified, evaluate it.
 			if exprProgram != nil {
-				include, err := EvaluateCommitExpression(meta, exprProgram)
+				include, err := evaluateCommitExpression(meta, exprProgram)
 				if err != nil {
 					return nil, fmt.Errorf("error evaluating expression commit filter: %w", err)
 				}
@@ -257,7 +258,7 @@ func (r *reconciler) discoverBranchHistory(repo git.Repo, sub kargoapi.GitSubscr
 						err,
 					)
 				}
-				if !MatchesPathsFilters(includeSelectors, excludeSelectors, diffPaths) {
+				if !matchesPathsFilters(includeSelectors, excludeSelectors, diffPaths) {
 					continue
 				}
 			}
@@ -320,11 +321,11 @@ func (r *reconciler) discoverTags(repo git.Repo, sub kargoapi.GitSubscription) (
 	}
 
 	// Compile include and exclude path selectors.
-	includeSelectors, err := GetPathSelectors(sub.IncludePaths)
+	includeSelectors, err := getPathSelectors(sub.IncludePaths)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing include selector: %w", err)
 	}
-	excludeSelectors, err := GetPathSelectors(sub.ExcludePaths)
+	excludeSelectors, err := getPathSelectors(sub.ExcludePaths)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing exclude selector: %w", err)
 	}
@@ -341,7 +342,7 @@ func (r *reconciler) discoverTags(repo git.Repo, sub kargoapi.GitSubscription) (
 				err,
 			)
 		}
-		if MatchesPathsFilters(includeSelectors, excludeSelectors, diffPaths) {
+		if matchesPathsFilters(includeSelectors, excludeSelectors, diffPaths) {
 			filteredTags = append(filteredTags, meta)
 		}
 
@@ -361,7 +362,7 @@ func filterTags(tags []git.TagMetadata, ignoreTags []string, allow string) ([]gi
 	}
 	filteredTags := make([]git.TagMetadata, 0, len(tags))
 	for _, tag := range tags {
-		if Ignores(tag.Tag, ignoreTags) || !Allows(tag.Tag, allowRegex) {
+		if ignores(tag.Tag, ignoreTags) || !Allows(tag.Tag, allowRegex) {
 			continue
 		}
 		filteredTags = append(filteredTags, tag)
@@ -395,63 +396,49 @@ func filterTagsByExpression(
 
 	filteredTags := make([]git.TagMetadata, 0, len(tags))
 	for _, tag := range tags {
-		include, err := EvaluateTagExpression(tag, program)
+		env := map[string]any{
+			"tag":         tag.Tag,
+			"id":          tag.CommitID,
+			"creatorDate": tag.CreatorDate,
+			"author":      tag.Author,
+			"committer":   tag.Committer,
+			"subject":     tag.Subject,
+			"tagger":      tag.Tagger,
+			"annotation":  tag.Annotation,
+		}
+
+		result, err := expr.Run(program, env)
 		if err != nil {
-			return nil, fmt.Errorf("error evaluating expression commit filter: %w", err)
+			return nil, fmt.Errorf("error evaluating tag expression filter: %w", err)
 		}
-		if !include {
-			continue
+
+		switch result := result.(type) {
+		case bool:
+			if !result {
+				continue
+			}
+		default:
+			parsedBool, err := strconv.ParseBool(fmt.Sprintf("%v", result))
+			if err != nil {
+				return nil, fmt.Errorf("error parsing expression result: %w", err)
+			}
+			if !parsedBool {
+				continue
+			}
 		}
+
 		filteredTags = append(filteredTags, tag)
 	}
 	return slices.Clip(filteredTags), nil
 }
 
-// EvaluateTagExpression evaluates the given tag expression against
-// the given tag metadata. The tag metadata is passed as the environment
-// for the expression evaluation. It returns true if the expression evaluates to
-// true, and false otherwise. If the expression is not a boolean, it is
-// converted to a boolean using strconv.ParseBool. If the conversion fails,
-// an error is returned.
-func EvaluateTagExpression(
-	tag git.TagMetadata,
-	expression *vm.Program,
-) (bool, error) {
-	env := map[string]any{
-		"tag":         tag.Tag,
-		"id":          tag.CommitID,
-		"creatorDate": tag.CreatorDate,
-		"author":      tag.Author,
-		"committer":   tag.Committer,
-		"subject":     tag.Subject,
-		"tagger":      tag.Tagger,
-		"annotation":  tag.Annotation,
-	}
-
-	result, err := expr.Run(expression, env)
-	if err != nil {
-		return false, err
-	}
-
-	switch result := result.(type) {
-	case bool:
-		return result, nil
-	default:
-		parsedBool, err := strconv.ParseBool(fmt.Sprintf("%v", result))
-		if err != nil {
-			return false, err
-		}
-		return parsedBool, nil
-	}
-}
-
-// EvaluateCommitExpression evaluates the given commit expression against
+// evaluateCommitExpression evaluates the given commit expression against
 // the given commit metadata. The commit metadata is passed as the environment
 // for the expression evaluation. It returns true if the expression evaluates to
 // true, and false otherwise. If the expression is not a boolean, it is
 // converted to a boolean using strconv.ParseBool. If the conversion fails,
 // an error is returned.
-func EvaluateCommitExpression(
+func evaluateCommitExpression(
 	commit git.CommitMetadata,
 	expression *vm.Program,
 ) (bool, error) {
@@ -489,9 +476,9 @@ func Allows(tagName string, allowRegex *regexp.Regexp) bool {
 	return allowRegex.MatchString(tagName)
 }
 
-// Ignores returns true if the given tag name is in the given list of ignored
+// ignores returns true if the given tag name is in the given list of ignored
 // tag names. It returns false otherwise.
-func Ignores(tagName string, ignore []string) bool {
+func ignores(tagName string, ignore []string) bool {
 	for _, i := range ignore {
 		if i == tagName {
 			return true
@@ -500,7 +487,7 @@ func Ignores(tagName string, ignore []string) bool {
 	return false
 }
 
-func GetPathSelectors(selectors []string) (pattern.Matcher, error) {
+func getPathSelectors(selectors []string) (pattern.Matcher, error) {
 	if len(selectors) == 0 {
 		return nil, nil
 	}
@@ -516,7 +503,7 @@ func GetPathSelectors(selectors []string) (pattern.Matcher, error) {
 	return matchers, nil
 }
 
-func MatchesPathsFilters(include, exclude pattern.Matcher, diffs []string) bool {
+func matchesPathsFilters(include, exclude pattern.Matcher, diffs []string) bool {
 	for _, path := range diffs {
 		// If include is nil, all paths are implicitly included
 		// Otherwise, check if the path matches the include pattern
