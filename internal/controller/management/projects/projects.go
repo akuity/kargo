@@ -944,10 +944,10 @@ func (r *reconciler) ensureDefaultUserRoles(
 					Resources: []string{"stages"},
 					Verbs:     []string{"promote"},
 				},
-				{ // Can create, view, and delete promotions
+				{ // Can create and view promotions
 					APIGroups: []string{kargoapi.GroupVersion.Group},
 					Resources: []string{"promotions"},
-					Verbs:     []string{"create", "delete", "get", "list", "watch"},
+					Verbs:     []string{"create", "get", "list", "watch"},
 				},
 				{ // Manual approvals involve patching Freight status
 					APIGroups: []string{kargoapi.GroupVersion.Group},
