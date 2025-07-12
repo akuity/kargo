@@ -1649,7 +1649,7 @@ func TestReconciler_ensureControllerPermissions(t *testing.T) {
 	}
 }
 
-func TestReconciler_ensureDefaultProjectRoles(t *testing.T) {
+func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler *reconciler

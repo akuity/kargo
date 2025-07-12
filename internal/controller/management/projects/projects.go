@@ -796,7 +796,8 @@ func (r *reconciler) ensureDefaultUserRoles(
 
 	const adminRoleName = "kargo-admin"
 	const viewerRoleName = "kargo-viewer"
-	allRoles := []string{adminRoleName, viewerRoleName}
+	const promoterRoleName = "kargo-promoter"
+	allRoles := []string{adminRoleName, viewerRoleName, promoterRoleName}
 
 	for _, saName := range allRoles {
 		saLogger := logger.WithValues("serviceAccount", saName)
@@ -908,6 +909,52 @@ func (r *reconciler) ensureDefaultUserRoles(
 					Verbs:     []string{"get", "list", "watch"},
 				},
 				{
+					APIGroups: []string{rolloutsapi.GroupVersion.Group},
+					Resources: []string{"analysisruns", "analysistemplates"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      promoterRoleName,
+				Namespace: project.Name,
+				Annotations: map[string]string{
+					rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
+				},
+			},
+			Rules: []rbacv1.PolicyRule{
+				{ // For viewing events and serviceaccounts
+					APIGroups: []string{""},
+					Resources: []string{"events", "serviceaccounts"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{ // For viewing project-level access
+					APIGroups: []string{rbacv1.SchemeGroupVersion.Group},
+					Resources: []string{"rolebindings", "roles"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{ // View access to Kargo resources
+					APIGroups: []string{kargoapi.GroupVersion.Group},
+					Resources: []string{"freights", "stages", "warehouses", "projectconfigs"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{ // Promote permission on all stages
+					APIGroups: []string{kargoapi.GroupVersion.Group},
+					Resources: []string{"stages"},
+					Verbs:     []string{"promote"},
+				},
+				{ // Can create and view promotions
+					APIGroups: []string{kargoapi.GroupVersion.Group},
+					Resources: []string{"promotions"},
+					Verbs:     []string{"create", "get", "list", "watch"},
+				},
+				{ // Manual approvals involve patching Freight status
+					APIGroups: []string{kargoapi.GroupVersion.Group},
+					Resources: []string{"freights/status"},
+					Verbs:     []string{"patch"},
+				},
+				{ // View AnalysisRuns and AnalysisTemplates
 					APIGroups: []string{rolloutsapi.GroupVersion.Group},
 					Resources: []string{"analysisruns", "analysistemplates"},
 					Verbs:     []string{"get", "list", "watch"},
