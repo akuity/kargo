@@ -128,7 +128,7 @@ func (g *gitlabWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 	})
 }
 
-// newGitLabRefreshCheck creates a new codeChange instance from a GitLab push event.
+// newGitLabRefreshCheck creates a new refreshEligibilityChecker from a GitLab push event.
 // It extracts the metadata from the event payload. This is used downstream to determine which Warehouses
 // should be refreshed in response to the event based on the commit selection
 // strategy configured for the Warehouse.

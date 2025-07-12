@@ -205,7 +205,7 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 	})
 }
 
-// newGitHubRefreshCheck hydrates a refresh eligibility checker codeChange from a
+// newGitHubRefreshCheck hydrates a refresh eligibility checker from a
 // GitHub PushEvent. This is used downstream to determine which Warehouses
 // should be refreshed in response to the event based on the commit selection
 // strategy configured for the Warehouse.
