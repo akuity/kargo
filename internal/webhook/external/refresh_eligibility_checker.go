@@ -6,10 +6,8 @@ import (
 	"slices"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/expr-lang/expr"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	libGit "github.com/akuity/kargo/internal/controller/git"
 	libSemver "github.com/akuity/kargo/internal/controller/semver"
 	"github.com/akuity/kargo/internal/controller/warehouses"
 	"github.com/akuity/kargo/internal/helm"
@@ -20,16 +18,10 @@ import (
 // request. The checker compares this information against the constraints defined
 // in various repo subscription types to determine if a refresh is needed.
 type refreshEligibilityChecker struct {
-	newCode     *codeChange
+	branchName  *string
+	newGitTag   *string
 	newImageTag *string
 	newChartTag *string
-}
-
-type codeChange struct {
-	tag    *libGit.TagMetadata
-	commit *libGit.CommitMetadata
-	branch string
-	diffs  []string
 }
 
 // needsRefresh filters out all subscriptions that do not match any of the
@@ -72,43 +64,39 @@ func filterSubsByRepoURL(subs []kargoapi.RepoSubscription, repoURLs ...string) [
 }
 
 func (rc *refreshEligibilityChecker) matchesGitConstraint(ctx context.Context, sub *kargoapi.GitSubscription) bool {
-	if rc.newCode == nil || sub == nil {
+	if sub == nil {
 		return false
 	}
 	switch sub.CommitSelectionStrategy {
 	case kargoapi.CommitSelectionStrategySemVer:
-		return rc.matchesSemVerConstraint(ctx, rc.newCode.tag.Tag, sub.SemverConstraint, sub.StrictSemvers) &&
-			rc.matchesGitBaseFilters(ctx, sub)
+		return rc.matchesSemVerConstraint(ctx, rc.newGitTag, sub.SemverConstraint, sub.StrictSemvers) &&
+			rc.matchesAllowIgnoreRules(ctx, rc.newGitTag, sub.AllowTags, sub.IgnoreTags)
 	case kargoapi.CommitSelectionStrategyNewestTag,
 		kargoapi.CommitSelectionStrategyLexical:
-		// We are always dealing with the newest tag in this context (webhooks),
-		// so we only need to check if the tag matches the base filters.
-		return rc.matchesGitBaseFilters(ctx, sub)
+		return rc.matchesAllowIgnoreRules(ctx, rc.newGitTag, sub.AllowTags, sub.IgnoreTags)
 	default: // NewestFromBranch is the default case for Git subscriptions.
-		// We are always dealing with the newest commit from the branch in this context
-		// (webhooks), so we only need to check if the branch matches the one we are looking for.
 		return rc.matchesNewestBranchConstraint(ctx, sub) &&
-			rc.matchesGitBaseFilters(ctx, sub)
+			rc.matchesAllowIgnoreRules(ctx, rc.newGitTag, sub.AllowTags, sub.IgnoreTags)
 	}
 }
 
 func (rc *refreshEligibilityChecker) matchesImageConstraint(ctx context.Context, sub *kargoapi.ImageSubscription) bool {
-	if rc.newImageTag == nil || sub == nil {
+	if sub == nil {
 		return false
 	}
 
 	switch sub.ImageSelectionStrategy {
 	case kargoapi.ImageSelectionStrategyLexical:
-		return rc.matchesAllowIgnoreRules(ctx, *rc.newImageTag, sub.AllowTags, sub.IgnoreTags)
+		return rc.matchesAllowIgnoreRules(ctx, rc.newImageTag, sub.AllowTags, sub.IgnoreTags)
 	case kargoapi.ImageSelectionStrategyNewestBuild:
 		// this strategy is always true in the context of webhooks, as we are
 		// always dealing with the newest build of the image.
 		return true
 	case kargoapi.ImageSelectionStrategyDigest:
 		// Unintuitively, the mutable tag name is specified using the semverConstraint field.
-		return *rc.newImageTag == sub.SemverConstraint
+		return rc.newImageTag == nil || *rc.newImageTag == sub.SemverConstraint
 	default: // SemVer is the default case for Image subscriptions.
-		return rc.matchesSemVerConstraint(ctx, *rc.newImageTag, sub.SemverConstraint, sub.StrictSemvers)
+		return rc.matchesSemVerConstraint(ctx, rc.newImageTag, sub.SemverConstraint, sub.StrictSemvers)
 	}
 }
 
@@ -125,17 +113,29 @@ func (rc *refreshEligibilityChecker) matchesChartConstraint(ctx context.Context,
 		return true
 	}
 	strict := true // SemVer constraints are always strict for charts.
-	return rc.matchesSemVerConstraint(ctx, *rc.newChartTag, sub.SemverConstraint, strict)
+	return rc.matchesSemVerConstraint(ctx, rc.newChartTag, sub.SemverConstraint, strict)
 }
 
-func (rc *refreshEligibilityChecker) matchesSemVerConstraint(ctx context.Context, tag, rule string, strict bool) bool {
-	logger := logging.LoggerFromContext(ctx).WithValues(
+func (rc *refreshEligibilityChecker) matchesSemVerConstraint(
+	ctx context.Context,
+	tag *string,
+	rule string,
+	strict bool,
+) bool {
+	logger := logging.LoggerFromContext(ctx)
+	if tag == nil {
+		logger.Debug("tag is nil, skipping semver constraint check")
+		return true // no tag to match against
+	}
+
+	logger = logger.WithValues(
 		"tag", tag,
 		"constraint", rule,
 		"strictSemvers", strict,
 	)
 
 	if rule == "" {
+		logger.Debug("semver constraint rule is unset, skipping semver constraint check rule check")
 		return true // no semver constraint specified, so all tags are allowed
 	}
 
@@ -145,7 +145,7 @@ func (rc *refreshEligibilityChecker) matchesSemVerConstraint(ctx context.Context
 		return false
 	}
 
-	version := libSemver.Parse(tag, strict)
+	version := libSemver.Parse(*tag, strict)
 	if version == nil {
 		logger.Info("tag is not semver formatted")
 		return false
@@ -162,11 +162,18 @@ func (rc *refreshEligibilityChecker) matchesNewestBranchConstraint(
 	ctx context.Context,
 	sub *kargoapi.GitSubscription,
 ) bool {
-	logger := logging.LoggerFromContext(ctx).WithValues(
-		"branch", rc.newCode.branch,
+	logger := logging.LoggerFromContext(ctx)
+	if rc.branchName == nil {
+		logger.Debug("branch name is nil, skipping branch constraint check")
+		return true
+	}
+
+	logger = logger.WithValues(
+		"branch", *rc.branchName,
 		"target-branch", sub.Branch,
 	)
-	if rc.newCode.branch != sub.Branch {
+
+	if *rc.branchName != sub.Branch {
 		logger.Debug("branch does not match subscription branch")
 		return false
 	}
@@ -174,115 +181,21 @@ func (rc *refreshEligibilityChecker) matchesNewestBranchConstraint(
 	return true
 }
 
-// matchesGitBaseFilters checks that path, expression, and tag filters match.
-func (rc *refreshEligibilityChecker) matchesGitBaseFilters(ctx context.Context, sub *kargoapi.GitSubscription) bool {
-	logger := logging.LoggerFromContext(ctx)
-	if ok := rc.matchesPathFilters(ctx, sub); !ok {
-		logger.Debug("path filters not satisfied")
-		return false
-	}
-	logger.Debug("path filters satisfied")
-
-	if ok := rc.matchesAllowIgnoreRules(ctx, rc.newCode.tag.Tag, sub.AllowTags, sub.IgnoreTags); !ok {
-		logger.Debug("allow/ignore rules not satisfied")
-		return false
-	}
-	logger.Debug("allow/ignore rules satisfied")
-
-	if ok := rc.matchesExpressionFilter(ctx, sub); !ok {
-		logger.Debug("expression filters not satisfied")
-		return false
-	}
-	logger.Debug("expression filters satisfied")
-	return true
-
-}
-
-// matchesPathFilters checks if the provided diffPaths match the
-// include and exclude path filters defined in the subscription.
-// If there are no include or exclude paths, it returns true.
-func (rc *refreshEligibilityChecker) matchesPathFilters(ctx context.Context, sub *kargoapi.GitSubscription) bool {
-	logger := logging.LoggerFromContext(ctx)
-
-	if sub.IncludePaths == nil && sub.ExcludePaths == nil {
-		logger.Debug("no path filters specified, all paths are allowed")
-		return true
-	}
-
-	logger.WithValues(
-		"includePaths", sub.IncludePaths,
-		"excludePaths", sub.ExcludePaths,
-	)
-
-	includeSelectors, err := warehouses.GetPathSelectors(sub.IncludePaths)
-	if err != nil {
-		logger.Error(err, "error parsing include selector")
-		return false
-	}
-
-	excludeSelectors, err := warehouses.GetPathSelectors(sub.ExcludePaths)
-	if err != nil {
-		logger.Error(err, "error parsing exclude selector")
-		return false
-	}
-
-	return warehouses.MatchesPathsFilters(
-		includeSelectors,
-		excludeSelectors,
-		rc.newCode.diffs,
-	)
-}
-
-// matchesExpressionFilter returns true if expression is empty.
-// If the expression is not valid an error is logged and false is returned.
-// if the tag is not nil, it evaluates the tag metadata against the expression.
-// If the commit is not nil, it evaluates the commit metadata against the
-// expression.
-func (rc *refreshEligibilityChecker) matchesExpressionFilter(ctx context.Context, sub *kargoapi.GitSubscription) bool {
-	logger := logging.LoggerFromContext(ctx).WithValues(
-		"expression", sub.ExpressionFilter,
-		"value", sub.ExpressionFilter,
-	)
-
-	if sub.ExpressionFilter == "" {
-		return true // no expression filter specified, so all tags are allowed
-	}
-
-	program, err := expr.Compile(sub.ExpressionFilter)
-	if err != nil {
-		logger.Error(err, "error compiling tag expression filter")
-		return false
-	}
-
-	switch sub.CommitSelectionStrategy {
-	case kargoapi.CommitSelectionStrategySemVer,
-		kargoapi.CommitSelectionStrategyNewestTag,
-		kargoapi.CommitSelectionStrategyLexical:
-		matches, err := warehouses.EvaluateTagExpression(*rc.newCode.tag, program)
-		if err != nil {
-			logger.Error(err, "error evaluating tag expression filter")
-			return false
-		}
-		return matches
-	default:
-		matches, err := warehouses.EvaluateCommitExpression(*rc.newCode.commit, program)
-		if err != nil {
-			logger.Error(err, "error evaluating commit expression filter")
-			return false
-		}
-		return matches
-	}
-}
-
 // matchesAllowIgnoreRules checks if the tag matches the allow and ignore rules
 // if no allow tags are specified, it returns true.
 func (rc *refreshEligibilityChecker) matchesAllowIgnoreRules(
 	ctx context.Context,
-	tag string,
+	tag *string,
 	allowTags string,
 	ignoreTags []string,
 ) bool {
-	logger := logging.LoggerFromContext(ctx).WithValues(
+	logger := logging.LoggerFromContext(ctx)
+	if tag == nil {
+		logger.Debug("tag is nil, skipping allow/ignore rules check")
+		return true // no tag to match against
+	}
+
+	logger = logger.WithValues(
 		"tag", tag,
 		"allowTags", allowTags,
 		"ignoreTags", ignoreTags,
@@ -299,7 +212,7 @@ func (rc *refreshEligibilityChecker) matchesAllowIgnoreRules(
 		return false
 	}
 
-	allowed := warehouses.Allows(tag, allowRegex)
+	allowed := warehouses.Allows(*tag, allowRegex)
 	if !allowed {
 		logger.Debug("tag found on allow list")
 		return false

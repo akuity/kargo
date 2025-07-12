@@ -2,12 +2,10 @@ package external
 
 import (
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	libGit "github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -22,18 +20,14 @@ func Test_needsRefresh_Git(t *testing.T) {
 		{
 			name:         "refresh checker code change unset",
 			repoURLs:     []string{"https://github.com/username/repo.git"},
-			rc:           &refreshEligibilityChecker{newCode: nil},
+			rc:           &refreshEligibilityChecker{newGitTag: nil},
 			rs:           kargoapi.RepoSubscription{Git: nil},
 			needsRefresh: false,
 		},
 		{
 			name:     "semver - invalid semver constraint",
 			repoURLs: []string{"https://github.com/username/repo.git"},
-			rc: &refreshEligibilityChecker{
-				newCode: &codeChange{
-					tag: &libGit.TagMetadata{Tag: "v1.0.0"},
-				},
-			},
+			rc:       &refreshEligibilityChecker{newGitTag: strPtr("v1.0.0")},
 			rs: kargoapi.RepoSubscription{
 				Git: &kargoapi.GitSubscription{
 					RepoURL:                 "https://github.com/username/repo.git",
@@ -49,11 +43,7 @@ func Test_needsRefresh_Git(t *testing.T) {
 		{
 			name:     "semver - tag is not semver formatted",
 			repoURLs: []string{"https://github.com/username/repo.git"},
-			rc: &refreshEligibilityChecker{
-				newCode: &codeChange{
-					tag: &libGit.TagMetadata{Tag: "not-semver-tag"},
-				},
-			},
+			rc:       &refreshEligibilityChecker{newGitTag: strPtr("not-semver-tag")},
 			rs: kargoapi.RepoSubscription{
 				Git: &kargoapi.GitSubscription{
 					RepoURL:                 "https://github.com/username/repo.git",
@@ -67,11 +57,7 @@ func Test_needsRefresh_Git(t *testing.T) {
 		{
 			name:     "semver - not matching",
 			repoURLs: []string{"https://github.com/username/repo.git"},
-			rc: &refreshEligibilityChecker{
-				newCode: &codeChange{
-					tag: &libGit.TagMetadata{Tag: "v1.2.3"},
-				},
-			},
+			rc:       &refreshEligibilityChecker{newGitTag: strPtr("v1.2.3")},
 			rs: kargoapi.RepoSubscription{
 				Git: &kargoapi.GitSubscription{
 					RepoURL:                 "https://github.com/username/repo.git",
@@ -85,11 +71,7 @@ func Test_needsRefresh_Git(t *testing.T) {
 		{
 			name:     "semver - matching",
 			repoURLs: []string{"https://github.com/username/repo.git"},
-			rc: &refreshEligibilityChecker{
-				newCode: &codeChange{
-					tag: &libGit.TagMetadata{Tag: "v1.2.3"},
-				},
-			},
+			rc:       &refreshEligibilityChecker{newGitTag: strPtr("v1.2.3")},
 			rs: kargoapi.RepoSubscription{
 				Git: &kargoapi.GitSubscription{
 					RepoURL:                 "https://github.com/username/repo.git",
@@ -103,9 +85,7 @@ func Test_needsRefresh_Git(t *testing.T) {
 		{
 			name:     "newest from branch - not matching",
 			repoURLs: []string{"https://github.com/username/repo.git"},
-			rc: &refreshEligibilityChecker{
-				newCode: &codeChange{branch: "release-1.0"},
-			},
+			rc:       &refreshEligibilityChecker{branchName: strPtr("release-1.0")},
 			rs: kargoapi.RepoSubscription{
 				Git: &kargoapi.GitSubscription{
 					RepoURL:                 "https://github.com/username/repo.git",
@@ -118,12 +98,7 @@ func Test_needsRefresh_Git(t *testing.T) {
 		{
 			name:     "newest from branch - matching",
 			repoURLs: []string{"https://github.com/username/repo.git"},
-			rc: &refreshEligibilityChecker{
-				newCode: &codeChange{
-					branch: "main",
-					tag:    &libGit.TagMetadata{Tag: "v1.0.0"},
-				},
-			},
+			rc:       &refreshEligibilityChecker{branchName: strPtr("main")},
 			rs: kargoapi.RepoSubscription{
 				Git: &kargoapi.GitSubscription{
 					RepoURL:                 "https://github.com/username/repo.git",
@@ -137,10 +112,8 @@ func Test_needsRefresh_Git(t *testing.T) {
 			name:     "lexical - not matching",
 			repoURLs: []string{"https://github.com/username/repo.git"},
 			rc: &refreshEligibilityChecker{
-				newCode: &codeChange{
-					branch: "main",
-					tag:    &libGit.TagMetadata{Tag: "v1.0.0"},
-				},
+				branchName: strPtr("main"),
+				newGitTag:  strPtr("v1.0.0"),
 			},
 			rs: kargoapi.RepoSubscription{
 				Git: &kargoapi.GitSubscription{
@@ -156,10 +129,8 @@ func Test_needsRefresh_Git(t *testing.T) {
 			name:     "lexical - matching",
 			repoURLs: []string{"https://github.com/username/repo.git"},
 			rc: &refreshEligibilityChecker{
-				newCode: &codeChange{
-					branch: "main",
-					tag:    &libGit.TagMetadata{Tag: "nightly-20231001"},
-				},
+				branchName: strPtr("main"),
+				newGitTag:  strPtr("nightly-20231001"),
 			},
 			rs: kargoapi.RepoSubscription{
 				Git: &kargoapi.GitSubscription{
@@ -167,91 +138,6 @@ func Test_needsRefresh_Git(t *testing.T) {
 					Branch:                  "main",
 					CommitSelectionStrategy: kargoapi.CommitSelectionStrategyLexical,
 					AllowTags:               `^nightly-\d{8}$`,
-				},
-			},
-			needsRefresh: true,
-		},
-		// From this point on, we are testing the newet tag strategy.
-		// In this context(webhooks) we are always working with the newest tag,
-		// so from here on out we will largely be testing the base filters.
-		// This includes mostly path filters and expressions; since allow/ignore
-		// rules were already tested above with the lexical strategy.
-		{
-			name:     "newest tag - path filters not matching",
-			repoURLs: []string{"https://github.com/username/repo.git"},
-			rc: &refreshEligibilityChecker{
-				newCode: &codeChange{
-					tag:   &libGit.TagMetadata{Tag: "v1.0.0"},
-					diffs: []string{"src/file.txt"},
-				},
-			},
-			rs: kargoapi.RepoSubscription{
-				Git: &kargoapi.GitSubscription{
-					RepoURL:                 "https://github.com/username/repo.git",
-					Branch:                  "main",
-					CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestTag,
-					IncludePaths:            []string{"docs/"},
-				},
-			},
-			needsRefresh: false,
-		},
-		{
-			name:     "newest tag - path filters matching",
-			repoURLs: []string{"https://github.com/username/repo.git"},
-			rc: &refreshEligibilityChecker{
-				newCode: &codeChange{
-					tag:   &libGit.TagMetadata{Tag: "v1.0.0"},
-					diffs: []string{"docs/file.txt"},
-				},
-			},
-			rs: kargoapi.RepoSubscription{
-				Git: &kargoapi.GitSubscription{
-					RepoURL:                 "https://github.com/username/repo.git",
-					Branch:                  "main",
-					CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestTag,
-					IncludePaths:            []string{"docs/"},
-				},
-			},
-			needsRefresh: true,
-		},
-		{
-			name:     "newest tag - expression filters not matching",
-			repoURLs: []string{"https://github.com/username/repo.git"},
-			rc: &refreshEligibilityChecker{
-				newCode: &codeChange{
-					tag: &libGit.TagMetadata{
-						Tag:         "v1.0.0",
-						CreatorDate: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
-					},
-				},
-			},
-			rs: kargoapi.RepoSubscription{
-				Git: &kargoapi.GitSubscription{
-					RepoURL:                 "https://github.com/username/repo.git",
-					Branch:                  "main",
-					CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestTag,
-					ExpressionFilter:        `creatorDate.After(date('2024-01-01'))`,
-				},
-			},
-			needsRefresh: false,
-		},
-		{
-			name:     "newest tag - expression filters matching",
-			repoURLs: []string{"https://github.com/username/repo.git"},
-			rc: &refreshEligibilityChecker{
-				newCode: &codeChange{
-					tag: &libGit.TagMetadata{
-						Tag:         "v1.0.0",
-						CreatorDate: time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC),
-					},
-				},
-			},
-			rs: kargoapi.RepoSubscription{
-				Git: &kargoapi.GitSubscription{
-					RepoURL:                 "https://github.com/username/repo.git",
-					Branch:                  "main",
-					CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestTag,
-					ExpressionFilter:        `creatorDate.After(date('2024-01-01'))`,
 				},
 			},
 			needsRefresh: true,

@@ -24,24 +24,7 @@ func TestBitbucketHandler(t *testing.T) {
 
 	const pushEventRequestBody = `
 {
-	"actor": {
-		"name": "admin",
-		"emailAddress": "admin@example.com"
-	},
-	"push": {
-		"changes": [
-			{
-				"new": {
-					"name": "main",
-					"target": {
-						"hash": "a1b2c3d4e5f6",
-						"message": "Updated file.txt",
-						"date": "2015-06-09T03:34:49+00:00"
-					}
-				}
-			}
-		]
-	},
+	"push": {"changes": [{"new": {"name": "main"}}]},
 	"repository": {
 		"links": {
 			"html": {

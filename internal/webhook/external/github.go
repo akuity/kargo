@@ -11,7 +11,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	libGit "github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/helm"
 	xhttp "github.com/akuity/kargo/internal/http"
@@ -191,7 +190,7 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			return
 
 		case *gh.PushEvent:
-			rc.newCode = newGitHubCodeChange(e)
+			rc = newGitHubRefreshCheck(e)
 			// TODO(krancour): GetHTMLURL() gives us a repo URL starting with
 			// https://. By refreshing Warehouses using a normalized representation of
 			// that URL, we will miss any Warehouses that are subscribed to the same
@@ -206,7 +205,7 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 	})
 }
 
-// newGitHubCodeChange hydrates a refresh eligibility checker codeChange from a
+// newGitHubRefreshCheck hydrates a refresh eligibility checker codeChange from a
 // GitHub PushEvent. This is used downstream to determine which Warehouses
 // should be refreshed in response to the event based on the commit selection
 // strategy configured for the Warehouse.
@@ -218,54 +217,19 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 //
 //	 Package event documentation:
 //		https://docs.github.com/en/webhooks/webhook-events-and-payloads#package
-func newGitHubCodeChange(e *gh.PushEvent) *codeChange {
-	hc := e.GetHeadCommit()
-
-	// expected format "Name <email>".
-	author := fmt.Sprintf("%s <%s>",
-		hc.GetAuthor().GetName(),
-		hc.GetAuthor().GetEmail(),
-	)
-	committor := fmt.Sprintf("%s <%s>",
-		hc.GetCommitter().GetName(),
-		hc.GetCommitter().GetEmail(),
-	)
-
-	subject := hc.GetMessage()
-	commitID := hc.GetID()
-	createdAt := hc.GetAuthor().GetDate().Time
-
-	var diffs []string
-	if hc != nil {
-		if len(hc.Added) > 0 {
-			diffs = append(diffs, hc.Added...)
-		}
-		if len(hc.Modified) > 0 {
-			diffs = append(diffs, hc.Modified...)
-		}
-		if len(hc.Removed) > 0 {
-			diffs = append(diffs, hc.Removed...)
+func newGitHubRefreshCheck(e *gh.PushEvent) *refreshEligibilityChecker {
+	var branchName, tag *string
+	if e.GetRef() != "" {
+		switch {
+		case strings.HasPrefix(e.GetRef(), "refs/tags/"):
+			tag = strPtr(strings.TrimPrefix(e.GetRef(), "refs/tags/"))
+		case strings.HasPrefix(e.GetRef(), "refs/heads/"):
+			branchName = strPtr(strings.TrimPrefix(e.GetRef(), "refs/heads/"))
 		}
 	}
 
-	return &codeChange{
-		tag: &libGit.TagMetadata{
-			Tag:         strings.TrimPrefix(e.GetRef(), "refs/tags/"),
-			CommitID:    commitID,
-			CreatorDate: createdAt,
-			Author:      author,
-			Committer:   committor,
-			Subject:     subject,
-			Tagger:      author,
-		},
-		commit: &libGit.CommitMetadata{
-			ID:         commitID,
-			CommitDate: createdAt,
-			Author:     author,
-			Committer:  committor,
-			Subject:    subject,
-		},
-		branch: strings.TrimPrefix(e.GetRef(), "refs/heads/"),
-		diffs:  diffs,
+	return &refreshEligibilityChecker{
+		newGitTag:  tag,
+		branchName: branchName,
 	}
 }
