@@ -1767,8 +1767,6 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 	}
 }
 
-
-
 func TestMigrateSpecToProjectConfig(t *testing.T) {
 	const testProject = "fake-project"
 	testScheme := runtime.NewScheme()
