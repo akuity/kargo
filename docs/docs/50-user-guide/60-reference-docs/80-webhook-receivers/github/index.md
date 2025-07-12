@@ -119,13 +119,13 @@ To configure a single GitHub repository to notify a receiver of relevant events:
    and `<repository>` has been replaced with the name of a repository belonging
    to that account and for which you are an administrator.
 
-    ![Settings](./img/webhooks/settings.png "Settings")
+    ![Settings](./img/repos/settings.png "Settings")
 
 1. Click <Hlt>Add webhook</Hlt>.
 
 1. Complete the <Hlt>Add webhook</Hlt> form:
 
-    ![Add Webhook Form](./img/webhooks/add-webhook-form.png "Add Webhook Form")
+    ![Add Webhook Form](./img/repos/add-webhook-form.png "Add Webhook Form")
 
     1. Complete the <Hlt>Payload URL</Hlt> field using the URL
        [for the webhook receiver](#retrieving-the-receivers-url).
@@ -162,16 +162,16 @@ To configure a single GitHub repository to notify a receiver of relevant events:
 
     1. From the <Hlt>Webhooks</Hlt> dashboard, select the new webhook.
 
-        ![Webhooks](./img/webhooks/webhooks.png "Webhooks")
+        ![Webhooks](./img/repos/webhooks.png "Webhooks")
 
     1. Select the <Hlt>Recent Deliveries</Hlt> tab.
 
-        ![Recent Deliveries](./img/webhooks/recent-deliveries.png "Recent Deliveries")
+        ![Recent Deliveries](./img/repos/recent-deliveries.png "Recent Deliveries")
 
     1. Select the <Hlt>ping</Hlt> event and ensure an HTTP response status of
        `200` was received from the webhook receiver.
 
-        ![Ping Response](./img/webhooks/ping-response.png "Ping Response")
+        ![Ping Response](./img/repos/ping-response.png "Ping Response")
 
 When these steps are complete, the repository will send events to the webhook
 receiver.
@@ -190,11 +190,13 @@ repositories in the organization:
    where `<organization>` has been replaced with the name of an organization for
    which you are an administrator.
 
+    ![Settings](./img/repos/settings.png "Settings")
+
 1. Click <Hlt>Add webhook</Hlt>.
 
 1. Complete the <Hlt>Add webhook</Hlt> form:
 
-    ![Add Webhook Form](./img/webhooks/add-webhook-form.png "Add Webhook Form")
+    ![Add Webhook Form](./img/orgs/add-webhook-form.png "Add Webhook Form")
 
     1. Complete the <Hlt>Payload URL</Hlt> field using the URL
        [for the webhook receiver](#retrieving-the-receivers-url).
@@ -231,16 +233,16 @@ repositories in the organization:
 
     1. From the organization <Hlt>Webhooks</Hlt> dashboard, select the new webhook.
 
-        ![Webhooks](./img/webhooks/webhooks.png "Webhooks")
+        ![Webhooks](./img/orgs/webhooks.png "Webhooks")
 
     1. Scroll down to the <Hlt>Recent Deliveries</Hlt> section.
 
-        ![Recent Deliveries](./img/webhooks/recent-deliveries.png "Recent Deliveries")
+        ![Recent Deliveries](./img/orgs/recent-deliveries.png "Recent Deliveries")
 
     1. Select the <Hlt>ping</Hlt> event and ensure an HTTP response status of
        `200` was received from the webhook receiver.
 
-        ![Ping Response](./img/webhooks/ping-response.png "Ping Response")
+        ![Ping Response](./img/orgs/ping-response.png "Ping Response")
 
 When these steps are complete, all repositories in the organization will send
 events to the webhook receiver.
