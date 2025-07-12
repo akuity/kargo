@@ -247,13 +247,6 @@ repositories in the organization:
 When these steps are complete, all repositories in the organization will send
 events to the webhook receiver.
 
-:::warning
-Organization-level webhooks will receive events from **all** repositories in
-the organization. This includes both public and private repositories. Ensure
-that your webhook receiver is configured to handle the volume of events and
-that you have appropriate security measures in place.
-:::
-
 :::info
 For additional information on configuring organization webhooks, refer directly
 to the
