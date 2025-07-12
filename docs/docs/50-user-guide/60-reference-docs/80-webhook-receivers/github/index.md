@@ -233,7 +233,7 @@ repositories in the organization:
 
         ![Webhooks](./img/webhooks/webhooks.png "Webhooks")
 
-    1. Select the <Hlt>Recent Deliveries</Hlt> tab.
+    1. Scroll down to the <Hlt>Recent Deliveries</Hlt> section.
 
         ![Recent Deliveries](./img/webhooks/recent-deliveries.png "Recent Deliveries")
 
