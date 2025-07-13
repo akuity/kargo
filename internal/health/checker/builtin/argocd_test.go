@@ -508,7 +508,7 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				) error {
 					count++
 					appCopy := app.DeepCopy()
-					if count > 2 {
+					if count > 3 {
 						// After a few retries, update the LastTransitionTime to be after operation finish
 						updatedHealthTransitionTime := metav1.NewTime(operationFinishTime.Add(1 * time.Second))
 						appCopy.Status.Health.LastTransitionTime = &updatedHealthTransitionTime
