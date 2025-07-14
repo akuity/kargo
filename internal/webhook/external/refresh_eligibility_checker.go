@@ -75,7 +75,7 @@ func (rc *refreshEligibilityChecker) matchesGitConstraint(ctx context.Context, s
 		kargoapi.CommitSelectionStrategyLexical:
 		return rc.matchesAllowIgnoreRules(ctx, rc.newGitTag, sub.AllowTags, sub.IgnoreTags)
 	default: // NewestFromBranch is the default case for Git subscriptions.
-		return rc.matchesNewestBranchConstraint(ctx, sub) &&
+		return rc.matchesBranchConstraint(ctx, sub) &&
 			rc.matchesAllowIgnoreRules(ctx, rc.newGitTag, sub.AllowTags, sub.IgnoreTags)
 	}
 }
@@ -158,10 +158,7 @@ func (rc *refreshEligibilityChecker) matchesSemVerConstraint(
 	return matches
 }
 
-func (rc *refreshEligibilityChecker) matchesNewestBranchConstraint(
-	ctx context.Context,
-	sub *kargoapi.GitSubscription,
-) bool {
+func (rc *refreshEligibilityChecker) matchesBranchConstraint(ctx context.Context, sub *kargoapi.GitSubscription) bool {
 	logger := logging.LoggerFromContext(ctx)
 	if rc.branchName == nil {
 		logger.Debug("branch name is nil, skipping branch constraint check")
