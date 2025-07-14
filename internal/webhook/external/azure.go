@@ -39,7 +39,7 @@ type azureWebhookReceiver struct {
 	*baseWebhookReceiver
 }
 
-// newazureWebhookReceiver returns a new instance of azureWebhookReceiver.
+// newAzureWebhookReceiver returns a new instance of azureWebhookReceiver.
 func newAzureWebhookReceiver(
 	c client.Client,
 	project string,
