@@ -16,11 +16,10 @@ new artifacts from all repositories to which that `Warehouse` subscribes.
 
 ## Configuring the Receiver
 
-The Gitea webhook receiver will need to reference a Kubernetes `Secret` with a
+A Gitea webhook receiver must reference a Kubernetes `Secret` resource with a
 `secret` key in its data map. This
 [shared secret](https://en.wikipedia.org/wiki/Shared_secret) will be used by
-Gitea to sign requests. The receiver will use it to authenticate those requests
-by verifying their signatures.
+Gitea to sign requests and by the receiver to verify those signatures.
 
 :::note
 The following commands are suggested for generating and base64-encoding a
