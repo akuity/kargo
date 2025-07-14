@@ -67,7 +67,7 @@ func (rc *refreshEligibilityChecker) matchesGitConstraint(ctx context.Context, s
 	if sub == nil {
 		return false
 	}
-	
+
 	switch sub.CommitSelectionStrategy {
 	case kargoapi.CommitSelectionStrategySemVer:
 		return rc.matchesSemVerConstraint(ctx, rc.newGitTag, sub.SemverConstraint, sub.StrictSemvers) &&
@@ -126,7 +126,7 @@ func (rc *refreshEligibilityChecker) matchesSemVerConstraint(
 	logger := logging.LoggerFromContext(ctx)
 	if tag == nil {
 		logger.Debug("tag is nil, skipping semver constraint check")
-		return true // no tag to match against
+		return true
 	}
 
 	logger = logger.WithValues(
@@ -136,8 +136,8 @@ func (rc *refreshEligibilityChecker) matchesSemVerConstraint(
 	)
 
 	if rule == "" {
-		logger.Debug("semver constraint rule is unset, skipping semver constraint check rule check")
-		return true // no semver constraint specified, so all tags are allowed
+		logger.Debug("semver constraint rule is unset, skipping semver constraint check")
+		return true
 	}
 
 	constraint, err := semver.NewConstraint(rule)
