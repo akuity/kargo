@@ -51,6 +51,8 @@ kind: ProjectConfig
 metadata:
   name: kargo-demo
   namespace: kargo-demo
+  labels:
+    kargo.akuity.io/cred-type: generic
 spec:
   webhookReceivers: 
   - name: gitea-wh-receiver
