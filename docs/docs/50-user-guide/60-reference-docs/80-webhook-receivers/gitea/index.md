@@ -53,10 +53,10 @@ metadata:
   namespace: kargo-demo
 spec:
   webhookReceivers: 
-    - name: gitea-wh-receiver
-      gitlab:
-        secretRef:
-          name: gitea-wh-secret
+  - name: gitea-wh-receiver
+    gitlab:
+      secretRef:
+        name: gitea-wh-secret
 ```
 
 ## Retrieving the Receiver's URL
