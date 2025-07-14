@@ -138,7 +138,7 @@ func (a *azureWebhookReceiver) handleAcrEvent(
 			w,
 			xhttp.Error(
 				fmt.Errorf("event type %s is not supported", event.Action),
-				http.StatusNotImplemented,
+				http.StatusBadRequest,
 			),
 		)
 		return
