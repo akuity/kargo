@@ -19,6 +19,7 @@ func TestValidatePromotionSteps(t *testing.T) {
 			name: "steps are valid",
 			steps: []kargoapi.PromotionStep{
 				{},
+				{}, // optional not dup
 				{As: "fake-step"},
 			},
 			assertions: func(t *testing.T, errs field.ErrorList) {

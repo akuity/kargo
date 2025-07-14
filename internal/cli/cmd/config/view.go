@@ -61,7 +61,7 @@ kargo config view --raw --output=jsonpath='{.bearerToken}'
 
 // addFlags adds the flags for the get freight options to the provided command.
 func (o *viewOptions) addFlags(cmd *cobra.Command) {
-	o.PrintFlags.AddFlags(cmd)
+	o.AddFlags(cmd)
 
 	cmd.Flags().BoolVar(&o.RawByteData, "raw", o.RawByteData, "Display raw byte data and sensitive data")
 }
@@ -90,7 +90,7 @@ func (o *viewOptions) run() error {
 	//       API object" in the future.
 	u.SetKind("CLIConfig")
 
-	printer, err := o.PrintFlags.ToPrinter()
+	printer, err := o.ToPrinter()
 	if err != nil {
 		return err
 	}

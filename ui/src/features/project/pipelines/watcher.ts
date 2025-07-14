@@ -6,11 +6,13 @@ import { QueryClient } from '@tanstack/react-query';
 import { transportWithAuth } from '@ui/config/transport';
 import {
   getStage,
+  getWarehouse,
   listStages,
   listWarehouses
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import {
   GetStageRequestSchema,
+  GetWarehouseRequestSchema,
   KargoService,
   ListStagesRequestSchema,
   ListStagesResponse,
@@ -95,7 +97,10 @@ export class Watcher {
           cardinality: 'finite',
           transport: transportWithAuth
         });
-        this.client.setQueryData(listStagesQueryKey, { stages: data });
+        this.client.setQueryData(listStagesQueryKey, {
+          stages: data,
+          $typeName: 'akuity.io.kargo.service.v1alpha1.ListStagesResponse'
+        });
 
         // update Stage details
         const getStageQueryKey = createConnectQueryKey({
@@ -107,7 +112,13 @@ export class Watcher {
           cardinality: 'finite',
           transport: transportWithAuth
         });
-        this.client.setQueryData(getStageQueryKey, { stage });
+        this.client.setQueryData(getStageQueryKey, {
+          result: {
+            value: stage,
+            case: 'stage'
+          },
+          $typeName: 'akuity.io.kargo.service.v1alpha1.GetStageResponse'
+        });
 
         onStageEvent?.(stage);
       }
@@ -160,19 +171,28 @@ export class Watcher {
           cardinality: 'finite',
           transport: transportWithAuth
         });
-        this.client.setQueryData(listWarehousesQueryKey, { warehouses: data });
+        this.client.setQueryData(listWarehousesQueryKey, {
+          warehouses: data,
+          $typeName: 'akuity.io.kargo.service.v1alpha1.ListWarehousesResponse'
+        });
 
         // update Warehouse details
         const getWarehouseQueryKey = createConnectQueryKey({
-          schema: getStage,
-          input: create(GetStageRequestSchema, {
+          schema: getWarehouse,
+          input: create(GetWarehouseRequestSchema, {
             project: this.project,
             name: warehouse.metadata?.name
           }),
           cardinality: 'finite',
           transport: transportWithAuth
         });
-        this.client.setQueryData(getWarehouseQueryKey, { warehouse });
+        this.client.setQueryData(getWarehouseQueryKey, {
+          $typeName: 'akuity.io.kargo.service.v1alpha1.GetWarehouseResponse',
+          result: {
+            value: warehouse,
+            case: 'warehouse'
+          }
+        });
 
         opts?.onWarehouseEvent?.(warehouse);
       }

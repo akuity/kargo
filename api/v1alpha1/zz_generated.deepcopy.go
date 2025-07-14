@@ -1423,6 +1423,10 @@ func (in *PromotionStatus) DeepCopyInto(out *PromotionStatus) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.StartedAt != nil {
+		in, out := &in.StartedAt, &out.StartedAt
+		*out = (*in).DeepCopy()
+	}
 	if in.FinishedAt != nil {
 		in, out := &in.FinishedAt, &out.FinishedAt
 		*out = (*in).DeepCopy()

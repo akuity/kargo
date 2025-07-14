@@ -78,7 +78,7 @@ kargo delete role my-role
 // addFlags adds the flags for the delete role options to the provided command.
 func (o *deleteRoleOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
-	o.PrintFlags.AddFlags(cmd)
+	o.AddFlags(cmd)
 
 	option.Project(cmd.Flags(), &o.Project, o.Config.Project,
 		"The Project for which to delete Roles. If not set, the default project will be used.")
@@ -111,7 +111,7 @@ func (o *deleteRoleOptions) run(ctx context.Context) error {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	printer, err := o.PrintFlags.ToPrinter()
+	printer, err := o.ToPrinter()
 	if err != nil {
 		return fmt.Errorf("create printer: %w", err)
 	}
@@ -135,7 +135,7 @@ func (o *deleteRoleOptions) run(ctx context.Context) error {
 					Name:      name,
 				},
 			},
-			o.IOStreams.Out,
+			o.Out,
 		)
 	}
 	return errors.Join(errs...)

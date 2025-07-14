@@ -70,8 +70,7 @@ func (g *githubWebhookReceiver) getSecretValues(
 ) ([]string, error) {
 	secretValue, ok := secretData[GithubSecretDataKey]
 	if !ok {
-		return nil,
-			errors.New("Secret data is not valid for a GitHub WebhookReceiver")
+		return nil, fmt.Errorf("missing %q data key for GitHub WebhookReceiver", GithubSecretDataKey)
 	}
 	return []string{string(secretValue)}, nil
 }

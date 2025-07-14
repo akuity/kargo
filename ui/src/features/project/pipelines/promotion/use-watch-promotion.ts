@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 
 import { transportWithAuth } from '@ui/config/transport';
 import { getPromotion } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { KargoService } from '@ui/gen/api/service/v1alpha1/service_pb';
+import { KargoService, RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
 
 export const useWatchPromotion = (project: string, promotion: string) => {
   const client = useQueryClient();
@@ -26,7 +26,7 @@ export const useWatchPromotion = (project: string, promotion: string) => {
       for await (const e of stream) {
         const updatedPromotion = e.promotion;
 
-        if (promotion) {
+        if (promotion && updatedPromotion) {
           const promotionQueryKey = createConnectQueryKey({
             cardinality: 'finite',
             schema: getPromotion,
@@ -39,8 +39,23 @@ export const useWatchPromotion = (project: string, promotion: string) => {
 
           client.setQueryData(promotionQueryKey, {
             result: {
-              value: updatedPromotion
-            }
+              value: updatedPromotion,
+              case: 'promotion'
+            },
+            $typeName: 'akuity.io.kargo.service.v1alpha1.GetPromotionResponse'
+          });
+
+          client.refetchQueries({
+            queryKey: createConnectQueryKey({
+              cardinality: 'finite',
+              schema: getPromotion,
+              input: {
+                project,
+                name: promotion,
+                format: RawFormat.YAML
+              },
+              transport: transportWithAuth
+            })
           });
         }
       }

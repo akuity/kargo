@@ -1,4 +1,4 @@
-import { Controls, ReactFlow, useNodesState } from '@xyflow/react';
+import { Controls, MiniMap, ReactFlow, useNodesState } from '@xyflow/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { queryCache } from '@ui/features/utils/cache';
@@ -67,7 +67,7 @@ export const Graph = (props: GraphProps) => {
     filterContext?.preferredFilter?.hideSubscriptions
   );
 
-  const [nodes, setNodes] = useNodesState(graph.nodes);
+  const [nodes, setNodes, onNodesChange] = useNodesState(graph.nodes);
 
   useEffect(() => {
     setNodes(graph.nodes);
@@ -142,7 +142,13 @@ export const Graph = (props: GraphProps) => {
         nodeTypes={nodeTypes}
         fitView
         proOptions={{ hideAttribution: true }}
+        minZoom={0}
+        onNodesChange={onNodesChange}
       >
+        <MiniMap
+          style={{ background: 'white', border: '1px solid lightblue', borderRadius: '5px' }}
+          pannable
+        />
         <Controls
           showInteractive={false}
           onFitView={() => {

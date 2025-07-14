@@ -10,7 +10,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	kubeerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -36,7 +35,6 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, r.patchProjectStatusFn)
 	require.NotNil(t, r.getNamespaceFn)
 	require.NotNil(t, r.createNamespaceFn)
-	require.NotNil(t, r.deleteNamespaceFn)
 	require.NotNil(t, r.patchOwnerReferencesFn)
 	require.NotNil(t, r.ensureFinalizerFn)
 	require.NotNil(t, r.removeFinalizerFn)
@@ -126,13 +124,6 @@ func TestReconciler_Reconcile(t *testing.T) {
 						kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
 					}
 					ns.Finalizers = []string{kargoapi.FinalizerName}
-					return nil
-				},
-				deleteNamespaceFn: func(
-					_ context.Context,
-					_ client.Object,
-					_ ...client.DeleteOption,
-				) error {
 					return nil
 				},
 				removeFinalizerFn: func(
@@ -508,7 +499,7 @@ func TestReconciler_cleanupProject(t *testing.T) {
 					client.Object,
 					...client.GetOption,
 				) error {
-					return kubeerr.NewNotFound(schema.GroupResource{}, "test-project")
+					return apierrors.NewNotFound(schema.GroupResource{}, "test-project")
 				},
 				removeFinalizerFn: func(
 					context.Context,
@@ -536,7 +527,7 @@ func TestReconciler_cleanupProject(t *testing.T) {
 					client.Object,
 					...client.GetOption,
 				) error {
-					return kubeerr.NewNotFound(schema.GroupResource{}, "test-project")
+					return apierrors.NewNotFound(schema.GroupResource{}, "test-project")
 				},
 				removeFinalizerFn: func(
 					context.Context,
@@ -694,13 +685,6 @@ func TestReconciler_cleanupProject(t *testing.T) {
 					ns.Name = "test-project"
 					return nil
 				},
-				deleteNamespaceFn: func(
-					context.Context,
-					client.Object,
-					...client.DeleteOption,
-				) error {
-					return nil
-				},
 				removeFinalizerFn: func(
 					context.Context,
 					client.Client,
@@ -733,13 +717,6 @@ func TestReconciler_cleanupProject(t *testing.T) {
 					ns.Name = "test-project"
 					return nil
 				},
-				deleteNamespaceFn: func(
-					context.Context,
-					client.Object,
-					...client.DeleteOption,
-				) error {
-					return kubeerr.NewNotFound(schema.GroupResource{}, "test-project")
-				},
 				removeFinalizerFn: func(
 					context.Context,
 					client.Client,
@@ -753,7 +730,7 @@ func TestReconciler_cleanupProject(t *testing.T) {
 			},
 		},
 		{
-			name: "delete namespace - error deleting",
+			name: "error removing namespace finalizer",
 			project: &kargoapi.Project{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        "test-project",
@@ -772,17 +749,17 @@ func TestReconciler_cleanupProject(t *testing.T) {
 					ns.Name = "test-project"
 					return nil
 				},
-				deleteNamespaceFn: func(
-					context.Context,
-					client.Object,
-					...client.DeleteOption,
+				removeFinalizerFn: func(
+					_ context.Context,
+					_ client.Client,
+					_ client.Object,
 				) error {
-					return errors.New("delete failed")
+					return fmt.Errorf("finalizer removal failed")
 				},
 			},
 			assertions: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "failed to delete namespace")
-				require.ErrorContains(t, err, "delete failed")
+				require.ErrorContains(t, err, "failed to remove finalizer from namespace")
+				require.ErrorContains(t, err, "finalizer removal failed")
 			},
 		},
 		{
@@ -805,20 +782,20 @@ func TestReconciler_cleanupProject(t *testing.T) {
 					ns.Name = "test-project"
 					return nil
 				},
-				deleteNamespaceFn: func(
-					context.Context,
-					client.Object,
-					...client.DeleteOption,
-				) error {
-					return nil
-				},
-				removeFinalizerFn: func(
-					context.Context,
-					client.Client,
-					client.Object,
-				) error {
-					return errors.New("finalizer removal failed")
-				},
+				removeFinalizerFn: func() func(context.Context, client.Client, client.Object) error {
+					var count int
+					return func(
+						context.Context,
+						client.Client,
+						client.Object,
+					) error {
+						if count == 0 {
+							count++
+							return nil // First call succeeds
+						}
+						return fmt.Errorf("finalizer removal failed")
+					}
+				}(),
 			},
 			assertions: func(t *testing.T, err error) {
 				require.ErrorContains(t, err, "failed to remove finalizer from project")
@@ -1650,7 +1627,7 @@ func TestReconciler_ensureControllerPermissions(t *testing.T) {
 	}
 }
 
-func TestReconciler_ensureDefaultProjectRoles(t *testing.T) {
+func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
@@ -1798,7 +1775,7 @@ func TestMigrateSpecToProjectConfig(t *testing.T) {
 					},
 					projCfg,
 				)
-				require.True(t, kubeerr.IsNotFound(err))
+				require.True(t, apierrors.IsNotFound(err))
 			},
 		},
 		{
@@ -1827,7 +1804,7 @@ func TestMigrateSpecToProjectConfig(t *testing.T) {
 					},
 					projCfg,
 				)
-				require.True(t, kubeerr.IsNotFound(err))
+				require.True(t, apierrors.IsNotFound(err))
 			},
 		},
 		{

@@ -63,7 +63,7 @@ func (g *giteaWebhookReceiver) getReceiverType() string {
 func (g *giteaWebhookReceiver) getSecretValues(
 	secretData map[string][]byte,
 ) ([]string, error) {
-	secretValue, ok := secretData[GiteaSecretDataKey]
+	secretValue, ok := secretData[giteaSecretDataKey]
 	if !ok {
 		return nil,
 			errors.New("Secret data is not valid for a Gitea WebhookReceiver")
@@ -78,7 +78,7 @@ func (g *giteaWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 
 		logger := logging.LoggerFromContext(ctx)
 
-		signingKey, ok := g.secretData[GiteaSecretDataKey] // a.k.a. shared secret
+		signingKey, ok := g.secretData[giteaSecretDataKey] // a.k.a. shared secret
 		if !ok {
 			xhttp.WriteErrorJSON(w, nil)
 			return

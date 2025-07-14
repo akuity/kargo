@@ -8,7 +8,9 @@ ARGO_ROLLOUTS_CHART_VERSION := 2.39.1
 CERT_MANAGER_CHART_VERSION 	:= 1.16.1
 
 BUF_LINT_ERROR_FORMAT	?= text
-GO_LINT_ERROR_FORMAT 	?= colored-line-number
+GO_LINT_EXTRA_FLAGS 	?= --output.text.print-issued-lines --output.text.colors
+
+GO_TEST_ARGS ?=
 
 VERSION_PACKAGE := github.com/akuity/kargo/pkg/x/version
 
@@ -80,7 +82,7 @@ lint-go: install-golangci-lint
 		for mod in $$(find . -maxdepth 4 -type f -name 'go.mod' | grep -v tools); do \
 			echo "Linting $$(dirname $${mod}) ..."; \
 			cd $$(dirname $${mod}); \
-			$(GOLANGCI_LINT) run --out-format=$(GO_LINT_ERROR_FORMAT) --config $(CURDIR)/.golangci.yaml; \
+			$(GOLANGCI_LINT) run --config $(CURDIR)/.golangci.yaml $(GO_LINT_EXTRA_FLAGS); \
 			cd - > /dev/null; \
 		done; \
 	}
@@ -138,7 +140,7 @@ test-unit: install-helm
 				-race \
 				-coverprofile=coverage.txt \
 				-covermode=atomic \
-				./...; \
+				./... $(GO_TEST_ARGS); \
 			cd - > /dev/null; \
 		done; \
 	}
@@ -249,12 +251,13 @@ codegen-docs:
 # that is pre-loaded with required tools.                                      #
 ################################################################################
 
-# Prevents issues with vcs stamping within docker containers. 
+# Prevents issues with vcs stamping within docker containers.
 GOFLAGS="-buildvcs=false"
 
 DOCKER_OPTS := -it \
 	--rm \
 	-e GOFLAGS=$(GOFLAGS) \
+	-e GO_TEST_ARGS=$(GO_TEST_ARGS) \
 	-v gomodcache:/home/user/gocache \
 	-v $(dir $(realpath $(firstword $(MAKEFILE_LIST)))):/workspaces/kargo \
 	-v /workspaces/kargo/ui/node_modules \

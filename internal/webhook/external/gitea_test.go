@@ -2,7 +2,6 @@ package external
 
 import (
 	"bytes"
-	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -18,25 +17,23 @@ import (
 	"github.com/akuity/kargo/internal/indexer"
 )
 
+const giteaWebhookRequestBodyImage = `
+{
+	"repository": {
+		"clone_url": "https://gitea.com/example/repo.git"
+	}
+}`
 
 func TestGiteaHandler(t *testing.T) {
 	const testURL = "https://webhooks.kargo.example.com/nonsense"
 
 	const testProjectName = "fake-project"
 
-	var validPushEvent = struct {
-		Repo struct {
-			Name string `json:"html_url"`
-		} `json:"repository"`
-	}{Repo: struct {
-		Name string `json:"html_url"`
-	}{Name: "https://gitea.com/example/repo"}}
-
 	testScheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(testScheme))
 
 	testSecretData := map[string][]byte{
-		GiteaSecretDataKey: []byte(testSigningKey),
+		giteaSecretDataKey: []byte(testSigningKey),
 	}
 
 	testCases := []struct {
@@ -116,7 +113,7 @@ func TestGiteaHandler(t *testing.T) {
 			},
 		},
 		{
-			name:       "success -- push event",
+			name:       "success",
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
@@ -138,14 +135,13 @@ func TestGiteaHandler(t *testing.T) {
 				indexer.WarehousesBySubscribedURLs,
 			).Build(),
 			req: func() *http.Request {
-				bodyBytes, err := json.Marshal(validPushEvent)
-				require.NoError(t, err)
+				b := []byte(giteaWebhookRequestBodyImage)
 				req := httptest.NewRequest(
 					http.MethodPost,
 					testURL,
-					bytes.NewBuffer(bodyBytes),
+					bytes.NewBuffer(b),
 				)
-				req.Header.Set("X-Hub-Signature-256", sign(bodyBytes))
+				req.Header.Set("X-Hub-Signature-256", sign(b))
 				req.Header.Set("X-Gitea-Event", "push")
 				return req
 			},

@@ -850,6 +850,8 @@ message GitSubscription {
   optional int32 discoveryLimit = 10;
 }
 
+// GiteaWebhookReceiverConfig describes a webhook receiver that is compatible
+// with Gitea payloads.
 message GiteaWebhookReceiverConfig {
   // SecretRef contains a reference to a Secret. For Project-scoped webhook
   // receivers, the referenced Secret must be in the same namespace as the
@@ -1327,6 +1329,9 @@ message PromotionStatus {
   // HealthChecks contains the health check directives to be executed after
   // the Promotion has completed.
   repeated HealthCheckStep healthChecks = 8;
+
+  // StartedAt is the time when the promotion started.
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time startedAt = 12;
 
   // FinishedAt is the time when the promotion was completed.
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time finishedAt = 6;
