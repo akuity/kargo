@@ -210,7 +210,7 @@ type acrEvent struct {
 //
 // nolint:lll
 type azureDevOpsEvent struct {
-	EventType string `json:"eventType,omitempty"` // For Azure DevOps
+	EventType string `json:"eventType,omitempty"`
 	Resource  struct {
 		Repository struct {
 			RemoteURL string `json:"remoteUrl,omitempty"`
