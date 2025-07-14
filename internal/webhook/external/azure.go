@@ -34,7 +34,7 @@ func init() {
 }
 
 // azureWebhookReceiver is an implementation of WebhookReceiver that handles
-// inbound webhooks from azure.
+// inbound webhooks from both Azure Container Registry (ACR) and Azure DevOps.
 type azureWebhookReceiver struct {
 	*baseWebhookReceiver
 }
