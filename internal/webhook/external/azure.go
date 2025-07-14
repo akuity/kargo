@@ -91,8 +91,10 @@ func (a *azureWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 			xhttp.WriteErrorJSON(
 				w,
 				xhttp.Error(
-					fmt.Errorf("user agent %s is not supported", r.UserAgent()),
-					http.StatusNotImplemented,
+					errors.New(
+						"request does not appear to have originated from a supported service",
+					),
+					http.StatusBadRequest,
 				),
 			)
 			return
