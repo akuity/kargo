@@ -68,7 +68,7 @@ func (a *azureWebhookReceiver) getSecretValues(
 	secretValue, ok := secretData[azureSecretDataKey]
 	if !ok {
 		return nil,
-			errors.New("secret data is not valid for an Azure WebhookReceiver")
+			fmt.Errorf("missing data key %q for Azure WebhookReceiver", azureSecretDataKey)
 	}
 	return []string{string(secretValue)}, nil
 }
