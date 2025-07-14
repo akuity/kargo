@@ -66,7 +66,7 @@ func (g *giteaWebhookReceiver) getSecretValues(
 	secretValue, ok := secretData[giteaSecretDataKey]
 	if !ok {
 		return nil,
-			errors.New("Secret data is not valid for a Gitea WebhookReceiver")
+			errors.New("secret data is not valid for a Gitea WebhookReceiver")
 	}
 	return []string{string(secretValue)}, nil
 }
