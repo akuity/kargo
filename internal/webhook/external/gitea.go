@@ -123,7 +123,7 @@ func (g *giteaWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 
 		payload := struct {
 			Repo struct {
-				URL string `json:"html_url"`
+				URL string `json:"clone_url"`
 			} `json:"repository"`
 		}{}
 		if err := json.Unmarshal(requestBody, &payload); err != nil {
