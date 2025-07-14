@@ -54,7 +54,7 @@ func newAzureWebhookReceiver(
 	}
 }
 
-// GetDetails implements WebhookReceiver.
+// getReceiverType implements WebhookReceiver.
 func (q *azureWebhookReceiver) getReceiverType() string {
 	return azure
 }
