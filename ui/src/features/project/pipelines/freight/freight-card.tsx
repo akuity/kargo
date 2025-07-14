@@ -182,17 +182,17 @@ export const FreightCard = (props: FreightCardProps) => {
           )}
 
           <div className='flex flex-col gap-1 justify-center items-center'>
-            {props.freight?.commits
-              ?.slice(0, 2)
-              .map((commit) => <FreightArtifact key={commit?.repoURL} artifact={commit} />)}
+            {props.freight?.commits?.slice(0, 2).map((commit) => (
+              <FreightArtifact key={commit?.repoURL} artifact={commit} />
+            ))}
 
-            {props.freight?.charts
-              ?.slice(0, 2)
-              .map((chart) => <FreightArtifact key={chart?.repoURL} artifact={chart} />)}
+            {props.freight?.charts?.slice(0, 2).map((chart) => (
+              <FreightArtifact key={chart?.repoURL} artifact={chart} />
+            ))}
 
-            {props.freight?.images
-              ?.slice(0, 2)
-              .map((image) => <FreightArtifact key={image?.repoURL} artifact={image} />)}
+            {props.freight?.images?.slice(0, 2).map((image) => (
+              <FreightArtifact key={image?.repoURL} artifact={image} />
+            ))}
 
             {noOfGitCommits + noOfHelmReleases + noOfContainerImages > 6 && (
               <Typography.Text type='secondary' className='text-[10px]'>

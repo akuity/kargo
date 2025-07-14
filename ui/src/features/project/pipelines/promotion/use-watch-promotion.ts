@@ -26,7 +26,7 @@ export const useWatchPromotion = (project: string, promotion: string) => {
       for await (const e of stream) {
         const updatedPromotion = e.promotion;
 
-        if (promotion) {
+        if (promotion && updatedPromotion) {
           const promotionQueryKey = createConnectQueryKey({
             cardinality: 'finite',
             schema: getPromotion,
@@ -39,8 +39,10 @@ export const useWatchPromotion = (project: string, promotion: string) => {
 
           client.setQueryData(promotionQueryKey, {
             result: {
-              value: updatedPromotion
-            }
+              value: updatedPromotion,
+              case: 'promotion'
+            },
+            $typeName: 'akuity.io.kargo.service.v1alpha1.GetPromotionResponse'
           });
 
           client.refetchQueries({
