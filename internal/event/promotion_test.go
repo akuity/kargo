@@ -108,10 +108,28 @@ func TestNewPromotionAnnotations(t *testing.T) {
 							Name:  "appNamespace",
 							Value: "test-namespace",
 						},
+						{
+							Name:  "overrideVar",
+							Value: "promotion-level-value",
+						},
+						{
+							Name:  "expressionVar",
+							Value: "${{ vars.appNamespace }}",
+						},
 					},
 					Steps: []v1alpha1.PromotionStep{
 						{
 							Uses: "argocd-update",
+							Vars: []v1alpha1.ExpressionVariable{
+								{
+									Name:  "overrideVar",
+									Value: "step-level-value",
+								},
+								{
+									Name:  "stepOnlyVar",
+									Value: "${{ vars.expressionVar }}-additional",
+								},
+							},
 							Config: &v1.JSON{Raw: []byte(`{
   "apps": [
     {
@@ -128,6 +146,10 @@ func TestNewPromotionAnnotations(t *testing.T) {
     {
       "name": "${{ ctx.promotion }}-${{ ctx.meta.promotion.actor }}",
       "namespace": "${{ ctx.targetFreight.name }}-${{ ctx.targetFreight.origin.name }}"
+    },
+    {
+      "name": "${{ vars.overrideVar }}",
+      "namespace": "${{ vars.stepOnlyVar }}"
     }
   ]
 }`)},
@@ -159,7 +181,8 @@ func TestNewPromotionAnnotations(t *testing.T) {
 				v1alpha1.AnnotationKeyEventApplications: `[{"name":"kargo-demo-test","namespace":"argocd"},` +
 					`{"name":"my-application","namespace":"argocd"},` +
 					`{"name":"my-application-test","namespace":"test-namespace"},` +
-					`{"name":"test-promotion-admin","namespace":"test-freight-test-warehouse"}]`,
+					`{"name":"test-promotion-admin","namespace":"test-freight-test-warehouse"},` +
+					`{"name":"step-level-value","namespace":"test-namespace-additional"}]`,
 			},
 		},
 		"template evaluation failure - graceful failing": {
