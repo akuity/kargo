@@ -125,6 +125,8 @@ type WebhookReceiverConfig struct {
 	Gitea *GiteaWebhookReceiverConfig `json:"gitea,omitempty" protobuf:"bytes,7,opt,name=gitea"`
 }
 
+// GiteaWebhookReceiverConfig describes a webhook receiver that is compatible
+// with Gitea payloads.
 type GiteaWebhookReceiverConfig struct {
 	// SecretRef contains a reference to a Secret. For Project-scoped webhook
 	// receivers, the referenced Secret must be in the same namespace as the
