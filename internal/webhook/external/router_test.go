@@ -164,10 +164,10 @@ func TestServer_route(t *testing.T) {
 				).Build(),
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
-				// The X-GitHub-Event header is not set. If we get back a 501 not
-				// implemented, it means we successfully routed the request to the
-				// a gitHubWebhookReceiver.
-				require.Equal(t, http.StatusNotImplemented, rr.Result().StatusCode)
+				// The X-GitHub-Event header is not set. If we get back a 400 bad
+				// request, it means we successfully routed the request to the a
+				// gitHubWebhookReceiver.
+				require.Equal(t, http.StatusBadRequest, rr.Result().StatusCode)
 			},
 		},
 		{
@@ -227,10 +227,10 @@ func TestServer_route(t *testing.T) {
 				).Build(),
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
-				// The X-GitHub-Event header is not set. If we get back a 501 not
-				// implemented, it means we successfully routed the request to the
-				// a gitHubWebhookReceiver.
-				require.Equal(t, http.StatusNotImplemented, rr.Result().StatusCode)
+				// The X-GitHub-Event header is not set. If we get back a 400 bad
+				// request, it means we successfully routed the request to the a
+				// gitHubWebhookReceiver.
+				require.Equal(t, http.StatusBadRequest, rr.Result().StatusCode)
 			},
 		},
 	}

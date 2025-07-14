@@ -74,7 +74,7 @@ func TestGitLabHandler(t *testing.T) {
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusNotImplemented, rr.Code)
+				require.Equal(t, http.StatusBadRequest, rr.Code)
 				require.JSONEq(
 					t,
 					`{"error":"event type nonsense is not supported"}`,

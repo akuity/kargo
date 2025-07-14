@@ -19,6 +19,9 @@ import (
 
 const dockerhubWebhookRequestBodyImage = `
 {
+	"push_data": {
+		"media_type": "application/vnd.oci.image.index.v1+json"
+	},
 	"repository": {
 		"repo_name": "example/repo"
 	}
@@ -26,10 +29,10 @@ const dockerhubWebhookRequestBodyImage = `
 
 const dockerhubWebhookRequestBodyChart = `
 {
-	"repository": {
-		"push_data": {
-			"media_type": "application/vnd.cncf.helm.config.v1+json"
+	"push_data": {
+		"media_type": "application/vnd.cncf.helm.config.v1+json"
 	},
+	"repository": {
 		"repo_name": "example/repo"
 	}
 }`

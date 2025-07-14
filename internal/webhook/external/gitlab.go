@@ -94,7 +94,7 @@ func (g *gitlabWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 				w,
 				xhttp.Error(
 					fmt.Errorf("event type %s is not supported", eventType),
-					http.StatusNotImplemented,
+					http.StatusBadRequest,
 				),
 			)
 			return

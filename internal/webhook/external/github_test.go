@@ -38,6 +38,13 @@ func TestGithubHandler(t *testing.T) {
 			PackageType: gh.Ptr(ghcrPackageTypeContainer),
 			PackageVersion: &gh.PackageVersion{
 				PackageURL: gh.Ptr("ghcr.io/example/repo:latest"),
+				ContainerMetadata: &gh.PackageEventContainerMetadata{
+					Manifest: map[string]any{
+						"config": map[string]any{
+							"media_type": "application/vnd.oci.image.index.v1+json",
+						},
+					},
+				},
 			},
 		},
 	}
@@ -91,7 +98,7 @@ func TestGithubHandler(t *testing.T) {
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusNotImplemented, rr.Code)
+				require.Equal(t, http.StatusBadRequest, rr.Code)
 				require.JSONEq(
 					t,
 					`{"error":"event type nonsense is not supported"}`,
