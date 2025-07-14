@@ -63,8 +63,8 @@ spec:
 
 ## Retrieving the Receiver's URL
 
-Kargo will generate a hard-to-guess URL from the configuration. We can obtain
-this URL using the following command:
+Kargo will generate a hard-to-guess URL from the receiver's configuration. This
+URL can be obtained using a command such as the following:
 
 ```shell
 kubectl get projectconfigs kargo-demo \
