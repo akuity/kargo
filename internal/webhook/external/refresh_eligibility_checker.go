@@ -67,6 +67,7 @@ func (rc *refreshEligibilityChecker) matchesGitConstraint(ctx context.Context, s
 	if sub == nil {
 		return false
 	}
+	
 	switch sub.CommitSelectionStrategy {
 	case kargoapi.CommitSelectionStrategySemVer:
 		return rc.matchesSemVerConstraint(ctx, rc.newGitTag, sub.SemverConstraint, sub.StrictSemvers) &&
