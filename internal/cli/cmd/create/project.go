@@ -71,7 +71,7 @@ kargo create project my-project
 // addFlags adds the flags for the create project options to the provided command.
 func (o *createProjectOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
-	o.PrintFlags.AddFlags(cmd)
+	o.AddFlags(cmd)
 }
 
 // complete sets the options from the command arguments.
@@ -127,9 +127,9 @@ func (o *createProjectOptions) run(ctx context.Context) error {
 		return fmt.Errorf("unmarshal project: %w", err)
 	}
 
-	printer, err := o.PrintFlags.ToPrinter()
+	printer, err := o.ToPrinter()
 	if err != nil {
 		return fmt.Errorf("new printer: %w", err)
 	}
-	return printer.PrintObj(project, o.IOStreams.Out)
+	return printer.PrintObj(project, o.Out)
 }

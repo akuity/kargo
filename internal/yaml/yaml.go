@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	yaml "sigs.k8s.io/yaml/goyaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 // Update represents a discrete update to be made to a YAML document.
@@ -107,9 +107,8 @@ func SetValuesInBytes(inBytes []byte, updates []Update) ([]byte, error) {
 					return nil, fmt.Errorf("%s: %w", errMsg, err)
 				}
 			}
-			if _, err := outBuf.WriteString(
-				fmt.Sprintf("%v", QuoteIfNecessary(change.value)),
-			); err != nil {
+			if _, err := fmt.Fprintf(outBuf,
+				"%v", QuoteIfNecessary(change.value)); err != nil {
 				return nil, fmt.Errorf("%s: %w", errMsg, err)
 			}
 			if _, err := outBuf.WriteString("\n"); err != nil {

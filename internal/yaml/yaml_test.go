@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	yaml "sigs.k8s.io/yaml/goyaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 func TestSetValuesInBytes(t *testing.T) {

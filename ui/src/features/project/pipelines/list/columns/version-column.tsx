@@ -41,17 +41,17 @@ export const versionColumn = (): ColumnType<Stage> => ({
         ) : null}
 
         <div>
-          {firstFreight?.commits
-            ?.slice(0, 2)
-            .map((commit) => <FreightArtifact expand key={commit?.repoURL} artifact={commit} />)}
+          {firstFreight?.commits?.slice(0, 2).map((commit) => (
+            <FreightArtifact expand key={commit?.repoURL} artifact={commit} />
+          ))}
 
-          {firstFreight?.charts
-            ?.slice(0, 2)
-            .map((chart) => <FreightArtifact expand key={chart?.repoURL} artifact={chart} />)}
+          {firstFreight?.charts?.slice(0, 2).map((chart) => (
+            <FreightArtifact expand key={chart?.repoURL} artifact={chart} />
+          ))}
 
-          {firstFreight?.images
-            ?.slice(0, 2)
-            .map((image) => <FreightArtifact expand key={image?.repoURL} artifact={image} />)}
+          {firstFreight?.images?.slice(0, 2).map((image) => (
+            <FreightArtifact expand key={image?.repoURL} artifact={image} />
+          ))}
 
           {totalArtifacts > 6 && (
             <Typography.Text type='secondary' className='text-[10px]'>

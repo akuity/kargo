@@ -3,7 +3,7 @@ name: Release
 on:
   release:
     types: 
-    - created
+    - published
   schedule:
   - cron: '0 1 * * 1-5' # 1 AM UTC is 5 PM PST/ 6 PM PDT
   workflow_dispatch:
@@ -54,7 +54,7 @@ jobs:
       with:
         driver-opts: network=host
     - name: Install Cosign
-      uses: sigstore/cosign-installer@fb28c2b6339dcd94da6e4cbcbc5e888961f6f8c3 # v3.9.0
+      uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3.9.1
       with:
         cosign-release: 'v2.2.1' # optional
     - name: Login to GHCR
@@ -177,7 +177,7 @@ jobs:
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
     container:
-      image: golang:1.24.4-bookworm
+      image: golang:1.24.5-bookworm
     strategy:
       matrix:
         os: [linux, darwin, windows]
@@ -205,7 +205,7 @@ jobs:
     - name: Install nodejs
       uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
       with:
-        node-version: "24.1.0"
+        node-version: "24.3.0"
         cache: "pnpm"
         cache-dependency-path: "**/pnpm-lock.yaml"
     - name: Build UI
@@ -245,7 +245,7 @@ jobs:
     if: github.event_name != 'release'
     runs-on: ubuntu-latest
     container:
-      image: golang:1.24.4-bookworm
+      image: golang:1.24.5-bookworm
     strategy:
       matrix:
         os: [linux, darwin, windows]
@@ -266,7 +266,7 @@ jobs:
     - name: Install nodejs
       uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
       with:
-        node-version: "24.1.0"
+        node-version: "24.3.0"
         cache: "pnpm"
         cache-dependency-path: "**/pnpm-lock.yaml"
     - name: Build UI

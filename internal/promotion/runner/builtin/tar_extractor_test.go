@@ -85,7 +85,7 @@ func Test_tarExtractor_run(t *testing.T) {
 				// Create existing destination with old content
 				extractDir := filepath.Join(tmpDir, "extracted")
 				require.NoError(t, os.MkdirAll(extractDir, 0o755))
-				require.NoError(t, os.WriteFile(filepath.Join(extractDir, "old_file.txt"), []byte("old content"), 0o644))
+				require.NoError(t, os.WriteFile(filepath.Join(extractDir, "old_file.txt"), []byte("old content"), 0o600))
 
 				// Create a tar file
 				tarPath := filepath.Join(tmpDir, "archive.tar")
@@ -284,7 +284,7 @@ func Test_tarExtractor_extractToDir(t *testing.T) {
 				InPath:  "archive.tar",
 				OutPath: "extracted/",
 			},
-			assertions: func(t *testing.T, workDir, extractDir string, result promotion.StepResult, err error) {
+			assertions: func(t *testing.T, _, extractDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
 
@@ -339,7 +339,7 @@ func Test_tarExtractor_extractToDir(t *testing.T) {
 				InPath:  "archive.tar.gz",
 				OutPath: "extracted/",
 			},
-			assertions: func(t *testing.T, workDir, extractDir string, result promotion.StepResult, err error) {
+			assertions: func(t *testing.T, _, extractDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
 
@@ -381,7 +381,7 @@ func Test_tarExtractor_extractToDir(t *testing.T) {
 				OutPath:         "extracted/",
 				StripComponents: ptr.To(int64(2)),
 			},
-			assertions: func(t *testing.T, workDir, extractDir string, result promotion.StepResult, err error) {
+			assertions: func(t *testing.T, _, extractDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
 
@@ -436,7 +436,7 @@ func Test_tarExtractor_extractToDir(t *testing.T) {
 				OutPath: "extracted/",
 				Ignore:  "ignore.txt",
 			},
-			assertions: func(t *testing.T, workDir, extractDir string, result promotion.StepResult, err error) {
+			assertions: func(t *testing.T, _, extractDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
 
@@ -492,7 +492,7 @@ func Test_tarExtractor_extractToDir(t *testing.T) {
 				InPath:  "archive.tar",
 				OutPath: "extracted/",
 			},
-			assertions: func(t *testing.T, workDir, extractDir string, result promotion.StepResult, err error) {
+			assertions: func(t *testing.T, _, extractDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
 
@@ -526,7 +526,7 @@ func Test_tarExtractor_extractToDir(t *testing.T) {
 				InPath:  "notatar.txt",
 				OutPath: "extracted/",
 			},
-			assertions: func(t *testing.T, workDir, extractDir string, result promotion.StepResult, err error) {
+			assertions: func(t *testing.T, _, _ string, result promotion.StepResult, err error) {
 				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
 				assert.ErrorContains(t, err, "error reading tar")
 			},
@@ -644,7 +644,7 @@ func Test_tarExtractor_extractToDir(t *testing.T) {
 				InPath:  "unsafe_symlinks.tar",
 				OutPath: "extracted/",
 			},
-			assertions: func(t *testing.T, workDir, extractDir string, result promotion.StepResult, err error) {
+			assertions: func(t *testing.T, _, extractDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
 
@@ -703,7 +703,7 @@ func Test_tarExtractor_extractToDir(t *testing.T) {
 				InPath:  "oversized.tar",
 				OutPath: "extracted/",
 			},
-			assertions: func(t *testing.T, workDir, extractDir string, result promotion.StepResult, err error) {
+			assertions: func(t *testing.T, _, _ string, result promotion.StepResult, err error) {
 				assert.Error(t, err)
 				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
 				assert.ErrorContains(t, err, "exceeds size limit")
@@ -744,7 +744,7 @@ func Test_tarExtractor_extractToDir(t *testing.T) {
 				InPath:  "oversized.tar",
 				OutPath: "extracted/",
 			},
-			assertions: func(t *testing.T, workDir, extractDir string, result promotion.StepResult, err error) {
+			assertions: func(t *testing.T, _, _ string, result promotion.StepResult, err error) {
 				assert.Error(t, err)
 				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
 				assert.ErrorContains(t, err, "extraction aborted: total size would exceed limit")
@@ -781,7 +781,7 @@ func Test_tarExtractor_extractToDir(t *testing.T) {
 				InPath:  "permissions.tar",
 				OutPath: "extracted/",
 			},
-			assertions: func(t *testing.T, workDir, extractDir string, result promotion.StepResult, err error) {
+			assertions: func(t *testing.T, _, extractDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
 
@@ -835,7 +835,7 @@ func Test_tarExtractor_simpleAtomicMove(t *testing.T) {
 
 				// Create source directory with content
 				require.NoError(t, os.MkdirAll(src, 0o755))
-				require.NoError(t, os.WriteFile(filepath.Join(src, "file.txt"), []byte("content"), 0o644))
+				require.NoError(t, os.WriteFile(filepath.Join(src, "file.txt"), []byte("content"), 0o600))
 
 				return src, dst
 			},
@@ -861,11 +861,11 @@ func Test_tarExtractor_simpleAtomicMove(t *testing.T) {
 
 				// Create source directory with content
 				require.NoError(t, os.MkdirAll(src, 0o755))
-				require.NoError(t, os.WriteFile(filepath.Join(src, "new.txt"), []byte("new content"), 0o644))
+				require.NoError(t, os.WriteFile(filepath.Join(src, "new.txt"), []byte("new content"), 0o600))
 
 				// Create existing destination with different content
 				require.NoError(t, os.MkdirAll(dst, 0o755))
-				require.NoError(t, os.WriteFile(filepath.Join(dst, "old.txt"), []byte("old content"), 0o644))
+				require.NoError(t, os.WriteFile(filepath.Join(dst, "old.txt"), []byte("old content"), 0o600))
 
 				return src, dst
 			},

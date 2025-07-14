@@ -152,8 +152,8 @@ func (r *reconciler) Reconcile(
 	logger := logging.LoggerFromContext(ctx)
 
 	logger = logger.WithValues(
-		"namespace", req.NamespacedName.Namespace,
-		"warehouse", req.NamespacedName.Name,
+		"namespace", req.Namespace,
+		"warehouse", req.Name,
 	)
 	ctx = logging.ContextWithLogger(ctx, logger)
 	logger.Debug("reconciling Warehouse")

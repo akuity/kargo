@@ -1337,6 +1337,9 @@ message PromotionStatus {
   // the Promotion has completed.
   repeated HealthCheckStep healthChecks = 8;
 
+  // StartedAt is the time when the promotion started.
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time startedAt = 12;
+
   // FinishedAt is the time when the promotion was completed.
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time finishedAt = 6;
 

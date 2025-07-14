@@ -17,17 +17,19 @@ Project](https://github.com/akuity/kargo/milestones)
 
 ## In Progress
 
-### v1.6.0
+### v1.7.0
 
 __Expected:__ TBD
+
+## Completed
+
+### v1.6.0
 
 The anchor feature of v1.6.0 is support for triggering applicable Warehouses to
 execute their artifact discovery process in response to inbound webhooks from
 source code and container image repositories. Initial support will favor the
 most popular platforms, such as GitHub, GitLab, Docker Hub and Quay.io, although
 support for many others will be phased in over time.
-
-## Completed
 
 ### v1.5.0
 

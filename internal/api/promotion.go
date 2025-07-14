@@ -70,6 +70,7 @@ func AbortPromotion(
 	promotion, err := GetPromotion(ctx, c, namespacedName)
 	if err != nil || promotion == nil {
 		if promotion == nil {
+			// nolint:staticcheck
 			err = fmt.Errorf(
 				"Promotion %q in namespace %q not found",
 				namespacedName.Name,

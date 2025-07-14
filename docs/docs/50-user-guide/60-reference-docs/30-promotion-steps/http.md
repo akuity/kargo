@@ -23,19 +23,31 @@ with a wide variety of external services.
 | `body` | `string` | N | The body of the request. __Note:__ As this field is a `string`, take care to utilize [`quote()`](../40-expressions.md#quotevalue) if the body is a valid JSON `object`. Refer to the example below of posting a message to a Slack channel. |
 | `insecureSkipTLSVerify` | `boolean` | N | Indicates whether to bypass TLS certificate verification when making the request. Setting this to `true` is highly discouraged. |
 | `timeout` | `string` | N | A string representation of the maximum time interval to wait for a request to complete. _This is the timeout for an individual HTTP request. If a request is retried, each attempt is independently subject to this timeout._ See Go's [`time` package docs](https://pkg.go.dev/time#ParseDuration) for a description of the accepted format. |
-| `successExpression` | `string` | N | An [expr-lang] expression that can evaluate the response to determine success. If this is left undefined and `failureExpression` _is_ defined, the default success criteria will be the inverse of the specified failure criteria. If both are left undefined, success is `true` when the HTTP status code is `2xx`. If `successExpression` and `failureExpression` are both defined and both evaluate to `true`, the failure takes precedence. Note that this expression should _not_ be offset by `${{` and `}}`. See examples for more details. |
-| `failureExpression` | `string` | N | An [expr-lang] expression that can evaluate the response to determine failure. If this is left undefined and `successExpression` _is_ defined, the default failure criteria will be the inverse of the specified success criteria. If both are left undefined, failure is `true` when the HTTP status code is _not_ `2xx`. If `successExpression` and `failureExpression` are both defined and both evaluate to `true`, the failure takes precedence. Note that this expression should _not_ be offset by `${{` and `}}`. See examples for more details. |
+| `successExpression` | `string` | N | An [expr-lang] expression that can evaluate the response to determine success. When defined, the step succeeds only when this expression evaluates to `true`. If both `successExpression` and `failureExpression` are defined and both evaluate to `true`, the failure takes precedence and the step fails terminally. Note that this expression should _not_ be offset by `${{` and `}}`. See examples for more details. |
+| `failureExpression` | `string` | N | An [expr-lang] expression that can evaluate the response to determine failure. When defined and evaluates to `true`, the step fails terminally. If both `successExpression` and `failureExpression` are defined and both evaluate to `true`, the failure takes precedence. Note that this expression should _not_ be offset by `${{` and `}}`. See examples for more details. |
 | `outputs` | `[]object` | N | A list of rules for extracting outputs from the HTTP response. These are only applied to responses deemed successful. |
 | `outputs[].name` | `string` | Y | The name of the output. |
 | `outputs[].fromExpression` | `string` | Y | An [expr-lang] expression that can extract a value from the HTTP response. Note that this expression should _not_ be offset by `${{` and `}}`. See examples for more details. |
 
+## Success and Failure Determination
+
+The step's outcome is determined by evaluating the success and failure criteria
+as follows:
+
+- If `failureExpression` is defined and evaluates to `true`, the step
+  **fails terminally** (no retries).
+- If `successExpression` is defined and evaluates to `true` (and failure
+  criteria are not met), the step **succeeds**.
+- If neither expression is defined: **2xx status codes** succeed,
+  **non-2xx status codes** fail but will be retried.
+- All other cases result in **Running** and will be retried.
+
 :::note
-An HTTP response that is not conclusively determined to have succeeded or failed
-will result in the step reporting a result of `Running`. Kargo will
-[retry](../15-promotion-templates.md#step-retries) such a step on its next
-attempt at reconciling the`Promotion` resource. This will continue until the step
-succeeds, fails, exhausts the configured maximum number of retries, or a configured
-timeout has elapsed.
+The key distinction is between **terminal failures** (when `failureExpression`
+evaluates to `true`) and **retried failures** (all other failure cases).
+Terminal failures stop the promotion immediately, while retried failures allow
+Kargo to retry the step according to the configured
+[retry policy](../15-promotion-templates.md#step-retries).
 :::
 
 ## Expressions
@@ -149,10 +161,9 @@ steps:
 
 Our request is considered:
 
-- Successful if the response status is `200`.
-- A failure if the response status is `404`.
-- Running if the response status is anything else. i.e. Any other status code
-  will result in a retry.
+- **Successful** if the response status is `200`.
+- **A terminal failure** if the response status is `404`.
+- **Running** (will be retried) if the response status is anything else.
 
 ### Posting to Slack
 
