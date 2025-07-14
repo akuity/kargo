@@ -4,11 +4,9 @@ sidebar_label: Gitea
 
 # The Gitea Webhook Receiver
 
-The Gitea Webhook Receiver will respond to `push` events originating from
-Gitea repositories.
-
-In response to a `push` event, the receiver "refreshes" Warehouses subscribed to
-the Git repository from which the event originated.
+The Gitea webhook receiver responds to `push` events originating from Gitea
+repositories by _refreshing_ all `Warehouse` resources subscribed to those
+repositories.
 
 :::info
 "Refreshing" a `Warehouse` resource means enqueuing it for immediate
