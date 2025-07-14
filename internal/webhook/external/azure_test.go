@@ -34,11 +34,13 @@ func TestAzureHandler(t *testing.T) {
 		{
 			name: "malformed request body",
 			req: func() *http.Request {
-				return httptest.NewRequest(
+				req := httptest.NewRequest(
 					http.MethodPost,
 					testURL,
 					bytes.NewBuffer([]byte("invalid json")),
 				)
+				req.Header.Set("User-Agent", "AzureContainerRegistry/1.0.0")
+				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusBadRequest, rr.Code)
@@ -67,11 +69,13 @@ func TestAzureHandler(t *testing.T) {
 				indexer.WarehousesBySubscribedURLs,
 			).Build(),
 			req: func() *http.Request {
-				return httptest.NewRequest(
+				req := httptest.NewRequest(
 					http.MethodPost,
 					testURL,
 					newACRPayload("ping"),
 				)
+				req.Header.Set("User-Agent", "AzureContainerRegistry/1.0.0")
+				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusOK, rr.Code)
@@ -104,11 +108,13 @@ func TestAzureHandler(t *testing.T) {
 				indexer.WarehousesBySubscribedURLs,
 			).Build(),
 			req: func() *http.Request {
-				return httptest.NewRequest(
+				req := httptest.NewRequest(
 					http.MethodPost,
 					testURL,
 					newACRPayload("push"),
 				)
+				req.Header.Set("User-Agent", "AzureContainerRegistry/1.0.0")
+				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusOK, rr.Code)
@@ -141,11 +147,13 @@ func TestAzureHandler(t *testing.T) {
 				indexer.WarehousesBySubscribedURLs,
 			).Build(),
 			req: func() *http.Request {
-				return httptest.NewRequest(
+				req := httptest.NewRequest(
 					http.MethodPost,
 					testURL,
 					newACRPayload("git.push"),
 				)
+				req.Header.Set("User-Agent", "VSServices/1.0.0")
+				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusOK, rr.Code)

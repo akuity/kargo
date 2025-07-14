@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -17,6 +18,7 @@ import (
 )
 
 const (
+	imageMediaType     = "application/vnd.docker.distribution.manifest.v2+json"
 	azureSecretDataKey = "secret"
 	azure              = "azure"
 )
@@ -76,59 +78,66 @@ func (q *azureWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		logger := logging.LoggerFromContext(ctx)
-		logger.Debug("identifying source repository")
-
-		logger.Info("received Azure webhook event",
-			"requestBody", string(requestBody),
-		)
-
-		var event azureEvent
-		if err := json.Unmarshal(requestBody, &event); err != nil {
-			xhttp.WriteErrorJSON(
-				w,
-				xhttp.Error(errors.New("invalid request body"),
-					http.StatusBadRequest,
-				),
-			)
-			return
-		}
+		logger.Debug("received azure event", "userAgent", r.UserAgent())
 
 		switch {
-		case event.Action == "ping":
-			xhttp.WriteResponseJSON(
-				w,
-				http.StatusOK,
-				map[string]string{
-					"msg": "ping event received, webhook is configured correctly",
-				},
-			)
-			return
-		case event.Action == "push":
-			repoURL := fmt.Sprintf("%s/%s",
-				event.Request.Host,
-				event.Target.Repository,
-			)
-
-			// Payloads from azure contain no information about media type, so we
-			// normalize the URL BOTH as if it were an image repo URL and as if it were
-			// a chart repository URL. These will coincidentally be the same, but by
-			// doing this, we safeguard against future changes to normalization logic.
-			// Note: The refresh logic will dedupe the URLs, so this does not create
-			// the possibility of a double refresh.
-			repoURLs := []string{
-				image.NormalizeURL(repoURL),
-				helm.NormalizeChartRepositoryURL(repoURL),
+		// format is AzureContainerRegistry/<version>
+		case strings.Contains(r.UserAgent(), "AzureContainerRegistry"):
+			var event acrEvent
+			if err := json.Unmarshal(requestBody, &event); err != nil {
+				xhttp.WriteErrorJSON(
+					w,
+					xhttp.Error(errors.New("invalid request body"),
+						http.StatusBadRequest,
+					),
+				)
+				return
 			}
 
-			logger = logger.WithValues("repoURLs", repoURLs)
-			ctx = logging.ContextWithLogger(ctx, logger)
-
-			refreshWarehouses(ctx, w, q.client, q.project, repoURL)
-			// For Azure DevOps, when you configure an action trigger
-			// and test it through their UI, it sends an event type
-			// that is the same as the one you configured it for
-			// as opposed to a "ping" event like Azure Container Registry does.
-		case event.EventType == "git.push":
+			switch event.Action {
+			case "push":
+				repoURL := fmt.Sprintf("%s/%s",
+					event.Request.Host,
+					event.Target.Repository,
+				)
+				if event.Target.MediaType == imageMediaType {
+					repoURL = image.NormalizeURL(repoURL)
+				} else {
+					repoURL = helm.NormalizeChartRepositoryURL(repoURL)
+				}
+				logger = logger.WithValues("repoURL", repoURL)
+				ctx = logging.ContextWithLogger(ctx, logger)
+				refreshWarehouses(ctx, w, q.client, q.project, repoURL)
+			case "ping":
+				xhttp.WriteResponseJSON(
+					w,
+					http.StatusOK,
+					map[string]string{
+						"msg": "ping event received, webhook is configured correctly",
+					},
+				)
+			default:
+				xhttp.WriteErrorJSON(
+					w,
+					xhttp.Error(
+						fmt.Errorf("event type %s is not supported", event.Action),
+						http.StatusNotImplemented,
+					),
+				)
+				return
+			}
+		// Format is VSServices/<version>
+		case strings.Contains(r.UserAgent(), "VSServices"):
+			var event azureDevOpsEvent
+			if err := json.Unmarshal(requestBody, &event); err != nil {
+				xhttp.WriteErrorJSON(
+					w,
+					xhttp.Error(errors.New("invalid request body"),
+						http.StatusBadRequest,
+					),
+				)
+				return
+			}
 			repoURL := git.NormalizeURL(event.Resource.Repository.RemoteURL)
 			logger = logger.WithValues("repoURL", repoURL)
 			ctx = logging.ContextWithLogger(ctx, logger)
@@ -137,7 +146,7 @@ func (q *azureWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 			xhttp.WriteErrorJSON(
 				w,
 				xhttp.Error(
-					fmt.Errorf("event type %s is not supported", event.Action),
+					fmt.Errorf("user agent %s is not supported", r.UserAgent()),
 					http.StatusNotImplemented,
 				),
 			)
@@ -146,36 +155,34 @@ func (q *azureWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 	})
 }
 
-// events can come from Azure Container Registry or Azure DevOps.
-// azureEvent is a struct that represents the payload of an event from either
-// of these services as there are no overlapping fields between the two
-//
-// For information on payload schemas for each service, see the links below:
+// For more information on the payload schema for Azure Container Registry, see:
 //
 //	Azure Container Registry
 //		https://learn.microsoft.com/en-us/azure/container-registry/container-registry-webhook-reference#payload-example-image-push-event
 //
 // nolint:lll
+type acrEvent struct {
+	Action string `json:"action"`
+	Target struct {
+		MediaType  string `json:"mediaType"`
+		Repository string `json:"repository"`
+	} `json:"target"`
+	Request struct {
+		Host string `json:"host"`
+	} `json:"request"`
+}
+
+// For information on payload schemas for Azure DevOps, see:
 //
 //	Azure DevOps
 //		https://learn.microsoft.com/en-us/azure/devops/service-hooks/services/webhooks?view=azure-devops#resource-details-to-send
 //
 // nolint:lll
-//
-// Note: there are no overlapping fields between the two services, so we can
-// use a single struct to represent both payloads.
-type azureEvent struct {
-	Action    string `json:"action"`              // For Azure Container Registry
+type azureDevOpsEvent struct {
 	EventType string `json:"eventType,omitempty"` // For Azure DevOps
-	Target    struct {
-		Repository string `json:"repository"`
-	} `json:"target"` // For Azure Container Registry
-	Request struct {
-		Host string `json:"host"`
-	} `json:"request"` // For Azure Container Registry
-	Resource struct {
+	Resource  struct {
 		Repository struct {
 			RemoteURL string `json:"remoteUrl,omitempty"`
 		} `json:"repository"`
-	} `json:"resource"` // For Azure DevOps
+	} `json:"resource"`
 }
