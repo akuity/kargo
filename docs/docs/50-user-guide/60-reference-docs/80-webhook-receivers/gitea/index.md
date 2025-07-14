@@ -14,6 +14,10 @@ reconciliation by the Kargo controller, which will execute the discovery of
 new artifacts from all repositories to which that `Warehouse` subscribes.
 :::
 
+:::info
+The Gitea webhook receiver also works with Gitea Enterprise Gitea Cloud.
+:::
+
 ## Configuring the Receiver
 
 A Gitea webhook receiver must reference a Kubernetes `Secret` resource with a
@@ -74,14 +78,32 @@ kubectl get projectconfigs kargo-demo \
 
 ## Registering with Gitea
 
+1. Navigating to the webhooks dashboard will vary based on scope.
+
+### Repo scope
+
 1. Navigate to `https://gitea.com/<namespace>/<repo>/settings/hooks`, where
    `<namespace>` has been replaced with a Gitea username or group name and
    `<project>` has been replaced with the name of a project belonging to that
    namespace and for which you are an administrator.
 
+### Org scope
+
+1. Navigate to `https://gitea.com/org/<org>/settings/hooks`, where 
+    `<org>` has been replaced by a Gitea organization for which you are an
+    administrator.
+
+### User scope
+
+1. Navigate to `https://gitea.com/org/user/settings/hooks`.
+
     ![Settings](./img/settings.png "Settings")
 
 1. Click <Hlt>Add Webhook</Hlt>.
+
+1. Click <Hlt>Gitea</Hlt> from the dropdown menu.
+
+    ![Dropdown](./img/dropdown.png "Dropdown")
 
 1. Complete the <Hlt>Webhooks</Hlt> form:
 
