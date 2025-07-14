@@ -36,7 +36,7 @@ func TestGiteaHandler(t *testing.T) {
 	require.NoError(t, kargoapi.AddToScheme(testScheme))
 
 	testSecretData := map[string][]byte{
-		GiteaSecretDataKey: []byte(giteaSigningKey),
+		GiteaSecretDataKey: []byte(testSigningKey),
 	}
 
 	testCases := []struct {
