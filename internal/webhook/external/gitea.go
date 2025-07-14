@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	GiteaSecretDataKey = "secret"
+	giteaSecretDataKey = "secret"
 
 	gitea = "gitea"
 )
