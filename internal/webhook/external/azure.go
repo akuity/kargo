@@ -1,6 +1,7 @@
 package external
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -18,7 +19,6 @@ import (
 )
 
 const (
-	imageMediaType     = "application/vnd.docker.distribution.manifest.v2+json"
 	azureSecretDataKey = "secret"
 	azure              = "azure"
 )
@@ -57,24 +57,24 @@ func newAzureWebhookReceiver(
 }
 
 // getReceiverType implements WebhookReceiver.
-func (q *azureWebhookReceiver) getReceiverType() string {
+func (a *azureWebhookReceiver) getReceiverType() string {
 	return azure
 }
 
 // getSecretValues implements WebhookReceiver.
-func (q *azureWebhookReceiver) getSecretValues(
+func (a *azureWebhookReceiver) getSecretValues(
 	secretData map[string][]byte,
 ) ([]string, error) {
 	secretValue, ok := secretData[azureSecretDataKey]
 	if !ok {
 		return nil,
-			errors.New("Secret data is not valid for an Azure WebhookReceiver")
+			errors.New("secret data is not valid for an Azure WebhookReceiver")
 	}
 	return []string{string(secretValue)}, nil
 }
 
 // getHandler implements WebhookReceiver.
-func (q *azureWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
+func (a *azureWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		logger := logging.LoggerFromContext(ctx)
@@ -83,65 +83,10 @@ func (q *azureWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 		switch {
 		// format is AzureContainerRegistry/<version>
 		case strings.Contains(r.UserAgent(), "AzureContainerRegistry"):
-			var event acrEvent
-			if err := json.Unmarshal(requestBody, &event); err != nil {
-				xhttp.WriteErrorJSON(
-					w,
-					xhttp.Error(errors.New("invalid request body"),
-						http.StatusBadRequest,
-					),
-				)
-				return
-			}
-
-			switch event.Action {
-			case "push":
-				repoURL := fmt.Sprintf("%s/%s",
-					event.Request.Host,
-					event.Target.Repository,
-				)
-				if event.Target.MediaType == imageMediaType {
-					repoURL = image.NormalizeURL(repoURL)
-				} else {
-					repoURL = helm.NormalizeChartRepositoryURL(repoURL)
-				}
-				logger = logger.WithValues("repoURL", repoURL)
-				ctx = logging.ContextWithLogger(ctx, logger)
-				refreshWarehouses(ctx, w, q.client, q.project, repoURL)
-			case "ping":
-				xhttp.WriteResponseJSON(
-					w,
-					http.StatusOK,
-					map[string]string{
-						"msg": "ping event received, webhook is configured correctly",
-					},
-				)
-			default:
-				xhttp.WriteErrorJSON(
-					w,
-					xhttp.Error(
-						fmt.Errorf("event type %s is not supported", event.Action),
-						http.StatusNotImplemented,
-					),
-				)
-				return
-			}
+			a.handleAcrEvent(ctx, w, requestBody)
 		// Format is VSServices/<version>
 		case strings.Contains(r.UserAgent(), "VSServices"):
-			var event azureDevOpsEvent
-			if err := json.Unmarshal(requestBody, &event); err != nil {
-				xhttp.WriteErrorJSON(
-					w,
-					xhttp.Error(errors.New("invalid request body"),
-						http.StatusBadRequest,
-					),
-				)
-				return
-			}
-			repoURL := git.NormalizeURL(event.Resource.Repository.RemoteURL)
-			logger = logger.WithValues("repoURL", repoURL)
-			ctx = logging.ContextWithLogger(ctx, logger)
-			refreshWarehouses(ctx, w, q.client, q.project, repoURL)
+			a.handleAzureDevOpsEvent(ctx, w, requestBody)
 		default:
 			xhttp.WriteErrorJSON(
 				w,
@@ -155,6 +100,89 @@ func (q *azureWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 	})
 }
 
+func (a *azureWebhookReceiver) handleAcrEvent(
+	ctx context.Context,
+	w http.ResponseWriter,
+	requestBody []byte,
+) {
+	var event acrEvent
+	if err := json.Unmarshal(requestBody, &event); err != nil {
+		xhttp.WriteErrorJSON(
+			w,
+			xhttp.Error(errors.New("invalid request body"),
+				http.StatusBadRequest,
+			),
+		)
+		return
+	}
+
+	switch event.Action {
+	case "push":
+		repoURLs := resolveAcrRepoURLs(event)
+		logger := logging.LoggerFromContext(ctx)
+		logger = logger.WithValues("repoURLs", repoURLs)
+		ctx = logging.ContextWithLogger(ctx, logger)
+		refreshWarehouses(ctx, w, a.client, a.project, repoURLs...)
+	case "ping":
+		xhttp.WriteResponseJSON(
+			w,
+			http.StatusOK,
+			map[string]string{
+				"msg": "ping event received, webhook is configured correctly",
+			},
+		)
+	default:
+		xhttp.WriteErrorJSON(
+			w,
+			xhttp.Error(
+				fmt.Errorf("event type %s is not supported", event.Action),
+				http.StatusNotImplemented,
+			),
+		)
+		return
+	}
+}
+
+func (a *azureWebhookReceiver) handleAzureDevOpsEvent(
+	ctx context.Context,
+	w http.ResponseWriter,
+	requestBody []byte,
+) {
+	var event azureDevOpsEvent
+	if err := json.Unmarshal(requestBody, &event); err != nil {
+		xhttp.WriteErrorJSON(
+			w,
+			xhttp.Error(errors.New("invalid request body"),
+				http.StatusBadRequest,
+			),
+		)
+		return
+	}
+	repoURL := git.NormalizeURL(event.Resource.Repository.RemoteURL)
+	logger := logging.LoggerFromContext(ctx)
+	logger = logger.WithValues("repoURL", repoURL)
+	ctx = logging.ContextWithLogger(ctx, logger)
+	refreshWarehouses(ctx, w, a.client, a.project, repoURL)
+}
+
+func resolveAcrRepoURLs(e acrEvent) []string {
+	repoURL := fmt.Sprintf("%s/%s", e.Request.Host, e.Target.Repository)
+	var repoURLs []string
+	switch e.Target.MediaType {
+	case imageMediaType:
+		repoURLs = append(repoURLs, image.NormalizeURL(repoURL))
+	case helmChartMediaType:
+		repoURLs = append(repoURLs, helm.NormalizeChartRepositoryURL(repoURL))
+	default:
+		repoURLs = append(repoURLs,
+			image.NormalizeURL(repoURL),
+			helm.NormalizeChartRepositoryURL(repoURL),
+		)
+	}
+	return repoURLs
+}
+
+// acrEvent represents the payload for Azure Container Registry webhooks.
 // For more information on the payload schema for Azure Container Registry, see:
 //
 //	Azure Container Registry
@@ -172,6 +200,7 @@ type acrEvent struct {
 	} `json:"request"`
 }
 
+// azureDevOpsEvent represents the payload for Azure DevOps webhooks.
 // For information on payload schemas for Azure DevOps, see:
 //
 //	Azure DevOps

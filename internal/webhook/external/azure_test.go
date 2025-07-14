@@ -2,6 +2,7 @@ package external
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -72,7 +73,7 @@ func TestAzureHandler(t *testing.T) {
 				req := httptest.NewRequest(
 					http.MethodPost,
 					testURL,
-					newACRPayload("ping"),
+					newAzurePayload("ping", ""),
 				)
 				req.Header.Set("User-Agent", "AzureContainerRegistry/1.0.0")
 				return req
@@ -87,7 +88,7 @@ func TestAzureHandler(t *testing.T) {
 			},
 		},
 		{
-			name: "success -- push",
+			name: "success -- image push",
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
 					ObjectMeta: metav1.ObjectMeta{
@@ -111,7 +112,46 @@ func TestAzureHandler(t *testing.T) {
 				req := httptest.NewRequest(
 					http.MethodPost,
 					testURL,
-					newACRPayload("push"),
+					newAzurePayload("push", imageMediaType),
+				)
+				req.Header.Set("User-Agent", "AzureContainerRegistry/1.0.0")
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(
+					t,
+					`{"msg":"refreshed 1 warehouse(s)"}`,
+					rr.Body.String(),
+				)
+			},
+		},
+		{
+			name: "success -- chart push",
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Chart: &kargoapi.ChartSubscription{
+								RepoURL: "fakeregistry.azurecr.io/fakeimage",
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					newAzurePayload("push", helmChartMediaType),
 				)
 				req.Header.Set("User-Agent", "AzureContainerRegistry/1.0.0")
 				return req
@@ -150,7 +190,7 @@ func TestAzureHandler(t *testing.T) {
 				req := httptest.NewRequest(
 					http.MethodPost,
 					testURL,
-					newACRPayload("git.push"),
+					newAzurePayload("git.push", ""),
 				)
 				req.Header.Set("User-Agent", "VSServices/1.0.0")
 				return req
@@ -186,18 +226,21 @@ func TestAzureHandler(t *testing.T) {
 	}
 }
 
-func newACRPayload(event string) *bytes.Buffer {
+func newAzurePayload(event, mediaType string) *bytes.Buffer {
 	switch event {
 	case "ping":
 		return bytes.NewBufferString(`{"action": "ping"}`)
 	case "push":
-		return bytes.NewBufferString(`
-		{
-			"action": "push",
-			"target": {"repository": "fakeimage"},
-			"request": {"host": "fakeregistry.azurecr.io"}
-		}`,
-		)
+		return bytes.NewBufferString(fmt.Sprintf(`
+			{
+				"action": "push",
+				"target": {
+					"repository": "fakeimage",
+					"mediaType": %q
+				},
+				"request": {"host": "fakeregistry.azurecr.io"}
+			}`, mediaType,
+		))
 	case "git.push":
 		return bytes.NewBufferString(`
 		{
