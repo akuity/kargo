@@ -192,7 +192,7 @@ func (rc *refreshEligibilityChecker) matchesAllowIgnoreRules(
 	logger := logging.LoggerFromContext(ctx)
 	if tag == nil {
 		logger.Debug("tag is nil, skipping allow/ignore rules check")
-		return true // no tag to match against
+		return true
 	}
 
 	logger = logger.WithValues(
@@ -214,7 +214,7 @@ func (rc *refreshEligibilityChecker) matchesAllowIgnoreRules(
 
 	allowed := warehouses.Allows(*tag, allowRegex)
 	if !allowed {
-		logger.Debug("tag found on allow list")
+		logger.Debug("tag not allowed")
 		return false
 	}
 	return true
