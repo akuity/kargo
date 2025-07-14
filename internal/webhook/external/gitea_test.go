@@ -18,7 +18,6 @@ import (
 	"github.com/akuity/kargo/internal/indexer"
 )
 
-const giteaSigningKey = "mysupersecrettoken"
 
 func TestGiteaHandler(t *testing.T) {
 	const testURL = "https://webhooks.kargo.example.com/nonsense"
