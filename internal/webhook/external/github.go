@@ -20,6 +20,10 @@ const (
 
 	github = "github"
 
+	githubEventTypePackage = "package"
+	githubEventTypePing    = "ping"
+	githubEventTypePush    = "push"
+
 	ghcrPackageTypeContainer = "CONTAINER"
 	ghcrPackageTypeDocker    = "docker"
 )
@@ -86,9 +90,9 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			return
 		}
 
-		eventType := r.Header.Get("X-GitHub-Event")
+		eventType := r.Header.Get(gh.EventTypeHeader)
 		switch eventType {
-		case "package", "ping", "push":
+		case githubEventTypePackage, githubEventTypePing, githubEventTypePush:
 		default:
 			xhttp.WriteErrorJSON(
 				w,

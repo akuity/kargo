@@ -17,6 +17,9 @@ import (
 const (
 	gitlab              = "gitlab"
 	gitLabSecretDataKey = "secret-token"
+
+	gitlabTokenHeader = "X-Gitlab-Token" // nolint: gosec
+	gitlabEventHeader = "X-Gitlab-Event"
 )
 
 func init() {
