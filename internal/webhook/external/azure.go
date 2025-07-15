@@ -91,7 +91,7 @@ func (a *azureWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 		case strings.HasPrefix(r.UserAgent(), acrUserAgentPrefix):
 			a.handleAcrEvent(ctx, w, requestBody)
 		// Format is VSServices/<version>
-		case strings.Contains(r.UserAgent(), "VSServices"):
+		case strings.HasPrefix(r.UserAgent(), azureDevOpsUserAgentPrefix):
 			a.handleAzureDevOpsEvent(ctx, w, requestBody)
 		default:
 			xhttp.WriteErrorJSON(
