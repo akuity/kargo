@@ -102,7 +102,7 @@ func (a *azureWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 	})
 }
 
-func (a *azureWebhookReceiver) handleAcrEvent(
+func (a *azureWebhookReceiver) handleACREvent(
 	ctx context.Context,
 	w http.ResponseWriter,
 	requestBody []byte,
