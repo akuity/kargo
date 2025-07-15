@@ -125,7 +125,7 @@ func (a *azureWebhookReceiver) handleACREvent(
 	}
 
 	switch event.Action {
-	case "push":
+	case acrPushEvent:
 		repoURL := normalizeOCIRepoURL(
 			fmt.Sprintf("%s/%s", event.Request.Host, eevent.Target.Repository),
 			event.Target.MediaType,
