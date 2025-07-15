@@ -192,7 +192,7 @@ func TestAzureHandler(t *testing.T) {
 					testURL,
 					newAzurePayload("git.push", ""),
 				)
-				req.Header.Set("User-Agent", "VSServices/1.0.0")
+				req.Header.Set("User-Agent", azureDevOpsUserAgentPrefix)
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
