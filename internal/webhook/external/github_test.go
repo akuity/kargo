@@ -41,7 +41,7 @@ func TestGithubHandler(t *testing.T) {
 				ContainerMetadata: &gh.PackageEventContainerMetadata{
 					Manifest: map[string]any{
 						"config": map[string]any{
-							"media_type": "application/vnd.oci.image.index.v1+json",
+							"media_type": ociImageIndexMediaType,
 						},
 					},
 				},
@@ -57,7 +57,7 @@ func TestGithubHandler(t *testing.T) {
 				ContainerMetadata: &gh.PackageEventContainerMetadata{
 					Manifest: map[string]any{
 						"config": map[string]any{
-							"media_type": "application/vnd.cncf.helm.config.v1+json",
+							"media_type": helmChartMediaType,
 						},
 					},
 				},

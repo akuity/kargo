@@ -15,6 +15,14 @@ import (
 )
 
 const (
+	azureSecretDataKey = "secret"
+	azure              = "azure"
+
+	acrUserAgentPrefix         = "AzureContainerRegistry"
+	azureDevOpsUserAgentPrefix = "VSServices"
+)
+
+const (
 	gitlab              = "gitlab"
 	gitLabSecretDataKey = "secret-token"
 

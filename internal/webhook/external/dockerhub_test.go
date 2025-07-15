@@ -20,7 +20,7 @@ import (
 const dockerhubWebhookRequestBodyImage = `
 {
 	"push_data": {
-		"media_type": "application/vnd.oci.image.index.v1+json"
+		"media_type": "` + ociImageIndexMediaType + `"
 	},
 	"repository": {
 		"repo_name": "example/repo"
@@ -30,7 +30,7 @@ const dockerhubWebhookRequestBodyImage = `
 const dockerhubWebhookRequestBodyChart = `
 {
 	"push_data": {
-		"media_type": "application/vnd.cncf.helm.config.v1+json"
+		"media_type": "` + helmChartMediaType + `"
 	},
 	"repository": {
 		"repo_name": "example/repo"

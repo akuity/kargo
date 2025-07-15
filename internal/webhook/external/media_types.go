@@ -7,11 +7,21 @@ import (
 	"github.com/akuity/kargo/internal/image"
 )
 
+const (
+	ociImageIndexMediaType    = "application/vnd.oci.image.index.v1+json"
+	ociImageManifestMediaType = "application/vnd.oci.image.manifest.v1+json"
+
+	dockerManifestListMediaType = "application/vnd.docker.distribution.manifest.list.v2+json"
+	dockerManifestMediaType     = "application/vnd.docker.distribution.manifest.v2+json"
+
+	helmChartMediaType = "application/vnd.cncf.helm.config.v1+json"
+)
+
 var containerImageMediaTypes = []string{
-	"application/vnd.oci.image.index.v1+json",
-	"application/vnd.oci.image.manifest.v1+json",
-	"application/vnd.docker.distribution.manifest.list.v2+json",
-	"application/vnd.docker.distribution.manifest.v2+json",
+	ociImageIndexMediaType,
+	ociImageManifestMediaType,
+	dockerManifestListMediaType,
+	dockerManifestMediaType,
 }
 
 func isContainerImageMediaType(mediaType string) bool {
@@ -19,10 +29,10 @@ func isContainerImageMediaType(mediaType string) bool {
 }
 
 func isHelmChartMediaType(mediaType string) bool {
-	return mediaType == "application/vnd.cncf.helm.config.v1+json"
+	return mediaType == helmChartMediaType
 }
 
-// normalizeOCIRepoURL returns a normalized representation the specified OCI
+// normalizeOCIRepoURL returns a normalized representation of the specified OCI
 // repository URL based on the specified media type. If the media type is not
 // recognized, an empty string is returned.
 func normalizeOCIRepoURL(repoURL, mediaType string) string {
