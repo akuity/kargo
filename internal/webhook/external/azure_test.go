@@ -40,7 +40,7 @@ func TestAzureHandler(t *testing.T) {
 					testURL,
 					bytes.NewBuffer([]byte("invalid json")),
 				)
-				req.Header.Set("User-Agent", "AzureContainerRegistry/1.0.0")
+				req.Header.Set("User-Agent", acrUserAgentPrefix)
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
