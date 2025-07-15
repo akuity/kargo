@@ -88,7 +88,7 @@ func (a *azureWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 
 		switch {
 		// Format is AzureContainerRegistry/<version>
-		case strings.Contains(r.UserAgent(), "AzureContainerRegistry"):
+		case strings.HasPrefix(r.UserAgent(), acrUserAgentPrefix):
 			a.handleAcrEvent(ctx, w, requestBody)
 		// Format is VSServices/<version>
 		case strings.Contains(r.UserAgent(), "VSServices"):
