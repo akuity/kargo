@@ -126,11 +126,14 @@ func (a *azureWebhookReceiver) handleACREvent(
 
 	switch event.Action {
 	case "push":
-		repoURLs := resolveAcrRepoURLs(event)
+		repoURL := normalizeOCIRepoURL(
+			fmt.Sprintf("%s/%s", event.Request.Host, eevent.Target.Repository),
+			event.Target.MediaType,
+		)
 		logger := logging.LoggerFromContext(ctx)
-		logger = logger.WithValues("repoURLs", repoURLs)
+		logger = logger.WithValues("repoURL", repoURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		refreshWarehouses(ctx, w, a.client, a.project, repoURLs...)
+		refreshWarehouses(ctx, w, a.client, a.project, repoURL)
 	case "ping":
 		xhttp.WriteResponseJSON(
 			w,
