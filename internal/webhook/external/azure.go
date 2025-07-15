@@ -21,6 +21,12 @@ import (
 const (
 	azureSecretDataKey = "secret"
 	azure              = "azure"
+
+	acrPingEvent = "ping"
+	acrPushEvent = "push"
+
+	acrUserAgentPrefix         = "AzureContainerRegistry"
+	azureDevOpsUserAgentPrefix = "VSServices"
 )
 
 func init() {
