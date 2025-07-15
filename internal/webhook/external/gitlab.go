@@ -17,6 +17,9 @@ import (
 const (
 	gitlab              = "gitlab"
 	gitLabSecretDataKey = "secret-token"
+
+	gitlabTokenHeader = "X-Gitlab-Token" // nolint: gosec
+	gitlabEventHeader = "X-Gitlab-Event"
 )
 
 func init() {
@@ -95,7 +98,7 @@ func (g *gitlabWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 				w,
 				xhttp.Error(
 					fmt.Errorf("event type %s is not supported", eventType),
-					http.StatusNotImplemented,
+					http.StatusBadRequest,
 				),
 			)
 			return

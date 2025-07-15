@@ -34,6 +34,11 @@ func refreshWarehouses(
 	// De-dupe repository URLs
 	slices.Sort(repoURLs)
 	repoURLs = slices.Compact(repoURLs)
+	// If there had been any empty strings in the slice, after sorting and
+	// compacting, at most the zero element will be empty. If it is, remove it.
+	if repoURLs[0] == "" {
+		repoURLs = repoURLs[1:]
+	}
 
 	warehouses := []kargoapi.Warehouse{}
 
