@@ -81,7 +81,7 @@ func (a *azureWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 		logger.Debug("received azure event", "userAgent", r.UserAgent())
 
 		switch {
-		// format is AzureContainerRegistry/<version>
+		// Format is AzureContainerRegistry/<version>
 		case strings.Contains(r.UserAgent(), "AzureContainerRegistry"):
 			a.handleAcrEvent(ctx, w, requestBody)
 		// Format is VSServices/<version>
