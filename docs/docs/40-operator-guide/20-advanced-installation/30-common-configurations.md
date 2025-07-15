@@ -334,8 +334,11 @@ Kargo to work with `Rollout` resources created by Argo Rollouts as part of the
 This can be disabled as follows:
 
 ```yaml
+api:
+  rollouts:
+    integrationEnabled: false
 controller:
-  argoRollouts:
+  rollouts:
     integrationEnabled: false
 ```
 
