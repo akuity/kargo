@@ -176,22 +176,6 @@ func (a *azureWebhookReceiver) handleAzureDevOpsEvent(
 	refreshWarehouses(ctx, w, a.client, a.project, repoURL)
 }
 
-func resolveAcrRepoURLs(e acrEvent) []string {
-	repoURL := fmt.Sprintf("%s/%s", e.Request.Host, e.Target.Repository)
-	var repoURLs []string
-	switch e.Target.MediaType {
-	case imageMediaType:
-		repoURLs = append(repoURLs, image.NormalizeURL(repoURL))
-	case helmChartMediaType:
-		repoURLs = append(repoURLs, helm.NormalizeChartRepositoryURL(repoURL))
-	default:
-		repoURLs = append(repoURLs,
-			image.NormalizeURL(repoURL),
-			helm.NormalizeChartRepositoryURL(repoURL),
-		)
-	}
-	return repoURLs
-}
 
 // acrEvent represents the payload for Azure Container Registry webhooks.
 // For more information on the payload schema for Azure Container Registry, see:
