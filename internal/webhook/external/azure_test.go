@@ -75,7 +75,7 @@ func TestAzureHandler(t *testing.T) {
 					testURL,
 					newAzurePayload("ping", ""),
 				)
-				req.Header.Set("User-Agent", "AzureContainerRegistry/1.0.0")
+				req.Header.Set("User-Agent", acrUserAgentPrefix)
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
