@@ -103,6 +103,32 @@ message ArgoCDAppSyncStatus {
   repeated string revisions = 3;
 }
 
+// AzureWebhookReceiverConfig describes a webhook receiver that is compatible
+// with Azure Container Registry (ACR) and Azure DevOps payloads.
+message AzureWebhookReceiverConfig {
+  // SecretRef contains a reference to a Secret. For Project-scoped webhook
+  // receivers, the referenced Secret must be in the same namespace as the
+  // ProjectConfig.
+  //
+  // For cluster-scoped webhook receivers, the referenced Secret must be in the
+  // designated "cluster Secrets" namespace.
+  //
+  // The Secret's data map is expected to contain a `secret` key whose value
+  // does NOT need to be shared directly with Azure when registering a webhook.
+  // It is used only by Kargo to create a complex, hard-to-guess URL,
+  // which implicitly serves as a shared secret. For more information about
+  // Azure webhooks, please refer to the Azure documentation:
+  //
+  //  Azure Container Registry:
+  // 	https://learn.microsoft.com/en-us/azure/container-registry/container-registry-repositories
+  //
+  //  Azure DevOps:
+  // 	http://learn.microsoft.com/en-us/azure/devops/service-hooks/services/webhooks?view=azure-devops
+  //
+  // +kubebuilder:validation:Required
+  optional .k8s.io.api.core.v1.LocalObjectReference secretRef = 1;
+}
+
 // BitbucketWebhookReceiverConfig describes a webhook receiver that is
 // compatible with Bitbucket payloads.
 message BitbucketWebhookReceiverConfig {
@@ -1882,6 +1908,10 @@ message WebhookReceiverConfig {
   // Quay contains the configuration for a webhook receiver that is compatible
   // with Quay payloads.
   optional QuayWebhookReceiverConfig quay = 4;
+
+  // Azure contains the configuration for a webhook receiver that is compatible
+  // with Azure Container Registry (ACR) and Azure DevOps payloads.
+  optional AzureWebhookReceiverConfig azure = 8;
 
   // Gitea contains the configuration for a webhook receiver that is compatible
   // with Gitea payloads.
