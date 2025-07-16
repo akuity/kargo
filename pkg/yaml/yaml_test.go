@@ -169,3 +169,164 @@ characters:
 		})
 	}
 }
+
+func TestMergeYAMLFiles(t *testing.T) {
+	testCases := []struct {
+		name       string
+		inputs     []string
+		assertions func(*testing.T, string, error)
+	}{
+		{
+			name: "no input YAML",
+			// Note: This YAML is invalid because one line is indented with a tab
+			inputs: []string{},
+			assertions: func(t *testing.T, output string, err error) {
+				require.ErrorContains(t, err, "empty input list provided")
+				require.Empty(t, output)
+			},
+		},
+		{
+			name: "empty input YAML",
+			// Note: This YAML is invalid because one line is indented with a tab
+			inputs: []string{``},
+			assertions: func(t *testing.T, output string, err error) {
+				require.ErrorContains(t, err, "EOF")
+				require.Empty(t, output)
+			},
+		},
+		{
+			name: "one invalid input YAML",
+			// Note: This YAML is invalid because one line is indented with a tab
+			inputs: []string{`
+characters:
+- name: Anakin
+  affiliation: Light side
+`, `
+#`},
+			assertions: func(t *testing.T, output string, err error) {
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					string(`characters:
+- name: Anakin
+  affiliation: Light side
+`),
+					output,
+				)
+			},
+		},
+		// 		{
+		// 			name: "invalid input YAML",
+		// 			// Note: This YAML is invalid because one line is indented with a tab
+		// 			inputs: []string{`
+		// characters:
+		// - name: Anakin
+		// 	affiliation: Light side
+		// 	  a: b
+		// `},
+		// 			assertions: func(t *testing.T, output string, err error) {
+		// 				require.ErrorContains(t, err, "found a tab character that violates indentation")
+		// 				require.Empty(t, output)
+		// 			},
+		// 		},
+		{
+			name: "no extra quotes around true number",
+			inputs: []string{`
+characters:
+- name: Arthur Dent
+  answer: idk
+`, `
+characters:
+- name: Arthur Dent
+  answer: 42
+`},
+			assertions: func(t *testing.T, output string, err error) {
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					string(`characters:
+- name: Arthur Dent
+  answer: 42
+`),
+					output,
+				)
+			},
+		},
+		{
+			name: "extra quotes around string containing a valid number",
+			inputs: []string{`
+characters:
+  - name: Arthur Dent
+    answer: idk
+`, `
+characters:
+  - name: Arthur Dent
+    answer: "42"
+`},
+			assertions: func(t *testing.T, output string, err error) {
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					string(`characters:
+- name: Arthur Dent
+  answer: "42"
+`),
+					output,
+				)
+			},
+		},
+		{
+			name: "success with single YAML file",
+			// Note: This YAML is invalid because one line is indented with a tab
+			inputs: []string{`
+characters:
+- name: Anakin
+  affiliation: Light side
+`},
+			assertions: func(t *testing.T, output string, err error) {
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					string(`characters:
+- name: Anakin
+  affiliation: Light side
+`),
+					output,
+				)
+			},
+		},
+		{
+			name: "success",
+			inputs: []string{`
+characters:
+- name: Anakin
+  affiliation: Light side
+`, `
+characters:
+- name: Anakin
+  affiliation: Dark side
+`},
+			assertions: func(t *testing.T, output string, err error) {
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					string(`characters:
+- name: Anakin
+  affiliation: Dark side
+`),
+					output,
+				)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			b, err := MergeYAMLFiles(testCase.inputs)
+
+			// fmt.Println(b)
+			// fmt.Println(err)
+			// fmt.Println("------")
+			testCase.assertions(t, b, err)
+		})
+	}
+}
