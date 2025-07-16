@@ -136,27 +136,25 @@ const quay: WebhookReceiverT = {
   ]
 };
 
-
-  const gitea: WebhookReceiverT = {
-    key: 'gitea',
-    label: 'Gitea',
-    secrets: [
-      {
-        dataKey: 'secret',
-        description: (
-          <>
-                    The Secret's data map is expected to contain a `secret` key whose value is the shared
+const gitea: WebhookReceiverT = {
+  key: 'gitea',
+  label: 'Gitea',
+  secrets: [
+    {
+      dataKey: 'secret',
+      description: (
+        <>
+          The Secret's data map is expected to contain a `secret` key whose value is the shared
           secret used to authenticate the webhook requests sent by Gitea. For more information
           please refer to the{' '}
           <a href='https://docs.gitea.io/en-us/webhooks/' target='_blank'>
             Gitea documentation
-            </a>
+          </a>
         </>
       )
     }
   ]
 };
-
 
 const azure: WebhookReceiverT = {
   key: 'azure',
