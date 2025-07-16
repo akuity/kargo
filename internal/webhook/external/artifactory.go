@@ -58,7 +58,7 @@ func newArtifactoryWebhookReceiver(
 	}
 }
 
-// GetDetails implements WebhookReceiver.
+// getReceiverType implements WebhookReceiver.
 func (a *artifactoryWebhookReceiver) getReceiverType() string {
 	return artifactory
 }
