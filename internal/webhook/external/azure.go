@@ -169,7 +169,7 @@ func (a *azureWebhookReceiver) handleAzureDevOpsEvent(
 		return
 	}
 
-	if event.EventType != "git.push" {
+	if event.EventType != azureDevOpsPushEvent {
 		xhttp.WriteErrorJSON(
 			w,
 			xhttp.Error(
