@@ -120,8 +120,8 @@ type WebhookReceiverConfig struct {
 	// Quay contains the configuration for a webhook receiver that is compatible
 	// with Quay payloads.
 	Quay *QuayWebhookReceiverConfig `json:"quay,omitempty" protobuf:"bytes,4,opt,name=quay"`
-	// Artifactory contains the configuration for a webhook receiver that is compatible
-	// with JFrog Artifactory payloads.
+	// Artifactory contains the configuration for a webhook receiver that is
+	// compatible with JFrog Artifactory payloads.
 	Artifactory *ArtifactoryWebhookReceiverConfig `json:"artifactory,omitempty" protobuf:"bytes,7,opt,name=artifactory"`
 	// Path is the path to the
 }
