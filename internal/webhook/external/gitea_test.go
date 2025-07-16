@@ -58,7 +58,7 @@ func TestGiteaHandler(t *testing.T) {
 			secretData: testSecretData,
 			req: func() *http.Request {
 				req := httptest.NewRequest(http.MethodPost, testURL, nil)
-				req.Header.Set("X-Gitea-Event", "nonsense")
+				req.Header.Set(giteaEventTypeHeader, "nonsense")
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -75,7 +75,7 @@ func TestGiteaHandler(t *testing.T) {
 			secretData: testSecretData,
 			req: func() *http.Request {
 				req := httptest.NewRequest(http.MethodPost, testURL, nil)
-				req.Header.Set("X-Gitea-Event", "push")
+				req.Header.Set(giteaEventTypeHeader, "push")
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -88,8 +88,8 @@ func TestGiteaHandler(t *testing.T) {
 			secretData: testSecretData,
 			req: func() *http.Request {
 				req := httptest.NewRequest(http.MethodPost, testURL, nil)
-				req.Header.Set("X-Gitea-Event", "push")
-				req.Header.Set("X-Hub-Signature-256", "totally-invalid-signature")
+				req.Header.Set(giteaEventTypeHeader, "push")
+				req.Header.Set(giteaSignatureHeader, "totally-invalid-signature")
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -103,8 +103,8 @@ func TestGiteaHandler(t *testing.T) {
 			req: func() *http.Request {
 				bodyBuf := bytes.NewBuffer([]byte("invalid json"))
 				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
-				req.Header.Set("X-Hub-Signature-256", sign(bodyBuf.Bytes()))
-				req.Header.Set("X-Gitea-Event", "push")
+				req.Header.Set(giteaSignatureHeader, sign(bodyBuf.Bytes()))
+				req.Header.Set(giteaEventTypeHeader, "push")
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -141,8 +141,8 @@ func TestGiteaHandler(t *testing.T) {
 					testURL,
 					bytes.NewBuffer(b),
 				)
-				req.Header.Set("X-Hub-Signature-256", sign(b))
-				req.Header.Set("X-Gitea-Event", "push")
+				req.Header.Set(giteaSignatureHeader, sign(b))
+				req.Header.Set(giteaEventTypeHeader, "push")
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {

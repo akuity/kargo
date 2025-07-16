@@ -16,7 +16,9 @@ import (
 )
 
 const (
-	giteaSecretDataKey = "secret"
+	giteaEventTypeHeader = "X-Gitea-Event"
+	giteaSignatureHeader = "X-Hub-Signature-256"
+	giteaSecretDataKey   = "secret"
 
 	gitea = "gitea"
 )
@@ -84,7 +86,7 @@ func (g *giteaWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 			return
 		}
 
-		eventType := r.Header.Get("X-Gitea-Event")
+		eventType := r.Header.Get(giteaEventTypeHeader)
 		switch eventType {
 		case "push":
 		default:
@@ -101,7 +103,7 @@ func (g *giteaWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 		logger = logger.WithValues("eventType", eventType)
 		ctx = logging.ContextWithLogger(ctx, logger)
 
-		sig := r.Header.Get(gh.SHA256SignatureHeader)
+		sig := r.Header.Get(giteaSignatureHeader)
 		if sig == "" {
 			xhttp.WriteErrorJSON(
 				w,
