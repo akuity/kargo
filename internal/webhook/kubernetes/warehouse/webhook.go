@@ -211,33 +211,20 @@ func (w *webhook) validateImageSub(
 	seen uniqueSubSet,
 ) field.ErrorList {
 	var errs field.ErrorList
-	// If no strategy has been specified
-	// default to the semVer strategy
-	if sub.ImageSelectionStrategy == "" {
-		sub.ImageSelectionStrategy = kargoapi.ImageSelectionStrategySemVer
-	}
-	// Give precedence to the constraint field
-	// However, validate semVerConstraint field if
-	// semVer image strategy is used
-	if sub.ImageSelectionStrategy == kargoapi.ImageSelectionStrategySemVer {
-		if sub.SemverConstraint != "" { //nolint:staticcheck
-			if err := validateSemverConstraint(
-				f.Child("semverConstraint"),
-				sub.SemverConstraint, //nolint:staticcheck
-			); err != nil {
-				errs = append(errs, err)
-			}
-		}
-
+	if sub.ImageSelectionStrategy == kargoapi.ImageSelectionStrategySemVer || sub.ImageSelectionStrategy == "" {
+		var err *field.Error
+		// Validate the Constraint field XOR the deprecated SemverConstraint field
+		// is a valid semantic version range:
 		if sub.Constraint != "" {
-			if err := validateSemverConstraint(
-				f.Child("constraint"),
-				sub.Constraint,
-			); err != nil {
-				errs = append(errs, err)
-			}
+			err = validateSemverConstraint(f.Child("constraint"), sub.Constraint)
+		} else if sub.SemverConstraint != "" { // nolint: staticcheck
+			err = validateSemverConstraint(f.Child("semverConstraint"), sub.SemverConstraint) // nolint: staticcheck
+		}
+		if err != nil {
+			errs = append(errs, err)
 		}
 	}
+
 	if sub.Platform != "" {
 		if !image.ValidatePlatformConstraint(sub.Platform) {
 			errs = append(errs, field.Invalid(f.Child("platform"), sub.Platform, ""))
