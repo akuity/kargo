@@ -519,6 +519,15 @@ type UntarConfig struct {
 	StripComponents *int64 `json:"stripComponents,omitempty"`
 }
 
+type YAMLMergeConfig struct {
+	// InPaths is the list of paths to YAML files to process
+	InPaths []string `json:"inPaths"`
+	// OutPath is the path to the merged YAML file to create or update.
+	OutPath string `json:"outPath"`
+	// Strict will cause the directive to fail if the input path does not exist.
+	Strict bool `json:"strict,omitempty"`
+}
+
 type YAMLParseConfig struct {
 	// An array of outputs to extract from the YAML file.
 	Outputs []YAMLParse `json:"outputs"`

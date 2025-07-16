@@ -1,9 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "YAMLUpdateConfig",
-  
-  "definitions": {
 
+  "definitions": {
     "yamlUpdate": {
       "type": "object",
       "additionalProperties": false,
@@ -19,9 +18,8 @@
       },
       "required": ["key", "value"]
     }
-
   },
-  
+
   "type": "object",
   "required": ["path", "updates"],
   "additionalProperties": false,
