@@ -4,7 +4,7 @@ sidebar_label: Azure
 
 # Azure Webhook Receiver
 
-The Azure webhook receiver responds to push and ping events originating
+The Azure webhook receiver responds to `push` and `ping` events originating
 from Azure Container Registry repositories and `git.push` events originating
 from Azure DevOps.
 
