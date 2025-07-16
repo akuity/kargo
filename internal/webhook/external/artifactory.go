@@ -42,7 +42,8 @@ type artifactoryWebhookReceiver struct {
 	*baseWebhookReceiver
 }
 
-// newArtifactoryWebhookReceiver returns a new instance of artifactoryWebhookReceiver.
+// newArtifactoryWebhookReceiver returns a new instance of
+// artifactoryWebhookReceiver.
 func newArtifactoryWebhookReceiver(
 	c client.Client,
 	project string,
