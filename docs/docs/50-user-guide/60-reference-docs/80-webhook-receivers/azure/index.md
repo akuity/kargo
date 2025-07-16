@@ -11,8 +11,9 @@ from Azure DevOps.
 The receiver unconditionally responds to `ping` events with an HTTP `200` status
 code.
 
-The receiver responds to `push`, and `git.push`  events by _refreshing_ all `Warehouse` resources
-subscribed to the repositories that correspond to the event.
+The receiver responds to `push` and `git.push` events by _refreshing_ all
+`Warehouse` resources subscribed to the repositories that correspond to the
+event.
 
 :::info
 "Refreshing" a `Warehouse` resource means enqueuing it for immediate
