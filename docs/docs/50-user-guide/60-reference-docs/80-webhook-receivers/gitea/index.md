@@ -47,6 +47,8 @@ kind: Secret
 metadata:
   name: gitea-wh-secret
   namespace: kargo-demo
+  labels:
+    kargo.akuity.io/cred-type: generic
 data:
   secret: <base64-encoded secret>
 ---
@@ -55,8 +57,6 @@ kind: ProjectConfig
 metadata:
   name: kargo-demo
   namespace: kargo-demo
-  labels:
-    kargo.akuity.io/cred-type: generic
 spec:
   webhookReceivers: 
   - name: gitea-wh-receiver
@@ -145,6 +145,7 @@ kubectl get projectconfigs kargo-demo \
 1. Click the <Hlt>Response</Hlt> tab and verify it was successful.
 
     ![Response](./img/response.png "Response")
+
 :::info
 For additional information on configuring Gitea webhooks, refer directly to the
 [Gitea Docs](https://docs.gitea.com/usage/webhooks).
