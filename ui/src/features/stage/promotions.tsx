@@ -116,7 +116,10 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
           },
           transport: transportWithAuth
         });
-        client.setQueryData(listPromotionsQueryKey, { promotions });
+        client.setQueryData(listPromotionsQueryKey, {
+          promotions,
+          $typeName: 'akuity.io.kargo.service.v1alpha1.ListPromotionsResponse'
+        });
       }
     };
     watchPromotions();

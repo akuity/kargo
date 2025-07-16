@@ -61,7 +61,6 @@ export const CreateWebhookModal = (props: CreateWebhookModalProps) => {
   return (
     <Modal
       open={props.visible}
-      onClose={props.hide}
       onCancel={props.hide}
       okText='Add'
       onOk={handleSubmit}

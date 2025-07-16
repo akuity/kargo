@@ -136,7 +136,7 @@ export const FreightDetails = ({
                               render: (_, record) => {
                                 switch (record.type) {
                                   case 'git':
-                                    return record.id;
+                                    return record.tag || record.id;
                                   case 'helm':
                                     return record.version;
                                   case 'image':

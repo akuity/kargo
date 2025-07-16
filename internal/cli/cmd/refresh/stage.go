@@ -85,6 +85,7 @@ func waitForStage(
 		}
 		token, ok := api.RefreshAnnotationValue(msg.Stage.GetAnnotations())
 		if !ok {
+			// nolint:staticcheck
 			return fmt.Errorf(
 				"Stage %q in Project %q has no %q annotation",
 				name, project, kargoapi.AnnotationKeyRefresh,

@@ -210,7 +210,7 @@ func Test_gitPusher_run(t *testing.T) {
 	gitprovider.Register(
 		fakeGitProviderName,
 		gitprovider.Registration{
-			Predicate: func(repoURL string) bool {
+			Predicate: func(_ string) bool {
 				return true
 			},
 			NewProvider: func(

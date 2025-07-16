@@ -113,10 +113,10 @@ message ArtifactoryWebhookReceiverConfig {
   // For cluster-scoped webhook receivers, the referenced Secret must be in the
   // designated "cluster Secrets" namespace.
   //
-  // The Secret's data map is expected to contain a `secret-token` key whose value is
-  // the shared secret used to authenticate the webhook requests sent by
-  // JFrog Artifactory. For more information please refer to the
-  // JFrog Artifactory documentation:
+  // The Secret's data map is expected to contain a `secret-token` key whose
+  // value is the shared secret used to authenticate the webhook requests sent
+  // by JFrog Artifactory. For more information please refer to the JFrog
+  // Artifactory documentation:
   //   https://jfrog.com/help/r/jfrog-platform-administration-documentation/webhooks
   //
   // +kubebuilder:validation:Required
@@ -1331,6 +1331,9 @@ message PromotionStatus {
   // the Promotion has completed.
   repeated HealthCheckStep healthChecks = 8;
 
+  // StartedAt is the time when the promotion started.
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time startedAt = 12;
+
   // FinishedAt is the time when the promotion was completed.
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time finishedAt = 6;
 
@@ -1881,8 +1884,8 @@ message WebhookReceiverConfig {
   // with Quay payloads.
   optional QuayWebhookReceiverConfig quay = 4;
 
-  // Artifactory contains the configuration for a webhook receiver that is compatible
-  // with JFrog Artifactory payloads.
+  // Artifactory contains the configuration for a webhook receiver that is
+  // compatible with JFrog Artifactory payloads.
   optional ArtifactoryWebhookReceiverConfig artifactory = 7;
 }
 

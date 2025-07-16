@@ -68,7 +68,7 @@ kargo delete clusterconfig
 // command.
 func (o *deleteClusterConfigOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
-	o.PrintFlags.AddFlags(cmd)
+	o.AddFlags(cmd)
 }
 
 // run removes the project config from the project.
@@ -78,7 +78,7 @@ func (o *deleteClusterConfigOptions) run(ctx context.Context) error {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	printer, err := o.PrintFlags.ToPrinter()
+	printer, err := o.ToPrinter()
 	if err != nil {
 		return fmt.Errorf("create printer: %w", err)
 	}
@@ -95,7 +95,7 @@ func (o *deleteClusterConfigOptions) run(ctx context.Context) error {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: o.Project,
 			},
-		}, o.IOStreams.Out); err != nil {
+		}, o.Out); err != nil {
 		return fmt.Errorf("print project configuration: %w", err)
 	}
 

@@ -3,14 +3,13 @@ package external
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/helm"
 	xhttp "github.com/akuity/kargo/internal/http"
-	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -64,8 +63,7 @@ func (d *dockerhubWebhookReceiver) getSecretValues(
 ) ([]string, error) {
 	secretValue, ok := secretData[dockerhubSecretDataKey]
 	if !ok {
-		return nil,
-			errors.New("Secret data is not valid for a Docker Hub WebhookReceiver")
+		return nil, fmt.Errorf("missing data key %q for DockerHub WebhookReceiver", dockerhubSecretDataKey)
 	}
 	return []string{string(secretValue)}, nil
 }
@@ -94,13 +92,10 @@ func (d *dockerhubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 			return
 		}
 
-		var repoURL string
-		switch payload.PushData.MediaType {
-		case helmChartMediaType:
-			repoURL = helm.NormalizeChartRepositoryURL(payload.Repository.RepoName)
-		default:
-			repoURL = image.NormalizeURL(payload.Repository.RepoName)
-		}
+		repoURL := normalizeOCIRepoURL(
+			payload.Repository.RepoName,
+			payload.PushData.MediaType,
+		)
 
 		logger = logger.WithValues("repoURL", repoURL)
 		ctx = logging.ContextWithLogger(ctx, logger)

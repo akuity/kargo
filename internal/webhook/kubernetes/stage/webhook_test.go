@@ -1041,6 +1041,8 @@ func Test_webhook_ValidateSpec(t *testing.T) {
 							{As: "foo"},
 							{As: "bar"},
 							{As: "baz"},
+							{As: ""},
+							{As: ""}, // optional not dup
 						},
 					},
 				},

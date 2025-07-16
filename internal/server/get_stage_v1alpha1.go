@@ -45,6 +45,7 @@ func (s *server) GetStage(
 		Namespace: project,
 	}, &u); err != nil {
 		if client.IgnoreNotFound(err) == nil {
+			// nolint:staticcheck
 			err = fmt.Errorf("Stage %q not found in project %q", name, project)
 			return nil, connect.NewError(connect.CodeNotFound, err)
 		}

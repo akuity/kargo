@@ -38,6 +38,13 @@ func TestGithubHandler(t *testing.T) {
 			PackageType: gh.Ptr(ghcrPackageTypeContainer),
 			PackageVersion: &gh.PackageVersion{
 				PackageURL: gh.Ptr("ghcr.io/example/repo:latest"),
+				ContainerMetadata: &gh.PackageEventContainerMetadata{
+					Manifest: map[string]any{
+						"config": map[string]any{
+							"media_type": ociImageIndexMediaType,
+						},
+					},
+				},
 			},
 		},
 	}
@@ -50,7 +57,7 @@ func TestGithubHandler(t *testing.T) {
 				ContainerMetadata: &gh.PackageEventContainerMetadata{
 					Manifest: map[string]any{
 						"config": map[string]any{
-							"media_type": "application/vnd.cncf.helm.config.v1+json",
+							"media_type": helmChartMediaType,
 						},
 					},
 				},
@@ -87,11 +94,11 @@ func TestGithubHandler(t *testing.T) {
 			secretData: testSecretData,
 			req: func() *http.Request {
 				req := httptest.NewRequest(http.MethodPost, testURL, nil)
-				req.Header.Set("X-GitHub-Event", "nonsense")
+				req.Header.Set(gh.EventTypeHeader, "nonsense")
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusNotImplemented, rr.Code)
+				require.Equal(t, http.StatusBadRequest, rr.Code)
 				require.JSONEq(
 					t,
 					`{"error":"event type nonsense is not supported"}`,
@@ -104,7 +111,7 @@ func TestGithubHandler(t *testing.T) {
 			secretData: testSecretData,
 			req: func() *http.Request {
 				req := httptest.NewRequest(http.MethodPost, testURL, nil)
-				req.Header.Set("X-GitHub-Event", "push")
+				req.Header.Set(gh.EventTypeHeader, githubEventTypePush)
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -117,8 +124,8 @@ func TestGithubHandler(t *testing.T) {
 			secretData: testSecretData,
 			req: func() *http.Request {
 				req := httptest.NewRequest(http.MethodPost, testURL, nil)
-				req.Header.Set("X-GitHub-Event", "push")
-				req.Header.Set("X-Hub-Signature-256", "totally-invalid-signature")
+				req.Header.Set(gh.EventTypeHeader, githubEventTypePush)
+				req.Header.Set(gh.SHA256SignatureHeader, "totally-invalid-signature")
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -132,8 +139,8 @@ func TestGithubHandler(t *testing.T) {
 			req: func() *http.Request {
 				bodyBuf := bytes.NewBuffer([]byte("invalid json"))
 				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
-				req.Header.Set("X-Hub-Signature-256", sign(bodyBuf.Bytes()))
-				req.Header.Set("X-GitHub-Event", "push")
+				req.Header.Set(gh.EventTypeHeader, githubEventTypePush)
+				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBuf.Bytes()))
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -147,8 +154,8 @@ func TestGithubHandler(t *testing.T) {
 			req: func() *http.Request {
 				bodyBuf := bytes.NewBuffer([]byte("{}"))
 				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
-				req.Header.Set("X-Hub-Signature-256", sign(bodyBuf.Bytes()))
-				req.Header.Set("X-GitHub-Event", "ping")
+				req.Header.Set(gh.EventTypeHeader, githubEventTypePing)
+				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBuf.Bytes()))
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -173,8 +180,8 @@ func TestGithubHandler(t *testing.T) {
 					testURL,
 					bytes.NewBuffer(bodyBytes),
 				)
-				req.Header.Set("X-Hub-Signature-256", sign(bodyBytes))
-				req.Header.Set("X-GitHub-Event", "package")
+				req.Header.Set(gh.EventTypeHeader, githubEventTypePackage)
+				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBytes))
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -195,8 +202,8 @@ func TestGithubHandler(t *testing.T) {
 					testURL,
 					bytes.NewBuffer(bodyBytes),
 				)
-				req.Header.Set("X-Hub-Signature-256", sign(bodyBytes))
-				req.Header.Set("X-GitHub-Event", "package")
+				req.Header.Set(gh.EventTypeHeader, githubEventTypePackage)
+				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBytes))
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -223,8 +230,8 @@ func TestGithubHandler(t *testing.T) {
 					testURL,
 					bytes.NewBuffer(bodyBytes),
 				)
-				req.Header.Set("X-Hub-Signature-256", sign(bodyBytes))
-				req.Header.Set("X-GitHub-Event", "package")
+				req.Header.Set(gh.EventTypeHeader, githubEventTypePackage)
+				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBytes))
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -260,8 +267,8 @@ func TestGithubHandler(t *testing.T) {
 					testURL,
 					bytes.NewBuffer(bodyBytes),
 				)
-				req.Header.Set("X-Hub-Signature-256", sign(bodyBytes))
-				req.Header.Set("X-GitHub-Event", "package")
+				req.Header.Set(gh.EventTypeHeader, githubEventTypePackage)
+				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBytes))
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -299,8 +306,8 @@ func TestGithubHandler(t *testing.T) {
 					testURL,
 					bytes.NewBuffer(bodyBytes),
 				)
-				req.Header.Set("X-Hub-Signature-256", sign(bodyBytes))
-				req.Header.Set("X-GitHub-Event", "package")
+				req.Header.Set(gh.EventTypeHeader, githubEventTypePackage)
+				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBytes))
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -338,8 +345,8 @@ func TestGithubHandler(t *testing.T) {
 					testURL,
 					bytes.NewBuffer(bodyBytes),
 				)
-				req.Header.Set("X-Hub-Signature-256", sign(bodyBytes))
-				req.Header.Set("X-GitHub-Event", "push")
+				req.Header.Set(gh.EventTypeHeader, githubEventTypePush)
+				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBytes))
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {

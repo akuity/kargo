@@ -142,7 +142,7 @@ func (k *kustomizeBuilder) writeResult(rm resmap.ResMap, outPath string) error {
 }
 
 // kustomizeBuild builds the manifests in the given directory using Kustomize.
-func kustomizeBuild(fs filesys.FileSystem, path string, pluginCfg *builtin.Plugin) (_ resmap.ResMap, err error) {
+func kustomizeBuild(kusFS filesys.FileSystem, path string, pluginCfg *builtin.Plugin) (_ resmap.ResMap, err error) {
 	kustomizeRenderMutex.Lock()
 	defer kustomizeRenderMutex.Unlock()
 
@@ -177,5 +177,5 @@ func kustomizeBuild(fs filesys.FileSystem, path string, pluginCfg *builtin.Plugi
 	}
 
 	k := krusty.MakeKustomizer(buildOptions)
-	return k.Run(fs, path)
+	return k.Run(kusFS, path)
 }

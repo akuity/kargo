@@ -228,7 +228,6 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
               control={control}
             >
               {({ field }) => (
-                // @ts-expect-error repoUrlInRegex won't be here so no boolean only strings
                 <Input
                   {...field}
                   type={key === 'password' ? 'password' : 'text'}

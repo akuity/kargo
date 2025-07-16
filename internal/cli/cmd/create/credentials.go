@@ -116,7 +116,7 @@ kargo create credentials my-credentials \
 // command.
 func (o *createCredentialsOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
-	o.PrintFlags.AddFlags(cmd)
+	o.AddFlags(cmd)
 
 	option.Project(
 		cmd.Flags(), &o.Project, o.Config.Project,
@@ -187,10 +187,8 @@ func (o *createCredentialsOptions) validate() error {
 
 // run creates the credentials in the project based on the options.
 func (o *createCredentialsOptions) run(ctx context.Context) error {
-	for {
-		if o.Password != "" {
-			break
-		}
+	for o.Password == "" {
+
 		prompt := &survey.Password{
 			Message: "Repository password",
 		}
@@ -231,9 +229,9 @@ func (o *createCredentialsOptions) run(ctx context.Context) error {
 		return fmt.Errorf("create credentials: %w", err)
 	}
 
-	printer, err := o.PrintFlags.ToPrinter()
+	printer, err := o.ToPrinter()
 	if err != nil {
 		return fmt.Errorf("new printer: %w", err)
 	}
-	return printer.PrintObj(resp.Msg.GetCredentials(), o.IOStreams.Out)
+	return printer.PrintObj(resp.Msg.GetCredentials(), o.Out)
 }
