@@ -91,10 +91,7 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 		if sig == "" {
 			xhttp.WriteErrorJSON(
 				w,
-				xhttp.Error(
-					errors.New("missing signature"),
-					http.StatusUnauthorized,
-				),
+				xhttp.Error(errors.New("missing signature"), http.StatusUnauthorized),
 			)
 			return
 		}
