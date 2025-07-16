@@ -80,22 +80,50 @@ kubectl get projectconfigs kargo-demo \
 
 1. Navigating to the webhooks dashboard will vary based on scope.
 
-### Repo scope
+### Scope Options
 
-1. Navigate to `https://gitea.com/<namespace>/<repo>/settings/hooks`, where
-   `<namespace>` has been replaced with a Gitea username or group name and
-   `<project>` has been replaced with the name of a project belonging to that
-   namespace and for which you are an administrator.
+  <Tabs groupId="navigation">
+  <TabItem value="repo-scope" label="Repo Scope" default>
 
-### Org scope
+  :::info
+  This option is useful if you are interested in receiving webhook events for a 
+  single given repository. If you are interested in configuring a single webhook 
+  for multiple repositories, you may want to consider a different option.
+  Otherwise, this option will require you to configure a webhook for each
+  repository individually.
+  :::
 
-1. Navigate to `https://gitea.com/org/<org>/settings/hooks`, where 
-    `<org>` has been replaced by a Gitea organization for which you are an
-    administrator.
+  1. Navigate to `https://gitea.com/<namespace>/<repo>/settings/hooks`, where
+    `<namespace>` has been replaced with a Gitea username or group name and
+    `<project>` has been replaced with the name of a project belonging to that
+    namespace and for which you are an administrator.
 
-### User scope
+  </TabItem>
+  <TabItem value="org-scope" label="Org Scope">
 
-1. Navigate to `https://gitea.com/org/user/settings/hooks`.
+  :::info
+  This option is useful if you are interested in configuring a single webhook 
+  for all repositories under a single organization; saving you time from
+  having to configure a webhook for each of them.
+  :::
+
+  1. Navigate to `https://gitea.com/org/<org>/settings/hooks`, where 
+      `<org>` has been replaced by a Gitea organization for which you are an
+      administrator.
+
+  </TabItem>
+  <TabItem value="user-scope" label="User Scope">
+
+  :::info
+  This option is useful if you are interested in receiving webhook events for 
+  all repositories that you own. Saving you time from
+  having to configure a webhook for each of them.
+  :::
+
+  1. Navigate to `https://gitea.com/org/user/settings/hooks`.
+ 
+  </TabItem>
+  </Tabs>
 
     ![Settings](./img/settings.png "Settings")
 
