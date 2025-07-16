@@ -49,11 +49,6 @@ echo "Encoded secret: $(echo -n $secret | base64)"
 :::
 
 ```yaml
-apiVersion: kargo.akuity.io/v1alpha1
-kind: Project
-metadata:
-  name: kargo-demo
----
 apiVersion: v1
 kind: Secret
 metadata:
