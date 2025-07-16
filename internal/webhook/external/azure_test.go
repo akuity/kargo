@@ -54,7 +54,7 @@ func TestAzureHandler(t *testing.T) {
 				req := httptest.NewRequest(
 					http.MethodPost,
 					testURL,
-					bytes.NewBuffer([]byte("invalid json")),
+					newAzurePayload(acrPingEvent, ""),
 				)
 				req.Header.Set("User-Agent", "invalid-user-agent")
 				return req
