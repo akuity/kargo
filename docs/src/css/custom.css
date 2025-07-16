@@ -81,8 +81,8 @@ main.landing-page {
   font-size: small;
 }
 
-.enterprise::after {
-  content: "Kargo Promote";
+.professional::after {
+  content: "Pro";
   margin-bottom: 0.5em;
   background: #1976d2;
   color: #fff;

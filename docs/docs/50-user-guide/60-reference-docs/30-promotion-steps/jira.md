@@ -3,12 +3,12 @@ sidebar_label: jira
 description: Integrates with Jira to manage issues, comments, and track promotion workflows.
 ---
 
-<span class="tag enterprise"></span>
+<span class="tag professional"></span>
 <span class="tag beta"></span>
 # `jira`
 
 :::info
-This promotion step is only available with Akuity Promote version v1.6 and above on [Akuity Platform](https://akuity.io/akuity-platform).
+This promotion step is only available in Kargo on the [Akuity Platform](https://akuity.io/akuity-platform), versions v1.6 and above.
 :::
 
 The `jira` promotion step provides comprehensive integration with Jira, allowing you to create, update, delete, and search for issues, manage comments, and track promotion workflows. This is particularly useful for maintaining traceability between your promotion processes and project management activities.
