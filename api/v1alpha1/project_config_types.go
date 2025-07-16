@@ -122,7 +122,29 @@ type WebhookReceiverConfig struct {
 	Quay *QuayWebhookReceiverConfig `json:"quay,omitempty" protobuf:"bytes,4,opt,name=quay"`
 	// Azure contains the configuration for a webhook receiver that is compatible
 	// with Azure Container Registry (ACR) and Azure DevOps payloads.
-	Azure *AzureWebhookReceiverConfig `json:"azure,omitempty" protobuf:"bytes,7,opt,name=azure"`
+	Azure *AzureWebhookReceiverConfig `json:"azure,omitempty" protobuf:"bytes,8,opt,name=azure"`
+	// Gitea contains the configuration for a webhook receiver that is compatible
+	// with Gitea payloads.
+	Gitea *GiteaWebhookReceiverConfig `json:"gitea,omitempty" protobuf:"bytes,7,opt,name=gitea"`
+}
+
+// GiteaWebhookReceiverConfig describes a webhook receiver that is compatible
+// with Gitea payloads.
+type GiteaWebhookReceiverConfig struct {
+	// SecretRef contains a reference to a Secret. For Project-scoped webhook
+	// receivers, the referenced Secret must be in the same namespace as the
+	// ProjectConfig.
+	//
+	// For cluster-scoped webhook receivers, the referenced Secret must be in the
+	// designated "cluster Secrets" namespace.
+	//
+	// The Secret's data map is expected to contain a `secret` key whose value is
+	// the shared secret used to authenticate the webhook requests sent by Gitea.
+	// For more information please refer to the Gitea documentation:
+	//   https://docs.gitea.io/en-us/webhooks/
+	//
+	// +kubebuilder:validation:Required
+	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
 }
 
 // BitbucketWebhookReceiverConfig describes a webhook receiver that is

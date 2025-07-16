@@ -45,6 +45,9 @@ func validateMutuallyExclusive(
 		if r.Azure != nil {
 			receivers = append(receivers, "Azure")
 		}
+		if r.Gitea != nil {
+			receivers = append(receivers, "Gitea")
+		}
 		if len(receivers) > 1 {
 			errs = append(errs, field.Forbidden(
 				f.Index(i),
