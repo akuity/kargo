@@ -27,7 +27,6 @@ import { decodeRawData } from '@ui/utils/decode-raw-data';
 
 import YamlEditor from '../common/code-editor/yaml-editor-lazy';
 import { StageConditionIcon } from '../common/stage-status/stage-condition-icon';
-import { getCurrentFreight } from '../common/utils';
 
 import { Promotions } from './promotions';
 import { RequestedFreight } from './requested-freight';
@@ -113,9 +112,8 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
                 {stage.metadata?.name}
               </Typography.Title>
               <Flex gap={4}>
-                {getCurrentFreight(stage).length > 0 && (
-                  <StageConditionIcon conditions={stageConditions} />
-                )}
+                <StageConditionIcon conditions={stageConditions} />
+
                 {!!stage.status?.health && <HealthStatusIcon health={stage.status?.health} />}
               </Flex>
             </Flex>

@@ -71,41 +71,41 @@ export const StageConditionIcon = memo(
       // Default state
       let iconState: IconState = {
         icon: faCircleMinus,
-        tooltipTitle: '',
+        tooltipTitle: 'Unknown',
         tooltipMessage: '',
         iconClass: 'text-gray-400'
       };
 
       // Priority: Promoting > Verifying > Reconciling > Failed > Ready
-      if (isPromoting) {
+      if (isPromoting && promotingCondition?.reason !== 'NoFreight') {
         iconState = {
           icon: faCircleMinus,
           tooltipTitle: 'Promoting',
           tooltipMessage: promotingCondition?.message ?? '',
           iconClass: 'text-gray-400'
         };
-      } else if (isVerifying) {
+      } else if (isVerifying && verifiedCondition?.reason !== 'NoFreight') {
         iconState = {
           icon: faMagnifyingGlass,
           tooltipTitle: 'Verifying',
           tooltipMessage: verifiedCondition?.message ?? '',
           iconClass: `text-blue-500 ${styles.magnifyingGlass}`
         };
-      } else if (isReconciling) {
+      } else if (isReconciling && reconcilingCondition?.reason !== 'NoFreight') {
         iconState = {
           icon: faSync,
           tooltipTitle: 'Reconciling',
           tooltipMessage: reconcilingCondition?.message ?? '',
           iconClass: `text-yellow-500 ${styles.rotate}`
         };
-      } else if (isFailed) {
+      } else if (isFailed && readyCondition?.reason !== 'NoFreight') {
         iconState = {
           icon: faTimesCircle,
           tooltipTitle: 'Failed',
           tooltipMessage: readyCondition?.message ?? '',
           iconClass: 'text-red-400'
         };
-      } else if (isReady) {
+      } else if (isReady && readyCondition?.reason !== 'NoFreight') {
         iconState = {
           icon: faCircle,
           tooltipTitle: 'Ready',
