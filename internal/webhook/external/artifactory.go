@@ -132,10 +132,7 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 			if err != nil {
 				xhttp.WriteErrorJSON(
 					w,
-					xhttp.Error(
-						fmt.Errorf("failed to parse origin URL: %w", err),
-						http.StatusBadRequest,
-					),
+					xhttp.Error(errors.New("invalid request body"), http.StatusBadRequest),
 				)
 				return
 			}
