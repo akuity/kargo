@@ -134,7 +134,7 @@ func imageDiscoveryLogFields(sub kargoapi.ImageSubscription) []any {
 		if constraint == "" {
 			constraint = sub.SemverConstraint // nolint: staticcheck
 		}
-		f = append(f, "constraint", sub.Constraint)
+		f = append(f, "constraint", constraint)
 	case kargoapi.ImageSelectionStrategyLexical, kargoapi.ImageSelectionStrategyNewestBuild:
 		f = append(f, "tagConstrained", sub.AllowTags != "" || len(sub.IgnoreTags) > 0)
 	}
