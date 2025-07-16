@@ -129,16 +129,12 @@ func imageDiscoveryLogFields(sub kargoapi.ImageSubscription) []any {
 		"platformConstrained", sub.Platform != "",
 	}
 	switch sub.ImageSelectionStrategy {
-	case kargoapi.ImageSelectionStrategySemVer:
-		if sub.Constraint != "" {
-			f = append(f, "constraint", sub.Constraint)
-		} else {
-			f = append(f, "semverConstraint", sub.SemverConstraint) //nolint:staticcheck
+	case kargoapi.ImageSelectionStrategySemVer, kargoapi.ImageSelectionStrategyDigest:
+		constraint := sub.Constraint
+		if constraint == "" {
+			constraint = sub.SemverConstraint // nolint: staticcheck
 		}
-	case kargoapi.ImageSelectionStrategyDigest:
-		if sub.Constraint != "" {
-			f = append(f, "constraint", sub.Constraint)
-		}
+		f = append(f, "constraint", sub.Constraint)
 	case kargoapi.ImageSelectionStrategyLexical, kargoapi.ImageSelectionStrategyNewestBuild:
 		f = append(f, "tagConstrained", sub.AllowTags != "" || len(sub.IgnoreTags) > 0)
 	}
