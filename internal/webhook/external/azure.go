@@ -12,9 +12,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/git"
-	"github.com/akuity/kargo/internal/helm"
 	xhttp "github.com/akuity/kargo/internal/http"
-	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -89,7 +87,7 @@ func (a *azureWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 		switch {
 		// Format is AzureContainerRegistry/<version>
 		case strings.HasPrefix(r.UserAgent(), acrUserAgentPrefix):
-			a.handleAcrEvent(ctx, w, requestBody)
+			a.handleACREvent(ctx, w, requestBody)
 		// Format is VSServices/<version>
 		case strings.HasPrefix(r.UserAgent(), azureDevOpsUserAgentPrefix):
 			a.handleAzureDevOpsEvent(ctx, w, requestBody)
@@ -127,7 +125,7 @@ func (a *azureWebhookReceiver) handleACREvent(
 	switch event.Action {
 	case acrPushEvent:
 		repoURL := normalizeOCIRepoURL(
-			fmt.Sprintf("%s/%s", event.Request.Host, eevent.Target.Repository),
+			fmt.Sprintf("%s/%s", event.Request.Host, event.Target.Repository),
 			event.Target.MediaType,
 		)
 		logger := logging.LoggerFromContext(ctx)
@@ -175,7 +173,6 @@ func (a *azureWebhookReceiver) handleAzureDevOpsEvent(
 	ctx = logging.ContextWithLogger(ctx, logger)
 	refreshWarehouses(ctx, w, a.client, a.project, repoURL)
 }
-
 
 // acrEvent represents the payload for Azure Container Registry webhooks.
 // For more information on the payload schema for Azure Container Registry, see:
