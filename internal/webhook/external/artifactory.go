@@ -119,9 +119,7 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 		if err := json.Unmarshal(requestBody, &payload); err != nil {
 			xhttp.WriteErrorJSON(
 				w,
-				xhttp.Error(errors.New("invalid request body"),
-					http.StatusBadRequest,
-				),
+				xhttp.Error(errors.New("invalid request body"), http.StatusBadRequest),
 			)
 			return
 		}
