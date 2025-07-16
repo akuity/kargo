@@ -4,11 +4,14 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"strings"
 
 	"go.yaml.in/yaml/v3"
+	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
+	"sigs.k8s.io/kustomize/kyaml/yaml/merge2"
 )
 
 // Update represents a discrete update to be made to a YAML document.
@@ -145,4 +148,32 @@ func findScalarNode(node *yaml.Node, keyPath []string) (int, int, error) {
 		return findScalarNode(node.Content[index], keyPath[1:])
 	}
 	return 0, 0, fmt.Errorf("key path not found")
+}
+
+// mergeYAMLFiles merges a list of yaml strings
+func MergeYAMLFiles(inputs []string) (string, error) {
+	if len(inputs) == 0 {
+		return "", fmt.Errorf("empty input list provided")
+	}
+
+	mergedNode, err := kyaml.Parse(inputs[0])
+	if err != nil {
+		return "", err
+	}
+
+	for i := 1; i < len(inputs); i++ {
+		patchNode, err := kyaml.Parse(inputs[i])
+		if err != nil {
+			if err == io.EOF {
+				continue
+			}
+			return "", err
+		}
+		mergedNode, err = merge2.Merge(patchNode, mergedNode, kyaml.MergeOptions{ListIncreaseDirection: 1})
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return mergedNode.MustString(), nil
 }
