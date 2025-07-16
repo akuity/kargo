@@ -49,6 +49,25 @@ func TestAzureHandler(t *testing.T) {
 			},
 		},
 		{
+			name: "unsupported user agent",
+			req: func() *http.Request {
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer([]byte("invalid json")),
+				)
+				req.Header.Set("User-Agent", "invalid-user-agent")
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, rr.Code)
+				require.JSONEq(t,
+					`{"error":"request does not appear to have originated from a supported service"}`,
+					rr.Body.String(),
+				)
+			},
+		},
+		{
 			name: "success -- ping",
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
@@ -73,7 +92,7 @@ func TestAzureHandler(t *testing.T) {
 				req := httptest.NewRequest(
 					http.MethodPost,
 					testURL,
-					newAzurePayload("ping", ""),
+					newAzurePayload(acrPingEvent, ""),
 				)
 				req.Header.Set("User-Agent", acrUserAgentPrefix)
 				return req
@@ -112,7 +131,7 @@ func TestAzureHandler(t *testing.T) {
 				req := httptest.NewRequest(
 					http.MethodPost,
 					testURL,
-					newAzurePayload("push", imageMediaType),
+					newAzurePayload(acrPushEvent, ociImageIndexMediaType),
 				)
 				req.Header.Set("User-Agent", acrUserAgentPrefix)
 				return req
@@ -151,7 +170,7 @@ func TestAzureHandler(t *testing.T) {
 				req := httptest.NewRequest(
 					http.MethodPost,
 					testURL,
-					newAzurePayload("push", helmChartMediaType),
+					newAzurePayload(acrPushEvent, helmChartMediaType),
 				)
 				req.Header.Set("User-Agent", acrUserAgentPrefix)
 				return req
@@ -190,7 +209,7 @@ func TestAzureHandler(t *testing.T) {
 				req := httptest.NewRequest(
 					http.MethodPost,
 					testURL,
-					newAzurePayload("git.push", ""),
+					newAzurePayload(azureDevOpsPushEvent, helmChartMediaType),
 				)
 				req.Header.Set("User-Agent", azureDevOpsUserAgentPrefix)
 				return req
@@ -228,9 +247,9 @@ func TestAzureHandler(t *testing.T) {
 
 func newAzurePayload(event, mediaType string) *bytes.Buffer {
 	switch event {
-	case "ping":
+	case acrPingEvent:
 		return bytes.NewBufferString(`{"action": "ping"}`)
-	case "push":
+	case acrPushEvent:
 		return bytes.NewBufferString(fmt.Sprintf(`
 			{
 				"action": "push",
@@ -241,7 +260,7 @@ func newAzurePayload(event, mediaType string) *bytes.Buffer {
 				"request": {"host": "fakeregistry.azurecr.io"}
 			}`, mediaType,
 		))
-	case "git.push":
+	case azureDevOpsPushEvent:
 		return bytes.NewBufferString(`
 		{
 			"eventType": "git.push",

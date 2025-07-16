@@ -20,8 +20,9 @@ const (
 	azureSecretDataKey = "secret"
 	azure              = "azure"
 
-	acrPingEvent = "ping"
-	acrPushEvent = "push"
+	acrPingEvent         = "ping"
+	acrPushEvent         = "push"
+	azureDevOpsPushEvent = "git.push"
 
 	acrUserAgentPrefix         = "AzureContainerRegistry"
 	azureDevOpsUserAgentPrefix = "VSServices"
@@ -167,6 +168,18 @@ func (a *azureWebhookReceiver) handleAzureDevOpsEvent(
 		)
 		return
 	}
+
+	if event.EventType != "git.push" {
+		xhttp.WriteErrorJSON(
+			w,
+			xhttp.Error(
+				fmt.Errorf("event type %s is not supported", event.EventType),
+				http.StatusBadRequest,
+			),
+		)
+		return
+	}
+
 	repoURL := git.NormalizeURL(event.Resource.Repository.RemoteURL)
 	logger := logging.LoggerFromContext(ctx)
 	logger = logger.WithValues("repoURL", repoURL)
