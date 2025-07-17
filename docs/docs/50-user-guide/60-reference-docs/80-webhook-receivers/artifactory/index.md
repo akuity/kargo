@@ -8,6 +8,10 @@ The Artifactory Webhook Receiver responds to `pushed` events originating from
 Artifactory repositories by _refreshing_ all `Warehouse` resources subscribed to 
 those repositories.
 
+:::warning
+   We do not respond to events where `domain` is `artifact` and `event_type`  is `deployed`.
+:::
+
 :::info
 "Refreshing" a `Warehouse` resource means enqueuing it for immediate
 reconciliation by the Kargo controller, which will execute the discovery of
@@ -87,12 +91,12 @@ kubectl get projectconfigs kargo-demo \
 
    ![Add Webhook](./img/add-webhook.png "Add Webhook")
 
-1. Enter a descriptive name in the <Hlt>Name</Hlt> field.
+   1. Enter a descriptive name in the <Hlt>Name</Hlt> field.
 
-1. Complete the <Hlt>URL</Hlt> field using the URL
-   [for the webhook receiver](#retrieving-the-receivers-url).
-  
-1. Under <Hlt>Execution Results</Hlt> check <Hlt>Show status of successful 
+   1. Complete the <Hlt>URL</Hlt> field using the URL
+      [for the webhook receiver](#retrieving-the-receivers-url).
+   
+   1. Under <Hlt>Execution Results</Hlt> check <Hlt>Show status of successful 
    executions in the Troubleshooting tab</Hlt>.
 
    :::info
@@ -101,28 +105,33 @@ kubectl get projectconfigs kargo-demo \
    Not test/dummy events. Even if they're successful.
    :::
 
-1. Scroll down to <Hlt>Events</Hlt> and select <Hlt>Docker and OCI</Hlt> > 
+   1. Scroll down to <Hlt>Events</Hlt> and select <Hlt>Docker and OCI</Hlt> > 
    <Hlt>Tag was pushed</Hlt>.
 
    ![Select Trigger](./img/select-trigger.png "Select Trigger")
 
-1. Upon clicking out of the input menu, an <Hlt>Add Repositories</Hlt> modal 
-   will appear.
+   :::info
+   We support webhooks only from image repos and (OCI) chart repos and we do 
+   not support webhooks from any other kind of repos, including legacy (HTTP/S) 
+   chart repos.
+   :::
+
+   1. Complete the form in the modal dialog that appears:
 
    ![Select Repos](./img/select-repos.png "Select Repos")
 
-1. Check any boxes corresponding to repositories this applies to.
+      1. Check any boxes corresponding to repositories this applies to.
 
-1. Click <Hlt>></Hlt> to move selected repositories into the selected window.
+      1. Click <Hlt>></Hlt> to move selected repositories into the selected window.
 
-   :::info
-   Upon moving repositories to the selected section, the <Hlt>Save</Hlt> will
-   become enabled.
-   :::
+      :::info
+      Upon moving repositories to the selected section, the <Hlt>Save</Hlt> will
+      become enabled.
+      :::
 
-   ![Repos Selected](./img/repos-selected.png "Repos Selected")
+      ![Repos Selected](./img/repos-selected.png "Repos Selected")
 
-1. Click <Hlt>Save</Hlt>.
+      1. Click <Hlt>Save</Hlt>.
 
 1. Scroll down to <Hlt>Authentication</Hlt>.
 
@@ -133,6 +142,10 @@ kubectl get projectconfigs kargo-demo \
    the [webhook receiver's configuration](#configuring-the-receiver).
 
 1. Select <Hlt>Use secret for payload signing</Hlt>.
+
+   :::caution
+   The webhook receiver won't accept unsigned requests.
+   :::
 
 1. Click <Hlt>Save</Hlt>.
 
