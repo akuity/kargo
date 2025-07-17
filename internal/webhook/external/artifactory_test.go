@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -27,7 +26,8 @@ func TestArtifactoryHandler(t *testing.T) {
 	const testProjectName = "fake-project"
 
 	validPushEvent := artifactoryEvent{
-		EventType: "pushed",
+		Domain:    artifactoryDockerDomain,
+		EventType: artifactoryPushedEventType,
 		Data: artifactoryEventData{
 			RepoKey:   "test-repo",
 			ImageName: "test-image",
@@ -67,7 +67,7 @@ func TestArtifactoryHandler(t *testing.T) {
 				req := httptest.NewRequest(
 					http.MethodPost,
 					testURL,
-					strings.NewReader(`{"event_type":"nonsense"}`),
+					body,
 				)
 				req.Header.Set(artifactoryAuthHeader, signWithArtifactory(body.Bytes()))
 				return req
@@ -76,7 +76,32 @@ func TestArtifactoryHandler(t *testing.T) {
 				require.Equal(t, http.StatusNotImplemented, rr.Code)
 				require.JSONEq(
 					t,
-					`{"error":"event type nonsense is not supported"}`,
+					`{"error":"event type must be 'pushed' and domain must be 'docker'"}`,
+					rr.Body.String(),
+				)
+			},
+		},
+		{
+			name:       "unsupported domain",
+			secretData: testSecretData,
+			req: func() *http.Request {
+				body := bytes.NewBufferString(`{
+					"event_type":"nonsense", 
+					"domain":"nonsense"
+				}`)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					body,
+				)
+				req.Header.Set(artifactoryAuthHeader, signWithArtifactory(body.Bytes()))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusNotImplemented, rr.Code)
+				require.JSONEq(
+					t,
+					`{"error":"event type must be 'pushed' and domain must be 'docker'"}`,
 					rr.Body.String(),
 				)
 			},
