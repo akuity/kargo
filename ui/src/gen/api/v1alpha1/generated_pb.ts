@@ -271,6 +271,47 @@ export const ArgoCDAppSyncStatusSchema: GenMessage<ArgoCDAppSyncStatus> = /*@__P
   messageDesc(file_api_v1alpha1_generated, 7);
 
 /**
+ * AzureWebhookReceiverConfig describes a webhook receiver that is compatible
+ * with Azure Container Registry (ACR) and Azure DevOps payloads.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.AzureWebhookReceiverConfig
+ */
+export type AzureWebhookReceiverConfig = Message<"github.com.akuity.kargo.api.v1alpha1.AzureWebhookReceiverConfig"> & {
+  /**
+   * SecretRef contains a reference to a Secret. For Project-scoped webhook
+   * receivers, the referenced Secret must be in the same namespace as the
+   * ProjectConfig.
+   *
+   * For cluster-scoped webhook receivers, the referenced Secret must be in the
+   * designated "cluster Secrets" namespace.
+   *
+   * The Secret's data map is expected to contain a `secret` key whose value
+   * does NOT need to be shared directly with Azure when registering a webhook.
+   * It is used only by Kargo to create a complex, hard-to-guess URL,
+   * which implicitly serves as a shared secret. For more information about
+   * Azure webhooks, please refer to the Azure documentation:
+   *
+   *  Azure Container Registry:
+   * 	https://learn.microsoft.com/en-us/azure/container-registry/container-registry-repositories
+   *
+   *  Azure DevOps:
+   * 	http://learn.microsoft.com/en-us/azure/devops/service-hooks/services/webhooks?view=azure-devops
+   *
+   * +kubebuilder:validation:Required
+   *
+   * @generated from field: optional k8s.io.api.core.v1.LocalObjectReference secretRef = 1;
+   */
+  secretRef?: LocalObjectReference;
+};
+
+/**
+ * Describes the message github.com.akuity.kargo.api.v1alpha1.AzureWebhookReceiverConfig.
+ * Use `create(AzureWebhookReceiverConfigSchema)` to create a new message.
+ */
+export const AzureWebhookReceiverConfigSchema: GenMessage<AzureWebhookReceiverConfig> = /*@__PURE__*/
+  messageDesc(file_api_v1alpha1_generated, 8);
+
+/**
  * BitbucketWebhookReceiverConfig describes a webhook receiver that is
  * compatible with Bitbucket payloads.
  *
@@ -303,7 +344,7 @@ export type BitbucketWebhookReceiverConfig = Message<"github.com.akuity.kargo.ap
  * Use `create(BitbucketWebhookReceiverConfigSchema)` to create a new message.
  */
 export const BitbucketWebhookReceiverConfigSchema: GenMessage<BitbucketWebhookReceiverConfig> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 8);
+  messageDesc(file_api_v1alpha1_generated, 9);
 
 /**
  * Chart describes a specific version of a Helm chart.
@@ -343,7 +384,7 @@ export type Chart = Message<"github.com.akuity.kargo.api.v1alpha1.Chart"> & {
  * Use `create(ChartSchema)` to create a new message.
  */
 export const ChartSchema: GenMessage<Chart> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 9);
+  messageDesc(file_api_v1alpha1_generated, 10);
 
 /**
  * ChartDiscoveryResult represents the result of a chart discovery operation for
@@ -396,7 +437,7 @@ export type ChartDiscoveryResult = Message<"github.com.akuity.kargo.api.v1alpha1
  * Use `create(ChartDiscoveryResultSchema)` to create a new message.
  */
 export const ChartDiscoveryResultSchema: GenMessage<ChartDiscoveryResult> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 10);
+  messageDesc(file_api_v1alpha1_generated, 11);
 
 /**
  * ChartSubscription defines a subscription to a Helm chart repository.
@@ -467,7 +508,7 @@ export type ChartSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.Ch
  * Use `create(ChartSubscriptionSchema)` to create a new message.
  */
 export const ChartSubscriptionSchema: GenMessage<ChartSubscription> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 11);
+  messageDesc(file_api_v1alpha1_generated, 12);
 
 /**
  * ClusterConfig is a resource type that describes cluster-level Kargo
@@ -501,7 +542,7 @@ export type ClusterConfig = Message<"github.com.akuity.kargo.api.v1alpha1.Cluste
  * Use `create(ClusterConfigSchema)` to create a new message.
  */
 export const ClusterConfigSchema: GenMessage<ClusterConfig> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 12);
+  messageDesc(file_api_v1alpha1_generated, 13);
 
 /**
  * ClusterConfigList contains a list of ClusterConfigs.
@@ -525,7 +566,7 @@ export type ClusterConfigList = Message<"github.com.akuity.kargo.api.v1alpha1.Cl
  * Use `create(ClusterConfigListSchema)` to create a new message.
  */
 export const ClusterConfigListSchema: GenMessage<ClusterConfigList> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 13);
+  messageDesc(file_api_v1alpha1_generated, 14);
 
 /**
  * ClusterConfigSpec describes cluster-level Kargo configuration.
@@ -547,7 +588,7 @@ export type ClusterConfigSpec = Message<"github.com.akuity.kargo.api.v1alpha1.Cl
  * Use `create(ClusterConfigSpecSchema)` to create a new message.
  */
 export const ClusterConfigSpecSchema: GenMessage<ClusterConfigSpec> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 14);
+  messageDesc(file_api_v1alpha1_generated, 15);
 
 /**
  * ClusterConfigStatus describes the current status of a ClusterConfig.
@@ -599,7 +640,7 @@ export type ClusterConfigStatus = Message<"github.com.akuity.kargo.api.v1alpha1.
  * Use `create(ClusterConfigStatusSchema)` to create a new message.
  */
 export const ClusterConfigStatusSchema: GenMessage<ClusterConfigStatus> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 15);
+  messageDesc(file_api_v1alpha1_generated, 16);
 
 /**
  * @generated from message github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask
@@ -626,7 +667,7 @@ export type ClusterPromotionTask = Message<"github.com.akuity.kargo.api.v1alpha1
  * Use `create(ClusterPromotionTaskSchema)` to create a new message.
  */
 export const ClusterPromotionTaskSchema: GenMessage<ClusterPromotionTask> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 16);
+  messageDesc(file_api_v1alpha1_generated, 17);
 
 /**
  * ClusterPromotionTaskList contains a list of PromotionTasks.
@@ -650,7 +691,7 @@ export type ClusterPromotionTaskList = Message<"github.com.akuity.kargo.api.v1al
  * Use `create(ClusterPromotionTaskListSchema)` to create a new message.
  */
 export const ClusterPromotionTaskListSchema: GenMessage<ClusterPromotionTaskList> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 17);
+  messageDesc(file_api_v1alpha1_generated, 18);
 
 /**
  * CurrentStage reflects a Stage's current use of Freight.
@@ -673,7 +714,7 @@ export type CurrentStage = Message<"github.com.akuity.kargo.api.v1alpha1.Current
  * Use `create(CurrentStageSchema)` to create a new message.
  */
 export const CurrentStageSchema: GenMessage<CurrentStage> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 18);
+  messageDesc(file_api_v1alpha1_generated, 19);
 
 /**
  * DiscoveredArtifacts holds the artifacts discovered by the Warehouse for its
@@ -727,7 +768,7 @@ export type DiscoveredArtifacts = Message<"github.com.akuity.kargo.api.v1alpha1.
  * Use `create(DiscoveredArtifactsSchema)` to create a new message.
  */
 export const DiscoveredArtifactsSchema: GenMessage<DiscoveredArtifacts> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 19);
+  messageDesc(file_api_v1alpha1_generated, 20);
 
 /**
  * DiscoveredCommit represents a commit discovered by a Warehouse for a
@@ -798,7 +839,7 @@ export type DiscoveredCommit = Message<"github.com.akuity.kargo.api.v1alpha1.Dis
  * Use `create(DiscoveredCommitSchema)` to create a new message.
  */
 export const DiscoveredCommitSchema: GenMessage<DiscoveredCommit> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 20);
+  messageDesc(file_api_v1alpha1_generated, 21);
 
 /**
  * DiscoveredImageReference represents an image reference discovered by a
@@ -852,7 +893,7 @@ export type DiscoveredImageReference = Message<"github.com.akuity.kargo.api.v1al
  * Use `create(DiscoveredImageReferenceSchema)` to create a new message.
  */
 export const DiscoveredImageReferenceSchema: GenMessage<DiscoveredImageReference> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 21);
+  messageDesc(file_api_v1alpha1_generated, 22);
 
 /**
  * DockerHubWebhookReceiverConfig describes a webhook receiver that is
@@ -885,7 +926,7 @@ export type DockerHubWebhookReceiverConfig = Message<"github.com.akuity.kargo.ap
  * Use `create(DockerHubWebhookReceiverConfigSchema)` to create a new message.
  */
 export const DockerHubWebhookReceiverConfigSchema: GenMessage<DockerHubWebhookReceiverConfig> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 22);
+  messageDesc(file_api_v1alpha1_generated, 23);
 
 /**
  * ExpressionVariable describes a single variable that may be referenced by
@@ -923,7 +964,7 @@ export type ExpressionVariable = Message<"github.com.akuity.kargo.api.v1alpha1.E
  * Use `create(ExpressionVariableSchema)` to create a new message.
  */
 export const ExpressionVariableSchema: GenMessage<ExpressionVariable> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 23);
+  messageDesc(file_api_v1alpha1_generated, 24);
 
 /**
  * Freight represents a collection of versioned artifacts.
@@ -994,7 +1035,7 @@ export type Freight = Message<"github.com.akuity.kargo.api.v1alpha1.Freight"> & 
  * Use `create(FreightSchema)` to create a new message.
  */
 export const FreightSchema: GenMessage<Freight> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 24);
+  messageDesc(file_api_v1alpha1_generated, 25);
 
 /**
  * FreightCollection is a collection of FreightReferences, each of which
@@ -1034,7 +1075,7 @@ export type FreightCollection = Message<"github.com.akuity.kargo.api.v1alpha1.Fr
  * Use `create(FreightCollectionSchema)` to create a new message.
  */
 export const FreightCollectionSchema: GenMessage<FreightCollection> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 25);
+  messageDesc(file_api_v1alpha1_generated, 26);
 
 /**
  * FreightList is a list of Freight resources.
@@ -1058,7 +1099,7 @@ export type FreightList = Message<"github.com.akuity.kargo.api.v1alpha1.FreightL
  * Use `create(FreightListSchema)` to create a new message.
  */
 export const FreightListSchema: GenMessage<FreightList> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 26);
+  messageDesc(file_api_v1alpha1_generated, 27);
 
 /**
  * FreightOrigin describes a kind of Freight in terms of where it may have
@@ -1095,7 +1136,7 @@ export type FreightOrigin = Message<"github.com.akuity.kargo.api.v1alpha1.Freigh
  * Use `create(FreightOriginSchema)` to create a new message.
  */
 export const FreightOriginSchema: GenMessage<FreightOrigin> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 27);
+  messageDesc(file_api_v1alpha1_generated, 28);
 
 /**
  * FreightReference is a simplified representation of a piece of Freight -- not
@@ -1147,7 +1188,7 @@ export type FreightReference = Message<"github.com.akuity.kargo.api.v1alpha1.Fre
  * Use `create(FreightReferenceSchema)` to create a new message.
  */
 export const FreightReferenceSchema: GenMessage<FreightReference> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 28);
+  messageDesc(file_api_v1alpha1_generated, 29);
 
 /**
  * FreightRequest expresses a Stage's need for Freight having originated from a
@@ -1180,7 +1221,7 @@ export type FreightRequest = Message<"github.com.akuity.kargo.api.v1alpha1.Freig
  * Use `create(FreightRequestSchema)` to create a new message.
  */
 export const FreightRequestSchema: GenMessage<FreightRequest> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 29);
+  messageDesc(file_api_v1alpha1_generated, 30);
 
 /**
  * @generated from message github.com.akuity.kargo.api.v1alpha1.FreightSources
@@ -1249,7 +1290,7 @@ export type FreightSources = Message<"github.com.akuity.kargo.api.v1alpha1.Freig
  * Use `create(FreightSourcesSchema)` to create a new message.
  */
 export const FreightSourcesSchema: GenMessage<FreightSources> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 30);
+  messageDesc(file_api_v1alpha1_generated, 31);
 
 /**
  * FreightStatus describes a piece of Freight's most recently observed state.
@@ -1297,7 +1338,7 @@ export type FreightStatus = Message<"github.com.akuity.kargo.api.v1alpha1.Freigh
  * Use `create(FreightStatusSchema)` to create a new message.
  */
 export const FreightStatusSchema: GenMessage<FreightStatus> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 31);
+  messageDesc(file_api_v1alpha1_generated, 32);
 
 /**
  * GitCommit describes a specific commit from a specific Git repository.
@@ -1363,7 +1404,7 @@ export type GitCommit = Message<"github.com.akuity.kargo.api.v1alpha1.GitCommit"
  * Use `create(GitCommitSchema)` to create a new message.
  */
 export const GitCommitSchema: GenMessage<GitCommit> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 32);
+  messageDesc(file_api_v1alpha1_generated, 33);
 
 /**
  * GitDiscoveryResult represents the result of a Git discovery operation for a
@@ -1400,7 +1441,7 @@ export type GitDiscoveryResult = Message<"github.com.akuity.kargo.api.v1alpha1.G
  * Use `create(GitDiscoveryResultSchema)` to create a new message.
  */
 export const GitDiscoveryResultSchema: GenMessage<GitDiscoveryResult> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 33);
+  messageDesc(file_api_v1alpha1_generated, 34);
 
 /**
  * GitHubWebhookReceiverConfig describes a webhook receiver that is compatible
@@ -1434,7 +1475,7 @@ export type GitHubWebhookReceiverConfig = Message<"github.com.akuity.kargo.api.v
  * Use `create(GitHubWebhookReceiverConfigSchema)` to create a new message.
  */
 export const GitHubWebhookReceiverConfigSchema: GenMessage<GitHubWebhookReceiverConfig> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 34);
+  messageDesc(file_api_v1alpha1_generated, 35);
 
 /**
  * GitLabWebhookReceiverConfig describes a webhook receiver that is compatible
@@ -1468,7 +1509,7 @@ export type GitLabWebhookReceiverConfig = Message<"github.com.akuity.kargo.api.v
  * Use `create(GitLabWebhookReceiverConfigSchema)` to create a new message.
  */
 export const GitLabWebhookReceiverConfigSchema: GenMessage<GitLabWebhookReceiverConfig> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 35);
+  messageDesc(file_api_v1alpha1_generated, 36);
 
 /**
  * GitSubscription defines a subscription to a Git repository.
@@ -1711,7 +1752,41 @@ export type GitSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.GitS
  * Use `create(GitSubscriptionSchema)` to create a new message.
  */
 export const GitSubscriptionSchema: GenMessage<GitSubscription> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 36);
+  messageDesc(file_api_v1alpha1_generated, 37);
+
+/**
+ * GiteaWebhookReceiverConfig describes a webhook receiver that is compatible
+ * with Gitea payloads.
+ *
+ * @generated from message github.com.akuity.kargo.api.v1alpha1.GiteaWebhookReceiverConfig
+ */
+export type GiteaWebhookReceiverConfig = Message<"github.com.akuity.kargo.api.v1alpha1.GiteaWebhookReceiverConfig"> & {
+  /**
+   * SecretRef contains a reference to a Secret. For Project-scoped webhook
+   * receivers, the referenced Secret must be in the same namespace as the
+   * ProjectConfig.
+   *
+   * For cluster-scoped webhook receivers, the referenced Secret must be in the
+   * designated "cluster Secrets" namespace.
+   *
+   * The Secret's data map is expected to contain a `secret` key whose value is
+   * the shared secret used to authenticate the webhook requests sent by Gitea.
+   * For more information please refer to the Gitea documentation:
+   *   https://docs.gitea.io/en-us/webhooks/
+   *
+   * +kubebuilder:validation:Required
+   *
+   * @generated from field: optional k8s.io.api.core.v1.LocalObjectReference secretRef = 1;
+   */
+  secretRef?: LocalObjectReference;
+};
+
+/**
+ * Describes the message github.com.akuity.kargo.api.v1alpha1.GiteaWebhookReceiverConfig.
+ * Use `create(GiteaWebhookReceiverConfigSchema)` to create a new message.
+ */
+export const GiteaWebhookReceiverConfigSchema: GenMessage<GiteaWebhookReceiverConfig> = /*@__PURE__*/
+  messageDesc(file_api_v1alpha1_generated, 38);
 
 /**
  * Health describes the health of a Stage.
@@ -1755,7 +1830,7 @@ export type Health = Message<"github.com.akuity.kargo.api.v1alpha1.Health"> & {
  * Use `create(HealthSchema)` to create a new message.
  */
 export const HealthSchema: GenMessage<Health> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 37);
+  messageDesc(file_api_v1alpha1_generated, 39);
 
 /**
  * HealthCheckStep describes a health check directive which can be executed by
@@ -1786,7 +1861,7 @@ export type HealthCheckStep = Message<"github.com.akuity.kargo.api.v1alpha1.Heal
  * Use `create(HealthCheckStepSchema)` to create a new message.
  */
 export const HealthCheckStepSchema: GenMessage<HealthCheckStep> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 38);
+  messageDesc(file_api_v1alpha1_generated, 40);
 
 /**
  * HealthStats contains a summary of the collective health of some resource
@@ -1808,7 +1883,7 @@ export type HealthStats = Message<"github.com.akuity.kargo.api.v1alpha1.HealthSt
  * Use `create(HealthStatsSchema)` to create a new message.
  */
 export const HealthStatsSchema: GenMessage<HealthStats> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 39);
+  messageDesc(file_api_v1alpha1_generated, 41);
 
 /**
  * Image describes a specific version of a container image.
@@ -1852,7 +1927,7 @@ export type Image = Message<"github.com.akuity.kargo.api.v1alpha1.Image"> & {
  * Use `create(ImageSchema)` to create a new message.
  */
 export const ImageSchema: GenMessage<Image> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 40);
+  messageDesc(file_api_v1alpha1_generated, 42);
 
 /**
  * ImageDiscoveryResult represents the result of an image discovery operation
@@ -1898,7 +1973,7 @@ export type ImageDiscoveryResult = Message<"github.com.akuity.kargo.api.v1alpha1
  * Use `create(ImageDiscoveryResultSchema)` to create a new message.
  */
 export const ImageDiscoveryResultSchema: GenMessage<ImageDiscoveryResult> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 41);
+  messageDesc(file_api_v1alpha1_generated, 43);
 
 /**
  * ImageSubscription defines a subscription to an image repository.
@@ -2070,7 +2145,7 @@ export type ImageSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.Im
  * Use `create(ImageSubscriptionSchema)` to create a new message.
  */
 export const ImageSubscriptionSchema: GenMessage<ImageSubscription> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 42);
+  messageDesc(file_api_v1alpha1_generated, 44);
 
 /**
  * Project is a resource type that reconciles to a specially labeled namespace
@@ -2108,7 +2183,7 @@ export type Project = Message<"github.com.akuity.kargo.api.v1alpha1.Project"> & 
  * Use `create(ProjectSchema)` to create a new message.
  */
 export const ProjectSchema: GenMessage<Project> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 43);
+  messageDesc(file_api_v1alpha1_generated, 45);
 
 /**
  * ProjectConfig is a resource type that describes the configuration of a
@@ -2142,7 +2217,7 @@ export type ProjectConfig = Message<"github.com.akuity.kargo.api.v1alpha1.Projec
  * Use `create(ProjectConfigSchema)` to create a new message.
  */
 export const ProjectConfigSchema: GenMessage<ProjectConfig> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 44);
+  messageDesc(file_api_v1alpha1_generated, 46);
 
 /**
  * ProjectConfigList is a list of ProjectConfig resources.
@@ -2166,7 +2241,7 @@ export type ProjectConfigList = Message<"github.com.akuity.kargo.api.v1alpha1.Pr
  * Use `create(ProjectConfigListSchema)` to create a new message.
  */
 export const ProjectConfigListSchema: GenMessage<ProjectConfigList> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 45);
+  messageDesc(file_api_v1alpha1_generated, 47);
 
 /**
  * ProjectSpec is a deprecated alias for ProjectConfigSpec. It is retained for
@@ -2199,7 +2274,7 @@ export type ProjectConfigSpec = Message<"github.com.akuity.kargo.api.v1alpha1.Pr
  * Use `create(ProjectConfigSpecSchema)` to create a new message.
  */
 export const ProjectConfigSpecSchema: GenMessage<ProjectConfigSpec> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 46);
+  messageDesc(file_api_v1alpha1_generated, 48);
 
 /**
  * ProjectConfigStatus describes the current status of a ProjectConfig.
@@ -2252,7 +2327,7 @@ export type ProjectConfigStatus = Message<"github.com.akuity.kargo.api.v1alpha1.
  * Use `create(ProjectConfigStatusSchema)` to create a new message.
  */
 export const ProjectConfigStatusSchema: GenMessage<ProjectConfigStatus> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 47);
+  messageDesc(file_api_v1alpha1_generated, 49);
 
 /**
  * ProjectList is a list of Project resources.
@@ -2276,7 +2351,7 @@ export type ProjectList = Message<"github.com.akuity.kargo.api.v1alpha1.ProjectL
  * Use `create(ProjectListSchema)` to create a new message.
  */
 export const ProjectListSchema: GenMessage<ProjectList> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 48);
+  messageDesc(file_api_v1alpha1_generated, 50);
 
 /**
  * ProjectStats contains a summary of the collective state of a Project's
@@ -2306,7 +2381,7 @@ export type ProjectStats = Message<"github.com.akuity.kargo.api.v1alpha1.Project
  * Use `create(ProjectStatsSchema)` to create a new message.
  */
 export const ProjectStatsSchema: GenMessage<ProjectStats> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 49);
+  messageDesc(file_api_v1alpha1_generated, 51);
 
 /**
  * ProjectStatus describes a Project's current status.
@@ -2340,7 +2415,7 @@ export type ProjectStatus = Message<"github.com.akuity.kargo.api.v1alpha1.Projec
  * Use `create(ProjectStatusSchema)` to create a new message.
  */
 export const ProjectStatusSchema: GenMessage<ProjectStatus> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 50);
+  messageDesc(file_api_v1alpha1_generated, 52);
 
 /**
  * Promotion represents a request to transition a particular Stage into a
@@ -2378,7 +2453,7 @@ export type Promotion = Message<"github.com.akuity.kargo.api.v1alpha1.Promotion"
  * Use `create(PromotionSchema)` to create a new message.
  */
 export const PromotionSchema: GenMessage<Promotion> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 51);
+  messageDesc(file_api_v1alpha1_generated, 53);
 
 /**
  * PromotionList contains a list of Promotion
@@ -2402,7 +2477,7 @@ export type PromotionList = Message<"github.com.akuity.kargo.api.v1alpha1.Promot
  * Use `create(PromotionListSchema)` to create a new message.
  */
 export const PromotionListSchema: GenMessage<PromotionList> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 52);
+  messageDesc(file_api_v1alpha1_generated, 54);
 
 /**
  * PromotionPolicy defines policies governing the promotion of Freight to a
@@ -2451,7 +2526,7 @@ export type PromotionPolicy = Message<"github.com.akuity.kargo.api.v1alpha1.Prom
  * Use `create(PromotionPolicySchema)` to create a new message.
  */
 export const PromotionPolicySchema: GenMessage<PromotionPolicy> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 53);
+  messageDesc(file_api_v1alpha1_generated, 55);
 
 /**
  * PromotionPolicySelector is a selector that matches the resource to which
@@ -2507,7 +2582,7 @@ export type PromotionPolicySelector = Message<"github.com.akuity.kargo.api.v1alp
  * Use `create(PromotionPolicySelectorSchema)` to create a new message.
  */
 export const PromotionPolicySelectorSchema: GenMessage<PromotionPolicySelector> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 54);
+  messageDesc(file_api_v1alpha1_generated, 56);
 
 /**
  * PromotionReference contains the relevant information about a Promotion
@@ -2550,7 +2625,7 @@ export type PromotionReference = Message<"github.com.akuity.kargo.api.v1alpha1.P
  * Use `create(PromotionReferenceSchema)` to create a new message.
  */
 export const PromotionReferenceSchema: GenMessage<PromotionReference> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 55);
+  messageDesc(file_api_v1alpha1_generated, 57);
 
 /**
  * PromotionSpec describes the desired transition of a specific Stage into a
@@ -2615,7 +2690,7 @@ export type PromotionSpec = Message<"github.com.akuity.kargo.api.v1alpha1.Promot
  * Use `create(PromotionSpecSchema)` to create a new message.
  */
 export const PromotionSpecSchema: GenMessage<PromotionSpec> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 56);
+  messageDesc(file_api_v1alpha1_generated, 58);
 
 /**
  * PromotionStatus describes the current state of the transition represented by
@@ -2720,7 +2795,7 @@ export type PromotionStatus = Message<"github.com.akuity.kargo.api.v1alpha1.Prom
  * Use `create(PromotionStatusSchema)` to create a new message.
  */
 export const PromotionStatusSchema: GenMessage<PromotionStatus> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 57);
+  messageDesc(file_api_v1alpha1_generated, 59);
 
 /**
  * PromotionStep describes a directive to be executed as part of a Promotion.
@@ -2805,7 +2880,7 @@ export type PromotionStep = Message<"github.com.akuity.kargo.api.v1alpha1.Promot
  * Use `create(PromotionStepSchema)` to create a new message.
  */
 export const PromotionStepSchema: GenMessage<PromotionStep> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 58);
+  messageDesc(file_api_v1alpha1_generated, 60);
 
 /**
  * PromotionStepRetry describes the retry policy for a PromotionStep.
@@ -2864,7 +2939,7 @@ export type PromotionStepRetry = Message<"github.com.akuity.kargo.api.v1alpha1.P
  * Use `create(PromotionStepRetrySchema)` to create a new message.
  */
 export const PromotionStepRetrySchema: GenMessage<PromotionStepRetry> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 59);
+  messageDesc(file_api_v1alpha1_generated, 61);
 
 /**
  * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionTask
@@ -2891,7 +2966,7 @@ export type PromotionTask = Message<"github.com.akuity.kargo.api.v1alpha1.Promot
  * Use `create(PromotionTaskSchema)` to create a new message.
  */
 export const PromotionTaskSchema: GenMessage<PromotionTask> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 60);
+  messageDesc(file_api_v1alpha1_generated, 62);
 
 /**
  * PromotionTaskList contains a list of PromotionTasks.
@@ -2915,7 +2990,7 @@ export type PromotionTaskList = Message<"github.com.akuity.kargo.api.v1alpha1.Pr
  * Use `create(PromotionTaskListSchema)` to create a new message.
  */
 export const PromotionTaskListSchema: GenMessage<PromotionTaskList> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 61);
+  messageDesc(file_api_v1alpha1_generated, 63);
 
 /**
  * PromotionTaskReference describes a reference to a PromotionTask.
@@ -2953,7 +3028,7 @@ export type PromotionTaskReference = Message<"github.com.akuity.kargo.api.v1alph
  * Use `create(PromotionTaskReferenceSchema)` to create a new message.
  */
 export const PromotionTaskReferenceSchema: GenMessage<PromotionTaskReference> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 62);
+  messageDesc(file_api_v1alpha1_generated, 64);
 
 /**
  * @generated from message github.com.akuity.kargo.api.v1alpha1.PromotionTaskSpec
@@ -2987,7 +3062,7 @@ export type PromotionTaskSpec = Message<"github.com.akuity.kargo.api.v1alpha1.Pr
  * Use `create(PromotionTaskSpecSchema)` to create a new message.
  */
 export const PromotionTaskSpecSchema: GenMessage<PromotionTaskSpec> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 63);
+  messageDesc(file_api_v1alpha1_generated, 65);
 
 /**
  * PromotionTemplate defines a template for a Promotion that can be used to
@@ -3007,7 +3082,7 @@ export type PromotionTemplate = Message<"github.com.akuity.kargo.api.v1alpha1.Pr
  * Use `create(PromotionTemplateSchema)` to create a new message.
  */
 export const PromotionTemplateSchema: GenMessage<PromotionTemplate> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 64);
+  messageDesc(file_api_v1alpha1_generated, 66);
 
 /**
  * PromotionTemplateSpec describes the (partial) specification of a Promotion
@@ -3043,7 +3118,7 @@ export type PromotionTemplateSpec = Message<"github.com.akuity.kargo.api.v1alpha
  * Use `create(PromotionTemplateSpecSchema)` to create a new message.
  */
 export const PromotionTemplateSpecSchema: GenMessage<PromotionTemplateSpec> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 65);
+  messageDesc(file_api_v1alpha1_generated, 67);
 
 /**
  * QuayWebhookReceiverConfig describes a webhook receiver that is compatible
@@ -3079,7 +3154,7 @@ export type QuayWebhookReceiverConfig = Message<"github.com.akuity.kargo.api.v1a
  * Use `create(QuayWebhookReceiverConfigSchema)` to create a new message.
  */
 export const QuayWebhookReceiverConfigSchema: GenMessage<QuayWebhookReceiverConfig> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 66);
+  messageDesc(file_api_v1alpha1_generated, 68);
 
 /**
  * RepoSubscription describes a subscription to ONE OF a Git repository, a
@@ -3115,7 +3190,7 @@ export type RepoSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.Rep
  * Use `create(RepoSubscriptionSchema)` to create a new message.
  */
 export const RepoSubscriptionSchema: GenMessage<RepoSubscription> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 67);
+  messageDesc(file_api_v1alpha1_generated, 69);
 
 /**
  * Stage is the Kargo API's main type.
@@ -3151,7 +3226,7 @@ export type Stage = Message<"github.com.akuity.kargo.api.v1alpha1.Stage"> & {
  * Use `create(StageSchema)` to create a new message.
  */
 export const StageSchema: GenMessage<Stage> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 68);
+  messageDesc(file_api_v1alpha1_generated, 70);
 
 /**
  * StageList is a list of Stage resources.
@@ -3175,7 +3250,7 @@ export type StageList = Message<"github.com.akuity.kargo.api.v1alpha1.StageList"
  * Use `create(StageListSchema)` to create a new message.
  */
 export const StageListSchema: GenMessage<StageList> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 69);
+  messageDesc(file_api_v1alpha1_generated, 71);
 
 /**
  * StageSpec describes the sources of Freight used by a Stage and how to
@@ -3242,7 +3317,7 @@ export type StageSpec = Message<"github.com.akuity.kargo.api.v1alpha1.StageSpec"
  * Use `create(StageSpecSchema)` to create a new message.
  */
 export const StageSpecSchema: GenMessage<StageSpec> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 70);
+  messageDesc(file_api_v1alpha1_generated, 72);
 
 /**
  * StageStats contains a summary of the collective state of a Project's
@@ -3271,7 +3346,7 @@ export type StageStats = Message<"github.com.akuity.kargo.api.v1alpha1.StageStat
  * Use `create(StageStatsSchema)` to create a new message.
  */
 export const StageStatsSchema: GenMessage<StageStats> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 71);
+  messageDesc(file_api_v1alpha1_generated, 73);
 
 /**
  * StageStatus describes a Stages's current and recent Freight, health, and
@@ -3363,7 +3438,7 @@ export type StageStatus = Message<"github.com.akuity.kargo.api.v1alpha1.StageSta
  * Use `create(StageStatusSchema)` to create a new message.
  */
 export const StageStatusSchema: GenMessage<StageStatus> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 72);
+  messageDesc(file_api_v1alpha1_generated, 74);
 
 /**
  * StepExecutionMetadata tracks metadata pertaining to the execution of
@@ -3432,7 +3507,7 @@ export type StepExecutionMetadata = Message<"github.com.akuity.kargo.api.v1alpha
  * Use `create(StepExecutionMetadataSchema)` to create a new message.
  */
 export const StepExecutionMetadataSchema: GenMessage<StepExecutionMetadata> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 73);
+  messageDesc(file_api_v1alpha1_generated, 75);
 
 /**
  * Verification describes how to verify that a Promotion has been successful
@@ -3471,7 +3546,7 @@ export type Verification = Message<"github.com.akuity.kargo.api.v1alpha1.Verific
  * Use `create(VerificationSchema)` to create a new message.
  */
 export const VerificationSchema: GenMessage<Verification> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 74);
+  messageDesc(file_api_v1alpha1_generated, 76);
 
 /**
  * VerificationInfo contains the details of an instance of a Verification
@@ -3541,7 +3616,7 @@ export type VerificationInfo = Message<"github.com.akuity.kargo.api.v1alpha1.Ver
  * Use `create(VerificationInfoSchema)` to create a new message.
  */
 export const VerificationInfoSchema: GenMessage<VerificationInfo> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 75);
+  messageDesc(file_api_v1alpha1_generated, 77);
 
 /**
  * VerifiedStage describes a Stage in which Freight has been verified.
@@ -3573,7 +3648,7 @@ export type VerifiedStage = Message<"github.com.akuity.kargo.api.v1alpha1.Verifi
  * Use `create(VerifiedStageSchema)` to create a new message.
  */
 export const VerifiedStageSchema: GenMessage<VerifiedStage> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 76);
+  messageDesc(file_api_v1alpha1_generated, 78);
 
 /**
  * Warehouse is a source of Freight.
@@ -3608,7 +3683,7 @@ export type Warehouse = Message<"github.com.akuity.kargo.api.v1alpha1.Warehouse"
  * Use `create(WarehouseSchema)` to create a new message.
  */
 export const WarehouseSchema: GenMessage<Warehouse> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 77);
+  messageDesc(file_api_v1alpha1_generated, 79);
 
 /**
  * WarehouseList is a list of Warehouse resources.
@@ -3632,7 +3707,7 @@ export type WarehouseList = Message<"github.com.akuity.kargo.api.v1alpha1.Wareho
  * Use `create(WarehouseListSchema)` to create a new message.
  */
 export const WarehouseListSchema: GenMessage<WarehouseList> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 78);
+  messageDesc(file_api_v1alpha1_generated, 80);
 
 /**
  * WarehouseSpec describes sources of versioned artifacts to be included in
@@ -3704,7 +3779,7 @@ export type WarehouseSpec = Message<"github.com.akuity.kargo.api.v1alpha1.Wareho
  * Use `create(WarehouseSpecSchema)` to create a new message.
  */
 export const WarehouseSpecSchema: GenMessage<WarehouseSpec> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 79);
+  messageDesc(file_api_v1alpha1_generated, 81);
 
 /**
  * WarehouseStats contains a summary of the collective state of a Project's
@@ -3734,7 +3809,7 @@ export type WarehouseStats = Message<"github.com.akuity.kargo.api.v1alpha1.Wareh
  * Use `create(WarehouseStatsSchema)` to create a new message.
  */
 export const WarehouseStatsSchema: GenMessage<WarehouseStats> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 80);
+  messageDesc(file_api_v1alpha1_generated, 82);
 
 /**
  * WarehouseStatus describes a Warehouse's most recently observed state.
@@ -3793,7 +3868,7 @@ export type WarehouseStatus = Message<"github.com.akuity.kargo.api.v1alpha1.Ware
  * Use `create(WarehouseStatusSchema)` to create a new message.
  */
 export const WarehouseStatusSchema: GenMessage<WarehouseStatus> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 81);
+  messageDesc(file_api_v1alpha1_generated, 83);
 
 /**
  * WebhookReceiverConfig describes the configuration for a single webhook
@@ -3854,6 +3929,22 @@ export type WebhookReceiverConfig = Message<"github.com.akuity.kargo.api.v1alpha
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.QuayWebhookReceiverConfig quay = 4;
    */
   quay?: QuayWebhookReceiverConfig;
+
+  /**
+   * Azure contains the configuration for a webhook receiver that is compatible
+   * with Azure Container Registry (ACR) and Azure DevOps payloads.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.AzureWebhookReceiverConfig azure = 8;
+   */
+  azure?: AzureWebhookReceiverConfig;
+
+  /**
+   * Gitea contains the configuration for a webhook receiver that is compatible
+   * with Gitea payloads.
+   *
+   * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.GiteaWebhookReceiverConfig gitea = 7;
+   */
+  gitea?: GiteaWebhookReceiverConfig;
 };
 
 /**
@@ -3861,7 +3952,7 @@ export type WebhookReceiverConfig = Message<"github.com.akuity.kargo.api.v1alpha
  * Use `create(WebhookReceiverConfigSchema)` to create a new message.
  */
 export const WebhookReceiverConfigSchema: GenMessage<WebhookReceiverConfig> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 82);
+  messageDesc(file_api_v1alpha1_generated, 84);
 
 /**
  * WebhookReceiverDetails encapsulates the details of a webhook receiver.
@@ -3896,5 +3987,5 @@ export type WebhookReceiverDetails = Message<"github.com.akuity.kargo.api.v1alph
  * Use `create(WebhookReceiverDetailsSchema)` to create a new message.
  */
 export const WebhookReceiverDetailsSchema: GenMessage<WebhookReceiverDetails> = /*@__PURE__*/
-  messageDesc(file_api_v1alpha1_generated, 83);
+  messageDesc(file_api_v1alpha1_generated, 85);
 

@@ -254,10 +254,38 @@ func (m *ArgoCDAppSyncStatus) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ArgoCDAppSyncStatus proto.InternalMessageInfo
 
+func (m *AzureWebhookReceiverConfig) Reset()      { *m = AzureWebhookReceiverConfig{} }
+func (*AzureWebhookReceiverConfig) ProtoMessage() {}
+func (*AzureWebhookReceiverConfig) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e26b7f7bbc391025, []int{8}
+}
+func (m *AzureWebhookReceiverConfig) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *AzureWebhookReceiverConfig) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b[:n], nil
+}
+func (m *AzureWebhookReceiverConfig) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AzureWebhookReceiverConfig.Merge(m, src)
+}
+func (m *AzureWebhookReceiverConfig) XXX_Size() int {
+	return m.Size()
+}
+func (m *AzureWebhookReceiverConfig) XXX_DiscardUnknown() {
+	xxx_messageInfo_AzureWebhookReceiverConfig.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_AzureWebhookReceiverConfig proto.InternalMessageInfo
+
 func (m *BitbucketWebhookReceiverConfig) Reset()      { *m = BitbucketWebhookReceiverConfig{} }
 func (*BitbucketWebhookReceiverConfig) ProtoMessage() {}
 func (*BitbucketWebhookReceiverConfig) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{8}
+	return fileDescriptor_e26b7f7bbc391025, []int{9}
 }
 func (m *BitbucketWebhookReceiverConfig) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -285,7 +313,7 @@ var xxx_messageInfo_BitbucketWebhookReceiverConfig proto.InternalMessageInfo
 func (m *Chart) Reset()      { *m = Chart{} }
 func (*Chart) ProtoMessage() {}
 func (*Chart) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{9}
+	return fileDescriptor_e26b7f7bbc391025, []int{10}
 }
 func (m *Chart) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -313,7 +341,7 @@ var xxx_messageInfo_Chart proto.InternalMessageInfo
 func (m *ChartDiscoveryResult) Reset()      { *m = ChartDiscoveryResult{} }
 func (*ChartDiscoveryResult) ProtoMessage() {}
 func (*ChartDiscoveryResult) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{10}
+	return fileDescriptor_e26b7f7bbc391025, []int{11}
 }
 func (m *ChartDiscoveryResult) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -341,7 +369,7 @@ var xxx_messageInfo_ChartDiscoveryResult proto.InternalMessageInfo
 func (m *ChartSubscription) Reset()      { *m = ChartSubscription{} }
 func (*ChartSubscription) ProtoMessage() {}
 func (*ChartSubscription) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{11}
+	return fileDescriptor_e26b7f7bbc391025, []int{12}
 }
 func (m *ChartSubscription) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -369,7 +397,7 @@ var xxx_messageInfo_ChartSubscription proto.InternalMessageInfo
 func (m *ClusterConfig) Reset()      { *m = ClusterConfig{} }
 func (*ClusterConfig) ProtoMessage() {}
 func (*ClusterConfig) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{12}
+	return fileDescriptor_e26b7f7bbc391025, []int{13}
 }
 func (m *ClusterConfig) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -397,7 +425,7 @@ var xxx_messageInfo_ClusterConfig proto.InternalMessageInfo
 func (m *ClusterConfigList) Reset()      { *m = ClusterConfigList{} }
 func (*ClusterConfigList) ProtoMessage() {}
 func (*ClusterConfigList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{13}
+	return fileDescriptor_e26b7f7bbc391025, []int{14}
 }
 func (m *ClusterConfigList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -425,7 +453,7 @@ var xxx_messageInfo_ClusterConfigList proto.InternalMessageInfo
 func (m *ClusterConfigSpec) Reset()      { *m = ClusterConfigSpec{} }
 func (*ClusterConfigSpec) ProtoMessage() {}
 func (*ClusterConfigSpec) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{14}
+	return fileDescriptor_e26b7f7bbc391025, []int{15}
 }
 func (m *ClusterConfigSpec) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -453,7 +481,7 @@ var xxx_messageInfo_ClusterConfigSpec proto.InternalMessageInfo
 func (m *ClusterConfigStatus) Reset()      { *m = ClusterConfigStatus{} }
 func (*ClusterConfigStatus) ProtoMessage() {}
 func (*ClusterConfigStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{15}
+	return fileDescriptor_e26b7f7bbc391025, []int{16}
 }
 func (m *ClusterConfigStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -481,7 +509,7 @@ var xxx_messageInfo_ClusterConfigStatus proto.InternalMessageInfo
 func (m *ClusterPromotionTask) Reset()      { *m = ClusterPromotionTask{} }
 func (*ClusterPromotionTask) ProtoMessage() {}
 func (*ClusterPromotionTask) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{16}
+	return fileDescriptor_e26b7f7bbc391025, []int{17}
 }
 func (m *ClusterPromotionTask) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -509,7 +537,7 @@ var xxx_messageInfo_ClusterPromotionTask proto.InternalMessageInfo
 func (m *ClusterPromotionTaskList) Reset()      { *m = ClusterPromotionTaskList{} }
 func (*ClusterPromotionTaskList) ProtoMessage() {}
 func (*ClusterPromotionTaskList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{17}
+	return fileDescriptor_e26b7f7bbc391025, []int{18}
 }
 func (m *ClusterPromotionTaskList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -537,7 +565,7 @@ var xxx_messageInfo_ClusterPromotionTaskList proto.InternalMessageInfo
 func (m *CurrentStage) Reset()      { *m = CurrentStage{} }
 func (*CurrentStage) ProtoMessage() {}
 func (*CurrentStage) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{18}
+	return fileDescriptor_e26b7f7bbc391025, []int{19}
 }
 func (m *CurrentStage) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -565,7 +593,7 @@ var xxx_messageInfo_CurrentStage proto.InternalMessageInfo
 func (m *DiscoveredArtifacts) Reset()      { *m = DiscoveredArtifacts{} }
 func (*DiscoveredArtifacts) ProtoMessage() {}
 func (*DiscoveredArtifacts) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{19}
+	return fileDescriptor_e26b7f7bbc391025, []int{20}
 }
 func (m *DiscoveredArtifacts) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -593,7 +621,7 @@ var xxx_messageInfo_DiscoveredArtifacts proto.InternalMessageInfo
 func (m *DiscoveredCommit) Reset()      { *m = DiscoveredCommit{} }
 func (*DiscoveredCommit) ProtoMessage() {}
 func (*DiscoveredCommit) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{20}
+	return fileDescriptor_e26b7f7bbc391025, []int{21}
 }
 func (m *DiscoveredCommit) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -621,7 +649,7 @@ var xxx_messageInfo_DiscoveredCommit proto.InternalMessageInfo
 func (m *DiscoveredImageReference) Reset()      { *m = DiscoveredImageReference{} }
 func (*DiscoveredImageReference) ProtoMessage() {}
 func (*DiscoveredImageReference) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{21}
+	return fileDescriptor_e26b7f7bbc391025, []int{22}
 }
 func (m *DiscoveredImageReference) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -649,7 +677,7 @@ var xxx_messageInfo_DiscoveredImageReference proto.InternalMessageInfo
 func (m *DockerHubWebhookReceiverConfig) Reset()      { *m = DockerHubWebhookReceiverConfig{} }
 func (*DockerHubWebhookReceiverConfig) ProtoMessage() {}
 func (*DockerHubWebhookReceiverConfig) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{22}
+	return fileDescriptor_e26b7f7bbc391025, []int{23}
 }
 func (m *DockerHubWebhookReceiverConfig) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -677,7 +705,7 @@ var xxx_messageInfo_DockerHubWebhookReceiverConfig proto.InternalMessageInfo
 func (m *ExpressionVariable) Reset()      { *m = ExpressionVariable{} }
 func (*ExpressionVariable) ProtoMessage() {}
 func (*ExpressionVariable) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{23}
+	return fileDescriptor_e26b7f7bbc391025, []int{24}
 }
 func (m *ExpressionVariable) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -705,7 +733,7 @@ var xxx_messageInfo_ExpressionVariable proto.InternalMessageInfo
 func (m *Freight) Reset()      { *m = Freight{} }
 func (*Freight) ProtoMessage() {}
 func (*Freight) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{24}
+	return fileDescriptor_e26b7f7bbc391025, []int{25}
 }
 func (m *Freight) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -733,7 +761,7 @@ var xxx_messageInfo_Freight proto.InternalMessageInfo
 func (m *FreightCollection) Reset()      { *m = FreightCollection{} }
 func (*FreightCollection) ProtoMessage() {}
 func (*FreightCollection) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{25}
+	return fileDescriptor_e26b7f7bbc391025, []int{26}
 }
 func (m *FreightCollection) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -761,7 +789,7 @@ var xxx_messageInfo_FreightCollection proto.InternalMessageInfo
 func (m *FreightList) Reset()      { *m = FreightList{} }
 func (*FreightList) ProtoMessage() {}
 func (*FreightList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{26}
+	return fileDescriptor_e26b7f7bbc391025, []int{27}
 }
 func (m *FreightList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -789,7 +817,7 @@ var xxx_messageInfo_FreightList proto.InternalMessageInfo
 func (m *FreightOrigin) Reset()      { *m = FreightOrigin{} }
 func (*FreightOrigin) ProtoMessage() {}
 func (*FreightOrigin) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{27}
+	return fileDescriptor_e26b7f7bbc391025, []int{28}
 }
 func (m *FreightOrigin) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -817,7 +845,7 @@ var xxx_messageInfo_FreightOrigin proto.InternalMessageInfo
 func (m *FreightReference) Reset()      { *m = FreightReference{} }
 func (*FreightReference) ProtoMessage() {}
 func (*FreightReference) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{28}
+	return fileDescriptor_e26b7f7bbc391025, []int{29}
 }
 func (m *FreightReference) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -845,7 +873,7 @@ var xxx_messageInfo_FreightReference proto.InternalMessageInfo
 func (m *FreightRequest) Reset()      { *m = FreightRequest{} }
 func (*FreightRequest) ProtoMessage() {}
 func (*FreightRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{29}
+	return fileDescriptor_e26b7f7bbc391025, []int{30}
 }
 func (m *FreightRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -873,7 +901,7 @@ var xxx_messageInfo_FreightRequest proto.InternalMessageInfo
 func (m *FreightSources) Reset()      { *m = FreightSources{} }
 func (*FreightSources) ProtoMessage() {}
 func (*FreightSources) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{30}
+	return fileDescriptor_e26b7f7bbc391025, []int{31}
 }
 func (m *FreightSources) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -901,7 +929,7 @@ var xxx_messageInfo_FreightSources proto.InternalMessageInfo
 func (m *FreightStatus) Reset()      { *m = FreightStatus{} }
 func (*FreightStatus) ProtoMessage() {}
 func (*FreightStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{31}
+	return fileDescriptor_e26b7f7bbc391025, []int{32}
 }
 func (m *FreightStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -929,7 +957,7 @@ var xxx_messageInfo_FreightStatus proto.InternalMessageInfo
 func (m *GitCommit) Reset()      { *m = GitCommit{} }
 func (*GitCommit) ProtoMessage() {}
 func (*GitCommit) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{32}
+	return fileDescriptor_e26b7f7bbc391025, []int{33}
 }
 func (m *GitCommit) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -957,7 +985,7 @@ var xxx_messageInfo_GitCommit proto.InternalMessageInfo
 func (m *GitDiscoveryResult) Reset()      { *m = GitDiscoveryResult{} }
 func (*GitDiscoveryResult) ProtoMessage() {}
 func (*GitDiscoveryResult) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{33}
+	return fileDescriptor_e26b7f7bbc391025, []int{34}
 }
 func (m *GitDiscoveryResult) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -985,7 +1013,7 @@ var xxx_messageInfo_GitDiscoveryResult proto.InternalMessageInfo
 func (m *GitHubWebhookReceiverConfig) Reset()      { *m = GitHubWebhookReceiverConfig{} }
 func (*GitHubWebhookReceiverConfig) ProtoMessage() {}
 func (*GitHubWebhookReceiverConfig) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{34}
+	return fileDescriptor_e26b7f7bbc391025, []int{35}
 }
 func (m *GitHubWebhookReceiverConfig) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1013,7 +1041,7 @@ var xxx_messageInfo_GitHubWebhookReceiverConfig proto.InternalMessageInfo
 func (m *GitLabWebhookReceiverConfig) Reset()      { *m = GitLabWebhookReceiverConfig{} }
 func (*GitLabWebhookReceiverConfig) ProtoMessage() {}
 func (*GitLabWebhookReceiverConfig) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{35}
+	return fileDescriptor_e26b7f7bbc391025, []int{36}
 }
 func (m *GitLabWebhookReceiverConfig) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1041,7 +1069,7 @@ var xxx_messageInfo_GitLabWebhookReceiverConfig proto.InternalMessageInfo
 func (m *GitSubscription) Reset()      { *m = GitSubscription{} }
 func (*GitSubscription) ProtoMessage() {}
 func (*GitSubscription) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{36}
+	return fileDescriptor_e26b7f7bbc391025, []int{37}
 }
 func (m *GitSubscription) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1066,10 +1094,38 @@ func (m *GitSubscription) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_GitSubscription proto.InternalMessageInfo
 
+func (m *GiteaWebhookReceiverConfig) Reset()      { *m = GiteaWebhookReceiverConfig{} }
+func (*GiteaWebhookReceiverConfig) ProtoMessage() {}
+func (*GiteaWebhookReceiverConfig) Descriptor() ([]byte, []int) {
+	return fileDescriptor_e26b7f7bbc391025, []int{38}
+}
+func (m *GiteaWebhookReceiverConfig) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *GiteaWebhookReceiverConfig) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	b = b[:cap(b)]
+	n, err := m.MarshalToSizedBuffer(b)
+	if err != nil {
+		return nil, err
+	}
+	return b[:n], nil
+}
+func (m *GiteaWebhookReceiverConfig) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_GiteaWebhookReceiverConfig.Merge(m, src)
+}
+func (m *GiteaWebhookReceiverConfig) XXX_Size() int {
+	return m.Size()
+}
+func (m *GiteaWebhookReceiverConfig) XXX_DiscardUnknown() {
+	xxx_messageInfo_GiteaWebhookReceiverConfig.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_GiteaWebhookReceiverConfig proto.InternalMessageInfo
+
 func (m *Health) Reset()      { *m = Health{} }
 func (*Health) ProtoMessage() {}
 func (*Health) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{37}
+	return fileDescriptor_e26b7f7bbc391025, []int{39}
 }
 func (m *Health) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1097,7 +1153,7 @@ var xxx_messageInfo_Health proto.InternalMessageInfo
 func (m *HealthCheckStep) Reset()      { *m = HealthCheckStep{} }
 func (*HealthCheckStep) ProtoMessage() {}
 func (*HealthCheckStep) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{38}
+	return fileDescriptor_e26b7f7bbc391025, []int{40}
 }
 func (m *HealthCheckStep) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1125,7 +1181,7 @@ var xxx_messageInfo_HealthCheckStep proto.InternalMessageInfo
 func (m *HealthStats) Reset()      { *m = HealthStats{} }
 func (*HealthStats) ProtoMessage() {}
 func (*HealthStats) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{39}
+	return fileDescriptor_e26b7f7bbc391025, []int{41}
 }
 func (m *HealthStats) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1153,7 +1209,7 @@ var xxx_messageInfo_HealthStats proto.InternalMessageInfo
 func (m *Image) Reset()      { *m = Image{} }
 func (*Image) ProtoMessage() {}
 func (*Image) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{40}
+	return fileDescriptor_e26b7f7bbc391025, []int{42}
 }
 func (m *Image) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1181,7 +1237,7 @@ var xxx_messageInfo_Image proto.InternalMessageInfo
 func (m *ImageDiscoveryResult) Reset()      { *m = ImageDiscoveryResult{} }
 func (*ImageDiscoveryResult) ProtoMessage() {}
 func (*ImageDiscoveryResult) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{41}
+	return fileDescriptor_e26b7f7bbc391025, []int{43}
 }
 func (m *ImageDiscoveryResult) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1209,7 +1265,7 @@ var xxx_messageInfo_ImageDiscoveryResult proto.InternalMessageInfo
 func (m *ImageSubscription) Reset()      { *m = ImageSubscription{} }
 func (*ImageSubscription) ProtoMessage() {}
 func (*ImageSubscription) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{42}
+	return fileDescriptor_e26b7f7bbc391025, []int{44}
 }
 func (m *ImageSubscription) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1237,7 +1293,7 @@ var xxx_messageInfo_ImageSubscription proto.InternalMessageInfo
 func (m *Project) Reset()      { *m = Project{} }
 func (*Project) ProtoMessage() {}
 func (*Project) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{43}
+	return fileDescriptor_e26b7f7bbc391025, []int{45}
 }
 func (m *Project) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1265,7 +1321,7 @@ var xxx_messageInfo_Project proto.InternalMessageInfo
 func (m *ProjectConfig) Reset()      { *m = ProjectConfig{} }
 func (*ProjectConfig) ProtoMessage() {}
 func (*ProjectConfig) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{44}
+	return fileDescriptor_e26b7f7bbc391025, []int{46}
 }
 func (m *ProjectConfig) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1293,7 +1349,7 @@ var xxx_messageInfo_ProjectConfig proto.InternalMessageInfo
 func (m *ProjectConfigList) Reset()      { *m = ProjectConfigList{} }
 func (*ProjectConfigList) ProtoMessage() {}
 func (*ProjectConfigList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{45}
+	return fileDescriptor_e26b7f7bbc391025, []int{47}
 }
 func (m *ProjectConfigList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1321,7 +1377,7 @@ var xxx_messageInfo_ProjectConfigList proto.InternalMessageInfo
 func (m *ProjectConfigSpec) Reset()      { *m = ProjectConfigSpec{} }
 func (*ProjectConfigSpec) ProtoMessage() {}
 func (*ProjectConfigSpec) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{46}
+	return fileDescriptor_e26b7f7bbc391025, []int{48}
 }
 func (m *ProjectConfigSpec) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1349,7 +1405,7 @@ var xxx_messageInfo_ProjectConfigSpec proto.InternalMessageInfo
 func (m *ProjectConfigStatus) Reset()      { *m = ProjectConfigStatus{} }
 func (*ProjectConfigStatus) ProtoMessage() {}
 func (*ProjectConfigStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{47}
+	return fileDescriptor_e26b7f7bbc391025, []int{49}
 }
 func (m *ProjectConfigStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1377,7 +1433,7 @@ var xxx_messageInfo_ProjectConfigStatus proto.InternalMessageInfo
 func (m *ProjectList) Reset()      { *m = ProjectList{} }
 func (*ProjectList) ProtoMessage() {}
 func (*ProjectList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{48}
+	return fileDescriptor_e26b7f7bbc391025, []int{50}
 }
 func (m *ProjectList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1405,7 +1461,7 @@ var xxx_messageInfo_ProjectList proto.InternalMessageInfo
 func (m *ProjectStats) Reset()      { *m = ProjectStats{} }
 func (*ProjectStats) ProtoMessage() {}
 func (*ProjectStats) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{49}
+	return fileDescriptor_e26b7f7bbc391025, []int{51}
 }
 func (m *ProjectStats) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1433,7 +1489,7 @@ var xxx_messageInfo_ProjectStats proto.InternalMessageInfo
 func (m *ProjectStatus) Reset()      { *m = ProjectStatus{} }
 func (*ProjectStatus) ProtoMessage() {}
 func (*ProjectStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{50}
+	return fileDescriptor_e26b7f7bbc391025, []int{52}
 }
 func (m *ProjectStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1461,7 +1517,7 @@ var xxx_messageInfo_ProjectStatus proto.InternalMessageInfo
 func (m *Promotion) Reset()      { *m = Promotion{} }
 func (*Promotion) ProtoMessage() {}
 func (*Promotion) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{51}
+	return fileDescriptor_e26b7f7bbc391025, []int{53}
 }
 func (m *Promotion) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1489,7 +1545,7 @@ var xxx_messageInfo_Promotion proto.InternalMessageInfo
 func (m *PromotionList) Reset()      { *m = PromotionList{} }
 func (*PromotionList) ProtoMessage() {}
 func (*PromotionList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{52}
+	return fileDescriptor_e26b7f7bbc391025, []int{54}
 }
 func (m *PromotionList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1517,7 +1573,7 @@ var xxx_messageInfo_PromotionList proto.InternalMessageInfo
 func (m *PromotionPolicy) Reset()      { *m = PromotionPolicy{} }
 func (*PromotionPolicy) ProtoMessage() {}
 func (*PromotionPolicy) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{53}
+	return fileDescriptor_e26b7f7bbc391025, []int{55}
 }
 func (m *PromotionPolicy) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1545,7 +1601,7 @@ var xxx_messageInfo_PromotionPolicy proto.InternalMessageInfo
 func (m *PromotionPolicySelector) Reset()      { *m = PromotionPolicySelector{} }
 func (*PromotionPolicySelector) ProtoMessage() {}
 func (*PromotionPolicySelector) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{54}
+	return fileDescriptor_e26b7f7bbc391025, []int{56}
 }
 func (m *PromotionPolicySelector) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1573,7 +1629,7 @@ var xxx_messageInfo_PromotionPolicySelector proto.InternalMessageInfo
 func (m *PromotionReference) Reset()      { *m = PromotionReference{} }
 func (*PromotionReference) ProtoMessage() {}
 func (*PromotionReference) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{55}
+	return fileDescriptor_e26b7f7bbc391025, []int{57}
 }
 func (m *PromotionReference) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1601,7 +1657,7 @@ var xxx_messageInfo_PromotionReference proto.InternalMessageInfo
 func (m *PromotionSpec) Reset()      { *m = PromotionSpec{} }
 func (*PromotionSpec) ProtoMessage() {}
 func (*PromotionSpec) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{56}
+	return fileDescriptor_e26b7f7bbc391025, []int{58}
 }
 func (m *PromotionSpec) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1629,7 +1685,7 @@ var xxx_messageInfo_PromotionSpec proto.InternalMessageInfo
 func (m *PromotionStatus) Reset()      { *m = PromotionStatus{} }
 func (*PromotionStatus) ProtoMessage() {}
 func (*PromotionStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{57}
+	return fileDescriptor_e26b7f7bbc391025, []int{59}
 }
 func (m *PromotionStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1657,7 +1713,7 @@ var xxx_messageInfo_PromotionStatus proto.InternalMessageInfo
 func (m *PromotionStep) Reset()      { *m = PromotionStep{} }
 func (*PromotionStep) ProtoMessage() {}
 func (*PromotionStep) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{58}
+	return fileDescriptor_e26b7f7bbc391025, []int{60}
 }
 func (m *PromotionStep) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1685,7 +1741,7 @@ var xxx_messageInfo_PromotionStep proto.InternalMessageInfo
 func (m *PromotionStepRetry) Reset()      { *m = PromotionStepRetry{} }
 func (*PromotionStepRetry) ProtoMessage() {}
 func (*PromotionStepRetry) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{59}
+	return fileDescriptor_e26b7f7bbc391025, []int{61}
 }
 func (m *PromotionStepRetry) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1713,7 +1769,7 @@ var xxx_messageInfo_PromotionStepRetry proto.InternalMessageInfo
 func (m *PromotionTask) Reset()      { *m = PromotionTask{} }
 func (*PromotionTask) ProtoMessage() {}
 func (*PromotionTask) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{60}
+	return fileDescriptor_e26b7f7bbc391025, []int{62}
 }
 func (m *PromotionTask) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1741,7 +1797,7 @@ var xxx_messageInfo_PromotionTask proto.InternalMessageInfo
 func (m *PromotionTaskList) Reset()      { *m = PromotionTaskList{} }
 func (*PromotionTaskList) ProtoMessage() {}
 func (*PromotionTaskList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{61}
+	return fileDescriptor_e26b7f7bbc391025, []int{63}
 }
 func (m *PromotionTaskList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1769,7 +1825,7 @@ var xxx_messageInfo_PromotionTaskList proto.InternalMessageInfo
 func (m *PromotionTaskReference) Reset()      { *m = PromotionTaskReference{} }
 func (*PromotionTaskReference) ProtoMessage() {}
 func (*PromotionTaskReference) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{62}
+	return fileDescriptor_e26b7f7bbc391025, []int{64}
 }
 func (m *PromotionTaskReference) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1797,7 +1853,7 @@ var xxx_messageInfo_PromotionTaskReference proto.InternalMessageInfo
 func (m *PromotionTaskSpec) Reset()      { *m = PromotionTaskSpec{} }
 func (*PromotionTaskSpec) ProtoMessage() {}
 func (*PromotionTaskSpec) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{63}
+	return fileDescriptor_e26b7f7bbc391025, []int{65}
 }
 func (m *PromotionTaskSpec) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1825,7 +1881,7 @@ var xxx_messageInfo_PromotionTaskSpec proto.InternalMessageInfo
 func (m *PromotionTemplate) Reset()      { *m = PromotionTemplate{} }
 func (*PromotionTemplate) ProtoMessage() {}
 func (*PromotionTemplate) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{64}
+	return fileDescriptor_e26b7f7bbc391025, []int{66}
 }
 func (m *PromotionTemplate) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1853,7 +1909,7 @@ var xxx_messageInfo_PromotionTemplate proto.InternalMessageInfo
 func (m *PromotionTemplateSpec) Reset()      { *m = PromotionTemplateSpec{} }
 func (*PromotionTemplateSpec) ProtoMessage() {}
 func (*PromotionTemplateSpec) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{65}
+	return fileDescriptor_e26b7f7bbc391025, []int{67}
 }
 func (m *PromotionTemplateSpec) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1881,7 +1937,7 @@ var xxx_messageInfo_PromotionTemplateSpec proto.InternalMessageInfo
 func (m *QuayWebhookReceiverConfig) Reset()      { *m = QuayWebhookReceiverConfig{} }
 func (*QuayWebhookReceiverConfig) ProtoMessage() {}
 func (*QuayWebhookReceiverConfig) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{66}
+	return fileDescriptor_e26b7f7bbc391025, []int{68}
 }
 func (m *QuayWebhookReceiverConfig) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1909,7 +1965,7 @@ var xxx_messageInfo_QuayWebhookReceiverConfig proto.InternalMessageInfo
 func (m *RepoSubscription) Reset()      { *m = RepoSubscription{} }
 func (*RepoSubscription) ProtoMessage() {}
 func (*RepoSubscription) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{67}
+	return fileDescriptor_e26b7f7bbc391025, []int{69}
 }
 func (m *RepoSubscription) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1937,7 +1993,7 @@ var xxx_messageInfo_RepoSubscription proto.InternalMessageInfo
 func (m *Stage) Reset()      { *m = Stage{} }
 func (*Stage) ProtoMessage() {}
 func (*Stage) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{68}
+	return fileDescriptor_e26b7f7bbc391025, []int{70}
 }
 func (m *Stage) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1965,7 +2021,7 @@ var xxx_messageInfo_Stage proto.InternalMessageInfo
 func (m *StageList) Reset()      { *m = StageList{} }
 func (*StageList) ProtoMessage() {}
 func (*StageList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{69}
+	return fileDescriptor_e26b7f7bbc391025, []int{71}
 }
 func (m *StageList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1993,7 +2049,7 @@ var xxx_messageInfo_StageList proto.InternalMessageInfo
 func (m *StageSpec) Reset()      { *m = StageSpec{} }
 func (*StageSpec) ProtoMessage() {}
 func (*StageSpec) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{70}
+	return fileDescriptor_e26b7f7bbc391025, []int{72}
 }
 func (m *StageSpec) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2021,7 +2077,7 @@ var xxx_messageInfo_StageSpec proto.InternalMessageInfo
 func (m *StageStats) Reset()      { *m = StageStats{} }
 func (*StageStats) ProtoMessage() {}
 func (*StageStats) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{71}
+	return fileDescriptor_e26b7f7bbc391025, []int{73}
 }
 func (m *StageStats) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2049,7 +2105,7 @@ var xxx_messageInfo_StageStats proto.InternalMessageInfo
 func (m *StageStatus) Reset()      { *m = StageStatus{} }
 func (*StageStatus) ProtoMessage() {}
 func (*StageStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{72}
+	return fileDescriptor_e26b7f7bbc391025, []int{74}
 }
 func (m *StageStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2077,7 +2133,7 @@ var xxx_messageInfo_StageStatus proto.InternalMessageInfo
 func (m *StepExecutionMetadata) Reset()      { *m = StepExecutionMetadata{} }
 func (*StepExecutionMetadata) ProtoMessage() {}
 func (*StepExecutionMetadata) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{73}
+	return fileDescriptor_e26b7f7bbc391025, []int{75}
 }
 func (m *StepExecutionMetadata) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2105,7 +2161,7 @@ var xxx_messageInfo_StepExecutionMetadata proto.InternalMessageInfo
 func (m *Verification) Reset()      { *m = Verification{} }
 func (*Verification) ProtoMessage() {}
 func (*Verification) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{74}
+	return fileDescriptor_e26b7f7bbc391025, []int{76}
 }
 func (m *Verification) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2133,7 +2189,7 @@ var xxx_messageInfo_Verification proto.InternalMessageInfo
 func (m *VerificationInfo) Reset()      { *m = VerificationInfo{} }
 func (*VerificationInfo) ProtoMessage() {}
 func (*VerificationInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{75}
+	return fileDescriptor_e26b7f7bbc391025, []int{77}
 }
 func (m *VerificationInfo) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2161,7 +2217,7 @@ var xxx_messageInfo_VerificationInfo proto.InternalMessageInfo
 func (m *VerifiedStage) Reset()      { *m = VerifiedStage{} }
 func (*VerifiedStage) ProtoMessage() {}
 func (*VerifiedStage) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{76}
+	return fileDescriptor_e26b7f7bbc391025, []int{78}
 }
 func (m *VerifiedStage) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2189,7 +2245,7 @@ var xxx_messageInfo_VerifiedStage proto.InternalMessageInfo
 func (m *Warehouse) Reset()      { *m = Warehouse{} }
 func (*Warehouse) ProtoMessage() {}
 func (*Warehouse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{77}
+	return fileDescriptor_e26b7f7bbc391025, []int{79}
 }
 func (m *Warehouse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2217,7 +2273,7 @@ var xxx_messageInfo_Warehouse proto.InternalMessageInfo
 func (m *WarehouseList) Reset()      { *m = WarehouseList{} }
 func (*WarehouseList) ProtoMessage() {}
 func (*WarehouseList) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{78}
+	return fileDescriptor_e26b7f7bbc391025, []int{80}
 }
 func (m *WarehouseList) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2245,7 +2301,7 @@ var xxx_messageInfo_WarehouseList proto.InternalMessageInfo
 func (m *WarehouseSpec) Reset()      { *m = WarehouseSpec{} }
 func (*WarehouseSpec) ProtoMessage() {}
 func (*WarehouseSpec) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{79}
+	return fileDescriptor_e26b7f7bbc391025, []int{81}
 }
 func (m *WarehouseSpec) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2273,7 +2329,7 @@ var xxx_messageInfo_WarehouseSpec proto.InternalMessageInfo
 func (m *WarehouseStats) Reset()      { *m = WarehouseStats{} }
 func (*WarehouseStats) ProtoMessage() {}
 func (*WarehouseStats) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{80}
+	return fileDescriptor_e26b7f7bbc391025, []int{82}
 }
 func (m *WarehouseStats) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2301,7 +2357,7 @@ var xxx_messageInfo_WarehouseStats proto.InternalMessageInfo
 func (m *WarehouseStatus) Reset()      { *m = WarehouseStatus{} }
 func (*WarehouseStatus) ProtoMessage() {}
 func (*WarehouseStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{81}
+	return fileDescriptor_e26b7f7bbc391025, []int{83}
 }
 func (m *WarehouseStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2329,7 +2385,7 @@ var xxx_messageInfo_WarehouseStatus proto.InternalMessageInfo
 func (m *WebhookReceiverConfig) Reset()      { *m = WebhookReceiverConfig{} }
 func (*WebhookReceiverConfig) ProtoMessage() {}
 func (*WebhookReceiverConfig) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{82}
+	return fileDescriptor_e26b7f7bbc391025, []int{84}
 }
 func (m *WebhookReceiverConfig) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2357,7 +2413,7 @@ var xxx_messageInfo_WebhookReceiverConfig proto.InternalMessageInfo
 func (m *WebhookReceiverDetails) Reset()      { *m = WebhookReceiverDetails{} }
 func (*WebhookReceiverDetails) ProtoMessage() {}
 func (*WebhookReceiverDetails) Descriptor() ([]byte, []int) {
-	return fileDescriptor_e26b7f7bbc391025, []int{83}
+	return fileDescriptor_e26b7f7bbc391025, []int{85}
 }
 func (m *WebhookReceiverDetails) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2393,6 +2449,7 @@ func init() {
 	proto.RegisterType((*ArgoCDAppHealthStatus)(nil), "github.com.akuity.kargo.api.v1alpha1.ArgoCDAppHealthStatus")
 	proto.RegisterType((*ArgoCDAppStatus)(nil), "github.com.akuity.kargo.api.v1alpha1.ArgoCDAppStatus")
 	proto.RegisterType((*ArgoCDAppSyncStatus)(nil), "github.com.akuity.kargo.api.v1alpha1.ArgoCDAppSyncStatus")
+	proto.RegisterType((*AzureWebhookReceiverConfig)(nil), "github.com.akuity.kargo.api.v1alpha1.AzureWebhookReceiverConfig")
 	proto.RegisterType((*BitbucketWebhookReceiverConfig)(nil), "github.com.akuity.kargo.api.v1alpha1.BitbucketWebhookReceiverConfig")
 	proto.RegisterType((*Chart)(nil), "github.com.akuity.kargo.api.v1alpha1.Chart")
 	proto.RegisterType((*ChartDiscoveryResult)(nil), "github.com.akuity.kargo.api.v1alpha1.ChartDiscoveryResult")
@@ -2428,6 +2485,7 @@ func init() {
 	proto.RegisterType((*GitHubWebhookReceiverConfig)(nil), "github.com.akuity.kargo.api.v1alpha1.GitHubWebhookReceiverConfig")
 	proto.RegisterType((*GitLabWebhookReceiverConfig)(nil), "github.com.akuity.kargo.api.v1alpha1.GitLabWebhookReceiverConfig")
 	proto.RegisterType((*GitSubscription)(nil), "github.com.akuity.kargo.api.v1alpha1.GitSubscription")
+	proto.RegisterType((*GiteaWebhookReceiverConfig)(nil), "github.com.akuity.kargo.api.v1alpha1.GiteaWebhookReceiverConfig")
 	proto.RegisterType((*Health)(nil), "github.com.akuity.kargo.api.v1alpha1.Health")
 	proto.RegisterType((*HealthCheckStep)(nil), "github.com.akuity.kargo.api.v1alpha1.HealthCheckStep")
 	proto.RegisterType((*HealthStats)(nil), "github.com.akuity.kargo.api.v1alpha1.HealthStats")
@@ -3122,6 +3180,39 @@ func (m *ArgoCDAppSyncStatus) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i -= len(m.Status)
 	copy(dAtA[i:], m.Status)
 	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Status)))
+	i--
+	dAtA[i] = 0xa
+	return len(dAtA) - i, nil
+}
+
+func (m *AzureWebhookReceiverConfig) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *AzureWebhookReceiverConfig) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *AzureWebhookReceiverConfig) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	{
+		size, err := m.SecretRef.MarshalToSizedBuffer(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = encodeVarintGenerated(dAtA, i, uint64(size))
+	}
 	i--
 	dAtA[i] = 0xa
 	return len(dAtA) - i, nil
@@ -4712,6 +4803,39 @@ func (m *GitSubscription) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i -= len(m.RepoURL)
 	copy(dAtA[i:], m.RepoURL)
 	i = encodeVarintGenerated(dAtA, i, uint64(len(m.RepoURL)))
+	i--
+	dAtA[i] = 0xa
+	return len(dAtA) - i, nil
+}
+
+func (m *GiteaWebhookReceiverConfig) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *GiteaWebhookReceiverConfig) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *GiteaWebhookReceiverConfig) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	{
+		size, err := m.SecretRef.MarshalToSizedBuffer(dAtA[:i])
+		if err != nil {
+			return 0, err
+		}
+		i -= size
+		i = encodeVarintGenerated(dAtA, i, uint64(size))
+	}
 	i--
 	dAtA[i] = 0xa
 	return len(dAtA) - i, nil
@@ -7217,6 +7341,30 @@ func (m *WebhookReceiverConfig) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.Azure != nil {
+		{
+			size, err := m.Azure.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintGenerated(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x42
+	}
+	if m.Gitea != nil {
+		{
+			size, err := m.Gitea.MarshalToSizedBuffer(dAtA[:i])
+			if err != nil {
+				return 0, err
+			}
+			i -= size
+			i = encodeVarintGenerated(dAtA, i, uint64(size))
+		}
+		i--
+		dAtA[i] = 0x3a
+	}
 	if m.DockerHub != nil {
 		{
 			size, err := m.DockerHub.MarshalToSizedBuffer(dAtA[:i])
@@ -7459,6 +7607,17 @@ func (m *ArgoCDAppSyncStatus) Size() (n int) {
 			n += 1 + l + sovGenerated(uint64(l))
 		}
 	}
+	return n
+}
+
+func (m *AzureWebhookReceiverConfig) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = m.SecretRef.Size()
+	n += 1 + l + sovGenerated(uint64(l))
 	return n
 }
 
@@ -8044,6 +8203,17 @@ func (m *GitSubscription) Size() (n int) {
 	n += 1 + sovGenerated(uint64(m.DiscoveryLimit))
 	n += 2
 	l = len(m.ExpressionFilter)
+	n += 1 + l + sovGenerated(uint64(l))
+	return n
+}
+
+func (m *GiteaWebhookReceiverConfig) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	l = m.SecretRef.Size()
 	n += 1 + l + sovGenerated(uint64(l))
 	return n
 }
@@ -8974,6 +9144,14 @@ func (m *WebhookReceiverConfig) Size() (n int) {
 		l = m.DockerHub.Size()
 		n += 1 + l + sovGenerated(uint64(l))
 	}
+	if m.Gitea != nil {
+		l = m.Gitea.Size()
+		n += 1 + l + sovGenerated(uint64(l))
+	}
+	if m.Azure != nil {
+		l = m.Azure.Size()
+		n += 1 + l + sovGenerated(uint64(l))
+	}
 	return n
 }
 
@@ -9105,6 +9283,16 @@ func (this *ArgoCDAppSyncStatus) String() string {
 		`Status:` + fmt.Sprintf("%v", this.Status) + `,`,
 		`Revision:` + fmt.Sprintf("%v", this.Revision) + `,`,
 		`Revisions:` + fmt.Sprintf("%v", this.Revisions) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *AzureWebhookReceiverConfig) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&AzureWebhookReceiverConfig{`,
+		`SecretRef:` + strings.Replace(strings.Replace(fmt.Sprintf("%v", this.SecretRef), "LocalObjectReference", "v11.LocalObjectReference", 1), `&`, ``, 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -9597,6 +9785,16 @@ func (this *GitSubscription) String() string {
 		`DiscoveryLimit:` + fmt.Sprintf("%v", this.DiscoveryLimit) + `,`,
 		`StrictSemvers:` + fmt.Sprintf("%v", this.StrictSemvers) + `,`,
 		`ExpressionFilter:` + fmt.Sprintf("%v", this.ExpressionFilter) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *GiteaWebhookReceiverConfig) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&GiteaWebhookReceiverConfig{`,
+		`SecretRef:` + strings.Replace(strings.Replace(fmt.Sprintf("%v", this.SecretRef), "LocalObjectReference", "v11.LocalObjectReference", 1), `&`, ``, 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -10325,6 +10523,8 @@ func (this *WebhookReceiverConfig) String() string {
 		`Quay:` + strings.Replace(this.Quay.String(), "QuayWebhookReceiverConfig", "QuayWebhookReceiverConfig", 1) + `,`,
 		`Bitbucket:` + strings.Replace(this.Bitbucket.String(), "BitbucketWebhookReceiverConfig", "BitbucketWebhookReceiverConfig", 1) + `,`,
 		`DockerHub:` + strings.Replace(this.DockerHub.String(), "DockerHubWebhookReceiverConfig", "DockerHubWebhookReceiverConfig", 1) + `,`,
+		`Gitea:` + strings.Replace(this.Gitea.String(), "GiteaWebhookReceiverConfig", "GiteaWebhookReceiverConfig", 1) + `,`,
+		`Azure:` + strings.Replace(this.Azure.String(), "AzureWebhookReceiverConfig", "AzureWebhookReceiverConfig", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -11531,6 +11731,89 @@ func (m *ArgoCDAppSyncStatus) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.Revisions = append(m.Revisions, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *AzureWebhookReceiverConfig) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: AzureWebhookReceiverConfig: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: AzureWebhookReceiverConfig: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SecretRef", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.SecretRef.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -16659,6 +16942,89 @@ func (m *GitSubscription) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.ExpressionFilter = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipGenerated(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if (skippy < 0) || (iNdEx+skippy) < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *GiteaWebhookReceiverConfig) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowGenerated
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: GiteaWebhookReceiverConfig: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: GiteaWebhookReceiverConfig: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field SecretRef", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.SecretRef.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -24201,6 +24567,78 @@ func (m *WebhookReceiverConfig) Unmarshal(dAtA []byte) error {
 				m.DockerHub = &DockerHubWebhookReceiverConfig{}
 			}
 			if err := m.DockerHub.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Gitea", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Gitea == nil {
+				m.Gitea = &GiteaWebhookReceiverConfig{}
+			}
+			if err := m.Gitea.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 8:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Azure", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Azure == nil {
+				m.Azure = &AzureWebhookReceiverConfig{}
+			}
+			if err := m.Azure.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
