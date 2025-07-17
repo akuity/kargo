@@ -19,7 +19,10 @@ import (
 
 const dockerhubWebhookRequestBodyImage = `
 {
-	"push_data": {"tag": "v1.0.0"},
+	"push_data": {
+		"tag": "v1.0.0",
+		"media_type": "` + ociImageIndexMediaType + `"
+	},
 	"repository": {
 		"repo_name": "example/repo"
 	}

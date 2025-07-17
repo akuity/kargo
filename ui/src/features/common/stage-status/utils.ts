@@ -35,7 +35,7 @@ export const getStagePhase = (stage: Stage) => {
     conditions
   );
 
-  if (promoting.isActive) {
+  if (promoting.isActive && promoting.condition?.reason !== 'NoFreight') {
     return 'Promoting';
   }
 
@@ -45,7 +45,7 @@ export const getStagePhase = (stage: Stage) => {
     conditions
   );
 
-  if (verifying.isActive) {
+  if (verifying.isActive && verifying.condition?.reason !== 'NoFreight') {
     return 'Verifying';
   }
 
@@ -63,7 +63,7 @@ export const getStagePhase = (stage: Stage) => {
 
   const failed = ready.condition?.status === StageConditionStatus.False;
 
-  if (failed) {
+  if (failed && ready.condition?.reason !== 'NoFreight') {
     return 'Failed';
   }
 
@@ -71,5 +71,5 @@ export const getStagePhase = (stage: Stage) => {
     return 'Ready';
   }
 
-  return 'Steady';
+  return 'Unknown';
 };

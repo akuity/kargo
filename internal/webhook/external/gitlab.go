@@ -18,6 +18,9 @@ import (
 const (
 	gitlab              = "gitlab"
 	gitLabSecretDataKey = "secret-token"
+
+	gitlabTokenHeader = "X-Gitlab-Token" // nolint: gosec
+	gitlabEventHeader = "X-Gitlab-Event"
 )
 
 func init() {
@@ -64,8 +67,7 @@ func (g *gitlabWebhookReceiver) getSecretValues(
 ) ([]string, error) {
 	token, ok := secretData[gitLabSecretDataKey]
 	if !ok {
-		return nil,
-			errors.New("Secret data is not valid for a GitLab WebhookReceiver")
+		return nil, fmt.Errorf("missing data key %q for GitLab WebhookReceiver", gitLabSecretDataKey)
 	}
 	return []string{string(token)}, nil
 }
@@ -96,7 +98,7 @@ func (g *gitlabWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 				w,
 				xhttp.Error(
 					fmt.Errorf("event type %s is not supported", eventType),
-					http.StatusNotImplemented,
+					http.StatusBadRequest,
 				),
 			)
 			return

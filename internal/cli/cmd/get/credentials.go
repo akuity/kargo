@@ -93,7 +93,7 @@ kargo get credentials my-credentials`),
 // command.
 func (o *getCredentialsOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
-	o.PrintFlags.AddFlags(cmd)
+	o.AddFlags(cmd)
 
 	option.Project(
 		cmd.Flags(), &o.Project, o.Config.Project,
@@ -171,7 +171,7 @@ func newCredentialsTable(list *metav1.List) *metav1.Table {
 		rows[i] = metav1.TableRow{
 			Cells: []any{
 				secret.Name,
-				secret.ObjectMeta.Labels[kargoapi.LabelKeyCredentialType],
+				secret.Labels[kargoapi.LabelKeyCredentialType],
 				secret.StringData[libCreds.FieldRepoURLIsRegex],
 				secret.StringData[libCreds.FieldRepoURL],
 				duration.HumanDuration(time.Since(secret.CreationTimestamp.Time)),

@@ -3,14 +3,16 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Flex, Form, FormItemProps, Tooltip } from 'antd';
 import React from 'react';
 import {
+  FieldPath,
   FieldValues,
   useController,
   UseControllerProps,
   UseControllerReturn
 } from 'react-hook-form';
 
-interface Props<T extends FieldValues> extends UseControllerProps<T> {
-  children: (props: UseControllerReturn<T>) => React.ReactNode;
+interface Props<T extends FieldValues, TName extends FieldPath<T> = FieldPath<T>>
+  extends UseControllerProps<T, TName> {
+  children: (props: UseControllerReturn<T, TName>) => React.ReactNode;
   label?: string;
   formItemOptions?: Omit<FormItemProps, 'label'>;
   className?: string;
@@ -20,7 +22,7 @@ interface Props<T extends FieldValues> extends UseControllerProps<T> {
   required?: boolean;
 }
 
-export const FieldContainer = <T extends FieldValues>({
+export const FieldContainer = <T extends FieldValues, TName extends FieldPath<T> = FieldPath<T>>({
   children,
   label,
   formItemOptions,
@@ -30,7 +32,7 @@ export const FieldContainer = <T extends FieldValues>({
   tooltip,
   required,
   ...props
-}: Props<T>) => {
+}: Props<T, TName>) => {
   const controller = useController(props);
 
   return (

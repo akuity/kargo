@@ -104,7 +104,7 @@ kargo get freight --alias=wonky-wombat
 // addFlags adds the flags for the get freight options to the provided command.
 func (o *getFreightOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
-	o.PrintFlags.AddFlags(cmd)
+	o.AddFlags(cmd)
 
 	option.Project(
 		cmd.Flags(), &o.Project, o.Config.Project,

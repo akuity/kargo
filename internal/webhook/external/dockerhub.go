@@ -3,14 +3,13 @@ package external
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/helm"
 	xhttp "github.com/akuity/kargo/internal/http"
-	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -64,8 +63,7 @@ func (d *dockerhubWebhookReceiver) getSecretValues(
 ) ([]string, error) {
 	secretValue, ok := secretData[dockerhubSecretDataKey]
 	if !ok {
-		return nil,
-			errors.New("Secret data is not valid for a Docker Hub WebhookReceiver")
+		return nil, fmt.Errorf("missing data key %q for DockerHub WebhookReceiver", dockerhubSecretDataKey)
 	}
 	return []string{string(secretValue)}, nil
 }
@@ -95,16 +93,21 @@ func (d *dockerhubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 			return
 		}
 
-		var repoURL string
-		newestTag := strPtr(payload.PushData.Tag)
+		repoURL := normalizeOCIRepoURL(
+			payload.Repository.RepoName,
+			payload.PushData.MediaType,
+		)
+
 		var rc *refreshEligibilityChecker
-		switch payload.PushData.MediaType {
-		case helmChartMediaType:
-			repoURL = helm.NormalizeChartRepositoryURL(payload.Repository.RepoName)
-			rc = &refreshEligibilityChecker{newChartTag: newestTag}
+		switch {
+		case isContainerImageMediaType(payload.PushData.MediaType):
+			rc = &refreshEligibilityChecker{newImageTag: &payload.PushData.Tag}
+		case isHelmChartMediaType(payload.PushData.MediaType):
+			rc = &refreshEligibilityChecker{newChartTag: &payload.PushData.Tag}
 		default:
-			repoURL = image.NormalizeURL(payload.Repository.RepoName)
-			rc = &refreshEligibilityChecker{newImageTag: newestTag}
+			logger.Debug("refresh eligibility checker initialization skipped due to unsupported media type",
+				"mediaType", payload.PushData.MediaType,
+			)
 		}
 
 		logger = logger.WithValues("repoURL", repoURL)

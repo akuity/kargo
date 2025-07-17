@@ -81,12 +81,12 @@ func (r *reconciler) Reconcile(
 	req ctrl.Request,
 ) (ctrl.Result, error) {
 	logger := logging.LoggerFromContext(ctx).WithValues(
-		"project-config", req.NamespacedName.Name,
+		"project-config", req.Name,
 	)
 	ctx = logging.ContextWithLogger(ctx, logger)
 
 	// Fetch the ProjectConfig
-	projectConfig, err := api.GetProjectConfig(ctx, r.client, req.NamespacedName.Name)
+	projectConfig, err := api.GetProjectConfig(ctx, r.client, req.Name)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

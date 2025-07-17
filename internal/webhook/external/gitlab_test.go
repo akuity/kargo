@@ -70,12 +70,12 @@ func TestGitLabHandler(t *testing.T) {
 			secretData: testSecretData,
 			req: func() *http.Request {
 				req := httptest.NewRequest(http.MethodPost, testURL, nil)
-				req.Header.Set("X-Gitlab-Token", testToken)
-				req.Header.Set("X-Gitlab-Event", "nonsense")
+				req.Header.Set(gitlabTokenHeader, testToken)
+				req.Header.Set(gitlabEventHeader, "nonsense")
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusNotImplemented, rr.Code)
+				require.Equal(t, http.StatusBadRequest, rr.Code)
 				require.JSONEq(
 					t,
 					`{"error":"event type nonsense is not supported"}`,
@@ -89,8 +89,8 @@ func TestGitLabHandler(t *testing.T) {
 			req: func() *http.Request {
 				bodyBuf := bytes.NewBuffer([]byte("invalid json"))
 				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
-				req.Header.Set("X-Gitlab-Token", testToken)
-				req.Header.Set("X-Gitlab-Event", "Push Hook")
+				req.Header.Set(gitlabTokenHeader, testToken)
+				req.Header.Set(gitlabEventHeader, "Push Hook")
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -129,8 +129,8 @@ func TestGitLabHandler(t *testing.T) {
 					testURL,
 					bodyBuf,
 				)
-				req.Header.Set("X-Gitlab-Token", testToken)
-				req.Header.Set("X-Gitlab-Event", "Push Hook")
+				req.Header.Set(gitlabTokenHeader, testToken)
+				req.Header.Set(gitlabEventHeader, "Push Hook")
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {

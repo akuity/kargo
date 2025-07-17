@@ -83,7 +83,7 @@ kubectl get projectconfigs kargo-demo \
 
 ## Registering with GitHub
 
-There are two options whereby GitHub repositories can be configured to send
+There are three options whereby GitHub repositories can be configured to send
 events to the webhook receiver:
 
 1. Configure webhooks directly for a single repository.
@@ -91,6 +91,13 @@ events to the webhook receiver:
     The advantage of this approach is that it is comparatively simple, however,
     its large disadvantage is that it is tedious and most likely infeasible to
     repeat this configuration for a large number of repositories.
+
+1. Configure webhooks directly at the organization level.
+
+    The advantage of this approach is that it is simple and applies to all
+    repositories in the organization, however, its disadvantage is that it
+    requires organization-level permissions and will send events from all
+    repositories in the organization.
 
 1. Create a [GitHub App](https://docs.github.com/en/apps).
 
@@ -101,7 +108,7 @@ events to the webhook receiver:
     into any number of GitHub repositories (belonging to the same account that
     owns the App).
 
-In the sections below, you will find instructions for both options.
+In the sections below, you will find instructions for all three options.
 
 ### Webhooks from a Single Repository
 
@@ -112,13 +119,13 @@ To configure a single GitHub repository to notify a receiver of relevant events:
    and `<repository>` has been replaced with the name of a repository belonging
    to that account and for which you are an administrator.
 
-    ![Settings](./img/webhooks/settings.png "Settings")
+    ![Settings](./img/repos/settings.png "Settings")
 
 1. Click <Hlt>Add webhook</Hlt>.
 
 1. Complete the <Hlt>Add webhook</Hlt> form:
 
-    ![Add Webhook Form](./img/webhooks/add-webhook-form.png "Add Webhook Form")
+    ![Add Webhook Form](./img/repos/add-webhook-form.png "Add Webhook Form")
 
     1. Complete the <Hlt>Payload URL</Hlt> field using the URL
        [for the webhook receiver](#retrieving-the-receivers-url).
@@ -155,16 +162,16 @@ To configure a single GitHub repository to notify a receiver of relevant events:
 
     1. From the <Hlt>Webhooks</Hlt> dashboard, select the new webhook.
 
-        ![Webhooks](./img/webhooks/webhooks.png "Webhooks")
+        ![Webhooks](./img/repos/webhooks.png "Webhooks")
 
     1. Select the <Hlt>Recent Deliveries</Hlt> tab.
 
-        ![Recent Deliveries](./img/webhooks/recent-deliveries.png "Recent Deliveries")
+        ![Recent Deliveries](./img/repos/recent-deliveries.png "Recent Deliveries")
 
     1. Select the <Hlt>ping</Hlt> event and ensure an HTTP response status of
        `200` was received from the webhook receiver.
 
-        ![Ping Response](./img/webhooks/ping-response.png "Ping Response")
+        ![Ping Response](./img/repos/ping-response.png "Ping Response")
 
 When these steps are complete, the repository will send events to the webhook
 receiver.
@@ -172,6 +179,78 @@ receiver.
 :::info
 For additional information on configuring webhooks, refer directly to the
 [GitHub Docs](https://docs.github.com/en/webhooks/using-webhooks/creating-webhooks).
+:::
+
+### Webhooks from an Organization
+
+To configure an organization to notify the receiver of relevant events from all
+repositories in the organization:
+
+1. Navigate to `https://github.com/organizations/<organization>/settings/hooks`,
+   where `<organization>` has been replaced with the name of an organization for
+   which you are an administrator.
+
+    ![Settings](./img/repos/settings.png "Settings")
+
+1. Click <Hlt>Add webhook</Hlt>.
+
+1. Complete the <Hlt>Add webhook</Hlt> form:
+
+    ![Add Webhook Form](./img/orgs/add-webhook-form.png "Add Webhook Form")
+
+    1. Complete the <Hlt>Payload URL</Hlt> field using the URL
+       [for the webhook receiver](#retrieving-the-receivers-url).
+
+    1. Set <Hlt>Content type</Hlt> to `application/json`.
+
+    1. Complete the <Hlt>Secret</Hlt> field using to the (unencoded) value
+       assigned to the `secret` key of the `Secret` resource referenced by the
+       [webhook receiver's configuration](#configuring-the-receiver).
+
+    1. Under <Hlt>Which events would you like to trigger this webhook?</Hlt>:
+
+        Leave <Hlt>Just the push event.</Hlt> selected, unless you would
+        like to receive events when container images or Helm charts are
+        pushed to associated GHCR repositories.
+
+        To receive such events, select
+        <Hlt>Let me select individual events.</Hlt>, then ensure
+        <Hlt>Pushes</Hlt> and <Hlt>Packages</Hlt> are both selected.
+
+        :::note
+        You will only receive events from those GHCR repositories explicitly
+        associated with your Git repository.
+
+        For more information on this topic, refer to
+        [these GitHub docs](https://docs.github.com/en/packages/learn-github-packages/connecting-a-repository-to-a-package).
+        :::
+
+    1. Ensure <Hlt>Active</Hlt> is selected.
+
+    1. Click <Hlt>Add webhook</Hlt>.
+
+1. Verify connectivity:
+
+    1. From the organization <Hlt>Webhooks</Hlt> dashboard, select the new webhook.
+
+        ![Webhooks](./img/orgs/webhooks.png "Webhooks")
+
+    1. Scroll down to the <Hlt>Recent Deliveries</Hlt> section.
+
+        ![Recent Deliveries](./img/orgs/recent-deliveries.png "Recent Deliveries")
+
+    1. Select the <Hlt>ping</Hlt> event and ensure an HTTP response status of
+       `200` was received from the webhook receiver.
+
+        ![Ping Response](./img/orgs/ping-response.png "Ping Response")
+
+When these steps are complete, all repositories in the organization will send
+events to the webhook receiver.
+
+:::info
+For additional information on configuring organization webhooks, refer directly
+to the
+[GitHub Docs](https://docs.github.com/en/webhooks/using-webhooks/creating-webhooks#creating-organization-webhooks).
 :::
 
 ### Webhooks from a GitHub App

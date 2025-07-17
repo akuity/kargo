@@ -20,7 +20,6 @@ import { paths } from '@ui/config/paths';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
 import { StageConditionIcon } from '@ui/features/common/stage-status/stage-condition-icon';
 import { getStagePhase } from '@ui/features/common/stage-status/utils';
-import { getCurrentFreight } from '@ui/features/common/utils';
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import {
   approveFreight,
@@ -97,26 +96,19 @@ export const StageNode = (props: { stage: Stage }) => {
     const lastPromotion = getLastPromotionDate(props.stage);
     const date = timestampDate(lastPromotion) as Date;
 
-    let Phase = null;
-
-    // hiddeco & Marvin9: ignore phase for no freights
-    if (getCurrentFreight(props.stage).length > 0) {
-      Phase = (
-        <Flex align='center' gap={4}>
-          {stagePhase}{' '}
-          <StageConditionIcon
-            className='text-[10px]'
-            conditions={props.stage?.status?.conditions || []}
-            noTooltip
-          />
-          {stagePhase === 'Promoting' && (
-            <FontAwesomeIcon icon={faExternalLink} className='text-[8px]' />
-          )}
-        </Flex>
-      );
-    } else {
-      Phase = <Typography.Text type='secondary'>No freight</Typography.Text>;
-    }
+    let Phase = (
+      <Flex align='center' gap={4}>
+        {stagePhase}{' '}
+        <StageConditionIcon
+          className='text-[10px]'
+          conditions={props.stage?.status?.conditions || []}
+          noTooltip
+        />
+        {stagePhase === 'Promoting' && (
+          <FontAwesomeIcon icon={faExternalLink} className='text-[8px]' />
+        )}
+      </Flex>
+    );
 
     if (stagePhase === 'Promoting') {
       Phase = (

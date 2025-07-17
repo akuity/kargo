@@ -12,7 +12,6 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/git"
-	"github.com/akuity/kargo/internal/helm"
 	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/logging"
@@ -22,6 +21,10 @@ const (
 	GithubSecretDataKey = "secret"
 
 	github = "github"
+
+	githubEventTypePackage = "package"
+	githubEventTypePing    = "ping"
+	githubEventTypePush    = "push"
 
 	ghcrPackageTypeContainer = "CONTAINER"
 	ghcrPackageTypeDocker    = "docker"
@@ -71,8 +74,7 @@ func (g *githubWebhookReceiver) getSecretValues(
 ) ([]string, error) {
 	secretValue, ok := secretData[GithubSecretDataKey]
 	if !ok {
-		return nil,
-			errors.New("Secret data is not valid for a GitHub WebhookReceiver")
+		return nil, fmt.Errorf("missing %q data key for GitHub WebhookReceiver", GithubSecretDataKey)
 	}
 	return []string{string(secretValue)}, nil
 }
@@ -90,15 +92,15 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			return
 		}
 
-		eventType := r.Header.Get("X-GitHub-Event")
+		eventType := r.Header.Get(gh.EventTypeHeader)
 		switch eventType {
-		case "package", "ping", "push":
+		case githubEventTypePackage, githubEventTypePing, githubEventTypePush:
 		default:
 			xhttp.WriteErrorJSON(
 				w,
 				xhttp.Error(
 					fmt.Errorf("event type %s is not supported", eventType),
-					http.StatusNotImplemented,
+					http.StatusBadRequest,
 				),
 			)
 			return
@@ -170,8 +172,8 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			manifest := v.GetContainerMetadata().GetManifest()
 			// Determine if the package is a Helm chart
 			if cfg, ok := manifest["config"].(map[string]any); ok {
-				if mediaType, ok := cfg["media_type"].(string); ok && mediaType == helmChartMediaType {
-					repoURL = helm.NormalizeChartRepositoryURL(ref.Context().Name())
+				if mediaType, ok := cfg["media_type"].(string); ok {
+					repoURL = normalizeOCIRepoURL(ref.Context().Name(), mediaType)
 				}
 				rc.newChartTag = v.Version
 			} else {

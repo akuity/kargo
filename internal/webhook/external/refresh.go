@@ -9,7 +9,6 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/akuity/kargo/api/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
 	xhttp "github.com/akuity/kargo/internal/http"
@@ -35,6 +34,11 @@ func refreshWarehouses(
 	// De-dupe repository URLs
 	slices.Sort(repoURLs)
 	repoURLs = slices.Compact(repoURLs)
+	// If there had been any empty strings in the slice, after sorting and
+	// compacting, at most the zero element will be empty. If it is, remove it.
+	if repoURLs[0] == "" {
+		repoURLs = repoURLs[1:]
+	}
 
 	warehouses := []kargoapi.Warehouse{}
 
@@ -49,7 +53,7 @@ func refreshWarehouses(
 			listOpts = append(listOpts, client.InNamespace(project))
 		}
 
-		ws := v1alpha1.WarehouseList{}
+		ws := kargoapi.WarehouseList{}
 		if err := c.List(ctx, &ws, listOpts...); err != nil {
 			repoLogger.Error(err, "error listing subscribed Warehouses")
 			xhttp.WriteErrorJSON(w, err)

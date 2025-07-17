@@ -78,6 +78,7 @@ func (s *server) ApproveFreight(
 		return nil, fmt.Errorf("get stage: %w", err)
 	}
 	if stage == nil {
+		// nolint:staticcheck
 		return nil, connect.NewError(
 			connect.CodeNotFound,
 			fmt.Errorf("Stage %q not found in namespace %q", stageName, project),

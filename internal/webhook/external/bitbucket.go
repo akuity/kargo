@@ -16,9 +16,14 @@ import (
 )
 
 const (
-	bitbucket              = "bitbucket"
+	bitbucket = "bitbucket"
+
 	bitbucketSecretDataKey = "secret"
-	bitbucketPushEvent     = "repo:push"
+
+	bitbucketEventHeader     = "X-Event-Key"
+	bitbucketSignatureHeader = "X-Hub-Signature"
+
+	bitbucketPushEvent = "repo:push"
 )
 
 func init() {
@@ -66,8 +71,7 @@ func (b *bitbucketWebhookReceiver) getSecretValues(
 ) ([]string, error) {
 	secretValue, ok := secretData[bitbucketSecretDataKey]
 	if !ok {
-		return nil,
-			errors.New("Secret data is not valid for a Bitbucket WebhookReceiver")
+		return nil, fmt.Errorf("missing data key %q for Bitbucket WebhookReceiver", bitbucketSecretDataKey)
 	}
 	return []string{string(secretValue)}, nil
 }
@@ -85,7 +89,7 @@ func (b *bitbucketWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 			return
 		}
 
-		eventType := r.Header.Get("X-Event-Key")
+		eventType := r.Header.Get(bitbucketEventHeader)
 		switch eventType {
 		case bitbucketPushEvent:
 		default:
@@ -93,13 +97,13 @@ func (b *bitbucketWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 				w,
 				xhttp.Error(
 					fmt.Errorf("event type %s is not supported", eventType),
-					http.StatusNotImplemented,
+					http.StatusBadRequest,
 				),
 			)
 			return
 		}
 
-		sig := r.Header.Get("X-Hub-Signature")
+		sig := r.Header.Get(bitbucketSignatureHeader)
 		if sig == "" {
 			xhttp.WriteErrorJSON(
 				w,

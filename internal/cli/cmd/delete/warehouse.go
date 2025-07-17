@@ -75,7 +75,7 @@ kargo delete warehouse my-warehouse
 // command.
 func (o *deleteWarehouseOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
-	o.PrintFlags.AddFlags(cmd)
+	o.AddFlags(cmd)
 
 	option.Project(cmd.Flags(), &o.Project, o.Config.Project,
 		"The Project for which to delete Warehouses. If not set, the default project will be used.")
@@ -109,7 +109,7 @@ func (o *deleteWarehouseOptions) run(ctx context.Context) error {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	printer, err := o.PrintFlags.ToPrinter()
+	printer, err := o.ToPrinter()
 	if err != nil {
 		return fmt.Errorf("create printer: %w", err)
 	}
@@ -133,7 +133,7 @@ func (o *deleteWarehouseOptions) run(ctx context.Context) error {
 				Name:      name,
 				Namespace: o.Project,
 			},
-		}, o.IOStreams.Out)
+		}, o.Out)
 	}
 	return errors.Join(errs...)
 }

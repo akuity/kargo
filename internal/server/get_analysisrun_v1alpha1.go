@@ -20,6 +20,7 @@ func (s *server) GetAnalysisRun(
 	req *connect.Request[svcv1alpha1.GetAnalysisRunRequest],
 ) (*connect.Response[svcv1alpha1.GetAnalysisRunResponse], error) {
 	if !s.cfg.RolloutsIntegrationEnabled {
+		// nolint:staticcheck
 		return nil, connect.NewError(
 			connect.CodeUnimplemented,
 			errors.New("Argo Rollouts integration is not enabled"),

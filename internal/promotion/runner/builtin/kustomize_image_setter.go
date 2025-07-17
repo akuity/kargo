@@ -12,11 +12,11 @@ import (
 
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/xeipuuv/gojsonschema"
+	"go.yaml.in/yaml/v3"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/kustomize/api/konfig"
 	kustypes "sigs.k8s.io/kustomize/api/types"
 	kyaml "sigs.k8s.io/kustomize/kyaml/yaml"
-	yaml "sigs.k8s.io/yaml/goyaml.v3"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/freight"

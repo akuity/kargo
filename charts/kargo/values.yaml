@@ -48,7 +48,7 @@ global:
   #      name: config-map-name
   #  - secretRef:
   #      name: secret-name
-  
+
   ## @param global.nodeSelector Default node selector for all Kargo pods.
   nodeSelector: {}
   ## @param global.tolerations Default tolerations for all Kargo pods.
@@ -216,7 +216,7 @@ api:
 
       ## @param api.oidc.dex.skipApprovalScreen Whether to skip Dex's own approval screen. Since upstream identity providers will already request user consent, this second approval screen from Dex can be both superfluous and confusing.
       skipApprovalScreen: true
-      
+
       ## @param api.oidc.dex.connectors Configure [Dex connectors](https://dexidp.io/docs/connectors/) to one or more upstream identity providers.
       connectors: []
       # - id: mock
@@ -309,7 +309,7 @@ api:
 
       tls:
         ## @param api.oidc.dex.tls.selfSignedCert Whether to generate a self-signed certificate for use with Dex. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-dex-server-cert` **must** be provided in the same namespace as Kargo. There is no provision for running Dex without TLS.
-        selfSignedCert: true      
+        selfSignedCert: true
 
   argocd:
     ## @param api.argocd.urls Mapping of Argo CD shards names to URLs to support deep links to Argo CD URLs. If sharding is not used, map the empty string to the single Argo CD URL.
@@ -334,7 +334,6 @@ api:
         key:
       ## @param api.rollouts.logs.httpHeaders Specifies HTTP headers to include in the HTTP GET request for log retrieval. These are typically used for authentication. The header values support expressions offset by ${{ }}, with the same variables documented for urlTemplate pre-defined and injected with values.
       httpHeaders: {}
-
 
   ## @param api.labels Labels to add to the api resources. Merges with `global.labels`, allowing you to override or add to the global labels.
   labels: {}
@@ -517,7 +516,8 @@ controller:
     clusterWideSecretReadingEnabled: false
 
   ## @param controller.initContainers Optional init containers to add to the controller pods. This is rendered as the literal YAML.
-  initContainers: []
+  initContainers:
+    []
     # - name: download-tools
     #   image: alpine:3.8
     #   command: [ sh, -c ]
@@ -683,7 +683,7 @@ externalWebhooksServer:
     # requests:
     #   cpu: 100m
     #   memory: 128Mi
-  
+
   ## @param externalWebhooksServer.nodeSelector Node selector for external webhook server pods. Defaults to `global.nodeSelector`.
   nodeSelector: {}
   ## @param externalWebhooksServer.tolerations Tolerations for external webhook server pods. Defaults to `global.tolerations`.
@@ -809,10 +809,10 @@ webhooksServer:
 
   ## @param webhooksServer.replicas The number of webhooks server pods.
   replicas: 1
-  
+
   ## @param webhooksServer.logLevel The log level for the webhooks server.
   logLevel: INFO
-  
+
   ## @param webhooksServer.controlplaneUserRegex Regular expression for matching controlplane users.
   controlplaneUserRegex: "" # ^system:serviceaccount:kargo:[a-z0-9]([-a-z0-9]*[a-z0-9])?$
 
@@ -872,3 +872,19 @@ webhooksServer:
     #   -----BEGIN CERTIFICATE-----
     #   ...
     #   -----END CERTIFICATE-----
+
+## @param extraObjects An array describing additional, arbitrary Kubernetes resources to include when rendering this chart. Items in the array may be YAML objects or strings. Either may be templated. Templates will be evaluated against the same set of values as the rest of the chart.
+extraObjects: []
+# - apiVersion: v1
+#   kind: ConfigMap
+#   metadata:
+#     name: custom-cm-1
+#   data:
+#     host: '{{ .Values.api.host }}'
+# - |
+#   apiVersion: v1
+#   kind: ConfigMap
+#   metadata:
+#     name: custom-cm-2
+#   data:
+#     host: {{ .Values.api.host }}
