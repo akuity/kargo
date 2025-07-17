@@ -520,9 +520,9 @@ type UntarConfig struct {
 }
 
 type YAMLMergeConfig struct {
-	// InPaths is the list of paths to YAML files to process
+	// InPaths is the list of paths of YAML files to merge
 	InPaths []string `json:"inPaths"`
-	// OutPath is the path to the merged YAML file to create or update.
+	// OutPath is the path to the merged YAML file to created or updated.
 	OutPath string `json:"outPath"`
 	// Strict will cause the directive to fail if the input path does not exist.
 	Strict bool `json:"strict,omitempty"`
