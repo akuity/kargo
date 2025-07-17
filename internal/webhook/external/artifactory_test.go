@@ -69,7 +69,7 @@ func TestArtifactoryHandler(t *testing.T) {
 					testURL,
 					strings.NewReader(`{"event_type":"nonsense"}`),
 				)
-				req.Header.Set("x-jfrog-event-auth", signWithArtifactory(body.Bytes()))
+				req.Header.Set(artifactoryAuthHeader, signWithArtifactory(body.Bytes()))
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -98,7 +98,7 @@ func TestArtifactoryHandler(t *testing.T) {
 			secretData: testSecretData,
 			req: func() *http.Request {
 				req := httptest.NewRequest(http.MethodPost, testURL, nil)
-				req.Header.Set("x-jfrog-event-auth", "invalid-signature")
+				req.Header.Set(artifactoryAuthHeader, "invalid-signature")
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -113,7 +113,7 @@ func TestArtifactoryHandler(t *testing.T) {
 				body := []byte("invalid json")
 				bodyBuf := bytes.NewBuffer(body)
 				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
-				req.Header.Set("x-jfrog-event-auth", signWithArtifactory(body))
+				req.Header.Set(artifactoryAuthHeader, signWithArtifactory(body))
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -151,7 +151,7 @@ func TestArtifactoryHandler(t *testing.T) {
 					testURL,
 					bytes.NewBuffer(bodyBytes),
 				)
-				req.Header.Set("x-jfrog-event-auth", signWithArtifactory(bodyBytes))
+				req.Header.Set(artifactoryAuthHeader, signWithArtifactory(bodyBytes))
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {

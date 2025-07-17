@@ -20,6 +20,7 @@ import (
 )
 
 const (
+	artifactoryAuthHeader    = "X-Jfrog-Event-Auth"
 	artifactorySecretDataKey = "secret-token"
 	artifactory              = "artifactory"
 )
@@ -87,7 +88,7 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 			return
 		}
 
-		sig := r.Header.Get("x-jfrog-event-auth")
+		sig := r.Header.Get(artifactoryAuthHeader)
 		if sig == "" {
 			xhttp.WriteErrorJSON(
 				w,
