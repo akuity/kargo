@@ -73,7 +73,7 @@ func (a *artifactoryWebhookReceiver) getSecretValues(
 	secretValue, ok := secretData[artifactorySecretDataKey]
 	if !ok {
 		return nil,
-			errors.New("Secret data is not valid for a Artifactory WebhookReceiver")
+			errors.New("secret data is not valid for a Artifactory WebhookReceiver")
 	}
 	return []string{string(secretValue)}, nil
 }
@@ -150,10 +150,7 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 		if err != nil {
 			xhttp.WriteErrorJSON(
 				w,
-				xhttp.Error(
-					fmt.Errorf("failed to construct repository URL: %w", err),
-					http.StatusBadRequest,
-				),
+				fmt.Errorf("failed to construct repository URL: %w", err),
 			)
 			return
 		}

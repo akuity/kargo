@@ -63,7 +63,10 @@ func TestArtifactoryHandler(t *testing.T) {
 			name:       "unsupported event type",
 			secretData: testSecretData,
 			req: func() *http.Request {
-				body := bytes.NewBufferString(`{"event_type":"nonsense"}`)
+				body := bytes.NewBufferString(`{
+					"event_type":"nonsense",
+					"domain":"docker"
+				}`)
 				req := httptest.NewRequest(
 					http.MethodPost,
 					testURL,
