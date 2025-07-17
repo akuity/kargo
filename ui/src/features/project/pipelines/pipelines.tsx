@@ -302,10 +302,9 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                   <Button icon={<FontAwesomeIcon icon={faDocker} />}>Images</Button>
                 </Dropdown>
               </Flex>
-
               <div
                 className={classNames(
-                  `${imageView === 'dynamic-grid' && ' w-[450px]'} absolute right-2 top-20 z-10 transition-opacity duration-300`,
+                  `w-[450px] absolute right-2 top-20 z-10 transition-opacity duration-300`,
                   {
                     'opacity-100 visible': preferredFilter?.images,
                     'opacity-0 invisible': !preferredFilter?.images
@@ -369,7 +368,6 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                   />
                 )}
               </div>
-
               {pipelineView === 'graph' && (
                 <Graph
                   project={project.metadata?.name || ''}
@@ -377,7 +375,6 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                   stages={listStagesQuery.data?.stages || []}
                 />
               )}
-
               {pipelineView === 'list' && (
                 <PipelineListView
                   stages={listStagesQuery.data?.stages || []}
