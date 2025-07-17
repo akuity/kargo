@@ -215,20 +215,6 @@ characters:
 				)
 			},
 		},
-		// 		{
-		// 			name: "invalid input YAML",
-		// 			// Note: This YAML is invalid because one line is indented with a tab
-		// 			inputs: []string{`
-		// characters:
-		// - name: Anakin
-		// 	affiliation: Light side
-		// 	  a: b
-		// `},
-		// 			assertions: func(t *testing.T, output string, err error) {
-		// 				require.ErrorContains(t, err, "found a tab character that violates indentation")
-		// 				require.Empty(t, output)
-		// 			},
-		// 		},
 		{
 			name: "no extra quotes around true number",
 			inputs: []string{`
@@ -277,7 +263,6 @@ characters:
 		},
 		{
 			name: "success with single YAML file",
-			// Note: This YAML is invalid because one line is indented with a tab
 			inputs: []string{`
 characters:
 - name: Anakin
@@ -313,6 +298,41 @@ characters:
 					string(`characters:
 - name: Anakin
   affiliation: Dark side
+`),
+					output,
+				)
+			},
+		},
+		{
+			name: "success with dict and object",
+			inputs: []string{`
+characters:
+- name: Anakin
+  affiliation: Light side
+- name: Jabba
+  affiliation: Toads
+weapon:
+  kind: lightsabre
+  color: green
+`, `
+characters:
+- name: Anakin
+  affiliation: Dark side
+weapon:
+  color: red
+episode: 3
+`},
+			assertions: func(t *testing.T, output string, err error) {
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					string(`characters:
+- name: Anakin
+  affiliation: Dark side
+weapon:
+  kind: lightsabre
+  color: red
+episode: 3
 `),
 					output,
 				)
