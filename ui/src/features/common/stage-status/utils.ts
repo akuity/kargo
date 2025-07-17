@@ -55,7 +55,7 @@ export const getStagePhase = (stage: Stage) => {
     conditions
   );
 
-  if (reconciling.isActive && reconciling.condition?.reason !== 'NoFreight') {
+  if (reconciling.isActive) {
     return 'Reconciling';
   }
 
@@ -67,7 +67,7 @@ export const getStagePhase = (stage: Stage) => {
     return 'Failed';
   }
 
-  if (ready.isActive && ready.condition?.reason !== 'NoFreight') {
+  if (ready.isActive) {
     return 'Ready';
   }
 

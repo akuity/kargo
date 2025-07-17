@@ -91,21 +91,21 @@ export const StageConditionIcon = memo(
           tooltipMessage: verifiedCondition?.message ?? '',
           iconClass: `text-blue-500 ${styles.magnifyingGlass}`
         };
-      } else if (isReconciling && reconcilingCondition?.reason !== 'NoFreight') {
+      } else if (isReconciling) {
         iconState = {
           icon: faSync,
           tooltipTitle: 'Reconciling',
           tooltipMessage: reconcilingCondition?.message ?? '',
           iconClass: `text-yellow-500 ${styles.rotate}`
         };
-      } else if (isFailed && readyCondition?.reason !== 'NoFreight') {
+      } else if (isFailed && readyCondition.reason !== 'NoFreight') {
         iconState = {
           icon: faTimesCircle,
           tooltipTitle: 'Failed',
           tooltipMessage: readyCondition?.message ?? '',
           iconClass: 'text-red-400'
         };
-      } else if (isReady && readyCondition?.reason !== 'NoFreight') {
+      } else if (isReady) {
         iconState = {
           icon: faCircle,
           tooltipTitle: 'Ready',
