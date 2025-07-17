@@ -22,6 +22,7 @@ import (
 const (
 	artifactoryDockerDomain    = "docker"
 	artifactoryPushedEventType = "pushed"
+	artifactoryChartImageType  = "oci"
 	artifactoryAuthHeader      = "X-Jfrog-Event-Auth"
 	artifactorySecretDataKey   = "secret-token"
 	artifactory                = "artifactory"
@@ -142,6 +143,7 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 			)
 			return
 		}
+		
 		repoURL, err := url.JoinPath(
 			parsed.Hostname(),
 			payload.Data.RepoKey,
@@ -155,20 +157,24 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 			return
 		}
 
+		switch payload.Data.ImageType {
+		case artifactoryDockerDomain:
+			repoURL = image.NormalizeURL(repoURL)
+		case artifactoryChartImageType:
+			repoURL = helm.NormalizeChartRepositoryURL(repoURL)
+		default:
+			xhttp.WriteErrorJSON(
+				w,
+				xhttp.Error(
+					fmt.Errorf("unsupported image type %q", payload.Data.ImageType),
+					http.StatusNotImplemented,
+				),
+			)
+			return
+		}
 		logger = logger.WithValues("repoURL", repoURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
-
-		// Payloads from Artifactory contain no information about media type, so we
-		// normalize the URL BOTH as if it were an image repo URL and as if it were
-		// a chart repository URL. These will coincidentally be the same, but by
-		// doing this, we safeguard against future changes to normalization logic.
-		// Note: The refresh logic will dedupe the URLs, so this does not create
-		// the possibility of a double refresh.
-		repoURLs := []string{
-			image.NormalizeURL(repoURL),
-			helm.NormalizeChartRepositoryURL(repoURL),
-		}
-		refreshWarehouses(ctx, w, a.client, a.project, repoURLs...)
+		refreshWarehouses(ctx, w, a.client, a.project, repoURL)
 
 	})
 }
@@ -183,4 +189,5 @@ type artifactoryEvent struct {
 type artifactoryEventData struct {
 	RepoKey   string `json:"repo_key"`
 	ImageName string `json:"image_name"`
+	ImageType string `json:"image_type"`
 }

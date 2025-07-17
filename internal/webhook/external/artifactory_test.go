@@ -25,10 +25,22 @@ func TestArtifactoryHandler(t *testing.T) {
 
 	const testProjectName = "fake-project"
 
-	validPushEvent := artifactoryEvent{
+	validImagePushEvent := artifactoryEvent{
 		Domain:    artifactoryDockerDomain,
 		EventType: artifactoryPushedEventType,
 		Data: artifactoryEventData{
+			ImageType: artifactoryDockerDomain,
+			RepoKey:   "test-repo",
+			ImageName: "test-image",
+		},
+		Origin: "https://artifactory.example.com",
+	}
+
+	validChartPushEvent := artifactoryEvent{
+		Domain:    artifactoryDockerDomain,
+		EventType: artifactoryPushedEventType,
+		Data: artifactoryEventData{
+			ImageType: artifactoryChartImageType,
 			RepoKey:   "test-repo",
 			ImageName: "test-image",
 		},
@@ -172,7 +184,83 @@ func TestArtifactoryHandler(t *testing.T) {
 				indexer.WarehousesBySubscribedURLs,
 			).Build(),
 			req: func() *http.Request {
-				bodyBytes, err := json.Marshal(validPushEvent)
+				bodyBytes, err := json.Marshal(validImagePushEvent)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set(artifactoryAuthHeader, signWithArtifactory(bodyBytes))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "success -- image push event",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Image: &kargoapi.ImageSubscription{
+								RepoURL: "artifactory.example.com/test-repo/test-image",
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(validImagePushEvent)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set(artifactoryAuthHeader, signWithArtifactory(bodyBytes))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "success -- chart push event",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Chart: &kargoapi.ChartSubscription{
+								RepoURL: "artifactory.example.com/test-repo/test-image",
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(validChartPushEvent)
 				require.NoError(t, err)
 				req := httptest.NewRequest(
 					http.MethodPost,
