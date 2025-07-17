@@ -1,25 +1,25 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "YAMLMergeConfig",
-  "type": "object",
-  "additionalProperties": false,
-  "properties": {
-    "inPaths": {
-      "type": "array",
-      "description": "InPaths is the list of paths of YAML files to merge",
-      "items": {
-        "type": "string"
-      }
-    },
-    "outPath": {
-      "type": "string",
-      "description": "OutPath is the path to the merged YAML file to create or update.",
-      "minLength": 1
-    },
-    "strict": {
-      "type": "boolean",
-      "description": "Strict will cause the directive to fail if the input path does not exist.",
-      "default": false
-    }
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "YAMLMergeConfig",
+ "type": "object",
+ "additionalProperties": false,
+ "properties": {
+  "inPaths": {
+   "type": "array",
+   "description": "InPaths is the list of paths of YAML files to merge",
+   "items": {
+    "type": "string"
+   }
+  },
+  "outPath": {
+   "type": "string",
+   "description": "OutPath is the path to the merged YAML file to created or updated.",
+   "minLength": 1
+  },
+  "strict": {
+   "type": "boolean",
+   "description": "Strict will cause the directive to fail if the input path does not exist.",
+   "default": false
   }
+ }
 }
