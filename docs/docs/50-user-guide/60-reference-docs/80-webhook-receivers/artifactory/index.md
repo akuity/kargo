@@ -136,7 +136,7 @@ kubectl get projectconfigs kargo-demo \
 
 1. Click <Hlt>Save</Hlt>.
 
-1. You will then be redirected to the <Hlt>Webhooks Dashboard</Hlt> where the 
-   newly created webhook will now be rendered.
+    You will then be redirected to the <Hlt>Webhooks Dashboard</Hlt> where the 
+    newly created webhook will now be rendered.
 
-   ![Created](./img/created.png "Created")
+    ![Created](./img/created.png "Created")
