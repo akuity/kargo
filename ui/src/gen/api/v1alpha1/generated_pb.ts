@@ -3956,7 +3956,6 @@ export type WebhookReceiverConfig = Message<"github.com.akuity.kargo.api.v1alpha
   artifactory?: ArtifactoryWebhookReceiverConfig;
 
   /**
-   * Path is the path to the
    * Azure contains the configuration for a webhook receiver that is compatible
    * with Azure Container Registry (ACR) and Azure DevOps payloads.
    *

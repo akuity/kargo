@@ -123,7 +123,6 @@ type WebhookReceiverConfig struct {
 	// Artifactory contains the configuration for a webhook receiver that is
 	// compatible with JFrog Artifactory payloads.
 	Artifactory *ArtifactoryWebhookReceiverConfig `json:"artifactory,omitempty" protobuf:"bytes,9,opt,name=artifactory"`
-	// Path is the path to the
 	// Azure contains the configuration for a webhook receiver that is compatible
 	// with Azure Container Registry (ACR) and Azure DevOps payloads.
 	Azure *AzureWebhookReceiverConfig `json:"azure,omitempty" protobuf:"bytes,8,opt,name=azure"`

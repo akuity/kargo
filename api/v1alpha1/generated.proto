@@ -1933,7 +1933,6 @@ message WebhookReceiverConfig {
   // compatible with JFrog Artifactory payloads.
   optional ArtifactoryWebhookReceiverConfig artifactory = 9;
 
-  // Path is the path to the
   // Azure contains the configuration for a webhook receiver that is compatible
   // with Azure Container Registry (ACR) and Azure DevOps payloads.
   optional AzureWebhookReceiverConfig azure = 8;

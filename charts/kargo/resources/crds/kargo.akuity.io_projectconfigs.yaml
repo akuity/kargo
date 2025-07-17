@@ -194,7 +194,6 @@ spec:
                       type: object
                     azure:
                       description: |-
-                        Path is the path to the
                         Azure contains the configuration for a webhook receiver that is compatible
                         with Azure Container Registry (ACR) and Azure DevOps payloads.
                       properties:
