@@ -132,7 +132,10 @@ func (a *azureWebhookReceiver) handleACREvent(
 		logger := logging.LoggerFromContext(ctx)
 		logger = logger.WithValues("repoURL", repoURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		refreshWarehouses(ctx, w, a.client, a.project, repoURL)
+		rc := &refreshEligibilityChecker{
+			newImageTag: &event.Target.Tag,
+		}
+		refreshWarehouses(ctx, w, a.client, a.project, rc, repoURL)
 	case acrPingEvent:
 		xhttp.WriteResponseJSON(
 			w,
@@ -184,7 +187,12 @@ func (a *azureWebhookReceiver) handleAzureDevOpsEvent(
 	logger := logging.LoggerFromContext(ctx)
 	logger = logger.WithValues("repoURL", repoURL)
 	ctx = logging.ContextWithLogger(ctx, logger)
-	refreshWarehouses(ctx, w, a.client, a.project, repoURL)
+	// Azure DevOps sends a []RefUpdates in the payload, following convention,
+	// this means we should omit setting a refresh checker for Azure DevOps given
+	// that elements could differ here e.g. one RefUpdate element could be a tag
+	// and another could be a branch
+	var rc *refreshEligibilityChecker
+	refreshWarehouses(ctx, w, a.client, a.project, rc, repoURL)
 }
 
 // acrEvent represents the payload for Azure Container Registry webhooks.
@@ -199,6 +207,7 @@ type acrEvent struct {
 	Target struct {
 		MediaType  string `json:"mediaType"`
 		Repository string `json:"repository"`
+		Tag        string `json:"tag"`
 	} `json:"target"`
 	Request struct {
 		Host string `json:"host"`
