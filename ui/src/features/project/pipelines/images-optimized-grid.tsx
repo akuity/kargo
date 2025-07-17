@@ -63,9 +63,9 @@ const ImageVersionRow = memo(
 
     return (
       <div className='bg-white rounded-md p-2.5 flex items-center gap-4 mb-2 shadow-sm'>
-        <div className='w-1/5 flex-shrink-0'>
+        <div className='w-1/5 flex-shrink-0 min-w-0'>
           <Tooltip title={`Image Tag: ${tag}`}>
-            <span className='font-mono text-sm font-semibold text-gray-800 truncate'>{tag}</span>
+            <div className='font-mono text-sm font-semibold text-gray-800 truncate'>{tag}</div>
           </Tooltip>
         </div>
         <div className='flex-grow flex items-center gap-2 flex-nowrap min-w-0'>
