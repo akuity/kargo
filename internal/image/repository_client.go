@@ -31,6 +31,10 @@ const (
 	maxMetadataConcurrency = 1000
 
 	unknown = "unknown"
+
+	// ociCreatedAnnotation is the OCI annotation for the image creation timestamp.
+	// See: https://specs.opencontainers.org/image-spec/annotations/
+	ociCreatedAnnotation = "org.opencontainers.image.created"
 )
 
 var metaSem = semaphore.NewWeighted(maxMetadataConcurrency)
@@ -437,9 +441,20 @@ func (r *repositoryClient) getImageFromV1Image(
 
 	return &image{
 		Digest:      digest,
-		CreatedAt:   &cfg.Created.Time,
+		CreatedAt:   getCreationTime(cfg),
 		Annotations: manifest.Annotations,
 	}, nil
+}
+
+func getCreationTime(cfg *v1.ConfigFile) *time.Time {
+	if cfg.Config.Labels != nil {
+		if createdStr, ok := cfg.Config.Labels[ociCreatedAnnotation]; ok {
+			if created, err := time.Parse(time.RFC3339, createdStr); err == nil {
+				return &created
+			}
+		}
+	}
+	return &cfg.Created.Time
 }
 
 // rateLimitedRoundTripper is a rate limited implementation of

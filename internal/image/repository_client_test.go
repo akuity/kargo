@@ -747,6 +747,33 @@ func Test_repositoryClient_getImageFromV1Image(t *testing.T) {
 				require.Equal(t, "2023-01-01T00:00:00Z", img.Annotations["org.opencontainers.image.created"])
 			},
 		},
+		{
+			name: "created date is taken from label",
+			img: &mockImage{
+				configFile: &v1.ConfigFile{
+					Created: v1.Time{Time: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
+					Config: v1.Config{
+						Labels: map[string]string{
+							"org.opencontainers.image.created": "2023-02-01T00:00:00Z",
+						},
+					},
+					OS:           "linux",
+					Architecture: "amd64",
+				},
+				manifest: &v1.Manifest{},
+			},
+			platform: &platformConstraint{
+				os:   "linux",
+				arch: "amd64",
+			},
+			assertions: func(t *testing.T, img *image, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, img)
+				expectedTime, err := time.Parse(time.RFC3339, "2023-02-01T00:00:00Z")
+				require.NoError(t, err)
+				require.Equal(t, expectedTime, *img.CreatedAt)
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
