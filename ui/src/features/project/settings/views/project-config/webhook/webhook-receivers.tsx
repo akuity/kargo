@@ -3,6 +3,7 @@ import {
   faDocker,
   faGithub,
   faGitlab,
+  faMicrosoft,
   faRedhat
 } from '@fortawesome/free-brands-svg-icons';
 import { IconDefinition } from '@fortawesome/free-solid-svg-icons';
@@ -158,11 +159,65 @@ const jfrog: WebhookReceiverT = {
   ]
 };
 
+const gitea: WebhookReceiverT = {
+  key: 'gitea',
+  label: 'Gitea',
+  secrets: [
+    {
+      dataKey: 'secret',
+      description: (
+        <>
+          The Secret's data map is expected to contain a `secret` key whose value is the shared
+          secret used to authenticate the webhook requests sent by Gitea. For more information
+          please refer to the{' '}
+          <a href='https://docs.gitea.io/en-us/webhooks/' target='_blank'>
+            Gitea documentation
+          </a>
+        </>
+      )
+    }
+  ]
+};
+
+const azure: WebhookReceiverT = {
+  key: 'azure',
+  label: 'Azure',
+  icon: faMicrosoft,
+  secrets: [
+    {
+      dataKey: 'secret',
+      description: (
+        <>
+          The Secret's data map is expected to contain a `secret` key whose value does NOT need to
+          be shared directly with Azure when registering a webhook. It is used only by Kargo to
+          create a complex, hard-to-guess URL, which implicitly serves as a shared secret. For more
+          information about Azure webhooks, please refer to the Azure documentation <br />
+          <a
+            href='https://learn.microsoft.com/en-us/azure/container-registry/container-registry-repositories'
+            target='_blank'
+          >
+            Azure Container Registry
+          </a>
+          <br />
+          <a
+            href='http://learn.microsoft.com/en-us/azure/devops/service-hooks/services/webhooks?view=azure-devops'
+            target='_blank'
+          >
+            Azure DevOps
+          </a>
+        </>
+      )
+    }
+  ]
+};
+
 export const webhookReceivers: WebhookReceiverT[] = [
+  azure,
   bitbucket,
   dockerhub,
+  gitea,
   github,
   gitlab,
-  jfrog,
-  quay
+  quay,
+  jfrog
 ];
