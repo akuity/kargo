@@ -104,7 +104,7 @@ field specifies a method for selecting the desired image. The available
 strategies are:
 
 - `SemVer`: Selects the image with the tag that best matches a semantic
-  versioning constraint specified by the `semverConstraint` field. With no
+  versioning constraint specified by the `constraint` field. With no
   constraint specified, the strategy simply selects the image with the
   semantically greatest tag. All tags that are not valid semantic versions are
   ignored.
@@ -164,11 +164,16 @@ strategies are:
 - `Digest`: This selects the image _currently_ referenced by some "mutable tag,"
    such as `latest`.
 
-    __Unintuitively, the mutable tag name must be specified using the
-    `semverConstraint` field.__ Importantly, the _digest_ will change every time
-    the tag is updated. Since the `semverConstraint` field is deprecated
-    starting v1.7, it is recommended to use the `constraint` field that should
-    be set to a valid mutable tag name.
+    The mutable tag name must be specified using the `constraint` field. This field
+    should be set to a valid tag name (e.g., "latest"). The selected image will
+    track the digest associated with that tag, which may change over time as new
+    images are pushed.
+
+    :::note
+    Prior to Kargo v1.7, the semverConstraint field was used to specify the
+    mutable tag name. This field is now deprecated and will be removed in
+    v1.9.0. Users should use the constraint field instead.
+    :::
 
     :::warning
     "Mutable tags": Tags like `latest` that are sometimes, perhaps frequently,
