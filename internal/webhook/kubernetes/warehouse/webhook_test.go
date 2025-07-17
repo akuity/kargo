@@ -212,7 +212,7 @@ func TestValidateSpec(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid",
+			name: "invalid when using constraint field",
 			spec: kargoapi.WarehouseSpec{
 				Subscriptions: []kargoapi.RepoSubscription{
 					{
@@ -220,8 +220,8 @@ func TestValidateSpec(t *testing.T) {
 							RepoURL: "bogus",
 						},
 						Image: &kargoapi.ImageSubscription{
-							SemverConstraint: "bogus",
-							Platform:         "bogus",
+							Constraint: "bogus",
+							Platform:   "bogus",
 						},
 						Chart: &kargoapi.ChartSubscription{
 							SemverConstraint: "bogus",
@@ -230,6 +230,12 @@ func TestValidateSpec(t *testing.T) {
 					{
 						Git: &kargoapi.GitSubscription{
 							RepoURL: "bogus",
+						},
+					},
+					{
+						Image: &kargoapi.ImageSubscription{
+							SemverConstraint: "latest",
+							Platform:         "latest",
 						},
 					},
 				},
@@ -242,7 +248,7 @@ func TestValidateSpec(t *testing.T) {
 					field.ErrorList{
 						{
 							Type:     field.ErrorTypeInvalid,
-							Field:    "spec.subscriptions[0].image.semverConstraint",
+							Field:    "spec.subscriptions[0].image.constraint",
 							BadValue: "bogus",
 						},
 						{
@@ -268,6 +274,22 @@ func TestValidateSpec(t *testing.T) {
 							Field:    "spec.subscriptions[1].git",
 							BadValue: "bogus",
 							Detail:   "subscription for Git repository already exists at \"spec.subscriptions[0].git\"",
+						},
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "spec.subscriptions[2].image.semverConstraint",
+							BadValue: "latest",
+						},
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "spec.subscriptions[2].image.platform",
+							BadValue: "latest",
+						},
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "spec.subscriptions[2].image",
+							BadValue: "",
+							Detail:   "subscription for image repository already exists at \"spec.subscriptions[0].image\"",
 						},
 					},
 					errs,
@@ -314,15 +336,15 @@ func TestValidateSubs(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid subscriptions",
+			name: "invalid subscriptions when using constraint field",
 			subs: []kargoapi.RepoSubscription{
 				{
 					Git: &kargoapi.GitSubscription{
 						RepoURL: "bogus",
 					},
 					Image: &kargoapi.ImageSubscription{
-						SemverConstraint: "bogus",
-						Platform:         "bogus",
+						Constraint: "bogus",
+						Platform:   "bogus",
 					},
 					Chart: &kargoapi.ChartSubscription{
 						SemverConstraint: "bogus",
@@ -333,15 +355,21 @@ func TestValidateSubs(t *testing.T) {
 						RepoURL: "bogus",
 					},
 				},
+				{
+					Image: &kargoapi.ImageSubscription{
+						SemverConstraint: "latest",
+						Platform:         "latest",
+					},
+				},
 			},
 			assertions: func(t *testing.T, subs []kargoapi.RepoSubscription, errs field.ErrorList) {
-				require.Len(t, errs, 5)
+				require.Len(t, errs, 8)
 				require.Equal(
 					t,
 					field.ErrorList{
 						{
 							Type:     field.ErrorTypeInvalid,
-							Field:    "subs[0].image.semverConstraint",
+							Field:    "subs[0].image.constraint",
 							BadValue: "bogus",
 						},
 						{
@@ -366,6 +394,22 @@ func TestValidateSubs(t *testing.T) {
 							Field:    "subs[1].git",
 							BadValue: "bogus",
 							Detail:   "subscription for Git repository already exists at \"subs[0].git\"",
+						},
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "subs[2].image.semverConstraint",
+							BadValue: "latest",
+						},
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "subs[2].image.platform",
+							BadValue: "latest",
+						},
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "subs[2].image",
+							BadValue: "",
+							Detail:   "subscription for image repository already exists at \"subs[0].image\"",
 						},
 					},
 					errs,
@@ -402,14 +446,14 @@ func TestValidateSub(t *testing.T) {
 		assertions func(*testing.T, kargoapi.RepoSubscription, field.ErrorList)
 	}{
 		{
-			name: "invalid subscription",
+			name: "invalid subscription when using the constraint field",
 			sub: kargoapi.RepoSubscription{
 				Git: &kargoapi.GitSubscription{
 					RepoURL: "bogus",
 				},
 				Image: &kargoapi.ImageSubscription{
-					SemverConstraint: "bogus",
-					Platform:         "bogus",
+					Constraint: "bogus",
+					Platform:   "bogus",
 				},
 				Chart: &kargoapi.ChartSubscription{
 					SemverConstraint: "bogus",
@@ -434,7 +478,7 @@ func TestValidateSub(t *testing.T) {
 						},
 						{
 							Type:     field.ErrorTypeInvalid,
-							Field:    "sub.image.semverConstraint",
+							Field:    "sub.image.constraint",
 							BadValue: "bogus",
 						},
 						{
@@ -552,7 +596,9 @@ func TestValidateImageSub(t *testing.T) {
 		assertions func(*testing.T, field.ErrorList)
 	}{
 		{
-			name: "invalid",
+			// TODO(@nitishfy) we can remove this test case once
+			// this deprecated field is removed
+			name: "invalid when using SemVerConstraint field (deprecated)",
 			sub: kargoapi.ImageSubscription{
 				RepoURL:          "bogus",
 				SemverConstraint: "bogus",
@@ -571,6 +617,44 @@ func TestValidateImageSub(t *testing.T) {
 						{
 							Type:     field.ErrorTypeInvalid,
 							Field:    "image.semverConstraint",
+							BadValue: "bogus",
+						},
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "image.platform",
+							BadValue: "bogus",
+						},
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "image",
+							BadValue: "bogus",
+							Detail:   "subscription for image repository already exists at \"spec.subscriptions[0].image\"",
+						},
+					},
+					errs,
+				)
+			},
+		},
+		{
+			name: "invalid when using constraint field",
+			sub: kargoapi.ImageSubscription{
+				RepoURL:    "bogus",
+				Constraint: "bogus",
+				Platform:   "bogus",
+			},
+			seen: uniqueSubSet{
+				subscriptionKey{
+					kind: "image",
+					id:   "bogus",
+				}: field.NewPath("spec.subscriptions[0].image"),
+			},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Equal(
+					t,
+					field.ErrorList{
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "image.constraint",
 							BadValue: "bogus",
 						},
 						{
