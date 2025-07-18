@@ -143,7 +143,7 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 			)
 			return
 		}
-		
+
 		repoURL, err := url.JoinPath(
 			parsed.Hostname(),
 			payload.Data.RepoKey,
