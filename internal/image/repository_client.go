@@ -31,6 +31,14 @@ const (
 	maxMetadataConcurrency = 1000
 
 	unknown = "unknown"
+
+	// ociCreatedAnnotation is the OCI annotation for the image creation timestamp.
+	// See: https://specs.opencontainers.org/image-spec/annotations/
+	ociCreatedAnnotation = "org.opencontainers.image.created"
+
+	// legacyBuildDateAnnotation is the legacy Label Schema annotation for build date.
+	// See: http://label-schema.org/rc1/
+	legacyBuildDateAnnotation = "org.label-schema.build-date"
 )
 
 var metaSem = semaphore.NewWeighted(maxMetadataConcurrency)
@@ -437,9 +445,35 @@ func (r *repositoryClient) getImageFromV1Image(
 
 	return &Image{
 		Digest:      digest,
-		CreatedAt:   &cfg.Created.Time,
+		CreatedAt:   getCreationTime(cfg, manifest.Annotations),
 		Annotations: manifest.Annotations,
 	}, nil
+}
+
+func getCreationTime(cfg *v1.ConfigFile, annotations map[string]string) *time.Time {
+	// Define the order of precedence: annotations first, then labels
+	sources := []struct {
+		data map[string]string
+		keys []string
+	}{
+		{annotations, []string{ociCreatedAnnotation, legacyBuildDateAnnotation}},
+		{cfg.Config.Labels, []string{ociCreatedAnnotation, legacyBuildDateAnnotation}},
+	}
+
+	for _, source := range sources {
+		if source.data != nil {
+			for _, key := range source.keys {
+				if createdStr, ok := source.data[key]; ok {
+					if created, err := time.Parse(time.RFC3339, createdStr); err == nil {
+						return &created
+					}
+				}
+			}
+		}
+	}
+
+	// Fall back to the config's Created field
+	return &cfg.Created.Time
 }
 
 // rateLimitedRoundTripper is a rate limited implementation of
