@@ -78,6 +78,7 @@ func (d *dockerhubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 		payload := struct {
 			PushData struct {
 				MediaType string `json:"media_type"`
+				Tag       string `json:"tag"`
 			} `json:"push_data"`
 			Repository struct {
 				RepoName string `json:"repo_name"`
@@ -97,9 +98,21 @@ func (d *dockerhubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 			payload.PushData.MediaType,
 		)
 
+		var rc *refreshEligibilityChecker
+		switch {
+		case isContainerImageMediaType(payload.PushData.MediaType):
+			rc = &refreshEligibilityChecker{newImageTag: &payload.PushData.Tag}
+		case isHelmChartMediaType(payload.PushData.MediaType):
+			rc = &refreshEligibilityChecker{newChartTag: &payload.PushData.Tag}
+		default:
+			logger.Debug("refresh eligibility checker initialization skipped due to unsupported media type",
+				"mediaType", payload.PushData.MediaType,
+			)
+		}
+
 		logger = logger.WithValues("repoURL", repoURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
 
-		refreshWarehouses(ctx, w, d.client, d.project, repoURL)
+		refreshWarehouses(ctx, w, d.client, d.project, rc, repoURL)
 	})
 }

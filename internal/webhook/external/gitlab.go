@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	gl "gitlab.com/gitlab-org/api/client-go"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -123,7 +124,32 @@ func (g *gitlabWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			}
 			logger = logger.WithValues("repoURL", repoURL)
 			ctx = logging.ContextWithLogger(ctx, logger)
-			refreshWarehouses(ctx, w, g.client, g.project, repoURL)
+			rc := newGitLabRefreshCheck(e)
+			refreshWarehouses(ctx, w, g.client, g.project, rc, repoURL)
 		}
 	})
+}
+
+// newGitLabRefreshCheck creates a new refreshEligibilityChecker from a GitLab push event.
+// It extracts the metadata from the event payload. This is used downstream to determine which Warehouses
+// should be refreshed in response to the event based on the commit selection
+// strategy configured for the Warehouse.
+//
+// See the GitLab Push event payload documentation for more details:
+//
+//	https://docs.gitlab.com/user/project/integrations/webhook_events/#push-events
+func newGitLabRefreshCheck(e *gl.PushEvent) *refreshEligibilityChecker {
+	var branchName, tag *string
+	if e.Ref != "" {
+		switch {
+		case strings.HasPrefix(e.Ref, "refs/tags/"):
+			tag = strPtr(strings.TrimPrefix(e.Ref, "refs/tags/"))
+		case strings.HasPrefix(e.Ref, "refs/heads/"):
+			branchName = strPtr(strings.TrimPrefix(e.Ref, "refs/heads/"))
+		}
+	}
+	return &refreshEligibilityChecker{
+		newGitTag:  tag,
+		branchName: branchName,
+	}
 }

@@ -78,7 +78,8 @@ func (q *quayWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 
 		payload := struct {
 			// format: quay.io/mynamespace/repository
-			DockerURL string `json:"docker_url"`
+			DockerURL   string   `json:"docker_url"`
+			UpdatedTags []string `json:"updated_tags"`
 		}{}
 
 		if err := json.Unmarshal(requestBody, &payload); err != nil {
@@ -104,7 +105,11 @@ func (q *quayWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 
 		logger = logger.WithValues("repoURLs", repoURLs)
 		ctx = logging.ContextWithLogger(ctx, logger)
-
-		refreshWarehouses(ctx, w, q.client, q.project, repoURLs...)
+		newestTag := strPtr(payload.UpdatedTags[len(payload.UpdatedTags)-1])
+		rc := &refreshEligibilityChecker{
+			newImageTag: newestTag,
+			newChartTag: newestTag,
+		}
+		refreshWarehouses(ctx, w, q.client, q.project, rc, repoURLs...)
 	})
 }

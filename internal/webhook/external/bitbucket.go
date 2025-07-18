@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	gh "github.com/google/go-github/v71/github"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -123,6 +124,13 @@ func (b *bitbucketWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 		}
 
 		payload := struct {
+			Push struct {
+				Changes []struct {
+					New struct {
+						Name string `json:"name"` // branch name
+					} `json:"new"`
+				} `json:"changes"`
+			} `json:"push"`
 			Repository struct {
 				Links struct {
 					HTML struct {
@@ -159,7 +167,11 @@ func (b *bitbucketWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 
 		logger = logger.WithValues("repoURL", repoURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
-
-		refreshWarehouses(ctx, w, b.client, b.project, repoURL)
+		branchName := strings.TrimPrefix(
+			payload.Push.Changes[len(payload.Push.Changes)-1].New.Name,
+			"refs/heads/",
+		)
+		rc := &refreshEligibilityChecker{branchName: strPtr(branchName)}
+		refreshWarehouses(ctx, w, b.client, b.project, rc, repoURL)
 	})
 }

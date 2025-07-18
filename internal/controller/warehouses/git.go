@@ -362,7 +362,7 @@ func filterTags(tags []git.TagMetadata, ignoreTags []string, allow string) ([]gi
 	}
 	filteredTags := make([]git.TagMetadata, 0, len(tags))
 	for _, tag := range tags {
-		if ignores(tag.Tag, ignoreTags) || !allows(tag.Tag, allowRegex) {
+		if ignores(tag.Tag, ignoreTags) || !Allows(tag.Tag, allowRegex) {
 			continue
 		}
 		filteredTags = append(filteredTags, tag)
@@ -467,9 +467,9 @@ func evaluateCommitExpression(
 	}
 }
 
-// allows returns true if the given tag name matches the given regular
+// Allows returns true if the given tag name matches the given regular
 // expression or if the regular expression is nil. It returns false otherwise.
-func allows(tagName string, allowRegex *regexp.Regexp) bool {
+func Allows(tagName string, allowRegex *regexp.Regexp) bool {
 	if allowRegex == nil {
 		return true
 	}

@@ -20,6 +20,7 @@ import (
 const dockerhubWebhookRequestBodyImage = `
 {
 	"push_data": {
+		"tag": "v1.0.0",
 		"media_type": "` + ociImageIndexMediaType + `"
 	},
 	"repository": {
@@ -30,7 +31,8 @@ const dockerhubWebhookRequestBodyImage = `
 const dockerhubWebhookRequestBodyChart = `
 {
 	"push_data": {
-		"media_type": "` + helmChartMediaType + `"
+		"tag": "v1.0.0",
+		"media_type": "application/vnd.cncf.helm.config.v1+json"
 	},
 	"repository": {
 		"repo_name": "example/repo"
@@ -79,7 +81,11 @@ func TestDockerHubHandler(t *testing.T) {
 					},
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
-							Image: &kargoapi.ImageSubscription{RepoURL: "example/repo"},
+							Image: &kargoapi.ImageSubscription{
+								RepoURL:                "example/repo",
+								ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+								SemverConstraint:       "^v1.0.0",
+							},
 						}},
 					},
 				},
