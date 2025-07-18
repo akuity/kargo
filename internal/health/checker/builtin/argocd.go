@@ -9,6 +9,7 @@ import (
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -223,36 +224,91 @@ func (a *argocdChecker) getApplicationHealth(
 			return stageHealth, appStatus, err
 		}
 		// If we care about revisions, and recently finished an operation, we
-		// should wait for a cooldown period before assessing the health of the
-		// application. This is to ensure the health check has a chance to run
-		// after the sync operation has finished.
+		// should wait for the health status to be trustworthy before assessing
+		// the health of the application. This is to ensure the health check has
+		// a chance to run after the sync operation has finished.
 		//
 		// xref: https://github.com/akuity/kargo/issues/2196
 		//
-		// TODO: revisit this when https://github.com/argoproj/argo-cd/pull/18660
-		// 	 is merged and released.
-		if app.Status.OperationState != nil {
-			cooldown := time.Now()
-			if !app.Status.OperationState.FinishedAt.IsZero() {
-				cooldown = app.Status.OperationState.FinishedAt.Time
-			}
-			cooldown = cooldown.Add(10 * time.Second)
-			if duration := time.Until(cooldown); duration > 0 {
-				time.Sleep(duration)
-				// Re-fetch the application to get the latest state.
-				if err := a.argocdClient.Get(ctx, appKey, app); err != nil {
-					if apierrors.IsNotFound(err) {
-						err = fmt.Errorf(
-							"unable to find Argo CD Application %q in namespace %q",
-							appKey.Name, appKey.Namespace,
-						)
-					} else {
-						err = fmt.Errorf(
+		// Strategy: Use progressive backoff to wait for LastTransitionTime to be
+		// greater than the operation finish time. If LastTransitionTime is not
+		// available after 30 seconds, handle based on ArgoCD version.
+		if app.Status.OperationState != nil && !app.Status.OperationState.FinishedAt.IsZero() {
+			operationFinishTime := app.Status.OperationState.FinishedAt.Time
+
+			// Check if LastTransitionTime is already trustworthy
+			if app.Status.Health.LastTransitionTime != nil &&
+				!app.Status.Health.LastTransitionTime.IsZero() &&
+				app.Status.Health.LastTransitionTime.After(operationFinishTime) {
+				// Health status is already trustworthy, no need to retry
+			} else {
+				// Need to wait for LastTransitionTime to be updated
+				startTime := time.Now()
+				maxWaitTime := 30 * time.Second
+
+				// Use standard backoff configuration
+				backoff := wait.Backoff{
+					Duration: 100 * time.Millisecond,
+					Factor:   2.0,
+					Steps:    100, // Large number to rely on timeout instead
+					Cap:      1 * time.Second,
+					Jitter:   0.0, // No jitter for predictable timing
+				}
+
+				// Use wait.ExponentialBackoff to handle the backoff logic
+				err := wait.ExponentialBackoff(backoff, func() (bool, error) {
+					// Check if we've exceeded the maximum wait time
+					if time.Since(startTime) >= maxWaitTime {
+						// Timeout reached
+						return true, nil
+					}
+
+					// Re-fetch the application to get the latest state
+					if err := a.argocdClient.Get(ctx, appKey, app); err != nil {
+						if apierrors.IsNotFound(err) {
+							return false, fmt.Errorf(
+								"unable to find Argo CD Application %q in namespace %q",
+								appKey.Name, appKey.Namespace,
+							)
+						}
+						return false, fmt.Errorf(
 							"error finding Argo CD Application %q in namespace %q: %w",
 							appKey.Name, appKey.Namespace, err,
 						)
 					}
-					return kargoapi.HealthStateUnknown, appStatus, err
+
+					// Check if LastTransitionTime is now available and greater than operation finish time
+					if app.Status.Health.LastTransitionTime != nil &&
+						!app.Status.Health.LastTransitionTime.IsZero() &&
+						app.Status.Health.LastTransitionTime.After(operationFinishTime) {
+						// Health status is now trustworthy, stop retrying
+						return true, nil
+					}
+
+					// Continue retrying
+					return false, nil
+				})
+
+				// Handle timeout and error conditions
+				if err != nil {
+					if !wait.Interrupted(err) {
+						// Other error (e.g., network issue, not found)
+						return kargoapi.HealthStateUnknown, appStatus, err
+					}
+
+					// Timed out, but this might be expected behavior
+					// After 30 seconds, decide based on LastTransitionTime availability
+					if app.Status.Health.LastTransitionTime != nil && !app.Status.Health.LastTransitionTime.IsZero() {
+						// Newer ArgoCD version but health info not updating properly
+						return kargoapi.HealthStateUnknown, appStatus, fmt.Errorf(
+							"argo CD Application %q in namespace %q health status LastTransitionTime "+
+								"has not been updated after sync operation completed at %s",
+							appKey.Name, appKey.Namespace, operationFinishTime.Format(time.RFC3339),
+						)
+					}
+
+					// Assume older ArgoCD version, trust the health status
+					// Continue without error
 				}
 			}
 		}
