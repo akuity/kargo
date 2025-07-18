@@ -834,6 +834,15 @@ webhooksServer:
     # foo: bar
     # another: value
 
+  ## @param webhooksServer.initContainers Optional init containers to add to the webhooks server pods. This is rendered as the literal YAML.
+  initContainers:
+    []
+    # - name: download-tools
+    #   image: alpine:3.8
+    #   command: [ sh, -c ]
+    #   args:
+    #    - ls
+    
   ## @param webhooksServer.env Environment variables to add to webhook server pods.
   env: []
   #  - name: ENV_NAME
@@ -844,7 +853,7 @@ webhooksServer:
   #      name: config-map-name
   #  - secretRef:
   #      name: secret-name
-
+  
   ## @param webhooksServer.resources Resources limits and requests for the webhooks server containers.
   resources: {}
     # limits:
