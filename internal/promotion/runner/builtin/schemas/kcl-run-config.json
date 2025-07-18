@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "KCLRunConfig",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["inputPath"],
+  "properties": {
+    "inputPath": {
+      "type": "string",
+      "description": "InputPath is the path to the KCL file or directory to execute.",
+      "minLength": 1
+    },
+    "outputPath": {
+      "type": "string",
+      "description": "OutputPath is the path where the KCL output should be written. If not specified, output will be returned in the step result.",
+      "minLength": 1
+    },
+    "args": {
+      "type": "array",
+      "description": "Args are additional arguments to pass to the KCL execution as key-value pairs.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "settings": {
+      "type": "object",
+      "description": "Settings are key-value pairs to pass to the KCL execution.",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  }
+}

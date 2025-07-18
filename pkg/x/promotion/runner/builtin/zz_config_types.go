@@ -395,6 +395,18 @@ type Helm struct {
 	KubeVersion string `json:"kubeVersion,omitempty"`
 }
 
+type KCLRunConfig struct {
+	// The path to the KCL file or directory to execute.
+	InputPath string `json:"inputPath"`
+	// The path where the KCL output should be written. If not specified, output will be
+	// returned in the step result.
+	OutputPath string `json:"outputPath,omitempty"`
+	// Additional arguments to pass to the KCL execution as key-value pairs.
+	Args []string `json:"args,omitempty"`
+	// Settings are key-value pairs to pass to the KCL execution.
+	Settings map[string]string `json:"settings,omitempty"`
+}
+
 type KustomizeSetImageConfig struct {
 	// Images is a list of container images to set or update in the Kustomization file. When
 	// left unspecified, all images from the Freight collection will be set in the Kustomization
