@@ -580,7 +580,7 @@ func Test_repositoryClient_getImageFromV1ImageIndex(t *testing.T) {
 						Digest:    testDigest,
 						CreatedAt: testImage.CreatedAt,
 						Annotations: map[string]string{
-							"org.opencontainers.image.created": "2023-01-01T00:00:00Z",
+							ociCreatedAnnotation: "2023-01-01T00:00:00Z",
 						},
 					}, nil
 				},
@@ -686,7 +686,7 @@ func Test_repositoryClient_getImageFromV1Image(t *testing.T) {
 				configFile: &v1.ConfigFile{},
 				manifest: &v1.Manifest{
 					Annotations: map[string]string{
-						"org.opencontainers.image.created": "2023-01-01T00:00:00Z",
+						ociCreatedAnnotation:               "2023-01-01T00:00:00Z",
 						"org.opencontainers.image.authors": "Test Author",
 					},
 				},
@@ -699,7 +699,7 @@ func Test_repositoryClient_getImageFromV1Image(t *testing.T) {
 				require.NotNil(t, img.CreatedAt)
 				require.NotNil(t, img.Annotations)
 				require.Equal(t, "Test Author", img.Annotations["org.opencontainers.image.authors"])
-				require.Equal(t, "2023-01-01T00:00:00Z", img.Annotations["org.opencontainers.image.created"])
+				require.Equal(t, "2023-01-01T00:00:00Z", img.Annotations[ociCreatedAnnotation])
 			},
 		},
 		{
@@ -729,7 +729,7 @@ func Test_repositoryClient_getImageFromV1Image(t *testing.T) {
 				},
 				manifest: &v1.Manifest{
 					Annotations: map[string]string{
-						"org.opencontainers.image.created": "2023-01-01T00:00:00Z",
+						ociCreatedAnnotation: "2023-01-01T00:00:00Z",
 					},
 				},
 			},
@@ -744,7 +744,7 @@ func Test_repositoryClient_getImageFromV1Image(t *testing.T) {
 				require.NotEmpty(t, img.Digest)
 				require.NotNil(t, img.CreatedAt)
 				require.NotNil(t, img.Annotations)
-				require.Equal(t, "2023-01-01T00:00:00Z", img.Annotations["org.opencontainers.image.created"])
+				require.Equal(t, "2023-01-01T00:00:00Z", img.Annotations[ociCreatedAnnotation])
 			},
 		},
 		{
@@ -754,7 +754,7 @@ func Test_repositoryClient_getImageFromV1Image(t *testing.T) {
 					Created: v1.Time{Time: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
 					Config: v1.Config{
 						Labels: map[string]string{
-							"org.opencontainers.image.created": "2023-02-01T00:00:00Z",
+							ociCreatedAnnotation: "2023-02-01T00:00:00Z",
 						},
 					},
 					OS:           "linux",
@@ -781,7 +781,7 @@ func Test_repositoryClient_getImageFromV1Image(t *testing.T) {
 					Created: v1.Time{Time: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
 					Config: v1.Config{
 						Labels: map[string]string{
-							"org.opencontainers.image.created": "2023-02-01T00:00:00Z",
+							ociCreatedAnnotation: "2023-02-01T00:00:00Z",
 						},
 					},
 					OS:           "linux",
@@ -789,7 +789,7 @@ func Test_repositoryClient_getImageFromV1Image(t *testing.T) {
 				},
 				manifest: &v1.Manifest{
 					Annotations: map[string]string{
-						"org.opencontainers.image.created": "2023-03-01T00:00:00Z",
+						ociCreatedAnnotation: "2023-03-01T00:00:00Z",
 					},
 				},
 			},
@@ -818,7 +818,7 @@ func Test_repositoryClient_getImageFromV1Image(t *testing.T) {
 				},
 				manifest: &v1.Manifest{
 					Annotations: map[string]string{
-						"org.label-schema.build-date": "2023-04-01T00:00:00Z",
+						legacyBuildDateAnnotation: "2023-04-01T00:00:00Z",
 					},
 				},
 			},
@@ -841,7 +841,7 @@ func Test_repositoryClient_getImageFromV1Image(t *testing.T) {
 					Created: v1.Time{Time: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
 					Config: v1.Config{
 						Labels: map[string]string{
-							"org.label-schema.build-date": "2023-05-01T00:00:00Z",
+							legacyBuildDateAnnotation: "2023-05-01T00:00:00Z",
 						},
 					},
 					OS:           "linux",
@@ -874,8 +874,8 @@ func Test_repositoryClient_getImageFromV1Image(t *testing.T) {
 				},
 				manifest: &v1.Manifest{
 					Annotations: map[string]string{
-						"org.opencontainers.image.created": "2023-06-01T00:00:00Z",
-						"org.label-schema.build-date":      "2023-07-01T00:00:00Z",
+						ociCreatedAnnotation:      "2023-06-01T00:00:00Z",
+						legacyBuildDateAnnotation: "2023-07-01T00:00:00Z",
 					},
 				},
 			},
@@ -898,7 +898,7 @@ func Test_repositoryClient_getImageFromV1Image(t *testing.T) {
 					Created: v1.Time{Time: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
 					Config: v1.Config{
 						Labels: map[string]string{
-							"org.opencontainers.image.created": "2023-08-01T00:00:00Z",
+							ociCreatedAnnotation: "2023-08-01T00:00:00Z",
 						},
 					},
 					OS:           "linux",
@@ -906,7 +906,7 @@ func Test_repositoryClient_getImageFromV1Image(t *testing.T) {
 				},
 				manifest: &v1.Manifest{
 					Annotations: map[string]string{
-						"org.label-schema.build-date": "2023-09-01T00:00:00Z",
+						legacyBuildDateAnnotation: "2023-09-01T00:00:00Z",
 					},
 				},
 			},
@@ -929,8 +929,8 @@ func Test_repositoryClient_getImageFromV1Image(t *testing.T) {
 					Created: v1.Time{Time: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
 					Config: v1.Config{
 						Labels: map[string]string{
-							"org.opencontainers.image.created": "2023-10-01T00:00:00Z",
-							"org.label-schema.build-date":      "2023-11-01T00:00:00Z",
+							ociCreatedAnnotation:      "2023-10-01T00:00:00Z",
+							legacyBuildDateAnnotation: "2023-11-01T00:00:00Z",
 						},
 					},
 					OS:           "linux",
