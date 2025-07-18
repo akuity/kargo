@@ -17,6 +17,7 @@ import jsonParseConfig from '@ui/gen/directives/json-parse-config.json';
 import jsonUpdateConfig from '@ui/gen/directives/json-update-config.json';
 import kustomizeBuildConfig from '@ui/gen/directives/kustomize-build-config.json';
 import kustomizeSetImageConfig from '@ui/gen/directives/kustomize-set-image-config.json';
+import yamlMergeConfig from '@ui/gen/directives/yaml-merge-config.json';
 import yamlParseConfig from '@ui/gen/directives/yaml-parse-config.json';
 import yamlUpdateConfig from '@ui/gen/directives/yaml-update-config.json';
 
@@ -60,6 +61,10 @@ export const useDiscoverPromotionDirectivesRegistries = (): PromotionDirectivesR
       {
         identifier: 'git-wait-for-pr',
         config: gitWaitForPR as unknown as JSONSchema7
+      },
+      {
+        identifier: 'yaml-merge',
+        config: yamlMergeConfig as unknown as JSONSchema7
       },
       {
         identifier: 'yaml-parse',
