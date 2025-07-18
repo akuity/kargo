@@ -35,6 +35,10 @@ const (
 	// ociCreatedAnnotation is the OCI annotation for the image creation timestamp.
 	// See: https://specs.opencontainers.org/image-spec/annotations/
 	ociCreatedAnnotation = "org.opencontainers.image.created"
+
+	// legacyBuildDateAnnotation is the legacy Label Schema annotation for build date.
+	// See: http://label-schema.org/rc1/
+	legacyBuildDateAnnotation = "org.label-schema.build-date"
 )
 
 var metaSem = semaphore.NewWeighted(maxMetadataConcurrency)
@@ -447,38 +451,23 @@ func (r *repositoryClient) getImageFromV1Image(
 }
 
 func getCreationTime(cfg *v1.ConfigFile, annotations map[string]string) *time.Time {
-	// Check OCI annotation first (most authoritative)
-	if annotations != nil {
-		if createdStr, ok := annotations[ociCreatedAnnotation]; ok {
-			if created, err := time.Parse(time.RFC3339, createdStr); err == nil {
-				return &created
-			}
-		}
+	// Define the order of precedence: annotations first, then labels
+	sources := []struct {
+		data map[string]string
+		keys []string
+	}{
+		{annotations, []string{ociCreatedAnnotation, legacyBuildDateAnnotation}},
+		{cfg.Config.Labels, []string{ociCreatedAnnotation, legacyBuildDateAnnotation}},
 	}
 
-	// Check legacy Label Schema annotation
-	if annotations != nil {
-		if createdStr, ok := annotations["org.label-schema.build-date"]; ok {
-			if created, err := time.Parse(time.RFC3339, createdStr); err == nil {
-				return &created
-			}
-		}
-	}
-
-	// Check OCI label in config
-	if cfg.Config.Labels != nil {
-		if createdStr, ok := cfg.Config.Labels[ociCreatedAnnotation]; ok {
-			if created, err := time.Parse(time.RFC3339, createdStr); err == nil {
-				return &created
-			}
-		}
-	}
-
-	// Check legacy Label Schema label in config
-	if cfg.Config.Labels != nil {
-		if createdStr, ok := cfg.Config.Labels["org.label-schema.build-date"]; ok {
-			if created, err := time.Parse(time.RFC3339, createdStr); err == nil {
-				return &created
+	for _, source := range sources {
+		if source.data != nil {
+			for _, key := range source.keys {
+				if createdStr, ok := source.data[key]; ok {
+					if created, err := time.Parse(time.RFC3339, createdStr); err == nil {
+						return &created
+					}
+				}
 			}
 		}
 	}
