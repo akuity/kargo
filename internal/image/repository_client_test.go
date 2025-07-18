@@ -774,6 +774,206 @@ func Test_repositoryClient_getImageFromV1Image(t *testing.T) {
 				require.Equal(t, expectedTime, *img.CreatedAt)
 			},
 		},
+		{
+			name: "created date is taken from annotation (higher priority than label)",
+			img: &mockImage{
+				configFile: &v1.ConfigFile{
+					Created: v1.Time{Time: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
+					Config: v1.Config{
+						Labels: map[string]string{
+							"org.opencontainers.image.created": "2023-02-01T00:00:00Z",
+						},
+					},
+					OS:           "linux",
+					Architecture: "amd64",
+				},
+				manifest: &v1.Manifest{
+					Annotations: map[string]string{
+						"org.opencontainers.image.created": "2023-03-01T00:00:00Z",
+					},
+				},
+			},
+			platform: &platformConstraint{
+				os:   "linux",
+				arch: "amd64",
+			},
+			assertions: func(t *testing.T, img *image, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, img)
+				expectedTime, err := time.Parse(time.RFC3339, "2023-03-01T00:00:00Z")
+				require.NoError(t, err)
+				require.Equal(t, expectedTime, *img.CreatedAt)
+			},
+		},
+		{
+			name: "created date is taken from legacy label schema annotation",
+			img: &mockImage{
+				configFile: &v1.ConfigFile{
+					Created: v1.Time{Time: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
+					Config: v1.Config{
+						Labels: map[string]string{},
+					},
+					OS:           "linux",
+					Architecture: "amd64",
+				},
+				manifest: &v1.Manifest{
+					Annotations: map[string]string{
+						"org.label-schema.build-date": "2023-04-01T00:00:00Z",
+					},
+				},
+			},
+			platform: &platformConstraint{
+				os:   "linux",
+				arch: "amd64",
+			},
+			assertions: func(t *testing.T, img *image, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, img)
+				expectedTime, err := time.Parse(time.RFC3339, "2023-04-01T00:00:00Z")
+				require.NoError(t, err)
+				require.Equal(t, expectedTime, *img.CreatedAt)
+			},
+		},
+		{
+			name: "created date is taken from legacy label schema label",
+			img: &mockImage{
+				configFile: &v1.ConfigFile{
+					Created: v1.Time{Time: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
+					Config: v1.Config{
+						Labels: map[string]string{
+							"org.label-schema.build-date": "2023-05-01T00:00:00Z",
+						},
+					},
+					OS:           "linux",
+					Architecture: "amd64",
+				},
+				manifest: &v1.Manifest{},
+			},
+			platform: &platformConstraint{
+				os:   "linux",
+				arch: "amd64",
+			},
+			assertions: func(t *testing.T, img *image, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, img)
+				expectedTime, err := time.Parse(time.RFC3339, "2023-05-01T00:00:00Z")
+				require.NoError(t, err)
+				require.Equal(t, expectedTime, *img.CreatedAt)
+			},
+		},
+		{
+			name: "OCI annotation takes priority over legacy annotation",
+			img: &mockImage{
+				configFile: &v1.ConfigFile{
+					Created: v1.Time{Time: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
+					Config: v1.Config{
+						Labels: map[string]string{},
+					},
+					OS:           "linux",
+					Architecture: "amd64",
+				},
+				manifest: &v1.Manifest{
+					Annotations: map[string]string{
+						"org.opencontainers.image.created": "2023-06-01T00:00:00Z",
+						"org.label-schema.build-date":      "2023-07-01T00:00:00Z",
+					},
+				},
+			},
+			platform: &platformConstraint{
+				os:   "linux",
+				arch: "amd64",
+			},
+			assertions: func(t *testing.T, img *image, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, img)
+				expectedTime, err := time.Parse(time.RFC3339, "2023-06-01T00:00:00Z")
+				require.NoError(t, err)
+				require.Equal(t, expectedTime, *img.CreatedAt)
+			},
+		},
+		{
+			name: "legacy annotation takes priority over OCI label",
+			img: &mockImage{
+				configFile: &v1.ConfigFile{
+					Created: v1.Time{Time: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
+					Config: v1.Config{
+						Labels: map[string]string{
+							"org.opencontainers.image.created": "2023-08-01T00:00:00Z",
+						},
+					},
+					OS:           "linux",
+					Architecture: "amd64",
+				},
+				manifest: &v1.Manifest{
+					Annotations: map[string]string{
+						"org.label-schema.build-date": "2023-09-01T00:00:00Z",
+					},
+				},
+			},
+			platform: &platformConstraint{
+				os:   "linux",
+				arch: "amd64",
+			},
+			assertions: func(t *testing.T, img *image, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, img)
+				expectedTime, err := time.Parse(time.RFC3339, "2023-09-01T00:00:00Z")
+				require.NoError(t, err)
+				require.Equal(t, expectedTime, *img.CreatedAt)
+			},
+		},
+		{
+			name: "OCI label takes priority over legacy label",
+			img: &mockImage{
+				configFile: &v1.ConfigFile{
+					Created: v1.Time{Time: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
+					Config: v1.Config{
+						Labels: map[string]string{
+							"org.opencontainers.image.created": "2023-10-01T00:00:00Z",
+							"org.label-schema.build-date":      "2023-11-01T00:00:00Z",
+						},
+					},
+					OS:           "linux",
+					Architecture: "amd64",
+				},
+				manifest: &v1.Manifest{},
+			},
+			platform: &platformConstraint{
+				os:   "linux",
+				arch: "amd64",
+			},
+			assertions: func(t *testing.T, img *image, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, img)
+				expectedTime, err := time.Parse(time.RFC3339, "2023-10-01T00:00:00Z")
+				require.NoError(t, err)
+				require.Equal(t, expectedTime, *img.CreatedAt)
+			},
+		},
+		{
+			name: "fallback to config.Created when no annotations or labels",
+			img: &mockImage{
+				configFile: &v1.ConfigFile{
+					Created: v1.Time{Time: time.Date(2023, 12, 1, 0, 0, 0, 0, time.UTC)},
+					Config: v1.Config{
+						Labels: map[string]string{},
+					},
+					OS:           "linux",
+					Architecture: "amd64",
+				},
+				manifest: &v1.Manifest{},
+			},
+			platform: &platformConstraint{
+				os:   "linux",
+				arch: "amd64",
+			},
+			assertions: func(t *testing.T, img *image, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, img)
+				expectedTime := time.Date(2023, 12, 1, 0, 0, 0, 0, time.UTC)
+				require.Equal(t, expectedTime, *img.CreatedAt)
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {

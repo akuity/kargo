@@ -441,12 +441,31 @@ func (r *repositoryClient) getImageFromV1Image(
 
 	return &image{
 		Digest:      digest,
-		CreatedAt:   getCreationTime(cfg),
+		CreatedAt:   getCreationTime(cfg, manifest.Annotations),
 		Annotations: manifest.Annotations,
 	}, nil
 }
 
-func getCreationTime(cfg *v1.ConfigFile) *time.Time {
+func getCreationTime(cfg *v1.ConfigFile, annotations map[string]string) *time.Time {
+	// Check OCI annotation first (most authoritative)
+	if annotations != nil {
+		if createdStr, ok := annotations[ociCreatedAnnotation]; ok {
+			if created, err := time.Parse(time.RFC3339, createdStr); err == nil {
+				return &created
+			}
+		}
+	}
+
+	// Check legacy Label Schema annotation
+	if annotations != nil {
+		if createdStr, ok := annotations["org.label-schema.build-date"]; ok {
+			if created, err := time.Parse(time.RFC3339, createdStr); err == nil {
+				return &created
+			}
+		}
+	}
+
+	// Check OCI label in config
 	if cfg.Config.Labels != nil {
 		if createdStr, ok := cfg.Config.Labels[ociCreatedAnnotation]; ok {
 			if created, err := time.Parse(time.RFC3339, createdStr); err == nil {
@@ -454,6 +473,17 @@ func getCreationTime(cfg *v1.ConfigFile) *time.Time {
 			}
 		}
 	}
+
+	// Check legacy Label Schema label in config
+	if cfg.Config.Labels != nil {
+		if createdStr, ok := cfg.Config.Labels["org.label-schema.build-date"]; ok {
+			if created, err := time.Parse(time.RFC3339, createdStr); err == nil {
+				return &created
+			}
+		}
+	}
+
+	// Fall back to the config's Created field
 	return &cfg.Created.Time
 }
 
