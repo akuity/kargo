@@ -29,6 +29,19 @@ func TestArtifactoryHandler(t *testing.T) {
 		Domain:    artifactoryDockerDomain,
 		EventType: artifactoryPushedEventType,
 		Data: artifactoryEventData{
+			Path:      "test-image/latest/manifest.json",
+			ImageType: artifactoryDockerDomain,
+			RepoKey:   "test-repo",
+			ImageName: "test-image",
+		},
+		Origin: "https://artifactory.example.com",
+	}
+
+	validImagePushEventWithPathPrefix := artifactoryEvent{
+		Domain:    artifactoryDockerDomain,
+		EventType: artifactoryPushedEventType,
+		Data: artifactoryEventData{
+			Path:      "foo/bar/test-image/latest/manifest.json",
 			ImageType: artifactoryDockerDomain,
 			RepoKey:   "test-repo",
 			ImageName: "test-image",
@@ -40,9 +53,10 @@ func TestArtifactoryHandler(t *testing.T) {
 		Domain:    artifactoryDockerDomain,
 		EventType: artifactoryPushedEventType,
 		Data: artifactoryEventData{
+			Path:      "test-chart/latest/chart.tgz",
 			ImageType: artifactoryChartImageType,
 			RepoKey:   "test-repo",
-			ImageName: "test-image",
+			ImageName: "test-chart",
 		},
 		Origin: "https://artifactory.example.com",
 	}
@@ -162,7 +176,7 @@ func TestArtifactoryHandler(t *testing.T) {
 			},
 		},
 		{
-			name:       "success -- push event",
+			name:       "success -- image push event with path prefix",
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
@@ -173,7 +187,7 @@ func TestArtifactoryHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
-								RepoURL: "artifactory.example.com/test-repo/test-image",
+								RepoURL: "artifactory.example.com/test-repo/foo/bar/test-image",
 							},
 						}},
 					},
@@ -184,7 +198,7 @@ func TestArtifactoryHandler(t *testing.T) {
 				indexer.WarehousesBySubscribedURLs,
 			).Build(),
 			req: func() *http.Request {
-				bodyBytes, err := json.Marshal(validImagePushEvent)
+				bodyBytes, err := json.Marshal(validImagePushEventWithPathPrefix)
 				require.NoError(t, err)
 				req := httptest.NewRequest(
 					http.MethodPost,
@@ -200,7 +214,7 @@ func TestArtifactoryHandler(t *testing.T) {
 			},
 		},
 		{
-			name:       "success -- image push event",
+			name:       "success -- image push event with no path prefix",
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
@@ -249,7 +263,7 @@ func TestArtifactoryHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Chart: &kargoapi.ChartSubscription{
-								RepoURL: "artifactory.example.com/test-repo/test-image",
+								RepoURL: "artifactory.example.com/test-repo/test-chart",
 							},
 						}},
 					},

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -124,6 +125,18 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 			return
 		}
 
+		logger = logger.WithValues(
+			"path", payload.Data.Path,
+			"eventType", payload.EventType,
+			"domain", payload.Domain,
+			"repoKey", payload.Data.RepoKey,
+			"imageName", payload.Data.ImageName,
+			"imageType", payload.Data.ImageType,
+			"origin", payload.Origin,
+		)
+
+		logger.Info("unmarshalled Artifactory webhook payload")
+
 		if payload.EventType != artifactoryPushedEventType || payload.Domain != artifactoryDockerDomain {
 			xhttp.WriteErrorJSON(
 				w,
@@ -144,11 +157,13 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 			return
 		}
 
-		repoURL, err := url.JoinPath(
-			parsed.Hostname(),
+		pathParts := getPathParts(
 			payload.Data.RepoKey,
+			payload.Data.Path,
 			payload.Data.ImageName,
 		)
+
+		repoURL, err := url.JoinPath(parsed.Hostname(), pathParts...)
 		if err != nil {
 			xhttp.WriteErrorJSON(
 				w,
@@ -175,8 +190,23 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 		logger = logger.WithValues("repoURL", repoURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
 		refreshWarehouses(ctx, w, a.client, a.project, repoURL)
-
 	})
+}
+
+// getPathParts returns the repo key with any prefixes that may be prepended to the image name.
+// e.g. for a path of "foo/bar/imagename", the returned slice will be ["repoKey", "foo", "bar", "imagename"].
+// If no prefixes are present, it will return just ["repoKey", "imagename"].
+func getPathParts(repoKey, path, imageName string) []string {
+	pathParts := []string{repoKey}
+	for s := range strings.SplitSeq(path, "/") {
+		pathParts = append(pathParts, s)
+		if s == imageName {
+			// we don't need the rest of the path after imageName
+			// like manifest.json or chart.tgz
+			break
+		}
+	}
+	return pathParts
 }
 
 type artifactoryEvent struct {
@@ -187,6 +217,7 @@ type artifactoryEvent struct {
 }
 
 type artifactoryEventData struct {
+	Path      string `json:"path"`
 	RepoKey   string `json:"repo_key"`
 	ImageName string `json:"image_name"`
 	ImageType string `json:"image_type"`
