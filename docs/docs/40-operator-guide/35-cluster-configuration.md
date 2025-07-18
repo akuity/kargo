@@ -121,7 +121,7 @@ The following example `ClusterConfig` configures two webhook receivers:
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1
-kind: Cluster
+kind: ClusterConfig
 metadata:
   name: cluster
 spec:
