@@ -148,7 +148,7 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 			return
 		}
 
-		parsed, err := url.Parse(payload.Origin)
+		originURL, err := url.Parse(payload.Origin)
 		if err != nil {
 			xhttp.WriteErrorJSON(
 				w,
@@ -157,20 +157,14 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 			return
 		}
 
-		pathParts := getPathParts(
-			payload.Data.RepoKey,
-			payload.Data.Path,
-			payload.Data.ImageName,
+		pathSections := strings.Split(payload.Data.Path, "/")
+		repoURL := strings.Join(
+			append(
+				[]string{originURL.Host, payload.Data.RepoKey},
+				pathSections[:len(pathSections)-2]...,
+			),
+			"/",
 		)
-
-		repoURL, err := url.JoinPath(parsed.Hostname(), pathParts...)
-		if err != nil {
-			xhttp.WriteErrorJSON(
-				w,
-				fmt.Errorf("failed to construct repository URL: %w", err),
-			)
-			return
-		}
 
 		switch payload.Data.ImageType {
 		case artifactoryDockerDomain:
@@ -191,22 +185,6 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 		ctx = logging.ContextWithLogger(ctx, logger)
 		refreshWarehouses(ctx, w, a.client, a.project, repoURL)
 	})
-}
-
-// getPathParts returns the repo key with any prefixes that may be prepended to the image name.
-// e.g. for a path of "foo/bar/imagename", the returned slice will be ["repoKey", "foo", "bar", "imagename"].
-// If no prefixes are present, it will return just ["repoKey", "imagename"].
-func getPathParts(repoKey, path, imageName string) []string {
-	pathParts := []string{repoKey}
-	for s := range strings.SplitSeq(path, "/") {
-		pathParts = append(pathParts, s)
-		if s == imageName {
-			// we don't need the rest of the path after imageName
-			// like manifest.json or chart.tgz
-			break
-		}
-	}
-	return pathParts
 }
 
 type artifactoryEvent struct {
