@@ -3,12 +3,14 @@ package event
 import (
 	"context"
 	"encoding/json"
+	"maps"
 	"time"
 
 	"k8s.io/apimachinery/pkg/types"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libargocd "github.com/akuity/kargo/internal/argocd"
+	"github.com/akuity/kargo/internal/expressions"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -90,14 +92,97 @@ func NewPromotionAnnotations(
 			apps = append(apps, namespacedName)
 		}
 	}
-	if len(apps) > 0 {
-		data, err := json.Marshal(apps)
-		if err != nil {
-			logger.Error(err, "marshal ArgoCD apps in JSON")
-		} else {
-			annotations[kargoapi.AnnotationKeyEventApplications] = string(data)
+
+	if len(apps) == 0 {
+		return annotations
+	}
+
+	data, err := json.Marshal(apps)
+	if err != nil {
+		return annotations
+	}
+
+	var result string
+	env := map[string]any{
+		"ctx": map[string]any{
+			"project":   p.GetNamespace(),
+			"promotion": p.GetName(),
+			"stage":     p.Spec.Stage,
+			"meta": map[string]any{
+				"promotion": map[string]any{
+					"actor": p.Annotations[kargoapi.AnnotationKeyCreateActor],
+				},
+			},
+		},
+	}
+	if f != nil {
+		targetFreight := map[string]any{
+			"name": f.Name,
+		}
+		if f.Origin.Name != "" {
+			targetFreight["origin"] = map[string]any{
+				"name": f.Origin.Name,
+			}
+		}
+		if ctx, ok := env["ctx"].(map[string]any); ok {
+			ctx["targetFreight"] = targetFreight
 		}
 	}
 
+	vars := calculateVars(p, env)
+	if len(vars) > 0 {
+		env["vars"] = vars
+	}
+
+	if evaled, err := expressions.EvaluateTemplate(string(data), env); err == nil {
+		// may be the same string after evaluation
+		if v, ok := evaled.(string); !ok {
+			if evaledBytes, err := json.Marshal(evaled); err == nil {
+				result = string(evaledBytes)
+			}
+		} else {
+			result = v
+		}
+	}
+	if result != "" {
+		annotations[kargoapi.AnnotationKeyEventApplications] = result
+	}
+
 	return annotations
+}
+
+// calculateVars evaluates promotion-level and step-level variables. step-level vars will override promotion-level vars.
+func calculateVars(
+	p *kargoapi.Promotion,
+	baseEnv map[string]any,
+) map[string]any {
+	vars := make(map[string]any)
+
+	for _, v := range p.Spec.Vars {
+		env := make(map[string]any)
+		maps.Copy(env, baseEnv)
+		env["vars"] = vars
+
+		newVar, err := expressions.EvaluateTemplate(v.Value, env)
+		if err != nil {
+			continue
+		}
+		vars[v.Name] = newVar
+	}
+
+	for _, step := range p.Spec.Steps {
+		for _, v := range step.Vars {
+			env := make(map[string]any)
+			maps.Copy(env, baseEnv)
+			env["vars"] = vars
+
+			newVar, err := expressions.EvaluateTemplate(v.Value, env)
+			if err != nil {
+				continue
+			}
+			vars[v.Name] = newVar
+		}
+	}
+
+	return vars
 }
