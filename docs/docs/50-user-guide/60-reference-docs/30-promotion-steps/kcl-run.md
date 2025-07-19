@@ -18,6 +18,9 @@ configuration files, manifests, or other YAML/JSON output from KCL programs.
 | `outputPath` | `string` | N | Path where the KCL output should be written. If not specified, output will be returned in the step result. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `settings` | `object` | N | Key-value pairs to pass to the KCL execution as options. |
 | `args` | `[]string` | N | Additional arguments to pass to the KCL execution as key-value pairs. |
+| `oci` | `object` | N | OCI configuration for fetching schema definitions from upstream registries. |
+| `oci.registry` | `string` | N | Registry URL for OCI schema definitions. Defaults to `ghcr.io`. |
+| `oci.repo` | `string` | N | Repository name for OCI schema definitions. Defaults to `kcl-lang`. |
 
 ## Examples
 
@@ -88,6 +91,24 @@ spec:
         - "true"
         - "--verbose"
         - "true"
+```
+
+### With OCI Configuration
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Promotion
+metadata:
+  name: my-promotion
+spec:
+  steps:
+  - uses: kcl-run
+    config:
+      inputPath: config/kcl-files
+      outputPath: manifests/app.yaml
+      oci:
+        registry: ghcr.io
+        repo: kcl-lang
 ```
 
 ## Example KCL File

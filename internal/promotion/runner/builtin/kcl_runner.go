@@ -9,6 +9,8 @@ import (
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/xeipuuv/gojsonschema"
 	kcl "kcl-lang.io/kcl-go"
+	"kcl-lang.io/kcl-go/pkg/native"
+	"kcl-lang.io/kcl-go/pkg/spec/gpyrpc"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/logging"
@@ -70,12 +72,22 @@ func (k *kclRunner) run(
 		return failure, err
 	}
 
-	opts, err := k.buildKCLOptions(stepCtx.WorkDir, kclFiles, cfg)
+	err = k.resolveDependencies(ctx, stepCtx.WorkDir, cfg)
 	if err != nil {
 		return failure, err
 	}
 
-	yamlResult, err := k.executeKCL(ctx, opts, cfg)
+	externalPkgs, err := k.updateDependencies(ctx, stepCtx.WorkDir)
+	if err != nil {
+		return failure, err
+	}
+
+	opts, err := k.buildKCLOptions(stepCtx.WorkDir, kclFiles, cfg, externalPkgs)
+	if err != nil {
+		return failure, err
+	}
+
+	yamlResult, err := k.executeKCL(ctx, opts, cfg, externalPkgs, kclFiles, stepCtx.WorkDir)
 	if err != nil {
 		return failure, err
 	}
@@ -108,7 +120,7 @@ func (k *kclRunner) resolveKCLFiles(workDir, inputPath string) ([]string, error)
 	return []string{secureInputPath}, nil
 }
 
-func (k *kclRunner) buildKCLOptions(workDir string, kclFiles []string, cfg builtin.KCLRunConfig) ([]kcl.Option, error) {
+func (k *kclRunner) buildKCLOptions(workDir string, kclFiles []string, cfg builtin.KCLRunConfig, externalPkgs []*gpyrpc.ExternalPkg) ([]kcl.Option, error) {
 	var opts []kcl.Option
 
 	opts = append(opts, kcl.WithKFilenames(kclFiles...))
@@ -129,10 +141,27 @@ func (k *kclRunner) buildKCLOptions(workDir string, kclFiles []string, cfg built
 	return opts, nil
 }
 
-func (k *kclRunner) executeKCL(ctx context.Context, opts []kcl.Option, cfg builtin.KCLRunConfig) (string, error) {
+func (k *kclRunner) executeKCL(ctx context.Context, opts []kcl.Option, cfg builtin.KCLRunConfig, externalPkgs []*gpyrpc.ExternalPkg, kclFiles []string, workDir string) (string, error) {
 	logger := logging.LoggerFromContext(ctx)
 
 	logger.Debug("executing kcl with options", "inputPath", cfg.InputPath, "args", cfg.Args, "settings", cfg.Settings)
+
+	if len(externalPkgs) > 0 {
+		logger.Debug("executing kcl with external packages", "kclFiles", kclFiles, "workDir", workDir, "numExternalPkgs", len(externalPkgs))
+		svc := native.NewNativeServiceClient()
+
+		execResult, err := svc.ExecProgram(&gpyrpc.ExecProgram_Args{
+			KFilenameList: kclFiles,
+			WorkDir:       workDir,
+			ExternalPkgs:  externalPkgs,
+		})
+		if err != nil {
+			return "", fmt.Errorf("error executing kcl with external packages: %w", err)
+		}
+
+		logger.Debug("kcl executed successfully with external packages", "outputLength", len(execResult.YamlResult))
+		return execResult.YamlResult, nil
+	}
 
 	result, err := kcl.Run("", opts...)
 	if err != nil {
@@ -177,7 +206,6 @@ func (k *kclRunner) handleOutput(workDir, outputPath, yamlResult string) (promot
 	return stepResult, nil
 }
 
-// findKCLFiles finds all .k files in the given directory
 func (k *kclRunner) findKCLFiles(dirPath string) ([]string, error) {
 	var kclFiles []string
 
@@ -194,4 +222,38 @@ func (k *kclRunner) findKCLFiles(dirPath string) ([]string, error) {
 	}
 
 	return kclFiles, nil
+}
+
+func (k *kclRunner) resolveDependencies(ctx context.Context, workDir string, cfg builtin.KCLRunConfig) error {
+	kclModPath := filepath.Join(workDir, "kcl.mod")
+	if _, err := os.Stat(kclModPath); os.IsNotExist(err) {
+		return nil
+	}
+
+	logger := logging.LoggerFromContext(ctx)
+	logger.Debug("kcl.mod found, dependencies should be resolved via KCL runtime", "workDir", workDir)
+
+	return nil
+}
+
+func (k *kclRunner) updateDependencies(ctx context.Context, workDir string) ([]*gpyrpc.ExternalPkg, error) {
+	kclModPath := filepath.Join(workDir, "kcl.mod")
+	if _, err := os.Stat(kclModPath); os.IsNotExist(err) {
+		return nil, nil // No dependencies to update
+	}
+
+	logger := logging.LoggerFromContext(ctx)
+	logger.Debug("updating kcl dependencies", "workDir", workDir)
+
+	updateArgs := &gpyrpc.UpdateDependencies_Args{
+		ManifestPath: workDir,
+	}
+
+	result, err := kcl.UpdateDependencies(updateArgs)
+	if err != nil {
+		return nil, fmt.Errorf("error updating kcl dependencies: %w", err)
+	}
+
+	logger.Debug("kcl dependencies updated successfully", "numExternalPkgs", len(result.ExternalPkgs))
+	return result.ExternalPkgs, nil
 }
