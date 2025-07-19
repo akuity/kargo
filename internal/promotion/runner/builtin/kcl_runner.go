@@ -42,7 +42,6 @@ func (k *kclRunner) Run(
 ) (promotion.StepResult, error) {
 	failure := promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}
 
-	// Validate the configuration against the JSON Schema
 	if err := validate(
 		k.schemaLoader,
 		gojsonschema.NewGoLoader(stepCtx.Config),
@@ -51,7 +50,6 @@ func (k *kclRunner) Run(
 		return failure, err
 	}
 
-	// Convert the configuration into a typed struct
 	cfg, err := promotion.ConfigToStruct[builtin.KCLRunConfig](stepCtx.Config)
 	if err != nil {
 		return failure, fmt.Errorf("could not convert config into %s config: %w", k.Name(), err)
@@ -66,29 +64,56 @@ func (k *kclRunner) run(
 	cfg builtin.KCLRunConfig,
 ) (promotion.StepResult, error) {
 	failure := promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}
-	logger := logging.LoggerFromContext(ctx)
 
-	// Secure join the input path to prevent path traversal attacks
-	inputPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.InputPath)
+	kclFiles, err := k.resolveKCLFiles(stepCtx.WorkDir, cfg.InputPath)
 	if err != nil {
-		return failure, fmt.Errorf("could not secure join inputPath %q: %w", cfg.InputPath, err)
+		return failure, err
 	}
 
-	// Check if the input path exists
-	if _, err := os.Stat(inputPath); err != nil {
-		return failure, fmt.Errorf("input path %q does not exist: %w", cfg.InputPath, err)
+	opts, err := k.buildKCLOptions(stepCtx.WorkDir, kclFiles, cfg)
+	if err != nil {
+		return failure, err
 	}
 
-	// Prepare KCL run options
+	yamlResult, err := k.executeKCL(ctx, opts, cfg)
+	if err != nil {
+		return failure, err
+	}
+
+	return k.handleOutput(stepCtx.WorkDir, cfg.OutputPath, yamlResult)
+}
+
+func (k *kclRunner) resolveKCLFiles(workDir, inputPath string) ([]string, error) {
+	secureInputPath, err := securejoin.SecureJoin(workDir, inputPath)
+	if err != nil {
+		return nil, fmt.Errorf("could not secure join inputPath %q: %w", inputPath, err)
+	}
+
+	pathInfo, err := os.Stat(secureInputPath)
+	if err != nil {
+		return nil, fmt.Errorf("input path %q does not exist: %w", inputPath, err)
+	}
+
+	if pathInfo.IsDir() {
+		kclFiles, err := k.findKCLFiles(secureInputPath)
+		if err != nil {
+			return nil, fmt.Errorf("could not find KCL files in directory %q: %w", inputPath, err)
+		}
+		if len(kclFiles) == 0 {
+			return nil, fmt.Errorf("no KCL files (*.k) found in directory %q", inputPath)
+		}
+		return kclFiles, nil
+	}
+
+	return []string{secureInputPath}, nil
+}
+
+func (k *kclRunner) buildKCLOptions(workDir string, kclFiles []string, cfg builtin.KCLRunConfig) ([]kcl.Option, error) {
 	var opts []kcl.Option
 
-	// Add the input path/file
-	opts = append(opts, kcl.WithKFilenames(inputPath))
+	opts = append(opts, kcl.WithKFilenames(kclFiles...))
+	opts = append(opts, kcl.WithWorkDir(workDir))
 
-	// Add working directory
-	opts = append(opts, kcl.WithWorkDir(stepCtx.WorkDir))
-
-	// Add settings as key-value pairs
 	if len(cfg.Settings) > 0 {
 		var keyValuePairs []string
 		for key, value := range cfg.Settings {
@@ -97,53 +122,76 @@ func (k *kclRunner) run(
 		opts = append(opts, kcl.WithOptions(keyValuePairs...))
 	}
 
-	// Add any additional arguments as options
 	if len(cfg.Args) > 0 {
 		opts = append(opts, kcl.WithOptions(cfg.Args...))
 	}
 
+	return opts, nil
+}
+
+func (k *kclRunner) executeKCL(ctx context.Context, opts []kcl.Option, cfg builtin.KCLRunConfig) (string, error) {
+	logger := logging.LoggerFromContext(ctx)
+
 	logger.Debug("executing kcl with options", "inputPath", cfg.InputPath, "args", cfg.Args, "settings", cfg.Settings)
 
-	// Execute KCL
-	result, err := kcl.Run(inputPath, opts...)
+	result, err := kcl.Run("", opts...)
 	if err != nil {
-		return failure, fmt.Errorf("error executing kcl: %w", err)
+		return "", fmt.Errorf("error executing kcl: %w", err)
 	}
 
-	// Get the YAML result
 	yamlResult := result.GetRawYamlResult()
-
 	logger.Debug("kcl executed successfully", "outputLength", len(yamlResult))
 
-	// Handle output
+	return yamlResult, nil
+}
+
+func (k *kclRunner) handleOutput(workDir, outputPath, yamlResult string) (promotion.StepResult, error) {
 	stepResult := promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}
 
-	if cfg.OutputPath != "" {
-		// If output path is specified, write the result to file
-		outputPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutputPath)
+	if outputPath != "" {
+		secureOutputPath, err := securejoin.SecureJoin(workDir, outputPath)
 		if err != nil {
-			return failure, fmt.Errorf("could not secure join outputPath %q: %w", cfg.OutputPath, err)
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+				fmt.Errorf("could not secure join outputPath %q: %w", outputPath, err)
 		}
 
-		// Create the output directory if it doesn't exist
-		if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
-			return failure, fmt.Errorf("could not create output directory: %w", err)
+		if err := os.MkdirAll(filepath.Dir(secureOutputPath), 0755); err != nil {
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+				fmt.Errorf("could not create output directory: %w", err)
 		}
 
-		// Write the result to file
-		if err := os.WriteFile(outputPath, []byte(yamlResult), 0644); err != nil {
-			return failure, fmt.Errorf("could not write output to file %q: %w", cfg.OutputPath, err)
+		if err := os.WriteFile(secureOutputPath, []byte(yamlResult), 0644); err != nil {
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+				fmt.Errorf("could not write output to file %q: %w", outputPath, err)
 		}
 
 		stepResult.Output = map[string]any{
-			"outputPath": cfg.OutputPath,
+			"outputPath": outputPath,
 		}
 	} else {
-		// If no output path, return the YAML result
 		stepResult.Output = map[string]any{
 			"output": yamlResult,
 		}
 	}
 
 	return stepResult, nil
+}
+
+// findKCLFiles finds all .k files in the given directory
+func (k *kclRunner) findKCLFiles(dirPath string) ([]string, error) {
+	var kclFiles []string
+
+	entries, err := os.ReadDir(dirPath)
+	if err != nil {
+		return nil, fmt.Errorf("could not read directory %q: %w", dirPath, err)
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() && filepath.Ext(entry.Name()) == ".k" {
+			fullPath := filepath.Join(dirPath, entry.Name())
+			kclFiles = append(kclFiles, fullPath)
+		}
+	}
+
+	return kclFiles, nil
 }

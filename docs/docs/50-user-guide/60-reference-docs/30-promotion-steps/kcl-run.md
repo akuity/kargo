@@ -14,14 +14,29 @@ configuration files, manifests, or other YAML/JSON output from KCL programs.
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `inputPath` | `string` | Y | Path to the KCL file or directory to execute. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
+| `inputPath` | `string` | Y | Path to the directory containing KCL files (*.k) to execute, or path to a single KCL file. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. When a directory is specified, all .k files in the directory will be processed. |
 | `outputPath` | `string` | N | Path where the KCL output should be written. If not specified, output will be returned in the step result. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `settings` | `object` | N | Key-value pairs to pass to the KCL execution as options. |
 | `args` | `[]string` | N | Additional arguments to pass to the KCL execution as key-value pairs. |
 
 ## Examples
 
-### Basic Usage
+### Basic Usage with Directory
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Promotion
+metadata:
+  name: my-promotion
+spec:
+  steps:
+  - uses: kcl-run
+    config:
+      inputPath: config/kcl-files
+      outputPath: manifests/app.yaml
+```
+
+### Basic Usage with Single File
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1
@@ -47,7 +62,7 @@ spec:
   steps:
   - uses: kcl-run
     config:
-      inputPath: config/app.k
+      inputPath: config/kcl-files
       outputPath: manifests/app.yaml
       settings:
         environment: production
@@ -66,7 +81,7 @@ spec:
   steps:
   - uses: kcl-run
     config:
-      inputPath: config/app.k
+      inputPath: config/kcl-files
       outputPath: manifests/app.yaml
       args:
         - "--strict"
@@ -102,9 +117,10 @@ spec = {
 ## Output
 
 The `kcl-run` step will:
-1. Execute the KCL file using the kcl-go SDK
-2. Generate YAML output from the KCL configuration
-3. Either write the output to the specified file path or return it in the step result
+1. Find and execute all .k files in the specified directory (or the single file if a file path is provided)
+2. Execute the KCL files using the kcl-go SDK
+3. Generate YAML output from the KCL configuration
+4. Either write the output to the specified file path or return it in the step result
 
 If `outputPath` is specified, the step result will contain:
 ```json

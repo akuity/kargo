@@ -7,7 +7,7 @@
   "properties": {
     "inputPath": {
       "type": "string",
-      "description": "InputPath is the path to the KCL file or directory to execute.",
+      "description": "InputPath is the path to the directory containing KCL files (*.k) to execute, or path to a single .k file.",
       "minLength": 1
     },
     "outputPath": {
