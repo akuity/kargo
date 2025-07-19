@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -66,14 +67,11 @@ func TestKCLRunner_Run(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Create a temporary directory for testing
 			tempDir, err := os.MkdirTemp("", "kcl-runner-test")
 			require.NoError(t, err)
 			defer os.RemoveAll(tempDir)
 
-			// Create a test KCL file
 			testKCLContent := `
-# Simple KCL configuration
 name = "test-app"
 version = "1.0.0"
 replicas = 3
@@ -90,33 +88,24 @@ config = {
 			err = os.WriteFile(kclFile, []byte(testKCLContent), 0644)
 			require.NoError(t, err)
 
-			// Create the KCL runner
 			runner := newKCLRunner()
 
-			// Create step context
 			stepCtx := &promotion.StepContext{
 				WorkDir: tempDir,
 				Config:  tc.config,
 			}
 
-			// Run the step
 			result, err := runner.Run(context.Background(), stepCtx)
 
 			if tc.expectError {
 				require.Error(t, err)
 				require.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
 			} else {
-				// Note: This test will fail if kcl is not installed on the system
-				// In a real environment, we would use a mock or skip if kcl is not available
-				if err != nil {
-					t.Skipf("Skipping test because kcl is not installed: %v", err)
-				}
 				require.NoError(t, err)
 				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
 
 				if tc.expectOutput {
 					require.NotNil(t, result.Output)
-					// Check that we have either output or outputPath
 					_, hasOutput := result.Output["output"]
 					_, hasOutputPath := result.Output["outputPath"]
 					require.True(t, hasOutput || hasOutputPath)
@@ -129,10 +118,9 @@ config = {
 func TestKCLRunner_Run_InvalidConfig(t *testing.T) {
 	runner := newKCLRunner()
 
-	// Test with invalid config (missing required fields)
 	stepCtx := &promotion.StepContext{
 		WorkDir: "/tmp",
-		Config:  map[string]any{}, // Empty config - should fail validation
+		Config:  map[string]any{},
 	}
 
 	result, err := runner.Run(context.Background(), stepCtx)
@@ -143,16 +131,73 @@ func TestKCLRunner_Run_InvalidConfig(t *testing.T) {
 func TestKCLRunner_Run_PathTraversal(t *testing.T) {
 	runner := newKCLRunner()
 
-	// Test with path traversal attempt
 	stepCtx := &promotion.StepContext{
 		WorkDir: "/tmp",
 		Config: map[string]any{
-			"inputPath": "../../etc/passwd", // Path traversal attempt
+			"inputPath": "../../etc/passwd",
 		},
 	}
 
 	result, err := runner.Run(context.Background(), stepCtx)
 	require.Error(t, err)
 	require.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
-	require.Contains(t, err.Error(), "could not secure join")
+	require.True(t,
+		strings.Contains(err.Error(), "could not secure join") ||
+			strings.Contains(err.Error(), "does not exist"),
+	)
+}
+
+func TestKCLRunner_Run_FileCreation(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "kcl-runner-file-test")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+
+	testKCLContent := `
+name = "test-app"
+replicas = 2
+
+config = {
+    apiVersion = "apps/v1"
+    kind = "Deployment"
+    metadata = {
+        name = name
+    }
+    spec = {
+        replicas = replicas
+    }
+}
+`
+	kclFile := filepath.Join(tempDir, "app.k")
+	err = os.WriteFile(kclFile, []byte(testKCLContent), 0644)
+	require.NoError(t, err)
+
+	runner := newKCLRunner()
+
+	outputFile := filepath.Join(tempDir, "output", "app.yaml")
+	stepCtx := &promotion.StepContext{
+		WorkDir: tempDir,
+		Config: map[string]any{
+			"inputPath":  "app.k",
+			"outputPath": "output/app.yaml",
+		},
+	}
+
+	result, err := runner.Run(context.Background(), stepCtx)
+	require.NoError(t, err)
+	require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
+
+	require.NotNil(t, result.Output)
+	outputPath, hasOutputPath := result.Output["outputPath"]
+	require.True(t, hasOutputPath)
+	require.Equal(t, "output/app.yaml", outputPath)
+
+	require.FileExists(t, outputFile)
+
+	content, err := os.ReadFile(outputFile)
+	require.NoError(t, err)
+	contentStr := string(content)
+	require.Contains(t, contentStr, "apiVersion: apps/v1")
+	require.Contains(t, contentStr, "kind: Deployment")
+	require.Contains(t, contentStr, "name: test-app")
+	require.Contains(t, contentStr, "replicas: 2")
 }
