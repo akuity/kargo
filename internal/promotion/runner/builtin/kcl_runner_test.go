@@ -65,6 +65,18 @@ func TestKCLRunner_Run(t *testing.T) {
 			expectError:  false,
 			expectOutput: true,
 		},
+		{
+			name: "valid config with OCI settings",
+			config: map[string]any{
+				"inputPath": "test.k",
+				"oci": map[string]string{
+					"registry": "ghcr.io",
+					"repo":     "kcl-lang",
+				},
+			},
+			expectError:  false,
+			expectOutput: true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -274,7 +286,7 @@ func TestKCLRunner_buildKCLOptions(t *testing.T) {
 			InputPath: "app.k",
 		}
 
-		opts, err := runner.buildKCLOptions(tempDir, kclFiles, cfg)
+		opts, err := runner.buildKCLOptions(tempDir, kclFiles, cfg, nil)
 		require.NoError(t, err)
 		require.NotEmpty(t, opts)
 	})
@@ -288,7 +300,7 @@ func TestKCLRunner_buildKCLOptions(t *testing.T) {
 			},
 		}
 
-		opts, err := runner.buildKCLOptions(tempDir, kclFiles, cfg)
+		opts, err := runner.buildKCLOptions(tempDir, kclFiles, cfg, nil)
 		require.NoError(t, err)
 		require.NotEmpty(t, opts)
 	})
@@ -299,7 +311,7 @@ func TestKCLRunner_buildKCLOptions(t *testing.T) {
 			Args:      []string{"--strict", "true"},
 		}
 
-		opts, err := runner.buildKCLOptions(tempDir, kclFiles, cfg)
+		opts, err := runner.buildKCLOptions(tempDir, kclFiles, cfg, nil)
 		require.NoError(t, err)
 		require.NotEmpty(t, opts)
 	})
@@ -313,7 +325,45 @@ func TestKCLRunner_buildKCLOptions(t *testing.T) {
 			Args: []string{"--verbose", "true"},
 		}
 
-		opts, err := runner.buildKCLOptions(tempDir, kclFiles, cfg)
+		opts, err := runner.buildKCLOptions(tempDir, kclFiles, cfg, nil)
+		require.NoError(t, err)
+		require.NotEmpty(t, opts)
+	})
+
+	t.Run("with OCI config", func(t *testing.T) {
+		cfg := builtin.KCLRunConfig{
+			InputPath: "app.k",
+			OCI: &builtin.KCLOCIConfig{
+				Registry: "custom-registry.io",
+				Repo:     "my-org",
+			},
+		}
+
+		opts, err := runner.buildKCLOptions(tempDir, kclFiles, cfg, nil)
+		require.NoError(t, err)
+		require.NotEmpty(t, opts)
+	})
+
+	t.Run("with OCI config using defaults", func(t *testing.T) {
+		cfg := builtin.KCLRunConfig{
+			InputPath: "app.k",
+			OCI:       &builtin.KCLOCIConfig{},
+		}
+
+		opts, err := runner.buildKCLOptions(tempDir, kclFiles, cfg, nil)
+		require.NoError(t, err)
+		require.NotEmpty(t, opts)
+	})
+
+	t.Run("with partial OCI config", func(t *testing.T) {
+		cfg := builtin.KCLRunConfig{
+			InputPath: "app.k",
+			OCI: &builtin.KCLOCIConfig{
+				Registry: "custom-registry.io",
+			},
+		}
+
+		opts, err := runner.buildKCLOptions(tempDir, kclFiles, cfg, nil)
 		require.NoError(t, err)
 		require.NotEmpty(t, opts)
 	})
@@ -346,7 +396,7 @@ config = {
 
 		cfg := builtin.KCLRunConfig{InputPath: "test.k"}
 
-		result, err := runner.executeKCL(context.Background(), opts, cfg)
+		result, err := runner.executeKCL(context.Background(), opts, cfg, nil, []string{kclFile}, tempDir)
 		require.NoError(t, err)
 		require.NotEmpty(t, result)
 		require.Contains(t, result, "name: test-app")
@@ -365,7 +415,7 @@ config = {
 
 		cfg := builtin.KCLRunConfig{InputPath: "invalid.k"}
 
-		_, err := runner.executeKCL(context.Background(), opts, cfg)
+		_, err := runner.executeKCL(context.Background(), opts, cfg, nil, []string{invalidFile}, tempDir)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "error executing kcl")
 	})
@@ -440,5 +490,155 @@ func TestKCLRunner_handleOutput(t *testing.T) {
 
 		fullOutputPath := filepath.Join(tempDir, outputPath)
 		require.FileExists(t, fullOutputPath)
+	})
+}
+
+func TestKCLRunner_Run_WithExternalDependencies(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "kcl-runner-k8s-test")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+
+	kclContent := `# Import and use the contents of the external dependency 'k8s'.
+import k8s.api.apps.v1 as apps
+
+apps.Deployment {
+    metadata.name = "nginx-deployment"
+    metadata.labels.app = "nginx"
+    spec: {
+        replicas = 3
+        selector.matchLabels = metadata.labels
+        template: {
+            metadata.labels = metadata.labels
+            spec.containers = [{
+                name = metadata.labels.app
+                image = "nginx:1.14.2"
+                ports: [{
+                    containerPort = 80
+                }]
+            }]
+        }
+    }
+}`
+
+	kclModContent := `[package]
+name = "my-module"
+edition = "v0.11.2"
+version = "0.0.1"
+
+[dependencies]
+k8s = { oci = "oci://ghcr.io/kcl-lang/k8s", tag = "1.32.4" }`
+
+	kclModLockContent := `[dependencies]
+  [dependencies.k8s]
+    name = "k8s"
+    full_name = "k8s_1.32.4"
+    version = "1.32.4"
+    sum = "WrltC/mTXtdzmhBZxlvM71wJL5C/UZ/vW+bF3nFvNbM="
+    reg = "ghcr.io"
+    repo = "kcl-lang/k8s"
+    oci_tag = "1.32.4"`
+
+	kclFile := filepath.Join(tempDir, "deployment.k")
+	kclMod := filepath.Join(tempDir, "kcl.mod")
+	kclModLock := filepath.Join(tempDir, "kcl.mod.lock")
+
+	require.NoError(t, os.WriteFile(kclFile, []byte(kclContent), 0644))
+	require.NoError(t, os.WriteFile(kclMod, []byte(kclModContent), 0644))
+	require.NoError(t, os.WriteFile(kclModLock, []byte(kclModLockContent), 0644))
+
+	runner := newKCLRunner()
+
+	t.Run("with k8s dependencies using default OCI", func(t *testing.T) {
+		stepCtx := &promotion.StepContext{
+			WorkDir: tempDir,
+			Config: map[string]any{
+				"inputPath": "deployment.k",
+				"oci": map[string]string{
+					"registry": "ghcr.io",
+					"repo":     "kcl-lang",
+				},
+			},
+		}
+
+		result, err := runner.Run(context.Background(), stepCtx)
+		require.NoError(t, err)
+		require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
+
+		require.NotNil(t, result.Output)
+		output, hasOutput := result.Output["output"]
+		require.True(t, hasOutput)
+
+		yamlOutput := output.(string)
+		require.Contains(t, yamlOutput, "apiVersion: apps/v1")
+		require.Contains(t, yamlOutput, "kind: Deployment")
+		require.Contains(t, yamlOutput, "name: nginx-deployment")
+		require.Contains(t, yamlOutput, "app: nginx")
+		require.Contains(t, yamlOutput, "replicas: 3")
+		require.Contains(t, yamlOutput, "image: nginx:1.14.2")
+		require.Contains(t, yamlOutput, "containerPort: 80")
+	})
+
+	t.Run("with k8s dependencies using custom OCI registry", func(t *testing.T) {
+		stepCtx := &promotion.StepContext{
+			WorkDir: tempDir,
+			Config: map[string]any{
+				"inputPath": "deployment.k",
+				"oci": map[string]string{
+					"registry": "artifacts.rbi.tech/ghcr-io-docker-proxy",
+					"repo":     "kcl-lang",
+				},
+			},
+		}
+
+		result, err := runner.Run(context.Background(), stepCtx)
+		require.NoError(t, err)
+		require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
+
+		require.NotNil(t, result.Output)
+		output, hasOutput := result.Output["output"]
+		require.True(t, hasOutput)
+
+		yamlOutput := output.(string)
+		require.Contains(t, yamlOutput, "apiVersion: apps/v1")
+		require.Contains(t, yamlOutput, "kind: Deployment")
+		require.Contains(t, yamlOutput, "name: nginx-deployment")
+	})
+
+	t.Run("with k8s dependencies and file output", func(t *testing.T) {
+		outputPath := "k8s-manifests/nginx.yaml"
+		stepCtx := &promotion.StepContext{
+			WorkDir: tempDir,
+			Config: map[string]any{
+				"inputPath":  "deployment.k",
+				"outputPath": outputPath,
+				"oci": map[string]string{
+					"registry": "ghcr.io",
+					"repo":     "kcl-lang",
+				},
+			},
+		}
+
+		result, err := runner.Run(context.Background(), stepCtx)
+		require.NoError(t, err)
+		require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
+
+		require.NotNil(t, result.Output)
+		actualOutputPath, hasOutputPath := result.Output["outputPath"]
+		require.True(t, hasOutputPath)
+		require.Equal(t, outputPath, actualOutputPath)
+
+		fullOutputPath := filepath.Join(tempDir, outputPath)
+		require.FileExists(t, fullOutputPath)
+
+		content, err := os.ReadFile(fullOutputPath)
+		require.NoError(t, err)
+		yamlContent := string(content)
+		require.Contains(t, yamlContent, "apiVersion: apps/v1")
+		require.Contains(t, yamlContent, "kind: Deployment")
+		require.Contains(t, yamlContent, "name: nginx-deployment")
+		require.Contains(t, yamlContent, "app: nginx")
+		require.Contains(t, yamlContent, "replicas: 3")
+		require.Contains(t, yamlContent, "image: nginx:1.14.2")
+		require.Contains(t, yamlContent, "containerPort: 80")
 	})
 }

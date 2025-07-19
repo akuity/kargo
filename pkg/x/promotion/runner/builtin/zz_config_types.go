@@ -405,6 +405,15 @@ type KCLRunConfig struct {
 	Args []string `json:"args,omitempty"`
 	// Settings are key-value pairs to pass to the KCL execution.
 	Settings map[string]string `json:"settings,omitempty"`
+	// OCI configuration for fetching schema definitions from upstream registries.
+	OCI *KCLOCIConfig `json:"oci,omitempty"`
+}
+
+type KCLOCIConfig struct {
+	// Registry URL for OCI schema definitions.
+	Registry string `json:"registry,omitempty"`
+	// Repository name for OCI schema definitions.
+	Repo string `json:"repo,omitempty"`
 }
 
 type KustomizeSetImageConfig struct {

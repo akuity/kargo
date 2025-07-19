@@ -28,6 +28,23 @@
       "additionalProperties": {
         "type": "string"
       }
+    },
+    "oci": {
+      "type": "object",
+      "description": "OCI configuration for fetching schema definitions from upstream registries.",
+      "additionalProperties": false,
+      "properties": {
+        "registry": {
+          "type": "string",
+          "description": "Registry URL for OCI schema definitions.",
+          "default": "ghcr.io"
+        },
+        "repo": {
+          "type": "string", 
+          "description": "Repository name for OCI schema definitions.",
+          "default": "kcl-lang"
+        }
+      }
     }
   }
 }
