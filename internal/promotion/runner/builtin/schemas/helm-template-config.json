@@ -35,6 +35,11 @@
       "description": "OutPath to write the rendered manifests to. If it points to a .yaml or .yml file, the rendered manifests will be written to that file. If it points to a directory, the rendered manifests will be written to this directory joined with the chart name.",
       "minLength": 1
     },
+    "outLayout": {
+      "type": "string",
+      "description": "OutLayout to use for the rendered manifest. This can be either 'helm' or 'flat'. The 'helm' layout will create a directory with the chart name and place the rendered manifests in that directory. The 'flat' layout will place all rendered manifests in the outPath directory without any subdirectories.",
+      "enum": ["helm", "flat"]
+    },
     "releaseName": {
       "type": "string",
       "description": "ReleaseName to use for the rendered manifests.",
