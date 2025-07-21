@@ -39,6 +39,7 @@ func Initialize(kargoClient, argocdClient client.Client, credsDB credentials.Dat
 		newHTTPRequester(),
 		newJSONParser(),
 		newJSONUpdater(),
+		newKCLRunner(),
 		newKustomizeBuilder(),
 		newKustomizeImageSetter(kargoClient),
 		pkgPromotion.NewTaskLevelOutputStepRunner(
