@@ -2,6 +2,7 @@ package projectconfig
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -52,22 +53,11 @@ func (w *webhook) ValidateCreate(
 ) (admission.Warnings, error) {
 	projectCfg := obj.(*kargoapi.ProjectConfig) // nolint: forcetypeassert
 
-	var errs field.ErrorList
-	if metaErrs := w.validateObjectMeta(
-		field.NewPath("metadata"),
-		projectCfg.ObjectMeta,
-	); len(metaErrs) > 0 {
-		errs = append(errs, metaErrs...)
-	}
-
-	if specErrs := w.validateSpec(
-		field.NewPath("spec"),
-		projectCfg.Spec,
-	); len(specErrs) > 0 {
-		errs = append(errs, specErrs...)
-	}
-
-	if len(errs) > 0 {
+	errs := w.validateObjectMeta(field.NewPath("metadata"), projectCfg.ObjectMeta)
+	if errs = append(
+		errs,
+		w.validateSpec(field.NewPath("spec"), projectCfg.Spec)...,
+	); len(errs) > 0 {
 		return nil, apierrors.NewInvalid(
 			projectConfigGroupKind,
 			projectCfg.Name,
@@ -87,7 +77,11 @@ func (w *webhook) ValidateCreate(
 	}
 
 	if err = w.ensureProjectNamespace(ctx, projectCfg.ObjectMeta); err != nil {
-		return nil, err
+		statusErr := &apierrors.StatusError{}
+		if ok := errors.As(err, &statusErr); ok {
+			return nil, statusErr
+		}
+		return nil, apierrors.NewInternalError(err)
 	}
 
 	return nil, nil
@@ -100,7 +94,8 @@ func (w *webhook) ValidateUpdate(
 ) (admission.Warnings, error) {
 	projectCfg := newObj.(*kargoapi.ProjectConfig) // nolint: forcetypeassert
 	if errs := w.validateSpec(field.NewPath("spec"), projectCfg.Spec); len(errs) > 0 {
-		return nil, apierrors.NewInvalid(projectConfigGroupKind, projectCfg.Name, errs)
+		return nil,
+			apierrors.NewInvalid(projectConfigGroupKind, projectCfg.Name, errs)
 	}
 	return nil, nil
 }

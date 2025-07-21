@@ -70,7 +70,7 @@ kargo get clusterconfig
 // command.
 func (o *getClusterConfigOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
-	o.PrintFlags.AddFlags(cmd)
+	o.AddFlags(cmd)
 }
 
 // run gets the cluster config from the server and prints it to the console.

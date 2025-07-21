@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	kubeerr "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -53,7 +53,7 @@ func TestCreate(t *testing.T) {
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
 		role, err := db.Create(context.Background(), testKargoRole)
-		require.True(t, kubeerr.IsAlreadyExists(err))
+		require.True(t, apierrors.IsAlreadyExists(err))
 		require.Nil(t, role)
 	})
 
@@ -69,7 +69,7 @@ func TestCreate(t *testing.T) {
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
 		role, err := db.Create(context.Background(), testKargoRole)
-		require.True(t, kubeerr.IsAlreadyExists(err))
+		require.True(t, apierrors.IsAlreadyExists(err))
 		require.Nil(t, role)
 	})
 
@@ -85,7 +85,7 @@ func TestCreate(t *testing.T) {
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
 		role, err := db.Create(context.Background(), testKargoRole)
-		require.True(t, kubeerr.IsAlreadyExists(err))
+		require.True(t, apierrors.IsAlreadyExists(err))
 		require.Nil(t, role)
 	})
 
@@ -184,7 +184,7 @@ func TestDelete(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
 		db := NewKubernetesRolesDatabase(c)
 		err := db.Delete(context.Background(), testProject, testKargoRoleName)
-		require.True(t, kubeerr.IsNotFound(err))
+		require.True(t, apierrors.IsNotFound(err))
 	})
 
 	t.Run("resources aren't manageable", func(t *testing.T) {
@@ -193,7 +193,7 @@ func TestDelete(t *testing.T) {
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
 		err := db.Delete(context.Background(), testProject, testKargoRoleName)
-		require.True(t, kubeerr.IsBadRequest(err))
+		require.True(t, apierrors.IsBadRequest(err))
 	})
 
 	t.Run("success", func(t *testing.T) {
@@ -207,13 +207,13 @@ func TestDelete(t *testing.T) {
 		require.NoError(t, err)
 		role := &rbacv1.Role{}
 		err = c.Get(context.Background(), objKey, role)
-		require.True(t, kubeerr.IsNotFound(err))
+		require.True(t, apierrors.IsNotFound(err))
 		roleBinding := &rbacv1.RoleBinding{}
 		err = c.Get(context.Background(), objKey, roleBinding)
-		require.True(t, kubeerr.IsNotFound(err))
+		require.True(t, apierrors.IsNotFound(err))
 		sa := &corev1.ServiceAccount{}
 		err = c.Get(context.Background(), objKey, sa)
-		require.True(t, kubeerr.IsNotFound(err))
+		require.True(t, apierrors.IsNotFound(err))
 	})
 }
 
@@ -222,7 +222,7 @@ func TestGet(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
 		db := NewKubernetesRolesDatabase(c)
 		kargoRole, err := db.Get(context.Background(), testProject, testKargoRoleName)
-		require.True(t, kubeerr.IsNotFound(err))
+		require.True(t, apierrors.IsNotFound(err))
 		require.Nil(t, kargoRole)
 	})
 
@@ -362,7 +362,7 @@ func TestGetAsResources(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
 		db := NewKubernetesRolesDatabase(c)
 		_, _, _, err := db.GetAsResources(context.Background(), testProject, testKargoRoleName)
-		require.True(t, kubeerr.IsNotFound(err))
+		require.True(t, apierrors.IsNotFound(err))
 	})
 
 	t.Run("no RoleBindings found", func(t *testing.T) {
@@ -384,7 +384,7 @@ func TestGetAsResources(t *testing.T) {
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
 		_, _, _, err := db.GetAsResources(context.Background(), testProject, testKargoRoleName)
-		require.True(t, kubeerr.IsNotFound(err))
+		require.True(t, apierrors.IsNotFound(err))
 	})
 
 	t.Run("success", func(t *testing.T) {
@@ -415,7 +415,7 @@ func TestGrantPermissionToRole(t *testing.T) {
 				Verbs:        []string{"get", "list"},
 			},
 		)
-		require.True(t, kubeerr.IsNotFound(err))
+		require.True(t, apierrors.IsNotFound(err))
 	})
 
 	t.Run("resources aren't manageable", func(t *testing.T) {
@@ -432,7 +432,7 @@ func TestGrantPermissionToRole(t *testing.T) {
 				Verbs:        []string{"get", "list"},
 			},
 		)
-		require.True(t, kubeerr.IsBadRequest(err))
+		require.True(t, apierrors.IsBadRequest(err))
 	})
 
 	t.Run("success with Role and RoleBinding creation", func(t *testing.T) {
@@ -546,7 +546,7 @@ func TestGrantRoleToUsers(t *testing.T) {
 					Values: []string{"fake-sub"},
 				}},
 		)
-		require.True(t, kubeerr.IsNotFound(err))
+		require.True(t, apierrors.IsNotFound(err))
 	})
 
 	t.Run("resources aren't manageable", func(t *testing.T) {
@@ -565,7 +565,7 @@ func TestGrantRoleToUsers(t *testing.T) {
 				},
 			},
 		)
-		require.True(t, kubeerr.IsBadRequest(err))
+		require.True(t, apierrors.IsBadRequest(err))
 	})
 
 	t.Run("success", func(t *testing.T) {
@@ -769,7 +769,7 @@ func TestRevokePermissionsFromRole(t *testing.T) {
 				Verbs:        []string{"get", "list"},
 			},
 		)
-		require.True(t, kubeerr.IsNotFound(err))
+		require.True(t, apierrors.IsNotFound(err))
 	})
 
 	t.Run("resources aren't manageable", func(t *testing.T) {
@@ -786,7 +786,7 @@ func TestRevokePermissionsFromRole(t *testing.T) {
 				Verbs:        []string{"get", "list"},
 			},
 		)
-		require.True(t, kubeerr.IsBadRequest(err))
+		require.True(t, apierrors.IsBadRequest(err))
 	})
 
 	t.Run("success with no action required", func(t *testing.T) {
@@ -859,7 +859,7 @@ func TestRevokeRoleFromUsers(t *testing.T) {
 				},
 			},
 		)
-		require.True(t, kubeerr.IsNotFound(err))
+		require.True(t, apierrors.IsNotFound(err))
 	})
 
 	t.Run("resources aren't manageable", func(t *testing.T) {
@@ -878,7 +878,7 @@ func TestRevokeRoleFromUsers(t *testing.T) {
 				},
 			},
 		)
-		require.True(t, kubeerr.IsBadRequest(err))
+		require.True(t, apierrors.IsBadRequest(err))
 	})
 
 	t.Run("success", func(t *testing.T) {
@@ -942,7 +942,7 @@ func TestUpdate(t *testing.T) {
 				},
 			},
 		)
-		require.True(t, kubeerr.IsNotFound(err))
+		require.True(t, apierrors.IsNotFound(err))
 	})
 
 	t.Run("resources aren't manageable", func(t *testing.T) {
@@ -959,7 +959,7 @@ func TestUpdate(t *testing.T) {
 				},
 			},
 		)
-		require.True(t, kubeerr.IsBadRequest(err))
+		require.True(t, apierrors.IsBadRequest(err))
 	})
 
 	t.Run("success with Role and RoleBinding creation", func(t *testing.T) {
@@ -1177,7 +1177,7 @@ func TestManageableResources(t *testing.T) {
 			nil,
 			nil,
 		)
-		require.True(t, kubeerr.IsBadRequest(err))
+		require.True(t, apierrors.IsBadRequest(err))
 	})
 
 	t.Run("multiple Roles", func(t *testing.T) {
@@ -1186,7 +1186,7 @@ func TestManageableResources(t *testing.T) {
 			[]rbacv1.Role{{}, {}},
 			nil,
 		)
-		require.True(t, kubeerr.IsBadRequest(err))
+		require.True(t, apierrors.IsBadRequest(err))
 	})
 
 	t.Run("single Role not annotated correctly", func(t *testing.T) {
@@ -1195,7 +1195,7 @@ func TestManageableResources(t *testing.T) {
 			[]rbacv1.Role{*plainRole(nil)},
 			nil,
 		)
-		require.True(t, kubeerr.IsBadRequest(err))
+		require.True(t, apierrors.IsBadRequest(err))
 	})
 
 	t.Run("multiple RoleBindings", func(t *testing.T) {
@@ -1204,7 +1204,7 @@ func TestManageableResources(t *testing.T) {
 			[]rbacv1.Role{*managedRole(nil)},
 			[]rbacv1.RoleBinding{{}, {}},
 		)
-		require.True(t, kubeerr.IsBadRequest(err))
+		require.True(t, apierrors.IsBadRequest(err))
 	})
 
 	t.Run("single RoleBinding is not annotated correctly", func(t *testing.T) {
@@ -1213,7 +1213,7 @@ func TestManageableResources(t *testing.T) {
 			[]rbacv1.Role{*managedRole(nil)},
 			[]rbacv1.RoleBinding{*plainRoleBinding()},
 		)
-		require.True(t, kubeerr.IsBadRequest(err))
+		require.True(t, apierrors.IsBadRequest(err))
 	})
 
 	t.Run("success", func(t *testing.T) {

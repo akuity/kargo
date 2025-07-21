@@ -120,6 +120,31 @@ type WebhookReceiverConfig struct {
 	// Quay contains the configuration for a webhook receiver that is compatible
 	// with Quay payloads.
 	Quay *QuayWebhookReceiverConfig `json:"quay,omitempty" protobuf:"bytes,4,opt,name=quay"`
+	// Azure contains the configuration for a webhook receiver that is compatible
+	// with Azure Container Registry (ACR) and Azure DevOps payloads.
+	Azure *AzureWebhookReceiverConfig `json:"azure,omitempty" protobuf:"bytes,8,opt,name=azure"`
+	// Gitea contains the configuration for a webhook receiver that is compatible
+	// with Gitea payloads.
+	Gitea *GiteaWebhookReceiverConfig `json:"gitea,omitempty" protobuf:"bytes,7,opt,name=gitea"`
+}
+
+// GiteaWebhookReceiverConfig describes a webhook receiver that is compatible
+// with Gitea payloads.
+type GiteaWebhookReceiverConfig struct {
+	// SecretRef contains a reference to a Secret. For Project-scoped webhook
+	// receivers, the referenced Secret must be in the same namespace as the
+	// ProjectConfig.
+	//
+	// For cluster-scoped webhook receivers, the referenced Secret must be in the
+	// designated "cluster Secrets" namespace.
+	//
+	// The Secret's data map is expected to contain a `secret` key whose value is
+	// the shared secret used to authenticate the webhook requests sent by Gitea.
+	// For more information please refer to the Gitea documentation:
+	//   https://docs.gitea.io/en-us/webhooks/
+	//
+	// +kubebuilder:validation:Required
+	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
 }
 
 // BitbucketWebhookReceiverConfig describes a webhook receiver that is
@@ -214,6 +239,32 @@ type QuayWebhookReceiverConfig struct {
 	// which implicitly serves as a shared secret. For more information about
 	// Quay webhooks, please refer to the Quay documentation:
 	//   https://docs.quay.io/guides/notifications.html
+	//
+	// +kubebuilder:validation:Required
+	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+}
+
+// AzureWebhookReceiverConfig describes a webhook receiver that is compatible
+// with Azure Container Registry (ACR) and Azure DevOps payloads.
+type AzureWebhookReceiverConfig struct {
+	// SecretRef contains a reference to a Secret. For Project-scoped webhook
+	// receivers, the referenced Secret must be in the same namespace as the
+	// ProjectConfig.
+	//
+	// For cluster-scoped webhook receivers, the referenced Secret must be in the
+	// designated "cluster Secrets" namespace.
+	//
+	// The Secret's data map is expected to contain a `secret` key whose value
+	// does NOT need to be shared directly with Azure when registering a webhook.
+	// It is used only by Kargo to create a complex, hard-to-guess URL,
+	// which implicitly serves as a shared secret. For more information about
+	// Azure webhooks, please refer to the Azure documentation:
+	//
+	//  Azure Container Registry:
+	//	https://learn.microsoft.com/en-us/azure/container-registry/container-registry-repositories
+	//
+	//  Azure DevOps:
+	//	http://learn.microsoft.com/en-us/azure/devops/service-hooks/services/webhooks?view=azure-devops
 	//
 	// +kubebuilder:validation:Required
 	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`

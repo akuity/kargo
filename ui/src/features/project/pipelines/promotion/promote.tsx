@@ -66,11 +66,12 @@ export const Promote = (props: PromoteProps) => {
       freight: props.freight?.metadata?.name
     };
 
-    if (actionContext?.action?.type === IAction.PROMOTE) {
-      promoteActionMutation.mutate(payload);
-    } else if (actionContext?.action?.type === IAction.PROMOTE_DOWNSTREAM) {
+    if (actionContext?.action?.type === IAction.PROMOTE_DOWNSTREAM) {
       promoteDownstreamActionMutation.mutate(payload);
+      return;
     }
+
+    promoteActionMutation.mutate(payload);
   };
 
   return (
@@ -100,7 +101,7 @@ export const Promote = (props: PromoteProps) => {
         <FreightDetails
           freight={props.freight}
           additionalTabs={promoteTabs.map((data, index) => ({
-            children: <data.component freight={props.freight} />,
+            children: <data.component freight={props.freight} stage={props.stage} />,
             key: String(data.label + index),
             label: data.label,
             icon: data.icon

@@ -9,7 +9,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	kubeerr "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
@@ -91,12 +91,6 @@ type reconciler struct {
 		context.Context,
 		client.Object,
 		...client.CreateOption,
-	) error
-
-	deleteNamespaceFn func(
-		context.Context,
-		client.Object,
-		...client.DeleteOption,
 	) error
 
 	patchOwnerReferencesFn func(
@@ -206,7 +200,6 @@ func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
 	r.patchProjectStatusFn = r.patchProjectStatus
 	r.getNamespaceFn = r.client.Get
 	r.createNamespaceFn = r.client.Create
-	r.deleteNamespaceFn = r.client.Delete
 	r.patchOwnerReferencesFn = api.PatchOwnerReferences
 	r.ensureFinalizerFn = api.EnsureFinalizer
 	r.removeFinalizerFn = api.RemoveFinalizer
@@ -226,12 +219,12 @@ func (r *reconciler) Reconcile(
 	req ctrl.Request,
 ) (ctrl.Result, error) {
 	logger := logging.LoggerFromContext(ctx).WithValues(
-		"project", req.NamespacedName.Name,
+		"project", req.Name,
 	)
 	ctx = logging.ContextWithLogger(ctx, logger)
 
 	// Find the Project
-	project, err := r.getProjectFn(ctx, r.client, req.NamespacedName.Name)
+	project, err := r.getProjectFn(ctx, r.client, req.Name)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -362,7 +355,7 @@ func (r *reconciler) cleanupProject(ctx context.Context, project *kargoapi.Proje
 	ns := &corev1.Namespace{}
 	err := r.getNamespaceFn(ctx, types.NamespacedName{Name: project.Name}, ns)
 	if err != nil {
-		if kubeerr.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			// Namespace already deleted or never existed, just remove finalizer
 			// from project
 			logger.Debug("namespace not found, removing project finalizer")
@@ -393,18 +386,11 @@ func (r *reconciler) cleanupProject(ctx context.Context, project *kargoapi.Proje
 			}
 			logger.Debug("removed project owner reference from namespace")
 		}
+	}
 
-		// Remove finalizer from namespace
-		if err = r.removeFinalizerFn(ctx, r.client, ns); err != nil {
-			return fmt.Errorf("failed to remove finalizer from namespace %q: %w", ns.Name, err)
-		}
-	} else {
-		// Delete the namespace
-		logger.Debug("deleting namespace")
-		if err = r.deleteNamespaceFn(ctx, ns); err != nil && !kubeerr.IsNotFound(err) {
-			return fmt.Errorf("failed to delete namespace %q: %w", ns.Name, err)
-		}
-		logger.Debug("deleted namespace", "namespace", ns.Name)
+	// Remove finalizer from namespace
+	if err = r.removeFinalizerFn(ctx, r.client, ns); err != nil {
+		return fmt.Errorf("failed to remove finalizer from namespace %q: %w", ns.Name, err)
 	}
 
 	// Remove finalizer from Project
@@ -532,7 +518,7 @@ func (r *reconciler) ensureNamespace(ctx context.Context, project *kargoapi.Proj
 		ctx,
 		types.NamespacedName{Name: project.Name},
 		ns,
-	); err != nil && !kubeerr.IsNotFound(err) {
+	); err != nil && !apierrors.IsNotFound(err) {
 		return fmt.Errorf("error getting namespace %q: %w", project.Name, err)
 	} else if err == nil {
 		// We found an existing namespace with the same name as the Project. It's
@@ -682,7 +668,7 @@ func (r *reconciler) ensureSystemPermissions(
 	for _, roleBinding := range roleBindings {
 		rbLogger := logger.WithValues("roleBinding", roleBinding.Name)
 		if err := r.createRoleBindingFn(ctx, &roleBinding); err != nil {
-			if !kubeerr.IsAlreadyExists(err) {
+			if !apierrors.IsAlreadyExists(err) {
 				return fmt.Errorf(
 					"error creating RoleBinding %q in Project namespace %q: %w",
 					roleBinding.Name, project.Name, err,
@@ -763,7 +749,7 @@ func (r *reconciler) ensureControllerPermissions(
 		}
 
 		if err := r.client.Create(ctx, roleBinding); err != nil {
-			if !kubeerr.IsAlreadyExists(err) {
+			if !apierrors.IsAlreadyExists(err) {
 				return fmt.Errorf(
 					"error creating RoleBinding %q for ServiceAccount %q in Project namespace %q: %w",
 					roleBinding.Name, sa.Name, project.Name, err,
@@ -796,7 +782,8 @@ func (r *reconciler) ensureDefaultUserRoles(
 
 	const adminRoleName = "kargo-admin"
 	const viewerRoleName = "kargo-viewer"
-	allRoles := []string{adminRoleName, viewerRoleName}
+	const promoterRoleName = "kargo-promoter"
+	allRoles := []string{adminRoleName, viewerRoleName, promoterRoleName}
 
 	for _, saName := range allRoles {
 		saLogger := logger.WithValues("serviceAccount", saName)
@@ -812,7 +799,7 @@ func (r *reconciler) ensureDefaultUserRoles(
 				},
 			},
 		); err != nil {
-			if kubeerr.IsAlreadyExists(err) {
+			if apierrors.IsAlreadyExists(err) {
 				saLogger.Debug("ServiceAccount already exists in project namespace")
 				continue
 			}
@@ -914,6 +901,52 @@ func (r *reconciler) ensureDefaultUserRoles(
 				},
 			},
 		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      promoterRoleName,
+				Namespace: project.Name,
+				Annotations: map[string]string{
+					rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
+				},
+			},
+			Rules: []rbacv1.PolicyRule{
+				{ // For viewing events and serviceaccounts
+					APIGroups: []string{""},
+					Resources: []string{"events", "serviceaccounts"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{ // For viewing project-level access
+					APIGroups: []string{rbacv1.SchemeGroupVersion.Group},
+					Resources: []string{"rolebindings", "roles"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{ // View access to Kargo resources
+					APIGroups: []string{kargoapi.GroupVersion.Group},
+					Resources: []string{"freights", "stages", "warehouses", "projectconfigs"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{ // Promote permission on all stages
+					APIGroups: []string{kargoapi.GroupVersion.Group},
+					Resources: []string{"stages"},
+					Verbs:     []string{"promote"},
+				},
+				{ // Can create and view promotions
+					APIGroups: []string{kargoapi.GroupVersion.Group},
+					Resources: []string{"promotions"},
+					Verbs:     []string{"create", "get", "list", "watch"},
+				},
+				{ // Manual approvals involve patching Freight status
+					APIGroups: []string{kargoapi.GroupVersion.Group},
+					Resources: []string{"freights/status"},
+					Verbs:     []string{"patch"},
+				},
+				{ // View AnalysisRuns and AnalysisTemplates
+					APIGroups: []string{rolloutsapi.GroupVersion.Group},
+					Resources: []string{"analysisruns", "analysistemplates"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+			},
+		},
 	}
 	for _, role := range roles {
 		roleLogger := logger.WithValues(
@@ -921,7 +954,7 @@ func (r *reconciler) ensureDefaultUserRoles(
 			"namespace", project.Name,
 		)
 		if err := r.createRoleFn(ctx, role); err != nil {
-			if kubeerr.IsAlreadyExists(err) {
+			if apierrors.IsAlreadyExists(err) {
 				roleLogger.Debug("Role already exists in project namespace")
 				continue
 			}
@@ -962,7 +995,7 @@ func (r *reconciler) ensureDefaultUserRoles(
 				},
 			},
 		); err != nil {
-			if kubeerr.IsAlreadyExists(err) {
+			if apierrors.IsAlreadyExists(err) {
 				rbLogger.Debug("RoleBinding already exists in project namespace")
 				continue
 			}
@@ -1024,7 +1057,7 @@ func (r *reconciler) migrateSpecToProjectConfig(
 			// could happen because the ProjectConfig was created by the user without
 			// them removing the spec from the Project. It could also be the result of
 			// a partial migration by a previous reconciliation attempt.
-			if !kubeerr.IsAlreadyExists(err) {
+			if !apierrors.IsAlreadyExists(err) {
 				return false, fmt.Errorf(
 					"error creating ProjectConfig in project namespace %q: %w",
 					project.Name, err,

@@ -3,7 +3,7 @@ package yaml
 import (
 	"fmt"
 
-	yaml "sigs.k8s.io/yaml/goyaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 // FieldNotFoundErr is an error type that is returned when a field is not found

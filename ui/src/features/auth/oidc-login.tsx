@@ -4,6 +4,7 @@ import {
   discoveryRequest,
   processDiscoveryResponse,
   generateRandomCodeVerifier,
+  generateRandomState,
   calculatePKCECodeChallenge,
   validateAuthResponse,
   authorizationCodeGrantRequest,
@@ -25,6 +26,7 @@ import {
 } from './oidc-utils';
 
 const codeVerifierKey = 'PKCE_code_verifier';
+const stateKey = 'PKCE_state';
 
 type Props = {
   oidcConfig: OIDCConfig;
@@ -80,6 +82,8 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
 
     const code_verifier = generateRandomCodeVerifier();
     sessionStorage.setItem(codeVerifierKey, code_verifier);
+    const state = generateRandomState();
+    sessionStorage.setItem(stateKey, state);
 
     const code_challenge = await calculatePKCECodeChallenge(code_verifier);
     const url = new URL(as.authorization_endpoint);
@@ -95,6 +99,7 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
     url.searchParams.set('redirect_uri', redirectURI);
     url.searchParams.set('response_type', 'code');
     url.searchParams.set('scope', getOIDCScopes(oidcConfig, as).join(' '));
+    url.searchParams.set('state', state);
 
     window.location.replace(url.toString());
   };
@@ -103,19 +108,21 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
   React.useEffect(() => {
     (async () => {
       const code_verifier = sessionStorage.getItem(codeVerifierKey);
+      const state = sessionStorage.getItem(stateKey);
       const searchParams = new URLSearchParams(location.search);
 
-      if (!as || !code_verifier || !searchParams.get('code')) {
+      if (
+        !as ||
+        !code_verifier ||
+        !searchParams.get('code') ||
+        !state ||
+        !searchParams.get('state')
+      ) {
         return;
       }
 
-      // Delete empty state
-      if (searchParams.get('state') === '') {
-        searchParams.delete('state');
-      }
-
       try {
-        const params = validateAuthResponse(as, client, searchParams);
+        const params = validateAuthResponse(as, client, searchParams, state);
 
         const response = await authorizationCodeGrantRequest(
           as,

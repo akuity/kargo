@@ -2,6 +2,7 @@ package warehouse
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -34,11 +35,8 @@ type webhook struct {
 	validateProjectFn func(
 		context.Context,
 		client.Client,
-		schema.GroupKind,
 		client.Object,
 	) error
-
-	validateCreateOrUpdateFn func(*kargoapi.Warehouse) (admission.Warnings, error)
 
 	validateSpecFn func(*field.Path, *kargoapi.WarehouseSpec) field.ErrorList
 }
@@ -57,7 +55,6 @@ func newWebhook(kubeClient client.Client) *webhook {
 		client: kubeClient,
 	}
 	w.validateProjectFn = libWebhook.ValidateProject
-	w.validateCreateOrUpdateFn = w.validateCreateOrUpdate
 	w.validateSpecFn = w.validateSpec
 	return w
 }
@@ -83,15 +80,29 @@ func (w *webhook) ValidateCreate(
 	obj runtime.Object,
 ) (admission.Warnings, error) {
 	warehouse := obj.(*kargoapi.Warehouse) // nolint: forcetypeassert
+	var errs field.ErrorList
 	if err := w.validateProjectFn(
 		ctx,
 		w.client,
-		warehouseGroupKind,
 		warehouse,
 	); err != nil {
-		return nil, err
+		var statusErr *apierrors.StatusError
+		if ok := errors.As(err, &statusErr); ok {
+			return nil, statusErr
+		}
+		var fieldErr *field.Error
+		if ok := errors.As(err, &fieldErr); !ok {
+			return nil, apierrors.NewInternalError(err)
+		}
+		errs = append(errs, fieldErr)
 	}
-	return w.validateCreateOrUpdateFn(warehouse)
+	if errs = append(
+		errs,
+		w.validateSpecFn(field.NewPath("spec"), &warehouse.Spec)...,
+	); len(errs) > 0 {
+		return nil, apierrors.NewInvalid(warehouseGroupKind, warehouse.Name, errs)
+	}
+	return nil, nil
 }
 
 func (w *webhook) ValidateUpdate(
@@ -100,7 +111,10 @@ func (w *webhook) ValidateUpdate(
 	newObj runtime.Object,
 ) (admission.Warnings, error) {
 	warehouse := newObj.(*kargoapi.Warehouse) // nolint: forcetypeassert
-	return w.validateCreateOrUpdateFn(warehouse)
+	if errs := w.validateSpecFn(field.NewPath("spec"), &warehouse.Spec); len(errs) > 0 {
+		return nil, apierrors.NewInvalid(warehouseGroupKind, warehouse.Name, errs)
+	}
+	return nil, nil
 }
 
 func (w *webhook) ValidateDelete(
@@ -108,16 +122,6 @@ func (w *webhook) ValidateDelete(
 	runtime.Object,
 ) (admission.Warnings, error) {
 	// No-op
-	return nil, nil
-}
-
-func (w *webhook) validateCreateOrUpdate(
-	warehouse *kargoapi.Warehouse,
-) (admission.Warnings, error) {
-	if errs :=
-		w.validateSpecFn(field.NewPath("spec"), &warehouse.Spec); len(errs) > 0 {
-		return nil, apierrors.NewInvalid(warehouseGroupKind, warehouse.Name, errs)
-	}
 	return nil, nil
 }
 

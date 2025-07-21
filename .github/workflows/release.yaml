@@ -54,7 +54,7 @@ jobs:
       with:
         driver-opts: network=host
     - name: Install Cosign
-      uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3.9.1
+      uses: sigstore/cosign-installer@d58896d6a1865668819e1d91763c7751a165e159 # v3.9.2
       with:
         cosign-release: 'v2.2.1' # optional
     - name: Login to GHCR
@@ -177,7 +177,7 @@ jobs:
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
     container:
-      image: golang:1.24.4-bookworm
+      image: golang:1.24.5-bookworm
     strategy:
       matrix:
         os: [linux, darwin, windows]
@@ -245,7 +245,7 @@ jobs:
     if: github.event_name != 'release'
     runs-on: ubuntu-latest
     container:
-      image: golang:1.24.4-bookworm
+      image: golang:1.24.5-bookworm
     strategy:
       matrix:
         os: [linux, darwin, windows]

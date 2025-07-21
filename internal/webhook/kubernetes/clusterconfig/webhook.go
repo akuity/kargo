@@ -36,30 +36,14 @@ func (w *webhook) ValidateCreate(
 	obj runtime.Object,
 ) (admission.Warnings, error) {
 	clusterCfg := obj.(*kargoapi.ClusterConfig) // nolint: forcetypeassert
-
-	var errs field.ErrorList
-	if metaErrs := w.validateObjectMeta(
-		field.NewPath("metadata"),
-		clusterCfg.ObjectMeta,
-	); len(metaErrs) > 0 {
-		errs = append(errs, metaErrs...)
+	errs := w.validateObjectMeta(field.NewPath("metadata"), clusterCfg.ObjectMeta)
+	if errs = append(
+		errs,
+		w.validateSpec(field.NewPath("spec"), clusterCfg.Spec)...,
+	); len(errs) > 0 {
+		return nil,
+			apierrors.NewInvalid(clusterConfigGroupKind, clusterCfg.Name, errs)
 	}
-
-	if specErrs := w.validateSpec(
-		field.NewPath("spec"),
-		clusterCfg.Spec,
-	); len(specErrs) > 0 {
-		errs = append(errs, specErrs...)
-	}
-
-	if len(errs) > 0 {
-		return nil, apierrors.NewInvalid(
-			clusterConfigGroupKind,
-			clusterCfg.Name,
-			errs,
-		)
-	}
-
 	return nil, nil
 }
 
@@ -69,8 +53,12 @@ func (w *webhook) ValidateUpdate(
 	newObj runtime.Object,
 ) (admission.Warnings, error) {
 	clusterCfg := newObj.(*kargoapi.ClusterConfig) // nolint: forcetypeassert
-	if errs := w.validateSpec(field.NewPath("spec"), clusterCfg.Spec); len(errs) > 0 {
-		return nil, apierrors.NewInvalid(clusterConfigGroupKind, clusterCfg.Name, errs)
+	if errs := w.validateSpec(
+		field.NewPath("spec"),
+		clusterCfg.Spec,
+	); len(errs) > 0 {
+		return nil,
+			apierrors.NewInvalid(clusterConfigGroupKind, clusterCfg.Name, errs)
 	}
 	return nil, nil
 }

@@ -81,7 +81,7 @@ kargo get project my-project
 // addFlags adds the flags for the get projects options to the provided command.
 func (o *getProjectsOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
-	o.PrintFlags.AddFlags(cmd)
+	o.AddFlags(cmd)
 }
 
 // complete sets the options from the command arguments.
