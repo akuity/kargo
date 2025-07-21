@@ -210,3 +210,11 @@ by the operator:
 1. Configure Kargo to look for `ServiceAccount` resources in these designated
    namespaces, by setting `api.oidc.globalServiceAccounts.namespaces` at
    installation time. For example:
+
+   ```yaml
+   api:
+    oidc:
+      globalServiceAccounts:
+        namespaces:
+          - kargo-global-service-accounts
+   ```  
