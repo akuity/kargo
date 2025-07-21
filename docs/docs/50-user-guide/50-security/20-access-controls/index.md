@@ -447,5 +447,9 @@ control in the hands of the operator, and you should be aware of them.
     Which can also be created with:
 
     ```shell
-    kubectl create rolebinding --serviceaccount kargo-global-service-account:team-x-developers --role kargo-admin -n kargo-demo kargo-demo-developer
+    kubectl create rolebinding \
+    --serviceaccount kargo-global-service-account:team-x-developers \
+    --role kargo-admin \
+    -n kargo-demo \
+    kargo-demo-developer
     ```
