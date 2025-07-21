@@ -154,6 +154,38 @@ func TestNewPromotionAnnotations(t *testing.T) {
   ]
 }`)},
 						},
+						{
+							Uses: "argocd-update",
+							Vars: []v1alpha1.ExpressionVariable{
+								{
+									Name:  "myApp",
+									Value: "same-app-var-1",
+								},
+							},
+							Config: &v1.JSON{Raw: []byte(`{
+  "apps": [
+    {
+      "name": "${{ vars.myApp }}"
+    }
+  ]
+}`)},
+						},
+						{
+							Uses: "argocd-update",
+							Vars: []v1alpha1.ExpressionVariable{
+								{
+									Name:  "myApp",
+									Value: "same-app-var-2",
+								},
+							},
+							Config: &v1.JSON{Raw: []byte(`{
+  "apps": [
+    {
+      "name": "${{ vars.myApp }}"
+    }
+  ]
+}`)},
+						},
 					},
 				},
 			},
@@ -180,8 +212,10 @@ func TestNewPromotionAnnotations(t *testing.T) {
 				v1alpha1.AnnotationKeyEventFreightCreateTime:   "2024-10-22T00:00:00Z",
 				v1alpha1.AnnotationKeyEventApplications: `[{"name":"kargo-demo-test","namespace":"argocd"},` +
 					`{"name":"my-application","namespace":"argocd"},` +
-					`{"name":"my-application-test","namespace":"test-namespace"},` +
+					`{"name":"same-app-var-1","namespace":"argocd"},` +
+					`{"name":"same-app-var-2","namespace":"argocd"},` +
 					`{"name":"test-promotion-admin","namespace":"test-freight-test-warehouse"},` +
+					`{"name":"my-application-test","namespace":"test-namespace"},` +
 					`{"name":"step-level-value","namespace":"test-namespace-additional"}]`,
 			},
 		},

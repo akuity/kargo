@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"maps"
+	"sort"
 	"time"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -71,39 +72,7 @@ func NewPromotionAnnotations(
 		}
 	}
 
-	var apps []types.NamespacedName
-	for _, step := range p.Spec.Steps {
-		if step.Uses != "argocd-update" || step.Config == nil {
-			continue
-		}
-		var cfg builtin.ArgoCDUpdateConfig
-		if err := json.Unmarshal(step.Config.Raw, &cfg); err != nil {
-			logger.Error(err, "unmarshal ArgoCD update config")
-			continue
-		}
-		for _, app := range cfg.Apps {
-			namespacedName := types.NamespacedName{
-				Namespace: app.Namespace,
-				Name:      app.Name,
-			}
-			if namespacedName.Namespace == "" {
-				namespacedName.Namespace = libargocd.Namespace()
-			}
-			apps = append(apps, namespacedName)
-		}
-	}
-
-	if len(apps) == 0 {
-		return annotations
-	}
-
-	data, err := json.Marshal(apps)
-	if err != nil {
-		return annotations
-	}
-
-	var result string
-	env := map[string]any{
+	baseEnv := map[string]any{
 		"ctx": map[string]any{
 			"project":   p.GetNamespace(),
 			"promotion": p.GetName(),
@@ -124,35 +93,96 @@ func NewPromotionAnnotations(
 				"name": f.Origin.Name,
 			}
 		}
-		if ctx, ok := env["ctx"].(map[string]any); ok {
+		if ctx, ok := baseEnv["ctx"].(map[string]any); ok {
 			ctx["targetFreight"] = targetFreight
 		}
 	}
 
-	vars := calculateVars(p, env)
-	if len(vars) > 0 {
-		env["vars"] = vars
-	}
-
-	if evaled, err := expressions.EvaluateTemplate(string(data), env); err == nil {
-		// may be the same string after evaluation
-		if v, ok := evaled.(string); !ok {
-			if evaledBytes, err := json.Marshal(evaled); err == nil {
-				result = string(evaledBytes)
-			}
-		} else {
-			result = v
+	setVar := func(env map[string]any, vars map[string]any) {
+		if _, ok := env["vars"]; !ok {
+			env["vars"] = make(map[string]any)
+		}
+		if varsMap, ok := env["vars"].(map[string]any); ok {
+			maps.Copy(varsMap, vars)
 		}
 	}
-	if result != "" {
-		annotations[kargoapi.AnnotationKeyEventApplications] = result
+
+	var allApps []types.NamespacedName
+	appSet := make(map[types.NamespacedName]struct{})
+	promotionVars := calculatePromotionVars(p, baseEnv)
+	setVar(baseEnv, promotionVars)
+
+	for _, step := range p.Spec.Steps {
+		if step.Uses != "argocd-update" || step.Config == nil {
+			continue
+		}
+		stepEnv := make(map[string]any)
+		maps.Copy(stepEnv, baseEnv)
+		stepVars := calculateStepVars(step, stepEnv)
+		setVar(stepEnv, stepVars)
+
+		stepConfigData, err := json.Marshal(step.Config)
+		if err != nil {
+			logger.Error(err, "marshal step config")
+			continue
+		}
+		evaledConfig, err := expressions.EvaluateTemplate(string(stepConfigData), stepEnv)
+		if err != nil {
+			logger.Error(err, "evaluate step config template")
+			continue
+		}
+
+		var evaledConfigBytes []byte
+		if v, ok := evaledConfig.(string); ok {
+			evaledConfigBytes = []byte(v)
+		} else {
+			evaledConfigBytes, err = json.Marshal(evaledConfig)
+			if err != nil {
+				logger.Error(err, "marshal evaluated step config")
+				continue
+			}
+		}
+
+		var cfg builtin.ArgoCDUpdateConfig
+		if err := json.Unmarshal(evaledConfigBytes, &cfg); err != nil {
+			logger.Error(err, "unmarshal evaluated ArgoCD update config")
+			continue
+		}
+
+		for _, app := range cfg.Apps {
+			namespacedName := types.NamespacedName{
+				Namespace: app.Namespace,
+				Name:      app.Name,
+			}
+			if namespacedName.Namespace == "" {
+				namespacedName.Namespace = libargocd.Namespace()
+			}
+			if _, exists := appSet[namespacedName]; !exists {
+				appSet[namespacedName] = struct{}{}
+				allApps = append(allApps, namespacedName)
+			}
+		}
+	}
+
+	if len(allApps) == 0 {
+		return annotations
+	}
+
+	sort.Slice(allApps, func(i, j int) bool {
+		if allApps[i].Namespace != allApps[j].Namespace {
+			return allApps[i].Namespace < allApps[j].Namespace
+		}
+		return allApps[i].Name < allApps[j].Name
+	})
+
+	if data, err := json.Marshal(allApps); err == nil {
+		annotations[kargoapi.AnnotationKeyEventApplications] = string(data)
 	}
 
 	return annotations
 }
 
-// calculateVars evaluates promotion-level and step-level variables. step-level vars will override promotion-level vars.
-func calculateVars(
+func calculatePromotionVars(
 	p *kargoapi.Promotion,
 	baseEnv map[string]any,
 ) map[string]any {
@@ -170,18 +200,36 @@ func calculateVars(
 		vars[v.Name] = newVar
 	}
 
-	for _, step := range p.Spec.Steps {
-		for _, v := range step.Vars {
-			env := make(map[string]any)
-			maps.Copy(env, baseEnv)
-			env["vars"] = vars
+	return vars
+}
 
-			newVar, err := expressions.EvaluateTemplate(v.Value, env)
-			if err != nil {
-				continue
+func calculateStepVars(
+	step kargoapi.PromotionStep,
+	baseEnv map[string]any,
+) map[string]any {
+	vars := make(map[string]any)
+
+	for _, v := range step.Vars {
+		env := make(map[string]any)
+		maps.Copy(env, baseEnv)
+		if existingVars, ok := baseEnv["vars"].(map[string]any); ok {
+			envVars := make(map[string]any)
+			env["vars"] = envVars
+			for k, v := range existingVars {
+				envVars[k] = v
 			}
-			vars[v.Name] = newVar
+			for k, val := range vars {
+				envVars[k] = val
+			}
+		} else {
+			env["vars"] = vars
 		}
+
+		newVar, err := expressions.EvaluateTemplate(v.Value, env)
+		if err != nil {
+			continue
+		}
+		vars[v.Name] = newVar
 	}
 
 	return vars
