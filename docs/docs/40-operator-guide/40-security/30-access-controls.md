@@ -216,5 +216,5 @@ by the operator:
     oidc:
       globalServiceAccounts:
         namespaces:
-          - kargo-global-service-accounts
+        - kargo-global-service-accounts
    ```  
