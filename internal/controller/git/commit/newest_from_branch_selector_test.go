@@ -325,7 +325,7 @@ func Test_newestFromBranchSelector_selectCommits(t *testing.T) {
 			name: "error listing commits",
 			selector: &newestFromBranchSelector{
 				baseSelector: &baseSelector{},
-				listCommitsFn: func(git.Repo, uint) ([]git.CommitMetadata, error) {
+				listCommitsFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
@@ -339,7 +339,7 @@ func Test_newestFromBranchSelector_selectCommits(t *testing.T) {
 				baseSelector: &baseSelector{
 					discoveryLimit: 3,
 				},
-				listCommitsFn: func(git.Repo, uint) ([]git.CommitMetadata, error) {
+				listCommitsFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
 					return []git.CommitMetadata{{}, {}, {}, {}, {}}, nil
 				},
 			},
@@ -354,7 +354,7 @@ func Test_newestFromBranchSelector_selectCommits(t *testing.T) {
 				baseSelector: &baseSelector{
 					filterExpression: nonBoolExpression,
 				},
-				listCommitsFn: func(git.Repo, uint) ([]git.CommitMetadata, error) {
+				listCommitsFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
 					return []git.CommitMetadata{{}}, nil
 				},
 			},
@@ -368,7 +368,7 @@ func Test_newestFromBranchSelector_selectCommits(t *testing.T) {
 				baseSelector: &baseSelector{
 					includePaths: includePaths,
 				},
-				listCommitsFn: func(git.Repo, uint) ([]git.CommitMetadata, error) {
+				listCommitsFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
 					return []git.CommitMetadata{{}}, nil
 				},
 				getDiffPathsForCommitIDFn: func(git.Repo, string) ([]string, error) {
@@ -386,7 +386,7 @@ func Test_newestFromBranchSelector_selectCommits(t *testing.T) {
 					filterExpression: idFilterExpression,
 					discoveryLimit:   3,
 				},
-				listCommitsFn: func(git.Repo, uint) ([]git.CommitMetadata, error) {
+				listCommitsFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
 					return []git.CommitMetadata{
 						{ID: "A"},
 						{ID: "B"},
@@ -412,7 +412,7 @@ func Test_newestFromBranchSelector_selectCommits(t *testing.T) {
 					includePaths:   includePaths,
 					discoveryLimit: 3,
 				},
-				listCommitsFn: func(git.Repo, uint) ([]git.CommitMetadata, error) {
+				listCommitsFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
 					return []git.CommitMetadata{
 						{ID: "A"},
 						{ID: "B"},

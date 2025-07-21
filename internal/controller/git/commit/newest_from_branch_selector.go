@@ -38,6 +38,7 @@ type newestFromBranchSelector struct {
 	selectCommitsFn func(git.Repo) ([]git.CommitMetadata, error)
 	listCommitsFn   func(
 		repo git.Repo,
+		limit uint,
 		skip uint,
 	) ([]git.CommitMetadata, error)
 	getDiffPathsForCommitIDFn func(
@@ -130,8 +131,8 @@ func (n *newestFromBranchSelector) selectCommits(
 	repo git.Repo,
 ) ([]git.CommitMetadata, error) {
 	var selectedCommits = make([]git.CommitMetadata, 0, n.discoveryLimit)
-	for skip := uint(0); ; skip += uint(n.discoveryLimit) { // nolint: gosec
-		commits, err := n.listCommitsFn(repo, skip)
+	for skip, batch := uint(0), uint(n.discoveryLimit); ; skip, batch = skip+batch, min(batch*2, 1000) { // nolint: gosec
+		commits, err := n.listCommitsFn(repo, batch, skip) // nolint: gosec
 		if err != nil {
 			return nil,
 				fmt.Errorf("error listing commits from git repo %q: %w", n.repoURL, err)
@@ -186,9 +187,10 @@ func (n *newestFromBranchSelector) selectCommits(
 
 func (n *newestFromBranchSelector) listCommits(
 	repo git.Repo,
+	limit uint,
 	skip uint,
 ) ([]git.CommitMetadata, error) {
-	return repo.ListCommits(uint(n.discoveryLimit), skip) // nolint: gosec
+	return repo.ListCommits(limit, skip) // nolint: gosec
 }
 
 func (n *newestFromBranchSelector) getDiffPathsForCommitID(
