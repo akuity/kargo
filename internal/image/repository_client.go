@@ -444,36 +444,35 @@ func (r *repositoryClient) getImageFromV1Image(
 	}
 
 	return &image{
-		Digest:      digest,
-		CreatedAt:   getCreationTime(cfg, manifest.Annotations),
+		Digest: digest,
+		CreatedAt: getCreationTime(
+			[]map[string]string{
+				manifest.Annotations,
+				cfg.Config.Labels,
+			},
+			&cfg.Created.Time,
+		),
 		Annotations: manifest.Annotations,
 	}, nil
 }
 
-func getCreationTime(cfg *v1.ConfigFile, annotations map[string]string) *time.Time {
-	// Define the order of precedence: annotations first, then labels
-	sources := []struct {
-		data map[string]string
-		keys []string
-	}{
-		{annotations, []string{ociCreatedAnnotation, legacyBuildDateAnnotation}},
-		{cfg.Config.Labels, []string{ociCreatedAnnotation, legacyBuildDateAnnotation}},
-	}
+func getCreationTime(sources []map[string]string, fallback *time.Time) *time.Time {
+	keys := []string{ociCreatedAnnotation, legacyBuildDateAnnotation}
 
 	for _, source := range sources {
-		if source.data != nil {
-			for _, key := range source.keys {
-				if createdStr, ok := source.data[key]; ok {
-					if created, err := time.Parse(time.RFC3339, createdStr); err == nil {
-						return &created
-					}
+		if source == nil {
+			continue
+		}
+		for _, key := range keys {
+			if createdStr, ok := source[key]; ok {
+				if created, err := time.Parse(time.RFC3339, createdStr); err == nil {
+					return &created
 				}
 			}
 		}
 	}
 
-	// Fall back to the config's Created field
-	return &cfg.Created.Time
+	return fallback
 }
 
 // rateLimitedRoundTripper is a rate limited implementation of
