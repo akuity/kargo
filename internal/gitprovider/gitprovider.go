@@ -28,8 +28,9 @@ type Options struct {
 	// Name specifies which Git provider to use when that information cannot be
 	// inferred from the repository URL.
 	Name string
-	// Token is the access token used to authenticate against the Git provider's
-	// API.
+	// Username used for authentication with the Git provider's API.
+	Username string
+	// Token or password used to authenticate against the Git provider's API.
 	Token string
 	// InsecureSkipTLSVerify specifies whether certificate verification errors
 	// should be ignored when connecting to the Git provider's API.
