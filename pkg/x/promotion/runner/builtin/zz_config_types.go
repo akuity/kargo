@@ -453,6 +453,19 @@ type Image struct {
 	Tag string `json:"tag,omitempty"`
 }
 
+type OCIPullConfig struct {
+	// ImageRef is the reference to the OCI artifact to pull. Supports both tag format
+	// 'registry/repository:tag' and digest format 'registry/repository@sha256:digest'.
+	ImageRef string `json:"imageRef"`
+	// Whether to skip TLS verification when pulling the artifact. Defaults to false.
+	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
+	// MediaType of the layer to pull. Selects the first layer matching this type. If not
+	// specified, it selects the first layer available.
+	MediaType string `json:"mediaType,omitempty"`
+	// OutPath is the path to the destination file where the extracted artifact will be saved.
+	OutPath string `json:"outPath"`
+}
+
 type UntarConfig struct {
 	// Ignore is a (multiline) string of glob patterns to ignore when extracting files. It
 	// accepts the same syntax as .gitignore files.

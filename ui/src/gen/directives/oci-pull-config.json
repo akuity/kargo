@@ -1,0 +1,28 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "OCIPullConfig",
+ "type": "object",
+ "additionalProperties": false,
+ "properties": {
+  "imageRef": {
+   "type": "string",
+   "description": "ImageRef is the reference to the OCI artifact to pull. Supports both tag format 'registry/repository:tag' and digest format 'registry/repository@sha256:digest'.",
+   "minLength": 1,
+   "pattern": "^[a-zA-Z0-9._-]+(/[a-zA-Z0-9._-]+)*[@:][a-zA-Z0-9._:-]+$"
+  },
+  "outPath": {
+   "type": "string",
+   "description": "OutPath is the path to the destination file where the extracted artifact will be saved.",
+   "minLength": 1
+  },
+  "mediaType": {
+   "type": "string",
+   "description": "MediaType of the layer to pull. Selects the first layer matching this type. If not specified, it selects the first layer available.",
+   "minLength": 1
+  },
+  "insecureSkipTLSVerify": {
+   "type": "boolean",
+   "description": "Whether to skip TLS verification when pulling the artifact. Defaults to false."
+  }
+ }
+}
