@@ -232,6 +232,11 @@ func TestValidateSpec(t *testing.T) {
 							RepoURL: "bogus",
 						},
 					},
+					{
+						Image: &kargoapi.ImageSubscription{
+							Constraint: "constraint",
+						},
+					},
 				},
 			},
 			assertions: func(t *testing.T, spec *kargoapi.WarehouseSpec, errs field.ErrorList) {
@@ -268,6 +273,17 @@ func TestValidateSpec(t *testing.T) {
 							Field:    "spec.subscriptions[1].git",
 							BadValue: "bogus",
 							Detail:   "subscription for Git repository already exists at \"spec.subscriptions[0].git\"",
+						},
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "spec.subscriptions[2].image.constraint",
+							BadValue: "constraint",
+						},
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "spec.subscriptions[2].image",
+							BadValue: "",
+							Detail:   "subscription for image repository already exists at \"spec.subscriptions[0].image\"",
 						},
 					},
 					errs,
@@ -333,9 +349,14 @@ func TestValidateSubs(t *testing.T) {
 						RepoURL: "bogus",
 					},
 				},
+				{
+					Image: &kargoapi.ImageSubscription{
+						Constraint: "constraint",
+					},
+				},
 			},
 			assertions: func(t *testing.T, subs []kargoapi.RepoSubscription, errs field.ErrorList) {
-				require.Len(t, errs, 5)
+				require.Len(t, errs, 7)
 				require.Equal(
 					t,
 					field.ErrorList{
@@ -366,6 +387,17 @@ func TestValidateSubs(t *testing.T) {
 							Field:    "subs[1].git",
 							BadValue: "bogus",
 							Detail:   "subscription for Git repository already exists at \"subs[0].git\"",
+						},
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "subs[2].image.constraint",
+							BadValue: "constraint",
+						},
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "subs[2].image",
+							BadValue: "",
+							Detail:   "subscription for image repository already exists at \"subs[0].image\"",
 						},
 					},
 					errs,
@@ -402,7 +434,8 @@ func TestValidateSub(t *testing.T) {
 		assertions func(*testing.T, kargoapi.RepoSubscription, field.ErrorList)
 	}{
 		{
-			name: "invalid subscription",
+			// TODO(@nitishfy) remove this testcase once the deprecated field is removed
+			name: "invalid subscription when using semverconstraint(deprecated) field",
 			sub: kargoapi.RepoSubscription{
 				Git: &kargoapi.GitSubscription{
 					RepoURL: "bogus",
@@ -436,6 +469,64 @@ func TestValidateSub(t *testing.T) {
 						{
 							Type:     field.ErrorTypeInvalid,
 							Field:    "sub.image.semverConstraint",
+							BadValue: "bogus",
+						},
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "sub.image.platform",
+							BadValue: "bogus",
+						},
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "sub.chart.semverConstraint",
+							BadValue: "bogus",
+						},
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "sub",
+							BadValue: sub,
+							Detail:   "exactly one of sub.git, sub.image, or sub.chart must be non-empty",
+						},
+					},
+					errs,
+				)
+			},
+		},
+		{
+			name: "invalid subscription when using constraint field",
+			sub: kargoapi.RepoSubscription{
+				Git: &kargoapi.GitSubscription{
+					RepoURL: "bogus",
+				},
+				Image: &kargoapi.ImageSubscription{
+					ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+					Constraint:             "bogus",
+					Platform:               "bogus",
+				},
+				Chart: &kargoapi.ChartSubscription{
+					SemverConstraint: "bogus",
+				},
+			},
+			seen: uniqueSubSet{
+				subscriptionKey{
+					kind: "git",
+					id:   git.NormalizeURL("bogus"),
+				}: field.NewPath("spec.subscriptions[0].git"),
+			},
+			assertions: func(t *testing.T, sub kargoapi.RepoSubscription, errs field.ErrorList) {
+				require.Len(t, errs, 5)
+				require.Equal(
+					t,
+					field.ErrorList{
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "sub.git",
+							BadValue: "bogus",
+							Detail:   "subscription for Git repository already exists at \"spec.subscriptions[0].git\"",
+						},
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "sub.image.constraint",
 							BadValue: "bogus",
 						},
 						{
@@ -553,7 +644,8 @@ func TestValidateImageSub(t *testing.T) {
 		assertions func(*testing.T, field.ErrorList)
 	}{
 		{
-			name: "invalid",
+			// TODO(@nitishfy) remove this test case once the deprecated field is removed
+			name: "invalid subscription when using semverconstraint(deprecated) field",
 			sub: kargoapi.ImageSubscription{
 				RepoURL:                "bogus",
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
@@ -573,6 +665,45 @@ func TestValidateImageSub(t *testing.T) {
 						{
 							Type:     field.ErrorTypeInvalid,
 							Field:    "image.semverConstraint",
+							BadValue: "bogus",
+						},
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "image.platform",
+							BadValue: "bogus",
+						},
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "image",
+							BadValue: "bogus",
+							Detail:   "subscription for image repository already exists at \"spec.subscriptions[0].image\"",
+						},
+					},
+					errs,
+				)
+			},
+		},
+		{
+			name: "invalid subscription when using constraint field",
+			sub: kargoapi.ImageSubscription{
+				RepoURL:                "bogus",
+				ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+				Constraint:             "bogus",
+				Platform:               "bogus",
+			},
+			seen: uniqueSubSet{
+				subscriptionKey{
+					kind: "image",
+					id:   "bogus",
+				}: field.NewPath("spec.subscriptions[0].image"),
+			},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Equal(
+					t,
+					field.ErrorList{
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "image.constraint",
 							BadValue: "bogus",
 						},
 						{
