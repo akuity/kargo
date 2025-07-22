@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { IconDefinition, faBook, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import { IconDefinition, faHistory, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
 import classNames from 'classnames';
@@ -86,7 +86,7 @@ const StageBox = memo(
     const tooltipTitle = showHistory
       ? isHighlighted
         ? `Most recent promotion: Currently in stage '${stageName}'`
-        : `Stage: '${stageName}' (Promotion #${order + 1})`
+        : `Stage: '${stageName}' (Sequential promotion #${order + 1})`
       : `Promoted to stage: '${stageName}'`;
 
     const style = {
@@ -100,11 +100,13 @@ const StageBox = memo(
       <Tooltip title={tooltipTitle}>
         <div
           onClick={() => navigate(generatePath(paths.stage, { name: project, stageName }))}
-          className='h-5 w-6 rounded flex items-center justify-center cursor-pointer transition-all duration-300'
+          className='h-6 w-full rounded flex items-center justify-center cursor-pointer transition-all duration-300'
           style={style}
         >
           {showHistory && (
-            <span className='text-white font-bold text-xs select-none'>{order + 1}</span>
+            <div className='flex items-center gap-0.5'>
+              <span className='text-white font-bold text-[10px] select-none'>#{order + 1}</span>
+            </div>
           )}
         </div>
       </Tooltip>
@@ -129,30 +131,46 @@ const ImageTagRow = memo(
     project: string;
     stageColorMap: Record<string, string>;
   }) => {
+    const sequentialOrderMap = useMemo(() => {
+      if (!showHistory) return {};
+
+      const stagesWithOrder = Object.entries(imageStageMap.stages || {})
+        .filter(([stageName]) => dynamicStages.includes(stageName))
+        .sort(([, a], [, b]) => (a as number) - (b as number));
+
+      const orderMap: Record<string, number> = {};
+      stagesWithOrder.forEach(([stageName], index) => {
+        orderMap[stageName] = index;
+      });
+
+      return orderMap;
+    }, [imageStageMap.stages, dynamicStages, showHistory]);
+
     return (
       <tr className='hover:bg-gray-50/70'>
-        <td className='sticky left-0 bg-white hover:bg-gray-50/70 p-1 border-b border-gray-200'>
+        <td className='sticky left-0 bg-white hover:bg-gray-50/70 px-1 py-0.5 border-b border-gray-200 z-20'>
           <Tooltip title={`Image Tag: ${tag}`}>
-            <span className='font-mono text-xs font-semibold'>{tag}</span>
+            <div className='font-mono text-xs font-semibold truncate'>{tag}</div>
           </Tooltip>
         </td>
         {dynamicStages.map((stageName) => {
-          const order = imageStageMap.stages?.[stageName];
-          const hasImage = order !== undefined;
+          const originalOrder = imageStageMap.stages?.[stageName];
+          const hasImage = originalOrder !== undefined;
+          const sequentialOrder = sequentialOrderMap[stageName];
 
           return (
-            <td key={stageName} className='p-1 border-b border-gray-200'>
+            <td key={stageName} className='px-1 py-1 border-b border-gray-200'>
               <div className='flex justify-center'>
                 {hasImage ? (
                   <StageBox
                     stageName={stageName}
-                    order={order}
+                    order={sequentialOrder}
                     showHistory={showHistory}
                     stageColorMap={stageColorMap}
                     project={project}
                   />
                 ) : (
-                  <div className='w-6 h-5 bg-gray-100 rounded text-xs flex items-center justify-center text-gray-400'>
+                  <div className='w-full h-6 bg-gray-100 rounded text-xs flex items-center justify-center text-gray-400'>
                     -
                   </div>
                 )}
@@ -204,10 +222,7 @@ interface ImagesProps {
 export const ImagesDynamicGrid = memo<ImagesProps>(
   ({ hide, images, project, stages, warehouses }) => {
     const { stageColorMap } = useContext(ColorContext);
-    const [showHistory, setShowHistory] = useLocalStorage(
-      'images-dynamic-grid-show-history',
-      false
-    );
+    const [showHistory, setShowHistory] = useLocalStorage('images-dynamic-grid-show-history', true);
 
     const filteredImages: ProcessedImages = useMemo(() => {
       const result: ProcessedImages = {};
@@ -283,12 +298,17 @@ export const ImagesDynamicGrid = memo<ImagesProps>(
             <HeaderButton
               onClick={() => setShowHistory(!showHistory)}
               selected={showHistory}
-              icon={faBook}
+              icon={faHistory}
               title={showHistory ? 'Hide promotion history' : 'Show promotion history'}
             />
             <HeaderButton onClick={hide} icon={faEyeSlash} title='Hide panel' />
           </div>
         </div>
+        {showHistory && (
+          <div className='mb-1 text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded'>
+            Numbers show sequential promotion order (#1 = most recent)
+          </div>
+        )}
 
         {repoURLs.length > 1 && (
           <div className='mb-3'>
@@ -306,32 +326,35 @@ export const ImagesDynamicGrid = memo<ImagesProps>(
           </div>
         )}
 
-        <div className='overflow-x-auto max-h-[356px]'>
+        <div className='overflow-x-auto max-h-[356px] relative z-10'>
           <table className='text-sm border-collapse w-full' style={{ tableLayout: 'fixed' }}>
             <colgroup>
-              <col style={{ width: '80px' }} />
+              <col style={{ width: '120px' }} />
               {dynamicStages.map((stageName) => (
-                <col key={stageName} style={{ width: '40px' }} />
+                <col key={stageName} style={{ width: '80px' }} />
               ))}
             </colgroup>
             <thead>
               <tr className='bg-gray-50'>
-                <th className='sticky left-0 bg-gray-50 text-left p-1 border-b font-semibold text-gray-600'>
+                <th className='sticky left-0 bg-gray-50 text-left px-1 py-0.5 border-b font-semibold text-gray-600 z-20'>
                   Tag
                 </th>
                 {dynamicStages.map((stageName) => (
                   <th
                     key={stageName}
-                    className='p-1 border-b font-semibold text-gray-600 text-center'
+                    className='px-1 py-1 border-b font-semibold text-gray-600 text-center'
                   >
-                    <div className='flex items-center justify-center'>
-                      <Tooltip title={stageName}>
+                    <Tooltip title={stageName}>
+                      <div className='flex items-center justify-center gap-1'>
                         <div
                           className='w-2.5 h-2.5 rounded-full flex-shrink-0'
                           style={{ backgroundColor: stageColorMap[stageName] }}
                         />
-                      </Tooltip>
-                    </div>
+                        <span className='text-xs font-medium text-gray-700 truncate max-w-[60px]'>
+                          {stageName}
+                        </span>
+                      </div>
+                    </Tooltip>
                   </th>
                 ))}
               </tr>
