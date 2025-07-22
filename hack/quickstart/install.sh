@@ -4,7 +4,7 @@ set -x
 
 argo_cd_chart_version=7.7.0
 argo_rollouts_chart_version=2.39.1
-cert_manager_chart_version=1.16.1
+cert_manager_chart_version=1.18.2
 
 helm install cert-manager cert-manager \
   --repo https://charts.jetstack.io \
