@@ -115,7 +115,7 @@ kubectl get projectconfigs kargo-demo \
 
 1. Navigate to `https://gitlab.com/groups/<group>/-/hooks`, where
    `<group>` has been replaced with a GitLab group name for which you are an 
-   Owner of the group.
+   owner of the group.
 
   </TabItem>
   </Tabs>
