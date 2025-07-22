@@ -81,8 +81,6 @@ kubectl get projectconfigs kargo-demo \
 
 1. Navigating to the webhooks dashboard will vary based on scope.
 
-<!-- To configure a single GitLab repository to notify a receiver of `push` events: -->
-
 ### Scope Options
 
   <Tabs groupId="navigation">
