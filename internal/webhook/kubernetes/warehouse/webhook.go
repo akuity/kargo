@@ -211,21 +211,22 @@ func (w *webhook) validateImageSub(
 	seen uniqueSubSet,
 ) field.ErrorList {
 	var errs field.ErrorList
-	// Give precedence to the constraint field
-	// However, validate semVerConstraint field if
-	// semVer image strategy is used
-	if sub.SemverConstraint != "" && sub.ImageSelectionStrategy == kargoapi.ImageSelectionStrategySemVer {
-		if err := validateSemverConstraint(
-			f.Child("semverConstraint"),
-			sub.SemverConstraint,
-		); err != nil {
-			errs = field.ErrorList{err}
+	if sub.ImageSelectionStrategy == kargoapi.ImageSelectionStrategySemVer || sub.ImageSelectionStrategy == "" {
+		var err *field.Error
+		// Validate the Constraint field XOR the deprecated SemverConstraint field
+		// is a valid semantic version range:
+		if sub.Constraint != "" {
+			err = validateSemverConstraint(f.Child("constraint"), sub.Constraint)
+		} else if sub.SemverConstraint != "" { // nolint:staticcheck
+			err = validateSemverConstraint(
+				f.Child("semverConstraint"),
+				sub.SemverConstraint, // nolint:staticcheck
+			)
+		}
+		if err != nil {
+			errs = append(errs, err)
 		}
 	}
-	// TODO(@nitishfy) we should conditionally validate the
-	// constratins field that it is a validd semver range
-	// expression if and only if the semver selection
-	// strategy is being used
 	if sub.Platform != "" {
 		if !image.ValidatePlatformConstraint(sub.Platform) {
 			errs = append(errs, field.Invalid(f.Child("platform"), sub.Platform, ""))

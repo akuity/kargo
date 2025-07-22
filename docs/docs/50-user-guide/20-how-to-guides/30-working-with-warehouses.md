@@ -110,10 +110,11 @@ strategies are:
   ignored.
 
     :::note
-    Starting Kargo v1.7, the `semverConstraint` field is deprecated for
-    container image subscriptions. It is recommended to use the `constraint`
-    field instead. When using the `SemVer` strategy, `constraint` should be a
-    valid semantic version range.
+    Prior to Kargo v1.7, the `semverConstraint` field was used
+    to define semantic version constraints for container image
+    subscriptions. This field is now deprecated and will be removed
+    in v1.9.0. Users should use the `constraint` field instead, which
+    supports the same syntax and semantics when used with the `SemVer` strategy.
     :::
 
    The `strictSemvers` field defaults to `true`, meaning only tags containing
@@ -170,9 +171,10 @@ strategies are:
     images are pushed.
 
     :::note
-    Prior to Kargo v1.7, the semverConstraint field was used to specify the
-    mutable tag name. This field is now deprecated and will be removed in
-    v1.9.0. Users should use the constraint field instead.
+    Prior to Kargo v1.7, the `semverConstraint` field was used to
+    specify the mutable tag name. This field is now deprecated
+    and will be removed in v1.9.0. Users should use the `constraint` field
+    instead.
     :::
 
     :::warning

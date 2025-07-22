@@ -128,28 +128,18 @@ func imageDiscoveryLogFields(sub kargoapi.ImageSubscription) []any {
 		"imageSelectionStrategy", sub.ImageSelectionStrategy,
 		"platformConstrained", sub.Platform != "",
 	}
+
 	switch sub.ImageSelectionStrategy {
 	case kargoapi.ImageSelectionStrategySemVer, kargoapi.ImageSelectionStrategyDigest:
-		// if the constraint field has been used, append its logs
-		// otherwise fallback to appending deprecated field logs
-		// only if semVer strategy is used
-		if sub.Constraint != "" {
-			f = append(
-				f,
-				"Constraint", sub.Constraint,
-			)
-		} else if sub.SemverConstraint != "" && sub.ImageSelectionStrategy == kargoapi.ImageSelectionStrategySemVer {
-			f = append(
-				f,
-				"semverConstraint", sub.SemverConstraint,
-			)
+		constraint := sub.Constraint
+		if constraint == "" {
+			constraint = sub.SemverConstraint // nolint:staticcheck
 		}
+		f = append(f, "constraint", constraint)
 	case kargoapi.ImageSelectionStrategyLexical, kargoapi.ImageSelectionStrategyNewestBuild:
-		f = append(
-			f,
-			"tagConstrained", sub.AllowTags != "" || len(sub.IgnoreTags) > 0,
-		)
+		f = append(f, "tagConstrained", sub.AllowTags != "" || len(sub.IgnoreTags) > 0)
 	}
+
 	return f
 }
 
@@ -157,12 +147,17 @@ func imageSelectorForSubscription(
 	sub kargoapi.ImageSubscription,
 	creds *image.Credentials,
 ) (image.Selector, error) {
+	constraint := sub.Constraint
+	if constraint == "" {
+		constraint = sub.SemverConstraint
+	}
+
 	return image.NewSelector(
 		sub.RepoURL,
 		image.SelectionStrategy(sub.ImageSelectionStrategy),
 		&image.SelectorOptions{
 			StrictSemvers:         sub.StrictSemvers,
-			Constraint:            determineConstraint(&sub),
+			Constraint:            constraint,
 			AllowRegex:            sub.AllowTags,
 			Ignore:                sub.IgnoreTags,
 			Platform:              sub.Platform,
@@ -171,17 +166,4 @@ func imageSelectorForSubscription(
 			DiscoveryLimit:        int(sub.DiscoveryLimit),
 		},
 	)
-}
-
-// determineConstraint returns the appropriate constraint string to be used
-// for image selection, based on the given ImageSubscription.
-func determineConstraint(sub *kargoapi.ImageSubscription) string {
-	if sub.Constraint != "" {
-		return sub.Constraint
-	}
-	if sub.ImageSelectionStrategy == kargoapi.ImageSelectionStrategySemVer && sub.SemverConstraint != "" {
-		return sub.SemverConstraint
-	}
-
-	return ""
 }
