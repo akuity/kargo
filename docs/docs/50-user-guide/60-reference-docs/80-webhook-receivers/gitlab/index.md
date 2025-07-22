@@ -79,12 +79,48 @@ kubectl get projectconfigs kargo-demo \
 
 ## Registering with GitLab
 
-To configure a single GitLab repository to notify a receiver of `push` events:
+1. Navigating to the webhooks dashboard will vary based on scope.
+
+<!-- To configure a single GitLab repository to notify a receiver of `push` events: -->
+
+### Scope Options
+
+  <Tabs groupId="navigation">
+  <TabItem value="project-scope" label="Project Scope" default>
+
+  :::info
+  This option is useful if you are interested in receiving webhook events for a 
+  single given repository. If you are interested in configuring a single webhook 
+  for multiple repositories, you may want to consider a different option.
+  Otherwise, this option will require you to configure a webhook for each
+  repository individually.
+  :::
 
 1. Navigate to `https://gitlab.com/<namespace>/<project>/-/hooks`, where
-   `<namespace>` has been replaced with a GitLab username or group name and
+   `<namespace>` has been replaced with a GitLab username and
    `<project>` has been replaced with the name of a project belonging to that
    namespace and for which you are an administrator.
+
+  </TabItem>
+  <TabItem value="group-scope" label="Group Scope" default>
+
+  :::info
+  This option is useful if you are interested in receiving webhook events for a 
+  multiple repositories in the same group. A group encompasses multiple projects 
+  and its subgroups.
+  :::
+
+  :::caution
+  If you configure identical webhooks in both a group and a project in that 
+  group, both webhooks are triggered for events in that project. 
+  :::
+
+1. Navigate to `https://gitlab.com/groups/<group>/-/hooks`, where
+   `<group>` has been replaced with a GitLab group name for which you are an 
+   Owner of the group.
+
+  </TabItem>
+  </Tabs>
 
     ![Settings](./img/settings.png "Settings")
 
