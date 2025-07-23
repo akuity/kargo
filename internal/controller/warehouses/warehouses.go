@@ -516,7 +516,7 @@ func (r *reconciler) patchStatus(
 
 func inScope(targetShard string, warehouse *kargoapi.Warehouse) bool {
 	shard, labeled := warehouse.GetLabels()[kargoapi.LabelKeyShard]
-	return labeled == false || shard == targetShard
+	return !labeled || shard == targetShard
 }
 
 // validateDiscoveredArtifacts validates the discovered artifacts and updates

@@ -6565,3 +6565,49 @@ func Test_buildFreightSummary(t *testing.T) {
 		})
 	}
 }
+
+func TestInScope(t *testing.T) {
+	tests := []struct {
+		name        string
+		stage       *kargoapi.Stage
+		targetShard string
+		inScope     bool
+	}{
+		{
+			name:        "Stage not labeled",
+			stage:       new(kargoapi.Stage),
+			targetShard: "this-shard",
+			inScope:     true,
+		},
+		{
+			name: "Stage labeled for different shard",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						kargoapi.LabelKeyShard: "other-shard",
+					},
+				},
+			},
+			targetShard: "this-shard",
+			inScope:     false,
+		},
+		{
+			name: "Stage labeled for correct shard",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						kargoapi.LabelKeyShard: "this-shard",
+					},
+				},
+			},
+			targetShard: "this-shard",
+			inScope:     true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.inScope, inScope(tt.targetShard, tt.stage))
+		})
+	}
+}

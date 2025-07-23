@@ -322,6 +322,11 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, nil
 	}
 
+	if !inScope(r.cfg.Name(), stage) {
+		logger.Debug("ignoring Stage because it is not in scope")
+		return ctrl.Result{}, nil
+	}
+
 	// Handle deletion of the Stage.
 	if !stage.DeletionTimestamp.IsZero() {
 		return ctrl.Result{}, r.handleDelete(ctx, stage)
@@ -1972,6 +1977,11 @@ func (r *RegularStageReconciler) clearAnalysisRuns(ctx context.Context, stage *k
 		)
 	}
 	return nil
+}
+
+func inScope(targetShard string, stage *kargoapi.Stage) bool {
+	shard, labeled := stage.GetLabels()[kargoapi.LabelKeyShard]
+	return !labeled || shard == targetShard
 }
 
 // summarizeConditions summarizes the conditions of the given Stage. It sets the
