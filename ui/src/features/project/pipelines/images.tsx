@@ -1,6 +1,7 @@
 import { IconDefinition, faHistory, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Tooltip } from 'antd';
+import { Button, Card, Flex, Select, Table, Tooltip, Typography } from 'antd';
+import { ColumnType } from 'antd/es/table';
 import classNames from 'classnames';
 import { memo, useContext, useMemo, useState, useEffect } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
@@ -127,7 +128,7 @@ const StageBox = memo(
 
     return (
       <Tooltip title={tooltipTitle}>
-        <button
+        <Button
           onClick={handleClick}
           className='h-6 w-full rounded flex items-center justify-center cursor-pointer transition-all duration-300 border-0 p-0'
           style={style}
@@ -137,81 +138,12 @@ const StageBox = memo(
               <span className='text-white font-bold text-[10px] select-none'>#{order + 1}</span>
             </div>
           )}
-        </button>
+        </Button>
       </Tooltip>
     );
   }
 );
 StageBox.displayName = 'StageBox';
-
-const ImageTagRow = memo(
-  ({
-    tag,
-    imageStageMap,
-    dynamicStages,
-    showHistory,
-    project,
-    stageColorMap
-  }: {
-    tag: string;
-    imageStageMap: ImageStageMap;
-    dynamicStages: string[];
-    showHistory: boolean;
-    project: string;
-    stageColorMap: Record<string, string>;
-  }) => {
-    const sequentialOrderMap = useMemo(() => {
-      if (!showHistory) return {};
-
-      const stagesWithOrder = Object.entries(imageStageMap.stages || {})
-        .filter(([stageName]) => dynamicStages.includes(stageName))
-        .sort(([, a], [, b]) => a - b);
-
-      const orderMap: Record<string, number> = {};
-      stagesWithOrder.forEach(([stageName], index) => {
-        orderMap[stageName] = index;
-      });
-
-      return orderMap;
-    }, [imageStageMap.stages, dynamicStages, showHistory]);
-
-    return (
-      <tr className='hover:bg-gray-50/70'>
-        <td className='sticky left-0 bg-white hover:bg-gray-50/70 px-1 py-0.5 border-b border-gray-200 z-20'>
-          <Tooltip title={`Image Tag: ${tag}`}>
-            <div className='font-mono text-xs font-semibold truncate'>{tag}</div>
-          </Tooltip>
-        </td>
-        {dynamicStages.map((stageName) => {
-          const originalOrder = imageStageMap.stages?.[stageName];
-          const hasImage = originalOrder !== undefined;
-          const sequentialOrder = sequentialOrderMap[stageName];
-
-          return (
-            <td key={stageName} className='px-1 py-1 border-b border-gray-200'>
-              <div className='flex justify-center'>
-                {hasImage ? (
-                  <StageBox
-                    stageName={stageName}
-                    order={sequentialOrder}
-                    showHistory={showHistory}
-                    stageColorMap={stageColorMap}
-                    project={project}
-                  />
-                ) : (
-                  <div className='w-full h-6 bg-gray-100 rounded text-xs flex items-center justify-center text-gray-400'>
-                    -
-                  </div>
-                )}
-              </div>
-            </td>
-          );
-        })}
-      </tr>
-    );
-  }
-);
-ImageTagRow.displayName = 'ImageTagRow';
 
 const HeaderButton = memo(
   ({
@@ -226,7 +158,7 @@ const HeaderButton = memo(
     title: string;
   }) => (
     <Tooltip title={title}>
-      <button
+      <Button
         onClick={onClick}
         className={classNames(
           'p-2 w-7 h-7 flex items-center justify-center rounded-md hover:bg-gray-200 transition-colors',
@@ -234,7 +166,7 @@ const HeaderButton = memo(
         )}
       >
         <FontAwesomeIcon icon={icon} />
-      </button>
+      </Button>
     </Tooltip>
   )
 );
@@ -268,81 +200,6 @@ const getDynamicStages = (selectedImageData: ProcessedTagMap | undefined): strin
 
   return Array.from(stageSet).sort();
 };
-
-const TableHeader = ({
-  dynamicStages,
-  stageColorMap
-}: {
-  dynamicStages: string[];
-  stageColorMap: Record<string, string>;
-}) => (
-  <thead>
-    <tr className='bg-gray-50'>
-      <th className='sticky left-0 bg-gray-50 text-left px-1 py-0.5 border-b font-semibold text-gray-600 z-20'>
-        Tag
-      </th>
-      {dynamicStages.map((stageName) => (
-        <th key={stageName} className='px-1 py-1 border-b font-semibold text-gray-600 text-center'>
-          <Tooltip title={stageName}>
-            <div className='flex items-center justify-center gap-1'>
-              <div
-                className='w-2.5 h-2.5 rounded-full flex-shrink-0'
-                style={{ backgroundColor: stageColorMap[stageName] }}
-              />
-              <span className='text-xs font-medium text-gray-700 truncate max-w-[60px]'>
-                {stageName}
-              </span>
-            </div>
-          </Tooltip>
-        </th>
-      ))}
-    </tr>
-  </thead>
-);
-
-const TableBody = ({
-  allTags,
-  selectedImageData,
-  dynamicStages,
-  showHistory,
-  project,
-  stageColorMap,
-  repoURLs
-}: {
-  allTags: string[];
-  selectedImageData: ProcessedTagMap | undefined;
-  dynamicStages: string[];
-  showHistory: boolean;
-  project: string;
-  stageColorMap: Record<string, string>;
-  repoURLs: string[];
-}) => (
-  <tbody>
-    {allTags.length > 0 ? (
-      allTags.map((tag) => {
-        const imageStageMap = selectedImageData?.tags[tag];
-        if (!imageStageMap) return null;
-        return (
-          <ImageTagRow
-            key={tag}
-            tag={tag}
-            imageStageMap={imageStageMap}
-            dynamicStages={dynamicStages}
-            showHistory={showHistory}
-            project={project}
-            stageColorMap={stageColorMap}
-          />
-        );
-      })
-    ) : (
-      <tr>
-        <td colSpan={dynamicStages.length + 1} className='text-center text-gray-500 py-12'>
-          {repoURLs.length > 0 ? 'Select an image' : 'No images found'}
-        </td>
-      </tr>
-    )}
-  </tbody>
-);
 
 export const Images = memo<ImagesProps>(({ hide, images, project, stages, warehouses }) => {
   const { stageColorMap } = useContext(ColorContext);
@@ -387,16 +244,122 @@ export const Images = memo<ImagesProps>(({ hide, images, project, stages, wareho
     return sortTags(tags);
   }, [selectedImageData]);
 
+  const sequentialOrderMaps = useMemo(() => {
+    if (!selectedImageData || !showHistory) return {};
+
+    const maps: Record<string, Record<string, number>> = {};
+
+    Object.entries(selectedImageData.tags).forEach(([tag, imageStageMap]) => {
+      const stagesWithOrder = Object.entries(imageStageMap.stages || {})
+        .filter(([stageName]) => dynamicStages.includes(stageName))
+        .sort(([, a], [, b]) => a - b);
+
+      const orderMap: Record<string, number> = {};
+      stagesWithOrder.forEach(([stageName], index) => {
+        orderMap[stageName] = index;
+      });
+
+      maps[tag] = orderMap;
+    });
+
+    return maps;
+  }, [selectedImageData, dynamicStages, showHistory]);
+
+  const tableColumns = useMemo(() => {
+    const columns: ColumnType<{ tag: string }>[] = [
+      {
+        title: 'Tag',
+        key: 'tag',
+        width: 120,
+        render: (_: unknown, record: { tag: string }) => (
+          <Tooltip title={`Image Tag: ${record.tag}`}>
+            <Typography.Text className='font-mono text-xs font-semibold truncate'>
+              {record.tag}
+            </Typography.Text>
+          </Tooltip>
+        )
+      }
+    ];
+
+    dynamicStages.forEach((stageName) => {
+      columns.push({
+        title: (
+          <Tooltip title={stageName}>
+            <Flex align='center' justify='center' gap={4}>
+              <div
+                className='w-2.5 h-2.5 rounded-full flex-shrink-0'
+                style={{ backgroundColor: stageColorMap[stageName] }}
+              />
+              <Typography.Text className='text-xs font-medium text-gray-700 truncate max-w-[60px]'>
+                {stageName}
+              </Typography.Text>
+            </Flex>
+          </Tooltip>
+        ),
+        key: stageName,
+        width: 80,
+        render: (_: unknown, record: { tag: string }) => {
+          const imageStageMap = selectedImageData?.tags[record.tag];
+          if (!imageStageMap) {
+            return (
+              <div className='w-full h-6 bg-gray-100 rounded text-xs flex items-center justify-center text-gray-400'>
+                -
+              </div>
+            );
+          }
+
+          const originalOrder = imageStageMap.stages?.[stageName];
+          const hasImage = originalOrder !== undefined;
+
+          if (!hasImage) {
+            return (
+              <div className='w-full h-6 bg-gray-100 rounded text-xs flex items-center justify-center text-gray-400'>
+                -
+              </div>
+            );
+          }
+
+          const sequentialOrder = sequentialOrderMaps[record.tag]?.[stageName] ?? 0;
+
+          return (
+            <div className='flex justify-center'>
+              <StageBox
+                stageName={stageName}
+                order={sequentialOrder}
+                showHistory={showHistory}
+                stageColorMap={stageColorMap}
+                project={project}
+              />
+            </div>
+          );
+        }
+      });
+    });
+
+    return columns;
+  }, [dynamicStages, stageColorMap, selectedImageData, showHistory, project, sequentialOrderMaps]);
+
+  const tableData = useMemo(() => {
+    return allTags.map((tag) => ({
+      key: tag,
+      tag
+    }));
+  }, [allTags]);
+
   return (
-    <div className='bg-white rounded-lg shadow-xl border border-gray-200/75 p-3'>
-      <div className='flex items-center justify-between mb-2'>
-        <div className='flex items-baseline gap-2'>
-          <h3 className='text-base font-semibold text-gray-800'>Images</h3>
+    <Card className='shadow-xl border border-gray-200/75'>
+      <Flex justify='space-between' align='center' className='mb-2'>
+        <Flex align='baseline' gap={8}>
+          <Typography.Title level={4} className='!mb-0'>
+            Images
+          </Typography.Title>
           {selectedRepoURL && (
-            <p className='text-sm text-gray-600 truncate'>{selectedRepoURL.split('/').pop()}</p>
+            <Typography.Text type='secondary' className='truncate'>
+              {selectedRepoURL.split('/').pop()}
+            </Typography.Text>
           )}
-        </div>
-        <div className='flex items-center gap-1'>
+        </Flex>
+        <Flex gap={4}>
           <HeaderButton
             onClick={() => setShowHistory(!showHistory)}
             selected={showHistory}
@@ -404,51 +367,47 @@ export const Images = memo<ImagesProps>(({ hide, images, project, stages, wareho
             title={showHistory ? 'Hide promotion history' : 'Show promotion history'}
           />
           <HeaderButton onClick={hide} icon={faEyeSlash} title='Hide panel' />
-        </div>
-      </div>
+        </Flex>
+      </Flex>
+
       {showHistory && (
-        <div className='mb-1 text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded'>
+        <Typography.Text
+          type='secondary'
+          className='text-xs bg-gray-50 px-2 py-0.5 rounded block mb-2'
+        >
           Numbers show sequential promotion order (#1 = most recent)
-        </div>
+        </Typography.Text>
       )}
 
       {repoURLs.length > 1 && (
         <div className='mb-3'>
-          <select
+          <Select
             value={selectedRepoURL}
-            onChange={(e) => setSelectedRepoURL(e.target.value)}
-            className='block border-gray-300 w-full text-gray-800 appearance-none p-2 bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
-          >
-            {repoURLs.map((repo) => (
-              <option value={repo} key={repo}>
-                {repo.split('/').pop() || repo}
-              </option>
-            ))}
-          </select>
+            onChange={setSelectedRepoURL}
+            className='w-full'
+            options={repoURLs.map((repo) => ({
+              value: repo,
+              label: repo.split('/').pop() || repo
+            }))}
+          />
         </div>
       )}
 
-      <div className='overflow-x-auto max-h-[356px] relative z-10'>
-        <table className='text-sm border-collapse w-full' style={{ tableLayout: 'fixed' }}>
-          <colgroup>
-            <col style={{ width: '120px' }} />
-            {dynamicStages.map((stageName) => (
-              <col key={stageName} style={{ width: '80px' }} />
-            ))}
-          </colgroup>
-          <TableHeader dynamicStages={dynamicStages} stageColorMap={stageColorMap} />
-          <TableBody
-            allTags={allTags}
-            selectedImageData={selectedImageData}
-            dynamicStages={dynamicStages}
-            showHistory={showHistory}
-            project={project}
-            stageColorMap={stageColorMap}
-            repoURLs={repoURLs}
-          />
-        </table>
-      </div>
-    </div>
+      <Table
+        columns={tableColumns}
+        dataSource={tableData}
+        pagination={false}
+        size='small'
+        scroll={{ x: 'max-content', y: 356 }}
+        locale={{
+          emptyText: (
+            <Typography.Text type='secondary' className='py-12'>
+              {repoURLs.length > 0 ? 'Select an image' : 'No images found'}
+            </Typography.Text>
+          )
+        }}
+      />
+    </Card>
   );
 });
 
