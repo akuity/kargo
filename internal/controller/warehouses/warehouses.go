@@ -33,6 +33,15 @@ type ReconcilerConfig struct {
 	MinReconciliationInterval time.Duration `envconfig:"MIN_WAREHOUSE_RECONCILIATION_INTERVAL"`
 }
 
+// Name returns the name of the warehouse controller.
+func (c ReconcilerConfig) Name() string {
+	const name = "warehouse-controller"
+	if c.ShardName != "" {
+		return name + "-" + c.ShardName
+	}
+	return name
+}
+
 func ReconcilerConfigFromEnv() ReconcilerConfig {
 	cfg := ReconcilerConfig{}
 	envconfig.MustProcess("", &cfg)
@@ -44,6 +53,7 @@ type reconciler struct {
 	client                    client.Client
 	credentialsDB             credentials.Database
 	minReconciliationInterval time.Duration
+	name                      string
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -76,6 +86,8 @@ type reconciler struct {
 	createFreightFn func(context.Context, client.Object, ...client.CreateOption) error
 
 	patchStatusFn func(context.Context, *kargoapi.Warehouse, func(*kargoapi.WarehouseStatus)) error
+
+	inScopeFn func(*kargoapi.Warehouse) bool
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Warehouse resources
@@ -102,7 +114,7 @@ func SetupReconcilerWithManager(
 		).
 		WithEventFilter(shardPredicate).
 		WithOptions(controller.CommonOptions(cfg.MaxConcurrentReconciles)).
-		Complete(newReconciler(mgr.GetClient(), credentialsDB, cfg.MinReconciliationInterval)); err != nil {
+		Complete(newReconciler(mgr.GetClient(), credentialsDB, cfg)); err != nil {
 		return fmt.Errorf("error building Warehouse reconciler: %w", err)
 	}
 
@@ -117,15 +129,16 @@ func SetupReconcilerWithManager(
 func newReconciler(
 	kubeClient client.Client,
 	credentialsDB credentials.Database,
-	minReconciliationInterval time.Duration,
+	cfg ReconcilerConfig,
 ) *reconciler {
 	r := &reconciler{
 		client:                    kubeClient,
 		credentialsDB:             credentialsDB,
-		minReconciliationInterval: minReconciliationInterval,
+		minReconciliationInterval: cfg.MinReconciliationInterval,
 		gitCloneFn:                git.Clone,
 		discoverChartVersionsFn:   helm.DiscoverChartVersions,
 		createFreightFn:           kubeClient.Create,
+		name:                      cfg.Name(),
 	}
 
 	r.discoverArtifactsFn = r.discoverArtifacts
@@ -166,6 +179,11 @@ func (r *reconciler) Reconcile(
 	if warehouse == nil {
 		// Ignore if not found. This can happen if the Warehouse was deleted after
 		// the current reconciliation request was issued.
+		return ctrl.Result{}, nil
+	}
+
+	if !inScope(r.name, warehouse) {
+		logger.Debug("ignoring Warehouse because it is not in scope")
 		return ctrl.Result{}, nil
 	}
 
@@ -498,6 +516,11 @@ func (r *reconciler) patchStatus(
 	update func(*kargoapi.WarehouseStatus),
 ) error {
 	return kubeclient.PatchStatus(ctx, r.client, warehouse, update)
+}
+
+func inScope(targetShard string, warehouse *kargoapi.Warehouse) bool {
+	shard, labeled := warehouse.GetLabels()[kargoapi.LabelKeyShard]
+	return labeled == false || shard == targetShard
 }
 
 // validateDiscoveredArtifacts validates the discovered artifacts and updates

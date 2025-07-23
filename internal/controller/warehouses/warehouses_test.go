@@ -25,7 +25,7 @@ func TestNewReconciler(t *testing.T) {
 	e := newReconciler(
 		kubeClient,
 		&credentials.FakeDB{},
-		minReconciliationInterval,
+		ReconcilerConfig{MinReconciliationInterval: minReconciliationInterval},
 	)
 	require.NotNil(t, e.client)
 	require.NotNil(t, e.credentialsDB)
@@ -1004,6 +1004,52 @@ func TestShouldDiscoverArtifacts(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := shouldDiscoverArtifacts(tt.warehouse, tt.refreshToken)
 			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestInScope(t *testing.T) {
+	tests := []struct {
+		name        string
+		warehouse   *kargoapi.Warehouse
+		targetShard string
+		inScope     bool
+	}{
+		{
+			name:        "Warehouse not labeled",
+			warehouse:   new(kargoapi.Warehouse),
+			targetShard: "this-shard",
+			inScope:     true,
+		},
+		{
+			name: "Warehouse labeled for different shard",
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						kargoapi.LabelKeyShard: "other-shard",
+					},
+				},
+			},
+			targetShard: "this-shard",
+			inScope:     false,
+		},
+		{
+			name: "Warehouse labeled for correct shard",
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						kargoapi.LabelKeyShard: "this-shard",
+					},
+				},
+			},
+			targetShard: "this-shard",
+			inScope:     true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.inScope, inScope(tt.targetShard, tt.warehouse))
 		})
 	}
 }
