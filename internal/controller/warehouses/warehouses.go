@@ -30,15 +30,6 @@ type ReconcilerConfig struct {
 	MinReconciliationInterval time.Duration `envconfig:"MIN_WAREHOUSE_RECONCILIATION_INTERVAL"`
 }
 
-// Name returns the name of the warehouse controller.
-func (c ReconcilerConfig) Name() string {
-	const name = "warehouse-controller"
-	if c.ShardName != "" {
-		return name + "-" + c.ShardName
-	}
-	return name
-}
-
 func ReconcilerConfigFromEnv() ReconcilerConfig {
 	cfg := ReconcilerConfig{}
 	envconfig.MustProcess("", &cfg)
@@ -151,7 +142,7 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	if !inScope(r.cfg.Name(), warehouse) {
+	if warehouse.GetLabels()[kargoapi.LabelKeyShard] != r.cfg.ShardName {
 		logger.Debug("ignoring Warehouse because it is not in scope")
 		return ctrl.Result{}, nil
 	}
@@ -485,11 +476,6 @@ func (r *reconciler) patchStatus(
 	update func(*kargoapi.WarehouseStatus),
 ) error {
 	return kubeclient.PatchStatus(ctx, r.client, warehouse, update)
-}
-
-func inScope(targetShard string, warehouse *kargoapi.Warehouse) bool {
-	shard, labeled := warehouse.GetLabels()[kargoapi.LabelKeyShard]
-	return !labeled || shard == targetShard
 }
 
 // validateDiscoveredArtifacts validates the discovered artifacts and updates

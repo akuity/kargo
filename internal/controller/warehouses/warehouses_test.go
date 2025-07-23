@@ -9,13 +9,17 @@ import (
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/conditions"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 func TestNewReconciler(t *testing.T) {
@@ -1003,48 +1007,134 @@ func TestShouldDiscoverArtifacts(t *testing.T) {
 	}
 }
 
-func TestInScope(t *testing.T) {
+func TestReconcile_ShardMatching(t *testing.T) {
+	testScheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(testScheme))
+
 	tests := []struct {
-		name        string
-		warehouse   *kargoapi.Warehouse
-		targetShard string
-		inScope     bool
+		name       string
+		reconciler func() *reconciler
+		req        ctrl.Request
+		assertions func(*testing.T, ctrl.Result, error)
 	}{
 		{
-			name:        "Warehouse not labeled",
-			warehouse:   new(kargoapi.Warehouse),
-			targetShard: "this-shard",
-			inScope:     true,
-		},
-		{
-			name: "Warehouse labeled for different shard",
-			warehouse: &kargoapi.Warehouse{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						kargoapi.LabelKeyShard: "other-shard",
-					},
+			name: "Shard mismatch",
+			reconciler: func() *reconciler {
+				return &reconciler{
+					client: fake.NewClientBuilder().
+						WithScheme(testScheme).
+						WithObjects(
+							&kargoapi.Warehouse{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "test-warehouse",
+									Namespace: "test-namespace",
+									Labels: map[string]string{
+										kargoapi.LabelKeyShard: "wrong-shard",
+									},
+								},
+							},
+						).Build(),
+					cfg: ReconcilerConfig{ShardName: "right-shard"},
+					// Intentionally not setting any xFns because we should never reach them
+					// because we will exit before any reconciliation logic is executed.
+					// With that said, there is nothing that needs to be asserted here
+				}
+			},
+			req: ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      "test-warehouse",
+					Namespace: "test-namespace",
 				},
 			},
-			targetShard: "this-shard",
-			inScope:     false,
+			assertions: func(t *testing.T, result ctrl.Result, err error) {
+				require.NoError(t, err)
+				require.True(t, result.IsZero())
+			},
 		},
 		{
-			name: "Warehouse labeled for correct shard",
-			warehouse: &kargoapi.Warehouse{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						kargoapi.LabelKeyShard: "this-shard",
+			name: "Shard match",
+			reconciler: func() *reconciler {
+				return &reconciler{
+					client: fake.NewClientBuilder().
+						WithScheme(testScheme).
+						WithObjects(
+							&kargoapi.Warehouse{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "test-warehouse",
+									Namespace: "test-namespace",
+									Labels: map[string]string{
+										kargoapi.LabelKeyShard: "right-shard",
+									},
+								},
+							},
+						).Build(),
+					cfg: ReconcilerConfig{
+						ShardName: "right-shard",
 					},
+					discoverArtifactsFn: func(context.Context, *kargoapi.Warehouse) (*kargoapi.DiscoveredArtifacts, error) {
+						return &kargoapi.DiscoveredArtifacts{}, nil
+					},
+					discoverCommitsFn: func(
+						context.Context, string,
+						[]kargoapi.RepoSubscription,
+					) ([]kargoapi.GitDiscoveryResult, error) {
+						return []kargoapi.GitDiscoveryResult{}, nil
+					},
+					discoverImagesFn: func(
+						context.Context, string,
+						[]kargoapi.RepoSubscription,
+					) ([]kargoapi.ImageDiscoveryResult, error) {
+						return []kargoapi.ImageDiscoveryResult{}, nil
+					},
+					discoverChartsFn: func(
+						context.Context, string,
+						[]kargoapi.RepoSubscription,
+					) ([]kargoapi.ChartDiscoveryResult, error) {
+						return []kargoapi.ChartDiscoveryResult{}, nil
+					},
+					buildFreightFromLatestArtifactsFn: func(
+						string,
+						*kargoapi.DiscoveredArtifacts,
+					) (*kargoapi.Freight, error) {
+						return &kargoapi.Freight{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "test-freight",
+								Namespace: "test-namespace",
+							},
+						}, nil
+					},
+					createFreightFn: func(
+						context.Context,
+						client.Object,
+						...client.CreateOption,
+					) error {
+						return nil
+					},
+					patchStatusFn: func(context.Context, *kargoapi.Warehouse, func(*kargoapi.WarehouseStatus)) error {
+						return nil
+					},
+				}
+			},
+			req: ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      "test-warehouse",
+					Namespace: "test-namespace",
 				},
 			},
-			targetShard: "this-shard",
-			inScope:     true,
+			assertions: func(t *testing.T, result ctrl.Result, err error) {
+				require.NoError(t, err)
+				require.True(t, result.IsZero())
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.inScope, inScope(tt.targetShard, tt.warehouse))
+			r := tt.reconciler()
+			logger := logging.NewLogger(logging.DebugLevel)
+			ctx := logging.ContextWithLogger(t.Context(), logger)
+			result, err := r.Reconcile(ctx, tt.req)
+			tt.assertions(t, result, err)
 		})
 	}
 }
