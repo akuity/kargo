@@ -1012,10 +1012,10 @@ func TestReconcile_ShardMatching(t *testing.T) {
 	require.NoError(t, kargoapi.AddToScheme(testScheme))
 
 	tests := []struct {
-		name       string
-		reconciler func() *reconciler
-		req        ctrl.Request
-		assertions func(*testing.T, ctrl.Result, error)
+		name        string
+		reconciler  func() *reconciler
+		req         ctrl.Request
+		shouldMatch bool
 	}{
 		{
 			name: "Shard mismatch",
@@ -1046,10 +1046,7 @@ func TestReconcile_ShardMatching(t *testing.T) {
 					Namespace: "test-namespace",
 				},
 			},
-			assertions: func(t *testing.T, result ctrl.Result, err error) {
-				require.NoError(t, err)
-				require.True(t, result.IsZero())
-			},
+			shouldMatch: false,
 		},
 		{
 			name: "Shard match",
@@ -1071,48 +1068,9 @@ func TestReconcile_ShardMatching(t *testing.T) {
 					cfg: ReconcilerConfig{
 						ShardName: "right-shard",
 					},
-					discoverArtifactsFn: func(context.Context, *kargoapi.Warehouse) (*kargoapi.DiscoveredArtifacts, error) {
-						return &kargoapi.DiscoveredArtifacts{}, nil
-					},
-					discoverCommitsFn: func(
-						context.Context, string,
-						[]kargoapi.RepoSubscription,
-					) ([]kargoapi.GitDiscoveryResult, error) {
-						return []kargoapi.GitDiscoveryResult{}, nil
-					},
-					discoverImagesFn: func(
-						context.Context, string,
-						[]kargoapi.RepoSubscription,
-					) ([]kargoapi.ImageDiscoveryResult, error) {
-						return []kargoapi.ImageDiscoveryResult{}, nil
-					},
-					discoverChartsFn: func(
-						context.Context, string,
-						[]kargoapi.RepoSubscription,
-					) ([]kargoapi.ChartDiscoveryResult, error) {
-						return []kargoapi.ChartDiscoveryResult{}, nil
-					},
-					buildFreightFromLatestArtifactsFn: func(
-						string,
-						*kargoapi.DiscoveredArtifacts,
-					) (*kargoapi.Freight, error) {
-						return &kargoapi.Freight{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "test-freight",
-								Namespace: "test-namespace",
-							},
-						}, nil
-					},
-					createFreightFn: func(
-						context.Context,
-						client.Object,
-						...client.CreateOption,
-					) error {
-						return nil
-					},
-					patchStatusFn: func(context.Context, *kargoapi.Warehouse, func(*kargoapi.WarehouseStatus)) error {
-						return nil
-					},
+					// Intentionally not setting any xFns for a different reason here.
+					// This time we want the test to panic and assert for it. This will
+					// mean that we made it past the shard check and into the reconcile logic.
 				}
 			},
 			req: ctrl.Request{
@@ -1121,10 +1079,7 @@ func TestReconcile_ShardMatching(t *testing.T) {
 					Namespace: "test-namespace",
 				},
 			},
-			assertions: func(t *testing.T, result ctrl.Result, err error) {
-				require.NoError(t, err)
-				require.True(t, result.IsZero())
-			},
+			shouldMatch: true,
 		},
 	}
 
@@ -1133,8 +1088,15 @@ func TestReconcile_ShardMatching(t *testing.T) {
 			r := tt.reconciler()
 			logger := logging.NewLogger(logging.DebugLevel)
 			ctx := logging.ContextWithLogger(t.Context(), logger)
+			if tt.shouldMatch {
+				require.Panics(t, func() {
+					r.Reconcile(ctx, tt.req)
+				})
+				return
+			}
 			result, err := r.Reconcile(ctx, tt.req)
-			tt.assertions(t, result, err)
+			require.NoError(t, err)
+			require.True(t, result.IsZero())
 		})
 	}
 }
