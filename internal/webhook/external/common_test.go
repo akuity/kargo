@@ -16,3 +16,9 @@ func sign(content []byte) string {
 		hex.EncodeToString(mac.Sum(nil)),
 	)
 }
+
+func signWithoutAlgoPrefix(content []byte) string {
+	mac := hmac.New(sha256.New, []byte(testSigningKey))
+	_, _ = mac.Write(content)
+	return hex.EncodeToString(mac.Sum(nil))
+}
