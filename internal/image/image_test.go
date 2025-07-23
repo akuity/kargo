@@ -13,12 +13,12 @@ func TestNewImage(t *testing.T) {
 	testCases := []struct {
 		name       string
 		tag        string
-		assertions func(*testing.T, Image)
+		assertions func(*testing.T, image)
 	}{
 		{
 			name: "tag is not a semver",
 			tag:  "fake-tag",
-			assertions: func(t *testing.T, image Image) {
+			assertions: func(t *testing.T, image image) {
 				require.Equal(t, "fake-tag", image.Tag)
 				require.Nil(t, image.semVer)
 				require.NotNil(t, image.CreatedAt)
@@ -29,7 +29,7 @@ func TestNewImage(t *testing.T) {
 		{
 			name: "tag is a semver",
 			tag:  "v1.2.3",
-			assertions: func(t *testing.T, image Image) {
+			assertions: func(t *testing.T, image image) {
 				require.Equal(t, "v1.2.3", image.Tag)
 				require.NotNil(t, image.semVer)
 				require.Equal(t, "1.2.3", image.semVer.String())

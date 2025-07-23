@@ -136,6 +136,29 @@ const quay: WebhookReceiverT = {
   ]
 };
 
+const jfrog: WebhookReceiverT = {
+  key: 'artifactory',
+  label: 'JFrog Artifactory',
+  secrets: [
+    {
+      dataKey: 'secret-token',
+      description: (
+        <>
+          The Secret's data map is expected to contain a `secret-token` key whose value is the
+          shared secret used to authenticate the webhook requests sent by JFrog Artifactory. For
+          more information please refer to the
+          <a
+            href='https://jfrog.com/help/r/jfrog-platform-administration-documentation/webhooks'
+            target='_blank'
+          >
+            JFrog Artifactory documentation
+          </a>
+        </>
+      )
+    }
+  ]
+};
+
 const gitea: WebhookReceiverT = {
   key: 'gitea',
   label: 'Gitea',
@@ -195,5 +218,6 @@ export const webhookReceivers: WebhookReceiverT[] = [
   gitea,
   github,
   gitlab,
-  quay
+  quay,
+  jfrog
 ];

@@ -51,7 +51,7 @@ const createFormSchema = (genericCreds: boolean, editing?: boolean) => {
   }
 
   return schema.refine((data) => ['git', 'helm', 'image', 'generic'].includes(data.type), {
-    message: "Type must be one of 'git', 'helm', 'image' or 'generic'."
+    error: "Type must be one of 'git', 'helm', 'image' or 'generic'."
   });
 };
 

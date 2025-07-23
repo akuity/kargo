@@ -3,9 +3,9 @@ include $(CURDIR)/hack/tools.mk
 SHELL	      ?= /bin/bash
 EXTENDED_PATH ?= $(CURDIR)/hack/bin:$(PATH)
 
-ARGO_CD_CHART_VERSION		:= 7.7.0
-ARGO_ROLLOUTS_CHART_VERSION := 2.39.1
-CERT_MANAGER_CHART_VERSION 	:= 1.16.1
+ARGO_CD_CHART_VERSION		:= 8.1.4
+ARGO_ROLLOUTS_CHART_VERSION := 2.40.1
+CERT_MANAGER_CHART_VERSION 	:= 1.18.2
 
 BUF_LINT_ERROR_FORMAT	?= text
 GO_LINT_EXTRA_FLAGS 	?= --output.text.print-issued-lines --output.text.colors

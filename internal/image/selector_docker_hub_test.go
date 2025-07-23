@@ -1,5 +1,5 @@
-//go:build dockerhub
-// +build dockerhub
+//go:build dockerhu
+// +build dockerhu
 
 package image
 
@@ -10,6 +10,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/stretchr/testify/require"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -32,13 +33,13 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	t.Run("digest strategy miss", func(t *testing.T) {
 		s, err := NewSelector(
-			debianRepo,
-			SelectionStrategyDigest,
-			&SelectorOptions{
-				Constraint:     "fake-constraint",
-				Creds:          getDockerHubCreds(),
-				DiscoveryLimit: 1,
+			kargoapi.ImageSubscription{
+				RepoURL:                debianRepo,
+				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
+				SemverConstraint:       "fake-constraint",
+				DiscoveryLimit:         1,
 			},
+			getDockerHubCreds(),
 		)
 		require.NoError(t, err)
 
@@ -49,13 +50,13 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	t.Run("digest strategy success", func(t *testing.T) {
 		s, err := NewSelector(
-			debianRepo,
-			SelectionStrategyDigest,
-			&SelectorOptions{
-				Constraint:     "bookworm",
-				Creds:          getDockerHubCreds(),
-				DiscoveryLimit: 1,
+			kargoapi.ImageSubscription{
+				RepoURL:                debianRepo,
+				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
+				SemverConstraint:       "bookworm",
+				DiscoveryLimit:         1,
 			},
+			getDockerHubCreds(),
 		)
 		require.NoError(t, err)
 
@@ -72,14 +73,14 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	t.Run("digest strategy miss with platform constraint", func(t *testing.T) {
 		s, err := NewSelector(
-			debianRepo,
-			SelectionStrategyDigest,
-			&SelectorOptions{
-				Constraint:     "bookworm",
-				Platform:       "linux/made-up-arch",
-				Creds:          getDockerHubCreds(),
-				DiscoveryLimit: 1,
+			kargoapi.ImageSubscription{
+				RepoURL:                debianRepo,
+				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
+				SemverConstraint:       "bookworm",
+				Platform:               "linux/made-up-arch",
+				DiscoveryLimit:         1,
 			},
+			getDockerHubCreds(),
 		)
 		require.NoError(t, err)
 
@@ -90,14 +91,14 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	t.Run("digest strategy success with platform constraint", func(t *testing.T) {
 		s, err := NewSelector(
-			debianRepo,
-			SelectionStrategyDigest,
-			&SelectorOptions{
-				Constraint:     "bookworm",
-				Platform:       platform,
-				Creds:          getDockerHubCreds(),
-				DiscoveryLimit: 1,
+			kargoapi.ImageSubscription{
+				RepoURL:                debianRepo,
+				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
+				SemverConstraint:       "bookworm",
+				Platform:               platform,
+				DiscoveryLimit:         1,
 			},
+			getDockerHubCreds(),
 		)
 		require.NoError(t, err)
 
@@ -113,13 +114,13 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	t.Run("lexical strategy miss", func(t *testing.T) {
 		s, err := NewSelector(
-			debianRepo,
-			SelectionStrategyLexical,
-			&SelectorOptions{
-				AllowRegex:     "nothing-matches-this",
-				Creds:          getDockerHubCreds(),
-				DiscoveryLimit: 1,
+			kargoapi.ImageSubscription{
+				RepoURL:                debianRepo,
+				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyLexical,
+				AllowTags:              "nothing-matches-this",
+				DiscoveryLimit:         1,
 			},
+			getDockerHubCreds(),
 		)
 		require.NoError(t, err)
 
@@ -130,12 +131,12 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	t.Run("lexical strategy success", func(t *testing.T) {
 		s, err := NewSelector(
-			debianRepo,
-			SelectionStrategyLexical,
-			&SelectorOptions{
-				Creds:          getDockerHubCreds(),
-				DiscoveryLimit: 1,
+			kargoapi.ImageSubscription{
+				RepoURL:                debianRepo,
+				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyLexical,
+				DiscoveryLimit:         1,
 			},
+			getDockerHubCreds(),
 		)
 		require.NoError(t, err)
 
@@ -152,18 +153,18 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	t.Run("lexical strategy miss with platform constraint", func(t *testing.T) {
 		s, err := NewSelector(
-			debianRepo,
-			SelectionStrategyLexical,
-			&SelectorOptions{
+			kargoapi.ImageSubscription{
+				RepoURL:                debianRepo,
+				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyLexical,
 				// Note: If we go older than jessie, we don't seem to get the correct
 				// digest, but jessie is ancient, so for now I am chalking it up to
 				// something having to do with the evolution of the Docker Hub API over
 				// time.
-				AllowRegex:     "^jessie",
+				AllowTags:      "^jessie",
 				Platform:       "linux/made-up-arch",
-				Creds:          getDockerHubCreds(),
 				DiscoveryLimit: 1,
 			},
+			getDockerHubCreds(),
 		)
 		require.NoError(t, err)
 
@@ -174,14 +175,14 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	t.Run("lexical strategy success with platform constraint", func(t *testing.T) {
 		s, err := NewSelector(
-			debianRepo,
-			SelectionStrategyLexical,
-			&SelectorOptions{
-				AllowRegex:     "^jessie",
-				Platform:       platform,
-				Creds:          getDockerHubCreds(),
-				DiscoveryLimit: 1,
+			kargoapi.ImageSubscription{
+				RepoURL:                debianRepo,
+				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyLexical,
+				AllowTags:              "^jessie",
+				Platform:               platform,
+				DiscoveryLimit:         1,
 			},
+			getDockerHubCreds(),
 		)
 		require.NoError(t, err)
 
@@ -197,13 +198,13 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	t.Run("newest build strategy miss", func(t *testing.T) {
 		s, err := NewSelector(
-			debianRepo,
-			SelectionStrategyNewestBuild,
-			&SelectorOptions{
-				AllowRegex:     "nothing-matches-this",
-				Creds:          getDockerHubCreds(),
-				DiscoveryLimit: 1,
+			kargoapi.ImageSubscription{
+				RepoURL:                debianRepo,
+				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyNewestBuild,
+				AllowTags:              "nothing-matches-this",
+				DiscoveryLimit:         1,
 			},
+			getDockerHubCreds(),
 		)
 		require.NoError(t, err)
 
@@ -214,13 +215,13 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	t.Run("newest build strategy success", func(t *testing.T) {
 		s, err := NewSelector(
-			debianRepo,
-			SelectionStrategyNewestBuild,
-			&SelectorOptions{
-				AllowRegex:     `^bookworm-202310\d\d$`,
-				Creds:          getDockerHubCreds(),
-				DiscoveryLimit: 1,
+			kargoapi.ImageSubscription{
+				RepoURL:                debianRepo,
+				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyNewestBuild,
+				AllowTags:              `^bookworm-202310\d\d$`,
+				DiscoveryLimit:         1,
 			},
+			getDockerHubCreds(),
 		)
 		require.NoError(t, err)
 
@@ -236,14 +237,14 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	t.Run("newest build strategy miss with platform constraint", func(t *testing.T) {
 		s, err := NewSelector(
-			debianRepo,
-			SelectionStrategyNewestBuild,
-			&SelectorOptions{
-				AllowRegex:     `^bookworm-202310\d\d$`,
-				Platform:       "linux/made-up-arch",
-				Creds:          getDockerHubCreds(),
-				DiscoveryLimit: 1,
+			kargoapi.ImageSubscription{
+				RepoURL:                debianRepo,
+				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyNewestBuild,
+				AllowTags:              `^bookworm-202310\d\d$`,
+				Platform:               "linux/made-up-arch",
+				DiscoveryLimit:         1,
 			},
+			getDockerHubCreds(),
 		)
 		require.NoError(t, err)
 
@@ -254,14 +255,14 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	t.Run("newest build strategy success with platform constraint", func(t *testing.T) {
 		s, err := NewSelector(
-			debianRepo,
-			SelectionStrategyNewestBuild,
-			&SelectorOptions{
-				AllowRegex:     `^bookworm-202310\d\d$`,
-				Platform:       platform,
-				Creds:          getDockerHubCreds(),
-				DiscoveryLimit: 1,
+			kargoapi.ImageSubscription{
+				RepoURL:                debianRepo,
+				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyNewestBuild,
+				AllowTags:              `^bookworm-202310\d\d$`,
+				Platform:               platform,
+				DiscoveryLimit:         1,
 			},
+			getDockerHubCreds(),
 		)
 		require.NoError(t, err)
 
@@ -277,13 +278,13 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	t.Run("semver strategy miss", func(t *testing.T) {
 		s, err := NewSelector(
-			debianRepo,
-			SelectionStrategySemVer,
-			&SelectorOptions{
-				Constraint:     "^99.0",
-				Creds:          getDockerHubCreds(),
-				DiscoveryLimit: 1,
+			kargoapi.ImageSubscription{
+				RepoURL:                debianRepo,
+				ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+				SemverConstraint:       "^99.0",
+				DiscoveryLimit:         1,
 			},
+			getDockerHubCreds(),
 		)
 		require.NoError(t, err)
 
@@ -294,13 +295,13 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	t.Run("semver strategy success", func(t *testing.T) {
 		s, err := NewSelector(
-			debianRepo,
-			SelectionStrategySemVer,
-			&SelectorOptions{
-				Constraint:     "^12.0",
-				Creds:          getDockerHubCreds(),
-				DiscoveryLimit: 1,
+			kargoapi.ImageSubscription{
+				RepoURL:                debianRepo,
+				ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+				SemverConstraint:       "^12.0",
+				DiscoveryLimit:         1,
 			},
+			getDockerHubCreds(),
 		)
 		require.NoError(t, err)
 
@@ -320,14 +321,14 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	t.Run("semver strategy miss with platform constraint", func(t *testing.T) {
 		s, err := NewSelector(
-			debianRepo,
-			SelectionStrategySemVer,
-			&SelectorOptions{
-				Constraint:     "^12.0",
-				Platform:       "linux/made-up-arch",
-				Creds:          getDockerHubCreds(),
-				DiscoveryLimit: 1,
+			kargoapi.ImageSubscription{
+				RepoURL:                debianRepo,
+				ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+				SemverConstraint:       "^12.0",
+				Platform:               "linux/made-up-arch",
+				DiscoveryLimit:         1,
 			},
+			getDockerHubCreds(),
 		)
 		require.NoError(t, err)
 
@@ -338,14 +339,14 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	t.Run("semver strategy success with platform constraint", func(t *testing.T) {
 		s, err := NewSelector(
-			debianRepo,
-			SelectionStrategySemVer,
-			&SelectorOptions{
-				Constraint:     "^12.0",
-				Platform:       platform,
-				Creds:          getDockerHubCreds(),
-				DiscoveryLimit: 1,
+			kargoapi.ImageSubscription{
+				RepoURL:                debianRepo,
+				ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+				SemverConstraint:       "^12.0",
+				Platform:               platform,
+				DiscoveryLimit:         1,
 			},
+			getDockerHubCreds(),
 		)
 		require.NoError(t, err)
 
