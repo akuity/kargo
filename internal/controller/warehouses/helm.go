@@ -7,6 +7,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/helm"
+	"github.com/akuity/kargo/internal/helm/chart"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -53,21 +54,18 @@ func (r *reconciler) discoverCharts(
 			logger = logger.WithValues("semverConstraint", sub.SemverConstraint)
 		}
 
-		// Discover versions of the chart based on the semver constraint.
-		versions, err := r.discoverChartVersionsFn(ctx, sub.RepoURL, sub.Name, sub.SemverConstraint, helmCreds)
+		selector, err := chart.NewSelector(*s.Chart, helmCreds)
 		if err != nil {
-			if sub.Name == "" {
-				return nil, fmt.Errorf(
-					"error discovering latest chart versions in repository %q: %w",
-					sub.RepoURL,
-					err,
-				)
-			}
 			return nil, fmt.Errorf(
-				"error discovering latest chart versions for chart %q in repository %q: %w",
-				sub.Name,
-				sub.RepoURL,
-				err,
+				"error obtaining selector for chart versions from helm chart repo %q: %w",
+				sub.RepoURL, err,
+			)
+		}
+		versions, err := selector.Select(ctx)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"error discovering chart versions from helm chart repo %q: %w",
+				sub.RepoURL, err,
 			)
 		}
 

@@ -448,6 +448,11 @@ spec:
             description: Status describes the Stage's current and recent Freight,
               health, and more.
             properties:
+              autoPromotionEnabled:
+                description: |-
+                  AutoPromotionEnabled indicates whether automatic promotion is enabled
+                  for the Stage based on the ProjectConfig.
+                type: boolean
               conditions:
                 description: |-
                   Conditions contains the last observations of the Stage's current

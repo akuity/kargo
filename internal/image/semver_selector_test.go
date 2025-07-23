@@ -1,86 +1,175 @@
 package image
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-func TestNewSemVerSelector(t *testing.T) {
-	testOpts := SelectorOptions{
-		AllowRegex:     "fake-regex",
-		Ignore:         []string{"fake-ignore"},
-		Platform:       "linux/amd64",
-		DiscoveryLimit: 10,
-	}
+func TestNewSemverSelectorTest(t *testing.T) {
 	testCases := []struct {
 		name       string
-		constraint string
-		assertions func(t *testing.T, s Selector, err error)
+		sub        kargoapi.ImageSubscription
+		assertions func(*testing.T, Selector, error)
 	}{
 		{
-			name:       "invalid semver constraint",
-			constraint: "invalid",
+			name: "error building tag based selector",
+			sub:  kargoapi.ImageSubscription{}, // No RepoURL
+			assertions: func(t *testing.T, _ Selector, err error) {
+				require.ErrorContains(t, err, "error building tag based selector")
+			},
+		},
+		{
+			name: "error parsing semver constraint",
+			sub: kargoapi.ImageSubscription{
+				RepoURL:          "example/image",
+				SemverConstraint: "invalid",
+			},
 			assertions: func(t *testing.T, _ Selector, err error) {
 				require.ErrorContains(t, err, "error parsing semver constraint")
 			},
 		},
 		{
-			name:       "no semver constraint",
-			constraint: "",
-			assertions: func(t *testing.T, s Selector, err error) {
-				require.NoError(t, err)
-				selector, ok := s.(*semVerSelector)
-				require.True(t, ok)
-				require.Equal(t, testOpts, selector.opts)
-				require.Nil(t, selector.constraint)
+			name: "success",
+			sub: kargoapi.ImageSubscription{
+				RepoURL:          "example/image",
+				SemverConstraint: "^v1.0.0",
 			},
-		},
-		{
-			name:       "valid semver constraint",
-			constraint: "^1.24",
-			assertions: func(t *testing.T, s Selector, err error) {
+			assertions: func(t *testing.T, sel Selector, err error) {
 				require.NoError(t, err)
-				selector, ok := s.(*semVerSelector)
+				s, ok := sel.(*semverSelector)
 				require.True(t, ok)
-				require.Equal(t, testOpts, selector.opts)
-				require.NotNil(t, selector.constraint)
+				require.NotNil(t, s.tagBasedSelector)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testOpts.Constraint = testCase.constraint
-			s, err := newSemVerSelector(nil, testOpts)
+			s, err := newSemverSelector(testCase.sub, nil)
 			testCase.assertions(t, s, err)
 		})
 	}
 }
 
-func TestSortImagesBySemver(t *testing.T) {
-	images := []Image{
-		newImage("5.0.0", "", nil),
-		newImage("0.0.1", "", nil),
-		newImage("0.2.1", "", nil),
-		newImage("0.1.1", "", nil),
-		newImage("1.1.1", "", nil),
-		newImage("7.0.6", "", nil),
-		newImage("1.0.0", "", nil),
-		newImage("1.0.2", "", nil),
+func Test_semverSelector_MatchesTag(t *testing.T) {
+	testCases := []struct {
+		name        string
+		selector    *semverSelector
+		tag         string
+		shouldMatch bool
+	}{
+		{
+			name:        "non semver ignored",
+			selector:    &semverSelector{tagBasedSelector: &tagBasedSelector{}},
+			tag:         "foo",
+			shouldMatch: false,
+		},
+		{
+			name: "non strict semver ignored",
+			selector: &semverSelector{
+				tagBasedSelector: &tagBasedSelector{},
+				strictSemvers:    true,
+			},
+			tag:         "v1.0", // Not strict
+			shouldMatch: false,
+		},
+		{
+			name:        "no regex specified",
+			selector:    &semverSelector{tagBasedSelector: &tagBasedSelector{}},
+			tag:         "v1.0.0",
+			shouldMatch: true,
+		},
+		{
+			name: "regex matches",
+			selector: &semverSelector{
+				tagBasedSelector: &tagBasedSelector{
+					allows: regexp.MustCompile(`^v1\.`),
+				},
+			},
+			tag:         "v1.0.0",
+			shouldMatch: true,
+		},
+		{
+			name: "regex does not match",
+			selector: &semverSelector{
+				tagBasedSelector: &tagBasedSelector{
+					allows: regexp.MustCompile(`^v1\.`),
+				},
+			},
+			tag:         "v2.0.0",
+			shouldMatch: false,
+		},
+		{
+			name: "ignored",
+			selector: &semverSelector{
+				tagBasedSelector: &tagBasedSelector{
+					ignores: []string{"v2.0.0"}},
+			},
+			tag:         "v2.0.0",
+			shouldMatch: false,
+		},
+		{
+			name: "not ignored",
+			selector: &semverSelector{
+				tagBasedSelector: &tagBasedSelector{
+					ignores: []string{"v2.0.0"},
+				},
+			},
+			tag:         "v1.0.0",
+			shouldMatch: true,
+		},
+		{
+			name: "regex matches, but ignored",
+			selector: &semverSelector{
+				tagBasedSelector: &tagBasedSelector{
+					allows:  regexp.MustCompile(`^v1\.`),
+					ignores: []string{"v1.0.0"},
+				},
+			},
+			tag:         "v1.0.0",
+			shouldMatch: false,
+		},
 	}
-	sortImagesBySemVer(images)
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(
+				t,
+				testCase.shouldMatch,
+				testCase.selector.MatchesTag(testCase.tag),
+			)
+		})
+	}
+}
+
+func Test_semVerSelector_sort(t *testing.T) {
+	unsorted := []string{
+		"5.0.0",
+		"0.0.1",
+		"0.2.1",
+		"0.1.1",
+		"1.1.1",
+		"7.0.6",
+		"1.0.0",
+		"1.0.2",
+	}
+
+	sorted := (&semverSelector{}).sort(unsorted)
+
 	require.Equal(
 		t,
-		[]Image{
-			newImage("7.0.6", "", nil),
-			newImage("5.0.0", "", nil),
-			newImage("1.1.1", "", nil),
-			newImage("1.0.2", "", nil),
-			newImage("1.0.0", "", nil),
-			newImage("0.2.1", "", nil),
-			newImage("0.1.1", "", nil),
-			newImage("0.0.1", "", nil),
+		[]string{
+			"7.0.6",
+			"5.0.0",
+			"1.1.1",
+			"1.0.2",
+			"1.0.0",
+			"0.2.1",
+			"0.1.1",
+			"0.0.1",
 		},
-		images,
+		sorted,
 	)
 }
