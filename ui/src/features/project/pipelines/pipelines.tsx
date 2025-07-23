@@ -39,9 +39,6 @@ import { FreightTimeline } from './freight/freight-timeline';
 import { Graph } from './graph/graph';
 import { GraphFilters } from './graph-filters';
 import { Images } from './images';
-import { ImagesCompactCard } from './images-compact-cards';
-import { ImagesDynamicGrid } from './images-dynamic-grid';
-import { ImagesOptimizedGrid } from './images-optimized-grid';
 import { PipelineListView } from './list/list-view';
 import { Promote } from './promotion/promote';
 import { Promotion } from './promotion/promotion';
@@ -80,9 +77,6 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
   const projectName = name;
 
   const [pipelineView, setPipelineView] = useState<'graph' | 'list'>('graph');
-  const [imageView, setImageView] = useState<
-    'card' | 'compact-cards' | 'dynamic-grid' | 'optimized-grid'
-  >('card');
 
   const listImagesQuery = useQuery(listImages, { project: name });
 
@@ -273,34 +267,15 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                 >
                   <Button icon={<FontAwesomeIcon icon={faPlus} />}>Create</Button>
                 </Dropdown>
-                <Dropdown
-                  menu={{
-                    items: [
-                      {
-                        key: '0',
-                        label: 'Card',
-                        onClick: () => setImageView('card')
-                      },
-                      {
-                        key: '1',
-                        label: 'Compact Cards',
-                        onClick: () => setImageView('compact-cards')
-                      },
-                      {
-                        key: '2',
-                        label: 'Dynamic Grid',
-                        onClick: () => setImageView('dynamic-grid')
-                      },
-                      {
-                        key: '3',
-                        label: 'Optimized Grid',
-                        onClick: () => setImageView('optimized-grid')
-                      }
-                    ]
-                  }}
-                >
-                  <Button icon={<FontAwesomeIcon icon={faDocker} />}>Images</Button>
-                </Dropdown>
+                <Button
+                  icon={<FontAwesomeIcon icon={faDocker} />}
+                  onClick={() =>
+                    setPreferredFilter({
+                      ...preferredFilter,
+                      images: !preferredFilter?.images
+                    })
+                  }
+                />
               </Flex>
               <div
                 className={classNames(
@@ -311,62 +286,18 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                   }
                 )}
               >
-                {imageView === 'card' && (
-                  <Images
-                    hide={() =>
-                      setPreferredFilter({
-                        ...preferredFilter,
-                        images: !preferredFilter?.images
-                      })
-                    }
-                    images={listImagesQuery.data?.images || {}}
-                    project={projectName || ''}
-                    stages={listStagesQuery.data?.stages || []}
-                    warehouses={listWarehousesQuery.data?.warehouses || []}
-                  />
-                )}
-                {imageView === 'compact-cards' && (
-                  <ImagesCompactCard
-                    hide={() =>
-                      setPreferredFilter({
-                        ...preferredFilter,
-                        images: !preferredFilter?.images
-                      })
-                    }
-                    images={listImagesQuery.data?.images || {}}
-                    project={projectName || ''}
-                    stages={listStagesQuery.data?.stages || []}
-                    warehouses={listWarehousesQuery.data?.warehouses || []}
-                  />
-                )}
-                {imageView === 'dynamic-grid' && (
-                  <ImagesDynamicGrid
-                    hide={() =>
-                      setPreferredFilter({
-                        ...preferredFilter,
-                        images: !preferredFilter?.images
-                      })
-                    }
-                    images={listImagesQuery.data?.images || {}}
-                    project={projectName || ''}
-                    stages={listStagesQuery.data?.stages || []}
-                    warehouses={listWarehousesQuery.data?.warehouses || []}
-                  />
-                )}
-                {imageView === 'optimized-grid' && (
-                  <ImagesOptimizedGrid
-                    hide={() =>
-                      setPreferredFilter({
-                        ...preferredFilter,
-                        images: !preferredFilter?.images
-                      })
-                    }
-                    images={listImagesQuery.data?.images || {}}
-                    project={projectName || ''}
-                    stages={listStagesQuery.data?.stages || []}
-                    warehouses={listWarehousesQuery.data?.warehouses || []}
-                  />
-                )}
+                <Images
+                  hide={() =>
+                    setPreferredFilter({
+                      ...preferredFilter,
+                      images: !preferredFilter?.images
+                    })
+                  }
+                  images={listImagesQuery.data?.images || {}}
+                  project={projectName || ''}
+                  stages={listStagesQuery.data?.stages || []}
+                  warehouses={listWarehousesQuery.data?.warehouses || []}
+                />
               </div>
               {pipelineView === 'graph' && (
                 <Graph
