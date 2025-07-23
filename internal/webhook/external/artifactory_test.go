@@ -18,8 +18,6 @@ import (
 	"github.com/akuity/kargo/internal/indexer"
 )
 
-const artifactorySigningKey = "mysupersecrettoken"
-
 func TestArtifactoryHandler(t *testing.T) {
 	const testURL = "https://webhooks.kargo.example.com/nonsense"
 
@@ -65,7 +63,7 @@ func TestArtifactoryHandler(t *testing.T) {
 	require.NoError(t, kargoapi.AddToScheme(testScheme))
 
 	testSecretData := map[string][]byte{
-		artifactorySecretDataKey: []byte(artifactorySigningKey),
+		artifactorySecretDataKey: []byte(testSigningKey),
 	}
 
 	testCases := []struct {
@@ -98,7 +96,7 @@ func TestArtifactoryHandler(t *testing.T) {
 					testURL,
 					body,
 				)
-				req.Header.Set(artifactoryAuthHeader, signWithArtifactory(body.Bytes()))
+				req.Header.Set(artifactoryAuthHeader, signWithoutAlgoPrefix(body.Bytes()))
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -123,7 +121,7 @@ func TestArtifactoryHandler(t *testing.T) {
 					testURL,
 					body,
 				)
-				req.Header.Set(artifactoryAuthHeader, signWithArtifactory(body.Bytes()))
+				req.Header.Set(artifactoryAuthHeader, signWithoutAlgoPrefix(body.Bytes()))
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -167,7 +165,7 @@ func TestArtifactoryHandler(t *testing.T) {
 				body := []byte("invalid json")
 				bodyBuf := bytes.NewBuffer(body)
 				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
-				req.Header.Set(artifactoryAuthHeader, signWithArtifactory(body))
+				req.Header.Set(artifactoryAuthHeader, signWithoutAlgoPrefix(body))
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -205,7 +203,7 @@ func TestArtifactoryHandler(t *testing.T) {
 					testURL,
 					bytes.NewBuffer(bodyBytes),
 				)
-				req.Header.Set(artifactoryAuthHeader, signWithArtifactory(bodyBytes))
+				req.Header.Set(artifactoryAuthHeader, signWithoutAlgoPrefix(bodyBytes))
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -243,7 +241,7 @@ func TestArtifactoryHandler(t *testing.T) {
 					testURL,
 					bytes.NewBuffer(bodyBytes),
 				)
-				req.Header.Set(artifactoryAuthHeader, signWithArtifactory(bodyBytes))
+				req.Header.Set(artifactoryAuthHeader, signWithoutAlgoPrefix(bodyBytes))
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -281,7 +279,7 @@ func TestArtifactoryHandler(t *testing.T) {
 					testURL,
 					bytes.NewBuffer(bodyBytes),
 				)
-				req.Header.Set(artifactoryAuthHeader, signWithArtifactory(bodyBytes))
+				req.Header.Set(artifactoryAuthHeader, signWithoutAlgoPrefix(bodyBytes))
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
