@@ -2,9 +2,9 @@
 
 set -x
 
-argo_cd_chart_version=7.7.0
-argo_rollouts_chart_version=2.39.1
-cert_manager_chart_version=1.16.1
+argo_cd_chart_version=8.1.4
+argo_rollouts_chart_version=2.40.1
+cert_manager_chart_version=1.18.2
 
 kind create cluster \
   --wait 120s \

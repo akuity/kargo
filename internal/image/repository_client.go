@@ -49,32 +49,32 @@ type repositoryClient struct {
 		context.Context,
 		string,
 		*platformConstraint,
-	) (*Image, error)
+	) (*image, error)
 
 	getImageByDigestFn func(
 		context.Context,
 		string,
 		*platformConstraint,
-	) (*Image, error)
+	) (*image, error)
 
 	getImageFromRemoteDescFn func(
 		context.Context,
 		*remote.Descriptor,
 		*platformConstraint,
-	) (*Image, error)
+	) (*image, error)
 
 	getImageFromV1ImageIndexFn func(
 		ctx context.Context,
 		digest string,
 		idx v1.ImageIndex,
 		platform *platformConstraint,
-	) (*Image, error)
+	) (*image, error)
 
 	getImageFromV1ImageFn func(
 		digest string,
 		img v1.Image,
 		platform *platformConstraint,
-	) (*Image, error)
+	) (*image, error)
 
 	remoteListFn func(name.Repository, ...remote.Option) ([]string, error)
 
@@ -149,7 +149,7 @@ func (r *repositoryClient) getImageByTag(
 	ctx context.Context,
 	tag string,
 	platform *platformConstraint,
-) (*Image, error) {
+) (*image, error) {
 	repoRef := r.repoRef.Context().Tag(tag)
 	opts := append(r.remoteOptions, remote.WithContext(ctx))
 	desc, err := r.remoteGetFn(repoRef, opts...)
@@ -178,7 +178,7 @@ func (r *repositoryClient) getImageByDigest(
 	ctx context.Context,
 	digest string,
 	platform *platformConstraint,
-) (*Image, error) {
+) (*image, error) {
 	logger := logging.LoggerFromContext(ctx)
 	logger.Trace(
 		"retrieving image",
@@ -186,8 +186,8 @@ func (r *repositoryClient) getImageByDigest(
 	)
 
 	if entry, exists := r.registry.imageCache.Get(digest); exists {
-		image := entry.(Image) // nolint: forcetypeassert
-		return &image, nil
+		img := entry.(image) // nolint: forcetypeassert
+		return &img, nil
 	}
 
 	logger.Trace(
@@ -230,7 +230,7 @@ func (r *repositoryClient) getImageFromRemoteDesc(
 	ctx context.Context,
 	desc *remote.Descriptor,
 	platform *platformConstraint,
-) (*Image, error) {
+) (*image, error) {
 	switch desc.MediaType {
 	case types.OCIImageIndex, types.DockerManifestList:
 		idx, err := desc.ImageIndex()
@@ -298,7 +298,7 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 	digest string,
 	idx v1.ImageIndex,
 	platform *platformConstraint,
-) (*Image, error) {
+) (*image, error) {
 	idxManifest, err := idx.IndexManifest()
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -399,7 +399,7 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 		// this in the future.
 	}
 
-	return &Image{
+	return &image{
 		Digest:      digest,
 		CreatedAt:   createdAt,
 		Annotations: annotations,
@@ -413,7 +413,7 @@ func (r *repositoryClient) getImageFromV1Image(
 	digest string,
 	img v1.Image,
 	platform *platformConstraint,
-) (*Image, error) {
+) (*image, error) {
 	cfg, err := img.ConfigFile()
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -435,7 +435,7 @@ func (r *repositoryClient) getImageFromV1Image(
 		)
 	}
 
-	return &Image{
+	return &image{
 		Digest:      digest,
 		CreatedAt:   &cfg.Created.Time,
 		Annotations: manifest.Annotations,

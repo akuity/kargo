@@ -1695,6 +1695,10 @@ message StageStatus {
 
   // LastPromotion is a reference to the last completed promotion.
   optional PromotionReference lastPromotion = 10;
+
+  // AutoPromotionEnabled indicates whether automatic promotion is enabled
+  // for the Stage based on the ProjectConfig.
+  optional bool autoPromotionEnabled = 14;
 }
 
 // StepExecutionMetadata tracks metadata pertaining to the execution of
