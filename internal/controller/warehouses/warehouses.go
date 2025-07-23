@@ -50,10 +50,9 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 
 // reconciler reconciles Warehouse resources.
 type reconciler struct {
-	client                    client.Client
-	credentialsDB             credentials.Database
-	minReconciliationInterval time.Duration
-	name                      string
+	client        client.Client
+	credentialsDB credentials.Database
+	cfg           ReconcilerConfig
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -132,13 +131,12 @@ func newReconciler(
 	cfg ReconcilerConfig,
 ) *reconciler {
 	r := &reconciler{
-		client:                    kubeClient,
-		credentialsDB:             credentialsDB,
-		minReconciliationInterval: cfg.MinReconciliationInterval,
-		gitCloneFn:                git.Clone,
-		discoverChartVersionsFn:   helm.DiscoverChartVersions,
-		createFreightFn:           kubeClient.Create,
-		name:                      cfg.Name(),
+		client:                  kubeClient,
+		credentialsDB:           credentialsDB,
+		cfg:                     cfg,
+		gitCloneFn:              git.Clone,
+		discoverChartVersionsFn: helm.DiscoverChartVersions,
+		createFreightFn:         kubeClient.Create,
 	}
 
 	r.discoverArtifactsFn = r.discoverArtifacts
@@ -182,7 +180,7 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	if !inScope(r.name, warehouse) {
+	if !inScope(r.cfg.Name(), warehouse) {
 		logger.Debug("ignoring Warehouse because it is not in scope")
 		return ctrl.Result{}, nil
 	}
@@ -219,7 +217,7 @@ func (r *reconciler) Reconcile(
 
 	// Everything succeeded, look for new changes on the defined interval.
 	return ctrl.Result{
-		RequeueAfter: warehouse.GetInterval(r.minReconciliationInterval),
+		RequeueAfter: warehouse.GetInterval(r.cfg.MinReconciliationInterval),
 	}, nil
 }
 
