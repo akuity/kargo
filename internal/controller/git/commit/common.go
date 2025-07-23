@@ -49,8 +49,8 @@ func matchesPathsFilters(
 }
 
 func shortenString(str string, length int) string {
-	if length >= 0 && len(str) > length {
-		return str[:length] + "..."
+	if length >= 3 && len(str) > length {
+		return str[:length-3] + "..."
 	}
 	return str
 }

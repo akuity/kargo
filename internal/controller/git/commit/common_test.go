@@ -220,7 +220,7 @@ func TestShortenString(t *testing.T) {
 			name:   "exceeds length",
 			str:    "this is a long string",
 			length: 10,
-			want:   "this is a ...",
+			want:   "this is...",
 		},
 		{
 			name:   "equal length",
