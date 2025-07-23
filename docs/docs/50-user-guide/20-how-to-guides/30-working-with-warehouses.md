@@ -104,17 +104,15 @@ field specifies a method for selecting the desired image. The available
 strategies are:
 
 - `SemVer`: Selects the image with the tag that best matches a semantic
-  versioning constraint specified by the `constraint` field. With no
-  constraint specified, the strategy simply selects the image with the
+  versioning constraint specified by the `constraint` field. If no such
+  constraint is specified, the strategy simply selects the image with the
   semantically greatest tag. All tags that are not valid semantic versions are
   ignored.
 
     :::note
-    Prior to Kargo v1.7, the `semverConstraint` field was used
-    to define semantic version constraints for container image
-    subscriptions. This field is now deprecated and will be removed
-    in v1.9.0. Users should use the `constraint` field instead, which
-    supports the same syntax and semantics when used with the `SemVer` strategy.
+    If the `constraint` field is empty, any constraints defined by the
+    deprecated `semverConstraint` field will be applied instead. The
+    `semverConstraint` field will be removed in v1.9.0.
     :::
 
    The `strictSemvers` field defaults to `true`, meaning only tags containing
@@ -162,19 +160,15 @@ strategies are:
           allowTags: ^nightly-\d{8}$
     ```
 
-- `Digest`: This selects the image _currently_ referenced by some "mutable tag,"
-   such as `latest`.
+- `Digest`: This selects the image _currently_ referenced by some "mutable tag"
+   (such as `latest`) specified by the `constraint` field.
 
-    The mutable tag name must be specified using the `constraint` field. This field
-    should be set to a valid tag name (e.g., "latest"). The selected image will
-    track the digest associated with that tag, which may change over time as new
-    images are pushed.
 
     :::note
-    Prior to Kargo v1.7, the `semverConstraint` field was used to
-    specify the mutable tag name. This field is now deprecated
-    and will be removed in v1.9.0. Users should use the `constraint` field
-    instead.
+    If the `constraint` field is empty, the name of the mutable tag will
+    (unintuitively) be determined by the value of the deprecated
+    `semverConstraint` field. The `semverConstraint` field will be removed in
+    v1.9.0.
     :::
 
     :::warning
