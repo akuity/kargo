@@ -319,7 +319,6 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// Safety check: do not reconcile Stages that are control flow Stages.
 	if stage.IsControlFlow() {
-		logger.Debug("ignoring Stage because it is a control flow Stage")
 		return ctrl.Result{}, nil
 	}
 
