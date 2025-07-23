@@ -163,7 +163,6 @@ strategies are:
 - `Digest`: This selects the image _currently_ referenced by some "mutable tag"
    (such as `latest`) specified by the `constraint` field.
 
-
     :::note
     If the `constraint` field is empty, the name of the mutable tag will
     (unintuitively) be determined by the value of the deprecated
