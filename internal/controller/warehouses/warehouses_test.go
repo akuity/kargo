@@ -1090,7 +1090,7 @@ func TestReconcile_ShardMatching(t *testing.T) {
 			ctx := logging.ContextWithLogger(t.Context(), logger)
 			if tt.shouldMatch {
 				require.Panics(t, func() {
-					r.Reconcile(ctx, tt.req)
+					r.Reconcile(ctx, tt.req) //nolint:errcheck
 				})
 				return
 			}

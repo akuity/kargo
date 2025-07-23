@@ -319,10 +319,11 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// Safety check: do not reconcile Stages that are control flow Stages.
 	if stage.IsControlFlow() {
+		logger.Debug("ignoring Stage because it is a control flow Stage")
 		return ctrl.Result{}, nil
 	}
 
-	if !inScope(r.cfg.Name(), stage) {
+	if stage.GetLabels()[kargoapi.LabelKeyShard] != r.cfg.ShardName {
 		logger.Debug("ignoring Stage because it is not in scope")
 		return ctrl.Result{}, nil
 	}
@@ -1979,11 +1980,6 @@ func (r *RegularStageReconciler) clearAnalysisRuns(ctx context.Context, stage *k
 		)
 	}
 	return nil
-}
-
-func inScope(targetShard string, stage *kargoapi.Stage) bool {
-	shard, labeled := stage.GetLabels()[kargoapi.LabelKeyShard]
-	return !labeled || shard == targetShard
 }
 
 // summarizeConditions summarizes the conditions of the given Stage. It sets the

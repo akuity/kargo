@@ -27,6 +27,7 @@ import (
 	"github.com/akuity/kargo/internal/health"
 	"github.com/akuity/kargo/internal/indexer"
 	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
+	"github.com/akuity/kargo/internal/logging"
 	healthPkg "github.com/akuity/kargo/pkg/health"
 )
 
@@ -6578,48 +6579,103 @@ func Test_buildFreightSummary(t *testing.T) {
 	}
 }
 
-func TestInScope(t *testing.T) {
+func TestReconcile_ShardMatching(t *testing.T) {
+	testScheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(testScheme))
+
 	tests := []struct {
 		name        string
-		stage       *kargoapi.Stage
-		targetShard string
-		inScope     bool
+		reconciler  func() *RegularStageReconciler
+		req         ctrl.Request
+		shouldMatch bool
 	}{
 		{
-			name:        "Stage not labeled",
-			stage:       new(kargoapi.Stage),
-			targetShard: "this-shard",
-			inScope:     true,
-		},
-		{
-			name: "Stage labeled for different shard",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						kargoapi.LabelKeyShard: "other-shard",
-					},
+			name: "Shard mismatch",
+			reconciler: func() *RegularStageReconciler {
+				return &RegularStageReconciler{
+					client: fake.NewClientBuilder().
+						WithScheme(testScheme).
+						WithObjects(
+							&kargoapi.Stage{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "test-stage",
+									Namespace: "test-namespace",
+									Labels: map[string]string{
+										kargoapi.LabelKeyShard: "wrong-shard",
+									},
+								},
+							},
+						).Build(),
+					cfg: ReconcilerConfig{ShardName: "right-shard"},
+					// Intentionally not setting any xFns because we should never reach them
+					// because we will exit before any reconciliation logic is executed.
+					// With that said, there is nothing that needs to be asserted here
+				}
+			},
+			req: ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      "test-stage",
+					Namespace: "test-namespace",
 				},
 			},
-			targetShard: "this-shard",
-			inScope:     false,
+			shouldMatch: false,
 		},
 		{
-			name: "Stage labeled for correct shard",
-			stage: &kargoapi.Stage{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						kargoapi.LabelKeyShard: "this-shard",
+			name: "Shard match",
+			reconciler: func() *RegularStageReconciler {
+				return &RegularStageReconciler{
+					client: fake.NewClientBuilder().
+						WithScheme(testScheme).
+						WithObjects(
+							&kargoapi.Stage{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "test-stage",
+									Namespace: "test-namespace",
+									Labels: map[string]string{
+										kargoapi.LabelKeyShard: "right-shard",
+									},
+								},
+								Spec: kargoapi.StageSpec{
+									// the promotion template is only necessary to get passed the
+									// stage.IsControlFlow() check in the reconcile logic.
+									PromotionTemplate: &kargoapi.PromotionTemplate{
+										Spec: kargoapi.PromotionTemplateSpec{
+											Steps: []kargoapi.PromotionStep{
+												{Uses: "fake-step"},
+											},
+										},
+									},
+								},
+							},
+						).Build(),
+					cfg: ReconcilerConfig{
+						ShardName: "right-shard",
 					},
+				}
+			},
+			req: ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      "test-stage",
+					Namespace: "test-namespace",
 				},
 			},
-			targetShard: "this-shard",
-			inScope:     true,
+			shouldMatch: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.inScope, inScope(tt.targetShard, tt.stage))
+			r := tt.reconciler()
+			logger := logging.NewLogger(logging.DebugLevel)
+			ctx := logging.ContextWithLogger(t.Context(), logger)
+			if tt.shouldMatch {
+				_, err := r.Reconcile(ctx, tt.req)
+				require.NoError(t, err)
+				return
+			}
+			result, err := r.Reconcile(ctx, tt.req)
+			require.NoError(t, err)
+			require.True(t, result.IsZero())
 		})
 	}
 }
