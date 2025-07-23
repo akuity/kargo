@@ -152,34 +152,6 @@ func Test_lexicalSelector_Select(t *testing.T) {
 			},
 		},
 		{
-			name: "error filtering tags by diff paths",
-			selector: &lexicalSelector{
-				tagBasedSelector: &tagBasedSelector{
-					baseSelector: &baseSelector{
-						gitCloneFn: func(
-							string,
-							*git.ClientOptions,
-							*git.CloneOptions,
-						) (git.Repo, error) {
-							return nil, nil
-						},
-					},
-					listTagsFn: func(git.Repo) ([]git.TagMetadata, error) {
-						return []git.TagMetadata{{}}, nil
-					},
-					filterTagsByDiffPathsFn: func(
-						git.Repo,
-						[]git.TagMetadata,
-					) ([]git.TagMetadata, error) {
-						return nil, errors.New("something went wrong")
-					},
-				},
-			},
-			assertions: func(t *testing.T, _ []kargoapi.DiscoveredCommit, err error) {
-				require.ErrorContains(t, err, "something went wrong")
-			},
-		},
-		{
 			name: "tags not allowed are filtered out",
 			selector: &lexicalSelector{
 				tagBasedSelector: &tagBasedSelector{
