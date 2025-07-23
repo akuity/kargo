@@ -37,11 +37,6 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, e.discoverImagesFn)
 	require.NotNil(t, e.discoverChartsFn)
 	require.NotNil(t, e.buildFreightFromLatestArtifactsFn)
-	require.NotNil(t, e.listCommitsFn)
-	require.NotNil(t, e.listTagsFn)
-	require.NotNil(t, e.discoverBranchHistoryFn)
-	require.NotNil(t, e.discoverTagsFn)
-	require.NotNil(t, e.getDiffPathsForCommitIDFn)
 	require.NotNil(t, e.createFreightFn)
 	require.NotNil(t, e.patchStatusFn)
 }

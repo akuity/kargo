@@ -4,19 +4,41 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 func TestNewDigestSelector(t *testing.T) {
-	testOpts := SelectorOptions{
-		Constraint: "fake-constraint",
-		platform: &platformConstraint{
-			os:   "linux",
-			arch: "amd64",
+	testCases := []struct {
+		name       string
+		sub        kargoapi.ImageSubscription
+		assertions func(*testing.T, Selector, error)
+	}{
+		{
+			name: "error building base selector",
+			sub:  kargoapi.ImageSubscription{}, // No RepoURL
+			assertions: func(t *testing.T, _ Selector, err error) {
+				require.ErrorContains(t, err, "error building base selector")
+			},
+		},
+		{
+			name: "success",
+			sub: kargoapi.ImageSubscription{
+				RepoURL:          "example/image",
+				SemverConstraint: "latest",
+			},
+			assertions: func(t *testing.T, s Selector, err error) {
+				require.NoError(t, err)
+				d, ok := s.(*digestSelector)
+				require.True(t, ok)
+				require.Equal(t, "latest", d.mutableTag)
+			},
 		},
 	}
-	s, err := newDigestSelector(nil, testOpts)
-	require.NoError(t, err)
-	selector, ok := s.(*digestSelector)
-	require.True(t, ok)
-	require.Equal(t, testOpts, selector.opts)
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			s, err := newDigestSelector(testCase.sub, nil)
+			testCase.assertions(t, s, err)
+		})
+	}
 }

@@ -15,7 +15,7 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-func TestNewRepository(t *testing.T) {
+func TestNewRepositoryClient(t *testing.T) {
 	client, err := newRepositoryClient("debian", false, nil)
 	require.NoError(t, err)
 	require.NotNil(t, client)
@@ -32,14 +32,14 @@ func TestNewRepository(t *testing.T) {
 	require.NotNil(t, client.remoteGetFn)
 }
 
-func TestGetImageByTag(t *testing.T) {
+func Test_repositoryClient_getImageByTag(t *testing.T) {
 	const testRepoURL = "fake-url"
 	const testTag = "fake-tag"
 
 	testRepoRef, err := name.ParseReference(testRepoURL)
 	require.NoError(t, err)
 
-	testImage := Image{
+	testImage := image{
 		Tag:       testTag,
 		CreatedAt: ptr.To(time.Now().UTC()),
 	}
@@ -47,7 +47,7 @@ func TestGetImageByTag(t *testing.T) {
 	testCases := []struct {
 		name       string
 		client     *repositoryClient
-		assertions func(*testing.T, *Image, error)
+		assertions func(*testing.T, *image, error)
 	}{
 		{
 			name: "error getting descriptor by tag",
@@ -60,7 +60,7 @@ func TestGetImageByTag(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, _ *Image, err error) {
+			assertions: func(t *testing.T, _ *image, err error) {
 				require.ErrorContains(t, err, "error getting image descriptor for tag")
 				require.ErrorContains(t, err, "something went wrong")
 			},
@@ -79,11 +79,11 @@ func TestGetImageByTag(t *testing.T) {
 					context.Context,
 					*remote.Descriptor,
 					*platformConstraint,
-				) (*Image, error) {
+				) (*image, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, _ *Image, err error) {
+			assertions: func(t *testing.T, _ *image, err error) {
 				require.ErrorContains(t, err, "error getting image from descriptor for tag")
 				require.ErrorContains(t, err, "something went wrong")
 			},
@@ -102,11 +102,11 @@ func TestGetImageByTag(t *testing.T) {
 					context.Context,
 					*remote.Descriptor,
 					*platformConstraint,
-				) (*Image, error) {
+				) (*image, error) {
 					return &testImage, nil
 				},
 			},
-			assertions: func(t *testing.T, img *Image, err error) {
+			assertions: func(t *testing.T, img *image, err error) {
 				require.NoError(t, err)
 				require.Equal(t, testImage, *img)
 			},
@@ -124,14 +124,14 @@ func TestGetImageByTag(t *testing.T) {
 	}
 }
 
-func TestGetImageByDigest(t *testing.T) {
+func Test_repositoryClient_getImageByDigest(t *testing.T) {
 	const testRepoURL = "fake-url"
 	const testDigest = "fake-digest"
 
 	testRepoRef, err := name.ParseReference(testRepoURL)
 	require.NoError(t, err)
 
-	testImage := Image{
+	testImage := image{
 		Digest:    testDigest,
 		CreatedAt: ptr.To(time.Now().UTC()),
 	}
@@ -148,14 +148,14 @@ func TestGetImageByDigest(t *testing.T) {
 	testCases := []struct {
 		name       string
 		client     *repositoryClient
-		assertions func(*testing.T, *Image, error)
+		assertions func(*testing.T, *image, error)
 	}{
 		{
 			name: "cache hit",
 			client: &repositoryClient{
 				registry: testRegistry,
 			},
-			assertions: func(t *testing.T, img *Image, err error) {
+			assertions: func(t *testing.T, img *image, err error) {
 				require.NoError(t, err)
 				require.Equal(t, testImage, *img)
 			},
@@ -173,7 +173,7 @@ func TestGetImageByDigest(t *testing.T) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, _ *Image, err error) {
+			assertions: func(t *testing.T, _ *image, err error) {
 				require.ErrorContains(t, err, "error getting image descriptor for digest")
 				require.ErrorContains(t, err, "something went wrong")
 			},
@@ -192,11 +192,11 @@ func TestGetImageByDigest(t *testing.T) {
 				},
 				getImageFromRemoteDescFn: func(
 					context.Context, *remote.Descriptor, *platformConstraint,
-				) (*Image, error) {
+				) (*image, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, _ *Image, err error) {
+			assertions: func(t *testing.T, _ *image, err error) {
 				require.ErrorContains(t, err, "error getting image from descriptor for digest")
 				require.ErrorContains(t, err, "something went wrong")
 			},
@@ -217,11 +217,11 @@ func TestGetImageByDigest(t *testing.T) {
 					context.Context,
 					*remote.Descriptor,
 					*platformConstraint,
-				) (*Image, error) {
+				) (*image, error) {
 					return &testImage, nil
 				},
 			},
-			assertions: func(t *testing.T, img *Image, err error) {
+			assertions: func(t *testing.T, img *image, err error) {
 				require.NoError(t, err)
 				require.Equal(t, testImage, *img)
 			},
@@ -239,8 +239,8 @@ func TestGetImageByDigest(t *testing.T) {
 	}
 }
 
-func TestGetImageFromRemoteDesc(t *testing.T) {
-	testImage := Image{
+func Test_repositoryClient_getImageFromRemoteDesc(t *testing.T) {
+	testImage := image{
 		CreatedAt: ptr.To(time.Now().UTC()),
 	}
 
@@ -254,12 +254,12 @@ func TestGetImageFromRemoteDesc(t *testing.T) {
 	testClient := &repositoryClient{
 		getImageFromV1ImageIndexFn: func(
 			context.Context, string, v1.ImageIndex, *platformConstraint,
-		) (*Image, error) {
+		) (*image, error) {
 			return &testImage, nil
 		},
 		getImageFromV1ImageFn: func(
 			string, v1.Image, *platformConstraint,
-		) (*Image, error) {
+		) (*image, error) {
 			return &testImage, nil
 		},
 	}
@@ -281,7 +281,7 @@ func TestGetImageFromRemoteDesc(t *testing.T) {
 	}
 
 	t.Run("with remote descriptor annotations", func(t *testing.T) {
-		imageWithAnnotations := Image{
+		imageWithAnnotations := image{
 			CreatedAt: ptr.To(time.Now().UTC()),
 			Annotations: map[string]string{
 				"key.one":   "image-value", // This should override descriptor
@@ -305,7 +305,7 @@ func TestGetImageFromRemoteDesc(t *testing.T) {
 		testClientWithAnnotations := &repositoryClient{
 			getImageFromV1ImageIndexFn: func(
 				context.Context, string, v1.ImageIndex, *platformConstraint,
-			) (*Image, error) {
+			) (*image, error) {
 				return &imageWithAnnotations, nil
 			},
 		}
@@ -327,10 +327,10 @@ func TestGetImageFromRemoteDesc(t *testing.T) {
 	})
 }
 
-func TestImageFromV1ImageIndex(t *testing.T) {
+func Test_repositoryClient_getImageFromV1ImageIndex(t *testing.T) {
 	const testDigest = "fake-digest"
 
-	testImage := Image{
+	testImage := image{
 		Digest:    testDigest,
 		CreatedAt: ptr.To(time.Now().UTC()),
 	}
@@ -340,7 +340,7 @@ func TestImageFromV1ImageIndex(t *testing.T) {
 		idx        v1.ImageIndex
 		platform   *platformConstraint
 		client     *repositoryClient
-		assertions func(*testing.T, *Image, error)
+		assertions func(*testing.T, *image, error)
 	}{
 		{
 			name: "empty list or index not supported",
@@ -350,7 +350,7 @@ func TestImageFromV1ImageIndex(t *testing.T) {
 				},
 			},
 			client: &repositoryClient{},
-			assertions: func(t *testing.T, _ *Image, err error) {
+			assertions: func(t *testing.T, _ *image, err error) {
 				require.ErrorContains(t, err, "empty V2 manifest list or OCI index is not supported")
 			},
 		},
@@ -371,7 +371,7 @@ func TestImageFromV1ImageIndex(t *testing.T) {
 				arch: "arm64",
 			},
 			client: &repositoryClient{},
-			assertions: func(t *testing.T, img *Image, err error) {
+			assertions: func(t *testing.T, img *image, err error) {
 				require.NoError(t, err)
 				require.Nil(t, img)
 			},
@@ -401,7 +401,7 @@ func TestImageFromV1ImageIndex(t *testing.T) {
 				arch: "amd64",
 			},
 			client: &repositoryClient{},
-			assertions: func(t *testing.T, _ *Image, err error) {
+			assertions: func(t *testing.T, _ *image, err error) {
 				require.ErrorContains(t, err, "expected only one reference to match platform")
 			},
 		},
@@ -424,11 +424,11 @@ func TestImageFromV1ImageIndex(t *testing.T) {
 			client: &repositoryClient{
 				getImageByDigestFn: func(
 					context.Context, string, *platformConstraint,
-				) (*Image, error) {
+				) (*image, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, _ *Image, err error) {
+			assertions: func(t *testing.T, _ *image, err error) {
 				require.ErrorContains(t, err, "error getting image with digest")
 				require.ErrorContains(t, err, "something went wrong")
 			},
@@ -452,11 +452,11 @@ func TestImageFromV1ImageIndex(t *testing.T) {
 			client: &repositoryClient{
 				getImageByDigestFn: func(
 					context.Context, string, *platformConstraint,
-				) (*Image, error) {
+				) (*image, error) {
 					return nil, nil
 				},
 			},
-			assertions: func(t *testing.T, _ *Image, err error) {
+			assertions: func(t *testing.T, _ *image, err error) {
 				require.ErrorContains(t, err, "expected manifest for digest")
 				require.ErrorContains(t, err, "to match platform")
 			},
@@ -484,9 +484,9 @@ func TestImageFromV1ImageIndex(t *testing.T) {
 			client: &repositoryClient{
 				getImageByDigestFn: func(
 					context.Context, string, *platformConstraint,
-				) (*Image, error) {
+				) (*image, error) {
 					// Return image with its own annotations
-					return &Image{
+					return &image{
 						Digest:    testDigest,
 						CreatedAt: testImage.CreatedAt,
 						Annotations: map[string]string{
@@ -497,7 +497,7 @@ func TestImageFromV1ImageIndex(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(t *testing.T, img *Image, err error) {
+			assertions: func(t *testing.T, img *image, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, img)
 				require.Equal(t, testDigest, img.Digest)
@@ -525,11 +525,11 @@ func TestImageFromV1ImageIndex(t *testing.T) {
 			client: &repositoryClient{
 				getImageByDigestFn: func(
 					context.Context, string, *platformConstraint,
-				) (*Image, error) {
+				) (*image, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
-			assertions: func(t *testing.T, _ *Image, err error) {
+			assertions: func(t *testing.T, _ *image, err error) {
 				require.ErrorContains(t, err, "error getting image with digest")
 				require.ErrorContains(t, err, "something went wrong")
 			},
@@ -549,11 +549,11 @@ func TestImageFromV1ImageIndex(t *testing.T) {
 			client: &repositoryClient{
 				getImageByDigestFn: func(
 					context.Context, string, *platformConstraint,
-				) (*Image, error) {
+				) (*image, error) {
 					return nil, nil
 				},
 			},
-			assertions: func(t *testing.T, _ *Image, err error) {
+			assertions: func(t *testing.T, _ *image, err error) {
 				require.ErrorContains(t, err, "found no image with digest")
 			},
 		},
@@ -575,8 +575,8 @@ func TestImageFromV1ImageIndex(t *testing.T) {
 			client: &repositoryClient{
 				getImageByDigestFn: func(
 					context.Context, string, *platformConstraint,
-				) (*Image, error) {
-					return &Image{
+				) (*image, error) {
+					return &image{
 						Digest:    testDigest,
 						CreatedAt: testImage.CreatedAt,
 						Annotations: map[string]string{
@@ -585,7 +585,7 @@ func TestImageFromV1ImageIndex(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(t *testing.T, img *Image, err error) {
+			assertions: func(t *testing.T, img *image, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, img)
 				require.Equal(t, testDigest, img.Digest)
@@ -620,8 +620,8 @@ func TestImageFromV1ImageIndex(t *testing.T) {
 			client: &repositoryClient{
 				getImageByDigestFn: func(
 					context.Context, string, *platformConstraint,
-				) (*Image, error) {
-					return &Image{
+				) (*image, error) {
+					return &image{
 						Digest:    testDigest,
 						CreatedAt: testImage.CreatedAt,
 						Annotations: map[string]string{
@@ -631,7 +631,7 @@ func TestImageFromV1ImageIndex(t *testing.T) {
 					}, nil
 				},
 			},
-			assertions: func(t *testing.T, img *Image, err error) {
+			assertions: func(t *testing.T, img *image, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, img)
 
@@ -656,7 +656,7 @@ func TestImageFromV1ImageIndex(t *testing.T) {
 	}
 }
 
-func TestGetImageFromV1Image(t *testing.T) {
+func Test_repositoryClient_getImageFromV1Image(t *testing.T) {
 	const testDigest = "fake-digest"
 
 	testCases := []struct {
@@ -664,7 +664,7 @@ func TestGetImageFromV1Image(t *testing.T) {
 		img        v1.Image
 		platform   *platformConstraint
 		client     *repositoryClient
-		assertions func(*testing.T, *Image, error)
+		assertions func(*testing.T, *image, error)
 	}{
 		{
 			name: "no platform constraint",
@@ -672,7 +672,7 @@ func TestGetImageFromV1Image(t *testing.T) {
 				configFile: &v1.ConfigFile{},
 			},
 			client: &repositoryClient{},
-			assertions: func(t *testing.T, img *Image, err error) {
+			assertions: func(t *testing.T, img *image, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, img)
 				require.NotEmpty(t, img.Digest)
@@ -692,7 +692,7 @@ func TestGetImageFromV1Image(t *testing.T) {
 				},
 			},
 			client: &repositoryClient{},
-			assertions: func(t *testing.T, img *Image, err error) {
+			assertions: func(t *testing.T, img *image, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, img)
 				require.NotEmpty(t, img.Digest)
@@ -715,7 +715,7 @@ func TestGetImageFromV1Image(t *testing.T) {
 				arch: "arm64",
 			},
 			client: &repositoryClient{},
-			assertions: func(t *testing.T, img *Image, err error) {
+			assertions: func(t *testing.T, img *image, err error) {
 				require.NoError(t, err)
 				require.Nil(t, img)
 			},
@@ -738,7 +738,7 @@ func TestGetImageFromV1Image(t *testing.T) {
 				arch: "amd64",
 			},
 			client: &repositoryClient{},
-			assertions: func(t *testing.T, img *Image, err error) {
+			assertions: func(t *testing.T, img *image, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, img)
 				require.NotEmpty(t, img.Digest)
