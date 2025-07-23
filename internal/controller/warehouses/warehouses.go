@@ -85,8 +85,6 @@ type reconciler struct {
 	createFreightFn func(context.Context, client.Object, ...client.CreateOption) error
 
 	patchStatusFn func(context.Context, *kargoapi.Warehouse, func(*kargoapi.WarehouseStatus)) error
-
-	inScopeFn func(*kargoapi.Warehouse) bool
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Warehouse resources
