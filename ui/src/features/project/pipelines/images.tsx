@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { IconDefinition, faHistory, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tooltip } from 'antd';
@@ -9,26 +8,15 @@ import semver from 'semver';
 
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
-import { TagMap } from '@ui/gen/api/service/v1alpha1/service_pb';
+import { TagMap, ImageStageMap } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
 type ProcessedTagMap = {
-  tags: Record<string, any>;
+  tags: Record<string, ImageStageMap>;
 };
-type ProcessedImages = Record<string, ProcessedTagMap>;
 
-const darkenColor = (hex: string, percent: number): string => {
-  if (!hex || !hex.startsWith('#') || hex.length !== 7) return '#4b5563';
-  const calculate = (c: string) =>
-    Math.max(0, Math.floor(parseInt(c, 16) * (1 - percent / 100)))
-      .toString(16)
-      .padStart(2, '0');
-  const r = calculate(hex.substring(1, 3));
-  const g = calculate(hex.substring(3, 5));
-  const b = calculate(hex.substring(5, 7));
-  return `#${r}${g}${b}`;
-};
+type ProcessedImages = Record<string, ProcessedTagMap>;
 
 const findWarehousesForImageRepo = (repoURL: string, warehouses: Warehouse[]): string[] => {
   return warehouses
@@ -63,6 +51,49 @@ const getStagesForImage = (
   return allReachableStages;
 };
 
+const getTooltipTitle = (
+  showHistory: boolean,
+  isHighlighted: boolean,
+  stageName: string,
+  order: number
+): string => {
+  if (!showHistory) {
+    return `Promoted to stage: '${stageName}'`;
+  }
+
+  if (isHighlighted) {
+    return `Most recent promotion: Currently in stage '${stageName}'`;
+  }
+
+  return `Stage: '${stageName}' (Sequential promotion #${order + 1})`;
+};
+
+const filterStagesForImage = (
+  imageStageMap: ImageStageMap,
+  stagesForImage: Set<string>
+): Record<string, number> => {
+  const filteredStages: Record<string, number> = {};
+  Object.entries(imageStageMap.stages || {}).forEach(([stageName, order]) => {
+    if (stagesForImage.has(stageName)) {
+      filteredStages[stageName] = order;
+    }
+  });
+  return filteredStages;
+};
+
+const processTagMap = (tagMap: TagMap, stagesForImage: Set<string>): ProcessedTagMap => {
+  const filteredTagMap: ProcessedTagMap = { tags: {} };
+
+  Object.entries(tagMap.tags || {}).forEach(([tag, imageStageMap]) => {
+    const filteredStages = filterStagesForImage(imageStageMap, stagesForImage);
+    if (Object.keys(filteredStages).length > 0) {
+      filteredTagMap.tags[tag] = { ...imageStageMap, stages: filteredStages };
+    }
+  });
+
+  return filteredTagMap;
+};
+
 const StageBox = memo(
   ({
     stageName,
@@ -81,24 +112,24 @@ const StageBox = memo(
     const isHighlighted = showHistory && order === 0;
     const baseColor = stageColorMap[stageName] || '#6b7280';
 
-    const tooltipTitle = showHistory
-      ? isHighlighted
-        ? `Most recent promotion: Currently in stage '${stageName}'`
-        : `Stage: '${stageName}' (Sequential promotion #${order + 1})`
-      : `Promoted to stage: '${stageName}'`;
+    const tooltipTitle = getTooltipTitle(showHistory, isHighlighted, stageName, order);
+
+    const handleClick = () => {
+      navigate(generatePath(paths.stage, { name: project, stageName }));
+    };
 
     const style = {
       backgroundColor: baseColor,
       opacity: showHistory && !isHighlighted ? 0.6 : 1,
-      border: isHighlighted ? `2px solid ${darkenColor(baseColor, 20)}` : '2px solid transparent',
+      border: isHighlighted ? '2px solid rgba(255,255,255,0.5)' : '2px solid transparent',
       boxShadow: isHighlighted ? '0 1px 3px rgba(0, 0, 0, 0.2)' : 'none'
     };
 
     return (
       <Tooltip title={tooltipTitle}>
-        <div
-          onClick={() => navigate(generatePath(paths.stage, { name: project, stageName }))}
-          className='h-6 w-full rounded flex items-center justify-center cursor-pointer transition-all duration-300'
+        <button
+          onClick={handleClick}
+          className='h-6 w-full rounded flex items-center justify-center cursor-pointer transition-all duration-300 border-0 p-0'
           style={style}
         >
           {showHistory && (
@@ -106,7 +137,7 @@ const StageBox = memo(
               <span className='text-white font-bold text-[10px] select-none'>#{order + 1}</span>
             </div>
           )}
-        </div>
+        </button>
       </Tooltip>
     );
   }
@@ -123,7 +154,7 @@ const ImageTagRow = memo(
     stageColorMap
   }: {
     tag: string;
-    imageStageMap: any;
+    imageStageMap: ImageStageMap;
     dynamicStages: string[];
     showHistory: boolean;
     project: string;
@@ -134,7 +165,7 @@ const ImageTagRow = memo(
 
       const stagesWithOrder = Object.entries(imageStageMap.stages || {})
         .filter(([stageName]) => dynamicStages.includes(stageName))
-        .sort(([, a], [, b]) => (a as number) - (b as number));
+        .sort(([, a], [, b]) => a - b);
 
       const orderMap: Record<string, number> = {};
       stagesWithOrder.forEach(([stageName], index) => {
@@ -217,30 +248,118 @@ interface ImagesProps {
   warehouses: Warehouse[];
 }
 
+const sortTags = (tags: string[]): string[] => {
+  return tags.sort((a, b) => {
+    try {
+      return semver.compare(b, a);
+    } catch {
+      return b.localeCompare(a);
+    }
+  });
+};
+
+const getDynamicStages = (selectedImageData: ProcessedTagMap | undefined): string[] => {
+  if (!selectedImageData) return [];
+
+  const stageSet = new Set<string>();
+  Object.values(selectedImageData.tags).forEach((imageStageMap) => {
+    Object.keys(imageStageMap.stages || {}).forEach((stageName) => stageSet.add(stageName));
+  });
+
+  return Array.from(stageSet).sort();
+};
+
+const TableHeader = ({
+  dynamicStages,
+  stageColorMap
+}: {
+  dynamicStages: string[];
+  stageColorMap: Record<string, string>;
+}) => (
+  <thead>
+    <tr className='bg-gray-50'>
+      <th className='sticky left-0 bg-gray-50 text-left px-1 py-0.5 border-b font-semibold text-gray-600 z-20'>
+        Tag
+      </th>
+      {dynamicStages.map((stageName) => (
+        <th key={stageName} className='px-1 py-1 border-b font-semibold text-gray-600 text-center'>
+          <Tooltip title={stageName}>
+            <div className='flex items-center justify-center gap-1'>
+              <div
+                className='w-2.5 h-2.5 rounded-full flex-shrink-0'
+                style={{ backgroundColor: stageColorMap[stageName] }}
+              />
+              <span className='text-xs font-medium text-gray-700 truncate max-w-[60px]'>
+                {stageName}
+              </span>
+            </div>
+          </Tooltip>
+        </th>
+      ))}
+    </tr>
+  </thead>
+);
+
+const TableBody = ({
+  allTags,
+  selectedImageData,
+  dynamicStages,
+  showHistory,
+  project,
+  stageColorMap,
+  repoURLs
+}: {
+  allTags: string[];
+  selectedImageData: ProcessedTagMap | undefined;
+  dynamicStages: string[];
+  showHistory: boolean;
+  project: string;
+  stageColorMap: Record<string, string>;
+  repoURLs: string[];
+}) => (
+  <tbody>
+    {allTags.length > 0 ? (
+      allTags.map((tag) => {
+        const imageStageMap = selectedImageData?.tags[tag];
+        if (!imageStageMap) return null;
+        return (
+          <ImageTagRow
+            key={tag}
+            tag={tag}
+            imageStageMap={imageStageMap}
+            dynamicStages={dynamicStages}
+            showHistory={showHistory}
+            project={project}
+            stageColorMap={stageColorMap}
+          />
+        );
+      })
+    ) : (
+      <tr>
+        <td colSpan={dynamicStages.length + 1} className='text-center text-gray-500 py-12'>
+          {repoURLs.length > 0 ? 'Select an image' : 'No images found'}
+        </td>
+      </tr>
+    )}
+  </tbody>
+);
+
 export const Images = memo<ImagesProps>(({ hide, images, project, stages, warehouses }) => {
   const { stageColorMap } = useContext(ColorContext);
   const [showHistory, setShowHistory] = useLocalStorage('images-dynamic-grid-show-history', true);
 
   const filteredImages: ProcessedImages = useMemo(() => {
     const result: ProcessedImages = {};
+
     Object.entries(images).forEach(([repoURL, tagMap]) => {
       const stagesForImage = getStagesForImage(repoURL, warehouses, stages);
-      const filteredTagMap: ProcessedTagMap = { tags: {} };
-      Object.entries(tagMap.tags || {}).forEach(([tag, imageStageMap]) => {
-        const filteredStages: Record<string, number> = {};
-        Object.entries(imageStageMap.stages || {}).forEach(([stageName, order]) => {
-          if (stagesForImage.has(stageName)) {
-            filteredStages[stageName] = order;
-          }
-        });
-        if (Object.keys(filteredStages).length > 0) {
-          filteredTagMap.tags[tag] = { ...imageStageMap, stages: filteredStages };
-        }
-      });
-      if (Object.keys(filteredTagMap.tags).length > 0) {
-        result[repoURL] = filteredTagMap;
+      const processedTagMap = processTagMap(tagMap, stagesForImage);
+
+      if (Object.keys(processedTagMap.tags).length > 0) {
+        result[repoURL] = processedTagMap;
       }
     });
+
     return result;
   }, [images, warehouses, stages]);
 
@@ -255,30 +374,17 @@ export const Images = memo<ImagesProps>(({ hide, images, project, stages, wareho
     }
   }, [repoURLs, selectedRepoURL]);
 
-  // NEW: Derive data based on the selection
   const selectedImageData = useMemo(
     () => (selectedRepoURL ? filteredImages[selectedRepoURL] : undefined),
     [selectedRepoURL, filteredImages]
   );
 
-  const dynamicStages = useMemo(() => {
-    if (!selectedImageData) return [];
-    const stageSet = new Set<string>();
-    Object.values(selectedImageData.tags).forEach((imageStageMap) => {
-      Object.keys(imageStageMap.stages || {}).forEach((stageName) => stageSet.add(stageName));
-    });
-    return Array.from(stageSet).sort();
-  }, [selectedImageData]);
+  const dynamicStages = useMemo(() => getDynamicStages(selectedImageData), [selectedImageData]);
 
   const allTags = useMemo(() => {
     if (!selectedImageData) return [];
-    return Object.keys(selectedImageData.tags).sort((a, b) => {
-      try {
-        return semver.compare(b, a);
-      } catch {
-        return b.localeCompare(a);
-      }
-    });
+    const tags = Object.keys(selectedImageData.tags);
+    return sortTags(tags);
   }, [selectedImageData]);
 
   return (
@@ -330,56 +436,16 @@ export const Images = memo<ImagesProps>(({ hide, images, project, stages, wareho
               <col key={stageName} style={{ width: '80px' }} />
             ))}
           </colgroup>
-          <thead>
-            <tr className='bg-gray-50'>
-              <th className='sticky left-0 bg-gray-50 text-left px-1 py-0.5 border-b font-semibold text-gray-600 z-20'>
-                Tag
-              </th>
-              {dynamicStages.map((stageName) => (
-                <th
-                  key={stageName}
-                  className='px-1 py-1 border-b font-semibold text-gray-600 text-center'
-                >
-                  <Tooltip title={stageName}>
-                    <div className='flex items-center justify-center gap-1'>
-                      <div
-                        className='w-2.5 h-2.5 rounded-full flex-shrink-0'
-                        style={{ backgroundColor: stageColorMap[stageName] }}
-                      />
-                      <span className='text-xs font-medium text-gray-700 truncate max-w-[60px]'>
-                        {stageName}
-                      </span>
-                    </div>
-                  </Tooltip>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {allTags.length > 0 ? (
-              allTags.map((tag) => {
-                const imageStageMap = selectedImageData?.tags[tag];
-                if (!imageStageMap) return null;
-                return (
-                  <ImageTagRow
-                    key={tag}
-                    tag={tag}
-                    imageStageMap={imageStageMap}
-                    dynamicStages={dynamicStages}
-                    showHistory={showHistory}
-                    project={project}
-                    stageColorMap={stageColorMap}
-                  />
-                );
-              })
-            ) : (
-              <tr>
-                <td colSpan={dynamicStages.length + 1} className='text-center text-gray-500 py-12'>
-                  {repoURLs.length > 0 ? 'Select an image' : 'No images found'}
-                </td>
-              </tr>
-            )}
-          </tbody>
+          <TableHeader dynamicStages={dynamicStages} stageColorMap={stageColorMap} />
+          <TableBody
+            allTags={allTags}
+            selectedImageData={selectedImageData}
+            dynamicStages={dynamicStages}
+            showHistory={showHistory}
+            project={project}
+            stageColorMap={stageColorMap}
+            repoURLs={repoURLs}
+          />
         </table>
       </div>
     </div>
