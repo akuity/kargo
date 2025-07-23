@@ -458,7 +458,7 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				Namespace: testApp.Namespace,
 				Name:      testApp.Name,
 			},
-			[]string{"fake-version", "fake-commit", "another-fake-commit"},
+			nil,
 		)
 		elapsed := time.Since(app.Status.OperationState.FinishedAt.Time)
 		require.NoError(t, err)
