@@ -111,12 +111,9 @@ func (n *newestFromBranchSelector) Select(ctx context.Context) (
 	if err != nil {
 		return nil, fmt.Errorf("error cloning git repo %q: %w", n.repoURL, err)
 	}
-	// Sometimes tests return nil repos.
-	if repo != nil {
-		defer func() {
-			_ = repo.Close()
-		}()
-	}
+	defer func() {
+		_ = repo.Close()
+	}()
 
 	commits, err := n.selectCommitsFn(repo)
 	if err != nil {

@@ -27,7 +27,6 @@ type tagBasedSelector struct {
 	allows  *regexp.Regexp
 	ignores []string
 
-	listTagsFn              func(git.Repo) ([]git.TagMetadata, error)
 	filterTagsByDiffPathsFn func(
 		git.Repo,
 		[]git.TagMetadata,
@@ -54,7 +53,6 @@ func newTagBasedSelector(
 			)
 		}
 	}
-	s.listTagsFn = s.listTags
 	s.filterTagsByDiffPathsFn = s.filterTagsByDiffPaths
 	return s, nil
 }
@@ -108,17 +106,6 @@ func (t *tagBasedSelector) clone(ctx context.Context) (git.Repo, error) {
 		return nil, fmt.Errorf("error cloning git repo %q: %w", t.repoURL, err)
 	}
 	return repo, nil
-}
-
-// listTags retrieves a list of all tags and their metadata from the given Git
-// repository.
-func (t *tagBasedSelector) listTags(repo git.Repo) ([]git.TagMetadata, error) {
-	tags, err := repo.ListTags()
-	if err != nil {
-		return nil,
-			fmt.Errorf("error listing tags from git repo %q: %w", t.repoURL, err)
-	}
-	return tags, nil
 }
 
 // filterTags evaluates all provided tags against the constraints defined by the

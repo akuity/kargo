@@ -151,7 +151,7 @@ func Test_newestFromBranchSelector_Select(t *testing.T) {
 						*git.ClientOptions,
 						*git.CloneOptions,
 					) (git.Repo, error) {
-						return nil, nil
+						return &git.MockRepo{}, nil
 					},
 				},
 				selectCommitsFn: func(git.Repo) ([]git.CommitMetadata, error) {
@@ -171,7 +171,7 @@ func Test_newestFromBranchSelector_Select(t *testing.T) {
 						*git.ClientOptions,
 						*git.CloneOptions,
 					) (git.Repo, error) {
-						return nil, nil
+						return &git.MockRepo{}, nil
 					},
 				},
 				selectCommitsFn: func(git.Repo) ([]git.CommitMetadata, error) {

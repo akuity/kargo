@@ -48,7 +48,6 @@ func TestNewTagBasedSelector(t *testing.T) {
 				require.NotNil(t, s.baseSelector)
 				require.NotNil(t, s.allows)
 				require.Equal(t, []string{"v1.0.0"}, s.ignores)
-				require.NotNil(t, s.listTagsFn)
 				require.NotNil(t, s.filterTagsByDiffPathsFn)
 			},
 		},

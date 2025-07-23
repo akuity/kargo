@@ -88,11 +88,12 @@ func Test_newestTagSelector_Select(t *testing.T) {
 							*git.ClientOptions,
 							*git.CloneOptions,
 						) (git.Repo, error) {
-							return nil, nil
+							return &git.MockRepo{
+								ListTagsFn: func() ([]git.TagMetadata, error) {
+									return nil, errors.New("something went wrong")
+								},
+							}, nil
 						},
-					},
-					listTagsFn: func(git.Repo) ([]git.TagMetadata, error) {
-						return nil, errors.New("something went wrong")
 					},
 				},
 			},
@@ -110,12 +111,13 @@ func Test_newestTagSelector_Select(t *testing.T) {
 							*git.ClientOptions,
 							*git.CloneOptions,
 						) (git.Repo, error) {
-							return nil, nil
+							return &git.MockRepo{
+								ListTagsFn: func() ([]git.TagMetadata, error) {
+									return []git.TagMetadata{{}}, nil
+								},
+							}, nil
 						},
 						filterExpression: nonBoolExpression,
-					},
-					listTagsFn: func(git.Repo) ([]git.TagMetadata, error) {
-						return []git.TagMetadata{{}}, nil
 					},
 				},
 			},
@@ -133,11 +135,12 @@ func Test_newestTagSelector_Select(t *testing.T) {
 							*git.ClientOptions,
 							*git.CloneOptions,
 						) (git.Repo, error) {
-							return nil, nil
+							return &git.MockRepo{
+								ListTagsFn: func() ([]git.TagMetadata, error) {
+									return []git.TagMetadata{{}}, nil
+								},
+							}, nil
 						},
-					},
-					listTagsFn: func(git.Repo) ([]git.TagMetadata, error) {
-						return []git.TagMetadata{{}}, nil
 					},
 					filterTagsByDiffPathsFn: func(
 						git.Repo,
@@ -161,16 +164,17 @@ func Test_newestTagSelector_Select(t *testing.T) {
 							*git.ClientOptions,
 							*git.CloneOptions,
 						) (git.Repo, error) {
-							return nil, nil
+							return &git.MockRepo{
+								ListTagsFn: func() ([]git.TagMetadata, error) {
+									return []git.TagMetadata{
+										{Tag: "123"},
+										{Tag: "abc"},
+									}, nil
+								},
+							}, nil
 						},
 					},
 					allows: allowAlphas,
-					listTagsFn: func(git.Repo) ([]git.TagMetadata, error) {
-						return []git.TagMetadata{
-							{Tag: "123"},
-							{Tag: "abc"},
-						}, nil
-					},
 					filterTagsByDiffPathsFn: func(
 						_ git.Repo,
 						tags []git.TagMetadata,
@@ -199,16 +203,17 @@ func Test_newestTagSelector_Select(t *testing.T) {
 							*git.ClientOptions,
 							*git.CloneOptions,
 						) (git.Repo, error) {
-							return nil, nil
+							return &git.MockRepo{
+								ListTagsFn: func() ([]git.TagMetadata, error) {
+									return []git.TagMetadata{
+										{Tag: "123"},
+										{Tag: "abc"},
+									}, nil
+								},
+							}, nil
 						},
 					},
 					ignores: []string{"123"},
-					listTagsFn: func(git.Repo) ([]git.TagMetadata, error) {
-						return []git.TagMetadata{
-							{Tag: "123"},
-							{Tag: "abc"},
-						}, nil
-					},
 					filterTagsByDiffPathsFn: func(
 						_ git.Repo,
 						tags []git.TagMetadata,
@@ -237,17 +242,18 @@ func Test_newestTagSelector_Select(t *testing.T) {
 							*git.ClientOptions,
 							*git.CloneOptions,
 						) (git.Repo, error) {
-							return nil, nil
+							return &git.MockRepo{
+								ListTagsFn: func() ([]git.TagMetadata, error) {
+									return []git.TagMetadata{
+										{Tag: "ABC"},
+										{Tag: "abc"},
+									}, nil
+								},
+							}, nil
 						},
 					},
 					allows:  allowAlphas,
 					ignores: []string{"ABC"},
-					listTagsFn: func(git.Repo) ([]git.TagMetadata, error) {
-						return []git.TagMetadata{
-							{Tag: "ABC"},
-							{Tag: "abc"},
-						}, nil
-					},
 					filterTagsByDiffPathsFn: func(
 						_ git.Repo,
 						tags []git.TagMetadata,
@@ -276,12 +282,13 @@ func Test_newestTagSelector_Select(t *testing.T) {
 							*git.ClientOptions,
 							*git.CloneOptions,
 						) (git.Repo, error) {
-							return nil, nil
+							return &git.MockRepo{
+								ListTagsFn: func() ([]git.TagMetadata, error) {
+									return []git.TagMetadata{{}, {}, {}, {}, {}}, nil
+								},
+							}, nil
 						},
 						discoveryLimit: 3,
-					},
-					listTagsFn: func(git.Repo) ([]git.TagMetadata, error) {
-						return []git.TagMetadata{{}, {}, {}, {}, {}}, nil
 					},
 					filterTagsByDiffPathsFn: func(
 						_ git.Repo,

@@ -104,14 +104,11 @@ func (s *semverSelector) Select(ctx context.Context) (
 	if err != nil {
 		return nil, err
 	}
-	// Sometimes tests return nil repos.
-	if repo != nil {
-		defer func() {
-			_ = repo.Close()
-		}()
-	}
+	defer func() {
+		_ = repo.Close()
+	}()
 
-	tags, err := s.listTagsFn(repo)
+	tags, err := repo.ListTags()
 	if err != nil {
 		return nil, err
 	}
