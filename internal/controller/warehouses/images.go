@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/image"
@@ -53,15 +51,24 @@ func (r *reconciler) discoverImages(
 		// Enrich the logger with additional fields for this subscription.
 		logger = logger.WithValues(imageDiscoveryLogFields(sub))
 
-		// Discover the latest suitable images.
-		images, err := r.discoverImageRefsFn(ctx, sub, regCreds)
+		selector, err := image.NewSelector(sub, regCreds)
 		if err != nil {
 			return nil, fmt.Errorf(
-				"error discovering latest images %q: %w",
+				"error obtaining selector for image %q: %w",
 				sub.RepoURL,
 				err,
 			)
 		}
+
+		images, err := selector.Select(ctx)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"error discovering newest applicable images %q: %w",
+				sub.RepoURL,
+				err,
+			)
+		}
+
 		if len(images) == 0 {
 			results = append(results, kargoapi.ImageDiscoveryResult{
 				RepoURL:  sub.RepoURL,
@@ -71,23 +78,10 @@ func (r *reconciler) discoverImages(
 			continue
 		}
 
-		discoveredImages := make([]kargoapi.DiscoveredImageReference, 0, len(images))
-		for _, img := range images {
-			discovery := kargoapi.DiscoveredImageReference{
-				Tag:         img.Tag,
-				Digest:      img.Digest,
-				Annotations: img.Annotations,
-			}
-			if img.CreatedAt != nil {
-				discovery.CreatedAt = &metav1.Time{Time: *img.CreatedAt}
-			}
-			discoveredImages = append(discoveredImages, discovery)
-		}
-
 		results = append(results, kargoapi.ImageDiscoveryResult{
 			RepoURL:    sub.RepoURL,
 			Platform:   sub.Platform,
-			References: discoveredImages,
+			References: images,
 		})
 		logger.Debug(
 			"discovered images",
@@ -96,31 +90,6 @@ func (r *reconciler) discoverImages(
 	}
 
 	return results, nil
-}
-
-func (r *reconciler) discoverImageRefs(
-	ctx context.Context,
-	sub kargoapi.ImageSubscription,
-	creds *image.Credentials,
-) ([]image.Image, error) {
-	imageSelector, err := imageSelectorForSubscription(sub, creds)
-	if err != nil {
-		return nil, fmt.Errorf(
-			"error creating image selector for image %q: %w",
-			sub.RepoURL,
-			err,
-		)
-	}
-
-	images, err := imageSelector.Select(ctx)
-	if err != nil {
-		return nil, fmt.Errorf(
-			"error discovering newest applicable images %q: %w",
-			sub.RepoURL,
-			err,
-		)
-	}
-	return images, nil
 }
 
 func imageDiscoveryLogFields(sub kargoapi.ImageSubscription) []any {
@@ -141,24 +110,4 @@ func imageDiscoveryLogFields(sub kargoapi.ImageSubscription) []any {
 		)
 	}
 	return f
-}
-
-func imageSelectorForSubscription(
-	sub kargoapi.ImageSubscription,
-	creds *image.Credentials,
-) (image.Selector, error) {
-	return image.NewSelector(
-		sub.RepoURL,
-		image.SelectionStrategy(sub.ImageSelectionStrategy),
-		&image.SelectorOptions{
-			StrictSemvers:         sub.StrictSemvers,
-			Constraint:            sub.SemverConstraint,
-			AllowRegex:            sub.AllowTags,
-			Ignore:                sub.IgnoreTags,
-			Platform:              sub.Platform,
-			Creds:                 creds,
-			InsecureSkipTLSVerify: sub.InsecureSkipTLSVerify,
-			DiscoveryLimit:        int(sub.DiscoveryLimit),
-		},
-	)
 }

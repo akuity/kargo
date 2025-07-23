@@ -353,6 +353,7 @@ func (r *ControlFlowStageReconciler) initializeStatus(stage *kargoapi.Stage) kar
 	newStatus.CurrentPromotion = nil
 	newStatus.LastPromotion = nil
 	newStatus.FreightSummary = "N/A"
+	newStatus.AutoPromotionEnabled = false
 
 	return *newStatus
 }

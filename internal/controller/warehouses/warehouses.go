@@ -17,10 +17,7 @@ import (
 	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/conditions"
 	"github.com/akuity/kargo/internal/controller"
-	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
-	"github.com/akuity/kargo/internal/helm"
-	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
@@ -62,25 +59,9 @@ type reconciler struct {
 
 	discoverImagesFn func(context.Context, string, []kargoapi.RepoSubscription) ([]kargoapi.ImageDiscoveryResult, error)
 
-	discoverImageRefsFn func(context.Context, kargoapi.ImageSubscription, *image.Credentials) ([]image.Image, error)
-
 	discoverChartsFn func(context.Context, string, []kargoapi.RepoSubscription) ([]kargoapi.ChartDiscoveryResult, error)
 
-	discoverChartVersionsFn func(context.Context, string, string, string, *helm.Credentials) ([]string, error)
-
 	buildFreightFromLatestArtifactsFn func(string, *kargoapi.DiscoveredArtifacts) (*kargoapi.Freight, error)
-
-	gitCloneFn func(string, *git.ClientOptions, *git.CloneOptions) (git.Repo, error)
-
-	listCommitsFn func(repo git.Repo, limit, skip uint) ([]git.CommitMetadata, error)
-
-	listTagsFn func(repo git.Repo) ([]git.TagMetadata, error)
-
-	discoverBranchHistoryFn func(repo git.Repo, sub kargoapi.GitSubscription) ([]git.CommitMetadata, error)
-
-	discoverTagsFn func(repo git.Repo, sub kargoapi.GitSubscription) ([]git.TagMetadata, error)
-
-	getDiffPathsForCommitIDFn func(repo git.Repo, commitID string) ([]string, error)
 
 	createFreightFn func(context.Context, client.Object, ...client.CreateOption) error
 
@@ -129,25 +110,17 @@ func newReconciler(
 	cfg ReconcilerConfig,
 ) *reconciler {
 	r := &reconciler{
-		client:                  kubeClient,
-		credentialsDB:           credentialsDB,
-		cfg:                     cfg,
-		gitCloneFn:              git.Clone,
-		discoverChartVersionsFn: helm.DiscoverChartVersions,
-		createFreightFn:         kubeClient.Create,
+		client:          kubeClient,
+		credentialsDB:   credentialsDB,
+		cfg:             cfg,
+		createFreightFn: kubeClient.Create,
 	}
 
 	r.discoverArtifactsFn = r.discoverArtifacts
 	r.discoverCommitsFn = r.discoverCommits
 	r.discoverImagesFn = r.discoverImages
-	r.discoverImageRefsFn = r.discoverImageRefs
 	r.discoverChartsFn = r.discoverCharts
 	r.buildFreightFromLatestArtifactsFn = r.buildFreightFromLatestArtifacts
-	r.listCommitsFn = r.listCommits
-	r.listTagsFn = r.listTags
-	r.discoverBranchHistoryFn = r.discoverBranchHistory
-	r.discoverTagsFn = r.discoverTags
-	r.getDiffPathsForCommitIDFn = r.getDiffPathsForCommitID
 	r.patchStatusFn = r.patchStatus
 	return r
 }
