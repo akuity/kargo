@@ -123,13 +123,6 @@ func (b *bitbucketWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 		}
 
 		payload := struct {
-			Push struct {
-				Changes []struct {
-					New struct {
-						Name string `json:"name"` // branch name
-					} `json:"new"`
-				} `json:"changes"`
-			} `json:"push"`
 			Repository struct {
 				Links struct {
 					HTML struct {

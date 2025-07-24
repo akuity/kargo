@@ -24,7 +24,6 @@ func TestBitbucketHandler(t *testing.T) {
 
 	const pushEventRequestBody = `
 {
-	"push": {"changes": [{"new": {"name": "refs/heads/main"}}]},
 	"repository": {
 		"links": {
 			"html": {

@@ -78,8 +78,7 @@ func (q *quayWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 
 		payload := struct {
 			// format: quay.io/mynamespace/repository
-			DockerURL   string   `json:"docker_url"`
-			UpdatedTags []string `json:"updated_tags"`
+			DockerURL string `json:"docker_url"`
 		}{}
 
 		if err := json.Unmarshal(requestBody, &payload); err != nil {
