@@ -25,56 +25,7 @@ import (
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
-func Test_ociPuller_pullImage(t *testing.T) {
-	tests := []struct {
-		name       string
-		cfg        builtin.OCIPullConfig
-		credsDB    credentials.Database
-		assertions func(*testing.T, v1.Image, error)
-	}{
-		{
-			name: "invalid image reference",
-			cfg: builtin.OCIPullConfig{
-				ImageRef: "invalid::reference",
-			},
-			credsDB: &credentials.FakeDB{},
-			assertions: func(t *testing.T, img v1.Image, err error) {
-				assert.ErrorContains(t, err, "invalid image reference")
-				assert.Nil(t, img)
-			},
-		},
-		{
-			name: "credentials error",
-			cfg: builtin.OCIPullConfig{
-				ImageRef: "registry.example.com/image:tag",
-			},
-			credsDB: &credentials.FakeDB{
-				GetFn: func(context.Context, string, credentials.Type, string) (*credentials.Credentials, error) {
-					return nil, errors.New("credentials error")
-				},
-			},
-			assertions: func(t *testing.T, img v1.Image, err error) {
-				assert.ErrorContains(t, err, "error obtaining credentials")
-				assert.Nil(t, img)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			runner := &ociPuller{credsDB: tt.credsDB}
-
-			stepCtx := &promotion.StepContext{
-				Project: "fake-project",
-			}
-
-			img, err := runner.pullImage(context.Background(), stepCtx, tt.cfg)
-			tt.assertions(t, img, err)
-		})
-	}
-}
-
-func Test_ociPuller_validate(t *testing.T) {
+func Test_ociDownloader_validate(t *testing.T) {
 	testCases := []struct {
 		name             string
 		config           promotion.Config
@@ -112,8 +63,8 @@ func Test_ociPuller_validate(t *testing.T) {
 		},
 	}
 
-	r := newOCIPuller(nil)
-	runner, ok := r.(*ociPuller)
+	r := newOCIDownloader(nil)
+	runner, ok := r.(*ociDownloader)
 	require.True(t, ok)
 
 	for _, testCase := range testCases {
@@ -130,7 +81,56 @@ func Test_ociPuller_validate(t *testing.T) {
 	}
 }
 
-func Test_ociPuller_prepareOutputPath(t *testing.T) {
+func Test_ociDownloader_resolveImage(t *testing.T) {
+	tests := []struct {
+		name       string
+		cfg        builtin.OCIDownloadConfig
+		credsDB    credentials.Database
+		assertions func(*testing.T, v1.Image, error)
+	}{
+		{
+			name: "invalid image reference",
+			cfg: builtin.OCIDownloadConfig{
+				ImageRef: "invalid::reference",
+			},
+			credsDB: &credentials.FakeDB{},
+			assertions: func(t *testing.T, img v1.Image, err error) {
+				assert.ErrorContains(t, err, "invalid image reference")
+				assert.Nil(t, img)
+			},
+		},
+		{
+			name: "credentials error",
+			cfg: builtin.OCIDownloadConfig{
+				ImageRef: "registry.example.com/image:tag",
+			},
+			credsDB: &credentials.FakeDB{
+				GetFn: func(context.Context, string, credentials.Type, string) (*credentials.Credentials, error) {
+					return nil, errors.New("credentials error")
+				},
+			},
+			assertions: func(t *testing.T, img v1.Image, err error) {
+				assert.ErrorContains(t, err, "error obtaining credentials")
+				assert.Nil(t, img)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			runner := &ociDownloader{credsDB: tt.credsDB}
+
+			stepCtx := &promotion.StepContext{
+				Project: "fake-project",
+			}
+
+			img, err := runner.resolveImage(context.Background(), stepCtx, tt.cfg)
+			tt.assertions(t, img, err)
+		})
+	}
+}
+
+func Test_ociDownloader_prepareOutputPath(t *testing.T) {
 	tests := []struct {
 		name       string
 		outPath    string
@@ -170,7 +170,7 @@ func Test_ociPuller_prepareOutputPath(t *testing.T) {
 		},
 	}
 
-	runner := &ociPuller{}
+	runner := &ociDownloader{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -181,17 +181,17 @@ func Test_ociPuller_prepareOutputPath(t *testing.T) {
 	}
 }
 
-func Test_ociPuller_buildRemoteOptions(t *testing.T) {
+func Test_ociDownloader_buildRemoteOptions(t *testing.T) {
 	tests := []struct {
 		name       string
 		credsDB    credentials.Database
-		cfg        builtin.OCIPullConfig
+		cfg        builtin.OCIDownloadConfig
 		assertions func(*testing.T, []remote.Option, error)
 	}{
 		{
 			name:    "basic options without auth",
 			credsDB: &credentials.FakeDB{},
-			cfg: builtin.OCIPullConfig{
+			cfg: builtin.OCIDownloadConfig{
 				ImageRef: "registry.example.com/image:tag",
 			},
 			assertions: func(t *testing.T, opts []remote.Option, err error) {
@@ -209,7 +209,7 @@ func Test_ociPuller_buildRemoteOptions(t *testing.T) {
 					}, nil
 				},
 			},
-			cfg: builtin.OCIPullConfig{
+			cfg: builtin.OCIDownloadConfig{
 				ImageRef: "registry.example.com/image:tag",
 			},
 			assertions: func(t *testing.T, opts []remote.Option, err error) {
@@ -224,7 +224,7 @@ func Test_ociPuller_buildRemoteOptions(t *testing.T) {
 					return nil, errors.New("credentials database error")
 				},
 			},
-			cfg: builtin.OCIPullConfig{
+			cfg: builtin.OCIDownloadConfig{
 				ImageRef:              "registry.example.com/image:tag",
 				InsecureSkipTLSVerify: false,
 			},
@@ -237,7 +237,7 @@ func Test_ociPuller_buildRemoteOptions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			runner := &ociPuller{credsDB: tt.credsDB}
+			runner := &ociDownloader{credsDB: tt.credsDB}
 
 			ref, err := name.ParseReference(tt.cfg.ImageRef)
 			require.NoError(t, err)
@@ -252,7 +252,7 @@ func Test_ociPuller_buildRemoteOptions(t *testing.T) {
 	}
 }
 
-func Test_ociPuller_getAuthOption(t *testing.T) {
+func Test_ociDownloader_getAuthOption(t *testing.T) {
 	tests := []struct {
 		name       string
 		credsDB    credentials.Database
@@ -313,7 +313,7 @@ func Test_ociPuller_getAuthOption(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			runner := &ociPuller{credsDB: tt.credsDB}
+			runner := &ociDownloader{credsDB: tt.credsDB}
 
 			ref, err := name.ParseReference("registry.example.com/image:tag")
 			require.NoError(t, err)
@@ -328,15 +328,15 @@ func Test_ociPuller_getAuthOption(t *testing.T) {
 	}
 }
 
-func Test_ociPuller_buildHTTPTransport(t *testing.T) {
+func Test_ociDownloader_buildHTTPTransport(t *testing.T) {
 	tests := []struct {
 		name       string
-		cfg        builtin.OCIPullConfig
+		cfg        builtin.OCIDownloadConfig
 		assertions func(*testing.T, *http.Transport)
 	}{
 		{
 			name: "default TLS verification",
-			cfg: builtin.OCIPullConfig{
+			cfg: builtin.OCIDownloadConfig{
 				InsecureSkipTLSVerify: false,
 			},
 			assertions: func(t *testing.T, transport *http.Transport) {
@@ -348,7 +348,7 @@ func Test_ociPuller_buildHTTPTransport(t *testing.T) {
 		},
 		{
 			name: "skip TLS verification",
-			cfg: builtin.OCIPullConfig{
+			cfg: builtin.OCIDownloadConfig{
 				InsecureSkipTLSVerify: true,
 			},
 			assertions: func(t *testing.T, transport *http.Transport) {
@@ -359,7 +359,7 @@ func Test_ociPuller_buildHTTPTransport(t *testing.T) {
 		},
 	}
 
-	runner := &ociPuller{}
+	runner := &ociDownloader{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -369,7 +369,7 @@ func Test_ociPuller_buildHTTPTransport(t *testing.T) {
 	}
 }
 
-func Test_ociPuller_extractLayerToFile(t *testing.T) {
+func Test_ociDownloader_extractLayerToFile(t *testing.T) {
 	tests := []struct {
 		name       string
 		setupImg   func() v1.Image
@@ -461,7 +461,7 @@ func Test_ociPuller_extractLayerToFile(t *testing.T) {
 		},
 	}
 
-	runner := &ociPuller{}
+	runner := &ociDownloader{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -475,7 +475,7 @@ func Test_ociPuller_extractLayerToFile(t *testing.T) {
 	}
 }
 
-func Test_ociPuller_writeLayerToFile(t *testing.T) {
+func Test_ociDownloader_writeLayerToFile(t *testing.T) {
 	tests := []struct {
 		name       string
 		layerData  string
@@ -527,7 +527,7 @@ func Test_ociPuller_writeLayerToFile(t *testing.T) {
 		},
 	}
 
-	runner := &ociPuller{}
+	runner := &ociDownloader{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -545,7 +545,7 @@ func Test_ociPuller_writeLayerToFile(t *testing.T) {
 	}
 }
 
-func Test_ociPuller_createTempFile(t *testing.T) {
+func Test_ociDownloader_createTempFile(t *testing.T) {
 	tests := []struct {
 		name       string
 		assertions func(*testing.T, *os.File, string, error)
@@ -569,7 +569,7 @@ func Test_ociPuller_createTempFile(t *testing.T) {
 		},
 	}
 
-	runner := &ociPuller{}
+	runner := &ociDownloader{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -581,7 +581,7 @@ func Test_ociPuller_createTempFile(t *testing.T) {
 	}
 }
 
-func Test_ociPuller_copyLayerToFile(t *testing.T) {
+func Test_ociDownloader_copyLayerToFile(t *testing.T) {
 	tests := []struct {
 		name       string
 		layer      v1.Layer
@@ -612,7 +612,7 @@ func Test_ociPuller_copyLayerToFile(t *testing.T) {
 		{
 			name: "layer exceeds size limit",
 			layer: &fakeSizeLayer{
-				size: maxArtifactSize + 1,
+				size: maxOCIArtifactSize + 1,
 				data: []byte("test content"),
 			},
 			assertions: func(t *testing.T, _ *os.File, err error) {
@@ -625,7 +625,7 @@ func Test_ociPuller_copyLayerToFile(t *testing.T) {
 		{
 			name: "layer within size limit",
 			layer: &fakeSizeLayer{
-				size: maxArtifactSize - 1,
+				size: maxOCIArtifactSize - 1,
 				data: []byte("test content"),
 			},
 			assertions: func(t *testing.T, f *os.File, err error) {
@@ -642,7 +642,7 @@ func Test_ociPuller_copyLayerToFile(t *testing.T) {
 		},
 	}
 
-	runner := &ociPuller{}
+	runner := &ociDownloader{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -659,7 +659,7 @@ func Test_ociPuller_copyLayerToFile(t *testing.T) {
 	}
 }
 
-func Test_ociPuller_findTargetLayer(t *testing.T) {
+func Test_ociDownloader_findTargetLayer(t *testing.T) {
 	tests := []struct {
 		name            string
 		setupImg        func() v1.Image
@@ -801,7 +801,7 @@ func Test_ociPuller_findTargetLayer(t *testing.T) {
 		},
 	}
 
-	runner := &ociPuller{}
+	runner := &ociDownloader{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
