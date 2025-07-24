@@ -133,6 +133,7 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 			"imageName", payload.Data.ImageName,
 			"imageType", payload.Data.ImageType,
 			"origin", payload.Origin,
+			"tag", payload.Data.Tag,
 		)
 
 		logger.Info("unmarshalled Artifactory webhook payload")
@@ -166,11 +167,14 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 			"/",
 		)
 
+		var rc *refreshEligibilityChecker
 		switch payload.Data.ImageType {
 		case artifactoryDockerDomain:
 			repoURL = image.NormalizeURL(repoURL)
+			rc = &refreshEligibilityChecker{newImageTag: &payload.Data.Tag}
 		case artifactoryChartImageType:
 			repoURL = helm.NormalizeChartRepositoryURL(repoURL)
+			rc = &refreshEligibilityChecker{newChartTag: &payload.Data.Tag}
 		default:
 			xhttp.WriteErrorJSON(
 				w,
@@ -183,7 +187,7 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 		}
 		logger = logger.WithValues("repoURL", repoURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		refreshWarehouses(ctx, w, a.client, a.project, repoURL)
+		refreshWarehouses(ctx, w, a.client, a.project, rc, repoURL)
 	})
 }
 
@@ -199,4 +203,5 @@ type artifactoryEventData struct {
 	RepoKey   string `json:"repo_key"`
 	ImageName string `json:"image_name"`
 	ImageType string `json:"image_type"`
+	Tag       string `json:"tag"`
 }
