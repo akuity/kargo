@@ -16,6 +16,10 @@
       "description": "OutPath is the path to the destination file where the extracted artifact will be saved.",
       "minLength": 1
     },
+    "allowOverwrite": {
+      "type": "boolean",
+      "description": "Whether to allow overwriting an existing file at the specified path. If false and the file exists, the download will fail."
+    },
     "mediaType": {
       "type": "string",
       "description": "MediaType of the layer to pull. Selects the first layer matching this type. If not specified, it selects the first layer available.",

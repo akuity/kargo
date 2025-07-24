@@ -48,16 +48,16 @@ func newOCIDownloader(credsDB credentials.Database) promotion.StepRunner {
 }
 
 // Name implements the promotion.StepRunner interface.
-func (o *ociDownloader) Name() string {
+func (d *ociDownloader) Name() string {
 	return "oci-download"
 }
 
 // Run implements the promotion.StepRunner interface.
-func (o *ociDownloader) Run(
+func (d *ociDownloader) Run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
-	if err := o.validate(stepCtx.Config); err != nil {
+	if err := d.validate(stepCtx.Config); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			&promotion.TerminalError{Err: err}
 	}
@@ -65,34 +65,34 @@ func (o *ociDownloader) Run(
 	cfg, err := promotion.ConfigToStruct[builtin.OCIDownloadConfig](stepCtx.Config)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			&promotion.TerminalError{Err: fmt.Errorf("could not convert config into %s config: %w", o.Name(), err)}
+			&promotion.TerminalError{Err: fmt.Errorf("could not convert config into %s config: %w", d.Name(), err)}
 	}
 
-	return o.run(ctx, stepCtx, cfg)
+	return d.run(ctx, stepCtx, cfg)
 }
 
 // validate validates ociDownloader configuration against a JSON schema.
-func (o *ociDownloader) validate(cfg promotion.Config) error {
-	return validate(o.schemaLoader, gojsonschema.NewGoLoader(cfg), o.Name())
+func (d *ociDownloader) validate(cfg promotion.Config) error {
+	return validate(d.schemaLoader, gojsonschema.NewGoLoader(cfg), d.Name())
 }
 
 // run executes the ociDownloader step with the provided configuration.
-func (o *ociDownloader) run(
+func (d *ociDownloader) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 	cfg builtin.OCIDownloadConfig,
 ) (promotion.StepResult, error) {
-	absOutPath, err := o.prepareOutputPath(stepCtx.WorkDir, cfg.OutPath)
+	absOutPath, err := d.prepareOutputPath(stepCtx.WorkDir, cfg.OutPath, cfg.AllowOverwrite)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
-	img, err := o.resolveImage(ctx, stepCtx, cfg)
+	img, err := d.resolveImage(ctx, stepCtx, cfg)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
-	if err = o.extractLayerToFile(img, cfg.MediaType, absOutPath); err != nil {
+	if err = d.extractLayerToFile(img, cfg.MediaType, absOutPath); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
@@ -100,22 +100,41 @@ func (o *ociDownloader) run(
 }
 
 // prepareOutputPath validates and prepares the output path for the artifact.
-func (o *ociDownloader) prepareOutputPath(workDir, outPath string) (string, error) {
+func (d *ociDownloader) prepareOutputPath(workDir, outPath string, allowOverwrite bool) (string, error) {
 	absOutPath, err := securejoin.SecureJoin(workDir, outPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to join path %q: %w", outPath, err)
 	}
 
+	if err = d.checkFileOverwrite(absOutPath, outPath, allowOverwrite); err != nil {
+		return "", err
+	}
+
 	destDir := filepath.Dir(absOutPath)
-	if err := os.MkdirAll(destDir, 0o700); err != nil {
+	if err = os.MkdirAll(destDir, 0o700); err != nil {
 		return "", fmt.Errorf("failed to create destination directory: %w", err)
 	}
 
 	return absOutPath, nil
 }
 
+// checkFileOverwrite validates file overwrite conditions.
+func (d *ociDownloader) checkFileOverwrite(absOutPath, outPath string, allowOverwrite bool) error {
+	if !allowOverwrite {
+		if _, err := os.Stat(absOutPath); err == nil || !os.IsNotExist(err) {
+			if err != nil {
+				return fmt.Errorf("error checking destination file: %w", err)
+			}
+			return &promotion.TerminalError{
+				Err: fmt.Errorf("file already exists at %s and overwrite is not allowed", outPath),
+			}
+		}
+	}
+	return nil
+}
+
 // resolveImage resolves the OCI image/artifact from the registry.
-func (o *ociDownloader) resolveImage(
+func (d *ociDownloader) resolveImage(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 	cfg builtin.OCIDownloadConfig,
@@ -125,7 +144,7 @@ func (o *ociDownloader) resolveImage(
 		return nil, fmt.Errorf("invalid image reference %q: %w", cfg.ImageRef, err)
 	}
 
-	remoteOpts, err := o.buildRemoteOptions(ctx, stepCtx, ref, cfg)
+	remoteOpts, err := d.buildRemoteOptions(ctx, stepCtx, ref, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +158,7 @@ func (o *ociDownloader) resolveImage(
 }
 
 // buildRemoteOptions constructs the remote options for the registry.
-func (o *ociDownloader) buildRemoteOptions(
+func (d *ociDownloader) buildRemoteOptions(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 	ref name.Reference,
@@ -147,11 +166,11 @@ func (o *ociDownloader) buildRemoteOptions(
 ) ([]remote.Option, error) {
 	remoteOpts := []remote.Option{
 		remote.WithContext(ctx),
-		remote.WithTransport(o.buildHTTPTransport(cfg)),
+		remote.WithTransport(d.buildHTTPTransport(cfg)),
 	}
 
 	// Configure authentication
-	if authOpt, err := o.getAuthOption(ctx, stepCtx, ref); err != nil {
+	if authOpt, err := d.getAuthOption(ctx, stepCtx, ref); err != nil {
 		return nil, err
 	} else if authOpt != nil {
 		remoteOpts = append(remoteOpts, authOpt)
@@ -161,14 +180,14 @@ func (o *ociDownloader) buildRemoteOptions(
 }
 
 // getAuthOption retrieves and configures authentication for the registry.
-func (o *ociDownloader) getAuthOption(
+func (d *ociDownloader) getAuthOption(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 	ref name.Reference,
 ) (remote.Option, error) {
 	repoURL := ref.Context().String()
 
-	creds, err := o.credsDB.Get(ctx, stepCtx.Project, credentials.TypeImage, repoURL)
+	creds, err := d.credsDB.Get(ctx, stepCtx.Project, credentials.TypeImage, repoURL)
 	if err != nil {
 		return nil, fmt.Errorf("error obtaining credentials for image repo %q: %w", repoURL, err)
 	}
@@ -185,7 +204,7 @@ func (o *ociDownloader) getAuthOption(
 
 // buildHTTPTransport creates a new HTTP transport with TLS settings based on
 // the configuration.
-func (o *ociDownloader) buildHTTPTransport(cfg builtin.OCIDownloadConfig) *http.Transport {
+func (d *ociDownloader) buildHTTPTransport(cfg builtin.OCIDownloadConfig) *http.Transport {
 	httpTransport := cleanhttp.DefaultTransport()
 	if cfg.InsecureSkipTLSVerify {
 		httpTransport.TLSClientConfig = &tls.Config{
@@ -197,23 +216,23 @@ func (o *ociDownloader) buildHTTPTransport(cfg builtin.OCIDownloadConfig) *http.
 
 // extractLayerToFile extracts the target layer from the image to the specified
 // file.
-func (o *ociDownloader) extractLayerToFile(img v1.Image, mediaType, absOutPath string) error {
+func (d *ociDownloader) extractLayerToFile(img v1.Image, mediaType, absOutPath string) error {
 	manifest, err := img.Manifest()
 	if err != nil {
 		return fmt.Errorf("failed to get manifest: %w", err)
 	}
 
-	targetLayer, err := o.findTargetLayer(img, manifest, mediaType)
+	targetLayer, err := d.findTargetLayer(img, manifest, mediaType)
 	if err != nil {
 		return fmt.Errorf("failed to find target layer: %w", err)
 	}
 
-	return o.writeLayerToFile(targetLayer, absOutPath)
+	return d.writeLayerToFile(targetLayer, absOutPath)
 }
 
 // writeLayerToFile writes the layer content to a file using atomic operations.
-func (o *ociDownloader) writeLayerToFile(layer v1.Layer, absOutPath string) error {
-	tempFile, tempPath, err := o.createTempFile(absOutPath)
+func (d *ociDownloader) writeLayerToFile(layer v1.Layer, absOutPath string) error {
+	tempFile, tempPath, err := d.createTempFile(absOutPath)
 	if err != nil {
 		return err
 	}
@@ -223,7 +242,7 @@ func (o *ociDownloader) writeLayerToFile(layer v1.Layer, absOutPath string) erro
 		_ = os.Remove(tempPath)
 	}()
 
-	if err = o.copyLayerToFile(layer, tempFile); err != nil {
+	if err = d.copyLayerToFile(layer, tempFile); err != nil {
 		return err
 	}
 
@@ -239,7 +258,7 @@ func (o *ociDownloader) writeLayerToFile(layer v1.Layer, absOutPath string) erro
 }
 
 // createTempFile creates a temporary file in the same directory as the target.
-func (o *ociDownloader) createTempFile(absOutPath string) (*os.File, string, error) {
+func (d *ociDownloader) createTempFile(absOutPath string) (*os.File, string, error) {
 	destDir := filepath.Dir(absOutPath)
 	baseFile := filepath.Base(absOutPath)
 
@@ -258,7 +277,7 @@ func (o *ociDownloader) createTempFile(absOutPath string) (*os.File, string, err
 }
 
 // copyLayerToFile copies layer content to the file with size limits.
-func (o *ociDownloader) copyLayerToFile(layer v1.Layer, tempFile *os.File) error {
+func (d *ociDownloader) copyLayerToFile(layer v1.Layer, tempFile *os.File) error {
 	size, err := layer.Size()
 	if err != nil {
 		return fmt.Errorf("failed to get layer size: %w", err)
@@ -287,7 +306,7 @@ func (o *ociDownloader) copyLayerToFile(layer v1.Layer, tempFile *os.File) error
 }
 
 // findTargetLayer finds the appropriate layer based on media type preference.
-func (o *ociDownloader) findTargetLayer(
+func (d *ociDownloader) findTargetLayer(
 	img v1.Image,
 	manifest *v1.Manifest,
 	targetMediaType string,
