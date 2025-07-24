@@ -144,7 +144,10 @@ func (o *ociPuller) buildRemoteOptions(
 	ref name.Reference,
 	cfg builtin.OCIPullConfig,
 ) ([]remote.Option, error) {
-	remoteOpts := []remote.Option{remote.WithContext(ctx)}
+	remoteOpts := []remote.Option{
+		remote.WithContext(ctx),
+		remote.WithTransport(o.buildHTTPTransport(cfg)),
+	}
 
 	// Configure authentication
 	if authOpt, err := o.getAuthOption(ctx, stepCtx, ref); err != nil {
@@ -152,9 +155,6 @@ func (o *ociPuller) buildRemoteOptions(
 	} else if authOpt != nil {
 		remoteOpts = append(remoteOpts, authOpt)
 	}
-
-	// Configure transport
-	remoteOpts = append(remoteOpts, remote.WithTransport(o.buildHTTPTransport(cfg)))
 
 	return remoteOpts, nil
 }
