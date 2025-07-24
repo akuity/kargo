@@ -132,9 +132,11 @@ func Test_ociDownloader_resolveImage(t *testing.T) {
 
 func Test_ociDownloader_prepareOutputPath(t *testing.T) {
 	tests := []struct {
-		name       string
-		outPath    string
-		assertions func(*testing.T, string, string, error)
+		name           string
+		outPath        string
+		allowOverwrite bool
+		setup          func(*testing.T, string)
+		assertions     func(*testing.T, string, string, error)
 	}{
 		{
 			name:    "valid relative path",
@@ -168,6 +170,36 @@ func Test_ociDownloader_prepareOutputPath(t *testing.T) {
 				assert.Equal(t, filepath.Join(workDir, "etc", "passwd"), absPath)
 			},
 		},
+		{
+			name:    "path already exists",
+			outPath: "output/file.tar",
+			setup: func(t *testing.T, workDir string) {
+				// Create the output file to simulate an existing path
+				existingFile := filepath.Join(workDir, "output", "file.tar")
+				require.NoError(t, os.MkdirAll(path.Dir(existingFile), 0o700))
+				require.NoError(t, os.WriteFile(existingFile, []byte("existing content"), 0o600))
+			},
+			allowOverwrite: false,
+			assertions: func(t *testing.T, _, absPath string, err error) {
+				assert.ErrorContains(t, err, "file already exists")
+				assert.Empty(t, absPath)
+			},
+		},
+		{
+			name:    "path already exists with overwrite allowed",
+			outPath: "output/file.tar",
+			setup: func(t *testing.T, workDir string) {
+				// Create the output file to simulate an existing path
+				existingFile := filepath.Join(workDir, "output", "file.tar")
+				require.NoError(t, os.MkdirAll(path.Dir(existingFile), 0o700))
+				require.NoError(t, os.WriteFile(existingFile, []byte("existing content"), 0o600))
+			},
+			allowOverwrite: true,
+			assertions: func(t *testing.T, workDir, absPath string, err error) {
+				require.NoError(t, err)
+				assert.True(t, strings.HasPrefix(absPath, workDir))
+			},
+		},
 	}
 
 	runner := &ociDownloader{}
@@ -175,7 +207,11 @@ func Test_ociDownloader_prepareOutputPath(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			workDir := t.TempDir()
-			absPath, err := runner.prepareOutputPath(workDir, tt.outPath)
+			if tt.setup != nil {
+				tt.setup(t, workDir)
+			}
+
+			absPath, err := runner.prepareOutputPath(workDir, tt.outPath, tt.allowOverwrite)
 			tt.assertions(t, workDir, absPath, err)
 		})
 	}

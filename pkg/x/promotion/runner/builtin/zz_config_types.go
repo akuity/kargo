@@ -454,6 +454,9 @@ type Image struct {
 }
 
 type OCIDownloadConfig struct {
+	// Whether to allow overwriting an existing file at the specified path. If false and the
+	// file exists, the download will fail.
+	AllowOverwrite bool `json:"allowOverwrite,omitempty"`
 	// ImageRef is the reference to the OCI artifact to pull. Supports both tag format
 	// 'registry/repository:tag' and digest format 'registry/repository@sha256:digest'.
 	ImageRef string `json:"imageRef"`

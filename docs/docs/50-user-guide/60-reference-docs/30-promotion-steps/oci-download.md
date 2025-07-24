@@ -20,6 +20,7 @@ Downloads are limited to 100MB to prevent resource exhaustion.
 |------|------|----------|-------------|
 | `imageRef` | `string` | Y | Reference to the OCI artifact to pull. Supports both tag format `registry/repository:tag` and digest format `registry/repository@sha256:digest`. |
 | `outPath` | `string` | Y | Path to the destination file where the extracted artifact will be saved. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
+| `allowOverwrite` | `boolean` | N | Whether to allow overwriting an existing file at the specified path. If `false` and the file exists, the download will fail. Defaults to `false`. |
 | `mediaType` | `string` | N | MediaType of the layer to pull. Selects the first layer matching this type. If not specified, selects the first layer available. |
 | `insecureSkipTLSVerify` | `boolean` | N | Whether to skip TLS verification when downloading the artifact. Defaults to `false`. |
 
