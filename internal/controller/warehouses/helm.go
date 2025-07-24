@@ -49,11 +49,6 @@ func (r *reconciler) discoverCharts(
 			logger.Debug("found no credentials for chart repo")
 		}
 
-		// Enrich the logger with additional fields for this subscription.
-		if sub.SemverConstraint != "" {
-			logger = logger.WithValues("semverConstraint", sub.SemverConstraint)
-		}
-
 		selector, err := chart.NewSelector(*s.Chart, helmCreds)
 		if err != nil {
 			return nil, fmt.Errorf(

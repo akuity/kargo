@@ -220,6 +220,7 @@ func TestValidateSpec(t *testing.T) {
 							RepoURL: "bogus",
 						},
 						Image: &kargoapi.ImageSubscription{
+							Constraint:       "constraint",
 							SemverConstraint: "bogus",
 							Platform:         "bogus",
 						},
@@ -240,6 +241,11 @@ func TestValidateSpec(t *testing.T) {
 				require.Equal(
 					t,
 					field.ErrorList{
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "spec.subscriptions[0].image.constraint",
+							BadValue: "constraint",
+						},
 						{
 							Type:     field.ErrorTypeInvalid,
 							Field:    "spec.subscriptions[0].image.semverConstraint",
@@ -321,6 +327,7 @@ func TestValidateSubs(t *testing.T) {
 						RepoURL: "bogus",
 					},
 					Image: &kargoapi.ImageSubscription{
+						Constraint:       "bogus",
 						SemverConstraint: "bogus",
 						Platform:         "bogus",
 					},
@@ -335,10 +342,14 @@ func TestValidateSubs(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, subs []kargoapi.RepoSubscription, errs field.ErrorList) {
-				require.Len(t, errs, 5)
 				require.Equal(
 					t,
 					field.ErrorList{
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "subs[0].image.constraint",
+							BadValue: "bogus",
+						},
 						{
 							Type:     field.ErrorTypeInvalid,
 							Field:    "subs[0].image.semverConstraint",
@@ -375,7 +386,31 @@ func TestValidateSubs(t *testing.T) {
 		{
 			name: "valid",
 			subs: []kargoapi.RepoSubscription{
-				{Image: &kargoapi.ImageSubscription{}},
+				{
+					Image: &kargoapi.ImageSubscription{
+						RepoURL: "example/repo",
+						// No constraints
+					},
+				},
+				{
+					Image: &kargoapi.ImageSubscription{
+						RepoURL:    "example/another-repo",
+						Constraint: "^v1.0.0",
+					},
+				},
+				{
+					Image: &kargoapi.ImageSubscription{
+						RepoURL:          "example/yet-another-repo",
+						SemverConstraint: "^v1.0.0",
+					},
+				},
+				{
+					Image: &kargoapi.ImageSubscription{
+						RepoURL:                "example/still-another-repo",
+						ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
+						SemverConstraint:       "latest",
+					},
+				},
 			},
 			assertions: func(t *testing.T, _ []kargoapi.RepoSubscription, errs field.ErrorList) {
 				require.Nil(t, errs)
@@ -408,6 +443,7 @@ func TestValidateSub(t *testing.T) {
 					RepoURL: "bogus",
 				},
 				Image: &kargoapi.ImageSubscription{
+					Constraint:       "bogus",
 					SemverConstraint: "bogus",
 					Platform:         "bogus",
 				},
@@ -422,7 +458,6 @@ func TestValidateSub(t *testing.T) {
 				}: field.NewPath("spec.subscriptions[0].git"),
 			},
 			assertions: func(t *testing.T, sub kargoapi.RepoSubscription, errs field.ErrorList) {
-				require.Len(t, errs, 5)
 				require.Equal(
 					t,
 					field.ErrorList{
@@ -431,6 +466,11 @@ func TestValidateSub(t *testing.T) {
 							Field:    "sub.git",
 							BadValue: "bogus",
 							Detail:   "subscription for Git repository already exists at \"spec.subscriptions[0].git\"",
+						},
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "sub.image.constraint",
+							BadValue: "bogus",
 						},
 						{
 							Type:     field.ErrorTypeInvalid,
@@ -555,6 +595,7 @@ func TestValidateImageSub(t *testing.T) {
 			name: "invalid",
 			sub: kargoapi.ImageSubscription{
 				RepoURL:          "bogus",
+				Constraint:       "bogus",
 				SemverConstraint: "bogus",
 				Platform:         "bogus",
 			},
@@ -568,6 +609,11 @@ func TestValidateImageSub(t *testing.T) {
 				require.Equal(
 					t,
 					field.ErrorList{
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "image.constraint",
+							BadValue: "bogus",
+						},
 						{
 							Type:     field.ErrorTypeInvalid,
 							Field:    "image.semverConstraint",

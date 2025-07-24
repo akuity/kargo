@@ -162,6 +162,10 @@
                     "description": "AllowTags is a regular expression that can optionally be used to limit the\nimage tags that are considered in determining the newest version of an\nimage. This field is optional.",
                     "type": "string"
                   },
+                  "constraint": {
+                    "description": "Constraint specifies constraints on what new image versions are\npermissible. Acceptable values for this field vary contextually by\nImageSelectionStrategy. The field is optional and is ignored by some\nstrategies. When non-empty, the value in this field takes precedence over\nthe value of the deprecated SemverConstraint field.",
+                    "type": "string"
+                  },
                   "discoveryLimit": {
                     "default": 20,
                     "description": "DiscoveryLimit is an optional limit on the number of image references\nthat can be discovered for this subscription. The limit is applied after\nfiltering images based on the AllowTags and IgnoreTags fields.\nWhen left unspecified, the field is implicitly treated as if its value\nwere \"20\". The upper limit for this field is 100.",
@@ -203,7 +207,7 @@
                     "type": "string"
                   },
                   "semverConstraint": {
-                    "description": "SemverConstraint specifies constraints on what new image versions are\npermissible. The value in this field only has any effect when the\nImageSelectionStrategy is SemVer or left unspecified (which is implicitly\nthe same as SemVer). This field is also optional. When left unspecified,\n(and the ImageSelectionStrategy is SemVer or unspecified), there will be no\nconstraints, which means the latest semantically tagged version of an image\nwill always be used. Care should be taken with leaving this field\nunspecified, as it can lead to the unanticipated rollout of breaking\nchanges.\nMore info: https://github.com/masterminds/semver#checking-version-constraints",
+                    "description": "SemverConstraint specifies constraints on what new image versions are\npermissible. The value in this field only has any effect when the\nImageSelectionStrategy is SemVer or left unspecified (which is implicitly\nthe same as SemVer). This field is also optional. When left unspecified,\n(and the ImageSelectionStrategy is SemVer or unspecified), there will be no\nconstraints, which means the latest semantically tagged version of an image\nwill always be used. Care should be taken with leaving this field\nunspecified, as it can lead to the unanticipated rollout of breaking\nchanges.\nMore info: https://github.com/masterminds/semver#checking-version-constraints\n\nDeprecated: Use Constraint instead. This field will be removed in v1.9.0",
                     "type": "string"
                   },
                   "strictSemvers": {
@@ -216,7 +220,17 @@
                   "repoURL",
                   "strictSemvers"
                 ],
-                "type": "object"
+                "type": "object",
+                "x-kubernetes-validations": [
+                  {
+                    "message": "semverConstraint and constraint fields are mutually exclusive",
+                    "rule": "!(has(self.semverConstraint) && has(self.constraint))"
+                  },
+                  {
+                    "message": "If imageSelectionStrategy is Digest, either constraint or semverConstraint must be set",
+                    "rule": "!(self.imageSelectionStrategy == 'Digest') || has(self.constraint) || has(self.semverConstraint)"
+                  }
+                ]
               }
             },
             "type": "object"
