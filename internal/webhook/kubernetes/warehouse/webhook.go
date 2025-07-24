@@ -212,19 +212,22 @@ func (w *webhook) validateImageSub(
 ) field.ErrorList {
 	var errs field.ErrorList
 	if sub.ImageSelectionStrategy == kargoapi.ImageSelectionStrategySemVer || sub.ImageSelectionStrategy == "" {
-		var err *field.Error
-		// Validate the Constraint field XOR the deprecated SemverConstraint field
-		// is a valid semantic version range:
 		if sub.Constraint != "" {
-			err = validateSemverConstraint(f.Child("constraint"), sub.Constraint)
-		} else if sub.SemverConstraint != "" { // nolint:staticcheck
-			err = validateSemverConstraint(
+			if err := validateSemverConstraint(
+				f.Child("constraint"),
+				sub.Constraint,
+			); err != nil {
+				errs = append(errs, err)
+			}
+		}
+		// TODO: Remove this in v1.9.0
+		if sub.SemverConstraint != "" { // nolint:staticcheck
+			if err := validateSemverConstraint(
 				f.Child("semverConstraint"),
 				sub.SemverConstraint, // nolint:staticcheck
-			)
-		}
-		if err != nil {
-			errs = append(errs, err)
+			); err != nil {
+				errs = append(errs, err)
+			}
 		}
 	}
 	if sub.Platform != "" {
