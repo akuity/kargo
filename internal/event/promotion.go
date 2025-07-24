@@ -121,30 +121,14 @@ func NewPromotionAnnotations(
 		stepVars := calculateStepVars(step, stepEnv)
 		setVar(stepEnv, stepVars)
 
-		stepConfigData, err := json.Marshal(step.Config)
-		if err != nil {
-			logger.Error(err, "marshal step config")
-			continue
-		}
-		evaledConfig, err := expressions.EvaluateTemplate(string(stepConfigData), stepEnv)
+		evaledConfig, err := expressions.EvaluateJSONTemplate(step.Config.Raw, stepEnv)
 		if err != nil {
 			logger.Error(err, "evaluate step config template")
 			continue
 		}
 
-		var evaledConfigBytes []byte
-		if v, ok := evaledConfig.(string); ok {
-			evaledConfigBytes = []byte(v)
-		} else {
-			evaledConfigBytes, err = json.Marshal(evaledConfig)
-			if err != nil {
-				logger.Error(err, "marshal evaluated step config")
-				continue
-			}
-		}
-
 		var cfg builtin.ArgoCDUpdateConfig
-		if err := json.Unmarshal(evaledConfigBytes, &cfg); err != nil {
+		if err := json.Unmarshal(evaledConfig, &cfg); err != nil {
 			logger.Error(err, "unmarshal evaluated ArgoCD update config")
 			continue
 		}
