@@ -17,6 +17,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/indexer"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 func TestRefreshWarehouses(t *testing.T) {
@@ -32,7 +33,6 @@ func TestRefreshWarehouses(t *testing.T) {
 		name       string
 		client     client.Client
 		project    string
-		qualifier  string
 		assertions func(*testing.T, *httptest.ResponseRecorder)
 	}{
 		{
@@ -209,10 +209,118 @@ func TestRefreshWarehouses(t *testing.T) {
 				w,
 				testCase.client,
 				testCase.project,
-				testCase.qualifier,
+				// qualifier
+				"",
 				testRepoURL,
 			)
 			testCase.assertions(t, w)
+		})
+	}
+}
+
+func TestNeedsRefresh(t *testing.T) {
+	testCases := []struct {
+		name      string
+		subs      []kargoapi.RepoSubscription
+		qualifier string
+		repoURLs  []string
+		expect    bool
+		expectErr bool
+	}{
+		{
+			name: "Git subscription with matching qualifier",
+			subs: []kargoapi.RepoSubscription{{
+				Git: &kargoapi.GitSubscription{
+					CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+					RepoURL:                 "https://github.com/username/repo.git",
+					Branch:                  "main",
+				},
+			}},
+			repoURLs:  []string{"https://github.com/username/repo.git"},
+			qualifier: "refs/heads/main",
+			expect:    true,
+		},
+		{
+			name: "Git subscription with non-matching qualifier",
+			subs: []kargoapi.RepoSubscription{{
+				Git: &kargoapi.GitSubscription{
+					CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+					RepoURL:                 "https://github.com/username/repo.git",
+					Branch:                  "main",
+				},
+			}},
+			repoURLs:  []string{"https://github.com/username/repo.git"},
+			qualifier: "release",
+			expect:    false,
+		},
+		{
+			name: "Image subscription with matching qualifier",
+			subs: []kargoapi.RepoSubscription{{
+				Image: &kargoapi.ImageSubscription{
+					RepoURL:                "docker.io/example/repo",
+					ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+					StrictSemvers:          true,
+				},
+			}},
+			repoURLs:  []string{"docker.io/example/repo"},
+			qualifier: "v1.0.0",
+			expect:    true,
+		},
+		{
+			name: "Image subscription with non-matching qualifier",
+			subs: []kargoapi.RepoSubscription{{
+				Image: &kargoapi.ImageSubscription{
+					RepoURL:                "docker.io/example/repo",
+					ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+					StrictSemvers:          true,
+				},
+			}},
+			repoURLs:  []string{"docker.io/example/repo"},
+			qualifier: "invalid-tag",
+			expect:    false,
+		},
+		{
+			name: "Chart subscription with matching qualifier",
+			subs: []kargoapi.RepoSubscription{{
+				Chart: &kargoapi.ChartSubscription{
+					RepoURL:          "oci://example.com/charts",
+					SemverConstraint: "^1.0.0",
+				},
+			}},
+			repoURLs:  []string{"example.com/charts"},
+			qualifier: "v1.0.0",
+			expect:    true,
+		},
+		{
+			name: "Chart subscription with non-matching qualifier",
+			subs: []kargoapi.RepoSubscription{{
+				Chart: &kargoapi.ChartSubscription{
+					RepoURL:          "oci://example.com/charts",
+					SemverConstraint: "^2.0.0",
+				},
+			}},
+			repoURLs:  []string{"example.com/charts"},
+			qualifier: "1.0.0",
+			expect:    false,
+		},
+		{
+			name:      "No subscriptions",
+			subs:      []kargoapi.RepoSubscription{},
+			qualifier: "main",
+			expect:    false,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			logger := logging.NewLogger(logging.DebugLevel)
+			ctx := logging.ContextWithLogger(t.Context(), logger)
+			result, err := needsRefresh(ctx, tc.subs, tc.qualifier, tc.repoURLs...)
+			if tc.expectErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tc.expect, *result)
 		})
 	}
 }
