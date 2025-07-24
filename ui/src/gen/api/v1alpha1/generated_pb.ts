@@ -1979,7 +1979,7 @@ export const ImageDiscoveryResultSchema: GenMessage<ImageDiscoveryResult> = /*@_
  * ImageSubscription defines a subscription to an image repository.
  *
  * +kubebuilder:validation:XValidation:message="semverConstraint and constraint fields are mutually exclusive",rule="!(has(self.semverConstraint) && has(self.constraint))"
- * +kubebuilder:validation:XValidation:message="If selectionStrategy is Digest, either constraint or semverConstraint must be set",rule="!(self.selectionStrategy == 'Digest') || has(self.constraint) || has(self.semverConstraint)"
+ * +kubebuilder:validation:XValidation:message="If imageSelectionStrategy is Digest, either constraint or semverConstraint must be set",rule="!(self.imageSelectionStrategy == 'Digest') || has(self.constraint) || has(self.semverConstraint)"
  *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.ImageSubscription
  */

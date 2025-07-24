@@ -227,8 +227,8 @@
                     "rule": "!(has(self.semverConstraint) && has(self.constraint))"
                   },
                   {
-                    "message": "If selectionStrategy is Digest, either constraint or semverConstraint must be set",
-                    "rule": "!(self.selectionStrategy == 'Digest') || has(self.constraint) || has(self.semverConstraint)"
+                    "message": "If imageSelectionStrategy is Digest, either constraint or semverConstraint must be set",
+                    "rule": "!(self.imageSelectionStrategy == 'Digest') || has(self.constraint) || has(self.semverConstraint)"
                   }
                 ]
               }
