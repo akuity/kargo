@@ -13,6 +13,8 @@ import { TagMap, ImageStageMap } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
+import { shortVersion } from './freight/short-version-utils';
+
 type ProcessedTagMap = {
   tags: Record<string, ImageStageMap>;
 };
@@ -66,7 +68,7 @@ const getTooltipTitle = (
     return `Most recent promotion: Currently in stage '${stageName}'`;
   }
 
-  return `Stage: '${stageName}' (Sequential promotion #${order + 1})`;
+  return `Stage: '${stageName}' (Promotion order: ${order})`;
 };
 
 const filterStagesForImage = (
@@ -135,7 +137,7 @@ const StageBox = memo(
         >
           {showHistory && (
             <div className='flex items-center gap-0.5'>
-              <span className='text-white font-bold text-[10px] select-none'>#{order + 1}</span>
+              <span className='text-white font-bold text-[10px] select-none'>{order}</span>
             </div>
           )}
         </Button>
@@ -244,27 +246,6 @@ export const Images = memo<ImagesProps>(({ hide, images, project, stages, wareho
     return sortTags(tags);
   }, [selectedImageData]);
 
-  const sequentialOrderMaps = useMemo(() => {
-    if (!selectedImageData || !showHistory) return {};
-
-    const maps: Record<string, Record<string, number>> = {};
-
-    Object.entries(selectedImageData.tags).forEach(([tag, imageStageMap]) => {
-      const stagesWithOrder = Object.entries(imageStageMap.stages || {})
-        .filter(([stageName]) => dynamicStages.includes(stageName))
-        .sort(([, a], [, b]) => a - b);
-
-      const orderMap: Record<string, number> = {};
-      stagesWithOrder.forEach(([stageName], index) => {
-        orderMap[stageName] = index;
-      });
-
-      maps[tag] = orderMap;
-    });
-
-    return maps;
-  }, [selectedImageData, dynamicStages, showHistory]);
-
   const tableColumns = useMemo(() => {
     const columns: ColumnType<{ tag: string }>[] = [
       {
@@ -274,7 +255,7 @@ export const Images = memo<ImagesProps>(({ hide, images, project, stages, wareho
         render: (_: unknown, record: { tag: string }) => (
           <Tooltip title={`Image Tag: ${record.tag}`}>
             <Typography.Text className='font-mono text-xs font-semibold truncate'>
-              {record.tag}
+              {shortVersion(record.tag, 15)}
             </Typography.Text>
           </Tooltip>
         )
@@ -319,13 +300,11 @@ export const Images = memo<ImagesProps>(({ hide, images, project, stages, wareho
             );
           }
 
-          const sequentialOrder = sequentialOrderMaps[record.tag]?.[stageName] ?? 0;
-
           return (
             <div className='flex justify-center'>
               <StageBox
                 stageName={stageName}
-                order={sequentialOrder}
+                order={originalOrder}
                 showHistory={showHistory}
                 stageColorMap={stageColorMap}
                 project={project}
@@ -337,7 +316,7 @@ export const Images = memo<ImagesProps>(({ hide, images, project, stages, wareho
     });
 
     return columns;
-  }, [dynamicStages, stageColorMap, selectedImageData, showHistory, project, sequentialOrderMaps]);
+  }, [dynamicStages, stageColorMap, selectedImageData, showHistory, project]);
 
   const tableData = useMemo(() => {
     return allTags.map((tag) => ({
@@ -375,7 +354,7 @@ export const Images = memo<ImagesProps>(({ hide, images, project, stages, wareho
           type='secondary'
           className='text-xs bg-gray-50 px-2 py-0.5 rounded block mb-2'
         >
-          Numbers show sequential promotion order (#1 = most recent)
+          Numbers show promotion order (0 = most recent)
         </Typography.Text>
       )}
 
