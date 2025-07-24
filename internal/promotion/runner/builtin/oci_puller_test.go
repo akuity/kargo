@@ -1,21 +1,28 @@
 package builtin
 
 import (
+	"context"
+	"errors"
 	"io"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/fake"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/static"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/pkg/promotion"
+	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
 func Test_ociPuller_validate(t *testing.T) {
@@ -121,6 +128,194 @@ func Test_ociPuller_prepareOutputPath(t *testing.T) {
 			workDir := t.TempDir()
 			absPath, err := runner.prepareOutputPath(workDir, tt.outPath)
 			tt.assertions(t, workDir, absPath, err)
+		})
+	}
+}
+
+func Test_ociPuller_buildRemoteOptions(t *testing.T) {
+	tests := []struct {
+		name       string
+		credsDB    credentials.Database
+		cfg        builtin.OCIPullConfig
+		assertions func(*testing.T, []remote.Option, error)
+	}{
+		{
+			name:    "basic options without auth",
+			credsDB: &credentials.FakeDB{},
+			cfg: builtin.OCIPullConfig{
+				ImageRef: "registry.example.com/image:tag",
+			},
+			assertions: func(t *testing.T, opts []remote.Option, err error) {
+				require.NoError(t, err)
+				assert.Len(t, opts, 2)
+			},
+		},
+		{
+			name: "options with authentication",
+			credsDB: &credentials.FakeDB{
+				GetFn: func(context.Context, string, credentials.Type, string) (*credentials.Credentials, error) {
+					return &credentials.Credentials{
+						Username: "user",
+						Password: "pass",
+					}, nil
+				},
+			},
+			cfg: builtin.OCIPullConfig{
+				ImageRef: "registry.example.com/image:tag",
+			},
+			assertions: func(t *testing.T, opts []remote.Option, err error) {
+				require.NoError(t, err)
+				assert.Len(t, opts, 3)
+			},
+		},
+		{
+			name: "credentials error",
+			credsDB: &credentials.FakeDB{
+				GetFn: func(context.Context, string, credentials.Type, string) (*credentials.Credentials, error) {
+					return nil, errors.New("credentials database error")
+				},
+			},
+			cfg: builtin.OCIPullConfig{
+				ImageRef:              "registry.example.com/image:tag",
+				InsecureSkipTLSVerify: false,
+			},
+			assertions: func(t *testing.T, opts []remote.Option, err error) {
+				assert.ErrorContains(t, err, "error obtaining credentials")
+				assert.Nil(t, opts)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			runner := &ociPuller{credsDB: tt.credsDB}
+
+			ref, err := name.ParseReference(tt.cfg.ImageRef)
+			require.NoError(t, err)
+
+			stepCtx := &promotion.StepContext{
+				Project: "fake-project",
+			}
+
+			opts, err := runner.buildRemoteOptions(context.Background(), stepCtx, ref, tt.cfg)
+			tt.assertions(t, opts, err)
+		})
+	}
+}
+
+func Test_ociPuller_getAuthOption(t *testing.T) {
+	tests := []struct {
+		name       string
+		credsDB    credentials.Database
+		assertions func(*testing.T, remote.Option, error)
+	}{
+		{
+			name:    "no credentials",
+			credsDB: &credentials.FakeDB{},
+			assertions: func(t *testing.T, opt remote.Option, err error) {
+				require.NoError(t, err)
+				assert.Nil(t, opt)
+			},
+		},
+		{
+			name: "valid credentials",
+			credsDB: &credentials.FakeDB{
+				GetFn: func(context.Context, string, credentials.Type, string) (*credentials.Credentials, error) {
+					return &credentials.Credentials{
+						Username: "user",
+						Password: "pass",
+					}, nil
+				},
+			},
+			assertions: func(t *testing.T, opt remote.Option, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, opt)
+			},
+		},
+		{
+			name: "empty username and password",
+			credsDB: &credentials.FakeDB{
+				GetFn: func(context.Context, string, credentials.Type, string) (*credentials.Credentials, error) {
+					return &credentials.Credentials{
+						Username: "",
+						Password: "",
+					}, nil
+				},
+			},
+			assertions: func(t *testing.T, opt remote.Option, err error) {
+				require.NoError(t, err)
+				assert.Nil(t, opt)
+			},
+		},
+		{
+			name: "credentials database error",
+			credsDB: &credentials.FakeDB{
+				GetFn: func(context.Context, string, credentials.Type, string) (*credentials.Credentials, error) {
+					return nil, errors.New("credentials database error")
+				},
+			},
+			assertions: func(t *testing.T, opt remote.Option, err error) {
+				assert.ErrorContains(t, err, "error obtaining credentials")
+				assert.ErrorContains(t, err, "credentials database error")
+				assert.Nil(t, opt)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			runner := &ociPuller{credsDB: tt.credsDB}
+
+			ref, err := name.ParseReference("registry.example.com/image:tag")
+			require.NoError(t, err)
+
+			stepCtx := &promotion.StepContext{
+				Project: "fake-project",
+			}
+
+			opt, err := runner.getAuthOption(context.Background(), stepCtx, ref)
+			tt.assertions(t, opt, err)
+		})
+	}
+}
+
+func Test_ociPuller_buildHTTPTransport(t *testing.T) {
+	tests := []struct {
+		name       string
+		cfg        builtin.OCIPullConfig
+		assertions func(*testing.T, *http.Transport)
+	}{
+		{
+			name: "default TLS verification",
+			cfg: builtin.OCIPullConfig{
+				InsecureSkipTLSVerify: false,
+			},
+			assertions: func(t *testing.T, transport *http.Transport) {
+				require.NotNil(t, transport)
+				if transport.TLSClientConfig != nil {
+					assert.False(t, transport.TLSClientConfig.InsecureSkipVerify)
+				}
+			},
+		},
+		{
+			name: "skip TLS verification",
+			cfg: builtin.OCIPullConfig{
+				InsecureSkipTLSVerify: true,
+			},
+			assertions: func(t *testing.T, transport *http.Transport) {
+				require.NotNil(t, transport)
+				require.NotNil(t, transport.TLSClientConfig)
+				assert.True(t, transport.TLSClientConfig.InsecureSkipVerify)
+			},
+		},
+	}
+
+	runner := &ociPuller{}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			transport := runner.buildHTTPTransport(tt.cfg)
+			tt.assertions(t, transport)
 		})
 	}
 }
