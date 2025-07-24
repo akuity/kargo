@@ -26,21 +26,21 @@ import (
 )
 
 const (
-	maxArtifactSize = 100 << 20
+	maxOCIArtifactSize = 100 << 20
 )
 
-// ociPuller is an implementation of the promotion.StepRunner interface
-// that pulls OCI artifacts from a registry.
-type ociPuller struct {
+// ociDownloader is an implementation of the promotion.StepRunner interface
+// that downloads OCI artifacts from a registry.
+type ociDownloader struct {
 	schemaLoader gojsonschema.JSONLoader
 	credsDB      credentials.Database
 }
 
-// newOCIPuller returns an implementation of the promotion.StepRunner interface
-// that pulls OCI artifacts from a registry. It uses the provided credentials
-// database to authenticate with the registry.
-func newOCIPuller(credsDB credentials.Database) promotion.StepRunner {
-	r := &ociPuller{
+// newOCIDownloader returns an implementation of the promotion.StepRunner
+// interface that downloads OCI artifacts from a registry. It uses the provided
+// credentials database to authenticate with the registry.
+func newOCIDownloader(credsDB credentials.Database) promotion.StepRunner {
+	r := &ociDownloader{
 		credsDB: credsDB,
 	}
 	r.schemaLoader = getConfigSchemaLoader(r.Name())
@@ -48,12 +48,12 @@ func newOCIPuller(credsDB credentials.Database) promotion.StepRunner {
 }
 
 // Name implements the promotion.StepRunner interface.
-func (o *ociPuller) Name() string {
-	return "oci-pull"
+func (o *ociDownloader) Name() string {
+	return "oci-download"
 }
 
 // Run implements the promotion.StepRunner interface.
-func (o *ociPuller) Run(
+func (o *ociDownloader) Run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
@@ -61,7 +61,7 @@ func (o *ociPuller) Run(
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
-	cfg, err := promotion.ConfigToStruct[builtin.OCIPullConfig](stepCtx.Config)
+	cfg, err := promotion.ConfigToStruct[builtin.OCIDownloadConfig](stepCtx.Config)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("could not convert config into %s config: %w", o.Name(), err)
@@ -70,23 +70,23 @@ func (o *ociPuller) Run(
 	return o.run(ctx, stepCtx, cfg)
 }
 
-// validate validates ociPuller configuration against a JSON schema.
-func (o *ociPuller) validate(cfg promotion.Config) error {
+// validate validates ociDownloader configuration against a JSON schema.
+func (o *ociDownloader) validate(cfg promotion.Config) error {
 	return validate(o.schemaLoader, gojsonschema.NewGoLoader(cfg), o.Name())
 }
 
-// run executes the ociPuller step with the provided configuration.
-func (o *ociPuller) run(
+// run executes the ociDownloader step with the provided configuration.
+func (o *ociDownloader) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.OCIPullConfig,
+	cfg builtin.OCIDownloadConfig,
 ) (promotion.StepResult, error) {
 	absOutPath, err := o.prepareOutputPath(stepCtx.WorkDir, cfg.OutPath)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
-	img, err := o.pullImage(ctx, stepCtx, cfg)
+	img, err := o.resolveImage(ctx, stepCtx, cfg)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
@@ -99,7 +99,7 @@ func (o *ociPuller) run(
 }
 
 // prepareOutputPath validates and prepares the output path for the artifact.
-func (o *ociPuller) prepareOutputPath(workDir, outPath string) (string, error) {
+func (o *ociDownloader) prepareOutputPath(workDir, outPath string) (string, error) {
 	absOutPath, err := securejoin.SecureJoin(workDir, outPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to join path %q: %w", outPath, err)
@@ -113,11 +113,11 @@ func (o *ociPuller) prepareOutputPath(workDir, outPath string) (string, error) {
 	return absOutPath, nil
 }
 
-// pullImage pulls the OCI image/artifact from the registry.
-func (o *ociPuller) pullImage(
+// resolveImage resolves the OCI image/artifact from the registry.
+func (o *ociDownloader) resolveImage(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
-	cfg builtin.OCIPullConfig,
+	cfg builtin.OCIDownloadConfig,
 ) (v1.Image, error) {
 	ref, err := name.ParseReference(cfg.ImageRef)
 	if err != nil {
@@ -131,18 +131,18 @@ func (o *ociPuller) pullImage(
 
 	img, err := remote.Image(ref, remoteOpts...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to pull image %q: %w", cfg.ImageRef, err)
+		return nil, fmt.Errorf("failed to resolve image %q: %w", cfg.ImageRef, err)
 	}
 
 	return img, nil
 }
 
-// buildRemoteOptions constructs the remote options for image pulling.
-func (o *ociPuller) buildRemoteOptions(
+// buildRemoteOptions constructs the remote options for the registry.
+func (o *ociDownloader) buildRemoteOptions(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 	ref name.Reference,
-	cfg builtin.OCIPullConfig,
+	cfg builtin.OCIDownloadConfig,
 ) ([]remote.Option, error) {
 	remoteOpts := []remote.Option{
 		remote.WithContext(ctx),
@@ -160,7 +160,7 @@ func (o *ociPuller) buildRemoteOptions(
 }
 
 // getAuthOption retrieves and configures authentication for the registry.
-func (o *ociPuller) getAuthOption(
+func (o *ociDownloader) getAuthOption(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 	ref name.Reference,
@@ -184,7 +184,7 @@ func (o *ociPuller) getAuthOption(
 
 // buildHTTPTransport creates a new HTTP transport with TLS settings based on
 // the configuration.
-func (o *ociPuller) buildHTTPTransport(cfg builtin.OCIPullConfig) *http.Transport {
+func (o *ociDownloader) buildHTTPTransport(cfg builtin.OCIDownloadConfig) *http.Transport {
 	httpTransport := cleanhttp.DefaultTransport()
 	if cfg.InsecureSkipTLSVerify {
 		httpTransport.TLSClientConfig = &tls.Config{
@@ -196,7 +196,7 @@ func (o *ociPuller) buildHTTPTransport(cfg builtin.OCIPullConfig) *http.Transpor
 
 // extractLayerToFile extracts the target layer from the image to the specified
 // file.
-func (o *ociPuller) extractLayerToFile(img v1.Image, mediaType, absOutPath string) error {
+func (o *ociDownloader) extractLayerToFile(img v1.Image, mediaType, absOutPath string) error {
 	manifest, err := img.Manifest()
 	if err != nil {
 		return fmt.Errorf("failed to get manifest: %w", err)
@@ -211,7 +211,7 @@ func (o *ociPuller) extractLayerToFile(img v1.Image, mediaType, absOutPath strin
 }
 
 // writeLayerToFile writes the layer content to a file using atomic operations.
-func (o *ociPuller) writeLayerToFile(layer v1.Layer, absOutPath string) error {
+func (o *ociDownloader) writeLayerToFile(layer v1.Layer, absOutPath string) error {
 	tempFile, tempPath, err := o.createTempFile(absOutPath)
 	if err != nil {
 		return err
@@ -238,7 +238,7 @@ func (o *ociPuller) writeLayerToFile(layer v1.Layer, absOutPath string) error {
 }
 
 // createTempFile creates a temporary file in the same directory as the target.
-func (o *ociPuller) createTempFile(absOutPath string) (*os.File, string, error) {
+func (o *ociDownloader) createTempFile(absOutPath string) (*os.File, string, error) {
 	destDir := filepath.Dir(absOutPath)
 	baseFile := filepath.Base(absOutPath)
 
@@ -257,14 +257,14 @@ func (o *ociPuller) createTempFile(absOutPath string) (*os.File, string, error) 
 }
 
 // copyLayerToFile copies layer content to the file with size limits.
-func (o *ociPuller) copyLayerToFile(layer v1.Layer, tempFile *os.File) error {
+func (o *ociDownloader) copyLayerToFile(layer v1.Layer, tempFile *os.File) error {
 	size, err := layer.Size()
 	if err != nil {
 		return fmt.Errorf("failed to get layer size: %w", err)
 	}
-	if size > maxArtifactSize {
+	if size > maxOCIArtifactSize {
 		return &promotion.TerminalError{
-			Err: fmt.Errorf("layer size %d exceeds maximum allowed size of %d bytes", size, maxArtifactSize),
+			Err: fmt.Errorf("layer size %d exceeds maximum allowed size of %d bytes", size, maxOCIArtifactSize),
 		}
 	}
 
@@ -273,7 +273,7 @@ func (o *ociPuller) copyLayerToFile(layer v1.Layer, tempFile *os.File) error {
 		return fmt.Errorf("failed to get layer content: %w", err)
 	}
 
-	if _, err = intio.LimitCopy(tempFile, layerReader, maxArtifactSize); err != nil {
+	if _, err = intio.LimitCopy(tempFile, layerReader, maxOCIArtifactSize); err != nil {
 		if errors.Is(err, &intio.BodyTooLargeError{}) {
 			return &promotion.TerminalError{
 				Err: fmt.Errorf("failed to copy layer content: %w", err),
@@ -286,7 +286,7 @@ func (o *ociPuller) copyLayerToFile(layer v1.Layer, tempFile *os.File) error {
 }
 
 // findTargetLayer finds the appropriate layer based on media type preference.
-func (o *ociPuller) findTargetLayer(
+func (o *ociDownloader) findTargetLayer(
 	img v1.Image,
 	manifest *v1.Manifest,
 	targetMediaType string,

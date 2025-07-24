@@ -453,7 +453,7 @@ type Image struct {
 	Tag string `json:"tag,omitempty"`
 }
 
-type OCIPullConfig struct {
+type OCIDownloadConfig struct {
 	// ImageRef is the reference to the OCI artifact to pull. Supports both tag format
 	// 'registry/repository:tag' and digest format 'registry/repository@sha256:digest'.
 	ImageRef string `json:"imageRef"`
