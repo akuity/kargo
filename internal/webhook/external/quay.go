@@ -102,14 +102,12 @@ func (q *quayWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 			image.NormalizeURL(payload.DockerURL),
 			helm.NormalizeChartRepositoryURL(payload.DockerURL),
 		}
-
-		logger = logger.WithValues("repoURLs", repoURLs)
+		// Quay sends a []UpdatedTags in the payload, following convention,
+		// this means we should omit setting a qualifier for Quay given
+		// that some elements may match some selectors and others may not.
+		var qualifier string
+		logger = logger.WithValues("repoURLs", repoURLs, "qualifier", qualifier)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		newestTag := strPtr(payload.UpdatedTags[len(payload.UpdatedTags)-1])
-		rc := &refreshEligibilityChecker{
-			newImageTag: newestTag,
-			newChartTag: newestTag,
-		}
-		refreshWarehouses(ctx, w, q.client, q.project, rc, repoURLs...)
+		refreshWarehouses(ctx, w, q.client, q.project, qualifier, repoURLs...)
 	})
 }

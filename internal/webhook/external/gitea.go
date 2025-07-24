@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 
 	gh "github.com/google/go-github/v71/github"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -143,24 +142,6 @@ func (g *giteaWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 
 		logger = logger.WithValues("repoURL", repoURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
-
-		rc := newGiteaRefreshCheck(payload.Ref)
-		refreshWarehouses(ctx, w, g.client, g.project, rc, repoURL)
+		refreshWarehouses(ctx, w, g.client, g.project, payload.Ref, repoURL)
 	})
-}
-
-func newGiteaRefreshCheck(ref string) *refreshEligibilityChecker {
-	var branchName, tag *string
-	if ref != "" {
-		switch {
-		case strings.HasPrefix(ref, "refs/tags/"):
-			tag = strPtr(strings.TrimPrefix(ref, "refs/tags/"))
-		case strings.HasPrefix(ref, "refs/heads/"):
-			branchName = strPtr(strings.TrimPrefix(ref, "refs/heads/"))
-		}
-	}
-	return &refreshEligibilityChecker{
-		branchName: branchName,
-		newGitTag:  tag,
-	}
 }

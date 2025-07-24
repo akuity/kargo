@@ -167,14 +167,11 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 			"/",
 		)
 
-		var rc *refreshEligibilityChecker
 		switch payload.Data.ImageType {
 		case artifactoryDockerDomain:
 			repoURL = image.NormalizeURL(repoURL)
-			rc = &refreshEligibilityChecker{newImageTag: &payload.Data.Tag}
 		case artifactoryChartImageType:
 			repoURL = helm.NormalizeChartRepositoryURL(repoURL)
-			rc = &refreshEligibilityChecker{newChartTag: &payload.Data.Tag}
 		default:
 			xhttp.WriteErrorJSON(
 				w,
@@ -185,9 +182,9 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 			)
 			return
 		}
-		logger = logger.WithValues("repoURL", repoURL)
+		logger = logger.WithValues("repoURL", repoURL, "qualifier", payload.Data.Tag)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		refreshWarehouses(ctx, w, a.client, a.project, rc, repoURL)
+		refreshWarehouses(ctx, w, a.client, a.project, payload.Data.Tag, repoURL)
 	})
 }
 

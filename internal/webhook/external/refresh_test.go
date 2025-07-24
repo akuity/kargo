@@ -32,6 +32,7 @@ func TestRefreshWarehouses(t *testing.T) {
 		name       string
 		client     client.Client
 		project    string
+		qualifier  string
 		assertions func(*testing.T, *httptest.ResponseRecorder)
 	}{
 		{
@@ -208,10 +209,7 @@ func TestRefreshWarehouses(t *testing.T) {
 				w,
 				testCase.client,
 				testCase.project,
-				// no refresh eligibility checker is used here
-				// because it is already exhaustively tested in
-				// refresh_eligibility_checker_test.go
-				nil,
+				testCase.qualifier,
 				testRepoURL,
 			)
 			testCase.assertions(t, w)
