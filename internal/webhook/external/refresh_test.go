@@ -259,6 +259,7 @@ func TestNeedsRefresh(t *testing.T) {
 				Image: &kargoapi.ImageSubscription{
 					RepoURL:                "docker.io/example/repo",
 					ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+					SemverConstraint:       "^1.0.0",
 					StrictSemvers:          true,
 				},
 			}},
@@ -272,6 +273,7 @@ func TestNeedsRefresh(t *testing.T) {
 				Image: &kargoapi.ImageSubscription{
 					RepoURL:                "docker.io/example/repo",
 					ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+					SemverConstraint:       "^1.0.0",
 					StrictSemvers:          true,
 				},
 			}},
