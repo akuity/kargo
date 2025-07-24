@@ -42,16 +42,16 @@ func TestNewPromotionAnnotations(t *testing.T) {
 						{
 							Uses: "argocd-update",
 							Config: &v1.JSON{Raw: []byte(`{
-  "apps": [
-    {
-      "name": "test-app-1"
-    },
-    {
-      "name": "test-app-2",
-      "namespace": "test-namespace"
-    }
-  ]
-}`)},
+								"apps": [
+									{
+										"name": "test-app-1"
+									},
+									{
+										"name": "test-app-2",
+										"namespace": "test-namespace"
+									}
+								]
+							}`)},
 						},
 					},
 				},
@@ -131,28 +131,28 @@ func TestNewPromotionAnnotations(t *testing.T) {
 								},
 							},
 							Config: &v1.JSON{Raw: []byte(`{
-  "apps": [
-    {
-      "name": "kargo-demo-${{ ctx.stage }}"
-    },
-    {
-      "name": "${{ vars.argocdApp }}",
-      "namespace": "argocd"
-    },
-    {
-      "name": "${{ vars.argocdApp }}-${{ ctx.stage }}",
-      "namespace": "${{ vars.appNamespace }}"
-    },
-    {
-      "name": "${{ ctx.promotion }}-${{ ctx.meta.promotion.actor }}",
-      "namespace": "${{ ctx.targetFreight.name }}-${{ ctx.targetFreight.origin.name }}"
-    },
-    {
-      "name": "${{ vars.overrideVar }}",
-      "namespace": "${{ vars.stepOnlyVar }}"
-    }
-  ]
-}`)},
+								"apps": [
+									{
+										"name": "kargo-demo-${{ ctx.stage }}"
+									},
+									{
+										"name": "${{ vars.argocdApp }}",
+										"namespace": "argocd"
+									},
+									{
+										"name": "${{ vars.argocdApp }}-${{ ctx.stage }}",
+										"namespace": "${{ vars.appNamespace }}"
+									},
+									{
+										"name": "${{ ctx.promotion }}-${{ ctx.meta.promotion.actor }}",
+										"namespace": "${{ ctx.targetFreight.name }}-${{ ctx.targetFreight.origin.name }}"
+									},
+									{
+										"name": "${{ vars.overrideVar }}",
+										"namespace": "${{ vars.stepOnlyVar }}"
+									}
+								]
+							}`)},
 						},
 						{
 							Uses: "argocd-update",
@@ -163,12 +163,12 @@ func TestNewPromotionAnnotations(t *testing.T) {
 								},
 							},
 							Config: &v1.JSON{Raw: []byte(`{
-  "apps": [
-    {
-      "name": "${{ vars.myApp }}"
-    }
-  ]
-}`)},
+								"apps": [
+									{
+										"name": "${{ vars.myApp }}"
+									}
+								]
+							}`)},
 						},
 						{
 							Uses: "argocd-update",
@@ -179,12 +179,12 @@ func TestNewPromotionAnnotations(t *testing.T) {
 								},
 							},
 							Config: &v1.JSON{Raw: []byte(`{
-  "apps": [
-    {
-      "name": "${{ vars.myApp }}"
-    }
-  ]
-}`)},
+								"apps": [
+									{
+										"name": "${{ vars.myApp }}"
+									}
+								]
+							}`)},
 						},
 					},
 				},
@@ -236,8 +236,8 @@ func TestNewPromotionAnnotations(t *testing.T) {
 						{
 							Uses: "argocd-update",
 							Config: &v1.JSON{Raw: []byte(`{
-  "apps": [{"name": "${{ invalid.template.syntax }}"}]
-}`)},
+								"apps": [{"name": "${{ invalid.template.syntax }}"}]
+							}`)},
 						},
 					},
 				},
