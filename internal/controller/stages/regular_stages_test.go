@@ -27,7 +27,6 @@ import (
 	"github.com/akuity/kargo/internal/health"
 	"github.com/akuity/kargo/internal/indexer"
 	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
-	"github.com/akuity/kargo/internal/logging"
 	healthPkg "github.com/akuity/kargo/pkg/health"
 )
 
@@ -77,6 +76,36 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 			assertions: func(t *testing.T, _ client.Client, result ctrl.Result, err error) {
 				require.NoError(t, err)
 				assert.Equal(t, ctrl.Result{}, result)
+			},
+		},
+		{
+			name: "shard mismatch",
+			req: ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: "default",
+					Name:      "test-stage",
+				},
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "test-stage",
+					Labels: map[string]string{
+						kargoapi.LabelKeyShard: "wrong-shard",
+					},
+				},
+				Spec: kargoapi.StageSpec{
+					Shard: "correct-shard",
+					PromotionTemplate: &kargoapi.PromotionTemplate{
+						Spec: kargoapi.PromotionTemplateSpec{
+							Steps: []kargoapi.PromotionStep{{}, {}},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, _ client.Client, result ctrl.Result, err error) {
+				require.NoError(t, err)
+				assert.True(t, result.IsZero())
 			},
 		},
 		{
@@ -6575,107 +6604,6 @@ func Test_buildFreightSummary(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := buildFreightSummary(tt.requested, tt.current)
 			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
-func TestReconcile_ShardMatching(t *testing.T) {
-	testScheme := runtime.NewScheme()
-	require.NoError(t, kargoapi.AddToScheme(testScheme))
-
-	tests := []struct {
-		name        string
-		reconciler  func() *RegularStageReconciler
-		req         ctrl.Request
-		shouldMatch bool
-	}{
-		{
-			name: "Shard mismatch",
-			reconciler: func() *RegularStageReconciler {
-				return &RegularStageReconciler{
-					client: fake.NewClientBuilder().
-						WithScheme(testScheme).
-						WithObjects(
-							&kargoapi.Stage{
-								ObjectMeta: metav1.ObjectMeta{
-									Name:      "test-stage",
-									Namespace: "test-namespace",
-									Labels: map[string]string{
-										kargoapi.LabelKeyShard: "wrong-shard",
-									},
-								},
-							},
-						).Build(),
-					cfg: ReconcilerConfig{ShardName: "right-shard"},
-					// Intentionally not setting any xFns because we should never reach them
-					// because we will exit before any reconciliation logic is executed.
-					// With that said, there is nothing that needs to be asserted here
-				}
-			},
-			req: ctrl.Request{
-				NamespacedName: types.NamespacedName{
-					Name:      "test-stage",
-					Namespace: "test-namespace",
-				},
-			},
-			shouldMatch: false,
-		},
-		{
-			name: "Shard match",
-			reconciler: func() *RegularStageReconciler {
-				return &RegularStageReconciler{
-					client: fake.NewClientBuilder().
-						WithScheme(testScheme).
-						WithObjects(
-							&kargoapi.Stage{
-								ObjectMeta: metav1.ObjectMeta{
-									Name:      "test-stage",
-									Namespace: "test-namespace",
-									Labels: map[string]string{
-										kargoapi.LabelKeyShard: "right-shard",
-									},
-								},
-								Spec: kargoapi.StageSpec{
-									// the promotion template is only necessary to get passed the
-									// stage.IsControlFlow() check in the reconcile logic.
-									PromotionTemplate: &kargoapi.PromotionTemplate{
-										Spec: kargoapi.PromotionTemplateSpec{
-											Steps: []kargoapi.PromotionStep{
-												{Uses: "fake-step"},
-											},
-										},
-									},
-								},
-							},
-						).Build(),
-					cfg: ReconcilerConfig{
-						ShardName: "right-shard",
-					},
-				}
-			},
-			req: ctrl.Request{
-				NamespacedName: types.NamespacedName{
-					Name:      "test-stage",
-					Namespace: "test-namespace",
-				},
-			},
-			shouldMatch: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			r := tt.reconciler()
-			logger := logging.NewLogger(logging.DebugLevel)
-			ctx := logging.ContextWithLogger(t.Context(), logger)
-			if tt.shouldMatch {
-				_, err := r.Reconcile(ctx, tt.req)
-				require.NoError(t, err)
-				return
-			}
-			result, err := r.Reconcile(ctx, tt.req)
-			require.NoError(t, err)
-			require.True(t, result.IsZero())
 		})
 	}
 }
