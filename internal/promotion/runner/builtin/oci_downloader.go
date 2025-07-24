@@ -58,13 +58,14 @@ func (o *ociDownloader) Run(
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
 	if err := o.validate(stepCtx.Config); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+			&promotion.TerminalError{Err: err}
 	}
 
 	cfg, err := promotion.ConfigToStruct[builtin.OCIDownloadConfig](stepCtx.Config)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("could not convert config into %s config: %w", o.Name(), err)
+			&promotion.TerminalError{Err: fmt.Errorf("could not convert config into %s config: %w", o.Name(), err)}
 	}
 
 	return o.run(ctx, stepCtx, cfg)
