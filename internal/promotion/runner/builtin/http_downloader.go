@@ -54,11 +54,13 @@ func (d *httpDownloader) Run(
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			&promotion.TerminalError{Err: err}
 	}
+
 	cfg, err := promotion.ConfigToStruct[builtin.HTTPDownloadConfig](stepCtx.Config)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			&promotion.TerminalError{Err: fmt.Errorf("could not convert config into download config: %w", err)}
 	}
+
 	return d.run(ctx, stepCtx, cfg)
 }
 
@@ -67,81 +69,91 @@ func (d *httpDownloader) validate(cfg promotion.Config) error {
 	return validate(d.schemaLoader, gojsonschema.NewGoLoader(cfg), d.Name())
 }
 
-// run executes the HTTP download step, downloading a file from the specified
-// URL and saving it to the specified output path. It handles file size limits,
-// overwriting existing files, and context cancellation.
+// run executes the httpDownloader step with the provided configuration.
 func (d *httpDownloader) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 	cfg builtin.HTTPDownloadConfig,
 ) (promotion.StepResult, error) {
-	absOutPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutPath)
+	absOutPath, err := d.prepareOutputPath(stepCtx.WorkDir, cfg.OutPath, cfg.AllowOverwrite)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("failed to join path %q: %w", cfg.OutPath, err)
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
-	destDir := filepath.Dir(absOutPath)
-	if err = os.MkdirAll(destDir, 0o700); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("failed to create destination directory: %w", err)
-	}
-
-	if !cfg.AllowOverwrite {
-		if _, err = os.Stat(absOutPath); err == nil || !os.IsNotExist(err) {
-			if err != nil {
-				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-					fmt.Errorf("error checking destination file: %w", err)
-			}
-
-			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-				&promotion.TerminalError{Err: fmt.Errorf("file already exists at %s and overwrite is not allowed", cfg.OutPath)}
-		}
-	}
-
-	req, err := d.buildRequest(cfg)
+	resp, err := d.performHTTPRequest(cfg)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			&promotion.TerminalError{Err: fmt.Errorf("error building HTTP request: %w", err)}
-	}
-
-	client, err := d.getClient(cfg)
-	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("error creating HTTP client: %w", err)
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("error sending HTTP request: %w", err)
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
-			fmt.Errorf("HTTP request failed with status %d", resp.StatusCode)
+	if err = d.validateResponse(resp); err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed}, err
 	}
 
-	// Check file size limit using Content-Length header if available
-	if contentLength := resp.ContentLength; contentLength > maxDownloadSize {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			&promotion.TerminalError{
-				Err: fmt.Errorf("download exceeds limit of %d bytes", maxDownloadSize),
-			}
-	}
-
-	// Download the file
-	if err = d.downloadFile(ctx, resp, absOutPath); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("error downloading file: %w", err)
+	if err = d.downloadToFile(ctx, resp, absOutPath); err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
 	return promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, nil
 }
 
+// prepareOutputPath validates and prepares the output path for the download.
+func (d *httpDownloader) prepareOutputPath(workDir, outPath string, allowOverwrite bool) (string, error) {
+	absOutPath, err := securejoin.SecureJoin(workDir, outPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to join path %q: %w", outPath, err)
+	}
+
+	if err = d.checkFileOverwrite(absOutPath, outPath, allowOverwrite); err != nil {
+		return "", err
+	}
+
+	destDir := filepath.Dir(absOutPath)
+	if err = os.MkdirAll(destDir, 0o700); err != nil {
+		return "", fmt.Errorf("failed to create destination directory: %w", err)
+	}
+
+	return absOutPath, nil
+}
+
+// checkFileOverwrite validates file overwrite conditions.
+func (d *httpDownloader) checkFileOverwrite(absOutPath, outPath string, allowOverwrite bool) error {
+	if !allowOverwrite {
+		if _, err := os.Stat(absOutPath); err == nil || !os.IsNotExist(err) {
+			if err != nil {
+				return fmt.Errorf("error checking destination file: %w", err)
+			}
+			return &promotion.TerminalError{
+				Err: fmt.Errorf("file already exists at %s and overwrite is not allowed", outPath),
+			}
+		}
+	}
+	return nil
+}
+
+// performHTTPRequest executes the HTTP request and returns the response.
+func (d *httpDownloader) performHTTPRequest(cfg builtin.HTTPDownloadConfig) (*http.Response, error) {
+	req, err := d.buildRequest(cfg)
+	if err != nil {
+		return nil, &promotion.TerminalError{Err: fmt.Errorf("error building HTTP request: %w", err)}
+	}
+
+	client, err := d.buildHTTPClient(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("error creating HTTP client: %w", err)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("error sending HTTP request: %w", err)
+	}
+
+	return resp, nil
+}
+
+// buildRequest constructs the HTTP request with headers and query parameters.
 func (d *httpDownloader) buildRequest(cfg builtin.HTTPDownloadConfig) (*http.Request, error) {
-	req, err := http.NewRequest("GET", cfg.URL, nil)
+	req, err := http.NewRequest(http.MethodGet, cfg.URL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error creating HTTP request: %w", err)
 	}
@@ -163,7 +175,8 @@ func (d *httpDownloader) buildRequest(cfg builtin.HTTPDownloadConfig) (*http.Req
 	return req, nil
 }
 
-func (d *httpDownloader) getClient(cfg builtin.HTTPDownloadConfig) (*http.Client, error) {
+// buildHTTPClient creates an HTTP client with the specified configuration.
+func (d *httpDownloader) buildHTTPClient(cfg builtin.HTTPDownloadConfig) (*http.Client, error) {
 	httpTransport := cleanhttp.DefaultTransport()
 	if cfg.InsecureSkipTLSVerify {
 		httpTransport.TLSClientConfig = &tls.Config{
@@ -185,31 +198,71 @@ func (d *httpDownloader) getClient(cfg builtin.HTTPDownloadConfig) (*http.Client
 	}, nil
 }
 
-func (d *httpDownloader) downloadFile(
-	ctx context.Context,
-	resp *http.Response,
-	outPath string,
-) error {
-	// Create temporary file in the same directory as the final destination
-	tempFile, err := os.CreateTemp(filepath.Dir(outPath), filepath.Base(outPath)+".tmp")
-	if err != nil {
-		return fmt.Errorf("failed to create temporary file: %w", err)
+// validateResponse checks the HTTP response status and content length.
+func (d *httpDownloader) validateResponse(resp *http.Response) error {
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("HTTP request failed with status %d", resp.StatusCode)
 	}
-	tempPath := tempFile.Name()
 
-	// Ensure cleanup of temp file regardless of outcome
+	// Check file size limit using Content-Length header if available
+	if contentLength := resp.ContentLength; contentLength > maxDownloadSize {
+		return &promotion.TerminalError{
+			Err: fmt.Errorf("download exceeds limit of %d bytes", maxDownloadSize),
+		}
+	}
+
+	return nil
+}
+
+// downloadToFile downloads the response content to the specified file.
+func (d *httpDownloader) downloadToFile(ctx context.Context, resp *http.Response, path string) error {
+	tempFile, tempPath, err := d.createTempFile(path)
+	if err != nil {
+		return err
+	}
+
 	defer func() {
 		_ = tempFile.Close()
-		// Always try to remove temp file. This will be a no-op if the file was
-		// successfully renamed to the final destination.
 		_ = os.Remove(tempPath)
 	}()
 
-	// Set permissions for the temporary file
-	if err = tempFile.Chmod(0o600); err != nil {
-		return fmt.Errorf("failed to set permissions on temporary file: %w", err)
+	if err = d.copyResponseToFile(ctx, resp, tempFile); err != nil {
+		return err
 	}
 
+	if err = tempFile.Close(); err != nil {
+		return fmt.Errorf("failed to close temporary file: %w", err)
+	}
+
+	if err = fs.SimpleAtomicMove(tempPath, path); err != nil {
+		return fmt.Errorf("failed to move file to final destination: %w", err)
+	}
+
+	return nil
+}
+
+// createTempFile creates a temporary file in the same directory as the target.
+func (d *httpDownloader) createTempFile(absOutPath string) (*os.File, string, error) {
+	destDir := filepath.Dir(absOutPath)
+	baseFile := filepath.Base(absOutPath)
+
+	tempFile, err := os.CreateTemp(destDir, baseFile+".tmp")
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to create temporary file: %w", err)
+	}
+
+	if err = tempFile.Chmod(0o600); err != nil {
+		_ = tempFile.Close()
+		_ = os.Remove(tempFile.Name())
+		return nil, "", fmt.Errorf("failed to set permissions on temporary file: %w", err)
+	}
+
+	return tempFile, tempFile.Name(), nil
+}
+
+// copyResponseToFile copies response content to the file with size limits and
+// context cancellation.
+func (d *httpDownloader) copyResponseToFile(ctx context.Context, resp *http.Response, f *os.File) error {
 	limitedReader := io.LimitReader(resp.Body, maxDownloadSize)
 
 	// Stream data with context cancellation support
@@ -224,13 +277,13 @@ func (d *httpDownloader) downloadFile(
 		}
 
 		var n int
+		var err error
 		if n, err = limitedReader.Read(buf); n > 0 {
-			if _, writeErr := tempFile.Write(buf[:n]); writeErr != nil {
+			if _, writeErr := f.Write(buf[:n]); writeErr != nil {
 				return fmt.Errorf("failed to write to file: %w", writeErr)
 			}
 			bytesDownloaded += int64(n)
 		}
-
 		if err == io.EOF {
 			break
 		}
@@ -241,26 +294,24 @@ func (d *httpDownloader) downloadFile(
 
 	// If we read exactly the limit, check if there's more data
 	if bytesDownloaded == maxDownloadSize {
-		buf := make([]byte, 1)
-		var n int
-
-		if n, err = resp.Body.Read(buf); err != nil && err != io.EOF {
-			return fmt.Errorf("failed to check for additional content: %w", err)
-		}
-
-		if n > 0 {
-			return fmt.Errorf("download exceeds limit of %d bytes", maxDownloadSize)
+		if err := d.checkForAdditionalContent(resp); err != nil {
+			return err
 		}
 	}
 
-	// Close temp file before rename
-	if err = tempFile.Close(); err != nil {
-		return fmt.Errorf("failed to close temporary file: %w", err)
+	return nil
+}
+
+// checkForAdditionalContent verifies if the response has more data beyond the
+// size limit.
+func (d *httpDownloader) checkForAdditionalContent(resp *http.Response) error {
+	n, err := resp.Body.Read(make([]byte, 1))
+	if err != nil && err != io.EOF {
+		return fmt.Errorf("failed to check for additional content: %w", err)
 	}
 
-	// Move the temporary file to the final destination
-	if err = fs.SimpleAtomicMove(tempPath, outPath); err != nil {
-		return fmt.Errorf("failed to move file to final destination: %w", err)
+	if n > 0 {
+		return fmt.Errorf("download exceeds limit of %d bytes", maxDownloadSize)
 	}
 
 	return nil

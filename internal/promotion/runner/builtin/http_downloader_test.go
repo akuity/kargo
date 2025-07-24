@@ -20,7 +20,7 @@ import (
 )
 
 func Test_httpDownloader_validate(t *testing.T) {
-	testCases := []struct {
+	tests := []struct {
 		name             string
 		config           promotion.Config
 		expectedProblems []string
@@ -191,13 +191,13 @@ func Test_httpDownloader_validate(t *testing.T) {
 	downloader, ok := d.(*httpDownloader)
 	require.True(t, ok)
 
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			err := downloader.validate(testCase.config)
-			if len(testCase.expectedProblems) == 0 {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := downloader.validate(tt.config)
+			if len(tt.expectedProblems) == 0 {
 				require.NoError(t, err)
 			} else {
-				for _, problem := range testCase.expectedProblems {
+				for _, problem := range tt.expectedProblems {
 					require.ErrorContains(t, err, problem)
 				}
 			}
@@ -206,7 +206,7 @@ func Test_httpDownloader_validate(t *testing.T) {
 }
 
 func Test_httpDownloader_run(t *testing.T) {
-	testCases := []struct {
+	tests := []struct {
 		name       string
 		cfg        builtin.HTTPDownloadConfig
 		handler    http.HandlerFunc
@@ -330,7 +330,7 @@ func Test_httpDownloader_run(t *testing.T) {
 			assertions: func(t *testing.T, res promotion.StepResult, err error, _ string) {
 				require.ErrorContains(t, err, "download exceeds limit")
 				require.True(t, promotion.IsTerminal(err))
-				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
 			},
 		},
 		{
@@ -365,20 +365,20 @@ func Test_httpDownloader_run(t *testing.T) {
 		},
 	}
 
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			// Create temporary work directory
 			workDir := t.TempDir()
 
 			// Setup existing file if needed
-			if testCase.setupFile != nil {
-				testCase.setupFile(t, workDir, testCase.cfg.OutPath)
+			if tt.setupFile != nil {
+				tt.setupFile(t, workDir, tt.cfg.OutPath)
 			}
 
 			// Create test server
-			srv := httptest.NewServer(testCase.handler)
+			srv := httptest.NewServer(tt.handler)
 			t.Cleanup(srv.Close)
-			testCase.cfg.URL = srv.URL
+			tt.cfg.URL = srv.URL
 
 			// Create step context
 			stepCtx := &promotion.StepContext{
@@ -387,8 +387,8 @@ func Test_httpDownloader_run(t *testing.T) {
 
 			// Run the downloader
 			d := &httpDownloader{}
-			res, err := d.run(context.Background(), stepCtx, testCase.cfg)
-			testCase.assertions(t, res, err, workDir)
+			res, err := d.run(context.Background(), stepCtx, tt.cfg)
+			tt.assertions(t, res, err, workDir)
 		})
 	}
 }
@@ -412,8 +412,8 @@ func Test_httpDownloader_buildRequest(t *testing.T) {
 	require.Equal(t, "Bearer token123", req.Header.Get("Authorization"))
 }
 
-func Test_httpDownloader_getClient(t *testing.T) {
-	testCases := []struct {
+func Test_httpDownloader_buildHTTPClient(t *testing.T) {
+	tests := []struct {
 		name       string
 		cfg        builtin.HTTPDownloadConfig
 		assertions func(*testing.T, *http.Client, error)
@@ -466,16 +466,16 @@ func Test_httpDownloader_getClient(t *testing.T) {
 	}
 
 	d := &httpDownloader{}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			client, err := d.getClient(testCase.cfg)
-			testCase.assertions(t, client, err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			client, err := d.buildHTTPClient(tt.cfg)
+			tt.assertions(t, client, err)
 		})
 	}
 }
 
-func Test_httpDownloader_downloadFile(t *testing.T) {
-	testCases := []struct {
+func Test_httpDownloader_downloadToFile(t *testing.T) {
+	tests := []struct {
 		name        string
 		contentSize int64
 		content     string
@@ -516,13 +516,13 @@ func Test_httpDownloader_downloadFile(t *testing.T) {
 		},
 	}
 
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			// Create mock response
 			resp := &http.Response{
 				StatusCode:    200,
-				ContentLength: testCase.contentSize,
-				Body:          io.NopCloser(strings.NewReader(testCase.content)),
+				ContentLength: tt.contentSize,
+				Body:          io.NopCloser(strings.NewReader(tt.content)),
 			}
 
 			// Create temporary output file path
@@ -531,13 +531,13 @@ func Test_httpDownloader_downloadFile(t *testing.T) {
 
 			// Download the file
 			d := &httpDownloader{}
-			err := d.downloadFile(context.Background(), resp, outPath)
-			testCase.assertions(t, err, outPath)
+			err := d.downloadToFile(context.Background(), resp, outPath)
+			tt.assertions(t, err, outPath)
 		})
 	}
 }
 
-func Test_httpDownloader_downloadFile_contextCancellation(t *testing.T) {
+func Test_httpDownloader_downloadToFile_contextCancellation(t *testing.T) {
 	// Create a slow reader that will be interrupted by context cancellation
 	sr := &slowReader{
 		content: strings.Repeat("x", 1000),
@@ -562,7 +562,7 @@ func Test_httpDownloader_downloadFile_contextCancellation(t *testing.T) {
 	}()
 
 	d := &httpDownloader{}
-	err := d.downloadFile(ctx, resp, outPath)
+	err := d.downloadToFile(ctx, resp, outPath)
 
 	require.ErrorContains(t, err, "download canceled")
 
@@ -571,7 +571,7 @@ func Test_httpDownloader_downloadFile_contextCancellation(t *testing.T) {
 	require.True(t, os.IsNotExist(err))
 }
 
-func Test_httpDownloader_downloadFile_sizeExceeded(t *testing.T) {
+func Test_httpDownloader_downloadToFile_sizeExceeded(t *testing.T) {
 	// Create content that exceeds the size limit
 	largeContent := strings.Repeat("x", int(maxDownloadSize)+1000)
 
@@ -584,7 +584,7 @@ func Test_httpDownloader_downloadFile_sizeExceeded(t *testing.T) {
 	outPath := filepath.Join(tempDir, "large-file.txt")
 
 	d := &httpDownloader{}
-	err := d.downloadFile(context.Background(), resp, outPath)
+	err := d.downloadToFile(context.Background(), resp, outPath)
 
 	require.ErrorContains(t, err, "download exceeds limit")
 
