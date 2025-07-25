@@ -6,7 +6,7 @@ sidebar_label: Azure
 
 The Azure webhook receiver responds to `push` and `ping` events originating
 from Azure Container Registry repositories and `git.push` events originating
-from Azure DevOps.
+from Azure DevOps repositories.
 
 The receiver unconditionally responds to `ping` events with an HTTP `200` status
 code.
@@ -46,6 +46,7 @@ secret=$(openssl rand -base64 48 | tr -d '=+/' | head -c 32)
 echo "Secret: $secret"
 echo "Encoded secret: $(echo -n $secret | base64)"
 ```
+
 :::
 
 ```yaml
@@ -54,6 +55,8 @@ kind: Secret
 metadata:
   name: azure-wh-secret
   namespace: kargo-demo
+  labels:
+    kargo.akuity.io/cred-type: generic
 data:
   secret: <base64-encoded secret>
 ---
@@ -64,10 +67,10 @@ metadata:
   namespace: kargo-demo
 spec:
   webhookReceivers: 
-    - name: azure-wh-receiver
-      acr:
-        secretRef:
-          name: azure-wh-secret
+  - name: azure-wh-receiver
+    azure:
+      secretRef:
+        name: azure-wh-secret
 ```
 
 ## Retrieving the Receiver's URL
@@ -88,17 +91,14 @@ DevOps services.
 
 ### Azure Container Registry
 
-1. In your <Hlt>Azure Container Registry</Hlt> portal, on the left-hand side, 
-click on <Hlt>Services</Hlt>.
+1. In your <Hlt>Azure Container Registry</Hlt> portal, on the left-hand side,
+   navigate to <Hlt>Services</Hlt> → <Hlt>Webhooks</Hlt>.
 
-1. Click on <Hlt>Webhooks</Hlt>.
-
-1. Now in your <Hlt>Webhooks dashboard</Hlt>, click <Hlt>Add</Hlt> at the top of
-   the screen.
+1. At the top of the screen, click <Hlt>Add</Hlt>.
 
     ![Webhooks](./img/acr/webhooks.png "Webhooks")
 
-1. Fill out the <Hlt>Create webhook</Hlt> form.
+1. Complete the <Hlt>Create webhook</Hlt> form:
 
     ![Create Webhook](./img/acr/create-webhook.png "Create Webhook")
 
@@ -107,7 +107,7 @@ click on <Hlt>Services</Hlt>.
     1. Select the <Hlt>Location</Hlt> closest to where your Kargo instance
        is running.
 
-    1. Complete the <Hlt>Service URI</Hlt> filed using the URL
+    1. Complete the <Hlt>Service URI</Hlt> field using the URL
        [for the webhook receiver](#retrieving-the-receivers-url).
 
     1. From the <Hlt>Actions</Hlt> drop-down menu, select `push`.
@@ -116,14 +116,14 @@ click on <Hlt>Services</Hlt>.
 
     1. Set the <Hlt>Scope</Hlt> using the format `<repository>:<tag>`.
 
-       :::note
-       Wild-cards are supported in both the `repository` and `tag` part of the 
-       <Hlt>Scope</Hlt> string.
-       :::
+        :::note
+        Wildcards are supported in both the `repository` and `tag` part of the
+        <Hlt>Scope</Hlt> string.
+        :::
 
     1. Click <Hlt>Create</Hlt>.
 
-    1. Back in your <Hlt>Webhooks dashboard</Hlt>, click on the newly created
+    1. Return to the <Hlt>Webhooks dashboard</Hlt> and select the newly created
        webhook.
 
        ![Created](./img/acr/created.png "Created")
@@ -138,7 +138,6 @@ click on <Hlt>Services</Hlt>.
 
        ![Success](./img/acr/success.png "Success")
 
-
 :::info
 For additional information on configuring ACR webhooks, refer directly to
 the [ACR Docs](https://learn.microsoft.com/en-us/azure/container-registry/container-registry-webhook#create-webhook---azure-portal).
@@ -146,12 +145,12 @@ the [ACR Docs](https://learn.microsoft.com/en-us/azure/container-registry/contai
 
 ### Azure DevOps
 
-1. Navigate to `https://dev.azure.com/<org>/<project>/_settings/serviceHooks`, 
+1. Navigate to `https://dev.azure.com/<org>/<project>/_settings/serviceHooks`,
    where`<org>` has been replaced with an organization name
    and `<project>` has been replaced with the name of a project belonging
    to that account and for which you are an administrator.
 
-1. On the left-hand-side menu under <Hlt>General</Hlt>, click 
+1. On the left-hand-side menu under <Hlt>General</Hlt>, click
    <Hlt>Service Hooks</Hlt>.
 
 1. Click <Hlt>Create Subscription</Hlt>.
@@ -167,34 +166,35 @@ the [ACR Docs](https://learn.microsoft.com/en-us/azure/container-registry/contai
 
   ![New Service Hook](./img/devops/new-service-hook.png "New Service Hook")
 
-1. Complete the <Hlt>Trigger</Hlt> form.
+1. Complete the <Hlt>Trigger</Hlt> form:
 
     ![Trigger](./img/devops/trigger.png "Trigger")
 
     1. Select <Hlt>Code Pushed</Hlt> from the drop-down menu labeled
-   <Hlt>Trigger on this type of event</Hlt>.
+       <Hlt>Trigger on this type of event</Hlt>.
 
-    1. Select the <Hlt>Repositories</Hlt>, <Hlt>Branches</Hlt>, and <Hlt>Users</Hlt>
-      for which the event will trigger for.
+    1. Select the <Hlt>Repositories</Hlt>, <Hlt>Branches</Hlt>, and
+       <Hlt>Users</Hlt> for which the event will trigger for.
 
     1. Click <Hlt>Next</Hlt>.
 
-1. Complete the Action form.
+1. Complete the Action form:
 
     ![Action](./img/devops/action.png "Action")
 
-    1. On the <Hlt>Action</Hlt> page, complete the <Hlt>Service URI</Hlt> field 
-      using the URL [for the webhook receiver](#retrieving-the-receivers-url).
+    1. Complete the <Hlt>Service URI</Hlt> field
+       using the URL [for the webhook receiver](#retrieving-the-receivers-url).
 
     1. Click <Hlt>Test</Hlt>.
 
-  ![Success](./img/devops/success.png "Success")
+       ![Success](./img/devops/success.png "Success")
 
-1. Upon receiving a <Hlt>Succeeded</Hlt> notification, click <Hlt>Close</Hlt>.
+1. After receiving a <Hlt>Succeeded</Hlt> notification, click <Hlt>Close</Hlt>.
 
 1. Click <Hlt>Finish</Hlt>.
 
 :::info
-For additional information on configuring Azure DevOps webhooks, refer directly to
-the [Azure DevOps Docs](https://learn.microsoft.com/en-us/azure/devops/service-hooks/services/webhooks?view=azure-devops).
+For additional information on configuring Azure DevOps webhooks, refer directly
+to the
+[Azure DevOps Docs](https://learn.microsoft.com/en-us/azure/devops/service-hooks/services/webhooks?view=azure-devops).
 :::
