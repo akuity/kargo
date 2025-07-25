@@ -31,6 +31,14 @@ const (
 	maxMetadataConcurrency = 1000
 
 	unknown = "unknown"
+
+	// ociCreatedAnnotation is the OCI annotation for the image creation timestamp.
+	// See: https://specs.opencontainers.org/image-spec/annotations/
+	ociCreatedAnnotation = "org.opencontainers.image.created"
+
+	// legacyBuildDateAnnotation is the legacy Label Schema annotation for build date.
+	// See: http://label-schema.org/rc1/
+	legacyBuildDateAnnotation = "org.label-schema.build-date"
 )
 
 var metaSem = semaphore.NewWeighted(maxMetadataConcurrency)
@@ -436,10 +444,35 @@ func (r *repositoryClient) getImageFromV1Image(
 	}
 
 	return &image{
-		Digest:      digest,
-		CreatedAt:   &cfg.Created.Time,
+		Digest: digest,
+		CreatedAt: getCreationTime(
+			[]map[string]string{
+				manifest.Annotations,
+				cfg.Config.Labels,
+			},
+			&cfg.Created.Time,
+		),
 		Annotations: manifest.Annotations,
 	}, nil
+}
+
+func getCreationTime(sources []map[string]string, fallback *time.Time) *time.Time {
+	keys := []string{ociCreatedAnnotation, legacyBuildDateAnnotation}
+
+	for _, source := range sources {
+		if source == nil {
+			continue
+		}
+		for _, key := range keys {
+			if createdStr, ok := source[key]; ok {
+				if created, err := time.Parse(time.RFC3339, createdStr); err == nil {
+					return &created
+				}
+			}
+		}
+	}
+
+	return fallback
 }
 
 // rateLimitedRoundTripper is a rate limited implementation of
