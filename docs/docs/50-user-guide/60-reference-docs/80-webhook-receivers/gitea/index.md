@@ -73,52 +73,35 @@ kubectl get projectconfigs kargo-demo \
 
 ## Registering with Gitea
 
-1. Navigating to the webhooks dashboard will vary based on scope.
+1. Navigate to the webhooks dashboard.
 
-### Scope Options
+    Where you can find these settings varies based on the scope at which you'd
+    like to enable your webhooks. Webhooks can be enabled for a single
+    repository, for all repositories within an organization, or for all
+    repositories belonging to an individual user.
 
-  <Tabs groupId="navigation">
-  <TabItem value="repo-scope" label="Repo Scope" default>
+    <Tabs groupId="navigation">
+    <TabItem value="repo-scope" label="Repo Scope" default>
 
-  :::info
-  This option is useful if you are interested in receiving webhook events for a 
-  single given repository. If you are interested in configuring a single webhook 
-  for multiple repositories, you may want to consider a different option.
-  Otherwise, this option will require you to configure a webhook for each
-  repository individually.
-  :::
-
-  1. Navigate to `https://gitea.com/<namespace>/<repo>/settings/hooks`, where
+    Navigate to `https://gitea.com/<namespace>/<repo>/settings/hooks`, where
     `<namespace>` has been replaced with a Gitea username or group name and
     `<project>` has been replaced with the name of a project belonging to that
     namespace and for which you are an administrator.
 
-  </TabItem>
-  <TabItem value="org-scope" label="Org Scope">
+    </TabItem>
+    <TabItem value="org-scope" label="Org Scope">
 
-  :::info
-  This option is useful if you are interested in configuring a single webhook 
-  for all repositories under a single organization; saving you time from
-  having to configure a webhook for each of them.
-  :::
+    Navigate to `https://gitea.com/org/<org>/settings/hooks`, where
+    `<org>` has been replaced by a Gitea organization for which you are an
+    administrator.
 
-  1. Navigate to `https://gitea.com/org/<org>/settings/hooks`, where 
-      `<org>` has been replaced by a Gitea organization for which you are an
-      administrator.
+    </TabItem>
+    <TabItem value="user-scope" label="User Scope">
 
-  </TabItem>
-  <TabItem value="user-scope" label="User Scope">
-
-  :::info
-  This option is useful if you are interested in receiving webhook events for 
-  all repositories that you own. Saving you time from
-  having to configure a webhook for each of them.
-  :::
-
-  1. Navigate to `https://gitea.com/org/user/settings/hooks`.
+    Navigate to `https://gitea.com/org/user/settings/hooks`.
  
-  </TabItem>
-  </Tabs>
+    </TabItem>
+    </Tabs>
 
     ![Settings](./img/settings.png "Settings")
 
@@ -144,30 +127,8 @@ kubectl get projectconfigs kargo-demo \
 
     1. Click <Hlt>Add Webhook</Hlt>.
 
-1. From the <Hlt>Webhooks settings</Hlt> click on the newly created webhook.
-
-    ![Webhooks](./img/created.png "Webhooks")
-
-1. Scroll down to <Hlt>Recent Deliveries</Hlt>.
-
-1. Click <Hlt>Test Delivery</Hlt>.
-
-    ![Test Button](./img/test.png "Test Button")
-
-    :::note
-    This will trigger a `Warehouse` refresh. It's ok if none are configured.
-    This will simply result in a 200 stating 0 `Warehouse`s were refreshed.
-    :::
-
-1. Scroll down to <Hlt>Recent Deliveries</Hlt> again.
-
-    ![Recent Deliveries](./img/recent-deliveries.png "Recent Deliveries")
-
-1. Click on the delivery.
-
-1. Click the <Hlt>Response</Hlt> tab and verify it was successful.
-
-    ![Response](./img/response.png "Response")
+       This will return you to the list of all webhooks registered at the
+       selected scope.
 
 :::info
 For additional information on configuring Gitea webhooks, refer directly to the
