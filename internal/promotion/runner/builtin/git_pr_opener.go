@@ -121,6 +121,7 @@ func (g *gitPROpener) run(
 	}
 	if repoCreds != nil {
 		gpOpts.Token = repoCreds.Password
+		gpOpts.Username = repoCreds.Username
 	}
 	if cfg.Provider != nil {
 		gpOpts.Name = string(*cfg.Provider)
