@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"maps"
 	"sort"
+	"strings"
 	"time"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -116,28 +117,46 @@ func NewPromotionAnnotations(
 		if step.Uses != "argocd-update" || step.Config == nil {
 			continue
 		}
-		stepEnv := make(map[string]any)
-		maps.Copy(stepEnv, baseEnv)
-		stepVars := calculateStepVars(step, stepEnv)
-		setVar(stepEnv, stepVars)
-
-		evaledConfig, err := expressions.EvaluateJSONTemplate(step.Config.Raw, stepEnv)
-		if err != nil {
-			logger.Error(err, "evaluate step config template")
-			continue
-		}
-
 		var cfg builtin.ArgoCDUpdateConfig
-		if err := json.Unmarshal(evaledConfig, &cfg); err != nil {
-			logger.Error(err, "unmarshal evaluated ArgoCD update config")
+		if err := json.Unmarshal(step.Config.Raw, &cfg); err != nil {
+			logger.Error(err, "unmarshal ArgoCD update config")
 			continue
 		}
-
 		for _, app := range cfg.Apps {
 			namespacedName := types.NamespacedName{
 				Namespace: app.Namespace,
 				Name:      app.Name,
 			}
+
+			if strings.Contains(namespacedName.Namespace, "${{") ||
+				strings.Contains(namespacedName.Name, "${{") {
+				stepEnv := make(map[string]any)
+				maps.Copy(stepEnv, baseEnv)
+				stepVars := calculateStepVars(step, stepEnv)
+				setVar(stepEnv, stepVars)
+				var ok bool
+				namespaceAny, err :=
+					expressions.EvaluateTemplate(namespacedName.Namespace, stepEnv)
+				if err != nil {
+					logger.Error(err, "error evaluating expression")
+					continue
+				}
+				if namespacedName.Namespace, ok = namespaceAny.(string); !ok {
+					logger.Error(err, "expression did not evaluate to a string")
+					continue
+				}
+				appNameAny, err :=
+					expressions.EvaluateTemplate(namespacedName.Name, stepEnv)
+				if err != nil {
+					logger.Error(err, "error evaluating expression")
+					continue
+				}
+				if namespacedName.Name, ok = appNameAny.(string); !ok {
+					logger.Error(err, "expression did not evaluate to a string")
+					continue
+				}
+			}
+
 			if namespacedName.Namespace == "" {
 				namespacedName.Namespace = libargocd.Namespace()
 			}
