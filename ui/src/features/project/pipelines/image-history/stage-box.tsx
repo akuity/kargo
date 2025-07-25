@@ -21,6 +21,10 @@ const getTooltipTitle = (
     return `Stage: '${stageName}' (Promotion order: ${orders[0]})`;
   }
 
+  if (isHighlighted) {
+    return `Most recent promotion: Currently in stage '${stageName}'. All promotions: ${orders.join(', ')}`;
+  }
+
   return `Stage: '${stageName}' (${orders.length} promotions: ${orders.join(', ')})`;
 };
 
