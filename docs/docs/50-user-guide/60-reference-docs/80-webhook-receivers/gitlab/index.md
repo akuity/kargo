@@ -79,50 +79,39 @@ kubectl get projectconfigs kargo-demo \
 
 ## Registering with GitLab
 
-1. Navigating to the webhooks dashboard will vary based on scope.
+1. Navigate to the webhooks dashboard.
 
-### Scope Options
+    Where you can find these settings varies based on the scope at which you'd
+    like to enable your webhooks. Webhooks can be enabled for a single project
+    (repository) or for all projects (repositories) in a group.
 
-  <Tabs groupId="navigation">
-  <TabItem value="project-scope" label="Project Scope" default>
+    <Tabs groupId="navigation">
+    <TabItem value="project-scope" label="Project Scope" default>
 
-  :::info
-  This option is useful if you are interested in receiving webhook events for a 
-  single given repository. If you are interested in configuring a single webhook 
-  for multiple repositories, you may want to consider a different option.
-  Otherwise, this option will require you to configure a webhook for each
-  repository individually.
-  :::
+    Navigate to `https://gitlab.com/<namespace>/<project>/-/hooks`, where
+    `<namespace>` has been replaced with a GitLab username and
+    `<project>` has been replaced with the name of a project belonging to that
+    namespace and for which you are an administrator.
 
-1. Navigate to `https://gitlab.com/<namespace>/<project>/-/hooks`, where
-   `<namespace>` has been replaced with a GitLab username and
-   `<project>` has been replaced with the name of a project belonging to that
-   namespace and for which you are an administrator.
+    </TabItem>
+    <TabItem value="group-scope" label="Group Scope" default>
 
-  </TabItem>
-  <TabItem value="group-scope" label="Group Scope" default>
+    Navigate to `https://gitlab.com/groups/<group>/-/hooks`, where
+    `<group>` has been replaced with a GitLab group name for which you are an
+    owner of the group.
 
-  :::info
-  This option is useful if you are interested in receiving webhook events for a 
-  multiple repositories in the same group. A group encompasses multiple projects 
-  and its subgroups.
-  :::
+    </TabItem>
+    </Tabs>
 
-  :::caution
-  If you configure identical webhooks in both a group and a project in that 
-  group, both webhooks are triggered for events in that project. 
-  :::
-
-1. Navigate to `https://gitlab.com/groups/<group>/-/hooks`, where
-   `<group>` has been replaced with a GitLab group name for which you are an 
-   owner of the group.
-
-  </TabItem>
-  </Tabs>
-
-    ![Settings](./img/settings.png "Settings")
+    :::caution
+    If you configure identical webhooks affecting a given project at _both_
+    the project level and group level, both webhooks will be triggered by
+    applicable events in that project.
+    :::
 
 1. Click <Hlt>Add new webhook</Hlt>.
+
+    ![Settings](./img/settings.png "Settings")
 
 1. Complete the <Hlt>Webhooks</Hlt> form:
 
