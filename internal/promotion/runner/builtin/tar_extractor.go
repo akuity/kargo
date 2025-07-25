@@ -17,6 +17,7 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	intfs "github.com/akuity/kargo/internal/io/fs"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
@@ -125,7 +126,7 @@ func (t *tarExtractor) run(
 
 	// Move the extracted files from the temporary directory to the final output
 	// path atomically
-	if err = t.simpleAtomicMove(tempDir, outPath); err != nil {
+	if err = intfs.SimpleAtomicMove(tempDir, outPath); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 
@@ -397,22 +398,4 @@ func (t *tarExtractor) loadIgnoreRules(outPath, rules string) gitignore.Matcher 
 	}
 
 	return gitignore.NewMatcher(ps)
-}
-
-func (t *tarExtractor) simpleAtomicMove(src, dst string) error {
-	if err := os.Rename(src, dst); err != nil {
-		if !os.IsExist(err) {
-			return fmt.Errorf("failed to move %s to %s: %w", src, dst, err)
-		}
-
-		// If the destination already exists, remove it and try again
-		if err := os.RemoveAll(dst); err != nil {
-			return fmt.Errorf("failed to remove existing destination %s: %w", dst, err)
-		}
-
-		if err := os.Rename(src, dst); err != nil {
-			return fmt.Errorf("failed to move %s to %s after removing existing: %w", src, dst, err)
-		}
-	}
-	return nil
 }

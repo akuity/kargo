@@ -445,11 +445,11 @@ func Test_httpRequester_buildRequest(t *testing.T) {
 	req, err := (&httpRequester{}).buildRequest(builtin.HTTPConfig{
 		Method: "GET",
 		URL:    "http://example.com",
-		Headers: []builtin.HTTPHeader{{
+		Headers: []builtin.HTTPConfigHeader{{
 			Name:  "Content-Type",
 			Value: "application/json",
 		}},
-		QueryParams: []builtin.HTTPQueryParam{{
+		QueryParams: []builtin.HTTPConfigQueryParam{{
 			Name:  "param",
 			Value: "some value", // We want to be sure this gets url-encoded
 		}},

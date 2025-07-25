@@ -15,11 +15,6 @@ func (e *BodyTooLargeError) Error() string {
 	return fmt.Sprintf("content exceeds limit of %d bytes", e.limit)
 }
 
-func (e *BodyTooLargeError) Is(target error) bool {
-	_, ok := target.(*BodyTooLargeError)
-	return ok
-}
-
 // LimitRead reads from the provided io.ReadCloser up to the specified limit.
 // If the body exceeds the limit, it returns an error. If the body is exactly
 // the limit, it checks for additional content and returns an error if any
