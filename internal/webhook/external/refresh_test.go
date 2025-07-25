@@ -218,7 +218,7 @@ func TestRefreshWarehouses(t *testing.T) {
 	}
 }
 
-func TestNeedsRefresh(t *testing.T) {
+func TestShouldRefresh(t *testing.T) {
 	testCases := []struct {
 		name      string
 		subs      []kargoapi.RepoSubscription
@@ -316,7 +316,7 @@ func TestNeedsRefresh(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			logger := logging.NewLogger(logging.DebugLevel)
 			ctx := logging.ContextWithLogger(t.Context(), logger)
-			result, err := needsRefresh(ctx, tc.subs, tc.qualifier, tc.repoURLs...)
+			result, err := shouldRefresh(ctx, tc.subs, tc.qualifier, tc.repoURLs...)
 			if tc.expectErr {
 				require.Error(t, err)
 				return
