@@ -159,7 +159,7 @@ const HeaderButton = memo(
     selected?: boolean;
     title: string;
   }) => (
-    <Tooltip title={title}>
+    <Tooltip title={title} placement='left'>
       <Button
         onClick={onClick}
         className={classNames(
