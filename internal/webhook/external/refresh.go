@@ -12,6 +12,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/controller/git/commit"
+	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/helm/chart"
 	xhttp "github.com/akuity/kargo/internal/http"
@@ -173,11 +174,13 @@ func shouldRefresh(
 // match any of the provided repository URLs; omitting them from processing.
 func filterSubsByRepoURL(subs []kargoapi.RepoSubscription, repoURLs ...string) []kargoapi.RepoSubscription {
 	containsRepoURL := func(sub kargoapi.RepoSubscription) bool {
-		return sub.Image != nil && slices.Contains(repoURLs, sub.Image.RepoURL) ||
-			sub.Git != nil && slices.Contains(repoURLs, sub.Git.RepoURL) ||
-			sub.Chart != nil && slices.Contains(repoURLs,
-				helm.NormalizeChartRepositoryURL(sub.Chart.RepoURL),
-			)
+		return (sub.Image != nil && slices.Contains(repoURLs,
+			image.NormalizeURL(sub.Image.RepoURL),
+		)) || (sub.Git != nil && slices.Contains(repoURLs,
+			git.NormalizeURL(sub.Git.RepoURL),
+		)) || (sub.Chart != nil && slices.Contains(repoURLs,
+			helm.NormalizeChartRepositoryURL(sub.Chart.RepoURL),
+		))
 	}
 	return slices.DeleteFunc(subs, func(sub kargoapi.RepoSubscription) bool {
 		return !containsRepoURL(sub)
