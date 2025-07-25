@@ -56,15 +56,18 @@ func Test_argocdUpdater_check(t *testing.T) {
 							Sources: []argocd.ApplicationSource{{}},
 						},
 						Status: argocd.ApplicationStatus{
+							OperationState: &argocd.OperationState{
+								Phase: argocd.OperationSucceeded,
+								FinishedAt: &metav1.Time{
+									Time: time.Now().Add(-1 * appHealthCooldownDuration),
+								},
+							},
 							Health: argocd.HealthStatus{
 								Status: argocd.HealthStatusHealthy,
 							},
 							Sync: argocd.SyncStatus{
 								Status:    argocd.SyncStatusCodeSynced,
 								Revisions: []string{"fake-version"},
-							},
-							OperationState: &argocd.OperationState{
-								FinishedAt: ptr.To(metav1.Now()),
 							},
 						},
 					},
@@ -74,13 +77,15 @@ func Test_argocdUpdater_check(t *testing.T) {
 							Name:      testAppName2,
 						},
 						Status: argocd.ApplicationStatus{
+							OperationState: &argocd.OperationState{
+								Phase: argocd.OperationSucceeded,
+								FinishedAt: &metav1.Time{
+									Time: time.Now().Add(-1 * appHealthCooldownDuration),
+								},
+							},
 							Conditions: []argocd.ApplicationCondition{
-								{
-									Type: argocd.ApplicationConditionComparisonError,
-								},
-								{
-									Type: argocd.ApplicationConditionInvalidSpecError,
-								},
+								{Type: argocd.ApplicationConditionComparisonError},
+								{Type: argocd.ApplicationConditionInvalidSpecError},
 							},
 						},
 					},
@@ -110,15 +115,18 @@ func Test_argocdUpdater_check(t *testing.T) {
 							Sources: []argocd.ApplicationSource{{}},
 						},
 						Status: argocd.ApplicationStatus{
+							OperationState: &argocd.OperationState{
+								Phase: argocd.OperationSucceeded,
+								FinishedAt: &metav1.Time{
+									Time: time.Now().Add(-1 * appHealthCooldownDuration),
+								},
+							},
 							Health: argocd.HealthStatus{
 								Status: argocd.HealthStatusHealthy,
 							},
 							Sync: argocd.SyncStatus{
 								Status:    argocd.SyncStatusCodeSynced,
 								Revisions: []string{"fake-version"},
-							},
-							OperationState: &argocd.OperationState{
-								FinishedAt: ptr.To(metav1.Now()),
 							},
 						},
 					},
@@ -131,15 +139,18 @@ func Test_argocdUpdater_check(t *testing.T) {
 							Sources: []argocd.ApplicationSource{{}},
 						},
 						Status: argocd.ApplicationStatus{
+							OperationState: &argocd.OperationState{
+								Phase: argocd.OperationSucceeded,
+								FinishedAt: &metav1.Time{
+									Time: time.Now().Add(-1 * appHealthCooldownDuration),
+								},
+							},
 							Health: argocd.HealthStatus{
 								Status: argocd.HealthStatusHealthy,
 							},
 							Sync: argocd.SyncStatus{
 								Status:    argocd.SyncStatusCodeSynced,
 								Revisions: []string{"fake-commit"},
-							},
-							OperationState: &argocd.OperationState{
-								FinishedAt: ptr.To(metav1.Now()),
 							},
 						},
 					},
@@ -267,8 +278,63 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 			},
 		},
 		{
+			name: "Application has an in-progress operation",
+			appStatus: argocd.ApplicationStatus{
+				OperationState: &argocd.OperationState{Phase: argocd.OperationRunning},
+				Health:         argocd.HealthStatus{Status: argocd.HealthStatusHealthy},
+			},
+			assertions: func(
+				t *testing.T,
+				stageHealth kargoapi.HealthState,
+				appStatus ArgoCDAppStatus,
+				err error,
+			) {
+				require.Error(t, err)
+				require.ErrorContains(t, err, "last operation of Argo CD Application")
+				require.ErrorContains(t, err, string(argocd.OperationRunning))
+				require.ErrorContains(t, err, "Application health status not trusted")
+				require.Equal(t, kargoapi.HealthStateUnknown, stageHealth)
+				require.Equal(t, testApp.Namespace, appStatus.Namespace)
+				require.Equal(t, testApp.Name, appStatus.Name)
+				require.Equal(t, argocd.HealthStatusHealthy, appStatus.Health.Status)
+			},
+		},
+		{
+			name: "Application's last operation completed recently",
+			appStatus: argocd.ApplicationStatus{
+				OperationState: &argocd.OperationState{
+					Phase: argocd.OperationSucceeded,
+					FinishedAt: &metav1.Time{
+						Time: time.Now().Add(-1*appHealthCooldownDuration + time.Second),
+					},
+				},
+				Health: argocd.HealthStatus{Status: argocd.HealthStatusHealthy},
+			},
+			assertions: func(
+				t *testing.T,
+				stageHealth kargoapi.HealthState,
+				appStatus ArgoCDAppStatus,
+				err error,
+			) {
+				require.Error(t, err)
+				require.ErrorContains(t, err, "last operation of Argo CD Application")
+				require.ErrorContains(t, err, "completed less than")
+				require.ErrorContains(t, err, "Application health status not trusted")
+				require.Equal(t, kargoapi.HealthStateUnknown, stageHealth)
+				require.Equal(t, testApp.Namespace, appStatus.Namespace)
+				require.Equal(t, testApp.Name, appStatus.Name)
+				require.Equal(t, argocd.HealthStatusHealthy, appStatus.Health.Status)
+			},
+		},
+		{
 			name: "Application has error conditions",
 			appStatus: argocd.ApplicationStatus{
+				OperationState: &argocd.OperationState{
+					Phase: argocd.OperationSucceeded,
+					FinishedAt: &metav1.Time{
+						Time: time.Now().Add(-1 * appHealthCooldownDuration),
+					},
+				},
 				Conditions: []argocd.ApplicationCondition{
 					{
 						Type:    argocd.ApplicationConditionComparisonError,
@@ -307,8 +373,47 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 			},
 		},
 		{
-			name: "no error conditions and no desired revisions",
+			name: "Application is not Healthy",
 			appStatus: argocd.ApplicationStatus{
+				OperationState: &argocd.OperationState{
+					Phase: argocd.OperationSucceeded,
+					FinishedAt: &metav1.Time{
+						Time: time.Now().Add(-1 * appHealthCooldownDuration),
+					},
+				},
+				Health: argocd.HealthStatus{
+					Status:  argocd.HealthStatusDegraded,
+					Message: "fake-message",
+				},
+				Sync: argocd.SyncStatus{
+					Status: argocd.SyncStatusCodeSynced,
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				stageHealth kargoapi.HealthState,
+				appStatus ArgoCDAppStatus,
+				err error,
+			) {
+				require.ErrorContains(t, err, "Argo CD Application")
+				require.ErrorContains(t, err, "has health state")
+				require.ErrorContains(t, err, string(argocd.HealthStatusDegraded))
+				require.Equal(t, kargoapi.HealthStateUnhealthy, stageHealth)
+				require.Equal(t, testApp.Namespace, appStatus.Namespace)
+				require.Equal(t, testApp.Name, appStatus.Name)
+				require.Equal(t, argocd.HealthStatusDegraded, appStatus.Health.Status)
+				require.Equal(t, argocd.SyncStatusCodeSynced, appStatus.Sync.Status)
+			},
+		},
+		{
+			name: "Application is Healthy and check has no desired revisions",
+			appStatus: argocd.ApplicationStatus{
+				OperationState: &argocd.OperationState{
+					Phase: argocd.OperationSucceeded,
+					FinishedAt: &metav1.Time{
+						Time: time.Now().Add(-1 * appHealthCooldownDuration),
+					},
+				},
 				Health: argocd.HealthStatus{
 					Status:  argocd.HealthStatusHealthy,
 					Message: "fake-message",
@@ -332,17 +437,20 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 			},
 		},
 		{
-			name: "no error conditions, but revisions out of sync",
+			name: "Application is Healthy, but not synced to desired revisions",
 			appStatus: argocd.ApplicationStatus{
+				OperationState: &argocd.OperationState{
+					Phase: argocd.OperationSucceeded,
+					FinishedAt: &metav1.Time{
+						Time: time.Now().Add(-1 * appHealthCooldownDuration),
+					},
+				},
 				Health: argocd.HealthStatus{
 					Status: argocd.HealthStatusHealthy,
 				},
 				Sync: argocd.SyncStatus{
 					Status:    argocd.SyncStatusCodeSynced,
 					Revisions: []string{"fake-version", "wrong-fake-commit", "another-fake-commit"},
-				},
-				OperationState: &argocd.OperationState{
-					FinishedAt: ptr.To(metav1.Now()),
 				},
 			},
 			desiredRevisions: []string{"fake-version", "fake-commit", "another-fake-commit"},
@@ -363,17 +471,20 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 			},
 		},
 		{
-			name: "no error conditions and revisions in sync",
+			name: "Application is Healthy and synced to desired revisions",
 			appStatus: argocd.ApplicationStatus{
+				OperationState: &argocd.OperationState{
+					Phase: argocd.OperationSucceeded,
+					FinishedAt: &metav1.Time{
+						Time: time.Now().Add(-1 * appHealthCooldownDuration),
+					},
+				},
 				Health: argocd.HealthStatus{
 					Status: argocd.HealthStatusHealthy,
 				},
 				Sync: argocd.SyncStatus{
 					Status:    argocd.SyncStatusCodeSynced,
 					Revisions: []string{"fake-version", "fake-commit", "another-fake-commit"},
-				},
-				OperationState: &argocd.OperationState{
-					FinishedAt: &metav1.Time{Time: metav1.Now().Add(-10 * time.Second)},
 				},
 			},
 			desiredRevisions: []string{"fake-version", "fake-commit", "another-fake-commit"},
@@ -415,60 +526,6 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 			testCase.assertions(t, stageHealth, appStatus, err)
 		})
 	}
-
-	t.Run("waits for operation cooldown", func(t *testing.T) {
-		app := testApp.DeepCopy()
-		app.Status = argocd.ApplicationStatus{
-			Health: argocd.HealthStatus{
-				Status: argocd.HealthStatusProgressing,
-			},
-			Sync: argocd.SyncStatus{
-				Status:    argocd.SyncStatusCodeSynced,
-				Revisions: []string{"fake-version", "fake-commit", "another-fake-commit"},
-			},
-			OperationState: &argocd.OperationState{
-				FinishedAt: ptr.To(metav1.Now()),
-			},
-		}
-		var count int
-		runner := &argocdChecker{
-			argocdClient: fake.NewClientBuilder().WithInterceptorFuncs(interceptor.Funcs{
-				Get: func(
-					_ context.Context,
-					_ client.WithWatch,
-					_ client.ObjectKey,
-					obj client.Object,
-					_ ...client.GetOption,
-				) error {
-					count++
-
-					appCopy := app.DeepCopy()
-					if count > 1 {
-						appCopy.Status.Health.Status = argocd.HealthStatusHealthy
-					}
-
-					*obj.(*argocd.Application) = *appCopy // nolint: forcetypeassert
-					return nil
-				},
-			}).Build(),
-		}
-		_, _, err := runner.getApplicationHealth(
-			context.Background(),
-			client.ObjectKey{
-				Namespace: testApp.Namespace,
-				Name:      testApp.Name,
-			},
-			[]string{"fake-version", "fake-commit", "another-fake-commit"},
-		)
-		elapsed := time.Since(app.Status.OperationState.FinishedAt.Time)
-		require.NoError(t, err)
-		// We wait for 10 seconds after the sync operation has finished. As such,
-		// the elapsed time should be greater than 8 seconds, but less than 12
-		// seconds. To ensure we do not introduce flakes in the tests.
-		require.Greater(t, elapsed, 8*time.Second)
-		require.Less(t, elapsed, 12*time.Second)
-		require.Equal(t, 2, count)
-	})
 }
 
 func Test_argocdUpdater_stageHealthForAppSync(t *testing.T) {
