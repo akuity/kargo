@@ -542,6 +542,11 @@ section of the Operator Guide.
 
 ### Azure Container Registry (ACR)
 
+The authentication options described in this section are applicable only to
+container image repositories whose URLs indicate they are hosted in ACR.
+
+#### Long-Lived Credentials {#acr-long-lived-credentials}
+
 Azure Container Registry directly supports long-lived credentials.
 
 It is possible to
@@ -551,10 +556,33 @@ with or without an expiration date. These tokens can be stored in the
 [in the first section](#repository-credentials-as-secret-resources) of this
 document.
 
+:::caution
+Following the principle of least privilege, the ACR token should be limited only
+to read-only access to the required ACR repositories. Configuring this will
+likely require the assistance of an Azure administrator.
+:::
+
+:::caution
+This method of authentication is a "lowest common denominator" approach that
+will work regardless of where Kargo is deployed. i.e. If running Kargo outside
+of AKS, this method will still work.
+
+If running Kargo within AKS, you may wish to consider using Azure Workload
+Identity instead.
+:::
+
+#### Azure Workload Identity
+
+If Kargo locates no `Secret` resources matching a repository URL, and if Kargo
+is deployed within an AKS cluster with workload identity enabled, it will attempt
+to use [Azure Workload Identity](https://learn.microsoft.com/en-us/azure/aks/workload-identity-overview)
+to authenticate. Leveraging this option eliminates the need to store credentials
+in a `Secret` resource.
+
 :::info
-Support for authentication to ACR repositories using workload identity is not
-yet implemented. Assuming/impersonating a project-specific principal in Azure is
-notably complex. So, while a future Kargo release is very likely to add some
-form of support for ACR and workload identity, it is unlikely to match the
-capabilities Kargo provides for ECR or GAR.
+This option relies upon extensive external configuration that likely requires
+the assistance of Kargo's operator and an Azure administrator, and as such,
+further coverage is delegated to the
+[Managing Credentials](../../40-operator-guide/40-security/40-managing-credentials.md)
+section of the Operator Guide.
 :::
