@@ -52,7 +52,6 @@ its [CLI](../../05-installing-the-cli/index.md), you will need to log in first.
 
        ![Kargo Projects List](./img/projects.png)
 
-
     </TabItem>
     <TabItem value="cli" label="Using the CLI">
 
