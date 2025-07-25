@@ -132,7 +132,7 @@ func (a *azureWebhookReceiver) handleACREvent(
 		logger := logging.LoggerFromContext(ctx)
 		logger = logger.WithValues("repoURL", repoURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		refreshWarehouses(ctx, w, a.client, a.project, repoURL)
+		refreshWarehouses(ctx, w, a.client, a.project, event.Target.Tag, repoURL)
 	case acrPingEvent:
 		xhttp.WriteResponseJSON(
 			w,
@@ -182,9 +182,14 @@ func (a *azureWebhookReceiver) handleAzureDevOpsEvent(
 
 	repoURL := git.NormalizeURL(event.Resource.Repository.RemoteURL)
 	logger := logging.LoggerFromContext(ctx)
-	logger = logger.WithValues("repoURL", repoURL)
+	// Azure DevOps sends a []RefUpdates in the payload, following convention,
+	// this means we should omit setting a qualifier for Azure DevOps given
+	// that elements could differ here e.g. one RefUpdate element could be a tag
+	// and another could be a branch
+	var qualifier string
+	logger = logger.WithValues("repoURL", repoURL, "qualifier", qualifier)
 	ctx = logging.ContextWithLogger(ctx, logger)
-	refreshWarehouses(ctx, w, a.client, a.project, repoURL)
+	refreshWarehouses(ctx, w, a.client, a.project, qualifier, repoURL)
 }
 
 // acrEvent represents the payload for Azure Container Registry webhooks.
@@ -199,6 +204,7 @@ type acrEvent struct {
 	Target struct {
 		MediaType  string `json:"mediaType"`
 		Repository string `json:"repository"`
+		Tag        string `json:"tag"`
 	} `json:"target"`
 	Request struct {
 		Host string `json:"host"`

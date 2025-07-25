@@ -133,6 +133,7 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 			"imageName", payload.Data.ImageName,
 			"imageType", payload.Data.ImageType,
 			"origin", payload.Origin,
+			"tag", payload.Data.Tag,
 		)
 
 		logger.Info("unmarshalled Artifactory webhook payload")
@@ -181,9 +182,9 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 			)
 			return
 		}
-		logger = logger.WithValues("repoURL", repoURL)
+		logger = logger.WithValues("repoURL", repoURL, "qualifier", payload.Data.Tag)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		refreshWarehouses(ctx, w, a.client, a.project, repoURL)
+		refreshWarehouses(ctx, w, a.client, a.project, payload.Data.Tag, repoURL)
 	})
 }
 
@@ -199,4 +200,5 @@ type artifactoryEventData struct {
 	RepoKey   string `json:"repo_key"`
 	ImageName string `json:"image_name"`
 	ImageType string `json:"image_type"`
+	Tag       string `json:"tag"`
 }

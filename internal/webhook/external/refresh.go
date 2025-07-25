@@ -11,7 +11,12 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
+	"github.com/akuity/kargo/internal/controller/git/commit"
+	"github.com/akuity/kargo/internal/git"
+	"github.com/akuity/kargo/internal/helm"
+	"github.com/akuity/kargo/internal/helm/chart"
 	xhttp "github.com/akuity/kargo/internal/http"
+	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -26,6 +31,7 @@ func refreshWarehouses(
 	w http.ResponseWriter,
 	c client.Client,
 	project string,
+	qualifier string,
 	repoURLs ...string,
 ) {
 	logger := logging.LoggerFromContext(ctx)
@@ -69,6 +75,23 @@ func refreshWarehouses(
 		return lhs.Namespace == rhs.Namespace && lhs.Name == rhs.Name
 	})
 
+	if qualifier != "" {
+		refreshEligibleWarehouses := make([]kargoapi.Warehouse, 0, len(warehouses))
+		for _, wh := range warehouses {
+			shouldRefresh, err := shouldRefresh(wh.Spec.Subscriptions, qualifier, repoURLs...)
+			if err != nil {
+				// log the error but obscure the details from the response
+				logger.Error(err, "failed to evaluate if warehouse needs refresh", "warehouse", wh.Name)
+				xhttp.WriteErrorJSON(w, err)
+				return
+			}
+			if *shouldRefresh {
+				refreshEligibleWarehouses = append(refreshEligibleWarehouses, wh)
+			}
+		}
+		warehouses = refreshEligibleWarehouses
+	}
+
 	logger.Debug("found Warehouses to refresh", "count", len(warehouses))
 
 	var failures int
@@ -102,4 +125,67 @@ func refreshWarehouses(
 			"msg": fmt.Sprintf("refreshed %d warehouse(s)", len(warehouses)),
 		},
 	)
+}
+
+func shouldRefresh(
+	subs []kargoapi.RepoSubscription,
+	qualifier string,
+	repoURLs ...string,
+) (*bool, error) {
+	var shouldRefresh bool
+	subs = filterSubsByRepoURL(subs, repoURLs...) // only interested in subs that contain any of the repo URLs.
+	for _, s := range subs {
+		switch {
+		case s.Git != nil:
+			selector, err := commit.NewSelector(*s.Git, nil)
+			if err != nil {
+				return nil, fmt.Errorf("error creating commit selector for Git subscription %q: %w",
+					s.Git.RepoURL, err,
+				)
+			}
+			shouldRefresh = selector.MatchesRef(qualifier)
+		case s.Image != nil:
+			selector, err := image.NewSelector(*s.Image, nil)
+			if err != nil {
+				return nil, fmt.Errorf("error creating image selector for Image subscription %q: %w",
+					s.Image.RepoURL, err,
+				)
+			}
+			shouldRefresh = selector.MatchesTag(qualifier)
+		case s.Chart != nil:
+			selector, err := chart.NewSelector(*s.Chart, nil)
+			if err != nil {
+				return nil, fmt.Errorf("error creating chart selector for Chart subscription %q: %w",
+					s.Chart.RepoURL, err,
+				)
+			}
+			shouldRefresh = selector.MatchesVersion(qualifier)
+		}
+		if shouldRefresh {
+			// exit early if we already found a match
+			return &shouldRefresh, nil
+		}
+	}
+	return &shouldRefresh, nil
+}
+
+// filterSubsByRepoURL deletes all subscriptions from subs that do not
+// match any of the provided repository URLs; omitting them from processing.
+// repoURLs should be normalized before calling this function.
+// / this function will normalize all subscription repo URLs before comparing
+// them to the provided repoURLs. With that said, the repoURLs are expected
+// to be normalized by the caller.
+func filterSubsByRepoURL(subs []kargoapi.RepoSubscription, repoURLs ...string) []kargoapi.RepoSubscription {
+	containsRepoURL := func(sub kargoapi.RepoSubscription) bool {
+		return (sub.Image != nil && slices.Contains(repoURLs,
+			image.NormalizeURL(sub.Image.RepoURL),
+		)) || (sub.Git != nil && slices.Contains(repoURLs,
+			git.NormalizeURL(sub.Git.RepoURL),
+		)) || (sub.Chart != nil && slices.Contains(repoURLs,
+			helm.NormalizeChartRepositoryURL(sub.Chart.RepoURL),
+		))
+	}
+	return slices.DeleteFunc(subs, func(sub kargoapi.RepoSubscription) bool {
+		return !containsRepoURL(sub)
+	})
 }

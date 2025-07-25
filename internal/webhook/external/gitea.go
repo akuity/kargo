@@ -124,6 +124,7 @@ func (g *giteaWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 		}
 
 		payload := struct {
+			Ref  string `json:"ref"`
 			Repo struct {
 				URL string `json:"clone_url"`
 			} `json:"repository"`
@@ -141,7 +142,6 @@ func (g *giteaWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 
 		logger = logger.WithValues("repoURL", repoURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
-
-		refreshWarehouses(ctx, w, g.client, g.project, repoURL)
+		refreshWarehouses(ctx, w, g.client, g.project, payload.Ref, repoURL)
 	})
 }

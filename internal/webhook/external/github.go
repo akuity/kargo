@@ -12,6 +12,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/git"
 	xhttp "github.com/akuity/kargo/internal/http"
+	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -134,7 +135,7 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 		}
 
 		var repoURL string
-
+		var qualifier string
 		switch e := event.(type) {
 		case *gh.PackageEvent:
 			switch e.GetAction() {
@@ -166,13 +167,17 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 				xhttp.WriteErrorJSON(w, err)
 				return
 			}
-			manifest := pkg.GetPackageVersion().GetContainerMetadata().GetManifest()
+			v := pkg.GetPackageVersion()
+			manifest := v.GetContainerMetadata().GetManifest()
+			// Determine if the package is a Helm chart
 			if cfg, ok := manifest["config"].(map[string]any); ok {
 				if mediaType, ok := cfg["media_type"].(string); ok {
 					repoURL = normalizeOCIRepoURL(ref.Context().Name(), mediaType)
 				}
+			} else {
+				repoURL = image.NormalizeURL(ref.Context().Name())
 			}
-
+			qualifier = v.GetVersion()
 		case *gh.PingEvent:
 			xhttp.WriteResponseJSON(
 				w,
@@ -184,6 +189,7 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			return
 
 		case *gh.PushEvent:
+			qualifier = e.GetRef()
 			// TODO(krancour): GetHTMLURL() gives us a repo URL starting with
 			// https://. By refreshing Warehouses using a normalized representation of
 			// that URL, we will miss any Warehouses that are subscribed to the same
@@ -191,9 +197,9 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			repoURL = git.NormalizeURL(e.GetRepo().GetCloneURL())
 		}
 
-		logger = logger.WithValues("repoURL", repoURL)
+		logger = logger.WithValues("repoURL", repoURL, "qualifier", qualifier)
 		ctx = logging.ContextWithLogger(ctx, logger)
 
-		refreshWarehouses(ctx, w, g.client, g.project, repoURL)
+		refreshWarehouses(ctx, w, g.client, g.project, qualifier, repoURL)
 	})
 }

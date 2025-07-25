@@ -128,7 +128,9 @@ func TestBitbucketHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{
-								RepoURL: "https://bitbucket.org/example/repo",
+								Branch:                  "main",
+								RepoURL:                 "https://bitbucket.org/example/repo",
+								CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
 							},
 						}},
 					},

@@ -156,10 +156,13 @@ func (b *bitbucketWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 		// TODO(krancour): There are very likely some yet-to-be-identified edge
 		// cases where this choice does not hold up.
 		repoURL := payload.Repository.Links.HTML.Href
-
-		logger = logger.WithValues("repoURL", repoURL)
+		// BitBucket sends a []Changes in the payload, following convention,
+		// this means we should omit setting a qualifier for BitBucket given
+		// that elements could differ here e.g. one RefUpdate element could be a tag
+		// and another could be a branch
+		var qualifier string
+		logger = logger.WithValues("repoURL", repoURL, "qualifier", qualifier)
 		ctx = logging.ContextWithLogger(ctx, logger)
-
-		refreshWarehouses(ctx, w, b.client, b.project, repoURL)
+		refreshWarehouses(ctx, w, b.client, b.project, qualifier, repoURL)
 	})
 }
