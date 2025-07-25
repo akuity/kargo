@@ -15,7 +15,7 @@ new artifacts from all repositories to which that `Warehouse` subscribes.
 :::
 
 :::info
-The Gitea webhook receiver also works with Gitea Enterprise Gitea Cloud.
+The Gitea webhook receiver also works with Gitea Enterprise and Gitea Cloud.
 :::
 
 ## Configuring the Receiver
@@ -37,11 +37,6 @@ echo "Encoded secret: $(echo -n $secret | base64)"
 :::
 
 ```yaml
-apiVersion: kargo.akuity.io/v1alpha1
-kind: Project
-metadata:
-  name: kargo-demo
----
 apiVersion: v1
 kind: Secret
 metadata:
