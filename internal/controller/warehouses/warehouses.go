@@ -38,9 +38,9 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 
 // reconciler reconciles Warehouse resources.
 type reconciler struct {
-	client                    client.Client
-	credentialsDB             credentials.Database
-	minReconciliationInterval time.Duration
+	client        client.Client
+	credentialsDB credentials.Database
+	cfg           ReconcilerConfig
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -83,7 +83,7 @@ func SetupReconcilerWithManager(
 		).
 		WithEventFilter(shardPredicate).
 		WithOptions(controller.CommonOptions(cfg.MaxConcurrentReconciles)).
-		Complete(newReconciler(mgr.GetClient(), credentialsDB, cfg.MinReconciliationInterval)); err != nil {
+		Complete(newReconciler(mgr.GetClient(), credentialsDB, cfg)); err != nil {
 		return fmt.Errorf("error building Warehouse reconciler: %w", err)
 	}
 
@@ -98,13 +98,13 @@ func SetupReconcilerWithManager(
 func newReconciler(
 	kubeClient client.Client,
 	credentialsDB credentials.Database,
-	minReconciliationInterval time.Duration,
+	cfg ReconcilerConfig,
 ) *reconciler {
 	r := &reconciler{
-		client:                    kubeClient,
-		credentialsDB:             credentialsDB,
-		minReconciliationInterval: minReconciliationInterval,
-		createFreightFn:           kubeClient.Create,
+		client:          kubeClient,
+		credentialsDB:   credentialsDB,
+		cfg:             cfg,
+		createFreightFn: kubeClient.Create,
 	}
 
 	r.discoverArtifactsFn = r.discoverArtifacts
@@ -142,6 +142,11 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
+	if warehouse.GetLabels()[kargoapi.LabelKeyShard] != r.cfg.ShardName {
+		logger.Debug("ignoring Warehouse because it is not in scope")
+		return ctrl.Result{}, nil
+	}
+
 	newStatus, err := r.syncWarehouse(ctx, warehouse)
 	if err != nil {
 		logger.Error(err, "error syncing Warehouse")
@@ -174,7 +179,7 @@ func (r *reconciler) Reconcile(
 
 	// Everything succeeded, look for new changes on the defined interval.
 	return ctrl.Result{
-		RequeueAfter: warehouse.GetInterval(r.minReconciliationInterval),
+		RequeueAfter: warehouse.GetInterval(r.cfg.MinReconciliationInterval),
 	}, nil
 }
 

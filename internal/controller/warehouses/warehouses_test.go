@@ -9,13 +9,17 @@ import (
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/conditions"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 func TestNewReconciler(t *testing.T) {
@@ -25,11 +29,11 @@ func TestNewReconciler(t *testing.T) {
 	e := newReconciler(
 		kubeClient,
 		&credentials.FakeDB{},
-		minReconciliationInterval,
+		ReconcilerConfig{MinReconciliationInterval: minReconciliationInterval},
 	)
 	require.NotNil(t, e.client)
 	require.NotNil(t, e.credentialsDB)
-	require.Equal(t, minReconciliationInterval, e.minReconciliationInterval)
+	require.Equal(t, minReconciliationInterval, e.cfg.MinReconciliationInterval)
 
 	// Assert that all overridable behaviors were initialized to a default:
 	require.NotNil(t, e.discoverArtifactsFn)
@@ -999,6 +1003,100 @@ func TestShouldDiscoverArtifacts(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := shouldDiscoverArtifacts(tt.warehouse, tt.refreshToken)
 			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestReconcile_ShardMatching(t *testing.T) {
+	testScheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(testScheme))
+
+	tests := []struct {
+		name        string
+		reconciler  func() *reconciler
+		req         ctrl.Request
+		shouldMatch bool
+	}{
+		{
+			name: "Shard mismatch",
+			reconciler: func() *reconciler {
+				return &reconciler{
+					client: fake.NewClientBuilder().
+						WithScheme(testScheme).
+						WithObjects(
+							&kargoapi.Warehouse{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "test-warehouse",
+									Namespace: "test-namespace",
+									Labels: map[string]string{
+										kargoapi.LabelKeyShard: "wrong-shard",
+									},
+								},
+							},
+						).Build(),
+					cfg: ReconcilerConfig{ShardName: "right-shard"},
+					// Intentionally not setting any xFns because we should never reach them
+					// because we will exit before any reconciliation logic is executed.
+					// With that said, there is nothing that needs to be asserted here
+				}
+			},
+			req: ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      "test-warehouse",
+					Namespace: "test-namespace",
+				},
+			},
+			shouldMatch: false,
+		},
+		{
+			name: "Shard match",
+			reconciler: func() *reconciler {
+				return &reconciler{
+					client: fake.NewClientBuilder().
+						WithScheme(testScheme).
+						WithObjects(
+							&kargoapi.Warehouse{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "test-warehouse",
+									Namespace: "test-namespace",
+									Labels: map[string]string{
+										kargoapi.LabelKeyShard: "right-shard",
+									},
+								},
+							},
+						).Build(),
+					cfg: ReconcilerConfig{
+						ShardName: "right-shard",
+					},
+					// Intentionally not setting any xFns for a different reason here.
+					// This time we want the test to panic and assert for it. This will
+					// mean that we made it past the shard check and into the reconcile logic.
+				}
+			},
+			req: ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      "test-warehouse",
+					Namespace: "test-namespace",
+				},
+			},
+			shouldMatch: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := tt.reconciler()
+			logger := logging.NewLogger(logging.DebugLevel)
+			ctx := logging.ContextWithLogger(t.Context(), logger)
+			if tt.shouldMatch {
+				require.Panics(t, func() {
+					r.Reconcile(ctx, tt.req) //nolint:errcheck
+				})
+				return
+			}
+			result, err := r.Reconcile(ctx, tt.req)
+			require.NoError(t, err)
+			require.True(t, result.IsZero())
 		})
 	}
 }

@@ -322,6 +322,11 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, nil
 	}
 
+	if stage.GetLabels()[kargoapi.LabelKeyShard] != r.cfg.ShardName {
+		logger.Debug("ignoring Stage because it is not in scope")
+		return ctrl.Result{}, nil
+	}
+
 	// Handle deletion of the Stage.
 	if !stage.DeletionTimestamp.IsZero() {
 		return ctrl.Result{}, r.handleDelete(ctx, stage)

@@ -79,6 +79,36 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 			},
 		},
 		{
+			name: "shard mismatch",
+			req: ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: "default",
+					Name:      "test-stage",
+				},
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "test-stage",
+					Labels: map[string]string{
+						kargoapi.LabelKeyShard: "wrong-shard",
+					},
+				},
+				Spec: kargoapi.StageSpec{
+					Shard: "correct-shard",
+					PromotionTemplate: &kargoapi.PromotionTemplate{
+						Spec: kargoapi.PromotionTemplateSpec{
+							Steps: []kargoapi.PromotionStep{{}, {}},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, _ client.Client, result ctrl.Result, err error) {
+				require.NoError(t, err)
+				assert.True(t, result.IsZero())
+			},
+		},
+		{
 			name: "handles deletion",
 			req: ctrl.Request{
 				NamespacedName: types.NamespacedName{
