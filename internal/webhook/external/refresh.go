@@ -75,7 +75,7 @@ func refreshWarehouses(
 	})
 
 	if qualifier != "" {
-		var refreshEligibleWarehouses []kargoapi.Warehouse
+		refreshEligibleWarehouses := make([]kargoapi.Warehouse, 0, len(warehouses))
 		for _, wh := range warehouses {
 			shouldRefresh, err := needsRefresh(ctx, wh.Spec.Subscriptions, qualifier, repoURLs...)
 			if err != nil {
