@@ -1,178 +1,21 @@
-import { IconDefinition, faHistory, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Card, Flex, Select, Table, Tooltip, Typography } from 'antd';
+import { faHistory, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import { Card, Flex, Select, Table, Tooltip, Typography } from 'antd';
 import { ColumnType } from 'antd/es/table';
-import classNames from 'classnames';
 import { memo, useContext, useMemo, useState, useEffect } from 'react';
-import { generatePath, useNavigate } from 'react-router-dom';
-import semver from 'semver';
 
-import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
-import { TagMap, ImageStageMap } from '@ui/gen/api/service/v1alpha1/service_pb';
+import { TagMap } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
-import { shortVersion } from './freight/short-version-utils';
+import { shortVersion } from '../freight/short-version-utils';
 
-type ProcessedTagMap = {
-  tags: Record<string, ImageStageMap>;
-};
-
-type ProcessedImages = Record<string, ProcessedTagMap>;
-
-const findWarehousesForImageRepo = (repoURL: string, warehouses: Warehouse[]): string[] => {
-  return warehouses
-    .filter((w) => w.spec?.subscriptions?.some((s) => s.image?.repoURL === repoURL))
-    .map((w) => w.metadata?.name || '')
-    .filter(Boolean);
-};
-
-const findStagesForWarehouse = (warehouseName: string, stages: Stage[]): Set<string> => {
-  const reachableStages = new Set<string>();
-  stages.forEach((stage) => {
-    const stageName = stage.metadata?.name;
-    if (stageName && stage.spec?.requestedFreight?.some((r) => r.origin?.name === warehouseName)) {
-      reachableStages.add(stageName);
-    }
-  });
-  return reachableStages;
-};
-
-const getStagesForImage = (
-  repoURL: string,
-  warehouses: Warehouse[],
-  stages: Stage[]
-): Set<string> => {
-  const warehousesForImage = findWarehousesForImageRepo(repoURL, warehouses);
-  const allReachableStages = new Set<string>();
-  warehousesForImage.forEach((warehouseName) => {
-    findStagesForWarehouse(warehouseName, stages).forEach((stageName) =>
-      allReachableStages.add(stageName)
-    );
-  });
-  return allReachableStages;
-};
-
-const getTooltipTitle = (
-  showHistory: boolean,
-  isHighlighted: boolean,
-  stageName: string,
-  order: number
-): string => {
-  if (!showHistory) {
-    return `Promoted to stage: '${stageName}'`;
-  }
-
-  if (isHighlighted) {
-    return `Most recent promotion: Currently in stage '${stageName}'`;
-  }
-
-  return `Stage: '${stageName}' (Promotion order: ${order})`;
-};
-
-const filterStagesForImage = (
-  imageStageMap: ImageStageMap,
-  stagesForImage: Set<string>
-): Record<string, number> => {
-  const filteredStages: Record<string, number> = {};
-  Object.entries(imageStageMap.stages || {}).forEach(([stageName, order]) => {
-    if (stagesForImage.has(stageName)) {
-      filteredStages[stageName] = order;
-    }
-  });
-  return filteredStages;
-};
-
-const processTagMap = (tagMap: TagMap, stagesForImage: Set<string>): ProcessedTagMap => {
-  const filteredTagMap: ProcessedTagMap = { tags: {} };
-
-  Object.entries(tagMap.tags || {}).forEach(([tag, imageStageMap]) => {
-    const filteredStages = filterStagesForImage(imageStageMap, stagesForImage);
-    if (Object.keys(filteredStages).length > 0) {
-      filteredTagMap.tags[tag] = { ...imageStageMap, stages: filteredStages };
-    }
-  });
-
-  return filteredTagMap;
-};
-
-const StageBox = memo(
-  ({
-    stageName,
-    order,
-    showHistory,
-    stageColorMap,
-    project
-  }: {
-    stageName: string;
-    order: number;
-    showHistory: boolean;
-    stageColorMap: Record<string, string>;
-    project: string;
-  }) => {
-    const navigate = useNavigate();
-    const isHighlighted = showHistory && order === 0;
-    const baseColor = stageColorMap[stageName] || '#6b7280';
-
-    const tooltipTitle = getTooltipTitle(showHistory, isHighlighted, stageName, order);
-
-    const handleClick = () => {
-      navigate(generatePath(paths.stage, { name: project, stageName }));
-    };
-
-    const style = {
-      backgroundColor: baseColor,
-      opacity: showHistory && !isHighlighted ? 0.6 : 1,
-      border: isHighlighted ? '2px solid rgba(255,255,255,0.5)' : '2px solid transparent',
-      boxShadow: isHighlighted ? '0 1px 3px rgba(0, 0, 0, 0.2)' : 'none'
-    };
-
-    return (
-      <Tooltip title={tooltipTitle}>
-        <Button
-          onClick={handleClick}
-          className='h-6 w-full rounded flex items-center justify-center cursor-pointer transition-all duration-300 border-0 p-0'
-          style={style}
-        >
-          {showHistory && (
-            <div className='flex items-center gap-0.5'>
-              <span className='text-white font-bold text-[10px] select-none'>{order}</span>
-            </div>
-          )}
-        </Button>
-      </Tooltip>
-    );
-  }
-);
-StageBox.displayName = 'StageBox';
-
-const HeaderButton = memo(
-  ({
-    onClick,
-    icon,
-    selected,
-    title
-  }: {
-    onClick: () => void;
-    icon: IconDefinition;
-    selected?: boolean;
-    title: string;
-  }) => (
-    <Tooltip title={title} placement='left'>
-      <Button
-        onClick={onClick}
-        className={classNames(
-          'p-2 w-7 h-7 flex items-center justify-center rounded-md hover:bg-gray-200 transition-colors',
-          selected ? 'bg-blue-100 text-blue-600' : 'text-gray-500 hover:text-gray-700'
-        )}
-      >
-        <FontAwesomeIcon icon={icon} />
-      </Button>
-    </Tooltip>
-  )
-);
-HeaderButton.displayName = 'HeaderButton';
+import { getStages, getStagesForImage } from './get-stages';
+import { HeaderButton } from './header-button';
+import { processTagMap } from './process-tag-map';
+import { sortTags } from './sort-tags';
+import { StageBox } from './stage-box';
+import { ProcessedImages } from './types';
 
 interface ImagesProps {
   hide: () => void;
@@ -182,27 +25,6 @@ interface ImagesProps {
   warehouses: Warehouse[];
 }
 
-const sortTags = (tags: string[]): string[] => {
-  return tags.sort((a, b) => {
-    try {
-      return semver.compare(b, a);
-    } catch {
-      return b.localeCompare(a);
-    }
-  });
-};
-
-const getDynamicStages = (selectedImageData: ProcessedTagMap | undefined): string[] => {
-  if (!selectedImageData) return [];
-
-  const stageSet = new Set<string>();
-  Object.values(selectedImageData.tags).forEach((imageStageMap) => {
-    Object.keys(imageStageMap.stages || {}).forEach((stageName) => stageSet.add(stageName));
-  });
-
-  return Array.from(stageSet).sort();
-};
-
 export const Images = memo<ImagesProps>(({ hide, images, project, stages, warehouses }) => {
   const { stageColorMap } = useContext(ColorContext);
   const [showHistory, setShowHistory] = useLocalStorage('images-dynamic-grid-show-history', true);
@@ -210,14 +32,14 @@ export const Images = memo<ImagesProps>(({ hide, images, project, stages, wareho
   const filteredImages: ProcessedImages = useMemo(() => {
     const result: ProcessedImages = {};
 
-    Object.entries(images).forEach(([repoURL, tagMap]) => {
+    for (const [repoURL, tagMap] of Object.entries(images)) {
       const stagesForImage = getStagesForImage(repoURL, warehouses, stages);
       const processedTagMap = processTagMap(tagMap, stagesForImage);
 
       if (Object.keys(processedTagMap.tags).length > 0) {
         result[repoURL] = processedTagMap;
       }
-    });
+    }
 
     return result;
   }, [images, warehouses, stages]);
@@ -238,7 +60,7 @@ export const Images = memo<ImagesProps>(({ hide, images, project, stages, wareho
     [selectedRepoURL, filteredImages]
   );
 
-  const dynamicStages = useMemo(() => getDynamicStages(selectedImageData), [selectedImageData]);
+  const dynamicStages = useMemo(() => getStages(selectedImageData), [selectedImageData]);
 
   const allTags = useMemo(() => {
     if (!selectedImageData) return [];
@@ -262,7 +84,7 @@ export const Images = memo<ImagesProps>(({ hide, images, project, stages, wareho
       }
     ];
 
-    dynamicStages.forEach((stageName) => {
+    for (const stageName of dynamicStages) {
       columns.push({
         title: (
           <Tooltip title={stageName}>
@@ -313,7 +135,7 @@ export const Images = memo<ImagesProps>(({ hide, images, project, stages, wareho
           );
         }
       });
-    });
+    }
 
     return columns;
   }, [dynamicStages, stageColorMap, selectedImageData, showHistory, project]);
@@ -389,5 +211,3 @@ export const Images = memo<ImagesProps>(({ hide, images, project, stages, wareho
     </Card>
   );
 });
-
-Images.displayName = 'Images';
