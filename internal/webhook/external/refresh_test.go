@@ -224,18 +224,17 @@ func TestShouldRefresh(t *testing.T) {
 		qualifier string
 		repoURLs  []string
 		expect    bool
-		expectErr bool
 	}{
 		{
 			name: "Git subscription with matching qualifier",
 			subs: []kargoapi.RepoSubscription{{
 				Git: &kargoapi.GitSubscription{
 					CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
-					RepoURL:                 "https://github.com/username/repo.git",
+					RepoURL:                 "https://github.com/username/repo",
 					Branch:                  "main",
 				},
 			}},
-			repoURLs:  []string{"https://github.com/username/repo.git"},
+			repoURLs:  []string{"https://github.com/username/repo"},
 			qualifier: "refs/heads/main",
 			expect:    true,
 		},
@@ -248,7 +247,7 @@ func TestShouldRefresh(t *testing.T) {
 					Branch:                  "main",
 				},
 			}},
-			repoURLs:  []string{"https://github.com/username/repo.git"},
+			repoURLs:  []string{"https://github.com/username/repo"},
 			qualifier: "release",
 			expect:    false,
 		},
@@ -262,7 +261,7 @@ func TestShouldRefresh(t *testing.T) {
 					StrictSemvers:          true,
 				},
 			}},
-			repoURLs:  []string{"docker.io/example/repo"},
+			repoURLs:  []string{"example/repo"},
 			qualifier: "v1.0.0",
 			expect:    true,
 		},
@@ -314,10 +313,6 @@ func TestShouldRefresh(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			result, err := shouldRefresh(tc.subs, tc.qualifier, tc.repoURLs...)
-			if tc.expectErr {
-				require.Error(t, err)
-				return
-			}
 			require.NoError(t, err)
 			require.Equal(t, tc.expect, *result)
 		})

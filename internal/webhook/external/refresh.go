@@ -171,6 +171,10 @@ func shouldRefresh(
 
 // filterSubsByRepoURL deletes all subscriptions from subs that do not
 // match any of the provided repository URLs; omitting them from processing.
+// repoURLs should be normalized before calling this function.
+// / this function will normalize all subscription repo URLs before comparing
+// them to the provided repoURLs. With that said, the repoURLs are expected
+// to be normalized by the caller.
 func filterSubsByRepoURL(subs []kargoapi.RepoSubscription, repoURLs ...string) []kargoapi.RepoSubscription {
 	containsRepoURL := func(sub kargoapi.RepoSubscription) bool {
 		return (sub.Image != nil && slices.Contains(repoURLs,
