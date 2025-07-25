@@ -8,38 +8,41 @@ const getTooltipTitle = (
   showHistory: boolean,
   isHighlighted: boolean,
   stageName: string,
-  order: number
+  orders: number[]
 ): string => {
   if (!showHistory) {
     return `Promoted to stage: '${stageName}'`;
   }
 
-  if (isHighlighted) {
-    return `Most recent promotion: Currently in stage '${stageName}'`;
+  if (orders.length === 1) {
+    if (isHighlighted) {
+      return `Most recent promotion: Currently in stage '${stageName}'`;
+    }
+    return `Stage: '${stageName}' (Promotion order: ${orders[0]})`;
   }
 
-  return `Stage: '${stageName}' (Promotion order: ${order})`;
+  return `Stage: '${stageName}' (${orders.length} promotions: ${orders.join(', ')})`;
 };
 
 export const StageBox = memo(
   ({
     stageName,
-    order,
+    orders,
     showHistory,
     stageColorMap,
     project
   }: {
     stageName: string;
-    order: number;
+    orders: number[];
     showHistory: boolean;
     stageColorMap: Record<string, string>;
     project: string;
   }) => {
     const navigate = useNavigate();
-    const isHighlighted = showHistory && order === 0;
+    const isHighlighted = showHistory && orders.includes(0);
     const baseColor = stageColorMap[stageName] || '#6b7280';
 
-    const tooltipTitle = getTooltipTitle(showHistory, isHighlighted, stageName, order);
+    const tooltipTitle = getTooltipTitle(showHistory, isHighlighted, stageName, orders);
 
     const handleClick = () => {
       navigate(generatePath(paths.stage, { name: project, stageName }));
@@ -61,7 +64,24 @@ export const StageBox = memo(
         >
           {showHistory && (
             <div className='flex items-center gap-0.5'>
-              <span className='text-white font-bold text-[10px] select-none'>{order}</span>
+              {orders.length === 1 ? (
+                <span className='text-white font-bold text-[10px] select-none'>{orders[0]}</span>
+              ) : (
+                <div className='flex items-center gap-0.5'>
+                  {orders.slice(0, 3).map((order, index) => (
+                    <span
+                      key={`${index}-${order}`}
+                      className='text-white font-bold text-[10px] select-none'
+                    >
+                      {order}
+                      {index < Math.min(3, orders.length) - 1 ? ',' : ''}
+                    </span>
+                  ))}
+                  {orders.length > 3 && (
+                    <span className='text-white font-bold text-[8px] select-none'>...</span>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </Button>

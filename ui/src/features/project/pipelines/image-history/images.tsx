@@ -55,6 +55,38 @@ export const Images = memo<ImagesProps>(({ hide, images, project, stages, wareho
     }
   }, [repoURLs, selectedRepoURL]);
 
+  const promotionHistory = useMemo(() => {
+    const history: Record<string, Record<string, Record<string, number[]>>> = {};
+
+    stages.forEach((stage) => {
+      const stageName = stage.metadata?.name || '';
+      if (!stageName) return;
+
+      stage.status?.freightHistory?.forEach((freightGroup, freightIndex) => {
+        Object.values(freightGroup.items || {}).forEach((freightRef) => {
+          freightRef.images?.forEach((image) => {
+            const repoURL = image.repoURL || '';
+            const tag = image.tag || '';
+
+            if (!history[repoURL]) {
+              history[repoURL] = {};
+            }
+            if (!history[repoURL][tag]) {
+              history[repoURL][tag] = {};
+            }
+            if (!history[repoURL][tag][stageName]) {
+              history[repoURL][tag][stageName] = [];
+            }
+
+            history[repoURL][tag][stageName].push(freightIndex);
+          });
+        });
+      });
+    });
+
+    return history;
+  }, [stages]);
+
   const selectedImageData = useMemo(
     () => (selectedRepoURL ? filteredImages[selectedRepoURL] : undefined),
     [selectedRepoURL, filteredImages]
@@ -122,11 +154,16 @@ export const Images = memo<ImagesProps>(({ hide, images, project, stages, wareho
             );
           }
 
+          // Get promotion orders from promotion history
+          const tagHistory = promotionHistory[selectedRepoURL]?.[record.tag]?.[stageName] || [];
+          const sortedOrders =
+            tagHistory.length > 0 ? tagHistory : [imageStageMap.stages?.[stageName] || 0];
+
           return (
             <div className='flex justify-center'>
               <StageBox
                 stageName={stageName}
-                order={originalOrder}
+                orders={sortedOrders}
                 showHistory={showHistory}
                 stageColorMap={stageColorMap}
                 project={project}
@@ -138,7 +175,15 @@ export const Images = memo<ImagesProps>(({ hide, images, project, stages, wareho
     }
 
     return columns;
-  }, [dynamicStages, stageColorMap, selectedImageData, showHistory, project]);
+  }, [
+    dynamicStages,
+    stageColorMap,
+    selectedImageData,
+    showHistory,
+    project,
+    promotionHistory,
+    selectedRepoURL
+  ]);
 
   const tableData = useMemo(() => {
     return allTags.map((tag) => ({
