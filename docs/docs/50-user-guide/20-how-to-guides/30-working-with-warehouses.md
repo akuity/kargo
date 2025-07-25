@@ -104,10 +104,16 @@ field specifies a method for selecting the desired image. The available
 strategies are:
 
 - `SemVer`: Selects the image with the tag that best matches a semantic
-  versioning constraint specified by the `semverConstraint` field. With no
-  constraint specified, the strategy simply selects the image with the
+  versioning constraint specified by the `constraint` field. If no such
+  constraint is specified, the strategy simply selects the image with the
   semantically greatest tag. All tags that are not valid semantic versions are
   ignored.
+
+    :::note
+    If the `constraint` field is empty, any constraints defined by the
+    deprecated `semverConstraint` field will be applied instead. The
+    `semverConstraint` field will be removed in v1.9.0.
+    :::
 
    The `strictSemvers` field defaults to `true`, meaning only tags containing
    all three parts of a semantic version (major, minor, and patch) are
@@ -154,12 +160,15 @@ strategies are:
           allowTags: ^nightly-\d{8}$
     ```
 
-- `Digest`: This selects the image _currently_ referenced by some "mutable tag,"
-   such as `latest`.
+- `Digest`: This selects the image _currently_ referenced by some "mutable tag"
+   (such as `latest`) specified by the `constraint` field.
 
-    __Unintuitively, the mutable tag name must be specified using the
-    `semverConstraint` field.__ Importantly, the _digest_ will change every time
-    the tag is updated.
+    :::note
+    If the `constraint` field is empty, the name of the mutable tag will
+    (unintuitively) be determined by the value of the deprecated
+    `semverConstraint` field. The `semverConstraint` field will be removed in
+    v1.9.0.
+    :::
 
     :::warning
     "Mutable tags": Tags like `latest` that are sometimes, perhaps frequently,

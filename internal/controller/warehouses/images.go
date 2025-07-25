@@ -48,9 +48,6 @@ func (r *reconciler) discoverImages(
 			logger.Debug("found no credentials for image repo")
 		}
 
-		// Enrich the logger with additional fields for this subscription.
-		logger = logger.WithValues(imageDiscoveryLogFields(sub))
-
 		selector, err := image.NewSelector(sub, regCreds)
 		if err != nil {
 			return nil, fmt.Errorf(
@@ -59,7 +56,6 @@ func (r *reconciler) discoverImages(
 				err,
 			)
 		}
-
 		images, err := selector.Select(ctx)
 		if err != nil {
 			return nil, fmt.Errorf(
@@ -90,24 +86,4 @@ func (r *reconciler) discoverImages(
 	}
 
 	return results, nil
-}
-
-func imageDiscoveryLogFields(sub kargoapi.ImageSubscription) []any {
-	f := []any{
-		"imageSelectionStrategy", sub.ImageSelectionStrategy,
-		"platformConstrained", sub.Platform != "",
-	}
-	switch sub.ImageSelectionStrategy {
-	case kargoapi.ImageSelectionStrategySemVer, kargoapi.ImageSelectionStrategyDigest:
-		f = append(
-			f,
-			"semverConstraint", sub.SemverConstraint,
-		)
-	case kargoapi.ImageSelectionStrategyLexical, kargoapi.ImageSelectionStrategyNewestBuild:
-		f = append(
-			f,
-			"tagConstrained", sub.AllowTags != "" || len(sub.IgnoreTags) > 0,
-		)
-	}
-	return f
 }
