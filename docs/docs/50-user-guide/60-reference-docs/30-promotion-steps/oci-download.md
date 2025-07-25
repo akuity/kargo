@@ -18,10 +18,10 @@ Downloads are limited to 100MB to prevent resource exhaustion.
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `imageRef` | `string` | Y | Reference to the OCI artifact to pull. Supports both tag format `registry/repository:tag` and digest format `registry/repository@sha256:digest`. |
+| `imageRef` | `string` | Y | Reference to the OCI artifact to download. Supports both tag format `registry/repository:tag` and digest format `registry/repository@sha256:digest`. For Helm OCI artifacts, the `oci://` prefix is supported (e.g., `oci://registry/repository:tag`) and will use Helm-specific credential lookup. |
 | `outPath` | `string` | Y | Path to the destination file where the extracted artifact will be saved. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `allowOverwrite` | `boolean` | N | Whether to allow overwriting an existing file at the specified path. If `false` and the file exists, the download will fail. Defaults to `false`. |
-| `mediaType` | `string` | N | MediaType of the layer to pull. Selects the first layer matching this type. If not specified, selects the first layer available. |
+| `mediaType` | `string` | N | Media type of the layer to download. Selects the first layer matching this type. If not specified, selects the first layer available. |
 | `insecureSkipTLSVerify` | `boolean` | N | Whether to skip TLS verification when downloading the artifact. Defaults to `false`. |
 
 ## Examples
@@ -37,6 +37,21 @@ steps:
 - uses: oci-download
   config:
     imageRef: registry.example.com/charts/my-app:1.0.0
+    outPath: ./charts/my-app-1.0.0.tgz
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+```
+
+### Downloading a Helm Chart with OCI Protocol
+
+This example shows downloading a Helm chart using the `oci://` prefix, which
+ensures that [Helm-specific credentials](../../50-security/30-managing-credentials.md)
+are used for authentication.
+
+```yaml
+steps:
+- uses: oci-download
+  config:
+    imageRef: oci://registry.example.com/charts/my-app:1.0.0
     outPath: ./charts/my-app-1.0.0.tgz
     mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
 ```
@@ -93,14 +108,14 @@ directly with Stage-specific values before being committed to a Git repository.
 
 ```yaml
 vars:
-- name: manifestRepo
+- name: gitRepo
   value: https://github.com/example/manifests.git
-- name: chartRegistry
-  value: registry.example.com/charts/my-app
+- name: chart
+  value: oci://registry.example.com/charts/my-app
 steps:
 - uses: git-clone
   config:
-    repoURL: ${{ vars.manifestRepo }}
+    repoURL: ${{ vars.gitRepo }}
     checkout:
     - branch: stage/${{ ctx.stage }}
       create: true
@@ -110,7 +125,7 @@ steps:
     path: ./out
 - uses: oci-download
   config:
-    imageRef: ${{ vars.chartRegistry }}:1.0.0
+    imageRef: ${{ vars.chart }}:1.0.0
     outPath: ./chart.tgz
     mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
 - uses: helm-template
