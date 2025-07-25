@@ -81,7 +81,7 @@ func refreshWarehouses(
 			if err != nil {
 				// log the error but obscure the details from the response
 				logger.Error(err, "failed to evaluate if warehouse needs refresh", "warehouse", wh.Name)
-				xhttp.WriteErrorJSON(w, fmt.Errorf("failed to evaluate if refresh is needed for warehouse %q", wh.Name))
+				xhttp.WriteErrorJSON(w, err)
 				return
 			}
 			if *shouldRefresh {
