@@ -78,7 +78,7 @@ func refreshWarehouses(
 	if qualifier != "" {
 		refreshEligibleWarehouses := make([]kargoapi.Warehouse, 0, len(warehouses))
 		for _, wh := range warehouses {
-			shouldRefresh, err := shouldRefresh(ctx, wh.Spec.Subscriptions, qualifier, repoURLs...)
+			shouldRefresh, err := shouldRefresh(wh.Spec.Subscriptions, qualifier, repoURLs...)
 			if err != nil {
 				// log the error but obscure the details from the response
 				logger.Error(err, "failed to evaluate if warehouse needs refresh", "warehouse", wh.Name)
@@ -128,7 +128,6 @@ func refreshWarehouses(
 }
 
 func shouldRefresh(
-	_ context.Context,
 	subs []kargoapi.RepoSubscription,
 	qualifier string,
 	repoURLs ...string,

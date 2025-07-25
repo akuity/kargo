@@ -17,7 +17,6 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/indexer"
-	"github.com/akuity/kargo/internal/logging"
 )
 
 func TestRefreshWarehouses(t *testing.T) {
@@ -314,9 +313,7 @@ func TestShouldRefresh(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			logger := logging.NewLogger(logging.DebugLevel)
-			ctx := logging.ContextWithLogger(t.Context(), logger)
-			result, err := shouldRefresh(ctx, tc.subs, tc.qualifier, tc.repoURLs...)
+			result, err := shouldRefresh(tc.subs, tc.qualifier, tc.repoURLs...)
 			if tc.expectErr {
 				require.Error(t, err)
 				return
