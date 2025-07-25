@@ -79,16 +79,39 @@ kubectl get projectconfigs kargo-demo \
 
 ## Registering with GitLab
 
-To configure a single GitLab repository to notify a receiver of `push` events:
+1. Navigate to the webhooks dashboard.
 
-1. Navigate to `https://gitlab.com/<namespace>/<project>/-/hooks`, where
-   `<namespace>` has been replaced with a GitLab username or group name and
-   `<project>` has been replaced with the name of a project belonging to that
-   namespace and for which you are an administrator.
+    Where you can find these settings varies based on the scope at which you'd
+    like to enable your webhooks. Webhooks can be enabled for a single project
+    (repository) or for all projects (repositories) in a group.
 
-    ![Settings](./img/settings.png "Settings")
+    <Tabs groupId="navigation">
+    <TabItem value="project-scope" label="Project Scope" default>
+
+    Navigate to `https://gitlab.com/<namespace>/<project>/-/hooks`, where
+    `<namespace>` has been replaced with a GitLab username and
+    `<project>` has been replaced with the name of a project belonging to that
+    namespace and for which you are an administrator.
+
+    </TabItem>
+    <TabItem value="group-scope" label="Group Scope" default>
+
+    Navigate to `https://gitlab.com/groups/<group>/-/hooks`, where
+    `<group>` has been replaced with a GitLab group name for which you are an
+    owner of the group.
+
+    </TabItem>
+    </Tabs>
+
+    :::caution
+    If you configure identical webhooks affecting a given project at _both_
+    the project level and group level, both webhooks will be triggered by
+    applicable events in that project.
+    :::
 
 1. Click <Hlt>Add new webhook</Hlt>.
+
+    ![Settings](./img/settings.png "Settings")
 
 1. Complete the <Hlt>Webhooks</Hlt> form:
 
@@ -96,7 +119,7 @@ To configure a single GitLab repository to notify a receiver of `push` events:
 
     1. Enter a descriptive name in the <Hlt>Name</Hlt> field.
 
-    1. Complete the <Hlt>URL</Hlt> filed using the URL
+    1. Complete the <Hlt>URL</Hlt> field using the URL
        [for the webhook receiver](#retrieving-the-receivers-url).
 
     1. Complete the <Hlt>Secret token</Hlt> field using to the (unencoded) value
