@@ -119,7 +119,7 @@ kubectl get projectconfigs kargo-demo \
 
     1. Enter a descriptive name in the <Hlt>Name</Hlt> field.
 
-    1. Complete the <Hlt>URL</Hlt> filed using the URL
+    1. Complete the <Hlt>URL</Hlt> field using the URL
        [for the webhook receiver](#retrieving-the-receivers-url).
 
     1. Complete the <Hlt>Secret token</Hlt> field using to the (unencoded) value
