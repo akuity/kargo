@@ -97,7 +97,10 @@ func (d *dockerhubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 			payload.Repository.RepoName,
 			payload.PushData.MediaType,
 		)
-		logger = logger.WithValues("repoURL", repoURL, "qualifier", payload.PushData.Tag)
+		logger = logger.WithValues(
+			"repoURL", repoURL,
+			"tag", payload.PushData.Tag,
+		)
 		ctx = logging.ContextWithLogger(ctx, logger)
 		refreshWarehouses(ctx, w, d.client, d.project, payload.PushData.Tag, repoURL)
 	})

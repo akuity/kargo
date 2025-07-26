@@ -130,7 +130,10 @@ func (a *azureWebhookReceiver) handleACREvent(
 			event.Target.MediaType,
 		)
 		logger := logging.LoggerFromContext(ctx)
-		logger = logger.WithValues("repoURL", repoURL)
+		logger = logger.WithValues(
+			"repoURL", repoURL,
+			"tag", event.Target.Tag,
+		)
 		ctx = logging.ContextWithLogger(ctx, logger)
 		refreshWarehouses(ctx, w, a.client, a.project, event.Target.Tag, repoURL)
 	case acrPingEvent:

@@ -178,6 +178,7 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 				repoURL = image.NormalizeURL(ref.Context().Name())
 			}
 			qualifier = v.GetContainerMetadata().GetTag().GetName()
+			logger = logger.WithValues("tag", qualifier)
 		case *gh.PingEvent:
 			xhttp.WriteResponseJSON(
 				w,
@@ -190,6 +191,7 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 
 		case *gh.PushEvent:
 			qualifier = e.GetRef()
+			logger = logger.WithValues("ref", qualifier)
 			// TODO(krancour): GetHTMLURL() gives us a repo URL starting with
 			// https://. By refreshing Warehouses using a normalized representation of
 			// that URL, we will miss any Warehouses that are subscribed to the same
@@ -197,7 +199,7 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			repoURL = git.NormalizeURL(e.GetRepo().GetCloneURL())
 		}
 
-		logger = logger.WithValues("repoURL", repoURL, "qualifier", qualifier)
+		logger = logger.WithValues("repoURL", repoURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
 
 		refreshWarehouses(ctx, w, g.client, g.project, qualifier, repoURL)
