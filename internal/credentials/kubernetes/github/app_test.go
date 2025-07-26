@@ -142,7 +142,7 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 		credType         credentials.Type
 		repoURL          string
 		data             map[string][]byte
-		getAccessTokenFn func(appIdentifier string, cacheKeyAppID, installationID int64, encodedPrivateKey, baseURL string) (string, error)
+		getAccessTokenFn func(appIdentifier string, installationID int64, encodedPrivateKey, baseURL string) (string, error)
 		assertions       func(t *testing.T, creds *credentials.Credentials, err error)
 	}{
 		{
@@ -213,7 +213,7 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 				installationIDKey: []byte("456"),
 				privateKeyKey:     []byte("private-key"),
 			},
-			getAccessTokenFn: func(_ string, _, _ int64, _, _ string) (string, error) {
+			getAccessTokenFn: func(_ string, _ int64, _, _ string) (string, error) {
 				return "", errors.New("token error")
 			},
 			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
@@ -231,7 +231,7 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 				installationIDKey: []byte("456"),
 				privateKeyKey:     []byte("private-key"),
 			},
-			getAccessTokenFn: func(_ string, _, _ int64, _, _ string) (string, error) {
+			getAccessTokenFn: func(_ string, _ int64, _, _ string) (string, error) {
 				return "test-token", nil
 			},
 			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
@@ -250,7 +250,7 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 				installationIDKey: []byte("456"),
 				privateKeyKey:     []byte("private-key"),
 			},
-			getAccessTokenFn: func(appIdentifier string, _, _ int64, _, _ string) (string, error) {
+			getAccessTokenFn: func(appIdentifier string, _ int64, _, _ string) (string, error) {
 				// Verify that the client ID is passed correctly
 				assert.Equal(t, "Iv1.1234567890123456", appIdentifier)
 				return "test-token-client", nil
@@ -294,8 +294,12 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 		encodedPrivateKey string
 		baseURL           string
 		setupCache        func(c *cache.Cache)
-		getAccessTokenFn  func(appIdentifier string, cacheKeyAppID, installationID int64, encodedPrivateKey, baseURL string) (string, error)
-		assertions        func(t *testing.T, c *cache.Cache, creds *credentials.Credentials, err error)
+		getAccessTokenFn  func(
+			appIdentifier string,
+			installationID int64,
+			encodedPrivateKey, baseURL string,
+		) (string, error)
+		assertions func(t *testing.T, c *cache.Cache, creds *credentials.Credentials, err error)
 	}{
 		{
 			name:              "cache hit",
@@ -320,7 +324,7 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 			installationID:    fakeInstallationID,
 			encodedPrivateKey: fakePrivateKey,
 			baseURL:           fakeBaseURL,
-			getAccessTokenFn: func(_ string, _, _ int64, _, _ string) (string, error) {
+			getAccessTokenFn: func(_ string, _ int64, _, _ string) (string, error) {
 				return fakeAccessToken, nil
 			},
 			assertions: func(t *testing.T, c *cache.Cache, creds *credentials.Credentials, err error) {
@@ -342,7 +346,7 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 			installationID:    fakeInstallationID,
 			encodedPrivateKey: fakePrivateKey,
 			baseURL:           fakeBaseURL,
-			getAccessTokenFn: func(_ string, _, _ int64, _, _ string) (string, error) {
+			getAccessTokenFn: func(_ string, _ int64, _, _ string) (string, error) {
 				return "", errors.New("token error")
 			},
 			assertions: func(t *testing.T, c *cache.Cache, creds *credentials.Credentials, err error) {
@@ -369,7 +373,9 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 				provider.getAccessTokenFn = tt.getAccessTokenFn
 			}
 
-			creds, err := provider.getUsernameAndPassword(strconv.FormatInt(tt.appID, 10), tt.appID, tt.installationID, tt.encodedPrivateKey, tt.baseURL)
+			creds, err := provider.getUsernameAndPassword(
+				strconv.FormatInt(tt.appID, 10), tt.appID, tt.installationID, tt.encodedPrivateKey, tt.baseURL,
+			)
 			tt.assertions(t, provider.tokenCache, creds, err)
 		})
 	}
