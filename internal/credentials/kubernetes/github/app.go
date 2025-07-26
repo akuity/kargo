@@ -152,21 +152,10 @@ func (p *AppCredentialProvider) getAccessToken(
 	installationID int64,
 	encodedPrivateKey, baseURL string,
 ) (string, error) {
-	decodedKey, err := decodeKey(encodedPrivateKey)
+	// Create our custom application token source that can handle both app ID and client ID
+	appTokenSource, err := newApplicationTokenSource(appIdentifier, encodedPrivateKey)
 	if err != nil {
 		return "", err
-	}
-
-	privateKey, err := parsePrivateKey(decodedKey)
-	if err != nil {
-		return "", fmt.Errorf("error parsing private key: %w", err)
-	}
-
-	// Create our custom application token source that can handle both app ID and client ID
-	appTokenSource := &applicationTokenSource{
-		appID:      appIdentifier,
-		privateKey: privateKey,
-		expiration: defaultApplicationTokenExpiration,
 	}
 
 	installationOpts := []githubauth.InstallationTokenSourceOpt{

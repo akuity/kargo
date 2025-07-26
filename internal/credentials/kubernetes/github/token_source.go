@@ -2,6 +2,7 @@ package github
 
 import (
 	"crypto/rsa"
+	"fmt"
 	"time"
 
 	jwt "github.com/golang-jwt/jwt/v5"
@@ -24,6 +25,27 @@ type applicationTokenSource struct {
 	appID      string // Can be numeric app ID or alphanumeric client ID
 	privateKey *rsa.PrivateKey
 	expiration time.Duration
+}
+
+// newApplicationTokenSource creates a new applicationTokenSource with the given
+// app identifier and encoded private key. It handles decoding and parsing the
+// private key internally.
+func newApplicationTokenSource(appIdentifier, encodedPrivateKey string) (*applicationTokenSource, error) {
+	decodedKey, err := decodeKey(encodedPrivateKey)
+	if err != nil {
+		return nil, err
+	}
+
+	privateKey, err := parsePrivateKey(decodedKey)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing private key: %w", err)
+	}
+
+	return &applicationTokenSource{
+		appID:      appIdentifier,
+		privateKey: privateKey,
+		expiration: defaultApplicationTokenExpiration,
+	}, nil
 }
 
 // Token generates a new GitHub App token for authenticating as a GitHub App.
