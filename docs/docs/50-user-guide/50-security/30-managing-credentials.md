@@ -366,7 +366,7 @@ create or install a GitHub App.
       repoURLIsRegex: <true if repoURL is a pattern matching multiple repositories>
     ```
     
-    Both the numeric App ID and the Client ID work identically for authentication purposes.
+    Both the numeric App ID and the Client ID work identically for authentication purposes. However, you can only specify one of them, not both.
     :::
 
     :::note

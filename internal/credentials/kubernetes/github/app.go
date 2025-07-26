@@ -2,19 +2,25 @@ package github
 
 import (
 	"context"
+	"crypto/rsa"
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/base64"
+	"encoding/pem"
 	"errors"
 	"fmt"
+	"hash/crc32"
 	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
+	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/jferrl/go-githubauth"
 	"github.com/patrickmn/go-cache"
+	"golang.org/x/oauth2"
 
 	"github.com/akuity/kargo/internal/credentials"
 )
@@ -28,14 +34,60 @@ const (
 	githubHost = "github.com"
 
 	accessTokenUsername = "kargo"
+
+	// bearerTokenType is the token type for GitHub App tokens
+	bearerTokenType = "Bearer"
+
+	// defaultApplicationTokenExpiration is the default expiration time for the GitHub App token.
+	// The expiration time of the JWT, after which it can't be used to request an installation token.
+	// The time must be no more than 10 minutes into the future.
+	defaultApplicationTokenExpiration = 10 * time.Minute
 )
 
 var base64Regex = regexp.MustCompile(`^[a-zA-Z0-9+/]*={0,2}$`)
 
+// kargoApplicationTokenSource represents a GitHub App token source that can handle
+// both numeric app IDs and alphanumeric client IDs.
+type kargoApplicationTokenSource struct {
+	appID      string      // Can be numeric app ID or alphanumeric client ID
+	privateKey *rsa.PrivateKey
+	expiration time.Duration
+}
+
+// Token generates a new GitHub App token for authenticating as a GitHub App.
+func (t *kargoApplicationTokenSource) Token() (*oauth2.Token, error) {
+	// To protect against clock drift, set the issuance time 60 seconds in the past.
+	now := time.Now().Add(-60 * time.Second)
+	expiresAt := now.Add(t.expiration)
+
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.RegisteredClaims{
+		IssuedAt:  jwt.NewNumericDate(now),
+		ExpiresAt: jwt.NewNumericDate(expiresAt),
+		Issuer:    t.appID, // Use appID directly as string (works for both numeric and alphanumeric)
+	})
+
+	tokenString, err := token.SignedString(t.privateKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return &oauth2.Token{
+		AccessToken: tokenString,
+		TokenType:   bearerTokenType,
+		Expiry:      expiresAt,
+	}, nil
+}
+
+// crc32Hash generates a CRC32 hash of a string and returns it as int64.
+// This is used to generate numeric cache keys for non-numeric client IDs.
+func crc32Hash(s string) uint32 {
+	return crc32.ChecksumIEEE([]byte(s))
+}
+
 type AppCredentialProvider struct {
 	tokenCache *cache.Cache
 
-	getAccessTokenFn func(appID, installationID int64, encodedPrivateKey, baseURL string) (string, error)
+	getAccessTokenFn func(appIdentifier string, cacheKeyAppID, installationID int64, encodedPrivateKey, baseURL string) (string, error)
 }
 
 // NewAppCredentialProvider returns an implementation of credentials.Provider.
@@ -74,20 +126,23 @@ func (p *AppCredentialProvider) GetCredentials(
 		return nil, nil
 	}
 
-	// Parse the app ID from either appID or clientID
-	var appID int64
-	var err error
-	
+	// Get the app identifier (either numeric app ID or alphanumeric client ID)
+	var appIdentifier string
+	var numericAppID int64 // Needed for cache key generation
+
 	if data[appIDKey] != nil {
-		appID, err = strconv.ParseInt(string(data[appIDKey]), 10, 64)
+		// Parse as numeric app ID
+		var err error
+		numericAppID, err = strconv.ParseInt(string(data[appIDKey]), 10, 64)
 		if err != nil {
 			return nil, fmt.Errorf("error parsing app ID: %w", err)
 		}
+		appIdentifier = string(data[appIDKey])
 	} else if data[clientIDKey] != nil {
-		appID, err = strconv.ParseInt(string(data[clientIDKey]), 10, 64)
-		if err != nil {
-			return nil, fmt.Errorf("error parsing client ID: %w", err)
-		}
+		// Use client ID as string directly
+		appIdentifier = string(data[clientIDKey])
+		// For cache key, we'll use a hash of the client ID since it's not numeric
+		numericAppID = int64(crc32Hash(appIdentifier))
 	} else {
 		return nil, fmt.Errorf("either githubAppID or githubAppClientID must be provided")
 	}
@@ -102,7 +157,7 @@ func (p *AppCredentialProvider) GetCredentials(
 		return nil, fmt.Errorf("error extracting base URL from : %w", err)
 	}
 
-	return p.getUsernameAndPassword(appID, installID, string(data[privateKeyKey]), baseURL)
+	return p.getUsernameAndPassword(appIdentifier, numericAppID, installID, string(data[privateKeyKey]), baseURL)
 }
 
 // getUsernameAndPassword gets a username and password for the given app and
@@ -110,11 +165,12 @@ func (p *AppCredentialProvider) GetCredentials(
 // GitHub App. The base URL is the scheme and host of the repository URL, which
 // is used to determine whether the repository is hosted on GitHub Enterprise.
 func (p *AppCredentialProvider) getUsernameAndPassword(
-	appID int64,
+	appIdentifier string,
+	cacheKeyAppID int64,
 	installationID int64,
 	encodedPrivateKey, baseURL string,
 ) (*credentials.Credentials, error) {
-	cacheKey := tokenCacheKey(baseURL, appID, installationID, encodedPrivateKey)
+	cacheKey := tokenCacheKey(baseURL, cacheKeyAppID, installationID, encodedPrivateKey)
 
 	// Check the cache for the token
 	if entry, exists := p.tokenCache.Get(cacheKey); exists {
@@ -126,7 +182,7 @@ func (p *AppCredentialProvider) getUsernameAndPassword(
 
 	// Cache miss, get a new token
 	accessToken, err := p.getAccessTokenFn(
-		appID, installationID,
+		appIdentifier, cacheKeyAppID, installationID,
 		encodedPrivateKey, baseURL,
 	)
 	if err != nil {
@@ -147,7 +203,8 @@ func (p *AppCredentialProvider) getUsernameAndPassword(
 // GitHub App. The base URL is the scheme and host of the repository URL, which
 // is used to determine whether the repository is hosted on GitHub Enterprise.
 func (p *AppCredentialProvider) getAccessToken(
-	appID, installationID int64,
+	appIdentifier string,
+	cacheKeyAppID, installationID int64,
 	encodedPrivateKey, baseURL string,
 ) (string, error) {
 	decodedKey, err := decodeKey(encodedPrivateKey)
@@ -155,9 +212,16 @@ func (p *AppCredentialProvider) getAccessToken(
 		return "", err
 	}
 
-	appTokenSource, err := githubauth.NewApplicationTokenSource(appID, decodedKey)
+	privateKey, err := parsePrivateKey(decodedKey)
 	if err != nil {
-		return "", fmt.Errorf("error creating application token source: %w", err)
+		return "", fmt.Errorf("error parsing private key: %w", err)
+	}
+
+	// Create our custom application token source that can handle both app ID and client ID
+	appTokenSource := &kargoApplicationTokenSource{
+		appID:      appIdentifier,
+		privateKey: privateKey,
+		expiration: defaultApplicationTokenExpiration,
 	}
 
 	installationOpts := []githubauth.InstallationTokenSourceOpt{
@@ -193,6 +257,31 @@ func tokenCacheKey(baseURL string, appID, installationID int64, encodedPrivateKe
 			),
 		)),
 	)
+}
+
+// parsePrivateKey parses a PEM-encoded RSA private key.
+func parsePrivateKey(pemKey []byte) (*rsa.PrivateKey, error) {
+	block, _ := pem.Decode(pemKey)
+	if block == nil {
+		return nil, fmt.Errorf("failed to decode PEM block")
+	}
+
+	switch block.Type {
+	case "RSA PRIVATE KEY":
+		return x509.ParsePKCS1PrivateKey(block.Bytes)
+	case "PRIVATE KEY":
+		key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+		if err != nil {
+			return nil, err
+		}
+		rsaKey, ok := key.(*rsa.PrivateKey)
+		if !ok {
+			return nil, fmt.Errorf("not an RSA private key")
+		}
+		return rsaKey, nil
+	default:
+		return nil, fmt.Errorf("unsupported key type: %s", block.Type)
+	}
 }
 
 // decodeKey attempts to base64 decode a key. If successful, it returns the

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"strconv"
 	"testing"
 
 	"github.com/patrickmn/go-cache"
@@ -32,7 +33,7 @@ func TestAppCredentialProvider_Supports(t *testing.T) {
 		expected bool
 	}{
 		{
-			name:     "supports valid Git credential with all required fields (appID)",
+			name:     "supports valid Git credential with all required fields",
 			credType: credentials.TypeGit,
 			repoURL:  "https://github.com/akuity/kargo",
 			data: map[string][]byte{
@@ -41,29 +42,6 @@ func TestAppCredentialProvider_Supports(t *testing.T) {
 				privateKeyKey:     []byte("private-key"),
 			},
 			expected: true,
-		},
-		{
-			name:     "supports valid Git credential with all required fields (clientID)",
-			credType: credentials.TypeGit,
-			repoURL:  "https://github.com/akuity/kargo",
-			data: map[string][]byte{
-				clientIDKey:       []byte("123"),
-				installationIDKey: []byte("456"),
-				privateKeyKey:     []byte("private-key"),
-			},
-			expected: true,
-		},
-		{
-			name:     "does not support both appID and clientID",
-			credType: credentials.TypeGit,
-			repoURL:  "https://github.com/akuity/kargo",
-			data: map[string][]byte{
-				appIDKey:          []byte("123"),
-				clientIDKey:       []byte("123"),
-				installationIDKey: []byte("456"),
-				privateKeyKey:     []byte("private-key"),
-			},
-			expected: false,
 		},
 		{
 			name:     "does not support non-Git credential type",
@@ -84,7 +62,7 @@ func TestAppCredentialProvider_Supports(t *testing.T) {
 			expected: false,
 		},
 		{
-			name:     "does not support missing appID and clientID",
+			name:     "does not support missing appID",
 			credType: credentials.TypeGit,
 			repoURL:  "https://github.com/akuity/kargo",
 			data: map[string][]byte{
@@ -113,6 +91,39 @@ func TestAppCredentialProvider_Supports(t *testing.T) {
 			},
 			expected: false,
 		},
+		{
+			name:     "supports valid Git credential with clientID instead of appID",
+			credType: credentials.TypeGit,
+			repoURL:  "https://github.com/akuity/kargo",
+			data: map[string][]byte{
+				clientIDKey:       []byte("Iv1.1234567890123456"),
+				installationIDKey: []byte("456"),
+				privateKeyKey:     []byte("private-key"),
+			},
+			expected: true,
+		},
+		{
+			name:     "does not support both appID and clientID",
+			credType: credentials.TypeGit,
+			repoURL:  "https://github.com/akuity/kargo",
+			data: map[string][]byte{
+				appIDKey:          []byte("123"),
+				clientIDKey:       []byte("Iv1.1234567890123456"),
+				installationIDKey: []byte("456"),
+				privateKeyKey:     []byte("private-key"),
+			},
+			expected: false,
+		},
+		{
+			name:     "does not support missing both appID and clientID",
+			credType: credentials.TypeGit,
+			repoURL:  "https://github.com/akuity/kargo",
+			data: map[string][]byte{
+				installationIDKey: []byte("456"),
+				privateKeyKey:     []byte("private-key"),
+			},
+			expected: false,
+		},
 	}
 
 	for _, tt := range testCases {
@@ -131,7 +142,7 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 		credType         credentials.Type
 		repoURL          string
 		data             map[string][]byte
-		getAccessTokenFn func(appID, installationID int64, encodedPrivateKey, baseURL string) (string, error)
+		getAccessTokenFn func(appIdentifier string, cacheKeyAppID, installationID int64, encodedPrivateKey, baseURL string) (string, error)
 		assertions       func(t *testing.T, creds *credentials.Credentials, err error)
 	}{
 		{
@@ -161,21 +172,6 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 				assert.Nil(t, creds)
 				assert.Error(t, err)
 				assert.ErrorContains(t, err, "error parsing app ID")
-			},
-		},
-		{
-			name:     "invalid client ID",
-			credType: credentials.TypeGit,
-			repoURL:  "https://github.com/akuity/kargo",
-			data: map[string][]byte{
-				clientIDKey:       []byte("invalid"),
-				installationIDKey: []byte("456"),
-				privateKeyKey:     []byte("private-key"),
-			},
-			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
-				assert.Nil(t, creds)
-				assert.Error(t, err)
-				assert.ErrorContains(t, err, "error parsing client ID")
 			},
 		},
 		{
@@ -217,7 +213,7 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 				installationIDKey: []byte("456"),
 				privateKeyKey:     []byte("private-key"),
 			},
-			getAccessTokenFn: func(_, _ int64, _, _ string) (string, error) {
+			getAccessTokenFn: func(_ string, _, _ int64, _, _ string) (string, error) {
 				return "", errors.New("token error")
 			},
 			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
@@ -227,7 +223,7 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 			},
 		},
 		{
-			name:     "successful token retrieval with appID",
+			name:     "successful token retrieval",
 			credType: credentials.TypeGit,
 			repoURL:  "https://github.com/akuity/kargo",
 			data: map[string][]byte{
@@ -235,7 +231,7 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 				installationIDKey: []byte("456"),
 				privateKeyKey:     []byte("private-key"),
 			},
-			getAccessTokenFn: func(_, _ int64, _, _ string) (string, error) {
+			getAccessTokenFn: func(_ string, _, _ int64, _, _ string) (string, error) {
 				return "test-token", nil
 			},
 			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
@@ -250,18 +246,20 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 			credType: credentials.TypeGit,
 			repoURL:  "https://github.com/akuity/kargo",
 			data: map[string][]byte{
-				clientIDKey:       []byte("123"),
+				clientIDKey:       []byte("Iv1.1234567890123456"),
 				installationIDKey: []byte("456"),
 				privateKeyKey:     []byte("private-key"),
 			},
-			getAccessTokenFn: func(_, _ int64, _, _ string) (string, error) {
-				return "test-token", nil
+			getAccessTokenFn: func(appIdentifier string, _, _ int64, _, _ string) (string, error) {
+				// Verify that the client ID is passed correctly
+				assert.Equal(t, "Iv1.1234567890123456", appIdentifier)
+				return "test-token-client", nil
 			},
 			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
 				assert.NoError(t, err)
 				assert.NotNil(t, creds)
 				assert.Equal(t, accessTokenUsername, creds.Username)
-				assert.Equal(t, "test-token", creds.Password)
+				assert.Equal(t, "test-token-client", creds.Password)
 			},
 		},
 	}
@@ -296,7 +294,7 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 		encodedPrivateKey string
 		baseURL           string
 		setupCache        func(c *cache.Cache)
-		getAccessTokenFn  func(appID, installationID int64, encodedPrivateKey, baseURL string) (string, error)
+		getAccessTokenFn  func(appIdentifier string, cacheKeyAppID, installationID int64, encodedPrivateKey, baseURL string) (string, error)
 		assertions        func(t *testing.T, c *cache.Cache, creds *credentials.Credentials, err error)
 	}{
 		{
@@ -322,7 +320,7 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 			installationID:    fakeInstallationID,
 			encodedPrivateKey: fakePrivateKey,
 			baseURL:           fakeBaseURL,
-			getAccessTokenFn: func(_, _ int64, _, _ string) (string, error) {
+			getAccessTokenFn: func(_ string, _, _ int64, _, _ string) (string, error) {
 				return fakeAccessToken, nil
 			},
 			assertions: func(t *testing.T, c *cache.Cache, creds *credentials.Credentials, err error) {
@@ -344,7 +342,7 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 			installationID:    fakeInstallationID,
 			encodedPrivateKey: fakePrivateKey,
 			baseURL:           fakeBaseURL,
-			getAccessTokenFn: func(_, _ int64, _, _ string) (string, error) {
+			getAccessTokenFn: func(_ string, _, _ int64, _, _ string) (string, error) {
 				return "", errors.New("token error")
 			},
 			assertions: func(t *testing.T, c *cache.Cache, creds *credentials.Credentials, err error) {
@@ -371,7 +369,7 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 				provider.getAccessTokenFn = tt.getAccessTokenFn
 			}
 
-			creds, err := provider.getUsernameAndPassword(tt.appID, tt.installationID, tt.encodedPrivateKey, tt.baseURL)
+			creds, err := provider.getUsernameAndPassword(strconv.FormatInt(tt.appID, 10), tt.appID, tt.installationID, tt.encodedPrivateKey, tt.baseURL)
 			tt.assertions(t, provider.tokenCache, creds, err)
 		})
 	}
@@ -456,69 +454,6 @@ func Test_extractBaseURL(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, tt.expected, result)
-			}
-		})
-	}
-}
-
-func TestClientIDEdgeCases(t *testing.T) {
-	provider := NewAppCredentialProvider()
-	ctx := context.Background()
-
-	testCases := []struct {
-		name       string
-		data       map[string][]byte
-		expectsErr bool
-		errMsg     string
-	}{
-		{
-			name: "clientID with valid numeric string",
-			data: map[string][]byte{
-				clientIDKey:       []byte("123456"),
-				installationIDKey: []byte("789012"),
-				privateKeyKey:     []byte("fake-private-key"),
-			},
-			expectsErr: false,
-		},
-		{
-			name: "clientID with non-numeric string",
-			data: map[string][]byte{
-				clientIDKey:       []byte("Iv1.abc123def456"),
-				installationIDKey: []byte("789012"),
-				privateKeyKey:     []byte("fake-private-key"),
-			},
-			expectsErr: true,
-			errMsg:     "error parsing client ID",
-		},
-		{
-			name: "clientID with decimal number",
-			data: map[string][]byte{
-				clientIDKey:       []byte("123.456"),
-				installationIDKey: []byte("789012"),
-				privateKeyKey:     []byte("fake-private-key"),
-			},
-			expectsErr: true,
-			errMsg:     "error parsing client ID",
-		},
-	}
-
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
-			// Mock the getAccessToken function to avoid network calls
-			p := provider.(*AppCredentialProvider)
-			p.getAccessTokenFn = func(_, _ int64, _, _ string) (string, error) {
-				return "test-token", nil
-			}
-
-			_, err := provider.GetCredentials(ctx, "", credentials.TypeGit, "https://github.com/test/repo", tt.data)
-			
-			if tt.expectsErr {
-				assert.Error(t, err)
-				if tt.errMsg != "" {
-					assert.ErrorContains(t, err, tt.errMsg)
-				}
-			} else {
-				assert.NoError(t, err)
 			}
 		})
 	}
