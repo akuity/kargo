@@ -84,21 +84,11 @@ func (p *AppCredentialProvider) GetCredentials(
 
 	// Get the app identifier (either numeric app ID or alphanumeric client ID)
 	var appIdentifier string
-	var numericAppID int64 // Needed for cache key generation
 
 	if data[appIDKey] != nil {
-		// Parse as numeric app ID
-		var err error
-		numericAppID, err = strconv.ParseInt(string(data[appIDKey]), 10, 64)
-		if err != nil {
-			return nil, fmt.Errorf("error parsing app ID: %w", err)
-		}
 		appIdentifier = string(data[appIDKey])
 	} else if data[clientIDKey] != nil {
-		// Use client ID as string directly
 		appIdentifier = string(data[clientIDKey])
-		// For cache key, we'll use a hash of the client ID since it's not numeric
-		numericAppID = int64(crc32Hash(appIdentifier))
 	} else {
 		return nil, fmt.Errorf("either githubAppID or githubAppClientID must be provided")
 	}
@@ -113,7 +103,7 @@ func (p *AppCredentialProvider) GetCredentials(
 		return nil, fmt.Errorf("error extracting base URL from : %w", err)
 	}
 
-	return p.getUsernameAndPassword(appIdentifier, numericAppID, installID, string(data[privateKeyKey]), baseURL)
+	return p.getUsernameAndPassword(appIdentifier, installID, string(data[privateKeyKey]), baseURL)
 }
 
 // getUsernameAndPassword gets a username and password for the given app and
@@ -122,11 +112,10 @@ func (p *AppCredentialProvider) GetCredentials(
 // is used to determine whether the repository is hosted on GitHub Enterprise.
 func (p *AppCredentialProvider) getUsernameAndPassword(
 	appIdentifier string,
-	cacheKeyAppID int64,
 	installationID int64,
 	encodedPrivateKey, baseURL string,
 ) (*credentials.Credentials, error) {
-	cacheKey := tokenCacheKey(baseURL, cacheKeyAppID, installationID, encodedPrivateKey)
+	cacheKey := tokenCacheKey(baseURL, appIdentifier, installationID, encodedPrivateKey)
 
 	// Check the cache for the token
 	if entry, exists := p.tokenCache.Get(cacheKey); exists {
@@ -201,15 +190,15 @@ func (p *AppCredentialProvider) getAccessToken(
 }
 
 // tokenCacheKey returns a cache key for an installation access token. The key
-// is a hash of the hostname, app ID, installation ID, and encoded private key.
+// is a hash of the hostname, app identifier, installation ID, and encoded private key.
 // Using a hash ensures that a decodable key is not stored in the cache.
-func tokenCacheKey(baseURL string, appID, installationID int64, encodedPrivateKey string) string {
+func tokenCacheKey(baseURL string, appIdentifier string, installationID int64, encodedPrivateKey string) string {
 	return fmt.Sprintf(
 		"%x",
 		sha256.Sum256([]byte(
 			fmt.Sprintf(
-				"%s:%d:%d:%s",
-				baseURL, appID, installationID, encodedPrivateKey,
+				"%s:%s:%d:%s",
+				baseURL, appIdentifier, installationID, encodedPrivateKey,
 			),
 		)),
 	)

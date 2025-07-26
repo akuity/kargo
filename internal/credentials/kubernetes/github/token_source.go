@@ -2,7 +2,6 @@ package github
 
 import (
 	"crypto/rsa"
-	"hash/crc32"
 	"time"
 
 	jwt "github.com/golang-jwt/jwt/v5"
@@ -49,10 +48,4 @@ func (t *applicationTokenSource) Token() (*oauth2.Token, error) {
 		TokenType:   bearerTokenType,
 		Expiry:      expiresAt,
 	}, nil
-}
-
-// crc32Hash generates a CRC32 hash of a string and returns it as int64.
-// This is used to generate numeric cache keys for non-numeric client IDs.
-func crc32Hash(s string) uint32 {
-	return crc32.ChecksumIEEE([]byte(s))
 }

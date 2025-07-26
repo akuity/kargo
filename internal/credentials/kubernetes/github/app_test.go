@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
-	"strconv"
 	"testing"
 
 	"github.com/patrickmn/go-cache"
@@ -160,21 +159,6 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 			},
 		},
 		{
-			name:     "invalid app ID",
-			credType: credentials.TypeGit,
-			repoURL:  "https://github.com/akuity/kargo",
-			data: map[string][]byte{
-				appIDKey:          []byte("invalid"),
-				installationIDKey: []byte("456"),
-				privateKeyKey:     []byte("private-key"),
-			},
-			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
-				assert.Nil(t, creds)
-				assert.Error(t, err)
-				assert.ErrorContains(t, err, "error parsing app ID")
-			},
-		},
-		{
 			name:     "invalid installation ID",
 			credType: credentials.TypeGit,
 			repoURL:  "https://github.com/akuity/kargo",
@@ -280,7 +264,7 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 
 func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 	const (
-		fakeAppID          = int64(123)
+		fakeAppIdentifier  = "123"
 		fakeInstallationID = int64(456)
 		fakePrivateKey     = "private-key"
 		fakeBaseURL        = "https://github.com"
@@ -289,7 +273,7 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 
 	testCases := []struct {
 		name              string
-		appID             int64
+		appIdentifier     string
 		installationID    int64
 		encodedPrivateKey string
 		baseURL           string
@@ -303,12 +287,12 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 	}{
 		{
 			name:              "cache hit",
-			appID:             fakeAppID,
+			appIdentifier:     fakeAppIdentifier,
 			installationID:    fakeInstallationID,
 			encodedPrivateKey: fakePrivateKey,
 			baseURL:           fakeBaseURL,
 			setupCache: func(c *cache.Cache) {
-				cacheKey := tokenCacheKey(fakeBaseURL, fakeAppID, fakeInstallationID, fakePrivateKey)
+				cacheKey := tokenCacheKey(fakeBaseURL, fakeAppIdentifier, fakeInstallationID, fakePrivateKey)
 				c.Set(cacheKey, fakeAccessToken, cache.DefaultExpiration)
 			},
 			assertions: func(t *testing.T, _ *cache.Cache, creds *credentials.Credentials, err error) {
@@ -320,7 +304,7 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 		},
 		{
 			name:              "cache miss, successful token fetch",
-			appID:             fakeAppID,
+			appIdentifier:     fakeAppIdentifier,
 			installationID:    fakeInstallationID,
 			encodedPrivateKey: fakePrivateKey,
 			baseURL:           fakeBaseURL,
@@ -334,7 +318,7 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 				assert.Equal(t, fakeAccessToken, creds.Password)
 
 				// Verify the token was cached
-				cacheKey := tokenCacheKey(fakeBaseURL, fakeAppID, fakeInstallationID, fakePrivateKey)
+				cacheKey := tokenCacheKey(fakeBaseURL, fakeAppIdentifier, fakeInstallationID, fakePrivateKey)
 				cachedToken, found := c.Get(cacheKey)
 				assert.True(t, found)
 				assert.Equal(t, fakeAccessToken, cachedToken)
@@ -342,7 +326,7 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 		},
 		{
 			name:              "error in getAccessToken",
-			appID:             fakeAppID,
+			appIdentifier:     fakeAppIdentifier,
 			installationID:    fakeInstallationID,
 			encodedPrivateKey: fakePrivateKey,
 			baseURL:           fakeBaseURL,
@@ -354,7 +338,7 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 				assert.Nil(t, creds)
 
 				// Verify the token was not cached
-				cacheKey := tokenCacheKey(fakeBaseURL, fakeAppID, fakeInstallationID, fakePrivateKey)
+				cacheKey := tokenCacheKey(fakeBaseURL, fakeAppIdentifier, fakeInstallationID, fakePrivateKey)
 				_, found := c.Get(cacheKey)
 				assert.False(t, found)
 			},
@@ -374,7 +358,7 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 			}
 
 			creds, err := provider.getUsernameAndPassword(
-				strconv.FormatInt(tt.appID, 10), tt.appID, tt.installationID, tt.encodedPrivateKey, tt.baseURL,
+				tt.appIdentifier, tt.installationID, tt.encodedPrivateKey, tt.baseURL,
 			)
 			tt.assertions(t, provider.tokenCache, creds, err)
 		})
