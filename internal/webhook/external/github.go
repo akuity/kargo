@@ -177,7 +177,7 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			} else {
 				repoURL = image.NormalizeURL(ref.Context().Name())
 			}
-			qualifier = v.GetVersion()
+			qualifier = v.GetContainerMetadata().GetTag().GetName()
 		case *gh.PingEvent:
 			xhttp.WriteResponseJSON(
 				w,
