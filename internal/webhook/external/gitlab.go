@@ -121,7 +121,10 @@ func (g *gitlabWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			if e.Repository != nil {
 				repoURL = git.NormalizeURL(e.Repository.GitHTTPURL)
 			}
-			logger = logger.WithValues("repoURL", repoURL)
+			logger = logger.WithValues(
+				"repoURL", repoURL,
+				"ref", e.Ref,
+			)
 			ctx = logging.ContextWithLogger(ctx, logger)
 			refreshWarehouses(ctx, w, g.client, g.project, e.Ref, repoURL)
 		}
