@@ -20,6 +20,7 @@ import (
 )
 
 const (
+	clientIDKey       = "githubAppClientID"
 	appIDKey          = "githubAppID"
 	installationIDKey = "githubAppInstallationID"
 	privateKeyKey     = "githubAppPrivateKey"
@@ -34,7 +35,12 @@ var base64Regex = regexp.MustCompile(`^[a-zA-Z0-9+/]*={0,2}$`)
 type AppCredentialProvider struct {
 	tokenCache *cache.Cache
 
-	getAccessTokenFn func(appID, installationID int64, encodedPrivateKey, baseURL string) (string, error)
+	getAccessTokenFn func(
+		clientID string,
+		installationID int64,
+		encodedPrivateKey string,
+		baseURL string,
+	) (string, error)
 }
 
 // NewAppCredentialProvider returns an implementation of credentials.Provider.
@@ -54,8 +60,8 @@ func (p *AppCredentialProvider) Supports(credType credentials.Type, _ string, da
 	if credType != credentials.TypeGit || len(data) == 0 {
 		return false
 	}
-
-	return data[appIDKey] != nil && data[installationIDKey] != nil && data[privateKeyKey] != nil
+	return (data[clientIDKey] != nil || data[appIDKey] != nil) &&
+		data[installationIDKey] != nil && data[privateKeyKey] != nil
 }
 
 func (p *AppCredentialProvider) GetCredentials(
@@ -69,9 +75,12 @@ func (p *AppCredentialProvider) GetCredentials(
 		return nil, nil
 	}
 
-	appID, err := strconv.ParseInt(string(data[appIDKey]), 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing app ID: %w", err)
+	// Client ID is the newer unique identifier for GitHub Apps. GitHub recommends
+	// using this when possible. If no client ID is found in the data map, we will
+	// fall back on the old/deprecated unique identifier, App ID.
+	clientID := string(data[clientIDKey])
+	if clientID == "" {
+		clientID = string(data[appIDKey])
 	}
 
 	installID, err := strconv.ParseInt(string(data[installationIDKey]), 10, 64)
@@ -84,19 +93,29 @@ func (p *AppCredentialProvider) GetCredentials(
 		return nil, fmt.Errorf("error extracting base URL from : %w", err)
 	}
 
-	return p.getUsernameAndPassword(appID, installID, string(data[privateKeyKey]), baseURL)
+	return p.getUsernameAndPassword(
+		clientID,
+		installID,
+		string(data[privateKeyKey]),
+		baseURL,
+	)
 }
 
-// getUsernameAndPassword gets a username and password for the given app and
-// installation IDs. The private key is the PEM-encoded private key for the
+// getUsernameAndPassword gets a username and password for the given client ID
+// and installation ID. The private key is the PEM-encoded private key for the
 // GitHub App. The base URL is the scheme and host of the repository URL, which
 // is used to determine whether the repository is hosted on GitHub Enterprise.
 func (p *AppCredentialProvider) getUsernameAndPassword(
-	appID int64,
+	clientID string,
 	installationID int64,
 	encodedPrivateKey, baseURL string,
 ) (*credentials.Credentials, error) {
-	cacheKey := tokenCacheKey(baseURL, appID, installationID, encodedPrivateKey)
+	cacheKey := tokenCacheKey(
+		baseURL,
+		clientID,
+		installationID,
+		encodedPrivateKey,
+	)
 
 	// Check the cache for the token
 	if entry, exists := p.tokenCache.Get(cacheKey); exists {
@@ -108,8 +127,10 @@ func (p *AppCredentialProvider) getUsernameAndPassword(
 
 	// Cache miss, get a new token
 	accessToken, err := p.getAccessTokenFn(
-		appID, installationID,
-		encodedPrivateKey, baseURL,
+		clientID,
+		installationID,
+		encodedPrivateKey,
+		baseURL,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("error getting installation access token: %w", err)
@@ -129,15 +150,17 @@ func (p *AppCredentialProvider) getUsernameAndPassword(
 // GitHub App. The base URL is the scheme and host of the repository URL, which
 // is used to determine whether the repository is hosted on GitHub Enterprise.
 func (p *AppCredentialProvider) getAccessToken(
-	appID, installationID int64,
-	encodedPrivateKey, baseURL string,
+	clientID string,
+	installationID int64,
+	encodedPrivateKey string,
+	baseURL string,
 ) (string, error) {
 	decodedKey, err := decodeKey(encodedPrivateKey)
 	if err != nil {
 		return "", err
 	}
 
-	appTokenSource, err := githubauth.NewApplicationTokenSource(appID, decodedKey)
+	appTokenSource, err := newApplicationTokenSource(clientID, decodedKey)
 	if err != nil {
 		return "", fmt.Errorf("error creating application token source: %w", err)
 	}
@@ -163,15 +186,20 @@ func (p *AppCredentialProvider) getAccessToken(
 }
 
 // tokenCacheKey returns a cache key for an installation access token. The key
-// is a hash of the hostname, app ID, installation ID, and encoded private key.
-// Using a hash ensures that a decodable key is not stored in the cache.
-func tokenCacheKey(baseURL string, appID, installationID int64, encodedPrivateKey string) string {
+// is a hash of the hostname, client ID, installation ID, and encoded private
+// key. Using a hash ensures that a decodable key is not stored in the cache.
+func tokenCacheKey(
+	baseURL string,
+	clientID string,
+	installationID int64,
+	encodedPrivateKey string,
+) string {
 	return fmt.Sprintf(
 		"%x",
 		sha256.Sum256([]byte(
 			fmt.Sprintf(
-				"%s:%d:%d:%s",
-				baseURL, appID, installationID, encodedPrivateKey,
+				"%s:%s:%d:%s",
+				baseURL, clientID, installationID, encodedPrivateKey,
 			),
 		)),
 	)

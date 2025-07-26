@@ -312,7 +312,7 @@ create or install a GitHub App.
     1. Under <Hlt>Where can this GitHub App be installed?</Hlt>,
        leave <Hlt>Only on this account</Hlt> selected.
     1. Click <Hlt>Create GitHub App</Hlt>.
-    1. Take note of the <Hlt>App ID</Hlt>.
+    1. Take note of the <Hlt>Client ID</Hlt>.
     1. Scroll to the bottom of the page and click <Hlt>Generate a private
        key</Hlt>. The resulting key will be downloaded immediately. Store
        it securely.
@@ -340,12 +340,41 @@ create or install a GitHub App.
       labels:
         kargo.akuity.io/cred-type: git
     stringData:
+      githubAppClientID: <client id>
+      githubAppPrivateKey: <PEM-encoded private key>
+      githubAppInstallationID: <installation id>
+      repoURL: <repo url>
+      repoURLIsRegex: <true if repoURL is a pattern matching multiple repositories>
+    ```
+
+    :::info
+    GitHub currently recommends using an App's alphanumeric client ID whenever
+    possible, but Kargo does support the deprecated, numeric App ID as an
+    alternative identifier for a GitHub App. The following example is thus
+    valid until such time that GitHub themselves may remove support for the
+    deprecated App ID.
+
+    ```yaml
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: <name>
+      namespace: <project namespace>
+      labels:
+        kargo.akuity.io/cred-type: git
+    stringData:
       githubAppID: <app id>
       githubAppPrivateKey: <PEM-encoded private key>
       githubAppInstallationID: <installation id>
       repoURL: <repo url>
       repoURLIsRegex: <true if repoURL is a pattern matching multiple repositories>
     ```
+
+    In the event that a `Secret`'s data map includes values for _both_ the
+    `githubAppClientID` and `githubAppID` keys, Kargo will prioritize the value
+    of the `githubAppClientID` key as its means of uniquely identifying the
+    GitHub App.
+    :::
 
     :::note
     The `kargo create/update credentials` commands do not support creating or
