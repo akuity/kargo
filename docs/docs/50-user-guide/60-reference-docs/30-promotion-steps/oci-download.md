@@ -38,7 +38,6 @@ steps:
   config:
     imageRef: registry.example.com/charts/my-app:1.0.0
     outPath: ./charts/my-app-1.0.0.tgz
-    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
 ```
 
 ### Downloading a Helm Chart with OCI Protocol
@@ -53,7 +52,6 @@ steps:
   config:
     imageRef: oci://registry.example.com/charts/my-app:1.0.0
     outPath: ./charts/my-app-1.0.0.tgz
-    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
 ```
 
 ### Downloading Configuration Files
@@ -82,6 +80,21 @@ steps:
   config:
     imageRef: ghcr.io/example/artifacts@sha256:1234567890abcdef
     outPath: ./artifacts/data.tar.gz
+```
+
+### Downloading with a Specific Media Type
+
+In this example, an artifact is downloaded by specifying a media type. This is
+useful when the OCI artifact contains multiple layers, and you want to target a
+specific one, such as a configuration file attached to a container image.
+
+```yaml
+steps:
+- uses: oci-download
+  config:
+    imageRef: registry.example.com/artifacts/my-app:v1.2.3
+    outPath: ./artifacts/config.json
+    mediaType: application/vnd.example.config.v1+json
 ```
 
 ### Downloading with TLS Verification Disabled
@@ -127,7 +140,6 @@ steps:
   config:
     imageRef: ${{ vars.chart }}:1.0.0
     outPath: ./chart.tgz
-    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
 - uses: helm-template
   config:
     path: ./chart.tgz
