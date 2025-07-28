@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
-	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -45,7 +44,8 @@ func refreshWarehouses(
 		repoURLs = repoURLs[1:]
 	}
 
-	warehouses := []kargoapi.Warehouse{}
+	// The distinct set of all Warehouses that should be refreshed
+	toRefresh := map[client.ObjectKey]*kargoapi.Warehouse{}
 
 	for _, repoURL := range repoURLs {
 		repoLogger := logger.WithValues("repositoryURL", repoURL)
@@ -65,43 +65,44 @@ func refreshWarehouses(
 			return
 		}
 
-		warehouses = append(warehouses, ws.Items...)
-	}
-
-	slices.SortFunc(warehouses, func(lhs, rhs kargoapi.Warehouse) int {
-		return strings.Compare(lhs.Namespace+lhs.Name, rhs.Namespace+rhs.Name)
-	})
-	warehouses = slices.CompactFunc(warehouses, func(lhs, rhs kargoapi.Warehouse) bool {
-		return lhs.Namespace == rhs.Namespace && lhs.Name == rhs.Name
-	})
-
-	if qualifier != "" {
-		refreshEligibleWarehouses := make([]kargoapi.Warehouse, 0, len(warehouses))
-		for _, wh := range warehouses {
-			shouldRefresh, err := shouldRefresh(wh.Spec.Subscriptions, qualifier, repoURLs...)
-			if err != nil {
-				// log the error but obscure the details from the response
-				logger.Error(err, "failed to evaluate if warehouse needs refresh", "warehouse", wh.Name)
-				xhttp.WriteErrorJSON(w, err)
-				return
+		for _, wh := range ws.Items {
+			whKey := client.ObjectKeyFromObject(&wh)
+			if _, alreadyRefreshing := toRefresh[whKey]; alreadyRefreshing {
+				continue
 			}
-			if *shouldRefresh {
-				refreshEligibleWarehouses = append(refreshEligibleWarehouses, wh)
+			if qualifier != "" {
+				shouldRefresh, err := shouldRefresh(wh, repoURL, qualifier)
+				if err != nil {
+					logger.Error(
+						err,
+						"failed to evaluate if warehouse needs refresh",
+						"warehouse", wh.Name,
+					)
+					xhttp.WriteErrorJSON(w, err)
+					return
+				}
+				if shouldRefresh {
+					toRefresh[whKey] = &wh
+				}
+			} else {
+				toRefresh[whKey] = &wh
 			}
 		}
-		warehouses = refreshEligibleWarehouses
 	}
 
-	logger.Debug("found Warehouses to refresh", "count", len(warehouses))
+	logger.Debug("found Warehouses to refresh", "count", len(toRefresh))
 
 	var failures int
-	for _, wh := range warehouses {
-		objKey := client.ObjectKeyFromObject(&wh)
-		if _, err := api.RefreshWarehouse(ctx, c, objKey); err != nil {
-			logger.Error(err, "error refreshing Warehouse", "objectKey", objKey)
+	for whKey := range toRefresh {
+		whLogger := logger.WithValues(
+			"namespace", whKey.Namespace,
+			"name", whKey.Name,
+		)
+		if _, err := api.RefreshWarehouse(ctx, c, whKey); err != nil {
+			whLogger.Error(err, "error refreshing Warehouse")
 			failures++
 		} else {
-			logger.Debug("refreshed Warehouse", "objectKey", objKey)
+			whLogger.Debug("refreshed Warehouse")
 		}
 	}
 
@@ -112,7 +113,7 @@ func refreshWarehouses(
 			map[string]string{
 				"error": fmt.Sprintf("failed to refresh %d of %d warehouses",
 					failures,
-					len(warehouses),
+					len(toRefresh),
 				),
 			},
 		)
@@ -122,70 +123,43 @@ func refreshWarehouses(
 		w,
 		http.StatusOK,
 		map[string]string{
-			"msg": fmt.Sprintf("refreshed %d warehouse(s)", len(warehouses)),
+			"msg": fmt.Sprintf("refreshed %d warehouse(s)", len(toRefresh)),
 		},
 	)
 }
 
-func shouldRefresh(
-	subs []kargoapi.RepoSubscription,
-	qualifier string,
-	repoURLs ...string,
-) (*bool, error) {
+func shouldRefresh(wh kargoapi.Warehouse, repoURL, qualifier string) (bool, error) {
 	var shouldRefresh bool
-	subs = filterSubsByRepoURL(subs, repoURLs...) // only interested in subs that contain any of the repo URLs.
-	for _, s := range subs {
+	for _, s := range wh.Spec.Subscriptions {
 		switch {
-		case s.Git != nil:
+		case s.Git != nil && git.NormalizeURL(s.Git.RepoURL) == repoURL:
 			selector, err := commit.NewSelector(*s.Git, nil)
 			if err != nil {
-				return nil, fmt.Errorf("error creating commit selector for Git subscription %q: %w",
+				return false, fmt.Errorf("error creating commit selector for Git subscription %q: %w",
 					s.Git.RepoURL, err,
 				)
 			}
 			shouldRefresh = selector.MatchesRef(qualifier)
-		case s.Image != nil:
+		case s.Image != nil && image.NormalizeURL(s.Image.RepoURL) == repoURL:
 			selector, err := image.NewSelector(*s.Image, nil)
 			if err != nil {
-				return nil, fmt.Errorf("error creating image selector for Image subscription %q: %w",
+				return false, fmt.Errorf("error creating image selector for Image subscription %q: %w",
 					s.Image.RepoURL, err,
 				)
 			}
 			shouldRefresh = selector.MatchesTag(qualifier)
-		case s.Chart != nil:
+		case s.Chart != nil && helm.NormalizeChartRepositoryURL(s.Chart.RepoURL) == repoURL:
 			selector, err := chart.NewSelector(*s.Chart, nil)
 			if err != nil {
-				return nil, fmt.Errorf("error creating chart selector for Chart subscription %q: %w",
+				return false, fmt.Errorf("error creating chart selector for Chart subscription %q: %w",
 					s.Chart.RepoURL, err,
 				)
 			}
 			shouldRefresh = selector.MatchesVersion(qualifier)
 		}
 		if shouldRefresh {
-			// exit early if we already found a match
-			return &shouldRefresh, nil
+			return true, nil
 		}
 	}
-	return &shouldRefresh, nil
-}
-
-// filterSubsByRepoURL deletes all subscriptions from subs that do not
-// match any of the provided repository URLs; omitting them from processing.
-// repoURLs should be normalized before calling this function.
-// / this function will normalize all subscription repo URLs before comparing
-// them to the provided repoURLs. With that said, the repoURLs are expected
-// to be normalized by the caller.
-func filterSubsByRepoURL(subs []kargoapi.RepoSubscription, repoURLs ...string) []kargoapi.RepoSubscription {
-	containsRepoURL := func(sub kargoapi.RepoSubscription) bool {
-		return (sub.Image != nil && slices.Contains(repoURLs,
-			image.NormalizeURL(sub.Image.RepoURL),
-		)) || (sub.Git != nil && slices.Contains(repoURLs,
-			git.NormalizeURL(sub.Git.RepoURL),
-		)) || (sub.Chart != nil && slices.Contains(repoURLs,
-			helm.NormalizeChartRepositoryURL(sub.Chart.RepoURL),
-		))
-	}
-	return slices.DeleteFunc(subs, func(sub kargoapi.RepoSubscription) bool {
-		return !containsRepoURL(sub)
-	})
+	return false, nil
 }

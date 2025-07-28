@@ -220,101 +220,125 @@ func TestRefreshWarehouses(t *testing.T) {
 func TestShouldRefresh(t *testing.T) {
 	testCases := []struct {
 		name      string
-		subs      []kargoapi.RepoSubscription
+		wh        kargoapi.Warehouse
 		qualifier string
-		repoURLs  []string
+		repoURL   string
 		expect    bool
 	}{
 		{
 			name: "Git subscription with matching qualifier",
-			subs: []kargoapi.RepoSubscription{{
-				Git: &kargoapi.GitSubscription{
-					CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
-					RepoURL:                 "https://github.com/username/repo",
-					Branch:                  "main",
+			wh: kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Git: &kargoapi.GitSubscription{
+							CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+							RepoURL:                 "https://github.com/username/repo",
+							Branch:                  "main",
+						}},
+					},
 				},
-			}},
-			repoURLs:  []string{"https://github.com/username/repo"},
+			},
+			repoURL:   "https://github.com/username/repo",
 			qualifier: "refs/heads/main",
 			expect:    true,
 		},
 		{
 			name: "Git subscription with non-matching qualifier",
-			subs: []kargoapi.RepoSubscription{{
-				Git: &kargoapi.GitSubscription{
-					CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
-					RepoURL:                 "https://github.com/username/repo.git",
-					Branch:                  "main",
+			wh: kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Git: &kargoapi.GitSubscription{
+							CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+							RepoURL:                 "https://github.com/username/repo.git",
+							Branch:                  "main",
+						}},
+					},
 				},
-			}},
-			repoURLs:  []string{"https://github.com/username/repo"},
+			},
+			repoURL:   "https://github.com/username/repo",
 			qualifier: "release",
 			expect:    false,
 		},
 		{
 			name: "Image subscription with matching qualifier",
-			subs: []kargoapi.RepoSubscription{{
-				Image: &kargoapi.ImageSubscription{
-					RepoURL:                "docker.io/example/repo",
-					ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
-					SemverConstraint:       "^1.0.0",
-					StrictSemvers:          true,
+			wh: kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Image: &kargoapi.ImageSubscription{
+							RepoURL:                "docker.io/example/repo",
+							ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+							SemverConstraint:       "^1.0.0",
+							StrictSemvers:          true,
+						}},
+					},
 				},
-			}},
-			repoURLs:  []string{"example/repo"},
+			},
+			repoURL:   "example/repo",
 			qualifier: "v1.0.0",
 			expect:    true,
 		},
 		{
 			name: "Image subscription with non-matching qualifier",
-			subs: []kargoapi.RepoSubscription{{
-				Image: &kargoapi.ImageSubscription{
-					RepoURL:                "docker.io/example/repo",
-					ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
-					SemverConstraint:       "^1.0.0",
-					StrictSemvers:          true,
+			wh: kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Image: &kargoapi.ImageSubscription{
+							RepoURL:                "docker.io/example/repo",
+							ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+							SemverConstraint:       "^1.0.0",
+							StrictSemvers:          true,
+						}},
+					},
 				},
-			}},
-			repoURLs:  []string{"docker.io/example/repo"},
+			},
+			repoURL:   "docker.io/example/repo",
 			qualifier: "invalid-tag",
 			expect:    false,
 		},
 		{
 			name: "Chart subscription with matching qualifier",
-			subs: []kargoapi.RepoSubscription{{
-				Chart: &kargoapi.ChartSubscription{
-					RepoURL:          "oci://example.com/charts",
-					SemverConstraint: "^1.0.0",
+			wh: kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Chart: &kargoapi.ChartSubscription{
+							RepoURL:          "oci://example.com/charts",
+							SemverConstraint: "^1.0.0",
+						}},
+					},
 				},
-			}},
-			repoURLs:  []string{"example.com/charts"},
+			},
+			repoURL:   "example.com/charts",
 			qualifier: "v1.0.0",
 			expect:    true,
 		},
 		{
 			name: "Chart subscription with non-matching qualifier",
-			subs: []kargoapi.RepoSubscription{{
-				Chart: &kargoapi.ChartSubscription{
-					RepoURL:          "oci://example.com/charts",
-					SemverConstraint: "^2.0.0",
+			wh: kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Chart: &kargoapi.ChartSubscription{
+							RepoURL:          "oci://example.com/charts",
+							SemverConstraint: "^2.0.0",
+						}},
+					},
 				},
-			}},
-			repoURLs:  []string{"example.com/charts"},
+			},
+			repoURL:   "example.com/charts",
 			qualifier: "1.0.0",
 			expect:    false,
 		},
 		{
 			name:      "No subscriptions",
-			subs:      []kargoapi.RepoSubscription{},
+			wh:        kargoapi.Warehouse{},
 			qualifier: "main",
 			expect:    false,
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result, err := shouldRefresh(tc.subs, tc.qualifier, tc.repoURLs...)
+			result, err := shouldRefresh(tc.wh, tc.repoURL, tc.qualifier)
 			require.NoError(t, err)
-			require.Equal(t, tc.expect, *result)
+			require.Equal(t, tc.expect, result)
 		})
 	}
 }

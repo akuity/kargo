@@ -57,6 +57,7 @@ func TestQuayHandler(t *testing.T) {
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
 								ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+								SemverConstraint:       "^1.0.0",
 								RepoURL:                "quay.io/mynamespace/repository",
 							},
 						}},
@@ -94,7 +95,8 @@ func TestQuayHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Chart: &kargoapi.ChartSubscription{
-								RepoURL: "oci://quay.io/mynamespace/repository",
+								SemverConstraint: "^1.0.0",
+								RepoURL:          "oci://quay.io/mynamespace/repository",
 							},
 						}},
 					},
