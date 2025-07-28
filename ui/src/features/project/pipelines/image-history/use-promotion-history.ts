@@ -8,7 +8,7 @@ export const usePromotionHistory = (stages: Stage[]) => {
 
     for (const stage of stages) {
       const stageName = stage.metadata?.name || '';
-      if (!stageName) return;
+      if (!stageName) return history;
 
       stage.status?.freightHistory?.forEach((freightGroup, freightIndex) => {
         for (const freightRef of Object.values(freightGroup.items)) {
