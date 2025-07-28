@@ -18,7 +18,7 @@ import (
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
-func Test_gitCloner_validateAndUnmarshal(t *testing.T) {
+func Test_gitCloner_convert(t *testing.T) {
 	testCases := []struct {
 		name             string
 		config           promotion.Config
@@ -309,7 +309,7 @@ func Test_gitCloner_validateAndUnmarshal(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			_, err := runner.validateAndUnmarshal(testCase.config)
+			_, err := runner.convert(testCase.config)
 			if len(testCase.expectedProblems) == 0 {
 				require.NoError(t, err)
 			} else {

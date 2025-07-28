@@ -55,24 +55,19 @@ func (k *kustomizeImageSetter) Run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
-	failure := promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}
-
-	if err := k.validate(stepCtx.Config); err != nil {
-		return failure, err
-	}
-
-	// Convert the configuration into a typed object.
-	cfg, err := promotion.ConfigToStruct[builtin.KustomizeSetImageConfig](stepCtx.Config)
+	cfg, err := k.convert(stepCtx.Config)
 	if err != nil {
-		return failure, fmt.Errorf("could not convert config into kustomize-set-image config: %w", err)
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusFailed,
+		}, &promotion.TerminalError{Err: err}
 	}
-
 	return k.run(ctx, stepCtx, cfg)
 }
 
-// validate validates kustomizeImageSetter configuration against a JSON schema.
-func (k *kustomizeImageSetter) validate(cfg promotion.Config) error {
-	return validate(k.schemaLoader, gojsonschema.NewGoLoader(cfg), k.Name())
+// convert validates kustomizeImageSetter configuration against a JSON schema
+// and converts it into a builtin.KustomizeSetImageConfig struct.
+func (k *kustomizeImageSetter) convert(cfg promotion.Config) (builtin.KustomizeSetImageConfig, error) {
+	return validateAndConvert[builtin.KustomizeSetImageConfig](k.schemaLoader, cfg, k.Name())
 }
 
 func (k *kustomizeImageSetter) run(

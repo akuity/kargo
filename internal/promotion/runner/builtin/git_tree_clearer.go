@@ -37,20 +37,19 @@ func (g *gitTreeClearer) Run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
-	if err := g.validate(stepCtx.Config); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
-	}
-	cfg, err := promotion.ConfigToStruct[builtin.GitClearConfig](stepCtx.Config)
+	cfg, err := g.convert(stepCtx.Config)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("could not convert config into %s config: %w", g.Name(), err)
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusFailed,
+		}, &promotion.TerminalError{Err: err}
 	}
 	return g.run(ctx, stepCtx, cfg)
 }
 
-// validate validates gitTreeClearer configuration against a JSON schema.
-func (g *gitTreeClearer) validate(cfg promotion.Config) error {
-	return validate(g.schemaLoader, gojsonschema.NewGoLoader(cfg), g.Name())
+// convert validates gitTreeClearer configuration against a JSON schema and
+// converts it into a builtin.GitClearConfig struct.
+func (g *gitTreeClearer) convert(cfg promotion.Config) (builtin.GitClearConfig, error) {
+	return validateAndConvert[builtin.GitClearConfig](g.schemaLoader, cfg, g.Name())
 }
 
 func (g *gitTreeClearer) run(

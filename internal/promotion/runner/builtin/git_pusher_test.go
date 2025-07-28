@@ -21,7 +21,7 @@ import (
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
-func Test_gitPusher_validate(t *testing.T) {
+func Test_gitPusher_convert(t *testing.T) {
 	testCases := []struct {
 		name             string
 		config           promotion.Config
@@ -138,7 +138,7 @@ func Test_gitPusher_validate(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			err := runner.validate(testCase.config)
+			_, err := runner.convert(testCase.config)
 			if len(testCase.expectedProblems) == 0 {
 				require.NoError(t, err)
 			} else {

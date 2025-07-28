@@ -112,21 +112,19 @@ func (a *argocdUpdater) Run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
-	if err := a.validate(stepCtx.Config); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
-	}
-	cfg, err := promotion.ConfigToStruct[builtin.ArgoCDUpdateConfig](stepCtx.Config)
+	cfg, err := a.convert(stepCtx.Config)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("could not convert config into %s config: %w", a.Name(), err)
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusFailed,
+		}, &promotion.TerminalError{Err: err}
 	}
 	return a.run(ctx, stepCtx, cfg)
 }
 
-// validate validates argocdUpdater configuration against a
-// JSON schema.
-func (a *argocdUpdater) validate(cfg promotion.Config) error {
-	return validate(a.schemaLoader, gojsonschema.NewGoLoader(cfg), a.Name())
+// convert validates argocdUpdater configuration against a JSON schema and
+// converts it into a builtin.ArgoCDUpdateConfig struct.
+func (a *argocdUpdater) convert(cfg promotion.Config) (builtin.ArgoCDUpdateConfig, error) {
+	return validateAndConvert[builtin.ArgoCDUpdateConfig](a.schemaLoader, cfg, a.Name())
 }
 
 func (a *argocdUpdater) run(

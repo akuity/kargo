@@ -53,20 +53,19 @@ func (k *kustomizeBuilder) Run(
 	_ context.Context,
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
-	failure := promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}
-
-	// Validate the configuration against the JSON Schema.
-	if err := validate(k.schemaLoader, gojsonschema.NewGoLoader(stepCtx.Config), k.Name()); err != nil {
-		return failure, err
-	}
-
-	// Convert the configuration into a typed object.
-	cfg, err := promotion.ConfigToStruct[builtin.KustomizeBuildConfig](stepCtx.Config)
+	cfg, err := k.convert(stepCtx.Config)
 	if err != nil {
-		return failure, fmt.Errorf("could not convert config into %s config: %w", k.Name(), err)
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusFailed,
+		}, &promotion.TerminalError{Err: err}
 	}
-
 	return k.run(stepCtx, cfg)
+}
+
+// convert validates kustomizeBuilder configuration against a JSON schema and
+// converts it into a builtin.KustomizeBuildConfig struct.
+func (k *kustomizeBuilder) convert(cfg promotion.Config) (builtin.KustomizeBuildConfig, error) {
+	return validateAndConvert[builtin.KustomizeBuildConfig](k.schemaLoader, cfg, k.Name())
 }
 
 func (k *kustomizeBuilder) run(

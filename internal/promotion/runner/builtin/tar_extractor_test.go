@@ -174,7 +174,7 @@ func Test_tarExtractor_run(t *testing.T) {
 				defer tw.Close()
 
 				// Add a file that exceeds the size limit
-				largeFileSize := MaxDecompressedFileSize + 1
+				largeFileSize := maxDecompressedFileSize + 1
 				hdr := &tar.Header{
 					Name: "large_file.bin",
 					Mode: 0o600,
@@ -685,7 +685,7 @@ func Test_tarExtractor_extractToDir(t *testing.T) {
 				defer tw.Close()
 
 				// Mock large file that exceeds the size limit
-				largeFileSize := MaxDecompressedFileSize + 1
+				largeFileSize := maxDecompressedFileSize + 1
 				hdr := &tar.Header{
 					Name: "large_file.bin",
 					Mode: 0o600,
@@ -724,17 +724,17 @@ func Test_tarExtractor_extractToDir(t *testing.T) {
 				tw := tar.NewWriter(tarFile)
 				defer tw.Close()
 
-				nbFiles := (MaxDecompressedTarSize / MaxDecompressedFileSize) + 1
+				nbFiles := (maxDecompressedTarSize / maxDecompressedFileSize) + 1
 				for i := range int(nbFiles) {
 					hdr := &tar.Header{
 						Name: fmt.Sprintf("file%d.bin", i),
 						Mode: 0o600,
-						Size: MaxDecompressedFileSize - 1,
+						Size: maxDecompressedFileSize - 1,
 					}
 					require.NoError(t, tw.WriteHeader(hdr))
 
 					// Write zeros to the file
-					_, err = tw.Write(make([]byte, MaxDecompressedFileSize-1))
+					_, err = tw.Write(make([]byte, maxDecompressedFileSize-1))
 					require.NoError(t, err)
 				}
 

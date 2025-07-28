@@ -16,7 +16,7 @@ import (
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
-func Test_jsonParser_validate(t *testing.T) {
+func Test_jsonParser_convert(t *testing.T) {
 	tests := []struct {
 		name          string
 		config        map[string]any
@@ -114,7 +114,7 @@ func Test_jsonParser_validate(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			err := runner.validate(tc.config)
+			_, err := runner.convert(tc.config)
 			if tc.expectedError == "" {
 				assert.NoError(t, err)
 			} else {
