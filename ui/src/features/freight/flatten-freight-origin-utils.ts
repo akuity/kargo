@@ -15,6 +15,7 @@ export type TableSource =
       message: string;
       author: string;
       committer: string;
+      tag?: string;
     }
   | {
       type: 'helm';
@@ -38,7 +39,8 @@ export const flattenFreightOrigin = (freight: Freight): TableSource[] => {
     branch: commit?.branch,
     committer: commit?.committer,
     id: commit?.id,
-    message: commit?.message
+    message: commit?.message,
+    tag: commit?.tag
   }));
 
   const helm: TableSource[] = freight?.charts?.map((chart) => ({
