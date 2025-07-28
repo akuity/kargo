@@ -37,6 +37,8 @@ export const ArtifactMenuItems = ({
         selected={selected?.repoURL === item.repoURL}
       >
         {item.repoURL}
+        {item.$typeName === 'github.com.akuity.kargo.api.v1alpha1.ChartDiscoveryResult' &&
+          `/${item.name}`}
       </ArtifactMenuItem>
     ))}
   </>

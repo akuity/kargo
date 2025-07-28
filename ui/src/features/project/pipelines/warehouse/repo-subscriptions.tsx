@@ -23,11 +23,11 @@ export const RepoSubscriptions = ({ subscriptions }: Props) => {
               bordered
               size='small'
               column={1}
-              style={{ width: '70%', minWidth: 500 }}
+              style={{ width: '40%', minWidth: 500 }}
             >
               <Descriptions.Item>
                 <Typography.Link
-                  href={subscription.chart?.repoURL}
+                  href={`${subscription.chart?.repoURL}/${subscription?.chart?.name}`}
                   target='_blank'
                   rel='noreferrer'
                 >
@@ -53,7 +53,7 @@ export const RepoSubscriptions = ({ subscriptions }: Props) => {
               bordered
               size='small'
               column={1}
-              style={{ width: '70%', minWidth: 500 }}
+              style={{ width: '40%', minWidth: 500 }}
             >
               <Descriptions.Item>
                 <Typography.Link href={subscription.git?.repoURL} target='_blank' rel='noreferrer'>
@@ -91,7 +91,7 @@ export const RepoSubscriptions = ({ subscriptions }: Props) => {
               bordered
               size='small'
               column={1}
-              style={{ width: '70%', minWidth: 500 }}
+              style={{ width: '40%', minWidth: 500 }}
             >
               <Descriptions.Item>
                 <Typography.Link
