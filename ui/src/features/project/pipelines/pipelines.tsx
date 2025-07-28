@@ -36,7 +36,7 @@ import {
 import { FreightTimeline } from './freight/freight-timeline';
 import { Graph } from './graph/graph';
 import { GraphFilters } from './graph-filters';
-import { Images } from './images';
+import { Images } from './image-history/images';
 import { PipelineListView } from './list/list-view';
 import { Promote } from './promotion/promote';
 import { Promotion } from './promotion/promotion';
@@ -264,11 +264,10 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                   }
                 />
               </Flex>
-
               <div
-                className={classNames('w-[450px] absolute right-2 top-20 z-10', {
-                  hidden: !preferredFilter?.images
-                })}
+                className={`w-[450px] absolute right-2 top-20 z-10 transition-opacity duration-300 ${
+                  preferredFilter?.images ? 'opacity-100' : 'opacity-0'
+                }`}
               >
                 <Images
                   hide={() =>
@@ -280,19 +279,16 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                   images={listImagesQuery.data?.images || {}}
                   project={projectName || ''}
                   stages={listStagesQuery.data?.stages || []}
+                  warehouses={listWarehousesQuery.data?.warehouses || []}
                 />
               </div>
-
               {pipelineView === 'graph' && (
-                <>
-                  <Graph
-                    project={project.metadata?.name || ''}
-                    warehouses={listWarehousesQuery.data?.warehouses || []}
-                    stages={listStagesQuery.data?.stages || []}
-                  />
-                </>
+                <Graph
+                  project={project.metadata?.name || ''}
+                  warehouses={listWarehousesQuery.data?.warehouses || []}
+                  stages={listStagesQuery.data?.stages || []}
+                />
               )}
-
               {pipelineView === 'list' && (
                 <PipelineListView
                   stages={listStagesQuery.data?.stages || []}
