@@ -14,12 +14,18 @@ export const RepoSubscriptions = ({ subscriptions }: Props) => {
   }
 
   return (
-    <div>
-      <Descriptions bordered size='small' column={1} style={{ width: '50%', minWidth: 500 }}>
-        {subscriptions.map((subscription) => (
-          <>
-            {subscription.chart && (
-              <Descriptions.Item label='Chart'>
+    <div className='flex flex-col gap-5'>
+      {subscriptions.map((subscription) => (
+        <>
+          {subscription.chart && (
+            <Descriptions
+              title='Chart'
+              bordered
+              size='small'
+              column={1}
+              style={{ width: '70%', minWidth: 500 }}
+            >
+              <Descriptions.Item>
                 <Typography.Link
                   href={subscription.chart?.repoURL}
                   target='_blank'
@@ -28,16 +34,66 @@ export const RepoSubscriptions = ({ subscriptions }: Props) => {
                   {subscription.chart?.repoURL}
                 </Typography.Link>
               </Descriptions.Item>
-            )}
-            {subscription.git && (
-              <Descriptions.Item label='Git'>
+
+              {!!subscription?.chart?.discoveryLimit && (
+                <Descriptions.Item label='discovery limit'>
+                  {subscription?.chart?.discoveryLimit}
+                </Descriptions.Item>
+              )}
+
+              {subscription?.chart?.name && (
+                <Descriptions.Item label='name'>{subscription?.chart?.name}</Descriptions.Item>
+              )}
+            </Descriptions>
+          )}
+
+          {subscription.git && (
+            <Descriptions
+              title='Git'
+              bordered
+              size='small'
+              column={1}
+              style={{ width: '70%', minWidth: 500 }}
+            >
+              <Descriptions.Item>
                 <Typography.Link href={subscription.git?.repoURL} target='_blank' rel='noreferrer'>
                   {subscription.git?.repoURL}
                 </Typography.Link>
               </Descriptions.Item>
-            )}
-            {subscription.image && (
-              <Descriptions.Item label='Image'>
+
+              {!!subscription?.git?.discoveryLimit && (
+                <Descriptions.Item label='discovery limit'>
+                  {subscription?.git?.discoveryLimit}
+                </Descriptions.Item>
+              )}
+
+              {subscription?.git?.branch && (
+                <Descriptions.Item label='branch'>{subscription?.git?.branch}</Descriptions.Item>
+              )}
+
+              {!!subscription?.git?.semverConstraint && (
+                <Descriptions.Item label='constraint'>
+                  {subscription?.git?.semverConstraint}
+                </Descriptions.Item>
+              )}
+
+              {subscription?.git?.commitSelectionStrategy && (
+                <Descriptions.Item label='commit selection strategy'>
+                  {subscription?.git?.commitSelectionStrategy}
+                </Descriptions.Item>
+              )}
+            </Descriptions>
+          )}
+
+          {subscription.image && (
+            <Descriptions
+              title='Image'
+              bordered
+              size='small'
+              column={1}
+              style={{ width: '70%', minWidth: 500 }}
+            >
+              <Descriptions.Item>
                 <Typography.Link
                   href={urlForImage(subscription.image?.repoURL)}
                   target='_blank'
@@ -46,10 +102,28 @@ export const RepoSubscriptions = ({ subscriptions }: Props) => {
                   {subscription.image?.repoURL}
                 </Typography.Link>
               </Descriptions.Item>
-            )}
-          </>
-        ))}
-      </Descriptions>
+
+              {!!subscription?.image?.discoveryLimit && (
+                <Descriptions.Item label='discovery limit'>
+                  {subscription?.image?.discoveryLimit}
+                </Descriptions.Item>
+              )}
+
+              {(!!subscription?.image?.constraint || !!subscription?.image?.semverConstraint) && (
+                <Descriptions.Item label='constraint'>
+                  {subscription?.image?.constraint || subscription?.image?.semverConstraint}
+                </Descriptions.Item>
+              )}
+
+              {subscription?.image?.imageSelectionStrategy && (
+                <Descriptions.Item label='image selection strategy'>
+                  {subscription?.image?.imageSelectionStrategy}
+                </Descriptions.Item>
+              )}
+            </Descriptions>
+          )}
+        </>
+      ))}
     </div>
   );
 };
