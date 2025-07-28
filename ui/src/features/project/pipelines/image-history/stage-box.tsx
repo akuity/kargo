@@ -43,7 +43,7 @@ export const StageBox = memo(
     project: string;
   }) => {
     const navigate = useNavigate();
-    const isHighlighted = showHistory && orders.includes(0);
+    const isHighlighted = showHistory && orders.includes(1);
     const baseColor = stageColorMap[stageName] || '#6b7280';
 
     const tooltipTitle = getTooltipTitle(showHistory, isHighlighted, stageName, orders);

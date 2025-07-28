@@ -278,13 +278,9 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                 />
               </Flex>
               <div
-                className={classNames(
-                  `w-[450px] absolute right-2 top-20 z-10 transition-opacity duration-300`,
-                  {
-                    'opacity-100 visible': preferredFilter?.images,
-                    'opacity-0 invisible': !preferredFilter?.images
-                  }
-                )}
+                className={`w-[450px] absolute right-2 top-20 z-10 transition-opacity duration-300 ${
+                  preferredFilter?.images ? 'opacity-100' : 'opacity-0'
+                }`}
               >
                 <Images
                   hide={() =>
