@@ -17,8 +17,9 @@ import (
 	"github.com/akuity/kargo/internal/indexer"
 )
 
-const giteaWebhookRequestBodyImage = `
+const giteaWebhookRequestBodyPush = `
 {
+	"ref": "refs/heads/main",
 	"repository": {
 		"clone_url": "https://gitea.com/example/repo.git"
 	}
@@ -124,7 +125,8 @@ func TestGiteaHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{
-								RepoURL: "https://gitea.com/example/repo",
+								CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+								RepoURL:                 "https://gitea.com/example/repo",
 							},
 						}},
 					},
@@ -135,7 +137,7 @@ func TestGiteaHandler(t *testing.T) {
 				indexer.WarehousesBySubscribedURLs,
 			).Build(),
 			req: func() *http.Request {
-				b := []byte(giteaWebhookRequestBodyImage)
+				b := []byte(giteaWebhookRequestBodyPush)
 				req := httptest.NewRequest(
 					http.MethodPost,
 					testURL,

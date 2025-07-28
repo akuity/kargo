@@ -117,7 +117,9 @@ func TestAzureHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
-								RepoURL: "fakeregistry.azurecr.io/fakeimage",
+								ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+								SemverConstraint:       "^1.0.0",
+								RepoURL:                "fakeregistry.azurecr.io/fakeimage",
 							},
 						}},
 					},
@@ -156,7 +158,8 @@ func TestAzureHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Chart: &kargoapi.ChartSubscription{
-								RepoURL: "fakeregistry.azurecr.io/fakeimage",
+								SemverConstraint: "^1.0.0",
+								RepoURL:          "oci://fakeregistry.azurecr.io/fakeimage",
 							},
 						}},
 					},
@@ -255,7 +258,8 @@ func newAzurePayload(event, mediaType string) *bytes.Buffer {
 				"action": "push",
 				"target": {
 					"repository": "fakeimage",
-					"mediaType": %q
+					"mediaType": %q,
+					"tag": "v1.0.0"
 				},
 				"request": {"host": "fakeregistry.azurecr.io"}
 			}`, mediaType,

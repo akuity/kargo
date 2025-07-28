@@ -23,15 +23,22 @@ func TestBitbucketHandler(t *testing.T) {
 	const testProjectName = "fake-project"
 
 	const pushEventRequestBody = `
-{
-	"repository": {
-		"links": {
-			"html": {
-				"href": "https://bitbucket.org/example/repo"
+	{
+		"actor": {
+			"name": "admin",
+			"emailAddress": "admin@example.com"
+		},
+		"push": {
+			"changes": [{"new": {"name": "refs/heads/main"}}]
+		},
+		"repository": {
+			"links": {
+				"html": {
+					"href": "https://bitbucket.org/example/repo"
+				}
 			}
 		}
-	}
-}`
+	}`
 
 	testScheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(testScheme))

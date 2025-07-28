@@ -122,15 +122,7 @@ func (b *bitbucketWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 			return
 		}
 
-		payload := struct {
-			Repository struct {
-				Links struct {
-					HTML struct {
-						Href string `json:"href"`
-					} `json:"html"`
-				} `json:"links"`
-			} `json:"repository"`
-		}{}
+		payload := new(bitBucketPushEvent)
 		if err := json.Unmarshal(requestBody, &payload); err != nil {
 			xhttp.WriteErrorJSON(
 				w,
@@ -156,13 +148,38 @@ func (b *bitbucketWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 		// TODO(krancour): There are very likely some yet-to-be-identified edge
 		// cases where this choice does not hold up.
 		repoURL := payload.Repository.Links.HTML.Href
-		// BitBucket sends a []Changes in the payload, following convention,
-		// this means we should omit setting a qualifier for BitBucket given
-		// that elements could differ here e.g. one RefUpdate element could be a tag
-		// and another could be a branch
-		var qualifier string
-		logger = logger.WithValues("repoURL", repoURL, "qualifier", qualifier)
+		refs := payload.getQualifiers()
+		logger = logger.WithValues("repoURL", repoURL, "refs", refs)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		refreshWarehouses(ctx, w, b.client, b.project, qualifier, repoURL)
+		refreshWarehouses(ctx, w, b.client, b.project, refs, repoURL)
 	})
+}
+
+type bitBucketPushEvent struct {
+	Actor struct {
+		Name         string `json:"name"`
+		EmailAddress string `json:"emailAddress"`
+	} `json:"actor"`
+	Push struct {
+		Changes []struct {
+			New struct {
+				Name string `json:"name"`
+			} `json:"new"`
+		} `json:"changes"`
+	} `json:"push"`
+	Repository struct {
+		Links struct {
+			HTML struct {
+				Href string `json:"href"`
+			} `json:"html"`
+		} `json:"links"`
+	} `json:"repository"`
+}
+
+func (b bitBucketPushEvent) getQualifiers() []string {
+	var qualifiers []string
+	for _, change := range b.Push.Changes {
+		qualifiers = append(qualifiers, change.New.Name)
+	}
+	return qualifiers
 }

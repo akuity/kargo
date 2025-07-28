@@ -30,7 +30,7 @@ func refreshWarehouses(
 	w http.ResponseWriter,
 	c client.Client,
 	project string,
-	qualifier string,
+	qualifiers []string,
 	repoURLs ...string,
 ) {
 	logger := logging.LoggerFromContext(ctx)
@@ -70,8 +70,8 @@ func refreshWarehouses(
 			if _, alreadyRefreshing := toRefresh[whKey]; alreadyRefreshing {
 				continue
 			}
-			if qualifier != "" {
-				shouldRefresh, err := shouldRefresh(wh, repoURL, qualifier)
+			if len(qualifiers) > 0 {
+				shouldRefresh, err := shouldRefresh(wh, repoURL, qualifiers)
 				if err != nil {
 					logger.Error(
 						err,
@@ -128,7 +128,7 @@ func refreshWarehouses(
 	)
 }
 
-func shouldRefresh(wh kargoapi.Warehouse, repoURL, qualifier string) (bool, error) {
+func shouldRefresh(wh kargoapi.Warehouse, repoURL string, qualifiers []string) (bool, error) {
 	var shouldRefresh bool
 	for _, s := range wh.Spec.Subscriptions {
 		switch {
@@ -139,7 +139,7 @@ func shouldRefresh(wh kargoapi.Warehouse, repoURL, qualifier string) (bool, erro
 					s.Git.RepoURL, err,
 				)
 			}
-			shouldRefresh = selector.MatchesRef(qualifier)
+			shouldRefresh = slices.ContainsFunc(qualifiers, selector.MatchesRef)
 		case s.Image != nil && image.NormalizeURL(s.Image.RepoURL) == repoURL:
 			selector, err := image.NewSelector(*s.Image, nil)
 			if err != nil {
@@ -147,7 +147,7 @@ func shouldRefresh(wh kargoapi.Warehouse, repoURL, qualifier string) (bool, erro
 					s.Image.RepoURL, err,
 				)
 			}
-			shouldRefresh = selector.MatchesTag(qualifier)
+			shouldRefresh = slices.ContainsFunc(qualifiers, selector.MatchesTag)
 		case s.Chart != nil && helm.NormalizeChartRepositoryURL(s.Chart.RepoURL) == repoURL:
 			selector, err := chart.NewSelector(*s.Chart, nil)
 			if err != nil {
@@ -155,7 +155,7 @@ func shouldRefresh(wh kargoapi.Warehouse, repoURL, qualifier string) (bool, erro
 					s.Chart.RepoURL, err,
 				)
 			}
-			shouldRefresh = selector.MatchesVersion(qualifier)
+			shouldRefresh = slices.ContainsFunc(qualifiers, selector.MatchesVersion)
 		}
 		if shouldRefresh {
 			return true, nil

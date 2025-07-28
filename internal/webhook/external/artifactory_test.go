@@ -27,6 +27,7 @@ func TestArtifactoryHandler(t *testing.T) {
 		Domain:    artifactoryDockerDomain,
 		EventType: artifactoryPushedEventType,
 		Data: artifactoryEventData{
+			Tag:       "v1.0.0",
 			Path:      "test-image/latest/manifest.json",
 			ImageType: artifactoryDockerDomain,
 			RepoKey:   "test-repo",
@@ -39,6 +40,7 @@ func TestArtifactoryHandler(t *testing.T) {
 		Domain:    artifactoryDockerDomain,
 		EventType: artifactoryPushedEventType,
 		Data: artifactoryEventData{
+			Tag:       "v1.0.0",
 			Path:      "foo/bar/test-image/latest/manifest.json",
 			ImageType: artifactoryDockerDomain,
 			RepoKey:   "test-repo",
@@ -51,6 +53,7 @@ func TestArtifactoryHandler(t *testing.T) {
 		Domain:    artifactoryDockerDomain,
 		EventType: artifactoryPushedEventType,
 		Data: artifactoryEventData{
+			Tag:       "v1.0.0",
 			Path:      "test-chart/latest/chart.tgz",
 			ImageType: artifactoryChartImageType,
 			RepoKey:   "test-repo",
@@ -185,7 +188,9 @@ func TestArtifactoryHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
-								RepoURL: "artifactory.example.com/test-repo/foo/bar/test-image",
+								ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+								SemverConstraint:       "^1.0.0",
+								RepoURL:                "artifactory.example.com/test-repo/foo/bar/test-image",
 							},
 						}},
 					},
@@ -223,7 +228,9 @@ func TestArtifactoryHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
-								RepoURL: "artifactory.example.com/test-repo/test-image",
+								ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+								SemverConstraint:       "^1.0.0",
+								RepoURL:                "artifactory.example.com/test-repo/test-image",
 							},
 						}},
 					},
@@ -261,7 +268,8 @@ func TestArtifactoryHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Chart: &kargoapi.ChartSubscription{
-								RepoURL: "artifactory.example.com/test-repo/test-chart",
+								SemverConstraint: "^1.0.0",
+								RepoURL:          "oci://artifactory.example.com/test-repo/test-chart",
 							},
 						}},
 					},

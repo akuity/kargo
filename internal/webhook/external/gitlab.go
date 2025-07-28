@@ -126,7 +126,7 @@ func (g *gitlabWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 				"ref", e.Ref,
 			)
 			ctx = logging.ContextWithLogger(ctx, logger)
-			refreshWarehouses(ctx, w, g.client, g.project, e.Ref, repoURL)
+			refreshWarehouses(ctx, w, g.client, g.project, []string{e.Ref}, repoURL)
 		}
 	})
 }

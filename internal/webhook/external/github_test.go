@@ -38,9 +38,11 @@ func TestGithubHandler(t *testing.T) {
 		Package: &gh.Package{
 			PackageType: gh.Ptr(ghcrPackageTypeContainer),
 			PackageVersion: &gh.PackageVersion{
-				Version:    gh.Ptr("v1.0.0"),
 				PackageURL: gh.Ptr("ghcr.io/example/repo:latest"),
 				ContainerMetadata: &gh.PackageEventContainerMetadata{
+					Tag: &gh.PackageEventContainerMetadataTag{
+						Name: gh.Ptr("v1.0.0"),
+					},
 					Manifest: map[string]any{
 						"config": map[string]any{
 							"media_type": ociImageIndexMediaType,
@@ -55,9 +57,11 @@ func TestGithubHandler(t *testing.T) {
 		Package: &gh.Package{
 			PackageType: gh.Ptr(ghcrPackageTypeContainer),
 			PackageVersion: &gh.PackageVersion{
-				Version:    gh.Ptr("v1.0.0"),
 				PackageURL: gh.Ptr("ghcr.io/example/repo:latest"),
 				ContainerMetadata: &gh.PackageEventContainerMetadata{
+					Tag: &gh.PackageEventContainerMetadataTag{
+						Name: gh.Ptr("v1.0.0"),
+					},
 					Manifest: map[string]any{
 						"config": map[string]any{
 							"media_type": helmChartMediaType,

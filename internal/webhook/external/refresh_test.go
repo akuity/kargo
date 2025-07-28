@@ -208,8 +208,8 @@ func TestRefreshWarehouses(t *testing.T) {
 				w,
 				testCase.client,
 				testCase.project,
-				// qualifier
-				"",
+				// qualifier match based testing is tested exhaustively in
+				[]string{},
 				testRepoURL,
 			)
 			testCase.assertions(t, w)
@@ -219,11 +219,11 @@ func TestRefreshWarehouses(t *testing.T) {
 
 func TestShouldRefresh(t *testing.T) {
 	testCases := []struct {
-		name      string
-		wh        kargoapi.Warehouse
-		qualifier string
-		repoURL   string
-		expect    bool
+		name       string
+		wh         kargoapi.Warehouse
+		qualifiers []string
+		repoURL    string
+		expect     bool
 	}{
 		{
 			name: "Git subscription with matching qualifier",
@@ -238,9 +238,9 @@ func TestShouldRefresh(t *testing.T) {
 					},
 				},
 			},
-			repoURL:   "https://github.com/username/repo",
-			qualifier: "refs/heads/main",
-			expect:    true,
+			repoURL:    "https://github.com/username/repo",
+			qualifiers: []string{"refs/heads/main"},
+			expect:     true,
 		},
 		{
 			name: "Git subscription with non-matching qualifier",
@@ -255,9 +255,9 @@ func TestShouldRefresh(t *testing.T) {
 					},
 				},
 			},
-			repoURL:   "https://github.com/username/repo",
-			qualifier: "release",
-			expect:    false,
+			repoURL:    "https://github.com/username/repo",
+			qualifiers: []string{"release"},
+			expect:     false,
 		},
 		{
 			name: "Image subscription with matching qualifier",
@@ -273,9 +273,9 @@ func TestShouldRefresh(t *testing.T) {
 					},
 				},
 			},
-			repoURL:   "example/repo",
-			qualifier: "v1.0.0",
-			expect:    true,
+			repoURL:    "example/repo",
+			qualifiers: []string{"v1.0.0"},
+			expect:     true,
 		},
 		{
 			name: "Image subscription with non-matching qualifier",
@@ -291,9 +291,9 @@ func TestShouldRefresh(t *testing.T) {
 					},
 				},
 			},
-			repoURL:   "docker.io/example/repo",
-			qualifier: "invalid-tag",
-			expect:    false,
+			repoURL:    "docker.io/example/repo",
+			qualifiers: []string{"invalid-tag"},
+			expect:     false,
 		},
 		{
 			name: "Chart subscription with matching qualifier",
@@ -307,9 +307,9 @@ func TestShouldRefresh(t *testing.T) {
 					},
 				},
 			},
-			repoURL:   "example.com/charts",
-			qualifier: "v1.0.0",
-			expect:    true,
+			repoURL:    "example.com/charts",
+			qualifiers: []string{"v1.0.0"},
+			expect:     true,
 		},
 		{
 			name: "Chart subscription with non-matching qualifier",
@@ -323,20 +323,20 @@ func TestShouldRefresh(t *testing.T) {
 					},
 				},
 			},
-			repoURL:   "example.com/charts",
-			qualifier: "1.0.0",
-			expect:    false,
+			repoURL:    "example.com/charts",
+			qualifiers: []string{"1.0.0"},
+			expect:     false,
 		},
 		{
-			name:      "No subscriptions",
-			wh:        kargoapi.Warehouse{},
-			qualifier: "main",
-			expect:    false,
+			name:       "No subscriptions",
+			wh:         kargoapi.Warehouse{},
+			qualifiers: []string{"main"},
+			expect:     false,
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result, err := shouldRefresh(tc.wh, tc.repoURL, tc.qualifier)
+			result, err := shouldRefresh(tc.wh, tc.repoURL, tc.qualifiers)
 			require.NoError(t, err)
 			require.Equal(t, tc.expect, result)
 		})

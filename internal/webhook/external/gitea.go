@@ -145,6 +145,6 @@ func (g *giteaWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 			"ref", payload.Ref,
 		)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		refreshWarehouses(ctx, w, g.client, g.project, payload.Ref, repoURL)
+		refreshWarehouses(ctx, w, g.client, g.project, []string{payload.Ref}, repoURL)
 	})
 }

@@ -102,18 +102,12 @@ func (q *quayWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 			image.NormalizeURL(payload.DockerURL),
 			helm.NormalizeChartRepositoryURL(payload.DockerURL),
 		}
-		logger = logger.WithValues("repoURLs", repoURLs)
 
-		// Quay sends a []UpdatedTags in the payload, if we have only one tag
-		// we can use it as a qualifier. Otherwise, we fallback to an empty qualifier.
-		// This is because dealing with multiple tags leads to selector
-		// ambiguity; making it possible to result in false negatives.
-		var qualifier string
-		if len(payload.UpdatedTags) == 1 {
-			qualifier = payload.UpdatedTags[0]
-			logger = logger.WithValues("tag", qualifier)
-		}
+		logger = logger.WithValues(
+			"repoURLs", repoURLs,
+			"tags", payload.UpdatedTags,
+		)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		refreshWarehouses(ctx, w, q.client, q.project, qualifier, repoURLs...)
+		refreshWarehouses(ctx, w, q.client, q.project, payload.UpdatedTags, repoURLs...)
 	})
 }
