@@ -6,13 +6,13 @@ export const usePromotionHistory = (stages: Stage[]) => {
   return useMemo(() => {
     const history: Record<string, Record<string, Record<string, number[]>>> = {};
 
-    stages.forEach((stage) => {
+    for (const stage of stages) {
       const stageName = stage.metadata?.name || '';
       if (!stageName) return;
 
       stage.status?.freightHistory?.forEach((freightGroup, freightIndex) => {
-        Object.values(freightGroup.items || {}).forEach((freightRef) => {
-          freightRef.images?.forEach((image) => {
+        for (const freightRef of Object.values(freightGroup.items)) {
+          for (const image of freightRef.images) {
             const repoURL = image.repoURL || '';
             const tag = image.tag || '';
 
@@ -27,10 +27,10 @@ export const usePromotionHistory = (stages: Stage[]) => {
             }
 
             history[repoURL][tag][stageName].push(freightIndex + 1);
-          });
-        });
+          }
+        }
       });
-    });
+    }
 
     return history;
   }, [stages]);

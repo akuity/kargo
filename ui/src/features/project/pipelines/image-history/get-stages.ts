@@ -42,9 +42,9 @@ export const getStagesForImage = (
   const warehousesForImage = findWarehousesForImageRepo(repoURL, warehouses);
   const allReachableStages = new Set<string>();
   for (const warehouseName of warehousesForImage) {
-    findStagesForWarehouse(warehouseName, stages).forEach((stageName) =>
-      allReachableStages.add(stageName)
-    );
+    for (const stageName of findStagesForWarehouse(warehouseName, stages)) {
+      allReachableStages.add(stageName);
+    }
   }
   return allReachableStages;
 };

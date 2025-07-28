@@ -7,23 +7,23 @@ const filterStagesForImage = (
   stagesForImage: Set<string>
 ): Record<string, number> => {
   const filteredStages: Record<string, number> = {};
-  Object.entries(imageStageMap.stages || {}).forEach(([stageName, order]) => {
+  for (const [stageName, order] of Object.entries(imageStageMap.stages || {})) {
     if (stagesForImage.has(stageName)) {
       filteredStages[stageName] = order;
     }
-  });
+  }
   return filteredStages;
 };
 
 export const processTagMap = (tagMap: TagMap, stagesForImage: Set<string>): ProcessedTagMap => {
   const filteredTagMap: ProcessedTagMap = { tags: {} };
 
-  Object.entries(tagMap.tags || {}).forEach(([tag, imageStageMap]) => {
+  for (const [tag, imageStageMap] of Object.entries(tagMap.tags || {})) {
     const filteredStages = filterStagesForImage(imageStageMap, stagesForImage);
     if (Object.keys(filteredStages).length > 0) {
       filteredTagMap.tags[tag] = { ...imageStageMap, stages: filteredStages };
     }
-  });
+  }
 
   return filteredTagMap;
 };
