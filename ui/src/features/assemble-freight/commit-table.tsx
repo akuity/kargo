@@ -19,11 +19,11 @@ export const CommitTable = ({
 }) => {
   const [page, setPage] = useState(1);
 
+  const doesAnyOfCommitsHaveTag = useMemo(() => commits?.find((c) => !!c?.tag), [commits]);
+
   if (!show) {
     return null;
   }
-
-  const doesAnyOfCommitsHaveTag = useMemo(() => commits?.find((c) => !!c?.tag), [commits]);
 
   return (
     <Table
