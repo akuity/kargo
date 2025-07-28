@@ -77,6 +77,7 @@ export const Images = memo<ImagesProps>(({ hide, images, project, stages, wareho
         title: 'Tag',
         key: 'tag',
         width: 120,
+        fixed: 'left',
         render: (_: unknown, record: { tag: string }) => (
           <Tooltip title={`Image Tag: ${record.tag}`}>
             <Typography.Text className='font-mono text-xs font-semibold truncate'>
