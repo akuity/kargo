@@ -131,7 +131,9 @@ func TestAzureHandler(t *testing.T) {
 				req := httptest.NewRequest(
 					http.MethodPost,
 					testURL,
-					newAzurePayload(acrPushEvent, ociImageIndexMediaType),
+					// Real world testing shows this media type is what the payload will
+					// contain when an image has been pushed to ACR.
+					newAzurePayload(acrPushEvent, dockerManifestMediaType),
 				)
 				req.Header.Set("User-Agent", acrUserAgentPrefix)
 				return req
@@ -170,7 +172,9 @@ func TestAzureHandler(t *testing.T) {
 				req := httptest.NewRequest(
 					http.MethodPost,
 					testURL,
-					newAzurePayload(acrPushEvent, helmChartMediaType),
+					// Real world testing shows this media type is what the payload will
+					// contain when a Helm chart is pushed to ACR.
+					newAzurePayload(acrPushEvent, ociImageManifestMediaType),
 				)
 				req.Header.Set("User-Agent", acrUserAgentPrefix)
 				return req
@@ -209,7 +213,7 @@ func TestAzureHandler(t *testing.T) {
 				req := httptest.NewRequest(
 					http.MethodPost,
 					testURL,
-					newAzurePayload(azureDevOpsPushEvent, helmChartMediaType),
+					newAzurePayload(azureDevOpsPushEvent, ""),
 				)
 				req.Header.Set("User-Agent", azureDevOpsUserAgentPrefix)
 				return req

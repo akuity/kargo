@@ -133,7 +133,8 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			return
 		}
 
-		var repoURL string
+		var repoURLs []string
+		var mediaType string
 
 		switch e := event.(type) {
 		case *gh.PackageEvent:
@@ -168,8 +169,8 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			}
 			manifest := pkg.GetPackageVersion().GetContainerMetadata().GetManifest()
 			if cfg, ok := manifest["config"].(map[string]any); ok {
-				if mediaType, ok := cfg["media_type"].(string); ok {
-					repoURL = normalizeOCIRepoURL(ref.Context().Name(), mediaType)
+				if mediaType, ok = cfg["media_type"].(string); ok {
+					repoURLs = getNormalizedImageRepoURLs(ref.Context().Name(), mediaType)
 				}
 			}
 
@@ -188,12 +189,15 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			// https://. By refreshing Warehouses using a normalized representation of
 			// that URL, we will miss any Warehouses that are subscribed to the same
 			// repository using a different URL format.
-			repoURL = git.NormalizeURL(e.GetRepo().GetCloneURL())
+			repoURLs = []string{git.NormalizeURL(e.GetRepo().GetCloneURL())}
 		}
 
-		logger = logger.WithValues("repoURL", repoURL)
+		logger = logger.WithValues(
+			"repoURLs", repoURLs,
+			"mediaType", mediaType,
+		)
 		ctx = logging.ContextWithLogger(ctx, logger)
 
-		refreshWarehouses(ctx, w, g.client, g.project, repoURL)
+		refreshWarehouses(ctx, w, g.client, g.project, repoURLs...)
 	})
 }

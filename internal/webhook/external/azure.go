@@ -125,14 +125,16 @@ func (a *azureWebhookReceiver) handleACREvent(
 
 	switch event.Action {
 	case acrPushEvent:
-		repoURL := normalizeOCIRepoURL(
+		repoURLs := getNormalizedImageRepoURLs(
 			fmt.Sprintf("%s/%s", event.Request.Host, event.Target.Repository),
 			event.Target.MediaType,
 		)
-		logger := logging.LoggerFromContext(ctx)
-		logger = logger.WithValues("repoURL", repoURL)
+		logger := logging.LoggerFromContext(ctx).WithValues(
+			"repoURLs", repoURLs,
+			"mediaType", event.Target.MediaType,
+		)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		refreshWarehouses(ctx, w, a.client, a.project, repoURL)
+		refreshWarehouses(ctx, w, a.client, a.project, repoURLs...)
 	case acrPingEvent:
 		xhttp.WriteResponseJSON(
 			w,
