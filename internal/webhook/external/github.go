@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
-	"github.com/google/go-containerregistry/pkg/name"
-	gh "github.com/google/go-github/v71/github"
+	gh "github.com/google/go-github/v74/github"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -23,6 +23,9 @@ const (
 	githubEventTypePackage = "package"
 	githubEventTypePing    = "ping"
 	githubEventTypePush    = "push"
+	// githubEventTypeRegistryPackage is similar to package event
+	// but is only valid for GitHub Apps
+	githubEventTypeRegistryPackage = "registry_package"
 
 	ghcrPackageTypeContainer = "CONTAINER"
 	ghcrPackageTypeDocker    = "docker"
@@ -92,7 +95,10 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 
 		eventType := r.Header.Get(gh.EventTypeHeader)
 		switch eventType {
-		case githubEventTypePackage, githubEventTypePing, githubEventTypePush:
+		case githubEventTypePackage,
+			githubEventTypePing,
+			githubEventTypePush,
+			githubEventTypeRegistryPackage:
 		default:
 			xhttp.WriteErrorJSON(
 				w,
@@ -161,20 +167,16 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 				xhttp.WriteResponseJSON(w, http.StatusOK, nil)
 				return
 			}
-			var ref name.Reference
-			if ref, err = name.ParseReference(
-				pkg.GetPackageVersion().GetPackageURL(),
-			); err != nil {
-				xhttp.WriteErrorJSON(w, err)
-				return
-			}
 			v := pkg.GetPackageVersion()
 			manifest := v.GetContainerMetadata().GetManifest()
 			// Determine if the package is a Helm chart
 			if cfg, ok := manifest["config"].(map[string]any); ok {
 				mediaType, _ = cfg["media_type"].(string)
 			}
-			repoURLs = getNormalizedImageRepoURLs(ref.Context().Name(), mediaType)
+			repoURLs = getNormalizedImageRepoURLs(
+				pkg.GetPackageVersion().GetPackageURL(),
+				mediaType,
+			)
 			tag := v.GetContainerMetadata().GetTag().GetName()
 			qualifiers = []string{tag}
 			logger = logger.WithValues("tag", tag)
@@ -197,6 +199,45 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			// that URL, we will miss any Warehouses that are subscribed to the same
 			// repository using a different URL format.
 			repoURLs = []string{git.NormalizeURL(e.GetRepo().GetCloneURL())}
+
+		case *gh.RegistryPackageEvent:
+			switch e.GetAction() {
+			// These are the only actions that should refresh Warehouses.
+			case "published", "updated":
+			default:
+				xhttp.WriteResponseJSON(w, http.StatusOK, nil)
+				return
+			}
+			pkg := e.GetRegistryPackage()
+			if pkg == nil || pkg.GetPackageVersion() == nil {
+				xhttp.WriteErrorJSON(
+					w,
+					xhttp.Error(errors.New("invalid request body"), http.StatusBadRequest),
+				)
+				return
+			}
+			switch pkg.GetPackageType() {
+			// These are the only types of packages we care about.
+			case ghcrPackageTypeContainer, ghcrPackageTypeDocker:
+			default:
+				xhttp.WriteResponseJSON(w, http.StatusOK, nil)
+				return
+			}
+			pkgURL := pkg.GetPackageVersion().GetPackageURL()
+			// GitHub sometimes sends package URLs with a trailing colon
+			// and no tag (e.g., "ghcr.io/user/image:"). Such strings are
+			// not valid OCI image references and will result in empty
+			// repo URLs. We trim the trailing colon to avoid parsing errors
+			// and optionally allow fallback handling (e.g., ":latest").
+			if strings.HasSuffix(pkgURL, ":") {
+				pkgURL = strings.TrimSuffix(pkgURL, ":") + ":latest"
+			}
+			manifest := pkg.GetPackageVersion().GetContainerMetadata().GetManifest()
+			if cfg, ok := manifest["config"].(map[string]any); ok {
+				if mediaType, ok = cfg["media_type"].(string); ok {
+					repoURLs = getNormalizedImageRepoURLs(pkgURL, mediaType)
+				}
+			}
 		}
 
 		logger = logger.WithValues(

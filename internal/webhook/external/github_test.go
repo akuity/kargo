@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	gh "github.com/google/go-github/v71/github"
+	gh "github.com/google/go-github/v74/github"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -64,6 +64,44 @@ func TestGithubHandler(t *testing.T) {
 					Tag: &gh.PackageEventContainerMetadataTag{
 						Name: gh.Ptr("v1.0.0"),
 					},
+					Manifest: map[string]any{
+						"config": map[string]any{
+							// Real world testing shows this media type is what the payload
+							// will contain when an image has been pushed to GHCR.
+							"media_type": helmChartConfigBlobMediaType,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	var validRegistryPackageEventImage = &gh.RegistryPackageEvent{
+		Action: gh.Ptr("published"),
+		RegistryPackage: &gh.Package{
+			PackageType: gh.Ptr(ghcrPackageTypeContainer),
+			PackageVersion: &gh.PackageVersion{
+				PackageURL: gh.Ptr("ghcr.io/example/repo:latest"),
+				ContainerMetadata: &gh.PackageEventContainerMetadata{
+					Manifest: map[string]any{
+						"config": map[string]any{
+							// Real world testing shows this media type is what the payload
+							// will contain when an image has been pushed to GHCR.
+							"media_type": dockerImageConfigBlobMediaType,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	var validRegistryPackageEventChart = &gh.RegistryPackageEvent{
+		Action: gh.Ptr("published"),
+		RegistryPackage: &gh.Package{
+			PackageType: gh.Ptr(ghcrPackageTypeContainer),
+			PackageVersion: &gh.PackageVersion{
+				PackageURL: gh.Ptr("ghcr.io/example/repo:latest"),
+				ContainerMetadata: &gh.PackageEventContainerMetadata{
 					Manifest: map[string]any{
 						"config": map[string]any{
 							// Real world testing shows this media type is what the payload
@@ -331,6 +369,83 @@ func TestGithubHandler(t *testing.T) {
 				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
 			},
 		},
+		{
+			name:       "success -- registry_package event - image",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Image: &kargoapi.ImageSubscription{RepoURL: "ghcr.io/example/repo"},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(validRegistryPackageEventImage)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set(gh.EventTypeHeader, "registry_package")
+				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBytes))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "success -- registry_package event - chart",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Chart: &kargoapi.ChartSubscription{
+								RepoURL: "ghcr.io/example/repo",
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(validRegistryPackageEventChart)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set(gh.EventTypeHeader, "registry_package")
+				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBytes))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+
 		{
 			name:       "success -- push event",
 			secretData: testSecretData,

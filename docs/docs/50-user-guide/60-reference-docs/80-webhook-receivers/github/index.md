@@ -327,7 +327,7 @@ receiver of relevant events from any repository into which it's been installed:
 
         If you would like to receive events when container images or Helm charts
         are pushed to associated GHCR repositories, ensure
-        <Hlt>Packages</Hlt> is also selected.
+        <Hlt>Registry package</Hlt> is also selected.
 
         :::note
         The events available for selection in this section of the form are
