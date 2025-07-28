@@ -208,7 +208,7 @@ func TestRefreshWarehouses(t *testing.T) {
 				w,
 				testCase.client,
 				testCase.project,
-				// qualifier match based testing is tested exhaustively in
+				// qualifier match based testing is tested exhaustively in TestShouldRefresh
 				[]string{},
 				testRepoURL,
 			)
