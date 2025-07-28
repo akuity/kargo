@@ -18,6 +18,156 @@ import (
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
+func Test_untarConfig_convert(t *testing.T) {
+	tests := []validationTestCase{
+		{
+			name:   "inPath not specified",
+			config: promotion.Config{},
+			expectedProblems: []string{
+				"(root): inPath is required",
+			},
+		},
+		{
+			name: "inPath is empty string",
+			config: promotion.Config{
+				"inPath": "",
+			},
+			expectedProblems: []string{
+				"inPath: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "outPath not specified",
+			config: promotion.Config{
+				"inPath": "/path/to/archive.tar.gz",
+			},
+			expectedProblems: []string{
+				"(root): outPath is required",
+			},
+		},
+		{
+			name: "outPath is empty string",
+			config: promotion.Config{
+				"inPath":  "/path/to/archive.tar.gz",
+				"outPath": "",
+			},
+			expectedProblems: []string{
+				"outPath: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "both required fields missing",
+			config: promotion.Config{
+				"stripComponents": 1,
+			},
+			expectedProblems: []string{
+				"(root): inPath is required",
+				"(root): outPath is required",
+			},
+		},
+		{
+			name: "stripComponents is negative",
+			config: promotion.Config{
+				"inPath":          "/path/to/archive.tar.gz",
+				"outPath":         "/destination/path",
+				"stripComponents": -1,
+			},
+			expectedProblems: []string{
+				"stripComponents: Must be greater than or equal to 0",
+			},
+		},
+		{
+			name: "ignore is empty string",
+			config: promotion.Config{
+				"inPath":  "/path/to/archive.tar.gz",
+				"outPath": "/destination/path",
+				"ignore":  "",
+			},
+			expectedProblems: []string{
+				"ignore: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "valid minimal config",
+			config: promotion.Config{
+				"inPath":  "/path/to/archive.tar.gz",
+				"outPath": "/destination/path",
+			},
+		},
+		{
+			name: "valid config with stripComponents=0",
+			config: promotion.Config{
+				"inPath":          "/path/to/archive.tar.gz",
+				"outPath":         "/destination/path",
+				"stripComponents": 0,
+			},
+		},
+		{
+			name: "valid config with stripComponents=1",
+			config: promotion.Config{
+				"inPath":          "/path/to/archive.tar.gz",
+				"outPath":         "/destination/path",
+				"stripComponents": 1,
+			},
+		},
+		{
+			name: "valid config with stripComponents=3",
+			config: promotion.Config{
+				"inPath":          "/path/to/archive.tar.gz",
+				"outPath":         "/destination/path",
+				"stripComponents": 3,
+			},
+		},
+		{
+			name: "valid config with ignore patterns",
+			config: promotion.Config{
+				"inPath":  "/path/to/archive.tar.gz",
+				"outPath": "/destination/path",
+				"ignore":  "*.log\n*.tmp\n__pycache__/",
+			},
+		},
+		{
+			name: "valid config with stripComponents and ignore",
+			config: promotion.Config{
+				"inPath":          "/path/to/archive.tar.gz",
+				"outPath":         "/destination/path",
+				"stripComponents": 2,
+				"ignore":          "node_modules/\n.git/\n*.log",
+			},
+		},
+		{
+			name: "valid kitchen sink",
+			config: promotion.Config{
+				"inPath":          "/path/to/source-code.tar.gz",
+				"outPath":         "/workspace/extracted",
+				"stripComponents": 1,
+				"ignore": `# Ignore build artifacts
+build/
+dist/
+target/
+
+# Ignore logs
+*.log
+*.tmp
+
+# Ignore version control
+.git/
+.svn/
+
+# Ignore dependencies
+node_modules/
+vendor/`,
+			},
+		},
+	}
+
+	r := newTarExtractor()
+	runner, ok := r.(*tarExtractor)
+	require.True(t, ok)
+
+	runValidationTests(t, runner.convert, tests)
+}
+
 func Test_tarExtractor_run(t *testing.T) {
 	tests := []struct {
 		name       string
