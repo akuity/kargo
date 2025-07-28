@@ -22,11 +22,7 @@ import (
 )
 
 func Test_kustomizeImageSetter_convert(t *testing.T) {
-	testCases := []struct {
-		name             string
-		config           promotion.Config
-		expectedProblems []string
-	}{
+	tests := []validationTestCase{
 		{
 			name:   "path is not specified",
 			config: promotion.Config{},
@@ -132,18 +128,7 @@ func Test_kustomizeImageSetter_convert(t *testing.T) {
 	runner, ok := r.(*kustomizeImageSetter)
 	require.True(t, ok)
 
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			_, err := runner.convert(testCase.config)
-			if len(testCase.expectedProblems) == 0 {
-				require.NoError(t, err)
-			} else {
-				for _, problem := range testCase.expectedProblems {
-					require.ErrorContains(t, err, problem)
-				}
-			}
-		})
-	}
+	runValidationTests(t, runner.convert, tests)
 }
 
 func Test_kustomizeImageSetter_run(t *testing.T) {
