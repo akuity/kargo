@@ -1007,7 +1007,7 @@ func TestShouldDiscoverArtifacts(t *testing.T) {
 	}
 }
 
-func TestReconcile_ShardMatching(t *testing.T) {
+func TestReconcile(t *testing.T) {
 	testScheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(testScheme))
 
