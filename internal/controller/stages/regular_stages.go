@@ -323,7 +323,7 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	if stage.GetLabels()[kargoapi.LabelKeyShard] != r.cfg.ShardName {
-		logger.Debug("ignoring Stage because it is not in scope")
+		logger.Debug("ignoring Stage because it is is not assigned to this shard")
 		return ctrl.Result{}, nil
 	}
 
