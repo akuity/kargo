@@ -39,6 +39,7 @@ import (
 
 // ReconcilerConfig represents configuration for the promotion reconciler.
 type ReconcilerConfig struct {
+	IsDefaultController     bool   `envconfig:"IS_DEFAULT_CONTROLLER"`
 	ShardName               string `envconfig:"SHARD_NAME"`
 	APIServerBaseURL        string `envconfig:"API_SERVER_BASE_URL"`
 	MaxConcurrentReconciles int    `envconfig:"MAX_CONCURRENT_PROMOTION_RECONCILES" default:"4"`
@@ -118,6 +119,10 @@ func SetupReconcilerWithManager(
 
 	c, err := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&kargoapi.Promotion{}).
+		WithEventFilter(controller.ResponsibleFor[client.Object]{
+			IsDefaultController: cfg.IsDefaultController,
+			ShardName:           cfg.ShardName,
+		}).
 		WithEventFilter(intpredicate.IgnoreDelete[client.Object]{}).
 		WithEventFilter(predicate.Or(
 			predicate.GenerationChangedPredicate{},
