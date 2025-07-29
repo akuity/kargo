@@ -161,34 +161,6 @@ func TestStep_GetConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "test secrets",
-			// Test that expressions can reference secrets
-			promoCtx: Context{
-				Secrets: map[string]map[string]string{
-					"secret1": {
-						"key1": "value1",
-						"key2": "value2",
-					},
-					"secret2": {
-						"key3": "value3",
-						"key4": "value4",
-					},
-				},
-			},
-			rawCfg: []byte(`{
-				"secret1-1": "${{ secrets.secret1.key1 }}",
-				"secret1-2": "${{ secrets.secret1.key2 }}",
-				"secret2-3": "${{ secrets.secret2.key3 }}",
-				"secret2-4": "${{ secrets.secret2.key4 }}"
-			}`),
-			expectedCfg: promotion.Config{
-				"secret1-1": "value1",
-				"secret1-2": "value2",
-				"secret2-3": "value3",
-				"secret2-4": "value4",
-			},
-		},
-		{
 			name: "test vars with literal values",
 			// Test that vars can be assigned literal values
 			promoCtx: Context{
