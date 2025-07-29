@@ -143,7 +143,7 @@ func (r *reconciler) Reconcile(
 	}
 
 	if warehouse.GetLabels()[kargoapi.LabelKeyShard] != r.cfg.ShardName {
-		logger.Debug("ignoring Warehouse because it is not in scope")
+		logger.Debug("ignoring Warehouse because it is is not assigned to this shard")
 		return ctrl.Result{}, nil
 	}
 

@@ -201,6 +201,11 @@ func (r *ControlFlowStageReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	if stage.GetLabels()[kargoapi.LabelKeyShard] != r.cfg.ShardName {
+		logger.Debug("ignoring Control Flow Stage because it is is not assigned to this shard")
+		return ctrl.Result{}, nil
+	}
+
 	// Safety check: do not reconcile Stages that are not control flow Stages.
 	if !stage.IsControlFlow() {
 		return ctrl.Result{}, nil
