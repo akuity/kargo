@@ -96,6 +96,8 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 				},
 				Spec: kargoapi.StageSpec{
 					Shard: "correct-shard",
+					// Specify some minimal promotion process to get this Stage past the
+					// logic that verifies this is not a control flow Stage.
 					PromotionTemplate: &kargoapi.PromotionTemplate{
 						Spec: kargoapi.PromotionTemplateSpec{
 							Steps: []kargoapi.PromotionStep{{}, {}},
