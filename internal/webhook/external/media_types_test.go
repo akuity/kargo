@@ -11,70 +11,113 @@ import (
 
 func TestGetNormalizedImageRepoURLs(t *testing.T) {
 	testCases := []struct {
-		name      string
-		repoURL   string
-		mediaType string
-		expected  []string
+		name       string
+		repoURL    string
+		mediaType  string
+		assertions func(t *testing.T, repoURLs []string)
 	}{
 		{
 			name:      "v2 manifest list",
 			repoURL:   "example/repo",
 			mediaType: dockerManifestListMediaType,
-			expected:  []string{image.NormalizeURL("example/repo")},
+			assertions: func(t *testing.T, repoURLs []string) {
+				require.Equal(t, []string{image.NormalizeURL("example/repo")}, repoURLs)
+			},
 		},
 		{
 			name:      "OCI manifest index",
 			repoURL:   "ghcr.io/example/repo",
 			mediaType: ociImageIndexMediaType,
-			expected:  []string{image.NormalizeURL("ghcr.io/example/repo")},
+			assertions: func(t *testing.T, repoURLs []string) {
+				require.Equal(
+					t,
+					[]string{image.NormalizeURL("ghcr.io/example/repo")},
+					repoURLs,
+				)
+			},
 		},
 		{
 			name:      "v2 manifest",
 			repoURL:   "example/repo",
 			mediaType: dockerManifestMediaType,
-			expected:  []string{image.NormalizeURL("example/repo")},
+			assertions: func(t *testing.T, repoURLs []string) {
+				require.Equal(t, []string{image.NormalizeURL("example/repo")}, repoURLs)
+			},
 		},
 		{
 			name:      "OCI manifest",
 			repoURL:   "ghcr.io/example/repo",
 			mediaType: ociImageManifestMediaType,
-			expected: []string{
-				image.NormalizeURL("ghcr.io/example/repo"),
-				helm.NormalizeChartRepositoryURL("ghcr.io/example/repo"),
+			assertions: func(t *testing.T, repoURLs []string) {
+				// Current image URL and chart URL normalization logic yield the same
+				// result for this input, so we expect that getNormalizedImageRepoURLs()
+				// will have compacted the results.
+				require.Len(t, repoURLs, 1)
+				require.Equal(t, image.NormalizeURL("ghcr.io/example/repo"), repoURLs[0])
+				require.Equal(
+					t,
+					helm.NormalizeChartRepositoryURL("ghcr.io/example/repo"),
+					repoURLs[0],
+				)
 			},
 		},
 		{
 			name:      "v2 image config blob",
 			repoURL:   "example/repo",
 			mediaType: dockerImageConfigBlobMediaType,
-			expected:  []string{image.NormalizeURL("example/repo")},
+			assertions: func(t *testing.T, repoURLs []string) {
+				require.Equal(t, []string{image.NormalizeURL("example/repo")}, repoURLs)
+			},
 		},
 		{
 			name:      "OCI image config blob",
 			repoURL:   "ghcr.io/example/repo",
 			mediaType: ociImageConfigBlobMediaType,
-			expected:  []string{image.NormalizeURL("ghcr.io/example/repo")},
+			assertions: func(t *testing.T, repoURLs []string) {
+				require.Equal(
+					t,
+					[]string{image.NormalizeURL("ghcr.io/example/repo")},
+					repoURLs,
+				)
+			},
 		},
 		{
 			name:      "Helm chart config blob",
 			repoURL:   "ghcr.io/example/repo",
 			mediaType: helmChartConfigBlobMediaType,
-			expected:  []string{helm.NormalizeChartRepositoryURL("ghcr.io/example/repo")},
+			assertions: func(t *testing.T, repoURLs []string) {
+				require.Equal(
+					t,
+					[]string{helm.NormalizeChartRepositoryURL("ghcr.io/example/repo")},
+					repoURLs,
+				)
+			},
 		},
 		{
 			name:      "something completely unexpected",
 			repoURL:   "ghcr.io/example/repo",
 			mediaType: "nonsense",
-			expected: []string{
-				image.NormalizeURL("ghcr.io/example/repo"),
-				helm.NormalizeChartRepositoryURL("ghcr.io/example/repo"),
+			assertions: func(t *testing.T, repoURLs []string) {
+				// Current image URL and chart URL normalization logic yield the same
+				// result for this input, so we expect that getNormalizedImageRepoURLs()
+				// will have compacted the results.
+				require.Len(t, repoURLs, 1)
+				require.Equal(
+					t,
+					image.NormalizeURL("ghcr.io/example/repo"),
+					repoURLs[0],
+				)
+				require.Equal(
+					t,
+					helm.NormalizeChartRepositoryURL("ghcr.io/example/repo"),
+					repoURLs[0],
+				)
 			},
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			urls := getNormalizedImageRepoURLs(tc.repoURL, tc.mediaType)
-			require.Equal(t, tc.expected, urls)
+			tc.assertions(t, getNormalizedImageRepoURLs(tc.repoURL, tc.mediaType))
 		})
 	}
 }

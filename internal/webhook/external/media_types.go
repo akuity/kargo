@@ -87,8 +87,12 @@ func getNormalizedImageRepoURLs(repoURL, mediaType string) []string {
 	if slices.Contains(probableContainerImageMediaTypes, mediaType) {
 		return []string{image.NormalizeURL(repoURL)}
 	}
-	return []string{
+	// The normalization process for image and chart URLs may change from time to
+	// time. At times, the URL normalized as if it were an image URL and the URL
+	// normalized as if it were a chart URL may turn out to be identical, in which
+	// case, compacting the slice is a cheap, but worthwhile optimization.
+	return slices.Compact([]string{
 		image.NormalizeURL(repoURL),
 		helm.NormalizeChartRepositoryURL(repoURL),
-	}
+	})
 }
