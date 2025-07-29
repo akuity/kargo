@@ -91,7 +91,7 @@ func (g *gitlabWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 
 		eventType := gl.HookEventType(r)
 		switch eventType {
-		case gl.EventTypePush:
+		case gl.EventTypePush, gl.EventTypeTagPush:
 		default:
 			xhttp.WriteErrorJSON(
 				w,
@@ -124,6 +124,17 @@ func (g *gitlabWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			logger = logger.WithValues(
 				"repoURL", repoURL,
 				"ref", e.Ref,
+			)
+			ctx = logging.ContextWithLogger(ctx, logger)
+			refreshWarehouses(ctx, w, g.client, g.project, []string{e.Ref}, repoURL)
+		case *gl.TagEvent:
+			var repoURL string
+			if e.Repository != nil {
+				repoURL = git.NormalizeURL(e.Repository.GitHTTPURL)
+			}
+			logger = logger.WithValues(
+				"repoURL", repoURL,
+				"tag", e.Ref,
 			)
 			ctx = logging.ContextWithLogger(ctx, logger)
 			refreshWarehouses(ctx, w, g.client, g.project, []string{e.Ref}, repoURL)

@@ -25,6 +25,14 @@ const gitlabPushEventRequestBody = `
 	}
 }`
 
+const gitlabTagPushEventRequestBody = `
+{
+	"ref": "refs/tags/v1.0.0",
+	"repository":{
+		"git_http_url": "https://gitlab.com/example/repo"
+	}
+}`
+
 func TestGitLabHandler(t *testing.T) {
 	const testURL = "https://webhooks.kargo.example.com/nonsense"
 
@@ -99,7 +107,7 @@ func TestGitLabHandler(t *testing.T) {
 			},
 		},
 		{
-			name:       "success",
+			name:       "success - push event",
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
@@ -131,6 +139,48 @@ func TestGitLabHandler(t *testing.T) {
 				)
 				req.Header.Set(gitlabTokenHeader, testToken)
 				req.Header.Set(gitlabEventHeader, "Push Hook")
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(
+					t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String(),
+				)
+			},
+		},
+		{
+			name:       "success - tag event",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								CommitSelectionStrategy: kargoapi.CommitSelectionStrategySemVer,
+								SemverConstraint:        "^1.0.0",
+								RepoURL:                 "https://gitlab.com/example/repo",
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBuf := bytes.NewBuffer([]byte(gitlabTagPushEventRequestBody))
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bodyBuf,
+				)
+				req.Header.Set(gitlabTokenHeader, testToken)
+				req.Header.Set(gitlabEventHeader, "Tag Push Hook")
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
