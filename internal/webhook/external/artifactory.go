@@ -182,10 +182,7 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 			)
 			return
 		}
-		logger = logger.WithValues(
-			"repoURL", repoURL,
-			"tag", payload.Data.Tag,
-		)
+		logger = logger.WithValues("repoURL", repoURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
 		refreshWarehouses(ctx, w, a.client, a.project, []string{payload.Data.Tag}, repoURL)
 	})

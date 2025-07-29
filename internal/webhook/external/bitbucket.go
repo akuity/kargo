@@ -122,7 +122,7 @@ func (b *bitbucketWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 			return
 		}
 
-		payload := new(bitBucketPushEvent)
+		payload := bitBucketPushEvent{}
 		if err := json.Unmarshal(requestBody, &payload); err != nil {
 			xhttp.WriteErrorJSON(
 				w,
@@ -148,7 +148,7 @@ func (b *bitbucketWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 		// TODO(krancour): There are very likely some yet-to-be-identified edge
 		// cases where this choice does not hold up.
 		repoURL := payload.Repository.Links.HTML.Href
-		refs := payload.getQualifiers()
+		refs := payload.getRefs()
 		logger = logger.WithValues("repoURL", repoURL, "refs", refs)
 		ctx = logging.ContextWithLogger(ctx, logger)
 		refreshWarehouses(ctx, w, b.client, b.project, refs, repoURL)
@@ -176,7 +176,8 @@ type bitBucketPushEvent struct {
 	} `json:"repository"`
 }
 
-func (b bitBucketPushEvent) getQualifiers() []string {
+// getRefs extracts all references mentioned by the event
+func (b bitBucketPushEvent) getRefs() []string {
 	var qualifiers []string
 	for _, change := range b.Push.Changes {
 		qualifiers = append(qualifiers, change.New.Name)

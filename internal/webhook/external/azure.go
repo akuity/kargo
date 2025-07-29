@@ -185,7 +185,7 @@ func (a *azureWebhookReceiver) handleAzureDevOpsEvent(
 
 	repoURL := git.NormalizeURL(event.Resource.Repository.RemoteURL)
 	logger := logging.LoggerFromContext(ctx)
-	refs := event.getQualifiers()
+	refs := event.getRefs()
 	logger = logger.WithValues(
 		"repoURL", repoURL,
 		"refs", refs,
@@ -232,7 +232,8 @@ type azureDevOpsEvent struct {
 	} `json:"resource"`
 }
 
-func (event azureDevOpsEvent) getQualifiers() []string {
+// getRefs extracts all references mentioned by the event
+func (event azureDevOpsEvent) getRefs() []string {
 	var qualifiers []string
 	for _, refUpdate := range event.Resource.RefUpdates {
 		qualifiers = append(qualifiers, refUpdate.Name)
