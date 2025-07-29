@@ -283,7 +283,7 @@ func (r *RegularStageReconciler) SetupWithManager(
 			ctx,
 			&kargoapi.Stage{},
 			indexer.StagesByAnalysisRunField,
-			indexer.StagesByAnalysisRun(r.cfg.ShardName),
+			indexer.StagesByAnalysisRun(r.cfg.ShardName, r.cfg.IsDefaultController),
 		); err != nil {
 			return fmt.Errorf("error setting up index for Stages by AnalysisRun: %w", err)
 		}
