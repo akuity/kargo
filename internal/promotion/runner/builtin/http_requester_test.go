@@ -263,8 +263,8 @@ func Test_httpRequester_run(t *testing.T) {
 		{
 			name: "success and not failed; non-json body",
 			handler: func(w http.ResponseWriter, _ *http.Request) {
-				// This is JSON, but the content type is not set to application/json
-				_, err := w.Write([]byte(`{"theMeaningOfLife": 42}`))
+				// This is a non-JSON body
+				_, err := w.Write([]byte(`this is just a regular string`))
 				require.NoError(t, err)
 			},
 			cfg: builtin.HTTPConfig{
@@ -585,7 +585,7 @@ func Test_httpRequester_buildExprEnv(t *testing.T) {
 			},
 		},
 		{
-			name: "valid JSON but unexpected type string",
+			name: "JSON content-type but unexpected type string",
 			resp: &http.Response{
 				StatusCode: http.StatusOK,
 				Header:     http.Header{"Content-Type": []string{"application/json"}},
@@ -594,6 +594,23 @@ func Test_httpRequester_buildExprEnv(t *testing.T) {
 			assertions: func(t *testing.T, env map[string]any, err error) {
 				require.Error(t, err)
 				require.ErrorContains(t, err, "unexpected type when unmarshaling")
+			},
+		},
+		{
+			name: "missing content-type but valid JSON body",
+			resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{}, // No Content-Type header
+				Body:       io.NopCloser(strings.NewReader(`{"foo": "bar"}`)),
+			},
+			assertions: func(t *testing.T, env map[string]any, err error) {
+				require.NoError(t, err)
+				bodyAny, ok := env["response"].(map[string]any)["body"]
+				require.True(t, ok)
+
+				body, ok := bodyAny.(map[string]any)
+				require.True(t, ok)
+				require.Equal(t, map[string]any{"foo": "bar"}, body)
 			},
 		},
 	}
