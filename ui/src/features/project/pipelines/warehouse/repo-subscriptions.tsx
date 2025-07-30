@@ -25,7 +25,7 @@ export const RepoSubscriptions = ({ subscriptions }: Props) => {
               column={1}
               style={{ width: '40%', minWidth: 500 }}
             >
-              <Descriptions.Item>
+              <Descriptions.Item label='repo URL'>
                 <Typography.Link
                   href={`${subscription.chart?.repoURL}/${subscription?.chart?.name}`}
                   target='_blank'
@@ -55,7 +55,7 @@ export const RepoSubscriptions = ({ subscriptions }: Props) => {
               column={1}
               style={{ width: '40%', minWidth: 500 }}
             >
-              <Descriptions.Item>
+              <Descriptions.Item label='repo URL'>
                 <Typography.Link href={subscription.git?.repoURL} target='_blank' rel='noreferrer'>
                   {subscription.git?.repoURL}
                 </Typography.Link>
@@ -93,7 +93,7 @@ export const RepoSubscriptions = ({ subscriptions }: Props) => {
               column={1}
               style={{ width: '40%', minWidth: 500 }}
             >
-              <Descriptions.Item>
+              <Descriptions.Item label='repo URL'>
                 <Typography.Link
                   href={urlForImage(subscription.image?.repoURL)}
                   target='_blank'
