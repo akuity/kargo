@@ -13,21 +13,19 @@ import { LoadingState } from '@ui/features/common';
 import { mapToNames } from '@ui/features/common/utils';
 import FreightDetails from '@ui/features/freight/freight-details';
 import WarehouseDetails from '@ui/features/project/pipelines/warehouse/warehouse-details';
-import { projectConfigTransport } from '@ui/features/project/settings/views/project-config/transport';
 import CreateStage from '@ui/features/stage/create-stage';
 import CreateWarehouse from '@ui/features/stage/create-warehouse/create-warehouse';
 import StageDetails from '@ui/features/stage/stage-details';
 import { getColors } from '@ui/features/stage/utils';
 import {
   getProject,
-  getProjectConfig,
   listImages,
   listStages,
   listWarehouses,
   queryFreight
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { FreightList } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { Freight, Project, ProjectConfig } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight, Project } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { ActionContext } from './context/action-context';
 import { DictionaryContext } from './context/dictionary-context';
@@ -38,7 +36,7 @@ import {
 import { FreightTimeline } from './freight/freight-timeline';
 import { Graph } from './graph/graph';
 import { GraphFilters } from './graph-filters';
-import { Images } from './images';
+import { Images } from './image-history/images';
 import { PipelineListView } from './list/list-view';
 import { Promote } from './promotion/promote';
 import { Promotion } from './promotion/promotion';
@@ -61,18 +59,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
 
   const projectQuery = useQuery(getProject, { name });
 
-  const projectConfigQuery = useQuery(
-    getProjectConfig,
-    {
-      project: name
-    },
-    {
-      transport: projectConfigTransport
-    }
-  );
-
   const project = projectQuery.data?.result?.value as Project;
-  const projectConfig = projectConfigQuery.data?.result?.value as ProjectConfig;
 
   const projectName = name;
 
@@ -90,7 +77,6 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
 
   const loading =
     projectQuery.isLoading ||
-    projectConfigQuery.isLoading ||
     getFreightQuery.isLoading ||
     listWarehousesQuery.isLoading ||
     listStagesQuery.isLoading;
@@ -137,9 +123,10 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
 
   const [viewingFreight, setViewingFreight] = useState<Freight | null>(null);
 
-  const freightInStages = useFreightInStage(listStagesQuery.data?.stages || []);
+  const stages = listStagesQuery?.data?.stages || [];
+  const freightInStages = useFreightInStage(stages);
   const freightById = useFreightById(getFreightQuery.data?.groups?.['']?.freight || []);
-  const stageAutoPromotionMap = useStageAutoPromotionMap(project, projectConfig);
+  const stageAutoPromotionMap = useStageAutoPromotionMap(stages);
   const subscribersByStage = useSubscribersByStage(listStagesQuery.data?.stages || []);
   const stageByName = useStageByName(listStagesQuery.data?.stages || []);
   const warehouseDrawer = useGetWarehouse(
@@ -277,11 +264,10 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                   }
                 />
               </Flex>
-
               <div
-                className={classNames('w-[450px] absolute right-2 top-20 z-10', {
-                  hidden: !preferredFilter?.images
-                })}
+                className={`w-[450px] absolute right-2 top-20 z-10 transition-opacity duration-300 ${
+                  preferredFilter?.images ? 'opacity-100' : 'opacity-0'
+                }`}
               >
                 <Images
                   hide={() =>
@@ -293,19 +279,16 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                   images={listImagesQuery.data?.images || {}}
                   project={projectName || ''}
                   stages={listStagesQuery.data?.stages || []}
+                  warehouses={listWarehousesQuery.data?.warehouses || []}
                 />
               </div>
-
               {pipelineView === 'graph' && (
-                <>
-                  <Graph
-                    project={project.metadata?.name || ''}
-                    warehouses={listWarehousesQuery.data?.warehouses || []}
-                    stages={listStagesQuery.data?.stages || []}
-                  />
-                </>
+                <Graph
+                  project={project.metadata?.name || ''}
+                  warehouses={listWarehousesQuery.data?.warehouses || []}
+                  stages={listStagesQuery.data?.stages || []}
+                />
               )}
-
               {pipelineView === 'list' && (
                 <PipelineListView
                   stages={listStagesQuery.data?.stages || []}

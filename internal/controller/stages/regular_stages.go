@@ -2,6 +2,7 @@ package stages
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -418,7 +419,14 @@ func (r *RegularStageReconciler) reconcile(
 		{
 			name: "assessing health",
 			reconcile: func() (kargoapi.StageStatus, error) {
-				return r.assessHealth(ctx, stage), nil
+				status := r.assessHealth(ctx, stage)
+				if status.Health != nil && status.Health.Status == kargoapi.HealthStateUnknown {
+					// If Stage health evaluated to Unknown, we'll treat it as an error so
+					// that Stage health will be re-assessed with a progressive backoff.
+					return status,
+						errors.New("Stage health evaluated to Unknown") // nolint: staticcheck
+				}
+				return status, nil
 			},
 		},
 		{

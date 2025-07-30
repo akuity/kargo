@@ -247,11 +247,6 @@ func Test_gitPROpener_run(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	// Validate backward compatibility with prNumber
-	// TODO: Remove in v1.7.0
-	prNumber, ok := res.Output[stateKeyPRNumber]
-	require.True(t, ok)
-	require.Equal(t, testPRNumber, prNumber)
 
 	// Validate the pr.ID and pr.URL fields
 	prOutput, ok := res.Output["pr"].(map[string]any)

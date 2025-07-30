@@ -21,7 +21,7 @@ const dockerhubWebhookRequestBodyImage = `
 {
 	"push_data": {
 		"tag": "v1.0.0",
-		"media_type": "` + ociImageIndexMediaType + `"
+		"media_type": "` + dockerImageConfigBlobMediaType + `"
 	},
 	"repository": {
 		"repo_name": "example/repo"
@@ -32,7 +32,7 @@ const dockerhubWebhookRequestBodyChart = `
 {
 	"push_data": {
 		"tag": "v1.0.0",
-		"media_type": "application/vnd.cncf.helm.config.v1+json"
+		"media_type": "` + helmChartConfigBlobMediaType + `"
 	},
 	"repository": {
 		"repo_name": "example/repo"

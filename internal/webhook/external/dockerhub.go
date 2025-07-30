@@ -93,15 +93,16 @@ func (d *dockerhubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 			return
 		}
 
-		repoURL := normalizeOCIRepoURL(
+		repoURLs := getNormalizedImageRepoURLs(
 			payload.Repository.RepoName,
 			payload.PushData.MediaType,
 		)
 		logger = logger.WithValues(
-			"repoURL", repoURL,
+			"repoURLs", repoURLs,
 			"tag", payload.PushData.Tag,
+			"mediaType", payload.PushData.MediaType,
 		)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		refreshWarehouses(ctx, w, d.client, d.project, []string{payload.PushData.Tag}, repoURL)
+		refreshWarehouses(ctx, w, d.client, d.project, []string{payload.PushData.Tag}, repoURLs...)
 	})
 }

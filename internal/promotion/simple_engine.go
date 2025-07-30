@@ -8,7 +8,6 @@ import (
 	"regexp"
 
 	gocache "github.com/patrickmn/go-cache"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -72,10 +71,6 @@ func (e *simpleEngine) Promote(
 	}
 	if workDir != promoCtx.WorkDir {
 		defer os.RemoveAll(workDir)
-	}
-
-	if promoCtx.Secrets, err = e.getProjectSecrets(ctx, promoCtx.Project); err != nil {
-		return Result{Status: kargoapi.PromotionPhaseErrored}, err
 	}
 
 	result := e.executeSteps(ctx, promoCtx, steps, workDir)
@@ -512,32 +507,4 @@ func (e *simpleEngine) setupWorkDir(existingDir string) (string, error) {
 		return "", fmt.Errorf("temporary working directory creation failed: %w", err)
 	}
 	return workDir, nil
-}
-
-// getProjectSecrets returns a map of all Secrets in the Project. The returned
-// map is keyed by Secret name and contains a map of Secret data.
-func (e *simpleEngine) getProjectSecrets(
-	ctx context.Context,
-	project string,
-) (map[string]map[string]string, error) {
-	secretList := corev1.SecretList{}
-	if err := e.kargoClient.List(
-		ctx,
-		&secretList,
-		client.InNamespace(project),
-		client.MatchingLabels{
-			kargoapi.LabelKeyCredentialType: kargoapi.LabelValueCredentialTypeGeneric,
-		},
-	); err != nil {
-		return nil, fmt.Errorf("error listing Secrets for Project %q: %w", project, err)
-	}
-
-	secretsMap := make(map[string]map[string]string, len(secretList.Items))
-	for _, secret := range secretList.Items {
-		secretsMap[secret.Name] = make(map[string]string, len(secret.Data))
-		for key, value := range secret.Data {
-			secretsMap[secret.Name][key] = string(value)
-		}
-	}
-	return secretsMap, nil
 }
