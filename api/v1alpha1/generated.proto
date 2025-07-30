@@ -1117,13 +1117,6 @@ message ImageSubscription {
 message Project {
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
-  // Spec describes a Project.
-  //
-  // Deprecated: Create a ProjectConfig resource with the same name as the
-  // Project resource in the Project's namespace. The ProjectConfig resource
-  // can be used to configure the Project.
-  optional ProjectConfigSpec spec = 2;
-
   // Status describes the Project's current status.
   optional ProjectStatus status = 3;
 }
@@ -1147,10 +1140,7 @@ message ProjectConfigList {
   repeated ProjectConfig items = 2;
 }
 
-// ProjectSpec is a deprecated alias for ProjectConfigSpec. It is retained for
-// backwards compatibility.
-//
-// Deprecated: Use ProjectConfigSpec instead.
+// ProjectConfigSpec describes the configuration of a Project.
 message ProjectConfigSpec {
   // PromotionPolicies defines policies governing the promotion of Freight to
   // specific Stages within the Project.
