@@ -56,12 +56,17 @@ func NewAppCredentialProvider() credentials.Provider {
 	return p
 }
 
-func (p *AppCredentialProvider) Supports(credType credentials.Type, _ string, data map[string][]byte) bool {
+func (p *AppCredentialProvider) Supports(
+	credType credentials.Type,
+	_ string,
+	data map[string][]byte,
+) bool {
 	if credType != credentials.TypeGit || len(data) == 0 {
 		return false
 	}
-	return (data[clientIDKey] != nil || data[appIDKey] != nil) &&
-		data[installationIDKey] != nil && data[privateKeyKey] != nil
+
+	return (strings.TrimSpace(string(data[clientIDKey])) != "" || strings.TrimSpace(string(data[appIDKey])) != "") &&
+		strings.TrimSpace(string(data[installationIDKey])) != "" && strings.TrimSpace(string(data[privateKeyKey])) != ""
 }
 
 func (p *AppCredentialProvider) GetCredentials(

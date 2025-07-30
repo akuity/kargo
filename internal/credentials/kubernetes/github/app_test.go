@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"maps"
 	"testing"
 
 	"github.com/patrickmn/go-cache"
@@ -24,21 +25,37 @@ func TestNewAppCredentialProvider(t *testing.T) {
 func TestAppCredentialProvider_Supports(t *testing.T) {
 	p := NewAppCredentialProvider()
 
+	// This is a control. Each test case will tweak a clone of this supported map.
+	supportedDataMap := map[string][]byte{
+		clientIDKey:       []byte("client"),
+		appIDKey:          []byte("123"),
+		installationIDKey: []byte("456"),
+		privateKeyKey:     []byte("private-key"),
+	}
+	require.True(t, p.Supports(credentials.TypeGit, "", supportedDataMap))
+
 	testCases := []struct {
-		name     string
-		credType credentials.Type
-		repoURL  string
-		data     map[string][]byte
-		expected bool
+		name       string
+		credType   credentials.Type
+		repoURL    string
+		getDataMap func() map[string][]byte
+		expected   bool
 	}{
 		{
 			name:     "non-Git credential type",
 			credType: credentials.Type("other"),
 			repoURL:  "https://github.com/akuity/kargo",
-			data: map[string][]byte{
-				clientIDKey:       []byte("foo"),
-				installationIDKey: []byte("456"),
-				privateKeyKey:     []byte("private-key"),
+			getDataMap: func() map[string][]byte {
+				return supportedDataMap
+			},
+			expected: false,
+		},
+		{
+			name:     "nil data map",
+			credType: credentials.TypeGit,
+			repoURL:  "https://github.com/akuity/kargo",
+			getDataMap: func() map[string][]byte {
+				return nil
 			},
 			expected: false,
 		},
@@ -46,16 +63,32 @@ func TestAppCredentialProvider_Supports(t *testing.T) {
 			name:     "empty data map",
 			credType: credentials.TypeGit,
 			repoURL:  "https://github.com/akuity/kargo",
-			data:     map[string][]byte{},
+			getDataMap: func() map[string][]byte {
+				return map[string][]byte{}
+			},
 			expected: false,
 		},
 		{
 			name:     "no client ID or app ID in data map",
 			credType: credentials.TypeGit,
 			repoURL:  "https://github.com/akuity/kargo",
-			data: map[string][]byte{
-				clientIDKey:   []byte("foo"),
-				privateKeyKey: []byte("private-key"),
+			getDataMap: func() map[string][]byte {
+				dm := maps.Clone(supportedDataMap)
+				delete(dm, appIDKey)
+				delete(dm, clientIDKey)
+				return dm
+			},
+			expected: false,
+		},
+		{
+			name:     "client ID and app ID are empty(ish)",
+			credType: credentials.TypeGit,
+			repoURL:  "https://github.com/akuity/kargo",
+			getDataMap: func() map[string][]byte {
+				dm := maps.Clone(supportedDataMap)
+				dm[appIDKey] = []byte(" ")
+				dm[clientIDKey] = []byte(" ")
+				return dm
 			},
 			expected: false,
 		},
@@ -63,9 +96,21 @@ func TestAppCredentialProvider_Supports(t *testing.T) {
 			name:     "no installation ID in data map",
 			credType: credentials.TypeGit,
 			repoURL:  "https://github.com/akuity/kargo",
-			data: map[string][]byte{
-				clientIDKey:   []byte("foo"),
-				privateKeyKey: []byte("private-key"),
+			getDataMap: func() map[string][]byte {
+				dm := maps.Clone(supportedDataMap)
+				delete(dm, installationIDKey)
+				return dm
+			},
+			expected: false,
+		},
+		{
+			name:     "installation ID is empty(ish)",
+			credType: credentials.TypeGit,
+			repoURL:  "https://github.com/akuity/kargo",
+			getDataMap: func() map[string][]byte {
+				dm := maps.Clone(supportedDataMap)
+				dm[installationIDKey] = []byte(" ")
+				return dm
 			},
 			expected: false,
 		},
@@ -73,9 +118,21 @@ func TestAppCredentialProvider_Supports(t *testing.T) {
 			name:     "no private key in data map",
 			credType: credentials.TypeGit,
 			repoURL:  "https://github.com/akuity/kargo",
-			data: map[string][]byte{
-				clientIDKey:       []byte("foo"),
-				installationIDKey: []byte("456"),
+			getDataMap: func() map[string][]byte {
+				dm := maps.Clone(supportedDataMap)
+				delete(dm, privateKeyKey)
+				return dm
+			},
+			expected: false,
+		},
+		{
+			name:     "private key is empty(ish)",
+			credType: credentials.TypeGit,
+			repoURL:  "https://github.com/akuity/kargo",
+			getDataMap: func() map[string][]byte {
+				dm := maps.Clone(supportedDataMap)
+				dm[privateKeyKey] = []byte(" ")
+				return dm
 			},
 			expected: false,
 		},
@@ -83,10 +140,10 @@ func TestAppCredentialProvider_Supports(t *testing.T) {
 			name:     "valid with client ID",
 			credType: credentials.TypeGit,
 			repoURL:  "https://github.com/akuity/kargo",
-			data: map[string][]byte{
-				clientIDKey:       []byte("foo"),
-				installationIDKey: []byte("456"),
-				privateKeyKey:     []byte("private-key"),
+			getDataMap: func() map[string][]byte {
+				dm := maps.Clone(supportedDataMap)
+				delete(dm, appIDKey)
+				return dm
 			},
 			expected: true,
 		},
@@ -94,17 +151,17 @@ func TestAppCredentialProvider_Supports(t *testing.T) {
 			name:     "valid with App ID",
 			credType: credentials.TypeGit,
 			repoURL:  "https://github.com/akuity/kargo",
-			data: map[string][]byte{
-				appIDKey:          []byte("123"),
-				installationIDKey: []byte("456"),
-				privateKeyKey:     []byte("private-key"),
+			getDataMap: func() map[string][]byte {
+				dm := maps.Clone(supportedDataMap)
+				delete(dm, clientIDKey)
+				return dm
 			},
 			expected: true,
 		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			result := p.Supports(tt.credType, tt.repoURL, tt.data)
+			result := p.Supports(tt.credType, tt.repoURL, tt.getDataMap())
 			assert.Equal(t, tt.expected, result)
 		})
 	}
