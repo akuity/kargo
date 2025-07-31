@@ -105,6 +105,8 @@ export const Step = ({
     )
     .map((plugin) => plugin.DeepLinkPlugin?.PromotionStep?.render);
 
+  const shortenStepName = step?.as?.length > 25 ? step.as.slice(0, 25) + '...' : step.as;
+
   return {
     className: classNames('', {
       'border-green-500': progressing,
@@ -123,8 +125,13 @@ export const Step = ({
           {failed && <FontAwesomeIcon icon={faTimes} className='text-red-500' />}
           {skipped && <FontAwesomeIcon icon={faBan} />}
         </Flex>
-        <Flex className={'w-full'} align='center'>
-          <span className='font-semibold text-base '>{meta.spec.identifier}</span>
+        <Flex className={'w-full'} align='center' gap={8}>
+          {!!step?.as && (
+            <Tag className='text-xs w-[200px] text-center py-1' color='blue' title={step.as}>
+              {shortenStepName}
+            </Tag>
+          )}
+          <span className='font-semibold text-sm'>{meta.spec.identifier}</span>
           {filteredUiPlugins.length > 0 && (
             <UiPluginHoles.DeepLinks.PromotionStep className='ml-2'>
               {filteredUiPlugins.map(
@@ -139,11 +146,6 @@ export const Step = ({
                   )
               )}
             </UiPluginHoles.DeepLinks.PromotionStep>
-          )}
-          {!!step?.as && (
-            <Tag className='text-xs ml-auto mr-5' color='blue'>
-              {step.as}
-            </Tag>
           )}
         </Flex>
       </Flex>
