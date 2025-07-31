@@ -43,6 +43,10 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, r.createServiceAccountFn)
 	require.NotNil(t, r.createRoleFn)
 	require.NotNil(t, r.createRoleBindingFn)
+	require.NotNil(t, r.createClusterRoleFn)
+	require.NotNil(t, r.createClusterRoleBindingFn)
+	require.NotNil(t, r.deleteClusterRoleFn)
+	require.NotNil(t, r.deleteClusterRoleBindingFn)
 }
 
 func TestReconciler_Reconcile(t *testing.T) {

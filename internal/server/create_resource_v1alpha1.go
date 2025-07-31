@@ -85,6 +85,13 @@ func (s *server) createResource(
 	// If we get to here, the resource does not already exists, so we can create
 	// it.
 
+	// If the object is a Project, annotate it with information about the user who
+	// created it.
+	//
+	// TODO(krancour): Do we want to do this for a broader variety of resource
+	// types in the future?
+	annotateProjectWithCreator(ctx, obj)
+
 	if err = s.client.Create(ctx, obj); err != nil {
 		return &svcv1alpha1.CreateResourceResult{
 			Result: &svcv1alpha1.CreateResourceResult_Error{
