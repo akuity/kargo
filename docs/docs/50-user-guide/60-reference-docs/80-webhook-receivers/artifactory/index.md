@@ -9,7 +9,8 @@ Artifactory repositories by _refreshing_ all `Warehouse` resources subscribed to
 those repositories.
 
 :::warning
-   We do not respond to events where `domain` is `artifact` and `event_type`  is `deployed`.
+This webhook receiver does not respond to events where `domain` is `artifact`
+and `event_type` is `deployed`.
 :::
 
 :::info
@@ -37,11 +38,6 @@ echo "Encoded secret token: $(echo -n $secret_token | base64)"
 :::
 
 ```yaml
-apiVersion: kargo.akuity.io/v1alpha1
-kind: Project
-metadata:
-  name: kargo-demo
----
 apiVersion: v1
 kind: Secret
 metadata:
@@ -59,10 +55,10 @@ metadata:
   namespace: kargo-demo
 spec:
   webhookReceivers: 
-    - name: artifactory-wh-receiver
-      artifactory:
-        secretRef:
-          name: artifactory-wh-secret
+  - name: artifactory-wh-receiver
+    artifactory:
+      secretRef:
+        name: artifactory-wh-secret
 ```
 
 ## Retrieving the Receiver's URL
@@ -80,62 +76,60 @@ kubectl get projectconfigs kargo-demo \
 
 1. Navigate to 
    `https://<jfrog-instance>.jfrog.io/ui/admin/configuration/webhooks`, where
-   `<jfrog-instance>` has been replaced with na Artifactory instance for which 
+   `<jfrog-instance>` has been replaced with an Artifactory instance for which 
    you are an administrator.
 
 1. Click <Hlt>New Webhook</Hlt>.
 
-   ![Webhooks Dashboard](./img/webhooks.png "Webhooks Dashboard")
+    ![Webhooks Dashboard](./img/webhooks.png "Webhooks Dashboard")
 
 1. Complete the <Hlt>Create new webhook</Hlt> form:
 
-   ![Add Webhook](./img/add-webhook.png "Add Webhook")
+    ![Add Webhook](./img/add-webhook.png "Add Webhook")
 
-   1. Enter a descriptive name in the <Hlt>Name</Hlt> field.
+    1. Enter a descriptive name in the <Hlt>Name</Hlt> field.
 
-   1. Complete the <Hlt>URL</Hlt> field using the URL
-      [for the webhook receiver](#retrieving-the-receivers-url).
-   
-   1. Under <Hlt>Execution Results</Hlt> check <Hlt>Show status of successful 
-   executions in the Troubleshooting tab</Hlt>.
+    1. Complete the <Hlt>URL</Hlt> field using the URL
+       [for the webhook receiver](#retrieving-the-receivers-url).
 
-   :::info
-   Although Artifactory supports sending test/dummy events to the URL,
-   only organically triggered events will show up in the troubleshooting tab.
-   Not test/dummy events. Even if they're successful.
-   :::
+    1. Under <Hlt>Execution Results</Hlt> check
+       <Hlt>Show status of successful executions in the Troubleshooting tab</Hlt>.
 
-   1. Scroll down to <Hlt>Events</Hlt> and select <Hlt>Docker and OCI</Hlt> > 
-   <Hlt>Tag was pushed</Hlt>.
+    :::info
+    Although Artifactory supports sending test events to the URL, such event are
+    _not_ displayed in the troubleshooting tab; only actual events are.
+    :::
 
-   ![Select Trigger](./img/select-trigger.png "Select Trigger")
+    1. Scroll down to <Hlt>Events</Hlt> and select
+       <Hlt>Docker and OCI</Hlt> ⃗ <Hlt>Tag was pushed</Hlt>.
 
-   :::info
-   We support webhooks only from image repos and (OCI) chart repos and we do 
-   not support webhooks from any other kind of repos, including legacy (HTTP/S) 
-   chart repos.
-   :::
+        ![Select Trigger](./img/select-trigger.png "Select Trigger")
 
-   1. Complete the form in the modal dialog that appears:
+    :::info
+    Artifactory supports many different types of registries and repositories.
+    This webhook responds only to events originating from repositories in OCI
+    registries. No other type of repository, including legacy (HTTP/S) Helm
+    chart repositories, is supported.
+    :::
 
-   ![Select Repos](./img/select-repos.png "Select Repos")
+    1. Complete the form in the modal dialog that appears:
 
-      1. Check any boxes corresponding to repositories this applies to.
+       ![Select Repos](./img/select-repos.png "Select Repos")
 
-      1. Click <Hlt>></Hlt> to move selected repositories into the selected window.
+        1. Check any boxes corresponding to repositories this applies to.
 
-      :::info
-      Upon moving repositories to the selected section, the <Hlt>Save</Hlt> will
-      become enabled.
-      :::
+        1. Click <Hlt>></Hlt> to move selected repositories into the selected window.
 
-      ![Repos Selected](./img/repos-selected.png "Repos Selected")
+            Upon moving repositories to the selected section, the
+            <Hlt>Save</Hlt> button will be enabled.
 
-      1. Click <Hlt>Save</Hlt>.
+            ![Repos Selected](./img/repos-selected.png "Repos Selected")
+
+        1. Click <Hlt>Save</Hlt>.
 
 1. Scroll down to <Hlt>Authentication</Hlt>.
 
-   ![Setup Auth](./img/setup-auth.png "Setup Auth")
+    ![Setup Auth](./img/setup-auth.png "Setup Auth")
 
 1. Complete the <Hlt>Secret token</Hlt> field using to the (unencoded) value
    assigned to the `secret-token` key of the `Secret` resource referenced by
@@ -143,13 +137,13 @@ kubectl get projectconfigs kargo-demo \
 
 1. Select <Hlt>Use secret for payload signing</Hlt>.
 
-   :::caution
-   The webhook receiver won't accept unsigned requests.
-   :::
+    :::caution
+    The webhook receiver won't accept unsigned requests.
+    :::
 
 1. Click <Hlt>Save</Hlt>.
 
-    You will then be redirected to the <Hlt>Webhooks Dashboard</Hlt> where the 
-    newly created webhook will now be rendered.
+    You will be redirected to the <Hlt>Webhooks Dashboard</Hlt> where the newly
+    created webhook will appear.
 
     ![Created](./img/created.png "Created")
