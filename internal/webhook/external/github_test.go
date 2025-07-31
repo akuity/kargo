@@ -370,7 +370,7 @@ func TestGithubHandler(t *testing.T) {
 			},
 		},
 		{
-			name:       "success -- registry_package event - image",
+			name:       "success -- registry_package event -- image",
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
@@ -407,7 +407,7 @@ func TestGithubHandler(t *testing.T) {
 			},
 		},
 		{
-			name:       "success -- registry_package event - chart",
+			name:       "success -- registry_package event -- chart",
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
