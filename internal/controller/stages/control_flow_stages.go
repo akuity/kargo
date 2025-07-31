@@ -33,6 +33,7 @@ type ControlFlowStageReconciler struct {
 	cfg           ReconcilerConfig
 	client        client.Client
 	eventRecorder record.EventRecorder
+	labelChecker  controller.ResponsibleFor[kargoapi.Stage]
 }
 
 // NewControlFlowStageReconciler returns a new control flow Stage reconciler.
@@ -43,6 +44,10 @@ func NewControlFlowStageReconciler(
 ) *ControlFlowStageReconciler {
 	return &ControlFlowStageReconciler{
 		cfg: cfg,
+		labelChecker: controller.ResponsibleFor[kargoapi.Stage]{
+			IsDefaultController: cfg.IsDefaultController,
+			ShardName:           cfg.ShardName,
+		},
 	}
 }
 
@@ -205,7 +210,7 @@ func (r *ControlFlowStageReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	if stage.GetLabels()[kargoapi.LabelKeyShard] != r.cfg.ShardName {
+	if !r.labelChecker.AmResponsible(stage) {
 		logger.Debug("ignoring Control Flow Stage because it is is not assigned to this shard")
 		return ctrl.Result{}, nil
 	}

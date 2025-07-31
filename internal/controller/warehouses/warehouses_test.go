@@ -18,6 +18,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/conditions"
+	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -1021,6 +1022,10 @@ func TestReconcile(t *testing.T) {
 			name: "Shard mismatch",
 			reconciler: func() *reconciler {
 				return &reconciler{
+					labelChecker: controller.ResponsibleFor[kargoapi.Warehouse]{
+						ShardName:           "right-shard",
+						IsDefaultController: false,
+					},
 					client: fake.NewClientBuilder().
 						WithScheme(testScheme).
 						WithObjects(
@@ -1055,6 +1060,10 @@ func TestReconcile(t *testing.T) {
 			name: "Shard match",
 			reconciler: func() *reconciler {
 				return &reconciler{
+					labelChecker: controller.ResponsibleFor[kargoapi.Warehouse]{
+						ShardName:           "right-shard",
+						IsDefaultController: false,
+					},
 					client: fake.NewClientBuilder().
 						WithScheme(testScheme).
 						WithObjects(

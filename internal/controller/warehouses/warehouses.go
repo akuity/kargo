@@ -42,6 +42,7 @@ type reconciler struct {
 	client        client.Client
 	credentialsDB credentials.Database
 	cfg           ReconcilerConfig
+	labelChecker  controller.ResponsibleFor[kargoapi.Warehouse]
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -142,7 +143,7 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	if warehouse.GetLabels()[kargoapi.LabelKeyShard] != r.cfg.ShardName {
+	if !r.labelChecker.AmResponsible(warehouse) {
 		logger.Debug("ignoring Warehouse because it is is not assigned to this shard")
 		return ctrl.Result{}, nil
 	}

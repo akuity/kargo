@@ -21,7 +21,7 @@ func (i ResponsibleFor[T]) Create(e event.TypedCreateEvent[T]) bool {
 	if obj == nil {
 		return false
 	}
-	return i.amResponsible(obj)
+	return i.AmResponsible(obj)
 }
 
 // Update implements predicate.Predicate.
@@ -30,7 +30,7 @@ func (i ResponsibleFor[T]) Update(e event.TypedUpdateEvent[T]) bool {
 	if obj == nil {
 		return false
 	}
-	return i.amResponsible(obj)
+	return i.AmResponsible(obj)
 }
 
 // Delete implements predicate.Predicate.
@@ -39,7 +39,7 @@ func (i ResponsibleFor[T]) Delete(e event.TypedDeleteEvent[T]) bool {
 	if obj == nil {
 		return false
 	}
-	return i.amResponsible(obj)
+	return i.AmResponsible(obj)
 }
 
 // Generic implements predicate.Predicate.
@@ -48,10 +48,10 @@ func (i ResponsibleFor[T]) Generic(e event.TypedGenericEvent[T]) bool {
 	if obj == nil {
 		return false
 	}
-	return i.amResponsible(obj)
+	return i.AmResponsible(obj)
 }
 
-func (i ResponsibleFor[T]) amResponsible(obj client.Object) bool {
+func (i ResponsibleFor[T]) AmResponsible(obj client.Object) bool {
 	objShard := obj.GetLabels()[kargoapi.LabelKeyShard]
 	return objShard == i.ShardName || (objShard == "" && i.IsDefaultController)
 }

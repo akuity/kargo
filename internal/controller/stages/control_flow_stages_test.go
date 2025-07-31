@@ -23,6 +23,7 @@ import (
 	rollouts "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/conditions"
+	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/indexer"
 	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
 )
@@ -341,8 +342,9 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 			r := &ControlFlowStageReconciler{
 				client:        c,
 				eventRecorder: fakeevent.NewEventRecorder(10),
-				cfg: ReconcilerConfig{
-					ShardName: "test-shard",
+				labelChecker: controller.ResponsibleFor[kargoapi.Stage]{
+					IsDefaultController: false,
+					ShardName:           "test-shard",
 				},
 			}
 
@@ -666,6 +668,10 @@ func TestControlFlowStageReconciler_reconcile(t *testing.T) {
 			r := &ControlFlowStageReconciler{
 				client:        c,
 				eventRecorder: fakeevent.NewEventRecorder(10),
+				labelChecker: controller.ResponsibleFor[kargoapi.Stage]{
+					IsDefaultController: false,
+					ShardName:           "test-shard",
+				},
 			}
 
 			status, err := r.reconcile(context.Background(), tt.stage, time.Now())

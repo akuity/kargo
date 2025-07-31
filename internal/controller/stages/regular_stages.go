@@ -81,6 +81,7 @@ type RegularStageReconciler struct {
 	client        client.Client
 	eventRecorder record.EventRecorder
 	healthChecker health.AggregatingChecker
+	labelChecker  controller.ResponsibleFor[kargoapi.Stage]
 
 	backoffCfg wait.Backoff
 }
@@ -93,6 +94,10 @@ func NewRegularStageReconciler(
 	return &RegularStageReconciler{
 		cfg:           cfg,
 		healthChecker: healthChecker,
+		labelChecker: controller.ResponsibleFor[kargoapi.Stage]{
+			IsDefaultController: cfg.IsDefaultController,
+			ShardName:           cfg.ShardName,
+		},
 		backoffCfg: wait.Backoff{
 			Duration: 1 * time.Second,
 			Factor:   2,
@@ -328,7 +333,7 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, nil
 	}
 
-	if stage.GetLabels()[kargoapi.LabelKeyShard] != r.cfg.ShardName {
+	if !r.labelChecker.AmResponsible(stage) {
 		logger.Debug("ignoring Stage because it is is not assigned to this shard")
 		return ctrl.Result{}, nil
 	}
