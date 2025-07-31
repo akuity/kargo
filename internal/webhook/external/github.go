@@ -12,7 +12,6 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/git"
 	xhttp "github.com/akuity/kargo/internal/http"
-	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -172,13 +171,11 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			v := pkg.GetPackageVersion()
 			manifest := v.GetContainerMetadata().GetManifest()
 			// Determine if the package is a Helm chart
+			var mediaType string
 			if cfg, ok := manifest["config"].(map[string]any); ok {
-				if mediaType, ok = cfg["media_type"].(string); ok {
-					repoURLs = getNormalizedImageRepoURLs(ref.Context().Name(), mediaType)
-				}
-			} else {
-				repoURLs = append(repoURLs, image.NormalizeURL(ref.Context().Name()))
+				mediaType, _ = cfg["media_type"].(string)
 			}
+			repoURLs = getNormalizedImageRepoURLs(ref.Context().Name(), mediaType)
 			tag := v.GetContainerMetadata().GetTag().GetName()
 			qualifiers = []string{tag}
 			logger = logger.WithValues("tag", tag)
