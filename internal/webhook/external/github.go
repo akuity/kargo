@@ -230,7 +230,7 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			// repo URLs. We trim the trailing colon to avoid parsing errors
 			// and optionally allow fallback handling (e.g., ":latest").
 			if strings.HasSuffix(pkgURL, ":") {
-				pkgURL = strings.TrimSuffix(pkgURL, ":") + ":latest"
+				pkgURL += "latest"
 			}
 			manifest := pkg.GetPackageVersion().GetContainerMetadata().GetManifest()
 			if cfg, ok := manifest["config"].(map[string]any); ok {
