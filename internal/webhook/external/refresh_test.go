@@ -22,6 +22,7 @@ import (
 func TestRefreshWarehouses(t *testing.T) {
 	// Callers are responsible for normalizing the repository URL.
 	testRepoURL := git.NormalizeURL("https://github.com/example/repo.git")
+	testRepoURLs := []string{testRepoURL}
 
 	const testProject = "fake-project"
 
@@ -200,19 +201,11 @@ func TestRefreshWarehouses(t *testing.T) {
 			},
 		},
 	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
-			refreshWarehouses(
-				t.Context(),
-				w,
-				testCase.client,
-				testCase.project,
-				// qualifier match based testing is tested exhaustively in TestShouldRefresh
-				[]string{},
-				testRepoURL,
-			)
-			testCase.assertions(t, w)
+			refreshWarehouses(t.Context(), w, tt.client, tt.project, testRepoURLs)
+			tt.assertions(t, w)
 		})
 	}
 }
@@ -336,7 +329,7 @@ func TestShouldRefresh(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result, err := shouldRefresh(tc.wh, tc.repoURL, tc.qualifiers)
+			result, err := shouldRefresh(tc.wh, tc.repoURL, tc.qualifiers...)
 			require.NoError(t, err)
 			require.Equal(t, tc.expect, result)
 		})

@@ -135,7 +135,7 @@ func (a *azureWebhookReceiver) handleACREvent(
 			"tag", event.Target.Tag,
 		)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		refreshWarehouses(ctx, w, a.client, a.project, []string{event.Target.Tag}, repoURLs...)
+		refreshWarehouses(ctx, w, a.client, a.project, repoURLs, event.Target.Tag)
 	case acrPingEvent:
 		xhttp.WriteResponseJSON(
 			w,
@@ -183,15 +183,15 @@ func (a *azureWebhookReceiver) handleAzureDevOpsEvent(
 		return
 	}
 
-	repoURL := git.NormalizeURL(event.Resource.Repository.RemoteURL)
+	repoURLs := []string{git.NormalizeURL(event.Resource.Repository.RemoteURL)}
 	logger := logging.LoggerFromContext(ctx)
 	refs := event.getRefs()
 	logger = logger.WithValues(
-		"repoURL", repoURL,
+		"repoURLs", repoURLs,
 		"refs", refs,
 	)
 	ctx = logging.ContextWithLogger(ctx, logger)
-	refreshWarehouses(ctx, w, a.client, a.project, refs, repoURL)
+	refreshWarehouses(ctx, w, a.client, a.project, repoURLs, refs...)
 }
 
 // acrEvent represents the payload for Azure Container Registry webhooks.

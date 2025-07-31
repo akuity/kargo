@@ -209,6 +209,6 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 		)
 		ctx = logging.ContextWithLogger(ctx, logger)
 
-		refreshWarehouses(ctx, w, g.client, g.project, qualifiers, repoURLs...)
+		refreshWarehouses(ctx, w, g.client, g.project, repoURLs, qualifiers...)
 	})
 }
