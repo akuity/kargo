@@ -101,7 +101,7 @@ kubectl get projectconfigs kargo-demo \
         events are.
         :::
 
-    1. Scroll down to <Hlt>Events</Hlt> and select
+    1. Under <Hlt>Events</Hlt>, select
        <Hlt>Docker and OCI</Hlt> ⃗ <Hlt>Tag was pushed</Hlt>.
 
         ![Select Trigger](./img/select-trigger.png "Select Trigger")
@@ -113,11 +113,12 @@ kubectl get projectconfigs kargo-demo \
         chart repositories, is supported.
         :::
 
-    1. Complete the form in the modal dialog that appears:
+    1. Complete the dialog that appears:
 
        ![Select Repos](./img/select-repos.png "Select Repos")
 
-        1. Check any boxes corresponding to repositories this applies to.
+        1. Check boxes corresponding to repositories from which you would like
+           to receive events.
 
         1. Click <Hlt>></Hlt> to move selected repositories into the selected window.
 
@@ -128,13 +129,12 @@ kubectl get projectconfigs kargo-demo \
 
         1. Click <Hlt>Save</Hlt>.
 
-    1. Scroll down to <Hlt>Authentication</Hlt>.
+    1. Under <Hlt>Authentication</Hlt>, complete the <Hlt>Secret token</Hlt>
+       field using the (unencoded) value of the `secret-token` key in the
+       `Secret` resource referenced by the
+       [webhook receiver's configuration](#configuring-the-receiver).
 
         ![Setup Auth](./img/setup-auth.png "Setup Auth")
-
-    1. Complete the <Hlt>Secret token</Hlt> field using to the (unencoded) value
-       assigned to the `secret-token` key of the `Secret` resource referenced by
-       the [webhook receiver's configuration](#configuring-the-receiver).
 
     1. Select <Hlt>Use secret for payload signing</Hlt>.
 
