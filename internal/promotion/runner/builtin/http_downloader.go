@@ -17,6 +17,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/io/fs"
+	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -226,6 +227,8 @@ func (d *httpDownloader) validateResponse(resp *http.Response) error {
 
 // downloadToFile downloads the response content to the specified file.
 func (d *httpDownloader) downloadToFile(ctx context.Context, resp *http.Response, path string) error {
+	logger := logging.LoggerFromContext(ctx)
+
 	tempFile, tempPath, err := d.createTempFile(path)
 	if err != nil {
 		return err
@@ -236,9 +239,12 @@ func (d *httpDownloader) downloadToFile(ctx context.Context, resp *http.Response
 		_ = os.Remove(tempPath)
 	}()
 
-	if err = d.copyResponseToFile(ctx, resp, tempFile); err != nil {
+	logger.Debug("starting HTTP download to temporary file", "url", resp.Request.URL.String())
+	size, err := d.copyResponseToFile(ctx, resp, tempFile)
+	if err != nil {
 		return err
 	}
+	logger.Debug("HTTP download completed", "url", resp.Request.URL.String(), "size", size)
 
 	if err = tempFile.Close(); err != nil {
 		return fmt.Errorf("failed to close temporary file: %w", err)
@@ -272,7 +278,7 @@ func (d *httpDownloader) createTempFile(absOutPath string) (*os.File, string, er
 
 // copyResponseToFile copies response content to the file with size limits and
 // context cancellation.
-func (d *httpDownloader) copyResponseToFile(ctx context.Context, resp *http.Response, f *os.File) error {
+func (d *httpDownloader) copyResponseToFile(ctx context.Context, resp *http.Response, f *os.File) (int64, error) {
 	limitedReader := io.LimitReader(resp.Body, maxDownloadSize)
 
 	// Obtain a buffer from the pool
@@ -283,11 +289,11 @@ func (d *httpDownloader) copyResponseToFile(ctx context.Context, resp *http.Resp
 	}()
 
 	// Stream data with context cancellation support
-	var bytesDownloaded int64
+	var totalBytes int64
 	for {
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("download canceled: %w", ctx.Err())
+			return totalBytes, fmt.Errorf("download canceled: %w", ctx.Err())
 		default:
 		}
 
@@ -295,26 +301,26 @@ func (d *httpDownloader) copyResponseToFile(ctx context.Context, resp *http.Resp
 		var err error
 		if n, err = limitedReader.Read(buf); n > 0 {
 			if _, writeErr := f.Write(buf[:n]); writeErr != nil {
-				return fmt.Errorf("failed to write to file: %w", writeErr)
+				return totalBytes, fmt.Errorf("failed to write to file: %w", writeErr)
 			}
-			bytesDownloaded += int64(n)
+			totalBytes += int64(n)
 		}
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			return fmt.Errorf("failed to read response body: %w", err)
+			return totalBytes, fmt.Errorf("failed to read response body: %w", err)
 		}
 	}
 
 	// If we read exactly the limit, check if there's more data
-	if bytesDownloaded == maxDownloadSize {
+	if totalBytes == maxDownloadSize {
 		if err := d.checkForAdditionalContent(resp); err != nil {
-			return err
+			return totalBytes, err
 		}
 	}
 
-	return nil
+	return totalBytes, nil
 }
 
 // checkForAdditionalContent verifies if the response has more data beyond the
