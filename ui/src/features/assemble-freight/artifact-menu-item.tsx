@@ -30,16 +30,29 @@ export const ArtifactMenuItems = ({
   items: DiscoveryResult[];
 }) => (
   <>
-    {items.map((item) => (
-      <ArtifactMenuItem
-        key={item.repoURL}
-        onClick={() => onClick(item)}
-        selected={selected?.repoURL === item.repoURL}
-      >
-        {item.repoURL}
-        {item.$typeName === 'github.com.akuity.kargo.api.v1alpha1.ChartDiscoveryResult' &&
-          `/${item.name}`}
-      </ArtifactMenuItem>
-    ))}
+    {items.map((item) => {
+      let isSelected = selected?.repoURL === item.repoURL;
+
+      if (
+        item.$typeName === 'github.com.akuity.kargo.api.v1alpha1.ChartDiscoveryResult' &&
+        selected?.$typeName === 'github.com.akuity.kargo.api.v1alpha1.ChartDiscoveryResult'
+      ) {
+        isSelected = `${selected?.repoURL}/${selected?.name}` === `${item.repoURL}/${item.name}`;
+      }
+
+      let key = item.repoURL;
+
+      if (item.$typeName === 'github.com.akuity.kargo.api.v1alpha1.ChartDiscoveryResult') {
+        key = item.name;
+      }
+
+      return (
+        <ArtifactMenuItem key={key} onClick={() => onClick(item)} selected={isSelected}>
+          {item.repoURL}
+          {item.$typeName === 'github.com.akuity.kargo.api.v1alpha1.ChartDiscoveryResult' &&
+            `/${item.name}`}
+        </ArtifactMenuItem>
+      );
+    })}
   </>
 );

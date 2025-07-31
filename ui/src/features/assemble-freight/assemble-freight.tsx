@@ -154,7 +154,7 @@ export const AssembleFreight = ({
     }
 
     for (const chart of charts) {
-      init[chart.repoURL as string] = {
+      init[`${chart.repoURL}/${chart.name}`] = {
         artifact: chart,
         info: chart.versions[0]
       };
@@ -182,9 +182,15 @@ export const AssembleFreight = ({
       return;
     }
     if (item) {
+      let key = selected.repoURL;
+
+      if (selected.$typeName === 'github.com.akuity.kargo.api.v1alpha1.ChartDiscoveryResult') {
+        key = `${selected.repoURL}/${selected.name}`;
+      }
+
       setChosenItems({
         ...chosenItems,
-        [selected.repoURL as string]: {
+        [key]: {
           artifact: selected,
           info: item
         }
@@ -271,7 +277,13 @@ const DiscoveryTable = ({
     return null;
   }
 
-  const selectedItem = chosenItems[selected?.repoURL as string]?.info;
+  let key = selected?.repoURL;
+
+  if (selected.$typeName === 'github.com.akuity.kargo.api.v1alpha1.ChartDiscoveryResult') {
+    key = `${selected.repoURL}/${selected?.name}`;
+  }
+
+  const selectedItem = chosenItems[key]?.info;
 
   return (
     <>
