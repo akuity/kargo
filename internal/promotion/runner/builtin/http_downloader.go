@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
@@ -25,6 +26,15 @@ const (
 	downloadBufferSize     = 64 * 1024
 	maxDownloadSize        = 100 << 20
 )
+
+// downloadBufferPool is a sync.Pool that provides byte slices for downloading
+// files. It is used to reduce memory allocations during file downloads.
+// The size of the byte slices is set to downloadBufferSize.
+var downloadBufferPool = sync.Pool{
+	New: func() any {
+		return make([]byte, downloadBufferSize)
+	},
+}
 
 // httpDownloader is an implementation of the promotion.StepRunner interface that
 // downloads files from HTTP/HTTPS URLs.
@@ -265,10 +275,15 @@ func (d *httpDownloader) createTempFile(absOutPath string) (*os.File, string, er
 func (d *httpDownloader) copyResponseToFile(ctx context.Context, resp *http.Response, f *os.File) error {
 	limitedReader := io.LimitReader(resp.Body, maxDownloadSize)
 
+	// Obtain a buffer from the pool
+	buf := downloadBufferPool.Get().([]byte) // nolint:forcetypeassert
+	defer func() {
+		clear(buf)
+		downloadBufferPool.Put(buf) // nolint:staticcheck
+	}()
+
 	// Stream data with context cancellation support
 	var bytesDownloaded int64
-	buf := make([]byte, downloadBufferSize)
-
 	for {
 		select {
 		case <-ctx.Done():
