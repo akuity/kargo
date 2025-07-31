@@ -30,9 +30,10 @@ import (
 )
 
 type ControlFlowStageReconciler struct {
-	cfg           ReconcilerConfig
-	client        client.Client
-	eventRecorder record.EventRecorder
+	cfg            ReconcilerConfig
+	client         client.Client
+	eventRecorder  record.EventRecorder
+	shardPredicate controller.ResponsibleFor[kargoapi.Stage]
 }
 
 // NewControlFlowStageReconciler returns a new control flow Stage reconciler.
@@ -43,6 +44,10 @@ func NewControlFlowStageReconciler(
 ) *ControlFlowStageReconciler {
 	return &ControlFlowStageReconciler{
 		cfg: cfg,
+		shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
+			IsDefaultController: cfg.IsDefaultController,
+			ShardName:           cfg.ShardName,
+		},
 	}
 }
 
@@ -203,6 +208,11 @@ func (r *ControlFlowStageReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	stage := &kargoapi.Stage{}
 	if err := r.client.Get(ctx, req.NamespacedName, stage); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	if !r.shardPredicate.IsResponsible(stage) {
+		logger.Debug("ignoring Control Flow Stage because it is is not assigned to this shard")
+		return ctrl.Result{}, nil
 	}
 
 	// Safety check: do not reconcile Stages that are not control flow Stages.

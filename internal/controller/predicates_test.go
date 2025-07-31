@@ -98,7 +98,7 @@ func TestResponsibleFor(t *testing.T) {
 				(&ResponsibleFor[kargoapi.Stage]{
 					IsDefaultController: testCase.isDefaultController,
 					ShardName:           testCase.shardName,
-				}).amResponsible(&kargoapi.Stage{
+				}).IsResponsible(&kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{Labels: testCase.labels},
 				}),
 			)

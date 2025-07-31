@@ -77,10 +77,11 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 }
 
 type RegularStageReconciler struct {
-	cfg           ReconcilerConfig
-	client        client.Client
-	eventRecorder record.EventRecorder
-	healthChecker health.AggregatingChecker
+	cfg            ReconcilerConfig
+	client         client.Client
+	eventRecorder  record.EventRecorder
+	healthChecker  health.AggregatingChecker
+	shardPredicate controller.ResponsibleFor[kargoapi.Stage]
 
 	backoffCfg wait.Backoff
 }
@@ -93,6 +94,10 @@ func NewRegularStageReconciler(
 	return &RegularStageReconciler{
 		cfg:           cfg,
 		healthChecker: healthChecker,
+		shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
+			IsDefaultController: cfg.IsDefaultController,
+			ShardName:           cfg.ShardName,
+		},
 		backoffCfg: wait.Backoff{
 			Duration: 1 * time.Second,
 			Factor:   2,
@@ -325,6 +330,11 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// Safety check: do not reconcile Stages that are control flow Stages.
 	if stage.IsControlFlow() {
+		return ctrl.Result{}, nil
+	}
+
+	if !r.shardPredicate.IsResponsible(stage) {
+		logger.Debug("ignoring Stage because it is is not assigned to this shard")
 		return ctrl.Result{}, nil
 	}
 
