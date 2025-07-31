@@ -1063,11 +1063,6 @@ func (in *Project) DeepCopyInto(out *Project) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
-	if in.Spec != nil {
-		in, out := &in.Spec, &out.Spec
-		*out = new(ProjectSpec)
-		(*in).DeepCopyInto(*out)
-	}
 	in.Status.DeepCopyInto(&out.Status)
 }
 

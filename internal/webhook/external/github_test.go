@@ -45,7 +45,9 @@ func TestGithubHandler(t *testing.T) {
 					},
 					Manifest: map[string]any{
 						"config": map[string]any{
-							"media_type": ociImageIndexMediaType,
+							// Real world testing shows this media type is what the payload
+							// will contain when an image has been pushed to GHCR.
+							"media_type": dockerImageConfigBlobMediaType,
 						},
 					},
 				},
@@ -64,7 +66,9 @@ func TestGithubHandler(t *testing.T) {
 					},
 					Manifest: map[string]any{
 						"config": map[string]any{
-							"media_type": helmChartMediaType,
+							// Real world testing shows this media type is what the payload
+							// will contain when an image has been pushed to GHCR.
+							"media_type": helmChartConfigBlobMediaType,
 						},
 					},
 				},

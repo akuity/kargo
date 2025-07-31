@@ -30,8 +30,8 @@ func refreshWarehouses(
 	w http.ResponseWriter,
 	c client.Client,
 	project string,
-	qualifiers []string,
-	repoURLs ...string,
+	repoURLs []string,
+	qualifiers ...string,
 ) {
 	logger := logging.LoggerFromContext(ctx)
 
@@ -71,7 +71,7 @@ func refreshWarehouses(
 				continue
 			}
 			if len(qualifiers) > 0 {
-				shouldRefresh, err := shouldRefresh(wh, repoURL, qualifiers)
+				shouldRefresh, err := shouldRefresh(wh, repoURL, qualifiers...)
 				if err != nil {
 					logger.Error(
 						err,
@@ -128,7 +128,7 @@ func refreshWarehouses(
 	)
 }
 
-func shouldRefresh(wh kargoapi.Warehouse, repoURL string, qualifiers []string) (bool, error) {
+func shouldRefresh(wh kargoapi.Warehouse, repoURL string, qualifiers ...string) (bool, error) {
 	var shouldRefresh bool
 	for _, s := range wh.Spec.Subscriptions {
 		switch {

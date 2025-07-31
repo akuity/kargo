@@ -118,6 +118,18 @@
                       {
                         "message": "PromotionTemplate step must have exactly one of uses or task set",
                         "rule": "(has(self.uses) ? !has(self.task) : has(self.task))"
+                      },
+                      {
+                        "message": "PromotionTemplate step referencing a task cannot set if",
+                        "rule": "!has(self.task) || !has(self.if)"
+                      },
+                      {
+                        "message": "PromotionTemplate step referencing a task cannot set continueOnError",
+                        "rule": "!has(self.task) || !has(self.continueOnError)"
+                      },
+                      {
+                        "message": "PromotionTemplate step referencing a task cannot set retry",
+                        "rule": "!has(self.task) || !has(self.retry)"
                       }
                     ]
                   },
@@ -186,7 +198,7 @@
                 "description": "Sources describes where the requested Freight may be obtained from. This is\na required field.",
                 "properties": {
                   "availabilityStrategy": {
-                    "description": "AvailabilityStrategy specifies the semantics for how requested Freight is\nmade available to the Stage. This field is optional. When left unspecified,\nthe field is implicitly treated as if its value were \"OneOf\".\n\nAccepted Values:\n\n- \"All\": Freight must be be verified and, if applicable, soaked in all\n  upstream Stages to be considered available for promotion.\n- \"OneOf\": Freight must be verified and, if applicable, soaked in at least\n   one upstream Stage to be considered available for promotion.\n- \"\": Treated the same as \"OneOf\".",
+                    "description": "AvailabilityStrategy specifies the semantics for how requested Freight is\nmade available to the Stage. This field is optional. When left unspecified,\nthe field is implicitly treated as if its value were \"OneOf\".\n\nAccepted Values:\n\n- \"All\": Freight must be verified and, if applicable, soaked in all\n  upstream Stages to be considered available for promotion.\n- \"OneOf\": Freight must be verified and, if applicable, soaked in at least\n   one upstream Stage to be considered available for promotion.\n- \"\": Treated the same as \"OneOf\".",
                     "enum": [
                       "All",
                       "OneOf",

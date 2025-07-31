@@ -9,13 +9,18 @@ import (
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/conditions"
+	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 func TestNewReconciler(t *testing.T) {
@@ -25,11 +30,11 @@ func TestNewReconciler(t *testing.T) {
 	e := newReconciler(
 		kubeClient,
 		&credentials.FakeDB{},
-		minReconciliationInterval,
+		ReconcilerConfig{MinReconciliationInterval: minReconciliationInterval},
 	)
 	require.NotNil(t, e.client)
 	require.NotNil(t, e.credentialsDB)
-	require.Equal(t, minReconciliationInterval, e.minReconciliationInterval)
+	require.Equal(t, minReconciliationInterval, e.cfg.MinReconciliationInterval)
 
 	// Assert that all overridable behaviors were initialized to a default:
 	require.NotNil(t, e.discoverArtifactsFn)
@@ -999,6 +1004,154 @@ func TestShouldDiscoverArtifacts(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := shouldDiscoverArtifacts(tt.warehouse, tt.refreshToken)
 			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestReconcile(t *testing.T) {
+	testScheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(testScheme))
+
+	tests := []struct {
+		name       string
+		reconciler func() *reconciler
+		req        ctrl.Request
+		assertions func(*testing.T, ctrl.Result, error)
+	}{
+		{
+			name: "Shard mismatch",
+			reconciler: func() *reconciler {
+				return &reconciler{
+					shardPredicate: controller.ResponsibleFor[kargoapi.Warehouse]{
+						ShardName:           "right-shard",
+						IsDefaultController: false,
+					},
+					client: fake.NewClientBuilder().
+						WithScheme(testScheme).
+						WithObjects(
+							&kargoapi.Warehouse{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "test-warehouse",
+									Namespace: "test-namespace",
+									Labels: map[string]string{
+										kargoapi.LabelKeyShard: "wrong-shard",
+									},
+								},
+							},
+						).Build(),
+					cfg: ReconcilerConfig{ShardName: "right-shard"},
+					// Intentionally not setting any xFns because we should never reach them
+					// because we will exit before any reconciliation logic is executed.
+				}
+			},
+			req: ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      "test-warehouse",
+					Namespace: "test-namespace",
+				},
+			},
+			assertions: func(t *testing.T, r ctrl.Result, err error) {
+				require.NoError(t, err)
+				require.True(t, r.IsZero(), "expected no further reconciliation after shard mismatch")
+			},
+		},
+		{
+			name: "Shard match",
+			reconciler: func() *reconciler {
+				return &reconciler{
+					shardPredicate: controller.ResponsibleFor[kargoapi.Warehouse]{
+						ShardName:           "right-shard",
+						IsDefaultController: false,
+					},
+					client: fake.NewClientBuilder().
+						WithScheme(testScheme).
+						WithObjects(
+							&kargoapi.Warehouse{
+								ObjectMeta: metav1.ObjectMeta{
+									Name:      "test-warehouse",
+									Namespace: "test-namespace",
+									Labels: map[string]string{
+										kargoapi.LabelKeyShard: "right-shard",
+									},
+								},
+							},
+						).Build(),
+					cfg: ReconcilerConfig{
+						ShardName:                 "right-shard",
+						MinReconciliationInterval: 5 * time.Minute,
+					},
+					discoverArtifactsFn: func(
+						context.Context,
+						*kargoapi.Warehouse,
+					) (*kargoapi.DiscoveredArtifacts, error) {
+						return &kargoapi.DiscoveredArtifacts{}, nil
+					},
+					discoverCommitsFn: func(
+						context.Context,
+						string,
+						[]kargoapi.RepoSubscription,
+					) ([]kargoapi.GitDiscoveryResult, error) {
+						return []kargoapi.GitDiscoveryResult{}, nil
+					},
+					discoverImagesFn: func(
+						context.Context,
+						string,
+						[]kargoapi.RepoSubscription,
+					) ([]kargoapi.ImageDiscoveryResult, error) {
+						return []kargoapi.ImageDiscoveryResult{}, nil
+					},
+					discoverChartsFn: func(
+						context.Context,
+						string,
+						[]kargoapi.RepoSubscription,
+					) ([]kargoapi.ChartDiscoveryResult, error) {
+						return []kargoapi.ChartDiscoveryResult{}, nil
+					},
+					buildFreightFromLatestArtifactsFn: func(
+						string,
+						*kargoapi.DiscoveredArtifacts,
+					) (*kargoapi.Freight, error) {
+						return &kargoapi.Freight{}, nil
+					},
+					createFreightFn: func(
+						context.Context,
+						client.Object,
+						...client.CreateOption,
+					) error {
+						return nil
+					},
+					patchStatusFn: func(
+						context.Context,
+						*kargoapi.Warehouse,
+						func(*kargoapi.WarehouseStatus),
+					) error {
+						return nil
+					},
+				}
+			},
+			req: ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      "test-warehouse",
+					Namespace: "test-namespace",
+				},
+			},
+			assertions: func(t *testing.T, r ctrl.Result, err error) {
+				require.NoError(t, err)
+				require.False(t, r.IsZero(), "expected further reconciliation after shard match")
+			},
+		},
+		// TODO(fuskovic): TestReconcile was initially added as part of
+		// https://github.com/akuity/kargo/pull/4677. We should add more test cases
+		// here to cover logic outside of the scope of shard predicate checks.
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := tt.reconciler()
+			logger := logging.NewLogger(logging.DebugLevel)
+			ctx := logging.ContextWithLogger(t.Context(), logger)
+			result, err := r.Reconcile(ctx, tt.req)
+			tt.assertions(t, result, err)
 		})
 	}
 }

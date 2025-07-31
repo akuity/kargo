@@ -2,6 +2,7 @@ package stages
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -50,6 +51,7 @@ import (
 
 // ReconcilerConfig represents configuration for the stage reconciler.
 type ReconcilerConfig struct {
+	IsDefaultController                bool   `envconfig:"IS_DEFAULT_CONTROLLER"`
 	ShardName                          string `envconfig:"SHARD_NAME"`
 	RolloutsIntegrationEnabled         bool   `envconfig:"ROLLOUTS_INTEGRATION_ENABLED"`
 	RolloutsControllerInstanceID       string `envconfig:"ROLLOUTS_CONTROLLER_INSTANCE_ID"`
@@ -75,10 +77,11 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 }
 
 type RegularStageReconciler struct {
-	cfg           ReconcilerConfig
-	client        client.Client
-	eventRecorder record.EventRecorder
-	healthChecker health.AggregatingChecker
+	cfg            ReconcilerConfig
+	client         client.Client
+	eventRecorder  record.EventRecorder
+	healthChecker  health.AggregatingChecker
+	shardPredicate controller.ResponsibleFor[kargoapi.Stage]
 
 	backoffCfg wait.Backoff
 }
@@ -91,6 +94,10 @@ func NewRegularStageReconciler(
 	return &RegularStageReconciler{
 		cfg:           cfg,
 		healthChecker: healthChecker,
+		shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
+			IsDefaultController: cfg.IsDefaultController,
+			ShardName:           cfg.ShardName,
+		},
 		backoffCfg: wait.Backoff{
 			Duration: 1 * time.Second,
 			Factor:   2,
@@ -171,7 +178,10 @@ func (r *RegularStageReconciler) SetupWithManager(
 	// Build the controller with the reconciler.
 	c, err := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&kargoapi.Stage{}).
-		WithOptions(controller.CommonOptions(r.cfg.MaxConcurrentReconciles)).
+		WithEventFilter(controller.ResponsibleFor[client.Object]{
+			IsDefaultController: r.cfg.IsDefaultController,
+			ShardName:           r.cfg.ShardName,
+		}).
 		WithEventFilter(intpredicate.IgnoreDelete[client.Object]{}).
 		WithEventFilter(
 			predicate.And(
@@ -184,6 +194,7 @@ func (r *RegularStageReconciler) SetupWithManager(
 				),
 			),
 		).
+		WithOptions(controller.CommonOptions(r.cfg.MaxConcurrentReconciles)).
 		Build(r)
 	if err != nil {
 		return fmt.Errorf("error building Stage reconciler: %w", err)
@@ -277,7 +288,7 @@ func (r *RegularStageReconciler) SetupWithManager(
 			ctx,
 			&kargoapi.Stage{},
 			indexer.StagesByAnalysisRunField,
-			indexer.StagesByAnalysisRun(r.cfg.ShardName),
+			indexer.StagesByAnalysisRun(r.cfg.ShardName, r.cfg.IsDefaultController),
 		); err != nil {
 			return fmt.Errorf("error setting up index for Stages by AnalysisRun: %w", err)
 		}
@@ -319,6 +330,11 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// Safety check: do not reconcile Stages that are control flow Stages.
 	if stage.IsControlFlow() {
+		return ctrl.Result{}, nil
+	}
+
+	if !r.shardPredicate.IsResponsible(stage) {
+		logger.Debug("ignoring Stage because it is is not assigned to this shard")
 		return ctrl.Result{}, nil
 	}
 
@@ -418,7 +434,14 @@ func (r *RegularStageReconciler) reconcile(
 		{
 			name: "assessing health",
 			reconcile: func() (kargoapi.StageStatus, error) {
-				return r.assessHealth(ctx, stage), nil
+				status := r.assessHealth(ctx, stage)
+				if status.Health != nil && status.Health.Status == kargoapi.HealthStateUnknown {
+					// If Stage health evaluated to Unknown, we'll treat it as an error so
+					// that Stage health will be re-assessed with a progressive backoff.
+					return status,
+						errors.New("Stage health evaluated to Unknown") // nolint: staticcheck
+				}
+				return status, nil
 			},
 		},
 		{

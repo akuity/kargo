@@ -108,6 +108,6 @@ func (q *quayWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 			"tags", payload.UpdatedTags,
 		)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		refreshWarehouses(ctx, w, q.client, q.project, payload.UpdatedTags, repoURLs...)
+		refreshWarehouses(ctx, w, q.client, q.project, repoURLs, payload.UpdatedTags...)
 	})
 }

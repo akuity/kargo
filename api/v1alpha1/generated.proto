@@ -598,7 +598,7 @@ message FreightSources {
   //
   // Accepted Values:
   //
-  // - "All": Freight must be be verified and, if applicable, soaked in all
+  // - "All": Freight must be verified and, if applicable, soaked in all
   //   upstream Stages to be considered available for promotion.
   // - "OneOf": Freight must be verified and, if applicable, soaked in at least
   //    one upstream Stage to be considered available for promotion.
@@ -1117,13 +1117,6 @@ message ImageSubscription {
 message Project {
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
-  // Spec describes a Project.
-  //
-  // Deprecated: Create a ProjectConfig resource with the same name as the
-  // Project resource in the Project's namespace. The ProjectConfig resource
-  // can be used to configure the Project.
-  optional ProjectConfigSpec spec = 2;
-
   // Status describes the Project's current status.
   optional ProjectStatus status = 3;
 }
@@ -1147,10 +1140,7 @@ message ProjectConfigList {
   repeated ProjectConfig items = 2;
 }
 
-// ProjectSpec is a deprecated alias for ProjectConfigSpec. It is retained for
-// backwards compatibility.
-//
-// Deprecated: Use ProjectConfigSpec instead.
+// ProjectConfigSpec describes the configuration of a Project.
 message ProjectConfigSpec {
   // PromotionPolicies defines policies governing the promotion of Freight to
   // specific Stages within the Project.
@@ -1564,6 +1554,9 @@ message PromotionTemplateSpec {
   //
   // +kubebuilder:validation:MinItems=1
   // +kubebuilder:validation:items:XValidation:message="PromotionTemplate step must have exactly one of uses or task set",rule="(has(self.uses) ? !has(self.task) : has(self.task))"
+  // +kubebuilder:validation:items:XValidation:message="PromotionTemplate step referencing a task cannot set if",rule="!has(self.task) || !has(self.if)"
+  // +kubebuilder:validation:items:XValidation:message="PromotionTemplate step referencing a task cannot set continueOnError",rule="!has(self.task) || !has(self.continueOnError)"
+  // +kubebuilder:validation:items:XValidation:message="PromotionTemplate step referencing a task cannot set retry",rule="!has(self.task) || !has(self.retry)"
   repeated PromotionStep steps = 1;
 }
 

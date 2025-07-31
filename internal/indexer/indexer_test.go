@@ -230,7 +230,7 @@ func TestStagesByAnalysisRun(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			res := StagesByAnalysisRun(tc.controllerShardName)(tc.stage)
+			res := StagesByAnalysisRun(tc.controllerShardName, false)(tc.stage)
 			tc.assertions(t, res)
 		})
 	}
@@ -472,6 +472,7 @@ func TestRunningPromotionsByArgoCDApplications(t *testing.T) {
 					context.TODO(),
 					c,
 					testCase.shardName,
+					false,
 				)(testCase.obj),
 			)
 		})

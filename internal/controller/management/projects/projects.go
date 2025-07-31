@@ -288,21 +288,6 @@ func (r *reconciler) reconcile(
 		reconcile func() (kargoapi.ProjectStatus, error)
 	}{
 		{
-			name: "migrate spec to ProjectConfig",
-			reconcile: func() (kargoapi.ProjectStatus, error) {
-				// TODO(hidde): Remove this migration code when the spec field is
-				// removed from Project.
-				migrated, err := r.migrateSpecToProjectConfig(ctx, project)
-				if err != nil {
-					return status, err
-				}
-				if migrated {
-					logger.Debug("migrated Project spec to ProjectConfig")
-				}
-				return status, nil
-			},
-		},
-		{
 			name: "syncing project resources",
 			reconcile: func() (kargoapi.ProjectStatus, error) {
 				return r.syncProject(ctx, project)
@@ -1023,62 +1008,6 @@ func (r *reconciler) patchProjectStatus(
 			*s = status
 		},
 	)
-}
-
-// migrateSpecToProjectConfig migrates the Project's Spec to a dedicated
-// ProjectConfig resource if necessary. It returns a boolean indicating whether
-// the Project resource was updated.
-func (r *reconciler) migrateSpecToProjectConfig(
-	ctx context.Context,
-	project *kargoapi.Project,
-) (bool, error) {
-	logger := logging.LoggerFromContext(ctx)
-
-	if project.Spec == nil { // nolint:staticcheck
-		return false, nil
-	}
-
-	if api.HasMigrationAnnotationValue(project, api.MigratedProjectSpecToProjectConfig) {
-		return false, nil
-	}
-
-	if len(project.Spec.PromotionPolicies) != 0 { // nolint:staticcheck
-		projectCfg := &kargoapi.ProjectConfig{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      project.Name,
-				Namespace: project.Name,
-			},
-			Spec: kargoapi.ProjectConfigSpec{
-				PromotionPolicies: project.Spec.PromotionPolicies, // nolint:staticcheck
-			},
-		}
-		if err := r.client.Create(ctx, projectCfg); err != nil {
-			// If the ProjectConfig already exists, we can ignore the error. This
-			// could happen because the ProjectConfig was created by the user without
-			// them removing the spec from the Project. It could also be the result of
-			// a partial migration by a previous reconciliation attempt.
-			if !apierrors.IsAlreadyExists(err) {
-				return false, fmt.Errorf(
-					"error creating ProjectConfig in project namespace %q: %w",
-					project.Name, err,
-				)
-			}
-			logger.Debug("ProjectConfig already exists")
-		} else {
-			logger.Debug("migrated Project spec to ProjectConfig")
-		}
-	}
-
-	// Mark the Project as migrated. This will prevent the migration code from
-	// running again in the future.
-	api.AddMigrationAnnotationValue(project, api.MigratedProjectSpecToProjectConfig)
-	if err := r.client.Update(ctx, project); err != nil {
-		return false, fmt.Errorf(
-			"error updating Project %q to add migrated label: %w",
-			project.Name, err,
-		)
-	}
-	return true, nil
 }
 
 // shouldKeepNamespace determines if a Namespace should be kept during Project

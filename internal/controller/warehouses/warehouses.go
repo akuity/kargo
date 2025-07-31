@@ -25,6 +25,7 @@ import (
 )
 
 type ReconcilerConfig struct {
+	IsDefaultController       bool          `envconfig:"IS_DEFAULT_CONTROLLER"`
 	ShardName                 string        `envconfig:"SHARD_NAME"`
 	MaxConcurrentReconciles   int           `envconfig:"MAX_CONCURRENT_WAREHOUSE_RECONCILES" default:"4"`
 	MinReconciliationInterval time.Duration `envconfig:"MIN_WAREHOUSE_RECONCILIATION_INTERVAL"`
@@ -38,9 +39,10 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 
 // reconciler reconciles Warehouse resources.
 type reconciler struct {
-	client                    client.Client
-	credentialsDB             credentials.Database
-	minReconciliationInterval time.Duration
+	client         client.Client
+	credentialsDB  credentials.Database
+	cfg            ReconcilerConfig
+	shardPredicate controller.ResponsibleFor[kargoapi.Warehouse]
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -67,13 +69,13 @@ func SetupReconcilerWithManager(
 	credentialsDB credentials.Database,
 	cfg ReconcilerConfig,
 ) error {
-	shardPredicate, err := controller.GetShardPredicate(cfg.ShardName)
-	if err != nil {
-		return fmt.Errorf("error creating shard selector predicate: %w", err)
-	}
 
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&kargoapi.Warehouse{}).
+		WithEventFilter(controller.ResponsibleFor[client.Object]{
+			IsDefaultController: cfg.IsDefaultController,
+			ShardName:           cfg.ShardName,
+		}).
 		WithEventFilter(intpredicate.IgnoreDelete[client.Object]{}).
 		WithEventFilter(
 			predicate.Or(
@@ -81,9 +83,8 @@ func SetupReconcilerWithManager(
 				kargo.RefreshRequested{},
 			),
 		).
-		WithEventFilter(shardPredicate).
 		WithOptions(controller.CommonOptions(cfg.MaxConcurrentReconciles)).
-		Complete(newReconciler(mgr.GetClient(), credentialsDB, cfg.MinReconciliationInterval)); err != nil {
+		Complete(newReconciler(mgr.GetClient(), credentialsDB, cfg)); err != nil {
 		return fmt.Errorf("error building Warehouse reconciler: %w", err)
 	}
 
@@ -98,13 +99,13 @@ func SetupReconcilerWithManager(
 func newReconciler(
 	kubeClient client.Client,
 	credentialsDB credentials.Database,
-	minReconciliationInterval time.Duration,
+	cfg ReconcilerConfig,
 ) *reconciler {
 	r := &reconciler{
-		client:                    kubeClient,
-		credentialsDB:             credentialsDB,
-		minReconciliationInterval: minReconciliationInterval,
-		createFreightFn:           kubeClient.Create,
+		client:          kubeClient,
+		credentialsDB:   credentialsDB,
+		cfg:             cfg,
+		createFreightFn: kubeClient.Create,
 	}
 
 	r.discoverArtifactsFn = r.discoverArtifacts
@@ -142,6 +143,11 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
+	if !r.shardPredicate.IsResponsible(warehouse) {
+		logger.Debug("ignoring Warehouse because it is is not assigned to this shard")
+		return ctrl.Result{}, nil
+	}
+
 	newStatus, err := r.syncWarehouse(ctx, warehouse)
 	if err != nil {
 		logger.Error(err, "error syncing Warehouse")
@@ -174,7 +180,7 @@ func (r *reconciler) Reconcile(
 
 	// Everything succeeded, look for new changes on the defined interval.
 	return ctrl.Result{
-		RequeueAfter: warehouse.GetInterval(r.minReconciliationInterval),
+		RequeueAfter: warehouse.GetInterval(r.cfg.MinReconciliationInterval),
 	}, nil
 }
 

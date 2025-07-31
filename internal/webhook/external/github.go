@@ -12,7 +12,6 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/git"
 	xhttp "github.com/akuity/kargo/internal/http"
-	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -134,8 +133,10 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			return
 		}
 
-		var repoURL string
 		var qualifiers []string
+		var repoURLs []string
+		var mediaType string
+
 		switch e := event.(type) {
 		case *gh.PackageEvent:
 			switch e.GetAction() {
@@ -171,12 +172,9 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			manifest := v.GetContainerMetadata().GetManifest()
 			// Determine if the package is a Helm chart
 			if cfg, ok := manifest["config"].(map[string]any); ok {
-				if mediaType, ok := cfg["media_type"].(string); ok {
-					repoURL = normalizeOCIRepoURL(ref.Context().Name(), mediaType)
-				}
-			} else {
-				repoURL = image.NormalizeURL(ref.Context().Name())
+				mediaType, _ = cfg["media_type"].(string)
 			}
+			repoURLs = getNormalizedImageRepoURLs(ref.Context().Name(), mediaType)
 			tag := v.GetContainerMetadata().GetTag().GetName()
 			qualifiers = []string{tag}
 			logger = logger.WithValues("tag", tag)
@@ -198,12 +196,15 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			// https://. By refreshing Warehouses using a normalized representation of
 			// that URL, we will miss any Warehouses that are subscribed to the same
 			// repository using a different URL format.
-			repoURL = git.NormalizeURL(e.GetRepo().GetCloneURL())
+			repoURLs = []string{git.NormalizeURL(e.GetRepo().GetCloneURL())}
 		}
 
-		logger = logger.WithValues("repoURL", repoURL)
+		logger = logger.WithValues(
+			"repoURLs", repoURLs,
+			"mediaType", mediaType,
+		)
 		ctx = logging.ContextWithLogger(ctx, logger)
 
-		refreshWarehouses(ctx, w, g.client, g.project, qualifiers, repoURL)
+		refreshWarehouses(ctx, w, g.client, g.project, repoURLs, qualifiers...)
 	})
 }

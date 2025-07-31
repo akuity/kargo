@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Dropdown, Flex, Result } from 'antd';
 import classNames from 'classnames';
 import { useMemo, useState } from 'react';
-import { generatePath, Link, useNavigate, useParams } from 'react-router-dom';
+import { generatePath, Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
@@ -13,41 +13,36 @@ import { LoadingState } from '@ui/features/common';
 import { mapToNames } from '@ui/features/common/utils';
 import FreightDetails from '@ui/features/freight/freight-details';
 import WarehouseDetails from '@ui/features/project/pipelines/warehouse/warehouse-details';
-import { projectConfigTransport } from '@ui/features/project/settings/views/project-config/transport';
 import CreateStage from '@ui/features/stage/create-stage';
 import CreateWarehouse from '@ui/features/stage/create-warehouse/create-warehouse';
 import StageDetails from '@ui/features/stage/stage-details';
 import { getColors } from '@ui/features/stage/utils';
 import {
   getProject,
-  getProjectConfig,
   listImages,
   listStages,
   listWarehouses,
   queryFreight
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { FreightList } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { Freight, Project, ProjectConfig } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight, Project } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { ActionContext } from './context/action-context';
 import { DictionaryContext } from './context/dictionary-context';
-import {
-  FreightTimelineControllerContext,
-  FreightTimelineControllerContextType
-} from './context/freight-timeline-controller-context';
+import { FreightTimelineControllerContext } from './context/freight-timeline-controller-context';
 import { FreightTimeline } from './freight/freight-timeline';
 import { Graph } from './graph/graph';
 import { GraphFilters } from './graph-filters';
-import { Images } from './images';
+import { Images } from './image-history/images';
 import { PipelineListView } from './list/list-view';
 import { Promote } from './promotion/promote';
 import { Promotion } from './promotion/promotion';
+import { useFreightTimelineControllerStore } from './url-params/use-freight-timeline-controller-store';
 import { useAction } from './use-action';
 import { useFreightById } from './use-freight-by-id';
 import { useFreightInStage } from './use-freight-in-stage';
 import { useGetFreight } from './use-get-freight';
 import { useGetWarehouse } from './use-get-warehouse';
-import { usePersistPreferredFilter } from './use-persist-filters';
 import { useStageAutoPromotionMap } from './use-stage-auto-promotion-map';
 import { useStageByName } from './use-stage-by-name';
 import { useSubscribersByStage } from './use-subscribers-by-stage';
@@ -58,25 +53,20 @@ import '@xyflow/react/dist/style.css';
 
 export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: boolean }) => {
   const { name, stageName, promotionId, freight, stage, warehouseName, freightName } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const projectQuery = useQuery(getProject, { name });
 
-  const projectConfigQuery = useQuery(
-    getProjectConfig,
-    {
-      project: name
-    },
-    {
-      transport: projectConfigTransport
-    }
-  );
-
   const project = projectQuery.data?.result?.value as Project;
-  const projectConfig = projectConfigQuery.data?.result?.value as ProjectConfig;
 
   const projectName = name;
 
-  const [pipelineView, setPipelineView] = useState<'graph' | 'list'>('graph');
+  const pipelineView: 'graph' | 'list' = (searchParams.get('view') as 'graph' | 'list') || 'graph';
+  const setPipelineView = (nextView: 'graph' | 'list') => {
+    const currentSearchParams = new URLSearchParams(searchParams);
+    currentSearchParams.set('view', nextView);
+    setSearchParams(currentSearchParams);
+  };
 
   const listImagesQuery = useQuery(listImages, { project: name });
 
@@ -90,7 +80,6 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
 
   const loading =
     projectQuery.isLoading ||
-    projectConfigQuery.isLoading ||
     getFreightQuery.isLoading ||
     listWarehousesQuery.isLoading ||
     listStagesQuery.isLoading;
@@ -119,27 +108,14 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
     [project, listStagesQuery.data?.stages]
   );
 
-  const [preferredFilter, setPreferredFilter] = useState<
-    FreightTimelineControllerContextType['preferredFilter']
-  >({
-    showAlias: true,
-    sources: [],
-    timerange: 'all-time',
-    showColors: true,
-    warehouses: [],
-    hideUnusedFreights: false,
-    stackedNodesParents: [],
-    hideSubscriptions: {},
-    images: false
-  });
-
-  usePersistPreferredFilter(projectName || '', preferredFilter, setPreferredFilter);
+  const [preferredFilter, setPreferredFilter] = useFreightTimelineControllerStore();
 
   const [viewingFreight, setViewingFreight] = useState<Freight | null>(null);
 
-  const freightInStages = useFreightInStage(listStagesQuery.data?.stages || []);
+  const stages = listStagesQuery?.data?.stages || [];
+  const freightInStages = useFreightInStage(stages);
   const freightById = useFreightById(getFreightQuery.data?.groups?.['']?.freight || []);
-  const stageAutoPromotionMap = useStageAutoPromotionMap(project, projectConfig);
+  const stageAutoPromotionMap = useStageAutoPromotionMap(stages);
   const subscribersByStage = useSubscribersByStage(listStagesQuery.data?.stages || []);
   const stageByName = useStageByName(listStagesQuery.data?.stages || []);
   const warehouseDrawer = useGetWarehouse(
@@ -277,35 +253,29 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                   }
                 />
               </Flex>
-
-              <div
-                className={classNames('w-[450px] absolute right-2 top-20 z-10', {
-                  hidden: !preferredFilter?.images
-                })}
-              >
-                <Images
-                  hide={() =>
-                    setPreferredFilter({
-                      ...preferredFilter,
-                      images: !preferredFilter?.images
-                    })
-                  }
-                  images={listImagesQuery.data?.images || {}}
-                  project={projectName || ''}
+              {preferredFilter?.images && (
+                <div className='w-[450px] absolute right-2 top-20 z-10'>
+                  <Images
+                    hide={() =>
+                      setPreferredFilter({
+                        ...preferredFilter,
+                        images: !preferredFilter?.images
+                      })
+                    }
+                    images={listImagesQuery.data?.images || {}}
+                    project={projectName || ''}
+                    stages={listStagesQuery.data?.stages || []}
+                    warehouses={listWarehousesQuery.data?.warehouses || []}
+                  />
+                </div>
+              )}
+              {pipelineView === 'graph' && (
+                <Graph
+                  project={project.metadata?.name || ''}
+                  warehouses={listWarehousesQuery.data?.warehouses || []}
                   stages={listStagesQuery.data?.stages || []}
                 />
-              </div>
-
-              {pipelineView === 'graph' && (
-                <>
-                  <Graph
-                    project={project.metadata?.name || ''}
-                    warehouses={listWarehousesQuery.data?.warehouses || []}
-                    stages={listStagesQuery.data?.stages || []}
-                  />
-                </>
               )}
-
               {pipelineView === 'list' && (
                 <PipelineListView
                   stages={listStagesQuery.data?.stages || []}

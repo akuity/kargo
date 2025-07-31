@@ -138,13 +138,13 @@ func (g *giteaWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 		}
 
 		// Normalize the repo name
-		repoURL := git.NormalizeURL(payload.Repo.URL)
+		repoURLs := []string{git.NormalizeURL(payload.Repo.URL)}
 
 		logger = logger.WithValues(
-			"repoURL", repoURL,
+			"repoURLs", repoURLs,
 			"ref", payload.Ref,
 		)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		refreshWarehouses(ctx, w, g.client, g.project, []string{payload.Ref}, repoURL)
+		refreshWarehouses(ctx, w, g.client, g.project, repoURLs, payload.Ref)
 	})
 }
