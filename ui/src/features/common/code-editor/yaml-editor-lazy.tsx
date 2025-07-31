@@ -79,7 +79,7 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
     } catch (_) {
       // ignore
     }
-  }, [hideManagedFields, value]);
+  }, [hideManagedFields, value, managedFieldsValue]);
 
   useEffect(() => {
     configureMonacoYaml(monaco, {
