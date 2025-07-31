@@ -149,7 +149,10 @@ func (b *bitbucketWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 		// cases where this choice does not hold up.
 		repoURLs := []string{payload.Repository.Links.HTML.Href}
 		refs := payload.getRefs()
-		logger = logger.WithValues("repoURLs", repoURLs, "refs", refs)
+		logger = logger.WithValues(
+			"repoURLs", repoURLs,
+			"refs", refs,
+		)
 		ctx = logging.ContextWithLogger(ctx, logger)
 		refreshWarehouses(ctx, w, b.client, b.project, repoURLs, refs...)
 	})
