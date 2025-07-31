@@ -95,22 +95,23 @@ kubectl get projectconfigs kargo-demo \
     1. Under <Hlt>Execution Results</Hlt> check
        <Hlt>Show status of successful executions in the Troubleshooting tab</Hlt>.
 
-    :::info
-    Although Artifactory supports sending test events to the URL, such event are
-    _not_ displayed in the troubleshooting tab; only actual events are.
-    :::
+        :::info
+        Although Artifactory supports sending test events to the URL, such
+        events are _not_ displayed in the troubleshooting tab; only actual
+        events are.
+        :::
 
     1. Scroll down to <Hlt>Events</Hlt> and select
        <Hlt>Docker and OCI</Hlt> ⃗ <Hlt>Tag was pushed</Hlt>.
 
         ![Select Trigger](./img/select-trigger.png "Select Trigger")
 
-    :::info
-    Artifactory supports many different types of registries and repositories.
-    This webhook responds only to events originating from repositories in OCI
-    registries. No other type of repository, including legacy (HTTP/S) Helm
-    chart repositories, is supported.
-    :::
+        :::info
+        Artifactory supports many different types of registries and repositories.
+        This webhook responds only to events originating from repositories in OCI
+        registries. No other type of repository, including legacy (HTTP/S) Helm
+        chart repositories, is supported.
+        :::
 
     1. Complete the form in the modal dialog that appears:
 
@@ -127,23 +128,23 @@ kubectl get projectconfigs kargo-demo \
 
         1. Click <Hlt>Save</Hlt>.
 
-1. Scroll down to <Hlt>Authentication</Hlt>.
+    1. Scroll down to <Hlt>Authentication</Hlt>.
 
-    ![Setup Auth](./img/setup-auth.png "Setup Auth")
+        ![Setup Auth](./img/setup-auth.png "Setup Auth")
 
-1. Complete the <Hlt>Secret token</Hlt> field using to the (unencoded) value
-   assigned to the `secret-token` key of the `Secret` resource referenced by
-   the [webhook receiver's configuration](#configuring-the-receiver).
+    1. Complete the <Hlt>Secret token</Hlt> field using to the (unencoded) value
+       assigned to the `secret-token` key of the `Secret` resource referenced by
+       the [webhook receiver's configuration](#configuring-the-receiver).
 
-1. Select <Hlt>Use secret for payload signing</Hlt>.
+    1. Select <Hlt>Use secret for payload signing</Hlt>.
 
-    :::caution
-    The webhook receiver won't accept unsigned requests.
-    :::
+        :::caution
+        The webhook receiver won't accept unsigned requests.
+        :::
 
-1. Click <Hlt>Save</Hlt>.
+    1. Click <Hlt>Save</Hlt>.
 
-    You will be redirected to the <Hlt>Webhooks Dashboard</Hlt> where the newly
-    created webhook will appear.
+        You will be redirected to the <Hlt>Webhooks Dashboard</Hlt> where the newly
+        created webhook will appear.
 
-    ![Created](./img/created.png "Created")
+        ![Created](./img/created.png "Created")
