@@ -5,13 +5,17 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
-	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
+	"github.com/akuity/kargo/internal/controller/git/commit"
+	"github.com/akuity/kargo/internal/git"
+	"github.com/akuity/kargo/internal/helm"
+	"github.com/akuity/kargo/internal/helm/chart"
 	xhttp "github.com/akuity/kargo/internal/http"
+	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/logging"
 )
@@ -26,7 +30,8 @@ func refreshWarehouses(
 	w http.ResponseWriter,
 	c client.Client,
 	project string,
-	repoURLs ...string,
+	repoURLs []string,
+	qualifiers ...string,
 ) {
 	logger := logging.LoggerFromContext(ctx)
 
@@ -39,7 +44,8 @@ func refreshWarehouses(
 		repoURLs = repoURLs[1:]
 	}
 
-	warehouses := []kargoapi.Warehouse{}
+	// The distinct set of all Warehouses that should be refreshed
+	toRefresh := map[client.ObjectKey]*kargoapi.Warehouse{}
 
 	for _, repoURL := range repoURLs {
 		repoLogger := logger.WithValues("repositoryURL", repoURL)
@@ -59,26 +65,44 @@ func refreshWarehouses(
 			return
 		}
 
-		warehouses = append(warehouses, ws.Items...)
+		for _, wh := range ws.Items {
+			whKey := client.ObjectKeyFromObject(&wh)
+			if _, alreadyRefreshing := toRefresh[whKey]; alreadyRefreshing {
+				continue
+			}
+			if len(qualifiers) > 0 {
+				shouldRefresh, err := shouldRefresh(wh, repoURL, qualifiers...)
+				if err != nil {
+					logger.Error(
+						err,
+						"failed to evaluate if warehouse needs refresh",
+						"warehouse", wh.Name,
+					)
+					xhttp.WriteErrorJSON(w, err)
+					return
+				}
+				if shouldRefresh {
+					toRefresh[whKey] = &wh
+				}
+			} else {
+				toRefresh[whKey] = &wh
+			}
+		}
 	}
 
-	slices.SortFunc(warehouses, func(lhs, rhs kargoapi.Warehouse) int {
-		return strings.Compare(lhs.Namespace+lhs.Name, rhs.Namespace+rhs.Name)
-	})
-	warehouses = slices.CompactFunc(warehouses, func(lhs, rhs kargoapi.Warehouse) bool {
-		return lhs.Namespace == rhs.Namespace && lhs.Name == rhs.Name
-	})
-
-	logger.Debug("found Warehouses to refresh", "count", len(warehouses))
+	logger.Debug("found Warehouses to refresh", "count", len(toRefresh))
 
 	var failures int
-	for _, wh := range warehouses {
-		objKey := client.ObjectKeyFromObject(&wh)
-		if _, err := api.RefreshWarehouse(ctx, c, objKey); err != nil {
-			logger.Error(err, "error refreshing Warehouse", "objectKey", objKey)
+	for whKey := range toRefresh {
+		whLogger := logger.WithValues(
+			"namespace", whKey.Namespace,
+			"name", whKey.Name,
+		)
+		if _, err := api.RefreshWarehouse(ctx, c, whKey); err != nil {
+			whLogger.Error(err, "error refreshing Warehouse")
 			failures++
 		} else {
-			logger.Debug("refreshed Warehouse", "objectKey", objKey)
+			whLogger.Debug("refreshed Warehouse")
 		}
 	}
 
@@ -89,7 +113,7 @@ func refreshWarehouses(
 			map[string]string{
 				"error": fmt.Sprintf("failed to refresh %d of %d warehouses",
 					failures,
-					len(warehouses),
+					len(toRefresh),
 				),
 			},
 		)
@@ -99,7 +123,43 @@ func refreshWarehouses(
 		w,
 		http.StatusOK,
 		map[string]string{
-			"msg": fmt.Sprintf("refreshed %d warehouse(s)", len(warehouses)),
+			"msg": fmt.Sprintf("refreshed %d warehouse(s)", len(toRefresh)),
 		},
 	)
+}
+
+func shouldRefresh(wh kargoapi.Warehouse, repoURL string, qualifiers ...string) (bool, error) {
+	var shouldRefresh bool
+	for _, s := range wh.Spec.Subscriptions {
+		switch {
+		case s.Git != nil && git.NormalizeURL(s.Git.RepoURL) == repoURL:
+			selector, err := commit.NewSelector(*s.Git, nil)
+			if err != nil {
+				return false, fmt.Errorf("error creating commit selector for Git subscription %q: %w",
+					s.Git.RepoURL, err,
+				)
+			}
+			shouldRefresh = slices.ContainsFunc(qualifiers, selector.MatchesRef)
+		case s.Image != nil && image.NormalizeURL(s.Image.RepoURL) == repoURL:
+			selector, err := image.NewSelector(*s.Image, nil)
+			if err != nil {
+				return false, fmt.Errorf("error creating image selector for Image subscription %q: %w",
+					s.Image.RepoURL, err,
+				)
+			}
+			shouldRefresh = slices.ContainsFunc(qualifiers, selector.MatchesTag)
+		case s.Chart != nil && helm.NormalizeChartRepositoryURL(s.Chart.RepoURL) == repoURL:
+			selector, err := chart.NewSelector(*s.Chart, nil)
+			if err != nil {
+				return false, fmt.Errorf("error creating chart selector for Chart subscription %q: %w",
+					s.Chart.RepoURL, err,
+				)
+			}
+			shouldRefresh = slices.ContainsFunc(qualifiers, selector.MatchesVersion)
+		}
+		if shouldRefresh {
+			return true, nil
+		}
+	}
+	return false, nil
 }

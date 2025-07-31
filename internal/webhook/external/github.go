@@ -133,6 +133,7 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			return
 		}
 
+		var qualifiers []string
 		var repoURLs []string
 		var mediaType string
 
@@ -167,13 +168,16 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 				xhttp.WriteErrorJSON(w, err)
 				return
 			}
-			manifest := pkg.GetPackageVersion().GetContainerMetadata().GetManifest()
+			v := pkg.GetPackageVersion()
+			manifest := v.GetContainerMetadata().GetManifest()
+			// Determine if the package is a Helm chart
 			if cfg, ok := manifest["config"].(map[string]any); ok {
-				if mediaType, ok = cfg["media_type"].(string); ok {
-					repoURLs = getNormalizedImageRepoURLs(ref.Context().Name(), mediaType)
-				}
+				mediaType, _ = cfg["media_type"].(string)
 			}
-
+			repoURLs = getNormalizedImageRepoURLs(ref.Context().Name(), mediaType)
+			tag := v.GetContainerMetadata().GetTag().GetName()
+			qualifiers = []string{tag}
+			logger = logger.WithValues("tag", tag)
 		case *gh.PingEvent:
 			xhttp.WriteResponseJSON(
 				w,
@@ -185,6 +189,9 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			return
 
 		case *gh.PushEvent:
+			ref := e.GetRef()
+			qualifiers = []string{ref}
+			logger = logger.WithValues("ref", ref)
 			// TODO(krancour): GetHTMLURL() gives us a repo URL starting with
 			// https://. By refreshing Warehouses using a normalized representation of
 			// that URL, we will miss any Warehouses that are subscribed to the same
@@ -198,6 +205,6 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 		)
 		ctx = logging.ContextWithLogger(ctx, logger)
 
-		refreshWarehouses(ctx, w, g.client, g.project, repoURLs...)
+		refreshWarehouses(ctx, w, g.client, g.project, repoURLs, qualifiers...)
 	})
 }

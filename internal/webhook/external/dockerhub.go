@@ -78,6 +78,7 @@ func (d *dockerhubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 		payload := struct {
 			PushData struct {
 				MediaType string `json:"media_type"`
+				Tag       string `json:"tag"`
 			} `json:"push_data"`
 			Repository struct {
 				RepoName string `json:"repo_name"`
@@ -96,13 +97,12 @@ func (d *dockerhubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 			payload.Repository.RepoName,
 			payload.PushData.MediaType,
 		)
-
 		logger = logger.WithValues(
 			"repoURLs", repoURLs,
+			"tag", payload.PushData.Tag,
 			"mediaType", payload.PushData.MediaType,
 		)
 		ctx = logging.ContextWithLogger(ctx, logger)
-
-		refreshWarehouses(ctx, w, d.client, d.project, repoURLs...)
+		refreshWarehouses(ctx, w, d.client, d.project, repoURLs, payload.PushData.Tag)
 	})
 }

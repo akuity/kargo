@@ -17,6 +17,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/indexer"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 const githubSigningKey = "mysupersecrettoken"
@@ -39,6 +40,9 @@ func TestGithubHandler(t *testing.T) {
 			PackageVersion: &gh.PackageVersion{
 				PackageURL: gh.Ptr("ghcr.io/example/repo:latest"),
 				ContainerMetadata: &gh.PackageEventContainerMetadata{
+					Tag: &gh.PackageEventContainerMetadataTag{
+						Name: gh.Ptr("v1.0.0"),
+					},
 					Manifest: map[string]any{
 						"config": map[string]any{
 							// Real world testing shows this media type is what the payload
@@ -57,6 +61,9 @@ func TestGithubHandler(t *testing.T) {
 			PackageVersion: &gh.PackageVersion{
 				PackageURL: gh.Ptr("ghcr.io/example/repo:latest"),
 				ContainerMetadata: &gh.PackageEventContainerMetadata{
+					Tag: &gh.PackageEventContainerMetadataTag{
+						Name: gh.Ptr("v1.0.0"),
+					},
 					Manifest: map[string]any{
 						"config": map[string]any{
 							// Real world testing shows this media type is what the payload
@@ -254,7 +261,11 @@ func TestGithubHandler(t *testing.T) {
 					},
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
-							Image: &kargoapi.ImageSubscription{RepoURL: "ghcr.io/example/repo"},
+							Image: &kargoapi.ImageSubscription{
+								RepoURL:                "ghcr.io/example/repo",
+								ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+								SemverConstraint:       "^v1.0.0",
+							},
 						}},
 					},
 				},
@@ -292,7 +303,8 @@ func TestGithubHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Chart: &kargoapi.ChartSubscription{
-								RepoURL: "oci://ghcr.io/example/repo",
+								SemverConstraint: "^v1.0.0",
+								RepoURL:          "oci://ghcr.io/example/repo",
 							},
 						}},
 					},
@@ -331,7 +343,9 @@ func TestGithubHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{
-								RepoURL: "https://github.com/example/repo",
+								RepoURL:                 "https://github.com/example/repo",
+								CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+								Branch:                  "main",
 							},
 						}},
 					},
@@ -367,6 +381,9 @@ func TestGithubHandler(t *testing.T) {
 				_ = testCase.req().Body.Close()
 			})
 
+			logger := logging.NewLogger(logging.DebugLevel)
+			ctx := logging.ContextWithLogger(testCase.req().Context(), logger)
+
 			w := httptest.NewRecorder()
 			(&githubWebhookReceiver{
 				baseWebhookReceiver: &baseWebhookReceiver{
@@ -374,7 +391,7 @@ func TestGithubHandler(t *testing.T) {
 					project:    testProjectName,
 					secretData: testCase.secretData,
 				},
-			}).getHandler(requestBody)(w, testCase.req())
+			}).getHandler(requestBody)(w, testCase.req().WithContext(ctx))
 
 			testCase.assertions(t, w)
 		})

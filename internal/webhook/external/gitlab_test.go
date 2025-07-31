@@ -19,6 +19,7 @@ import (
 
 const gitlabPushEventRequestBody = `
 {
+	"ref": "refs/heads/main",
 	"repository":{
 		"git_http_url": "https://gitlab.com/example/repo"
 	}
@@ -109,7 +110,9 @@ func TestGitLabHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{
-								RepoURL: "https://gitlab.com/example/repo",
+								CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+								Branch:                  "main",
+								RepoURL:                 "https://gitlab.com/example/repo",
 							},
 						}},
 					},

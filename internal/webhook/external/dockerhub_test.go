@@ -20,6 +20,7 @@ import (
 const dockerhubWebhookRequestBodyImage = `
 {
 	"push_data": {
+		"tag": "v1.0.0",
 		"media_type": "` + dockerImageConfigBlobMediaType + `"
 	},
 	"repository": {
@@ -30,6 +31,7 @@ const dockerhubWebhookRequestBodyImage = `
 const dockerhubWebhookRequestBodyChart = `
 {
 	"push_data": {
+		"tag": "v1.0.0",
 		"media_type": "` + helmChartConfigBlobMediaType + `"
 	},
 	"repository": {
@@ -79,7 +81,11 @@ func TestDockerHubHandler(t *testing.T) {
 					},
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
-							Image: &kargoapi.ImageSubscription{RepoURL: "example/repo"},
+							Image: &kargoapi.ImageSubscription{
+								RepoURL:                "example/repo",
+								ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+								SemverConstraint:       "^v1.0.0",
+							},
 						}},
 					},
 				},

@@ -22,6 +22,7 @@ import (
 func TestRefreshWarehouses(t *testing.T) {
 	// Callers are responsible for normalizing the repository URL.
 	testRepoURL := git.NormalizeURL("https://github.com/example/repo.git")
+	testRepoURLs := []string{testRepoURL}
 
 	const testProject = "fake-project"
 
@@ -200,17 +201,137 @@ func TestRefreshWarehouses(t *testing.T) {
 			},
 		},
 	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
-			refreshWarehouses(
-				t.Context(),
-				w,
-				testCase.client,
-				testCase.project,
-				testRepoURL,
-			)
-			testCase.assertions(t, w)
+			refreshWarehouses(t.Context(), w, tt.client, tt.project, testRepoURLs)
+			tt.assertions(t, w)
+		})
+	}
+}
+
+func TestShouldRefresh(t *testing.T) {
+	testCases := []struct {
+		name       string
+		wh         kargoapi.Warehouse
+		qualifiers []string
+		repoURL    string
+		expect     bool
+	}{
+		{
+			name: "Git subscription with matching qualifier",
+			wh: kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Git: &kargoapi.GitSubscription{
+							CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+							RepoURL:                 "https://github.com/username/repo",
+							Branch:                  "main",
+						}},
+					},
+				},
+			},
+			repoURL:    "https://github.com/username/repo",
+			qualifiers: []string{"refs/heads/main"},
+			expect:     true,
+		},
+		{
+			name: "Git subscription with non-matching qualifier",
+			wh: kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Git: &kargoapi.GitSubscription{
+							CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+							RepoURL:                 "https://github.com/username/repo.git",
+							Branch:                  "main",
+						}},
+					},
+				},
+			},
+			repoURL:    "https://github.com/username/repo",
+			qualifiers: []string{"release"},
+			expect:     false,
+		},
+		{
+			name: "Image subscription with matching qualifier",
+			wh: kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Image: &kargoapi.ImageSubscription{
+							RepoURL:                "docker.io/example/repo",
+							ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+							SemverConstraint:       "^1.0.0",
+							StrictSemvers:          true,
+						}},
+					},
+				},
+			},
+			repoURL:    "example/repo",
+			qualifiers: []string{"v1.0.0"},
+			expect:     true,
+		},
+		{
+			name: "Image subscription with non-matching qualifier",
+			wh: kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Image: &kargoapi.ImageSubscription{
+							RepoURL:                "docker.io/example/repo",
+							ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+							SemverConstraint:       "^1.0.0",
+							StrictSemvers:          true,
+						}},
+					},
+				},
+			},
+			repoURL:    "docker.io/example/repo",
+			qualifiers: []string{"invalid-tag"},
+			expect:     false,
+		},
+		{
+			name: "Chart subscription with matching qualifier",
+			wh: kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Chart: &kargoapi.ChartSubscription{
+							RepoURL:          "oci://example.com/charts",
+							SemverConstraint: "^1.0.0",
+						}},
+					},
+				},
+			},
+			repoURL:    "example.com/charts",
+			qualifiers: []string{"v1.0.0"},
+			expect:     true,
+		},
+		{
+			name: "Chart subscription with non-matching qualifier",
+			wh: kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Chart: &kargoapi.ChartSubscription{
+							RepoURL:          "oci://example.com/charts",
+							SemverConstraint: "^2.0.0",
+						}},
+					},
+				},
+			},
+			repoURL:    "example.com/charts",
+			qualifiers: []string{"1.0.0"},
+			expect:     false,
+		},
+		{
+			name:       "No subscriptions",
+			wh:         kargoapi.Warehouse{},
+			qualifiers: []string{"main"},
+			expect:     false,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := shouldRefresh(tc.wh, tc.repoURL, tc.qualifiers...)
+			require.NoError(t, err)
+			require.Equal(t, tc.expect, result)
 		})
 	}
 }
