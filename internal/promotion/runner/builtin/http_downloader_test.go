@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -520,6 +521,13 @@ func Test_httpDownloader_downloadToFile(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create mock response
 			resp := &http.Response{
+				Request: &http.Request{
+					URL: &url.URL{
+						Scheme: "https",
+						Host:   "example.com",
+						Path:   "downloaded-file.txt",
+					},
+				},
 				StatusCode:    200,
 				ContentLength: tt.contentSize,
 				Body:          io.NopCloser(strings.NewReader(tt.content)),
@@ -545,6 +553,13 @@ func Test_httpDownloader_downloadToFile_contextCancellation(t *testing.T) {
 	}
 
 	resp := &http.Response{
+		Request: &http.Request{
+			URL: &url.URL{
+				Scheme: "https",
+				Host:   "example.com",
+				Path:   "downloaded-file.txt",
+			},
+		},
 		StatusCode: 200,
 		Body:       io.NopCloser(sr),
 	}
@@ -576,6 +591,13 @@ func Test_httpDownloader_downloadToFile_sizeExceeded(t *testing.T) {
 	largeContent := strings.Repeat("x", int(maxDownloadSize)+1000)
 
 	resp := &http.Response{
+		Request: &http.Request{
+			URL: &url.URL{
+				Scheme: "https",
+				Host:   "example.com",
+				Path:   "downloaded-file.txt",
+			},
+		},
 		StatusCode: 200,
 		Body:       io.NopCloser(strings.NewReader(largeContent)),
 	}
