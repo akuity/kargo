@@ -101,7 +101,7 @@ kubectl get projectconfigs kargo-demo \
         events are.
         :::
 
-    1. Under <Hlt>Events</Hlt>, select
+    1. In the <Hlt>Events</Hlt> drop-down, select
        <Hlt>Docker and OCI</Hlt> ⃗ <Hlt>Tag was pushed</Hlt>.
 
         ![Select Trigger](./img/select-trigger.png "Select Trigger")
@@ -117,13 +117,12 @@ kubectl get projectconfigs kargo-demo \
 
        ![Select Repos](./img/select-repos.png "Select Repos")
 
-        1. Check boxes corresponding to repositories from which you would like
-           to receive events.
+        1. Select repositories from which you would like to receive events from
+           those listed on the left.
 
-        1. Click <Hlt>></Hlt> to move selected repositories into the selected window.
+        1. Click <Hlt>&gt;</Hlt> to move your selections to the right.
 
-            Upon moving repositories to the selected section, the
-            <Hlt>Save</Hlt> button will be enabled.
+            Upon doing so, the <Hlt>Save</Hlt> button will be enabled.
 
             ![Repos Selected](./img/repos-selected.png "Repos Selected")
 
