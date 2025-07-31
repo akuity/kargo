@@ -58,23 +58,19 @@ func (d *ociDownloader) Run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
-	if err := d.validate(stepCtx.Config); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			&promotion.TerminalError{Err: err}
-	}
-
-	cfg, err := promotion.ConfigToStruct[builtin.OCIDownloadConfig](stepCtx.Config)
+	cfg, err := d.convert(stepCtx.Config)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			&promotion.TerminalError{Err: fmt.Errorf("could not convert config into %s config: %w", d.Name(), err)}
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusFailed,
+		}, &promotion.TerminalError{Err: err}
 	}
-
 	return d.run(ctx, stepCtx, cfg)
 }
 
-// validate validates ociDownloader configuration against a JSON schema.
-func (d *ociDownloader) validate(cfg promotion.Config) error {
-	return validate(d.schemaLoader, gojsonschema.NewGoLoader(cfg), d.Name())
+// convert validates the ociDownloader configuration against a JSON schema
+// and converts it into a builtin.OCIDownloadConfig struct.
+func (d *ociDownloader) convert(cfg promotion.Config) (builtin.OCIDownloadConfig, error) {
+	return validateAndConvert[builtin.OCIDownloadConfig](d.schemaLoader, cfg, d.Name())
 }
 
 // run executes the ociDownloader step with the provided configuration.
