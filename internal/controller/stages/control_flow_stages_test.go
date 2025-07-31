@@ -342,7 +342,7 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 			r := &ControlFlowStageReconciler{
 				client:        c,
 				eventRecorder: fakeevent.NewEventRecorder(10),
-				labelChecker: controller.ResponsibleFor[kargoapi.Stage]{
+				shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
 					IsDefaultController: false,
 					ShardName:           "test-shard",
 				},
@@ -668,7 +668,7 @@ func TestControlFlowStageReconciler_reconcile(t *testing.T) {
 			r := &ControlFlowStageReconciler{
 				client:        c,
 				eventRecorder: fakeevent.NewEventRecorder(10),
-				labelChecker: controller.ResponsibleFor[kargoapi.Stage]{
+				shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
 					IsDefaultController: false,
 					ShardName:           "test-shard",
 				},

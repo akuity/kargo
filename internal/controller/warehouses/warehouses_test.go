@@ -1022,7 +1022,7 @@ func TestReconcile(t *testing.T) {
 			name: "Shard mismatch",
 			reconciler: func() *reconciler {
 				return &reconciler{
-					labelChecker: controller.ResponsibleFor[kargoapi.Warehouse]{
+					shardPredicate: controller.ResponsibleFor[kargoapi.Warehouse]{
 						ShardName:           "right-shard",
 						IsDefaultController: false,
 					},
@@ -1059,7 +1059,7 @@ func TestReconcile(t *testing.T) {
 			name: "Shard match",
 			reconciler: func() *reconciler {
 				return &reconciler{
-					labelChecker: controller.ResponsibleFor[kargoapi.Warehouse]{
+					shardPredicate: controller.ResponsibleFor[kargoapi.Warehouse]{
 						ShardName:           "right-shard",
 						IsDefaultController: false,
 					},
@@ -1140,6 +1140,9 @@ func TestReconcile(t *testing.T) {
 				require.False(t, r.IsZero(), "expected further reconciliation after shard match")
 			},
 		},
+		// TODO(fuskovic): TestReconcile was initially added as part of
+		// https://github.com/akuity/kargo/pull/4677. We should add more test cases
+		// here to cover logic outside of the scope of shard predicate checks.
 	}
 
 	for _, tt := range tests {

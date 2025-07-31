@@ -39,10 +39,10 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 
 // reconciler reconciles Warehouse resources.
 type reconciler struct {
-	client        client.Client
-	credentialsDB credentials.Database
-	cfg           ReconcilerConfig
-	labelChecker  controller.ResponsibleFor[kargoapi.Warehouse]
+	client         client.Client
+	credentialsDB  credentials.Database
+	cfg            ReconcilerConfig
+	shardPredicate controller.ResponsibleFor[kargoapi.Warehouse]
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -143,7 +143,7 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	if !r.labelChecker.IsResponsible(warehouse) {
+	if !r.shardPredicate.IsResponsible(warehouse) {
 		logger.Debug("ignoring Warehouse because it is is not assigned to this shard")
 		return ctrl.Result{}, nil
 	}
