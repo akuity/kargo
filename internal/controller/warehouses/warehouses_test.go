@@ -1042,7 +1042,6 @@ func TestReconcile(t *testing.T) {
 					cfg: ReconcilerConfig{ShardName: "right-shard"},
 					// Intentionally not setting any xFns because we should never reach them
 					// because we will exit before any reconciliation logic is executed.
-					// With that said, there is nothing that needs to be asserted here
 				}
 			},
 			req: ctrl.Request{
