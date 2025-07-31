@@ -171,7 +171,6 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			v := pkg.GetPackageVersion()
 			manifest := v.GetContainerMetadata().GetManifest()
 			// Determine if the package is a Helm chart
-			var mediaType string
 			if cfg, ok := manifest["config"].(map[string]any); ok {
 				mediaType, _ = cfg["media_type"].(string)
 			}
