@@ -25,7 +25,7 @@ accordingly.
 A GitLab webhook receiver must reference a Kubernetes `Secret` resource with a
 `secret-token` key in its data map. This
 [shared secret](https://en.wikipedia.org/wiki/Shared_secret) will be used by
-GitLab to sign requests any by the receiver to verify those signatures.
+GitLab to sign requests and by the receiver to verify those signatures.
 
 :::note
 The following commands are suggested for generating and base64-encoding a
@@ -50,6 +50,8 @@ kind: Secret
 metadata:
   name: gl-wh-secret
   namespace: kargo-demo
+  labels:
+    kargo.akuity.io/cred-type: generic
 data:
   secret-token: <base64-encoded secret token>
 ---
