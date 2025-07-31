@@ -303,7 +303,7 @@ type HTTPConfig struct {
 	// An expression to evaluate to determine if the request failed.
 	FailureExpression string `json:"failureExpression,omitempty"`
 	// Headers to include in the HTTP request.
-	Headers []HTTPHeader `json:"headers,omitempty"`
+	Headers []HTTPConfigHeader `json:"headers,omitempty"`
 	// Whether to skip TLS verification when making the request. (Not recommended.)
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 	// The HTTP method to use for the request.
@@ -311,7 +311,7 @@ type HTTPConfig struct {
 	// Outputs to extract from the HTTP response.
 	Outputs []HTTPOutput `json:"outputs,omitempty"`
 	// Query parameters to include in the HTTP request.
-	QueryParams []HTTPQueryParam `json:"queryParams,omitempty"`
+	QueryParams []HTTPConfigQueryParam `json:"queryParams,omitempty"`
 	// An expression to evaluate to determine if the request was successful.
 	SuccessExpression string `json:"successExpression,omitempty"`
 	// The maximum time to wait for the request to complete. If not specified, the default is 10
@@ -321,7 +321,7 @@ type HTTPConfig struct {
 	URL string `json:"url"`
 }
 
-type HTTPHeader struct {
+type HTTPConfigHeader struct {
 	// The name of the header.
 	Name string `json:"name"`
 	// The value of the header.
@@ -335,7 +335,40 @@ type HTTPOutput struct {
 	Name string `json:"name"`
 }
 
-type HTTPQueryParam struct {
+type HTTPConfigQueryParam struct {
+	// The name of the query parameter.
+	Name string `json:"name"`
+	// The value of the query parameter.
+	Value string `json:"value"`
+}
+
+type HTTPDownloadConfig struct {
+	// Whether to allow overwriting an existing file at the specified path. If false and the
+	// file exists, the download will fail.
+	AllowOverwrite bool `json:"allowOverwrite,omitempty"`
+	// Headers to include in the HTTP request.
+	Headers []HTTPDownloadConfigHeader `json:"headers,omitempty"`
+	// Whether to skip TLS verification when making the request. (Not recommended.)
+	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
+	// The path where the downloaded file will be saved.
+	OutPath string `json:"outPath"`
+	// Query parameters to include in the HTTP request.
+	QueryParams []HTTPDownloadConfigQueryParam `json:"queryParams,omitempty"`
+	// The maximum time to wait for the download to complete. If not specified, the default is 5
+	// minutes.
+	Timeout string `json:"timeout,omitempty"`
+	// The URL to download from.
+	URL string `json:"url"`
+}
+
+type HTTPDownloadConfigHeader struct {
+	// The name of the header.
+	Name string `json:"name"`
+	// The value of the header.
+	Value string `json:"value"`
+}
+
+type HTTPDownloadConfigQueryParam struct {
 	// The name of the query parameter.
 	Name string `json:"name"`
 	// The value of the query parameter.

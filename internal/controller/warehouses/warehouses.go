@@ -25,6 +25,7 @@ import (
 )
 
 type ReconcilerConfig struct {
+	IsDefaultController       bool          `envconfig:"IS_DEFAULT_CONTROLLER"`
 	ShardName                 string        `envconfig:"SHARD_NAME"`
 	MaxConcurrentReconciles   int           `envconfig:"MAX_CONCURRENT_WAREHOUSE_RECONCILES" default:"4"`
 	MinReconciliationInterval time.Duration `envconfig:"MIN_WAREHOUSE_RECONCILIATION_INTERVAL"`
@@ -67,13 +68,13 @@ func SetupReconcilerWithManager(
 	credentialsDB credentials.Database,
 	cfg ReconcilerConfig,
 ) error {
-	shardPredicate, err := controller.GetShardPredicate(cfg.ShardName)
-	if err != nil {
-		return fmt.Errorf("error creating shard selector predicate: %w", err)
-	}
 
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&kargoapi.Warehouse{}).
+		WithEventFilter(controller.ResponsibleFor[client.Object]{
+			IsDefaultController: cfg.IsDefaultController,
+			ShardName:           cfg.ShardName,
+		}).
 		WithEventFilter(intpredicate.IgnoreDelete[client.Object]{}).
 		WithEventFilter(
 			predicate.Or(
@@ -81,7 +82,6 @@ func SetupReconcilerWithManager(
 				kargo.RefreshRequested{},
 			),
 		).
-		WithEventFilter(shardPredicate).
 		WithOptions(controller.CommonOptions(cfg.MaxConcurrentReconciles)).
 		Complete(newReconciler(mgr.GetClient(), credentialsDB, cfg.MinReconciliationInterval)); err != nil {
 		return fmt.Errorf("error building Warehouse reconciler: %w", err)

@@ -130,7 +130,10 @@ func (r *ControlFlowStageReconciler) SetupWithManager(
 	c, err := ctrl.NewControllerManagedBy(mgr).
 		For(&kargoapi.Stage{}).
 		Named("control_flow_stage").
-		WithOptions(controller.CommonOptions(r.cfg.MaxConcurrentControlFlowReconciles)).
+		WithEventFilter(controller.ResponsibleFor[client.Object]{
+			IsDefaultController: r.cfg.IsDefaultController,
+			ShardName:           r.cfg.ShardName,
+		}).
 		WithEventFilter(intpredicate.IgnoreDelete[client.Object]{}).
 		WithEventFilter(
 			predicate.And(
@@ -141,6 +144,7 @@ func (r *ControlFlowStageReconciler) SetupWithManager(
 				),
 			),
 		).
+		WithOptions(controller.CommonOptions(r.cfg.MaxConcurrentControlFlowReconciles)).
 		Build(r)
 	if err != nil {
 		return fmt.Errorf("error building control flow Stage reconciler: %w", err)

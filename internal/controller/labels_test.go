@@ -4,57 +4,90 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"k8s.io/apimachinery/pkg/labels"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-func TestGetShardPredicate(t *testing.T) {
-	const testShardName = "test-shard"
-	unlabeledEvent := event.CreateEvent{
-		Object: &kargoapi.Stage{},
-	}
-	labeledEvent := event.CreateEvent{
-		Object: &kargoapi.Stage{
-			ObjectMeta: metav1.ObjectMeta{
-				Labels: map[string]string{
-					kargoapi.LabelKeyShard: testShardName,
-				},
-			},
-		},
-	}
+func TestGetShardRequirement(t *testing.T) {
 	testCases := []struct {
-		name       string
-		shardName  string
-		assertions func(*testing.T, predicate.Predicate, error)
+		name                string
+		shardName           string
+		isDefaultController bool
+		assertions          func(*testing.T, *labels.Requirement, error)
 	}{
 		{
-			name:      "shard name is the empty string",
-			shardName: "",
-			assertions: func(t *testing.T, pred predicate.Predicate, err error) {
+			name:                "no shard name + default controller",
+			shardName:           "",
+			isDefaultController: true,
+			assertions: func(t *testing.T, req *labels.Requirement, err error) {
 				require.NoError(t, err)
-				require.NotNil(t, pred)
-				require.True(t, pred.Create(unlabeledEvent))
-				require.False(t, pred.Create(labeledEvent))
+				require.NotNil(t, req)
+				require.True(t, req.Matches(labels.Set{}))
+				require.False(
+					t,
+					req.Matches(labels.Set{kargoapi.LabelKeyShard: "fake-shard"}),
+				)
 			},
 		},
 		{
-			name:      "shard name is not the empty string",
-			shardName: testShardName,
-			assertions: func(t *testing.T, pred predicate.Predicate, err error) {
+			name:                "no shard name + not default controller",
+			shardName:           "",
+			isDefaultController: false,
+			assertions: func(t *testing.T, req *labels.Requirement, err error) {
 				require.NoError(t, err)
-				require.NotNil(t, pred)
-				require.False(t, pred.Create(unlabeledEvent))
-				require.True(t, pred.Create(labeledEvent))
+				// Absence of a shard name makes this controller the de facto default.
+				// It doesn't matter that isDefaultController is false. If Kargo is
+				// installed via its Helm chart, this combination of settings should
+				// actually never occur.
+				require.NotNil(t, req)
+				require.True(t, req.Matches(labels.Set{}))
+				require.False(
+					t,
+					req.Matches(labels.Set{kargoapi.LabelKeyShard: "fake-shard"}),
+				)
+			},
+		},
+		{
+			name:                "shard name + default controller",
+			shardName:           "fake-shard",
+			isDefaultController: true,
+			assertions: func(t *testing.T, req *labels.Requirement, err error) {
+				require.NoError(t, err)
+				// These conditions cannot be distilled down to a single
+				// labels.Requirement, so we expect none is returned. The caller will
+				// determine how to proceed under these circumstances.
+				require.Nil(t, req)
+			},
+		},
+		{
+			name:                "shard name + not default controller",
+			shardName:           "fake-shard",
+			isDefaultController: false,
+			assertions: func(t *testing.T, req *labels.Requirement, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, req)
+				require.False(t, req.Matches(labels.Set{}))
+				require.True(
+					t,
+					req.Matches(labels.Set{kargoapi.LabelKeyShard: "fake-shard"}),
+				)
+				require.False(
+					t,
+					req.Matches(labels.Set{
+						kargoapi.LabelKeyShard: "different-fake-shard",
+					}),
+				)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			pred, err := GetShardPredicate(testCase.shardName)
-			testCase.assertions(t, pred, err)
+			req, err := GetShardRequirement(
+				testCase.shardName,
+				testCase.isDefaultController,
+			)
+			testCase.assertions(t, req, err)
 		})
 	}
 }
