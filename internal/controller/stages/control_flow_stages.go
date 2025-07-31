@@ -210,7 +210,7 @@ func (r *ControlFlowStageReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	if !r.labelChecker.AmResponsible(stage) {
+	if !r.labelChecker.IsResponsible(stage) {
 		logger.Debug("ignoring Control Flow Stage because it is is not assigned to this shard")
 		return ctrl.Result{}, nil
 	}

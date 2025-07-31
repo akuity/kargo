@@ -333,7 +333,7 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, nil
 	}
 
-	if !r.labelChecker.AmResponsible(stage) {
+	if !r.labelChecker.IsResponsible(stage) {
 		logger.Debug("ignoring Stage because it is is not assigned to this shard")
 		return ctrl.Result{}, nil
 	}

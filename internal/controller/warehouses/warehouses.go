@@ -143,7 +143,7 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	if !r.labelChecker.AmResponsible(warehouse) {
+	if !r.labelChecker.IsResponsible(warehouse) {
 		logger.Debug("ignoring Warehouse because it is is not assigned to this shard")
 		return ctrl.Result{}, nil
 	}
