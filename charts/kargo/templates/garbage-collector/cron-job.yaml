@@ -52,6 +52,10 @@ spec:
           affinity:
             {{- toYaml . | nindent 12 }}
           {{- end }}
+          {{- with .Values.image.pullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 8 }}
+          {{- end }}
           containers:
           - name: garbage-collector
             image: {{ include "kargo.image" . }}

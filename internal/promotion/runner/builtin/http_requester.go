@@ -295,7 +295,7 @@ func (h *httpRequester) buildExprEnv(
 		},
 	}
 	contentType, _, _ := mime.ParseMediaType(resp.Header.Get(contentTypeHeader))
-	if len(bodyBytes) > 0 && contentType == contentTypeJSON {
+	if len(bodyBytes) > 0 && (contentType == contentTypeJSON || json.Valid(bodyBytes)) {
 		var parsedBody any
 		if err := json.Unmarshal(bodyBytes, &parsedBody); err != nil {
 			return nil, fmt.Errorf("failed to parse response: %w", err)

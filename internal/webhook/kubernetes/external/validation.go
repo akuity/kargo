@@ -42,6 +42,9 @@ func validateMutuallyExclusive(
 		if r.Quay != nil {
 			receivers = append(receivers, "Quay")
 		}
+		if r.Artifactory != nil {
+			receivers = append(receivers, "Artifactory")
+		}
 		if r.Azure != nil {
 			receivers = append(receivers, "Azure")
 		}

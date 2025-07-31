@@ -45,12 +45,18 @@ func newSemverSelector(
 		tagBasedSelector: tagBased,
 		strictSemvers:    sub.StrictSemvers,
 	}
-	if sub.SemverConstraint != "" {
+	constraintStr := sub.Constraint
+	if constraintStr == "" {
+		// Fall back on the deprecated SemverConstraint field.
+		// TODO: Remove this for v1.9.0.
+		constraintStr = sub.SemverConstraint // nolint: staticcheck
+	}
+	if constraintStr != "" {
 		if s.constraint, err =
-			semver.NewConstraint(sub.SemverConstraint); err != nil {
+			semver.NewConstraint(constraintStr); err != nil {
 			return nil, fmt.Errorf(
 				"error parsing semver constraint %q: %w",
-				sub.SemverConstraint, err,
+				constraintStr, err,
 			)
 		}
 	}

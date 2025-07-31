@@ -39,10 +39,16 @@ func newDigestSelector(
 	if err != nil {
 		return nil, fmt.Errorf("error building base selector: %w", err)
 	}
-	return &digestSelector{
+	s := &digestSelector{
 		baseSelector: base,
-		mutableTag:   sub.SemverConstraint,
-	}, nil
+		mutableTag:   sub.Constraint,
+	}
+	if s.mutableTag == "" {
+		// Fall back on the deprecated SemverConstraint field.
+		// TODO: Remove this for v1.9.0.
+		s.mutableTag = sub.SemverConstraint // nolint: staticcheck
+	}
+	return s, nil
 }
 
 // MatchesTag implements Selector.
