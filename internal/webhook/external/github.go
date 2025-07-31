@@ -20,11 +20,17 @@ const (
 
 	github = "github"
 
+	// githubEventTypePackage is type of event corresponds to a package push when the webhook is
+	// registered directly at the repository-level. i.e. It's when the webhook
+	// is not registered indirectly via a GitHub App that's been installed into
+	// the repository.
 	githubEventTypePackage = "package"
 	githubEventTypePing    = "ping"
 	githubEventTypePush    = "push"
-	// githubEventTypeRegistryPackage is similar to package event
-	// but is only valid for GitHub Apps
+	// githubEventTypeRegistryPackage corresponds to a package push event when the
+	// webhook is registered indirectly via a GitHub App that's been installed
+	// into the repository. i.e. When the webhook is not registered directly at
+	// the repository-level.
 	githubEventTypeRegistryPackage = "registry_package"
 
 	ghcrPackageTypeContainer = "CONTAINER"
@@ -227,7 +233,6 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			// and no tag (e.g., "ghcr.io/user/image:"). Such strings are
 			// not valid OCI image references and will result in empty
 			// repo URLs. We trim the trailing colon to avoid parsing errors
-			// and optionally allow fallback handling (e.g., ":latest").
 			pkgURL := strings.TrimSuffix(pkg.GetPackageVersion().GetPackageURL(), ":")
 			manifest := pkg.GetPackageVersion().GetContainerMetadata().GetManifest()
 			if cfg, ok := manifest["config"].(map[string]any); ok {
