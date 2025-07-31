@@ -253,24 +253,22 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                   }
                 />
               </Flex>
-              <div
-                className={`w-[450px] absolute right-2 top-20 z-10 transition-opacity duration-300 ${
-                  preferredFilter?.images ? 'opacity-100' : 'opacity-0'
-                }`}
-              >
-                <Images
-                  hide={() =>
-                    setPreferredFilter({
-                      ...preferredFilter,
-                      images: !preferredFilter?.images
-                    })
-                  }
-                  images={listImagesQuery.data?.images || {}}
-                  project={projectName || ''}
-                  stages={listStagesQuery.data?.stages || []}
-                  warehouses={listWarehousesQuery.data?.warehouses || []}
-                />
-              </div>
+              {preferredFilter?.images && (
+                <div className='w-[450px] absolute right-2 top-20 z-10'>
+                  <Images
+                    hide={() =>
+                      setPreferredFilter({
+                        ...preferredFilter,
+                        images: !preferredFilter?.images
+                      })
+                    }
+                    images={listImagesQuery.data?.images || {}}
+                    project={projectName || ''}
+                    stages={listStagesQuery.data?.stages || []}
+                    warehouses={listWarehousesQuery.data?.warehouses || []}
+                  />
+                </div>
+              )}
               {pipelineView === 'graph' && (
                 <Graph
                   project={project.metadata?.name || ''}
