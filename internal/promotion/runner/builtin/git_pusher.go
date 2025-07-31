@@ -58,20 +58,18 @@ func (g *gitPushPusher) Run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
-	if err := g.validate(stepCtx.Config); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
-	}
-	cfg, err := promotion.ConfigToStruct[builtin.GitPushConfig](stepCtx.Config)
+	cfg, err := g.convert(stepCtx.Config)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("could not convert config into git-push config: %w", err)
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusFailed,
+		}, &promotion.TerminalError{Err: err}
 	}
 	return g.run(ctx, stepCtx, cfg)
 }
 
 // validate validates gitPusher configuration against a JSON schema.
-func (g *gitPushPusher) validate(cfg promotion.Config) error {
-	return validate(g.schemaLoader, gojsonschema.NewGoLoader(cfg), "git-push")
+func (g *gitPushPusher) convert(cfg promotion.Config) (builtin.GitPushConfig, error) {
+	return validateAndConvert[builtin.GitPushConfig](g.schemaLoader, cfg, g.Name())
 }
 
 func (g *gitPushPusher) run(

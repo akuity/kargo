@@ -61,23 +61,19 @@ func (d *httpDownloader) Run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
-	if err := d.validate(stepCtx.Config); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			&promotion.TerminalError{Err: err}
-	}
-
-	cfg, err := promotion.ConfigToStruct[builtin.HTTPDownloadConfig](stepCtx.Config)
+	cfg, err := d.convert(stepCtx.Config)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			&promotion.TerminalError{Err: fmt.Errorf("could not convert config into download config: %w", err)}
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusFailed,
+		}, &promotion.TerminalError{Err: err}
 	}
-
 	return d.run(ctx, stepCtx, cfg)
 }
 
-// validate validates httpDownloader configuration against a JSON schema.
-func (d *httpDownloader) validate(cfg promotion.Config) error {
-	return validate(d.schemaLoader, gojsonschema.NewGoLoader(cfg), d.Name())
+// convert validates httpDownloader configuration against a JSON schema and
+// converts it into a builtin.HTTPDownloadConfig struct.
+func (d *httpDownloader) convert(cfg promotion.Config) (builtin.HTTPDownloadConfig, error) {
+	return validateAndConvert[builtin.HTTPDownloadConfig](d.schemaLoader, cfg, d.Name())
 }
 
 // run executes the httpDownloader step with the provided configuration.

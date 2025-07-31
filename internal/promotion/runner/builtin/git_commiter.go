@@ -40,20 +40,19 @@ func (g *gitCommitter) Run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
-	if err := g.validate(stepCtx.Config); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
-	}
-	cfg, err := promotion.ConfigToStruct[builtin.GitCommitConfig](stepCtx.Config)
+	cfg, err := g.convert(stepCtx.Config)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("could not convert config into %s config: %w", g.Name(), err)
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusFailed,
+		}, &promotion.TerminalError{Err: err}
 	}
 	return g.run(ctx, stepCtx, cfg)
 }
 
-// validate validates gitCommitter configuration against a JSON schema.
-func (g *gitCommitter) validate(cfg promotion.Config) error {
-	return validate(g.schemaLoader, gojsonschema.NewGoLoader(cfg), g.Name())
+// convert validates the configuration against a JSON schema and converts it
+// into a builtin.GitCommitConfig struct.
+func (g *gitCommitter) convert(cfg promotion.Config) (builtin.GitCommitConfig, error) {
+	return validateAndConvert[builtin.GitCommitConfig](g.schemaLoader, cfg, g.Name())
 }
 
 func (g *gitCommitter) run(

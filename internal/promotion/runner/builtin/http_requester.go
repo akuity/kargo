@@ -52,21 +52,19 @@ func (h *httpRequester) Run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
-	if err := h.validate(stepCtx.Config); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			&promotion.TerminalError{Err: err}
-	}
-	cfg, err := promotion.ConfigToStruct[builtin.HTTPConfig](stepCtx.Config)
+	cfg, err := h.convert(stepCtx.Config)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			&promotion.TerminalError{Err: fmt.Errorf("could not convert config into http config: %w", err)}
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusFailed,
+		}, &promotion.TerminalError{Err: err}
 	}
 	return h.run(ctx, stepCtx, cfg)
 }
 
-// validate validates httpRequester configuration against a JSON schema.
-func (h *httpRequester) validate(cfg promotion.Config) error {
-	return validate(h.schemaLoader, gojsonschema.NewGoLoader(cfg), h.Name())
+// convert validates httpRequester configuration against a JSON schema and
+// converts it into a builtin.HTTPConfig struct.
+func (h *httpRequester) convert(cfg promotion.Config) (builtin.HTTPConfig, error) {
+	return validateAndConvert[builtin.HTTPConfig](h.schemaLoader, cfg, h.Name())
 }
 
 func (h *httpRequester) run(

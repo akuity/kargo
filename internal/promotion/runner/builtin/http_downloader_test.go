@@ -21,11 +21,7 @@ import (
 )
 
 func Test_httpDownloader_validate(t *testing.T) {
-	tests := []struct {
-		name             string
-		config           promotion.Config
-		expectedProblems []string
-	}{
+	tests := []validationTestCase{
 		{
 			name:   "url not specified",
 			config: promotion.Config{},
@@ -188,22 +184,11 @@ func Test_httpDownloader_validate(t *testing.T) {
 		},
 	}
 
-	d := newHTTPDownloader()
-	downloader, ok := d.(*httpDownloader)
+	r := newHTTPDownloader()
+	runner, ok := r.(*httpDownloader)
 	require.True(t, ok)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := downloader.validate(tt.config)
-			if len(tt.expectedProblems) == 0 {
-				require.NoError(t, err)
-			} else {
-				for _, problem := range tt.expectedProblems {
-					require.ErrorContains(t, err, problem)
-				}
-			}
-		})
-	}
+	runValidationTests(t, runner.convert, tests)
 }
 
 func Test_httpDownloader_run(t *testing.T) {

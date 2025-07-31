@@ -15,12 +15,8 @@ import (
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
-func Test_httpRequester_validate(t *testing.T) {
-	testCases := []struct {
-		name             string
-		config           promotion.Config
-		expectedProblems []string
-	}{
+func Test_httpRequester_convert(t *testing.T) {
+	tests := []validationTestCase{
 		{
 			name:   "url not specified",
 			config: promotion.Config{},
@@ -210,18 +206,7 @@ func Test_httpRequester_validate(t *testing.T) {
 	runner, ok := r.(*httpRequester)
 	require.True(t, ok)
 
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			err := runner.validate(testCase.config)
-			if len(testCase.expectedProblems) == 0 {
-				require.NoError(t, err)
-			} else {
-				for _, problem := range testCase.expectedProblems {
-					require.ErrorContains(t, err, problem)
-				}
-			}
-		})
-	}
+	runValidationTests(t, runner.convert, tests)
 }
 
 func Test_httpRequester_run(t *testing.T) {

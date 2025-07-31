@@ -38,23 +38,19 @@ func (jp *jsonParser) Run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
-	failure := promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}
-
-	if err := jp.validate(stepCtx.Config); err != nil {
-		return failure, err
-	}
-
-	cfg, err := promotion.ConfigToStruct[builtin.JSONParseConfig](stepCtx.Config)
+	cfg, err := jp.convert(stepCtx.Config)
 	if err != nil {
-		return failure, fmt.Errorf("could not convert config into %s config: %w", jp.Name(), err)
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusFailed,
+		}, &promotion.TerminalError{Err: err}
 	}
-
 	return jp.run(ctx, stepCtx, cfg)
 }
 
-// validate validates jsonParser configuration against a JSON schema.
-func (jp *jsonParser) validate(cfg promotion.Config) error {
-	return validate(jp.schemaLoader, gojsonschema.NewGoLoader(cfg), jp.Name())
+// convert validates jsonParser configuration against a JSON schema and
+// converts it into a builtin.JSONParseConfig struct.
+func (jp *jsonParser) convert(cfg promotion.Config) (builtin.JSONParseConfig, error) {
+	return validateAndConvert[builtin.JSONParseConfig](jp.schemaLoader, cfg, jp.Name())
 }
 
 func (jp *jsonParser) run(

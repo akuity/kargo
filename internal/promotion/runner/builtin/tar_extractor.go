@@ -25,12 +25,12 @@ import (
 
 // Size limits to prevent decompression bombs
 const (
-	// MaxDecompressedTarSize is the maximum size of all files extracted from a
+	// maxDecompressedTarSize is the maximum size of all files extracted from a
 	// tar archive.
-	MaxDecompressedTarSize int64 = 100 * 1024 * 1024
-	// MaxDecompressedFileSize is the maximum size of a single file extracted
+	maxDecompressedTarSize int64 = 100 * 1024 * 1024
+	// maxDecompressedFileSize is the maximum size of a single file extracted
 	// from a tar archive.
-	MaxDecompressedFileSize int64 = 50 * 1024 * 1024
+	maxDecompressedFileSize int64 = 50 * 1024 * 1024
 
 	// gzipID1 is the first byte of the gzip magic number
 	gzipID1 = 0x1F
@@ -69,19 +69,19 @@ func (t *tarExtractor) Run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
-	// Validate the configuration against the JSON Schema.
-	if err := validate(t.schemaLoader, gojsonschema.NewGoLoader(stepCtx.Config), t.Name()); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
-	}
-
-	// Convert the configuration into a typed object.
-	cfg, err := promotion.ConfigToStruct[builtin.UntarConfig](stepCtx.Config)
+	cfg, err := t.convert(stepCtx.Config)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("could not convert config into %s config: %w", t.Name(), err)
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusFailed,
+		}, &promotion.TerminalError{Err: err}
 	}
-
 	return t.run(ctx, stepCtx, cfg)
+}
+
+// convert validates the configuration against a JSON schema and converts it
+// into a builtin.UntarConfig struct.
+func (t *tarExtractor) convert(cfg promotion.Config) (builtin.UntarConfig, error) {
+	return validateAndConvert[builtin.UntarConfig](t.schemaLoader, cfg, t.Name())
 }
 
 func (t *tarExtractor) run(
@@ -292,23 +292,23 @@ func (t *tarExtractor) extractToDir(
 		case tar.TypeReg:
 			// Check if single file exceeds max size limit
 			logger.Trace("checking file size", "path", targetName, "size", header.Size)
-			if header.Size > MaxDecompressedFileSize {
+			if header.Size > maxDecompressedFileSize {
 				logger.Trace("aborting extraction due to exceeding file size limit",
 					"path", targetName,
 					"size", header.Size,
-					"limit", MaxDecompressedFileSize)
+					"limit", maxDecompressedFileSize)
 				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-					fmt.Errorf("extraction aborted: file %s exceeds size limit of %d bytes", targetName, MaxDecompressedFileSize)
+					fmt.Errorf("extraction aborted: file %s exceeds size limit of %d bytes", targetName, maxDecompressedFileSize)
 			}
 
 			// Check if total extracted size would exceed limit
-			if totalExtractedSize+header.Size > MaxDecompressedTarSize {
+			if totalExtractedSize+header.Size > maxDecompressedTarSize {
 				logger.Trace("aborting extraction due to exceeding total size limit",
 					"totalSize", totalExtractedSize,
 					"fileSize", header.Size,
-					"limit", MaxDecompressedTarSize)
+					"limit", maxDecompressedTarSize)
 				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-					fmt.Errorf("extraction aborted: total size would exceed limit of %d bytes", MaxDecompressedTarSize)
+					fmt.Errorf("extraction aborted: total size would exceed limit of %d bytes", maxDecompressedTarSize)
 			}
 
 			dir := filepath.Dir(targetPath)

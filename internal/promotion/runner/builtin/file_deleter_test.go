@@ -14,6 +14,72 @@ import (
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
+func Test_fileDeleter_convert(t *testing.T) {
+	tests := []validationTestCase{
+		{
+			name:   "path not specified",
+			config: promotion.Config{},
+			expectedProblems: []string{
+				"(root): path is required",
+			},
+		},
+		{
+			name: "path is empty string",
+			config: promotion.Config{
+				"path": "",
+			},
+			expectedProblems: []string{
+				"path: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "strict is not specified",
+			config: promotion.Config{
+				"path": "/path/to/delete",
+			},
+			// No expected problems because strict is optional with default: false
+			expectedProblems: nil,
+		},
+		{
+			name: "valid minimal config",
+			config: promotion.Config{
+				"path": "/path/to/delete",
+			},
+			expectedProblems: nil,
+		},
+		{
+			name: "valid config with strict=false",
+			config: promotion.Config{
+				"path":   "/path/to/delete",
+				"strict": false,
+			},
+			expectedProblems: nil,
+		},
+		{
+			name: "valid config with strict=true",
+			config: promotion.Config{
+				"path":   "/path/to/delete",
+				"strict": true,
+			},
+			expectedProblems: nil,
+		},
+		{
+			name: "valid kitchen sink",
+			config: promotion.Config{
+				"path":   "/path/to/file/or/directory/to/delete",
+				"strict": true,
+			},
+			expectedProblems: nil,
+		},
+	}
+
+	r := newFileDeleter()
+	runner, ok := r.(*fileDeleter)
+	require.True(t, ok)
+
+	runValidationTests(t, runner.convert, tests)
+}
+
 func Test_fileDeleter_run(t *testing.T) {
 	tests := []struct {
 		name       string

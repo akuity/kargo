@@ -38,24 +38,19 @@ func (y *yamlUpdater) Run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
-	failure := promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}
-
-	if err := y.validate(stepCtx.Config); err != nil {
-		return failure, err
-	}
-
-	// Convert the configuration into a typed struct
-	cfg, err := promotion.ConfigToStruct[builtin.YAMLUpdateConfig](stepCtx.Config)
+	cfg, err := y.convert(stepCtx.Config)
 	if err != nil {
-		return failure, fmt.Errorf("could not convert config into %s config: %w", y.Name(), err)
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusFailed,
+		}, &promotion.TerminalError{Err: err}
 	}
-
 	return y.run(ctx, stepCtx, cfg)
 }
 
-// validate validates yamlImageUpdater configuration against a JSON schema.
-func (y *yamlUpdater) validate(cfg promotion.Config) error {
-	return validate(y.schemaLoader, gojsonschema.NewGoLoader(cfg), y.Name())
+// convert validates yamlUpdater configuration against a JSON schema and
+// converts it into a builtin.YAMLUpdateConfig struct.
+func (y *yamlUpdater) convert(cfg promotion.Config) (builtin.YAMLUpdateConfig, error) {
+	return validateAndConvert[builtin.YAMLUpdateConfig](y.schemaLoader, cfg, y.Name())
 }
 
 func (y *yamlUpdater) run(

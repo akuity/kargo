@@ -16,95 +16,107 @@ import (
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
-func Test_jsonParser_validate(t *testing.T) {
-	tests := []struct {
-		name          string
-		config        map[string]any
-		expectedError string
-	}{
+func Test_jsonParser_convert(t *testing.T) {
+	tests := []validationTestCase{
 		{
 			name: "path not specified (missing path field)",
-			config: map[string]any{
+			config: promotion.Config{
 				"outputs": []map[string]any{
 					{"name": "output1", "fromExpression": "$.data"},
 				},
 			},
-			expectedError: "(root): path is required",
+			expectedProblems: []string{
+				"(root): path is required",
+			},
 		},
 		{
 			name: "path is empty string",
-			config: map[string]any{
+			config: promotion.Config{
 				"path": "",
 				"outputs": []map[string]any{
 					{"name": "output1", "fromExpression": "$.data"},
 				},
 			},
-			expectedError: "path: String length must be greater than or equal to 1",
+			expectedProblems: []string{
+				"path: String length must be greater than or equal to 1",
+			},
 		},
 		{
 			name: "outputs field is missing",
-			config: map[string]any{
+			config: promotion.Config{
 				"path": "valid.json",
 			},
-			expectedError: "(root): outputs is required",
+			expectedProblems: []string{
+				"(root): outputs is required",
+			},
 		},
 		{
 			name: "outputs field is an empty array",
-			config: map[string]any{
+			config: promotion.Config{
 				"path":    "valid.json",
 				"outputs": []map[string]any{},
 			},
-			expectedError: "outputs: Array must have at least 1 items",
+			expectedProblems: []string{
+				"outputs: Array must have at least 1 items",
+			},
 		},
 		{
 			name: "name is not specified",
-			config: map[string]any{
+			config: promotion.Config{
 				"path": "valid.json",
 				"outputs": []map[string]any{
 					{"fromExpression": "$.data"},
 				},
 			},
-			expectedError: "outputs.0: name is required",
+			expectedProblems: []string{
+				"outputs.0: name is required",
+			},
 		},
 		{
 			name: "name is empty",
-			config: map[string]any{
+			config: promotion.Config{
 				"path": "valid.json",
 				"outputs": []map[string]any{
 					{"name": "", "fromExpression": "$.data"},
 				},
 			},
-			expectedError: "name: String length must be greater than or equal to 1",
+			expectedProblems: []string{
+				"name: String length must be greater than or equal to 1",
+			},
 		},
 		{
 			name: "FromExpression is not specified",
-			config: map[string]any{
+			config: promotion.Config{
 				"path": "valid.json",
 				"outputs": []map[string]any{
 					{"name": "output1"},
 				},
 			},
-			expectedError: "outputs.0: fromExpression is required",
+			expectedProblems: []string{
+				"outputs.0: fromExpression is required",
+			},
 		},
 		{
 			name: "FromExpression is empty",
-			config: map[string]any{
+			config: promotion.Config{
 				"path": "valid.json",
 				"outputs": []map[string]any{
 					{"name": "output1", "fromExpression": ""},
 				},
 			},
-			expectedError: "fromExpression: String length must be greater than or equal to 1",
+			expectedProblems: []string{
+				"fromExpression: String length must be greater than or equal to 1",
+			},
 		},
 		{
 			name: "valid configuration (path + outputs present)",
-			config: map[string]any{
+			config: promotion.Config{
 				"path": "valid.json",
 				"outputs": []map[string]any{
 					{"name": "output1", "fromExpression": "$.data"},
 				},
 			},
-			expectedError: "",
+			expectedProblems: nil,
 		},
 	}
 
@@ -112,17 +124,7 @@ func Test_jsonParser_validate(t *testing.T) {
 	runner, ok := r.(*jsonParser)
 	require.True(t, ok)
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			err := runner.validate(tc.config)
-			if tc.expectedError == "" {
-				assert.NoError(t, err)
-			} else {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), tc.expectedError)
-			}
-		})
-	}
+	runValidationTests(t, runner.convert, tests)
 }
 
 func Test_jsonParser_run(t *testing.T) {

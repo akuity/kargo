@@ -61,24 +61,17 @@ func (h *helmTemplateRunner) Run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
-	failure := promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}
-
-	// Validate the configuration against the JSON Schema
-	if err := validate(
-		h.schemaLoader,
-		gojsonschema.NewGoLoader(stepCtx.Config),
-		h.Name(),
-	); err != nil {
-		return failure, err
-	}
-
-	// Convert the configuration into a typed struct
-	cfg, err := promotion.ConfigToStruct[builtin.HelmTemplateConfig](stepCtx.Config)
+	cfg, err := h.convert(stepCtx.Config)
 	if err != nil {
-		return failure, fmt.Errorf("could not convert config into %s config: %w", h.Name(), err)
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusFailed,
+		}, &promotion.TerminalError{Err: err}
 	}
-
 	return h.run(ctx, stepCtx, cfg)
+}
+
+func (h *helmTemplateRunner) convert(cfg promotion.Config) (builtin.HelmTemplateConfig, error) {
+	return validateAndConvert[builtin.HelmTemplateConfig](h.schemaLoader, cfg, h.Name())
 }
 
 func (h *helmTemplateRunner) run(

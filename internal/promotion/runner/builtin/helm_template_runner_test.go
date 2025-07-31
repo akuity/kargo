@@ -19,6 +19,265 @@ import (
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
+func Test_helmTemplateRunner_convert(t *testing.T) {
+	tests := []validationTestCase{
+		{
+			name:   "outPath not specified",
+			config: promotion.Config{},
+			expectedProblems: []string{
+				"(root): outPath is required",
+			},
+		},
+		{
+			name: "outPath is empty string",
+			config: promotion.Config{
+				"outPath": "",
+			},
+			expectedProblems: []string{
+				"outPath: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "path not specified",
+			config: promotion.Config{
+				"outPath": "/output/path",
+			},
+			expectedProblems: []string{
+				"(root): path is required",
+			},
+		},
+		{
+			name: "path is empty string",
+			config: promotion.Config{
+				"outPath": "/output/path",
+				"path":    "",
+			},
+			expectedProblems: []string{
+				"path: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "releaseName not specified",
+			config: promotion.Config{
+				"outPath": "/output/path",
+				"path":    "/chart/path",
+			},
+			expectedProblems: []string{
+				"(root): releaseName is required",
+			},
+		},
+		{
+			name: "releaseName is empty string",
+			config: promotion.Config{
+				"outPath":     "/output/path",
+				"path":        "/chart/path",
+				"releaseName": "",
+			},
+			expectedProblems: []string{
+				"releaseName: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "all required fields missing",
+			config: promotion.Config{
+				"namespace": "default",
+			},
+			expectedProblems: []string{
+				"(root): outPath is required",
+				"(root): path is required",
+				"(root): releaseName is required",
+			},
+		},
+		{
+			name: "valuesFiles contains empty string",
+			config: promotion.Config{
+				"outPath":     "/output/path",
+				"path":        "/chart/path",
+				"releaseName": "my-release",
+				"valuesFiles": []string{"values.yaml", ""},
+			},
+			expectedProblems: []string{
+				"valuesFiles.1: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "setValues key not specified",
+			config: promotion.Config{
+				"outPath":     "/output/path",
+				"path":        "/chart/path",
+				"releaseName": "my-release",
+				"setValues": []promotion.Config{
+					{
+						"value": "some-value",
+					},
+				},
+			},
+			expectedProblems: []string{
+				"setValues.0: key is required",
+			},
+		},
+		{
+			name: "setValues key is empty string",
+			config: promotion.Config{
+				"outPath":     "/output/path",
+				"path":        "/chart/path",
+				"releaseName": "my-release",
+				"setValues": []promotion.Config{
+					{
+						"key":   "",
+						"value": "some-value",
+					},
+				},
+			},
+			expectedProblems: []string{
+				"setValues.0.key: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "setValues value not specified",
+			config: promotion.Config{
+				"outPath":     "/output/path",
+				"path":        "/chart/path",
+				"releaseName": "my-release",
+				"setValues": []promotion.Config{
+					{
+						"key": "image.tag",
+					},
+				},
+			},
+			expectedProblems: []string{
+				"setValues.0: value is required",
+			},
+		},
+		{
+			name: "apiVersions contains empty string",
+			config: promotion.Config{
+				"outPath":     "/output/path",
+				"path":        "/chart/path",
+				"releaseName": "my-release",
+				"apiVersions": []string{"v1", ""},
+			},
+			expectedProblems: []string{
+				"apiVersions.1: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "valid minimal config",
+			config: promotion.Config{
+				"outPath":     "/output/path",
+				"path":        "/chart/path",
+				"releaseName": "my-release",
+			},
+			expectedProblems: nil,
+		},
+		{
+			name: "valid config with optional boolean fields",
+			config: promotion.Config{
+				"outPath":           "/output/path",
+				"path":              "/chart/path",
+				"releaseName":       "my-release",
+				"useReleaseName":    true,
+				"buildDependencies": true,
+				"includeCRDs":       true,
+				"disableHooks":      true,
+				"skipTests":         true,
+			},
+			expectedProblems: nil,
+		},
+		{
+			name: "valid config with namespace and kubeVersion",
+			config: promotion.Config{
+				"outPath":     "/output/path",
+				"path":        "/chart/path",
+				"releaseName": "my-release",
+				"namespace":   "production",
+				"kubeVersion": "1.28.0",
+			},
+			expectedProblems: nil,
+		},
+		{
+			name: "valid config with valuesFiles",
+			config: promotion.Config{
+				"outPath":     "/output/path",
+				"path":        "/chart/path",
+				"releaseName": "my-release",
+				"valuesFiles": []string{"values.yaml", "values-prod.yaml"},
+			},
+			expectedProblems: nil,
+		},
+		{
+			name: "valid config with setValues",
+			config: promotion.Config{
+				"outPath":     "/output/path",
+				"path":        "/chart/path",
+				"releaseName": "my-release",
+				"setValues": []promotion.Config{
+					{
+						"key":   "image.tag",
+						"value": "v1.2.3",
+					},
+					{
+						"key":   "replicaCount",
+						"value": "3",
+					},
+					{
+						"key":   "service.type",
+						"value": "",
+					}, // Empty value should be valid
+				},
+			},
+			expectedProblems: nil,
+		},
+		{
+			name: "valid config with apiVersions",
+			config: promotion.Config{
+				"outPath":     "/output/path",
+				"path":        "/chart/path",
+				"releaseName": "my-release",
+				"apiVersions": []string{"v1", "apps/v1", "networking.k8s.io/v1"},
+			},
+		},
+		{
+			name: "valid kitchen sink",
+			config: promotion.Config{
+				"outPath":        "/output/manifests",
+				"path":           "/path/to/helm/chart",
+				"releaseName":    "my-application",
+				"useReleaseName": true,
+				"namespace":      "production",
+				"valuesFiles":    []string{"values.yaml", "values-prod.yaml", "secrets.yaml"},
+				"setValues": []promotion.Config{
+					{
+						"key":   "image.repository",
+						"value": "myregistry.com/myapp",
+					},
+					{
+						"key":   "image.tag",
+						"value": "v2.1.0",
+					},
+					{
+						"key":   "ingress.enabled",
+						"value": "true",
+					},
+				},
+				"buildDependencies": true,
+				"includeCRDs":       true,
+				"disableHooks":      false,
+				"skipTests":         true,
+				"kubeVersion":       "1.29.0",
+				"apiVersions":       []string{"v1", "apps/v1", "networking.k8s.io/v1", "cert-manager.io/v1"},
+			},
+			expectedProblems: nil,
+		},
+	}
+
+	r := newHelmTemplateRunner(nil)
+	runner, ok := r.(*helmTemplateRunner)
+	require.True(t, ok)
+
+	runValidationTests(t, runner.convert, tests)
+}
+
 func Test_helmTemplateRunner_run(t *testing.T) {
 	tests := []struct {
 		name       string

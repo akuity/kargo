@@ -16,6 +16,109 @@ import (
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
+func Test_filerCopier_convert(t *testing.T) {
+	tests := []validationTestCase{
+		{
+			name:   "inPath not specified",
+			config: promotion.Config{},
+			expectedProblems: []string{
+				"(root): inPath is required",
+			},
+		},
+		{
+			name: "inPath is empty string",
+			config: promotion.Config{
+				"inPath": "",
+			},
+			expectedProblems: []string{
+				"inPath: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "outPath not specified",
+			config: promotion.Config{
+				"inPath": "/source/path",
+			},
+			expectedProblems: []string{
+				"(root): outPath is required",
+			},
+		},
+		{
+			name: "outPath is empty string",
+			config: promotion.Config{
+				"inPath":  "/source/path",
+				"outPath": "",
+			},
+			expectedProblems: []string{
+				"outPath: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "ignore is empty string",
+			config: promotion.Config{
+				"inPath":  "/source/path",
+				"outPath": "/destination/path",
+				"ignore":  "",
+			},
+			expectedProblems: []string{
+				"ignore: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "both required fields missing",
+			config: promotion.Config{
+				"ignore": "*.log\n*.tmp",
+			},
+			expectedProblems: []string{
+				"(root): inPath is required",
+				"(root): outPath is required",
+			},
+		},
+		{
+			name: "valid minimal config",
+			config: promotion.Config{
+				"inPath":  "/source/path",
+				"outPath": "/destination/path",
+			},
+			expectedProblems: nil,
+		},
+		{
+			name: "valid config with ignore patterns",
+			config: promotion.Config{
+				"inPath":  "/source/path",
+				"outPath": "/destination/path",
+				"ignore":  "*.log\n*.tmp\nnode_modules/\n.git/",
+			},
+			expectedProblems: nil,
+		},
+		{
+			name: "valid kitchen sink",
+			config: promotion.Config{
+				"inPath":  "/path/to/source/directory",
+				"outPath": "/path/to/destination/directory",
+				"ignore": `# Ignore log files
+*.log
+*.tmp
+
+# Ignore build artifacts
+build/
+dist/
+
+# Ignore version control
+.git/
+.svn/`,
+			},
+			expectedProblems: nil,
+		},
+	}
+
+	r := newFileCopier()
+	runner, ok := r.(*fileCopier)
+	require.True(t, ok)
+
+	runValidationTests(t, runner.convert, tests)
+}
+
 func Test_fileCopier_run(t *testing.T) {
 	tests := []struct {
 		name       string

@@ -15,12 +15,8 @@ import (
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
-func Test_jsonUpdater_validate(t *testing.T) {
-	testCases := []struct {
-		name             string
-		config           promotion.Config
-		expectedProblems []string
-	}{
+func Test_jsonUpdater_convert(t *testing.T) {
+	tests := []validationTestCase{
 		{
 			name:   "path is not specified",
 			config: promotion.Config{},
@@ -104,18 +100,7 @@ func Test_jsonUpdater_validate(t *testing.T) {
 	runner, ok := r.(*jsonUpdater)
 	require.True(t, ok)
 
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			err := runner.validate(testCase.config)
-			if len(testCase.expectedProblems) == 0 {
-				require.NoError(t, err)
-			} else {
-				for _, problem := range testCase.expectedProblems {
-					require.ErrorContains(t, err, problem)
-				}
-			}
-		})
-	}
+	runValidationTests(t, runner.convert, tests)
 }
 
 func Test_jsonUpdater_updateValuesFile(t *testing.T) {

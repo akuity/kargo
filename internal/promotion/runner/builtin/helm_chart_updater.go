@@ -41,24 +41,19 @@ func (h *helmChartUpdater) Run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
-	failure := promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}
-
-	if err := h.validate(stepCtx.Config); err != nil {
-		return failure, err
-	}
-
-	// Convert the configuration into a typed struct
-	cfg, err := promotion.ConfigToStruct[builtin.HelmUpdateChartConfig](stepCtx.Config)
+	cfg, err := h.convert(stepCtx.Config)
 	if err != nil {
-		return failure, fmt.Errorf("could not convert config into %s config: %w", h.Name(), err)
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusFailed,
+		}, &promotion.TerminalError{Err: err}
 	}
-
 	return h.run(ctx, stepCtx, cfg)
 }
 
-// validate validates helmChartUpdater configuration against a JSON schema.
-func (h *helmChartUpdater) validate(cfg promotion.Config) error {
-	return validate(h.schemaLoader, gojsonschema.NewGoLoader(cfg), h.Name())
+// convert validates helmChartUpdater configuration against a JSON schema and
+// converts it into a builtin.HelmUpdateChartConfig struct.
+func (h *helmChartUpdater) convert(cfg promotion.Config) (builtin.HelmUpdateChartConfig, error) {
+	return validateAndConvert[builtin.HelmUpdateChartConfig](h.schemaLoader, cfg, h.Name())
 }
 
 func (h *helmChartUpdater) run(
