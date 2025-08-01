@@ -252,6 +252,11 @@ type HelmTemplateConfig struct {
 	KubeVersion string `json:"kubeVersion,omitempty"`
 	// Namespace to use for the rendered manifests.
 	Namespace string `json:"namespace,omitempty"`
+	// OutLayout to use for the rendered manifest. This can be either 'helm' or 'flat'. The
+	// 'helm' layout will create a directory with the chart name and place the rendered
+	// manifests in that directory. The 'flat' layout will place all rendered manifests in the
+	// outPath directory without any subdirectories.
+	OutLayout *OutLayout `json:"outLayout,omitempty"`
 	// OutPath to write the rendered manifests to. If it points to a .yaml or .yml file, the
 	// rendered manifests will be written to that file. If it points to a directory, the
 	// rendered manifests will be written to this directory joined with the chart name.
@@ -415,11 +420,11 @@ type KustomizeBuildConfig struct {
 // Plugin contains configuration for customizing the behavior of builtin Kustomize plugins.
 type Plugin struct {
 	// Helm contains configuration for inflating a Helm chart.
-	Helm *Helm `json:"helm,omitempty"`
+	Helm *HelmClass `json:"helm,omitempty"`
 }
 
 // Helm contains configuration for inflating a Helm chart.
-type Helm struct {
+type HelmClass struct {
 	// APIVersions allows a manual set of supported API versions to be passed when inflating a
 	// Helm chart.
 	APIVersions []string `json:"apiVersions,omitempty"`
@@ -522,4 +527,15 @@ const (
 	Gitea     Provider = "gitea"
 	Github    Provider = "github"
 	Gitlab    Provider = "gitlab"
+)
+
+// OutLayout to use for the rendered manifest. This can be either 'helm' or 'flat'. The
+// 'helm' layout will create a directory with the chart name and place the rendered
+// manifests in that directory. The 'flat' layout will place all rendered manifests in the
+// outPath directory without any subdirectories.
+type OutLayout string
+
+const (
+	Flat OutLayout = "flat"
+	Helm OutLayout = "helm"
 )
