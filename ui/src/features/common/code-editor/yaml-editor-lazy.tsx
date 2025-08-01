@@ -44,42 +44,11 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
     resourceType
   } = props;
   const [hideManagedFields, setHideManagedFields] = React.useState(!!isHideManagedFieldsDisplayed);
-  const [managedFieldsValue, setManagedFieldsValue] = React.useState<object | null>(null);
+  const managedFields = useRef({});
 
   const handleOnChange = (newValue: string | undefined) => {
     onChange?.(newValue);
   };
-
-  React.useEffect(() => {
-    try {
-      const data = yaml.parse(value);
-
-      // Hide managedFields
-      if (hideManagedFields && data?.metadata?.managedFields) {
-        setManagedFieldsValue(data?.metadata?.managedFields);
-        delete data.metadata.managedFields;
-
-        onChange?.(yaml.stringify(data));
-      }
-
-      // Restore managedFields
-      if (!hideManagedFields && managedFieldsValue) {
-        onChange?.(
-          yaml.stringify({
-            ...data,
-            metadata: {
-              ...(typeof data.metadata === 'object' ? data.metadata : {}),
-              managedFields: managedFieldsValue
-            }
-          })
-        );
-
-        setManagedFieldsValue(null);
-      }
-    } catch (_) {
-      // ignore
-    }
-  }, [hideManagedFields, value, managedFieldsValue]);
 
   useEffect(() => {
     configureMonacoYaml(monaco, {
@@ -100,6 +69,26 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
     });
   }, []);
 
+  useEffect(() => {
+    try {
+      const data = yaml.parse(value);
+
+      if (hideManagedFields) {
+        if (data?.metadata?.managedFields) {
+          managedFields.current = data.metadata.managedFields;
+          delete data?.metadata?.managedFields;
+        }
+      } else {
+        if (data.metadata) {
+          data.metadata.managedFields = managedFields.current;
+        }
+      }
+      onChange?.(yaml.stringify(data));
+    } catch (_) {
+      // ignore
+    }
+  }, [hideManagedFields, value, onChange]);
+
   // Handle readonly field (without onChange)
   const _value = React.useMemo(() => {
     if (onChange) {
@@ -111,7 +100,7 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
 
       // Hide managedFields
       if (hideManagedFields && data?.metadata?.managedFields) {
-        setManagedFieldsValue(data?.metadata?.managedFields);
+        managedFields.current = data.metadata.managedFields;
         delete data.metadata.managedFields;
 
         return yaml.stringify(data);
