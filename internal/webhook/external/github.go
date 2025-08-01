@@ -28,9 +28,9 @@ const (
 	githubEventTypePing    = "ping"
 	githubEventTypePush    = "push"
 	// githubEventTypeRegistryPackage corresponds to a package push event when the
-	// webhook is registered indirectly via a GitHub App that's been installed
-	// into the repository. i.e. When the webhook is not registered directly at
-	// the repository-level.
+	// webhook has been registered indirectly via a GitHub App that's been
+	// installed into the repository. i.e. When the webhook has not been
+	// registered directly at the repository-level.
 	githubEventTypeRegistryPackage = "registry_package"
 
 	ghcrPackageTypeContainer = "CONTAINER"
