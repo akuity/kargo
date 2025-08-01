@@ -22,7 +22,8 @@ func init() {
 		kargoapi.CommitSelectionStrategyNewestFromBranch,
 		selectorRegistration{
 			predicate: func(sub kargoapi.GitSubscription) bool {
-				return sub.CommitSelectionStrategy == kargoapi.CommitSelectionStrategyNewestFromBranch
+				return sub.CommitSelectionStrategy == kargoapi.CommitSelectionStrategyNewestFromBranch ||
+					sub.CommitSelectionStrategy == ""
 			},
 			factory: newNewestFromBranchSelector,
 		},

@@ -4,8 +4,8 @@ sidebar_label: GitHub
 
 # GitHub Webhook Receiver
 
-The GitHub webhook receiver responds to `ping`, `push`, and `package` events
-originating from GitHub.
+The GitHub webhook receiver responds to `ping`, `push`, `package`, and
+`registry_package` events originating from GitHub.
 
 The receiver unconditionally responds to `ping` events with an HTTP `200` status
 code.
@@ -327,7 +327,7 @@ receiver of relevant events from any repository into which it's been installed:
 
         If you would like to receive events when container images or Helm charts
         are pushed to associated GHCR repositories, ensure
-        <Hlt>Packages</Hlt> is also selected.
+        <Hlt>Registry package</Hlt> is also selected.
 
         :::note
         The events available for selection in this section of the form are

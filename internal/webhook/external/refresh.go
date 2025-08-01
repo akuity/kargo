@@ -40,8 +40,17 @@ func refreshWarehouses(
 	repoURLs = slices.Compact(repoURLs)
 	// If there had been any empty strings in the slice, after sorting and
 	// compacting, at most the zero element will be empty. If it is, remove it.
-	if repoURLs[0] == "" {
+	if len(repoURLs) > 0 && repoURLs[0] == "" {
 		repoURLs = repoURLs[1:]
+	}
+
+	// De-dupe qualifiers
+	slices.Sort(qualifiers)
+	qualifiers = slices.Compact(qualifiers)
+	// If there had been any empty strings in the slice, after sorting and
+	// compacting, at most the zero element will be empty. If it is, remove it.
+	if len(qualifiers) > 0 && qualifiers[0] == "" {
+		qualifiers = qualifiers[1:]
 	}
 
 	// The distinct set of all Warehouses that should be refreshed

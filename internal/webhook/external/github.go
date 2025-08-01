@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
-	"github.com/google/go-containerregistry/pkg/name"
-	gh "github.com/google/go-github/v71/github"
+	gh "github.com/google/go-github/v74/github"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -20,9 +20,18 @@ const (
 
 	github = "github"
 
+	// githubEventTypePackage corresponds to a package push event when the webhook
+	// has been registered directly at the repository-level. i.e. When the webhook
+	// has not been registered indirectly via a GitHub App that's been installed
+	// into the repository.
 	githubEventTypePackage = "package"
 	githubEventTypePing    = "ping"
 	githubEventTypePush    = "push"
+	// githubEventTypeRegistryPackage corresponds to a package push event when the
+	// webhook has been registered indirectly via a GitHub App that's been
+	// installed into the repository. i.e. When the webhook has not been
+	// registered directly at the repository-level.
+	githubEventTypeRegistryPackage = "registry_package"
 
 	ghcrPackageTypeContainer = "CONTAINER"
 	ghcrPackageTypeDocker    = "docker"
@@ -92,7 +101,10 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 
 		eventType := r.Header.Get(gh.EventTypeHeader)
 		switch eventType {
-		case githubEventTypePackage, githubEventTypePing, githubEventTypePush:
+		case githubEventTypePackage,
+			githubEventTypePing,
+			githubEventTypePush,
+			githubEventTypeRegistryPackage:
 		default:
 			xhttp.WriteErrorJSON(
 				w,
@@ -135,7 +147,6 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 
 		var qualifiers []string
 		var repoURLs []string
-		var mediaType string
 
 		switch e := event.(type) {
 		case *gh.PackageEvent:
@@ -161,23 +172,32 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 				xhttp.WriteResponseJSON(w, http.StatusOK, nil)
 				return
 			}
-			var ref name.Reference
-			if ref, err = name.ParseReference(
-				pkg.GetPackageVersion().GetPackageURL(),
-			); err != nil {
-				xhttp.WriteErrorJSON(w, err)
-				return
-			}
-			v := pkg.GetPackageVersion()
-			manifest := v.GetContainerMetadata().GetManifest()
-			// Determine if the package is a Helm chart
+			pkgVer := pkg.GetPackageVersion()
+			containerMeta := pkgVer.GetContainerMetadata()
+			manifest := containerMeta.GetManifest()
+			var mediaType string
 			if cfg, ok := manifest["config"].(map[string]any); ok {
 				mediaType, _ = cfg["media_type"].(string)
 			}
-			repoURLs = getNormalizedImageRepoURLs(ref.Context().Name(), mediaType)
-			tag := v.GetContainerMetadata().GetTag().GetName()
+			repoURLs = getNormalizedImageRepoURLs(
+				// In the case of `registry_package` events, we have sometimes observed
+				// GitHub sending URLs with a trailing colon and no tag (e.g.,
+				// "ghcr.io/user/image:"). Such strings are not valid OCI image
+				// references. We've NOT seen this occur with `package` events, however,
+				// the similarities between those two event types are so great that we
+				// suspect it is a possibility. Out of an abundance of caution we are
+				// trimming any trailing colon that may be present in this URL in order
+				// to avoid parsing errors.
+				strings.TrimSuffix(pkgVer.GetPackageURL(), ":"),
+				mediaType,
+			)
+
+			tag := containerMeta.GetTag().GetName()
 			qualifiers = []string{tag}
-			logger = logger.WithValues("tag", tag)
+			logger = logger.WithValues(
+				"mediaType", mediaType,
+				"tag", tag,
+			)
 		case *gh.PingEvent:
 			xhttp.WriteResponseJSON(
 				w,
@@ -189,20 +209,64 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			return
 
 		case *gh.PushEvent:
-			ref := e.GetRef()
-			qualifiers = []string{ref}
-			logger = logger.WithValues("ref", ref)
 			// TODO(krancour): GetHTMLURL() gives us a repo URL starting with
 			// https://. By refreshing Warehouses using a normalized representation of
 			// that URL, we will miss any Warehouses that are subscribed to the same
 			// repository using a different URL format.
 			repoURLs = []string{git.NormalizeURL(e.GetRepo().GetCloneURL())}
+			ref := e.GetRef()
+			qualifiers = []string{ref}
+			logger = logger.WithValues("ref", ref)
+
+		case *gh.RegistryPackageEvent:
+			switch e.GetAction() {
+			// These are the only actions that should refresh Warehouses.
+			case "published", "updated":
+			default:
+				xhttp.WriteResponseJSON(w, http.StatusOK, nil)
+				return
+			}
+			pkg := e.GetRegistryPackage()
+			if pkg == nil || pkg.GetPackageVersion() == nil {
+				xhttp.WriteErrorJSON(
+					w,
+					xhttp.Error(errors.New("invalid request body"), http.StatusBadRequest),
+				)
+				return
+			}
+			switch pkg.GetPackageType() {
+			// These are the only types of packages we care about.
+			case ghcrPackageTypeContainer, ghcrPackageTypeDocker:
+			default:
+				xhttp.WriteResponseJSON(w, http.StatusOK, nil)
+				return
+			}
+			pkgVer := pkg.GetPackageVersion()
+			containerMeta := pkgVer.GetContainerMetadata()
+			manifest := containerMeta.GetManifest()
+			var mediaType string
+			if cfg, ok := manifest["config"].(map[string]any); ok {
+				mediaType, _ = cfg["media_type"].(string)
+			}
+			repoURLs = getNormalizedImageRepoURLs(
+				// GitHub sometimes sends package URLs with a trailing colon and no tag
+				// (e.g., "ghcr.io/user/image:"). Such strings are not valid OCI image
+				// references. We trim the trailing colon to avoid parsing errors.
+				//
+				// TODO(krancour): We do not have a firm grasp on why this sometimes
+				// happens and sometimes does not.
+				strings.TrimSuffix(pkgVer.GetPackageURL(), ":"),
+				mediaType,
+			)
+			tag := containerMeta.GetTag().GetName()
+			qualifiers = []string{tag}
+			logger = logger.WithValues(
+				"mediaType", mediaType,
+				"tag", tag,
+			)
 		}
 
-		logger = logger.WithValues(
-			"repoURLs", repoURLs,
-			"mediaType", mediaType,
-		)
+		logger = logger.WithValues("repoURLs", repoURLs)
 		ctx = logging.ContextWithLogger(ctx, logger)
 
 		refreshWarehouses(ctx, w, g.client, g.project, repoURLs, qualifiers...)
