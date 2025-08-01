@@ -173,16 +173,14 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 				xhttp.WriteResponseJSON(w, http.StatusOK, nil)
 				return
 			}
-			v := pkg.GetPackageVersion()
-			manifest := v.GetContainerMetadata().GetManifest()
+			pkgVer := pkg.GetPackageVersion()
+			containerMeta := pkgVer.GetContainerMetadata()
+			manifest := containerMeta.GetManifest()
 			if cfg, ok := manifest["config"].(map[string]any); ok {
 				mediaType, _ = cfg["media_type"].(string)
 			}
-			repoURLs = getNormalizedImageRepoURLs(
-				pkg.GetPackageVersion().GetPackageURL(),
-				mediaType,
-			)
-			tag := v.GetContainerMetadata().GetTag().GetName()
+			repoURLs = getNormalizedImageRepoURLs(pkgVer.GetPackageURL(), mediaType)
+			tag := containerMeta.GetTag().GetName()
 			qualifiers = []string{tag}
 			logger = logger.WithValues("tag", tag)
 		case *gh.PingEvent:
@@ -228,8 +226,9 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 				xhttp.WriteResponseJSON(w, http.StatusOK, nil)
 				return
 			}
-			v := pkg.GetPackageVersion()
-			manifest := v.GetContainerMetadata().GetManifest()
+			pkgVer := pkg.GetPackageVersion()
+			containerMeta := pkgVer.GetContainerMetadata()
+			manifest := containerMeta.GetManifest()
 			if cfg, ok := manifest["config"].(map[string]any); ok {
 				mediaType, _ = cfg["media_type"].(string)
 			}
@@ -237,10 +236,10 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 				// GitHub sometimes sends package URLs with a trailing colon and no tag
 				// (e.g., "ghcr.io/user/image:"). Such strings are not valid OCI image
 				// references. We trim the trailing colon to avoid parsing errors.
-				strings.TrimSuffix(pkg.GetPackageVersion().GetPackageURL(), ":"),
+				strings.TrimSuffix(pkgVer.GetPackageURL(), ":"),
 				mediaType,
 			)
-			tag := v.GetContainerMetadata().GetTag().GetName()
+			tag := containerMeta.GetTag().GetName()
 			qualifiers = []string{tag}
 			logger = logger.WithValues("tag", tag)
 		}
