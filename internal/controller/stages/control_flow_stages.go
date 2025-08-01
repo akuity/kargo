@@ -24,6 +24,7 @@ import (
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/kubernetes"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	"github.com/akuity/kargo/internal/logging"
 	intpredicate "github.com/akuity/kargo/internal/predicate"
@@ -586,7 +587,7 @@ func (r *ControlFlowStageReconciler) clearAnalysisRuns(ctx context.Context, stag
 		&rollouts.AnalysisRun{},
 		client.InNamespace(stage.Namespace),
 		client.MatchingLabels(map[string]string{
-			kargoapi.LabelKeyStage: stage.Name,
+			kargoapi.LabelKeyStage: kubernetes.ShortenLabelValue(stage.Name),
 		}),
 	); err != nil {
 		return fmt.Errorf("error deleting AnalysisRuns for Stage %q in namespace %q: %w",
