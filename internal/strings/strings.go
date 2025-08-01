@@ -27,8 +27,8 @@ func SplitLast(s, sep string) (string, string, error) {
 	return s[:i], s[i+1:], nil
 }
 
-// WARNING: Do not change this. See comment on HashShorten().
-const shortHashLen = 8
+// WARNING: Do not change this. See comment on strings.HashShorten().
+const defaultShortHashLen = 8
 
 // HashShorten deterministically shortens the provided string to the specified
 // length by retaining as many of the leading characters as possible and
@@ -48,9 +48,17 @@ const shortHashLen = 8
 // requisite uniqueness. If this algorithm is altered, the ability to shorten
 // identifiers and match the result to an identifier previously shortened with
 // the older algorithm will be compromised.
-func HashShorten(s string, maxLen int, sep string) (string, bool) {
+func HashShorten(
+	s string,
+	maxLen int,
+	sep string,
+	shortHashLen int,
+) (string, bool) {
 	if len(s) <= maxLen {
 		return s, true // Nothing to do
+	}
+	if shortHashLen <= 0 {
+		shortHashLen = defaultShortHashLen
 	}
 	if maxLen < shortHashLen {
 		// We cannot possibly shorten to the specified length
