@@ -147,7 +147,6 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 
 		var qualifiers []string
 		var repoURLs []string
-		var mediaType string
 
 		switch e := event.(type) {
 		case *gh.PackageEvent:
@@ -176,13 +175,29 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			pkgVer := pkg.GetPackageVersion()
 			containerMeta := pkgVer.GetContainerMetadata()
 			manifest := containerMeta.GetManifest()
+			var mediaType string
 			if cfg, ok := manifest["config"].(map[string]any); ok {
 				mediaType, _ = cfg["media_type"].(string)
 			}
-			repoURLs = getNormalizedImageRepoURLs(pkgVer.GetPackageURL(), mediaType)
+			repoURLs = getNormalizedImageRepoURLs(
+				// In the case of `registry_package` events, we have sometimes observed
+				// GitHub sending URLs with a trailing colon and no tag (e.g.,
+				// "ghcr.io/user/image:"). Such strings are not valid OCI image
+				// references. We've NOT seen this occur with `package` events, however,
+				// the similarities between those two event types are so great that we
+				// suspect it is a possibility. Out of an abundance of caution we are
+				// trimming any trailing colon that may be present in this URL in order
+				// to avoid parsing errors.
+				strings.TrimSuffix(pkgVer.GetPackageURL(), ":"),
+				mediaType,
+			)
+
 			tag := containerMeta.GetTag().GetName()
 			qualifiers = []string{tag}
-			logger = logger.WithValues("tag", tag)
+			logger = logger.WithValues(
+				"mediaType", mediaType,
+				"tag", tag,
+			)
 		case *gh.PingEvent:
 			xhttp.WriteResponseJSON(
 				w,
@@ -194,14 +209,14 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			return
 
 		case *gh.PushEvent:
-			ref := e.GetRef()
-			qualifiers = []string{ref}
-			logger = logger.WithValues("ref", ref)
 			// TODO(krancour): GetHTMLURL() gives us a repo URL starting with
 			// https://. By refreshing Warehouses using a normalized representation of
 			// that URL, we will miss any Warehouses that are subscribed to the same
 			// repository using a different URL format.
 			repoURLs = []string{git.NormalizeURL(e.GetRepo().GetCloneURL())}
+			ref := e.GetRef()
+			qualifiers = []string{ref}
+			logger = logger.WithValues("ref", ref)
 
 		case *gh.RegistryPackageEvent:
 			switch e.GetAction() {
@@ -229,6 +244,7 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			pkgVer := pkg.GetPackageVersion()
 			containerMeta := pkgVer.GetContainerMetadata()
 			manifest := containerMeta.GetManifest()
+			var mediaType string
 			if cfg, ok := manifest["config"].(map[string]any); ok {
 				mediaType, _ = cfg["media_type"].(string)
 			}
@@ -236,18 +252,21 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 				// GitHub sometimes sends package URLs with a trailing colon and no tag
 				// (e.g., "ghcr.io/user/image:"). Such strings are not valid OCI image
 				// references. We trim the trailing colon to avoid parsing errors.
+				//
+				// TODO(krancour): We do not have a firm grasp on why this sometimes
+				// happens and sometimes does not.
 				strings.TrimSuffix(pkgVer.GetPackageURL(), ":"),
 				mediaType,
 			)
 			tag := containerMeta.GetTag().GetName()
 			qualifiers = []string{tag}
-			logger = logger.WithValues("tag", tag)
+			logger = logger.WithValues(
+				"mediaType", mediaType,
+				"tag", tag,
+			)
 		}
 
-		logger = logger.WithValues(
-			"repoURLs", repoURLs,
-			"mediaType", mediaType,
-		)
+		logger = logger.WithValues("repoURLs", repoURLs)
 		ctx = logging.ContextWithLogger(ctx, logger)
 
 		refreshWarehouses(ctx, w, g.client, g.project, repoURLs, qualifiers...)
