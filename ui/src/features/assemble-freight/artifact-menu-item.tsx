@@ -33,16 +33,11 @@ export const ArtifactMenuItems = ({
   <>
     {items.map((item) => {
       const isSelected = !!selected && isEqualSubscriptions(selected, item);
+      const key = getSubscriptionKey(item);
 
       return (
-        <ArtifactMenuItem
-          key={getSubscriptionKey(item)}
-          onClick={() => onClick(item)}
-          selected={isSelected}
-        >
-          {item.repoURL}
-          {item.$typeName === 'github.com.akuity.kargo.api.v1alpha1.ChartDiscoveryResult' &&
-            `/${item.name}`}
+        <ArtifactMenuItem key={key} onClick={() => onClick(item)} selected={isSelected}>
+          {key}
         </ArtifactMenuItem>
       );
     })}
