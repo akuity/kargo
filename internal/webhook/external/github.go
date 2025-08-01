@@ -175,7 +175,6 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			}
 			v := pkg.GetPackageVersion()
 			manifest := v.GetContainerMetadata().GetManifest()
-			// Determine if the package is a Helm chart
 			if cfg, ok := manifest["config"].(map[string]any); ok {
 				mediaType, _ = cfg["media_type"].(string)
 			}
@@ -229,16 +228,21 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 				xhttp.WriteResponseJSON(w, http.StatusOK, nil)
 				return
 			}
-			// GitHub sometimes sends package URLs with a trailing colon and no tag
-			// (e.g., "ghcr.io/user/image:"). Such strings are not valid OCI image
-			// references. We trim the trailing colon to avoid parsing errors.
-			pkgURL := strings.TrimSuffix(pkg.GetPackageVersion().GetPackageURL(), ":")
-			manifest := pkg.GetPackageVersion().GetContainerMetadata().GetManifest()
+			v := pkg.GetPackageVersion()
+			manifest := v.GetContainerMetadata().GetManifest()
 			if cfg, ok := manifest["config"].(map[string]any); ok {
-				if mediaType, ok = cfg["media_type"].(string); ok {
-					repoURLs = getNormalizedImageRepoURLs(pkgURL, mediaType)
-				}
+				mediaType, _ = cfg["media_type"].(string)
 			}
+			repoURLs = getNormalizedImageRepoURLs(
+				// GitHub sometimes sends package URLs with a trailing colon and no tag
+				// (e.g., "ghcr.io/user/image:"). Such strings are not valid OCI image
+				// references. We trim the trailing colon to avoid parsing errors.
+				strings.TrimSuffix(pkg.GetPackageVersion().GetPackageURL(), ":"),
+				mediaType,
+			)
+			tag := v.GetContainerMetadata().GetTag().GetName()
+			qualifiers = []string{tag}
+			logger = logger.WithValues("tag", tag)
 		}
 
 		logger = logger.WithValues(
