@@ -18,7 +18,8 @@ func init() {
 		kargoapi.ImageSelectionStrategySemVer,
 		selectorRegistration{
 			predicate: func(sub kargoapi.ImageSubscription) bool {
-				return sub.ImageSelectionStrategy == kargoapi.ImageSelectionStrategySemVer
+				return sub.ImageSelectionStrategy == kargoapi.ImageSelectionStrategySemVer ||
+					sub.ImageSelectionStrategy == ""
 			},
 			factory: newSemverSelector,
 		},
