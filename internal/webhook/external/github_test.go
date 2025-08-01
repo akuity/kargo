@@ -83,6 +83,9 @@ func TestGithubHandler(t *testing.T) {
 			PackageVersion: &gh.PackageVersion{
 				PackageURL: gh.Ptr("ghcr.io/example/repo:latest"),
 				ContainerMetadata: &gh.PackageEventContainerMetadata{
+					Tag: &gh.PackageEventContainerMetadataTag{
+						Name: gh.Ptr("v1.0.0"),
+					},
 					Manifest: map[string]any{
 						"config": map[string]any{
 							// Real world testing shows this media type is what the payload
@@ -102,6 +105,9 @@ func TestGithubHandler(t *testing.T) {
 			PackageVersion: &gh.PackageVersion{
 				PackageURL: gh.Ptr("ghcr.io/example/repo:latest"),
 				ContainerMetadata: &gh.PackageEventContainerMetadata{
+					Tag: &gh.PackageEventContainerMetadataTag{
+						Name: gh.Ptr("v1.0.0"),
+					},
 					Manifest: map[string]any{
 						"config": map[string]any{
 							// Real world testing shows this media type is what the payload
@@ -341,8 +347,8 @@ func TestGithubHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Chart: &kargoapi.ChartSubscription{
-								SemverConstraint: "^v1.0.0",
 								RepoURL:          "oci://ghcr.io/example/repo",
+								SemverConstraint: "^v1.0.0",
 							},
 						}},
 					},
@@ -370,6 +376,47 @@ func TestGithubHandler(t *testing.T) {
 			},
 		},
 		{
+			name:       "success -- push event",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL:                 "https://github.com/example/repo",
+								CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+								Branch:                  "main",
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(validPushEvent)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set(gh.EventTypeHeader, githubEventTypePush)
+				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBytes))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
 			name:       "success -- registry_package event -- image",
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
@@ -380,7 +427,11 @@ func TestGithubHandler(t *testing.T) {
 					},
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
-							Image: &kargoapi.ImageSubscription{RepoURL: "ghcr.io/example/repo"},
+							Image: &kargoapi.ImageSubscription{
+								RepoURL:                "ghcr.io/example/repo",
+								ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+								SemverConstraint:       "^v1.0.0",
+							},
 						}},
 					},
 				},
@@ -418,7 +469,8 @@ func TestGithubHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Chart: &kargoapi.ChartSubscription{
-								RepoURL: "ghcr.io/example/repo",
+								RepoURL:          "oci://ghcr.io/example/repo",
+								SemverConstraint: "^v1.0.0",
 							},
 						}},
 					},
@@ -437,48 +489,6 @@ func TestGithubHandler(t *testing.T) {
 					bytes.NewBuffer(bodyBytes),
 				)
 				req.Header.Set(gh.EventTypeHeader, "registry_package")
-				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBytes))
-				return req
-			},
-			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusOK, rr.Code)
-				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
-			},
-		},
-
-		{
-			name:       "success -- push event",
-			secretData: testSecretData,
-			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
-				&kargoapi.Warehouse{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProjectName,
-						Name:      "fake-warehouse",
-					},
-					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
-							Git: &kargoapi.GitSubscription{
-								RepoURL:                 "https://github.com/example/repo",
-								CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
-								Branch:                  "main",
-							},
-						}},
-					},
-				},
-			).WithIndex(
-				&kargoapi.Warehouse{},
-				indexer.WarehousesBySubscribedURLsField,
-				indexer.WarehousesBySubscribedURLs,
-			).Build(),
-			req: func() *http.Request {
-				bodyBytes, err := json.Marshal(validPushEvent)
-				require.NoError(t, err)
-				req := httptest.NewRequest(
-					http.MethodPost,
-					testURL,
-					bytes.NewBuffer(bodyBytes),
-				)
-				req.Header.Set(gh.EventTypeHeader, githubEventTypePush)
 				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBytes))
 				return req
 			},
