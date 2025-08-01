@@ -1,6 +1,7 @@
 import classNames from 'classnames';
 
 import { DiscoveryResult } from './types';
+import { getSubscriptionKey, isEqualSubscriptions } from './unique-subscription-key';
 
 export interface ArtifactMenuItemProps {
   onClick: () => void;
@@ -30,16 +31,15 @@ export const ArtifactMenuItems = ({
   items: DiscoveryResult[];
 }) => (
   <>
-    {items.map((item) => (
-      <ArtifactMenuItem
-        key={item.repoURL}
-        onClick={() => onClick(item)}
-        selected={selected?.repoURL === item.repoURL}
-      >
-        {item.repoURL}
-        {item.$typeName === 'github.com.akuity.kargo.api.v1alpha1.ChartDiscoveryResult' &&
-          `/${item.name}`}
-      </ArtifactMenuItem>
-    ))}
+    {items.map((item) => {
+      const isSelected = !!selected && isEqualSubscriptions(selected, item);
+      const key = getSubscriptionKey(item);
+
+      return (
+        <ArtifactMenuItem key={key} onClick={() => onClick(item)} selected={isSelected}>
+          {key}
+        </ArtifactMenuItem>
+      );
+    })}
   </>
 );
