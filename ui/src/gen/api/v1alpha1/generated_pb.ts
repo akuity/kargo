@@ -3128,7 +3128,6 @@ export type PromotionTemplateSpec = Message<"github.com.akuity.kargo.api.v1alpha
    *
    * +kubebuilder:validation:MinItems=1
    * +kubebuilder:validation:items:XValidation:message="PromotionTemplate step must have exactly one of uses or task set",rule="(has(self.uses) ? !has(self.task) : has(self.task))"
-   * +kubebuilder:validation:items:XValidation:message="PromotionTemplate step referencing a task cannot set if",rule="!has(self.task) || !has(self.if)"
    * +kubebuilder:validation:items:XValidation:message="PromotionTemplate step referencing a task cannot set continueOnError",rule="!has(self.task) || !has(self.continueOnError)"
    * +kubebuilder:validation:items:XValidation:message="PromotionTemplate step referencing a task cannot set retry",rule="!has(self.task) || !has(self.retry)"
    *
