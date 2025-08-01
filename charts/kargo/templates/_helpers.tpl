@@ -154,3 +154,13 @@ app.kubernetes.io/component: kubernetes-webhooks-server
 {{- define "kargo.managementController.labels" -}}
 app.kubernetes.io/component: management-controller
 {{- end -}}
+
+{{- define "kargo.api.oidc.additionalParameters" -}}
+    {{- if .Values.api.oidc.additionalParameters -}}
+        {{- $list := list -}}
+        {{- range $key, $value := .Values.api.oidc.additionalParameters -}}
+            {{- $list = printf "%s:%s" $key $value | append $list  -}}
+        {{- end -}}
+        {{- join "," $list -}}
+    {{- end -}}
+{{- end -}}
