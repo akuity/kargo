@@ -211,9 +211,6 @@ spec:
                               of uses or task set
                             rule: '(has(self.uses) ? !has(self.task) : has(self.task))'
                           - message: PromotionTemplate step referencing a task cannot
-                              set if
-                            rule: '!has(self.task) || !has(self.if)'
-                          - message: PromotionTemplate step referencing a task cannot
                               set continueOnError
                             rule: '!has(self.task) || !has(self.continueOnError)'
                           - message: PromotionTemplate step referencing a task cannot
