@@ -4,8 +4,8 @@ sidebar_label: GitHub
 
 # GitHub Webhook Receiver
 
-The GitHub webhook receiver responds to `ping`, `push`, and `package` events
-originating from GitHub.
+The GitHub webhook receiver responds to `ping`, `push`, `package`, and
+`registry_package` events originating from GitHub.
 
 The receiver unconditionally responds to `ping` events with an HTTP `200` status
 code.
