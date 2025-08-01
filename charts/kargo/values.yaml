@@ -172,7 +172,7 @@ api:
         # - kargo-admin
 
     projectCreators:
-      ## @param api.oidc.projectCreators.claims Subjects having any of these claims will automatically receive the permissions of the karo-user role (see `api.oidc.users`) **plus** permission to create new `Project`s. When a `Project`` is created by such a user via the CLI or UI (i.e. through the API and not through `kubectl`) they will automatically receive admin permissions within `that`` Project as well as permission to update and delete the cluster-scoped Project resource itself.
+      ## @param api.oidc.projectCreators.claims Subjects having any of these claims will automatically receive the permissions of the karo-user role (see `api.oidc.users`) **plus** permission to create new `Project`s. When a `Project` is created by such a user via the CLI or UI (i.e. through the API and not through `kubectl`) they will automatically receive admin permissions within that `Project` as well as permission to update and delete the cluster-scoped `Project` resource itself.
       claims: {}
       # sub:
       # - alice
