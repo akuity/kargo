@@ -20,8 +20,8 @@ const (
 
 	github = "github"
 
-	// githubEventTypePackage is type of event corresponds to a package push when the webhook is
-	// registered directly at the repository-level. i.e. It's when the webhook
+	// githubEventTypePackage corresponds to a package push event when the webhook
+	// has been registered directly at the repository-level. i.e. When the webhook
 	// is not registered indirectly via a GitHub App that's been installed into
 	// the repository.
 	githubEventTypePackage = "package"
