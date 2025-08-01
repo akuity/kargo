@@ -29,6 +29,7 @@ import (
 	"github.com/akuity/kargo/internal/conditions"
 	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/kubernetes"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -1044,10 +1045,9 @@ func (r *reconciler) ensureDefaultUserRoles(
 	// This ClusterRole allows those bound to it to update and delete one specific
 	// Project. This is necessary since Projects are cluster-scoped, meaning this
 	// permission cannot be defined anywhere except at the cluster-level.
-	//
-	// TODO(krancour): There's an obvious problem here if
-	// len("kargo-project-admin-") + len(project.Name) > max resource name length.
-	crName := fmt.Sprintf("kargo-project-admin-%s", project.Name)
+	crName := kubernetes.ShortenResourceName(
+		fmt.Sprintf("kargo-project-admin-%s", project.Name),
+	)
 	crLogger := logger.WithValues("name", crName)
 	if err := r.createClusterRoleFn(
 		ctx,
@@ -1068,8 +1068,6 @@ func (r *reconciler) ensureDefaultUserRoles(
 	}
 	crLogger.Debug("created ClusterRole")
 
-	// TODO(krancour): There's an obvious problem here if
-	// len("kargo-project-admin-") + len(project.Name) > max resource name length.
 	crbName := crName
 	crbLogger := logger.WithValues("name", crbName)
 	logger.WithValues()

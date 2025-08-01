@@ -1,6 +1,9 @@
 package strings
 
 import (
+	"crypto/sha256"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -71,4 +74,100 @@ func TestSplitLast(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestHashShorten(t *testing.T) {
+	const in = "Four score and seven years ago"
+	const sep = "... "
+
+	t.Run("input is shorter than requested max length", func(t *testing.T) {
+		out, nowShort := HashShorten(in, len(in), sep)
+		require.True(t, nowShort)
+		require.Equal(t, in, out)
+	})
+
+	t.Run("requested max length is shorter than short hash length", func(t *testing.T) {
+		out, nowShort := HashShorten(in, shortHashLen-1, sep)
+		require.False(t, nowShort)
+		require.Equal(t, in, out)
+	})
+
+	t.Run("shortened to the exact length of the short hash", func(t *testing.T) {
+		out, nowShort := HashShorten(in, shortHashLen, sep)
+		require.True(t, nowShort)
+		// The result should be the short hash only
+		sum := fmt.Sprintf("%x", sha256.Sum256([]byte(in)))
+		require.Equal(t, out, sum[:shortHashLen])
+	})
+
+	t.Run("shortened without enough room for original chars + separator", func(t *testing.T) {
+		out, nowShort := HashShorten(in, len(sep)+shortHashLen, sep)
+		require.True(t, nowShort)
+		// The result should be the short hash only
+		sum := fmt.Sprintf("%x", sha256.Sum256([]byte(in)))
+		require.Equal(t, out, sum[:shortHashLen])
+	})
+
+	t.Run("shortened with enough room for original chars + separator", func(t *testing.T) {
+		maxLength := 1 + len(sep) + shortHashLen
+		out, nowShort := HashShorten(in, maxLength, sep)
+		require.True(t, nowShort)
+		// The result should be the short hash only
+		require.Len(t, out, maxLength)
+		// The result should contain the separator
+		require.Contains(t, out, sep)
+		// The trailing characters of the result should be the short hash
+		sum := fmt.Sprintf("%x", sha256.Sum256([]byte(in)))
+		require.Equal(t, out[len(out)-shortHashLen:], sum[:shortHashLen])
+	})
+
+	t.Run("no double separators in the result", func(t *testing.T) {
+		// Carefully engineering input that will result in a double separator that
+		// we expect to be removed from the final result...
+		const firstPart = "Four score and seven"
+		const secondPart = "years, ago our fathers brought forth, on this continent"
+		in := firstPart + sep + secondPart
+		maxLength := len(firstPart) + 2*len(sep) + shortHashLen
+		out, nowShort := HashShorten(in, maxLength, sep)
+		require.True(t, nowShort)
+		// The separator should be found only once in the result
+		require.Equal(t, 1, strings.Count(out, sep))
+		// The trailing characters of the result should be the short hash
+		sum := fmt.Sprintf("%x", sha256.Sum256([]byte(in)))
+		require.Equal(t, out[len(out)-shortHashLen:], sum[:shortHashLen])
+	})
+
+	t.Run("separator defaults to single dash", func(t *testing.T) {
+		// maxLength is enough room for one original character, a dash, and the
+		// short hash
+		maxLength := 1 + 1 + shortHashLen
+		out, nowShort := HashShorten(in, maxLength, "")
+		require.True(t, nowShort)
+		require.Contains(t, out, "-")
+		// The trailing characters of the result should be the short hash
+		sum := fmt.Sprintf("%x", sha256.Sum256([]byte(in)))
+		require.Equal(t, out[len(out)-shortHashLen:], sum[:shortHashLen])
+	})
+
+	t.Run("results are deterministic", func(t *testing.T) {
+		maxLength := 1 + len(sep) + shortHashLen
+		out1, nowShort := HashShorten(in, maxLength, sep)
+		require.True(t, nowShort)
+		out2, nowShort := HashShorten(in, maxLength, sep)
+		require.True(t, nowShort)
+		require.Equal(t, out1, out2)
+	})
+
+	t.Run("different input yields different results", func(t *testing.T) {
+		maxLength := 1 + len(sep) + shortHashLen
+		out1, nowShort := HashShorten(in, maxLength, sep)
+		require.True(t, nowShort)
+		out2, nowShort := HashShorten(
+			"Five score and seven years ago",
+			maxLength,
+			sep,
+		)
+		require.True(t, nowShort)
+		require.NotEqual(t, out1, out2)
+	})
 }
