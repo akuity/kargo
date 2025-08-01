@@ -199,6 +199,18 @@ func (d *ociDownloader) buildRemoteOptions(
 	return remoteOpts, nil
 }
 
+// buildHTTPTransport creates a new HTTP transport with TLS settings based on
+// the configuration.
+func (d *ociDownloader) buildHTTPTransport(cfg builtin.OCIDownloadConfig) *http.Transport {
+	httpTransport := cleanhttp.DefaultTransport()
+	if cfg.InsecureSkipTLSVerify {
+		httpTransport.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true, // nolint: gosec
+		}
+	}
+	return httpTransport
+}
+
 // getAuthOption retrieves and configures authentication for the registry.
 func (d *ociDownloader) getAuthOption(
 	ctx context.Context,
@@ -229,18 +241,6 @@ func (d *ociDownloader) getAuthOption(
 	return nil, nil
 }
 
-// buildHTTPTransport creates a new HTTP transport with TLS settings based on
-// the configuration.
-func (d *ociDownloader) buildHTTPTransport(cfg builtin.OCIDownloadConfig) *http.Transport {
-	httpTransport := cleanhttp.DefaultTransport()
-	if cfg.InsecureSkipTLSVerify {
-		httpTransport.TLSClientConfig = &tls.Config{
-			InsecureSkipVerify: true, // nolint: gosec
-		}
-	}
-	return httpTransport
-}
-
 // extractLayerToFile extracts the target layer from the image to the specified
 // file.
 func (d *ociDownloader) extractLayerToFile(img v1.Image, mediaType, absOutPath string) error {
@@ -255,6 +255,38 @@ func (d *ociDownloader) extractLayerToFile(img v1.Image, mediaType, absOutPath s
 	}
 
 	return d.writeLayerToFile(targetLayer, absOutPath)
+}
+
+// findTargetLayer finds the appropriate layer based on media type preference.
+func (d *ociDownloader) findTargetLayer(
+	img v1.Image,
+	manifest *v1.Manifest,
+	targetMediaType string,
+) (v1.Layer, error) {
+	layers, err := img.Layers()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get image layers: %w", err)
+	}
+
+	if len(layers) == 0 {
+		return nil, errors.New("image has no layers")
+	}
+
+	// If a specific media type is requested, find the first matching layer
+	if targetMediaType != "" {
+		for i, layerDesc := range manifest.Layers {
+			if string(layerDesc.MediaType) == targetMediaType {
+				if i >= len(layers) {
+					return nil, fmt.Errorf("layer index %d out of range", i)
+				}
+				return layers[i], nil
+			}
+		}
+		return nil, fmt.Errorf("no layer found with media type %q", targetMediaType)
+	}
+
+	// If no specific media type requested, return the first layer
+	return layers[0], nil
 }
 
 // writeLayerToFile writes the layer content to a file using atomic operations.
@@ -330,36 +362,4 @@ func (d *ociDownloader) copyLayerToFile(layer v1.Layer, tempFile *os.File) error
 	}
 
 	return nil
-}
-
-// findTargetLayer finds the appropriate layer based on media type preference.
-func (d *ociDownloader) findTargetLayer(
-	img v1.Image,
-	manifest *v1.Manifest,
-	targetMediaType string,
-) (v1.Layer, error) {
-	layers, err := img.Layers()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get image layers: %w", err)
-	}
-
-	if len(layers) == 0 {
-		return nil, errors.New("image has no layers")
-	}
-
-	// If a specific media type is requested, find the first matching layer
-	if targetMediaType != "" {
-		for i, layerDesc := range manifest.Layers {
-			if string(layerDesc.MediaType) == targetMediaType {
-				if i >= len(layers) {
-					return nil, fmt.Errorf("layer index %d out of range", i)
-				}
-				return layers[i], nil
-			}
-		}
-		return nil, fmt.Errorf("no layer found with media type %q", targetMediaType)
-	}
-
-	// If no specific media type requested, return the first layer
-	return layers[0], nil
 }

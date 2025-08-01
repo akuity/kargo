@@ -386,6 +386,47 @@ func Test_ociDownloader_buildRemoteOptions(t *testing.T) {
 	}
 }
 
+func Test_ociDownloader_buildHTTPTransport(t *testing.T) {
+	tests := []struct {
+		name       string
+		cfg        builtin.OCIDownloadConfig
+		assertions func(*testing.T, *http.Transport)
+	}{
+		{
+			name: "default TLS verification",
+			cfg: builtin.OCIDownloadConfig{
+				InsecureSkipTLSVerify: false,
+			},
+			assertions: func(t *testing.T, transport *http.Transport) {
+				require.NotNil(t, transport)
+				if transport.TLSClientConfig != nil {
+					assert.False(t, transport.TLSClientConfig.InsecureSkipVerify)
+				}
+			},
+		},
+		{
+			name: "skip TLS verification",
+			cfg: builtin.OCIDownloadConfig{
+				InsecureSkipTLSVerify: true,
+			},
+			assertions: func(t *testing.T, transport *http.Transport) {
+				require.NotNil(t, transport)
+				require.NotNil(t, transport.TLSClientConfig)
+				assert.True(t, transport.TLSClientConfig.InsecureSkipVerify)
+			},
+		},
+	}
+
+	runner := &ociDownloader{}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			transport := runner.buildHTTPTransport(tt.cfg)
+			tt.assertions(t, transport)
+		})
+	}
+}
+
 func Test_ociDownloader_getAuthOption(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -506,47 +547,6 @@ func Test_ociDownloader_getAuthOption(t *testing.T) {
 	}
 }
 
-func Test_ociDownloader_buildHTTPTransport(t *testing.T) {
-	tests := []struct {
-		name       string
-		cfg        builtin.OCIDownloadConfig
-		assertions func(*testing.T, *http.Transport)
-	}{
-		{
-			name: "default TLS verification",
-			cfg: builtin.OCIDownloadConfig{
-				InsecureSkipTLSVerify: false,
-			},
-			assertions: func(t *testing.T, transport *http.Transport) {
-				require.NotNil(t, transport)
-				if transport.TLSClientConfig != nil {
-					assert.False(t, transport.TLSClientConfig.InsecureSkipVerify)
-				}
-			},
-		},
-		{
-			name: "skip TLS verification",
-			cfg: builtin.OCIDownloadConfig{
-				InsecureSkipTLSVerify: true,
-			},
-			assertions: func(t *testing.T, transport *http.Transport) {
-				require.NotNil(t, transport)
-				require.NotNil(t, transport.TLSClientConfig)
-				assert.True(t, transport.TLSClientConfig.InsecureSkipVerify)
-			},
-		},
-	}
-
-	runner := &ociDownloader{}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			transport := runner.buildHTTPTransport(tt.cfg)
-			tt.assertions(t, transport)
-		})
-	}
-}
-
 func Test_ociDownloader_extractLayerToFile(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -649,6 +649,159 @@ func Test_ociDownloader_extractLayerToFile(t *testing.T) {
 			img := tt.setupImg()
 			err := runner.extractLayerToFile(img, tt.mediaType, absOutPath)
 			tt.assertions(t, absOutPath, err)
+		})
+	}
+}
+
+func Test_ociDownloader_findTargetLayer(t *testing.T) {
+	tests := []struct {
+		name            string
+		setupImg        func() v1.Image
+		manifest        *v1.Manifest
+		targetMediaType string
+		assertions      func(*testing.T, v1.Layer, error)
+	}{
+		{
+			name: "no specific media type returns first layer",
+			setupImg: func() v1.Image {
+				return &fake.FakeImage{
+					LayersStub: func() ([]v1.Layer, error) {
+						return []v1.Layer{
+							static.NewLayer([]byte("layer1"), types.DockerLayer),
+							static.NewLayer([]byte("layer2"), types.OCILayer),
+						}, nil
+					},
+				}
+			},
+			manifest: createTestManifest([]types.MediaType{
+				types.DockerLayer,
+				types.OCILayer,
+			}),
+			targetMediaType: "",
+			assertions: func(t *testing.T, layer v1.Layer, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, layer)
+				content, readErr := layer.Compressed()
+				require.NoError(t, readErr)
+				data, readErr := io.ReadAll(content)
+				require.NoError(t, readErr)
+				assert.Equal(t, "layer1", string(data))
+			},
+		},
+		{
+			name: "specific media type found",
+			setupImg: func() v1.Image {
+				return &fake.FakeImage{
+					LayersStub: func() ([]v1.Layer, error) {
+						return []v1.Layer{
+							static.NewLayer([]byte("layer1"), types.DockerLayer),
+							static.NewLayer([]byte("layer2"), types.OCILayer),
+						}, nil
+					},
+				}
+			},
+			manifest: createTestManifest([]types.MediaType{
+				types.DockerLayer,
+				types.OCILayer,
+			}),
+			targetMediaType: string(types.OCILayer),
+			assertions: func(t *testing.T, layer v1.Layer, err error) {
+				require.NoError(t, err)
+
+				require.NotNil(t, layer)
+				content, readErr := layer.Compressed()
+				require.NoError(t, readErr)
+
+				data, readErr := io.ReadAll(content)
+				require.NoError(t, readErr)
+				assert.Equal(t, "layer2", string(data))
+			},
+		},
+		{
+			name: "specific media type not found",
+			setupImg: func() v1.Image {
+				return &fake.FakeImage{
+					LayersStub: func() ([]v1.Layer, error) {
+						return []v1.Layer{
+							static.NewLayer([]byte("layer1"), types.DockerLayer),
+						}, nil
+					},
+				}
+			},
+			manifest: createTestManifest([]types.MediaType{
+				types.DockerLayer,
+			}),
+			targetMediaType: string(types.OCILayer),
+			assertions: func(t *testing.T, layer v1.Layer, err error) {
+				assert.ErrorContains(t, err, "no layer found with media type")
+				assert.Nil(t, layer)
+			},
+		},
+		{
+			name: "no layers",
+			setupImg: func() v1.Image {
+				return &fake.FakeImage{
+					LayersStub: func() ([]v1.Layer, error) {
+						return []v1.Layer{}, nil
+					},
+				}
+			},
+			manifest: createTestManifest(nil),
+			assertions: func(t *testing.T, layer v1.Layer, err error) {
+				assert.ErrorContains(t, err, "image has no layers")
+				assert.Nil(t, layer)
+			},
+		},
+		{
+			name: "layers error",
+			setupImg: func() v1.Image {
+				return &fake.FakeImage{
+					LayersStub: func() ([]v1.Layer, error) {
+						return nil, errors.New("layers error")
+					},
+				}
+			},
+			manifest: createTestManifest([]types.MediaType{types.DockerLayer}),
+			assertions: func(t *testing.T, layer v1.Layer, err error) {
+				assert.ErrorContains(t, err, "failed to get image layers")
+				assert.Nil(t, layer)
+			},
+		},
+		{
+			name: "layer index out of range",
+			setupImg: func() v1.Image {
+				return &fake.FakeImage{
+					LayersStub: func() ([]v1.Layer, error) {
+						return []v1.Layer{
+							static.NewLayer([]byte("layer1"), types.DockerLayer),
+						}, nil
+					},
+				}
+			},
+			manifest: &v1.Manifest{
+				SchemaVersion: 2,
+				MediaType:     types.DockerManifestSchema2,
+				Layers: []v1.Descriptor{
+					{MediaType: types.DockerLayer},
+					{MediaType: types.OCILayer}, // This will cause index out of range
+				},
+			},
+			targetMediaType: string(types.OCILayer),
+			assertions: func(t *testing.T, layer v1.Layer, err error) {
+				assert.ErrorContains(t, err, "layer index")
+				assert.ErrorContains(t, err, "out of range")
+				assert.Nil(t, layer)
+			},
+		},
+	}
+
+	runner := &ociDownloader{}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			img := tt.setupImg()
+			layer, err := runner.findTargetLayer(img, tt.manifest, tt.targetMediaType)
+			tt.assertions(t, layer, err)
 		})
 	}
 }
@@ -833,159 +986,6 @@ func Test_ociDownloader_copyLayerToFile(t *testing.T) {
 
 			err = runner.copyLayerToFile(tt.layer, tempFile)
 			tt.assertions(t, tempFile, err)
-		})
-	}
-}
-
-func Test_ociDownloader_findTargetLayer(t *testing.T) {
-	tests := []struct {
-		name            string
-		setupImg        func() v1.Image
-		manifest        *v1.Manifest
-		targetMediaType string
-		assertions      func(*testing.T, v1.Layer, error)
-	}{
-		{
-			name: "no specific media type returns first layer",
-			setupImg: func() v1.Image {
-				return &fake.FakeImage{
-					LayersStub: func() ([]v1.Layer, error) {
-						return []v1.Layer{
-							static.NewLayer([]byte("layer1"), types.DockerLayer),
-							static.NewLayer([]byte("layer2"), types.OCILayer),
-						}, nil
-					},
-				}
-			},
-			manifest: createTestManifest([]types.MediaType{
-				types.DockerLayer,
-				types.OCILayer,
-			}),
-			targetMediaType: "",
-			assertions: func(t *testing.T, layer v1.Layer, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, layer)
-				content, readErr := layer.Compressed()
-				require.NoError(t, readErr)
-				data, readErr := io.ReadAll(content)
-				require.NoError(t, readErr)
-				assert.Equal(t, "layer1", string(data))
-			},
-		},
-		{
-			name: "specific media type found",
-			setupImg: func() v1.Image {
-				return &fake.FakeImage{
-					LayersStub: func() ([]v1.Layer, error) {
-						return []v1.Layer{
-							static.NewLayer([]byte("layer1"), types.DockerLayer),
-							static.NewLayer([]byte("layer2"), types.OCILayer),
-						}, nil
-					},
-				}
-			},
-			manifest: createTestManifest([]types.MediaType{
-				types.DockerLayer,
-				types.OCILayer,
-			}),
-			targetMediaType: string(types.OCILayer),
-			assertions: func(t *testing.T, layer v1.Layer, err error) {
-				require.NoError(t, err)
-
-				require.NotNil(t, layer)
-				content, readErr := layer.Compressed()
-				require.NoError(t, readErr)
-
-				data, readErr := io.ReadAll(content)
-				require.NoError(t, readErr)
-				assert.Equal(t, "layer2", string(data))
-			},
-		},
-		{
-			name: "specific media type not found",
-			setupImg: func() v1.Image {
-				return &fake.FakeImage{
-					LayersStub: func() ([]v1.Layer, error) {
-						return []v1.Layer{
-							static.NewLayer([]byte("layer1"), types.DockerLayer),
-						}, nil
-					},
-				}
-			},
-			manifest: createTestManifest([]types.MediaType{
-				types.DockerLayer,
-			}),
-			targetMediaType: string(types.OCILayer),
-			assertions: func(t *testing.T, layer v1.Layer, err error) {
-				assert.ErrorContains(t, err, "no layer found with media type")
-				assert.Nil(t, layer)
-			},
-		},
-		{
-			name: "no layers",
-			setupImg: func() v1.Image {
-				return &fake.FakeImage{
-					LayersStub: func() ([]v1.Layer, error) {
-						return []v1.Layer{}, nil
-					},
-				}
-			},
-			manifest: createTestManifest(nil),
-			assertions: func(t *testing.T, layer v1.Layer, err error) {
-				assert.ErrorContains(t, err, "image has no layers")
-				assert.Nil(t, layer)
-			},
-		},
-		{
-			name: "layers error",
-			setupImg: func() v1.Image {
-				return &fake.FakeImage{
-					LayersStub: func() ([]v1.Layer, error) {
-						return nil, errors.New("layers error")
-					},
-				}
-			},
-			manifest: createTestManifest([]types.MediaType{types.DockerLayer}),
-			assertions: func(t *testing.T, layer v1.Layer, err error) {
-				assert.ErrorContains(t, err, "failed to get image layers")
-				assert.Nil(t, layer)
-			},
-		},
-		{
-			name: "layer index out of range",
-			setupImg: func() v1.Image {
-				return &fake.FakeImage{
-					LayersStub: func() ([]v1.Layer, error) {
-						return []v1.Layer{
-							static.NewLayer([]byte("layer1"), types.DockerLayer),
-						}, nil
-					},
-				}
-			},
-			manifest: &v1.Manifest{
-				SchemaVersion: 2,
-				MediaType:     types.DockerManifestSchema2,
-				Layers: []v1.Descriptor{
-					{MediaType: types.DockerLayer},
-					{MediaType: types.OCILayer}, // This will cause index out of range
-				},
-			},
-			targetMediaType: string(types.OCILayer),
-			assertions: func(t *testing.T, layer v1.Layer, err error) {
-				assert.ErrorContains(t, err, "layer index")
-				assert.ErrorContains(t, err, "out of range")
-				assert.Nil(t, layer)
-			},
-		},
-	}
-
-	runner := &ociDownloader{}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			img := tt.setupImg()
-			layer, err := runner.findTargetLayer(img, tt.manifest, tt.targetMediaType)
-			tt.assertions(t, layer, err)
 		})
 	}
 }
