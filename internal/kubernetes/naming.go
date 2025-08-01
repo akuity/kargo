@@ -18,7 +18,7 @@ func ShortenResourceName(name string) string {
 }
 
 // ShortenLabelValue deterministically shortens the provided string value to the
-// maximum allowed length for the the value of a Kubernetes label by retaining
+// maximum allowed length for the value of a Kubernetes label by retaining
 // as many of the leading characters as possible and replacing as many trailing
 // characters as necessary with a short hash of the entire input. The preserved
 // characters of the input value and the short hash will be separated by a dash.

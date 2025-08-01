@@ -41,6 +41,7 @@ import (
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/kubernetes"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/pattern"
@@ -1347,7 +1348,7 @@ func (r *RegularStageReconciler) startVerification(
 		rollouts.WithNamePrefix(stage.Name),
 		rollouts.WithNameSuffix(freight.ID),
 		rollouts.WithExtraLabels(map[string]string{
-			kargoapi.LabelKeyStage:             stage.Name,
+			kargoapi.LabelKeyStage:             kubernetes.ShortenLabelValue(stage.Name),
 			kargoapi.LabelKeyFreightCollection: freight.ID,
 		}),
 		rollouts.WithArgumentEvaluationConfig{
@@ -1611,7 +1612,7 @@ func (r *RegularStageReconciler) findExistingAnalysisRun(
 		client.InNamespace(stage.Namespace),
 		client.MatchingLabelsSelector{
 			Selector: labels.SelectorFromSet(map[string]string{
-				kargoapi.LabelKeyStage:             stage.Name,
+				kargoapi.LabelKeyStage:             kubernetes.ShortenLabelValue(stage.Name),
 				kargoapi.LabelKeyFreightCollection: freightColID,
 			}),
 		},
@@ -1987,7 +1988,7 @@ func (r *RegularStageReconciler) clearAnalysisRuns(ctx context.Context, stage *k
 		&rolloutsapi.AnalysisRun{},
 		client.InNamespace(stage.Namespace),
 		client.MatchingLabels(map[string]string{
-			kargoapi.LabelKeyStage: stage.Name,
+			kargoapi.LabelKeyStage: kubernetes.ShortenLabelValue(stage.Name),
 		}),
 	); err != nil {
 		return fmt.Errorf("error deleting AnalysisRuns for Stage %q in namespace %q: %w",
