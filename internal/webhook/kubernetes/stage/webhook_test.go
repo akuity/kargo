@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
 	authnv1 "k8s.io/api/authentication/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -1053,6 +1054,7 @@ func Test_webhook_ValidateSpec(t *testing.T) {
 		},
 	}
 	w := &webhook{}
+	w.validatePromotionStepTaskRefsFn = w.validatePromotionStepTaskRefs
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
@@ -1067,7 +1069,7 @@ func Test_webhook_ValidateSpec(t *testing.T) {
 	}
 }
 
-func Test_webhook_ValidateRequestedFreight(t *testing.T) {
+func Test_webhook_validateRequestedFreight(t *testing.T) {
 	testFreightRequest := kargoapi.FreightRequest{
 		Origin: kargoapi.FreightOrigin{
 			Kind: kargoapi.FreightOriginKindWarehouse,
@@ -1121,6 +1123,189 @@ func Test_webhook_ValidateRequestedFreight(t *testing.T) {
 				w.validateRequestedFreight(
 					field.NewPath("requestedFreight"),
 					testCase.reqs,
+				),
+			)
+		})
+	}
+}
+
+func Test_webhook_validatePromotionStepTaskRefs(t *testing.T) {
+	testCases := []struct {
+		name       string
+		steps      []kargoapi.PromotionStep
+		assertions func(*testing.T, field.ErrorList)
+	}{
+		{
+			name: "step with task reference and 'if' condition should fail",
+			steps: []kargoapi.PromotionStep{
+				{
+					As: "test-step",
+					Task: &kargoapi.PromotionTaskReference{
+						Name: "test-task",
+					},
+					If: "some-condition",
+				},
+			},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Len(t, errs, 1)
+				require.Equal(t, field.ErrorTypeForbidden, errs[0].Type)
+				require.Equal(t, "steps[0].if", errs[0].Field)
+				require.Equal(t, "PromotionTemplate step referencing a task cannot have an 'if' condition", errs[0].Detail)
+			},
+		},
+		{
+			name: "step with task reference and config should fail",
+			steps: []kargoapi.PromotionStep{
+				{
+					As: "test-step",
+					Task: &kargoapi.PromotionTaskReference{
+						Name: "test-task",
+					},
+					Config: &apiextensionsv1.JSON{
+						Raw: []byte(`{"key": "value"}`),
+					},
+				},
+			},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Len(t, errs, 1)
+				require.Equal(t, field.ErrorTypeForbidden, errs[0].Type)
+				require.Equal(t, "steps[0].config", errs[0].Field)
+				require.Equal(t, "PromotionTemplate step referencing a task cannot have a config", errs[0].Detail)
+			},
+		},
+		{
+			name: "step with task reference, 'if' condition and config should fail with both errors",
+			steps: []kargoapi.PromotionStep{
+				{
+					As: "test-step",
+					Task: &kargoapi.PromotionTaskReference{
+						Name: "test-task",
+					},
+					If: "some-condition",
+					Config: &apiextensionsv1.JSON{
+						Raw: []byte(`{"key": "value"}`),
+					},
+				},
+			},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Len(t, errs, 2)
+				require.Equal(t, field.ErrorTypeForbidden, errs[0].Type)
+				require.Equal(t, "steps[0].if", errs[0].Field)
+				require.Equal(t, "PromotionTemplate step referencing a task cannot have an 'if' condition", errs[0].Detail)
+				require.Equal(t, field.ErrorTypeForbidden, errs[1].Type)
+				require.Equal(t, "steps[0].config", errs[1].Field)
+				require.Equal(t, "PromotionTemplate step referencing a task cannot have a config", errs[1].Detail)
+			},
+		},
+		{
+			name: "multiple steps with task references and violations",
+			steps: []kargoapi.PromotionStep{
+				{
+					As: "step-1",
+					Task: &kargoapi.PromotionTaskReference{
+						Name: "task-1",
+					},
+					If: "condition-1",
+				},
+				{
+					As: "step-2",
+					Task: &kargoapi.PromotionTaskReference{
+						Name: "task-2",
+					},
+					Config: &apiextensionsv1.JSON{
+						Raw: []byte(`{"key": "value"}`),
+					},
+				},
+			},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Len(t, errs, 2)
+				require.Equal(t, field.ErrorTypeForbidden, errs[0].Type)
+				require.Equal(t, "steps[0].if", errs[0].Field)
+				require.Equal(t, "PromotionTemplate step referencing a task cannot have an 'if' condition", errs[0].Detail)
+				require.Equal(t, field.ErrorTypeForbidden, errs[1].Type)
+				require.Equal(t, "steps[1].config", errs[1].Field)
+				require.Equal(t, "PromotionTemplate step referencing a task cannot have a config", errs[1].Detail)
+			},
+		},
+		{
+			name: "step with task reference but no violations should pass",
+			steps: []kargoapi.PromotionStep{
+				{
+					As: "test-step",
+					Task: &kargoapi.PromotionTaskReference{
+						Name: "test-task",
+					},
+				},
+			},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Empty(t, errs)
+			},
+		},
+		{
+			name: "step without task reference can have 'if' condition and config",
+			steps: []kargoapi.PromotionStep{
+				{
+					As:   "test-step",
+					Uses: "some-action",
+					If:   "some-condition",
+					Config: &apiextensionsv1.JSON{
+						Raw: []byte(`{"key": "value"}`),
+					},
+				},
+			},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Empty(t, errs)
+			},
+		},
+		{
+			name: "mixed steps - some with task references, some without",
+			steps: []kargoapi.PromotionStep{
+				{
+					As: "step-with-task",
+					Task: &kargoapi.PromotionTaskReference{
+						Name: "test-task",
+					},
+				},
+				{
+					As:   "step-without-task",
+					Uses: "some-action",
+					If:   "some-condition",
+					Config: &apiextensionsv1.JSON{
+						Raw: []byte(`{"key": "value"}`),
+					},
+				},
+				{
+					As: "step-with-task-violation",
+					Task: &kargoapi.PromotionTaskReference{
+						Name: "another-task",
+					},
+					If: "another-condition",
+				},
+			},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Len(t, errs, 1)
+				require.Equal(t, field.ErrorTypeForbidden, errs[0].Type)
+				require.Equal(t, "steps[2].if", errs[0].Field)
+				require.Equal(t, "PromotionTemplate step referencing a task cannot have an 'if' condition", errs[0].Detail)
+			},
+		},
+		{
+			name:  "empty steps should pass",
+			steps: []kargoapi.PromotionStep{},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Empty(t, errs)
+			},
+		},
+	}
+
+	w := &webhook{}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				t,
+				w.validatePromotionStepTaskRefs(
+					field.NewPath("steps"),
+					testCase.steps,
 				),
 			)
 		})
