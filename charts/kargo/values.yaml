@@ -171,8 +171,32 @@ api:
         # groups:
         # - kargo-admin
 
+    projectCreators:
+      ## @param api.oidc.projectCreators.claims Subjects having any of these claims will automatically receive the permissions of the karo-user role (see `api.oidc.users`) **plus** permission to create new `Project`s. When a `Project` is created by such a user via the CLI or UI (i.e. through the API and not through `kubectl`) they will automatically receive admin permissions within that `Project` as well as permission to update and delete the cluster-scoped `Project` resource itself.
+      claims: {}
+      # sub:
+      # - alice
+      # - bob
+      # email:
+      # - alice@example.com
+      # - bob@examples.com
+      # groups:
+      # - kargo-project-creator
+
+    users:
+      ## @param api.oidc.users.claims Subjects having any of these claims will automatically receive read-only access to all cluster-scoped Kargo resources. This is the minimum level of permissions that can be granted to a user to allow them to view the list of Projects and system-level configuration. This does not include any access to `Secrets`.
+      claims: {}
+      # sub:
+      # - alice
+      # - bob
+      # email:
+      # - alice@example.com
+      # - bob@examples.com
+      # groups:
+      # - kargo-user
+
     viewers:
-      ## @param api.oidc.viewers.claims Subjects having any of these claims will automatically receive read-only access to all Kargo resources. This does not include any access to Secrets.
+      ## @param api.oidc.viewers.claims Subjects having any of these claims will automatically receive read-only access to all Kargo resources. This does not include any access to `Secret`s.
       claims: {}
         # sub:
         # - alice
@@ -183,17 +207,7 @@ api:
         # groups:
         # - kargo-viewer
 
-    users:
-      ## @param api.oidc.users.claims Subjects having any of these claims will automatically receive read-only access to all cluster-scoped Kargo resources. This is the minimum level of permissions that can be granted to a user to allow them to view the list of Projects and system-level configuration. This does not include any access to Secrets.
-      claims: {}
-      # sub:
-      # - alice
-      # - bob
-      # email:
-      # - alice@example.com
-      # - bob@examples.com
-      # groups:
-      # - kargo-viewer
+
 
     globalServiceAccounts:
       ## @param api.oidc.globalServiceAccounts.namespaces List of namespaces to look for shared service accounts.

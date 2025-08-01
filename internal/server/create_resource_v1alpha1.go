@@ -24,12 +24,32 @@ func (s *server) CreateResource(
 		return nil, connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("parse manifest: %w", err))
 	}
 	resources := append(projects, otherResources...)
+
+	createdProjects := map[string]struct{}{}
+
 	results := make([]*svcv1alpha1.CreateResourceResult, 0, len(resources))
 	for _, r := range resources {
 		resource := r // Avoid implicit memory aliasing
-		result, err := s.createResource(ctx, &resource)
+		var cl client.Client = s.client
+		if _, ok := createdProjects[resource.GetNamespace()]; ok {
+			// This resource belongs to a Project we created previously in this API
+			// call. The user had sufficient permissions to accomplish that and having
+			// done so makes them automatically the "owner" of the Project and an
+			// admin. Most of those permissions are wrangled into place asynchronously
+			// by the management controller, so in order to proceed with synchronously
+			// creating resources within the Project at this time, we will use the API
+			// server's own permissions to accomplish that. We accomplish that using
+			// s.client's internal client for creation of this resource.
+			cl = s.client.InternalClient()
+		}
+		result, err := s.createResource(ctx, cl, &resource)
 		if err != nil && len(resources) == 1 {
 			return nil, err
+		}
+		// If we just created a Project successfully, keep track of this Project
+		// being one that was created in the course of this API call.
+		if resource.GroupVersionKind() == projectGVK {
+			createdProjects[resource.GetName()] = struct{}{}
 		}
 		results = append(results, result)
 	}
@@ -42,6 +62,7 @@ func (s *server) CreateResource(
 
 func (s *server) createResource(
 	ctx context.Context,
+	cl client.Client,
 	obj *unstructured.Unstructured,
 ) (*svcv1alpha1.CreateResourceResult, error) {
 	if obj.GroupVersionKind() == secretGVK && !s.cfg.SecretManagementEnabled {
@@ -57,10 +78,10 @@ func (s *server) createResource(
 	// for some error from a webhook to obscure the fact that the resource already
 	// exists.
 	existingObj := obj.DeepCopy()
-	err := s.client.Get(ctx, client.ObjectKeyFromObject(obj), existingObj)
+	err := cl.Get(ctx, client.ObjectKeyFromObject(obj), existingObj)
 	if err == nil {
 		// Whoops! This resource already exists. Make the error look just like we'd
-		// gotten it from directly calling s.client.Create.
+		// gotten it from directly calling cl.Create.
 		err := apierrors.NewAlreadyExists(
 			schema.GroupResource{
 				Group:    existingObj.GetObjectKind().GroupVersionKind().Group,
@@ -85,7 +106,11 @@ func (s *server) createResource(
 	// If we get to here, the resource does not already exists, so we can create
 	// it.
 
-	if err = s.client.Create(ctx, obj); err != nil {
+	// If the object is a Project, annotate it with information about the user who
+	// created it.
+	annotateProjectWithCreator(ctx, obj)
+
+	if err = cl.Create(ctx, obj); err != nil {
 		return &svcv1alpha1.CreateResourceResult{
 			Result: &svcv1alpha1.CreateResourceResult_Error{
 				Error: fmt.Errorf("create resource: %w", err).Error(),

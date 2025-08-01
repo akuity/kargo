@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -28,6 +29,7 @@ import (
 	"github.com/akuity/kargo/internal/conditions"
 	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/kubernetes"
 	"github.com/akuity/kargo/internal/logging"
 )
 
@@ -134,6 +136,30 @@ type reconciler struct {
 		client.Object,
 		...client.CreateOption,
 	) error
+
+	createClusterRoleFn func(
+		context.Context,
+		client.Object,
+		...client.CreateOption,
+	) error
+
+	createClusterRoleBindingFn func(
+		context.Context,
+		client.Object,
+		...client.CreateOption,
+	) error
+
+	deleteClusterRoleFn func(
+		context.Context,
+		client.Object,
+		...client.DeleteOption,
+	) error
+
+	deleteClusterRoleBindingFn func(
+		context.Context,
+		client.Object,
+		...client.DeleteOption,
+	) error
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Project resources and
@@ -209,6 +235,10 @@ func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
 	r.createServiceAccountFn = r.client.Create
 	r.createRoleFn = r.client.Create
 	r.createRoleBindingFn = r.client.Create
+	r.createClusterRoleFn = r.client.Create
+	r.createClusterRoleBindingFn = r.client.Create
+	r.deleteClusterRoleFn = r.client.Delete
+	r.deleteClusterRoleBindingFn = r.client.Delete
 	return r
 }
 
@@ -335,6 +365,22 @@ func (r *reconciler) reconcile(
 // resources.
 func (r *reconciler) cleanupProject(ctx context.Context, project *kargoapi.Project) error {
 	logger := logging.LoggerFromContext(ctx)
+
+	// Delete cluster-scoped resources that are specific to the Project
+	crbName := fmt.Sprintf("kargo-project-admin-%s", project.Name)
+	if err := r.deleteClusterRoleBindingFn(
+		ctx,
+		&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: crbName}},
+	); err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("error deleting ClusterRoleBinding %q: %w", crbName, err)
+	}
+	crName := crbName
+	if err := r.deleteClusterRoleFn(
+		ctx,
+		&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: crName}},
+	); err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("error deleting ClusterRole %q: %w", crName, err)
+	}
 
 	// Get namespace for the Project
 	ns := &corev1.Namespace{}
@@ -759,28 +805,32 @@ func (r *reconciler) ensureDefaultUserRoles(
 	ctx context.Context,
 	project *kargoapi.Project,
 ) error {
-	logger := logging.LoggerFromContext(ctx).WithValues(
-		"project", project.Name,
-		"name", project.Name,
-		"namespace", project.Name,
-	)
+	logger := logging.LoggerFromContext(ctx).WithValues("project", project.Name)
 
 	const adminRoleName = "kargo-admin"
 	const viewerRoleName = "kargo-viewer"
 	const promoterRoleName = "kargo-promoter"
 	allRoles := []string{adminRoleName, viewerRoleName, promoterRoleName}
-
+	saAnnotations := map[string]string{
+		rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
+	}
+	if creator, ok := project.Annotations[kargoapi.AnnotationKeyCreateActor]; ok {
+		if parts := strings.SplitN(creator, ":", 2); len(parts) == 2 {
+			saAnnotations[rbacapi.AnnotationKeyOIDCClaimNamePrefix+parts[0]] = parts[1]
+		}
+	}
 	for _, saName := range allRoles {
-		saLogger := logger.WithValues("serviceAccount", saName)
+		saLogger := logger.WithValues(
+			"name", saName,
+			"namespace", project.Name,
+		)
 		if err := r.createServiceAccountFn(
 			ctx,
 			&corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      saName,
-					Namespace: project.Name,
-					Annotations: map[string]string{
-						rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
-					},
+					Name:        saName,
+					Namespace:   project.Name,
+					Annotations: saAnnotations,
 				},
 			},
 		); err != nil {
@@ -935,7 +985,7 @@ func (r *reconciler) ensureDefaultUserRoles(
 	}
 	for _, role := range roles {
 		roleLogger := logger.WithValues(
-			"role", role.Name,
+			"name", role.Name,
 			"namespace", project.Name,
 		)
 		if err := r.createRoleFn(ctx, role); err != nil {
@@ -953,7 +1003,7 @@ func (r *reconciler) ensureDefaultUserRoles(
 
 	for _, rbName := range allRoles {
 		rbLogger := logger.WithValues(
-			"roleBinding", rbName,
+			"name", rbName,
 			"namespace", project.Name,
 		)
 		if err := r.createRoleBindingFn(
@@ -991,6 +1041,58 @@ func (r *reconciler) ensureDefaultUserRoles(
 		}
 		rbLogger.Debug("created RoleBinding in project namespace")
 	}
+
+	// This ClusterRole allows those bound to it to update and delete one specific
+	// Project. This is necessary since Projects are cluster-scoped, meaning this
+	// permission cannot be defined anywhere except at the cluster-level.
+	crName := kubernetes.ShortenResourceName(
+		fmt.Sprintf("kargo-project-admin-%s", project.Name),
+	)
+	crLogger := logger.WithValues("name", crName)
+	if err := r.createClusterRoleFn(
+		ctx,
+		&rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{Name: crName},
+			Rules: []rbacv1.PolicyRule{{
+				APIGroups:     []string{kargoapi.GroupVersion.Group},
+				Resources:     []string{"projects"},
+				ResourceNames: []string{project.Name},
+				Verbs:         []string{"delete", "update"},
+			}},
+		},
+	); err != nil {
+		if !apierrors.IsAlreadyExists(err) {
+			return fmt.Errorf("error creating ClusterRole %q: %w", crName, err)
+		}
+		crLogger.Debug("ClusterRole already exists")
+	}
+	crLogger.Debug("created ClusterRole")
+
+	crbName := crName
+	crbLogger := logger.WithValues("name", crbName)
+	logger.WithValues()
+	if err := r.createClusterRoleBindingFn(
+		ctx,
+		&rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: crbName},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     crName,
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      "ServiceAccount",
+				Name:      adminRoleName,
+				Namespace: project.Name,
+			}},
+		},
+	); err != nil {
+		if !apierrors.IsAlreadyExists(err) {
+			return fmt.Errorf("error creating ClusterRoleBinding %q: %w", crName, err)
+		}
+		crbLogger.Debug("ClusterRoleBinding already exists")
+	}
+	crbLogger.Debug("created ClusterRoleBinding")
 
 	return nil
 }

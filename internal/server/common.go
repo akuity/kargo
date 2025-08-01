@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,9 +16,17 @@ import (
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
+	"github.com/akuity/kargo/internal/server/user"
 )
 
 var (
+	projectGVK = schema.GroupVersionKind{
+		Group:   kargoapi.GroupVersion.Group,
+		Version: kargoapi.GroupVersion.Version,
+		Kind:    "Project",
+	}
+
 	secretGVK = schema.GroupVersionKind{
 		Group:   "",
 		Version: "v1",
@@ -54,7 +63,7 @@ func splitYAML(
 		if err := yaml.Unmarshal(ext.Raw, &resource); err != nil {
 			return nil, nil, fmt.Errorf("error unmarshaling manifest: %w", err)
 		}
-		if resource.GroupVersionKind().Group == kargoapi.GroupVersion.Group && resource.GetKind() == "Project" {
+		if resource.GroupVersionKind() == projectGVK {
 			projects = append(projects, resource)
 		} else {
 			otherResources = append(otherResources, resource)
@@ -81,5 +90,25 @@ func objectOrRaw[T client.Object](obj T, format svcv1alpha1.RawFormat) (T, []byt
 		return *new(T), raw, nil
 	default:
 		return obj, nil, nil
+	}
+}
+
+// annotateProjectWithCreator annotates an unstructured object with information
+// about the user who is creating the object only if that unstructured object
+// represents a Project.
+func annotateProjectWithCreator(
+	ctx context.Context,
+	obj *unstructured.Unstructured,
+) {
+	if obj == nil || obj.GroupVersionKind() != projectGVK {
+		return
+	}
+	if userInfo, found := user.InfoFromContext(ctx); found {
+		annotations := obj.GetAnnotations()
+		if annotations == nil {
+			annotations = map[string]string{}
+		}
+		annotations[kargoapi.AnnotationKeyCreateActor] = api.FormatEventUserActor(userInfo)
+		obj.SetAnnotations(annotations)
 	}
 }

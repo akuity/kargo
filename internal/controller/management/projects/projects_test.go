@@ -43,6 +43,10 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, r.createServiceAccountFn)
 	require.NotNil(t, r.createRoleFn)
 	require.NotNil(t, r.createRoleBindingFn)
+	require.NotNil(t, r.createClusterRoleFn)
+	require.NotNil(t, r.createClusterRoleBindingFn)
+	require.NotNil(t, r.deleteClusterRoleFn)
+	require.NotNil(t, r.deleteClusterRoleBindingFn)
 }
 
 func TestReconciler_Reconcile(t *testing.T) {
@@ -123,6 +127,20 @@ func TestReconciler_Reconcile(t *testing.T) {
 						kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
 					}
 					ns.Finalizers = []string{kargoapi.FinalizerName}
+					return nil
+				},
+				deleteClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				deleteClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
 					return nil
 				},
 				removeFinalizerFn: func(
@@ -393,6 +411,55 @@ func TestReconciler_cleanupProject(t *testing.T) {
 		assertions func(*testing.T, error)
 	}{
 		{
+			name: "error deleting cluster role binding",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-project",
+				},
+			},
+			reconciler: &reconciler{
+				deleteClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error deleting ClusterRoleBinding")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "error deleting cluster role",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-project",
+				},
+			},
+			reconciler: &reconciler{
+				deleteClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				deleteClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error deleting ClusterRole")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
 			name: "error getting namespace",
 			project: &kargoapi.Project{
 				ObjectMeta: metav1.ObjectMeta{
@@ -400,6 +467,20 @@ func TestReconciler_cleanupProject(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
+				deleteClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				deleteClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
 				getNamespaceFn: func(
 					context.Context,
 					types.NamespacedName,
@@ -422,6 +503,20 @@ func TestReconciler_cleanupProject(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
+				deleteClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				deleteClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
 				getNamespaceFn: func(
 					context.Context,
 					types.NamespacedName,
@@ -450,6 +545,20 @@ func TestReconciler_cleanupProject(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
+				deleteClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				deleteClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
 				getNamespaceFn: func(
 					context.Context,
 					types.NamespacedName,
@@ -483,6 +592,20 @@ func TestReconciler_cleanupProject(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
+				deleteClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				deleteClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
 				getNamespaceFn: func(
 					_ context.Context,
 					_ types.NamespacedName,
@@ -529,6 +652,20 @@ func TestReconciler_cleanupProject(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
+				deleteClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				deleteClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
 				getNamespaceFn: func(
 					_ context.Context,
 					_ types.NamespacedName,
@@ -568,6 +705,20 @@ func TestReconciler_cleanupProject(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
+				deleteClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				deleteClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
 				getNamespaceFn: func(
 					_ context.Context,
 					_ types.NamespacedName,
@@ -603,6 +754,20 @@ func TestReconciler_cleanupProject(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
+				deleteClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				deleteClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
 				getNamespaceFn: func(
 					_ context.Context,
 					_ types.NamespacedName,
@@ -635,6 +800,20 @@ func TestReconciler_cleanupProject(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
+				deleteClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				deleteClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
 				getNamespaceFn: func(
 					_ context.Context,
 					_ types.NamespacedName,
@@ -667,6 +846,20 @@ func TestReconciler_cleanupProject(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
+				deleteClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				deleteClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
 				getNamespaceFn: func(
 					_ context.Context,
 					_ types.NamespacedName,
@@ -700,6 +893,20 @@ func TestReconciler_cleanupProject(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
+				deleteClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				deleteClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
 				getNamespaceFn: func(
 					_ context.Context,
 					_ types.NamespacedName,
@@ -1632,8 +1839,103 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 			},
 		},
 		{
+			name: "error creating ClusterRole",
+			reconciler: &reconciler{
+				createServiceAccountFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error creating ClusterRole")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "error creating ClusterRoleBinding",
+			reconciler: &reconciler{
+				createServiceAccountFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error creating ClusterRoleBinding")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
 			name: "success",
 			reconciler: &reconciler{
+				createClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
 				createServiceAccountFn: func(
 					context.Context,
 					client.Object,
