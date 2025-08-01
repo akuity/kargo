@@ -229,10 +229,9 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 				xhttp.WriteResponseJSON(w, http.StatusOK, nil)
 				return
 			}
-			// GitHub sometimes sends package URLs with a trailing colon
-			// and no tag (e.g., "ghcr.io/user/image:"). Such strings are
-			// not valid OCI image references and will result in empty
-			// repo URLs. We trim the trailing colon to avoid parsing errors
+			// GitHub sometimes sends package URLs with a trailing colon and no tag
+			// (e.g., "ghcr.io/user/image:"). Such strings are not valid OCI image
+			// references. We trim the trailing colon to avoid parsing errors.
 			pkgURL := strings.TrimSuffix(pkg.GetPackageVersion().GetPackageURL(), ":")
 			manifest := pkg.GetPackageVersion().GetContainerMetadata().GetManifest()
 			if cfg, ok := manifest["config"].(map[string]any); ok {
