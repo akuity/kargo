@@ -150,7 +150,8 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 
 		switch e := event.(type) {
 		case *gh.PackageEvent:
-			switch e.GetAction() {
+			action := e.GetAction()
+			switch action {
 			// These are the only actions that should refresh Warehouses.
 			case "published", "updated":
 			default:
@@ -219,7 +220,8 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			logger = logger.WithValues("ref", ref)
 
 		case *gh.RegistryPackageEvent:
-			switch e.GetAction() {
+			action := e.GetAction()
+			switch action {
 			// These are the only actions that should refresh Warehouses.
 			case "published", "updated":
 			default:
