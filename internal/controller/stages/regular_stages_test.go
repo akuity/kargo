@@ -3695,6 +3695,48 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 			},
 		},
 		{
+			name: "finds existing analysis run with stage name exceeding max label length",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "this-is-a-very-long-stage-name-that-exceeds-the-label-length-and-should-be-truncated",
+				},
+				Spec: kargoapi.StageSpec{
+					Verification: &kargoapi.Verification{},
+				},
+			},
+			freightCol: kargoapi.FreightCollection{
+				ID: "test-collection",
+				Freight: map[string]kargoapi.FreightReference{
+					"warehouse": {Name: "test-freight"},
+				},
+			},
+			objects: []client.Object{
+				&rolloutsapi.AnalysisRun{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "existing-analysis",
+						Namespace: "fake-project",
+						Labels: map[string]string{
+							kargoapi.LabelKeyStage:             "this-is-a-very-long-stage-name-that-exceeds-the-label-1c0a17e1",
+							kargoapi.LabelKeyFreightCollection: "test-collection",
+						},
+					},
+					Status: rolloutsapi.AnalysisRunStatus{
+						Phase:   "Successful",
+						Message: "Analysis completed successfully",
+					},
+				},
+			},
+			assertions: func(t *testing.T, _ client.Client, vi *kargoapi.VerificationInfo, err error) {
+				require.NoError(t, err)
+
+				require.NotNil(t, vi)
+				assert.NotEmpty(t, vi.ID)
+				assert.Equal(t, kargoapi.VerificationPhaseSuccessful, vi.Phase)
+				assert.Equal(t, "existing-analysis", vi.AnalysisRun.Name)
+			},
+		},
+		{
 			name: "creates new analysis run",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
@@ -3733,6 +3775,50 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 					Namespace: vi.AnalysisRun.Namespace,
 					Name:      vi.AnalysisRun.Name,
 				}, ar))
+			},
+		},
+		{
+			name: "creates new analysis run with with stage name exceeding max label length",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "this-is-a-very-long-stage-name-that-exceeds-the-label-length-and-should-be-truncated",
+				},
+				Spec: kargoapi.StageSpec{
+					Verification: &kargoapi.Verification{},
+				},
+			},
+			freightCol: kargoapi.FreightCollection{
+				ID: "test-collection",
+				Freight: map[string]kargoapi.FreightReference{
+					"warehouse": {Name: "test-freight"},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-freight",
+						Namespace: "fake-project",
+					},
+				},
+			},
+			assertions: func(t *testing.T, c client.Client, vi *kargoapi.VerificationInfo, err error) {
+				require.NoError(t, err)
+
+				require.NotNil(t, vi)
+				assert.NotEmpty(t, vi.ID)
+				assert.Equal(t, kargoapi.VerificationPhasePending, vi.Phase)
+				assert.NotNil(t, vi.AnalysisRun)
+
+				// Verify analysis run was created
+				ar := &rolloutsapi.AnalysisRun{}
+				require.NoError(t, c.Get(context.Background(), types.NamespacedName{
+					Namespace: vi.AnalysisRun.Namespace,
+					Name:      vi.AnalysisRun.Name,
+				}, ar))
+
+				// Verify stage label was truncated correctly
+				assert.Equal(t, "this-is-a-very-long-stage-name-that-exceeds-the-label-1c0a17e1", ar.Labels[kargoapi.LabelKeyStage])
 			},
 		},
 		{
