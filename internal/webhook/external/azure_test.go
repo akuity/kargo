@@ -68,7 +68,7 @@ func TestAzureHandler(t *testing.T) {
 			},
 		},
 		{
-			name: "success -- ping",
+			name: "successful ping",
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
 					ObjectMeta: metav1.ObjectMeta{
@@ -107,7 +107,9 @@ func TestAzureHandler(t *testing.T) {
 			},
 		},
 		{
-			name: "success -- image push",
+			name: "no tag match (image)",
+			// This event would prompt the Warehouse to refresh if not for the tag
+			// in the event falling outside the subscription's semver range.
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
 					ObjectMeta: metav1.ObjectMeta{
@@ -117,9 +119,50 @@ func TestAzureHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
-								ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
-								SemverConstraint:       "^1.0.0",
-								RepoURL:                "fakeregistry.azurecr.io/fakeimage",
+								RepoURL:          "fakeregistry.azurecr.io/fakeimage",
+								SemverConstraint: "^2.0.0", // Constraint won't be met
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					// Real world testing shows this media type is what the payload will
+					// contain when an image has been pushed to ACR.
+					newAzurePayload(acrPushEvent, dockerManifestMediaType),
+				)
+				req.Header.Set("User-Agent", acrUserAgentPrefix)
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(
+					t,
+					`{"msg":"refreshed 0 warehouse(s)"}`,
+					rr.Body.String(),
+				)
+			},
+		},
+		{
+			name: "warehouse refreshed (image)",
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Image: &kargoapi.ImageSubscription{
+								RepoURL:          "fakeregistry.azurecr.io/fakeimage",
+								SemverConstraint: "^1.0.0",
 							},
 						}},
 					},
@@ -150,7 +193,9 @@ func TestAzureHandler(t *testing.T) {
 			},
 		},
 		{
-			name: "success -- chart push",
+			name: "no version match (chart)",
+			// This event would prompt the Warehouse to refresh if not for the tag
+			// in the event falling outside the subscription's semver range.
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
 					ObjectMeta: metav1.ObjectMeta{
@@ -160,8 +205,50 @@ func TestAzureHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Chart: &kargoapi.ChartSubscription{
-								SemverConstraint: "^1.0.0",
 								RepoURL:          "oci://fakeregistry.azurecr.io/fakeimage",
+								SemverConstraint: "^2.0.0", // Constraint won't be met
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					// Real world testing shows this media type is what the payload will
+					// contain when a Helm chart is pushed to ACR.
+					newAzurePayload(acrPushEvent, ociImageManifestMediaType),
+				)
+				req.Header.Set("User-Agent", acrUserAgentPrefix)
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(
+					t,
+					`{"msg":"refreshed 0 warehouse(s)"}`,
+					rr.Body.String(),
+				)
+			},
+		},
+		{
+			name: "warehouse refreshed (chart)",
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Chart: &kargoapi.ChartSubscription{
+								RepoURL:          "oci://fakeregistry.azurecr.io/fakeimage",
+								SemverConstraint: "^1.0.0",
 							},
 						}},
 					},
@@ -192,7 +279,50 @@ func TestAzureHandler(t *testing.T) {
 			},
 		},
 		{
-			name: "success -- git push",
+			name: "no ref match (git)",
+			// This event would prompt the Warehouse to refresh if not for the ref in
+			// the event being for the main branch whilst the subscription is
+			// interested in commits from a different branch.
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "https://dev.azure.com/testorg/testproject/_git/testrepo",
+								Branch:  "not-main", // Constraint won't be met
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					newAzurePayload(azureDevOpsPushEvent, ""),
+				)
+				req.Header.Set("User-Agent", azureDevOpsUserAgentPrefix)
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(
+					t,
+					`{"msg":"refreshed 0 warehouse(s)"}`,
+					rr.Body.String(),
+				)
+			},
+		},
+		{
+			name: "warehouse refreshed (git)",
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
 					ObjectMeta: metav1.ObjectMeta{
@@ -273,6 +403,11 @@ func newAzurePayload(event, mediaType string) *bytes.Buffer {
 		{
 			"eventType": "git.push",
 			"resource": {
+				"refUpdates": [
+					{
+						"name": "refs/heads/main"
+					}
+				],
 				"repository": {
 					"remoteUrl": "https://dev.azure.com/testorg/testproject/_git/testrepo"
 				}

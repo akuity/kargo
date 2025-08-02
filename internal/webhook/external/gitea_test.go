@@ -76,7 +76,7 @@ func TestGiteaHandler(t *testing.T) {
 			secretData: testSecretData,
 			req: func() *http.Request {
 				req := httptest.NewRequest(http.MethodPost, testURL, nil)
-				req.Header.Set(giteaEventTypeHeader, "push")
+				req.Header.Set(giteaEventTypeHeader, giteaEventTypePush)
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -89,7 +89,7 @@ func TestGiteaHandler(t *testing.T) {
 			secretData: testSecretData,
 			req: func() *http.Request {
 				req := httptest.NewRequest(http.MethodPost, testURL, nil)
-				req.Header.Set(giteaEventTypeHeader, "push")
+				req.Header.Set(giteaEventTypeHeader, giteaEventTypePush)
 				req.Header.Set(giteaSignatureHeader, "totally-invalid-signature")
 				return req
 			},
@@ -105,7 +105,7 @@ func TestGiteaHandler(t *testing.T) {
 				bodyBuf := bytes.NewBuffer([]byte("invalid json"))
 				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
 				req.Header.Set(giteaSignatureHeader, sign(bodyBuf.Bytes()))
-				req.Header.Set(giteaEventTypeHeader, "push")
+				req.Header.Set(giteaEventTypeHeader, giteaEventTypePush)
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
@@ -114,7 +114,10 @@ func TestGiteaHandler(t *testing.T) {
 			},
 		},
 		{
-			name:       "success",
+			name: "no ref match",
+			// This event would prompt the Warehouse to refresh if not for the ref in
+			// the event being for the main branch whilst the subscription is
+			// interested in commits from a different branch.
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
@@ -125,8 +128,8 @@ func TestGiteaHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{
-								CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
-								RepoURL:                 "https://gitea.com/example/repo",
+								RepoURL: "https://gitea.com/example/repo",
+								Branch:  "not-main", // Constraint won't be met
 							},
 						}},
 					},
@@ -144,7 +147,45 @@ func TestGiteaHandler(t *testing.T) {
 					bytes.NewBuffer(b),
 				)
 				req.Header.Set(giteaSignatureHeader, sign(b))
-				req.Header.Set(giteaEventTypeHeader, "push")
+				req.Header.Set(giteaEventTypeHeader, giteaEventTypePush)
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 0 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "warehouse refreshed",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "https://gitea.com/example/repo",
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				b := []byte(giteaWebhookRequestBodyPush)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(b),
+				)
+				req.Header.Set(giteaSignatureHeader, sign(b))
+				req.Header.Set(giteaEventTypeHeader, giteaEventTypePush)
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
