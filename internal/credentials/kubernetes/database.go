@@ -13,6 +13,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/credentials/kubernetes/acr"
 	"github.com/akuity/kargo/internal/credentials/kubernetes/basic"
 	"github.com/akuity/kargo/internal/credentials/kubernetes/ecr"
 	"github.com/akuity/kargo/internal/credentials/kubernetes/gar"
@@ -57,6 +58,7 @@ func NewDatabase(
 ) credentials.Database {
 	var credentialProviders = []credentials.Provider{
 		&basic.CredentialProvider{},
+		acr.NewWorkloadIdentityProvider(ctx),
 		ecr.NewAccessKeyProvider(),
 		ecr.NewManagedIdentityProvider(ctx),
 		gar.NewServiceAccountKeyProvider(),
