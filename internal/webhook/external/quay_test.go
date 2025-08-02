@@ -46,7 +46,9 @@ func TestQuayHandler(t *testing.T) {
 			},
 		},
 		{
-			name: "success -- image",
+			name: "no tag match (image)",
+			// This event would prompt the Warehouse to refresh if not for the tag
+			// in the event falling outside the subscription's semver range.
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
 					ObjectMeta: metav1.ObjectMeta{
@@ -56,9 +58,46 @@ func TestQuayHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
-								ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
-								SemverConstraint:       "^1.0.0",
-								RepoURL:                "quay.io/mynamespace/repository",
+								RepoURL:          "quay.io/mynamespace/repository",
+								SemverConstraint: "^2.0.0", // Constraint won't be met
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				return httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					newQuayPayload(),
+				)
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(
+					t,
+					`{"msg":"refreshed 0 warehouse(s)"}`,
+					rr.Body.String(),
+				)
+			},
+		},
+		{
+			name: "warehouse refreshed (image)",
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Image: &kargoapi.ImageSubscription{
+								RepoURL:          "quay.io/mynamespace/repository",
+								SemverConstraint: "^1.0.0",
 							},
 						}},
 					},
@@ -85,7 +124,9 @@ func TestQuayHandler(t *testing.T) {
 			},
 		},
 		{
-			name: "success -- chart",
+			name: "no version match (chart)",
+			// This event would prompt the Warehouse to refresh if not for the tag
+			// in the event falling outside the subscription's semver range.
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
 					ObjectMeta: metav1.ObjectMeta{
@@ -95,8 +136,46 @@ func TestQuayHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Chart: &kargoapi.ChartSubscription{
-								SemverConstraint: "^1.0.0",
 								RepoURL:          "oci://quay.io/mynamespace/repository",
+								SemverConstraint: "^2.0.0", // Constraint won't be met
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				return httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					newQuayPayload(),
+				)
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(
+					t,
+					`{"msg":"refreshed 0 warehouse(s)"}`,
+					rr.Body.String(),
+				)
+			},
+		},
+		{
+			name: "warehouse refreshed (chart)",
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Chart: &kargoapi.ChartSubscription{
+								RepoURL:          "oci://quay.io/mynamespace/repository",
+								SemverConstraint: "^1.0.0",
 							},
 						}},
 					},
