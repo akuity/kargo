@@ -177,7 +177,9 @@ func TestArtifactoryHandler(t *testing.T) {
 			},
 		},
 		{
-			name:       "success -- image push event with path prefix",
+			name: "no tag match (image)",
+			// This event would prompt the Warehouse to refresh if not for the tag
+			// in the event falling outside the subscription's semver range.
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
@@ -188,9 +190,48 @@ func TestArtifactoryHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
-								ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
-								SemverConstraint:       "^1.0.0",
-								RepoURL:                "artifactory.example.com/test-repo/foo/bar/test-image",
+								RepoURL:          "artifactory.example.com/test-repo/test-image",
+								SemverConstraint: "^2.0.0", // Constraint won't be met
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(validImagePushEvent)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set(artifactoryAuthHeader, signWithoutAlgoPrefix(bodyBytes))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 0 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "warehouse refreshed (image)",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Image: &kargoapi.ImageSubscription{
+								// Artifactory supports nested repository structures
+								RepoURL:          "artifactory.example.com/test-repo/foo/bar/test-image",
+								SemverConstraint: "^1.0.0",
 							},
 						}},
 					},
@@ -217,7 +258,9 @@ func TestArtifactoryHandler(t *testing.T) {
 			},
 		},
 		{
-			name:       "success -- image push event with no path prefix",
+			name: "no version match (chart)",
+			// This event would prompt the Warehouse to refresh if not for the tag
+			// in the event falling outside the subscription's semver range.
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
@@ -227,10 +270,9 @@ func TestArtifactoryHandler(t *testing.T) {
 					},
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
-							Image: &kargoapi.ImageSubscription{
-								ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
-								SemverConstraint:       "^1.0.0",
-								RepoURL:                "artifactory.example.com/test-repo/test-image",
+							Chart: &kargoapi.ChartSubscription{
+								RepoURL:          "oci://artifactory.example.com/test-repo/test-chart",
+								SemverConstraint: "^2.0.0", // Constraint won't be met
 							},
 						}},
 					},
@@ -241,7 +283,7 @@ func TestArtifactoryHandler(t *testing.T) {
 				indexer.WarehousesBySubscribedURLs,
 			).Build(),
 			req: func() *http.Request {
-				bodyBytes, err := json.Marshal(validImagePushEvent)
+				bodyBytes, err := json.Marshal(validChartPushEvent)
 				require.NoError(t, err)
 				req := httptest.NewRequest(
 					http.MethodPost,
@@ -253,11 +295,11 @@ func TestArtifactoryHandler(t *testing.T) {
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusOK, rr.Code)
-				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
+				require.JSONEq(t, `{"msg":"refreshed 0 warehouse(s)"}`, rr.Body.String())
 			},
 		},
 		{
-			name:       "success -- chart push event",
+			name:       "warehouse refreshed (chart)",
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
@@ -268,8 +310,8 @@ func TestArtifactoryHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Chart: &kargoapi.ChartSubscription{
-								SemverConstraint: "^1.0.0",
 								RepoURL:          "oci://artifactory.example.com/test-repo/test-chart",
+								SemverConstraint: "^1.0.0",
 							},
 						}},
 					},

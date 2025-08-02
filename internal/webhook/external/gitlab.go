@@ -15,7 +15,8 @@ import (
 )
 
 const (
-	gitlab              = "gitlab"
+	gitlab = "gitlab"
+
 	gitLabSecretDataKey = "secret-token"
 
 	gitlabTokenHeader = "X-Gitlab-Token" // nolint: gosec

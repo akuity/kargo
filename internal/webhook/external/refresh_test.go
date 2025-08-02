@@ -228,13 +228,13 @@ func TestShouldRefresh(t *testing.T) {
 			name: "Git subscription with matching qualifier",
 			wh: kargoapi.Warehouse{
 				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
-						{Git: &kargoapi.GitSubscription{
+					Subscriptions: []kargoapi.RepoSubscription{{
+						Git: &kargoapi.GitSubscription{
 							CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
 							RepoURL:                 "https://github.com/username/repo",
 							Branch:                  "main",
-						}},
-					},
+						},
+					}},
 				},
 			},
 			repoURL:    "https://github.com/username/repo",
@@ -245,13 +245,13 @@ func TestShouldRefresh(t *testing.T) {
 			name: "Git subscription with non-matching qualifier",
 			wh: kargoapi.Warehouse{
 				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
-						{Git: &kargoapi.GitSubscription{
+					Subscriptions: []kargoapi.RepoSubscription{{
+						Git: &kargoapi.GitSubscription{
 							CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
 							RepoURL:                 "https://github.com/username/repo.git",
 							Branch:                  "main",
-						}},
-					},
+						},
+					}},
 				},
 			},
 			repoURL:    "https://github.com/username/repo",
@@ -262,14 +262,14 @@ func TestShouldRefresh(t *testing.T) {
 			name: "Image subscription with matching qualifier",
 			wh: kargoapi.Warehouse{
 				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
-						{Image: &kargoapi.ImageSubscription{
+					Subscriptions: []kargoapi.RepoSubscription{{
+						Image: &kargoapi.ImageSubscription{
 							RepoURL:                "docker.io/example/repo",
 							ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
 							SemverConstraint:       "^1.0.0",
 							StrictSemvers:          true,
-						}},
-					},
+						},
+					}},
 				},
 			},
 			repoURL:    "example/repo",
@@ -280,14 +280,14 @@ func TestShouldRefresh(t *testing.T) {
 			name: "Image subscription with non-matching qualifier",
 			wh: kargoapi.Warehouse{
 				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
-						{Image: &kargoapi.ImageSubscription{
+					Subscriptions: []kargoapi.RepoSubscription{{
+						Image: &kargoapi.ImageSubscription{
 							RepoURL:                "docker.io/example/repo",
 							ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
 							SemverConstraint:       "^1.0.0",
 							StrictSemvers:          true,
-						}},
-					},
+						},
+					}},
 				},
 			},
 			repoURL:    "docker.io/example/repo",
@@ -298,12 +298,12 @@ func TestShouldRefresh(t *testing.T) {
 			name: "Chart subscription with matching qualifier",
 			wh: kargoapi.Warehouse{
 				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
-						{Chart: &kargoapi.ChartSubscription{
+					Subscriptions: []kargoapi.RepoSubscription{{
+						Chart: &kargoapi.ChartSubscription{
 							RepoURL:          "oci://example.com/charts",
 							SemverConstraint: "^1.0.0",
-						}},
-					},
+						},
+					}},
 				},
 			},
 			repoURL:    "example.com/charts",
@@ -314,12 +314,12 @@ func TestShouldRefresh(t *testing.T) {
 			name: "Chart subscription with non-matching qualifier",
 			wh: kargoapi.Warehouse{
 				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
-						{Chart: &kargoapi.ChartSubscription{
+					Subscriptions: []kargoapi.RepoSubscription{{
+						Chart: &kargoapi.ChartSubscription{
 							RepoURL:          "oci://example.com/charts",
 							SemverConstraint: "^2.0.0",
-						}},
-					},
+						},
+					}},
 				},
 			},
 			repoURL:    "example.com/charts",
