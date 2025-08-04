@@ -3721,7 +3721,7 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 							kargoapi.LabelKeyFreightCollection: "test-collection",
 						},
 						Annotations: map[string]string{
-							kargoapi.AnnotationKeyStage: "this-is-a-very-long-stage-name-that-exceeds-the-label-length-and-should-be-truncated",
+							kargoapi.AnnotationKeyStage: "this-is-a-very-long-stage-name-that-exceeds-the-label-length-and-should-be-truncated", // nolint:lll
 						},
 					},
 					Status: rolloutsapi.AnalysisRunStatus{
@@ -3828,12 +3828,20 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 				}, ar))
 
 				// Verify stage label was truncated correctly
-				assert.Equal(t, "this-is-a-very-long-stage-name-that-exceeds-the-label-1c0a17e1", ar.Labels[kargoapi.LabelKeyStage])
+				assert.Equal(
+					t,
+					"this-is-a-very-long-stage-name-that-exceeds-the-label-1c0a17e1",
+					ar.Labels[kargoapi.LabelKeyStage],
+				)
 
 				// Verify annotation contains the full stage name
 				fullStageName, hasAnnotation := ar.Annotations[kargoapi.AnnotationKeyStage]
-				assert.True(t, hasAnnotation, "Stage annotation should be present when stage name exceeds label length")
-				assert.Equal(t, "this-is-a-very-long-stage-name-that-exceeds-the-label-length-and-should-be-truncated", fullStageName)
+				assert.True(t, hasAnnotation)
+				assert.Equal(
+					t,
+					"this-is-a-very-long-stage-name-that-exceeds-the-label-length-and-should-be-truncated",
+					fullStageName,
+				)
 			},
 		},
 		{
@@ -3893,7 +3901,7 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 
 				// Verify no stage annotation is added since stage name doesn't need shortening
 				_, hasStageAnnotation := ar.Annotations[kargoapi.AnnotationKeyStage]
-				assert.False(t, hasStageAnnotation, "Stage annotation should not be present when stage name doesn't need shortening")
+				assert.False(t, hasStageAnnotation)
 			},
 		},
 		{
@@ -3953,11 +3961,18 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 				// Verify both promotion and stage annotations are present
 				assert.Equal(t, "test-promotion", ar.Annotations[kargoapi.AnnotationKeyPromotion])
 				fullStageName, hasStageAnnotation := ar.Annotations[kargoapi.AnnotationKeyStage]
-				assert.True(t, hasStageAnnotation, "Stage annotation should be present when stage name exceeds label length")
-				assert.Equal(t, "this-is-a-very-long-stage-name-that-exceeds-the-label-length-and-should-be-truncated", fullStageName)
+				assert.True(t, hasStageAnnotation)
+				assert.Equal(
+					t,
+					"this-is-a-very-long-stage-name-that-exceeds-the-label-length-and-should-be-truncated",
+					fullStageName,
+				)
 
 				// Verify stage label was truncated correctly
-				assert.Equal(t, "this-is-a-very-long-stage-name-that-exceeds-the-label-1c0a17e1", ar.Labels[kargoapi.LabelKeyStage])
+				assert.Equal(t,
+					"this-is-a-very-long-stage-name-that-exceeds-the-label-1c0a17e1",
+					ar.Labels[kargoapi.LabelKeyStage],
+				)
 			},
 		},
 		{
