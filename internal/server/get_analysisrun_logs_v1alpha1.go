@@ -345,15 +345,22 @@ func (s *server) getStageFromAnalysisRun(
 	ctx context.Context,
 	run *rolloutsapi.AnalysisRun,
 ) (*kargoapi.Stage, error) {
-	stageName, ok := run.Labels[kargoapi.LabelKeyStage]
+	// The (full) name of the Stage is stored in the AnalysisRun's annotations
+	// when the label value contains a (hash-)shortened version of the Stage
+	// name. Check for this value first, and if it is not found, check the
+	// labels. If neither is found, return an error.
+	stageName, ok := run.Annotations[kargoapi.AnnotationKeyStage]
 	if !ok {
-		return nil, connect.NewError(
-			connect.CodeNotFound,
-			fmt.Errorf(
-				"AnalysisRun %q in namespace %q has no stage label",
-				run.Name, run.Namespace,
-			),
-		)
+		stageName, ok = run.Labels[kargoapi.LabelKeyStage]
+		if !ok {
+			return nil, connect.NewError(
+				connect.CodeNotFound,
+				fmt.Errorf(
+					"AnalysisRun %q in namespace %q has no stage label",
+					run.Name, run.Namespace,
+				),
+			)
+		}
 	}
 	stage, err := api.GetStage(
 		ctx,

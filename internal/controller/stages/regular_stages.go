@@ -41,6 +41,7 @@ import (
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/kubernetes"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/pattern"
@@ -1340,6 +1341,7 @@ func (r *RegularStageReconciler) startVerification(
 
 	// At this point, we know that we need to start a new AnalysisRun for the
 	// verification.
+	shortStageName := kubernetes.ShortenLabelValue(stage.Name)
 	builder := rollouts.NewAnalysisRunBuilder(r.client, rollouts.Config{
 		ControllerInstanceID: r.cfg.RolloutsControllerInstanceID,
 	})
@@ -1347,7 +1349,7 @@ func (r *RegularStageReconciler) startVerification(
 		rollouts.WithNamePrefix(stage.Name),
 		rollouts.WithNameSuffix(freight.ID),
 		rollouts.WithExtraLabels(map[string]string{
-			kargoapi.LabelKeyStage:             stage.Name,
+			kargoapi.LabelKeyStage:             shortStageName,
 			kargoapi.LabelKeyFreightCollection: freight.ID,
 		}),
 		rollouts.WithArgumentEvaluationConfig{
@@ -1375,6 +1377,13 @@ func (r *RegularStageReconciler) startVerification(
 			Vars: stage.Spec.Vars,
 		},
 	}
+
+	if stage.Name != shortStageName {
+		builderOpts = append(builderOpts, rollouts.WithExtraAnnotations(map[string]string{
+			kargoapi.AnnotationKeyStage: stage.Name,
+		}))
+	}
+
 	for _, freightRef := range freight.Freight {
 		builderOpts = append(builderOpts, rollouts.WithOwner{
 			APIVersion: kargoapi.GroupVersion.String(),
@@ -1611,7 +1620,7 @@ func (r *RegularStageReconciler) findExistingAnalysisRun(
 		client.InNamespace(stage.Namespace),
 		client.MatchingLabelsSelector{
 			Selector: labels.SelectorFromSet(map[string]string{
-				kargoapi.LabelKeyStage:             stage.Name,
+				kargoapi.LabelKeyStage:             kubernetes.ShortenLabelValue(stage.Name),
 				kargoapi.LabelKeyFreightCollection: freightColID,
 			}),
 		},
@@ -1987,7 +1996,7 @@ func (r *RegularStageReconciler) clearAnalysisRuns(ctx context.Context, stage *k
 		&rolloutsapi.AnalysisRun{},
 		client.InNamespace(stage.Namespace),
 		client.MatchingLabels(map[string]string{
-			kargoapi.LabelKeyStage: stage.Name,
+			kargoapi.LabelKeyStage: kubernetes.ShortenLabelValue(stage.Name),
 		}),
 	); err != nil {
 		return fmt.Errorf("error deleting AnalysisRuns for Stage %q in namespace %q: %w",
