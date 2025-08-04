@@ -3695,6 +3695,51 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 			},
 		},
 		{
+			name: "finds existing analysis run with stage name exceeding max label length",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "this-is-a-very-long-stage-name-that-exceeds-the-label-length-and-should-be-truncated",
+				},
+				Spec: kargoapi.StageSpec{
+					Verification: &kargoapi.Verification{},
+				},
+			},
+			freightCol: kargoapi.FreightCollection{
+				ID: "test-collection",
+				Freight: map[string]kargoapi.FreightReference{
+					"warehouse": {Name: "test-freight"},
+				},
+			},
+			objects: []client.Object{
+				&rolloutsapi.AnalysisRun{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "existing-analysis",
+						Namespace: "fake-project",
+						Labels: map[string]string{
+							kargoapi.LabelKeyStage:             "this-is-a-very-long-stage-name-that-exceeds-the-label-1c0a17e1",
+							kargoapi.LabelKeyFreightCollection: "test-collection",
+						},
+						Annotations: map[string]string{
+							kargoapi.AnnotationKeyStage: "this-is-a-very-long-stage-name-that-exceeds-the-label-length-and-should-be-truncated", // nolint:lll
+						},
+					},
+					Status: rolloutsapi.AnalysisRunStatus{
+						Phase:   "Successful",
+						Message: "Analysis completed successfully",
+					},
+				},
+			},
+			assertions: func(t *testing.T, _ client.Client, vi *kargoapi.VerificationInfo, err error) {
+				require.NoError(t, err)
+
+				require.NotNil(t, vi)
+				assert.NotEmpty(t, vi.ID)
+				assert.Equal(t, kargoapi.VerificationPhaseSuccessful, vi.Phase)
+				assert.Equal(t, "existing-analysis", vi.AnalysisRun.Name)
+			},
+		},
+		{
 			name: "creates new analysis run",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
@@ -3733,6 +3778,70 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 					Namespace: vi.AnalysisRun.Namespace,
 					Name:      vi.AnalysisRun.Name,
 				}, ar))
+
+				// Verify stage label is not shortened since stage name is short
+				assert.Equal(t, "test-stage", ar.Labels[kargoapi.LabelKeyStage])
+
+				// Verify no annotation is added since stage name doesn't need shortening
+				_, hasAnnotation := ar.Annotations[kargoapi.AnnotationKeyStage]
+				assert.False(t, hasAnnotation, "Stage annotation should not be present when stage name doesn't need shortening")
+			},
+		},
+		{
+			name: "creates new analysis run with stage name exceeding max label length",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "this-is-a-very-long-stage-name-that-exceeds-the-label-length-and-should-be-truncated",
+				},
+				Spec: kargoapi.StageSpec{
+					Verification: &kargoapi.Verification{},
+				},
+			},
+			freightCol: kargoapi.FreightCollection{
+				ID: "test-collection",
+				Freight: map[string]kargoapi.FreightReference{
+					"warehouse": {Name: "test-freight"},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-freight",
+						Namespace: "fake-project",
+					},
+				},
+			},
+			assertions: func(t *testing.T, c client.Client, vi *kargoapi.VerificationInfo, err error) {
+				require.NoError(t, err)
+
+				require.NotNil(t, vi)
+				assert.NotEmpty(t, vi.ID)
+				assert.Equal(t, kargoapi.VerificationPhasePending, vi.Phase)
+				assert.NotNil(t, vi.AnalysisRun)
+
+				// Verify analysis run was created
+				ar := &rolloutsapi.AnalysisRun{}
+				require.NoError(t, c.Get(context.Background(), types.NamespacedName{
+					Namespace: vi.AnalysisRun.Namespace,
+					Name:      vi.AnalysisRun.Name,
+				}, ar))
+
+				// Verify stage label was truncated correctly
+				assert.Equal(
+					t,
+					"this-is-a-very-long-stage-name-that-exceeds-the-label-1c0a17e1",
+					ar.Labels[kargoapi.LabelKeyStage],
+				)
+
+				// Verify annotation contains the full stage name
+				fullStageName, hasAnnotation := ar.Annotations[kargoapi.AnnotationKeyStage]
+				assert.True(t, hasAnnotation)
+				assert.Equal(
+					t,
+					"this-is-a-very-long-stage-name-that-exceeds-the-label-length-and-should-be-truncated",
+					fullStageName,
+				)
 			},
 		},
 		{
@@ -3782,13 +3891,88 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 				assert.NotEmpty(t, vi.ID)
 				assert.Equal(t, "test-user", vi.Actor)
 
-				// Verify promotion label was added
+				// Verify promotion annotation was added
 				ar := &rolloutsapi.AnalysisRun{}
 				require.NoError(t, c.Get(context.Background(), types.NamespacedName{
 					Namespace: vi.AnalysisRun.Namespace,
 					Name:      vi.AnalysisRun.Name,
 				}, ar))
 				assert.Equal(t, "test-promotion", ar.Annotations[kargoapi.AnnotationKeyPromotion])
+
+				// Verify no stage annotation is added since stage name doesn't need shortening
+				_, hasStageAnnotation := ar.Annotations[kargoapi.AnnotationKeyStage]
+				assert.False(t, hasStageAnnotation)
+			},
+		},
+		{
+			name: "handles reverification with control plane actor and long stage name",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "this-is-a-very-long-stage-name-that-exceeds-the-label-length-and-should-be-truncated",
+				},
+				Spec: kargoapi.StageSpec{
+					Verification: &kargoapi.Verification{},
+				},
+				Status: kargoapi.StageStatus{
+					LastPromotion: &kargoapi.PromotionReference{
+						Name: "test-promotion",
+					},
+				},
+			},
+			freightCol: kargoapi.FreightCollection{
+				ID: "test-collection",
+				Freight: map[string]kargoapi.FreightReference{
+					"warehouse": {Name: "test-freight"},
+				},
+				VerificationHistory: []kargoapi.VerificationInfo{
+					{
+						ID: "prev-verification",
+					},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "test-freight",
+					},
+				},
+			},
+			req: &kargoapi.VerificationRequest{
+				ID:           "prev-verification",
+				Actor:        "test-user",
+				ControlPlane: true,
+			},
+			assertions: func(t *testing.T, c client.Client, vi *kargoapi.VerificationInfo, err error) {
+				require.NoError(t, err)
+
+				require.NotNil(t, vi)
+				assert.NotEmpty(t, vi.ID)
+				assert.Equal(t, "test-user", vi.Actor)
+
+				// Verify analysis run was created
+				ar := &rolloutsapi.AnalysisRun{}
+				require.NoError(t, c.Get(context.Background(), types.NamespacedName{
+					Namespace: vi.AnalysisRun.Namespace,
+					Name:      vi.AnalysisRun.Name,
+				}, ar))
+
+				// Verify both promotion and stage annotations are present
+				assert.Equal(t, "test-promotion", ar.Annotations[kargoapi.AnnotationKeyPromotion])
+				fullStageName, hasStageAnnotation := ar.Annotations[kargoapi.AnnotationKeyStage]
+				assert.True(t, hasStageAnnotation)
+				assert.Equal(
+					t,
+					"this-is-a-very-long-stage-name-that-exceeds-the-label-length-and-should-be-truncated",
+					fullStageName,
+				)
+
+				// Verify stage label was truncated correctly
+				assert.Equal(t,
+					"this-is-a-very-long-stage-name-that-exceeds-the-label-1c0a17e1",
+					ar.Labels[kargoapi.LabelKeyStage],
+				)
 			},
 		},
 		{
