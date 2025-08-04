@@ -361,14 +361,41 @@ func TestServer_getStageFromAnalysisRun(t *testing.T) {
 		assertions func(t *testing.T, stage *kargoapi.Stage, err error)
 	}{
 		{
-			name: "analysis run is missing stage label",
+			name: "analysis run is missing stage annotation and label",
 			run:  &rolloutsapi.AnalysisRun{},
 			assertions: func(t *testing.T, _ *kargoapi.Stage, err error) {
 				require.ErrorContains(t, err, "has no stage label")
 			},
 		},
 		{
-			name: "error getting stage",
+			name: "error getting stage from annotation",
+			run: &rolloutsapi.AnalysisRun{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyStage: testStageName,
+					},
+				},
+			},
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithInterceptorFuncs(
+				interceptor.Funcs{
+					Get: func(
+						context.Context,
+						client.WithWatch,
+						client.ObjectKey,
+						client.Object,
+						...client.GetOption,
+					) error {
+						return fmt.Errorf("something went wrong")
+					},
+				},
+			).Build(),
+			assertions: func(t *testing.T, _ *kargoapi.Stage, err error) {
+				require.ErrorContains(t, err, "error getting Stage")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "error getting stage from label",
 			run: &rolloutsapi.AnalysisRun{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
@@ -395,7 +422,33 @@ func TestServer_getStageFromAnalysisRun(t *testing.T) {
 			},
 		},
 		{
-			name: "stage not found",
+			name: "stage not found from annotation",
+			run: &rolloutsapi.AnalysisRun{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyStage: testStageName,
+					},
+				},
+			},
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithInterceptorFuncs(
+				interceptor.Funcs{
+					Get: func(
+						context.Context,
+						client.WithWatch,
+						client.ObjectKey,
+						client.Object,
+						...client.GetOption,
+					) error {
+						return apierrors.NewNotFound(schema.GroupResource{}, "")
+					},
+				},
+			).Build(),
+			assertions: func(t *testing.T, _ *kargoapi.Stage, err error) {
+				require.ErrorContains(t, err, "not found")
+			},
+		},
+		{
+			name: "stage not found from label",
 			run: &rolloutsapi.AnalysisRun{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
@@ -421,7 +474,32 @@ func TestServer_getStageFromAnalysisRun(t *testing.T) {
 			},
 		},
 		{
-			name: "success",
+			name: "success with annotation",
+			run: &rolloutsapi.AnalysisRun{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: testNamespace,
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyStage: testStageName,
+					},
+				},
+			},
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      testStageName,
+						Namespace: testNamespace,
+					},
+				},
+			).Build(),
+			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, stage)
+				require.Equal(t, testNamespace, stage.Namespace)
+				require.Equal(t, testStageName, stage.Name)
+			},
+		},
+		{
+			name: "success with label",
 			run: &rolloutsapi.AnalysisRun{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNamespace,
@@ -443,6 +521,34 @@ func TestServer_getStageFromAnalysisRun(t *testing.T) {
 				require.NotNil(t, stage)
 				require.Equal(t, testNamespace, stage.Namespace)
 				require.Equal(t, testStageName, stage.Name)
+			},
+		},
+		{
+			name: "annotation takes precedence over label",
+			run: &rolloutsapi.AnalysisRun{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: testNamespace,
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyStage: testStageName,
+					},
+					Labels: map[string]string{
+						kargoapi.LabelKeyStage: "different-stage-name",
+					},
+				},
+			},
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      testStageName,
+						Namespace: testNamespace,
+					},
+				},
+			).Build(),
+			assertions: func(t *testing.T, stage *kargoapi.Stage, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, stage)
+				require.Equal(t, testNamespace, stage.Namespace)
+				require.Equal(t, testStageName, stage.Name) // Should use annotation value, not label value
 			},
 		},
 	}

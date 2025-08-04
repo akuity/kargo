@@ -1341,6 +1341,7 @@ func (r *RegularStageReconciler) startVerification(
 
 	// At this point, we know that we need to start a new AnalysisRun for the
 	// verification.
+	shortStageName := kubernetes.ShortenLabelValue(stage.Name)
 	builder := rollouts.NewAnalysisRunBuilder(r.client, rollouts.Config{
 		ControllerInstanceID: r.cfg.RolloutsControllerInstanceID,
 	})
@@ -1348,7 +1349,7 @@ func (r *RegularStageReconciler) startVerification(
 		rollouts.WithNamePrefix(stage.Name),
 		rollouts.WithNameSuffix(freight.ID),
 		rollouts.WithExtraLabels(map[string]string{
-			kargoapi.LabelKeyStage:             kubernetes.ShortenLabelValue(stage.Name),
+			kargoapi.LabelKeyStage:             shortStageName,
 			kargoapi.LabelKeyFreightCollection: freight.ID,
 		}),
 		rollouts.WithArgumentEvaluationConfig{
@@ -1376,6 +1377,13 @@ func (r *RegularStageReconciler) startVerification(
 			Vars: stage.Spec.Vars,
 		},
 	}
+
+	if stage.Name != shortStageName {
+		builderOpts = append(builderOpts, rollouts.WithExtraAnnotations(map[string]string{
+			kargoapi.AnnotationKeyStage: stage.Name,
+		}))
+	}
+
 	for _, freightRef := range freight.Freight {
 		builderOpts = append(builderOpts, rollouts.WithOwner{
 			APIVersion: kargoapi.GroupVersion.String(),
