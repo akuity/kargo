@@ -322,7 +322,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
               <CreateStage
                 project={project?.metadata?.name}
                 warehouses={mapToNames(listWarehousesQuery.data?.warehouses || [])}
-                stages={mapToNames(listStagesQuery.data?.stages || [])}
+                stages={listStagesQuery.data?.stages || []}
               />
             )}
 

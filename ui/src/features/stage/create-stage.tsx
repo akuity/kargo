@@ -76,7 +76,7 @@ export const CreateStage = ({
 }: {
   project?: string;
   warehouses?: string[];
-  stages?: string[];
+  stages?: Stage[];
 }) => {
   const navigate = useNavigate();
   const close = () => navigate(generatePath(paths.project, { name: project }));
