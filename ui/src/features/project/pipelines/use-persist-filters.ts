@@ -4,8 +4,7 @@ import { FreightTimelineControllerContextType } from './context/freight-timeline
 
 export const usePersistPreferredFilter = (
   project: string,
-  preferredFilter: FreightTimelineControllerContextType['preferredFilter'],
-  updatePreferredFilter: (f: FreightTimelineControllerContextType['preferredFilter']) => void
+  preferredFilter: FreightTimelineControllerContextType['preferredFilter']
 ) => {
   const init = useRef(false);
 
@@ -17,16 +16,16 @@ export const usePersistPreferredFilter = (
 
     localStorage.setItem(`filters-${project}`, JSON.stringify(preferredFilter));
   }, [preferredFilter]);
+};
 
-  useEffect(() => {
-    const preferredFilterLocal = localStorage.getItem(`filters-${project}`);
+export const getFreightTimelineFiltersLocalStorage = (
+  project?: string
+): Partial<FreightTimelineControllerContextType['preferredFilter']> => {
+  const filters = localStorage.getItem(`filters-${project}`);
 
-    if (preferredFilterLocal) {
-      try {
-        updatePreferredFilter(JSON.parse(preferredFilterLocal));
-      } catch (e) {
-        // silent
-      }
-    }
-  }, []);
+  if (filters) {
+    return JSON.parse(filters);
+  }
+
+  return {};
 };

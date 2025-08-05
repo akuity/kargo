@@ -43,6 +43,7 @@ import { useFreightById } from './use-freight-by-id';
 import { useFreightInStage } from './use-freight-in-stage';
 import { useGetFreight } from './use-get-freight';
 import { useGetWarehouse } from './use-get-warehouse';
+import { usePersistPreferredFilter } from './use-persist-filters';
 import { useStageAutoPromotionMap } from './use-stage-auto-promotion-map';
 import { useStageByName } from './use-stage-by-name';
 import { useSubscribersByStage } from './use-subscribers-by-stage';
@@ -108,7 +109,9 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
     [project, listStagesQuery.data?.stages]
   );
 
-  const [preferredFilter, setPreferredFilter] = useFreightTimelineControllerStore();
+  const [preferredFilter, setPreferredFilter] = useFreightTimelineControllerStore(
+    projectName || ''
+  );
 
   const [viewingFreight, setViewingFreight] = useState<Freight | null>(null);
 
@@ -133,6 +136,8 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
   });
 
   const freights = getFreightQuery.data?.groups?.['']?.freight || [];
+
+  usePersistPreferredFilter(projectName || '', preferredFilter);
 
   useWatchFreight(projectName || '');
 
