@@ -54,7 +54,7 @@ spec:
           {{- end }}
           {{- with .Values.image.pullSecrets }}
           imagePullSecrets:
-            {{- toYaml . | nindent 8 }}
+            {{- toYaml . | nindent 12 }}
           {{- end }}
           containers:
           - name: garbage-collector
