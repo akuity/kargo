@@ -127,9 +127,11 @@ export const Step = ({
         </Flex>
         <Flex className={'w-full'} align='center' gap={8}>
           {!!step?.as && (
-            <Tag className='text-xs w-[200px] text-center py-1' color='blue' title={step.as}>
-              {shortenStepName}
-            </Tag>
+            <div className='w-[200px]'>
+              <Tag className='text-xs text-center py-1' color='blue' title={step.as}>
+                {shortenStepName}
+              </Tag>
+            </div>
           )}
           <span className='font-semibold text-sm'>{meta.spec.identifier}</span>
           {filteredUiPlugins.length > 0 && (
