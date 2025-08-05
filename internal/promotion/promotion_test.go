@@ -468,6 +468,18 @@ func TestStep_GetConfig(t *testing.T) {
 				"chartVersion8": "fake-chart-version",
 			},
 		},
+		{
+			name:        "test success function",
+			promoCtx:    Context{},
+			rawCfg:      []byte(`{"wasSuccessful": "${{ success() }}"}`),
+			expectedCfg: promotion.Config{"wasSuccessful": true},
+		},
+		{
+			name:        "test failure function",
+			promoCtx:    Context{},
+			rawCfg:      []byte(`{"wasFailure": "${{ failure() }}"}`),
+			expectedCfg: promotion.Config{"wasFailure": false},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
