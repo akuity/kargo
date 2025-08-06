@@ -102,9 +102,13 @@ func newReconciler(
 	cfg ReconcilerConfig,
 ) *reconciler {
 	r := &reconciler{
-		client:          kubeClient,
-		credentialsDB:   credentialsDB,
-		cfg:             cfg,
+		client:        kubeClient,
+		credentialsDB: credentialsDB,
+		cfg:           cfg,
+		shardPredicate: controller.ResponsibleFor[kargoapi.Warehouse]{
+			IsDefaultController: cfg.IsDefaultController,
+			ShardName:           cfg.ShardName,
+		},
 		createFreightFn: kubeClient.Create,
 	}
 
@@ -144,7 +148,7 @@ func (r *reconciler) Reconcile(
 	}
 
 	if !r.shardPredicate.IsResponsible(warehouse) {
-		logger.Debug("ignoring Warehouse because it is is not assigned to this shard")
+		logger.Debug("ignoring Warehouse because it is not assigned to this shard")
 		return ctrl.Result{}, nil
 	}
 
