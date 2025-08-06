@@ -505,7 +505,8 @@ config:
 
 ### `success()`
 
-The `success()` function checks the status of all preceding steps and returns true if none of them have failed or errored and false otherwise.
+The `success()` function checks the status of all preceding steps and returns 
+true if none of them have failed or errored and false otherwise.
 
 Examples:
 
