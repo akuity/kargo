@@ -516,7 +516,8 @@ config:
 
 ### `failure()`
 
-The `failure()` function checks the status of all preceding steps and returns true if any of them have failed or errored and false otherwise.
+The `failure()` function checks the status of all preceding steps and returns 
+true if any of them have failed or errored and false otherwise.
 
 Examples:
 
@@ -536,15 +537,14 @@ config:
   alwaysTrue: ${{ always() }}
 ```
 
-### `status(stepName)`
+### `status(stepAlias)`
 
-The `status(stepName)` function retrieves the status of a specific step by its alias
-within the current promotion context; returning its value as a string.
+The `status(stepAlias)` function retrieves the status of a specific step by its 
+alias within the current promotion context; returning its value as a string.
 
 Examples:
 
 ```yaml
 config:
-  status: ${{ status(stepName) }}
+  status: ${{ status("my-step-alias") }}
 ```
-
