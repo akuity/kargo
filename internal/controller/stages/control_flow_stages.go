@@ -212,7 +212,7 @@ func (r *ControlFlowStageReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	if !r.shardPredicate.IsResponsible(stage) {
-		logger.Debug("ignoring Control Flow Stage because it is is not assigned to this shard")
+		logger.Debug("ignoring Control Flow Stage because it is not assigned to this shard")
 		return ctrl.Result{}, nil
 	}
 
