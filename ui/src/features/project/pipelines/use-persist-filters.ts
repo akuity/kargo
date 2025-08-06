@@ -24,7 +24,11 @@ export const getFreightTimelineFiltersLocalStorage = (
   const filters = localStorage.getItem(`filters-${project}`);
 
   if (filters) {
-    return JSON.parse(filters);
+    try {
+      return JSON.parse(filters);
+    } catch {
+      return {};
+    }
   }
 
   return {};
