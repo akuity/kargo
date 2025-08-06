@@ -158,7 +158,7 @@ func MergeYAMLFiles(inputs []string) (string, error) {
 
 	mergedNode, err := kyaml.Parse(inputs[0])
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error parsing first input: %w", err)
 	}
 
 	for i := 1; i < len(inputs); i++ {
@@ -167,11 +167,11 @@ func MergeYAMLFiles(inputs []string) (string, error) {
 			if err == io.EOF {
 				continue
 			}
-			return "", err
+			return "", fmt.Errorf("error parsing input at index %d: %w", i, err)
 		}
 		mergedNode, err = merge2.Merge(patchNode, mergedNode, kyaml.MergeOptions{ListIncreaseDirection: 1})
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("error merging node at index %d: %w", i, err)
 		}
 	}
 

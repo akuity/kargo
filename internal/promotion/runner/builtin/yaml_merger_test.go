@@ -114,7 +114,7 @@ app:
   version: "2.0.0"
 `,
 			},
-			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
+			assertions: func(t *testing.T, workDir string, _ promotion.StepResult, err error) {
 				assert.NoError(t, err)
 				content, err := os.ReadFile(path.Join(workDir, "modified.yaml"))
 				require.NoError(t, err)
