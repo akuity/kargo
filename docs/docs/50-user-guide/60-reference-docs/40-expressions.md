@@ -502,3 +502,81 @@ config:
 config:
   chartVersion: ${{ chartFrom("https://example.com/charts", "my-chart", warehouse("my-warehouse")).Version }}
 ```
+
+### `semverDiff(version1, version2)`
+
+The `semverDiff()` function compares two semantic version strings and returns
+the difference level between them. It has two required arguments:
+
+- `version1` (Required): A string representing the first semantic version to compare.
+- `version2` (Required): A string representing the second semantic version to compare.
+
+The function returns one of the following strings:
+
+| Return Value | Description |
+|--------------|-------------|
+| `Major` | The major version components differ. |
+| `Minor` | The minor version components differ (major versions are the same). |
+| `Patch` | The patch version components differ (major and minor versions are the same). |
+| `Metadata` | Only the build metadata differs (major, minor, and patch versions are the same). |
+| `None` | The versions are identical. |
+| `Incomparable` | One or both version strings are invalid or not valid semantic versions. |
+
+:::info
+The function uses the [Semantic Versioning](https://semver.org/) specification
+to parse and compare versions. It supports versions with or without the `v`
+prefix, as well as prerelease and build metadata components.
+:::
+
+Examples:
+
+```yaml
+# Open a pull request only for major version changes
+- uses: git-open-pr
+  if: ${{ semverDiff(chartFrom("oci://example.com/chart").Version, "1.0.0") == "Major" }}
+  config:
+    repoURL: https://github.com/example/config-repo.git
+    sourceBranch: ${{ outputs.push.branch }}
+    targetBranch: stage/${{ ctx.stage }}
+    title: "Major version update detected"
+```
+
+```yaml
+# Conditionally execute different steps based on version difference
+- uses: git-open-pr
+  if: ${{ semverDiff(imageFrom("myapp").Tag, "2.0.0") == "Major" }}
+  config:
+    repoURL: https://github.com/example/config-repo.git
+    sourceBranch: ${{ outputs.push.branch }}
+    targetBranch: stage/${{ ctx.stage }}
+    title: "Breaking change: Major version update"
+    labels: ["breaking-change", "needs-review"]
+
+- uses: git-push
+  if: ${{ semverDiff(imageFrom("myapp").Tag, "2.0.0") != "Major" }}
+  config:
+    repoURL: https://github.com/example/config-repo.git
+    targetBranch: stage/${{ ctx.stage }}
+    message: "Minor/patch update: ${{ imageFrom("myapp").Tag }}"
+```
+
+```yaml
+# Include version difference information in PR titles
+- uses: git-open-pr
+  config:
+    repoURL: https://github.com/example/config-repo.git
+    sourceBranch: ${{ outputs.push.branch }}
+    targetBranch: stage/${{ ctx.stage }}
+    title: "${{ semverDiff(chartFrom("oci://example.com/chart").Version, outputs.previous.version) }} update: ${{ chartFrom("oci://example.com/chart").Version }}"
+```
+
+```yaml
+# Skip processing if versions are incomparable (invalid)
+- uses: helm-update-chart
+  if: ${{ semverDiff(chartFrom("oci://example.com/chart").Version, "0.0.0") != "Incomparable" }}
+  config:
+    path: ./manifests
+    charts:
+    - repository: oci://example.com/chart
+      version: ${{ chartFrom("oci://example.com/chart").Version }}
+```

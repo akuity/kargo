@@ -1360,19 +1360,22 @@ func (r *RegularStageReconciler) startVerification(
 				},
 			},
 			Options: append(
-				exprfn.FreightOperations(
-					ctx,
-					r.client,
-					stage.Namespace,
-					stage.Spec.RequestedFreight,
-					freight.References(),
+				append(
+					exprfn.FreightOperations(
+						ctx,
+						r.client,
+						stage.Namespace,
+						stage.Spec.RequestedFreight,
+						freight.References(),
+					),
+					exprfn.DataOperations(
+						ctx,
+						r.client,
+						gocache.New(gocache.NoExpiration, gocache.NoExpiration),
+						stage.Namespace,
+					)...,
 				),
-				exprfn.DataOperations(
-					ctx,
-					r.client,
-					gocache.New(gocache.NoExpiration, gocache.NoExpiration),
-					stage.Namespace,
-				)...,
+				exprfn.UtilityOperations()...,
 			),
 			Vars: stage.Spec.Vars,
 		},
