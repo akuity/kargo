@@ -318,14 +318,17 @@ func (s *Step) GetConfig(
 		s.Config,
 		env,
 		append(
-			exprfn.FreightOperations(
-				ctx,
-				cl,
-				promoCtx.Project,
-				promoCtx.FreightRequests,
-				promoCtx.Freight.References(),
+			append(
+				exprfn.FreightOperations(
+					ctx,
+					cl,
+					promoCtx.Project,
+					promoCtx.FreightRequests,
+					promoCtx.Freight.References(),
+				),
+				exprfn.DataOperations(ctx, cl, cache, promoCtx.Project)...,
 			),
-			exprfn.DataOperations(ctx, cl, cache, promoCtx.Project)...,
+			exprfn.StatusOperations(s.Alias, promoCtx.StepExecutionMetadata)...,
 		)...,
 	)
 	if err != nil {

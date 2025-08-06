@@ -468,6 +468,37 @@ func TestStep_GetConfig(t *testing.T) {
 				"chartVersion8": "fake-chart-version",
 			},
 		},
+		{
+			name:        "test success function",
+			promoCtx:    Context{},
+			rawCfg:      []byte(`{"wasSuccessful": "${{ success() }}"}`),
+			expectedCfg: promotion.Config{"wasSuccessful": true},
+		},
+		{
+			name:        "test failure function",
+			promoCtx:    Context{},
+			rawCfg:      []byte(`{"wasFailure": "${{ failure() }}"}`),
+			expectedCfg: promotion.Config{"wasFailure": false},
+		},
+		{
+			name:        "test always function",
+			promoCtx:    Context{},
+			rawCfg:      []byte(`{"alwaysTrue": "${{ always() }}"}`),
+			expectedCfg: promotion.Config{"alwaysTrue": true},
+		},
+		{
+			name: "test status function",
+			promoCtx: Context{
+				StepExecutionMetadata: kargoapi.StepExecutionMetadataList{
+					{
+						Alias:  "test-step",
+						Status: kargoapi.PromotionStepStatusFailed,
+					},
+				},
+			},
+			rawCfg:      []byte(`{"status": "${{ status(\"test-step\") }}"}`),
+			expectedCfg: promotion.Config{"status": "Failed"},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {

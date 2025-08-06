@@ -502,3 +502,50 @@ config:
 config:
   chartVersion: ${{ chartFrom("https://example.com/charts", "my-chart", warehouse("my-warehouse")).Version }}
 ```
+
+### `success()`
+
+The `success()` function checks the status of all preceding steps and returns 
+true if none of them have failed or errored and false otherwise.
+
+Examples:
+
+```yaml
+config:
+  wasSuccessful: ${{ success() }}
+```
+
+### `failure()`
+
+The `failure()` function checks the status of all preceding steps and returns 
+true if any of them have failed or errored and false otherwise.
+
+Examples:
+
+```yaml
+config:
+  wasFailure: ${{ failure() }}
+```
+
+### `always()`
+
+The `always()` function unconditionally returns true.
+
+Examples:
+
+```yaml
+config:
+  alwaysTrue: ${{ always() }}
+```
+
+### `status(stepAlias)`
+
+The `status(stepAlias)` function retrieves the status of a specific step by its 
+alias within the current promotion context; returning its value as a string.
+
+Examples:
+
+```yaml
+config:
+  status: ${{ status("my-step-alias") }}
+```

@@ -267,6 +267,11 @@ func Success(stepExecMetas kargoapi.StepExecutionMetadataList) expr.Option {
 	)
 }
 
+// Status returns an expr.Option that provides a `status()` function
+// for use in expressions.
+//
+// The `status()` function retrieves the status of a specific step by its alias
+// within the current promotion context; returning its value as a string.
 func Status(
 	currentStepAlias string,
 	stepExecMetas kargoapi.StepExecutionMetadataList,
