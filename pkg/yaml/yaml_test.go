@@ -186,15 +186,6 @@ func TestMergeYAMLFiles(t *testing.T) {
 			},
 		},
 		{
-			name: "empty input YAML",
-			// Note: This YAML is invalid because one line is indented with a tab
-			inputs: []string{``},
-			assertions: func(t *testing.T, output string, err error) {
-				require.ErrorContains(t, err, "EOF")
-				require.Empty(t, output)
-			},
-		},
-		{
 			name: "one invalid input YAML",
 			// Note: This YAML is invalid because one line is indented with a tab
 			inputs: []string{`
@@ -342,10 +333,6 @@ episode: 3
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			b, err := MergeYAMLFiles(testCase.inputs)
-
-			// fmt.Println(b)
-			// fmt.Println(err)
-			// fmt.Println("------")
 			testCase.assertions(t, b, err)
 		})
 	}

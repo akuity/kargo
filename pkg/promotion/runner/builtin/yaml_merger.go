@@ -113,6 +113,10 @@ func (y *yamlMerger) run(
 
 	// merge YAML files
 	outYAML, err := yaml.MergeYAMLFiles(yamlData)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+			fmt.Errorf("could not merge YAML files: %w", err)
+	}
 
 	// write yaml file
 	outPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutPath)
@@ -121,11 +125,11 @@ func (y *yamlMerger) run(
 			fmt.Errorf("could not secure join outPath %q: %w", cfg.OutPath, err)
 	}
 
-	if err := os.MkdirAll(filepath.Dir(outPath), 0o700); err != nil {
-		return failure, fmt.Errorf("Error creating directory structure %s: %w", filepath.Dir(outPath), err)
+	if err = os.MkdirAll(filepath.Dir(outPath), 0o700); err != nil {
+		return failure, fmt.Errorf("error creating directory structure %s: %w", filepath.Dir(outPath), err)
 	}
 	if err = os.WriteFile(outPath, []byte(outYAML), 0o600); err != nil {
-		return failure, fmt.Errorf("Error writing to file %s: %w", outPath, err)
+		return failure, fmt.Errorf("error writing to file %s: %w", outPath, err)
 	}
 
 	// add commit msg
