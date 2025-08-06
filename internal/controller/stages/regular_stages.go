@@ -335,7 +335,7 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	if !r.shardPredicate.IsResponsible(stage) {
-		logger.Debug("ignoring Stage because it is is not assigned to this shard")
+		logger.Debug("ignoring Stage because it is not assigned to this shard")
 		return ctrl.Result{}, nil
 	}
 

@@ -144,7 +144,7 @@ func (r *reconciler) Reconcile(
 	}
 
 	if !r.shardPredicate.IsResponsible(warehouse) {
-		logger.Debug("ignoring Warehouse because it is is not assigned to this shard")
+		logger.Debug("ignoring Warehouse because it is not assigned to this shard")
 		return ctrl.Result{}, nil
 	}
 
