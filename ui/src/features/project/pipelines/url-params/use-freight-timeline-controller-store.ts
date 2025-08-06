@@ -4,7 +4,9 @@ import { useSearchParams } from 'react-router-dom';
 import { FreightTimelineControllerContextType } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
 import { timerangeTypes } from '@ui/features/project/pipelines/freight/filter-timerange-utils';
 
-export const useFreightTimelineControllerStore = () => {
+import { getFreightTimelineFiltersLocalStorage } from '../use-persist-filters';
+
+export const useFreightTimelineControllerStore = (project: string) => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const filters = useMemo(() => {
@@ -17,7 +19,8 @@ export const useFreightTimelineControllerStore = () => {
       hideUnusedFreights: false,
       stackedNodesParents: [],
       hideSubscriptions: {},
-      images: false
+      images: false,
+      ...getFreightTimelineFiltersLocalStorage(project)
     };
 
     const showAliasParam = searchParams.get('showAlias');
