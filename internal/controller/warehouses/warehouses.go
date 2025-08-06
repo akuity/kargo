@@ -102,9 +102,13 @@ func newReconciler(
 	cfg ReconcilerConfig,
 ) *reconciler {
 	r := &reconciler{
-		client:          kubeClient,
-		credentialsDB:   credentialsDB,
-		cfg:             cfg,
+		client:        kubeClient,
+		credentialsDB: credentialsDB,
+		cfg:           cfg,
+		shardPredicate: controller.ResponsibleFor[kargoapi.Warehouse]{
+			IsDefaultController: cfg.IsDefaultController,
+			ShardName:           cfg.ShardName,
+		},
 		createFreightFn: kubeClient.Create,
 	}
 
