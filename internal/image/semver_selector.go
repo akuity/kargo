@@ -121,10 +121,6 @@ func (s *semverSelector) Select(
 	logger.Trace("sorting tags semantically")
 	tags = s.sort(tags)
 
-	logger.Trace("sorting tags lexically")
-	slices.Sort(tags)
-	slices.Reverse(tags)
-
 	images, err := s.getImagesByTags(ctx, tags)
 	if err != nil {
 		return nil, fmt.Errorf("error getting images by tags")
