@@ -306,7 +306,7 @@ to provide an additional interaction point within it.
 
 A "tangled" pipeline:
 
-![Tangled Pipeline](./img/tangled.png)
+![Tangled Pipeline](./img/control-flow-tangled.png)
 
 Using a control flow stage:
 
