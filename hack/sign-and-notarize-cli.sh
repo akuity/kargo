@@ -3,7 +3,7 @@
 echo "checking required environment variables are set..."
 
 if [[ -z "${KARGO_BIN_PATH}" ]]; then
-    echo "KARGO_BIN_PATH is empty." && exit 1
+    echo "KARGO_BIN_PATH is unset." && exit 1
 fi
 
 if [[ -z "${QUILL_SIGN_P12}" ]]; then
