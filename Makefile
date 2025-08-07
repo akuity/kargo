@@ -184,8 +184,8 @@ build-cli:
 		./cmd/cli
 
 .PHONY: sign-and-notarize-cli
-sign-and-notarize-cli:
-	@./hack/sign-and-notarize.sh
+sign-and-notarize-cli: install-quill
+	$(QUILL) sign-and-notarize --p12 $(QUILL_SIGN_P12) $(KARGO_BIN_PATH)
 
 ################################################################################
 # Used for Nighty/Unstable builds                                              #
