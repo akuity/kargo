@@ -30,7 +30,7 @@ echo "confirmed environment variables are set correctly."
 
 if [[ ! -x "$(command -v quill)" ]]; then
     echo "quill is not installed. Installing..."
-    curl -sSfL https://get.anchore.io/quill | sudo sh -s -- -b /usr/local/bin \
+    curl -sSfL https://get.anchore.io/quill | sh -s -- -b /usr/local/bin \
     && echo "quill installed successfully."
 else
     echo "quill is already installed."
@@ -43,4 +43,4 @@ if [ $? -ne 0 ]; then
     echo "failed to sign and notarize $KARGO_BIN_PATH" && exit 1
 fi
 
-echo "successfully signed and notarized $KARGO_BIN_PATH
+echo "successfully signed and notarized $KARGO_BIN_PATH"
