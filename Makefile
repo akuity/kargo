@@ -183,6 +183,10 @@ build-cli:
 		-o bin/kargo-$(GOOS)-$(GOARCH)$(shell [ ${GOOS} = windows ] && echo .exe) \
 		./cmd/cli
 
+.PHONY: sign-and-notarize-cli
+sign-and-notarize-cli:
+	@./hack/sign-and-notarize.sh
+
 ################################################################################
 # Used for Nighty/Unstable builds                                              #
 ################################################################################

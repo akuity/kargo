@@ -226,6 +226,17 @@ jobs:
         GIT_COMMIT: ${{ github.sha }}
         GIT_TREE_STATE: clean
       run: make build-cli
+    - name: Sign and Notarize CLI
+      if: ${{ matrix.os == 'darwin' }}
+      env: 
+        QUILL_SIGN_P12: ${{ secrets.QUILL_SIGN_P12 }}
+        QUILL_SIGN_PASSWORD: ${{ secrets.QUILL_SIGN_PASSWORD }}
+        QUILL_NOTARY_KEY: ${{ secrets.QUILL_NOTARY_KEY }}
+        QUILL_NOTARY_KEY_ID: ${{ secrets.QUILL_NOTARY_KEY_ID }}
+        QUILL_NOTARY_ISSUER: ${{ secrets.QUILL_NOTARY_ISSUER }}
+        KARGO_BIN_PATH: bin/kargo-${{ matrix.os }}-${{ matrix.arch }}
+      run: |
+        make sign-and-notarize-cli
     - name: Publish CLI
       uses: svenstaro/upload-release-action@v2
       with:
