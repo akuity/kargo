@@ -7,23 +7,23 @@ if [[ -z "${KARGO_BIN_PATH}" ]]; then
 fi
 
 if [[ -z "${QUILL_SIGN_P12}" ]]; then
-    echo "QUILL_SIGN_P12 is unset or empty." && exit 1
+    echo "QUILL_SIGN_P12 is unset." && exit 1
 fi
 
 if [[ -z "${QUILL_SIGN_PASSWORD}" ]]; then
-    echo "QUILL_SIGN_PASSWORD is unset or empty." && exit 1
+    echo "QUILL_SIGN_PASSWORD is unset." && exit 1
 fi
 
 if [[ -z "${QUILL_NOTARY_KEY}" ]]; then
-    echo "QUILL_NOTARY_KEY is unset or empty." && exit 1
+    echo "QUILL_NOTARY_KEY is unset." && exit 1
 fi
 
 if [[ -z "${QUILL_NOTARY_KEY_ID}" ]]; then
-    echo "QUILL_NOTARY_KEY_ID is unset or empty." && exit 1
+    echo "QUILL_NOTARY_KEY_ID is unset." && exit 1
 fi
 
 if [[ -z "${QUILL_NOTARY_ISSUER}" ]]; then
-    echo "QUILL_NOTARY_ISSUER is unset or empty." && exit 1
+    echo "QUILL_NOTARY_ISSUER is unset." && exit 1
 fi
 
 echo "confirmed environment variables are set correctly."
