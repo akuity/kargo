@@ -14,6 +14,7 @@ import {
 } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { FieldContainer } from '../common/form/field-container';
+import { findStagesForWarehouse } from '../project/pipelines/image-history/get-stages';
 
 import { requestedFreightSchema } from './schemas';
 
@@ -42,14 +43,7 @@ export const RequestedFreightEditor = ({
       return [];
     }
 
-    return stages
-      .filter((stage) => {
-        return stage.spec?.requestedFreight?.some(
-          (freightRequest) => freightRequest.origin?.name === selectedWarehouse
-        );
-      })
-      .map((stage) => stage.metadata?.name || '')
-      .filter(Boolean);
+    return Array.from(findStagesForWarehouse(selectedWarehouse, stages));
   }, [selectedWarehouse, stages]);
 
   return (
