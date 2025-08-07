@@ -132,6 +132,7 @@ export const CredentialsSettings = () => {
             },
             {
               key: 'actions',
+              fixed: 'right',
               render: (record) => (
                 <Space>
                   <Button
@@ -236,6 +237,7 @@ export const CredentialsSettings = () => {
             },
             {
               key: 'actions',
+              fixed: 'right',
               render: (record) => (
                 <Space>
                   <Button

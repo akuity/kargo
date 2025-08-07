@@ -78,6 +78,7 @@ export const ClusterSecret = () => {
           },
           {
             key: 'actions',
+            fixed: 'right',
             render: (_, record) => (
               <Flex justify='flex-end' gap={8}>
                 <Button
