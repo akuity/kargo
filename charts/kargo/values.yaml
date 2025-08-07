@@ -853,6 +853,11 @@ webhooksServer:
   #      name: config-map-name
   #  - secretRef:
   #      name: secret-name
+
+  ## @param webhooksServer.volumes Volumes for the webhooks server pods.
+  volumes: []
+  ## @param webhooksServer.volumeMounts Volume mounts for the webhooks server pods.
+  volumeMounts: []
   
   ## @param webhooksServer.resources Resources limits and requests for the webhooks server containers.
   resources: {}

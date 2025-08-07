@@ -94,6 +94,9 @@ spec:
           name: kubeconfigs
           readOnly: true
         {{- end }}
+        {{- with .Values.webhooksServer.volumeMounts }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
         {{- with .Values.webhooksServer.securityContext | default .Values.global.securityContext }}
         securityContext:
           {{- toYaml . | nindent 10 }}
@@ -104,6 +107,7 @@ spec:
       initContainers:
       {{- with .Values.webhooksServer.initContainers }}
         {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- end }}
       volumes:
       - name: cert
@@ -116,6 +120,9 @@ spec:
           defaultMode: 0644
           secretName: {{ .Values.kubeconfigSecrets.kargo }}
       {{- end }}
+      {{- with .Values.webhooksServer.volumes }}
+          {{- toYaml . | nindent 6 }}
+        {{- end }}
       {{- with .Values.webhooksServer.nodeSelector | default .Values.global.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -124,5 +131,4 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-{{- end }}
 {{- end }}
