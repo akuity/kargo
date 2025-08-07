@@ -23,7 +23,7 @@ const findWarehousesForImageRepo = (repoURL: string, warehouses: Warehouse[]): s
     .filter(Boolean);
 };
 
-const findStagesForWarehouse = (warehouseName: string, stages: Stage[]): Set<string> => {
+export const findStagesForWarehouse = (warehouseName: string, stages: Stage[]): Set<string> => {
   const reachableStages = new Set<string>();
   for (const stage of stages) {
     const stageName = stage.metadata?.name;
