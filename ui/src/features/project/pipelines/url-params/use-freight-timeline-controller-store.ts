@@ -56,6 +56,8 @@ export const useFreightTimelineControllerStore = (project: string) => {
     const stackedNodesParentsParam = searchParams.getAll('stackedNodesParents');
     if (stackedNodesParentsParam && stackedNodesParentsParam.length > 0) {
       filters.stackedNodesParents = stackedNodesParentsParam;
+    } else {
+      filters.stackedNodesParents = [];
     }
 
     const imagesParam = searchParams.get('images');
@@ -68,6 +70,8 @@ export const useFreightTimelineControllerStore = (project: string) => {
       for (const hideSubscriptionOf of hideSubscriptionsParam) {
         filters.hideSubscriptions[hideSubscriptionOf] = true;
       }
+    } else {
+      filters.hideSubscriptions = {};
     }
 
     return filters;
