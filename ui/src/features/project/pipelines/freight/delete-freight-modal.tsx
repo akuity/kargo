@@ -14,6 +14,7 @@ export const DeleteFreightModal = ({
   freight
 }: ModalComponentProps & { onDelete: () => void; freight: Freight }) => {
   const { name: project } = useParams();
+
   const { mutate: deleteAction, isPending } = useMutation(deleteFreight, {
     onSuccess: () => {
       message.success('Freight successfully deleted');
