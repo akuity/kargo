@@ -19,9 +19,8 @@ This promotion step supports various operations including issue management, comm
 
 All Jira operations require proper authentication credentials stored in a Kubernetes `Secret`.
 
-| Name                     | Type     | Required | Description                                                                                                                  |
-| ------------------------ | -------- | -------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `credentials.secretName` | `string` | Y        | Name of the `Secret` containing the Jira credentials.                                                                        |
+| Name                     | Type     | Required | Description                                                                         | ------------------------ | -------- | -------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `credentials.secretName` | `string` | Y        | Name of the `Secret` containing the Jira credentials in the project namespace.                                                                        |
 
 
 The referenced `Secret` should contain the following keys:
