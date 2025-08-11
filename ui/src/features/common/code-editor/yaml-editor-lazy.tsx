@@ -75,7 +75,7 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
 
       const performTransformation =
         (hideManagedFields && data?.metadata?.managedFields) ||
-        (!hideManagedFields && data?.metadata?.managedFields);
+        (!hideManagedFields && !data?.metadata?.managedFields);
 
       if (!performTransformation) {
         return;
