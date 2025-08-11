@@ -26,6 +26,7 @@ CODE_GENERATOR_VERSION	?= $(shell grep k8s.io/code-generator $(TOOLS_MOD_FILE) |
 CONTROLLER_GEN_VERSION	?= $(shell grep k8s.io/controller-tools $(TOOLS_MOD_FILE) | awk '{print $$2}')
 PROTOC_VERSION			?= v25.3
 BUF_VERSION				?= $(shell grep github.com/bufbuild/buf $(TOOLS_MOD_FILE) | awk '{print $$2}')
+QUILL_VERSION			?= v0.5.1
 
 ################################################################################
 # Tool targets                                                                 #
@@ -39,6 +40,7 @@ PROTOC_GEN_GO   := $(BIN_DIR)/protoc-gen-gogo-$(OS)-$(ARCH)-$(CODE_GENERATOR_VER
 CONTROLLER_GEN  := $(BIN_DIR)/controller-gen-$(OS)-$(ARCH)-$(CONTROLLER_GEN_VERSION)
 PROTOC          := $(BIN_DIR)/protoc-$(OS)-$(ARCH)-$(PROTOC_VERSION)
 BUF             := $(BIN_DIR)/buf-$(OS)-$(ARCH)-$(BUF_VERSION)
+QUILL		   	:= $(BIN_DIR)/quill-$(OS)-$(ARCH)-$(QUILL_VERSION)
 
 $(GOLANGCI_LINT):
 	$(call install-golangci-lint,$@,$(GOLANGCI_LINT_VERSION))
@@ -64,6 +66,9 @@ $(PROTOC):
 $(BUF):
 	$(call go-install-tool,$@,github.com/bufbuild/buf/cmd/buf,$(BUF_VERSION))
 
+$(QUILL):
+	$(call install-quill,$@,$(QUILL_VERSION))
+
 ################################################################################
 # Symlink targets                                                              #
 ################################################################################
@@ -76,6 +81,7 @@ PROTOC_GEN_GO_LINK	:= $(BIN_DIR)/protoc-gen-gogo
 CONTROLLER_GEN_LINK	:= $(BIN_DIR)/controller-gen
 PROTOC_LINK			:= $(BIN_DIR)/protoc
 BUF_LINK			:= $(BIN_DIR)/buf
+QUILL_LINK			:= $(BIN_DIR)/quill
 
 .PHONY: $(GOLANGCI_LINT_LINK)
 $(GOLANGCI_LINT_LINK): $(GOLANGCI_LINT)
@@ -109,11 +115,15 @@ $(PROTOC_LINK): $(PROTOC)
 $(BUF_LINK): $(BUF)
 	$(call create-symlink,$(BUF),$(BUF_LINK))
 
+.PHONY: $(QUILL_LINK)
+$(QUILL_LINK): $(QUILL)
+	$(call create-symlink,$(QUILL),$(QUILL_LINK))
+
 ################################################################################
 # Alias targets                                                                #
 ################################################################################
 
-TOOLS := install-golangci-lint install-helm install-goimports install-go-to-protobuf install-protoc-gen-gogo install-controller-gen install-protoc install-buf
+TOOLS := install-golangci-lint install-helm install-goimports install-go-to-protobuf install-protoc-gen-gogo install-controller-gen install-protoc install-buf install-quill
 
 .PHONY: install-tools
 install-tools: $(TOOLS)
@@ -141,6 +151,9 @@ install-protoc: $(PROTOC) $(PROTOC_LINK)
 
 .PHONY: install-buf
 install-buf: $(BUF) $(BUF_LINK)
+
+.PHONY: install-quill
+install-quill: $(QUILL) $(QUILL_LINK)
 
 ################################################################################
 # Clean up targets                                                             #
@@ -213,6 +226,25 @@ define install-helm
 	PATH="$$TMP_DIR:$$PATH" HELM_INSTALL_DIR=$$TMP_DIR USE_SUDO="false" DESIRED_VERSION="$(2)" ./get_helm.sh ;\
 	mkdir -p $(dir $(1)) ;\
 	mv $$TMP_DIR/helm $(1) ;\
+	rm -rf $$TMP_DIR ;\
+	}
+endef
+
+# install-quill installs Quill.
+#
+# $(1) binary path
+# $(2) version
+define install-quill
+	@[ -f $(1) ] || { \
+	set -e ;\
+	TMP_DIR=$$(mktemp -d) ;\
+	cd $$TMP_DIR ;\
+	echo "Installing quill $(2) to $(1)" ;\
+	curl -fsSL -o install.sh https://get.anchore.io/quill ;\
+	chmod 0700 install.sh ;\
+	./install.sh -b $$TMP_DIR $(2) ;\
+	mkdir -p $(dir $(1)) ;\
+	mv $$TMP_DIR/quill $(1) ;\
 	rm -rf $$TMP_DIR ;\
 	}
 endef
