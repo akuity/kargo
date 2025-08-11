@@ -73,6 +73,14 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
     try {
       const data = yaml.parse(value);
 
+      const performTransformation =
+        (hideManagedFields && data?.metadata?.managedFields) ||
+        (!hideManagedFields && !data?.metadata?.managedFields);
+
+      if (!performTransformation) {
+        return;
+      }
+
       if (hideManagedFields) {
         if (data?.metadata?.managedFields) {
           managedFields.current = data.metadata.managedFields;
@@ -83,7 +91,10 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
           data.metadata.managedFields = managedFields.current;
         }
       }
-      onChange?.(yaml.stringify(data));
+
+      if (data) {
+        onChange?.(yaml.stringify(data));
+      }
     } catch (_) {
       // ignore
     }
