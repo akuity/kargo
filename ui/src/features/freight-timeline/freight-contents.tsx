@@ -73,7 +73,7 @@ export const FreightContents = (props: {
           linkClass={linkClass}
           highlighted={highlighted}
           key={`${c.repoURL}:${c.version}`}
-          title={`${c.repoURL}:${c.version}`}
+          title={`${c.repoURL}${c.name ? `/${c.name}` : ''}:${c.version}`}
           fullContentVisibility={props.fullContentVisibility}
           icon={faAnchor}
         >
