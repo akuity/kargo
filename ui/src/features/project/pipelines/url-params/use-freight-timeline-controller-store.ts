@@ -31,6 +31,8 @@ export const useFreightTimelineControllerStore = (project: string) => {
     const sourcesParam = searchParams.getAll('sources');
     if (sourcesParam && sourcesParam.length > 0) {
       filters.sources = sourcesParam;
+    } else {
+      filters.sources = [];
     }
 
     const timerangeParam = searchParams.get('timerange');
@@ -46,6 +48,8 @@ export const useFreightTimelineControllerStore = (project: string) => {
     const warehousesParam = searchParams.getAll('warehouses');
     if (warehousesParam && warehousesParam.length > 0) {
       filters.warehouses = warehousesParam;
+    } else {
+      filters.warehouses = [];
     }
 
     const hideUnusedFreightsParam = searchParams.get('hideUnusedFreights');
