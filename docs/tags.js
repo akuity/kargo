@@ -1,7 +1,9 @@
+import enterpriseFeatures from './enterprise-features.json';
+
 export const isProfessional = (item) => {
-    return item.label === 'jira';
+    return enterpriseFeatures.pro.includes(item.label);
 };
 
 export const isBeta = (item) => {
-    return item.label === 'jira';
+    return enterpriseFeatures.beta.includes(item.label);
 }
