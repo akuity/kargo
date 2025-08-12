@@ -6,16 +6,16 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
-	"github.com/akuity/kargo/internal/event"
 	"github.com/akuity/kargo/internal/kargo"
+	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/server/user"
+	"github.com/akuity/kargo/pkg/event"
 )
 
 // PromoteToStage creates a Promotion resource to transition a specified Stage
@@ -150,11 +150,8 @@ func (s *server) recordPromotionCreatedEvent(
 		msg += fmt.Sprintf(" by %q", actor)
 	}
 
-	s.recorder.AnnotatedEventf(
-		p,
-		event.NewPromotionAnnotations(ctx, actor, p, f),
-		corev1.EventTypeNormal,
-		kargoapi.EventReasonPromotionCreated,
-		msg,
-	)
+	evt := event.NewPromotionCreated(msg, actor, p, f)
+	if err := s.sender.Send(ctx, event.ToCloudEvent(evt)); err != nil {
+		logging.LoggerFromContext(ctx).Error(err, "Error when publishing new promotion event")
+	}
 }
