@@ -77,7 +77,6 @@ export const EditAnalysisTemplateModal = ({ visible, hide, templateName, project
             height='500px'
             placeholder={getAnalysisTemplateYAMLExample(projectName)}
             isLoading={isLoading}
-            isHideManagedFieldsDisplayed
             label='Spec'
           />
         )}

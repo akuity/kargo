@@ -1,5 +1,5 @@
 import Editor, { loader } from '@monaco-editor/react';
-import { Checkbox, Flex, Spin, Typography } from 'antd';
+import { Flex, Spin, Typography } from 'antd';
 import type { JSONSchema4 } from 'json-schema';
 import * as monaco from 'monaco-editor';
 import { configureMonacoYaml } from 'monaco-yaml';
@@ -20,7 +20,6 @@ export interface YamlEditorProps {
   schema?: JSONSchema4;
   placeholder?: string;
   isLoading?: boolean;
-  isHideManagedFieldsDisplayed?: boolean;
   label?: string;
   toolbar?: React.ReactNode;
   resourceType?: string;
@@ -38,13 +37,9 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
     schema,
     placeholder,
     isLoading,
-    isHideManagedFieldsDisplayed,
     label,
-    toolbar,
     resourceType
   } = props;
-  const [hideManagedFields, setHideManagedFields] = React.useState(!!isHideManagedFieldsDisplayed);
-  const managedFields = useRef({});
 
   const handleOnChange = (newValue: string | undefined) => {
     onChange?.(newValue);
@@ -69,49 +64,13 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
     });
   }, []);
 
-  useEffect(() => {
-    try {
-      const data = yaml.parse(value);
-
-      const performTransformation =
-        (hideManagedFields && data?.metadata?.managedFields) ||
-        (!hideManagedFields && !data?.metadata?.managedFields);
-
-      if (!performTransformation) {
-        return;
-      }
-
-      if (hideManagedFields) {
-        if (data?.metadata?.managedFields) {
-          managedFields.current = data.metadata.managedFields;
-          delete data?.metadata?.managedFields;
-        }
-      } else {
-        if (data.metadata) {
-          data.metadata.managedFields = managedFields.current;
-        }
-      }
-
-      if (data) {
-        onChange?.(yaml.stringify(data));
-      }
-    } catch (_) {
-      // ignore
-    }
-  }, [hideManagedFields, value, onChange]);
-
   // Handle readonly field (without onChange)
   const _value = React.useMemo(() => {
-    if (onChange) {
-      return value;
-    }
-
     try {
       const data = yaml.parse(value);
 
       // Hide managedFields
-      if (hideManagedFields && data?.metadata?.managedFields) {
-        managedFields.current = data.metadata.managedFields;
+      if (data?.metadata?.managedFields) {
         delete data.metadata.managedFields;
 
         return yaml.stringify(data);
@@ -121,7 +80,7 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
     } catch (_) {
       return value;
     }
-  }, [value, hideManagedFields]);
+  }, [value]);
 
   const handleEditorDidMount = (editor: monaco.editor.IStandaloneCodeEditor) => {
     editorRef.current = editor;
@@ -137,25 +96,8 @@ const YamlEditor: FC<YamlEditorProps> = (props) => {
 
   return (
     <>
-      <Flex
-        align='center'
-        className={isHideManagedFieldsDisplayed || label ? 'mb-2 mt-1' : ''}
-        gap={8}
-      >
+      <Flex align='center' className={label ? 'mb-2 mt-1' : ''} gap={8}>
         <div>{label}</div>
-        <Flex align='center' justify='end' gap={8} flex={1}>
-          {isHideManagedFieldsDisplayed && (
-            <label>
-              <Checkbox
-                className='mr-2'
-                checked={hideManagedFields}
-                onChange={(e) => setHideManagedFields(e.target.checked)}
-              />
-              Hide Managed Fields
-            </label>
-          )}
-          {toolbar && <div>{toolbar}</div>}
-        </Flex>
       </Flex>
       <div
         style={{ border: '1px solid #d9d9d9', height, overflow: 'hidden' }}
