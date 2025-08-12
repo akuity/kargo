@@ -8,7 +8,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
-	"oras.land/oras-go/v2/registry/remote/auth"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/helm"
@@ -29,26 +28,29 @@ func newOCISelector(
 	if err != nil {
 		return nil, fmt.Errorf("error building base selector: %w", err)
 	}
+
 	ref, err := registry.ParseReference(strings.TrimPrefix(sub.RepoURL, "oci://"))
 	if err != nil {
 		return nil,
 			fmt.Errorf("error parsing repository URL %q: %w", sub.RepoURL, err)
 	}
+
+	authorizer := helm.NewEphemeralAuthorizer()
+	if creds != nil {
+		if err = authorizer.Login(context.Background(), ref.Host(), creds.Username, creds.Password); err != nil {
+			return nil, fmt.Errorf(
+				"error logging in to OCI repository %q: %w",
+				sub.RepoURL,
+				err,
+			)
+		}
+	}
+
 	return &ociSelector{
 		baseSelector: base,
 		repo: &remote.Repository{
 			Reference: ref,
-			Client: &auth.Client{
-				Credential: func(context.Context, string) (auth.Credential, error) {
-					if creds != nil {
-						return auth.Credential{
-							Username: creds.Username,
-							Password: creds.Password,
-						}, nil
-					}
-					return auth.Credential{}, nil
-				},
-			},
+			Client:    authorizer,
 		},
 	}, nil
 }
