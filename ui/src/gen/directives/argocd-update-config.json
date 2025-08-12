@@ -31,7 +31,7 @@
        "desiredRevision": {
         "type": "string",
         "description": "Specifies the desired revision for the source. If left undefined, the desired revision will be determined by Freight (if possible). Note that the source's 'targetRevision' will not be updated to this commit unless 'updateTargetRevision=true' is set. The utility of this field, on its own, is to specify the revision that the source should be observably synced to during a health check.",
-        "minLength": 1
+        "minLength": 40
        },
        "helm": {
         "type": "object",
@@ -120,7 +120,7 @@
     "desiredRevision": {
      "type": "string",
      "description": "Specifies the desired revision for the source. If left undefined, the desired revision will be determined by Freight (if possible). Note that the source's 'targetRevision' will not be updated to this commit unless 'updateTargetRevision=true' is set. The utility of this field, on its own, is to specify the revision that the source should be observably synced to during a health check.",
-     "minLength": 1
+     "minLength": 40
     },
     "helm": {
      "type": "object",
@@ -331,7 +331,7 @@
         "desiredRevision": {
          "type": "string",
          "description": "Specifies the desired revision for the source. If left undefined, the desired revision will be determined by Freight (if possible). Note that the source's 'targetRevision' will not be updated to this commit unless 'updateTargetRevision=true' is set. The utility of this field, on its own, is to specify the revision that the source should be observably synced to during a health check.",
-         "minLength": 1
+         "minLength": 40
         },
         "helm": {
          "type": "object",
