@@ -28,8 +28,8 @@ in greater detail.
 ### Variables
 
 The `spec.vars` field allows you to define variables that can be referenced anywhere
-in the `Stage` specification that supports expressions, including the promotion
-template and verification configuration.
+in the `Stage` specification that supports expressions, including the
+[promotion template](#promotion-templates) and [verification configuration](#verification).
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1
@@ -51,7 +51,7 @@ spec:
 Stage-level variables are merged with promotion template-level variables, with
 promotion template variables taking precedence for any conflicting names.
 This allows you to define common variables at the `Stage` level while still being
-able to override or supplement them at the promotion level when needed.
+able to override or supplement them at the promotion level as needed.
 
 :::info
 Variables defined at the Stage level can be referenced using
