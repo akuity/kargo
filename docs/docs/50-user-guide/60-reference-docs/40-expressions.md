@@ -249,7 +249,7 @@ executed immediately following a promotion, are not intrinsically part of the
 promotion process itself. Therefore, promotion-level variables (such as those defined
 in `spec.promotionTemplate.spec.vars`) and promotion context (like `outputs` from
 promotion steps) are not accessible during verification. Only Stage-level variables
-and Stage context are available.
+and context are available.
 :::
 
 | Name | Type | Description |

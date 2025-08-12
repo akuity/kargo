@@ -29,7 +29,8 @@ in greater detail.
 
 The `spec.vars` field allows you to define variables that can be referenced anywhere
 in the `Stage` specification that supports expressions, including the
-[promotion template](#promotion-templates) and [verification configuration](#verification).
+[promotion template](#promotion-templates) and
+[verification configuration](#verification).
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1
