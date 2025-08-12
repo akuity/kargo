@@ -22,8 +22,8 @@ A `Stage` resource's `spec` field is itself composed of four main areas of conce
 
 * Verification
 
-The following sections will explore each of these `spec` sections as well as `status`
-in greater detail.
+The following sections will explore each of these as well as `status` in
+greater detail.
 
 ### Variables
 
