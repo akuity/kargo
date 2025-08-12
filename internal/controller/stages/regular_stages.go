@@ -11,7 +11,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/kelseyhightower/envconfig"
 	gocache "github.com/patrickmn/go-cache"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -19,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -35,8 +33,6 @@ import (
 	"github.com/akuity/kargo/internal/conditions"
 	"github.com/akuity/kargo/internal/controller"
 	argocdapi "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
-	kargoEvent "github.com/akuity/kargo/internal/event"
-	exprfn "github.com/akuity/kargo/internal/expressions/function"
 	"github.com/akuity/kargo/internal/health"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/kargo"
@@ -47,6 +43,9 @@ import (
 	"github.com/akuity/kargo/internal/pattern"
 	intpredicate "github.com/akuity/kargo/internal/predicate"
 	"github.com/akuity/kargo/internal/rollouts"
+	kargoEvent "github.com/akuity/kargo/pkg/event"
+	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
+	exprfn "github.com/akuity/kargo/pkg/expressions/function"
 	healthPkg "github.com/akuity/kargo/pkg/health"
 )
 
@@ -80,7 +79,7 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 type RegularStageReconciler struct {
 	cfg            ReconcilerConfig
 	client         client.Client
-	eventRecorder  record.EventRecorder
+	eventSender    kargoEvent.Sender
 	healthChecker  health.AggregatingChecker
 	shardPredicate controller.ResponsibleFor[kargoapi.Stage]
 
@@ -119,7 +118,9 @@ func (r *RegularStageReconciler) SetupWithManager(
 ) error {
 	// Configure client and event recorder using manager.
 	r.client = kargoMgr.GetClient()
-	r.eventRecorder = libEvent.NewRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), r.cfg.Name())
+	r.eventSender = k8sevent.NewEventSender(
+		libEvent.NewRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), r.cfg.Name()),
+	)
 
 	// This index is used to find all Promotions that are associated with a
 	// specific Stage.
@@ -1251,25 +1252,9 @@ func (r *RegularStageReconciler) recordFreightVerificationEvent(
 		return
 	}
 
-	annotations := map[string]string{
-		kargoapi.AnnotationKeyEventActor:             api.FormatEventControllerActor(r.cfg.Name()),
-		kargoapi.AnnotationKeyEventProject:           stage.Namespace,
-		kargoapi.AnnotationKeyEventStageName:         stage.Name,
-		kargoapi.AnnotationKeyEventFreightAlias:      freight.Alias,
-		kargoapi.AnnotationKeyEventFreightName:       freight.Name,
-		kargoapi.AnnotationKeyEventFreightCreateTime: freight.CreationTimestamp.Format(time.RFC3339),
-	}
-	if vi.StartTime != nil {
-		annotations[kargoapi.AnnotationKeyEventVerificationStartTime] = vi.StartTime.Format(time.RFC3339)
-	}
-	if vi.FinishTime != nil {
-		annotations[kargoapi.AnnotationKeyEventVerificationFinishTime] = vi.FinishTime.Format(time.RFC3339)
-	}
-
+	var analysisTriggeredByPromotion *string
 	// Extract metadata from the AnalysisRun if available
 	if vi.HasAnalysisRun() {
-		annotations[kargoapi.AnnotationKeyEventAnalysisRunName] = vi.AnalysisRun.Name
-
 		ar := &rolloutsapi.AnalysisRun{}
 		if err := r.client.Get(context.Background(), types.NamespacedName{
 			Namespace: vi.AnalysisRun.Namespace,
@@ -1283,34 +1268,45 @@ func (r *RegularStageReconciler) recordFreightVerificationEvent(
 		}
 		// AnalysisRun that triggered by a Promotion contains the Promotion name
 		if promoName, ok := ar.Annotations[kargoapi.AnnotationKeyPromotion]; ok {
-			annotations[kargoapi.AnnotationKeyEventPromotionName] = promoName
+			analysisTriggeredByPromotion = &promoName
 		}
 	}
+
+	evtActor := api.FormatEventControllerActor(r.cfg.Name())
 
 	// If the verification is manually triggered (e.g. reverify),
 	// override the actor with the one who triggered the verification.
 	if vi.Actor != "" {
-		annotations[kargoapi.AnnotationKeyEventActor] = vi.Actor
+		evtActor = vi.Actor
 	}
 
-	reason := kargoapi.EventReasonFreightVerificationUnknown
-	message := vi.Message
+	var evt kargoEvent.FreightVerificationEventMeta
 
 	switch vi.Phase {
 	case kargoapi.VerificationPhaseSuccessful:
-		reason = kargoapi.EventReasonFreightVerificationSucceeded
-		message = "Freight verification succeeded"
+		e := kargoEvent.NewFreightVerificationSucceeded(evtActor, stage.Name, freight, vi)
+		e.Message = "Freight verification succeeded"
+		evt = e
 	case kargoapi.VerificationPhaseFailed:
-		reason = kargoapi.EventReasonFreightVerificationFailed
+		evt = kargoEvent.NewFreightVerificationFailed(evtActor, stage.Name, freight, vi)
 	case kargoapi.VerificationPhaseError:
-		reason = kargoapi.EventReasonFreightVerificationErrored
+		evt = kargoEvent.NewFreightVerificationErrored(evtActor, stage.Name, freight, vi)
 	case kargoapi.VerificationPhaseAborted:
-		reason = kargoapi.EventReasonFreightVerificationAborted
+		evt = kargoEvent.NewFreightVerificationAborted(evtActor, stage.Name, freight, vi)
 	case kargoapi.VerificationPhaseInconclusive:
-		reason = kargoapi.EventReasonFreightVerificationInconclusive
+		evt = kargoEvent.NewFreightVerificationInconclusive(evtActor, stage.Name, freight, vi)
+	default:
+		evt = kargoEvent.NewFreightVerificationUnknown(evtActor, stage.Name, freight, vi)
 	}
 
-	r.eventRecorder.AnnotatedEventf(freight, annotations, corev1.EventTypeNormal, reason, message)
+	evt.SetTriggeredByPromotion(analysisTriggeredByPromotion)
+
+	if err := r.eventSender.Send(context.Background(), kargoEvent.ToCloudEvent(evt)); err != nil {
+		logging.LoggerFromContext(context.Background()).Error(
+			err, "failed to send verification event",
+			"freight", freightRef.Name,
+		)
+	}
 }
 
 // startVerification starts a new verification for the Freight that is associated
@@ -1786,20 +1782,17 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 				latestFreight.Name, stage.Namespace, err,
 			)
 		}
-		r.eventRecorder.AnnotatedEventf(
+		evt := kargoEvent.NewPromotionCreated(
+			fmt.Sprintf("Automatically promoted Freight from origin %q for Stage %q",
+				origin,
+				promotion.Spec.Stage),
+			api.FormatEventControllerActor(r.cfg.Name()),
 			promotion,
-			kargoEvent.NewPromotionAnnotations(
-				ctx,
-				api.FormatEventControllerActor(r.cfg.Name()),
-				promotion,
-				&latestFreight,
-			),
-			corev1.EventTypeNormal,
-			kargoapi.EventReasonPromotionCreated,
-			"Automatically promoted Freight from origin %q for Stage %q",
-			origin,
-			promotion.Spec.Stage,
+			&latestFreight,
 		)
+		if err := r.eventSender.Send(ctx, kargoEvent.ToCloudEvent(evt)); err != nil {
+			logger.Error(err, "failed to send promotion event")
+		}
 		logger.Debug(
 			"created Promotion resource",
 			"promotion", promotion.Name,

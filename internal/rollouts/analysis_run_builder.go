@@ -16,7 +16,7 @@ import (
 
 	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/expressions"
+	"github.com/akuity/kargo/pkg/expressions"
 )
 
 // controllerInstanceIDLabelKey is the key for the Argo Rollouts controller

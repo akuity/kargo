@@ -3,7 +3,6 @@ package api
 import (
 	"fmt"
 	"os"
-	"time"
 
 	authnv1 "k8s.io/api/authentication/v1"
 
@@ -44,20 +43,6 @@ func FormatEventUserActor(u user.Info) string {
 
 func FormatEventKubernetesUserActor(u authnv1.UserInfo) string {
 	return kargoapi.EventActorKubernetesUserPrefix + u.Username
-}
-
-func NewFreightApprovedEventAnnotations(actor string, f *kargoapi.Freight, stageName string) map[string]string {
-	annotations := map[string]string{
-		kargoapi.AnnotationKeyEventProject:           f.Namespace,
-		kargoapi.AnnotationKeyEventFreightCreateTime: f.CreationTimestamp.Format(time.RFC3339),
-		kargoapi.AnnotationKeyEventFreightAlias:      f.Alias,
-		kargoapi.AnnotationKeyEventFreightName:       f.Name,
-		kargoapi.AnnotationKeyEventStageName:         stageName,
-	}
-	if actor != "" {
-		annotations[kargoapi.AnnotationKeyEventActor] = actor
-	}
-	return annotations
 }
 
 func formatOIDCUsername(oidcUsername string) string {

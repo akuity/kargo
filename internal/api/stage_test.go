@@ -18,6 +18,37 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
+// TODO(krancour): If we move our actual indexers to this package, we can use
+// them here instead of duplicating them for the sake of avoiding an import
+// cycle.
+const warehouseField = "warehouse"
+
+func warehouseIndexer(obj client.Object) []string {
+	return []string{obj.(*kargoapi.Freight).Origin.Name} // nolint: forcetypeassert
+}
+
+const approvedField = "approvedFor"
+
+func approvedForIndexer(obj client.Object) []string {
+	freight := obj.(*kargoapi.Freight) // nolint: forcetypeassert
+	var approvedFor []string
+	for stage := range freight.Status.ApprovedFor {
+		approvedFor = append(approvedFor, stage)
+	}
+	return approvedFor
+}
+
+const verifiedInField = "verifiedIn"
+
+func verifiedInIndexer(obj client.Object) []string {
+	freight := obj.(*kargoapi.Freight) // nolint: forcetypeassert
+	var verifiedIn []string
+	for stage := range freight.Status.VerifiedIn {
+		verifiedIn = append(verifiedIn, stage)
+	}
+	return verifiedIn
+}
+
 func TestGetStage(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
 	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))

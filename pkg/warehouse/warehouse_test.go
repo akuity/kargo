@@ -1,4 +1,4 @@
-package api
+package warehouse
 
 import (
 	"context"
@@ -17,9 +17,8 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-// TODO(krancour): If we move our actual indexers to this package, we can use
-// them here instead of duplicating them for the sake of avoiding an import
-// cycle.
+// These are all stubbed out indexers. If we ever move indexers into `pkg` (unlikely) we can replace
+// them here
 const warehouseField = "warehouse"
 
 func warehouseIndexer(obj client.Object) []string {

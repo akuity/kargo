@@ -22,6 +22,7 @@ import (
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
 	intpredicate "github.com/akuity/kargo/internal/predicate"
+	pkgwarehouse "github.com/akuity/kargo/pkg/warehouse"
 )
 
 type ReconcilerConfig struct {
@@ -137,7 +138,7 @@ func (r *reconciler) Reconcile(
 	logger.Debug("reconciling Warehouse")
 
 	// Find the Warehouse
-	warehouse, err := api.GetWarehouse(ctx, r.client, req.NamespacedName)
+	warehouse, err := pkgwarehouse.GetWarehouse(ctx, r.client, req.NamespacedName)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

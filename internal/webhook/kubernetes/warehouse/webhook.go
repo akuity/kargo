@@ -16,10 +16,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/image"
 	libWebhook "github.com/akuity/kargo/internal/webhook/kubernetes"
+	"github.com/akuity/kargo/pkg/git"
 )
 
 var warehouseGroupKind = schema.GroupKind{

@@ -1,37 +1,38 @@
 package v1alpha1
 
 const (
-	AnnotationKeyEventActor                  = "event.kargo.akuity.io/actor"
-	AnnotationKeyEventProject                = "event.kargo.akuity.io/project"
-	AnnotationKeyEventPromotionName          = "event.kargo.akuity.io/promotion-name"
-	AnnotationKeyEventPromotionCreateTime    = "event.kargo.akuity.io/promotion-create-time"
-	AnnotationKeyEventFreightAlias           = "event.kargo.akuity.io/freight-alias"
-	AnnotationKeyEventFreightName            = "event.kargo.akuity.io/freight-name"
-	AnnotationKeyEventFreightCreateTime      = "event.kargo.akuity.io/freight-create-time"
-	AnnotationKeyEventFreightCommits         = "event.kargo.akuity.io/freight-commits"
-	AnnotationKeyEventFreightImages          = "event.kargo.akuity.io/freight-images"
-	AnnotationKeyEventFreightCharts          = "event.kargo.akuity.io/freight-charts"
-	AnnotationKeyEventStageName              = "event.kargo.akuity.io/stage-name"
-	AnnotationKeyEventAnalysisRunName        = "event.kargo.akuity.io/analysis-run-name"
-	AnnotationKeyEventVerificationPending    = "event.kargo.akuity.io/verification-pending"
-	AnnotationKeyEventVerificationStartTime  = "event.kargo.akuity.io/verification-start-time"
-	AnnotationKeyEventVerificationFinishTime = "event.kargo.akuity.io/verification-finish-time"
-	AnnotationKeyEventApplications           = "event.kargo.akuity.io/applications"
+	AnnotationKeyEventPrefix                 = "event.kargo.akuity.io/"
+	AnnotationKeyEventActor                  = AnnotationKeyEventPrefix + "actor"
+	AnnotationKeyEventProject                = AnnotationKeyEventPrefix + "project"
+	AnnotationKeyEventPromotionName          = AnnotationKeyEventPrefix + "promotion-name"
+	AnnotationKeyEventPromotionCreateTime    = AnnotationKeyEventPrefix + "promotion-create-time"
+	AnnotationKeyEventFreightAlias           = AnnotationKeyEventPrefix + "freight-alias"
+	AnnotationKeyEventFreightName            = AnnotationKeyEventPrefix + "freight-name"
+	AnnotationKeyEventFreightCreateTime      = AnnotationKeyEventPrefix + "freight-create-time"
+	AnnotationKeyEventFreightCommits         = AnnotationKeyEventPrefix + "freight-commits"
+	AnnotationKeyEventFreightImages          = AnnotationKeyEventPrefix + "freight-images"
+	AnnotationKeyEventFreightCharts          = AnnotationKeyEventPrefix + "freight-charts"
+	AnnotationKeyEventStageName              = AnnotationKeyEventPrefix + "stage-name"
+	AnnotationKeyEventAnalysisRunName        = AnnotationKeyEventPrefix + "analysis-run-name"
+	AnnotationKeyEventVerificationPending    = AnnotationKeyEventPrefix + "verification-pending"
+	AnnotationKeyEventVerificationStartTime  = AnnotationKeyEventPrefix + "verification-start-time"
+	AnnotationKeyEventVerificationFinishTime = AnnotationKeyEventPrefix + "verification-finish-time"
+	AnnotationKeyEventApplications           = AnnotationKeyEventPrefix + "applications"
 )
 
 const (
-	EventReasonPromotionCreated                = "PromotionCreated"
-	EventReasonPromotionSucceeded              = "PromotionSucceeded"
-	EventReasonPromotionFailed                 = "PromotionFailed"
-	EventReasonPromotionErrored                = "PromotionErrored"
-	EventReasonPromotionAborted                = "PromotionAborted"
-	EventReasonFreightApproved                 = "FreightApproved"
-	EventReasonFreightVerificationSucceeded    = "FreightVerificationSucceeded"
-	EventReasonFreightVerificationFailed       = "FreightVerificationFailed"
-	EventReasonFreightVerificationErrored      = "FreightVerificationErrored"
-	EventReasonFreightVerificationAborted      = "FreightVerificationAborted"
-	EventReasonFreightVerificationInconclusive = "FreightVerificationInconclusive"
-	EventReasonFreightVerificationUnknown      = "FreightVerificationUnknown"
+	EventTypePromotionCreated                EventType = "PromotionCreated"
+	EventTypePromotionSucceeded              EventType = "PromotionSucceeded"
+	EventTypePromotionFailed                 EventType = "PromotionFailed"
+	EventTypePromotionErrored                EventType = "PromotionErrored"
+	EventTypePromotionAborted                EventType = "PromotionAborted"
+	EventTypeFreightApproved                 EventType = "FreightApproved"
+	EventTypeFreightVerificationSucceeded    EventType = "FreightVerificationSucceeded"
+	EventTypeFreightVerificationFailed       EventType = "FreightVerificationFailed"
+	EventTypeFreightVerificationErrored      EventType = "FreightVerificationErrored"
+	EventTypeFreightVerificationAborted      EventType = "FreightVerificationAborted"
+	EventTypeFreightVerificationInconclusive EventType = "FreightVerificationInconclusive"
+	EventTypeFreightVerificationUnknown      EventType = "FreightVerificationUnknown"
 )
 
 const (
@@ -42,3 +43,5 @@ const (
 	EventActorKubernetesUserPrefix = "kubernetes:"
 	EventActorUnknown              = "unknown actor"
 )
+
+type EventType string
