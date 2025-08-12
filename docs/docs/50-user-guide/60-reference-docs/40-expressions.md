@@ -243,6 +243,11 @@ definition of the static variables).
 
 ### Verification Variables
 
+| Name | Type | Description |
+|------|------|-------------|
+| `ctx` | `object` | Contains contextual information about the stage. See structure below. |
+| `vars` | `object` | A user-defined map of variable names to static values of any type. The map is derived from the `Stage`'s `spec.vars` field. Variable names must observe standard Go variable-naming rules. Stage-level variables can be referenced in verification arguments to pass dynamic values to AnalysisRuns. |
+
 :::note
 Verification processes evaluate a `Stage`'s current state and, while frequently
 executed immediately following a promotion, are not intrinsically part of the
@@ -251,11 +256,6 @@ in `spec.promotionTemplate.spec.vars`) and promotion context (like `outputs` fro
 promotion steps) are not accessible during verification. Only Stage-level variables
 and context are available.
 :::
-
-| Name | Type | Description |
-|------|------|-------------|
-| `ctx` | `object` | Contains contextual information about the stage. See structure below. |
-| `vars` | `object` | A user-defined map of variable names to static values of any type. The map is derived from the `Stage`'s `spec.vars` field. Variable names must observe standard Go variable-naming rules. Stage-level variables can be referenced in verification arguments to pass dynamic values to AnalysisRuns. |
 
 #### Context (`ctx`) Object Structure for Verification
 
