@@ -154,7 +154,7 @@ Expect other useful variables to be added in the future.
 |------|------|-------------|
 | `ctx` | `object` | Contains contextual information about the promotion. See detailed structure below. |
 | `outputs` | `object` | A map of output from previous promotion steps indexed by step aliases. |
-| `vars` | `object` | A user-defined map of variable names to static values of any type. The map is derived from a `Promotion`'s `spec.promotionTemplate.spec.vars` field. Variable names must observe standard Go variable-naming rules. Variables values may, themselves, be defined using an expression. `vars` (contains previously defined variables) and `ctx` are available to expressions defining the values of variables, however, `outputs` and `secrets` are not. |
+| `vars` | `object` | A user-defined map of variable names to static values of any type. The map is derived from both the `Stage`'s `spec.vars` field and the `Promotion`'s `spec.promotionTemplate.spec.vars` field, with promotion template variables taking precedence over Stage-level variables for any conflicting names. Variable names must observe standard Go variable-naming rules. Variables values may, themselves, be defined using an expression. `vars` (contains previously defined variables) and `ctx` are available to expressions defining the values of variables, however, `outputs` and `secrets` are not. |
 | `task` | `object` | A map containing output from previous steps within the same PromotionTask under the `outputs` field, indexed by step aliases. Only available within `(Cluster)PromotionTask` steps. |
 
 #### Context (`ctx`) Object Structure
@@ -246,6 +246,16 @@ definition of the static variables).
 | Name | Type | Description |
 |------|------|-------------|
 | `ctx` | `object` | Contains contextual information about the stage. See structure below. |
+| `vars` | `object` | A user-defined map of variable names to static values of any type. The map is derived from the `Stage`'s `spec.vars` field. Variable names must observe standard Go variable-naming rules. Stage-level variables can be referenced in verification arguments to pass dynamic values to AnalysisRuns. |
+
+:::note
+Verification processes evaluate a `Stage`'s current state and, while frequently
+executed immediately following a promotion, are not intrinsically part of the
+promotion process itself. Therefore, promotion-level variables (such as those defined
+in `spec.promotionTemplate.spec.vars`) and promotion context (like `outputs` from
+promotion steps) are not accessible during verification. Only Stage-level variables
+and context are available.
+:::
 
 #### Context (`ctx`) Object Structure for Verification
 

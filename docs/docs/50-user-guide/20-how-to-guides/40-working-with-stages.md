@@ -12,7 +12,9 @@ Each Kargo Stage is represented by a Kubernetes resource of type `Stage`.
 Like most Kubernetes resources, a `Stage` is composed of a user-defined `spec` field
 and a system-populated `status` field.
 
-A `Stage` resource's `spec` field is itself composed of three main areas of concern:
+A `Stage` resource's `spec` field is itself composed of four main areas of concern:
+
+* Variables
 
 * Requested Freight
 
@@ -20,7 +22,43 @@ A `Stage` resource's `spec` field is itself composed of three main areas of conc
 
 * Verification
 
-The following sections will explore each of these `spec` sections as well as `status` in greater detail.
+The following sections will explore each of these as well as `status` in
+greater detail.
+
+### Variables
+
+The `spec.vars` field allows you to define variables that can be referenced anywhere
+in the `Stage` specification that supports expressions, including the
+[promotion template](#promotion-templates) and
+[verification configuration](#verification).
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: test
+  namespace: kargo-demo
+spec:
+  vars:
+    - name: gitopsRepo
+      value: https://github.com/example/kargo-demo.git
+    - name: targetBranch
+      value: stage/test
+    - name: imageRepo
+      value: public.ecr.aws/nginx/nginx
+  # ...
+```
+
+Stage-level variables are merged with promotion template-level variables, with
+promotion template variables taking precedence for any conflicting names.
+This allows you to define common variables at the `Stage` level while still being
+able to override or supplement them at the promotion level as needed.
+
+:::info
+Variables defined at the Stage level can be referenced using
+`${{ vars.<variable-name> }}` syntax throughout the `Stage` specification,
+including in promotion templates and verification arguments.
+:::
 
 ### Requested Freight
 
