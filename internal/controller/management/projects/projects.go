@@ -885,7 +885,7 @@ func (r *reconciler) ensureDefaultUserRoles(
 				{ // Nearly full access to all Promotions, but they are immutable
 					APIGroups: []string{kargoapi.GroupVersion.Group},
 					Resources: []string{"promotions"},
-					Verbs:     []string{"create", "delete", "get", "list", "watch"},
+					Verbs:     []string{"create", "delete", "get", "list", "watch", "patch"},
 				},
 				{ // Manual approvals involve patching Freight status
 					APIGroups: []string{kargoapi.GroupVersion.Group},
