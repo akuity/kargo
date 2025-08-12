@@ -77,7 +77,6 @@ export const EditClusterAnalysisTemplateModal = ({ visible, hide, templateName }
             height='500px'
             placeholder={getClusterAnalysisTemplateYAMLExample()}
             isLoading={isLoading}
-            isHideManagedFieldsDisplayed
             label='Spec'
           />
         )}
