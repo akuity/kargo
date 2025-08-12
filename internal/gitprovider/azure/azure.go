@@ -11,8 +11,8 @@ import (
 	adogit "github.com/microsoft/azure-devops-go-api/azuredevops/v7/git"
 	"k8s.io/utils/ptr"
 
-	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/gitprovider"
+	"github.com/akuity/kargo/pkg/git"
 )
 
 const ProviderName = "azure"

@@ -11,8 +11,8 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	"k8s.io/utils/ptr"
 
-	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/gitprovider"
+	"github.com/akuity/kargo/pkg/git"
 )
 
 const ProviderName = "github"

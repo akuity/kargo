@@ -19,7 +19,6 @@ import (
 
 	rollouts "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	libargocd "github.com/akuity/kargo/internal/argocd"
 	"github.com/akuity/kargo/internal/controller"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/promotions"
@@ -36,6 +35,7 @@ import (
 	promotionStepRunners "github.com/akuity/kargo/internal/promotion/runner/builtin"
 	"github.com/akuity/kargo/internal/server/kubernetes"
 	"github.com/akuity/kargo/internal/types"
+	libargocd "github.com/akuity/kargo/pkg/argocd"
 	pkgPromotion "github.com/akuity/kargo/pkg/promotion"
 	versionpkg "github.com/akuity/kargo/pkg/x/version"
 )

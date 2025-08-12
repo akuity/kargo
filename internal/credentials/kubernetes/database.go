@@ -17,9 +17,9 @@ import (
 	"github.com/akuity/kargo/internal/credentials/kubernetes/ecr"
 	"github.com/akuity/kargo/internal/credentials/kubernetes/gar"
 	"github.com/akuity/kargo/internal/credentials/kubernetes/github"
-	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/pkg/git"
 )
 
 // database is an implementation of the credentials.Database interface that

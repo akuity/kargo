@@ -26,6 +26,7 @@ import (
 	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/indexer"
 	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
+	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 )
 
 func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
@@ -340,8 +341,8 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 				Build()
 
 			r := &ControlFlowStageReconciler{
-				client:        c,
-				eventRecorder: fakeevent.NewEventRecorder(10),
+				client:      c,
+				eventSender: k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
 				shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
 					IsDefaultController: false,
 					ShardName:           "test-shard",
@@ -666,8 +667,8 @@ func TestControlFlowStageReconciler_reconcile(t *testing.T) {
 				Build()
 
 			r := &ControlFlowStageReconciler{
-				client:        c,
-				eventRecorder: fakeevent.NewEventRecorder(10),
+				client:      c,
+				eventSender: k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
 				shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
 					IsDefaultController: false,
 					ShardName:           "test-shard",
@@ -913,7 +914,7 @@ func TestControlFlowStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 				event := <-recorder.Events
 
 				assert.Equal(t, corev1.EventTypeNormal, event.EventType)
-				assert.Equal(t, kargoapi.EventReasonFreightVerificationSucceeded, event.Reason)
+				assert.Equal(t, string(kargoapi.EventTypeFreightVerificationSucceeded), event.Reason)
 				assert.Equal(t, "Freight verification succeeded", event.Message)
 
 				assert.Equal(t, map[string]string{
@@ -1030,8 +1031,8 @@ func TestControlFlowStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 			recorder := fakeevent.NewEventRecorder(10)
 
 			r := &ControlFlowStageReconciler{
-				client:        c,
-				eventRecorder: recorder,
+				client:      c,
+				eventSender: k8sevent.NewEventSender(recorder),
 			}
 
 			_, err := r.markFreightVerifiedForStage(context.Background(), tt.stage, tt.freight, tt.startTime, tt.finishTime)

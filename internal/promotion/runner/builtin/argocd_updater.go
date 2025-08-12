@@ -16,10 +16,11 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libargocd "github.com/akuity/kargo/internal/argocd"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
-	"github.com/akuity/kargo/internal/git"
 	checkers "github.com/akuity/kargo/internal/health/checker/builtin"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
+	pkgargocd "github.com/akuity/kargo/pkg/argocd"
+	"github.com/akuity/kargo/pkg/git"
 	"github.com/akuity/kargo/pkg/health"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
@@ -153,7 +154,7 @@ func (a *argocdUpdater) run(
 			Name:      update.Name,
 		}
 		if appKey.Namespace == "" {
-			appKey.Namespace = libargocd.Namespace()
+			appKey.Namespace = pkgargocd.Namespace()
 		}
 		app, err := a.getAuthorizedApplicationFn(ctx, stepCtx, appKey)
 		if err != nil {
@@ -543,7 +544,7 @@ func (a *argocdUpdater) syncApplication(
 		ctx,
 		app,
 		applicationOperationInitiator,
-		argocd.EventReasonOperationStarted,
+		argocd.EventTypeOperationStarted,
 		message,
 	)
 	return nil

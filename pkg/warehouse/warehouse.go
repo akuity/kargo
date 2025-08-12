@@ -1,7 +1,8 @@
-package api
+package warehouse
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -59,7 +61,7 @@ func RefreshWarehouse(
 		c,
 		warehouse,
 		kargoapi.AnnotationKeyRefresh,
-		time.Now().Format(time.RFC3339),
+		ptr.To(time.Now().Format(time.RFC3339)),
 	); err != nil {
 		return nil, fmt.Errorf("refresh: %w", err)
 	}
@@ -68,10 +70,6 @@ func RefreshWarehouse(
 
 // ListWarehouseFreightOptions is a struct that can be used to specify filtering
 // criteria when listing Freight resources that originated from a Warehouse.
-//
-// +protobuf=false
-// +k8s:deepcopy-gen=false
-// +k8s:openapi-gen=false
 type ListWarehouseFreightOptions struct {
 	// ApprovedFor names a Stage for which all Freight resources that have been
 	// approved for that Stage should be included in the list results.
@@ -238,4 +236,40 @@ func ListFreightFromWarehouse(
 		}
 	}
 	return filtered, nil
+}
+
+// NOTE(thomastaylor312): This is copy pasted and adapted from internal/api to avoid needing to pull
+// this into a separate `pkg/helper` module we reimport in kargo/internal. If we end up using this
+// in more than one place, we should probably pull the original code out into a reusable module
+func patchAnnotation(
+	ctx context.Context,
+	c client.Client,
+	obj client.Object,
+	key string,
+	value *string,
+) error {
+	type objectMeta struct {
+		Annotations map[string]*string `json:"annotations"`
+	}
+	type patch struct {
+		ObjectMeta objectMeta `json:"metadata"`
+	}
+	data, err := json.Marshal(patch{
+		ObjectMeta: objectMeta{
+			Annotations: map[string]*string{
+				key: value,
+			},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("marshal patch data: %w", err)
+	}
+	if err := c.Patch(
+		ctx,
+		obj,
+		client.RawPatch(types.MergePatchType, data),
+	); err != nil {
+		return fmt.Errorf("patch annotation: %w", err)
+	}
+	return nil
 }
