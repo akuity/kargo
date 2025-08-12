@@ -103,7 +103,6 @@ export const ProjectConfig = () => {
               onChange={(e) => field.onChange(e || '')}
               placeholder={yaml.stringify(projectConfigYAMLExample)}
               schema={projectConfigSchema as JSONSchema4}
-              isHideManagedFieldsDisplayed
             />
           )}
         </FieldContainer>
