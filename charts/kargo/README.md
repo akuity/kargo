@@ -17,7 +17,7 @@
 | Name                                   | Description                                                                                  | Value                   |
 | -------------------------------------- | -------------------------------------------------------------------------------------------- | ----------------------- |
 | `global.clusterSecretsNamespace`       | Indicates a namespace where Secrets associated with cluster-scoped resources can be located. | `kargo-cluster-secrets` |
-| `global.createClusterSecretsNamespace` | Indicates whether the `clusterSecretsNamespace` should be created by Kargo.                  | `true`                  |
+| `global.createClusterSecretsNamespace` | Indicates whether the `clusterSecretsNamespace` should be managed by the chart.              | `true`                  |
 | `global.labels`                        | Labels to add to all resources.                                                              | `{}`                    |
 | `global.annotations`                   | Annotations to add to all resources.                                                         | `{}`                    |
 | `global.podLabels`                     | Labels to add to all pods.                                                                   | `{}`                    |
