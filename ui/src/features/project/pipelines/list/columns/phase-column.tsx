@@ -17,12 +17,12 @@ export const phaseColumn = (): ColumnType<Stage> => ({
     if (getCurrentFreight(stage).length > 0) {
       const Comp = (
         <Flex align='center' gap={4}>
-          {stagePhase}{' '}
           <StageConditionIcon
             conditions={stage?.status?.conditions || []}
             noTooltip
             className='text-[10px]'
           />
+          {stagePhase}{' '}
         </Flex>
       );
 

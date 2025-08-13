@@ -98,12 +98,12 @@ export const StageNode = (props: { stage: Stage }) => {
 
     let Phase = (
       <Flex align='center' gap={4}>
-        {stagePhase}{' '}
         <StageConditionIcon
           className='text-[10px]'
           conditions={props.stage?.status?.conditions || []}
           noTooltip
         />
+        {stagePhase}
         {stagePhase === 'Promoting' && (
           <FontAwesomeIcon icon={faExternalLink} className='text-[8px]' />
         )}
@@ -130,8 +130,8 @@ export const StageNode = (props: { stage: Stage }) => {
           {stageHealth?.status && (
             <Flex gap={4}>
               <Flex align='center' gap={4}>
-                {stageHealth?.status}
                 <HealthStatusIcon noTooltip className='text-[8px]' health={stageHealth} />
+                {stageHealth?.status}
               </Flex>
             </Flex>
           )}
