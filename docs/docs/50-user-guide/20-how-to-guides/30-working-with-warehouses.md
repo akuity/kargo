@@ -671,18 +671,12 @@ Helm chart repository subscriptions can be defined using the following fields:
         semverConstraint: ^1.0.0
   ```
 
-
 ## Working with Private Repositories
 
-When your `Warehouse` needs to access private repositories (Git repositories,
-container image registries, or Helm chart repositories), you'll need to configure
-appropriate credentials.
-
-Kargo uses specially labeled Kubernetes `Secret` resources to store repository
-credentials. These credentials are matched to repositories by URL and repository type.
-
-For a more detailed information on creating and managing repository credentials
-refer to [Managing Credentials](../50-security/30-managing-credentials.md).
+Frequently, `Warehouse`s require access to private repositories, in which case
+appropriate credentials must be made available in some form. The many available
+authentication options are covered in great detail on the
+[Managing Credentials](../50-security/30-managing-credentials.md) page.
 
 ## Performance Considerations
 
