@@ -9,6 +9,7 @@ import { edgeIndexer } from './edge-indexer';
 import { layoutGraph } from './layout-graph';
 import { stackedIndexer, warehouseIndexer } from './node-indexer';
 import { stackNodes } from './stack-nodes';
+import { DimensionState } from './use-node-dimension-state';
 
 export const reactFlowNodeConstants = {
   CUSTOM_NODE: 'custom-node',
@@ -21,6 +22,7 @@ export const useReactFlowPipelineGraph = (
   // basically list of warehouses
   pipeline: string[],
   redraw: boolean,
+  dimensionState: DimensionState,
   stack?: {
     afterNodes?: string[];
   },
@@ -29,6 +31,13 @@ export const useReactFlowPipelineGraph = (
   const { warehouseColorMap } = useContext(ColorContext);
 
   return useMemo(() => {
+    if (Object.keys(dimensionState).length === 0) {
+      return {
+        nodes: [],
+        edges: []
+      };
+    }
+
     // eslint-disable-next-line prefer-const
     let { graph, stageByName } = layoutGraph(
       {
@@ -46,6 +55,7 @@ export const useReactFlowPipelineGraph = (
           return !!pipeline.length && !pipeline.includes(w?.metadata?.name || '');
         }
       },
+      dimensionState,
       warehouseColorMap
     );
 
@@ -66,8 +76,8 @@ export const useReactFlowPipelineGraph = (
           id: node,
           type: reactFlowNodeConstants.STACKED_NODE,
           position: {
-            x: dagreNode?.x - dagreNode?.width / 2,
-            y: dagreNode?.y - dagreNode?.height / 2
+            x: dagreNode?.x,
+            y: dagreNode?.y
           },
           data: {
             value: dagreNode?.value,
@@ -88,8 +98,8 @@ export const useReactFlowPipelineGraph = (
         id: node,
         type: reactFlowNodeConstants.CUSTOM_NODE,
         position: {
-          x: dagreNode?.x - dagreNode?.width / 2,
-          y: dagreNode?.y - dagreNode?.height / 2
+          x: dagreNode?.x,
+          y: dagreNode?.y
         },
         data: {
           label: node,
@@ -131,5 +141,5 @@ export const useReactFlowPipelineGraph = (
       nodes: reactFlowNodes,
       edges: reactFlowEdges
     };
-  }, [stack?.afterNodes, pipeline, redraw, warehouseColorMap, hideSubscriptions]);
+  }, [stack?.afterNodes, pipeline, redraw, warehouseColorMap, hideSubscriptions, dimensionState]);
 };
