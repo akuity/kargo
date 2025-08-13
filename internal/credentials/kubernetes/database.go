@@ -235,6 +235,8 @@ func (k *database) getCredentialsSecret(
 		switch credType {
 		case credentials.TypeGit:
 			secretURL = git.NormalizeURL(secretURL)
+		case credentials.TypeImage:
+			secretURL = image.NormalizeURL(secretURL)
 		case credentials.TypeHelm:
 			secretURL = helm.NormalizeChartRepositoryURL(secretURL)
 		}
