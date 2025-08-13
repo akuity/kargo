@@ -1,6 +1,5 @@
 global:
   clusterSecretsNamespace: kargo-cluster-secrets
-  createClusterSecretsNamespace: false
 api:
   logLevel: DEBUG
   host: localhost:30081
