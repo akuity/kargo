@@ -675,7 +675,7 @@ Helm chart repository subscriptions can be defined using the following fields:
 
 Frequently, `Warehouse`s require access to private repositories, in which case
 appropriate credentials must be made available in some form. The many available
-authentication options are covered in great detail on the
+authentication options are covered in detail on the
 [Managing Credentials](../50-security/30-managing-credentials.md) page.
 
 ## Performance Considerations
