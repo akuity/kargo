@@ -49,6 +49,14 @@ export const getStagePhase = (stage: Stage) => {
     return 'Verifying';
   }
 
+  const ready = hasCondition(StageConditionType.Ready, StageConditionStatus.True, conditions);
+
+  const failed = ready.condition?.status === StageConditionStatus.False;
+
+  if (failed && ready.condition?.reason !== 'NoFreight') {
+    return 'Failed';
+  }
+
   const reconciling = hasCondition(
     StageConditionType.Reconciling,
     StageConditionStatus.True,
@@ -57,14 +65,6 @@ export const getStagePhase = (stage: Stage) => {
 
   if (reconciling.isActive) {
     return 'Reconciling';
-  }
-
-  const ready = hasCondition(StageConditionType.Ready, StageConditionStatus.True, conditions);
-
-  const failed = ready.condition?.status === StageConditionStatus.False;
-
-  if (failed && ready.condition?.reason !== 'NoFreight') {
-    return 'Failed';
   }
 
   if (ready.isActive) {

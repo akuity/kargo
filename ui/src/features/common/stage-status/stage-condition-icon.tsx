@@ -91,13 +91,6 @@ export const StageConditionIcon = memo(
           tooltipMessage: verifiedCondition?.message ?? '',
           iconClass: `text-blue-500 ${styles.magnifyingGlass}`
         };
-      } else if (isReconciling) {
-        iconState = {
-          icon: faSync,
-          tooltipTitle: 'Reconciling',
-          tooltipMessage: reconcilingCondition?.message ?? '',
-          iconClass: `text-yellow-500 ${styles.rotate}`
-        };
       } else if (isFailed && readyCondition.reason !== 'NoFreight') {
         iconState = {
           icon: faTimesCircle,
@@ -111,6 +104,13 @@ export const StageConditionIcon = memo(
           tooltipTitle: 'Ready',
           tooltipMessage: readyCondition?.message ?? '',
           iconClass: 'text-green-400'
+        };
+      } else if (isReconciling) {
+        iconState = {
+          icon: faSync,
+          tooltipTitle: 'Reconciling',
+          tooltipMessage: reconcilingCondition?.message ?? '',
+          iconClass: `text-yellow-500 ${styles.rotate}`
         };
       }
 
