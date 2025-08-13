@@ -19,7 +19,8 @@ image:
 global:
   ## @param global.clusterSecretsNamespace Indicates a namespace where Secrets associated with cluster-scoped resources can be located.
   clusterSecretsNamespace: kargo-cluster-secrets
-
+  ## @param global.createClusterSecretsNamespace Indicates whether the `clusterSecretsNamespace` should be created by Kargo. 
+  createClusterSecretsNamespace: true
   ## @param global.labels Labels to add to all resources.
   labels: {}
   ## @param global.annotations Annotations to add to all resources.
