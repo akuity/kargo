@@ -73,6 +73,36 @@ is structured as follows:
 | `header` | `func(string) string` | `headers` can be inconvenient to work with directly. This function allows you to access a header by name. |
 | `body` | `map[string]any` | The body of the response, if any, unmarshaled into a map. If the response body is empty, this map will also be empty. |
 
+:::info
+`vars` and `outputs` are not _directly_ available inside `successExpression` or
+`failureExpression`. These expressions are evaluated inside the `http` step itself
+after it receives the response, and the only built-in context at that stage is the
+`response` object.
+
+If you need to compare against a variable or output value, you can insert its value
+at configuration time by wrapping it in `${{ }}` and quoting it inside your
+expression. For example:
+
+```yaml
+vars:
+- name: expectedStatus
+  value: completed
+steps:
+- uses: http
+  config:
+    url: https://api.example.com/status
+    successExpression: response.body.status == '${{ vars.expectedStatus }}'
+    failureExpression: response.body.status == 'failed'
+```
+
+At runtime, `${{ vars.expectedStatus }}` will be replaced with its actual value
+(`'completed'`), so the `http` step's expression sees:
+
+```yaml
+successExpression: response.body.status == 'completed'
+```
+:::
+
 ## Outputs
 
 The `http` step only produces the outputs described by the `outputs` field of
