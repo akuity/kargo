@@ -139,9 +139,7 @@ export const StageConditionIcon = memo(
           icon={iconState.icon}
           className={classNames(className, iconState.iconClass)}
         />
-        {isFailed && isReconciling && (
-          <FontAwesomeIcon icon={faSync} spin className='text-yellow-500' />
-        )}
+        {isReconciling && <FontAwesomeIcon icon={faSync} spin className='text-yellow-500' />}
       </>
     );
 
