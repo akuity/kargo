@@ -34,7 +34,7 @@ export const StageConditionIcon = memo(
     className?: string;
     noTooltip?: boolean;
   }) => {
-    const { iconState, isPromoting, isFailed, isReconciling } = useMemo(() => {
+    const { iconState, isPromoting, isReconciling } = useMemo(() => {
       const hasCondition = (
         type: StageConditionType,
         status: StageConditionStatus
