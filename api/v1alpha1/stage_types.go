@@ -381,6 +381,10 @@ type StageStatus struct {
 	// AutoPromotionEnabled indicates whether automatic promotion is enabled
 	// for the Stage based on the ProjectConfig.
 	AutoPromotionEnabled bool `json:"autoPromotionEnabled,omitempty" protobuf:"varint,14,opt,name=autoPromotionEnabled"`
+	// Metadata is a map of arbitrary metadata associated with the Stage.
+	// This is useful for storing additional information about the Stage
+	// that can be shared across promotions, verifications, or other processes.
+	Metadata map[string]apiextensionsv1.JSON `json:"metadata,omitempty" protobuf:"bytes,15,rep,name=metadata" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 }
 
 // GetConditions implements the conditions.Getter interface.
