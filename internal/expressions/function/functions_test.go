@@ -1295,3 +1295,267 @@ func Test_freightMetadata(t *testing.T) {
 		})
 	}
 }
+
+func Test_stageMetadata(t *testing.T) {
+	const testProject = "fake-project"
+	const testStageName = "fake-stage"
+
+	scheme := runtime.NewScheme()
+	assert.NoError(t, kargoapi.AddToScheme(scheme))
+
+	// Sample metadata for testing
+	testMetadata := map[string]any{
+		"deployment-id": "abc123",
+		"environment":   "staging",
+	}
+
+	// Create a stage object with metadata
+	testStage := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      testStageName,
+			Namespace: testProject,
+		},
+		Status: kargoapi.StageStatus{},
+	}
+
+	// Add metadata to the stage status
+	err := testStage.Status.UpsertMetadata("deployment-config", testMetadata)
+	assert.NoError(t, err)
+
+	err = testStage.Status.UpsertMetadata("build-number", 42)
+	assert.NoError(t, err)
+
+	err = testStage.Status.UpsertMetadata("issue", "#1234")
+	assert.NoError(t, err)
+
+	tests := []struct {
+		name       string
+		objects    []client.Object
+		args       []any
+		assertions func(t *testing.T, result any, err error)
+	}{
+		{
+			name:    "successful metadata retrieval - string map",
+			objects: []client.Object{testStage},
+			args:    []any{testStageName, "deployment-config"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, testMetadata, result)
+			},
+		},
+		{
+			name:    "successful metadata retrieval - number",
+			objects: []client.Object{testStage},
+			args:    []any{testStageName, "build-number"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				// JSON unmarshaling converts numbers to float64
+				assert.Equal(t, float64(42), result)
+			},
+		},
+		{
+			name:    "successful metadata retrieval - string",
+			objects: []client.Object{testStage},
+			args:    []any{testStageName, "issue"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, "#1234", result)
+			},
+		},
+		{
+			name:    "metadata key not found",
+			objects: []client.Object{testStage},
+			args:    []any{testStageName, "non-existent-key"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name:    "stage not found",
+			objects: []client.Object{}, // No stage objects
+			args:    []any{testStageName, "deployment-config"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "no arguments",
+			args: []any{},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "expected 2 arguments")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "one argument only",
+			args: []any{testStageName},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "expected 2 arguments")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "too many arguments",
+			args: []any{testStageName, "deployment-config", "extra"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "expected 2 arguments")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "invalid first argument type",
+			args: []any{123, "deployment-config"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "first argument must be string")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "invalid second argument type",
+			args: []any{testStageName, 123},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "second argument must be string")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "empty stage name",
+			args: []any{"", "deployment-config"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "stage name must not be empty")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "empty metadata key",
+			args: []any{testStageName, ""},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "metadata key must not be empty")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "stage with no metadata",
+			objects: []client.Object{
+				&kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      testStageName,
+						Namespace: testProject,
+					},
+					Status: kargoapi.StageStatus{}, // Empty status with no metadata
+				},
+			},
+			args: []any{testStageName, "some-key"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "stage with complex nested metadata",
+			objects: []client.Object{
+				func() *kargoapi.Stage {
+					stage := &kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      testStageName,
+							Namespace: testProject,
+						},
+						Status: kargoapi.StageStatus{},
+					}
+					complexData := map[string]any{
+						"nested": map[string]any{
+							"level1": map[string]string{
+								"key1": "value1",
+								"key2": "value2",
+							},
+							"level2": []string{"item1", "item2", "item3"},
+						},
+						"simple": "value",
+					}
+					err := stage.Status.UpsertMetadata("complex-config", complexData)
+					assert.NoError(t, err)
+					return stage
+				}(),
+			},
+			args: []any{testStageName, "complex-config"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.NotNil(t, result)
+
+				// Verify the complex structure is preserved
+				resultMap, ok := result.(map[string]any)
+				assert.True(t, ok)
+				assert.Contains(t, resultMap, "nested")
+				assert.Contains(t, resultMap, "simple")
+				assert.Equal(t, "value", resultMap["simple"])
+
+				nested, ok := resultMap["nested"].(map[string]any)
+				assert.True(t, ok)
+				assert.Contains(t, nested, "level1")
+				assert.Contains(t, nested, "level2")
+			},
+		},
+		{
+			name: "stage metadata with empty string value",
+			objects: []client.Object{
+				func() *kargoapi.Stage {
+					stage := &kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      testStageName,
+							Namespace: testProject,
+						},
+						Status: kargoapi.StageStatus{},
+					}
+					err := stage.Status.UpsertMetadata("empty-value", "")
+					assert.NoError(t, err)
+					return stage
+				}(),
+			},
+			args: []any{testStageName, "empty-value"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, "", result)
+			},
+		},
+		{
+			name: "stage metadata with boolean false value",
+			objects: []client.Object{
+				func() *kargoapi.Stage {
+					stage := &kargoapi.Stage{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      testStageName,
+							Namespace: testProject,
+						},
+						Status: kargoapi.StageStatus{},
+					}
+					err := stage.Status.UpsertMetadata("boolean-value", false)
+					assert.NoError(t, err)
+					return stage
+				}(),
+			},
+			args: []any{testStageName, "boolean-value"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, false, result)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(tt.objects...).
+				Build()
+
+			fn := stageMetadata(ctx, c, testProject)
+
+			result, err := fn(tt.args...)
+			tt.assertions(t, result, err)
+		})
+	}
+}

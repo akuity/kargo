@@ -22,10 +22,10 @@ type exprFn func(params ...any) (any, error)
 // FreightOperations returns a slice of expr.Option containing functions for
 // Freight operations.
 //
-// It provides `warehouse()`, `commitFrom()`, `imageFrom()`, and `chartFrom()`
-// functions that can be used within expressions. The functions operate within
-// the context of a given project with the provided freight requests and
-// references.
+// It provides `warehouse()`, `commitFrom()`, `imageFrom()`, `chartFrom()` and
+// `stageMetadata()` functions that can be used within expressions. The functions
+// operate within the context of a given project with the provided freight requests
+// and references.
 func FreightOperations(
 	ctx context.Context,
 	c client.Client,
@@ -39,6 +39,21 @@ func FreightOperations(
 		ImageFrom(ctx, c, project, freightRequests, freightRefs),
 		ChartFrom(ctx, c, project, freightRequests, freightRefs),
 		FreightMetadata(ctx, c, project),
+	}
+}
+
+// StageOperations returns a slice of expr.Option containing functions for
+// Stage operations.
+//
+// It provides `stageMetadata()` function that can be used within expressions
+// to access metadata stored on Stage resources.
+func StageOperations(
+	ctx context.Context,
+	c client.Client,
+	project string,
+) []expr.Option {
+	return []expr.Option{
+		StageMetadata(ctx, c, project),
 	}
 }
 
@@ -199,6 +214,70 @@ func freightMetadata(
 		found, err := freightData.Status.GetMetadata(key, &data)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get metadata %s from freight %s: %w", key, freightRefName, err)
+		}
+		if !found {
+			return nil, nil
+		}
+
+		return data, nil
+	}
+}
+
+func StageMetadata(
+	ctx context.Context,
+	c client.Client,
+	project string,
+) expr.Option {
+	return expr.Function(
+		"stageMetadata",
+		stageMetadata(ctx, c, project),
+		new(func(stageName, key string) any),
+	)
+}
+
+func stageMetadata(
+	ctx context.Context,
+	c client.Client,
+	project string,
+) exprFn {
+	return func(a ...any) (any, error) {
+		if len(a) != 2 {
+			return nil, fmt.Errorf("expected 2 arguments, got %d", len(a))
+		}
+
+		stageName, ok := a[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("first argument must be string, got %T", a[0])
+		}
+
+		if stageName == "" {
+			return nil, fmt.Errorf("stage name must not be empty")
+		}
+
+		key, ok := a[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("second argument must be string, got %T", a[1])
+		}
+		if key == "" {
+			return nil, fmt.Errorf("metadata key must not be empty")
+		}
+
+		stageData := kargoapi.Stage{}
+
+		if err := c.Get(ctx, client.ObjectKey{
+			Namespace: project,
+			Name:      stageName,
+		}, &stageData); err != nil {
+			if apierrors.IsNotFound(err) {
+				return nil, nil
+			}
+			return nil, fmt.Errorf("failed to get stage %s: %w", stageName, err)
+		}
+
+		var data any
+		found, err := stageData.Status.GetMetadata(key, &data)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get metadata %s from stage %s: %w", key, stageName, err)
 		}
 		if !found {
 			return nil, nil
