@@ -5,9 +5,9 @@ sidebar_label: Managing Credentials
 
 # Managing Credentials
 
-Kargo `Warehouse`s frequently require access to private repositories -
-read/write for Git repositories and read-only for container image or Helm chart
-repositories.
+Kargo `Warehouse`s frequently require read-only access to private repositories.
+Promotion processes often require this as well, and may even require read/write
+access to Git repositories.
 
 This page provides a comprehensive overview of the authentication
 options available for managing and using such credentials in Kargo projects.
