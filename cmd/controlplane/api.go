@@ -16,6 +16,7 @@ import (
 	"github.com/akuity/kargo/internal/server/kubernetes"
 	"github.com/akuity/kargo/internal/server/rbac"
 	"github.com/akuity/kargo/internal/types"
+	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	versionpkg "github.com/akuity/kargo/pkg/x/version"
 )
 
@@ -128,11 +129,13 @@ func (o *apiOptions) run(ctx context.Context) error {
 		serverCfg,
 		kubeClient,
 		rbac.NewKubernetesRolesDatabase(kubeClient),
-		event.NewRecorder(
-			ctx,
-			kubeClient.InternalClient().Scheme(),
-			kubeClient.InternalClient(),
-			"api",
+		k8sevent.NewEventSender(
+			event.NewRecorder(
+				ctx,
+				kubeClient.InternalClient().Scheme(),
+				kubeClient.InternalClient(),
+				"api",
+			),
 		),
 	)
 	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.BindAddress, o.Port))

@@ -1,7 +1,6 @@
 package event
 
 import (
-	"context"
 	"encoding/json"
 	"testing"
 	"time"
@@ -261,12 +260,14 @@ func TestNewPromotionAnnotations(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			result := NewPromotionAnnotations(context.TODO(), tc.actor, tc.promotion, tc.freight)
+			evt := NewPromotionEvent("a message", tc.actor, tc.promotion, tc.freight)
+			result := evt.MarshalAnnotations()
 			if tc.expectedFunc != nil {
 				tc.expectedFunc(t, result)
 				return
 			}
-			require.Equal(t, len(tc.expected), len(result), "Number of annotations doesn't match")
+			require.Equal(t, len(tc.expected), len(result),
+				"Number of annotations doesn't match:\nExpected: %+v\nActual: %+v", tc.expected, result)
 			for key, expectedValue := range tc.expected {
 				if key == v1alpha1.AnnotationKeyEventApplications {
 					expectedAppsJSON := tc.expected[v1alpha1.AnnotationKeyEventApplications]

@@ -6,7 +6,7 @@ import (
 	"connectrpc.com/connect"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
-	libargocd "github.com/akuity/kargo/internal/argocd"
+	libargocd "github.com/akuity/kargo/pkg/argocd"
 )
 
 func (s *server) GetConfig(

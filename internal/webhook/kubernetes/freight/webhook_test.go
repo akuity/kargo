@@ -24,6 +24,7 @@ import (
 	"github.com/akuity/kargo/internal/api"
 	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
 	libWebhook "github.com/akuity/kargo/internal/webhook/kubernetes"
+	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 )
 
 func TestNewWebhook(t *testing.T) {
@@ -31,7 +32,7 @@ func TestNewWebhook(t *testing.T) {
 	w := newWebhook(
 		libWebhook.Config{},
 		kubeClient,
-		&fakeevent.EventRecorder{},
+		k8sevent.NewEventSender(&fakeevent.EventRecorder{}),
 	)
 	require.NotNil(t, w.freightAliasGenerator)
 	// Assert that all overridable behaviors were initialized to a default:
@@ -737,7 +738,7 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 				require.NoError(t, err)
 				require.Len(t, r.Events, 1)
 				event := <-r.Events
-				require.Equal(t, kargoapi.EventReasonFreightApproved, event.Reason)
+				require.Equal(t, string(kargoapi.EventTypeFreightApproved), event.Reason)
 			},
 		},
 		{
@@ -790,7 +791,7 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 			oldFreight, newFreight := testCase.setup()
 
 			recorder := fakeevent.NewEventRecorder(1)
-			testCase.webhook.recorder = recorder
+			testCase.webhook.sender = k8sevent.NewEventSender(recorder)
 
 			var req admission.Request
 			if testCase.userInfo != nil {

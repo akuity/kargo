@@ -5,17 +5,15 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
-	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -26,7 +24,6 @@ import (
 	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/controller"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
-	"github.com/akuity/kargo/internal/event"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
@@ -34,6 +31,8 @@ import (
 	"github.com/akuity/kargo/internal/logging"
 	intpredicate "github.com/akuity/kargo/internal/predicate"
 	"github.com/akuity/kargo/internal/promotion"
+	"github.com/akuity/kargo/pkg/event"
+	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	pkgPromotion "github.com/akuity/kargo/pkg/promotion"
 )
 
@@ -66,7 +65,7 @@ type reconciler struct {
 
 	cfg ReconcilerConfig
 
-	recorder record.EventRecorder
+	sender event.Sender
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -117,7 +116,9 @@ func SetupReconcilerWithManager(
 
 	reconciler := newReconciler(
 		kargoMgr.GetClient(),
-		libEvent.NewRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), cfg.Name()),
+		k8sevent.NewEventSender(
+			libEvent.NewRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), cfg.Name()),
+		),
 		promoEngine,
 		cfg,
 	)
@@ -182,14 +183,14 @@ func SetupReconcilerWithManager(
 
 func newReconciler(
 	kargoClient client.Client,
-	recorder record.EventRecorder,
+	sender event.Sender,
 	promoEngine promotion.Engine,
 	cfg ReconcilerConfig,
 ) *reconciler {
 	r := &reconciler{
 		kargoClient: kargoClient,
 		promoEngine: promoEngine,
-		recorder:    recorder,
+		sender:      sender,
 		cfg:         cfg,
 	}
 	r.getStageFn = api.GetStage
@@ -393,14 +394,14 @@ func (r *reconciler) Reconcile(
 			)
 		}
 
-		var reason string
+		var reason kargoapi.EventType
 		switch newStatus.Phase {
 		case kargoapi.PromotionPhaseSucceeded:
-			reason = kargoapi.EventReasonPromotionSucceeded
+			reason = kargoapi.EventTypePromotionSucceeded
 		case kargoapi.PromotionPhaseFailed:
-			reason = kargoapi.EventReasonPromotionFailed
+			reason = kargoapi.EventTypePromotionFailed
 		case kargoapi.PromotionPhaseErrored:
-			reason = kargoapi.EventReasonPromotionErrored
+			reason = kargoapi.EventTypePromotionErrored
 		}
 
 		msg := fmt.Sprintf("Promotion %s", newStatus.Phase)
@@ -408,15 +409,17 @@ func (r *reconciler) Reconcile(
 			msg += fmt.Sprintf(": %s", newStatus.Message)
 		}
 
-		eventAnnotations := event.NewPromotionAnnotations(ctx,
+		evt := event.NewPromotionEvent(msg,
 			api.FormatEventControllerActor(r.cfg.Name()),
 			promo, freight)
 
 		if newStatus.Phase == kargoapi.PromotionPhaseSucceeded {
-			eventAnnotations[kargoapi.AnnotationKeyEventVerificationPending] =
-				strconv.FormatBool(stage.Spec.Verification != nil)
+			evt.VerificationPending = ptr.To(stage.Spec.Verification != nil)
 		}
-		r.recorder.AnnotatedEventf(promo, eventAnnotations, corev1.EventTypeNormal, reason, msg)
+
+		if sendErr := r.sender.Send(ctx, evt.ToCloudEvent(reason)); sendErr != nil {
+			logger.Error(sendErr, "error sending promotion event")
+		}
 	}
 
 	if err != nil {
@@ -659,16 +662,12 @@ func (r *reconciler) terminatePromotion(
 		return err
 	}
 
-	eventMeta := event.NewPromotionAnnotations(ctx, "", promo, freight)
-	eventMeta[kargoapi.AnnotationKeyEventActor] = actor
+	evt := event.NewPromotionEvent(newStatus.Message, "", promo, freight)
+	evt.Actor = ptr.To(actor)
 
-	r.recorder.AnnotatedEventf(
-		promo,
-		eventMeta,
-		corev1.EventTypeNormal,
-		kargoapi.EventReasonPromotionAborted,
-		newStatus.Message,
-	)
+	if err := r.sender.Send(ctx, evt.ToCloudEvent(kargoapi.EventTypePromotionAborted)); err != nil {
+		logger.Error(err, "error sending Promotion aborted event")
+	}
 
 	return nil
 }

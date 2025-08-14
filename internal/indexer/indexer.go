@@ -13,13 +13,13 @@ import (
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	libargocd "github.com/akuity/kargo/internal/argocd"
-	"github.com/akuity/kargo/internal/expressions"
-	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/promotion"
+	libargocd "github.com/akuity/kargo/pkg/argocd"
+	"github.com/akuity/kargo/pkg/expressions"
+	"github.com/akuity/kargo/pkg/git"
 )
 
 const (
