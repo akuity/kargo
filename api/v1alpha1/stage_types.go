@@ -2,6 +2,7 @@ package v1alpha1
 
 import (
 	"crypto/sha1"
+	"encoding/json"
 	"fmt"
 	"maps"
 	"slices"
@@ -395,6 +396,40 @@ func (w *StageStatus) GetConditions() []metav1.Condition {
 // SetConditions implements the conditions.Setter interface.
 func (w *StageStatus) SetConditions(conditions []metav1.Condition) {
 	w.Conditions = conditions
+}
+
+// UpsertMetadata inserts or updates the given key in Stage status Metadata
+func (s *StageStatus) UpsertMetadata(key string, data any) error {
+	if len(s.Metadata) == 0 {
+		s.Metadata = make(map[string]apiextensionsv1.JSON)
+	}
+
+	if key == "" {
+		return fmt.Errorf("key must not be empty")
+	}
+
+	dataBytes, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	s.Metadata[key] = apiextensionsv1.JSON{
+		Raw: dataBytes,
+	}
+	return nil
+}
+
+// GetMetadata retrieves the data associated with the given key from Stage status Metadata
+func (s *StageStatus) GetMetadata(key string, data any) (bool, error) {
+	dataBytes, ok := s.Metadata[key]
+
+	if !ok {
+		return false, nil
+	}
+
+	if err := json.Unmarshal(dataBytes.Raw, data); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // FreightReference is a simplified representation of a piece of Freight -- not
