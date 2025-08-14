@@ -60,28 +60,11 @@ The expressions included in the `successExpression`, `failureExpression`, and
 `outputs[].fromExpression` fields should _not_ be offset by `${{` and `}}`. This
 is to prevent the expressions from being evaluated by Kargo during
 pre-processing of step configurations. The `http` step itself will evaluate
-these expressions.
-:::
+these expressions after receiving the HTTP response.
 
-A `response` object (a `map[string]any`) is available to these expressions. It
-is structured as follows:
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `status` | `int` | The HTTP status code of the response. |
-| `headers` | `http.Header` | The headers of the response. See applicable [Go documentation](https://pkg.go.dev/net/http#Header). |
-| `header` | `func(string) string` | `headers` can be inconvenient to work with directly. This function allows you to access a header by name. |
-| `body` | `map[string]any` | The body of the response, if any, unmarshaled into a map. If the response body is empty, this map will also be empty. |
-
-:::info
-`vars` and `outputs` are not _directly_ available inside `successExpression` or
-`failureExpression`. These expressions are evaluated inside the `http` step itself
-after it receives the response, and the only built-in context at that stage is the
-`response` object.
-
-If you need to compare against a variable or output value, you can insert its value
-at configuration time by wrapping it in `${{ }}` and quoting it inside your
-expression. For example:
+However, if you need to use variables or outputs from other steps within these
+expressions, you can wrap those specific values in `${{ }}` so they are
+pre-evaluated and substituted before the configuration reaches the step:
 
 ```yaml
 vars:
@@ -95,13 +78,23 @@ steps:
     failureExpression: response.body.status == 'failed'
 ```
 
-At runtime, `${{ vars.expectedStatus }}` will be replaced with its actual value
-(`'completed'`), so the `http` step's expression sees:
+At runtime, `${{ vars.expectedStatus }}` is replaced with `'completed'`, so the
+`http` step receives:
 
 ```yaml
 successExpression: response.body.status == 'completed'
 ```
 :::
+
+A `response` object (a `map[string]any`) is available to these expressions. It
+is structured as follows:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | `int` | The HTTP status code of the response. |
+| `headers` | `http.Header` | The headers of the response. See applicable [Go documentation](https://pkg.go.dev/net/http#Header). |
+| `header` | `func(string) string` | `headers` can be inconvenient to work with directly. This function allows you to access a header by name. |
+| `body` | `map[string]any` | The body of the response, if any, unmarshaled into a map. If the response body is empty, this map will also be empty. |
 
 ## Outputs
 
