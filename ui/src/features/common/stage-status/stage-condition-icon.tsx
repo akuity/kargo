@@ -34,7 +34,7 @@ export const StageConditionIcon = memo(
     className?: string;
     noTooltip?: boolean;
   }) => {
-    const { iconState, isPromoting } = useMemo(() => {
+    const { iconState, isPromoting, isReconciling } = useMemo(() => {
       const hasCondition = (
         type: StageConditionType,
         status: StageConditionStatus
@@ -76,7 +76,7 @@ export const StageConditionIcon = memo(
         iconClass: 'text-gray-400'
       };
 
-      // Priority: Promoting > Verifying > Reconciling > Failed > Ready
+      // Priority: Promoting > Verifying > Failed > Ready > Reconciling
       if (isPromoting && promotingCondition?.reason !== 'NoFreight') {
         iconState = {
           icon: faCircleMinus,
@@ -90,13 +90,6 @@ export const StageConditionIcon = memo(
           tooltipTitle: 'Verifying',
           tooltipMessage: verifiedCondition?.message ?? '',
           iconClass: `text-blue-500 ${styles.magnifyingGlass}`
-        };
-      } else if (isReconciling) {
-        iconState = {
-          icon: faSync,
-          tooltipTitle: 'Reconciling',
-          tooltipMessage: reconcilingCondition?.message ?? '',
-          iconClass: `text-yellow-500 ${styles.rotate}`
         };
       } else if (isFailed && readyCondition.reason !== 'NoFreight') {
         iconState = {
@@ -112,9 +105,16 @@ export const StageConditionIcon = memo(
           tooltipMessage: readyCondition?.message ?? '',
           iconClass: 'text-green-400'
         };
+      } else if (isReconciling) {
+        iconState = {
+          icon: faSync,
+          tooltipTitle: 'Reconciling',
+          tooltipMessage: reconcilingCondition?.message ?? '',
+          iconClass: `text-yellow-500 ${styles.rotate}`
+        };
       }
 
-      return { iconState, isPromoting };
+      return { iconState, isPromoting, isFailed, isReconciling };
     }, [conditions]); // Only recalculate when conditions changes
 
     const tooltipContent = useMemo(
@@ -134,10 +134,13 @@ export const StageConditionIcon = memo(
     const Icon = isPromoting ? (
       <TruckIcon className={className} />
     ) : (
-      <FontAwesomeIcon
-        icon={iconState.icon}
-        className={classNames(className, iconState.iconClass)}
-      />
+      <>
+        <FontAwesomeIcon
+          icon={iconState.icon}
+          className={classNames(className, iconState.iconClass)}
+        />
+        {isReconciling && <FontAwesomeIcon icon={faSync} spin className='text-yellow-500' />}
+      </>
     );
 
     if (noTooltip) {

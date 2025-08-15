@@ -13,8 +13,8 @@ export const healthColumn = (): ColumnType<Stage> => ({
     if (stageHealth?.status) {
       return (
         <Flex gap={4} align='center'>
-          {stageHealth?.status}
           <HealthStatusIcon noTooltip health={stageHealth} />
+          {stageHealth?.status}
         </Flex>
       );
     }
