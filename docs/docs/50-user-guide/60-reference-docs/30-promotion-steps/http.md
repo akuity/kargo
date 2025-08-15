@@ -94,6 +94,7 @@ configuration:
   "successExpression": "response.body.status == 'completed'",
   "url": "https://api.example.com/status"
 }
+```
 
 Internally, the step evaluates the `successExpression` and `failureExpression`
 exactly as if the user had written them as they now appear.
