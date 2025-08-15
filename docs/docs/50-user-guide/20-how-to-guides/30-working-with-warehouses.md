@@ -41,7 +41,7 @@ spec:
   subscriptions:
   - image:
       repoURL: public.ecr.aws/nginx/nginx
-      semverConstraint: ^1.26.0
+      constraint: ^1.26.0
   - git:
       repoURL: https://github.com/example/kargo-demo.git
 ```
@@ -138,7 +138,7 @@ strategies are:
       subscriptions:
       - image:
           repoURL: public.ecr.aws/nginx/nginx
-          semverConstraint: ^1.26.0
+          constraint: ^1.26.0
     ```
 
 - `Lexical`: This strategy selects the image with the lexicographically greatest
@@ -190,7 +190,7 @@ strategies are:
       - image:
           repoURL: public.ecr.aws/nginx/nginx
           imageSelectionStrategy: Digest
-          semverConstraint: latest
+          constraint: latest
     ```
 
 <a name="newest-build"></a>
