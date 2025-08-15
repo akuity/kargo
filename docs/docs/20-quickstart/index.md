@@ -308,7 +308,7 @@ the previous section.
       subscriptions:
       - image:
           repoURL: public.ecr.aws/nginx/nginx
-          semverConstraint: ^1.26.0
+          constraint: ^1.26.0
           discoveryLimit: 5
     ---
     apiVersion: kargo.akuity.io/v1alpha1
@@ -476,7 +476,7 @@ the previous section.
       subscriptions:
       - image:
           repoURL: public.ecr.aws/nginx/nginx
-          semverConstraint: ^1.26.0
+          constraint: ^1.26.0
           discoveryLimit: 5
     ---
     apiVersion: kargo.akuity.io/v1alpha1
