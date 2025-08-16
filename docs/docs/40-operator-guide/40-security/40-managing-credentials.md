@@ -5,12 +5,13 @@ sidebar_label: Managing Credentials
 
 # Managing Credentials
 
-To orchestrate the promotion of `Freight` from `Stage` to `Stage`, Kargo will
-often require read/write permissions on private Git repositories and read-only
-permissions on private container image or Helm chart repositories.
+Kargo `Warehouse`s frequently require read-only access to private repositories.
+Promotion processes often require this as well, and may even require read/write
+access to Git repositories.
 
-This section focuses on an operator's role in providing Kargo projects with
-necessary credentials.
+This page focuses on an operator's role in providing Kargo projects with necessary
+credentials and configuring various authentication options, including ambient
+credentials that require minimal configuration within Kargo itself.
 
 :::info
 __Not what you were looking for?__
