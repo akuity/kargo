@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -1029,6 +1030,176 @@ func Test_argoCDUpdater_syncApplication(t *testing.T) {
 		assertions     func(*testing.T, error)
 	}{
 		{
+			name: "updates sources when both source and sources are specified",
+			runner: &argocdUpdater{
+				argoCDAppPatchFn: func(
+					ctx context.Context,
+					app kubeclient.ObjectWithKind,
+					patchFn kubeclient.UnstructuredPatchFn,
+				) error {
+					// Verify that the patch function updates sources, not source
+					src := &unstructured.Unstructured{}
+					dst := &unstructured.Unstructured{}
+					src.Object = map[string]any{
+						"spec": map[string]any{
+							"sources": []any{
+								map[string]any{
+									"repoURL":        "https://example.com/repo.git",
+									"targetRevision": "v2.0.0",
+								},
+							},
+						},
+					}
+					dst.Object = map[string]any{
+						"spec": map[string]any{
+							"source": map[string]any{
+								"repoURL":        "https://example.com/repo.git",
+								"targetRevision": "v1.0.0",
+							},
+							"sources": []any{
+								map[string]any{
+									"repoURL":        "https://example.com/repo.git",
+									"targetRevision": "v1.5.0",
+								},
+							},
+						},
+					}
+
+					err := patchFn(*src, *dst)
+					if err != nil {
+						return err
+					}
+
+					// Verify that sources was updated, not source
+					dstSpec := dst.Object["spec"].(map[string]any)
+					dstSources := dstSpec["sources"].([]any)
+					require.Len(t, dstSources, 1)
+					dstSource := dstSources[0].(map[string]any)
+					require.Equal(t, "v2.0.0", dstSource["targetRevision"])
+
+					// Original source field should remain unchanged
+					dstSource1 := dstSpec["source"].(map[string]any)
+					require.Equal(t, "v1.0.0", dstSource1["targetRevision"])
+
+					return nil
+				},
+				logAppEventFn: func(
+					context.Context,
+					*argocd.Application,
+					string,
+					string,
+					string,
+				) {
+				},
+			},
+			app: &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-name",
+					Namespace: "fake-namespace",
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAuthorizedStage: "fake-namespace:fake-name",
+					},
+				},
+				Spec: argocd.ApplicationSpec{
+					// Both source and sources are specified - sources should take precedence
+					Source: &argocd.ApplicationSource{
+						RepoURL:        "https://example.com/repo.git",
+						TargetRevision: "v1.0.0",
+					},
+					Sources: []argocd.ApplicationSource{
+						{
+							RepoURL:        "https://example.com/repo.git",
+							TargetRevision: "v1.5.0",
+						},
+					},
+				},
+			},
+			desiredSources: argocd.ApplicationSources{
+				{
+					RepoURL:        "https://example.com/repo.git",
+					TargetRevision: "v2.0.0",
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "updates source when only source is specified",
+			runner: &argocdUpdater{
+				argoCDAppPatchFn: func(
+					ctx context.Context,
+					app kubeclient.ObjectWithKind,
+					patchFn kubeclient.UnstructuredPatchFn,
+				) error {
+					// Verify that the patch function updates source when sources is empty
+					src := &unstructured.Unstructured{}
+					dst := &unstructured.Unstructured{}
+					src.Object = map[string]any{
+						"spec": map[string]any{
+							"source": map[string]any{
+								"repoURL":        "https://example.com/repo.git",
+								"targetRevision": "v2.0.0",
+							},
+						},
+					}
+					dst.Object = map[string]any{
+						"spec": map[string]any{
+							"source": map[string]any{
+								"repoURL":        "https://example.com/repo.git",
+								"targetRevision": "v1.0.0",
+							},
+						},
+					}
+
+					err := patchFn(*src, *dst)
+					if err != nil {
+						return err
+					}
+
+					// Verify that source was updated
+					dstSpec := dst.Object["spec"].(map[string]any)
+					dstSource := dstSpec["source"].(map[string]any)
+					require.Equal(t, "v2.0.0", dstSource["targetRevision"])
+
+					return nil
+				},
+				logAppEventFn: func(
+					context.Context,
+					*argocd.Application,
+					string,
+					string,
+					string,
+				) {
+				},
+			},
+			app: &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-name",
+					Namespace: "fake-namespace",
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyAuthorizedStage: "fake-namespace:fake-name",
+					},
+				},
+				Spec: argocd.ApplicationSpec{
+					// Only source is specified
+					Source: &argocd.ApplicationSource{
+						RepoURL:        "https://example.com/repo.git",
+						TargetRevision: "v1.0.0",
+					},
+				},
+			},
+			desiredSources: argocd.ApplicationSources{
+				{
+					RepoURL:        "https://example.com/repo.git",
+					TargetRevision: "v2.0.0",
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
 			name: "error patching Application",
 			runner: &argocdUpdater{
 				argoCDAppPatchFn: func(
@@ -1046,6 +1217,18 @@ func Test_argoCDUpdater_syncApplication(t *testing.T) {
 					Annotations: map[string]string{
 						kargoapi.AnnotationKeyAuthorizedStage: "fake-namespace:fake-name",
 					},
+				},
+				Spec: argocd.ApplicationSpec{
+					Source: &argocd.ApplicationSource{
+						RepoURL:        "https://example.com/repo.git",
+						TargetRevision: "v1.0.0",
+					},
+				},
+			},
+			desiredSources: argocd.ApplicationSources{
+				{
+					RepoURL:        "https://example.com/repo.git",
+					TargetRevision: "v2.0.0",
 				},
 			},
 			assertions: func(t *testing.T, err error) {
@@ -1079,6 +1262,18 @@ func Test_argoCDUpdater_syncApplication(t *testing.T) {
 					Annotations: map[string]string{
 						kargoapi.AnnotationKeyAuthorizedStage: "fake-namespace:fake-name",
 					},
+				},
+				Spec: argocd.ApplicationSpec{
+					Source: &argocd.ApplicationSource{
+						RepoURL:        "https://example.com/repo.git",
+						TargetRevision: "v1.0.0",
+					},
+				},
+			},
+			desiredSources: argocd.ApplicationSources{
+				{
+					RepoURL:        "https://example.com/repo.git",
+					TargetRevision: "v2.0.0",
 				},
 			},
 			assertions: func(t *testing.T, err error) {

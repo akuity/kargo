@@ -432,10 +432,10 @@ func (a *argocdUpdater) syncApplication(
 	app.Annotations[argocd.AnnotationKeyRefresh] = string(argocd.RefreshTypeHard)
 
 	// Update the desired source(s) in the Argo CD Application.
-	if app.Spec.Source != nil {
-		app.Spec.Source = desiredSources[0].DeepCopy()
-	} else {
+	if len(app.Spec.Sources) > 0 {
 		app.Spec.Sources = desiredSources.DeepCopy()
+	} else {
+		app.Spec.Source = desiredSources[0].DeepCopy()
 	}
 
 	// Initiate a new operation.
