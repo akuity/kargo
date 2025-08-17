@@ -1,0 +1,178 @@
+package external
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/http"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/helm"
+	xhttp "github.com/akuity/kargo/internal/http"
+	"github.com/akuity/kargo/internal/image"
+	"github.com/akuity/kargo/internal/logging"
+)
+
+const (
+	harborSecretDataKey = "auth-header"
+	harborAuthHeader    = "Authorization"
+	harbor              = "harbor"
+)
+
+func init() {
+	registry.register(
+		harbor,
+		webhookReceiverRegistration{
+			predicate: func(cfg kargoapi.WebhookReceiverConfig) bool {
+				return cfg.Harbor != nil
+			},
+			factory: newHarborWebhookReceiver,
+		},
+	)
+}
+
+// harborWebhookReceiver is an implementation of WebhookReceiver that handles
+// inbound webhooks from Harbor.
+type harborWebhookReceiver struct {
+	*baseWebhookReceiver
+}
+
+// newHarborWebhookReceiver returns a new instance of harborWebhookReceiver.
+func newHarborWebhookReceiver(
+	c client.Client,
+	project string,
+	cfg kargoapi.WebhookReceiverConfig,
+) WebhookReceiver {
+	return &harborWebhookReceiver{
+		baseWebhookReceiver: &baseWebhookReceiver{
+			client:     c,
+			project:    project,
+			secretName: cfg.Harbor.SecretRef.Name,
+		},
+	}
+}
+
+// GetDetails implements WebhookReceiver.
+func (q *harborWebhookReceiver) getReceiverType() string {
+	return harbor
+}
+
+// getSecretValues implements WebhookReceiver.
+func (q *harborWebhookReceiver) getSecretValues(
+	secretData map[string][]byte,
+) ([]string, error) {
+	secretValue, ok := secretData[harborSecretDataKey]
+	if !ok {
+		return nil, fmt.Errorf(
+			"missing data key %q for Harbor WebhookReceiver",
+			harborSecretDataKey,
+		)
+	}
+	return []string{string(secretValue)}, nil
+}
+
+// getHandler implements WebhookReceiver.
+func (q *harborWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		logger := logging.LoggerFromContext(ctx)
+		logger.Debug("identifying source repository")
+
+		token, ok := q.secretData[harborSecretDataKey]
+		if !ok {
+			xhttp.WriteErrorJSON(w, nil)
+			return
+		}
+
+		authHeader := r.Header.Get(harborAuthHeader)
+		if authHeader == "" {
+			xhttp.WriteErrorJSON(
+				w,
+				xhttp.Error(errors.New("missing authorization"), http.StatusUnauthorized),
+			)
+			return
+		}
+
+		// Harbor webhook authentication uses a simple string comparison, and is
+		// expected to match whatever "Auth Header" was configured in Harbor's
+		// webhook settings
+		if authHeader != string(token) {
+			xhttp.WriteErrorJSON(
+				w,
+				xhttp.Error(
+					errors.New("unauthorized"),
+					http.StatusUnauthorized,
+				),
+			)
+			return
+		}
+
+		// Note: this is Harbor's "Default" payload format, the "CloudEvents" format
+		// is not supported
+		payload := struct {
+			Type      string `json:"type"`
+			OccurAt   int64  `json:"occur_at"`
+			Operator  string `json:"operator"`
+			EventData struct {
+				Resources []struct {
+					Digest      string `json:"digest"`
+					Tag         string `json:"tag"`
+					ResourceURL string `json:"resource_url"`
+				} `json:"resources"`
+				Repository struct {
+					DateCreated  int64  `json:"date_created"`
+					Name         string `json:"name"`
+					Namespace    string `json:"namespace"`
+					RepoFullName string `json:"repo_full_name"`
+					RepoType     string `json:"repo_type"`
+				} `json:"repository"`
+			} `json:"event_data"`
+		}{}
+
+		logger.WithValues("payload", payload)
+
+		if err := json.Unmarshal(requestBody, &payload); err != nil {
+			xhttp.WriteErrorJSON(
+				w,
+				xhttp.Error(errors.New("invalid request body"),
+					http.StatusBadRequest,
+				),
+			)
+			return
+		}
+
+		// Only handle artifact push events for now
+		if payload.Type != "PUSH_ARTIFACT" {
+			xhttp.WriteErrorJSON(
+				w,
+				xhttp.Error(errors.New("unsupported event type"),
+					http.StatusBadRequest,
+				),
+			)
+			return
+		}
+
+		var repoURLs []string
+		var tags []string
+		for _, res := range payload.EventData.Resources {
+			if res.ResourceURL != "" {
+				// Normalize URLs both as image and Helm chart repositories
+				// since Harbor supports both Docker images and Helm charts
+				repoURLs = append(repoURLs, image.NormalizeURL(res.ResourceURL))
+				repoURLs = append(repoURLs, helm.NormalizeChartRepositoryURL(res.ResourceURL))
+			}
+			if res.Tag != "" {
+				tags = append(tags, res.Tag)
+			}
+		}
+
+		logger = logger.WithValues(
+			"repoURLs", repoURLs,
+			"tags", tags,
+		)
+		ctx = logging.ContextWithLogger(ctx, logger)
+		refreshWarehouses(ctx, w, q.client, q.project, repoURLs, tags...)
+	})
+}
