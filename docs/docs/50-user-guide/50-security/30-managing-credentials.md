@@ -6,11 +6,11 @@ sidebar_label: Managing Credentials
 # Managing Credentials
 
 Kargo `Warehouse`s frequently require read-only access to private repositories.
-Promotion processes often require this as well, and may even require read/write
+Promotion processes often require this as well, and may also require read/write
 access to Git repositories.
 
-This page provides a comprehensive overview of the authentication
-options available for managing and using such credentials in Kargo projects.
+This section presents an overview of how users can manage and use such
+credentials within their Kargo Projects.
 
 :::info
 __Not what you were looking for?__
