@@ -108,7 +108,9 @@ kubectl get projectconfigs kargo-demo \
     1. Click <Hlt>Add</Hlt>
 
 1. The webhook should now be registered with Harbor. You can test it by pushing
-   an artifact to the repository, and verifying in Harbor's logs that the
-   webhook was received successfully by Kargo.
+   an artifact to the repository. This should trigger a webhook run, which you
+   can review by clicking the name of your webhook. You can then check the
+   status of the run and verify that the run was successful, as well as review
+   the logs for any errors or issues if it was not.
 
    ![Webhooks View After Adding Webhook](./img/webhooks-view-after-adding-webhook.png "Webhooks View After Adding Webhook")
