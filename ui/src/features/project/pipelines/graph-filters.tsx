@@ -1,7 +1,6 @@
 import { faCircleNodes, faList, faObjectGroup } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Card, Segmented, Select, Typography } from 'antd';
-import classNames from 'classnames';
 import { useMemo } from 'react';
 
 import { Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
@@ -26,7 +25,7 @@ export const GraphFilters = (props: GraphFiltersProps) => {
   );
 
   return (
-    <Card size='small' className={classNames(props.className)}>
+    <Card size='small' className={props.className}>
       <Typography.Text className='text-xs' type='secondary'>
         Warehouses:{' '}
       </Typography.Text>
