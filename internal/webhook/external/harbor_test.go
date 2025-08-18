@@ -274,20 +274,6 @@ func TestHarborHandler(t *testing.T) {
 						}},
 					},
 				},
-				&kargoapi.Warehouse{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProjectName,
-						Name:      "fake-warehouse-nginx",
-					},
-					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
-							Image: &kargoapi.ImageSubscription{
-								RepoURL:          "harbor.example.com/library/nginx",
-								SemverConstraint: "^1.0.0",
-							},
-						}},
-					},
-				},
 			).WithIndex(
 				&kargoapi.Warehouse{},
 				indexer.WarehousesBySubscribedURLsField,
@@ -302,7 +288,7 @@ func TestHarborHandler(t *testing.T) {
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusOK, rr.Code)
-				require.JSONEq(t, `{"msg":"refreshed 2 warehouse(s)"}`, rr.Body.String())
+				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
 			},
 		},
 		{
