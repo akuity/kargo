@@ -147,15 +147,20 @@ func (q *harborWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 
 		var repoURLs []string
 		var tags []string
-		for _, res := range payload.EventData.Resources {
-			if res.ResourceURL != "" {
-				// Normalize URLs both as image and Helm chart repositories
-				// since Harbor supports both Docker images and Helm charts
-				repoURLs = append(repoURLs, image.NormalizeURL(res.ResourceURL))
-				repoURLs = append(repoURLs, helm.NormalizeChartRepositoryURL(res.ResourceURL))
+		if len(payload.EventData.Resources) > 0 {
+			// Payloads from Harbor contain no information about media type, so we
+			// normalize the URL BOTH as if it were an image repo URL and as if it
+			// were a chart repository URL. These will coincidentally be the same, but
+			// by doing this, we safeguard against future changes to normalization
+			// logic. Note: The refresh logic will dedupe the URLs, so this does not
+			// create the possibility of a double refresh.
+			repoURLs = []string{
+				image.NormalizeURL(payload.EventData.Resources[0].ResourceURL),
+				helm.NormalizeChartRepositoryURL(payload.EventData.Resources[0].ResourceURL),
 			}
-			if res.Tag != "" {
-				tags = append(tags, res.Tag)
+			tags = make([]string, len(payload.EventData.Resources))
+			for i, res := range payload.EventData.Resources {
+				tags[i] = res.Tag
 			}
 		}
 
