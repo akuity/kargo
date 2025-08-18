@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Dropdown, Flex, Result } from 'antd';
 import classNames from 'classnames';
 import { useMemo, useState } from 'react';
-import { generatePath, Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { generatePath, Link, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
@@ -54,20 +54,12 @@ import '@xyflow/react/dist/style.css';
 
 export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: boolean }) => {
   const { name, stageName, promotionId, freight, stage, warehouseName, freightName } = useParams();
-  const [searchParams, setSearchParams] = useSearchParams();
 
   const projectQuery = useQuery(getProject, { name });
 
   const project = projectQuery.data?.result?.value as Project;
 
   const projectName = name;
-
-  const pipelineView: 'graph' | 'list' = (searchParams.get('view') as 'graph' | 'list') || 'graph';
-  const setPipelineView = (nextView: 'graph' | 'list') => {
-    const currentSearchParams = new URLSearchParams(searchParams);
-    currentSearchParams.set('view', nextView);
-    setSearchParams(currentSearchParams);
-  };
 
   const listImagesQuery = useQuery(listImages, { project: name });
 
@@ -112,6 +104,12 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
   const [preferredFilter, setPreferredFilter] = useFreightTimelineControllerStore(
     projectName || ''
   );
+
+  const pipelineView = preferredFilter.view;
+
+  const setPipelineView = (nextView: 'graph' | 'list') => {
+    setPreferredFilter({ ...preferredFilter, view: nextView });
+  };
 
   const [viewingFreight, setViewingFreight] = useState<Freight | null>(null);
 
