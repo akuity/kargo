@@ -151,7 +151,7 @@ func (s *server) recordPromotionCreatedEvent(
 	}
 
 	evt := event.NewPromotionCreated(msg, actor, p, f)
-	if err := s.sender.Send(ctx, event.ToCloudEvent(evt)); err != nil {
+	if err := s.sender.Send(ctx, evt); err != nil {
 		logging.LoggerFromContext(ctx).Error(err, "Error when publishing new promotion event")
 	}
 }

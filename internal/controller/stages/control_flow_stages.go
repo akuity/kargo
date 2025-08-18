@@ -438,7 +438,7 @@ func (r *ControlFlowStageReconciler) markFreightVerifiedForStage(
 			},
 		}
 
-		if err := r.eventSender.Send(ctx, event.ToCloudEvent(evt)); err != nil {
+		if err := r.eventSender.Send(ctx, evt); err != nil {
 			logger.Error(
 				err,
 				"failed to send Freight verification succeeded event",

@@ -428,7 +428,7 @@ func (r *reconciler) Reconcile(
 			)
 		}
 
-		if sendErr := r.sender.Send(ctx, event.ToCloudEvent(evt)); sendErr != nil {
+		if sendErr := r.sender.Send(ctx, evt); sendErr != nil {
 			logger.Error(sendErr, "error sending promotion event")
 		}
 	}
@@ -675,7 +675,7 @@ func (r *reconciler) terminatePromotion(
 
 	evt := event.NewPromotionAborted(newStatus.Message, actor, promo, freight)
 
-	if err := r.sender.Send(ctx, event.ToCloudEvent(evt)); err != nil {
+	if err := r.sender.Send(ctx, evt); err != nil {
 		logger.Error(err, "error sending Promotion aborted event")
 	}
 

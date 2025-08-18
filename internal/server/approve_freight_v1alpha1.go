@@ -125,7 +125,7 @@ func (s *server) ApproveFreight(
 	}
 
 	evt := event.NewFreightApproved(eventMsg, actor, stageName, freight)
-	if err := s.sender.Send(ctx, event.ToCloudEvent(evt)); err != nil {
+	if err := s.sender.Send(ctx, evt); err != nil {
 		logging.LoggerFromContext(ctx).Error(err,
 			"error sending Freight approved event")
 	}

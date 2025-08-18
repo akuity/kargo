@@ -2,25 +2,17 @@ package kubernetes
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 
-	cloudevent "github.com/cloudevents/sdk-go/v2"
 	corev1 "k8s.io/api/core/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/event"
 )
 
-// FromKubernetesEvent converts a Kubernetes Kargo event to a CloudEvent.
-func FromKubernetesEvent(evt corev1.Event) (cloudevent.Event, error) {
-	cloudEvent := cloudevent.NewEvent()
-	cloudEvent.SetID(string(evt.UID))
-	cloudEvent.SetSource(event.Source(evt.InvolvedObject.Namespace, evt.InvolvedObject.Kind, evt.InvolvedObject.Name))
-	cloudEvent.SetType(event.EventTypePrefix + evt.Reason)
-	cloudEvent.SetTime(evt.LastTimestamp.Time)
-
-	var parsedEvent event.Message
+// FromKubernetesEvent converts a Kubernetes Kargo event to a concrete event type
+func FromKubernetesEvent(evt corev1.Event) (event.Meta, error) {
+	var parsedEvent event.Meta
 	var err error
 
 	switch kargoapi.EventType(evt.Reason) {
@@ -49,6 +41,9 @@ func FromKubernetesEvent(evt corev1.Event) (cloudevent.Event, error) {
 	case kargoapi.EventTypeFreightVerificationUnknown:
 		parsedEvent, err = event.UnmarshalFreightVerificationUnknownAnnotations(evt.Annotations)
 	default:
+		customEvt := &event.Custom{
+			EventType: kargoapi.EventType(evt.Reason),
+		}
 		// For custom event types, we try to parse everything back out to a generic
 		// map[string]interface{} so it can be parsed into a concrete type by a consumer
 		data := make(map[string]any)
@@ -66,23 +61,30 @@ func FromKubernetesEvent(evt corev1.Event) (cloudevent.Event, error) {
 				val = v
 			}
 			// Strip the annotation prefix
-			data[strings.TrimPrefix(k, kargoapi.AnnotationKeyEventPrefix)] = val
+			key := strings.TrimPrefix(k, kargoapi.AnnotationKeyEventPrefix)
+			// If the value is a string, check for a well-known annotation
+			if valStr, ok := val.(string); ok {
+				switch key {
+				case event.AnnotationEventKeyKind:
+					customEvt.ObjectKind = valStr
+				case event.AnnotationEventKeyName:
+					customEvt.Name = valStr
+				case event.AnnotationEventKeyProject:
+					customEvt.Project = valStr
+				case event.AnnotationEventKeyMessage:
+					customEvt.Message = valStr
+				}
+				continue
+			}
+			data[key] = val
 		}
-		if setDataErr := cloudEvent.SetData(cloudevent.ApplicationJSON, data); setDataErr != nil {
-			return cloudevent.Event{}, fmt.Errorf("failed to set event data: %w", err)
-		}
-		// Return early in this case since we can't assume anything else for this type
-		return cloudEvent, nil
+		customEvt.Data = data
+		parsedEvent = customEvt
 	}
 
 	if err != nil {
-		return cloudevent.Event{}, err
-	}
-	// Set the message on the event before setting the data
-	parsedEvent.SetMessage(evt.Message)
-	if err := cloudEvent.SetData(cloudevent.ApplicationJSON, parsedEvent); err != nil {
-		return cloudevent.Event{}, fmt.Errorf("failed to set event data: %w", err)
+		return nil, err
 	}
 
-	return cloudEvent, nil
+	return parsedEvent, nil
 }

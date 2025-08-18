@@ -1,12 +1,39 @@
 package event
 
 import (
+	"encoding/json"
+	"fmt"
 	"maps"
+	"reflect"
+	"sort"
 	"strconv"
+	"strings"
+	"time"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/argocd"
 	"github.com/akuity/kargo/pkg/expressions"
+	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 )
+
+// Promotion is a struct that contains common fields for promotion-related events.
+type Promotion struct {
+	*Freight
+	Name         string                 `json:"promotionName"`
+	StageName    string                 `json:"stageName"`
+	CreateTime   time.Time              `json:"promotionCreateTime"`
+	Applications []types.NamespacedName `json:"applications,omitempty"`
+}
+
+func (p Promotion) GetName() string {
+	return p.Name
+}
+
+func (p Promotion) Kind() string {
+	return "Promotion"
+}
 
 // PromotionSucceeded is event data related to a successful promotion.
 type PromotionSucceeded struct {
@@ -140,6 +167,20 @@ func NewPromotionCreated(
 	}
 }
 
+func (p *Promotion) MarshalAnnotationsTo(annotations map[string]string) {
+	annotations[kargoapi.AnnotationKeyEventPromotionName] = p.Name
+	annotations[kargoapi.AnnotationKeyEventStageName] = p.StageName
+	annotations[kargoapi.AnnotationKeyEventPromotionCreateTime] = p.CreateTime.Format(time.RFC3339)
+	if len(p.Applications) > 0 {
+		if data, err := json.Marshal(p.Applications); err == nil {
+			annotations[kargoapi.AnnotationKeyEventApplications] = string(data)
+		}
+	}
+	if p.Freight != nil {
+		p.Freight.MarshalAnnotationsTo(annotations)
+	}
+}
+
 func (p *PromotionSucceeded) MarshalAnnotations() map[string]string {
 	// Note that we skip message here, as it is not used in the annotations.
 	annotations := map[string]string{}
@@ -184,8 +225,40 @@ func (p *PromotionCreated) MarshalAnnotations() map[string]string {
 	return annotations
 }
 
+// UnmarshalPromotionAnnotations populates the Promotion fields from the given kubernetes annotations.
+func UnmarshalPromotionAnnotations(annotations map[string]string) (Promotion, error) {
+	var freight *Freight
+	f, err := UnmarshalFreightAnnotations(annotations)
+	if err != nil {
+		return Promotion{}, fmt.Errorf("failed to unmarshal freight annotations: %w", err)
+	}
+	// If the returned Freight object is not the zero type (i.e. has data), then we include it
+	if !reflect.ValueOf(f).IsZero() {
+		freight = &f
+	}
+	createTime, err := parseTime(annotations[kargoapi.AnnotationKeyEventPromotionCreateTime])
+	if err != nil {
+		return Promotion{}, fmt.Errorf("failed to parse promotion create time: %w", err)
+	}
+	evt := Promotion{
+		Freight:    freight,
+		Name:       annotations[kargoapi.AnnotationKeyEventPromotionName],
+		StageName:  annotations[kargoapi.AnnotationKeyEventStageName],
+		CreateTime: createTime,
+	}
+
+	if applications, ok := annotations[kargoapi.AnnotationKeyEventApplications]; ok {
+		var apps []types.NamespacedName
+		if err := json.Unmarshal([]byte(applications), &apps); err != nil {
+			return evt, fmt.Errorf("failed to unmarshal applications: %w", err)
+		}
+		evt.Applications = apps
+	}
+	return evt, nil
+}
+
 // UnmarshalPromotionSucceededAnnotations converts the given annotations into a PromotionSucceeded. This is used by the
-// main event handler to convert the data into a normal CloudEvent, but is exposed for convenience.
+// main event handler to convert the data into a normal structured event, but is exposed for convenience.
 func UnmarshalPromotionSucceededAnnotations(annotations map[string]string) (*PromotionSucceeded, error) {
 	common, err := UnmarshalCommonAnnotations(annotations)
 	if err != nil {
@@ -208,7 +281,7 @@ func UnmarshalPromotionSucceededAnnotations(annotations map[string]string) (*Pro
 }
 
 // UnmarshalPromotionFailedAnnotations converts the given annotations into a PromotionFailed. This is used by the
-// main event handler to convert the data into a normal CloudEvent, but is exposed for convenience.
+// main event handler to convert the data into a normal structured event, but is exposed for convenience.
 func UnmarshalPromotionFailedAnnotations(annotations map[string]string) (*PromotionFailed, error) {
 	common, err := UnmarshalCommonAnnotations(annotations)
 	if err != nil {
@@ -226,7 +299,7 @@ func UnmarshalPromotionFailedAnnotations(annotations map[string]string) (*Promot
 }
 
 // UnmarshalPromotionErroredAnnotations converts the given annotations into a PromotionErrored. This is used by the
-// main event handler to convert the data into a normal CloudEvent, but is exposed for convenience.
+// main event handler to convert the data into a normal structured event, but is exposed for convenience.
 func UnmarshalPromotionErroredAnnotations(annotations map[string]string) (*PromotionErrored, error) {
 	common, err := UnmarshalCommonAnnotations(annotations)
 	if err != nil {
@@ -244,7 +317,7 @@ func UnmarshalPromotionErroredAnnotations(annotations map[string]string) (*Promo
 }
 
 // UnmarshalPromotionAbortedAnnotations converts the given annotations into a PromotionAborted. This is used by the
-// main event handler to convert the data into a normal CloudEvent, but is exposed for convenience.
+// main event handler to convert the data into a normal structured event, but is exposed for convenience.
 func UnmarshalPromotionAbortedAnnotations(annotations map[string]string) (*PromotionAborted, error) {
 	common, err := UnmarshalCommonAnnotations(annotations)
 	if err != nil {
@@ -262,7 +335,7 @@ func UnmarshalPromotionAbortedAnnotations(annotations map[string]string) (*Promo
 }
 
 // UnmarshalPromotionCreatedAnnotations converts the given annotations into a PromotionCreated. This is used by the
-// main event handler to convert the data into a normal CloudEvent, but is exposed for convenience.
+// main event handler to convert the data into a normal structured event, but is exposed for convenience.
 func UnmarshalPromotionCreatedAnnotations(annotations map[string]string) (*PromotionCreated, error) {
 	common, err := UnmarshalCommonAnnotations(annotations)
 	if err != nil {
@@ -277,6 +350,124 @@ func UnmarshalPromotionCreatedAnnotations(annotations map[string]string) (*Promo
 		Promotion: promotion,
 	}
 	return &evt, nil
+}
+
+func newPromotion(
+	promotion *kargoapi.Promotion,
+	freight *kargoapi.Freight,
+) Promotion {
+	evt := Promotion{
+		Name:       promotion.GetName(),
+		StageName:  promotion.Spec.Stage,
+		CreateTime: promotion.GetCreationTimestamp().Time,
+	}
+
+	if freight != nil {
+		evt.Freight = ptr.To(newFreight(freight, promotion.Spec.Stage))
+	}
+
+	baseEnv := map[string]any{
+		"ctx": map[string]any{
+			"project":   promotion.GetNamespace(),
+			"promotion": promotion.GetName(),
+			"stage":     promotion.Spec.Stage,
+			"meta": map[string]any{
+				"promotion": map[string]any{
+					"actor": promotion.Annotations[kargoapi.AnnotationKeyCreateActor],
+				},
+			},
+		},
+	}
+	if freight != nil {
+		targetFreight := map[string]any{
+			"name": freight.Name,
+		}
+		if freight.Origin.Name != "" {
+			targetFreight["origin"] = map[string]any{
+				"name": freight.Origin.Name,
+			}
+		}
+		if ctx, ok := baseEnv["ctx"].(map[string]any); ok {
+			ctx["targetFreight"] = targetFreight
+		}
+	}
+
+	setVar := func(env map[string]any, vars map[string]any) {
+		if _, ok := env["vars"]; !ok {
+			env["vars"] = make(map[string]any)
+		}
+		if varsMap, ok := env["vars"].(map[string]any); ok {
+			maps.Copy(varsMap, vars)
+		}
+	}
+
+	var allApps []types.NamespacedName
+	appSet := make(map[types.NamespacedName]struct{})
+	promotionVars := calculatePromotionVars(promotion, baseEnv)
+	setVar(baseEnv, promotionVars)
+
+	// NOTE(thomastaylor312): Right now if there are any errors when trying to evaluate the
+	// expressions or convert types, we just skip. Originally we logged this, but this library
+	// doesn't have logging, so this retains the same behavior. If we want to log these errors, we
+	// can add a logger to the context and use that here.
+	for _, step := range promotion.Spec.Steps {
+		if step.Uses != "argocd-update" || step.Config == nil {
+			continue
+		}
+		var cfg builtin.ArgoCDUpdateConfig
+		if err := json.Unmarshal(step.Config.Raw, &cfg); err != nil {
+			continue
+		}
+		for _, app := range cfg.Apps {
+			namespacedName := types.NamespacedName{
+				Namespace: app.Namespace,
+				Name:      app.Name,
+			}
+
+			if strings.Contains(namespacedName.Namespace, "${{") ||
+				strings.Contains(namespacedName.Name, "${{") {
+				stepEnv := make(map[string]any)
+				maps.Copy(stepEnv, baseEnv)
+				stepVars := calculateStepVars(step, stepEnv)
+				setVar(stepEnv, stepVars)
+				var ok bool
+				namespaceAny, err := expressions.EvaluateTemplate(namespacedName.Namespace, stepEnv)
+				if err != nil {
+					continue
+				}
+				if namespacedName.Namespace, ok = namespaceAny.(string); !ok {
+					continue
+				}
+				appNameAny, err := expressions.EvaluateTemplate(namespacedName.Name, stepEnv)
+				if err != nil {
+					continue
+				}
+				if namespacedName.Name, ok = appNameAny.(string); !ok {
+					continue
+				}
+			}
+
+			if namespacedName.Namespace == "" {
+				namespacedName.Namespace = argocd.Namespace()
+			}
+			if _, exists := appSet[namespacedName]; !exists {
+				appSet[namespacedName] = struct{}{}
+				allApps = append(allApps, namespacedName)
+			}
+		}
+	}
+	if len(allApps) > 0 {
+		sort.Slice(allApps, func(i, j int) bool {
+			if allApps[i].Namespace != allApps[j].Namespace {
+				return allApps[i].Namespace < allApps[j].Namespace
+			}
+			return allApps[i].Name < allApps[j].Name
+		})
+
+		evt.Applications = allApps
+	}
+
+	return evt
 }
 
 func calculatePromotionVars(

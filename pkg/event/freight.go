@@ -1,6 +1,7 @@
 package event
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -8,6 +9,25 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
+
+// Freight is a struct that contains common fields for freight-related events.
+type Freight struct {
+	Name       string               `json:"freightName"`
+	StageName  string               `json:"stageName"`
+	CreateTime time.Time            `json:"freightCreateTime,omitempty"`
+	Alias      *string              `json:"freightAlias,omitempty"`
+	Commits    []kargoapi.GitCommit `json:"freightCommits,omitempty"`
+	Images     []kargoapi.Image     `json:"freightImages,omitempty"`
+	Charts     []kargoapi.Chart     `json:"freightCharts,omitempty"`
+}
+
+func (f Freight) GetName() string {
+	return f.Name
+}
+
+func (f Freight) Kind() string {
+	return "Freight"
+}
 
 // FreightVerificationEventMeta is an interface for metadata associated with freight verification
 // events. It is an extension of the Meta interface with a few verification-specific methods
@@ -285,6 +305,30 @@ func NewFreightApproved(message, actor, stageName string, freight *kargoapi.Frei
 	}
 }
 
+func (f *Freight) MarshalAnnotationsTo(annotations map[string]string) {
+	annotations[kargoapi.AnnotationKeyEventFreightName] = f.Name
+	annotations[kargoapi.AnnotationKeyEventFreightCreateTime] = f.CreateTime.Format(time.RFC3339)
+	annotations[kargoapi.AnnotationKeyEventStageName] = f.StageName
+	if f.Alias != nil {
+		annotations[kargoapi.AnnotationKeyEventFreightAlias] = *f.Alias
+	}
+	if len(f.Commits) > 0 {
+		if data, err := json.Marshal(f.Commits); err == nil {
+			annotations[kargoapi.AnnotationKeyEventFreightCommits] = string(data)
+		}
+	}
+	if len(f.Images) > 0 {
+		if data, err := json.Marshal(f.Images); err == nil {
+			annotations[kargoapi.AnnotationKeyEventFreightImages] = string(data)
+		}
+	}
+	if len(f.Charts) > 0 {
+		if data, err := json.Marshal(f.Charts); err == nil {
+			annotations[kargoapi.AnnotationKeyEventFreightCharts] = string(data)
+		}
+	}
+}
+
 func (f *FreightVerificationSucceeded) MarshalAnnotations() map[string]string {
 	annotations := map[string]string{}
 	f.Common.MarshalAnnotationsTo(annotations)
@@ -340,9 +384,54 @@ func (f *FreightApproved) MarshalAnnotations() map[string]string {
 	return annotations
 }
 
+// UnmarshalFreightAnnotations populates the Freight fields from the given kubernetes annotations.
+func UnmarshalFreightAnnotations(annotations map[string]string) (Freight, error) {
+	evt := Freight{}
+
+	// Only populate fields if freight name is present (indicating freight data exists)
+	if name, ok := annotations[kargoapi.AnnotationKeyEventFreightName]; ok && name != "" {
+		evt.Name = name
+		evt.StageName = annotations[kargoapi.AnnotationKeyEventStageName]
+
+		if createTimeStr, ok := annotations[kargoapi.AnnotationKeyEventFreightCreateTime]; ok && createTimeStr != "" {
+			createTime, err := parseTime(createTimeStr)
+			if err != nil {
+				return Freight{}, fmt.Errorf("failed to parse freight create time: %w", err)
+			}
+			evt.CreateTime = createTime
+		}
+	}
+
+	if alias, ok := annotations[kargoapi.AnnotationKeyEventFreightAlias]; ok {
+		evt.Alias = &alias
+	}
+	if commits, ok := annotations[kargoapi.AnnotationKeyEventFreightCommits]; ok {
+		var cs []kargoapi.GitCommit
+		if err := json.Unmarshal([]byte(commits), &cs); err != nil {
+			return evt, fmt.Errorf("failed to unmarshal freight commits: %w", err)
+		}
+		evt.Commits = cs
+	}
+	if images, ok := annotations[kargoapi.AnnotationKeyEventFreightImages]; ok {
+		var is []kargoapi.Image
+		if err := json.Unmarshal([]byte(images), &is); err != nil {
+			return evt, fmt.Errorf("failed to unmarshal freight images: %w", err)
+		}
+		evt.Images = is
+	}
+	if charts, ok := annotations[kargoapi.AnnotationKeyEventFreightCharts]; ok {
+		var cs []kargoapi.Chart
+		if err := json.Unmarshal([]byte(charts), &cs); err != nil {
+			return evt, fmt.Errorf("failed to unmarshal freight charts: %w", err)
+		}
+		evt.Charts = cs
+	}
+	return evt, nil
+}
+
 // UnmarshalFreightVerificationSucceededAnnotations converts the given annotations into a
 // FreightVerificationSucceeded event. This is used by the main event handler to convert the data
-// into a normal CloudEvent, but is exposed for convenience.
+// into a normal structured event, but is exposed for convenience.
 func UnmarshalFreightVerificationSucceededAnnotations(
 	annotations map[string]string,
 ) (*FreightVerificationSucceeded, error) {
@@ -368,7 +457,7 @@ func UnmarshalFreightVerificationSucceededAnnotations(
 
 // UnmarshalFreightVerificationFailedAnnotations converts the given annotations into a
 // FreightVerificationFailed event. This is used by the main event handler to convert the data
-// into a normal CloudEvent, but is exposed for convenience.
+// into a normal structured event, but is exposed for convenience.
 func UnmarshalFreightVerificationFailedAnnotations(
 	annotations map[string]string,
 ) (*FreightVerificationFailed, error) {
@@ -394,7 +483,7 @@ func UnmarshalFreightVerificationFailedAnnotations(
 
 // UnmarshalFreightVerificationInconclusiveAnnotations converts the given annotations into a
 // FreightVerificationInconclusive event. This is used by the main event handler to convert the data
-// into a normal CloudEvent, but is exposed for convenience.
+// into a normal structured event, but is exposed for convenience.
 func UnmarshalFreightVerificationInconclusiveAnnotations(
 	annotations map[string]string,
 ) (*FreightVerificationInconclusive, error) {
@@ -420,7 +509,7 @@ func UnmarshalFreightVerificationInconclusiveAnnotations(
 
 // UnmarshalFreightVerificationErroredAnnotations converts the given annotations into a
 // FreightVerificationErrored event. This is used by the main event handler to convert the data
-// into a normal CloudEvent, but is exposed for convenience.
+// into a normal structured event, but is exposed for convenience.
 func UnmarshalFreightVerificationErroredAnnotations(
 	annotations map[string]string,
 ) (*FreightVerificationErrored, error) {
@@ -446,7 +535,7 @@ func UnmarshalFreightVerificationErroredAnnotations(
 
 // UnmarshalFreightVerificationUnknownAnnotations converts the given annotations into a
 // FreightVerificationUnknown event. This is used by the main event handler to convert the data
-// into a normal CloudEvent, but is exposed for convenience.
+// into a normal structured event, but is exposed for convenience.
 func UnmarshalFreightVerificationUnknownAnnotations(
 	annotations map[string]string,
 ) (*FreightVerificationUnknown, error) {
@@ -472,7 +561,7 @@ func UnmarshalFreightVerificationUnknownAnnotations(
 
 // UnmarshalFreightVerificationAbortedAnnotations converts the given annotations into a
 // FreightVerificationAborted event. This is used by the main event handler to convert the data
-// into a normal CloudEvent, but is exposed for convenience.
+// into a normal structured event, but is exposed for convenience.
 func UnmarshalFreightVerificationAbortedAnnotations(
 	annotations map[string]string,
 ) (*FreightVerificationAborted, error) {
@@ -498,7 +587,7 @@ func UnmarshalFreightVerificationAbortedAnnotations(
 
 // UnmarshalFreightApprovedAnnotations converts the given annotations into a
 // FreightApproved event. This is used by the main event handler to convert the data
-// into a normal CloudEvent, but is exposed for convenience.
+// into a normal structured event, but is exposed for convenience.
 func UnmarshalFreightApprovedAnnotations(
 	annotations map[string]string,
 ) (*FreightApproved, error) {
@@ -515,4 +604,28 @@ func UnmarshalFreightApprovedAnnotations(
 		Freight: freight,
 	}
 	return &evt, nil
+}
+
+func newFreight(freight *kargoapi.Freight, stageName string) Freight {
+	if freight == nil {
+		return Freight{}
+	}
+	evt := Freight{
+		CreateTime: freight.CreationTimestamp.Time,
+		Name:       freight.Name,
+		StageName:  stageName,
+	}
+	if freight.Alias != "" {
+		evt.Alias = &freight.Alias
+	}
+	if len(freight.Commits) > 0 {
+		evt.Commits = freight.Commits
+	}
+	if len(freight.Images) > 0 {
+		evt.Images = freight.Images
+	}
+	if len(freight.Charts) > 0 {
+		evt.Charts = freight.Charts
+	}
+	return evt
 }

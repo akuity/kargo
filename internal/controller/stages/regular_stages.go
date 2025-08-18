@@ -1301,7 +1301,7 @@ func (r *RegularStageReconciler) recordFreightVerificationEvent(
 
 	evt.SetTriggeredByPromotion(analysisTriggeredByPromotion)
 
-	if err := r.eventSender.Send(context.Background(), kargoEvent.ToCloudEvent(evt)); err != nil {
+	if err := r.eventSender.Send(context.Background(), evt); err != nil {
 		logging.LoggerFromContext(context.Background()).Error(
 			err, "failed to send verification event",
 			"freight", freightRef.Name,
@@ -1790,7 +1790,7 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 			promotion,
 			&latestFreight,
 		)
-		if err := r.eventSender.Send(ctx, kargoEvent.ToCloudEvent(evt)); err != nil {
+		if err := r.eventSender.Send(ctx, evt); err != nil {
 			logger.Error(err, "failed to send promotion event")
 		}
 		logger.Debug(

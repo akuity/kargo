@@ -345,7 +345,7 @@ func (w *webhook) recordFreightApprovedEvent(
 		stageName,
 		actor,
 	), actor, stageName, f)
-	if err := w.sender.Send(ctx, event.ToCloudEvent(evt)); err != nil {
+	if err := w.sender.Send(ctx, evt); err != nil {
 		logging.LoggerFromContext(ctx).Error(err,
 			"error sending Freight approved event")
 	}

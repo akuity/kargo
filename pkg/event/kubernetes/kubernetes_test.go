@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	cloudevent "github.com/cloudevents/sdk-go/v2"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,11 +16,12 @@ import (
 
 func TestFromKubernetesEvent(t *testing.T) {
 	testCases := map[string]struct {
-		k8sEvent     corev1.Event
-		expectedType string
-		expectedData any
-		expectError  bool
-		errorMessage string
+		k8sEvent        corev1.Event
+		expectedType    kargoapi.EventType
+		expectedData    any
+		expectError     bool
+		errorMessage    string
+		extraValidation func(*testing.T, event.Meta)
 	}{
 		"promotion succeeded event": {
 			k8sEvent: corev1.Event{
@@ -47,7 +47,7 @@ func TestFromKubernetesEvent(t *testing.T) {
 				},
 				LastTimestamp: metav1.Time{Time: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)},
 			},
-			expectedType: event.EventTypePrefix + string(kargoapi.EventTypePromotionSucceeded),
+			expectedType: kargoapi.EventTypePromotionSucceeded,
 		},
 		"promotion failed event": {
 			k8sEvent: corev1.Event{
@@ -69,7 +69,7 @@ func TestFromKubernetesEvent(t *testing.T) {
 				},
 				LastTimestamp: metav1.Time{Time: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)},
 			},
-			expectedType: event.EventTypePrefix + string(kargoapi.EventTypePromotionFailed),
+			expectedType: kargoapi.EventTypePromotionFailed,
 		},
 		"freight verification succeeded event": {
 			k8sEvent: corev1.Event{
@@ -93,7 +93,7 @@ func TestFromKubernetesEvent(t *testing.T) {
 				},
 				LastTimestamp: metav1.Time{Time: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)},
 			},
-			expectedType: event.EventTypePrefix + string(kargoapi.EventTypeFreightVerificationSucceeded),
+			expectedType: kargoapi.EventTypeFreightVerificationSucceeded,
 		},
 		"freight approved event": {
 			k8sEvent: corev1.Event{
@@ -115,16 +115,19 @@ func TestFromKubernetesEvent(t *testing.T) {
 				},
 				LastTimestamp: metav1.Time{Time: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)},
 			},
-			expectedType: event.EventTypePrefix + string(kargoapi.EventTypeFreightApproved),
+			expectedType: kargoapi.EventTypeFreightApproved,
 		},
 		"custom event type": {
 			k8sEvent: corev1.Event{
 				ObjectMeta: metav1.ObjectMeta{
 					UID: "test-uid",
 					Annotations: map[string]string{
-						kargoapi.AnnotationKeyEventPrefix + "customField": "customValue",
-						kargoapi.AnnotationKeyEventPrefix + "jsonField":   `{"key":"value"}`,
-						"non-kargo-annotation":                            "ignored",
+						kargoapi.AnnotationKeyEventProject:                               "test-project",
+						kargoapi.AnnotationKeyEventPrefix + event.AnnotationEventKeyName: "test-event",
+						kargoapi.AnnotationKeyEventPrefix + event.AnnotationEventKeyKind: "CustomKind",
+						kargoapi.AnnotationKeyEventPrefix + "customField":                "customValue",
+						kargoapi.AnnotationKeyEventPrefix + "jsonField":                  `{"key":"value"}`,
+						"non-kargo-annotation":                                           "ignored",
 					},
 				},
 				Reason:  "CustomEventType",
@@ -136,7 +139,11 @@ func TestFromKubernetesEvent(t *testing.T) {
 				},
 				LastTimestamp: metav1.Time{Time: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)},
 			},
-			expectedType: event.EventTypePrefix + "CustomEventType",
+			expectedType: "CustomEventType",
+			extraValidation: func(t *testing.T, meta event.Meta) {
+				require.Equal(t, "test-event", meta.GetName())
+				require.Equal(t, "CustomKind", meta.Kind())
+			},
 		},
 		"invalid promotion annotations": {
 			k8sEvent: corev1.Event{
@@ -186,14 +193,11 @@ func TestFromKubernetesEvent(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			require.Equal(t, string(tc.k8sEvent.UID), result.ID())
 			require.Equal(t, tc.expectedType, result.Type())
-			require.Equal(t, event.Source(tc.k8sEvent.InvolvedObject.Namespace,
-				tc.k8sEvent.InvolvedObject.Kind, tc.k8sEvent.InvolvedObject.Name), result.Source())
-			require.Equal(t, tc.k8sEvent.LastTimestamp.Time, result.Time())
 
-			// Verify data is set correctly
-			require.NotEmpty(t, result.Data())
+			if tc.extraValidation != nil {
+				tc.extraValidation(t, result)
+			}
 		})
 	}
 }
@@ -272,8 +276,7 @@ func TestFromKubernetesEvent_AllEventTypes(t *testing.T) {
 
 			result, err := FromKubernetesEvent(k8sEvent)
 			require.NoError(t, err)
-			require.Equal(t, event.EventTypePrefix+string(eventType), result.Type())
-			require.Equal(t, "test-uid", result.ID())
+			require.Equal(t, eventType, result.Type())
 		})
 	}
 }
@@ -286,129 +289,54 @@ func TestNewEventSender(t *testing.T) {
 }
 
 func TestEventSender_Send(t *testing.T) {
+
 	testCases := map[string]struct {
-		cloudEvent    cloudevent.Event
+		event         event.Meta
 		expectError   bool
 		errorMessage  string
 		expectedCalls int
 	}{
 		"promotion succeeded event": {
-			cloudEvent: func() cloudevent.Event {
-				evt := cloudevent.NewEvent()
-				evt.SetType(event.EventTypePrefix + string(kargoapi.EventTypePromotionSucceeded))
-				evt.SetSource(event.Source("test-project", "Promotion", "test-promotion"))
-
-				promotionEvent := &event.PromotionSucceeded{
-					Common: event.Common{
-						Project: "test-project",
-						Message: "Promotion succeeded",
-						Actor:   stringPtr("test-actor"),
-					},
-					Promotion: event.Promotion{
-						Name:       "test-promotion",
-						StageName:  "test-stage",
-						CreateTime: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-					},
-				}
-				_ = evt.SetData(cloudevent.ApplicationJSON, promotionEvent)
-				return evt
-			}(),
+			event: &event.PromotionSucceeded{
+				Common: event.Common{
+					Project: "test-project",
+					Message: "Promotion succeeded",
+					Actor:   stringPtr("test-actor"),
+				},
+				Promotion: event.Promotion{
+					Name:       "test-promotion",
+					StageName:  "test-stage",
+					CreateTime: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+				},
+			},
 			expectedCalls: 1,
 		},
 		"freight approved event": {
-			cloudEvent: func() cloudevent.Event {
-				evt := cloudevent.NewEvent()
-				evt.SetType(event.EventTypePrefix + string(kargoapi.EventTypeFreightApproved))
-				evt.SetSource(event.Source("test-project", "Freight", "test-freight"))
-
-				freightEvent := &event.FreightApproved{
-					Common: event.Common{
-						Project: "test-project",
-						Message: "Freight approved",
-						Actor:   stringPtr("test-actor"),
-					},
-					Freight: event.Freight{
-						Name:       "test-freight",
-						StageName:  "test-stage",
-						CreateTime: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-					},
-				}
-				_ = evt.SetData(cloudevent.ApplicationJSON, freightEvent)
-				return evt
-			}(),
+			event: &event.FreightApproved{
+				Common: event.Common{
+					Project: "test-project",
+					Message: "Freight approved",
+					Actor:   stringPtr("test-actor"),
+				},
+				Freight: event.Freight{
+					Name:       "test-freight",
+					StageName:  "test-stage",
+					CreateTime: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+				},
+			},
 			expectedCalls: 1,
 		},
 		"custom event type": {
-			cloudEvent: func() cloudevent.Event {
-				evt := cloudevent.NewEvent()
-				evt.SetType(event.EventTypePrefix + "CustomEventType")
-				evt.SetSource(event.Source("test-project", "CustomResource", "test-resource"))
-
-				data := map[string]any{
-					"message":     "Custom event message",
-					"customField": "customValue",
-					"jsonField":   map[string]string{"key": "value"},
-				}
-				_ = evt.SetData(cloudevent.ApplicationJSON, data)
-				return evt
-			}(),
+			event: &customEvent{
+				Message:     "Custom event message",
+				CustomField: "customValue",
+				JSONField:   map[string]string{"key": "value"},
+				EventType:   "CustomEventType",
+				Name:        "test-resource",
+				Project:     "test-project",
+				ObjectKind:  "CustomResource",
+			},
 			expectedCalls: 1,
-		},
-		"invalid event type prefix": {
-			cloudEvent: func() cloudevent.Event {
-				evt := cloudevent.NewEvent()
-				evt.SetType("invalid.prefix.event")
-				evt.SetSource(event.Source("test-project", "Promotion", "test-promotion"))
-				return evt
-			}(),
-			expectError:  true,
-			errorMessage: "does not match expected prefix",
-		},
-		"invalid source format": {
-			cloudEvent: func() cloudevent.Event {
-				evt := cloudevent.NewEvent()
-				evt.SetType(event.EventTypePrefix + string(kargoapi.EventTypePromotionSucceeded))
-				evt.SetSource("invalid-source")
-
-				promotionEvent := &event.PromotionSucceeded{
-					Common: event.Common{
-						Project: "test-project",
-						Message: "Promotion succeeded",
-						Actor:   stringPtr("test-actor"),
-					},
-					Promotion: event.Promotion{
-						Name:       "test-promotion",
-						StageName:  "test-stage",
-						CreateTime: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-					},
-				}
-				_ = evt.SetData(cloudevent.ApplicationJSON, promotionEvent)
-				return evt
-			}(),
-			expectError:  true,
-			errorMessage: "invalid event source",
-		},
-		"unsupported content type for custom event": {
-			cloudEvent: func() cloudevent.Event {
-				evt := cloudevent.NewEvent()
-				evt.SetType(event.EventTypePrefix + "CustomEventType")
-				evt.SetSource(event.Source("test-project", "CustomResource", "test-resource"))
-				_ = evt.SetData("text/plain", "plain text data")
-				return evt
-			}(),
-			expectError:  true,
-			errorMessage: "unsupported content type",
-		},
-		"invalid event data": {
-			cloudEvent: func() cloudevent.Event {
-				evt := cloudevent.NewEvent()
-				evt.SetType(event.EventTypePrefix + string(kargoapi.EventTypePromotionSucceeded))
-				evt.SetSource(event.Source("test-project", "Promotion", "test-promotion"))
-				_ = evt.SetData(cloudevent.ApplicationJSON, "invalid-data")
-				return evt
-			}(),
-			expectError:  true,
-			errorMessage: "failed to unmarshal event data",
 		},
 	}
 
@@ -417,7 +345,7 @@ func TestEventSender_Send(t *testing.T) {
 			recorder := &mockEventRecorder{}
 			sender := NewEventSender(recorder)
 
-			err := sender.Send(context.Background(), tc.cloudEvent)
+			err := sender.Send(context.Background(), tc.event)
 
 			if tc.expectError {
 				require.Error(t, err)
@@ -434,30 +362,30 @@ func TestEventSender_Send(t *testing.T) {
 
 func TestConvertToAnnotations(t *testing.T) {
 	testCases := map[string]struct {
-		data         []byte
+		data         event.Meta
 		expected     map[string]string
 		expectError  bool
 		errorMessage string
 	}{
-		"simple data": {
-			data: []byte(`{"field1":"value1","field2":"value2"}`),
-			expected: map[string]string{
-				kargoapi.AnnotationKeyEventPrefix + "field1": "value1",
-				kargoapi.AnnotationKeyEventPrefix + "field2": "value2",
+		"custom event": {
+			data: &customEvent{
+				Message:     "Custom event message",
+				CustomField: "customValue",
+				JSONField:   map[string]string{"key": "value"},
+				EventType:   "CustomEventType",
+				Name:        "test-resource",
+				Project:     "test-project",
+				ObjectKind:  "CustomResource",
 			},
-		},
-		"complex data": {
-			data: []byte(`{"stringField":"value","objectField":{"key":"value"},"arrayField":["item1","item2"]}`),
 			expected: map[string]string{
-				kargoapi.AnnotationKeyEventPrefix + "stringField": "value",
-				kargoapi.AnnotationKeyEventPrefix + "objectField": `{"key":"value"}`,
-				kargoapi.AnnotationKeyEventPrefix + "arrayField":  `["item1","item2"]`,
+				kargoapi.AnnotationKeyEventPrefix + "message":     "Custom event message",
+				kargoapi.AnnotationKeyEventPrefix + "customField": "customValue",
+				kargoapi.AnnotationKeyEventPrefix + "jsonField":   `{"key":"value"}`,
+				kargoapi.AnnotationKeyEventPrefix + "type":        "CustomEventType",
+				kargoapi.AnnotationKeyEventPrefix + "name":        "test-resource",
+				kargoapi.AnnotationKeyEventPrefix + "project":     "test-project",
+				kargoapi.AnnotationKeyEventPrefix + "objectKind":  "CustomResource",
 			},
-		},
-		"invalid json": {
-			data:         []byte(`invalid json`),
-			expectError:  true,
-			errorMessage: "failed to unmarshal event data",
 		},
 	}
 
@@ -562,4 +490,30 @@ func (m *mockEventRecorder) AnnotatedEventf(_ runtime.Object, _ map[string]strin
 	_, _, _ string, _ ...any,
 ) {
 	m.callCount++
+}
+
+type customEvent struct {
+	Message     string             `json:"message"`
+	CustomField string             `json:"customField"`
+	JSONField   map[string]string  `json:"jsonField"`
+	EventType   kargoapi.EventType `json:"type"`
+	Name        string             `json:"name"`
+	Project     string             `json:"project"`
+	ObjectKind  string             `json:"objectKind"`
+}
+
+func (c customEvent) Type() kargoapi.EventType {
+	return c.EventType
+}
+
+func (c *customEvent) Kind() string {
+	return c.ObjectKind
+}
+
+func (c *customEvent) GetName() string {
+	return c.Name
+}
+
+func (c *customEvent) GetProject() string {
+	return c.Project
 }

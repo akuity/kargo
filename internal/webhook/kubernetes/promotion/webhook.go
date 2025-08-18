@@ -395,7 +395,7 @@ func (w *webhook) recordPromotionCreatedEvent(
 	evt := kargoEvent.NewPromotionCreated(fmt.Sprintf("Promotion created for Stage %q by %q",
 		p.Spec.Stage,
 		actor), actor, p, f)
-	if err := w.sender.Send(ctx, kargoEvent.ToCloudEvent(evt)); err != nil {
+	if err := w.sender.Send(ctx, evt); err != nil {
 		logging.LoggerFromContext(ctx).Error(
 			err,
 			"failed to send Promotion created event",
