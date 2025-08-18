@@ -12,8 +12,8 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/ktrysmt/go-bitbucket"
 
+	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/gitprovider"
-	"github.com/akuity/kargo/pkg/git"
 )
 
 const (

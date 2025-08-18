@@ -10,8 +10,8 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 
+	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/gitprovider"
-	"github.com/akuity/kargo/pkg/git"
 )
 
 const ProviderName = "gitlab"

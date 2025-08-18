@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/git"
+	"github.com/akuity/kargo/internal/git"
 )
 
 func TestNewWebhook(t *testing.T) {

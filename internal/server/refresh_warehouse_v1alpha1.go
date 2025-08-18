@@ -7,7 +7,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
-	pkgwarehouse "github.com/akuity/kargo/pkg/warehouse"
+	"github.com/akuity/kargo/internal/api"
 )
 
 func (s *server) RefreshWarehouse(
@@ -28,7 +28,7 @@ func (s *server) RefreshWarehouse(
 		return nil, err
 	}
 
-	warehouse, err := pkgwarehouse.RefreshWarehouse(ctx, s.client.InternalClient(), client.ObjectKey{
+	warehouse, err := api.RefreshWarehouse(ctx, s.client.InternalClient(), client.ObjectKey{
 		Namespace: project,
 		Name:      name,
 	})

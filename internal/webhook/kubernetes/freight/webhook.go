@@ -20,6 +20,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
+	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/indexer"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
@@ -27,8 +28,6 @@ import (
 	libWebhook "github.com/akuity/kargo/internal/webhook/kubernetes"
 	"github.com/akuity/kargo/pkg/event"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
-	"github.com/akuity/kargo/pkg/git"
-	pkgwarehouse "github.com/akuity/kargo/pkg/warehouse"
 )
 
 var (
@@ -110,7 +109,7 @@ func newWebhook(
 	w.validateProjectFn = libWebhook.ValidateProject
 	w.listFreightFn = kubeClient.List
 	w.listStagesFn = kubeClient.List
-	w.getWarehouseFn = pkgwarehouse.GetWarehouse
+	w.getWarehouseFn = api.GetWarehouse
 	w.validateFreightArtifactsFn = validateFreightArtifacts
 	w.isRequestFromKargoControlplaneFn = libWebhook.IsRequestFromKargoControlplane(cfg.ControlplaneUserRegex)
 	return w

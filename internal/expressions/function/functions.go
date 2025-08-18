@@ -14,14 +14,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/freight"
+	"github.com/akuity/kargo/internal/controller/freight"
+	"github.com/akuity/kargo/internal/kargo"
 )
 
 type exprFn func(params ...any) (any, error)
-
-// PromotionAliasSeparator is the separator used in the Promotion step alias
-// to separate the task alias from the step alias.
-const PromotionAliasSeparator = "::"
 
 // FreightOperations returns a slice of expr.Option containing functions for
 // Freight operations.
@@ -609,7 +606,7 @@ func getStatus(
 	stepExecMetas kargoapi.StepExecutionMetadataList,
 ) exprFn {
 	var currentStepNamespace string
-	if parts := strings.Split(currentStepAlias, PromotionAliasSeparator); len(parts) == 2 {
+	if parts := strings.Split(currentStepAlias, kargo.PromotionAliasSeparator); len(parts) == 2 {
 		currentStepNamespace = parts[0]
 	}
 	return func(a ...any) (any, error) {
@@ -629,7 +626,7 @@ func getStatus(
 		for _, stepExecMeta := range stepExecMetas {
 			stepShortAlias := stepExecMeta.Alias
 			var stepNamespace string
-			if parts := strings.Split(stepExecMeta.Alias, PromotionAliasSeparator); len(parts) == 2 {
+			if parts := strings.Split(stepExecMeta.Alias, kargo.PromotionAliasSeparator); len(parts) == 2 {
 				stepNamespace = parts[0]
 				stepShortAlias = parts[1]
 			}

@@ -9,15 +9,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/controller/git/commit"
+	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/helm/chart"
 	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/logging"
-	"github.com/akuity/kargo/pkg/git"
-	"github.com/akuity/kargo/pkg/warehouse"
 )
 
 // refreshWarehouses refreshes all Warehouses in the given namespace that are
@@ -107,7 +107,7 @@ func refreshWarehouses(
 			"namespace", whKey.Namespace,
 			"name", whKey.Name,
 		)
-		if _, err := warehouse.RefreshWarehouse(ctx, c, whKey); err != nil {
+		if _, err := api.RefreshWarehouse(ctx, c, whKey); err != nil {
 			whLogger.Error(err, "error refreshing Warehouse")
 			failures++
 		} else {

@@ -15,7 +15,6 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/server/user"
-	pkgwarehouse "github.com/akuity/kargo/pkg/warehouse"
 )
 
 // GetStage returns a pointer to the Stage resource specified by the
@@ -57,7 +56,7 @@ func ListFreightAvailableToStage(
 
 	for _, req := range s.Spec.RequestedFreight {
 		// Get the Warehouse of origin
-		warehouse, err := pkgwarehouse.GetWarehouse(
+		warehouse, err := GetWarehouse(
 			ctx,
 			c,
 			types.NamespacedName{
@@ -77,16 +76,16 @@ func ListFreightAvailableToStage(
 			)
 		}
 		// Get applicable Freight from the Warehouse
-		var listOpts *pkgwarehouse.ListWarehouseFreightOptions
+		var listOpts *ListWarehouseFreightOptions
 		if !req.Sources.Direct {
-			listOpts = &pkgwarehouse.ListWarehouseFreightOptions{
+			listOpts = &ListWarehouseFreightOptions{
 				ApprovedFor:          s.Name,
 				VerifiedIn:           req.Sources.Stages,
 				AvailabilityStrategy: req.Sources.AvailabilityStrategy,
 				RequiredSoakTime:     req.Sources.RequiredSoakTime,
 			}
 		}
-		freightFromWarehouse, err := pkgwarehouse.ListFreightFromWarehouse(
+		freightFromWarehouse, err := ListFreightFromWarehouse(
 			ctx, c, warehouse, listOpts,
 		)
 		if err != nil {

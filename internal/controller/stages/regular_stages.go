@@ -33,6 +33,7 @@ import (
 	"github.com/akuity/kargo/internal/conditions"
 	"github.com/akuity/kargo/internal/controller"
 	argocdapi "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
+	exprfn "github.com/akuity/kargo/internal/expressions/function"
 	"github.com/akuity/kargo/internal/health"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/kargo"
@@ -45,7 +46,6 @@ import (
 	"github.com/akuity/kargo/internal/rollouts"
 	kargoEvent "github.com/akuity/kargo/pkg/event"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
-	exprfn "github.com/akuity/kargo/pkg/expressions/function"
 	healthPkg "github.com/akuity/kargo/pkg/health"
 )
 
