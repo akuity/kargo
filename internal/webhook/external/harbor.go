@@ -19,6 +19,7 @@ const (
 	harborSecretDataKey = "auth-header"
 	harborAuthHeader    = "Authorization"
 	harbor              = "harbor"
+	harborEventTypePush = "PUSH_ARTIFACT"
 )
 
 func init() {
@@ -144,7 +145,7 @@ func (q *harborWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 		}
 
 		// Only handle artifact push events for now
-		if payload.Type != "PUSH_ARTIFACT" {
+		if payload.Type != harborEventTypePush {
 			xhttp.WriteErrorJSON(
 				w,
 				xhttp.Error(errors.New("unsupported event type"),

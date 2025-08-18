@@ -3,6 +3,7 @@ package external
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -24,7 +25,7 @@ func TestHarborHandler(t *testing.T) {
 	const testAuthToken = "test-auth-token-123"
 
 	validPushArtifactEvent := map[string]interface{}{
-		"type":     "PUSH_ARTIFACT",
+		"type":     harborEventTypePush,
 		"occur_at": 1680501893,
 		"operator": "harbor-jobservice",
 		"event_data": map[string]interface{}{
@@ -46,7 +47,7 @@ func TestHarborHandler(t *testing.T) {
 	}
 
 	validPushArtifactEventMultipleResources := map[string]interface{}{
-		"type":     "PUSH_ARTIFACT",
+		"type":     harborEventTypePush,
 		"occur_at": 1680501893,
 		"operator": "harbor-jobservice",
 		"event_data": map[string]interface{}{
@@ -73,7 +74,7 @@ func TestHarborHandler(t *testing.T) {
 	}
 
 	validHelmChartPushEvent := map[string]interface{}{
-		"type":     "PUSH_ARTIFACT",
+		"type":     harborEventTypePush,
 		"occur_at": 1680501893,
 		"operator": "harbor-jobservice",
 		"event_data": map[string]interface{}{
@@ -122,10 +123,10 @@ func TestHarborHandler(t *testing.T) {
 			name:       "missing authorization header",
 			secretData: testSecretData,
 			req: func() *http.Request {
-				body := bytes.NewBufferString(`{
-					"type": "PUSH_ARTIFACT",
+				body := bytes.NewBufferString(fmt.Sprintf(`{
+					"type": "%s",
 					"occur_at": 1680501893
-				}`)
+				}`, harborEventTypePush))
 				req := httptest.NewRequest(http.MethodPost, testURL, body)
 				// No Authorization header set
 				return req
@@ -139,10 +140,10 @@ func TestHarborHandler(t *testing.T) {
 			name:       "invalid authorization header",
 			secretData: testSecretData,
 			req: func() *http.Request {
-				body := bytes.NewBufferString(`{
-					"type": "PUSH_ARTIFACT",
+				body := bytes.NewBufferString(fmt.Sprintf(`{
+					"type": "%s",
 					"occur_at": 1680501893
-				}`)
+				}`, harborEventTypePush))
 				req := httptest.NewRequest(http.MethodPost, testURL, body)
 				req.Header.Set(harborAuthHeader, "invalid-token")
 				return req
@@ -380,8 +381,8 @@ func TestHarborHandler(t *testing.T) {
 			name:       "empty resources array",
 			secretData: testSecretData,
 			req: func() *http.Request {
-				body := bytes.NewBufferString(`{
-					"type": "PUSH_ARTIFACT",
+				body := bytes.NewBufferString(fmt.Sprintf(`{
+					"type": "%s",
 					"occur_at": 1680501893,
 					"operator": "harbor-jobservice",
 					"event_data": {
@@ -394,7 +395,7 @@ func TestHarborHandler(t *testing.T) {
 							"repo_type": "private"
 						}
 					}
-				}`)
+				}`, harborEventTypePush))
 				req := httptest.NewRequest(http.MethodPost, testURL, body)
 				req.Header.Set(harborAuthHeader, testAuthToken)
 				return req
