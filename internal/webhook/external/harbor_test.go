@@ -22,7 +22,7 @@ import (
 func TestHarborHandler(t *testing.T) {
 	const testURL = "https://webhooks.kargo.example.com/nonsense"
 	const testProjectName = "fake-project"
-	const testAuthToken = "test-auth-token-123"
+	const testAuthToken = "test-auth-token-123" // nolint: gosec
 
 	validPushArtifactEvent := map[string]any{
 		"type": harborEventTypePush,
