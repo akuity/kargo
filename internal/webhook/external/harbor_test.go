@@ -24,73 +24,42 @@ func TestHarborHandler(t *testing.T) {
 	const testProjectName = "fake-project"
 	const testAuthToken = "test-auth-token-123"
 
-	validPushArtifactEvent := map[string]interface{}{
-		"type":     harborEventTypePush,
-		"occur_at": 1680501893,
-		"operator": "harbor-jobservice",
-		"event_data": map[string]interface{}{
-			"resources": []map[string]interface{}{
+	validPushArtifactEvent := map[string]any{
+		"type": harborEventTypePush,
+		"event_data": map[string]any{
+			"resources": []map[string]any{
 				{
-					"digest":       "sha256:954b378c375d852eb3c63ab88978f640b4348b01c1b3456a024a81536dafbbf4",
 					"tag":          "v1.0.0",
 					"resource_url": "harbor.example.com/library/alpine:v1.0.0",
 				},
-			},
-			"repository": map[string]interface{}{
-				"date_created":   1680501893,
-				"name":           "alpine",
-				"namespace":      "library",
-				"repo_full_name": "library/alpine",
-				"repo_type":      "private",
 			},
 		},
 	}
 
-	validPushArtifactEventMultipleResources := map[string]interface{}{
-		"type":     harborEventTypePush,
-		"occur_at": 1680501893,
-		"operator": "harbor-jobservice",
-		"event_data": map[string]interface{}{
-			"resources": []map[string]interface{}{
+	validPushArtifactEventMultipleResources := map[string]any{
+		"type": harborEventTypePush,
+		"event_data": map[string]any{
+			"resources": []map[string]any{
 				{
-					"digest":       "sha256:954b378c375d852eb3c63ab88978f640b4348b01c1b3456a024a81536dafbbf4",
 					"tag":          "v1.0.0",
 					"resource_url": "harbor.example.com/library/alpine:v1.0.0",
 				},
 				{
-					"digest":       "sha256:111b378c375d852eb3c63ab88978f640b4348b01c1b3456a024a81536dafbbf5",
 					"tag":          "v1.1.0",
 					"resource_url": "harbor.example.com/library/alpine:v1.1.0",
 				},
 			},
-			"repository": map[string]interface{}{
-				"date_created":   1680501893,
-				"name":           "alpine",
-				"namespace":      "library",
-				"repo_full_name": "library/alpine",
-				"repo_type":      "private",
-			},
 		},
 	}
 
-	validHelmChartPushEvent := map[string]interface{}{
-		"type":     harborEventTypePush,
-		"occur_at": 1680501893,
-		"operator": "harbor-jobservice",
-		"event_data": map[string]interface{}{
-			"resources": []map[string]interface{}{
+	validHelmChartPushEvent := map[string]any{
+		"type": harborEventTypePush,
+		"event_data": map[string]any{
+			"resources": []map[string]any{
 				{
-					"digest":       "sha256:954b378c375d852eb3c63ab88978f640b4348b01c1b3456a024a81536dafbbf4",
 					"tag":          "v1.0.0",
 					"resource_url": "harbor.example.com/charts/my-chart:v1.0.0",
 				},
-			},
-			"repository": map[string]interface{}{
-				"date_created":   1680501893,
-				"name":           "my-chart",
-				"namespace":      "charts",
-				"repo_full_name": "charts/my-chart",
-				"repo_type":      "private",
 			},
 		},
 	}
@@ -124,8 +93,7 @@ func TestHarborHandler(t *testing.T) {
 			secretData: testSecretData,
 			req: func() *http.Request {
 				body := bytes.NewBufferString(fmt.Sprintf(`{
-					"type": "%s",
-					"occur_at": 1680501893
+					"type": "%s"
 				}`, harborEventTypePush))
 				req := httptest.NewRequest(http.MethodPost, testURL, body)
 				// No Authorization header set
@@ -141,8 +109,7 @@ func TestHarborHandler(t *testing.T) {
 			secretData: testSecretData,
 			req: func() *http.Request {
 				body := bytes.NewBufferString(fmt.Sprintf(`{
-					"type": "%s",
-					"occur_at": 1680501893
+					"type": "%s"
 				}`, harborEventTypePush))
 				req := httptest.NewRequest(http.MethodPost, testURL, body)
 				req.Header.Set(harborAuthHeader, "invalid-token")
@@ -172,8 +139,7 @@ func TestHarborHandler(t *testing.T) {
 			secretData: testSecretData,
 			req: func() *http.Request {
 				body := bytes.NewBufferString(`{
-					"type": "PULL_ARTIFACT",
-					"occur_at": 1680501893
+					"type": "PULL_ARTIFACT"
 				}`)
 				req := httptest.NewRequest(http.MethodPost, testURL, body)
 				req.Header.Set(harborAuthHeader, testAuthToken)
@@ -369,17 +335,8 @@ func TestHarborHandler(t *testing.T) {
 			req: func() *http.Request {
 				body := bytes.NewBufferString(fmt.Sprintf(`{
 					"type": "%s",
-					"occur_at": 1680501893,
-					"operator": "harbor-jobservice",
 					"event_data": {
-						"resources": [],
-						"repository": {
-							"date_created": 1680501893,
-							"name": "alpine",
-							"namespace": "library",
-							"repo_full_name": "library/alpine",
-							"repo_type": "private"
-						}
+						"resources": []
 					}
 				}`, harborEventTypePush))
 				req := httptest.NewRequest(http.MethodPost, testURL, body)
