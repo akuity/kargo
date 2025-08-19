@@ -437,11 +437,38 @@ func (r *RegularStageReconciler) reconcile(
 			reconcile: func() (kargoapi.StageStatus, error) {
 				status := r.assessHealth(ctx, stage)
 				if status.Health != nil && status.Health.Status == kargoapi.HealthStateUnknown {
-					// If Stage health evaluated to Unknown, we'll treat it as an error so
-					// that Stage health will be re-assessed with a progressive backoff.
-					return status,
-						errors.New("Stage health evaluated to Unknown") // nolint: staticcheck
+					// If Stage health has evaluated to Unknown, there are two specific
+					// scenarios between which we must distinguish and handle differently
+					// from one another:
+					//
+					//  1. If Stage health is unknown specifically because the last
+					//     Promotion did not succeed, we know we cannot obtain a more
+					//     definitive assessment of Stage health until a new Promotion has
+					//     restored the Stage to a consistent state by executing to
+					//     completion. In such a case, we're DONE reconciling the Stage,
+					//     for now. We would like the Stage's conditions to reflect that
+					//     and for the next reconciliation attempt to occur after the
+					//     usual interval. This can be accomplished by returning a nil
+					//     error.
+					//
+					//  2. If Stage health is unknown for any other reason, we MAY
+					//     possibly obtain a more definitive assessment simply by
+					//     re-attempting reconciliation. In such a case, we would like
+					//     the Stage's conditions to reflect that we're still trying to
+					//     reconcile, with subsequent attempts observing a progressive
+					//     backoff. This can be accomplished by returning an error.
+					if lastPromo := status.LastPromotion; lastPromo == nil ||
+						lastPromo.Status == nil ||
+						!lastPromo.Status.Phase.IsTerminal() ||
+						lastPromo.Status.Phase == kargoapi.PromotionPhaseSucceeded {
+						// Scenario 2: There was no last Promotion or there was and it was
+						// successful. Whatever the reason the Stage health evaluated to
+						// Unknown, an unsuccessful Promotion wasn't it.
+						return status, errors.New("Stage health evaluated to Unknown") // nolint: staticcheck
+					}
 				}
+				// Health assessment was definitive OR scenario 1: Stage health is
+				// unknown specifically because the last Promotion did not succeed.
 				return status, nil
 			},
 		},
@@ -747,6 +774,24 @@ func (r *RegularStageReconciler) syncPromotions(
 func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoapi.Stage) kargoapi.StageStatus {
 	logger := logging.LoggerFromContext(ctx)
 	newStatus := *stage.Status.DeepCopy()
+
+	if currentPromo := stage.Status.CurrentPromotion; currentPromo != nil {
+		logger.Debug("Promotion is in progress: no health checks to perform")
+		conditions.Set(&newStatus, &metav1.Condition{
+			Type:               kargoapi.ConditionTypeHealthy,
+			Status:             metav1.ConditionUnknown,
+			Reason:             "ActivePromotion",
+			Message:            "Stage has a Promotion in progress",
+			ObservedGeneration: stage.Generation,
+		})
+		newStatus.Health = &kargoapi.Health{
+			Status: kargoapi.HealthStateUnknown,
+			Issues: []string{
+				"Cannot assess health because a Promotion is currently in progress",
+			},
+		}
+		return newStatus
+	}
 
 	lastPromo := stage.Status.LastPromotion
 	if lastPromo == nil {
@@ -1359,7 +1404,13 @@ func (r *RegularStageReconciler) startVerification(
 					"stage":   stage.Name,
 				},
 			},
-			Options: append(
+			Options: slices.Concat(
+				exprfn.DataOperations(
+					ctx,
+					r.client,
+					gocache.New(gocache.NoExpiration, gocache.NoExpiration),
+					stage.Namespace,
+				),
 				exprfn.FreightOperations(
 					ctx,
 					r.client,
@@ -1367,12 +1418,7 @@ func (r *RegularStageReconciler) startVerification(
 					stage.Spec.RequestedFreight,
 					freight.References(),
 				),
-				exprfn.DataOperations(
-					ctx,
-					r.client,
-					gocache.New(gocache.NoExpiration, gocache.NoExpiration),
-					stage.Namespace,
-				)...,
+				exprfn.UtilityOperations(),
 			),
 			Vars: stage.Spec.Vars,
 		},

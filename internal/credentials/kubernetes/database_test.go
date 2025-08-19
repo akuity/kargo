@@ -49,6 +49,8 @@ func TestGet(t *testing.T) {
 		// Git URL to verify that Git URL normalization is not applied to image
 		// URLs.
 		testImageURL = "my-registry.io:5000/image"
+
+		ociRepoURL = "oci://foo/bar/something"
 	)
 
 	testGitLabels := map[string]string{
@@ -57,6 +59,10 @@ func TestGet(t *testing.T) {
 
 	testImageLabels := map[string]string{
 		kargoapi.LabelKeyCredentialType: credentials.TypeImage.String(),
+	}
+
+	testChartLabels := map[string]string{
+		kargoapi.LabelKeyCredentialType: credentials.TypeHelm.String(),
 	}
 
 	projectGitCredentialWithRepoURL := &corev1.Secret{
@@ -181,6 +187,20 @@ func TestGet(t *testing.T) {
 			credentials.FieldRepoURLIsRegex: []byte("true"),
 			credentials.FieldUsername:       []byte("global-pattern"),
 			credentials.FieldPassword:       []byte("fake-password"),
+		},
+	}
+
+	projectChartCredentialWithRepoURLPattern := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "project-credential-chart-repo-url-pattern",
+			Namespace: testProjectNamespace,
+			Labels:    testChartLabels,
+		},
+		Data: map[string][]byte{
+			credentials.FieldRepoURL:        []byte("^oci://foo/bar"),
+			credentials.FieldRepoURLIsRegex: []byte("true"),
+			credentials.FieldUsername:       []byte("username"),
+			credentials.FieldPassword:       []byte("password"),
 		},
 	}
 
@@ -329,6 +349,13 @@ func TestGet(t *testing.T) {
 			credType: credentials.TypeGit,
 			repoURL:  testInsecureGitURL,
 			expected: projectGitCredentialWithInsecureRepoURL,
+		},
+		{
+			name:     "regex normalization",
+			secrets:  []client.Object{projectChartCredentialWithRepoURLPattern},
+			credType: credentials.TypeHelm,
+			repoURL:  ociRepoURL,
+			expected: projectChartCredentialWithRepoURLPattern,
 		},
 	}
 

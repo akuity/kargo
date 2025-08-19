@@ -7,7 +7,7 @@ replace github.com/akuity/kargo/api => ../api
 require (
 	github.com/akuity/kargo/api v0.0.0
 	github.com/stretchr/testify v1.10.0
-	k8s.io/apimachinery v0.33.3
+	k8s.io/apimachinery v0.33.4
 )
 
 require (

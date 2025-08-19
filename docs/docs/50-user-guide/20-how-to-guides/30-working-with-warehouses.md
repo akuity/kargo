@@ -41,7 +41,7 @@ spec:
   subscriptions:
   - image:
       repoURL: public.ecr.aws/nginx/nginx
-      semverConstraint: ^1.26.0
+      constraint: ^1.26.0
   - git:
       repoURL: https://github.com/example/kargo-demo.git
 ```
@@ -138,7 +138,7 @@ strategies are:
       subscriptions:
       - image:
           repoURL: public.ecr.aws/nginx/nginx
-          semverConstraint: ^1.26.0
+          constraint: ^1.26.0
     ```
 
 - `Lexical`: This strategy selects the image with the lexicographically greatest
@@ -190,7 +190,7 @@ strategies are:
       - image:
           repoURL: public.ecr.aws/nginx/nginx
           imageSelectionStrategy: Digest
-          semverConstraint: latest
+          constraint: latest
     ```
 
 <a name="newest-build"></a>
@@ -670,6 +670,13 @@ Helm chart repository subscriptions can be defined using the following fields:
         name: my-chart
         semverConstraint: ^1.0.0
   ```
+
+## Working with Private Repositories
+
+Frequently, `Warehouse`s require access to private repositories, in which case
+appropriate credentials must be made available in some form. The many available
+authentication options are covered in detail on the
+[Managing Credentials](../50-security/30-managing-credentials.md) page.
 
 ## Performance Considerations
 

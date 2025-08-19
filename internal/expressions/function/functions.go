@@ -6,6 +6,7 @@ import (
 	"maps"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/expr-lang/expr"
 	gocache "github.com/patrickmn/go-cache"
 	corev1 "k8s.io/api/core/v1"
@@ -53,6 +54,14 @@ func DataOperations(ctx context.Context, c client.Client, cache *gocache.Cache, 
 	return []expr.Option{
 		ConfigMap(ctx, c, cache, project),
 		Secret(ctx, c, cache, project),
+	}
+}
+
+// UtilityOperations returns a slice of expr.Option containing functions for
+// utility operations, such as semantic version comparisons.
+func UtilityOperations() []expr.Option {
+	return []expr.Option{
+		SemverDiff(),
 	}
 }
 
@@ -225,6 +234,21 @@ func Secret(ctx context.Context, c client.Client, cache *gocache.Cache, project 
 		"secret",
 		getSecret(ctx, c, cache, project),
 		new(func(name string) map[string]string),
+	)
+}
+
+// SemverDiff returns an expr.Option that provides a `semverDiff()` function for
+// use in expressions.
+//
+// The semverDiff function compares two semantic version strings and returns a
+// string indicating the magnitude of difference between them -- one of:
+// "Major", "Minor", "Patch", "Metadata", "None", or "Incomparable" if either or
+// both arguments are not valid semantic versions.
+func SemverDiff() expr.Option {
+	return expr.Function(
+		"semverDiff",
+		semverDiff,
+		new(func(ver1Str, ver2Str string) string),
 	)
 }
 
@@ -612,6 +636,48 @@ func getStatus(
 		}
 		return "", nil
 	}
+}
+
+// semverDiff compares two semantic version strings and returns a string
+// indicating the magnitude of difference between them -- one of: "Major",
+// "Minor", "Patch", "Metadata", "None", or "Incomparable" if either or both
+// arguments are not valid semantic versions.
+func semverDiff(a ...any) (any, error) {
+	if len(a) != 2 {
+		return nil, fmt.Errorf("expected 2 arguments, got %d", len(a))
+	}
+
+	ver1Str, ok := a[0].(string)
+	if !ok {
+		return nil, fmt.Errorf("first argument must be string, got %T", a[0])
+	}
+
+	ver2Str, ok := a[1].(string)
+	if !ok {
+		return nil, fmt.Errorf("second argument must be string, got %T", a[1])
+	}
+
+	ver1, err := semver.NewVersion(ver1Str)
+	if err != nil {
+		return "Incomparable", nil
+	}
+	ver2, err := semver.NewVersion(ver2Str)
+	if err != nil {
+		return "Incomparable", nil
+	}
+	if ver1.Major() != ver2.Major() {
+		return "Major", nil
+	}
+	if ver1.Minor() != ver2.Minor() {
+		return "Minor", nil
+	}
+	if ver1.Patch() != ver2.Patch() {
+		return "Patch", nil
+	}
+	if ver1.Metadata() != ver2.Metadata() {
+		return "Metadata", nil
+	}
+	return "None", nil
 }
 
 const (

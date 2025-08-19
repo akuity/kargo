@@ -263,18 +263,17 @@ func (s *Step) Skip(
 	v, err := expressions.EvaluateTemplate(
 		s.If,
 		env,
-		append(
-			append(
-				exprfn.FreightOperations(
-					ctx,
-					cl,
-					promoCtx.Project,
-					promoCtx.FreightRequests,
-					promoCtx.Freight.References(),
-				),
-				exprfn.DataOperations(ctx, cl, cache, promoCtx.Project)...,
+		slices.Concat(
+			exprfn.DataOperations(ctx, cl, cache, promoCtx.Project),
+			exprfn.FreightOperations(
+				ctx,
+				cl,
+				promoCtx.Project,
+				promoCtx.FreightRequests,
+				promoCtx.Freight.References(),
 			),
-			exprfn.StatusOperations(s.Alias, promoCtx.StepExecutionMetadata)...,
+			exprfn.StatusOperations(s.Alias, promoCtx.StepExecutionMetadata),
+			exprfn.UtilityOperations(),
 		)...,
 	)
 	if err != nil {
@@ -317,18 +316,17 @@ func (s *Step) GetConfig(
 	evaledCfgJSON, err := expressions.EvaluateJSONTemplate(
 		s.Config,
 		env,
-		append(
-			append(
-				exprfn.FreightOperations(
-					ctx,
-					cl,
-					promoCtx.Project,
-					promoCtx.FreightRequests,
-					promoCtx.Freight.References(),
-				),
-				exprfn.DataOperations(ctx, cl, cache, promoCtx.Project)...,
+		slices.Concat(
+			exprfn.DataOperations(ctx, cl, cache, promoCtx.Project),
+			exprfn.FreightOperations(
+				ctx,
+				cl,
+				promoCtx.Project,
+				promoCtx.FreightRequests,
+				promoCtx.Freight.References(),
 			),
-			exprfn.StatusOperations(s.Alias, promoCtx.StepExecutionMetadata)...,
+			exprfn.StatusOperations(s.Alias, promoCtx.StepExecutionMetadata),
+			exprfn.UtilityOperations(),
 		)...,
 	)
 	if err != nil {
@@ -357,9 +355,16 @@ func (s *Step) GetVars(
 		newVar, err := expressions.EvaluateTemplate(
 			v.Value,
 			s.BuildEnv(promoCtx, StepEnvWithVars(vars)),
-			append(
-				exprfn.FreightOperations(ctx, cl, promoCtx.Project, promoCtx.FreightRequests, promoCtx.Freight.References()),
-				exprfn.DataOperations(ctx, cl, cache, promoCtx.Project)...,
+			slices.Concat(
+				exprfn.DataOperations(ctx, cl, cache, promoCtx.Project),
+				exprfn.FreightOperations(
+					ctx,
+					cl,
+					promoCtx.Project,
+					promoCtx.FreightRequests,
+					promoCtx.Freight.References(),
+				),
+				exprfn.UtilityOperations(),
 			)...,
 		)
 		if err != nil {
@@ -380,9 +385,16 @@ func (s *Step) GetVars(
 				StepEnvWithTaskOutputs(s.Alias, promoCtx.State),
 				StepEnvWithVars(vars),
 			),
-			append(
-				exprfn.FreightOperations(ctx, cl, promoCtx.Project, promoCtx.FreightRequests, promoCtx.Freight.References()),
-				exprfn.DataOperations(ctx, cl, cache, promoCtx.Project)...,
+			slices.Concat(
+				exprfn.DataOperations(ctx, cl, cache, promoCtx.Project),
+				exprfn.FreightOperations(
+					ctx,
+					cl,
+					promoCtx.Project,
+					promoCtx.FreightRequests,
+					promoCtx.Freight.References(),
+				),
+				exprfn.UtilityOperations(),
 			)...,
 		)
 		if err != nil {

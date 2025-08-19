@@ -515,7 +515,7 @@ config:
 
 ### `success()`
 
-The `success()` function checks the status of all preceding steps and returns 
+The `success()` function checks the status of all preceding steps and returns
 true if none of them have failed or errored and false otherwise.
 
 Examples:
@@ -527,7 +527,7 @@ config:
 
 ### `failure()`
 
-The `failure()` function checks the status of all preceding steps and returns 
+The `failure()` function checks the status of all preceding steps and returns
 true if any of them have failed or errored and false otherwise.
 
 Examples:
@@ -550,7 +550,7 @@ config:
 
 ### `status(stepAlias)`
 
-The `status(stepAlias)` function retrieves the status of a specific step by its 
+The `status(stepAlias)` function retrieves the status of a specific step by its
 alias within the current promotion context; returning its value as a string.
 
 Examples:
@@ -558,4 +558,62 @@ Examples:
 ```yaml
 config:
   status: ${{ status("my-step-alias") }}
+```
+
+### `semverDiff(version1, version2)`
+
+The `semverDiff()` function compares two semantic version strings and returns
+a string indicating the magnitude of difference between them. Possible return
+values include, and are limited to:
+
+| Return Value | Description |
+|--------------|-------------|
+| `Major` | The major version components differ. |
+| `Minor` | The minor version components differ (major versions are the same). |
+| `Patch` | The patch version components differ (major and minor versions are the same). |
+| `Metadata` | Only the build metadata differs (major, minor, and patch versions are the same). |
+| `None` | The versions are identical. |
+| `Incomparable` | One or both arguments are not valid semantic versions. |
+
+:::info
+The function uses the [Semantic Versioning](https://semver.org/) specification
+to parse and compare versions. It supports versions with or without the `v`
+prefix, as well as prerelease and build metadata components.
+:::
+
+Example:
+
+```yaml
+# Open a pull request for major version changes of an image; push directly
+# otherwise...
+
+# Presume steps not shown have read and updated the version number of the image
+# referenced by some manifest.
+
+- uses: git-push
+  as: direct-push
+  if: ${{ semverDiff(imageFrom(vars.imageRepo).Tag, outputs['read-version'].currentVersion) != 'Major' }}
+  config:
+    repoURL: ${{ vars.gitRepo }}
+    targetBranch: stage/${{ ctx.stage }}
+    message: ${{ semverDiff(imageFrom(vars.imageRepo).Tag, outputs['read-version'].currentVersion) }} update of ${{ vars.imageRepo }}
+
+- uses: git-push
+  as: indirect-push
+  if: ${{ semverDiff(imageFrom(vars.imageRepo).Tag, outputs['read-version'].currentVersion) == 'Major' }}
+  config:
+    repoURL: ${{ vars.gitRepo }}
+    generateTargetBranch: true
+    message: Major update of ${{ vars.imageRepo }}
+
+- uses: git-open-pr
+  if: ${{ semverDiff(imageFrom(vars.imageRepo).Tag, outputs['read-version'].currentVersion) == 'Major' }}
+  config:
+    repoURL: https://github.com/example/config-repo.git
+    sourceBranch: ${{ outputs['indirect-push'].branch }}
+    targetBranch: stage/${{ ctx.stage }}
+    title: Major update of ${{ vars.imageRepo }}
+    labels:
+    - breaking-change
+    - needs-review
 ```
