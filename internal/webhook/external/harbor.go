@@ -56,12 +56,12 @@ func newHarborWebhookReceiver(
 }
 
 // GetDetails implements WebhookReceiver.
-func (q *harborWebhookReceiver) getReceiverType() string {
+func (h *harborWebhookReceiver) getReceiverType() string {
 	return harbor
 }
 
 // getSecretValues implements WebhookReceiver.
-func (q *harborWebhookReceiver) getSecretValues(
+func (h *harborWebhookReceiver) getSecretValues(
 	secretData map[string][]byte,
 ) ([]string, error) {
 	secretValue, ok := secretData[harborSecretDataKey]
@@ -75,13 +75,13 @@ func (q *harborWebhookReceiver) getSecretValues(
 }
 
 // getHandler implements WebhookReceiver.
-func (q *harborWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
+func (h *harborWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		logger := logging.LoggerFromContext(ctx)
 		logger.Debug("identifying source repository")
 
-		token, ok := q.secretData[harborSecretDataKey]
+		token, ok := h.secretData[harborSecretDataKey]
 		if !ok {
 			xhttp.WriteErrorJSON(w, nil)
 			return
@@ -169,6 +169,6 @@ func (q *harborWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			"tags", tags,
 		)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		refreshWarehouses(ctx, w, q.client, q.project, repoURLs, tags...)
+		refreshWarehouses(ctx, w, h.client, h.project, repoURLs, tags...)
 	})
 }
