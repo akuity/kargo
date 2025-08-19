@@ -5,7 +5,6 @@ import { RepoSubscription, Stage, Warehouse } from '@ui/gen/api/v1alpha1/generat
 
 import { repoSubscriptionIndexer, stageIndexer, warehouseIndexer } from './node-indexer';
 import { repoSubscriptionLabelling, stageLabelling, warehouseLabelling } from './node-labeling';
-// import { repoSubscriptionSizer, stageSizer, warehouseSizer } from './node-sizer';
 import { pickMaxSize, repoSubscriptionSizer, stageSizer, warehouseSizer } from './node-sizer';
 import { DimensionState } from './use-node-dimension-state';
 
