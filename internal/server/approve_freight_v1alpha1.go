@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -16,7 +15,9 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/server/user"
+	"github.com/akuity/kargo/pkg/event"
 )
 
 func (s *server) ApproveFreight(
@@ -123,13 +124,11 @@ func (s *server) ApproveFreight(
 		eventMsg += fmt.Sprintf(" by %q", actor)
 	}
 
-	s.recorder.AnnotatedEventf(
-		freight,
-		api.NewFreightApprovedEventAnnotations(actor, freight, stageName),
-		corev1.EventTypeNormal,
-		kargoapi.EventReasonFreightApproved,
-		eventMsg,
-	)
+	evt := event.NewFreightApproved(eventMsg, actor, stageName, freight)
+	if err := s.sender.Send(ctx, evt); err != nil {
+		logging.LoggerFromContext(ctx).Error(err,
+			"error sending Freight approved event")
+	}
 	return &connect.Response[svcv1alpha1.ApproveFreightResponse]{}, nil
 }
 

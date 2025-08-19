@@ -20,8 +20,8 @@ import (
 	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/api/stubs/rollouts"
 	libEncoding "github.com/akuity/kargo/internal/encoding"
-	"github.com/akuity/kargo/internal/expressions"
 	"github.com/akuity/kargo/internal/server/user"
+	"github.com/akuity/kargo/pkg/expressions"
 )
 
 func (s *server) GetAnalysisRunLogs(

@@ -19,6 +19,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
 	"github.com/akuity/kargo/internal/promotion"
+	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	pkgPromotion "github.com/akuity/kargo/pkg/promotion"
 )
 
@@ -31,12 +32,12 @@ func TestNewPromotionReconciler(t *testing.T) {
 	kubeClient := fake.NewClientBuilder().Build()
 	r := newReconciler(
 		kubeClient,
-		&fakeevent.EventRecorder{},
+		k8sevent.NewEventSender(&fakeevent.EventRecorder{}),
 		&promotion.MockEngine{},
 		ReconcilerConfig{},
 	)
 	require.NotNil(t, r.kargoClient)
-	require.NotNil(t, r.recorder)
+	require.NotNil(t, r.sender)
 	require.NotNil(t, r.promoEngine)
 	require.NotNil(t, r.getStageFn)
 	require.NotNil(t, r.promoteFn)
@@ -53,7 +54,7 @@ func newFakeReconciler(
 		WithObjects(objects...).WithStatusSubresource(objects...).Build()
 	return newReconciler(
 		kargoClient,
-		recorder,
+		k8sevent.NewEventSender(recorder),
 		&promotion.MockEngine{},
 		ReconcilerConfig{},
 	)
@@ -71,14 +72,14 @@ func TestReconcile(t *testing.T) {
 		expectTerminateFnCalled bool
 		expectedPhase           kargoapi.PromotionPhase
 		expectedEventRecorded   bool
-		expectedEventReason     string
+		expectedEventType       kargoapi.EventType
 	}{
 		{
 			name:                  "normal reconcile",
 			expectPromoteFnCalled: true,
 			expectedPhase:         kargoapi.PromotionPhaseSucceeded,
 			expectedEventRecorded: true,
-			expectedEventReason:   kargoapi.EventReasonPromotionSucceeded,
+			expectedEventType:     kargoapi.EventTypePromotionSucceeded,
 			promos: []client.Object{
 				&kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{
@@ -105,7 +106,7 @@ func TestReconcile(t *testing.T) {
 			expectPromoteFnCalled: false,
 			expectedPhase:         kargoapi.PromotionPhaseErrored,
 			expectedEventRecorded: false,
-			expectedEventReason:   kargoapi.EventReasonPromotionErrored,
+			expectedEventType:     kargoapi.EventTypePromotionErrored,
 			promos: []client.Object{
 				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhaseErrored, now),
 			},
@@ -115,7 +116,7 @@ func TestReconcile(t *testing.T) {
 			expectPromoteFnCalled: true,
 			expectedPhase:         kargoapi.PromotionPhaseSucceeded,
 			expectedEventRecorded: true,
-			expectedEventReason:   kargoapi.EventReasonPromotionSucceeded,
+			expectedEventType:     kargoapi.EventTypePromotionSucceeded,
 			promos: []client.Object{
 				&kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{
@@ -159,7 +160,7 @@ func TestReconcile(t *testing.T) {
 			promoToReconcile:      &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo1"},
 			expectedPhase:         kargoapi.PromotionPhaseSucceeded,
 			expectedEventRecorded: true,
-			expectedEventReason:   kargoapi.EventReasonPromotionSucceeded,
+			expectedEventType:     kargoapi.EventTypePromotionSucceeded,
 			promos: []client.Object{
 				&kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{
@@ -202,7 +203,7 @@ func TestReconcile(t *testing.T) {
 			expectPromoteFnCalled: true,
 			expectedPhase:         kargoapi.PromotionPhaseErrored,
 			expectedEventRecorded: true,
-			expectedEventReason:   kargoapi.EventReasonPromotionErrored,
+			expectedEventType:     kargoapi.EventTypePromotionErrored,
 			promos: []client.Object{
 				&kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{
@@ -227,7 +228,7 @@ func TestReconcile(t *testing.T) {
 			expectPromoteFnCalled: true,
 			expectedPhase:         kargoapi.PromotionPhaseErrored,
 			expectedEventRecorded: true,
-			expectedEventReason:   kargoapi.EventReasonPromotionErrored,
+			expectedEventType:     kargoapi.EventTypePromotionErrored,
 			promos: []client.Object{
 				&kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{
@@ -330,7 +331,7 @@ func TestReconcile(t *testing.T) {
 				if tc.expectedEventRecorded {
 					require.Len(t, recorder.Events, 1)
 					event := <-recorder.Events
-					require.Equal(t, tc.expectedEventReason, event.Reason)
+					require.Equal(t, tc.expectedEventType, kargoapi.EventType(event.Reason))
 				}
 			}
 		})
@@ -366,7 +367,7 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
-				require.Equal(t, kargoapi.EventReasonPromotionAborted, event.Reason)
+				require.Equal(t, string(kargoapi.EventTypePromotionAborted), event.Reason)
 			},
 		},
 		{
@@ -400,7 +401,7 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
-				require.Equal(t, kargoapi.EventReasonPromotionAborted, event.Reason)
+				require.Equal(t, string(kargoapi.EventTypePromotionAborted), event.Reason)
 			},
 		},
 		{
@@ -423,7 +424,7 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
-				require.Equal(t, kargoapi.EventReasonPromotionAborted, event.Reason)
+				require.Equal(t, string(kargoapi.EventTypePromotionAborted), event.Reason)
 				actor := event.Annotations[kargoapi.AnnotationKeyEventActor]
 				require.Equal(t, "fake-actor", actor)
 			},
@@ -488,7 +489,7 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 
 			r := &reconciler{
 				kargoClient: c,
-				recorder:    recorder,
+				sender:      k8sevent.NewEventSender(recorder),
 			}
 
 			req := tt.req
