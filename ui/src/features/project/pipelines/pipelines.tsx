@@ -248,6 +248,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                   <Button icon={<FontAwesomeIcon icon={faPlus} />}>Create</Button>
                 </Dropdown>
                 <Button
+                  className='z-10'
                   icon={<FontAwesomeIcon icon={faDocker} />}
                   onClick={() =>
                     setPreferredFilter({
