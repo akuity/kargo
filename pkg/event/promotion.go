@@ -10,12 +10,13 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
+
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/argocd"
 	"github.com/akuity/kargo/pkg/expressions"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 )
 
 // Promotion is a struct that contains common fields for promotion-related events.
