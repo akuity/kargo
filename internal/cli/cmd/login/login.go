@@ -18,7 +18,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/bacongobbler/browser"
+	"github.com/pkg/browser"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/spf13/cobra"
@@ -368,7 +368,7 @@ func ssoLogin(
 		oauth2.SetAuthURLParam("code_challenge", codeChallenge),
 		oauth2.SetAuthURLParam("code_challenge_method", "S256"),
 	)
-	if err = browser.Open(u); err != nil {
+	if err = browser.OpenURL(u); err != nil {
 		return "", "", fmt.Errorf("error opening system default browser: %w", err)
 	}
 
