@@ -9,12 +9,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/promotion"
@@ -22,11 +19,10 @@ import (
 
 func TestSimpleEngine_Promote(t *testing.T) {
 	tests := []struct {
-		name        string
-		promoCtx    Context
-		steps       []Step
-		interceptor interceptor.Funcs
-		assertions  func(*testing.T, Result, error)
+		name       string
+		promoCtx   Context
+		steps      []Step
+		assertions func(*testing.T, Result, error)
 	}{
 		{
 			name: "successful promotion",
@@ -74,25 +70,6 @@ func TestSimpleEngine_Promote(t *testing.T) {
 				assert.Contains(t, result.StepExecutionMetadata[0].Message, context.Canceled.Error())
 			},
 		},
-		{
-			name: "secrets retrieval failure",
-			promoCtx: Context{
-				Project: "test-project",
-			},
-			steps: []Step{
-				{Kind: "success-step"},
-			},
-			interceptor: interceptor.Funcs{
-				List: func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error {
-					return errors.New("something went wrong")
-				},
-			},
-			assertions: func(t *testing.T, result Result, err error) {
-				assert.ErrorContains(t, err, "error listing Secrets for Project")
-				assert.ErrorContains(t, err, "something went wrong")
-				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
-			},
-		},
 	}
 
 	for _, tt := range tests {
@@ -127,9 +104,6 @@ func TestSimpleEngine_Promote(t *testing.T) {
 
 			engine := &simpleEngine{
 				registry: testRegistry,
-				kargoClient: fake.NewClientBuilder().
-					WithInterceptorFuncs(tt.interceptor).
-					Build(),
 			}
 
 			result, err := engine.Promote(ctx, tt.promoCtx, tt.steps)
@@ -941,84 +915,6 @@ func TestSimpleEngine_setupWorkDir(t *testing.T) {
 			engine := &simpleEngine{}
 			dir, err := engine.setupWorkDir(tt.existingDir)
 			tt.assertions(t, dir, err)
-		})
-	}
-}
-
-func TestSimpleEngine_getProjectSecrets(t *testing.T) {
-	testData := map[string][]byte{
-		"key1": []byte("value1"),
-		"key2": []byte("value2"),
-	}
-	tests := []struct {
-		name        string
-		project     string
-		objects     []client.Object
-		interceptor interceptor.Funcs
-		assertions  func(*testing.T, map[string]map[string]string, error)
-	}{
-		{
-			name:    "successful retrieval",
-			project: "test-project",
-			objects: []client.Object{
-				&corev1.Secret{ // Not labeled; should not be included
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-secret-a",
-						Namespace: "test-project",
-					},
-					Data: testData,
-				},
-				&corev1.Secret{ // Labeled; should be included
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-secret-b",
-						Namespace: "test-project",
-						Labels: map[string]string{
-							kargoapi.LabelKeyCredentialType: kargoapi.LabelValueCredentialTypeGeneric,
-						},
-					},
-					Data: testData,
-				},
-			},
-			assertions: func(t *testing.T, secrets map[string]map[string]string, err error) {
-				assert.NoError(t, err)
-				require.Len(t, secrets, 1)
-				assert.Equal(t, "value1", secrets["test-secret-b"]["key1"])
-				assert.Equal(t, "value2", secrets["test-secret-b"]["key2"])
-			},
-		},
-		{
-			name:    "list error",
-			project: "test-project",
-			interceptor: interceptor.Funcs{
-				List: func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error {
-					return errors.New("list error")
-				},
-			},
-			assertions: func(t *testing.T, _ map[string]map[string]string, err error) {
-				assert.ErrorContains(t, err, "error listing Secrets")
-			},
-		},
-		{
-			name:    "no secrets",
-			project: "empty-project",
-			assertions: func(t *testing.T, secrets map[string]map[string]string, err error) {
-				assert.NoError(t, err)
-				assert.Empty(t, secrets)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			engine := &simpleEngine{
-				kargoClient: fake.NewClientBuilder().
-					WithObjects(tt.objects...).
-					WithInterceptorFuncs(tt.interceptor).
-					Build(),
-			}
-
-			secrets, err := engine.getProjectSecrets(context.Background(), tt.project)
-			tt.assertions(t, secrets, err)
 		})
 	}
 }

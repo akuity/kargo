@@ -20,7 +20,8 @@ import (
 const dockerhubWebhookRequestBodyImage = `
 {
 	"push_data": {
-		"media_type": "` + ociImageIndexMediaType + `"
+		"tag": "v1.0.0",
+		"media_type": "` + dockerImageConfigBlobMediaType + `"
 	},
 	"repository": {
 		"repo_name": "example/repo"
@@ -30,7 +31,8 @@ const dockerhubWebhookRequestBodyImage = `
 const dockerhubWebhookRequestBodyChart = `
 {
 	"push_data": {
-		"media_type": "` + helmChartMediaType + `"
+		"tag": "v1.0.0",
+		"media_type": "` + helmChartConfigBlobMediaType + `"
 	},
 	"repository": {
 		"repo_name": "example/repo"
@@ -70,7 +72,9 @@ func TestDockerHubHandler(t *testing.T) {
 			},
 		},
 		{
-			name: "success -- image",
+			name: "no tag match (image)",
+			// This event would prompt the Warehouse to refresh if not for the tag
+			// in the event falling outside the subscription's semver range.
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
 					ObjectMeta: metav1.ObjectMeta{
@@ -79,7 +83,45 @@ func TestDockerHubHandler(t *testing.T) {
 					},
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
-							Image: &kargoapi.ImageSubscription{RepoURL: "example/repo"},
+							Image: &kargoapi.ImageSubscription{
+								RepoURL:          "example/repo",
+								SemverConstraint: "^v2.0.0", // Constraint won't be met
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBuf := bytes.NewBuffer([]byte(dockerhubWebhookRequestBodyImage))
+				return httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(
+					t,
+					`{"msg":"refreshed 0 warehouse(s)"}`,
+					rr.Body.String(),
+				)
+			},
+		},
+		{
+			name: "warehouse refreshed (image)",
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Image: &kargoapi.ImageSubscription{
+								RepoURL:          "example/repo",
+								SemverConstraint: "^v1.0.0",
+							},
 						}},
 					},
 				},
@@ -102,7 +144,44 @@ func TestDockerHubHandler(t *testing.T) {
 			},
 		},
 		{
-			name: "success -- chart",
+			name: "no version match (chart)",
+			// This event would prompt the Warehouse to refresh if not for the tag
+			// in the event falling outside the subscription's semver range.
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Chart: &kargoapi.ChartSubscription{
+								RepoURL:          "oci://docker.io/example/repo",
+								SemverConstraint: "^2.0.0", // Constraint won't be met
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBuf := bytes.NewBuffer([]byte(dockerhubWebhookRequestBodyChart))
+				return httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(
+					t,
+					`{"msg":"refreshed 0 warehouse(s)"}`,
+					rr.Body.String(),
+				)
+			},
+		},
+		{
+			name: "warehouse refreshed (chart)",
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
 					ObjectMeta: metav1.ObjectMeta{

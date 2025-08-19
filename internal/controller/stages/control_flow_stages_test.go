@@ -23,6 +23,7 @@ import (
 	rollouts "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/conditions"
+	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/indexer"
 	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
 )
@@ -42,8 +43,11 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 		Name:      testStageName,
 	}
 	testStageMeta := metav1.ObjectMeta{
-		Namespace:  testProject,
-		Name:       testStageName,
+		Namespace: testProject,
+		Name:      testStageName,
+		Labels: map[string]string{
+			kargoapi.LabelKeyShard: "test-shard",
+		},
 		Finalizers: []string{kargoapi.FinalizerName},
 	}
 	testWarehouseOrigin := kargoapi.FreightOrigin{
@@ -70,6 +74,25 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 			assertions: func(t *testing.T, _ client.Client, result ctrl.Result, err error) {
 				require.NoError(t, err)
 				assert.Equal(t, ctrl.Result{}, result)
+			},
+		},
+		{
+			name: "shard mismatch",
+			req: ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: testProject,
+					Name:      testStageName,
+				},
+			},
+			assertions: func(t *testing.T, _ client.Client, result ctrl.Result, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, ctrl.Result{}, result)
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: testStageMeta,
+				Spec: kargoapi.StageSpec{
+					PromotionTemplate: nil,
+				},
 			},
 		},
 		{
@@ -116,6 +139,9 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 					Name:              testStageName,
 					DeletionTimestamp: &metav1.Time{Time: time.Now()},
 					Finalizers:        []string{kargoapi.FinalizerName},
+					Labels: map[string]string{
+						kargoapi.LabelKeyShard: "test-shard",
+					},
 				},
 			},
 			interceptor: interceptor.Funcs{
@@ -135,6 +161,9 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testProject,
 					Name:      testStageName,
+					Labels: map[string]string{
+						kargoapi.LabelKeyShard: "test-shard",
+					},
 				},
 			},
 			assertions: func(t *testing.T, c client.Client, result ctrl.Result, err error) {
@@ -156,6 +185,9 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 					Namespace:  testProject,
 					Name:       testStageName,
 					Finalizers: []string{kargoapi.FinalizerName},
+					Labels: map[string]string{
+						kargoapi.LabelKeyShard: "test-shard",
+					},
 					Annotations: map[string]string{
 						kargoapi.AnnotationKeyArgoCDContext: "old-argocd-context",
 					},
@@ -310,6 +342,10 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 			r := &ControlFlowStageReconciler{
 				client:        c,
 				eventRecorder: fakeevent.NewEventRecorder(10),
+				shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
+					IsDefaultController: false,
+					ShardName:           "test-shard",
+				},
 			}
 
 			result, err := r.Reconcile(context.Background(), tt.req)
@@ -632,6 +668,10 @@ func TestControlFlowStageReconciler_reconcile(t *testing.T) {
 			r := &ControlFlowStageReconciler{
 				client:        c,
 				eventRecorder: fakeevent.NewEventRecorder(10),
+				shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
+					IsDefaultController: false,
+					ShardName:           "test-shard",
+				},
 			}
 
 			status, err := r.reconcile(context.Background(), tt.stage, time.Now())

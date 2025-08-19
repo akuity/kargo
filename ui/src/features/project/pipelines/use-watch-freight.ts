@@ -33,7 +33,24 @@ export const useWatchFreight = (project: string) => {
 
         let currentFreight = queryCache.freight.get(project);
 
-        if (e.type !== 'DELETED') {
+        if (e.type === 'DELETED') {
+          // Remove the deleted freight from the cache
+          if (currentFreight?.groups?.['']?.freight) {
+            currentFreight = {
+              ...currentFreight,
+              groups: {
+                ...currentFreight?.groups,
+                '': {
+                  ...currentFreight?.groups?.[''],
+                  freight: currentFreight?.groups?.['']?.freight?.filter(
+                    (f) => f?.metadata?.name !== freight?.metadata?.name
+                  )
+                }
+              }
+            };
+          }
+        } else {
+          // Handle ADDED and MODIFIED events
           const exist = currentFreight?.groups?.['']?.freight?.find(
             (f) => f?.metadata?.name === freight?.metadata?.name
           );
@@ -58,18 +75,18 @@ export const useWatchFreight = (project: string) => {
               }
             };
           }
-
-          const queryFreightKey = createConnectQueryKey({
-            cardinality: 'finite',
-            schema: queryFreight,
-            input: {
-              project
-            },
-            transport: transportWithAuth
-          });
-
-          client.setQueryData(queryFreightKey, currentFreight);
         }
+
+        const queryFreightKey = createConnectQueryKey({
+          cardinality: 'finite',
+          schema: queryFreight,
+          input: {
+            project
+          },
+          transport: transportWithAuth
+        });
+
+        client.setQueryData(queryFreightKey, currentFreight);
       }
     };
 

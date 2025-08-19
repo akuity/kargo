@@ -6,6 +6,8 @@ export const validatorMessages = {
 
 export const zodValidators = {
   requiredString: z
-    .string({ required_error: validatorMessages.required })
-    .min(1, { message: validatorMessages.required })
+    .string({
+      error: (issue) => (issue.input === undefined ? validatorMessages.required : issue.message)
+    })
+    .min(1, { error: validatorMessages.required })
 };

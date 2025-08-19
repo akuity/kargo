@@ -31,6 +31,14 @@ const (
 	maxMetadataConcurrency = 1000
 
 	unknown = "unknown"
+
+	// ociCreatedAnnotation is the OCI annotation for the image creation timestamp.
+	// See: https://specs.opencontainers.org/image-spec/annotations/
+	ociCreatedAnnotation = "org.opencontainers.image.created"
+
+	// legacyBuildDateAnnotation is the legacy Label Schema annotation for build date.
+	// See: http://label-schema.org/rc1/
+	legacyBuildDateAnnotation = "org.label-schema.build-date"
 )
 
 var metaSem = semaphore.NewWeighted(maxMetadataConcurrency)
@@ -49,32 +57,32 @@ type repositoryClient struct {
 		context.Context,
 		string,
 		*platformConstraint,
-	) (*Image, error)
+	) (*image, error)
 
 	getImageByDigestFn func(
 		context.Context,
 		string,
 		*platformConstraint,
-	) (*Image, error)
+	) (*image, error)
 
 	getImageFromRemoteDescFn func(
 		context.Context,
 		*remote.Descriptor,
 		*platformConstraint,
-	) (*Image, error)
+	) (*image, error)
 
 	getImageFromV1ImageIndexFn func(
 		ctx context.Context,
 		digest string,
 		idx v1.ImageIndex,
 		platform *platformConstraint,
-	) (*Image, error)
+	) (*image, error)
 
 	getImageFromV1ImageFn func(
 		digest string,
 		img v1.Image,
 		platform *platformConstraint,
-	) (*Image, error)
+	) (*image, error)
 
 	remoteListFn func(name.Repository, ...remote.Option) ([]string, error)
 
@@ -149,7 +157,7 @@ func (r *repositoryClient) getImageByTag(
 	ctx context.Context,
 	tag string,
 	platform *platformConstraint,
-) (*Image, error) {
+) (*image, error) {
 	repoRef := r.repoRef.Context().Tag(tag)
 	opts := append(r.remoteOptions, remote.WithContext(ctx))
 	desc, err := r.remoteGetFn(repoRef, opts...)
@@ -178,7 +186,7 @@ func (r *repositoryClient) getImageByDigest(
 	ctx context.Context,
 	digest string,
 	platform *platformConstraint,
-) (*Image, error) {
+) (*image, error) {
 	logger := logging.LoggerFromContext(ctx)
 	logger.Trace(
 		"retrieving image",
@@ -186,8 +194,8 @@ func (r *repositoryClient) getImageByDigest(
 	)
 
 	if entry, exists := r.registry.imageCache.Get(digest); exists {
-		image := entry.(Image) // nolint: forcetypeassert
-		return &image, nil
+		img := entry.(image) // nolint: forcetypeassert
+		return &img, nil
 	}
 
 	logger.Trace(
@@ -230,7 +238,7 @@ func (r *repositoryClient) getImageFromRemoteDesc(
 	ctx context.Context,
 	desc *remote.Descriptor,
 	platform *platformConstraint,
-) (*Image, error) {
+) (*image, error) {
 	switch desc.MediaType {
 	case types.OCIImageIndex, types.DockerManifestList:
 		idx, err := desc.ImageIndex()
@@ -298,7 +306,7 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 	digest string,
 	idx v1.ImageIndex,
 	platform *platformConstraint,
-) (*Image, error) {
+) (*image, error) {
 	idxManifest, err := idx.IndexManifest()
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -399,7 +407,7 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 		// this in the future.
 	}
 
-	return &Image{
+	return &image{
 		Digest:      digest,
 		CreatedAt:   createdAt,
 		Annotations: annotations,
@@ -413,7 +421,7 @@ func (r *repositoryClient) getImageFromV1Image(
 	digest string,
 	img v1.Image,
 	platform *platformConstraint,
-) (*Image, error) {
+) (*image, error) {
 	cfg, err := img.ConfigFile()
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -435,11 +443,36 @@ func (r *repositoryClient) getImageFromV1Image(
 		)
 	}
 
-	return &Image{
-		Digest:      digest,
-		CreatedAt:   &cfg.Created.Time,
+	return &image{
+		Digest: digest,
+		CreatedAt: getCreationTime(
+			[]map[string]string{
+				manifest.Annotations,
+				cfg.Config.Labels,
+			},
+			&cfg.Created.Time,
+		),
 		Annotations: manifest.Annotations,
 	}, nil
+}
+
+func getCreationTime(sources []map[string]string, fallback *time.Time) *time.Time {
+	keys := []string{ociCreatedAnnotation, legacyBuildDateAnnotation}
+
+	for _, source := range sources {
+		if source == nil {
+			continue
+		}
+		for _, key := range keys {
+			if createdStr, ok := source[key]; ok {
+				if created, err := time.Parse(time.RFC3339, createdStr); err == nil {
+					return &created
+				}
+			}
+		}
+	}
+
+	return fallback
 }
 
 // rateLimitedRoundTripper is a rate limited implementation of

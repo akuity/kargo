@@ -55,12 +55,49 @@ Kargo to retry the step according to the configured
 The `successExpression`, `failureExpression`, and `outputs[].fromExpression`
 fields all support [expr-lang][] expressions.
 
-:::note
-The expressions included in the `successExpression`, `failureExpression`, and
-`outputs[].fromExpression` fields should _not_ be offset by `${{` and `}}`. This
-is to prevent the expressions from being evaluated by Kargo during
-pre-processing of step configurations. The `http` step itself will evaluate
-these expressions.
+:::warning
+Expressions in the `successExpression` and `failureExpression` fields must _not_
+be enclosed by `${{` and `}}` since all such expressions are evaluated _prior_
+to step execution. (i.e. All steps are _actually_ executed against static,
+pre-evaluated configuration!) Since these two expressions are intended to be
+evaulated _internally_ by the `http` step, and only after receiving an HTTP
+response, not enclosing them within `${{` and `}}` prevents premature evaluation
+and ensures they are passed to the `http` step exactly as they've been written.
+
+If your `successExpression` or `failureExpression` need to reference variables
+or output from previous steps, use expressions that _are_ enclosed by `${{`
+and `}}` _within_ those expressions. The "inner expressions" will be evaluated
+prior to step execution, while the "outer expressions" will be evaluated by the
+step itself.
+
+Consider the following:
+
+```yaml
+vars:
+- name: expectedStatus
+  value: completed
+steps:
+- uses: http
+  config:
+    url: https://api.example.com/status
+    successExpression: response.body.status == '${{ vars.expectedStatus }}'
+    failureExpression: response.body.status == 'failed'
+```
+
+After expressions enclosed within `${{` and `}}` have been pre-evaluated, the
+`http` step defined above is execute against the following _now static_
+configuration:
+
+```yaml
+{
+  "failureExpression": "response.body.status == 'failed'",
+  "successExpression": "response.body.status == 'completed'",
+  "url": "https://api.example.com/status"
+}
+```
+
+Internally, the step evaluates the `successExpression` and `failureExpression`
+exactly as if the user had written them as they now appear.
 :::
 
 A `response` object (a `map[string]any`) is available to these expressions. It

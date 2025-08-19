@@ -304,7 +304,7 @@ type FreightSources struct {
 	//
 	// Accepted Values:
 	//
-	// - "All": Freight must be be verified and, if applicable, soaked in all
+	// - "All": Freight must be verified and, if applicable, soaked in all
 	//   upstream Stages to be considered available for promotion.
 	// - "OneOf": Freight must be verified and, if applicable, soaked in at least
 	//    one upstream Stage to be considered available for promotion.
@@ -333,6 +333,8 @@ type PromotionTemplateSpec struct {
 	//
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:items:XValidation:message="PromotionTemplate step must have exactly one of uses or task set",rule="(has(self.uses) ? !has(self.task) : has(self.task))"
+	// +kubebuilder:validation:items:XValidation:message="PromotionTemplate step referencing a task cannot set continueOnError",rule="!has(self.task) || !has(self.continueOnError)"
+	// +kubebuilder:validation:items:XValidation:message="PromotionTemplate step referencing a task cannot set retry",rule="!has(self.task) || !has(self.retry)"
 	Steps []PromotionStep `json:"steps,omitempty" protobuf:"bytes,1,rep,name=steps"`
 }
 
@@ -376,6 +378,9 @@ type StageStatus struct {
 	CurrentPromotion *PromotionReference `json:"currentPromotion,omitempty" protobuf:"bytes,7,opt,name=currentPromotion"`
 	// LastPromotion is a reference to the last completed promotion.
 	LastPromotion *PromotionReference `json:"lastPromotion,omitempty" protobuf:"bytes,10,opt,name=lastPromotion"`
+	// AutoPromotionEnabled indicates whether automatic promotion is enabled
+	// for the Stage based on the ProjectConfig.
+	AutoPromotionEnabled bool `json:"autoPromotionEnabled,omitempty" protobuf:"varint,14,opt,name=autoPromotionEnabled"`
 }
 
 // GetConditions implements the conditions.Getter interface.

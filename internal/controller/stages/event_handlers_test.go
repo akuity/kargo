@@ -1305,7 +1305,7 @@ func Test_stageEnqueuerForAnalysisRuns_Update(t *testing.T) {
 				WithIndex(
 					&kargoapi.Stage{},
 					indexer.StagesByAnalysisRunField,
-					indexer.StagesByAnalysisRun(""),
+					indexer.StagesByAnalysisRun("", false),
 				).
 				WithInterceptorFuncs(tt.interceptor).
 				Build()

@@ -161,34 +161,6 @@ func TestStep_GetConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "test secrets",
-			// Test that expressions can reference secrets
-			promoCtx: Context{
-				Secrets: map[string]map[string]string{
-					"secret1": {
-						"key1": "value1",
-						"key2": "value2",
-					},
-					"secret2": {
-						"key3": "value3",
-						"key4": "value4",
-					},
-				},
-			},
-			rawCfg: []byte(`{
-				"secret1-1": "${{ secrets.secret1.key1 }}",
-				"secret1-2": "${{ secrets.secret1.key2 }}",
-				"secret2-3": "${{ secrets.secret2.key3 }}",
-				"secret2-4": "${{ secrets.secret2.key4 }}"
-			}`),
-			expectedCfg: promotion.Config{
-				"secret1-1": "value1",
-				"secret1-2": "value2",
-				"secret2-3": "value3",
-				"secret2-4": "value4",
-			},
-		},
-		{
 			name: "test vars with literal values",
 			// Test that vars can be assigned literal values
 			promoCtx: Context{
@@ -495,6 +467,37 @@ func TestStep_GetConfig(t *testing.T) {
 				"chartVersion7": "fake-chart-version",
 				"chartVersion8": "fake-chart-version",
 			},
+		},
+		{
+			name:        "test success function",
+			promoCtx:    Context{},
+			rawCfg:      []byte(`{"wasSuccessful": "${{ success() }}"}`),
+			expectedCfg: promotion.Config{"wasSuccessful": true},
+		},
+		{
+			name:        "test failure function",
+			promoCtx:    Context{},
+			rawCfg:      []byte(`{"wasFailure": "${{ failure() }}"}`),
+			expectedCfg: promotion.Config{"wasFailure": false},
+		},
+		{
+			name:        "test always function",
+			promoCtx:    Context{},
+			rawCfg:      []byte(`{"alwaysTrue": "${{ always() }}"}`),
+			expectedCfg: promotion.Config{"alwaysTrue": true},
+		},
+		{
+			name: "test status function",
+			promoCtx: Context{
+				StepExecutionMetadata: kargoapi.StepExecutionMetadataList{
+					{
+						Alias:  "test-step",
+						Status: kargoapi.PromotionStepStatusFailed,
+					},
+				},
+			},
+			rawCfg:      []byte(`{"status": "${{ status(\"test-step\") }}"}`),
+			expectedCfg: promotion.Config{"status": "Failed"},
 		},
 	}
 	for _, testCase := range testCases {

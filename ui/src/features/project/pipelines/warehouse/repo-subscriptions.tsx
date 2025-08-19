@@ -8,36 +8,109 @@ type Props = {
   projectName?: string;
 };
 
+const DescriptionsLabelStyle: React.CSSProperties = {
+  width: '40%'
+};
+
 export const RepoSubscriptions = ({ subscriptions }: Props) => {
   if (!subscriptions) {
     return null;
   }
 
   return (
-    <div>
-      <Descriptions bordered size='small' column={1} style={{ width: '50%', minWidth: 500 }}>
-        {subscriptions.map((subscription) => (
-          <>
-            {subscription.chart && (
-              <Descriptions.Item label='Chart'>
+    <div className='flex flex-col gap-5'>
+      {subscriptions.map((subscription) => (
+        <>
+          {subscription.chart && (
+            <Descriptions
+              title='Chart'
+              bordered
+              size='small'
+              column={1}
+              style={{ width: '40%', minWidth: 500 }}
+            >
+              <Descriptions.Item label='repo URL' styles={{ label: DescriptionsLabelStyle }}>
                 <Typography.Link
-                  href={subscription.chart?.repoURL}
+                  href={`${subscription.chart?.repoURL}/${subscription?.chart?.name}`}
                   target='_blank'
                   rel='noreferrer'
                 >
                   {subscription.chart?.repoURL}
                 </Typography.Link>
               </Descriptions.Item>
-            )}
-            {subscription.git && (
-              <Descriptions.Item label='Git'>
+
+              {!!subscription?.chart?.discoveryLimit && (
+                <Descriptions.Item
+                  label='discovery limit'
+                  styles={{ label: DescriptionsLabelStyle }}
+                >
+                  {subscription?.chart?.discoveryLimit}
+                </Descriptions.Item>
+              )}
+
+              {subscription?.chart?.name && (
+                <Descriptions.Item label='name' styles={{ label: DescriptionsLabelStyle }}>
+                  {subscription?.chart?.name}
+                </Descriptions.Item>
+              )}
+            </Descriptions>
+          )}
+
+          {subscription.git && (
+            <Descriptions
+              title='Git'
+              bordered
+              size='small'
+              column={1}
+              style={{ width: '40%', minWidth: 500 }}
+            >
+              <Descriptions.Item label='repo URL' styles={{ label: DescriptionsLabelStyle }}>
                 <Typography.Link href={subscription.git?.repoURL} target='_blank' rel='noreferrer'>
                   {subscription.git?.repoURL}
                 </Typography.Link>
               </Descriptions.Item>
-            )}
-            {subscription.image && (
-              <Descriptions.Item label='Image'>
+
+              {!!subscription?.git?.discoveryLimit && (
+                <Descriptions.Item
+                  label='discovery limit'
+                  styles={{ label: DescriptionsLabelStyle }}
+                >
+                  {subscription?.git?.discoveryLimit}
+                </Descriptions.Item>
+              )}
+
+              {subscription?.git?.branch && (
+                <Descriptions.Item label='branch' styles={{ label: DescriptionsLabelStyle }}>
+                  {subscription?.git?.branch}
+                </Descriptions.Item>
+              )}
+
+              {!!subscription?.git?.semverConstraint && (
+                <Descriptions.Item label='constraint' styles={{ label: DescriptionsLabelStyle }}>
+                  {subscription?.git?.semverConstraint}
+                </Descriptions.Item>
+              )}
+
+              {subscription?.git?.commitSelectionStrategy && (
+                <Descriptions.Item
+                  label='commit selection strategy'
+                  styles={{ label: DescriptionsLabelStyle }}
+                >
+                  {subscription?.git?.commitSelectionStrategy}
+                </Descriptions.Item>
+              )}
+            </Descriptions>
+          )}
+
+          {subscription.image && (
+            <Descriptions
+              title='Image'
+              bordered
+              size='small'
+              column={1}
+              style={{ width: '40%', minWidth: 500 }}
+            >
+              <Descriptions.Item label='repo URL' styles={{ label: DescriptionsLabelStyle }}>
                 <Typography.Link
                   href={urlForImage(subscription.image?.repoURL)}
                   target='_blank'
@@ -46,10 +119,34 @@ export const RepoSubscriptions = ({ subscriptions }: Props) => {
                   {subscription.image?.repoURL}
                 </Typography.Link>
               </Descriptions.Item>
-            )}
-          </>
-        ))}
-      </Descriptions>
+
+              {!!subscription?.image?.discoveryLimit && (
+                <Descriptions.Item
+                  label='discovery limit'
+                  styles={{ label: DescriptionsLabelStyle }}
+                >
+                  {subscription?.image?.discoveryLimit}
+                </Descriptions.Item>
+              )}
+
+              {(!!subscription?.image?.constraint || !!subscription?.image?.semverConstraint) && (
+                <Descriptions.Item label='constraint' styles={{ label: DescriptionsLabelStyle }}>
+                  {subscription?.image?.constraint || subscription?.image?.semverConstraint}
+                </Descriptions.Item>
+              )}
+
+              {subscription?.image?.imageSelectionStrategy && (
+                <Descriptions.Item
+                  label='image selection strategy'
+                  styles={{ label: DescriptionsLabelStyle }}
+                >
+                  {subscription?.image?.imageSelectionStrategy}
+                </Descriptions.Item>
+              )}
+            </Descriptions>
+          )}
+        </>
+      ))}
     </div>
   );
 };

@@ -120,12 +120,7 @@ export const WarehouseDetails = ({
                 rawWarehouseYamlQuery.isLoading ? (
                   <Skeleton />
                 ) : (
-                  <YamlEditor
-                    value={rawWarehouseYaml}
-                    height='700px'
-                    isHideManagedFieldsDisplayed
-                    disabled
-                  />
+                  <YamlEditor value={rawWarehouseYaml} height='700px' disabled />
                 )
               }
             />

@@ -29,6 +29,7 @@ import { ChartTable } from './chart-table';
 import { CommitTable } from './commit-table';
 import { ImageTable } from './image-table';
 import { DiscoveryResult, FreightInfo } from './types';
+import { getSubscriptionKey } from './unique-subscription-key';
 
 const constructFreight = (
   chosenItems: {
@@ -147,21 +148,21 @@ export const AssembleFreight = ({
     }
 
     for (const image of images) {
-      init[image.repoURL as string] = {
+      init[getSubscriptionKey(image)] = {
         artifact: image,
         info: image.references[0]
       };
     }
 
     for (const chart of charts) {
-      init[chart.repoURL as string] = {
+      init[getSubscriptionKey(chart)] = {
         artifact: chart,
         info: chart.versions[0]
       };
     }
 
     for (const commit of git) {
-      init[commit.repoURL as string] = {
+      init[getSubscriptionKey(commit)] = {
         artifact: commit,
         info: commit.commits[0]
       };
@@ -184,7 +185,7 @@ export const AssembleFreight = ({
     if (item) {
       setChosenItems({
         ...chosenItems,
-        [selected.repoURL as string]: {
+        [getSubscriptionKey(selected)]: {
           artifact: selected,
           info: item
         }
@@ -271,7 +272,7 @@ const DiscoveryTable = ({
     return null;
   }
 
-  const selectedItem = chosenItems[selected?.repoURL as string]?.info;
+  const selectedItem = chosenItems[getSubscriptionKey(selected)]?.info;
 
   return (
     <>

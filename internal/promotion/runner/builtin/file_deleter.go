@@ -41,19 +41,19 @@ func (f *fileDeleter) Run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
-	// Validate the configuration against the JSON Schema.
-	if err := validate(f.schemaLoader, gojsonschema.NewGoLoader(stepCtx.Config), f.Name()); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
-	}
-
-	// Convert the configuration into a typed object.
-	cfg, err := promotion.ConfigToStruct[builtin.DeleteConfig](stepCtx.Config)
+	cfg, err := f.convert(stepCtx.Config)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("could not convert config into %s config: %w", f.Name(), err)
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusFailed,
+		}, &promotion.TerminalError{Err: err}
 	}
-
 	return f.run(ctx, stepCtx, cfg)
+}
+
+// convert validates fileDeleter configuration against a JSON schema and
+// converts it into a builtin.DeleteConfig struct.
+func (f *fileDeleter) convert(cfg promotion.Config) (builtin.DeleteConfig, error) {
+	return validateAndConvert[builtin.DeleteConfig](f.schemaLoader, cfg, f.Name())
 }
 
 func (f *fileDeleter) run(

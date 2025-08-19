@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HTTPDownloadConfig",
+
+  "definitions": {
+    "httpHeader": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "value"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The name of the header."
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The value of the header."
+        }
+      }
+    },
+
+    "httpQueryParam": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "value"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The name of the query parameter."
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The value of the query parameter."
+        }
+      }
+    }
+  },
+
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["url", "outPath"],
+  "properties": {
+    "url": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The URL to download from."
+    },
+    "outPath": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The path where the downloaded file will be saved."
+    },
+    "allowOverwrite": {
+      "type": "boolean",
+      "description": "Whether to allow overwriting an existing file at the specified path. If false and the file exists, the download will fail."
+    },
+    "headers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/httpHeader"
+      },
+      "description": "Headers to include in the HTTP request."
+    },
+    "queryParams": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/httpQueryParam"
+      },
+      "description": "Query parameters to include in the HTTP request."
+    },
+    "insecureSkipTLSVerify": {
+      "type": "boolean",
+      "description": "Whether to skip TLS verification when making the request. (Not recommended.)"
+    },
+    "timeout": {
+      "type": "string",
+      "pattern": "(?:\\d+(ns|us|µs|ms|s|m|h))+",
+      "description": "The maximum time to wait for the download to complete. If not specified, the default is 5 minutes."
+    }
+  }
+}

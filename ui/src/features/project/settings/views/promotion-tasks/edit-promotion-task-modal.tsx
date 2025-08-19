@@ -77,7 +77,6 @@ export const EditPromotionTaskModal = (props: EditPromotionTaskModalProps) => {
             placeholder={getPromotionTaskYAMLExample(
               props.promotionTask?.metadata?.name || 'custom-promotion-task'
             )}
-            isHideManagedFieldsDisplayed
             label='Spec'
           />
         )}

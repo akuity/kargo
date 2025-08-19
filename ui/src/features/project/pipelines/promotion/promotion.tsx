@@ -248,9 +248,7 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
           {
             key: 'yaml',
             label: 'YAML',
-            children: (
-              <YamlEditor value={props.yaml} height='500px' disabled isHideManagedFieldsDisplayed />
-            )
+            children: <YamlEditor value={props.yaml} height='500px' disabled />
           }
         ]}
       />

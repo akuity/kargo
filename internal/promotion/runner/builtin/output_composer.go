@@ -2,7 +2,6 @@ package builtin
 
 import (
 	"context"
-	"fmt"
 	"maps"
 
 	"github.com/xeipuuv/gojsonschema"
@@ -55,19 +54,17 @@ func (c *outputComposer) Run(
 	_ context.Context,
 	stepCtx *pkgPromotion.StepContext,
 ) (pkgPromotion.StepResult, error) {
-	// Validate the configuration against the JSON Schema.
-	if err := validate(c.schemaLoader, gojsonschema.NewGoLoader(stepCtx.Config), c.Name()); err != nil {
-		return pkgPromotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
-	}
-
-	// Convert the configuration into a typed object.
-	cfg, err := pkgPromotion.ConfigToStruct[builtin.ComposeOutput](stepCtx.Config)
+	cfg, err := c.convert(stepCtx.Config)
 	if err != nil {
-		return pkgPromotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("could not convert config into %s config: %w", c.Name(), err)
+		return pkgPromotion.StepResult{
+			Status: kargoapi.PromotionStepStatusFailed,
+		}, &pkgPromotion.TerminalError{Err: err}
 	}
-
 	return c.run(cfg)
+}
+
+func (c *outputComposer) convert(cfg pkgPromotion.Config) (builtin.ComposeOutput, error) {
+	return validateAndConvert[builtin.ComposeOutput](c.schemaLoader, cfg, c.Name())
 }
 
 func (c *outputComposer) run(

@@ -36,11 +36,13 @@ func Initialize(kargoClient, argocdClient client.Client, credsDB credentials.Dat
 		newGitPusher(credsDB),
 		newGitTreeClearer(),
 		newHelmTemplateRunner(credsDB),
+		newHTTPDownloader(),
 		newHTTPRequester(),
 		newJSONParser(),
 		newJSONUpdater(),
 		newKustomizeBuilder(),
 		newKustomizeImageSetter(kargoClient),
+		newOCIDownloader(credsDB),
 		pkgPromotion.NewTaskLevelOutputStepRunner(
 			newOutputComposer(),
 		),

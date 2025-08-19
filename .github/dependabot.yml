@@ -23,8 +23,7 @@ updates:
     directory: "/ui"
     versioning-strategy: increase
     schedule:
-      interval: "weekly"
-      day: "sunday"
+      interval: "monthly"
     commit-message:
       prefix: "chore(deps):"
     groups:

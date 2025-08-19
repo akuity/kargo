@@ -41,7 +41,8 @@ import (
 )
 
 type controllerOptions struct {
-	ShardName string
+	IsDefaultController bool
+	ShardName           string
 
 	ControlPlaneKubeConfig string
 	QPS                    float32
@@ -80,6 +81,7 @@ func newControllerCommand() *cobra.Command {
 }
 
 func (o *controllerOptions) complete() {
+	o.IsDefaultController = types.MustParseBool(os.GetEnv("IS_DEFAULT_CONTROLLER", "false"))
 	o.ShardName = os.GetEnv("SHARD_NAME", "")
 
 	o.ControlPlaneKubeConfig = os.GetEnv("KUBECONFIG", "")
@@ -102,6 +104,7 @@ func (o *controllerOptions) run(ctx context.Context) error {
 		"commit", version.GitCommit,
 		"GOMAXPROCS", stdruntime.GOMAXPROCS(0),
 		"GOMEMLIMIT", os.GetEnv("GOMEMLIMIT", ""),
+		"defaultController", o.IsDefaultController,
 	)
 	if o.ShardName != "" {
 		startupLogger = startupLogger.WithValues("shard", o.ShardName)
@@ -204,12 +207,32 @@ func (o *controllerOptions) setupKargoManager(
 		}
 	}
 
-	shardReq, err := controller.GetShardRequirement(stagesReconcilerCfg.ShardName)
+	// We may or may not be able to distill stagesReconcilerCfg.ShardName and
+	// stagesReconcilerCfg.IsDefaultController down to a labels.Requirement. If
+	// we're able to do so, we'll build a labels.Selector from that requirement
+	// and use it to narrow the set of Stages and Promotions our client's internal
+	// cache needs to be concerned with watching. If we're unable to distill
+	// stagesReconcilerCfg.ShardName and stagesReconcilerCfg.IsDefaultController
+	// down to a labels.Requirement, then we have no choice but to let our
+	// client's internal cache watch all Stages and Promotions and the respective
+	// reconcilers for those types will, instead, need to apply a predicate to
+	// filter out resources for which they are not responsible.
+	cacheOpts := cache.Options{}
+	shardReq, err := controller.GetShardRequirement(
+		stagesReconcilerCfg.ShardName,
+		stagesReconcilerCfg.IsDefaultController,
+	)
 	if err != nil {
 		return nil, nil, stagesReconcilerCfg,
 			fmt.Errorf("error getting shard requirement: %w", err)
 	}
-	shardSelector := labels.NewSelector().Add(*shardReq)
+	if shardReq != nil {
+		shardSelector := labels.NewSelector().Add(*shardReq)
+		cacheOpts.ByObject = map[client.Object]cache.ByObject{
+			&kargoapi.Stage{}:     {Label: shardSelector},
+			&kargoapi.Promotion{}: {Label: shardSelector},
+		}
+	}
 
 	mgr, err := ctrl.NewManager(
 		restCfg,
@@ -235,17 +258,7 @@ func (o *controllerOptions) setupKargoManager(
 					},
 				},
 			},
-			Cache: cache.Options{
-				// When Kargo is sharded, we expect the controller to only handle
-				// resources in the shard it is responsible for. This is enforced
-				// by the following label selectors on the informers, EXCEPT for
-				// Warehouses — which should be accessible by all controllers in
-				// a sharded setup, but handled by only one controller at a time.
-				ByObject: map[client.Object]cache.ByObject{
-					&kargoapi.Stage{}:     {Label: shardSelector},
-					&kargoapi.Promotion{}: {Label: shardSelector},
-				},
-			},
+			Cache: cacheOpts,
 		},
 	)
 

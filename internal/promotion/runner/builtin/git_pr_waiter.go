@@ -47,20 +47,19 @@ func (g *gitPRWaiter) Run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
-	if err := g.validate(stepCtx.Config); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
-	}
-	cfg, err := promotion.ConfigToStruct[builtin.GitWaitForPRConfig](stepCtx.Config)
+	cfg, err := g.convert(stepCtx.Config)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("could not convert config into git-wait-for-pr config: %w", err)
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusFailed,
+		}, &promotion.TerminalError{Err: err}
 	}
 	return g.run(ctx, stepCtx, cfg)
 }
 
-// validate validates gitPRWaiter configuration against a JSON schema.
-func (g *gitPRWaiter) validate(cfg promotion.Config) error {
-	return validate(g.schemaLoader, gojsonschema.NewGoLoader(cfg), g.Name())
+// convert validates the configuration against a JSON schema and converts it
+// into a builtin.GitWaitForPRConfig struct.
+func (g *gitPRWaiter) convert(cfg promotion.Config) (builtin.GitWaitForPRConfig, error) {
+	return validateAndConvert[builtin.GitWaitForPRConfig](g.schemaLoader, cfg, g.Name())
 }
 
 func (g *gitPRWaiter) run(

@@ -79,7 +79,6 @@ export const UpsertConfigMapsModal = (props: Props) => {
         height='500px'
         value={yaml}
         onChange={(e) => setYaml(e || '')}
-        isHideManagedFieldsDisplayed
       />
     </Modal>
   );

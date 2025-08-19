@@ -15,7 +15,8 @@ import (
 )
 
 const (
-	gitlab              = "gitlab"
+	gitlab = "gitlab"
+
 	gitLabSecretDataKey = "secret-token"
 
 	gitlabTokenHeader = "X-Gitlab-Token" // nolint: gosec
@@ -91,7 +92,7 @@ func (g *gitlabWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 
 		eventType := gl.HookEventType(r)
 		switch eventType {
-		case gl.EventTypePush:
+		case gl.EventTypePush, gl.EventTypeTagPush:
 		default:
 			xhttp.WriteErrorJSON(
 				w,
@@ -117,13 +118,27 @@ func (g *gitlabWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 
 		switch e := event.(type) {
 		case *gl.PushEvent:
-			var repoURL string
+			var repoURLs []string
 			if e.Repository != nil {
-				repoURL = git.NormalizeURL(e.Repository.GitHTTPURL)
+				repoURLs = []string{git.NormalizeURL(e.Repository.GitHTTPURL)}
 			}
-			logger = logger.WithValues("repoURL", repoURL)
+			logger = logger.WithValues(
+				"repoURLs", repoURLs,
+				"ref", e.Ref,
+			)
 			ctx = logging.ContextWithLogger(ctx, logger)
-			refreshWarehouses(ctx, w, g.client, g.project, repoURL)
+			refreshWarehouses(ctx, w, g.client, g.project, repoURLs, e.Ref)
+		case *gl.TagEvent:
+			var repoURLs []string
+			if e.Repository != nil {
+				repoURLs = []string{git.NormalizeURL(e.Repository.GitHTTPURL)}
+			}
+			logger = logger.WithValues(
+				"repoURLs", repoURLs,
+				"tag", e.Ref,
+			)
+			ctx = logging.ContextWithLogger(ctx, logger)
+			refreshWarehouses(ctx, w, g.client, g.project, repoURLs, e.Ref)
 		}
 	})
 }

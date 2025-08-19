@@ -20,7 +20,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/conditions"
 )
 
@@ -44,6 +43,10 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, r.createServiceAccountFn)
 	require.NotNil(t, r.createRoleFn)
 	require.NotNil(t, r.createRoleBindingFn)
+	require.NotNil(t, r.createClusterRoleFn)
+	require.NotNil(t, r.createClusterRoleBindingFn)
+	require.NotNil(t, r.deleteClusterRoleFn)
+	require.NotNil(t, r.deleteClusterRoleBindingFn)
 }
 
 func TestReconciler_Reconcile(t *testing.T) {
@@ -124,6 +127,20 @@ func TestReconciler_Reconcile(t *testing.T) {
 						kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
 					}
 					ns.Finalizers = []string{kargoapi.FinalizerName}
+					return nil
+				},
+				deleteClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				deleteClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
 					return nil
 				},
 				removeFinalizerFn: func(
@@ -242,76 +259,6 @@ func TestReconciler_reconcile(t *testing.T) {
 			err error,
 		)
 	}{
-		{
-			name:       "error migrating spec to ProjectConfig",
-			reconciler: &reconciler{},
-			// Requires no phase --> conditions migration.
-			// Does require spec --> ProjectConfig migration.
-			project: &kargoapi.Project{
-				ObjectMeta: metav1.ObjectMeta{Name: testProject},
-				// Non-nil of spec is enough to trigger migration.
-				Spec: &kargoapi.ProjectSpec{}, // nolint:staticcheck
-			},
-			interceptor: interceptor.Funcs{
-				Update: func(
-					context.Context,
-					client.WithWatch,
-					client.Object,
-					...client.UpdateOption,
-				) error {
-					return fmt.Errorf("something went wrong")
-				},
-			},
-			assertions: func(
-				t *testing.T,
-				status kargoapi.ProjectStatus,
-				_ client.Client,
-				err error,
-			) {
-				require.ErrorContains(t, err, "something went wrong")
-
-				// Doesn't impact conditions
-				require.Len(t, status.Conditions, 0)
-			},
-		},
-		{
-			name: "success migrating spec to ProjectConfig",
-			reconciler: &reconciler{
-				ensureNamespaceFn: func(context.Context, *kargoapi.Project) error {
-					return nil
-				},
-				ensureSystemPermissionsFn: func(context.Context, *kargoapi.Project) error {
-					return nil
-				},
-				ensureDefaultUserRolesFn: func(context.Context, *kargoapi.Project) error {
-					return nil
-				},
-			},
-			// Requires no phase --> conditions migration.
-			// Does require spec --> ProjectConfig migration.
-			project: &kargoapi.Project{
-				ObjectMeta: metav1.ObjectMeta{Name: testProject},
-				// Non-nil of spec is enough to trigger migration.
-				Spec: &kargoapi.ProjectSpec{}, // nolint:staticcheck
-			},
-			assertions: func(
-				t *testing.T,
-				status kargoapi.ProjectStatus,
-				cl client.Client,
-				err error,
-			) {
-				require.NoError(t, err)
-
-				// Doesn't impact conditions
-				require.Len(t, status.Conditions, 0)
-
-				// Spec should be cleared
-				project := &kargoapi.Project{}
-				err = cl.Get(context.Background(), types.NamespacedName{Name: testProject}, project)
-				require.NoError(t, err)
-				require.Empty(t, project.Spec) // nolint:staticcheck
-			},
-		},
 		{
 			name: "error syncing project",
 			reconciler: &reconciler{
@@ -464,6 +411,55 @@ func TestReconciler_cleanupProject(t *testing.T) {
 		assertions func(*testing.T, error)
 	}{
 		{
+			name: "error deleting cluster role binding",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-project",
+				},
+			},
+			reconciler: &reconciler{
+				deleteClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error deleting ClusterRoleBinding")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "error deleting cluster role",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-project",
+				},
+			},
+			reconciler: &reconciler{
+				deleteClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				deleteClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error deleting ClusterRole")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
 			name: "error getting namespace",
 			project: &kargoapi.Project{
 				ObjectMeta: metav1.ObjectMeta{
@@ -471,6 +467,20 @@ func TestReconciler_cleanupProject(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
+				deleteClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				deleteClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
 				getNamespaceFn: func(
 					context.Context,
 					types.NamespacedName,
@@ -493,6 +503,20 @@ func TestReconciler_cleanupProject(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
+				deleteClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				deleteClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
 				getNamespaceFn: func(
 					context.Context,
 					types.NamespacedName,
@@ -521,6 +545,20 @@ func TestReconciler_cleanupProject(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
+				deleteClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				deleteClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
 				getNamespaceFn: func(
 					context.Context,
 					types.NamespacedName,
@@ -554,6 +592,20 @@ func TestReconciler_cleanupProject(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
+				deleteClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				deleteClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
 				getNamespaceFn: func(
 					_ context.Context,
 					_ types.NamespacedName,
@@ -600,6 +652,20 @@ func TestReconciler_cleanupProject(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
+				deleteClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				deleteClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
 				getNamespaceFn: func(
 					_ context.Context,
 					_ types.NamespacedName,
@@ -639,6 +705,20 @@ func TestReconciler_cleanupProject(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
+				deleteClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				deleteClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
 				getNamespaceFn: func(
 					_ context.Context,
 					_ types.NamespacedName,
@@ -674,6 +754,20 @@ func TestReconciler_cleanupProject(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
+				deleteClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				deleteClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
 				getNamespaceFn: func(
 					_ context.Context,
 					_ types.NamespacedName,
@@ -706,6 +800,20 @@ func TestReconciler_cleanupProject(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
+				deleteClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				deleteClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
 				getNamespaceFn: func(
 					_ context.Context,
 					_ types.NamespacedName,
@@ -738,6 +846,20 @@ func TestReconciler_cleanupProject(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
+				deleteClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				deleteClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
 				getNamespaceFn: func(
 					_ context.Context,
 					_ types.NamespacedName,
@@ -771,6 +893,20 @@ func TestReconciler_cleanupProject(t *testing.T) {
 				},
 			},
 			reconciler: &reconciler{
+				deleteClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				deleteClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
 				getNamespaceFn: func(
 					_ context.Context,
 					_ types.NamespacedName,
@@ -1703,8 +1839,103 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 			},
 		},
 		{
+			name: "error creating ClusterRole",
+			reconciler: &reconciler{
+				createServiceAccountFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error creating ClusterRole")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "error creating ClusterRoleBinding",
+			reconciler: &reconciler{
+				createServiceAccountFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error creating ClusterRoleBinding")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
 			name: "success",
 			reconciler: &reconciler{
+				createClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
 				createServiceAccountFn: func(
 					context.Context,
 					client.Object,
@@ -1741,135 +1972,6 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 					&kargoapi.Project{},
 				),
 			)
-		})
-	}
-}
-
-func TestMigrateSpecToProjectConfig(t *testing.T) {
-	const testProject = "fake-project"
-	testScheme := runtime.NewScheme()
-	err := kargoapi.AddToScheme(testScheme)
-	require.NoError(t, err)
-
-	tests := []struct {
-		name        string
-		project     *kargoapi.Project
-		interceptor interceptor.Funcs
-		assertions  func(t *testing.T, migrated bool, cl client.Client, err error)
-	}{
-		{
-			name: "nil spec",
-			project: &kargoapi.Project{
-				ObjectMeta: metav1.ObjectMeta{Name: testProject},
-				Spec:       nil,
-			},
-			assertions: func(t *testing.T, migrated bool, cl client.Client, err error) {
-				require.NoError(t, err)
-				require.False(t, migrated)
-				projCfg := &kargoapi.ProjectConfig{}
-				err = cl.Get(
-					context.Background(),
-					types.NamespacedName{
-						Name:      testProject,
-						Namespace: testProject,
-					},
-					projCfg,
-				)
-				require.True(t, apierrors.IsNotFound(err))
-			},
-		},
-		{
-			name: "empty promotion policies",
-			project: &kargoapi.Project{
-				ObjectMeta: metav1.ObjectMeta{Name: testProject},
-				Spec: &kargoapi.ProjectSpec{ // nolint:staticcheck
-					PromotionPolicies: []kargoapi.PromotionPolicy{},
-				},
-			},
-			assertions: func(t *testing.T, migrated bool, cl client.Client, err error) {
-				require.NoError(t, err)
-				require.True(t, migrated)
-				project := &kargoapi.Project{}
-				err = cl.Get(context.Background(), types.NamespacedName{Name: testProject}, project)
-				require.NoError(t, err)
-				require.Contains(t, project.Annotations, kargoapi.AnnotationKeyMigrated)
-				require.True(t, api.HasMigrationAnnotationValue(project, api.MigratedProjectSpecToProjectConfig))
-				require.NotNil(t, project.Spec) // nolint:staticcheck
-				projCfg := &kargoapi.ProjectConfig{}
-				err = cl.Get(
-					context.Background(),
-					types.NamespacedName{
-						Name:      testProject,
-						Namespace: testProject,
-					},
-					projCfg,
-				)
-				require.True(t, apierrors.IsNotFound(err))
-			},
-		},
-		{
-			name: "error creating ProjectConfig",
-			project: &kargoapi.Project{
-				ObjectMeta: metav1.ObjectMeta{Name: testProject},
-				Spec: &kargoapi.ProjectSpec{ // nolint:staticcheck
-					PromotionPolicies: []kargoapi.PromotionPolicy{
-						{Stage: "policy-1"}, // nolint:staticcheck
-					},
-				},
-			},
-			interceptor: interceptor.Funcs{
-				Create: func(context.Context, client.WithWatch, client.Object, ...client.CreateOption) error {
-					return errors.New("something went wrong")
-				},
-			},
-			assertions: func(t *testing.T, migrated bool, _ client.Client, err error) {
-				require.ErrorContains(t, err, "something went wrong")
-				require.False(t, migrated)
-			},
-		},
-		{
-			name: "success with promotion policies",
-			project: &kargoapi.Project{
-				ObjectMeta: metav1.ObjectMeta{Name: testProject},
-				Spec: &kargoapi.ProjectSpec{ // nolint:staticcheck
-					PromotionPolicies: []kargoapi.PromotionPolicy{
-						{Stage: "policy-1"}, // nolint:staticcheck
-					},
-				},
-			},
-			assertions: func(t *testing.T, migrated bool, cl client.Client, err error) {
-				require.NoError(t, err)
-				require.True(t, migrated)
-				project := &kargoapi.Project{}
-				err = cl.Get(context.Background(), types.NamespacedName{Name: testProject}, project)
-				require.NoError(t, err)
-				require.Contains(t, project.Annotations, kargoapi.AnnotationKeyMigrated)
-				require.True(t, api.HasMigrationAnnotationValue(project, api.MigratedProjectSpecToProjectConfig))
-				require.NotNil(t, project.Spec) // nolint:staticcheck
-				projCfg := &kargoapi.ProjectConfig{}
-				err = cl.Get(
-					context.Background(),
-					types.NamespacedName{
-						Name:      testProject,
-						Namespace: testProject,
-					},
-					projCfg,
-				)
-				require.NoError(t, err)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cl := fake.NewClientBuilder().
-				WithScheme(testScheme).
-				WithObjects(tt.project).
-				WithInterceptorFuncs(tt.interceptor).
-				Build()
-			r := &reconciler{client: cl}
-			migrated, err := r.migrateSpecToProjectConfig(context.Background(), tt.project)
-			tt.assertions(t, migrated, cl, err)
 		})
 	}
 }

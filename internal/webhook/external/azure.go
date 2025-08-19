@@ -125,14 +125,17 @@ func (a *azureWebhookReceiver) handleACREvent(
 
 	switch event.Action {
 	case acrPushEvent:
-		repoURL := normalizeOCIRepoURL(
+		repoURLs := getNormalizedImageRepoURLs(
 			fmt.Sprintf("%s/%s", event.Request.Host, event.Target.Repository),
 			event.Target.MediaType,
 		)
-		logger := logging.LoggerFromContext(ctx)
-		logger = logger.WithValues("repoURL", repoURL)
+		logger := logging.LoggerFromContext(ctx).WithValues(
+			"repoURLs", repoURLs,
+			"mediaType", event.Target.MediaType,
+			"tag", event.Target.Tag,
+		)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		refreshWarehouses(ctx, w, a.client, a.project, repoURL)
+		refreshWarehouses(ctx, w, a.client, a.project, repoURLs, event.Target.Tag)
 	case acrPingEvent:
 		xhttp.WriteResponseJSON(
 			w,
@@ -180,11 +183,15 @@ func (a *azureWebhookReceiver) handleAzureDevOpsEvent(
 		return
 	}
 
-	repoURL := git.NormalizeURL(event.Resource.Repository.RemoteURL)
+	repoURLs := []string{git.NormalizeURL(event.Resource.Repository.RemoteURL)}
 	logger := logging.LoggerFromContext(ctx)
-	logger = logger.WithValues("repoURL", repoURL)
+	refs := event.getRefs()
+	logger = logger.WithValues(
+		"repoURLs", repoURLs,
+		"refs", refs,
+	)
 	ctx = logging.ContextWithLogger(ctx, logger)
-	refreshWarehouses(ctx, w, a.client, a.project, repoURL)
+	refreshWarehouses(ctx, w, a.client, a.project, repoURLs, refs...)
 }
 
 // acrEvent represents the payload for Azure Container Registry webhooks.
@@ -199,6 +206,7 @@ type acrEvent struct {
 	Target struct {
 		MediaType  string `json:"mediaType"`
 		Repository string `json:"repository"`
+		Tag        string `json:"tag"`
 	} `json:"target"`
 	Request struct {
 		Host string `json:"host"`
@@ -215,8 +223,20 @@ type acrEvent struct {
 type azureDevOpsEvent struct {
 	EventType string `json:"eventType,omitempty"`
 	Resource  struct {
+		RefUpdates []struct {
+			Name string `json:"name,omitempty"`
+		} `json:"refUpdates,omitempty"`
 		Repository struct {
 			RemoteURL string `json:"remoteUrl,omitempty"`
 		} `json:"repository"`
 	} `json:"resource"`
+}
+
+// getRefs extracts all references mentioned by the event
+func (event azureDevOpsEvent) getRefs() []string {
+	var qualifiers []string
+	for _, refUpdate := range event.Resource.RefUpdates {
+		qualifiers = append(qualifiers, refUpdate.Name)
+	}
+	return qualifiers
 }

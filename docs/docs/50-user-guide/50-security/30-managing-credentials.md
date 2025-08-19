@@ -5,12 +5,12 @@ sidebar_label: Managing Credentials
 
 # Managing Credentials
 
-To orchestrate the promotion of `Freight` from `Stage` to `Stage`, Kargo will
-often require read/write permissions on private Git repositories and read-only
-permissions on private container image or Helm chart repositories.
+Kargo `Warehouse`s frequently require read-only access to private repositories.
+Promotion processes often require this as well, and may also require read/write
+access to Git repositories.
 
 This section presents an overview of how users can manage and use such
-credentials within their Kargo projects.
+credentials within their Kargo Projects.
 
 :::info
 __Not what you were looking for?__
@@ -104,12 +104,12 @@ __Precedence__
 
 When Kargo searches for repository credentials in a project's namespace, it
 _first_ iterates over all appropriately labeled `Secret`s _without_
-`repoIsRegex` set to `true` looking for a `repoURL` value matching the
+`repoURLIsRegex` set to `true` looking for a `repoURL` value matching the
 repository URL exactly.
 
 Only if no exact match is found does it iterate over all
-appropriately labeled `Secret`s with `repoIsRegex` set to `true` looking for a
-regular expression matching the repository URL.
+appropriately labeled `Secret`s with `repoURLIsRegex` set to `true` looking for
+a regular expression matching the repository URL.
 
 When searching for an exact match, and then again when searching for a pattern
 match, appropriately labeled `Secret`s are considered in lexical order by name.
@@ -312,7 +312,7 @@ create or install a GitHub App.
     1. Under <Hlt>Where can this GitHub App be installed?</Hlt>,
        leave <Hlt>Only on this account</Hlt> selected.
     1. Click <Hlt>Create GitHub App</Hlt>.
-    1. Take note of the <Hlt>App ID</Hlt>.
+    1. Take note of the <Hlt>Client ID</Hlt>.
     1. Scroll to the bottom of the page and click <Hlt>Generate a private
        key</Hlt>. The resulting key will be downloaded immediately. Store
        it securely.
@@ -340,12 +340,41 @@ create or install a GitHub App.
       labels:
         kargo.akuity.io/cred-type: git
     stringData:
+      githubAppClientID: <client id>
+      githubAppPrivateKey: <PEM-encoded private key>
+      githubAppInstallationID: <installation id>
+      repoURL: <repo url>
+      repoURLIsRegex: <true if repoURL is a pattern matching multiple repositories>
+    ```
+
+    :::info
+    GitHub currently recommends using an App's alphanumeric client ID whenever
+    possible, but Kargo does support the deprecated, numeric App ID as an
+    alternative identifier for a GitHub App. The following example is thus
+    valid until such time that GitHub themselves may remove support for the
+    deprecated App ID.
+
+    ```yaml
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: <name>
+      namespace: <project namespace>
+      labels:
+        kargo.akuity.io/cred-type: git
+    stringData:
       githubAppID: <app id>
       githubAppPrivateKey: <PEM-encoded private key>
       githubAppInstallationID: <installation id>
       repoURL: <repo url>
       repoURLIsRegex: <true if repoURL is a pattern matching multiple repositories>
     ```
+
+    In the event that a `Secret`'s data map includes values for _both_ the
+    `githubAppClientID` and `githubAppID` keys, Kargo will prioritize the value
+    of the `githubAppClientID` key as its means of uniquely identifying the
+    GitHub App.
+    :::
 
     :::note
     The `kargo create/update credentials` commands do not support creating or

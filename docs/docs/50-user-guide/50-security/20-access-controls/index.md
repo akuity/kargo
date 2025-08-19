@@ -424,3 +424,32 @@ control in the hands of the operator, and you should be aware of them.
     are not truly global because they are still mapped to users according to the
     rules described in the previous sections.
     :::
+
+    Example custom `RoleBinding` to a local `Project` role using a "global"
+    `ServiceAccount` in a separate namespace:
+
+    ```yaml
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: RoleBinding
+    metadata:
+      name: kargo-demo-developer
+      namespace: kargo-demo
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: Role
+      name: kargo-admin
+    subjects:
+    - kind: ServiceAccount
+      name: team-x-developers
+      namespace: kargo-global-service-accounts
+    ```
+
+    Which can also be created with:
+
+    ```shell
+    kubectl create rolebinding \
+    --serviceaccount kargo-global-service-account:team-x-developers \
+    --role kargo-admin \
+    -n kargo-demo \
+    kargo-demo-developer
+    ```

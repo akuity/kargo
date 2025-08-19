@@ -40,7 +40,11 @@ type webhook struct {
 		client.Object,
 	) error
 
-	validateSpecFn func(*field.Path, kargoapi.StageSpec) field.ErrorList
+	validateSpecFn                  func(*field.Path, kargoapi.StageSpec) field.ErrorList
+	validatePromotionStepTaskRefsFn func(
+		*field.Path,
+		[]kargoapi.PromotionStep,
+	) field.ErrorList
 
 	isRequestFromKargoControlplaneFn libWebhook.IsRequestFromKargoControlplaneFn
 }
@@ -73,6 +77,7 @@ func newWebhook(
 	w.admissionRequestFromContextFn = admission.RequestFromContext
 	w.validateProjectFn = libWebhook.ValidateProject
 	w.validateSpecFn = w.validateSpec
+	w.validatePromotionStepTaskRefsFn = w.validatePromotionStepTaskRefs
 	w.isRequestFromKargoControlplaneFn =
 		libWebhook.IsRequestFromKargoControlplane(cfg.ControlplaneUserRegex)
 	return w
@@ -198,16 +203,28 @@ func (w *webhook) validateSpec(
 	spec kargoapi.StageSpec,
 ) field.ErrorList {
 	errs := w.validateRequestedFreight(f.Child("requestedFreight"), spec.RequestedFreight)
+
 	if spec.PromotionTemplate == nil {
 		return errs
 	}
-	return append(
+
+	errs = append(
 		errs,
 		libWebhook.ValidatePromotionSteps(
 			f.Child("promotionTemplate").Child("spec").Child("steps"),
 			spec.PromotionTemplate.Spec.Steps,
 		)...,
 	)
+
+	errs = append(
+		errs,
+		w.validatePromotionStepTaskRefsFn(
+			f.Child("promotionTemplate").Child("spec").Child("steps"),
+			spec.PromotionTemplate.Spec.Steps,
+		)...,
+	)
+
+	return errs
 }
 
 func (w *webhook) validateRequestedFreight(
@@ -233,4 +250,55 @@ func (w *webhook) validateRequestedFreight(
 		seenOrigins[req.Origin.String()] = struct{}{}
 	}
 	return nil
+}
+
+// validatePromotionStepTaskRefs validates that PromotionTemplate steps that
+// reference a task do not have an 'if' condition or a config field set.
+//
+// Note that this validation is specific to Stages, as other resources (e.g.
+// Promotions and PromotionTasks) do not allow steps that reference a task
+// at all.
+func (w *webhook) validatePromotionStepTaskRefs(
+	f *field.Path,
+	steps []kargoapi.PromotionStep,
+) field.ErrorList {
+	errs := field.ErrorList{}
+	for i, step := range steps {
+		if step.Task == nil {
+			continue
+		}
+
+		// TODO(hidde): 'if' is a reserved CEL keyword, and because of this,
+		// validation rules at CRD level are not allowed on Kubernetes versions
+		// below 1.31.x. Once the minimum supported Kubernetes version is 1.31.x,
+		// this can be changed to a validation rule at CRD level.
+		//
+		// xref: https://github.com/akuity/kargo/pull/4732
+		// xref: https://github.com/kubernetes/kubernetes/pull/126977
+		if step.If != "" {
+			errs = append(
+				errs,
+				field.Forbidden(
+					f.Index(i).Child("if"),
+					"PromotionTemplate step referencing a task cannot have an 'if' condition",
+				),
+			)
+		}
+
+		// NB(hidde): This validation did not appear to be possible using CEL
+		// expressions, even on Kubernetes 1.31.x and above. This is either
+		// because the CEL expression language does not support checking
+		// the raw JSON type of the field, or because there is a bug in the
+		// CEL expression validation logic in the Kubernetes API server.
+		if step.Config != nil {
+			errs = append(
+				errs,
+				field.Forbidden(
+					f.Index(i).Child("config"),
+					"PromotionTemplate step referencing a task cannot have a config",
+				),
+			)
+		}
+	}
+	return errs
 }

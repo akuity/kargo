@@ -1,10 +1,11 @@
 import { toJson } from '@bufbuild/protobuf';
-import { Descriptions, Tabs, TabsProps } from 'antd';
+import { Descriptions, TabsProps } from 'antd';
 import Link from 'antd/es/typography/Link';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { ManifestPreview } from '@ui/features/common/manifest-preview';
+import TabsWithUrl from '@ui/features/common/tabs-with-url';
 import { FreightStatusList } from '@ui/features/freight/freight-status-list';
 import { FreightTable } from '@ui/features/project/pipelines/freight/freight-table';
 import { useGetFreightCreation } from '@ui/features/project/pipelines/freight/use-get-freight-creation';
@@ -25,7 +26,7 @@ export const FreightDetails = (props: FreightDetailsProps) => {
 
   return (
     <>
-      <Tabs
+      <TabsWithUrl
         items={[
           {
             key: 'freight',

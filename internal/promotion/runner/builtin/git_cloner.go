@@ -59,25 +59,24 @@ func (g *gitCloner) Name() string {
 	return "git-clone"
 }
 
-// validateAndUnmarshal validates the config and unmarshals it into a typed
-// struct.
-func (g *gitCloner) validateAndUnmarshal(
-	cfg promotion.Config,
-) (builtin.GitCloneConfig, error) {
-	// Schema validation
-	if err := validate(
-		g.schemaLoader,
-		gojsonschema.NewGoLoader(cfg),
-		g.Name(),
-	); err != nil {
-		return builtin.GitCloneConfig{}, err
-	}
-
-	// Unmarshal to typed config
-	typedCfg, err := promotion.ConfigToStruct[builtin.GitCloneConfig](cfg)
+// Run implements the promotion.StepRunner interface.
+func (g *gitCloner) Run(
+	ctx context.Context,
+	stepCtx *promotion.StepContext,
+) (promotion.StepResult, error) {
+	cfg, err := g.convert(stepCtx.Config)
 	if err != nil {
-		return builtin.GitCloneConfig{},
-			fmt.Errorf("could not convert config into %s config: %w", g.Name(), err)
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusFailed,
+		}, &promotion.TerminalError{Err: err}
+	}
+	return g.run(ctx, stepCtx, cfg)
+}
+
+func (g *gitCloner) convert(cfg promotion.Config) (builtin.GitCloneConfig, error) {
+	typedCfg, err := validateAndConvert[builtin.GitCloneConfig](g.schemaLoader, cfg, g.Name())
+	if err != nil {
+		return builtin.GitCloneConfig{}, err
 	}
 
 	// Ensure any specified aliases are unique across all checkouts
@@ -91,19 +90,8 @@ func (g *gitCloner) validateAndUnmarshal(
 			seen[checkout.As] = struct{}{}
 		}
 	}
-	return typedCfg, nil
-}
 
-// Run implements the promotion.StepRunner interface.
-func (g *gitCloner) Run(
-	ctx context.Context,
-	stepCtx *promotion.StepContext,
-) (promotion.StepResult, error) {
-	cfg, err := g.validateAndUnmarshal(stepCtx.Config)
-	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
-	}
-	return g.run(ctx, stepCtx, cfg)
+	return typedCfg, nil
 }
 
 func (g *gitCloner) run(

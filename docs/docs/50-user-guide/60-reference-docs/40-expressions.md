@@ -154,8 +154,7 @@ Expect other useful variables to be added in the future.
 |------|------|-------------|
 | `ctx` | `object` | Contains contextual information about the promotion. See detailed structure below. |
 | `outputs` | `object` | A map of output from previous promotion steps indexed by step aliases. |
-| `secrets` | `object` | A map of maps, indexed by the names of all Kubernetes `Secret`s in the `Promotion`'s `Project` that are labeled with `kargo.akuity.io/cred-type: generic`. Each inner map exposes the keys from the corresponding `Secret`'s `data` field. See [Managing Other Secrets](../50-security/40-managing-other-secrets.md) for more details about managing such `Secret`s.<br/><br/>__Deprecated: Use the [`secret()` function](#secretname) instead. Will be removed in v1.7.0.__ |
-| `vars` | `object` | A user-defined map of variable names to static values of any type. The map is derived from a `Promotion`'s `spec.promotionTemplate.spec.vars` field. Variable names must observe standard Go variable-naming rules. Variables values may, themselves, be defined using an expression. `vars` (contains previously defined variables) and `ctx` are available to expressions defining the values of variables, however, `outputs` and `secrets` are not. |
+| `vars` | `object` | A user-defined map of variable names to static values of any type. The map is derived from both the `Stage`'s `spec.vars` field and the `Promotion`'s `spec.promotionTemplate.spec.vars` field, with promotion template variables taking precedence over Stage-level variables for any conflicting names. Variable names must observe standard Go variable-naming rules. Variables values may, themselves, be defined using an expression. `vars` (contains previously defined variables) and `ctx` are available to expressions defining the values of variables, however, `outputs` and `secrets` are not. |
 | `task` | `object` | A map containing output from previous steps within the same PromotionTask under the `outputs` field, indexed by step aliases. Only available within `(Cluster)PromotionTask` steps. |
 
 #### Context (`ctx`) Object Structure
@@ -247,6 +246,16 @@ definition of the static variables).
 | Name | Type | Description |
 |------|------|-------------|
 | `ctx` | `object` | Contains contextual information about the stage. See structure below. |
+| `vars` | `object` | A user-defined map of variable names to static values of any type. The map is derived from the `Stage`'s `spec.vars` field. Variable names must observe standard Go variable-naming rules. Stage-level variables can be referenced in verification arguments to pass dynamic values to AnalysisRuns. |
+
+:::note
+Verification processes evaluate a `Stage`'s current state and, while frequently
+executed immediately following a promotion, are not intrinsically part of the
+promotion process itself. Therefore, promotion-level variables (such as those defined
+in `spec.promotionTemplate.spec.vars`) and promotion context (like `outputs` from
+promotion steps) are not accessible during verification. Only Stage-level variables
+and context are available.
+:::
 
 #### Context (`ctx`) Object Structure for Verification
 
@@ -502,4 +511,109 @@ config:
 # HTTP/S repository with specific warehouse
 config:
   chartVersion: ${{ chartFrom("https://example.com/charts", "my-chart", warehouse("my-warehouse")).Version }}
+```
+
+### `success()`
+
+The `success()` function checks the status of all preceding steps and returns
+true if none of them have failed or errored and false otherwise.
+
+Examples:
+
+```yaml
+config:
+  wasSuccessful: ${{ success() }}
+```
+
+### `failure()`
+
+The `failure()` function checks the status of all preceding steps and returns
+true if any of them have failed or errored and false otherwise.
+
+Examples:
+
+```yaml
+config:
+  wasFailure: ${{ failure() }}
+```
+
+### `always()`
+
+The `always()` function unconditionally returns true.
+
+Examples:
+
+```yaml
+config:
+  alwaysTrue: ${{ always() }}
+```
+
+### `status(stepAlias)`
+
+The `status(stepAlias)` function retrieves the status of a specific step by its
+alias within the current promotion context; returning its value as a string.
+
+Examples:
+
+```yaml
+config:
+  status: ${{ status("my-step-alias") }}
+```
+
+### `semverDiff(version1, version2)`
+
+The `semverDiff()` function compares two semantic version strings and returns
+a string indicating the magnitude of difference between them. Possible return
+values include, and are limited to:
+
+| Return Value | Description |
+|--------------|-------------|
+| `Major` | The major version components differ. |
+| `Minor` | The minor version components differ (major versions are the same). |
+| `Patch` | The patch version components differ (major and minor versions are the same). |
+| `Metadata` | Only the build metadata differs (major, minor, and patch versions are the same). |
+| `None` | The versions are identical. |
+| `Incomparable` | One or both arguments are not valid semantic versions. |
+
+:::info
+The function uses the [Semantic Versioning](https://semver.org/) specification
+to parse and compare versions. It supports versions with or without the `v`
+prefix, as well as prerelease and build metadata components.
+:::
+
+Example:
+
+```yaml
+# Open a pull request for major version changes of an image; push directly
+# otherwise...
+
+# Presume steps not shown have read and updated the version number of the image
+# referenced by some manifest.
+
+- uses: git-push
+  as: direct-push
+  if: ${{ semverDiff(imageFrom(vars.imageRepo).Tag, outputs['read-version'].currentVersion) != 'Major' }}
+  config:
+    repoURL: ${{ vars.gitRepo }}
+    targetBranch: stage/${{ ctx.stage }}
+    message: ${{ semverDiff(imageFrom(vars.imageRepo).Tag, outputs['read-version'].currentVersion) }} update of ${{ vars.imageRepo }}
+
+- uses: git-push
+  as: indirect-push
+  if: ${{ semverDiff(imageFrom(vars.imageRepo).Tag, outputs['read-version'].currentVersion) == 'Major' }}
+  config:
+    repoURL: ${{ vars.gitRepo }}
+    generateTargetBranch: true
+    message: Major update of ${{ vars.imageRepo }}
+
+- uses: git-open-pr
+  if: ${{ semverDiff(imageFrom(vars.imageRepo).Tag, outputs['read-version'].currentVersion) == 'Major' }}
+  config:
+    repoURL: https://github.com/example/config-repo.git
+    sourceBranch: ${{ outputs['indirect-push'].branch }}
+    targetBranch: stage/${{ ctx.stage }}
+    title: Major update of ${{ vars.imageRepo }}
+    labels:
+    - breaking-change
+    - needs-review
 ```

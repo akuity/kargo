@@ -803,20 +803,34 @@ func getAuthorizedClient(globalServiceAccountNamespaces []string) func(
 		// sub is a standard claim. If the user has this claim, we can infer that
 		// they authenticated using OIDC.
 		if _, ok := userInfo.Claims["sub"]; ok {
-			var namespacesToCheck []string
+			namespacesToCheck := make(
+				[]string,
+				0,
+				// Look in the global ServiceAccount namespaces + at most one more
+				len(globalServiceAccountNamespaces)+1,
+			)
 			if key.Namespace != "" {
 				// This is written the way it is to keep key.Namespace as the first
-				// element in the slice, so it is checked first, because this is where
-				// there is the highest likelihood of finding a ServiceAccount with
-				// the required permissions.
-				namespacesToCheck = make([]string, 0, 1+len(globalServiceAccountNamespaces))
+				// element in the slice, because it is where there is the highest
+				// likelihood of finding a ServiceAccount with the required permissions.
 				namespacesToCheck = append(namespacesToCheck, key.Namespace)
 				namespacesToCheck = append(namespacesToCheck, globalServiceAccountNamespaces...)
 			} else {
-				// Check ONLY globalServiceAccountNamespaces. i.e. We will NOT check
-				// project namespaces to find suitable ServiceAccounts for dealing with
-				// cluster-scoped resources.
-				namespacesToCheck = globalServiceAccountNamespaces
+				// For cluster-scoped resources, the set of namespaces to check is only
+				// the global ServiceAccount namespaces except in the special case of a
+				// Project. For a Project, we also need to look in the Project's
+				// underlying namespace.
+				//
+				// This is written the way it is so that in the case of a Project
+				// resource, key.Name is the first element in the slice, because this is
+				// where there is the highest likelihood of finding a ServiceAccount
+				// with the required permissions.
+				if ra.Group == kargoapi.GroupVersion.Group &&
+					ra.Version == kargoapi.GroupVersion.Version &&
+					ra.Resource == "projects" {
+					namespacesToCheck = append(namespacesToCheck, key.Name)
+				}
+				namespacesToCheck = append(namespacesToCheck, globalServiceAccountNamespaces...)
 			}
 			for _, namespaceToCheck := range namespacesToCheck {
 				serviceAccountsToCheck := userInfo.ServiceAccountsByNamespace[namespaceToCheck]

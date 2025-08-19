@@ -2,6 +2,7 @@ package stages
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -40,6 +41,7 @@ import (
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/kubernetes"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/pattern"
@@ -50,6 +52,7 @@ import (
 
 // ReconcilerConfig represents configuration for the stage reconciler.
 type ReconcilerConfig struct {
+	IsDefaultController                bool   `envconfig:"IS_DEFAULT_CONTROLLER"`
 	ShardName                          string `envconfig:"SHARD_NAME"`
 	RolloutsIntegrationEnabled         bool   `envconfig:"ROLLOUTS_INTEGRATION_ENABLED"`
 	RolloutsControllerInstanceID       string `envconfig:"ROLLOUTS_CONTROLLER_INSTANCE_ID"`
@@ -75,10 +78,11 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 }
 
 type RegularStageReconciler struct {
-	cfg           ReconcilerConfig
-	client        client.Client
-	eventRecorder record.EventRecorder
-	healthChecker health.AggregatingChecker
+	cfg            ReconcilerConfig
+	client         client.Client
+	eventRecorder  record.EventRecorder
+	healthChecker  health.AggregatingChecker
+	shardPredicate controller.ResponsibleFor[kargoapi.Stage]
 
 	backoffCfg wait.Backoff
 }
@@ -91,6 +95,10 @@ func NewRegularStageReconciler(
 	return &RegularStageReconciler{
 		cfg:           cfg,
 		healthChecker: healthChecker,
+		shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
+			IsDefaultController: cfg.IsDefaultController,
+			ShardName:           cfg.ShardName,
+		},
 		backoffCfg: wait.Backoff{
 			Duration: 1 * time.Second,
 			Factor:   2,
@@ -171,7 +179,10 @@ func (r *RegularStageReconciler) SetupWithManager(
 	// Build the controller with the reconciler.
 	c, err := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&kargoapi.Stage{}).
-		WithOptions(controller.CommonOptions(r.cfg.MaxConcurrentReconciles)).
+		WithEventFilter(controller.ResponsibleFor[client.Object]{
+			IsDefaultController: r.cfg.IsDefaultController,
+			ShardName:           r.cfg.ShardName,
+		}).
 		WithEventFilter(intpredicate.IgnoreDelete[client.Object]{}).
 		WithEventFilter(
 			predicate.And(
@@ -184,6 +195,7 @@ func (r *RegularStageReconciler) SetupWithManager(
 				),
 			),
 		).
+		WithOptions(controller.CommonOptions(r.cfg.MaxConcurrentReconciles)).
 		Build(r)
 	if err != nil {
 		return fmt.Errorf("error building Stage reconciler: %w", err)
@@ -277,7 +289,7 @@ func (r *RegularStageReconciler) SetupWithManager(
 			ctx,
 			&kargoapi.Stage{},
 			indexer.StagesByAnalysisRunField,
-			indexer.StagesByAnalysisRun(r.cfg.ShardName),
+			indexer.StagesByAnalysisRun(r.cfg.ShardName, r.cfg.IsDefaultController),
 		); err != nil {
 			return fmt.Errorf("error setting up index for Stages by AnalysisRun: %w", err)
 		}
@@ -319,6 +331,11 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// Safety check: do not reconcile Stages that are control flow Stages.
 	if stage.IsControlFlow() {
+		return ctrl.Result{}, nil
+	}
+
+	if !r.shardPredicate.IsResponsible(stage) {
+		logger.Debug("ignoring Stage because it is not assigned to this shard")
 		return ctrl.Result{}, nil
 	}
 
@@ -418,7 +435,41 @@ func (r *RegularStageReconciler) reconcile(
 		{
 			name: "assessing health",
 			reconcile: func() (kargoapi.StageStatus, error) {
-				return r.assessHealth(ctx, stage), nil
+				status := r.assessHealth(ctx, stage)
+				if status.Health != nil && status.Health.Status == kargoapi.HealthStateUnknown {
+					// If Stage health has evaluated to Unknown, there are two specific
+					// scenarios between which we must distinguish and handle differently
+					// from one another:
+					//
+					//  1. If Stage health is unknown specifically because the last
+					//     Promotion did not succeed, we know we cannot obtain a more
+					//     definitive assessment of Stage health until a new Promotion has
+					//     restored the Stage to a consistent state by executing to
+					//     completion. In such a case, we're DONE reconciling the Stage,
+					//     for now. We would like the Stage's conditions to reflect that
+					//     and for the next reconciliation attempt to occur after the
+					//     usual interval. This can be accomplished by returning a nil
+					//     error.
+					//
+					//  2. If Stage health is unknown for any other reason, we MAY
+					//     possibly obtain a more definitive assessment simply by
+					//     re-attempting reconciliation. In such a case, we would like
+					//     the Stage's conditions to reflect that we're still trying to
+					//     reconcile, with subsequent attempts observing a progressive
+					//     backoff. This can be accomplished by returning an error.
+					if lastPromo := status.LastPromotion; lastPromo == nil ||
+						lastPromo.Status == nil ||
+						!lastPromo.Status.Phase.IsTerminal() ||
+						lastPromo.Status.Phase == kargoapi.PromotionPhaseSucceeded {
+						// Scenario 2: There was no last Promotion or there was and it was
+						// successful. Whatever the reason the Stage health evaluated to
+						// Unknown, an unsuccessful Promotion wasn't it.
+						return status, errors.New("Stage health evaluated to Unknown") // nolint: staticcheck
+					}
+				}
+				// Health assessment was definitive OR scenario 1: Stage health is
+				// unknown specifically because the last Promotion did not succeed.
+				return status, nil
 			},
 		},
 		{
@@ -723,6 +774,24 @@ func (r *RegularStageReconciler) syncPromotions(
 func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoapi.Stage) kargoapi.StageStatus {
 	logger := logging.LoggerFromContext(ctx)
 	newStatus := *stage.Status.DeepCopy()
+
+	if currentPromo := stage.Status.CurrentPromotion; currentPromo != nil {
+		logger.Debug("Promotion is in progress: no health checks to perform")
+		conditions.Set(&newStatus, &metav1.Condition{
+			Type:               kargoapi.ConditionTypeHealthy,
+			Status:             metav1.ConditionUnknown,
+			Reason:             "ActivePromotion",
+			Message:            "Stage has a Promotion in progress",
+			ObservedGeneration: stage.Generation,
+		})
+		newStatus.Health = &kargoapi.Health{
+			Status: kargoapi.HealthStateUnknown,
+			Issues: []string{
+				"Cannot assess health because a Promotion is currently in progress",
+			},
+		}
+		return newStatus
+	}
 
 	lastPromo := stage.Status.LastPromotion
 	if lastPromo == nil {
@@ -1317,6 +1386,7 @@ func (r *RegularStageReconciler) startVerification(
 
 	// At this point, we know that we need to start a new AnalysisRun for the
 	// verification.
+	shortStageName := kubernetes.ShortenLabelValue(stage.Name)
 	builder := rollouts.NewAnalysisRunBuilder(r.client, rollouts.Config{
 		ControllerInstanceID: r.cfg.RolloutsControllerInstanceID,
 	})
@@ -1324,7 +1394,7 @@ func (r *RegularStageReconciler) startVerification(
 		rollouts.WithNamePrefix(stage.Name),
 		rollouts.WithNameSuffix(freight.ID),
 		rollouts.WithExtraLabels(map[string]string{
-			kargoapi.LabelKeyStage:             stage.Name,
+			kargoapi.LabelKeyStage:             shortStageName,
 			kargoapi.LabelKeyFreightCollection: freight.ID,
 		}),
 		rollouts.WithArgumentEvaluationConfig{
@@ -1334,7 +1404,13 @@ func (r *RegularStageReconciler) startVerification(
 					"stage":   stage.Name,
 				},
 			},
-			Options: append(
+			Options: slices.Concat(
+				exprfn.DataOperations(
+					ctx,
+					r.client,
+					gocache.New(gocache.NoExpiration, gocache.NoExpiration),
+					stage.Namespace,
+				),
 				exprfn.FreightOperations(
 					ctx,
 					r.client,
@@ -1342,16 +1418,18 @@ func (r *RegularStageReconciler) startVerification(
 					stage.Spec.RequestedFreight,
 					freight.References(),
 				),
-				exprfn.DataOperations(
-					ctx,
-					r.client,
-					gocache.New(gocache.NoExpiration, gocache.NoExpiration),
-					stage.Namespace,
-				)...,
+				exprfn.UtilityOperations(),
 			),
 			Vars: stage.Spec.Vars,
 		},
 	}
+
+	if stage.Name != shortStageName {
+		builderOpts = append(builderOpts, rollouts.WithExtraAnnotations(map[string]string{
+			kargoapi.AnnotationKeyStage: stage.Name,
+		}))
+	}
+
 	for _, freightRef := range freight.Freight {
 		builderOpts = append(builderOpts, rollouts.WithOwner{
 			APIVersion: kargoapi.GroupVersion.String(),
@@ -1588,7 +1666,7 @@ func (r *RegularStageReconciler) findExistingAnalysisRun(
 		client.InNamespace(stage.Namespace),
 		client.MatchingLabelsSelector{
 			Selector: labels.SelectorFromSet(map[string]string{
-				kargoapi.LabelKeyStage:             stage.Name,
+				kargoapi.LabelKeyStage:             kubernetes.ShortenLabelValue(stage.Name),
 				kargoapi.LabelKeyFreightCollection: freightColID,
 			}),
 		},
@@ -1630,8 +1708,10 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 
 	// Confirm that auto-promotion is allowed for the Stage.
 	if autoPromotionAllowed, err := r.autoPromotionAllowed(ctx, stage.ObjectMeta); err != nil || !autoPromotionAllowed {
+		newStatus.AutoPromotionEnabled = false
 		return newStatus, err
 	}
+	newStatus.AutoPromotionEnabled = true
 
 	// Retrieve promotable Freight for the Stage.
 	promotableFreight, err := r.getPromotableFreight(ctx, stage)
@@ -1962,7 +2042,7 @@ func (r *RegularStageReconciler) clearAnalysisRuns(ctx context.Context, stage *k
 		&rolloutsapi.AnalysisRun{},
 		client.InNamespace(stage.Namespace),
 		client.MatchingLabels(map[string]string{
-			kargoapi.LabelKeyStage: stage.Name,
+			kargoapi.LabelKeyStage: kubernetes.ShortenLabelValue(stage.Name),
 		}),
 	); err != nil {
 		return fmt.Errorf("error deleting AnalysisRuns for Stage %q in namespace %q: %w",

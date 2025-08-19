@@ -143,9 +143,9 @@ steps:
 ```
 
 :::note
-Steps referencing `PromotionTask` or `ClusterPromotionTask` do not support
-configuration or retry options like built-in step, as the steps within the
-task define their own configuration. For more information, see the
+Steps referencing `PromotionTask` or `ClusterPromotionTask` __do not__ support
+any configuration option other than an `alias` and `vars`, as the steps within
+the task define their own configuration. For more information, see the
 [Promotion Tasks Reference](20-promotion-tasks.md).
 :::
 
@@ -335,6 +335,12 @@ logic in your promotion templates.
 Conditional steps can be used in [Promotion Tasks](20-promotion-tasks.md) to
 conditionally execute a task step based on provided
 [task variables](20-promotion-tasks.md#task-variables).
+
+An `if` condition specified on the [task step](#promotion-task-steps) itself
+does not affect the execution of the task, as the steps of the `PromotionTask`
+are inflated into the `Promotion` at creation time. Because of this, the `if`
+condition would be evaluated at creation time rather than execution time,
+preventing it from accessing the status or outputs of previous steps.
 :::
 
 #### Step Retries

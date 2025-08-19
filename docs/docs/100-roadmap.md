@@ -17,11 +17,16 @@ Project](https://github.com/akuity/kargo/milestones)
 
 ## In Progress
 
-### v1.7.0
+### v1.8.0
 
 __Expected:__ TBD
 
 ## Completed
+
+### v1.7.0
+
+This release focused on improving Kargo's webhook receiver capabilities, adding
+new Promotion steps, and enhancing the UI.
 
 ### v1.6.0
 

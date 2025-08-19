@@ -118,7 +118,6 @@ export const AnalysisModal = ({
             height='500px'
             isLoading={isLoading}
             disabled
-            isHideManagedFieldsDisplayed
           />
         </Tabs.TabPane>
 

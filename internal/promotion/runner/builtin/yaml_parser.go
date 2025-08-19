@@ -38,23 +38,19 @@ func (yp *yamlParser) Run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
-	failure := promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}
-
-	if err := yp.validate(stepCtx.Config); err != nil {
-		return failure, err
-	}
-
-	cfg, err := promotion.ConfigToStruct[builtin.YAMLParseConfig](stepCtx.Config)
+	cfg, err := yp.convert(stepCtx.Config)
 	if err != nil {
-		return failure, fmt.Errorf("could not convert config into %s config: %w", yp.Name(), err)
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusFailed,
+		}, &promotion.TerminalError{Err: err}
 	}
-
 	return yp.run(ctx, stepCtx, cfg)
 }
 
-// validate validates yamlParser configuration against a YAML schema.
-func (yp *yamlParser) validate(cfg promotion.Config) error {
-	return validate(yp.schemaLoader, gojsonschema.NewGoLoader(cfg), yp.Name())
+// convert validates yamlParser configuration against a YAML schema and
+// converts it into a builtin.YAMLParseConfig struct.
+func (yp *yamlParser) convert(cfg promotion.Config) (builtin.YAMLParseConfig, error) {
+	return validateAndConvert[builtin.YAMLParseConfig](yp.schemaLoader, cfg, yp.Name())
 }
 
 func (yp *yamlParser) run(

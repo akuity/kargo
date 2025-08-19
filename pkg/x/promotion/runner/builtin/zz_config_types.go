@@ -252,6 +252,11 @@ type HelmTemplateConfig struct {
 	KubeVersion string `json:"kubeVersion,omitempty"`
 	// Namespace to use for the rendered manifests.
 	Namespace string `json:"namespace,omitempty"`
+	// OutLayout to use for the rendered manifest. This can be either 'helm' or 'flat'. The
+	// 'helm' layout will create a directory with the chart name and place the rendered
+	// manifests in that directory. The 'flat' layout will place all rendered manifests in the
+	// outPath directory without any subdirectories.
+	OutLayout *OutLayout `json:"outLayout,omitempty"`
 	// OutPath to write the rendered manifests to. If it points to a .yaml or .yml file, the
 	// rendered manifests will be written to that file. If it points to a directory, the
 	// rendered manifests will be written to this directory joined with the chart name.
@@ -303,7 +308,7 @@ type HTTPConfig struct {
 	// An expression to evaluate to determine if the request failed.
 	FailureExpression string `json:"failureExpression,omitempty"`
 	// Headers to include in the HTTP request.
-	Headers []HTTPHeader `json:"headers,omitempty"`
+	Headers []HTTPConfigHeader `json:"headers,omitempty"`
 	// Whether to skip TLS verification when making the request. (Not recommended.)
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 	// The HTTP method to use for the request.
@@ -311,7 +316,7 @@ type HTTPConfig struct {
 	// Outputs to extract from the HTTP response.
 	Outputs []HTTPOutput `json:"outputs,omitempty"`
 	// Query parameters to include in the HTTP request.
-	QueryParams []HTTPQueryParam `json:"queryParams,omitempty"`
+	QueryParams []HTTPConfigQueryParam `json:"queryParams,omitempty"`
 	// An expression to evaluate to determine if the request was successful.
 	SuccessExpression string `json:"successExpression,omitempty"`
 	// The maximum time to wait for the request to complete. If not specified, the default is 10
@@ -321,7 +326,7 @@ type HTTPConfig struct {
 	URL string `json:"url"`
 }
 
-type HTTPHeader struct {
+type HTTPConfigHeader struct {
 	// The name of the header.
 	Name string `json:"name"`
 	// The value of the header.
@@ -335,7 +340,40 @@ type HTTPOutput struct {
 	Name string `json:"name"`
 }
 
-type HTTPQueryParam struct {
+type HTTPConfigQueryParam struct {
+	// The name of the query parameter.
+	Name string `json:"name"`
+	// The value of the query parameter.
+	Value string `json:"value"`
+}
+
+type HTTPDownloadConfig struct {
+	// Whether to allow overwriting an existing file at the specified path. If false and the
+	// file exists, the download will fail.
+	AllowOverwrite bool `json:"allowOverwrite,omitempty"`
+	// Headers to include in the HTTP request.
+	Headers []HTTPDownloadConfigHeader `json:"headers,omitempty"`
+	// Whether to skip TLS verification when making the request. (Not recommended.)
+	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
+	// The path where the downloaded file will be saved.
+	OutPath string `json:"outPath"`
+	// Query parameters to include in the HTTP request.
+	QueryParams []HTTPDownloadConfigQueryParam `json:"queryParams,omitempty"`
+	// The maximum time to wait for the download to complete. If not specified, the default is 5
+	// minutes.
+	Timeout string `json:"timeout,omitempty"`
+	// The URL to download from.
+	URL string `json:"url"`
+}
+
+type HTTPDownloadConfigHeader struct {
+	// The name of the header.
+	Name string `json:"name"`
+	// The value of the header.
+	Value string `json:"value"`
+}
+
+type HTTPDownloadConfigQueryParam struct {
 	// The name of the query parameter.
 	Name string `json:"name"`
 	// The value of the query parameter.
@@ -382,11 +420,11 @@ type KustomizeBuildConfig struct {
 // Plugin contains configuration for customizing the behavior of builtin Kustomize plugins.
 type Plugin struct {
 	// Helm contains configuration for inflating a Helm chart.
-	Helm *Helm `json:"helm,omitempty"`
+	Helm *HelmClass `json:"helm,omitempty"`
 }
 
 // Helm contains configuration for inflating a Helm chart.
-type Helm struct {
+type HelmClass struct {
 	// APIVersions allows a manual set of supported API versions to be passed when inflating a
 	// Helm chart.
 	APIVersions []string `json:"apiVersions,omitempty"`
@@ -418,6 +456,22 @@ type Image struct {
 	NewName string `json:"newName,omitempty"`
 	// Tag of the image to set in the Kustomization file. Mutually exclusive with 'digest'.
 	Tag string `json:"tag,omitempty"`
+}
+
+type OCIDownloadConfig struct {
+	// Whether to allow overwriting an existing file at the specified path. If false and the
+	// file exists, the download will fail.
+	AllowOverwrite bool `json:"allowOverwrite,omitempty"`
+	// ImageRef is the reference to the OCI artifact to pull. Supports both tag format
+	// 'registry/repository:tag' and digest format 'registry/repository@sha256:digest'.
+	ImageRef string `json:"imageRef"`
+	// Whether to skip TLS verification when pulling the artifact. Defaults to false.
+	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
+	// MediaType of the layer to pull. Selects the first layer matching this type. If not
+	// specified, it selects the first layer available.
+	MediaType string `json:"mediaType,omitempty"`
+	// OutPath is the path to the destination file where the extracted artifact will be saved.
+	OutPath string `json:"outPath"`
 }
 
 type UntarConfig struct {
@@ -473,4 +527,15 @@ const (
 	Gitea     Provider = "gitea"
 	Github    Provider = "github"
 	Gitlab    Provider = "gitlab"
+)
+
+// OutLayout to use for the rendered manifest. This can be either 'helm' or 'flat'. The
+// 'helm' layout will create a directory with the chart name and place the rendered
+// manifests in that directory. The 'flat' layout will place all rendered manifests in the
+// outPath directory without any subdirectories.
+type OutLayout string
+
+const (
+	Flat OutLayout = "flat"
+	Helm OutLayout = "helm"
 )

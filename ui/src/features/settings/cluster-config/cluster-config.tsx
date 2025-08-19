@@ -101,7 +101,6 @@ export const ClusterConfig = () => {
               onChange={(e) => field.onChange(e || '')}
               placeholder={stringify(clusterConfigYAMLExample)}
               schema={clusterConfigSchema as JSONSchema4}
-              isHideManagedFieldsDisplayed
             />
           )}
         </FieldContainer>

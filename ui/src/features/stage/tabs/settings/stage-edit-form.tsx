@@ -60,7 +60,6 @@ export const StageEditForm = () => {
             schema={schema as JSONSchema4}
             placeholder={projectName && getStageYAMLExample(projectName)}
             isLoading={isLoading}
-            isHideManagedFieldsDisplayed
             label='YAML'
             resourceType='stages'
           />

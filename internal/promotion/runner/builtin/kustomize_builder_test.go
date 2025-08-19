@@ -18,6 +18,165 @@ import (
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
+func Test_kustomizeBuilder_convert(t *testing.T) {
+	tests := []validationTestCase{
+		{
+			name:   "path not specified",
+			config: promotion.Config{},
+			expectedProblems: []string{
+				"(root): path is required",
+			},
+		},
+		{
+			name: "path is empty string",
+			config: promotion.Config{
+				"path": "",
+			},
+			expectedProblems: []string{
+				"path: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "outPath not specified",
+			config: promotion.Config{
+				"path": "/kustomization/path",
+			},
+			expectedProblems: []string{
+				"(root): outPath is required",
+			},
+		},
+		{
+			name: "outPath is empty string",
+			config: promotion.Config{
+				"path":    "/kustomization/path",
+				"outPath": "",
+			},
+			expectedProblems: []string{
+				"outPath: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "both required fields missing",
+			config: promotion.Config{
+				"plugin": promotion.Config{},
+			},
+			expectedProblems: []string{
+				"(root): path is required",
+				"(root): outPath is required",
+			},
+		},
+		{
+			name: "plugin.helm.apiVersions contains empty string",
+			config: promotion.Config{
+				"path":    "/kustomization/path",
+				"outPath": "/output/manifests.yaml",
+				"plugin": promotion.Config{
+					"helm": promotion.Config{
+						"apiVersions": []string{"v1", ""},
+					},
+				},
+			},
+			expectedProblems: []string{
+				"plugin.helm.apiVersions.1: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "valid minimal config",
+			config: promotion.Config{
+				"path":    "/kustomization/path",
+				"outPath": "/output/manifests.yaml",
+			},
+			expectedProblems: nil,
+		},
+		{
+			name: "valid config with empty plugin",
+			config: promotion.Config{
+				"path":    "/kustomization/path",
+				"outPath": "/output/manifests.yaml",
+				"plugin":  promotion.Config{},
+			},
+			expectedProblems: nil,
+		},
+		{
+			name: "valid config with empty helm plugin",
+			config: promotion.Config{
+				"path":    "/kustomization/path",
+				"outPath": "/output/manifests.yaml",
+				"plugin": promotion.Config{
+					"helm": promotion.Config{},
+				},
+			},
+			expectedProblems: nil,
+		},
+		{
+			name: "valid config with helm kubeVersion only",
+			config: promotion.Config{
+				"path":    "/kustomization/path",
+				"outPath": "/output/manifests.yaml",
+				"plugin": promotion.Config{
+					"helm": promotion.Config{
+						"kubeVersion": "1.28.0",
+					},
+				},
+			},
+			expectedProblems: nil,
+		},
+		{
+			name: "valid config with helm apiVersions only",
+			config: promotion.Config{
+				"path":    "/kustomization/path",
+				"outPath": "/output/manifests.yaml",
+				"plugin": promotion.Config{
+					"helm": promotion.Config{
+						"apiVersions": []string{"v1", "apps/v1", "networking.k8s.io/v1"},
+					},
+				},
+			},
+			expectedProblems: nil,
+		},
+		{
+			name: "valid config with both helm fields",
+			config: promotion.Config{
+				"path":    "/kustomization/path",
+				"outPath": "/output/manifests.yaml",
+				"plugin": promotion.Config{
+					"helm": promotion.Config{
+						"kubeVersion": "1.29.0",
+						"apiVersions": []string{"v1", "apps/v1"},
+					},
+				},
+			},
+			expectedProblems: nil,
+		},
+		{
+			name: "valid kitchen sink",
+			config: promotion.Config{
+				"path":    "/path/to/kustomization/directory",
+				"outPath": "/output/built-manifests.yaml",
+				"plugin": promotion.Config{
+					"helm": promotion.Config{
+						"kubeVersion": "1.29.2",
+						"apiVersions": []string{
+							"v1",
+							"apps/v1",
+							"networking.k8s.io/v1",
+							"cert-manager.io/v1",
+							"argoproj.io/v1alpha1",
+						},
+					},
+				},
+			},
+			expectedProblems: nil,
+		},
+	}
+
+	r := newKustomizeBuilder()
+	runner, ok := r.(*kustomizeBuilder)
+	require.True(t, ok)
+
+	runValidationTests(t, runner.convert, tests)
+}
+
 func Test_kustomizeBuilder_run(t *testing.T) {
 	tests := []struct {
 		name       string

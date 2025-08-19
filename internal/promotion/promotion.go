@@ -3,7 +3,6 @@ package promotion
 import (
 	"context"
 	"fmt"
-	"maps"
 	"slices"
 	"strings"
 	"time"
@@ -63,8 +62,6 @@ type Context struct {
 	// Vars is a list of variable definitions that can be used by the
 	// Steps.
 	Vars []kargoapi.ExpressionVariable
-	// Secrets is a map of secrets that can be used by the Steps.
-	Secrets map[string]map[string]string
 	// Actor is the name of the actor triggering the Promotion.
 	Actor string
 }
@@ -91,13 +88,6 @@ func (c Context) DeepCopy() Context {
 		newC.FreightRequests = make([]kargoapi.FreightRequest, len(c.FreightRequests))
 		for i, fr := range c.FreightRequests {
 			newC.FreightRequests[i] = *fr.DeepCopy()
-		}
-	}
-
-	if c.Secrets != nil {
-		newC.Secrets = make(map[string]map[string]string, len(c.Secrets))
-		for k, v := range c.Secrets {
-			newC.Secrets[k] = maps.Clone(v)
 		}
 	}
 
@@ -144,14 +134,6 @@ type StepEnvOption func(map[string]any)
 func StepEnvWithVars(vars map[string]any) StepEnvOption {
 	return func(env map[string]any) {
 		env["vars"] = vars
-	}
-}
-
-// StepEnvWithSecrets returns a StepEnvOption that adds the provided secrets to
-// the environment of the Step.
-func StepEnvWithSecrets(secrets map[string]map[string]string) StepEnvOption {
-	return func(env map[string]any) {
-		env["secrets"] = secrets
 	}
 }
 
@@ -281,18 +263,17 @@ func (s *Step) Skip(
 	v, err := expressions.EvaluateTemplate(
 		s.If,
 		env,
-		append(
-			append(
-				exprfn.FreightOperations(
-					ctx,
-					cl,
-					promoCtx.Project,
-					promoCtx.FreightRequests,
-					promoCtx.Freight.References(),
-				),
-				exprfn.DataOperations(ctx, cl, cache, promoCtx.Project)...,
+		slices.Concat(
+			exprfn.DataOperations(ctx, cl, cache, promoCtx.Project),
+			exprfn.FreightOperations(
+				ctx,
+				cl,
+				promoCtx.Project,
+				promoCtx.FreightRequests,
+				promoCtx.Freight.References(),
 			),
-			exprfn.StatusOperations(s.Alias, promoCtx.StepExecutionMetadata)...,
+			exprfn.StatusOperations(s.Alias, promoCtx.StepExecutionMetadata),
+			exprfn.UtilityOperations(),
 		)...,
 	)
 	if err != nil {
@@ -330,13 +311,13 @@ func (s *Step) GetConfig(
 		StepEnvWithOutputs(promoCtx.State),
 		StepEnvWithTaskOutputs(s.Alias, promoCtx.State),
 		StepEnvWithVars(vars),
-		StepEnvWithSecrets(promoCtx.Secrets),
 	)
 
 	evaledCfgJSON, err := expressions.EvaluateJSONTemplate(
 		s.Config,
 		env,
-		append(
+		slices.Concat(
+			exprfn.DataOperations(ctx, cl, cache, promoCtx.Project),
 			exprfn.FreightOperations(
 				ctx,
 				cl,
@@ -344,7 +325,8 @@ func (s *Step) GetConfig(
 				promoCtx.FreightRequests,
 				promoCtx.Freight.References(),
 			),
-			exprfn.DataOperations(ctx, cl, cache, promoCtx.Project)...,
+			exprfn.StatusOperations(s.Alias, promoCtx.StepExecutionMetadata),
+			exprfn.UtilityOperations(),
 		)...,
 	)
 	if err != nil {
@@ -373,9 +355,16 @@ func (s *Step) GetVars(
 		newVar, err := expressions.EvaluateTemplate(
 			v.Value,
 			s.BuildEnv(promoCtx, StepEnvWithVars(vars)),
-			append(
-				exprfn.FreightOperations(ctx, cl, promoCtx.Project, promoCtx.FreightRequests, promoCtx.Freight.References()),
-				exprfn.DataOperations(ctx, cl, cache, promoCtx.Project)...,
+			slices.Concat(
+				exprfn.DataOperations(ctx, cl, cache, promoCtx.Project),
+				exprfn.FreightOperations(
+					ctx,
+					cl,
+					promoCtx.Project,
+					promoCtx.FreightRequests,
+					promoCtx.Freight.References(),
+				),
+				exprfn.UtilityOperations(),
 			)...,
 		)
 		if err != nil {
@@ -396,9 +385,16 @@ func (s *Step) GetVars(
 				StepEnvWithTaskOutputs(s.Alias, promoCtx.State),
 				StepEnvWithVars(vars),
 			),
-			append(
-				exprfn.FreightOperations(ctx, cl, promoCtx.Project, promoCtx.FreightRequests, promoCtx.Freight.References()),
-				exprfn.DataOperations(ctx, cl, cache, promoCtx.Project)...,
+			slices.Concat(
+				exprfn.DataOperations(ctx, cl, cache, promoCtx.Project),
+				exprfn.FreightOperations(
+					ctx,
+					cl,
+					promoCtx.Project,
+					promoCtx.FreightRequests,
+					promoCtx.Freight.References(),
+				),
+				exprfn.UtilityOperations(),
 			)...,
 		)
 		if err != nil {

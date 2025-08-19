@@ -30,5 +30,5 @@ export const ManifestPreview = ({
     return v;
   });
 
-  return <YamlEditor value={encodedObject} height={height} disabled isHideManagedFieldsDisplayed />;
+  return <YamlEditor value={encodedObject} height={height} disabled />;
 };

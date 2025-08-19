@@ -3,7 +3,7 @@ ARG BASE_IMAGE=kargo-base
 ####################################################################################################
 # ui-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM docker.io/library/node:24.3.0 AS ui-builder
+FROM --platform=$BUILDPLATFORM docker.io/library/node:24.6.0 AS ui-builder
 
 ARG PNPM_VERSION=9.0.3
 RUN npm install --global pnpm@${PNPM_VERSION}
@@ -20,7 +20,7 @@ RUN NODE_ENV='production' VERSION=${VERSION} pnpm run build
 ####################################################################################################
 # back-end-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM golang:1.24.5-bookworm AS back-end-builder
+FROM --platform=$BUILDPLATFORM golang:1.24.6-bookworm AS back-end-builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -64,14 +64,14 @@ WORKDIR /kargo/bin
 ####################################################################################################
 # `tools` stage allows us to take the leverage of the parallel build.
 # For example, this stage can be cached and re-used when we have to rebuild code base.
-FROM curlimages/curl:8.14.1 AS tools
+FROM curlimages/curl:8.15.0 AS tools
 
 ARG TARGETOS
 ARG TARGETARCH
 
 WORKDIR /tools
 
-RUN GRPC_HEALTH_PROBE_VERSION=v0.4.37 && \
+RUN GRPC_HEALTH_PROBE_VERSION=v0.4.39 && \
     curl -fL -o /tools/grpc_health_probe https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/${GRPC_HEALTH_PROBE_VERSION}/grpc_health_probe-${TARGETOS}-${TARGETARCH} && \
     chmod +x /tools/grpc_health_probe
 
@@ -102,7 +102,7 @@ CMD ["/usr/local/bin/kargo"]
 # - supports development
 # - not used for official image builds
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM docker.io/library/node:24.3.0 AS ui-dev
+FROM --platform=$BUILDPLATFORM docker.io/library/node:24.6.0 AS ui-dev
 
 ARG PNPM_VERSION=9.0.3
 RUN npm install --global pnpm@${PNPM_VERSION}

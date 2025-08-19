@@ -35,6 +35,13 @@ const (
 	// of the annotation should be in the format of "<project>:<stage>".
 	AnnotationKeyAuthorizedStage = "kargo.akuity.io/authorized-stage"
 
+	// AnnotationKeyStage is an annotation key that can be set on a resource to
+	// indicate that it is associated with a specific Stage. It compliments
+	// LabelKeyStage, which may contain the same value but in a (hash-)shortened
+	// form to fit within the Kubernetes label value length. The value of this
+	// annotation is expected to be the full name of the Stage.
+	AnnotationKeyStage = "kargo.akuity.io/stage"
+
 	// AnnotationKeyPromotion is an annotation key that can be set on a
 	// resource to indicate that it is related to a specific promotion.
 	AnnotationKeyPromotion = "kargo.akuity.io/promotion"

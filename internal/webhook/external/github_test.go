@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	gh "github.com/google/go-github/v71/github"
+	gh "github.com/google/go-github/v74/github"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -17,6 +17,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/indexer"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 const githubSigningKey = "mysupersecrettoken"
@@ -39,9 +40,14 @@ func TestGithubHandler(t *testing.T) {
 			PackageVersion: &gh.PackageVersion{
 				PackageURL: gh.Ptr("ghcr.io/example/repo:latest"),
 				ContainerMetadata: &gh.PackageEventContainerMetadata{
+					Tag: &gh.PackageEventContainerMetadataTag{
+						Name: gh.Ptr("v1.0.0"),
+					},
 					Manifest: map[string]any{
 						"config": map[string]any{
-							"media_type": ociImageIndexMediaType,
+							// Real world testing shows this media type is what the payload
+							// will contain when an image has been pushed to GHCR.
+							"media_type": dockerImageConfigBlobMediaType,
 						},
 					},
 				},
@@ -55,9 +61,58 @@ func TestGithubHandler(t *testing.T) {
 			PackageVersion: &gh.PackageVersion{
 				PackageURL: gh.Ptr("ghcr.io/example/repo:latest"),
 				ContainerMetadata: &gh.PackageEventContainerMetadata{
+					Tag: &gh.PackageEventContainerMetadataTag{
+						Name: gh.Ptr("v1.0.0"),
+					},
 					Manifest: map[string]any{
 						"config": map[string]any{
-							"media_type": helmChartMediaType,
+							// Real world testing shows this media type is what the payload
+							// will contain when an image has been pushed to GHCR.
+							"media_type": helmChartConfigBlobMediaType,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	var validRegistryPackageEventImage = &gh.RegistryPackageEvent{
+		Action: gh.Ptr("published"),
+		RegistryPackage: &gh.Package{
+			PackageType: gh.Ptr(ghcrPackageTypeContainer),
+			PackageVersion: &gh.PackageVersion{
+				PackageURL: gh.Ptr("ghcr.io/example/repo:latest"),
+				ContainerMetadata: &gh.PackageEventContainerMetadata{
+					Tag: &gh.PackageEventContainerMetadataTag{
+						Name: gh.Ptr("v1.0.0"),
+					},
+					Manifest: map[string]any{
+						"config": map[string]any{
+							// Real world testing shows this media type is what the payload
+							// will contain when an image has been pushed to GHCR.
+							"media_type": dockerImageConfigBlobMediaType,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	var validRegistryPackageEventChart = &gh.RegistryPackageEvent{
+		Action: gh.Ptr("published"),
+		RegistryPackage: &gh.Package{
+			PackageType: gh.Ptr(ghcrPackageTypeContainer),
+			PackageVersion: &gh.PackageVersion{
+				PackageURL: gh.Ptr("ghcr.io/example/repo:latest"),
+				ContainerMetadata: &gh.PackageEventContainerMetadata{
+					Tag: &gh.PackageEventContainerMetadataTag{
+						Name: gh.Ptr("v1.0.0"),
+					},
+					Manifest: map[string]any{
+						"config": map[string]any{
+							// Real world testing shows this media type is what the payload
+							// will contain when an image has been pushed to GHCR.
+							"media_type": helmChartConfigBlobMediaType,
 						},
 					},
 				},
@@ -149,7 +204,7 @@ func TestGithubHandler(t *testing.T) {
 			},
 		},
 		{
-			name:       "success -- ping event",
+			name:       "successful ping event",
 			secretData: testSecretData,
 			req: func() *http.Request {
 				bodyBuf := bytes.NewBuffer([]byte("{}"))
@@ -168,7 +223,7 @@ func TestGithubHandler(t *testing.T) {
 			},
 		},
 		{
-			name:       "unsupported package event action",
+			name:       "unsupported action (package event)",
 			secretData: testSecretData,
 			req: func() *http.Request {
 				bodyBytes, err := json.Marshal(
@@ -190,7 +245,7 @@ func TestGithubHandler(t *testing.T) {
 			},
 		},
 		{
-			name:       "package event missing package",
+			name:       "package missing (package event)",
 			secretData: testSecretData,
 			req: func() *http.Request {
 				bodyBytes, err := json.Marshal(
@@ -212,7 +267,7 @@ func TestGithubHandler(t *testing.T) {
 			},
 		},
 		{
-			name:       "unsupported package type",
+			name:       "unsupported package type (package event)",
 			secretData: testSecretData,
 			req: func() *http.Request {
 				bodyBytes, err := json.Marshal(
@@ -240,7 +295,9 @@ func TestGithubHandler(t *testing.T) {
 			},
 		},
 		{
-			name:       "success -- package event -- image",
+			name: "no tag match (package event, image)",
+			// This event would prompt the Warehouse to refresh if not for the tag
+			// in the event falling outside the subscription's semver range.
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
@@ -250,7 +307,50 @@ func TestGithubHandler(t *testing.T) {
 					},
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
-							Image: &kargoapi.ImageSubscription{RepoURL: "ghcr.io/example/repo"},
+							Image: &kargoapi.ImageSubscription{
+								RepoURL:          "ghcr.io/example/repo",
+								SemverConstraint: "^v2.0.0", // Constraint won't be met
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(validPackageEventImage)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set(gh.EventTypeHeader, githubEventTypePackage)
+				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBytes))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 0 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "warehouse refreshed (package event, image)",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Image: &kargoapi.ImageSubscription{
+								RepoURL:          "ghcr.io/example/repo",
+								SemverConstraint: "^v1.0.0",
+							},
 						}},
 					},
 				},
@@ -277,7 +377,9 @@ func TestGithubHandler(t *testing.T) {
 			},
 		},
 		{
-			name:       "success -- package event -- chart",
+			name: "no version match (package event, chart)",
+			// This event would prompt the Warehouse to refresh if not for the tag
+			// in the event falling outside the subscription's semver range.
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
@@ -288,7 +390,48 @@ func TestGithubHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Chart: &kargoapi.ChartSubscription{
-								RepoURL: "oci://ghcr.io/example/repo",
+								RepoURL:          "oci://ghcr.io/example/repo",
+								SemverConstraint: "^v2.0.0", // Constraint won't be met
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(validPackageEventChart)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set(gh.EventTypeHeader, githubEventTypePackage)
+				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBytes))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 0 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "warehouse refreshed (package event, chart)",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Chart: &kargoapi.ChartSubscription{
+								RepoURL:          "oci://ghcr.io/example/repo",
+								SemverConstraint: "^v1.0.0",
 							},
 						}},
 					},
@@ -316,7 +459,10 @@ func TestGithubHandler(t *testing.T) {
 			},
 		},
 		{
-			name:       "success -- push event",
+			name: "no ref match (push event, git)",
+			// This event would prompt the Warehouse to refresh if not for the ref in
+			// the event being for the main branch whilst the subscription is
+			// interested in commits from a different branch.
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
@@ -328,6 +474,47 @@ func TestGithubHandler(t *testing.T) {
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{
 								RepoURL: "https://github.com/example/repo",
+								Branch:  "not-main", // Constraint won't be met
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(validPushEvent)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set(gh.EventTypeHeader, githubEventTypePush)
+				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBytes))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 0 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "warehouse refreshed (push event, git)",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "https://github.com/example/repo",
+								Branch:  "main",
 							},
 						}},
 					},
@@ -354,6 +541,242 @@ func TestGithubHandler(t *testing.T) {
 				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
 			},
 		},
+		{
+			name:       "unsupported action (registry_package event)",
+			secretData: testSecretData,
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(
+					&gh.RegistryPackageEvent{Action: gh.Ptr("deleted")},
+				)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set(gh.EventTypeHeader, githubEventTypeRegistryPackage)
+				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBytes))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, "{}", rr.Body.String())
+			},
+		},
+		{
+			name:       "registry package missing (registry_package event)",
+			secretData: testSecretData,
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(
+					&gh.RegistryPackageEvent{Action: gh.Ptr("published")},
+				)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set(gh.EventTypeHeader, githubEventTypeRegistryPackage)
+				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBytes))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, rr.Code)
+				require.JSONEq(t, `{"error":"invalid request body"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "unsupported package type (registry_package event)",
+			secretData: testSecretData,
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(
+					&gh.RegistryPackageEvent{
+						Action: gh.Ptr("published"),
+						RegistryPackage: &gh.Package{
+							PackageType:    gh.Ptr("npm"),
+							PackageVersion: &gh.PackageVersion{},
+						},
+					},
+				)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set(gh.EventTypeHeader, githubEventTypeRegistryPackage)
+				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBytes))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, "{}", rr.Body.String())
+			},
+		},
+		{
+			name: "no tag match (registry_package event, image)",
+			// This event would prompt the Warehouse to refresh if not for the tag
+			// in the event falling outside the subscription's semver range.
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Image: &kargoapi.ImageSubscription{
+								RepoURL:          "ghcr.io/example/repo",
+								SemverConstraint: "^v2.0.0", // Constraint won't be met
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(validRegistryPackageEventImage)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set(gh.EventTypeHeader, githubEventTypeRegistryPackage)
+				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBytes))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 0 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "warehouse refreshed -- (registry_package event, image)",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Image: &kargoapi.ImageSubscription{
+								RepoURL:          "ghcr.io/example/repo",
+								SemverConstraint: "^v1.0.0",
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(validRegistryPackageEventImage)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set(gh.EventTypeHeader, githubEventTypeRegistryPackage)
+				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBytes))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name: "no version match (registry_package event, chart)",
+			// This event would prompt the Warehouse to refresh if not for the tag
+			// in the event falling outside the subscription's semver range.
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Chart: &kargoapi.ChartSubscription{
+								RepoURL:          "oci://ghcr.io/example/repo",
+								SemverConstraint: "^v2.0.0", // Constraint won't be met
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(validRegistryPackageEventChart)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set(gh.EventTypeHeader, githubEventTypeRegistryPackage)
+				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBytes))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 0 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "warehouse refreshed (registry_package event, chart)",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Chart: &kargoapi.ChartSubscription{
+								RepoURL:          "oci://ghcr.io/example/repo",
+								SemverConstraint: "^v1.0.0",
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(validRegistryPackageEventChart)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set(gh.EventTypeHeader, githubEventTypeRegistryPackage)
+				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBytes))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -363,6 +786,9 @@ func TestGithubHandler(t *testing.T) {
 				_ = testCase.req().Body.Close()
 			})
 
+			logger := logging.NewLogger(logging.DebugLevel)
+			ctx := logging.ContextWithLogger(testCase.req().Context(), logger)
+
 			w := httptest.NewRecorder()
 			(&githubWebhookReceiver{
 				baseWebhookReceiver: &baseWebhookReceiver{
@@ -370,7 +796,7 @@ func TestGithubHandler(t *testing.T) {
 					project:    testProjectName,
 					secretData: testCase.secretData,
 				},
-			}).getHandler(requestBody)(w, testCase.req())
+			}).getHandler(requestBody)(w, testCase.req().WithContext(ctx))
 
 			testCase.assertions(t, w)
 		})

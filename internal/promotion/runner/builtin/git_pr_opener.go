@@ -23,13 +23,6 @@ import (
 	_ "github.com/akuity/kargo/internal/gitprovider/gitlab"    // GitLab provider registration
 )
 
-// stateKeyPRNumber is the key used to store the PR number in the shared State.
-//
-// Deprecated: Use `pr.id` instead.
-//
-// TODO: Remove in v1.7.0
-const stateKeyPRNumber = "prNumber"
-
 // gitPROpener is an implementation of the promotion.StepRunner interface that
 // opens a pull request.
 type gitPROpener struct {
@@ -57,20 +50,19 @@ func (g *gitPROpener) Run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
-	if err := g.validate(stepCtx.Config); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
-	}
-	cfg, err := promotion.ConfigToStruct[builtin.GitOpenPRConfig](stepCtx.Config)
+	cfg, err := g.convert(stepCtx.Config)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("could not convert config into git-open-pr config: %w", err)
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusFailed,
+		}, &promotion.TerminalError{Err: err}
 	}
 	return g.run(ctx, stepCtx, cfg)
 }
 
-// validate validates gitPROpener configuration against a JSON schema.
-func (g *gitPROpener) validate(cfg promotion.Config) error {
-	return validate(g.schemaLoader, gojsonschema.NewGoLoader(cfg), g.Name())
+// convert validates the configuration against a JSON schema and converts it
+// into a builtin.GitOpenPRConfig struct.
+func (g *gitPROpener) convert(cfg promotion.Config) (builtin.GitOpenPRConfig, error) {
+	return validateAndConvert[builtin.GitOpenPRConfig](g.schemaLoader, cfg, g.Name())
 }
 
 func (g *gitPROpener) run(
@@ -152,7 +144,6 @@ func (g *gitPROpener) run(
 					"id":  pr.Number,
 					"url": pr.URL,
 				},
-				stateKeyPRNumber: pr.Number, // TODO: Remove in v1.7.0
 			},
 		}, nil
 	}
@@ -234,7 +225,6 @@ func (g *gitPROpener) run(
 				"id":  pr.Number,
 				"url": pr.URL,
 			},
-			stateKeyPRNumber: pr.Number, // TODO: Remove in v1.7.0
 		},
 	}, nil
 }

@@ -35,12 +35,8 @@ func Test_newArgocdUpdater(t *testing.T) {
 	require.NotNil(t, runner.logAppEventFn)
 }
 
-func Test_argoCDUpdater_validate(t *testing.T) {
-	testCases := []struct {
-		name             string
-		config           promotion.Config
-		expectedProblems []string
-	}{
+func Test_argoCDUpdater_convert(t *testing.T) {
+	tests := []validationTestCase{
 		{
 			name:   "apps not specified",
 			config: promotion.Config{},
@@ -318,19 +314,7 @@ func Test_argoCDUpdater_validate(t *testing.T) {
 	}
 
 	runner := newArgocdUpdater(nil)
-
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			err := runner.validate(testCase.config)
-			if len(testCase.expectedProblems) == 0 {
-				require.NoError(t, err)
-			} else {
-				for _, problem := range testCase.expectedProblems {
-					require.ErrorContains(t, err, problem)
-				}
-			}
-		})
-	}
+	runValidationTests(t, runner.convert, tests)
 }
 
 func Test_argoCDUpdater_run(t *testing.T) {

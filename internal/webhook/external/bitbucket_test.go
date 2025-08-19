@@ -23,15 +23,22 @@ func TestBitbucketHandler(t *testing.T) {
 	const testProjectName = "fake-project"
 
 	const pushEventRequestBody = `
-{
-	"repository": {
-		"links": {
-			"html": {
-				"href": "https://bitbucket.org/example/repo"
+	{
+		"actor": {
+			"name": "admin",
+			"emailAddress": "admin@example.com"
+		},
+		"push": {
+			"changes": [{"new": {"name": "refs/heads/main"}}]
+		},
+		"repository": {
+			"links": {
+				"html": {
+					"href": "https://bitbucket.org/example/repo"
+				}
 			}
 		}
-	}
-}`
+	}`
 
 	testScheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(testScheme))
@@ -117,7 +124,49 @@ func TestBitbucketHandler(t *testing.T) {
 			},
 		},
 		{
-			name:       "success",
+			name: "no ref match",
+			// This event would prompt the Warehouse to refresh if not for the ref in
+			// the event being for the main branch whilst the subscription is
+			// interested in commits from a different branch.
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "https://bitbucket.org/example/repo",
+								Branch:  "not-main", // Constraint won't be met
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBuf := bytes.NewBuffer([]byte(pushEventRequestBody))
+				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
+				req.Header.Set(bitbucketEventHeader, bitbucketPushEvent)
+				req.Header.Set(bitbucketSignatureHeader, sign(bodyBuf.Bytes()))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(
+					t,
+					`{"msg":"refreshed 0 warehouse(s)"}`,
+					rr.Body.String(),
+				)
+			},
+		},
+		{
+			name:       "warehouse refreshed",
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{

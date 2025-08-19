@@ -35,11 +35,12 @@ export type AppSubpage = Subpage & {
 };
 
 export type PromoteTabComponentProps = {
+  stage: Stage;
   freight: Freight;
 };
 export type PromoteTab = {
   type: 'promoteTab';
-  component: ({ freight }: PromoteTabComponentProps) => React.ReactNode;
+  component: (props: PromoteTabComponentProps) => React.ReactNode;
   label: string;
   icon?: React.ReactNode;
 };

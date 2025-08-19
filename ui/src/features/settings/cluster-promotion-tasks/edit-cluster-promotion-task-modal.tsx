@@ -73,7 +73,6 @@ export const EditClusterPromotionTaskModal = (props: EditClusterPromotionTaskMod
             isLoading={getClusterPromotionTaskQuery.isFetching}
             height='500px'
             placeholder={getClusterAnalysisTemplateYAMLExample()}
-            isHideManagedFieldsDisplayed
             label='Spec'
           />
         )}

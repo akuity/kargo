@@ -19,12 +19,8 @@ import (
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
-func Test_gitPROpener_validate(t *testing.T) {
-	testCases := []struct {
-		name             string
-		config           promotion.Config
-		expectedProblems []string
-	}{
+func Test_gitPROpener_convert(t *testing.T) {
+	tests := []validationTestCase{
 		{
 			name:   "repoURL not specified",
 			config: promotion.Config{},
@@ -144,18 +140,7 @@ func Test_gitPROpener_validate(t *testing.T) {
 	runner, ok := r.(*gitPROpener)
 	require.True(t, ok)
 
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			err := runner.validate(testCase.config)
-			if len(testCase.expectedProblems) == 0 {
-				require.NoError(t, err)
-			} else {
-				for _, problem := range testCase.expectedProblems {
-					require.ErrorContains(t, err, problem)
-				}
-			}
-		})
-	}
+	runValidationTests(t, runner.convert, tests)
 }
 
 func Test_gitPROpener_run(t *testing.T) {
@@ -247,11 +232,6 @@ func Test_gitPROpener_run(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	// Validate backward compatibility with prNumber
-	// TODO: Remove in v1.7.0
-	prNumber, ok := res.Output[stateKeyPRNumber]
-	require.True(t, ok)
-	require.Equal(t, testPRNumber, prNumber)
 
 	// Validate the pr.ID and pr.URL fields
 	prOutput, ok := res.Output["pr"].(map[string]any)

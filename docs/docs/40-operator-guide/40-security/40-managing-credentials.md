@@ -5,11 +5,11 @@ sidebar_label: Managing Credentials
 
 # Managing Credentials
 
-To orchestrate the promotion of `Freight` from `Stage` to `Stage`, Kargo will
-often require read/write permissions on private Git repositories and read-only
-permissions on private container image or Helm chart repositories.
+Kargo `Warehouse`s frequently require read-only access to private repositories.
+Promotion processes often require this as well, and may also require read/write
+access to Git repositories.
 
-This section focuses on an operator's role in providing Kargo projects with
+This section focuses on an operator's role in providing Kargo Projects with
 necessary credentials.
 
 :::info
@@ -112,12 +112,12 @@ __Precedence__
 
 When Kargo searches for repository credentials in a "global" namespace, it
 _first_ iterates over all appropriately labeled `Secret`s _without_
-`repoIsRegex` set to `true` looking for a `repoURL` value matching the
+`repoURLIsRegex` set to `true` looking for a `repoURL` value matching the
 repository URL exactly.
 
 Only if no exact match is found does it iterate over all
-appropriately labeled `Secret`s with `repoIsRegex` set to `true` looking for a
-regular expression matching the repository URL.
+appropriately labeled `Secret`s with `repoURLIsRegex` set to `true` looking for
+a regular expression matching the repository URL.
 
 When searching for an exact match, and then again when searching for a pattern
 match, appropriately labeled `Secret`s are considered in lexical order by name.

@@ -7,7 +7,7 @@ import {
   faWarehouse
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Badge, Button, Card, Flex, message } from 'antd';
+import { Badge, Button, Card, Flex, message, Tooltip } from 'antd';
 import classNames from 'classnames';
 import { useContext, useMemo } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
@@ -41,6 +41,10 @@ export const WarehouseNode = (props: { warehouse: Warehouse }) => {
       props.warehouse?.metadata?.name || ''
     ];
 
+  const isWarehouseNameLong = (props.warehouse?.metadata?.name?.length || 0) > 17;
+  const warehouseNameHeader = `${props.warehouse?.metadata?.name?.slice(0, 17)}${isWarehouseNameLong ? '...' : ''}`;
+  const WarehouseNameHeader = <span className='text-xs'>{warehouseNameHeader}</span>;
+
   return (
     <Card
       size='small'
@@ -52,7 +56,12 @@ export const WarehouseNode = (props: { warehouse: Warehouse }) => {
             className={classNames(warehouseState.hasError && 'text-red-500')}
           >
             <FontAwesomeIcon icon={faWarehouse} />
-            <span className='text-xs'>{props.warehouse?.metadata?.name}</span>
+
+            {isWarehouseNameLong ? (
+              <Tooltip title={props.warehouse?.metadata?.name}>{WarehouseNameHeader}</Tooltip>
+            ) : (
+              WarehouseNameHeader
+            )}
 
             {warehouseState.hasError && <Badge status='error' />}
           </Flex>

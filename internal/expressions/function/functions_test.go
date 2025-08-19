@@ -1295,3 +1295,179 @@ func Test_freightMetadata(t *testing.T) {
 		})
 	}
 }
+
+func Test_semverDiff(t *testing.T) {
+	tests := []struct {
+		name       string
+		args       []any
+		assertions func(t *testing.T, result any, err error)
+	}{
+		{
+			name: "major version difference",
+			args: []any{"1.1.1", "2.2.2"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, "Major", result)
+			},
+		},
+		{
+			name: "minor version difference",
+			args: []any{"1.1.1", "1.2.2"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, "Minor", result)
+			},
+		},
+		{
+			name: "patch version difference",
+			args: []any{"1.1.1", "1.1.2"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, "Patch", result)
+			},
+		},
+		{
+			name: "metadata difference",
+			args: []any{"1.1.1+build1", "1.1.1+build2"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, "Metadata", result)
+			},
+		},
+		{
+			name: "no difference",
+			args: []any{"1.2.3", "1.2.3"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, "None", result)
+			},
+		},
+		{
+			name: "invalid first version",
+			args: []any{"invalid", "1.0.0"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, "Incomparable", result)
+			},
+		},
+		{
+			name: "invalid second version",
+			args: []any{"1.0.0", "invalid"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, "Incomparable", result)
+			},
+		},
+		{
+			name: "both versions invalid",
+			args: []any{"invalid1", "invalid2"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, "Incomparable", result)
+			},
+		},
+		{
+			name: "semver with prerelease",
+			args: []any{"1.0.0-alpha", "1.0.0-beta"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, "None", result) // Prerelease versions are considered equal for diff purposes
+			},
+		},
+		{
+			name: "complex semver with metadata and prerelease",
+			args: []any{"1.0.0-alpha.1+build.1", "1.0.0-alpha.1+build.2"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, "Metadata", result)
+			},
+		},
+		{
+			name: "major difference with prerelease",
+			args: []any{"1.0.0-alpha", "2.0.0-alpha"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, "Major", result)
+			},
+		},
+		{
+			name: "minor difference with prerelease",
+			args: []any{"1.1.0-alpha", "1.2.0-alpha"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, "Minor", result)
+			},
+		},
+		{
+			name: "patch difference with prerelease",
+			args: []any{"1.1.1-alpha", "1.1.2-alpha"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, "Patch", result)
+			},
+		},
+		{
+			name: "no arguments",
+			args: []any{},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "expected 2 arguments")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "one argument",
+			args: []any{"1.0.0"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "expected 2 arguments")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "too many arguments",
+			args: []any{"1.0.0", "2.0.0", "3.0.0"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "expected 2 arguments")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "invalid first argument type",
+			args: []any{123, "1.0.0"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "first argument must be string")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "invalid second argument type",
+			args: []any{"1.0.0", 123},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "second argument must be string")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "empty version strings",
+			args: []any{"", ""},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, "Incomparable", result)
+			},
+		},
+		{
+			name: "loose semver format",
+			args: []any{"v1.0.0", "v2.0.0"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, "Major", result)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := semverDiff(tt.args...)
+			tt.assertions(t, result, err)
+		})
+	}
+}

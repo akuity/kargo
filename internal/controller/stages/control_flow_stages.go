@@ -24,15 +24,17 @@ import (
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
+	"github.com/akuity/kargo/internal/kubernetes"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	"github.com/akuity/kargo/internal/logging"
 	intpredicate "github.com/akuity/kargo/internal/predicate"
 )
 
 type ControlFlowStageReconciler struct {
-	cfg           ReconcilerConfig
-	client        client.Client
-	eventRecorder record.EventRecorder
+	cfg            ReconcilerConfig
+	client         client.Client
+	eventRecorder  record.EventRecorder
+	shardPredicate controller.ResponsibleFor[kargoapi.Stage]
 }
 
 // NewControlFlowStageReconciler returns a new control flow Stage reconciler.
@@ -43,6 +45,10 @@ func NewControlFlowStageReconciler(
 ) *ControlFlowStageReconciler {
 	return &ControlFlowStageReconciler{
 		cfg: cfg,
+		shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
+			IsDefaultController: cfg.IsDefaultController,
+			ShardName:           cfg.ShardName,
+		},
 	}
 }
 
@@ -130,7 +136,10 @@ func (r *ControlFlowStageReconciler) SetupWithManager(
 	c, err := ctrl.NewControllerManagedBy(mgr).
 		For(&kargoapi.Stage{}).
 		Named("control_flow_stage").
-		WithOptions(controller.CommonOptions(r.cfg.MaxConcurrentControlFlowReconciles)).
+		WithEventFilter(controller.ResponsibleFor[client.Object]{
+			IsDefaultController: r.cfg.IsDefaultController,
+			ShardName:           r.cfg.ShardName,
+		}).
 		WithEventFilter(intpredicate.IgnoreDelete[client.Object]{}).
 		WithEventFilter(
 			predicate.And(
@@ -141,6 +150,7 @@ func (r *ControlFlowStageReconciler) SetupWithManager(
 				),
 			),
 		).
+		WithOptions(controller.CommonOptions(r.cfg.MaxConcurrentControlFlowReconciles)).
 		Build(r)
 	if err != nil {
 		return fmt.Errorf("error building control flow Stage reconciler: %w", err)
@@ -199,6 +209,11 @@ func (r *ControlFlowStageReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	stage := &kargoapi.Stage{}
 	if err := r.client.Get(ctx, req.NamespacedName, stage); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	if !r.shardPredicate.IsResponsible(stage) {
+		logger.Debug("ignoring Control Flow Stage because it is not assigned to this shard")
+		return ctrl.Result{}, nil
 	}
 
 	// Safety check: do not reconcile Stages that are not control flow Stages.
@@ -353,6 +368,7 @@ func (r *ControlFlowStageReconciler) initializeStatus(stage *kargoapi.Stage) kar
 	newStatus.CurrentPromotion = nil
 	newStatus.LastPromotion = nil
 	newStatus.FreightSummary = "N/A"
+	newStatus.AutoPromotionEnabled = false
 
 	return *newStatus
 }
@@ -571,7 +587,7 @@ func (r *ControlFlowStageReconciler) clearAnalysisRuns(ctx context.Context, stag
 		&rollouts.AnalysisRun{},
 		client.InNamespace(stage.Namespace),
 		client.MatchingLabels(map[string]string{
-			kargoapi.LabelKeyStage: stage.Name,
+			kargoapi.LabelKeyStage: kubernetes.ShortenLabelValue(stage.Name),
 		}),
 	); err != nil {
 		return fmt.Errorf("error deleting AnalysisRuns for Stage %q in namespace %q: %w",

@@ -64,7 +64,6 @@ export const GeneralSettings = () => {
               placeholder={yaml.stringify(projectYAMLExample)}
               isLoading={isLoading}
               resourceType='projects'
-              isHideManagedFieldsDisplayed
             />
           )}
         </FieldContainer>

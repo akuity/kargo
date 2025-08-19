@@ -17,10 +17,7 @@ import (
 	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/conditions"
 	"github.com/akuity/kargo/internal/controller"
-	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/credentials"
-	"github.com/akuity/kargo/internal/helm"
-	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
@@ -28,6 +25,7 @@ import (
 )
 
 type ReconcilerConfig struct {
+	IsDefaultController       bool          `envconfig:"IS_DEFAULT_CONTROLLER"`
 	ShardName                 string        `envconfig:"SHARD_NAME"`
 	MaxConcurrentReconciles   int           `envconfig:"MAX_CONCURRENT_WAREHOUSE_RECONCILES" default:"4"`
 	MinReconciliationInterval time.Duration `envconfig:"MIN_WAREHOUSE_RECONCILIATION_INTERVAL"`
@@ -41,9 +39,10 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 
 // reconciler reconciles Warehouse resources.
 type reconciler struct {
-	client                    client.Client
-	credentialsDB             credentials.Database
-	minReconciliationInterval time.Duration
+	client         client.Client
+	credentialsDB  credentials.Database
+	cfg            ReconcilerConfig
+	shardPredicate controller.ResponsibleFor[kargoapi.Warehouse]
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -53,25 +52,9 @@ type reconciler struct {
 
 	discoverImagesFn func(context.Context, string, []kargoapi.RepoSubscription) ([]kargoapi.ImageDiscoveryResult, error)
 
-	discoverImageRefsFn func(context.Context, kargoapi.ImageSubscription, *image.Credentials) ([]image.Image, error)
-
 	discoverChartsFn func(context.Context, string, []kargoapi.RepoSubscription) ([]kargoapi.ChartDiscoveryResult, error)
 
-	discoverChartVersionsFn func(context.Context, string, string, string, *helm.Credentials) ([]string, error)
-
 	buildFreightFromLatestArtifactsFn func(string, *kargoapi.DiscoveredArtifacts) (*kargoapi.Freight, error)
-
-	gitCloneFn func(string, *git.ClientOptions, *git.CloneOptions) (git.Repo, error)
-
-	listCommitsFn func(repo git.Repo, limit, skip uint) ([]git.CommitMetadata, error)
-
-	listTagsFn func(repo git.Repo) ([]git.TagMetadata, error)
-
-	discoverBranchHistoryFn func(repo git.Repo, sub kargoapi.GitSubscription) ([]git.CommitMetadata, error)
-
-	discoverTagsFn func(repo git.Repo, sub kargoapi.GitSubscription) ([]git.TagMetadata, error)
-
-	getDiffPathsForCommitIDFn func(repo git.Repo, commitID string) ([]string, error)
 
 	createFreightFn func(context.Context, client.Object, ...client.CreateOption) error
 
@@ -86,13 +69,13 @@ func SetupReconcilerWithManager(
 	credentialsDB credentials.Database,
 	cfg ReconcilerConfig,
 ) error {
-	shardPredicate, err := controller.GetShardPredicate(cfg.ShardName)
-	if err != nil {
-		return fmt.Errorf("error creating shard selector predicate: %w", err)
-	}
 
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&kargoapi.Warehouse{}).
+		WithEventFilter(controller.ResponsibleFor[client.Object]{
+			IsDefaultController: cfg.IsDefaultController,
+			ShardName:           cfg.ShardName,
+		}).
 		WithEventFilter(intpredicate.IgnoreDelete[client.Object]{}).
 		WithEventFilter(
 			predicate.Or(
@@ -100,9 +83,8 @@ func SetupReconcilerWithManager(
 				kargo.RefreshRequested{},
 			),
 		).
-		WithEventFilter(shardPredicate).
 		WithOptions(controller.CommonOptions(cfg.MaxConcurrentReconciles)).
-		Complete(newReconciler(mgr.GetClient(), credentialsDB, cfg.MinReconciliationInterval)); err != nil {
+		Complete(newReconciler(mgr.GetClient(), credentialsDB, cfg)); err != nil {
 		return fmt.Errorf("error building Warehouse reconciler: %w", err)
 	}
 
@@ -117,28 +99,24 @@ func SetupReconcilerWithManager(
 func newReconciler(
 	kubeClient client.Client,
 	credentialsDB credentials.Database,
-	minReconciliationInterval time.Duration,
+	cfg ReconcilerConfig,
 ) *reconciler {
 	r := &reconciler{
-		client:                    kubeClient,
-		credentialsDB:             credentialsDB,
-		minReconciliationInterval: minReconciliationInterval,
-		gitCloneFn:                git.Clone,
-		discoverChartVersionsFn:   helm.DiscoverChartVersions,
-		createFreightFn:           kubeClient.Create,
+		client:        kubeClient,
+		credentialsDB: credentialsDB,
+		cfg:           cfg,
+		shardPredicate: controller.ResponsibleFor[kargoapi.Warehouse]{
+			IsDefaultController: cfg.IsDefaultController,
+			ShardName:           cfg.ShardName,
+		},
+		createFreightFn: kubeClient.Create,
 	}
 
 	r.discoverArtifactsFn = r.discoverArtifacts
 	r.discoverCommitsFn = r.discoverCommits
 	r.discoverImagesFn = r.discoverImages
-	r.discoverImageRefsFn = r.discoverImageRefs
 	r.discoverChartsFn = r.discoverCharts
 	r.buildFreightFromLatestArtifactsFn = r.buildFreightFromLatestArtifacts
-	r.listCommitsFn = r.listCommits
-	r.listTagsFn = r.listTags
-	r.discoverBranchHistoryFn = r.discoverBranchHistory
-	r.discoverTagsFn = r.discoverTags
-	r.getDiffPathsForCommitIDFn = r.getDiffPathsForCommitID
 	r.patchStatusFn = r.patchStatus
 	return r
 }
@@ -166,6 +144,11 @@ func (r *reconciler) Reconcile(
 	if warehouse == nil {
 		// Ignore if not found. This can happen if the Warehouse was deleted after
 		// the current reconciliation request was issued.
+		return ctrl.Result{}, nil
+	}
+
+	if !r.shardPredicate.IsResponsible(warehouse) {
+		logger.Debug("ignoring Warehouse because it is not assigned to this shard")
 		return ctrl.Result{}, nil
 	}
 
@@ -201,7 +184,7 @@ func (r *reconciler) Reconcile(
 
 	// Everything succeeded, look for new changes on the defined interval.
 	return ctrl.Result{
-		RequeueAfter: warehouse.GetInterval(r.minReconciliationInterval),
+		RequeueAfter: warehouse.GetInterval(r.cfg.MinReconciliationInterval),
 	}, nil
 }
 

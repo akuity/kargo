@@ -45,6 +45,8 @@ kind: Secret
 metadata:
   name: bb-wh-secret
   namespace: kargo-demo
+  labels:
+    kargo.akuity.io/cred-type: generic
 data:
   secret: <base64-encoded secret>
 ---

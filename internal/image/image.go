@@ -6,8 +6,8 @@ import (
 	"github.com/Masterminds/semver/v3"
 )
 
-// Image is a representation of a container image.
-type Image struct {
+// image is a representation of a container image.
+type image struct {
 	Tag         string
 	Digest      string
 	Annotations map[string]string
@@ -16,9 +16,9 @@ type Image struct {
 	semVer *semver.Version
 }
 
-// newImage initializes and returns an Image.
-func newImage(tag, digest string, date *time.Time) Image {
-	t := Image{
+// newImage initializes and returns an image.
+func newImage(tag, digest string, date *time.Time) image {
+	t := image{
 		Tag:       tag,
 		Digest:    digest,
 		CreatedAt: date,

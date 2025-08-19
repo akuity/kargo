@@ -18,6 +18,156 @@ import (
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
+func Test_untarConfig_convert(t *testing.T) {
+	tests := []validationTestCase{
+		{
+			name:   "inPath not specified",
+			config: promotion.Config{},
+			expectedProblems: []string{
+				"(root): inPath is required",
+			},
+		},
+		{
+			name: "inPath is empty string",
+			config: promotion.Config{
+				"inPath": "",
+			},
+			expectedProblems: []string{
+				"inPath: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "outPath not specified",
+			config: promotion.Config{
+				"inPath": "/path/to/archive.tar.gz",
+			},
+			expectedProblems: []string{
+				"(root): outPath is required",
+			},
+		},
+		{
+			name: "outPath is empty string",
+			config: promotion.Config{
+				"inPath":  "/path/to/archive.tar.gz",
+				"outPath": "",
+			},
+			expectedProblems: []string{
+				"outPath: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "both required fields missing",
+			config: promotion.Config{
+				"stripComponents": 1,
+			},
+			expectedProblems: []string{
+				"(root): inPath is required",
+				"(root): outPath is required",
+			},
+		},
+		{
+			name: "stripComponents is negative",
+			config: promotion.Config{
+				"inPath":          "/path/to/archive.tar.gz",
+				"outPath":         "/destination/path",
+				"stripComponents": -1,
+			},
+			expectedProblems: []string{
+				"stripComponents: Must be greater than or equal to 0",
+			},
+		},
+		{
+			name: "ignore is empty string",
+			config: promotion.Config{
+				"inPath":  "/path/to/archive.tar.gz",
+				"outPath": "/destination/path",
+				"ignore":  "",
+			},
+			expectedProblems: []string{
+				"ignore: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "valid minimal config",
+			config: promotion.Config{
+				"inPath":  "/path/to/archive.tar.gz",
+				"outPath": "/destination/path",
+			},
+		},
+		{
+			name: "valid config with stripComponents=0",
+			config: promotion.Config{
+				"inPath":          "/path/to/archive.tar.gz",
+				"outPath":         "/destination/path",
+				"stripComponents": 0,
+			},
+		},
+		{
+			name: "valid config with stripComponents=1",
+			config: promotion.Config{
+				"inPath":          "/path/to/archive.tar.gz",
+				"outPath":         "/destination/path",
+				"stripComponents": 1,
+			},
+		},
+		{
+			name: "valid config with stripComponents=3",
+			config: promotion.Config{
+				"inPath":          "/path/to/archive.tar.gz",
+				"outPath":         "/destination/path",
+				"stripComponents": 3,
+			},
+		},
+		{
+			name: "valid config with ignore patterns",
+			config: promotion.Config{
+				"inPath":  "/path/to/archive.tar.gz",
+				"outPath": "/destination/path",
+				"ignore":  "*.log\n*.tmp\n__pycache__/",
+			},
+		},
+		{
+			name: "valid config with stripComponents and ignore",
+			config: promotion.Config{
+				"inPath":          "/path/to/archive.tar.gz",
+				"outPath":         "/destination/path",
+				"stripComponents": 2,
+				"ignore":          "node_modules/\n.git/\n*.log",
+			},
+		},
+		{
+			name: "valid kitchen sink",
+			config: promotion.Config{
+				"inPath":          "/path/to/source-code.tar.gz",
+				"outPath":         "/workspace/extracted",
+				"stripComponents": 1,
+				"ignore": `# Ignore build artifacts
+build/
+dist/
+target/
+
+# Ignore logs
+*.log
+*.tmp
+
+# Ignore version control
+.git/
+.svn/
+
+# Ignore dependencies
+node_modules/
+vendor/`,
+			},
+		},
+	}
+
+	r := newTarExtractor()
+	runner, ok := r.(*tarExtractor)
+	require.True(t, ok)
+
+	runValidationTests(t, runner.convert, tests)
+}
+
 func Test_tarExtractor_run(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -174,7 +324,7 @@ func Test_tarExtractor_run(t *testing.T) {
 				defer tw.Close()
 
 				// Add a file that exceeds the size limit
-				largeFileSize := MaxDecompressedFileSize + 1
+				largeFileSize := maxDecompressedFileSize + 1
 				hdr := &tar.Header{
 					Name: "large_file.bin",
 					Mode: 0o600,
@@ -685,7 +835,7 @@ func Test_tarExtractor_extractToDir(t *testing.T) {
 				defer tw.Close()
 
 				// Mock large file that exceeds the size limit
-				largeFileSize := MaxDecompressedFileSize + 1
+				largeFileSize := maxDecompressedFileSize + 1
 				hdr := &tar.Header{
 					Name: "large_file.bin",
 					Mode: 0o600,
@@ -724,17 +874,17 @@ func Test_tarExtractor_extractToDir(t *testing.T) {
 				tw := tar.NewWriter(tarFile)
 				defer tw.Close()
 
-				nbFiles := (MaxDecompressedTarSize / MaxDecompressedFileSize) + 1
+				nbFiles := (maxDecompressedTarSize / maxDecompressedFileSize) + 1
 				for i := range int(nbFiles) {
 					hdr := &tar.Header{
 						Name: fmt.Sprintf("file%d.bin", i),
 						Mode: 0o600,
-						Size: MaxDecompressedFileSize - 1,
+						Size: maxDecompressedFileSize - 1,
 					}
 					require.NoError(t, tw.WriteHeader(hdr))
 
 					// Write zeros to the file
-					_, err = tw.Write(make([]byte, MaxDecompressedFileSize-1))
+					_, err = tw.Write(make([]byte, maxDecompressedFileSize-1))
 					require.NoError(t, err)
 				}
 
@@ -816,103 +966,6 @@ func Test_tarExtractor_extractToDir(t *testing.T) {
 			)
 
 			tt.assertions(t, workDir, extractDir, result, err)
-		})
-	}
-}
-
-func Test_tarExtractor_simpleAtomicMove(t *testing.T) {
-	tests := []struct {
-		name       string
-		setupFunc  func(*testing.T) (string, string)
-		assertions func(*testing.T, string, string, error)
-	}{
-		{
-			name: "successful move to non-existent destination",
-			setupFunc: func(t *testing.T) (string, string) {
-				tmpDir := t.TempDir()
-				src := filepath.Join(tmpDir, "src")
-				dst := filepath.Join(tmpDir, "dst")
-
-				// Create source directory with content
-				require.NoError(t, os.MkdirAll(src, 0o755))
-				require.NoError(t, os.WriteFile(filepath.Join(src, "file.txt"), []byte("content"), 0o600))
-
-				return src, dst
-			},
-			assertions: func(t *testing.T, src, dst string, err error) {
-				assert.NoError(t, err)
-
-				// Source should no longer exist
-				_, err = os.Stat(src)
-				assert.True(t, os.IsNotExist(err))
-
-				// Destination should exist with content
-				content, err := os.ReadFile(filepath.Join(dst, "file.txt"))
-				assert.NoError(t, err)
-				assert.Equal(t, "content", string(content))
-			},
-		},
-		{
-			name: "successful move overwriting existing destination",
-			setupFunc: func(t *testing.T) (string, string) {
-				tmpDir := t.TempDir()
-				src := filepath.Join(tmpDir, "src")
-				dst := filepath.Join(tmpDir, "dst")
-
-				// Create source directory with content
-				require.NoError(t, os.MkdirAll(src, 0o755))
-				require.NoError(t, os.WriteFile(filepath.Join(src, "new.txt"), []byte("new content"), 0o600))
-
-				// Create existing destination with different content
-				require.NoError(t, os.MkdirAll(dst, 0o755))
-				require.NoError(t, os.WriteFile(filepath.Join(dst, "old.txt"), []byte("old content"), 0o600))
-
-				return src, dst
-			},
-			assertions: func(t *testing.T, src, dst string, err error) {
-				assert.NoError(t, err)
-
-				// Source should no longer exist
-				_, err = os.Stat(src)
-				assert.True(t, os.IsNotExist(err))
-
-				// Destination should have new content, not old
-				content, err := os.ReadFile(filepath.Join(dst, "new.txt"))
-				assert.NoError(t, err)
-				assert.Equal(t, "new content", string(content))
-
-				// Old file should not exist
-				_, err = os.Stat(filepath.Join(dst, "old.txt"))
-				assert.True(t, os.IsNotExist(err))
-			},
-		},
-		{
-			name: "fails when source doesn't exist",
-			setupFunc: func(t *testing.T) (string, string) {
-				tmpDir := t.TempDir()
-				src := filepath.Join(tmpDir, "nonexistent")
-				dst := filepath.Join(tmpDir, "dst")
-				return src, dst
-			},
-			assertions: func(t *testing.T, src, dst string, err error) {
-				assert.Error(t, err)
-
-				// Neither should exist
-				_, err = os.Stat(src)
-				assert.True(t, os.IsNotExist(err))
-				_, err = os.Stat(dst)
-				assert.True(t, os.IsNotExist(err))
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			extractor := &tarExtractor{}
-			src, dst := tt.setupFunc(t)
-
-			err := extractor.simpleAtomicMove(src, dst)
-			tt.assertions(t, src, dst, err)
 		})
 	}
 }

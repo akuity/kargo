@@ -13,6 +13,7 @@ type GraphFiltersProps = {
   stages: Stage[];
   pipelineView: 'graph' | 'list';
   setPipelineView: (view: 'graph' | 'list') => void;
+  className?: string;
 };
 
 export const GraphFilters = (props: GraphFiltersProps) => {
@@ -24,7 +25,7 @@ export const GraphFilters = (props: GraphFiltersProps) => {
   );
 
   return (
-    <Card size='small'>
+    <Card size='small' className={props.className}>
       <Typography.Text className='text-xs' type='secondary'>
         Warehouses:{' '}
       </Typography.Text>

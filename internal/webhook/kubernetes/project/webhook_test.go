@@ -18,7 +18,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/api"
 )
 
 func TestWebhookConfigFromEnv(t *testing.T) {
@@ -69,21 +68,6 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 			},
 		},
 		{
-			name: "project with deprecated spec",
-			project: &kargoapi.Project{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: testProjectName,
-				},
-				Spec: &kargoapi.ProjectSpec{}, // nolint: staticcheck
-			},
-			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
-				assert.Len(t, warnings, 1)
-				assert.Contains(t, warnings[0], "ProjectSpec is deprecated")
-				assert.Contains(t, warnings[0], testProjectName)
-				assert.NoError(t, err) // Creation should succeed with warnings
-			},
-		},
-		{
 			name: "namespace exists with project label",
 			project: &kargoapi.Project{
 				ObjectMeta: metav1.ObjectMeta{
@@ -128,22 +112,6 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				assert.NoError(t, err)
 			},
 		},
-		{
-			name: "dry run request with deprecated spec",
-			project: &kargoapi.Project{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: testProjectName,
-				},
-				Spec: &kargoapi.ProjectSpec{}, // nolint: staticcheck
-			},
-			isDryRun: true,
-			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
-				assert.Len(t, warnings, 1)
-				assert.Contains(t, warnings[0], "ProjectSpec is deprecated")
-				assert.Contains(t, warnings[0], testProjectName)
-				assert.NoError(t, err)
-			},
-		},
 	}
 
 	for _, tt := range tests {
@@ -173,183 +141,17 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 }
 
 func Test_webhook_ValidateUpdate(t *testing.T) {
-	scheme := runtime.NewScheme()
-	require.NoError(t, kargoapi.AddToScheme(scheme))
+	w := &webhook{}
 
-	testProjectName := "test-project"
-
-	tests := []struct {
-		name       string
-		oldProject *kargoapi.Project
-		newProject *kargoapi.Project
-		assertions func(*testing.T, admission.Warnings, error)
-	}{
-		{
-			name: "no spec changes",
-			oldProject: &kargoapi.Project{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: testProjectName,
-				},
-			},
-			newProject: &kargoapi.Project{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: testProjectName,
-				},
-			},
-			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
-				assert.Empty(t, warnings)
-				assert.NoError(t, err)
-			},
-		},
-		{
-			name: "no change to deprecated spec",
-			oldProject: &kargoapi.Project{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: testProjectName,
-				},
-				Spec: &kargoapi.ProjectSpec{}, // nolint: staticcheck
-			},
-			newProject: &kargoapi.Project{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: testProjectName,
-				},
-				Spec: &kargoapi.ProjectSpec{}, // nolint: staticcheck
-			},
-			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
-				assert.Len(t, warnings, 1)
-				assert.Contains(t, warnings[0], "ProjectSpec is deprecated")
-				assert.Contains(t, warnings[0], testProjectName)
-				assert.NoError(t, err) // Should succeed with warnings
-			},
-		},
-		{
-			name: "changes to deprecated spec without migration annotation",
-			oldProject: &kargoapi.Project{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: testProjectName,
-				},
-				Spec: &kargoapi.ProjectSpec{ // nolint: staticcheck
-					PromotionPolicies: []kargoapi.PromotionPolicy{
-						{
-							Stage:                "test-stage",
-							AutoPromotionEnabled: false,
-						},
-					},
-				},
-			},
-			newProject: &kargoapi.Project{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: testProjectName,
-				},
-				Spec: &kargoapi.ProjectSpec{ // nolint: staticcheck
-					PromotionPolicies: []kargoapi.PromotionPolicy{
-						{
-							Stage:                "test-stage",
-							AutoPromotionEnabled: true,
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
-				assert.Len(t, warnings, 1)
-				assert.Contains(t, warnings[0], "ProjectSpec is deprecated")
-				assert.Contains(t, warnings[0], testProjectName)
-				assert.NoError(t, err) // Should succeed with warnings when no migration annotation
-			},
-		},
-		{
-			name: "changes to deprecated spec with migration annotation",
-			oldProject: &kargoapi.Project{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: testProjectName,
-				},
-				Spec: &kargoapi.ProjectSpec{ // nolint: staticcheck
-					PromotionPolicies: []kargoapi.PromotionPolicy{
-						{
-							Stage:                "test-stage",
-							AutoPromotionEnabled: false,
-						},
-					},
-				},
-			},
-			newProject: func() *kargoapi.Project {
-				p := &kargoapi.Project{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: testProjectName,
-					},
-					Spec: &kargoapi.ProjectSpec{ // nolint: staticcheck
-						PromotionPolicies: []kargoapi.PromotionPolicy{
-							{
-								Stage:                "test-stage",
-								AutoPromotionEnabled: true,
-							},
-						},
-					},
-				}
-				api.AddMigrationAnnotationValue(p, api.MigratedProjectSpecToProjectConfig)
-				return p
-			}(),
-			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
-				assert.Empty(t, warnings) // No warnings when there's an error
-				require.Error(t, err)
-
-				var statusErr *apierrors.StatusError
-				require.True(t, errors.As(err, &statusErr))
-
-				assert.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
-				assert.Contains(t, statusErr.ErrStatus.Details.Causes[0].Message, "deprecated field")
-				assert.Equal(t, "spec", statusErr.ErrStatus.Details.Causes[0].Field)
-			},
-		},
-		{
-			name: "no changes to deprecated spec with migration annotation",
-			oldProject: &kargoapi.Project{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        testProjectName,
-					Annotations: make(map[string]string),
-				},
-				Spec: &kargoapi.ProjectSpec{ // nolint: staticcheck
-					PromotionPolicies: []kargoapi.PromotionPolicy{
-						{
-							Stage:                "test-stage",
-							AutoPromotionEnabled: false,
-						},
-					},
-				},
-			},
-			newProject: func() *kargoapi.Project {
-				p := &kargoapi.Project{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: testProjectName,
-					},
-					Spec: &kargoapi.ProjectSpec{ // nolint: staticcheck
-						PromotionPolicies: []kargoapi.PromotionPolicy{
-							{
-								Stage:                "test-stage",
-								AutoPromotionEnabled: false,
-							},
-						},
-					},
-				}
-				api.AddMigrationAnnotationValue(p, api.MigratedProjectSpecToProjectConfig)
-				return p
-			}(),
-			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
-				assert.Len(t, warnings, 1)
-				assert.Contains(t, warnings[0], "ProjectSpec is deprecated")
-				assert.Contains(t, warnings[0], testProjectName)
-				assert.NoError(t, err) // Should succeed when no changes to spec
-			},
+	project := &kargoapi.Project{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-project",
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			w := &webhook{}
-			warnings, err := w.ValidateUpdate(context.Background(), tt.oldProject, tt.newProject)
-			tt.assertions(t, warnings, err)
-		})
-	}
+	warnings, err := w.ValidateUpdate(context.Background(), project, project)
+	assert.Empty(t, warnings)
+	assert.NoError(t, err)
 }
 
 func Test_webhook_ValidateDelete(t *testing.T) {

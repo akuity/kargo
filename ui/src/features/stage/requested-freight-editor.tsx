@@ -3,11 +3,18 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Alert, AutoComplete, Button, Flex, Select, Switch, Tooltip } from 'antd';
 import classNames from 'classnames';
+import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 
-import { FreightOrigin, FreightRequest, FreightSources } from '@ui/gen/api/v1alpha1/generated_pb';
+import {
+  FreightOrigin,
+  FreightRequest,
+  FreightSources,
+  Stage
+} from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { FieldContainer } from '../common/form/field-container';
+import { findStagesForWarehouse } from '../project/pipelines/image-history/get-stages';
 
 import { requestedFreightSchema } from './schemas';
 
@@ -18,7 +25,7 @@ export const RequestedFreightEditor = ({
 }: {
   onSubmit: (data: FreightRequest) => void;
   warehouses?: string[];
-  stages?: string[];
+  stages?: Stage[];
 }) => {
   const { control, handleSubmit, watch, reset } = useForm({
     defaultValues: {
@@ -29,6 +36,15 @@ export const RequestedFreightEditor = ({
   });
 
   const direct = watch('sources.direct');
+  const selectedWarehouse = watch('warehouse');
+
+  const filteredStages = useMemo(() => {
+    if (!selectedWarehouse || !stages) {
+      return [];
+    }
+
+    return Array.from(findStagesForWarehouse(selectedWarehouse, stages));
+  }, [selectedWarehouse, stages]);
 
   return (
     <div className='w-full rounded-md bg-gray-50 p-3 mb-6'>
@@ -74,11 +90,11 @@ export const RequestedFreightEditor = ({
           'opacity-50 cursor-not-allowed': direct
         })}
       >
-        {!direct && (stages || []).length === 0 && (
+        {!direct && (filteredStages || []).length === 0 && selectedWarehouse && (
           <Alert
             type='warning'
             className='mb-4'
-            message='There are no other Stages in this Project. Before configuring Upstream Stages, create another Stage to avoid errors.'
+            message='There are no Stages in this Project that source Freight from the selected Warehouse. Before configuring Upstream Stages, create another Stage that sources Freight from this Warehouse.'
           />
         )}
 
@@ -92,7 +108,7 @@ export const RequestedFreightEditor = ({
             <Select
               mode='multiple'
               placeholder='my-stage'
-              options={(stages || []).map((name) => ({ value: name }))}
+              options={(filteredStages || []).map((name) => ({ value: name }))}
               value={field.value}
               disabled={direct}
               onChange={(value) => field.onChange(value)}

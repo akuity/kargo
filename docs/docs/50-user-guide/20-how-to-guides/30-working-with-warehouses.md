@@ -41,7 +41,7 @@ spec:
   subscriptions:
   - image:
       repoURL: public.ecr.aws/nginx/nginx
-      semverConstraint: ^1.26.0
+      constraint: ^1.26.0
   - git:
       repoURL: https://github.com/example/kargo-demo.git
 ```
@@ -104,10 +104,16 @@ field specifies a method for selecting the desired image. The available
 strategies are:
 
 - `SemVer`: Selects the image with the tag that best matches a semantic
-  versioning constraint specified by the `semverConstraint` field. With no
-  constraint specified, the strategy simply selects the image with the
+  versioning constraint specified by the `constraint` field. If no such
+  constraint is specified, the strategy simply selects the image with the
   semantically greatest tag. All tags that are not valid semantic versions are
   ignored.
+
+    :::note
+    If the `constraint` field is empty, any constraints defined by the
+    deprecated `semverConstraint` field will be applied instead. The
+    `semverConstraint` field will be removed in v1.9.0.
+    :::
 
    The `strictSemvers` field defaults to `true`, meaning only tags containing
    all three parts of a semantic version (major, minor, and patch) are
@@ -132,7 +138,7 @@ strategies are:
       subscriptions:
       - image:
           repoURL: public.ecr.aws/nginx/nginx
-          semverConstraint: ^1.26.0
+          constraint: ^1.26.0
     ```
 
 - `Lexical`: This strategy selects the image with the lexicographically greatest
@@ -154,12 +160,15 @@ strategies are:
           allowTags: ^nightly-\d{8}$
     ```
 
-- `Digest`: This selects the image _currently_ referenced by some "mutable tag,"
-   such as `latest`.
+- `Digest`: This selects the image _currently_ referenced by some "mutable tag"
+   (such as `latest`) specified by the `constraint` field.
 
-    __Unintuitively, the mutable tag name must be specified using the
-    `semverConstraint` field.__ Importantly, the _digest_ will change every time
-    the tag is updated.
+    :::note
+    If the `constraint` field is empty, the name of the mutable tag will
+    (unintuitively) be determined by the value of the deprecated
+    `semverConstraint` field. The `semverConstraint` field will be removed in
+    v1.9.0.
+    :::
 
     :::warning
     "Mutable tags": Tags like `latest` that are sometimes, perhaps frequently,
@@ -181,7 +190,7 @@ strategies are:
       - image:
           repoURL: public.ecr.aws/nginx/nginx
           imageSelectionStrategy: Digest
-          semverConstraint: latest
+          constraint: latest
     ```
 
 <a name="newest-build"></a>
@@ -671,6 +680,14 @@ Helm chart repository subscriptions can be defined using the following fields:
         repoURL: oci://us-central1-docker.pkg.dev/my-project/my-helm-charts/my-chart
         semverConstraint: ^1.0.0
   ```
+
+## Working with Private Repositories
+
+Frequently, `Warehouse`s require access to private repositories, in which case
+appropriate credentials must be made available in some form. The many available
+authentication options are covered in detail on the
+[Managing Credentials](../50-security/30-managing-credentials.md) page.
+
 
 ## Performance Considerations
 

@@ -39,23 +39,19 @@ func (j *jsonUpdater) Run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
-	failure := promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}
-
-	if err := j.validate(stepCtx.Config); err != nil {
-		return failure, err
-	}
-
-	cfg, err := promotion.ConfigToStruct[builtin.JSONUpdateConfig](stepCtx.Config)
+	cfg, err := j.convert(stepCtx.Config)
 	if err != nil {
-		return failure, fmt.Errorf("could not convert config into %s config: %w", j.Name(), err)
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusFailed,
+		}, &promotion.TerminalError{Err: err}
 	}
-
 	return j.run(ctx, stepCtx, cfg)
 }
 
-// validate validates jsonUpdater configuration against a JSON schema.
-func (j *jsonUpdater) validate(cfg promotion.Config) error {
-	return validate(j.schemaLoader, gojsonschema.NewGoLoader(cfg), j.Name())
+// convert validates jsonUpdater configuration against a JSON schema and
+// converts it into a builtin.JSONUpdateConfig struct.
+func (j *jsonUpdater) convert(cfg promotion.Config) (builtin.JSONUpdateConfig, error) {
+	return validateAndConvert[builtin.JSONUpdateConfig](j.schemaLoader, cfg, j.Name())
 }
 
 func (j *jsonUpdater) run(

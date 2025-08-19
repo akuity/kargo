@@ -1,5 +1,5 @@
 import { Radio, Table } from 'antd';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { DiscoveredCommit } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
@@ -19,6 +19,8 @@ export const CommitTable = ({
 }) => {
   const [page, setPage] = useState(1);
 
+  const doesAnyOfCommitsHaveTag = useMemo(() => commits?.find((c) => !!c?.tag), [commits]);
+
   if (!show) {
     return null;
   }
@@ -36,6 +38,12 @@ export const CommitTable = ({
             />
           )
         },
+        doesAnyOfCommitsHaveTag
+          ? {
+              title: 'tag',
+              dataIndex: 'tag'
+            }
+          : {},
         {
           title: 'ID',
           render: (record: DiscoveredCommit) => <TruncatedCopyable text={record?.id} />
