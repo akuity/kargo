@@ -118,6 +118,11 @@ const config = {
             label: 'Discord Community',
             position: 'right',
           },
+          {
+            href: '/api-documentation',
+            label: 'API Docs',
+            position: 'left',
+          },
         ],
       },
       footer: {
