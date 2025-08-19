@@ -76,8 +76,8 @@ export const useReactFlowPipelineGraph = (
           id: node,
           type: reactFlowNodeConstants.STACKED_NODE,
           position: {
-            x: dagreNode?.x,
-            y: dagreNode?.y
+            x: dagreNode?.x - dagreNode?.width / 2,
+            y: dagreNode?.y - dagreNode?.height / 2
           },
           data: {
             value: dagreNode?.value,
@@ -98,8 +98,8 @@ export const useReactFlowPipelineGraph = (
         id: node,
         type: reactFlowNodeConstants.CUSTOM_NODE,
         position: {
-          x: dagreNode?.x,
-          y: dagreNode?.y
+          x: dagreNode?.x - dagreNode?.width / 2,
+          y: dagreNode?.y - dagreNode?.height / 2
         },
         data: {
           label: node,
