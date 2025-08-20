@@ -18,9 +18,9 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/pkg/browser"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/hashicorp/go-cleanhttp"
+	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 	"golang.org/x/oauth2"
 	"k8s.io/utils/strings/slices"
