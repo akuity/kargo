@@ -19,7 +19,7 @@ func FormatEventControllerActor(name string) string {
 // that can be used as a value of AnnotationKeyEventActor.
 //
 // 1. If the user is admin, it returns EventActorAdmin since other information is not available.
-// 2. If the email is available, it returns email in "email:<email>" format.
+// 2. If the email is available, it returns email in "email:email" format.
 // 3. If the subject is available, it returns subject in "subject:<subject>" format.
 // 4. Otherwise, it returns EventActorUnknown.
 func FormatEventUserActor(u user.Info) string {
