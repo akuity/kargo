@@ -112,7 +112,7 @@ function main() {
 # Kube and Kargo API definitions are consolidated into a single directory
 # along with the template file. This temporary doc directory is
 # used as the basis for relative input paths for the proto compiler.
-# Docs are generated in the `docs/docs/90-api-documenation.md` directory.
+# Final result is output in docs/docs/90-api-documenation.md.
 
 temp_doc_dir=$(mktemp -d)
 cp -R "${proj_dir}/api" $temp_doc_dir/api
