@@ -1,5 +1,5 @@
 import { Radio, Table } from 'antd';
-import { useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { DiscoveredCommit } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
@@ -18,6 +18,24 @@ export const CommitTable = ({
   show?: boolean;
 }) => {
   const [page, setPage] = useState(1);
+  const pageSize = 10;
+  const lastSelectedIdRef = useRef<string | undefined>(undefined);
+
+  useLayoutEffect(() => {
+    if (!selected) {
+      setPage(1);
+      lastSelectedIdRef.current = undefined;
+      return;
+    }
+    const key = selected?.id;
+    if (lastSelectedIdRef.current === key) return;
+    lastSelectedIdRef.current = key;
+    const idx = commits.findIndex((c) => c?.id === key);
+    if (idx >= 0) {
+      const nextPage = Math.floor(idx / pageSize) + 1;
+      if (nextPage !== page) setPage(nextPage);
+    }
+  }, [selected, commits]);
 
   const doesAnyOfCommitsHaveTag = useMemo(() => commits?.find((c) => !!c?.tag), [commits]);
 
@@ -25,25 +43,27 @@ export const CommitTable = ({
     return null;
   }
 
+  const tagColumn = doesAnyOfCommitsHaveTag
+    ? [{
+        title: 'tag',
+        dataIndex: 'tag' as const
+      }]
+    : [];
+
   return (
     <Table
       dataSource={commits}
-      pagination={{ current: page, onChange: (page) => setPage(page) }}
+      pagination={{ current: page, onChange: (page) => setPage(page), pageSize }}
       columns={[
         {
           render: (record: DiscoveredCommit) => (
             <Radio
-              checked={selected === record}
-              onClick={() => select(selected === record ? undefined : record)}
+              checked={selected?.id === record?.id}
+              onClick={() => select(selected?.id === record?.id ? undefined : record)}
             />
           )
         },
-        doesAnyOfCommitsHaveTag
-          ? {
-              title: 'tag',
-              dataIndex: 'tag'
-            }
-          : {},
+        ...tagColumn,
         {
           title: 'ID',
           render: (record: DiscoveredCommit) => <TruncatedCopyable text={record?.id} />

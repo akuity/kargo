@@ -4,6 +4,8 @@ import {
   faArrowsLeftRightToLine,
   faCheck,
   faEllipsis,
+  faCopy,
+  faPlus,
   faTrash,
   faWarehouse,
   IconDefinition
@@ -121,6 +123,23 @@ export const FreightCard = (props: FreightCardProps) => {
             <Dropdown
               menu={{
                 items: [
+                  {
+                    key: 'create-freight',
+                    label: 'Create Freight based on this',
+                    icon: <FontAwesomeIcon icon={faCopy} />,
+                    onClick: (e) => {
+                      e.domEvent.stopPropagation();
+                      // Navigate directly to the warehouse Freight Assembly tab
+                      navigate(
+                        generatePath(paths.warehouse, {
+                          name: props.freight?.metadata?.namespace,
+                          warehouseName: props.freight?.origin?.name || '',
+                          tab: 'create-freight'
+                        }),
+                        { state: { sourceFreight: props.freight } }
+                      );
+                    }
+                  },
                   {
                     key: 'manually-approve',
                     label: 'Manually Approve',

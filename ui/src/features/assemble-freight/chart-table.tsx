@@ -1,5 +1,5 @@
 import { Radio, Table } from 'antd';
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 
 export const ChartTable = ({
   versions,
@@ -13,6 +13,24 @@ export const ChartTable = ({
   show?: boolean;
 }) => {
   const [page, setPage] = useState(1);
+  const pageSize = 10;
+  const lastSelectedVersionRef = useRef<string | undefined>(undefined);
+
+  useLayoutEffect(() => {
+    if (!selected) {
+      setPage(1);
+      lastSelectedVersionRef.current = undefined;
+      return;
+    }
+    const key = selected;
+    if (lastSelectedVersionRef.current === key) return;
+    lastSelectedVersionRef.current = key;
+    const idx = versions.findIndex((v) => v === key);
+    if (idx >= 0) {
+      const nextPage = Math.floor(idx / pageSize) + 1;
+      if (nextPage !== page) setPage(nextPage);
+    }
+  }, [selected, versions]);
 
   if (!show) {
     return null;
@@ -21,7 +39,11 @@ export const ChartTable = ({
   return (
     <Table
       dataSource={versions.map((version) => ({ version }))}
-      pagination={{ current: page, onChange: (page) => setPage(page) }}
+      pagination={{
+        current: page,
+        onChange: (page) => setPage(page),
+        pageSize
+      }}
       columns={[
         {
           width: '50px',
