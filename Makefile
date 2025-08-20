@@ -218,7 +218,7 @@ build-cli-with-ui: build-ui build-cli
 codegen: codegen-proto codegen-controller codegen-directive-configs codegen-ui codegen-docs
 
 .PHONY: codegen-proto
-codegen-proto: install-protoc install-go-to-protobuf install-protoc-gen-gogo install-goimports install-buf
+codegen-proto: install-protoc install-go-to-protobuf install-protoc-gen-gogo install-goimports install-buf install-protoc-gen-doc
 	./hack/codegen/proto.sh
 
 .PHONY: codegen-controller
@@ -247,22 +247,6 @@ codegen-ui:
 codegen-docs:
 	npm install -g @bitnami/readme-generator-for-helm
 	bash hack/helm-docs/helm-docs.sh
-
-.PHONY: api-docs
-api-docs:
-	$(CONTAINER_RUNTIME) run --rm \
-    -v	$(PWD)/docs/docs:/out \
-    -v	$(PWD):/protos \
-    pseudomuto/protoc-gen-doc \
-    --doc_opt=/out/api-docs.templ,90-api-documentation.md \
-		api/service/v1alpha1/service.proto \
-		api/rbac/v1alpha1/generated.proto \
-		api/v1alpha1/generated.proto \
-		api/stubs/rollouts/v1alpha1/generated.proto
-
-# protoc \
-# 	--doc_out=./doc/docs \
-# 	--doc_opt=api-docs.templ,docs.md ./api/service/v1alpha1/*.proto
 
 ################################################################################
 # Hack: Targets to help you hack                                               #
