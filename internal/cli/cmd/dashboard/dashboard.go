@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/bacongobbler/browser"
+	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
 
 	"github.com/akuity/kargo/internal/cli/config"
@@ -49,7 +49,7 @@ func (o *dashboardOptions) validate() error {
 
 // run opens the Kargo Dashboard in the default browser.
 func (o *dashboardOptions) run() error {
-	if err := browser.Open(o.Config.APIAddress); err != nil {
+	if err := browser.OpenURL(o.Config.APIAddress); err != nil {
 		return fmt.Errorf("error opening dashboard in default browser: %w", err)
 	}
 	return nil
