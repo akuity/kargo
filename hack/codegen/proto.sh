@@ -108,6 +108,12 @@ function main() {
 
 { msg "Generating API docs"; } 2> /dev/null
 
+# Protoc-gen-doc plugin is used to generate API documentation.
+# Kube and Kargo API definitions are consolidated into a single directory
+# along with the template file. This temporary doc directory is
+# used as the basis for relative input paths for the proto compiler.
+# Docs are generated in the `docs/docs/90-api-documenation.md` directory.
+
 temp_doc_dir=$(mktemp -d)
 cp -R "${proj_dir}/api" $temp_doc_dir/api
 cp -R "${tmp_dir}/vendor/k8s.io" $temp_doc_dir/k8s.io
@@ -116,10 +122,10 @@ cp "${proj_dir}/api-docs.templ" $temp_doc_dir/api-docs.templ
 protoc -I $temp_doc_dir \
 	--doc_out="${proj_dir}/docs/docs" \
 	--doc_opt=$temp_doc_dir/api-docs.templ,90-api-documentation.md \
-		"api/service/v1alpha1/service.proto" \
-		"api/rbac/v1alpha1/generated.proto" \
-		"api/v1alpha1/generated.proto" \
-		"api/stubs/rollouts/v1alpha1/generated.proto" \
+    "api/service/v1alpha1/service.proto" \
+    "api/rbac/v1alpha1/generated.proto" \
+    "api/v1alpha1/generated.proto" \
+    "api/stubs/rollouts/v1alpha1/generated.proto" \
     "k8s.io/api/core/v1/generated.proto" \
     "k8s.io/api/batch/v1/generated.proto" \
     "k8s.io/api/rbac/v1/generated.proto" \
@@ -130,7 +136,9 @@ protoc -I $temp_doc_dir \
     "k8s.io/apimachinery/pkg/runtime/generated.proto" \
     "k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto"
 
-rm -rf $temp_doc_dir
+  { msg "Cleaning up temporary API docs directory..."; } 2> /dev/null
+
+  rm -rf $temp_doc_dir
 
   { msg "Copying generated .proto and .pb.go files back to the project root..."; } 2> /dev/null
   find "$build_src_dir/api" \( \
