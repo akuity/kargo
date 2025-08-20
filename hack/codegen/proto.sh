@@ -105,6 +105,52 @@ function main() {
     --proto-import="${tmp_dir}/vendor" \
     --output-dir="${tmp_dir}/src"
 
+local api_dir="${proj_dir}/api"
+local k8s_dir="${tmp_dir}/vendor/k8s.io"
+rm -rf testdir || true
+mkdir -p testdir
+cp -R "${api_dir}" testdir/api
+cp -R "${k8s_dir}" testdir/k8s.io
+cp "${proj_dir}/api-docs.templ" testdir/api-docs.templ
+
+
+# echo "${APIMACHINERY_PKGS[*]}"
+# ls "${tmp_dir}/src/github.com/akuity/kargo"
+# ls "${tmp_dir}/vendor"
+# ls "${tmp_dir}/vendor/k8s.io"
+# ls "${tmp_dir}/vendor/k8s.io/api/core/v1"
+# ls "${tmp_dir}/vendor/github.com/akuity"
+# ls "${tmp_dir}/vendor/github.com/akuity/kargo"
+# ls "${tmp_dir}/vendor/github.com/akuity/kargo/api/service/v1alpha1"
+{ msg "Generating API docs"; } 2> /dev/null
+protoc -I testdir \
+	--doc_out="${proj_dir}/docs/docs" \
+	--doc_opt=testdir/api-docs.templ,90-api-documentation.md \
+		"api/service/v1alpha1/service.proto" \
+		"api/rbac/v1alpha1/generated.proto" \
+		"api/v1alpha1/generated.proto" \
+		"api/stubs/rollouts/v1alpha1/generated.proto" \
+    "k8s.io/api/core/v1/generated.proto" \
+    "k8s.io/api/batch/v1/generated.proto" \
+    "k8s.io/api/rbac/v1/generated.proto" \
+    "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1/generated.proto" \
+    "k8s.io/apimachinery/pkg/util/intstr/generated.proto" \
+    "k8s.io/apimachinery/pkg/api/resource/generated.proto" \
+    "k8s.io/apimachinery/pkg/runtime/schema/generated.proto" \
+    "k8s.io/apimachinery/pkg/runtime/generated.proto" \
+    "k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto"
+    
+  exit 1
+	# docker run --rm \
+  #   -v	"${tmp_dir}/src/github.com/akuity/kargo/docs/docs:/out" \
+  #   -v	"${tmp_dir}/src/github.com/akuity/kargo/:/protos" \
+  #   pseudomuto/protoc-gen-doc \
+  #   --doc_opt=/out/api-docs.templ,90-api-documentation.md \
+	# 	api/service/v1alpha1/service.proto \
+	# 	api/rbac/v1alpha1/generated.proto \
+	# 	api/v1alpha1/generated.proto \
+	# 	api/stubs/rollouts/v1alpha1/generated.proto
+
   { msg "Copying generated .proto and .pb.go files back to the project root..."; } 2> /dev/null
   find "$build_src_dir/api" \( \
     -name '*.proto' -o \
