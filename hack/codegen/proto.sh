@@ -105,27 +105,17 @@ function main() {
     --proto-import="${tmp_dir}/vendor" \
     --output-dir="${tmp_dir}/src"
 
-local api_dir="${proj_dir}/api"
-local k8s_dir="${tmp_dir}/vendor/k8s.io"
-rm -rf testdir || true
-mkdir -p testdir
-cp -R "${api_dir}" testdir/api
-cp -R "${k8s_dir}" testdir/k8s.io
-cp "${proj_dir}/api-docs.templ" testdir/api-docs.templ
 
-
-# echo "${APIMACHINERY_PKGS[*]}"
-# ls "${tmp_dir}/src/github.com/akuity/kargo"
-# ls "${tmp_dir}/vendor"
-# ls "${tmp_dir}/vendor/k8s.io"
-# ls "${tmp_dir}/vendor/k8s.io/api/core/v1"
-# ls "${tmp_dir}/vendor/github.com/akuity"
-# ls "${tmp_dir}/vendor/github.com/akuity/kargo"
-# ls "${tmp_dir}/vendor/github.com/akuity/kargo/api/service/v1alpha1"
 { msg "Generating API docs"; } 2> /dev/null
-protoc -I testdir \
+
+temp_doc_dir=$(mktemp -d)
+cp -R "${proj_dir}/api" $temp_doc_dir/api
+cp -R "${tmp_dir}/vendor/k8s.io" $temp_doc_dir/k8s.io
+cp "${proj_dir}/api-docs.templ" $temp_doc_dir/api-docs.templ
+
+protoc -I $temp_doc_dir \
 	--doc_out="${proj_dir}/docs/docs" \
-	--doc_opt=testdir/api-docs.templ,90-api-documentation.md \
+	--doc_opt=$temp_doc_dir/api-docs.templ,90-api-documentation.md \
 		"api/service/v1alpha1/service.proto" \
 		"api/rbac/v1alpha1/generated.proto" \
 		"api/v1alpha1/generated.proto" \
@@ -139,17 +129,8 @@ protoc -I testdir \
     "k8s.io/apimachinery/pkg/runtime/schema/generated.proto" \
     "k8s.io/apimachinery/pkg/runtime/generated.proto" \
     "k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto"
-    
-  exit 1
-	# docker run --rm \
-  #   -v	"${tmp_dir}/src/github.com/akuity/kargo/docs/docs:/out" \
-  #   -v	"${tmp_dir}/src/github.com/akuity/kargo/:/protos" \
-  #   pseudomuto/protoc-gen-doc \
-  #   --doc_opt=/out/api-docs.templ,90-api-documentation.md \
-	# 	api/service/v1alpha1/service.proto \
-	# 	api/rbac/v1alpha1/generated.proto \
-	# 	api/v1alpha1/generated.proto \
-	# 	api/stubs/rollouts/v1alpha1/generated.proto
+
+rm -rf $temp_doc_dir
 
   { msg "Copying generated .proto and .pb.go files back to the project root..."; } 2> /dev/null
   find "$build_src_dir/api" \( \
