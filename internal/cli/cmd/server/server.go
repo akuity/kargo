@@ -16,6 +16,7 @@ import (
 	apiconfig "github.com/akuity/kargo/internal/server/config"
 	"github.com/akuity/kargo/internal/server/kubernetes"
 	"github.com/akuity/kargo/internal/server/rbac"
+	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 )
 
 type serverOptions struct {
@@ -95,7 +96,7 @@ func (o *serverOptions) run(ctx context.Context) error {
 		},
 		client,
 		rbac.NewKubernetesRolesDatabase(client),
-		&fakeevent.EventRecorder{},
+		k8sevent.NewEventSender(&fakeevent.EventRecorder{}),
 	)
 	if err := srv.Serve(ctx, l); err != nil {
 		return fmt.Errorf("serve error: %w", err)

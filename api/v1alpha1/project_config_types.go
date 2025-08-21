@@ -117,6 +117,9 @@ type WebhookReceiverConfig struct {
 	// GitLab contains the configuration for a webhook receiver that is compatible
 	// with GitLab payloads.
 	GitLab *GitLabWebhookReceiverConfig `json:"gitlab,omitempty" protobuf:"bytes,3,opt,name=gitlab"`
+	// Harbor contains the configuration for a webhook receiver that is compatible
+	// with Harbor payloads.
+	Harbor *HarborWebhookReceiverConfig `json:"harbor,omitempty" protobuf:"bytes,10,opt,name=harbor"`
 	// Quay contains the configuration for a webhook receiver that is compatible
 	// with Quay payloads.
 	Quay *QuayWebhookReceiverConfig `json:"quay,omitempty" protobuf:"bytes,4,opt,name=quay"`
@@ -221,6 +224,25 @@ type GitLabWebhookReceiverConfig struct {
 	// shared secret specified when registering the webhook in GitLab. For more
 	// information about this token, please refer to the GitLab documentation:
 	//   https://docs.gitlab.com/user/project/integrations/webhooks/
+	//
+	// +kubebuilder:validation:Required
+	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+}
+
+// HarborWebhookReceiverConfig describes a webhook receiver that is compatible
+// with Harbor payloads.
+type HarborWebhookReceiverConfig struct {
+	// SecretRef contains a reference to a Secret. For Project-scoped webhook
+	// receivers, the referenced Secret must be in the same namespace as the
+	// ProjectConfig.
+	//
+	// For cluster-scoped webhook receivers, the referenced Secret must be in the
+	// designated "cluster Secrets" namespace.
+	//
+	// The secret is expected to contain an `auth-header` key containing the "auth
+	// header" specified when registering the webhook in Harbor. For more
+	// information, please refer to the Harbor documentation:
+	//   https://goharbor.io/docs/main/working-with-projects/project-configuration/configure-webhooks/
 	//
 	// +kubebuilder:validation:Required
 	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`

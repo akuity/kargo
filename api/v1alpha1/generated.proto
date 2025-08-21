@@ -915,6 +915,25 @@ message GiteaWebhookReceiverConfig {
   optional .k8s.io.api.core.v1.LocalObjectReference secretRef = 1;
 }
 
+// HarborWebhookReceiverConfig describes a webhook receiver that is compatible
+// with Harbor payloads.
+message HarborWebhookReceiverConfig {
+  // SecretRef contains a reference to a Secret. For Project-scoped webhook
+  // receivers, the referenced Secret must be in the same namespace as the
+  // ProjectConfig.
+  //
+  // For cluster-scoped webhook receivers, the referenced Secret must be in the
+  // designated "cluster Secrets" namespace.
+  //
+  // The secret is expected to contain an `auth-header` key containing the "auth
+  // header" specified when registering the webhook in Harbor. For more
+  // information, please refer to the Harbor documentation:
+  //   https://goharbor.io/docs/main/working-with-projects/project-configuration/configure-webhooks/
+  //
+  // +kubebuilder:validation:Required
+  optional .k8s.io.api.core.v1.LocalObjectReference secretRef = 1;
+}
+
 // Health describes the health of a Stage.
 message Health {
   // Status describes the health of the Stage.
@@ -1934,6 +1953,10 @@ message WebhookReceiverConfig {
   // GitLab contains the configuration for a webhook receiver that is compatible
   // with GitLab payloads.
   optional GitLabWebhookReceiverConfig gitlab = 3;
+
+  // Harbor contains the configuration for a webhook receiver that is compatible
+  // with Harbor payloads.
+  optional HarborWebhookReceiverConfig harbor = 10;
 
   // Quay contains the configuration for a webhook receiver that is compatible
   // with Quay payloads.

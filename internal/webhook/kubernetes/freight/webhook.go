@@ -9,13 +9,11 @@ import (
 
 	"github.com/technosophos/moniker"
 	admissionv1 "k8s.io/api/admission/v1"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -26,7 +24,10 @@ import (
 	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/indexer"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
+	"github.com/akuity/kargo/internal/logging"
 	libWebhook "github.com/akuity/kargo/internal/webhook/kubernetes"
+	"github.com/akuity/kargo/pkg/event"
+	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 )
 
 var (
@@ -44,7 +45,7 @@ type webhook struct {
 	client                client.Client
 	freightAliasGenerator moniker.Namer
 
-	recorder record.EventRecorder
+	sender event.Sender
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -84,7 +85,7 @@ func SetupWebhookWithManager(
 	w := newWebhook(
 		cfg,
 		mgr.GetClient(),
-		libEvent.NewRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), "freight-webhook"),
+		k8sevent.NewEventSender(libEvent.NewRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), "freight-webhook")),
 	)
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&kargoapi.Freight{}).
@@ -96,12 +97,12 @@ func SetupWebhookWithManager(
 func newWebhook(
 	cfg libWebhook.Config,
 	kubeClient client.Client,
-	recorder record.EventRecorder,
+	sender event.Sender,
 ) *webhook {
 	w := &webhook{
 		client:                kubeClient,
 		freightAliasGenerator: moniker.New(),
-		recorder:              recorder,
+		sender:                sender,
 	}
 	w.admissionRequestFromContextFn = admission.RequestFromContext
 	w.getAvailableFreightAliasFn = w.getAvailableFreightAlias
@@ -293,7 +294,7 @@ func (w *webhook) ValidateUpdate(
 	if !w.isRequestFromKargoControlplaneFn(req) {
 		for approvedStage := range newFreight.Status.ApprovedFor {
 			if !oldFreight.IsApprovedFor(approvedStage) {
-				w.recordFreightApprovedEvent(req, newFreight, approvedStage)
+				w.recordFreightApprovedEvent(ctx, req, newFreight, approvedStage)
 			}
 		}
 	}
@@ -334,20 +335,21 @@ func (w *webhook) ValidateDelete(
 }
 
 func (w *webhook) recordFreightApprovedEvent(
+	ctx context.Context,
 	req admission.Request,
 	f *kargoapi.Freight,
 	stageName string,
 ) {
 	actor := api.FormatEventKubernetesUserActor(req.UserInfo)
-	w.recorder.AnnotatedEventf(
-		f,
-		api.NewFreightApprovedEventAnnotations(actor, f, stageName),
-		corev1.EventTypeNormal,
-		kargoapi.EventReasonFreightApproved,
-		"Freight approved for Stage %q by %q",
+	evt := event.NewFreightApproved(fmt.Sprintf("Freight approved for Stage %q by %q",
 		stageName,
 		actor,
-	)
+	), actor, stageName, f)
+	if err := w.sender.Send(ctx, evt); err != nil {
+		logging.LoggerFromContext(ctx).Error(err,
+			"error sending Freight approved event")
+	}
+
 }
 
 type artifactType string

@@ -8,25 +8,24 @@ import (
 
 	admissionv1 "k8s.io/api/admission/v1"
 	authzv1 "k8s.io/api/authorization/v1"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
-	kargoEvent "github.com/akuity/kargo/internal/event"
 	"github.com/akuity/kargo/internal/kargo"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	"github.com/akuity/kargo/internal/logging"
 	libWebhook "github.com/akuity/kargo/internal/webhook/kubernetes"
+	kargoEvent "github.com/akuity/kargo/pkg/event"
+	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 )
 
 var (
@@ -44,7 +43,7 @@ type webhook struct {
 	client  client.Client
 	decoder admission.Decoder
 
-	recorder record.EventRecorder
+	sender kargoEvent.Sender
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -92,7 +91,7 @@ func SetupWebhookWithManager(
 		cfg,
 		mgr.GetClient(),
 		admission.NewDecoder(mgr.GetScheme()),
-		libEvent.NewRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), "promotion-webhook"),
+		k8sevent.NewEventSender(libEvent.NewRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), "promotion-webhook")),
 	)
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&kargoapi.Promotion{}).
@@ -105,12 +104,12 @@ func newWebhook(
 	cfg libWebhook.Config,
 	kubeClient client.Client,
 	decoder admission.Decoder,
-	recorder record.EventRecorder,
+	sender kargoEvent.Sender,
 ) *webhook {
 	w := &webhook{
-		client:   kubeClient,
-		decoder:  decoder,
-		recorder: recorder,
+		client:  kubeClient,
+		decoder: decoder,
+		sender:  sender,
 	}
 	w.getFreightFn = api.GetFreight
 	w.getStageFn = api.GetStage
@@ -393,15 +392,15 @@ func (w *webhook) recordPromotionCreatedEvent(
 	f *kargoapi.Freight,
 ) {
 	actor := api.FormatEventKubernetesUserActor(req.UserInfo)
-	w.recorder.AnnotatedEventf(
-		p,
-		kargoEvent.NewPromotionAnnotations(ctx, actor, p, f),
-		corev1.EventTypeNormal,
-		kargoapi.EventReasonPromotionCreated,
-		"Promotion created for Stage %q by %q",
+	evt := kargoEvent.NewPromotionCreated(fmt.Sprintf("Promotion created for Stage %q by %q",
 		p.Spec.Stage,
-		actor,
-	)
+		actor), actor, p, f)
+	if err := w.sender.Send(ctx, evt); err != nil {
+		logging.LoggerFromContext(ctx).Error(
+			err,
+			"failed to send Promotion created event",
+		)
+	}
 }
 
 func (w *webhook) setAbortAnnotationActor(req admission.Request, existing, updated *kargoapi.Promotion) {

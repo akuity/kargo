@@ -22,7 +22,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.18.4
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.48.0
 	github.com/aws/aws-sdk-go-v2/service/sts v1.37.0
-	github.com/bacongobbler/browser v1.1.0
 	github.com/bmatcuk/doublestar/v4 v4.9.1
 	github.com/bombsimon/logrusr/v4 v4.1.0
 	github.com/coreos/go-oidc/v3 v3.15.0
@@ -48,6 +47,7 @@ require (
 	github.com/oklog/ulid/v2 v2.1.1
 	github.com/otiai10/copy v1.14.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible
+	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
 	github.com/rs/cors v1.11.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/sosedoff/gitkit v0.4.0
@@ -56,7 +56,6 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/technosophos/moniker v0.0.0-20210218184952-3ea787d3943b
 	github.com/tidwall/sjson v1.2.5
-	github.com/valyala/fasttemplate v1.2.2
 	github.com/xeipuuv/gojsonschema v1.2.0
 	gitlab.com/gitlab-org/api/client-go v0.137.0
 	go.uber.org/ratelimit v0.3.1
@@ -205,6 +204,7 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
+	github.com/valyala/fasttemplate v1.2.2 // indirect
 	github.com/vbatts/tar-split v0.12.1 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
