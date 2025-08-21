@@ -149,6 +149,7 @@ export const Graph = (props: GraphProps) => {
         proOptions={{ hideAttribution: true }}
         minZoom={0}
         onNodesChange={onNodesChange}
+        onlyRenderVisibleElements
       >
         {!Object.keys(dimensions).length && (
           <div className='opacity-0 overflow-hidden h-0'>
