@@ -1687,9 +1687,9 @@ export type GitSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.GitS
    * For NewestFromBranch (commit filtering):
    *   - `id`: The ID (sha) of the commit.
    *   - `commitDate`: The commit date of the commit.
-   *   - `author`: The author of the commit message, in the format "Name <email>".
+   *   - `author`: The author of the commit message, in the format "Name email".
    *   - `committer`: The person who committed the commit, in the format
-   * 	   "Name <email>".
+   * 	   "Name email".
    *   - `subject`: The subject (first line) of the commit message.
    *
    * For Lexical, NewestTag, SemVer (tag filtering):
@@ -1698,12 +1698,12 @@ export type GitSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.GitS
    *   - `creatorDate`: The creation date of an annotated tag, or the commit
    * 		date of a lightweight tag.
    *   - `author`: The author of the commit message associated with the tag,
-   * 	   in the format "Name <email>".
+   * 	   in the format "Name email".
    *   - `committer`: The person who committed the commit associated with the
-   * 	   tag, in the format "Name <email>".
+   * 	   tag, in the format "Name email".
    *   - `subject`: The subject (first line) of the commit message associated
    * 	   with the tag.
-   * 	 - `tagger`: The person who created the tag, in the format "Name <email>".
+   * 	 - `tagger`: The person who created the tag, in the format "Name email".
    * 	   Only available for annotated tags.
    * 	 - `annotation`: The subject (first line) of the tag annotation. Only
    * 	   available for annotated tags.
