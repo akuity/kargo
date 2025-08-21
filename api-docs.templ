@@ -1,28 +1,6 @@
 # API Documentation
 <a name="top"></a>
 
-## Table of Contents
-{{range .Files}}
-{{$file_name := .Name}}- [{{.Name}}](#{{.Name | anchor}})
-  {{- if .Messages }}
-  {{range .Messages}}  - [{{.LongName}}](#{{.FullName | anchor}})
-  {{end}}
-  {{- end -}}
-  {{- if .Enums }}
-  {{range .Enums}}  - [{{.LongName}}](#{{.FullName | anchor}})
-  {{end}}
-  {{- end -}}
-  {{- if .Extensions }}
-  {{range .Extensions}}  - [File-level Extensions](#{{$file_name | anchor}}-extensions)
-  {{end}}
-  {{- end -}}
-  {{- if .Services }}
-  {{range .Services}}  - [{{.Name}}](#{{.FullName | anchor}})
-  {{end}}
-  {{- end -}}
-{{end}}
-- [Scalar Value Types](#scalar-value-types)
-
 {{range .Files}}
 {{$file_name := .Name}}
 <a name="{{.Name | anchor}}"></a>
