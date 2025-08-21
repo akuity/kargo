@@ -245,6 +245,7 @@
     - [GitLabWebhookReceiverConfig](#github-com-akuity-kargo-api-v1alpha1-GitLabWebhookReceiverConfig)
     - [GitSubscription](#github-com-akuity-kargo-api-v1alpha1-GitSubscription)
     - [GiteaWebhookReceiverConfig](#github-com-akuity-kargo-api-v1alpha1-GiteaWebhookReceiverConfig)
+    - [HarborWebhookReceiverConfig](#github-com-akuity-kargo-api-v1alpha1-HarborWebhookReceiverConfig)
     - [Health](#github-com-akuity-kargo-api-v1alpha1-Health)
     - [HealthCheckStep](#github-com-akuity-kargo-api-v1alpha1-HealthCheckStep)
     - [HealthStats](#github-com-akuity-kargo-api-v1alpha1-HealthStats)
@@ -4269,6 +4270,28 @@ The Secret's data map is expected to contain a `secret` key whose value is the s
 
 
 
+<a name="github-com-akuity-kargo-api-v1alpha1-HarborWebhookReceiverConfig"></a>
+
+### HarborWebhookReceiverConfig
+HarborWebhookReceiverConfig describes a webhook receiver that is compatible
+with Harbor payloads.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| secretRef | [k8s.io.api.core.v1.LocalObjectReference](#k8s-io-api-core-v1-LocalObjectReference) | optional | SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.
+
+For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.
+
+The secret is expected to contain an `auth-header` key containing the "auth header" specified when registering the webhook in Harbor. For more information, please refer to the Harbor documentation: https://goharbor.io/docs/main/working-with-projects/project-configuration/configure-webhooks/
+
++kubebuilder:validation:Required |
+
+
+
+
+
+
 <a name="github-com-akuity-kargo-api-v1alpha1-Health"></a>
 
 ### Health
@@ -5225,6 +5248,7 @@ receiver.
 | dockerhub | [DockerHubWebhookReceiverConfig](#github-com-akuity-kargo-api-v1alpha1-DockerHubWebhookReceiverConfig) | optional | DockerHub contains the configuration for a webhook receiver that is compatible with DockerHub payloads. |
 | github | [GitHubWebhookReceiverConfig](#github-com-akuity-kargo-api-v1alpha1-GitHubWebhookReceiverConfig) | optional | GitHub contains the configuration for a webhook receiver that is compatible with GitHub payloads. |
 | gitlab | [GitLabWebhookReceiverConfig](#github-com-akuity-kargo-api-v1alpha1-GitLabWebhookReceiverConfig) | optional | GitLab contains the configuration for a webhook receiver that is compatible with GitLab payloads. |
+| harbor | [HarborWebhookReceiverConfig](#github-com-akuity-kargo-api-v1alpha1-HarborWebhookReceiverConfig) | optional | Harbor contains the configuration for a webhook receiver that is compatible with Harbor payloads. |
 | quay | [QuayWebhookReceiverConfig](#github-com-akuity-kargo-api-v1alpha1-QuayWebhookReceiverConfig) | optional | Quay contains the configuration for a webhook receiver that is compatible with Quay payloads. |
 | artifactory | [ArtifactoryWebhookReceiverConfig](#github-com-akuity-kargo-api-v1alpha1-ArtifactoryWebhookReceiverConfig) | optional | Artifactory contains the configuration for a webhook receiver that is compatible with JFrog Artifactory payloads. |
 | azure | [AzureWebhookReceiverConfig](#github-com-akuity-kargo-api-v1alpha1-AzureWebhookReceiverConfig) | optional | Azure contains the configuration for a webhook receiver that is compatible with Azure Container Registry (ACR) and Azure DevOps payloads. |
