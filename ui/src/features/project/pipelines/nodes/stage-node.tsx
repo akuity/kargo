@@ -34,6 +34,7 @@ import { stageIndexer } from '../graph/node-indexer';
 
 import './stage-node.less';
 import style from './node-size-source-of-truth.module.less';
+import { PullRequestLink } from './pull-request-link';
 import { StageFreight } from './stage-freight';
 import {
   getLastPromotionDate,
@@ -136,6 +137,8 @@ export const StageNode = (props: { stage: Stage }) => {
             </Flex>
           )}
         </Flex>
+
+        <PullRequestLink stage={props.stage} />
 
         {lastPromotion && (
           <Link
