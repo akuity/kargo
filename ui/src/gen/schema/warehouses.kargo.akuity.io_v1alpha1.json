@@ -197,7 +197,7 @@
                     "type": "boolean"
                   },
                   "platform": {
-                    "description": "Platform is a string of the form os/arch that limits the tags that can\nbe considered when searching for new versions of an image. This field is\noptional. When left unspecified, it is implicitly equivalent to the\nOS/architecture of the Kargo controller. Care should be taken to set this\nvalue correctly in cases where the image referenced by this\nImageRepositorySubscription will run on a Kubernetes node with a different\nOS/architecture than the Kargo controller. At present this is uncommon, but\nnot unheard of.",
+                    "description": "Platform is a string of the form <os>/<arch> that limits the tags that can\nbe considered when searching for new versions of an image. This field is\noptional. When left unspecified, it is implicitly equivalent to the\nOS/architecture of the Kargo controller. Care should be taken to set this\nvalue correctly in cases where the image referenced by this\nImageRepositorySubscription will run on a Kubernetes node with a different\nOS/architecture than the Kargo controller. At present this is uncommon, but\nnot unheard of.",
                     "type": "string"
                   },
                   "repoURL": {
