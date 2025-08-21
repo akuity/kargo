@@ -382,10 +382,10 @@ type CommitMetadata struct {
 	ID string
 	// CommitDate is the date of the commit.
 	CommitDate time.Time
-	// Author is the author of the commit, in the format "Name email".
+	// Author is the author of the commit, in the format "Name <email>".
 	Author string
 	// Committer is the person who committed the commit, in the format
-	// "Name email".
+	// "Name <email>".
 	Committer string
 	// Subject is the subject (first line) of the commit message.
 	Subject string
@@ -452,15 +452,15 @@ type TagMetadata struct {
 	// of a lightweight tag.
 	CreatorDate time.Time
 	// Author is the author of the commit message associated with the tag, in
-	// the format "Name email".
+	// the format "Name <email>".
 	Author string
 	// Committer is the person who committed the commit associated with the tag,
-	// in the format "Name email".
+	// in the format "Name <email>".
 	Committer string
 	// Subject is the subject (first line) of the commit message associated
 	// with the tag.
 	Subject string
-	// Tagger is the person who created the tag, in the format "Name email".
+	// Tagger is the person who created the tag, in the format "Name <email>".
 	// This field is only populated for annotated tags.
 	Tagger string
 	// Annotation is the annotation of the tag, if it is an annotated tag.
