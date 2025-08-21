@@ -338,6 +338,8 @@ type SetValues struct {
 	Key string `json:"key"`
 	// The new value for the key.
 	Value string `json:"value"`
+	// Whether to force the value to be treated as a string. When true, uses --set-literal instead of --set.
+	ForceString bool `json:"forceString,omitempty"`
 }
 
 type HelmUpdateChartConfig struct {

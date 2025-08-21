@@ -31,6 +31,7 @@ commonly preceded by a [`git-clear` step](git-clear.md) and followed by
 | `setValues` | `[]object` | N | Allows for amending chart configuration inline as one would with the `helm template` command's `--set` flag. |
 | `setValues[].key` | `string` | N | The key whose value should be set. For nested values, use dots to delimit key parts. e.g. `image.tag`. |
 | `setValues[].value` | `string` | N | The new value for the key. |
+| `setValues[].forceString` | `boolean` | N | Whether to force the value to be treated as a string. When true, uses `--set-literal` instead of `--set`. This is `false` by default. |
 
 ## Examples
 
