@@ -33,6 +33,7 @@ import { useGraphContext } from '../context/graph-context';
 import { stageIndexer } from '../graph/node-indexer';
 
 import './stage-node.less';
+import { ArgoCDLink } from './argocd-link';
 import style from './node-size-source-of-truth.module.less';
 import { PullRequestLink } from './pull-request-link';
 import { StageFreight } from './stage-freight';
@@ -129,11 +130,13 @@ export const StageNode = (props: { stage: Stage }) => {
         <Flex gap={24}>
           {Phase}
           {stageHealth?.status && (
-            <Flex gap={4}>
+            <Flex gap={16}>
               <Flex align='center' gap={4}>
                 {stageHealth?.status}
                 <HealthStatusIcon noTooltip className='text-[8px]' health={stageHealth} />
               </Flex>
+
+              <ArgoCDLink stage={props.stage} shards={dictionaryContext?.argocdShards} />
             </Flex>
           )}
         </Flex>

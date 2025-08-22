@@ -18,6 +18,7 @@ import CreateWarehouse from '@ui/features/stage/create-warehouse/create-warehous
 import StageDetails from '@ui/features/stage/stage-details';
 import { getColors } from '@ui/features/stage/utils';
 import {
+  getConfig,
   getProject,
   listImages,
   listStages,
@@ -55,6 +56,10 @@ import '@xyflow/react/dist/style.css';
 export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: boolean }) => {
   const { name, stageName, promotionId, freight, stage, warehouseName, freightName } = useParams();
 
+  const getConfigQuery = useQuery(getConfig);
+
+  const argocdShards = getConfigQuery?.data?.argocdShards;
+
   const projectQuery = useQuery(getProject, { name });
 
   const project = projectQuery.data?.result?.value as Project;
@@ -75,7 +80,8 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
     projectQuery.isLoading ||
     getFreightQuery.isLoading ||
     listWarehousesQuery.isLoading ||
-    listStagesQuery.isLoading;
+    listStagesQuery.isLoading ||
+    getConfigQuery.isLoading;
 
   const promote = freight && stage ? { freight, stage } : undefined;
 
@@ -174,7 +180,8 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
             freightById,
             stageAutoPromotionMap,
             subscribersByStage,
-            stageByName
+            stageByName,
+            argocdShards
           }}
         >
           <ColorContext.Provider value={{ stageColorMap, warehouseColorMap }}>
