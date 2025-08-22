@@ -33,6 +33,7 @@ import { useGraphContext } from '../context/graph-context';
 import { stageIndexer } from '../graph/node-indexer';
 
 import './stage-node.less';
+import { AnalysisRunLogsLink } from './analysis-run-logs-link';
 import { ArgoCDLink } from './argocd-link';
 import style from './node-size-source-of-truth.module.less';
 import { PullRequestLink } from './pull-request-link';
@@ -142,6 +143,8 @@ export const StageNode = (props: { stage: Stage }) => {
         </Flex>
 
         <PullRequestLink stage={props.stage} />
+
+        <AnalysisRunLogsLink stage={props.stage} />
 
         {lastPromotion && (
           <Link

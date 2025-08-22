@@ -14,9 +14,10 @@ func (s *server) GetConfig(
 	*connect.Request[svcv1alpha1.GetConfigRequest],
 ) (*connect.Response[svcv1alpha1.GetConfigResponse], error) {
 	resp := svcv1alpha1.GetConfigResponse{
-		ArgocdShards:            make(map[string]*svcv1alpha1.ArgoCDShard),
-		SecretManagementEnabled: s.cfg.SecretManagementEnabled,
-		ClusterSecretsNamespace: s.cfg.ClusterSecretNamespace,
+		ArgocdShards:                  make(map[string]*svcv1alpha1.ArgoCDShard),
+		SecretManagementEnabled:       s.cfg.SecretManagementEnabled,
+		ClusterSecretsNamespace:       s.cfg.ClusterSecretNamespace,
+		HasAnalysisRunLogsUrlTemplate: s.cfg.AnalysisRunLogURLTemplate != "",
 	}
 	for shardName, url := range s.cfg.ArgoCDConfig.URLs {
 		resp.ArgocdShards[shardName] = &svcv1alpha1.ArgoCDShard{
