@@ -207,7 +207,7 @@ explicitly empty
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| secret | [k8s.io.api.core.v1.Secret](#k8s-io-api-core-v1-Secret) |  |  |
+| secret | k8s.io.api.core.v1.Secret |  |  |
 
 
 
@@ -244,7 +244,7 @@ explicitly empty
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| credentials | [k8s.io.api.core.v1.Secret](#k8s-io-api-core-v1-Secret) |  |  |
+| credentials | k8s.io.api.core.v1.Secret |  |  |
 
 
 
@@ -340,7 +340,7 @@ explicitly empty
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| secret | [k8s.io.api.core.v1.Secret](#k8s-io-api-core-v1-Secret) |  |  |
+| secret | k8s.io.api.core.v1.Secret |  |  |
 
 
 
@@ -1006,7 +1006,7 @@ explicitly empty
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| config_map | [k8s.io.api.core.v1.ConfigMap](#k8s-io-api-core-v1-ConfigMap) |  |  |
+| config_map | k8s.io.api.core.v1.ConfigMap |  |  |
 | raw | [bytes](#bytes) |  |  |
 
 
@@ -1082,7 +1082,7 @@ explicitly empty
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| credentials | [k8s.io.api.core.v1.Secret](#k8s-io-api-core-v1-Secret) |  |  |
+| credentials | k8s.io.api.core.v1.Secret |  |  |
 | raw | [bytes](#bytes) |  |  |
 
 
@@ -1569,7 +1569,7 @@ explicitly empty
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| secrets | [k8s.io.api.core.v1.Secret](#k8s-io-api-core-v1-Secret) | repeated |  |
+| secrets | k8s.io.api.core.v1.Secret | repeated |  |
 
 
 
@@ -1599,7 +1599,7 @@ explicitly empty
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| config_maps | [k8s.io.api.core.v1.ConfigMap](#k8s-io-api-core-v1-ConfigMap) | repeated |  |
+| config_maps | k8s.io.api.core.v1.ConfigMap | repeated |  |
 
 
 
@@ -1629,7 +1629,7 @@ explicitly empty
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| credentials | [k8s.io.api.core.v1.Secret](#k8s-io-api-core-v1-Secret) | repeated |  |
+| credentials | k8s.io.api.core.v1.Secret | repeated |  |
 
 
 
@@ -1705,7 +1705,7 @@ explicitly empty
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| events | [k8s.io.api.core.v1.Event](#k8s-io-api-core-v1-Event) | repeated |  |
+| events | k8s.io.api.core.v1.Event | repeated |  |
 
 
 
@@ -1735,7 +1735,7 @@ explicitly empty
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| secrets | [k8s.io.api.core.v1.Secret](#k8s-io-api-core-v1-Secret) | repeated |  |
+| secrets | k8s.io.api.core.v1.Secret | repeated |  |
 
 
 
@@ -2311,7 +2311,7 @@ explicitly empty
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| secret | [k8s.io.api.core.v1.Secret](#k8s-io-api-core-v1-Secret) |  |  |
+| secret | k8s.io.api.core.v1.Secret |  |  |
 
 
 
@@ -2348,7 +2348,7 @@ explicitly empty
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| credentials | [k8s.io.api.core.v1.Secret](#k8s-io-api-core-v1-Secret) |  |  |
+| credentials | k8s.io.api.core.v1.Secret |  |  |
 
 
 
@@ -2425,7 +2425,7 @@ explicitly empty
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| secret | [k8s.io.api.core.v1.Secret](#k8s-io-api-core-v1-Secret) |  |  |
+| secret | k8s.io.api.core.v1.Secret |  |  |
 
 
 
@@ -2904,10 +2904,10 @@ explicitly empty
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| metadata | [k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta](#k8s-io-apimachinery-pkg-apis-meta-v1-ObjectMeta) | optional |  |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta | optional |  |
 | kargoManaged | [bool](#bool) | optional |  |
 | claims | [Claim](#github-com-akuity-kargo-api-rbac-v1alpha1-Claim) | repeated |  |
-| rules | [k8s.io.api.rbac.v1.PolicyRule](#k8s-io-api-rbac-v1-PolicyRule) | repeated |  |
+| rules | k8s.io.api.rbac.v1.PolicyRule | repeated |  |
 
 
 
@@ -2922,10 +2922,10 @@ explicitly empty
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| metadata | [k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta](#k8s-io-apimachinery-pkg-apis-meta-v1-ObjectMeta) | optional |  |
-| serviceAccount | [k8s.io.api.core.v1.ServiceAccount](#k8s-io-api-core-v1-ServiceAccount) | optional |  |
-| roles | [k8s.io.api.rbac.v1.Role](#k8s-io-api-rbac-v1-Role) | repeated |  |
-| roleBindings | [k8s.io.api.rbac.v1.RoleBinding](#k8s-io-api-rbac-v1-RoleBinding) | repeated |  |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta | optional |  |
+| serviceAccount | k8s.io.api.core.v1.ServiceAccount | optional |  |
+| roles | k8s.io.api.rbac.v1.Role | repeated |  |
+| roleBindings | k8s.io.api.rbac.v1.RoleBinding | repeated |  |
 
 
 
@@ -3063,7 +3063,7 @@ approved.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| approvedAt | [k8s.io.apimachinery.pkg.apis.meta.v1.Time](#k8s-io-apimachinery-pkg-apis-meta-v1-Time) | optional | ApprovedAt is the time at which the Freight was approved for the Stage. |
+| approvedAt | k8s.io.apimachinery.pkg.apis.meta.v1.Time | optional | ApprovedAt is the time at which the Freight was approved for the Stage. |
 
 
 
@@ -3130,7 +3130,7 @@ compatible with JFrog Artifactory payloads.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| secretRef | [k8s.io.api.core.v1.LocalObjectReference](#k8s-io-api-core-v1-LocalObjectReference) | optional | SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.
+| secretRef | k8s.io.api.core.v1.LocalObjectReference | optional | SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.
 
 For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.
 
@@ -3152,7 +3152,7 @@ with Azure Container Registry (ACR) and Azure DevOps payloads.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| secretRef | [k8s.io.api.core.v1.LocalObjectReference](#k8s-io-api-core-v1-LocalObjectReference) | optional | SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.
+| secretRef | k8s.io.api.core.v1.LocalObjectReference | optional | SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.
 
 For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.
 
@@ -3178,7 +3178,7 @@ compatible with Bitbucket payloads.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| secretRef | [k8s.io.api.core.v1.LocalObjectReference](#k8s-io-api-core-v1-LocalObjectReference) | optional | SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.
+| secretRef | k8s.io.api.core.v1.LocalObjectReference | optional | SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.
 
 For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.
 
@@ -3264,7 +3264,7 @@ configuration.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| metadata | [k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta](#k8s-io-apimachinery-pkg-apis-meta-v1-ObjectMeta) | optional |  |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta | optional |  |
 | spec | [ClusterConfigSpec](#github-com-akuity-kargo-api-v1alpha1-ClusterConfigSpec) | optional | Spec describes the configuration of a cluster. |
 | status | [ClusterConfigStatus](#github-com-akuity-kargo-api-v1alpha1-ClusterConfigStatus) | optional | Status describes the current status of a ClusterConfig. |
 
@@ -3281,7 +3281,7 @@ ClusterConfigList contains a list of ClusterConfigs.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| metadata | [k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta](#k8s-io-apimachinery-pkg-apis-meta-v1-ListMeta) | optional |  |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta | optional |  |
 | items | [ClusterConfig](#github-com-akuity-kargo-api-v1alpha1-ClusterConfig) | repeated |  |
 
 
@@ -3312,7 +3312,7 @@ ClusterConfigStatus describes the current status of a ClusterConfig.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| conditions | [k8s.io.apimachinery.pkg.apis.meta.v1.Condition](#k8s-io-apimachinery-pkg-apis-meta-v1-Condition) | repeated | Conditions contains the last observations of the ClusterConfig's current state.
+| conditions | k8s.io.apimachinery.pkg.apis.meta.v1.Condition | repeated | Conditions contains the last observations of the ClusterConfig's current state.
 
 +patchMergeKey=type +patchStrategy=merge +listType=map +listMapKey=type |
 | observedGeneration | [int64](#int64) | optional | ObservedGeneration represents the .metadata.generation that this ClusterConfig was reconciled against. |
@@ -3332,7 +3332,7 @@ ClusterConfigStatus describes the current status of a ClusterConfig.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| metadata | [k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta](#k8s-io-apimachinery-pkg-apis-meta-v1-ObjectMeta) | optional |  |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta | optional |  |
 | spec | [PromotionTaskSpec](#github-com-akuity-kargo-api-v1alpha1-PromotionTaskSpec) | optional | Spec describes the desired transition of a specific Stage into a specific Freight.
 
 +kubebuilder:validation:Required |
@@ -3350,7 +3350,7 @@ ClusterPromotionTaskList contains a list of PromotionTasks.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| metadata | [k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta](#k8s-io-apimachinery-pkg-apis-meta-v1-ListMeta) | optional |  |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta | optional |  |
 | items | [ClusterPromotionTask](#github-com-akuity-kargo-api-v1alpha1-ClusterPromotionTask) | repeated |  |
 
 
@@ -3366,7 +3366,7 @@ CurrentStage reflects a Stage's current use of Freight.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| since | [k8s.io.apimachinery.pkg.apis.meta.v1.Time](#k8s-io-apimachinery-pkg-apis-meta-v1-Time) | optional | Since is the time at which the Stage most recently started using the Freight. This can be used to calculate how long the Freight has been in use by the Stage. |
+| since | k8s.io.apimachinery.pkg.apis.meta.v1.Time | optional | Since is the time at which the Stage most recently started using the Freight. This can be used to calculate how long the Freight has been in use by the Stage. |
 
 
 
@@ -3382,7 +3382,7 @@ subscriptions.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| discoveredAt | [k8s.io.apimachinery.pkg.apis.meta.v1.Time](#k8s-io-apimachinery-pkg-apis-meta-v1-Time) | optional | DiscoveredAt is the time at which the Warehouse discovered the artifacts.
+| discoveredAt | k8s.io.apimachinery.pkg.apis.meta.v1.Time | optional | DiscoveredAt is the time at which the Warehouse discovered the artifacts.
 
 +optional |
 | git | [GitDiscoveryResult](#github-com-akuity-kargo-api-v1alpha1-GitDiscoveryResult) | repeated | Git holds the commits discovered by the Warehouse for the Git subscriptions.
@@ -3417,7 +3417,7 @@ GitSubscription.
 | subject | [string](#string) | optional | Subject is the subject of the commit (i.e. the first line of the commit message). |
 | author | [string](#string) | optional | Author is the author of the commit. |
 | committer | [string](#string) | optional | Committer is the person who committed the commit. |
-| creatorDate | [k8s.io.apimachinery.pkg.apis.meta.v1.Time](#k8s-io-apimachinery-pkg-apis-meta-v1-Time) | optional | CreatorDate is the commit creation date as specified by the commit, or the tagger date if the commit belongs to an annotated tag. |
+| creatorDate | k8s.io.apimachinery.pkg.apis.meta.v1.Time | optional | CreatorDate is the commit creation date as specified by the commit, or the tagger date if the commit belongs to an annotated tag. |
 
 
 
@@ -3440,7 +3440,7 @@ Warehouse for an ImageSubscription.
 
 +kubebuilder:validation:MinLength=1 +kubebuilder:validation:Pattern=`^[a-z0-9]+:[a-f0-9]+$` +akuity:test-kubebuilder-pattern=Digest |
 | annotations | [DiscoveredImageReference.AnnotationsEntry](#github-com-akuity-kargo-api-v1alpha1-DiscoveredImageReference-AnnotationsEntry) | repeated | Annotations is a map of key-value pairs that provide additional information about the image. |
-| createdAt | [k8s.io.apimachinery.pkg.apis.meta.v1.Time](#k8s-io-apimachinery-pkg-apis-meta-v1-Time) | optional | CreatedAt is the time the image was created. This field is optional, and not populated for every ImageSelectionStrategy. |
+| createdAt | k8s.io.apimachinery.pkg.apis.meta.v1.Time | optional | CreatedAt is the time the image was created. This field is optional, and not populated for every ImageSelectionStrategy. |
 
 
 
@@ -3472,7 +3472,7 @@ compatible with Docker Hub payloads.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| secretRef | [k8s.io.api.core.v1.LocalObjectReference](#k8s-io-api-core-v1-LocalObjectReference) | optional | SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.
+| secretRef | k8s.io.api.core.v1.LocalObjectReference | optional | SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.
 
 The Secret's data map is expected to contain a `secret` key whose value does NOT need to be shared directly with Docker Hub when registering a webhook. It is used only by Kargo to create a complex, hard-to-guess URL, which implicitly serves as a shared secret. For more information about Docker Hub webhooks, please refer to the Docker documentation: https://docs.docker.com/docker-hub/webhooks/
 
@@ -3514,7 +3514,7 @@ Freight represents a collection of versioned artifacts.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| metadata | [k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta](#k8s-io-apimachinery-pkg-apis-meta-v1-ObjectMeta) | optional |  |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta | optional |  |
 | alias | [string](#string) | optional | Alias is a human-friendly alias for a piece of Freight. This is an optional field. A defaulting webhook will sync this field with the value of the kargo.akuity.io/alias label. When the alias label is not present or differs from the value of this field, the defaulting webhook will set the label to the value of this field. If the alias label is present and this field is empty, the defaulting webhook will set the value of this field to the value of the alias label. If this field is empty and the alias label is not present, the defaulting webhook will choose an available alias and assign it to both the field and label. |
 | origin | [FreightOrigin](#github-com-akuity-kargo-api-v1alpha1-FreightOrigin) | optional | Origin describes a kind of Freight in terms of its origin.
 
@@ -3572,7 +3572,7 @@ FreightList is a list of Freight resources.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| metadata | [k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta](#k8s-io-apimachinery-pkg-apis-meta-v1-ListMeta) | optional |  |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta | optional |  |
 | items | [Freight](#github-com-akuity-kargo-api-v1alpha1-Freight) | repeated |  |
 
 
@@ -3652,7 +3652,7 @@ particular Warehouse.
 | ----- | ---- | ----- | ----------- |
 | direct | [bool](#bool) | optional | Direct indicates the requested Freight may be obtained directly from the Warehouse from which it originated. If this field's value is false, then the value of the Stages field must be non-empty. i.e. Between the two fields, at least one source must be specified. |
 | stages | [string](#string) | repeated | Stages identifies other "upstream" Stages as potential sources of the requested Freight. If this field's value is empty, then the value of the Direct field must be true. i.e. Between the two fields, at least on source must be specified. |
-| requiredSoakTime | [k8s.io.apimachinery.pkg.apis.meta.v1.Duration](#k8s-io-apimachinery-pkg-apis-meta-v1-Duration) | optional | RequiredSoakTime specifies a minimum duration for which the requested Freight must have continuously occupied ("soaked in") in an upstream Stage before becoming available for promotion to this Stage. This is an optional field. If nil or zero, no soak time is required. Any soak time requirement is in ADDITION to the requirement that Freight be verified in an upstream Stage to become available for promotion to this Stage, although a manual approval for promotion to this Stage will supersede any soak time requirement.
+| requiredSoakTime | k8s.io.apimachinery.pkg.apis.meta.v1.Duration | optional | RequiredSoakTime specifies a minimum duration for which the requested Freight must have continuously occupied ("soaked in") in an upstream Stage before becoming available for promotion to this Stage. This is an optional field. If nil or zero, no soak time is required. Any soak time requirement is in ADDITION to the requirement that Freight be verified in an upstream Stage to become available for promotion to this Stage, although a manual approval for promotion to this Stage will supersede any soak time requirement.
 
 +kubebuilder:validation:Type=string +kubebuilder:validation:Pattern=`^([0-9]+(\.[0-9]+)?(s|m|h))+$` +akuity:test-kubebuilder-pattern=Duration |
 | availabilityStrategy | [string](#string) | optional | AvailabilityStrategy specifies the semantics for how requested Freight is made available to the Stage. This field is optional. When left unspecified, the field is implicitly treated as if its value were "OneOf".
@@ -3727,7 +3727,7 @@ FreightStatus describes a piece of Freight's most recently observed state.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | key | [string](#string) | optional |  |
-| value | [k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON](#k8s-io-apiextensions_apiserver-pkg-apis-apiextensions-v1-JSON) | optional |  |
+| value | k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON | optional |  |
 
 
 
@@ -3801,7 +3801,7 @@ with GitHub payloads.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| secretRef | [k8s.io.api.core.v1.LocalObjectReference](#k8s-io-api-core-v1-LocalObjectReference) | optional | SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.
+| secretRef | k8s.io.api.core.v1.LocalObjectReference | optional | SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.
 
 For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.
 
@@ -3823,7 +3823,7 @@ with GitLab payloads.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| secretRef | [k8s.io.api.core.v1.LocalObjectReference](#k8s-io-api-core-v1-LocalObjectReference) | optional | SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.
+| secretRef | k8s.io.api.core.v1.LocalObjectReference | optional | SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.
 
 For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.
 
@@ -3913,7 +3913,7 @@ with Gitea payloads.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| secretRef | [k8s.io.api.core.v1.LocalObjectReference](#k8s-io-api-core-v1-LocalObjectReference) | optional | SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.
+| secretRef | k8s.io.api.core.v1.LocalObjectReference | optional | SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.
 
 For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.
 
@@ -3935,7 +3935,7 @@ with Harbor payloads.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| secretRef | [k8s.io.api.core.v1.LocalObjectReference](#k8s-io-api-core-v1-LocalObjectReference) | optional | SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.
+| secretRef | k8s.io.api.core.v1.LocalObjectReference | optional | SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.
 
 For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.
 
@@ -3958,8 +3958,8 @@ Health describes the health of a Stage.
 | ----- | ---- | ----- | ----------- |
 | status | [string](#string) | optional | Status describes the health of the Stage. |
 | issues | [string](#string) | repeated | Issues clarifies why a Stage in any state other than Healthy is in that state. This field will always be the empty when a Stage is Healthy. |
-| config | [k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON](#k8s-io-apiextensions_apiserver-pkg-apis-apiextensions-v1-JSON) | optional | Config is the opaque configuration of all health checks performed on this Stage. |
-| output | [k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON](#k8s-io-apiextensions_apiserver-pkg-apis-apiextensions-v1-JSON) | optional | Output is the opaque output of all health checks performed on this Stage. |
+| config | k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON | optional | Config is the opaque configuration of all health checks performed on this Stage. |
+| output | k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON | optional | Output is the opaque output of all health checks performed on this Stage. |
 
 
 
@@ -3978,7 +3978,7 @@ a Stage to verify the health of a Promotion result.
 | uses | [string](#string) | optional | Uses identifies a runner that can execute this step.
 
 +kubebuilder:validation:MinLength=1 |
-| config | [k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON](#k8s-io-apiextensions_apiserver-pkg-apis-apiextensions-v1-JSON) | optional | Config is the configuration for the directive. |
+| config | k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON | optional | Config is the configuration for the directive. |
 
 
 
@@ -4123,7 +4123,7 @@ and other TODO: TBD project-level resources.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| metadata | [k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta](#k8s-io-apimachinery-pkg-apis-meta-v1-ObjectMeta) | optional |  |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta | optional |  |
 | status | [ProjectStatus](#github-com-akuity-kargo-api-v1alpha1-ProjectStatus) | optional | Status describes the Project's current status. |
 
 
@@ -4140,7 +4140,7 @@ Project.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| metadata | [k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta](#k8s-io-apimachinery-pkg-apis-meta-v1-ObjectMeta) | optional |  |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta | optional |  |
 | spec | [ProjectConfigSpec](#github-com-akuity-kargo-api-v1alpha1-ProjectConfigSpec) | optional | Spec describes the configuration of a Project. |
 | status | [ProjectConfigStatus](#github-com-akuity-kargo-api-v1alpha1-ProjectConfigStatus) | optional | Status describes the current status of a ProjectConfig. |
 
@@ -4157,7 +4157,7 @@ ProjectConfigList is a list of ProjectConfig resources.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| metadata | [k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta](#k8s-io-apimachinery-pkg-apis-meta-v1-ListMeta) | optional |  |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta | optional |  |
 | items | [ProjectConfig](#github-com-akuity-kargo-api-v1alpha1-ProjectConfig) | repeated |  |
 
 
@@ -4189,7 +4189,7 @@ ProjectConfigStatus describes the current status of a ProjectConfig.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| conditions | [k8s.io.apimachinery.pkg.apis.meta.v1.Condition](#k8s-io-apimachinery-pkg-apis-meta-v1-Condition) | repeated | Conditions contains the last observations of the Project Config's current state.
+| conditions | k8s.io.apimachinery.pkg.apis.meta.v1.Condition | repeated | Conditions contains the last observations of the Project Config's current state.
 
 +patchMergeKey=type +patchStrategy=merge +listType=map +listMapKey=type |
 | observedGeneration | [int64](#int64) | optional | ObservedGeneration represents the .metadata.generation that this ProjectConfig was reconciled against. |
@@ -4209,7 +4209,7 @@ ProjectList is a list of Project resources.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| metadata | [k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta](#k8s-io-apimachinery-pkg-apis-meta-v1-ListMeta) | optional |  |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta | optional |  |
 | items | [Project](#github-com-akuity-kargo-api-v1alpha1-Project) | repeated |  |
 
 
@@ -4242,7 +4242,7 @@ ProjectStatus describes a Project's current status.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| conditions | [k8s.io.apimachinery.pkg.apis.meta.v1.Condition](#k8s-io-apimachinery-pkg-apis-meta-v1-Condition) | repeated | Conditions contains the last observations of the Project's current state. +patchMergeKey=type +patchStrategy=merge +listType=map +listMapKey=type |
+| conditions | k8s.io.apimachinery.pkg.apis.meta.v1.Condition | repeated | Conditions contains the last observations of the Project's current state. +patchMergeKey=type +patchStrategy=merge +listType=map +listMapKey=type |
 | stats | [ProjectStats](#github-com-akuity-kargo-api-v1alpha1-ProjectStats) | optional | Stats contains a summary of the collective state of a Project's constituent resources. |
 
 
@@ -4259,7 +4259,7 @@ particular Freight.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| metadata | [k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta](#k8s-io-apimachinery-pkg-apis-meta-v1-ObjectMeta) | optional |  |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta | optional |  |
 | spec | [PromotionSpec](#github-com-akuity-kargo-api-v1alpha1-PromotionSpec) | optional | Spec describes the desired transition of a specific Stage into a specific Freight.
 
 +kubebuilder:validation:Required |
@@ -4278,7 +4278,7 @@ PromotionList contains a list of Promotion
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| metadata | [k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta](#k8s-io-apimachinery-pkg-apis-meta-v1-ListMeta) | optional |  |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta | optional |  |
 | items | [Promotion](#github-com-akuity-kargo-api-v1alpha1-Promotion) | repeated |  |
 
 
@@ -4329,7 +4329,7 @@ When both Name and LabelSelector are specified, the Name is ANDed with the Label
 NOTE: Using a specific exact name is the most secure option. Pattern matching via regex or glob can be exploited by users with permissions to match promotion policies that weren't intended to apply to their resources. For example, a user could create a resource with a name deliberately crafted to match the pattern, potentially bypassing intended promotion controls.
 
 +optional |
-| labelSelector | [k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector](#k8s-io-apimachinery-pkg-apis-meta-v1-LabelSelector) | optional | LabelSelector is a selector that matches the resource to which this policy applies.
+| labelSelector | k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector | optional | LabelSelector is a selector that matches the resource to which this policy applies.
 
 When both Name and LabelSelector are specified, the Name is ANDed with the LabelSelector. I.e., the resource must match both the Name and LabelSelector to be selected by this policy.
 
@@ -4352,7 +4352,7 @@ as observed by a Stage.
 | name | [string](#string) | optional | Name is the name of the Promotion. |
 | freight | [FreightReference](#github-com-akuity-kargo-api-v1alpha1-FreightReference) | optional | Freight is the freight being promoted. |
 | status | [PromotionStatus](#github-com-akuity-kargo-api-v1alpha1-PromotionStatus) | optional | Status is the (optional) status of the Promotion. |
-| finishedAt | [k8s.io.apimachinery.pkg.apis.meta.v1.Time](#k8s-io-apimachinery-pkg-apis-meta-v1-Time) | optional | FinishedAt is the time at which the Promotion was completed. |
+| finishedAt | k8s.io.apimachinery.pkg.apis.meta.v1.Time | optional | FinishedAt is the time at which the Promotion was completed. |
 
 
 
@@ -4399,11 +4399,11 @@ a Promotion.
 | freight | [FreightReference](#github-com-akuity-kargo-api-v1alpha1-FreightReference) | optional | Freight is the detail of the piece of freight that was referenced by this promotion. |
 | freightCollection | [FreightCollection](#github-com-akuity-kargo-api-v1alpha1-FreightCollection) | optional | FreightCollection contains the details of the piece of Freight referenced by this Promotion as well as any additional Freight that is carried over from the target Stage's current state. |
 | healthChecks | [HealthCheckStep](#github-com-akuity-kargo-api-v1alpha1-HealthCheckStep) | repeated | HealthChecks contains the health check directives to be executed after the Promotion has completed. |
-| startedAt | [k8s.io.apimachinery.pkg.apis.meta.v1.Time](#k8s-io-apimachinery-pkg-apis-meta-v1-Time) | optional | StartedAt is the time when the promotion started. |
-| finishedAt | [k8s.io.apimachinery.pkg.apis.meta.v1.Time](#k8s-io-apimachinery-pkg-apis-meta-v1-Time) | optional | FinishedAt is the time when the promotion was completed. |
+| startedAt | k8s.io.apimachinery.pkg.apis.meta.v1.Time | optional | StartedAt is the time when the promotion started. |
+| finishedAt | k8s.io.apimachinery.pkg.apis.meta.v1.Time | optional | FinishedAt is the time when the promotion was completed. |
 | currentStep | [int64](#int64) | optional | CurrentStep is the index of the current promotion step being executed. This permits steps that have already run successfully to be skipped on subsequent reconciliations attempts. |
 | stepExecutionMetadata | [StepExecutionMetadata](#github-com-akuity-kargo-api-v1alpha1-StepExecutionMetadata) | repeated | StepExecutionMetadata tracks metadata pertaining to the execution of individual promotion steps. |
-| state | [k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON](#k8s-io-apiextensions_apiserver-pkg-apis-apiextensions-v1-JSON) | optional | State stores the state of the promotion process between reconciliation attempts. |
+| state | k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON | optional | State stores the state of the promotion process between reconciliation attempts. |
 
 
 
@@ -4427,7 +4427,7 @@ PromotionStep describes a directive to be executed as part of a Promotion.
 | continueOnError | [bool](#bool) | optional | ContinueOnError is a boolean value that, if set to true, will cause the Promotion to continue executing the next step even if this step fails. It also will not permit this failure to impact the overall status of the Promotion. |
 | retry | [PromotionStepRetry](#github-com-akuity-kargo-api-v1alpha1-PromotionStepRetry) | optional | Retry is the retry policy for this step. |
 | vars | [ExpressionVariable](#github-com-akuity-kargo-api-v1alpha1-ExpressionVariable) | repeated | Vars is a list of variables that can be referenced by expressions in the step's Config. The values override the values specified in the PromotionSpec. |
-| config | [k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON](#k8s-io-apiextensions_apiserver-pkg-apis-apiextensions-v1-JSON) | optional | Config is opaque configuration for the PromotionStep that is understood only by each PromotionStep's implementation. It is legal to utilize expressions in defining values at any level of this block. See https://docs.kargo.io/user-guide/reference-docs/expressions for details. |
+| config | k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON | optional | Config is opaque configuration for the PromotionStep that is understood only by each PromotionStep's implementation. It is legal to utilize expressions in defining values at any level of this block. See https://docs.kargo.io/user-guide/reference-docs/expressions for details. |
 
 
 
@@ -4442,7 +4442,7 @@ PromotionStepRetry describes the retry policy for a PromotionStep.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| timeout | [k8s.io.apimachinery.pkg.apis.meta.v1.Duration](#k8s-io-apimachinery-pkg-apis-meta-v1-Duration) | optional | Timeout is the soft maximum interval in which a step that returns a Running status (which typically indicates it's waiting for something to happen) may be retried.
+| timeout | k8s.io.apimachinery.pkg.apis.meta.v1.Duration | optional | Timeout is the soft maximum interval in which a step that returns a Running status (which typically indicates it's waiting for something to happen) may be retried.
 
 The maximum is a soft one because the check for whether the interval has elapsed occurs AFTER the step has run. This effectively means a step may run ONCE beyond the close of the interval.
 
@@ -4472,7 +4472,7 @@ In a future release, Kargo is likely to become capable of distinguishing between
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| metadata | [k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta](#k8s-io-apimachinery-pkg-apis-meta-v1-ObjectMeta) | optional |  |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta | optional |  |
 | spec | [PromotionTaskSpec](#github-com-akuity-kargo-api-v1alpha1-PromotionTaskSpec) | optional | Spec describes the composition of a PromotionTask, including the variables available to the task and the steps.
 
 +kubebuilder:validation:Required |
@@ -4490,7 +4490,7 @@ PromotionTaskList contains a list of PromotionTasks.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| metadata | [k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta](#k8s-io-apimachinery-pkg-apis-meta-v1-ListMeta) | optional |  |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta | optional |  |
 | items | [PromotionTask](#github-com-akuity-kargo-api-v1alpha1-PromotionTask) | repeated |  |
 
 
@@ -4581,7 +4581,7 @@ with Quay.io payloads.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| secretRef | [k8s.io.api.core.v1.LocalObjectReference](#k8s-io-api-core-v1-LocalObjectReference) | optional | SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.
+| secretRef | k8s.io.api.core.v1.LocalObjectReference | optional | SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.
 
 For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.
 
@@ -4620,7 +4620,7 @@ Stage is the Kargo API's main type.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| metadata | [k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta](#k8s-io-apimachinery-pkg-apis-meta-v1-ObjectMeta) | optional |  |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta | optional |  |
 | spec | [StageSpec](#github-com-akuity-kargo-api-v1alpha1-StageSpec) | optional | Spec describes sources of Freight used by the Stage and how to incorporate Freight into the Stage.
 
 +kubebuilder:validation:Required |
@@ -4639,7 +4639,7 @@ StageList is a list of Stage resources.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| metadata | [k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta](#k8s-io-apimachinery-pkg-apis-meta-v1-ListMeta) | optional |  |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta | optional |  |
 | items | [Stage](#github-com-akuity-kargo-api-v1alpha1-Stage) | repeated |  |
 
 
@@ -4695,7 +4695,7 @@ more.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| conditions | [k8s.io.apimachinery.pkg.apis.meta.v1.Condition](#k8s-io-apimachinery-pkg-apis-meta-v1-Condition) | repeated | Conditions contains the last observations of the Stage's current state. +patchMergeKey=type +patchStrategy=merge +listType=map +listMapKey=type |
+| conditions | k8s.io.apimachinery.pkg.apis.meta.v1.Condition | repeated | Conditions contains the last observations of the Stage's current state. +patchMergeKey=type +patchStrategy=merge +listType=map +listMapKey=type |
 | lastHandledRefresh | [string](#string) | optional | LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh annotation that was handled by the controller. This field can be used to determine whether the request to refresh the resource has been handled. +optional |
 | freightHistory | [FreightCollection](#github-com-akuity-kargo-api-v1alpha1-FreightCollection) | repeated | FreightHistory is a list of recent Freight selections that were deployed to the Stage. By default, the last ten Freight selections are stored. The first item in the list is the most recent Freight selection and currently deployed to the Stage, subsequent items are older selections. |
 | freightSummary | [string](#string) | optional | FreightSummary is human-readable text maintained by the controller that summarizes what Freight is currently deployed to the Stage. For Stages that request a single piece of Freight AND the request has been fulfilled, this field will simply contain the name of the Freight. For Stages that request a single piece of Freight AND the request has NOT been fulfilled, or for Stages that request multiple pieces of Freight, this field will contain a summary of fulfilled/requested Freight. The existence of this field is a workaround for kubectl limitations so that this complex but valuable information can be displayed in a column in response to `kubectl get stages`. |
@@ -4720,8 +4720,8 @@ a promotion step.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | alias | [string](#string) | optional | Alias is the alias of the step. |
-| startedAt | [k8s.io.apimachinery.pkg.apis.meta.v1.Time](#k8s-io-apimachinery-pkg-apis-meta-v1-Time) | optional | StartedAt is the time at which the first attempt to execute the step began. |
-| finishedAt | [k8s.io.apimachinery.pkg.apis.meta.v1.Time](#k8s-io-apimachinery-pkg-apis-meta-v1-Time) | optional | FinishedAt is the time at which the final attempt to execute the step completed. |
+| startedAt | k8s.io.apimachinery.pkg.apis.meta.v1.Time | optional | StartedAt is the time at which the first attempt to execute the step began. |
+| finishedAt | k8s.io.apimachinery.pkg.apis.meta.v1.Time | optional | FinishedAt is the time at which the final attempt to execute the step completed. |
 | errorCount | [uint32](#uint32) | optional | ErrorCount tracks consecutive failed attempts to execute the step. |
 | status | [string](#string) | optional | Status is the high-level outcome of the step. |
 | message | [string](#string) | optional | Message is a display message about the step, including any errors. |
@@ -4761,11 +4761,11 @@ process.
 | ----- | ---- | ----- | ----------- |
 | id | [string](#string) | optional | ID is the identifier of the Verification process. |
 | actor | [string](#string) | optional | Actor is the name of the entity that initiated or aborted the Verification process. |
-| startTime | [k8s.io.apimachinery.pkg.apis.meta.v1.Time](#k8s-io-apimachinery-pkg-apis-meta-v1-Time) | optional | StartTime is the time at which the Verification process was started. |
+| startTime | k8s.io.apimachinery.pkg.apis.meta.v1.Time | optional | StartTime is the time at which the Verification process was started. |
 | phase | [string](#string) | optional | Phase describes the current phase of the Verification process. Generally, this will be a reflection of the underlying AnalysisRun's phase, however, there are exceptions to this, such as in the case where an AnalysisRun cannot be launched successfully. |
 | message | [string](#string) | optional | Message may contain additional information about why the verification process is in its current phase. |
 | analysisRun | [AnalysisRunReference](#github-com-akuity-kargo-api-v1alpha1-AnalysisRunReference) | optional | AnalysisRun is a reference to the Argo Rollouts AnalysisRun that implements the Verification process. |
-| finishTime | [k8s.io.apimachinery.pkg.apis.meta.v1.Time](#k8s-io-apimachinery-pkg-apis-meta-v1-Time) | optional | FinishTime is the time at which the Verification process finished. |
+| finishTime | k8s.io.apimachinery.pkg.apis.meta.v1.Time | optional | FinishTime is the time at which the Verification process finished. |
 
 
 
@@ -4780,8 +4780,8 @@ VerifiedStage describes a Stage in which Freight has been verified.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| verifiedAt | [k8s.io.apimachinery.pkg.apis.meta.v1.Time](#k8s-io-apimachinery-pkg-apis-meta-v1-Time) | optional | VerifiedAt is the time at which the Freight was verified in the Stage. |
-| longestSoak | [k8s.io.apimachinery.pkg.apis.meta.v1.Duration](#k8s-io-apimachinery-pkg-apis-meta-v1-Duration) | optional | LongestCompletedSoak represents the longest definite time interval wherein the Freight was in CONTINUOUS use by the Stage. This value is updated as Freight EXITS the Stage. If the Freight is currently in use by the Stage, the time elapsed since the Freight ENTERED the Stage is its current soak time, which may exceed the value of this field. |
+| verifiedAt | k8s.io.apimachinery.pkg.apis.meta.v1.Time | optional | VerifiedAt is the time at which the Freight was verified in the Stage. |
+| longestSoak | k8s.io.apimachinery.pkg.apis.meta.v1.Duration | optional | LongestCompletedSoak represents the longest definite time interval wherein the Freight was in CONTINUOUS use by the Stage. This value is updated as Freight EXITS the Stage. If the Freight is currently in use by the Stage, the time elapsed since the Freight ENTERED the Stage is its current soak time, which may exceed the value of this field. |
 
 
 
@@ -4796,7 +4796,7 @@ Warehouse is a source of Freight.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| metadata | [k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta](#k8s-io-apimachinery-pkg-apis-meta-v1-ObjectMeta) | optional |  |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta | optional |  |
 | spec | [WarehouseSpec](#github-com-akuity-kargo-api-v1alpha1-WarehouseSpec) | optional | Spec describes sources of artifacts.
 
 +kubebuilder:validation:Required |
@@ -4815,7 +4815,7 @@ WarehouseList is a list of Warehouse resources.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| metadata | [k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta](#k8s-io-apimachinery-pkg-apis-meta-v1-ListMeta) | optional |  |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta | optional |  |
 | items | [Warehouse](#github-com-akuity-kargo-api-v1alpha1-Warehouse) | repeated |  |
 
 
@@ -4833,7 +4833,7 @@ Freight produced by this Warehouse.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | shard | [string](#string) | optional | Shard is the name of the shard that this Warehouse belongs to. This is an optional field. If not specified, the Warehouse will belong to the default shard. A defaulting webhook will sync this field with the value of the kargo.akuity.io/shard label. When the shard label is not present or differs from the value of this field, the defaulting webhook will set the label to the value of this field. If the shard label is present and this field is empty, the defaulting webhook will set the value of this field to the value of the shard label. |
-| interval | [k8s.io.apimachinery.pkg.apis.meta.v1.Duration](#k8s-io-apimachinery-pkg-apis-meta-v1-Duration) | optional | Interval is the reconciliation interval for this Warehouse. On each reconciliation, the Warehouse will discover new artifacts and optionally produce new Freight. This field is optional. When left unspecified, the field is implicitly treated as if its value were "5m0s".
+| interval | k8s.io.apimachinery.pkg.apis.meta.v1.Duration | optional | Interval is the reconciliation interval for this Warehouse. On each reconciliation, the Warehouse will discover new artifacts and optionally produce new Freight. This field is optional. When left unspecified, the field is implicitly treated as if its value were "5m0s".
 
 +kubebuilder:validation:Type=string +kubebuilder:validation:Pattern=`^([0-9]+(\.[0-9]+)?(s|m|h))+$` +kubebuilder:default="5m0s" +akuity:test-kubebuilder-pattern=Duration |
 | freightCreationPolicy | [string](#string) | optional | FreightCreationPolicy describes how Freight is created by this Warehouse. This field is optional. When left unspecified, the field is implicitly treated as if its value were "Automatic".
@@ -4877,7 +4877,7 @@ WarehouseStatus describes a Warehouse's most recently observed state.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| conditions | [k8s.io.apimachinery.pkg.apis.meta.v1.Condition](#k8s-io-apimachinery-pkg-apis-meta-v1-Condition) | repeated | Conditions contains the last observations of the Warehouse's current state. +patchMergeKey=type +patchStrategy=merge +listType=map +listMapKey=type |
+| conditions | k8s.io.apimachinery.pkg.apis.meta.v1.Condition | repeated | Conditions contains the last observations of the Warehouse's current state. +patchMergeKey=type +patchStrategy=merge +listType=map +listMapKey=type |
 | lastHandledRefresh | [string](#string) | optional | LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh annotation that was handled by the controller. This field can be used to determine whether the request to refresh the resource has been handled. +optional |
 | observedGeneration | [int64](#int64) | optional | ObservedGeneration represents the .metadata.generation that this Warehouse was reconciled against. |
 | lastFreightID | [string](#string) | optional | LastFreightID is a reference to the system-assigned identifier (name) of the most recent Freight produced by the Warehouse. |
@@ -4956,7 +4956,7 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| metadata | [k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta](#k8s-io-apimachinery-pkg-apis-meta-v1-ObjectMeta) | optional |  |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta | optional |  |
 | spec | [AnalysisRunSpec](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-AnalysisRunSpec) | optional |  |
 | status | [AnalysisRunStatus](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-AnalysisRunStatus) | optional |  |
 
@@ -4973,7 +4973,7 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| metadata | [k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta](#k8s-io-apimachinery-pkg-apis-meta-v1-ListMeta) | optional |  |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta | optional |  |
 | items | [AnalysisRun](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-AnalysisRun) | repeated |  |
 
 
@@ -5011,7 +5011,7 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 | phase | [string](#string) | optional |  |
 | message | [string](#string) | optional |  |
 | metricResults | [MetricResult](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-MetricResult) | repeated |  |
-| startedAt | [k8s.io.apimachinery.pkg.apis.meta.v1.Time](#k8s-io-apimachinery-pkg-apis-meta-v1-Time) | optional |  |
+| startedAt | k8s.io.apimachinery.pkg.apis.meta.v1.Time | optional |  |
 | runSummary | [RunSummary](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-RunSummary) | optional |  |
 | dryRunSummary | [RunSummary](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-RunSummary) | optional |  |
 
@@ -5028,7 +5028,7 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| metadata | [k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta](#k8s-io-apimachinery-pkg-apis-meta-v1-ObjectMeta) | optional |  |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta | optional |  |
 | spec | [AnalysisTemplateSpec](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-AnalysisTemplateSpec) | optional |  |
 
 
@@ -5044,7 +5044,7 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| metadata | [k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta](#k8s-io-apimachinery-pkg-apis-meta-v1-ListMeta) | optional |  |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta | optional |  |
 | items | [AnalysisTemplate](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-AnalysisTemplate) | repeated |  |
 
 
@@ -5131,7 +5131,7 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 | expression | [string](#string) | optional |  |
 | label | [string](#string) | optional |  |
 | metricStat | [CloudWatchMetricStat](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-CloudWatchMetricStat) | optional |  |
-| period | [k8s.io.apimachinery.pkg.util.intstr.IntOrString](#k8s-io-apimachinery-pkg-util-intstr-IntOrString) | optional |  |
+| period | k8s.io.apimachinery.pkg.util.intstr.IntOrString | optional |  |
 | returnData | [bool](#bool) | optional |  |
 
 
@@ -5148,7 +5148,7 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | metric | [CloudWatchMetricStatMetric](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-CloudWatchMetricStatMetric) | optional |  |
-| period | [k8s.io.apimachinery.pkg.util.intstr.IntOrString](#k8s-io-apimachinery-pkg-util-intstr-IntOrString) | optional |  |
+| period | k8s.io.apimachinery.pkg.util.intstr.IntOrString | optional |  |
 | stat | [string](#string) | optional |  |
 | unit | [string](#string) | optional |  |
 
@@ -5198,7 +5198,7 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| metadata | [k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta](#k8s-io-apimachinery-pkg-apis-meta-v1-ObjectMeta) | optional |  |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta | optional |  |
 | spec | [AnalysisTemplateSpec](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-AnalysisTemplateSpec) | optional |  |
 
 
@@ -5214,7 +5214,7 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| metadata | [k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta](#k8s-io-apimachinery-pkg-apis-meta-v1-ListMeta) | optional |  |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta | optional |  |
 | items | [ClusterAnalysisTemplate](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-ClusterAnalysisTemplate) | repeated |  |
 
 
@@ -5327,8 +5327,8 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| metadata | [k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta](#k8s-io-apimachinery-pkg-apis-meta-v1-ObjectMeta) | optional |  |
-| spec | [k8s.io.api.batch.v1.JobSpec](#k8s-io-api-batch-v1-JobSpec) | optional |  |
+| metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta | optional |  |
+| spec | k8s.io.api.batch.v1.JobSpec | optional |  |
 
 
 
@@ -5400,11 +5400,11 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 | ----- | ---- | ----- | ----------- |
 | phase | [string](#string) | optional |  |
 | message | [string](#string) | optional |  |
-| startedAt | [k8s.io.apimachinery.pkg.apis.meta.v1.Time](#k8s-io-apimachinery-pkg-apis-meta-v1-Time) | optional |  |
-| finishedAt | [k8s.io.apimachinery.pkg.apis.meta.v1.Time](#k8s-io-apimachinery-pkg-apis-meta-v1-Time) | optional |  |
+| startedAt | k8s.io.apimachinery.pkg.apis.meta.v1.Time | optional |  |
+| finishedAt | k8s.io.apimachinery.pkg.apis.meta.v1.Time | optional |  |
 | value | [string](#string) | optional |  |
 | metadata | [Measurement.MetadataEntry](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-Measurement-MetadataEntry) | repeated |  |
-| resumeAt | [k8s.io.apimachinery.pkg.apis.meta.v1.Time](#k8s-io-apimachinery-pkg-apis-meta-v1-Time) | optional |  |
+| resumeAt | k8s.io.apimachinery.pkg.apis.meta.v1.Time | optional |  |
 
 
 
@@ -5454,14 +5454,14 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 | name | [string](#string) | optional |  |
 | interval | [string](#string) | optional |  |
 | initialDelay | [string](#string) | optional |  |
-| count | [k8s.io.apimachinery.pkg.util.intstr.IntOrString](#k8s-io-apimachinery-pkg-util-intstr-IntOrString) | optional |  |
+| count | k8s.io.apimachinery.pkg.util.intstr.IntOrString | optional |  |
 | successCondition | [string](#string) | optional |  |
 | failureCondition | [string](#string) | optional |  |
-| failureLimit | [k8s.io.apimachinery.pkg.util.intstr.IntOrString](#k8s-io-apimachinery-pkg-util-intstr-IntOrString) | optional |  |
-| inconclusiveLimit | [k8s.io.apimachinery.pkg.util.intstr.IntOrString](#k8s-io-apimachinery-pkg-util-intstr-IntOrString) | optional |  |
-| consecutiveErrorLimit | [k8s.io.apimachinery.pkg.util.intstr.IntOrString](#k8s-io-apimachinery-pkg-util-intstr-IntOrString) | optional |  |
+| failureLimit | k8s.io.apimachinery.pkg.util.intstr.IntOrString | optional |  |
+| inconclusiveLimit | k8s.io.apimachinery.pkg.util.intstr.IntOrString | optional |  |
+| consecutiveErrorLimit | k8s.io.apimachinery.pkg.util.intstr.IntOrString | optional |  |
 | provider | [MetricProvider](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-MetricProvider) | optional |  |
-| consecutiveSuccessLimit | [k8s.io.apimachinery.pkg.util.intstr.IntOrString](#k8s-io-apimachinery-pkg-util-intstr-IntOrString) | optional |  |
+| consecutiveSuccessLimit | k8s.io.apimachinery.pkg.util.intstr.IntOrString | optional |  |
 
 
 
