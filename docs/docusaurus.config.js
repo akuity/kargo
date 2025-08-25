@@ -12,7 +12,7 @@ const config = {
   title: 'Kargo Docs',
   url: 'https://docs.kargo.io',
   baseUrl: '/',
-  onBrokenLinks: 'warn',
+  onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
   favicon: 'img/kargo.png',
 

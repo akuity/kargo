@@ -19,7 +19,7 @@
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 {{range .Fields -}}
-  | {{.Name}} | {{ if not (contains "k8s.io" .FullType )}}[{{.LongType}}](#{{.FullType | anchor}}){{ else }}{{.FullType}}{{ end }} | {{range (.Description | splitList "\n" )  }} {{.}} {{end}} |
+  | {{.Name}} | {{ if not (contains "k8s.io" .FullType )}}[{{.LongType}}](#{{.FullType | anchor}}){{ else }}{{.FullType}}{{ end }} | {{range (.Description | splitList "\n" )  }} {{if not (contains "+kubebuilder:validation:Pattern" .)}}{{.}}{{ end }}{{end}} |
 {{end}}
 {{end}}
 
