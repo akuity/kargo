@@ -71,6 +71,7 @@ export const TokenRenew = () => {
     }
 
     (async () => {
+      const redirectQuery = searchParams.get(redirectToQueryParam);
       try {
         const response = await refreshTokenGrantRequest(as, client, oidcClientAuth, refreshToken, {
           [allowInsecureRequests]: shouldAllowHttpRequest(),
@@ -85,23 +86,28 @@ export const TokenRenew = () => {
             placement: 'bottomRight'
           });
           logout();
-          navigate(paths.login);
+          navigate(
+            `${paths.login}${redirectQuery ? `?${redirectToQueryParam}=${redirectQuery}` : ''}`
+          );
           return;
         }
 
         onLogin(result.id_token, result.refresh_token);
-        navigate(searchParams.get(redirectToQueryParam) || paths.home);
+        navigate(redirectQuery || paths.home);
       } catch (err) {
         logout();
-        navigate(paths.login);
+        navigate(
+          `${paths.login}${redirectQuery ? `?${redirectToQueryParam}=${redirectQuery}` : ''}`
+        );
       }
     })();
   }, [as, client]);
 
   React.useEffect(() => {
+    const redirectQuery = searchParams.get(redirectToQueryParam);
     if (isError || isASError) {
       logout();
-      navigate(paths.login);
+      navigate(`${paths.login}${redirectQuery ? `?${redirectToQueryParam}=${redirectQuery}` : ''}`);
     }
   }, [isError, isASError]);
 
