@@ -61,12 +61,19 @@ func (r *reconciler) collectStats(
 		return status, fmt.Errorf("error listing Stages: %w", err)
 	}
 
+	controlFlowStages := 0
+	for _, stage := range stages.Items {
+		if stage.IsControlFlow() {
+			controlFlowStages++
+		}
+	}
+
 	stats := kargoapi.ProjectStats{
 		Warehouses: kargoapi.WarehouseStats{
 			Count: int64(len(warehouses.Items)),
 		},
 		Stages: kargoapi.StageStats{
-			Count: int64(len(stages.Items)),
+			Count: int64(len(stages.Items)) - int64(controlFlowStages),
 		},
 	}
 
