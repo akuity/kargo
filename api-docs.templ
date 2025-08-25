@@ -16,10 +16,10 @@
 {{.Description}}
 
 {{if .HasFields}}
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
+| Field | Type | Description |
+| ----- | ---- | ----------- |
 {{range .Fields -}}
-| {{.Name}} | {{ if not (contains "k8s.io" .FullType )}}[{{.LongType}}](#{{.FullType | anchor}}){{ else }}{{.FullType}}{{ end }} | {{.Label}} | {{if (index .Options "deprecated"|default false)}}**Deprecated.** {{end}}{{nobr .Description}}{{if .DefaultValue}} Default: {{.DefaultValue}}{{end}} |
+  | {{.Name}} | {{ if not (contains "k8s.io" .FullType )}}[{{.LongType}}](#{{.FullType | anchor}}){{ else }}{{.FullType}}{{ end }} | {{range (.Description | splitList "\n" )  }} {{.}} {{end}} |
 {{end}}
 {{end}}
 
