@@ -2,12 +2,14 @@ package builtin
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/xeipuuv/gojsonschema"
+	"gopkg.in/yaml.v3"
 	kcl "kcl-lang.io/kcl-go"
 	"kcl-lang.io/kcl-go/pkg/native"
 	"kcl-lang.io/kcl-go/pkg/spec/gpyrpc"
@@ -120,11 +122,110 @@ func (k *kclRunner) resolveKCLFiles(workDir, inputPath string) ([]string, error)
 	return []string{secureInputPath}, nil
 }
 
+func (k *kclRunner) resolveValueFiles(workDir string, valueFiles []string) ([]string, error) {
+	var resolvedFiles []string
+
+	for _, valueFile := range valueFiles {
+		secureValuePath, err := securejoin.SecureJoin(workDir, valueFile)
+		if err != nil {
+			return nil, fmt.Errorf("could not secure join value file path %q: %w", valueFile, err)
+		}
+
+		pathInfo, err := os.Stat(secureValuePath)
+		if err != nil {
+			return nil, fmt.Errorf("value file %q does not exist: %w", valueFile, err)
+		}
+
+		if pathInfo.IsDir() {
+			return nil, fmt.Errorf("value file path %q is a directory, expected a file", valueFile)
+		}
+
+		// Validate file extension
+		ext := filepath.Ext(secureValuePath)
+		if ext != ".yaml" && ext != ".yml" && ext != ".json" {
+			return nil, fmt.Errorf("value file %q must have .yaml, .yml, or .json extension", valueFile)
+		}
+
+		resolvedFiles = append(resolvedFiles, secureValuePath)
+	}
+
+	return resolvedFiles, nil
+}
+
+// parseValueFileToOptions parses a YAML or JSON file and converts it to KCL options
+func (k *kclRunner) parseValueFileToOptions(filePath string) ([]string, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read value file: %w", err)
+	}
+
+	var values map[string]interface{}
+	if err := yaml.Unmarshal(data, &values); err != nil {
+		return nil, fmt.Errorf("failed to parse YAML/JSON: %w", err)
+	}
+
+	var options []string
+	for key, value := range values {
+		valueStr, err := k.convertValueToString(value)
+		if err != nil {
+			return nil, fmt.Errorf("failed to serialize value for key %s: %w", key, err)
+		}
+		options = append(options, fmt.Sprintf("%s=%s", key, valueStr))
+	}
+
+	return options, nil
+}
+
+// convertValueToString converts a value of any type to its string representation
+// suitable for use as a KCL option value
+func (k *kclRunner) convertValueToString(value interface{}) (string, error) {
+	var valueStr string
+	switch v := value.(type) {
+	case string:
+		valueStr = v
+	case int:
+		valueStr = fmt.Sprintf("%d", v)
+	case int64:
+		valueStr = fmt.Sprintf("%d", v)
+	case float64:
+		valueStr = fmt.Sprintf("%g", v)
+	case bool:
+		valueStr = fmt.Sprintf("%t", v)
+	case nil:
+		valueStr = "null"
+	default:
+		// For complex types, use JSON encoding
+		jsonBytes, err := json.Marshal(v)
+		if err != nil {
+			return "", fmt.Errorf("failed to serialize complex value: %w", err)
+		}
+		valueStr = string(jsonBytes)
+	}
+	return valueStr, nil
+}
+
 func (k *kclRunner) buildKCLOptions(workDir string, kclFiles []string, cfg builtin.KCLRunConfig, externalPkgs []*gpyrpc.ExternalPkg) ([]kcl.Option, error) {
 	var opts []kcl.Option
 
 	opts = append(opts, kcl.WithKFilenames(kclFiles...))
 	opts = append(opts, kcl.WithWorkDir(workDir))
+
+	if len(cfg.ValueFiles) > 0 {
+		valueFiles, err := k.resolveValueFiles(workDir, cfg.ValueFiles)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, valueFile := range valueFiles {
+			options, err := k.parseValueFileToOptions(valueFile)
+			if err != nil {
+				return nil, fmt.Errorf("error parsing value file %s: %w", valueFile, err)
+			}
+			if len(options) > 0 {
+				opts = append(opts, kcl.WithOptions(options...))
+			}
+		}
+	}
 
 	if len(cfg.Settings) > 0 {
 		var keyValuePairs []string

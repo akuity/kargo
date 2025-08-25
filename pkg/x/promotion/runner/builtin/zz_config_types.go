@@ -407,6 +407,9 @@ type KCLRunConfig struct {
 	Settings map[string]string `json:"settings,omitempty"`
 	// OCI configuration for fetching schema definitions from upstream registries.
 	OCI *KCLOCIConfig `json:"oci,omitempty"`
+	// ValueFiles are paths to YAML/JSON files containing values to be used during KCL execution.
+	// These files will be made available to KCL as external data sources.
+	ValueFiles []string `json:"valueFiles,omitempty"`
 }
 
 type KCLOCIConfig struct {

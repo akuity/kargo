@@ -367,6 +367,28 @@ func TestKCLRunner_buildKCLOptions(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEmpty(t, opts)
 	})
+
+	t.Run("with value files", func(t *testing.T) {
+		// Create test value files
+		valuesYAML := `
+environment: production
+replicas: 3
+image:
+  tag: v1.2.3
+  repository: nginx
+`
+		valueFile := filepath.Join(tempDir, "values.yaml")
+		require.NoError(t, os.WriteFile(valueFile, []byte(valuesYAML), 0644))
+
+		cfg := builtin.KCLRunConfig{
+			InputPath:  "app.k",
+			ValueFiles: []string{"values.yaml"},
+		}
+
+		opts, err := runner.buildKCLOptions(tempDir, kclFiles, cfg, nil)
+		require.NoError(t, err)
+		require.NotEmpty(t, opts)
+	})
 }
 
 func TestKCLRunner_executeKCL(t *testing.T) {
@@ -641,4 +663,271 @@ k8s = { oci = "oci://ghcr.io/kcl-lang/k8s", tag = "1.32.4" }`
 		require.Contains(t, yamlContent, "image: nginx:1.14.2")
 		require.Contains(t, yamlContent, "containerPort: 80")
 	})
+}
+
+func TestKCLRunner_resolveValueFiles(t *testing.T) {
+	runner := newKCLRunner().(*kclRunner)
+
+	tempDir, err := os.MkdirTemp("", "kcl-value-files-test")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+
+	// Create test value files
+	valuesYAML := `
+environment: production
+replicas: 3
+`
+	valuesFile := filepath.Join(tempDir, "values.yaml")
+	require.NoError(t, os.WriteFile(valuesFile, []byte(valuesYAML), 0644))
+
+	configJSON := `{"service": {"port": 8080}}`
+	configFile := filepath.Join(tempDir, "config.json")
+	require.NoError(t, os.WriteFile(configFile, []byte(configJSON), 0644))
+
+	t.Run("resolve existing value files", func(t *testing.T) {
+		files, err := runner.resolveValueFiles(tempDir, []string{"values.yaml", "config.json"})
+		require.NoError(t, err)
+		require.Len(t, files, 2)
+		require.Contains(t, files, valuesFile)
+		require.Contains(t, files, configFile)
+	})
+
+	t.Run("non-existent value file", func(t *testing.T) {
+		_, err := runner.resolveValueFiles(tempDir, []string{"nonexistent.yaml"})
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "does not exist")
+	})
+
+	t.Run("invalid file extension", func(t *testing.T) {
+		txtFile := filepath.Join(tempDir, "invalid.txt")
+		require.NoError(t, os.WriteFile(txtFile, []byte("content"), 0644))
+
+		_, err := runner.resolveValueFiles(tempDir, []string{"invalid.txt"})
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "must have .yaml, .yml, or .json extension")
+	})
+
+	t.Run("directory instead of file", func(t *testing.T) {
+		subDir := filepath.Join(tempDir, "subdir")
+		require.NoError(t, os.Mkdir(subDir, 0755))
+
+		_, err := runner.resolveValueFiles(tempDir, []string{"subdir"})
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "is a directory, expected a file")
+	})
+}
+
+func TestKCLRunner_Run_WithValueFiles(t *testing.T) {
+	runner := newKCLRunner()
+
+	tempDir, err := os.MkdirTemp("", "kcl-value-files-integration-test")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+
+	kclContent := `# Simple KCL file that reads from settings
+appName = option("appName") or "default-app"
+replicas = option("replicas") or 1
+
+config = {
+    name = appName
+    replicas = replicas
+}
+`
+	kclFile := filepath.Join(tempDir, "app.k")
+	require.NoError(t, os.WriteFile(kclFile, []byte(kclContent), 0644))
+
+	// Create a simple values file
+	valuesYAML := `appName: "my-awesome-app"
+replicas: 3
+`
+	valuesFile := filepath.Join(tempDir, "values.yaml")
+	require.NoError(t, os.WriteFile(valuesFile, []byte(valuesYAML), 0644))
+
+	stepCtx := &promotion.StepContext{
+		WorkDir: tempDir,
+		Config: map[string]any{
+			"inputPath":  "app.k",
+			"valueFiles": []string{"values.yaml"},
+		},
+	}
+
+	result, err := runner.Run(context.Background(), stepCtx)
+	require.NoError(t, err)
+	require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
+
+	require.NotNil(t, result.Output)
+	output, hasOutput := result.Output["output"]
+	require.True(t, hasOutput)
+
+	outputStr, ok := output.(string)
+	require.True(t, ok)
+	require.NotEmpty(t, outputStr)
+
+	require.Contains(t, outputStr, "my-awesome-app")
+	require.Contains(t, outputStr, "3")
+}
+
+func TestKCLRunner_parseValueFileToOptions_YAML(t *testing.T) {
+	tempDir := t.TempDir()
+
+	yamlContent := `
+appName: "test-app"
+replicas: 3
+enabled: true
+config:
+  debug: false
+  timeout: 30
+`
+	yamlFile := filepath.Join(tempDir, "values.yaml")
+	require.NoError(t, os.WriteFile(yamlFile, []byte(yamlContent), 0644))
+
+	runner := &kclRunner{}
+
+	options, err := runner.parseValueFileToOptions(yamlFile)
+	require.NoError(t, err)
+	require.NotEmpty(t, options)
+
+	optionMap := make(map[string]string)
+	for _, option := range options {
+		parts := strings.SplitN(option, "=", 2)
+		if len(parts) == 2 {
+			optionMap[parts[0]] = parts[1]
+		}
+	}
+
+	require.Equal(t, "test-app", optionMap["appName"])
+	require.Equal(t, "3", optionMap["replicas"])
+	require.Equal(t, "true", optionMap["enabled"])
+
+	// Verify complex nested values are serialized as JSON
+	require.Contains(t, optionMap["config"], `"debug":false`)
+	require.Contains(t, optionMap["config"], `"timeout":30`)
+}
+
+func TestKCLRunner_parseValueFileToOptions_JSON(t *testing.T) {
+	tempDir := t.TempDir()
+
+	jsonContent := `{
+	"service": "my-service",
+	"port": 8080,
+	"active": true
+}`
+	jsonFile := filepath.Join(tempDir, "values.json")
+	require.NoError(t, os.WriteFile(jsonFile, []byte(jsonContent), 0644))
+
+	runner := &kclRunner{}
+
+	jsonOptions, err := runner.parseValueFileToOptions(jsonFile)
+	require.NoError(t, err)
+	require.NotEmpty(t, jsonOptions)
+
+	jsonOptionMap := make(map[string]string)
+	for _, option := range jsonOptions {
+		parts := strings.SplitN(option, "=", 2)
+		if len(parts) == 2 {
+			jsonOptionMap[parts[0]] = parts[1]
+		}
+	}
+
+	require.Equal(t, "my-service", jsonOptionMap["service"])
+	require.Equal(t, "8080", jsonOptionMap["port"])
+	require.Equal(t, "true", jsonOptionMap["active"])
+}
+
+func TestKCLRunner_convertValueToString(t *testing.T) {
+	runner := &kclRunner{}
+
+	tests := []struct {
+		name     string
+		input    interface{}
+		expected string
+		wantErr  bool
+	}{
+		{
+			name:     "string value",
+			input:    "hello world",
+			expected: "hello world",
+			wantErr:  false,
+		},
+		{
+			name:     "int value",
+			input:    42,
+			expected: "42",
+			wantErr:  false,
+		},
+		{
+			name:     "int64 value",
+			input:    int64(1234567890),
+			expected: "1234567890",
+			wantErr:  false,
+		},
+		{
+			name:     "float64 value",
+			input:    3.14159,
+			expected: "3.14159",
+			wantErr:  false,
+		},
+		{
+			name:     "bool true value",
+			input:    true,
+			expected: "true",
+			wantErr:  false,
+		},
+		{
+			name:     "bool false value",
+			input:    false,
+			expected: "false",
+			wantErr:  false,
+		},
+		{
+			name:     "nil value",
+			input:    nil,
+			expected: "null",
+			wantErr:  false,
+		},
+		{
+			name: "map value",
+			input: map[string]interface{}{
+				"key1": "value1",
+				"key2": 123,
+			},
+			expected: `{"key1":"value1","key2":123}`,
+			wantErr:  false,
+		},
+		{
+			name:     "slice value",
+			input:    []string{"item1", "item2", "item3"},
+			expected: `["item1","item2","item3"]`,
+			wantErr:  false,
+		},
+		{
+			name: "complex nested structure",
+			input: map[string]interface{}{
+				"metadata": map[string]interface{}{
+					"name":      "test-app",
+					"namespace": "default",
+				},
+				"spec": map[string]interface{}{
+					"replicas": 3,
+					"enabled":  true,
+				},
+			},
+			expected: `{"metadata":{"name":"test-app","namespace":"default"},"spec":{"enabled":true,"replicas":3}}`,
+			wantErr:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := runner.convertValueToString(tt.input)
+
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, result)
+		})
+	}
 }
