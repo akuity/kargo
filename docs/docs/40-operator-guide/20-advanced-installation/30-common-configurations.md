@@ -328,7 +328,7 @@ namespace specified by `controller.argocd.namespace`.
 ### Disabling the Argo Rollouts Integration
 
 By default, Kargo will enable the Argo Rollouts integration, which configures
-Kargo to work with `Rollout` resources created by Argo Rollouts as part of the
+Kargo to work with `AnalysisRun` resources created as part of the
 [verification feature](../../50-user-guide/20-how-to-guides/40-working-with-stages.md#verification).
 
 This can be disabled as follows:
