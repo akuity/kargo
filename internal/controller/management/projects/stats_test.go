@@ -276,6 +276,37 @@ func Test_reconciler_collectStats(t *testing.T) {
 				require.Equal(t, int64(1), stats.Stages.Health.Healthy)
 			},
 		},
+		{
+			name: "ignore control flow stages stats collection",
+			project: &kargoapi.Project{
+				Status: kargoapi.ProjectStatus{
+					Conditions: []metav1.Condition{{
+						Type:   kargoapi.ConditionTypeReady,
+						Status: metav1.ConditionTrue,
+					}},
+				},
+			},
+			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+				&kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "stage1-control-flow",
+						Namespace: testProject,
+					},
+				},
+				&kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "stage2-control-flow",
+						Namespace: testProject,
+					},
+				},
+			).Build(),
+			assertions: func(t *testing.T, status kargoapi.ProjectStatus, err error) {
+				require.NoError(t, err)
+				require.Nil(t, conditions.Get(&status, kargoapi.ConditionTypeHealthy))
+				stats := status.Stats
+				require.Equal(t, int64(0), stats.Stages.Count)
+			},
+		},
 	}
 
 	for _, tt := range testCases {
