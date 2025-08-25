@@ -233,9 +233,9 @@ type GitSubscription struct {
 	// For NewestFromBranch (commit filtering):
 	//   - `id`: The ID (sha) of the commit.
 	//   - `commitDate`: The commit date of the commit.
-	//   - `author`: The author of the commit message, in the format "Name <email>".
+	//   - `author`: The author of the commit message, in the format "Name email".
 	//   - `committer`: The person who committed the commit, in the format
-	//	   "Name <email>".
+	//	   "Name email".
 	//   - `subject`: The subject (first line) of the commit message.
 	//
 	// For Lexical, NewestTag, SemVer (tag filtering):
@@ -244,12 +244,12 @@ type GitSubscription struct {
 	//   - `creatorDate`: The creation date of an annotated tag, or the commit
 	//		date of a lightweight tag.
 	//   - `author`: The author of the commit message associated with the tag,
-	//	   in the format "Name <email>".
+	//	   in the format "Name email".
 	//   - `committer`: The person who committed the commit associated with the
-	//	   tag, in the format "Name <email>".
+	//	   tag, in the format "Name email".
 	//   - `subject`: The subject (first line) of the commit message associated
 	//	   with the tag.
-	//	 - `tagger`: The person who created the tag, in the format "Name <email>".
+	//	 - `tagger`: The person who created the tag, in the format "Name email".
 	//	   Only available for annotated tags.
 	//	 - `annotation`: The subject (first line) of the tag annotation. Only
 	//	   available for annotated tags.
@@ -390,7 +390,7 @@ type ImageSubscription struct {
 	//
 	// +kubebuilder:validation:Optional
 	IgnoreTags []string `json:"ignoreTags,omitempty" protobuf:"bytes,6,rep,name=ignoreTags"`
-	// Platform is a string of the form <os>/<arch> that limits the tags that can
+	// Platform is a string of the form os/arch that limits the tags that can
 	// be considered when searching for new versions of an image. This field is
 	// optional. When left unspecified, it is implicitly equivalent to the
 	// OS/architecture of the Kargo controller. Care should be taken to set this

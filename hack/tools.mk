@@ -27,6 +27,7 @@ CONTROLLER_GEN_VERSION	?= $(shell grep k8s.io/controller-tools $(TOOLS_MOD_FILE)
 PROTOC_VERSION			?= v25.3
 BUF_VERSION				?= $(shell grep github.com/bufbuild/buf $(TOOLS_MOD_FILE) | awk '{print $$2}')
 QUILL_VERSION			?= v0.5.1
+PROTOC_GEN_DOC_VERSION	?= v1.5.1
 
 ################################################################################
 # Tool targets                                                                 #
@@ -41,6 +42,7 @@ CONTROLLER_GEN  := $(BIN_DIR)/controller-gen-$(OS)-$(ARCH)-$(CONTROLLER_GEN_VERS
 PROTOC          := $(BIN_DIR)/protoc-$(OS)-$(ARCH)-$(PROTOC_VERSION)
 BUF             := $(BIN_DIR)/buf-$(OS)-$(ARCH)-$(BUF_VERSION)
 QUILL		   	:= $(BIN_DIR)/quill-$(OS)-$(ARCH)-$(QUILL_VERSION)
+PROTOC_GEN_DOC  := $(BIN_DIR)/protoc-gen-doc-$(OS)-$(ARCH)-$(PROTOC_GEN_DOC_VERSION)
 
 $(GOLANGCI_LINT):
 	$(call install-golangci-lint,$@,$(GOLANGCI_LINT_VERSION))
@@ -69,6 +71,9 @@ $(BUF):
 $(QUILL):
 	$(call install-quill,$@,$(QUILL_VERSION))
 
+$(PROTOC_GEN_DOC):
+	$(call go-install-tool,$@,github.com/pseudomuto/protoc-gen-doc/cmd/protoc-gen-doc,$(PROTOC_GEN_DOC_VERSION))
+
 ################################################################################
 # Symlink targets                                                              #
 ################################################################################
@@ -82,6 +87,7 @@ CONTROLLER_GEN_LINK	:= $(BIN_DIR)/controller-gen
 PROTOC_LINK			:= $(BIN_DIR)/protoc
 BUF_LINK			:= $(BIN_DIR)/buf
 QUILL_LINK			:= $(BIN_DIR)/quill
+PROTOC_GEN_DOC_LINK	:= $(BIN_DIR)/protoc-gen-doc
 
 .PHONY: $(GOLANGCI_LINT_LINK)
 $(GOLANGCI_LINT_LINK): $(GOLANGCI_LINT)
@@ -119,11 +125,15 @@ $(BUF_LINK): $(BUF)
 $(QUILL_LINK): $(QUILL)
 	$(call create-symlink,$(QUILL),$(QUILL_LINK))
 
+.PHONY: $(PROTOC_GEN_DOC_LINK)
+$(PROTOC_GEN_DOC_LINK): $(PROTOC_GEN_DOC)
+	$(call create-symlink,$(PROTOC_GEN_DOC),$(PROTOC_GEN_DOC_LINK))
+
 ################################################################################
 # Alias targets                                                                #
 ################################################################################
 
-TOOLS := install-golangci-lint install-helm install-goimports install-go-to-protobuf install-protoc-gen-gogo install-controller-gen install-protoc install-buf install-quill
+TOOLS := install-golangci-lint install-helm install-goimports install-go-to-protobuf install-protoc-gen-gogo install-controller-gen install-protoc install-buf install-quill install-protoc-gen-doc
 
 .PHONY: install-tools
 install-tools: $(TOOLS)
@@ -154,6 +164,9 @@ install-buf: $(BUF) $(BUF_LINK)
 
 .PHONY: install-quill
 install-quill: $(QUILL) $(QUILL_LINK)
+
+.PHONY: install-protoc-gen-doc
+install-protoc-gen-doc: $(PROTOC_GEN_DOC) $(PROTOC_GEN_DOC_LINK)
 
 ################################################################################
 # Clean up targets                                                             #
