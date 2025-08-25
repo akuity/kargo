@@ -2,6 +2,7 @@ import { TransportProvider, useQuery } from '@connectrpc/connect-query';
 import { useEffect, useRef, useState } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 
+import { redirectToQueryParam } from '@ui/config/auth';
 import { paths } from '@ui/config/paths';
 import { transport, transportWithAuth } from '@ui/config/transport';
 import { ModalContextProvider } from '@ui/features/common/modal/modal-context-provider';
@@ -21,7 +22,9 @@ export const ProtectedRoute = () => {
   }, []);
 
   if (!data?.skipAuth && !isLoading && !isLoggedIn) {
-    return <Navigate to={paths.login} replace />;
+    return (
+      <Navigate to={`${paths.login}?${redirectToQueryParam}=${window.location.pathname}`} replace />
+    );
   }
 
   return (
