@@ -1133,6 +1133,12 @@ func Test_freightMetadata(t *testing.T) {
 		"environment":   "staging",
 	}
 
+	expectedMetadata := map[string]any{
+		"deployment-config": testMetadata,
+		"build-number":      float64(42),
+		"issue":             "#1234",
+	}
+
 	// Create a freight object with metadata
 	testFreight := &kargoapi.Freight{
 		ObjectMeta: metav1.ObjectMeta{
@@ -1159,7 +1165,16 @@ func Test_freightMetadata(t *testing.T) {
 		assertions func(t *testing.T, result any, err error)
 	}{
 		{
-			name:    "successful metadata retrieval - string map",
+			name:    "successful metadata retrieval, single arg - string map",
+			objects: []client.Object{testFreight},
+			args:    []any{testFreightName},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, expectedMetadata, result)
+			},
+		},
+		{
+			name:    "successful metadata retrieval, two arg - string map",
 			objects: []client.Object{testFreight},
 			args:    []any{testFreightName, "deployment-config"},
 			assertions: func(t *testing.T, result any, err error) {
@@ -1168,7 +1183,7 @@ func Test_freightMetadata(t *testing.T) {
 			},
 		},
 		{
-			name:    "successful metadata retrieval - number",
+			name:    "successful metadata retrieval, two arg - number",
 			objects: []client.Object{testFreight},
 			args:    []any{testFreightName, "build-number"},
 			assertions: func(t *testing.T, result any, err error) {
@@ -1178,7 +1193,7 @@ func Test_freightMetadata(t *testing.T) {
 			},
 		},
 		{
-			name:    "successful metadata retrieval - string",
+			name:    "successful metadata retrieval, two arg - string",
 			objects: []client.Object{testFreight},
 			args:    []any{testFreightName, "issue"},
 			assertions: func(t *testing.T, result any, err error) {
@@ -1187,7 +1202,33 @@ func Test_freightMetadata(t *testing.T) {
 			},
 		},
 		{
-			name:    "metadata key not found",
+			name:    "freight not found",
+			objects: []client.Object{}, // No freight objects
+			args:    []any{testFreightName},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "freight exists but no metadata",
+			objects: []client.Object{
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      testFreightName,
+						Namespace: testProject,
+					},
+					Status: kargoapi.FreightStatus{}, // Empty status with no metadata
+				},
+			},
+			args: []any{testFreightName},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name:    "metadata key not found, two arg",
 			objects: []client.Object{testFreight},
 			args:    []any{testFreightName, "non-existent-key"},
 			assertions: func(t *testing.T, result any, err error) {
@@ -1196,7 +1237,7 @@ func Test_freightMetadata(t *testing.T) {
 			},
 		},
 		{
-			name:    "freight not found",
+			name:    "freight not found, two arg",
 			objects: []client.Object{}, // No freight objects
 			args:    []any{testFreightName, "deployment-config"},
 			assertions: func(t *testing.T, result any, err error) {
@@ -1208,15 +1249,7 @@ func Test_freightMetadata(t *testing.T) {
 			name: "no arguments",
 			args: []any{},
 			assertions: func(t *testing.T, result any, err error) {
-				assert.ErrorContains(t, err, "expected 2 argument")
-				assert.Nil(t, result)
-			},
-		},
-		{
-			name: "one argument only",
-			args: []any{testFreightName},
-			assertions: func(t *testing.T, result any, err error) {
-				assert.ErrorContains(t, err, "expected 2 argument")
+				assert.ErrorContains(t, err, "expected 1 argument")
 				assert.Nil(t, result)
 			},
 		},
@@ -1224,21 +1257,22 @@ func Test_freightMetadata(t *testing.T) {
 			name: "too many arguments",
 			args: []any{testFreightName, "deployment-config", "extra"},
 			assertions: func(t *testing.T, result any, err error) {
-				assert.ErrorContains(t, err, "expected 2 argument")
+				assert.ErrorContains(t, err, "expected 1 argument")
 				assert.Nil(t, result)
 			},
 		},
 		{
 			name: "invalid first argument type",
-			args: []any{123, "deployment-config"},
+			args: []any{123},
 			assertions: func(t *testing.T, result any, err error) {
 				assert.ErrorContains(t, err, "argument must be string")
 				assert.Nil(t, result)
 			},
 		},
 		{
-			name: "invalid second argument type",
-			args: []any{testFreightName, 123},
+			name:    "invalid second argument type",
+			objects: []client.Object{testFreight},
+			args:    []any{testFreightName, 123},
 			assertions: func(t *testing.T, result any, err error) {
 				assert.ErrorContains(t, err, "argument must be string")
 				assert.Nil(t, result)
@@ -1253,27 +1287,11 @@ func Test_freightMetadata(t *testing.T) {
 			},
 		},
 		{
-			name: "empty metadata key",
-			args: []any{testFreightName, ""},
+			name:    "empty metadata key",
+			objects: []client.Object{testFreight},
+			args:    []any{testFreightName, ""},
 			assertions: func(t *testing.T, result any, err error) {
 				assert.ErrorContains(t, err, "metadata key must not be empty")
-				assert.Nil(t, result)
-			},
-		},
-		{
-			name: "freight with no metadata",
-			objects: []client.Object{
-				&kargoapi.Freight{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      testFreightName,
-						Namespace: testProject,
-					},
-					Status: kargoapi.FreightStatus{}, // Empty status with no metadata
-				},
-			},
-			args: []any{testFreightName, "some-key"},
-			assertions: func(t *testing.T, result any, err error) {
-				assert.NoError(t, err)
 				assert.Nil(t, result)
 			},
 		},
@@ -1289,6 +1307,128 @@ func Test_freightMetadata(t *testing.T) {
 				Build()
 
 			fn := freightMetadata(ctx, c, testProject)
+
+			result, err := fn(tt.args...)
+			tt.assertions(t, result, err)
+		})
+	}
+}
+
+func Test_stageMetadata(t *testing.T) {
+	const testProject = "fake-project"
+	const testStageName = "fake-stage"
+
+	scheme := runtime.NewScheme()
+	assert.NoError(t, kargoapi.AddToScheme(scheme))
+
+	// Sample metadata for testing
+	testMetadata := map[string]any{
+		"deployment-id": "abc123",
+		"environment":   "staging",
+	}
+
+	expectedMetadata := map[string]any{
+		"deployment-config": testMetadata,
+	}
+
+	// Create a stage object with metadata
+	testStage := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      testStageName,
+			Namespace: testProject,
+		},
+		Status: kargoapi.StageStatus{},
+	}
+
+	// Add metadata to the stage status
+	err := testStage.Status.UpsertMetadata("deployment-config", testMetadata)
+	assert.NoError(t, err)
+
+	tests := []struct {
+		name       string
+		objects    []client.Object
+		args       []any
+		assertions func(t *testing.T, result any, err error)
+	}{
+		{
+			name:    "successful metadata retrieval",
+			objects: []client.Object{testStage},
+			args:    []any{testStageName},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, expectedMetadata, result)
+			},
+		},
+		{
+			name:    "stage not found",
+			objects: []client.Object{}, // No stage objects
+			args:    []any{testStageName},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "stage exists but no metadata",
+			objects: []client.Object{
+				&kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      testStageName,
+						Namespace: testProject,
+					},
+					Status: kargoapi.StageStatus{}, // Empty metadata
+				},
+			},
+			args: []any{testStageName},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "no arguments",
+			args: []any{},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "expected 1 argument")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "too many arguments",
+			args: []any{testStageName, "extra"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "expected 1 argument")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "invalid argument type",
+			args: []any{123},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "argument must be string")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "empty stage name",
+			args: []any{""},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "stage name must not be empty")
+				assert.Nil(t, result)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(tt.objects...).
+				Build()
+
+			fn := stageMetadata(ctx, c, testProject)
 
 			result, err := fn(tt.args...)
 			tt.assertions(t, result, err)
