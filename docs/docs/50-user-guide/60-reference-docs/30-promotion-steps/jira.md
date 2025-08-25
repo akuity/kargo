@@ -353,11 +353,15 @@ Use the `freightMetadata()` template function to retrieve issue keys stored by p
 
 ```yaml
 # Access the default issue key
-issueKey: ${{ freightMetadata(ctx.targetFreight.name, 'jira-issue-key') }}
+issueKey: ${{ freightMetadata(ctx.targetFreight.name).jira-issue-key }}
 
 # Access a custom issue key (when issueAlias was used during creation)
-issueKey: ${{ freightMetadata(ctx.targetFreight.name, 'my-custom-alias') }}
+issueKey: ${{ freightMetadata(ctx.targetFreight.name).my-custom-alias }}
 ```
+
+:::note
+The two-argument form (`freightMetadata(ctx.targetFreight.name, 'jira-issue-key')`) is deprecated as of `v1.8` and will be removed in `v1.10`. Please migrate to the single-argument form as shown above.
+:::
 
 ### Example
 

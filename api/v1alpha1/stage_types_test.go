@@ -1,10 +1,12 @@
 package v1alpha1
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -971,4 +973,158 @@ func TestChartDeepEquals(t *testing.T) {
 			require.Equal(t, testCase.expectedResult, testCase.b.DeepEquals(testCase.a))
 		})
 	}
+}
+
+func TestStageStatus_UpsertAndGetMetadata_Integration(t *testing.T) {
+	tests := []struct {
+		name string
+		data any
+	}{
+		{
+			name: "string value",
+			data: "test-string",
+		},
+		{
+			name: "integer value",
+			data: 42,
+		},
+		{
+			name: "boolean value",
+			data: true,
+		},
+		{
+			name: "complex struct",
+			data: struct {
+				Name    string            `json:"name"`
+				Age     int               `json:"age"`
+				Active  bool              `json:"active"`
+				Tags    []string          `json:"tags"`
+				Configs map[string]string `json:"configs"`
+			}{
+				Name:   "test-user",
+				Age:    30,
+				Active: true,
+				Tags:   []string{"admin", "developer"},
+				Configs: map[string]string{
+					"theme": "dark",
+					"lang":  "en",
+				},
+			},
+		},
+		{
+			name: "slice of integers",
+			data: []int{1, 2, 3, 4, 5},
+		},
+		{
+			name: "nested map",
+			data: map[string]any{
+				"level1": map[string]any{
+					"level2": map[string]string{
+						"key": "value",
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			status := StageStatus{}
+			key := "integration-test-key"
+
+			// Test Upsert
+			err1 := status.UpsertMetadata(key, tt.data)
+			require.NoError(t, err1)
+
+			// Verify metadata was stored
+			require.NotNil(t, status.Metadata)
+			require.Contains(t, status.Metadata, key)
+
+			// Test Get with correct type
+			switch expected := tt.data.(type) {
+			case string:
+				var result string
+				found, err := status.GetMetadata(key, &result)
+				require.True(t, found)
+				require.NoError(t, err)
+				require.Equal(t, expected, result)
+
+			case int:
+				var result int
+				found, err := status.GetMetadata(key, &result)
+				require.True(t, found)
+				require.NoError(t, err)
+				require.Equal(t, expected, result)
+
+			case bool:
+				var result bool
+				found, err := status.GetMetadata(key, &result)
+				require.True(t, found)
+				require.NoError(t, err)
+				require.Equal(t, expected, result)
+
+			case []int:
+				var result []int
+				found, err := status.GetMetadata(key, &result)
+				require.True(t, found)
+				require.NoError(t, err)
+				require.Equal(t, expected, result)
+
+			default:
+				// For complex types, use any and compare JSON representation
+				var result any
+				found, err := status.GetMetadata(key, &result)
+				require.True(t, found)
+				require.NoError(t, err)
+
+				// Compare by marshaling both to JSON
+				expectedJSON, err := json.Marshal(expected)
+				require.NoError(t, err)
+				resultJSON, err := json.Marshal(result)
+				require.NoError(t, err)
+				require.JSONEq(t, string(expectedJSON), string(resultJSON))
+			}
+
+			// Test updating the same key
+			newData := "updated-value"
+			err := status.UpsertMetadata(key, newData)
+			require.NoError(t, err)
+
+			var updatedResult string
+			found, err := status.GetMetadata(key, &updatedResult)
+			require.True(t, found)
+			require.NoError(t, err)
+			require.Equal(t, newData, updatedResult)
+		})
+	}
+}
+
+func TestStageStatus_MetadataEdgeCases(t *testing.T) {
+	t.Run("empty key", func(t *testing.T) {
+		status := StageStatus{}
+		err := status.UpsertMetadata("", "value")
+		require.Error(t, err)
+	})
+
+	t.Run("nil target for Get", func(t *testing.T) {
+		status := StageStatus{
+			Metadata: map[string]apiextensionsv1.JSON{
+				"test-key": {Raw: []byte(`"test-value"`)},
+			},
+		}
+
+		// This should cause an error during unmarshal
+		found, err := status.GetMetadata("test-key", nil)
+		require.False(t, found)
+		require.Error(t, err)
+	})
+
+	t.Run("get non-existent key", func(t *testing.T) {
+		status := StageStatus{}
+		var result string
+		found, err := status.GetMetadata("non-existent", &result)
+		require.False(t, found)
+		require.NoError(t, err)
+		require.Equal(t, "", result)
+	})
 }
