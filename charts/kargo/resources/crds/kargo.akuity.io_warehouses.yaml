@@ -242,24 +242,24 @@ spec:
                             (commit filtering):\n  - `id`: The ID (sha) of the commit.\n
                             \ - `commitDate`: The commit date of the commit.\n  -
                             `author`: The author of the commit message, in the format
-                            \"Name email\".\n  - `committer`: The person who committed
-                            the commit, in the format\n\t   \"Name email\".\n  - `subject`:
-                            The subject (first line) of the commit message.\n\nFor
+                            \"Name <email>\".\n  - `committer`: The person who committed
+                            the commit, in the format\n\t   \"Name <email>\".\n  -
+                            `subject`: The subject (first line) of the commit message.\n\nFor
                             Lexical, NewestTag, SemVer (tag filtering):\n  - `tag`:
                             The name of the tag.\n  - `id`: The ID (sha) of the commit
                             associated with the tag.\n  - `creatorDate`: The creation
                             date of an annotated tag, or the commit\n\t\tdate of a
                             lightweight tag.\n  - `author`: The author of the commit
                             message associated with the tag,\n\t   in the format \"Name
-                            email\".\n  - `committer`: The person who committed the
-                            commit associated with the\n\t   tag, in the format \"Name
-                            email\".\n  - `subject`: The subject (first line) of the
-                            commit message associated\n\t   with the tag.\n\t - `tagger`:
-                            The person who created the tag, in the format \"Name email\".\n\t
-                            \  Only available for annotated tags.\n\t - `annotation`:
-                            The subject (first line) of the tag annotation. Only\n\t
-                            \  available for annotated tags.\n\nRefer to the expr-lang
-                            documentation for more details on syntax and\ncapabilities
+                            <email>\".\n  - `committer`: The person who committed
+                            the commit associated with the\n\t   tag, in the format
+                            \"Name <email>\".\n  - `subject`: The subject (first line)
+                            of the commit message associated\n\t   with the tag.\n\t
+                            - `tagger`: The person who created the tag, in the format
+                            \"Name <email>\".\n\t   Only available for annotated tags.\n\t
+                            - `annotation`: The subject (first line) of the tag annotation.
+                            Only\n\t   available for annotated tags.\n\nRefer to the
+                            expr-lang documentation for more details on syntax and\ncapabilities
                             of the expression language: https://expr-lang.org."
                           type: string
                         ignoreTags:
@@ -406,7 +406,7 @@ spec:
                           type: boolean
                         platform:
                           description: |-
-                            Platform is a string of the form os/arch that limits the tags that can
+                            Platform is a string of the form <os>/<arch> that limits the tags that can
                             be considered when searching for new versions of an image. This field is
                             optional. When left unspecified, it is implicitly equivalent to the
                             OS/architecture of the Kargo controller. Care should be taken to set this
