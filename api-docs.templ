@@ -9,7 +9,7 @@
 ## {{.Name}}
 {{.Description}}
 
-{{range .Messages}}
+{{- range .Messages}}
 <a name="{{.FullName | anchor}}"></a>
 
 ### {{.LongName}}
@@ -21,7 +21,7 @@
 {{range .Fields -}}
   | {{.Name}} | {{ if not (contains "k8s.io" .FullType )}}[{{.LongType}}](#{{.FullType | anchor}}){{ else }}{{.FullType}}{{ end }} | {{range (.Description | splitList "\n" )  }} {{if not (contains "+kubebuilder:validation:Pattern" .)}}{{. | replace "<" "&lt;" | replace ">" "&gt;" }}{{else}}{{ . | replace "[" "" | replace "]" "" }}{{ end }}{{end}} |
 {{end}}
-{{end}}
+{{- end}}
 
 {{- if .HasExtensions}}
 | Extension | Type | Base | Number | Description |
