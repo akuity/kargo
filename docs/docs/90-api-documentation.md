@@ -1,8 +1,6 @@
 # API Documentation
 <a name="top"></a>
 
-
-
 <a name="api_service_v1alpha1_service-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -1790,8 +1788,6 @@ explicitly empty
 
  <!-- end services -->
 
-
-
 <a name="api_rbac_v1alpha1_generated-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -1846,8 +1842,6 @@ explicitly empty
  <!-- end enums --> <!-- end HasExtensions -->
 
  <!-- end services -->
-
-
 
 <a name="api_v1alpha1_generated-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
@@ -2999,8 +2993,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
  <!-- end services -->
 
-
-
 <a name="api_stubs_rollouts_v1alpha1_generated-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -3551,8 +3543,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
  <!-- end enums --> <!-- end HasExtensions -->
 
  <!-- end services -->
-
-
 
 ## Scalar Value Types
 

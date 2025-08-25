@@ -1,14 +1,13 @@
 # API Documentation
 <a name="top"></a>
 
-{{range .Files}}
+{{- range .Files}}
 {{$file_name := .Name}}
 <a name="{{.Name | anchor}}"></a>
 <p align="right"><a href="#top">Top</a></p>
 
 ## {{.Name}}
 {{.Description}}
-
 {{- range .Messages -}}
 <a name="{{.FullName | anchor}}"></a>
 
@@ -71,7 +70,7 @@
 {{end}}
 {{end}} <!-- end services -->
 
-{{end}}
+{{- end}}
 
 ## Scalar Value Types
 
