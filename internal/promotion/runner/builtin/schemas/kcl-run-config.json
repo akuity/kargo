@@ -6,9 +6,13 @@
   "required": ["inputPath"],
   "properties": {
     "inputPath": {
-      "type": "string",
-      "description": "InputPath is the path to the directory containing KCL files (*.k) to execute, or path to a single .k file.",
-      "minLength": 1
+      "type": "array",
+      "description": "InputPath are paths to directories containing KCL files (*.k) to execute, or paths to individual .k files.",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1
     },
     "outputPath": {
       "type": "string",

@@ -396,8 +396,8 @@ type Helm struct {
 }
 
 type KCLRunConfig struct {
-	// The path to the KCL file or directory to execute.
-	InputPath string `json:"inputPath"`
+	// The paths to KCL files or directories to execute.
+	InputPath []string `json:"inputPath"`
 	// The path where the KCL output should be written. If not specified, output will be
 	// returned in the step result.
 	OutputPath string `json:"outputPath,omitempty"`

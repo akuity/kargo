@@ -14,7 +14,7 @@ configuration files, manifests, or other YAML/JSON output from KCL programs.
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `inputPath` | `string` | Y | Path to the directory containing KCL files (*.k) to execute, or path to a single KCL file. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. When a directory is specified, all .k files in the directory will be processed. |
+| `inputPath` | `[]string` | Y | List of paths to directories containing KCL files (*.k) to execute, or paths to individual KCL files. These paths are relative to the temporary workspace that Kargo provisions for use by the promotion process. When a directory is specified, all .k files in the directory will be processed. |
 | `outputPath` | `string` | N | Path where the KCL output should be written. If not specified, output will be returned in the step result. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `settings` | `object` | N | Key-value pairs to pass to the KCL execution as options. |
 | `args` | `[]string` | N | Additional arguments to pass to the KCL execution as key-value pairs. |
@@ -36,7 +36,8 @@ spec:
   steps:
   - uses: kcl-run
     config:
-      inputPath: config/kcl-files
+      inputPath: 
+        - config/kcl-files
       outputPath: manifests/app.yaml
 ```
 
@@ -51,7 +52,26 @@ spec:
   steps:
   - uses: kcl-run
     config:
-      inputPath: config/app.k
+      inputPath: 
+        - config/app.k
+      outputPath: manifests/app.yaml
+```
+
+### With Multiple Input Paths
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Promotion
+metadata:
+  name: my-promotion
+spec:
+  steps:
+  - uses: kcl-run
+    config:
+      inputPath: 
+        - config/base
+        - config/overlays/production
+        - config/additional.k
       outputPath: manifests/app.yaml
 ```
 
@@ -66,7 +86,8 @@ spec:
   steps:
   - uses: kcl-run
     config:
-      inputPath: config/kcl-files
+      inputPath: 
+        - config/kcl-files
       outputPath: manifests/app.yaml
       settings:
         environment: production
@@ -85,7 +106,8 @@ spec:
   steps:
   - uses: kcl-run
     config:
-      inputPath: config/kcl-files
+      inputPath: 
+        - config/kcl-files
       outputPath: manifests/app.yaml
       args:
         - "--strict"
@@ -105,7 +127,8 @@ spec:
   steps:
   - uses: kcl-run
     config:
-      inputPath: config/kcl-files
+      inputPath: 
+        - config/kcl-files
       outputPath: manifests/app.yaml
       valueFiles:
         - config/values.yaml
@@ -123,7 +146,8 @@ spec:
   steps:
   - uses: kcl-run
     config:
-      inputPath: config/kcl-files
+      inputPath: 
+        - config/kcl-files
       outputPath: manifests/app.yaml
       oci:
         registry: ghcr.io

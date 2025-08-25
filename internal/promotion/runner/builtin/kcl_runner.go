@@ -97,29 +97,35 @@ func (k *kclRunner) run(
 	return k.handleOutput(stepCtx.WorkDir, cfg.OutputPath, yamlResult)
 }
 
-func (k *kclRunner) resolveKCLFiles(workDir, inputPath string) ([]string, error) {
-	secureInputPath, err := securejoin.SecureJoin(workDir, inputPath)
-	if err != nil {
-		return nil, fmt.Errorf("could not secure join inputPath %q: %w", inputPath, err)
-	}
+func (k *kclRunner) resolveKCLFiles(workDir string, inputPaths []string) ([]string, error) {
+	var allKclFiles []string
 
-	pathInfo, err := os.Stat(secureInputPath)
-	if err != nil {
-		return nil, fmt.Errorf("input path %q does not exist: %w", inputPath, err)
-	}
-
-	if pathInfo.IsDir() {
-		kclFiles, err := k.findKCLFiles(secureInputPath)
+	for _, inputPath := range inputPaths {
+		secureInputPath, err := securejoin.SecureJoin(workDir, inputPath)
 		if err != nil {
-			return nil, fmt.Errorf("could not find KCL files in directory %q: %w", inputPath, err)
+			return nil, fmt.Errorf("could not secure join inputPath %q: %w", inputPath, err)
 		}
-		if len(kclFiles) == 0 {
-			return nil, fmt.Errorf("no KCL files (*.k) found in directory %q", inputPath)
+
+		pathInfo, err := os.Stat(secureInputPath)
+		if err != nil {
+			return nil, fmt.Errorf("input path %q does not exist: %w", inputPath, err)
 		}
-		return kclFiles, nil
+
+		if pathInfo.IsDir() {
+			kclFiles, err := k.findKCLFiles(secureInputPath)
+			if err != nil {
+				return nil, fmt.Errorf("could not find KCL files in directory %q: %w", inputPath, err)
+			}
+			if len(kclFiles) == 0 {
+				return nil, fmt.Errorf("no KCL files (*.k) found in directory %q", inputPath)
+			}
+			allKclFiles = append(allKclFiles, kclFiles...)
+		} else {
+			allKclFiles = append(allKclFiles, secureInputPath)
+		}
 	}
 
-	return []string{secureInputPath}, nil
+	return allKclFiles, nil
 }
 
 func (k *kclRunner) resolveValueFiles(workDir string, valueFiles []string) ([]string, error) {
@@ -245,7 +251,7 @@ func (k *kclRunner) buildKCLOptions(workDir string, kclFiles []string, cfg built
 func (k *kclRunner) executeKCL(ctx context.Context, opts []kcl.Option, cfg builtin.KCLRunConfig, externalPkgs []*gpyrpc.ExternalPkg, kclFiles []string, workDir string) (string, error) {
 	logger := logging.LoggerFromContext(ctx)
 
-	logger.Debug("executing kcl with options", "inputPath", cfg.InputPath, "args", cfg.Args, "settings", cfg.Settings)
+	logger.Debug("executing kcl with options", "inputPaths", cfg.InputPath, "args", cfg.Args, "settings", cfg.Settings)
 
 	if len(externalPkgs) > 0 {
 		logger.Debug("executing kcl with external packages", "kclFiles", kclFiles, "workDir", workDir, "numExternalPkgs", len(externalPkgs))

@@ -30,7 +30,7 @@ func TestKCLRunner_Run(t *testing.T) {
 		{
 			name: "valid config with input path",
 			config: map[string]any{
-				"inputPath": "test.k",
+				"inputPath": []string{"test.k"},
 			},
 			expectError:  false,
 			expectOutput: true,
@@ -38,7 +38,7 @@ func TestKCLRunner_Run(t *testing.T) {
 		{
 			name: "valid config with input and output paths",
 			config: map[string]any{
-				"inputPath":  "test.k",
+				"inputPath":  []string{"test.k"},
 				"outputPath": "output.yaml",
 			},
 			expectError:  false,
@@ -47,7 +47,7 @@ func TestKCLRunner_Run(t *testing.T) {
 		{
 			name: "valid config with additional args",
 			config: map[string]any{
-				"inputPath": "test.k",
+				"inputPath": []string{"test.k"},
 				"args":      []string{"--strict", "true", "--verbose", "true"},
 			},
 			expectError:  false,
@@ -56,7 +56,7 @@ func TestKCLRunner_Run(t *testing.T) {
 		{
 			name: "valid config with settings",
 			config: map[string]any{
-				"inputPath": "test.k",
+				"inputPath": []string{"test.k"},
 				"settings": map[string]string{
 					"debug":   "true",
 					"verbose": "true",
@@ -68,7 +68,7 @@ func TestKCLRunner_Run(t *testing.T) {
 		{
 			name: "valid config with OCI settings",
 			config: map[string]any{
-				"inputPath": "test.k",
+				"inputPath": []string{"test.k"},
 				"oci": map[string]string{
 					"registry": "ghcr.io",
 					"repo":     "kcl-lang",
@@ -148,7 +148,7 @@ func TestKCLRunner_Run_PathTraversal(t *testing.T) {
 	stepCtx := &promotion.StepContext{
 		WorkDir: "/tmp",
 		Config: map[string]any{
-			"inputPath": "../../etc/passwd",
+			"inputPath": []string{"../../etc/passwd"},
 		},
 	}
 
@@ -191,7 +191,7 @@ config = {
 	stepCtx := &promotion.StepContext{
 		WorkDir: tempDir,
 		Config: map[string]any{
-			"inputPath":  "app.k",
+			"inputPath":  []string{"app.k"},
 			"outputPath": "output/app.yaml",
 		},
 	}
@@ -233,14 +233,14 @@ func TestKCLRunner_resolveKCLFiles(t *testing.T) {
 	require.NoError(t, os.WriteFile(txtFile, []byte("readme"), 0644))
 
 	t.Run("single file", func(t *testing.T) {
-		files, err := runner.resolveKCLFiles(tempDir, "app.k")
+		files, err := runner.resolveKCLFiles(tempDir, []string{"app.k"})
 		require.NoError(t, err)
 		require.Len(t, files, 1)
 		require.Equal(t, kclFile1, files[0])
 	})
 
 	t.Run("directory with KCL files", func(t *testing.T) {
-		files, err := runner.resolveKCLFiles(tempDir, ".")
+		files, err := runner.resolveKCLFiles(tempDir, []string{"."})
 		require.NoError(t, err)
 		require.Len(t, files, 2)
 		require.Contains(t, files, kclFile1)
@@ -248,7 +248,7 @@ func TestKCLRunner_resolveKCLFiles(t *testing.T) {
 	})
 
 	t.Run("non-existent file", func(t *testing.T) {
-		_, err := runner.resolveKCLFiles(tempDir, "nonexistent.k")
+		_, err := runner.resolveKCLFiles(tempDir, []string{"nonexistent.k"})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "does not exist")
 	})
@@ -257,18 +257,34 @@ func TestKCLRunner_resolveKCLFiles(t *testing.T) {
 		emptyDir := filepath.Join(tempDir, "empty")
 		require.NoError(t, os.Mkdir(emptyDir, 0755))
 
-		_, err := runner.resolveKCLFiles(tempDir, "empty")
+		_, err := runner.resolveKCLFiles(tempDir, []string{"empty"})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "no KCL files (*.k) found")
 	})
 
 	t.Run("path traversal protection", func(t *testing.T) {
-		_, err := runner.resolveKCLFiles(tempDir, "../../../etc/passwd")
+		_, err := runner.resolveKCLFiles(tempDir, []string{"../../../etc/passwd"})
 		require.Error(t, err)
 		require.True(t,
 			strings.Contains(err.Error(), "could not secure join") ||
 				strings.Contains(err.Error(), "does not exist"),
 		)
+	})
+
+	t.Run("multiple input paths", func(t *testing.T) {
+		// Create subdirectory with additional KCL files
+		subDir := filepath.Join(tempDir, "subdir")
+		require.NoError(t, os.Mkdir(subDir, 0755))
+		
+		kclFile3 := filepath.Join(subDir, "extra.k")
+		require.NoError(t, os.WriteFile(kclFile3, []byte("extra = \"test\""), 0644))
+
+		files, err := runner.resolveKCLFiles(tempDir, []string{"app.k", "subdir", "config.k"})
+		require.NoError(t, err)
+		require.Len(t, files, 3)
+		require.Contains(t, files, kclFile1) // app.k
+		require.Contains(t, files, kclFile2) // config.k
+		require.Contains(t, files, kclFile3) // subdir/extra.k
 	})
 }
 
@@ -283,7 +299,7 @@ func TestKCLRunner_buildKCLOptions(t *testing.T) {
 
 	t.Run("basic options", func(t *testing.T) {
 		cfg := builtin.KCLRunConfig{
-			InputPath: "app.k",
+			InputPath: []string{"app.k"},
 		}
 
 		opts, err := runner.buildKCLOptions(tempDir, kclFiles, cfg, nil)
@@ -293,7 +309,7 @@ func TestKCLRunner_buildKCLOptions(t *testing.T) {
 
 	t.Run("with settings", func(t *testing.T) {
 		cfg := builtin.KCLRunConfig{
-			InputPath: "app.k",
+			InputPath: []string{"app.k"},
 			Settings: map[string]string{
 				"debug":   "true",
 				"verbose": "1",
@@ -307,7 +323,7 @@ func TestKCLRunner_buildKCLOptions(t *testing.T) {
 
 	t.Run("with args", func(t *testing.T) {
 		cfg := builtin.KCLRunConfig{
-			InputPath: "app.k",
+			InputPath: []string{"app.k"},
 			Args:      []string{"--strict", "true"},
 		}
 
@@ -318,7 +334,7 @@ func TestKCLRunner_buildKCLOptions(t *testing.T) {
 
 	t.Run("with both settings and args", func(t *testing.T) {
 		cfg := builtin.KCLRunConfig{
-			InputPath: "app.k",
+			InputPath: []string{"app.k"},
 			Settings: map[string]string{
 				"debug": "true",
 			},
@@ -332,7 +348,7 @@ func TestKCLRunner_buildKCLOptions(t *testing.T) {
 
 	t.Run("with OCI config", func(t *testing.T) {
 		cfg := builtin.KCLRunConfig{
-			InputPath: "app.k",
+			InputPath: []string{"app.k"},
 			OCI: &builtin.KCLOCIConfig{
 				Registry: "custom-registry.io",
 				Repo:     "my-org",
@@ -346,7 +362,7 @@ func TestKCLRunner_buildKCLOptions(t *testing.T) {
 
 	t.Run("with OCI config using defaults", func(t *testing.T) {
 		cfg := builtin.KCLRunConfig{
-			InputPath: "app.k",
+			InputPath: []string{"app.k"},
 			OCI:       &builtin.KCLOCIConfig{},
 		}
 
@@ -357,7 +373,7 @@ func TestKCLRunner_buildKCLOptions(t *testing.T) {
 
 	t.Run("with partial OCI config", func(t *testing.T) {
 		cfg := builtin.KCLRunConfig{
-			InputPath: "app.k",
+			InputPath: []string{"app.k"},
 			OCI: &builtin.KCLOCIConfig{
 				Registry: "custom-registry.io",
 			},
@@ -381,7 +397,7 @@ image:
 		require.NoError(t, os.WriteFile(valueFile, []byte(valuesYAML), 0644))
 
 		cfg := builtin.KCLRunConfig{
-			InputPath:  "app.k",
+			InputPath:  []string{"app.k"},
 			ValueFiles: []string{"values.yaml"},
 		}
 
@@ -416,7 +432,7 @@ config = {
 			kcl.WithWorkDir(tempDir),
 		}
 
-		cfg := builtin.KCLRunConfig{InputPath: "test.k"}
+		cfg := builtin.KCLRunConfig{InputPath: []string{"test.k"}}
 
 		result, err := runner.executeKCL(context.Background(), opts, cfg, nil, []string{kclFile}, tempDir)
 		require.NoError(t, err)
@@ -435,7 +451,7 @@ config = {
 			kcl.WithWorkDir(tempDir),
 		}
 
-		cfg := builtin.KCLRunConfig{InputPath: "invalid.k"}
+		cfg := builtin.KCLRunConfig{InputPath: []string{"invalid.k"}}
 
 		_, err := runner.executeKCL(context.Background(), opts, cfg, nil, []string{invalidFile}, tempDir)
 		require.Error(t, err)
@@ -574,7 +590,7 @@ k8s = { oci = "oci://ghcr.io/kcl-lang/k8s", tag = "1.32.4" }`
 		stepCtx := &promotion.StepContext{
 			WorkDir: tempDir,
 			Config: map[string]any{
-				"inputPath": "deployment.k",
+				"inputPath": []string{"deployment.k"},
 				"oci": map[string]string{
 					"registry": "ghcr.io",
 					"repo":     "kcl-lang",
@@ -604,7 +620,7 @@ k8s = { oci = "oci://ghcr.io/kcl-lang/k8s", tag = "1.32.4" }`
 		stepCtx := &promotion.StepContext{
 			WorkDir: tempDir,
 			Config: map[string]any{
-				"inputPath": "deployment.k",
+				"inputPath": []string{"deployment.k"},
 				"oci": map[string]string{
 					"registry": "artifacts.rbi.tech/ghcr-io-docker-proxy",
 					"repo":     "kcl-lang",
@@ -631,7 +647,7 @@ k8s = { oci = "oci://ghcr.io/kcl-lang/k8s", tag = "1.32.4" }`
 		stepCtx := &promotion.StepContext{
 			WorkDir: tempDir,
 			Config: map[string]any{
-				"inputPath":  "deployment.k",
+				"inputPath":  []string{"deployment.k"},
 				"outputPath": outputPath,
 				"oci": map[string]string{
 					"registry": "ghcr.io",
@@ -746,7 +762,7 @@ replicas: 3
 	stepCtx := &promotion.StepContext{
 		WorkDir: tempDir,
 		Config: map[string]any{
-			"inputPath":  "app.k",
+			"inputPath":  []string{"app.k"},
 			"valueFiles": []string{"values.yaml"},
 		},
 	}
