@@ -33,11 +33,9 @@ export const ProtectedRoute = () => {
       */}
       <PromotionDirectivesRegistryContextProvider>
         <div ref={modalRef}>
-          {modalRoot && (
-            <ModalContextProvider container={modalRoot}>
-              <Outlet />
-            </ModalContextProvider>
-          )}
+          <ModalContextProvider container={modalRoot}>
+            <Outlet />
+          </ModalContextProvider>
         </div>
       </PromotionDirectivesRegistryContextProvider>
     </TransportProvider>

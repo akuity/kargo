@@ -1,7 +1,7 @@
 import { faQuestionCircle } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Radio, Table } from 'antd';
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 
 import { DiscoveredImageReference } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
@@ -20,6 +20,26 @@ export const ImageTable = ({
   show?: boolean;
 }) => {
   const [page, setPage] = useState(1);
+  const pageSize = 10;
+  const lastSelectedTagRef = useRef<string | undefined>(undefined);
+
+  useLayoutEffect(() => {
+    if (!selected) {
+      setPage(1);
+      lastSelectedTagRef.current = undefined;
+      return;
+    }
+    const key = selected?.tag;
+    if (lastSelectedTagRef.current === key) {
+      return;
+    }
+    lastSelectedTagRef.current = key;
+    const idx = references.findIndex((r) => r?.tag === key);
+    if (idx >= 0) {
+      const nextPage = Math.floor(idx / pageSize) + 1;
+      if (nextPage !== page) setPage(nextPage);
+    }
+  }, [selected, references]);
 
   if (!show) {
     return null;
@@ -28,13 +48,13 @@ export const ImageTable = ({
   return (
     <Table
       dataSource={references}
-      pagination={{ current: page, onChange: (page) => setPage(page) }}
+      pagination={{ current: page, onChange: (page) => setPage(page), pageSize }}
       columns={[
         {
           render: (record: DiscoveredImageReference) => (
             <Radio
               checked={selected?.tag === record?.tag}
-              onClick={() => select(selected === record ? undefined : record)}
+              onClick={() => select(selected?.tag === record?.tag ? undefined : record)}
             />
           )
         },
