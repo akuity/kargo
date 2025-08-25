@@ -122,7 +122,7 @@ rm "${proj_dir}/docs/docs/90-api-documentation.md" || true
 
 protoc -I $temp_doc_dir \
 	--doc_out="${proj_dir}/docs/docs" \
-	--doc_opt=$temp_doc_dir/api-docs.templ,90-api-documentation.md:k8s.io \
+	--doc_opt=$temp_doc_dir/api-docs.templ,90-api-documentation.md:k8s.io,api/stubs/rollouts \
     "api/service/v1alpha1/service.proto" \
     "api/rbac/v1alpha1/generated.proto" \
     "api/v1alpha1/generated.proto" \
