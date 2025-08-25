@@ -22,14 +22,10 @@
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-AbortPromotionResponse"></a>
 
 ### AbortPromotionResponse
 explicitly empty
-
-
 
 
 <a name="akuity-io-kargo-service-v1alpha1-AbortVerificationRequest"></a>
@@ -44,14 +40,10 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-AbortVerificationResponse"></a>
 
 ### AbortVerificationResponse
 explicitly empty
-
-
 
 
 <a name="akuity-io-kargo-service-v1alpha1-AdminLoginRequest"></a>
@@ -65,8 +57,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-AdminLoginResponse"></a>
 
 ### AdminLoginResponse
@@ -74,8 +64,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | id_token | [string](#string) |   |
-
-
 
 
 
@@ -94,14 +82,10 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-ApproveFreightResponse"></a>
 
 ### ApproveFreightResponse
 explicitly empty
-
-
 
 
 <a name="akuity-io-kargo-service-v1alpha1-ArgoCDShard"></a>
@@ -116,8 +100,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-Claims"></a>
 
 ### Claims
@@ -125,8 +107,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | claims | [github.com.akuity.kargo.api.rbac.v1alpha1.Claim](#github-com-akuity-kargo-api-rbac-v1alpha1-Claim) |  Note: oneof and repeated do not work together |
-
-
 
 
 
@@ -143,8 +123,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-CreateClusterSecretRequest"></a>
 
 ### CreateClusterSecretRequest
@@ -153,8 +131,6 @@ explicitly empty
 | ----- | ---- | ----------- |
 | name | [string](#string) |   |
 | data | [CreateClusterSecretRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-CreateClusterSecretRequest-DataEntry) |   |
-
-
 
 
 
@@ -171,8 +147,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-CreateClusterSecretResponse"></a>
 
 ### CreateClusterSecretResponse
@@ -180,8 +154,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | secret | k8s.io.api.core.v1.Secret |   |
-
-
 
 
 
@@ -204,8 +176,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-CreateCredentialsResponse"></a>
 
 ### CreateCredentialsResponse
@@ -213,8 +183,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | credentials | k8s.io.api.core.v1.Secret |   |
-
-
 
 
 
@@ -230,8 +198,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-CreateOrUpdateResourceResponse"></a>
 
 ### CreateOrUpdateResourceResponse
@@ -239,8 +205,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | results | [CreateOrUpdateResourceResult](#akuity-io-kargo-service-v1alpha1-CreateOrUpdateResourceResult) |   |
-
-
 
 
 
@@ -254,8 +218,6 @@ explicitly empty
 | created_resource_manifest | [bytes](#bytes) |   |
 | updated_resource_manifest | [bytes](#bytes) |   |
 | error | [string](#string) |   |
-
-
 
 
 
@@ -274,8 +236,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-CreateProjectSecretRequest-DataEntry"></a>
 
 ### CreateProjectSecretRequest.DataEntry
@@ -284,8 +244,6 @@ explicitly empty
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
 | value | [string](#string) |   |
-
-
 
 
 
@@ -301,8 +259,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-CreateResourceRequest"></a>
 
 ### CreateResourceRequest
@@ -314,8 +270,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-CreateResourceResponse"></a>
 
 ### CreateResourceResponse
@@ -323,8 +277,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | results | [CreateResourceResult](#akuity-io-kargo-service-v1alpha1-CreateResourceResult) |   |
-
-
 
 
 
@@ -341,8 +293,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-CreateRoleRequest"></a>
 
 ### CreateRoleRequest
@@ -354,8 +304,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-CreateRoleResponse"></a>
 
 ### CreateRoleResponse
@@ -363,8 +311,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | role | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |   |
-
-
 
 
 
@@ -381,14 +327,10 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-DeleteAnalysisTemplateResponse"></a>
 
 ### DeleteAnalysisTemplateResponse
 explicitly empty
-
-
 
 
 <a name="akuity-io-kargo-service-v1alpha1-DeleteClusterAnalysisTemplateRequest"></a>
@@ -402,14 +344,10 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-DeleteClusterAnalysisTemplateResponse"></a>
 
 ### DeleteClusterAnalysisTemplateResponse
 explicitly empty
-
-
 
 
 <a name="akuity-io-kargo-service-v1alpha1-DeleteClusterConfigRequest"></a>
@@ -418,14 +356,10 @@ explicitly empty
 explicitly empty
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-DeleteClusterConfigResponse"></a>
 
 ### DeleteClusterConfigResponse
 explicitly empty
-
-
 
 
 <a name="akuity-io-kargo-service-v1alpha1-DeleteClusterSecretRequest"></a>
@@ -439,14 +373,10 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-DeleteClusterSecretResponse"></a>
 
 ### DeleteClusterSecretResponse
 explicitly empty
-
-
 
 
 <a name="akuity-io-kargo-service-v1alpha1-DeleteCredentialsRequest"></a>
@@ -461,14 +391,10 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-DeleteCredentialsResponse"></a>
 
 ### DeleteCredentialsResponse
 explicitly empty
-
-
 
 
 <a name="akuity-io-kargo-service-v1alpha1-DeleteFreightRequest"></a>
@@ -484,14 +410,10 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-DeleteFreightResponse"></a>
 
 ### DeleteFreightResponse
 explicitly empty
-
-
 
 
 <a name="akuity-io-kargo-service-v1alpha1-DeleteProjectConfigRequest"></a>
@@ -505,14 +427,10 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-DeleteProjectConfigResponse"></a>
 
 ### DeleteProjectConfigResponse
 explicitly empty
-
-
 
 
 <a name="akuity-io-kargo-service-v1alpha1-DeleteProjectRequest"></a>
@@ -526,14 +444,10 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-DeleteProjectResponse"></a>
 
 ### DeleteProjectResponse
 explicitly empty
-
-
 
 
 <a name="akuity-io-kargo-service-v1alpha1-DeleteProjectSecretRequest"></a>
@@ -548,14 +462,10 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-DeleteProjectSecretResponse"></a>
 
 ### DeleteProjectSecretResponse
 explicitly empty
-
-
 
 
 <a name="akuity-io-kargo-service-v1alpha1-DeleteResourceRequest"></a>
@@ -569,8 +479,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-DeleteResourceResponse"></a>
 
 ### DeleteResourceResponse
@@ -578,8 +486,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | results | [DeleteResourceResult](#akuity-io-kargo-service-v1alpha1-DeleteResourceResult) |   |
-
-
 
 
 
@@ -596,8 +502,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-DeleteRoleRequest"></a>
 
 ### DeleteRoleRequest
@@ -610,14 +514,10 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-DeleteRoleResponse"></a>
 
 ### DeleteRoleResponse
 explicitly empty
-
-
 
 
 <a name="akuity-io-kargo-service-v1alpha1-DeleteStageRequest"></a>
@@ -632,14 +532,10 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-DeleteStageResponse"></a>
 
 ### DeleteStageResponse
 explicitly empty
-
-
 
 
 <a name="akuity-io-kargo-service-v1alpha1-DeleteWarehouseRequest"></a>
@@ -654,14 +550,10 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-DeleteWarehouseResponse"></a>
 
 ### DeleteWarehouseResponse
 explicitly empty
-
-
 
 
 <a name="akuity-io-kargo-service-v1alpha1-FreightList"></a>
@@ -671,8 +563,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | freight | [github.com.akuity.kargo.api.v1alpha1.Freight](#github-com-akuity-kargo-api-v1alpha1-Freight) |   |
-
-
 
 
 
@@ -691,8 +581,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-GetAnalysisRunLogsResponse"></a>
 
 ### GetAnalysisRunLogsResponse
@@ -700,8 +588,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | chunk | [string](#string) |   |
-
-
 
 
 
@@ -719,8 +605,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-GetAnalysisRunResponse"></a>
 
 ### GetAnalysisRunResponse
@@ -729,8 +613,6 @@ explicitly empty
 | ----- | ---- | ----------- |
 | analysis_run | [github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisRun](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-AnalysisRun) |   |
 | raw | [bytes](#bytes) |   |
-
-
 
 
 
@@ -748,8 +630,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-GetAnalysisTemplateResponse"></a>
 
 ### GetAnalysisTemplateResponse
@@ -758,8 +638,6 @@ explicitly empty
 | ----- | ---- | ----------- |
 | analysis_template | [github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisTemplate](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-AnalysisTemplate) |   |
 | raw | [bytes](#bytes) |   |
-
-
 
 
 
@@ -776,8 +654,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-GetClusterAnalysisTemplateResponse"></a>
 
 ### GetClusterAnalysisTemplateResponse
@@ -790,8 +666,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-GetClusterConfigRequest"></a>
 
 ### GetClusterConfigRequest
@@ -799,8 +673,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |   |
-
-
 
 
 
@@ -817,8 +689,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-GetClusterPromotionTaskRequest"></a>
 
 ### GetClusterPromotionTaskRequest
@@ -831,8 +701,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-GetClusterPromotionTaskResponse"></a>
 
 ### GetClusterPromotionTaskResponse
@@ -841,8 +709,6 @@ explicitly empty
 | ----- | ---- | ----------- |
 | promotion_task | [github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask](#github-com-akuity-kargo-api-v1alpha1-ClusterPromotionTask) |   |
 | raw | [bytes](#bytes) |   |
-
-
 
 
 
@@ -860,8 +726,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-GetConfigMapResponse"></a>
 
 ### GetConfigMapResponse
@@ -874,13 +738,9 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-GetConfigRequest"></a>
 
 ### GetConfigRequest
-
-
 
 
 
@@ -897,8 +757,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-GetConfigResponse-ArgocdShardsEntry"></a>
 
 ### GetConfigResponse.ArgocdShardsEntry
@@ -907,8 +765,6 @@ explicitly empty
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
 | value | [ArgoCDShard](#akuity-io-kargo-service-v1alpha1-ArgoCDShard) |   |
-
-
 
 
 
@@ -926,8 +782,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-GetCredentialsResponse"></a>
 
 ### GetCredentialsResponse
@@ -936,8 +790,6 @@ explicitly empty
 | ----- | ---- | ----------- |
 | credentials | k8s.io.api.core.v1.Secret |   |
 | raw | [bytes](#bytes) |   |
-
-
 
 
 
@@ -956,8 +808,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-GetFreightResponse"></a>
 
 ### GetFreightResponse
@@ -966,8 +816,6 @@ explicitly empty
 | ----- | ---- | ----------- |
 | freight | [github.com.akuity.kargo.api.v1alpha1.Freight](#github-com-akuity-kargo-api-v1alpha1-Freight) |   |
 | raw | [bytes](#bytes) |   |
-
-
 
 
 
@@ -984,8 +832,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-GetProjectConfigResponse"></a>
 
 ### GetProjectConfigResponse
@@ -994,8 +840,6 @@ explicitly empty
 | ----- | ---- | ----------- |
 | project_config | [github.com.akuity.kargo.api.v1alpha1.ProjectConfig](#github-com-akuity-kargo-api-v1alpha1-ProjectConfig) |   |
 | raw | [bytes](#bytes) |   |
-
-
 
 
 
@@ -1012,8 +856,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-GetProjectResponse"></a>
 
 ### GetProjectResponse
@@ -1022,8 +864,6 @@ explicitly empty
 | ----- | ---- | ----------- |
 | project | [github.com.akuity.kargo.api.v1alpha1.Project](#github-com-akuity-kargo-api-v1alpha1-Project) |   |
 | raw | [bytes](#bytes) |   |
-
-
 
 
 
@@ -1041,8 +881,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-GetPromotionResponse"></a>
 
 ### GetPromotionResponse
@@ -1051,8 +889,6 @@ explicitly empty
 | ----- | ---- | ----------- |
 | promotion | [github.com.akuity.kargo.api.v1alpha1.Promotion](#github-com-akuity-kargo-api-v1alpha1-Promotion) |   |
 | raw | [bytes](#bytes) |   |
-
-
 
 
 
@@ -1070,8 +906,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-GetPromotionTaskResponse"></a>
 
 ### GetPromotionTaskResponse
@@ -1084,13 +918,9 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-GetPublicConfigRequest"></a>
 
 ### GetPublicConfigRequest
-
-
 
 
 
@@ -1103,8 +933,6 @@ explicitly empty
 | oidc_config | [OIDCConfig](#akuity-io-kargo-service-v1alpha1-OIDCConfig) |   |
 | admin_account_enabled | [bool](#bool) |   |
 | skip_auth | [bool](#bool) |   |
-
-
 
 
 
@@ -1123,8 +951,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-GetRoleResponse"></a>
 
 ### GetRoleResponse
@@ -1134,8 +960,6 @@ explicitly empty
 | role | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |   |
 | resources | [github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources](#github-com-akuity-kargo-api-rbac-v1alpha1-RoleResources) |   |
 | raw | [bytes](#bytes) |   |
-
-
 
 
 
@@ -1153,8 +977,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-GetStageResponse"></a>
 
 ### GetStageResponse
@@ -1167,13 +989,9 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-GetVersionInfoRequest"></a>
 
 ### GetVersionInfoRequest
-
-
 
 
 
@@ -1184,8 +1002,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | version_info | [VersionInfo](#akuity-io-kargo-service-v1alpha1-VersionInfo) |   |
-
-
 
 
 
@@ -1203,8 +1019,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-GetWarehouseResponse"></a>
 
 ### GetWarehouseResponse
@@ -1213,8 +1027,6 @@ explicitly empty
 | ----- | ---- | ----------- |
 | warehouse | [github.com.akuity.kargo.api.v1alpha1.Warehouse](#github-com-akuity-kargo-api-v1alpha1-Warehouse) |   |
 | raw | [bytes](#bytes) |   |
-
-
 
 
 
@@ -1233,8 +1045,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-GrantResponse"></a>
 
 ### GrantResponse
@@ -1246,8 +1056,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-ImageStageMap"></a>
 
 ### ImageStageMap
@@ -1255,8 +1063,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | stages | [ImageStageMap.StagesEntry](#akuity-io-kargo-service-v1alpha1-ImageStageMap-StagesEntry) |  stages maps stage names to the order which an image was promoted to that stage |
-
-
 
 
 
@@ -1273,8 +1079,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-ListAnalysisTemplatesRequest"></a>
 
 ### ListAnalysisTemplatesRequest
@@ -1282,8 +1086,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | project | [string](#string) |   |
-
-
 
 
 
@@ -1299,13 +1101,9 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-ListClusterAnalysisTemplatesRequest"></a>
 
 ### ListClusterAnalysisTemplatesRequest
-
-
 
 
 
@@ -1320,13 +1118,9 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-ListClusterPromotionTasksRequest"></a>
 
 ### ListClusterPromotionTasksRequest
-
-
 
 
 
@@ -1341,14 +1135,10 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-ListClusterSecretsRequest"></a>
 
 ### ListClusterSecretsRequest
 explicitly empty
-
-
 
 
 <a name="akuity-io-kargo-service-v1alpha1-ListClusterSecretsResponse"></a>
@@ -1358,8 +1148,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | secrets | k8s.io.api.core.v1.Secret |   |
-
-
 
 
 
@@ -1375,8 +1163,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-ListConfigMapsResponse"></a>
 
 ### ListConfigMapsResponse
@@ -1384,8 +1170,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | config_maps | k8s.io.api.core.v1.ConfigMap |   |
-
-
 
 
 
@@ -1401,8 +1185,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-ListCredentialsResponse"></a>
 
 ### ListCredentialsResponse
@@ -1410,8 +1192,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | credentials | k8s.io.api.core.v1.Secret |   |
-
-
 
 
 
@@ -1427,8 +1207,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-ListImagesResponse"></a>
 
 ### ListImagesResponse
@@ -1436,8 +1214,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | images | [ListImagesResponse.ImagesEntry](#akuity-io-kargo-service-v1alpha1-ListImagesResponse-ImagesEntry) |  images maps image repository names to their tags |
-
-
 
 
 
@@ -1454,8 +1230,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-ListProjectEventsRequest"></a>
 
 ### ListProjectEventsRequest
@@ -1463,8 +1237,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | project | [string](#string) |   |
-
-
 
 
 
@@ -1480,8 +1252,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-ListProjectSecretsRequest"></a>
 
 ### ListProjectSecretsRequest
@@ -1493,8 +1263,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-ListProjectSecretsResponse"></a>
 
 ### ListProjectSecretsResponse
@@ -1502,8 +1270,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | secrets | k8s.io.api.core.v1.Secret |   |
-
-
 
 
 
@@ -1521,8 +1287,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-ListProjectsResponse"></a>
 
 ### ListProjectsResponse
@@ -1531,8 +1295,6 @@ explicitly empty
 | ----- | ---- | ----------- |
 | projects | [github.com.akuity.kargo.api.v1alpha1.Project](#github-com-akuity-kargo-api-v1alpha1-Project) |   |
 | total | [int32](#int32) |   |
-
-
 
 
 
@@ -1548,8 +1310,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-ListPromotionTasksResponse"></a>
 
 ### ListPromotionTasksResponse
@@ -1557,8 +1317,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | promotion_tasks | [github.com.akuity.kargo.api.v1alpha1.PromotionTask](#github-com-akuity-kargo-api-v1alpha1-PromotionTask) |   |
-
-
 
 
 
@@ -1575,8 +1333,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-ListPromotionsResponse"></a>
 
 ### ListPromotionsResponse
@@ -1584,8 +1340,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | promotions | [github.com.akuity.kargo.api.v1alpha1.Promotion](#github-com-akuity-kargo-api-v1alpha1-Promotion) |   |
-
-
 
 
 
@@ -1602,8 +1356,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-ListRolesResponse"></a>
 
 ### ListRolesResponse
@@ -1612,8 +1364,6 @@ explicitly empty
 | ----- | ---- | ----------- |
 | roles | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |  Note: oneof and repeated do not work together |
 | resources | [github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources](#github-com-akuity-kargo-api-rbac-v1alpha1-RoleResources) |   |
-
-
 
 
 
@@ -1629,8 +1379,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-ListStagesResponse"></a>
 
 ### ListStagesResponse
@@ -1638,8 +1386,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | stages | [github.com.akuity.kargo.api.v1alpha1.Stage](#github-com-akuity-kargo-api-v1alpha1-Stage) |   |
-
-
 
 
 
@@ -1655,8 +1401,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-ListWarehousesResponse"></a>
 
 ### ListWarehousesResponse
@@ -1664,8 +1408,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | warehouses | [github.com.akuity.kargo.api.v1alpha1.Warehouse](#github-com-akuity-kargo-api-v1alpha1-Warehouse) |   |
-
-
 
 
 
@@ -1684,8 +1426,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-PromoteDownstreamRequest"></a>
 
 ### PromoteDownstreamRequest
@@ -1700,8 +1440,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-PromoteDownstreamResponse"></a>
 
 ### PromoteDownstreamResponse
@@ -1709,8 +1447,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | promotions | [github.com.akuity.kargo.api.v1alpha1.Promotion](#github-com-akuity-kargo-api-v1alpha1-Promotion) |   |
-
-
 
 
 
@@ -1729,8 +1465,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-PromoteToStageResponse"></a>
 
 ### PromoteToStageResponse
@@ -1738,8 +1472,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | promotion | [github.com.akuity.kargo.api.v1alpha1.Promotion](#github-com-akuity-kargo-api-v1alpha1-Promotion) |   |
-
-
 
 
 
@@ -1761,8 +1493,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-QueryFreightResponse"></a>
 
 ### QueryFreightResponse
@@ -1770,8 +1500,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | groups | [QueryFreightResponse.GroupsEntry](#akuity-io-kargo-service-v1alpha1-QueryFreightResponse-GroupsEntry) |   |
-
-
 
 
 
@@ -1788,14 +1516,10 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-RefreshClusterConfigRequest"></a>
 
 ### RefreshClusterConfigRequest
 explicitly empty
-
-
 
 
 <a name="akuity-io-kargo-service-v1alpha1-RefreshClusterConfigResponse"></a>
@@ -1805,8 +1529,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | cluster_config | [github.com.akuity.kargo.api.v1alpha1.ClusterConfig](#github-com-akuity-kargo-api-v1alpha1-ClusterConfig) |   |
-
-
 
 
 
@@ -1822,8 +1544,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-RefreshProjectConfigResponse"></a>
 
 ### RefreshProjectConfigResponse
@@ -1831,8 +1551,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | project_config | [github.com.akuity.kargo.api.v1alpha1.ProjectConfig](#github-com-akuity-kargo-api-v1alpha1-ProjectConfig) |   |
-
-
 
 
 
@@ -1849,8 +1567,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-RefreshStageResponse"></a>
 
 ### RefreshStageResponse
@@ -1858,8 +1574,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | stage | [github.com.akuity.kargo.api.v1alpha1.Stage](#github-com-akuity-kargo-api-v1alpha1-Stage) |   |
-
-
 
 
 
@@ -1876,8 +1590,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-RefreshWarehouseResponse"></a>
 
 ### RefreshWarehouseResponse
@@ -1885,8 +1597,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | warehouse | [github.com.akuity.kargo.api.v1alpha1.Warehouse](#github-com-akuity-kargo-api-v1alpha1-Warehouse) |   |
-
-
 
 
 
@@ -1903,14 +1613,10 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-ReverifyResponse"></a>
 
 ### ReverifyResponse
 explicitly empty
-
-
 
 
 <a name="akuity-io-kargo-service-v1alpha1-RevokeRequest"></a>
@@ -1927,8 +1633,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-RevokeResponse"></a>
 
 ### RevokeResponse
@@ -1940,8 +1644,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-TagMap"></a>
 
 ### TagMap
@@ -1949,8 +1651,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | tags | [TagMap.TagsEntry](#akuity-io-kargo-service-v1alpha1-TagMap-TagsEntry) |  tags maps image tag names to stages which have previously used that tag |
-
-
 
 
 
@@ -1967,8 +1667,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-UpdateClusterSecretRequest"></a>
 
 ### UpdateClusterSecretRequest
@@ -1977,8 +1675,6 @@ explicitly empty
 | ----- | ---- | ----------- |
 | name | [string](#string) |   |
 | data | [UpdateClusterSecretRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-UpdateClusterSecretRequest-DataEntry) |   |
-
-
 
 
 
@@ -1995,8 +1691,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-UpdateClusterSecretResponse"></a>
 
 ### UpdateClusterSecretResponse
@@ -2004,8 +1698,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | secret | k8s.io.api.core.v1.Secret |   |
-
-
 
 
 
@@ -2028,8 +1720,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-UpdateCredentialsResponse"></a>
 
 ### UpdateCredentialsResponse
@@ -2037,8 +1727,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | credentials | k8s.io.api.core.v1.Secret |   |
-
-
 
 
 
@@ -2057,14 +1745,10 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-UpdateFreightAliasResponse"></a>
 
 ### UpdateFreightAliasResponse
 explicitly empty
-
-
 
 
 <a name="akuity-io-kargo-service-v1alpha1-UpdateProjectSecretRequest"></a>
@@ -2081,8 +1765,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-UpdateProjectSecretRequest-DataEntry"></a>
 
 ### UpdateProjectSecretRequest.DataEntry
@@ -2091,8 +1773,6 @@ explicitly empty
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
 | value | [string](#string) |   |
-
-
 
 
 
@@ -2108,8 +1788,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-UpdateResourceRequest"></a>
 
 ### UpdateResourceRequest
@@ -2121,8 +1799,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-UpdateResourceResponse"></a>
 
 ### UpdateResourceResponse
@@ -2130,8 +1806,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | results | [UpdateResourceResult](#akuity-io-kargo-service-v1alpha1-UpdateResourceResult) |   |
-
-
 
 
 
@@ -2148,8 +1822,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-UpdateRoleRequest"></a>
 
 ### UpdateRoleRequest
@@ -2161,8 +1833,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-UpdateRoleResponse"></a>
 
 ### UpdateRoleResponse
@@ -2170,8 +1840,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | role | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |   |
-
-
 
 
 
@@ -2193,14 +1861,10 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-WatchClusterConfigRequest"></a>
 
 ### WatchClusterConfigRequest
 explicitly empty
-
-
 
 
 <a name="akuity-io-kargo-service-v1alpha1-WatchClusterConfigResponse"></a>
@@ -2215,8 +1879,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-WatchFreightRequest"></a>
 
 ### WatchFreightRequest
@@ -2224,8 +1886,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | project | [string](#string) |   |
-
-
 
 
 
@@ -2242,8 +1902,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-WatchProjectConfigRequest"></a>
 
 ### WatchProjectConfigRequest
@@ -2251,8 +1909,6 @@ explicitly empty
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | project | [string](#string) |   |
-
-
 
 
 
@@ -2269,8 +1925,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-WatchPromotionRequest"></a>
 
 ### WatchPromotionRequest
@@ -2279,8 +1933,6 @@ explicitly empty
 | ----- | ---- | ----------- |
 | project | [string](#string) |   |
 | name | [string](#string) |   |
-
-
 
 
 
@@ -2297,8 +1949,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-WatchPromotionsRequest"></a>
 
 ### WatchPromotionsRequest
@@ -2307,8 +1957,6 @@ explicitly empty
 | ----- | ---- | ----------- |
 | project | [string](#string) |   |
 | stage | [string](#string) |   |
-
-
 
 
 
@@ -2325,8 +1973,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-WatchStagesRequest"></a>
 
 ### WatchStagesRequest
@@ -2335,8 +1981,6 @@ explicitly empty
 | ----- | ---- | ----------- |
 | project | [string](#string) |   |
 | name | [string](#string) |   |
-
-
 
 
 
@@ -2353,8 +1997,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-WatchWarehousesRequest"></a>
 
 ### WatchWarehousesRequest
@@ -2367,8 +2009,6 @@ explicitly empty
 
 
 
-
-
 <a name="akuity-io-kargo-service-v1alpha1-WatchWarehousesResponse"></a>
 
 ### WatchWarehousesResponse
@@ -2377,8 +2017,6 @@ explicitly empty
 | ----- | ---- | ----------- |
 | warehouse | [github.com.akuity.kargo.api.v1alpha1.Warehouse](#github-com-akuity-kargo-api-v1alpha1-Warehouse) |   |
 | type | [string](#string) |   |
-
-
 
 
 
@@ -2397,9 +2035,7 @@ explicitly empty
 | RAW_FORMAT_YAML | 2 |  |
 
 
- <!-- end enums -->
-
- <!-- end HasExtensions -->
+ <!-- end enums --> <!-- end HasExtensions -->
 
 
 <a name="akuity-io-kargo-service-v1alpha1-KargoService"></a>
@@ -2513,8 +2149,6 @@ explicitly empty
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-rbac-v1alpha1-ResourceDetails"></a>
 
 ### ResourceDetails
@@ -2524,8 +2158,6 @@ explicitly empty
 | resourceType | [string](#string) |   |
 | resourceName | [string](#string) |   |
 | verbs | [string](#string) |   |
-
-
 
 
 
@@ -2544,8 +2176,6 @@ explicitly empty
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-rbac-v1alpha1-RoleResources"></a>
 
 ### RoleResources
@@ -2559,13 +2189,9 @@ explicitly empty
 
 
 
-
-
  <!-- end messages -->
 
- <!-- end enums -->
-
- <!-- end HasExtensions -->
+ <!-- end enums --> <!-- end HasExtensions -->
 
  <!-- end services -->
 
@@ -2590,8 +2216,6 @@ AnalysisRunArgument represents an argument to be added to an AnalysisRun.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-AnalysisRunMetadata"></a>
 
 ### AnalysisRunMetadata
@@ -2601,8 +2225,6 @@ AnalysisRuns.
 | ----- | ---- | ----------- |
 | labels | [AnalysisRunMetadata.LabelsEntry](#github-com-akuity-kargo-api-v1alpha1-AnalysisRunMetadata-LabelsEntry) |  Additional labels to apply to an AnalysisRun. |
 | annotations | [AnalysisRunMetadata.AnnotationsEntry](#github-com-akuity-kargo-api-v1alpha1-AnalysisRunMetadata-AnnotationsEntry) |  Additional annotations to apply to an AnalysisRun. |
-
-
 
 
 
@@ -2619,8 +2241,6 @@ AnalysisRuns.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-AnalysisRunMetadata-LabelsEntry"></a>
 
 ### AnalysisRunMetadata.LabelsEntry
@@ -2629,8 +2249,6 @@ AnalysisRuns.
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
 | value | [string](#string) |   |
-
-
 
 
 
@@ -2648,8 +2266,6 @@ AnalysisRunReference is a reference to an AnalysisRun.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-AnalysisTemplateReference"></a>
 
 ### AnalysisTemplateReference
@@ -2658,8 +2274,6 @@ AnalysisTemplateReference is a reference to an AnalysisTemplate.
 | ----- | ---- | ----------- |
 | name | [string](#string) |  Name is the name of the AnalysisTemplate in the same project/namespace as the Stage.  +kubebuilder:validation:Required |
 | kind | [string](#string) |  Kind is the type of the AnalysisTemplate. Can be either AnalysisTemplate or ClusterAnalysisTemplate, default is AnalysisTemplate.  +kubebuilder:validation:Optional +kubebuilder:validation:Enum=AnalysisTemplate;ClusterAnalysisTemplate |
-
-
 
 
 
@@ -2676,8 +2290,6 @@ approved.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-ArgoCDAppHealthStatus"></a>
 
 ### ArgoCDAppHealthStatus
@@ -2686,8 +2298,6 @@ ArgoCDAppHealthStatus describes the health of an ArgoCD Application.
 | ----- | ---- | ----------- |
 | status | [string](#string) |   |
 | message | [string](#string) |   |
-
-
 
 
 
@@ -2706,8 +2316,6 @@ ArgoCDAppStatus describes the current state of a single ArgoCD Application.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-ArgoCDAppSyncStatus"></a>
 
 ### ArgoCDAppSyncStatus
@@ -2717,8 +2325,6 @@ ArgoCDAppSyncStatus describes the sync status of an ArgoCD Application.
 | status | [string](#string) |   |
 | revision | [string](#string) |   |
 | revisions | [string](#string) |   |
-
-
 
 
 
@@ -2735,8 +2341,6 @@ compatible with JFrog Artifactory payloads.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-AzureWebhookReceiverConfig"></a>
 
 ### AzureWebhookReceiverConfig
@@ -2745,8 +2349,6 @@ with Azure Container Registry (ACR) and Azure DevOps payloads.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.  The Secret's data map is expected to contain a `secret` key whose value does NOT need to be shared directly with Azure when registering a webhook. It is used only by Kargo to create a complex, hard-to-guess URL, which implicitly serves as a shared secret. For more information about Azure webhooks, please refer to the Azure documentation:   Azure Container Registry: 	https://learn.microsoft.com/en-us/azure/container-registry/container-registry-repositories   Azure DevOps: 	http://learn.microsoft.com/en-us/azure/devops/service-hooks/services/webhooks?view=azure-devops  +kubebuilder:validation:Required |
-
-
 
 
 
@@ -2763,8 +2365,6 @@ compatible with Bitbucket payloads.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-Chart"></a>
 
 ### Chart
@@ -2774,8 +2374,6 @@ Chart describes a specific version of a Helm chart.
 | repoURL | [string](#string) |  RepoURL specifies the URL of a Helm chart repository. Classic chart repositories (using HTTP/S) can contain differently named charts. When this field points to such a repository, the Name field will specify the name of the chart within the repository. In the case of a repository within an OCI registry, the URL implicitly points to a specific chart and the Name field will be empty. |
 | name | [string](#string) |  Name specifies the name of the chart. |
 | version | [string](#string) |  Version specifies a particular version of the chart. |
-
-
 
 
 
@@ -2795,8 +2393,6 @@ a ChartSubscription.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-ChartSubscription"></a>
 
 ### ChartSubscription
@@ -2807,8 +2403,6 @@ ChartSubscription defines a subscription to a Helm chart repository.
 | name | [string](#string) |  Name specifies the name of a Helm chart to subscribe to within a classic chart repository specified by the RepoURL field. This field is required when the RepoURL field points to a classic chart repository and MUST otherwise be empty. |
 | semverConstraint | [string](#string) |  SemverConstraint specifies constraints on what new chart versions are permissible. This field is optional. When left unspecified, there will be no constraints, which means the latest version of the chart will always be used. Care should be taken with leaving this field unspecified, as it can lead to the unanticipated rollout of breaking changes. More info: https://github.com/masterminds/semver#checking-version-constraints  +kubebuilder:validation:Optional |
 | discoveryLimit | [int32](#int32) |  DiscoveryLimit is an optional limit on the number of chart versions that can be discovered for this subscription. The limit is applied after filtering charts based on the SemverConstraint field. When left unspecified, the field is implicitly treated as if its value were "20". The upper limit for this field is 100.  +kubebuilder:validation:Minimum=1 +kubebuilder:validation:Maximum=100 +kubebuilder:default=20 |
-
-
 
 
 
@@ -2827,8 +2421,6 @@ configuration.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-ClusterConfigList"></a>
 
 ### ClusterConfigList
@@ -2841,8 +2433,6 @@ ClusterConfigList contains a list of ClusterConfigs.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-ClusterConfigSpec"></a>
 
 ### ClusterConfigSpec
@@ -2850,8 +2440,6 @@ ClusterConfigSpec describes cluster-level Kargo configuration.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | webhookReceivers | [WebhookReceiverConfig](#github-com-akuity-kargo-api-v1alpha1-WebhookReceiverConfig) |  WebhookReceivers describes cluster-scoped webhook receivers used for processing events from various external platforms |
-
-
 
 
 
@@ -2870,8 +2458,6 @@ ClusterConfigStatus describes the current status of a ClusterConfig.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-ClusterPromotionTask"></a>
 
 ### ClusterPromotionTask
@@ -2880,8 +2466,6 @@ ClusterConfigStatus describes the current status of a ClusterConfig.
 | ----- | ---- | ----------- |
 | metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta |   |
 | spec | [PromotionTaskSpec](#github-com-akuity-kargo-api-v1alpha1-PromotionTaskSpec) |  Spec describes the desired transition of a specific Stage into a specific Freight.  +kubebuilder:validation:Required |
-
-
 
 
 
@@ -2898,8 +2482,6 @@ ClusterPromotionTaskList contains a list of PromotionTasks.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-CurrentStage"></a>
 
 ### CurrentStage
@@ -2907,8 +2489,6 @@ CurrentStage reflects a Stage's current use of Freight.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | since | k8s.io.apimachinery.pkg.apis.meta.v1.Time |  Since is the time at which the Stage most recently started using the Freight. This can be used to calculate how long the Freight has been in use by the Stage. |
-
-
 
 
 
@@ -2924,8 +2504,6 @@ subscriptions.
 | git | [GitDiscoveryResult](#github-com-akuity-kargo-api-v1alpha1-GitDiscoveryResult) |  Git holds the commits discovered by the Warehouse for the Git subscriptions.  +optional |
 | images | [ImageDiscoveryResult](#github-com-akuity-kargo-api-v1alpha1-ImageDiscoveryResult) |  Images holds the image references discovered by the Warehouse for the image subscriptions.  +optional |
 | charts | [ChartDiscoveryResult](#github-com-akuity-kargo-api-v1alpha1-ChartDiscoveryResult) |  Charts holds the charts discovered by the Warehouse for the chart subscriptions.  +optional |
-
-
 
 
 
@@ -2948,8 +2526,6 @@ GitSubscription.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-DiscoveredImageReference"></a>
 
 ### DiscoveredImageReference
@@ -2961,8 +2537,6 @@ Warehouse for an ImageSubscription.
 | digest | [string](#string) |  Digest is the digest of the image.  +kubebuilder:validation:MinLength=1 +kubebuilder:validation:Pattern=`^a-z0-9+:a-f0-9+$` +akuity:test-kubebuilder-pattern=Digest |
 | annotations | [DiscoveredImageReference.AnnotationsEntry](#github-com-akuity-kargo-api-v1alpha1-DiscoveredImageReference-AnnotationsEntry) |  Annotations is a map of key-value pairs that provide additional information about the image. |
 | createdAt | k8s.io.apimachinery.pkg.apis.meta.v1.Time |  CreatedAt is the time the image was created. This field is optional, and not populated for every ImageSelectionStrategy. |
-
-
 
 
 
@@ -2979,8 +2553,6 @@ Warehouse for an ImageSubscription.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-DockerHubWebhookReceiverConfig"></a>
 
 ### DockerHubWebhookReceiverConfig
@@ -2989,8 +2561,6 @@ compatible with Docker Hub payloads.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  The Secret's data map is expected to contain a `secret` key whose value does NOT need to be shared directly with Docker Hub when registering a webhook. It is used only by Kargo to create a complex, hard-to-guess URL, which implicitly serves as a shared secret. For more information about Docker Hub webhooks, please refer to the Docker documentation:   https://docs.docker.com/docker-hub/webhooks/  +kubebuilder:validation:Required |
-
-
 
 
 
@@ -3012,8 +2582,6 @@ allow for dynamic evaluation of expressions based on the variable values.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-Freight"></a>
 
 ### Freight
@@ -3027,8 +2595,6 @@ Freight represents a collection of versioned artifacts.
 | images | [Image](#github-com-akuity-kargo-api-v1alpha1-Image) |  Images describes specific versions of specific container images. |
 | charts | [Chart](#github-com-akuity-kargo-api-v1alpha1-Chart) |  Charts describes specific versions of specific Helm charts. |
 | status | [FreightStatus](#github-com-akuity-kargo-api-v1alpha1-FreightStatus) |  Status describes the current status of this Freight. |
-
-
 
 
 
@@ -3048,8 +2614,6 @@ Stage.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-FreightCollection-ItemsEntry"></a>
 
 ### FreightCollection.ItemsEntry
@@ -3058,8 +2622,6 @@ Stage.
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
 | value | [FreightReference](#github-com-akuity-kargo-api-v1alpha1-FreightReference) |   |
-
-
 
 
 
@@ -3076,8 +2638,6 @@ FreightList is a list of Freight resources.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-FreightOrigin"></a>
 
 ### FreightOrigin
@@ -3089,8 +2649,6 @@ originated.
 | ----- | ---- | ----------- |
 | kind | [string](#string) |  Kind is the kind of resource from which Freight may have originated. At present, this can only be "Warehouse".  +kubebuilder:validation:Required |
 | name | [string](#string) |  Name is the name of the resource of the kind indicated by the Kind field from which Freight may originate.  +kubebuilder:validation:Required |
-
-
 
 
 
@@ -3111,8 +2669,6 @@ a root resource type.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-FreightRequest"></a>
 
 ### FreightRequest
@@ -3122,8 +2678,6 @@ particular Warehouse.
 | ----- | ---- | ----------- |
 | origin | [FreightOrigin](#github-com-akuity-kargo-api-v1alpha1-FreightOrigin) |  Origin specifies from where the requested Freight must have originated. This is a required field.  +kubebuilder:validation:Required |
 | sources | [FreightSources](#github-com-akuity-kargo-api-v1alpha1-FreightSources) |  Sources describes where the requested Freight may be obtained from. This is a required field. |
-
-
 
 
 
@@ -3142,8 +2696,6 @@ particular Warehouse.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-FreightStatus"></a>
 
 ### FreightStatus
@@ -3154,8 +2706,6 @@ FreightStatus describes a piece of Freight's most recently observed state.
 | verifiedIn | [FreightStatus.VerifiedInEntry](#github-com-akuity-kargo-api-v1alpha1-FreightStatus-VerifiedInEntry) |  VerifiedIn describes the Stages in which this Freight has been verified through promotion and subsequent health checks. |
 | approvedFor | [FreightStatus.ApprovedForEntry](#github-com-akuity-kargo-api-v1alpha1-FreightStatus-ApprovedForEntry) |  ApprovedFor describes the Stages for which this Freight has been approved preemptively/manually by a user. This is useful for hotfixes, where one might wish to promote a piece of Freight to a given Stage without transiting the entire pipeline. |
 | metadata | [FreightStatus.MetadataEntry](#github-com-akuity-kargo-api-v1alpha1-FreightStatus-MetadataEntry) |  Metadata is a map of arbitrary metadata associated with the Freight. This is useful for storing additional information about the Freight or Promotion that can be shared across steps or stages. |
-
-
 
 
 
@@ -3172,8 +2722,6 @@ FreightStatus describes a piece of Freight's most recently observed state.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-FreightStatus-CurrentlyInEntry"></a>
 
 ### FreightStatus.CurrentlyInEntry
@@ -3182,8 +2730,6 @@ FreightStatus describes a piece of Freight's most recently observed state.
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
 | value | [CurrentStage](#github-com-akuity-kargo-api-v1alpha1-CurrentStage) |   |
-
-
 
 
 
@@ -3200,8 +2746,6 @@ FreightStatus describes a piece of Freight's most recently observed state.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-FreightStatus-VerifiedInEntry"></a>
 
 ### FreightStatus.VerifiedInEntry
@@ -3210,8 +2754,6 @@ FreightStatus describes a piece of Freight's most recently observed state.
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
 | value | [VerifiedStage](#github-com-akuity-kargo-api-v1alpha1-VerifiedStage) |   |
-
-
 
 
 
@@ -3233,8 +2775,6 @@ GitCommit describes a specific commit from a specific Git repository.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-GitDiscoveryResult"></a>
 
 ### GitDiscoveryResult
@@ -3244,8 +2784,6 @@ GitSubscription.
 | ----- | ---- | ----------- |
 | repoURL | [string](#string) |  RepoURL is the repository URL of the GitSubscription.  +kubebuilder:validation:MinLength=1 +kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:(\w-+)(:(.+))?@)?(\w-+(?:\.\w-+)*)(?::(\d{1,5}))?(/.*)$)|(?:^(\w-+)@(\w++(?:\.\w-+)*):(/?.*))` +akuity:test-kubebuilder-pattern=GitRepoURLPattern |
 | commits | [DiscoveredCommit](#github-com-akuity-kargo-api-v1alpha1-DiscoveredCommit) |  Commits is a list of commits discovered by the Warehouse for the GitSubscription. An empty list indicates that the discovery operation was successful, but no commits matching the GitSubscription criteria were found.  +optional |
-
-
 
 
 
@@ -3262,8 +2800,6 @@ with GitHub payloads.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-GitLabWebhookReceiverConfig"></a>
 
 ### GitLabWebhookReceiverConfig
@@ -3272,8 +2808,6 @@ with GitLab payloads.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.  The secret is expected to contain a `secret-token` key containing the shared secret specified when registering the webhook in GitLab. For more information about this token, please refer to the GitLab documentation:   https://docs.gitlab.com/user/project/integrations/webhooks/  +kubebuilder:validation:Required |
-
-
 
 
 
@@ -3300,8 +2834,6 @@ GitSubscription defines a subscription to a Git repository.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-GiteaWebhookReceiverConfig"></a>
 
 ### GiteaWebhookReceiverConfig
@@ -3314,8 +2846,6 @@ with Gitea payloads.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-HarborWebhookReceiverConfig"></a>
 
 ### HarborWebhookReceiverConfig
@@ -3324,8 +2854,6 @@ with Harbor payloads.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.  The secret is expected to contain an `auth-header` key containing the "auth header" specified when registering the webhook in Harbor. For more information, please refer to the Harbor documentation:   https://goharbor.io/docs/main/working-with-projects/project-configuration/configure-webhooks/  +kubebuilder:validation:Required |
-
-
 
 
 
@@ -3344,8 +2872,6 @@ Health describes the health of a Stage.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-HealthCheckStep"></a>
 
 ### HealthCheckStep
@@ -3359,8 +2885,6 @@ a Stage to verify the health of a Promotion result.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-HealthStats"></a>
 
 ### HealthStats
@@ -3369,8 +2893,6 @@ type.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | healthy | [int64](#int64) |  Healthy contains the number of resources that are explicitly healthy. |
-
-
 
 
 
@@ -3389,8 +2911,6 @@ Image describes a specific version of a container image.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-Image-AnnotationsEntry"></a>
 
 ### Image.AnnotationsEntry
@@ -3399,8 +2919,6 @@ Image describes a specific version of a container image.
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
 | value | [string](#string) |   |
-
-
 
 
 
@@ -3415,8 +2933,6 @@ for an ImageSubscription.
 | repoURL | [string](#string) |  RepoURL is the repository URL of the image, as specified in the ImageSubscription.  +kubebuilder:validation:MinLength=1 |
 | platform | [string](#string) |  Platform is the target platform constraint of the ImageSubscription for which references were discovered. This field is optional, and only populated if the ImageSubscription specifies a Platform. |
 | references | [DiscoveredImageReference](#github-com-akuity-kargo-api-v1alpha1-DiscoveredImageReference) |  References is a list of image references discovered by the Warehouse for the ImageSubscription. An empty list indicates that the discovery operation was successful, but no images matching the ImageSubscription criteria were found.  +optional |
-
-
 
 
 
@@ -3444,8 +2960,6 @@ ImageSubscription defines a subscription to an image repository.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-Project"></a>
 
 ### Project
@@ -3455,8 +2969,6 @@ and other TODO: TBD project-level resources.
 | ----- | ---- | ----------- |
 | metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta |   |
 | status | [ProjectStatus](#github-com-akuity-kargo-api-v1alpha1-ProjectStatus) |  Status describes the Project's current status. |
-
-
 
 
 
@@ -3475,8 +2987,6 @@ Project.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-ProjectConfigList"></a>
 
 ### ProjectConfigList
@@ -3489,8 +2999,6 @@ ProjectConfigList is a list of ProjectConfig resources.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-ProjectConfigSpec"></a>
 
 ### ProjectConfigSpec
@@ -3499,8 +3007,6 @@ ProjectConfigSpec describes the configuration of a Project.
 | ----- | ---- | ----------- |
 | promotionPolicies | [PromotionPolicy](#github-com-akuity-kargo-api-v1alpha1-PromotionPolicy) |  PromotionPolicies defines policies governing the promotion of Freight to specific Stages within the Project. |
 | webhookReceivers | [WebhookReceiverConfig](#github-com-akuity-kargo-api-v1alpha1-WebhookReceiverConfig) |  WebhookReceivers describes Project-specific webhook receivers used for processing events from various external platforms |
-
-
 
 
 
@@ -3519,8 +3025,6 @@ ProjectConfigStatus describes the current status of a ProjectConfig.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-ProjectList"></a>
 
 ### ProjectList
@@ -3529,8 +3033,6 @@ ProjectList is a list of Project resources.
 | ----- | ---- | ----------- |
 | metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta |   |
 | items | [Project](#github-com-akuity-kargo-api-v1alpha1-Project) |   |
-
-
 
 
 
@@ -3548,8 +3050,6 @@ constituent resources.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-ProjectStatus"></a>
 
 ### ProjectStatus
@@ -3558,8 +3058,6 @@ ProjectStatus describes a Project's current status.
 | ----- | ---- | ----------- |
 | conditions | k8s.io.apimachinery.pkg.apis.meta.v1.Condition |  Conditions contains the last observations of the Project's current state. +patchMergeKey=type +patchStrategy=merge +listType=map +listMapKey=type |
 | stats | [ProjectStats](#github-com-akuity-kargo-api-v1alpha1-ProjectStats) |  Stats contains a summary of the collective state of a Project's constituent resources. |
-
-
 
 
 
@@ -3578,8 +3076,6 @@ particular Freight.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-PromotionList"></a>
 
 ### PromotionList
@@ -3588,8 +3084,6 @@ PromotionList contains a list of Promotion
 | ----- | ---- | ----------- |
 | metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta |   |
 | items | [Promotion](#github-com-akuity-kargo-api-v1alpha1-Promotion) |   |
-
-
 
 
 
@@ -3610,8 +3104,6 @@ specific Stage.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-PromotionPolicySelector"></a>
 
 ### PromotionPolicySelector
@@ -3622,8 +3114,6 @@ to match a set of resources by label.
 | ----- | ---- | ----------- |
 | name | [string](#string) |  Name is the name of the resource to which this policy applies.  It can be an exact name, a regex pattern (with prefix "regex:"), or a glob pattern (with prefix "glob:").  When both Name and LabelSelector are specified, the Name is ANDed with the LabelSelector. I.e., the resource must match both the Name and LabelSelector to be selected by this policy.  NOTE: Using a specific exact name is the most secure option. Pattern matching via regex or glob can be exploited by users with permissions to match promotion policies that weren't intended to apply to their resources. For example, a user could create a resource with a name deliberately crafted to match the pattern, potentially bypassing intended promotion controls.  +optional |
 | labelSelector | k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector |  LabelSelector is a selector that matches the resource to which this policy applies.  When both Name and LabelSelector are specified, the Name is ANDed with the LabelSelector. I.e., the resource must match both the Name and LabelSelector to be selected by this policy.  NOTE: Using label selectors introduces security risks as users with appropriate permissions could create new resources with labels that match the selector, potentially enabling unauthorized auto-promotion. For sensitive environments, exact Name matching provides tighter control. |
-
-
 
 
 
@@ -3643,8 +3133,6 @@ as observed by a Stage.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-PromotionSpec"></a>
 
 ### PromotionSpec
@@ -3656,8 +3144,6 @@ specific Freight.
 | freight | [string](#string) |  Freight specifies the piece of Freight to be promoted into the Stage referenced by the Stage field.  +kubebuilder:validation:Required +kubebuilder:validation:MinLength=1 +kubebuilder:validation:MaxLength=253 +kubebuilder:validation:Pattern=`^a-z0-9(-a-z0-9*a-z0-9)?(\.a-z0-9(-a-z0-9*a-z0-9)?)*$` +akuity:test-kubebuilder-pattern=KubernetesName |
 | vars | [ExpressionVariable](#github-com-akuity-kargo-api-v1alpha1-ExpressionVariable) |  Vars is a list of variables that can be referenced by expressions in promotion steps. |
 | steps | [PromotionStep](#github-com-akuity-kargo-api-v1alpha1-PromotionStep) |  Steps specifies the directives to be executed as part of this Promotion. The order in which the directives are executed is the order in which they are listed in this field.  +kubebuilder:validation:Required +kubebuilder:validation:MinItems=1 +kubebuilder:validation:items:XValidation:message="Promotion step must have uses set and must not reference a task",rule="has(self.uses) && !has(self.task)" |
-
-
 
 
 
@@ -3684,8 +3170,6 @@ a Promotion.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-PromotionStep"></a>
 
 ### PromotionStep
@@ -3704,8 +3188,6 @@ PromotionStep describes a directive to be executed as part of a Promotion.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-PromotionStepRetry"></a>
 
 ### PromotionStepRetry
@@ -3714,8 +3196,6 @@ PromotionStepRetry describes the retry policy for a PromotionStep.
 | ----- | ---- | ----------- |
 | timeout | k8s.io.apimachinery.pkg.apis.meta.v1.Duration |  Timeout is the soft maximum interval in which a step that returns a Running status (which typically indicates it's waiting for something to happen) may be retried.  The maximum is a soft one because the check for whether the interval has elapsed occurs AFTER the step has run. This effectively means a step may run ONCE beyond the close of the interval.  If this field is set to nil, the effective default will be a step-specific one. If no step-specific default exists (i.e. is also nil), the effective default will be the system-wide default of 0.  A value of 0 will cause the step to be retried indefinitely unless the ErrorThreshold is reached. |
 | errorThreshold | [uint32](#uint32) |  ErrorThreshold is the number of consecutive times the step must fail (for any reason) before retries are abandoned and the entire Promotion is marked as failed.  If this field is set to 0, the effective default will be a step-specific one. If no step-specific default exists (i.e. is also 0), the effective default will be the system-wide default of 1.  A value of 1 will cause the Promotion to be marked as failed after just a single failure; i.e. no retries will be attempted.  There is no option to specify an infinite number of retries using a value such as -1.  In a future release, Kargo is likely to become capable of distinguishing between recoverable and non-recoverable step failures. At that time, it is planned that unrecoverable failures will not be subject to this threshold and will immediately cause the Promotion to be marked as failed without further condition. |
-
-
 
 
 
@@ -3732,8 +3212,6 @@ PromotionStepRetry describes the retry policy for a PromotionStep.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-PromotionTaskList"></a>
 
 ### PromotionTaskList
@@ -3742,8 +3220,6 @@ PromotionTaskList contains a list of PromotionTasks.
 | ----- | ---- | ----------- |
 | metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta |   |
 | items | [PromotionTask](#github-com-akuity-kargo-api-v1alpha1-PromotionTask) |   |
-
-
 
 
 
@@ -3760,8 +3236,6 @@ PromotionTaskReference describes a reference to a PromotionTask.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-PromotionTaskSpec"></a>
 
 ### PromotionTaskSpec
@@ -3774,8 +3248,6 @@ PromotionTaskReference describes a reference to a PromotionTask.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-PromotionTemplate"></a>
 
 ### PromotionTemplate
@@ -3784,8 +3256,6 @@ incorporate Freight into a Stage.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | spec | [PromotionTemplateSpec](#github-com-akuity-kargo-api-v1alpha1-PromotionTemplateSpec) |   |
-
-
 
 
 
@@ -3804,8 +3274,6 @@ Stage.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-QuayWebhookReceiverConfig"></a>
 
 ### QuayWebhookReceiverConfig
@@ -3814,8 +3282,6 @@ with Quay.io payloads.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.  The Secret's data map is expected to contain a `secret` key whose value does NOT need to be shared directly with Quay when registering a webhook. It is used only by Kargo to create a complex, hard-to-guess URL, which implicitly serves as a shared secret. For more information about Quay webhooks, please refer to the Quay documentation:   https://docs.quay.io/guides/notifications.html  +kubebuilder:validation:Required |
-
-
 
 
 
@@ -3834,8 +3300,6 @@ container image repository, or a Helm chart repository.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-Stage"></a>
 
 ### Stage
@@ -3849,8 +3313,6 @@ Stage is the Kargo API's main type.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-StageList"></a>
 
 ### StageList
@@ -3859,8 +3321,6 @@ StageList is a list of Stage resources.
 | ----- | ---- | ----------- |
 | metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta |   |
 | items | [Stage](#github-com-akuity-kargo-api-v1alpha1-Stage) |   |
-
-
 
 
 
@@ -3881,8 +3341,6 @@ incorporate Freight into the Stage.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-StageStats"></a>
 
 ### StageStats
@@ -3892,8 +3350,6 @@ Stages.
 | ----- | ---- | ----------- |
 | count | [int64](#int64) |  Count contains the total number of Stages in the Project. |
 | health | [HealthStats](#github-com-akuity-kargo-api-v1alpha1-HealthStats) |  Health contains a summary of the collective health of a Project's Stages. |
-
-
 
 
 
@@ -3918,8 +3374,6 @@ more.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-StepExecutionMetadata"></a>
 
 ### StepExecutionMetadata
@@ -3938,8 +3392,6 @@ a promotion step.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-Verification"></a>
 
 ### Verification
@@ -3950,8 +3402,6 @@ using Argo Rollouts AnalysisTemplates.
 | analysisTemplates | [AnalysisTemplateReference](#github-com-akuity-kargo-api-v1alpha1-AnalysisTemplateReference) |  AnalysisTemplates is a list of AnalysisTemplates from which AnalysisRuns should be created to verify a Stage's current Freight is fit to be promoted downstream. |
 | analysisRunMetadata | [AnalysisRunMetadata](#github-com-akuity-kargo-api-v1alpha1-AnalysisRunMetadata) |  AnalysisRunMetadata contains optional metadata that should be applied to all AnalysisRuns. |
 | args | [AnalysisRunArgument](#github-com-akuity-kargo-api-v1alpha1-AnalysisRunArgument) |  Args lists arguments that should be added to all AnalysisRuns. |
-
-
 
 
 
@@ -3974,8 +3424,6 @@ process.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-VerifiedStage"></a>
 
 ### VerifiedStage
@@ -3984,8 +3432,6 @@ VerifiedStage describes a Stage in which Freight has been verified.
 | ----- | ---- | ----------- |
 | verifiedAt | k8s.io.apimachinery.pkg.apis.meta.v1.Time |  VerifiedAt is the time at which the Freight was verified in the Stage. |
 | longestSoak | k8s.io.apimachinery.pkg.apis.meta.v1.Duration |  LongestCompletedSoak represents the longest definite time interval wherein the Freight was in CONTINUOUS use by the Stage. This value is updated as Freight EXITS the Stage. If the Freight is currently in use by the Stage, the time elapsed since the Freight ENTERED the Stage is its current soak time, which may exceed the value of this field. |
-
-
 
 
 
@@ -4003,8 +3449,6 @@ Warehouse is a source of Freight.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-WarehouseList"></a>
 
 ### WarehouseList
@@ -4013,8 +3457,6 @@ WarehouseList is a list of Warehouse resources.
 | ----- | ---- | ----------- |
 | metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta |   |
 | items | [Warehouse](#github-com-akuity-kargo-api-v1alpha1-Warehouse) |   |
-
-
 
 
 
@@ -4034,8 +3476,6 @@ Freight produced by this Warehouse.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-WarehouseStats"></a>
 
 ### WarehouseStats
@@ -4045,8 +3485,6 @@ Warehouses.
 | ----- | ---- | ----------- |
 | count | [int64](#int64) |  Count contains the total number of Warehouses in the Project. |
 | health | [HealthStats](#github-com-akuity-kargo-api-v1alpha1-HealthStats) |  Health contains a summary of the collective health of a Project's Warehouses. |
-
-
 
 
 
@@ -4062,8 +3500,6 @@ WarehouseStatus describes a Warehouse's most recently observed state.
 | observedGeneration | [int64](#int64) |  ObservedGeneration represents the .metadata.generation that this Warehouse was reconciled against. |
 | lastFreightID | [string](#string) |  LastFreightID is a reference to the system-assigned identifier (name) of the most recent Freight produced by the Warehouse. |
 | discoveredArtifacts | [DiscoveredArtifacts](#github-com-akuity-kargo-api-v1alpha1-DiscoveredArtifacts) |  DiscoveredArtifacts holds the artifacts discovered by the Warehouse. |
-
-
 
 
 
@@ -4089,8 +3525,6 @@ receiver.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-v1alpha1-WebhookReceiverDetails"></a>
 
 ### WebhookReceiverDetails
@@ -4103,13 +3537,9 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
 
 
-
-
  <!-- end messages -->
 
- <!-- end enums -->
-
- <!-- end HasExtensions -->
+ <!-- end enums --> <!-- end HasExtensions -->
 
  <!-- end services -->
 
@@ -4135,8 +3565,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-AnalysisRunList"></a>
 
 ### AnalysisRunList
@@ -4145,8 +3573,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 | ----- | ---- | ----------- |
 | metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta |   |
 | items | [AnalysisRun](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-AnalysisRun) |   |
-
-
 
 
 
@@ -4162,8 +3588,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 | terminate | [bool](#bool) |   |
 | dryRun | [DryRun](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-DryRun) |   |
 | measurementRetention | [MeasurementRetention](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-MeasurementRetention) |   |
-
-
 
 
 
@@ -4184,8 +3608,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-AnalysisTemplate"></a>
 
 ### AnalysisTemplate
@@ -4198,8 +3620,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-AnalysisTemplateList"></a>
 
 ### AnalysisTemplateList
@@ -4208,8 +3628,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 | ----- | ---- | ----------- |
 | metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta |   |
 | items | [AnalysisTemplate](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-AnalysisTemplate) |   |
-
-
 
 
 
@@ -4228,8 +3646,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-Argument"></a>
 
 ### Argument
@@ -4239,8 +3655,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 | name | [string](#string) |   |
 | value | [string](#string) |   |
 | valueFrom | [ValueFrom](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-ValueFrom) |   |
-
-
 
 
 
@@ -4257,8 +3671,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-CloudWatchMetric"></a>
 
 ### CloudWatchMetric
@@ -4267,8 +3679,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 | ----- | ---- | ----------- |
 | interval | [string](#string) |   |
 | metricDataQueries | [CloudWatchMetricDataQuery](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-CloudWatchMetricDataQuery) |   |
-
-
 
 
 
@@ -4289,8 +3699,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-CloudWatchMetricStat"></a>
 
 ### CloudWatchMetricStat
@@ -4301,8 +3709,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 | period | k8s.io.apimachinery.pkg.util.intstr.IntOrString |   |
 | stat | [string](#string) |   |
 | unit | [string](#string) |   |
-
-
 
 
 
@@ -4320,8 +3726,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-CloudWatchMetricStatMetricDimension"></a>
 
 ### CloudWatchMetricStatMetricDimension
@@ -4330,8 +3734,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 | ----- | ---- | ----------- |
 | name | [string](#string) |   |
 | value | [string](#string) |   |
-
-
 
 
 
@@ -4348,8 +3750,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-ClusterAnalysisTemplateList"></a>
 
 ### ClusterAnalysisTemplateList
@@ -4358,8 +3758,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 | ----- | ---- | ----------- |
 | metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta |   |
 | items | [ClusterAnalysisTemplate](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-ClusterAnalysisTemplate) |   |
-
-
 
 
 
@@ -4379,8 +3777,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-DatadogMetric-QueriesEntry"></a>
 
 ### DatadogMetric.QueriesEntry
@@ -4389,8 +3785,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
 | value | [string](#string) |   |
-
-
 
 
 
@@ -4406,8 +3800,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-FieldRef"></a>
 
 ### FieldRef
@@ -4415,8 +3807,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | fieldPath | [string](#string) |  Required: Path of the field to select in the specified API version |
-
-
 
 
 
@@ -4433,8 +3823,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-InfluxdbMetric"></a>
 
 ### InfluxdbMetric
@@ -4447,8 +3835,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-JobMetric"></a>
 
 ### JobMetric
@@ -4457,8 +3843,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 | ----- | ---- | ----------- |
 | metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta |   |
 | spec | k8s.io.api.batch.v1.JobSpec |   |
-
-
 
 
 
@@ -4481,8 +3865,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-KayentaScope"></a>
 
 ### KayentaScope
@@ -4496,8 +3878,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-KayentaThreshold"></a>
 
 ### KayentaThreshold
@@ -4506,8 +3886,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 | ----- | ---- | ----------- |
 | pass | [int64](#int64) |   |
 | marginal | [int64](#int64) |   |
-
-
 
 
 
@@ -4529,8 +3907,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-Measurement-MetadataEntry"></a>
 
 ### Measurement.MetadataEntry
@@ -4543,8 +3919,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-MeasurementRetention"></a>
 
 ### MeasurementRetention
@@ -4553,8 +3927,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 | ----- | ---- | ----------- |
 | metricName | [string](#string) |   |
 | limit | [int32](#int32) |   |
-
-
 
 
 
@@ -4576,8 +3948,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 | consecutiveErrorLimit | k8s.io.apimachinery.pkg.util.intstr.IntOrString |   |
 | provider | [MetricProvider](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-MetricProvider) |   |
 | consecutiveSuccessLimit | k8s.io.apimachinery.pkg.util.intstr.IntOrString |   |
-
-
 
 
 
@@ -4604,8 +3974,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-MetricProvider-PluginEntry"></a>
 
 ### MetricProvider.PluginEntry
@@ -4614,8 +3982,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
 | value | [bytes](#bytes) |   |
-
-
 
 
 
@@ -4642,8 +4008,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-MetricResult-MetadataEntry"></a>
 
 ### MetricResult.MetadataEntry
@@ -4652,8 +4016,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
 | value | [string](#string) |   |
-
-
 
 
 
@@ -4670,8 +4032,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-OAuth2Config"></a>
 
 ### OAuth2Config
@@ -4682,8 +4042,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 | clientId | [string](#string) |   |
 | clientSecret | [string](#string) |   |
 | scopes | [string](#string) |   |
-
-
 
 
 
@@ -4704,8 +4062,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-RunSummary"></a>
 
 ### RunSummary
@@ -4717,8 +4073,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 | failed | [int32](#int32) |   |
 | inconclusive | [int32](#int32) |   |
 | error | [int32](#int32) |   |
-
-
 
 
 
@@ -4738,8 +4092,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-SecretKeyRef"></a>
 
 ### SecretKeyRef
@@ -4748,8 +4100,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 | ----- | ---- | ----------- |
 | name | [string](#string) |   |
 | key | [string](#string) |   |
-
-
 
 
 
@@ -4767,8 +4117,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-SkyWalkingMetric"></a>
 
 ### SkyWalkingMetric
@@ -4778,8 +4126,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 | address | [string](#string) |   |
 | query | [string](#string) |   |
 | interval | [string](#string) |   |
-
-
 
 
 
@@ -4796,8 +4142,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-WavefrontMetric"></a>
 
 ### WavefrontMetric
@@ -4806,8 +4150,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 | ----- | ---- | ----------- |
 | address | [string](#string) |   |
 | query | [string](#string) |   |
-
-
 
 
 
@@ -4831,8 +4173,6 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
 
 
-
-
 <a name="github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-WebMetricHeader"></a>
 
 ### WebMetricHeader
@@ -4844,13 +4184,9 @@ WebhookReceiverDetails encapsulates the details of a webhook receiver.
 
 
 
-
-
  <!-- end messages -->
 
- <!-- end enums -->
-
- <!-- end HasExtensions -->
+ <!-- end enums --> <!-- end HasExtensions -->
 
  <!-- end services -->
 

@@ -23,7 +23,7 @@
 {{end}}
 {{end}}
 
-{{if .HasExtensions}}
+{{- if .HasExtensions}}
 | Extension | Type | Base | Number | Description |
 | --------- | ---- | ---- | ------ | ----------- |
 {{range .Extensions -}}
@@ -47,7 +47,7 @@
 
 {{end}} <!-- end enums -->
 
-{{if .HasExtensions}}
+{{- if .HasExtensions}}
 <a name="{{$file_name | anchor}}-extensions"></a>
 
 ### File-level Extensions
