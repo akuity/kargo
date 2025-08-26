@@ -53,7 +53,7 @@ To enable Kargo controllers to update an Argo CD `Application` on behalf of
 a given `Stage`, that `Application` must be explicitly annotated as follows:
 
 ```yaml
-kargo.akuity.io/authorized-stage: "<project-name>:<stage-name>"
+kargo.akuity.io/authorized-stage: "<kargo-project-name>:<stage-name>"
 ```
 
 Because an annotation such as the one above could only be added to
