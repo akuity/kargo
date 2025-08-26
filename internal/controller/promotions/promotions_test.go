@@ -111,6 +111,26 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
+			name:                  "Promotion doesn't belong to shard",
+			expectPromoteFnCalled: false,
+			expectedPhase:         kargoapi.PromotionPhasePending,
+			expectedEventRecorded: false,
+			promos: []client.Object{
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-promo",
+						Namespace: "fake-namespace",
+						Labels: map[string]string{
+							kargoapi.LabelKeyShard: "wrong-shard",
+						},
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhasePending,
+					},
+				},
+			},
+		},
+		{
 			name:                  "promo already running",
 			expectPromoteFnCalled: true,
 			expectedPhase:         kargoapi.PromotionPhaseSucceeded,
