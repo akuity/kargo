@@ -23,7 +23,10 @@ export const ProtectedRoute = () => {
 
   if (!data?.skipAuth && !isLoading && !isLoggedIn) {
     return (
-      <Navigate to={`${paths.login}?${redirectToQueryParam}=${window.location.pathname}`} replace />
+      <Navigate
+        to={`${paths.login}?${window.location.pathname !== paths.home ? `${redirectToQueryParam}=${window.location.pathname}` : ''}`}
+        replace
+      />
     );
   }
 
