@@ -34,15 +34,6 @@
   | {{.Name}} | {{ if not (contains "k8s.io" .FullType )}}[{{.LongType}}](#{{.FullType | anchor}}){{ else }}{{.FullType}}{{ end }} | {{range (.Description | splitList "\n" )  }} {{if not (contains "+kubebuilder:validation:Pattern" .)}}{{. | replace "<" "&lt;" | replace ">" "&gt;" }}{{else}}{{ . | replace "[" "" | replace "]" "" }}{{ end }}{{end}} |
 {{end}}
 {{- end}}
-
-{{- if .HasExtensions}}
-| Extension | Type | Base | Number | Description |
-| --------- | ---- | ---- | ------ | ----------- |
-{{range .Extensions -}}
-  | {{.Name}} | {{.LongType}} | {{.ContainingLongType}} | {{.Number}} | {{nobr .Description}}{{if .DefaultValue}} Default: {{.DefaultValue}}{{end}} |
-{{end}}
-{{end}}
-
 {{end}} <!-- end messages -->
 
 {{range .Enums}}
