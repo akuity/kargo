@@ -6,6 +6,19 @@
 <a name="{{.Name | anchor}}"></a>
 <p align="right"><a href="#top">Top</a></p>
 
+{{range .Services}}
+<a name="{{.FullName | anchor}}"></a>
+
+### {{.Name}}
+{{.Description}}
+
+| Method Name | Request Type | Response Type |
+| ----------- | ------------ | ------------- |
+{{range .Methods -}}
+  | {{.Name}} | [{{.RequestLongType}}](#{{.RequestFullType | anchor}}){{if .RequestStreaming}}(stream){{end}} | [{{.ResponseLongType}}](#{{.ResponseFullType | anchor}}){{if .ResponseStreaming}}(stream){{end}} |
+{{end}}
+{{end}} <!-- end services -->
+
 ## {{.Name}}
 {{.Description}}
 {{- range .Messages -}}
@@ -56,20 +69,6 @@
   | {{.Name}} | {{.LongType}} | {{.ContainingLongType}} | {{.Number}} | {{nobr .Description}}{{if .DefaultValue}} Default: `{{.DefaultValue}}`{{end}} |
 {{end}}
 {{end}} <!-- end HasExtensions -->
-
-{{range .Services}}
-<a name="{{.FullName | anchor}}"></a>
-
-### {{.Name}}
-{{.Description}}
-
-| Method Name | Request Type | Response Type | Description |
-| ----------- | ------------ | ------------- | ------------|
-{{range .Methods -}}
-  | {{.Name}} | [{{.RequestLongType}}](#{{.RequestFullType | anchor}}){{if .RequestStreaming}} stream{{end}} | [{{.ResponseLongType}}](#{{.ResponseFullType | anchor}}){{if .ResponseStreaming}} stream{{end}} | {{nobr .Description}} |
-{{end}}
-{{end}} <!-- end services -->
-
 {{- end}}
 
 ## Scalar Value Types
