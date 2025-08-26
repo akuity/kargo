@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/controller"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/internal/indexer"
 )
@@ -240,6 +241,144 @@ func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 			u.Update(context.TODO(), tt.e, wq)
 
 			tt.assertions(t, wq)
+		})
+	}
+}
+
+func TestPromotionAcknowledgedByStageHandler_Update(t *testing.T) {
+	testCases := []struct {
+		name           string
+		shardPredicate controller.ResponsibleFor[kargoapi.Stage]
+		e              event.TypedUpdateEvent[*kargoapi.Stage]
+		assertions     func(
+			*testing.T,
+			workqueue.TypedRateLimitingInterface[reconcile.Request],
+		)
+	}{
+		{
+			name: "Event without new object",
+			e: event.TypedUpdateEvent[*kargoapi.Stage]{
+				ObjectOld: &kargoapi.Stage{},
+			},
+			assertions: func(
+				t *testing.T,
+				wq workqueue.TypedRateLimitingInterface[reconcile.Request],
+			) {
+				require.Equal(t, 0, wq.Len())
+			},
+		},
+		{
+			name: "Event without old object",
+			e: event.TypedUpdateEvent[*kargoapi.Stage]{
+				ObjectNew: &kargoapi.Stage{},
+			},
+			assertions: func(
+				t *testing.T,
+				wq workqueue.TypedRateLimitingInterface[reconcile.Request],
+			) {
+				require.Equal(t, 0, wq.Len())
+			},
+		},
+		{
+			name: "Stage does not belong to shard",
+			shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
+				IsDefaultController: false,
+				ShardName:           "fake-shard",
+			},
+			// This event would result in a Promotion being added to the work queue if
+			// it were not for the shard mismatch.
+			e: event.TypedUpdateEvent[*kargoapi.Stage]{
+				ObjectOld: &kargoapi.Stage{
+					Status: kargoapi.StageStatus{
+						CurrentPromotion: &kargoapi.PromotionReference{
+							Name: "one-promotion",
+						},
+					},
+				},
+				ObjectNew: &kargoapi.Stage{
+					Status: kargoapi.StageStatus{
+						CurrentPromotion: &kargoapi.PromotionReference{
+							Name: "another-promotion",
+						},
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				wq workqueue.TypedRateLimitingInterface[reconcile.Request],
+			) {
+				require.Equal(t, 0, wq.Len())
+			},
+		},
+		{
+			name: "no current promotion",
+			shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
+				IsDefaultController: true,
+				ShardName:           "fake-shard",
+			},
+			e: event.TypedUpdateEvent[*kargoapi.Stage]{
+				ObjectOld: &kargoapi.Stage{},
+				ObjectNew: &kargoapi.Stage{},
+			},
+			assertions: func(
+				t *testing.T,
+				wq workqueue.TypedRateLimitingInterface[reconcile.Request],
+			) {
+				require.Equal(t, 0, wq.Len())
+			},
+		},
+		{
+			name: "Promotion is enqueued for reconciliation",
+			shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
+				IsDefaultController: true,
+				ShardName:           "fake-shard",
+			},
+			e: event.TypedUpdateEvent[*kargoapi.Stage]{
+				ObjectOld: &kargoapi.Stage{
+					Status: kargoapi.StageStatus{
+						CurrentPromotion: &kargoapi.PromotionReference{
+							Name: "one-promotion",
+						},
+					},
+				},
+				ObjectNew: &kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+					},
+					Status: kargoapi.StageStatus{
+						CurrentPromotion: &kargoapi.PromotionReference{
+							Name: "another-promotion",
+						},
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				wq workqueue.TypedRateLimitingInterface[reconcile.Request],
+			) {
+				require.Equal(t, 1, wq.Len())
+				item, _ := wq.Get()
+				require.Equal(t, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: "fake-project",
+						Name:      "another-promotion",
+					},
+				}, item)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			p := &PromotionAcknowledgedByStageHandler[*kargoapi.Stage]{
+				shardPredicate: testCase.shardPredicate,
+			}
+
+			wq := workqueue.NewTypedRateLimitingQueue(
+				workqueue.DefaultTypedControllerRateLimiter[reconcile.Request](),
+			)
+			p.Update(context.Background(), testCase.e, wq)
+
+			testCase.assertions(t, wq)
 		})
 	}
 }

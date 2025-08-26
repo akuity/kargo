@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/controller"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/logging"
@@ -74,6 +75,7 @@ func (u *UpdatedArgoCDAppHandler[T]) Update(
 		promotions,
 		&client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(
+				// Note: This index only includes Promotions assigned to this shard.
 				indexer.RunningPromotionsByArgoCDApplicationsField,
 				fmt.Sprintf("%s:%s", newApp.Namespace, newApp.Name),
 			),
@@ -108,10 +110,12 @@ func (u *UpdatedArgoCDAppHandler[T]) Update(
 // PromotionAcknowledgedByStageHandler is an event handler that enqueues a
 // Promotion for reconciliation when it has been acknowledged by the Stage\
 // it is for.
-type PromotionAcknowledgedByStageHandler[T any] struct{}
+type PromotionAcknowledgedByStageHandler[T any] struct {
+	shardPredicate controller.ResponsibleFor[kargoapi.Stage]
+}
 
 // Create implements TypedEventHandler.
-func (u *PromotionAcknowledgedByStageHandler[T]) Create(
+func (p *PromotionAcknowledgedByStageHandler[T]) Create(
 	context.Context,
 	event.TypedCreateEvent[T],
 	workqueue.TypedRateLimitingInterface[reconcile.Request],
@@ -120,7 +124,7 @@ func (u *PromotionAcknowledgedByStageHandler[T]) Create(
 }
 
 // Delete implements TypedEventHandler.
-func (u *PromotionAcknowledgedByStageHandler[T]) Delete(
+func (p *PromotionAcknowledgedByStageHandler[T]) Delete(
 	context.Context,
 	event.TypedDeleteEvent[T],
 	workqueue.TypedRateLimitingInterface[reconcile.Request],
@@ -129,7 +133,7 @@ func (u *PromotionAcknowledgedByStageHandler[T]) Delete(
 }
 
 // Generic implements TypedEventHandler.
-func (u *PromotionAcknowledgedByStageHandler[T]) Generic(
+func (p *PromotionAcknowledgedByStageHandler[T]) Generic(
 	context.Context,
 	event.TypedGenericEvent[T],
 	workqueue.TypedRateLimitingInterface[reconcile.Request],
@@ -138,7 +142,7 @@ func (u *PromotionAcknowledgedByStageHandler[T]) Generic(
 }
 
 // Update implements TypedEventHandler.
-func (u *PromotionAcknowledgedByStageHandler[T]) Update(
+func (p *PromotionAcknowledgedByStageHandler[T]) Update(
 	ctx context.Context,
 	e event.TypedUpdateEvent[T],
 	wq workqueue.TypedRateLimitingInterface[reconcile.Request],
@@ -152,6 +156,16 @@ func (u *PromotionAcknowledgedByStageHandler[T]) Update(
 			nil, "Update event has no new or old object",
 			"event", e,
 		)
+		return
+	}
+
+	// When an event handler places work on the work queue, it bypasses the event
+	// filters the reconciler may be using on its watches, so we want to be sure
+	// here that we do not enqueue a Stage's current Promotion for
+	// reconciliation if the Stage isn't handled by this shard. (The Promotions
+	// reconciler' Reconcile() method will ultimately ignore any such Promotion
+	// anyway, so really this is just an optimization.)
+	if !p.shardPredicate.IsResponsible(newStage) {
 		return
 	}
 
