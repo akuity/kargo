@@ -371,8 +371,53 @@ relevant `Freight` is not found from the `FreightCollection`.
 :::tip
 You can handle `nil` values gracefully in Expr using its
 [nil coalescing](https://expr-lang.org/docs/language-definition#nil-coalescing) and
-[optional chaining](https://expr-lang.org/docs/language-definition#optional-chaining) features.
+[optional chaining](https://expr-lang.org/docs/language-definition#optional-chaining)
+features.
 :::
+
+### `freightMetadata(freightName)`
+
+The `freightMetadata()` function retrieves metadata stored in a `Freight` resource.
+It has one required argument:
+
+- `freightName` (Required): The name of the `Freight` resource
+
+This returns a map containing all metadata key-value pairs stored in the `Freight`
+resource.
+
+Example:
+
+```yaml
+config:
+  # Access metadata values using ['key-name'] syntax
+  issueKey: ${{ freightMetadata(ctx.targetFreight.name)['jira-issue-key'] }}
+  customValue: ${{ freightMetadata(ctx.targetFreight.name)['my-custom-key'] }}
+```
+
+:::note
+The two-argument form (`freightMetadata(ctx.targetFreight.name, 'jira-issue-key')`)
+is deprecated as of `v1.8` and will be removed in `v1.10`. Please migrate to the
+single-argument form as shown above.
+:::
+
+### `stageMetadata(stageName)`
+
+The `stageMetadata()` function retrieves metadata stored in a `Stage` resource. It
+has one required argument:
+
+- `stageName` (Required): The name of the `Stage` resource
+
+This returns a map containing all metadata key-value pairs stored in the `Stage`
+resource.
+
+Example:
+
+```yaml
+config:
+  # Access metadata values using ['key-name'] syntax
+  envType: ${{ stageMetadata(ctx.stage)['environment-type'] }}
+  region: ${{ stageMetadata(ctx.stage)['aws-region'] }}
+```
 
 ### `commitFrom(repoURL, [freightOrigin])`
 

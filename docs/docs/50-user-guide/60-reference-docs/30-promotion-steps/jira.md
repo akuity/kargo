@@ -8,16 +8,23 @@ description: Integrates with Jira to manage issues, comments, and track promotio
 # `jira`
 
 :::info
-This promotion step is only available in Kargo on the [Akuity Platform](https://akuity.io/akuity-platform), versions v1.6 and above.
+This promotion step is only available in Kargo on the
+[Akuity Platform](https://akuity.io/akuity-platform), versions v1.6 and above.
 :::
 
-The `jira` promotion step provides comprehensive integration with Jira, allowing you to create, update, delete, and search for issues, manage comments, and track promotion workflows. This is particularly useful for maintaining traceability between your promotion processes and project management activities.
+The `jira` promotion step provides comprehensive integration with Jira, allowing you
+to create, update, delete, and search for issues, manage comments, and track
+promotion workflows. This is particularly useful for maintaining traceability between
+your promotion processes and project management activities.
 
-This promotion step supports various operations including issue management, comment handling, and status tracking, making it a powerful tool for promotion workflows that require coordination with project management systems.
+This promotion step supports various operations including issue management, comment
+handling, and status tracking, making it a powerful tool for promotion workflows that
+require coordination with project management systems.
 
 ## Credentials Configuration
 
-All Jira operations require proper authentication credentials stored in a Kubernetes `Secret`.
+All Jira operations require proper authentication credentials stored in a Kubernetes
+`Secret`.
 
 | Name                     | Type     | Required | Description                                                                      |
 |--------------------------|----------|----------|----------------------------------------------------------------------------------|
@@ -58,7 +65,8 @@ Creates a new Jira issue with specified details.
 
 #### Example
 
-This example creates a new Jira issue to track a promotion, assigns it to a team member, and adds relevant labels.
+This example creates a new Jira issue to track a promotion, assigns it to a team
+member, and adds relevant labels.
 
 ```yaml
 steps:
@@ -112,7 +120,8 @@ This step does not produce any output.
 
 #### Example
 
-This example updates an existing issue's status and adds a comment with promotion details.
+This example updates an existing issue's status and adds a comment with promotion
+details.
 
 ```yaml
 steps:
@@ -170,7 +179,8 @@ steps:
 
 ### Search Issues
 
-Searches for Jira issues using JQL ([Jira Query Language](https://support.atlassian.com/jira-service-management-cloud/docs/use-advanced-search-with-jira-query-language-jql/)).
+Searches for Jira issues using JQL
+([Jira Query Language](https://support.atlassian.com/jira-service-management-cloud/docs/use-advanced-search-with-jira-query-language-jql/)).
 
 #### Configuration
 
@@ -340,32 +350,38 @@ steps:
 ```
 
 :::info Content Formatting
-The Jira configuration supports setting issue and comment content using `description` or `body` fields. These are plain text fields that do not support special formatting such as Markdown. For rich formatting capabilities, use the ADF (Atlassian Document Format) alternatives `adfDescription` or `adfBody`. For more information about ADF structure and formatting, see the [Atlassian Document Format documentation](https://developer.atlassian.com/cloud/jira/platform/apis/document/structure/).
+The Jira configuration supports setting issue and comment content using `description`
+or `body` fields. These are plain text fields that do not support special formatting
+such as Markdown. For rich formatting capabilities, use the ADF (Atlassian Document
+Format) alternatives `adfDescription` or `adfBody`. For more information about ADF
+structure and formatting, see the
+[Atlassian Document Format documentation](https://developer.atlassian.com/cloud/jira/platform/apis/document/structure/).
 :::
 
 ## Multi-Stage Workflow
 
-The Jira promotion step automatically stores created issue keys in the Freight metadata, allowing subsequent stages to reference the same issue. This enables tracking a single Jira issue across multiple promotion stages.
+The Jira promotion step automatically stores created issue keys in the Freight
+metadata, allowing subsequent stages to reference the same issue. This enables
+tracking a single Jira issue across multiple promotion stages.
 
 ### Accessing Issue Keys from Freight Metadata
 
-Use the `freightMetadata()` template function to retrieve issue keys stored by previous stages:
+Use the [`freightMetadata()`](../40-expressions.md#freightmetadatafreightname)
+template function to retrieve issue keys stored by previous stages:
 
 ```yaml
 # Access the default issue key
-issueKey: ${{ freightMetadata(ctx.targetFreight.name).jira-issue-key }}
+issueKey: ${{ freightMetadata(ctx.targetFreight.name)['jira-issue-key'] }}
 
 # Access a custom issue key (when issueAlias was used during creation)
-issueKey: ${{ freightMetadata(ctx.targetFreight.name).my-custom-alias }}
+issueKey: ${{ freightMetadata(ctx.targetFreight.name)['my-custom-alias'] }}
 ```
-
-:::note
-The two-argument form (`freightMetadata(ctx.targetFreight.name, 'jira-issue-key')`) is deprecated as of `v1.8` and will be removed in `v1.10`. Please migrate to the single-argument form as shown above.
-:::
 
 ### Example
 
-This comprehensive example demonstrates using the Jira promotion step across multiple stages in a promotion pipeline, tracking a single issue from its creation during testing through its final promotion to production:
+This comprehensive example demonstrates using the Jira promotion step across multiple
+stages in a promotion pipeline, tracking a single issue from its creation during
+testing through its final promotion to production:
 
 ```yaml
 ---
@@ -655,9 +671,14 @@ spec:
 
 This multi-stage workflow demonstrates:
 
-- **Issue Creation**: The `test` stage creates a comprehensive Jira issue with ADF formatting
-- **Freight Metadata**: The issue key is automatically stored in freight metadata for later stages
-- **Status Tracking**: Each stage waits for specific approval statuses before proceeding
-- **Progressive Updates**: Labels and comments are updated as the release moves through environments
+- **Issue Creation**: The `test` stage creates a comprehensive Jira issue with ADF
+formatting
+- **Freight Metadata**: The issue key is automatically stored in freight metadata for
+later stages
+- **Status Tracking**: Each stage waits for specific approval statuses before
+proceeding
+- **Progressive Updates**: Labels and comments are updated as the release moves
+through environments
 - **Error Handling**: Cleanup steps run on failures to maintain clean state
-- **Search Functionality**: The `prod` stage demonstrates finding issues by label when freight metadata isn't available
+- **Search Functionality**: The `prod` stage demonstrates finding issues by label
+when freight metadata isn't available
