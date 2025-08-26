@@ -24,10 +24,10 @@ type exprFn func(params ...any) (any, error)
 // FreightOperations returns a slice of expr.Option containing functions for
 // Freight operations.
 //
-// It provides `warehouse()`, `commitFrom()`, `imageFrom()`, `chartFrom()` and
-// `stageMetadata()` functions that can be used within expressions. The functions
-// operate within the context of a given project with the provided freight requests
-// and references.
+// It provides `warehouse()`, `commitFrom()`, `imageFrom()`, and `chartFrom()`
+// functions that can be used within expressions. The functions operate within
+// the context of a given project with the provided freight requests and
+// references.
 func FreightOperations(
 	ctx context.Context,
 	c client.Client,
@@ -40,22 +40,6 @@ func FreightOperations(
 		CommitFrom(ctx, c, project, freightRequests, freightRefs),
 		ImageFrom(ctx, c, project, freightRequests, freightRefs),
 		ChartFrom(ctx, c, project, freightRequests, freightRefs),
-		FreightMetadata(ctx, c, project),
-	}
-}
-
-// StageOperations returns a slice of expr.Option containing functions for
-// Stage operations.
-//
-// It provides `stageMetadata()` function that can be used within expressions
-// to access metadata stored on Stage resources.
-func StageOperations(
-	ctx context.Context,
-	c client.Client,
-	project string,
-) []expr.Option {
-	return []expr.Option{
-		StageMetadata(ctx, c, project),
 	}
 }
 
@@ -70,6 +54,8 @@ func DataOperations(ctx context.Context, c client.Client, cache *gocache.Cache, 
 	return []expr.Option{
 		ConfigMap(ctx, c, cache, project),
 		Secret(ctx, c, cache, project),
+		FreightMetadata(ctx, c, project),
+		StageMetadata(ctx, c, project),
 	}
 }
 
@@ -257,7 +243,7 @@ func freightMetadata(
 	}
 }
 
-// StageMetadata returns an expr.Option that provides a `stageMetadata()` function 
+// StageMetadata returns an expr.Option that provides a `stageMetadata()` function
 // for use in expressions.
 //
 // Usage:
