@@ -60,8 +60,9 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 
 // reconciler reconciles Promotion resources.
 type reconciler struct {
-	kargoClient client.Client
-	promoEngine promotion.Engine
+	kargoClient    client.Client
+	promoEngine    promotion.Engine
+	shardPredicate controller.ResponsibleFor[kargoapi.Promotion]
 
 	cfg ReconcilerConfig
 
@@ -148,7 +149,12 @@ func SetupReconcilerWithManager(
 		source.Kind(
 			kargoMgr.GetCache(),
 			&kargoapi.Stage{},
-			&PromotionAcknowledgedByStageHandler[*kargoapi.Stage]{},
+			&PromotionAcknowledgedByStageHandler[*kargoapi.Stage]{
+				shardPredicate: controller.ResponsibleFor[kargoapi.Stage]{
+					IsDefaultController: cfg.IsDefaultController,
+					ShardName:           cfg.ShardName,
+				},
+			},
 		),
 	); err != nil {
 		return fmt.Errorf("unable to watch Stages: %w", err)
@@ -192,6 +198,10 @@ func newReconciler(
 		promoEngine: promoEngine,
 		sender:      sender,
 		cfg:         cfg,
+		shardPredicate: controller.ResponsibleFor[kargoapi.Promotion]{
+			IsDefaultController: cfg.IsDefaultController,
+			ShardName:           cfg.ShardName,
+		},
 	}
 	r.getStageFn = api.GetStage
 	r.promoteFn = r.promote
@@ -222,6 +232,12 @@ func (r *reconciler) Reconcile(
 		// Promotion was deleted after the current reconciliation request was issued.
 		return ctrl.Result{}, nil
 	}
+
+	if !r.shardPredicate.IsResponsible(promo) {
+		logger.Debug("ignoring Promotion because it is not assigned to this shard")
+		return ctrl.Result{}, nil
+	}
+
 	// Find the Freight
 	freight, err := api.GetFreight(ctx, r.kargoClient, types.NamespacedName{
 		Namespace: promo.Namespace,
