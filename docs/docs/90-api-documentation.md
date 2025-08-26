@@ -3,12 +3,9 @@
 
 <a name="api_service_v1alpha1_service-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
-
-
 <a name="akuity-io-kargo-service-v1alpha1-KargoService"></a>
 
 ### KargoService
-
 
 | Method Name | Request Type | Response Type |
 | ----------- | ------------ | ------------- |
@@ -1608,9 +1605,7 @@ explicitly empty
  <!-- end enums --> <!-- end HasExtensions -->
 
 <a name="api_rbac_v1alpha1_generated-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
- <!-- end services -->
+<p align="right"><a href="#top">Top</a></p> <!-- end services -->
 
 ## rbac/v1alpha1
 <a name="github-com-akuity-kargo-api-rbac-v1alpha1-Claim"></a>
@@ -1659,9 +1654,7 @@ explicitly empty
  <!-- end enums --> <!-- end HasExtensions -->
 
 <a name="api_v1alpha1_generated-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
- <!-- end services -->
+<p align="right"><a href="#top">Top</a></p> <!-- end services -->
 
 ## v1alpha1
 <a name="github-com-akuity-kargo-api-v1alpha1-AnalysisRunArgument"></a>

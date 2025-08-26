@@ -6,11 +6,11 @@
 <a name="{{.Name | anchor}}"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-{{range .Services}}
+{{- range .Services}}
 <a name="{{.FullName | anchor}}"></a>
 
 ### {{.Name}}
-{{.Description}}
+{{- .Description}}
 
 | Method Name | Request Type | Response Type |
 | ----------- | ------------ | ------------- |
