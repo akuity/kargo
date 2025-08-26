@@ -19,7 +19,7 @@
 {{end}}
 {{end}} <!-- end services -->
 
-## {{.Name}}
+## {{.Name | trimPrefix "api/" | trimSuffix "/service.proto" | trimSuffix "/generated.proto" }}
 {{.Description}}
 {{- range .Messages -}}
 <a name="{{.FullName | anchor}}"></a>
