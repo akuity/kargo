@@ -25,13 +25,13 @@
 <a name="{{.FullName | anchor}}"></a>
 
 ### {{.LongName}}
-{{.Description}}
+{{range (.Description | splitList "\n" )  }} {{if not (contains "kubebuilder" .)}}{{.}}{{end}}{{end}}
 
 {{- if .HasFields}}
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 {{range .Fields -}}
-  | {{.Name}} | {{ if not (contains "k8s.io" .FullType )}}[{{.LongType}}](#{{.FullType | anchor}}){{ else }}{{.FullType}}{{ end }} | {{range (.Description | splitList "\n" )  }} {{if not (contains "+kubebuilder:validation:Pattern" .)}}{{. | replace "<" "&lt;" | replace ">" "&gt;" }}{{else}}{{ . | replace "[" "" | replace "]" "" }}{{ end }}{{end}} |
+  | {{.Name}} | {{ if not (contains "k8s.io" .FullType )}}[{{.LongType}}](#{{.FullType | anchor}}){{ else }}{{.FullType}}{{ end }} | {{range (.Description | splitList "\n" )  }} {{if not (contains "kubebuilder" .)}}{{. | replace "<" "&lt;" | replace ">" "&gt;" }}{{end}}{{end}} |
 {{end}}
 {{- end}}
 {{end}} <!-- end messages -->
