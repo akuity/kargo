@@ -174,11 +174,7 @@ func Test_reconciler_collectStats(t *testing.T) {
 					Spec: kargoapi.StageSpec{
 						PromotionTemplate: &kargoapi.PromotionTemplate{
 							Spec: kargoapi.PromotionTemplateSpec{
-								Steps: []kargoapi.PromotionStep{
-									{
-										Uses: "git-clone",
-									},
-								},
+								Steps: []kargoapi.PromotionStep{{}},
 							},
 						},
 					},
@@ -197,11 +193,7 @@ func Test_reconciler_collectStats(t *testing.T) {
 					Spec: kargoapi.StageSpec{
 						PromotionTemplate: &kargoapi.PromotionTemplate{
 							Spec: kargoapi.PromotionTemplateSpec{
-								Steps: []kargoapi.PromotionStep{
-									{
-										Uses: "git-clone",
-									},
-								},
+								Steps: []kargoapi.PromotionStep{{}},
 							},
 						},
 					},
@@ -227,11 +219,7 @@ func Test_reconciler_collectStats(t *testing.T) {
 					Spec: kargoapi.StageSpec{
 						PromotionTemplate: &kargoapi.PromotionTemplate{
 							Spec: kargoapi.PromotionTemplateSpec{
-								Steps: []kargoapi.PromotionStep{
-									{
-										Uses: "git-clone",
-									},
-								},
+								Steps: []kargoapi.PromotionStep{{}},
 							},
 						},
 					},
@@ -250,11 +238,7 @@ func Test_reconciler_collectStats(t *testing.T) {
 					Spec: kargoapi.StageSpec{
 						PromotionTemplate: &kargoapi.PromotionTemplate{
 							Spec: kargoapi.PromotionTemplateSpec{
-								Steps: []kargoapi.PromotionStep{
-									{
-										Uses: "git-clone",
-									},
-								},
+								Steps: []kargoapi.PromotionStep{{}},
 							},
 						},
 					},
