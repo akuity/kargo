@@ -141,6 +141,18 @@ kubectl get projectconfigs kargo-demo \
         The webhook receiver won't accept unsigned requests.
         :::
 
+    1. Optionally, in the <Hlt>Headers</Hlt> section, you can set a custom `X-Kargo-Repo-URLs` header.
+
+        :::info
+        The value of `X-Kargo-Repo-URLs` can either be a single repository URL
+        or a comma-separated list of repository URLs. If set, any warehouses 
+        with subscriptions to the designated repo URL(s) will be refreshed. This
+        can be useful for repositories with unconventional naming schemes or
+        self-hosted instances.
+        :::
+
+        ![Custom Headers](./img/custom-headers.png "Custom Headers")
+
     1. Click <Hlt>Save</Hlt>.
 
         You will be redirected to the <Hlt>Webhooks</Hlt> page where the newly
