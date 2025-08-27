@@ -155,7 +155,7 @@ export const StageNode = (props: { stage: Stage }) => {
               promotionId: props.stage?.status?.lastPromotion?.name
             })}
           >
-            <Flex gap={4} align='center'>
+            <Flex gap={4} align='center' justify='center'>
               <span>Last Promotion: </span>
               <span title={date?.toString()}>
                 {formatDistance(date, new Date(), { addSuffix: true })}
