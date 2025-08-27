@@ -123,7 +123,7 @@ func (s *semverSelector) Select(
 
 	images, err := s.getImagesByTags(ctx, tags)
 	if err != nil {
-		return nil, fmt.Errorf("error getting images by tags")
+		return nil, fmt.Errorf("error getting images by tags: %w", err)
 	}
 
 	if len(images) == 0 {
