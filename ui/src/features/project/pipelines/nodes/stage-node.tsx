@@ -128,7 +128,7 @@ export const StageNode = (props: { stage: Stage }) => {
 
     descriptionItems = (
       <Flex className='text-[10px]' gap={8} wrap vertical>
-        <Flex gap={24}>
+        <Flex gap={24} justify='center'>
           {Phase}
           {stageHealth?.status && (
             <Flex gap={16}>
@@ -142,9 +142,11 @@ export const StageNode = (props: { stage: Stage }) => {
           )}
         </Flex>
 
-        <PullRequestLink stage={props.stage} />
+        <center>
+          <PullRequestLink stage={props.stage} />
 
-        <AnalysisRunLogsLink stage={props.stage} />
+          <AnalysisRunLogsLink stage={props.stage} />
+        </center>
 
         {lastPromotion && (
           <Link

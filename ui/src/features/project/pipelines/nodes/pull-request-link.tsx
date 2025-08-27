@@ -1,5 +1,9 @@
 import { useQuery } from '@connectrpc/connect-query';
-import { faCircleNotch, faCodePullRequest } from '@fortawesome/free-solid-svg-icons';
+import {
+  faCircleNotch,
+  faCodePullRequest,
+  faExternalLink
+} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Spin, Tag } from 'antd';
 import Link from 'antd/es/typography/Link';
@@ -77,10 +81,11 @@ export const PullRequestLink = (props: PullRequestLinkProps) => {
 
   return (
     <Link href={pullRequestLink} target='_blank'>
-      <Tag color='orange'>
+      <Tag color='green'>
         <span className='text-[10px]'>
           Waiting for Approval <FontAwesomeIcon className='ml-1' icon={faCodePullRequest} />
           <FontAwesomeIcon icon={faCircleNotch} spin className='ml-1' />
+          <FontAwesomeIcon icon={faExternalLink} className='ml-1' />
         </span>
       </Tag>
     </Link>
