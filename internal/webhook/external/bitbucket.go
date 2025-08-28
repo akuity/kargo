@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	gh "github.com/google/go-github/v71/github"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -22,7 +23,8 @@ const (
 	bitbucketEventHeader     = "X-Event-Key"
 	bitbucketSignatureHeader = "X-Hub-Signature"
 
-	bitbucketPushEvent = "repo:push"
+	bitbucketPushEvent       = "repo:push"
+	bitbucketServerPushEvent = "repo:refs_changed" // Bitbucket Server (Data Center
 )
 
 func init() {
@@ -88,9 +90,19 @@ func (b *bitbucketWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 			return
 		}
 
+		// Bitbucket Cloud and Data Center provide slightly different event
+		// payloads. This interface describes what we need from either.
+		var payload interface {
+			getRefs() []string
+			getRepoURLs() []string
+		}
+
 		eventType := r.Header.Get(bitbucketEventHeader)
 		switch eventType {
 		case bitbucketPushEvent:
+			payload = &bitBucketPushEvent{}
+		case bitbucketServerPushEvent:
+			payload = &bitBucketServerPushEvent{}
 		default:
 			xhttp.WriteErrorJSON(
 				w,
@@ -122,8 +134,7 @@ func (b *bitbucketWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 			return
 		}
 
-		payload := bitBucketPushEvent{}
-		if err := json.Unmarshal(requestBody, &payload); err != nil {
+		if err := json.Unmarshal(requestBody, payload); err != nil {
 			xhttp.WriteErrorJSON(
 				w,
 				xhttp.Error(errors.New("invalid request body"), http.StatusBadRequest),
@@ -131,23 +142,7 @@ func (b *bitbucketWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 			return
 		}
 
-		// Note: It may seem peculiar to obtain the repo URL from the payload's
-		// repository.links.html.href field, however, there is no better option.
-		//
-		// A naive option would be combining https://bitbucket.org/ with the value
-		// of the payload's repository.full_name field, but that does not hold up
-		// for events originating from Bitbucket Data Center, which will utilize a
-		// custom domain name.
-		//
-		// A slightly better approach would be to parse the protocol and hostname
-		// from the value of the payload's repository.links.html.href field and
-		// combine that with the value of the payload's repository.full_name field,
-		// however, in all (currently known) cases, that yields the same result as
-		// simply using the value of the repository.links.html.href field directly.
-		//
-		// TODO(krancour): There are very likely some yet-to-be-identified edge
-		// cases where this choice does not hold up.
-		repoURLs := []string{payload.Repository.Links.HTML.Href}
+		repoURLs := payload.getRepoURLs()
 		refs := payload.getRefs()
 		logger = logger.WithValues(
 			"repoURLs", repoURLs,
@@ -158,6 +153,9 @@ func (b *bitbucketWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 	})
 }
 
+// bitBucketPushEvent represents the payload Bitbucket Cloud sends for
+// "repo:push" events.
+// See https://support.atlassian.com/bitbucket-cloud/docs/event-payloads/#Push
 type bitBucketPushEvent struct {
 	Actor struct {
 		Name         string `json:"name"`
@@ -179,11 +177,75 @@ type bitBucketPushEvent struct {
 	} `json:"repository"`
 }
 
-// getRefs extracts all references mentioned by the event
+// Note: It may seem peculiar to obtain the repo URL from the payload's
+// repository.links.html.href field, however, there is no better option.
+//
+// A naive option would be combining https://bitbucket.org/ with the value
+// of the payload's repository.full_name field, but that does not hold up
+// for events originating from Bitbucket Data Center, which will utilize a
+// custom domain name.
+//
+// A slightly better approach would be to parse the protocol and hostname
+// from the value of the payload's repository.links.html.href field and
+// combine that with the value of the payload's repository.full_name field,
+// however, in all (currently known) cases, that yields the same result as
+// simply using the value of the repository.links.html.href field directly.
+//
+// TODO(krancour): There are very likely some yet-to-be-identified edge
+// cases where this choice does not hold up.
+func (b bitBucketPushEvent) getRepoURLs() []string {
+	return []string{b.Repository.Links.HTML.Href}
+}
+
+// getRefs extracts all references mentioned by the repo:push event.
+// See https://support.atlassian.com/bitbucket-cloud/docs/event-payloads/#Push
 func (b bitBucketPushEvent) getRefs() []string {
 	var qualifiers []string
 	for _, change := range b.Push.Changes {
 		qualifiers = append(qualifiers, change.New.Name)
+	}
+	return qualifiers
+}
+
+// bitBucketServerPushEvent represents the payload Bitbucket Server (Data
+// Center) sends for "repo:refs_changed" events.
+// See https://confluence.atlassian.com/bitbucketserver/event-payload-938025882.html
+type bitBucketServerPushEvent struct {
+	Actor struct {
+		Name         string `json:"name"`
+		EmailAddress string `json:"emailAddress"`
+	} `json:"actor"`
+	Changes []struct {
+		Ref struct {
+			DisplayID string `json:"displayId"`
+		} `json:"ref"`
+	} `json:"changes"`
+	Repository struct {
+		Links struct {
+			Clone []struct {
+				Href string `json:"href"`
+			} `json:"clone"`
+		} `json:"links"`
+	} `json:"repository"`
+}
+
+// getRepoURLs extracts the Bitbucket "clone" URLs. Typically,
+// this includes both ssh and https URLs.
+func (b bitBucketServerPushEvent) getRepoURLs() []string {
+	repoURLs := []string{}
+	for _, link := range b.Repository.Links.Clone {
+		// Internally, the warehouse subscription normalizes URLs by stripping
+		// .git suffixes, so we do the same here.
+		hrefWithoutGitSuffix := strings.TrimSuffix(link.Href, ".git")
+		repoURLs = append(repoURLs, hrefWithoutGitSuffix)
+	}
+	return repoURLs
+}
+
+func (b bitBucketServerPushEvent) getRefs() []string {
+	var qualifiers []string
+	for _, change := range b.Changes {
+		qualifiers = append(qualifiers, change.Ref.DisplayID)
 	}
 	return qualifiers
 }
