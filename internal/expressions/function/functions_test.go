@@ -1165,46 +1165,68 @@ func Test_freightMetadata(t *testing.T) {
 		assertions func(t *testing.T, result any, err error)
 	}{
 		{
-			name:    "successful metadata retrieval, single arg - string map",
-			objects: []client.Object{testFreight},
-			args:    []any{testFreightName},
+			name: "no arguments",
+			args: []any{},
 			assertions: func(t *testing.T, result any, err error) {
-				assert.NoError(t, err)
-				assert.Equal(t, expectedMetadata, result)
+				assert.ErrorContains(t, err, "expected 1 argument")
+				assert.Nil(t, result)
 			},
 		},
 		{
-			name:    "successful metadata retrieval, two arg - string map",
-			objects: []client.Object{testFreight},
-			args:    []any{testFreightName, "deployment-config"},
+			name: "too many arguments",
+			args: []any{testFreightName, "deployment-config", "extra"},
 			assertions: func(t *testing.T, result any, err error) {
-				assert.NoError(t, err)
-				assert.Equal(t, testMetadata, result)
+				assert.ErrorContains(t, err, "expected 1 argument")
+				assert.Nil(t, result)
 			},
 		},
 		{
-			name:    "successful metadata retrieval, two arg - number",
-			objects: []client.Object{testFreight},
-			args:    []any{testFreightName, "build-number"},
+			name: "invalid first argument type",
+			args: []any{123},
 			assertions: func(t *testing.T, result any, err error) {
-				assert.NoError(t, err)
-				// JSON unmarshaling converts numbers to float64
-				assert.Equal(t, float64(42), result)
+				assert.ErrorContains(t, err, "argument must be string")
+				assert.Nil(t, result)
 			},
 		},
 		{
-			name:    "successful metadata retrieval, two arg - string",
-			objects: []client.Object{testFreight},
-			args:    []any{testFreightName, "issue"},
+			name: "empty freight ref name",
+			args: []any{"", "deployment-config"},
 			assertions: func(t *testing.T, result any, err error) {
-				assert.NoError(t, err)
-				assert.Equal(t, "#1234", result)
+				assert.ErrorContains(t, err, "freight ref name must not be empty")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name:    "invalid second argument type",
+			objects: []client.Object{testFreight},
+			args:    []any{testFreightName, 123},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "argument must be string")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name:    "empty metadata key",
+			objects: []client.Object{testFreight},
+			args:    []any{testFreightName, ""},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "metadata key must not be empty")
+				assert.Nil(t, result)
 			},
 		},
 		{
 			name:    "freight not found",
 			objects: []client.Object{}, // No freight objects
 			args:    []any{testFreightName},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name:    "freight not found, two arg",
+			objects: []client.Object{}, // No freight objects
+			args:    []any{testFreightName, "deployment-config"},
 			assertions: func(t *testing.T, result any, err error) {
 				assert.NoError(t, err)
 				assert.Nil(t, result)
@@ -1237,62 +1259,40 @@ func Test_freightMetadata(t *testing.T) {
 			},
 		},
 		{
-			name:    "freight not found, two arg",
-			objects: []client.Object{}, // No freight objects
+			name:    "successful metadata retrieval, two arg - string map",
+			objects: []client.Object{testFreight},
 			args:    []any{testFreightName, "deployment-config"},
 			assertions: func(t *testing.T, result any, err error) {
 				assert.NoError(t, err)
-				assert.Nil(t, result)
+				assert.Equal(t, testMetadata, result)
 			},
 		},
 		{
-			name: "no arguments",
-			args: []any{},
-			assertions: func(t *testing.T, result any, err error) {
-				assert.ErrorContains(t, err, "expected 1 argument")
-				assert.Nil(t, result)
-			},
-		},
-		{
-			name: "too many arguments",
-			args: []any{testFreightName, "deployment-config", "extra"},
-			assertions: func(t *testing.T, result any, err error) {
-				assert.ErrorContains(t, err, "expected 1 argument")
-				assert.Nil(t, result)
-			},
-		},
-		{
-			name: "invalid first argument type",
-			args: []any{123},
-			assertions: func(t *testing.T, result any, err error) {
-				assert.ErrorContains(t, err, "argument must be string")
-				assert.Nil(t, result)
-			},
-		},
-		{
-			name:    "invalid second argument type",
+			name:    "successful metadata retrieval, two arg - number",
 			objects: []client.Object{testFreight},
-			args:    []any{testFreightName, 123},
+			args:    []any{testFreightName, "build-number"},
 			assertions: func(t *testing.T, result any, err error) {
-				assert.ErrorContains(t, err, "argument must be string")
-				assert.Nil(t, result)
+				assert.NoError(t, err)
+				// JSON unmarshaling converts numbers to float64
+				assert.Equal(t, float64(42), result)
 			},
 		},
 		{
-			name: "empty freight ref name",
-			args: []any{"", "deployment-config"},
-			assertions: func(t *testing.T, result any, err error) {
-				assert.ErrorContains(t, err, "freight ref name must not be empty")
-				assert.Nil(t, result)
-			},
-		},
-		{
-			name:    "empty metadata key",
+			name:    "successful metadata retrieval, two arg - string",
 			objects: []client.Object{testFreight},
-			args:    []any{testFreightName, ""},
+			args:    []any{testFreightName, "issue"},
 			assertions: func(t *testing.T, result any, err error) {
-				assert.ErrorContains(t, err, "metadata key must not be empty")
-				assert.Nil(t, result)
+				assert.NoError(t, err)
+				assert.Equal(t, "#1234", result)
+			},
+		},
+		{
+			name:    "successful metadata retrieval, single arg - string map",
+			objects: []client.Object{testFreight},
+			args:    []any{testFreightName},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, expectedMetadata, result)
 			},
 		},
 	}

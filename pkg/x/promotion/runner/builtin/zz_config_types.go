@@ -474,6 +474,20 @@ type OCIDownloadConfig struct {
 	OutPath string `json:"outPath"`
 }
 
+type SetMetadataConfig struct {
+	// List of metadata updates to apply to various resources
+	Updates []Update `json:"updates"`
+}
+
+type Update struct {
+	// Kind of resource to update metadata for
+	Kind Kind `json:"kind"`
+	// Name of the resource to update metadata for
+	Name string `json:"name"`
+	// Key-value pairs to set as metadata on the resource
+	Values map[string]interface{} `json:"values"`
+}
+
 type UntarConfig struct {
 	// Ignore is a (multiline) string of glob patterns to ignore when extracting files. It
 	// accepts the same syntax as .gitignore files.
@@ -538,4 +552,12 @@ type OutLayout string
 const (
 	Flat OutLayout = "flat"
 	Helm OutLayout = "helm"
+)
+
+// Kind of resource to update metadata for
+type Kind string
+
+const (
+	Freight Kind = "Freight"
+	Stage   Kind = "Stage"
 )

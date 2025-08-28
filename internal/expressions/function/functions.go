@@ -171,8 +171,8 @@ func FreightMetadata(
 	return expr.Function(
 		"freightMetadata",
 		freightMetadata(ctx, c, project),
-		new(func(freightRefName string) map[string]any),
 		new(func(freightRefName, key string) any), // Deprecated
+		new(func(freightRefName string) map[string]any),
 	)
 }
 

@@ -391,13 +391,27 @@ Example:
 config:
   # Access metadata values using ['key-name'] syntax
   issueKey: ${{ freightMetadata(ctx.targetFreight.name)['jira-issue-key'] }}
-  customValue: ${{ freightMetadata(ctx.targetFreight.name)['my-custom-key'] }}
+
+  # Using nil coalescing (??) to provide default values if metadata is missing
+  tier: ${{ stageMetadata(ctx.stage)['tier'] ?? "default-tier" }}
+
+  # Using optional chaining (?.) with nil coalescing for nested values
+  nested: ${{ stageMetadata(ctx.stage)?.config?.settings?.timeoutSeconds ?? 300 }}
 ```
 
+:::tip
+You can handle `nil` values gracefully in Expr using its
+[nil coalescing](https://expr-lang.org/docs/language-definition#nil-coalescing) and
+[optional chaining](https://expr-lang.org/docs/language-definition#optional-chaining)
+features.
+:::
+
 :::note
-The two-argument form (`freightMetadata(ctx.targetFreight.name, 'jira-issue-key')`)
-is deprecated as of `v1.8` and will be removed in `v1.10`. Please migrate to the
-single-argument form as shown above.
+An optional second argument (`freightMetadata(freightName, 'key-name')`) is supported
+but deprecated as of `v1.8` and will be removed in `v1.10`. While the two-argument
+form returns a single value for the specified key, the single-argument form returns
+the complete metadata map. To migrate, use the single-argument form with map access
+syntax: `freightMetadata(freightName)['key-name']`.
 :::
 
 ### `stageMetadata(stageName)`
@@ -415,9 +429,21 @@ Example:
 ```yaml
 config:
   # Access metadata values using ['key-name'] syntax
-  envType: ${{ stageMetadata(ctx.stage)['environment-type'] }}
   region: ${{ stageMetadata(ctx.stage)['aws-region'] }}
+
+  # Using nil coalescing (??) to provide default values if metadata is missing
+  tier: ${{ stageMetadata(ctx.stage)['tier'] ?? "default-tier" }}
+
+  # Using optional chaining (?.) with nil coalescing for nested values
+  nested: ${{ stageMetadata(ctx.stage)?.config?.settings?.timeoutSeconds ?? 300 }}
 ```
+
+:::tip
+You can handle `nil` values gracefully in Expr using its
+[nil coalescing](https://expr-lang.org/docs/language-definition#nil-coalescing) and
+[optional chaining](https://expr-lang.org/docs/language-definition#optional-chaining)
+features.
+:::
 
 ### `commitFrom(repoURL, [freightOrigin])`
 
