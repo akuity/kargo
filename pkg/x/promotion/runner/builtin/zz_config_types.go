@@ -173,6 +173,28 @@ type GitCommitConfigAuthor struct {
 	SigningKey string `json:"signingKey,omitempty"`
 }
 
+type GitMergePRConfig struct {
+	// If true, deletes the source branch after merging the PR. Default is false.
+	DeleteBranchAfterMerge bool `json:"deleteBranchAfterMerge,omitempty"`
+	// Skip TLS verification when interacting with the Git provider. Default is false.
+	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
+	// The merge strategy to use. If not specified, the provider's default will be used.
+	MergeMethod *MergeMethod `json:"mergeMethod,omitempty"`
+	// The number of the pull request to merge.
+	PRNumber int64 `json:"prNumber"`
+	// The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github',
+	// and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly
+	// specified.
+	Provider *Provider `json:"provider,omitempty"`
+	// The URL of the remote Git repository containing the pull request.
+	RepoURL string `json:"repoURL"`
+	// If true, the step will only attempt to merge after all required status checks pass. If
+	// false, the step will attempt to merge immediately. Note: Bypassing required checks
+	// requires admin or bypass permissions on some providers. If you lack these permissions,
+	// the merge will fail.
+	WaitForChecks bool `json:"waitForChecks,omitempty"`
+}
+
 type GitOpenPRConfig struct {
 	// Indicates whether a new, empty orphan branch should be created and pushed to the remote
 	// if the target branch does not already exist there. Default is false.
@@ -515,6 +537,15 @@ type YAMLUpdate struct {
 	// The new value for the specified key.
 	Value interface{} `json:"value"`
 }
+
+// The merge strategy to use. If not specified, the provider's default will be used.
+type MergeMethod string
+
+const (
+	Merge  MergeMethod = "merge"
+	Rebase MergeMethod = "rebase"
+	Squash MergeMethod = "squash"
+)
 
 // The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github',
 // and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly

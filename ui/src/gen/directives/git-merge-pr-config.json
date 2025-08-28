@@ -1,0 +1,51 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "GitMergePRConfig",
+ "type": "object",
+ "additionalProperties": false,
+ "properties": {
+  "repoURL": {
+   "type": "string",
+   "description": "The URL of the remote Git repository containing the pull request.",
+   "minLength": 1,
+   "format": "uri"
+  },
+  "prNumber": {
+   "type": "integer",
+   "description": "The number of the pull request to merge.",
+   "minimum": 1
+  },
+  "provider": {
+   "type": "string",
+   "description": "The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github', and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly specified.",
+   "enum": [
+    "azure",
+    "bitbucket",
+    "gitea",
+    "github",
+    "gitlab"
+   ]
+  },
+  "mergeMethod": {
+   "type": "string",
+   "description": "The merge strategy to use. If not specified, the provider's default will be used.",
+   "enum": [
+    "merge",
+    "squash",
+    "rebase"
+   ]
+  },
+  "insecureSkipTLSVerify": {
+   "type": "boolean",
+   "description": "Skip TLS verification when interacting with the Git provider. Default is false."
+  },
+  "deleteBranchAfterMerge": {
+   "type": "boolean",
+   "description": "If true, deletes the source branch after merging the PR. Default is false."
+  },
+  "waitForChecks": {
+   "type": "boolean",
+   "description": "If true, the step will only attempt to merge after all required status checks pass. If false, the step will attempt to merge immediately. Note: Bypassing required checks requires admin or bypass permissions on some providers. If you lack these permissions, the merge will fail."
+  }
+ }
+}
