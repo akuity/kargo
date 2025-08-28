@@ -33,7 +33,10 @@ import { useGraphContext } from '../context/graph-context';
 import { stageIndexer } from '../graph/node-indexer';
 
 import './stage-node.less';
+import { AnalysisRunLogsLink } from './analysis-run-logs-link';
+import { ArgoCDLink } from './argocd-link';
 import style from './node-size-source-of-truth.module.less';
+import { PullRequestLink } from './pull-request-link';
 import { StageFreight } from './stage-freight';
 import {
   getLastPromotionDate,
@@ -125,17 +128,25 @@ export const StageNode = (props: { stage: Stage }) => {
 
     descriptionItems = (
       <Flex className='text-[10px]' gap={8} wrap vertical>
-        <Flex gap={24}>
+        <Flex gap={24} justify='center'>
           {Phase}
           {stageHealth?.status && (
-            <Flex gap={4}>
+            <Flex gap={16}>
               <Flex align='center' gap={4}>
                 {stageHealth?.status}
                 <HealthStatusIcon noTooltip className='text-[8px]' health={stageHealth} />
               </Flex>
+
+              <ArgoCDLink stage={props.stage} shards={dictionaryContext?.argocdShards} />
             </Flex>
           )}
         </Flex>
+
+        <center>
+          <PullRequestLink stage={props.stage} />
+
+          <AnalysisRunLogsLink stage={props.stage} />
+        </center>
 
         {lastPromotion && (
           <Link
@@ -144,7 +155,7 @@ export const StageNode = (props: { stage: Stage }) => {
               promotionId: props.stage?.status?.lastPromotion?.name
             })}
           >
-            <Flex gap={4} align='center'>
+            <Flex gap={4} align='center' justify='center'>
               <span>Last Promotion: </span>
               <span title={date?.toString()}>
                 {formatDistance(date, new Date(), { addSuffix: true })}
