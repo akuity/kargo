@@ -183,6 +183,10 @@ build-cli:
 		-o bin/kargo-$(GOOS)-$(GOARCH)$(shell [ ${GOOS} = windows ] && echo .exe) \
 		./cmd/cli
 
+.PHONY: sign-and-notarize-cli
+sign-and-notarize-cli: install-quill
+	$(QUILL) sign-and-notarize --p12 $(QUILL_SIGN_P12) $(KARGO_BIN_PATH)
+
 ################################################################################
 # Used for Nighty/Unstable builds                                              #
 ################################################################################
@@ -214,7 +218,7 @@ build-cli-with-ui: build-ui build-cli
 codegen: codegen-proto codegen-controller codegen-directive-configs codegen-ui codegen-docs
 
 .PHONY: codegen-proto
-codegen-proto: install-protoc install-go-to-protobuf install-protoc-gen-gogo install-goimports install-buf
+codegen-proto: install-protoc install-go-to-protobuf install-protoc-gen-gogo install-goimports install-buf install-protoc-gen-doc
 	./hack/codegen/proto.sh
 
 .PHONY: codegen-controller
