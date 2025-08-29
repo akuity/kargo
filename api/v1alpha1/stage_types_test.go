@@ -1,10 +1,12 @@
 package v1alpha1
 
 import (
+	"reflect"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -970,5 +972,236 @@ func TestChartDeepEquals(t *testing.T) {
 			require.Equal(t, testCase.expectedResult, testCase.a.DeepEquals(testCase.b))
 			require.Equal(t, testCase.expectedResult, testCase.b.DeepEquals(testCase.a))
 		})
+	}
+}
+
+func TestStageStatus_UpsertMetadata(t *testing.T) {
+	testCases := []struct {
+		name         string
+		initialState map[string]apiextensionsv1.JSON
+		key          string
+		data         any
+		expectError  bool
+		expectedJSON string
+	}{
+		{
+			name:         "upsert string into empty metadata",
+			key:          "test-key",
+			data:         "test-string",
+			expectedJSON: `"test-string"`,
+		},
+		{
+			name:         "upsert int into empty metadata",
+			key:          "test-key",
+			data:         42,
+			expectedJSON: `42`,
+		},
+		{
+			name:         "upsert bool into empty metadata",
+			key:          "test-key",
+			data:         true,
+			expectedJSON: `true`,
+		},
+		{
+			name:         "upsert slice into empty metadata",
+			key:          "test-key",
+			data:         []int{1, 2, 3},
+			expectedJSON: `[1,2,3]`,
+		},
+		{
+			name: "upsert complex struct into empty metadata",
+			key:  "test-key",
+			data: struct {
+				Name   string   `json:"name"`
+				Age    int      `json:"age"`
+				Active bool     `json:"active"`
+				Tags   []string `json:"tags"`
+			}{
+				Name:   "test-user",
+				Age:    30,
+				Active: true,
+				Tags:   []string{"admin", "dev"},
+			},
+			expectedJSON: `{"name":"test-user","age":30,"active":true,"tags":["admin","dev"]}`,
+		},
+		{
+			name: "update existing metadata",
+			initialState: map[string]apiextensionsv1.JSON{
+				"test-key": {Raw: []byte(`"old-value"`)},
+			},
+			key:          "test-key",
+			data:         "new-value",
+			expectedJSON: `"new-value"`,
+		},
+		{
+			name:        "empty key",
+			key:         "",
+			data:        "value",
+			expectError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			status := StageStatus{
+				Metadata: tc.initialState,
+			}
+
+			err := status.UpsertMetadata(tc.key, tc.data)
+
+			if tc.expectError {
+				require.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			require.NotNil(t, status.Metadata)
+			require.Contains(t, status.Metadata, tc.key)
+			if tc.expectedJSON != "" {
+				require.JSONEq(t, tc.expectedJSON, string(status.Metadata[tc.key].Raw))
+			}
+		})
+	}
+}
+
+func TestStageStatus_GetMetadata(t *testing.T) {
+	testJSON := map[string]apiextensionsv1.JSON{
+		"string-key": {Raw: []byte(`"test-value"`)},
+		"int-key":    {Raw: []byte(`42`)},
+		"bool-key":   {Raw: []byte(`true`)},
+		"slice-key":  {Raw: []byte(`[1,2,3]`)},
+		"struct-key": {Raw: []byte(`{"name":"test-user","age":30,"active":true}`)},
+	}
+
+	testCases := []struct {
+		name         string
+		metadata     map[string]apiextensionsv1.JSON
+		key          string
+		target       any
+		expectFound  bool
+		expectError  bool
+		expectedData any
+	}{
+		{
+			name:         "get string value",
+			metadata:     testJSON,
+			key:          "string-key",
+			target:       new(string),
+			expectFound:  true,
+			expectedData: "test-value",
+		},
+		{
+			name:         "get int value",
+			metadata:     testJSON,
+			key:          "int-key",
+			target:       new(int),
+			expectFound:  true,
+			expectedData: 42,
+		},
+		{
+			name:         "get bool value",
+			metadata:     testJSON,
+			key:          "bool-key",
+			target:       new(bool),
+			expectFound:  true,
+			expectedData: true,
+		},
+		{
+			name:         "get slice value",
+			metadata:     testJSON,
+			key:          "slice-key",
+			target:       &[]int{},
+			expectFound:  true,
+			expectedData: []int{1, 2, 3},
+		},
+		{
+			name:     "get struct value",
+			metadata: testJSON,
+			key:      "struct-key",
+			target: &struct {
+				Name   string `json:"name"`
+				Age    int    `json:"age"`
+				Active bool   `json:"active"`
+			}{},
+			expectFound: true,
+			expectedData: struct {
+				Name   string `json:"name"`
+				Age    int    `json:"age"`
+				Active bool   `json:"active"`
+			}{
+				Name:   "test-user",
+				Age:    30,
+				Active: true,
+			},
+		},
+		{
+			name:        "key not found",
+			metadata:    testJSON,
+			key:         "nonexistent-key",
+			target:      new(string),
+			expectFound: false,
+		},
+		{
+			name:        "nil target",
+			metadata:    testJSON,
+			key:         "string-key",
+			target:      nil,
+			expectError: true,
+		},
+		{
+			name:        "wrong target type",
+			metadata:    testJSON,
+			key:         "string-key",
+			target:      new(int),
+			expectFound: false,
+			expectError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			status := StageStatus{
+				Metadata: tc.metadata,
+			}
+
+			found, err := status.GetMetadata(tc.key, tc.target)
+
+			require.Equal(t, tc.expectFound, found)
+
+			if tc.expectError {
+				require.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			if tc.expectedData != nil {
+				require.Equal(t, tc.expectedData, derefAny(tc.target))
+			}
+		})
+	}
+}
+
+// derefAny is a helper function to dereference any pointer type
+func derefAny(ptr any) any {
+	if ptr == nil {
+		return nil
+	}
+
+	switch v := ptr.(type) {
+	case *string:
+		return *v
+	case *int:
+		return *v
+	case *bool:
+		return *v
+	case *[]int:
+		return *v
+	default:
+		// For struct types, dereference if it's a pointer
+		val := reflect.ValueOf(ptr)
+		if val.Kind() == reflect.Ptr && val.Elem().Kind() == reflect.Struct {
+			return val.Elem().Interface()
+		}
+		return ptr
 	}
 }

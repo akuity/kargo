@@ -2,6 +2,7 @@ package function
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"maps"
 	"strings"
@@ -39,7 +40,6 @@ func FreightOperations(
 		CommitFrom(ctx, c, project, freightRequests, freightRefs),
 		ImageFrom(ctx, c, project, freightRequests, freightRefs),
 		ChartFrom(ctx, c, project, freightRequests, freightRefs),
-		FreightMetadata(ctx, c, project),
 	}
 }
 
@@ -54,6 +54,8 @@ func DataOperations(ctx context.Context, c client.Client, cache *gocache.Cache, 
 	return []expr.Option{
 		ConfigMap(ctx, c, cache, project),
 		Secret(ctx, c, cache, project),
+		FreightMetadata(ctx, c, project),
+		StageMetadata(ctx, c, project),
 	}
 }
 
@@ -153,6 +155,14 @@ func ChartFrom(
 	)
 }
 
+// FreightMetadata returns an expr.Option that provides a `freightMetadata()` function for use in expressions.
+//
+// Usage:
+//   - `freightMetadata(freightRefName)` returns the entire metadata map for the Freight.
+//   - `freightMetadata(freightRefName, key)` returns the value for the given key
+//     (DEPRECATED; will be removed in v1.10).
+//
+// The second argument is deprecated as of v1.8. Prefer using the single-argument form.
 func FreightMetadata(
 	ctx context.Context,
 	c client.Client,
@@ -161,7 +171,8 @@ func FreightMetadata(
 	return expr.Function(
 		"freightMetadata",
 		freightMetadata(ctx, c, project),
-		new(func(freightRefName, key string) any),
+		new(func(freightRefName, key string) any), // Deprecated
+		new(func(freightRefName string) map[string]any),
 	)
 }
 
@@ -171,29 +182,19 @@ func freightMetadata(
 	project string,
 ) exprFn {
 	return func(a ...any) (any, error) {
-		if len(a) != 2 {
-			return nil, fmt.Errorf("expected 2 argument, got %d", len(a))
+		if len(a) != 1 && len(a) != 2 {
+			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
 		}
 
 		freightRefName, ok := a[0].(string)
 		if !ok {
-			return nil, fmt.Errorf("argument must be string, got %T", a[0])
+			return nil, fmt.Errorf("first argument must be string, got %T", a[0])
 		}
-
 		if freightRefName == "" {
 			return nil, fmt.Errorf("freight ref name must not be empty")
 		}
 
-		key, ok := a[1].(string)
-		if !ok {
-			return nil, fmt.Errorf("argument must be string, got %T", a[1])
-		}
-		if key == "" {
-			return nil, fmt.Errorf("metadata key must not be empty")
-		}
-
 		freightData := kargoapi.Freight{}
-
 		if err := c.Get(ctx, client.ObjectKey{
 			Namespace: project,
 			Name:      freightRefName,
@@ -204,6 +205,32 @@ func freightMetadata(
 			return nil, fmt.Errorf("failed to get freight %s: %w", freightRefName, err)
 		}
 
+		// If only one argument, return the whole metadata map
+		if len(a) == 1 {
+			if freightData.Status.Metadata == nil {
+				return nil, nil
+			}
+
+			decoded := make(map[string]any, len(freightData.Status.Metadata))
+			for k, v := range freightData.Status.Metadata {
+				var val any
+				if err := json.Unmarshal(v.Raw, &val); err != nil {
+					return nil, fmt.Errorf("failed to unmarshal metadata value for key %s: %w", k, err)
+				}
+				decoded[k] = val
+			}
+			return decoded, nil
+		}
+
+		// Deprecated: If two arguments, return the value for the key
+		key, ok := a[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("second argument must be string, got %T", a[1])
+		}
+		if key == "" {
+			return nil, fmt.Errorf("metadata key must not be empty")
+		}
+
 		var data any
 		found, err := freightData.Status.GetMetadata(key, &data)
 		if err != nil {
@@ -212,8 +239,67 @@ func freightMetadata(
 		if !found {
 			return nil, nil
 		}
-
 		return data, nil
+	}
+}
+
+// StageMetadata returns an expr.Option that provides a `stageMetadata()` function
+// for use in expressions.
+//
+// Usage:
+//   - `stageMetadata(stageName)` returns the entire metadata map for the Stage.
+func StageMetadata(
+	ctx context.Context,
+	c client.Client,
+	project string,
+) expr.Option {
+	return expr.Function(
+		"stageMetadata",
+		stageMetadata(ctx, c, project),
+		new(func(stageName string) map[string]any),
+	)
+}
+
+func stageMetadata(
+	ctx context.Context,
+	c client.Client,
+	project string,
+) exprFn {
+	return func(a ...any) (any, error) {
+		if len(a) != 1 {
+			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
+		}
+
+		stageName, ok := a[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("argument must be string, got %T", a[0])
+		}
+		if stageName == "" {
+			return nil, fmt.Errorf("stage name must not be empty")
+		}
+
+		stageData := kargoapi.Stage{}
+		if err := c.Get(ctx, client.ObjectKey{
+			Namespace: project,
+			Name:      stageName,
+		}, &stageData); err != nil {
+			if apierrors.IsNotFound(err) {
+				return nil, nil
+			}
+			return nil, fmt.Errorf("failed to get stage %s: %w", stageName, err)
+		}
+		if stageData.Status.Metadata == nil {
+			return nil, nil
+		}
+		decoded := make(map[string]any, len(stageData.Status.Metadata))
+		for k, v := range stageData.Status.Metadata {
+			var val any
+			if err := json.Unmarshal(v.Raw, &val); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal metadata value for key %s: %w", k, err)
+			}
+			decoded[k] = val
+		}
+		return decoded, nil
 	}
 }
 

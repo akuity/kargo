@@ -46,6 +46,7 @@ func Initialize(kargoClient, argocdClient client.Client, credsDB credentials.Dat
 		pkgPromotion.NewTaskLevelOutputStepRunner(
 			newOutputComposer(),
 		),
+		newMetadataSetter(kargoClient),
 		newTarExtractor(),
 		newYAMLParser(),
 		newYAMLUpdater(),
