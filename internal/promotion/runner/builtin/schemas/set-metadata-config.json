@@ -28,9 +28,7 @@
             "type": "object",
             "description": "Key-value pairs to set as metadata on the resource",
             "minProperties": 1,
-            "additionalProperties": {
-              "type": ["string", "number", "boolean", "null"]
-            }
+            "additionalProperties": true
           }
         }
       }

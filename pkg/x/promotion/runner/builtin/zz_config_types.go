@@ -485,7 +485,7 @@ type Update struct {
 	// Name of the resource to update metadata for
 	Name string `json:"name"`
 	// Key-value pairs to set as metadata on the resource
-	Values map[string]*Value `json:"values"`
+	Values map[string]interface{} `json:"values"`
 }
 
 type UntarConfig struct {
@@ -561,9 +561,3 @@ const (
 	Freight Kind = "Freight"
 	Stage   Kind = "Stage"
 )
-
-type Value struct {
-	Bool   bool
-	Double int64
-	String string
-}
