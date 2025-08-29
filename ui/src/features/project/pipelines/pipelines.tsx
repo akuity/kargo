@@ -1,4 +1,5 @@
 import { useQuery } from '@connectrpc/connect-query';
+import { ConnectError, Code } from '@connectrpc/connect';
 import { faDocker } from '@fortawesome/free-brands-svg-icons';
 import { faPlus } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -25,7 +26,7 @@ import {
   queryFreight
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { FreightList } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { Freight, Project } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Project, Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { ActionContext } from './context/action-context';
 import { DictionaryContext } from './context/dictionary-context';
@@ -84,7 +85,8 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
   const action = useAction();
 
   const stageDetails =
-    stageName && listStagesQuery.data?.stages.find((s) => s?.metadata?.name === stageName);
+    stageName &&
+    (listStagesQuery.data?.stages || []).find((s: Stage) => s?.metadata?.name === stageName);
 
   const warehouseColorMap = useMemo(
     () =>
@@ -111,7 +113,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
     setPreferredFilter({ ...preferredFilter, view: nextView });
   };
 
-  const [viewingFreight, setViewingFreight] = useState<Freight | null>(null);
+  const [viewingFreight, setViewingFreight] = useState<ReturnType<typeof useFreightById>[string] | null>(null);
 
   const stages = listStagesQuery?.data?.stages || [];
   const freightInStages = useFreightInStage(stages);
@@ -143,7 +145,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
     return <LoadingState />;
   }
 
-  if (projectQuery.error) {
+  if (projectQuery.error && projectQuery.error instanceof ConnectError && projectQuery.error.code !== Code.Canceled) {
     return (
       <Result
         status='404'
@@ -228,19 +230,21 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                       {
                         key: '2',
                         label: 'Freight',
-                        children: listWarehousesQuery.data?.warehouses?.map((warehouse) => ({
-                          key: warehouse?.metadata?.name || '',
-                          label: warehouse?.metadata?.name || '',
-                          onClick: () => {
-                            navigate(
-                              generatePath(paths.warehouse, {
-                                name: project.metadata?.name,
-                                warehouseName: warehouse?.metadata?.name || '',
-                                tab: 'create-freight'
-                              })
-                            );
-                          }
-                        }))
+                        children: (listWarehousesQuery.data?.warehouses || []).map(
+                          (warehouse: Warehouse) => ({
+                            key: warehouse?.metadata?.name || '',
+                            label: warehouse?.metadata?.name || '',
+                            onClick: () => {
+                              navigate(
+                                generatePath(paths.warehouse, {
+                                  name: project.metadata?.name,
+                                  warehouseName: warehouse?.metadata?.name || '',
+                                  tab: 'create-freight'
+                                })
+                              );
+                            }
+                          })
+                        )
                       }
                     ]
                   }}
