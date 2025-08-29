@@ -7,6 +7,7 @@ import (
 	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -1145,18 +1146,14 @@ func Test_freightMetadata(t *testing.T) {
 			Name:      testFreightName,
 			Namespace: testProject,
 		},
-		Status: kargoapi.FreightStatus{},
+		Status: kargoapi.FreightStatus{
+			Metadata: map[string]apiextensionsv1.JSON{
+				"deployment-config": {Raw: []byte(`{"deployment-id":"abc123","environment":"staging"}`)},
+				"build-number":      {Raw: []byte(`42`)},
+				"issue":             {Raw: []byte(`"#1234"`)},
+			},
+		},
 	}
-
-	// Add metadata to the freight status
-	err := testFreight.Status.UpsertMetadata("deployment-config", testMetadata)
-	assert.NoError(t, err)
-
-	err = testFreight.Status.UpsertMetadata("build-number", 42)
-	assert.NoError(t, err)
-
-	err = testFreight.Status.UpsertMetadata("issue", "#1234")
-	assert.NoError(t, err)
 
 	tests := []struct {
 		name       string
@@ -1337,12 +1334,14 @@ func Test_stageMetadata(t *testing.T) {
 			Name:      testStageName,
 			Namespace: testProject,
 		},
-		Status: kargoapi.StageStatus{},
+		Status: kargoapi.StageStatus{
+			Metadata: map[string]apiextensionsv1.JSON{
+				"deployment-config": {
+					Raw: []byte(`{"deployment-id":"abc123","environment":"staging"}`),
+				},
+			},
+		},
 	}
-
-	// Add metadata to the stage status
-	err := testStage.Status.UpsertMetadata("deployment-config", testMetadata)
-	assert.NoError(t, err)
 
 	tests := []struct {
 		name       string
@@ -1350,41 +1349,6 @@ func Test_stageMetadata(t *testing.T) {
 		args       []any
 		assertions func(t *testing.T, result any, err error)
 	}{
-		{
-			name:    "successful metadata retrieval",
-			objects: []client.Object{testStage},
-			args:    []any{testStageName},
-			assertions: func(t *testing.T, result any, err error) {
-				assert.NoError(t, err)
-				assert.Equal(t, expectedMetadata, result)
-			},
-		},
-		{
-			name:    "stage not found",
-			objects: []client.Object{}, // No stage objects
-			args:    []any{testStageName},
-			assertions: func(t *testing.T, result any, err error) {
-				assert.NoError(t, err)
-				assert.Nil(t, result)
-			},
-		},
-		{
-			name: "stage exists but no metadata",
-			objects: []client.Object{
-				&kargoapi.Stage{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      testStageName,
-						Namespace: testProject,
-					},
-					Status: kargoapi.StageStatus{}, // Empty metadata
-				},
-			},
-			args: []any{testStageName},
-			assertions: func(t *testing.T, result any, err error) {
-				assert.NoError(t, err)
-				assert.Nil(t, result)
-			},
-		},
 		{
 			name: "no arguments",
 			args: []any{},
@@ -1415,6 +1379,41 @@ func Test_stageMetadata(t *testing.T) {
 			assertions: func(t *testing.T, result any, err error) {
 				assert.ErrorContains(t, err, "stage name must not be empty")
 				assert.Nil(t, result)
+			},
+		},
+		{
+			name:    "stage not found",
+			objects: []client.Object{}, // No stage objects
+			args:    []any{testStageName},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "stage exists but no metadata",
+			objects: []client.Object{
+				&kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      testStageName,
+						Namespace: testProject,
+					},
+					Status: kargoapi.StageStatus{}, // Empty status with no metadata
+				},
+			},
+			args: []any{testStageName},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name:    "successful metadata retrieval",
+			objects: []client.Object{testStage},
+			args:    []any{testStageName},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, expectedMetadata, result)
 			},
 		},
 	}

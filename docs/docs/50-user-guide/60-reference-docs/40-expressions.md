@@ -390,7 +390,7 @@ Example:
 ```yaml
 config:
   # Access metadata values using ['key-name'] syntax
-  issueKey: ${{ freightMetadata(ctx.targetFreight.name)['jira-issue-key'] }}
+  category: ${{ freightMetadata(ctx.targetFreight.name)['deployment-category'] }}
 
   # Using nil coalescing (??) to provide default values if metadata is missing
   tier: ${{ stageMetadata(ctx.stage)['tier'] ?? "default-tier" }}
