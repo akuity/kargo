@@ -4,6 +4,7 @@ import {
   faArrowsLeftRightToLine,
   faCheck,
   faEllipsis,
+  faMagicWandSparkles,
   faTrash,
   faWarehouse,
   IconDefinition
@@ -121,6 +122,21 @@ export const FreightCard = (props: FreightCardProps) => {
             <Dropdown
               menu={{
                 items: [
+                  {
+                    key: 'similar-freight',
+                    label: 'Create similar freight',
+                    icon: <FontAwesomeIcon icon={faMagicWandSparkles} />,
+                    onClick: (e) => {
+                      e.domEvent.stopPropagation();
+                      navigate(
+                        `${generatePath(paths.warehouse, {
+                          name: props.freight?.metadata?.namespace,
+                          warehouseName: props.freight?.origin?.name,
+                          tab: 'create-freight'
+                        })}?similar=${props.freight?.alias}`
+                      );
+                    }
+                  },
                   {
                     key: 'manually-approve',
                     label: 'Manually Approve',

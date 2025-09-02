@@ -1,5 +1,6 @@
 import { Radio, Table } from 'antd';
-import { useState } from 'react';
+
+import { useDetectPage } from './use-detect-page';
 
 export const ChartTable = ({
   versions,
@@ -12,7 +13,7 @@ export const ChartTable = ({
   select: (version?: string) => void;
   show?: boolean;
 }) => {
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useDetectPage(versions, selected, show);
 
   if (!show) {
     return null;
