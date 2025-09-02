@@ -7,6 +7,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Spin, Tag } from 'antd';
 import Link from 'antd/es/typography/Link';
+import classNames from 'classnames';
 import { useMemo } from 'react';
 
 import { getPromotionOutputsByStepAlias } from '@ui/features/stage/utils/promotion';
@@ -18,6 +19,7 @@ import { getCurrentPromotion } from './stage-meta-utils';
 
 type PullRequestLinkProps = {
   stage: Stage;
+  className?: string;
 };
 
 export const PullRequestLink = (props: PullRequestLinkProps) => {
@@ -80,9 +82,9 @@ export const PullRequestLink = (props: PullRequestLinkProps) => {
   }
 
   return (
-    <Link href={pullRequestLink} target='_blank'>
-      <Tag color='green'>
-        <span className='text-[10px]'>
+    <Link href={pullRequestLink} target='_blank' className={classNames(props.className)}>
+      <Tag color='green' bordered={false}>
+        <span className='text-[8px]'>
           Waiting for Approval <FontAwesomeIcon className='ml-1' icon={faCodePullRequest} />
           <FontAwesomeIcon icon={faCircleNotch} spin className='ml-1' />
           <FontAwesomeIcon icon={faExternalLink} className='ml-1' />

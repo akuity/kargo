@@ -10,6 +10,7 @@ export type DictionaryContextType = {
   subscribersByStage: Record<string, Set<string>>;
   stageByName: Record<string, Stage>;
   argocdShards?: Record<string, ArgoCDShard>;
+  hasAnalysisRunLogsUrlTemplate?: boolean;
 };
 
 export const DictionaryContext = createContext<DictionaryContextType | null>(null);

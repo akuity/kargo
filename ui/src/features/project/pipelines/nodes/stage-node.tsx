@@ -95,10 +95,10 @@ export const StageNode = (props: { stage: Stage }) => {
 
   let descriptionItems: ReactNode;
 
-  if (!controlFlow) {
-    const lastPromotion = getLastPromotionDate(props.stage);
-    const date = timestampDate(lastPromotion) as Date;
+  const lastPromotion = getLastPromotionDate(props.stage);
+  const date = timestampDate(lastPromotion) as Date;
 
+  if (!controlFlow) {
     let Phase = (
       <Flex align='center' gap={4}>
         {stagePhase}{' '}
@@ -145,25 +145,10 @@ export const StageNode = (props: { stage: Stage }) => {
         <center>
           <PullRequestLink stage={props.stage} />
 
-          <AnalysisRunLogsLink stage={props.stage} />
+          {dictionaryContext?.hasAnalysisRunLogsUrlTemplate && (
+            <AnalysisRunLogsLink stage={props.stage} />
+          )}
         </center>
-
-        {lastPromotion && (
-          <Link
-            to={generatePath(paths.promotion, {
-              name: props.stage?.metadata?.namespace,
-              promotionId: props.stage?.status?.lastPromotion?.name
-            })}
-          >
-            <Flex gap={4} align='center' justify='center'>
-              <span>Last Promotion: </span>
-              <span title={date?.toString()}>
-                {formatDistance(date, new Date(), { addSuffix: true })}
-              </span>
-              <FontAwesomeIcon icon={faExternalLink} className='text-[6px]' />
-            </Flex>
-          </Link>
-        )}
       </Flex>
     );
   }
@@ -342,6 +327,23 @@ export const StageNode = (props: { stage: Stage }) => {
             onClick={() => graphContext?.onStack(stageNodeIndex)}
           />
         )}
+
+      {lastPromotion && (
+        <Link
+          to={generatePath(paths.promotion, {
+            name: props.stage?.metadata?.namespace,
+            promotionId: props.stage?.status?.lastPromotion?.name
+          })}
+        >
+          <Flex gap={4} align='center' justify='center' className='text-[10px]'>
+            <span>Last Promotion: </span>
+            <span title={date?.toString()}>
+              {formatDistance(date, new Date(), { addSuffix: true })}
+            </span>
+            <FontAwesomeIcon icon={faExternalLink} className='text-[6px]' />
+          </Flex>
+        </Link>
+      )}
     </Card>
   );
 };

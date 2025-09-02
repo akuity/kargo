@@ -181,7 +181,8 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
             stageAutoPromotionMap,
             subscribersByStage,
             stageByName,
-            argocdShards
+            argocdShards,
+            hasAnalysisRunLogsUrlTemplate: getConfigQuery?.data?.hasAnalysisRunLogsUrlTemplate
           }}
         >
           <ColorContext.Provider value={{ stageColorMap, warehouseColorMap }}>
