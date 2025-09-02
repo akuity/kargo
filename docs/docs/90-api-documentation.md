@@ -5,7 +5,9 @@
 <p align="right"><a href="#top">Top</a></p>
 <a name="akuity-io-kargo-service-v1alpha1-KargoService"></a>
 
-### KargoService
+### KargoServiceKargoService provides the primary API for interacting with Kargo resources.
+It offers comprehensive functionality for managing continuous delivery pipelines,
+including stages, promotions, freight, warehouses, credentials, and related resources.
 
 | Method Name | Request Type | Response Type |
 | ----------- | ------------ | ------------- |
@@ -122,18 +124,18 @@
 <a name="akuity-io-kargo-service-v1alpha1-AdminLoginRequest"></a>
 
 ### AdminLoginRequest
- 
+ AdminLoginRequest contains credentials for admin authentication.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| password | [string](#string) |   |
+| password | [string](#string) |  password is the admin password. |
 
 <a name="akuity-io-kargo-service-v1alpha1-AdminLoginResponse"></a>
 
 ### AdminLoginResponse
- 
+ AdminLoginResponse contains the authentication token for admin access.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| id_token | [string](#string) |   |
+| id_token | [string](#string) |  id_token is the JWT token for authenticated admin access. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ApproveFreightRequest"></a>
 
@@ -153,11 +155,11 @@
 <a name="akuity-io-kargo-service-v1alpha1-ArgoCDShard"></a>
 
 ### ArgoCDShard
- 
+ ArgoCDShard represents configuration for a specific ArgoCD shard.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| url | [string](#string) |   |
-| namespace | [string](#string) |   |
+| url | [string](#string) |  url is the base URL of the ArgoCD server. |
+| namespace | [string](#string) |  namespace is the Kubernetes namespace where ArgoCD is installed. |
 
 <a name="akuity-io-kargo-service-v1alpha1-Claims"></a>
 
@@ -170,11 +172,11 @@
 <a name="akuity-io-kargo-service-v1alpha1-ComponentVersions"></a>
 
 ### ComponentVersions
- 
+ ComponentVersions contains version information for different Kargo components.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| server | [VersionInfo](#akuity-io-kargo-service-v1alpha1-VersionInfo) |   |
-| cli | [VersionInfo](#akuity-io-kargo-service-v1alpha1-VersionInfo) |   |
+| server | [VersionInfo](#akuity-io-kargo-service-v1alpha1-VersionInfo) |  server contains version information for the Kargo server. |
+| cli | [VersionInfo](#akuity-io-kargo-service-v1alpha1-VersionInfo) |  cli contains version information for the Kargo CLI. |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateClusterSecretRequest"></a>
 
@@ -633,16 +635,16 @@
 <a name="akuity-io-kargo-service-v1alpha1-GetConfigRequest"></a>
 
 ### GetConfigRequest
- 
+ GetConfigRequest is the request message for retrieving server configuration.
 <a name="akuity-io-kargo-service-v1alpha1-GetConfigResponse"></a>
 
 ### GetConfigResponse
- 
+ GetConfigResponse contains server configuration information.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| argocd_shards | [GetConfigResponse.ArgocdShardsEntry](#akuity-io-kargo-service-v1alpha1-GetConfigResponse-ArgocdShardsEntry) |   |
-| secret_management_enabled | [bool](#bool) |   |
-| cluster_secrets_namespace | [string](#string) |   |
+| argocd_shards | [GetConfigResponse.ArgocdShardsEntry](#akuity-io-kargo-service-v1alpha1-GetConfigResponse-ArgocdShardsEntry) |  argocd_shards maps shard names to their ArgoCD configuration. |
+| secret_management_enabled | [bool](#bool) |  secret_management_enabled indicates if secret management features are available. |
+| cluster_secrets_namespace | [string](#string) |  cluster_secrets_namespace is the namespace used for cluster-scoped secrets. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetConfigResponse-ArgocdShardsEntry"></a>
 
@@ -769,16 +771,16 @@
 <a name="akuity-io-kargo-service-v1alpha1-GetPublicConfigRequest"></a>
 
 ### GetPublicConfigRequest
- 
+ GetPublicConfigRequest is the request message for retrieving public configuration.
 <a name="akuity-io-kargo-service-v1alpha1-GetPublicConfigResponse"></a>
 
 ### GetPublicConfigResponse
- 
+ GetPublicConfigResponse contains publicly accessible configuration settings.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| oidc_config | [OIDCConfig](#akuity-io-kargo-service-v1alpha1-OIDCConfig) |   |
-| admin_account_enabled | [bool](#bool) |   |
-| skip_auth | [bool](#bool) |   |
+| oidc_config | [OIDCConfig](#akuity-io-kargo-service-v1alpha1-OIDCConfig) |  oidc_config contains OpenID Connect configuration for authentication. |
+| admin_account_enabled | [bool](#bool) |  admin_account_enabled indicates if admin account authentication is available. |
+| skip_auth | [bool](#bool) |  skip_auth indicates if authentication should be bypassed. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetRoleRequest"></a>
 
@@ -823,14 +825,14 @@
 <a name="akuity-io-kargo-service-v1alpha1-GetVersionInfoRequest"></a>
 
 ### GetVersionInfoRequest
- 
+ GetVersionInfoRequest is the request message for retrieving version information.
 <a name="akuity-io-kargo-service-v1alpha1-GetVersionInfoResponse"></a>
 
 ### GetVersionInfoResponse
- 
+ GetVersionInfoResponse contains the server's version information.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| version_info | [VersionInfo](#akuity-io-kargo-service-v1alpha1-VersionInfo) |   |
+| version_info | [VersionInfo](#akuity-io-kargo-service-v1alpha1-VersionInfo) |  version_info contains detailed version and build information. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetWarehouseRequest"></a>
 
@@ -1133,13 +1135,13 @@
 <a name="akuity-io-kargo-service-v1alpha1-OIDCConfig"></a>
 
 ### OIDCConfig
- 
+ OIDCConfig contains OpenID Connect configuration for authentication.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| issuer_url | [string](#string) |   |
-| client_id | [string](#string) |   |
-| scopes | [string](#string) |   |
-| cli_client_id | [string](#string) |   |
+| issuer_url | [string](#string) |  issuer_url is the OIDC provider's issuer URL. |
+| client_id | [string](#string) |  client_id is the OIDC client identifier for web applications. |
+| scopes | [string](#string) |  scopes are the OIDC scopes to request during authentication. |
+| cli_client_id | [string](#string) |  cli_client_id is the OIDC client identifier for CLI applications. |
 
 <a name="akuity-io-kargo-service-v1alpha1-PromoteDownstreamRequest"></a>
 
@@ -1457,16 +1459,16 @@
 <a name="akuity-io-kargo-service-v1alpha1-VersionInfo"></a>
 
 ### VersionInfo
- 
+ VersionInfo contains detailed version and build information for a Kargo component.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| version | [string](#string) |   |
-| git_commit | [string](#string) |   |
-| git_tree_dirty | [bool](#bool) |   |
-| build_time | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |   |
-| go_version | [string](#string) |   |
-| compiler | [string](#string) |   |
-| platform | [string](#string) |   |
+| version | [string](#string) |  version is the semantic version string. |
+| git_commit | [string](#string) |  git_commit is the Git commit hash used for the build. |
+| git_tree_dirty | [bool](#bool) |  git_tree_dirty indicates whether the Git working tree was dirty during build. |
+| build_time | [google.protobuf.Timestamp](#google-protobuf-Timestamp) |  build_time is the timestamp when the build was created. |
+| go_version | [string](#string) |  go_version is the Go version used for the build. |
+| compiler | [string](#string) |  compiler is the compiler used for the build. |
+| platform | [string](#string) |  platform is the target platform for the build. |
 
 <a name="akuity-io-kargo-service-v1alpha1-WatchClusterConfigRequest"></a>
 
@@ -1593,13 +1595,13 @@
 <a name="akuity-io-kargo-service-v1alpha1-RawFormat"></a>
 
 ### RawFormat
-
+RawFormat specifies the format for raw resource representation.
 
 | Name | Number | Description |
 | ---- | ------ | ----------- |
-| RAW_FORMAT_UNSPECIFIED | 0 |  |
-| RAW_FORMAT_JSON | 1 |  |
-| RAW_FORMAT_YAML | 2 |  |
+| RAW_FORMAT_UNSPECIFIED | 0 | RAW_FORMAT_UNSPECIFIED indicates no specific format is requested. |
+| RAW_FORMAT_JSON | 1 | RAW_FORMAT_JSON requests JSON format for raw resources. |
+| RAW_FORMAT_YAML | 2 | RAW_FORMAT_YAML requests YAML format for raw resources. |
 
 
  <!-- end enums --> <!-- end HasExtensions -->

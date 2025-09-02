@@ -10,202 +10,325 @@ import "api/rbac/v1alpha1/generated.proto";
 
 option go_package = "github.com/akuity/kargo/api/service/v1alpha1;svcv1alpha1";
 
+// RawFormat specifies the format for raw resource representation.
 enum RawFormat {
+  // RAW_FORMAT_UNSPECIFIED indicates no specific format is requested.
   RAW_FORMAT_UNSPECIFIED = 0;
+  // RAW_FORMAT_JSON requests JSON format for raw resources.
   RAW_FORMAT_JSON = 1;
+  // RAW_FORMAT_YAML requests YAML format for raw resources.
   RAW_FORMAT_YAML = 2;
 }
 
+// KargoService provides the primary API for interacting with Kargo resources.
+// It offers comprehensive functionality for managing continuous delivery pipelines,
+// including stages, promotions, freight, warehouses, credentials, and related resources.
 service KargoService {
+  // GetVersionInfo returns version information for the Kargo server.
   rpc GetVersionInfo(GetVersionInfoRequest) returns (GetVersionInfoResponse);
+  // GetConfig retrieves the server configuration including ArgoCD shard information.
   rpc GetConfig(GetConfigRequest) returns (GetConfigResponse);
+  // GetPublicConfig returns publicly accessible configuration including OIDC settings.
   rpc GetPublicConfig(GetPublicConfigRequest) returns (GetPublicConfigResponse);
 
+  // AdminLogin authenticates an admin user and returns an access token.
   rpc AdminLogin(AdminLoginRequest) returns (AdminLoginResponse);
 
   /* Kargo-related resources management API */
   // TODO(devholic): Add ApplyResource API
   // rpc ApplyResource(ApplyResourceRequest) returns (ApplyResourceRequest);
+  // CreateResource creates new Kubernetes resources from provided manifests.
   rpc CreateResource(CreateResourceRequest) returns (CreateResourceResponse);
+  // CreateOrUpdateResource creates or updates Kubernetes resources based on provided manifests.
   rpc CreateOrUpdateResource(CreateOrUpdateResourceRequest) returns (CreateOrUpdateResourceResponse);
+  // UpdateResource updates existing Kubernetes resources with provided manifests.
   rpc UpdateResource(UpdateResourceRequest) returns (UpdateResourceResponse);
+  // DeleteResource deletes Kubernetes resources specified in the provided manifests.
   rpc DeleteResource(DeleteResourceRequest) returns (DeleteResourceResponse);
 
   /* Stage APIs */
 
+  // ListStages retrieves all stages within a project.
   rpc ListStages(ListStagesRequest) returns (ListStagesResponse);
+  // ListImages returns available images and their usage across stages.
   rpc ListImages(ListImagesRequest) returns (ListImagesResponse);
+  // GetStage retrieves details of a specific stage.
   rpc GetStage(GetStageRequest) returns (GetStageResponse);
+  // WatchStages provides a streaming interface to monitor stage changes.
   rpc WatchStages(WatchStagesRequest) returns (stream WatchStagesResponse);
+  // DeleteStage removes a stage from the system.
   rpc DeleteStage(DeleteStageRequest) returns (DeleteStageResponse);
+  // RefreshStage triggers a refresh of stage status and health checks.
   rpc RefreshStage(RefreshStageRequest) returns (RefreshStageResponse);
 
   /* ClusterConfig APIs */
 
+  // GetClusterConfig retrieves cluster-level configuration settings.
   rpc GetClusterConfig(GetClusterConfigRequest) returns (GetClusterConfigResponse);
+  // DeleteClusterConfig removes cluster-level configuration.
   rpc DeleteClusterConfig(DeleteClusterConfigRequest) returns (DeleteClusterConfigResponse);
+  // WatchClusterConfig provides streaming updates for cluster configuration changes.
   rpc WatchClusterConfig(WatchClusterConfigRequest) returns (stream WatchClusterConfigResponse);
+  // RefreshClusterConfig triggers a refresh of cluster configuration.
   rpc RefreshClusterConfig(RefreshClusterConfigRequest) returns (RefreshClusterConfigResponse);
 
   /* Promotion APIs */
 
+  // ListPromotions retrieves all promotions, optionally filtered by stage.
   rpc ListPromotions(ListPromotionsRequest) returns (ListPromotionsResponse);
+  // WatchPromotions provides streaming updates for promotion changes.
   rpc WatchPromotions(WatchPromotionsRequest) returns (stream WatchPromotionsResponse);
+  // GetPromotion retrieves details of a specific promotion.
   rpc GetPromotion(GetPromotionRequest) returns (GetPromotionResponse);
+  // WatchPromotion provides streaming updates for a specific promotion.
   rpc WatchPromotion(WatchPromotionRequest) returns (stream WatchPromotionResponse);
+  // AbortPromotion cancels a running promotion process.
   rpc AbortPromotion(AbortPromotionRequest) returns (AbortPromotionResponse);
 
   /* Project APIs */
 
+  // DeleteProject removes a project and all associated resources.
   rpc DeleteProject(DeleteProjectRequest) returns (DeleteProjectResponse);
+  // GetProject retrieves details of a specific project.
   rpc GetProject(GetProjectRequest) returns (GetProjectResponse);
+  // ListProjects retrieves all projects with optional filtering and pagination.
   rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
 
   /* ProjectConfig APIs */
+  // GetProjectConfig retrieves project-level configuration settings.
   rpc GetProjectConfig(GetProjectConfigRequest) returns (GetProjectConfigResponse);
+  // DeleteProjectConfig removes project-level configuration.
   rpc DeleteProjectConfig(DeleteProjectConfigRequest) returns (DeleteProjectConfigResponse);
+  // WatchProjectConfig provides streaming updates for project configuration changes.
   rpc WatchProjectConfig(WatchProjectConfigRequest) returns (stream WatchProjectConfigResponse);
+  // RefreshProjectConfig triggers a refresh of project configuration.
   rpc RefreshProjectConfig(RefreshProjectConfigRequest) returns (RefreshProjectConfigResponse);
 
   /* Freight APIs */
 
+  // ApproveFreight marks freight as approved for promotion to a specific stage.
   rpc ApproveFreight(ApproveFreightRequest) returns (ApproveFreightResponse);
+  // DeleteFreight removes freight from the system.
   rpc DeleteFreight(DeleteFreightRequest) returns (DeleteFreightResponse);
+  // GetFreight retrieves details of specific freight.
   rpc GetFreight(GetFreightRequest) returns (GetFreightResponse);
+  // WatchFreight provides streaming updates for freight changes.
   rpc WatchFreight(WatchFreightRequest) returns (stream WatchFreightResponse);
+  // PromoteToStage initiates a promotion of freight to a specific stage.
   rpc PromoteToStage(PromoteToStageRequest) returns (PromoteToStageResponse);
+  // PromoteDownstream automatically promotes freight to downstream stages.
   rpc PromoteDownstream(PromoteDownstreamRequest) returns (PromoteDownstreamResponse);
+  // QueryFreight searches for freight based on specified criteria.
   rpc QueryFreight(QueryFreightRequest) returns (QueryFreightResponse);
+  // UpdateFreightAlias changes the alias associated with specific freight.
   rpc UpdateFreightAlias(UpdateFreightAliasRequest) returns (UpdateFreightAliasResponse);
 
   /* Verification APIs */
 
+  // Reverify triggers re-execution of verification processes for a stage.
   rpc Reverify(ReverifyRequest) returns (ReverifyResponse);
+  // AbortVerification cancels running verification processes for a stage.
   rpc AbortVerification(AbortVerificationRequest) returns (AbortVerificationResponse);
 
   /* Warehouse APIs */
 
+  // ListWarehouses retrieves all warehouses within a project.
   rpc ListWarehouses(ListWarehousesRequest) returns (ListWarehousesResponse);
+  // GetWarehouse retrieves details of a specific warehouse.
   rpc GetWarehouse(GetWarehouseRequest) returns (GetWarehouseResponse);
+  // WatchWarehouses provides streaming updates for warehouse changes.
   rpc WatchWarehouses(WatchWarehousesRequest) returns (stream WatchWarehousesResponse);
+  // DeleteWarehouse removes a warehouse from the system.
   rpc DeleteWarehouse(DeleteWarehouseRequest) returns (DeleteWarehouseResponse);
+  // RefreshWarehouse triggers a refresh of warehouse status and freight discovery.
   rpc RefreshWarehouse(RefreshWarehouseRequest) returns (RefreshWarehouseResponse);
 
   /* Credential APIs */
 
+  // CreateCredentials creates new credentials for accessing external resources.
   rpc CreateCredentials(CreateCredentialsRequest) returns (CreateCredentialsResponse);
+  // DeleteCredentials removes credentials from the system.
   rpc DeleteCredentials(DeleteCredentialsRequest) returns (DeleteCredentialsResponse);
+  // GetCredentials retrieves details of specific credentials.
   rpc GetCredentials(GetCredentialsRequest) returns (GetCredentialsResponse);
+  // ListCredentials retrieves all credentials within a project.
   rpc ListCredentials(ListCredentialsRequest) returns (ListCredentialsResponse);
+  // UpdateCredentials modifies existing credentials.
   rpc UpdateCredentials(UpdateCredentialsRequest) returns (UpdateCredentialsResponse);
 
   /* Project Secrets APIs */
 
+  // ListProjectSecrets retrieves all secrets within a project.
   rpc ListProjectSecrets(ListProjectSecretsRequest) returns (ListProjectSecretsResponse);
+  // CreateProjectSecret creates a new secret within a project.
   rpc CreateProjectSecret(CreateProjectSecretRequest) returns (CreateProjectSecretResponse);
+  // UpdateProjectSecret modifies an existing project secret.
   rpc UpdateProjectSecret(UpdateProjectSecretRequest) returns (UpdateProjectSecretResponse);
+  // DeleteProjectSecret removes a secret from a project.
   rpc DeleteProjectSecret(DeleteProjectSecretRequest) returns (DeleteProjectSecretResponse);
 
   /* ConfigMaps APIs */
 
+  // ListConfigMaps retrieves all ConfigMaps within a project.
   rpc ListConfigMaps(ListConfigMapsRequest) returns (ListConfigMapsResponse);
+  // GetConfigMap retrieves details of a specific ConfigMap.
   rpc GetConfigMap(GetConfigMapRequest) returns (GetConfigMapResponse);
 
   /* Analysis APIs */
 
+  // ListAnalysisTemplates retrieves all AnalysisTemplates within a project.
   rpc ListAnalysisTemplates(ListAnalysisTemplatesRequest) returns (ListAnalysisTemplatesResponse);
+  // GetAnalysisTemplate retrieves details of a specific AnalysisTemplate.
   rpc GetAnalysisTemplate(GetAnalysisTemplateRequest) returns (GetAnalysisTemplateResponse);
+  // DeleteAnalysisTemplate removes an AnalysisTemplate from a project.
   rpc DeleteAnalysisTemplate(DeleteAnalysisTemplateRequest) returns (DeleteAnalysisTemplateResponse);
+  // ListClusterAnalysisTemplates retrieves all cluster-scoped AnalysisTemplates.
   rpc ListClusterAnalysisTemplates(ListClusterAnalysisTemplatesRequest) returns (ListClusterAnalysisTemplatesResponse);
+  // GetClusterAnalysisTemplate retrieves details of a specific cluster-scoped AnalysisTemplate.
   rpc GetClusterAnalysisTemplate(GetClusterAnalysisTemplateRequest) returns (GetClusterAnalysisTemplateResponse);
+  // DeleteClusterAnalysisTemplate removes a cluster-scoped AnalysisTemplate.
   rpc DeleteClusterAnalysisTemplate(DeleteClusterAnalysisTemplateRequest) returns (DeleteClusterAnalysisTemplateResponse);
+  // GetAnalysisRun retrieves details of a specific AnalysisRun.
   rpc GetAnalysisRun(GetAnalysisRunRequest) returns (GetAnalysisRunResponse);
+  // GetAnalysisRunLogs streams logs from an AnalysisRun.
   rpc GetAnalysisRunLogs(GetAnalysisRunLogsRequest) returns (stream GetAnalysisRunLogsResponse);
 
   /* Event APIs */
 
+  // ListProjectEvents retrieves events associated with a project.
   rpc ListProjectEvents(ListProjectEventsRequest) returns (ListProjectEventsResponse);
 
   /* Promotion Task APIs */
 
+  // ListPromotionTasks retrieves all PromotionTasks within a project.
   rpc ListPromotionTasks(ListPromotionTasksRequest) returns (ListPromotionTasksResponse);
+  // ListClusterPromotionTasks retrieves all cluster-scoped PromotionTasks.
   rpc ListClusterPromotionTasks(ListClusterPromotionTasksRequest) returns (ListClusterPromotionTasksResponse);
+  // GetPromotionTask retrieves details of a specific PromotionTask.
   rpc GetPromotionTask(GetPromotionTaskRequest) returns (GetPromotionTaskResponse);
+  // GetClusterPromotionTask retrieves details of a specific cluster-scoped PromotionTask.
   rpc GetClusterPromotionTask(GetClusterPromotionTaskRequest) returns (GetClusterPromotionTaskResponse);
 
   /* Role APIs */
 
+  // CreateRole creates a new RBAC role within a project.
   rpc CreateRole(CreateRoleRequest) returns (CreateRoleResponse);
+  // DeleteRole removes an RBAC role from a project.
   rpc DeleteRole(DeleteRoleRequest) returns (DeleteRoleResponse);
+  // GetRole retrieves details of a specific RBAC role.
   rpc GetRole(GetRoleRequest) returns (GetRoleResponse);
+  // Grant assigns permissions or binds users/services to a role.
   rpc Grant(GrantRequest) returns (GrantResponse);
+  // ListRoles retrieves all RBAC roles within a project.
   rpc ListRoles(ListRolesRequest) returns (ListRolesResponse);
+  // Revoke removes permissions or unbinds users/services from a role.
   rpc Revoke(RevokeRequest) returns (RevokeResponse);
+  // UpdateRole modifies an existing RBAC role.
   rpc UpdateRole(UpdateRoleRequest) returns (UpdateRoleResponse);
 
   /* Cluster Secrets APIs */
+  // ListClusterSecrets retrieves all cluster-scoped secrets.
   rpc ListClusterSecrets(ListClusterSecretsRequest) returns (ListClusterSecretsResponse);
+  // CreateClusterSecret creates a new cluster-scoped secret.
   rpc CreateClusterSecret(CreateClusterSecretRequest) returns (CreateClusterSecretResponse);
+  // UpdateClusterSecret modifies an existing cluster-scoped secret.
   rpc UpdateClusterSecret(UpdateClusterSecretRequest) returns (UpdateClusterSecretResponse);
+  // DeleteClusterSecret removes a cluster-scoped secret.
   rpc DeleteClusterSecret(DeleteClusterSecretRequest) returns (DeleteClusterSecretResponse);
 }
 
 /* Version and Configuration Messages */
 
+// ComponentVersions contains version information for different Kargo components.
 message ComponentVersions {
+  // server contains version information for the Kargo server.
   optional VersionInfo server = 1;
+  // cli contains version information for the Kargo CLI.
   optional VersionInfo cli = 2;
 }
 
+// VersionInfo contains detailed version and build information for a Kargo component.
 message VersionInfo {
+  // version is the semantic version string.
   string version = 1;
+  // git_commit is the Git commit hash used for the build.
   string git_commit = 2;
+  // git_tree_dirty indicates whether the Git working tree was dirty during build.
   bool git_tree_dirty = 3;
+  // build_time is the timestamp when the build was created.
   google.protobuf.Timestamp build_time = 4;
+  // go_version is the Go version used for the build.
   string go_version = 5;
+  // compiler is the compiler used for the build.
   string compiler = 6;
+  // platform is the target platform for the build.
   string platform = 7;
 }
 
+// GetVersionInfoRequest is the request message for retrieving version information.
 message GetVersionInfoRequest {}
 
+// GetVersionInfoResponse contains the server's version information.
 message GetVersionInfoResponse {
+  // version_info contains detailed version and build information.
   VersionInfo version_info = 1;
 }
 
+// GetConfigRequest is the request message for retrieving server configuration.
 message GetConfigRequest {}
 
+// ArgoCDShard represents configuration for a specific ArgoCD shard.
 message ArgoCDShard {
+  // url is the base URL of the ArgoCD server.
   string url = 1;
+  // namespace is the Kubernetes namespace where ArgoCD is installed.
   string namespace = 2;
 }
 
+// GetConfigResponse contains server configuration information.
 message GetConfigResponse {
+  // argocd_shards maps shard names to their ArgoCD configuration.
   map<string, ArgoCDShard> argocd_shards = 1;
+  // secret_management_enabled indicates if secret management features are available.
   bool secret_management_enabled = 2;
+  // cluster_secrets_namespace is the namespace used for cluster-scoped secrets.
   string cluster_secrets_namespace = 3;
 }
 
+// GetPublicConfigRequest is the request message for retrieving public configuration.
 message GetPublicConfigRequest {}
 
+// GetPublicConfigResponse contains publicly accessible configuration settings.
 message GetPublicConfigResponse {
+  // oidc_config contains OpenID Connect configuration for authentication.
   OIDCConfig oidc_config = 1;
+  // admin_account_enabled indicates if admin account authentication is available.
   bool admin_account_enabled = 2;
+  // skip_auth indicates if authentication should be bypassed.
   bool skip_auth = 3;
 }
 
+// OIDCConfig contains OpenID Connect configuration for authentication.
 message OIDCConfig {
+  // issuer_url is the OIDC provider's issuer URL.
   string issuer_url = 1;
+  // client_id is the OIDC client identifier for web applications.
   string client_id = 2;
+  // scopes are the OIDC scopes to request during authentication.
   repeated string scopes = 3;
+  // cli_client_id is the OIDC client identifier for CLI applications.
   string cli_client_id = 4;
 }
 
+// AdminLoginRequest contains credentials for admin authentication.
 message AdminLoginRequest {
+  // password is the admin password.
   string password = 1;
 }
 
+// AdminLoginResponse contains the authentication token for admin access.
 message AdminLoginResponse {
+  // id_token is the JWT token for authenticated admin access.
   string id_token = 1;
 }
 
