@@ -695,40 +695,58 @@ message ListProjectsResponse {
 
 /* ProjectConfig Messages */
 
+// GetProjectConfigRequest is the request for retrieving project-level configuration settings.
 message GetProjectConfigRequest {
+  // project is the name of the project to retrieve configuration for.
   string project = 1;
+  // format specifies the desired response format (structured object or raw YAML).
   RawFormat format = 2;
 }
 
+// GetProjectConfigResponse contains the requested project configuration.
 message GetProjectConfigResponse {
   oneof result {
+    // project_config is the structured ProjectConfig object.
     github.com.akuity.kargo.api.v1alpha1.ProjectConfig project_config = 1;
+    // raw is the raw YAML representation of the project configuration.
     bytes raw = 2;
   }
 }
 
+// DeleteProjectConfigRequest is the request for removing project-level configuration.
 message DeleteProjectConfigRequest {
+  // project is the name of the project to delete configuration for.
   string project = 1;
 }
 
+// DeleteProjectConfigResponse is the response after deleting project configuration.
 message DeleteProjectConfigResponse {
   /* explicitly empty */
 }
 
+// WatchProjectConfigRequest is the request for streaming project configuration changes.
 message WatchProjectConfigRequest {
+  // project is the name of the project to watch for configuration changes.
   string project = 1;
 }
 
+// WatchProjectConfigResponse provides streaming updates for project configuration changes.
 message WatchProjectConfigResponse {
+  // project_config is the updated ProjectConfig object.
   github.com.akuity.kargo.api.v1alpha1.ProjectConfig project_config = 1;
-  string type = 2; // ADDED / MODIFIED / DELETED
+  // type indicates the type of change (ADDED / MODIFIED / DELETED).
+  string type = 2;
 }
 
+// RefreshProjectConfigRequest is the request for triggering a refresh of project configuration.
 message RefreshProjectConfigRequest {
+  // project is the name of the project to refresh configuration for.
   string project = 1;
 }
 
+// RefreshProjectConfigResponse contains the refreshed project configuration.
 message RefreshProjectConfigResponse {
+  // project_config is the refreshed ProjectConfig object.
   github.com.akuity.kargo.api.v1alpha1.ProjectConfig project_config = 1;
 }
 
@@ -990,23 +1008,34 @@ message RefreshWarehouseResponse {
   github.com.akuity.kargo.api.v1alpha1.Warehouse warehouse = 1;
 }
 
+// ListConfigMapsRequest is the request for retrieving all ConfigMaps in a project.
 message ListConfigMapsRequest {
+  // project is the name of the project to list ConfigMaps from.
   string project = 1;
 }
 
+// ListConfigMapsResponse contains the list of ConfigMaps in a project.
 message ListConfigMapsResponse {
+  // config_maps is the list of ConfigMaps found in the project.
   repeated k8s.io.api.core.v1.ConfigMap config_maps = 1;
 }
 
+// GetConfigMapRequest is the request for retrieving a specific ConfigMap.
 message GetConfigMapRequest {
+  // project is the name of the project containing the ConfigMap.
   string project = 1;
+  // name is the name of the ConfigMap to retrieve.
   string name = 2;
+  // format specifies the desired response format (structured object or raw YAML).
   RawFormat format = 3;
 }
 
+// GetConfigMapResponse contains the requested ConfigMap information.
 message GetConfigMapResponse {
   oneof result {
+    // config_map is the structured Kubernetes ConfigMap object.
     k8s.io.api.core.v1.ConfigMap config_map = 1;
+    // raw is the raw YAML representation of the ConfigMap.
     bytes raw = 2;
   }
 }
