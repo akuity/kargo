@@ -5,10 +5,6 @@
 <p align="right"><a href="#top">Top</a></p>
 <a name="akuity-io-kargo-service-v1alpha1-KargoService"></a>
 
-### KargoServiceKargoService provides the primary API for interacting with Kargo resources.
-It offers comprehensive functionality for managing continuous delivery pipelines,
-including stages, promotions, freight, warehouses, credentials, and related resources.
-
 | Method Name | Request Type | Response Type |
 | ----------- | ------------ | ------------- |
 | GetVersionInfo | [GetVersionInfoRequest](#akuity-io-kargo-service-v1alpha1-GetVersionInfoRequest) | [GetVersionInfoResponse](#akuity-io-kargo-service-v1alpha1-GetVersionInfoResponse) |
