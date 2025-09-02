@@ -207,25 +207,25 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-CreateCredentialsRequest"></a>
 
 ### CreateCredentialsRequest
- 
+ CreateCredentialsRequest is the request for creating new credentials for accessing external resources.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| name | [string](#string) |   |
-| description | [string](#string) |   |
-| type | [string](#string) |  type is git, helm, image |
-| repo_url | [string](#string) |   |
-| repo_url_is_regex | [bool](#bool) |   |
-| username | [string](#string) |   |
-| password | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project where the credentials will be stored. |
+| name | [string](#string) |  name is the name of the credentials. |
+| description | [string](#string) |  description is a human-readable description of the credentials. |
+| type | [string](#string) |  type specifies the credential type (git, helm, image). |
+| repo_url | [string](#string) |  repo_url is the URL of the repository or registry these credentials apply to. |
+| repo_url_is_regex | [bool](#bool) |  repo_url_is_regex indicates whether repo_url should be treated as a regular expression. |
+| username | [string](#string) |  username is the username for authentication. |
+| password | [string](#string) |  password is the password or token for authentication. |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateCredentialsResponse"></a>
 
 ### CreateCredentialsResponse
- 
+ CreateCredentialsResponse contains the newly created credentials.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| credentials | k8s.io.api.core.v1.Secret |   |
+| credentials | k8s.io.api.core.v1.Secret |  credentials is the created Kubernetes Secret containing the credentials. |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateOrUpdateResourceRequest"></a>
 
@@ -409,15 +409,15 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-DeleteProjectRequest"></a>
 
 ### DeleteProjectRequest
- 
+ DeleteProjectRequest is the request for deleting a project and all associated resources.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| name | [string](#string) |   |
+| name | [string](#string) |  name is the name of the project to delete. |
 
 <a name="akuity-io-kargo-service-v1alpha1-DeleteProjectResponse"></a>
 
 ### DeleteProjectResponse
- explicitly empty
+ DeleteProjectResponse is the response after deleting a project.  explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteProjectSecretRequest"></a>
 
 ### DeleteProjectSecretRequest
@@ -485,16 +485,16 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-DeleteWarehouseRequest"></a>
 
 ### DeleteWarehouseRequest
- 
+ DeleteWarehouseRequest is the request for deleting a warehouse.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| name | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project containing the warehouse. |
+| name | [string](#string) |  name is the name of the warehouse to delete. |
 
 <a name="akuity-io-kargo-service-v1alpha1-DeleteWarehouseResponse"></a>
 
 ### DeleteWarehouseResponse
- explicitly empty
+ DeleteWarehouseResponse is the response after deleting a warehouse.  explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-FreightList"></a>
 
 ### FreightList
@@ -715,20 +715,20 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-GetProjectRequest"></a>
 
 ### GetProjectRequest
- 
+ GetProjectRequest is the request for retrieving details of a specific project.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| name | [string](#string) |   |
-| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |   |
+| name | [string](#string) |  name is the name of the project to retrieve. |
+| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |  format specifies the format for raw resource representation. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetProjectResponse"></a>
 
 ### GetProjectResponse
- 
+ GetProjectResponse contains the requested project information.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [github.com.akuity.kargo.api.v1alpha1.Project](#github-com-akuity-kargo-api-v1alpha1-Project) |   |
-| raw | [bytes](#bytes) |   |
+| project | [github.com.akuity.kargo.api.v1alpha1.Project](#github-com-akuity-kargo-api-v1alpha1-Project) |  project contains the Project resource in structured format. |
+| raw | [bytes](#bytes) |  raw contains the Project resource in the requested raw format. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetPromotionRequest"></a>
 
@@ -837,21 +837,21 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-GetWarehouseRequest"></a>
 
 ### GetWarehouseRequest
- 
+ GetWarehouseRequest is the request for retrieving details of a specific warehouse.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| name | [string](#string) |   |
-| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |   |
+| project | [string](#string) |  project is the name of the project containing the warehouse. |
+| name | [string](#string) |  name is the name of the warehouse to retrieve. |
+| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |  format specifies the format for raw resource representation. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetWarehouseResponse"></a>
 
 ### GetWarehouseResponse
- 
+ GetWarehouseResponse contains the requested warehouse information.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| warehouse | [github.com.akuity.kargo.api.v1alpha1.Warehouse](#github-com-akuity-kargo-api-v1alpha1-Warehouse) |   |
-| raw | [bytes](#bytes) |   |
+| warehouse | [github.com.akuity.kargo.api.v1alpha1.Warehouse](#github-com-akuity-kargo-api-v1alpha1-Warehouse) |  warehouse contains the Warehouse resource in structured format. |
+| raw | [bytes](#bytes) |  raw contains the Warehouse resource in the requested raw format. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GrantRequest"></a>
 
@@ -1033,21 +1033,21 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-ListProjectsRequest"></a>
 
 ### ListProjectsRequest
- 
+ ListProjectsRequest is the request for listing all projects with optional filtering and pagination.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| page_size | [int32](#int32) |   |
-| page | [int32](#int32) |   |
-| filter | [string](#string) |   |
+| page_size | [int32](#int32) |  page_size specifies the maximum number of projects to return per page. |
+| page | [int32](#int32) |  page specifies which page of results to return. |
+| filter | [string](#string) |  filter specifies an optional filter expression for projects. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListProjectsResponse"></a>
 
 ### ListProjectsResponse
- 
+ ListProjectsResponse contains the list of projects and pagination information.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| projects | [github.com.akuity.kargo.api.v1alpha1.Project](#github-com-akuity-kargo-api-v1alpha1-Project) |   |
-| total | [int32](#int32) |   |
+| projects | [github.com.akuity.kargo.api.v1alpha1.Project](#github-com-akuity-kargo-api-v1alpha1-Project) |  projects is the list of Project resources matching the request criteria. |
+| total | [int32](#int32) |  total is the total number of projects available (across all pages). |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListPromotionTasksRequest"></a>
 
@@ -1119,18 +1119,18 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-ListWarehousesRequest"></a>
 
 ### ListWarehousesRequest
- 
+ ListWarehousesRequest is the request for listing warehouses within a project.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project whose warehouses should be listed. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListWarehousesResponse"></a>
 
 ### ListWarehousesResponse
- 
+ ListWarehousesResponse contains a list of warehouses within a project.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| warehouses | [github.com.akuity.kargo.api.v1alpha1.Warehouse](#github-com-akuity-kargo-api-v1alpha1-Warehouse) |   |
+| warehouses | [github.com.akuity.kargo.api.v1alpha1.Warehouse](#github-com-akuity-kargo-api-v1alpha1-Warehouse) |  warehouses is the list of Warehouse resources found in the project. |
 
 <a name="akuity-io-kargo-service-v1alpha1-OIDCConfig"></a>
 
@@ -1260,19 +1260,19 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-RefreshWarehouseRequest"></a>
 
 ### RefreshWarehouseRequest
- 
+ RefreshWarehouseRequest is the request for refreshing a warehouse's status and freight discovery.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| name | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project containing the warehouse. |
+| name | [string](#string) |  name is the name of the warehouse to refresh. |
 
 <a name="akuity-io-kargo-service-v1alpha1-RefreshWarehouseResponse"></a>
 
 ### RefreshWarehouseResponse
- 
+ RefreshWarehouseResponse contains the refreshed warehouse information.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| warehouse | [github.com.akuity.kargo.api.v1alpha1.Warehouse](#github-com-akuity-kargo-api-v1alpha1-Warehouse) |   |
+| warehouse | [github.com.akuity.kargo.api.v1alpha1.Warehouse](#github-com-akuity-kargo-api-v1alpha1-Warehouse) |  warehouse is the refreshed Warehouse resource. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ReverifyRequest"></a>
 
@@ -1574,20 +1574,20 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-WatchWarehousesRequest"></a>
 
 ### WatchWarehousesRequest
- 
+ WatchWarehousesRequest is the request for watching warehouse changes via streaming.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| name | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project whose warehouses should be watched. |
+| name | [string](#string) |  name is the name of a specific warehouse to watch, if empty all warehouses in the project are watched. |
 
 <a name="akuity-io-kargo-service-v1alpha1-WatchWarehousesResponse"></a>
 
 ### WatchWarehousesResponse
- 
+ WatchWarehousesResponse contains warehouse change notifications.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| warehouse | [github.com.akuity.kargo.api.v1alpha1.Warehouse](#github-com-akuity-kargo-api-v1alpha1-Warehouse) |   |
-| type | [string](#string) |   |
+| warehouse | [github.com.akuity.kargo.api.v1alpha1.Warehouse](#github-com-akuity-kargo-api-v1alpha1-Warehouse) |  warehouse is the Warehouse resource that changed. |
+| type | [string](#string) |  type indicates the type of change (ADDED, MODIFIED, DELETED). |
 
  <!-- end messages -->
 
