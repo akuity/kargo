@@ -123,14 +123,14 @@ app:
 			},
 		},
 		{
-			name: "failed to read InPaths file in Strict mode",
+			name: "failed to read InPaths file when ignoreMissingFiles is false",
 			stepCtx: &promotion.StepContext{
 				Project: "test-project",
 			},
 			cfg: builtin.YAMLMergeConfig{
-				InPaths: []string{"non-existent/values.yaml"},
-				OutPath: "modified.yaml",
-				Strict:  true,
+				InPaths:            []string{"non-existent/values.yaml"},
+				OutPath:            "modified.yaml",
+				IgnoreMissingFiles: false,
 			},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
 				assert.Error(t, err)
@@ -144,8 +144,9 @@ app:
 				Project: "test-project",
 			},
 			cfg: builtin.YAMLMergeConfig{
-				InPaths: []string{"non-existent/values.yaml"},
-				OutPath: "modified.yaml",
+				InPaths:            []string{"non-existent/values.yaml"},
+				OutPath:            "modified.yaml",
+				IgnoreMissingFiles: true,
 			},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)

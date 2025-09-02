@@ -92,7 +92,7 @@ func (y *yamlMerger) run(
 		inBytes, err := os.ReadFile(inPath)
 		if err != nil {
 			// we skip if file does not exist
-			if !cfg.Strict && os.IsNotExist(err) {
+			if cfg.IgnoreMissingFiles && os.IsNotExist(err) {
 				continue
 			}
 			return failure, fmt.Errorf(

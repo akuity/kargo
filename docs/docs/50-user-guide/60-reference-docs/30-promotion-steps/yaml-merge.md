@@ -5,15 +5,17 @@ description: Merge multiple YAML file into a single file.
 
 # `yaml-merge`
 
-`yaml-merge` merges multiple YAML files into a single file. This step
-most often used to merge multiple Helm values.yaml files into a single
-file and is commonly followed by a [`helm-template` step](helm-template.md).
-YAML files are merged in order, so the first one is the base, and all
-subsequent files are "overlays", modifying the default values.
+`yaml-merge` merges multiple YAML files into a single file.
+YAML files are merged in order, so the first in the list
+is the base values, and all subsequent files are "overlays",
+modifying the base values.
+When `ignoreMissingFiles` is set to true, missing files will
+be ignored and the directive will succeed.
+
 
 :::note
 Merging is done with usual constrains:
-- new objects are merged
+- new objects are added
 - object with same name are modified
 - lists are replaced by latest version (no merge)
 - null values delete the object
@@ -24,8 +26,8 @@ Merging is done with usual constrains:
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
 | `inPaths` | `[]string` | Y | Paths to a YAML files. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
-| `outPath` | `string` | Y | The path to the output file. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
-| `strict` | `bool` | N | Strict will cause the directive to fail if an input path does not exist. Defaults to `false`. |
+| `outPath` | `string`   | Y | The path to the output file. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
+| `ignoreMissingFiles` | `bool` | N | When set to true, the directive will skip input files that does not exist. Defaults to `false`. |
 
 ## Output
 
@@ -37,8 +39,8 @@ Merging is done with usual constrains:
 
 ### Common Usage
 
-In this example, two Helm values, one global, one more specific, are merged
-into a new single file, that is then commited.
+In this example, two Helm value files, one global, one more specific, are merged
+into a new single file, that is then commited to the deployment branch.
 
 This pattern is commonly used when you need to merge global values
 into a final `values.yaml` file, to be used by Helm.
