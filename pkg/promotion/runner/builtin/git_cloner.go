@@ -186,6 +186,12 @@ func (g *gitCloner) run(
 					"error adding work tree %s to repo %s: %w",
 					checkout.Path, cfg.RepoURL, err,
 				)
+		} 
+		if cfg.RecurseSubmodules{
+			if err := worktree.UpdateSubmodules(); err != nil { 
+                return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+                    fmt.Errorf("error updating submodules for worktree at %s: %w", path, err)
+            }
 		}
 		key := checkout.Path
 		if checkout.As != "" {

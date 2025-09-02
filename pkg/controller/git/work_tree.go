@@ -87,6 +87,8 @@ type WorkTree interface {
 	ResetHard() error
 	// URL returns the remote URL of the repository.
 	URL() string
+	// UpdateSubmodules updates the submodules in the working tree.
+	UpdateSubmodules() error
 }
 
 // workTree is an implementation of the WorkTree interface for interacting with
@@ -631,6 +633,13 @@ func (w *workTree) RefsHaveDiffs(commit1 string, commit2 string) (bool, error) {
 func (w *workTree) ResetHard() error {
 	if _, err := libExec.Exec(w.buildGitCommand("reset", "--hard")); err != nil {
 		return fmt.Errorf("error resetting branch working tree: %w", err)
+	}
+	return nil
+}
+
+func (w *workTree) UpdateSubmodules() error {
+	if _, err := libExec.Exec(w.buildGitCommand("submodule", "update", "--init", "--recursive")); err != nil {
+		return fmt.Errorf("error updating submodules: %w", err)
 	}
 	return nil
 }

@@ -8,6 +8,10 @@
    "type": "boolean",
    "description": "Indicates whether to skip TLS verification when cloning the repository. Default is false."
   },
+  "recurseSubmodules": {
+   "type": "boolean",
+   "description": "Indicates whether to recursively clone submodules. Default is false."
+  },
   "repoURL": {
    "type": "string",
    "description": "The URL of a remote Git repository to clone. Required.",
