@@ -4,8 +4,7 @@ import {
   faArrowsLeftRightToLine,
   faCheck,
   faEllipsis,
-  faCopy,
-  faPlus,
+  faMagicWandSparkles,
   faTrash,
   faWarehouse,
   IconDefinition
@@ -124,19 +123,17 @@ export const FreightCard = (props: FreightCardProps) => {
               menu={{
                 items: [
                   {
-                    key: 'create-freight',
-                    label: 'Create Freight based on this',
-                    icon: <FontAwesomeIcon icon={faCopy} />,
+                    key: 'similar-freight',
+                    label: 'Create similar freight',
+                    icon: <FontAwesomeIcon icon={faMagicWandSparkles} />,
                     onClick: (e) => {
                       e.domEvent.stopPropagation();
-                      // Navigate directly to the warehouse Freight Assembly tab
                       navigate(
-                        generatePath(paths.warehouse, {
+                        `${generatePath(paths.warehouse, {
                           name: props.freight?.metadata?.namespace,
-                          warehouseName: props.freight?.origin?.name || '',
+                          warehouseName: props.freight?.origin?.name,
                           tab: 'create-freight'
-                        }),
-                        { state: { sourceFreight: props.freight } }
+                        })}?similar=${props.freight?.alias}`
                       );
                     }
                   },

@@ -1,5 +1,6 @@
 import { Radio, Table } from 'antd';
-import { useLayoutEffect, useRef, useState } from 'react';
+
+import { useDetectPage } from './use-detect-page';
 
 export const ChartTable = ({
   versions,
@@ -12,25 +13,7 @@ export const ChartTable = ({
   select: (version?: string) => void;
   show?: boolean;
 }) => {
-  const [page, setPage] = useState(1);
-  const pageSize = 10;
-  const lastSelectedVersionRef = useRef<string | undefined>(undefined);
-
-  useLayoutEffect(() => {
-    if (!selected) {
-      setPage(1);
-      lastSelectedVersionRef.current = undefined;
-      return;
-    }
-    const key = selected;
-    if (lastSelectedVersionRef.current === key) return;
-    lastSelectedVersionRef.current = key;
-    const idx = versions.findIndex((v) => v === key);
-    if (idx >= 0) {
-      const nextPage = Math.floor(idx / pageSize) + 1;
-      if (nextPage !== page) setPage(nextPage);
-    }
-  }, [selected, versions]);
+  const [page, setPage] = useDetectPage(versions, selected, show);
 
   if (!show) {
     return null;

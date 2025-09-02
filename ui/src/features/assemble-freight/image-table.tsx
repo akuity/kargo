@@ -1,12 +1,12 @@
 import { faQuestionCircle } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Radio, Table } from 'antd';
-import { useLayoutEffect, useRef, useState } from 'react';
 
 import { DiscoveredImageReference } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { TruncatedCopyable } from './truncated-copyable';
+import { useDetectPage } from './use-detect-page';
 
 export const ImageTable = ({
   references,
@@ -19,27 +19,7 @@ export const ImageTable = ({
   select: (reference?: DiscoveredImageReference) => void;
   show?: boolean;
 }) => {
-  const [page, setPage] = useState(1);
-  const pageSize = 10;
-  const lastSelectedTagRef = useRef<string | undefined>(undefined);
-
-  useLayoutEffect(() => {
-    if (!selected) {
-      setPage(1);
-      lastSelectedTagRef.current = undefined;
-      return;
-    }
-    const key = selected?.tag;
-    if (lastSelectedTagRef.current === key) {
-      return;
-    }
-    lastSelectedTagRef.current = key;
-    const idx = references.findIndex((r) => r?.tag === key);
-    if (idx >= 0) {
-      const nextPage = Math.floor(idx / pageSize) + 1;
-      if (nextPage !== page) setPage(nextPage);
-    }
-  }, [selected, references]);
+  const [page, setPage] = useDetectPage(references, selected, show);
 
   if (!show) {
     return null;

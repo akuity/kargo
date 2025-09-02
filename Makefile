@@ -218,7 +218,7 @@ build-cli-with-ui: build-ui build-cli
 codegen: codegen-proto codegen-controller codegen-directive-configs codegen-ui codegen-docs
 
 .PHONY: codegen-proto
-codegen-proto: install-protoc install-go-to-protobuf install-protoc-gen-gogo install-goimports install-buf
+codegen-proto: install-protoc install-go-to-protobuf install-protoc-gen-gogo install-goimports install-buf install-protoc-gen-doc
 	./hack/codegen/proto.sh
 
 .PHONY: codegen-controller

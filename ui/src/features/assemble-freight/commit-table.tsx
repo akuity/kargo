@@ -1,10 +1,11 @@
 import { Radio, Table } from 'antd';
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useMemo } from 'react';
 
 import { DiscoveredCommit } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { TruncatedCopyable } from './truncated-copyable';
+import { useDetectPage } from './use-detect-page';
 
 export const CommitTable = ({
   commits,
@@ -17,25 +18,7 @@ export const CommitTable = ({
   select: (commit?: DiscoveredCommit) => void;
   show?: boolean;
 }) => {
-  const [page, setPage] = useState(1);
-  const pageSize = 10;
-  const lastSelectedIdRef = useRef<string | undefined>(undefined);
-
-  useLayoutEffect(() => {
-    if (!selected) {
-      setPage(1);
-      lastSelectedIdRef.current = undefined;
-      return;
-    }
-    const key = selected?.id;
-    if (lastSelectedIdRef.current === key) return;
-    lastSelectedIdRef.current = key;
-    const idx = commits.findIndex((c) => c?.id === key);
-    if (idx >= 0) {
-      const nextPage = Math.floor(idx / pageSize) + 1;
-      if (nextPage !== page) setPage(nextPage);
-    }
-  }, [selected, commits]);
+  const [page, setPage] = useDetectPage(commits, selected, show);
 
   const doesAnyOfCommitsHaveTag = useMemo(() => commits?.find((c) => !!c?.tag), [commits]);
 

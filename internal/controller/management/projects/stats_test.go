@@ -171,6 +171,13 @@ func Test_reconciler_collectStats(t *testing.T) {
 						Name:      "stage1",
 						Namespace: testProject,
 					},
+					Spec: kargoapi.StageSpec{
+						PromotionTemplate: &kargoapi.PromotionTemplate{
+							Spec: kargoapi.PromotionTemplateSpec{
+								Steps: []kargoapi.PromotionStep{{}},
+							},
+						},
+					},
 					Status: kargoapi.StageStatus{
 						Conditions: []metav1.Condition{{
 							Type:   kargoapi.ConditionTypeHealthy,
@@ -183,6 +190,13 @@ func Test_reconciler_collectStats(t *testing.T) {
 						Name:      "stage2",
 						Namespace: testProject,
 					},
+					Spec: kargoapi.StageSpec{
+						PromotionTemplate: &kargoapi.PromotionTemplate{
+							Spec: kargoapi.PromotionTemplateSpec{
+								Steps: []kargoapi.PromotionStep{{}},
+							},
+						},
+					},
 					Status: kargoapi.StageStatus{
 						Conditions: []metav1.Condition{{
 							Type:   kargoapi.ConditionTypeHealthy,
@@ -192,7 +206,7 @@ func Test_reconciler_collectStats(t *testing.T) {
 				},
 				&kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "stage3",
+						Name:      "stage3-control-flow",
 						Namespace: testProject,
 					},
 					// No health condition == unknown
@@ -201,6 +215,13 @@ func Test_reconciler_collectStats(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "stage4",
 						Namespace: testProject,
+					},
+					Spec: kargoapi.StageSpec{
+						PromotionTemplate: &kargoapi.PromotionTemplate{
+							Spec: kargoapi.PromotionTemplateSpec{
+								Steps: []kargoapi.PromotionStep{{}},
+							},
+						},
 					},
 					Status: kargoapi.StageStatus{
 						Conditions: []metav1.Condition{{
@@ -213,6 +234,13 @@ func Test_reconciler_collectStats(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "stage5",
 						Namespace: testProject,
+					},
+					Spec: kargoapi.StageSpec{
+						PromotionTemplate: &kargoapi.PromotionTemplate{
+							Spec: kargoapi.PromotionTemplateSpec{
+								Steps: []kargoapi.PromotionStep{{}},
+							},
+						},
 					},
 					Status: kargoapi.StageStatus{
 						Conditions: []metav1.Condition{{
@@ -228,7 +256,7 @@ func Test_reconciler_collectStats(t *testing.T) {
 				stats := status.Stats
 				require.Equal(t, int64(5), stats.Warehouses.Count)
 				require.Equal(t, int64(1), stats.Warehouses.Health.Healthy)
-				require.Equal(t, int64(5), stats.Stages.Count)
+				require.Equal(t, int64(4), stats.Stages.Count)
 				require.Equal(t, int64(1), stats.Stages.Health.Healthy)
 			},
 		},

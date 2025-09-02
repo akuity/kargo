@@ -27,6 +27,7 @@ import {
 
 const codeVerifierKey = 'PKCE_code_verifier';
 const stateKey = 'PKCE_state';
+const platformRedirectKey = 'platform_redirect';
 
 type Props = {
   oidcConfig: OIDCConfig;
@@ -84,6 +85,7 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
     sessionStorage.setItem(codeVerifierKey, code_verifier);
     const state = generateRandomState();
     sessionStorage.setItem(stateKey, state);
+    sessionStorage.setItem(platformRedirectKey, window.location.search);
 
     const code_challenge = await calculatePKCECodeChallenge(code_verifier);
     const url = new URL(as.authorization_endpoint);
@@ -103,6 +105,7 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
     (async () => {
       const code_verifier = sessionStorage.getItem(codeVerifierKey);
       const state = sessionStorage.getItem(stateKey);
+      const platformRedirect = sessionStorage.getItem(platformRedirectKey);
       const searchParams = new URLSearchParams(location.search);
 
       if (
@@ -144,6 +147,14 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
         }
 
         onLogin(result.id_token, result.refresh_token);
+
+        if (platformRedirect) {
+          const redirectTo = new URLSearchParams(platformRedirect).get('redirectTo');
+
+          if (redirectTo) {
+            window.location.replace(window.location.origin + redirectTo);
+          }
+        }
       } catch (err) {
         if (err instanceof AuthorizationResponseError) {
           notification.error({

@@ -29,6 +29,9 @@ import { ArtifactMenuGroup } from './artifact-menu-group';
 import { ChartTable } from './chart-table';
 import { CommitTable } from './commit-table';
 import { ImageTable } from './image-table';
+import { mergeWithSimilarFreight } from './merge-with-similar-freight';
+import { missingArtifactsToSimilarFreight } from './missing-artifacts-to-similar-freight';
+import { SimilarToFreightNote } from './similar-to-freight-note';
 import { DiscoveryResult, FreightInfo } from './types';
 import { getSubscriptionKey } from './unique-subscription-key';
 
@@ -89,15 +92,14 @@ const constructFreight = (
 
 export const AssembleFreight = ({
   warehouse,
-  sourceFreight,
+  similarToFreight,
   onSuccess
 }: {
   warehouse?: Warehouse;
-  sourceFreight?: Freight;
+  similarToFreight?: Freight;
   onSuccess: () => void;
 }) => {
   const { name: project } = useParams();
-  const [selected, setSelected] = useState<DiscoveryResult>();
 
   const errorHandler = newErrorHandler((err) => {
     const errorMessage = err instanceof ConnectError ? err.rawMessage : 'Unexpected API error';
@@ -119,171 +121,78 @@ export const AssembleFreight = ({
     }
   });
 
+  // a map of artifact identifiers to freight info
+  // contains freight info for all artifacts selected to be included in the new freight
   const [images, charts, git] = useMemo(() => {
-    if (!warehouse?.status?.discoveredArtifacts) {
-      return [[], [], []];
-    }
-    return [
-      warehouse.status.discoveredArtifacts.images || [],
-      warehouse.status.discoveredArtifacts.charts || [],
-      warehouse.status.discoveredArtifacts.git || []
-    ];
+    const images: ImageDiscoveryResult[] = warehouse?.status?.discoveredArtifacts?.images || [];
+    const charts: ChartDiscoveryResult[] = warehouse?.status?.discoveredArtifacts?.charts || [];
+    const git: GitDiscoveryResult[] = warehouse?.status?.discoveredArtifacts?.git || [];
+
+    return [images, charts, git];
   }, [warehouse]);
 
-  const { init, fallbackUsed, noArtifacts, missing } = useMemo(() => {
-    const initialSelections: { [key: string]: { artifact: DiscoveryResult; info: FreightInfo } } =
-      {};
-    let fallback = false;
-
-    const imagesList = images || [];
-    const chartsList = charts || [];
-    const gitList = git || [];
-
-    const nothingDiscovered =
-      imagesList.length === 0 && chartsList.length === 0 && gitList.length === 0;
-
-    const missingImages: string[] = [];
-    const missingCharts: string[] = [];
-    const missingCommits: string[] = [];
-
-    const shortCommit = (id?: string) => (id ? id.substring(0, 7) : '');
-
-    if (sourceFreight) {
-      for (const image of sourceFreight.images || []) {
-        const artifact = imagesList.find((i) => i.repoURL === image.repoURL);
-        if (artifact) {
-          const info = artifact.references.find(
-            (r: DiscoveredImageReference) => r.tag === image.tag
-          );
-          if (info) {
-            initialSelections[getSubscriptionKey(artifact)] = { artifact, info };
-          } else {
-            missingImages.push(`${image.repoURL}:${image.tag || image.digest || ''}`);
-          }
-        } else {
-          missingImages.push(`${image.repoURL}:${image.tag || image.digest || ''}`);
-        }
-      }
-      for (const chart of sourceFreight.charts || []) {
-        const artifact = chartsList.find((c) => c.repoURL === chart.repoURL && c.name === chart.name);
-        if (artifact) {
-          const info = artifact.versions.find((v: string) => v === chart.version);
-          if (info) {
-            initialSelections[getSubscriptionKey(artifact)] = { artifact, info };
-          } else {
-            missingCharts.push(`${chart.name} ${chart.version} (${chart.repoURL})`);
-          }
-        } else {
-          missingCharts.push(`${chart.name} ${chart.version} (${chart.repoURL})`);
-        }
-      }
-      for (const commit of sourceFreight.commits || []) {
-        const artifact = gitList.find((g) => g.repoURL === commit.repoURL);
-        if (artifact) {
-          const info = artifact.commits.find((c: DiscoveredCommit) => c.id === commit.id);
-          if (info) {
-            initialSelections[getSubscriptionKey(artifact)] = { artifact, info };
-          } else {
-            missingCommits.push(`${shortCommit(commit.id)} (${commit.repoURL})`);
-          }
-        } else {
-          missingCommits.push(`${shortCommit(commit.id)} (${commit.repoURL})`);
-        }
-      }
-
-      // Failover to defaults for any discovered artifact with no source match
-      for (const image of imagesList) {
-        const key = getSubscriptionKey(image);
-        if (!initialSelections[key] && image.references?.length > 0) {
-          initialSelections[key] = { artifact: image, info: image.references[0] };
-          fallback = true;
-        }
-      }
-      for (const chart of chartsList) {
-        const key = getSubscriptionKey(chart);
-        if (!initialSelections[key] && chart.versions?.length > 0) {
-          initialSelections[key] = { artifact: chart, info: chart.versions[0] };
-          fallback = true;
-        }
-      }
-      for (const commit of gitList) {
-        const key = getSubscriptionKey(commit);
-        if (!initialSelections[key] && commit.commits?.length > 0) {
-          initialSelections[key] = { artifact: commit, info: commit.commits[0] };
-          fallback = true;
-        }
-      }
-    } else {
-      for (const image of imagesList) {
-        if (image.references?.length > 0) {
-          initialSelections[getSubscriptionKey(image)] = {
-            artifact: image,
-            info: image.references[0]
-          };
-        }
-      }
-      for (const chart of chartsList) {
-        if (chart.versions?.length > 0) {
-          initialSelections[getSubscriptionKey(chart)] = {
-            artifact: chart,
-            info: chart.versions[0]
-          };
-        }
-      }
-      for (const commit of gitList) {
-        if (commit.commits?.length > 0) {
-          initialSelections[getSubscriptionKey(commit)] = {
-            artifact: commit,
-            info: commit.commits[0]
-          };
-        }
-      }
+  const [selected, setSelected] = useState<DiscoveryResult | undefined>(() => {
+    if (images?.length > 0) {
+      return images[0];
     }
 
-    return {
-      init: initialSelections,
-      fallbackUsed: fallback || (sourceFreight ? nothingDiscovered : false),
-      noArtifacts: nothingDiscovered,
-      missing: {
-        images: missingImages,
-        charts: missingCharts,
-        commits: missingCommits
-      }
-    };
-  }, [sourceFreight, images, charts, git]);
+    if (charts?.length > 0) {
+      return charts[0];
+    }
+
+    if (git?.length > 0) {
+      return git[0];
+    }
+  });
 
   const [chosenItems, setChosenItems] = useState<{
     [key: string]: {
       artifact: DiscoveryResult;
       info: FreightInfo;
     };
-  }>(init);
+  }>(() => {
+    const items: Record<string, { artifact: DiscoveryResult; info: FreightInfo }> = {};
 
-  useEffect(() => {
-    setChosenItems(init);
-  }, [init]);
+    const discoveredArtifacts = warehouse?.status?.discoveredArtifacts;
 
-  useEffect(() => {
-    const all: DiscoveryResult[] = [
-      ...(images as DiscoveryResult[]),
-      ...(charts as DiscoveryResult[]),
-      ...(git as DiscoveryResult[])
-    ];
-
-    const selectedStillExists = selected
-      ? all.some((a) => getSubscriptionKey(a) === getSubscriptionKey(selected))
-      : false;
-
-    if (!selected || !selectedStillExists) {
-      if (images?.length > 0) {
-        setSelected(images[0]);
-      } else if (charts?.length > 0) {
-        setSelected(charts[0]);
-      } else if (git?.length > 0) {
-        setSelected(git[0]);
-      }
+    for (const image of discoveredArtifacts?.images || []) {
+      items[getSubscriptionKey(image)] = {
+        artifact: image,
+        info: image.references[0]
+      };
     }
-  }, [selected, images, charts, git]);
+
+    for (const chart of discoveredArtifacts?.charts || []) {
+      items[getSubscriptionKey(chart)] = {
+        artifact: chart,
+        info: chart.versions[0]
+      };
+    }
+
+    for (const commit of discoveredArtifacts?.git || []) {
+      items[getSubscriptionKey(commit)] = {
+        artifact: commit,
+        info: commit.commits[0]
+      };
+    }
+
+    if (similarToFreight) {
+      mergeWithSimilarFreight(items, discoveredArtifacts, similarToFreight);
+    }
+
+    return items;
+  });
+
+  const missingArtifactsForSimilarFreight = useMemo(() => {
+    if (!similarToFreight) {
+      return [];
+    }
+
+    return missingArtifactsToSimilarFreight(
+      warehouse?.status?.discoveredArtifacts,
+      similarToFreight
+    );
+  }, [similarToFreight, warehouse?.status?.discoveredArtifacts]);
 
   function select<T extends FreightInfo>(item?: T) {
     if (!selected) {
@@ -386,7 +295,11 @@ export const AssembleFreight = ({
 
   return (
     <div>
-      {renderDisclaimer()}
+      <SimilarToFreightNote
+        missingArtifacts={missingArtifactsForSimilarFreight}
+        similarToFreight={similarToFreight}
+        className='mb-5'
+      />
       <div className='text-xs font-medium text-gray-500 mb-2'>FREIGHT CONTENTS</div>
       <div className='mt-3 mb-5 flex items-center'>
         {Object.keys(chosenItems)?.length > 0 ? (
