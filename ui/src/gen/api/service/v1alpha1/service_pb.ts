@@ -1611,15 +1611,21 @@ export const ListProjectsResponseSchema: GenMessage<ListProjectsResponse> = /*@_
   messageDesc(file_api_service_v1alpha1_service, 61);
 
 /**
+ * GetProjectConfigRequest is the request for retrieving project-level configuration settings.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.GetProjectConfigRequest
  */
 export type GetProjectConfigRequest = Message<"akuity.io.kargo.service.v1alpha1.GetProjectConfigRequest"> & {
   /**
+   * project is the name of the project to retrieve configuration for.
+   *
    * @generated from field: string project = 1;
    */
   project: string;
 
   /**
+   * format specifies the desired response format (structured object or raw YAML).
+   *
    * @generated from field: akuity.io.kargo.service.v1alpha1.RawFormat format = 2;
    */
   format: RawFormat;
@@ -1633,6 +1639,8 @@ export const GetProjectConfigRequestSchema: GenMessage<GetProjectConfigRequest> 
   messageDesc(file_api_service_v1alpha1_service, 62);
 
 /**
+ * GetProjectConfigResponse contains the requested project configuration.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.GetProjectConfigResponse
  */
 export type GetProjectConfigResponse = Message<"akuity.io.kargo.service.v1alpha1.GetProjectConfigResponse"> & {
@@ -1641,12 +1649,16 @@ export type GetProjectConfigResponse = Message<"akuity.io.kargo.service.v1alpha1
    */
   result: {
     /**
+     * project_config is the structured ProjectConfig object.
+     *
      * @generated from field: github.com.akuity.kargo.api.v1alpha1.ProjectConfig project_config = 1;
      */
     value: ProjectConfig;
     case: "projectConfig";
   } | {
     /**
+     * raw is the raw YAML representation of the project configuration.
+     *
      * @generated from field: bytes raw = 2;
      */
     value: Uint8Array;
@@ -1662,10 +1674,14 @@ export const GetProjectConfigResponseSchema: GenMessage<GetProjectConfigResponse
   messageDesc(file_api_service_v1alpha1_service, 63);
 
 /**
+ * DeleteProjectConfigRequest is the request for removing project-level configuration.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.DeleteProjectConfigRequest
  */
 export type DeleteProjectConfigRequest = Message<"akuity.io.kargo.service.v1alpha1.DeleteProjectConfigRequest"> & {
   /**
+   * project is the name of the project to delete configuration for.
+   *
    * @generated from field: string project = 1;
    */
   project: string;
@@ -1679,6 +1695,8 @@ export const DeleteProjectConfigRequestSchema: GenMessage<DeleteProjectConfigReq
   messageDesc(file_api_service_v1alpha1_service, 64);
 
 /**
+ * DeleteProjectConfigResponse is the response after deleting project configuration.
+ *
  * explicitly empty 
  *
  * @generated from message akuity.io.kargo.service.v1alpha1.DeleteProjectConfigResponse
@@ -1694,10 +1712,14 @@ export const DeleteProjectConfigResponseSchema: GenMessage<DeleteProjectConfigRe
   messageDesc(file_api_service_v1alpha1_service, 65);
 
 /**
+ * WatchProjectConfigRequest is the request for streaming project configuration changes.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.WatchProjectConfigRequest
  */
 export type WatchProjectConfigRequest = Message<"akuity.io.kargo.service.v1alpha1.WatchProjectConfigRequest"> & {
   /**
+   * project is the name of the project to watch for configuration changes.
+   *
    * @generated from field: string project = 1;
    */
   project: string;
@@ -1711,16 +1733,20 @@ export const WatchProjectConfigRequestSchema: GenMessage<WatchProjectConfigReque
   messageDesc(file_api_service_v1alpha1_service, 66);
 
 /**
+ * WatchProjectConfigResponse provides streaming updates for project configuration changes.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.WatchProjectConfigResponse
  */
 export type WatchProjectConfigResponse = Message<"akuity.io.kargo.service.v1alpha1.WatchProjectConfigResponse"> & {
   /**
+   * project_config is the updated ProjectConfig object.
+   *
    * @generated from field: github.com.akuity.kargo.api.v1alpha1.ProjectConfig project_config = 1;
    */
   projectConfig?: ProjectConfig;
 
   /**
-   * ADDED / MODIFIED / DELETED
+   * type indicates the type of change (ADDED / MODIFIED / DELETED).
    *
    * @generated from field: string type = 2;
    */
@@ -1735,10 +1761,14 @@ export const WatchProjectConfigResponseSchema: GenMessage<WatchProjectConfigResp
   messageDesc(file_api_service_v1alpha1_service, 67);
 
 /**
+ * RefreshProjectConfigRequest is the request for triggering a refresh of project configuration.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.RefreshProjectConfigRequest
  */
 export type RefreshProjectConfigRequest = Message<"akuity.io.kargo.service.v1alpha1.RefreshProjectConfigRequest"> & {
   /**
+   * project is the name of the project to refresh configuration for.
+   *
    * @generated from field: string project = 1;
    */
   project: string;
@@ -1752,10 +1782,14 @@ export const RefreshProjectConfigRequestSchema: GenMessage<RefreshProjectConfigR
   messageDesc(file_api_service_v1alpha1_service, 68);
 
 /**
+ * RefreshProjectConfigResponse contains the refreshed project configuration.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.RefreshProjectConfigResponse
  */
 export type RefreshProjectConfigResponse = Message<"akuity.io.kargo.service.v1alpha1.RefreshProjectConfigResponse"> & {
   /**
+   * project_config is the refreshed ProjectConfig object.
+   *
    * @generated from field: github.com.akuity.kargo.api.v1alpha1.ProjectConfig project_config = 1;
    */
   projectConfig?: ProjectConfig;
@@ -2650,10 +2684,14 @@ export const RefreshWarehouseResponseSchema: GenMessage<RefreshWarehouseResponse
   messageDesc(file_api_service_v1alpha1_service, 100);
 
 /**
+ * ListConfigMapsRequest is the request for retrieving all ConfigMaps in a project.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.ListConfigMapsRequest
  */
 export type ListConfigMapsRequest = Message<"akuity.io.kargo.service.v1alpha1.ListConfigMapsRequest"> & {
   /**
+   * project is the name of the project to list ConfigMaps from.
+   *
    * @generated from field: string project = 1;
    */
   project: string;
@@ -2667,10 +2705,14 @@ export const ListConfigMapsRequestSchema: GenMessage<ListConfigMapsRequest> = /*
   messageDesc(file_api_service_v1alpha1_service, 101);
 
 /**
+ * ListConfigMapsResponse contains the list of ConfigMaps in a project.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.ListConfigMapsResponse
  */
 export type ListConfigMapsResponse = Message<"akuity.io.kargo.service.v1alpha1.ListConfigMapsResponse"> & {
   /**
+   * config_maps is the list of ConfigMaps found in the project.
+   *
    * @generated from field: repeated k8s.io.api.core.v1.ConfigMap config_maps = 1;
    */
   configMaps: ConfigMap[];
@@ -2684,20 +2726,28 @@ export const ListConfigMapsResponseSchema: GenMessage<ListConfigMapsResponse> = 
   messageDesc(file_api_service_v1alpha1_service, 102);
 
 /**
+ * GetConfigMapRequest is the request for retrieving a specific ConfigMap.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.GetConfigMapRequest
  */
 export type GetConfigMapRequest = Message<"akuity.io.kargo.service.v1alpha1.GetConfigMapRequest"> & {
   /**
+   * project is the name of the project containing the ConfigMap.
+   *
    * @generated from field: string project = 1;
    */
   project: string;
 
   /**
+   * name is the name of the ConfigMap to retrieve.
+   *
    * @generated from field: string name = 2;
    */
   name: string;
 
   /**
+   * format specifies the desired response format (structured object or raw YAML).
+   *
    * @generated from field: akuity.io.kargo.service.v1alpha1.RawFormat format = 3;
    */
   format: RawFormat;
@@ -2711,6 +2761,8 @@ export const GetConfigMapRequestSchema: GenMessage<GetConfigMapRequest> = /*@__P
   messageDesc(file_api_service_v1alpha1_service, 103);
 
 /**
+ * GetConfigMapResponse contains the requested ConfigMap information.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.GetConfigMapResponse
  */
 export type GetConfigMapResponse = Message<"akuity.io.kargo.service.v1alpha1.GetConfigMapResponse"> & {
@@ -2719,12 +2771,16 @@ export type GetConfigMapResponse = Message<"akuity.io.kargo.service.v1alpha1.Get
    */
   result: {
     /**
+     * config_map is the structured Kubernetes ConfigMap object.
+     *
      * @generated from field: k8s.io.api.core.v1.ConfigMap config_map = 1;
      */
     value: ConfigMap;
     case: "configMap";
   } | {
     /**
+     * raw is the raw YAML representation of the ConfigMap.
+     *
      * @generated from field: bytes raw = 2;
      */
     value: Uint8Array;

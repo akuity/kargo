@@ -393,15 +393,15 @@
 <a name="akuity-io-kargo-service-v1alpha1-DeleteProjectConfigRequest"></a>
 
 ### DeleteProjectConfigRequest
- 
+ DeleteProjectConfigRequest is the request for removing project-level configuration.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project to delete configuration for. |
 
 <a name="akuity-io-kargo-service-v1alpha1-DeleteProjectConfigResponse"></a>
 
 ### DeleteProjectConfigResponse
- explicitly empty
+ DeleteProjectConfigResponse is the response after deleting project configuration.  explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteProjectRequest"></a>
 
 ### DeleteProjectRequest
@@ -612,21 +612,21 @@
 <a name="akuity-io-kargo-service-v1alpha1-GetConfigMapRequest"></a>
 
 ### GetConfigMapRequest
- 
+ GetConfigMapRequest is the request for retrieving a specific ConfigMap.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| name | [string](#string) |   |
-| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |   |
+| project | [string](#string) |  project is the name of the project containing the ConfigMap. |
+| name | [string](#string) |  name is the name of the ConfigMap to retrieve. |
+| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |  format specifies the desired response format (structured object or raw YAML). |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetConfigMapResponse"></a>
 
 ### GetConfigMapResponse
- 
+ GetConfigMapResponse contains the requested ConfigMap information.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| config_map | k8s.io.api.core.v1.ConfigMap |   |
-| raw | [bytes](#bytes) |   |
+| config_map | k8s.io.api.core.v1.ConfigMap |  config_map is the structured Kubernetes ConfigMap object. |
+| raw | [bytes](#bytes) |  raw is the raw YAML representation of the ConfigMap. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetConfigRequest"></a>
 
@@ -693,20 +693,20 @@
 <a name="akuity-io-kargo-service-v1alpha1-GetProjectConfigRequest"></a>
 
 ### GetProjectConfigRequest
- 
+ GetProjectConfigRequest is the request for retrieving project-level configuration settings.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |   |
+| project | [string](#string) |  project is the name of the project to retrieve configuration for. |
+| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |  format specifies the desired response format (structured object or raw YAML). |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetProjectConfigResponse"></a>
 
 ### GetProjectConfigResponse
- 
+ GetProjectConfigResponse contains the requested project configuration.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project_config | [github.com.akuity.kargo.api.v1alpha1.ProjectConfig](#github-com-akuity-kargo-api-v1alpha1-ProjectConfig) |   |
-| raw | [bytes](#bytes) |   |
+| project_config | [github.com.akuity.kargo.api.v1alpha1.ProjectConfig](#github-com-akuity-kargo-api-v1alpha1-ProjectConfig) |  project_config is the structured ProjectConfig object. |
+| raw | [bytes](#bytes) |  raw is the raw YAML representation of the project configuration. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetProjectRequest"></a>
 
@@ -940,18 +940,18 @@
 <a name="akuity-io-kargo-service-v1alpha1-ListConfigMapsRequest"></a>
 
 ### ListConfigMapsRequest
- 
+ ListConfigMapsRequest is the request for retrieving all ConfigMaps in a project.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project to list ConfigMaps from. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListConfigMapsResponse"></a>
 
 ### ListConfigMapsResponse
- 
+ ListConfigMapsResponse contains the list of ConfigMaps in a project.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| config_maps | k8s.io.api.core.v1.ConfigMap |   |
+| config_maps | k8s.io.api.core.v1.ConfigMap |  config_maps is the list of ConfigMaps found in the project. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListCredentialsRequest"></a>
 
@@ -1223,18 +1223,18 @@
 <a name="akuity-io-kargo-service-v1alpha1-RefreshProjectConfigRequest"></a>
 
 ### RefreshProjectConfigRequest
- 
+ RefreshProjectConfigRequest is the request for triggering a refresh of project configuration.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project to refresh configuration for. |
 
 <a name="akuity-io-kargo-service-v1alpha1-RefreshProjectConfigResponse"></a>
 
 ### RefreshProjectConfigResponse
- 
+ RefreshProjectConfigResponse contains the refreshed project configuration.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project_config | [github.com.akuity.kargo.api.v1alpha1.ProjectConfig](#github-com-akuity-kargo-api-v1alpha1-ProjectConfig) |   |
+| project_config | [github.com.akuity.kargo.api.v1alpha1.ProjectConfig](#github-com-akuity-kargo-api-v1alpha1-ProjectConfig) |  project_config is the refreshed ProjectConfig object. |
 
 <a name="akuity-io-kargo-service-v1alpha1-RefreshStageRequest"></a>
 
@@ -1499,19 +1499,19 @@
 <a name="akuity-io-kargo-service-v1alpha1-WatchProjectConfigRequest"></a>
 
 ### WatchProjectConfigRequest
- 
+ WatchProjectConfigRequest is the request for streaming project configuration changes.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project to watch for configuration changes. |
 
 <a name="akuity-io-kargo-service-v1alpha1-WatchProjectConfigResponse"></a>
 
 ### WatchProjectConfigResponse
- 
+ WatchProjectConfigResponse provides streaming updates for project configuration changes.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project_config | [github.com.akuity.kargo.api.v1alpha1.ProjectConfig](#github-com-akuity-kargo-api-v1alpha1-ProjectConfig) |   |
-| type | [string](#string) |  ADDED / MODIFIED / DELETED |
+| project_config | [github.com.akuity.kargo.api.v1alpha1.ProjectConfig](#github-com-akuity-kargo-api-v1alpha1-ProjectConfig) |  project_config is the updated ProjectConfig object. |
+| type | [string](#string) |  type indicates the type of change (ADDED / MODIFIED / DELETED). |
 
 <a name="akuity-io-kargo-service-v1alpha1-WatchPromotionRequest"></a>
 

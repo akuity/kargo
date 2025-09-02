@@ -3605,13 +3605,16 @@ func (x *ListProjectsResponse) GetTotal() int32 {
 	return 0
 }
 
+// GetProjectConfigRequest is the request for retrieving project-level configuration settings.
 type GetProjectConfigRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Project string    `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Format  RawFormat `protobuf:"varint,2,opt,name=format,proto3,enum=akuity.io.kargo.service.v1alpha1.RawFormat" json:"format,omitempty"`
+	// project is the name of the project to retrieve configuration for.
+	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	// format specifies the desired response format (structured object or raw YAML).
+	Format RawFormat `protobuf:"varint,2,opt,name=format,proto3,enum=akuity.io.kargo.service.v1alpha1.RawFormat" json:"format,omitempty"`
 }
 
 func (x *GetProjectConfigRequest) Reset() {
@@ -3660,6 +3663,7 @@ func (x *GetProjectConfigRequest) GetFormat() RawFormat {
 	return RawFormat_RAW_FORMAT_UNSPECIFIED
 }
 
+// GetProjectConfigResponse contains the requested project configuration.
 type GetProjectConfigResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3730,10 +3734,12 @@ type isGetProjectConfigResponse_Result interface {
 }
 
 type GetProjectConfigResponse_ProjectConfig struct {
+	// project_config is the structured ProjectConfig object.
 	ProjectConfig *v1alpha1.ProjectConfig `protobuf:"bytes,1,opt,name=project_config,json=projectConfig,proto3,oneof"`
 }
 
 type GetProjectConfigResponse_Raw struct {
+	// raw is the raw YAML representation of the project configuration.
 	Raw []byte `protobuf:"bytes,2,opt,name=raw,proto3,oneof"`
 }
 
@@ -3741,11 +3747,13 @@ func (*GetProjectConfigResponse_ProjectConfig) isGetProjectConfigResponse_Result
 
 func (*GetProjectConfigResponse_Raw) isGetProjectConfigResponse_Result() {}
 
+// DeleteProjectConfigRequest is the request for removing project-level configuration.
 type DeleteProjectConfigRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// project is the name of the project to delete configuration for.
 	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
 }
 
@@ -3788,6 +3796,7 @@ func (x *DeleteProjectConfigRequest) GetProject() string {
 	return ""
 }
 
+// DeleteProjectConfigResponse is the response after deleting project configuration.
 type DeleteProjectConfigResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3826,11 +3835,13 @@ func (*DeleteProjectConfigResponse) Descriptor() ([]byte, []int) {
 	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{65}
 }
 
+// WatchProjectConfigRequest is the request for streaming project configuration changes.
 type WatchProjectConfigRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// project is the name of the project to watch for configuration changes.
 	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
 }
 
@@ -3873,13 +3884,16 @@ func (x *WatchProjectConfigRequest) GetProject() string {
 	return ""
 }
 
+// WatchProjectConfigResponse provides streaming updates for project configuration changes.
 type WatchProjectConfigResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// project_config is the updated ProjectConfig object.
 	ProjectConfig *v1alpha1.ProjectConfig `protobuf:"bytes,1,opt,name=project_config,json=projectConfig,proto3" json:"project_config,omitempty"`
-	Type          string                  `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"` // ADDED / MODIFIED / DELETED
+	// type indicates the type of change (ADDED / MODIFIED / DELETED).
+	Type string `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
 }
 
 func (x *WatchProjectConfigResponse) Reset() {
@@ -3928,11 +3942,13 @@ func (x *WatchProjectConfigResponse) GetType() string {
 	return ""
 }
 
+// RefreshProjectConfigRequest is the request for triggering a refresh of project configuration.
 type RefreshProjectConfigRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// project is the name of the project to refresh configuration for.
 	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
 }
 
@@ -3975,11 +3991,13 @@ func (x *RefreshProjectConfigRequest) GetProject() string {
 	return ""
 }
 
+// RefreshProjectConfigResponse contains the refreshed project configuration.
 type RefreshProjectConfigResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// project_config is the refreshed ProjectConfig object.
 	ProjectConfig *v1alpha1.ProjectConfig `protobuf:"bytes,1,opt,name=project_config,json=projectConfig,proto3" json:"project_config,omitempty"`
 }
 
@@ -5839,11 +5857,13 @@ func (x *RefreshWarehouseResponse) GetWarehouse() *v1alpha1.Warehouse {
 	return nil
 }
 
+// ListConfigMapsRequest is the request for retrieving all ConfigMaps in a project.
 type ListConfigMapsRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// project is the name of the project to list ConfigMaps from.
 	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
 }
 
@@ -5886,11 +5906,13 @@ func (x *ListConfigMapsRequest) GetProject() string {
 	return ""
 }
 
+// ListConfigMapsResponse contains the list of ConfigMaps in a project.
 type ListConfigMapsResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// config_maps is the list of ConfigMaps found in the project.
 	ConfigMaps []*v1.ConfigMap `protobuf:"bytes,1,rep,name=config_maps,json=configMaps,proto3" json:"config_maps,omitempty"`
 }
 
@@ -5933,14 +5955,18 @@ func (x *ListConfigMapsResponse) GetConfigMaps() []*v1.ConfigMap {
 	return nil
 }
 
+// GetConfigMapRequest is the request for retrieving a specific ConfigMap.
 type GetConfigMapRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Project string    `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Name    string    `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Format  RawFormat `protobuf:"varint,3,opt,name=format,proto3,enum=akuity.io.kargo.service.v1alpha1.RawFormat" json:"format,omitempty"`
+	// project is the name of the project containing the ConfigMap.
+	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	// name is the name of the ConfigMap to retrieve.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// format specifies the desired response format (structured object or raw YAML).
+	Format RawFormat `protobuf:"varint,3,opt,name=format,proto3,enum=akuity.io.kargo.service.v1alpha1.RawFormat" json:"format,omitempty"`
 }
 
 func (x *GetConfigMapRequest) Reset() {
@@ -5996,6 +6022,7 @@ func (x *GetConfigMapRequest) GetFormat() RawFormat {
 	return RawFormat_RAW_FORMAT_UNSPECIFIED
 }
 
+// GetConfigMapResponse contains the requested ConfigMap information.
 type GetConfigMapResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -6066,10 +6093,12 @@ type isGetConfigMapResponse_Result interface {
 }
 
 type GetConfigMapResponse_ConfigMap struct {
+	// config_map is the structured Kubernetes ConfigMap object.
 	ConfigMap *v1.ConfigMap `protobuf:"bytes,1,opt,name=config_map,json=configMap,proto3,oneof"`
 }
 
 type GetConfigMapResponse_Raw struct {
+	// raw is the raw YAML representation of the ConfigMap.
 	Raw []byte `protobuf:"bytes,2,opt,name=raw,proto3,oneof"`
 }
 
