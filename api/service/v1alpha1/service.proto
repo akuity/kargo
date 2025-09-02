@@ -1039,339 +1039,511 @@ message CreateCredentialsResponse {
   k8s.io.api.core.v1.Secret credentials = 1;
 }
 
+// DeleteCredentialsRequest is the request for deleting existing credentials.
 message DeleteCredentialsRequest {
+  // project is the name of the project containing the credentials.
   string project = 1;
+  // name is the name of the credentials to delete.
   string name = 2;
 }
 
+// DeleteCredentialsResponse is the response returned after deleting credentials.
 message DeleteCredentialsResponse {
   /* explicitly empty */
 }
 
+// GetCredentialsRequest is the request for retrieving existing credentials.
 message GetCredentialsRequest {
+  // project is the name of the project containing the credentials.
   string project = 1;
+  // name is the name of the credentials to retrieve.
   string name = 2;
+  // format specifies the desired response format (structured object or raw YAML).
   RawFormat format = 3;
 }
 
+// GetCredentialsResponse contains the requested credentials information.
 message GetCredentialsResponse {
   oneof result {
+    // credentials is the structured Kubernetes Secret containing the credentials.
     k8s.io.api.core.v1.Secret credentials = 1;
+    // raw is the raw YAML representation of the credentials.
     bytes raw = 2;
   }
 }
 
+// ListCredentialsRequest is the request for listing all credentials in a project.
 message ListCredentialsRequest {
+  // project is the name of the project whose credentials will be listed.
   string project = 1;
 }
 
+// ListCredentialsResponse contains a list of credentials for the specified project.
 message ListCredentialsResponse {
+  // credentials is the list of Kubernetes Secrets containing the credentials.
   repeated k8s.io.api.core.v1.Secret credentials = 1;
 }
 
+// UpdateCredentialsRequest is the request for updating existing credentials.
 message UpdateCredentialsRequest {
+  // project is the name of the project containing the credentials.
   string project = 1;
+  // name is the name of the credentials to update.
   string name = 2;
+  // description is a human-readable description of the credentials.
   string description = 8;
+  // type specifies the credential type (git, helm, image).
   string type = 3;
+  // repo_url is the URL of the repository or registry these credentials apply to.
   string repo_url = 4 [json_name = "repoURL"];
+  // repo_url_is_regex indicates whether repo_url should be treated as a regular expression.
   bool repo_url_is_regex = 5 [json_name = "repoURLIsRegex"];
+  // username is the username for authentication.
   string username = 6;
+  // password is the password or token for authentication.
   string password = 7;
 }
 
+// UpdateCredentialsResponse contains the updated credentials information.
 message UpdateCredentialsResponse {
+  // credentials is the updated Kubernetes Secret containing the credentials.
   k8s.io.api.core.v1.Secret credentials = 1;
 }
 
 /* Project Secrets Messages */
 
+// ListProjectSecretsRequest is the request for listing all secrets in a project.
 message ListProjectSecretsRequest {
+  // project is the name of the project whose secrets will be listed.
   string project = 1;
 }
 
+// ListProjectSecretsResponse contains a list of secrets for the specified project.
 message ListProjectSecretsResponse {
+  // secrets is the list of Kubernetes Secrets within the project.
   repeated k8s.io.api.core.v1.Secret secrets = 1;
 }
 
+// CreateProjectSecretRequest is the request for creating a new secret within a project.
 message CreateProjectSecretRequest {
+  // project is the name of the project where the secret will be created.
   string project = 1;
+  // name is the name of the secret to create.
   string name = 2;
+  // description is a human-readable description of the secret.
   string description = 3;
+  // data contains the key-value pairs that make up the secret data.
   map<string, string> data = 4;
 }
 
+// CreateProjectSecretResponse contains the newly created project secret.
 message CreateProjectSecretResponse {
+  // secret is the created Kubernetes Secret within the project.
   k8s.io.api.core.v1.Secret secret = 1;
 }
 
+// UpdateProjectSecretRequest is the request for updating an existing project secret.
 message UpdateProjectSecretRequest {
+  // project is the name of the project containing the secret.
   string project = 1;
+  // name is the name of the secret to update.
   string name = 2;
+  // description is a human-readable description of the secret.
   string description = 3;
+  // data contains the key-value pairs that make up the secret data.
   map<string, string> data = 4;
 }
 
+// UpdateProjectSecretResponse contains the updated project secret information.
 message UpdateProjectSecretResponse {
+  // secret is the updated Kubernetes Secret within the project.
   k8s.io.api.core.v1.Secret secret = 1;
 }
 
+// DeleteProjectSecretRequest is the request for deleting a project secret.
 message DeleteProjectSecretRequest {
+  // project is the name of the project containing the secret.
   string project = 1;
+  // name is the name of the secret to delete.
   string name = 2;
 }
 
+// DeleteProjectSecretResponse is the response returned after deleting a project secret.
 message DeleteProjectSecretResponse {
   /* explicitly empty */
 }
 
 /* Analysis Messages */
 
+// ListAnalysisTemplatesRequest is the request for listing all analysis templates in a project.
 message ListAnalysisTemplatesRequest {
+  // project is the name of the project whose analysis templates will be listed.
   string project = 1;
 }
 
+// ListAnalysisTemplatesResponse contains a list of analysis templates for the specified project.
 message ListAnalysisTemplatesResponse {
+  // analysis_templates is the list of AnalysisTemplate resources within the project.
   repeated github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisTemplate analysis_templates = 1 [json_name = "analysisTemplates"];
 }
 
+// GetAnalysisTemplateRequest is the request for retrieving a specific analysis template.
 message GetAnalysisTemplateRequest {
+  // project is the name of the project containing the analysis template.
   string project = 1;
+  // name is the name of the analysis template to retrieve.
   string name = 2;
+  // format specifies the desired response format (structured object or raw YAML).
   RawFormat format = 3;
 }
 
+// GetAnalysisTemplateResponse contains the requested analysis template information.
 message GetAnalysisTemplateResponse {
   oneof result {
+    // analysis_template is the structured AnalysisTemplate resource.
     github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisTemplate analysis_template = 1 [json_name = "analysisTemplate"];
+    // raw is the raw YAML representation of the analysis template.
     bytes raw = 2;
   }
 }
 
+// DeleteAnalysisTemplateRequest is the request for deleting an analysis template.
 message DeleteAnalysisTemplateRequest {
+  // project is the name of the project containing the analysis template.
   string project = 1;
+  // name is the name of the analysis template to delete.
   string name = 2;
 }
 
+// DeleteAnalysisTemplateResponse is the response returned after deleting an analysis template.
 message DeleteAnalysisTemplateResponse {
   /* explicitly empty */
 }
 
+// ListClusterAnalysisTemplatesRequest is the request for listing all cluster-level analysis templates.
 message ListClusterAnalysisTemplatesRequest {}
 
+// ListClusterAnalysisTemplatesResponse contains a list of cluster-level analysis templates.
 message ListClusterAnalysisTemplatesResponse {
+  // cluster_analysis_templates is the list of ClusterAnalysisTemplate resources.
   repeated github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.ClusterAnalysisTemplate cluster_analysis_templates = 1 [json_name = "clusteranalysisTemplates"];
 }
 
+// GetClusterAnalysisTemplateRequest is the request for retrieving a specific cluster analysis template.
 message GetClusterAnalysisTemplateRequest {
+  // name is the name of the cluster analysis template to retrieve.
   string name = 2;
+  // format specifies the desired response format (structured object or raw YAML).
   RawFormat format = 3;
 }
 
+// GetClusterAnalysisTemplateResponse contains the requested cluster analysis template information.
 message GetClusterAnalysisTemplateResponse {
   oneof result {
+    // cluster_analysis_template is the structured ClusterAnalysisTemplate resource.
     github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.ClusterAnalysisTemplate cluster_analysis_template = 1 [json_name = "clusterAnalysisTemplate"];
+    // raw is the raw YAML representation of the cluster analysis template.
     bytes raw = 2;
   }
 }
 
+// DeleteClusterAnalysisTemplateRequest is the request for deleting a cluster analysis template.
 message DeleteClusterAnalysisTemplateRequest {
+  // name is the name of the cluster analysis template to delete.
   string name = 2;
 }
 
+// DeleteClusterAnalysisTemplateResponse is the response returned after deleting a cluster analysis template.
 message DeleteClusterAnalysisTemplateResponse {
   /* explicitly empty */
 }
 
+// GetAnalysisRunRequest is the request for retrieving a specific analysis run.
 message GetAnalysisRunRequest {
+  // namespace is the namespace containing the analysis run.
   string namespace = 1;
+  // name is the name of the analysis run to retrieve.
   string name = 2;
+  // format specifies the desired response format (structured object or raw YAML).
   RawFormat format = 3;
 }
 
+// GetAnalysisRunResponse contains the requested analysis run information.
 message GetAnalysisRunResponse {
   oneof result {
+    // analysis_run is the structured AnalysisRun resource.
     github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisRun analysis_run = 1 [json_name = "analysisRun"];
+    // raw is the raw YAML representation of the analysis run.
     bytes raw = 2;
   }
 }
 
+// GetAnalysisRunLogsRequest is the request for retrieving logs from an analysis run.
 message GetAnalysisRunLogsRequest {
+  // namespace is the namespace containing the analysis run.
   string namespace = 1;
+  // name is the name of the analysis run whose logs to retrieve.
   string name = 2;
+  // metric_name is the specific metric whose logs to retrieve.
   string metric_name = 3;
+  // container_name is the specific container whose logs to retrieve.
   string container_name = 4;
 }
 
+// GetAnalysisRunLogsResponse contains a chunk of logs from the analysis run.
 message GetAnalysisRunLogsResponse {
+  // chunk is a portion of the log output from the analysis run.
   string chunk = 1;
 }
 
 /* Event Messages */
 
+// ListProjectEventsRequest is the request for listing events in a project.
 message ListProjectEventsRequest {
+  // project is the name of the project whose events will be listed.
   string project = 1;
 }
 
+// ListProjectEventsResponse contains a list of events for the specified project.
 message ListProjectEventsResponse {
+  // events is the list of Kubernetes Events within the project.
   repeated k8s.io.api.core.v1.Event events = 1;
 }
 
 /* Promotion Task Messages */
 
+// ListPromotionTasksRequest is the request for listing promotion tasks in a project.
 message ListPromotionTasksRequest {
+  // project is the name of the project whose promotion tasks will be listed.
   string project = 1;
 }
 
+// ListPromotionTasksResponse contains a list of promotion tasks for the specified project.
 message ListPromotionTasksResponse {
+  // promotion_tasks is the list of PromotionTask resources within the project.
   repeated github.com.akuity.kargo.api.v1alpha1.PromotionTask promotion_tasks = 1;
 }
 
+// GetPromotionTaskRequest is the request for retrieving a specific promotion task.
 message GetPromotionTaskRequest {
+  // project is the name of the project containing the promotion task.
   string project = 1;
+  // name is the name of the promotion task to retrieve.
   string name = 2;
+  // format specifies the desired response format (structured object or raw YAML).
   RawFormat format = 3;
 }
 
+// GetPromotionTaskResponse contains the requested promotion task information.
 message GetPromotionTaskResponse {
   oneof result {
+    // promotion_task is the structured PromotionTask resource.
     github.com.akuity.kargo.api.v1alpha1.PromotionTask promotion_task = 1 [json_name = "promotionTask"];
+    // raw is the raw YAML representation of the promotion task.
     bytes raw = 2;
   }
 }
 
+// ListClusterPromotionTasksRequest is the request for listing all cluster-level promotion tasks.
 message ListClusterPromotionTasksRequest {}
 
+// ListClusterPromotionTasksResponse contains a list of cluster-level promotion tasks.
 message ListClusterPromotionTasksResponse {
+  // cluster_promotion_tasks is the list of ClusterPromotionTask resources.
   repeated github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask cluster_promotion_tasks = 1;
 }
 
+// GetClusterPromotionTaskRequest is the request for retrieving a specific cluster promotion task.
 message GetClusterPromotionTaskRequest {
+  // name is the name of the cluster promotion task to retrieve.
   string name = 2;
+  // format specifies the desired response format (structured object or raw YAML).
   RawFormat format = 3;
 }
 
+// GetClusterPromotionTaskResponse contains the requested cluster promotion task information.
 message GetClusterPromotionTaskResponse {
   oneof result {
+    // promotion_task is the structured ClusterPromotionTask resource.
     github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask promotion_task = 1 [json_name = "clusterPromotionTask"];
+    // raw is the raw YAML representation of the cluster promotion task.
     bytes raw = 2;
   }
 }
 
 /* Role Messages */
 
+// CreateRoleRequest is the request for creating a new RBAC role.
 message CreateRoleRequest {
+  // role is the Role resource to create.
   github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
 }
 
+// CreateRoleResponse contains the newly created role information.
 message CreateRoleResponse {
+  // role is the created Role resource.
   github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
 }
 
+// DeleteRoleRequest is the request for deleting an RBAC role.
 message DeleteRoleRequest {
+  // project is the name of the project containing the role.
   string project = 1;
+  // name is the name of the role to delete.
   string name = 2;
 }
 
+// DeleteRoleResponse is the response returned after deleting a role.
 message DeleteRoleResponse {
   /* explicitly empty */
 }
 
+// GetRoleRequest is the request for retrieving a specific RBAC role.
 message GetRoleRequest {
+  // project is the name of the project containing the role.
   string project = 1;
+  // name is the name of the role to retrieve.
   string name = 2;
+  // as_resources indicates whether to return the role as resources or as a role object.
   bool as_resources = 3;
+  // format specifies the desired response format (structured object or raw YAML).
   RawFormat format = 4;
 }
 
+// GetRoleResponse contains the requested role information.
 message GetRoleResponse {
   oneof result {
+    // role is the structured Role resource.
     github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
+    // resources is the structured RoleResources containing the role's resources.
     github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources resources = 2;
+    // raw is the raw YAML representation of the role.
     bytes raw = 3;
   }
 }
 
+// Claims represents a collection of OIDC claims for role-based access control.
 message Claims {
   // Note: oneof and repeated do not work together
+  // claims is the list of claims associated with a user or service account.
   repeated github.com.akuity.kargo.api.rbac.v1alpha1.Claim claims = 1;
 }
 
+// GrantRequest is the request for granting a role to a user or resource.
 message GrantRequest {
+  // project is the name of the project where the role will be granted.
   string project = 1;
+  // role is the name of the role to grant.
   string role = 2;
   oneof request {
+    // user_claims are the OIDC claims for the user being granted the role.
     Claims user_claims = 3;
+    // resource_details are the details of the resource being granted the role.
     github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails resource_details = 4;
   }
 }
 
+// GrantResponse contains information about the granted role.
 message GrantResponse {
+  // role is the Role resource that was granted.
   github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
 }
 
+// ListRolesRequest is the request for listing all roles in a project.
 message ListRolesRequest {
+  // project is the name of the project whose roles will be listed.
   string project = 1;
+  // as_resources indicates whether to return roles as resources or as role objects.
   bool as_resources = 2;
 }
 
+// ListRolesResponse contains a list of roles for the specified project.
 message ListRolesResponse {
   // Note: oneof and repeated do not work together
+  // roles is the list of Role resources when requested as roles.
   repeated github.com.akuity.kargo.api.rbac.v1alpha1.Role roles = 1;
+  // resources is the list of RoleResources when requested as resources.
   repeated github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources resources = 2;
 }
 
+// RevokeRequest is the request for revoking a role from a user or resource.
 message RevokeRequest {
+  // project is the name of the project where the role will be revoked.
   string project = 1;
+  // role is the name of the role to revoke.
   string role = 2;
   oneof request {
+    // user_claims are the OIDC claims for the user whose role is being revoked.
     Claims user_claims = 3;
+    // resource_details are the details of the resource whose role is being revoked.
     github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails resource_details = 4;
   }
 }
 
+// RevokeResponse contains information about the revoked role.
 message RevokeResponse {
+  // role is the Role resource that was revoked.
   github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
 }
 
+// UpdateRoleRequest is the request for updating an existing RBAC role.
 message UpdateRoleRequest {
+  // role is the updated Role resource.
   github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
 }
 
+// UpdateRoleResponse contains the updated role information.
 message UpdateRoleResponse {
+  // role is the updated Role resource.
   github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
 }
 
+// ListClusterSecretsRequest is the request for listing all cluster-level secrets.
 message ListClusterSecretsRequest {
   /* explicitly empty */
 }
 
+// ListClusterSecretsResponse contains a list of cluster-level secrets.
 message ListClusterSecretsResponse {
+  // secrets is the list of cluster-level Kubernetes Secrets.
   repeated k8s.io.api.core.v1.Secret secrets = 1;
 }
 
+// CreateClusterSecretRequest is the request for creating a new cluster-level secret.
 message CreateClusterSecretRequest {
+  // name is the name of the cluster secret to create.
   string name = 1;
+  // data contains the key-value pairs that make up the secret data.
   map<string, string> data = 2;
 }
 
+// CreateClusterSecretResponse contains the newly created cluster secret.
 message CreateClusterSecretResponse {
+  // secret is the created cluster-level Kubernetes Secret.
   k8s.io.api.core.v1.Secret secret = 1;
 }
 
+// UpdateClusterSecretRequest is the request for updating an existing cluster secret.
 message UpdateClusterSecretRequest {
+  // name is the name of the cluster secret to update.
   string name = 1;
+  // data contains the key-value pairs that make up the secret data.
   map<string, string> data = 2;
 }
 
+// UpdateClusterSecretResponse contains the updated cluster secret information.
 message UpdateClusterSecretResponse {
+  // secret is the updated cluster-level Kubernetes Secret.
   k8s.io.api.core.v1.Secret secret = 1;
 }
 
+// DeleteClusterSecretRequest is the request for deleting a cluster secret.
 message DeleteClusterSecretRequest {
+  // name is the name of the cluster secret to delete.
   string name = 1;
 }
 
+// DeleteClusterSecretResponse is the response returned after deleting a cluster secret.
 message DeleteClusterSecretResponse {
   /* explicitly empty */
 }
