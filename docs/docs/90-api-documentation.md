@@ -98,29 +98,29 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-AbortPromotionRequest"></a>
 
 ### AbortPromotionRequest
- 
+ AbortPromotionRequest is the request for canceling a running promotion process.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| name | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project containing the promotion. |
+| name | [string](#string) |  name is the name of the promotion to abort. |
 
 <a name="akuity-io-kargo-service-v1alpha1-AbortPromotionResponse"></a>
 
 ### AbortPromotionResponse
- explicitly empty
+ AbortPromotionResponse is the response after aborting a promotion.  explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-AbortVerificationRequest"></a>
 
 ### AbortVerificationRequest
- 
+ AbortVerificationRequest is the request for canceling running verification processes for a stage.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| stage | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project containing the stage. |
+| stage | [string](#string) |  stage is the name of the stage whose verification should be aborted. |
 
 <a name="akuity-io-kargo-service-v1alpha1-AbortVerificationResponse"></a>
 
 ### AbortVerificationResponse
- explicitly empty
+ AbortVerificationResponse is the response after aborting verification.  explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-AdminLoginRequest"></a>
 
 ### AdminLoginRequest
@@ -733,21 +733,21 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-GetPromotionRequest"></a>
 
 ### GetPromotionRequest
- 
+ GetPromotionRequest is the request for retrieving details of a specific promotion.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| name | [string](#string) |   |
-| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |   |
+| project | [string](#string) |  project is the name of the project containing the promotion. |
+| name | [string](#string) |  name is the name of the promotion to retrieve. |
+| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |  format specifies the format for raw resource representation. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetPromotionResponse"></a>
 
 ### GetPromotionResponse
- 
+ GetPromotionResponse contains the requested promotion information.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| promotion | [github.com.akuity.kargo.api.v1alpha1.Promotion](#github-com-akuity-kargo-api-v1alpha1-Promotion) |   |
-| raw | [bytes](#bytes) |   |
+| promotion | [github.com.akuity.kargo.api.v1alpha1.Promotion](#github-com-akuity-kargo-api-v1alpha1-Promotion) |  promotion contains the Promotion resource in structured format. |
+| raw | [bytes](#bytes) |  raw contains the Promotion resource in the requested raw format. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetPromotionTaskRequest"></a>
 
@@ -1068,19 +1068,19 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-ListPromotionsRequest"></a>
 
 ### ListPromotionsRequest
- 
+ ListPromotionsRequest is the request for retrieving all promotions, optionally filtered by stage.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| stage | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project whose promotions should be listed. |
+| stage | [string](#string) |  stage is an optional stage name to filter promotions by. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListPromotionsResponse"></a>
 
 ### ListPromotionsResponse
- 
+ ListPromotionsResponse contains a list of promotions within a project.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| promotions | [github.com.akuity.kargo.api.v1alpha1.Promotion](#github-com-akuity-kargo-api-v1alpha1-Promotion) |   |
+| promotions | [github.com.akuity.kargo.api.v1alpha1.Promotion](#github-com-akuity-kargo-api-v1alpha1-Promotion) |  promotions is the list of Promotion resources found in the project. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListRolesRequest"></a>
 
@@ -1277,16 +1277,16 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-ReverifyRequest"></a>
 
 ### ReverifyRequest
- 
+ ReverifyRequest is the request for triggering re-execution of verification processes for a stage.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| stage | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project containing the stage. |
+| stage | [string](#string) |  stage is the name of the stage to reverify. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ReverifyResponse"></a>
 
 ### ReverifyResponse
- explicitly empty
+ ReverifyResponse is the response after triggering reverification.  explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-RevokeRequest"></a>
 
 ### RevokeRequest
@@ -1520,38 +1520,38 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-WatchPromotionRequest"></a>
 
 ### WatchPromotionRequest
- 
+ WatchPromotionRequest is the request for watching a specific promotion via streaming.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| name | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project containing the promotion. |
+| name | [string](#string) |  name is the name of the promotion to watch. |
 
 <a name="akuity-io-kargo-service-v1alpha1-WatchPromotionResponse"></a>
 
 ### WatchPromotionResponse
- 
+ WatchPromotionResponse contains specific promotion change notifications.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| promotion | [github.com.akuity.kargo.api.v1alpha1.Promotion](#github-com-akuity-kargo-api-v1alpha1-Promotion) |   |
-| type | [string](#string) |   |
+| promotion | [github.com.akuity.kargo.api.v1alpha1.Promotion](#github-com-akuity-kargo-api-v1alpha1-Promotion) |  promotion is the Promotion resource that changed. |
+| type | [string](#string) |  type indicates the type of change (ADDED, MODIFIED, DELETED). |
 
 <a name="akuity-io-kargo-service-v1alpha1-WatchPromotionsRequest"></a>
 
 ### WatchPromotionsRequest
- 
+ WatchPromotionsRequest is the request for watching promotion changes via streaming.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| stage | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project whose promotions should be watched. |
+| stage | [string](#string) |  stage is an optional stage name to filter promotions by. |
 
 <a name="akuity-io-kargo-service-v1alpha1-WatchPromotionsResponse"></a>
 
 ### WatchPromotionsResponse
- 
+ WatchPromotionsResponse contains promotion change notifications.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| promotion | [github.com.akuity.kargo.api.v1alpha1.Promotion](#github-com-akuity-kargo-api-v1alpha1-Promotion) |   |
-| type | [string](#string) |   |
+| promotion | [github.com.akuity.kargo.api.v1alpha1.Promotion](#github-com-akuity-kargo-api-v1alpha1-Promotion) |  promotion is the Promotion resource that changed. |
+| type | [string](#string) |  type indicates the type of change (ADDED, MODIFIED, DELETED). |
 
 <a name="akuity-io-kargo-service-v1alpha1-WatchStagesRequest"></a>
 

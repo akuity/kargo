@@ -25,12 +25,16 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// RawFormat specifies the format for raw resource representation.
 type RawFormat int32
 
 const (
+	// RAW_FORMAT_UNSPECIFIED indicates no specific format is requested.
 	RawFormat_RAW_FORMAT_UNSPECIFIED RawFormat = 0
-	RawFormat_RAW_FORMAT_JSON        RawFormat = 1
-	RawFormat_RAW_FORMAT_YAML        RawFormat = 2
+	// RAW_FORMAT_JSON requests JSON format for raw resources.
+	RawFormat_RAW_FORMAT_JSON RawFormat = 1
+	// RAW_FORMAT_YAML requests YAML format for raw resources.
+	RawFormat_RAW_FORMAT_YAML RawFormat = 2
 )
 
 // Enum value maps for RawFormat.
@@ -74,13 +78,16 @@ func (RawFormat) EnumDescriptor() ([]byte, []int) {
 	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{0}
 }
 
+// ComponentVersions contains version information for different Kargo components.
 type ComponentVersions struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// server contains version information for the Kargo server.
 	Server *VersionInfo `protobuf:"bytes,1,opt,name=server,proto3,oneof" json:"server,omitempty"`
-	Cli    *VersionInfo `protobuf:"bytes,2,opt,name=cli,proto3,oneof" json:"cli,omitempty"`
+	// cli contains version information for the Kargo CLI.
+	Cli *VersionInfo `protobuf:"bytes,2,opt,name=cli,proto3,oneof" json:"cli,omitempty"`
 }
 
 func (x *ComponentVersions) Reset() {
@@ -129,18 +136,26 @@ func (x *ComponentVersions) GetCli() *VersionInfo {
 	return nil
 }
 
+// VersionInfo contains detailed version and build information for a Kargo component.
 type VersionInfo struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Version      string                 `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
-	GitCommit    string                 `protobuf:"bytes,2,opt,name=git_commit,json=gitCommit,proto3" json:"git_commit,omitempty"`
-	GitTreeDirty bool                   `protobuf:"varint,3,opt,name=git_tree_dirty,json=gitTreeDirty,proto3" json:"git_tree_dirty,omitempty"`
-	BuildTime    *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=build_time,json=buildTime,proto3" json:"build_time,omitempty"`
-	GoVersion    string                 `protobuf:"bytes,5,opt,name=go_version,json=goVersion,proto3" json:"go_version,omitempty"`
-	Compiler     string                 `protobuf:"bytes,6,opt,name=compiler,proto3" json:"compiler,omitempty"`
-	Platform     string                 `protobuf:"bytes,7,opt,name=platform,proto3" json:"platform,omitempty"`
+	// version is the semantic version string.
+	Version string `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	// git_commit is the Git commit hash used for the build.
+	GitCommit string `protobuf:"bytes,2,opt,name=git_commit,json=gitCommit,proto3" json:"git_commit,omitempty"`
+	// git_tree_dirty indicates whether the Git working tree was dirty during build.
+	GitTreeDirty bool `protobuf:"varint,3,opt,name=git_tree_dirty,json=gitTreeDirty,proto3" json:"git_tree_dirty,omitempty"`
+	// build_time is the timestamp when the build was created.
+	BuildTime *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=build_time,json=buildTime,proto3" json:"build_time,omitempty"`
+	// go_version is the Go version used for the build.
+	GoVersion string `protobuf:"bytes,5,opt,name=go_version,json=goVersion,proto3" json:"go_version,omitempty"`
+	// compiler is the compiler used for the build.
+	Compiler string `protobuf:"bytes,6,opt,name=compiler,proto3" json:"compiler,omitempty"`
+	// platform is the target platform for the build.
+	Platform string `protobuf:"bytes,7,opt,name=platform,proto3" json:"platform,omitempty"`
 }
 
 func (x *VersionInfo) Reset() {
@@ -224,6 +239,7 @@ func (x *VersionInfo) GetPlatform() string {
 	return ""
 }
 
+// GetVersionInfoRequest is the request message for retrieving version information.
 type GetVersionInfoRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -262,11 +278,13 @@ func (*GetVersionInfoRequest) Descriptor() ([]byte, []int) {
 	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{2}
 }
 
+// GetVersionInfoResponse contains the server's version information.
 type GetVersionInfoResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// version_info contains detailed version and build information.
 	VersionInfo *VersionInfo `protobuf:"bytes,1,opt,name=version_info,json=versionInfo,proto3" json:"version_info,omitempty"`
 }
 
@@ -309,6 +327,7 @@ func (x *GetVersionInfoResponse) GetVersionInfo() *VersionInfo {
 	return nil
 }
 
+// GetConfigRequest is the request message for retrieving server configuration.
 type GetConfigRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -347,12 +366,15 @@ func (*GetConfigRequest) Descriptor() ([]byte, []int) {
 	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{4}
 }
 
+// ArgoCDShard represents configuration for a specific ArgoCD shard.
 type ArgoCDShard struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Url       string `protobuf:"bytes,1,opt,name=url,proto3" json:"url,omitempty"`
+	// url is the base URL of the ArgoCD server.
+	Url string `protobuf:"bytes,1,opt,name=url,proto3" json:"url,omitempty"`
+	// namespace is the Kubernetes namespace where ArgoCD is installed.
 	Namespace string `protobuf:"bytes,2,opt,name=namespace,proto3" json:"namespace,omitempty"`
 }
 
@@ -402,14 +424,18 @@ func (x *ArgoCDShard) GetNamespace() string {
 	return ""
 }
 
+// GetConfigResponse contains server configuration information.
 type GetConfigResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ArgocdShards            map[string]*ArgoCDShard `protobuf:"bytes,1,rep,name=argocd_shards,json=argocdShards,proto3" json:"argocd_shards,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	SecretManagementEnabled bool                    `protobuf:"varint,2,opt,name=secret_management_enabled,json=secretManagementEnabled,proto3" json:"secret_management_enabled,omitempty"`
-	ClusterSecretsNamespace string                  `protobuf:"bytes,3,opt,name=cluster_secrets_namespace,json=clusterSecretsNamespace,proto3" json:"cluster_secrets_namespace,omitempty"`
+	// argocd_shards maps shard names to their ArgoCD configuration.
+	ArgocdShards map[string]*ArgoCDShard `protobuf:"bytes,1,rep,name=argocd_shards,json=argocdShards,proto3" json:"argocd_shards,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	// secret_management_enabled indicates if secret management features are available.
+	SecretManagementEnabled bool `protobuf:"varint,2,opt,name=secret_management_enabled,json=secretManagementEnabled,proto3" json:"secret_management_enabled,omitempty"`
+	// cluster_secrets_namespace is the namespace used for cluster-scoped secrets.
+	ClusterSecretsNamespace string `protobuf:"bytes,3,opt,name=cluster_secrets_namespace,json=clusterSecretsNamespace,proto3" json:"cluster_secrets_namespace,omitempty"`
 }
 
 func (x *GetConfigResponse) Reset() {
@@ -465,6 +491,7 @@ func (x *GetConfigResponse) GetClusterSecretsNamespace() string {
 	return ""
 }
 
+// GetPublicConfigRequest is the request message for retrieving public configuration.
 type GetPublicConfigRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -503,14 +530,18 @@ func (*GetPublicConfigRequest) Descriptor() ([]byte, []int) {
 	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{7}
 }
 
+// GetPublicConfigResponse contains publicly accessible configuration settings.
 type GetPublicConfigResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	OidcConfig          *OIDCConfig `protobuf:"bytes,1,opt,name=oidc_config,json=oidcConfig,proto3" json:"oidc_config,omitempty"`
-	AdminAccountEnabled bool        `protobuf:"varint,2,opt,name=admin_account_enabled,json=adminAccountEnabled,proto3" json:"admin_account_enabled,omitempty"`
-	SkipAuth            bool        `protobuf:"varint,3,opt,name=skip_auth,json=skipAuth,proto3" json:"skip_auth,omitempty"`
+	// oidc_config contains OpenID Connect configuration for authentication.
+	OidcConfig *OIDCConfig `protobuf:"bytes,1,opt,name=oidc_config,json=oidcConfig,proto3" json:"oidc_config,omitempty"`
+	// admin_account_enabled indicates if admin account authentication is available.
+	AdminAccountEnabled bool `protobuf:"varint,2,opt,name=admin_account_enabled,json=adminAccountEnabled,proto3" json:"admin_account_enabled,omitempty"`
+	// skip_auth indicates if authentication should be bypassed.
+	SkipAuth bool `protobuf:"varint,3,opt,name=skip_auth,json=skipAuth,proto3" json:"skip_auth,omitempty"`
 }
 
 func (x *GetPublicConfigResponse) Reset() {
@@ -566,15 +597,20 @@ func (x *GetPublicConfigResponse) GetSkipAuth() bool {
 	return false
 }
 
+// OIDCConfig contains OpenID Connect configuration for authentication.
 type OIDCConfig struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	IssuerUrl   string   `protobuf:"bytes,1,opt,name=issuer_url,json=issuerUrl,proto3" json:"issuer_url,omitempty"`
-	ClientId    string   `protobuf:"bytes,2,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
-	Scopes      []string `protobuf:"bytes,3,rep,name=scopes,proto3" json:"scopes,omitempty"`
-	CliClientId string   `protobuf:"bytes,4,opt,name=cli_client_id,json=cliClientId,proto3" json:"cli_client_id,omitempty"`
+	// issuer_url is the OIDC provider's issuer URL.
+	IssuerUrl string `protobuf:"bytes,1,opt,name=issuer_url,json=issuerUrl,proto3" json:"issuer_url,omitempty"`
+	// client_id is the OIDC client identifier for web applications.
+	ClientId string `protobuf:"bytes,2,opt,name=client_id,json=clientId,proto3" json:"client_id,omitempty"`
+	// scopes are the OIDC scopes to request during authentication.
+	Scopes []string `protobuf:"bytes,3,rep,name=scopes,proto3" json:"scopes,omitempty"`
+	// cli_client_id is the OIDC client identifier for CLI applications.
+	CliClientId string `protobuf:"bytes,4,opt,name=cli_client_id,json=cliClientId,proto3" json:"cli_client_id,omitempty"`
 }
 
 func (x *OIDCConfig) Reset() {
@@ -637,11 +673,13 @@ func (x *OIDCConfig) GetCliClientId() string {
 	return ""
 }
 
+// AdminLoginRequest contains credentials for admin authentication.
 type AdminLoginRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// password is the admin password.
 	Password string `protobuf:"bytes,1,opt,name=password,proto3" json:"password,omitempty"`
 }
 
@@ -684,11 +722,13 @@ func (x *AdminLoginRequest) GetPassword() string {
 	return ""
 }
 
+// AdminLoginResponse contains the authentication token for admin access.
 type AdminLoginResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// id_token is the JWT token for authenticated admin access.
 	IdToken string `protobuf:"bytes,1,opt,name=id_token,json=idToken,proto3" json:"id_token,omitempty"`
 }
 
@@ -731,11 +771,13 @@ func (x *AdminLoginResponse) GetIdToken() string {
 	return ""
 }
 
+// CreateResourceRequest contains Kubernetes resource manifests to be created.
 type CreateResourceRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// manifest contains the raw Kubernetes resource manifests in YAML or JSON format.
 	Manifest []byte `protobuf:"bytes,1,opt,name=manifest,proto3" json:"manifest,omitempty"`
 }
 
@@ -778,6 +820,7 @@ func (x *CreateResourceRequest) GetManifest() []byte {
 	return nil
 }
 
+// CreateResourceResult represents the result of attempting to create a single resource.
 type CreateResourceResult struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -848,10 +891,12 @@ type isCreateResourceResult_Result interface {
 }
 
 type CreateResourceResult_CreatedResourceManifest struct {
+	// created_resource_manifest contains the successfully created resource manifest.
 	CreatedResourceManifest []byte `protobuf:"bytes,1,opt,name=created_resource_manifest,json=createdResourceManifest,proto3,oneof"`
 }
 
 type CreateResourceResult_Error struct {
+	// error contains the error message if resource creation failed.
 	Error string `protobuf:"bytes,2,opt,name=error,proto3,oneof"`
 }
 
@@ -859,11 +904,13 @@ func (*CreateResourceResult_CreatedResourceManifest) isCreateResourceResult_Resu
 
 func (*CreateResourceResult_Error) isCreateResourceResult_Result() {}
 
+// CreateResourceResponse contains the results of creating multiple resources.
 type CreateResourceResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// results contains the outcome for each resource creation attempt.
 	Results []*CreateResourceResult `protobuf:"bytes,1,rep,name=results,proto3" json:"results,omitempty"`
 }
 
@@ -906,11 +953,13 @@ func (x *CreateResourceResponse) GetResults() []*CreateResourceResult {
 	return nil
 }
 
+// CreateOrUpdateResourceRequest contains Kubernetes resource manifests to be created or updated.
 type CreateOrUpdateResourceRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// manifest contains the raw Kubernetes resource manifests in YAML or JSON format.
 	Manifest []byte `protobuf:"bytes,1,opt,name=manifest,proto3" json:"manifest,omitempty"`
 }
 
@@ -953,6 +1002,7 @@ func (x *CreateOrUpdateResourceRequest) GetManifest() []byte {
 	return nil
 }
 
+// CreateOrUpdateResourceResult represents the result of attempting to create or update a single resource.
 type CreateOrUpdateResourceResult struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1031,14 +1081,17 @@ type isCreateOrUpdateResourceResult_Result interface {
 }
 
 type CreateOrUpdateResourceResult_CreatedResourceManifest struct {
+	// created_resource_manifest contains the newly created resource manifest.
 	CreatedResourceManifest []byte `protobuf:"bytes,1,opt,name=created_resource_manifest,json=createdResourceManifest,proto3,oneof"`
 }
 
 type CreateOrUpdateResourceResult_UpdatedResourceManifest struct {
+	// updated_resource_manifest contains the updated existing resource manifest.
 	UpdatedResourceManifest []byte `protobuf:"bytes,2,opt,name=updated_resource_manifest,json=updatedResourceManifest,proto3,oneof"`
 }
 
 type CreateOrUpdateResourceResult_Error struct {
+	// error contains the error message if the operation failed.
 	Error string `protobuf:"bytes,3,opt,name=error,proto3,oneof"`
 }
 
@@ -1050,11 +1103,13 @@ func (*CreateOrUpdateResourceResult_UpdatedResourceManifest) isCreateOrUpdateRes
 
 func (*CreateOrUpdateResourceResult_Error) isCreateOrUpdateResourceResult_Result() {}
 
+// CreateOrUpdateResourceResponse contains the results of creating or updating multiple resources.
 type CreateOrUpdateResourceResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// results contains the outcome for each resource create or update attempt.
 	Results []*CreateOrUpdateResourceResult `protobuf:"bytes,1,rep,name=results,proto3" json:"results,omitempty"`
 }
 
@@ -1097,11 +1152,13 @@ func (x *CreateOrUpdateResourceResponse) GetResults() []*CreateOrUpdateResourceR
 	return nil
 }
 
+// UpdateResourceRequest contains Kubernetes resource manifests to be updated.
 type UpdateResourceRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// manifest contains the raw Kubernetes resource manifests in YAML or JSON format.
 	Manifest []byte `protobuf:"bytes,1,opt,name=manifest,proto3" json:"manifest,omitempty"`
 }
 
@@ -1144,6 +1201,7 @@ func (x *UpdateResourceRequest) GetManifest() []byte {
 	return nil
 }
 
+// UpdateResourceResult represents the result of attempting to update a single resource.
 type UpdateResourceResult struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1214,10 +1272,12 @@ type isUpdateResourceResult_Result interface {
 }
 
 type UpdateResourceResult_UpdatedResourceManifest struct {
+	// updated_resource_manifest contains the successfully updated resource manifest.
 	UpdatedResourceManifest []byte `protobuf:"bytes,1,opt,name=updated_resource_manifest,json=updatedResourceManifest,proto3,oneof"`
 }
 
 type UpdateResourceResult_Error struct {
+	// error contains the error message if resource update failed.
 	Error string `protobuf:"bytes,2,opt,name=error,proto3,oneof"`
 }
 
@@ -1225,11 +1285,13 @@ func (*UpdateResourceResult_UpdatedResourceManifest) isUpdateResourceResult_Resu
 
 func (*UpdateResourceResult_Error) isUpdateResourceResult_Result() {}
 
+// UpdateResourceResponse contains the results of updating multiple resources.
 type UpdateResourceResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// results contains the outcome for each resource update attempt.
 	Results []*UpdateResourceResult `protobuf:"bytes,1,rep,name=results,proto3" json:"results,omitempty"`
 }
 
@@ -1272,11 +1334,13 @@ func (x *UpdateResourceResponse) GetResults() []*UpdateResourceResult {
 	return nil
 }
 
+// DeleteResourceRequest contains Kubernetes resource manifests to be deleted.
 type DeleteResourceRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// manifest contains the raw Kubernetes resource manifests in YAML or JSON format.
 	Manifest []byte `protobuf:"bytes,1,opt,name=manifest,proto3" json:"manifest,omitempty"`
 }
 
@@ -1319,6 +1383,7 @@ func (x *DeleteResourceRequest) GetManifest() []byte {
 	return nil
 }
 
+// DeleteResourceResult represents the result of attempting to delete a single resource.
 type DeleteResourceResult struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1389,10 +1454,12 @@ type isDeleteResourceResult_Result interface {
 }
 
 type DeleteResourceResult_DeletedResourceManifest struct {
+	// deleted_resource_manifest contains the successfully deleted resource manifest.
 	DeletedResourceManifest []byte `protobuf:"bytes,1,opt,name=deleted_resource_manifest,json=deletedResourceManifest,proto3,oneof"`
 }
 
 type DeleteResourceResult_Error struct {
+	// error contains the error message if resource deletion failed.
 	Error string `protobuf:"bytes,2,opt,name=error,proto3,oneof"`
 }
 
@@ -1400,11 +1467,13 @@ func (*DeleteResourceResult_DeletedResourceManifest) isDeleteResourceResult_Resu
 
 func (*DeleteResourceResult_Error) isDeleteResourceResult_Result() {}
 
+// DeleteResourceResponse contains the results of deleting multiple resources.
 type DeleteResourceResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// results contains the outcome for each resource deletion attempt.
 	Results []*DeleteResourceResult `protobuf:"bytes,1,rep,name=results,proto3" json:"results,omitempty"`
 }
 
@@ -1447,11 +1516,13 @@ func (x *DeleteResourceResponse) GetResults() []*DeleteResourceResult {
 	return nil
 }
 
+// ListStagesRequest is the request for listing stages within a project.
 type ListStagesRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// project is the name of the project whose stages should be listed.
 	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
 }
 
@@ -1494,11 +1565,13 @@ func (x *ListStagesRequest) GetProject() string {
 	return ""
 }
 
+// ListStagesResponse contains a list of stages within a project.
 type ListStagesResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// stages is the list of Stage resources found in the project.
 	Stages []*v1alpha1.Stage `protobuf:"bytes,1,rep,name=stages,proto3" json:"stages,omitempty"`
 }
 
@@ -1541,11 +1614,13 @@ func (x *ListStagesResponse) GetStages() []*v1alpha1.Stage {
 	return nil
 }
 
+// ListImagesRequest is the request for listing images and their usage across stages.
 type ListImagesRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// project is the name of the project whose images should be listed.
 	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
 }
 
@@ -1588,12 +1663,13 @@ func (x *ListImagesRequest) GetProject() string {
 	return ""
 }
 
+// ListImagesResponse contains information about images and their usage across stages.
 type ListImagesResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// images maps image repository names to their tags
+	// images maps image repository names to their tags and stage usage information.
 	Images map[string]*TagMap `protobuf:"bytes,2,rep,name=images,proto3" json:"images,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
@@ -1636,12 +1712,13 @@ func (x *ListImagesResponse) GetImages() map[string]*TagMap {
 	return nil
 }
 
+// TagMap represents the mapping of image tags to stages that have used them.
 type TagMap struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// tags maps image tag names to stages which have previously used that tag
+	// tags maps image tag names to stages which have previously used that tag.
 	Tags map[string]*ImageStageMap `protobuf:"bytes,1,rep,name=tags,proto3" json:"tags,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
@@ -1684,12 +1761,13 @@ func (x *TagMap) GetTags() map[string]*ImageStageMap {
 	return nil
 }
 
+// ImageStageMap represents the mapping of stages to the order in which an image was promoted.
 type ImageStageMap struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// stages maps stage names to the order which an image was promoted to that stage
+	// stages maps stage names to the order in which an image was promoted to that stage.
 	Stages map[string]int32 `protobuf:"bytes,1,rep,name=stages,proto3" json:"stages,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
 }
 
@@ -1732,14 +1810,18 @@ func (x *ImageStageMap) GetStages() map[string]int32 {
 	return nil
 }
 
+// GetStageRequest is the request for retrieving details of a specific stage.
 type GetStageRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Project string    `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Name    string    `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Format  RawFormat `protobuf:"varint,3,opt,name=format,proto3,enum=akuity.io.kargo.service.v1alpha1.RawFormat" json:"format,omitempty"`
+	// project is the name of the project containing the stage.
+	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	// name is the name of the stage to retrieve.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// format specifies the format for raw resource representation.
+	Format RawFormat `protobuf:"varint,3,opt,name=format,proto3,enum=akuity.io.kargo.service.v1alpha1.RawFormat" json:"format,omitempty"`
 }
 
 func (x *GetStageRequest) Reset() {
@@ -1795,6 +1877,7 @@ func (x *GetStageRequest) GetFormat() RawFormat {
 	return RawFormat_RAW_FORMAT_UNSPECIFIED
 }
 
+// GetStageResponse contains the requested stage information.
 type GetStageResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1865,10 +1948,12 @@ type isGetStageResponse_Result interface {
 }
 
 type GetStageResponse_Stage struct {
+	// stage contains the Stage resource in structured format.
 	Stage *v1alpha1.Stage `protobuf:"bytes,1,opt,name=stage,proto3,oneof"`
 }
 
 type GetStageResponse_Raw struct {
+	// raw contains the Stage resource in the requested raw format.
 	Raw []byte `protobuf:"bytes,2,opt,name=raw,proto3,oneof"`
 }
 
@@ -1876,13 +1961,16 @@ func (*GetStageResponse_Stage) isGetStageResponse_Result() {}
 
 func (*GetStageResponse_Raw) isGetStageResponse_Result() {}
 
+// WatchStagesRequest is the request for watching stage changes via streaming.
 type WatchStagesRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// project is the name of the project whose stages should be watched.
 	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Name    string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// name is the name of a specific stage to watch, if empty all stages in the project are watched.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 }
 
 func (x *WatchStagesRequest) Reset() {
@@ -1931,13 +2019,16 @@ func (x *WatchStagesRequest) GetName() string {
 	return ""
 }
 
+// WatchStagesResponse contains stage change notifications.
 type WatchStagesResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// stage is the Stage resource that changed.
 	Stage *v1alpha1.Stage `protobuf:"bytes,1,opt,name=stage,proto3" json:"stage,omitempty"`
-	Type  string          `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
+	// type indicates the type of change (ADDED, MODIFIED, DELETED).
+	Type string `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
 }
 
 func (x *WatchStagesResponse) Reset() {
@@ -1986,13 +2077,16 @@ func (x *WatchStagesResponse) GetType() string {
 	return ""
 }
 
+// DeleteStageRequest is the request for deleting a stage.
 type DeleteStageRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// project is the name of the project containing the stage.
 	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Name    string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// name is the name of the stage to delete.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 }
 
 func (x *DeleteStageRequest) Reset() {
@@ -2041,6 +2135,7 @@ func (x *DeleteStageRequest) GetName() string {
 	return ""
 }
 
+// DeleteStageResponse is the response after deleting a stage.
 type DeleteStageResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -2079,13 +2174,16 @@ func (*DeleteStageResponse) Descriptor() ([]byte, []int) {
 	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{35}
 }
 
+// RefreshStageRequest is the request for refreshing a stage's status.
 type RefreshStageRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// project is the name of the project containing the stage.
 	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Name    string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// name is the name of the stage to refresh.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 }
 
 func (x *RefreshStageRequest) Reset() {
@@ -2134,11 +2232,13 @@ func (x *RefreshStageRequest) GetName() string {
 	return ""
 }
 
+// RefreshStageResponse contains the refreshed stage information.
 type RefreshStageResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// stage is the refreshed Stage resource.
 	Stage *v1alpha1.Stage `protobuf:"bytes,1,opt,name=stage,proto3" json:"stage,omitempty"`
 }
 
@@ -2563,13 +2663,16 @@ func (x *RefreshClusterConfigResponse) GetClusterConfig() *v1alpha1.ClusterConfi
 	return nil
 }
 
+// ListPromotionsRequest is the request for retrieving all promotions, optionally filtered by stage.
 type ListPromotionsRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Project string  `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Stage   *string `protobuf:"bytes,2,opt,name=stage,proto3,oneof" json:"stage,omitempty"`
+	// project is the name of the project whose promotions should be listed.
+	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	// stage is an optional stage name to filter promotions by.
+	Stage *string `protobuf:"bytes,2,opt,name=stage,proto3,oneof" json:"stage,omitempty"`
 }
 
 func (x *ListPromotionsRequest) Reset() {
@@ -2618,11 +2721,13 @@ func (x *ListPromotionsRequest) GetStage() string {
 	return ""
 }
 
+// ListPromotionsResponse contains a list of promotions within a project.
 type ListPromotionsResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// promotions is the list of Promotion resources found in the project.
 	Promotions []*v1alpha1.Promotion `protobuf:"bytes,1,rep,name=promotions,proto3" json:"promotions,omitempty"`
 }
 
@@ -2665,13 +2770,16 @@ func (x *ListPromotionsResponse) GetPromotions() []*v1alpha1.Promotion {
 	return nil
 }
 
+// WatchPromotionsRequest is the request for watching promotion changes via streaming.
 type WatchPromotionsRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Project string  `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Stage   *string `protobuf:"bytes,2,opt,name=stage,proto3,oneof" json:"stage,omitempty"`
+	// project is the name of the project whose promotions should be watched.
+	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	// stage is an optional stage name to filter promotions by.
+	Stage *string `protobuf:"bytes,2,opt,name=stage,proto3,oneof" json:"stage,omitempty"`
 }
 
 func (x *WatchPromotionsRequest) Reset() {
@@ -2720,13 +2828,16 @@ func (x *WatchPromotionsRequest) GetStage() string {
 	return ""
 }
 
+// WatchPromotionsResponse contains promotion change notifications.
 type WatchPromotionsResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// promotion is the Promotion resource that changed.
 	Promotion *v1alpha1.Promotion `protobuf:"bytes,1,opt,name=promotion,proto3" json:"promotion,omitempty"`
-	Type      string              `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
+	// type indicates the type of change (ADDED, MODIFIED, DELETED).
+	Type string `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
 }
 
 func (x *WatchPromotionsResponse) Reset() {
@@ -2775,14 +2886,18 @@ func (x *WatchPromotionsResponse) GetType() string {
 	return ""
 }
 
+// GetPromotionRequest is the request for retrieving details of a specific promotion.
 type GetPromotionRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Project string    `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Name    string    `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Format  RawFormat `protobuf:"varint,3,opt,name=format,proto3,enum=akuity.io.kargo.service.v1alpha1.RawFormat" json:"format,omitempty"`
+	// project is the name of the project containing the promotion.
+	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	// name is the name of the promotion to retrieve.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// format specifies the format for raw resource representation.
+	Format RawFormat `protobuf:"varint,3,opt,name=format,proto3,enum=akuity.io.kargo.service.v1alpha1.RawFormat" json:"format,omitempty"`
 }
 
 func (x *GetPromotionRequest) Reset() {
@@ -2838,6 +2953,7 @@ func (x *GetPromotionRequest) GetFormat() RawFormat {
 	return RawFormat_RAW_FORMAT_UNSPECIFIED
 }
 
+// GetPromotionResponse contains the requested promotion information.
 type GetPromotionResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -2908,10 +3024,12 @@ type isGetPromotionResponse_Result interface {
 }
 
 type GetPromotionResponse_Promotion struct {
+	// promotion contains the Promotion resource in structured format.
 	Promotion *v1alpha1.Promotion `protobuf:"bytes,1,opt,name=promotion,proto3,oneof"`
 }
 
 type GetPromotionResponse_Raw struct {
+	// raw contains the Promotion resource in the requested raw format.
 	Raw []byte `protobuf:"bytes,2,opt,name=raw,proto3,oneof"`
 }
 
@@ -2919,13 +3037,16 @@ func (*GetPromotionResponse_Promotion) isGetPromotionResponse_Result() {}
 
 func (*GetPromotionResponse_Raw) isGetPromotionResponse_Result() {}
 
+// WatchPromotionRequest is the request for watching a specific promotion via streaming.
 type WatchPromotionRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// project is the name of the project containing the promotion.
 	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Name    string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// name is the name of the promotion to watch.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 }
 
 func (x *WatchPromotionRequest) Reset() {
@@ -2974,13 +3095,16 @@ func (x *WatchPromotionRequest) GetName() string {
 	return ""
 }
 
+// WatchPromotionResponse contains specific promotion change notifications.
 type WatchPromotionResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// promotion is the Promotion resource that changed.
 	Promotion *v1alpha1.Promotion `protobuf:"bytes,1,opt,name=promotion,proto3" json:"promotion,omitempty"`
-	Type      string              `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
+	// type indicates the type of change (ADDED, MODIFIED, DELETED).
+	Type string `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
 }
 
 func (x *WatchPromotionResponse) Reset() {
@@ -3029,13 +3153,16 @@ func (x *WatchPromotionResponse) GetType() string {
 	return ""
 }
 
+// AbortPromotionRequest is the request for canceling a running promotion process.
 type AbortPromotionRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// project is the name of the project containing the promotion.
 	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Name    string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// name is the name of the promotion to abort.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 }
 
 func (x *AbortPromotionRequest) Reset() {
@@ -3084,6 +3211,7 @@ func (x *AbortPromotionRequest) GetName() string {
 	return ""
 }
 
+// AbortPromotionResponse is the response after aborting a promotion.
 type AbortPromotionResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3122,11 +3250,13 @@ func (*AbortPromotionResponse) Descriptor() ([]byte, []int) {
 	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{55}
 }
 
+// DeleteProjectRequest is the request for deleting a project and all associated resources.
 type DeleteProjectRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// name is the name of the project to delete.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 }
 
@@ -3169,6 +3299,7 @@ func (x *DeleteProjectRequest) GetName() string {
 	return ""
 }
 
+// DeleteProjectResponse is the response after deleting a project.
 type DeleteProjectResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3207,12 +3338,15 @@ func (*DeleteProjectResponse) Descriptor() ([]byte, []int) {
 	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{57}
 }
 
+// GetProjectRequest is the request for retrieving details of a specific project.
 type GetProjectRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Name   string    `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// name is the name of the project to retrieve.
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// format specifies the format for raw resource representation.
 	Format RawFormat `protobuf:"varint,2,opt,name=format,proto3,enum=akuity.io.kargo.service.v1alpha1.RawFormat" json:"format,omitempty"`
 }
 
@@ -3262,6 +3396,7 @@ func (x *GetProjectRequest) GetFormat() RawFormat {
 	return RawFormat_RAW_FORMAT_UNSPECIFIED
 }
 
+// GetProjectResponse contains the requested project information.
 type GetProjectResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3332,10 +3467,12 @@ type isGetProjectResponse_Result interface {
 }
 
 type GetProjectResponse_Project struct {
+	// project contains the Project resource in structured format.
 	Project *v1alpha1.Project `protobuf:"bytes,1,opt,name=project,proto3,oneof"`
 }
 
 type GetProjectResponse_Raw struct {
+	// raw contains the Project resource in the requested raw format.
 	Raw []byte `protobuf:"bytes,2,opt,name=raw,proto3,oneof"`
 }
 
@@ -3343,14 +3480,18 @@ func (*GetProjectResponse_Project) isGetProjectResponse_Result() {}
 
 func (*GetProjectResponse_Raw) isGetProjectResponse_Result() {}
 
+// ListProjectsRequest is the request for listing all projects with optional filtering and pagination.
 type ListProjectsRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PageSize *int32  `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3,oneof" json:"page_size,omitempty"`
-	Page     *int32  `protobuf:"varint,2,opt,name=page,proto3,oneof" json:"page,omitempty"`
-	Filter   *string `protobuf:"bytes,3,opt,name=filter,proto3,oneof" json:"filter,omitempty"`
+	// page_size specifies the maximum number of projects to return per page.
+	PageSize *int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3,oneof" json:"page_size,omitempty"`
+	// page specifies which page of results to return.
+	Page *int32 `protobuf:"varint,2,opt,name=page,proto3,oneof" json:"page,omitempty"`
+	// filter specifies an optional filter expression for projects.
+	Filter *string `protobuf:"bytes,3,opt,name=filter,proto3,oneof" json:"filter,omitempty"`
 }
 
 func (x *ListProjectsRequest) Reset() {
@@ -3406,13 +3547,16 @@ func (x *ListProjectsRequest) GetFilter() string {
 	return ""
 }
 
+// ListProjectsResponse contains the list of projects and pagination information.
 type ListProjectsResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// projects is the list of Project resources matching the request criteria.
 	Projects []*v1alpha1.Project `protobuf:"bytes,1,rep,name=projects,proto3" json:"projects,omitempty"`
-	Total    int32               `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	// total is the total number of projects available (across all pages).
+	Total int32 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
 }
 
 func (x *ListProjectsResponse) Reset() {
@@ -3878,15 +4022,20 @@ func (x *RefreshProjectConfigResponse) GetProjectConfig() *v1alpha1.ProjectConfi
 	return nil
 }
 
+// ApproveFreightRequest is the request for approving freight for promotion to a stage.
 type ApproveFreightRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// project is the name of the project containing the freight.
 	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Name    string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Alias   string `protobuf:"bytes,3,opt,name=alias,proto3" json:"alias,omitempty"`
-	Stage   string `protobuf:"bytes,4,opt,name=stage,proto3" json:"stage,omitempty"`
+	// name is the name of the freight to approve.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// alias is the alias of the freight to approve.
+	Alias string `protobuf:"bytes,3,opt,name=alias,proto3" json:"alias,omitempty"`
+	// stage is the name of the stage for which to approve the freight.
+	Stage string `protobuf:"bytes,4,opt,name=stage,proto3" json:"stage,omitempty"`
 }
 
 func (x *ApproveFreightRequest) Reset() {
@@ -3949,6 +4098,7 @@ func (x *ApproveFreightRequest) GetStage() string {
 	return ""
 }
 
+// ApproveFreightResponse is the response after approving freight.
 type ApproveFreightResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3987,14 +4137,18 @@ func (*ApproveFreightResponse) Descriptor() ([]byte, []int) {
 	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{71}
 }
 
+// DeleteFreightRequest is the request for deleting freight.
 type DeleteFreightRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// project is the name of the project containing the freight.
 	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Name    string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Alias   string `protobuf:"bytes,3,opt,name=alias,proto3" json:"alias,omitempty"`
+	// name is the name of the freight to delete.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// alias is the alias of the freight to delete.
+	Alias string `protobuf:"bytes,3,opt,name=alias,proto3" json:"alias,omitempty"`
 }
 
 func (x *DeleteFreightRequest) Reset() {
@@ -4050,6 +4204,7 @@ func (x *DeleteFreightRequest) GetAlias() string {
 	return ""
 }
 
+// DeleteFreightResponse is the response after deleting freight.
 type DeleteFreightResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -4088,15 +4243,20 @@ func (*DeleteFreightResponse) Descriptor() ([]byte, []int) {
 	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{73}
 }
 
+// GetFreightRequest is the request for retrieving details of specific freight.
 type GetFreightRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Project string    `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Name    string    `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Alias   string    `protobuf:"bytes,3,opt,name=alias,proto3" json:"alias,omitempty"`
-	Format  RawFormat `protobuf:"varint,4,opt,name=format,proto3,enum=akuity.io.kargo.service.v1alpha1.RawFormat" json:"format,omitempty"`
+	// project is the name of the project containing the freight.
+	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	// name is the name of the freight to retrieve.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// alias is the alias of the freight to retrieve.
+	Alias string `protobuf:"bytes,3,opt,name=alias,proto3" json:"alias,omitempty"`
+	// format specifies the format for raw resource representation.
+	Format RawFormat `protobuf:"varint,4,opt,name=format,proto3,enum=akuity.io.kargo.service.v1alpha1.RawFormat" json:"format,omitempty"`
 }
 
 func (x *GetFreightRequest) Reset() {
@@ -4159,6 +4319,7 @@ func (x *GetFreightRequest) GetFormat() RawFormat {
 	return RawFormat_RAW_FORMAT_UNSPECIFIED
 }
 
+// GetFreightResponse contains the requested freight information.
 type GetFreightResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -4229,10 +4390,12 @@ type isGetFreightResponse_Result interface {
 }
 
 type GetFreightResponse_Freight struct {
+	// freight contains the Freight resource in structured format.
 	Freight *v1alpha1.Freight `protobuf:"bytes,1,opt,name=freight,proto3,oneof"`
 }
 
 type GetFreightResponse_Raw struct {
+	// raw contains the Freight resource in the requested raw format.
 	Raw []byte `protobuf:"bytes,2,opt,name=raw,proto3,oneof"`
 }
 
@@ -4240,11 +4403,13 @@ func (*GetFreightResponse_Freight) isGetFreightResponse_Result() {}
 
 func (*GetFreightResponse_Raw) isGetFreightResponse_Result() {}
 
+// WatchFreightRequest is the request for watching freight changes via streaming.
 type WatchFreightRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// project is the name of the project whose freight should be watched.
 	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
 }
 
@@ -4287,13 +4452,16 @@ func (x *WatchFreightRequest) GetProject() string {
 	return ""
 }
 
+// WatchFreightResponse contains freight change notifications.
 type WatchFreightResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// freight is the Freight resource that changed.
 	Freight *v1alpha1.Freight `protobuf:"bytes,1,opt,name=freight,proto3" json:"freight,omitempty"`
-	Type    string            `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"` // ADDED / MODIFIED / DELETED
+	// type indicates the type of change (ADDED, MODIFIED, DELETED).
+	Type string `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"` // ADDED / MODIFIED / DELETED
 }
 
 func (x *WatchFreightResponse) Reset() {
@@ -4342,14 +4510,19 @@ func (x *WatchFreightResponse) GetType() string {
 	return ""
 }
 
+// PromoteToStageRequest is the request for promoting freight to a specific stage.
 type PromoteToStageRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Project      string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Stage        string `protobuf:"bytes,2,opt,name=stage,proto3" json:"stage,omitempty"`
-	Freight      string `protobuf:"bytes,3,opt,name=freight,proto3" json:"freight,omitempty"`
+	// project is the name of the project containing the stage and freight.
+	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	// stage is the name of the stage to promote freight to.
+	Stage string `protobuf:"bytes,2,opt,name=stage,proto3" json:"stage,omitempty"`
+	// freight is the name of the freight to promote.
+	Freight string `protobuf:"bytes,3,opt,name=freight,proto3" json:"freight,omitempty"`
+	// freight_alias is the alias of the freight to promote.
 	FreightAlias string `protobuf:"bytes,4,opt,name=freight_alias,json=freightAlias,proto3" json:"freight_alias,omitempty"`
 }
 
@@ -4413,11 +4586,13 @@ func (x *PromoteToStageRequest) GetFreightAlias() string {
 	return ""
 }
 
+// PromoteToStageResponse contains the promotion created for the freight promotion.
 type PromoteToStageResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// promotion is the Promotion resource created for this freight promotion.
 	Promotion *v1alpha1.Promotion `protobuf:"bytes,1,opt,name=promotion,proto3" json:"promotion,omitempty"`
 }
 
@@ -4460,14 +4635,19 @@ func (x *PromoteToStageResponse) GetPromotion() *v1alpha1.Promotion {
 	return nil
 }
 
+// PromoteDownstreamRequest is the request for automatically promoting freight to downstream stages.
 type PromoteDownstreamRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Project      string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Stage        string `protobuf:"bytes,2,opt,name=stage,proto3" json:"stage,omitempty"`
-	Freight      string `protobuf:"bytes,3,opt,name=freight,proto3" json:"freight,omitempty"`
+	// project is the name of the project containing the stage and freight.
+	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	// stage is the name of the source stage from which to promote downstream.
+	Stage string `protobuf:"bytes,2,opt,name=stage,proto3" json:"stage,omitempty"`
+	// freight is the name of the freight to promote downstream.
+	Freight string `protobuf:"bytes,3,opt,name=freight,proto3" json:"freight,omitempty"`
+	// freight_alias is the alias of the freight to promote downstream.
 	FreightAlias string `protobuf:"bytes,4,opt,name=freight_alias,json=freightAlias,proto3" json:"freight_alias,omitempty"`
 }
 
@@ -4531,11 +4711,13 @@ func (x *PromoteDownstreamRequest) GetFreightAlias() string {
 	return ""
 }
 
+// PromoteDownstreamResponse contains the promotions created for downstream freight promotions.
 type PromoteDownstreamResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// promotions are the Promotion resources created for downstream freight promotions.
 	Promotions []*v1alpha1.Promotion `protobuf:"bytes,1,rep,name=promotions,proto3" json:"promotions,omitempty"`
 }
 
@@ -4578,17 +4760,25 @@ func (x *PromoteDownstreamResponse) GetPromotions() []*v1alpha1.Promotion {
 	return nil
 }
 
+// QueryFreightRequest is the request for searching freight based on specified criteria.
 type QueryFreightRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Project string   `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Stage   string   `protobuf:"bytes,2,opt,name=stage,proto3" json:"stage,omitempty"`
-	GroupBy string   `protobuf:"bytes,3,opt,name=group_by,json=groupBy,proto3" json:"group_by,omitempty"`
-	Group   string   `protobuf:"bytes,4,opt,name=group,proto3" json:"group,omitempty"`
-	OrderBy string   `protobuf:"bytes,5,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
-	Reverse bool     `protobuf:"varint,6,opt,name=reverse,proto3" json:"reverse,omitempty"`
+	// project is the name of the project to search for freight.
+	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	// stage is the name of the stage to filter freight by.
+	Stage string `protobuf:"bytes,2,opt,name=stage,proto3" json:"stage,omitempty"`
+	// group_by specifies how to group the freight results.
+	GroupBy string `protobuf:"bytes,3,opt,name=group_by,json=groupBy,proto3" json:"group_by,omitempty"`
+	// group specifies which group to return results for.
+	Group string `protobuf:"bytes,4,opt,name=group,proto3" json:"group,omitempty"`
+	// order_by specifies how to order the freight results.
+	OrderBy string `protobuf:"bytes,5,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	// reverse indicates whether to reverse the order of results.
+	Reverse bool `protobuf:"varint,6,opt,name=reverse,proto3" json:"reverse,omitempty"`
+	// origins filters freight by their origins (e.g., warehouse names).
 	Origins []string `protobuf:"bytes,7,rep,name=origins,proto3" json:"origins,omitempty"`
 }
 
@@ -4673,11 +4863,13 @@ func (x *QueryFreightRequest) GetOrigins() []string {
 	return nil
 }
 
+// QueryFreightResponse contains the grouped freight search results.
 type QueryFreightResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// groups maps group names to their corresponding freight lists.
 	Groups map[string]*FreightList `protobuf:"bytes,1,rep,name=groups,proto3" json:"groups,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
@@ -4720,11 +4912,13 @@ func (x *QueryFreightResponse) GetGroups() map[string]*FreightList {
 	return nil
 }
 
+// FreightList contains a list of freight resources.
 type FreightList struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// freight is the list of Freight resources.
 	Freight []*v1alpha1.Freight `protobuf:"bytes,1,rep,name=freight,proto3" json:"freight,omitempty"`
 }
 
@@ -4767,14 +4961,19 @@ func (x *FreightList) GetFreight() []*v1alpha1.Freight {
 	return nil
 }
 
+// UpdateFreightAliasRequest is the request for updating a freight's alias.
 type UpdateFreightAliasRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Project  string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Name     string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// project is the name of the project containing the freight.
+	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	// name is the name of the freight whose alias should be updated.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// old_alias is the current alias of the freight.
 	OldAlias string `protobuf:"bytes,3,opt,name=old_alias,json=oldAlias,proto3" json:"old_alias,omitempty"`
+	// new_alias is the new alias to assign to the freight.
 	NewAlias string `protobuf:"bytes,4,opt,name=new_alias,json=newAlias,proto3" json:"new_alias,omitempty"`
 }
 
@@ -4838,6 +5037,7 @@ func (x *UpdateFreightAliasRequest) GetNewAlias() string {
 	return ""
 }
 
+// UpdateFreightAliasResponse is the response after updating a freight's alias.
 type UpdateFreightAliasResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -4876,13 +5076,16 @@ func (*UpdateFreightAliasResponse) Descriptor() ([]byte, []int) {
 	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{86}
 }
 
+// ReverifyRequest is the request for triggering re-execution of verification processes for a stage.
 type ReverifyRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// project is the name of the project containing the stage.
 	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Stage   string `protobuf:"bytes,2,opt,name=stage,proto3" json:"stage,omitempty"`
+	// stage is the name of the stage to reverify.
+	Stage string `protobuf:"bytes,2,opt,name=stage,proto3" json:"stage,omitempty"`
 }
 
 func (x *ReverifyRequest) Reset() {
@@ -4931,6 +5134,7 @@ func (x *ReverifyRequest) GetStage() string {
 	return ""
 }
 
+// ReverifyResponse is the response after triggering reverification.
 type ReverifyResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -4969,13 +5173,16 @@ func (*ReverifyResponse) Descriptor() ([]byte, []int) {
 	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{88}
 }
 
+// AbortVerificationRequest is the request for canceling running verification processes for a stage.
 type AbortVerificationRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// project is the name of the project containing the stage.
 	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Stage   string `protobuf:"bytes,2,opt,name=stage,proto3" json:"stage,omitempty"`
+	// stage is the name of the stage whose verification should be aborted.
+	Stage string `protobuf:"bytes,2,opt,name=stage,proto3" json:"stage,omitempty"`
 }
 
 func (x *AbortVerificationRequest) Reset() {
@@ -5024,6 +5231,7 @@ func (x *AbortVerificationRequest) GetStage() string {
 	return ""
 }
 
+// AbortVerificationResponse is the response after aborting verification.
 type AbortVerificationResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -5062,11 +5270,13 @@ func (*AbortVerificationResponse) Descriptor() ([]byte, []int) {
 	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{90}
 }
 
+// ListWarehousesRequest is the request for listing warehouses within a project.
 type ListWarehousesRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// project is the name of the project whose warehouses should be listed.
 	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
 }
 
@@ -5109,11 +5319,13 @@ func (x *ListWarehousesRequest) GetProject() string {
 	return ""
 }
 
+// ListWarehousesResponse contains a list of warehouses within a project.
 type ListWarehousesResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// warehouses is the list of Warehouse resources found in the project.
 	Warehouses []*v1alpha1.Warehouse `protobuf:"bytes,1,rep,name=warehouses,proto3" json:"warehouses,omitempty"`
 }
 
@@ -5156,14 +5368,18 @@ func (x *ListWarehousesResponse) GetWarehouses() []*v1alpha1.Warehouse {
 	return nil
 }
 
+// GetWarehouseRequest is the request for retrieving details of a specific warehouse.
 type GetWarehouseRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Project string    `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Name    string    `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Format  RawFormat `protobuf:"varint,3,opt,name=format,proto3,enum=akuity.io.kargo.service.v1alpha1.RawFormat" json:"format,omitempty"`
+	// project is the name of the project containing the warehouse.
+	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	// name is the name of the warehouse to retrieve.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// format specifies the format for raw resource representation.
+	Format RawFormat `protobuf:"varint,3,opt,name=format,proto3,enum=akuity.io.kargo.service.v1alpha1.RawFormat" json:"format,omitempty"`
 }
 
 func (x *GetWarehouseRequest) Reset() {
@@ -5219,6 +5435,7 @@ func (x *GetWarehouseRequest) GetFormat() RawFormat {
 	return RawFormat_RAW_FORMAT_UNSPECIFIED
 }
 
+// GetWarehouseResponse contains the requested warehouse information.
 type GetWarehouseResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -5289,10 +5506,12 @@ type isGetWarehouseResponse_Result interface {
 }
 
 type GetWarehouseResponse_Warehouse struct {
+	// warehouse contains the Warehouse resource in structured format.
 	Warehouse *v1alpha1.Warehouse `protobuf:"bytes,1,opt,name=warehouse,proto3,oneof"`
 }
 
 type GetWarehouseResponse_Raw struct {
+	// raw contains the Warehouse resource in the requested raw format.
 	Raw []byte `protobuf:"bytes,2,opt,name=raw,proto3,oneof"`
 }
 
@@ -5300,13 +5519,16 @@ func (*GetWarehouseResponse_Warehouse) isGetWarehouseResponse_Result() {}
 
 func (*GetWarehouseResponse_Raw) isGetWarehouseResponse_Result() {}
 
+// WatchWarehousesRequest is the request for watching warehouse changes via streaming.
 type WatchWarehousesRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// project is the name of the project whose warehouses should be watched.
 	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Name    string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// name is the name of a specific warehouse to watch, if empty all warehouses in the project are watched.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 }
 
 func (x *WatchWarehousesRequest) Reset() {
@@ -5355,13 +5577,16 @@ func (x *WatchWarehousesRequest) GetName() string {
 	return ""
 }
 
+// WatchWarehousesResponse contains warehouse change notifications.
 type WatchWarehousesResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// warehouse is the Warehouse resource that changed.
 	Warehouse *v1alpha1.Warehouse `protobuf:"bytes,1,opt,name=warehouse,proto3" json:"warehouse,omitempty"`
-	Type      string              `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
+	// type indicates the type of change (ADDED, MODIFIED, DELETED).
+	Type string `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
 }
 
 func (x *WatchWarehousesResponse) Reset() {
@@ -5410,13 +5635,16 @@ func (x *WatchWarehousesResponse) GetType() string {
 	return ""
 }
 
+// DeleteWarehouseRequest is the request for deleting a warehouse.
 type DeleteWarehouseRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// project is the name of the project containing the warehouse.
 	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Name    string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// name is the name of the warehouse to delete.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 }
 
 func (x *DeleteWarehouseRequest) Reset() {
@@ -5465,6 +5693,7 @@ func (x *DeleteWarehouseRequest) GetName() string {
 	return ""
 }
 
+// DeleteWarehouseResponse is the response after deleting a warehouse.
 type DeleteWarehouseResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -5503,13 +5732,16 @@ func (*DeleteWarehouseResponse) Descriptor() ([]byte, []int) {
 	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{98}
 }
 
+// RefreshWarehouseRequest is the request for refreshing a warehouse's status and freight discovery.
 type RefreshWarehouseRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// project is the name of the project containing the warehouse.
 	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Name    string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// name is the name of the warehouse to refresh.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 }
 
 func (x *RefreshWarehouseRequest) Reset() {
@@ -5558,11 +5790,13 @@ func (x *RefreshWarehouseRequest) GetName() string {
 	return ""
 }
 
+// RefreshWarehouseResponse contains the refreshed warehouse information.
 type RefreshWarehouseResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// warehouse is the refreshed Warehouse resource.
 	Warehouse *v1alpha1.Warehouse `protobuf:"bytes,1,opt,name=warehouse,proto3" json:"warehouse,omitempty"`
 }
 
@@ -5843,20 +6077,28 @@ func (*GetConfigMapResponse_ConfigMap) isGetConfigMapResponse_Result() {}
 
 func (*GetConfigMapResponse_Raw) isGetConfigMapResponse_Result() {}
 
+// CreateCredentialsRequest is the request for creating new credentials for accessing external resources.
 type CreateCredentialsRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Project     string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Name        string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// project is the name of the project where the credentials will be stored.
+	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	// name is the name of the credentials.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// description is a human-readable description of the credentials.
 	Description string `protobuf:"bytes,8,opt,name=description,proto3" json:"description,omitempty"`
-	// type is git, helm, image
-	Type           string `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
-	RepoUrl        string `protobuf:"bytes,4,opt,name=repo_url,json=repoURL,proto3" json:"repo_url,omitempty"`
-	RepoUrlIsRegex bool   `protobuf:"varint,5,opt,name=repo_url_is_regex,json=repoURLIsRegex,proto3" json:"repo_url_is_regex,omitempty"`
-	Username       string `protobuf:"bytes,6,opt,name=username,proto3" json:"username,omitempty"`
-	Password       string `protobuf:"bytes,7,opt,name=password,proto3" json:"password,omitempty"`
+	// type specifies the credential type (git, helm, image).
+	Type string `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
+	// repo_url is the URL of the repository or registry these credentials apply to.
+	RepoUrl string `protobuf:"bytes,4,opt,name=repo_url,json=repoURL,proto3" json:"repo_url,omitempty"`
+	// repo_url_is_regex indicates whether repo_url should be treated as a regular expression.
+	RepoUrlIsRegex bool `protobuf:"varint,5,opt,name=repo_url_is_regex,json=repoURLIsRegex,proto3" json:"repo_url_is_regex,omitempty"`
+	// username is the username for authentication.
+	Username string `protobuf:"bytes,6,opt,name=username,proto3" json:"username,omitempty"`
+	// password is the password or token for authentication.
+	Password string `protobuf:"bytes,7,opt,name=password,proto3" json:"password,omitempty"`
 }
 
 func (x *CreateCredentialsRequest) Reset() {
@@ -5947,11 +6189,13 @@ func (x *CreateCredentialsRequest) GetPassword() string {
 	return ""
 }
 
+// CreateCredentialsResponse contains the newly created credentials.
 type CreateCredentialsResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// credentials is the created Kubernetes Secret containing the credentials.
 	Credentials *v1.Secret `protobuf:"bytes,1,opt,name=credentials,proto3" json:"credentials,omitempty"`
 }
 
