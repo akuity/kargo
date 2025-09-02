@@ -10,7 +10,7 @@
   },
   "recurseSubmodules": {
    "type": "boolean",
-   "description": "Indicates whether to recursively clone submodules. Default is false."
+   "description": "Indicates whether to recursively clone submodules. Default is false. Note that any provided credentials must also be valid for the submodules."
   },
   "repoURL": {
    "type": "string",
