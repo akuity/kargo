@@ -334,134 +334,194 @@ message AdminLoginResponse {
 
 /* Resource Management Messages */
 
+// CreateResourceRequest contains Kubernetes resource manifests to be created.
 message CreateResourceRequest {
+  // manifest contains the raw Kubernetes resource manifests in YAML or JSON format.
   bytes manifest = 1;
 }
 
+// CreateResourceResult represents the result of attempting to create a single resource.
 message CreateResourceResult {
   oneof result {
+    // created_resource_manifest contains the successfully created resource manifest.
     bytes created_resource_manifest = 1;
+    // error contains the error message if resource creation failed.
     string error = 2;
   }
 }
 
+// CreateResourceResponse contains the results of creating multiple resources.
 message CreateResourceResponse {
+  // results contains the outcome for each resource creation attempt.
   repeated CreateResourceResult results = 1;
 }
 
+// CreateOrUpdateResourceRequest contains Kubernetes resource manifests to be created or updated.
 message CreateOrUpdateResourceRequest {
+  // manifest contains the raw Kubernetes resource manifests in YAML or JSON format.
   bytes manifest = 1;
 }
 
+// CreateOrUpdateResourceResult represents the result of attempting to create or update a single resource.
 message CreateOrUpdateResourceResult {
   oneof result {
+    // created_resource_manifest contains the newly created resource manifest.
     bytes created_resource_manifest = 1;
+    // updated_resource_manifest contains the updated existing resource manifest.
     bytes updated_resource_manifest = 2;
+    // error contains the error message if the operation failed.
     string error = 3;
   }
 }
 
+// CreateOrUpdateResourceResponse contains the results of creating or updating multiple resources.
 message CreateOrUpdateResourceResponse {
+  // results contains the outcome for each resource create or update attempt.
   repeated CreateOrUpdateResourceResult results = 1;
 }
 
+// UpdateResourceRequest contains Kubernetes resource manifests to be updated.
 message UpdateResourceRequest {
+  // manifest contains the raw Kubernetes resource manifests in YAML or JSON format.
   bytes manifest = 1;
 }
 
+// UpdateResourceResult represents the result of attempting to update a single resource.
 message UpdateResourceResult {
   oneof result {
+    // updated_resource_manifest contains the successfully updated resource manifest.
     bytes updated_resource_manifest = 1;
+    // error contains the error message if resource update failed.
     string error = 2;
   }
 }
 
+// UpdateResourceResponse contains the results of updating multiple resources.
 message UpdateResourceResponse {
+  // results contains the outcome for each resource update attempt.
   repeated UpdateResourceResult results = 1;
 }
 
+// DeleteResourceRequest contains Kubernetes resource manifests to be deleted.
 message DeleteResourceRequest {
+  // manifest contains the raw Kubernetes resource manifests in YAML or JSON format.
   bytes manifest = 1;
 }
 
+// DeleteResourceResult represents the result of attempting to delete a single resource.
 message DeleteResourceResult {
   oneof result {
+    // deleted_resource_manifest contains the successfully deleted resource manifest.
     bytes deleted_resource_manifest = 1;
+    // error contains the error message if resource deletion failed.
     string error = 2;
   }
 }
 
+// DeleteResourceResponse contains the results of deleting multiple resources.
 message DeleteResourceResponse {
+  // results contains the outcome for each resource deletion attempt.
   repeated DeleteResourceResult results = 1;
 }
 
 /* Stage Messages */
 
+// ListStagesRequest is the request for listing stages within a project.
 message ListStagesRequest {
+  // project is the name of the project whose stages should be listed.
   string project = 1;
 }
 
+// ListStagesResponse contains a list of stages within a project.
 message ListStagesResponse {
+  // stages is the list of Stage resources found in the project.
   repeated github.com.akuity.kargo.api.v1alpha1.Stage stages = 1;
 }
 
+// ListImagesRequest is the request for listing images and their usage across stages.
 message ListImagesRequest {
+  // project is the name of the project whose images should be listed.
   string project = 1;
 }
 
+// ListImagesResponse contains information about images and their usage across stages.
 message ListImagesResponse {
-  // images maps image repository names to their tags
+  // images maps image repository names to their tags and stage usage information.
   map<string, TagMap> images = 2;
 }
 
+// TagMap represents the mapping of image tags to stages that have used them.
 message TagMap {
-  // tags maps image tag names to stages which have previously used that tag
+  // tags maps image tag names to stages which have previously used that tag.
   map<string, ImageStageMap> tags = 1;
 }
 
+// ImageStageMap represents the mapping of stages to the order in which an image was promoted.
 message ImageStageMap {
-  // stages maps stage names to the order which an image was promoted to that stage
+  // stages maps stage names to the order in which an image was promoted to that stage.
   map<string, int32> stages = 1;
 }
 
+// GetStageRequest is the request for retrieving details of a specific stage.
 message GetStageRequest {
+  // project is the name of the project containing the stage.
   string project = 1;
+  // name is the name of the stage to retrieve.
   string name = 2;
+  // format specifies the format for raw resource representation.
   RawFormat format = 3;
 }
 
+// GetStageResponse contains the requested stage information.
 message GetStageResponse {
   oneof result {
+    // stage contains the Stage resource in structured format.
     github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
+    // raw contains the Stage resource in the requested raw format.
     bytes raw = 2;
   }
 }
 
+// WatchStagesRequest is the request for watching stage changes via streaming.
 message WatchStagesRequest {
+  // project is the name of the project whose stages should be watched.
   string project = 1;
+  // name is the name of a specific stage to watch, if empty all stages in the project are watched.
   string name = 2;
 }
 
+// WatchStagesResponse contains stage change notifications.
 message WatchStagesResponse {
+  // stage is the Stage resource that changed.
   github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
+  // type indicates the type of change (ADDED, MODIFIED, DELETED).
   string type = 2;
 }
 
+// DeleteStageRequest is the request for deleting a stage.
 message DeleteStageRequest {
+  // project is the name of the project containing the stage.
   string project = 1;
+  // name is the name of the stage to delete.
   string name = 2;
 }
 
+// DeleteStageResponse is the response after deleting a stage.
 message DeleteStageResponse {
   /* explicitly empty */
 }
 
+// RefreshStageRequest is the request for refreshing a stage's status.
 message RefreshStageRequest {
+  // project is the name of the project containing the stage.
   string project = 1;
+  // name is the name of the stage to refresh.
   string name = 2;
 }
 
+// RefreshStageResponse contains the refreshed stage information.
 message RefreshStageResponse {
+  // stage is the refreshed Stage resource.
   github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
 }
 
@@ -630,97 +690,153 @@ message RefreshProjectConfigResponse {
 
 /* Freight Messages */
 
+// ApproveFreightRequest is the request for approving freight for promotion to a stage.
 message ApproveFreightRequest {
+  // project is the name of the project containing the freight.
   string project = 1;
+  // name is the name of the freight to approve.
   string name = 2;
+  // alias is the alias of the freight to approve.
   string alias = 3;
+  // stage is the name of the stage for which to approve the freight.
   string stage = 4;
 }
 
+// ApproveFreightResponse is the response after approving freight.
 message ApproveFreightResponse {
   /* explicitly empty */
 }
 
+// DeleteFreightRequest is the request for deleting freight.
 message DeleteFreightRequest {
+  // project is the name of the project containing the freight.
   string project = 1;
+  // name is the name of the freight to delete.
   string name = 2;
+  // alias is the alias of the freight to delete.
   string alias = 3;
 }
 
+// DeleteFreightResponse is the response after deleting freight.
 message DeleteFreightResponse {
   /* explicitly empty */
 }
 
+// GetFreightRequest is the request for retrieving details of specific freight.
 message GetFreightRequest {
+  // project is the name of the project containing the freight.
   string project = 1;
+  // name is the name of the freight to retrieve.
   string name = 2;
+  // alias is the alias of the freight to retrieve.
   string alias = 3;
+  // format specifies the format for raw resource representation.
   RawFormat format = 4;
 }
 
+// GetFreightResponse contains the requested freight information.
 message GetFreightResponse {
   oneof result {
+    // freight contains the Freight resource in structured format.
     github.com.akuity.kargo.api.v1alpha1.Freight freight = 1;
+    // raw contains the Freight resource in the requested raw format.
     bytes raw = 2;
   }
 }
 
+// WatchFreightRequest is the request for watching freight changes via streaming.
 message WatchFreightRequest {
+  // project is the name of the project whose freight should be watched.
   string project = 1;
 }
 
+// WatchFreightResponse contains freight change notifications.
 message WatchFreightResponse {
+  // freight is the Freight resource that changed.
   github.com.akuity.kargo.api.v1alpha1.Freight freight = 1;
+  // type indicates the type of change (ADDED, MODIFIED, DELETED).
   string type = 2; // ADDED / MODIFIED / DELETED
 }
 
+// PromoteToStageRequest is the request for promoting freight to a specific stage.
 message PromoteToStageRequest {
+  // project is the name of the project containing the stage and freight.
   string project = 1;
+  // stage is the name of the stage to promote freight to.
   string stage = 2;
+  // freight is the name of the freight to promote.
   string freight = 3;
+  // freight_alias is the alias of the freight to promote.
   string freight_alias = 4 [json_name = "freightAlias"];
 }
 
+// PromoteToStageResponse contains the promotion created for the freight promotion.
 message PromoteToStageResponse {
+  // promotion is the Promotion resource created for this freight promotion.
   github.com.akuity.kargo.api.v1alpha1.Promotion promotion = 1;
 }
 
+// PromoteDownstreamRequest is the request for automatically promoting freight to downstream stages.
 message PromoteDownstreamRequest {
+  // project is the name of the project containing the stage and freight.
   string project = 1;
+  // stage is the name of the source stage from which to promote downstream.
   string stage = 2;
+  // freight is the name of the freight to promote downstream.
   string freight = 3;
+  // freight_alias is the alias of the freight to promote downstream.
   string freight_alias = 4 [json_name = "freightAlias"];
 }
 
+// PromoteDownstreamResponse contains the promotions created for downstream freight promotions.
 message PromoteDownstreamResponse {
+  // promotions are the Promotion resources created for downstream freight promotions.
   repeated github.com.akuity.kargo.api.v1alpha1.Promotion promotions = 1;
 }
 
+// QueryFreightRequest is the request for searching freight based on specified criteria.
 message QueryFreightRequest {
+  // project is the name of the project to search for freight.
   string project = 1;
+  // stage is the name of the stage to filter freight by.
   string stage = 2;
+  // group_by specifies how to group the freight results.
   string group_by = 3;
+  // group specifies which group to return results for.
   string group = 4;
+  // order_by specifies how to order the freight results.
   string order_by = 5;
+  // reverse indicates whether to reverse the order of results.
   bool reverse = 6;
+  // origins filters freight by their origins (e.g., warehouse names).
   repeated string origins = 7;
 }
 
+// QueryFreightResponse contains the grouped freight search results.
 message QueryFreightResponse {
+  // groups maps group names to their corresponding freight lists.
   map<string, FreightList> groups = 1;
 }
 
+// FreightList contains a list of freight resources.
 message FreightList {
+  // freight is the list of Freight resources.
   repeated github.com.akuity.kargo.api.v1alpha1.Freight freight = 1;
 }
 
+// UpdateFreightAliasRequest is the request for updating a freight's alias.
 message UpdateFreightAliasRequest {
+  // project is the name of the project containing the freight.
   string project = 1;
+  // name is the name of the freight whose alias should be updated.
   string name = 2;
+  // old_alias is the current alias of the freight.
   string old_alias = 3 [json_name = "oldAlias"];
+  // new_alias is the new alias to assign to the freight.
   string new_alias = 4 [json_name = "newAlias"];
 }
 
+// UpdateFreightAliasResponse is the response after updating a freight's alias.
 message UpdateFreightAliasResponse {
   /* explicitly empty */
 }
@@ -819,19 +935,29 @@ message GetConfigMapResponse {
 
 /* Credential Messages */
 
+// CreateCredentialsRequest is the request for creating new credentials for accessing external resources.
 message CreateCredentialsRequest {
+  // project is the name of the project where the credentials will be stored.
   string project = 1;
+  // name is the name of the credentials.
   string name = 2;
+  // description is a human-readable description of the credentials.
   string description = 8;
-  // type is git, helm, image
+  // type specifies the credential type (git, helm, image).
   string type = 3;
+  // repo_url is the URL of the repository or registry these credentials apply to.
   string repo_url = 4 [json_name = "repoURL"];
+  // repo_url_is_regex indicates whether repo_url should be treated as a regular expression.
   bool repo_url_is_regex = 5 [json_name = "repoURLIsRegex"];
+  // username is the username for authentication.
   string username = 6;
+  // password is the password or token for authentication.
   string password = 7;
 }
 
+// CreateCredentialsResponse contains the newly created credentials.
 message CreateCredentialsResponse {
+  // credentials is the created Kubernetes Secret containing the credentials.
   k8s.io.api.core.v1.Secret credentials = 1;
 }
 

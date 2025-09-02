@@ -140,18 +140,18 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-ApproveFreightRequest"></a>
 
 ### ApproveFreightRequest
- 
+ ApproveFreightRequest is the request for approving freight for promotion to a stage.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| name | [string](#string) |   |
-| alias | [string](#string) |   |
-| stage | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project containing the freight. |
+| name | [string](#string) |  name is the name of the freight to approve. |
+| alias | [string](#string) |  alias is the alias of the freight to approve. |
+| stage | [string](#string) |  stage is the name of the stage for which to approve the freight. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ApproveFreightResponse"></a>
 
 ### ApproveFreightResponse
- explicitly empty
+ ApproveFreightResponse is the response after approving freight.  explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-ArgoCDShard"></a>
 
 ### ArgoCDShard
@@ -230,28 +230,28 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-CreateOrUpdateResourceRequest"></a>
 
 ### CreateOrUpdateResourceRequest
- 
+ CreateOrUpdateResourceRequest contains Kubernetes resource manifests to be created or updated.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| manifest | [bytes](#bytes) |   |
+| manifest | [bytes](#bytes) |  manifest contains the raw Kubernetes resource manifests in YAML or JSON format. |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateOrUpdateResourceResponse"></a>
 
 ### CreateOrUpdateResourceResponse
- 
+ CreateOrUpdateResourceResponse contains the results of creating or updating multiple resources.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| results | [CreateOrUpdateResourceResult](#akuity-io-kargo-service-v1alpha1-CreateOrUpdateResourceResult) |   |
+| results | [CreateOrUpdateResourceResult](#akuity-io-kargo-service-v1alpha1-CreateOrUpdateResourceResult) |  results contains the outcome for each resource create or update attempt. |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateOrUpdateResourceResult"></a>
 
 ### CreateOrUpdateResourceResult
- 
+ CreateOrUpdateResourceResult represents the result of attempting to create or update a single resource.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| created_resource_manifest | [bytes](#bytes) |   |
-| updated_resource_manifest | [bytes](#bytes) |   |
-| error | [string](#string) |   |
+| created_resource_manifest | [bytes](#bytes) |  created_resource_manifest contains the newly created resource manifest. |
+| updated_resource_manifest | [bytes](#bytes) |  updated_resource_manifest contains the updated existing resource manifest. |
+| error | [string](#string) |  error contains the error message if the operation failed. |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateProjectSecretRequest"></a>
 
@@ -284,27 +284,27 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-CreateResourceRequest"></a>
 
 ### CreateResourceRequest
- 
+ CreateResourceRequest contains Kubernetes resource manifests to be created.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| manifest | [bytes](#bytes) |   |
+| manifest | [bytes](#bytes) |  manifest contains the raw Kubernetes resource manifests in YAML or JSON format. |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateResourceResponse"></a>
 
 ### CreateResourceResponse
- 
+ CreateResourceResponse contains the results of creating multiple resources.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| results | [CreateResourceResult](#akuity-io-kargo-service-v1alpha1-CreateResourceResult) |   |
+| results | [CreateResourceResult](#akuity-io-kargo-service-v1alpha1-CreateResourceResult) |  results contains the outcome for each resource creation attempt. |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateResourceResult"></a>
 
 ### CreateResourceResult
- 
+ CreateResourceResult represents the result of attempting to create a single resource.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| created_resource_manifest | [bytes](#bytes) |   |
-| error | [string](#string) |   |
+| created_resource_manifest | [bytes](#bytes) |  created_resource_manifest contains the successfully created resource manifest. |
+| error | [string](#string) |  error contains the error message if resource creation failed. |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateRoleRequest"></a>
 
@@ -383,17 +383,17 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-DeleteFreightRequest"></a>
 
 ### DeleteFreightRequest
- 
+ DeleteFreightRequest is the request for deleting freight.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| name | [string](#string) |   |
-| alias | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project containing the freight. |
+| name | [string](#string) |  name is the name of the freight to delete. |
+| alias | [string](#string) |  alias is the alias of the freight to delete. |
 
 <a name="akuity-io-kargo-service-v1alpha1-DeleteFreightResponse"></a>
 
 ### DeleteFreightResponse
- explicitly empty
+ DeleteFreightResponse is the response after deleting freight.  explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteProjectConfigRequest"></a>
 
 ### DeleteProjectConfigRequest
@@ -434,27 +434,27 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-DeleteResourceRequest"></a>
 
 ### DeleteResourceRequest
- 
+ DeleteResourceRequest contains Kubernetes resource manifests to be deleted.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| manifest | [bytes](#bytes) |   |
+| manifest | [bytes](#bytes) |  manifest contains the raw Kubernetes resource manifests in YAML or JSON format. |
 
 <a name="akuity-io-kargo-service-v1alpha1-DeleteResourceResponse"></a>
 
 ### DeleteResourceResponse
- 
+ DeleteResourceResponse contains the results of deleting multiple resources.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| results | [DeleteResourceResult](#akuity-io-kargo-service-v1alpha1-DeleteResourceResult) |   |
+| results | [DeleteResourceResult](#akuity-io-kargo-service-v1alpha1-DeleteResourceResult) |  results contains the outcome for each resource deletion attempt. |
 
 <a name="akuity-io-kargo-service-v1alpha1-DeleteResourceResult"></a>
 
 ### DeleteResourceResult
- 
+ DeleteResourceResult represents the result of attempting to delete a single resource.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| deleted_resource_manifest | [bytes](#bytes) |   |
-| error | [string](#string) |   |
+| deleted_resource_manifest | [bytes](#bytes) |  deleted_resource_manifest contains the successfully deleted resource manifest. |
+| error | [string](#string) |  error contains the error message if resource deletion failed. |
 
 <a name="akuity-io-kargo-service-v1alpha1-DeleteRoleRequest"></a>
 
@@ -472,16 +472,16 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-DeleteStageRequest"></a>
 
 ### DeleteStageRequest
- 
+ DeleteStageRequest is the request for deleting a stage.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| name | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project containing the stage. |
+| name | [string](#string) |  name is the name of the stage to delete. |
 
 <a name="akuity-io-kargo-service-v1alpha1-DeleteStageResponse"></a>
 
 ### DeleteStageResponse
- explicitly empty
+ DeleteStageResponse is the response after deleting a stage.  explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteWarehouseRequest"></a>
 
 ### DeleteWarehouseRequest
@@ -498,10 +498,10 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-FreightList"></a>
 
 ### FreightList
- 
+ FreightList contains a list of freight resources.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| freight | [github.com.akuity.kargo.api.v1alpha1.Freight](#github-com-akuity-kargo-api-v1alpha1-Freight) |   |
+| freight | [github.com.akuity.kargo.api.v1alpha1.Freight](#github-com-akuity-kargo-api-v1alpha1-Freight) |  freight is the list of Freight resources. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetAnalysisRunLogsRequest"></a>
 
@@ -677,22 +677,22 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-GetFreightRequest"></a>
 
 ### GetFreightRequest
- 
+ GetFreightRequest is the request for retrieving details of specific freight.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| name | [string](#string) |   |
-| alias | [string](#string) |   |
-| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |   |
+| project | [string](#string) |  project is the name of the project containing the freight. |
+| name | [string](#string) |  name is the name of the freight to retrieve. |
+| alias | [string](#string) |  alias is the alias of the freight to retrieve. |
+| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |  format specifies the format for raw resource representation. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetFreightResponse"></a>
 
 ### GetFreightResponse
- 
+ GetFreightResponse contains the requested freight information.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| freight | [github.com.akuity.kargo.api.v1alpha1.Freight](#github-com-akuity-kargo-api-v1alpha1-Freight) |   |
-| raw | [bytes](#bytes) |   |
+| freight | [github.com.akuity.kargo.api.v1alpha1.Freight](#github-com-akuity-kargo-api-v1alpha1-Freight) |  freight contains the Freight resource in structured format. |
+| raw | [bytes](#bytes) |  raw contains the Freight resource in the requested raw format. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetProjectConfigRequest"></a>
 
@@ -806,21 +806,21 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-GetStageRequest"></a>
 
 ### GetStageRequest
- 
+ GetStageRequest is the request for retrieving details of a specific stage.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| name | [string](#string) |   |
-| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |   |
+| project | [string](#string) |  project is the name of the project containing the stage. |
+| name | [string](#string) |  name is the name of the stage to retrieve. |
+| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |  format specifies the format for raw resource representation. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetStageResponse"></a>
 
 ### GetStageResponse
- 
+ GetStageResponse contains the requested stage information.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| stage | [github.com.akuity.kargo.api.v1alpha1.Stage](#github-com-akuity-kargo-api-v1alpha1-Stage) |   |
-| raw | [bytes](#bytes) |   |
+| stage | [github.com.akuity.kargo.api.v1alpha1.Stage](#github-com-akuity-kargo-api-v1alpha1-Stage) |  stage contains the Stage resource in structured format. |
+| raw | [bytes](#bytes) |  raw contains the Stage resource in the requested raw format. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetVersionInfoRequest"></a>
 
@@ -875,10 +875,10 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-ImageStageMap"></a>
 
 ### ImageStageMap
- 
+ ImageStageMap represents the mapping of stages to the order in which an image was promoted.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| stages | [ImageStageMap.StagesEntry](#akuity-io-kargo-service-v1alpha1-ImageStageMap-StagesEntry) |  stages maps stage names to the order which an image was promoted to that stage |
+| stages | [ImageStageMap.StagesEntry](#akuity-io-kargo-service-v1alpha1-ImageStageMap-StagesEntry) |  stages maps stage names to the order in which an image was promoted to that stage. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ImageStageMap-StagesEntry"></a>
 
@@ -976,18 +976,18 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-ListImagesRequest"></a>
 
 ### ListImagesRequest
- 
+ ListImagesRequest is the request for listing images and their usage across stages.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project whose images should be listed. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListImagesResponse"></a>
 
 ### ListImagesResponse
- 
+ ListImagesResponse contains information about images and their usage across stages.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| images | [ListImagesResponse.ImagesEntry](#akuity-io-kargo-service-v1alpha1-ListImagesResponse-ImagesEntry) |  images maps image repository names to their tags |
+| images | [ListImagesResponse.ImagesEntry](#akuity-io-kargo-service-v1alpha1-ListImagesResponse-ImagesEntry) |  images maps image repository names to their tags and stage usage information. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListImagesResponse-ImagesEntry"></a>
 
@@ -1103,18 +1103,18 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-ListStagesRequest"></a>
 
 ### ListStagesRequest
- 
+ ListStagesRequest is the request for listing stages within a project.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project whose stages should be listed. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListStagesResponse"></a>
 
 ### ListStagesResponse
- 
+ ListStagesResponse contains a list of stages within a project.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| stages | [github.com.akuity.kargo.api.v1alpha1.Stage](#github-com-akuity-kargo-api-v1alpha1-Stage) |   |
+| stages | [github.com.akuity.kargo.api.v1alpha1.Stage](#github-com-akuity-kargo-api-v1alpha1-Stage) |  stages is the list of Stage resources found in the project. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListWarehousesRequest"></a>
 
@@ -1146,62 +1146,62 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-PromoteDownstreamRequest"></a>
 
 ### PromoteDownstreamRequest
- 
+ PromoteDownstreamRequest is the request for automatically promoting freight to downstream stages.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| stage | [string](#string) |   |
-| freight | [string](#string) |   |
-| freight_alias | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project containing the stage and freight. |
+| stage | [string](#string) |  stage is the name of the source stage from which to promote downstream. |
+| freight | [string](#string) |  freight is the name of the freight to promote downstream. |
+| freight_alias | [string](#string) |  freight_alias is the alias of the freight to promote downstream. |
 
 <a name="akuity-io-kargo-service-v1alpha1-PromoteDownstreamResponse"></a>
 
 ### PromoteDownstreamResponse
- 
+ PromoteDownstreamResponse contains the promotions created for downstream freight promotions.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| promotions | [github.com.akuity.kargo.api.v1alpha1.Promotion](#github-com-akuity-kargo-api-v1alpha1-Promotion) |   |
+| promotions | [github.com.akuity.kargo.api.v1alpha1.Promotion](#github-com-akuity-kargo-api-v1alpha1-Promotion) |  promotions are the Promotion resources created for downstream freight promotions. |
 
 <a name="akuity-io-kargo-service-v1alpha1-PromoteToStageRequest"></a>
 
 ### PromoteToStageRequest
- 
+ PromoteToStageRequest is the request for promoting freight to a specific stage.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| stage | [string](#string) |   |
-| freight | [string](#string) |   |
-| freight_alias | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project containing the stage and freight. |
+| stage | [string](#string) |  stage is the name of the stage to promote freight to. |
+| freight | [string](#string) |  freight is the name of the freight to promote. |
+| freight_alias | [string](#string) |  freight_alias is the alias of the freight to promote. |
 
 <a name="akuity-io-kargo-service-v1alpha1-PromoteToStageResponse"></a>
 
 ### PromoteToStageResponse
- 
+ PromoteToStageResponse contains the promotion created for the freight promotion.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| promotion | [github.com.akuity.kargo.api.v1alpha1.Promotion](#github-com-akuity-kargo-api-v1alpha1-Promotion) |   |
+| promotion | [github.com.akuity.kargo.api.v1alpha1.Promotion](#github-com-akuity-kargo-api-v1alpha1-Promotion) |  promotion is the Promotion resource created for this freight promotion. |
 
 <a name="akuity-io-kargo-service-v1alpha1-QueryFreightRequest"></a>
 
 ### QueryFreightRequest
- 
+ QueryFreightRequest is the request for searching freight based on specified criteria.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| stage | [string](#string) |   |
-| group_by | [string](#string) |   |
-| group | [string](#string) |   |
-| order_by | [string](#string) |   |
-| reverse | [bool](#bool) |   |
-| origins | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project to search for freight. |
+| stage | [string](#string) |  stage is the name of the stage to filter freight by. |
+| group_by | [string](#string) |  group_by specifies how to group the freight results. |
+| group | [string](#string) |  group specifies which group to return results for. |
+| order_by | [string](#string) |  order_by specifies how to order the freight results. |
+| reverse | [bool](#bool) |  reverse indicates whether to reverse the order of results. |
+| origins | [string](#string) |  origins filters freight by their origins (e.g., warehouse names). |
 
 <a name="akuity-io-kargo-service-v1alpha1-QueryFreightResponse"></a>
 
 ### QueryFreightResponse
- 
+ QueryFreightResponse contains the grouped freight search results.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| groups | [QueryFreightResponse.GroupsEntry](#akuity-io-kargo-service-v1alpha1-QueryFreightResponse-GroupsEntry) |   |
+| groups | [QueryFreightResponse.GroupsEntry](#akuity-io-kargo-service-v1alpha1-QueryFreightResponse-GroupsEntry) |  groups maps group names to their corresponding freight lists. |
 
 <a name="akuity-io-kargo-service-v1alpha1-QueryFreightResponse-GroupsEntry"></a>
 
@@ -1243,19 +1243,19 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-RefreshStageRequest"></a>
 
 ### RefreshStageRequest
- 
+ RefreshStageRequest is the request for refreshing a stage's status.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| name | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project containing the stage. |
+| name | [string](#string) |  name is the name of the stage to refresh. |
 
 <a name="akuity-io-kargo-service-v1alpha1-RefreshStageResponse"></a>
 
 ### RefreshStageResponse
- 
+ RefreshStageResponse contains the refreshed stage information.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| stage | [github.com.akuity.kargo.api.v1alpha1.Stage](#github-com-akuity-kargo-api-v1alpha1-Stage) |   |
+| stage | [github.com.akuity.kargo.api.v1alpha1.Stage](#github-com-akuity-kargo-api-v1alpha1-Stage) |  stage is the refreshed Stage resource. |
 
 <a name="akuity-io-kargo-service-v1alpha1-RefreshWarehouseRequest"></a>
 
@@ -1309,10 +1309,10 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-TagMap"></a>
 
 ### TagMap
- 
+ TagMap represents the mapping of image tags to stages that have used them.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| tags | [TagMap.TagsEntry](#akuity-io-kargo-service-v1alpha1-TagMap-TagsEntry) |  tags maps image tag names to stages which have previously used that tag |
+| tags | [TagMap.TagsEntry](#akuity-io-kargo-service-v1alpha1-TagMap-TagsEntry) |  tags maps image tag names to stages which have previously used that tag. |
 
 <a name="akuity-io-kargo-service-v1alpha1-TagMap-TagsEntry"></a>
 
@@ -1375,18 +1375,18 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-UpdateFreightAliasRequest"></a>
 
 ### UpdateFreightAliasRequest
- 
+ UpdateFreightAliasRequest is the request for updating a freight's alias.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| name | [string](#string) |   |
-| old_alias | [string](#string) |   |
-| new_alias | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project containing the freight. |
+| name | [string](#string) |  name is the name of the freight whose alias should be updated. |
+| old_alias | [string](#string) |  old_alias is the current alias of the freight. |
+| new_alias | [string](#string) |  new_alias is the new alias to assign to the freight. |
 
 <a name="akuity-io-kargo-service-v1alpha1-UpdateFreightAliasResponse"></a>
 
 ### UpdateFreightAliasResponse
- explicitly empty
+ UpdateFreightAliasResponse is the response after updating a freight's alias.  explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-UpdateProjectSecretRequest"></a>
 
 ### UpdateProjectSecretRequest
@@ -1418,27 +1418,27 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-UpdateResourceRequest"></a>
 
 ### UpdateResourceRequest
- 
+ UpdateResourceRequest contains Kubernetes resource manifests to be updated.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| manifest | [bytes](#bytes) |   |
+| manifest | [bytes](#bytes) |  manifest contains the raw Kubernetes resource manifests in YAML or JSON format. |
 
 <a name="akuity-io-kargo-service-v1alpha1-UpdateResourceResponse"></a>
 
 ### UpdateResourceResponse
- 
+ UpdateResourceResponse contains the results of updating multiple resources.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| results | [UpdateResourceResult](#akuity-io-kargo-service-v1alpha1-UpdateResourceResult) |   |
+| results | [UpdateResourceResult](#akuity-io-kargo-service-v1alpha1-UpdateResourceResult) |  results contains the outcome for each resource update attempt. |
 
 <a name="akuity-io-kargo-service-v1alpha1-UpdateResourceResult"></a>
 
 ### UpdateResourceResult
- 
+ UpdateResourceResult represents the result of attempting to update a single resource.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| updated_resource_manifest | [bytes](#bytes) |   |
-| error | [string](#string) |   |
+| updated_resource_manifest | [bytes](#bytes) |  updated_resource_manifest contains the successfully updated resource manifest. |
+| error | [string](#string) |  error contains the error message if resource update failed. |
 
 <a name="akuity-io-kargo-service-v1alpha1-UpdateRoleRequest"></a>
 
@@ -1486,19 +1486,19 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-WatchFreightRequest"></a>
 
 ### WatchFreightRequest
- 
+ WatchFreightRequest is the request for watching freight changes via streaming.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project whose freight should be watched. |
 
 <a name="akuity-io-kargo-service-v1alpha1-WatchFreightResponse"></a>
 
 ### WatchFreightResponse
- 
+ WatchFreightResponse contains freight change notifications.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| freight | [github.com.akuity.kargo.api.v1alpha1.Freight](#github-com-akuity-kargo-api-v1alpha1-Freight) |   |
-| type | [string](#string) |  ADDED / MODIFIED / DELETED |
+| freight | [github.com.akuity.kargo.api.v1alpha1.Freight](#github-com-akuity-kargo-api-v1alpha1-Freight) |  freight is the Freight resource that changed. |
+| type | [string](#string) |  type indicates the type of change (ADDED, MODIFIED, DELETED).  ADDED / MODIFIED / DELETED |
 
 <a name="akuity-io-kargo-service-v1alpha1-WatchProjectConfigRequest"></a>
 
@@ -1556,20 +1556,20 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-WatchStagesRequest"></a>
 
 ### WatchStagesRequest
- 
+ WatchStagesRequest is the request for watching stage changes via streaming.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| name | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project whose stages should be watched. |
+| name | [string](#string) |  name is the name of a specific stage to watch, if empty all stages in the project are watched. |
 
 <a name="akuity-io-kargo-service-v1alpha1-WatchStagesResponse"></a>
 
 ### WatchStagesResponse
- 
+ WatchStagesResponse contains stage change notifications.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| stage | [github.com.akuity.kargo.api.v1alpha1.Stage](#github-com-akuity-kargo-api-v1alpha1-Stage) |   |
-| type | [string](#string) |   |
+| stage | [github.com.akuity.kargo.api.v1alpha1.Stage](#github-com-akuity-kargo-api-v1alpha1-Stage) |  stage is the Stage resource that changed. |
+| type | [string](#string) |  type indicates the type of change (ADDED, MODIFIED, DELETED). |
 
 <a name="akuity-io-kargo-service-v1alpha1-WatchWarehousesRequest"></a>
 
