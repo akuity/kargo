@@ -16,9 +16,9 @@
    "description": "OutPath is the path to the merged YAML file to created or updated.",
    "minLength": 1
   },
-  "strict": {
+  "ignoreMissingFiles": {
    "type": "boolean",
-   "description": "Strict will cause the directive to fail if the input path does not exist.",
+   "description": "allow directive to pass even if an input file does not exist.",
    "default": false
   }
  }
