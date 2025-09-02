@@ -27,16 +27,18 @@ export const CommitTable = ({
   }
 
   const tagColumn = doesAnyOfCommitsHaveTag
-    ? [{
-        title: 'tag',
-        dataIndex: 'tag' as const
-      }]
+    ? [
+        {
+          title: 'tag',
+          dataIndex: 'tag' as const
+        }
+      ]
     : [];
 
   return (
     <Table
       dataSource={commits}
-      pagination={{ current: page, onChange: (page) => setPage(page), pageSize }}
+      pagination={{ current: page, onChange: (page) => setPage(page) }}
       columns={[
         {
           render: (record: DiscoveredCommit) => (

@@ -40,7 +40,6 @@ export const WarehouseDetails = ({
   const createFreightSimilarTo = search.get('similar');
 
   const navigate = useNavigate();
-  const location = useLocation();
 
   const onClose = () => navigate(generatePath(paths.project, { name: projectName }));
 

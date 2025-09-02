@@ -24,8 +24,7 @@ export const ChartTable = ({
       dataSource={versions.map((version) => ({ version }))}
       pagination={{
         current: page,
-        onChange: (page) => setPage(page),
-        pageSize
+        onChange: (page) => setPage(page)
       }}
       columns={[
         {

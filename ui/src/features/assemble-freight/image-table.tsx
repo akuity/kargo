@@ -28,7 +28,7 @@ export const ImageTable = ({
   return (
     <Table
       dataSource={references}
-      pagination={{ current: page, onChange: (page) => setPage(page), pageSize }}
+      pagination={{ current: page, onChange: (page) => setPage(page) }}
       columns={[
         {
           render: (record: DiscoveredImageReference) => (

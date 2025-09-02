@@ -9,7 +9,7 @@ type PortalProps = {
 };
 
 export const Portal = ({
-  container = typeof document !== 'undefined' ? document.body : null,
+  container = document.body,
   children,
   disablePortal = false
 }: PortalProps) => {
@@ -17,9 +17,7 @@ export const Portal = ({
     return children;
   }
 
-  if (!container) {
-    return null;
-  }
-
-  return <ErrorBoundary>{ReactDOM.createPortal(children, container)}</ErrorBoundary>;
+  return (
+    <ErrorBoundary>{container ? ReactDOM.createPortal(children, container) : null}</ErrorBoundary>
+  );
 };
