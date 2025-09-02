@@ -6238,13 +6238,16 @@ func (x *CreateCredentialsResponse) GetCredentials() *v1.Secret {
 	return nil
 }
 
+// DeleteCredentialsRequest is the request for deleting existing credentials.
 type DeleteCredentialsRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// project is the name of the project containing the credentials.
 	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Name    string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// name is the name of the credentials to delete.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 }
 
 func (x *DeleteCredentialsRequest) Reset() {
@@ -6293,6 +6296,7 @@ func (x *DeleteCredentialsRequest) GetName() string {
 	return ""
 }
 
+// DeleteCredentialsResponse is the response returned after deleting credentials.
 type DeleteCredentialsResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -6331,14 +6335,18 @@ func (*DeleteCredentialsResponse) Descriptor() ([]byte, []int) {
 	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{108}
 }
 
+// GetCredentialsRequest is the request for retrieving existing credentials.
 type GetCredentialsRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Project string    `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Name    string    `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Format  RawFormat `protobuf:"varint,3,opt,name=format,proto3,enum=akuity.io.kargo.service.v1alpha1.RawFormat" json:"format,omitempty"`
+	// project is the name of the project containing the credentials.
+	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	// name is the name of the credentials to retrieve.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// format specifies the desired response format (structured object or raw YAML).
+	Format RawFormat `protobuf:"varint,3,opt,name=format,proto3,enum=akuity.io.kargo.service.v1alpha1.RawFormat" json:"format,omitempty"`
 }
 
 func (x *GetCredentialsRequest) Reset() {
@@ -6394,6 +6402,7 @@ func (x *GetCredentialsRequest) GetFormat() RawFormat {
 	return RawFormat_RAW_FORMAT_UNSPECIFIED
 }
 
+// GetCredentialsResponse contains the requested credentials information.
 type GetCredentialsResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -6464,10 +6473,12 @@ type isGetCredentialsResponse_Result interface {
 }
 
 type GetCredentialsResponse_Credentials struct {
+	// credentials is the structured Kubernetes Secret containing the credentials.
 	Credentials *v1.Secret `protobuf:"bytes,1,opt,name=credentials,proto3,oneof"`
 }
 
 type GetCredentialsResponse_Raw struct {
+	// raw is the raw YAML representation of the credentials.
 	Raw []byte `protobuf:"bytes,2,opt,name=raw,proto3,oneof"`
 }
 
@@ -6475,11 +6486,13 @@ func (*GetCredentialsResponse_Credentials) isGetCredentialsResponse_Result() {}
 
 func (*GetCredentialsResponse_Raw) isGetCredentialsResponse_Result() {}
 
+// ListCredentialsRequest is the request for listing all credentials in a project.
 type ListCredentialsRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// project is the name of the project whose credentials will be listed.
 	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
 }
 
@@ -6522,11 +6535,13 @@ func (x *ListCredentialsRequest) GetProject() string {
 	return ""
 }
 
+// ListCredentialsResponse contains a list of credentials for the specified project.
 type ListCredentialsResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// credentials is the list of Kubernetes Secrets containing the credentials.
 	Credentials []*v1.Secret `protobuf:"bytes,1,rep,name=credentials,proto3" json:"credentials,omitempty"`
 }
 
@@ -6569,19 +6584,28 @@ func (x *ListCredentialsResponse) GetCredentials() []*v1.Secret {
 	return nil
 }
 
+// UpdateCredentialsRequest is the request for updating existing credentials.
 type UpdateCredentialsRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Project        string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Name           string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Description    string `protobuf:"bytes,8,opt,name=description,proto3" json:"description,omitempty"`
-	Type           string `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
-	RepoUrl        string `protobuf:"bytes,4,opt,name=repo_url,json=repoURL,proto3" json:"repo_url,omitempty"`
-	RepoUrlIsRegex bool   `protobuf:"varint,5,opt,name=repo_url_is_regex,json=repoURLIsRegex,proto3" json:"repo_url_is_regex,omitempty"`
-	Username       string `protobuf:"bytes,6,opt,name=username,proto3" json:"username,omitempty"`
-	Password       string `protobuf:"bytes,7,opt,name=password,proto3" json:"password,omitempty"`
+	// project is the name of the project containing the credentials.
+	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	// name is the name of the credentials to update.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// description is a human-readable description of the credentials.
+	Description string `protobuf:"bytes,8,opt,name=description,proto3" json:"description,omitempty"`
+	// type specifies the credential type (git, helm, image).
+	Type string `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
+	// repo_url is the URL of the repository or registry these credentials apply to.
+	RepoUrl string `protobuf:"bytes,4,opt,name=repo_url,json=repoURL,proto3" json:"repo_url,omitempty"`
+	// repo_url_is_regex indicates whether repo_url should be treated as a regular expression.
+	RepoUrlIsRegex bool `protobuf:"varint,5,opt,name=repo_url_is_regex,json=repoURLIsRegex,proto3" json:"repo_url_is_regex,omitempty"`
+	// username is the username for authentication.
+	Username string `protobuf:"bytes,6,opt,name=username,proto3" json:"username,omitempty"`
+	// password is the password or token for authentication.
+	Password string `protobuf:"bytes,7,opt,name=password,proto3" json:"password,omitempty"`
 }
 
 func (x *UpdateCredentialsRequest) Reset() {
@@ -6672,11 +6696,13 @@ func (x *UpdateCredentialsRequest) GetPassword() string {
 	return ""
 }
 
+// UpdateCredentialsResponse contains the updated credentials information.
 type UpdateCredentialsResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// credentials is the updated Kubernetes Secret containing the credentials.
 	Credentials *v1.Secret `protobuf:"bytes,1,opt,name=credentials,proto3" json:"credentials,omitempty"`
 }
 
@@ -6719,11 +6745,13 @@ func (x *UpdateCredentialsResponse) GetCredentials() *v1.Secret {
 	return nil
 }
 
+// ListProjectSecretsRequest is the request for listing all secrets in a project.
 type ListProjectSecretsRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// project is the name of the project whose secrets will be listed.
 	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
 }
 
@@ -6766,11 +6794,13 @@ func (x *ListProjectSecretsRequest) GetProject() string {
 	return ""
 }
 
+// ListProjectSecretsResponse contains a list of secrets for the specified project.
 type ListProjectSecretsResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// secrets is the list of Kubernetes Secrets within the project.
 	Secrets []*v1.Secret `protobuf:"bytes,1,rep,name=secrets,proto3" json:"secrets,omitempty"`
 }
 
@@ -6813,15 +6843,20 @@ func (x *ListProjectSecretsResponse) GetSecrets() []*v1.Secret {
 	return nil
 }
 
+// CreateProjectSecretRequest is the request for creating a new secret within a project.
 type CreateProjectSecretRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Project     string            `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Name        string            `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Description string            `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	Data        map[string]string `protobuf:"bytes,4,rep,name=data,proto3" json:"data,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	// project is the name of the project where the secret will be created.
+	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	// name is the name of the secret to create.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// description is a human-readable description of the secret.
+	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	// data contains the key-value pairs that make up the secret data.
+	Data map[string]string `protobuf:"bytes,4,rep,name=data,proto3" json:"data,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
 func (x *CreateProjectSecretRequest) Reset() {
@@ -6884,11 +6919,13 @@ func (x *CreateProjectSecretRequest) GetData() map[string]string {
 	return nil
 }
 
+// CreateProjectSecretResponse contains the newly created project secret.
 type CreateProjectSecretResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// secret is the created Kubernetes Secret within the project.
 	Secret *v1.Secret `protobuf:"bytes,1,opt,name=secret,proto3" json:"secret,omitempty"`
 }
 
@@ -6931,15 +6968,20 @@ func (x *CreateProjectSecretResponse) GetSecret() *v1.Secret {
 	return nil
 }
 
+// UpdateProjectSecretRequest is the request for updating an existing project secret.
 type UpdateProjectSecretRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Project     string            `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Name        string            `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Description string            `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	Data        map[string]string `protobuf:"bytes,4,rep,name=data,proto3" json:"data,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	// project is the name of the project containing the secret.
+	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	// name is the name of the secret to update.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// description is a human-readable description of the secret.
+	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	// data contains the key-value pairs that make up the secret data.
+	Data map[string]string `protobuf:"bytes,4,rep,name=data,proto3" json:"data,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
 func (x *UpdateProjectSecretRequest) Reset() {
@@ -7002,11 +7044,13 @@ func (x *UpdateProjectSecretRequest) GetData() map[string]string {
 	return nil
 }
 
+// UpdateProjectSecretResponse contains the updated project secret information.
 type UpdateProjectSecretResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// secret is the updated Kubernetes Secret within the project.
 	Secret *v1.Secret `protobuf:"bytes,1,opt,name=secret,proto3" json:"secret,omitempty"`
 }
 
@@ -7049,13 +7093,16 @@ func (x *UpdateProjectSecretResponse) GetSecret() *v1.Secret {
 	return nil
 }
 
+// DeleteProjectSecretRequest is the request for deleting a project secret.
 type DeleteProjectSecretRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// project is the name of the project containing the secret.
 	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Name    string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// name is the name of the secret to delete.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 }
 
 func (x *DeleteProjectSecretRequest) Reset() {
@@ -7104,6 +7151,7 @@ func (x *DeleteProjectSecretRequest) GetName() string {
 	return ""
 }
 
+// DeleteProjectSecretResponse is the response returned after deleting a project secret.
 type DeleteProjectSecretResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -7142,11 +7190,13 @@ func (*DeleteProjectSecretResponse) Descriptor() ([]byte, []int) {
 	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{122}
 }
 
+// ListAnalysisTemplatesRequest is the request for listing all analysis templates in a project.
 type ListAnalysisTemplatesRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// project is the name of the project whose analysis templates will be listed.
 	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
 }
 
@@ -7189,11 +7239,13 @@ func (x *ListAnalysisTemplatesRequest) GetProject() string {
 	return ""
 }
 
+// ListAnalysisTemplatesResponse contains a list of analysis templates for the specified project.
 type ListAnalysisTemplatesResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// analysis_templates is the list of AnalysisTemplate resources within the project.
 	AnalysisTemplates []*v1alpha11.AnalysisTemplate `protobuf:"bytes,1,rep,name=analysis_templates,json=analysisTemplates,proto3" json:"analysis_templates,omitempty"`
 }
 
@@ -7236,14 +7288,18 @@ func (x *ListAnalysisTemplatesResponse) GetAnalysisTemplates() []*v1alpha11.Anal
 	return nil
 }
 
+// GetAnalysisTemplateRequest is the request for retrieving a specific analysis template.
 type GetAnalysisTemplateRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Project string    `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Name    string    `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Format  RawFormat `protobuf:"varint,3,opt,name=format,proto3,enum=akuity.io.kargo.service.v1alpha1.RawFormat" json:"format,omitempty"`
+	// project is the name of the project containing the analysis template.
+	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	// name is the name of the analysis template to retrieve.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// format specifies the desired response format (structured object or raw YAML).
+	Format RawFormat `protobuf:"varint,3,opt,name=format,proto3,enum=akuity.io.kargo.service.v1alpha1.RawFormat" json:"format,omitempty"`
 }
 
 func (x *GetAnalysisTemplateRequest) Reset() {
@@ -7299,6 +7355,7 @@ func (x *GetAnalysisTemplateRequest) GetFormat() RawFormat {
 	return RawFormat_RAW_FORMAT_UNSPECIFIED
 }
 
+// GetAnalysisTemplateResponse contains the requested analysis template information.
 type GetAnalysisTemplateResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -7369,10 +7426,12 @@ type isGetAnalysisTemplateResponse_Result interface {
 }
 
 type GetAnalysisTemplateResponse_AnalysisTemplate struct {
+	// analysis_template is the structured AnalysisTemplate resource.
 	AnalysisTemplate *v1alpha11.AnalysisTemplate `protobuf:"bytes,1,opt,name=analysis_template,json=analysisTemplate,proto3,oneof"`
 }
 
 type GetAnalysisTemplateResponse_Raw struct {
+	// raw is the raw YAML representation of the analysis template.
 	Raw []byte `protobuf:"bytes,2,opt,name=raw,proto3,oneof"`
 }
 
@@ -7380,13 +7439,16 @@ func (*GetAnalysisTemplateResponse_AnalysisTemplate) isGetAnalysisTemplateRespon
 
 func (*GetAnalysisTemplateResponse_Raw) isGetAnalysisTemplateResponse_Result() {}
 
+// DeleteAnalysisTemplateRequest is the request for deleting an analysis template.
 type DeleteAnalysisTemplateRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// project is the name of the project containing the analysis template.
 	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Name    string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// name is the name of the analysis template to delete.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 }
 
 func (x *DeleteAnalysisTemplateRequest) Reset() {
@@ -7435,6 +7497,7 @@ func (x *DeleteAnalysisTemplateRequest) GetName() string {
 	return ""
 }
 
+// DeleteAnalysisTemplateResponse is the response returned after deleting an analysis template.
 type DeleteAnalysisTemplateResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -7473,6 +7536,7 @@ func (*DeleteAnalysisTemplateResponse) Descriptor() ([]byte, []int) {
 	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{128}
 }
 
+// ListClusterAnalysisTemplatesRequest is the request for listing all cluster-level analysis templates.
 type ListClusterAnalysisTemplatesRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -7511,11 +7575,13 @@ func (*ListClusterAnalysisTemplatesRequest) Descriptor() ([]byte, []int) {
 	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{129}
 }
 
+// ListClusterAnalysisTemplatesResponse contains a list of cluster-level analysis templates.
 type ListClusterAnalysisTemplatesResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// cluster_analysis_templates is the list of ClusterAnalysisTemplate resources.
 	ClusterAnalysisTemplates []*v1alpha11.ClusterAnalysisTemplate `protobuf:"bytes,1,rep,name=cluster_analysis_templates,json=clusteranalysisTemplates,proto3" json:"cluster_analysis_templates,omitempty"`
 }
 
@@ -7558,12 +7624,15 @@ func (x *ListClusterAnalysisTemplatesResponse) GetClusterAnalysisTemplates() []*
 	return nil
 }
 
+// GetClusterAnalysisTemplateRequest is the request for retrieving a specific cluster analysis template.
 type GetClusterAnalysisTemplateRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Name   string    `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// name is the name of the cluster analysis template to retrieve.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// format specifies the desired response format (structured object or raw YAML).
 	Format RawFormat `protobuf:"varint,3,opt,name=format,proto3,enum=akuity.io.kargo.service.v1alpha1.RawFormat" json:"format,omitempty"`
 }
 
@@ -7613,6 +7682,7 @@ func (x *GetClusterAnalysisTemplateRequest) GetFormat() RawFormat {
 	return RawFormat_RAW_FORMAT_UNSPECIFIED
 }
 
+// GetClusterAnalysisTemplateResponse contains the requested cluster analysis template information.
 type GetClusterAnalysisTemplateResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -7683,10 +7753,12 @@ type isGetClusterAnalysisTemplateResponse_Result interface {
 }
 
 type GetClusterAnalysisTemplateResponse_ClusterAnalysisTemplate struct {
+	// cluster_analysis_template is the structured ClusterAnalysisTemplate resource.
 	ClusterAnalysisTemplate *v1alpha11.ClusterAnalysisTemplate `protobuf:"bytes,1,opt,name=cluster_analysis_template,json=clusterAnalysisTemplate,proto3,oneof"`
 }
 
 type GetClusterAnalysisTemplateResponse_Raw struct {
+	// raw is the raw YAML representation of the cluster analysis template.
 	Raw []byte `protobuf:"bytes,2,opt,name=raw,proto3,oneof"`
 }
 
@@ -7695,11 +7767,13 @@ func (*GetClusterAnalysisTemplateResponse_ClusterAnalysisTemplate) isGetClusterA
 
 func (*GetClusterAnalysisTemplateResponse_Raw) isGetClusterAnalysisTemplateResponse_Result() {}
 
+// DeleteClusterAnalysisTemplateRequest is the request for deleting a cluster analysis template.
 type DeleteClusterAnalysisTemplateRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// name is the name of the cluster analysis template to delete.
 	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 }
 
@@ -7742,6 +7816,7 @@ func (x *DeleteClusterAnalysisTemplateRequest) GetName() string {
 	return ""
 }
 
+// DeleteClusterAnalysisTemplateResponse is the response returned after deleting a cluster analysis template.
 type DeleteClusterAnalysisTemplateResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -7780,14 +7855,18 @@ func (*DeleteClusterAnalysisTemplateResponse) Descriptor() ([]byte, []int) {
 	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{134}
 }
 
+// GetAnalysisRunRequest is the request for retrieving a specific analysis run.
 type GetAnalysisRunRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Namespace string    `protobuf:"bytes,1,opt,name=namespace,proto3" json:"namespace,omitempty"`
-	Name      string    `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Format    RawFormat `protobuf:"varint,3,opt,name=format,proto3,enum=akuity.io.kargo.service.v1alpha1.RawFormat" json:"format,omitempty"`
+	// namespace is the namespace containing the analysis run.
+	Namespace string `protobuf:"bytes,1,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	// name is the name of the analysis run to retrieve.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// format specifies the desired response format (structured object or raw YAML).
+	Format RawFormat `protobuf:"varint,3,opt,name=format,proto3,enum=akuity.io.kargo.service.v1alpha1.RawFormat" json:"format,omitempty"`
 }
 
 func (x *GetAnalysisRunRequest) Reset() {
@@ -7843,6 +7922,7 @@ func (x *GetAnalysisRunRequest) GetFormat() RawFormat {
 	return RawFormat_RAW_FORMAT_UNSPECIFIED
 }
 
+// GetAnalysisRunResponse contains the requested analysis run information.
 type GetAnalysisRunResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -7913,10 +7993,12 @@ type isGetAnalysisRunResponse_Result interface {
 }
 
 type GetAnalysisRunResponse_AnalysisRun struct {
+	// analysis_run is the structured AnalysisRun resource.
 	AnalysisRun *v1alpha11.AnalysisRun `protobuf:"bytes,1,opt,name=analysis_run,json=analysisRun,proto3,oneof"`
 }
 
 type GetAnalysisRunResponse_Raw struct {
+	// raw is the raw YAML representation of the analysis run.
 	Raw []byte `protobuf:"bytes,2,opt,name=raw,proto3,oneof"`
 }
 
@@ -7924,14 +8006,19 @@ func (*GetAnalysisRunResponse_AnalysisRun) isGetAnalysisRunResponse_Result() {}
 
 func (*GetAnalysisRunResponse_Raw) isGetAnalysisRunResponse_Result() {}
 
+// GetAnalysisRunLogsRequest is the request for retrieving logs from an analysis run.
 type GetAnalysisRunLogsRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Namespace     string `protobuf:"bytes,1,opt,name=namespace,proto3" json:"namespace,omitempty"`
-	Name          string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	MetricName    string `protobuf:"bytes,3,opt,name=metric_name,json=metricName,proto3" json:"metric_name,omitempty"`
+	// namespace is the namespace containing the analysis run.
+	Namespace string `protobuf:"bytes,1,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	// name is the name of the analysis run whose logs to retrieve.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// metric_name is the specific metric whose logs to retrieve.
+	MetricName string `protobuf:"bytes,3,opt,name=metric_name,json=metricName,proto3" json:"metric_name,omitempty"`
+	// container_name is the specific container whose logs to retrieve.
 	ContainerName string `protobuf:"bytes,4,opt,name=container_name,json=containerName,proto3" json:"container_name,omitempty"`
 }
 
@@ -7995,11 +8082,13 @@ func (x *GetAnalysisRunLogsRequest) GetContainerName() string {
 	return ""
 }
 
+// GetAnalysisRunLogsResponse contains a chunk of logs from the analysis run.
 type GetAnalysisRunLogsResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// chunk is a portion of the log output from the analysis run.
 	Chunk string `protobuf:"bytes,1,opt,name=chunk,proto3" json:"chunk,omitempty"`
 }
 
@@ -8042,11 +8131,13 @@ func (x *GetAnalysisRunLogsResponse) GetChunk() string {
 	return ""
 }
 
+// ListProjectEventsRequest is the request for listing events in a project.
 type ListProjectEventsRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// project is the name of the project whose events will be listed.
 	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
 }
 
@@ -8089,11 +8180,13 @@ func (x *ListProjectEventsRequest) GetProject() string {
 	return ""
 }
 
+// ListProjectEventsResponse contains a list of events for the specified project.
 type ListProjectEventsResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// events is the list of Kubernetes Events within the project.
 	Events []*v1.Event `protobuf:"bytes,1,rep,name=events,proto3" json:"events,omitempty"`
 }
 
@@ -8136,11 +8229,13 @@ func (x *ListProjectEventsResponse) GetEvents() []*v1.Event {
 	return nil
 }
 
+// ListPromotionTasksRequest is the request for listing promotion tasks in a project.
 type ListPromotionTasksRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// project is the name of the project whose promotion tasks will be listed.
 	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
 }
 
@@ -8183,11 +8278,13 @@ func (x *ListPromotionTasksRequest) GetProject() string {
 	return ""
 }
 
+// ListPromotionTasksResponse contains a list of promotion tasks for the specified project.
 type ListPromotionTasksResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// promotion_tasks is the list of PromotionTask resources within the project.
 	PromotionTasks []*v1alpha1.PromotionTask `protobuf:"bytes,1,rep,name=promotion_tasks,json=promotionTasks,proto3" json:"promotion_tasks,omitempty"`
 }
 
@@ -8230,14 +8327,18 @@ func (x *ListPromotionTasksResponse) GetPromotionTasks() []*v1alpha1.PromotionTa
 	return nil
 }
 
+// GetPromotionTaskRequest is the request for retrieving a specific promotion task.
 type GetPromotionTaskRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Project string    `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Name    string    `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Format  RawFormat `protobuf:"varint,3,opt,name=format,proto3,enum=akuity.io.kargo.service.v1alpha1.RawFormat" json:"format,omitempty"`
+	// project is the name of the project containing the promotion task.
+	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	// name is the name of the promotion task to retrieve.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// format specifies the desired response format (structured object or raw YAML).
+	Format RawFormat `protobuf:"varint,3,opt,name=format,proto3,enum=akuity.io.kargo.service.v1alpha1.RawFormat" json:"format,omitempty"`
 }
 
 func (x *GetPromotionTaskRequest) Reset() {
@@ -8293,6 +8394,7 @@ func (x *GetPromotionTaskRequest) GetFormat() RawFormat {
 	return RawFormat_RAW_FORMAT_UNSPECIFIED
 }
 
+// GetPromotionTaskResponse contains the requested promotion task information.
 type GetPromotionTaskResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -8363,10 +8465,12 @@ type isGetPromotionTaskResponse_Result interface {
 }
 
 type GetPromotionTaskResponse_PromotionTask struct {
+	// promotion_task is the structured PromotionTask resource.
 	PromotionTask *v1alpha1.PromotionTask `protobuf:"bytes,1,opt,name=promotion_task,json=promotionTask,proto3,oneof"`
 }
 
 type GetPromotionTaskResponse_Raw struct {
+	// raw is the raw YAML representation of the promotion task.
 	Raw []byte `protobuf:"bytes,2,opt,name=raw,proto3,oneof"`
 }
 
@@ -8374,6 +8478,7 @@ func (*GetPromotionTaskResponse_PromotionTask) isGetPromotionTaskResponse_Result
 
 func (*GetPromotionTaskResponse_Raw) isGetPromotionTaskResponse_Result() {}
 
+// ListClusterPromotionTasksRequest is the request for listing all cluster-level promotion tasks.
 type ListClusterPromotionTasksRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -8412,11 +8517,13 @@ func (*ListClusterPromotionTasksRequest) Descriptor() ([]byte, []int) {
 	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{145}
 }
 
+// ListClusterPromotionTasksResponse contains a list of cluster-level promotion tasks.
 type ListClusterPromotionTasksResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// cluster_promotion_tasks is the list of ClusterPromotionTask resources.
 	ClusterPromotionTasks []*v1alpha1.ClusterPromotionTask `protobuf:"bytes,1,rep,name=cluster_promotion_tasks,json=clusterPromotionTasks,proto3" json:"cluster_promotion_tasks,omitempty"`
 }
 
@@ -8459,12 +8566,15 @@ func (x *ListClusterPromotionTasksResponse) GetClusterPromotionTasks() []*v1alph
 	return nil
 }
 
+// GetClusterPromotionTaskRequest is the request for retrieving a specific cluster promotion task.
 type GetClusterPromotionTaskRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Name   string    `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// name is the name of the cluster promotion task to retrieve.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// format specifies the desired response format (structured object or raw YAML).
 	Format RawFormat `protobuf:"varint,3,opt,name=format,proto3,enum=akuity.io.kargo.service.v1alpha1.RawFormat" json:"format,omitempty"`
 }
 
@@ -8514,6 +8624,7 @@ func (x *GetClusterPromotionTaskRequest) GetFormat() RawFormat {
 	return RawFormat_RAW_FORMAT_UNSPECIFIED
 }
 
+// GetClusterPromotionTaskResponse contains the requested cluster promotion task information.
 type GetClusterPromotionTaskResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -8584,10 +8695,12 @@ type isGetClusterPromotionTaskResponse_Result interface {
 }
 
 type GetClusterPromotionTaskResponse_PromotionTask struct {
+	// promotion_task is the structured ClusterPromotionTask resource.
 	PromotionTask *v1alpha1.ClusterPromotionTask `protobuf:"bytes,1,opt,name=promotion_task,json=clusterPromotionTask,proto3,oneof"`
 }
 
 type GetClusterPromotionTaskResponse_Raw struct {
+	// raw is the raw YAML representation of the cluster promotion task.
 	Raw []byte `protobuf:"bytes,2,opt,name=raw,proto3,oneof"`
 }
 
@@ -8595,11 +8708,13 @@ func (*GetClusterPromotionTaskResponse_PromotionTask) isGetClusterPromotionTaskR
 
 func (*GetClusterPromotionTaskResponse_Raw) isGetClusterPromotionTaskResponse_Result() {}
 
+// CreateRoleRequest is the request for creating a new RBAC role.
 type CreateRoleRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// role is the Role resource to create.
 	Role *v1alpha12.Role `protobuf:"bytes,1,opt,name=role,proto3" json:"role,omitempty"`
 }
 
@@ -8642,11 +8757,13 @@ func (x *CreateRoleRequest) GetRole() *v1alpha12.Role {
 	return nil
 }
 
+// CreateRoleResponse contains the newly created role information.
 type CreateRoleResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// role is the created Role resource.
 	Role *v1alpha12.Role `protobuf:"bytes,1,opt,name=role,proto3" json:"role,omitempty"`
 }
 
@@ -8689,13 +8806,16 @@ func (x *CreateRoleResponse) GetRole() *v1alpha12.Role {
 	return nil
 }
 
+// DeleteRoleRequest is the request for deleting an RBAC role.
 type DeleteRoleRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// project is the name of the project containing the role.
 	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Name    string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// name is the name of the role to delete.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 }
 
 func (x *DeleteRoleRequest) Reset() {
@@ -8744,6 +8864,7 @@ func (x *DeleteRoleRequest) GetName() string {
 	return ""
 }
 
+// DeleteRoleResponse is the response returned after deleting a role.
 type DeleteRoleResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -8782,15 +8903,20 @@ func (*DeleteRoleResponse) Descriptor() ([]byte, []int) {
 	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{152}
 }
 
+// GetRoleRequest is the request for retrieving a specific RBAC role.
 type GetRoleRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Project     string    `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Name        string    `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	AsResources bool      `protobuf:"varint,3,opt,name=as_resources,json=asResources,proto3" json:"as_resources,omitempty"`
-	Format      RawFormat `protobuf:"varint,4,opt,name=format,proto3,enum=akuity.io.kargo.service.v1alpha1.RawFormat" json:"format,omitempty"`
+	// project is the name of the project containing the role.
+	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	// name is the name of the role to retrieve.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// as_resources indicates whether to return the role as resources or as a role object.
+	AsResources bool `protobuf:"varint,3,opt,name=as_resources,json=asResources,proto3" json:"as_resources,omitempty"`
+	// format specifies the desired response format (structured object or raw YAML).
+	Format RawFormat `protobuf:"varint,4,opt,name=format,proto3,enum=akuity.io.kargo.service.v1alpha1.RawFormat" json:"format,omitempty"`
 }
 
 func (x *GetRoleRequest) Reset() {
@@ -8853,6 +8979,7 @@ func (x *GetRoleRequest) GetFormat() RawFormat {
 	return RawFormat_RAW_FORMAT_UNSPECIFIED
 }
 
+// GetRoleResponse contains the requested role information.
 type GetRoleResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -8931,14 +9058,17 @@ type isGetRoleResponse_Result interface {
 }
 
 type GetRoleResponse_Role struct {
+	// role is the structured Role resource.
 	Role *v1alpha12.Role `protobuf:"bytes,1,opt,name=role,proto3,oneof"`
 }
 
 type GetRoleResponse_Resources struct {
+	// resources is the structured RoleResources containing the role's resources.
 	Resources *v1alpha12.RoleResources `protobuf:"bytes,2,opt,name=resources,proto3,oneof"`
 }
 
 type GetRoleResponse_Raw struct {
+	// raw is the raw YAML representation of the role.
 	Raw []byte `protobuf:"bytes,3,opt,name=raw,proto3,oneof"`
 }
 
@@ -8948,12 +9078,14 @@ func (*GetRoleResponse_Resources) isGetRoleResponse_Result() {}
 
 func (*GetRoleResponse_Raw) isGetRoleResponse_Result() {}
 
+// Claims represents a collection of OIDC claims for role-based access control.
 type Claims struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
 	// Note: oneof and repeated do not work together
+	// claims is the list of claims associated with a user or service account.
 	Claims []*v1alpha12.Claim `protobuf:"bytes,1,rep,name=claims,proto3" json:"claims,omitempty"`
 }
 
@@ -8996,13 +9128,16 @@ func (x *Claims) GetClaims() []*v1alpha12.Claim {
 	return nil
 }
 
+// GrantRequest is the request for granting a role to a user or resource.
 type GrantRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// project is the name of the project where the role will be granted.
 	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Role    string `protobuf:"bytes,2,opt,name=role,proto3" json:"role,omitempty"`
+	// role is the name of the role to grant.
+	Role string `protobuf:"bytes,2,opt,name=role,proto3" json:"role,omitempty"`
 	// Types that are assignable to Request:
 	//
 	//	*GrantRequest_UserClaims
@@ -9082,10 +9217,12 @@ type isGrantRequest_Request interface {
 }
 
 type GrantRequest_UserClaims struct {
+	// user_claims are the OIDC claims for the user being granted the role.
 	UserClaims *Claims `protobuf:"bytes,3,opt,name=user_claims,json=userClaims,proto3,oneof"`
 }
 
 type GrantRequest_ResourceDetails struct {
+	// resource_details are the details of the resource being granted the role.
 	ResourceDetails *v1alpha12.ResourceDetails `protobuf:"bytes,4,opt,name=resource_details,json=resourceDetails,proto3,oneof"`
 }
 
@@ -9093,11 +9230,13 @@ func (*GrantRequest_UserClaims) isGrantRequest_Request() {}
 
 func (*GrantRequest_ResourceDetails) isGrantRequest_Request() {}
 
+// GrantResponse contains information about the granted role.
 type GrantResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// role is the Role resource that was granted.
 	Role *v1alpha12.Role `protobuf:"bytes,1,opt,name=role,proto3" json:"role,omitempty"`
 }
 
@@ -9140,13 +9279,16 @@ func (x *GrantResponse) GetRole() *v1alpha12.Role {
 	return nil
 }
 
+// ListRolesRequest is the request for listing all roles in a project.
 type ListRolesRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Project     string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	AsResources bool   `protobuf:"varint,2,opt,name=as_resources,json=asResources,proto3" json:"as_resources,omitempty"`
+	// project is the name of the project whose roles will be listed.
+	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	// as_resources indicates whether to return roles as resources or as role objects.
+	AsResources bool `protobuf:"varint,2,opt,name=as_resources,json=asResources,proto3" json:"as_resources,omitempty"`
 }
 
 func (x *ListRolesRequest) Reset() {
@@ -9195,13 +9337,16 @@ func (x *ListRolesRequest) GetAsResources() bool {
 	return false
 }
 
+// ListRolesResponse contains a list of roles for the specified project.
 type ListRolesResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
 	// Note: oneof and repeated do not work together
-	Roles     []*v1alpha12.Role          `protobuf:"bytes,1,rep,name=roles,proto3" json:"roles,omitempty"`
+	// roles is the list of Role resources when requested as roles.
+	Roles []*v1alpha12.Role `protobuf:"bytes,1,rep,name=roles,proto3" json:"roles,omitempty"`
+	// resources is the list of RoleResources when requested as resources.
 	Resources []*v1alpha12.RoleResources `protobuf:"bytes,2,rep,name=resources,proto3" json:"resources,omitempty"`
 }
 
@@ -9251,13 +9396,16 @@ func (x *ListRolesResponse) GetResources() []*v1alpha12.RoleResources {
 	return nil
 }
 
+// RevokeRequest is the request for revoking a role from a user or resource.
 type RevokeRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// project is the name of the project where the role will be revoked.
 	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
-	Role    string `protobuf:"bytes,2,opt,name=role,proto3" json:"role,omitempty"`
+	// role is the name of the role to revoke.
+	Role string `protobuf:"bytes,2,opt,name=role,proto3" json:"role,omitempty"`
 	// Types that are assignable to Request:
 	//
 	//	*RevokeRequest_UserClaims
@@ -9337,10 +9485,12 @@ type isRevokeRequest_Request interface {
 }
 
 type RevokeRequest_UserClaims struct {
+	// user_claims are the OIDC claims for the user whose role is being revoked.
 	UserClaims *Claims `protobuf:"bytes,3,opt,name=user_claims,json=userClaims,proto3,oneof"`
 }
 
 type RevokeRequest_ResourceDetails struct {
+	// resource_details are the details of the resource whose role is being revoked.
 	ResourceDetails *v1alpha12.ResourceDetails `protobuf:"bytes,4,opt,name=resource_details,json=resourceDetails,proto3,oneof"`
 }
 
@@ -9348,11 +9498,13 @@ func (*RevokeRequest_UserClaims) isRevokeRequest_Request() {}
 
 func (*RevokeRequest_ResourceDetails) isRevokeRequest_Request() {}
 
+// RevokeResponse contains information about the revoked role.
 type RevokeResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// role is the Role resource that was revoked.
 	Role *v1alpha12.Role `protobuf:"bytes,1,opt,name=role,proto3" json:"role,omitempty"`
 }
 
@@ -9395,11 +9547,13 @@ func (x *RevokeResponse) GetRole() *v1alpha12.Role {
 	return nil
 }
 
+// UpdateRoleRequest is the request for updating an existing RBAC role.
 type UpdateRoleRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// role is the updated Role resource.
 	Role *v1alpha12.Role `protobuf:"bytes,1,opt,name=role,proto3" json:"role,omitempty"`
 }
 
@@ -9442,11 +9596,13 @@ func (x *UpdateRoleRequest) GetRole() *v1alpha12.Role {
 	return nil
 }
 
+// UpdateRoleResponse contains the updated role information.
 type UpdateRoleResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// role is the updated Role resource.
 	Role *v1alpha12.Role `protobuf:"bytes,1,opt,name=role,proto3" json:"role,omitempty"`
 }
 
@@ -9489,6 +9645,7 @@ func (x *UpdateRoleResponse) GetRole() *v1alpha12.Role {
 	return nil
 }
 
+// ListClusterSecretsRequest is the request for listing all cluster-level secrets.
 type ListClusterSecretsRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -9527,11 +9684,13 @@ func (*ListClusterSecretsRequest) Descriptor() ([]byte, []int) {
 	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{164}
 }
 
+// ListClusterSecretsResponse contains a list of cluster-level secrets.
 type ListClusterSecretsResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// secrets is the list of cluster-level Kubernetes Secrets.
 	Secrets []*v1.Secret `protobuf:"bytes,1,rep,name=secrets,proto3" json:"secrets,omitempty"`
 }
 
@@ -9574,12 +9733,15 @@ func (x *ListClusterSecretsResponse) GetSecrets() []*v1.Secret {
 	return nil
 }
 
+// CreateClusterSecretRequest is the request for creating a new cluster-level secret.
 type CreateClusterSecretRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Name string            `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// name is the name of the cluster secret to create.
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// data contains the key-value pairs that make up the secret data.
 	Data map[string]string `protobuf:"bytes,2,rep,name=data,proto3" json:"data,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
@@ -9629,11 +9791,13 @@ func (x *CreateClusterSecretRequest) GetData() map[string]string {
 	return nil
 }
 
+// CreateClusterSecretResponse contains the newly created cluster secret.
 type CreateClusterSecretResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// secret is the created cluster-level Kubernetes Secret.
 	Secret *v1.Secret `protobuf:"bytes,1,opt,name=secret,proto3" json:"secret,omitempty"`
 }
 
@@ -9676,12 +9840,15 @@ func (x *CreateClusterSecretResponse) GetSecret() *v1.Secret {
 	return nil
 }
 
+// UpdateClusterSecretRequest is the request for updating an existing cluster secret.
 type UpdateClusterSecretRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Name string            `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// name is the name of the cluster secret to update.
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// data contains the key-value pairs that make up the secret data.
 	Data map[string]string `protobuf:"bytes,2,rep,name=data,proto3" json:"data,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
@@ -9731,11 +9898,13 @@ func (x *UpdateClusterSecretRequest) GetData() map[string]string {
 	return nil
 }
 
+// UpdateClusterSecretResponse contains the updated cluster secret information.
 type UpdateClusterSecretResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// secret is the updated cluster-level Kubernetes Secret.
 	Secret *v1.Secret `protobuf:"bytes,1,opt,name=secret,proto3" json:"secret,omitempty"`
 }
 
@@ -9778,11 +9947,13 @@ func (x *UpdateClusterSecretResponse) GetSecret() *v1.Secret {
 	return nil
 }
 
+// DeleteClusterSecretRequest is the request for deleting a cluster secret.
 type DeleteClusterSecretRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// name is the name of the cluster secret to delete.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 }
 
@@ -9825,6 +9996,7 @@ func (x *DeleteClusterSecretRequest) GetName() string {
 	return ""
 }
 
+// DeleteClusterSecretResponse is the response returned after deleting a cluster secret.
 type DeleteClusterSecretResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache

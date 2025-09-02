@@ -2831,15 +2831,21 @@ export const CreateCredentialsResponseSchema: GenMessage<CreateCredentialsRespon
   messageDesc(file_api_service_v1alpha1_service, 106);
 
 /**
+ * DeleteCredentialsRequest is the request for deleting existing credentials.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.DeleteCredentialsRequest
  */
 export type DeleteCredentialsRequest = Message<"akuity.io.kargo.service.v1alpha1.DeleteCredentialsRequest"> & {
   /**
+   * project is the name of the project containing the credentials.
+   *
    * @generated from field: string project = 1;
    */
   project: string;
 
   /**
+   * name is the name of the credentials to delete.
+   *
    * @generated from field: string name = 2;
    */
   name: string;
@@ -2853,6 +2859,8 @@ export const DeleteCredentialsRequestSchema: GenMessage<DeleteCredentialsRequest
   messageDesc(file_api_service_v1alpha1_service, 107);
 
 /**
+ * DeleteCredentialsResponse is the response returned after deleting credentials.
+ *
  * explicitly empty 
  *
  * @generated from message akuity.io.kargo.service.v1alpha1.DeleteCredentialsResponse
@@ -2868,20 +2876,28 @@ export const DeleteCredentialsResponseSchema: GenMessage<DeleteCredentialsRespon
   messageDesc(file_api_service_v1alpha1_service, 108);
 
 /**
+ * GetCredentialsRequest is the request for retrieving existing credentials.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.GetCredentialsRequest
  */
 export type GetCredentialsRequest = Message<"akuity.io.kargo.service.v1alpha1.GetCredentialsRequest"> & {
   /**
+   * project is the name of the project containing the credentials.
+   *
    * @generated from field: string project = 1;
    */
   project: string;
 
   /**
+   * name is the name of the credentials to retrieve.
+   *
    * @generated from field: string name = 2;
    */
   name: string;
 
   /**
+   * format specifies the desired response format (structured object or raw YAML).
+   *
    * @generated from field: akuity.io.kargo.service.v1alpha1.RawFormat format = 3;
    */
   format: RawFormat;
@@ -2895,6 +2911,8 @@ export const GetCredentialsRequestSchema: GenMessage<GetCredentialsRequest> = /*
   messageDesc(file_api_service_v1alpha1_service, 109);
 
 /**
+ * GetCredentialsResponse contains the requested credentials information.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.GetCredentialsResponse
  */
 export type GetCredentialsResponse = Message<"akuity.io.kargo.service.v1alpha1.GetCredentialsResponse"> & {
@@ -2903,12 +2921,16 @@ export type GetCredentialsResponse = Message<"akuity.io.kargo.service.v1alpha1.G
    */
   result: {
     /**
+     * credentials is the structured Kubernetes Secret containing the credentials.
+     *
      * @generated from field: k8s.io.api.core.v1.Secret credentials = 1;
      */
     value: Secret;
     case: "credentials";
   } | {
     /**
+     * raw is the raw YAML representation of the credentials.
+     *
      * @generated from field: bytes raw = 2;
      */
     value: Uint8Array;
@@ -2924,10 +2946,14 @@ export const GetCredentialsResponseSchema: GenMessage<GetCredentialsResponse> = 
   messageDesc(file_api_service_v1alpha1_service, 110);
 
 /**
+ * ListCredentialsRequest is the request for listing all credentials in a project.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.ListCredentialsRequest
  */
 export type ListCredentialsRequest = Message<"akuity.io.kargo.service.v1alpha1.ListCredentialsRequest"> & {
   /**
+   * project is the name of the project whose credentials will be listed.
+   *
    * @generated from field: string project = 1;
    */
   project: string;
@@ -2941,10 +2967,14 @@ export const ListCredentialsRequestSchema: GenMessage<ListCredentialsRequest> = 
   messageDesc(file_api_service_v1alpha1_service, 111);
 
 /**
+ * ListCredentialsResponse contains a list of credentials for the specified project.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.ListCredentialsResponse
  */
 export type ListCredentialsResponse = Message<"akuity.io.kargo.service.v1alpha1.ListCredentialsResponse"> & {
   /**
+   * credentials is the list of Kubernetes Secrets containing the credentials.
+   *
    * @generated from field: repeated k8s.io.api.core.v1.Secret credentials = 1;
    */
   credentials: Secret[];
@@ -2958,45 +2988,63 @@ export const ListCredentialsResponseSchema: GenMessage<ListCredentialsResponse> 
   messageDesc(file_api_service_v1alpha1_service, 112);
 
 /**
+ * UpdateCredentialsRequest is the request for updating existing credentials.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.UpdateCredentialsRequest
  */
 export type UpdateCredentialsRequest = Message<"akuity.io.kargo.service.v1alpha1.UpdateCredentialsRequest"> & {
   /**
+   * project is the name of the project containing the credentials.
+   *
    * @generated from field: string project = 1;
    */
   project: string;
 
   /**
+   * name is the name of the credentials to update.
+   *
    * @generated from field: string name = 2;
    */
   name: string;
 
   /**
+   * description is a human-readable description of the credentials.
+   *
    * @generated from field: string description = 8;
    */
   description: string;
 
   /**
+   * type specifies the credential type (git, helm, image).
+   *
    * @generated from field: string type = 3;
    */
   type: string;
 
   /**
+   * repo_url is the URL of the repository or registry these credentials apply to.
+   *
    * @generated from field: string repo_url = 4 [json_name = "repoURL"];
    */
   repoUrl: string;
 
   /**
+   * repo_url_is_regex indicates whether repo_url should be treated as a regular expression.
+   *
    * @generated from field: bool repo_url_is_regex = 5 [json_name = "repoURLIsRegex"];
    */
   repoUrlIsRegex: boolean;
 
   /**
+   * username is the username for authentication.
+   *
    * @generated from field: string username = 6;
    */
   username: string;
 
   /**
+   * password is the password or token for authentication.
+   *
    * @generated from field: string password = 7;
    */
   password: string;
@@ -3010,10 +3058,14 @@ export const UpdateCredentialsRequestSchema: GenMessage<UpdateCredentialsRequest
   messageDesc(file_api_service_v1alpha1_service, 113);
 
 /**
+ * UpdateCredentialsResponse contains the updated credentials information.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.UpdateCredentialsResponse
  */
 export type UpdateCredentialsResponse = Message<"akuity.io.kargo.service.v1alpha1.UpdateCredentialsResponse"> & {
   /**
+   * credentials is the updated Kubernetes Secret containing the credentials.
+   *
    * @generated from field: k8s.io.api.core.v1.Secret credentials = 1;
    */
   credentials?: Secret;
@@ -3027,10 +3079,14 @@ export const UpdateCredentialsResponseSchema: GenMessage<UpdateCredentialsRespon
   messageDesc(file_api_service_v1alpha1_service, 114);
 
 /**
+ * ListProjectSecretsRequest is the request for listing all secrets in a project.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.ListProjectSecretsRequest
  */
 export type ListProjectSecretsRequest = Message<"akuity.io.kargo.service.v1alpha1.ListProjectSecretsRequest"> & {
   /**
+   * project is the name of the project whose secrets will be listed.
+   *
    * @generated from field: string project = 1;
    */
   project: string;
@@ -3044,10 +3100,14 @@ export const ListProjectSecretsRequestSchema: GenMessage<ListProjectSecretsReque
   messageDesc(file_api_service_v1alpha1_service, 115);
 
 /**
+ * ListProjectSecretsResponse contains a list of secrets for the specified project.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.ListProjectSecretsResponse
  */
 export type ListProjectSecretsResponse = Message<"akuity.io.kargo.service.v1alpha1.ListProjectSecretsResponse"> & {
   /**
+   * secrets is the list of Kubernetes Secrets within the project.
+   *
    * @generated from field: repeated k8s.io.api.core.v1.Secret secrets = 1;
    */
   secrets: Secret[];
@@ -3061,25 +3121,35 @@ export const ListProjectSecretsResponseSchema: GenMessage<ListProjectSecretsResp
   messageDesc(file_api_service_v1alpha1_service, 116);
 
 /**
+ * CreateProjectSecretRequest is the request for creating a new secret within a project.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.CreateProjectSecretRequest
  */
 export type CreateProjectSecretRequest = Message<"akuity.io.kargo.service.v1alpha1.CreateProjectSecretRequest"> & {
   /**
+   * project is the name of the project where the secret will be created.
+   *
    * @generated from field: string project = 1;
    */
   project: string;
 
   /**
+   * name is the name of the secret to create.
+   *
    * @generated from field: string name = 2;
    */
   name: string;
 
   /**
+   * description is a human-readable description of the secret.
+   *
    * @generated from field: string description = 3;
    */
   description: string;
 
   /**
+   * data contains the key-value pairs that make up the secret data.
+   *
    * @generated from field: map<string, string> data = 4;
    */
   data: { [key: string]: string };
@@ -3093,10 +3163,14 @@ export const CreateProjectSecretRequestSchema: GenMessage<CreateProjectSecretReq
   messageDesc(file_api_service_v1alpha1_service, 117);
 
 /**
+ * CreateProjectSecretResponse contains the newly created project secret.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.CreateProjectSecretResponse
  */
 export type CreateProjectSecretResponse = Message<"akuity.io.kargo.service.v1alpha1.CreateProjectSecretResponse"> & {
   /**
+   * secret is the created Kubernetes Secret within the project.
+   *
    * @generated from field: k8s.io.api.core.v1.Secret secret = 1;
    */
   secret?: Secret;
@@ -3110,25 +3184,35 @@ export const CreateProjectSecretResponseSchema: GenMessage<CreateProjectSecretRe
   messageDesc(file_api_service_v1alpha1_service, 118);
 
 /**
+ * UpdateProjectSecretRequest is the request for updating an existing project secret.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.UpdateProjectSecretRequest
  */
 export type UpdateProjectSecretRequest = Message<"akuity.io.kargo.service.v1alpha1.UpdateProjectSecretRequest"> & {
   /**
+   * project is the name of the project containing the secret.
+   *
    * @generated from field: string project = 1;
    */
   project: string;
 
   /**
+   * name is the name of the secret to update.
+   *
    * @generated from field: string name = 2;
    */
   name: string;
 
   /**
+   * description is a human-readable description of the secret.
+   *
    * @generated from field: string description = 3;
    */
   description: string;
 
   /**
+   * data contains the key-value pairs that make up the secret data.
+   *
    * @generated from field: map<string, string> data = 4;
    */
   data: { [key: string]: string };
@@ -3142,10 +3226,14 @@ export const UpdateProjectSecretRequestSchema: GenMessage<UpdateProjectSecretReq
   messageDesc(file_api_service_v1alpha1_service, 119);
 
 /**
+ * UpdateProjectSecretResponse contains the updated project secret information.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.UpdateProjectSecretResponse
  */
 export type UpdateProjectSecretResponse = Message<"akuity.io.kargo.service.v1alpha1.UpdateProjectSecretResponse"> & {
   /**
+   * secret is the updated Kubernetes Secret within the project.
+   *
    * @generated from field: k8s.io.api.core.v1.Secret secret = 1;
    */
   secret?: Secret;
@@ -3159,15 +3247,21 @@ export const UpdateProjectSecretResponseSchema: GenMessage<UpdateProjectSecretRe
   messageDesc(file_api_service_v1alpha1_service, 120);
 
 /**
+ * DeleteProjectSecretRequest is the request for deleting a project secret.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.DeleteProjectSecretRequest
  */
 export type DeleteProjectSecretRequest = Message<"akuity.io.kargo.service.v1alpha1.DeleteProjectSecretRequest"> & {
   /**
+   * project is the name of the project containing the secret.
+   *
    * @generated from field: string project = 1;
    */
   project: string;
 
   /**
+   * name is the name of the secret to delete.
+   *
    * @generated from field: string name = 2;
    */
   name: string;
@@ -3181,6 +3275,8 @@ export const DeleteProjectSecretRequestSchema: GenMessage<DeleteProjectSecretReq
   messageDesc(file_api_service_v1alpha1_service, 121);
 
 /**
+ * DeleteProjectSecretResponse is the response returned after deleting a project secret.
+ *
  * explicitly empty 
  *
  * @generated from message akuity.io.kargo.service.v1alpha1.DeleteProjectSecretResponse
@@ -3196,10 +3292,14 @@ export const DeleteProjectSecretResponseSchema: GenMessage<DeleteProjectSecretRe
   messageDesc(file_api_service_v1alpha1_service, 122);
 
 /**
+ * ListAnalysisTemplatesRequest is the request for listing all analysis templates in a project.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.ListAnalysisTemplatesRequest
  */
 export type ListAnalysisTemplatesRequest = Message<"akuity.io.kargo.service.v1alpha1.ListAnalysisTemplatesRequest"> & {
   /**
+   * project is the name of the project whose analysis templates will be listed.
+   *
    * @generated from field: string project = 1;
    */
   project: string;
@@ -3213,10 +3313,14 @@ export const ListAnalysisTemplatesRequestSchema: GenMessage<ListAnalysisTemplate
   messageDesc(file_api_service_v1alpha1_service, 123);
 
 /**
+ * ListAnalysisTemplatesResponse contains a list of analysis templates for the specified project.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.ListAnalysisTemplatesResponse
  */
 export type ListAnalysisTemplatesResponse = Message<"akuity.io.kargo.service.v1alpha1.ListAnalysisTemplatesResponse"> & {
   /**
+   * analysis_templates is the list of AnalysisTemplate resources within the project.
+   *
    * @generated from field: repeated github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisTemplate analysis_templates = 1;
    */
   analysisTemplates: AnalysisTemplate[];
@@ -3230,20 +3334,28 @@ export const ListAnalysisTemplatesResponseSchema: GenMessage<ListAnalysisTemplat
   messageDesc(file_api_service_v1alpha1_service, 124);
 
 /**
+ * GetAnalysisTemplateRequest is the request for retrieving a specific analysis template.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateRequest
  */
 export type GetAnalysisTemplateRequest = Message<"akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateRequest"> & {
   /**
+   * project is the name of the project containing the analysis template.
+   *
    * @generated from field: string project = 1;
    */
   project: string;
 
   /**
+   * name is the name of the analysis template to retrieve.
+   *
    * @generated from field: string name = 2;
    */
   name: string;
 
   /**
+   * format specifies the desired response format (structured object or raw YAML).
+   *
    * @generated from field: akuity.io.kargo.service.v1alpha1.RawFormat format = 3;
    */
   format: RawFormat;
@@ -3257,6 +3369,8 @@ export const GetAnalysisTemplateRequestSchema: GenMessage<GetAnalysisTemplateReq
   messageDesc(file_api_service_v1alpha1_service, 125);
 
 /**
+ * GetAnalysisTemplateResponse contains the requested analysis template information.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateResponse
  */
 export type GetAnalysisTemplateResponse = Message<"akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateResponse"> & {
@@ -3265,12 +3379,16 @@ export type GetAnalysisTemplateResponse = Message<"akuity.io.kargo.service.v1alp
    */
   result: {
     /**
+     * analysis_template is the structured AnalysisTemplate resource.
+     *
      * @generated from field: github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisTemplate analysis_template = 1;
      */
     value: AnalysisTemplate;
     case: "analysisTemplate";
   } | {
     /**
+     * raw is the raw YAML representation of the analysis template.
+     *
      * @generated from field: bytes raw = 2;
      */
     value: Uint8Array;
@@ -3286,15 +3404,21 @@ export const GetAnalysisTemplateResponseSchema: GenMessage<GetAnalysisTemplateRe
   messageDesc(file_api_service_v1alpha1_service, 126);
 
 /**
+ * DeleteAnalysisTemplateRequest is the request for deleting an analysis template.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.DeleteAnalysisTemplateRequest
  */
 export type DeleteAnalysisTemplateRequest = Message<"akuity.io.kargo.service.v1alpha1.DeleteAnalysisTemplateRequest"> & {
   /**
+   * project is the name of the project containing the analysis template.
+   *
    * @generated from field: string project = 1;
    */
   project: string;
 
   /**
+   * name is the name of the analysis template to delete.
+   *
    * @generated from field: string name = 2;
    */
   name: string;
@@ -3308,6 +3432,8 @@ export const DeleteAnalysisTemplateRequestSchema: GenMessage<DeleteAnalysisTempl
   messageDesc(file_api_service_v1alpha1_service, 127);
 
 /**
+ * DeleteAnalysisTemplateResponse is the response returned after deleting an analysis template.
+ *
  * explicitly empty 
  *
  * @generated from message akuity.io.kargo.service.v1alpha1.DeleteAnalysisTemplateResponse
@@ -3323,6 +3449,8 @@ export const DeleteAnalysisTemplateResponseSchema: GenMessage<DeleteAnalysisTemp
   messageDesc(file_api_service_v1alpha1_service, 128);
 
 /**
+ * ListClusterAnalysisTemplatesRequest is the request for listing all cluster-level analysis templates.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.ListClusterAnalysisTemplatesRequest
  */
 export type ListClusterAnalysisTemplatesRequest = Message<"akuity.io.kargo.service.v1alpha1.ListClusterAnalysisTemplatesRequest"> & {
@@ -3336,10 +3464,14 @@ export const ListClusterAnalysisTemplatesRequestSchema: GenMessage<ListClusterAn
   messageDesc(file_api_service_v1alpha1_service, 129);
 
 /**
+ * ListClusterAnalysisTemplatesResponse contains a list of cluster-level analysis templates.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.ListClusterAnalysisTemplatesResponse
  */
 export type ListClusterAnalysisTemplatesResponse = Message<"akuity.io.kargo.service.v1alpha1.ListClusterAnalysisTemplatesResponse"> & {
   /**
+   * cluster_analysis_templates is the list of ClusterAnalysisTemplate resources.
+   *
    * @generated from field: repeated github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.ClusterAnalysisTemplate cluster_analysis_templates = 1 [json_name = "clusteranalysisTemplates"];
    */
   clusterAnalysisTemplates: ClusterAnalysisTemplate[];
@@ -3353,15 +3485,21 @@ export const ListClusterAnalysisTemplatesResponseSchema: GenMessage<ListClusterA
   messageDesc(file_api_service_v1alpha1_service, 130);
 
 /**
+ * GetClusterAnalysisTemplateRequest is the request for retrieving a specific cluster analysis template.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.GetClusterAnalysisTemplateRequest
  */
 export type GetClusterAnalysisTemplateRequest = Message<"akuity.io.kargo.service.v1alpha1.GetClusterAnalysisTemplateRequest"> & {
   /**
+   * name is the name of the cluster analysis template to retrieve.
+   *
    * @generated from field: string name = 2;
    */
   name: string;
 
   /**
+   * format specifies the desired response format (structured object or raw YAML).
+   *
    * @generated from field: akuity.io.kargo.service.v1alpha1.RawFormat format = 3;
    */
   format: RawFormat;
@@ -3375,6 +3513,8 @@ export const GetClusterAnalysisTemplateRequestSchema: GenMessage<GetClusterAnaly
   messageDesc(file_api_service_v1alpha1_service, 131);
 
 /**
+ * GetClusterAnalysisTemplateResponse contains the requested cluster analysis template information.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.GetClusterAnalysisTemplateResponse
  */
 export type GetClusterAnalysisTemplateResponse = Message<"akuity.io.kargo.service.v1alpha1.GetClusterAnalysisTemplateResponse"> & {
@@ -3383,12 +3523,16 @@ export type GetClusterAnalysisTemplateResponse = Message<"akuity.io.kargo.servic
    */
   result: {
     /**
+     * cluster_analysis_template is the structured ClusterAnalysisTemplate resource.
+     *
      * @generated from field: github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.ClusterAnalysisTemplate cluster_analysis_template = 1;
      */
     value: ClusterAnalysisTemplate;
     case: "clusterAnalysisTemplate";
   } | {
     /**
+     * raw is the raw YAML representation of the cluster analysis template.
+     *
      * @generated from field: bytes raw = 2;
      */
     value: Uint8Array;
@@ -3404,10 +3548,14 @@ export const GetClusterAnalysisTemplateResponseSchema: GenMessage<GetClusterAnal
   messageDesc(file_api_service_v1alpha1_service, 132);
 
 /**
+ * DeleteClusterAnalysisTemplateRequest is the request for deleting a cluster analysis template.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.DeleteClusterAnalysisTemplateRequest
  */
 export type DeleteClusterAnalysisTemplateRequest = Message<"akuity.io.kargo.service.v1alpha1.DeleteClusterAnalysisTemplateRequest"> & {
   /**
+   * name is the name of the cluster analysis template to delete.
+   *
    * @generated from field: string name = 2;
    */
   name: string;
@@ -3421,6 +3569,8 @@ export const DeleteClusterAnalysisTemplateRequestSchema: GenMessage<DeleteCluste
   messageDesc(file_api_service_v1alpha1_service, 133);
 
 /**
+ * DeleteClusterAnalysisTemplateResponse is the response returned after deleting a cluster analysis template.
+ *
  * explicitly empty 
  *
  * @generated from message akuity.io.kargo.service.v1alpha1.DeleteClusterAnalysisTemplateResponse
@@ -3436,20 +3586,28 @@ export const DeleteClusterAnalysisTemplateResponseSchema: GenMessage<DeleteClust
   messageDesc(file_api_service_v1alpha1_service, 134);
 
 /**
+ * GetAnalysisRunRequest is the request for retrieving a specific analysis run.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.GetAnalysisRunRequest
  */
 export type GetAnalysisRunRequest = Message<"akuity.io.kargo.service.v1alpha1.GetAnalysisRunRequest"> & {
   /**
+   * namespace is the namespace containing the analysis run.
+   *
    * @generated from field: string namespace = 1;
    */
   namespace: string;
 
   /**
+   * name is the name of the analysis run to retrieve.
+   *
    * @generated from field: string name = 2;
    */
   name: string;
 
   /**
+   * format specifies the desired response format (structured object or raw YAML).
+   *
    * @generated from field: akuity.io.kargo.service.v1alpha1.RawFormat format = 3;
    */
   format: RawFormat;
@@ -3463,6 +3621,8 @@ export const GetAnalysisRunRequestSchema: GenMessage<GetAnalysisRunRequest> = /*
   messageDesc(file_api_service_v1alpha1_service, 135);
 
 /**
+ * GetAnalysisRunResponse contains the requested analysis run information.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.GetAnalysisRunResponse
  */
 export type GetAnalysisRunResponse = Message<"akuity.io.kargo.service.v1alpha1.GetAnalysisRunResponse"> & {
@@ -3471,12 +3631,16 @@ export type GetAnalysisRunResponse = Message<"akuity.io.kargo.service.v1alpha1.G
    */
   result: {
     /**
+     * analysis_run is the structured AnalysisRun resource.
+     *
      * @generated from field: github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisRun analysis_run = 1;
      */
     value: AnalysisRun;
     case: "analysisRun";
   } | {
     /**
+     * raw is the raw YAML representation of the analysis run.
+     *
      * @generated from field: bytes raw = 2;
      */
     value: Uint8Array;
@@ -3492,25 +3656,35 @@ export const GetAnalysisRunResponseSchema: GenMessage<GetAnalysisRunResponse> = 
   messageDesc(file_api_service_v1alpha1_service, 136);
 
 /**
+ * GetAnalysisRunLogsRequest is the request for retrieving logs from an analysis run.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.GetAnalysisRunLogsRequest
  */
 export type GetAnalysisRunLogsRequest = Message<"akuity.io.kargo.service.v1alpha1.GetAnalysisRunLogsRequest"> & {
   /**
+   * namespace is the namespace containing the analysis run.
+   *
    * @generated from field: string namespace = 1;
    */
   namespace: string;
 
   /**
+   * name is the name of the analysis run whose logs to retrieve.
+   *
    * @generated from field: string name = 2;
    */
   name: string;
 
   /**
+   * metric_name is the specific metric whose logs to retrieve.
+   *
    * @generated from field: string metric_name = 3;
    */
   metricName: string;
 
   /**
+   * container_name is the specific container whose logs to retrieve.
+   *
    * @generated from field: string container_name = 4;
    */
   containerName: string;
@@ -3524,10 +3698,14 @@ export const GetAnalysisRunLogsRequestSchema: GenMessage<GetAnalysisRunLogsReque
   messageDesc(file_api_service_v1alpha1_service, 137);
 
 /**
+ * GetAnalysisRunLogsResponse contains a chunk of logs from the analysis run.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.GetAnalysisRunLogsResponse
  */
 export type GetAnalysisRunLogsResponse = Message<"akuity.io.kargo.service.v1alpha1.GetAnalysisRunLogsResponse"> & {
   /**
+   * chunk is a portion of the log output from the analysis run.
+   *
    * @generated from field: string chunk = 1;
    */
   chunk: string;
@@ -3541,10 +3719,14 @@ export const GetAnalysisRunLogsResponseSchema: GenMessage<GetAnalysisRunLogsResp
   messageDesc(file_api_service_v1alpha1_service, 138);
 
 /**
+ * ListProjectEventsRequest is the request for listing events in a project.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.ListProjectEventsRequest
  */
 export type ListProjectEventsRequest = Message<"akuity.io.kargo.service.v1alpha1.ListProjectEventsRequest"> & {
   /**
+   * project is the name of the project whose events will be listed.
+   *
    * @generated from field: string project = 1;
    */
   project: string;
@@ -3558,10 +3740,14 @@ export const ListProjectEventsRequestSchema: GenMessage<ListProjectEventsRequest
   messageDesc(file_api_service_v1alpha1_service, 139);
 
 /**
+ * ListProjectEventsResponse contains a list of events for the specified project.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.ListProjectEventsResponse
  */
 export type ListProjectEventsResponse = Message<"akuity.io.kargo.service.v1alpha1.ListProjectEventsResponse"> & {
   /**
+   * events is the list of Kubernetes Events within the project.
+   *
    * @generated from field: repeated k8s.io.api.core.v1.Event events = 1;
    */
   events: Event[];
@@ -3575,10 +3761,14 @@ export const ListProjectEventsResponseSchema: GenMessage<ListProjectEventsRespon
   messageDesc(file_api_service_v1alpha1_service, 140);
 
 /**
+ * ListPromotionTasksRequest is the request for listing promotion tasks in a project.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.ListPromotionTasksRequest
  */
 export type ListPromotionTasksRequest = Message<"akuity.io.kargo.service.v1alpha1.ListPromotionTasksRequest"> & {
   /**
+   * project is the name of the project whose promotion tasks will be listed.
+   *
    * @generated from field: string project = 1;
    */
   project: string;
@@ -3592,10 +3782,14 @@ export const ListPromotionTasksRequestSchema: GenMessage<ListPromotionTasksReque
   messageDesc(file_api_service_v1alpha1_service, 141);
 
 /**
+ * ListPromotionTasksResponse contains a list of promotion tasks for the specified project.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.ListPromotionTasksResponse
  */
 export type ListPromotionTasksResponse = Message<"akuity.io.kargo.service.v1alpha1.ListPromotionTasksResponse"> & {
   /**
+   * promotion_tasks is the list of PromotionTask resources within the project.
+   *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.PromotionTask promotion_tasks = 1;
    */
   promotionTasks: PromotionTask[];
@@ -3609,20 +3803,28 @@ export const ListPromotionTasksResponseSchema: GenMessage<ListPromotionTasksResp
   messageDesc(file_api_service_v1alpha1_service, 142);
 
 /**
+ * GetPromotionTaskRequest is the request for retrieving a specific promotion task.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.GetPromotionTaskRequest
  */
 export type GetPromotionTaskRequest = Message<"akuity.io.kargo.service.v1alpha1.GetPromotionTaskRequest"> & {
   /**
+   * project is the name of the project containing the promotion task.
+   *
    * @generated from field: string project = 1;
    */
   project: string;
 
   /**
+   * name is the name of the promotion task to retrieve.
+   *
    * @generated from field: string name = 2;
    */
   name: string;
 
   /**
+   * format specifies the desired response format (structured object or raw YAML).
+   *
    * @generated from field: akuity.io.kargo.service.v1alpha1.RawFormat format = 3;
    */
   format: RawFormat;
@@ -3636,6 +3838,8 @@ export const GetPromotionTaskRequestSchema: GenMessage<GetPromotionTaskRequest> 
   messageDesc(file_api_service_v1alpha1_service, 143);
 
 /**
+ * GetPromotionTaskResponse contains the requested promotion task information.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.GetPromotionTaskResponse
  */
 export type GetPromotionTaskResponse = Message<"akuity.io.kargo.service.v1alpha1.GetPromotionTaskResponse"> & {
@@ -3644,12 +3848,16 @@ export type GetPromotionTaskResponse = Message<"akuity.io.kargo.service.v1alpha1
    */
   result: {
     /**
+     * promotion_task is the structured PromotionTask resource.
+     *
      * @generated from field: github.com.akuity.kargo.api.v1alpha1.PromotionTask promotion_task = 1;
      */
     value: PromotionTask;
     case: "promotionTask";
   } | {
     /**
+     * raw is the raw YAML representation of the promotion task.
+     *
      * @generated from field: bytes raw = 2;
      */
     value: Uint8Array;
@@ -3665,6 +3873,8 @@ export const GetPromotionTaskResponseSchema: GenMessage<GetPromotionTaskResponse
   messageDesc(file_api_service_v1alpha1_service, 144);
 
 /**
+ * ListClusterPromotionTasksRequest is the request for listing all cluster-level promotion tasks.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.ListClusterPromotionTasksRequest
  */
 export type ListClusterPromotionTasksRequest = Message<"akuity.io.kargo.service.v1alpha1.ListClusterPromotionTasksRequest"> & {
@@ -3678,10 +3888,14 @@ export const ListClusterPromotionTasksRequestSchema: GenMessage<ListClusterPromo
   messageDesc(file_api_service_v1alpha1_service, 145);
 
 /**
+ * ListClusterPromotionTasksResponse contains a list of cluster-level promotion tasks.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.ListClusterPromotionTasksResponse
  */
 export type ListClusterPromotionTasksResponse = Message<"akuity.io.kargo.service.v1alpha1.ListClusterPromotionTasksResponse"> & {
   /**
+   * cluster_promotion_tasks is the list of ClusterPromotionTask resources.
+   *
    * @generated from field: repeated github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask cluster_promotion_tasks = 1;
    */
   clusterPromotionTasks: ClusterPromotionTask[];
@@ -3695,15 +3909,21 @@ export const ListClusterPromotionTasksResponseSchema: GenMessage<ListClusterProm
   messageDesc(file_api_service_v1alpha1_service, 146);
 
 /**
+ * GetClusterPromotionTaskRequest is the request for retrieving a specific cluster promotion task.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.GetClusterPromotionTaskRequest
  */
 export type GetClusterPromotionTaskRequest = Message<"akuity.io.kargo.service.v1alpha1.GetClusterPromotionTaskRequest"> & {
   /**
+   * name is the name of the cluster promotion task to retrieve.
+   *
    * @generated from field: string name = 2;
    */
   name: string;
 
   /**
+   * format specifies the desired response format (structured object or raw YAML).
+   *
    * @generated from field: akuity.io.kargo.service.v1alpha1.RawFormat format = 3;
    */
   format: RawFormat;
@@ -3717,6 +3937,8 @@ export const GetClusterPromotionTaskRequestSchema: GenMessage<GetClusterPromotio
   messageDesc(file_api_service_v1alpha1_service, 147);
 
 /**
+ * GetClusterPromotionTaskResponse contains the requested cluster promotion task information.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.GetClusterPromotionTaskResponse
  */
 export type GetClusterPromotionTaskResponse = Message<"akuity.io.kargo.service.v1alpha1.GetClusterPromotionTaskResponse"> & {
@@ -3725,12 +3947,16 @@ export type GetClusterPromotionTaskResponse = Message<"akuity.io.kargo.service.v
    */
   result: {
     /**
+     * promotion_task is the structured ClusterPromotionTask resource.
+     *
      * @generated from field: github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask promotion_task = 1 [json_name = "clusterPromotionTask"];
      */
     value: ClusterPromotionTask;
     case: "promotionTask";
   } | {
     /**
+     * raw is the raw YAML representation of the cluster promotion task.
+     *
      * @generated from field: bytes raw = 2;
      */
     value: Uint8Array;
@@ -3746,10 +3972,14 @@ export const GetClusterPromotionTaskResponseSchema: GenMessage<GetClusterPromoti
   messageDesc(file_api_service_v1alpha1_service, 148);
 
 /**
+ * CreateRoleRequest is the request for creating a new RBAC role.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.CreateRoleRequest
  */
 export type CreateRoleRequest = Message<"akuity.io.kargo.service.v1alpha1.CreateRoleRequest"> & {
   /**
+   * role is the Role resource to create.
+   *
    * @generated from field: github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
    */
   role?: Role;
@@ -3763,10 +3993,14 @@ export const CreateRoleRequestSchema: GenMessage<CreateRoleRequest> = /*@__PURE_
   messageDesc(file_api_service_v1alpha1_service, 149);
 
 /**
+ * CreateRoleResponse contains the newly created role information.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.CreateRoleResponse
  */
 export type CreateRoleResponse = Message<"akuity.io.kargo.service.v1alpha1.CreateRoleResponse"> & {
   /**
+   * role is the created Role resource.
+   *
    * @generated from field: github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
    */
   role?: Role;
@@ -3780,15 +4014,21 @@ export const CreateRoleResponseSchema: GenMessage<CreateRoleResponse> = /*@__PUR
   messageDesc(file_api_service_v1alpha1_service, 150);
 
 /**
+ * DeleteRoleRequest is the request for deleting an RBAC role.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.DeleteRoleRequest
  */
 export type DeleteRoleRequest = Message<"akuity.io.kargo.service.v1alpha1.DeleteRoleRequest"> & {
   /**
+   * project is the name of the project containing the role.
+   *
    * @generated from field: string project = 1;
    */
   project: string;
 
   /**
+   * name is the name of the role to delete.
+   *
    * @generated from field: string name = 2;
    */
   name: string;
@@ -3802,6 +4042,8 @@ export const DeleteRoleRequestSchema: GenMessage<DeleteRoleRequest> = /*@__PURE_
   messageDesc(file_api_service_v1alpha1_service, 151);
 
 /**
+ * DeleteRoleResponse is the response returned after deleting a role.
+ *
  * explicitly empty 
  *
  * @generated from message akuity.io.kargo.service.v1alpha1.DeleteRoleResponse
@@ -3817,25 +4059,35 @@ export const DeleteRoleResponseSchema: GenMessage<DeleteRoleResponse> = /*@__PUR
   messageDesc(file_api_service_v1alpha1_service, 152);
 
 /**
+ * GetRoleRequest is the request for retrieving a specific RBAC role.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.GetRoleRequest
  */
 export type GetRoleRequest = Message<"akuity.io.kargo.service.v1alpha1.GetRoleRequest"> & {
   /**
+   * project is the name of the project containing the role.
+   *
    * @generated from field: string project = 1;
    */
   project: string;
 
   /**
+   * name is the name of the role to retrieve.
+   *
    * @generated from field: string name = 2;
    */
   name: string;
 
   /**
+   * as_resources indicates whether to return the role as resources or as a role object.
+   *
    * @generated from field: bool as_resources = 3;
    */
   asResources: boolean;
 
   /**
+   * format specifies the desired response format (structured object or raw YAML).
+   *
    * @generated from field: akuity.io.kargo.service.v1alpha1.RawFormat format = 4;
    */
   format: RawFormat;
@@ -3849,6 +4101,8 @@ export const GetRoleRequestSchema: GenMessage<GetRoleRequest> = /*@__PURE__*/
   messageDesc(file_api_service_v1alpha1_service, 153);
 
 /**
+ * GetRoleResponse contains the requested role information.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.GetRoleResponse
  */
 export type GetRoleResponse = Message<"akuity.io.kargo.service.v1alpha1.GetRoleResponse"> & {
@@ -3857,18 +4111,24 @@ export type GetRoleResponse = Message<"akuity.io.kargo.service.v1alpha1.GetRoleR
    */
   result: {
     /**
+     * role is the structured Role resource.
+     *
      * @generated from field: github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
      */
     value: Role;
     case: "role";
   } | {
     /**
+     * resources is the structured RoleResources containing the role's resources.
+     *
      * @generated from field: github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources resources = 2;
      */
     value: RoleResources;
     case: "resources";
   } | {
     /**
+     * raw is the raw YAML representation of the role.
+     *
      * @generated from field: bytes raw = 3;
      */
     value: Uint8Array;
@@ -3884,11 +4144,14 @@ export const GetRoleResponseSchema: GenMessage<GetRoleResponse> = /*@__PURE__*/
   messageDesc(file_api_service_v1alpha1_service, 154);
 
 /**
+ * Claims represents a collection of OIDC claims for role-based access control.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.Claims
  */
 export type Claims = Message<"akuity.io.kargo.service.v1alpha1.Claims"> & {
   /**
    * Note: oneof and repeated do not work together
+   * claims is the list of claims associated with a user or service account.
    *
    * @generated from field: repeated github.com.akuity.kargo.api.rbac.v1alpha1.Claim claims = 1;
    */
@@ -3903,15 +4166,21 @@ export const ClaimsSchema: GenMessage<Claims> = /*@__PURE__*/
   messageDesc(file_api_service_v1alpha1_service, 155);
 
 /**
+ * GrantRequest is the request for granting a role to a user or resource.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.GrantRequest
  */
 export type GrantRequest = Message<"akuity.io.kargo.service.v1alpha1.GrantRequest"> & {
   /**
+   * project is the name of the project where the role will be granted.
+   *
    * @generated from field: string project = 1;
    */
   project: string;
 
   /**
+   * role is the name of the role to grant.
+   *
    * @generated from field: string role = 2;
    */
   role: string;
@@ -3921,12 +4190,16 @@ export type GrantRequest = Message<"akuity.io.kargo.service.v1alpha1.GrantReques
    */
   request: {
     /**
+     * user_claims are the OIDC claims for the user being granted the role.
+     *
      * @generated from field: akuity.io.kargo.service.v1alpha1.Claims user_claims = 3;
      */
     value: Claims;
     case: "userClaims";
   } | {
     /**
+     * resource_details are the details of the resource being granted the role.
+     *
      * @generated from field: github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails resource_details = 4;
      */
     value: ResourceDetails;
@@ -3942,10 +4215,14 @@ export const GrantRequestSchema: GenMessage<GrantRequest> = /*@__PURE__*/
   messageDesc(file_api_service_v1alpha1_service, 156);
 
 /**
+ * GrantResponse contains information about the granted role.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.GrantResponse
  */
 export type GrantResponse = Message<"akuity.io.kargo.service.v1alpha1.GrantResponse"> & {
   /**
+   * role is the Role resource that was granted.
+   *
    * @generated from field: github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
    */
   role?: Role;
@@ -3959,15 +4236,21 @@ export const GrantResponseSchema: GenMessage<GrantResponse> = /*@__PURE__*/
   messageDesc(file_api_service_v1alpha1_service, 157);
 
 /**
+ * ListRolesRequest is the request for listing all roles in a project.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.ListRolesRequest
  */
 export type ListRolesRequest = Message<"akuity.io.kargo.service.v1alpha1.ListRolesRequest"> & {
   /**
+   * project is the name of the project whose roles will be listed.
+   *
    * @generated from field: string project = 1;
    */
   project: string;
 
   /**
+   * as_resources indicates whether to return roles as resources or as role objects.
+   *
    * @generated from field: bool as_resources = 2;
    */
   asResources: boolean;
@@ -3981,17 +4264,22 @@ export const ListRolesRequestSchema: GenMessage<ListRolesRequest> = /*@__PURE__*
   messageDesc(file_api_service_v1alpha1_service, 158);
 
 /**
+ * ListRolesResponse contains a list of roles for the specified project.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.ListRolesResponse
  */
 export type ListRolesResponse = Message<"akuity.io.kargo.service.v1alpha1.ListRolesResponse"> & {
   /**
    * Note: oneof and repeated do not work together
+   * roles is the list of Role resources when requested as roles.
    *
    * @generated from field: repeated github.com.akuity.kargo.api.rbac.v1alpha1.Role roles = 1;
    */
   roles: Role[];
 
   /**
+   * resources is the list of RoleResources when requested as resources.
+   *
    * @generated from field: repeated github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources resources = 2;
    */
   resources: RoleResources[];
@@ -4005,15 +4293,21 @@ export const ListRolesResponseSchema: GenMessage<ListRolesResponse> = /*@__PURE_
   messageDesc(file_api_service_v1alpha1_service, 159);
 
 /**
+ * RevokeRequest is the request for revoking a role from a user or resource.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.RevokeRequest
  */
 export type RevokeRequest = Message<"akuity.io.kargo.service.v1alpha1.RevokeRequest"> & {
   /**
+   * project is the name of the project where the role will be revoked.
+   *
    * @generated from field: string project = 1;
    */
   project: string;
 
   /**
+   * role is the name of the role to revoke.
+   *
    * @generated from field: string role = 2;
    */
   role: string;
@@ -4023,12 +4317,16 @@ export type RevokeRequest = Message<"akuity.io.kargo.service.v1alpha1.RevokeRequ
    */
   request: {
     /**
+     * user_claims are the OIDC claims for the user whose role is being revoked.
+     *
      * @generated from field: akuity.io.kargo.service.v1alpha1.Claims user_claims = 3;
      */
     value: Claims;
     case: "userClaims";
   } | {
     /**
+     * resource_details are the details of the resource whose role is being revoked.
+     *
      * @generated from field: github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails resource_details = 4;
      */
     value: ResourceDetails;
@@ -4044,10 +4342,14 @@ export const RevokeRequestSchema: GenMessage<RevokeRequest> = /*@__PURE__*/
   messageDesc(file_api_service_v1alpha1_service, 160);
 
 /**
+ * RevokeResponse contains information about the revoked role.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.RevokeResponse
  */
 export type RevokeResponse = Message<"akuity.io.kargo.service.v1alpha1.RevokeResponse"> & {
   /**
+   * role is the Role resource that was revoked.
+   *
    * @generated from field: github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
    */
   role?: Role;
@@ -4061,10 +4363,14 @@ export const RevokeResponseSchema: GenMessage<RevokeResponse> = /*@__PURE__*/
   messageDesc(file_api_service_v1alpha1_service, 161);
 
 /**
+ * UpdateRoleRequest is the request for updating an existing RBAC role.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.UpdateRoleRequest
  */
 export type UpdateRoleRequest = Message<"akuity.io.kargo.service.v1alpha1.UpdateRoleRequest"> & {
   /**
+   * role is the updated Role resource.
+   *
    * @generated from field: github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
    */
   role?: Role;
@@ -4078,10 +4384,14 @@ export const UpdateRoleRequestSchema: GenMessage<UpdateRoleRequest> = /*@__PURE_
   messageDesc(file_api_service_v1alpha1_service, 162);
 
 /**
+ * UpdateRoleResponse contains the updated role information.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.UpdateRoleResponse
  */
 export type UpdateRoleResponse = Message<"akuity.io.kargo.service.v1alpha1.UpdateRoleResponse"> & {
   /**
+   * role is the updated Role resource.
+   *
    * @generated from field: github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
    */
   role?: Role;
@@ -4095,6 +4405,8 @@ export const UpdateRoleResponseSchema: GenMessage<UpdateRoleResponse> = /*@__PUR
   messageDesc(file_api_service_v1alpha1_service, 163);
 
 /**
+ * ListClusterSecretsRequest is the request for listing all cluster-level secrets.
+ *
  * explicitly empty 
  *
  * @generated from message akuity.io.kargo.service.v1alpha1.ListClusterSecretsRequest
@@ -4110,10 +4422,14 @@ export const ListClusterSecretsRequestSchema: GenMessage<ListClusterSecretsReque
   messageDesc(file_api_service_v1alpha1_service, 164);
 
 /**
+ * ListClusterSecretsResponse contains a list of cluster-level secrets.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.ListClusterSecretsResponse
  */
 export type ListClusterSecretsResponse = Message<"akuity.io.kargo.service.v1alpha1.ListClusterSecretsResponse"> & {
   /**
+   * secrets is the list of cluster-level Kubernetes Secrets.
+   *
    * @generated from field: repeated k8s.io.api.core.v1.Secret secrets = 1;
    */
   secrets: Secret[];
@@ -4127,15 +4443,21 @@ export const ListClusterSecretsResponseSchema: GenMessage<ListClusterSecretsResp
   messageDesc(file_api_service_v1alpha1_service, 165);
 
 /**
+ * CreateClusterSecretRequest is the request for creating a new cluster-level secret.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.CreateClusterSecretRequest
  */
 export type CreateClusterSecretRequest = Message<"akuity.io.kargo.service.v1alpha1.CreateClusterSecretRequest"> & {
   /**
+   * name is the name of the cluster secret to create.
+   *
    * @generated from field: string name = 1;
    */
   name: string;
 
   /**
+   * data contains the key-value pairs that make up the secret data.
+   *
    * @generated from field: map<string, string> data = 2;
    */
   data: { [key: string]: string };
@@ -4149,10 +4471,14 @@ export const CreateClusterSecretRequestSchema: GenMessage<CreateClusterSecretReq
   messageDesc(file_api_service_v1alpha1_service, 166);
 
 /**
+ * CreateClusterSecretResponse contains the newly created cluster secret.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.CreateClusterSecretResponse
  */
 export type CreateClusterSecretResponse = Message<"akuity.io.kargo.service.v1alpha1.CreateClusterSecretResponse"> & {
   /**
+   * secret is the created cluster-level Kubernetes Secret.
+   *
    * @generated from field: k8s.io.api.core.v1.Secret secret = 1;
    */
   secret?: Secret;
@@ -4166,15 +4492,21 @@ export const CreateClusterSecretResponseSchema: GenMessage<CreateClusterSecretRe
   messageDesc(file_api_service_v1alpha1_service, 167);
 
 /**
+ * UpdateClusterSecretRequest is the request for updating an existing cluster secret.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.UpdateClusterSecretRequest
  */
 export type UpdateClusterSecretRequest = Message<"akuity.io.kargo.service.v1alpha1.UpdateClusterSecretRequest"> & {
   /**
+   * name is the name of the cluster secret to update.
+   *
    * @generated from field: string name = 1;
    */
   name: string;
 
   /**
+   * data contains the key-value pairs that make up the secret data.
+   *
    * @generated from field: map<string, string> data = 2;
    */
   data: { [key: string]: string };
@@ -4188,10 +4520,14 @@ export const UpdateClusterSecretRequestSchema: GenMessage<UpdateClusterSecretReq
   messageDesc(file_api_service_v1alpha1_service, 168);
 
 /**
+ * UpdateClusterSecretResponse contains the updated cluster secret information.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.UpdateClusterSecretResponse
  */
 export type UpdateClusterSecretResponse = Message<"akuity.io.kargo.service.v1alpha1.UpdateClusterSecretResponse"> & {
   /**
+   * secret is the updated cluster-level Kubernetes Secret.
+   *
    * @generated from field: k8s.io.api.core.v1.Secret secret = 1;
    */
   secret?: Secret;
@@ -4205,10 +4541,14 @@ export const UpdateClusterSecretResponseSchema: GenMessage<UpdateClusterSecretRe
   messageDesc(file_api_service_v1alpha1_service, 169);
 
 /**
+ * DeleteClusterSecretRequest is the request for deleting a cluster secret.
+ *
  * @generated from message akuity.io.kargo.service.v1alpha1.DeleteClusterSecretRequest
  */
 export type DeleteClusterSecretRequest = Message<"akuity.io.kargo.service.v1alpha1.DeleteClusterSecretRequest"> & {
   /**
+   * name is the name of the cluster secret to delete.
+   *
    * @generated from field: string name = 1;
    */
   name: string;
@@ -4222,6 +4562,8 @@ export const DeleteClusterSecretRequestSchema: GenMessage<DeleteClusterSecretReq
   messageDesc(file_api_service_v1alpha1_service, 170);
 
 /**
+ * DeleteClusterSecretResponse is the response returned after deleting a cluster secret.
+ *
  * explicitly empty 
  *
  * @generated from message akuity.io.kargo.service.v1alpha1.DeleteClusterSecretResponse

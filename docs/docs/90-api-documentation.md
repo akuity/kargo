@@ -164,10 +164,10 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-Claims"></a>
 
 ### Claims
- 
+ Claims represents a collection of OIDC claims for role-based access control.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| claims | [github.com.akuity.kargo.api.rbac.v1alpha1.Claim](#github-com-akuity-kargo-api-rbac-v1alpha1-Claim) |  Note: oneof and repeated do not work together |
+| claims | [github.com.akuity.kargo.api.rbac.v1alpha1.Claim](#github-com-akuity-kargo-api-rbac-v1alpha1-Claim) |  Note: oneof and repeated do not work together claims is the list of claims associated with a user or service account. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ComponentVersions"></a>
 
@@ -181,11 +181,11 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-CreateClusterSecretRequest"></a>
 
 ### CreateClusterSecretRequest
- 
+ CreateClusterSecretRequest is the request for creating a new cluster-level secret.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| name | [string](#string) |   |
-| data | [CreateClusterSecretRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-CreateClusterSecretRequest-DataEntry) |   |
+| name | [string](#string) |  name is the name of the cluster secret to create. |
+| data | [CreateClusterSecretRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-CreateClusterSecretRequest-DataEntry) |  data contains the key-value pairs that make up the secret data. |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateClusterSecretRequest-DataEntry"></a>
 
@@ -199,10 +199,10 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-CreateClusterSecretResponse"></a>
 
 ### CreateClusterSecretResponse
- 
+ CreateClusterSecretResponse contains the newly created cluster secret.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| secret | k8s.io.api.core.v1.Secret |   |
+| secret | k8s.io.api.core.v1.Secret |  secret is the created cluster-level Kubernetes Secret. |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateCredentialsRequest"></a>
 
@@ -256,13 +256,13 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-CreateProjectSecretRequest"></a>
 
 ### CreateProjectSecretRequest
- 
+ CreateProjectSecretRequest is the request for creating a new secret within a project.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| name | [string](#string) |   |
-| description | [string](#string) |   |
-| data | [CreateProjectSecretRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-CreateProjectSecretRequest-DataEntry) |   |
+| project | [string](#string) |  project is the name of the project where the secret will be created. |
+| name | [string](#string) |  name is the name of the secret to create. |
+| description | [string](#string) |  description is a human-readable description of the secret. |
+| data | [CreateProjectSecretRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-CreateProjectSecretRequest-DataEntry) |  data contains the key-value pairs that make up the secret data. |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateProjectSecretRequest-DataEntry"></a>
 
@@ -276,10 +276,10 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-CreateProjectSecretResponse"></a>
 
 ### CreateProjectSecretResponse
- 
+ CreateProjectSecretResponse contains the newly created project secret.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| secret | k8s.io.api.core.v1.Secret |   |
+| secret | k8s.io.api.core.v1.Secret |  secret is the created Kubernetes Secret within the project. |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateResourceRequest"></a>
 
@@ -309,44 +309,44 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-CreateRoleRequest"></a>
 
 ### CreateRoleRequest
- 
+ CreateRoleRequest is the request for creating a new RBAC role.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| role | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |   |
+| role | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |  role is the Role resource to create. |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateRoleResponse"></a>
 
 ### CreateRoleResponse
- 
+ CreateRoleResponse contains the newly created role information.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| role | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |   |
+| role | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |  role is the created Role resource. |
 
 <a name="akuity-io-kargo-service-v1alpha1-DeleteAnalysisTemplateRequest"></a>
 
 ### DeleteAnalysisTemplateRequest
- 
+ DeleteAnalysisTemplateRequest is the request for deleting an analysis template.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| name | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project containing the analysis template. |
+| name | [string](#string) |  name is the name of the analysis template to delete. |
 
 <a name="akuity-io-kargo-service-v1alpha1-DeleteAnalysisTemplateResponse"></a>
 
 ### DeleteAnalysisTemplateResponse
- explicitly empty
+ DeleteAnalysisTemplateResponse is the response returned after deleting an analysis template.  explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteClusterAnalysisTemplateRequest"></a>
 
 ### DeleteClusterAnalysisTemplateRequest
- 
+ DeleteClusterAnalysisTemplateRequest is the request for deleting a cluster analysis template.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| name | [string](#string) |   |
+| name | [string](#string) |  name is the name of the cluster analysis template to delete. |
 
 <a name="akuity-io-kargo-service-v1alpha1-DeleteClusterAnalysisTemplateResponse"></a>
 
 ### DeleteClusterAnalysisTemplateResponse
- explicitly empty
+ DeleteClusterAnalysisTemplateResponse is the response returned after deleting a cluster analysis template.  explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteClusterConfigRequest"></a>
 
 ### DeleteClusterConfigRequest
@@ -358,28 +358,28 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-DeleteClusterSecretRequest"></a>
 
 ### DeleteClusterSecretRequest
- 
+ DeleteClusterSecretRequest is the request for deleting a cluster secret.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| name | [string](#string) |   |
+| name | [string](#string) |  name is the name of the cluster secret to delete. |
 
 <a name="akuity-io-kargo-service-v1alpha1-DeleteClusterSecretResponse"></a>
 
 ### DeleteClusterSecretResponse
- explicitly empty
+ DeleteClusterSecretResponse is the response returned after deleting a cluster secret.  explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteCredentialsRequest"></a>
 
 ### DeleteCredentialsRequest
- 
+ DeleteCredentialsRequest is the request for deleting existing credentials.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| name | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project containing the credentials. |
+| name | [string](#string) |  name is the name of the credentials to delete. |
 
 <a name="akuity-io-kargo-service-v1alpha1-DeleteCredentialsResponse"></a>
 
 ### DeleteCredentialsResponse
- explicitly empty
+ DeleteCredentialsResponse is the response returned after deleting credentials.  explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteFreightRequest"></a>
 
 ### DeleteFreightRequest
@@ -421,16 +421,16 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-DeleteProjectSecretRequest"></a>
 
 ### DeleteProjectSecretRequest
- 
+ DeleteProjectSecretRequest is the request for deleting a project secret.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| name | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project containing the secret. |
+| name | [string](#string) |  name is the name of the secret to delete. |
 
 <a name="akuity-io-kargo-service-v1alpha1-DeleteProjectSecretResponse"></a>
 
 ### DeleteProjectSecretResponse
- explicitly empty
+ DeleteProjectSecretResponse is the response returned after deleting a project secret.  explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteResourceRequest"></a>
 
 ### DeleteResourceRequest
@@ -459,16 +459,16 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-DeleteRoleRequest"></a>
 
 ### DeleteRoleRequest
- 
+ DeleteRoleRequest is the request for deleting an RBAC role.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| name | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project containing the role. |
+| name | [string](#string) |  name is the name of the role to delete. |
 
 <a name="akuity-io-kargo-service-v1alpha1-DeleteRoleResponse"></a>
 
 ### DeleteRoleResponse
- explicitly empty
+ DeleteRoleResponse is the response returned after deleting a role.  explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteStageRequest"></a>
 
 ### DeleteStageRequest
@@ -506,77 +506,77 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-GetAnalysisRunLogsRequest"></a>
 
 ### GetAnalysisRunLogsRequest
- 
+ GetAnalysisRunLogsRequest is the request for retrieving logs from an analysis run.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| namespace | [string](#string) |   |
-| name | [string](#string) |   |
-| metric_name | [string](#string) |   |
-| container_name | [string](#string) |   |
+| namespace | [string](#string) |  namespace is the namespace containing the analysis run. |
+| name | [string](#string) |  name is the name of the analysis run whose logs to retrieve. |
+| metric_name | [string](#string) |  metric_name is the specific metric whose logs to retrieve. |
+| container_name | [string](#string) |  container_name is the specific container whose logs to retrieve. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetAnalysisRunLogsResponse"></a>
 
 ### GetAnalysisRunLogsResponse
- 
+ GetAnalysisRunLogsResponse contains a chunk of logs from the analysis run.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| chunk | [string](#string) |   |
+| chunk | [string](#string) |  chunk is a portion of the log output from the analysis run. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetAnalysisRunRequest"></a>
 
 ### GetAnalysisRunRequest
- 
+ GetAnalysisRunRequest is the request for retrieving a specific analysis run.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| namespace | [string](#string) |   |
-| name | [string](#string) |   |
-| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |   |
+| namespace | [string](#string) |  namespace is the namespace containing the analysis run. |
+| name | [string](#string) |  name is the name of the analysis run to retrieve. |
+| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |  format specifies the desired response format (structured object or raw YAML). |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetAnalysisRunResponse"></a>
 
 ### GetAnalysisRunResponse
- 
+ GetAnalysisRunResponse contains the requested analysis run information.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| analysis_run | [github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisRun](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-AnalysisRun) |   |
-| raw | [bytes](#bytes) |   |
+| analysis_run | [github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisRun](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-AnalysisRun) |  analysis_run is the structured AnalysisRun resource. |
+| raw | [bytes](#bytes) |  raw is the raw YAML representation of the analysis run. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetAnalysisTemplateRequest"></a>
 
 ### GetAnalysisTemplateRequest
- 
+ GetAnalysisTemplateRequest is the request for retrieving a specific analysis template.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| name | [string](#string) |   |
-| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |   |
+| project | [string](#string) |  project is the name of the project containing the analysis template. |
+| name | [string](#string) |  name is the name of the analysis template to retrieve. |
+| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |  format specifies the desired response format (structured object or raw YAML). |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetAnalysisTemplateResponse"></a>
 
 ### GetAnalysisTemplateResponse
- 
+ GetAnalysisTemplateResponse contains the requested analysis template information.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| analysis_template | [github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisTemplate](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-AnalysisTemplate) |   |
-| raw | [bytes](#bytes) |   |
+| analysis_template | [github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisTemplate](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-AnalysisTemplate) |  analysis_template is the structured AnalysisTemplate resource. |
+| raw | [bytes](#bytes) |  raw is the raw YAML representation of the analysis template. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetClusterAnalysisTemplateRequest"></a>
 
 ### GetClusterAnalysisTemplateRequest
- 
+ GetClusterAnalysisTemplateRequest is the request for retrieving a specific cluster analysis template.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| name | [string](#string) |   |
-| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |   |
+| name | [string](#string) |  name is the name of the cluster analysis template to retrieve. |
+| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |  format specifies the desired response format (structured object or raw YAML). |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetClusterAnalysisTemplateResponse"></a>
 
 ### GetClusterAnalysisTemplateResponse
- 
+ GetClusterAnalysisTemplateResponse contains the requested cluster analysis template information.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| cluster_analysis_template | [github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.ClusterAnalysisTemplate](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-ClusterAnalysisTemplate) |   |
-| raw | [bytes](#bytes) |   |
+| cluster_analysis_template | [github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.ClusterAnalysisTemplate](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-ClusterAnalysisTemplate) |  cluster_analysis_template is the structured ClusterAnalysisTemplate resource. |
+| raw | [bytes](#bytes) |  raw is the raw YAML representation of the cluster analysis template. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetClusterConfigRequest"></a>
 
@@ -598,20 +598,20 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-GetClusterPromotionTaskRequest"></a>
 
 ### GetClusterPromotionTaskRequest
- 
+ GetClusterPromotionTaskRequest is the request for retrieving a specific cluster promotion task.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| name | [string](#string) |   |
-| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |   |
+| name | [string](#string) |  name is the name of the cluster promotion task to retrieve. |
+| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |  format specifies the desired response format (structured object or raw YAML). |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetClusterPromotionTaskResponse"></a>
 
 ### GetClusterPromotionTaskResponse
- 
+ GetClusterPromotionTaskResponse contains the requested cluster promotion task information.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| promotion_task | [github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask](#github-com-akuity-kargo-api-v1alpha1-ClusterPromotionTask) |   |
-| raw | [bytes](#bytes) |   |
+| promotion_task | [github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask](#github-com-akuity-kargo-api-v1alpha1-ClusterPromotionTask) |  promotion_task is the structured ClusterPromotionTask resource. |
+| raw | [bytes](#bytes) |  raw is the raw YAML representation of the cluster promotion task. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetConfigMapRequest"></a>
 
@@ -658,21 +658,21 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-GetCredentialsRequest"></a>
 
 ### GetCredentialsRequest
- 
+ GetCredentialsRequest is the request for retrieving existing credentials.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| name | [string](#string) |   |
-| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |   |
+| project | [string](#string) |  project is the name of the project containing the credentials. |
+| name | [string](#string) |  name is the name of the credentials to retrieve. |
+| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |  format specifies the desired response format (structured object or raw YAML). |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetCredentialsResponse"></a>
 
 ### GetCredentialsResponse
- 
+ GetCredentialsResponse contains the requested credentials information.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| credentials | k8s.io.api.core.v1.Secret |   |
-| raw | [bytes](#bytes) |   |
+| credentials | k8s.io.api.core.v1.Secret |  credentials is the structured Kubernetes Secret containing the credentials. |
+| raw | [bytes](#bytes) |  raw is the raw YAML representation of the credentials. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetFreightRequest"></a>
 
@@ -752,21 +752,21 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-GetPromotionTaskRequest"></a>
 
 ### GetPromotionTaskRequest
- 
+ GetPromotionTaskRequest is the request for retrieving a specific promotion task.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| name | [string](#string) |   |
-| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |   |
+| project | [string](#string) |  project is the name of the project containing the promotion task. |
+| name | [string](#string) |  name is the name of the promotion task to retrieve. |
+| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |  format specifies the desired response format (structured object or raw YAML). |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetPromotionTaskResponse"></a>
 
 ### GetPromotionTaskResponse
- 
+ GetPromotionTaskResponse contains the requested promotion task information.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| promotion_task | [github.com.akuity.kargo.api.v1alpha1.PromotionTask](#github-com-akuity-kargo-api-v1alpha1-PromotionTask) |   |
-| raw | [bytes](#bytes) |   |
+| promotion_task | [github.com.akuity.kargo.api.v1alpha1.PromotionTask](#github-com-akuity-kargo-api-v1alpha1-PromotionTask) |  promotion_task is the structured PromotionTask resource. |
+| raw | [bytes](#bytes) |  raw is the raw YAML representation of the promotion task. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetPublicConfigRequest"></a>
 
@@ -785,23 +785,23 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-GetRoleRequest"></a>
 
 ### GetRoleRequest
- 
+ GetRoleRequest is the request for retrieving a specific RBAC role.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| name | [string](#string) |   |
-| as_resources | [bool](#bool) |   |
-| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |   |
+| project | [string](#string) |  project is the name of the project containing the role. |
+| name | [string](#string) |  name is the name of the role to retrieve. |
+| as_resources | [bool](#bool) |  as_resources indicates whether to return the role as resources or as a role object. |
+| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |  format specifies the desired response format (structured object or raw YAML). |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetRoleResponse"></a>
 
 ### GetRoleResponse
- 
+ GetRoleResponse contains the requested role information.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| role | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |   |
-| resources | [github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources](#github-com-akuity-kargo-api-rbac-v1alpha1-RoleResources) |   |
-| raw | [bytes](#bytes) |   |
+| role | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |  role is the structured Role resource. |
+| resources | [github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources](#github-com-akuity-kargo-api-rbac-v1alpha1-RoleResources) |  resources is the structured RoleResources containing the role's resources. |
+| raw | [bytes](#bytes) |  raw is the raw YAML representation of the role. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetStageRequest"></a>
 
@@ -856,21 +856,21 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-GrantRequest"></a>
 
 ### GrantRequest
- 
+ GrantRequest is the request for granting a role to a user or resource.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| role | [string](#string) |   |
-| user_claims | [Claims](#akuity-io-kargo-service-v1alpha1-Claims) |   |
-| resource_details | [github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails](#github-com-akuity-kargo-api-rbac-v1alpha1-ResourceDetails) |   |
+| project | [string](#string) |  project is the name of the project where the role will be granted. |
+| role | [string](#string) |  role is the name of the role to grant. |
+| user_claims | [Claims](#akuity-io-kargo-service-v1alpha1-Claims) |  user_claims are the OIDC claims for the user being granted the role. |
+| resource_details | [github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails](#github-com-akuity-kargo-api-rbac-v1alpha1-ResourceDetails) |  resource_details are the details of the resource being granted the role. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GrantResponse"></a>
 
 ### GrantResponse
- 
+ GrantResponse contains information about the granted role.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| role | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |   |
+| role | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |  role is the Role resource that was granted. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ImageStageMap"></a>
 
@@ -892,54 +892,54 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-ListAnalysisTemplatesRequest"></a>
 
 ### ListAnalysisTemplatesRequest
- 
+ ListAnalysisTemplatesRequest is the request for listing all analysis templates in a project.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project whose analysis templates will be listed. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListAnalysisTemplatesResponse"></a>
 
 ### ListAnalysisTemplatesResponse
- 
+ ListAnalysisTemplatesResponse contains a list of analysis templates for the specified project.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| analysis_templates | [github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisTemplate](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-AnalysisTemplate) |   |
+| analysis_templates | [github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisTemplate](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-AnalysisTemplate) |  analysis_templates is the list of AnalysisTemplate resources within the project. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListClusterAnalysisTemplatesRequest"></a>
 
 ### ListClusterAnalysisTemplatesRequest
- 
+ ListClusterAnalysisTemplatesRequest is the request for listing all cluster-level analysis templates.
 <a name="akuity-io-kargo-service-v1alpha1-ListClusterAnalysisTemplatesResponse"></a>
 
 ### ListClusterAnalysisTemplatesResponse
- 
+ ListClusterAnalysisTemplatesResponse contains a list of cluster-level analysis templates.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| cluster_analysis_templates | [github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.ClusterAnalysisTemplate](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-ClusterAnalysisTemplate) |   |
+| cluster_analysis_templates | [github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.ClusterAnalysisTemplate](#github-com-akuity-kargo-api-stubs-rollouts-v1alpha1-ClusterAnalysisTemplate) |  cluster_analysis_templates is the list of ClusterAnalysisTemplate resources. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListClusterPromotionTasksRequest"></a>
 
 ### ListClusterPromotionTasksRequest
- 
+ ListClusterPromotionTasksRequest is the request for listing all cluster-level promotion tasks.
 <a name="akuity-io-kargo-service-v1alpha1-ListClusterPromotionTasksResponse"></a>
 
 ### ListClusterPromotionTasksResponse
- 
+ ListClusterPromotionTasksResponse contains a list of cluster-level promotion tasks.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| cluster_promotion_tasks | [github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask](#github-com-akuity-kargo-api-v1alpha1-ClusterPromotionTask) |   |
+| cluster_promotion_tasks | [github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask](#github-com-akuity-kargo-api-v1alpha1-ClusterPromotionTask) |  cluster_promotion_tasks is the list of ClusterPromotionTask resources. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListClusterSecretsRequest"></a>
 
 ### ListClusterSecretsRequest
- explicitly empty
+ ListClusterSecretsRequest is the request for listing all cluster-level secrets.  explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-ListClusterSecretsResponse"></a>
 
 ### ListClusterSecretsResponse
- 
+ ListClusterSecretsResponse contains a list of cluster-level secrets.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| secrets | k8s.io.api.core.v1.Secret |   |
+| secrets | k8s.io.api.core.v1.Secret |  secrets is the list of cluster-level Kubernetes Secrets. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListConfigMapsRequest"></a>
 
@@ -960,18 +960,18 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-ListCredentialsRequest"></a>
 
 ### ListCredentialsRequest
- 
+ ListCredentialsRequest is the request for listing all credentials in a project.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project whose credentials will be listed. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListCredentialsResponse"></a>
 
 ### ListCredentialsResponse
- 
+ ListCredentialsResponse contains a list of credentials for the specified project.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| credentials | k8s.io.api.core.v1.Secret |   |
+| credentials | k8s.io.api.core.v1.Secret |  credentials is the list of Kubernetes Secrets containing the credentials. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListImagesRequest"></a>
 
@@ -1001,34 +1001,34 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-ListProjectEventsRequest"></a>
 
 ### ListProjectEventsRequest
- 
+ ListProjectEventsRequest is the request for listing events in a project.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project whose events will be listed. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListProjectEventsResponse"></a>
 
 ### ListProjectEventsResponse
- 
+ ListProjectEventsResponse contains a list of events for the specified project.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| events | k8s.io.api.core.v1.Event |   |
+| events | k8s.io.api.core.v1.Event |  events is the list of Kubernetes Events within the project. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListProjectSecretsRequest"></a>
 
 ### ListProjectSecretsRequest
- 
+ ListProjectSecretsRequest is the request for listing all secrets in a project.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project whose secrets will be listed. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListProjectSecretsResponse"></a>
 
 ### ListProjectSecretsResponse
- 
+ ListProjectSecretsResponse contains a list of secrets for the specified project.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| secrets | k8s.io.api.core.v1.Secret |   |
+| secrets | k8s.io.api.core.v1.Secret |  secrets is the list of Kubernetes Secrets within the project. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListProjectsRequest"></a>
 
@@ -1052,18 +1052,18 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-ListPromotionTasksRequest"></a>
 
 ### ListPromotionTasksRequest
- 
+ ListPromotionTasksRequest is the request for listing promotion tasks in a project.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project whose promotion tasks will be listed. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListPromotionTasksResponse"></a>
 
 ### ListPromotionTasksResponse
- 
+ ListPromotionTasksResponse contains a list of promotion tasks for the specified project.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| promotion_tasks | [github.com.akuity.kargo.api.v1alpha1.PromotionTask](#github-com-akuity-kargo-api-v1alpha1-PromotionTask) |   |
+| promotion_tasks | [github.com.akuity.kargo.api.v1alpha1.PromotionTask](#github-com-akuity-kargo-api-v1alpha1-PromotionTask) |  promotion_tasks is the list of PromotionTask resources within the project. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListPromotionsRequest"></a>
 
@@ -1085,20 +1085,20 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-ListRolesRequest"></a>
 
 ### ListRolesRequest
- 
+ ListRolesRequest is the request for listing all roles in a project.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| as_resources | [bool](#bool) |   |
+| project | [string](#string) |  project is the name of the project whose roles will be listed. |
+| as_resources | [bool](#bool) |  as_resources indicates whether to return roles as resources or as role objects. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListRolesResponse"></a>
 
 ### ListRolesResponse
- 
+ ListRolesResponse contains a list of roles for the specified project.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| roles | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |  Note: oneof and repeated do not work together |
-| resources | [github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources](#github-com-akuity-kargo-api-rbac-v1alpha1-RoleResources) |   |
+| roles | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |  Note: oneof and repeated do not work together roles is the list of Role resources when requested as roles. |
+| resources | [github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources](#github-com-akuity-kargo-api-rbac-v1alpha1-RoleResources) |  resources is the list of RoleResources when requested as resources. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListStagesRequest"></a>
 
@@ -1290,21 +1290,21 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-RevokeRequest"></a>
 
 ### RevokeRequest
- 
+ RevokeRequest is the request for revoking a role from a user or resource.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| role | [string](#string) |   |
-| user_claims | [Claims](#akuity-io-kargo-service-v1alpha1-Claims) |   |
-| resource_details | [github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails](#github-com-akuity-kargo-api-rbac-v1alpha1-ResourceDetails) |   |
+| project | [string](#string) |  project is the name of the project where the role will be revoked. |
+| role | [string](#string) |  role is the name of the role to revoke. |
+| user_claims | [Claims](#akuity-io-kargo-service-v1alpha1-Claims) |  user_claims are the OIDC claims for the user whose role is being revoked. |
+| resource_details | [github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails](#github-com-akuity-kargo-api-rbac-v1alpha1-ResourceDetails) |  resource_details are the details of the resource whose role is being revoked. |
 
 <a name="akuity-io-kargo-service-v1alpha1-RevokeResponse"></a>
 
 ### RevokeResponse
- 
+ RevokeResponse contains information about the revoked role.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| role | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |   |
+| role | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |  role is the Role resource that was revoked. |
 
 <a name="akuity-io-kargo-service-v1alpha1-TagMap"></a>
 
@@ -1326,11 +1326,11 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-UpdateClusterSecretRequest"></a>
 
 ### UpdateClusterSecretRequest
- 
+ UpdateClusterSecretRequest is the request for updating an existing cluster secret.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| name | [string](#string) |   |
-| data | [UpdateClusterSecretRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-UpdateClusterSecretRequest-DataEntry) |   |
+| name | [string](#string) |  name is the name of the cluster secret to update. |
+| data | [UpdateClusterSecretRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-UpdateClusterSecretRequest-DataEntry) |  data contains the key-value pairs that make up the secret data. |
 
 <a name="akuity-io-kargo-service-v1alpha1-UpdateClusterSecretRequest-DataEntry"></a>
 
@@ -1344,33 +1344,33 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-UpdateClusterSecretResponse"></a>
 
 ### UpdateClusterSecretResponse
- 
+ UpdateClusterSecretResponse contains the updated cluster secret information.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| secret | k8s.io.api.core.v1.Secret |   |
+| secret | k8s.io.api.core.v1.Secret |  secret is the updated cluster-level Kubernetes Secret. |
 
 <a name="akuity-io-kargo-service-v1alpha1-UpdateCredentialsRequest"></a>
 
 ### UpdateCredentialsRequest
- 
+ UpdateCredentialsRequest is the request for updating existing credentials.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| name | [string](#string) |   |
-| description | [string](#string) |   |
-| type | [string](#string) |   |
-| repo_url | [string](#string) |   |
-| repo_url_is_regex | [bool](#bool) |   |
-| username | [string](#string) |   |
-| password | [string](#string) |   |
+| project | [string](#string) |  project is the name of the project containing the credentials. |
+| name | [string](#string) |  name is the name of the credentials to update. |
+| description | [string](#string) |  description is a human-readable description of the credentials. |
+| type | [string](#string) |  type specifies the credential type (git, helm, image). |
+| repo_url | [string](#string) |  repo_url is the URL of the repository or registry these credentials apply to. |
+| repo_url_is_regex | [bool](#bool) |  repo_url_is_regex indicates whether repo_url should be treated as a regular expression. |
+| username | [string](#string) |  username is the username for authentication. |
+| password | [string](#string) |  password is the password or token for authentication. |
 
 <a name="akuity-io-kargo-service-v1alpha1-UpdateCredentialsResponse"></a>
 
 ### UpdateCredentialsResponse
- 
+ UpdateCredentialsResponse contains the updated credentials information.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| credentials | k8s.io.api.core.v1.Secret |   |
+| credentials | k8s.io.api.core.v1.Secret |  credentials is the updated Kubernetes Secret containing the credentials. |
 
 <a name="akuity-io-kargo-service-v1alpha1-UpdateFreightAliasRequest"></a>
 
@@ -1390,13 +1390,13 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-UpdateProjectSecretRequest"></a>
 
 ### UpdateProjectSecretRequest
- 
+ UpdateProjectSecretRequest is the request for updating an existing project secret.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |   |
-| name | [string](#string) |   |
-| description | [string](#string) |   |
-| data | [UpdateProjectSecretRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-UpdateProjectSecretRequest-DataEntry) |   |
+| project | [string](#string) |  project is the name of the project containing the secret. |
+| name | [string](#string) |  name is the name of the secret to update. |
+| description | [string](#string) |  description is a human-readable description of the secret. |
+| data | [UpdateProjectSecretRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-UpdateProjectSecretRequest-DataEntry) |  data contains the key-value pairs that make up the secret data. |
 
 <a name="akuity-io-kargo-service-v1alpha1-UpdateProjectSecretRequest-DataEntry"></a>
 
@@ -1410,10 +1410,10 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-UpdateProjectSecretResponse"></a>
 
 ### UpdateProjectSecretResponse
- 
+ UpdateProjectSecretResponse contains the updated project secret information.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| secret | k8s.io.api.core.v1.Secret |   |
+| secret | k8s.io.api.core.v1.Secret |  secret is the updated Kubernetes Secret within the project. |
 
 <a name="akuity-io-kargo-service-v1alpha1-UpdateResourceRequest"></a>
 
@@ -1443,18 +1443,18 @@ including stages, promotions, freight, warehouses, credentials, and related reso
 <a name="akuity-io-kargo-service-v1alpha1-UpdateRoleRequest"></a>
 
 ### UpdateRoleRequest
- 
+ UpdateRoleRequest is the request for updating an existing RBAC role.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| role | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |   |
+| role | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |  role is the updated Role resource. |
 
 <a name="akuity-io-kargo-service-v1alpha1-UpdateRoleResponse"></a>
 
 ### UpdateRoleResponse
- 
+ UpdateRoleResponse contains the updated role information.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| role | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |   |
+| role | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |  role is the updated Role resource. |
 
 <a name="akuity-io-kargo-service-v1alpha1-VersionInfo"></a>
 
