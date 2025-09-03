@@ -1,4 +1,8 @@
+import { faMap } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Controls, MiniMap, ReactFlow, useNodesState } from '@xyflow/react';
+import { Button } from 'antd';
+import classNames from 'classnames';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { queryCache } from '@ui/features/utils/cache';
@@ -160,10 +164,26 @@ export const Graph = (props: GraphProps) => {
             />
           </div>
         )}
-        <MiniMap
-          style={{ background: 'white', border: '1px solid lightblue', borderRadius: '5px' }}
-          pannable
+        <Button
+          className={classNames('absolute right-5 z-10', {
+            'bottom-44': filterContext?.preferredFilter?.showMinimap,
+            'bottom-5': !filterContext?.preferredFilter?.showMinimap
+          })}
+          title={filterContext?.preferredFilter?.showMinimap ? 'Hide Minimap' : 'Show Minimap'}
+          icon={<FontAwesomeIcon icon={faMap} />}
+          onClick={() =>
+            filterContext?.setPreferredFilter({
+              ...filterContext?.preferredFilter,
+              showMinimap: !filterContext?.preferredFilter?.showMinimap
+            })
+          }
         />
+        {filterContext?.preferredFilter?.showMinimap && (
+          <MiniMap
+            style={{ background: 'white', border: '1px solid lightblue', borderRadius: '5px' }}
+            pannable
+          />
+        )}
         <Controls
           showInteractive={false}
           onFitView={() => {
