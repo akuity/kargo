@@ -42,15 +42,36 @@ export const versionColumn = (): ColumnType<Stage> => ({
 
         <div>
           {firstFreight?.commits?.slice(0, 2).map((commit) => (
-            <FreightArtifact expand key={commit?.repoURL} artifact={commit} />
+            <FreightArtifact
+              expand
+              key={commit?.repoURL}
+              artifact={commit}
+              showArtifactIcons={
+                freightTimelineControllerContext?.preferredFilter?.showArtifactIcons
+              }
+            />
           ))}
 
           {firstFreight?.charts?.slice(0, 2).map((chart) => (
-            <FreightArtifact expand key={chart?.repoURL} artifact={chart} />
+            <FreightArtifact
+              expand
+              key={chart?.repoURL}
+              artifact={chart}
+              showArtifactIcons={
+                freightTimelineControllerContext?.preferredFilter?.showArtifactIcons
+              }
+            />
           ))}
 
           {firstFreight?.images?.slice(0, 2).map((image) => (
-            <FreightArtifact expand key={image?.repoURL} artifact={image} />
+            <FreightArtifact
+              expand
+              key={image?.repoURL}
+              artifact={image}
+              showArtifactIcons={
+                freightTimelineControllerContext?.preferredFilter?.showArtifactIcons
+              }
+            />
           ))}
 
           {totalArtifacts > 6 && (
