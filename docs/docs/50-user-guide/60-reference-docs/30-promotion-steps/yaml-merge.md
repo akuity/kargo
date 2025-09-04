@@ -1,16 +1,16 @@
 ---
 sidebar_label: yaml-merge
-description: Merge multiple YAML file into a single file.
+description: Merge multiple YAML files into a single file.
 ---
 
 # `yaml-merge`
 
 `yaml-merge` merges multiple YAML files into a single file.
-YAML files are merged in order, so the first in the list
-is the base values, and all subsequent files are "overlays",
-modifying the base values.
-When `ignoreMissingFiles` is set to true, missing files will
-be ignored and the directive will succeed.
+YAML files are merged in order.The first file in the list
+is the source, and all subsequent files are applied over it.
+
+When `ignoreMissingFiles` is false (default), the step will fail
+if a file from `inPaths` does not exist.
 
 
 :::note
