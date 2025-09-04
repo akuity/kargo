@@ -522,10 +522,10 @@ type UntarConfig struct {
 type YAMLMergeConfig struct {
 	// allow directive to pass even if an input file does not exist.
 	IgnoreMissingFiles bool `json:"ignoreMissingFiles,omitempty"`
-	// InPaths is the list of paths of YAML files to merge
-	InPaths []string `json:"inPaths"`
-	// OutPath is the path to the merged YAML file to created or updated.
-	OutPath string `json:"outPath"`
+	// InFiles is the list of paths of YAML files to merge
+	InFiles []string `json:"inFiles"`
+	// OutFile is the path to the merged YAML file to created or updated.
+	OutFile string `json:"outFile"`
 }
 
 type YAMLParseConfig struct {

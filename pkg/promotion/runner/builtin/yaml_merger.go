@@ -26,13 +26,13 @@ func init() {
 }
 
 // yamlMerger is an implementation of the promotion.StepRunner interface that
-// updates do a merge of the multiple YAML files.
+// merges multiple YAML files.
 type yamlMerger struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
 // newYAMLMerger returns an implementation of the promotion.StepRunner interface
-// that updates the values of specified keys in a YAML file.
+// that merges multiple YAML files.
 func newYAMLMerger() promotion.StepRunner {
 	r := &yamlMerger{}
 	r.schemaLoader = getConfigSchemaLoader(r.Name())
@@ -49,19 +49,21 @@ func (y *yamlMerger) Run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
-	failure := promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}
-
-	if err := y.validate(stepCtx.Config); err != nil {
-		return failure, err
-	}
-
-	// Convert the configuration into a typed struct
-	cfg, err := promotion.ConfigToStruct[builtin.YAMLMergeConfig](stepCtx.Config)
+	cfg, err := y.convert(stepCtx.Config)
 	if err != nil {
-		return failure, fmt.Errorf("could not convert config into %s config: %w", y.Name(), err)
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusFailed,
+		}, &promotion.TerminalError{Err: err}
 	}
-
 	return y.run(ctx, stepCtx, cfg)
+}
+
+// convert validates yamlMerger configuration against a JSON schema and
+// converts it into a builtin.YAMLMergeConfig struct.
+func (y *yamlMerger) convert(
+	cfg promotion.Config,
+) (builtin.YAMLMergeConfig, error) {
+	return validateAndConvert[builtin.YAMLMergeConfig](y.schemaLoader, cfg, f.Name())
 }
 
 // validate validates yamlMerger configuration against a JSON schema.
@@ -78,18 +80,19 @@ func (y *yamlMerger) run(
 	result := promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}
 	failure := promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}
 
-	mergedFiles := []string{} // keep track of files actually merged
+	// Keep track of files actually merged.
+	mergedFiles := make([]string, 0, len(cfg.InFiles))
 
 	// Secure join the paths to prevent path traversal attacks.
 	yamlData := []string{}
-	for _, path := range cfg.InPaths {
-		inPath, err := securejoin.SecureJoin(stepCtx.WorkDir, path)
+	for _, path := range cfg.InFiles {
+		inFile, err := securejoin.SecureJoin(stepCtx.WorkDir, path)
 		if err != nil {
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-				fmt.Errorf("could not secure join inPath %q: %w", path, err)
+				fmt.Errorf("could not secure join input file %q: %w", path, err)
 		}
 
-		inBytes, err := os.ReadFile(inPath)
+		inBytes, err := os.ReadFile(inFile)
 		if err != nil {
 			// we skip if file does not exist
 			if cfg.IgnoreMissingFiles && os.IsNotExist(err) {
@@ -97,7 +100,7 @@ func (y *yamlMerger) run(
 			}
 			return failure, fmt.Errorf(
 				"error reading file %q: %w",
-				inPath,
+				inFile,
 				err,
 			)
 		}
@@ -111,29 +114,29 @@ func (y *yamlMerger) run(
 		yamlData = append(yamlData, string(inBytes))
 	}
 
-	// merge YAML files
+	// Merge
 	outYAML, err := yaml.MergeYAMLFiles(yamlData)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("could not merge YAML files: %w", err)
 	}
 
-	// write yaml file
-	outPath, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutPath)
+	// Write out a single YAML file.
+	outFile, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutFile)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("could not secure join outPath %q: %w", cfg.OutPath, err)
+			fmt.Errorf("could not secure join outFile %q: %w", cfg.OutFile, err)
 	}
 
-	if err = os.MkdirAll(filepath.Dir(outPath), 0o700); err != nil {
-		return failure, fmt.Errorf("error creating directory structure %s: %w", filepath.Dir(outPath), err)
+	if err = os.MkdirAll(filepath.Dir(outFile), 0o700); err != nil {
+		return failure, fmt.Errorf("error creating directory structure %s: %w", filepath.Dir(outFile), err)
 	}
-	if err = os.WriteFile(outPath, []byte(outYAML), 0o600); err != nil {
-		return failure, fmt.Errorf("error writing to file %s: %w", outPath, err)
+	if err = os.WriteFile(outFile, []byte(outYAML), 0o600); err != nil {
+		return failure, fmt.Errorf("error writing to file %s: %w", outFile, err)
 	}
 
-	// add commit msg
-	if commitMsg := y.generateCommitMessage(cfg.OutPath, mergedFiles); commitMsg != "" {
+	// Add a commit message fragment to the step's output.
+	if commitMsg := y.generateCommitMessage(cfg.OutFile, mergedFiles); commitMsg != "" {
 		result.Output = map[string]any{
 			"commitMessage": commitMsg,
 		}
@@ -142,19 +145,14 @@ func (y *yamlMerger) run(
 }
 
 func (y *yamlMerger) generateCommitMessage(path string, fileList []string) string {
-	if len(path) <= 1 {
-		return "no YAML file merged"
+	if len(fileList) <= 1 {
+		return "no YAML files merged"
 	}
 
 	var commitMsg strings.Builder
 	_, _ = commitMsg.WriteString(fmt.Sprintf("Merged YAML files to %s\n", path))
 	for _, file := range fileList {
-		_, _ = commitMsg.WriteString(
-			fmt.Sprintf(
-				"\n- %s",
-				file,
-			),
-		)
+		_, _ = commitMsg.WriteString(fmt.Sprintf("\n- %s", file))
 	}
 
 	return commitMsg.String()
