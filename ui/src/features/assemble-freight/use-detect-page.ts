@@ -35,7 +35,7 @@ export const useDetectPage = (
       return;
     }
 
-    setPage(Math.ceil(index / pageLimit));
+    setPage(Math.ceil((index + 1) / pageLimit));
   }, [items, selected, pause]);
 
   return [page, setPage] as const;

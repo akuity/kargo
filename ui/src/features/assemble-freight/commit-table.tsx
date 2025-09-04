@@ -18,7 +18,7 @@ export const CommitTable = ({
   select: (commit?: DiscoveredCommit) => void;
   show?: boolean;
 }) => {
-  const [page, setPage] = useDetectPage(commits, selected, show);
+  const [page, setPage] = useDetectPage(commits, selected, !show);
 
   const doesAnyOfCommitsHaveTag = useMemo(() => commits?.find((c) => !!c?.tag), [commits]);
 
