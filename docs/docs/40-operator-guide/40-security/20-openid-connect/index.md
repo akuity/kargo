@@ -6,7 +6,7 @@ sidebar_label: OpenID Connect
 
 By design, Kargo has no built-in system of registering and managing users.
 Assuming the lone, built-in admin account is disabled, as recommended
-[here](./10-secure-configuration.md#disabling-the-admin-account), you will need
+[here](../10-secure-configuration.md#disabling-the-admin-account), you will need
 to configure Kargo to authenticate users via an external identity provider
 (IDP). This is recommended even in the case of the admin account not having been
 disabled, as it is the only way to grant users access to Kargo without
@@ -44,8 +44,8 @@ regardless. We will show how to work around such a constraint._
 
 :::info
 Whether you're installing Kargo
-[using Helm](../20-advanced-installation/10-advanced-with-helm.md) or
-[via Argo CD](../20-advanced-installation/20-advanced-with-argocd.md), the
+[using Helm](../../20-advanced-installation/10-advanced-with-helm.md) or
+[via Argo CD](../../20-advanced-installation/20-advanced-with-argocd.md), the
 next two sections assume familiarity with procedures for configuring that
 installation.
 :::
@@ -117,7 +117,7 @@ When installing Kargo with Helm, all options related to OIDC are grouped under
 
     If there are additional claims you need because either you or administrators
     of individual projects will use them in mapping users to roles
-    (see [Access Controls](30-access-controls.md)), add the
+    (see [Access Controls](../30-access-controls.md)), add the
     corresponding scopes to the list. Consult your IDP's documentation to
     discover what scopes are available.
 
