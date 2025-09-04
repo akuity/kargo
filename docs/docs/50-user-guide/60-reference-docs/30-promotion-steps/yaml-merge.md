@@ -70,15 +70,35 @@ steps:
       - ./src/charts/qa/values.yaml
       - ./src/charts/qa/cluster-a/values.yaml
     outPath: ./out/charts/my-chart/values.yaml
-- uses: copy
-  config:
-    inPath: ./src/charts/my-chart/Chart.yaml
-    outPath: ./out/charts/my-chart/Chart.yaml
-- uses: git-commit
-  config:
-    message: "updated Chart values"
-    path: ./out
-- uses: git-push
-  config:
-    path: ./out
+# Render manifests to ./out, commit, push, etc...
+```
+
+
+Given the sample input YAMLs:
+
+**charts/my-chart/values.yaml**
+```yaml
+service:
+  enabled: false
+```
+
+**charts/qa/values.yaml**
+```yaml
+service:
+  enabled: true
+```
+
+**charts/qa/cluster-a/values.yaml**
+```yaml
+service:
+  type: LoadBalancer
+```
+
+The step would produce the following output:
+
+**charts/my-chart/values.yaml**
+```yaml
+service:
+  enabled: true
+  type: LoadBalancer
 ```
