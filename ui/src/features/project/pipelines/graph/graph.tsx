@@ -1,8 +1,6 @@
 import { faMap } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Controls, MiniMap, ReactFlow, useNodesState } from '@xyflow/react';
-import { Button } from 'antd';
-import classNames from 'classnames';
+import { ControlButton, Controls, MiniMap, ReactFlow, useNodesState } from '@xyflow/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { queryCache } from '@ui/features/utils/cache';
@@ -164,20 +162,6 @@ export const Graph = (props: GraphProps) => {
             />
           </div>
         )}
-        <Button
-          className={classNames('absolute right-5 z-10', {
-            'bottom-44': filterContext?.preferredFilter?.showMinimap,
-            'bottom-5': !filterContext?.preferredFilter?.showMinimap
-          })}
-          title={filterContext?.preferredFilter?.showMinimap ? 'Hide Minimap' : 'Show Minimap'}
-          icon={<FontAwesomeIcon icon={faMap} />}
-          onClick={() =>
-            filterContext?.setPreferredFilter({
-              ...filterContext?.preferredFilter,
-              showMinimap: !filterContext?.preferredFilter?.showMinimap
-            })
-          }
-        />
         {filterContext?.preferredFilter?.showMinimap && (
           <MiniMap
             style={{ background: 'white', border: '1px solid lightblue', borderRadius: '5px' }}
@@ -189,7 +173,19 @@ export const Graph = (props: GraphProps) => {
           onFitView={() => {
             setRedraw(!redraw);
           }}
-        />
+        >
+          <ControlButton
+            title={filterContext?.preferredFilter?.showMinimap ? 'Hide Minimap' : 'Show Minimap'}
+            onClick={() =>
+              filterContext?.setPreferredFilter({
+                ...filterContext?.preferredFilter,
+                showMinimap: !filterContext?.preferredFilter?.showMinimap
+              })
+            }
+          >
+            <FontAwesomeIcon icon={faMap} />
+          </ControlButton>
+        </Controls>
       </ReactFlow>
     </GraphContext.Provider>
   );
