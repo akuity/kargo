@@ -386,14 +386,14 @@ Example:
 
 ```yaml
 config:
-  # Access metadata values using ['key-name'] syntax
+  # Access metadata values using dot notation
   category: ${{ freightMetadata(ctx.targetFreight.name).category }}
 
   # Using nil coalescing (??) to provide default values if metadata is missing
-  tier: ${{ stageMetadata(ctx.stage)['tier'] ?? "default-tier" }}
+  settings: ${{ freightMetadata(ctx.targetFreight.name)['settings'] ?? "default-settings" }}
 
   # Using optional chaining (?.) with nil coalescing for nested values
-  nested: ${{ stageMetadata(ctx.stage)?.config?.settings?.timeoutSeconds ?? 300 }}
+  nested: ${{ freightMetadata(ctx.targetFreight.name)?.config?.settings?.timeoutSeconds ?? 300 }}
 ```
 
 :::tip
@@ -407,8 +407,9 @@ features.
 An optional second argument (`freightMetadata(freightName, 'key-name')`) is supported
 but deprecated as of `v1.8` and will be removed in `v1.10`. While the two-argument
 form returns a single value for the specified key, the single-argument form returns
-the complete metadata map. To migrate, use the single-argument form with map access
-syntax: `freightMetadata(freightName)['key-name']`.
+the complete metadata map. To migrate, use either dot notation
+(`freightMetadata(freightName).keyName`) or map access syntax
+(`freightMetadata(freightName)['key-name']`) to access specific values.
 :::
 
 ### `stageMetadata(stageName)`

@@ -3,7 +3,6 @@ package builtin
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/xeipuuv/gojsonschema"
 	"k8s.io/apimachinery/pkg/types"
@@ -61,42 +60,20 @@ func (s *metadataSetter) run(
 	_ *promotion.StepContext,
 	cfg builtin.SetMetadataConfig,
 ) (promotion.StepResult, error) {
-
-	type updateGroup struct {
-		kind   string
-		values map[string]any
-	}
-
-	updatesByResource := make(map[string]*updateGroup)
-
-	for _, u := range cfg.Updates {
-		key := fmt.Sprintf("%s/%s", u.Kind, u.Name)
-		if _, exists := updatesByResource[key]; !exists {
-			updatesByResource[key] = &updateGroup{
-				kind:   string(u.Kind),
-				values: make(map[string]any),
-			}
-		}
-		for k, v := range u.Values {
-			updatesByResource[key].values[k] = v
-		}
-	}
-
 	type metadataUpsertable interface {
 		UpsertMetadata(key string, value any) error
 	}
 
-	for key, group := range updatesByResource {
+	for _, update := range cfg.Updates {
 		var obj client.Object
 		var upsertable metadataUpsertable
 
-		resourceName := key[strings.Index(key, "/")+1:]
-		switch group.kind {
+		switch update.Kind {
 		case "Stage":
 			stage := &kargoapi.Stage{}
 			if err := s.kargoClient.Get(
 				ctx,
-				types.NamespacedName{Name: resourceName},
+				types.NamespacedName{Name: update.Name},
 				stage,
 			); err != nil {
 				return promotion.StepResult{
@@ -109,7 +86,7 @@ func (s *metadataSetter) run(
 			freight := &kargoapi.Freight{}
 			if err := s.kargoClient.Get(
 				ctx,
-				types.NamespacedName{Name: resourceName},
+				types.NamespacedName{Name: update.Name},
 				freight,
 			); err != nil {
 				return promotion.StepResult{
@@ -122,11 +99,11 @@ func (s *metadataSetter) run(
 			return promotion.StepResult{
 					Status: kargoapi.PromotionStepStatusFailed,
 				}, &promotion.TerminalError{
-					Err: fmt.Errorf("unsupported kind %q", group.kind),
+					Err: fmt.Errorf("unsupported kind %q", update.Kind),
 				}
 		}
 
-		for k, v := range group.values {
+		for k, v := range update.Values {
 			if err := upsertable.UpsertMetadata(k, v); err != nil {
 				return promotion.StepResult{
 					Status: kargoapi.PromotionStepStatusErrored,
@@ -137,7 +114,7 @@ func (s *metadataSetter) run(
 		if err := s.kargoClient.Status().Update(ctx, obj); err != nil {
 			return promotion.StepResult{
 				Status: kargoapi.PromotionStepStatusErrored,
-			}, fmt.Errorf("failed to update status for %s: %w", key, err)
+			}, fmt.Errorf("failed to update status for %s/%s: %w", update.Kind, update.Name, err)
 		}
 	}
 
