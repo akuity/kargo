@@ -9,8 +9,8 @@ description: Merge multiple YAML files into a single file.
 YAML files are merged in order.The first file in the list
 is the source, and all subsequent files are applied over it.
 
-When `ignoreMissingFiles` is false (default), the step will fail
-if a file from `inPaths` does not exist.
+When `ignoreMissingFiles` is false (default), the Task will fail
+if any file from `inPaths` does not exist.
 
 
 :::note
@@ -39,10 +39,11 @@ Merging is done with usual constrains:
 
 ### Common Usage
 
-In this example, two Helm value files, one global, one more specific, are merged
+In this example, three Helm value files, one global, one more specific
+for the QA environment and a last one specific to the cluster, are merged
 into a new single file, that is then commited to the deployment branch.
 
-This pattern is commonly used when you need to merge global values
+This pattern is commonly used when you need to merge multiple value files
 into a final `values.yaml` file, to be used by Helm.
 
 ```yaml
@@ -69,5 +70,15 @@ steps:
       - ./src/charts/qa/values.yaml
       - ./src/charts/qa/cluster-a/values.yaml
     outPath: ./out/charts/my-chart/values.yaml
-# Render manifests to ./out, commit, push, etc...
+- uses: copy
+  config:
+    inPath: ./src/charts/my-chart/Chart.yaml
+    outPath: ./out/charts/my-chart/Chart.yaml
+- uses: git-commit
+  config:
+    message: "updated Chart values"
+    path: ./out
+- uses: git-push
+  config:
+    path: ./out
 ```
