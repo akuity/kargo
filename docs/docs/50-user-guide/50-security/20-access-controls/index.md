@@ -25,7 +25,7 @@ provider (IDP) that implements the
 [OpenID Connect](https://openid.net/developers/how-connect-works/) (OIDC)
 protocol. Configuring this is the responsibility of the operator and is
 discussed in-depth in the dedicated
-[OpenID Connect](../../../40-operator-guide/40-security/20-openid-connect.md)
+[OpenID Connect](../../../40-operator-guide/40-security/20-openid-connect/index.md)
 section of the Operator Guide.
 
 Kargo also implements access controls through _pure Kubernetes
