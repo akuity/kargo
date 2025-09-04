@@ -120,10 +120,10 @@ func (s *metadataSetter) run(
 			upsertable = &freight.Status
 		default:
 			return promotion.StepResult{
-				Status: kargoapi.PromotionStepStatusFailed,
-			}, &promotion.TerminalError{
-				Err: fmt.Errorf("unsupported kind %q", group.kind),
-			}
+					Status: kargoapi.PromotionStepStatusFailed,
+				}, &promotion.TerminalError{
+					Err: fmt.Errorf("unsupported kind %q", group.kind),
+				}
 		}
 
 		for k, v := range group.values {
