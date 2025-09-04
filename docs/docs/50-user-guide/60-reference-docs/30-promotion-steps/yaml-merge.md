@@ -1,50 +1,53 @@
 ---
 sidebar_label: yaml-merge
-description: Merge multiple YAML files into a single file.
+description: Merges multiple YAML files into a single file.
 ---
 
 # `yaml-merge`
 
 `yaml-merge` merges multiple YAML files into a single file.
-YAML files are merged in order.The first file in the list
+YAML files are merged in order. The first file in the list
 is the source, and all subsequent files are applied over it.
 
-When `ignoreMissingFiles` is false (default), the Task will fail
-if any file from `inPaths` does not exist.
-
+When `ignoreMissingFiles` is false (default), the step will fail
+if any file from `inFiles` does not exist.
 
 :::note
-Merging is done with usual constrains:
-- new objects are added
-- object with same name are modified
-- lists are replaced by latest version (no merge)
-- null values delete the object
+Merging is performed as follows:
+- **Scalar values:** If both documents define a scalar (string, number, boolean)
+  at the same key, the value from the second document overrides the first.
+- **Mapping (object) values:** If both documents define a mapping at the same
+  key, the mappings are merged recursively.
+- **Sequence (array) values:** If both documents define a sequence at the same
+  key, the sequence from the second document replaces the first (no merging).
+- **Keys present only in one document:** Keys that exist in only one document
+  are included as-is in the result.
+- **Null values:** If a key is set to `null` in the second document, it removes
+  or overrides the value from the first document.
 :::
 
 ## Configuration
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `inPaths` | `[]string` | Y | Paths to a YAML files. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
-| `outPath` | `string`   | Y | The path to the output file. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
+| `inFiles` | `[]string` | Y | Paths to a YAML files. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
+| `outFile` | `string`   | Y | The path to the output file. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `ignoreMissingFiles` | `bool` | N | When set to true, the directive will skip input files that does not exist. Defaults to `false`. |
 
 ## Output
 
 | Name | Type | Description |
 |------|------|-------------|
-| `commitMessage` | `string` | A description of the change(s) applied by this step. Typically, a subsequent [`git-commit` step](git-commit.md) will reference this output and aggregate this commit message fragment with other like it to build a comprehensive commit message that describes all changes. |
+| `commitMessage` | `string` | A description of the change(s) applied by this step. Typically, a subsequent [`git-commit` step](git-commit.md) will reference this output and aggregate this commit message fragment with others like it to build a comprehensive commit message that describes all changes. |
 
 ## Examples
 
 ### Common Usage
 
-In this example, three Helm value files, one global, one more specific
-for the QA environment and a last one specific to the cluster, are merged
-into a new single file, that is then commited to the deployment branch.
-
-This pattern is commonly used when you need to merge multiple value files
-into a final `values.yaml` file, to be used by Helm.
+In the following example, multiple Helm values files (one "base", a second with
+environment-specific overrides, and a third with cluster-specific overrides) are
+merged into a new, single file, which is then committed to a Stage-specific
+branch:
 
 ```yaml
 vars:
@@ -65,16 +68,15 @@ steps:
     path: ./out
 - uses: yaml-merge
   config:
-    inPaths:
-      - ./src/charts/my-chart/values.yaml
-      - ./src/charts/qa/values.yaml
-      - ./src/charts/qa/cluster-a/values.yaml
-    outPath: ./out/charts/my-chart/values.yaml
+    inFiles:
+    - ./src/charts/my-chart/values.yaml
+    - ./src/charts/qa/values.yaml
+    - ./src/charts/qa/cluster-a/values.yaml
+    outFile: ./out/charts/my-chart/values.yaml
 # Render manifests to ./out, commit, push, etc...
 ```
 
-
-Given the sample input YAMLs:
+Given the following sample input files:
 
 **charts/my-chart/values.yaml**
 ```yaml

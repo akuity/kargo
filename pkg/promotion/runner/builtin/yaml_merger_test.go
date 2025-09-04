@@ -21,48 +21,48 @@ func Test_yamlMerger_validate(t *testing.T) {
 		expectedError string
 	}{
 		{
-			name: "inPaths not specified (missing path field)",
+			name: "inFiles not specified (missing path field)",
 			config: map[string]any{
-				"outPath": "valid.yaml",
+				"outFile": "valid.yaml",
 			},
-			expectedError: "(root): inPaths is required",
+			expectedError: "(root): inFiles is required",
 		},
 		{
-			name: "inPaths field is an empty array",
+			name: "inFiles field is an empty array",
 			config: map[string]any{
-				"inPaths": []string{},
-				"outPath": "valid.yaml",
+				"inFiles": []string{},
+				"outFile": "valid.yaml",
 			},
-			expectedError: "invalid yaml-merge config: inPaths: Array must have at least 1 items",
+			expectedError: "invalid yaml-merge config: inFiles: Array must have at least 1 items",
 		},
 		{
-			name: "inPaths contains empty string",
+			name: "inFiles contains empty string",
 			config: map[string]any{
-				"inPaths": []string{""},
-				"outPath": "valid.yaml",
+				"inFiles": []string{""},
+				"outFile": "valid.yaml",
 			},
 			expectedError: "",
 		},
 		{
-			name: "outPath not specified (missing path field)",
+			name: "outFile not specified (missing path field)",
 			config: map[string]any{
-				"inPaths": []string{"valid.yaml"},
+				"inFiles": []string{"valid.yaml"},
 			},
-			expectedError: "invalid yaml-merge config: (root): outPath is required",
+			expectedError: "invalid yaml-merge config: (root): outFile is required",
 		},
 		{
-			name: "outPath is empty string",
+			name: "outFile is empty string",
 			config: map[string]any{
-				"inPaths": []string{"valid.yaml"},
-				"outPath": "",
+				"inFiles": []string{"valid.yaml"},
+				"outFile": "",
 			},
-			expectedError: "invalid yaml-merge config: outPath: String length must be greater than or equal to 1",
+			expectedError: "invalid yaml-merge config: outFile: String length must be greater than or equal to 1",
 		},
 		{
-			name: "valid configuration (inPaths + outPath present)",
+			name: "valid configuration (inFiles + outFile present)",
 			config: map[string]any{
-				"inPaths": []string{"valid.yaml"},
-				"outPath": "valid.yaml",
+				"inFiles": []string{"valid.yaml"},
+				"outFile": "valid.yaml",
 			},
 			expectedError: "",
 		},
@@ -99,8 +99,8 @@ func Test_YAMLMerger_run(t *testing.T) {
 				Project: "test-project",
 			},
 			cfg: builtin.YAMLMergeConfig{
-				InPaths: []string{"base.yaml", "overrides.yaml"},
-				OutPath: "modified.yaml",
+				InFiles: []string{"base.yaml", "overrides.yaml"},
+				outFile: "modified.yaml",
 			},
 			files: map[string]string{
 				"base.yaml": `
@@ -123,13 +123,13 @@ app:
 			},
 		},
 		{
-			name: "failed to read InPaths file when ignoreMissingFiles is false",
+			name: "failed to read InFiles file when ignoreMissingFiles is false",
 			stepCtx: &promotion.StepContext{
 				Project: "test-project",
 			},
 			cfg: builtin.YAMLMergeConfig{
-				InPaths:            []string{"non-existent/values.yaml"},
-				OutPath:            "modified.yaml",
+				InFiles:            []string{"non-existent/values.yaml"},
+				outFile:            "modified.yaml",
 				IgnoreMissingFiles: false,
 			},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
@@ -139,13 +139,13 @@ app:
 			},
 		},
 		{
-			name: "failed to read InPaths file",
+			name: "failed to read InFiles file",
 			stepCtx: &promotion.StepContext{
 				Project: "test-project",
 			},
 			cfg: builtin.YAMLMergeConfig{
-				InPaths:            []string{"non-existent/values.yaml"},
-				OutPath:            "modified.yaml",
+				InFiles:            []string{"non-existent/values.yaml"},
+				OutFile:            "modified.yaml",
 				IgnoreMissingFiles: true,
 			},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
@@ -164,8 +164,8 @@ app:
 				Project: "test-project",
 			},
 			cfg: builtin.YAMLMergeConfig{
-				InPaths: []string{"base.yaml", "overrides.yaml"},
-				OutPath: "",
+				InFiles: []string{"base.yaml", "overrides.yaml"},
+				OutFile: "",
 			},
 			files: map[string]string{
 				"base.yaml": `

@@ -150,7 +150,7 @@ func findScalarNode(node *yaml.Node, keyPath []string) (int, int, error) {
 	return 0, 0, fmt.Errorf("key path not found")
 }
 
-// mergeYAMLFiles merges a list of yaml strings
+// MergeYAMLFiles merges a list of yaml strings.
 func MergeYAMLFiles(inputs []string) (string, error) {
 	if len(inputs) == 0 {
 		return "", fmt.Errorf("empty input list provided")
