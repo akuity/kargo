@@ -20,9 +20,12 @@ export const useFreightTimelineControllerStore = (project: string) => {
       stackedNodesParents: [],
       hideSubscriptions: {},
       images: false,
-      view: 'graph',
-      ...getFreightTimelineFiltersLocalStorage(project)
+      view: 'graph'
     };
+
+    if (searchParams.size === 0) {
+      return { ...filters, ...getFreightTimelineFiltersLocalStorage(project) };
+    }
 
     const viewParam = searchParams.get('view');
     if (viewParam && viewParam !== '' && ['graph', 'list'].includes(viewParam)) {
@@ -84,13 +87,15 @@ export const useFreightTimelineControllerStore = (project: string) => {
       filters.hideSubscriptions = {};
     }
 
-    return filters;
+    return { ...getFreightTimelineFiltersLocalStorage(project), ...filters };
   }, [searchParams]);
 
   return [
     filters,
     useCallback(
       (nextPartial: Partial<FreightTimelineControllerContextType['preferredFilter']>) => {
+        localStorage.setItem(`filters-${project}`, JSON.stringify({ ...filters, ...nextPartial }));
+
         const currentSearchParams = new URLSearchParams(searchParams);
 
         currentSearchParams.set('view', `${nextPartial.view}`);
