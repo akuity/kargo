@@ -26,7 +26,7 @@
      },
      "values": {
       "type": "object",
-      "description": "Key-value pairs to set as metadata on the resource",
+      "description": "Key/value pairs to set as metadata on the resource",
       "minProperties": 1,
       "additionalProperties": true
      }

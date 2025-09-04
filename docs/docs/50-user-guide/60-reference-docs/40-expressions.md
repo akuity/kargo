@@ -377,20 +377,17 @@ features.
 
 ### `freightMetadata(freightName)`
 
-The `freightMetadata()` function retrieves metadata stored in a `Freight` resource.
-It has one required argument:
+The `freightMetadata()` function retrieves the map of all metadata stored in a
+`Freight` resource. It has one required argument:
 
 - `freightName` (Required): The name of the `Freight` resource
-
-This returns a map containing all metadata key-value pairs stored in the `Freight`
-resource.
 
 Example:
 
 ```yaml
 config:
   # Access metadata values using ['key-name'] syntax
-  category: ${{ freightMetadata(ctx.targetFreight.name)['deployment-category'] }}
+  category: ${{ freightMetadata(ctx.targetFreight.name).category }}
 
   # Using nil coalescing (??) to provide default values if metadata is missing
   tier: ${{ stageMetadata(ctx.stage)['tier'] ?? "default-tier" }}
@@ -421,7 +418,7 @@ has one required argument:
 
 - `stageName` (Required): The name of the `Stage` resource
 
-This returns a map containing all metadata key-value pairs stored in the `Stage`
+This returns a map containing all metadata key/value pairs stored in the `Stage`
 resource.
 
 Example:

@@ -1,7 +1,6 @@
 package v1alpha1
 
 import (
-	"reflect"
 	"testing"
 	"time"
 
@@ -1065,143 +1064,103 @@ func TestStageStatus_UpsertMetadata(t *testing.T) {
 }
 
 func TestStageStatus_GetMetadata(t *testing.T) {
-	testJSON := map[string]apiextensionsv1.JSON{
-		"string-key": {Raw: []byte(`"test-value"`)},
-		"int-key":    {Raw: []byte(`42`)},
-		"bool-key":   {Raw: []byte(`true`)},
-		"slice-key":  {Raw: []byte(`[1,2,3]`)},
-		"struct-key": {Raw: []byte(`{"name":"test-user","age":30,"active":true}`)},
-	}
-
-	testCases := []struct {
-		name         string
-		metadata     map[string]apiextensionsv1.JSON
-		key          string
-		target       any
-		expectFound  bool
-		expectError  bool
-		expectedData any
-	}{
-		{
-			name:         "get string value",
-			metadata:     testJSON,
-			key:          "string-key",
-			target:       new(string),
-			expectFound:  true,
-			expectedData: "test-value",
-		},
-		{
-			name:         "get int value",
-			metadata:     testJSON,
-			key:          "int-key",
-			target:       new(int),
-			expectFound:  true,
-			expectedData: 42,
-		},
-		{
-			name:         "get bool value",
-			metadata:     testJSON,
-			key:          "bool-key",
-			target:       new(bool),
-			expectFound:  true,
-			expectedData: true,
-		},
-		{
-			name:         "get slice value",
-			metadata:     testJSON,
-			key:          "slice-key",
-			target:       &[]int{},
-			expectFound:  true,
-			expectedData: []int{1, 2, 3},
-		},
-		{
-			name:     "get struct value",
-			metadata: testJSON,
-			key:      "struct-key",
-			target: &struct {
-				Name   string `json:"name"`
-				Age    int    `json:"age"`
-				Active bool   `json:"active"`
-			}{},
-			expectFound: true,
-			expectedData: struct {
-				Name   string `json:"name"`
-				Age    int    `json:"age"`
-				Active bool   `json:"active"`
-			}{
-				Name:   "test-user",
-				Age:    30,
-				Active: true,
-			},
-		},
-		{
-			name:        "key not found",
-			metadata:    testJSON,
-			key:         "nonexistent-key",
-			target:      new(string),
-			expectFound: false,
-		},
-		{
-			name:        "nil target",
-			metadata:    testJSON,
-			key:         "string-key",
-			target:      nil,
-			expectError: true,
-		},
-		{
-			name:        "wrong target type",
-			metadata:    testJSON,
-			key:         "string-key",
-			target:      new(int),
-			expectFound: false,
-			expectError: true,
+	status := StageStatus{
+		Metadata: map[string]apiextensionsv1.JSON{
+			"string-key": {Raw: []byte(`"test-value"`)},
+			"int-key":    {Raw: []byte(`42`)},
+			"bool-key":   {Raw: []byte(`true`)},
+			"slice-key":  {Raw: []byte(`[1,2,3]`)},
+			"struct-key": {Raw: []byte(`{"name":"test-user","age":30,"active":true}`)},
 		},
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			status := StageStatus{
-				Metadata: tc.metadata,
-			}
+	t.Run("get string value", func(t *testing.T) {
+		var value string
+		found, err := status.GetMetadata("string-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(t, "test-value", value)
+	})
 
-			found, err := status.GetMetadata(tc.key, tc.target)
+	t.Run("get int value", func(t *testing.T) {
+		var value int
+		found, err := status.GetMetadata("int-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(t, 42, value)
+	})
 
-			require.Equal(t, tc.expectFound, found)
+	t.Run("get bool value", func(t *testing.T) {
+		var value bool
+		found, err := status.GetMetadata("bool-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(t, true, value)
+	})
 
-			if tc.expectError {
-				require.Error(t, err)
-				return
-			}
+	t.Run("get slice value", func(t *testing.T) {
+		var value []int
+		found, err := status.GetMetadata("slice-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(t, []int{1, 2, 3}, value)
+	})
 
-			require.NoError(t, err)
-			if tc.expectedData != nil {
-				require.Equal(t, tc.expectedData, derefAny(tc.target))
-			}
-		})
-	}
-}
-
-// derefAny is a helper function to dereference any pointer type
-func derefAny(ptr any) any {
-	if ptr == nil {
-		return nil
-	}
-
-	switch v := ptr.(type) {
-	case *string:
-		return *v
-	case *int:
-		return *v
-	case *bool:
-		return *v
-	case *[]int:
-		return *v
-	default:
-		// For struct types, dereference if it's a pointer
-		val := reflect.ValueOf(ptr)
-		if val.Kind() == reflect.Ptr && val.Elem().Kind() == reflect.Struct {
-			return val.Elem().Interface()
+	t.Run("get struct value", func(t *testing.T) {
+		var value struct {
+			Name   string `json:"name"`
+			Age    int    `json:"age"`
+			Active bool   `json:"active"`
 		}
-		return ptr
-	}
+		found, err := status.GetMetadata("struct-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(t, "test-user", value.Name)
+		require.Equal(t, 30, value.Age)
+		require.Equal(t, true, value.Active)
+	})
+
+	t.Run("get any value -- string", func(t *testing.T) {
+		var value any
+		found, err := status.GetMetadata("string-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(t, "test-value", value)
+	})
+
+	t.Run("get any value -- map", func(t *testing.T) {
+		var value any
+		found, err := status.GetMetadata("struct-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(
+			t,
+			map[string]any{
+				"name":   "test-user",
+				"age":    float64(30),
+				"active": true,
+			},
+			value,
+		)
+	})
+
+	t.Run("key not found", func(t *testing.T) {
+		var value string
+		found, err := status.GetMetadata("nonexistent-key", &value)
+		require.NoError(t, err)
+		require.False(t, found)
+	})
+
+	t.Run("nil target", func(t *testing.T) {
+		found, err := status.GetMetadata("string-key", nil)
+		require.Error(t, err)
+		require.False(t, found)
+	})
+
+	t.Run("wrong target type", func(t *testing.T) {
+		var value int
+		found, err := status.GetMetadata("string-key", &value)
+		require.Error(t, err)
+		require.False(t, found)
+	})
 }

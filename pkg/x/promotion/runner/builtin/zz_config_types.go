@@ -484,7 +484,7 @@ type Update struct {
 	Kind Kind `json:"kind"`
 	// Name of the resource to update metadata for
 	Name string `json:"name"`
-	// Key-value pairs to set as metadata on the resource
+	// Key/value pairs to set as metadata on the resource
 	Values map[string]interface{} `json:"values"`
 }
 
