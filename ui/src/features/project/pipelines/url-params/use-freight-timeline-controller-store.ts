@@ -21,6 +21,7 @@ export const useFreightTimelineControllerStore = (project: string) => {
       hideSubscriptions: {},
       images: false,
       view: 'graph',
+      showArtifactIcons: false,
       ...getFreightTimelineFiltersLocalStorage(project)
     };
 
@@ -32,6 +33,11 @@ export const useFreightTimelineControllerStore = (project: string) => {
     const showAliasParam = searchParams.get('showAlias');
     if (showAliasParam && showAliasParam !== '') {
       filters.showAlias = showAliasParam === 'true';
+    }
+
+    const artifactIcons = searchParams.get('showArtifactIcons');
+    if (artifactIcons && artifactIcons !== '') {
+      filters.showArtifactIcons = artifactIcons === 'true';
     }
 
     const sourcesParam = searchParams.getAll('sources');
@@ -98,6 +104,8 @@ export const useFreightTimelineControllerStore = (project: string) => {
         currentSearchParams.set('showColors', `${nextPartial.showColors}`);
 
         currentSearchParams.set('showAlias', `${nextPartial.showAlias}`);
+
+        currentSearchParams.set('showArtifactIcons', `${nextPartial.showArtifactIcons}`);
 
         currentSearchParams.delete('sources');
         if (nextPartial.sources && nextPartial.sources.length > 0) {
