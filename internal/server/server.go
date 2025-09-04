@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"crypto/tls"
 	"embed"
 	"errors"
 	"fmt"
@@ -29,6 +30,7 @@ import (
 	rollouts "github.com/akuity/kargo/internal/api/stubs/rollouts"
 	httputil "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/internal/server/certloader"
 	"github.com/akuity/kargo/internal/server/config"
 	"github.com/akuity/kargo/internal/server/dex"
 	"github.com/akuity/kargo/internal/server/kubernetes"
@@ -241,10 +243,22 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	errCh := make(chan error)
 	go func() {
 		if s.cfg.TLSConfig != nil {
+			certLoader, err := certloader.NewCertLoader(logger, s.cfg.TLSConfig.CertPath, s.cfg.TLSConfig.KeyPath)
+			if err != nil {
+				errCh <- fmt.Errorf("error initializing cert loader: %w", err)
+				return
+			}
+			defer certLoader.Close()
+
+			srv.TLSConfig = &tls.Config{
+				GetCertificate: certLoader.GetCertificate,
+				MinVersion:     tls.VersionTLS13,
+			}
+
 			errCh <- srv.ServeTLS(
 				l,
-				s.cfg.TLSConfig.CertPath,
-				s.cfg.TLSConfig.KeyPath,
+				"", // cert - not used because GetCertificate is used
+				"", // key - not used because GetCertificate is used
 			)
 		} else {
 			errCh <- srv.Serve(l)
