@@ -23,6 +23,10 @@ export const useFreightTimelineControllerStore = (project: string) => {
       view: 'graph'
     };
 
+    if (searchParams.size === 0) {
+      return { ...filters, ...getFreightTimelineFiltersLocalStorage(project) };
+    }
+
     const viewParam = searchParams.get('view');
     if (viewParam && viewParam !== '' && ['graph', 'list'].includes(viewParam)) {
       filters.view = viewParam as 'graph' | 'list';
@@ -83,10 +87,7 @@ export const useFreightTimelineControllerStore = (project: string) => {
       filters.hideSubscriptions = {};
     }
 
-    return {
-      ...filters,
-      ...getFreightTimelineFiltersLocalStorage(project)
-    };
+    return { ...getFreightTimelineFiltersLocalStorage(project), ...filters };
   }, [searchParams]);
 
   return [
