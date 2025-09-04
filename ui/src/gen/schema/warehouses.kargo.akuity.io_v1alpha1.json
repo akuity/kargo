@@ -16,6 +16,16 @@
     "spec": {
       "description": "Spec describes sources of artifacts.",
       "properties": {
+        "freightCreationFilters": {
+          "description": "FreightCreationFilters defines filters that are applied when determining\nwhether new Freight should be created. This field is optional.",
+          "properties": {
+            "expression": {
+              "description": "Expression is an expression that must evaluate to true for new Freight\nto be created. The expression should be a valid expr-lang.",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
         "freightCreationPolicy": {
           "default": "Automatic",
           "description": "FreightCreationPolicy describes how Freight is created by this Warehouse.\nThis field is optional. When left unspecified, the field is implicitly\ntreated as if its value were \"Automatic\".\n\nAccepted values:\n\n- \"Automatic\": New Freight is created automatically when any new artifact\n  is discovered.\n- \"Manual\": New Freight is never created automatically.",

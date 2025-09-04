@@ -46,6 +46,17 @@ spec:
           spec:
             description: Spec describes sources of artifacts.
             properties:
+              freightCreationFilters:
+                description: |-
+                  FreightCreationFilters defines filters that are applied when determining
+                  whether new Freight should be created. This field is optional.
+                properties:
+                  expression:
+                    description: |-
+                      Expression is an expression that must evaluate to true for new Freight
+                      to be created. The expression should be a valid expr-lang.
+                    type: string
+                type: object
               freightCreationPolicy:
                 default: Automatic
                 description: |-
