@@ -1155,3 +1155,88 @@ func TestReconcile(t *testing.T) {
 		})
 	}
 }
+
+func Test_evaluateFreightCreationFilter(t *testing.T) {
+	testCases := []struct {
+		name        string
+		warehouse   *kargoapi.Warehouse
+		artifacts   *kargoapi.DiscoveredArtifacts
+		expectError bool
+		expectMatch bool
+	}{
+		{
+			name:        "empty expression",
+			warehouse:   &kargoapi.Warehouse{},
+			artifacts:   &kargoapi.DiscoveredArtifacts{},
+			expectError: false,
+			expectMatch: true,
+		},
+		{
+			name: "image tags dont match",
+			warehouse: &kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					FreightCreationFilters: kargoapi.FreightCreationFilters{
+						Expression: "images[0].Referencestag == images[1].tag",
+					},
+				},
+			},
+			artifacts: &kargoapi.DiscoveredArtifacts{
+				Images: []kargoapi.ImageDiscoveryResult{
+					{
+						References: []kargoapi.DiscoveredImageReference{
+							{Tag: "tag1"},
+							{Tag: "tag2"},
+						},
+					},
+					{
+						References: []kargoapi.DiscoveredImageReference{
+							{Tag: "tag1"},
+							{Tag: "tag3"},
+						},
+					},
+				},
+			},
+			expectError: false,
+			expectMatch: false,
+		},
+		{
+			name: "image tags match",
+			warehouse: &kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					FreightCreationFilters: kargoapi.FreightCreationFilters{
+						Expression: "images[0].Referencestag == images[1].tag",
+					},
+				},
+			},
+			artifacts: &kargoapi.DiscoveredArtifacts{
+				Images: []kargoapi.ImageDiscoveryResult{
+					{
+						References: []kargoapi.DiscoveredImageReference{
+							{Tag: "tag1"},
+							{Tag: "tag2"},
+						},
+					},
+					{
+						References: []kargoapi.DiscoveredImageReference{
+							{Tag: "tag1"},
+							{Tag: "tag2"},
+						},
+					},
+				},
+			},
+			expectError: false,
+			expectMatch: false,
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			match, err := evaluateFreightCreationFilter(t.Context(), tt.warehouse, tt.artifacts)
+			if tt.expectError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.expectMatch, match)
+			}
+		})
+	}
+}

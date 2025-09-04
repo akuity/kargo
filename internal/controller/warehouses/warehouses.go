@@ -3,9 +3,11 @@ package warehouses
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/expr-lang/expr"
 	"github.com/kelseyhightower/envconfig"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -18,6 +20,9 @@ import (
 	"github.com/akuity/kargo/internal/conditions"
 	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/git"
+	"github.com/akuity/kargo/internal/helm"
+	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/logging"
@@ -279,6 +284,17 @@ func (r *reconciler) syncWarehouse(
 		// failed. We do not return an error here, to prevent a requeue loop
 		// which would cause unnecessary pressure on the upstream sources.
 		conditions.Delete(&status, kargoapi.ConditionTypeReconciling)
+		return status, nil
+	}
+
+	ok, err := evaluateFreightCreationFilter(ctx, warehouse, status.DiscoveredArtifacts)
+	if err != nil {
+		logger.Error(err, "failed to evalueate freight creation filters")
+		return status, nil
+	}
+
+	if !ok {
+		logger.Debug("freight creation filters not satisfied; skipping freight creation")
 		return status, nil
 	}
 
@@ -682,4 +698,112 @@ func shouldDiscoverArtifacts(
 	default:
 		return false
 	}
+}
+
+func evaluateFreightCreationFilter(
+	ctx context.Context,
+	w *kargoapi.Warehouse,
+	artifacts *kargoapi.DiscoveredArtifacts,
+) (bool, error) {
+	logger := logging.LoggerFromContext(ctx)
+	logger.Debug("evaluating freight creation filter expression")
+
+	if w.Spec.FreightCreationFilters.Expression == "" {
+		return true, nil
+	}
+
+	type subscription struct{ tags []string }
+	var subscriptions []subscription
+	for _, s := range w.Spec.Subscriptions {
+		switch {
+		case s.Git != nil:
+			for _, a := range artifacts.Git {
+				if git.NormalizeURL(s.Git.RepoURL) == git.NormalizeURL(a.RepoURL) {
+					subscriptions = append(
+						subscriptions,
+						subscription{
+							tags: getTagsFromDiscoveredCommits(a.Commits),
+						},
+					)
+					break
+				}
+			}
+		case s.Image != nil:
+			for _, a := range artifacts.Images {
+				if image.NormalizeURL(s.Image.RepoURL) == image.NormalizeURL(a.RepoURL) {
+					subscriptions = append(
+						subscriptions,
+						subscription{
+							tags: getTagsFromDiscoveredImages(a.References),
+						},
+					)
+					break
+				}
+			}
+		case s.Chart != nil:
+			for _, a := range artifacts.Charts {
+				if helm.NormalizeChartRepositoryURL(s.Chart.RepoURL) == helm.NormalizeChartRepositoryURL(a.RepoURL) {
+					subscriptions = append(
+						subscriptions,
+						subscription{
+							tags: getTagsFromDiscoveredCharts(a.Versions),
+						},
+					)
+					break
+				}
+			}
+		}
+	}
+
+	env := map[string]any{
+		"subscriptions": w.Spec.Subscriptions,
+		"charts":        artifacts.Charts[0].RepoURL,
+		"images":        artifacts.Images[0].References,
+		"git":           artifacts.Git,
+	}
+
+	program, err := expr.Compile(w.Spec.FreightCreationFilters.Expression, expr.Env(env))
+	if err != nil {
+		return false, fmt.Errorf("error compiling expression %q: %w", w.Spec.FreightCreationFilters.Expression, err)
+	}
+
+	result, err := expr.Run(program, env)
+	if err != nil {
+		return false, err
+	}
+
+	switch result := result.(type) {
+	case bool:
+		return result, nil
+	default:
+		parsedBool, err := strconv.ParseBool(fmt.Sprintf("%v", result))
+		if err != nil {
+			return false, err
+		}
+		return parsedBool, nil
+	}
+}
+
+func getTagsFromDiscoveredCommits(commits []kargoapi.DiscoveredCommit) []string {
+	var tags []string
+	for _, c := range commits {
+		tags = append(tags, c.Tag)
+	}
+	return tags
+}
+
+func getTagsFromDiscoveredImages(images []kargoapi.DiscoveredImageReference) []string {
+	var tags []string
+	for _, c := range images {
+		tags = append(tags, c.Tag)
+	}
+	return tags
+}
+
+func getTagsFromDiscoveredCharts(charts []kargoapi.ChartDiscoveryResult) []string {
+	var tags []string
+	for _, c := range charts {
+		tags = append(tags, c.Versions...)
+	}
+	return tags
 }
