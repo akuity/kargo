@@ -18,8 +18,8 @@ promotion of software artifacts through the many stages of their lifecycle.
 
 Read about Kargo in our [docs](https://docs.kargo.io), get hands-on right away
 with our [Quickstart](https://docs.kargo.io/quickstart) tutorial, or watch the
-*Multi-Stage Deployment Pipelines the GitOps Way* talk by Jesse Suen & Kent
-Rancourt of [Akuity](https://akuity.io/) at GitOpsCon EU 2024:
+*Multi-Stage Deployment Pipelines the GitOps Way* talk presented by Jesse Suen &
+Kent Rancourt of [Akuity](https://akuity.io/) at GitOpsCon EU 2024:
 
 [![Multi-Stage Deployment Pipelines the GitOps Way - Kargo](https://img.youtube.com/vi/0B_JODxyK0w/0.jpg)](https://youtu.be/0B_JODxyK0w)
 
