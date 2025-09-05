@@ -60,10 +60,8 @@ func (y *yamlMerger) Run(
 
 // convert validates yamlMerger configuration against a JSON schema and
 // converts it into a builtin.YAMLMergeConfig struct.
-func (y *yamlMerger) convert(
-	cfg promotion.Config,
-) (builtin.YAMLMergeConfig, error) {
-	return validateAndConvert[builtin.YAMLMergeConfig](y.schemaLoader, cfg, f.Name())
+func (y *yamlMerger) convert(cfg promotion.Config) (builtin.YAMLMergeConfig, error) {
+	return validateAndConvert[builtin.YAMLMergeConfig](y.schemaLoader, cfg, y.Name())
 }
 
 // validate validates yamlMerger configuration against a JSON schema.
@@ -80,63 +78,51 @@ func (y *yamlMerger) run(
 	result := promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}
 	failure := promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}
 
-	// Keep track of files actually merged.
-	mergedFiles := make([]string, 0, len(cfg.InFiles))
+	// sanity check
+	if len(cfg.InFiles) == 0 || cfg.OutFile == "" {
+		return failure, fmt.Errorf("inFiles and OutFile must not be empty")
+	}
 
-	// Secure join the paths to prevent path traversal attacks.
-	yamlData := []string{}
+	// Secure join the input paths to prevent path traversal attacks.
+	filePaths := []string{}
 	for _, path := range cfg.InFiles {
 		inFile, err := securejoin.SecureJoin(stepCtx.WorkDir, path)
 		if err != nil {
-			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-				fmt.Errorf("could not secure join input file %q: %w", path, err)
+			return failure, fmt.Errorf("could not secure join input file %q: %w", path, err)
 		}
 
-		inBytes, err := os.ReadFile(inFile)
+		// only add existing files
+		_, err = os.Stat(inFile)
 		if err != nil {
-			// we skip if file does not exist
-			if cfg.IgnoreMissingFiles && os.IsNotExist(err) {
+			if cfg.IgnoreMissingFiles {
 				continue
 			}
-			return failure, fmt.Errorf(
-				"error reading file %q: %w",
-				inFile,
-				err,
-			)
-		}
+			return failure, fmt.Errorf("input file not found:  %s", inFile)
 
-		// we skip if file is empty
-		if len(inBytes) == 0 {
-			continue
 		}
+		filePaths = append(filePaths, inFile)
 
-		mergedFiles = append(mergedFiles, path)
-		yamlData = append(yamlData, string(inBytes))
 	}
 
-	// Merge
-	outYAML, err := yaml.MergeYAMLFiles(yamlData)
-	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("could not merge YAML files: %w", err)
-	}
-
-	// Write out a single YAML file.
+	// Secure join the output path to prevent path traversal attacks.
 	outFile, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutFile)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("could not secure join outFile %q: %w", cfg.OutFile, err)
+		return failure, fmt.Errorf("could not secure join outFile %q: %w", cfg.OutFile, err)
 	}
 
+	// ensure output path fully exist
 	if err = os.MkdirAll(filepath.Dir(outFile), 0o700); err != nil {
 		return failure, fmt.Errorf("error creating directory structure %s: %w", filepath.Dir(outFile), err)
 	}
-	if err = os.WriteFile(outFile, []byte(outYAML), 0o600); err != nil {
-		return failure, fmt.Errorf("error writing to file %s: %w", outFile, err)
+
+	// Merge files
+	err = yaml.MergeYAMLFiles(filePaths, outFile)
+	if err != nil {
+		return failure, fmt.Errorf("could not merge YAML files: %w", err)
 	}
 
 	// Add a commit message fragment to the step's output.
-	if commitMsg := y.generateCommitMessage(cfg.OutFile, mergedFiles); commitMsg != "" {
+	if commitMsg := y.generateCommitMessage(cfg.OutFile, filePaths); commitMsg != "" {
 		result.Output = map[string]any{
 			"commitMessage": commitMsg,
 		}
