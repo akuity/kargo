@@ -100,7 +100,7 @@ func Test_YAMLMerger_run(t *testing.T) {
 			},
 			cfg: builtin.YAMLMergeConfig{
 				InFiles: []string{"base.yaml", "overrides.yaml"},
-				outFile: "modified.yaml",
+				OutFile: "modified.yaml",
 			},
 			files: map[string]string{
 				"base.yaml": `
@@ -129,17 +129,17 @@ app:
 			},
 			cfg: builtin.YAMLMergeConfig{
 				InFiles:            []string{"non-existent/values.yaml"},
-				outFile:            "modified.yaml",
+				OutFile:            "modified.yaml",
 				IgnoreMissingFiles: false,
 			},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
 				assert.Error(t, err)
 				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, result)
-				assert.Contains(t, err.Error(), "error reading file")
+				assert.Contains(t, err.Error(), "input file not found: ")
 			},
 		},
 		{
-			name: "failed to read InFiles file",
+			name: "failed when nonexistent input file is given",
 			stepCtx: &promotion.StepContext{
 				Project: "test-project",
 			},
@@ -149,13 +149,9 @@ app:
 				IgnoreMissingFiles: true,
 			},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
-				assert.NoError(t, err)
-				assert.Equal(t, promotion.StepResult{
-					Status: kargoapi.PromotionStepStatusSucceeded,
-					Output: map[string]any{
-						"commitMessage": "Merged YAML files to modified.yaml\n",
-					},
-				}, result)
+				assert.Error(t, err)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, result)
+				assert.Contains(t, err.Error(), "could not merge YAML files:")
 			},
 		},
 		{
@@ -184,7 +180,7 @@ app:
 				assert.Equal(t, promotion.StepResult{
 					Status: kargoapi.PromotionStepStatusErrored,
 				}, result)
-				assert.Contains(t, err.Error(), "Error writing to file")
+				assert.Contains(t, err.Error(), "inFiles and OutFile must not be empty")
 			},
 		},
 	}
