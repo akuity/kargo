@@ -15,6 +15,11 @@
         "value": {
           "type": "string",
           "description": "The new value for the key."
+        },
+        "forceString": {
+          "type": "boolean",
+          "description": "Whether to force the value to be treated as a string. When true, uses --set-literal instead of --set.",
+          "default": false
         }
       },
       "required": ["key", "value"]
