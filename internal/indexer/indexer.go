@@ -470,7 +470,8 @@ func ServiceAccountsByOIDCClaims(obj client.Object) []string {
 
 	refinedClaimValues := []string{}
 	for annotationKey, annotationValue := range sa.GetAnnotations() {
-		if strings.HasPrefix(annotationKey, rbacapi.AnnotationKeyOIDCClaimNamePrefix) {
+		switch {
+		case strings.HasPrefix(annotationKey, rbacapi.AnnotationKeyOIDCClaimNamePrefix):
 			rawClaimName := strings.TrimPrefix(annotationKey, rbacapi.AnnotationKeyOIDCClaimNamePrefix)
 			rawClaimValue := strings.TrimSpace(annotationValue)
 			if rawClaimValue == "" {
@@ -480,6 +481,15 @@ func ServiceAccountsByOIDCClaims(obj client.Object) []string {
 			for _, e := range claimValues {
 				if claimValue := strings.TrimSpace(e); claimValue != "" {
 					refinedClaimValues = append(refinedClaimValues, FormatClaim(rawClaimName, claimValue))
+				}
+			}
+		case strings.HasPrefix(annotationKey, rbacapi.AnnotationKeyOIDCClaims):
+			// the map is interpreted as a multi-line string e.g. "'cognito:groups': devops\nemail: user@example.com\n"
+			for e := range strings.SplitSeq(annotationValue, "\n") {
+				if e != "" {
+					e = strings.ReplaceAll(e, ": ", "/") //  cognito:groups: devops -> cognito:groups/devops
+					e = strings.ReplaceAll(e, "'", "")   // account for 'cognito:groups'/devops edgecase
+					refinedClaimValues = append(refinedClaimValues, e)
 				}
 			}
 		}
