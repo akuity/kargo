@@ -138,11 +138,25 @@ clientLoop:
 
 	var data map[string][]byte
 	if secret != nil {
-		data = secret.Data
+		// create a dataCopy that will store the
+		// secret's data and project-repo key
+		// annotation value if it is present
+		dataCopy := make(map[string][]byte)
+		for key, val := range secret.Data {
+			dataCopy[key] = val
+		}
+		if secret.Annotations != nil {
+			if val, ok := secret.Annotations[kargoapi.AnnotationProjectReposKey]; ok && val != "" {
+				dataCopy[kargoapi.AnnotationProjectReposKey] = []byte(val)
+			}
+		}
+		data = dataCopy
 	}
 
+	logging.LoggerFromContext(ctx).Info("data value in secret", "data:", data)
 	for _, p := range k.credentialProviders {
 		creds, err := p.GetCredentials(ctx, namespace, credType, repoURL, data)
+		logging.LoggerFromContext(ctx).Info("creds value", "creds", creds)
 		if err != nil {
 			return nil, err
 		}

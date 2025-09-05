@@ -4,8 +4,12 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/logging"
+	"github.com/google/go-github/v73/github"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -40,6 +44,7 @@ type AppCredentialProvider struct {
 		installationID int64,
 		encodedPrivateKey string,
 		baseURL string,
+		allowedRepos []string,
 	) (string, error)
 }
 
@@ -69,15 +74,46 @@ func (p *AppCredentialProvider) Supports(
 		strings.TrimSpace(string(data[installationIDKey])) != "" && strings.TrimSpace(string(data[privateKeyKey])) != ""
 }
 
+// GetCredentials implements the credentials.Provider interface for GitHub Apps.
+// It returns GitHub installation access tokens scoped to a repository, with
+// optional restrictions enforced from the `project-repos` annotation.
 func (p *AppCredentialProvider) GetCredentials(
-	_ context.Context,
-	_ string,
+	ctx context.Context,
+	project string,
 	credType credentials.Type,
 	repoURL string,
 	data map[string][]byte,
 ) (*credentials.Credentials, error) {
+	logger := logging.LoggerFromContext(ctx).WithValues()
 	if !p.Supports(credType, repoURL, data) {
 		return nil, nil
+	}
+
+	// Extract the pproect-repos JSON from annotation
+	// in data or directly from data key
+	projectReposJSON, hasProjectRepos := data[kargoapi.AnnotationProjectReposKey]
+
+	var allowedRepos []string
+	unrestricted := true
+
+	if hasProjectRepos && len(projectReposJSON) > 0 {
+		logger.Debug("1")
+		var projectRepoMap map[string][]string
+		if err := json.Unmarshal(projectReposJSON, &projectRepoMap); err != nil {
+			// If JSON is invalid, we mark as restricted (deny by default)
+			logger.Debug("error unmarshalling project-repos JSON")
+			unrestricted = false
+		} else {
+			// Look up repos for the specific project
+			repos, found := projectRepoMap[project]
+			if !found || len(repos) == 0 {
+				// project not allowed any repos, deny creds
+				return nil, fmt.Errorf("no repositories allowed for project %q", project)
+			}
+			// otherwise restrict token scope to these repos
+			allowedRepos = repos
+			unrestricted = false
+		}
 	}
 
 	// Client ID is the newer unique identifier for GitHub Apps. GitHub recommends
@@ -98,11 +134,34 @@ func (p *AppCredentialProvider) GetCredentials(
 		return nil, fmt.Errorf("error extracting base URL from : %w", err)
 	}
 
+	repoName := extractRepoName(repoURL)
+	if repoName == "" {
+		return nil, fmt.Errorf("could not extract repository name from repo URL %q", repoURL)
+	}
+
+	if !unrestricted {
+		found := false
+		for _, r := range allowedRepos {
+			if r == repoName {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			// repo not allowed for this project
+			return nil, fmt.Errorf("repository %q is not allowed for project %q", repoName, project)
+		}
+	} else {
+		allowedRepos = []string{repoName}
+	}
+
 	return p.getUsernameAndPassword(
 		clientID,
 		installID,
 		string(data[privateKeyKey]),
 		baseURL,
+		allowedRepos,
 	)
 }
 
@@ -114,12 +173,14 @@ func (p *AppCredentialProvider) getUsernameAndPassword(
 	clientID string,
 	installationID int64,
 	encodedPrivateKey, baseURL string,
+	allowedRepos []string,
 ) (*credentials.Credentials, error) {
 	cacheKey := tokenCacheKey(
 		baseURL,
 		clientID,
 		installationID,
 		encodedPrivateKey,
+		allowedRepos,
 	)
 
 	// Check the cache for the token
@@ -136,6 +197,7 @@ func (p *AppCredentialProvider) getUsernameAndPassword(
 		installationID,
 		encodedPrivateKey,
 		baseURL,
+		allowedRepos,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("error getting installation access token: %w", err)
@@ -159,6 +221,7 @@ func (p *AppCredentialProvider) getAccessToken(
 	installationID int64,
 	encodedPrivateKey string,
 	baseURL string,
+	allowedRepos []string,
 ) (string, error) {
 	decodedKey, err := decodeKey(encodedPrivateKey)
 	if err != nil {
@@ -181,6 +244,13 @@ func (p *AppCredentialProvider) getAccessToken(
 			installationOpts = append(installationOpts, githubauth.WithEnterpriseURLs(baseURL, baseURL))
 		}
 	}
+
+	if len(allowedRepos) > 0 {
+		opts := &github.InstallationTokenOptions{
+			Repositories: allowedRepos,
+		}
+		installationOpts = append(installationOpts, githubauth.WithInstallationTokenOptions(opts))
+	}
 	installationTokenSource := githubauth.NewInstallationTokenSource(installationID, appTokenSource, installationOpts...)
 
 	token, err := installationTokenSource.Token()
@@ -198,13 +268,14 @@ func tokenCacheKey(
 	clientID string,
 	installationID int64,
 	encodedPrivateKey string,
+	allowedRepos []string,
 ) string {
 	return fmt.Sprintf(
 		"%x",
 		sha256.Sum256([]byte(
 			fmt.Sprintf(
-				"%s:%s:%d:%s",
-				baseURL, clientID, installationID, encodedPrivateKey,
+				"%s:%s:%d:%s:%s",
+				baseURL, clientID, installationID, encodedPrivateKey, strings.Join(allowedRepos, ","),
 			),
 		)),
 	)
@@ -243,4 +314,16 @@ func extractBaseURL(fullURL string) (string, error) {
 		return "", fmt.Errorf("error parsing URL: %w", err)
 	}
 	return u.Scheme + "://" + u.Host, nil
+}
+
+// extractRepoName returns the repository name from a Git repository URL.
+// It trims the optional ".git" suffix and then extracts the last path segment.
+func extractRepoName(repoURL string) string {
+	trimmed := strings.TrimSuffix(repoURL, ".git")
+	trimmed = strings.TrimSuffix(trimmed, "/")
+	parts := strings.Split(trimmed, "/")
+	if len(parts) == 0 {
+		return ""
+	}
+	return parts[len(parts)-1]
 }
