@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -150,30 +149,36 @@ func findScalarNode(node *yaml.Node, keyPath []string) (int, int, error) {
 	return 0, 0, fmt.Errorf("key path not found")
 }
 
-// MergeYAMLFiles merges a list of yaml strings.
-func MergeYAMLFiles(inputs []string) (string, error) {
-	if len(inputs) == 0 {
-		return "", fmt.Errorf("empty input list provided")
+// MergeYAMLFiles merges a list of YAML files.
+func MergeYAMLFiles(inputPaths []string, outputPath string) error {
+	if len(inputPaths) == 0 || outputPath == "" {
+		return fmt.Errorf("inFiles and OutFile must not be empty")
 	}
 
-	mergedNode, err := kyaml.Parse(inputs[0])
+	// read first YAML file
+	mergedNode, err := kyaml.ReadFile(inputPaths[0])
 	if err != nil {
-		return "", fmt.Errorf("error parsing first input: %w", err)
+		return fmt.Errorf("error parsing first input file: %w", err)
 	}
 
-	for i := 1; i < len(inputs); i++ {
-		patchNode, err := kyaml.Parse(inputs[i])
+	// read all other YAML file and apply the patch
+	for i := 1; i < len(inputPaths); i++ {
+		patchNode, err := kyaml.ReadFile(inputPaths[i])
 		if err != nil {
-			if err == io.EOF {
-				continue
-			}
-			return "", fmt.Errorf("error parsing input at index %d: %w", i, err)
+			return fmt.Errorf("error parsing input file %s: %w", inputPaths[i], err)
 		}
+
 		mergedNode, err = merge2.Merge(patchNode, mergedNode, kyaml.MergeOptions{ListIncreaseDirection: 1})
 		if err != nil {
-			return "", fmt.Errorf("error merging node at index %d: %w", i, err)
+			return fmt.Errorf("error merging node at index %d: %w", i, err)
 		}
 	}
 
-	return mergedNode.MustString(), nil
+	// write the resulting file
+	err = kyaml.WriteFile(mergedNode, outputPath)
+	if err != nil {
+		return fmt.Errorf("error writing the merged file to %s: %w", outputPath, err)
+	}
+
+	return nil
 }
