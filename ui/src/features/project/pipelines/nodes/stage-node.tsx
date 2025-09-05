@@ -33,7 +33,10 @@ import { useGraphContext } from '../context/graph-context';
 import { stageIndexer } from '../graph/node-indexer';
 
 import './stage-node.less';
+import { AnalysisRunLogsLink } from './analysis-run-logs-link';
+import { ArgoCDLink } from './argocd-link';
 import style from './node-size-source-of-truth.module.less';
+import { PullRequestLink } from './pull-request-link';
 import { StageFreight } from './stage-freight';
 import {
   getLastPromotionDate,
@@ -92,10 +95,10 @@ export const StageNode = (props: { stage: Stage }) => {
 
   let descriptionItems: ReactNode;
 
-  if (!controlFlow) {
-    const lastPromotion = getLastPromotionDate(props.stage);
-    const date = timestampDate(lastPromotion) as Date;
+  const lastPromotion = getLastPromotionDate(props.stage);
+  const date = timestampDate(lastPromotion) as Date;
 
+  if (!controlFlow) {
     let Phase = (
       <Flex align='center' gap={4}>
         {stagePhase}{' '}
@@ -125,34 +128,27 @@ export const StageNode = (props: { stage: Stage }) => {
 
     descriptionItems = (
       <Flex className='text-[10px]' gap={8} wrap vertical>
-        <Flex gap={24}>
+        <Flex gap={24} justify='center'>
           {Phase}
           {stageHealth?.status && (
-            <Flex gap={4}>
+            <Flex gap={16}>
               <Flex align='center' gap={4}>
                 {stageHealth?.status}
                 <HealthStatusIcon noTooltip className='text-[8px]' health={stageHealth} />
               </Flex>
+
+              <ArgoCDLink stage={props.stage} shards={dictionaryContext?.argocdShards} />
             </Flex>
           )}
         </Flex>
 
-        {lastPromotion && (
-          <Link
-            to={generatePath(paths.promotion, {
-              name: props.stage?.metadata?.namespace,
-              promotionId: props.stage?.status?.lastPromotion?.name
-            })}
-          >
-            <Flex gap={4} align='center'>
-              <span>Last Promotion: </span>
-              <span title={date?.toString()}>
-                {formatDistance(date, new Date(), { addSuffix: true })}
-              </span>
-              <FontAwesomeIcon icon={faExternalLink} className='text-[6px]' />
-            </Flex>
-          </Link>
-        )}
+        <center>
+          <PullRequestLink stage={props.stage} />
+
+          {dictionaryContext?.hasAnalysisRunLogsUrlTemplate && (
+            <AnalysisRunLogsLink stage={props.stage} />
+          )}
+        </center>
       </Flex>
     );
   }
@@ -331,6 +327,23 @@ export const StageNode = (props: { stage: Stage }) => {
             onClick={() => graphContext?.onStack(stageNodeIndex)}
           />
         )}
+
+      {lastPromotion && (
+        <Link
+          to={generatePath(paths.promotion, {
+            name: props.stage?.metadata?.namespace,
+            promotionId: props.stage?.status?.lastPromotion?.name
+          })}
+        >
+          <Flex gap={4} align='center' justify='center' className='text-[10px]'>
+            <span>Last Promotion: </span>
+            <span title={date?.toString()}>
+              {formatDistance(date, new Date(), { addSuffix: true })}
+            </span>
+            <FontAwesomeIcon icon={faExternalLink} className='text-[6px]' />
+          </Flex>
+        </Link>
+      )}
     </Card>
   );
 };

@@ -643,6 +643,7 @@
 | argocd_shards | [GetConfigResponse.ArgocdShardsEntry](#akuity-io-kargo-service-v1alpha1-GetConfigResponse-ArgocdShardsEntry) |   |
 | secret_management_enabled | [bool](#bool) |   |
 | cluster_secrets_namespace | [string](#string) |   |
+| has_analysis_run_logs_url_template | [bool](#bool) |   |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetConfigResponse-ArgocdShardsEntry"></a>
 

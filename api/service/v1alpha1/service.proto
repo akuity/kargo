@@ -184,6 +184,7 @@ message GetConfigResponse {
   map<string, ArgoCDShard> argocd_shards = 1;
   bool secret_management_enabled = 2;
   string cluster_secrets_namespace = 3;
+  bool has_analysis_run_logs_url_template = 4;
 }
 
 message GetPublicConfigRequest {}

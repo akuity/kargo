@@ -31,5 +31,5 @@ export const getPromotionHealthCheckConfig = (hc: HealthCheckStep): Record<strin
     })
   );
 
-export const getPromotionStepAlias = (promotionStep: PromotionStep, stepIndex: string) =>
+export const getPromotionStepAlias = (promotionStep: PromotionStep, stepIndex: string | number) =>
   promotionStep?.as || `step-${stepIndex}`;
