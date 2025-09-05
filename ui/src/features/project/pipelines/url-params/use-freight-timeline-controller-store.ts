@@ -20,7 +20,8 @@ export const useFreightTimelineControllerStore = (project: string) => {
       stackedNodesParents: [],
       hideSubscriptions: {},
       images: false,
-      view: 'graph'
+      view: 'graph',
+      showMinimap: true
     };
 
     if (searchParams.size === 0) {
@@ -35,6 +36,11 @@ export const useFreightTimelineControllerStore = (project: string) => {
     const showAliasParam = searchParams.get('showAlias');
     if (showAliasParam && showAliasParam !== '') {
       filters.showAlias = showAliasParam === 'true';
+    }
+
+    const showMinimap = searchParams.get('showMinimap');
+    if (showMinimap && showMinimap !== '') {
+      filters.showMinimap = showMinimap === 'true';
     }
 
     const sourcesParam = searchParams.getAll('sources');
@@ -99,6 +105,8 @@ export const useFreightTimelineControllerStore = (project: string) => {
         const currentSearchParams = new URLSearchParams(searchParams);
 
         currentSearchParams.set('view', `${nextPartial.view}`);
+
+        currentSearchParams.set('showMinimap', `${nextPartial.showMinimap}`);
 
         currentSearchParams.set('showColors', `${nextPartial.showColors}`);
 
