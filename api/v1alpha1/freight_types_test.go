@@ -1,11 +1,9 @@
 package v1alpha1
 
 import (
-	"encoding/json"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -470,147 +468,193 @@ func TestFreightStatus_AddApprovedStage(t *testing.T) {
 	})
 }
 
-func TestFreightStatus_UpsertAndGetMetadata_Integration(t *testing.T) {
-	tests := []struct {
-		name string
-		data any
+func TestFreightStatus_UpsertMetadata(t *testing.T) {
+	testCases := []struct {
+		name         string
+		initialState map[string]apiextensionsv1.JSON
+		key          string
+		data         any
+		expectError  bool
+		expectedJSON string
 	}{
 		{
-			name: "string value",
-			data: "test-string",
+			name:         "upsert string into empty metadata",
+			key:          "test-key",
+			data:         "test-string",
+			expectedJSON: `"test-string"`,
 		},
 		{
-			name: "integer value",
-			data: 42,
+			name:         "upsert int into empty metadata",
+			key:          "test-key",
+			data:         42,
+			expectedJSON: `42`,
 		},
 		{
-			name: "boolean value",
-			data: true,
+			name:         "upsert bool into empty metadata",
+			key:          "test-key",
+			data:         true,
+			expectedJSON: `true`,
 		},
 		{
-			name: "complex struct",
+			name:         "upsert slice into empty metadata",
+			key:          "test-key",
+			data:         []int{1, 2, 3},
+			expectedJSON: `[1,2,3]`,
+		},
+		{
+			name: "upsert complex struct into empty metadata",
+			key:  "test-key",
 			data: struct {
-				Name    string            `json:"name"`
-				Age     int               `json:"age"`
-				Active  bool              `json:"active"`
-				Tags    []string          `json:"tags"`
-				Configs map[string]string `json:"configs"`
+				Name   string   `json:"name"`
+				Age    int      `json:"age"`
+				Active bool     `json:"active"`
+				Tags   []string `json:"tags"`
 			}{
 				Name:   "test-user",
 				Age:    30,
 				Active: true,
-				Tags:   []string{"admin", "developer"},
-				Configs: map[string]string{
-					"theme": "dark",
-					"lang":  "en",
-				},
+				Tags:   []string{"admin", "dev"},
 			},
+			expectedJSON: `{"name":"test-user","age":30,"active":true,"tags":["admin","dev"]}`,
 		},
 		{
-			name: "slice of integers",
-			data: []int{1, 2, 3, 4, 5},
+			name: "update existing metadata",
+			initialState: map[string]apiextensionsv1.JSON{
+				"test-key": {Raw: []byte(`"old-value"`)},
+			},
+			key:          "test-key",
+			data:         "new-value",
+			expectedJSON: `"new-value"`,
 		},
 		{
-			name: "nested map",
-			data: map[string]any{
-				"level1": map[string]any{
-					"level2": map[string]string{
-						"key": "value",
-					},
-				},
-			},
+			name:        "empty key",
+			key:         "",
+			data:        "value",
+			expectError: true,
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			status := FreightStatus{}
-			key := "integration-test-key"
-
-			// Test Upsert
-			err1 := status.UpsertMetadata(key, tt.data)
-			require.NoError(t, err1)
-
-			// Verify metadata was stored
-			assert.NotNil(t, status.Metadata)
-			assert.Contains(t, status.Metadata, key)
-
-			// Test Get with correct type
-			switch expected := tt.data.(type) {
-			case string:
-				var result string
-				found, err := status.GetMetadata(key, &result)
-				assert.True(t, found)
-				assert.NoError(t, err)
-				assert.Equal(t, expected, result)
-
-			case int:
-				var result int
-				found, err := status.GetMetadata(key, &result)
-				assert.True(t, found)
-				assert.NoError(t, err)
-				assert.Equal(t, expected, result)
-
-			case bool:
-				var result bool
-				found, err := status.GetMetadata(key, &result)
-				assert.True(t, found)
-				assert.NoError(t, err)
-				assert.Equal(t, expected, result)
-
-			case []int:
-				var result []int
-				found, err := status.GetMetadata(key, &result)
-				assert.True(t, found)
-				assert.NoError(t, err)
-				assert.Equal(t, expected, result)
-
-			default:
-				// For complex types, use any and compare JSON representation
-				var result any
-				found, err := status.GetMetadata(key, &result)
-				assert.True(t, found)
-				assert.NoError(t, err)
-
-				// Compare by marshaling both to JSON
-				expectedJSON, err := json.Marshal(expected)
-				require.NoError(t, err)
-				resultJSON, err := json.Marshal(result)
-				require.NoError(t, err)
-				assert.JSONEq(t, string(expectedJSON), string(resultJSON))
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			status := FreightStatus{
+				Metadata: tc.initialState,
 			}
 
-			// Test updating the same key
-			newData := "updated-value"
-			err := status.UpsertMetadata(key, newData)
-			require.NoError(t, err)
+			err := status.UpsertMetadata(tc.key, tc.data)
 
-			var updatedResult string
-			found, err := status.GetMetadata(key, &updatedResult)
-			assert.True(t, found)
-			assert.NoError(t, err)
-			assert.Equal(t, newData, updatedResult)
+			if tc.expectError {
+				require.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			require.NotNil(t, status.Metadata)
+			require.Contains(t, status.Metadata, tc.key)
+			if tc.expectedJSON != "" {
+				require.JSONEq(t, tc.expectedJSON, string(status.Metadata[tc.key].Raw))
+			}
 		})
 	}
 }
 
-func TestFreightStatus_MetadataEdgeCases(t *testing.T) {
-	t.Run("empty key", func(t *testing.T) {
-		status := FreightStatus{}
-		err := status.UpsertMetadata("", "value")
-		assert.Error(t, err)
+func TestFreightStatus_GetMetadata(t *testing.T) {
+	status := FreightStatus{
+		Metadata: map[string]apiextensionsv1.JSON{
+			"string-key": {Raw: []byte(`"test-value"`)},
+			"int-key":    {Raw: []byte(`42`)},
+			"bool-key":   {Raw: []byte(`true`)},
+			"slice-key":  {Raw: []byte(`[1,2,3]`)},
+			"struct-key": {Raw: []byte(`{"name":"test-user","age":30,"active":true}`)},
+		},
+	}
+
+	t.Run("get string value", func(t *testing.T) {
+		var value string
+		found, err := status.GetMetadata("string-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(t, "test-value", value)
 	})
 
-	t.Run("nil target for Get", func(t *testing.T) {
-		status := FreightStatus{
-			Metadata: map[string]apiextensionsv1.JSON{
-				"test-key": {Raw: []byte(`"test-value"`)},
-			},
-		}
+	t.Run("get int value", func(t *testing.T) {
+		var value int
+		found, err := status.GetMetadata("int-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(t, 42, value)
+	})
 
-		// This should cause a panic or error during unmarshal
-		found, err := status.GetMetadata("test-key", nil)
-		assert.False(t, found)
-		assert.Error(t, err)
+	t.Run("get bool value", func(t *testing.T) {
+		var value bool
+		found, err := status.GetMetadata("bool-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(t, true, value)
+	})
+
+	t.Run("get slice value", func(t *testing.T) {
+		var value []int
+		found, err := status.GetMetadata("slice-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(t, []int{1, 2, 3}, value)
+	})
+
+	t.Run("get struct value", func(t *testing.T) {
+		var value struct {
+			Name   string `json:"name"`
+			Age    int    `json:"age"`
+			Active bool   `json:"active"`
+		}
+		found, err := status.GetMetadata("struct-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(t, "test-user", value.Name)
+		require.Equal(t, 30, value.Age)
+		require.Equal(t, true, value.Active)
+	})
+
+	t.Run("get any value -- string", func(t *testing.T) {
+		var value any
+		found, err := status.GetMetadata("string-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(t, "test-value", value)
+	})
+
+	t.Run("get any value -- map", func(t *testing.T) {
+		var value any
+		found, err := status.GetMetadata("struct-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(
+			t,
+			map[string]any{
+				"name":   "test-user",
+				"age":    float64(30),
+				"active": true,
+			},
+			value,
+		)
+	})
+
+	t.Run("key not found", func(t *testing.T) {
+		var value string
+		found, err := status.GetMetadata("nonexistent-key", &value)
+		require.NoError(t, err)
+		require.False(t, found)
+	})
+
+	t.Run("nil target", func(t *testing.T) {
+		found, err := status.GetMetadata("string-key", nil)
+		require.Error(t, err)
+		require.False(t, found)
+	})
+
+	t.Run("wrong target type", func(t *testing.T) {
+		var value int
+		found, err := status.GetMetadata("string-key", &value)
+		require.Error(t, err)
+		require.False(t, found)
 	})
 }

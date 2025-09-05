@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -971,4 +972,195 @@ func TestChartDeepEquals(t *testing.T) {
 			require.Equal(t, testCase.expectedResult, testCase.b.DeepEquals(testCase.a))
 		})
 	}
+}
+
+func TestStageStatus_UpsertMetadata(t *testing.T) {
+	testCases := []struct {
+		name         string
+		initialState map[string]apiextensionsv1.JSON
+		key          string
+		data         any
+		expectError  bool
+		expectedJSON string
+	}{
+		{
+			name:         "upsert string into empty metadata",
+			key:          "test-key",
+			data:         "test-string",
+			expectedJSON: `"test-string"`,
+		},
+		{
+			name:         "upsert int into empty metadata",
+			key:          "test-key",
+			data:         42,
+			expectedJSON: `42`,
+		},
+		{
+			name:         "upsert bool into empty metadata",
+			key:          "test-key",
+			data:         true,
+			expectedJSON: `true`,
+		},
+		{
+			name:         "upsert slice into empty metadata",
+			key:          "test-key",
+			data:         []int{1, 2, 3},
+			expectedJSON: `[1,2,3]`,
+		},
+		{
+			name: "upsert complex struct into empty metadata",
+			key:  "test-key",
+			data: struct {
+				Name   string   `json:"name"`
+				Age    int      `json:"age"`
+				Active bool     `json:"active"`
+				Tags   []string `json:"tags"`
+			}{
+				Name:   "test-user",
+				Age:    30,
+				Active: true,
+				Tags:   []string{"admin", "dev"},
+			},
+			expectedJSON: `{"name":"test-user","age":30,"active":true,"tags":["admin","dev"]}`,
+		},
+		{
+			name: "update existing metadata",
+			initialState: map[string]apiextensionsv1.JSON{
+				"test-key": {Raw: []byte(`"old-value"`)},
+			},
+			key:          "test-key",
+			data:         "new-value",
+			expectedJSON: `"new-value"`,
+		},
+		{
+			name:        "empty key",
+			key:         "",
+			data:        "value",
+			expectError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			status := StageStatus{
+				Metadata: tc.initialState,
+			}
+
+			err := status.UpsertMetadata(tc.key, tc.data)
+
+			if tc.expectError {
+				require.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			require.NotNil(t, status.Metadata)
+			require.Contains(t, status.Metadata, tc.key)
+			if tc.expectedJSON != "" {
+				require.JSONEq(t, tc.expectedJSON, string(status.Metadata[tc.key].Raw))
+			}
+		})
+	}
+}
+
+func TestStageStatus_GetMetadata(t *testing.T) {
+	status := StageStatus{
+		Metadata: map[string]apiextensionsv1.JSON{
+			"string-key": {Raw: []byte(`"test-value"`)},
+			"int-key":    {Raw: []byte(`42`)},
+			"bool-key":   {Raw: []byte(`true`)},
+			"slice-key":  {Raw: []byte(`[1,2,3]`)},
+			"struct-key": {Raw: []byte(`{"name":"test-user","age":30,"active":true}`)},
+		},
+	}
+
+	t.Run("get string value", func(t *testing.T) {
+		var value string
+		found, err := status.GetMetadata("string-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(t, "test-value", value)
+	})
+
+	t.Run("get int value", func(t *testing.T) {
+		var value int
+		found, err := status.GetMetadata("int-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(t, 42, value)
+	})
+
+	t.Run("get bool value", func(t *testing.T) {
+		var value bool
+		found, err := status.GetMetadata("bool-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(t, true, value)
+	})
+
+	t.Run("get slice value", func(t *testing.T) {
+		var value []int
+		found, err := status.GetMetadata("slice-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(t, []int{1, 2, 3}, value)
+	})
+
+	t.Run("get struct value", func(t *testing.T) {
+		var value struct {
+			Name   string `json:"name"`
+			Age    int    `json:"age"`
+			Active bool   `json:"active"`
+		}
+		found, err := status.GetMetadata("struct-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(t, "test-user", value.Name)
+		require.Equal(t, 30, value.Age)
+		require.Equal(t, true, value.Active)
+	})
+
+	t.Run("get any value -- string", func(t *testing.T) {
+		var value any
+		found, err := status.GetMetadata("string-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(t, "test-value", value)
+	})
+
+	t.Run("get any value -- map", func(t *testing.T) {
+		var value any
+		found, err := status.GetMetadata("struct-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(
+			t,
+			map[string]any{
+				"name":   "test-user",
+				"age":    float64(30),
+				"active": true,
+			},
+			value,
+		)
+	})
+
+	t.Run("key not found", func(t *testing.T) {
+		var value string
+		found, err := status.GetMetadata("nonexistent-key", &value)
+		require.NoError(t, err)
+		require.False(t, found)
+	})
+
+	t.Run("nil target", func(t *testing.T) {
+		found, err := status.GetMetadata("string-key", nil)
+		require.Error(t, err)
+		require.False(t, found)
+	})
+
+	t.Run("wrong target type", func(t *testing.T) {
+		var value int
+		found, err := status.GetMetadata("string-key", &value)
+		require.Error(t, err)
+		require.False(t, found)
+	})
 }
