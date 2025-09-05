@@ -69,4 +69,6 @@ const (
 	// AnnotationValueTrue is the value used to indicate that an annotation
 	// is set to true.
 	AnnotationValueTrue = "true"
+
+	AnnotationProjectReposKey = "kargo.akuity.io/project-repos"
 )
