@@ -833,7 +833,7 @@ func TestServiceAccountsByOIDCClaims(t *testing.T) {
 					},
 				},
 			},
-			expected: []string{"cognito:groups/devops", "email/user@example.com"},	
+			expected: []string{"cognito:groups/devops", "email/user@example.com"},
 		},
 		{
 			name: "ServiceAccount has OIDC claims with key containing multiple colons",
@@ -844,7 +844,7 @@ func TestServiceAccountsByOIDCClaims(t *testing.T) {
 					},
 				},
 			},
-			expected: []string{"cognito:groups:subgroups/devops", "email/user@example.com"},	
+			expected: []string{"cognito:groups:subgroups/devops", "email/user@example.com"},
 		},
 		{
 			name: "ServiceAccount has OIDC claims with key containing colon and single quotes",
@@ -855,7 +855,18 @@ func TestServiceAccountsByOIDCClaims(t *testing.T) {
 					},
 				},
 			},
-			expected: []string{"cognito:groups/devops", "email/user@example.com"},	
+			expected: []string{"cognito:groups/devops", "email/user@example.com"},
+		},
+		{
+			name: "ServiceAccount has OIDC claims with key containing multiple values",
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						rbacapi.AnnotationKeyOIDCClaims: "foo': a,b,c\nbar: 1,2,3",
+					},
+				},
+			},
+			expected: []string{"foo/a,b,c", "bar/1,2,3"},
 		},
 	}
 	for _, testCase := range testCases {

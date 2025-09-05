@@ -38,3 +38,7 @@ func OIDCClaimNameFromAnnotationKey(key string) (string, bool) {
 	}
 	return strings.TrimPrefix(key, AnnotationKeyOIDCClaimNamePrefix), true
 }
+
+func AnnotationKeyOIDCClaimsValue(keyValuePairs ...string) string {
+	return ""
+}
