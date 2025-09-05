@@ -15,6 +15,14 @@ const (
 	// may be either a scalar string value or a comma-separated list.
 	AnnotationKeyOIDCClaimNamePrefix = "rbac.kargo.akuity.io/claim."
 
+	// AnnotationKeyOIDCClaims is an annotation key that can be set on a
+	// ServiceAccount to associate it with any user authenticated via OIDC and
+	// having any of the claims indicated by the value of the annotation. The
+	// value is expected to be a map[string]string and is intended for use
+	// when AnnotationKeyOIDCClaimNamePrefix is not possible to use due to
+	// to the misrepresentation of special characters.
+	AnnotationKeyOIDCClaims = "rbac.kargo.akuity.io/claims"
+
 	// AnnotationValueTrue is a value that can be set on an annotation to indicate
 	// that it applies.
 	AnnotationValueTrue = "true"
