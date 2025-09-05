@@ -70,5 +70,25 @@ const (
 	// is set to true.
 	AnnotationValueTrue = "true"
 
+	// AnnotationProjectReposKey is the Kubernetes Secret annotation key
+	// used to specify per-project repository access restrictions for GitHub App credentials.
+	//
+	// The value associated with this annotation should be a JSON object mapping
+	// project names (string) to lists of allowed repository names ([]string).
+	//
+	// Example value:
+	//
+	//   {
+	//     "kargo-demo": ["kargo-demo", "kargo-helm"],
+	//     "kargo-simple": ["renovate-gh"]
+	//   }
+	//
+	// If the annotation is present on a Secret, Kargo will enforce that the project
+	// must be explicitly granted access to the target repository for credentials
+	// to be returned. If the project is missing or has no allowed repos, credential
+	// requests for that project and repo will be denied.
+	//
+	// If the annotation is missing or empty, no per-project repository restrictions
+	// will be applied (full access within matching Secret scope).
 	AnnotationProjectReposKey = "kargo.akuity.io/project-repos"
 )
