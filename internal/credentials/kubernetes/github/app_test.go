@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"maps"
 	"testing"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 )
 
@@ -493,7 +493,7 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 				assert.Equal(t, []string{"repo-a", "repo-b"}, allowedRepos)
 				return fakeAccessToken, nil
 			},
-			assertions: func(t *testing.T, c *cache.Cache, creds *credentials.Credentials, err error) {
+			assertions: func(t *testing.T, _ *cache.Cache, creds *credentials.Credentials, err error) {
 				assert.NoError(t, err)
 				assert.NotNil(t, creds)
 				assert.Equal(t, fakeAccessToken, creds.Password)
