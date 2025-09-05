@@ -825,13 +825,32 @@ func TestServiceAccountsByOIDCClaims(t *testing.T) {
 			expected: []string{"email/fake-email", "email/fake-email-2"},
 		},
 		{
-			name: "ServiceAccount has OIDC claims",
+			name: "ServiceAccount has OIDC claims with key containing colon",
 			sa: &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						// When you apply the desired yaml from https://github.com/akuity/kargo/issues/4978
-						// the map is actually interpreted as a multiline string with newlines
-						// separating the key-value pairs.
+						rbacapi.AnnotationKeyOIDCClaims: "cognito:groups: devops\nemail: user@example.com\n",
+					},
+				},
+			},
+			expected: []string{"cognito:groups/devops", "email/user@example.com"},	
+		},
+		{
+			name: "ServiceAccount has OIDC claims with key containing multiple colons",
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						rbacapi.AnnotationKeyOIDCClaims: "cognito:groups:subgroups: devops\nemail: user@example.com\n",
+					},
+				},
+			},
+			expected: []string{"cognito:groups:subgroups/devops", "email/user@example.com"},	
+		},
+		{
+			name: "ServiceAccount has OIDC claims with key containing colon and single quotes",
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
 						rbacapi.AnnotationKeyOIDCClaims: "'cognito:groups': devops\nemail: user@example.com\n",
 					},
 				},
