@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"maps"
 	"testing"
 
@@ -180,6 +181,7 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 			installationID int64,
 			encodedPrivateKey string,
 			baseURL string,
+			allowedRepos []string,
 		) (string, error)
 		assertions func(t *testing.T, creds *credentials.Credentials, err error)
 	}{
@@ -236,7 +238,7 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 				installationIDKey: []byte("456"),
 				privateKeyKey:     []byte("private-key"),
 			},
-			getAccessTokenFn: func(_ string, _ int64, _, _ string) (string, error) {
+			getAccessTokenFn: func(_ string, _ int64, _, _ string, _ []string) (string, error) {
 				return "", errors.New("token error")
 			},
 			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
@@ -254,7 +256,7 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 				installationIDKey: []byte("456"),
 				privateKeyKey:     []byte("private-key"),
 			},
-			getAccessTokenFn: func(_ string, _ int64, _, _ string) (string, error) {
+			getAccessTokenFn: func(_ string, _ int64, _, _ string, _ []string) (string, error) {
 				return "test-token", nil
 			},
 			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
@@ -262,6 +264,83 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 				assert.NotNil(t, creds)
 				assert.Equal(t, accessTokenUsername, creds.Username)
 				assert.Equal(t, "test-token", creds.Password)
+			},
+		},
+		{
+			name:     "project repos annotation - project not found in map",
+			credType: credentials.TypeGit,
+			repoURL:  "https://github.com/akuity/kargo",
+			data: map[string][]byte{
+				appIDKey:                           []byte("123"),
+				installationIDKey:                  []byte("456"),
+				privateKeyKey:                      []byte("private-key"),
+				kargoapi.AnnotationProjectReposKey: []byte(`{"other-project": ["kargo"]}`),
+			},
+			getAccessTokenFn: func(_ string, _ int64, _, _ string, _ []string) (string, error) {
+				return "test-token", nil
+			},
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
+				assert.Nil(t, creds)
+				assert.Error(t, err)
+				assert.ErrorContains(t, err, `no repositories allowed for project ""`)
+			},
+		},
+		{
+			name:     "project repos annotation - repo not allowed",
+			credType: credentials.TypeGit,
+			repoURL:  "https://github.com/akuity/kargo",
+			data: map[string][]byte{
+				appIDKey:                           []byte("123"),
+				installationIDKey:                  []byte("456"),
+				privateKeyKey:                      []byte("private-key"),
+				kargoapi.AnnotationProjectReposKey: []byte(`{"": ["other-repo"]}`),
+			},
+			getAccessTokenFn: func(_ string, _ int64, _, _ string, _ []string) (string, error) {
+				return "test-token", nil
+			},
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
+				assert.Nil(t, creds)
+				assert.Error(t, err)
+				assert.ErrorContains(t, err, `repository "kargo" is not allowed`)
+			},
+		},
+		{
+			name:     "project repos annotation - repo allowed",
+			credType: credentials.TypeGit,
+			repoURL:  "https://github.com/akuity/kargo",
+			data: map[string][]byte{
+				appIDKey:                           []byte("123"),
+				installationIDKey:                  []byte("456"),
+				privateKeyKey:                      []byte("private-key"),
+				kargoapi.AnnotationProjectReposKey: []byte(`{"": ["kargo"]}`),
+			},
+			getAccessTokenFn: func(_ string, _ int64, _, _ string, allowedRepos []string) (string, error) {
+				assert.Equal(t, []string{"kargo"}, allowedRepos) // scope check
+				return "scoped-token", nil
+			},
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
+				assert.NoError(t, err)
+				assert.NotNil(t, creds)
+				assert.Equal(t, "scoped-token", creds.Password)
+			},
+		},
+		{
+			name:     "project repos annotation - invalid JSON",
+			credType: credentials.TypeGit,
+			repoURL:  "https://github.com/akuity/kargo",
+			data: map[string][]byte{
+				appIDKey:                           []byte("123"),
+				installationIDKey:                  []byte("456"),
+				privateKeyKey:                      []byte("private-key"),
+				kargoapi.AnnotationProjectReposKey: []byte(`{invalid-json}`),
+			},
+			getAccessTokenFn: func(_ string, _ int64, _, _ string, _ []string) (string, error) {
+				return "unrestricted-token", nil
+			},
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
+				// When JSON is invalid, we fall back to restricted mode with no allowed repos
+				assert.Nil(t, creds)
+				assert.Error(t, err)
 			},
 		},
 	}
@@ -301,12 +380,14 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 		installationID    int64
 		encodedPrivateKey string
 		baseURL           string
+		allowedRepos      []string
 		setupCache        func(c *cache.Cache)
 		getAccessTokenFn  func(
 			appOrClientID string,
 			installationID int64,
 			encodedPrivateKey string,
 			baseURL string,
+			allowedRepos []string,
 		) (string, error)
 		assertions func(*testing.T, *cache.Cache, *credentials.Credentials, error)
 	}{
@@ -322,6 +403,7 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 					fakeAppOrClientID,
 					fakeInstallationID,
 					fakePrivateKey,
+					nil,
 				)
 				c.Set(cacheKey, fakeAccessToken, cache.DefaultExpiration)
 			},
@@ -343,7 +425,7 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 			installationID:    fakeInstallationID,
 			encodedPrivateKey: fakePrivateKey,
 			baseURL:           fakeBaseURL,
-			getAccessTokenFn: func(_ string, _ int64, _, _ string) (string, error) {
+			getAccessTokenFn: func(_ string, _ int64, _, _ string, _ []string) (string, error) {
 				return fakeAccessToken, nil
 			},
 			assertions: func(
@@ -363,6 +445,7 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 					fakeAppOrClientID,
 					fakeInstallationID,
 					fakePrivateKey,
+					nil,
 				)
 				cachedToken, found := c.Get(cacheKey)
 				assert.True(t, found)
@@ -375,7 +458,7 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 			installationID:    fakeInstallationID,
 			encodedPrivateKey: fakePrivateKey,
 			baseURL:           fakeBaseURL,
-			getAccessTokenFn: func(_ string, _ int64, _, _ string) (string, error) {
+			getAccessTokenFn: func(_ string, _ int64, _, _ string, _ []string) (string, error) {
 				return "", errors.New("token error")
 			},
 			assertions: func(
@@ -393,9 +476,27 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 					fakeAppOrClientID,
 					fakeInstallationID,
 					fakePrivateKey,
+					nil,
 				)
 				_, found := c.Get(cacheKey)
 				assert.False(t, found)
+			},
+		},
+		{
+			name:              "cache miss with allowed repos",
+			appOrClientID:     fakeAppOrClientID,
+			installationID:    fakeInstallationID,
+			encodedPrivateKey: fakePrivateKey,
+			baseURL:           fakeBaseURL,
+			allowedRepos:      []string{"repo-a", "repo-b"},
+			getAccessTokenFn: func(_ string, _ int64, _, _ string, allowedRepos []string) (string, error) {
+				assert.Equal(t, []string{"repo-a", "repo-b"}, allowedRepos)
+				return fakeAccessToken, nil
+			},
+			assertions: func(t *testing.T, c *cache.Cache, creds *credentials.Credentials, err error) {
+				assert.NoError(t, err)
+				assert.NotNil(t, creds)
+				assert.Equal(t, fakeAccessToken, creds.Password)
 			},
 		},
 	}
@@ -417,6 +518,7 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 				tt.installationID,
 				tt.encodedPrivateKey,
 				tt.baseURL,
+				tt.allowedRepos,
 			)
 			tt.assertions(t, provider.tokenCache, creds, err)
 		})
@@ -503,6 +605,57 @@ func Test_extractBaseURL(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, tt.expected, result)
 			}
+		})
+	}
+}
+
+func Test_extractRepoURL(t *testing.T) {
+	testCases := []struct {
+		name     string
+		url      string
+		expected string
+	}{
+		{
+			name:     "GitHub HTTPS URL with .git suffix",
+			url:      "https://github.com/akuity/kargo-helm.git",
+			expected: "kargo-helm",
+		},
+		{
+			name:     "GitHub HTTPS URL without .git suffix",
+			url:      "https://github.com/akuity/kargo",
+			expected: "kargo",
+		},
+		{
+			name:     "GitHub SSH URL with .git suffix",
+			url:      "git@github.com:akuity/kargo-helm.git",
+			expected: "kargo-helm",
+		},
+		{
+			name:     "GitHub SSH URL without .git suffix",
+			url:      "git@github.com:akuity/kargo",
+			expected: "kargo",
+		},
+		{
+			name:     "Trailing slash",
+			url:      "https://github.com/akuity/kargo/",
+			expected: "kargo",
+		},
+		{
+			name:     "Empty string",
+			url:      "",
+			expected: "",
+		},
+		{
+			name:     "No slashes",
+			url:      "kargo",
+			expected: "kargo",
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := extractRepoName(tt.url)
+			assert.Equal(t, tt.expected, actual)
 		})
 	}
 }
