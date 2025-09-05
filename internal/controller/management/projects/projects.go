@@ -30,7 +30,7 @@ import (
 	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/kubernetes"
-	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 const (
@@ -336,7 +336,6 @@ func (r *reconciler) reconcile(
 		// Reconcile the Project with the sub-reconciler.
 		var err error
 		status, err = subR.reconcile()
-
 		// If an error occurred during the sub-reconciler, then we should return the
 		// error which will cause the Project to be requeued.
 		if err != nil {

@@ -12,7 +12,7 @@ import (
 	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/io"
-	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 // route routes inbound webhook requests to a sender-specific handler.

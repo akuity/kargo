@@ -7,7 +7,7 @@ import (
 	"slices"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 // tagBasedSelector is a base implementation of Selector that provides common

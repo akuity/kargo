@@ -24,10 +24,10 @@ import (
 	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/indexer"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
-	"github.com/akuity/kargo/internal/logging"
 	libWebhook "github.com/akuity/kargo/internal/webhook/kubernetes"
 	"github.com/akuity/kargo/pkg/event"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 var (
@@ -349,7 +349,6 @@ func (w *webhook) recordFreightApprovedEvent(
 		logging.LoggerFromContext(ctx).Error(err,
 			"error sending Freight approved event")
 	}
-
 }
 
 type artifactType string
@@ -388,8 +387,8 @@ func validateFreightArtifacts(
 	freight *kargoapi.Freight,
 	warehouse *kargoapi.Warehouse,
 ) field.ErrorList {
-	var subscriptions = make(map[artifactSubscription]bool, len(warehouse.Spec.Subscriptions))
-	var counts = make(map[artifactSubscription]int)
+	subscriptions := make(map[artifactSubscription]bool, len(warehouse.Spec.Subscriptions))
+	counts := make(map[artifactSubscription]int)
 
 	// Collect all the subscriptions from the Warehouse.
 	for _, repo := range warehouse.Spec.Subscriptions {

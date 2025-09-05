@@ -17,7 +17,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/indexer"
-	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 const githubSigningKey = "mysupersecrettoken"
@@ -27,13 +27,13 @@ func TestGithubHandler(t *testing.T) {
 
 	const testProjectName = "fake-project"
 
-	var validPushEvent = &gh.PushEvent{
+	validPushEvent := &gh.PushEvent{
 		Ref: gh.Ptr("refs/heads/main"),
 		Repo: &gh.PushEventRepository{
 			CloneURL: gh.Ptr("https://github.com/example/repo"),
 		},
 	}
-	var validPackageEventImage = &gh.PackageEvent{
+	validPackageEventImage := &gh.PackageEvent{
 		Action: gh.Ptr("published"),
 		Package: &gh.Package{
 			PackageType: gh.Ptr(ghcrPackageTypeContainer),
@@ -54,7 +54,7 @@ func TestGithubHandler(t *testing.T) {
 			},
 		},
 	}
-	var validPackageEventChart = &gh.PackageEvent{
+	validPackageEventChart := &gh.PackageEvent{
 		Action: gh.Ptr("published"),
 		Package: &gh.Package{
 			PackageType: gh.Ptr(ghcrPackageTypeContainer),
@@ -76,7 +76,7 @@ func TestGithubHandler(t *testing.T) {
 		},
 	}
 
-	var validRegistryPackageEventImage = &gh.RegistryPackageEvent{
+	validRegistryPackageEventImage := &gh.RegistryPackageEvent{
 		Action: gh.Ptr("published"),
 		RegistryPackage: &gh.Package{
 			PackageType: gh.Ptr(ghcrPackageTypeContainer),
@@ -98,7 +98,7 @@ func TestGithubHandler(t *testing.T) {
 		},
 	}
 
-	var validRegistryPackageEventChart = &gh.RegistryPackageEvent{
+	validRegistryPackageEventChart := &gh.RegistryPackageEvent{
 		Action: gh.Ptr("published"),
 		RegistryPackage: &gh.Package{
 			PackageType: gh.Ptr(ghcrPackageTypeContainer),
@@ -786,7 +786,7 @@ func TestGithubHandler(t *testing.T) {
 				_ = testCase.req().Body.Close()
 			})
 
-			logger := logging.NewLogger(logging.DebugLevel)
+			logger := logging.NewLoggerOrDie(logging.DebugLevel, logging.DefaultFormat)
 			ctx := logging.ContextWithLogger(testCase.req().Context(), logger)
 
 			w := httptest.NewRecorder()

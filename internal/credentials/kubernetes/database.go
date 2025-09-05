@@ -20,7 +20,7 @@ import (
 	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/image"
-	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 // database is an implementation of the credentials.Database interface that
@@ -56,7 +56,7 @@ func NewDatabase(
 	localClusterClient client.Client,
 	cfg DatabaseConfig,
 ) credentials.Database {
-	var credentialProviders = []credentials.Provider{
+	credentialProviders := []credentials.Provider{
 		&basic.CredentialProvider{},
 		ecr.NewAccessKeyProvider(),
 		ecr.NewManagedIdentityProvider(ctx),

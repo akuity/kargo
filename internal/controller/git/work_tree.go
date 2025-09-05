@@ -13,7 +13,7 @@ import (
 	"time"
 
 	libExec "github.com/akuity/kargo/internal/exec"
-	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 // WorkTree is an interface for interacting with any working tree of a Git

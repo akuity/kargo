@@ -15,9 +15,9 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/kubeclient"
-	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/server/user"
 	"github.com/akuity/kargo/pkg/event"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 func (s *server) ApproveFreight(

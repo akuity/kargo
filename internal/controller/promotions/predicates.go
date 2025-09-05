@@ -4,7 +4,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
-	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 // ArgoCDAppOperationCompleted is a predicate that filters out ArgoCD Application
