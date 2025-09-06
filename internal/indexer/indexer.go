@@ -484,11 +484,12 @@ func ServiceAccountsByOIDCClaims(obj client.Object) []string {
 				}
 			}
 		case strings.HasPrefix(annotationKey, rbacapi.AnnotationKeyOIDCClaims):
-			// the map is interpreted as a multi-line string e.g. "'cognito:groups': devops\nemail: user@example.com\n"
+			// the map is interpreted as a multi-line string e.g.
+			//  "'cognito:groups': devops\nemail: user@example.com\n"
 			for e := range strings.SplitSeq(annotationValue, "\n") {
 				if e != "" {
-					e = strings.Replace(e, ": ", "/", 1) //  cognito:groups: devops -> cognito:groups/devops
-					e = strings.ReplaceAll(e, "'", "")   // account for 'cognito:groups'/devops edgecase
+					e = strings.Replace(e, ": ", "/", 1) // 'cognito:groups': devops -> 'cognito:groups'/devops
+					e = strings.ReplaceAll(e, "'", "")   // 'cognito:groups'/devops -> cognito:groups/devops
 					refinedClaimValues = append(refinedClaimValues, e)
 				}
 			}
