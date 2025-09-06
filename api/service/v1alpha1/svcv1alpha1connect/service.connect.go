@@ -347,89 +347,167 @@ var (
 
 // KargoServiceClient is a client for the akuity.io.kargo.service.v1alpha1.KargoService service.
 type KargoServiceClient interface {
+	// GetVersionInfo returns version information for the Kargo server.
 	GetVersionInfo(context.Context, *connect.Request[v1alpha1.GetVersionInfoRequest]) (*connect.Response[v1alpha1.GetVersionInfoResponse], error)
+	// GetConfig retrieves the server configuration including ArgoCD shard information.
 	GetConfig(context.Context, *connect.Request[v1alpha1.GetConfigRequest]) (*connect.Response[v1alpha1.GetConfigResponse], error)
+	// GetPublicConfig returns publicly accessible configuration including OIDC settings.
 	GetPublicConfig(context.Context, *connect.Request[v1alpha1.GetPublicConfigRequest]) (*connect.Response[v1alpha1.GetPublicConfigResponse], error)
+	// AdminLogin authenticates an admin user and returns an access token.
 	AdminLogin(context.Context, *connect.Request[v1alpha1.AdminLoginRequest]) (*connect.Response[v1alpha1.AdminLoginResponse], error)
 	// TODO(devholic): Add ApplyResource API
 	// rpc ApplyResource(ApplyResourceRequest) returns (ApplyResourceRequest);
+	// CreateResource creates new Kubernetes resources from provided manifests.
 	CreateResource(context.Context, *connect.Request[v1alpha1.CreateResourceRequest]) (*connect.Response[v1alpha1.CreateResourceResponse], error)
+	// CreateOrUpdateResource creates or updates Kubernetes resources based on provided manifests.
 	CreateOrUpdateResource(context.Context, *connect.Request[v1alpha1.CreateOrUpdateResourceRequest]) (*connect.Response[v1alpha1.CreateOrUpdateResourceResponse], error)
+	// UpdateResource updates existing Kubernetes resources with provided manifests.
 	UpdateResource(context.Context, *connect.Request[v1alpha1.UpdateResourceRequest]) (*connect.Response[v1alpha1.UpdateResourceResponse], error)
+	// DeleteResource deletes Kubernetes resources specified in the provided manifests.
 	DeleteResource(context.Context, *connect.Request[v1alpha1.DeleteResourceRequest]) (*connect.Response[v1alpha1.DeleteResourceResponse], error)
+	// ListStages retrieves all stages within a project.
 	ListStages(context.Context, *connect.Request[v1alpha1.ListStagesRequest]) (*connect.Response[v1alpha1.ListStagesResponse], error)
+	// ListImages returns available images and their usage across stages.
 	ListImages(context.Context, *connect.Request[v1alpha1.ListImagesRequest]) (*connect.Response[v1alpha1.ListImagesResponse], error)
+	// GetStage retrieves details of a specific stage.
 	GetStage(context.Context, *connect.Request[v1alpha1.GetStageRequest]) (*connect.Response[v1alpha1.GetStageResponse], error)
+	// WatchStages provides a streaming interface to monitor stage changes.
 	WatchStages(context.Context, *connect.Request[v1alpha1.WatchStagesRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchStagesResponse], error)
+	// DeleteStage removes a stage from the system.
 	DeleteStage(context.Context, *connect.Request[v1alpha1.DeleteStageRequest]) (*connect.Response[v1alpha1.DeleteStageResponse], error)
+	// RefreshStage triggers a refresh of stage status and health checks.
 	RefreshStage(context.Context, *connect.Request[v1alpha1.RefreshStageRequest]) (*connect.Response[v1alpha1.RefreshStageResponse], error)
+	// GetClusterConfig retrieves cluster-level configuration settings.
 	GetClusterConfig(context.Context, *connect.Request[v1alpha1.GetClusterConfigRequest]) (*connect.Response[v1alpha1.GetClusterConfigResponse], error)
+	// DeleteClusterConfig removes cluster-level configuration.
 	DeleteClusterConfig(context.Context, *connect.Request[v1alpha1.DeleteClusterConfigRequest]) (*connect.Response[v1alpha1.DeleteClusterConfigResponse], error)
+	// WatchClusterConfig provides streaming updates for cluster configuration changes.
 	WatchClusterConfig(context.Context, *connect.Request[v1alpha1.WatchClusterConfigRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchClusterConfigResponse], error)
+	// RefreshClusterConfig triggers a refresh of cluster configuration.
 	RefreshClusterConfig(context.Context, *connect.Request[v1alpha1.RefreshClusterConfigRequest]) (*connect.Response[v1alpha1.RefreshClusterConfigResponse], error)
+	// ListPromotions retrieves all promotions, optionally filtered by stage.
 	ListPromotions(context.Context, *connect.Request[v1alpha1.ListPromotionsRequest]) (*connect.Response[v1alpha1.ListPromotionsResponse], error)
+	// WatchPromotions provides streaming updates for promotion changes.
 	WatchPromotions(context.Context, *connect.Request[v1alpha1.WatchPromotionsRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchPromotionsResponse], error)
+	// GetPromotion retrieves details of a specific promotion.
 	GetPromotion(context.Context, *connect.Request[v1alpha1.GetPromotionRequest]) (*connect.Response[v1alpha1.GetPromotionResponse], error)
+	// WatchPromotion provides streaming updates for a specific promotion.
 	WatchPromotion(context.Context, *connect.Request[v1alpha1.WatchPromotionRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchPromotionResponse], error)
+	// AbortPromotion cancels a running promotion process.
 	AbortPromotion(context.Context, *connect.Request[v1alpha1.AbortPromotionRequest]) (*connect.Response[v1alpha1.AbortPromotionResponse], error)
+	// DeleteProject removes a project and all associated resources.
 	DeleteProject(context.Context, *connect.Request[v1alpha1.DeleteProjectRequest]) (*connect.Response[v1alpha1.DeleteProjectResponse], error)
+	// GetProject retrieves details of a specific project.
 	GetProject(context.Context, *connect.Request[v1alpha1.GetProjectRequest]) (*connect.Response[v1alpha1.GetProjectResponse], error)
+	// ListProjects retrieves all projects with optional filtering and pagination.
 	ListProjects(context.Context, *connect.Request[v1alpha1.ListProjectsRequest]) (*connect.Response[v1alpha1.ListProjectsResponse], error)
-	// ProjectConfig APIs
+	// GetProjectConfig retrieves project-level configuration settings.
 	GetProjectConfig(context.Context, *connect.Request[v1alpha1.GetProjectConfigRequest]) (*connect.Response[v1alpha1.GetProjectConfigResponse], error)
+	// DeleteProjectConfig removes project-level configuration.
 	DeleteProjectConfig(context.Context, *connect.Request[v1alpha1.DeleteProjectConfigRequest]) (*connect.Response[v1alpha1.DeleteProjectConfigResponse], error)
+	// WatchProjectConfig provides streaming updates for project configuration changes.
 	WatchProjectConfig(context.Context, *connect.Request[v1alpha1.WatchProjectConfigRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchProjectConfigResponse], error)
+	// RefreshProjectConfig triggers a refresh of project configuration.
 	RefreshProjectConfig(context.Context, *connect.Request[v1alpha1.RefreshProjectConfigRequest]) (*connect.Response[v1alpha1.RefreshProjectConfigResponse], error)
+	// ApproveFreight marks freight as approved for promotion to a specific stage.
 	ApproveFreight(context.Context, *connect.Request[v1alpha1.ApproveFreightRequest]) (*connect.Response[v1alpha1.ApproveFreightResponse], error)
+	// DeleteFreight removes freight from the system.
 	DeleteFreight(context.Context, *connect.Request[v1alpha1.DeleteFreightRequest]) (*connect.Response[v1alpha1.DeleteFreightResponse], error)
+	// GetFreight retrieves details of specific freight.
 	GetFreight(context.Context, *connect.Request[v1alpha1.GetFreightRequest]) (*connect.Response[v1alpha1.GetFreightResponse], error)
+	// WatchFreight provides streaming updates for freight changes.
 	WatchFreight(context.Context, *connect.Request[v1alpha1.WatchFreightRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchFreightResponse], error)
+	// PromoteToStage initiates a promotion of freight to a specific stage.
 	PromoteToStage(context.Context, *connect.Request[v1alpha1.PromoteToStageRequest]) (*connect.Response[v1alpha1.PromoteToStageResponse], error)
+	// PromoteDownstream automatically promotes freight to downstream stages.
 	PromoteDownstream(context.Context, *connect.Request[v1alpha1.PromoteDownstreamRequest]) (*connect.Response[v1alpha1.PromoteDownstreamResponse], error)
+	// QueryFreight searches for freight based on specified criteria.
 	QueryFreight(context.Context, *connect.Request[v1alpha1.QueryFreightRequest]) (*connect.Response[v1alpha1.QueryFreightResponse], error)
+	// UpdateFreightAlias changes the alias associated with specific freight.
 	UpdateFreightAlias(context.Context, *connect.Request[v1alpha1.UpdateFreightAliasRequest]) (*connect.Response[v1alpha1.UpdateFreightAliasResponse], error)
+	// Reverify triggers re-execution of verification processes for a stage.
 	Reverify(context.Context, *connect.Request[v1alpha1.ReverifyRequest]) (*connect.Response[v1alpha1.ReverifyResponse], error)
+	// AbortVerification cancels running verification processes for a stage.
 	AbortVerification(context.Context, *connect.Request[v1alpha1.AbortVerificationRequest]) (*connect.Response[v1alpha1.AbortVerificationResponse], error)
+	// ListWarehouses retrieves all warehouses within a project.
 	ListWarehouses(context.Context, *connect.Request[v1alpha1.ListWarehousesRequest]) (*connect.Response[v1alpha1.ListWarehousesResponse], error)
+	// GetWarehouse retrieves details of a specific warehouse.
 	GetWarehouse(context.Context, *connect.Request[v1alpha1.GetWarehouseRequest]) (*connect.Response[v1alpha1.GetWarehouseResponse], error)
+	// WatchWarehouses provides streaming updates for warehouse changes.
 	WatchWarehouses(context.Context, *connect.Request[v1alpha1.WatchWarehousesRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchWarehousesResponse], error)
+	// DeleteWarehouse removes a warehouse from the system.
 	DeleteWarehouse(context.Context, *connect.Request[v1alpha1.DeleteWarehouseRequest]) (*connect.Response[v1alpha1.DeleteWarehouseResponse], error)
+	// RefreshWarehouse triggers a refresh of warehouse status and freight discovery.
 	RefreshWarehouse(context.Context, *connect.Request[v1alpha1.RefreshWarehouseRequest]) (*connect.Response[v1alpha1.RefreshWarehouseResponse], error)
+	// CreateCredentials creates new credentials for accessing external resources.
 	CreateCredentials(context.Context, *connect.Request[v1alpha1.CreateCredentialsRequest]) (*connect.Response[v1alpha1.CreateCredentialsResponse], error)
+	// DeleteCredentials removes credentials from the system.
 	DeleteCredentials(context.Context, *connect.Request[v1alpha1.DeleteCredentialsRequest]) (*connect.Response[v1alpha1.DeleteCredentialsResponse], error)
+	// GetCredentials retrieves details of specific credentials.
 	GetCredentials(context.Context, *connect.Request[v1alpha1.GetCredentialsRequest]) (*connect.Response[v1alpha1.GetCredentialsResponse], error)
+	// ListCredentials retrieves all credentials within a project.
 	ListCredentials(context.Context, *connect.Request[v1alpha1.ListCredentialsRequest]) (*connect.Response[v1alpha1.ListCredentialsResponse], error)
+	// UpdateCredentials modifies existing credentials.
 	UpdateCredentials(context.Context, *connect.Request[v1alpha1.UpdateCredentialsRequest]) (*connect.Response[v1alpha1.UpdateCredentialsResponse], error)
+	// ListProjectSecrets retrieves all secrets within a project.
 	ListProjectSecrets(context.Context, *connect.Request[v1alpha1.ListProjectSecretsRequest]) (*connect.Response[v1alpha1.ListProjectSecretsResponse], error)
+	// CreateProjectSecret creates a new secret within a project.
 	CreateProjectSecret(context.Context, *connect.Request[v1alpha1.CreateProjectSecretRequest]) (*connect.Response[v1alpha1.CreateProjectSecretResponse], error)
+	// UpdateProjectSecret modifies an existing project secret.
 	UpdateProjectSecret(context.Context, *connect.Request[v1alpha1.UpdateProjectSecretRequest]) (*connect.Response[v1alpha1.UpdateProjectSecretResponse], error)
+	// DeleteProjectSecret removes a secret from a project.
 	DeleteProjectSecret(context.Context, *connect.Request[v1alpha1.DeleteProjectSecretRequest]) (*connect.Response[v1alpha1.DeleteProjectSecretResponse], error)
+	// ListConfigMaps retrieves all ConfigMaps within a project.
 	ListConfigMaps(context.Context, *connect.Request[v1alpha1.ListConfigMapsRequest]) (*connect.Response[v1alpha1.ListConfigMapsResponse], error)
+	// GetConfigMap retrieves details of a specific ConfigMap.
 	GetConfigMap(context.Context, *connect.Request[v1alpha1.GetConfigMapRequest]) (*connect.Response[v1alpha1.GetConfigMapResponse], error)
+	// ListAnalysisTemplates retrieves all AnalysisTemplates within a project.
 	ListAnalysisTemplates(context.Context, *connect.Request[v1alpha1.ListAnalysisTemplatesRequest]) (*connect.Response[v1alpha1.ListAnalysisTemplatesResponse], error)
+	// GetAnalysisTemplate retrieves details of a specific AnalysisTemplate.
 	GetAnalysisTemplate(context.Context, *connect.Request[v1alpha1.GetAnalysisTemplateRequest]) (*connect.Response[v1alpha1.GetAnalysisTemplateResponse], error)
+	// DeleteAnalysisTemplate removes an AnalysisTemplate from a project.
 	DeleteAnalysisTemplate(context.Context, *connect.Request[v1alpha1.DeleteAnalysisTemplateRequest]) (*connect.Response[v1alpha1.DeleteAnalysisTemplateResponse], error)
+	// ListClusterAnalysisTemplates retrieves all cluster-scoped AnalysisTemplates.
 	ListClusterAnalysisTemplates(context.Context, *connect.Request[v1alpha1.ListClusterAnalysisTemplatesRequest]) (*connect.Response[v1alpha1.ListClusterAnalysisTemplatesResponse], error)
+	// GetClusterAnalysisTemplate retrieves details of a specific cluster-scoped AnalysisTemplate.
 	GetClusterAnalysisTemplate(context.Context, *connect.Request[v1alpha1.GetClusterAnalysisTemplateRequest]) (*connect.Response[v1alpha1.GetClusterAnalysisTemplateResponse], error)
+	// DeleteClusterAnalysisTemplate removes a cluster-scoped AnalysisTemplate.
 	DeleteClusterAnalysisTemplate(context.Context, *connect.Request[v1alpha1.DeleteClusterAnalysisTemplateRequest]) (*connect.Response[v1alpha1.DeleteClusterAnalysisTemplateResponse], error)
+	// GetAnalysisRun retrieves details of a specific AnalysisRun.
 	GetAnalysisRun(context.Context, *connect.Request[v1alpha1.GetAnalysisRunRequest]) (*connect.Response[v1alpha1.GetAnalysisRunResponse], error)
+	// GetAnalysisRunLogs streams logs from an AnalysisRun.
 	GetAnalysisRunLogs(context.Context, *connect.Request[v1alpha1.GetAnalysisRunLogsRequest]) (*connect.ServerStreamForClient[v1alpha1.GetAnalysisRunLogsResponse], error)
+	// ListProjectEvents retrieves events associated with a project.
 	ListProjectEvents(context.Context, *connect.Request[v1alpha1.ListProjectEventsRequest]) (*connect.Response[v1alpha1.ListProjectEventsResponse], error)
+	// ListPromotionTasks retrieves all PromotionTasks within a project.
 	ListPromotionTasks(context.Context, *connect.Request[v1alpha1.ListPromotionTasksRequest]) (*connect.Response[v1alpha1.ListPromotionTasksResponse], error)
+	// ListClusterPromotionTasks retrieves all cluster-scoped PromotionTasks.
 	ListClusterPromotionTasks(context.Context, *connect.Request[v1alpha1.ListClusterPromotionTasksRequest]) (*connect.Response[v1alpha1.ListClusterPromotionTasksResponse], error)
+	// GetPromotionTask retrieves details of a specific PromotionTask.
 	GetPromotionTask(context.Context, *connect.Request[v1alpha1.GetPromotionTaskRequest]) (*connect.Response[v1alpha1.GetPromotionTaskResponse], error)
+	// GetClusterPromotionTask retrieves details of a specific cluster-scoped PromotionTask.
 	GetClusterPromotionTask(context.Context, *connect.Request[v1alpha1.GetClusterPromotionTaskRequest]) (*connect.Response[v1alpha1.GetClusterPromotionTaskResponse], error)
+	// CreateRole creates a new RBAC role within a project.
 	CreateRole(context.Context, *connect.Request[v1alpha1.CreateRoleRequest]) (*connect.Response[v1alpha1.CreateRoleResponse], error)
+	// DeleteRole removes an RBAC role from a project.
 	DeleteRole(context.Context, *connect.Request[v1alpha1.DeleteRoleRequest]) (*connect.Response[v1alpha1.DeleteRoleResponse], error)
+	// GetRole retrieves details of a specific RBAC role.
 	GetRole(context.Context, *connect.Request[v1alpha1.GetRoleRequest]) (*connect.Response[v1alpha1.GetRoleResponse], error)
+	// Grant assigns permissions or binds users/services to a role.
 	Grant(context.Context, *connect.Request[v1alpha1.GrantRequest]) (*connect.Response[v1alpha1.GrantResponse], error)
+	// ListRoles retrieves all RBAC roles within a project.
 	ListRoles(context.Context, *connect.Request[v1alpha1.ListRolesRequest]) (*connect.Response[v1alpha1.ListRolesResponse], error)
+	// Revoke removes permissions or unbinds users/services from a role.
 	Revoke(context.Context, *connect.Request[v1alpha1.RevokeRequest]) (*connect.Response[v1alpha1.RevokeResponse], error)
+	// UpdateRole modifies an existing RBAC role.
 	UpdateRole(context.Context, *connect.Request[v1alpha1.UpdateRoleRequest]) (*connect.Response[v1alpha1.UpdateRoleResponse], error)
-	// Cluster Secrets APIs
+	// ListClusterSecrets retrieves all cluster-scoped secrets.
 	ListClusterSecrets(context.Context, *connect.Request[v1alpha1.ListClusterSecretsRequest]) (*connect.Response[v1alpha1.ListClusterSecretsResponse], error)
+	// CreateClusterSecret creates a new cluster-scoped secret.
 	CreateClusterSecret(context.Context, *connect.Request[v1alpha1.CreateClusterSecretRequest]) (*connect.Response[v1alpha1.CreateClusterSecretResponse], error)
+	// UpdateClusterSecret modifies an existing cluster-scoped secret.
 	UpdateClusterSecret(context.Context, *connect.Request[v1alpha1.UpdateClusterSecretRequest]) (*connect.Response[v1alpha1.UpdateClusterSecretResponse], error)
+	// DeleteClusterSecret removes a cluster-scoped secret.
 	DeleteClusterSecret(context.Context, *connect.Request[v1alpha1.DeleteClusterSecretRequest]) (*connect.Response[v1alpha1.DeleteClusterSecretResponse], error)
 }
 
@@ -1420,89 +1498,167 @@ func (c *kargoServiceClient) DeleteClusterSecret(ctx context.Context, req *conne
 // KargoServiceHandler is an implementation of the akuity.io.kargo.service.v1alpha1.KargoService
 // service.
 type KargoServiceHandler interface {
+	// GetVersionInfo returns version information for the Kargo server.
 	GetVersionInfo(context.Context, *connect.Request[v1alpha1.GetVersionInfoRequest]) (*connect.Response[v1alpha1.GetVersionInfoResponse], error)
+	// GetConfig retrieves the server configuration including ArgoCD shard information.
 	GetConfig(context.Context, *connect.Request[v1alpha1.GetConfigRequest]) (*connect.Response[v1alpha1.GetConfigResponse], error)
+	// GetPublicConfig returns publicly accessible configuration including OIDC settings.
 	GetPublicConfig(context.Context, *connect.Request[v1alpha1.GetPublicConfigRequest]) (*connect.Response[v1alpha1.GetPublicConfigResponse], error)
+	// AdminLogin authenticates an admin user and returns an access token.
 	AdminLogin(context.Context, *connect.Request[v1alpha1.AdminLoginRequest]) (*connect.Response[v1alpha1.AdminLoginResponse], error)
 	// TODO(devholic): Add ApplyResource API
 	// rpc ApplyResource(ApplyResourceRequest) returns (ApplyResourceRequest);
+	// CreateResource creates new Kubernetes resources from provided manifests.
 	CreateResource(context.Context, *connect.Request[v1alpha1.CreateResourceRequest]) (*connect.Response[v1alpha1.CreateResourceResponse], error)
+	// CreateOrUpdateResource creates or updates Kubernetes resources based on provided manifests.
 	CreateOrUpdateResource(context.Context, *connect.Request[v1alpha1.CreateOrUpdateResourceRequest]) (*connect.Response[v1alpha1.CreateOrUpdateResourceResponse], error)
+	// UpdateResource updates existing Kubernetes resources with provided manifests.
 	UpdateResource(context.Context, *connect.Request[v1alpha1.UpdateResourceRequest]) (*connect.Response[v1alpha1.UpdateResourceResponse], error)
+	// DeleteResource deletes Kubernetes resources specified in the provided manifests.
 	DeleteResource(context.Context, *connect.Request[v1alpha1.DeleteResourceRequest]) (*connect.Response[v1alpha1.DeleteResourceResponse], error)
+	// ListStages retrieves all stages within a project.
 	ListStages(context.Context, *connect.Request[v1alpha1.ListStagesRequest]) (*connect.Response[v1alpha1.ListStagesResponse], error)
+	// ListImages returns available images and their usage across stages.
 	ListImages(context.Context, *connect.Request[v1alpha1.ListImagesRequest]) (*connect.Response[v1alpha1.ListImagesResponse], error)
+	// GetStage retrieves details of a specific stage.
 	GetStage(context.Context, *connect.Request[v1alpha1.GetStageRequest]) (*connect.Response[v1alpha1.GetStageResponse], error)
+	// WatchStages provides a streaming interface to monitor stage changes.
 	WatchStages(context.Context, *connect.Request[v1alpha1.WatchStagesRequest], *connect.ServerStream[v1alpha1.WatchStagesResponse]) error
+	// DeleteStage removes a stage from the system.
 	DeleteStage(context.Context, *connect.Request[v1alpha1.DeleteStageRequest]) (*connect.Response[v1alpha1.DeleteStageResponse], error)
+	// RefreshStage triggers a refresh of stage status and health checks.
 	RefreshStage(context.Context, *connect.Request[v1alpha1.RefreshStageRequest]) (*connect.Response[v1alpha1.RefreshStageResponse], error)
+	// GetClusterConfig retrieves cluster-level configuration settings.
 	GetClusterConfig(context.Context, *connect.Request[v1alpha1.GetClusterConfigRequest]) (*connect.Response[v1alpha1.GetClusterConfigResponse], error)
+	// DeleteClusterConfig removes cluster-level configuration.
 	DeleteClusterConfig(context.Context, *connect.Request[v1alpha1.DeleteClusterConfigRequest]) (*connect.Response[v1alpha1.DeleteClusterConfigResponse], error)
+	// WatchClusterConfig provides streaming updates for cluster configuration changes.
 	WatchClusterConfig(context.Context, *connect.Request[v1alpha1.WatchClusterConfigRequest], *connect.ServerStream[v1alpha1.WatchClusterConfigResponse]) error
+	// RefreshClusterConfig triggers a refresh of cluster configuration.
 	RefreshClusterConfig(context.Context, *connect.Request[v1alpha1.RefreshClusterConfigRequest]) (*connect.Response[v1alpha1.RefreshClusterConfigResponse], error)
+	// ListPromotions retrieves all promotions, optionally filtered by stage.
 	ListPromotions(context.Context, *connect.Request[v1alpha1.ListPromotionsRequest]) (*connect.Response[v1alpha1.ListPromotionsResponse], error)
+	// WatchPromotions provides streaming updates for promotion changes.
 	WatchPromotions(context.Context, *connect.Request[v1alpha1.WatchPromotionsRequest], *connect.ServerStream[v1alpha1.WatchPromotionsResponse]) error
+	// GetPromotion retrieves details of a specific promotion.
 	GetPromotion(context.Context, *connect.Request[v1alpha1.GetPromotionRequest]) (*connect.Response[v1alpha1.GetPromotionResponse], error)
+	// WatchPromotion provides streaming updates for a specific promotion.
 	WatchPromotion(context.Context, *connect.Request[v1alpha1.WatchPromotionRequest], *connect.ServerStream[v1alpha1.WatchPromotionResponse]) error
+	// AbortPromotion cancels a running promotion process.
 	AbortPromotion(context.Context, *connect.Request[v1alpha1.AbortPromotionRequest]) (*connect.Response[v1alpha1.AbortPromotionResponse], error)
+	// DeleteProject removes a project and all associated resources.
 	DeleteProject(context.Context, *connect.Request[v1alpha1.DeleteProjectRequest]) (*connect.Response[v1alpha1.DeleteProjectResponse], error)
+	// GetProject retrieves details of a specific project.
 	GetProject(context.Context, *connect.Request[v1alpha1.GetProjectRequest]) (*connect.Response[v1alpha1.GetProjectResponse], error)
+	// ListProjects retrieves all projects with optional filtering and pagination.
 	ListProjects(context.Context, *connect.Request[v1alpha1.ListProjectsRequest]) (*connect.Response[v1alpha1.ListProjectsResponse], error)
-	// ProjectConfig APIs
+	// GetProjectConfig retrieves project-level configuration settings.
 	GetProjectConfig(context.Context, *connect.Request[v1alpha1.GetProjectConfigRequest]) (*connect.Response[v1alpha1.GetProjectConfigResponse], error)
+	// DeleteProjectConfig removes project-level configuration.
 	DeleteProjectConfig(context.Context, *connect.Request[v1alpha1.DeleteProjectConfigRequest]) (*connect.Response[v1alpha1.DeleteProjectConfigResponse], error)
+	// WatchProjectConfig provides streaming updates for project configuration changes.
 	WatchProjectConfig(context.Context, *connect.Request[v1alpha1.WatchProjectConfigRequest], *connect.ServerStream[v1alpha1.WatchProjectConfigResponse]) error
+	// RefreshProjectConfig triggers a refresh of project configuration.
 	RefreshProjectConfig(context.Context, *connect.Request[v1alpha1.RefreshProjectConfigRequest]) (*connect.Response[v1alpha1.RefreshProjectConfigResponse], error)
+	// ApproveFreight marks freight as approved for promotion to a specific stage.
 	ApproveFreight(context.Context, *connect.Request[v1alpha1.ApproveFreightRequest]) (*connect.Response[v1alpha1.ApproveFreightResponse], error)
+	// DeleteFreight removes freight from the system.
 	DeleteFreight(context.Context, *connect.Request[v1alpha1.DeleteFreightRequest]) (*connect.Response[v1alpha1.DeleteFreightResponse], error)
+	// GetFreight retrieves details of specific freight.
 	GetFreight(context.Context, *connect.Request[v1alpha1.GetFreightRequest]) (*connect.Response[v1alpha1.GetFreightResponse], error)
+	// WatchFreight provides streaming updates for freight changes.
 	WatchFreight(context.Context, *connect.Request[v1alpha1.WatchFreightRequest], *connect.ServerStream[v1alpha1.WatchFreightResponse]) error
+	// PromoteToStage initiates a promotion of freight to a specific stage.
 	PromoteToStage(context.Context, *connect.Request[v1alpha1.PromoteToStageRequest]) (*connect.Response[v1alpha1.PromoteToStageResponse], error)
+	// PromoteDownstream automatically promotes freight to downstream stages.
 	PromoteDownstream(context.Context, *connect.Request[v1alpha1.PromoteDownstreamRequest]) (*connect.Response[v1alpha1.PromoteDownstreamResponse], error)
+	// QueryFreight searches for freight based on specified criteria.
 	QueryFreight(context.Context, *connect.Request[v1alpha1.QueryFreightRequest]) (*connect.Response[v1alpha1.QueryFreightResponse], error)
+	// UpdateFreightAlias changes the alias associated with specific freight.
 	UpdateFreightAlias(context.Context, *connect.Request[v1alpha1.UpdateFreightAliasRequest]) (*connect.Response[v1alpha1.UpdateFreightAliasResponse], error)
+	// Reverify triggers re-execution of verification processes for a stage.
 	Reverify(context.Context, *connect.Request[v1alpha1.ReverifyRequest]) (*connect.Response[v1alpha1.ReverifyResponse], error)
+	// AbortVerification cancels running verification processes for a stage.
 	AbortVerification(context.Context, *connect.Request[v1alpha1.AbortVerificationRequest]) (*connect.Response[v1alpha1.AbortVerificationResponse], error)
+	// ListWarehouses retrieves all warehouses within a project.
 	ListWarehouses(context.Context, *connect.Request[v1alpha1.ListWarehousesRequest]) (*connect.Response[v1alpha1.ListWarehousesResponse], error)
+	// GetWarehouse retrieves details of a specific warehouse.
 	GetWarehouse(context.Context, *connect.Request[v1alpha1.GetWarehouseRequest]) (*connect.Response[v1alpha1.GetWarehouseResponse], error)
+	// WatchWarehouses provides streaming updates for warehouse changes.
 	WatchWarehouses(context.Context, *connect.Request[v1alpha1.WatchWarehousesRequest], *connect.ServerStream[v1alpha1.WatchWarehousesResponse]) error
+	// DeleteWarehouse removes a warehouse from the system.
 	DeleteWarehouse(context.Context, *connect.Request[v1alpha1.DeleteWarehouseRequest]) (*connect.Response[v1alpha1.DeleteWarehouseResponse], error)
+	// RefreshWarehouse triggers a refresh of warehouse status and freight discovery.
 	RefreshWarehouse(context.Context, *connect.Request[v1alpha1.RefreshWarehouseRequest]) (*connect.Response[v1alpha1.RefreshWarehouseResponse], error)
+	// CreateCredentials creates new credentials for accessing external resources.
 	CreateCredentials(context.Context, *connect.Request[v1alpha1.CreateCredentialsRequest]) (*connect.Response[v1alpha1.CreateCredentialsResponse], error)
+	// DeleteCredentials removes credentials from the system.
 	DeleteCredentials(context.Context, *connect.Request[v1alpha1.DeleteCredentialsRequest]) (*connect.Response[v1alpha1.DeleteCredentialsResponse], error)
+	// GetCredentials retrieves details of specific credentials.
 	GetCredentials(context.Context, *connect.Request[v1alpha1.GetCredentialsRequest]) (*connect.Response[v1alpha1.GetCredentialsResponse], error)
+	// ListCredentials retrieves all credentials within a project.
 	ListCredentials(context.Context, *connect.Request[v1alpha1.ListCredentialsRequest]) (*connect.Response[v1alpha1.ListCredentialsResponse], error)
+	// UpdateCredentials modifies existing credentials.
 	UpdateCredentials(context.Context, *connect.Request[v1alpha1.UpdateCredentialsRequest]) (*connect.Response[v1alpha1.UpdateCredentialsResponse], error)
+	// ListProjectSecrets retrieves all secrets within a project.
 	ListProjectSecrets(context.Context, *connect.Request[v1alpha1.ListProjectSecretsRequest]) (*connect.Response[v1alpha1.ListProjectSecretsResponse], error)
+	// CreateProjectSecret creates a new secret within a project.
 	CreateProjectSecret(context.Context, *connect.Request[v1alpha1.CreateProjectSecretRequest]) (*connect.Response[v1alpha1.CreateProjectSecretResponse], error)
+	// UpdateProjectSecret modifies an existing project secret.
 	UpdateProjectSecret(context.Context, *connect.Request[v1alpha1.UpdateProjectSecretRequest]) (*connect.Response[v1alpha1.UpdateProjectSecretResponse], error)
+	// DeleteProjectSecret removes a secret from a project.
 	DeleteProjectSecret(context.Context, *connect.Request[v1alpha1.DeleteProjectSecretRequest]) (*connect.Response[v1alpha1.DeleteProjectSecretResponse], error)
+	// ListConfigMaps retrieves all ConfigMaps within a project.
 	ListConfigMaps(context.Context, *connect.Request[v1alpha1.ListConfigMapsRequest]) (*connect.Response[v1alpha1.ListConfigMapsResponse], error)
+	// GetConfigMap retrieves details of a specific ConfigMap.
 	GetConfigMap(context.Context, *connect.Request[v1alpha1.GetConfigMapRequest]) (*connect.Response[v1alpha1.GetConfigMapResponse], error)
+	// ListAnalysisTemplates retrieves all AnalysisTemplates within a project.
 	ListAnalysisTemplates(context.Context, *connect.Request[v1alpha1.ListAnalysisTemplatesRequest]) (*connect.Response[v1alpha1.ListAnalysisTemplatesResponse], error)
+	// GetAnalysisTemplate retrieves details of a specific AnalysisTemplate.
 	GetAnalysisTemplate(context.Context, *connect.Request[v1alpha1.GetAnalysisTemplateRequest]) (*connect.Response[v1alpha1.GetAnalysisTemplateResponse], error)
+	// DeleteAnalysisTemplate removes an AnalysisTemplate from a project.
 	DeleteAnalysisTemplate(context.Context, *connect.Request[v1alpha1.DeleteAnalysisTemplateRequest]) (*connect.Response[v1alpha1.DeleteAnalysisTemplateResponse], error)
+	// ListClusterAnalysisTemplates retrieves all cluster-scoped AnalysisTemplates.
 	ListClusterAnalysisTemplates(context.Context, *connect.Request[v1alpha1.ListClusterAnalysisTemplatesRequest]) (*connect.Response[v1alpha1.ListClusterAnalysisTemplatesResponse], error)
+	// GetClusterAnalysisTemplate retrieves details of a specific cluster-scoped AnalysisTemplate.
 	GetClusterAnalysisTemplate(context.Context, *connect.Request[v1alpha1.GetClusterAnalysisTemplateRequest]) (*connect.Response[v1alpha1.GetClusterAnalysisTemplateResponse], error)
+	// DeleteClusterAnalysisTemplate removes a cluster-scoped AnalysisTemplate.
 	DeleteClusterAnalysisTemplate(context.Context, *connect.Request[v1alpha1.DeleteClusterAnalysisTemplateRequest]) (*connect.Response[v1alpha1.DeleteClusterAnalysisTemplateResponse], error)
+	// GetAnalysisRun retrieves details of a specific AnalysisRun.
 	GetAnalysisRun(context.Context, *connect.Request[v1alpha1.GetAnalysisRunRequest]) (*connect.Response[v1alpha1.GetAnalysisRunResponse], error)
+	// GetAnalysisRunLogs streams logs from an AnalysisRun.
 	GetAnalysisRunLogs(context.Context, *connect.Request[v1alpha1.GetAnalysisRunLogsRequest], *connect.ServerStream[v1alpha1.GetAnalysisRunLogsResponse]) error
+	// ListProjectEvents retrieves events associated with a project.
 	ListProjectEvents(context.Context, *connect.Request[v1alpha1.ListProjectEventsRequest]) (*connect.Response[v1alpha1.ListProjectEventsResponse], error)
+	// ListPromotionTasks retrieves all PromotionTasks within a project.
 	ListPromotionTasks(context.Context, *connect.Request[v1alpha1.ListPromotionTasksRequest]) (*connect.Response[v1alpha1.ListPromotionTasksResponse], error)
+	// ListClusterPromotionTasks retrieves all cluster-scoped PromotionTasks.
 	ListClusterPromotionTasks(context.Context, *connect.Request[v1alpha1.ListClusterPromotionTasksRequest]) (*connect.Response[v1alpha1.ListClusterPromotionTasksResponse], error)
+	// GetPromotionTask retrieves details of a specific PromotionTask.
 	GetPromotionTask(context.Context, *connect.Request[v1alpha1.GetPromotionTaskRequest]) (*connect.Response[v1alpha1.GetPromotionTaskResponse], error)
+	// GetClusterPromotionTask retrieves details of a specific cluster-scoped PromotionTask.
 	GetClusterPromotionTask(context.Context, *connect.Request[v1alpha1.GetClusterPromotionTaskRequest]) (*connect.Response[v1alpha1.GetClusterPromotionTaskResponse], error)
+	// CreateRole creates a new RBAC role within a project.
 	CreateRole(context.Context, *connect.Request[v1alpha1.CreateRoleRequest]) (*connect.Response[v1alpha1.CreateRoleResponse], error)
+	// DeleteRole removes an RBAC role from a project.
 	DeleteRole(context.Context, *connect.Request[v1alpha1.DeleteRoleRequest]) (*connect.Response[v1alpha1.DeleteRoleResponse], error)
+	// GetRole retrieves details of a specific RBAC role.
 	GetRole(context.Context, *connect.Request[v1alpha1.GetRoleRequest]) (*connect.Response[v1alpha1.GetRoleResponse], error)
+	// Grant assigns permissions or binds users/services to a role.
 	Grant(context.Context, *connect.Request[v1alpha1.GrantRequest]) (*connect.Response[v1alpha1.GrantResponse], error)
+	// ListRoles retrieves all RBAC roles within a project.
 	ListRoles(context.Context, *connect.Request[v1alpha1.ListRolesRequest]) (*connect.Response[v1alpha1.ListRolesResponse], error)
+	// Revoke removes permissions or unbinds users/services from a role.
 	Revoke(context.Context, *connect.Request[v1alpha1.RevokeRequest]) (*connect.Response[v1alpha1.RevokeResponse], error)
+	// UpdateRole modifies an existing RBAC role.
 	UpdateRole(context.Context, *connect.Request[v1alpha1.UpdateRoleRequest]) (*connect.Response[v1alpha1.UpdateRoleResponse], error)
-	// Cluster Secrets APIs
+	// ListClusterSecrets retrieves all cluster-scoped secrets.
 	ListClusterSecrets(context.Context, *connect.Request[v1alpha1.ListClusterSecretsRequest]) (*connect.Response[v1alpha1.ListClusterSecretsResponse], error)
+	// CreateClusterSecret creates a new cluster-scoped secret.
 	CreateClusterSecret(context.Context, *connect.Request[v1alpha1.CreateClusterSecretRequest]) (*connect.Response[v1alpha1.CreateClusterSecretResponse], error)
+	// UpdateClusterSecret modifies an existing cluster-scoped secret.
 	UpdateClusterSecret(context.Context, *connect.Request[v1alpha1.UpdateClusterSecretRequest]) (*connect.Response[v1alpha1.UpdateClusterSecretResponse], error)
+	// DeleteClusterSecret removes a cluster-scoped secret.
 	DeleteClusterSecret(context.Context, *connect.Request[v1alpha1.DeleteClusterSecretRequest]) (*connect.Response[v1alpha1.DeleteClusterSecretResponse], error)
 }
 

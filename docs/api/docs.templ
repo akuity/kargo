@@ -9,9 +9,6 @@
 {{- range .Services}}
 <a name="{{.FullName | anchor}}"></a>
 
-### {{.Name}}
-{{- .Description}}
-
 | Method Name | Request Type | Response Type |
 | ----------- | ------------ | ------------- |
 {{range .Methods -}}
