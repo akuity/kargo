@@ -880,7 +880,7 @@ func TestServiceAccountsByOIDCClaims(t *testing.T) {
 			expected: []string{"foo/a,b,c", "bar/1,2,3"},
 		},
 		{
-			name: "ServiceAccount has OIDC claims with no values",
+			name: "ServiceAccount has OIDC invalid input no colon",
 			sa: &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
