@@ -877,7 +877,7 @@ func TestServiceAccountsByOIDCClaims(t *testing.T) {
 					},
 				},
 			},
-			expected: []string{"foo/a,b,c", "bar/1,2,3"},
+			expected: []string{"foo/a", "foo/b", "foo/c", "bar/1", "bar/2", "bar/3"},
 		},
 		{
 			name: "ServiceAccount has OIDC invalid input no colon",
