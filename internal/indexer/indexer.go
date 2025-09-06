@@ -493,9 +493,11 @@ func ServiceAccountsByOIDCClaims(obj client.Object) []string {
 						return strings.ReplaceAll(s, "'", "") // rm single quotes
 					}
 					lastColonIndex := strings.LastIndex(e, ":")
-					claimKey := clean(e[:lastColonIndex])
-					claimValue := clean(e[lastColonIndex+1:]) // +1 to skip the colon itself
-					refinedClaimValues = append(refinedClaimValues, FormatClaim(claimKey, claimValue))
+					if lastColonIndex != -1 { // protect from panicing on invalid input
+						claimKey := clean(e[:lastColonIndex])
+						claimValue := clean(e[lastColonIndex+1:]) // +1 to skip the colon itself
+						refinedClaimValues = append(refinedClaimValues, FormatClaim(claimKey, claimValue))
+					}
 				}
 			}
 		}
