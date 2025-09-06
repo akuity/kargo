@@ -19,9 +19,9 @@ import (
 	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
-	"github.com/akuity/kargo/internal/logging"
 	intpredicate "github.com/akuity/kargo/internal/predicate"
 	"github.com/akuity/kargo/internal/webhook/external"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 type ReconcilerConfig struct {
@@ -165,7 +165,6 @@ func (r *reconciler) reconcile(
 		// Reconcile the ProjectConfig with the sub-reconciler.
 		var err error
 		status, err = subR.reconcile()
-
 		// If an error occurred during the sub-reconciler, then we should return the
 		// error which will cause the ProjectConfig to be requeued.
 		if err != nil {

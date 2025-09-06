@@ -29,8 +29,8 @@ import (
 	rollouts "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/indexer"
-	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/server/user"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 // ClientOptions specifies options for customizing the client returned by the
@@ -176,13 +176,11 @@ func NewClient(
 	if opts, err = setOptionsDefaults(opts); err != nil {
 		return nil, fmt.Errorf("error setting client options defaults: %w", err)
 	}
-	internalClient, err :=
-		opts.NewInternalClient(ctx, restCfg, opts.Scheme)
+	internalClient, err := opts.NewInternalClient(ctx, restCfg, opts.Scheme)
 	if err != nil {
 		return nil, fmt.Errorf("error building internal client: %w", err)
 	}
-	internalDynamicClient, err :=
-		opts.NewInternalDynamicClient(restCfg)
+	internalDynamicClient, err := opts.NewInternalDynamicClient(restCfg)
 	if err != nil {
 		return nil, fmt.Errorf("error building internal dynamic client: %w", err)
 	}

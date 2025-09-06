@@ -9,7 +9,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 func init() {

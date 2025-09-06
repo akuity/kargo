@@ -8,8 +8,8 @@ import (
 	"connectrpc.com/connect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/server/config"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 func NewHandlerOption(

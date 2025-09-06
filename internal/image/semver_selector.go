@@ -10,7 +10,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libSemver "github.com/akuity/kargo/internal/controller/semver"
-	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 func init() {
@@ -53,8 +53,7 @@ func newSemverSelector(
 		constraintStr = sub.SemverConstraint // nolint: staticcheck
 	}
 	if constraintStr != "" {
-		if s.constraint, err =
-			semver.NewConstraint(constraintStr); err != nil {
+		if s.constraint, err = semver.NewConstraint(constraintStr); err != nil {
 			return nil, fmt.Errorf(
 				"error parsing semver constraint %q: %w",
 				constraintStr, err,

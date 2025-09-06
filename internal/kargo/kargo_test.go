@@ -9,7 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 func TestPromoPhaseChanged_Update(t *testing.T) {
@@ -69,7 +69,7 @@ func TestPromoPhaseChanged_Update(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := NewPromoPhaseChangedPredicate(logging.NewLogger(logging.InfoLevel))
+			p := NewPromoPhaseChangedPredicate(logging.NewLoggerOrDie(logging.InfoLevel, logging.DefaultFormat))
 			require.Equal(t, tt.want, p.Update(event.TypedUpdateEvent[*kargoapi.Promotion]{
 				ObjectOld: tt.oldObject,
 				ObjectNew: tt.newObject,

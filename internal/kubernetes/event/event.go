@@ -13,7 +13,7 @@ import (
 	"k8s.io/client-go/util/retry"
 	libClient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 type recorder struct {
@@ -107,9 +107,7 @@ func (r *recorder) newRetryDecider(event *corev1.Event) func(error) bool {
 	}
 }
 
-var (
-	_ record.EventSink = &sink{}
-)
+var _ record.EventSink = &sink{}
 
 type sink struct {
 	ctx    context.Context

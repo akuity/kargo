@@ -12,7 +12,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
-	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 const branchPrefix = "refs/heads/"
@@ -128,7 +128,7 @@ func (n *newestFromBranchSelector) Select(ctx context.Context) (
 func (n *newestFromBranchSelector) selectCommits(
 	repo git.Repo,
 ) ([]git.CommitMetadata, error) {
-	var selectedCommits = make([]git.CommitMetadata, 0, n.discoveryLimit)
+	selectedCommits := make([]git.CommitMetadata, 0, n.discoveryLimit)
 	for skip, batch := uint(0), uint(n.discoveryLimit); ; skip, batch = skip+batch, min(batch*2, 1000) { // nolint: gosec
 		commits, err := n.listCommitsFn(repo, batch, skip) // nolint: gosec
 		if err != nil {

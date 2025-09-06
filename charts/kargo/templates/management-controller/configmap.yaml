@@ -15,6 +15,7 @@ data:
   MANAGE_CONTROLLER_ROLE_BINDINGS: "false"
   {{- end }}
   LOG_LEVEL: {{ quote .Values.managementController.logLevel }}
+  LOG_FORMAT: {{ quote .Values.managementController.logFormat }}
   {{- if .Values.kubeconfigSecrets.kargo }}
   KUBECONFIG: /etc/kargo/kubeconfigs/kubeconfig.yaml
   {{- end }}

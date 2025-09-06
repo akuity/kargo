@@ -15,7 +15,7 @@ import (
 	"google.golang.org/api/iamcredentials/v1"
 
 	"github.com/akuity/kargo/internal/credentials"
-	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 const (
@@ -107,7 +107,7 @@ func (p *WorkloadIdentityFederationProvider) GetCredentials(
 		return nil, nil
 	}
 
-	var cacheKey = tokenCacheKey(project)
+	cacheKey := tokenCacheKey(project)
 
 	// Check the token cache for a Project-specific token
 	if entry, exists := p.tokenCache.Get(cacheKey); exists {

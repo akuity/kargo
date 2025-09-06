@@ -19,9 +19,9 @@ import (
 	"github.com/akuity/kargo/internal/git"
 	checkers "github.com/akuity/kargo/internal/health/checker/builtin"
 	"github.com/akuity/kargo/internal/kubeclient"
-	"github.com/akuity/kargo/internal/logging"
 	pkgargocd "github.com/akuity/kargo/pkg/argocd"
 	"github.com/akuity/kargo/pkg/health"
+	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -144,7 +144,7 @@ func (a *argocdUpdater) run(
 	logger := logging.LoggerFromContext(ctx)
 	logger.Debug("executing argocd-update promotion step")
 
-	var updateResults = make([]argocd.OperationPhase, 0, len(stepCfg.Apps))
+	updateResults := make([]argocd.OperationPhase, 0, len(stepCfg.Apps))
 	appHealthChecks := make([]checkers.ArgoCDAppHealthCheck, len(stepCfg.Apps))
 	for i := range stepCfg.Apps {
 		update := &stepCfg.Apps[i]
@@ -517,8 +517,7 @@ func (a *argocdUpdater) syncApplication(
 		_, srcHasStatus := src.Object["status"]
 		if dstHasStatus && srcHasStatus {
 			// nolint: forcetypeassert
-			dst.Object["status"].(map[string]any)["operationState"] =
-				src.Object["status"].(map[string]any)["operationState"]
+			dst.Object["status"].(map[string]any)["operationState"] = src.Object["status"].(map[string]any)["operationState"]
 		}
 		return nil
 	}); err != nil {
