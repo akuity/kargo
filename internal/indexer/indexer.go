@@ -495,8 +495,8 @@ func ServiceAccountsByOIDCClaims(obj client.Object) []string {
 					lastColonIndex := strings.LastIndex(e, ":")
 					if lastColonIndex != -1 { // protect from panicing on invalid input
 						claimKey := clean(e[:lastColonIndex])
-						claimValues := strings.Split(e[lastColonIndex+1:], ",")
-						for _, cv := range claimValues {
+						claimValues := strings.SplitSeq(e[lastColonIndex+1:], ",")
+						for cv := range claimValues {
 							if claimValue := clean(cv); claimValue != "" {
 								refinedClaimValues = append(refinedClaimValues, FormatClaim(claimKey, claimValue))
 							}
