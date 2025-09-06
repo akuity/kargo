@@ -488,9 +488,14 @@ func ServiceAccountsByOIDCClaims(obj client.Object) []string {
 			//	"'cognito:groups': devops\nemail: user@example.com\n"
 			for e := range strings.SplitSeq(annotationValue, "\n") {
 				if e != "" {
-					e = strings.Replace(e, ": ", "/", 1) // 'cognito:groups': devops -> 'cognito:groups'/devops
-					e = strings.ReplaceAll(e, "'", "")   // 'cognito:groups'/devops -> cognito:groups/devops
-					refinedClaimValues = append(refinedClaimValues, e)
+					clean := func(s string) string {
+						s = strings.TrimSpace(s)              // rm spaces
+						return strings.ReplaceAll(s, "'", "") // rm single quotes
+					}
+					lastColonIndex := strings.LastIndex(e, ":")
+					claimKey := clean(e[:lastColonIndex])
+					claimValue := clean(e[lastColonIndex+1:]) // +1 to skip the colon itself
+					refinedClaimValues = append(refinedClaimValues, FormatClaim(claimKey, claimValue))
 				}
 			}
 		}
