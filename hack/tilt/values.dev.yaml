@@ -31,6 +31,9 @@ api:
         email:
         # This email claim is hard-coded in the Dex mockCallback connector
         - kilgore@kilgore.trout
+      claimsv2:
+        cognito:groups:
+        - devops
 controller:
   logLevel: DEBUG
 crds:
