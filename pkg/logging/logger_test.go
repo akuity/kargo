@@ -172,3 +172,98 @@ func TestToZapLevel(t *testing.T) {
 		})
 	}
 }
+
+func TestParseFormat(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected Format
+		wantErr  bool
+	}{
+		{
+			name:     "json format",
+			input:    "json",
+			expected: JSONFormat,
+			wantErr:  false,
+		},
+		{
+			name:     "json format uppercase",
+			input:    "JSON",
+			expected: JSONFormat,
+			wantErr:  false,
+		},
+		{
+			name:     "json format mixed case",
+			input:    "JsOn",
+			expected: JSONFormat,
+			wantErr:  false,
+		},
+		{
+			name:     "console format",
+			input:    "console",
+			expected: ConsoleFormat,
+			wantErr:  false,
+		},
+		{
+			name:     "console format uppercase",
+			input:    "CONSOLE",
+			expected: ConsoleFormat,
+			wantErr:  false,
+		},
+		{
+			name:     "console format mixed case",
+			input:    "CoNsOlE",
+			expected: ConsoleFormat,
+			wantErr:  false,
+		},
+		{
+			name:     "whitespace",
+			input:    " json ",
+			expected: JSONFormat,
+			wantErr:  false,
+		},
+		{
+			name:     "invalid format",
+			input:    "invalid",
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "numeric string",
+			input:    "123",
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "special characters",
+			input:    "json!@#",
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "partial match",
+			input:    "jso",
+			expected: "",
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := ParseFormat(tt.input)
+			if tt.wantErr {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "invalid log format")
+			} else {
+				require.NoError(t, err)
+			}
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}

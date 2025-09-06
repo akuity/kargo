@@ -190,7 +190,7 @@ func newLoggerInternal(level Level, format Format, writer zapcore.WriteSyncer) (
 // ParseFormat parses a string representation of a log format and returns the
 // corresponding Format value or an error if it isn't recognized
 func ParseFormat(f string) (Format, error) {
-	switch Format(strings.ToLower(f)) {
+	switch Format(strings.TrimSpace(strings.ToLower(f))) {
 	case JSONFormat:
 		return JSONFormat, nil
 	case ConsoleFormat:
