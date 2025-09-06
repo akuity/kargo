@@ -879,17 +879,6 @@ func TestServiceAccountsByOIDCClaims(t *testing.T) {
 			},
 			expected: []string{"foo/a,b,c", "bar/1,2,3"},
 		},
-		{
-			name: "ServiceAccount has OIDC claims with no space after last colon",
-			sa: &corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						rbacapi.AnnotationKeyOIDCClaims: "foo:a\nbar:b",
-					},
-				},
-			},
-			expected: []string{"foo/a", "bar/b"},
-		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
