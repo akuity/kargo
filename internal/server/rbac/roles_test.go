@@ -139,10 +139,6 @@ func TestCreate(t *testing.T) {
 				rbacapi.AnnotationKeyOIDCClaim("sub"):    "bar-sub,foo-sub",
 				rbacapi.AnnotationKeyOIDCClaim("email"):  "bar-email,foo-email",
 				rbacapi.AnnotationKeyOIDCClaim("groups"): "bar-group,foo-group",
-				rbacapi.AnnotationKeyOIDCClaims:          rbacapi.AnnotationKeyOIDCClaimsValue(
-					"cognito:groups", "bar-group,foo-group",
-					"email", "bar-email,foo-email",
-				),
 				kargoapi.AnnotationKeyDescription:        "fake-description",
 			},
 			sa.Annotations,
