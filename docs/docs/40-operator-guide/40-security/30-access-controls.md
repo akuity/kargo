@@ -101,6 +101,26 @@ A user may be mapped to multiple `ServiceAccount` resources. A user's effective
 permissions are therefore the _union_ of the permissions associated with all
 such `ServiceAccount` resources.
 
+Alternatively, you can also use the `rbac.kargo.akuity.io/claims` key.
+This is especially useful for keys that contain special characters like `:`.
+
+For example, in the case of AWS Cognito, we would end up with a key like
+`rbac.kargo.akuity.io/claim.cognito:groups: mygroup`; which is not allowed by 
+k8s. So we use the `rbac.kargo.akuity.io/claims` annotation to solve for this 
+like so:
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: admin
+  namespace: kargo-demo
+  annotations:
+    rbac.kargo.akuity.io/claims: |
+      'cognito:groups': devops
+      email: user@example.com
+```
+
 ### Global Mappings
 
 Now that we've seen how users are mapped to `ServiceAccount` resources, we can
