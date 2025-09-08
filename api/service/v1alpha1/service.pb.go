@@ -436,7 +436,7 @@ type GetConfigResponse struct {
 	SecretManagementEnabled bool `protobuf:"varint,2,opt,name=secret_management_enabled,json=secretManagementEnabled,proto3" json:"secret_management_enabled,omitempty"`
 	// cluster_secrets_namespace is the namespace used for cluster-scoped secrets.
 	ClusterSecretsNamespace string `protobuf:"bytes,3,opt,name=cluster_secrets_namespace,json=clusterSecretsNamespace,proto3" json:"cluster_secrets_namespace,omitempty"`
-  // has_analysis_run_logs_url_template indicates if an analysis run logs URL template is configured.
+	// has_analysis_run_logs_url_template indicates if an analysis run logs URL template is configured.
 	HasAnalysisRunLogsUrlTemplate bool `protobuf:"varint,4,opt,name=has_analysis_run_logs_url_template,json=hasAnalysisRunLogsUrlTemplate,proto3" json:"has_analysis_run_logs_url_template,omitempty"`
 }
 

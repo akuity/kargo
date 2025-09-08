@@ -220,6 +220,8 @@ export type GetConfigResponse = Message<"akuity.io.kargo.service.v1alpha1.GetCon
   clusterSecretsNamespace: string;
 
   /**
+   * has_analysis_run_logs_url_template indicates if an analysis run logs URL template is configured.
+   *
    * @generated from field: bool has_analysis_run_logs_url_template = 4;
    */
   hasAnalysisRunLogsUrlTemplate: boolean;
