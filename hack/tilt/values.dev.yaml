@@ -27,16 +27,11 @@ api:
       probes:
         enabled: false
     admins:
-      claims:
-        email:
-        # This email claim is hard-coded in the Dex mockCallback connector
-        - kilgore@kilgore.trout
-      # just testing, will delete before merge
-      claimsv2:
-        cognito:groups:
-        - devops
-        email:
-          user@inbox.com
+      claims: |
+        {
+          "email": ["kilgore@kilgore.trout", "user@inbox.com"],
+          "cognito:groups": ["devops"]
+        }
 controller:
   logLevel: DEBUG
 crds:
