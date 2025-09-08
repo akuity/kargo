@@ -19,7 +19,7 @@ import (
 	"go.uber.org/ratelimit"
 	"golang.org/x/sync/semaphore"
 
-	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 const (

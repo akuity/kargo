@@ -20,7 +20,7 @@ import (
 	"github.com/akuity/kargo/internal/conditions"
 	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/credentials"
-	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 func TestNewReconciler(t *testing.T) {
@@ -1148,7 +1148,7 @@ func TestReconcile(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := tt.reconciler()
-			logger := logging.NewLogger(logging.DebugLevel)
+			logger := logging.NewLoggerOrDie(logging.DebugLevel, logging.DefaultFormat)
 			ctx := logging.ContextWithLogger(t.Context(), logger)
 			result, err := r.Reconcile(ctx, tt.req)
 			tt.assertions(t, result, err)

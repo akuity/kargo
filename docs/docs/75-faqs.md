@@ -198,5 +198,5 @@ can also integrate with a variety of identity providers that either don't
 support PKCE or don't support OpenID Connect at all (GitHub, for example).
 
 Refer to our
-[OpenID Connect integration docs](./40-operator-guide/40-security/20-openid-connect.md)
+[OpenID Connect integration docs](./40-operator-guide/40-security/20-openid-connect/index.md)
 for comprehensive coverage of this topic.

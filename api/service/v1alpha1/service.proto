@@ -293,6 +293,7 @@ message GetConfigResponse {
   bool secret_management_enabled = 2;
   // cluster_secrets_namespace is the namespace used for cluster-scoped secrets.
   string cluster_secrets_namespace = 3;
+  bool has_analysis_run_logs_url_template = 4;
 }
 
 // GetPublicConfigRequest is the request message for retrieving public configuration.

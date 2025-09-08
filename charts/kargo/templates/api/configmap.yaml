@@ -10,6 +10,7 @@ metadata:
 data:
   KARGO_NAMESPACE: {{ .Release.Namespace }}
   LOG_LEVEL: {{ quote .Values.api.logLevel }}
+  LOG_FORMAT: {{ quote .Values.api.logFormat }}
   {{- if .Values.kubeconfigSecrets.kargo }}
   KUBECONFIG: /etc/kargo/kubeconfig.yaml
   {{- end }}

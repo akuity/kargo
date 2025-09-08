@@ -19,7 +19,7 @@ import (
 	"github.com/patrickmn/go-cache"
 
 	"github.com/akuity/kargo/internal/credentials"
-	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 const roleARNFormat = "arn:aws:iam::%s:role/kargo-project-%s"

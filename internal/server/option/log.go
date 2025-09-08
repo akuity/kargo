@@ -7,19 +7,15 @@ import (
 
 	"connectrpc.com/connect"
 
-	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
-var (
-	loggingIgnorableMethods = map[string]bool{
-		"/grpc.health.v1.Health/Check": true,
-		"/grpc.health.v1.Health/Watch": true,
-	}
-)
+var loggingIgnorableMethods = map[string]bool{
+	"/grpc.health.v1.Health/Check": true,
+	"/grpc.health.v1.Health/Watch": true,
+}
 
-var (
-	_ connect.Interceptor = &logInterceptor{}
-)
+var _ connect.Interceptor = &logInterceptor{}
 
 type logInterceptor struct {
 	logger           *logging.Logger
@@ -66,13 +62,15 @@ func (i *logInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 }
 
 func (i *logInterceptor) WrapStreamingClient(
-	next connect.StreamingClientFunc) connect.StreamingClientFunc {
+	next connect.StreamingClientFunc,
+) connect.StreamingClientFunc {
 	// TODO: Support streaming client
 	return next
 }
 
 func (i *logInterceptor) WrapStreamingHandler(
-	next connect.StreamingHandlerFunc) connect.StreamingHandlerFunc {
+	next connect.StreamingHandlerFunc,
+) connect.StreamingHandlerFunc {
 	return func(ctx context.Context, conn connect.StreamingHandlerConn) error {
 		start := time.Now()
 		ctx = i.newLogger(ctx, conn.Spec().Procedure, start)
@@ -99,7 +97,8 @@ func (i *logInterceptor) WrapStreamingHandler(
 }
 
 func (i *logInterceptor) newLogger(
-	ctx context.Context, procedure string, start time.Time) context.Context {
+	ctx context.Context, procedure string, start time.Time,
+) context.Context {
 	service := path.Dir(procedure)[1:]
 	method := path.Base(procedure)
 	logger := i.logger.WithValues(

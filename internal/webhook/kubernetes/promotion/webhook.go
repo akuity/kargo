@@ -22,10 +22,10 @@ import (
 	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/kargo"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
-	"github.com/akuity/kargo/internal/logging"
 	libWebhook "github.com/akuity/kargo/internal/webhook/kubernetes"
 	kargoEvent "github.com/akuity/kargo/pkg/event"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 var (

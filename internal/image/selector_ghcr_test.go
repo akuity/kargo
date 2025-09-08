@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 // All test cases in this file are integration tests that rely on ghcr.io. You
@@ -23,7 +23,7 @@ func TestSelectImageGHCR(t *testing.T) {
 
 	ctx := logging.ContextWithLogger(
 		context.Background(),
-		logging.NewLogger(logging.TraceLevel),
+		logging.NewLoggerOrDie(logging.TraceLevel, logging.DefaultFormat),
 	)
 
 	t.Run("digest strategy", func(t *testing.T) {

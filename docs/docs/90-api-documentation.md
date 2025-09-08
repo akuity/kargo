@@ -641,6 +641,7 @@
 | argocd_shards | [GetConfigResponse.ArgocdShardsEntry](#akuity-io-kargo-service-v1alpha1-GetConfigResponse-ArgocdShardsEntry) |  argocd_shards maps shard names to their ArgoCD configuration. |
 | secret_management_enabled | [bool](#bool) |  secret_management_enabled indicates if secret management features are available. |
 | cluster_secrets_namespace | [string](#string) |  cluster_secrets_namespace is the namespace used for cluster-scoped secrets. |
+| has_analysis_run_logs_url_template | [bool](#bool) | has_analysis_run_logs_url_template indicates if an analysis run logs URL template is configured. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetConfigResponse-ArgocdShardsEntry"></a>
 

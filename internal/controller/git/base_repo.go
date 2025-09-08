@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	libExec "github.com/akuity/kargo/internal/exec"
-	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 const (
@@ -199,8 +199,7 @@ func (b *baseRepo) setupAuth(homeDir string) error {
 		rsaKeyPath := filepath.Join(sshPath, "id_rsa")
 		// nolint: lll
 		sshConfig := fmt.Sprintf("Host *\n  StrictHostKeyChecking no\n  UserKnownHostsFile=/dev/null\n  IdentityFile %q\n", rsaKeyPath)
-		if err :=
-			os.WriteFile(sshConfigPath, []byte(sshConfig), 0600); err != nil {
+		if err := os.WriteFile(sshConfigPath, []byte(sshConfig), 0600); err != nil {
 			return fmt.Errorf("error writing SSH config to %q: %w", sshConfigPath, err)
 		}
 

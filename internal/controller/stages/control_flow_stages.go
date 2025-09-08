@@ -24,10 +24,10 @@ import (
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/kubernetes"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
-	"github.com/akuity/kargo/internal/logging"
 	intpredicate "github.com/akuity/kargo/internal/predicate"
 	"github.com/akuity/kargo/pkg/event"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 type ControlFlowStageReconciler struct {

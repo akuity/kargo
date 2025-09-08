@@ -24,9 +24,9 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/indexer"
-	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/server/config"
 	"github.com/akuity/kargo/internal/server/user"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 const authHeaderKey = "Authorization"
@@ -78,8 +78,7 @@ func newAuthInterceptor(
 	if cfg.OIDCConfig != nil {
 		a.oidcTokenVerifyFn = newMultiClientVerifier(ctx, cfg)
 	}
-	a.parseUnverifiedJWTFn =
-		jwt.NewParser(jwt.WithoutClaimsValidation()).ParseUnverified
+	a.parseUnverifiedJWTFn = jwt.NewParser(jwt.WithoutClaimsValidation()).ParseUnverified
 	a.verifyKargoIssuedTokenFn = a.verifyKargoIssuedToken
 	a.verifyIDPIssuedTokenFn = a.verifyIDPIssuedToken
 	a.oidcExtractClaimsFn = oidcExtractClaims
@@ -233,8 +232,7 @@ func (a *authInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 		req connect.AnyRequest,
 	) (connect.AnyResponse, error) {
 		var err error
-		if ctx, err =
-			a.authenticate(ctx, req.Spec().Procedure, req.Header()); err != nil {
+		if ctx, err = a.authenticate(ctx, req.Spec().Procedure, req.Header()); err != nil {
 			return nil, connect.NewError(connect.CodeUnauthenticated, err)
 		}
 		return next(ctx, req)

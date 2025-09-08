@@ -20,8 +20,8 @@ import (
 	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
-	"github.com/akuity/kargo/internal/logging"
 	intpredicate "github.com/akuity/kargo/internal/predicate"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 type ReconcilerConfig struct {
@@ -69,7 +69,6 @@ func SetupReconcilerWithManager(
 	credentialsDB credentials.Database,
 	cfg ReconcilerConfig,
 ) error {
-
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&kargoapi.Warehouse{}).
 		WithEventFilter(controller.ResponsibleFor[client.Object]{

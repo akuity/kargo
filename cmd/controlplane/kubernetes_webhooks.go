@@ -16,7 +16,6 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/indexer"
-	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
 	"github.com/akuity/kargo/internal/server/kubernetes"
 	"github.com/akuity/kargo/internal/types"
@@ -30,6 +29,7 @@ import (
 	"github.com/akuity/kargo/internal/webhook/kubernetes/promotiontask"
 	"github.com/akuity/kargo/internal/webhook/kubernetes/stage"
 	"github.com/akuity/kargo/internal/webhook/kubernetes/warehouse"
+	"github.com/akuity/kargo/pkg/logging"
 	versionpkg "github.com/akuity/kargo/pkg/x/version"
 )
 
@@ -45,10 +45,11 @@ type kubernetesWebhooksServerOptions struct {
 }
 
 func newKubernetesWebhooksServerCommand() *cobra.Command {
+	_, format := getLogVars()
 	cmdOpts := &kubernetesWebhooksServerOptions{
 		// During startup, we enforce use of an info-level logger to ensure that
 		// no important startup messages are missed.
-		Logger: logging.NewLogger(logging.InfoLevel),
+		Logger: logging.NewLoggerOrDie(logging.InfoLevel, format),
 	}
 
 	cmd := &cobra.Command{
@@ -57,6 +58,14 @@ func newKubernetesWebhooksServerCommand() *cobra.Command {
 		SilenceErrors:     true,
 		SilenceUsage:      true,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			version := versionpkg.GetVersion()
+			cmdOpts.Logger.Info(
+				"Starting Kargo Kubernetes Webhooks Server",
+				"version", version.Version,
+				"commit", version.GitCommit,
+				"GOMAXPROCS", stdruntime.GOMAXPROCS(0),
+				"GOMEMLIMIT", os.GetEnv("GOMEMLIMIT", ""),
+			)
 			cmdOpts.complete()
 
 			return cmdOpts.run(cmd.Context())
@@ -73,18 +82,13 @@ func (o *kubernetesWebhooksServerOptions) complete() {
 
 	o.MetricsBindAddress = os.GetEnv("METRICS_BIND_ADDRESS", "0")
 	o.PprofBindAddress = os.GetEnv("PPROF_BIND_ADDRESS", "")
+
+	logLevel, logFormat := getLogVars()
+
+	o.Logger = logging.NewLoggerOrDie(logLevel, logFormat)
 }
 
 func (o *kubernetesWebhooksServerOptions) run(ctx context.Context) error {
-	version := versionpkg.GetVersion()
-	o.Logger.Info(
-		"Starting Kargo Kubernetes Webhooks Server",
-		"version", version.Version,
-		"commit", version.GitCommit,
-		"GOMAXPROCS", stdruntime.GOMAXPROCS(0),
-		"GOMEMLIMIT", os.GetEnv("GOMEMLIMIT", ""),
-	)
-
 	webhookCfg := libWebhook.ConfigFromEnv()
 
 	restCfg, err := kubernetes.GetRestConfig(ctx, o.KubeConfig)

@@ -12,7 +12,7 @@ import (
 	"github.com/akuity/kargo/internal/helm"
 	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/image"
-	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 const (

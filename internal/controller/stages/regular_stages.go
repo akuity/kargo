@@ -40,13 +40,13 @@ import (
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/kubernetes"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
-	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/pattern"
 	intpredicate "github.com/akuity/kargo/internal/predicate"
 	"github.com/akuity/kargo/internal/rollouts"
 	kargoEvent "github.com/akuity/kargo/pkg/event"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	healthPkg "github.com/akuity/kargo/pkg/health"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 // ReconcilerConfig represents configuration for the stage reconciler.
@@ -1883,7 +1883,7 @@ func (r *RegularStageReconciler) getPromotableFreight(
 		)
 	}
 
-	var promotableFreight = make(map[string][]kargoapi.Freight)
+	promotableFreight := make(map[string][]kargoapi.Freight)
 	for _, freight := range availableFreight {
 		originID := freight.Origin.String()
 		if _, ok := promotableFreight[originID]; !ok {

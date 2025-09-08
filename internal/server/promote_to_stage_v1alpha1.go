@@ -13,9 +13,9 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/kargo"
-	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/server/user"
 	"github.com/akuity/kargo/pkg/event"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 // PromoteToStage creates a Promotion resource to transition a specified Stage

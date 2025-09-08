@@ -28,11 +28,11 @@ import (
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
-	"github.com/akuity/kargo/internal/logging"
 	intpredicate "github.com/akuity/kargo/internal/predicate"
 	"github.com/akuity/kargo/internal/promotion"
 	"github.com/akuity/kargo/pkg/event"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
+	"github.com/akuity/kargo/pkg/logging"
 	pkgPromotion "github.com/akuity/kargo/pkg/promotion"
 )
 

@@ -21,8 +21,12 @@ export const useFreightTimelineControllerStore = (project: string) => {
       hideSubscriptions: {},
       images: false,
       view: 'graph',
-      ...getFreightTimelineFiltersLocalStorage(project)
+      showMinimap: true
     };
+
+    if (searchParams.size === 0) {
+      return { ...filters, ...getFreightTimelineFiltersLocalStorage(project) };
+    }
 
     const viewParam = searchParams.get('view');
     if (viewParam && viewParam !== '' && ['graph', 'list'].includes(viewParam)) {
@@ -32,6 +36,11 @@ export const useFreightTimelineControllerStore = (project: string) => {
     const showAliasParam = searchParams.get('showAlias');
     if (showAliasParam && showAliasParam !== '') {
       filters.showAlias = showAliasParam === 'true';
+    }
+
+    const showMinimap = searchParams.get('showMinimap');
+    if (showMinimap && showMinimap !== '') {
+      filters.showMinimap = showMinimap === 'true';
     }
 
     const sourcesParam = searchParams.getAll('sources');
@@ -84,16 +93,20 @@ export const useFreightTimelineControllerStore = (project: string) => {
       filters.hideSubscriptions = {};
     }
 
-    return filters;
+    return { ...getFreightTimelineFiltersLocalStorage(project), ...filters };
   }, [searchParams]);
 
   return [
     filters,
     useCallback(
       (nextPartial: Partial<FreightTimelineControllerContextType['preferredFilter']>) => {
+        localStorage.setItem(`filters-${project}`, JSON.stringify({ ...filters, ...nextPartial }));
+
         const currentSearchParams = new URLSearchParams(searchParams);
 
         currentSearchParams.set('view', `${nextPartial.view}`);
+
+        currentSearchParams.set('showMinimap', `${nextPartial.showMinimap}`);
 
         currentSearchParams.set('showColors', `${nextPartial.showColors}`);
 

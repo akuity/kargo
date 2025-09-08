@@ -17,7 +17,7 @@ import (
 	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/indexer"
-	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 // refreshWarehouses refreshes all Warehouses in the given namespace that are

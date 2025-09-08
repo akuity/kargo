@@ -28,7 +28,6 @@ import (
 	"github.com/akuity/kargo/internal/api"
 	rollouts "github.com/akuity/kargo/internal/api/stubs/rollouts"
 	httputil "github.com/akuity/kargo/internal/http"
-	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/server/config"
 	"github.com/akuity/kargo/internal/server/dex"
 	"github.com/akuity/kargo/internal/server/kubernetes"
@@ -36,6 +35,7 @@ import (
 	"github.com/akuity/kargo/internal/server/rbac"
 	"github.com/akuity/kargo/internal/server/validation"
 	"github.com/akuity/kargo/pkg/event"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 var (
