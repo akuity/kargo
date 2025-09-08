@@ -39,11 +39,9 @@ func TestFormatEventUserActor(t *testing.T) {
 			expected: kargoapi.EventActorEmailPrefix + "email@inbox.com",
 		},
 		{
-			name: "oidc-username",
-			user: user.Info{
-				Username: "oidc-username",
-			},
-			expected: formatOIDCUsername("oidc-username"),
+			name:     "oidc-username",
+			user:     user.Info{Username: "oidc-username"},
+			expected: formatOIDCUsername(user.Info{Username: "oidc-username"}),
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {

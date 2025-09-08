@@ -27,6 +27,9 @@ type Info struct {
 	// ServiceAccountsByNamespace is the mapping of namespace names to sets of
 	// ServiceAccounts that a user has been mapped to.
 	ServiceAccountsByNamespace map[string]map[types.NamespacedName]struct{}
+	// UsernameClaim identifies from which specific claim the user's uniquely
+	// identifying username was extracted from.
+	UsernameClaim string
 	// Username is the username of the user. This is often the email address
 	// of the user, but may be different depending on configuration.
 	Username string
