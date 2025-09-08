@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -44,7 +45,7 @@ type AppCredentialProvider struct {
 		installationID int64,
 		encodedPrivateKey string,
 		baseURL string,
-		allowedRepos []string,
+		repoName string,
 	) (string, error)
 }
 
@@ -89,20 +90,21 @@ func (p *AppCredentialProvider) GetCredentials(
 		return nil, nil
 	}
 
-	// Extract the pproect-repos JSON from annotation
+	// Extract the project-repos JSON from annotation
 	// in data or directly from data key
 	projectReposJSON, hasProjectRepos := data[kargoapi.AnnotationProjectReposKey]
 
-	var allowedRepos []string
-	unrestricted := true
+	var (
+		allowedRepos []string
+		restricted   bool
+	)
 
 	if hasProjectRepos && len(projectReposJSON) > 0 {
-		logger.Debug("1")
 		var projectRepoMap map[string][]string
 		if err := json.Unmarshal(projectReposJSON, &projectRepoMap); err != nil {
 			// If JSON is invalid, we mark as restricted (deny by default)
 			logger.Debug("error unmarshalling project-repos JSON")
-			unrestricted = false
+			restricted = true
 		} else {
 			// Look up repos for the specific project
 			repos, found := projectRepoMap[project]
@@ -112,7 +114,7 @@ func (p *AppCredentialProvider) GetCredentials(
 			}
 			// otherwise restrict token scope to these repos
 			allowedRepos = repos
-			unrestricted = false
+			restricted = true
 		}
 	}
 
@@ -139,21 +141,8 @@ func (p *AppCredentialProvider) GetCredentials(
 		return nil, fmt.Errorf("could not extract repository name from repo URL %q", repoURL)
 	}
 
-	if !unrestricted {
-		found := false
-		for _, r := range allowedRepos {
-			if r == repoName {
-				found = true
-				break
-			}
-		}
-
-		if !found {
-			// repo not allowed for this project
-			return nil, fmt.Errorf("repository %q is not allowed for project %q", repoName, project)
-		}
-	} else {
-		allowedRepos = []string{repoName}
+	if restricted && !slices.Contains(allowedRepos, repoName) {
+		return nil, nil
 	}
 
 	return p.getUsernameAndPassword(
@@ -161,7 +150,7 @@ func (p *AppCredentialProvider) GetCredentials(
 		installID,
 		string(data[privateKeyKey]),
 		baseURL,
-		allowedRepos,
+		repoName,
 	)
 }
 
@@ -173,14 +162,14 @@ func (p *AppCredentialProvider) getUsernameAndPassword(
 	clientID string,
 	installationID int64,
 	encodedPrivateKey, baseURL string,
-	allowedRepos []string,
+	repoName string,
 ) (*credentials.Credentials, error) {
 	cacheKey := tokenCacheKey(
 		baseURL,
 		clientID,
 		installationID,
 		encodedPrivateKey,
-		allowedRepos,
+		repoName,
 	)
 
 	// Check the cache for the token
@@ -197,7 +186,7 @@ func (p *AppCredentialProvider) getUsernameAndPassword(
 		installationID,
 		encodedPrivateKey,
 		baseURL,
-		allowedRepos,
+		repoName,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("error getting installation access token: %w", err)
@@ -221,7 +210,7 @@ func (p *AppCredentialProvider) getAccessToken(
 	installationID int64,
 	encodedPrivateKey string,
 	baseURL string,
-	allowedRepos []string,
+	repoName string,
 ) (string, error) {
 	decodedKey, err := decodeKey(encodedPrivateKey)
 	if err != nil {
@@ -245,12 +234,12 @@ func (p *AppCredentialProvider) getAccessToken(
 		}
 	}
 
-	if len(allowedRepos) > 0 {
-		opts := &github.InstallationTokenOptions{
-			Repositories: allowedRepos,
-		}
-		installationOpts = append(installationOpts, githubauth.WithInstallationTokenOptions(opts))
+	opts := &github.InstallationTokenOptions{
+		Repositories: []string{repoName},
 	}
+
+	installationOpts = append(installationOpts, githubauth.WithInstallationTokenOptions(opts))
+
 	installationTokenSource := githubauth.NewInstallationTokenSource(installationID, appTokenSource, installationOpts...)
 
 	token, err := installationTokenSource.Token()
@@ -268,16 +257,16 @@ func tokenCacheKey(
 	clientID string,
 	installationID int64,
 	encodedPrivateKey string,
-	allowedRepos []string,
+	repoName string,
 ) string {
 	return fmt.Sprintf(
 		"%x",
 		sha256.Sum256([]byte(
 			fmt.Sprintf(
 				"%s:%s:%d:%s:%s",
-				baseURL, clientID, installationID, encodedPrivateKey, strings.Join(allowedRepos, ","),
-			),
-		)),
+				baseURL, clientID, installationID, encodedPrivateKey, repoName),
+		),
+		),
 	)
 }
 

@@ -181,7 +181,7 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 			installationID int64,
 			encodedPrivateKey string,
 			baseURL string,
-			allowedRepos []string,
+			repoName string,
 		) (string, error)
 		assertions func(t *testing.T, creds *credentials.Credentials, err error)
 	}{
@@ -238,7 +238,7 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 				installationIDKey: []byte("456"),
 				privateKeyKey:     []byte("private-key"),
 			},
-			getAccessTokenFn: func(_ string, _ int64, _, _ string, _ []string) (string, error) {
+			getAccessTokenFn: func(_ string, _ int64, _, _, _ string) (string, error) {
 				return "", errors.New("token error")
 			},
 			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
@@ -256,7 +256,7 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 				installationIDKey: []byte("456"),
 				privateKeyKey:     []byte("private-key"),
 			},
-			getAccessTokenFn: func(_ string, _ int64, _, _ string, _ []string) (string, error) {
+			getAccessTokenFn: func(_ string, _ int64, _, _, _ string) (string, error) {
 				return "test-token", nil
 			},
 			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
@@ -276,7 +276,7 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 				privateKeyKey:                      []byte("private-key"),
 				kargoapi.AnnotationProjectReposKey: []byte(`{"other-project": ["kargo"]}`),
 			},
-			getAccessTokenFn: func(_ string, _ int64, _, _ string, _ []string) (string, error) {
+			getAccessTokenFn: func(_ string, _ int64, _, _, _ string) (string, error) {
 				return "test-token", nil
 			},
 			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
@@ -295,13 +295,12 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 				privateKeyKey:                      []byte("private-key"),
 				kargoapi.AnnotationProjectReposKey: []byte(`{"": ["other-repo"]}`),
 			},
-			getAccessTokenFn: func(_ string, _ int64, _, _ string, _ []string) (string, error) {
+			getAccessTokenFn: func(_ string, _ int64, _, _, _ string) (string, error) {
 				return "test-token", nil
 			},
 			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
 				assert.Nil(t, creds)
-				assert.Error(t, err)
-				assert.ErrorContains(t, err, `repository "kargo" is not allowed`)
+				assert.NoError(t, err)
 			},
 		},
 		{
@@ -314,8 +313,8 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 				privateKeyKey:                      []byte("private-key"),
 				kargoapi.AnnotationProjectReposKey: []byte(`{"": ["kargo"]}`),
 			},
-			getAccessTokenFn: func(_ string, _ int64, _, _ string, allowedRepos []string) (string, error) {
-				assert.Equal(t, []string{"kargo"}, allowedRepos) // scope check
+			getAccessTokenFn: func(_ string, _ int64, _, _, repoName string) (string, error) {
+				assert.Equal(t, "kargo", repoName) // scope check
 				return "scoped-token", nil
 			},
 			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
@@ -334,13 +333,13 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 				privateKeyKey:                      []byte("private-key"),
 				kargoapi.AnnotationProjectReposKey: []byte(`{invalid-json}`),
 			},
-			getAccessTokenFn: func(_ string, _ int64, _, _ string, _ []string) (string, error) {
+			getAccessTokenFn: func(_ string, _ int64, _, _, _ string) (string, error) {
 				return "unrestricted-token", nil
 			},
 			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
 				// When JSON is invalid, we fall back to restricted mode with no allowed repos
 				assert.Nil(t, creds)
-				assert.Error(t, err)
+				assert.NoError(t, err)
 			},
 		},
 	}
@@ -380,14 +379,14 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 		installationID    int64
 		encodedPrivateKey string
 		baseURL           string
-		allowedRepos      []string
+		repoName          string
 		setupCache        func(c *cache.Cache)
 		getAccessTokenFn  func(
 			appOrClientID string,
 			installationID int64,
 			encodedPrivateKey string,
 			baseURL string,
-			allowedRepos []string,
+			repoName string,
 		) (string, error)
 		assertions func(*testing.T, *cache.Cache, *credentials.Credentials, error)
 	}{
@@ -403,7 +402,7 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 					fakeAppOrClientID,
 					fakeInstallationID,
 					fakePrivateKey,
-					nil,
+					"",
 				)
 				c.Set(cacheKey, fakeAccessToken, cache.DefaultExpiration)
 			},
@@ -425,7 +424,7 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 			installationID:    fakeInstallationID,
 			encodedPrivateKey: fakePrivateKey,
 			baseURL:           fakeBaseURL,
-			getAccessTokenFn: func(_ string, _ int64, _, _ string, _ []string) (string, error) {
+			getAccessTokenFn: func(_ string, _ int64, _, _, _ string) (string, error) {
 				return fakeAccessToken, nil
 			},
 			assertions: func(
@@ -445,7 +444,7 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 					fakeAppOrClientID,
 					fakeInstallationID,
 					fakePrivateKey,
-					nil,
+					"",
 				)
 				cachedToken, found := c.Get(cacheKey)
 				assert.True(t, found)
@@ -458,7 +457,7 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 			installationID:    fakeInstallationID,
 			encodedPrivateKey: fakePrivateKey,
 			baseURL:           fakeBaseURL,
-			getAccessTokenFn: func(_ string, _ int64, _, _ string, _ []string) (string, error) {
+			getAccessTokenFn: func(_ string, _ int64, _, _, _ string) (string, error) {
 				return "", errors.New("token error")
 			},
 			assertions: func(
@@ -476,7 +475,7 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 					fakeAppOrClientID,
 					fakeInstallationID,
 					fakePrivateKey,
-					nil,
+					"",
 				)
 				_, found := c.Get(cacheKey)
 				assert.False(t, found)
@@ -488,9 +487,9 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 			installationID:    fakeInstallationID,
 			encodedPrivateKey: fakePrivateKey,
 			baseURL:           fakeBaseURL,
-			allowedRepos:      []string{"repo-a", "repo-b"},
-			getAccessTokenFn: func(_ string, _ int64, _, _ string, allowedRepos []string) (string, error) {
-				assert.Equal(t, []string{"repo-a", "repo-b"}, allowedRepos)
+			repoName:          "repo-a",
+			getAccessTokenFn: func(_ string, _ int64, _, _, repoName string) (string, error) {
+				assert.Equal(t, "repo-a", repoName)
 				return fakeAccessToken, nil
 			},
 			assertions: func(t *testing.T, _ *cache.Cache, creds *credentials.Credentials, err error) {
@@ -518,7 +517,7 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 				tt.installationID,
 				tt.encodedPrivateKey,
 				tt.baseURL,
-				tt.allowedRepos,
+				tt.repoName,
 			)
 			tt.assertions(t, provider.tokenCache, creds, err)
 		})

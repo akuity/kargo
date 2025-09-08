@@ -153,10 +153,8 @@ clientLoop:
 		data = dataCopy
 	}
 
-	logging.LoggerFromContext(ctx).Info("data value in secret", "data:", data)
 	for _, p := range k.credentialProviders {
 		creds, err := p.GetCredentials(ctx, namespace, credType, repoURL, data)
-		logging.LoggerFromContext(ctx).Info("creds value", "creds", creds)
 		if err != nil {
 			return nil, err
 		}
