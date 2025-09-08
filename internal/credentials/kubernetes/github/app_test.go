@@ -281,8 +281,7 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 			},
 			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
 				assert.Nil(t, creds)
-				assert.Error(t, err)
-				assert.ErrorContains(t, err, `no repositories allowed for project ""`)
+				assert.NoError(t, err)
 			},
 		},
 		{
@@ -300,7 +299,7 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 			},
 			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
 				assert.Nil(t, creds)
-				assert.NoError(t, err)
+				assert.Error(t, err)
 			},
 		},
 		{
@@ -339,7 +338,7 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
 				// When JSON is invalid, we fall back to restricted mode with no allowed repos
 				assert.Nil(t, creds)
-				assert.NoError(t, err)
+				assert.Error(t, err)
 			},
 		},
 	}

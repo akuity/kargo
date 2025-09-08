@@ -109,8 +109,10 @@ func (p *AppCredentialProvider) GetCredentials(
 			// Look up repos for the specific project
 			repos, found := projectRepoMap[project]
 			if !found || len(repos) == 0 {
-				// project not allowed any repos, deny creds
-				return nil, fmt.Errorf("no repositories allowed for project %q", project)
+				// This project has no allowed repositories configured in the annotation.
+				// Returning (nil, nil) signals "not applicable" instead of a hard error,
+				// so that the caller can continue trying other credential providers.
+				return nil, nil
 			}
 			// otherwise restrict token scope to these repos
 			allowedRepos = repos
@@ -142,7 +144,7 @@ func (p *AppCredentialProvider) GetCredentials(
 	}
 
 	if restricted && !slices.Contains(allowedRepos, repoName) {
-		return nil, nil
+		return nil, fmt.Errorf("repository %q is not allowed for project %q", repoName, project)
 	}
 
 	return p.getUsernameAndPassword(
