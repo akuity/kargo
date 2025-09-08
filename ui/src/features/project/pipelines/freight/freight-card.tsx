@@ -4,7 +4,7 @@ import {
   faArrowsLeftRightToLine,
   faCheck,
   faEllipsis,
-  faMagicWandSparkles,
+  faPlus,
   faTrash,
   faWarehouse,
   IconDefinition
@@ -125,7 +125,7 @@ export const FreightCard = (props: FreightCardProps) => {
                   {
                     key: 'similar-freight',
                     label: 'Create similar freight',
-                    icon: <FontAwesomeIcon icon={faMagicWandSparkles} />,
+                    icon: <FontAwesomeIcon icon={faPlus} />,
                     onClick: (e) => {
                       e.domEvent.stopPropagation();
                       navigate(
