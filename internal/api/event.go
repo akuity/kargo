@@ -46,5 +46,9 @@ func FormatEventKubernetesUserActor(u authnv1.UserInfo) string {
 }
 
 func formatOIDCUsername(oidcUsername string) string {
+	claim := os.Getenv("OIDC_USERNAME_CLAIM")
+	if claim == "" {
+		return oidcUsername
+	}
 	return fmt.Sprintf("%s:%s", os.Getenv("OIDC_USERNAME_CLAIM"), oidcUsername)
 }
