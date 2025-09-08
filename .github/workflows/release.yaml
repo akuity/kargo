@@ -177,7 +177,7 @@ jobs:
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
     container:
-      image: golang:1.25.0-trixie
+      image: golang:1.25.1-trixie
     strategy:
       matrix:
         os: [linux, darwin, windows]
@@ -256,7 +256,7 @@ jobs:
     if: github.event_name != 'release'
     runs-on: ubuntu-latest
     container:
-      image: golang:1.25.0-trixie
+      image: golang:1.25.1-trixie
     strategy:
       matrix:
         os: [linux, darwin, windows]
