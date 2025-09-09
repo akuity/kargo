@@ -109,11 +109,6 @@ Keys with colons should be wrapped with quotes.
 
 ### JSON example
 
-:::info
-Both arrays and comma-separated lists are valid JSON field
-values when dealing with multiple elements.
-:::
-
 ```yaml
 apiVersion: v1
 kind: ServiceAccount
@@ -128,11 +123,6 @@ metadata:
         "special:key": value
       }
 ```
-
-:::info
-JSON values with multiple elements can be structured as arrays or
-comma-separated strings.
-:::
 
 ### Global Mappings
 
