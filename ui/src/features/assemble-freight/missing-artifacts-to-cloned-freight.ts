@@ -8,25 +8,25 @@ import {
 
 import { artifactInDiscoveredResults } from './artifact-in-discovered-results';
 
-export const missingArtifactsToSimilarFreight = (
+export const missingArtifactsToClonedFreight = (
   discoveredArtifacts: DiscoveredArtifacts | undefined,
-  similarFreight: Freight
+  cloneFreight: Freight
 ) => {
   const missingArtifacts: (Image | GitCommit | Chart)[] = [];
 
-  for (const image of similarFreight?.images || []) {
+  for (const image of cloneFreight?.images || []) {
     if (!artifactInDiscoveredResults(image, discoveredArtifacts)) {
       missingArtifacts.push(image);
     }
   }
 
-  for (const chart of similarFreight?.charts || []) {
+  for (const chart of cloneFreight?.charts || []) {
     if (!artifactInDiscoveredResults(chart, discoveredArtifacts)) {
       missingArtifacts.push(chart);
     }
   }
 
-  for (const commit of similarFreight?.commits || []) {
+  for (const commit of cloneFreight?.commits || []) {
     if (!artifactInDiscoveredResults(commit, discoveredArtifacts)) {
       missingArtifacts.push(commit);
     }

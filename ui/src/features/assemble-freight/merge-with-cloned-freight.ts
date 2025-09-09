@@ -14,12 +14,12 @@ import {
 import { DiscoveryResult, FreightInfo } from './types';
 import { getSubscriptionKey } from './unique-subscription-key';
 
-export const mergeWithSimilarFreight = (
+export const mergeWithClonedFreight = (
   itemsToBeMerged: Record<string, { artifact: DiscoveryResult; info: FreightInfo }>,
   discoveredArtifacts: DiscoveredArtifacts | undefined,
-  similarFreight: Freight
+  cloneFreight: Freight
 ) => {
-  for (const image of similarFreight?.images || []) {
+  for (const image of cloneFreight?.images || []) {
     const imageArtifact = artifactInDiscoveredResults(image, discoveredArtifacts);
     if (
       imageArtifact &&
@@ -32,7 +32,7 @@ export const mergeWithSimilarFreight = (
     }
   }
 
-  for (const chart of similarFreight?.charts || []) {
+  for (const chart of cloneFreight?.charts || []) {
     const chartArtifact = artifactInDiscoveredResults(chart, discoveredArtifacts);
 
     if (
@@ -46,7 +46,7 @@ export const mergeWithSimilarFreight = (
     }
   }
 
-  for (const commit of similarFreight?.commits || []) {
+  for (const commit of cloneFreight?.commits || []) {
     const commitArtifact = artifactInDiscoveredResults(commit, discoveredArtifacts);
 
     if (

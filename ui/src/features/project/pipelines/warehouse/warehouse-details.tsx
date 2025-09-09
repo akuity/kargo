@@ -37,7 +37,7 @@ export const WarehouseDetails = ({
   const { name: projectName, warehouseName, tab } = useParams();
   const [search] = useSearchParams();
 
-  const createFreightSimilarTo = search.get('similar');
+  const cloneFreight = search.get('clone-freight');
 
   const navigate = useNavigate();
 
@@ -60,10 +60,10 @@ export const WarehouseDetails = ({
     getFreight,
     {
       project: projectName,
-      alias: createFreightSimilarTo || ''
+      alias: cloneFreight || ''
     },
     {
-      enabled: !!createFreightSimilarTo && tab === 'create-freight'
+      enabled: !!cloneFreight && tab === 'create-freight'
     }
   );
 
@@ -127,7 +127,7 @@ export const WarehouseDetails = ({
               ) : (
                 <AssembleFreight
                   warehouse={warehouse}
-                  similarToFreight={freightQuery.data?.result.value as Freight}
+                  cloneFreight={freightQuery.data?.result.value as Freight}
                   onSuccess={() => {
                     onClose();
                     refetchFreight();

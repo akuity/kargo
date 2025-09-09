@@ -8,22 +8,12 @@ import { generatePath, Link } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { Chart, Freight, GitCommit, Image } from '@ui/gen/api/v1alpha1/generated_pb';
 
-export const SimilarToFreightNote = (props: {
-  similarToFreight?: Freight;
+export const CloneFreightNote = (props: {
+  cloneFreight?: Freight;
   missingArtifacts: (Image | GitCommit | Chart)[];
   className?: string;
 }) => {
-  if (!props.similarToFreight) {
-    return null;
-  }
-
-  const allMissing =
-    props.missingArtifacts.length ===
-    props.similarToFreight?.images?.length +
-      props.similarToFreight?.charts?.length +
-      props.similarToFreight?.commits?.length;
-
-  if (allMissing) {
+  if (!props.cloneFreight) {
     return null;
   }
 
@@ -75,11 +65,11 @@ export const SimilarToFreightNote = (props: {
           Based on{' '}
           <Link
             to={generatePath(paths.freight, {
-              name: props.similarToFreight?.metadata?.namespace,
-              freightName: props.similarToFreight?.metadata?.name
+              name: props.cloneFreight?.metadata?.namespace,
+              freightName: props.cloneFreight?.metadata?.name
             })}
           >
-            {props.similarToFreight?.alias}
+            {props.cloneFreight?.alias}
           </Link>{' '}
           - matching versions are pre-filled.
         </>

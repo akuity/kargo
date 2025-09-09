@@ -26,11 +26,11 @@ import { FreightContents } from '../freight-timeline/freight-contents';
 
 import { ArtifactMenuGroup } from './artifact-menu-group';
 import { ChartTable } from './chart-table';
+import { CloneFreightNote } from './clone-freight-note';
 import { CommitTable } from './commit-table';
 import { ImageTable } from './image-table';
-import { mergeWithSimilarFreight } from './merge-with-similar-freight';
-import { missingArtifactsToSimilarFreight } from './missing-artifacts-to-similar-freight';
-import { SimilarToFreightNote } from './similar-to-freight-note';
+import { mergeWithClonedFreight } from './merge-with-cloned-freight';
+import { missingArtifactsToClonedFreight } from './missing-artifacts-to-cloned-freight';
 import { DiscoveryResult, FreightInfo } from './types';
 import { getSubscriptionKey } from './unique-subscription-key';
 
@@ -91,11 +91,11 @@ const constructFreight = (
 
 export const AssembleFreight = ({
   warehouse,
-  similarToFreight,
+  cloneFreight,
   onSuccess
 }: {
   warehouse?: Warehouse;
-  similarToFreight?: Freight;
+  cloneFreight?: Freight;
   onSuccess: () => void;
 }) => {
   const { name: project } = useParams();
@@ -175,23 +175,20 @@ export const AssembleFreight = ({
       };
     }
 
-    if (similarToFreight) {
-      mergeWithSimilarFreight(items, discoveredArtifacts, similarToFreight);
+    if (cloneFreight) {
+      mergeWithClonedFreight(items, discoveredArtifacts, cloneFreight);
     }
 
     return items;
   });
 
-  const missingArtifactsForSimilarFreight = useMemo(() => {
-    if (!similarToFreight) {
+  const missingArtifacts = useMemo(() => {
+    if (!cloneFreight) {
       return [];
     }
 
-    return missingArtifactsToSimilarFreight(
-      warehouse?.status?.discoveredArtifacts,
-      similarToFreight
-    );
-  }, [similarToFreight, warehouse?.status?.discoveredArtifacts]);
+    return missingArtifactsToClonedFreight(warehouse?.status?.discoveredArtifacts, cloneFreight);
+  }, [cloneFreight, warehouse?.status?.discoveredArtifacts]);
 
   function select<T extends FreightInfo>(item?: T) {
     if (!selected) {
@@ -215,9 +212,9 @@ export const AssembleFreight = ({
 
   return (
     <div>
-      <SimilarToFreightNote
-        missingArtifacts={missingArtifactsForSimilarFreight}
-        similarToFreight={similarToFreight}
+      <CloneFreightNote
+        missingArtifacts={missingArtifacts}
+        cloneFreight={cloneFreight}
         className='mb-5'
       />
       <div className='text-xs font-medium text-gray-500 mb-2'>FREIGHT CONTENTS</div>

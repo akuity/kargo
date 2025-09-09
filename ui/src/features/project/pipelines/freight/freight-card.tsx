@@ -124,7 +124,7 @@ export const FreightCard = (props: FreightCardProps) => {
                 items: [
                   {
                     key: 'similar-freight',
-                    label: 'Create similar freight',
+                    label: 'Clone freight',
                     icon: <FontAwesomeIcon icon={faPlus} />,
                     onClick: (e) => {
                       e.domEvent.stopPropagation();
@@ -133,7 +133,7 @@ export const FreightCard = (props: FreightCardProps) => {
                           name: props.freight?.metadata?.namespace,
                           warehouseName: props.freight?.origin?.name,
                           tab: 'create-freight'
-                        })}?similar=${props.freight?.alias}`
+                        })}?clone-freight=${props.freight?.alias}`
                       );
                     }
                   },
