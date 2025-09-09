@@ -91,9 +91,11 @@
  <!-- end services -->
 
 ## service/v1alpha1
+
 :::warning
 Stability is not guaranteed.
 :::
+
 <a name="akuity-io-kargo-service-v1alpha1-AbortPromotionRequest"></a>
 
 ### AbortPromotionRequest
