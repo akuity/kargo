@@ -470,21 +470,47 @@ func ServiceAccountsByOIDCClaims(obj client.Object) []string {
 
 	refinedClaimValues := []string{}
 	for annotationKey, annotationValue := range sa.GetAnnotations() {
+		if strings.HasPrefix(annotationKey, rbacapi.AnnotationKeyOIDCClaimNamePrefix) {
+			rawClaimName := strings.TrimPrefix(annotationKey, rbacapi.AnnotationKeyOIDCClaimNamePrefix)
+			rawClaimValue := strings.TrimSpace(annotationValue)
+			if rawClaimValue == "" {
+				continue
+			}
+			claimValues := strings.Split(rawClaimValue, ",")
+			for _, e := range claimValues {
+				if claimValue := strings.TrimSpace(e); claimValue != "" {
+					refinedClaimValues = append(refinedClaimValues, FormatClaim(rawClaimName, claimValue))
+				}
+			}
+		}
 		if strings.HasPrefix(annotationKey, rbacapi.AnnotationKeyOIDCClaims) {
-			p := new(rbacAnnotationProcessor)
-			switch {
-			case p.isJSON(annotationValue):
-				refinedClaimValues = append(refinedClaimValues,
-					p.processAsJSON(annotationValue)...,
-				)
-			case p.isMultiLineString(annotationValue):
-				refinedClaimValues = append(refinedClaimValues,
-					p.processAsMultiLineString(annotationValue)...,
-				)
-			default:
-				refinedClaimValues = append(refinedClaimValues,
-					p.processAsYAML(annotationValue)...,
-				)
+			claimsMap := make(map[string]any)
+			if err := json.Unmarshal([]byte(annotationValue), &claimsMap); err != nil {
+				continue
+			}
+			for claimName, claimValue := range claimsMap {
+				switch v := claimValue.(type) {
+				case string:
+					if strings.Contains(v, ",") {
+						for e := range strings.SplitSeq(v, ",") {
+							if cv := strings.TrimSpace(e); cv != "" {
+								refinedClaimValues = append(refinedClaimValues, FormatClaim(claimName, cv))
+							}
+						}
+						continue
+					}
+					if cv := strings.TrimSpace(v); cv != "" {
+						refinedClaimValues = append(refinedClaimValues, FormatClaim(claimName, cv))
+					}
+				case []any:
+					for _, e := range v {
+						if claimValue, ok := e.(string); ok {
+							if cv := strings.TrimSpace(claimValue); cv != "" {
+								refinedClaimValues = append(refinedClaimValues, FormatClaim(claimName, cv))
+							}
+						}
+					}
+				}
 			}
 		}
 	}

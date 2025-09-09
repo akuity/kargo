@@ -876,53 +876,6 @@ func TestServiceAccountsByOIDCClaims(t *testing.T) {
 			expected: nil,
 		},
 		{
-			name: "ServiceAccount has multi-line string OIDC claims with key containing multiple colons",
-			sa: &corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						rbacapi.AnnotationKeyOIDCClaims: "cognito:groups:subgroups: devops\nemail: user@example.com\n",
-					},
-				},
-			},
-			expected: []string{"cognito:groups:subgroups/devops", "email/user@example.com"},
-		},
-		{
-			name: "ServiceAccount has multi-line string OIDC claims with key containing colon and single quotes",
-			sa: &corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						rbacapi.AnnotationKeyOIDCClaims: "'cognito:groups': devops\nemail: user@example.com\n",
-					},
-				},
-			},
-			expected: []string{"cognito:groups/devops", "email/user@example.com"},
-		},
-		{
-			name: "ServiceAccount has multi-line string OIDC claims key and value containing single quotes",
-			sa: &corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						rbacapi.AnnotationKeyOIDCClaims: "'cognito:groups': 'devops'\nemail: user@example.com\n",
-					},
-				},
-			},
-			expected: []string{"cognito:groups/devops", "email/user@example.com"},
-		},
-		{
-			name: "ServiceAccount has multi-line string OIDC claims with key containing multiple values",
-			sa: &corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						rbacapi.AnnotationKeyOIDCClaims: "foo: a,b,c\nbar: 1,2,3",
-					},
-				},
-			},
-			expected: []string{
-				"bar/1", "bar/2", "bar/3",
-				"foo/a", "foo/b", "foo/c",
-			},
-		},
-		{
 			name: "ServiceAccount has OIDC invalid input",
 			sa: &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
@@ -932,36 +885,6 @@ func TestServiceAccountsByOIDCClaims(t *testing.T) {
 				},
 			},
 			expected: nil,
-		},
-		{
-			name: "ServiceAccount has Yaml OIDC claims",
-			sa: &corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						rbacapi.AnnotationKeyOIDCClaims: `
-claims:
-    email: user1@inbox.com
-    group: devops
-`,
-					},
-				},
-			},
-			expected: []string{"email/user1@inbox.com", "group/devops"},
-		},
-		{
-			name: "ServiceAccount has Yaml OIDC claims",
-			sa: &corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						rbacapi.AnnotationKeyOIDCClaims: `
-claims:
-    email: user1@inbox.com,user2@inbox.com
-    group: devops
-`,
-					},
-				},
-			},
-			expected: []string{"email/user1@inbox.com", "email/user2@inbox.com", "group/devops"},
 		},
 	}
 	for _, testCase := range testCases {
