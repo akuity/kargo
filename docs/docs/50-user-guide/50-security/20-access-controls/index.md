@@ -91,9 +91,13 @@ metadata:
   namespace: kargo-demo
   annotations:
     rbac.kargo.akuity.io/claims:
-      sub: alice,bob
+      sub: 
+        - alice
+        - bob
       email: carl@example.com
-      groups: devops,kargo-admin
+      groups: 
+        - devops
+        - kargo-admin
       "special:key": value
 ```
 

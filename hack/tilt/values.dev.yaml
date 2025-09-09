@@ -34,18 +34,14 @@ api:
           "email": ["kilgore@kilgore.trout", "user@inbox.com"],
           "cognito:groups": ["devops"]
         }
-    projectCreators:
-      # JSON format with comma-separated strings
-      claims:
-        {
-          "email": "kilgore@kilgore.trout,user@inbox.com",
-          "cognito:groups": "devops"
-        }
     # YAML/map format
     users:
       claims:
-        email: kilgore@kilgore.trout,user@inbox.com
-        "cognito:groups": devops
+        email: 
+          - kilgore@kilgore.trout
+          - user@inbox.com
+        "cognito:groups": 
+          - devops
 controller:
   logLevel: DEBUG
 crds:

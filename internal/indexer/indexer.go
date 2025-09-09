@@ -476,8 +476,7 @@ func ServiceAccountsByOIDCClaims(obj client.Object) []string {
 			if rawClaimValue == "" {
 				continue
 			}
-			claimValues := strings.Split(rawClaimValue, ",")
-			for _, e := range claimValues {
+			for e := range strings.SplitSeq(rawClaimValue, ",") {
 				if claimValue := strings.TrimSpace(e); claimValue != "" {
 					refinedClaimValues = append(refinedClaimValues, FormatClaim(rawClaimName, claimValue))
 				}
@@ -491,23 +490,13 @@ func ServiceAccountsByOIDCClaims(obj client.Object) []string {
 			for claimName, claimValue := range claimsMap {
 				switch v := claimValue.(type) {
 				case string:
-					if strings.Contains(v, ",") {
-						for e := range strings.SplitSeq(v, ",") {
-							if cv := strings.TrimSpace(e); cv != "" {
-								refinedClaimValues = append(refinedClaimValues, FormatClaim(claimName, cv))
-							}
-						}
-						continue
-					}
 					if cv := strings.TrimSpace(v); cv != "" {
 						refinedClaimValues = append(refinedClaimValues, FormatClaim(claimName, cv))
 					}
 				case []any:
-					for _, e := range v {
-						if claimValue, ok := e.(string); ok {
-							if cv := strings.TrimSpace(claimValue); cv != "" {
-								refinedClaimValues = append(refinedClaimValues, FormatClaim(claimName, cv))
-							}
+					for _, claimValue := range v {
+						if cv := strings.TrimSpace(fmt.Sprintf("%v", claimValue)); cv != "" {
+							refinedClaimValues = append(refinedClaimValues, FormatClaim(claimName, cv))
 						}
 					}
 				}

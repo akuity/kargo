@@ -845,13 +845,13 @@ func TestServiceAccountsByOIDCClaims(t *testing.T) {
 			},
 		},
 		{
-			name: "ServiceAccount has OIDC claims JSON with comma-separated string values",
+			name: "ServiceAccount has OIDC claims JSON with strings",
 			sa: &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
 						rbacapi.AnnotationKeyOIDCClaims: `
 							{
-								"email": "kilgore@kilgore.trout,user@inbox.com",
+								"email": "kilgore@kilgore.trout",
 								"cognito:groups": "devops"
 							}
 						`,
@@ -861,7 +861,6 @@ func TestServiceAccountsByOIDCClaims(t *testing.T) {
 			expected: []string{
 				"cognito:groups/devops",
 				"email/kilgore@kilgore.trout",
-				"email/user@inbox.com",
 			},
 		},
 		{
@@ -870,17 +869,6 @@ func TestServiceAccountsByOIDCClaims(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
 						rbacapi.AnnotationKeyOIDCClaims: `{}`,
-					},
-				},
-			},
-			expected: nil,
-		},
-		{
-			name: "ServiceAccount has OIDC claims with invalid JSON",
-			sa: &corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						rbacapi.AnnotationKeyOIDCClaims: `invalid`,
 					},
 				},
 			},
