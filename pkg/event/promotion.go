@@ -21,10 +21,10 @@ import (
 
 // Promotion is a struct that contains common fields for promotion-related events.
 type Promotion struct {
-	*Freight
-	Name         string                 `json:"promotionName"`
+	Freight      *Freight               `json:"freight,omitempty"`
+	Name         string                 `json:"name"`
 	StageName    string                 `json:"stageName"`
-	CreateTime   time.Time              `json:"promotionCreateTime"`
+	CreateTime   time.Time              `json:"createTime"`
 	Applications []types.NamespacedName `json:"applications,omitempty"`
 }
 
@@ -186,8 +186,7 @@ func (p *PromotionSucceeded) MarshalAnnotations() map[string]string {
 	// Note that we skip message here, as it is not used in the annotations.
 	annotations := map[string]string{}
 	if p.VerificationPending != nil {
-		annotations[kargoapi.AnnotationKeyEventVerificationPending] =
-			strconv.FormatBool(*p.VerificationPending)
+		annotations[kargoapi.AnnotationKeyEventVerificationPending] = strconv.FormatBool(*p.VerificationPending)
 	}
 	p.Common.MarshalAnnotationsTo(annotations)
 	p.Promotion.MarshalAnnotationsTo(annotations)
