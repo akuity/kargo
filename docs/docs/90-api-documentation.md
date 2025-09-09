@@ -1611,7 +1611,9 @@ RawFormat specifies the format for raw resource representation.
 <a name="api_rbac_v1alpha1_generated-proto"></a>
 <p align="right"><a href="#top">Top</a></p> <!-- end services -->
 
-## rbac/v1alpha1<a name="github-com-akuity-kargo-api-rbac-v1alpha1-Claim"></a>
+## rbac/v1alpha1
+
+<a name="github-com-akuity-kargo-api-rbac-v1alpha1-Claim"></a>
 
 ### Claim
  
@@ -1659,7 +1661,9 @@ RawFormat specifies the format for raw resource representation.
 <a name="api_v1alpha1_generated-proto"></a>
 <p align="right"><a href="#top">Top</a></p> <!-- end services -->
 
-## v1alpha1<a name="github-com-akuity-kargo-api-v1alpha1-AnalysisRunArgument"></a>
+## v1alpha1
+
+<a name="github-com-akuity-kargo-api-v1alpha1-AnalysisRunArgument"></a>
 
 ### AnalysisRunArgument
  AnalysisRunArgument represents an argument to be added to an AnalysisRun.
