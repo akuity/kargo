@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	authnv1 "k8s.io/api/authentication/v1"
@@ -27,7 +26,7 @@ func FormatEventUserActor(u user.Info) string {
 		return kargoapi.EventActorAdmin
 	}
 	if u.Username != "" {
-		return formatOIDCUsername(u.Username)
+		return formatOIDCUsername(u)
 	}
 	if emailClaim, ok := u.Claims["email"]; ok {
 		if email, ok := emailClaim.(string); ok {
@@ -40,10 +39,6 @@ func FormatEventUserActor(u user.Info) string {
 		}
 	}
 	return kargoapi.EventActorUnknown
-}
-
-func FormatEventKubernetesUserActor(u authnv1.UserInfo) string {
-	return kargoapi.EventActorKubernetesUserPrefix + u.Username
 }
 
 func NewFreightApprovedEventAnnotations(actor string, f *kargoapi.Freight, stageName string) map[string]string {
@@ -60,6 +55,10 @@ func NewFreightApprovedEventAnnotations(actor string, f *kargoapi.Freight, stage
 	return annotations
 }
 
-func formatOIDCUsername(oidcUsername string) string {
-	return fmt.Sprintf("%s:%s", os.Getenv("OIDC_USERNAME_CLAIM"), oidcUsername)
+func FormatEventKubernetesUserActor(u authnv1.UserInfo) string {
+	return kargoapi.EventActorKubernetesUserPrefix + u.Username
+}
+
+func formatOIDCUsername(u user.Info) string {
+	return fmt.Sprintf("%s:%s", u.UsernameClaim, u.Username)
 }
