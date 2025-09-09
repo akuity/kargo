@@ -15,9 +15,16 @@
   | {{.Name}} | [{{.RequestLongType}}](#{{.RequestFullType | anchor}}){{if .RequestStreaming}}(stream){{end}} | [{{.ResponseLongType}}](#{{.ResponseFullType | anchor}}){{if .ResponseStreaming}}(stream){{end}} |
 {{end}}
 {{end}} <!-- end services -->
+{{ $name :=  ( .Name | trimPrefix "api/" | trimSuffix "/service.proto" | trimSuffix "/generated.proto" ) }}
+## {{ $name }}
 
-## {{.Name | trimPrefix "api/" | trimSuffix "/service.proto" | trimSuffix "/generated.proto" }}
-{{.Description}}
+{{- if eq $name "service/v1alpha1" }}
+:::warning
+Stability is not guaranteed.
+:::
+{{ end }}
+
+{{- .Description}}
 {{- range .Messages -}}
 <a name="{{.FullName | anchor}}"></a>
 
