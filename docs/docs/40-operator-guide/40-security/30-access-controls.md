@@ -77,8 +77,6 @@ that rule._
 ServiceAccount resources may be mapped to users through the use of annotation claims defined under the `rbac.kargo.akuity.io/claims` key. The value of the annotation can be a JSON object,
 multi-line string, or a map.
 
-:::
-
 In the following example, the `ServiceAccount` resource is mapped to all of:
 
 * Users with a `sub` claim identifying them as either `alice` or `bob`.
@@ -106,7 +104,7 @@ metadata:
 :::
 
 
-#### Multi-line string example
+### Multi-line string example
 
 ```yaml
 apiVersion: v1
@@ -121,7 +119,7 @@ metadata:
       groups: devops,kargo-admin
 ```
 
-#### JSON example
+### JSON example
 
 :::info
 Both arrays and comma-separated lists are valid JSON field
