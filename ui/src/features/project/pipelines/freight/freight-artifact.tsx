@@ -1,5 +1,3 @@
-import { faExternalLink } from '@fortawesome/free-solid-svg-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tag } from 'antd';
 import Link from 'antd/es/typography/Link';
 import { ReactNode } from 'react';
@@ -10,6 +8,7 @@ import {
 } from '@ui/features/freight-timeline/open-container-initiative-utils';
 import { Chart, GitCommit, Image } from '@ui/gen/api/v1alpha1/generated_pb';
 
+import { ArtifactIcon } from './artifact-icon';
 import { humanComprehendableArtifact } from './artifact-parts-utils';
 import { shortVersion } from './short-version-utils';
 
@@ -39,11 +38,9 @@ export const FreightArtifact = (props: FreightArtifactProps) => {
 
     const TagComponent = (
       <Tag title={props.artifact.repoURL} bordered={false} color='geekblue' key={props.artifact.id}>
-        {id.slice(0, 7)}
+        <ArtifactIcon artifactType={artifactType} className='mr-1' />
 
-        {!!url && (
-          <FontAwesomeIcon icon={faExternalLink} className='text-blue-600 text-[8px] ml-1' />
-        )}
+        {id.slice(0, 7)}
 
         {Expand}
       </Tag>
@@ -73,6 +70,8 @@ export const FreightArtifact = (props: FreightArtifactProps) => {
         color='geekblue'
         key={props.artifact.repoURL}
       >
+        <ArtifactIcon artifactType={artifactType} className='mr-1' />
+
         {shortVersion(props.artifact.version)}
 
         {Expand}
@@ -92,12 +91,11 @@ export const FreightArtifact = (props: FreightArtifactProps) => {
       bordered={false}
       color='geekblue'
       key={props.artifact?.repoURL}
+      className='hover:cursor-default'
     >
-      {shortVersion(props.artifact?.tag)}
+      <ArtifactIcon artifactType={artifactType} className='mr-1' />
 
-      {!!imageSourceFromOci && (
-        <FontAwesomeIcon icon={faExternalLink} className='text-blue-600 ml-1 text-[8px]' />
-      )}
+      {shortVersion(props.artifact?.tag)}
 
       {Expand}
     </Tag>
