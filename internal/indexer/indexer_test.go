@@ -814,6 +814,17 @@ func TestServiceAccountsByOIDCClaims(t *testing.T) {
 			sa:   &corev1.ServiceAccount{},
 		},
 		{
+			name: "ServiceAccount has OIDC email",
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						rbacapi.AnnotationKeyOIDCClaimNamePrefix + "email": "fake-email, fake-email-2",
+					},
+				},
+			},
+			expected: []string{"email/fake-email", "email/fake-email-2"},
+		},
+		{
 			name: "ServiceAccount has OIDC claims JSON with arrays",
 			sa: &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
