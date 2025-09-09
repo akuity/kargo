@@ -124,7 +124,7 @@ metadata:
 :::info
 Both arrays and comma-separated lists are valid JSON field
 values when dealing with multiple elements.
-::
+:::
 
 ```yaml
 apiVersion: v1
