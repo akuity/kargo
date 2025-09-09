@@ -25,5 +25,5 @@ export const ArtifactIcon = (props: {
       break;
   }
 
-  return <FontAwesomeIcon icon={icon} className={classNames(props.className)} />;
+  return <FontAwesomeIcon icon={icon} className={classNames(props.className, 'text-[11px]')} />;
 };

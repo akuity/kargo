@@ -18,7 +18,6 @@ export type FreightTimelineControllerContextType = {
     hideSubscriptions: Record<string, boolean>;
     images: boolean;
     view: 'graph' | 'list';
-    showArtifactIcons: boolean;
   };
   setPreferredFilter: (filter: FreightTimelineControllerContextType['preferredFilter']) => void;
 };

@@ -17,7 +17,6 @@ import { shortVersion } from './short-version-utils';
 type FreightArtifactProps = {
   artifact: GitCommit | Chart | Image;
   expand?: boolean;
-  showArtifactIcons?: boolean;
 };
 
 export const FreightArtifact = (props: FreightArtifactProps) => {
@@ -41,7 +40,7 @@ export const FreightArtifact = (props: FreightArtifactProps) => {
 
     const TagComponent = (
       <Tag title={props.artifact.repoURL} bordered={false} color='geekblue' key={props.artifact.id}>
-        {props.showArtifactIcons && <ArtifactIcon artifactType={artifactType} className='mr-1' />}
+        <ArtifactIcon artifactType={artifactType} className='mr-1' />
 
         {id.slice(0, 7)}
 
@@ -77,7 +76,7 @@ export const FreightArtifact = (props: FreightArtifactProps) => {
         color='geekblue'
         key={props.artifact.repoURL}
       >
-        {props.showArtifactIcons && <ArtifactIcon artifactType={artifactType} className='mr-1' />}
+        <ArtifactIcon artifactType={artifactType} className='mr-1' />
 
         {shortVersion(props.artifact.version)}
 
@@ -99,7 +98,7 @@ export const FreightArtifact = (props: FreightArtifactProps) => {
       color='geekblue'
       key={props.artifact?.repoURL}
     >
-      {props.showArtifactIcons && <ArtifactIcon artifactType={artifactType} className='mr-1' />}
+      <ArtifactIcon artifactType={artifactType} className='mr-1' />
 
       {shortVersion(props.artifact?.tag)}
 

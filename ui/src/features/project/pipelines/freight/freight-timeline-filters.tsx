@@ -148,19 +148,6 @@ export const FreightTimelineFilters = (props: FreightTimelineFiltersProps) => {
             Hide unused
           </Checkbox>
         </div>
-
-        <Checkbox
-          className='text-xs mt-3'
-          checked={props.preferredFilter?.showArtifactIcons}
-          onChange={(e) =>
-            props.onPreferredFilterChange({
-              ...props.preferredFilter,
-              showArtifactIcons: e.target.checked
-            })
-          }
-        >
-          Show Artifact Icons
-        </Checkbox>
       </div>
     </div>
   );
