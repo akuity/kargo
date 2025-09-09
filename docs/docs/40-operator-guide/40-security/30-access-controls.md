@@ -74,8 +74,7 @@ project namespaces only (i.e. only those labeled with
 `kargo.akuity.io/project: "true"`). _This section focuses on the exceptions to
 that rule._
 
-ServiceAccount resources may be mapped to users through the use of annotation claims defined under the `rbac.kargo.akuity.io/claims` key. The value of the annotation can be a JSON object,
-multi-line string, or a map.
+ServiceAccount resources may be mapped to users through the use of annotation claims defined under the `rbac.kargo.akuity.io/claims` key. The value of the annotation can be a standard YAML map or a JSON object.
 
 In the following example, the `ServiceAccount` resource is mapped to all of:
 
@@ -97,27 +96,12 @@ metadata:
       sub: alice,bob
       email: carl@example.com
       groups: devops,kargo-admin
+      "special:key": value
 ```
 
 :::caution
-  When working with keys that contains special characters like a ':', for example: `cognito:groups: mygroup` then you must use either use the multi-line string or JSON formats to avoid invalid key format errors.
+Keys with colons should be wrapped with quotes.
 :::
-
-
-### Multi-line string example
-
-```yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: admin
-  namespace: kargo-demo
-  annotations:
-    rbac.kargo.akuity.io/claims: |
-      sub: alice,bob
-      email: carl@example.com
-      groups: devops,kargo-admin
-```
 
 ### JSON example
 
@@ -133,13 +117,18 @@ metadata:
   name: admin
   namespace: kargo-demo
   annotations:
-    rbac.kargo.akuity.io/claims: |
+    rbac.kargo.akuity.io/claims:
       {
-        // format: JSON array or comma-separated string
-        "sub": ["alice", "bob" ], // or "alice,bob"
-        "email": carl@example.com
+        "sub": ["alice", "bob" ],
+        "email": carl@example.com,
+        "special:key": value
       }
 ```
+
+:::info
+JSON values with multiple elements can be structured as arrays or
+comma-separated strings.
+:::
 
 ### Global Mappings
 
