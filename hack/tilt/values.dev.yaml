@@ -26,12 +26,31 @@ api:
         type: mockCallback
       probes:
         enabled: false
+    # Just testing different value formats, will revert before merge
     admins:
+      # JSON format with arrays
       claims: |
         {
           "email": ["kilgore@kilgore.trout", "user@inbox.com"],
           "cognito:groups": ["devops"]
         }
+    projectCreators:
+      # JSON format with comma-separated strings
+      claims: |
+        {
+          "email": "kilgore@kilgore.trout,user@inbox.com",
+          "cognito:groups": "devops"
+        }
+    # YAML/map format
+    # this method doesn't support keys with special characters like ':'
+      users:
+        claims:
+          email: kilgore@kilgore.trout,user@inbox.com
+    # multi-line string
+      viewers:
+        claims: |
+          email: kilgore@kilgore.trout,user@inbox.com
+          cognito:groups: developers
 controller:
   logLevel: DEBUG
 crds:

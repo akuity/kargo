@@ -72,16 +72,19 @@ mapped. This search is mostly limited to `ServiceAccount` resources in Kargo
 project namespaces only (i.e. only those labeled with
 `kargo.akuity.io/project: "true"`).
 
-ServiceAccount resources may be mapped to users through the use of annotations
-whose key begins with `rbac.kargo.akuity.io/claim.`. The value of the annotation
-may be a single value, or a comma-delimited list of values.
+ServiceAccount resources may be mapped to users through the use of annotation claims defined under the `rbac.kargo.akuity.io/claims` key. The value of the annotation can be a JSON object,
+multi-line string, or a map.
+
+:::
 
 In the following example, the `ServiceAccount` resource is mapped to all of:
 
 * Users with a `sub` claim identifying them as either `alice` or `bob`.
 * A user with the `email` claim `carl@example.com`.
-* All users with a `groups` claim containing _either_ the `devops` or
+* All users with a `groups` claim  containing _either_ the `devops` or
   `kargo-admin` group.
+
+### Map example
 
 ```yaml
 apiVersion: v1
@@ -90,22 +93,18 @@ metadata:
   name: admin
   namespace: kargo-demo
   annotations:
-    rbac.kargo.akuity.io/claim.sub: alice,bob
-    rbac.kargo.akuity.io/claim.email: carl@example.com
-    rbac.kargo.akuity.io/claim.groups: devops,kargo-admin
+    rbac.kargo.akuity.io/claims:
+      sub: alice,bob
+      email: carl@example.com
+      groups: devops,kargo-admin
 ```
 
-A user may be mapped to multiple `ServiceAccount` resources. A user's effective
-permissions are therefore the _union_ of the permissions associated with all
-such `ServiceAccount` resources.
+:::caution
+  When working with keys that contains special characters like a ':', for example: `cognito:groups: mygroup` then you must use either use the multi-line string or JSON formats to avoid invalid key format errors.
+:::
 
-Alternatively, you can also use the `rbac.kargo.akuity.io/claims` key.
-This is especially useful for keys that contain special characters like `:`.
 
-For example, in the case of AWS Cognito, we would end up with a key like
-`rbac.kargo.akuity.io/claim.cognito:groups: mygroup`; which is not allowed by 
-k8s. So we use the `rbac.kargo.akuity.io/claims` annotation to solve for this 
-like so:
+#### Multi-line string example
 
 ```yaml
 apiVersion: v1
@@ -115,8 +114,31 @@ metadata:
   namespace: kargo-demo
   annotations:
     rbac.kargo.akuity.io/claims: |
-      'cognito:groups': devops
-      email: user@example.com
+      sub: alice,bob
+      email: carl@example.com
+      groups: devops,kargo-admin
+```
+
+#### JSON example
+
+:::info
+Both arrays and comma-separated lists are valid JSON field
+values when dealing with multiple elements.
+::
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: admin
+  namespace: kargo-demo
+  annotations:
+    rbac.kargo.akuity.io/claims: |
+      {
+        // format: JSON array or comma-separated string
+        "sub": ["alice", "bob" ], // or "alice,bob"
+        "email": carl@example.com
+      }
 ```
 
 ### Managing Mappings and Permissions
@@ -313,7 +335,8 @@ metadata:
   namespace: guestbook
   annotations:
     kargo.akuity.io/description: Permissions to promote into pre-prod Stages
-    rbac.kargo.akuity.io/claim.groups: devops
+    rbac.kargo.akuity.io/claims:
+      groups: devops
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -390,7 +413,8 @@ metadata:
   name: admin
   namespace: guestbook
   annotations:
-    rbac.kargo.akuity.io/claim.groups: devops
+    rbac.kargo.akuity.io/claims:
+      groups: devops
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

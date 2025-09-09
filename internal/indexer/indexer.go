@@ -470,45 +470,29 @@ func ServiceAccountsByOIDCClaims(obj client.Object) []string {
 
 	refinedClaimValues := []string{}
 	for annotationKey, annotationValue := range sa.GetAnnotations() {
-		switch {
-		case strings.HasPrefix(annotationKey, rbacapi.AnnotationKeyOIDCClaimNamePrefix):
-			rawClaimName := strings.TrimPrefix(annotationKey, rbacapi.AnnotationKeyOIDCClaimNamePrefix)
-			rawClaimValue := strings.TrimSpace(annotationValue)
-			if rawClaimValue == "" {
-				continue
-			}
-			claimValues := strings.Split(rawClaimValue, ",")
-			for _, e := range claimValues {
-				if claimValue := strings.TrimSpace(e); claimValue != "" {
-					refinedClaimValues = append(refinedClaimValues, FormatClaim(rawClaimName, claimValue))
-				}
-			}
-		case strings.HasPrefix(annotationKey, rbacapi.AnnotationKeyOIDCClaims):
-			//	the claims map is interpreted as a multi-line string e.g.
-			//	"'cognito:groups': devops\nemail: user@example.com\n"
-			for e := range strings.SplitSeq(annotationValue, "\n") {
-				if e != "" {
-					clean := func(s string) string {
-						s = strings.TrimSpace(s)              // rm spaces
-						return strings.ReplaceAll(s, "'", "") // rm single quotes
-					}
-					lastColonIndex := strings.LastIndex(e, ":")
-					if lastColonIndex != -1 { // protect from panicing on invalid input
-						claimKey := clean(e[:lastColonIndex])
-						claimValues := strings.SplitSeq(e[lastColonIndex+1:], ",")
-						for cv := range claimValues {
-							if claimValue := clean(cv); claimValue != "" {
-								refinedClaimValues = append(refinedClaimValues, FormatClaim(claimKey, claimValue))
-							}
-						}
-					}
-				}
+		if strings.HasPrefix(annotationKey, rbacapi.AnnotationKeyOIDCClaims) {
+			p := new(rbacAnnotationProcessor)
+			switch {
+			case p.isJSON(annotationValue):
+				refinedClaimValues = append(refinedClaimValues,
+					p.processAsJSON(annotationValue)...,
+				)
+			case p.isMultiLineString(annotationValue):
+				refinedClaimValues = append(refinedClaimValues,
+					p.processAsMultiLineString(annotationValue)...,
+				)
+			default:
+				refinedClaimValues = append(refinedClaimValues,
+					p.processAsYAML(annotationValue)...,
+				)
 			}
 		}
 	}
+
 	if len(refinedClaimValues) == 0 {
 		return nil
 	}
+	slices.Sort(refinedClaimValues)
 	return refinedClaimValues
 }
 

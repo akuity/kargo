@@ -814,29 +814,69 @@ func TestServiceAccountsByOIDCClaims(t *testing.T) {
 			sa:   &corev1.ServiceAccount{},
 		},
 		{
-			name: "ServiceAccount has OIDC email",
+			name: "ServiceAccount has OIDC claims JSON with arrays",
 			sa: &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						rbacapi.AnnotationKeyOIDCClaimNamePrefix + "email": "fake-email, fake-email-2",
+						rbacapi.AnnotationKeyOIDCClaims: `
+							{
+								"email": ["kilgore@kilgore.trout", "user@inbox.com"],
+								"cognito:groups": ["devops"]
+							}
+						`,
 					},
 				},
 			},
-			expected: []string{"email/fake-email", "email/fake-email-2"},
+			expected: []string{
+				"cognito:groups/devops",
+				"email/kilgore@kilgore.trout",
+				"email/user@inbox.com",
+			},
 		},
 		{
-			name: "ServiceAccount has OIDC claims with key containing colon",
+			name: "ServiceAccount has OIDC claims JSON with comma-separated string values",
 			sa: &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
-						rbacapi.AnnotationKeyOIDCClaims: "cognito:groups: devops\nemail: user@example.com\n",
+						rbacapi.AnnotationKeyOIDCClaims: `
+							{
+								"email": "kilgore@kilgore.trout,user@inbox.com",
+								"cognito:groups": "devops"
+							}
+						`,
 					},
 				},
 			},
-			expected: []string{"cognito:groups/devops", "email/user@example.com"},
+			expected: []string{
+				"cognito:groups/devops",
+				"email/kilgore@kilgore.trout",
+				"email/user@inbox.com",
+			},
 		},
 		{
-			name: "ServiceAccount has OIDC claims with key containing multiple colons",
+			name: "ServiceAccount has OIDC claims JSON with empty JSON object",
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						rbacapi.AnnotationKeyOIDCClaims: `{}`,
+					},
+				},
+			},
+			expected: nil,
+		},
+		{
+			name: "ServiceAccount has OIDC claims with invalid JSON",
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						rbacapi.AnnotationKeyOIDCClaims: `invalid`,
+					},
+				},
+			},
+			expected: nil,
+		},
+		{
+			name: "ServiceAccount has multi-line string OIDC claims with key containing multiple colons",
 			sa: &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
@@ -847,7 +887,7 @@ func TestServiceAccountsByOIDCClaims(t *testing.T) {
 			expected: []string{"cognito:groups:subgroups/devops", "email/user@example.com"},
 		},
 		{
-			name: "ServiceAccount has OIDC claims with key containing colon and single quotes",
+			name: "ServiceAccount has multi-line string OIDC claims with key containing colon and single quotes",
 			sa: &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
@@ -858,7 +898,7 @@ func TestServiceAccountsByOIDCClaims(t *testing.T) {
 			expected: []string{"cognito:groups/devops", "email/user@example.com"},
 		},
 		{
-			name: "ServiceAccount has OIDC claims key and value containing single quotes",
+			name: "ServiceAccount has multi-line string OIDC claims key and value containing single quotes",
 			sa: &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
@@ -869,7 +909,7 @@ func TestServiceAccountsByOIDCClaims(t *testing.T) {
 			expected: []string{"cognito:groups/devops", "email/user@example.com"},
 		},
 		{
-			name: "ServiceAccount has OIDC claims with key containing multiple values",
+			name: "ServiceAccount has multi-line string OIDC claims with key containing multiple values",
 			sa: &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
@@ -877,10 +917,13 @@ func TestServiceAccountsByOIDCClaims(t *testing.T) {
 					},
 				},
 			},
-			expected: []string{"foo/a", "foo/b", "foo/c", "bar/1", "bar/2", "bar/3"},
+			expected: []string{
+				"bar/1", "bar/2", "bar/3",
+				"foo/a", "foo/b", "foo/c",
+			},
 		},
 		{
-			name: "ServiceAccount has OIDC invalid input no colon",
+			name: "ServiceAccount has OIDC invalid input",
 			sa: &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
@@ -889,6 +932,36 @@ func TestServiceAccountsByOIDCClaims(t *testing.T) {
 				},
 			},
 			expected: nil,
+		},
+		{
+			name: "ServiceAccount has Yaml OIDC claims",
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						rbacapi.AnnotationKeyOIDCClaims: `
+claims:
+    email: user1@inbox.com
+    group: devops
+`,
+					},
+				},
+			},
+			expected: []string{"email/user1@inbox.com", "group/devops"},
+		},
+		{
+			name: "ServiceAccount has Yaml OIDC claims",
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						rbacapi.AnnotationKeyOIDCClaims: `
+claims:
+    email: user1@inbox.com,user2@inbox.com
+    group: devops
+`,
+					},
+				},
+			},
+			expected: []string{"email/user1@inbox.com", "email/user2@inbox.com", "group/devops"},
 		},
 	}
 	for _, testCase := range testCases {
