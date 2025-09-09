@@ -1,5 +1,3 @@
-import { faExternalLink } from '@fortawesome/free-solid-svg-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Tag } from 'antd';
 import Link from 'antd/es/typography/Link';
 import { ReactNode } from 'react';
@@ -43,10 +41,6 @@ export const FreightArtifact = (props: FreightArtifactProps) => {
         <ArtifactIcon artifactType={artifactType} className='mr-1' />
 
         {id.slice(0, 7)}
-
-        {!!url && (
-          <FontAwesomeIcon icon={faExternalLink} className='text-blue-600 text-[8px] ml-1' />
-        )}
 
         {Expand}
       </Tag>
@@ -97,14 +91,11 @@ export const FreightArtifact = (props: FreightArtifactProps) => {
       bordered={false}
       color='geekblue'
       key={props.artifact?.repoURL}
+      className='hover:cursor-default'
     >
       <ArtifactIcon artifactType={artifactType} className='mr-1' />
 
       {shortVersion(props.artifact?.tag)}
-
-      {!!imageSourceFromOci && (
-        <FontAwesomeIcon icon={faExternalLink} className='text-blue-600 ml-1 text-[8px]' />
-      )}
 
       {Expand}
     </Tag>
