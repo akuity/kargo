@@ -36,9 +36,10 @@ Stability is not guaranteed.
   | {{.Name}} | {{ if not (contains "k8s.io" .FullType )}}[{{.LongType}}](#{{.FullType | anchor}}){{ else }}{{.FullType}}{{ end }} | {{range (.Description | splitList "\n" )  }} {{if not (contains "kubebuilder" .)}}{{. | replace "<" "&lt;" | replace ">" "&gt;" }}{{end}}{{end}} |
 {{end}}
 {{- end}}
-{{end}} <!-- end messages -->
+{{- end}}
+<!-- end messages -->
 
-{{range .Enums}}
+{{- range .Enums}}
 <a name="{{.FullName | anchor}}"></a>
 
 ### {{.LongName}}
