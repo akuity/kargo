@@ -98,7 +98,8 @@ webhooks:
 ## the Kargo controller is running.
 ## @descriptionEnd
 ## @skip kubeconfigSecrets
-kubeconfigSecrets: {}
+kubeconfigSecrets:
+  {}
   ## @param kubeconfigSecrets.kargo [nullable] Kubernetes `Secret` name containing kubeconfig for a remote Kubernetes cluster hosting Kargo resources. Used by all Kargo components.
   # kargo: ""
   ## @param kubeconfigSecrets.argocd [nullable] Kubernetes `Secret` name containing kubeconfig for a remote Kubernetes cluster hosting Argo CD resources. Used by Kargo controller(s) only.
@@ -157,14 +158,15 @@ api:
     cliClientID:
     ## @param api.oidc.additionalScopes The additional scopes to send to the OIDC provider. This should be set to the scopes you wish to be provided to your identity provider from clients of Kargo, the scopes openid, profile and email are always requested and don't need to be added, this value is intended for any additional ones you require.
     additionalScopes:
-    - groups
+      - groups
 
     ## @param api.oidc.usernameClaim The claim to use as the username for the user.
     usernameClaim: email
 
     admins:
       ## @param api.oidc.admins.claims Subjects having any of these claims will automatically be Kargo admins.
-      claims: {}
+      claims:
+        {}
         # sub:
         # - alice
         # - bob
@@ -200,7 +202,8 @@ api:
 
     viewers:
       ## @param api.oidc.viewers.claims Subjects having any of these claims will automatically receive read-only access to all Kargo resources. This does not include any access to `Secret`s.
-      claims: {}
+      claims:
+        {}
         # sub:
         # - alice
         # - bob
@@ -209,8 +212,6 @@ api:
         # - bob@examples.com
         # groups:
         # - kargo-viewer
-
-
 
     globalServiceAccounts:
       ## @param api.oidc.globalServiceAccounts.namespaces List of namespaces to look for shared service accounts.
@@ -301,7 +302,8 @@ api:
       #   readOnly: true
 
       ## @param api.oidc.dex.resources Resources limits and requests for the Dex server containers.
-      resources: {}
+      resources:
+        {}
         # limits:
         #   cpu: 100m
         #   memory: 128Mi
@@ -327,6 +329,9 @@ api:
       tls:
         ## @param api.oidc.dex.tls.selfSignedCert Whether to generate a self-signed certificate for use with Dex. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-dex-server-cert` **must** be provided in the same namespace as Kargo. There is no provision for running Dex without TLS.
         selfSignedCert: true
+        ## @param api.oidc.dex.tls.secretName Name of the existing TLS secret for use with Dex..
+        ## Required when `api.oidc.tls.selfSignedCert` is `false`. Ignored if `selfSignedCert` is `true`.
+        secretName: ""
 
   argocd:
     ## @param api.argocd.urls Mapping of Argo CD shards names to URLs to support deep links to Argo CD URLs. If sharding is not used, map the empty string to the single Argo CD URL.
@@ -382,7 +387,8 @@ api:
   #      name: secret-name
 
   ## @param api.resources Resources limits and requests for the api containers.
-  resources: {}
+  resources:
+    {}
     # limits:
     #   cpu: 100m
     #   memory: 128Mi
@@ -414,6 +420,9 @@ api:
     enabled: true
     ## @param api.tls.selfSignedCert Whether to generate a self-signed certificate for use by the API server. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-api-cert` **must** be provided in the same namespace as Kargo.
     selfSignedCert: true
+    ## @param api.tls.secretName Name of the existing TLS secret to use for the API server's.
+    ## Required when `api.tls.selfSignedCert` is `false`. Ignored if `selfSignedCert` is `true`.
+    secretName: ""
     ## @param api.tls.terminatedUpstream Whether TLS is terminated upstream, i.e. a load balancer, reverse-proxy, or an Ingress controller using a single wildcard cert is terminating it. Setting this to `true` forces all API server URLs to use HTTPS even if the Ingress (if applicable) or API server itself are listening for plain HTTP requests.
     terminatedUpstream: false
 
@@ -421,7 +430,8 @@ api:
     ## @param api.ingress.enabled Whether to enable ingress by creating an Ingress resource. By default, this is disabled. Enabling ingress is advanced usage.
     enabled: false
     ## @param api.ingress.annotations Annotations specified by your ingress controller to customize the behavior of the Ingress resource.
-    annotations: {}
+    annotations:
+      {}
       # kubernetes.io/ingress.class: nginx
     ## @param api.ingress.ingressClassName If implemented by your ingress controller, specifies the ingress class. If your ingress controller does not support this, use the `kubernetes.io/ingress.class` annotation instead.
     ingressClassName:
@@ -566,7 +576,8 @@ controller:
   volumeMounts: []
 
   ## @param controller.resources Resources limits and requests for the controller containers.
-  resources: {}
+  resources:
+    {}
     # limits:
     #   cpu: 100m
     #   memory: 128Mi
@@ -642,7 +653,8 @@ garbageCollector:
   #      name: secret-name
 
   ## @param garbageCollector.resources Resources limits and requests for the garbage collector containers.
-  resources: {}
+  resources:
+    {}
     # limits:
     #   cpu: 100m
     #   memory: 128Mi
@@ -705,7 +717,8 @@ externalWebhooksServer:
   #      name: secret-name
 
   ## @param externalWebhooksServer.resources Resources limits and requests for the external webhook server containers.
-  resources: {}
+  resources:
+    {}
     # limits:
     #   cpu: 100m
     #   memory: 128Mi
@@ -731,6 +744,9 @@ externalWebhooksServer:
     enabled: true
     ## @param externalWebhooksServer.tls.selfSignedCert Whether to generate a self-signed certificate for use by the external webhooks server. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-external-webhook-server-cert` **must** be provided in the same namespace as Kargo.
     selfSignedCert: true
+    ## @param externalWebhooksServer.tls.secretName Name of the existing TLS secret for the external webhooks servers.
+    ## Required when `externalWebhooksServer.tls.selfSignedCert` is `false`. Ignored if `selfSignedCert` is `true`.
+    secretName: ""
     ## @param externalWebhooksServer.tls.terminatedUpstream Whether TLS is terminated upstream, i.e. a load balancer, reverse-proxy, or an Ingress controller using a single wildcard cert is terminating it. Setting this to `true` forces all external webhook server URLs to use HTTPS even if the Ingress (if applicable) or external webhook server itself are listening for plain HTTP requests.
     terminatedUpstream: false
 
@@ -738,7 +754,8 @@ externalWebhooksServer:
     ## @param externalWebhooksServer.ingress.enabled Whether to enable separate ingress for webhook by creating an Ingress resource. By default, this is disabled and webhook is exposed as part of kargo-api ingress. Enabling ingress is advanced usage.
     enabled: false
     ## @param externalWebhooksServer.ingress.annotations Annotations specified by your ingress controller to customize the behavior of the Ingress resource.
-    annotations: {}
+    annotations:
+      {}
       # kubernetes.io/ingress.class: nginx
     ## @param externalWebhooksServer.ingress.ingressClassName If implemented by your ingress controller, specifies the ingress class. If your ingress controller does not support this, use the `kubernetes.io/ingress.class` annotation instead.
     ingressClassName:
@@ -747,6 +764,9 @@ externalWebhooksServer:
       enabled: true
       ## @param externalWebhooksServer.ingress.tls.selfSignedCert Whether to generate a self-signed certificate for use with the external webhook server's Ingress resource. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-external-webhook-server-ingress-cert` **must** be provided in the same namespace as Kargo. The value in this field has no effect if `externalWebhooksServer.ingress.tls.enabled` is `false`.
       selfSignedCert: true
+      ## @param externalWebhooksServer.ingress.tls.secretName Name of the existing TLS secret for the external webhooks servers Ingress resource.
+      ## Required when `externalWebhooksServer.ingress.tls.selfSignedCert` is `false`. Ignored if `selfSignedCert` is `true`.
+      secretName: ""
     ## @param externalWebhooksServer.ingress.pathType You may want to use `Prefix` for some controllers (like AWS LoadBalancer Ingress controller), which don't support `/` as wildcard path when pathType is set to `ImplementationSpecific`
     pathType: ImplementationSpecific
 
@@ -816,7 +836,8 @@ managementController:
   #      name: secret-name
 
   ## @param managementController.resources Resources limits and requests for the management controller containers.
-  resources: {}
+  resources:
+    {}
     # limits:
     #   cpu: 100m
     #   memory: 128Mi
@@ -879,7 +900,8 @@ webhooksServer:
   #      name: secret-name
 
   ## @param webhooksServer.resources Resources limits and requests for the webhooks server containers.
-  resources: {}
+  resources:
+    {}
     # limits:
     #   cpu: 100m
     #   memory: 128Mi
@@ -899,6 +921,9 @@ webhooksServer:
   tls:
     ## @param webhooksServer.tls.selfSignedCert  Whether to generate a self-signed certificate for the controller's built-in webhook server. If `true`, `cert-manager` CRDs **must** be present in the cluster. Kargo will create and use its own namespaced issuer. If `false`, a cert secret named `kargo-webhooks-server-cert` **must** be provided in the same namespace as Kargo. If this cert is not trusted by the Kubernetes API server, you must set `webhooksServer.tls.caBundle`, as Kubernetes does not support referencing CA bundles from secrets. This is why it is strongly recommended to use `cert-manager`. Note that this configuration is mandatory, because Kubernetes requires TLS for webhooks.
     selfSignedCert: true
+    ## @param webhooksServer.tls.secretName Name of the existing TLS secret  for the controller's built-in webhook server.
+    ## Required when `webhooksServer.tls.selfSignedCert` is `false`. Ignored if `selfSignedCert` is `true`.
+    secretName: ""
     ## @param webhooksServer.tls.caBundle  PEM-encoded TLS certificates (which should also be stored in `kargo-webhooks-server-cert`) to trust when `webhooksServer.tls.selfSignedCert` is **false**. When the cert is *already* trusted by the Kubernetes API server, ignore this parameter. When it is **not** trusted (e.g. self-signed), configure the cert (with intermediate certificates) here.
     caBundle: ""
     # caBundle: |

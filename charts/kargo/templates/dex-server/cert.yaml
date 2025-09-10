@@ -10,5 +10,5 @@ spec:
   issuerRef:
     kind: Issuer
     name: kargo-selfsigned-cert-issuer
-  secretName: kargo-dex-server-cert
+  secretName: {{ include "kargo.dex.serverTLSSecretName" . }}
 {{- end }}

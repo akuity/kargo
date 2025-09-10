@@ -47,14 +47,8 @@ spec:
       {{- end }}
   {{- if .Values.api.ingress.tls.enabled }}
   tls:
-  {{- if .Values.api.ingress.tls.secretName }}
     - hosts:
         - {{ quote .Values.api.host }}
-      secretName: {{ .Values.api.ingress.tls.secretName | quote }}
-  {{- else }}
-    - hosts:
-        - {{ quote .Values.api.host }}
-      secretName: kargo-api-ingress-cert
-  {{- end }}
+      secretName: {{ include "kargo.api.ingressTLSSecretName" . | quote }}
   {{- end }}
 {{- end }}
