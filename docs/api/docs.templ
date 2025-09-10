@@ -2,12 +2,18 @@
 <a name="top"></a>
 
 {{- range .Files}}
-{{$file_name := .Name}}
+{{ $file_name := .Name}}
 <a name="{{.Name | anchor}}"></a>
 <p align="right"><a href="#top">Top</a></p>
 
+## {{ .Name | trimPrefix "api/" | trimSuffix "/service.proto" | trimSuffix "/generated.proto" }}
+
 {{- range .Services}}
 <a name="{{.FullName | anchor}}"></a>
+
+:::warning
+Stability is not guaranteed.
+:::
 
 | Method Name | Request Type | Response Type |
 | ----------- | ------------ | ------------- |
@@ -15,16 +21,6 @@
   | {{.Name}} | [{{.RequestLongType}}](#{{.RequestFullType | anchor}}){{if .RequestStreaming}}(stream){{end}} | [{{.ResponseLongType}}](#{{.ResponseFullType | anchor}}){{if .ResponseStreaming}}(stream){{end}} |
 {{end}}
 {{end}} <!-- end services -->
-{{ $name :=  ( .Name | trimPrefix "api/" | trimSuffix "/service.proto" | trimSuffix "/generated.proto" ) }}
-## {{ $name }}
-
-{{- if eq $name "service/v1alpha1" }}
-
-:::warning
-Stability is not guaranteed.
-:::
-
-{{- end }}
 
 {{ .Description}}
 {{- range .Messages -}}
