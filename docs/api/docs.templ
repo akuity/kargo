@@ -20,10 +20,10 @@ Stability is not guaranteed.
 {{range .Methods -}}
   | {{.Name}} | [{{.RequestLongType}}](#{{.RequestFullType | anchor}}){{if .RequestStreaming}}(stream){{end}} | [{{.ResponseLongType}}](#{{.ResponseFullType | anchor}}){{if .ResponseStreaming}}(stream){{end}} |
 {{end}}
-{{end}}
+{{- end}}
 
 {{- .Description}}
-{{- range .Messages -}}
+{{- range .Messages}}
 <a name="{{.FullName | anchor}}"></a>
 
 ### {{.LongName}}
