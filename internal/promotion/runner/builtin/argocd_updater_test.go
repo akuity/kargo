@@ -285,7 +285,7 @@ func Test_argoCDUpdater_convert(t *testing.T) {
 					"namespace": "argocd",
 					"sources": []promotion.Config{{
 						"repoURL":              "fake-git-url",
-						"desiredRevision":      "fake-commit",
+						"desiredRevision":      "0532b614f4b84aa2af74a0c7d62e3d9d8ba446b5",
 						"updateTargetRevision": true,
 						"helm": promotion.Config{
 							"images": []promotion.Config{
