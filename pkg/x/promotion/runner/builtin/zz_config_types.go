@@ -27,11 +27,11 @@ type ArgoCDAppSourceUpdate struct {
 	// same fields in the source. i.e. Do not match the values of these two fields to your
 	// Warehouse; match them to the Application source you wish to update.
 	Chart string `json:"chart,omitempty"`
-	// Specifies the desired immutable revision for the source (e.g. a full-length commit SHA).
-	// If left undefined, the desired revision will be determined by Freight (if possible). Note
-	// that the source's 'targetRevision' will not be updated to this commit unless
-	// 'updateTargetRevision=true' is set. The utility of this field, on its own, is to specify
-	// the revision that the source should be observably synced to during a health check.
+	// Specifies the desired revision for the source. If left undefined, the desired revision
+	// will be determined by Freight (if possible). Note that the source's 'targetRevision' will
+	// not be updated to this commit unless 'updateTargetRevision=true' is set. The utility of
+	// this field, on its own, is to specify the revision that the source should be observably
+	// synced to during a health check.
 	DesiredRevision string                       `json:"desiredRevision,omitempty"`
 	Helm            *ArgoCDHelmParameterUpdates  `json:"helm,omitempty"`
 	Kustomize       *ArgoCDKustomizeImageUpdates `json:"kustomize,omitempty"`
