@@ -74,7 +74,10 @@ project namespaces only (i.e. only those labeled with
 `kargo.akuity.io/project: "true"`). _This section focuses on the exceptions to
 that rule._
 
-ServiceAccount resources may be mapped to users through the use of annotation claims defined under the `rbac.kargo.akuity.io/claims` key. The value of the annotation can be a standard YAML map or a JSON object.
+ServiceAccount resources may be mapped to users through use of the
+`rbac.kargo.akuity.io/claim` annotation. Its value must be a string
+representation of a JSON object containing claim names as keys mapped to claim
+values represented as strings or lists.
 
 In the following example, the `ServiceAccount` resource is mapped to all of:
 
