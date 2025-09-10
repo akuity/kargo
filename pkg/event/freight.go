@@ -12,7 +12,7 @@ import (
 
 // Freight is a struct that contains common fields for freight-related events.
 type Freight struct {
-	Name       string               `json:"freightName"`
+	Name       string               `json:"name"`
 	StageName  string               `json:"stageName"`
 	CreateTime time.Time            `json:"createTime"`
 	Alias      *string              `json:"alias,omitempty"`
