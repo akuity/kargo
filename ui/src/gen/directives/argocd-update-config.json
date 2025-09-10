@@ -30,8 +30,8 @@
        },
        "desiredRevision": {
         "type": "string",
-        "description": "Specifies the desired immutable revision for the source (e.g. a full-length commit SHA). If left undefined, the desired revision will be determined by Freight (if possible). Note that the source's 'targetRevision' will not be updated to this commit unless 'updateTargetRevision=true' is set. The utility of this field, on its own, is to specify the revision that the source should be observably synced to during a health check.",
-        "minLength": 40
+        "description": "Specifies the desired revision for the source. If left undefined, the desired revision will be determined by Freight (if possible). Note that the source's 'targetRevision' will not be updated to this commit unless 'updateTargetRevision=true' is set. The utility of this field, on its own, is to specify the revision that the source should be observably synced to during a health check.",
+        "minLength": 1
        },
        "helm": {
         "type": "object",
@@ -119,8 +119,8 @@
     },
     "desiredRevision": {
      "type": "string",
-     "description": "Specifies the desired immutable revision for the source (e.g. a full-length commit SHA). If left undefined, the desired revision will be determined by Freight (if possible). Note that the source's 'targetRevision' will not be updated to this commit unless 'updateTargetRevision=true' is set. The utility of this field, on its own, is to specify the revision that the source should be observably synced to during a health check.",
-     "minLength": 40
+     "description": "Specifies the desired revision for the source. If left undefined, the desired revision will be determined by Freight (if possible). Note that the source's 'targetRevision' will not be updated to this commit unless 'updateTargetRevision=true' is set. The utility of this field, on its own, is to specify the revision that the source should be observably synced to during a health check.",
+     "minLength": 1
     },
     "helm": {
      "type": "object",
@@ -330,8 +330,8 @@
         },
         "desiredRevision": {
          "type": "string",
-         "description": "Specifies the desired immutable revision for the source (e.g. a full-length commit SHA). If left undefined, the desired revision will be determined by Freight (if possible). Note that the source's 'targetRevision' will not be updated to this commit unless 'updateTargetRevision=true' is set. The utility of this field, on its own, is to specify the revision that the source should be observably synced to during a health check.",
-         "minLength": 40
+         "description": "Specifies the desired revision for the source. If left undefined, the desired revision will be determined by Freight (if possible). Note that the source's 'targetRevision' will not be updated to this commit unless 'updateTargetRevision=true' is set. The utility of this field, on its own, is to specify the revision that the source should be observably synced to during a health check.",
+         "minLength": 1
         },
         "helm": {
          "type": "object",
