@@ -49,19 +49,7 @@ Stability is not guaranteed.
 {{range .Values -}}
   | {{.Name}} | {{.Number}} | {{nobr .Description}} |
 {{end}}
-
 {{end}} <!-- end enums -->
-
-{{- if .HasExtensions}}
-<a name="{{$file_name | anchor}}-extensions"></a>
-
-### File-level Extensions
-| Extension | Type | Base | Number | Description |
-| --------- | ---- | ---- | ------ | ----------- |
-{{range .Extensions -}}
-  | {{.Name}} | {{.LongType}} | {{.ContainingLongType}} | {{.Number}} | {{nobr .Description}}{{if .DefaultValue}} Default: `{{.DefaultValue}}`{{end}} |
-{{end}}
-{{end}} <!-- end HasExtensions -->
 {{- end}}
 
 ## Scalar Value Types

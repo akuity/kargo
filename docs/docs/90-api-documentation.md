@@ -1603,8 +1603,7 @@ RawFormat specifies the format for raw resource representation.
 | RAW_FORMAT_JSON | 1 | RAW_FORMAT_JSON requests JSON format for raw resources. |
 | RAW_FORMAT_YAML | 2 | RAW_FORMAT_YAML requests YAML format for raw resources. |
 
-
- <!-- end enums --> <!-- end HasExtensions -->
+ <!-- end enums -->
 
 <a name="api_rbac_v1alpha1_generated-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
@@ -1652,7 +1651,7 @@ RawFormat specifies the format for raw resource representation.
 
  <!-- end messages -->
 
- <!-- end enums --> <!-- end HasExtensions -->
+ <!-- end enums -->
 
 <a name="api_v1alpha1_generated-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
@@ -2642,7 +2641,7 @@ RawFormat specifies the format for raw resource representation.
 
  <!-- end messages -->
 
- <!-- end enums --> <!-- end HasExtensions -->
+ <!-- end enums -->
 
 ## Scalar Value Types
 
