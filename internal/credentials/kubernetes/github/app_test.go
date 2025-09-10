@@ -268,83 +268,7 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 			},
 		},
 		{
-			name:     "project repos annotation - project not found in map",
-			credType: credentials.TypeGit,
-			repoURL:  "https://github.com/akuity/kargo",
-			data: map[string][]byte{
-				appIDKey:                               []byte("123"),
-				installationIDKey:                      []byte("456"),
-				privateKeyKey:                          []byte("private-key"),
-				kargoapi.AnnotationKeyGitHubTokenScope: []byte(`{"other-project": ["kargo"]}`),
-			},
-			getAccessTokenFn: func(_ string, _ int64, _, _, _ string) (string, error) {
-				return "test-token", nil
-			},
-			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
-				assert.Nil(t, creds)
-				assert.NoError(t, err)
-			},
-		},
-		{
-			name:     "project repos annotation - repo not allowed",
-			credType: credentials.TypeGit,
-			repoURL:  "https://github.com/akuity/kargo",
-			data: map[string][]byte{
-				appIDKey:                               []byte("123"),
-				installationIDKey:                      []byte("456"),
-				privateKeyKey:                          []byte("private-key"),
-				kargoapi.AnnotationKeyGitHubTokenScope: []byte(`{"": ["other-repo"]}`),
-			},
-			getAccessTokenFn: func(_ string, _ int64, _, _, _ string) (string, error) {
-				return "test-token", nil
-			},
-			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
-				assert.Nil(t, creds)
-				assert.NoError(t, err)
-			},
-		},
-		{
 			name:     "project repos annotation - repo allowed",
-			credType: credentials.TypeGit,
-			repoURL:  "https://github.com/akuity/kargo",
-			data: map[string][]byte{
-				appIDKey:                               []byte("123"),
-				installationIDKey:                      []byte("456"),
-				privateKeyKey:                          []byte("private-key"),
-				kargoapi.AnnotationKeyGitHubTokenScope: []byte(`{"": ["kargo"]}`),
-			},
-			getAccessTokenFn: func(_ string, _ int64, _, _, repoName string) (string, error) {
-				assert.Equal(t, "kargo", repoName) // scope check
-				return "scoped-token", nil
-			},
-			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
-				assert.NoError(t, err)
-				assert.NotNil(t, creds)
-				assert.Equal(t, "scoped-token", creds.Password)
-			},
-		},
-		{
-			name:     "project repos annotation - invalid JSON",
-			credType: credentials.TypeGit,
-			repoURL:  "https://github.com/akuity/kargo",
-			data: map[string][]byte{
-				appIDKey:                               []byte("123"),
-				installationIDKey:                      []byte("456"),
-				privateKeyKey:                          []byte("private-key"),
-				kargoapi.AnnotationKeyGitHubTokenScope: []byte(`{invalid-json}`),
-			},
-			getAccessTokenFn: func(_ string, _ int64, _, _, _ string) (string, error) {
-				return "unrestricted-token", nil
-			},
-			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
-				// When JSON is invalid, we fall back to restricted mode with no allowed repos
-				assert.Nil(t, creds)
-				assert.Error(t, err)
-			},
-		},
-
-		{
-			name:     "project repos metadata - repo allowed",
 			credType: credentials.TypeGit,
 			repoURL:  "https://github.com/akuity/kargo",
 			data: map[string][]byte{
@@ -367,7 +291,7 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 			},
 		},
 		{
-			name:     "project repos metadata - repo not allowed",
+			name:     "project repos annotation - repo not allowed",
 			credType: credentials.TypeGit,
 			repoURL:  "https://github.com/akuity/kargo",
 			data: map[string][]byte{
@@ -387,7 +311,7 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 			},
 		},
 		{
-			name:     "project repos metadata - invalid JSON",
+			name:     "project repos annotation - invalid JSON",
 			credType: credentials.TypeGit,
 			repoURL:  "https://github.com/akuity/kargo",
 			data: map[string][]byte{
@@ -405,6 +329,81 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 			},
 			annotations: map[string]string{
 				kargoapi.AnnotationKeyGitHubTokenScope: `{invalid-json}`,
+			},
+		},
+		{
+			name:     "project repos annotation in data - project not found in map",
+			credType: credentials.TypeGit,
+			repoURL:  "https://github.com/akuity/kargo",
+			data: map[string][]byte{
+				appIDKey:                               []byte("123"),
+				installationIDKey:                      []byte("456"),
+				privateKeyKey:                          []byte("private-key"),
+				kargoapi.AnnotationKeyGitHubTokenScope: []byte(`{"other-project": ["kargo"]}`),
+			},
+			getAccessTokenFn: func(_ string, _ int64, _, _, _ string) (string, error) {
+				return "test-token", nil
+			},
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
+				assert.Nil(t, creds)
+				assert.NoError(t, err)
+			},
+		},
+		{
+			name:     "project repos annotation in data - repo not allowed",
+			credType: credentials.TypeGit,
+			repoURL:  "https://github.com/akuity/kargo",
+			data: map[string][]byte{
+				appIDKey:                               []byte("123"),
+				installationIDKey:                      []byte("456"),
+				privateKeyKey:                          []byte("private-key"),
+				kargoapi.AnnotationKeyGitHubTokenScope: []byte(`{"": ["other-repo"]}`),
+			},
+			getAccessTokenFn: func(_ string, _ int64, _, _, _ string) (string, error) {
+				return "test-token", nil
+			},
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
+				assert.Nil(t, creds)
+				assert.NoError(t, err)
+			},
+		},
+		{
+			name:     "project repos annotation in data - repo allowed",
+			credType: credentials.TypeGit,
+			repoURL:  "https://github.com/akuity/kargo",
+			data: map[string][]byte{
+				appIDKey:                               []byte("123"),
+				installationIDKey:                      []byte("456"),
+				privateKeyKey:                          []byte("private-key"),
+				kargoapi.AnnotationKeyGitHubTokenScope: []byte(`{"": ["kargo"]}`),
+			},
+			getAccessTokenFn: func(_ string, _ int64, _, _, repoName string) (string, error) {
+				assert.Equal(t, "kargo", repoName) // scope check
+				return "scoped-token", nil
+			},
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
+				assert.NoError(t, err)
+				assert.NotNil(t, creds)
+				assert.Equal(t, "scoped-token", creds.Password)
+			},
+		},
+		{
+			name:     "project repos annotation in data - invalid JSON",
+			credType: credentials.TypeGit,
+			repoURL:  "https://github.com/akuity/kargo",
+			data: map[string][]byte{
+				appIDKey:                               []byte("123"),
+				installationIDKey:                      []byte("456"),
+				privateKeyKey:                          []byte("private-key"),
+				kargoapi.AnnotationKeyGitHubTokenScope: []byte(`{invalid-json}`),
+			},
+			getAccessTokenFn: func(_ string, _ int64, _, _, _ string) (string, error) {
+				return "unrestricted-token", nil
+			},
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
+				// When JSON is invalid, we fall back to restricted mode with no allowed repos
+				assert.Nil(t, creds)
+				assert.Error(t, err)
 			},
 		},
 	}
