@@ -98,6 +98,10 @@ metadata:
       }
 ```
 
+A user may be mapped to multiple `ServiceAccount` resources. A user's effective
+permissions are therefore the _union_ of the permissions associated with all
+such `ServiceAccount` resources.
+
 ### Managing Mappings and Permissions
 
 Unless the operator has disabled it, project admins can manage
