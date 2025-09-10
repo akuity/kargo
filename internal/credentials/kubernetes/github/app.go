@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/akuity/kargo/pkg/logging"
 	"net/url"
 	"regexp"
 	"slices"
@@ -21,7 +22,6 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
-	"github.com/akuity/kargo/internal/logging"
 )
 
 const (
@@ -84,27 +84,39 @@ func (p *AppCredentialProvider) GetCredentials(
 	credType credentials.Type,
 	repoURL string,
 	data map[string][]byte,
+	metadata map[string][]string,
 ) (*credentials.Credentials, error) {
 	logger := logging.LoggerFromContext(ctx).WithValues()
 	if !p.Supports(credType, repoURL, data) {
 		return nil, nil
 	}
 
-	// Extract the project-repos JSON from annotation
-	// in data or directly from data key
-	projectReposJSON, hasProjectRepos := data[kargoapi.AnnotationProjectReposKey]
-
 	var (
-		allowedRepos []string
-		restricted   bool
+		allowedRepos     []string
+		restricted       bool
+		projectReposJSON []byte
 	)
 
-	if hasProjectRepos && len(projectReposJSON) > 0 {
+	// Try to search for annotation in the metadata
+	if vals, ok := metadata[kargoapi.AnnotationKeyGitHubTokenScope]; ok && len(vals) > 0 {
+		projectReposJSON = []byte(vals[0])
+	}
+
+	// If the annotation is not configured, try to look for it in data field
+	if projectReposJSON == nil {
+		if raw, ok := data[kargoapi.AnnotationKeyGitHubTokenScope]; ok && len(raw) > 0 {
+			projectReposJSON = raw
+		}
+	}
+
+	if len(projectReposJSON) > 0 {
 		var projectRepoMap map[string][]string
 		if err := json.Unmarshal(projectReposJSON, &projectRepoMap); err != nil {
-			// If JSON is invalid, we mark as restricted (deny by default)
+			// If JSON is invalid, simply return the error
+			// since it doesn't make sense to move to the next provider
+			// when the JSON already is invalid
 			logger.Debug("error unmarshalling project-repos JSON")
-			restricted = true
+			return nil, fmt.Errorf("erro unmarshalling project-repos JSON: %v\n", err)
 		} else {
 			// Look up repos for the specific project
 			repos, found := projectRepoMap[project]
@@ -144,7 +156,10 @@ func (p *AppCredentialProvider) GetCredentials(
 	}
 
 	if restricted && !slices.Contains(allowedRepos, repoName) {
-		return nil, fmt.Errorf("repository %q is not allowed for project %q", repoName, project)
+		// This project has no allowed repositories configured in the annotation.
+		// Returning (nil, nil) signals "not applicable" instead of a hard error,
+		// so that the caller can continue trying other credential providers.
+		return nil, nil
 	}
 
 	return p.getUsernameAndPassword(

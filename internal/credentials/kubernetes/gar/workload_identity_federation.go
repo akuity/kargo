@@ -102,6 +102,7 @@ func (p *WorkloadIdentityFederationProvider) GetCredentials(
 	credType credentials.Type,
 	repoURL string,
 	_ map[string][]byte,
+	_ map[string][]string,
 ) (*credentials.Credentials, error) {
 	if !p.Supports(credType, repoURL, nil) {
 		return nil, nil

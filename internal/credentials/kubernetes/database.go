@@ -136,25 +136,22 @@ clientLoop:
 		}
 	}
 
-	var data map[string][]byte
+	var (
+		data     map[string][]byte
+		metadata map[string][]string
+	)
+
 	if secret != nil {
-		// create a dataCopy that will store the
-		// secret's data and project-repo key
-		// annotation value if it is present
-		dataCopy := make(map[string][]byte)
-		for key, val := range secret.Data {
-			dataCopy[key] = val
-		}
+		data = secret.Data
 		if secret.Annotations != nil {
 			if val, ok := secret.Annotations[kargoapi.AnnotationProjectReposKey]; ok && val != "" {
-				dataCopy[kargoapi.AnnotationProjectReposKey] = []byte(val)
+				metadata[kargoapi.AnnotationProjectReposKey] = []string{val}
 			}
 		}
-		data = dataCopy
 	}
 
 	for _, p := range k.credentialProviders {
-		creds, err := p.GetCredentials(ctx, namespace, credType, repoURL, data)
+		creds, err := p.GetCredentials(ctx, namespace, credType, repoURL, data, metadata)
 		if err != nil {
 			return nil, err
 		}

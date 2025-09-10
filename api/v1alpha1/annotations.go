@@ -70,7 +70,7 @@ const (
 	// is set to true.
 	AnnotationValueTrue = "true"
 
-	// AnnotationProjectReposKey is the Kubernetes Secret annotation key
+	// AnnotationKeyGitHubTokenScope is the Kubernetes Secret annotation key
 	// used to specify per-project repository access restrictions for GitHub App credentials.
 	//
 	// The value associated with this annotation should be a JSON object mapping
@@ -90,5 +90,5 @@ const (
 	//
 	// If the annotation is missing or empty, no per-project repository restrictions
 	// will be applied (full access within matching Secret scope).
-	AnnotationProjectReposKey = "kargo.akuity.io/project-repos"
+	AnnotationKeyGitHubTokenScope = "kargo.akuity.io/github-token-scopes"
 )

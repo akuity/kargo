@@ -58,5 +58,6 @@ type Provider interface {
 		credType Type,
 		repoURL string,
 		data map[string][]byte,
+		metadata map[string][]string,
 	) (*Credentials, error)
 }
