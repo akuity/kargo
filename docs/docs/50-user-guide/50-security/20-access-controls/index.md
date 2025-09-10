@@ -80,32 +80,7 @@ In the following example, the `ServiceAccount` resource is mapped to all of:
 * A user with the `email` claim `carl@example.com`.
 * All users with a `groups` claim  containing _either_ the `devops` or
   `kargo-admin` group.
-
-### Map example
-
-```yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: admin
-  namespace: kargo-demo
-  annotations:
-    rbac.kargo.akuity.io/claims:
-      sub: 
-        - alice
-        - bob
-      email: carl@example.com
-      groups: 
-        - devops
-        - kargo-admin
-      "special:key": value
-```
-
-:::caution
-Keys with colons should be wrapped with quotes.
-:::
-
-### JSON example
+* Users with a `special:key` claim.
 
 ```yaml
 apiVersion: v1
@@ -117,8 +92,9 @@ metadata:
     rbac.kargo.akuity.io/claims:
       {
         "sub": ["alice", "bob" ],
-        "email": carl@example.com,
-        "special:key": value
+        "email": "carl@example.com",
+        "groups": ["devops", "kargo-admin"],
+        "special:key": "value"
       }
 ```
 
@@ -316,8 +292,7 @@ metadata:
   namespace: guestbook
   annotations:
     kargo.akuity.io/description: Permissions to promote into pre-prod Stages
-    rbac.kargo.akuity.io/claims:
-      groups: devops
+    rbac.kargo.akuity.io/claims: '{"groups":"devops"}'
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -394,8 +369,7 @@ metadata:
   name: admin
   namespace: guestbook
   annotations:
-    rbac.kargo.akuity.io/claims:
-      groups: devops
+    rbac.kargo.akuity.io/claims: '{"groups":"devops"}'
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
