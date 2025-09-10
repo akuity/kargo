@@ -1,4 +1,6 @@
-import { Controls, MiniMap, ReactFlow, useNodesState } from '@xyflow/react';
+import { faMap } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { ControlButton, Controls, MiniMap, ReactFlow, useNodesState } from '@xyflow/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { queryCache } from '@ui/features/utils/cache';
@@ -9,8 +11,10 @@ import { GraphContext } from '../context/graph-context';
 import { StackedNodes } from '../nodes/stacked-nodes';
 
 import { CustomNode } from './custom-node';
+import { DummyNodeRenderrer } from './dummy-node-renderrer';
 import { stageIndexer, warehouseIndexer } from './node-indexer';
 import { useEventsWatcher } from './use-events-watcher';
+import { useNodeDimensionState } from './use-node-dimension-state';
 import { reactFlowNodeConstants, useReactFlowPipelineGraph } from './use-pipeline-graph';
 
 type GraphProps = {
@@ -56,11 +60,14 @@ export const Graph = (props: GraphProps) => {
 
   const [redraw, setRedraw] = useState(false);
 
+  const [dimensions, setDimensions] = useNodeDimensionState();
+
   const graph = useReactFlowPipelineGraph(
     props.stages,
     props.warehouses,
     filterContext?.preferredFilter.warehouses || [],
     redraw,
+    dimensions,
     {
       afterNodes: stackedNodesParents
     },
@@ -144,17 +151,41 @@ export const Graph = (props: GraphProps) => {
         proOptions={{ hideAttribution: true }}
         minZoom={0}
         onNodesChange={onNodesChange}
+        onlyRenderVisibleElements
       >
-        <MiniMap
-          style={{ background: 'white', border: '1px solid lightblue', borderRadius: '5px' }}
-          pannable
-        />
+        {!Object.keys(dimensions).length && (
+          <div className='opacity-0 overflow-hidden h-0'>
+            <DummyNodeRenderrer
+              stages={props.stages}
+              warehouses={props.warehouses}
+              onDimensionChange={setDimensions}
+            />
+          </div>
+        )}
+        {filterContext?.preferredFilter?.showMinimap && (
+          <MiniMap
+            style={{ background: 'white', border: '1px solid lightblue', borderRadius: '5px' }}
+            pannable
+          />
+        )}
         <Controls
           showInteractive={false}
           onFitView={() => {
             setRedraw(!redraw);
           }}
-        />
+        >
+          <ControlButton
+            title={filterContext?.preferredFilter?.showMinimap ? 'Hide Minimap' : 'Show Minimap'}
+            onClick={() =>
+              filterContext?.setPreferredFilter({
+                ...filterContext?.preferredFilter,
+                showMinimap: !filterContext?.preferredFilter?.showMinimap
+              })
+            }
+          >
+            <FontAwesomeIcon icon={faMap} />
+          </ControlButton>
+        </Controls>
       </ReactFlow>
     </GraphContext.Provider>
   );

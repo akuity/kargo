@@ -21,10 +21,10 @@ import (
 	"github.com/akuity/kargo/internal/controller/management/projectconfigs"
 	"github.com/akuity/kargo/internal/controller/management/projects"
 	"github.com/akuity/kargo/internal/controller/management/serviceaccounts"
-	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
 	"github.com/akuity/kargo/internal/server/kubernetes"
 	"github.com/akuity/kargo/internal/types"
+	"github.com/akuity/kargo/pkg/logging"
 	versionpkg "github.com/akuity/kargo/pkg/x/version"
 )
 
@@ -46,7 +46,7 @@ func newManagementControllerCommand() *cobra.Command {
 	cmdOpts := &managementControllerOptions{
 		// During startup, we enforce use of an info-level logger to ensure that
 		// no important startup messages are missed.
-		Logger: logging.NewLogger(logging.InfoLevel),
+		Logger: logging.NewLoggerOrDie(logging.InfoLevel, logging.DefaultFormat),
 	}
 
 	cmd := &cobra.Command{

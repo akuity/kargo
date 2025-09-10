@@ -12,6 +12,7 @@ data:
   KARGO_NAMESPACE: {{ .Release.Namespace }}
   CLUSTER_SECRETS_NAMESPACE: {{ .Values.global.clusterSecretsNamespace }}
   LOG_LEVEL: {{ quote .Values.externalWebhooksServer.logLevel }}
+  LOG_FORMAT: {{ quote .Values.externalWebhooksServer.logFormat }}
   {{- if .Values.kubeconfigSecrets.kargo }}
   KUBECONFIG: /etc/kargo/kubeconfig.yaml
   {{- end }}

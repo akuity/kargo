@@ -6,7 +6,7 @@ import (
 	"slices"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 func init() {
@@ -76,7 +76,7 @@ func (l *lexicalSelector) Select(
 
 	images, err := l.getImagesByTags(ctx, tags)
 	if err != nil {
-		return nil, fmt.Errorf("error getting images by tags")
+		return nil, fmt.Errorf("error getting images by tags: %w", err)
 	}
 
 	if len(images) == 0 {

@@ -8,7 +8,7 @@ import (
 	"github.com/akuity/kargo/internal/controller/git"
 	"github.com/akuity/kargo/internal/controller/git/commit"
 	"github.com/akuity/kargo/internal/credentials"
-	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 // discoverCommits discovers commits from the given Git repositories based on the

@@ -107,6 +107,14 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
       filtered = [...newFiltered];
     }
 
+    if (isPromotionMode) {
+      filtered = filtered.filter((f) =>
+        actionContext?.action?.stage?.spec?.requestedFreight?.find(
+          (fr) => fr.origin?.name === f?.origin?.name
+        )
+      );
+    }
+
     return filtered;
   }, [
     props.freights,
@@ -115,7 +123,9 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
     freightTimelineControllerContext.preferredFilter.timerange,
     freightTimelineControllerContext.preferredFilter.warehouses,
     freightTimelineControllerContext.preferredFilter.hideUnusedFreights,
-    dictionaryContext?.freightInStages
+    dictionaryContext?.freightInStages,
+    isPromotionMode,
+    actionContext
   ]);
 
   const freightListStyleRef = useRef<HTMLDivElement>(null);

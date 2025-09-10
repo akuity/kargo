@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 // cleanProjects is a worker function that receives Project names over a channel

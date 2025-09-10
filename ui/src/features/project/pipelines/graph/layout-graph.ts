@@ -5,7 +5,8 @@ import { RepoSubscription, Stage, Warehouse } from '@ui/gen/api/v1alpha1/generat
 
 import { repoSubscriptionIndexer, stageIndexer, warehouseIndexer } from './node-indexer';
 import { repoSubscriptionLabelling, stageLabelling, warehouseLabelling } from './node-labeling';
-import { repoSubscriptionSizer, stageSizer, warehouseSizer } from './node-sizer';
+import { pickMaxSize, repoSubscriptionSizer, stageSizer, warehouseSizer } from './node-sizer';
+import { DimensionState } from './use-node-dimension-state';
 
 export type GraphMeta = {
   warehouse?: Warehouse;
@@ -26,6 +27,7 @@ export const layoutGraph = (
     warehouses: Warehouse[];
     ignore?: (w: Warehouse) => boolean;
   },
+  dimensionState: DimensionState,
   warehouseColorMap?: ColorMap
 ) => {
   const graph = new graphlib.Graph<GraphMeta>({ multigraph: true });
@@ -52,7 +54,7 @@ export const layoutGraph = (
     const warehouseNodeIndex = warehouseIndexer.index(w);
     graph.setNode(warehouseNodeIndex, {
       ...warehouseLabelling.label(w),
-      ...warehouseSizer.size()
+      ...pickMaxSize(warehouseSizer.size(), dimensionState[warehouseNodeIndex] || {})
     });
 
     for (const s of w.spec?.subscriptions || []) {
@@ -60,7 +62,7 @@ export const layoutGraph = (
 
       graph.setNode(subscriptionNodeIndex, {
         ...repoSubscriptionLabelling.label(w, s),
-        ...repoSubscriptionSizer.size()
+        ...pickMaxSize(repoSubscriptionSizer.size(), dimensionState[subscriptionNodeIndex] || {})
       });
 
       graph.setEdge(subscriptionNodeIndex, warehouseNodeIndex);
@@ -76,7 +78,7 @@ export const layoutGraph = (
 
     graph.setNode(stageNodeIndex, {
       ...stageLabelling.label(s),
-      ...stageSizer.size()
+      ...pickMaxSize(stageSizer.size(), dimensionState[stageNodeIndex] || {})
     });
 
     for (const requestedOrigin of s.spec?.requestedFreight || []) {

@@ -19,15 +19,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
-var (
-	projectGroupResource = schema.GroupResource{
-		Group:    kargoapi.GroupVersion.Group,
-		Resource: "projects",
-	}
-)
+var projectGroupResource = schema.GroupResource{
+	Group:    kargoapi.GroupVersion.Group,
+	Resource: "projects",
+}
 
 type WebhookConfig struct {
 	KargoNamespace string `envconfig:"KARGO_NAMESPACE" required:"true"`

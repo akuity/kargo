@@ -15,6 +15,7 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	fakeevent "github.com/akuity/kargo/internal/kubernetes/event/fake"
+	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 )
 
 func TestApproveFreight(t *testing.T) {
@@ -368,14 +369,14 @@ func TestApproveFreight(t *testing.T) {
 				require.Len(t, recorder.Events, 1)
 				event := <-recorder.Events
 				require.Equal(t, corev1.EventTypeNormal, event.EventType)
-				require.Equal(t, kargoapi.EventReasonFreightApproved, event.Reason)
+				require.Equal(t, string(kargoapi.EventTypeFreightApproved), event.Reason)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			recorder := fakeevent.NewEventRecorder(1)
-			testCase.server.recorder = recorder
+			testCase.server.sender = k8sevent.NewEventSender(recorder)
 			resp, err := testCase.server.ApproveFreight(
 				context.Background(),
 				connect.NewRequest(testCase.req),

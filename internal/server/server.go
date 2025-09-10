@@ -20,7 +20,6 @@ import (
 	"golang.org/x/net/http2/h2c"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/akuity/kargo/api/service/v1alpha1/svcv1alpha1connect"
@@ -29,13 +28,14 @@ import (
 	"github.com/akuity/kargo/internal/api"
 	rollouts "github.com/akuity/kargo/internal/api/stubs/rollouts"
 	httputil "github.com/akuity/kargo/internal/http"
-	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/server/config"
 	"github.com/akuity/kargo/internal/server/dex"
 	"github.com/akuity/kargo/internal/server/kubernetes"
 	"github.com/akuity/kargo/internal/server/option"
 	"github.com/akuity/kargo/internal/server/rbac"
 	"github.com/akuity/kargo/internal/server/validation"
+	"github.com/akuity/kargo/pkg/event"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 var (
@@ -46,10 +46,10 @@ var (
 )
 
 type server struct {
-	cfg      config.ServerConfig
-	client   kubernetes.Client
-	rolesDB  rbac.RolesDatabase
-	recorder record.EventRecorder
+	cfg     config.ServerConfig
+	client  kubernetes.Client
+	rolesDB rbac.RolesDatabase
+	sender  event.Sender
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -166,13 +166,13 @@ func NewServer(
 	cfg config.ServerConfig,
 	kubeClient kubernetes.Client,
 	rolesDB rbac.RolesDatabase,
-	recorder record.EventRecorder,
+	sender event.Sender,
 ) Server {
 	s := &server{
-		cfg:      cfg,
-		client:   kubeClient,
-		rolesDB:  rolesDB,
-		recorder: recorder,
+		cfg:     cfg,
+		client:  kubeClient,
+		rolesDB: rolesDB,
+		sender:  sender,
 	}
 
 	s.validateProjectExistsFn = s.validateProjectExists

@@ -79,7 +79,7 @@ export const App = () => (
           </BrowserRouter>
         </AuthContextProvider>
       </ConfigProvider>
-      <ReactQueryDevtools />
+      <ReactQueryDevtools buttonPosition='bottom-left' />
     </QueryClientProvider>
   </TransportProvider>
 );

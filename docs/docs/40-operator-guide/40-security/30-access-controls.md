@@ -25,7 +25,7 @@ Kargo is usually configured to support single-sign-on (SSO) using an identity
 provider (IDP) that implements the
 [OpenID Connect](https://openid.net/developers/how-connect-works/) (OIDC)
 protocol. This topic is explored in much greater depth in the dedicated
-[OpenID Connect](./20-openid-connect.md) section of the Operator Guide.
+[OpenID Connect](./20-openid-connect/index.md) section of the Operator Guide.
 
 Kargo also implements access controls through _pure Kubernetes
 [RBAC](https://kubernetes.io/docs/reference/access-authn-authz/rbac/)._
@@ -65,7 +65,7 @@ obtain trusted information about the user which, importantly, includes _claims_
 such as username, email address, and group membership. The exact claims
 available depend on the IDP and the configuration of the Kargo API server. For
 more details on this topic, refer to the
-[OpenID Connect](./20-openid-connect.md) section of the Operator Guide.
+[OpenID Connect](./20-openid-connect/index.md) section of the Operator Guide.
 
 Also for every request, the Kargo API server queries the Kubernetes API server
 to obtain a list of all `ServiceAccount` resources to which the user has been
@@ -171,7 +171,7 @@ not_ extend to credentials and other project `Secret`s.
 
 :::info
 For additional information, once again, refer to the
-[OpenID Connect](./20-openid-connect.md) section of the Operator Guide.
+[OpenID Connect](./20-openid-connect/index.md) section of the Operator Guide.
 :::
 
 #### Global `ServiceAccount` Namespaces

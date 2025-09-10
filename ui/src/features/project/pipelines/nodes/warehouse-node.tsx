@@ -79,7 +79,7 @@ export const WarehouseNode = (props: { warehouse: Warehouse }) => {
           />
         </Flex>
       }
-      className={(styles['warehouse-node-size'], 'relative')}
+      className={styles['warehouse-node-size']}
       style={{
         border: color && `1px solid ${color}`
       }}

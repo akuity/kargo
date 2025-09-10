@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Dropdown, Flex, Result } from 'antd';
 import classNames from 'classnames';
 import { useMemo, useState } from 'react';
-import { generatePath, Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { generatePath, Link, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
@@ -18,6 +18,7 @@ import CreateWarehouse from '@ui/features/stage/create-warehouse/create-warehous
 import StageDetails from '@ui/features/stage/stage-details';
 import { getColors } from '@ui/features/stage/utils';
 import {
+  getConfig,
   getProject,
   listImages,
   listStages,
@@ -25,7 +26,7 @@ import {
   queryFreight
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { FreightList } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { Freight, Project } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight, Project, Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { ActionContext } from './context/action-context';
 import { DictionaryContext } from './context/dictionary-context';
@@ -54,20 +55,16 @@ import '@xyflow/react/dist/style.css';
 
 export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: boolean }) => {
   const { name, stageName, promotionId, freight, stage, warehouseName, freightName } = useParams();
-  const [searchParams, setSearchParams] = useSearchParams();
+
+  const getConfigQuery = useQuery(getConfig);
+
+  const argocdShards = getConfigQuery?.data?.argocdShards;
 
   const projectQuery = useQuery(getProject, { name });
 
   const project = projectQuery.data?.result?.value as Project;
 
   const projectName = name;
-
-  const pipelineView: 'graph' | 'list' = (searchParams.get('view') as 'graph' | 'list') || 'graph';
-  const setPipelineView = (nextView: 'graph' | 'list') => {
-    const currentSearchParams = new URLSearchParams(searchParams);
-    currentSearchParams.set('view', nextView);
-    setSearchParams(currentSearchParams);
-  };
 
   const listImagesQuery = useQuery(listImages, { project: name });
 
@@ -83,7 +80,8 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
     projectQuery.isLoading ||
     getFreightQuery.isLoading ||
     listWarehousesQuery.isLoading ||
-    listStagesQuery.isLoading;
+    listStagesQuery.isLoading ||
+    getConfigQuery.isLoading;
 
   const promote = freight && stage ? { freight, stage } : undefined;
 
@@ -92,7 +90,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
   const action = useAction();
 
   const stageDetails =
-    stageName && listStagesQuery.data?.stages.find((s) => s?.metadata?.name === stageName);
+    stageName && listStagesQuery.data?.stages?.find((s: Stage) => s?.metadata?.name === stageName);
 
   const warehouseColorMap = useMemo(
     () =>
@@ -112,6 +110,12 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
   const [preferredFilter, setPreferredFilter] = useFreightTimelineControllerStore(
     projectName || ''
   );
+
+  const pipelineView = preferredFilter.view;
+
+  const setPipelineView = (nextView: 'graph' | 'list') => {
+    setPreferredFilter({ ...preferredFilter, view: nextView });
+  };
 
   const [viewingFreight, setViewingFreight] = useState<Freight | null>(null);
 
@@ -176,7 +180,9 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
             freightById,
             stageAutoPromotionMap,
             subscribersByStage,
-            stageByName
+            stageByName,
+            argocdShards,
+            hasAnalysisRunLogsUrlTemplate: getConfigQuery?.data?.hasAnalysisRunLogsUrlTemplate
           }}
         >
           <ColorContext.Provider value={{ stageColorMap, warehouseColorMap }}>
@@ -186,7 +192,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
               <Flex
                 gap={12}
                 className={classNames(
-                  'z-10 top-2 right-2 left-2',
+                  'top-2 right-2 left-2',
                   pipelineView === 'graph' ? 'absolute' : 'pt-2 px-2'
                 )}
                 align='flex-start'
@@ -196,9 +202,10 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                   stages={listStagesQuery.data?.stages || []}
                   pipelineView={pipelineView}
                   setPipelineView={setPipelineView}
+                  className='z-10'
                 />
                 <Dropdown
-                  className='ml-auto'
+                  className='ml-auto z-10'
                   trigger={['click']}
                   menu={{
                     items: [
@@ -229,19 +236,21 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                       {
                         key: '2',
                         label: 'Freight',
-                        children: listWarehousesQuery.data?.warehouses?.map((warehouse) => ({
-                          key: warehouse?.metadata?.name || '',
-                          label: warehouse?.metadata?.name || '',
-                          onClick: () => {
-                            navigate(
-                              generatePath(paths.warehouse, {
-                                name: project.metadata?.name,
-                                warehouseName: warehouse?.metadata?.name || '',
-                                tab: 'create-freight'
-                              })
-                            );
-                          }
-                        }))
+                        children: listWarehousesQuery.data?.warehouses?.map(
+                          (warehouse: Warehouse) => ({
+                            key: warehouse?.metadata?.name || '',
+                            label: warehouse?.metadata?.name || '',
+                            onClick: () => {
+                              navigate(
+                                generatePath(paths.warehouse, {
+                                  name: project.metadata?.name,
+                                  warehouseName: warehouse?.metadata?.name || '',
+                                  tab: 'create-freight'
+                                })
+                              );
+                            }
+                          })
+                        )
                       }
                     ]
                   }}
@@ -249,6 +258,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
                   <Button icon={<FontAwesomeIcon icon={faPlus} />}>Create</Button>
                 </Dropdown>
                 <Button
+                  className='z-10'
                   icon={<FontAwesomeIcon icon={faDocker} />}
                   onClick={() =>
                     setPreferredFilter({

@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
-	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -26,14 +24,16 @@ import (
 	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/internal/kubernetes"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
-	"github.com/akuity/kargo/internal/logging"
 	intpredicate "github.com/akuity/kargo/internal/predicate"
+	"github.com/akuity/kargo/pkg/event"
+	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 type ControlFlowStageReconciler struct {
 	cfg            ReconcilerConfig
 	client         client.Client
-	eventRecorder  record.EventRecorder
+	eventSender    event.Sender
 	shardPredicate controller.ResponsibleFor[kargoapi.Stage]
 }
 
@@ -60,9 +60,11 @@ func (r *ControlFlowStageReconciler) SetupWithManager(
 	mgr ctrl.Manager,
 	sharedIndexer client.FieldIndexer,
 ) error {
-	// Configure client and event recorder using manager.
+	// Configure client and event sender using manager.
 	r.client = mgr.GetClient()
-	r.eventRecorder = libEvent.NewRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), r.cfg.Name())
+	r.eventSender = k8sevent.NewEventSender(
+		libEvent.NewRecorder(ctx, mgr.GetScheme(), mgr.GetClient(), r.cfg.Name()),
+	)
 
 	// This index is used to find all Freight that are directly available from
 	// a Warehouse. It is used to find Freight that can be sourced directly from
@@ -421,23 +423,27 @@ func (r *ControlFlowStageReconciler) markFreightVerifiedForStage(
 
 		newlyVerified++
 
-		// Record an event for the verification.
-		r.eventRecorder.AnnotatedEventf(
-			stage,
-			map[string]string{
-				kargoapi.AnnotationKeyEventActor:                  api.FormatEventControllerActor(r.cfg.Name()),
-				kargoapi.AnnotationKeyEventProject:                stage.Namespace,
-				kargoapi.AnnotationKeyEventStageName:              stage.Name,
-				kargoapi.AnnotationKeyEventFreightAlias:           f.Alias,
-				kargoapi.AnnotationKeyEventFreightName:            f.Name,
-				kargoapi.AnnotationKeyEventFreightCreateTime:      f.CreationTimestamp.Format(time.RFC3339),
-				kargoapi.AnnotationKeyEventVerificationStartTime:  startTime.Format(time.RFC3339),
-				kargoapi.AnnotationKeyEventVerificationFinishTime: finishTime.Format(time.RFC3339),
-			},
-			corev1.EventTypeNormal,
-			kargoapi.EventReasonFreightVerificationSucceeded,
+		common, fr := event.NewFreightCommon(
 			"Freight verification succeeded",
+			api.FormatEventControllerActor(r.cfg.Name()),
+			stage.Name,
+			&f,
 		)
+		evt := &event.FreightVerificationSucceeded{
+			Common:  common,
+			Freight: fr,
+			FreightVerification: event.FreightVerification{
+				StartTime:  &startTime,
+				FinishTime: &finishTime,
+			},
+		}
+
+		if err := r.eventSender.Send(ctx, evt); err != nil {
+			logger.Error(
+				err,
+				"failed to send Freight verification succeeded event",
+			)
+		}
 	}
 
 	if failures > 0 {

@@ -1,10 +1,11 @@
 import { Radio, Table } from 'antd';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
 import { DiscoveredCommit } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { TruncatedCopyable } from './truncated-copyable';
+import { useDetectPage } from './use-detect-page';
 
 export const CommitTable = ({
   commits,
@@ -17,13 +18,22 @@ export const CommitTable = ({
   select: (commit?: DiscoveredCommit) => void;
   show?: boolean;
 }) => {
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useDetectPage(commits, selected, !show);
 
   const doesAnyOfCommitsHaveTag = useMemo(() => commits?.find((c) => !!c?.tag), [commits]);
 
   if (!show) {
     return null;
   }
+
+  const tagColumn = doesAnyOfCommitsHaveTag
+    ? [
+        {
+          title: 'tag',
+          dataIndex: 'tag' as const
+        }
+      ]
+    : [];
 
   return (
     <Table
@@ -33,17 +43,12 @@ export const CommitTable = ({
         {
           render: (record: DiscoveredCommit) => (
             <Radio
-              checked={selected === record}
-              onClick={() => select(selected === record ? undefined : record)}
+              checked={selected?.id === record?.id}
+              onClick={() => select(selected?.id === record?.id ? undefined : record)}
             />
           )
         },
-        doesAnyOfCommitsHaveTag
-          ? {
-              title: 'tag',
-              dataIndex: 'tag'
-            }
-          : {},
+        ...tagColumn,
         {
           title: 'ID',
           render: (record: DiscoveredCommit) => <TruncatedCopyable text={record?.id} />

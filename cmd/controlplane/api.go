@@ -9,13 +9,14 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/akuity/kargo/internal/kubernetes/event"
-	"github.com/akuity/kargo/internal/logging"
 	"github.com/akuity/kargo/internal/os"
 	"github.com/akuity/kargo/internal/server"
 	"github.com/akuity/kargo/internal/server/config"
 	"github.com/akuity/kargo/internal/server/kubernetes"
 	"github.com/akuity/kargo/internal/server/rbac"
 	"github.com/akuity/kargo/internal/types"
+	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
+	"github.com/akuity/kargo/pkg/logging"
 	versionpkg "github.com/akuity/kargo/pkg/x/version"
 )
 
@@ -31,10 +32,11 @@ type apiOptions struct {
 }
 
 func newAPICommand() *cobra.Command {
+	_, format := getLogVars()
 	cmdOpts := &apiOptions{
 		// During startup, we enforce use of an info-level logger to ensure that
 		// no important startup messages are missed.
-		Logger: logging.NewLogger(logging.InfoLevel),
+		Logger: logging.NewLoggerOrDie(logging.InfoLevel, format),
 	}
 
 	cmd := &cobra.Command{
@@ -43,6 +45,14 @@ func newAPICommand() *cobra.Command {
 		SilenceErrors:     true,
 		SilenceUsage:      true,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			version := versionpkg.GetVersion()
+			cmdOpts.Logger.Info(
+				"Starting Kargo API Server",
+				"version", version.Version,
+				"commit", version.GitCommit,
+				"GOMAXPROCS", runtime.GOMAXPROCS(0),
+				"GOMEMLIMIT", os.GetEnv("GOMEMLIMIT", ""),
+			)
 			cmdOpts.complete()
 
 			return cmdOpts.run(cmd.Context())
@@ -59,18 +69,13 @@ func (o *apiOptions) complete() {
 
 	o.BindAddress = os.GetEnv("BIND_ADDRESS", "0.0.0.0")
 	o.Port = os.GetEnv("PORT", "8080")
+
+	logLevel, logFormat := getLogVars()
+
+	o.Logger = logging.NewLoggerOrDie(logLevel, logFormat)
 }
 
 func (o *apiOptions) run(ctx context.Context) error {
-	version := versionpkg.GetVersion()
-	o.Logger.Info(
-		"Starting Kargo API Server",
-		"version", version.Version,
-		"commit", version.GitCommit,
-		"GOMAXPROCS", runtime.GOMAXPROCS(0),
-		"GOMEMLIMIT", os.GetEnv("GOMEMLIMIT", ""),
-	)
-
 	serverCfg := config.ServerConfigFromEnv()
 
 	restCfg, err := kubernetes.GetRestConfig(ctx, o.KubeConfig)
@@ -128,11 +133,13 @@ func (o *apiOptions) run(ctx context.Context) error {
 		serverCfg,
 		kubeClient,
 		rbac.NewKubernetesRolesDatabase(kubeClient),
-		event.NewRecorder(
-			ctx,
-			kubeClient.InternalClient().Scheme(),
-			kubeClient.InternalClient(),
-			"api",
+		k8sevent.NewEventSender(
+			event.NewRecorder(
+				ctx,
+				kubeClient.InternalClient().Scheme(),
+				kubeClient.InternalClient(),
+				"api",
+			),
 		),
 	)
 	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.BindAddress, o.Port))

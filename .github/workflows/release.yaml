@@ -36,7 +36,7 @@ jobs:
         echo "Repository is set to: $REPO"
         echo "repo=$REPO" >> $GITHUB_OUTPUT
     - name: Setup Go
-      uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+      uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
       with:
         go-version: '1.23.0'
     - name: Set version for unstable builds
@@ -64,7 +64,7 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     - name: Checkout
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
     - name: Docker meta
       id: meta
       uses: docker/metadata-action@v5
@@ -160,7 +160,7 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     - name: Checkout code
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
     - name: Publish chart
       env:
         HELM_EXPERIMENTAL_OCI: '1'
@@ -177,7 +177,7 @@ jobs:
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
     container:
-      image: golang:1.24.5-bookworm
+      image: golang:1.25.1-trixie
     strategy:
       matrix:
         os: [linux, darwin, windows]
@@ -191,8 +191,8 @@ jobs:
       hash-windows-arm64: ${{ steps.hash.outputs.hash-windows-arm64 }}
     steps:
     - name: Checkout code
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-    - uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+    - uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
       with:
         path: /go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
@@ -203,9 +203,9 @@ jobs:
       with:
         package_json_file: ui/package.json
     - name: Install nodejs
-      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
       with:
-        node-version: "24.3.0"
+        node-version: "24.7.0"
         cache: "pnpm"
         cache-dependency-path: "**/pnpm-lock.yaml"
     - name: Build UI
@@ -226,6 +226,17 @@ jobs:
         GIT_COMMIT: ${{ github.sha }}
         GIT_TREE_STATE: clean
       run: make build-cli
+    - name: Sign and Notarize CLI
+      if: ${{ matrix.os == 'darwin' }}
+      env: 
+        QUILL_SIGN_P12: ${{ secrets.QUILL_SIGN_P12 }}
+        QUILL_SIGN_PASSWORD: ${{ secrets.QUILL_SIGN_PASSWORD }}
+        QUILL_NOTARY_KEY: ${{ secrets.QUILL_NOTARY_KEY }}
+        QUILL_NOTARY_KEY_ID: ${{ secrets.QUILL_NOTARY_KEY_ID }}
+        QUILL_NOTARY_ISSUER: ${{ secrets.QUILL_NOTARY_ISSUER }}
+        KARGO_BIN_PATH: bin/kargo-${{ matrix.os }}-${{ matrix.arch }}
+      run: |
+        make sign-and-notarize-cli
     - name: Publish CLI
       uses: svenstaro/upload-release-action@v2
       with:
@@ -245,15 +256,15 @@ jobs:
     if: github.event_name != 'release'
     runs-on: ubuntu-latest
     container:
-      image: golang:1.24.5-bookworm
+      image: golang:1.25.1-trixie
     strategy:
       matrix:
         os: [linux, darwin, windows]
         arch: [amd64, arm64]
     steps:
     - name: Checkout code
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-    - uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+    - uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
       with:
         path: /go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
@@ -264,9 +275,9 @@ jobs:
       with:
         package_json_file: ui/package.json
     - name: Install nodejs
-      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
       with:
-        node-version: "24.3.0"
+        node-version: "24.7.0"
         cache: "pnpm"
         cache-dependency-path: "**/pnpm-lock.yaml"
     - name: Build UI
@@ -287,11 +298,22 @@ jobs:
         GIT_COMMIT: ${{ github.sha }}
         GIT_TREE_STATE: clean
       run: make build-nightly-cli
+    - name: Sign and Notarize CLI
+      if: ${{ matrix.os == 'darwin' }}
+      env: 
+        QUILL_SIGN_P12: ${{ secrets.QUILL_SIGN_P12 }}
+        QUILL_SIGN_PASSWORD: ${{ secrets.QUILL_SIGN_PASSWORD }}
+        QUILL_NOTARY_KEY: ${{ secrets.QUILL_NOTARY_KEY }}
+        QUILL_NOTARY_KEY_ID: ${{ secrets.QUILL_NOTARY_KEY_ID }}
+        QUILL_NOTARY_ISSUER: ${{ secrets.QUILL_NOTARY_ISSUER }}
+        KARGO_BIN_PATH: bin/kargo-cli/${{ needs.publish-image.outputs.unstable-version }}/${{ matrix.os }}/${{ matrix.arch }}/kargo
+      run: |
+        make sign-and-notarize-cli
     - name: Install awscli
       run: |
         apt update && apt install awscli -y
     - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
+      uses: aws-actions/configure-aws-credentials@v5
       with:
         role-to-assume: ${{ secrets.AWS_ROLE }}
         aws-region: us-west-2

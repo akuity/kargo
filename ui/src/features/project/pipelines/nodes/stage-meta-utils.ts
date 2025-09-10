@@ -21,6 +21,8 @@ export const useIsColorsUsed = () => {
 
 export const getLastPromotionDate = (stage: Stage) => stage?.status?.lastPromotion?.finishedAt;
 
+export const getCurrentPromotion = (stage: Stage) => stage?.status?.currentPromotion?.name;
+
 export const useHideStageIfInPromotionMode = (stage: Stage) => {
   const actionContext = useActionContext();
   const dictionaryContext = useDictionaryContext();

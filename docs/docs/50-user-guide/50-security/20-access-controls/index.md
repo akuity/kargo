@@ -25,7 +25,7 @@ provider (IDP) that implements the
 [OpenID Connect](https://openid.net/developers/how-connect-works/) (OIDC)
 protocol. Configuring this is the responsibility of the operator and is
 discussed in-depth in the dedicated
-[OpenID Connect](../../../40-operator-guide/40-security/20-openid-connect.md)
+[OpenID Connect](../../../40-operator-guide/40-security/20-openid-connect/index.md)
 section of the Operator Guide.
 
 Kargo also implements access controls through _pure Kubernetes
@@ -137,19 +137,18 @@ Three such "Kargo roles" are pre-defined in a project's namespace when a new
 
 #### Managing Kargo Roles with the UI
 
-To see all Kargo roles in a project, navigate to your project and click the
-"people" icon in the upper right corner of the screen:
+To see all Kargo roles in a `Project` click <Hlt>Settings</Hlt> in the upper right corner of the `Project` view:
 
-![Project](img/project.png)
+![Project](img/roles-manage.png)
 
-Kargo will display a list of all Kargo roles in the project:
+Then, go to the <Hlt>Roles</Hlt> tab. This will display a list of all Kargo roles associated with the Project:
 
-![Roles](img/roles.png)
+![Roles](img/roles-manage-2.png)
 
 This interface also permits users with appropriate permissions to create,
 modify, or delete Kargo roles:
 
-![Edit Role](img/edit-role.png)
+![Edit Role](img/roles-manage-3.png)
 
 :::info
 The Kargo API server translates all such creations, modifications, and deletions

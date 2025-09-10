@@ -20,17 +20,34 @@ export const useFreightTimelineControllerStore = (project: string) => {
       stackedNodesParents: [],
       hideSubscriptions: {},
       images: false,
-      ...getFreightTimelineFiltersLocalStorage(project)
+      view: 'graph',
+      showMinimap: true
     };
+
+    if (searchParams.size === 0) {
+      return { ...filters, ...getFreightTimelineFiltersLocalStorage(project) };
+    }
+
+    const viewParam = searchParams.get('view');
+    if (viewParam && viewParam !== '' && ['graph', 'list'].includes(viewParam)) {
+      filters.view = viewParam as 'graph' | 'list';
+    }
 
     const showAliasParam = searchParams.get('showAlias');
     if (showAliasParam && showAliasParam !== '') {
       filters.showAlias = showAliasParam === 'true';
     }
 
+    const showMinimap = searchParams.get('showMinimap');
+    if (showMinimap && showMinimap !== '') {
+      filters.showMinimap = showMinimap === 'true';
+    }
+
     const sourcesParam = searchParams.getAll('sources');
     if (sourcesParam && sourcesParam.length > 0) {
       filters.sources = sourcesParam;
+    } else {
+      filters.sources = [];
     }
 
     const timerangeParam = searchParams.get('timerange');
@@ -46,6 +63,8 @@ export const useFreightTimelineControllerStore = (project: string) => {
     const warehousesParam = searchParams.getAll('warehouses');
     if (warehousesParam && warehousesParam.length > 0) {
       filters.warehouses = warehousesParam;
+    } else {
+      filters.warehouses = [];
     }
 
     const hideUnusedFreightsParam = searchParams.get('hideUnusedFreights');
@@ -74,14 +93,20 @@ export const useFreightTimelineControllerStore = (project: string) => {
       filters.hideSubscriptions = {};
     }
 
-    return filters;
+    return { ...getFreightTimelineFiltersLocalStorage(project), ...filters };
   }, [searchParams]);
 
   return [
     filters,
     useCallback(
       (nextPartial: Partial<FreightTimelineControllerContextType['preferredFilter']>) => {
+        localStorage.setItem(`filters-${project}`, JSON.stringify({ ...filters, ...nextPartial }));
+
         const currentSearchParams = new URLSearchParams(searchParams);
+
+        currentSearchParams.set('view', `${nextPartial.view}`);
+
+        currentSearchParams.set('showMinimap', `${nextPartial.showMinimap}`);
 
         currentSearchParams.set('showColors', `${nextPartial.showColors}`);
 

@@ -19,7 +19,8 @@ import (
 	"github.com/akuity/kargo/internal/credentials/kubernetes/github"
 	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/helm"
-	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/internal/image"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 // database is an implementation of the credentials.Database interface that
@@ -55,7 +56,7 @@ func NewDatabase(
 	localClusterClient client.Client,
 	cfg DatabaseConfig,
 ) credentials.Database {
-	var credentialProviders = []credentials.Provider{
+	credentialProviders := []credentials.Provider{
 		&basic.CredentialProvider{},
 		ecr.NewAccessKeyProvider(),
 		ecr.NewManagedIdentityProvider(ctx),
@@ -103,7 +104,6 @@ func (k *database) Get(
 
 	var secret *corev1.Secret
 	var err error
-
 clientLoop:
 	for _, c := range clients {
 		// Check namespace for credentials
@@ -187,11 +187,14 @@ func (k *database) getCredentialsSecret(
 	// generally safe. We no longer do this as it was discovered that an image
 	// repository URL with a port number could be mistaken for an SCP-style URL of
 	// the form host.xz:path/to/repo
+	var normalizedRepoURL string
 	switch credType {
 	case credentials.TypeGit:
-		repoURL = git.NormalizeURL(repoURL)
+		normalizedRepoURL = git.NormalizeURL(repoURL)
+	case credentials.TypeImage:
+		normalizedRepoURL = image.NormalizeURL(repoURL)
 	case credentials.TypeHelm:
-		repoURL = helm.NormalizeChartRepositoryURL(repoURL)
+		normalizedRepoURL = helm.NormalizeChartRepositoryURL(repoURL)
 	}
 
 	logger := logging.LoggerFromContext(ctx)
@@ -218,7 +221,10 @@ func (k *database) getCredentialsSecret(
 				)
 				continue
 			}
-			if regex.MatchString(repoURL) {
+			// We can't normalize the regex pattern so we need to check
+			// the original repoURL and the normalized one.
+			// For more details see: https://github.com/akuity/kargo/issues/4833
+			if regex.MatchString(repoURL) || regex.MatchString(normalizedRepoURL) {
 				return &secret, nil
 			}
 			continue
@@ -229,10 +235,12 @@ func (k *database) getCredentialsSecret(
 		switch credType {
 		case credentials.TypeGit:
 			secretURL = git.NormalizeURL(secretURL)
+		case credentials.TypeImage:
+			secretURL = image.NormalizeURL(secretURL)
 		case credentials.TypeHelm:
 			secretURL = helm.NormalizeChartRepositoryURL(secretURL)
 		}
-		if secretURL == repoURL {
+		if secretURL == normalizedRepoURL {
 			return &secret, nil
 		}
 	}

@@ -8,11 +8,11 @@ sidebar_label: Working with Freight
 **Freight** is an important Kargo concept. A single "piece of freight" is a set
 of references to one or more versioned artifacts, which may include one or more:
 
-* Container images (from image repositories)
+- Container images (from image repositories)
 
-* Kubernetes manifests (from Git repositories)
+- Kubernetes manifests (from Git repositories)
 
-* Helm charts (from chart repositories)
+- Helm charts (from chart repositories)
 
 Freight can therefore be thought of as a sort of meta-artifact. Freight is what
 Kargo seeks to progress from one stage to another.
@@ -78,18 +78,16 @@ NAME                                       ALIAS              AGE
 f5f87aa23c9e97f43eb83dd63768ee41f5ba3766   mortal-dragonfly   35s
 ```
 
-Sample output:
-
-```shell
-NAME                                       ALIAS              AGE
-f5f87aa23c9e97f43eb83dd63768ee41f5ba3766   mortal-dragonfly   35s
-```
-
 :::info
 The Kargo UI, to make efficient use of screen real estate, displays aliases
 only, but a `Freight` resource's `name` can always be discovered by hovering
 over its alias.
 :::
+
+By default, the freight timeline shows the `Warehouse` name for each freight.
+You can also enable alias display in the freight timeline filter: click the _funnel icon_ in the freight timeline, then check the box next to <Hlt>Alias</Hlt> to show alias names on the freight timeline:
+
+![Freight Alias Name](./img/freight-alias-name.png)
 
 :::note
 Kargo CLI commands will accept `Freight` aliases as an alternative to a
@@ -109,14 +107,18 @@ To update the `Freight` Alias:
 <Tabs groupId="update-alias">
 <TabItem value="ui" label="Using the UI" default>
 
-1. Click the three dots on the `Freight` in the <Hlt>Freight Timeline</Hlt>,
-   then select <Hlt>Change Alias</Hlt>:
+1. Select a `Freight` from the `Freight` timeline to open its detailed view:
 
    ![update-freight-alias](img/freight-alias.png)
 
-1. Specify a value in the <Hlt>New Alias</Hlt> field and click <Hlt>Submit</Hlt>:
+1. In the top right corner of the `Freight` view, click <Hlt>Edit Alias</Hlt>
+   to modify the alias:
 
    ![update-freight-alias](img/freight-alias-2.png)
+
+1. Specify a value in the <Hlt>New Alias</Hlt> field and click <Hlt>Submit</Hlt>:
+
+   ![update-freight-alias](img/freight-alias-3.png)
 
 </TabItem>
 <TabItem value="cli" label="Using the CLI">
@@ -127,6 +129,7 @@ kargo update freight \
   --name f5f87aa23c9e97f43eb83dd63768ee41f5ba3766 \
   --new-alias frozen-tauntaun
 ```
+
 Alternatively, you can reference the `Freight` to which you want to assign a new alias using its existing alias:
 
 ```shell
@@ -159,7 +162,7 @@ resource for promotion to any given `Stage`. To manually approve the `Freight`:
 <Tabs groupId="manual-approval">
 <TabItem value="ui" label="Using the UI" default>
 
-1. Click the three dots on the `Freight` in the <Hlt>Freight Timeline</Hlt>,
+1. Click the three dots on the `Freight` in the `Freight` timeline,
    then select <Hlt>Manually Approve</Hlt>:
 
    ![update-freight-alias](img/freight-approval.png)
@@ -200,7 +203,7 @@ bypassed:
 <Tabs groupId="freight-status">
 <TabItem value="ui" label="Using the UI" default>
 
-1. Click on the `Freight` in the <Hlt>Freight Timeline</Hlt>:
+1. Click on the `Freight` in the `Freight` timeline to open the `Freight` view:
 
    ![freight-status](img/freight-status.png)
 
@@ -234,14 +237,31 @@ kargo get freight \
 <Tabs groupId="promoting">
 <TabItem value="ui" label="Using the UI" default>
 
-1. Click the three dots on the `Freight` in the <Hlt>Freight Timeline</Hlt>,
-   then select <Hlt>Promote</Hlt>:
+1. To promote `Freight` to a `Stage`, click the truck icon in the
+   header of the `Stage` node and then select <Hlt>Promote</Hlt>:
 
-   ![Promote Freight to a Stage](img/freight-promotion.png)
+   ![Promote Freight to a Stage](img/promote-freight-to-a-stage.png)
 
-2. Select the `Stage` and click <Hlt>Promote</Hlt>:
+1. From the `Freight` timeline at the top of the screen, select the `Freight` you'd like
+   to promote into the `Stage` by clicking <Hlt>Select</Hlt>:
 
-   ![Promote Freight to a Stage](img/freight-promotion-2.png)
+   ![Promote Freight to a Stage](img/promote-freight-to-a-stage-2.png)
+
+1. Confirm the action by clicking <Hlt>Promote</Hlt>:
+
+   ![Kargo Promotion Confirmation](img/promote-freight-to-a-stage-3.png)
+
+   A summary of the `Promotion` will pop up and will be updated in real-time as
+   the steps of the promotion process complete. Once they have all completed,
+   the `Promotion`'s status will change to <Hlt>Succeeded</Hlt>:
+
+   ![Kargo Promotion View](img/kargo-promotion-view.png)
+
+   You will also notice the freight timeline has been automatically updated.
+   Every piece of `Freight` in the timeline is color-coded to indicate which
+   `Stage`s (if any) are actively using it:
+
+   ![Kargo Freight Timeline](img/kargo-freight.png)
 
 </TabItem>
 <TabItem value="cli" label="Using the CLI">
@@ -269,38 +289,38 @@ kargo promote \
 
 ## OCI Image Annotations
 
-Kargo understands 
+Kargo understands
 [OCI Image Annotations](https://github.com/opencontainers/image-spec/blob/main/annotations.md)
-and uses them to generate helpful links in the UI. When the following 
+and uses them to generate helpful links in the UI. When the following
 annotations are present in your container images, Kargo can display
 direct references to the source code and revision:
 
-* `org.opencontainers.image.source`
-* `org.opencontainers.image.revision`
+- `org.opencontainers.image.source`
+- `org.opencontainers.image.revision`
 
-   ![oci-annotations](img/freight-oci-annotations.png)
+  ![oci-annotations](img/freight-oci-annotations.png)
 
 ### Adding Annotations with GitHub Actions
 
 If you're using Docker's `build-and-push` GitHub Action, you can
-automatically  include these annotations using the 
+automatically include these annotations using the
 [`metadata-action` action](https://github.com/docker/metadata-action?tab=readme-ov-file#annotations).
 Here's an example workflow snippet:
 
 ```yaml
-  - name: Docker meta
-    id: meta
-    uses: docker/metadata-action@v5
-    with:
-      images: akuity/guestbook
-    env:
-      DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index  
+- name: Docker meta
+  id: meta
+  uses: docker/metadata-action@v5
+  with:
+    images: akuity/guestbook
+  env:
+    DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
 
-  - name: Build and push
-    uses: docker/build-push-action@v6
-    with:
-      tags: ${{ steps.meta.outputs.tags }}
-      annotations: ${{ steps.meta.outputs.annotations }}
+- name: Build and push
+  uses: docker/build-push-action@v6
+  with:
+    tags: ${{ steps.meta.outputs.tags }}
+    annotations: ${{ steps.meta.outputs.annotations }}
 ```
 
 ### Adding Annotations with `docker buildx`

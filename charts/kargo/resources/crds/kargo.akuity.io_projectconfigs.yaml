@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.18.0
+    controller-gen.kubebuilder.io/version: v0.19.0
   name: projectconfigs.kargo.akuity.io
 spec:
   group: kargo.akuity.io
@@ -376,6 +376,39 @@ spec:
                             shared secret specified when registering the webhook in GitLab. For more
                             information about this token, please refer to the GitLab documentation:
                               https://docs.gitlab.com/user/project/integrations/webhooks/
+                          properties:
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      required:
+                      - secretRef
+                      type: object
+                    harbor:
+                      description: |-
+                        Harbor contains the configuration for a webhook receiver that is compatible
+                        with Harbor payloads.
+                      properties:
+                        secretRef:
+                          description: |-
+                            SecretRef contains a reference to a Secret. For Project-scoped webhook
+                            receivers, the referenced Secret must be in the same namespace as the
+                            ProjectConfig.
+
+                            For cluster-scoped webhook receivers, the referenced Secret must be in the
+                            designated "cluster Secrets" namespace.
+
+                            The secret is expected to contain an `auth-header` key containing the "auth
+                            header" specified when registering the webhook in Harbor. For more
+                            information, please refer to the Harbor documentation:
+                              https://goharbor.io/docs/main/working-with-projects/project-configuration/configure-webhooks/
                           properties:
                             name:
                               default: ""

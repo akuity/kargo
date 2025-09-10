@@ -14,7 +14,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
-	"github.com/akuity/kargo/internal/logging"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 const tagPrefix = "refs/tags/"
@@ -179,7 +179,7 @@ func (t *tagBasedSelector) filterTagsByDiffPaths(
 	if len(tags) == 0 || (t.includePaths == nil && t.excludePaths == nil) {
 		return tags, nil
 	}
-	var filteredTags = make([]git.TagMetadata, 0, t.discoveryLimit)
+	filteredTags := make([]git.TagMetadata, 0, t.discoveryLimit)
 	for _, tag := range tags {
 		diffPaths, err := repo.GetDiffPathsForCommitID(tag.CommitID)
 		if err != nil {
