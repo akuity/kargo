@@ -1,5 +1,5 @@
 import { useMutation } from '@connectrpc/connect-query';
-import { Alert } from 'antd';
+import { Alert, Typography } from 'antd';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -21,11 +21,25 @@ export const useManualApprovalModal = () => {
   return ({ freight, onClose, projectName, stage }: CallbackProps) =>
     confirm({
       title: 'Manual approval required',
+      okText: 'Approve',
+      width: 600,
       content: (
-        <Alert
-          banner
-          message='The selected freight has not been allowed for promotion to this stage. If you confirm, we will manually approve it. Do you want to proceed?'
-        />
+        <>
+          <Alert
+            banner
+            type='error'
+            message={
+              <>
+                The selected Freight does not meet criteria for Promotion to this Stage, such as
+                successful Promotion to and verification in upstream Stages. Manually approving the
+                Freight for Promotion to this Stage will dismiss bypass the unmet criteria.
+              </>
+            }
+          />
+          <Typography.Paragraph className='mt-2'>
+            Do you want to manually approve?
+          </Typography.Paragraph>
+        </>
       ),
       onCancel: onClose,
       onOk: async () =>

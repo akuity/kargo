@@ -1,5 +1,5 @@
 import { useMutation } from '@connectrpc/connect-query';
-import { useDndContext, useDroppable } from '@dnd-kit/core';
+import { useDroppable } from '@dnd-kit/core';
 import {
   faBarsStaggered,
   faBolt,
@@ -32,8 +32,8 @@ import { timestampDate } from '@ui/utils/connectrpc-utils';
 import { useDictionaryContext } from '../context/dictionary-context';
 import { useGraphContext } from '../context/graph-context';
 import { stageIndexer } from '../graph/node-indexer';
+import { DropOverlay } from '../promotion/drag-and-drop/drop-overlay';
 
-import './stage-node.less';
 import { AnalysisRunLogsLink } from './analysis-run-logs-link';
 import { ArgoCDLink } from './argocd-link';
 import style from './node-size-source-of-truth.module.less';
@@ -47,6 +47,8 @@ import {
   useStageHeaderStyle
 } from './stage-meta-utils';
 import { useGetUpstreamFreight } from './use-get-upstream-freight';
+
+import './stage-node.less';
 
 export const StageNode = (props: { stage: Stage }) => {
   const navigate = useNavigate();
@@ -242,11 +244,13 @@ export const StageNode = (props: { stage: Stage }) => {
           : undefined
     });
   }
-  const dndContext = useDndContext();
+
   const { isOver, setNodeRef } = useDroppable({
-    id: props.stage.metadata?.name || 'stage-node'
+    id: props.stage.metadata?.name || 'stage-node',
+    data: {
+      requestedFreightNames: props.stage.spec?.requestedFreight.map((f) => f.origin?.name) || []
+    }
   });
-  const isDragging = Boolean(dndContext.active);
 
   return (
     <div
@@ -309,19 +313,7 @@ export const StageNode = (props: { stage: Stage }) => {
         size='small'
         variant='borderless'
       >
-        <div
-          className={classNames('stage-node-draggingOverlay', {
-            'stage-node-draggingOverlay--hidden': !isDragging
-          })}
-          style={{ transform: isOver ? 'scale(0.96)' : undefined }}
-        >
-          <>
-            <FontAwesomeIcon icon={faTruckArrowRight} />
-            <Typography.Title level={5} className='!mb-0'>
-              Promote
-            </Typography.Title>
-          </>
-        </div>
+        <DropOverlay isOver={isOver} stage={props.stage} />
         {controlFlow && (
           <Typography.Text type='secondary'>
             <FontAwesomeIcon icon={faTruckArrowRight} className='mr-2' />

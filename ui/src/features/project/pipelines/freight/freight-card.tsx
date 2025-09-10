@@ -96,14 +96,13 @@ export const FreightCard = (props: FreightCardProps) => {
     }
   }, [props.soakTime]);
 
-  // const soakTimePercentage = useSoakTimePercentage(frozenInitialSoakTime.current, soakTime);
-
   const soakTimeFormatted = useMemo(() => (soakTime ? formatDuration(soakTime) : ''), [soakTime]);
 
   let CardContent: ReactNode;
 
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
-    id: props.freight.metadata?.name || 'name'
+    id: props.freight.metadata?.name || 'name',
+    data: { originName: props.freight.origin?.name }
   });
 
   const showManualApproveModal = useManualApprovalModal();

@@ -70,9 +70,12 @@ export const DndPromotionContext = ({ children, projectName }: Props) => {
     <DndContext
       autoScroll={false}
       onDragEnd={({ active, over }) => {
-        if (active && over) {
-          setStage(over?.id as string);
-          setFreight(active?.id as string);
+        if (
+          // make sure that the freight can be promoted to this stage by checking the origin
+          over?.data?.current?.requestedFreightNames.includes(active?.data?.current?.originName)
+        ) {
+          setStage(over.id as string);
+          setFreight(active.id as string);
         }
       }}
     >
