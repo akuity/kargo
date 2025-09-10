@@ -482,7 +482,7 @@ func ServiceAccountsByOIDCClaims(obj client.Object) []string {
 				}
 			}
 		}
-		if strings.HasPrefix(annotationKey, rbacapi.AnnotationKeyOIDCClaims) {
+		if annotationKey == rbacapi.AnnotationKeyOIDCClaims {
 			claimsMap := make(map[string]any)
 			if err := json.Unmarshal([]byte(annotationValue), &claimsMap); err != nil {
 				continue
