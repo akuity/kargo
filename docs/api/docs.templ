@@ -20,7 +20,7 @@ Stability is not guaranteed.
 {{range .Methods -}}
   | {{.Name}} | [{{.RequestLongType}}](#{{.RequestFullType | anchor}}){{if .RequestStreaming}}(stream){{end}} | [{{.ResponseLongType}}](#{{.ResponseFullType | anchor}}){{if .ResponseStreaming}}(stream){{end}} |
 {{end}}
-{{end}} <!-- end services -->
+{{end}}
 
 {{.Description}}
 {{- range .Messages -}}

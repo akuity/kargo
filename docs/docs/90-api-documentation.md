@@ -94,7 +94,7 @@ Stability is not guaranteed.
 | UpdateClusterSecret | [UpdateClusterSecretRequest](#akuity-io-kargo-service-v1alpha1-UpdateClusterSecretRequest) | [UpdateClusterSecretResponse](#akuity-io-kargo-service-v1alpha1-UpdateClusterSecretResponse) |
 | DeleteClusterSecret | [DeleteClusterSecretRequest](#akuity-io-kargo-service-v1alpha1-DeleteClusterSecretRequest) | [DeleteClusterSecretResponse](#akuity-io-kargo-service-v1alpha1-DeleteClusterSecretResponse) |
 
- <!-- end services -->
+
 
 <a name="akuity-io-kargo-service-v1alpha1-AbortPromotionRequest"></a>
 
@@ -1611,7 +1611,7 @@ RawFormat specifies the format for raw resource representation.
 <a name="api_rbac_v1alpha1_generated-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## rbac/v1alpha1 <!-- end services -->
+## rbac/v1alpha1
 
 <a name="github-com-akuity-kargo-api-rbac-v1alpha1-Claim"></a>
 
@@ -1661,7 +1661,7 @@ RawFormat specifies the format for raw resource representation.
 <a name="api_v1alpha1_generated-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## v1alpha1 <!-- end services -->
+## v1alpha1
 
 <a name="github-com-akuity-kargo-api-v1alpha1-AnalysisRunArgument"></a>
 
