@@ -91,7 +91,7 @@ metadata:
   name: admin
   namespace: kargo-demo
   annotations:
-    rbac.kargo.akuity.io/claims:
+    rbac.kargo.akuity.io/claims: |
       {
         "sub": ["alice", "bob" ],
         "email": "carl@example.com",
