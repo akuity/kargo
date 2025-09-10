@@ -137,21 +137,17 @@ clientLoop:
 	}
 
 	var (
-		data     map[string][]byte
-		metadata map[string][]string
+		data        map[string][]byte
+		annotations map[string]string
 	)
 
 	if secret != nil {
 		data = secret.Data
-		if secret.Annotations != nil {
-			if val, ok := secret.Annotations[kargoapi.AnnotationProjectReposKey]; ok && val != "" {
-				metadata[kargoapi.AnnotationProjectReposKey] = []string{val}
-			}
-		}
+		annotations = secret.Annotations
 	}
 
 	for _, p := range k.credentialProviders {
-		creds, err := p.GetCredentials(ctx, namespace, credType, repoURL, data, metadata)
+		creds, err := p.GetCredentials(ctx, namespace, credType, repoURL, data, annotations)
 		if err != nil {
 			return nil, err
 		}

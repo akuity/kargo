@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/logging"
 	"net/url"
 	"regexp"
@@ -20,7 +21,6 @@ import (
 	"github.com/jferrl/go-githubauth"
 	"github.com/patrickmn/go-cache"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 )
 
@@ -84,7 +84,7 @@ func (p *AppCredentialProvider) GetCredentials(
 	credType credentials.Type,
 	repoURL string,
 	data map[string][]byte,
-	metadata map[string][]string,
+	annotations map[string]string,
 ) (*credentials.Credentials, error) {
 	logger := logging.LoggerFromContext(ctx).WithValues()
 	if !p.Supports(credType, repoURL, data) {
@@ -97,12 +97,14 @@ func (p *AppCredentialProvider) GetCredentials(
 		projectReposJSON []byte
 	)
 
-	// Try to search for annotation in the metadata
-	if vals, ok := metadata[kargoapi.AnnotationKeyGitHubTokenScope]; ok && len(vals) > 0 {
-		projectReposJSON = []byte(vals[0])
+	// Check for GitHub token scope annotation
+	if annotations != nil {
+		if val, ok := annotations[kargoapi.AnnotationKeyGitHubTokenScope]; ok && val != "" {
+			projectReposJSON = []byte(val)
+		}
 	}
 
-	// If the annotation is not configured, try to look for it in data field
+	// Check data field if annotation not found
 	if projectReposJSON == nil {
 		if raw, ok := data[kargoapi.AnnotationKeyGitHubTokenScope]; ok && len(raw) > 0 {
 			projectReposJSON = raw

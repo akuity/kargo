@@ -176,7 +176,7 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 		credType         credentials.Type
 		repoURL          string
 		data             map[string][]byte
-		metadata         map[string][]string
+		annotations      map[string]string
 		getAccessTokenFn func(
 			appOrClientID string,
 			installationID int64,
@@ -272,10 +272,10 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 			credType: credentials.TypeGit,
 			repoURL:  "https://github.com/akuity/kargo",
 			data: map[string][]byte{
-				appIDKey:                           []byte("123"),
-				installationIDKey:                  []byte("456"),
-				privateKeyKey:                      []byte("private-key"),
-				kargoapi.AnnotationProjectReposKey: []byte(`{"other-project": ["kargo"]}`),
+				appIDKey:                               []byte("123"),
+				installationIDKey:                      []byte("456"),
+				privateKeyKey:                          []byte("private-key"),
+				kargoapi.AnnotationKeyGitHubTokenScope: []byte(`{"other-project": ["kargo"]}`),
 			},
 			getAccessTokenFn: func(_ string, _ int64, _, _, _ string) (string, error) {
 				return "test-token", nil
@@ -290,10 +290,10 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 			credType: credentials.TypeGit,
 			repoURL:  "https://github.com/akuity/kargo",
 			data: map[string][]byte{
-				appIDKey:                           []byte("123"),
-				installationIDKey:                  []byte("456"),
-				privateKeyKey:                      []byte("private-key"),
-				kargoapi.AnnotationProjectReposKey: []byte(`{"": ["other-repo"]}`),
+				appIDKey:                               []byte("123"),
+				installationIDKey:                      []byte("456"),
+				privateKeyKey:                          []byte("private-key"),
+				kargoapi.AnnotationKeyGitHubTokenScope: []byte(`{"": ["other-repo"]}`),
 			},
 			getAccessTokenFn: func(_ string, _ int64, _, _, _ string) (string, error) {
 				return "test-token", nil
@@ -308,10 +308,10 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 			credType: credentials.TypeGit,
 			repoURL:  "https://github.com/akuity/kargo",
 			data: map[string][]byte{
-				appIDKey:                           []byte("123"),
-				installationIDKey:                  []byte("456"),
-				privateKeyKey:                      []byte("private-key"),
-				kargoapi.AnnotationProjectReposKey: []byte(`{"": ["kargo"]}`),
+				appIDKey:                               []byte("123"),
+				installationIDKey:                      []byte("456"),
+				privateKeyKey:                          []byte("private-key"),
+				kargoapi.AnnotationKeyGitHubTokenScope: []byte(`{"": ["kargo"]}`),
 			},
 			getAccessTokenFn: func(_ string, _ int64, _, _, repoName string) (string, error) {
 				assert.Equal(t, "kargo", repoName) // scope check
@@ -328,10 +328,10 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 			credType: credentials.TypeGit,
 			repoURL:  "https://github.com/akuity/kargo",
 			data: map[string][]byte{
-				appIDKey:                           []byte("123"),
-				installationIDKey:                  []byte("456"),
-				privateKeyKey:                      []byte("private-key"),
-				kargoapi.AnnotationProjectReposKey: []byte(`{invalid-json}`),
+				appIDKey:                               []byte("123"),
+				installationIDKey:                      []byte("456"),
+				privateKeyKey:                          []byte("private-key"),
+				kargoapi.AnnotationKeyGitHubTokenScope: []byte(`{invalid-json}`),
 			},
 			getAccessTokenFn: func(_ string, _ int64, _, _, _ string) (string, error) {
 				return "unrestricted-token", nil
@@ -362,8 +362,8 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 				assert.Equal(t, "scoped-token", creds.Password)
 			},
 			// metadata passed explicitly in test runner
-			metadata: map[string][]string{
-				kargoapi.AnnotationProjectReposKey: {`{"": ["kargo"]}`},
+			annotations: map[string]string{
+				kargoapi.AnnotationKeyGitHubTokenScope: `{"": ["kargo"]}`,
 			},
 		},
 		{
@@ -382,8 +382,8 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 				assert.Nil(t, creds)
 				assert.NoError(t, err)
 			},
-			metadata: map[string][]string{
-				kargoapi.AnnotationProjectReposKey: {`{"": ["other-repo"]}`},
+			annotations: map[string]string{
+				kargoapi.AnnotationKeyGitHubTokenScope: `{"": ["other-repo"]}`,
 			},
 		},
 		{
@@ -403,8 +403,8 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 				assert.Nil(t, creds)
 				assert.Error(t, err)
 			},
-			metadata: map[string][]string{
-				kargoapi.AnnotationProjectReposKey: {`{invalid-json}`},
+			annotations: map[string]string{
+				kargoapi.AnnotationKeyGitHubTokenScope: `{invalid-json}`,
 			},
 		},
 	}
@@ -423,7 +423,7 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 				tt.credType,
 				tt.repoURL,
 				tt.data,
-				tt.metadata,
+				tt.annotations,
 			)
 			tt.assertions(t, creds, err)
 		})

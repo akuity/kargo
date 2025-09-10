@@ -61,7 +61,7 @@ func (p *AccessKeyProvider) GetCredentials(
 	credType credentials.Type,
 	repoURL string,
 	data map[string][]byte,
-	_ map[string][]string,
+	_ map[string]string,
 ) (*credentials.Credentials, error) {
 	if !p.Supports(credType, repoURL, data) {
 		return nil, nil
