@@ -26,22 +26,14 @@ api:
         type: mockCallback
       probes:
         enabled: false
-    # Just testing different value formats, will revert before merge
+    # Just testing will revert before merge
     admins:
-      # JSON format with arrays
       claims:
-        {
-          "email": ["kilgore@kilgore.trout", "user@inbox.com"],
-          "cognito:groups": ["devops"]
-        }
-    # YAML/map format
-    users:
-      claims:
-        email: 
-          - kilgore@kilgore.trout
-          - user@inbox.com
-        "cognito:groups": 
-          - devops
+          email:
+            - kilgore@kilgore.trout
+            - user@inbox.com
+          "cognito:groups":
+            - "devops"
 controller:
   logLevel: DEBUG
 crds:
