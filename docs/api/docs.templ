@@ -2,7 +2,7 @@
 <a name="top"></a>
 
 {{- range .Files}}
-{{ $file_name := .Name}}
+{{$file_name := .Name}}
 <a name="{{.Name | anchor}}"></a>
 <p align="right"><a href="#top">Top</a></p>
 
@@ -22,7 +22,7 @@ Stability is not guaranteed.
 {{end}}
 {{end}} <!-- end services -->
 
-{{ .Description}}
+{{.Description}}
 {{- range .Messages -}}
 <a name="{{.FullName | anchor}}"></a>
 
