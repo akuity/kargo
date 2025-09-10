@@ -14,11 +14,11 @@ import (
 type Freight struct {
 	Name       string               `json:"freightName"`
 	StageName  string               `json:"stageName"`
-	CreateTime time.Time            `json:"freightCreateTime,omitempty"`
-	Alias      *string              `json:"freightAlias,omitempty"`
-	Commits    []kargoapi.GitCommit `json:"freightCommits,omitempty"`
-	Images     []kargoapi.Image     `json:"freightImages,omitempty"`
-	Charts     []kargoapi.Chart     `json:"freightCharts,omitempty"`
+	CreateTime time.Time            `json:"createTime"`
+	Alias      *string              `json:"alias,omitempty"`
+	Commits    []kargoapi.GitCommit `json:"commits,omitempty"`
+	Images     []kargoapi.Image     `json:"images,omitempty"`
+	Charts     []kargoapi.Chart     `json:"charts,omitempty"`
 }
 
 func (f Freight) GetName() string {
@@ -221,8 +221,7 @@ func newFreightVerificationParts(actor, stageName string, freight *kargoapi.Frei
 func NewFreightVerificationSucceeded(actor, stageName string, freight *kargoapi.Freight,
 	verification *kargoapi.VerificationInfo,
 ) *FreightVerificationSucceeded {
-	common, freightEvent, freightVerification :=
-		newFreightVerificationParts(actor, stageName, freight, verification)
+	common, freightEvent, freightVerification := newFreightVerificationParts(actor, stageName, freight, verification)
 	return &FreightVerificationSucceeded{
 		Common:              common,
 		Freight:             freightEvent,
@@ -234,8 +233,7 @@ func NewFreightVerificationSucceeded(actor, stageName string, freight *kargoapi.
 func NewFreightVerificationFailed(actor, stageName string, freight *kargoapi.Freight,
 	verification *kargoapi.VerificationInfo,
 ) *FreightVerificationFailed {
-	common, freightEvent, freightVerification :=
-		newFreightVerificationParts(actor, stageName, freight, verification)
+	common, freightEvent, freightVerification := newFreightVerificationParts(actor, stageName, freight, verification)
 	return &FreightVerificationFailed{
 		Common:              common,
 		Freight:             freightEvent,
@@ -247,8 +245,7 @@ func NewFreightVerificationFailed(actor, stageName string, freight *kargoapi.Fre
 func NewFreightVerificationAborted(actor, stageName string, freight *kargoapi.Freight,
 	verification *kargoapi.VerificationInfo,
 ) *FreightVerificationAborted {
-	common, freightEvent, freightVerification :=
-		newFreightVerificationParts(actor, stageName, freight, verification)
+	common, freightEvent, freightVerification := newFreightVerificationParts(actor, stageName, freight, verification)
 	return &FreightVerificationAborted{
 		Common:              common,
 		Freight:             freightEvent,
@@ -260,8 +257,7 @@ func NewFreightVerificationAborted(actor, stageName string, freight *kargoapi.Fr
 func NewFreightVerificationUnknown(actor, stageName string, freight *kargoapi.Freight,
 	verification *kargoapi.VerificationInfo,
 ) *FreightVerificationUnknown {
-	common, freightEvent, freightVerification :=
-		newFreightVerificationParts(actor, stageName, freight, verification)
+	common, freightEvent, freightVerification := newFreightVerificationParts(actor, stageName, freight, verification)
 	return &FreightVerificationUnknown{
 		Common:              common,
 		Freight:             freightEvent,
@@ -273,8 +269,7 @@ func NewFreightVerificationUnknown(actor, stageName string, freight *kargoapi.Fr
 func NewFreightVerificationErrored(actor, stageName string, freight *kargoapi.Freight,
 	verification *kargoapi.VerificationInfo,
 ) *FreightVerificationErrored {
-	common, freightEvent, freightVerification :=
-		newFreightVerificationParts(actor, stageName, freight, verification)
+	common, freightEvent, freightVerification := newFreightVerificationParts(actor, stageName, freight, verification)
 	return &FreightVerificationErrored{
 		Common:              common,
 		Freight:             freightEvent,
@@ -286,8 +281,7 @@ func NewFreightVerificationErrored(actor, stageName string, freight *kargoapi.Fr
 func NewFreightVerificationInconclusive(actor, stageName string, freight *kargoapi.Freight,
 	verification *kargoapi.VerificationInfo,
 ) *FreightVerificationInconclusive {
-	common, freightEvent, freightVerification :=
-		newFreightVerificationParts(actor, stageName, freight, verification)
+	common, freightEvent, freightVerification := newFreightVerificationParts(actor, stageName, freight, verification)
 	return &FreightVerificationInconclusive{
 		Common:              common,
 		Freight:             freightEvent,
