@@ -1439,7 +1439,6 @@ func Test_dropClaimAnnotations(t *testing.T) {
 			expectedClaims: []string{"sub/foo"},
 			assertions: func(t *testing.T, expectedClaims []string, saAnnotations map[string]string) {
 				require.Len(t, saAnnotations, 1)
-				t.Logf("saAnnotations: %+v", saAnnotations)
 				annotationValue, ok := saAnnotations[rbacapi.AnnotationKeyOIDCClaims]
 				require.True(t, ok)
 				got, err := rbacapi.OIDCClaimsFromAnnotationValue(annotationValue)
