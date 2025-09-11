@@ -16,6 +16,7 @@ import (
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/logging"
 )
 
 // RolesDatabase is an interface for the Kargo Roles store.
@@ -762,17 +763,30 @@ func replaceClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]stri
 }
 
 func amendClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]string) {
+	// hydrate the new map with any existing claims
+	// for the "rbac.kargo.akuity.io/claims" annotation
+	newClaims := make(map[string][]string)
+	if _, ok := sa.Annotations[rbacapi.AnnotationKeyOIDCClaims]; ok {
+		if err := json.Unmarshal([]byte(sa.Annotations[rbacapi.AnnotationKeyOIDCClaims]), &newClaims); err != nil {
+			logging.NewLogger(logging.ErrorLevel).Error(err, "error unmarshaling existing claims annotation")
+		}
+	}
 	for name, values := range claims {
+		// delete any existing "rbac.kargo.akuity.io/claim.<claim-name>" annotations
+		// after appending their values to the new map
 		if existing, exists := sa.Annotations[rbacapi.AnnotationKeyOIDCClaim(name)]; exists {
 			values = append(strings.Split(existing, ","), values...)
+			delete(sa.Annotations, rbacapi.AnnotationKeyOIDCClaim(name))
 		}
 		slices.Sort(values)
-		values = slices.Compact(values)
-		if sa.Annotations == nil {
-			sa.Annotations = map[string]string{}
-		}
-		sa.Annotations[rbacapi.AnnotationKeyOIDCClaim(name)] = strings.Join(values, ",")
+		newClaims[name] = slices.Compact(append(newClaims[name], values...))
 	}
+	if sa.Annotations == nil {
+		sa.Annotations = map[string]string{}
+	}
+	// set everything under the "rbac.kargo.akuity.io/claims" annotation
+	b, _ := json.Marshal(newClaims)
+	sa.Annotations[rbacapi.AnnotationKeyOIDCClaims] = string(b)
 }
 
 func dropFromClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]string) {

@@ -1307,6 +1307,81 @@ func Test_replaceClaimAnnotations(t *testing.T) {
 	}
 }
 
+func Test_amendClaimAnnotations(t *testing.T) {
+	testCases := []struct {
+		name                string
+		sa                  *corev1.ServiceAccount
+		claimsToAmend       map[string][]string
+		expectedAnnotations map[string]string
+		expectedClaims      []string
+		assertions          func(t *testing.T, expectedClaims []string, saAnnotations map[string]string)
+	}{
+		{
+			name: "amend simple",
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						rbacapi.AnnotationKeyOIDCClaims: `{"email":["bar@foo.com"],"sub":["foo","bar"]}`,
+					},
+				},
+			},
+			claimsToAmend: map[string][]string{
+				"email": {"foo@bar.com"},
+				"sub":   {"baz"},
+			},
+			expectedAnnotations: map[string]string{
+				rbacapi.AnnotationKeyOIDCClaims: `{"email":["foo@bar.com","bar@foo.com"],"sub":["foo","bar","baz"]}`,
+			},
+			expectedClaims: []string{"email/bar@foo.com", "email/foo@bar.com", "sub/bar", "sub/baz", "sub/foo"},
+			assertions: func(t *testing.T, expectedClaims []string, saAnnotations map[string]string) {
+				require.Len(t, saAnnotations, 1)
+				annotationValue, ok := saAnnotations[rbacapi.AnnotationKeyOIDCClaims]
+				require.True(t, ok)
+				got, err := rbacapi.OIDCClaimsFromAnnotationValue(annotationValue)
+				require.NoError(t, err)
+				slices.Sort(expectedClaims)
+				slices.Sort(got)
+				require.Equal(t, expectedClaims, got)
+			},
+		},
+		{
+			name: "amend old sa claim annotations with new rbac.kargo.akuity.io/claims format",
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						rbacapi.AnnotationKeyOIDCClaim("email"): "foo@bar.com",
+						rbacapi.AnnotationKeyOIDCClaim("sub"):   "foo,bar",
+					},
+				},
+			},
+			claimsToAmend: map[string][]string{
+				"email": {"bar@foo.com"},
+				"sub":   {"baz"},
+			},
+			expectedAnnotations: map[string]string{
+				rbacapi.AnnotationKeyOIDCClaims: `{"email":["foo@bar.com","bar@foo.com"],"sub":["foo","bar","baz"]}`,
+			},
+			expectedClaims: []string{"email/bar@foo.com", "email/foo@bar.com", "sub/bar", "sub/baz", "sub/foo"},
+			assertions: func(t *testing.T, expectedClaims []string, saAnnotations map[string]string) {
+				require.Len(t, saAnnotations, 1)
+				annotationValue, ok := saAnnotations[rbacapi.AnnotationKeyOIDCClaims]
+				require.True(t, ok)
+				got, err := rbacapi.OIDCClaimsFromAnnotationValue(annotationValue)
+				require.NoError(t, err)
+				slices.Sort(expectedClaims)
+				slices.Sort(got)
+				require.Equal(t, expectedClaims, got)
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			amendClaimAnnotations(tc.sa, tc.claimsToAmend)
+			tc.assertions(t, tc.expectedClaims, tc.sa.Annotations)
+		})
+	}
+}
+
 func plainServiceAccount(annotations map[string]string) *corev1.ServiceAccount {
 	return &corev1.ServiceAccount{ObjectMeta: plainObjectMeta(annotations)}
 }
