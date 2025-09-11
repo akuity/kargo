@@ -187,16 +187,23 @@ func Test_metadataSetter_run(t *testing.T) {
 			setup: func(t *testing.T, client client.Client) {
 				stage := &kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-stage",
+						Name:      "test-stage",
+						Namespace: "test-project",
 					},
 				}
 				require.NoError(t, client.Create(context.Background(), stage))
+				s := &kargoapi.Stage{}
+				err := client.Get(context.Background(), types.NamespacedName{
+					Name:      "test-stage",
+					Namespace: "test-project",
+				}, s)
+				require.NoError(t, err, "Stage not found after Create")
 			},
 			verify: func(t *testing.T, client client.Client) {
 				stage := &kargoapi.Stage{}
 				require.NoError(t, client.Get(
 					context.Background(),
-					types.NamespacedName{Name: "test-stage"},
+					types.NamespacedName{Name: "test-stage", Namespace: "test-project"},
 					stage,
 				))
 
@@ -227,16 +234,23 @@ func Test_metadataSetter_run(t *testing.T) {
 			setup: func(t *testing.T, client client.Client) {
 				freight := &kargoapi.Freight{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-freight",
+						Name:      "test-freight",
+						Namespace: "test-project",
 					},
 				}
 				require.NoError(t, client.Create(context.Background(), freight))
+				f := &kargoapi.Freight{}
+				err := client.Get(context.Background(), types.NamespacedName{
+					Name:      "test-freight",
+					Namespace: "test-project",
+				}, f)
+				require.NoError(t, err, "Freight not found after Create")
 			},
 			verify: func(t *testing.T, client client.Client) {
 				freight := &kargoapi.Freight{}
 				require.NoError(t, client.Get(
 					context.Background(),
-					types.NamespacedName{Name: "test-freight"},
+					types.NamespacedName{Name: "test-freight", Namespace: "test-project"},
 					freight,
 				))
 
@@ -272,16 +286,23 @@ func Test_metadataSetter_run(t *testing.T) {
 			setup: func(t *testing.T, client client.Client) {
 				stage := &kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-stage",
+						Name:      "test-stage",
+						Namespace: "test-project",
 					},
 				}
 				require.NoError(t, client.Create(context.Background(), stage))
+				s := &kargoapi.Stage{}
+				err := client.Get(context.Background(), types.NamespacedName{
+					Name:      "test-stage",
+					Namespace: "test-project",
+				}, s)
+				require.NoError(t, err, "Stage not found after Create")
 			},
 			verify: func(t *testing.T, client client.Client) {
 				stage := &kargoapi.Stage{}
 				require.NoError(t, client.Get(
 					context.Background(),
-					types.NamespacedName{Name: "test-stage"},
+					types.NamespacedName{Name: "test-stage", Namespace: "test-project"},
 					stage,
 				))
 
@@ -311,7 +332,8 @@ func Test_metadataSetter_run(t *testing.T) {
 			}
 
 			setter := &metadataSetter{kargoClient: client}
-			result, err := setter.run(context.Background(), nil, tt.cfg)
+			stepCtx := &promotion.StepContext{Project: "test-project"}
+			result, err := setter.run(context.Background(), stepCtx, tt.cfg)
 
 			if tt.wantErr {
 				require.Error(t, err)
