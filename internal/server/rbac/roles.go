@@ -2,6 +2,7 @@ package rbac
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
@@ -743,23 +744,21 @@ func claimListToMap(claims []rbacapi.Claim) map[string][]string {
 }
 
 func replaceClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]string) {
-	// Step through the existing annotations and for each that looks like a claim
-	// annotation, remove it if the corresponding claim is not in the new claims
-	// map.
+	// Some service accounts may have been setup the old way.
+	// e.g. using rbac.kargo.akuity.io/claim.<claim-name> style annotations.
 	for k := range sa.Annotations {
-		if name, ok := rbacapi.OIDCClaimNameFromAnnotationKey(k); ok {
-			if _, exists := claims[name]; !exists {
-				delete(sa.Annotations, k)
-			}
+		if strings.HasPrefix(k, rbacapi.AnnotationKeyOIDCClaimNamePrefix) {
+			delete(sa.Annotations, k)
 		}
 	}
+	// We need to also remove any claims set the new way.
+	// e.g. using rbac.kargo.akuity.io/claims annotation.
+	delete(sa.Annotations, rbacapi.AnnotationKeyOIDCClaims)
 	if sa.Annotations == nil {
 		sa.Annotations = map[string]string{}
 	}
-	// Add or update the annotations for the new claims
-	for name, values := range claims {
-		sa.Annotations[rbacapi.AnnotationKeyOIDCClaim(name)] = strings.Join(values, ",")
-	}
+	b, _ := json.Marshal(claims)
+	sa.Annotations[rbacapi.AnnotationKeyOIDCClaims] = string(b)
 }
 
 func amendClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]string) {

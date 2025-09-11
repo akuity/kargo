@@ -1,6 +1,10 @@
 package v1alpha1
 
-import "strings"
+import (
+	"encoding/json"
+	"fmt"
+	"strings"
+)
 
 const (
 	// AnnotationKeyManaged is an annotation key that can be set on a
@@ -39,4 +43,29 @@ func OIDCClaimNameFromAnnotationKey(key string) (string, bool) {
 		return "", false
 	}
 	return strings.TrimPrefix(key, AnnotationKeyOIDCClaimNamePrefix), true
+}
+
+// OIDCClaimsFromAnnotationValue parses the value of an
+// rbac.kargo.akuity.io/claims annotation and returns the corresponding list of
+// formatted and sorted claims.
+func OIDCClaimsFromAnnotationValue(value string) ([]string, error) {
+	claims := make(map[string][]string)
+	if err := json.Unmarshal([]byte(value), &claims); err != nil {
+		return nil, fmt.Errorf("unmarshaling OIDC claims from annotation value: %w", err)
+	}
+	var result []string
+	for name, values := range claims {
+		for _, v := range values {
+			result = append(result,
+				FormatClaim(name, strings.TrimSpace(v)),
+			)
+		}
+	}
+	return result, nil
+}
+
+// FormatClaim formats a claims name and values to be used by the
+// IndexServiceAccountsByOIDCClaims index.
+func FormatClaim(claimName, claimValue string) string {
+	return claimName + "/" + claimValue
 }

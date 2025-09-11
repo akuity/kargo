@@ -454,12 +454,6 @@ func StagesByWarehouse(obj client.Object) []string {
 	return warehouses
 }
 
-// FormatClaim formats a claims name and values to be used by the
-// IndexServiceAccountsByOIDCClaims index.
-func FormatClaim(claimName string, claimValue string) string {
-	return claimName + "/" + claimValue
-}
-
 // ServiceAccountsByOIDCClaims is a client.IndexerFunc that indexes
 // ServiceAccounts by their OIDC claims.
 func ServiceAccountsByOIDCClaims(obj client.Object) []string {
@@ -479,28 +473,26 @@ func ServiceAccountsByOIDCClaims(obj client.Object) []string {
 			}
 			for e := range strings.SplitSeq(rawClaimValue, ",") {
 				if claimValue := strings.TrimSpace(e); claimValue != "" {
-					refinedClaimValues = append(refinedClaimValues, FormatClaim(rawClaimName, claimValue))
+					refinedClaimValues = append(refinedClaimValues, rbacapi.FormatClaim(rawClaimName, claimValue))
 				}
 			}
 		case annotationKey == rbacapi.AnnotationKeyOIDCClaims:
-			claimsMap := make(map[string][]string)
-			if err := json.Unmarshal([]byte(annotationValue), &claimsMap); err != nil {
+			claims, err := rbacapi.OIDCClaimsFromAnnotationValue(annotationValue)
+			if err != nil {
+				logging.NewLogger(logging.ErrorLevel).WithValues(
+					"annotationValue", annotationValue,
+					"serviceAccount", sa.Name,
+					"namespace", sa.Namespace,
+				).Error(err, "failed to parse OIDC claims from annotation value")
 				continue
 			}
-			for claimName, claimValues := range claimsMap {
-				for _, claimValue := range claimValues {
-					if cv := strings.TrimSpace(claimValue); cv != "" {
-						refinedClaimValues = append(refinedClaimValues, FormatClaim(claimName, cv))
-					}
-				}
-			}
+			refinedClaimValues = append(refinedClaimValues, claims...)
 		}
 	}
 
 	if len(refinedClaimValues) == 0 {
 		return nil
 	}
-	slices.Sort(refinedClaimValues)
 	return refinedClaimValues
 }
 

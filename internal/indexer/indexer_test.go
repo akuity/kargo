@@ -3,6 +3,7 @@ package indexer
 import (
 	"context"
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -869,11 +870,10 @@ func TestServiceAccountsByOIDCClaims(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			require.Equal(
-				t,
-				testCase.expected,
-				ServiceAccountsByOIDCClaims(testCase.sa),
-			)
+			serviceAccounts := ServiceAccountsByOIDCClaims(testCase.sa)
+			slices.Sort(serviceAccounts)
+			slices.Sort(testCase.expected)
+			require.Equal(t, testCase.expected, serviceAccounts)
 		})
 	}
 }
