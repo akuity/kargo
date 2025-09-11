@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/git"
 	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/pkg/logging"
 )
@@ -22,7 +23,16 @@ const (
 	bitbucketEventHeader     = "X-Event-Key"
 	bitbucketSignatureHeader = "X-Hub-Signature"
 
+	// bitbucketPushEvent is the event Bitbucket Cloud sends when a branch
+	// receives new commits.  Its body is represented by the
+	// bitbucketPushEventBody struct.
+	// See https://support.atlassian.com/bitbucket-cloud/docs/event-payloads/#Push
 	bitbucketPushEvent = "repo:push"
+	// bitbucketRefsChangedEvent is the event Bitbucket Server (Data Center)
+	// sends when a branch receives new commits. Its body is represented by the
+	// bitbucketRefsChangedEventBody struct.
+	// See https://confluence.atlassian.com/bitbucketserver/event-payload-938025882.html#Eventpayload-repo-push
+	bitbucketRefsChangedEvent = "repo:refs_changed"
 )
 
 func init() {
@@ -88,9 +98,19 @@ func (b *bitbucketWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 			return
 		}
 
+		// Bitbucket Cloud and Data Center provide slightly different event
+		// payloads. This interface describes what we need from either.
+		var payload interface {
+			getRefs() []string
+			getRepoURLs() []string
+		}
+
 		eventType := r.Header.Get(bitbucketEventHeader)
 		switch eventType {
 		case bitbucketPushEvent:
+			payload = &bitbucketPushEventBody{}
+		case bitbucketRefsChangedEvent:
+			payload = &bitbucketRefsChangedEventBody{}
 		default:
 			xhttp.WriteErrorJSON(
 				w,
@@ -122,8 +142,7 @@ func (b *bitbucketWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 			return
 		}
 
-		payload := bitBucketPushEvent{}
-		if err := json.Unmarshal(requestBody, &payload); err != nil {
+		if err := json.Unmarshal(requestBody, payload); err != nil {
 			xhttp.WriteErrorJSON(
 				w,
 				xhttp.Error(errors.New("invalid request body"), http.StatusBadRequest),
@@ -131,23 +150,7 @@ func (b *bitbucketWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 			return
 		}
 
-		// Note: It may seem peculiar to obtain the repo URL from the payload's
-		// repository.links.html.href field, however, there is no better option.
-		//
-		// A naive option would be combining https://bitbucket.org/ with the value
-		// of the payload's repository.full_name field, but that does not hold up
-		// for events originating from Bitbucket Data Center, which will utilize a
-		// custom domain name.
-		//
-		// A slightly better approach would be to parse the protocol and hostname
-		// from the value of the payload's repository.links.html.href field and
-		// combine that with the value of the payload's repository.full_name field,
-		// however, in all (currently known) cases, that yields the same result as
-		// simply using the value of the repository.links.html.href field directly.
-		//
-		// TODO(krancour): There are very likely some yet-to-be-identified edge
-		// cases where this choice does not hold up.
-		repoURLs := []string{payload.Repository.Links.HTML.Href}
+		repoURLs := payload.getRepoURLs()
 		refs := payload.getRefs()
 		logger = logger.WithValues(
 			"repoURLs", repoURLs,
@@ -158,7 +161,10 @@ func (b *bitbucketWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 	})
 }
 
-type bitBucketPushEvent struct {
+// bitbucketPushEventBody represents the payload Bitbucket Cloud sends for
+// "repo:push" events.
+// See https://support.atlassian.com/bitbucket-cloud/docs/event-payloads/#Push
+type bitbucketPushEventBody struct {
 	Actor struct {
 		Name         string `json:"name"`
 		EmailAddress string `json:"emailAddress"`
@@ -179,11 +185,74 @@ type bitBucketPushEvent struct {
 	} `json:"repository"`
 }
 
-// getRefs extracts all references mentioned by the event
-func (b bitBucketPushEvent) getRefs() []string {
+// Note: It may seem peculiar to obtain the repo URL from the payload's
+// repository.links.html.href field, however, there is no better option.
+//
+// A naive option would be combining https://bitbucket.org/ with the value
+// of the payload's repository.full_name field, but that does not hold up
+// for events originating from Bitbucket Data Center, which will utilize a
+// custom domain name.
+//
+// A slightly better approach would be to parse the protocol and hostname
+// from the value of the payload's repository.links.html.href field and
+// combine that with the value of the payload's repository.full_name field,
+// however, in all (currently known) cases, that yields the same result as
+// simply using the value of the repository.links.html.href field directly.
+//
+// TODO(krancour): There are very likely some yet-to-be-identified edge
+// cases where this choice does not hold up.
+func (b bitbucketPushEventBody) getRepoURLs() []string {
+	return []string{b.Repository.Links.HTML.Href}
+}
+
+// getRefs extracts all references mentioned by the repo:push event.
+// See https://support.atlassian.com/bitbucket-cloud/docs/event-payloads/#Push
+func (b bitbucketPushEventBody) getRefs() []string {
 	var qualifiers []string
 	for _, change := range b.Push.Changes {
 		qualifiers = append(qualifiers, change.New.Name)
+	}
+	return qualifiers
+}
+
+// bitbucketRefsChangedEventBody represents the payload Bitbucket Server (Data
+// Center) sends for "repo:refs_changed" events.
+// See https://confluence.atlassian.com/bitbucketserver/event-payload-938025882.html
+// That documentation states: "The following payloads contain some of the
+// common entity types – User, Repository,  Comment, and Pull Request – which
+// have consistent representations in all the payloads where they appear.
+type bitbucketRefsChangedEventBody struct {
+	Actor struct {
+		Name         string `json:"name"`
+		EmailAddress string `json:"emailAddress"`
+	} `json:"actor"`
+	Changes []struct {
+		Ref struct {
+			ID string `json:"id"`
+		} `json:"ref"`
+	} `json:"changes"`
+	Repository struct {
+		Links struct {
+			Clone []struct {
+				Href string `json:"href"`
+			} `json:"clone"`
+		} `json:"links"`
+	} `json:"repository"`
+}
+
+// getRepoURLs returns a set of normalized repoURLs from the event.
+func (b bitbucketRefsChangedEventBody) getRepoURLs() []string {
+	repoURLs := []string{}
+	for _, link := range b.Repository.Links.Clone {
+		repoURLs = append(repoURLs, git.NormalizeURL(link.Href))
+	}
+	return repoURLs
+}
+
+func (b bitbucketRefsChangedEventBody) getRefs() []string {
+	var qualifiers []string
+	for _, change := range b.Changes {
+		qualifiers = append(qualifiers, change.Ref.ID)
 	}
 	return qualifiers
 }
