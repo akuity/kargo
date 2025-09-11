@@ -790,20 +790,30 @@ func amendClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]string
 }
 
 func dropFromClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]string) {
-	for name, values := range claims {
-		slices.Sort(values)
-		values = slices.Compact(values)
-		values = removeFromStringSlice(strings.Split(sa.Annotations[rbacapi.AnnotationKeyOIDCClaim(name)], ","), values)
-		if len(values) == 0 {
-			delete(sa.Annotations, rbacapi.AnnotationKeyOIDCClaim(name))
-			continue
+	// hydrate the new map with any existing claims
+	// for the "rbac.kargo.akuity.io/claims" annotation
+	jsonStyleClaims := make(map[string][]string)
+	if _, ok := sa.Annotations[rbacapi.AnnotationKeyOIDCClaims]; ok {
+		if err := json.Unmarshal([]byte(sa.Annotations[rbacapi.AnnotationKeyOIDCClaims]), &jsonStyleClaims); err != nil {
+			logging.NewLogger(logging.ErrorLevel).Error(err, "error unmarshaling existing claims annotation")
 		}
-		slices.Sort(values)
-		if sa.Annotations == nil {
-			sa.Annotations = map[string]string{}
-		}
-		sa.Annotations[rbacapi.AnnotationKeyOIDCClaim(name)] = strings.Join(values, ",")
 	}
+	for name, values := range claims {
+		if prefixStyleValues, ok := sa.Annotations[rbacapi.AnnotationKeyOIDCClaim(name)]; ok {
+			values = removeFromStringSlice(strings.Split(prefixStyleValues, ","), values)
+			delete(sa.Annotations, rbacapi.AnnotationKeyOIDCClaim(name))
+		} else {
+			values = removeFromStringSlice(jsonStyleClaims[name], values)
+		}
+		slices.Sort(values)
+		jsonStyleClaims[name] = slices.Compact(values)
+	}
+	if sa.Annotations == nil {
+		sa.Annotations = map[string]string{}
+	}
+	// set everything under the "rbac.kargo.akuity.io/claims" annotation
+	b, _ := json.Marshal(jsonStyleClaims)
+	sa.Annotations[rbacapi.AnnotationKeyOIDCClaims] = string(b)
 }
 
 func buildNewServiceAccount(namespace, name string) *corev1.ServiceAccount {

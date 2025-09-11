@@ -1345,7 +1345,7 @@ func Test_amendClaimAnnotations(t *testing.T) {
 			},
 		},
 		{
-			name: "amend old sa claim annotations with new rbac.kargo.akuity.io/claims format",
+			name: "amend from old sa claim annotations and amend with new rbac.kargo.akuity.io/claims format",
 			sa: &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
@@ -1377,6 +1377,82 @@ func Test_amendClaimAnnotations(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			amendClaimAnnotations(tc.sa, tc.claimsToAmend)
+			tc.assertions(t, tc.expectedClaims, tc.sa.Annotations)
+		})
+	}
+}
+
+func Test_dropClaimAnnotations(t *testing.T) {
+	testCases := []struct {
+		name                string
+		sa                  *corev1.ServiceAccount
+		claimsToDrop        map[string][]string
+		expectedAnnotations map[string]string
+		expectedClaims      []string
+		assertions          func(t *testing.T, expectedClaims []string, saAnnotations map[string]string)
+	}{
+		{
+			name: "drop simple",
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						rbacapi.AnnotationKeyOIDCClaims: `{"email":["foo@bar.com"],"sub":["foo","bar"]}`,
+					},
+				},
+			},
+			claimsToDrop: map[string][]string{
+				"email": {"foo@bar.com"},
+				"sub":   {"baz"},
+			},
+			expectedAnnotations: map[string]string{
+				rbacapi.AnnotationKeyOIDCClaims: `{"sub":["foo","baz"]}`,
+			},
+			expectedClaims: []string{"sub/bar", "sub/foo"},
+			assertions: func(t *testing.T, expectedClaims []string, saAnnotations map[string]string) {
+				require.Len(t, saAnnotations, 1)
+				annotationValue, ok := saAnnotations[rbacapi.AnnotationKeyOIDCClaims]
+				require.True(t, ok)
+				got, err := rbacapi.OIDCClaimsFromAnnotationValue(annotationValue)
+				require.NoError(t, err)
+				slices.Sort(expectedClaims)
+				slices.Sort(got)
+				require.Equal(t, expectedClaims, got)
+			},
+		},
+		{
+			name: "drop from old sa claim annotations and convert to rbac.kargo.akuity.io/claims format",
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						rbacapi.AnnotationKeyOIDCClaim("email"): "foo@bar.com",
+						rbacapi.AnnotationKeyOIDCClaim("sub"):   "foo,bar",
+					},
+				},
+			},
+			claimsToDrop: map[string][]string{
+				"email": {"foo@bar.com"},
+				"sub":   {"bar"},
+			},
+			expectedAnnotations: map[string]string{
+				rbacapi.AnnotationKeyOIDCClaims: `{"sub":["foo","baz"]}`,
+			},
+			expectedClaims: []string{"sub/foo"},
+			assertions: func(t *testing.T, expectedClaims []string, saAnnotations map[string]string) {
+				require.Len(t, saAnnotations, 1)
+				t.Logf("saAnnotations: %+v", saAnnotations)
+				annotationValue, ok := saAnnotations[rbacapi.AnnotationKeyOIDCClaims]
+				require.True(t, ok)
+				got, err := rbacapi.OIDCClaimsFromAnnotationValue(annotationValue)
+				require.NoError(t, err)
+				slices.Sort(expectedClaims)
+				slices.Sort(got)
+				require.Equal(t, expectedClaims, got)
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			dropFromClaimAnnotations(tc.sa, tc.claimsToDrop)
 			tc.assertions(t, tc.expectedClaims, tc.sa.Annotations)
 		})
 	}
