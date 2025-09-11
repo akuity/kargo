@@ -58,18 +58,27 @@ To enable integration with your IDP, you will first need to register Kargo as a
 client. Carefully consult your IDP's documentation for instructions on how to do
 so.
 
-The callback URLs you will need to register are:
+The callback URL(s) you will need to register depend on whether your IDP
+supports both OIDC and PKCE:
 
-- `https://<hostname for api server>/login` (for the UI)
-- `https://localhost/auth/callback` (for the CLI)
+**With a compatible identity provider:**
 
-:::info
-If your IDP does not permit you to register multiple callback URLs, you
-may need to register two clients -- one each for the UI and the CLI.
-:::
+  - `https://<hostname for api server>/login` (for the UI)
+  - `https://localhost/auth/callback` (for the CLI)
 
-__When registration is complete, make note of the issuer URL and client ID
-provided by your IDP.__
+    <br/>
+
+    :::info
+    If your IDP does not permit you to register multiple callback URLs, you
+    may need to register two clients -- one each for the UI and the CLI.
+    :::
+
+**With an incompatible identity provider:**
+
+  - `https://<hostname for api server>/dex/callback` (for both the UI and CLI)
+
+**When registration is complete, make note of the issuer URL and client ID
+provided by your IDP.**
 
 ### Configuring Kargo
 
@@ -80,6 +89,12 @@ When installing Kargo with Helm, all options related to OIDC are grouped under
 
 1. Only if your IDP supports _both_ OIDC and PKCE:
 
+    :::caution
+    If your IDP does not support _both_ OIDC and PKCE, the
+    [Adapting Incompatible IDPs](#adapting-incompatible-idps) section provides
+    alternate instructions for this step.
+    :::
+
     1. Set `api.oidc.issuerURL` to the issuer URL provided by your IDP.
 
     1. Set `api.oidc.clientID` to the client ID provided by your IDP.
@@ -87,7 +102,6 @@ When installing Kargo with Helm, all options related to OIDC are grouped under
         If you registered two separate separate clients for the UI and CLI with
         your IDP, additionally specify a value for `api.oidc.cliClientID`. This
         setting can otherwise be left alone.
-
 
     1. Ensure `api.oidc.dex.enabled` remains set to its default value of
        `false`.
@@ -185,7 +199,7 @@ To configure Kargo to use Dex, set:
 1. Configure one or more [connectors](https://dexidp.io/docs/connectors/) under
    `api.oidc.dex.connectors`.
 
-    But default, no connectors are configured, although the Kargo chart's
+    By default, no connectors are configured, although the Kargo chart's
     `values.yaml` file includes a few examples, however, Dex's own documentation
     should be counted as the definitive source of information on how to
     configure each available connector.
