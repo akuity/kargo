@@ -1,32 +1,47 @@
 import { Modal, ModalFuncProps } from 'antd';
+import React from 'react';
 
 export interface ConfirmProps {
   title: string | React.ReactNode;
-  onOk: () => void;
+  onOk: () => Promise<unknown> | void;
   hide?: () => void;
   content?: string | React.ReactNode;
 }
 
 export const ConfirmModal = ({
   onOk,
+  onCancel,
   title = 'Are you sure?',
   content,
   hide,
-  visible,
   ...props
 }: ConfirmProps & ModalFuncProps) => {
-  const onConfirm = () => {
-    onOk();
+  const [loading, setLoading] = React.useState(false);
+
+  const confirm = async () => {
+    try {
+      setLoading(true);
+      await onOk();
+      hide?.();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cancel = () => {
+    if (loading) return;
+
+    onCancel?.();
     hide?.();
   };
 
   return (
     <Modal
-      open={visible}
-      onCancel={hide}
+      onCancel={cancel}
       okText='Confirm'
-      onOk={onConfirm}
+      onOk={confirm}
       title={title}
+      okButtonProps={{ loading }}
       {...props}
     >
       {content}
