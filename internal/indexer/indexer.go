@@ -479,11 +479,6 @@ func ServiceAccountsByOIDCClaims(obj client.Object) []string {
 		case annotationKey == rbacapi.AnnotationKeyOIDCClaims:
 			claims, err := rbacapi.OIDCClaimsFromAnnotationValue(annotationValue)
 			if err != nil {
-				logging.NewLogger(logging.ErrorLevel).WithValues(
-					"annotationValue", annotationValue,
-					"serviceAccount", sa.Name,
-					"namespace", sa.Namespace,
-				).Error(err, "failed to parse OIDC claims from annotation value")
 				continue
 			}
 			refinedClaimValues = append(refinedClaimValues, claims...)
