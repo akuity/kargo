@@ -6,7 +6,7 @@ sidebar_label: OpenID Connect
 
 By design, Kargo has no built-in system of registering and managing users.
 Assuming the lone, built-in admin account is disabled, as recommended
-[here](../10-secure-configuration.md#disabling-the-admin-account), you will need
+[secure configuration guide](../10-secure-configuration.md#disabling-the-admin-account), you will need
 to configure Kargo to authenticate users via an external identity provider
 (IDP). This is recommended even in the case of the admin account not having been
 disabled, as it is the only way to grant users access to Kargo without
@@ -58,18 +58,24 @@ To enable integration with your IDP, you will first need to register Kargo as a
 client. Carefully consult your IDP's documentation for instructions on how to do
 so.
 
-The callback URLs you will need to register are:
+The callback URLs you will need to register depend on whether you're using Dex:
 
-- `https://<hostname for api server>/login` (for the UI)
+**If not using Dex:**
+
+- `https://<hostname for api server>/dex/callback` (for the UI)
 - `https://localhost/auth/callback` (for the CLI)
+
+**If using Dex:**
+
+- `https://<hostname for api server>/dex/callback` (for both UI and CLI)
 
 :::info
 If your IDP does not permit you to register multiple callback URLs, you
-may need to register two clients -- one each for the UI and the CLI.
+may need to register two clients -- one each for the UI and the CLI when not using Dex.
 :::
 
-__When registration is complete, make note of the issuer URL and client ID
-provided by your IDP.__
+**When registration is complete, make note of the issuer URL and client ID
+provided by your IDP.**
 
 ### Configuring Kargo
 
@@ -84,10 +90,9 @@ When installing Kargo with Helm, all options related to OIDC are grouped under
 
     1. Set `api.oidc.clientID` to the client ID provided by your IDP.
 
-        If you registered two separate separate clients for the UI and CLI with
-        your IDP, additionally specify a value for `api.oidc.cliClientID`. This
-        setting can otherwise be left alone.
-
+        Optionally, if you registered separate clients for the UI and CLI with
+        your IDP, specify a value for `api.oidc.cliClientID`. If left blank,
+        Kargo will use the main Client ID for CLI authentication.
 
     1. Ensure `api.oidc.dex.enabled` remains set to its default value of
        `false`.
@@ -199,7 +204,8 @@ To configure Kargo to use Dex, set:
     api:
       oidc:
         enabled: true
-        # ... omitted for brevity ...
+        clientID: <dex client id>
+        cliClientID: <optional cli client id>  # Optional - if left blank, uses clientID
         dex:
           enabled: true
           # Adapted from: https://dexidp.io/docs/connectors/github/
@@ -217,6 +223,10 @@ To configure Kargo to use Dex, set:
                 - <team name>
                 - <another team name>
     ```
+
+    :::note
+    The `cliClientID` field is optional. If left blank, Kargo will use the main `clientID` for CLI authentication.
+    :::
 
     :::info
     The Kargo chart will generate all the remaining Dex configuration for you.
