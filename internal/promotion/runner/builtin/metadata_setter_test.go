@@ -2,9 +2,11 @@ package builtin
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -138,214 +140,291 @@ func Test_metadataSetter_convert(t *testing.T) {
 func Test_metadataSetter_run(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
-	_ = metav1.AddMetaToScheme(scheme)
+
+	const (
+		testObjName = "test-obj"
+		testProject = "test-project"
+	)
+
+	testData := map[string]apiextensionsv1.JSON{
+		"string":  {Raw: []byte(`"bar"`)},
+		"num":     {Raw: []byte(`42`)},
+		"complex": {Raw: []byte(`{"foo": "bar", "bat": "baz"}`)},
+	}
+
+	testValueUpdates := map[string]any{
+		"string":  "bar",
+		"num":     43,
+		"complex": map[string]any{"updated": true},
+		"new":     "success!",
+	}
 
 	tests := []struct {
-		name    string
-		cfg     builtin.SetMetadataConfig
-		setup   func(t *testing.T, client client.Client)
-		verify  func(t *testing.T, client client.Client)
-		wantErr bool
+		name       string
+		client     client.Client
+		cfg        builtin.SetMetadataConfig
+		assertions func(*testing.T, promotion.StepResult, client.Client, error)
 	}{
 		{
 			name: "unsupported kind",
 			cfg: builtin.SetMetadataConfig{
-				Updates: []builtin.Update{
-					{
-						Kind:   "UnsupportedKind",
-						Name:   "test-resource",
-						Values: map[string]any{"key": "value"},
-					},
-				},
+				Updates: []builtin.Update{{
+					Kind: "UnsupportedKind",
+					Name: "test-resource",
+					// Values: map[string]any{"key": "value"},
+				}},
 			},
-			wantErr: true,
+			assertions: func(
+				t *testing.T,
+				res promotion.StepResult,
+				_ client.Client,
+				err error,
+			) {
+				require.ErrorContains(t, err, "unsupported kind")
+				require.Equal(t, res.Status, kargoapi.PromotionStepStatusFailed)
+			},
 		},
 		{
-			name: "resource not found",
+			name:   "Stage not found",
+			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
 			cfg: builtin.SetMetadataConfig{
-				Updates: []builtin.Update{
-					{
-						Kind:   "Stage",
-						Name:   "nonexistent-stage",
-						Values: map[string]any{"key": "value"},
-					},
-				},
+				Updates: []builtin.Update{{
+					Kind: "Stage",
+					Name: "nonexistent",
+				}},
 			},
-			wantErr: true,
+			assertions: func(
+				t *testing.T,
+				res promotion.StepResult,
+				_ client.Client,
+				err error,
+			) {
+				require.ErrorContains(t, err, "error getting Stage")
+				require.Equal(t, res.Status, kargoapi.PromotionStepStatusErrored)
+			},
 		},
 		{
-			name: "successful update of stage metadata",
-			cfg: builtin.SetMetadataConfig{
-				Updates: []builtin.Update{
-					{
-						Kind:   "Stage",
-						Name:   "test-stage",
-						Values: map[string]any{"key1": "value1", "key2": 42},
-					},
-				},
-			},
-			setup: func(t *testing.T, client client.Client) {
-				stage := &kargoapi.Stage{
+			name: "error patching Stage status",
+			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+				&kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-stage",
-						Namespace: "test-project",
+						Name:            testObjName,
+						Namespace:       testProject,
+						ResourceVersion: "invalid", // This will force the patch to fail
 					},
-				}
-				require.NoError(t, client.Create(context.Background(), stage))
-				s := &kargoapi.Stage{}
-				err := client.Get(context.Background(), types.NamespacedName{
-					Name:      "test-stage",
-					Namespace: "test-project",
-				}, s)
-				require.NoError(t, err, "Stage not found after Create")
+				},
+			).WithStatusSubresource(&kargoapi.Stage{}).Build(),
+			cfg: builtin.SetMetadataConfig{
+				Updates: []builtin.Update{{
+					Kind:   "Stage",
+					Name:   testObjName,
+					Values: testValueUpdates,
+				}},
 			},
-			verify: func(t *testing.T, client client.Client) {
+			assertions: func(
+				t *testing.T,
+				res promotion.StepResult,
+				_ client.Client,
+				err error,
+			) {
+				require.ErrorContains(t, err, "error patching status of Stage")
+				require.ErrorContains(t, err, "can not convert resourceVersion")
+				require.Equal(t, res.Status, kargoapi.PromotionStepStatusErrored)
+			},
+		},
+		{
+			name: "successful Stage metadata update",
+			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+				&kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      testObjName,
+						Namespace: testProject,
+					},
+					Status: kargoapi.StageStatus{
+						Metadata: testData,
+					},
+				},
+			).WithStatusSubresource(&kargoapi.Stage{}).Build(),
+			cfg: builtin.SetMetadataConfig{
+				Updates: []builtin.Update{{
+					Kind:   "Stage",
+					Name:   testObjName,
+					Values: testValueUpdates,
+				}},
+			},
+			assertions: func(
+				t *testing.T,
+				res promotion.StepResult,
+				c client.Client,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, res.Status, kargoapi.PromotionStepStatusSucceeded)
+
 				stage := &kargoapi.Stage{}
-				require.NoError(t, client.Get(
+				err = c.Get(
 					context.Background(),
-					types.NamespacedName{Name: "test-stage", Namespace: "test-project"},
+					types.NamespacedName{
+						Name:      testObjName,
+						Namespace: testProject,
+					},
 					stage,
-				))
-
-				var value1 string
-				exists, err := stage.Status.GetMetadata("key1", &value1)
+				)
 				require.NoError(t, err)
-				require.True(t, exists)
-				require.Equal(t, "value1", value1)
 
-				var value2 int
-				exists, err = stage.Status.GetMetadata("key2", &value2)
+				dataBytes, ok := stage.Status.Metadata["string"]
+				require.True(t, ok)
+				var data any
+				err = json.Unmarshal(dataBytes.Raw, &data)
 				require.NoError(t, err)
-				require.True(t, exists)
-				require.Equal(t, 42, value2)
+				require.Equal(t, "bar", data)
+
+				dataBytes, ok = stage.Status.Metadata["num"]
+				require.True(t, ok)
+				err = json.Unmarshal(dataBytes.Raw, &data)
+				require.NoError(t, err)
+				require.Equal(t, float64(43), data)
+
+				dataBytes, ok = stage.Status.Metadata["complex"]
+				require.True(t, ok)
+				err = json.Unmarshal(dataBytes.Raw, &data)
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					map[string]any{"updated": true},
+					data,
+				)
+
+				dataBytes, ok = stage.Status.Metadata["new"]
+				require.True(t, ok)
+				err = json.Unmarshal(dataBytes.Raw, &data)
+				require.NoError(t, err)
+				require.Equal(t, "success!", data)
 			},
 		},
 		{
-			name: "successful update of freight metadata",
+			name:   "Freight not found",
+			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
 			cfg: builtin.SetMetadataConfig{
-				Updates: []builtin.Update{
-					{
-						Kind:   "Freight",
-						Name:   "test-freight",
-						Values: map[string]any{"version": "1.0.0", "deployed": true},
+				Updates: []builtin.Update{{
+					Kind: "Freight",
+					Name: "nonexistent",
+				}},
+			},
+			assertions: func(
+				t *testing.T,
+				res promotion.StepResult,
+				_ client.Client,
+				err error,
+			) {
+				require.ErrorContains(t, err, "error getting Freight")
+				require.Equal(t, res.Status, kargoapi.PromotionStepStatusErrored)
+			},
+		},
+		{
+			name: "error patching Freight status",
+			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            testObjName,
+						Namespace:       testProject,
+						ResourceVersion: "invalid", // This will force the patch to fail
 					},
 				},
+			).WithStatusSubresource(&kargoapi.Freight{}).Build(),
+			cfg: builtin.SetMetadataConfig{
+				Updates: []builtin.Update{{
+					Kind:   "Freight",
+					Name:   testObjName,
+					Values: testValueUpdates,
+				}},
 			},
-			setup: func(t *testing.T, client client.Client) {
-				freight := &kargoapi.Freight{
+			assertions: func(
+				t *testing.T,
+				res promotion.StepResult,
+				_ client.Client,
+				err error,
+			) {
+				require.ErrorContains(t, err, "error patching status of Freight")
+				require.ErrorContains(t, err, "can not convert resourceVersion")
+				require.Equal(t, res.Status, kargoapi.PromotionStepStatusErrored)
+			},
+		},
+		{
+			name: "successful Freight metadata update",
+			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+				&kargoapi.Freight{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-freight",
-						Namespace: "test-project",
+						Name:      testObjName,
+						Namespace: testProject,
 					},
-				}
-				require.NoError(t, client.Create(context.Background(), freight))
-				f := &kargoapi.Freight{}
-				err := client.Get(context.Background(), types.NamespacedName{
-					Name:      "test-freight",
-					Namespace: "test-project",
-				}, f)
-				require.NoError(t, err, "Freight not found after Create")
+				},
+			).WithStatusSubresource(&kargoapi.Freight{}).Build(),
+			cfg: builtin.SetMetadataConfig{
+				Updates: []builtin.Update{{
+					Kind:   "Freight",
+					Name:   testObjName,
+					Values: testValueUpdates,
+				}},
 			},
-			verify: func(t *testing.T, client client.Client) {
+			assertions: func(
+				t *testing.T,
+				res promotion.StepResult,
+				c client.Client,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, res.Status, kargoapi.PromotionStepStatusSucceeded)
+
 				freight := &kargoapi.Freight{}
-				require.NoError(t, client.Get(
+				err = c.Get(
 					context.Background(),
-					types.NamespacedName{Name: "test-freight", Namespace: "test-project"},
+					types.NamespacedName{
+						Name:      testObjName,
+						Namespace: testProject,
+					},
 					freight,
-				))
-
-				var version string
-				exists, err := freight.Status.GetMetadata("version", &version)
+				)
 				require.NoError(t, err)
-				require.True(t, exists)
-				require.Equal(t, "1.0.0", version)
 
-				var deployed bool
-				exists, err = freight.Status.GetMetadata("deployed", &deployed)
+				dataBytes, ok := freight.Status.Metadata["string"]
+				require.True(t, ok)
+				var data any
+				err = json.Unmarshal(dataBytes.Raw, &data)
 				require.NoError(t, err)
-				require.True(t, exists)
-				require.True(t, deployed)
-			},
-		},
-		{
-			name: "multiple updates to same resource",
-			cfg: builtin.SetMetadataConfig{
-				Updates: []builtin.Update{
-					{
-						Kind:   "Stage",
-						Name:   "test-stage",
-						Values: map[string]any{"key1": "value1"},
-					},
-					{
-						Kind:   "Stage",
-						Name:   "test-stage",
-						Values: map[string]any{"key2": "value2"},
-					},
-				},
-			},
-			setup: func(t *testing.T, client client.Client) {
-				stage := &kargoapi.Stage{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-stage",
-						Namespace: "test-project",
-					},
-				}
-				require.NoError(t, client.Create(context.Background(), stage))
-				s := &kargoapi.Stage{}
-				err := client.Get(context.Background(), types.NamespacedName{
-					Name:      "test-stage",
-					Namespace: "test-project",
-				}, s)
-				require.NoError(t, err, "Stage not found after Create")
-			},
-			verify: func(t *testing.T, client client.Client) {
-				stage := &kargoapi.Stage{}
-				require.NoError(t, client.Get(
-					context.Background(),
-					types.NamespacedName{Name: "test-stage", Namespace: "test-project"},
-					stage,
-				))
+				require.Equal(t, "bar", data)
 
-				var value1, value2 string
-				exists, err := stage.Status.GetMetadata("key1", &value1)
+				dataBytes, ok = freight.Status.Metadata["num"]
+				require.True(t, ok)
+				err = json.Unmarshal(dataBytes.Raw, &data)
 				require.NoError(t, err)
-				require.True(t, exists)
-				require.Equal(t, "value1", value1)
+				require.Equal(t, float64(43), data)
 
-				exists, err = stage.Status.GetMetadata("key2", &value2)
+				dataBytes, ok = freight.Status.Metadata["complex"]
+				require.True(t, ok)
+				err = json.Unmarshal(dataBytes.Raw, &data)
 				require.NoError(t, err)
-				require.True(t, exists)
-				require.Equal(t, "value2", value2)
+				require.Equal(
+					t,
+					map[string]any{"updated": true},
+					data,
+				)
+
+				dataBytes, ok = freight.Status.Metadata["new"]
+				require.True(t, ok)
+				err = json.Unmarshal(dataBytes.Raw, &data)
+				require.NoError(t, err)
+				require.Equal(t, "success!", data)
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client := fake.NewClientBuilder().
-				WithScheme(scheme).
-				WithStatusSubresource(&kargoapi.Stage{}, &kargoapi.Freight{}).
-				Build()
-
-			if tt.setup != nil {
-				tt.setup(t, client)
-			}
-
-			setter := &metadataSetter{kargoClient: client}
-			stepCtx := &promotion.StepContext{Project: "test-project"}
+			setter := &metadataSetter{kargoClient: tt.client}
+			stepCtx := &promotion.StepContext{Project: testProject}
 			result, err := setter.run(context.Background(), stepCtx, tt.cfg)
-
-			if tt.wantErr {
-				require.Error(t, err)
-				return
-			}
-
-			require.NoError(t, err)
-			require.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
-
-			if tt.verify != nil {
-				tt.verify(t, client)
-			}
+			tt.assertions(t, result, tt.client, err)
 		})
 	}
 }

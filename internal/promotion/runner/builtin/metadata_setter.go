@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/kubeclient"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -60,14 +61,7 @@ func (s *metadataSetter) run(
 	stepCtx *promotion.StepContext,
 	cfg builtin.SetMetadataConfig,
 ) (promotion.StepResult, error) {
-	type metadataUpsertable interface {
-		UpsertMetadata(key string, value any) error
-	}
-
 	for _, update := range cfg.Updates {
-		var obj client.Object
-		var upsertable metadataUpsertable
-
 		switch update.Kind {
 		case "Stage":
 			stage := &kargoapi.Stage{}
@@ -83,8 +77,29 @@ func (s *metadataSetter) run(
 					Status: kargoapi.PromotionStepStatusErrored,
 				}, fmt.Errorf("error getting Stage: %w", err)
 			}
-			obj = stage
-			upsertable = &stage.Status
+			newStatus := stage.Status.DeepCopy()
+			if err := s.upsertMetadata(newStatus, update.Values); err != nil {
+				return promotion.StepResult{
+						Status: kargoapi.PromotionStepStatusErrored,
+					}, fmt.Errorf(
+						"error updating metadata for Stage %q in namespace %q: %w",
+						stage.Name, stage.Namespace, err,
+					)
+			}
+			if err := kubeclient.PatchStatus(
+				ctx,
+				s.kargoClient,
+				stage,
+				func(status *kargoapi.StageStatus) { *status = *newStatus },
+			); err != nil {
+				return promotion.StepResult{
+						Status: kargoapi.PromotionStepStatusErrored,
+					}, fmt.Errorf(
+						"error patching status of Stage %q in namespace %q: %w",
+						stage.Name, stage.Namespace, err,
+					)
+			}
+
 		case "Freight":
 			freight := &kargoapi.Freight{}
 			if err := s.kargoClient.Get(
@@ -99,8 +114,29 @@ func (s *metadataSetter) run(
 					Status: kargoapi.PromotionStepStatusErrored,
 				}, fmt.Errorf("error getting Freight: %w", err)
 			}
-			obj = freight
-			upsertable = &freight.Status
+			newStatus := freight.Status.DeepCopy()
+			if err := s.upsertMetadata(newStatus, update.Values); err != nil {
+				return promotion.StepResult{
+						Status: kargoapi.PromotionStepStatusErrored,
+					}, fmt.Errorf(
+						"error updating metadata for Freight %q in namespace %q: %w",
+						freight.Name, freight.Namespace, err,
+					)
+			}
+			if err := kubeclient.PatchStatus(
+				ctx,
+				s.kargoClient,
+				freight,
+				func(status *kargoapi.FreightStatus) { *status = *newStatus },
+			); err != nil {
+				return promotion.StepResult{
+						Status: kargoapi.PromotionStepStatusErrored,
+					}, fmt.Errorf(
+						"error patching status of Freight %q in namespace %q: %w",
+						freight.Name, freight.Namespace, err,
+					)
+			}
+
 		default:
 			return promotion.StepResult{
 					Status: kargoapi.PromotionStepStatusFailed,
@@ -108,23 +144,25 @@ func (s *metadataSetter) run(
 					Err: fmt.Errorf("unsupported kind %q", update.Kind),
 				}
 		}
-
-		for k, v := range update.Values {
-			if err := upsertable.UpsertMetadata(k, v); err != nil {
-				return promotion.StepResult{
-					Status: kargoapi.PromotionStepStatusErrored,
-				}, fmt.Errorf("failed to upsert metadata for key %q: %w", k, err)
-			}
-		}
-
-		if err := s.kargoClient.Status().Update(ctx, obj); err != nil {
-			return promotion.StepResult{
-				Status: kargoapi.PromotionStepStatusErrored,
-			}, fmt.Errorf("failed to update status for %s/%s: %w", update.Kind, update.Name, err)
-		}
 	}
 
 	return promotion.StepResult{
 		Status: kargoapi.PromotionStepStatusSucceeded,
 	}, nil
+}
+
+type metadataUpsertable interface {
+	UpsertMetadata(key string, value any) error
+}
+
+func (s *metadataSetter) upsertMetadata(
+	u metadataUpsertable,
+	metadata map[string]any,
+) error {
+	for k, v := range metadata {
+		if err := u.UpsertMetadata(k, v); err != nil {
+			return err
+		}
+	}
+	return nil
 }
