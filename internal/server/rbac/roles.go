@@ -16,7 +16,6 @@ import (
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/logging"
 )
 
 // RolesDatabase is an interface for the Kargo Roles store.
@@ -767,9 +766,7 @@ func amendClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]string
 	// for the "rbac.kargo.akuity.io/claims" annotation
 	newClaims := make(map[string][]string)
 	if _, ok := sa.Annotations[rbacapi.AnnotationKeyOIDCClaims]; ok {
-		if err := json.Unmarshal([]byte(sa.Annotations[rbacapi.AnnotationKeyOIDCClaims]), &newClaims); err != nil {
-			logging.NewLogger(logging.ErrorLevel).Error(err, "error unmarshaling existing claims annotation")
-		}
+		_ = json.Unmarshal([]byte(sa.Annotations[rbacapi.AnnotationKeyOIDCClaims]), &newClaims)
 	}
 	for name, values := range claims {
 		// delete any existing "rbac.kargo.akuity.io/claim.<claim-name>" annotations
@@ -794,9 +791,7 @@ func dropFromClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]str
 	// for the "rbac.kargo.akuity.io/claims" annotation
 	jsonStyleClaims := make(map[string][]string)
 	if _, ok := sa.Annotations[rbacapi.AnnotationKeyOIDCClaims]; ok {
-		if err := json.Unmarshal([]byte(sa.Annotations[rbacapi.AnnotationKeyOIDCClaims]), &jsonStyleClaims); err != nil {
-			logging.NewLogger(logging.ErrorLevel).Error(err, "error unmarshaling existing claims annotation")
-		}
+		_ = json.Unmarshal([]byte(sa.Annotations[rbacapi.AnnotationKeyOIDCClaims]), &jsonStyleClaims)
 	}
 	for name, values := range claims {
 		if prefixStyleValues, ok := sa.Annotations[rbacapi.AnnotationKeyOIDCClaim(name)]; ok {
