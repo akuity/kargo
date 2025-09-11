@@ -57,7 +57,7 @@ func (s *metadataSetter) convert(cfg promotion.Config) (builtin.SetMetadataConfi
 
 func (s *metadataSetter) run(
 	ctx context.Context,
-	_ *promotion.StepContext,
+	stepCtx *promotion.StepContext,
 	cfg builtin.SetMetadataConfig,
 ) (promotion.StepResult, error) {
 	type metadataUpsertable interface {
@@ -73,7 +73,10 @@ func (s *metadataSetter) run(
 			stage := &kargoapi.Stage{}
 			if err := s.kargoClient.Get(
 				ctx,
-				types.NamespacedName{Name: update.Name},
+				types.NamespacedName{
+					Name:      update.Name,
+					Namespace: stepCtx.Project,
+				},
 				stage,
 			); err != nil {
 				return promotion.StepResult{
@@ -86,7 +89,10 @@ func (s *metadataSetter) run(
 			freight := &kargoapi.Freight{}
 			if err := s.kargoClient.Get(
 				ctx,
-				types.NamespacedName{Name: update.Name},
+				types.NamespacedName{
+					Name:      update.Name,
+					Namespace: stepCtx.Project,
+				},
 				freight,
 			); err != nil {
 				return promotion.StepResult{
