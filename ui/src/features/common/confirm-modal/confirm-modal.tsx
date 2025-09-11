@@ -19,13 +19,18 @@ export const ConfirmModal = ({
   const [loading, setLoading] = React.useState(false);
 
   const confirm = async () => {
-    setLoading(true);
-    await onOk();
-    hide?.();
-    setLoading(false);
+    try {
+      setLoading(true);
+      await onOk();
+      hide?.();
+    } finally {
+      setLoading(false);
+    }
   };
 
   const cancel = () => {
+    if (loading) return;
+
     onCancel?.();
     hide?.();
   };

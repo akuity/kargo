@@ -309,7 +309,7 @@ export const FreightCard = (props: FreightCardProps) => {
           <div
             {...listeners}
             {...attributes}
-            className='bg-gray-100 rounded text-center cursor-pointer hover:bg-gray-200'
+            className='bg-gray-100 rounded text-center cursor-pointer hover:bg-gray-200 active:bg-gray-200'
             style={{ padding: '3px 0 1px' }}
             onMouseEnter={(e) => e.stopPropagation()}
           >
