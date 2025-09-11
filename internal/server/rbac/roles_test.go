@@ -133,14 +133,13 @@ func TestCreate(t *testing.T) {
 			sa,
 		)
 		require.NoError(t, err)
+		expected := `{"email":["bar-email","foo-email"],"groups":["bar-group","foo-group"],"sub":["bar-sub","foo-sub"]}`
 		require.Equal(
 			t,
 			map[string]string{
-				rbacapi.AnnotationKeyManaged:             rbacapi.AnnotationValueTrue,
-				rbacapi.AnnotationKeyOIDCClaim("sub"):    "bar-sub,foo-sub",
-				rbacapi.AnnotationKeyOIDCClaim("email"):  "bar-email,foo-email",
-				rbacapi.AnnotationKeyOIDCClaim("groups"): "bar-group,foo-group",
-				kargoapi.AnnotationKeyDescription:        "fake-description",
+				rbacapi.AnnotationKeyManaged:      rbacapi.AnnotationValueTrue,
+				rbacapi.AnnotationKeyOIDCClaims:   expected,
+				kargoapi.AnnotationKeyDescription: "fake-description",
 			},
 			sa.Annotations,
 		)
@@ -606,13 +605,12 @@ func TestGrantRoleToUsers(t *testing.T) {
 			sa,
 		)
 		require.NoError(t, err)
+		expected := `{"email":["bar-email","foo-email"],"groups":["bar-group","foo-group"],"sub":["bar-sub","foo-sub"]}`
 		require.Equal(
 			t,
 			map[string]string{
-				rbacapi.AnnotationKeyManaged:             rbacapi.AnnotationValueTrue,
-				rbacapi.AnnotationKeyOIDCClaim("sub"):    "bar-sub,foo-sub",
-				rbacapi.AnnotationKeyOIDCClaim("email"):  "bar-email,foo-email",
-				rbacapi.AnnotationKeyOIDCClaim("groups"): "bar-group,foo-group",
+				rbacapi.AnnotationKeyManaged:    rbacapi.AnnotationValueTrue,
+				rbacapi.AnnotationKeyOIDCClaims: expected,
 			},
 			sa.Annotations,
 		)
@@ -922,8 +920,8 @@ func TestRevokeRoleFromUsers(t *testing.T) {
 		require.Equal(
 			t,
 			map[string]string{
-				rbacapi.AnnotationKeyManaged:          rbacapi.AnnotationValueTrue,
-				rbacapi.AnnotationKeyOIDCClaim("sub"): "foo-sub",
+				rbacapi.AnnotationKeyManaged:    rbacapi.AnnotationValueTrue,
+				rbacapi.AnnotationKeyOIDCClaims: `{"sub":["foo-sub"]}`,
 			},
 			sa.Annotations,
 		)
@@ -1000,13 +998,12 @@ func TestUpdate(t *testing.T) {
 		sa := &corev1.ServiceAccount{}
 		err = c.Get(context.Background(), objKey, sa)
 		require.NoError(t, err)
+		expected := `{"email":["bar-email","foo-email"],"groups":["bar-group","foo-group"],"sub":["bar-sub","foo-sub"]}`
 		require.Equal(
 			t,
 			map[string]string{
-				rbacapi.AnnotationKeyManaged:             rbacapi.AnnotationValueTrue,
-				rbacapi.AnnotationKeyOIDCClaim("sub"):    "bar-sub,foo-sub",
-				rbacapi.AnnotationKeyOIDCClaim("email"):  "bar-email,foo-email",
-				rbacapi.AnnotationKeyOIDCClaim("groups"): "bar-group,foo-group",
+				rbacapi.AnnotationKeyManaged:    rbacapi.AnnotationValueTrue,
+				rbacapi.AnnotationKeyOIDCClaims: expected,
 			},
 			sa.Annotations,
 		)
@@ -1107,11 +1104,9 @@ func TestUpdate(t *testing.T) {
 		require.Equal(
 			t,
 			map[string]string{
-				rbacapi.AnnotationKeyManaged:             rbacapi.AnnotationValueTrue,
-				rbacapi.AnnotationKeyOIDCClaim("sub"):    "foo-sub",
-				rbacapi.AnnotationKeyOIDCClaim("email"):  "foo-email",
-				rbacapi.AnnotationKeyOIDCClaim("groups"): "foo-group",
-				kargoapi.AnnotationKeyDescription:        "foo-description",
+				rbacapi.AnnotationKeyManaged:      rbacapi.AnnotationValueTrue,
+				rbacapi.AnnotationKeyOIDCClaims:   `{"email":["foo-email"],"groups":["foo-group"],"sub":["foo-sub"]}`,
+				kargoapi.AnnotationKeyDescription: "foo-description",
 			},
 			sa.Annotations,
 		)

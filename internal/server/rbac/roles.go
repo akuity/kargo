@@ -798,10 +798,14 @@ func dropFromClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]str
 			values = removeFromStringSlice(strings.Split(prefixStyleValues, ","), values)
 			delete(sa.Annotations, rbacapi.AnnotationKeyOIDCClaim(name))
 		} else {
+			delete(sa.Annotations, name)
 			values = removeFromStringSlice(jsonStyleClaims[name], values)
 		}
 		slices.Sort(values)
 		jsonStyleClaims[name] = slices.Compact(values)
+		if len(jsonStyleClaims[name]) == 0 {
+			delete(jsonStyleClaims, name)
+		}
 	}
 	if sa.Annotations == nil {
 		sa.Annotations = map[string]string{}
