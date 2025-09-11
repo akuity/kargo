@@ -90,7 +90,7 @@ When installing Kargo with Helm, all options related to OIDC are grouped under
 1. Only if your IDP supports _both_ OIDC and PKCE:
 
     :::caution
-    If your IDP does not support _both_ OIDC and PKCE,
+    If your IDP does not support _both_ OIDC and PKCE, the
     [Adapting Incompatible IDPs](#adapting-incompatible-idps) section provides
     alternate instructions for this step.
     :::
