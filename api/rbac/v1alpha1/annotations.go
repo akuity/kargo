@@ -23,10 +23,9 @@ const (
 	// ServiceAccount to associate it with any user authenticated via OIDC and
 	// having any of the claims indicated by the value of the annotation. The
 	// value is expected to be a string representation of a JSON object containing
-	// claim names as keys mapped to claim values represented as strings or lists
-	// of strings.
+	// claim names as keys mapped to claim values represented as lists of strings.
 	//
-	// {"email": "kilgore@kilgore.trout", "groups": ["devops", "maintainers"]}
+	// {"email": ["kilgore@kilgore.trout"], "groups": ["devops", "maintainers"]}
 	AnnotationKeyOIDCClaims = "rbac.kargo.akuity.io/claims"
 
 	// AnnotationValueTrue is a value that can be set on an annotation to indicate
