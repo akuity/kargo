@@ -9,8 +9,8 @@ import (
 const accessTokenUsername = "oauth2accesstoken"
 
 var (
-	gcrURLRegex = regexp.MustCompile(`^(?:.+\.)?gcr\.io/`) // Legacy
-	garURLRegex = regexp.MustCompile(`^.+-docker\.pkg\.dev/`)
+	gcrURLRegex = regexp.MustCompile(`^(?:oci://)?(?:.+\.)?gcr\.io/`) // Legacy
+	garURLRegex = regexp.MustCompile(`^(?:oci://)?(.+-docker\.pkg\.dev/)`)
 )
 
 func tokenCacheKey(key string) string {

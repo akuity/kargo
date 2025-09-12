@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/compute/metadata"
@@ -85,7 +86,11 @@ func (p *WorkloadIdentityFederationProvider) Supports(
 	repoURL string,
 	_ map[string][]byte,
 ) bool {
-	if p.projectID == "" || credType != credentials.TypeImage {
+	if p.projectID == "" || (credType != credentials.TypeImage && credType != credentials.TypeHelm) {
+		return false
+	}
+
+	if credType == credentials.TypeHelm && !strings.HasPrefix(repoURL, "oci://") {
 		return false
 	}
 
