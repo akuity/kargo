@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/expr-lang/expr"
 	"github.com/kelseyhightower/envconfig"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -18,6 +19,7 @@ import (
 	"github.com/akuity/kargo/internal/conditions"
 	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/expressions/function"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
 	intpredicate "github.com/akuity/kargo/internal/predicate"
@@ -263,9 +265,31 @@ func (r *reconciler) syncWarehouse(
 		}
 		logger.Debug("discovered latest artifacts")
 
-		// Update the status with the discovered artifacts, and mark the
+		filteredArtifacts, err := r.filterDiscoveredArtifacts(ctx, warehouse, discoveredArtifacts)
+		if err != nil {
+			conditions.Set(
+				&status,
+				&metav1.Condition{
+					Type:               kargoapi.ConditionTypeHealthy,
+					Status:             metav1.ConditionFalse,
+					Reason:             "DiscoveryFailed",
+					Message:            fmt.Sprintf("Unable to evaluate freight creation filter: %s", err.Error()),
+					ObservedGeneration: warehouse.GetGeneration(),
+				},
+				&metav1.Condition{
+					Type:               kargoapi.ConditionTypeReady,
+					Status:             metav1.ConditionFalse,
+					Reason:             "DiscoveryFailure",
+					Message:            fmt.Sprintf("Unable to evaluate freight creation filter: %s", err.Error()),
+					ObservedGeneration: warehouse.GetGeneration(),
+				},
+			)
+			return status, fmt.Errorf("error evaluating freight creation filters: %w", err)
+		}
+
+		// Update the status with the filtered artifacts, and mark the
 		// Warehouse as healthy.
-		status.DiscoveredArtifacts = discoveredArtifacts
+		status.DiscoveredArtifacts = filteredArtifacts
 	}
 
 	// At this point, we have successfully discovered the latest artifacts
@@ -644,6 +668,42 @@ func validateDiscoveredArtifacts(
 		},
 	)
 	return true
+}
+
+func (r *reconciler) filterDiscoveredArtifacts(
+	ctx context.Context,
+	wh *kargoapi.Warehouse,
+	discoveredArtifacts *kargoapi.DiscoveredArtifacts,
+) (*kargoapi.DiscoveredArtifacts, error) {
+	if wh.Spec.FreightCreationFilter.Expression == "" {
+		return discoveredArtifacts, nil
+	}
+
+	program, err := expr.Compile(wh.Spec.FreightCreationFilter.Expression)
+	if err != nil {
+		return nil, fmt.Errorf("error compiling tag filter expression: %w", err)
+	}
+
+	filteredArtifacts := &kargoapi.DiscoveredArtifacts{
+		DiscoveredAt: discoveredArtifacts.DiscoveredAt,
+	}
+
+	// TODO: finish hydrating env
+	env := map[string]any{
+		"commitFromWarehouse": function.ChartFromWarehouse(ctx, r.client, wh.Namespace, wh, discoveredArtifacts.Charts),
+		"imageFromWarehouse":  function.ImageFromWarehouse(ctx, r.client, wh.Namespace, wh, discoveredArtifacts.Images),
+		"chartFromWarehouse":  function.CommitFromWarehouse(ctx, r.client, wh.Namespace, wh, discoveredArtifacts.Git),
+	}
+
+	result, err := expr.Run(program, env)
+	if err != nil {
+		return nil, fmt.Errorf("error evaluating tag filter expression: %w", err)
+	}
+
+	fmt.Printf("result: %+v\n", result)
+
+	// TODO: use result to resolve discoveredArtifacts
+	return filteredArtifacts, nil
 }
 
 // shouldDiscoverArtifacts returns true if the Warehouse should attempt to

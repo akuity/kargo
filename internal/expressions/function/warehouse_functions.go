@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	whctrl "github.com/akuity/kargo/internal/controller/warehouses"
 	"github.com/expr-lang/expr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -29,11 +28,12 @@ func CommitFromWarehouse(
 	ctx context.Context,
 	c client.Client,
 	project string,
-	warehouse kargoapi.Warehouse,
+	warehouse *kargoapi.Warehouse,
+	discoveredCommits []kargoapi.GitDiscoveryResult,
 ) expr.Option {
 	return expr.Function(
 		"commitFrom",
-		getCommitFromWarehouse(ctx, c, project, warehouse),
+		getCommitFromWarehouse(ctx, c, project, warehouse, discoveredCommits),
 		new(func(repoURL string, warehouse kargoapi.Warehouse) kargoapi.GitCommit),
 		new(func(repoURL string) kargoapi.GitCommit),
 	)
@@ -49,11 +49,12 @@ func ImageFromWarehouse(
 	ctx context.Context,
 	c client.Client,
 	project string,
-	warehouse kargoapi.Warehouse,
+	warehouse *kargoapi.Warehouse,
+	discoveredImages []kargoapi.ImageDiscoveryResult,
 ) expr.Option {
 	return expr.Function(
 		"imageFrom",
-		getImageFromWarehouse(ctx, c, project, warehouse),
+		getImageFromWarehouse(ctx, c, project, warehouse, discoveredImages),
 		new(func(repoURL string, warehouse kargoapi.Warehouse) kargoapi.Image),
 		new(func(repoURL string) kargoapi.Image),
 	)
@@ -69,11 +70,12 @@ func ChartFromWarehouse(
 	ctx context.Context,
 	c client.Client,
 	project string,
-	warehouse kargoapi.Warehouse,
+	warehouse *kargoapi.Warehouse,
+	discoveredCharts []kargoapi.ChartDiscoveryResult,
 ) expr.Option {
 	return expr.Function(
 		"chartFrom",
-		getChartFromWarehouse(ctx, c, project, warehouse),
+		getChartFromWarehouse(ctx, c, project, warehouse, discoveredCharts),
 		new(func(repoURL string, chartName string, origin kargoapi.FreightOrigin) kargoapi.Chart),
 		new(func(repoURL string, chartName string) kargoapi.Chart),
 		new(func(repoURL string, origin kargoapi.FreightOrigin) kargoapi.Chart),
@@ -90,39 +92,14 @@ func getCommitFromWarehouse(
 	ctx context.Context,
 	cl client.Client,
 	project string,
-	warehouse kargoapi.Warehouse,
+	warehouse *kargoapi.Warehouse,
+	discoveredCommits []kargoapi.GitDiscoveryResult,
 ) exprFn {
 	return func(a ...any) (any, error) {
-		if len(a) == 0 || len(a) > 2 {
-			return nil, fmt.Errorf("expected 1-2 arguments, got %d", len(a))
-		}
-
-		repoURL, ok := a[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("first argument must be string, got %T", a[0])
-		}
-
-		var desiredOrigin *kargoapi.FreightOrigin
-		if len(a) == 2 {
-			origin, ok := a[1].(kargoapi.FreightOrigin)
-			if !ok {
-				return nil, fmt.Errorf("second argument must be FreightOrigin, got %T", a[1])
-			}
-			desiredOrigin = &origin
-		}
-
-		return whctrl.FindCommit(
-			ctx,
-			cl,
-			project,
-			freightReqs,
-			desiredOrigin,
-			freightRefs,
-			repoURL,
-		)
+		// TODO: implement
+		return nil, nil
 	}
 }
-
 
 // getImageFromWarehouse returns a function that finds container images based on repository
 // URL and optional origin.
@@ -133,36 +110,12 @@ func getImageFromWarehouse(
 	ctx context.Context,
 	c client.Client,
 	project string,
-	warehouse kargoapi.Warehouse,
+	warehouse *kargoapi.Warehouse,
+	discoveredImages []kargoapi.ImageDiscoveryResult,
 ) exprFn {
 	return func(a ...any) (any, error) {
-		if len(a) == 0 || len(a) > 2 {
-			return nil, fmt.Errorf("expected 1-2 arguments, got %d", len(a))
-		}
-
-		repoURL, ok := a[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("first argument must be string, got %T", a[0])
-		}
-
-		var desiredOrigin *kargoapi.FreightOrigin
-		if len(a) == 2 {
-			origin, ok := a[1].(kargoapi.FreightOrigin)
-			if !ok {
-				return nil, fmt.Errorf("second argument must be FreightOrigin, got %T", a[1])
-			}
-			desiredOrigin = &origin
-		}
-
-		return whctrl.FindImage(
-			ctx,
-			c,
-			project,
-			freightRequests,
-			desiredOrigin,
-			freightRefs,
-			repoURL,
-		)
+		// TODO: implement
+		return nil, nil
 	}
 }
 
@@ -175,52 +128,12 @@ func getChartFromWarehouse(
 	ctx context.Context,
 	c client.Client,
 	project string,
-	warehouse kargoapi.Warehouse,
+	warehouse *kargoapi.Warehouse,
+	discoveredCharts []kargoapi.ChartDiscoveryResult,
 ) exprFn {
 	return func(a ...any) (any, error) {
-		if len(a) == 0 || len(a) > 3 {
-			return nil, fmt.Errorf("expected 1-3 arguments, got %d", len(a))
-		}
-
-		repoURL, ok := a[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("first argument must be string, got %T", a[0])
-		}
-
-		var chartName string
-		var desiredOrigin *kargoapi.FreightOrigin
-
-		if len(a) >= 2 {
-			if name, ok := a[1].(string); ok {
-				chartName = name
-			} else if origin, ok := a[1].(kargoapi.FreightOrigin); ok {
-				desiredOrigin = &origin
-			} else {
-				return nil, fmt.Errorf("second argument must be string or FreightOrigin, got %T", a[1])
-			}
-		}
-
-		if len(a) == 3 {
-			if chartName == "" {
-				return nil, fmt.Errorf("when using three arguments, second argument must be string, got %T", a[1])
-			}
-			origin, ok := a[2].(kargoapi.FreightOrigin)
-			if !ok {
-				return nil, fmt.Errorf("third argument must be FreightOrigin, got %T", a[2])
-			}
-			desiredOrigin = &origin
-		}
-
-		return whctrl.FindChart(
-			ctx,
-			c,
-			project,
-			freightReqs,
-			desiredOrigin,
-			freightRefs,
-			repoURL,
-			chartName,
-		)
+		// TODO: implement
+		return nil, nil
 	}
 }
 
