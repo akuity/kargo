@@ -100,7 +100,7 @@ spec:
         projected:
           sources:
           - secret:
-              name: kargo-dex-server-cert
+              name: {{ include "kargo.dex.serverTLSSecretName" . }}
               items:
               - key: tls.crt
                 path: tls.crt

@@ -181,7 +181,7 @@ spec:
 {{- end }}
 {{- if .Values.api.tls.enabled }}
               - secret:
-                  name: kargo-api-cert
+                  name: {{ include "kargo.api.serverTLSSecretName" . }}
                   items:
                     - key: tls.crt
                       path: tls.crt
@@ -190,7 +190,7 @@ spec:
 {{- end }}
 {{- if and .Values.api.oidc.enabled .Values.api.oidc.dex.enabled }}
               - secret:
-                  name: kargo-dex-server-cert
+                  name: {{ include "kargo.dex.serverTLSSecretName" . }}
                   items:
                     - key: ca.crt
                       path: idp-ca.crt
