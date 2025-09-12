@@ -14,13 +14,14 @@ import (
 	"strings"
 	"time"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/credentials"
-	"github.com/akuity/kargo/pkg/logging"
 	"github.com/google/go-github/v73/github"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/jferrl/go-githubauth"
 	"github.com/patrickmn/go-cache"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 const (
@@ -117,8 +118,7 @@ func (p *AppCredentialProvider) GetCredentials(
 			// since it doesn't make sense to move to the next provider
 			// when the JSON already is invalid
 			logger.Debug("error unmarshalling project-repos JSON")
-			// nolint:staticcheck
-			return nil, fmt.Errorf("error unmarshalling project-repos JSON: %v\n", err)
+			return nil, fmt.Errorf("error unmarshalling project-repos JSON: %v", err)
 		}
 		// Look up repos for the specific project
 		repos, found := projectRepoMap[project]
