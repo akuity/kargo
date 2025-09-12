@@ -505,6 +505,12 @@ message FreightCollection {
   repeated VerificationInfo verificationHistory = 2;
 }
 
+// FreightCreationFilters defines filters that must be satisfied for Freight to be created.
+message FreightCreationFilters {
+  // Expression is an expr-lang expression that must evaluate to true for Freight to be created.
+  optional string expression = 1;
+}
+
 // FreightList is a list of Freight resources.
 message FreightList {
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
@@ -1885,6 +1891,10 @@ message WarehouseSpec {
   //
   // +kubebuilder:validation:MinItems=1
   repeated RepoSubscription subscriptions = 1;
+
+  // FreightCreationFilters defines filters that must be satisfied for Freight to be created.
+  // +kubebuilder:validation:Optional
+  optional FreightCreationFilters freightCreationFilters = 5;
 }
 
 // WarehouseStats contains a summary of the collective state of a Project's

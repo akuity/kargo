@@ -108,6 +108,10 @@ type WarehouseSpec struct {
 	//
 	// +kubebuilder:validation:MinItems=1
 	Subscriptions []RepoSubscription `json:"subscriptions" protobuf:"bytes,1,rep,name=subscriptions"`
+
+	// FreightCreationFilters defines filters that must be satisfied for Freight to be created.
+	// +kubebuilder:validation:Optional
+	FreightCreationFilters FreightCreationFilters `json:"freightCreationFilters" protobuf:"bytes,5,opt,name=freightCreationFilters"`
 }
 
 // FreightCreationPolicy defines how Freight is created by a Warehouse.
@@ -120,6 +124,12 @@ const (
 	// FreightCreationPolicyManual indicates that Freight is created manually.
 	FreightCreationPolicyManual FreightCreationPolicy = "Manual"
 )
+
+// FreightCreationFilters defines filters that must be satisfied for Freight to be created.
+type FreightCreationFilters struct {
+	// Expression is an expr-lang expression that must evaluate to true for Freight to be created.
+	Expression string `json:"expression,omitempty" protobuf:"bytes,1,opt,name=expression"`
+}
 
 // RepoSubscription describes a subscription to ONE OF a Git repository, a
 // container image repository, or a Helm chart repository.
