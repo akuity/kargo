@@ -25,7 +25,9 @@ const (
 	// value is expected to be a string representation of a JSON object containing
 	// claim names as keys mapped to claim values represented as lists of strings.
 	//
-	// {"email": ["kilgore@kilgore.trout"], "groups": ["devops", "maintainers"]}
+	// For example:
+	//
+	//   `{"email": ["kilgore@kilgore.trout"], "groups": ["devops", "maintainers"]}`
 	AnnotationKeyOIDCClaims = "rbac.kargo.akuity.io/claims"
 
 	// AnnotationValueTrue is a value that can be set on an annotation to indicate
