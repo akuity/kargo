@@ -36,9 +36,9 @@ func FreightOperations(
 ) []expr.Option {
 	return []expr.Option{
 		Warehouse(),
-		CommitFrom(ctx, c, project, freightRequests, freightRefs),
-		ImageFrom(ctx, c, project, freightRequests, freightRefs),
-		ChartFrom(ctx, c, project, freightRequests, freightRefs),
+		CommitFromFreight(ctx, c, project, freightRequests, freightRefs),
+		ImageFromFreight(ctx, c, project, freightRequests, freightRefs),
+		ChartFromFreight(ctx, c, project, freightRequests, freightRefs),
 		FreightMetadata(ctx, c, project),
 	}
 }
@@ -88,13 +88,13 @@ func Warehouse() expr.Option {
 	return expr.Function("warehouse", warehouse, new(func(name string) kargoapi.FreightOrigin))
 }
 
-// CommitFrom returns an expr.Option that provides a `commitFrom()` function
+// CommitFromFreight returns an expr.Option that provides a `commitFrom()` function
 // for use in expressions.
 //
 // The commitFrom function finds Git commits based on repository URL and
 // optional origin, using the provided freight requests and references within
 // the project context.
-func CommitFrom(
+func CommitFromFreight(
 	ctx context.Context,
 	c client.Client,
 	project string,
@@ -103,19 +103,19 @@ func CommitFrom(
 ) expr.Option {
 	return expr.Function(
 		"commitFrom",
-		getCommit(ctx, c, project, freightReqs, freightRefs),
+		getCommitFromFreight(ctx, c, project, freightReqs, freightRefs),
 		new(func(repoURL string, origin kargoapi.FreightOrigin) kargoapi.GitCommit),
 		new(func(repoURL string) kargoapi.GitCommit),
 	)
 }
 
-// ImageFrom returns an expr.Option that provides an `imageFrom()` function for
+// ImageFromFreight returns an expr.Option that provides an `imageFrom()` function for
 // use in expressions.
 //
 // The imageFrom function finds container images based on repository URL and
 // optional origin, using the provided freight requests and references within
 // the project context.
-func ImageFrom(
+func ImageFromFreight(
 	ctx context.Context,
 	c client.Client,
 	project string,
@@ -124,19 +124,19 @@ func ImageFrom(
 ) expr.Option {
 	return expr.Function(
 		"imageFrom",
-		getImage(ctx, c, project, freightReqs, freightRefs),
+		getImageFrom(ctx, c, project, freightReqs, freightRefs),
 		new(func(repoURL string, origin kargoapi.FreightOrigin) kargoapi.Image),
 		new(func(repoURL string) kargoapi.Image),
 	)
 }
 
-// ChartFrom returns an expr.Option that provides a `chartFrom()` function for
+// ChartFromFreight returns an expr.Option that provides a `chartFrom()` function for
 // use in expressions.
 //
 // The chartFrom function finds Helm charts based on repository URL, optional
 // chart name, and optional origin, using the provided freight requests and
 // references within the project context.
-func ChartFrom(
+func ChartFromFreight(
 	ctx context.Context,
 	c client.Client,
 	project string,
@@ -331,12 +331,12 @@ func warehouse(a ...any) (any, error) {
 	}, nil
 }
 
-// getCommit returns a function that finds Git commits based on repository URL
+// getCommitFromFreight returns a function that finds Git commits based on repository URL
 // and optional origin.
 //
 // The returned function uses freight requests and references to locate the
 // appropriate commit within the project context.
-func getCommit(
+func getCommitFromFreight(
 	ctx context.Context,
 	cl client.Client,
 	project string,
@@ -374,12 +374,12 @@ func getCommit(
 	}
 }
 
-// getImage returns a function that finds container images based on repository
+// getImageFrom returns a function that finds container images based on repository
 // URL and optional origin.
 //
 // The returned function uses freight requests and references to locate the
 // appropriate image within the project context.
-func getImage(
+func getImageFrom(
 	ctx context.Context,
 	c client.Client,
 	project string,

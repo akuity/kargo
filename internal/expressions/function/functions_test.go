@@ -74,7 +74,7 @@ func Test_warehouse(t *testing.T) {
 	}
 }
 
-func Test_getCommit(t *testing.T) {
+func Test_getCommitFromFreight(t *testing.T) {
 	const testProject = "fake-project"
 
 	scheme := runtime.NewScheme()
@@ -217,7 +217,7 @@ func Test_getCommit(t *testing.T) {
 				WithObjects(tt.objects...).
 				Build()
 
-			fn := getCommit(
+			fn := getCommitFromFreight(
 				ctx,
 				c,
 				testProject,
@@ -231,7 +231,7 @@ func Test_getCommit(t *testing.T) {
 	}
 }
 
-func Test_getImage(t *testing.T) {
+func Test_getImageFromFreight(t *testing.T) {
 	const testProject = "fake-project"
 
 	scheme := runtime.NewScheme()
@@ -370,7 +370,7 @@ func Test_getImage(t *testing.T) {
 				WithObjects(tt.objects...).
 				Build()
 
-			fn := getImage(
+			fn := getImageFrom(
 				ctx,
 				c,
 				testProject,
@@ -384,7 +384,7 @@ func Test_getImage(t *testing.T) {
 	}
 }
 
-func Test_getChart(t *testing.T) {
+func Test_getChartFromFreight(t *testing.T) {
 	const testProject = "fake-project"
 
 	scheme := runtime.NewScheme()
