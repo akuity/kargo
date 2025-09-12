@@ -675,11 +675,11 @@ func (r *reconciler) filterDiscoveredArtifacts(
 	wh *kargoapi.Warehouse,
 	discoveredArtifacts *kargoapi.DiscoveredArtifacts,
 ) (*kargoapi.DiscoveredArtifacts, error) {
-	if wh.Spec.FreightCreationFilter.Expression == "" {
+	if wh.Spec.FreightCreationFilters.Expression == "" {
 		return discoveredArtifacts, nil
 	}
 
-	program, err := expr.Compile(wh.Spec.FreightCreationFilter.Expression)
+	program, err := expr.Compile(wh.Spec.FreightCreationFilters.Expression)
 	if err != nil {
 		return nil, fmt.Errorf("error compiling tag filter expression: %w", err)
 	}
