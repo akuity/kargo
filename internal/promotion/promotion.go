@@ -237,6 +237,7 @@ func (s *Step) BuildEnv(promoCtx Context, opts ...StepEnvOption) map[string]any 
 func (s *Step) Skip(
 	ctx context.Context,
 	cl client.Client,
+	apiReader client.Reader,
 	cache *gocache.Cache,
 	promoCtx Context,
 ) (bool, error) {
@@ -247,7 +248,7 @@ func (s *Step) Skip(
 		return promoCtx.StepExecutionMetadata.HasFailures(), nil
 	}
 
-	vars, err := s.GetVars(ctx, cl, cache, promoCtx)
+	vars, err := s.GetVars(ctx, cl, apiReader, cache, promoCtx)
 	if err != nil {
 		return false, err
 	}
@@ -264,7 +265,7 @@ func (s *Step) Skip(
 		s.If,
 		env,
 		slices.Concat(
-			exprfn.DataOperations(ctx, cl, cache, promoCtx.Project),
+			exprfn.DataOperations(ctx, apiReader, cache, promoCtx.Project),
 			exprfn.FreightOperations(
 				ctx,
 				cl,
@@ -293,6 +294,7 @@ func (s *Step) Skip(
 func (s *Step) GetConfig(
 	ctx context.Context,
 	cl client.Client,
+	apiReader client.Reader,
 	cache *gocache.Cache,
 	promoCtx Context,
 ) (promotion.Config, error) {
@@ -300,7 +302,7 @@ func (s *Step) GetConfig(
 		return nil, nil
 	}
 
-	vars, err := s.GetVars(ctx, cl, cache, promoCtx)
+	vars, err := s.GetVars(ctx, cl, apiReader, cache, promoCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -317,7 +319,7 @@ func (s *Step) GetConfig(
 		s.Config,
 		env,
 		slices.Concat(
-			exprfn.DataOperations(ctx, cl, cache, promoCtx.Project),
+			exprfn.DataOperations(ctx, apiReader, cache, promoCtx.Project),
 			exprfn.FreightOperations(
 				ctx,
 				cl,
@@ -344,6 +346,7 @@ func (s *Step) GetConfig(
 func (s *Step) GetVars(
 	ctx context.Context,
 	cl client.Client,
+	apiReader client.Reader,
 	cache *gocache.Cache,
 	promoCtx Context,
 ) (map[string]any, error) {
@@ -356,7 +359,7 @@ func (s *Step) GetVars(
 			v.Value,
 			s.BuildEnv(promoCtx, StepEnvWithVars(vars)),
 			slices.Concat(
-				exprfn.DataOperations(ctx, cl, cache, promoCtx.Project),
+				exprfn.DataOperations(ctx, apiReader, cache, promoCtx.Project),
 				exprfn.FreightOperations(
 					ctx,
 					cl,
@@ -386,7 +389,7 @@ func (s *Step) GetVars(
 				StepEnvWithVars(vars),
 			),
 			slices.Concat(
-				exprfn.DataOperations(ctx, cl, cache, promoCtx.Project),
+				exprfn.DataOperations(ctx, apiReader, cache, promoCtx.Project),
 				exprfn.FreightOperations(
 					ctx,
 					cl,

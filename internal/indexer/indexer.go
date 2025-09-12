@@ -119,6 +119,7 @@ func PromotionsByStage(obj client.Object) []string {
 func RunningPromotionsByArgoCDApplications(
 	ctx context.Context,
 	cl client.Client,
+	apiReader client.Reader,
 	shardName string,
 	isDefaultController bool,
 ) client.IndexerFunc {
@@ -223,7 +224,7 @@ func RunningPromotionsByArgoCDApplications(
 
 			// As step-level variables are allowed to reference to output, we
 			// need to provide the state.
-			vars, err := dirStep.GetVars(ctx, cl, nil, promoCtx)
+			vars, err := dirStep.GetVars(ctx, cl, apiReader, nil, promoCtx)
 			if err != nil {
 				logger.Error(
 					err,

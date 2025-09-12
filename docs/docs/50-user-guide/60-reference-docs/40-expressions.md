@@ -371,7 +371,76 @@ relevant `Freight` is not found from the `FreightCollection`.
 :::tip
 You can handle `nil` values gracefully in Expr using its
 [nil coalescing](https://expr-lang.org/docs/language-definition#nil-coalescing) and
-[optional chaining](https://expr-lang.org/docs/language-definition#optional-chaining) features.
+[optional chaining](https://expr-lang.org/docs/language-definition#optional-chaining)
+features.
+:::
+
+### `freightMetadata(freightName)`
+
+The `freightMetadata()` function retrieves the map of all metadata stored in a
+`Freight` resource. It has one required argument:
+
+- `freightName` (Required): The name of the `Freight` resource
+
+Example:
+
+```yaml
+config:
+  # Access metadata values using dot notation
+  category: ${{ freightMetadata(ctx.targetFreight.name).category }}
+
+  # Using nil coalescing (??) to provide default values if metadata is missing
+  settings: ${{ freightMetadata(ctx.targetFreight.name)['settings'] ?? "default-settings" }}
+
+  # Using optional chaining (?.) with nil coalescing for nested values
+  nested: ${{ freightMetadata(ctx.targetFreight.name)?.config?.settings?.timeoutSeconds ?? 300 }}
+```
+
+:::tip
+You can handle `nil` values gracefully in Expr using its
+[nil coalescing](https://expr-lang.org/docs/language-definition#nil-coalescing) and
+[optional chaining](https://expr-lang.org/docs/language-definition#optional-chaining)
+features.
+:::
+
+:::note
+An optional second argument (`freightMetadata(freightName, 'key-name')`) is supported
+but deprecated as of `v1.8` and will be removed in `v1.10`. While the two-argument
+form returns a single value for the specified key, the single-argument form returns
+the complete metadata map. To migrate, use either dot notation
+(`freightMetadata(freightName).keyName`) or map access syntax
+(`freightMetadata(freightName)['key-name']`) to access specific values.
+:::
+
+### `stageMetadata(stageName)`
+
+The `stageMetadata()` function retrieves metadata stored in a `Stage` resource. It
+has one required argument:
+
+- `stageName` (Required): The name of the `Stage` resource
+
+This returns a map containing all metadata key/value pairs stored in the `Stage`
+resource.
+
+Example:
+
+```yaml
+config:
+  # Access metadata values using ['key-name'] syntax
+  region: ${{ stageMetadata(ctx.stage)['aws-region'] }}
+
+  # Using nil coalescing (??) to provide default values if metadata is missing
+  tier: ${{ stageMetadata(ctx.stage)['tier'] ?? "default-tier" }}
+
+  # Using optional chaining (?.) with nil coalescing for nested values
+  nested: ${{ stageMetadata(ctx.stage)?.config?.settings?.timeoutSeconds ?? 300 }}
+```
+
+:::tip
+You can handle `nil` values gracefully in Expr using its
+[nil coalescing](https://expr-lang.org/docs/language-definition#nil-coalescing) and
+[optional chaining](https://expr-lang.org/docs/language-definition#optional-chaining)
+features.
 :::
 
 ### `commitFrom(repoURL, [freightOrigin])`

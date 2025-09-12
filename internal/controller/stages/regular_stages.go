@@ -77,8 +77,12 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 }
 
 type RegularStageReconciler struct {
-	cfg            ReconcilerConfig
-	client         client.Client
+	cfg    ReconcilerConfig
+	client client.Client
+	// apiReader is used sparingly for reading directly from the API server in
+	// cases where we're concerned about the possibility of the other client's
+	// cache being stale.
+	apiReader      client.Reader
 	eventSender    kargoEvent.Sender
 	healthChecker  health.AggregatingChecker
 	shardPredicate controller.ResponsibleFor[kargoapi.Stage]
@@ -1403,7 +1407,7 @@ func (r *RegularStageReconciler) startVerification(
 			Options: slices.Concat(
 				exprfn.DataOperations(
 					ctx,
-					r.client,
+					r.apiReader,
 					gocache.New(gocache.NoExpiration, gocache.NoExpiration),
 					stage.Namespace,
 				),
