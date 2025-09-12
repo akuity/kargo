@@ -90,5 +90,7 @@ const (
 	//
 	// If the annotation is missing or empty, no per-project repository restrictions
 	// will be applied (full access within matching Secret scope).
+	//
+	// #nosec G101 -- This is not a credential, just an annotation key name.
 	AnnotationKeyGitHubTokenScope = "kargo.akuity.io/github-token-scopes"
 )
