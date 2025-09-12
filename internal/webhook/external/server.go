@@ -30,8 +30,17 @@ func NewServer(cfg ServerConfig, cl client.Client) Server {
 
 func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	logger := logging.LoggerFromContext(ctx)
+
+	mux := http.NewServeMux()
+	// Health check endpoint. Keep health handling separate from the route handler.
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	// All other requests are delegated to the route handler.
+	mux.HandleFunc("/", s.route)
+
 	srv := &http.Server{
-		Handler:           http.HandlerFunc(s.route),
+		Handler:           mux,
 		ReadHeaderTimeout: time.Minute,
 	}
 	errCh := make(chan error)
