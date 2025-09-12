@@ -269,7 +269,7 @@ func TestAccessKeyProvider_GetCredentials(t *testing.T) {
 				tt.setupCache(provider.tokenCache)
 			}
 
-			creds, err := provider.GetCredentials(ctx, "", tt.credType, tt.repoURL, tt.data)
+			creds, err := provider.GetCredentials(ctx, "", tt.credType, tt.repoURL, tt.data, nil)
 			tt.assertions(t, provider.tokenCache, creds, err)
 		})
 	}

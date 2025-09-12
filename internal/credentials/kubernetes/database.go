@@ -136,13 +136,18 @@ clientLoop:
 		}
 	}
 
-	var data map[string][]byte
+	var (
+		data        map[string][]byte
+		annotations map[string]string
+	)
+
 	if secret != nil {
 		data = secret.Data
+		annotations = secret.Annotations
 	}
 
 	for _, p := range k.credentialProviders {
-		creds, err := p.GetCredentials(ctx, namespace, credType, repoURL, data)
+		creds, err := p.GetCredentials(ctx, namespace, credType, repoURL, data, annotations)
 		if err != nil {
 			return nil, err
 		}

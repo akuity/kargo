@@ -347,6 +347,31 @@ create or install a GitHub App.
       repoURLIsRegex: <true if repoURL is a pattern matching multiple repositories>
     ```
 
+   :::info
+   Kargo supports per-project repository restrictions for GitHub App credentials.
+   This is controlled by the `kargo.akuity.io/github-token-scope` annotation.
+   To ensure each Kargo project can only access specific repositories,
+   you can add the following annotation to your Secret:
+    ```yaml
+   metadata:
+     annotations:
+       kargo.akuity.io/github-token-scopes: |
+        {
+        "kargo-demo": ["repo-1", "repo-2"],
+        "kargo-simple": ["repo-3"]
+        }
+   ```
+   With this configuration, the project `kargo-demo` can use this secret only
+   when accessing `repo-1` or `repo-2` repos. The project `kargo-simple` can use it
+   only for `repo-3` repo. Any other project or repo will result in no credentials
+   being returned.
+
+   If the annotation is missing or empty, no per-project restrictions are applied,
+   and the secret is valid for any repo that matches `repoURL`. If the JSON is invalid,
+   Kargo will log an error and fail credential resolution for this secret without moving
+   to next credential provider.
+   :::
+
     :::info
     GitHub currently recommends using an App's alphanumeric client ID whenever
     possible, but Kargo does support the deprecated, numeric App ID as an
@@ -392,7 +417,7 @@ App is that the App's permissions are not tied to a specific GitHub user.
 It is easy to violate the principle of least privilege when authenticating using
 this method.
 
-For convenience sake, it may be tempting to register a single GitHub App and
+For convenience’s sake, it may be tempting to register a single GitHub App and
 select a broad set of repositories when installing that App into your
 organization. It may also be tempting to create a single set of
 [global credentials](#global-credentials) such that all Kargo projects can use
