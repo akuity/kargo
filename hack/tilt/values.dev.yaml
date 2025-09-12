@@ -26,11 +26,14 @@ api:
         type: mockCallback
       probes:
         enabled: false
+    # Just testing will revert before merge
     admins:
       claims:
-        email:
-        # This email claim is hard-coded in the Dex mockCallback connector
-        - kilgore@kilgore.trout
+          email:
+            - kilgore@kilgore.trout
+            - user@inbox.com
+          "cognito:groups":
+            - "devops"
 controller:
   logLevel: DEBUG
 crds:

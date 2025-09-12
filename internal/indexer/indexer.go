@@ -454,12 +454,6 @@ func StagesByWarehouse(obj client.Object) []string {
 	return warehouses
 }
 
-// FormatClaim formats a claims name and values to be used by the
-// IndexServiceAccountsByOIDCClaims index.
-func FormatClaim(claimName string, claimValue string) string {
-	return claimName + "/" + claimValue
-}
-
 // ServiceAccountsByOIDCClaims is a client.IndexerFunc that indexes
 // ServiceAccounts by their OIDC claims.
 func ServiceAccountsByOIDCClaims(obj client.Object) []string {
@@ -470,20 +464,27 @@ func ServiceAccountsByOIDCClaims(obj client.Object) []string {
 
 	refinedClaimValues := []string{}
 	for annotationKey, annotationValue := range sa.GetAnnotations() {
-		if strings.HasPrefix(annotationKey, rbacapi.AnnotationKeyOIDCClaimNamePrefix) {
+		switch {
+		case strings.HasPrefix(annotationKey, rbacapi.AnnotationKeyOIDCClaimNamePrefix):
 			rawClaimName := strings.TrimPrefix(annotationKey, rbacapi.AnnotationKeyOIDCClaimNamePrefix)
 			rawClaimValue := strings.TrimSpace(annotationValue)
 			if rawClaimValue == "" {
 				continue
 			}
-			claimValues := strings.Split(rawClaimValue, ",")
-			for _, e := range claimValues {
+			for e := range strings.SplitSeq(rawClaimValue, ",") {
 				if claimValue := strings.TrimSpace(e); claimValue != "" {
-					refinedClaimValues = append(refinedClaimValues, FormatClaim(rawClaimName, claimValue))
+					refinedClaimValues = append(refinedClaimValues, rbacapi.FormatClaim(rawClaimName, claimValue))
 				}
 			}
+		case annotationKey == rbacapi.AnnotationKeyOIDCClaims:
+			claims, err := rbacapi.OIDCClaimsFromAnnotationValue(annotationValue)
+			if err != nil {
+				continue
+			}
+			refinedClaimValues = append(refinedClaimValues, claims...)
 		}
 	}
+
 	if len(refinedClaimValues) == 0 {
 		return nil
 	}

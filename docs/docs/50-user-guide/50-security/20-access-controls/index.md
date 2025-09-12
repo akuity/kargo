@@ -72,9 +72,7 @@ mapped. This search is mostly limited to `ServiceAccount` resources in Kargo
 project namespaces only (i.e. only those labeled with
 `kargo.akuity.io/project: "true"`).
 
-ServiceAccount resources may be mapped to users through the use of annotations
-whose key begins with `rbac.kargo.akuity.io/claim.`. The value of the annotation
-may be a single value, or a comma-delimited list of values.
+ServiceAccount resources may be mapped to users through the use of annotation claims defined under the `rbac.kargo.akuity.io/claims` key. The value of the annotation can be a standard YAML map or a JSON object.
 
 In the following example, the `ServiceAccount` resource is mapped to all of:
 
@@ -82,6 +80,7 @@ In the following example, the `ServiceAccount` resource is mapped to all of:
 * A user with the `email` claim `carl@example.com`.
 * All users with a `groups` claim containing _either_ the `devops` or
   `kargo-admin` group.
+* Users with a `special:key` claim.
 
 ```yaml
 apiVersion: v1
@@ -90,9 +89,13 @@ metadata:
   name: admin
   namespace: kargo-demo
   annotations:
-    rbac.kargo.akuity.io/claim.sub: alice,bob
-    rbac.kargo.akuity.io/claim.email: carl@example.com
-    rbac.kargo.akuity.io/claim.groups: devops,kargo-admin
+    rbac.kargo.akuity.io/claims: |
+      {
+        "sub": ["alice", "bob" ],
+        "email": "carl@example.com",
+        "groups": ["devops", "kargo-admin"],
+        "special:key": "value"
+      }
 ```
 
 A user may be mapped to multiple `ServiceAccount` resources. A user's effective
@@ -293,7 +296,7 @@ metadata:
   namespace: guestbook
   annotations:
     kargo.akuity.io/description: Permissions to promote into pre-prod Stages
-    rbac.kargo.akuity.io/claim.groups: devops
+    rbac.kargo.akuity.io/claims: '{"groups":"devops"}'
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -370,7 +373,7 @@ metadata:
   name: admin
   namespace: guestbook
   annotations:
-    rbac.kargo.akuity.io/claim.groups: devops
+    rbac.kargo.akuity.io/claims: '{"groups":"devops"}'
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
