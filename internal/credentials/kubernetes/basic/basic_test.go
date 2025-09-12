@@ -234,7 +234,7 @@ func TestCredentialProvider_GetCredentials(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			creds, err := provider.GetCredentials(context.Background(), "", test.credType, test.repoURL, test.data)
+			creds, err := provider.GetCredentials(context.Background(), "", test.credType, test.repoURL, test.data, nil)
 			test.assertions(t, creds, err)
 		})
 	}
