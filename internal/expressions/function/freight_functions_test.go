@@ -370,7 +370,7 @@ func Test_getImageFromFreight(t *testing.T) {
 				WithObjects(tt.objects...).
 				Build()
 
-			fn := getImageFrom(
+			fn := getImageFromFreight(
 				ctx,
 				c,
 				testProject,
@@ -626,7 +626,7 @@ func Test_getChartFromFreight(t *testing.T) {
 				WithObjects(tt.objects...).
 				Build()
 
-			fn := getChart(
+			fn := getChartFromFreight(
 				ctx,
 				c,
 				testProject,
