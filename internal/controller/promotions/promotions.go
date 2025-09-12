@@ -108,6 +108,7 @@ func SetupReconcilerWithManager(
 		indexer.RunningPromotionsByArgoCDApplications(
 			ctx,
 			kargoMgr.GetClient(),
+			kargoMgr.GetAPIReader(),
 			cfg.ShardName,
 			cfg.IsDefaultController,
 		),

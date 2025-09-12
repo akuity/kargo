@@ -46,15 +46,24 @@ func DefaultExprDataCacheFn() *gocache.Cache {
 type simpleEngine struct {
 	registry    stepRunnerRegistry
 	kargoClient client.Client
-	cacheFunc   ExprDataCacheFn
+	// apiReader is used sparingly for reading directly from the API server in
+	// cases where we're concerned about the possibility of the other client's
+	// cache being stale.
+	apiReader client.Reader
+	cacheFunc ExprDataCacheFn
 }
 
 // NewSimpleEngine returns a simple implementation of the Engine interface that
 // uses built-in StepRunners.
-func NewSimpleEngine(kargoClient client.Client, cacheFunc ExprDataCacheFn) Engine {
+func NewSimpleEngine(
+	kargoClient client.Client,
+	apiReader client.Reader,
+	cacheFunc ExprDataCacheFn,
+) Engine {
 	return &simpleEngine{
 		registry:    stepRunnerReg,
 		kargoClient: kargoClient,
+		apiReader:   apiReader,
 		cacheFunc:   cacheFunc,
 	}
 }
@@ -231,7 +240,7 @@ func (e *simpleEngine) shouldSkipStep(
 	step Step,
 	meta *kargoapi.StepExecutionMetadata,
 ) bool {
-	skip, err := step.Skip(ctx, e.kargoClient, cache, promoCtx)
+	skip, err := step.Skip(ctx, e.kargoClient, e.apiReader, cache, promoCtx)
 	if err != nil {
 		meta.Status = kargoapi.PromotionStepStatusErrored
 		meta.Message = fmt.Sprintf("error checking if step %q should be skipped: %s", step.Alias, err)
@@ -467,7 +476,7 @@ func (e *simpleEngine) prepareStepContext(
 	step Step,
 	workDir string,
 ) (*promotion.StepContext, error) {
-	stepCfg, err := step.GetConfig(ctx, e.kargoClient, cache, promoCtx)
+	stepCfg, err := step.GetConfig(ctx, e.kargoClient, e.apiReader, cache, promoCtx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get step config: %w", err)
 	}

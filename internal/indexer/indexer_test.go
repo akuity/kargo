@@ -471,6 +471,7 @@ func TestRunningPromotionsByArgoCDApplications(t *testing.T) {
 				RunningPromotionsByArgoCDApplications(
 					context.TODO(),
 					c,
+					c,
 					testCase.shardName,
 					false,
 				)(testCase.obj),

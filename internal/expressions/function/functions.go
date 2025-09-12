@@ -50,12 +50,17 @@ func FreightOperations(
 // ConfigMaps and Secrets to avoid repeated API calls. This can
 // improve performance when the same ConfigMaps and Secrets are accessed
 // multiple times within the same expression evaluation.
-func DataOperations(ctx context.Context, c client.Client, cache *gocache.Cache, project string) []expr.Option {
+func DataOperations(
+	ctx context.Context,
+	apiReader client.Reader,
+	cache *gocache.Cache,
+	project string,
+) []expr.Option {
 	return []expr.Option{
-		ConfigMap(ctx, c, cache, project),
-		Secret(ctx, c, cache, project),
-		FreightMetadata(ctx, c, project),
-		StageMetadata(ctx, c, project),
+		ConfigMap(ctx, apiReader, cache, project),
+		Secret(ctx, apiReader, cache, project),
+		FreightMetadata(ctx, apiReader, project),
+		StageMetadata(ctx, apiReader, project),
 	}
 }
 
@@ -165,7 +170,7 @@ func ChartFrom(
 // The second argument is deprecated as of v1.8. Prefer using the single-argument form.
 func FreightMetadata(
 	ctx context.Context,
-	c client.Client,
+	c client.Reader,
 	project string,
 ) expr.Option {
 	return expr.Function(
@@ -178,7 +183,7 @@ func FreightMetadata(
 
 func freightMetadata(
 	ctx context.Context,
-	c client.Client,
+	c client.Reader,
 	project string,
 ) exprFn {
 	return func(a ...any) (any, error) {
@@ -250,7 +255,7 @@ func freightMetadata(
 //   - `stageMetadata(stageName)` returns the entire metadata map for the Stage.
 func StageMetadata(
 	ctx context.Context,
-	c client.Client,
+	c client.Reader,
 	project string,
 ) expr.Option {
 	return expr.Function(
@@ -262,7 +267,7 @@ func StageMetadata(
 
 func stageMetadata(
 	ctx context.Context,
-	c client.Client,
+	c client.Reader,
 	project string,
 ) exprFn {
 	return func(a ...any) (any, error) {
@@ -305,7 +310,7 @@ func stageMetadata(
 
 // ConfigMap returns an expr.Option that provides a `configMap()` function for
 // use in expressions.
-func ConfigMap(ctx context.Context, c client.Client, cache *gocache.Cache, project string) expr.Option {
+func ConfigMap(ctx context.Context, c client.Reader, cache *gocache.Cache, project string) expr.Option {
 	return expr.Function(
 		"configMap",
 		getConfigMap(ctx, c, cache, project),
@@ -315,7 +320,7 @@ func ConfigMap(ctx context.Context, c client.Client, cache *gocache.Cache, proje
 
 // Secret returns an expr.Option that provides a `secret()` function for use in
 // expressions.
-func Secret(ctx context.Context, c client.Client, cache *gocache.Cache, project string) expr.Option {
+func Secret(ctx context.Context, c client.Reader, cache *gocache.Cache, project string) expr.Option {
 	return expr.Function(
 		"secret",
 		getSecret(ctx, c, cache, project),
@@ -571,7 +576,7 @@ func getChart(
 // prefix, project name, and ConfigMap name. Because of this, the same cache
 // can be shared with other functions that accept a cache parameter (e.g.,
 // getSecret) without worrying about key collisions.
-func getConfigMap(ctx context.Context, c client.Client, cache *gocache.Cache, project string) exprFn {
+func getConfigMap(ctx context.Context, c client.Reader, cache *gocache.Cache, project string) exprFn {
 	return func(a ...any) (any, error) {
 		if len(a) != 1 {
 			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
@@ -626,7 +631,7 @@ func getConfigMap(ctx context.Context, c client.Client, cache *gocache.Cache, pr
 // project name, and Secret name. Because of this, the same cache can be shared
 // with other functions that accept a cache parameter (e.g., getConfigMap)
 // without worrying about key collisions.
-func getSecret(ctx context.Context, c client.Client, cache *gocache.Cache, project string) exprFn {
+func getSecret(ctx context.Context, c client.Reader, cache *gocache.Cache, project string) exprFn {
 	return func(a ...any) (any, error) {
 		if len(a) != 1 {
 			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
