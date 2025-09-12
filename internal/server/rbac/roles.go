@@ -751,9 +751,10 @@ func replaceClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]stri
 			delete(sa.Annotations, k)
 		}
 	}
-	// We need to also remove any claims set the new way.
-	// e.g. using rbac.kargo.akuity.io/claims annotation.
-	delete(sa.Annotations, rbacapi.AnnotationKeyOIDCClaims)
+	if len(claims) == 0 {
+		delete(sa.Annotations, rbacapi.AnnotationKeyOIDCClaims)
+		return
+	}
 	if sa.Annotations == nil {
 		sa.Annotations = map[string]string{}
 	}
