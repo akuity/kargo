@@ -22,8 +22,7 @@ func TestNewServer(t *testing.T) {
 }
 
 func TestServer_Healthz(t *testing.T) {
-	testClient := fake.NewFakeClient()
-	s, ok := NewServer(ServerConfig{}, testClient).(*server)
+	s, ok := NewServer(ServerConfig{}, nil).(*server)
 	require.True(t, ok)
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
