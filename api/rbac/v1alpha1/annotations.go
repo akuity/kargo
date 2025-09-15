@@ -3,6 +3,7 @@ package v1alpha1
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -63,6 +64,32 @@ func OIDCClaimsFromAnnotationValue(value string) ([]string, error) {
 		}
 	}
 	return result, nil
+}
+
+// OIDCClaimsFromAnnotationValue parses the values of both the
+// rbac.kargo.akuity.io/claims and rbac.kargo.akuity.io/claim.<name> annotations
+// and consolidates them into a single map where the value of each key is sorted and deduped.
+func OIDCClaimsFromAnnotationValues(annotations map[string]string) (map[string][]string, error) {
+	claims := make(map[string][]string)
+	// hydrate with new style claims
+	if _, ok := annotations[AnnotationKeyOIDCClaims]; ok {
+		if err := json.Unmarshal([]byte(annotations[AnnotationKeyOIDCClaims]), &claims); err != nil {
+			return nil, fmt.Errorf("unmarshaling OIDC claims from annotation value: %w", err)
+		}
+	}
+	// hydrate with old style claims
+	for name, values := range annotations {
+		if key, ok := OIDCClaimNameFromAnnotationKey(name); ok {
+			for v := range strings.SplitSeq(values, ",") {
+				claims[key] = append(claims[key], strings.TrimSpace(v))
+			}
+		}
+	}
+	for k, v := range claims {
+		slices.Sort(v)
+		claims[k] = slices.Compact(v)
+	}
+	return claims, nil
 }
 
 // FormatClaim formats a claims name and values to be used by the
